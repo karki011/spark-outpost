@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { agentAnswersSchema, agentFormSchema } from './agent-questions.ts';
 import { checkpointKindSchema, checkpointPayloadSchema } from './checkpoints.ts';
 import type { InvolvementLevel } from './involvement-levels.ts';
 import { workPlaceSchema } from './chat-workspace.ts';
@@ -9,6 +10,7 @@ import {
   sparkActionSchema,
   sparkResultSchema,
 } from './spark-actions.ts';
+import { sparkRuleAnswerSchema, sparkRuleRefusalSchema } from './spark-rules.ts';
 
 export const runModeSchema = z.enum(['chat', 'ask', 'do']);
 export type RunMode = z.infer<typeof runModeSchema>;
@@ -119,8 +121,18 @@ export const approvalPayloadSchema = z.object({
   sparkRequested: z.boolean().optional(),
   agentReason: z.string().optional(),
   subagent: z.string().optional(),
+  sparkRule: sparkRuleRefusalSchema.optional(),
+  form: agentFormSchema.optional(),
 });
 export type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;
+
+export function holdsToConfirm(payload: ApprovalPayload): boolean {
+  return (
+    payload.forcePush !== undefined ||
+    payload.gitControl !== undefined ||
+    payload.secretSend !== undefined
+  );
+}
 
 export const approvalSchema = z.object({
   id: z.uuid(),
@@ -141,8 +153,11 @@ export const approvalSchema = z.object({
   note: z.string().nullable().optional(),
   autoContinueAt: z.string().nullable().optional(),
   edits: sparkActionEditsSchema.nullable().optional(),
+  ruleAnswer: sparkRuleAnswerSchema.nullable().optional(),
 });
 export type Approval = z.infer<typeof approvalSchema>;
+
+export const ANSWERED_BY_ASK_SPARK = 'Answered by Ask Spark';
 
 export const CHECK_TOOL_CALL_PREFIX = 'check:';
 
@@ -160,6 +175,7 @@ export const approvalDecisionRequestSchema = z.object({
   payloadHash: z.string().min(1).max(200).optional(),
   note: z.string().trim().max(APPROVAL_NOTE_MAX_LENGTH).optional(),
   edits: sparkActionEditsSchema.optional(),
+  answers: agentAnswersSchema.optional(),
 });
 export type ApprovalDecisionRequest = z.input<typeof approvalDecisionRequestSchema>;
 
@@ -188,7 +204,6 @@ export const updateProjectRequestSchema = z
     name: projectNameSchema.optional(),
     commandAllowlist: commandAllowlistSchema.optional(),
     workPlace: workPlaceSchema.optional(),
-    browserKeepSignIns: z.boolean().optional(),
   })
   .refine((body) => Object.values(body).some((value) => value !== undefined));
 export type UpdateProjectRequest = z.input<typeof updateProjectRequestSchema>;

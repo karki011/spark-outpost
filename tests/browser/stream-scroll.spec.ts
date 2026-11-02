@@ -123,6 +123,7 @@ test('a streaming reply follows the bottom, yields to the reader, and settles in
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(prompt);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   const sent = page.waitForRequest(
     (request) => request.method() === 'POST' && request.url().endsWith('/messages'),
   );
@@ -193,11 +194,12 @@ test('a message queued or sent now while a turn runs brings the thread back to t
     await expect(jump).toBeVisible();
   };
   await input.fill('Paragraph one. ' + 'history words fill the thread '.repeat(40));
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 45_000 });
   await input.fill('Keep going until I stop you #slowbuild');
   await input.press('Enter');
-  await expect(page.locator('.thread .ai-head').last().locator('.mood')).toHaveText('working');
+  await expect(page.locator('.thread .msg.ai .mood').last()).toHaveText('working');
 
   await scrollUp();
   await input.fill('Queue this for later');

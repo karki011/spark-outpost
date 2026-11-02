@@ -1,0 +1,31 @@
+@media not ((max-width: 640px) or ((max-height: 500px) and (pointer: coarse))) {
+  .wp.browser.over,
+  .wp.on.browser.over {
+    width: min(var(--wp-w, 640px), var(--wp-cap));
+  }
+}
+
+.bp-width {
+  position: fixed;
+  z-index: 130;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.bp-width-menu {
+  min-width: 240px;
+}
+
+.bp-width-menu button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}

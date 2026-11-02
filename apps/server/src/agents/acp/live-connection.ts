@@ -90,6 +90,9 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
     .onRequest(acp.methods.client.session.requestPermission, (ctx) =>
       handle((handlers) => handlers.permission(ctx.params, ctx.requestId)),
     )
+    .onRequest(acp.methods.client.elicitation.create, (ctx) =>
+      handle((handlers) => handlers.question(ctx.params, ctx.requestId, ctx.signal)),
+    )
     .onRequest(acp.methods.client.fs.writeTextFile, (ctx) =>
       handle((handlers) => handlers.write(ctx.params)),
     )
@@ -146,7 +149,7 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
   };
   agent.exited.catch(() => markGone());
   const ctx = await Promise.race([connected, agent.exited]).catch((error: unknown) => {
-    agent.kill();
+    void agent.kill();
     void markGone();
     throw error;
   });
@@ -214,12 +217,14 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
     },
     async close() {
       if (!isGone && opened) await closeQuietly(ctx, opened.init, opened.session.sessionId);
-      agent.kill();
+      const killing = agent.kill();
       await markGone();
+      await killing;
     },
-    kill() {
-      agent.kill();
-      return markGone();
+    async kill() {
+      const killing = agent.kill();
+      await markGone();
+      await killing;
     },
   };
   return self;

@@ -2,7 +2,7 @@
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 4px 12px;
-  margin: 10px 14px 0;
+  margin: 10px 0 0;
   font-size: 12.5px;
 }
 .sac-facts dt {
@@ -14,7 +14,7 @@
   overflow-wrap: anywhere;
 }
 .sac-edit {
-  margin: 8px 14px 0;
+  margin: 8px 0 0;
 }
 .sac-facts code {
   font-size: 12px;
@@ -44,7 +44,7 @@
 .sac-fields {
   display: grid;
   gap: 10px;
-  margin: 12px 14px 0;
+  margin: 12px 0 0;
 }
 .sac-fields textarea {
   resize: vertical;
@@ -108,4 +108,13 @@
   font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+.sac-caller {
+  box-shadow: inset 0 0 0 1.5px var(--warn);
+}
+.sac-caller .sn-vis {
+  margin-bottom: 4px;
+}
+.sac-caller .appr-h .ic {
+  color: var(--warn);
 }

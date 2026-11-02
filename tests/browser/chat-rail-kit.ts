@@ -4,8 +4,7 @@ import { openChats } from './navigation.ts';
 
 export const SHOTS = process.env.CHAT_WIDE_SHOTS ?? 'test-results/chat-rail';
 export const WIDE = { width: 2000, height: 1100 };
-export const COLUMN = 880;
-export const INDENT = 38;
+export const COLUMN = 760;
 export const PROMPTS = [
   'Fix the date divider #plan',
   'Compare the queue backends in a table',
@@ -54,6 +53,7 @@ export async function ask(page: Page, prompts: readonly string[]) {
   const input = page.getByRole('textbox', { name: 'Message' });
   for (const [index, text] of prompts.entries()) {
     await input.fill(text);
+    await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
     await input.press('Enter');
     await expect(turns(page)).toHaveCount(index + 1);
     await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0, {
@@ -102,7 +102,7 @@ export async function pageScroll(page: Page): Promise<number> {
 export async function composerGap(page: Page): Promise<number> {
   const [main, composer] = await Promise.all([
     page.getByRole('main').boundingBox(),
-    page.locator('.composer').boundingBox(),
+    page.locator('.composer-frame').boundingBox(),
   ]);
   return main!.y + main!.height - (composer!.y + composer!.height);
 }
@@ -122,10 +122,8 @@ export async function columnEdges(page: Page) {
     return {
       thread: edges('.thread'),
       column: edges('.col'),
-      prose: edges('.col .md > p'),
-      head: edges('.col .ai-head'),
-      name: edges('.col .ai-head .provider-name'),
-      foot: edges('.col .turn-foot'),
+      prose: edges('.col .msg.ai .md > p'),
+      meta: edges('.col .turn-meta'),
       table: edges('.col .md-table'),
       composer: edges('.composer'),
       bubbleRight: edges('.col .bubble').right,

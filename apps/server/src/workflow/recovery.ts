@@ -1,9 +1,10 @@
 import { expirePendingApprovals } from '../persistence/approvals.ts';
 import type { Db } from '../persistence/db.ts';
 import { findExpiredLeases, type Lease } from '../persistence/jobs.ts';
+import { markUnreadAfterCrash } from '../persistence/member-messages.ts';
 import { failRunningPieces, skipUnstartedPieces } from '../persistence/pieces.ts';
 import { LeaseLostError, appendRunEvent } from '../persistence/run-events.ts';
-import { runWaitedInBackground } from '../persistence/subagents.ts';
+import { runBackgroundWait } from '../persistence/subagents.ts';
 import { runEvents, type RunIdentity } from './run-events.ts';
 
 export const OUTCOME_UNKNOWN_MESSAGE =
@@ -17,6 +18,18 @@ export const WAITING_OUTCOME_MESSAGE = `${OUTCOME_UNKNOWN_MESSAGE} It was waitin
 
 export const BACKGROUND_OUTCOME_MESSAGE =
   'Spark stopped while the agent was waiting on background work. That work stopped with it, so its results never arrived. Nothing was retried automatically.';
+
+export const SLEEP_OUTCOME_MESSAGE =
+  'Spark stopped while the agent was sleeping until a wakeup. The wakeup stopped with it, so the agent did not continue. Nothing was retried automatically.';
+
+async function interruptedMessage(db: Db, runId: string): Promise<string> {
+  const background = await runBackgroundWait(db, runId);
+  if (!background) return OUTCOME_UNKNOWN_MESSAGE;
+  if (background.wakesAt !== undefined && background.agents + background.tasks === 0) {
+    return SLEEP_OUTCOME_MESSAGE;
+  }
+  return BACKGROUND_OUTCOME_MESSAGE;
+}
 
 export async function recoverExpiredLeases(db: Db): Promise<number> {
   const expired = await findExpiredLeases(db);
@@ -42,15 +55,12 @@ async function markOutcomeUnknown(db: Db, lease: Lease): Promise<boolean> {
     }
     const expired = await expirePendingApprovals(db, lease.runId, 'recovery');
     const message =
-      expired > 0
-        ? WAITING_OUTCOME_MESSAGE
-        : (await runWaitedInBackground(db, lease.runId))
-          ? BACKGROUND_OUTCOME_MESSAGE
-          : OUTCOME_UNKNOWN_MESSAGE;
+      expired > 0 ? WAITING_OUTCOME_MESSAGE : await interruptedMessage(db, lease.runId);
     await appendRunEvent(db, lease, runEvents.error(message, 'outcome_unknown'), {
       expectExpired: true,
       transition: { status: 'outcome_unknown', error: message },
     });
+    await markUnreadAfterCrash(db, lease.runId);
     return true;
   } catch (error) {
     if (error instanceof LeaseLostError) return false;

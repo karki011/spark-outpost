@@ -1,8 +1,10 @@
 import {
   COMMAND_BROWSER_CHARS,
+  COMMAND_DESCRIBED,
   COMMAND_FINISHED,
   COMMAND_OUTPUT,
   COMMAND_STARTED,
+  commandDescribedSchema,
   commandFinishedSchema,
   commandOutputSchema,
   commandStartedSchema,
@@ -87,6 +89,12 @@ export function applyCommandEvent(
         epoch: 0,
       },
     ];
+  }
+  if (event.name === COMMAND_DESCRIBED) {
+    const described = commandDescribedSchema.safeParse(event.value);
+    if (!described.success) return commands;
+    const { id, description } = described.data;
+    return update(commands, id, (command) => ({ ...command, description }));
   }
   if (event.name === COMMAND_OUTPUT) {
     const output = commandOutputSchema.safeParse(event.value);

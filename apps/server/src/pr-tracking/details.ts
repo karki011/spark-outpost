@@ -6,6 +6,7 @@ import { plainExcerpt } from './plain-text.ts';
 
 export const SPARK_REPLY_MARKER = '<!-- spark-outpost:follow-up -->';
 const MAX_CHECK_RUNS = 60;
+const MAX_THREAD_PAGES = 5;
 const MAX_REVIEWERS = 20;
 const MAX_THREADS = 50;
 const SUMMARY_CHARS = 160;
@@ -98,19 +99,22 @@ function checkState(run: CheckRunFields): PrCheckState {
   return run.conclusion !== null && FAILED.has(run.conclusion) ? 'failing' : 'neutral';
 }
 
-export function checkRunsView(runs: readonly CheckRunFields[]): PrCheckRun[] {
+export function latestCheckRuns(runs: readonly CheckRunFields[]): PrCheckRun[] {
   const latest = new Map<string, CheckRunFields>();
   for (const run of runs) {
     const known = latest.get(run.name);
     if (!known || (run.id ?? 0) > (known.id ?? 0)) latest.set(run.name, run);
   }
-  return [...latest.values()]
-    .map((run) => ({
-      name: run.name,
-      url: run.html_url ?? null,
-      state: checkState(run),
-      summary: run.output?.title?.trim() ? plainExcerpt(run.output.title, SUMMARY_CHARS) : null,
-    }))
+  return [...latest.values()].map((run) => ({
+    name: run.name,
+    url: run.html_url ?? null,
+    state: checkState(run),
+    summary: run.output?.title?.trim() ? plainExcerpt(run.output.title, SUMMARY_CHARS) : null,
+  }));
+}
+
+export function checkRunsView(runs: readonly CheckRunFields[]): PrCheckRun[] {
+  return latestCheckRuns(runs)
     .toSorted(
       (a, b) => ORDER.indexOf(a.state) - ORDER.indexOf(b.state) || a.name.localeCompare(b.name),
     )
@@ -226,6 +230,9 @@ const resolvedSchema = z.object({
     repository: z.object({
       pullRequest: z.object({
         reviewThreads: z.object({
+          pageInfo: z
+            .object({ hasNextPage: z.boolean(), endCursor: z.string().nullable() })
+            .optional(),
           nodes: z.array(
             z.object({
               isResolved: z.boolean(),
@@ -240,10 +247,34 @@ const resolvedSchema = z.object({
   }),
 });
 
-function resolvedQuery(repo: RepoRef, number: number): string {
+function resolvedQuery(repo: RepoRef, number: number, after: string | null): string {
   const owner = JSON.stringify(repo.owner);
   const name = JSON.stringify(repo.name);
-  return `query { repository(owner: ${owner}, name: ${name}) { pullRequest(number: ${number}) { reviewThreads(first: 100) { nodes { isResolved comments(first: 1) { nodes { databaseId } } } } } } }`;
+  const from = after === null ? '' : `, after: ${JSON.stringify(after)}`;
+  return `query { repository(owner: ${owner}, name: ${name}) { pullRequest(number: ${number}) { reviewThreads(first: 100${from}) { pageInfo { hasNextPage endCursor } nodes { isResolved comments(first: 1) { nodes { databaseId } } } } } } }`;
+}
+
+async function resolvedPage(
+  connection: GitHubConnection,
+  repo: RepoRef,
+  number: number,
+  after: string | null,
+) {
+  const answer = await connection
+    .post(
+      '/graphql',
+      { query: resolvedQuery(repo, number, after) },
+      resolvedSchema,
+      'reading threads',
+    )
+    .catch(() => null);
+  return answer?.data.repository.pullRequest.reviewThreads ?? null;
+}
+
+type ThreadPage = NonNullable<Awaited<ReturnType<typeof resolvedPage>>>;
+
+function nextCursor(page: ThreadPage): string | null {
+  return page.pageInfo?.hasNextPage ? (page.pageInfo.endCursor ?? null) : null;
 }
 
 export async function readResolved(
@@ -251,12 +282,18 @@ export async function readResolved(
   repo: RepoRef,
   number: number,
 ): Promise<Set<number> | null> {
-  const answer = await connection
-    .post('/graphql', { query: resolvedQuery(repo, number) }, resolvedSchema, 'reading threads')
-    .catch(() => null);
-  if (!answer) return null;
+  const first = await resolvedPage(connection, repo, number, null);
+  if (!first) return null;
+  const pages: ThreadPage[] = [first];
+  let cursor = nextCursor(first);
+  while (cursor !== null && pages.length < MAX_THREAD_PAGES) {
+    const page = await resolvedPage(connection, repo, number, cursor);
+    if (!page) break;
+    pages.push(page);
+    cursor = nextCursor(page);
+  }
   const resolved = new Set<number>();
-  for (const thread of answer.data.repository.pullRequest.reviewThreads.nodes) {
+  for (const thread of pages.flatMap((page) => page.nodes)) {
     const root = thread.comments.nodes[0]?.databaseId;
     if (thread.isResolved && root != null) resolved.add(root);
   }
@@ -282,13 +319,28 @@ export async function readDiscussion(
   return { reviews, inline, issue };
 }
 
+export async function threadResolution(
+  connection: GitHubConnection,
+  repo: RepoRef,
+  number: number,
+  discussion: Pick<Discussion, 'inline'>,
+): Promise<Set<number> | null> {
+  const hasThreads = discussion.inline.some((comment) => !comment.in_reply_to_id);
+  return hasThreads ? readResolved(connection, repo, number) : null;
+}
+
+export function detailsOf(
+  discussion: Discussion,
+  resolved: ReadonlySet<number> | null,
+): Omit<StoredDetails, 'checkRuns'> {
+  return { reviewers: reviewersOf(discussion.reviews), ...threadsOf(discussion, resolved) };
+}
+
 export async function discussionDetails(
   connection: GitHubConnection,
   repo: RepoRef,
   number: number,
   discussion: Discussion,
 ): Promise<Omit<StoredDetails, 'checkRuns'>> {
-  const hasThreads = discussion.inline.some((comment) => !comment.in_reply_to_id);
-  const resolved = hasThreads ? await readResolved(connection, repo, number) : null;
-  return { reviewers: reviewersOf(discussion.reviews), ...threadsOf(discussion, resolved) };
+  return detailsOf(discussion, await threadResolution(connection, repo, number, discussion));
 }

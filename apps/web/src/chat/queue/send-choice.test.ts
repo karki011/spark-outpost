@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MemberMessage, Run } from '@spark-outpost/contracts';
 import {
+  busyButtonTitle,
   busyHint,
   choiceKey,
   choiceNote,
@@ -66,7 +67,10 @@ describe('what Enter does while a turn runs', () => {
   it('says what Send now does while the agent only waits', () => {
     expect(choiceNote('now', true)).toBe('Reaches the agent while it waits, or joins the queue');
     expect(choiceNote('now', false)).toBe('Steers or interrupts the turn');
-    expect(choiceNote('queue', true)).toBe('Sends when this turn ends');
+    expect(choiceNote('queue', true)).toBe(
+      'Reaches the agent in order while it waits, or when this turn ends',
+    );
+    expect(choiceNote('queue', false)).toBe('Sends when this turn ends');
     expect(choiceTitle('now', 'now', true, true)).toBe(
       'Send now: reaches the agent while it waits, or joins the queue (Enter)',
     );
@@ -80,6 +84,18 @@ describe('what Enter does while a turn runs', () => {
       'Send now: steers or interrupts the turn (⌘Enter)',
     );
     expect(choiceTitle('queue', 'now', true)).toBe('Queue: sends when this turn ends (⌘Enter)');
+  });
+
+  it('names the other key in the send button tooltip while a turn runs', () => {
+    expect(busyButtonTitle('queue', true)).toBe(
+      'Queue: sends when this turn ends (Enter) · ⌘Enter to send now',
+    );
+    expect(busyButtonTitle('now', false)).toBe(
+      'Send now: steers or interrupts the turn (Enter) · Ctrl+Enter to queue',
+    );
+    expect(busyButtonTitle('now', true, true)).toBe(
+      'Send now: reaches the agent while it waits, or joins the queue (Enter) · ⌘Enter to queue',
+    );
   });
 });
 

@@ -91,10 +91,13 @@ async function leaveIsland(page: Page) {
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
 }
 
-const homeTab = (page: Page) => island(page).getByRole('tab', { name: 'Home' });
-const nowCard = (page: Page) => island(page).getByRole('region', { name: /^Now/ });
+const inbox = (page: Page, name: RegExp | string) => island(page).getByRole('region', { name });
 
-test('stays collapsed through running work and approvals, and opens on hover', async ({ page }) => {
+const needYou = (page: Page) => island(page).locator('.isl-pbadge');
+
+test('stays at rest through running work and approvals; hover answers in place', async ({
+  page,
+}) => {
   test.setTimeout(60_000);
   await resetTestDatabase({ onboarded: true });
   await openIsland(page);
@@ -109,16 +112,19 @@ test('stays collapsed through running work and approvals, and opens on hover', a
   });
   const scout = island(page).locator('.isl-scout-wrap svg.scout');
   await expect(scout).toHaveClass(/\bworking\b/);
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await page.waitForTimeout(1500);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await shot(page, 'working');
 
-  await hoverIsland(page);
-  await expect(homeTab(page)).toHaveAttribute('aria-selected', 'true');
-  await expect(nowCard(page)).toHaveAccessibleName('Now: Fix image uploads');
-  await expect(nowCard(page)).toContainText('Editing · upload.ts');
-  await shot(page, 'hover-home');
-  await leaveIsland(page);
+  await pointAtScout(page);
+  await expect(island(page)).toHaveAttribute('data-view', 'panel');
+  await expect(island(page).locator('.isl-hover')).toHaveCount(0);
+  await expect(inbox(page, /^Working/)).toContainText('Fix image uploads');
+  await shot(page, 'home');
+  await page.keyboard.press('Escape');
+  await page.mouse.move(5, 600);
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
 
   await seedChats([
     {
@@ -127,63 +133,33 @@ test('stays collapsed through running work and approvals, and opens on hover', a
       approval: { kind: 'execute', title: 'npm install sharp', command: 'npm install sharp' },
     },
   ]);
+  await expect(needYou(page)).toHaveText('1');
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
-  await expect(island(page).locator('.isl-restline')).toContainText(
-    'Approve: run npm install sharp',
-  );
+  await shot(page, 'waiting-count');
 
-  await shot(page, 'waiting-line');
-  await hoverIsland(page);
-  await expect(island(page).getByRole('tab', { name: /^Chats/ })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
-  const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
-  await expect(waiting).toContainText('npm install sharp');
-  await shot(page, 'approval');
-  await waiting.getByRole('button', { name: 'Allow', exact: true }).click();
+  await pointAtScout(page);
+  const hover = island(page).locator('.isl-hover');
+  await expect(hover).toContainText('Add the image library');
+  await expect(hover).toContainText('npm install sharp');
+  await expect(island(page)).toHaveAttribute('data-view', 'now');
+  await shot(page, 'hover-request');
+  await hover.getByRole('button', { name: 'Allow' }).click();
   await expect
     .poll(async () => (await sql(`SELECT status FROM approvals`)).rows[0]?.status)
     .toBe('allowed');
 
-  await sql(`UPDATE runs SET status = 'running' WHERE status = 'awaiting_approval'`);
-  await page.keyboard.press('Escape');
-  await leaveIsland(page);
-  await sql(
-    `UPDATE runs SET status = 'succeeded', finished_at = now() WHERE conversation_id = $1`,
-    [running],
-  );
+  await page.mouse.move(5, 600);
+  await sql(`UPDATE runs SET status = 'succeeded', finished_at = now()`);
   await expect(scout).toHaveClass(/\bhappy\b/);
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await page.waitForTimeout(1000);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await shot(page, 'done');
 
   await hoverIsland(page);
-  await expect(nowCard(page)).toHaveAccessibleName('Now: Add the image library');
-  const popup = page.waitForEvent('popup');
-  await nowCard(page)
-    .getByRole('button', { name: 'Open Add the image library' })
-    .click({ modifiers: ['Meta'] });
-  await (await popup).close();
-  await expect(island(page)).toHaveAttribute('data-view', 'note');
-  const note = island(page).getByRole('status').filter({ hasText: 'Opening Spark…' });
-  await expect(note).toBeVisible();
-  await page.waitForTimeout(400);
-  const layout = await island(page).evaluate((root) => {
-    const box = (selector: string) => root.querySelector(selector)!.getBoundingClientRect();
-    const scout = box('.isl-scout-wrap');
-    return {
-      scoutRight: scout.right,
-      textLefts: [box('.isl-note .isl-ttl').left, box('.isl-note .isl-hint').left],
-      noteBottom: box('.isl-note').bottom,
-      islandBottom: root.getBoundingClientRect().bottom,
-    };
-  });
-  for (const left of layout.textLefts) expect(left).toBeGreaterThan(layout.scoutRight);
-  expect(layout.noteBottom).toBeLessThan(layout.islandBottom);
-  await page.mouse.move(5, 600);
-  await expect(island(page)).toHaveAttribute('data-view', 'peek', { timeout: 3000 });
+  await expect(inbox(page, 'Nothing needs you')).toBeVisible();
+  await expect(island(page)).not.toContainText('Fix image uploads');
+  await leaveIsland(page);
 });
 
 test('the approval card takes Y only once focused', async ({ page }) => {
@@ -197,10 +173,10 @@ test('the approval card takes Y only once focused', async ({ page }) => {
   ]);
   await openIsland(page);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
+  await expect(needYou(page)).toHaveText('1');
   await page.keyboard.press('y');
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
+  await expect(needYou(page)).toHaveText('1');
   await page.keyboard.press('Alt+Space');
   const card = island(page).getByRole('group', { name: /pnpm rotate/ });
   await expect(card).toBeFocused();
@@ -220,10 +196,6 @@ test('quick chat starts a real chat with the project and autonomy chips @package
   await page.keyboard.press('Alt+Space');
   const message = island(page).getByRole('textbox', { name: 'Message' });
   await expect(message).toBeFocused();
-  await expect(island(page).getByRole('tab', { name: 'New chat' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
   await island(page).getByRole('button', { name: 'Spark autonomy: Full auto → PR' }).click();
   await expect(
     island(page).getByRole('button', { name: 'Spark autonomy: Automatic' }),
@@ -239,51 +211,45 @@ test('quick chat starts a real chat with the project and autonomy chips @package
       ),
     )
     .toContain('Where do we resize uploaded images?');
-  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await expect(island(page).locator('.isl-scout-wrap svg.scout')).toHaveClass(/\bhappy\b/, {
     timeout: 20_000,
   });
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await hoverIsland(page);
-  await expect(nowCard(page)).toHaveAccessibleName(/Where do we resize uploaded images/);
+  await expect(inbox(page, 'Nothing needs you')).toBeVisible();
   await shot(page, 'reply');
 });
 
-test('sessions search, open one and ask for an update without touching the agent @packaged', async ({
+test('the Home shortcut opens Home, and a working tile opens that chat in Spark @packaged', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
   const ids = await seedChats([
     { title: 'Fix image uploads', run: { status: 'running' } },
     { title: 'Add dark mode toggle', run: { status: 'succeeded' } },
-    { title: 'Upload size limit', run: { status: 'succeeded' } },
   ]);
   await decorateLatestRun(ids[0]!, { provider: 'claude', step: 'Editing upload.ts' });
   await openIsland(page);
   await page.keyboard.press('Alt+Shift+Space');
-  const search = island(page).getByRole('combobox', { name: 'Search sessions' });
-  await expect(search).toBeFocused();
-  await search.fill('upload');
-  const list = island(page).getByRole('listbox', { name: 'Recent sessions' });
-  await expect(list.getByRole('option')).toHaveCount(2);
-  await shot(page, 'sessions');
-  await page.keyboard.press('Enter');
-  await expect(island(page)).toContainText('Fix image uploads');
-  const before = (await sql(`SELECT count(*)::int AS n FROM run_events`)).rows[0]!.n;
-  await island(page).getByRole('button', { name: 'Ask for update' }).click();
-  const update = island(page).getByRole('status').filter({ hasText: 'Next:' });
-  await expect(update).toContainText('Editing upload.ts'.toLowerCase());
-  await shot(page, 'update');
-  expect((await sql(`SELECT count(*)::int AS n FROM run_events`)).rows[0]!.n).toBe(before);
-  await island(page).getByRole('button', { name: 'Back to chats' }).click();
-  await expect(search).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(island(page).getByRole('button', { name: 'Back to chats' })).toBeVisible();
-  await page.keyboard.press('Escape');
+  const running = inbox(page, /^Working/);
+  await expect(running.getByRole('button', { name: /^Fix image uploads/ })).toContainText(
+    'Editing upload.ts',
+  );
+  await expect(running).not.toContainText('Add dark mode toggle');
+  await shot(page, 'inbox');
+  const popup = page.waitForEvent('popup');
+  await running.getByRole('button', { name: /^Fix image uploads/ }).click();
+  await (await popup).close();
+  await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
+  await page.keyboard.press('Alt+Shift+Space');
+  await expect(running).toBeVisible();
+  await page.keyboard.press('Alt+Shift+Space');
   await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
 });
 
-test('Ask answers instantly from Spark’s own state', async ({ page }) => {
+test('Ask sends every question to the model, even one about Spark’s own state', async ({
+  page,
+}) => {
   await resetTestDatabase({ onboarded: true });
   await seedChats([
     {
@@ -293,24 +259,24 @@ test('Ask answers instantly from Spark’s own state', async ({ page }) => {
     },
   ]);
   await openIsland(page);
-  await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
+  await expect(needYou(page)).toHaveText('1');
   await page.keyboard.press('Alt+Shift+Space');
-  await page.keyboard.press('Meta+4');
+  await page.keyboard.press('Meta+3');
   const ask = island(page).getByRole('textbox', { name: 'Ask Spark' });
   await expect(ask).toBeFocused();
+  const chips = island(page).getByRole('group', { name: 'Suggested questions' });
+  await expect(chips.getByRole('button')).toHaveText(['Who needs me?', 'What’s running?']);
   await ask.fill('Does anyone need anything?');
   await page.keyboard.press('Enter');
-  await expect(island(page)).toContainText('1 chat needs you: “Deploy the site”.');
-  await expect(island(page).getByRole('button', { name: 'Open “Deploy the site”' })).toBeVisible();
+  const answers = island(page).locator('.isl-ask-a');
+  await expect(answers).toHaveCount(1, { timeout: 20_000 });
+  await expect(answers.first()).toContainText('You wrote: "Does anyone need anything?"', {
+    timeout: 20_000,
+  });
+  await expect(island(page).getByRole('button', { name: 'Review “Deploy the site”' })).toHaveCount(
+    0,
+  );
   await shot(page, 'ask');
-  await expect
-    .poll(async () => (await sql(`SELECT count(*)::int AS n FROM messages`)).rows[0]!.n)
-    .toBe(1);
-
-  await ask.fill('Which provider did the most work this week?');
-  await page.keyboard.press('Enter');
-  await expect(island(page).locator('.isl-ask-a')).toHaveCount(2, { timeout: 20_000 });
   await expect
     .poll(
       async () =>
@@ -325,33 +291,6 @@ test('Ask answers instantly from Spark’s own state', async ({ page }) => {
     .toEqual([{ title: 'Ask Spark', provider: 'claude' }]);
 });
 
-test('active chats peek out beside Scout and hide while one is open', async ({ page }) => {
-  await resetTestDatabase({ onboarded: true });
-  await seedChats([
-    { title: 'Fix image uploads', run: { status: 'succeeded' } },
-    { title: 'Add dark mode toggle', run: { status: 'succeeded' } },
-  ]);
-  await openIsland(page);
-  const row = page.getByRole('toolbar', { name: 'Active chats' });
-  await expect(row.getByRole('button', { name: /^Chat: / })).toHaveCount(2);
-  await seedChats([{ title: 'Speed up cold start', run: { status: 'succeeded' } }]);
-  await expect(row.getByRole('button', { name: /^Chat: / })).toHaveCount(3);
-  await shot(page, 'peek-row');
-
-  await row.getByRole('button', { name: 'Chat: Add dark mode toggle, done' }).click();
-  await expect(island(page)).toHaveAttribute('data-view', 'panel');
-  await expect(island(page)).toContainText('Add dark mode toggle');
-  await expect(row).not.toHaveAttribute('data-shown');
-  await page.keyboard.press('Escape');
-  await page.keyboard.press('Escape');
-  await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  await expect(row).toHaveAttribute('data-shown', 'true');
-  const first = row.getByRole('button', { name: /^Chat: / }).first();
-  await first.focus();
-  await page.keyboard.press('ArrowRight');
-  await expect(row.getByRole('button', { name: /^Chat: / }).nth(1)).toBeFocused();
-});
-
 test('the island has no serious accessibility problems in its main views', async ({ page }) => {
   test.setTimeout(90_000);
   await resetTestDatabase({ onboarded: true });
@@ -364,10 +303,17 @@ test('the island has no serious accessibility problems in its main views', async
   ]);
   await openIsland(page);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
+  await expect(needYou(page)).toHaveText('1');
   const views: string[] = [];
   const check = async (name: string) => {
     await page.waitForTimeout(700);
+    await page.waitForFunction(() =>
+      document
+        .getAnimations()
+        .every(
+          (animation) => !(animation instanceof CSSTransition) || animation.playState !== 'running',
+        ),
+    );
     const results = await new AxeBuilder({ page }).include('.isl-root').analyze();
     for (const violation of results.violations) {
       if (violation.impact === 'serious' || violation.impact === 'critical') {
@@ -377,25 +323,29 @@ test('the island has no serious accessibility problems in its main views', async
       }
     }
   };
-  await check('collapsed approval');
+  await check('resting Scout');
+  await pointAtScout(page);
+  await expect(island(page).locator('.isl-hover')).toContainText('Deploy the site');
+  await check('hover line');
+  await page.mouse.move(5, 600);
   await page.keyboard.press('Alt+Space');
   await expect(island(page)).toHaveAttribute('data-view', 'card');
   await check('card');
   await page.keyboard.press('Escape');
-  await hoverIsland(page);
-  await check('chat opened on hover');
-  await page.keyboard.press('Meta+2');
-  await check('sessions');
-  await page.keyboard.press('Meta+3');
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await island(page).locator('.isl-scout-btn').click();
+  await expect(island(page)).toHaveAttribute('data-view', 'panel');
+  await check('home opened from Scout');
+  await island(page).getByRole('button', { name: 'New chat' }).click();
   await check('quick chat');
-  await page.keyboard.press('Meta+4');
+  await page.keyboard.press('Meta+3');
   await check('ask');
   await page.keyboard.press('Meta+1');
-  await check('home');
+  await check('home again');
   expect(views).toEqual([]);
 });
 
-test('without a notch the blob peeks on its own, hover opens the full panel and a click focuses it', async ({
+test('without a notch Scout peeks on its own, hover opens the full panel and a click focuses it', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -418,23 +368,12 @@ test('without a notch the blob peeks on its own, hover opens the full panel and 
   expect(Math.max(...eyes.map((eye) => eye.bottom))).toBeLessThanOrEqual(24);
   const lastRest = () =>
     page.evaluate(() => (window as unknown as { islandRest: unknown[] }).islandRest.at(-1));
-  await expect.poll(lastRest).not.toBeNull();
+  await expect
+    .poll(lastRest)
+    .toEqual(expect.objectContaining({ width: expect.any(Number), height: expect.any(Number) }));
   const rest = (await lastRest()) as { width: number; height: number };
   expect(rest.width).toBeLessThan(200);
   expect(rest.height).toBeLessThan(50);
-  const blob = page.getByRole('button', { name: /^Chat: Fix image uploads/ });
-  await expect.poll(async () => (await blob.boundingBox())?.y).toBe(-10);
-  expect((await blob.boundingBox())!.height).toBe(28);
-  const blobEyes = await blob
-    .locator('.mo-eyes')
-    .evaluate((element) => element.getBoundingClientRect().top);
-  expect(blobEyes).toBeGreaterThanOrEqual(0);
-  expect(blobEyes).toBeLessThan(24);
-  const spot = (await blob.boundingBox())!;
-  await page.mouse.move(spot.x + spot.width / 2, 8);
-  await page.waitForTimeout(400);
-  await expect(island(page)).toHaveAttribute('data-view', 'peek');
-
   await pointAtScout(page);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
   const box = (await island(page).boundingBox())!;
@@ -444,12 +383,8 @@ test('without a notch the blob peeks on its own, hover opens the full panel and 
   const lastFocus = () =>
     page.evaluate(() => (window as unknown as { islandFocus: boolean[] }).islandFocus.at(-1));
   expect(await lastFocus()).not.toBe(true);
-  await expect(island(page).getByRole('region', { name: 'Now: Fix image uploads' })).toBeVisible();
-  await expect(island(page).getByRole('tab', { name: 'Home' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
-  const newChat = island(page).getByRole('tab', { name: 'New chat' });
+  await expect(inbox(page, 'Nothing needs you')).toBeVisible();
+  const newChat = island(page).getByRole('button', { name: 'New chat' });
   await expect(newChat).toHaveCSS('cursor', 'pointer');
   await newChat.click();
 
@@ -477,7 +412,7 @@ test('without a notch the blob peeks on its own, hover opens the full panel and 
 
   await pointAtScout(page);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
-  await island(page).getByRole('tab', { name: 'New chat' }).click();
+  await island(page).getByRole('button', { name: 'New chat' }).click();
   await expect(message).toBeFocused();
   await message.fill('Keep this draft');
   await message.blur();

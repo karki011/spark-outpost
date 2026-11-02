@@ -6,7 +6,16 @@ import {
   type IslandGeometry,
 } from '../desktop/desktop-bridge.ts';
 import { matchesShortcut } from '../desktop/shortcut-keys.ts';
-import { onScout, scoutHit, scoutRects } from './island-hover.ts';
+import {
+  MENU_QUIET_MS,
+  onScout,
+  pointerIntent,
+  pointerSpeed,
+  scoutHit,
+  scoutRects,
+  SETTLE_MS,
+  type PointerSample,
+} from './island-hover.ts';
 import { HIT_MARGIN, islandRegions, restGrows, restSize, type RestSize } from './island-regions.ts';
 import { useIslandLayout } from './use-island-layout.ts';
 
@@ -41,12 +50,14 @@ interface BridgeOptions {
   coreRects: () => DOMRect[];
   blobRects: () => DOMRect[];
   peek: boolean;
+  strip?: boolean;
   hovered: boolean;
   islandRef: RefObject<HTMLElement | null>;
   focusable: boolean;
   onHover: (inside: boolean) => void;
   onCommand: (action: IslandAction) => void;
   onBlur: () => void;
+  onMenuBar?: (busy: boolean) => void;
 }
 
 export function useSparkFocus(): boolean {
@@ -70,8 +81,10 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
   const shrinkTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const resting = options.peek && geometry.docked && !geometry.notch;
   const latest = useRef(options);
+  const geometryRef = useRef(geometry);
   useEffect(() => {
     latest.current = options;
+    geometryRef.current = geometry;
   });
 
   useEffect(() => {
@@ -128,16 +141,49 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       hovering.current = on;
       latest.current.onHover(on);
     };
+    const leaveWhenHidden = () => {
+      if (document.visibilityState === 'hidden') setHover(false);
+    };
+    document.addEventListener('visibilitychange', leaveWhenHidden);
     let lastProbe = -Infinity;
     let probeFrame = 0;
     let trailing: { x: number; y: number } | null = null;
+    let sample: PointerSample | null = null;
+    let settleTimer: ReturnType<typeof setTimeout> | undefined;
+    let quietTimer: ReturnType<typeof setTimeout> | undefined;
+    let menuBusy = false;
+    const menuBar = (busy: boolean) => {
+      clearTimeout(quietTimer);
+      if (busy) {
+        if (!menuBusy) latest.current.onMenuBar?.(true);
+        menuBusy = true;
+        return;
+      }
+      if (!menuBusy) return;
+      quietTimer = setTimeout(() => {
+        menuBusy = false;
+        latest.current.onMenuBar?.(false);
+      }, MENU_QUIET_MS);
+    };
     const probe = (x: number, y: number) => {
       lastProbe = performance.now();
       trailing = null;
       remeasureRef.current();
-      const { coreRects, islandRef, peek } = latest.current;
+      const { coreRects, islandRef, peek, strip } = latest.current;
       const onBlob = onScout(islandRef.current, x, y);
-      setHover(onBlob || (!peek && inside(coreRects(), x, y)));
+      const onIsland = onBlob || ((!peek || strip === true) && inside(coreRects(), x, y));
+      const next = { x, y, at: lastProbe };
+      const speed = pointerSpeed(sample, next);
+      sample = next;
+      const { menuBar: bar, windowTop } = geometryRef.current;
+      const intent = pointerIntent({ onIsland, speed, y, menuBar: bar - (windowTop ?? 0) });
+      clearTimeout(settleTimer);
+      if (intent === 'passing') {
+        settleTimer = setTimeout(() => probe(x, y), SETTLE_MS);
+        return;
+      }
+      menuBar(intent === 'menu-bar');
+      setHover(intent === 'hover');
     };
     const onMove = (event: MouseEvent) => {
       if (dragging) {
@@ -167,8 +213,14 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
         });
       }
     };
-    const onLeave = () => {
+    const onLeave = (event: MouseEvent) => {
       trailing = null;
+      clearTimeout(settleTimer);
+      const { menuBar: bar, windowTop } = geometryRef.current;
+      if (event.clientY <= bar - (windowTop ?? 0)) {
+        menuBar(true);
+        menuBar(false);
+      }
       if (dragging) return;
       setHover(false);
     };
@@ -198,7 +250,11 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       event.stopPropagation();
       event.preventDefault();
     };
-    const onBlur = () => latest.current.onBlur();
+    const onBlur = () => {
+      menuBar(true);
+      menuBar(false);
+      latest.current.onBlur();
+    };
     const onDragIn = () => hold(true);
     const onDragOut = (event: DragEvent) => {
       if (event.type === 'drop' || !event.relatedTarget) hold(false);
@@ -215,7 +271,10 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
     document.documentElement.addEventListener('dragleave', onDragOut);
     return () => {
       cancelAnimationFrame(probeFrame);
+      clearTimeout(settleTimer);
+      clearTimeout(quietTimer);
       offPointer?.();
+      document.removeEventListener('visibilitychange', leaveWhenHidden);
       window.removeEventListener('dragenter', onDragIn);
       window.removeEventListener('drop', onDragOut);
       document.documentElement.removeEventListener('dragleave', onDragOut);

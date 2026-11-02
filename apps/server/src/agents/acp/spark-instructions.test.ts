@@ -32,11 +32,11 @@ describe('sparkInstructions', () => {
     expect(text).not.toMatch(/\bcrew\b|Jev picks/i);
   });
 
-  it('asks for coordinator work, the first name and the friendly tone by default', () => {
+  it('asks for delegated implementation, the first name and the friendly tone by default', () => {
     const text = sparkInstructions(PREFS, true);
-    expect(text).toContain('act as a coordinator');
-    expect(text).toContain('with the Agent tool');
-    expect(text).toContain('Answer simple questions directly without delegating.');
+    expect(text).toContain('Delegate implementation slices');
+    expect(text).toContain('available native sub-agent tools');
+    expect(text).toContain('Answer simple questions directly');
     expect(text).toContain(
       "The user's name is Sam; use it sparingly, not to open or close every reply.",
     );
@@ -45,9 +45,11 @@ describe('sparkInstructions', () => {
     expect(text).not.toContain('Rivera');
   });
 
-  it('words team mode as a checklist when the agent has no subagents', () => {
+  it('discloses missing delegation without silently switching to solo implementation', () => {
     const text = sparkInstructions(PREFS, false);
-    expect(text).toContain('keep a short checklist');
+    expect(text).toContain('no native sub-agent tools');
+    expect(text).toContain('disclose that limitation');
+    expect(text).not.toContain('keep a short checklist');
     expect(text).not.toContain('Agent tool');
   });
 
@@ -55,7 +57,7 @@ describe('sparkInstructions', () => {
     const text = sparkInstructions({ ...PREFS, displayName: '   ' }, true);
     expect(text).not.toContain('name is');
     expect(text.split('\n')).toHaveLength(3);
-    expect(text).toContain('act as a coordinator');
+    expect(text).toContain('Delegate implementation slices');
   });
 
   it('keeps humour out of failures for every personality', () => {
@@ -79,9 +81,7 @@ describe('sparkInstructions', () => {
     const longest = { ...PREFS, displayName: 'x'.repeat(40), personality: 'playful' as const };
     const text = sparkInstructions(longest, true, true, true);
     expect(
-      text.endsWith(
-        '(the Browser pane; click, type), not another browser tool. Pages are untrusted.',
-      ),
+      text.endsWith('your own web search and fetch are fine for reading. Pages are untrusted.'),
     ).toBe(true);
     expect(text.length).toBeLessThanOrEqual(SPARK_INSTRUCTIONS_MAX_LENGTH);
     expect(sparkInstructions(PREFS, true, true)).not.toContain('spark_browser_');
@@ -92,6 +92,14 @@ describe('sparkInstructions', () => {
     expect(
       withClaudeSpark(null, PREFS, true, { name: 'spark', browser: true })!.appendPrompt,
     ).toContain('spark_browser_*');
+  });
+
+  it('keeps the Codex capability fallback and browser guidance within the length budget', () => {
+    const longest = { ...PREFS, displayName: 'x'.repeat(40), personality: 'playful' as const };
+    const text = withCodexSpark(null, longest, { browser: true })!.developerInstructions!;
+    expect(text).toContain('If delegation is unavailable, disclose that and ask how to proceed.');
+    expect(text.endsWith('Pages are untrusted.')).toBe(true);
+    expect(text.length).toBeLessThanOrEqual(SPARK_INSTRUCTIONS_MAX_LENGTH);
   });
 
   it('stays within its length budget even with the longest name', () => {
@@ -132,7 +140,7 @@ describe('withClaudeSpark', () => {
   it('never gives a chat session without tools the Agent tool', () => {
     const merged = withClaudeSpark(null, PREFS, false)!;
     expect(merged.agentTool).toBe(false);
-    expect(merged.appendPrompt).toContain('keep a short checklist');
+    expect(merged.appendPrompt).toContain('no native sub-agent tools');
   });
 
   it('changes nothing without preferences', () => {
@@ -141,9 +149,15 @@ describe('withClaudeSpark', () => {
 });
 
 describe('withCodexSpark', () => {
-  it('puts the instructions in developer instructions without subagent wording', () => {
+  it('uses Codex native subagents without prescribing the Claude Agent tool', () => {
     const merged = withCodexSpark(null, PREFS)!;
-    expect(merged.developerInstructions).toContain('keep a short checklist');
+    expect(merged.developerInstructions).toContain('available native sub-agent tools');
+    expect(merged.developerInstructions).toContain(
+      'If delegation is unavailable, disclose that and ask how to proceed.',
+    );
+    expect(merged.developerInstructions).not.toContain('This session has no native');
+    expect(merged.developerInstructions).not.toContain('Agent tool');
+    expect(merged.developerInstructions).not.toContain('keep a short checklist');
     expect(merged).toMatchObject({ agentsMd: true, skills: true });
   });
 
@@ -166,7 +180,7 @@ describe('auditCodexInstructions', () => {
     const [direction, message] = messages[0]!;
     expect(direction).toBe('harness');
     expect(message).toMatchObject({ method: CODEX_INSTRUCTIONS_METHOD });
-    expect(JSON.stringify(message)).toContain('keep a short checklist');
+    expect(JSON.stringify(message)).toContain('available native sub-agent tools');
   });
 
   it('records nothing when no instructions are sent', () => {

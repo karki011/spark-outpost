@@ -30,24 +30,17 @@ import { OnScreenChat, onScreenChatId } from '../conversations/on-screen.ts';
 import { isDocLinkOpen, leaveDocs, useDocLinks } from '../docs/doc-route.ts';
 import { DocsSkeleton } from '../docs/DocsSkeleton.tsx';
 import { Home } from '../home/Home.tsx';
-import { Onboarding } from '../onboarding/Onboarding.tsx';
 import { OutpostHost } from '../outposts/OutpostHost.tsx';
 import { ResetHost } from '../reset/ResetHost.tsx';
 import { SessionPaletteHost } from '../sessions/SessionPaletteHost.tsx';
-import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
-import { useSettingsRequests } from '../settings/settings-request.ts';
-import {
-  currentProviderRoute,
-  leaveProviderRoute,
-  onProviderRoute,
-} from '../providers/provider-route.ts';
-import { SHOW_ISLAND_LABEL } from '../settings/DesktopCompanionSetting.tsx';
+import { useSettingsState } from '../settings/use-settings-state.ts';
+import { useAppMenu } from '../desktop/use-app-menu.ts';
+import { LEVEL_LABEL } from '../settings/setting-labels.ts';
 import { requestSettingFocus } from '../settings/setting-focus.ts';
-import { LEVEL_LABEL } from '../spark/LevelSetting.tsx';
-import { requestFeedback } from '../help/feedback-request.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { FreezeWhileHidden } from '../ui/FreezeWhileHidden.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
+import { useOutpostRoute } from './use-outpost-route.ts';
 import { TicketsViewSkeleton } from '../tickets/TicketsViewSkeleton.tsx';
 import { unseenNotices } from '../tickets/ticket-model.ts';
 import { ticketKeys } from '../tickets/tickets-api.ts';
@@ -61,24 +54,39 @@ import { ReconnectBanner } from './connection/ReconnectBanner.tsx';
 import { LivePausedHint } from './live/LivePausedHint.tsx';
 import { useAppEvents } from './live/use-app-events.ts';
 import { useFirstContent } from './first-content.ts';
-import { Analytics, OutpostView, Phone, preloadView, Tickets, Today } from './lazy-views.tsx';
+import {
+  Analytics,
+  BrowserView,
+  Onboarding,
+  OutpostView,
+  Phone,
+  preloadSettings,
+  preloadView,
+  SettingsDialog,
+  Tickets,
+  Today,
+} from './lazy-views.tsx';
 import { JoinShortcut } from '../calendar/JoinShortcut.tsx';
 import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
+import { readHomeDraftId, saveHomeDraftId } from '../home/home-draft.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
 import { DefaultLevelNotice } from '../spark/DefaultLevelNotice.tsx';
 import { PasskeyOffer } from '../phone/PasskeyOffer.tsx';
-import { openTeammateSheet } from '../teammates/teammate-store.ts';
 import { useAttentionTitle } from './use-attention-title.ts';
+import { useAlertingChats } from '../attention/use-attention.ts';
 import { useAttentionReport } from '../desktop/use-attention-report.ts';
 import { useChatRequests } from './chat-request.ts';
 import { useSlackPresence } from '../slack/use-slack-presence.ts';
 import { useCloseSeenNotifications } from '../phone/close-seen-notifications.ts';
 import { useNotificationChats } from '../phone/use-notification-chats.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
+import { useChatRetention } from './chat-retention.ts';
 import { startIdleMotion } from './idle-motion.ts';
+import { useDesktopSettingsOpener } from './use-desktop-settings-opener.ts';
 import '../ui/controls.css';
 import { openTodayEvent, useTodayOpener } from '../calendar/today-request.ts';
+import { browserViewAvailable, useBrowserViewOpener } from '../browser-view/view-store.ts';
 
 const StableChatView = memo(ChatView);
 
@@ -95,22 +103,17 @@ function ChatShell({ entering }: { entering: boolean }) {
   const live = useAppEvents();
   const connection = useConnection();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [openOutpostId, setOpenOutpostId] = useState<string | null>(null);
-  const [outpostJumpTo, setOutpostJumpTo] = useState<string | null>(null);
-  const selectChat = useCallback((id: string) => {
-    setSelectedId(id);
-    setOpenOutpostId(null);
-  }, []);
-  const [draftId, setDraftId] = useState(newDraftId);
-  const [settings, setSettingsState] = useState<SettingsSection | null>(() =>
-    currentProviderRoute() ? 'ai' : null,
+  const { route: outpost, show: showOutpost, close: closeOutpost } = useOutpostRoute();
+  const openOutpostId = outpost?.id ?? null;
+  const selectChat = useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      closeOutpost();
+    },
+    [closeOutpost],
   );
-  const setSettings = useCallback((next: SettingsSection | null) => {
-    if (next !== 'ai') leaveProviderRoute();
-    setSettingsState(next);
-  }, []);
-  useSettingsRequests(setSettings);
-  useEffect(() => onProviderRoute(() => setSettingsState('ai')), []);
+  const [draftId, setDraftId] = useState(newDraftId);
+  const [settings, setSettings] = useSettingsState();
   const [storedView, setViewState] = useState<AppView>(() =>
     isDocLinkOpen() ? 'docs' : readSavedView(),
   );
@@ -123,7 +126,11 @@ function ChatShell({ entering }: { entering: boolean }) {
     setView('docs');
     setSettings(null);
   });
-  const [homeDraftId, setHomeDraftId] = useState(newDraftId);
+  const [homeDraftId, setHomeDraftId] = useState(readHomeDraftId);
+  const rotateHomeDraft = useCallback((next: string) => {
+    saveHomeDraftId(next);
+    setHomeDraftId(next);
+  }, []);
   const [ticketFocus, setTicketFocus] = useState<string | null>(null);
   const openTicket = useCallback(
     (itemId: string) => {
@@ -139,7 +146,8 @@ function ChatShell({ entering }: { entering: boolean }) {
     queryFn: api.listConversations,
   });
   const chats = conversations.data ?? [];
-  const waiting = attention(chats, null).count;
+  const alerting = useAlertingChats();
+  const waiting = attention(chats, null, alerting).count;
   const { inbox } = useTicketInbox();
   const ticketsWaiting = (inbox.data?.tickets ?? []).filter(
     (ticket) => ticket.section === 'attention',
@@ -147,10 +155,14 @@ function ChatShell({ entering }: { entering: boolean }) {
   const ticketNotices = unseenNotices(inbox.data?.tickets ?? []);
   const layout = useSidebarLayoutState(waiting > 0);
   const { remote } = useRemoteClient();
-  const hiddenView = (layout.narrow && storedView === 'map') || (remote && storedView === 'today');
+  const hiddenView =
+    (layout.narrow && (storedView === 'map' || storedView === 'browser')) ||
+    (remote && storedView === 'today') ||
+    (storedView === 'browser' && (remote || !browserViewAvailable()));
   const view: AppView = hiddenView ? 'home' : storedView;
   useAttentionTitle(waiting);
   useAttentionReport(conversations.data);
+  useAppMenu({ sidebarShown: !layout.hidden });
   const finished = chats.some((chat) => rowState(chat, false).tone === 'done');
   const mood =
     waiting > 0 ? 'alert' : chats.some(isRunning) ? 'working' : finished ? 'happy' : null;
@@ -182,9 +194,8 @@ function ChatShell({ entering }: { entering: boolean }) {
     layout.closeDrawer();
   });
 
-  const openOutpost = useStableCallback((id: string, postId?: string) => {
-    setOpenOutpostId(id);
-    setOutpostJumpTo(postId ?? null);
+  const openOutpost = useStableCallback((id: string, postId?: string, thread?: boolean) => {
+    showOutpost(id, postId, thread);
     setView('chats');
     layout.closeDrawer();
   });
@@ -208,37 +219,14 @@ function ChatShell({ entering }: { entering: boolean }) {
     setView('today');
   }, [setSettings, setView]);
   useTodayOpener(showToday);
+  const showBrowserView = useCallback(() => {
+    setSettings(null);
+    setView('browser');
+  }, [setSettings, setView]);
+  useBrowserViewOpener(showBrowserView);
   useSlackPresence(remote);
   useNotificationChats(remote, openChat);
-  useEffect(() => sparkDesktop()?.help?.onOpenFeedback(requestFeedback), []);
-  useEffect(
-    () =>
-      sparkDesktop()?.onOpenSettings?.((target) => {
-        if (target === 'sparks') {
-          setSettings('sparks');
-          return;
-        }
-        if (target === 'connectors') {
-          setSettings('tools');
-          return;
-        }
-        if (target === 'spark-new') {
-          openTeammateSheet({ kind: 'create' });
-          return;
-        }
-        if (target.startsWith('today:')) {
-          openTodayEvent(target.slice('today:'.length));
-          return;
-        }
-        if (target.startsWith('spark-edit:')) {
-          openTeammateSheet({ kind: 'edit', id: target.slice('spark-edit:'.length) });
-          return;
-        }
-        requestSettingFocus(SHOW_ISLAND_LABEL);
-        setSettings('notifications');
-      }),
-    [setSettings],
-  );
+  useDesktopSettingsOpener(setSettings);
 
   const openAtCard = (chat: ConversationSummary) => {
     openChat(chat.id);
@@ -255,6 +243,7 @@ function ChatShell({ entering }: { entering: boolean }) {
     settingsOpen: settings !== null,
     activeId,
   });
+  useChatRetention(activeId);
   const viewedHere = useChatViewed(onScreenId);
   useMarkSeen(viewedHere ? onScreenId : null, chats);
   useCloseSeenNotifications(remote, chats, viewedHere ? onScreenId : null);
@@ -280,6 +269,7 @@ function ChatShell({ entering }: { entering: boolean }) {
             ticketNotices={ticketNotices}
             mood={mood}
             onIntent={preloadView}
+            onSettingsIntent={preloadSettings}
             onView={(next) => {
               setView(next);
               if (next === 'chats' && layout.collapsed && !layout.narrow) layout.reveal();
@@ -312,9 +302,10 @@ function ChatShell({ entering }: { entering: boolean }) {
                   <OutpostView
                     key={openOutpostId}
                     id={openOutpostId}
-                    jumpTo={outpostJumpTo}
+                    jumpTo={outpost?.jumpTo}
+                    openThread={outpost?.thread}
                     onOpenChat={openChat}
-                    onGone={() => setOpenOutpostId(null)}
+                    onGone={closeOutpost}
                   />
                 </Suspense>
               )}
@@ -327,7 +318,7 @@ function ChatShell({ entering }: { entering: boolean }) {
               mood={mood}
               draftId={homeDraftId}
               onOpenChat={openAtCard}
-              onRotateDraft={setHomeDraftId}
+              onRotateDraft={rotateHomeDraft}
               onOpenId={openChat}
               onChats={() => setView('chats')}
               onTickets={(itemId) => {
@@ -337,6 +328,11 @@ function ChatShell({ entering }: { entering: boolean }) {
               onUsage={() => setSettings('usage')}
               onProviders={() => setSettings('ai')}
             />
+          )}
+          {view === 'browser' && (
+            <Suspense fallback={<main className="page" aria-label="Browser" aria-busy="true" />}>
+              <BrowserView chats={chats} onOpenChat={openChat} />
+            </Suspense>
           )}
           {view === 'today' && (
             <Suspense fallback={<main className="page" aria-label="Today" aria-busy="true" />}>
@@ -390,7 +386,12 @@ function ChatShell({ entering }: { entering: boolean }) {
           )}
           <StatusCompanion
             chats={chats}
-            visible={!layout.narrow && view !== 'map' && (view !== 'chats' || activeId === null)}
+            visible={
+              !layout.narrow &&
+              view !== 'map' &&
+              view !== 'browser' &&
+              (view !== 'chats' || activeId === null)
+            }
             onOpenChat={openAtCard}
             onHome={() => setView('home')}
           />
@@ -407,16 +408,17 @@ function ChatShell({ entering }: { entering: boolean }) {
           <TeammateHost />
           <AnimatePresence>
             {settings && (
-              <SettingsDialog
-                key="settings"
-                section={settings}
-                onSection={setSettings}
-                onClose={() => setSettings(null)}
-                onOpenChat={(id) => {
-                  setSettings(null);
-                  openChat(id);
-                }}
-              />
+              <Suspense key="settings" fallback={null}>
+                <SettingsDialog
+                  section={settings}
+                  onSection={setSettings}
+                  onClose={() => setSettings(null)}
+                  onOpenChat={(id) => {
+                    setSettings(null);
+                    openChat(id);
+                  }}
+                />
+              </Suspense>
             )}
           </AnimatePresence>
         </div>
@@ -462,7 +464,9 @@ export function App() {
           <ChatShell entering={entering} />
         </DocsReachable>
       ) : (
-        <Onboarding onFinished={handleOnboardingFinished} />
+        <Suspense fallback={<div className="app" aria-hidden="true" />}>
+          <Onboarding onFinished={handleOnboardingFinished} />
+        </Suspense>
       )}
       {connection.lost && <ReconnectBanner />}
       {!connection.lost && setup.data.profile.onboardingCompleted && <PauseBanner />}

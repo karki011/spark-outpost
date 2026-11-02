@@ -5,7 +5,7 @@ import { createTestApp } from './app-support.ts';
 import { pairDevice, remoteClient, setSwitches, turnRemoteOn } from './remote-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
-const STREAMS = new Set(['GET /api/events']);
+const STREAMS = new Set(['GET /api/events', 'GET /api/run-events']);
 const WEB_APP_ROUTE = 'GET /{*path}';
 const ANSWER_WITHIN_MS = 4000;
 const DERIVED_ROWS = [
@@ -20,7 +20,7 @@ beforeEach(async () => {
   t = await createTestDb();
   app = createTestApp(t);
   await turnRemoteOn(app);
-  await setSwitches(app, { terminal: true, terminalApprove: true });
+  await setSwitches(app, { terminal: true, terminalApprove: true, artifacts: true });
 });
 
 afterEach(async () => {

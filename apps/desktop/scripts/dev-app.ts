@@ -108,8 +108,10 @@ export const PASSED_ENV = [
   'SPARK_CALENDAR_SEED',
   'SPARK_CALENDAR_SEED_STATE',
   'SPARK_CALENDAR_SEED_ONE',
+  'SPARK_FAKE_ASSISTIVE',
   'SPARK_FAKE_OPEN_EXTERNAL',
   'SPARK_TEST_LIVE_SESSION_IDLE_MS',
+  'SPARK_VOICE_FILE_INPUT',
 ] as const;
 
 function envArgs(options: OpenOptions): string[] {
@@ -221,11 +223,19 @@ export function missingPrerequisites(
     path.join(repoRoot, 'apps/web/dist/index.html'),
   ].filter((file) => !exists(file));
   const helper = path.join(repoRoot, '.local/mac-control', arch, 'spark-mac-control');
-  const warnings = exists(helper)
-    ? []
-    : [
-        `No Mac control helper at ${helper}; run pnpm desktop:mac-control there to use Mac control.`,
-      ];
+  const addon = path.join(repoRoot, '.local/no-activate', arch, 'no-activate.node');
+  const warnings = [
+    ...(exists(helper)
+      ? []
+      : [
+          `No Mac control helper at ${helper}; run pnpm desktop:mac-control there to use Mac control.`,
+        ]),
+    ...(exists(addon)
+      ? []
+      : [
+          `No no-activate addon at ${addon}; run pnpm desktop:no-activate there, or clicks on Spark Island bring Spark forward.`,
+        ]),
+  ];
   return { missing, warnings };
 }
 

@@ -94,7 +94,14 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await expect(git).toContainText(/Git \d+\.\d+/);
   await expect(git).toContainText('Found');
   const tools = dialog(page).locator('.cx-card');
-  const names = ['GitHub', 'Jira', 'Linear', 'Slack', ...(CALENDAR_HOST ? ['Calendar'] : [])];
+  const names = [
+    'GitHub',
+    'Jira',
+    'Linear',
+    'Slack',
+    'ServiceNow',
+    ...(CALENDAR_HOST ? ['Calendar'] : []),
+  ];
   await expect(tools).toHaveCount(names.length);
   for (const [index, name] of names.entries()) await expect(tools.nth(index)).toContainText(name);
   await expect(dialog(page).locator('.cx-card button.pc-head')).toHaveCount(names.length);
@@ -141,42 +148,56 @@ test('Meet Spark sets the personality, and the blob reacts', async ({ page }) =>
     .poll(async () => (await (await page.request.get('/api/setup')).json()).profile.personality)
     .toBe('playful');
 
-  const profile = (await (await page.request.get('/api/setup')).json()).profile;
-  expect(profile).toMatchObject({
-    displayName: 'Sam Rivera',
-    personality: 'playful',
-  });
+  await expect
+    .poll(async () => (await (await page.request.get('/api/setup')).json()).profile.displayName)
+    .toBe('Sam Rivera');
   await continueButton(page).click();
-  await expect(dialog(page).getByRole('heading', { name: 'Pick a theme' })).toBeVisible();
+  await expect(dialog(page).getByRole('heading', { name: 'Pick a look' })).toBeVisible();
 });
 
-test('the theme step applies the chosen theme and remembers it', async ({ page }) => {
+test('the look step follows the system, pairs tints and remembers the choice', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/');
   await nameField(page).fill('Hazel');
   await continueButton(page).click();
   const previewBackground = (skin: string) =>
     dialog(page)
-      .locator(`.tprev[data-skin="${skin}"]`)
+      .locator(`.tprev-half[data-skin="${skin}"]`)
       .evaluate((element) => getComputedStyle(element).backgroundColor);
   expect(await previewBackground('moss')).toBe('rgb(17, 20, 14)');
   expect(await previewBackground('fjord')).toBe('rgb(237, 241, 245)');
   expect(await previewBackground('lagoon')).toBe('rgb(232, 242, 241)');
   expect(await previewBackground('plum')).toBe('rgb(21, 15, 23)');
   expect(await previewBackground('sage')).toBe('rgb(236, 239, 228)');
+  expect(await previewBackground('loam')).toBe('rgb(19, 18, 13)');
   expect(await previewBackground('aurora')).toBe('rgb(17, 15, 38)');
   expect(await previewBackground('iris')).toBe('rgb(243, 240, 254)');
-  await expect(dialog(page).getByRole('radio')).toHaveCount(12);
-  expect(await columnCount(page)).toBe(4);
+  const modes = dialog(page).getByRole('radiogroup', { name: 'Appearance' });
+  await expect(modes.getByRole('radio', { name: 'Automatic' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  const tints = dialog(page).getByRole('radiogroup', { name: 'Tint' });
+  await expect(tints.getByRole('radio')).toHaveCount(6);
+  await expect(tints.getByRole('radio', { name: 'Graphite' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  expect(await columnCount(page)).toBe(3);
   const preview = await dialog(page).locator('.tprev').first().boundingBox();
   expect(preview?.height).toBeLessThanOrEqual(130);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(() => columnCount(page)).toBe(2);
   await page.setViewportSize({ width: 1280, height: 720 });
 
-  const apricot = dialog(page).getByRole('radio', { name: 'Apricot' });
+  const apricot = tints.getByRole('radio', { name: 'Apricot · Plum' });
   await apricot.click();
   await expect(apricot).toHaveAttribute('aria-checked', 'true');
-  expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('apricot');
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'apricot');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'plum');
+  await modes.getByRole('radio', { name: 'Light' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-skin', 'apricot');
 
   await page.reload();
   expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('apricot');
@@ -232,7 +253,7 @@ test('each step centres its column in the panel and the footer lines up with it'
   await nameField(page).fill('Hazel');
   await expectCentred();
   await continueButton(page).click();
-  await expect(dialog(page).getByRole('heading', { name: 'Pick a theme' })).toBeVisible();
+  await expect(dialog(page).getByRole('heading', { name: 'Pick a look' })).toBeVisible();
   await expect(dialog(page).locator('.pane')).toHaveCount(1);
   await expectCentred();
 });

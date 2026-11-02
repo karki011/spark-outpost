@@ -25,9 +25,12 @@ import {
   FAKE_TAILSCALE_STATE,
   MAP_ROOT_PREFIX,
   PACKAGED,
+  TEST_DATA_DIR,
   SERVER_LOG_DIR,
   SIGN_IN_FIXTURE,
   slot,
+  SPARK_MANAGED_RULES_FILE,
+  SPARK_RULES_FILE,
   STUB_PORT,
   TEST_DATABASE_URL,
   TEST_TMPDIR,
@@ -44,12 +47,17 @@ const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
 process.env.SPARK_BROWSER_API_TOKEN ??= randomBytes(32).toString('base64url');
 const apiToken = process.env.SPARK_BROWSER_API_TOKEN;
 
+const builtTmux = path.resolve('.local/tmux', process.arch, 'bin/tmux');
 const serverEnv = {
+  SPARK_DATA_DIR: TEST_DATA_DIR,
+  ...(existsSync(builtTmux) ? { SPARK_TMUX_BIN: builtTmux } : {}),
   PATH: `${path.resolve('tests/browser/bin')}:${FAKE_CLAUDE_BIN}:/usr/bin:/bin`,
   CLI_LOOKUP_LOGIN_SHELL: 'false',
   FAKE_CODEX_STATE,
   FAKE_GH_STATE,
   FAKE_TAILSCALE_STATE,
+  SPARK_RULES_FILE,
+  SPARK_MANAGED_RULES_FILE,
   SPARK_FAKE_CALENDAR_STATE: FAKE_CALENDAR_STATE,
   FAKE_GH_NODE: process.execPath,
   FAKE_GH_API: `${STUB_URL}/github`,
@@ -77,6 +85,7 @@ const serverEnv = {
   AGENT_RUNTIME: 'fake',
   OUTCOME_SAMPLE_RATE: '0',
   MORNING_BRIEF: 'false',
+  ARCHIVE_SWEEP: 'false',
   MAP_ROOT_PREFIX,
   CLONE_TEST_ROOT,
   PAIRING_TEST_ATTEMPTS_PER_MINUTE: '1000',
@@ -101,9 +110,15 @@ const serverEnv = {
 
 const node = JSON.stringify(process.execPath);
 const serverCommand = (entry: string) => `${node} --import tsx ${entry}`;
+const workerFakes = [
+  process.env.SPARK_FAKE_BROWSER === '1' ? 'fake-browser-host.ts' : null,
+  process.env.SPARK_FAKE_CALENDAR === '1' ? 'fake-calendar-host.ts' : null,
+]
+  .filter((fake) => fake !== null)
+  .map((fake) => `--import ../../tests/browser/${fake}`);
 const workerCommand =
-  process.env.SPARK_FAKE_BROWSER === '1'
-    ? `${node} --import tsx --import ../../tests/browser/fake-browser-host.ts src/workflow/main.ts`
+  workerFakes.length > 0
+    ? `${node} --import tsx ${workerFakes.join(' ')} src/workflow/main.ts`
     : serverCommand('src/workflow/main.ts');
 const apiCommand =
   process.env.SPARK_FAKE_CALENDAR === '1'

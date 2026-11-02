@@ -2,19 +2,19 @@ import './spark-action-card.css';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
+  ARTIFACT_KIND_LABELS,
   editableFields,
+  serviceNowAsksAlways,
   sparkActionQuestion,
-  ticketPriorityNameSchema,
   ticketSourceNames,
-  ticketStatusLabels,
-  ticketStatusSchema,
   type Approval,
   type ApprovalDecidedValue,
+  type ApprovalOption,
   type SparkAction,
-  type SparkActionEdits,
 } from '@spark-outpost/contracts';
 import { approvalsApi } from '../../api/approvals.ts';
-import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
+import { formatBytes } from '../../api/attachments.ts';
+import { WarnIcon } from '../../ui/icons.tsx';
 import { HoldToConfirm } from '../../ui/HoldToConfirm.tsx';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { isAllow } from './approval-outcome.ts';
@@ -23,88 +23,16 @@ import { HandoffFacts, SignInFacts } from './SignInFacts.tsx';
 import { MacFacts, macByline, macNote } from './MacFacts.tsx';
 import { CalendarFacts, calendarByline, calendarNote } from './CalendarFacts.tsx';
 import { AtlassianFacts, atlassianByline, atlassianNote } from './AtlassianFacts.tsx';
+import { ServiceNowFacts, serviceNowByline, serviceNowNote } from './ServiceNowFacts.tsx';
 import { SiteFacts } from './SiteFacts.tsx';
 import { OutpostStartFacts, outpostStartByline, outpostStartNote } from './OutpostStartFacts.tsx';
 import { siteByline, siteNote } from './site-card-text.ts';
 import { PrFollowUpFacts, PrRoundFacts } from './PrFollowUpFacts.tsx';
 import { McpActionFacts } from '../../settings/mcp/McpActionFacts.tsx';
 import { TeammateFacts } from '../../teammates/TeammateFacts.tsx';
-
-interface Draft {
-  title: string;
-  description: string;
-  body: string;
-  type: string | null;
-  priority: string;
-  labels: string;
-  status: string;
-  to: string;
-  skip: string[];
-}
-
-const STATUS_CHOICES = ticketStatusSchema.options.map((status) => ({
-  id: status,
-  label: ticketStatusLabels[status],
-}));
-
-function nameChoices(action: SparkAction, current: string) {
-  const names = action.action === 'transition_ticket' ? (action.choices ?? []) : [];
-  return [...new Set([...names, current])].map((name) => ({ id: name, label: name }));
-}
-
-const PRIORITY_CHOICES = [
-  { id: '', label: 'None' },
-  ...ticketPriorityNameSchema.options.map((priority) => ({
-    id: priority,
-    label: priority[0]!.toUpperCase() + priority.slice(1),
-  })),
-];
-
-const TEXT_LABELS: Partial<Record<SparkAction['action'], string>> = {
-  comment_ticket: 'Comment',
-  post_slack: 'Slack message',
-};
-
-function draftOf(action: SparkAction): Draft {
-  return {
-    title: 'title' in action ? action.title : '',
-    description: action.action === 'create_ticket' ? action.description : '',
-    body: 'body' in action ? (action.body ?? '') : '',
-    type: action.action === 'create_ticket' ? action.type : null,
-    priority: action.action === 'create_ticket' ? (action.priority ?? '') : '',
-    labels: action.action === 'create_ticket' ? action.labels.join(', ') : '',
-    status: action.action === 'transition_ticket' ? action.status : '',
-    to: action.action === 'transition_ticket' ? (action.to ?? '') : '',
-    skip: action.action === 'pr_follow_up' ? action.skip : [],
-  };
-}
-
-function editsOf(action: SparkAction, draft: Draft): SparkActionEdits {
-  const before = draftOf(action);
-  const edits: SparkActionEdits = {};
-  for (const field of editableFields(action.action)) {
-    if (field === 'skip') {
-      if (draft.skip.length > 0) edits.skip = draft.skip;
-      continue;
-    }
-    if (draft[field] === before[field]) continue;
-    if (field === 'labels') {
-      edits.labels = draft.labels
-        .split(',')
-        .map((label) => label.trim())
-        .filter(Boolean);
-    } else if (field === 'priority') {
-      edits.priority = ticketPriorityNameSchema.safeParse(draft.priority).data ?? null;
-    } else if (field === 'status') {
-      edits.status = ticketStatusSchema.parse(draft.status);
-    } else if (field === 'type') {
-      edits.type = draft.type?.trim() || null;
-    } else {
-      edits[field] = draft[field];
-    }
-  }
-  return edits;
-}
+import { useRemoteClient } from '../../phone/use-remote-client.ts';
+import { draftOf, editsOf, Fields } from './SparkActionFields.tsx';
+import { RULES_ON_THE_MAC, RulesEditFacts, rulesByline, rulesNote } from './RulesEditFacts.tsx';
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -193,6 +121,9 @@ function Facts({ action }: { action: SparkAction }) {
     case 'jira_edit':
     case 'confluence_edit':
       return <AtlassianFacts action={action} />;
+    case 'servicenow_read':
+    case 'servicenow_edit':
+      return <ServiceNowFacts action={action} />;
     case 'post_slack':
       return (
         <dl className="sac-facts">
@@ -215,8 +146,21 @@ function Facts({ action }: { action: SparkAction }) {
       );
     case 'start_outpost':
       return <OutpostStartFacts action={action} />;
+    case 'rules_edit':
+      return <RulesEditFacts action={action} />;
+    case 'publish_artifact':
+      return (
+        <dl className="sac-facts">
+          <Fact label="Artifact">{action.title}</Fact>
+          <Fact label="Kind">
+            {ARTIFACT_KIND_LABELS[action.kind]}, version {action.version}
+          </Fact>
+          <Fact label="Size">{formatBytes(action.bytes)}</Fact>
+        </dl>
+      );
     case 'open_pr':
     case 'pr_follow_up':
+    case 'ask_spark':
       return null;
   }
 }
@@ -228,7 +172,9 @@ function byline(action: SparkAction, agent: string, secretFiles?: readonly strin
     macByline(action, agent) ??
     calendarByline(action, agent) ??
     atlassianByline(action, agent) ??
-    outpostStartByline(action, agent);
+    serviceNowByline(action, agent) ??
+    outpostStartByline(action, agent) ??
+    rulesByline(action);
   if (mac) return mac;
   if (action.action === 'pr_follow_up') {
     return 'Spark fixed the PR feedback in this chat. Confirm to push and reply on GitHub.';
@@ -240,7 +186,12 @@ function confirmNote(action: SparkAction, secretFiles?: readonly string[]): stri
   const site = siteNote(action, secretFiles);
   if (site) return site;
   const mac =
-    macNote(action) ?? calendarNote(action) ?? atlassianNote(action) ?? outpostStartNote(action);
+    macNote(action) ??
+    calendarNote(action) ??
+    atlassianNote(action) ??
+    serviceNowNote(action) ??
+    outpostStartNote(action) ??
+    rulesNote(action);
   if (mac) return mac;
   if (action.action === 'pr_follow_up') {
     return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';
@@ -256,107 +207,6 @@ function takeover(action: SparkAction): string | null {
     return null;
   }
   return `${action.ticket.key} is assigned to ${action.currentAssignee}. Confirming takes it over.`;
-}
-
-interface FieldsProps {
-  action: SparkAction;
-  draft: Draft;
-  onChange: (next: Draft) => void;
-  disabled: boolean;
-}
-
-function Fields({ action, draft, onChange, disabled }: FieldsProps) {
-  const id = useId();
-  const fields = editableFields(action.action);
-  const set = (field: keyof Draft) => (value: string) => onChange({ ...draft, [field]: value });
-  return (
-    <div className="sac-fields">
-      {fields.includes('title') && (
-        <label className="field" htmlFor={`${id}-title`}>
-          <span>Title</span>
-          <input
-            id={`${id}-title`}
-            className="inp"
-            value={draft.title}
-            disabled={disabled}
-            onChange={(event) => set('title')(event.target.value)}
-          />
-        </label>
-      )}
-      {(fields.includes('description') || fields.includes('body')) && (
-        <label className="field" htmlFor={`${id}-text`}>
-          <span>{TEXT_LABELS[action.action] ?? 'Description'}</span>
-          <textarea
-            id={`${id}-text`}
-            className="inp"
-            rows={5}
-            value={fields.includes('body') ? draft.body : draft.description}
-            disabled={disabled}
-            onChange={(event) =>
-              set(fields.includes('body') ? 'body' : 'description')(event.target.value)
-            }
-          />
-        </label>
-      )}
-      {fields.includes('status') && (
-        <div className="field">
-          <span>Move to</span>
-          {draft.to ? (
-            <ChoicePicker
-              label="Move to"
-              choices={nameChoices(action, draft.to)}
-              value={draft.to}
-              onChange={set('to')}
-            />
-          ) : (
-            <ChoicePicker
-              label="Move to"
-              choices={STATUS_CHOICES}
-              value={draft.status}
-              onChange={set('status')}
-            />
-          )}
-        </div>
-      )}
-      {fields.includes('priority') && (
-        <div className="sac-row">
-          <label className="field" htmlFor={`${id}-type`}>
-            <span>Type</span>
-            <input
-              id={`${id}-type`}
-              className="inp"
-              placeholder={
-                action.action === 'create_ticket' && action.source === 'jira' ? 'Task' : 'None'
-              }
-              value={draft.type ?? ''}
-              disabled={disabled}
-              onChange={(event) => set('type')(event.target.value)}
-            />
-          </label>
-          <div className="field">
-            <span>Priority</span>
-            <ChoicePicker
-              label="Priority"
-              choices={PRIORITY_CHOICES}
-              value={draft.priority}
-              onChange={set('priority')}
-            />
-          </div>
-          <label className="field" htmlFor={`${id}-labels`}>
-            <span>Labels</span>
-            <input
-              id={`${id}-labels`}
-              className="inp"
-              placeholder="Comma separated"
-              value={draft.labels}
-              disabled={disabled}
-              onChange={(event) => set('labels')(event.target.value)}
-            />
-          </label>
-        </div>
-      )}
-    </div>
-  );
 }
 
 export function SparkActionCard({
@@ -387,7 +237,8 @@ export function SparkActionCard({
     onSuccess: onDecided,
   });
   const confirmRef = useRef<HTMLButtonElement>(null);
-  const requested = approval.payload.sparkRequested === true;
+  const callerSees = serviceNowAsksAlways(action);
+  const requested = approval.payload.sparkRequested === true && !callerSees;
   useEffect(() => {
     if (!requested) return;
     const active = document.activeElement;
@@ -398,16 +249,22 @@ export function SparkActionCard({
   const secretFiles = approval.payload.secretSend;
   const holdOption = secretFiles ? approval.options.find(isAllow) : undefined;
   const blankTitle = editableFields(action.action).includes('title') && !draft.title.trim();
+  const { remote } = useRemoteClient();
+  const onTheMac = remote && action.action === 'rules_edit';
+  const shown = approval.options.filter((option) => option !== holdOption);
+  const primary = shown.find(isAllow);
+  const buttonClass = (option: ApprovalOption) =>
+    option === primary ? 'btn primary sm' : isAllow(option) ? 'btn line sm' : 'btn ghost sm deny';
   return (
     <div
-      className="appr sac"
+      className={callerSees ? 'appr sac sac-caller' : 'appr sac'}
       role="group"
       aria-labelledby={headingId}
       id={approvalAnchor(approval.id)}
     >
       <div className="appr-h">
         <span className="ic" aria-hidden="true">
-          <i className="appr-dia" />
+          {callerSees ? <WarnIcon /> : <i className="appr-dia" />}
         </span>
         <span id={headingId}>
           <b>{secretFiles ? 'Send a secret value?' : sparkActionQuestion(action)}</b>{' '}
@@ -437,22 +294,24 @@ export function SparkActionCard({
           onConfirm={() => decide.mutate(holdOption.optionId)}
         />
       )}
-      <div className="appr-acts">
-        {approval.options
-          .filter((option) => option !== holdOption)
-          .map((option) => (
+      {onTheMac ? (
+        <p className="appr-reason">{RULES_ON_THE_MAC}</p>
+      ) : (
+        <div className="appr-acts">
+          {shown.map((option) => (
             <button
               key={option.optionId}
-              ref={isAllow(option) ? confirmRef : undefined}
+              ref={option === primary ? confirmRef : undefined}
               type="button"
-              className={isAllow(option) ? 'btn primary sm' : 'btn ghost sm deny'}
+              className={buttonClass(option)}
               disabled={decide.isPending || (isAllow(option) && blankTitle)}
               onClick={() => decide.mutate(option.optionId)}
             >
               {option.name}
             </button>
           ))}
-      </div>
+        </div>
+      )}
       {decide.isError && (
         <p className="appr-err" role="alert">
           {decide.error.message}

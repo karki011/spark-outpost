@@ -10,7 +10,7 @@ import {
 } from './native-terminal-fixture.ts';
 import { pickTerminalAgent } from './native-terminal-support.ts';
 import { chatRepo } from './project-chat-kit.ts';
-import { openChats } from './navigation.ts';
+import { chooseSessionType, openChats } from './navigation.ts';
 import { connectTickets, openTickets, resetTicketFakes } from './ticket-seed.ts';
 
 test.beforeEach(async () => {
@@ -22,15 +22,11 @@ test('terminal launch selection preserves chat and lets the user pick a native a
 }) => {
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  const choice = page.getByRole('radiogroup', { name: 'Session type' });
-  await expect(choice.getByRole('radio', { name: 'Chat', exact: true })).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
-  await choice.getByRole('radio', { name: 'Terminal' }).click();
+  await expect(page.getByRole('button', { name: 'Session type: Chat' })).toBeVisible();
+  await chooseSessionType(page, 'Terminal');
   await expect(page.getByRole('heading', { name: 'Work in your terminal' })).toBeVisible();
   const composer = page.locator('.composer-wrap');
-  await expect(composer.getByRole('radiogroup', { name: 'Session type' })).toBeVisible();
+  await expect(composer.getByRole('button', { name: 'Session type: Terminal' })).toBeVisible();
   await expect(composer.getByRole('button', { name: 'Choose project', exact: true })).toBeVisible();
   await expect(composer.getByRole('button', { name: /^Permissions: / })).toBeVisible();
   await expect(composer).toContainText('Terminal sessions don’t open pull requests automatically');
@@ -43,7 +39,7 @@ test('terminal launch selection preserves chat and lets the user pick a native a
     .getByRole('textbox', { name: 'What would you like to work on?' })
     .fill('Inspect this project.');
   await expect(page.getByRole('button', { name: 'Start terminal', exact: true })).toBeEnabled();
-  await choice.getByRole('radio', { name: 'Chat', exact: true }).click();
+  await chooseSessionType(page, 'Chat');
   await expect(page.getByRole('button', { name: 'Start terminal', exact: true })).toHaveCount(0);
   await expect(page.locator('.composer textarea')).toBeVisible();
 });
@@ -92,8 +88,7 @@ test('ticket launch keeps Terminal separate from Plan first and Build @packaged'
 test('failed terminal creation unlocks session and agent choices @packaged', async ({ page }) => {
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  const sessions = page.getByRole('radiogroup', { name: 'Session type' });
-  await sessions.getByRole('radio', { name: 'Terminal' }).click();
+  await chooseSessionType(page, 'Terminal');
   await page
     .getByRole('textbox', { name: 'What would you like to work on?' })
     .fill('Inspect the project.');
@@ -109,9 +104,9 @@ test('failed terminal creation unlocks session and agent choices @packaged', asy
   await expect(
     page.getByRole('alert').filter({ hasText: 'Creation temporarily unavailable.' }),
   ).toBeVisible();
-  await expect(sessions.getByRole('radio', { name: 'Chat', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: /^Session type: / })).toBeEnabled();
   await pickTerminalAgent(page, 'Codex');
-  await sessions.getByRole('radio', { name: 'Chat', exact: true }).click();
+  await chooseSessionType(page, 'Chat');
   await expect(page.locator('.composer textarea')).toBeVisible();
 });
 
@@ -120,8 +115,7 @@ test('a failed first terminal launch unlocks the choices and leaves no dead sess
 }) => {
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  const sessions = page.getByRole('radiogroup', { name: 'Session type' });
-  await sessions.getByRole('radio', { name: 'Terminal' }).click();
+  await chooseSessionType(page, 'Terminal');
   const prompt = page.getByRole('textbox', { name: 'What would you like to work on?' });
   await prompt.fill('Inspect the project.');
   await page.route(/\/api\/conversations\/[^/]+\/terminal$/, async (route) => {
@@ -136,10 +130,10 @@ test('a failed first terminal launch unlocks the choices and leaves no dead sess
   await expect(
     page.getByRole('alert').filter({ hasText: 'Claude Code is not installed.' }),
   ).toBeVisible();
-  await expect(sessions.getByRole('radio', { name: 'Chat', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: /^Session type: / })).toBeEnabled();
   await page.reload();
-  await expect(sessions.getByRole('radio', { name: 'Chat', exact: true })).toBeEnabled();
-  await sessions.getByRole('radio', { name: 'Terminal' }).click();
+  await expect(page.getByRole('button', { name: /^Session type: / })).toBeEnabled();
+  await chooseSessionType(page, 'Terminal');
   await expect(prompt).toBeVisible();
 });
 
@@ -158,10 +152,7 @@ test('a starting terminal names the phase it is in and clears it when the termin
     await db.query(`UPDATE projects SET work_place = 'worktree' WHERE root_path = $1`, [repo.root]);
     await openChats(page);
     await page.getByRole('button', { name: 'New chat' }).first().click();
-    await page
-      .getByRole('radiogroup', { name: 'Session type' })
-      .getByRole('radio', { name: 'Terminal' })
-      .click();
+    await chooseSessionType(page, 'Terminal');
     await pickTerminalAgent(page, 'Codex');
     await page.getByRole('button', { name: 'Choose project', exact: true }).click();
     const folders = page.getByRole('dialog', { name: 'Project folders' });
@@ -205,10 +196,7 @@ test('a terminal opens in its worktree and is usable while dependencies are stil
     await db.query(`UPDATE projects SET work_place = 'worktree' WHERE root_path = $1`, [repo.root]);
     await openChats(page);
     await page.getByRole('button', { name: 'New chat' }).first().click();
-    await page
-      .getByRole('radiogroup', { name: 'Session type' })
-      .getByRole('radio', { name: 'Terminal' })
-      .click();
+    await chooseSessionType(page, 'Terminal');
     await pickTerminalAgent(page, 'Codex');
     await page.getByRole('button', { name: 'Choose project', exact: true }).click();
     const folders = page.getByRole('dialog', { name: 'Project folders' });

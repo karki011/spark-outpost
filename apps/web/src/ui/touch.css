@@ -15,7 +15,12 @@
     .tk .kref,
     .vstep,
     .ctx-repo,
-    .theme-menu button
+    .ctx-branch,
+    .ctx-details,
+    .session-chip,
+    .theme-menu button,
+    .mdf-tool,
+    .mdf-toggle
   ) {
     position: relative;
   }
@@ -35,7 +40,12 @@
     .tk .qa,
     .tk .kref,
     .vstep,
-    .ctx-repo
+    .ctx-repo,
+    .ctx-branch,
+    .ctx-details,
+    .session-chip,
+    .mdf-tool,
+    .mdf-toggle
   )::before {
     content: '';
     position: absolute;
@@ -44,6 +54,10 @@
     width: max(100%, 44px);
     height: max(100%, 44px);
     transform: translate(-50%, -50%);
+  }
+
+  :is(.fopt, .mopt) {
+    min-height: 44px;
   }
 
   :is(

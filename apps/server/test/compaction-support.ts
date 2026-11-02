@@ -57,7 +57,6 @@ export async function startCompactionHarness(
     db: t.db,
     providers: new Map([['claude', fakeClaude(store, commands)]]),
     leaseSeconds: 30,
-    concurrency: 2,
     pollMs: 20,
     cancelPollMs: 20,
     approvalPollMs: 20,

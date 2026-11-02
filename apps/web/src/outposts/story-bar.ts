@@ -3,12 +3,12 @@ import {
   type OutpostStory,
   type RequestState,
   type StackWarningKind,
+  type StoryPullRequest,
   type StoryTask,
 } from '@spark-outpost/contracts';
 import { countLabel } from '../ui/count-label.ts';
-import { STATE_LABELS, webLink } from './post-text.ts';
-
-export type PullMark = 'open' | 'draft' | 'merged' | 'closed';
+import { webLink } from './post-text.ts';
+import { requestStatus, statusLabel, type PullMark, type ThreadStatus } from './request-status.ts';
 
 export interface PrChipView {
   label: string;
@@ -33,6 +33,7 @@ export interface StoryRowView {
   handle: string;
   title: string;
   state: RequestState | null;
+  status: ThreadStatus | null;
   stateLabel: string;
   note: string | null;
   order: string | null;
@@ -61,11 +62,15 @@ function baseName(task: StoryTask, parent: StoryTask | null): string | null {
   return stacked ? `#${parent.pullRequest?.number}` : base;
 }
 
+export function pullMark(pull: Pick<StoryPullRequest, 'state' | 'draft'>): PullMark {
+  return pull.state === 'open' && pull.draft ? 'draft' : pull.state;
+}
+
 function chipOf(task: StoryTask, parent: StoryTask | null): PrChipView | null {
   const pull = task.pullRequest;
   if (pull === null) return null;
   const base = baseName(task, parent);
-  const mark: PullMark = pull.state === 'open' && pull.draft ? 'draft' : pull.state;
+  const mark = pullMark(pull);
   const into = base === null ? '' : ` into ${base}`;
   return {
     label: base === null ? `#${pull.number}` : `#${pull.number} → ${base}`,
@@ -100,12 +105,16 @@ function fillOf(kind: StackWarningKind, task: StoryTask, parent: StoryTask | nul
 function rowOf(task: StoryTask, tasks: readonly StoryTask[]): StoryRowView {
   const parent = parentOf(task, tasks);
   const quiet = task.state === 'answered' || task.state === 'working';
+  const pull = task.pullRequest === null ? null : pullMark(task.pullRequest);
+  const status = task.state === null ? null : requestStatus(task.state, pull);
   return {
     conversationId: task.conversationId,
     handle: task.handle,
     title: task.title,
     state: task.state,
-    stateLabel: task.state === null ? NOT_STARTED : STATE_LABELS[task.state],
+    status,
+    stateLabel:
+      task.state === null || status === null ? NOT_STARTED : statusLabel(task.state, status),
     note: quiet ? null : task.reason,
     order: orderOf(task),
     pull: chipOf(task, parent),

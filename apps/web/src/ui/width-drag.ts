@@ -28,6 +28,9 @@ interface WidthDrag {
   direction: 1 | -1;
   clamp(width: number): number;
   commit(width: number): void;
+  value?(width: number): number;
+  text?(width: number): string;
+  onPaint?(width: number): void;
 }
 
 export function startWidthDrag(event: PointerEvent<HTMLElement>, drag: WidthDrag): void {
@@ -40,8 +43,9 @@ export function startWidthDrag(event: PointerEvent<HTMLElement>, drag: WidthDrag
   const paint = () => {
     frame = 0;
     for (const target of drag.targets) target.style.width = `min(${width}px, var(${drag.cap}))`;
-    handle.setAttribute('aria-valuenow', String(width));
-    handle.setAttribute('aria-valuetext', widthText(width));
+    handle.setAttribute('aria-valuenow', String(drag.value?.(width) ?? width));
+    handle.setAttribute('aria-valuetext', (drag.text ?? widthText)(width));
+    drag.onPaint?.(width);
   };
   const onMove = (move: globalThis.PointerEvent) => {
     moved = true;

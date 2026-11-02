@@ -76,7 +76,12 @@ function RepoSetup({ project, onOpen }: { project: Project; onOpen: (path: strin
   );
 }
 
-export function AgentSetup({ repos }: { repos: Project[] }) {
+export function useSetupAttention(projectId: string | null): boolean {
+  const config = useAgentConfig(projectId).data;
+  return config ? needsAttention(config) || trustPrompt(config) !== null : false;
+}
+
+export function AgentSetup({ repos, labelled = false }: { repos: Project[]; labelled?: boolean }) {
   const popover = usePopover<HTMLButtonElement, HTMLDivElement>();
   const { open, toggle, setOpen, anchorRef, panelRef } = popover;
   const panelId = useId();
@@ -105,7 +110,7 @@ export function AgentSetup({ repos }: { repos: Project[] }) {
       <button
         ref={anchorRef}
         type="button"
-        className="ctx-setup"
+        className={labelled ? 'ctx-setup labelled' : 'ctx-setup'}
         aria-label={`Agent setup for ${primary.name}${attention ? ' (some parts are off)' : ''}`}
         title={`Agent setup for ${primary.name}`}
         aria-haspopup="dialog"
@@ -114,6 +119,7 @@ export function AgentSetup({ repos }: { repos: Project[] }) {
         onClick={toggle}
       >
         <SlidersIcon />
+        {labelled && <span className="ctx-setup-name">Agent setup</span>}
         {attention && <span className="ctx-dot" aria-hidden="true" />}
       </button>
       <div

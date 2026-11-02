@@ -1,6 +1,6 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { createReadStream, existsSync } from 'node:fs';
-import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,7 +11,7 @@ import { packageDesktop, releaseDir } from './stage.ts';
 const work = path.join(releaseDir, 'e2e');
 const feedDir = path.join(work, 'feed');
 const installDir = path.join(os.tmpdir(), 'spark-outpost-e2e-applications');
-const appData = path.join(work, 'app-data');
+const appData = await mkdtemp('/tmp/spark-e2e-');
 const userData = path.join(appData, 'Spark Outpost');
 const PACKAGE_NAME = 'spark-outpost-e2e';
 const APP_ID = 'ai.spark-outpost.app.e2e';
@@ -29,6 +29,8 @@ const BROKEN_MIGRATION = [
 ];
 
 const zipRanges: number[] = [];
+
+const runningApps = new Set<Running>();
 
 const results: { check: string; outcome: 'verified' | 'blocked' | 'failed'; detail: string }[] = [];
 
@@ -138,6 +140,7 @@ interface Running {
   child: ChildProcess;
   lines: string[];
   exited: Promise<number | null>;
+  error?: Error;
 }
 
 function launch(app: string, args: string[] = []): Running {
@@ -155,8 +158,17 @@ function launch(app: string, args: string[] = []): Running {
   };
   child.stdout.on('data', collect);
   child.stderr.on('data', collect);
-  const exited = new Promise<number | null>((resolve) => child.once('exit', resolve));
-  return { child, lines, exited };
+  const exited = new Promise<number | null>((resolve) => {
+    child.once('exit', resolve);
+    child.once('error', (error) => {
+      running.error = error;
+      resolve(null);
+    });
+  });
+  const running: Running = { child, lines, exited };
+  runningApps.add(running);
+  void exited.then(() => runningApps.delete(running));
+  return running;
 }
 
 async function waitForLine(running: Running, pattern: RegExp, timeoutMs: number) {
@@ -164,6 +176,12 @@ async function waitForLine(running: Running, pattern: RegExp, timeoutMs: number)
   while (Date.now() < deadline) {
     const found = running.lines.find((line) => pattern.test(line));
     if (found) return found;
+    const failure = running.lines.find((line) => line.includes('[main] Startup failed.'));
+    if (failure || running.error || !runningApps.has(running)) {
+      throw new Error(
+        `App stopped before ${pattern}: ${running.error?.message ?? failure ?? `exit ${running.child.exitCode}, signal ${running.child.signalCode}`}\n${running.lines.slice(-8).join('\n')}`,
+      );
+    }
     await delay(500);
   }
   return null;
@@ -365,13 +383,14 @@ async function removeTestCaches(): Promise<void> {
   }
 }
 
-await rm(work, { recursive: true, force: true });
-await removeTestCaches();
-await mkdir(feedDir, { recursive: true });
-const server = await serveFeed();
-const address = server.address();
-const feedUrl = `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
+let server: Server | undefined;
 try {
+  await rm(work, { recursive: true, force: true });
+  await removeTestCaches();
+  await mkdir(feedDir, { recursive: true });
+  server = await serveFeed();
+  const address = server.address();
+  const feedUrl = `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
   const v1 = await buildVersion('0.0.1', feedUrl, []);
   const v2 = await buildVersion('0.0.2', feedUrl, [GOOD_MIGRATION]);
   const v3 = await buildVersion('0.0.3', feedUrl, [GOOD_MIGRATION, BROKEN_MIGRATION]);
@@ -379,8 +398,16 @@ try {
   await updateCycle(v1);
   await migrationCycle(v2, v3);
 } finally {
-  server.close();
-  await removeTestCaches();
+  server?.close();
+  const remaining = [...runningApps];
+  await Promise.all(remaining.map((running) => quit(running, 5_000)));
+  await Promise.all(remaining.map((running) => running.exited));
+  stopRelaunched();
+  try {
+    await removeTestCaches();
+  } finally {
+    await rm(appData, { recursive: true, force: true });
+  }
 }
 
 console.log('\n[e2e] Summary');

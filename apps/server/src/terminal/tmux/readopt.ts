@@ -174,11 +174,11 @@ async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<
 
 export async function readoptTmuxSessions(input: ReadoptInput): Promise<string[]> {
   const kept: string[] = [];
-  killUnknownSessions(input.tmux);
-  for (const id of new Set(listSessionIds(input.tmux))) {
+  await killUnknownSessions(input.tmux);
+  for (const id of new Set(await listSessionIds(input.tmux))) {
     const row = await liveRow(input.db, input.workspaceId, id);
     if (!row) {
-      killSessionTree(input.tmux, id);
+      await killSessionTree(input.tmux, id);
       continue;
     }
     if (input.live.has(row.conversation_id)) continue;
@@ -188,7 +188,7 @@ export async function readoptTmuxSessions(input: ReadoptInput): Promise<string[]
     } catch (error) {
       console.error('Could not re-adopt a terminal session:', (error as Error).message);
       input.terminals.kill(id);
-      killSessionTree(input.tmux, id);
+      await killSessionTree(input.tmux, id);
     }
   }
   return kept;

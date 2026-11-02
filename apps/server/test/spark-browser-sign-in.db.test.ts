@@ -239,6 +239,13 @@ describe('spark_browser_sign_in', () => {
     const refused = await chat.call('spark_browser_sign_in', { signIn: saved.id });
     expect(refused.outcome).toBe('not_signed_in');
     expect(refused.reason).toContain('Nothing was filled');
+    expect(refused.requiresUserSiteApproval).toBe(!url.startsWith('http:'));
+    if (!url.startsWith('http:')) {
+      expect(refused.nextStep).toContain('Add this site');
+      expect(refused.nextStep).toContain('retry spark_browser_sign_in');
+    } else {
+      expect(refused.nextStep).toContain('cannot be added');
+    }
     expect(await cardCount()).toBe(0);
     expect(reads).not.toHaveBeenCalled();
     expect(fake.ops('sign_in')).toEqual([]);
@@ -454,6 +461,21 @@ describe('handing the tab to the user to sign in', () => {
     });
     expect(await calling).toMatchObject({ outcome: 'cancelled' });
     expect(handOvers().at(-1)!.handoff).toBeNull();
+  });
+
+  it('tells the agent the user closed the tab when it is gone by Cancel', async () => {
+    const chat = await projectChat();
+    const calling = chat.call('spark_browser_sign_in', { handOver: true });
+    const card = await pendingCard(t);
+    await eventually(async () => handOvers().length === 1);
+    fake.failure = new BrowserHostError('no_tab', 'There is no tab tab1 in this chat.');
+    await decideApproval(t.db, t.workspaceId, card.id, {
+      optionId: SPARK_ACTION_OPTION.decline,
+      scope: 'once',
+    });
+    const result = await calling;
+    expect(result).toMatchObject({ outcome: 'tab_closed', tab: 'tab1' });
+    expect(String(result.message)).toContain('The user closed the tab');
   });
 
   it('frees the tab when the user stops the turn, and is never answered from a paired device', async () => {

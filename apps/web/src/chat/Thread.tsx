@@ -1,7 +1,12 @@
 import './thread.css';
 import './turn-indent.css';
-import { memo, use, useEffect } from 'react';
-import { PERMISSION_DO, type ConversationDetail, type Project } from '@spark-outpost/contracts';
+import { Fragment, memo, use, useEffect } from 'react';
+import {
+  PERMISSION_DO,
+  archivedInactiveLine,
+  type ConversationDetail,
+  type Project,
+} from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { useVoice } from '../spark/use-voice.ts';
 import { greeting } from '../spark/voice.ts';
@@ -10,6 +15,8 @@ import { repoSummary } from './project/repo-list.ts';
 import { RepoKit } from './project/RepoKit.tsx';
 import { buildTurns } from './turns.ts';
 import { TurnSection } from './TurnSection.tsx';
+import { AssistantTopicDivider, TopicDivider } from './compaction/DividerLine.tsx';
+import { placeTopics } from './compaction/topic-model.ts';
 import { TodaySoFar } from './today/TodaySoFar.tsx';
 import { useStickToBottom } from './use-stick-to-bottom.ts';
 import { useMessageJump } from './message-jump.ts';
@@ -36,7 +43,6 @@ interface ThreadProps {
   repos: Project[];
   sends: ChatSends;
   taskId: string | null;
-  onOpenTask?: (taskId: string) => void;
   onOpenChat: (conversationId: string) => void;
   quotes: QuotesState;
 }
@@ -46,7 +52,6 @@ export const Thread = memo(function Thread({
   repos,
   sends,
   taskId,
-  onOpenTask,
   onOpenChat,
   quotes,
 }: ThreadProps) {
@@ -56,12 +61,12 @@ export const Thread = memo(function Thread({
   const { scrollerRef, scroller, away, follow, release, jumpToLatest } = useStickToBottom();
   useMessageJump(detail.conversation.id, scroller, release, detail.messages.length);
   const turns = buildTurns(detail);
-  const parentOf = new Map(detail.runs.map((run) => [run.id, run.parentRunId ?? run.id]));
-  const taskAfterRun = new Map(
-    detail.tasks.map((task) => {
-      const last = task.runIds.at(-1);
-      return [last ? (parentOf.get(last) ?? last) : undefined, task];
-    }),
+  const topics = placeTopics(
+    detail.topics ?? [],
+    turns.map(({ run, userMessage }) => ({
+      runId: run.id,
+      at: userMessage?.createdAt ?? run.createdAt,
+    })),
   );
 
   usePendingArrival(follow);
@@ -74,7 +79,7 @@ export const Thread = memo(function Thread({
     if (pendingCount > 0) follow();
   }, [pendingCount, follow]);
 
-  if (turns.length === 0 && pendingCount === 0) {
+  if (turns.length === 0 && pendingCount === 0 && topics.after.length === 0) {
     return (
       <div className="thread-wrap">
         <div className="thread">
@@ -115,20 +120,29 @@ export const Thread = memo(function Thread({
         <div className="col">
           <OutlineTicks detail={detail} taskId={taskId} scroller={scroller} />
           <CommandDockContext value={remote ? null : detail.conversation.id}>
-            {turns.map(({ run, userMessage, assistantMessage, laterMessages }) => (
-              <TurnSection
-                key={run.id}
-                run={run}
-                userMessage={userMessage}
-                assistantMessage={assistantMessage}
-                laterMessages={laterMessages}
-                detail={detail}
-                repo={repos[0] ?? null}
-                task={taskAfterRun.get(run.id) ?? null}
-                onOpenTask={onOpenTask}
-                onOpenChat={onOpenChat}
-              />
+            {turns.map(({ run, userMessage, assistantMessage, laterMessages }, index) => (
+              <Fragment key={run.id}>
+                {topics.before.get(run.id)?.map((topic) => (
+                  <AssistantTopicDivider key={topic.id} topic={topic} />
+                ))}
+                <TurnSection
+                  run={run}
+                  userMessage={userMessage}
+                  assistantMessage={assistantMessage}
+                  laterMessages={laterMessages}
+                  previous={turns[index - 1]?.run ?? null}
+                  detail={detail}
+                  repo={repos[0] ?? null}
+                  onOpenChat={onOpenChat}
+                />
+              </Fragment>
             ))}
+            {topics.after.map((topic) => (
+              <AssistantTopicDivider key={topic.id} topic={topic} />
+            ))}
+            {detail.conversation.archivedAt && detail.conversation.autoArchivedDays && (
+              <TopicDivider label={archivedInactiveLine(detail.conversation.autoArchivedDays)} />
+            )}
           </CommandDockContext>
           <PendingSends sends={sends} />
         </div>

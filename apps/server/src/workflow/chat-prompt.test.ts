@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { delegationPolicy } from '../agents/delegation-policy.ts';
 import { chatPrompt, type ChatPromptFacts, type ChatPromptProject } from './chat-prompt.ts';
 import * as text from './chat-prompt-text.ts';
 
@@ -38,12 +39,12 @@ describe('chatPrompt', () => {
         'Folder: /Users/sam/.spark/worktrees/shop-1 · Branch: spark/add-export (a worktree of shop)',
         '',
         'How to split work',
-        '- Small or single-area change: do it yourself.',
-        '- Independent parts inside this repo and branch (searching, reviewing, edits to separate files): use your own sub-agents.',
-        "- Work that spans repos, needs separate branches or pull requests, or is big enough that the user should steer each part: propose sub-chats with spark_outpost_draft and say why. The user starts them; you don't.",
+        delegationPolicy(),
+        "- If separate Spark chats are needed, propose them with spark_outpost_draft and say why. The user starts them; you don't.",
         '- If the request is unclear, ask one question and stop.',
         '',
         'Engineering',
+        '- Change files with your file-editing tools, not shell commands such as heredocs, cat > or sed -i, so the user sees each change as a diff.',
         "- The repo's own instructions (AGENTS.md, CLAUDE.md) take priority over these.",
         '- Read the code your change touches before deciding anything.',
         "- Before writing code, stop at the first of these that works: it doesn't need to exist · the codebase already has it · the standard library has it · the platform has it · an installed dependency has it · it can be one line · otherwise write the minimum that works.",
@@ -57,7 +58,7 @@ describe('chatPrompt', () => {
         "- End with what you skipped or didn't check, and any risk.",
         '',
         'Publishing',
-        '- Spark will ask you to publish when the work is done; you may also push this branch and open a pull request yourself.',
+        '- Full auto is the publishing default, not an override of the user’s instructions. Spark may ask you to publish when done; honor any current restriction on committing, pushing or pull requests.',
       ].join('\n'),
     );
   });
@@ -74,6 +75,14 @@ describe('chatPrompt', () => {
     expect(prompt).not.toContain('spark_outpost_draft');
     expect(prompt).not.toContain('sub-chats');
     expect(prompt).toContain(text.SPLIT_UNCLEAR);
+  });
+
+  it('asks a Do turn to ask with its question tool, and leaves other turns as they were', () => {
+    const doing = build({ asksWithTool: true });
+    expect(doing).toContain(text.SPLIT_ASK_WITH_TOOL);
+    expect(doing).not.toContain(text.SPLIT_UNCLEAR);
+    expect(build({})).toContain(text.SPLIT_UNCLEAR);
+    expect(build({})).not.toContain('AskUserQuestion');
   });
 
   it('offers starting sub-chats only when the run has the start tool', () => {
@@ -184,10 +193,43 @@ describe('chatPrompt', () => {
     expect(prompt).not.toMatch(/[\r\u2028\u2029]/u);
   });
 
-  it('holds no safety rules, role names or planning instructions', () => {
+  it('delegates implementation while preserving mode and repository constraints', () => {
     const prompt = build({ customInstructions: null });
-    expect(prompt).not.toMatch(/\b(coordinator|builder|critic|pieces?|integrator|reader)\b/iu);
-    expect(prompt).not.toMatch(/\bplan(s|ning|ned)?\b/iu);
-    expect(prompt).not.toMatch(/secret|force|--no-verify|hook|approval|permission|\.sparkignore/iu);
+    expect(prompt).toContain('delegate the edits to available provider sub-agents');
+    expect(prompt).toContain('including a single small slice');
+    expect(prompt).toContain(
+      'read-only requests and planning do not require implementation agents',
+    );
+    expect(prompt).toContain('Explicit user and repository constraints take priority');
+    expect(prompt).not.toContain('Small or single-area change: do it yourself');
+  });
+
+  it('keeps assigned workers bounded even when chat creation tools are present', () => {
+    const prompt = build({ assignedWork: true, outpostStartTool: true });
+    expect(prompt).toContain('Execute that assignment and return evidence to the lead');
+    expect(prompt).not.toContain('act as the lead');
+    expect(prompt).not.toContain('spark_outpost_start');
+    expect(prompt).not.toContain('spark_outpost_draft');
+  });
+
+  it('keeps projectless chats on the in-session delegation path', () => {
+    const prompt = chatPrompt({ ...base, project: null, outpostDraftTool: false });
+    expect(prompt).toContain('A normal chat does not need an Outpost');
+    expect(prompt).toContain('Use only delegation capabilities actually available');
+    expect(prompt).not.toContain('spark_outpost_start');
+  });
+
+  it('gives workers reusable roles and evidence-based handoffs without a fixed pipeline', () => {
+    const prompt = build({});
+    for (const role of ['Lead:', 'Builder:', 'Verifier:', 'Reviewer:', 'Explorer (optional):']) {
+      expect(prompt).toContain(role);
+    }
+    expect(prompt).toContain('not a mandatory sequence');
+    expect(prompt).toContain('required and provided interfaces');
+    expect(prompt).toContain('Workers return changed files, checks and their results');
+    expect(prompt).toContain('checks the seams between slices');
+    expect(prompt).toContain('session planning tools when available');
+    expect(prompt).toContain('existing session transcript when no planning tool exists');
+    expect(prompt).toContain('do not add routine approval pauses');
   });
 });

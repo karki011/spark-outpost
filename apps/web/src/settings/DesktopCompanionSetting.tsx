@@ -10,14 +10,16 @@ import { acceleratorFromKey, shortcutKeys } from '../desktop/shortcut-keys.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 import type { DocTarget } from '../ui/DocLink.tsx';
 import { Keys } from '../ui/Keys.tsx';
+import { ISLAND_HEIGHT_LABEL, IslandHeightSetting } from './IslandHeightSetting.tsx';
 import { ISLAND_SIZE_LABEL, IslandSizeSetting } from './IslandSizeSetting.tsx';
 import { SettingRow } from './SettingRow.tsx';
+import { SHOW_ISLAND_LABEL } from './setting-labels.ts';
 
-export const SHOW_ISLAND_LABEL = 'Show Spark Island';
 const CHIMES = 'Island chimes';
 const AUTO_EXPAND = 'Open requests by themselves';
 const HIDE_IN_SHARE = 'Hide in screen sharing';
 const NOTIFY = 'Dock badge and notifications';
+const MENU_BAR = 'Show in menu bar';
 
 function notifyHint(status: CompanionStatus): string {
   if (!status.notify) return 'Off. No Dock count, and no notification while Spark Island is off.';
@@ -28,13 +30,14 @@ function notifyHint(status: CompanionStatus): string {
 
 const SHORTCUTS: { action: IslandAction; label: string; hint: string }[] = [
   { action: 'quick', label: 'Quick chat shortcut', hint: 'Opens a new chat from anywhere.' },
-  { action: 'sessions', label: 'Sessions shortcut', hint: 'Finds a chat and asks for an update.' },
+  { action: 'sessions', label: 'Inbox shortcut', hint: 'Opens the island inbox.' },
 ];
 
 const DEFAULTS: Record<IslandAction, string> = { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' };
 
 const SHOWN_WITH_ISLAND = [
   ISLAND_SIZE_LABEL,
+  ISLAND_HEIGHT_LABEL,
   AUTO_EXPAND,
   HIDE_IN_SHARE,
   ...SHORTCUTS.map((shortcut) => shortcut.label),
@@ -46,7 +49,9 @@ export function islandRows(): string[] {
   return [
     SHOW_ISLAND_LABEL,
     NOTIFY,
+    MENU_BAR,
     ISLAND_SIZE_LABEL,
+    ISLAND_HEIGHT_LABEL,
     AUTO_EXPAND,
     HIDE_IN_SHARE,
     ...SHORTCUTS.map((shortcut) => shortcut.label),
@@ -176,6 +181,7 @@ export function DesktopCompanionSetting() {
   const expandId = useId();
   const shareId = useId();
   const notifyId = useId();
+  const menuBarId = useId();
   if (!companionAvailable() || !status?.supported) return null;
   const desktop = sparkDesktop()!;
   return (
@@ -204,6 +210,20 @@ export function DesktopCompanionSetting() {
           onChange={(on) => void desktop.companion.setNotify?.(on)}
         />
       )}
+      {desktop.companion.setMenuBar && (
+        <SwitchRow
+          id={menuBarId}
+          label={MENU_BAR}
+          doc={{ page: 'desktop-companion', heading: 'turn-it-on-and-size-it' }}
+          hint={
+            status.menuBar
+              ? 'A Spark icon in the menu bar opens Spark, shows or hides Spark Island, and quits.'
+              : 'Off. Open Spark from the Dock; right-click its icon to show or hide Spark Island.'
+          }
+          checked={status.menuBar === true}
+          onChange={(on) => void desktop.companion.setMenuBar?.(on)}
+        />
+      )}
       {status.enabled && (
         <>
           {desktop.companion.setIslandSize && (
@@ -212,6 +232,11 @@ export function DesktopCompanionSetting() {
               onChange={(size) => void desktop.companion.setIslandSize?.(size)}
             />
           )}
+          <IslandHeightSetting
+            status={status}
+            onChange={desktop.companion.setIslandHeight}
+            onPreview={desktop.companion.previewIslandHeight}
+          />
           {desktop.companion.setAutoExpand && (
             <SwitchRow
               id={expandId}

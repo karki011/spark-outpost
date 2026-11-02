@@ -8,7 +8,8 @@ html[data-island] #root {
   min-height: 100vh;
 }
 
-html[data-island] .shell-sk {
+html[data-island] .shell-sk,
+html[data-settings-window] .shell-sk {
   display: none;
 }
 

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, webFrame, webUtils, type IpcRendererEvent } from 'electron';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { applySeed } from './storage-seed.ts';
 import { hourCycleFromArgs } from './hour-cycle-arg.ts';
@@ -38,9 +38,13 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
       ipcRenderer.invoke(IPC.companionSetShortcut, action, accelerator),
     setSound: (on: boolean) => ipcRenderer.invoke(IPC.companionSetSound, on),
     setIslandSize: (size: string) => ipcRenderer.invoke(IPC.companionSetIslandSize, size),
+    setIslandHeight: (height: number) => ipcRenderer.invoke(IPC.companionSetIslandHeight, height),
+    previewIslandHeight: (height: number) =>
+      ipcRenderer.invoke(IPC.companionPreviewIslandHeight, height),
     setAutoExpand: (on: boolean) => ipcRenderer.invoke(IPC.companionSetAutoExpand, on),
     setHideInShare: (on: boolean) => ipcRenderer.invoke(IPC.companionSetHideInShare, on),
     setNotify: (on: boolean) => ipcRenderer.invoke(IPC.companionSetNotify, on),
+    setMenuBar: (on: boolean) => ipcRenderer.invoke(IPC.companionSetMenuBar, on),
     onChange: (callback: (status: unknown) => void) => listen(IPC.companionChanged, callback),
   },
   attention: {
@@ -59,6 +63,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     gone: () => ipcRenderer.send(IPC.meetingAlertGone),
     ready: () => ipcRenderer.send(IPC.meetingAlertReady),
     focus: () => ipcRenderer.send(IPC.meetingAlertFocus),
+    onTakeFocus: (callback: () => void) => listen(IPC.meetingAlertTakeFocus, callback),
     setRegions: (regions: unknown) => ipcRenderer.send(IPC.meetingAlertRegions, regions),
     pointerMoved: () => ipcRenderer.send(IPC.meetingAlertPointerMoved),
   },
@@ -79,7 +84,6 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     onEscape: (callback: () => void) => listen(IPC.islandEscape, callback),
     onPointer: (callback: (point: unknown) => void) => listen(IPC.islandPointer, callback),
     sparkFocused: () => ipcRenderer.invoke(IPC.islandSparkFocused),
-    pickFolder: () => ipcRenderer.invoke(IPC.islandPickFolder),
     pathForFile: (file: File) => webUtils.getPathForFile(file) || null,
     onSparkFocus: (callback: (focused: unknown) => void) => listen(IPC.islandSparkFocus, callback),
     setInteractive: (on: boolean) => ipcRenderer.send(IPC.islandInteractive, on),
@@ -105,6 +109,9 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
   },
   privacy: {
     openFullDiskAccess: () => ipcRenderer.invoke(IPC.privacyOpenFullDiskAccess),
+  },
+  sparkRules: {
+    openFile: () => ipcRenderer.invoke(IPC.sparkRulesOpenFile),
   },
   macControl: {
     status: () => ipcRenderer.invoke(IPC.macControlStatus),
@@ -138,26 +145,68 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     command: (chatId: string, command: unknown) =>
       ipcRenderer.invoke(IPC.browserCommand, chatId, command),
     start: (placement: unknown) => ipcRenderer.invoke(IPC.browserStart, placement),
-    sites: (projectId: string) => ipcRenderer.invoke(IPC.browserSites, projectId),
-    signOut: (projectId: string, origin: string | null) =>
-      ipcRenderer.invoke(IPC.browserSignOut, { projectId, origin }),
+    sites: () => ipcRenderer.invoke(IPC.browserSites),
+    signOut: (origin: string | null) => ipcRenderer.invoke(IPC.browserSignOut, { origin }),
     onState: (callback: (state: unknown) => void) => listen(IPC.browserStateChanged, callback),
     onSnapshot: (callback: (snapshot: unknown) => void) => listen(IPC.browserSnapshot, callback),
     onPicked: (callback: (pick: unknown) => void) => listen(IPC.browserPicked, callback),
     onSelectedText: (callback: (selected: unknown) => void) =>
       listen(IPC.browserSelectedText, callback),
+    onShortcut: (callback: (event: unknown) => void) => listen(IPC.browserShortcut, callback),
+    onFound: (callback: (found: unknown) => void) => listen(IPC.browserFound, callback),
+    zoom: () => webFrame.getZoomFactor(),
+  },
+  browserView: {
+    state: (profile: string) => ipcRenderer.invoke(IPC.browserViewState, profile),
+    place: (placement: unknown) => ipcRenderer.invoke(IPC.browserViewPlace, placement),
+    placeSlot: (slot: unknown) => ipcRenderer.invoke(IPC.browserViewPlaceSlot, slot),
+    command: (profile: string, command: unknown) =>
+      ipcRenderer.invoke(IPC.browserViewCommand, profile, command),
+    start: (profile: string) => ipcRenderer.invoke(IPC.browserViewStart, profile),
+    handToChat: (request: unknown) => ipcRenderer.invoke(IPC.browserViewHand, request),
+    fromChat: (request: unknown) => ipcRenderer.invoke(IPC.browserToView, request),
+    pageText: (profile: string, tabId: string) =>
+      ipcRenderer.invoke(IPC.browserViewPageText, profile, tabId),
+    clearZooms: (profile: string) => ipcRenderer.invoke(IPC.browserViewClearZooms, profile),
+    onPicked: (callback: (pick: unknown) => void) => listen(IPC.browserViewPicked, callback),
+    searchEngine: () => ipcRenderer.invoke(IPC.browserViewSearchEngine),
+    setSearchEngine: (engine: string) => ipcRenderer.invoke(IPC.browserViewSetSearchEngine, engine),
+    archive: () => ipcRenderer.invoke(IPC.browserViewArchive),
+    setArchive: (setting: unknown) => ipcRenderer.invoke(IPC.browserViewSetArchive, setting),
+    onIntent: (callback: (intent: unknown) => void) => listen(IPC.browserViewIntent, callback),
+    onState: (callback: (state: unknown) => void) => listen(IPC.browserViewStateChanged, callback),
+    onSnapshot: (callback: (snapshot: unknown) => void) =>
+      listen(IPC.browserViewSnapshot, callback),
+    onShortcut: (callback: (event: unknown) => void) => listen(IPC.browserViewShortcut, callback),
+    onFound: (callback: (found: unknown) => void) => listen(IPC.browserViewFound, callback),
+    downloads: () => ipcRenderer.invoke(IPC.browserDownloads),
+    downloadAct: (request: unknown) => ipcRenderer.invoke(IPC.browserDownloadAct, request),
+    onDownloads: (callback: (list: unknown) => void) =>
+      listen(IPC.browserDownloadsChanged, callback),
   },
   help: {
     info: () => ipcRenderer.invoke(IPC.helpInfo),
     exportDiagnostics: () => ipcRenderer.invoke(IPC.helpExportDiagnostics),
     showLogs: () => ipcRenderer.invoke(IPC.helpShowLogs),
-    onOpenFeedback: (callback: () => void) => {
+  },
+  menu: {
+    onCommand: (callback: (command: unknown) => void) => listen(IPC.menuCommand, callback),
+    reportSidebar: (shown: boolean) => ipcRenderer.send(IPC.menuSidebarShown, shown),
+  },
+  settingsWindow: {
+    open: (route: string, focus: string | null) =>
+      ipcRenderer.send(IPC.settingsWindowOpen, route, focus),
+    take: () => ipcRenderer.invoke(IPC.settingsWindowTake),
+    onChange: (callback: () => void) => listen(IPC.settingsWindowChanged, callback),
+    openChat: (id: string) => ipcRenderer.send(IPC.settingsWindowOpenChat, id),
+    openDoc: (link: string) => ipcRenderer.send(IPC.settingsWindowOpenDoc, link),
+    onDoc: (callback: (link: string) => void) => {
       const take = () =>
-        void ipcRenderer.invoke(IPC.helpPending).then((pending: unknown) => {
-          if (pending === true) callback();
+        void ipcRenderer.invoke(IPC.settingsWindowTakeDoc).then((link: unknown) => {
+          if (typeof link === 'string') callback(link);
         });
       take();
-      return listen(IPC.helpOpen, take);
+      return listen(IPC.settingsWindowDoc, take);
     },
   },
   onOpenSettings: (callback: (target: string) => void) => {

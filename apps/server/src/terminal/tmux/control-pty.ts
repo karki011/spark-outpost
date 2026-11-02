@@ -13,6 +13,7 @@ import {
   paneQuery,
   parsePane,
   readPane,
+  readPaneAsync,
   RELEASE_HELD_START,
   type TmuxPane,
   type TmuxStart,
@@ -74,9 +75,11 @@ export function controlPty(
     if (ended) return;
     ended = true;
     flush();
-    killSession(host, start.sessionId, null);
+    const killing = killSession(host, start.sessionId, null);
     client.close();
-    for (const listener of exitListeners) listener(result);
+    void killing.then(() => {
+      for (const listener of exitListeners) listener(result);
+    });
   };
   const checkDeath = () =>
     client.command(paneQuery(pane.paneId), (lines) => {
@@ -86,11 +89,13 @@ export function controlPty(
     });
   const lost = () => {
     if (ended) return;
-    const now = readPane(host, start.sessionId);
-    if (now?.dead) return exit(paneExit(now));
-    if (!now || !answered) return exit({ exitCode: LOST_EXIT_CODE });
-    answered = false;
-    connect();
+    void readPaneAsync(host, start.sessionId).then((now) => {
+      if (ended) return;
+      if (now?.dead) return exit(paneExit(now));
+      if (!now || !answered) return exit({ exitCode: LOST_EXIT_CODE });
+      answered = false;
+      connect();
+    });
   };
   function connect() {
     client = open(host, start.sessionId);
@@ -144,9 +149,9 @@ export function controlPty(
     kill: () => {
       if (ended) return;
       ended = true;
-      killSession(host, start.sessionId, pane.dead ? null : pane.pid);
+      const killing = killSession(host, start.sessionId, pane.dead ? null : pane.pid);
       client.close();
-      setImmediate(() => {
+      void killing.then(() => {
         for (const listener of exitListeners) listener({ exitCode: 0, signal: SIGHUP });
       });
     },

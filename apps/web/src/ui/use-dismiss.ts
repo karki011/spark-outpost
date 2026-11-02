@@ -5,19 +5,29 @@ interface DismissOptions {
   open: boolean;
   panelRef: RefObject<HTMLElement | null>;
   anchor: () => HTMLElement | null;
+  alsoInside?: () => HTMLElement | null;
   focusBack: () => HTMLElement | null;
   onClose: () => void;
 }
 
-export function useDismiss({ open, panelRef, anchor, focusBack, onClose }: DismissOptions) {
+export function useDismiss({
+  open,
+  panelRef,
+  anchor,
+  alsoInside = () => null,
+  focusBack,
+  onClose,
+}: DismissOptions) {
   const close = useStableCallback(onClose);
   const anchorOf = useStableCallback(anchor);
+  const secondAnchor = useStableCallback(alsoInside);
   const focusTarget = useStableCallback(focusBack);
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
       if (panelRef.current?.contains(target) || anchorOf()?.contains(target)) return;
+      if (secondAnchor()?.contains(target)) return;
       close();
     };
     const onKeyDown = (event: KeyboardEvent) => {
@@ -33,5 +43,5 @@ export function useDismiss({ open, panelRef, anchor, focusBack, onClose }: Dismi
       window.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('keydown', onKeyDown, true);
     };
-  }, [open, panelRef, anchorOf, focusTarget, close]);
+  }, [open, panelRef, anchorOf, secondAnchor, focusTarget, close]);
 }

@@ -45,7 +45,6 @@ function start(approvalTimeoutMs?: number) {
     db: t.db,
     providers: new Map([[provider.name, provider]]),
     leaseSeconds: 30,
-    concurrency: 2,
     pollMs: 20,
     cancelPollMs: 20,
     approvalPollMs: 20,
@@ -227,8 +226,13 @@ describe('Ask runs with commands', () => {
     expect((await settled(runId)).status).toBe('succeeded');
     const detail = await getConversationDetail(t.db, conversationId);
     expect(detail?.approvals.filter((approval) => approval.decidedBy !== 'level')).toEqual([]);
-    expect(detail?.activity[runId]?.map((step) => step.name)).toContain(
-      'Allowed `curl -sI https://example.com` (Automatic in an Ask turn)',
+    const { rows } = await t.db.query(
+      'SELECT status, decided_by FROM approvals WHERE run_id = $1',
+      [runId],
+    );
+    expect(rows).toContainEqual({ status: 'allowed', decided_by: 'level' });
+    expect(detail?.activity[runId]?.map((step) => step.name)).not.toContainEqual(
+      expect.stringMatching(/^Allowed /),
     );
     expect(await readFile(join(root, FAKE_EDIT_FILE), 'utf8')).toBe('original\n');
   });

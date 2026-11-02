@@ -4,7 +4,7 @@ import { clipText, commandFull, commandSummary, fileName, hideSecrets } from './
 export type StepKind = 'read' | 'edit' | 'run' | 'search' | 'think' | 'other';
 
 const KINDS: [StepKind, RegExp][] = [
-  ['read', /^(read|reading|view|viewing|cat|open|opening)$/i],
+  ['read', /^(read|reading|view|viewing|cat|open|opening|fetched)$/i],
   [
     'edit',
     /^(edit|editing|edited|write|writing|wrote|modify|modifying|modified|update|updating|create|creating|patch|patching|multiedit|apply|applying)$/i,
@@ -12,7 +12,7 @@ const KINDS: [StepKind, RegExp][] = [
   ['run', /^(run|running|ran|bash|terminal|execute|executing|exec)$/i],
   [
     'search',
-    /^(search|searching|grep|glob|find|finding|list|listing|ls|fetch|fetching|websearch|webfetch)$/i,
+    /^(search|searching|searched|grep|glob|find|finding|list|listing|ls|fetch|fetching|websearch|webfetch)$/i,
   ],
   ['think', /^(think|thinking|thought)$/i],
 ];
@@ -37,6 +37,25 @@ export interface StepActivity {
   target: string | null;
   code: boolean;
   full: string;
+  detail?: string;
+}
+
+export const REFUSED_VERB = 'Refused';
+const REFUSED_STEP = /^Refused (.+?) — (.+)$/s;
+
+function refusedActivity(safe: string, full: string): StepActivity | null {
+  const match = REFUSED_STEP.exec(safe);
+  if (!match) return null;
+  const [, what = '', reason = ''] = match;
+  const code = /^`[^`]+`$/.test(what);
+  return {
+    kind: 'other',
+    verb: REFUSED_VERB,
+    target: plain(what),
+    code,
+    full,
+    detail: plain(reason),
+  };
 }
 
 const FILE_TOKEN = /[\\/]|^[\w@.-]+\.[a-z0-9]{1,8}$/i;
@@ -59,6 +78,8 @@ function plain(text: string): string {
 export function stepActivity(name: string): StepActivity {
   const safe = hideSecrets(friendlyStep(name)).trim();
   const full = plain(safe);
+  const refused = refusedActivity(safe, full);
+  if (refused) return refused;
   if (safe.startsWith('`')) {
     const command = quoted(safe) ?? full;
     return { kind: 'run', verb: 'Running', target: commandSummary(command), code: true, full };

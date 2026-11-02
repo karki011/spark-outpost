@@ -103,6 +103,16 @@ describe('ACP permission requests in Do mode', { timeout: 20_000 }, () => {
     });
   });
 
+  it('adds no step for an allow nobody was asked about', async () => {
+    const { stub } = gate(async (request, signal) => ({
+      ...(await allow(request, signal)),
+      quiet: true,
+    }));
+    const result = await run('#write', stub);
+    expect(result.text).toContain('permission=yes');
+    expect(result.steps).not.toContain('Allowed it');
+  });
+
   it('answers with the reject option when the gate denies', async () => {
     const { stub } = gate(deny);
     const result = await run('#write', stub);
@@ -139,6 +149,18 @@ describe('ACP permission requests in Do mode', { timeout: 20_000 }, () => {
 });
 
 describe('fs/write_text_file in Do mode', { timeout: 20_000 }, () => {
+  it('writes without a step when the gate allowed it quietly', async () => {
+    const { stub } = gate(async (request, signal) => ({
+      ...(await allow(request, signal)),
+      quiet: true,
+    }));
+    const target = join(root, 'notes.txt');
+    const result = await run(`#fswrite ${target}`, stub);
+    expect(result.text).toContain(`[write ${target}=ok:]`);
+    expect(result.steps).not.toContain('Allowed it');
+    await writeFile(target, 'before\n');
+  });
+
   it('asks the gate with a diff, then writes the file', async () => {
     const { stub, requests } = gate(allow);
     const target = join(root, 'notes.txt');

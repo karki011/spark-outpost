@@ -7,7 +7,11 @@ import { railCrossings, type RailCrossing } from '../../approvals/rail-crossings
 import { observedSecretReads } from '../../approvals/secret-reads.ts';
 import { outsideRoots } from '../../approvals/request-place.ts';
 import { parseShell } from '../../approvals/shell-parse.ts';
+import { RECOMMENDED_RULES } from '../../spark-rules/recommended.ts';
+import type { SparkRuleSet } from '../../spark-rules/resolve.ts';
 import { createReviewTracker } from '../../audit/review-tracker.ts';
+import type { AgentCli } from './agent-cli.ts';
+import { stoppedByAgent } from './agent-stopped.ts';
 import { approvalRequestFrom } from './permission-request.ts';
 import { objectFields } from './object-fields.ts';
 
@@ -17,6 +21,7 @@ export interface ObservedRail {
   paths: string[];
   inside: boolean;
   originals: RailOriginal[];
+  stopped: boolean;
 }
 
 export interface Observed {
@@ -36,6 +41,8 @@ export interface RailWatchContext {
   roots: readonly RequestRoot[];
   cwd: string;
   home?: string;
+  cli?: AgentCli | null;
+  rules?: () => Promise<SparkRuleSet>;
 }
 
 const ORIGINAL_MAX_CHARS = 64 * 1024;
@@ -105,12 +112,20 @@ export function createRailWatch(context: RailWatchContext): RailWatch {
       const shell = request.kind === 'execute' ? await parseShell(request.command) : null;
       const secretReads = await observedSecretReads(request, shell);
       if (!ran) return { rails: [], secretReads };
-      const rails = (await railCrossings(request, { shell })).map((crossing) => ({
+      const rules = context.rules ? await context.rules() : RECOMMENDED_RULES;
+      const rails = (await railCrossings(request, { shell, rules })).map((crossing) => ({
         toolCallId: ran.toolCallId,
         rail: crossing.rail,
         paths: crossing.paths.map((target) => shown(target, home)),
         inside: changesInside(crossing, request),
         originals: originalsOf(crossing, request, home),
+        stopped: stoppedByAgent(
+          context.cli ?? null,
+          crossing.rail,
+          toolCall,
+          request.command,
+          update.status === 'failed',
+        ),
       }));
       return { rails, secretReads };
     },

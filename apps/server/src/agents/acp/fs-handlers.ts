@@ -10,7 +10,7 @@ import {
   type PathPolicy,
   type ResolvedPath,
 } from '../../projects/path-policy.ts';
-import type { GateAnswer } from '../../providers/provider.ts';
+import { isQuiet, type GateAnswer } from '../../providers/provider.ts';
 import { NO_FOLDER_REASON } from './permissions.ts';
 import { ASK_RUN_REASON } from '../../approvals/ask-run.ts';
 
@@ -107,7 +107,7 @@ export async function writeTextFile(
     roots: policy.roots,
     home: context.home,
   });
-  context.annotate(answer.note);
+  if (!isQuiet(answer)) context.annotate(answer.note);
   if (answer.outcome === 'cancelled') {
     throw acp.RequestError.requestCancelled({ path: params.path }, 'The turn was stopped.');
   }

@@ -1,4 +1,5 @@
 import './rail-flags.css';
+import { useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ConversationDetail, RailFlag, RailOriginal } from '@spark-outpost/contracts';
 import { approvalsApi } from '../../api/approvals.ts';
@@ -6,6 +7,7 @@ import { queryKeys } from '../../api/client.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
 import { ShieldIcon } from '../../ui/icons.tsx';
 import { copyButtonText, useCopyFeedback } from '../../ui/use-copy-feedback.ts';
+import { RowIcon } from '../rows/RowIcon.tsx';
 import { flagNote } from './rail-flag-text.ts';
 
 function Original({ original }: { original: RailOriginal }) {
@@ -25,7 +27,7 @@ function settledLine(flag: RailFlag): string {
   return flag.status === 'reverted' ? 'Reverted to before this run.' : 'Dismissed.';
 }
 
-function RailFlagCard({ flag, conversationId }: { flag: RailFlag; conversationId: string }) {
+export function RailFlagCard({ flag, conversationId }: { flag: RailFlag; conversationId: string }) {
   const queryClient = useQueryClient();
   const decide = useMutation({
     mutationFn: (action: 'dismiss' | 'revert') => approvalsApi.decideFlag(flag.id, { action }),
@@ -69,7 +71,7 @@ function RailFlagCard({ flag, conversationId }: { flag: RailFlag; conversationId
               disabled={decide.isPending}
               onClick={() => decide.mutate('dismiss')}
             >
-              Dismiss
+              Got it
             </button>
           </div>
         </>
@@ -82,14 +84,31 @@ function RailFlagCard({ flag, conversationId }: { flag: RailFlag; conversationId
   );
 }
 
-export function RailFlags({ detail, runId }: { detail: ConversationDetail; runId: string }) {
-  const flags = (detail.railFlags ?? []).filter((flag) => flag.turnRunId === runId);
-  if (flags.length === 0) return null;
+export function FlagLine({ flag, conversationId }: { flag: RailFlag; conversationId: string }) {
+  const [open, setOpen] = useState(false);
+  const cardId = useId();
+  const settled = flag.status !== 'open';
   return (
     <>
-      {flags.map((flag) => (
-        <RailFlagCard key={flag.id} flag={flag} conversationId={detail.conversation.id} />
-      ))}
+      <div className={settled ? 'flag-line settled' : 'flag-line'}>
+        <RowIcon name="flag" />
+        <span className="flag-line-text">
+          <b>Flag</b>: {flag.title}
+          {settled && <span className="flag-line-state"> · {settledLine(flag)}</span>}
+        </span>
+        <button
+          type="button"
+          className="flag-line-details"
+          aria-expanded={open}
+          aria-controls={cardId}
+          onClick={() => setOpen(!open)}
+        >
+          Details
+        </button>
+      </div>
+      <div id={cardId} hidden={!open}>
+        {open && <RailFlagCard flag={flag} conversationId={conversationId} />}
+      </div>
     </>
   );
 }

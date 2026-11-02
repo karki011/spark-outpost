@@ -96,8 +96,8 @@ export function fakeAgents(options: FakeAgentOptions = {}): Map<string, Provider
 export interface TurnWorkerOptions extends FakeAgentOptions {
   shipAccess?: WorkerOptions['shipAccess'];
   providers?: ReadonlyMap<string, Provider>;
-  concurrency?: number;
   cancelPollMs?: number;
+  chatFolders?: string;
 }
 
 export function startTurnWorker(t: TestDb, options: TurnWorkerOptions = {}): Worker {
@@ -105,10 +105,10 @@ export function startTurnWorker(t: TestDb, options: TurnWorkerOptions = {}): Wor
     db: t.db,
     providers: options.providers ?? fakeAgents(options),
     leaseSeconds: 30,
-    concurrency: options.concurrency ?? 8,
     pollMs: 20,
     cancelPollMs: options.cancelPollMs ?? 20,
     approvalPollMs: 20,
     ...(options.shipAccess ? { shipAccess: options.shipAccess } : {}),
+    ...(options.chatFolders ? { chatFolders: options.chatFolders } : {}),
   });
 }

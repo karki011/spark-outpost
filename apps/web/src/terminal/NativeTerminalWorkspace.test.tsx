@@ -7,6 +7,7 @@ import type {
   ConversationSummary,
   NativeTerminalSession,
 } from '@spark-outpost/contracts';
+import type * as TerminalLiveModule from './terminal-live.ts';
 import type * as ApiClient from '../api/client.ts';
 import type { TerminalHandlers } from './terminal-connection.ts';
 
@@ -22,6 +23,10 @@ vi.mock('./terminal-api.ts', () => ({
   nativeTerminalApi: { get: fake.get, launch: fake.launch, attach: fake.attach, stop: fake.stop },
   deleteTerminalSession: fake.stop,
   nativeTerminalKey: (id: string) => ['native-terminal', id],
+}));
+vi.mock('./terminal-live.ts', async (original) => ({
+  ...(await original<typeof TerminalLiveModule>()),
+  loadTerminalLive: async (chat: string) => ({ session: await fake.get(chat) }),
 }));
 vi.mock('./TerminalCompanion.tsx', () => ({
   TerminalCompanion: () => <span data-testid="companion" />,

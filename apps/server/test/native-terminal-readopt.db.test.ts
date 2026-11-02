@@ -271,7 +271,7 @@ describe.skipIf(!bin)('Terminal sessions across a Spark restart', () => {
 
     await second.runtime.stop(conversationId);
     await until(() => !isAlive(pid), 'the command to stop');
-    expect(listSessionIds(tmux)).toEqual([]);
+    expect(await listSessionIds(tmux)).toEqual([]);
     expect((await row()).state).toBe('exited');
     expect(existsSync(join(folder, 'test/terminal-sessions', id))).toBe(false);
   });
@@ -382,7 +382,7 @@ describe.skipIf(!bin)('Terminal sessions across a Spark restart', () => {
     tryTmux(tmux, ['send-keys', '-t', `=${sessionName(stray)}:`, '-H', '0a']);
     const world = await start();
     await world.runtime.recover();
-    expect(listSessionIds(tmux)).toEqual([]);
+    expect(await listSessionIds(tmux)).toEqual([]);
     await until(() => !isAlive(pane.pid), 'the stray command to stop');
   });
 
@@ -396,7 +396,7 @@ describe.skipIf(!bin)('Terminal sessions across a Spark restart', () => {
     await second.runtime.recover();
     await until(async () => (await row()).state === 'error', 'the exit to be recorded');
     expect((await row()).reason).toBe('Native agent exited (4).');
-    expect(listSessionIds(tmux)).toEqual([]);
+    expect(await listSessionIds(tmux)).toEqual([]);
   });
 
   it('keeps an idle session idle, with nothing to catch up', async () => {
@@ -417,7 +417,7 @@ describe.skipIf(!bin)('Terminal sessions across a Spark restart', () => {
     const second = await restart(first);
     await expect(second.runtime.recover()).rejects.toThrow('stopped terminal host');
     expect(readPane(tmux, id)).toMatchObject({ pid, dead: false });
-    expect(listSessionIds(tmux)).toEqual([id]);
+    expect(await listSessionIds(tmux)).toEqual([id]);
   });
 
   it('stops every session and the tmux server when Spark quits', async () => {
@@ -425,7 +425,7 @@ describe.skipIf(!bin)('Terminal sessions across a Spark restart', () => {
     const { pid } = await launched(world);
     await world.runtime.dispose();
     await until(() => !isAlive(pid), 'the command to stop');
-    expect(listSessionIds(tmux)).toEqual([]);
+    expect(await listSessionIds(tmux)).toEqual([]);
     expect((await row()).state).toBe('exited');
   });
 });

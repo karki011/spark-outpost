@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CreateOutpostRequest, DraftChat } from '@spark-outpost/contracts';
+import type { CreateOutpostRequest, DraftChat, OutpostStory } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
 import { projectKeys } from '../api/projects.ts';
 import {
@@ -13,10 +13,47 @@ import {
 } from './create/create-fixtures.ts';
 import { OutpostCreate } from './OutpostCreate.tsx';
 import { outpostKeys, type ProposedDraft } from './outposts-api.ts';
-import { DOCS_CHAT, FE_CHAT, OUTPOST_ID, chat, detail, member, outpost } from './test-fixtures.ts';
+import {
+  API_CHAT,
+  DOCS_CHAT,
+  FE_CHAT,
+  OUTPOST_ID,
+  chat,
+  detail,
+  member,
+  outpost,
+} from './test-fixtures.ts';
 
 let client: QueryClient;
 let requests: CreateOutpostRequest[];
+let stories: OutpostStory[];
+
+const OPENING_POST = '0f000000-0000-4000-8000-000000000001';
+
+function storyOpening(): OutpostStory {
+  const task = {
+    conversationId: API_CHAT,
+    handle: 'api',
+    title: 'Build api',
+    position: 0,
+    dependsOn: null,
+    dependsOnHandle: null,
+    stacked: false,
+    openingPostId: OPENING_POST,
+    state: null,
+    reason: null,
+    branch: null,
+    pullRequest: null,
+    warnings: [],
+  };
+  return {
+    draftId: STORY_DRAFT_ID,
+    title: 'Checkout',
+    leadConversationId: DOCS_CHAT,
+    leadHandle: 'lead',
+    tasks: [task],
+  };
+}
 
 function proposed(handle: string, overrides: Partial<DraftChat> = {}): DraftChat {
   return {
@@ -63,6 +100,7 @@ beforeEach(() => {
   client.setQueryData(outpostKeys.list, []);
   seedCreateQueries(client);
   requests = [];
+  stories = [];
   vi.stubGlobal(
     'fetch',
     vi.fn((_url: string, init?: RequestInit) => {
@@ -71,7 +109,8 @@ beforeEach(() => {
       }
       const body = JSON.parse(String(init.body)) as CreateOutpostRequest;
       requests.push(body);
-      const created = { ...detail([], { id: body.id, name: body.name, members: [] }), failed: [] };
+      const made = detail([], { id: body.id, name: body.name, members: [] });
+      const created = { ...made, stories, failed: [] };
       return Promise.resolve(new Response(JSON.stringify(created), { status: 201 }));
     }),
   );
@@ -98,17 +137,17 @@ function newChats(): Extract<CreateOutpostRequest['members'][number], { new: unk
 }
 
 describe('OutpostCreate from a draft a chat proposed', () => {
-  it('starts the proposed chats under the draft, with the lead and the starts-after edge', async () => {
+  it('starts the proposed chats once on Return, with the lead and the starts-after edge', async () => {
     seedDraft();
     seedLead('agent');
     const { onCreated } = open();
-    const name = await screen.findByRole<HTMLInputElement>('textbox', { name: /^Name/ });
+    const name = await screen.findByRole<HTMLInputElement>('textbox', { name: 'Outpost name' });
     expect(name.value).toBe('Orders launch');
     fireEvent.keyDown(name, { key: 'Enter' });
-    fireEvent.click(button(/^Continue/));
-    fireEvent.click(button(/^Start outpost/));
+    fireEvent.click(button(/^Start/));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
+    expect(requests).toHaveLength(1);
     const request = requests[0]!;
     expect(request.draftId).toBe(STORY_DRAFT_ID);
     expect(request.name).toBe('Orders launch');
@@ -127,10 +166,8 @@ describe('OutpostCreate from a draft a chat proposed', () => {
     seedDraft({}, [proposed('api')]);
     seedLead('read-only');
     open();
-    const name = await screen.findByRole('textbox', { name: /^Name/ });
-    fireEvent.keyDown(name, { key: 'Enter' });
+    await screen.findByRole('textbox', { name: 'Outpost name' });
     expect(screen.getByText('api · Codex GPT-5 · Read-only')).toBeTruthy();
-    fireEvent.click(button(/^Continue/));
     fireEvent.click(button(/^Start outpost/));
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(newChats()[0]?.new.agentMode).toBe('read-only');
@@ -140,12 +177,11 @@ describe('OutpostCreate from a draft a chat proposed', () => {
     seedDraft({}, [proposed('api')]);
     seedLead('read-only');
     open();
-    fireEvent.keyDown(await screen.findByRole('textbox', { name: /^Name/ }), { key: 'Enter' });
+    await screen.findByRole('textbox', { name: 'Outpost name' });
     fireEvent.click(button('Edit Build api'));
     fireEvent.click(button('Permissions: Read-only'));
     fireEvent.click(screen.getByRole('radio', { name: 'Approve for me' }));
     fireEvent.click(button('Done'));
-    fireEvent.click(button(/^Continue/));
     fireEvent.click(button(/^Start outpost/));
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(newChats()[0]?.new.agentMode).toBe('agent');
@@ -155,31 +191,31 @@ describe('OutpostCreate from a draft a chat proposed', () => {
     seedDraft({}, [proposed('api')]);
     seedLead('agent');
     const { onCreated } = open();
-    const name = await screen.findByRole<HTMLInputElement>('textbox', { name: /^Name/ });
+    const name = await screen.findByRole<HTMLInputElement>('textbox', { name: 'Outpost name' });
     fireEvent.change(name, { target: { value: 'Typed by hand' } });
     await client.invalidateQueries({ queryKey: queryKeys.conversation(DOCS_CHAT) });
     await client.invalidateQueries({ queryKey: outpostKeys.all });
     seedDraft({ startedAt: '2026-10-09T10:00:00.000Z', outpostId: OUTPOST_ID });
     await waitFor(() => expect(client.isFetching()).toBe(0));
     expect(onCreated).not.toHaveBeenCalled();
-    expect(screen.getByRole<HTMLInputElement>('textbox', { name: /^Name/ }).value).toBe(
+    expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Outpost name' }).value).toBe(
       'Typed by hand',
     );
-    expect(screen.getByRole('dialog', { name: 'New outpost' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: /^Start a new outpost/ })).toBeTruthy();
     expect(screen.queryByRole('alertdialog')).toBeNull();
   });
 
-  it('adds the chats to the outpost the lead is already in, under its id and name', async () => {
+  it('adds the chats to the outpost the lead is already in and opens the first started thread', async () => {
+    stories = [storyOpening()];
     seedDraft({}, [proposed('api')]);
     seedLead('agent', true);
     client.setQueryData(outpostKeys.list, [outpost({ members: [member(DOCS_CHAT, 'lead', 1)] })]);
     const { onCreated } = open();
-    const dialog = await screen.findByRole('dialog', { name: 'Add chats to Usage by user' });
+    const dialog = await screen.findByRole('dialog', { name: 'Start 1 chat in Usage by user' });
     expect(within(dialog).getAllByRole('textbox', { name: /^Handle for/ })).toHaveLength(1);
-    fireEvent.click(button(/^Continue/));
-    fireEvent.click(button(/^Start chats/));
+    fireEvent.click(button('Start 1 chat'));
 
-    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(OUTPOST_ID));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(OUTPOST_ID, OPENING_POST));
     expect(requests[0]).toMatchObject({
       id: OUTPOST_ID,
       name: 'Usage by user',
@@ -192,7 +228,7 @@ describe('OutpostCreate from a draft a chat proposed', () => {
     seedDraft({ startedAt: '2026-10-09T10:00:00.000Z', outpostId: OUTPOST_ID });
     seedLead('agent');
     const { onCreated } = open();
-    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(OUTPOST_ID));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(OUTPOST_ID, null));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 

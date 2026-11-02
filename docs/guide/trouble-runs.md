@@ -8,40 +8,40 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 
 ## A run seems stuck
 
-- **You see:** a chat that doesn't move.
-- **Why:** it's usually waiting for you or running a long command.
-- **Fix:** read the line above the message box. **Waiting for you** jumps to the card. Anything else, like **Running · pnpm test**, is working.
-- **Still stuck:** select **Stop**, then send a new message.
+- **You see:** a chat not moving.
+- **Why:** it usually waits for you or runs a long command.
+- **Fix:** read the end of the turn: a card waits there, or **Working** runs on. **⌘⇧Y** jumps to a card.
+- **Still stuck:** **Stop**, then send a new message.
 
 ## A run stopped with the app
 
 - **You see:** the **This turn was interrupted** card.
-- **Why:** Spark Outpost stopped mid-run.
-- **Fix:** select **Continue from here** to resume the session, or **Start fresh**. Nothing retries by itself.
+- **Why:** the app stopped mid-run.
+- **Fix:** **Continue from here** resumes the session, or **Start fresh**. Nothing retries itself.
 
 ## A card expired
 
-- **You see:** **Expired** on an approval card and "waited for you" on the turn.
-- **Why:** nobody answered within 30 minutes, so it was declined.
-- **Fix:** select **Try again** under the turn.
+- **You see:** **Expired** on an approval card; the turn says "waited for you".
+- **Why:** unanswered for 30 minutes, it was declined.
+- **Fix:** **Try again** under the turn.
 - **Still stuck:** [allow the command](answer-approvals.md#let-a-command-run-without-asking) for the project.
 
 ## Spark blocked a step
 
-- **You see:** a step that says "Spark's policy blocked", or "Declined: … (This changes .env, a secret file)".
-- **Why:** the action crossed a [protected path](protected-paths.md), or a read-only mode was asked to change files.
-- **Fix:** in a read-only mode, switch the agent's mode. For a protected path, answer the card.
-- **Still stuck:** do that step in a [terminal](terminals.md).
+- **You see:** "Refused" with the command and why, such as "Refused gh pr create — …", or "Declined: … (This changes .env, a secret file)".
+- **Why:** it crossed a [protected path](protected-paths.md), or a read-only mode tried to change files.
+- **Fix:** leave the read-only mode, or answer the path's card.
+- **Still stuck:** do it in a [terminal](terminals.md).
 
 ## A push or PR failed
 
 - **You see:** an error with the exact `git push` command, or only a **Create PR on GitHub** link.
-- **Why:** your git login was refused and no GitHub sign-in or token covers the repo, or GitHub isn't connected.
-- **Fix:** open **Settings → Connectors → GitHub** and select **Test**.
+- **Why:** your git login was refused, and no GitHub connection covers the repo.
+- **Fix:** **Test** in **Settings → Connectors → GitHub**.
 - **Still stuck:** run the shown command in a terminal, or create the PR from the link.
 
 ## A change wasn't published
 
-- **You see:** "Not published: …" at the end of a reply, or no pull request at **Full auto → PR**.
-- **Why:** the publish step failed or was stopped. A later turn that changes no files doesn't try again.
-- **Fix:** ask the agent to push and open the pull request, or [ship](ship-and-pull-requests.md) it yourself.
+- **You see:** "Not published: …" ending a reply, or no PR at **Full auto → PR**.
+- **Why:** the publish step failed or was stopped; a later turn changing no files doesn't retry.
+- **Fix:** ask the agent to push and open the PR, or [ship](ship-and-pull-requests.md) it yourself.

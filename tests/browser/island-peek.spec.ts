@@ -21,7 +21,6 @@ import { seedChats } from './sidebar-seed.ts';
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
 const SIZES = ['small', 'medium', 'large', 'xlarge'] as const;
 const NOTCH = { width: 220, height: 38, menuBar: 44 };
-const OUT_GAP = 4;
 const deploy = {
   title: 'Deploy the site',
   run: { status: 'awaiting_approval' },
@@ -66,18 +65,21 @@ async function tuckedUnder(page: Page, size: (typeof SIZES)[number], edge: numbe
   expect(look.eyesTop).toBeGreaterThan(edge);
 }
 
-async function fullyOut(page: Page, size: (typeof SIZES)[number], edge: number) {
+async function outCentred(page: Page, edge: number) {
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await expect(island(page)).not.toHaveClass(/\btucked\b/);
-  await expect
-    .poll(() => scoutLook(page))
-    .toMatchObject({ top: edge + OUT_GAP, size: ISLAND_BLOB[size], hidden: 0 });
+  await settled(page);
+  await expect.poll(async () => (await scoutLook(page)).hidden).toBe(0);
+  await expect.poll(async () => (await scoutLook(page)).top).toBeGreaterThanOrEqual(edge);
+  await expect.poll(() => scoutCentre(page)).toBe(VIEWPORT.width / 2);
+  expect((await island(page).boundingBox())!.width).toBeLessThanOrEqual(NOTCH.width + 2);
 }
 
 for (const notch of [true, false]) {
   const edge = notch ? NOTCH.menuBar : 0;
   const where = notch ? 'under a 220x38 notch' : 'at the top edge of a flat display';
   for (const size of SIZES) {
-    test(`at ${size} size the resting blob shows its lower half ${where}, comes out when a chat needs you and tucks back`, async ({
+    test(`at ${size} size the resting blob shows its lower half ${where}, comes out with a count when a chat needs you and tucks back`, async ({
       page,
     }) => {
       await resetTestDatabase({ onboarded: true });
@@ -89,11 +91,11 @@ for (const notch of [true, false]) {
 
       const [chat] = await seedChats([deploy]);
       await expect(island(page).locator('.isl-pbadge')).toHaveText('1');
-      await expect(island(page)).toHaveAttribute('data-view', 'peek');
-      await fullyOut(page, size, edge);
+      await outCentred(page, edge);
       await shot(page, `${notch ? 'notch' : 'flat'}-${size}-needs-you`);
 
       await archive(chat!);
+      await expect(island(page)).toHaveAttribute('data-view', 'peek');
       await expect(island(page).locator('.isl-pbadge')).toHaveCount(0);
       await tuckedUnder(page, size, edge);
     });
@@ -222,14 +224,14 @@ test('a floating blob opens from its body, not the space round it', async ({ pag
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
 });
 
-test('a working chat keeps the blob out and a floating island is never tucked', async ({
+test('a working chat brings Scout out of the notch, still compact, and a floating island is never tucked', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
   await seedChats([{ title: 'Fix billing totals', run: { status: 'running' }, minutesAgo: 1 }]);
   await open(page, { size: 'large' });
   await expect(island(page).locator('.isl-scout-wrap svg.scout')).toHaveClass(/\bworking\b/);
-  await fullyOut(page, 'large', NOTCH.menuBar);
+  await outCentred(page, NOTCH.menuBar);
 
   await resetTestDatabase({ onboarded: true });
   await open(page, { size: 'xlarge', docked: false });
@@ -248,7 +250,10 @@ test('with reduced motion the blob is out or tucked at once, with no slide', asy
   await tuckedUnder(page, 'xlarge', NOTCH.menuBar);
   await seedChats([deploy]);
   await expect(island(page)).not.toHaveClass(/\btucked\b/);
-  expect((await scoutLook(page)).top).toBe(NOTCH.menuBar + OUT_GAP);
+  const first = await page.locator('.isl-scout-wrap').boundingBox();
+  await page.waitForTimeout(300);
+  expect(await page.locator('.isl-scout-wrap').boundingBox()).toEqual(first);
+  await outCentred(page, NOTCH.menuBar);
   expect(
     await island(page)
       .locator('.isl-scout-wrap .sc-look')
@@ -269,7 +274,7 @@ test.describe('screenshots', () => {
           await tuckedUnder(page, size, notch ? NOTCH.menuBar : 0);
           await shot(page, `${theme}-${where}-${size}-rest`);
           await seedChats([deploy]);
-          await fullyOut(page, size, notch ? NOTCH.menuBar : 0);
+          await outCentred(page, notch ? NOTCH.menuBar : 0);
           await shot(page, `${theme}-${where}-${size}-needs-you`);
         });
       }

@@ -66,7 +66,7 @@ async function save(settings: object) {
   return api().send('put', '/api/spark-assistant/settings', settings);
 }
 
-const FAST = { provider: null, modelChoice: 'fast', model: null, effort: null };
+const FAST = { provider: null, modelChoice: 'fast', model: null, effort: null, acts: 'manual' };
 
 async function settingsOf(id: string) {
   const settings = await resolveChatSettings(t.db, id);
@@ -100,7 +100,9 @@ describe('Spark assistant settings', () => {
     const id = await assistantId();
     const picked = { provider: 'codex', modelChoice: 'pick', model: 'gpt-6-sol', effort: 'high' };
     expect((await save(picked)).status).toBe(200);
-    expect((await view()).settings).toEqual(picked);
+    expect((await view()).settings).toEqual({ ...picked, acts: 'manual' });
+    expect((await save({ ...picked, acts: 'act' })).status).toBe(200);
+    expect((await view()).settings.acts).toBe('act');
     expect(await settingsOf(id)).toMatchObject({
       provider: 'codex',
       model: 'gpt-6-sol',

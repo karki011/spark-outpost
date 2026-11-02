@@ -127,6 +127,12 @@ export const busyEnterSchema = z.enum(['queue', 'now']);
 export type BusyEnterAction = z.infer<typeof busyEnterSchema>;
 export const DEFAULT_BUSY_ENTER: BusyEnterAction = 'queue';
 
+export const archiveInactiveDaysSchema = z
+  .union([z.literal(2), z.literal(7), z.literal(30)])
+  .nullable();
+export type ArchiveInactiveDays = z.infer<typeof archiveInactiveDaysSchema>;
+export const DEFAULT_ARCHIVE_INACTIVE_DAYS: ArchiveInactiveDays = 2;
+
 export const profileSchema = z.object({
   displayName: z.string(),
   defaultProvider: providerIdSchema.nullable(),
@@ -153,8 +159,12 @@ export const profileSchema = z.object({
   heartbeat: z.boolean().default(true),
   wideWindow: wideWindowSchema.default(DEFAULT_WIDE_WINDOW),
   busyEnter: busyEnterSchema.default(DEFAULT_BUSY_ENTER),
-  terminalRecordLikeChat: z.boolean().default(false),
+  archiveInactiveDays: archiveInactiveDaysSchema.default(DEFAULT_ARCHIVE_INACTIVE_DAYS),
+  terminalRecordLikeChat: z.boolean().default(true),
   macControl: z.boolean().default(false),
+  codeMode: z.boolean().default(true),
+  collapseFinishedTurns: z.boolean().default(true),
+  codeModeUnavailable: z.boolean().optional(),
 });
 export type Profile = z.infer<typeof profileSchema>;
 export type SparkSessionPrefs = Pick<
@@ -197,8 +207,11 @@ export const updateProfileRequestSchema = z
     heartbeat: z.boolean(),
     wideWindow: wideWindowSchema,
     busyEnter: busyEnterSchema,
+    archiveInactiveDays: archiveInactiveDaysSchema,
     terminalRecordLikeChat: z.boolean(),
     macControl: z.boolean(),
+    codeMode: z.boolean(),
+    collapseFinishedTurns: z.boolean(),
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

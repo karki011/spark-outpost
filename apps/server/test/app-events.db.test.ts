@@ -87,6 +87,32 @@ async function startChat() {
   return { conversationId: conversation.id, lease };
 }
 
+it('a new usage reading on a run sends one NOTIFY, and the same reading sends none', async () => {
+  const payloads: string[] = [];
+  const raw = await listen(testDatabaseUrl(), 'changes', (payload) => payloads.push(payload));
+  try {
+    const { conversationId, lease } = await startChat();
+    const usageEvents = () =>
+      payloads
+        .map((payload) => JSON.parse(payload) as Record<string, unknown>)
+        .filter((event) => event.kind === 'usage' && event.conversationId === conversationId);
+    const write = () =>
+      t.db.query('UPDATE runs SET context_used = 620, context_size = 1000 WHERE id = $1', [
+        lease.runId,
+      ]);
+    await write();
+    await write();
+    await t.db.query('UPDATE runs SET context_used = 700 WHERE id = $1', [lease.runId]);
+    const seen = await eventually(async () => (usageEvents().length >= 2 ? usageEvents() : null));
+    expect(seen).toEqual([
+      { kind: 'usage', conversationId, runId: lease.runId },
+      { kind: 'usage', conversationId, runId: lease.runId },
+    ]);
+  } finally {
+    await raw.close();
+  }
+});
+
 it('a run write sends a NOTIFY carrying only ids and kinds', async () => {
   const payloads: string[] = [];
   const raw = await listen(testDatabaseUrl(), 'changes', (payload) => payloads.push(payload));
@@ -104,8 +130,14 @@ it('a run write sends a NOTIFY carrying only ids and kinds', async () => {
       return found.some((event) => event.kind === 'step') ? found : null;
     });
     expect(mine).toContainEqual({ kind: 'run', conversationId, runId: lease.runId });
-    expect(mine).toContainEqual({ kind: 'step', conversationId, runId: lease.runId });
-    for (const event of mine)
+    expect(mine).toContainEqual({
+      kind: 'step',
+      conversationId,
+      runId: lease.runId,
+      phase: 'started',
+      step: 'Reading the code',
+    });
+    for (const event of mine.filter((item) => item.kind !== 'step'))
       expect(Object.keys(event).sort()).toEqual(['conversationId', 'kind', 'runId']);
   } finally {
     await raw.close();

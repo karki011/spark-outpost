@@ -11,7 +11,7 @@ import {
   nudgeText,
   tallyHeld,
 } from './island-calendar.ts';
-import { dismissNudge, NO_NUDGE_MARKS, snoozeNudge } from './nudge-marks.ts';
+import { dismissNudge, NO_NUDGE_MARKS, snoozeNudge, withJoined } from './nudge-marks.ts';
 
 const iso = (time: number) => new Date(time).toISOString();
 const CHAT = '00000000-0000-4000-8000-000000000001';
@@ -88,6 +88,22 @@ describe('nudgeText', () => {
 });
 
 describe('a wrap-up about a chat', () => {
+  it('expires a cached wrap-up once the associated meeting ends', () => {
+    const meeting = event('Review', at(10), at(10, 30));
+    const calendar = now({
+      upcoming: [meeting],
+      nudge: {
+        ...nudge('wrap_up', meeting.title, at(10)),
+        eventKey: meeting.key,
+        kind: 'wrap_up',
+        chats: [{ id: CHAT, title: 'dashboards', reason: 'running' }],
+      },
+    });
+    const chats = new Map([[CHAT, 'running' as const]]);
+    expect(calendarLine(input(calendar, { at: at(10, 29, 59), chats }))).not.toBeNull();
+    expect(calendarLine(input(calendar, { at: at(10, 30), chats }))).toBeNull();
+  });
+
   const wrapUp = (): CalendarNudge => ({
     ...(nudge('wrap_up', 'Design review', at(10, 5)) as Extract<
       CalendarNudge,
@@ -105,6 +121,19 @@ describe('a wrap-up about a chat', () => {
     expect(calendarLine(input(now({ nudge: wrapUp() }), { chats: asking }))?.text).toBe(
       'Meeting in 15 min · the dashboards chat needs you',
     );
+  });
+
+  it('stays a line about the chat when the meeting is on the calendar, not a meeting card', () => {
+    const review = event('Design review', at(10, 5), at(10, 30), { link: link('zoom') });
+    const running = chatStates([chat(CHAT, { latestRun: { status: 'running' } as never })]);
+    const calendar = now({
+      upcoming: [review],
+      nudge: { ...wrapUp(), eventKey: review.key, startsAt: review.start },
+    });
+    const line = calendarLine(input(calendar, { chats: running }));
+    expect(line?.event).toBeNull();
+    expect(line?.meeting?.sub).toContain('dashboards');
+    expect(line?.text).toBe('Meeting in 15 min · the dashboards chat is still running');
   });
 
   it('goes away once the chat has finished', () => {
@@ -171,6 +200,16 @@ describe('calendarLine', () => {
     expect(
       calendarLine(input(now({ hold: { ...hold, focus: false, title: 'Standup' } })))?.text,
     ).toBe('Standup · alerts held until 11:30 AM');
+  });
+
+  it('offers no Join on the hold line for a meeting already joined', () => {
+    const standup = event('Standup', at(9, 55), at(10, 10), { link: link('zoom') });
+    const held = now({ hold, upcoming: [standup] });
+    expect(calendarLine(input(held))?.join).toBe(standup);
+    const joined = withJoined(NO_NUDGE_MARKS, new Set([standup.key]));
+    const line = calendarLine(input(held, { marks: joined }));
+    expect(line?.text).toBe('Focus · alerts held until 11:30 AM');
+    expect(line?.join).toBeNull();
   });
 
   it('keeps the catch-up line after the calendar is disconnected', () => {
@@ -271,6 +310,20 @@ describe('calendarLine', () => {
       const snoozed = snoozeNudge(NO_NUDGE_MARKS, standup.key, end, at(9, 50));
       expect(calendarLine(input(single, { at: at(9, 51), marks: snoozed }))).toBeNull();
       expect(calendarLine(input(single, { at: at(9, 52), marks: snoozed }))).not.toBeNull();
+    });
+
+    it('leaves a snoozed or dismissed meeting out of the Choose line', () => {
+      const grouped = now({
+        upcoming: [standup, design],
+        nudge: beforeNudge(standup, [standup, design]),
+      });
+      const end = Date.parse(standup.end);
+      const snoozed = snoozeNudge(NO_NUDGE_MARKS, standup.key, end, at(9, 50));
+      const line = calendarLine(input(grouped, { at: at(9, 51), marks: snoozed }));
+      expect(line?.choose).toBeNull();
+      expect(line?.event?.key).toBe(design.key);
+      const both = dismissNudge(snoozed, design.key, Date.parse(design.end));
+      expect(calendarLine(input(grouped, { at: at(9, 51), marks: both }))).toBeNull();
     });
 
     it('never brings a snoozed meeting back after it ended', () => {

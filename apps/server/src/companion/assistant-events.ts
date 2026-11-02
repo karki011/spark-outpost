@@ -26,6 +26,7 @@ export function eventLine(kind: AssistantEventKind, detail: string | null): stri
     fact_added: 'Key fact added',
     fact_removed: 'Key fact removed',
     history_cleared: 'Ask Spark history cleared',
+    topic_started: 'Ask Spark started a new topic',
   };
   return detail ? `${lines[kind]}: ${detail}` : lines[kind];
 }

@@ -8,7 +8,7 @@ import type {
 import type { Chime } from '../island/island-sound.ts';
 import { countLabel } from '../ui/count-label.ts';
 import { clock, minutesUntil } from './calendar-format.ts';
-import { stillOn } from './event-clock.ts';
+import { hasEnded, stillOn } from './event-clock.ts';
 import { nudgeHidden, type NudgeMarks } from './nudge-marks.ts';
 import { meetingParts, type MeetingParts } from './meeting-line.ts';
 import { joinTarget } from './today-model.ts';
@@ -158,6 +158,13 @@ function captureLine(now: CalendarNow, dismissed: ReadonlySet<string>): Calendar
   };
 }
 
+function shownJoin(now: CalendarNow, input: CalendarLineInput): CalendarEvent | null {
+  const shown = stillOn(now.upcoming, input.at).filter(
+    (event) => !nudgeHidden(input.marks, event.key, input.at),
+  );
+  return joinTarget(shown, input.at);
+}
+
 function joinLine(now: CalendarNow, input: CalendarLineInput): CalendarLine | null {
   const target = joinTarget(stillOn(now.upcoming, input.at), input.at);
   if (!target?.link || nudgeHidden(input.marks, target.key, input.at)) return null;
@@ -209,12 +216,18 @@ function catchUpLine(text: string): CalendarLine {
   };
 }
 
-function liveNudge(now: CalendarNow, nudge: CalendarNudge, at: number): CalendarNudge | null {
-  if (nudge.kind === 'wrap_up') return nudge;
+function liveNudge(
+  now: CalendarNow,
+  nudge: CalendarNudge,
+  input: CalendarLineInput,
+): CalendarNudge | null {
   const fallback = meetingOf(now, nudge.eventKey);
+  if (nudge.kind === 'wrap_up') return fallback && hasEnded(fallback, input.at) ? null : nudge;
   const members = nudge.group.length > 0 ? nudge.group : fallback ? [fallback] : [];
   if (members.length === 0) return nudge;
-  const group = stillOn(members, at);
+  const group = stillOn(members, input.at).filter(
+    (event) => !nudgeHidden(input.marks, event.key, input.at),
+  );
   if (group.length === 0) return null;
   const lead = group.find((event) => event.key === nudge.eventKey) ?? group[0]!;
   return { ...nudge, eventKey: lead.key, title: lead.title, startsAt: lead.start, group };
@@ -222,7 +235,7 @@ function liveNudge(now: CalendarNow, nudge: CalendarNudge, at: number): Calendar
 
 function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineInput) {
   const current = liveWrapUp(shown, input.chats);
-  const nudge = current ? liveNudge(now, current, input.at) : null;
+  const nudge = current ? liveNudge(now, current, input) : null;
   if (!nudge) return null;
   const group = nudgeGroupOf(nudge);
   const text = nudgeText(nudge, input.at, input.waiting);
@@ -256,8 +269,8 @@ function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineIn
     key: `${nudge.kind}:${nudge.eventKey}`,
     eventKey: nudge.eventKey,
     text,
-    event: nudged,
-    join: nudged?.link ? nudged : joinTarget(stillOn(now.upcoming, input.at), input.at),
+    event: nudge.kind === 'wrap_up' ? null : nudged,
+    join: nudged?.link ? nudged : shownJoin(now, input),
     choose: null,
     capture: null,
     dismiss: null,
@@ -266,12 +279,12 @@ function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineIn
 }
 
 export function calendarLine(input: CalendarLineInput): CalendarLine | null {
-  const { now, at } = input;
+  const { now } = input;
   const caughtUp = input.catchUp ? catchUpText(input.catchUp) : null;
   if (!now?.active) return caughtUp ? catchUpLine(caughtUp) : null;
   const nudged = now.nudge ? nudgeLine(now, now.nudge, input) : null;
   if (nudged) return nudged;
-  const held = holdLine(now, joinTarget(stillOn(now.upcoming, at), at));
+  const held = holdLine(now, shownJoin(now, input));
   if (held) return held;
   if (caughtUp) return catchUpLine(caughtUp);
   const capture = captureLine(now, input.dismissed);

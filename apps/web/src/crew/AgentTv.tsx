@@ -1,4 +1,5 @@
 import './agent-tv.css';
+import { teamAgents } from './worker-identity.ts';
 import './agent-tv-stage.css';
 import 'blobatar/gaze.css';
 import {
@@ -7,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type MouseEvent,
   type PointerEvent,
 } from 'react';
@@ -40,9 +42,9 @@ import { TvList } from './TvList.tsx';
 import type { TvRows } from './tv-list.ts';
 import { tvCaption } from './tv-caption.ts';
 import { StageGaze } from './tv-gaze.ts';
-import { clampToViewport, STAGES, watchStage } from './tv-layout.ts';
+import { clampInto, dockInto, stageRoom, tvStage, watchStage, type TvDock } from './tv-layout.ts';
 import type { TvAsk } from './tv-scene.ts';
-import { useThrottledText, useViewport } from './use-tv-env.ts';
+import { useChatArea, useThrottledText, useViewport } from './use-tv-env.ts';
 import { useTvChatter } from './use-tv-events.ts';
 
 const CAPTION_THROTTLE_MS = 2500;
@@ -72,6 +74,16 @@ function isNarrow(): boolean {
   return matchesMedia(PHONE_QUERY);
 }
 
+function dockStyle(dock: TvDock | null): CSSProperties | undefined {
+  if (!dock) return undefined;
+  return {
+    '--tv-right': `${dock.right}px`,
+    '--tv-bottom': `${dock.bottom}px`,
+    '--tv-max-w': `${dock.maxWidth}px`,
+    '--tv-max-h': `${dock.maxHeight}px`,
+  } as CSSProperties;
+}
+
 function focusButton() {
   document.getElementById(CHAT_MENU_BUTTON_ID)?.focus();
 }
@@ -86,6 +98,9 @@ interface AgentTvProps {
   onStop(runId: string): void;
   branch?: string | null;
   subagents?: readonly SubagentRow[];
+  messageChats?: readonly { conversationId: string; name: string }[];
+  onMessage?: (conversationId: string) => void;
+  onRedirect?: (row: SubagentRow) => void;
 }
 
 export function AgentTv({
@@ -98,8 +113,12 @@ export function AgentTv({
   onStop,
   branch = null,
   subagents = [],
+  messageChats = [],
+  onMessage,
+  onRedirect,
 }: AgentTvProps) {
   const { position, size, watch, muted, view, cleared } = useAgentTv();
+  const stageMembers = useMemo(() => teamAgents(members, subagents), [members, subagents]);
   const panel = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const reduced = useReducedMotion();
@@ -111,7 +130,17 @@ export function AgentTv({
   const captionText = [caption.lead, caption.text].filter(Boolean).join(': ');
   const spoken = useThrottledText(captionText, CAPTION_THROTTLE_MS);
   const narrow = usePhone();
-  const metrics = watch ? watchStage(viewport) : STAGES[narrow ? 's' : size];
+  const area = useChatArea();
+  const dock = area && !narrow && !watch ? dockInto(area, viewport) : null;
+  const metrics = watch
+    ? watchStage(viewport)
+    : tvStage(
+        narrow ? 's' : size,
+        dock
+          ? stageRoom(dock, subagents.length > 0, Boolean(onMessage && messageChats.length > 0))
+          : null,
+        stageMembers.length - 1,
+      );
   const viewTip = useTooltip(view === 'list' ? 'List view' : 'Stage view');
   const sizeTip = useTooltip('Small / Medium / Large TV');
   const muteTip = useTooltip(muted ? 'Show speech bubbles' : 'Mute speech bubbles');
@@ -153,10 +182,10 @@ export function AgentTv({
       Object.assign(element.style, { left: '', top: '', right: '', bottom: '' });
       return;
     }
-    const next = clampToViewport(
+    const next = clampInto(
       position,
       { width: element.offsetWidth, height: element.offsetHeight },
-      { width: innerWidth, height: innerHeight },
+      area ?? { left: 0, top: 0, right: innerWidth, bottom: innerHeight },
     );
     Object.assign(element.style, {
       left: `${next.x}px`,
@@ -164,7 +193,7 @@ export function AgentTv({
       right: 'auto',
       bottom: 'auto',
     });
-  }, [position, size, watch, view, viewport.width, viewport.height]);
+  }, [position, size, watch, view, area, viewport.width, viewport.height]);
 
   const close = () => {
     closeAgentTv();
@@ -180,7 +209,13 @@ export function AgentTv({
     const handle = event.currentTarget;
     handle.setPointerCapture(event.pointerId);
     const move = (moveEvent: globalThis.PointerEvent) =>
-      moveAgentTv({ x: moveEvent.clientX - offset.x, y: moveEvent.clientY - offset.y });
+      moveAgentTv(
+        clampInto(
+          { x: moveEvent.clientX - offset.x, y: moveEvent.clientY - offset.y },
+          { width: element.offsetWidth, height: element.offsetHeight },
+          area ?? { left: 0, top: 0, right: innerWidth, bottom: innerHeight },
+        ),
+      );
     const stop = () => {
       handle.removeEventListener('pointermove', move);
       handle.removeEventListener('pointerup', stop);
@@ -211,6 +246,7 @@ export function AgentTv({
       <div
         ref={panel}
         className={classes.filter(Boolean).join(' ')}
+        style={dockStyle(dock)}
         role="dialog"
         aria-label="Agent TV"
         tabIndex={-1}
@@ -296,7 +332,7 @@ export function AgentTv({
           />
         ) : (
           <AgentTvStage
-            members={members}
+            members={stageMembers}
             metrics={metrics}
             asks={asks}
             chatter={chatter}
@@ -304,13 +340,40 @@ export function AgentTv({
             reduced={reduced}
             selected={selected}
             onSelect={setSelected}
-            onPick={onPick}
+            onPick={(id) => {
+              if (!subagents.some((row) => row.id === id)) return onPick(id);
+              const card = [
+                ...(panel.current?.querySelectorAll<HTMLElement>('[data-worker-id]') ?? []),
+              ].find((element) => element.dataset.workerId === id);
+              card?.scrollIntoView({ block: 'nearest' });
+              card?.querySelector<HTMLButtonElement>('button')?.focus();
+            }}
             onAsk={onAsk}
           />
         )}
         {subagents.length > 0 && (
           <div className="tv-subagents" role="group" aria-label="Sub-agents" tabIndex={0}>
-            <AgentCards rows={subagents} live={members.some((member) => isBusy(member.state))} />
+            <AgentCards
+              rows={subagents}
+              live={Boolean(
+                members[0] && (isBusy(members[0].state) || members[0].state === 'waiting'),
+              )}
+              onRedirect={onRedirect}
+            />
+          </div>
+        )}
+        {onMessage && messageChats.length > 0 && (
+          <div className="tv-messages" role="group" aria-label="Message agents">
+            {messageChats.map((chat) => (
+              <button
+                key={chat.conversationId}
+                type="button"
+                className="btn sm line"
+                onClick={() => onMessage(chat.conversationId)}
+              >
+                Message {chat.name}
+              </button>
+            ))}
           </div>
         )}
         {view === 'stage' && (

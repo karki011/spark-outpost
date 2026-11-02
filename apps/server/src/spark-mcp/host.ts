@@ -5,7 +5,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { sparkAvailability, type SparkAvailability } from './availability.ts';
 import type { SparkScope, SparkToolDeps } from './deps.ts';
-import { sparkMcpServer } from './server.ts';
+import { sparkInstructionsFor, sparkMcpServer, sparkToolsFor } from './server.ts';
 import { endMacRun } from '../mac-control/end-run.ts';
 import { endBrowserRun } from './tools/browser/end-run.ts';
 import { auditInvalidMacCall } from './tools/mac/invalid-input.ts';
@@ -13,6 +13,7 @@ import { auditInvalidMacCall } from './tools/mac/invalid-input.ts';
 export interface SparkGrant {
   url: string;
   token: string;
+  offered?: string;
   revoke(): void;
   endTurn?(runId: string): void;
 }
@@ -24,6 +25,11 @@ export interface SparkMcpHost {
   restore(scope: SparkScope, key: string): Promise<SparkGrant>;
   rebind(scope: SparkScope, key: string): Promise<SparkGrant>;
   close(): Promise<void>;
+}
+
+function offeredTools(scope: SparkScope, available: SparkAvailability): string {
+  const names = sparkToolsFor(scope, available).map((tool) => tool.name);
+  return JSON.stringify([names, sparkInstructionsFor(available)]);
 }
 
 const GRANT_KEY = /^[0-9a-f]{64}$/;
@@ -40,7 +46,7 @@ function listenOn(server: Server, port: number): Promise<boolean> {
 }
 
 const MCP_PATH = '/mcp';
-const BODY_LIMIT_BYTES = 1_000_000;
+const BODY_LIMIT_BYTES = 10_000_000;
 
 export const sparkGrantKey = (token: string) => createHash('sha256').update(token).digest('hex');
 const digest = sparkGrantKey;
@@ -176,10 +182,12 @@ export async function startSparkMcpHost(
   host = `127.0.0.1:${port}`;
   const url = `http://${host}${MCP_PATH}`;
   const register = async (scope: SparkScope, key: string, token: string): Promise<SparkGrant> => {
-    grants.set(key, { scope, available: await availabilityOf(deps, scope) });
+    const available = await availabilityOf(deps, scope);
+    grants.set(key, { scope, available });
     return {
       url,
       token,
+      offered: offeredTools(scope, available),
       revoke: () => {
         grants.delete(key);
         for (const [callKey, controller] of calls) {

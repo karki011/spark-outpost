@@ -1,41 +1,57 @@
-import { session, type Session } from 'electron';
-import type { SignedInSite } from '@spark-outpost/contracts';
+import { session, type DownloadItem, type Session, type WebContents } from 'electron';
+import type { BrowserProfile, SignedInSite } from '@spark-outpost/contracts';
 import { MEDIA_GUARD_ID, mediaGuardPreload } from '../media-guard.ts';
 import {
-  isBrowserPartition,
-  projectPartition,
+  COPY_GUARD_ID,
+  copyGuardPreload,
+  pagePermissionAllowed,
+  type InputMarks,
+} from './clipboard-permission.ts';
+import {
+  BROWSER_PARTITION,
+  PERSONAL_PARTITION,
   requestAllowed,
   withoutSparkToken,
 } from './request-guard.ts';
 
 export interface SessionGuards {
   blockedPorts(): ReadonlySet<number>;
-  roots(partition: string): readonly string[];
+  roots(contents: WebContents | null): readonly string[];
   log(line: string): void;
+  inputMarks(contents: WebContents | null): InputMarks | null;
+  download?(item: DownloadItem, contents: WebContents | null): boolean;
 }
 
 const configured = new WeakSet<Session>();
 
+export function profilePartition(profile: BrowserProfile): string {
+  return profile === 'personal' ? PERSONAL_PARTITION : BROWSER_PARTITION;
+}
+
 export function browserSession(partition: string, guards: SessionGuards): Session {
-  if (!isBrowserPartition(partition)) throw new Error('Not a browser partition.');
   const target = session.fromPartition(partition);
   if (target === session.defaultSession) {
     throw new Error('The browser pane never uses the app session.');
   }
   if (configured.has(target)) return target;
   configured.add(target);
-  target.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-  target.setPermissionCheckHandler(() => false);
+  target.setPermissionRequestHandler((contents, permission, callback) =>
+    callback(pagePermissionAllowed(permission, guards.inputMarks(contents), Date.now())),
+  );
+  target.setPermissionCheckHandler((contents, permission) =>
+    pagePermissionAllowed(permission, guards.inputMarks(contents), Date.now()),
+  );
   target.registerPreloadScript({
     type: 'frame',
     filePath: mediaGuardPreload(),
     id: MEDIA_GUARD_ID,
   });
+  target.registerPreloadScript({ type: 'frame', filePath: copyGuardPreload(), id: COPY_GUARD_ID });
   target.setDevicePermissionHandler(() => false);
   target.webRequest.onBeforeRequest((details, callback) => {
     const allowed = requestAllowed(details.url, {
       blockedPorts: guards.blockedPorts(),
-      roots: guards.roots(partition),
+      roots: guards.roots(details.webContents ?? null),
     });
     if (!allowed)
       guards.log('Blocked a page request to a Spark port or a file outside the project.');
@@ -44,7 +60,9 @@ export function browserSession(partition: string, guards: SessionGuards): Sessio
   target.webRequest.onBeforeSendHeaders((details, callback) => {
     callback({ requestHeaders: withoutSparkToken(details.requestHeaders) });
   });
-  target.on('will-download', (event) => event.preventDefault());
+  target.on('will-download', (event, item, contents) => {
+    if (!guards.download?.(item, contents ?? null)) event.preventDefault();
+  });
   return target;
 }
 
@@ -91,8 +109,8 @@ function cookieOrigin(domain: string, secure: boolean): string {
   return `${secure ? 'https' : 'http'}://${host}`;
 }
 
-export async function signedInSites(projectId: string): Promise<SignedInSite[]> {
-  const target = session.fromPartition(projectPartition(projectId));
+export async function signedInSites(): Promise<SignedInSite[]> {
+  const target = session.fromPartition(BROWSER_PARTITION);
   const cookies = await target.cookies.get({});
   const counts = new Map<string, number>();
   for (const cookie of cookies) {
@@ -104,8 +122,8 @@ export async function signedInSites(projectId: string): Promise<SignedInSite[]> 
     .sort((a, b) => a.origin.localeCompare(b.origin));
 }
 
-export async function signOut(projectId: string, origin: string | null): Promise<void> {
-  const target = session.fromPartition(projectPartition(projectId));
+export async function signOut(origin: string | null): Promise<void> {
+  const target = session.fromPartition(BROWSER_PARTITION);
   if (origin === null) {
     await target.clearStorageData();
     return;

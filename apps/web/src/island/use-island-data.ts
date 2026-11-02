@@ -9,6 +9,7 @@ import type {
 import { api, queryKeys } from '../api/client.ts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { providerName } from '../chat/provider-name.ts';
+import { runStep } from '../chat/wait-label.ts';
 import { conversationCrew } from '../crew/conversation-crew.ts';
 import type { CrewAgent } from '../crew/crew-model.ts';
 import { isRunning } from '../conversations/row-state.ts';
@@ -51,7 +52,7 @@ export function chatAgent(
     name: chat.attention?.agentName ?? (provider ? providerName(provider) : 'Spark'),
     role: null,
     provider,
-    line: chat.latestRun?.step ?? null,
+    line: chat.latestRun ? runStep(chat.latestRun) : null,
     crew,
   };
 }

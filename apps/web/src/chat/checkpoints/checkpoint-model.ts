@@ -47,10 +47,15 @@ export function asksQuestions(payload: CheckpointPayload): boolean {
   return payload.kind === 'clarify' && payload.questions.length > 0;
 }
 
+function questionsTitle(payload: CheckpointPayload): string {
+  const one = payload.questions.length === 1;
+  if (payload.agent)
+    return one ? `${payload.agent} has a question` : `${payload.agent} has questions`;
+  return one ? SPARK_QUESTION_TITLE : SPARK_QUESTIONS_TITLE;
+}
+
 export function checkpointTitle(payload: CheckpointPayload): string {
-  if (asksQuestions(payload)) {
-    return payload.questions.length === 1 ? SPARK_QUESTION_TITLE : SPARK_QUESTIONS_TITLE;
-  }
+  if (asksQuestions(payload)) return questionsTitle(payload);
   if (payload.kind === 'stuck')
     return payload.agent ? `${payload.agent} was repeating itself` : TITLES.stuck;
   if (payload.kind === 'ownership') {
@@ -64,7 +69,11 @@ export function checkpointTitle(payload: CheckpointPayload): string {
 }
 
 export function quickPicks(question: CheckpointQuestion): string[] {
-  return [...new Set([question.default, ...question.options])];
+  return [...new Set([question.default, ...question.options])].filter(Boolean);
+}
+
+export function takesText(question: CheckpointQuestion): boolean {
+  return question.freeText !== false;
 }
 
 export interface QuestionAnswer {
@@ -74,11 +83,34 @@ export interface QuestionAnswer {
 
 export const NO_ANSWER: QuestionAnswer = { picks: [], text: '' };
 
-export function togglePick(answer: QuestionAnswer, pick: string): QuestionAnswer {
-  const picks = answer.picks.includes(pick)
-    ? answer.picks.filter((picked) => picked !== pick)
-    : [...answer.picks, pick];
-  return { ...answer, picks };
+export function togglePick(
+  answer: QuestionAnswer,
+  pick: string,
+  question?: CheckpointQuestion,
+): QuestionAnswer {
+  if (question?.pick === 'one') return { ...answer, picks: [pick] };
+  if (answer.picks.includes(pick)) {
+    return { ...answer, picks: answer.picks.filter((picked) => picked !== pick) };
+  }
+  return { ...answer, picks: [...answer.picks, pick] };
+}
+
+export function choosePick(pick: string): QuestionAnswer {
+  return { picks: [pick], text: '' };
+}
+
+export function typeAnswer(
+  answer: QuestionAnswer,
+  text: string,
+  question: CheckpointQuestion,
+): QuestionAnswer {
+  if (question.pick === 'one' && text.trim()) return { picks: [], text };
+  return { ...answer, text };
+}
+
+export function firstAnswer(question: CheckpointQuestion): QuestionAnswer {
+  if (question.pick !== 'one' || !question.default) return NO_ANSWER;
+  return choosePick(question.default);
 }
 
 export function answerText(question: CheckpointQuestion, answer: QuestionAnswer): string {
@@ -162,7 +194,7 @@ const WAITING_LABELS: Record<CheckpointPayload['kind'], string> = {
 };
 
 export function waitingLabel(payload: CheckpointPayload): string {
-  if (asksQuestions(payload)) return 'Answer Spark’s questions';
+  if (asksQuestions(payload)) return `Answer ${payload.agent ?? 'Spark'}’s questions`;
   if (payload.kind === 'stuck') {
     return payload.agent ? `Continue ${payload.agent}, or stop` : WAITING_LABELS.stuck;
   }

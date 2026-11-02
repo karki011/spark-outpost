@@ -24,6 +24,7 @@ async function replyWithLinks(page: Page) {
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByLabel('Message');
   await input.fill(`See [the site](${SITE}), [the docs](${DOCS}) and [mail](mailto:a@example.com)`);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
   const reply = page.locator('.msg.ai .md').last();
   await expect(reply.getByRole('link', { name: 'the site' })).toBeVisible({ timeout: 15_000 });
@@ -64,7 +65,6 @@ test('a link in a reply opens in the Browser pane, not in a new window', async (
   expect(((await calls(page, 'start')) as { bounds: unknown }[])[0]).toMatchObject({
     bounds: null,
     projectId: null,
-    keepSignIns: true,
   });
 
   await pushTabs(page, [{ url: SITE, title: 'Example', place: 'external', active: true }]);

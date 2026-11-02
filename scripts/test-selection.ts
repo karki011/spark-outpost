@@ -31,6 +31,7 @@ const DB_FULL_RUN_PREFIXES: readonly { prefix: string; why: string }[] = [
   { prefix: 'apps/server/test/fake-', why: 'the fake agent is started by path' },
   { prefix: 'apps/server/test/echo-mcp-server.mjs', why: 'started by path' },
   { prefix: 'apps/server/src/codescan/parse-worker.ts', why: 'worker thread loaded by path' },
+  { prefix: 'apps/server/src/codemode/worker.ts', why: 'worker thread loaded by path' },
   { prefix: 'tests/browser/bin/', why: 'fake gh and codex are started by path' },
   { prefix: 'docs/guide/', why: 'spark_docs reads the guide from disk' },
   { prefix: 'patches/', why: 'dependency patch' },

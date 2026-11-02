@@ -93,9 +93,10 @@ interface ChatProps {
   approvals: Approval[];
   runs?: Run[];
   active?: string | null;
+  queued?: number;
 }
 
-function Chat({ store, approvals, runs = [], active = null }: ChatProps) {
+function Chat({ store, approvals, runs = [], active = null, queued = 0 }: ChatProps) {
   return (
     <StatusContext value={store}>
       <div data-testid="thread">
@@ -103,7 +104,13 @@ function Chat({ store, approvals, runs = [], active = null }: ChatProps) {
           <Card key={approval.id} approval={approval} />
         ))}
       </div>
-      <ComposerStatus store={store} runs={runs} activeRunId={active} provider="claude" />
+      <ComposerStatus
+        store={store}
+        runs={runs}
+        activeRunId={active}
+        provider="claude"
+        queued={queued}
+      />
       <div className="composer">
         <textarea aria-label="Message" />
       </div>
@@ -146,11 +153,17 @@ describe('waiting for you', () => {
     const line = within(status()).getByRole('button', { name: /^Waiting for you/ });
     expect(line.textContent).toBe("Waiting for you · approve git grep -l -i 'AI_USER' … Review");
     expect(line.querySelector('code')?.textContent).toBe("git grep -l -i 'AI_USER' …");
-    expect(within(thread()).getByRole('group', { name: /Run a command\?/ })).toBeTruthy();
+    expect(within(thread()).getByRole('group', { name: /^Run .+\?$/ })).toBeTruthy();
     await act(() => vi.advanceTimersByTimeAsync(0));
     expect(within(status()).getByRole('status').textContent).toBe(
       "Waiting for you: approve git grep -l -i 'AI_USER' …",
     );
+  });
+
+  it('keeps the count of queued messages on the waiting line', () => {
+    show({ approvals: [command], queued: 3 });
+    const line = status().querySelector('.cs-line')!;
+    expect(line.querySelector('.cs-queued')?.textContent).toBe('3 queued');
   });
 
   it('shows the full command on hover', async () => {
@@ -173,7 +186,7 @@ describe('waiting for you', () => {
     ]);
     fireEvent.click(items[1]!);
     await frames();
-    expect(document.activeElement?.textContent).toBe('Yes');
+    expect(document.activeElement?.classList.contains('appr-h')).toBe(true);
     expect(within(status()).queryByRole('list')).toBeNull();
   });
 
@@ -182,7 +195,7 @@ describe('waiting for you', () => {
     screen.getByRole('textbox', { name: 'Message' }).focus();
     fireEvent.keyDown(window, { key: 'Y', shiftKey: true, ctrlKey: true, metaKey: true });
     await frames();
-    expect(document.activeElement?.textContent).toBe('Yes');
+    expect(document.activeElement?.classList.contains('appr-h')).toBe(true);
   });
 
   it('does not take focus from the composer when a card arrives', () => {
@@ -207,7 +220,7 @@ describe('waiting for you', () => {
         },
       ],
     });
-    const card = within(thread()).getByRole('group', { name: /Spark has a few questions/ });
+    const card = within(thread()).getByRole('group', { name: /Pip has questions/ });
     expect(card.textContent).toContain('Went with the best guesses after 10s.');
     expect(status().dataset.state).toBe('idle');
   });
@@ -293,13 +306,13 @@ describe('while the agent works', () => {
     expect(status().querySelector('.cs-time')?.textContent).toBe('12s');
   });
 
-  it('says Done with the run time, then goes quiet', async () => {
+  it('announces Done with the run time without showing a line', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'Date'] });
     const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
     view.rerender({ approvals: [], runs: [run('succeeded')], active: null });
-    expect(shown()).toBe('Done · 2m 14s');
-    await act(() => vi.advanceTimersByTimeAsync(9_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     expect(status().dataset.state).toBe('idle');
+    expect(within(status()).getByRole('status').textContent).toBe('Done after 2m 14s');
   });
 
   it('announces politely, at most once every few seconds', async () => {
@@ -322,22 +335,19 @@ describe('while the agent works', () => {
 describe('clarify questions', () => {
   it('lists each question with its best guess and quick answers', () => {
     show({ approvals: [questions] });
-    const card = within(thread()).getByRole('group', { name: /Spark has a few questions/ });
-    expect(card.textContent).toContain('Spendbest guess');
+    const card = within(thread()).getByRole('group', { name: /Pip has questions/ });
+    expect(card.textContent).toContain('SpendPip’s best guess');
     expect(card.textContent).toContain('Which period?Best guess: This month');
     const send = within(card).getByRole('button', { name: 'Send' }) as HTMLButtonElement;
     expect(send.disabled).toBe(true);
-    const usage = within(card).getByRole('button', { name: 'Usage' });
+    const usage = within(card).getByRole('checkbox', { name: 'Usage' }) as HTMLInputElement;
     fireEvent.click(usage);
-    expect(usage.getAttribute('aria-pressed')).toBe('true');
-    const spend = within(card).getByRole('button', { name: /^Spend/ });
+    expect(usage.checked).toBe(true);
+    const spend = within(card).getByRole('checkbox', { name: /^Spend/ }) as HTMLInputElement;
     fireEvent.click(spend);
-    expect(usage.getAttribute('aria-pressed')).toBe('true');
-    expect(spend.getAttribute('aria-pressed')).toBe('true');
-    expect(within(card).getByRole('group', { name: /question 1, choose any$/ })).toBeTruthy();
-    expect(
-      (within(card).getByRole('textbox', { name: 'Which report?' }) as HTMLTextAreaElement).value,
-    ).toBe('');
+    expect(usage.checked).toBe(true);
+    expect(spend.checked).toBe(true);
+    expect(within(card).getByRole('group', { name: 'Which report?, choose any' })).toBeTruthy();
     expect(send.disabled).toBe(false);
     fireEvent.click(usage);
     fireEvent.click(spend);

@@ -43,7 +43,6 @@ function start(provider: Provider = createFakeProvider({ stepMs: 0, wordMs: 0 })
     db: t.db,
     providers: new Map([[provider.name, provider]]),
     leaseSeconds: 30,
-    concurrency: 1,
     pollMs: 20,
   });
   return provider.name;
@@ -111,10 +110,8 @@ describe('tasks', () => {
     expect(task!.links).toMatchObject([
       { kind: 'pr', url: FAKE_PR_URL, title: 'spark-outpost/demo#42', source: 'agent_text' },
     ]);
-    expect(task!.summary.text).toBe(`${task!.summary.done} of ${task!.summary.total} done`);
-    expect(task!.items.find((item) => item.id === 'planned')).toMatchObject({
-      agent: { provider: 'fake', model: 'fake-fast', effort: 'low' },
-    });
+    expect(task!.summary.text).toBe('3 of 3 done');
+    expect(task!.todo.map((item) => item.id)).toEqual(['todo:0', 'todo:1', 'todo:2']);
 
     const { rows } = await t.db.query<{ payload: { activityType?: string; messageId?: string } }>(
       `SELECT payload FROM run_events WHERE run_id = $1 AND type = 'ACTIVITY_SNAPSHOT' ORDER BY seq`,
@@ -123,7 +120,7 @@ describe('tasks', () => {
     const activities = rows
       .map((row) => row.payload.activityType)
       .filter((type) => type !== 'orchestration');
-    expect(activities).toEqual(['task', 'plan', 'plan', 'plan', 'link']);
+    expect(activities).toEqual(['todo', 'task', 'plan', 'todo', 'plan', 'todo', 'plan', 'link']);
 
     const detail = await getConversationDetail(t.db, conversationId);
     expect(detail?.tasks).toHaveLength(1);
@@ -149,10 +146,6 @@ describe('tasks', () => {
       durationMs: 1234,
     });
     expect(task!.costSource).toBe('estimated');
-    expect(task!.items.find((item) => item.id === `run:${run.id}`)).toMatchObject({
-      agent: { provider: 'fake', model: 'fake-deep', effort: 'high' },
-      costSource: 'estimated',
-    });
   });
 
   it('joins follow-ups to the open task so plan versions span runs', async () => {
@@ -172,7 +165,11 @@ describe('tasks', () => {
     expect(task!.planVersions[0]!.usedBy).toEqual([first.id, chat.id, again.id]);
     expect(task!.planVersions[0]!.sourceRunId).toBe(again.id);
     expect(task!.links).toHaveLength(1);
-    expect(task!.items.map((item) => item.label)).toContain('Follow-up: Also add a test #plan');
+    expect(task!.todo.map((item) => item.label)).toEqual([
+      'Read the request',
+      'Look through the code',
+      'Write the answer',
+    ]);
   });
 
   it('starts a new task after the previous one is closed', async () => {
@@ -269,11 +266,8 @@ describe('tasks', () => {
     expect(task!.links).toMatchObject([
       { url: 'https://github.com/o/r/pull/9', source: 'tool_output' },
     ]);
-    expect(task!.items.map((item) => item.id)).toEqual([
-      'understood',
-      `run:${working.id}`,
-      'pr:https://github.com/o/r/pull/9',
-    ]);
+    expect(task!.todo).toEqual([]);
+    expect(task!.recorded).toEqual([]);
   });
 
   it('lists only pull requests the chat opened, not ones the agent mentioned', async () => {
@@ -294,12 +288,10 @@ describe('tasks', () => {
       [opened, 'tool_output'],
       [mentioned, 'agent_text'],
     ]);
-    expect(task!.items.filter((item) => item.id.startsWith('pr:'))).toEqual([
-      expect.objectContaining({ label: 'Opened o/r#30', state: 'done' }),
-    ]);
+    expect(task!.todo).toEqual([]);
   });
 
-  it('writes no plan once the worker lost its lease', async () => {
+  it('writes no plan or to-do once the worker lost its lease', async () => {
     const conversationId = await newConversation();
     const sent = await sendUserMessage(
       t.db,
@@ -329,9 +321,11 @@ describe('tasks', () => {
             overwrite: false,
             supersedesPrevious: false,
           },
+          todo: body.entries,
         },
       ),
     ).rejects.toBeInstanceOf(LeaseLostError);
+    expect((await getRun(t.db, sent.run.id))?.todo).toBeNull();
     const { rowCount } = await t.db.query('SELECT 1 FROM run_artifacts WHERE task_id = $1', [
       taskId,
     ]);

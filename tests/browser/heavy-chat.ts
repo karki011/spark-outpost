@@ -54,8 +54,8 @@ function inflate(detail: ConversationDetail): ConversationDetail {
       done: true,
     }));
   }
-  const items: TaskListItem[] = Array.from({ length: TASK_ITEMS }, (_, index) => ({
-    ...task.items[index % task.items.length]!,
+  const todo: TaskListItem[] = Array.from({ length: TASK_ITEMS }, (_, index) => ({
+    ...task.todo[index % task.todo.length]!,
     id: `heavy-${index}`,
     label: `Check divider case ${index}`,
     state: 'done',
@@ -68,7 +68,7 @@ function inflate(detail: ConversationDetail): ConversationDetail {
     tasks: [
       {
         ...task,
-        items,
+        todo,
         summary: { ...task.summary, total: TASK_ITEMS, done: TASK_ITEMS },
       },
     ],
@@ -95,10 +95,9 @@ export async function openHeavyChat(page: Page, keepLive = false): Promise<void>
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
-  await expect(page.locator('.taskc, .crail-tasks-head')).toContainText(/Task 6\/6|6 of 6/, {
-    timeout: 30_000,
-  });
+  await expect(page.locator('.todo-line')).toContainText('3 of 3 done', { timeout: 30_000 });
   await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
     const response = await route.fetch();

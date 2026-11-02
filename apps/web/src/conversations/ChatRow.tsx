@@ -1,15 +1,20 @@
-import { memo, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
+import { memo, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
 import { motion } from 'motion/react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { categoryLabel, type ConversationSummary } from '@spark-outpost/contracts';
+import {
+  archivedInactiveLine,
+  categoryLabel,
+  shownChatTitle,
+  type ConversationSummary,
+} from '@spark-outpost/contracts';
 import { DotsIcon, GripIcon, MergedIcon, PinIcon, RestoreIcon, TrashIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { MatchSnippet } from './MatchSnippet.tsx';
 import { recencyLabel } from './recency.ts';
 import { rowFaceState, rowState } from './row-state.ts';
-import { chatBlob } from './chat-blob.ts';
+import { BLOB_LABELS, chatBlob } from './chat-blob.ts';
 import { ChatBlob } from './ChatBlob.tsx';
 import { useChatOnScreen } from './on-screen.ts';
 import { RowTitle, useMarquee } from './RowTitle.tsx';
@@ -26,7 +31,10 @@ interface ChatRowProps {
   flash: boolean;
   index: number;
   handle?: string | undefined;
+  faceless?: boolean;
+  relation?: string | null;
   onOpen: (id: string) => void;
+  onPrepare?: (id: string) => void;
   onMenu: (id: string, element: HTMLElement, point: { x: number; y: number } | null) => void;
   onRename: (chat: ConversationSummary, title: string | null) => void;
   onRestore: (chat: ConversationSummary) => void;
@@ -122,6 +130,7 @@ function HistoryActions({
 
 export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   const { chat, selected, renaming, sortable, settling, flash, handle } = props;
+  const { faceless = false, relation = null } = props;
   const { onOpen, onMenu, onRename } = props;
   const history = chat.archivedAt !== null;
   const draggable = sortable && !renaming && !history;
@@ -148,12 +157,25 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   const classes = [
     'row',
     `st-${state.tone}`,
+    faceless ? 'faceless' : '',
     selected ? 'active' : '',
     isDragging ? 'placeholder' : '',
     flash ? 'flash' : '',
     chat.pinnedAt ? 'pinned' : '',
   ].filter(Boolean);
   const pointerListeners = pointerStart(listeners, draggable);
+  const prepareTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelPrepare = () => {
+    if (prepareTimer.current !== null) clearTimeout(prepareTimer.current);
+    prepareTimer.current = null;
+  };
+  const prepare = () => {
+    cancelPrepare();
+    if (!selected && !renaming && !isDragging && props.onPrepare) {
+      prepareTimer.current = setTimeout(() => props.onPrepare?.(chat.id), 150);
+    }
+  };
+  useEffect(() => cancelPrepare, []);
 
   const openMenuAt = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
@@ -168,27 +190,38 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     'data-chat': chat.id,
     onContextMenu: renaming ? undefined : openMenuAt,
     onPointerEnter: (event: PointerEvent<HTMLElement>) => {
-      if (event.pointerType === 'mouse') marquee.start();
+      if (event.pointerType === 'mouse') {
+        marquee.start();
+        prepare();
+      }
     },
-    onPointerLeave: marquee.stop,
+    onPointerLeave: () => {
+      marquee.stop();
+      cancelPrepare();
+    },
   };
   const terminal = chat.sessionType === 'terminal';
+  const autoArchived =
+    history && chat.autoArchivedDays ? archivedInactiveLine(chat.autoArchivedDays) : null;
+  const title = shownChatTitle(chat.title);
   const tooltip = [
-    chat.title,
+    title,
     terminal ? 'Terminal session' : null,
     handle ? `@${handle}` : null,
+    relation,
     chat.teammate ? `with ${chat.teammate.name}` : null,
     chat.titleSource === 'auto' ? 'Renamed by Spark' : null,
     chat.category ? categoryLabel(chat.category) : null,
     state.label,
     chat.pullRequestMerged ? MERGED_LABEL : null,
     recencyLabel(chat.updatedAt),
+    autoArchived,
   ].filter(Boolean);
   const content = (
     <>
       {renaming ? (
         <div className="row-open">
-          <span className="st">{face}</span>
+          {!faceless && <span className="st">{face}</span>}
           <span className="rt">
             <RenameInput
               title={chat.title}
@@ -205,16 +238,22 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
           title={tooltip.join(' · ')}
           onClick={() => onOpen(chat.id)}
           onFocus={(event) => {
-            if (event.currentTarget.matches(':focus-visible')) marquee.start();
+            if (event.currentTarget.matches(':focus-visible')) {
+              marquee.start();
+              prepare();
+            }
           }}
-          onBlur={marquee.stop}
+          onBlur={() => {
+            marquee.stop();
+            cancelPrepare();
+          }}
           {...pointerListeners}
         >
-          <span className="st">{face}</span>
+          {!faceless && <span className="st">{face}</span>}
           <span className="rt">
             <span className="row-title-line">
               <RowTitle
-                text={chat.title}
+                text={title}
                 overflow={marquee.overflow}
                 running={marquee.running}
                 titleRef={marquee.ref}
@@ -222,10 +261,17 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
               {chat.pullRequestMerged && <MergedMark />}
             </span>
             {handle && <span className="sr-only">{`, @${handle}`}</span>}
+            {relation && <span className="sr-only">{`, ${relation}`}</span>}
             {terminal && <span className="sr-only">, Terminal session</span>}
             {chat.match && <MatchSnippet match={chat.match} />}
             {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
+            {autoArchived && <span className="sr-only">, {autoArchived}</span>}
           </span>
+          {blob && (
+            <span className="row-state" data-state={blob} aria-hidden="true">
+              {BLOB_LABELS[blob]}
+            </span>
+          )}
           <ChatBlob kind={blob} />
         </button>
       )}

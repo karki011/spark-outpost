@@ -2,6 +2,12 @@
 
 Terminal sessions run the installed Claude Code or Codex interactive CLI in a pane of a tmux server that Spark owns ([tmux](#tmux)); without a usable tmux they run in a Spark-owned PTY as before. Chat sessions continue through ACP. Terminal sessions do not start chat runs and cannot switch a live Chat conversation into a native terminal.
 
+## Agent-led delegation
+
+Every new or explicitly resumed Claude Code and Codex Terminal session receives the shared delegation policy through its native system or developer instructions. The lead delegates implementation slices using available provider subagents, choosing roles, agent count and whether each worker owns one or several slices. An assigned worker executes its slice without a requirement to delegate again. This does not require an Outpost or change the provider permission mode, and a provider without usable delegation reports that limitation. Spark does not spawn a fixed crew or enforce delegation through a tool gate. Existing running or re-adopted CLI processes retain their launch instructions until an explicit resume or a new session.
+
+The shared policy supplies reusable Lead, Builder, Verifier, Reviewer and optional Explorer responsibilities. The lead chooses which apply, records slice plans in available session planning tools or the transcript, and places scope, interfaces, dependencies and done criteria in each actual assignment. Workers return changed files, check results and blockers through existing provider results. This adds no role table, persisted orchestration state machine or independent scheduler, and does not silently enable native CLI features the owner disabled. Provider telemetry determines which worker activity Spark can display; instruction delivery alone does not prove delegation or verification happened.
+
 ## Ownership and lifecycle
 
 The desktop starts an independent local runtime under the channel's app-data directory. That runtime owns embedded PostgreSQL, the Node API, and the workflow worker. Electron controls the windows and connects to this runtime over a Unix domain socket, `runtime/control.sock` (mode 0600) in the channel's private `runtime` directory (mode 0700), so only the same user can reach it. The host creates a new control token on every start (`runtime/token`, mode 0600) and records its pid and app version in `runtime/endpoint.json`; it removes a stale socket and endpoint on start after checking that no live host answers, and removes the endpoint and token on shutdown. The token never crosses the socket: the client sends a nonce, the host answers with an HMAC of the token over both nonces, the client verifies it and answers with its own, and the host serves no request before that. The API launch token stays in runtime memory and is read only over this proven connection. The host starts only the app's own API, worker and migration entries through its own `server-entry.js`; the server folder is fixed when the host is spawned. Service environments are passed through whole, because agents need the user's login-shell environment. Development and installed channels have separate directories and credentials. A data folder whose socket path exceeds 103 bytes is refused with an error.
@@ -116,7 +122,9 @@ Spark counts the mod as active while it checked in within the last 5 s (`remote/
 
 ### Recording a Claude session like a chat
 
-**Record Terminal sessions like chats** (Settings → Chats & autonomy, `profiles.terminal_record_like_chat`, migration 0178, off by default) lets the owner keep what a chat keeps for Claude Terminal sessions. It changes nothing for Codex, for a session whose mod is not loaded, or while it is off.
+**Record Terminal sessions like chats** (Settings → Chats & autonomy, `profiles.terminal_record_like_chat`, migration 0178; migration 0218 defaults new profiles on and preserves every existing on/off value) lets the owner keep what a chat keeps for Claude Terminal sessions. It changes nothing for Codex, for a session whose mod is not loaded, or while it is off.
+
+Migration 0218 changes only the column default; it does not infer whether an existing off value was a deliberate choice. `terminal-record-settings.db.test.ts` verifies new-profile defaults, saved off choices and an upgrade with both existing values. This default change does not extend recording to Codex or prove live mod delivery.
 
 **How the mod learns the setting.** It reads it from `observer.json`, which is written at launch and again at re-adoption. After that, the inbox reply's `record` field updates it.
 

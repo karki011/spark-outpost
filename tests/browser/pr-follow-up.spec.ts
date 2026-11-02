@@ -91,8 +91,8 @@ test('the chat shows what Spark is doing with its PR and one card confirms the p
   await expect(pull.getByRole('link', { name: 'Review the card' })).toBeVisible();
   await pull.getByText('3 items gathered').click();
   const held = pull.getByRole('listitem').filter({ hasText: 'F3' });
-  await expect(held).toContainText('mallory · can’t write to the repo');
-  await expect(held).toContainText('Shown only');
+  await expect(held).toContainText('mallory · no write access');
+  await expect(held).toContainText('Not acted on');
   await page.keyboard.press('Escape');
 
   const row = page

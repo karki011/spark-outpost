@@ -13,15 +13,20 @@ export function AskedList({ approval }: { approval: CheckpointApproval }) {
   const questions = approval.payload.checkpoint.questions;
   const note = answeredNote(approval);
   const sent = sentAnswers(questions, note);
-  const guessed = approval.decisionOptionId !== CHECKPOINT_OPTION.answer || note !== null;
+  const answered = approval.decisionOptionId === CHECKPOINT_OPTION.answer;
+  const guessed = approval.payload.form ? answered : !answered || note !== null;
+  const inHeading = questions.length === 1;
+  const hasLine = (index: number) =>
+    !inHeading || sent.answers[index] || (guessed && questions[index]?.default);
+  if (!questions.some((_, index) => hasLine(index))) return null;
   return (
     <ol className="ck-asked">
       {questions.map((question, index) => {
         const answer = sent.answers[index];
         return (
           <li key={question.question}>
-            {question.question} {answer && <b>→ {answer}</b>}
-            {!answer && guessed && <span>Best guess: {question.default}</span>}
+            {!inHeading && question.question} {answer && <b>→ {answer}</b>}
+            {!answer && guessed && question.default && <span>Best guess: {question.default}</span>}
           </li>
         );
       })}
@@ -50,7 +55,7 @@ function ChoicesBody({ approval, decide }: BodyProps) {
       )}
       {offers(approval, CHECKPOINT_OPTION.answer) && (
         <NoteForm
-          label={choices.length > 0 ? 'Or answer in your own words' : 'Answer in your own words'}
+          label={choices.length > 0 ? 'Something else…' : 'Type your answer'}
           initial=""
           submit="Send"
           busy={decide.busy}

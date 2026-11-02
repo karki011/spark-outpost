@@ -1,0 +1,255 @@
+.mdf {
+  position: relative;
+}
+
+.mdf-field {
+  position: relative;
+}
+
+.mdf-field > textarea {
+  position: relative;
+  z-index: 1;
+  color: transparent;
+  caret-color: var(--text);
+  font-kerning: none;
+  font-variant-ligatures: none;
+  font-feature-settings:
+    'kern' 0,
+    'liga' 0,
+    'calt' 0;
+}
+
+.mdf-field > textarea::selection {
+  color: transparent;
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.mdf-mirror {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-style: solid;
+  border-color: transparent;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.mdl {
+  min-height: 1lh;
+}
+
+.mdm-marker {
+  color: var(--faint);
+}
+
+.mdm-strong {
+  -webkit-text-stroke: 0.035em currentColor;
+}
+
+.mdm-em {
+  font-style: italic;
+  font-synthesis: style;
+}
+
+.mdm-strike {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, currentColor 60%, transparent);
+}
+
+.mdm-code {
+  border-radius: 4px;
+  background: var(--raise);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--accent-text);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.mdm-link {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+
+.mdm-url {
+  color: var(--faint);
+}
+
+.mdm-mention {
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.mdl-quote {
+  box-shadow: inset 2px 0 0 var(--line-strong);
+  color: var(--muted);
+}
+
+.mdl-quote > .mdm-marker:first-child {
+  color: transparent;
+}
+
+.mdl-code,
+.mdl-fence-open,
+.mdl-fence-close {
+  background: var(--code);
+  box-shadow:
+    -6px 0 0 var(--code),
+    6px 0 0 var(--code);
+}
+
+.mdl-fence-open {
+  border-radius: 6px 6px 0 0;
+}
+
+.mdl-fence-close {
+  border-radius: 0 0 6px 6px;
+}
+
+.mdl-heading {
+  color: var(--text);
+}
+
+.mdf-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px 4px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mdf-sep {
+  flex-shrink: 0;
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--line);
+}
+
+.mdf-hint {
+  margin-left: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mdf-tool,
+.mdf-toggle {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--muted);
+  transition:
+    background 0.15s var(--out),
+    color 0.15s var(--out);
+}
+
+.mdf-tool:hover,
+.mdf-toggle:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.mdf-tool[aria-pressed='true'],
+.mdf-toggle[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.mdf-toggle {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.mdf-float {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.mdf-link {
+  position: absolute;
+  z-index: 21;
+  display: grid;
+  gap: 4px;
+  width: min(300px, 100%);
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
+}
+
+.mdf-link label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mdf-link input {
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 13.5px;
+}
+
+.mdf-link input + label {
+  margin-top: 6px;
+}
+
+.mdf-link-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.mdf-link-keys {
+  flex: 1;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (pointer: coarse) {
+  .mdf-float {
+    display: none;
+  }
+}
+
+@media (hover: none) {
+  .mdf-hint {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .mdf-mirror {
+    display: none;
+  }
+
+  .mdf-field > textarea {
+    color: CanvasText;
+  }
+}

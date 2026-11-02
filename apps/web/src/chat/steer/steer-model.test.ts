@@ -123,7 +123,7 @@ describe('steerStatus', () => {
       crew: [member(TOP, 'Atlas', 'running'), member(BOLT, 'Bolt', 'running')],
     });
     expect(steerStatus(steer('a'), handedOff, top, true)).toEqual({
-      text: 'Bolt reads this at its next step',
+      text: 'Sent · Bolt reads it at its next step',
       tone: 'wait',
     });
   });
@@ -137,13 +137,16 @@ describe('steerStatus', () => {
       ],
     });
     expect(steerStatus(steer('a'), several, top, true).text).toBe(
-      'The crew reads this at its next step',
+      'Sent · The crew reads it at its next step',
     );
   });
 
   it('names the member that took the message, not the run it was addressed to', () => {
     const taken = steer('a', { status: 'delivered', deliveredRunId: BOLT });
-    expect(steerStatus(taken, detail(), top, true)).toEqual({ text: 'Bolt has it', tone: 'ok' });
+    expect(steerStatus(taken, detail(), top, true)).toEqual({
+      text: 'Bolt took this in',
+      tone: 'ok',
+    });
   });
 
   it('says the turn is stopping when the agent could not take it mid-turn', () => {
@@ -158,7 +161,7 @@ describe('steerStatus', () => {
     const listedInCrewOnly = detail({ runs: [run(TOP, 'running')] });
     const waiting = steer('a', { runId: BOLT, urgency: 'next' });
     expect(steerStatus(waiting, listedInCrewOnly, top, true)).toEqual({
-      text: 'Bolt reads this at its next step',
+      text: 'Sent · Bolt reads it at its next step',
       tone: 'wait',
     });
   });
@@ -189,11 +192,11 @@ describe('steerStatus', () => {
   it('names the provider in a turn with one agent', () => {
     const solo = detail({ runs: [run(TOP, 'running')], crew: [] });
     expect(steerStatus(steer('a'), solo, top, false).text).toBe(
-      'Claude reads this at its next step',
+      'Sent · Claude reads it at its next step',
     );
     const child = detail({ crew: [member(BOLT, 'Bolt', 'running')] });
     const taken = steer('a', { status: 'delivered', deliveredRunId: BOLT });
-    expect(steerStatus(taken, child, top, false).text).toBe('Codex has it');
+    expect(steerStatus(taken, child, top, false).text).toBe('Codex took this in');
   });
 });
 
@@ -206,6 +209,13 @@ describe('withSteer', () => {
       steer('new', { body: 'Use UTC', createdAt: now, runId: TOP }),
     ]);
     expect(turnSteers(next, TOP)).toHaveLength(1);
+  });
+
+  it('keeps image-only steers visible while their delivery is pending', () => {
+    const next = withSteer(detail(), 'image', '', now, ['file-a']);
+    expect(turnSteers(next, TOP)).toMatchObject([
+      { id: 'image', body: '', attachmentIds: ['file-a'] },
+    ]);
   });
 
   it('adds nothing when no turn is running or the message is already there', () => {

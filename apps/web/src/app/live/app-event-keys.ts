@@ -21,7 +21,11 @@ import {
 } from '../../terminal/terminal-api.ts';
 import { ticketKeys } from '../../tickets/tickets-api.ts';
 import { calendarKeys } from '../../calendar/calendar-api.ts';
+import { islandRequestsKey } from '../../island/island-requests.ts';
+import { attentionKey } from '../../attention/attention-api.ts';
 import { sparkPauseKey } from '../pause/spark-pause-api.ts';
+
+type RunStreamed = (runId: string) => boolean;
 
 interface Invalidation {
   queryKey: QueryKey;
@@ -44,6 +48,8 @@ export const LIVE_ROOTS: readonly string[] = [
   outpostKeys.all[0],
   agentTerminalKeys.all[0],
   calendarKeys.all[0],
+  islandRequestsKey[0],
+  attentionKey[0],
 ];
 
 export function isLiveQueryKey(key: QueryKey): boolean {
@@ -51,6 +57,7 @@ export function isLiveQueryKey(key: QueryKey): boolean {
 }
 
 const list: Invalidation = { queryKey: queryKeys.conversations, exact: true };
+const attention: Invalidation = { queryKey: attentionKey, exact: true };
 const search: Invalidation = { queryKey: queryKeys.conversationSearches };
 const tasks: Invalidation = { queryKey: taskKeys.all };
 const changeSummaries: Invalidation = { queryKey: diffKeys.summaries };
@@ -87,7 +94,21 @@ function outcome(event: AppEvent): Invalidation[] {
   return event.runId ? [{ queryKey: outcomeKeys.run(event.runId), exact: true }] : [];
 }
 
-function invalidationsFor(event: AppEvent): Invalidation[] {
+function stepInvalidations(event: AppEvent, streamed: RunStreamed): Invalidation[] {
+  if (!event.phase) {
+    return [list, ...conversationScoped(event, true), changeSummaries, ...terminalRemote(event)];
+  }
+  const id = event.conversationId;
+  const detail = event.runId && streamed(event.runId) ? [] : conversationScoped(event, false);
+  return [
+    ...detail,
+    ...(id ? [{ queryKey: auditKeys.summary(id), exact: true }] : []),
+    ...(event.phase === 'finished' ? [changeSummaries] : []),
+    ...terminalRemote(event),
+  ];
+}
+
+function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[] {
   switch (event.kind) {
     case 'conversation':
       return [
@@ -118,7 +139,9 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
         ...terminalRemote(event),
       ];
     case 'step':
-      return [list, ...conversationScoped(event, true), changeSummaries, ...terminalRemote(event)];
+      return stepInvalidations(event, streamed);
+    case 'usage':
+      return conversationScoped(event, false);
     case 'subagent':
       return [list, ...conversationScoped(event, true)];
     case 'approval':
@@ -162,7 +185,15 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
       return [{ queryKey: sparkPauseKey, exact: true }];
     case 'calendar':
       return [{ queryKey: calendarKeys.all }];
+    case 'island_request':
+      return [{ queryKey: islandRequestsKey, exact: true }];
+    case 'attention':
+      return [list];
   }
+}
+
+function withAttention(invalidations: Invalidation[]): Invalidation[] {
+  return invalidations.includes(list) ? [...invalidations, attention] : invalidations;
 }
 
 export function isStepEvent(event: AppEvent): boolean {
@@ -176,9 +207,13 @@ function covers(broad: Invalidation, narrow: Invalidation): boolean {
   return broad.queryKey.every((part, index) => part === narrow.queryKey[index]);
 }
 
-export function mergeInvalidations(events: readonly AppEvent[]): Invalidation[] {
+export function mergeInvalidations(
+  events: readonly AppEvent[],
+  streamed: RunStreamed = () => false,
+): Invalidation[] {
   const unique = new Map<string, Invalidation>();
-  for (const invalidation of events.flatMap(invalidationsFor)) {
+  const invalidations = events.flatMap((event) => withAttention(invalidationsFor(event, streamed)));
+  for (const invalidation of invalidations) {
     unique.set(JSON.stringify([invalidation.queryKey, invalidation.exact ?? false]), invalidation);
   }
   const all = [...unique.values()];

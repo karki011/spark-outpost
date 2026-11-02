@@ -1,64 +1,80 @@
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { chatRepo, type ChatRepo, projectChat, resetWithAgents, send } from './project-chat-kit.ts';
-import { openChats } from './navigation.ts';
+import { git, repoWithRemote, type TestRepo } from '../../apps/server/test/ship-support.ts';
+import { resetTestDatabase } from './database.ts';
+import { turnDone } from './project-chat-kit.ts';
+import { buildNotes, chatIn } from './result-block-kit.ts';
+import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
 
-let repo: ChatRepo;
+test.describe.configure({ timeout: 120_000 });
+let base = '';
 
-test.beforeEach(async ({ page }) => {
-  await resetWithAgents();
-  repo = chatRepo();
-  await page.setViewportSize({ width: 1400, height: 900 });
+test.beforeEach(async ({ page, request }) => {
+  base = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'spark-feedback-')));
+  await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
+  await request.post(`http://127.0.0.1:${STUB_PORT}/github-test/reset`);
+  await page.setViewportSize({ width: 1400, height: 1200 });
 });
 
-test.afterEach(() => repo.remove());
+test.afterEach(() => {
+  rmSync(base, { recursive: true, force: true });
+  rmSync(FAKE_GH_STATE, { force: true });
+});
 
-const keepCard = (page: Page) => page.locator('section.result');
+const turns = (page: Page) => page.locator('section[data-turn]');
+const feedbackIn = (page: Page, turn: number) =>
+  turns(page).nth(turn).locator('.turn-meta').getByRole('group', { name: 'How did it go?' });
 
-async function ask(page: Page, text: string, turns: number): Promise<void> {
-  await send(page, text);
-  await expect(page.locator('.turn-foot')).toHaveCount(turns, { timeout: 60_000 });
-  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 60_000 });
+async function sendAndWait(page: Page, text: string, count: number): Promise<void> {
+  const input = page.getByRole('textbox', { name: 'Message' });
+  await input.fill(text);
+  await input.press('Enter');
+  await expect(page.locator('.turn-meta')).toHaveCount(count, { timeout: 60_000 });
+  await turnDone(page, 60_000);
 }
 
-async function twoEarlierTurns(page: Page): Promise<void> {
-  await ask(page, 'What does the divider component do?', 1);
-  await ask(page, 'Where is the header styled?', 2);
+function pushedCommits(repo: TestRepo): number {
+  const branch = git(repo.bare, 'for-each-ref', '--format=%(refname)', 'refs/heads/spark/');
+  return Number(git(repo.bare, 'rev-list', '--count', branch));
 }
 
-async function keptChange(page: Page, choice: 'Keep' | 'Revert'): Promise<void> {
-  await projectChat(page, repo, 'Auto-edit');
-  if (choice === 'Keep') await twoEarlierTurns(page);
-  await send(page, 'Fix the divider #build');
-  await expect(keepCard(page)).toHaveAccessibleName(/^Kept · /, { timeout: 60_000 });
-  await expect(keepCard(page).getByRole('button', { name: 'Keep', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
-  if (choice === 'Revert') {
-    await page.getByRole('button', { name: 'Revert to before this run' }).click();
-    await page
-      .getByRole('group', { name: 'Revert to before this run' })
-      .getByRole('button', { name: 'Revert', exact: true })
-      .click();
-    await expect(page.getByRole('status').filter({ hasText: /^Reverted/ })).toBeVisible();
-  }
+async function chatWithPullRequest(page: Page): Promise<TestRepo> {
+  const repo = await repoWithRemote(base, 'feedback');
+  writeFileSync(FAKE_GH_STATE, 'octo-cli');
+  await chatIn(page, repo, 'Full auto');
+  await sendAndWait(page, 'What does the notes file hold?', 1);
+  await buildNotes(page);
+  await expect(page.locator('.pr-opened')).toHaveCount(1, { timeout: 30_000 });
+  return repo;
 }
 
-test('asks how it went after Keep, and the answer can be changed later', async ({ page }) => {
-  test.setTimeout(240_000);
-  await keptChange(page, 'Keep');
-  const feedback = keepCard(page).getByRole('group', { name: 'How did it go?' });
+test('asks how it went once, on the turn that opened the pull request', async ({ page }) => {
+  const repo = await chatWithPullRequest(page);
+  await expect(turns(page)).toHaveCount(2);
+  await expect(turns(page).nth(1).locator('.pr-opened')).toHaveCount(1);
+  await expect(feedbackIn(page, 0)).toHaveCount(0);
+  const feedback = feedbackIn(page, 1);
   await expect(feedback).toBeVisible({ timeout: 15_000 });
+  await expect(feedback).not.toHaveClass(/quiet/);
   await expect(feedback.locator('.fb-q')).toHaveCount(0);
-  const line = (await keepCard(page).locator('.result-line').boundingBox())!;
-  const thumbs = (await feedback.boundingBox())!;
-  expect(thumbs.y + thumbs.height).toBeLessThanOrEqual(line.y + line.height + 1);
+
   const good = feedback.getByRole('button', { name: 'Good result' });
   await good.focus();
   await page.keyboard.press('Enter');
   await expect(good).toHaveAttribute('aria-pressed', 'true');
   await expect(feedback.getByRole('status')).toHaveText('Saved');
 
+  const before = pushedCommits(repo);
+  await sendAndWait(page, 'Add another line to the notes #edit #plan', 3);
+  await expect.poll(() => pushedCommits(repo), { timeout: 30_000 }).toBeGreaterThan(before);
+  await expect(page.locator('.pr-opened')).toHaveCount(1);
+  await expect(feedbackIn(page, 2)).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'How did it go?' })).toHaveCount(1);
+
   await page.reload();
-  const again = keepCard(page).getByRole('group', { name: 'How did it go?' });
+  const again = feedbackIn(page, 1);
   await expect(again.getByRole('button', { name: 'Good result' })).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -73,60 +89,47 @@ test('asks how it went after Keep, and the answer can be changed later', async (
     'aria-pressed',
     'false',
   );
+  await expect(page.getByRole('group', { name: 'How did it go?' })).toHaveCount(1);
 });
 
-test('after Revert, asks what went wrong with reasons and a comment', async ({ page }) => {
-  test.setTimeout(60_000);
-  await keptChange(page, 'Revert');
-  await expect(keepCard(page)).toHaveAccessibleName('Reverted');
-  const wrong = keepCard(page).getByRole('group', { name: 'What went wrong?' });
-  await expect(wrong).toBeVisible({ timeout: 15_000 });
-  await expect(wrong.getByRole('button', { name: 'Good result' })).toHaveCount(0);
-  for (const reason of ['Wrong approach', 'Broke something', 'Too much change', 'Other']) {
-    await expect(wrong.getByRole('button', { name: reason })).toBeVisible();
-  }
-  await wrong.getByRole('button', { name: 'Too much change' }).click();
-  await wrong.getByRole('textbox', { name: 'Comment (optional)' }).fill('Touched unrelated files');
-  await wrong.getByRole('button', { name: 'Save' }).click();
-  await expect(wrong.getByRole('status')).toHaveText('Saved');
+test('Cancel and Esc close the feedback comment without saving it', async ({ page }) => {
+  await chatWithPullRequest(page);
+  const feedback = feedbackIn(page, 1);
+  const good = feedback.getByRole('button', { name: 'Good result' });
+  await good.click();
+  await expect(feedback.getByRole('status')).toHaveText('Saved');
+  const note = feedback.getByRole('textbox', { name: 'Comment (optional)' });
+
+  await feedback.getByRole('button', { name: 'Add a comment' }).click();
+  await note.fill('Not saved');
+  await feedback.getByRole('button', { name: 'Cancel' }).click();
+  await expect(note).toBeHidden();
+  await expect(good).toBeFocused();
+  await expect(good).toHaveAttribute('aria-pressed', 'true');
+
+  await feedback.getByRole('button', { name: 'Add a comment' }).click();
+  await expect(note).toHaveValue('');
+  await note.fill('Also not saved');
+  await note.press('Escape');
+  await expect(note).toBeHidden();
+  await expect(good).toBeFocused();
 
   await page.reload();
-  const saved = keepCard(page).getByRole('group', { name: 'What went wrong?' });
-  await expect(saved.getByRole('button', { name: 'Too much change' })).toHaveAttribute(
+  const again = feedbackIn(page, 1);
+  await expect(again.getByRole('button', { name: 'Good result' })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
-  await expect(saved.getByRole('textbox', { name: 'Comment (optional)' })).toHaveValue(
-    'Touched unrelated files',
-  );
+  await expect(again.getByRole('textbox', { name: 'Comment (optional)' })).toBeHidden();
 });
 
-test('keeps the thumbs in the token row, nudging only from the third turn', async ({ page }) => {
-  test.setTimeout(90_000);
-  await openChats(page);
-  await page.getByRole('button', { name: 'New chat' }).first().click();
-  await twoEarlierTurns(page);
-  await ask(page, 'What does the badge component do?', 3);
-  const turns = page.locator('.turn-foot');
-  await expect(turns.nth(0).locator('.fb')).toHaveClass(/quiet/, { timeout: 15_000 });
-  await expect(turns.nth(1).locator('.fb')).toHaveClass(/quiet/);
-  const feedback = turns.nth(2).getByRole('group', { name: 'How did it go?' });
-  await expect(feedback).toBeVisible({ timeout: 15_000 });
-  await expect(feedback).not.toHaveClass(/quiet/);
-  await expect(page.locator('.fb-q')).toHaveCount(0);
-  await page.mouse.move(0, 0);
-  await expect(feedback).toHaveCSS('opacity', '1');
-
-  const bad = feedback.getByRole('button', { name: 'Bad result' });
-  const meta = (await turns.nth(2).locator('.run-meta').boundingBox())!;
-  const thumb = (await bad.boundingBox())!;
-  expect(Math.abs(meta.y + meta.height / 2 - (thumb.y + thumb.height / 2))).toBeLessThan(6);
-  expect(thumb.x).toBeGreaterThan(meta.x + meta.width);
-
-  await bad.click();
-  await expect(feedback.getByRole('group', { name: 'Reasons' })).toBeVisible();
-  await feedback.getByRole('button', { name: 'Add a comment' }).click();
-  await feedback.getByRole('textbox', { name: 'Comment (optional)' }).fill('Too vague');
-  await feedback.getByRole('button', { name: 'Save' }).click();
-  await expect(feedback.getByRole('status')).toHaveText('Saved');
+test('a chat with no pull request never asks how it went', async ({ page }) => {
+  const repo = await repoWithRemote(base, 'nopull');
+  await chatIn(page, repo, 'Auto-edit');
+  await sendAndWait(page, 'What does the notes file hold?', 1);
+  await sendAndWait(page, 'Add a line to the notes #edit #plan', 2);
+  await expect(page.locator('.pr-opened')).toHaveCount(0);
+  await expect(page.getByRole('group', { name: /How did it go\?|What went wrong\?/ })).toHaveCount(
+    0,
+  );
 });

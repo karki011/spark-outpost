@@ -1,9 +1,15 @@
+import { appContentSecurityPolicy, artifactOrigin } from '@spark-outpost/contracts';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { agentConfigRoutes } from './agent-config-routes.ts';
 import { analyticsRoutes } from './analytics-routes.ts';
 import type { AppEventFeed } from './app-events.ts';
 import { approvalRoutes } from './approval-routes.ts';
+import { attentionRoutes } from './attention-routes.ts';
+import { sparkRulesRoutes } from './spark-rules-routes.ts';
+import { adoptPullRoutes } from './adopt-pull-routes.ts';
 import { attachmentRoutes } from './attachment-routes.ts';
+import { chatFileRoutes } from './chat-file-routes.ts';
+import { artifactRoutes } from '../artifacts/routes.ts';
 import { jsonBody } from './json-body.ts';
 import { auditRoutes } from './audit-routes.ts';
 import { chatShareRoutes, type ChatShareRouteDeps } from './chat-share-routes.ts';
@@ -37,6 +43,7 @@ import { taskChangeRoutes } from './task-change-routes.ts';
 import { taskRoutes } from './task-routes.ts';
 import { queueRoutes } from './queue-routes.ts';
 import { sparkPauseRoutes } from './spark-pause-routes.ts';
+import { browserHistoryRoutes } from './browser-history-routes.ts';
 import { calendarRoutes } from '../calendar/routes.ts';
 import type { CalendarHost } from '../calendar/host-client.ts';
 import type { GoogleSource } from '../calendar/google/source.ts';
@@ -68,7 +75,7 @@ export interface AppOptions
     Pick<ChatWorkspaceDeps, 'openFolder'>,
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
     Pick<McpRouteDeps, 'probeMcp'>,
-    Pick<ConversationActionDeps, 'deleteSettleMs'>,
+    Pick<ConversationActionDeps, 'deleteSettleMs' | 'chatFolders'>,
     Pick<CloneRouteDeps, 'clones' | 'cloneTest' | 'reservedFolders'>,
     Pick<ChatShareRouteDeps, 'linkScheme'> {
   terminals: TerminalSessions;
@@ -78,6 +85,7 @@ export interface AppOptions
   appEvents: AppEventFeed;
   outposts: OutpostDelivery;
   stackGit?: StackGit;
+  artifactOriginDown?: boolean;
   port: number;
   allowedOrigins: readonly string[];
   apiToken: string;
@@ -110,7 +118,13 @@ export function createAppParts(options: AppOptions) {
       requireLaunchToken(options.apiToken),
     ]),
   );
+  const web = options.webRoot
+    ? webApp(options.webRoot, appContentSecurityPolicy(artifactOrigin(options.port)))
+    : null;
+  if (web) app.use(web.files);
   app.use('/api', attachmentRoutes(options));
+  app.use('/api', chatFileRoutes(options));
+  app.use('/api', artifactRoutes(options));
   app.use(jsonBody());
   app.use(remote.bodyGuard);
   app.use('/api', remote.routes);
@@ -131,6 +145,7 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', taskRoutes(options));
   app.use('/api', queueRoutes(options));
   app.use('/api', sparkPauseRoutes(options));
+  app.use('/api', browserHistoryRoutes(options));
   app.use('/api', calendarRoutes(options));
   const outposts = outpostRouters(options);
   app.use('/api', outposts.api);
@@ -142,6 +157,9 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', chatTicketRoutes(options));
   app.use('/api', slackRoutes(options));
   app.use('/api', approvalRoutes(options));
+  app.use('/api', attentionRoutes(options));
+  app.use('/api', sparkRulesRoutes(options));
+  app.use('/api', adoptPullRoutes(options));
   app.use('/api', modelCardRoutes(options));
   app.use('/api', homeRoutes(options));
   app.use('/api', teammateRoutes(options));
@@ -166,7 +184,7 @@ export function createAppParts(options: AppOptions) {
       },
     }),
   );
-  if (options.webRoot) app.use(webApp(options.webRoot));
+  if (web) app.use(web.page);
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found.' });
   });

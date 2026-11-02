@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getRun } from '../src/persistence/runs.ts';
-import { usageSummarySchema } from '@spark-outpost/contracts';
+import { parseRunStreamFrame, usageSummarySchema } from '@spark-outpost/contracts';
 import { FAKE_COST_USD, FAKE_TOKENS, createFakeProvider } from '../src/providers/fake.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
@@ -19,7 +19,6 @@ beforeEach(async () => {
     db: t.db,
     providers: new Map([[provider.name, provider]]),
     leaseSeconds: 30,
-    concurrency: 1,
     pollMs: 20,
   });
   app = createTestApp(t);
@@ -34,17 +33,16 @@ const post = (path: string, body: object) =>
   request(app).post(path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
 const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
 
-function parseSse(text: string): { id: number; type: string }[] {
+function streamedEvents(text: string): { runId: string; seq: number; type: string }[] {
   return text
     .split('\n\n')
-    .filter((frame) => frame.startsWith('id: '))
-    .map((frame) => {
-      const [idLine, dataLine] = frame.split('\n');
-      return {
-        id: Number(idLine!.slice(4)),
-        type: (JSON.parse(dataLine!.slice(6)) as { type: string }).type,
-      };
-    });
+    .filter((frame) => frame.startsWith('data: '))
+    .map((frame) => parseRunStreamFrame(frame.slice(6)))
+    .flatMap((frame) =>
+      frame && 'event' in frame
+        ? [{ runId: frame.runId, seq: frame.seq, type: frame.event.type }]
+        : [],
+    );
 }
 
 async function completedRun(): Promise<string> {
@@ -65,35 +63,21 @@ describe('run event stream', () => {
     const run = await getRun(t.db, runId);
     const detail = await get(`/api/conversations/${run!.conversationId}`).expect(200);
     expect(detail.body.activity[runId]).toEqual([
-      { name: 'Reading your message', done: true },
-      { name: 'Writing a reply', done: true },
+      expect.objectContaining({ name: 'Reading your message', done: true }),
+      expect.objectContaining({ name: 'Writing a reply', done: true }),
     ]);
   });
 
-  it('replays every event in order and ends at the terminal event', async () => {
+  it('replays every event of a finished run in order and ends it at the terminal event', async () => {
     const runId = await completedRun();
-    const response = await get(`/api/runs/${runId}/events`).expect(200);
-    const events = parseSse(response.text);
+    const response = await get(`/api/run-events?runs=${runId}:0`).expect(200);
+    const events = streamedEvents(response.text);
 
-    expect(events.map((event) => event.id)).toEqual(events.map((_, index) => index + 1));
+    expect(events.map((event) => event.seq)).toEqual(events.map((_, index) => index + 1));
+    expect(new Set(events.map((event) => event.runId))).toEqual(new Set([runId]));
     expect(events[0]?.type).toBe('RUN_STARTED');
     expect(events.at(-1)?.type).toBe('RUN_FINISHED');
-  });
-
-  it('resumes after Last-Event-ID without duplicates', async () => {
-    const runId = await completedRun();
-    const all = parseSse((await get(`/api/runs/${runId}/events`)).text);
-    const resumed = parseSse(
-      (await get(`/api/runs/${runId}/events`).set('Last-Event-ID', '3')).text,
-    );
-
-    expect(resumed.map((event) => event.id)).toEqual(all.slice(3).map((event) => event.id));
-  });
-
-  it('answers 204 when a finished run has nothing after the cursor', async () => {
-    const runId = await completedRun();
-    const all = parseSse((await get(`/api/runs/${runId}/events`)).text);
-    await get(`/api/runs/${runId}/events`).set('Last-Event-ID', String(all.length)).expect(204);
+    expect(response.text.trimEnd().endsWith(`data: {"runId":"${runId}","end":"done"}`)).toBe(true);
   });
 });
 

@@ -56,15 +56,7 @@ function Thumb({
   );
 }
 
-function FeedbackRow({
-  outcome,
-  variant,
-  quiet,
-}: {
-  outcome: TurnOutcome;
-  variant: FeedbackVariant;
-  quiet: boolean;
-}) {
+function FeedbackRow({ outcome, variant }: { outcome: TurnOutcome; variant: FeedbackVariant }) {
   const queryClient = useQueryClient();
   const labelId = useId();
   const commentId = useId();
@@ -119,12 +111,7 @@ function FeedbackRow({
 
   return (
     <div
-      className={[
-        'fb',
-        quiet && 'quiet',
-        draft.rating && 'rated',
-        (draft.rating === 'down' || commenting) && 'open',
-      ]
+      className={['fb', draft.rating && 'rated', (draft.rating === 'down' || commenting) && 'open']
         .filter(Boolean)
         .join(' ')}
       role="group"
@@ -132,7 +119,7 @@ function FeedbackRow({
       ref={rowRef}
     >
       <div className="fb-line">
-        <span id={labelId} className={quiet || !reverted ? 'sr-only' : 'fb-q'}>
+        <span id={labelId} className={reverted ? 'fb-q' : 'sr-only'}>
           {reverted ? 'What went wrong?' : 'How did it go?'}
         </span>
         {!reverted && (
@@ -225,9 +212,5 @@ export function TurnFeedback({ runId, variant }: { runId: string; variant: Feedb
   });
   const outcome = query.data?.outcome ?? null;
   if (!outcome) return null;
-  const quiet =
-    variant === 'turn'
-      ? outcome.prompt === null
-      : outcome.prompt === null && outcome.feedback === null;
-  return <FeedbackRow outcome={outcome} variant={variant} quiet={quiet} />;
+  return <FeedbackRow outcome={outcome} variant={variant} />;
 }

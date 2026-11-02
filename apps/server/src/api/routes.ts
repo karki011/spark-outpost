@@ -1,4 +1,5 @@
 import { remoteDeviceOf } from '../remote/principal.ts';
+import { z } from 'zod';
 import { Router } from 'express';
 import {
   CONVERSATION_SEARCH_MAX_LENGTH,
@@ -14,6 +15,7 @@ import {
   createConversation,
   getConversationDetail,
   listConversations,
+  listConversationsAfter,
   sendUserMessage,
 } from '../persistence/conversations.ts';
 import { AnnotationError, listAnnotations } from '../persistence/annotations.ts';
@@ -32,11 +34,12 @@ import { ConversationMissingError } from '../persistence/chat-settings.ts';
 import { InvalidDefaultError } from '../persistence/setup.ts';
 import { TerminalLimitError } from '../terminal/sessions.ts';
 import type { RunEventHub } from './run-event-hub.ts';
-import { streamRunEvents } from './run-stream.ts';
+import { streamRuns } from './run-stream.ts';
 import { AttachmentError } from '../persistence/attachment-content.ts';
 import { FolderError } from '../projects/folders.ts';
 import { ProjectNotFoundError } from '../projects/projects.ts';
 import { TaskNotFoundError } from '../persistence/tasks.ts';
+import { AttentionItemNotFoundError } from '../persistence/attention-items.ts';
 import {
   BadRequestError,
   RequestTooLargeError,
@@ -52,8 +55,10 @@ import { ticketErrorStatus } from './ticket-routes.ts';
 import { slackErrorStatus } from './slack-routes.ts';
 import { teammateErrorStatus } from './teammate-routes.ts';
 import { queueErrorStatus } from './queue-routes.ts';
+import { adoptErrorStatus } from './adopt-pull-routes.ts';
 import { outpostErrorStatus } from './outpost-routes.ts';
 import { interruptionErrorStatus } from './interruption-routes.ts';
+import { sparkRulesErrorStatus } from './spark-rules-routes.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { PlanDocumentError } from '../persistence/plan-documents.ts';
 import { AgentConfigConflictError } from './agent-config-routes.ts';
@@ -87,6 +92,12 @@ export function apiRoutes(deps: RouteDeps): Router {
     const search = typeof req.query.q === 'string' ? req.query.q : '';
     if (search.length > CONVERSATION_SEARCH_MAX_LENGTH) {
       throw new BadRequestError('Search for a shorter phrase.');
+    }
+    if (req.query.after !== undefined) {
+      const after = z.uuid().safeParse(req.query.after);
+      if (!after.success) throw new BadRequestError('Name the last chat with its id.');
+      res.json(await listConversationsAfter(db, workspaceId, after.data));
+      return;
     }
     res.json(await listConversations(db, workspaceId, search));
   });
@@ -200,8 +211,8 @@ export function apiRoutes(deps: RouteDeps): Router {
     res.json(thought);
   });
 
-  router.get('/runs/:id/events', async (req, res) => {
-    await streamRunEvents(db, hub, paramId(req), req, res);
+  router.get('/run-events', async (req, res) => {
+    await streamRuns(db, hub, req, res);
   });
 
   return router;
@@ -216,9 +227,11 @@ export function statusForError(error: unknown): { status: number; message: strin
     slackErrorStatus(error) ??
     teammateErrorStatus(error) ??
     queueErrorStatus(error) ??
+    adoptErrorStatus(error) ??
     outpostErrorStatus(error) ??
     cloneErrorStatus(error) ??
-    interruptionErrorStatus(error);
+    interruptionErrorStatus(error) ??
+    sparkRulesErrorStatus(error);
   if (known) return known;
   if (
     error instanceof BadRequestError ||
@@ -239,7 +252,11 @@ export function statusForError(error: unknown): { status: number; message: strin
   if (error instanceof ConversationNotFoundError || error instanceof ConversationMissingError) {
     return { status: 404, message: 'Conversation not found.' };
   }
-  if (error instanceof ProjectNotFoundError || error instanceof ChatNotFoundError) {
+  if (
+    error instanceof ProjectNotFoundError ||
+    error instanceof ChatNotFoundError ||
+    error instanceof AttentionItemNotFoundError
+  ) {
     return { status: 404, message: error.message };
   }
   if (error instanceof TaskNotFoundError) return { status: 404, message: 'Task not found.' };

@@ -1,4 +1,4 @@
-import { CHECKPOINT_OPTION, type Approval } from '@spark-outpost/contracts';
+import { CHECKPOINT_OPTION, type Approval, type PrWatch } from '@spark-outpost/contracts';
 
 export type FeedbackVariant = 'kept' | 'reverted' | 'turn';
 
@@ -29,4 +29,15 @@ export function keepCardHost(
     approvalId: last.id,
     variant: revertedLater ? 'reverted' : VARIANTS[last.decisionOptionId]!,
   };
+}
+
+export function isFeedbackTurn(
+  watches: readonly Pick<PrWatch, 'opened'>[],
+  turnRunIds: readonly string[],
+): boolean {
+  const first = watches
+    .filter((watch) => watch.opened.runId !== null)
+    .toSorted((a, b) => a.opened.at.localeCompare(b.opened.at))
+    .at(0);
+  return first?.opened.runId != null && turnRunIds.includes(first.opened.runId);
 }

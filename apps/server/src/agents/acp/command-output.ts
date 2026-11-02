@@ -1,4 +1,6 @@
 import type { SessionUpdate, ToolCallContent } from '@agentclientprotocol/sdk';
+import { isMcpToolName } from '@spark-outpost/contracts';
+import { toolNameOf } from './tool-titles.ts';
 import type { ProviderOutput } from '../../providers/provider.ts';
 import { objectFields } from './object-fields.ts';
 
@@ -12,6 +14,7 @@ interface OpenCommand {
   streamed: boolean;
   started: boolean;
   text: string;
+  description: string | null;
   cwd: string | null;
 }
 
@@ -27,6 +30,13 @@ function commandText(title: string | null | undefined, rawInput: unknown): strin
   if (typeof command === 'string') return command.trim();
   if (Array.isArray(command)) return command.filter((part) => typeof part === 'string').join(' ');
   return '';
+}
+
+function commandDescription(rawInput: unknown): string | null {
+  const { description } = objectFields(rawInput);
+  if (typeof description !== 'string') return null;
+  const line = description.replace(/\s+/g, ' ').trim();
+  return line === '' ? null : line;
 }
 
 function commandCwd(update: ToolUpdate): string | null {
@@ -97,15 +107,26 @@ export function createCommandTracker(live: boolean): CommandTracker {
     return outputs;
   };
 
+  const noteDescription = (update: ToolUpdate, command: OpenCommand): ProviderOutput[] => {
+    const description = commandDescription(update.rawInput);
+    if (!description || description === command.description) return [];
+    command.description = description;
+    if (!command.started) return [];
+    return [{ kind: 'command_described', id: update.toolCallId, description }];
+  };
+
   const seen = (update: ToolUpdate, command: OpenCommand): ProviderOutput[] => {
     command.text ||= commandText(update.title, update.rawInput);
+    const described = noteDescription(update, command);
     command.cwd ??= commandCwd(update);
-    const outputs = produced(update, command);
+    const outputs = [...described, ...produced(update, command)];
     if (command.started || (command.text === '' && outputs.length === 0)) return outputs;
     command.started = true;
-    const { text, cwd } = command;
+    const { text, description, cwd } = command;
+    const id = update.toolCallId;
+    const titled = description ? { description } : {};
     return [
-      { kind: 'command_started', id: update.toolCallId, command: text || UNNAMED, cwd, live },
+      { kind: 'command_started', id, command: text || UNNAMED, ...titled, cwd, live },
       ...outputs,
     ];
   };
@@ -115,10 +136,17 @@ export function createCommandTracker(live: boolean): CommandTracker {
       if (update.sessionUpdate !== 'tool_call' && update.sessionUpdate !== 'tool_call_update') {
         return [];
       }
+      if (isMcpToolName(toolNameOf(update) ?? update.title ?? '')) return [];
       const known = open.get(update.toolCallId);
       if (known) return seen(update, known);
       if (update.sessionUpdate !== 'tool_call' || update.kind !== 'execute') return [];
-      const command: OpenCommand = { streamed: false, started: false, text: '', cwd: null };
+      const command: OpenCommand = {
+        streamed: false,
+        started: false,
+        text: '',
+        description: null,
+        cwd: null,
+      };
       open.set(update.toolCallId, command);
       return seen(update, command);
     },

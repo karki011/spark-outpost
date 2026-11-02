@@ -16,6 +16,7 @@ import {
 import {
   admitDevice,
   blockedFieldsOf,
+  highRiskFieldsOf,
   markRemote,
   remoteDeviceOf,
   type RemoteDevicePrincipal,
@@ -44,6 +45,8 @@ export interface GatewayDeps {
 
 const PUBLIC_FILES = new Set([
   '/theme.css',
+  '/theme-base.css',
+  '/appearance.js',
   '/manifest.webmanifest',
   '/icon-192.png',
   '/icon-512.png',
@@ -227,7 +230,10 @@ export function remoteGateway(deps: GatewayDeps) {
       await refuseDevice(req, res, device, 403, `switch:${cardNeeds}`, switchRefusal(cardNeeds));
       return;
     }
-    admitDevice(res, device, decision.blockedFields);
+    admitDevice(res, device, {
+      blocked: decision.blockedFields,
+      highRisk: decision.highRiskFields,
+    });
     await touchDevice(db, device.id);
     if (isPageRequest(req) && isEntryReturn(req)) {
       res.set('Cache-Control', 'no-store').redirect(302, entryTarget(req));
@@ -259,6 +265,11 @@ export function remoteGateway(deps: GatewayDeps) {
       const field = blockedFieldIn(req.body, blockedFieldsOf(res));
       if (!device) {
         next();
+        return;
+      }
+      if (blockedFieldIn(req.body, highRiskFieldsOf(res))) {
+        const refusal = switchRefusal('highRiskCards');
+        await refuseDevice(req, res, device, 403, 'switch:highRiskCards', refusal);
         return;
       }
       if (!field) {

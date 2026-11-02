@@ -1,4 +1,5 @@
 import { basename } from 'node:path';
+import { isChatWorkFolder } from '../chat-files/folders.ts';
 import type { Db } from '../persistence/db.ts';
 import type { Append } from './agent-turn.ts';
 import { runEvents } from './run-events.ts';
@@ -23,7 +24,11 @@ async function recordRoots(
   return rows[0]?.project_roots ?? null;
 }
 
-export function projectMoveStep(move: ProjectMove): string {
+export function projectMoveStep(move: ProjectMove, chatFolders?: string): string {
+  const own = (folder: string) =>
+    chatFolders !== undefined && isChatWorkFolder(chatFolders, folder);
+  if (own(move.from)) return `Working in ${basename(move.to)} from this turn`;
+  if (own(move.to)) return 'No project since the last turn';
   return `Project changed since the last turn: ${basename(move.from)} → ${basename(move.to)}`;
 }
 
@@ -40,7 +45,12 @@ async function ownWorktree(db: Db, conversationId: string, move: ProjectMove): P
   return rows.length > 0;
 }
 
-export async function noteProjectMove(db: Db, input: RunInput, append: Append): Promise<RunInput> {
+export async function noteProjectMove(
+  db: Db,
+  input: RunInput,
+  append: Append,
+  chatFolders?: string,
+): Promise<RunInput> {
   if (input.parentRunId !== null) return input;
   const previous = await recordRoots(db, input.identity.runId, input.projectRoots);
   const from = previous?.[0];
@@ -48,7 +58,7 @@ export async function noteProjectMove(db: Db, input: RunInput, append: Append): 
   if (!from || !to || from === to || input.history.length === 0) return input;
   const move = { from, to };
   if (await ownWorktree(db, input.identity.threadId, move)) return input;
-  const step = projectMoveStep(move);
+  const step = projectMoveStep(move, chatFolders);
   await append(runEvents.stepStarted(step));
   await append(runEvents.stepFinished(step));
   return { ...input, projectMove: move };

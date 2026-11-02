@@ -249,12 +249,13 @@ test('keeps what the phone can do across reloads', async ({ page }) => {
   const main = await openPhone(page);
   await turnOn(page);
   const switches = main.getByRole('region', { name: 'What paired devices can do' });
-  await expect(switches.getByRole('switch')).toHaveCount(10);
+  await expect(switches.getByRole('switch')).toHaveCount(11);
   await expect(switches.getByText('stay on the Mac')).toBeVisible();
   for (const name of [
     'Follow, type in and stop Terminal sessions',
     'Approve in Terminal sessions',
     'Notify when a chat needs you',
+    'Open artifacts',
   ])
     await expect(switches.getByRole('switch', { name })).toHaveAttribute('aria-checked', 'false');
   const reset = switches.getByRole('switch', { name: 'Reset or delete data' });
@@ -318,7 +319,7 @@ test('every theme passes colour and ARIA checks on the Phone page and the pairin
   await expectEveryTheme([[page, '.ph']], 'devices');
 });
 
-test('the pairing page follows the saved theme, groups a pasted code and keeps a refused one', async ({
+test('the pairing page follows the saved theme or the system, groups a pasted code and keeps a refused one', async ({
   page,
   browser,
 }) => {
@@ -327,6 +328,9 @@ test('the pairing page follows the saved theme, groups a pasted code and keeps a
   await startPairing(page);
 
   const fresh = await openPairingPage(browser, '', null);
+  await expect(fresh.phone.locator('html')).toHaveAttribute('data-skin', 'light');
+  await fresh.phone.emulateMedia({ colorScheme: 'dark' });
+  await fresh.phone.reload();
   await expect(fresh.phone.locator('html')).toHaveAttribute('data-skin', 'graphite');
   await fresh.context.close();
   const saved = await openPairingPage(browser, '', 'apricot');
@@ -334,7 +338,7 @@ test('the pairing page follows the saved theme, groups a pasted code and keeps a
   await saved.context.close();
 
   const { context, phone } = await openPairingPage(browser);
-  await expect(phone.locator('html')).not.toHaveAttribute('data-skin', /./);
+  await expect(phone.locator('html')).toHaveAttribute('data-skin', 'light');
   const field = phone.getByLabel('Pairing code');
   await expect(field).toHaveAttribute('autocapitalize', 'characters');
   expect(await field.evaluate((input) => parseFloat(getComputedStyle(input).fontSize))).toBe(16);

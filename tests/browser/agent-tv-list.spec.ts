@@ -1,5 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { toggleHeaderPane } from './header-menu.ts';
+import { randomUUID } from 'node:crypto';
+import { seedChats } from './sidebar-seed.ts';
+import { openChats } from './navigation.ts';
 import {
   allowEdit,
   BUILD_REQUEST,
@@ -33,10 +36,46 @@ const tvOf = (page: Page) => page.getByRole('dialog', { name: 'Agent TV' });
 const running = (page: Page) =>
   tvOf(page).getByRole('list', { name: 'Running' }).getByRole('listitem');
 
+test('Message an Outpost member opens that chat and preserves its draft', async ({ page }) => {
+  const [lead, worker] = await seedChats([{ title: 'Lead chat' }, { title: 'Worker chat' }]);
+  await openChats(page);
+  const created = await page.request.post('/api/outposts', {
+    data: {
+      id: randomUUID(),
+      name: 'Messaging team',
+      members: [
+        { conversationId: lead, handle: 'lead' },
+        { conversationId: worker, handle: 'builder' },
+      ],
+    },
+  });
+  expect(created.ok()).toBe(true);
+  await openChats(page);
+  const sidebar = page.getByRole('navigation', { name: 'Chats' });
+  const input = page.getByRole('textbox', { name: 'Message', exact: true });
+  await sidebar.getByText('Worker chat', { exact: true }).click();
+  await input.fill('Worker draft stays');
+  await sidebar.getByText('Lead chat', { exact: true }).click();
+  await input.fill('Split the work #build #subagentshold');
+  await input.press('Enter');
+  await expect(page.locator('.msg.ai').last()).toContainText('Waiting on 2 agents', {
+    timeout: 30_000,
+  });
+  await input.fill('Lead draft stays');
+  await toggleHeaderPane(page, 'Agent TV');
+  const tv = tvOf(page);
+  await tv.getByRole('button', { name: 'Message builder', exact: true }).click();
+  await expect(tv).toHaveCount(0);
+  await expect(input).toHaveValue('Worker draft stays');
+  await expect(input).toBeFocused();
+  await sidebar.getByText('Lead chat', { exact: true }).click();
+  await expect(input).toHaveValue('Lead draft stays');
+});
+
 async function listWhileWaiting(page: Page) {
   await projectChat(page, repo, 'Ask before edits');
   await send(page, `${BUILD_REQUEST} #build`);
-  await expect(card(page, /Change a file\?/)).toBeVisible({ timeout: 30_000 });
+  await expect(card(page, /^Edit .+\?$/)).toBeVisible({ timeout: 30_000 });
   return openList(page);
 }
 
@@ -98,7 +137,7 @@ test('Needs you jumps to the approval, and Finished opens, shows the outcome and
 }) => {
   test.setTimeout(90_000);
   const tv = await listWhileWaiting(page);
-  const edit = card(page, /Change a file\?/);
+  const edit = card(page, /^Edit .+\?$/);
   const needs = running(page).getByRole('button', { name: 'Needs you' });
   await expect(needs).toBeVisible({ timeout: 10_000 });
   await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));

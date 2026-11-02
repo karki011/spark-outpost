@@ -12,6 +12,8 @@ import {
   FORCE_PUSH_DENY_RULES,
   secretRules,
 } from './agents.ts';
+import { tempRoots } from '../../approvals/temp-dirs.ts';
+import { CLAUDE_DO_TOOLS, CLAUDE_GATED_TOOLS, CLAUDE_READ_TOOLS } from './claude-tools.ts';
 import { CODEX_DO_MODE, codexPermissionProfiles } from './codex-permissions.ts';
 import { zaiEnvironment, zaiModelId } from './zai.ts';
 
@@ -46,21 +48,54 @@ describe('Claude session options', () => {
         disableBypassPermissionsMode: 'disable',
       });
     }
-    expect(project.tools).toEqual(['Read', 'Glob', 'Grep']);
+    expect(project.tools).toEqual([...CLAUDE_READ_TOOLS, 'AskUserQuestion']);
     expect(optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true)).tools).toEqual([
-      'Read',
-      'Glob',
-      'Grep',
+      ...CLAUDE_READ_TOOLS,
       'Write',
       'ExitPlanMode',
+      'AskUserQuestion',
     ]);
-    expect(chat.tools).toEqual([]);
+    expect(chat.tools).toEqual(['AskUserQuestion']);
+  });
+
+  it('lets Claude read the temp folders Spark treats as scratch, and keeps secret edits there denied', () => {
+    const doing = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
+    for (const options of [project, chat, doing]) {
+      expect(options.settings.permissions.additionalDirectories).toEqual(tempRoots());
+      expect(options.settings.permissions.blockReadsOutsideWorkingDirectories).toBe(true);
+    }
+    expect(tempRoots()).toContain('/tmp');
+    expect(doing.disallowedTools).toContain('Edit(//tmp/**/.env)');
+    expect(doing.settings.permissions.deny).toContain('Edit(//private/tmp/**/.env)');
   });
 
   it('passes extra repos only as deny-rule anchors, never as directories in _meta', () => {
     expect(project).not.toHaveProperty('additionalDirectories');
     expect(project.disallowedTools).toContain('Edit(//work/lib/**/.env)');
     expect(project.settings.permissions.deny).toEqual(project.disallowedTools);
+  });
+
+  it("denies reading and editing Spark's browser data in every Claude session", () => {
+    const saved = process.env.SPARK_DATA_DIR;
+    process.env.SPARK_DATA_DIR = '/nowhere/Spark Outpost';
+    try {
+      const sessions = [
+        agentDefinitions.claude.conversationSessionMeta?.(null),
+        agentDefinitions.claude.projectSessionMeta?.([], null),
+        agentDefinitions.claude.doSessionMeta?.([], null, true),
+      ];
+      for (const meta of sessions) {
+        const options = optionsOf(meta);
+        expect(options.disallowedTools).toContain('Read(//nowhere/Spark Outpost/Partitions/**)');
+        expect(options.disallowedTools).toContain(
+          'Edit(//nowhere/Spark Outpost/postgres-password)',
+        );
+        expect(options.settings.permissions.deny).toEqual(options.disallowedTools);
+      }
+    } finally {
+      if (saved === undefined) delete process.env.SPARK_DATA_DIR;
+      else process.env.SPARK_DATA_DIR = saved;
+    }
   });
 
   it('denies editing the same secret names as the path policy, and leaves reading to the mode', () => {
@@ -86,30 +121,36 @@ describe('Claude session options', () => {
 
   it('matches claudeSessionMeta for the project tools', () => {
     expect(agentDefinitions.claude.projectSessionMeta?.([])).toEqual(
-      claudeSessionMeta(['Read', 'Glob', 'Grep'], []),
+      claudeSessionMeta([...CLAUDE_READ_TOOLS, 'AskUserQuestion'], []),
     );
   });
 
   it('gives Ask turns a shell and leaves asking to the agent, but for git config', () => {
     const asking = optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true, true));
-    expect(asking.tools).toEqual(['Read', 'Glob', 'Grep', 'Bash', 'Write', 'ExitPlanMode']);
-    expect(asking.settings.permissions.ask).toEqual([GIT_CONFIG_ASK_RULE]);
+    expect(asking.tools).toEqual([
+      ...CLAUDE_READ_TOOLS,
+      ...CLAUDE_GATED_TOOLS,
+      'Write',
+      'ExitPlanMode',
+      'AskUserQuestion',
+    ]);
+    expect(asking.settings.permissions.ask).toEqual(['WebFetch', 'Monitor', GIT_CONFIG_ASK_RULE]);
+    expect(project.settings.permissions).not.toHaveProperty('ask');
+    expect(project.tools).not.toContain('WebFetch');
+    expect(chat.settings.permissions).not.toHaveProperty('ask');
   });
 
   it('gives Do runs the edit, shell and todo tools and asks only for the safety floor', () => {
     const options = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
-    expect(options.tools).toEqual([
-      'Read',
-      'Glob',
-      'Grep',
-      'Edit',
-      'Write',
-      'Bash',
-      'TodoWrite',
-      'EnterPlanMode',
-      'ExitPlanMode',
+    expect(options.tools).toEqual([...CLAUDE_DO_TOOLS]);
+    for (const tool of ['Edit', 'Write', 'NotebookEdit', 'Bash', 'Monitor', 'WebSearch']) {
+      expect(options.tools).toContain(tool);
+    }
+    expect(options.settings.permissions.ask).toEqual([
+      'WebFetch',
+      'Monitor',
+      ...floorAskRules(options.tools, []),
     ]);
-    expect(options.settings.permissions.ask).toEqual(floorAskRules(options.tools, []));
     expect(bashAsks(options)).toEqual([GIT_CONFIG_ASK_RULE]);
     expect(options.settings.permissions).toMatchObject({
       blockReadsOutsideWorkingDirectories: true,
@@ -148,17 +189,29 @@ describe('Codex launch', () => {
         skill_mcp_dependency_install: false,
         apps: false,
       },
-      web_search: 'disabled',
       default_permissions: 'read-only',
       permissions: codexPermissionProfiles(),
     });
     const project = agentDefinitions.codex.conversationEnv?.('/tmp/run', true) ?? {};
     expect(project).toMatchObject({ INITIAL_AGENT_MODE: 'read-only' });
     expect(JSON.parse(project.CODEX_CONFIG ?? '{}')).toMatchObject({
-      features: { shell_tool: true, unified_exec: false, skill_mcp_dependency_install: false },
-      web_search: 'disabled',
+      features: {
+        shell_tool: true,
+        unified_exec: false,
+        skill_mcp_dependency_install: false,
+      },
       default_permissions: 'read-only',
     });
+    expect(JSON.parse(project.CODEX_CONFIG ?? '{}')).not.toHaveProperty('web_search');
+  });
+
+  it('leaves native delegation to the effective Codex configuration in every launch mode', () => {
+    for (const browsing of [false, true]) {
+      for (const profiles of [false, true]) {
+        const env = agentDefinitions.codex.conversationEnv?.('/tmp/run', browsing, null, profiles);
+        expect(JSON.parse(env?.CODEX_CONFIG ?? '{}').features).not.toHaveProperty('multi_agent');
+      }
+    }
   });
 
   it('does Do in the patched ask-every-action mode, opening only the primary repo', () => {

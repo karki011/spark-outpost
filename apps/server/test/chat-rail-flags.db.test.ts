@@ -75,7 +75,7 @@ describe('Spark moderates Bypass permissions', { timeout: 120_000 }, () => {
         turnRunId: runId,
       }),
     ]);
-    expect(detail!.conversation.needsInput).toBe(true);
+    expect(detail!.conversation.needsInput).toBe(false);
     expect(detail!.conversation.attention).toMatchObject({ kind: 'flag', title: flags[0]!.title });
     expect(await unreviewedTitles(conversationId)).toContain(`Write ${OUTSIDE_FILE}`);
     const { rows } = await t.db.query(

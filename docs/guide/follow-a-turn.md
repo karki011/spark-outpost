@@ -3,58 +3,67 @@ title: Follow, stop and queue messages
 section: Chats
 type: how-to
 order: 216
-summary: See what the agent is doing, stop it, queue more messages while it works, and delete a running chat.
+summary: Follow work, stop it, queue files and messages, or delete a running chat.
 ---
 
-You'll follow, stop and queue a turn. About 2 minutes.
+About 2 minutes.
 
 ## See what's happening
 
-1. Read the reply's header, such as **Reading api.ts · 3 steps**.
-2. Select the step count, then **Thinking** to read it.
-3. **Show work panel** has the plan, files and cost; **Agent TV** is in the **…** menu.
-4. Sub-agents share one line; **View** shows a card each.
+1. The working line names the current step and its time.
+2. Answered cards and flags stay in place; waiting cards sit last.
+3. Summaries separate commands **passed** from tools **done**.
+4. Code Mode labels discovery and reads; failures expand.
+5. The to-do folds when done.
+6. Sidebar blobs show the **Agent TV** team.
+7. **View agents** opens **Work**; done workers fold.
+8. **Message** opens that chat’s composer; Outposts show handles.
+9. **Ask lead to redirect** drafts in that chat.
 
-When the agent needs you, select **Waiting for you** or press **⌘⇧Y**.
+**⌘⇧Y** jumps to the waiting card.
 
-Failed command output stays open in the reply. **Open in terminal** shows it in a [dock tab](terminals.md#watch-an-agents-command).
+**Open in terminal** shows failed output in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
-1. Select **Stop**. Its sub-agents and background work stop too.
+1. **Stop** or **Esc** also stops sub-agents and background work.
 
 ## Background work
 
-While Claude's background agents run, the chat shows **Waiting on 1 background agent**, then **Writing up results**. **Enter** reaches it; **Stop background tasks** ends them.
+During **Waiting on 1 background agent** or Claude’s **Sleeping until 10:48**, **Stop background tasks** or **Stop waiting** ends it.
 
-The agent stays running between messages, up to 30 idle minutes. A turn it starts itself shows **Continued on its own**. Quit shows **Stopped by Quit**; your next message picks up.
+Waits last 30 idle minutes; resumed turns show **Continued on its own**.
 
 ## Queue messages
 
-1. While a turn runs, type a message. **Enter** queues it.
-2. **⌘Enter** sends it now.
-3. While the agent waits on sub-agents, **Enter** sends now.
-4. Use **Edit**, **Move up**, **Move down**, **Remove** or **Send now** on a queued message.
+Send files without text. Queues survive restarts; drafts don't survive a reload.
 
-| When                           | Spark                                |
-| ------------------------------ | ------------------------------------ |
-| The turn finishes              | Sends queued messages in order.      |
-| You send one now               | Shows its status.                    |
-| You stop the turn, or it fails | Pauses the queue until **Send now**. |
-| You reload or restart          | Keeps the queue.                     |
+1. While a turn runs, **Enter** queues a message.
+2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.
+3. While the agent only waits, **Enter** sends now; the queue follows.
+4. Queued: **Edit**, **Move up**, **Move down**, **Remove**, **Send now**; **Retry** ones are read-only.
+
+| When                      | Spark                                 |
+| ------------------------- | ------------------------------------- |
+| The turn finishes         | Sends the queue in order.             |
+| Stopped or failed         | Queue pauses until **Send now**.      |
+| You stop before it's read | **Send as next message** or **Edit**. |
+| Agent can't take it       | Queues it first.                      |
 
 ## Delete a running chat
 
-1. In the chat's **…** menu, select **Delete**, then **Confirm delete**.
+1. Select **… → Delete → Confirm delete**.
 2. **Undo** restores it.
 
 ## After a turn
 
-| Under a reply                                  | Use it to                                                   |
-| ---------------------------------------------- | ----------------------------------------------------------- |
-| **Good result** / **Bad result**               | Rate the reply locally.                                     |
-| Selected text                                  | **Add to chat**, **Ask about this**, **Comment**, **Copy**. |
-| `/fresh`, or **Start fresh** in the **…** menu | Restart without the old context.                            |
-| Ticks left of the thread                       | Jump to a message.                                          |
+Steps fold under **Worked for …**; steered replies don't.
+
+| Under a reply                    | Use it to                                                   |
+| -------------------------------- | ----------------------------------------------------------- |
+| **Good result** / **Bad result** | Rate the PR turn.                                           |
+| Selected text                    | **Add to chat**, **Ask about this**, **Comment**, **Copy**. |
+| `/fresh` or **… → Start fresh**  | Restart without old context.                                |
+| Ticks left of the thread         | Jump to a message.                                          |
 
 **Next:** [Answer an approval card](answer-approvals.md)

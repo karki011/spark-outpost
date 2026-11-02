@@ -31,7 +31,8 @@ async function upcoming(page: Page) {
   return calendarNowSchema.parse(await response.json()).upcoming;
 }
 
-const meetings = (page: Page) => island(page).getByRole('region', { name: 'Next meetings' });
+const meetings = (page: Page) =>
+  island(page).getByRole('list', { name: 'Meetings left today' }).getByRole('listitem').first();
 const scout = (page: Page) => island(page).locator('.isl-scout-wrap svg.scout');
 
 async function soundOn(page: Page) {
@@ -84,7 +85,7 @@ test('with reduced motion the island glows instead of hopping', async ({ page })
   expect((await fakeState(page)).chimes).toBe(0);
 });
 
-test('Home lists the next meetings with Join on the open one and opens Today at a row', async ({
+test('Home lists the next meeting with Join while it opens, and opens Today on it', async ({
   page,
 }) => {
   await connect(page);
@@ -92,18 +93,13 @@ test('Home lists the next meetings with Join on the open one and opens Today at 
   await fakeHomeDesktop(page);
   await openIsland(page);
   await openHome(page);
-  const list = meetings(page);
-  await expect(list.getByRole('listitem')).toHaveCount(3);
-  await expect(list).toContainText('Standup');
-  await expect(list).toContainText('Customer call');
-  await expect(list).toContainText('Vendor sync');
-  await expect(list.getByRole('button', { name: 'Join Standup' })).toBeVisible();
-  await expect(list.getByRole('button', { name: /^Join Customer call/ })).toHaveCount(0);
-  await list.getByRole('button', { name: /Customer call/ }).click();
-  const customer = next.find((event) => event.title === 'Customer call')!;
-  await expect
-    .poll(async () => (await fakeState(page)).settings)
-    .toEqual([`today:${customer.key}`]);
+  const row = meetings(page);
+  await expect(row).toContainText('Standup');
+  await expect(row).toContainText(/in [1-5] min/);
+  await expect(row.getByRole('button', { name: 'Join Zoom: Standup' })).toBeVisible();
+  await row.getByRole('button', { name: /^Standup/ }).click();
+  const standup = next.find((event) => event.title === 'Standup')!;
+  await expect.poll(async () => (await fakeState(page)).settings).toEqual([`today:${standup.key}`]);
 });
 
 test('Join waits until ten minutes before and shows the start time until then', async ({
@@ -115,7 +111,7 @@ test('Join waits until ten minutes before and shows the start time until then', 
   await openIsland(page);
   await openHome(page);
   await expect(meetings(page)).toContainText('Standup');
-  await expect(meetings(page).getByRole('button', { name: 'Join Standup' })).toHaveCount(0);
+  await expect(meetings(page).getByRole('button', { name: /^Join/ })).toHaveCount(0);
   await page.goto('/');
   const card = page.getByRole('region', { name: 'Upcoming' });
   const join = card.getByRole('button', { name: /^Standup at \d+:\d+ [AP]M, Join opens at / });
@@ -124,20 +120,17 @@ test('Join waits until ten minutes before and shows the start time until then', 
 });
 
 for (const size of ['small', 'large'] as const) {
-  test(`the next meetings fit the ${size} island`, async ({ page }) => {
+  test(`the next meeting fits the ${size} island`, async ({ page }) => {
     await connect(page);
     await openNotchIsland(page, { size, autoExpand: false });
     await openHome(page);
-    const list = meetings(page);
-    await expect(list.getByRole('listitem')).toHaveCount(3);
+    const row = meetings(page);
+    await expect(row).toContainText('Standup');
     await settled(page);
     const view = island(page).locator('.isl-view');
-    const [shell, box] = await Promise.all([view.boundingBox(), list.boundingBox()]);
+    const [shell, box] = await Promise.all([view.boundingBox(), row.boundingBox()]);
     expect(box!.x).toBeGreaterThanOrEqual(shell!.x);
     expect(box!.x + box!.width).toBeLessThanOrEqual(shell!.x + shell!.width + 1);
-    const clipped = await list
-      .locator('.isl-meet-row span')
-      .evaluateAll((spans) => spans.map((span) => span.getBoundingClientRect().height <= 30));
-    expect(clipped).toEqual([true, true, true]);
+    expect(box!.height).toBeLessThanOrEqual(72);
   });
 }

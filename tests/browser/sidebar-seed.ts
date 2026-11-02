@@ -165,3 +165,43 @@ export async function seedChats(chats: readonly SeedChat[]): Promise<string[]> {
     await db.end();
   }
 }
+
+export async function notifyChanged(kind: string, conversationId: string): Promise<void> {
+  const db = openTestDb();
+  try {
+    await db.query(`SELECT pg_notify('changes', $1)`, [
+      JSON.stringify({ kind, conversationId, runId: null }),
+    ]);
+  } finally {
+    await db.end();
+  }
+}
+
+export async function seedApproval(
+  conversationId: string,
+  approval: SeedApproval,
+): Promise<string> {
+  const db = openTestDb();
+  try {
+    const { rows } = await db.query<{ id: string; seq: number }>(
+      `UPDATE runs r SET status = 'awaiting_approval'
+       WHERE r.id = (SELECT id FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL
+                     ORDER BY created_at DESC LIMIT 1)
+       RETURNING r.id,
+         (SELECT COALESCE(max(seq), 0) + 1 FROM run_events WHERE run_id = r.id)::int AS seq`,
+      [conversationId],
+    );
+    const run = rows[0]!;
+    await insertApproval(db, run, approval, run.seq);
+    const created = await db.query<{ id: string }>(
+      'SELECT id FROM approvals WHERE run_id = $1 ORDER BY created_at DESC LIMIT 1',
+      [run.id],
+    );
+    await db.query(`SELECT pg_notify('changes', $1)`, [
+      JSON.stringify({ kind: 'approval', conversationId, runId: run.id }),
+    ]);
+    return created.rows[0]!.id;
+  } finally {
+    await db.end();
+  }
+}

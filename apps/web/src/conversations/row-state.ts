@@ -7,6 +7,7 @@ import {
 } from '@spark-outpost/contracts';
 import { terminalMood } from '../terminal/native-state.ts';
 import type { ChatFaceState } from '../brand/chat-face.ts';
+import { runStep } from '../chat/wait-label.ts';
 
 export type RowTone = 'running' | 'permission' | 'asking' | 'done' | 'error' | 'idle';
 
@@ -42,7 +43,6 @@ function waitingState(chat: ConversationSummary): RowState {
   if (chat.attention?.prFeedback) return { tone: 'permission', label: 'PR feedback', sub };
   if (asksPermission(chat)) return { tone: 'permission', label: 'Asking permission', sub };
   if (chat.attention?.kind === 'stuck') return { tone: 'asking', label: 'Repeating itself', sub };
-  if (chat.attention?.kind === 'flag') return { tone: 'asking', label: 'Flagged by Spark', sub };
   return { tone: 'asking', label: 'Needs your input', sub };
 }
 
@@ -64,13 +64,16 @@ export function rowState(chat: ConversationSummary, open: boolean): RowState {
     return { tone, label: terminalLabel(state), sub: terminalLabel(state) };
   }
   if (needsInput(chat)) return waitingState(chat);
+  if (chat.attention?.kind === 'flag' && !isRunning(chat)) {
+    return { tone: 'done', label: 'Flagged by Spark', sub: chat.attention.title };
+  }
   const run = chat.latestRun;
   if (!run) return IDLE;
   switch (run.status) {
     case 'queued':
       return { tone: 'running', label: 'Running', sub: 'Starting' };
     case 'running':
-      return { tone: 'running', label: 'Running', sub: run.step ?? 'Working' };
+      return { tone: 'running', label: 'Running', sub: runStep(run) ?? 'Working' };
     case 'failed':
       return { tone: 'error', label: 'Stopped with an error', sub: reason(run.error) };
     case 'outcome_unknown':
@@ -112,8 +115,12 @@ export function waitingHeadline(chat: ConversationSummary): string {
   return `${chat.title} ${asksPermission(chat) ? 'needs your permission' : 'needs your input'}`;
 }
 
-export function attention(chats: readonly ConversationSummary[], openId: string | null): Attention {
-  const asking = chats.filter((chat) => !chat.archivedAt && needsInput(chat));
+export function attention(
+  chats: readonly ConversationSummary[],
+  openId: string | null,
+  alerting: ReadonlySet<string>,
+): Attention {
+  const asking = chats.filter((chat) => !chat.archivedAt && alerting.has(chat.id));
   const others = asking.filter((chat) => chat.id !== openId);
   const text =
     others.length === 0

@@ -13,6 +13,7 @@ import { ticketKeys, ticketsApi } from '../tickets/tickets-api.ts';
 import { prefersReducedMotion } from '../ui/motion.ts';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { UpcomingCard } from '../calendar/UpcomingCard.tsx';
+import { useAlertingChats } from '../attention/use-attention.ts';
 import { HomeComposer } from './HomeComposer.tsx';
 import { RecentChats, RecentSkeleton, RunningNow } from './HomeCards.tsx';
 import { needsYou, recentChats, runningNow, summaryParts } from './home-model.ts';
@@ -90,6 +91,8 @@ export function Home(props: HomeProps) {
 
   const voice = useVoice();
   const need = needsYou(chats);
+  const alerting = useAlertingChats();
+  const waiting = need.filter((item) => alerting.has(item.chat.id)).length;
   const running = runningNow(chats);
   const recent = recentChats(
     chats,
@@ -139,7 +142,7 @@ export function Home(props: HomeProps) {
                 {props.loading ? (
                   <span className="hsk summary" aria-hidden="true" />
                 ) : (
-                  summaryParts(chats, need.length, quietSummary(voice)).map((part, index) =>
+                  summaryParts(chats, waiting, quietSummary(voice)).map((part, index) =>
                     part.link ? (
                       <button
                         key={index}
@@ -170,6 +173,7 @@ export function Home(props: HomeProps) {
               mode={mode}
               brief={brief}
               rows={feedRows(need, now)}
+              waiting={waiting}
               entries={entries}
               connectHint={hint.show}
               voice={voice}

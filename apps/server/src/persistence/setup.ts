@@ -4,6 +4,7 @@ import {
   modePosture,
   permissionFor,
   type AgentModeOption,
+  type ArchiveInactiveDays,
   type BusyEnterAction,
   type CompactionThresholds,
   type InvolvementLevel,
@@ -55,8 +56,11 @@ interface ProfileRow {
   heartbeat: boolean;
   wide_window: WideWindowLayout;
   busy_enter: BusyEnterAction;
+  archive_inactive_days: ArchiveInactiveDays;
   terminal_record_like_chat: boolean;
   mac_control: boolean;
+  code_mode: boolean;
+  collapse_finished_turns: boolean;
 }
 
 export interface ConnectionRow {
@@ -101,7 +105,8 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
        pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, personality, agent_instructions, agent_instructions_file, default_level,
        default_level_notice,
        morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
-       heartbeat, wide_window, busy_enter, terminal_record_like_chat, mac_control,
+       heartbeat, wide_window, busy_enter, archive_inactive_days, terminal_record_like_chat,
+       mac_control, code_mode, collapse_finished_turns,
        to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
@@ -197,8 +202,12 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     heartbeat: profile.heartbeat,
     wideWindow: profile.wide_window,
     busyEnter: profile.busy_enter,
+    archiveInactiveDays: profile.archive_inactive_days,
     terminalRecordLikeChat: profile.terminal_record_like_chat,
     macControl: profile.mac_control,
+    codeMode: profile.code_mode && process.env.SPARK_CODE_MODE !== '0',
+    ...(process.env.SPARK_CODE_MODE === '0' ? { codeModeUnavailable: true } : {}),
+    collapseFinishedTurns: profile.collapse_finished_turns,
   };
   return { profile: result, providers, advisors };
 }
@@ -257,6 +266,9 @@ export async function updateProfile(
        agent_instructions_file = COALESCE($25, agent_instructions_file),
        terminal_record_like_chat = COALESCE($26, terminal_record_like_chat),
        mac_control = COALESCE($27, mac_control),
+       archive_inactive_days = CASE WHEN $28 THEN $29::integer ELSE archive_inactive_days END,
+       code_mode = COALESCE($30, code_mode),
+       collapse_finished_turns = COALESCE($31, collapse_finished_turns),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -287,11 +299,16 @@ export async function updateProfile(
       update.agentInstructionsFile?.trim() ?? null,
       update.terminalRecordLikeChat ?? null,
       update.macControl ?? null,
+      update.archiveInactiveDays !== undefined,
+      update.archiveInactiveDays ?? null,
+      update.codeMode ?? null,
+      update.collapseFinishedTurns ?? null,
     ],
   );
 }
 
 export interface SparkPreferences extends SparkSessionPrefs {
+  codeMode: boolean;
   instructionsNote: string | null;
 }
 
@@ -309,6 +326,7 @@ export async function sparkPreferences(
     personality: profile.personality,
     agentInstructions: instructions.text,
     instructionsNote: instructions.fileError && instructionsFileNote(instructions.fileError),
+    codeMode: profile.code_mode && process.env.SPARK_CODE_MODE !== '0',
   };
 }
 
@@ -430,7 +448,8 @@ export async function recordTest(
 ): Promise<void> {
   await db.query(
     `UPDATE provider_connections
-     SET last_test_at = now(), last_test_ok = $3, last_test_message = $4
+     SET last_test_at = now(), last_test_ok = $3, last_test_message = $4,
+       verified_at = CASE WHEN $3 THEN now() ELSE verified_at END
      WHERE workspace_id = $1 AND provider = $2 AND disconnected_at IS NULL`,
     [workspaceId, provider, outcome.ok, outcome.message],
   );

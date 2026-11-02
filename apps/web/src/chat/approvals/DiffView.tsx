@@ -9,7 +9,7 @@ import {
   type Language,
 } from '../markdown/highlighter.ts';
 import { formatCount } from '../changes/change-rules.ts';
-import { foldRows, paintLine, shownRows, type DiffRow } from './diff-model.ts';
+import { foldRows, paintLine, shownRows, type DiffModel, type DiffRow } from './diff-model.ts';
 import { useDiffModel } from './use-diff-model.ts';
 
 const MARKS = { add: '+', remove: '−', same: ' ' } as const;
@@ -124,8 +124,31 @@ function DiffSkeleton() {
   );
 }
 
-export function DiffView({ diff, fullPath }: { diff: FileDiff; fullPath?: string | undefined }) {
-  const model = useDiffModel(diff.oldText, diff.newText);
+export function DiffCount({ model }: { model: DiffModel }) {
+  return (
+    <span className="appr-count">
+      <span className="plus">+{formatCount(model.added)}</span>{' '}
+      <span className="minus">−{formatCount(model.removed)}</span>
+    </span>
+  );
+}
+
+interface DiffViewProps {
+  diff: FileDiff;
+  fullPath?: string | undefined;
+}
+
+export function DiffView(props: DiffViewProps) {
+  const model = useDiffModel(props.diff.oldText, props.diff.newText);
+  return <DiffFigure {...props} model={model} counted={false} />;
+}
+
+export function DiffFigure({
+  diff,
+  fullPath,
+  model,
+  counted,
+}: DiffViewProps & { model: DiffModel | null; counted: boolean }) {
   const blocks = useMemo(() => (model ? foldRows(model.rows) : []), [model]);
   const highlighted = useHighlighted(diff, highlightable(diff) ? languageForPath(diff.path) : null);
   const [wrap, setWrap] = useState(false);
@@ -139,12 +162,7 @@ export function DiffView({ diff, fullPath }: { diff: FileDiff; fullPath?: string
       <figcaption>
         <code title={fullPath}>{diff.path}</code>
         {diff.oldText === null && <span className="dv-badge">New file</span>}
-        {model && (
-          <span className="appr-count">
-            <span className="plus">+{formatCount(model.added)}</span>{' '}
-            <span className="minus">−{formatCount(model.removed)}</span>
-          </span>
-        )}
+        {model && !counted && <DiffCount model={model} />}
         <button
           type="button"
           className="dv-wrap"

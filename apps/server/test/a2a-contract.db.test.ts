@@ -30,6 +30,7 @@ import {
   postColumns,
   queueRows,
   replyRow,
+  pendingApproval,
   setRunStatus,
 } from './a2a-fixtures.ts';
 import { addMemberChat, createOutpostRow, insertRequestRow } from './outpost-fixtures.ts';
@@ -366,7 +367,13 @@ describe('GetTask', () => {
     };
     expect((await getTask(task.id)).status?.state).toBe(TaskState.TASK_STATE_SUBMITTED);
     expect(await stateAfter('running')).toBe(TaskState.TASK_STATE_WORKING);
+    await pendingApproval(t.db, runId);
     expect(await stateAfter('awaiting_approval')).toBe(TaskState.TASK_STATE_INPUT_REQUIRED);
+    await t.db.query(
+      "UPDATE approvals SET status = 'allowed', decided_at = now() WHERE run_id = $1",
+      [runId],
+    );
+    expect((await getTask(task.id)).status?.state).toBe(TaskState.TASK_STATE_WORKING);
     expect(await stateAfter('failed')).toBe(TaskState.TASK_STATE_FAILED);
     expect(await stateAfter('outcome_unknown')).toBe(TaskState.TASK_STATE_FAILED);
     expect(await stateAfter('cancelled')).toBe(TaskState.TASK_STATE_CANCELED);

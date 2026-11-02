@@ -10,7 +10,7 @@ async function send(page: Page, text: string) {
   await input.press('Enter');
 }
 
-const working = (page: Page) => page.locator('.ai-avatar.working');
+const working = (page: Page) => page.locator('.turn-working');
 const done = (page: Page) => page.locator('.mood', { hasText: 'done' });
 
 test.beforeEach(async () => {
@@ -18,26 +18,27 @@ test.beforeEach(async () => {
 });
 
 test("the ring shows the model's window during a turn and after it", async ({ page }) => {
-  await send(page, 'Plan the rollout #ctx13 #window1m #midturn');
+  await send(page, 'Plan the rollout #ctx62 #window1m #midturn');
   const ring = page.getByRole('button', {
-    name: 'Context window: 13% used, 130K of 1M tokens',
+    name: 'Context window: 62% used, 620K of 1M tokens',
   });
-  await expect(ring).toHaveText('13%', { timeout: 20_000 });
+  await expect(ring).toHaveText('62% context', { timeout: 20_000 });
   await expect(working(page)).toBeVisible();
 
   await expect(done(page)).toBeVisible({ timeout: 20_000 });
-  await expect(ring).toHaveText('13%');
+  await expect(ring).toHaveText('62% context');
 });
 
-test('the ring hides its percentage while the window is unknown', async ({ page }) => {
-  await send(page, 'Plan the rollout #ctx40 #midturn');
-  const unknown = page.getByRole('button', { name: 'Context window: no usage reported yet' });
+test('the ring stays out of the way until the window is known and past half', async ({ page }) => {
+  await send(page, 'Plan the rollout #ctx70 #midturn');
   await expect(page.getByText(/This reply comes from the fake provider/)).toBeVisible({
     timeout: 30_000,
   });
-  await expect(unknown).toHaveText('');
+  await expect(page.getByRole('button', { name: /^Context window/ })).toHaveCount(0);
   await expect(working(page)).toBeVisible();
 
   await expect(done(page)).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole('button', { name: /Context window: 40% used/ })).toHaveText('40%');
+  await expect(page.getByRole('button', { name: /Context window: 70% used/ })).toHaveText(
+    '70% context',
+  );
 });

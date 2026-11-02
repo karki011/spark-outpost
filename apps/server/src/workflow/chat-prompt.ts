@@ -1,4 +1,5 @@
 import type { InvolvementLevel } from '@spark-outpost/contracts';
+import { delegationPolicy } from '../agents/delegation-policy.ts';
 import * as text from './chat-prompt-text.ts';
 
 export interface ChatPromptProject {
@@ -17,6 +18,8 @@ export interface ChatPromptFacts {
   outpostStartTool?: boolean;
   level: InvolvementLevel;
   followUpRound?: boolean;
+  asksWithTool?: boolean;
+  assignedWork?: boolean;
   customInstructions: string | null;
 }
 
@@ -36,6 +39,7 @@ function whereLines(project: ChatPromptProject): string[] {
 }
 
 function subChatLines(facts: ChatPromptFacts): string[] {
+  if (facts.assignedWork) return [];
   if (facts.outpostStartTool) return [text.SPLIT_SUB_CHATS_START];
   return facts.outpostDraftTool ? [text.SPLIT_SUB_CHATS] : [];
 }
@@ -43,10 +47,9 @@ function subChatLines(facts: ChatPromptFacts): string[] {
 function splitSection(facts: ChatPromptFacts): string {
   return [
     text.SPLIT_HEADING,
-    text.SPLIT_ALONE,
-    text.SPLIT_SUB_AGENTS,
+    delegationPolicy({ assignedWork: facts.assignedWork === true }),
     ...subChatLines(facts),
-    text.SPLIT_UNCLEAR,
+    facts.asksWithTool ? text.SPLIT_ASK_WITH_TOOL : text.SPLIT_UNCLEAR,
   ].join('\n');
 }
 

@@ -7,6 +7,7 @@ import { sparkPreferences } from '../persistence/setup.ts';
 import { sendUserMessage } from '../persistence/conversations.ts';
 import type { Db } from '../persistence/db.ts';
 import { loadRunInput } from '../workflow/run-input.ts';
+import { delegationPolicy } from '../agents/delegation-policy.ts';
 import { withPublishNote } from '../workflow/publish-context.ts';
 import { placeChat, type PlacePhase } from '../orchestration/chat-place.ts';
 import { DEFAULT_BRANCH_PREFIX } from '../projects/worktrees.ts';
@@ -105,7 +106,7 @@ export async function prepareNativeSession(
     const prompt = runId
       ? [input.prompt, await withPublishNote(deps.db, input)].filter(Boolean).join('\n\n')
       : '';
-    const instructions = [prefs.agentInstructions ?? '', SPARK_SESSION_NOTE]
+    const instructions = [prefs.agentInstructions ?? '', SPARK_SESSION_NOTE, delegationPolicy()]
       .filter((text) => text.trim())
       .join('\n\n');
     return {

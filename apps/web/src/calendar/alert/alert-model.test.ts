@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { at, event, link } from '../test-fixtures.ts';
-import { alertTitle, countdownSeconds, joinState, parsePlace, rigFor } from './alert-model.ts';
+import {
+  alertNotice,
+  alertTitle,
+  countdownSeconds,
+  joinState,
+  parsePlace,
+  rigFor,
+  shortcutJoin,
+} from './alert-model.ts';
 
 const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });
 const design = event('Design sync', at(10), at(10, 30));
@@ -8,6 +16,7 @@ const design = event('Design sync', at(10), at(10, 30));
 describe('alert card', () => {
   it('says when the meeting starts, then how long ago it started', () => {
     expect(alertTitle([standup], at(9, 59))).toBe('Standup starts in 1 min');
+    expect(alertTitle([standup], at(10))).toBe('Standup starts now');
     expect(alertTitle([standup], at(10, 0, 30))).toBe('Standup starts now');
     expect(alertTitle([standup], at(10, 3))).toBe('Standup started 3 min ago');
     expect(alertTitle([standup, design], at(9, 59))).toBe('2 meetings start in 1 min');
@@ -30,5 +39,21 @@ describe('alert card', () => {
   it('counts the automatic join down in whole seconds', () => {
     expect(countdownSeconds(10_000, 500)).toBe(10);
     expect(countdownSeconds(10_000, 12_000)).toBe(0);
+  });
+
+  it('lets ⌘J join only when one meeting on the card can be joined', () => {
+    const vendor = event('Vendor sync', at(10), at(10, 30), { link: link('meet') });
+    expect(shortcutJoin([standup, design], at(9, 59))?.key).toBe(standup.key);
+    expect(shortcutJoin([standup, vendor], at(9, 59))).toBeNull();
+    expect(shortcutJoin([standup], at(9, 30))).toBeNull();
+  });
+});
+
+describe('alert notification text', () => {
+  it('names the meeting and gives the same time line as the card, without a ticking countdown', () => {
+    const notice = alertNotice([standup]);
+    expect(notice.title).toBe('Standup');
+    expect(notice.body).toMatch(/Zoom/);
+    expect(alertNotice([standup, design]).title).toBe('2 meetings: Standup, Design sync');
   });
 });

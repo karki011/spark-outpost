@@ -2,7 +2,10 @@ import { EventEmitter } from 'node:events';
 import type { Cdp, CdpListener } from './cdp.ts';
 
 type RequestVerdict = (answer: { cancel?: boolean }) => void;
-type RequestHandler = (details: { url: string }, callback: RequestVerdict) => void;
+type RequestHandler = (
+  details: { url: string; webContents?: unknown },
+  callback: RequestVerdict,
+) => void;
 type HeaderVerdict = (answer: { requestHeaders: Record<string, string> }) => void;
 type HeaderHandler = (
   details: { url: string; requestHeaders: Record<string, string> },
@@ -13,6 +16,8 @@ type PermissionHandler = (
   permission: string,
   callback: (granted: boolean) => void,
 ) => void;
+
+type PermissionCheck = (contents: unknown, permission: string) => boolean;
 
 export interface Request {
   partition: string;
@@ -47,7 +52,7 @@ export class FakeSession extends EventEmitter {
   private beforeRequest: RequestHandler | null = null;
   private beforeHeaders: HeaderHandler | null = null;
   private permission: PermissionHandler | null = null;
-  private check: (() => boolean) | null = null;
+  private check: PermissionCheck | null = null;
   private device: (() => boolean) | null = null;
 
   readonly webRequest = {
@@ -67,7 +72,7 @@ export class FakeSession extends EventEmitter {
     this.permission = handler;
   }
 
-  setPermissionCheckHandler(handler: () => boolean): void {
+  setPermissionCheckHandler(handler: PermissionCheck): void {
     this.check = handler;
   }
 
@@ -82,9 +87,9 @@ export class FakeSession extends EventEmitter {
     return script.filePath;
   }
 
-  requestCancelled(url: string): boolean {
+  requestCancelled(url: string, webContents?: unknown): boolean {
     let cancelled = false;
-    this.beforeRequest?.({ url }, (answer) => {
+    this.beforeRequest?.({ url, webContents }, (answer) => {
       cancelled = answer.cancel === true;
     });
     return cancelled;
@@ -98,12 +103,20 @@ export class FakeSession extends EventEmitter {
     return sent;
   }
 
-  permissionGranted(permission: string): boolean {
+  permissionGranted(permission: string, contents: unknown = null): boolean {
     let granted = true;
-    this.permission?.(null, permission, (answer) => {
+    this.permission?.(contents, permission, (answer) => {
       granted = answer;
     });
-    return granted || this.check?.() !== false || this.device?.() !== false;
+    return granted || this.check?.(contents, permission) !== false || this.device?.() !== false;
+  }
+
+  permissionAnswers(permission: string, contents: unknown): { request: boolean; check: boolean } {
+    let request = true;
+    this.permission?.(contents, permission, (answer) => {
+      request = answer;
+    });
+    return { request, check: this.check?.(contents, permission) !== false };
   }
 
   downloadCancelled(): boolean {
@@ -122,10 +135,21 @@ function hostOf(url: string): string {
   return new URL(url).host;
 }
 
+let contentsIds = 0;
+
 export class FakeContents extends EventEmitter {
+  readonly id = ++contentsIds;
   url = '';
   destroyed = false;
-  private opener: ((details: { url: string }) => { action: string }) | null = null;
+  focused = false;
+  blocksUnload = false;
+  audioMuted = false;
+  zoomFactor = 1;
+  printed = 0;
+  audible = false;
+  private opener:
+    | ((details: { url: string; disposition: string; features: string }) => { action: string })
+    | null = null;
   private readonly cdpListeners = new Set<CdpListener>();
   readonly navigationHistory = {
     canGoBack: () => false,
@@ -151,16 +175,51 @@ export class FakeContents extends EventEmitter {
     return this.url;
   }
 
+  setAudioMuted(muted: boolean): void {
+    this.audioMuted = muted;
+  }
+
+  getZoomFactor(): number {
+    return this.zoomFactor;
+  }
+
+  setZoomFactor(zoom: number): void {
+    this.zoomFactor = zoom;
+  }
+
+  print(): void {
+    this.printed += 1;
+  }
+
   cdpEmit(method: string, params: Record<string, unknown> = {}): void {
     for (const listener of this.cdpListeners) listener(method, params);
+  }
+
+  isCurrentlyAudible(): boolean {
+    return this.audible;
   }
 
   isDestroyed(): boolean {
     return this.destroyed;
   }
 
-  close(): void {
+  isFocused(): boolean {
+    if (this.destroyed) throw new TypeError('Object has been destroyed');
+    return this.focused;
+  }
+
+  close(options?: { waitForBeforeUnload?: boolean }): void {
+    if (this.destroyed) throw new TypeError('Object has been destroyed');
+    if (options?.waitForBeforeUnload && this.blocksUnload) {
+      this.emit('will-prevent-unload', prevention());
+      return;
+    }
     this.destroyed = true;
+    this.emit('destroyed');
+  }
+
+  crash(): void {
+    this.emit('render-process-gone', {}, { reason: 'crashed' });
   }
 
   stop(): void {}
@@ -169,19 +228,25 @@ export class FakeContents extends EventEmitter {
 
   focus(): void {}
 
-  setWindowOpenHandler(handler: (details: { url: string }) => { action: string }): void {
+  setWindowOpenHandler(
+    handler: (details: { url: string; disposition: string; features: string }) => {
+      action: string;
+    },
+  ): void {
     this.opener = handler;
   }
 
-  windowOpen(url: string): string {
-    return this.opener?.({ url }).action ?? 'allow';
+  windowOpen(url: string, disposition = 'foreground-tab', features = ''): string {
+    return this.opener?.({ url, disposition, features }).action ?? 'allow';
   }
 
   private fetch(first: string): { url: string; failed: string | null } {
     let url = first;
     for (;;) {
       if (url !== 'about:blank') {
-        if (this.session.requestCancelled(url)) return { url, failed: 'ERR_BLOCKED_BY_CLIENT' };
+        if (this.session.requestCancelled(url, this)) {
+          return { url, failed: 'ERR_BLOCKED_BY_CLIENT' };
+        }
         net.requests.push({
           partition: this.session.partition,
           url,
@@ -224,6 +289,7 @@ export class FakeContents extends EventEmitter {
 export class FakeView {
   readonly webContents: FakeContents;
   visible = false;
+  bounds: { x: number; y: number; width: number; height: number } | null = null;
 
   constructor(options: { webPreferences: { session: FakeSession } }) {
     this.webContents = new FakeContents(options.webPreferences.session);
@@ -232,7 +298,9 @@ export class FakeView {
 
   setBorderRadius(): void {}
 
-  setBounds(): void {}
+  setBounds(bounds: { x: number; y: number; width: number; height: number }): void {
+    this.bounds = bounds;
+  }
 
   setVisible(visible: boolean): void {
     this.visible = visible;

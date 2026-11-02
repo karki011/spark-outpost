@@ -91,7 +91,7 @@ test('the work panel is wider by default, resizes from its edge and remembers th
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('Task 6/6', { timeout: 20_000 });
+  await expect(page.locator('.todo-line')).toContainText('3 of 3 done', { timeout: 20_000 });
   await expect.poll(() => panelWidth(page)).toBe(432);
 
   const handle = page.getByRole('separator', { name: 'Resize work panel' });
@@ -131,10 +131,11 @@ test('the work panel slides open and closed without moving the thread', async ({
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
-  await expect(page.getByRole('region', { name: 'Tasks' })).toContainText('6 of 6', {
+  const rail = page.getByRole('region', { name: 'Chat context' });
+  await expect(rail.getByRole('region', { name: 'To-do' })).toContainText('3 of 3', {
     timeout: 20_000,
   });
-  await expect(page.locator('.taskc')).toHaveCount(0);
+  await page.getByRole('button', { name: 'To-do: 3 of 3 done' }).click();
   await page
     .getByRole('main')
     .locator('.head')
@@ -174,6 +175,31 @@ test.describe('a finished change', () => {
   });
 
   test.afterEach(() => repo.remove());
+
+  test('a closed work panel shows no loading motion and loads when opened', async ({ page }) => {
+    await projectChat(page, repo, 'Full auto');
+    await send(page, `${BUILD_REQUEST} #build`);
+    await turnDone(page, 30_000);
+    const header = page.getByRole('main').locator('.head');
+    await header.getByRole('button', { name: 'Hide work panel' }).click();
+    await page.reload();
+    await expect(page.locator('.msg.ai')).toBeVisible({ timeout: 20_000 });
+
+    const aside = page.locator('#work-panel');
+    await expect(aside).toBeHidden();
+    const running = () =>
+      aside.evaluate(
+        (element) =>
+          element.getAnimations({ subtree: true }).filter((item) => item.playState === 'running')
+            .length,
+      );
+    await expect.poll(running).toBe(0);
+    await expect(aside.locator('.skel, .loadretry')).toHaveCount(0);
+
+    await header.getByRole('button', { name: 'Show work panel' }).click();
+    await expect(aside.getByRole('tab', { name: 'Links' })).toBeVisible();
+    await expect(aside.locator('.skel, .loadretry')).toHaveCount(0);
+  });
 
   test('the kept record lists the changed files and Cost shows the agent', async ({ page }) => {
     test.setTimeout(90_000);
@@ -222,6 +248,7 @@ test.describe('a finished change', () => {
     expect(new Set(rights).size).toBe(1);
     if (RAIL_SHOTS) await work.screenshot({ path: path.join(RAIL_SHOTS, 'cost-by-agent-340.png') });
     await page.setViewportSize({ width: 390, height: 800 });
+    await page.getByRole('button', { name: 'Show work panel' }).click();
     await expect.poll(() => overlappingCells(page)).toEqual([]);
     await page.setViewportSize({ width: 1400, height: 900 });
 

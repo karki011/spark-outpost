@@ -1,4 +1,4 @@
-import { PUBLISH_NOTE_ACTIVITY, type ShipResult } from '@spark-outpost/contracts';
+import { PUBLISH_NOTE_ACTIVITY } from '@spark-outpost/contracts';
 import { newId } from '../persistence/ids.ts';
 import type { Published } from '../ship/published.ts';
 import type { Append, TurnResult } from './agent-turn.ts';
@@ -19,16 +19,6 @@ export function notPublishedLine(said: Pick<TurnResult, 'outcome' | 'error'>): s
   if (said.outcome === 'cancelled') return 'Not published: the publish step was stopped.';
   const why = said.error ? ` ${said.error}` : '';
   return `Not published: the publish step failed.${why}`;
-}
-
-export function committedLine(result: ShipResult, why: string | null): string {
-  const commit = result.commit ? ` ${result.commit.slice(0, 7)}` : '';
-  return `Committed${commit} on ${result.branch}, not pushed.${why ? ` ${why}` : ''}`;
-}
-
-export function notCommittedLine(error: unknown): string {
-  const reason = error instanceof Error ? error.message : String(error);
-  return `The change is kept but was not committed: ${reason}`;
 }
 
 export async function notePublish(append: Append, line: string | null): Promise<void> {

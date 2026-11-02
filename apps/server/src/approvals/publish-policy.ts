@@ -4,12 +4,19 @@ import {
   gitPublishesBesidesPush,
   hostingCommands,
   hostingRead,
-  publishesCode,
   publishesThroughGit,
   pushTargets,
   reachesHosting,
   type PushTarget,
 } from './git-commands.ts';
+import { floorEffect, type SparkRuleSet } from '../spark-rules/resolve.ts';
+import type { FloorRuleId } from '../spark-rules/rule-ids.ts';
+import {
+  followsRule,
+  ownGhRules,
+  DEFAULT_RULE_CONTEXT,
+  type SparkRuleContext,
+} from './gh-rules.ts';
 import { namesAnotherRepo, ownPullReply, type OwnRepo } from './own-repo.ts';
 
 export interface FollowUpRound {
@@ -34,9 +41,15 @@ export interface StackBase {
   onRemote: boolean;
 }
 
+export interface AdoptedBranch {
+  author: string;
+  pull: number;
+}
+
 export interface TaskBranch {
   branch: string;
   protectedBranches: readonly string[];
+  adopted?: AdoptedBranch | null;
   pull?: number | null;
   stackBase?: StackBase | null;
   pullBase?: string | null;
@@ -56,10 +69,20 @@ export interface PublishBrief {
 }
 
 export type PublishVerdict =
-  { kind: 'allow'; basis: PublishBasis } | { kind: 'refuse'; reason: string };
+  | { kind: 'allow'; basis: PublishBasis }
+  | { kind: 'mode' }
+  | { kind: 'refuse' | 'ask'; reason: string; rule?: FloorRuleId };
+
+export function ruled(rule: FloorRuleId | null): { rule?: FloorRuleId } {
+  return rule ? { rule } : {};
+}
 
 export const NO_TASK_BRANCH_REASON =
-  "Only this chat's own spark/ branch can be pushed, and this run isn't on one";
+  "Only this chat's own spark/ branch, or the pull request branch the user adopted for it, can be pushed, and this run isn't on one";
+
+export function adoptedForceReason(branch: string, adopted: AdoptedBranch): string {
+  return `${branch} is @${adopted.author}'s pull request #${adopted.pull}: Spark never force pushes it. Update it by merging, then push without force`;
+}
 export const REMOTE_RAIL_REASON =
   'Changing git remotes, mailing patches and hosting CLIs other than gh stay refused';
 
@@ -178,22 +201,41 @@ function writesHosting(program: Program): boolean {
   return !hostingRead(program);
 }
 
-function hostingRefusal(
+function writesUnder(command: string, rules: SparkRuleContext): (program: Program) => boolean {
+  return (program) => writesHosting(program) && !followsRule(program, command, rules);
+}
+
+export function publishesUnder(command: string, rules: SparkRuleContext): boolean {
+  return publishesThroughGit(command) || hostingCommands(command).some(writesUnder(command, rules));
+}
+
+type Stop = readonly [reason: string, rule: FloorRuleId | null];
+
+function opensPull(args: readonly string[]): boolean {
+  const [group, verb] = args;
+  return group === 'pr' && verb !== undefined && GH_PR_WRITES.has(verb);
+}
+
+function* hostingStops(
   command: string,
   task: TaskBranch,
   judged: (program: Program) => boolean,
   own: OwnRepo | null,
-): string | null {
+): Generator<Stop> {
   const followed = namesAnotherRepo(command) ? null : own;
   for (const program of hostingCommands(command)) {
     if (!judged(program)) continue;
-    const refused =
-      programName(program) === 'gh'
-        ? ghRefusal(program.slice(1), task, followed)
-        : REMOTE_RAIL_REASON;
-    if (refused) return refused;
+    if (programName(program) !== 'gh') {
+      yield [REMOTE_RAIL_REASON, 'GitRemote'];
+      continue;
+    }
+    const args = program.slice(1);
+    const refused = ghRefusal(args, task, followed);
+    if (!refused) continue;
+    const owned = ownGhRules(args);
+    if (owned.length === 0) yield [refused, opensPull(args) ? 'PullRequest' : null];
+    for (const rule of owned) yield [refused, rule];
   }
-  return null;
 }
 
 function viewsOwnPull(command: string, task: TaskBranch | null): boolean {
@@ -203,17 +245,16 @@ function viewsOwnPull(command: string, task: TaskBranch | null): boolean {
   });
 }
 
-function pushRefusal(push: PushTarget, task: TaskBranch): string | null {
-  if (push.widens) return WIDE_PUSH_REASON;
-  if (push.remote && /[:/@]/.test(push.remote)) return REMOTE_URL_REASON;
+function* pushStops(push: PushTarget, task: TaskBranch): Generator<Stop> {
+  if (push.widens) yield [WIDE_PUSH_REASON, 'Push(other)'];
+  if (push.remote && /[:/@]/.test(push.remote)) yield [REMOTE_URL_REASON, 'GitRemote'];
   const named = push.branches.length > 0 && push.branches.every((name) => name === task.branch);
   if (!named || task.protectedBranches.includes(task.branch)) {
-    return otherBranchReason(task.branch);
+    yield [otherBranchReason(task.branch), 'Push(other)'];
   }
   if (task.stackBase && !task.stackBase.onRemote) {
-    return parentNotPushedReason(task.branch, task.stackBase);
+    yield [parentNotPushedReason(task.branch, task.stackBase), null];
   }
-  return null;
 }
 
 export function otherBranchPushes(command: string, task: TaskBranch | null): string[] | null {
@@ -226,29 +267,47 @@ export function otherBranchPushes(command: string, task: TaskBranch | null): str
   return own === null && pushes.length > 0 ? [] : null;
 }
 
-function refusalAmong(
+function* stopsAmong(
   command: string,
   task: TaskBranch | null,
   judged: (program: Program) => boolean,
   own: OwnRepo | null,
-): string | null {
-  if (gitPublishesBesidesPush(command)) return REMOTE_RAIL_REASON;
-  if (!task) return NO_TASK_BRANCH_REASON;
-  const hosting = hostingRefusal(command, task, judged, own);
-  if (hosting) return hosting;
-  for (const push of pushTargets(command)) {
-    const refused = pushRefusal(push, task);
-    if (refused) return refused;
+): Generator<Stop> {
+  if (gitPublishesBesidesPush(command)) yield [REMOTE_RAIL_REASON, 'GitRemote'];
+  if (!task) {
+    const pushes = pushTargets(command).length > 0;
+    yield [NO_TASK_BRANCH_REASON, pushes ? 'Push(other)' : 'PullRequest'];
+    return;
   }
-  return null;
+  yield* hostingStops(command, task, judged, own);
+  for (const push of pushTargets(command)) yield* pushStops(push, task);
 }
 
-export function publishRefusal(
+export interface PublishStop {
+  kind: 'refuse' | 'ask' | 'mode';
+  reason: string;
+  rule: FloorRuleId | null;
+}
+
+export function firstStop(stops: Iterable<Stop>, rules: SparkRuleSet): PublishStop | null {
+  let asked: PublishStop | null = null;
+  let lifted: PublishStop | null = null;
+  for (const [reason, rule] of stops) {
+    const effect = rule ? floorEffect(rules, rule) : 'deny';
+    if (effect === 'deny') return { kind: 'refuse', reason, rule };
+    if (effect === 'ask') asked ??= { kind: 'ask', reason, rule };
+    else lifted ??= { kind: 'mode', reason, rule };
+  }
+  return asked ?? lifted;
+}
+
+export function publishStop(
   command: string,
   task: TaskBranch | null,
   own: OwnRepo | null = null,
-): string | null {
-  return refusalAmong(command, task, writesHosting, own);
+  rules: SparkRuleContext = DEFAULT_RULE_CONTEXT,
+): PublishStop | null {
+  return firstStop(stopsAmong(command, task, writesUnder(command, rules), own), rules.rules);
 }
 
 export function onlyRepliesOnOwnPull(command: string, own: OwnRepo | null): boolean {
@@ -260,9 +319,9 @@ export function onlyRepliesOnOwnPull(command: string, own: OwnRepo | null): bool
   );
 }
 
-function publishActions(command: string): PublishAction[] {
+function publishActions(command: string, rules: SparkRuleContext): PublishAction[] {
   const pushes = pushTargets(command).length > 0;
-  const pulls = hostingCommands(command).some(writesHosting);
+  const pulls = hostingCommands(command).some(writesUnder(command, rules));
   return [...(pushes ? (['push'] as const) : []), ...(pulls ? (['pull'] as const) : [])];
 }
 
@@ -271,13 +330,30 @@ export function publishVerdict(
   posture: ModePosture,
   context: PublishContext,
   own: OwnRepo | null = null,
+  rules: SparkRuleContext = DEFAULT_RULE_CONTEXT,
+): PublishVerdict | null {
+  const verdict = ruledPublishVerdict(command, posture, context, own, rules);
+  if (verdict?.kind === 'refuse' || verdict?.kind === 'ask') {
+    return { kind: verdict.kind, reason: verdict.reason };
+  }
+  return verdict;
+}
+
+export function ruledPublishVerdict(
+  command: string,
+  posture: ModePosture,
+  context: PublishContext,
+  own: OwnRepo | null = null,
+  rules: SparkRuleContext = DEFAULT_RULE_CONTEXT,
 ): PublishVerdict | null {
   if (!reachesHosting(command) || onlyRepliesOnOwnPull(command, own)) return null;
-  const basis = publishBasis(posture, context.grant, publishActions(command));
+  const basis = publishBasis(posture, context.grant, publishActions(command, rules));
   if (!basis) return null;
-  if (!publishesCode(command)) {
+  if (!publishesUnder(command, rules)) {
     return viewsOwnPull(command, context.task) ? { kind: 'allow', basis } : null;
   }
-  const refused = publishRefusal(command, context.task, own);
-  return refused ? { kind: 'refuse', reason: refused } : { kind: 'allow', basis };
+  const stop = publishStop(command, context.task, own, rules);
+  if (!stop) return { kind: 'allow', basis };
+  if (stop.kind === 'mode') return { kind: 'mode' };
+  return { kind: stop.kind, reason: stop.reason, ...ruled(stop.rule) };
 }

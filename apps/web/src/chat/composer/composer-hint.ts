@@ -12,9 +12,8 @@ export function composerHint(
 ): string {
   if (attachments.uploading) return 'Uploading your files…';
   if (attachments.failed) return 'Remove or retry the files that failed';
-  if (queueing && attachments.items.length > 0) return 'Files wait until this turn ends';
-  if (queueing) return busyHint(preferred, MAC, waitingOn, background);
-  return 'Enter to send, Shift + Enter for a new line';
+  if (queueing && waitingOn > 0) return busyHint(preferred, MAC, waitingOn, background);
+  return '';
 }
 
 interface PlaceholderFacts {
@@ -27,12 +26,11 @@ interface PlaceholderFacts {
 export function composerPlaceholder(facts: PlaceholderFacts): string {
   if (facts.queueing && facts.preferred === 'now') return 'Send a message to the running turn';
   if (facts.queueing) return 'Queue a message for when this turn ends';
-  if (facts.hasRepos && facts.hasSparks) {
-    return 'Ask anything, @ to add a file or hand a job to a Spark, / for commands';
-  }
-  if (facts.hasRepos) return 'Ask anything, @ to add a file, / for commands';
-  if (facts.hasSparks) return 'Ask anything, @ to hand a job to a Spark, / for commands';
-  return 'Ask anything, / for commands';
+  if (facts.hasRepos && facts.hasSparks)
+    return 'Ask anything. @ for files or a Spark, / for commands';
+  if (facts.hasRepos) return 'Ask anything. @ for files, / for commands';
+  if (facts.hasSparks) return 'Ask anything. @ for a Spark, / for commands';
+  return 'Ask anything. / for commands';
 }
 
 export function focusAtEnd(input: HTMLTextAreaElement): void {

@@ -1,4 +1,5 @@
-import { subagentUsageParts, type SubagentRow } from '@spark-outpost/contracts';
+import { friendlyStep, subagentUsageParts, type SubagentRow } from '@spark-outpost/contracts';
+import { workerRole } from '../../crew/worker-identity.ts';
 import { subagentDurationMs } from './subagent-view.ts';
 
 export interface AgentCounts {
@@ -36,6 +37,14 @@ export function agentsLine(counts: AgentCounts): string {
   );
 }
 
+export function allDoneLine(rows: readonly Pick<SubagentRow, 'state' | 'name'>[]): string | null {
+  if (rows.length === 0 || rows.some((row) => row.state !== 'done')) return null;
+  const roles = new Set(rows.map((row) => workerRole(row.name)));
+  const [role] = roles;
+  const noun = roles.size === 1 && role ? role.toLowerCase() : 'agent';
+  return `${rows.length} ${noun}${rows.length === 1 ? '' : 's'} done`;
+}
+
 const PURPOSE_MIN_CHARS = 24;
 
 export function agentPurpose(task: string, name: string): string | null {
@@ -51,13 +60,28 @@ export function agentPurpose(task: string, name: string): string | null {
   return purpose;
 }
 
-export function agentNow(row: SubagentRow): string | null {
-  if (row.state !== 'working') return null;
+function agentNow(row: SubagentRow): string | null {
   return row.step ?? row.steps.at(-1)?.name ?? null;
 }
 
-export function agentLatestCommand(row: SubagentRow): string | null {
-  return row.state === 'working' ? (row.commands.at(-1) ?? null) : null;
+function plain(text: string): string {
+  return text.replaceAll('`', '').replace(/\s+/g, ' ').trim();
+}
+
+export interface AgentActivity {
+  text: string;
+  command: boolean;
+  full: string;
+}
+
+export function agentActivity(row: SubagentRow): AgentActivity | null {
+  if (row.state !== 'working') return null;
+  const now = agentNow(row);
+  const command = row.commands.at(-1) ?? null;
+  if (command && (!now || plain(friendlyStep(now)).includes(plain(command)))) {
+    return { text: command, command: true, full: command };
+  }
+  return now ? { text: now, command: false, full: plain(friendlyStep(now)) } : null;
 }
 
 function compactTokens(tokens: number): string {

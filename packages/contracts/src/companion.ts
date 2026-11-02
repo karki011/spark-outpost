@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { assistantActsSchema } from './ask-spark-action.ts';
 import { providerIdSchema } from './provider-ids.ts';
 
 export const CHAT_UPDATE_MAX_LINES = 3;
@@ -22,6 +23,7 @@ export const assistantSettingsSchema = z.object({
   modelChoice: assistantModelChoiceSchema,
   model: z.string().min(1).max(200).nullable(),
   effort: z.string().min(1).max(40).nullable(),
+  acts: assistantActsSchema.default('manual'),
 });
 export type AssistantSettings = z.infer<typeof assistantSettingsSchema>;
 
@@ -63,6 +65,7 @@ export const assistantEventKindSchema = z.enum([
   'fact_added',
   'fact_removed',
   'history_cleared',
+  'topic_started',
 ]);
 export type AssistantEventKind = z.infer<typeof assistantEventKindSchema>;
 

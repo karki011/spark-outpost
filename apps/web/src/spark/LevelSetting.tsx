@@ -1,7 +1,6 @@
 import { AUTONOMY_LEVELS, type InvolvementLevel } from '@spark-outpost/contracts';
 import { ProfileChoiceSetting } from '../settings/ProfileChoiceSetting.tsx';
-
-export const LEVEL_LABEL = 'How much Spark does alone';
+import { LEVEL_LABEL } from '../settings/setting-labels.ts';
 
 const INFO = {
   items: AUTONOMY_LEVELS.map((level) => ({ label: level.label, text: level.hint })),

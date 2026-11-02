@@ -6,7 +6,7 @@ import {
 import type { FlaggedItem } from '../persistence/attention-settings.ts';
 import { ellipsize, oneLine } from './text.ts';
 
-const KEYS = /\b[A-Z][A-Z0-9_]*-\d+\b/g;
+const KEYS = /\b(?:[A-Z][A-Z0-9_]*-\d+|[A-Z]{2,8}\d{4,12})\b/g;
 const PULLS = /#(\d+)\b/g;
 const DAYS = /\b(\d+)\s*(?:days?\b|d\b)/gi;
 

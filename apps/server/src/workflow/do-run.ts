@@ -3,11 +3,17 @@ import type { Db } from '../persistence/db.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
 import { saveSnapshot, type RunSnapshot } from '../persistence/run-snapshots.ts';
 import { backupBeforeEdit, snapshotRun } from '../projects/run-changes.ts';
-import type { PermissionGate } from '../providers/provider.ts';
+import type { QuestionGate } from '../providers/provider.ts';
 import type { Append } from './agent-turn.ts';
-import { createApprovalGate, type EditObserver, type PlanModeHooks } from './approval-gate.ts';
+import {
+  createApprovalGate,
+  type ApprovalGate,
+  type EditObserver,
+  type PlanModeHooks,
+} from './approval-gate.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { askTurnAutoWhy } from './ask-auto.ts';
+import { createQuestionGate } from './question-gate.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
 
 export interface AskRunOptions {
@@ -32,6 +38,7 @@ export interface AskTurnOptions extends AskRunOptions {
 export interface DoRunOptions extends AskRunOptions {
   changesProject?: boolean | undefined;
   projectRoots: readonly string[];
+  keepsCopies?: boolean;
   backupAlsoFor?: string | undefined;
   observe?: EditObserver | undefined;
   plans?: PlanModeHooks | undefined;
@@ -67,7 +74,7 @@ function gateBasics(options: AskRunOptions) {
   };
 }
 
-export function prepareAskRun(options: AskTurnOptions): PermissionGate {
+export function prepareAskRun(options: AskTurnOptions): ApprovalGate {
   return createApprovalGate({
     ...gateBasics(options),
     posture: 'read_only',
@@ -83,21 +90,37 @@ export function prepareAskRun(options: AskTurnOptions): PermissionGate {
   });
 }
 
-export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGate | undefined> {
-  const root = options.projectRoots[0];
-  if (!root) return undefined;
-  const snapshot = options.snapshot ?? (await takeSnapshot(options.db, options.runId, root));
-  return createApprovalGate({
+function doGate(options: DoRunOptions, backup: (paths: readonly string[]) => Promise<void>) {
+  return {
     ...gateBasics(options),
     changesProject: options.changesProject === true,
     ...(options.observe ? { observe: options.observe } : {}),
     ...(options.plans ? { plans: options.plans } : {}),
     ...(options.publish ? { publish: options.publish } : {}),
-    backup: async (paths) => {
+    backup,
+  };
+}
+
+export async function prepareDoRun(options: DoRunOptions): Promise<ApprovalGate | undefined> {
+  const root = options.projectRoots[0];
+  if (!root) return undefined;
+  if (options.keepsCopies === false) return createApprovalGate(doGate(options, async () => {}));
+  const snapshot = options.snapshot ?? (await takeSnapshot(options.db, options.runId, root));
+  return createApprovalGate(
+    doGate(options, async (paths) => {
       await backupBeforeEdit(options.db, options.runId, snapshot, paths);
       if (options.backupAlsoFor) {
         await backupBeforeEdit(options.db, options.backupAlsoFor, snapshot, paths);
       }
-    },
-  });
+    }),
+  );
+}
+
+export function prepareQuestions(
+  options: AskRunOptions,
+  approvals: ApprovalGate | undefined,
+): QuestionGate {
+  const gate =
+    approvals ?? createApprovalGate({ ...gateBasics(options), backup: async () => undefined });
+  return createQuestionGate(options.db, options.runId, gate);
 }

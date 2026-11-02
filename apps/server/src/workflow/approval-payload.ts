@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type { ApprovalPayload } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
+import { shortCommand } from '../approvals/policy-blocked.ts';
 import type { Asking } from './approval-options.ts';
 
 const DIFF_BUDGET = 64 * 1024;
@@ -32,6 +33,11 @@ export function subject(request: ApprovalRequest): string {
     return `${verb} ${request.paths.map((target) => `\`${relativeLabel(request, target)}\``).join(', ')}`;
   }
   return request.title.trim() || 'an action';
+}
+
+export function refusedSubject(request: ApprovalRequest): string {
+  if (request.kind === 'execute' && request.command) return `\`${shortCommand(request.command)}\``;
+  return subject(request);
 }
 
 export function approvalPayload(request: ApprovalRequest, asking: Asking): ApprovalPayload {
@@ -69,5 +75,6 @@ export function approvalPayload(request: ApprovalRequest, asking: Asking): Appro
     ...(asking.secretSend ? { secretSend: asking.secretSend } : {}),
     ...(request.agentReason ? { agentReason: request.agentReason } : {}),
     ...(request.subagent ? { subagent: request.subagent } : {}),
+    ...(asking.sparkRule ? { sparkRule: asking.sparkRule } : {}),
   };
 }

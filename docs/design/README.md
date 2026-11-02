@@ -21,6 +21,25 @@
 
 Screenshots of shipped features (buttons, connectors, GitHub, inputs, MCP, models, reset, settings, Spark, Home, Tickets, etc.) were removed from this folder because they went stale. Regenerate them from the `*-shots` Playwright specs (`tests/browser/home-shots.spec.ts`, `tests/browser/spark-shots.spec.ts`) with `SPARK_SHOTS` set to an output folder.
 
+## Apple's guidelines and this kit
+
+The Mac app shell follows Apple's [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines): the app and standard menus (**Settings…** ⌘,, View, Format), standard keyboard shortcuts (never reusing Apple's for another action), a Settings window, context menus, panels and HUDs, inspectors on the trailing edge, focus and VoiceOver, Increase Contrast, Reduce Motion, and the system appearance by default.
+
+This kit (this folder and `apps/web/public/theme.css`) governs content, tokens and type, shared by the Mac app, the browser and the phone. Where the two conflict on the Mac shell, Apple wins.
+
+For every surface:
+
+- Text is never under 12px.
+- Controls are at least 28px on the Mac and 44px on touch. This is stricter than the 24px WCAG minimum the chat-screen browser test enforces ([ACCESSIBILITY.md](ACCESSIBILITY.md#focus-and-targets)).
+- Status is an icon plus a word, never colour alone, and each colour has one meaning.
+
+Decided where Apple and the kit differ (the owner's Apple review, October 2026):
+
+- The app themes become tints over light and dark, and **Automatic** (follow the system) is the default.
+- Inter is the shared content and interface font; Geist Mono stays for code. Both ship locally with the app. Use regular weight for reading, medium for labels and semibold for headings.
+- The 12px floor stays, above Apple's own 10pt minimum.
+- Sentence case in the web UI; title case in native menus.
+
 ## Tips
 
 - The mockup saves your onboarding and theme in the browser. To see onboarding again, use Settings, then Profile, then Replay onboarding.

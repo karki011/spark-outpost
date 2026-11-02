@@ -57,6 +57,7 @@ test('Spark assistant starts on the fast model and keeps the provider, model and
     modelChoice: 'fast',
     model: null,
     effort: 'medium',
+    acts: 'manual',
   });
   await expect(again.getByText('None yet. Say “remember …” to add one.')).toBeVisible();
 });

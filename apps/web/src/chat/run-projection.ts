@@ -2,19 +2,22 @@ import {
   EventType,
   MODEL_SWITCH_ACTIVITY,
   ORCHESTRATION_ACTIVITY,
+  TODO_ACTIVITY,
   applySubagentEvent,
   emptySubagentRoster,
   modelSwitchSchema,
   orchestrationSchema,
   stepMark,
+  todoActivitySchema,
   type Approval,
   type ModelSwitch,
   type Orchestration,
+  type PlanEntry,
   type AgentTerminalStarted,
   type RunEvent,
   type SubagentRoster,
 } from '@spark-outpost/contracts';
-import { applyApprovalEvent } from './approvals/approval-events.ts';
+import { applyApprovalEvent, requestedApprovalId } from './approvals/approval-events.ts';
 import { applyAgentTerminalEvent } from './commands/agent-terminal-model.ts';
 import { applyCommandEvent, type LiveCommand } from './commands/command-model.ts';
 import {
@@ -26,7 +29,24 @@ import {
 
 export type LiveRunStatus = 'connecting' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 
-export interface RunStep {
+export interface StepAnchor {
+  textOffset?: number | undefined;
+  textBefore?: string | undefined;
+  textHeld?: number | undefined;
+}
+
+export interface StepTimes {
+  startedAt?: number | undefined;
+  finishedAt?: number | undefined;
+}
+
+export interface StepTool {
+  toolKind?: string | undefined;
+  toolName?: string | undefined;
+  target?: string | undefined;
+}
+
+export interface RunStep extends StepAnchor, StepTimes, StepTool {
   name: string;
   done: boolean;
   toolCallId?: string | undefined;
@@ -38,7 +58,7 @@ export interface RunStep {
 
 export type StepStatus = 'done' | 'failed' | 'open';
 
-export interface StepView {
+export interface StepView extends StepAnchor, StepTimes, StepTool {
   name: string;
   status: StepStatus;
   reasoningId?: string | undefined;
@@ -55,13 +75,40 @@ function thinkingOf(step: RunStep): Pick<StepView, 'reasoningId' | 'thought'> {
 }
 
 function startedStep(event: Extract<RunEvent, { type: typeof EventType.STEP_STARTED }>): RunStep {
-  const { toolCallId, waits } = stepMark(event);
+  const { toolCallId, waits, textOffset, textBefore, textHeld, toolKind, toolName, target } =
+    stepMark(event);
   return {
     name: event.stepName,
     done: false,
     ...(toolCallId ? { toolCallId } : {}),
     ...(waits ? { waits: true } : {}),
     ...(event.subagentRunId ? { subagent: true } : {}),
+    ...(textOffset === undefined ? {} : { textOffset, textBefore, textHeld }),
+    ...(event.timestamp === undefined ? {} : { startedAt: event.timestamp }),
+    ...(toolKind ? { toolKind } : {}),
+    ...(toolName ? { toolName } : {}),
+    ...(target ? { target } : {}),
+  };
+}
+
+function toolOf(step: StepTool): StepTool {
+  return {
+    ...(step.toolKind ? { toolKind: step.toolKind } : {}),
+    ...(step.toolName ? { toolName: step.toolName } : {}),
+    ...(step.target ? { target: step.target } : {}),
+  };
+}
+
+function anchorOf(step: StepAnchor): StepAnchor {
+  return step.textOffset === undefined
+    ? {}
+    : { textOffset: step.textOffset, textBefore: step.textBefore, textHeld: step.textHeld };
+}
+
+function timesOf(step: StepTimes): StepTimes {
+  return {
+    ...(step.startedAt === undefined ? {} : { startedAt: step.startedAt }),
+    ...(step.finishedAt === undefined ? {} : { finishedAt: step.finishedAt }),
   };
 }
 
@@ -76,7 +123,19 @@ function finishStep(
     : -1;
   const index =
     called >= 0 ? called : steps.findIndex((step) => !step.done && step.name === event.stepName);
-  return steps.map((step, position) => (position === index ? { ...step, done: true } : step));
+  const finishedAt = event.timestamp === undefined ? {} : { finishedAt: event.timestamp };
+  const { target, toolName } = stepMark(event);
+  return steps.map((step, position) =>
+    position === index
+      ? {
+          ...step,
+          done: true,
+          ...finishedAt,
+          ...(target && !step.target ? { target } : {}),
+          ...(toolName && !step.toolName ? { toolName } : {}),
+        }
+      : step,
+  );
 }
 
 function withThought(steps: readonly RunStep[], reasoningId: string, delta: string): RunStep[] {
@@ -128,6 +187,9 @@ export function viewSteps(steps: readonly RunStep[]): StepView[] {
     views.push({
       name: step.name,
       status: step.done ? 'done' : 'open',
+      ...anchorOf(step),
+      ...timesOf(step),
+      ...toolOf(step),
       ...thinkingOf(step),
       ...(step.subagent ? { subagent: true } : {}),
       ...(step.waits ? { waits: true } : {}),
@@ -142,11 +204,13 @@ export interface RunProjection extends ReplyStream {
   error: string | null;
   lastSeq: number;
   approvals: readonly Approval[];
+  approvalAt: Readonly<Record<string, number>>;
   orchestration: Orchestration | null;
   modelSwitch: ModelSwitch | null;
   commands: readonly LiveCommand[];
   terminals: readonly AgentTerminalStarted[];
   subagents: SubagentRoster;
+  todo: readonly PlanEntry[] | null;
 }
 
 export const initialRunProjection: RunProjection = {
@@ -156,12 +220,23 @@ export const initialRunProjection: RunProjection = {
   error: null,
   lastSeq: 0,
   approvals: [],
+  approvalAt: {},
   orchestration: null,
   modelSwitch: null,
   commands: [],
   terminals: [],
   subagents: emptySubagentRoster,
+  todo: null,
 };
+
+function withApprovalAt(
+  state: RunProjection,
+  event: { name: string; value: unknown },
+): Readonly<Record<string, number>> {
+  const id = requestedApprovalId(event);
+  if (id === null || id in state.approvalAt) return state.approvalAt;
+  return { ...state.approvalAt, [id]: state.text.length };
+}
 
 export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent): RunProjection {
   if (seq <= state.lastSeq) return state;
@@ -182,7 +257,11 @@ export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent
       return event.subagentRunId ? next : withTextDelta(next, event.messageId, event.delta);
     case EventType.TEXT_MESSAGE_END: {
       if (event.subagentRunId) return next;
-      const started = { commands: state.commands.length, terminals: state.terminals.length };
+      const started = {
+        commands: state.commands.length,
+        terminals: state.terminals.length,
+        at: event.timestamp ?? null,
+      };
       return withTextEnd(next, event.messageId, started);
     }
     case EventType.RUN_FINISHED:
@@ -194,6 +273,10 @@ export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent
         const change = modelSwitchSchema.safeParse(event.content);
         return change.success ? { ...next, modelSwitch: change.data } : next;
       }
+      if (event.activityType === TODO_ACTIVITY) {
+        const list = todoActivitySchema.safeParse(event.content);
+        return list.success ? { ...next, todo: list.data.entries } : next;
+      }
       if (event.activityType !== ORCHESTRATION_ACTIVITY) return next;
       const parsed = orchestrationSchema.safeParse(event.content);
       return parsed.success ? { ...next, orchestration: parsed.data } : next;
@@ -202,6 +285,7 @@ export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent
       return {
         ...next,
         approvals: applyApprovalEvent(state.approvals, event),
+        approvalAt: withApprovalAt(state, event),
         commands: applyCommandEvent(state.commands, event),
         terminals: applyAgentTerminalEvent(state.terminals, event),
       };

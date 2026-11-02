@@ -1,10 +1,10 @@
 import {
-  waitedOn,
   type BackgroundWait,
   type BusyEnterAction,
   type MemberMessage,
   type Run,
 } from '@spark-outpost/contracts';
+import { waitedOnText } from '../wait-label.ts';
 
 export interface ModifierKeys {
   metaKey: boolean;
@@ -51,17 +51,20 @@ export function busyHint(
   background: BackgroundWait | null = null,
 ): string {
   if (waitingOn > 0) {
-    const waits = `while it waits on ${waitedOn(waitingOn, background)}`;
+    const waits = `while it waits on ${waitedOnText(waitingOn, background)}`;
     return `Enter to send to the agent now, ${waits} · ${modifiedEnter(mac)} to queue`;
   }
   const other = otherAction(preferred);
   return `Enter to ${SEND_CHOICES[preferred].hint} · ${modifiedEnter(mac)} to ${SEND_CHOICES[other].hint}`;
 }
 
-const WAITING_NOW_NOTE = 'Reaches the agent while it waits, or joins the queue';
+const WAITING_NOTES: Record<BusyEnterAction, string> = {
+  now: 'Reaches the agent while it waits, or joins the queue',
+  queue: 'Reaches the agent in order while it waits, or when this turn ends',
+};
 
 export function choiceNote(action: BusyEnterAction, waiting: boolean): string {
-  return waiting && action === 'now' ? WAITING_NOW_NOTE : SEND_CHOICES[action].note;
+  return waiting ? WAITING_NOTES[action] : SEND_CHOICES[action].note;
 }
 
 export function choiceTitle(
@@ -103,4 +106,10 @@ export function sendNowStatus({ memberMessages = [], runs }: SendNowFacts): stri
     default:
       return null;
   }
+}
+
+export function busyButtonTitle(preferred: BusyEnterAction, mac: boolean, waiting = false) {
+  const other = otherAction(preferred);
+  const otherKey = `${modifiedEnter(mac)} to ${SEND_CHOICES[other].hint}`;
+  return `${choiceTitle(preferred, preferred, mac, waiting)} · ${otherKey}`;
 }

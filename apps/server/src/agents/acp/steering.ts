@@ -1,6 +1,8 @@
 import type * as acp from '@agentclientprotocol/sdk';
 import { z } from 'zod';
-import type { ProviderTurn, SteerRequests } from '../../providers/provider.ts';
+import type { ProviderMessage, ProviderTurn, SteerRequests } from '../../providers/provider.ts';
+
+import { followUpBlocks, promptSupport, type PromptSupport } from './conversation-prompt.ts';
 
 type Requester = Pick<acp.ClientContext, 'request'>;
 
@@ -13,11 +15,19 @@ export function steeringSupported(init: acp.InitializeResponse): boolean {
   return advertisedSchema.safeParse(init._meta).success;
 }
 
-async function steer(ctx: Requester, sessionId: string, text: string): Promise<boolean> {
+async function steer(
+  ctx: Requester,
+  sessionId: string,
+  message: ProviderMessage,
+  support: PromptSupport,
+): Promise<boolean> {
   const response = await ctx
     .request<unknown, unknown>(STEER_METHOD, {
       sessionId,
-      prompt: [{ type: 'text', text }],
+      prompt:
+        typeof message === 'string'
+          ? [{ type: 'text', text: message }]
+          : followUpBlocks(message.text, { attachments: message.attachments, support }),
       _meta: { steering: { idleBehavior: 'promptRequired' } },
     })
     .catch(() => null);
@@ -32,14 +42,14 @@ export function attachSteering(
   steering: SteerRequests | undefined,
 ): () => void {
   if (!steering || !steeringSupported(init)) return () => undefined;
-  return steering.attach((text) => steer(ctx, sessionId, text));
+  return steering.attach((text) => steer(ctx, sessionId, text, promptSupport(init)));
 }
 
 export async function nextMessage(
   turn: ProviderTurn,
   stopReason: acp.StopReason,
   signal: AbortSignal,
-): Promise<string | null> {
+): Promise<ProviderMessage | null> {
   if (!turn.inbox || stopReason !== 'end_turn' || signal.aborted) return null;
   return turn.inbox.take();
 }

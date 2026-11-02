@@ -1,32 +1,33 @@
-import type { ReactNode } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   isTerminalRunStatus,
-  waitingOnLabel,
   STOPPED_BY_QUIT,
   type Approval,
   type ConversationDetail,
   type Message,
   type Project,
   type Run,
-  type TerminalRunStatus,
 } from '@spark-outpost/contracts';
+import { setupApi, setupKey } from '../api/setup.ts';
 import { CacheRebuildNote } from '../usage/CacheRebuildNote.tsx';
 import { RunUsageMeta } from '../usage/RunUsageMeta.tsx';
-import { AiTurn, type TurnState } from './AiTurn.tsx';
+import { waitLabel } from './wait-label.ts';
 import { ApprovalCard } from './approvals/ApprovalCard.tsx';
 import { decidedFirst, hasPending } from './approvals/approval-events.ts';
 import { BrowserCheckMeta } from '../browser/BrowserCheckMeta.tsx';
 import { turnShots } from '../browser/browser-check.ts';
-import { RailFlags } from './approvals/RailFlags.tsx';
-import { RevertChanged } from './approvals/RevertChanged.tsx';
-import { askedBeforeTimeout, isLatestTurn, timedOut, WAITED_LABEL } from './approvals/timed-out.ts';
-import { FilesChanged, taskForRuns } from './changes/FilesChanged.tsx';
+import { askedBeforeTimeout, isLatestTurn } from './approvals/timed-out.ts';
+import { taskForRuns } from './changes/FilesChanged.tsx';
+import { ChatFiles } from './files/ChatFiles.tsx';
+import { ArtifactCards } from './artifacts/ArtifactCards.tsx';
 import { CheckpointCard } from './checkpoints/CheckpointCard.tsx';
 import { turnAgentTerminals } from './commands/agent-terminal-model.ts';
+import { cardsLeft, commandAnswers } from './commands/command-answers.ts';
+import { hourCycle } from '../desktop/hour-cycle.ts';
 import { AgentTerminalsRunning } from './commands/AgentTerminalRow.tsx';
 import { runCommands, shownCommands } from './commands/command-model.ts';
 import { useChatAgentTerminals } from './commands/use-agent-terminals.ts';
-import { TurnReply } from './commands/TurnReply.tsx';
 import { isCheckpoint } from './checkpoints/checkpoint-model.ts';
 import { turnCheckpoints } from './checkpoints/turn-checkpoints.ts';
 import { shownApprovals } from './crew/crew-items.ts';
@@ -36,62 +37,43 @@ import { keepCardHost } from './outcomes/feedback-host.ts';
 import { AgreedReplyLine } from './plans/AgreedReplyLine.tsx';
 import { PlanSavedLine } from './plans/PlanSavedLine.tsx';
 import { TurnFeedback } from './outcomes/TurnFeedback.tsx';
-import { ResultBlock } from './outcomes/ResultBlock.tsx';
+import { useFeedbackTurn } from './outcomes/use-feedback-turn.ts';
+import { turnRunIds } from './turn-props.ts';
 import { PublishResult } from './publish/PublishResult.tsx';
 import { copiedReply, splitAtPublish, turnReplies } from './publish/turn-replies.ts';
-import {
-  shownSteps,
-  streamLeads,
-  type LiveRunStatus,
-  type RunProjection,
-} from './run-projection.ts';
+import { shownSteps, streamLeads, viewSteps, type RunProjection } from './run-projection.ts';
 import { ErrorLine, ModelSwitchNote } from './ModelSwitchNote.tsx';
 import { providerName } from './provider-name.ts';
 import { useLiveReport } from './status/status-context.ts';
-import { BackgroundWork } from './BackgroundWork.tsx';
-import { SubagentsLine } from './subagents/SubagentsLine.tsx';
+import { TurnActivity } from './turn/TurnActivity.tsx';
+import { leadStep } from './turn/live-label.ts';
+import { useReportLeadStep } from '../crew/lead-steps.ts';
+import { TurnCardView } from './turn/TurnCardView.tsx';
+import { turnCards, type TurnCard } from './turn/turn-cards.ts';
 import { useShowAgents } from './subagents/agent-board.ts';
 import { shownSubagents } from './subagents/subagent-view.ts';
 import { runSeconds } from './turns.ts';
+import { clockText } from './status/status-text.ts';
+import { modelOf } from '../crew/chat-agent.ts';
 import { useRunStream } from './use-run-stream.ts';
-import { StepList, StepToggle, turnHeading, useStepLog } from './WorkLog.tsx';
-
-const liveStates: Record<LiveRunStatus, TurnState> = {
-  connecting: 'working',
-  running: 'working',
-  succeeded: 'done',
-  failed: 'failed',
-  cancelled: 'stopped',
-};
-
-const liveMoods: Record<LiveRunStatus, string> = {
-  connecting: 'working',
-  running: 'working',
-  succeeded: 'done',
-  failed: 'hit a problem',
-  cancelled: 'stopped',
-};
-
-const finishedStates: Record<TerminalRunStatus, TurnState> = {
-  succeeded: 'done',
-  failed: 'failed',
-  cancelled: 'stopped',
-  outcome_unknown: 'stopped',
-};
-
-const finishedMoods: Record<TerminalRunStatus, string> = {
-  succeeded: 'done',
-  failed: 'hit a problem',
-  cancelled: 'stopped',
-  outcome_unknown: 'interrupted',
-};
+import { currentTodo, shownTodo, turnTodo } from '../todo/todo-model.ts';
+import { TurnTodo } from '../todo/TurnTodo.tsx';
+import { TurnRows } from './rows/TurnRows.tsx';
+import { turnRowParts } from './rows/turn-rows.ts';
+import { canFold } from './rows/turn-fold.ts';
+import { useTurnChanges } from './rows/use-turn-changes.ts';
+import { AgentMark, TurnMeta, agentChanged } from './turn/TurnParts.tsx';
+import { TurnChangesLine } from './turn/TurnChangesLine.tsx';
+import { turnMood } from './turn/turn-mood.ts';
+import { SteerGroup } from './steer/SteeredMessage.tsx';
+import { seenAfter, steerMarks, turnSteers } from './steer/steer-model.ts';
 
 interface SoloTurnProps {
   run: Run;
-  taskCount?: ReactNode;
   detail: ConversationDetail;
   assistantMessage: Message | null;
   laterMessages: readonly Message[];
+  previous?: Run | null;
   repo: Project | null;
 }
 
@@ -119,13 +101,15 @@ function turnApprovals(
   return shownApprovals(stored, pendingCheckpoint ? [pendingCheckpoint] : [], stream.approvals);
 }
 
-function turnStatus(run: Run, stream: RunProjection, waiting: boolean) {
-  if (timedOut(run.error)) return { state: 'stopped' as const, label: WAITED_LABEL };
-  if (isTerminalRunStatus(run.status)) {
-    return { state: finishedStates[run.status], label: finishedMoods[run.status] };
-  }
-  if (waiting) return { state: 'waiting' as const, label: 'waiting for you' };
-  return { state: liveStates[stream.status], label: liveMoods[stream.status] };
+function useCollapseFinishedTurns(): boolean {
+  const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
+  return setup.data?.profile.collapseFinishedTurns ?? true;
+}
+
+function metaLine(run: Run, model: string | null): string | null {
+  const seconds = runSeconds(run);
+  const parts = [model, seconds === null ? null : clockText(seconds * 1000)].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 export function SoloTurn({
@@ -133,8 +117,8 @@ export function SoloTurn({
   detail,
   assistantMessage,
   laterMessages,
+  previous = null,
   repo,
-  taskCount,
 }: SoloTurnProps) {
   const { member, child } = soloChild(run, detail);
   const provider = member?.provider ?? run.provider;
@@ -147,37 +131,26 @@ export function SoloTurn({
   const approvals = turnApprovals(run, detail, stream, member?.runId ?? null);
   const waiting = working && hasPending(approvals);
   const cards = decidedFirst(approvals);
+  const conversationId = detail.conversation.id;
   const approvalCard = (approval: Approval) =>
     isCheckpoint(approval) ? (
       <CheckpointCard key={approval.id} approval={approval} />
     ) : (
       <ApprovalCard key={approval.id} approval={approval} provider={provider} repo={repo} />
     );
-  const status = turnStatus(run, stream, waiting);
-  const { state } = status;
   const subagents = shownSubagents(stream.subagents.rows, detail.subagents?.[run.id], leads);
   useShowAgents(run.id, run.createdAt, subagents, working);
   const waitingOn = working && !waiting ? stream.subagents.waitingOn : 0;
   const waitingText =
-    waitingOn > 0 ? waitingOnLabel(waitingOn, stream.subagents.background).toLowerCase() : null;
-  const label = waitingText ?? status.label;
+    waitingOn > 0 ? waitLabel(waitingOn, stream.subagents.background).toLowerCase() : null;
 
   const persistedSteps = detail.activity[run.id]?.length
     ? detail.activity[run.id]!
     : (detail.activity[member?.runId ?? ''] ?? []);
   const steps = shownSteps(stream, persistedSteps, leads);
+  const todo = shownTodo(stream.todo, child?.todo ?? run.todo);
+  const doingTodo = working && !waitingText ? currentTodo(todo) : null;
   const stepsRunId = !leads && detail.activity[run.id]?.length ? run.id : streamRunId;
-  useLiveReport(
-    {
-      id: run.id,
-      name: providerName(provider),
-      provider,
-      kind: 'agent',
-      ...(waitingText ? { doing: waitingText } : {}),
-    },
-    working,
-    waitingText ? [] : steps,
-  );
   const persistedText =
     assistantMessage?.content ??
     detail.messages.find((message) => message.role === 'assistant' && message.runId === child?.id)
@@ -209,6 +182,26 @@ export function SoloTurn({
     replyClosedAt,
   });
   const publishing = replies.publishText !== '' || commands.publish.length > 0;
+  const lead = leadStep({
+    subagents,
+    commands: [...commands.reply, ...commands.publish],
+    steps,
+    publishing: stream.replyEnd || publishing ? { since: stream.replyEnd?.at ?? null } : null,
+  });
+  useReportLeadStep(run.id, working && !waiting ? lead : null);
+  useLiveReport(
+    {
+      id: run.id,
+      name: providerName(provider),
+      provider,
+      kind: 'agent',
+      ...(waitingText ? { doing: waitingText } : {}),
+      ...(doingTodo ? { todo: doingTodo } : {}),
+    },
+    working,
+    waitingText ? [] : steps,
+    lead.since,
+  );
   const interrupted = run.status === 'outcome_unknown';
   const shown = child?.modelSwitch || child?.errorDetails ? child : run;
   const error = finished
@@ -224,74 +217,135 @@ export function SoloTurn({
     : undefined;
   const host = finished ? keepCardHost(checkpoints, Boolean(revertible?.revertedAt)) : null;
   const kept = checkpoints.find((approval) => approval.id === host?.approvalId) ?? null;
+  const feedbackTurn = useFeedbackTurn(detail.conversation.id, turnRunIds(detail, run.id));
 
   const turnRuns = [run, child].filter((candidate): candidate is Run => Boolean(candidate));
   const changeRunIds = turnRuns.map((candidate) => candidate.id);
-  const seconds = finished ? runSeconds(run) : null;
-  const log = useStepLog(steps, state, stepsRunId);
-  const changeTask =
-    finished && turnRuns.some((candidate) => candidate.mode === 'do')
-      ? taskForRuns(detail.tasks, changeRunIds)
-      : null;
+  const changeTask = turnRuns.some((candidate) => candidate.mode === 'do')
+    ? taskForRuns(detail.tasks, changeRunIds)
+    : null;
+  const changes = useTurnChanges(changeTask?.id ?? null, changeRunIds);
+  const todoEntries = turnTodo(detail.runs, run.id, todo);
+  const answers = commandAnswers(approvals, hourCycle());
+  const commandCalls = new Set(
+    [...commands.reply, ...commands.publish].flatMap((command) =>
+      command.toolCallId ? [command.toolCallId] : [],
+    ),
+  );
+  const steers = turnSteers(detail, run.id);
+  const rowInput = {
+    text,
+    steps: viewSteps(steps),
+    commands: commands.reply,
+    shots: turnShots(detail, run.id),
+    terminals: terminalParts.reply,
+    steers: steerMarks(steers),
+    todo: todoEntries.length > 0,
+  };
+  const collapse = useCollapseFinishedTurns();
+  const [foldOpen, setFoldOpen] = useState(false);
+  const foldable = finished && collapse && canFold(turnRowParts(rowInput));
+  const decided =
+    foldable && !foldOpen ? cards.decided : cardsLeft(cards.decided, answers, commandCalls);
+  const timeline = turnCards({
+    approvals: [
+      ...decided,
+      ...checkpoints.filter((approval) => approval !== kept && approval.status !== 'pending'),
+    ],
+    flags: (detail.railFlags ?? []).filter((flag) => flag.turnRunId === run.id),
+    approvalAt: stream.approvalAt,
+    publishFrom: stream.replyEnd?.at ?? (replyClosedAt ? Date.parse(replyClosedAt) : null),
+  });
+  const parts = turnRowParts({ ...rowInput, cards: timeline.marks });
+  const cardView = (card: TurnCard) => (
+    <TurnCardView
+      key={card.id}
+      card={card}
+      provider={provider}
+      repo={repo}
+      conversationId={conversationId}
+    />
+  );
+  const cardsAt = (ids: readonly string[]) =>
+    ids.flatMap((id) => {
+      const card = timeline.byId.get(id);
+      return card ? [cardView(card)] : [];
+    });
+  const steersAt = (ids: readonly string[], index: number) => (
+    <SteerGroup
+      messages={steers.filter((message) => ids.includes(message.id))}
+      detail={detail}
+      run={run}
+      crew={false}
+      seen={seenAfter(parts, index)}
+    />
+  );
+  const mood = turnMood({
+    run,
+    live: stream.status,
+    waiting,
+    waitingText,
+    started: steps.length > 0 || text !== '',
+  });
+  const fold = foldable
+    ? { open: foldOpen, seconds: runSeconds(run), onToggle: () => setFoldOpen(!foldOpen) }
+    : null;
+  const usageRun = child?.usage ? child : run;
+  const meta = metaLine(run, modelOf(usageRun) ?? modelOf(run));
 
   return (
-    <AiTurn
-      provider={provider}
-      label={working && !waiting && !waitingText && !log && !text ? 'thinking' : label}
-      state={state}
-      liveId={working && !waiting ? run.id : null}
-      following={child?.following ?? run.following}
-      status={
-        log || taskCount ? (
-          <>
-            {log && (
-              <StepToggle
-                log={log}
-                label={turnHeading(log.views, waitingText ? 'waiting' : state, seconds, log.open)}
-              />
-            )}
-            {log && taskCount && (
-              <span className="mood-dot" aria-hidden="true">
-                ·
-              </span>
-            )}
-            {taskCount}
-          </>
-        ) : null
-      }
-    >
-      {log && (
-        <div className={log.open ? 'steps open' : 'steps'}>
-          <StepList log={log} />
-        </div>
-      )}
-      <SubagentsLine runId={run.id} rows={subagents} live={working} />
+    <div className="msg ai solo" data-state={finished ? run.status : 'working'}>
+      <p className="sr-only">
+        {providerName(provider)} <span className="mood">{mood}</span>
+      </p>
+      {agentChanged(run, previous) && <AgentMark provider={provider} model={modelOf(run)} />}
       <PlanSavedLine detail={detail} runId={run.id} />
-      <RailFlags detail={detail} runId={run.id} />
-      {cards.decided.map(approvalCard)}
-      <TurnReply
-        text={text}
-        shots={turnShots(detail, run.id)}
-        commands={commands.reply}
-        terminals={terminalParts.reply}
-        waiting={waiting}
+      <TurnRows
+        parts={parts}
+        context={{
+          runId: stepsRunId,
+          working,
+          waiting,
+          changes,
+          todo: <TurnTodo entries={todoEntries} live={working} />,
+          answers,
+        }}
+        steers={steersAt}
+        cards={cardsAt}
+        fold={fold}
       >
         {(part, last) => (
           <Markdown text={part} streaming={last && leads && active && !publishing} />
         )}
-      </TurnReply>
-      <BackgroundWork
-        runId={run.id}
-        background={working && !waiting ? stream.subagents.background : null}
-      />
+      </TurnRows>
+      <ChatFiles files={(detail.chatFiles ?? []).filter((file) => file.runId === run.id)} />
+      <ArtifactCards chatId={detail.conversation.id} runId={run.id} pages={detail.artifactPages} />
+      {finished && (
+        <TurnChangesLine
+          kept={kept}
+          host={host}
+          changes={changes}
+          revertible={revertible ?? null}
+          runIds={changeRunIds}
+          taskId={changeTask?.id ?? null}
+          conversationId={detail.conversation.id}
+        />
+      )}
       <PublishResult
         text={replies.publishText}
         commands={commands.publish}
         terminals={terminalParts.publish}
         waiting={waiting}
         streaming={leads && active}
+        answers={answers}
       />
+      {timeline.publish.map(cardView)}
       {cards.pending.map(approvalCard)}
+      {checkpoints
+        .filter((approval) => approval !== kept && approval.status === 'pending')
+        .map((approval) => (
+          <CheckpointCard key={approval.id} approval={approval} />
+        ))}
       <AgreedReplyLine detail={detail} message={assistantMessage} finished={finished} />
       {finished && <AgentTerminalsRunning terminals={terminals} />}
       {run.status === 'cancelled' && (
@@ -311,16 +365,16 @@ export function SoloTurn({
           retryIn: isLatestTurn(detail, run.id) ? detail.conversation.id : null,
         }}
       />
+      <TurnActivity
+        run={run}
+        subagents={subagents}
+        working={working}
+        waiting={waiting}
+        background={stream.subagents.background}
+        lead={lead}
+      />
       {finished && (
-        <div className="turn-foot">
-          <RunUsageMeta run={child?.usage ? child : run} />
-          <CacheRebuildNote rebuild={detail.promptCache?.rebuilds[run.id]} />
-          <BrowserCheckMeta
-            detail={detail}
-            run={run}
-            taskId={changeTask?.id ?? null}
-            runIds={changeRunIds}
-          />
+        <TurnMeta>
           {text && (
             <MessageActions
               text={copiedReply(replies)}
@@ -329,29 +383,24 @@ export function SoloTurn({
               side="assistant"
             />
           )}
-          {!host && <TurnFeedback runId={run.id} variant="turn" />}
-        </div>
+          {feedbackTurn && (
+            <TurnFeedback
+              key={host?.variant ?? 'turn'}
+              runId={run.id}
+              variant={host?.variant ?? 'turn'}
+            />
+          )}
+          {meta && <span className="turn-meta-line">{meta}</span>}
+          <RunUsageMeta run={usageRun} />
+          <CacheRebuildNote rebuild={detail.promptCache?.rebuilds[run.id]} />
+          <BrowserCheckMeta
+            detail={detail}
+            run={run}
+            taskId={changeTask?.id ?? null}
+            runIds={changeRunIds}
+          />
+        </TurnMeta>
       )}
-      {changeTask && !kept && <FilesChanged taskId={changeTask.id} runIds={changeRunIds} />}
-      {checkpoints
-        .filter((approval) => approval !== kept)
-        .map((approval) => (
-          <CheckpointCard key={approval.id} approval={approval} />
-        ))}
-      {host && kept && (
-        <ResultBlock
-          approval={kept}
-          variant={host.variant}
-          runId={run.id}
-          runIds={changeRunIds}
-          revertible={revertible ?? null}
-          taskId={changeTask?.id ?? null}
-          conversationId={detail.conversation.id}
-        />
-      )}
-      {revertible && !kept && (
-        <RevertChanged run={revertible} taskId={changeTask?.id ?? null} runIds={changeRunIds} />
-      )}
-    </AiTurn>
+    </div>
   );
 }

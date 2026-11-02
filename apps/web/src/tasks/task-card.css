@@ -1,22 +1,13 @@
-.wbar,
-.hprog {
+.wbar {
   display: block;
   height: 3px;
   border-radius: 3px;
   background: var(--raise);
   overflow: hidden;
-}
-
-.wbar {
   margin-top: 10px;
 }
 
-.hprog {
-  margin-top: 7px;
-}
-
-.wbar i,
-.hprog i {
+.wbar i {
   display: block;
   width: 100%;
   height: 100%;
@@ -60,99 +51,4 @@
 .spill.bad {
   color: var(--danger);
   background: var(--danger-soft);
-}
-
-.taskc {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  width: 100%;
-  height: 30px;
-  margin: 8px 0 2px;
-  padding: 0 10px 0 8px;
-  border-radius: var(--r-sm);
-  font-size: 12.5px;
-  line-height: 1;
-  color: var(--muted);
-  text-align: left;
-  white-space: nowrap;
-  background: color-mix(in srgb, var(--raise) 70%, var(--panel));
-  transition: background 0.15s;
-  animation: rise 0.25s var(--out) both;
-}
-
-.taskc:hover {
-  background: var(--raise);
-}
-
-.taskc.wait {
-  background: color-mix(in srgb, var(--warn) 9%, var(--raise));
-}
-
-.taskc.wait:hover {
-  background: color-mix(in srgb, var(--warn) 14%, var(--raise));
-}
-
-.taskc .chev {
-  flex: 0 0 12px;
-  color: var(--faint);
-}
-
-.taskc .mo-root:hover {
-  transform: none;
-}
-
-.taskc .tc-count {
-  flex-shrink: 0;
-  font-weight: 500;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-.taskc .cs-dot,
-.taskc .tc-status {
-  flex-shrink: 0;
-}
-
-.taskc.wait .tc-status {
-  color: var(--warn);
-}
-
-.taskc .tc-what {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.taskc .hprog {
-  flex: 0 0 48px;
-  margin: 0 0 0 auto;
-}
-
-.stack {
-  display: flex;
-  padding-left: 6px;
-  flex-shrink: 0;
-}
-
-.stack > span {
-  flex-shrink: 0;
-  margin-left: -7px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--raise);
-  display: grid;
-  place-items: center;
-  box-shadow: 0 0 0 2px var(--raise);
-}
-
-.stack > span > svg {
-  overflow: visible;
-}
-
-.taskc .stack > span {
-  width: 20px;
-  height: 20px;
 }

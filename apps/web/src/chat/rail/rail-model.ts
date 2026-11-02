@@ -9,17 +9,21 @@ import {
   type PrWatch,
 } from '@spark-outpost/contracts';
 import { castAgents, isSparkLed, tvCast } from '../../crew/conversation-crew.ts';
+import type { LeadSteps } from '../../crew/lead-steps.ts';
 import { isBusy, modelLabel, roleLabel, type CrewAgent } from '../../crew/crew-model.ts';
 import { crewAgents } from '../../crew/crew-projection.ts';
 import { turnState } from '../../crew/tv-list.ts';
+import { teamAgents } from '../../crew/worker-identity.ts';
 import { countLabel } from '../../ui/count-label.ts';
 import { formatTokens } from '../composer/model-options.ts';
 import { filesLabel, formatTotal } from '../changes/change-rules.ts';
+import { followingLine } from '../project/agent-setup.ts';
 import { repoSummary } from '../project/repo-list.ts';
 import type { WorkTab } from '../../tasks/TaskDetails.tsx';
 import { formatCost } from '../../usage/format.ts';
 
-export type RailRowId = 'project' | 'agent' | 'autonomy' | 'changes' | 'checks' | 'pr' | 'usage';
+export type RailRowId =
+  'project' | 'agent' | 'following' | 'autonomy' | 'changes' | 'checks' | 'pr' | 'usage';
 
 export type RailAction =
   | { kind: 'project' }
@@ -55,6 +59,7 @@ export interface RailFacts {
   contextPercent: number | null;
   hasTask: boolean;
   hasStoredCrew?: boolean;
+  following?: readonly string[];
 }
 
 const CHECKS: Record<PrChecks, { text: string; tone?: RailTone }> = {
@@ -134,13 +139,18 @@ function usageRow(facts: RailFacts): RailRow | null {
 export function railRows(facts: RailFacts): RailRow[] {
   const rows: RailRow[] = [projectRow(facts)];
   const agent = [facts.provider, facts.model].filter(Boolean).join(' · ');
+  const mode = facts.repoNames.length > 0 ? `mode ${facts.mode}` : facts.mode;
   rows.push({
     id: 'agent',
     text: agent,
     detail: facts.mode,
-    label: `Agent ${agent}, mode ${facts.mode}`,
+    label: `Agent ${agent}, ${mode}`,
     action: facts.hasTask && facts.hasStoredCrew ? { kind: 'tab', tab: 'crew' } : null,
   });
+  const following = followingLine(facts.following ?? []);
+  if (following) {
+    rows.push({ id: 'following', text: following, detail: null, label: following, action: null });
+  }
   if (facts.autonomy) {
     const level = autonomyLabel(facts.autonomy);
     rows.push({
@@ -169,7 +179,7 @@ export function railRows(facts: RailFacts): RailRow[] {
       text: checks.text,
       detail: null,
       label: checks.text,
-      action: facts.hasTask ? { kind: 'tab', tab: 'tasks' } : null,
+      action: facts.hasTask ? { kind: 'tab', tab: 'links' } : null,
       ...(checks.tone ? { tone: checks.tone } : {}),
     });
     rows.push(pullRow(facts.watch, facts.pulls ?? 1, facts.hasTask));
@@ -195,14 +205,18 @@ interface RailCrewView {
   list: CrewAgent[];
 }
 
-export function railCrew(detail: ConversationDetail, running: boolean): RailCrewView {
-  const cast = tvCast(detail);
+export function railCrew(
+  detail: ConversationDetail,
+  running: boolean,
+  live: LeadSteps = new Map(),
+): RailCrewView {
+  const cast = tvCast(detail, live);
   if (!cast) return { stage: [], list: [] };
   const stored = detail.orchestrations?.[cast.run.id];
   if (stored && !isSparkLed(stored)) {
     return { stage: [], list: finishedCrew(stored, crewAgents(stored, detail.activity)) };
   }
-  const members = castAgents(cast);
+  const members = teamAgents(castAgents(cast), cast.subagents);
   if (running && !isTerminalRunStatus(cast.run.status)) return { stage: members, list: [] };
   return { stage: [], list: members };
 }
@@ -220,4 +234,8 @@ export function crewSectionLabel(agents: readonly CrewAgent[]): string {
 export function crewJob(agent: CrewAgent): string {
   const turns = agent.turns && agent.turns > 1 ? `${agent.turns} turns` : null;
   return [roleLabel(agent), modelLabel(agent), turns].filter(Boolean).join(' · ');
+}
+
+export function latestFollowing(detail: Pick<ConversationDetail, 'runs'>): readonly string[] {
+  return detail.runs.findLast((run) => !run.parentRunId && run.following?.length)?.following ?? [];
 }

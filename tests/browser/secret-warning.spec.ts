@@ -79,6 +79,7 @@ test('ordinary code and prose send without a warning', async ({ page }) => {
   const input = await newChatInput(page);
   const code = 'const apiKey = process.env.OPENAI_API_KEY; // see the sk-learn-pipeline-for-images';
   await input.fill(code);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
   await expect(page.locator('.md', { hasText: 'You wrote:' })).toBeVisible({ timeout: 15_000 });
   await expect(warning(page)).toHaveCount(0);
@@ -115,7 +116,7 @@ test('the island Quick chat and Ask warn before sending a key', async ({ page })
   await expect(message).toHaveValue(CLEANED);
   await expect(message).toBeFocused();
 
-  await page.keyboard.press('Meta+4');
+  await page.keyboard.press('Meta+3');
   const ask = island.getByRole('textbox', { name: 'Ask Spark' });
   await expect(ask).toBeFocused();
   await ask.fill(`Is ${KEY} still valid?`);

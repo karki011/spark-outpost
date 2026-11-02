@@ -1,47 +1,43 @@
 ---
-title: Connect GitHub, Atlassian or Linear
+title: Connect GitHub and ticket trackers
 section: Projects and shipping
 type: how-to
 order: 330
-summary: Connect GitHub so Spark can open pull requests, connect Atlassian (Jira, Confluence) or Linear, and keep tickets in step with pull requests.
+summary: Connect GitHub so Spark can open pull requests, connect Atlassian (Jira, Confluence), Linear or ServiceNow, and keep tickets in step with pull requests.
 ---
 
-You'll connect GitHub and your ticket tracker. About 3 minutes.
-
-Every connection is optional.
+Each connection is optional. About 3 minutes.
 
 ## Connect GitHub
 
-1. Open **Settings → Connectors** and select the **GitHub** card.
-2. For **GitHub sign-in**, select **Sign in with GitHub**, then **Open GitHub**, and enter the code shown. Only builds set up for it offer this.
-3. For **gh CLI**, run `gh auth login` in a terminal, then select **Check again**.
-4. For **Personal token**, paste it into **Personal access token** and select **Verify token**. Add an **Enterprise host** if you use one.
-5. Select **Test** to check each project's remote and sign-in without changing anything.
+1. Open **Settings → Connectors** and select **GitHub**.
+2. For **GitHub sign-in**, select **Sign in with GitHub**, then **Open GitHub**, and enter the code shown (only in builds set up for it).
+3. For **gh CLI**, run `gh auth login`, then select **Check again**.
+4. For **Personal token**, paste it into **Personal access token** and select **Verify token**, adding any **Enterprise host**.
+5. Select **Test** to check each project's remote and sign-in, changing nothing.
 
-With sign-in, Spark reaches only the repositories you pick. A project marked **not covered** shows **Give Spark access to this repo**.
+Sign-in reaches only repositories you pick. A project marked **not covered** shows **Give Spark access to this repo**.
 
-Access renews itself; if it ends, select **Sign in again**. Sign-in needs github.com, not an Enterprise server.
+Access renews itself; if it ends, select **Sign in again**. Sign-in needs github.com, not Enterprise.
 
 ![The GitHub card in Settings → Connectors](images/tickets-github-light.png)
 
-## Connect Atlassian or Linear
+## Connect a ticket tracker
 
-1. Open **Settings → Connectors** and select **Atlassian** or **Linear**.
-2. For Atlassian, enter the **Site URL**, **Email** and an **API token**. For Linear, enter an **API key**.
+1. Open **Settings → Connectors** and select **Atlassian**, **Linear** or **ServiceNow**.
+2. Atlassian: **Site URL**, **Email**, **API token**. Linear: **API key**. ServiceNow: **Instance** (`acme`), then a **Username** with a **Password** or **API key**; with SSO, ask your admin for a key.
 3. Select **Save and check**.
 
-**Jira** and **Confluence** each get a switch; the card says when the token can't reach one.
+Each product or record type has a switch (**Changes**: read only) and says when out of reach.
 
-Keys stay in your keychain, never shown again. To stop, select **Disconnect** (Atlassian: **···** → **Disconnect…**).
+Keys stay in your keychain. To stop, select **Disconnect** (or **···** → **Disconnect…**). ServiceNow's **···** also has **Check connection** and **Open instance**.
 
 ## Keep tickets in sync with pull requests
 
-Linear and **Jira tickets** on Atlassian have two switches, on by default: **Move tickets to In review when a PR opens** and **Move tickets to Done when the PR merges**.
+Linear and Atlassian **Jira tickets** have two switches, on by default: **Move tickets to In review when a PR opens** and **Move tickets to Done when the PR merges**.
 
-Under each switch, and for **Start work**, a picker lists your projects' statuses. **Automatic** uses the status named Done, In Review or In Progress, or the only fit; never Rejected, Cancelled or Duplicate.
+Each switch, and **Start work**, has a picker of your projects' statuses. **Automatic** uses the status named Done, In Review or In Progress, or the only fit; never Rejected, Cancelled or Duplicate.
 
-When several fit, Spark flags the ticket and leaves it for you.
-
-Spark always adds the PR link and never comments on tickets.
+When several fit, Spark flags the ticket. It always adds the PR link, never a comment.
 
 **Next:** [Work from the Tickets inbox](tickets-inbox.md)

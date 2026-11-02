@@ -101,16 +101,18 @@ export function createSubagentProgress({
 
   const noteBackground = (output: ProviderOutput) => {
     if (output.kind !== 'background_work') return;
-    const { agents, tasks } = output;
+    const { agents, tasks, wakesAt } = output;
     const names = output.names
       .slice(0, BACKGROUND_NAMES_SHOWN)
       .map((name) => storable(name).slice(0, BACKGROUND_NAME_MAX));
-    background = agents + tasks > 0 ? { agents, tasks, names } : null;
+    const sleeps = wakesAt === undefined ? {} : { wakesAt };
+    background = agents + tasks > 0 || wakesAt ? { agents, tasks, names, ...sleeps } : null;
   };
 
   const wait = (): { waitingOn: number; background?: BackgroundWait } => {
     if (background) {
-      const waitingOn = ownOpen > 0 ? 0 : background.agents + background.tasks;
+      const sleeping = background.wakesAt === undefined ? 0 : 1;
+      const waitingOn = ownOpen > 0 ? 0 : background.agents + background.tasks + sleeping;
       return { waitingOn, background };
     }
     return { waitingOn: ownOpen > 0 ? 0 : working.size };

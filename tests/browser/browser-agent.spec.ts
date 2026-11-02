@@ -12,6 +12,7 @@ import {
   resetWithAgents,
   send,
 } from './project-chat-kit.ts';
+import { animationsSettled } from './settle.ts';
 
 const FAKE_HOST = process.env.SPARK_FAKE_BROWSER === '1';
 const SITE = 'https://docs.example.com';
@@ -84,6 +85,7 @@ test('the pane marks the tab the agent is working on and says what it last did',
   );
   await expect(pane.getByText('Spark is driving')).toBeVisible();
   await expect(pane.getByLabel('Address')).toHaveValue(`${SITE}/guide`);
+  await animationsSettled(page);
   const axe = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
     .include('.bp-head')
@@ -138,11 +140,12 @@ test('an agent opens a site, reads it and acts on it after the user allows, with
     ]),
   );
   await expect(page.getByText('typed it')).toBeVisible(WAIT);
+  const sent = /sent data to docs\.example\.com after reading private work data \(spark_chats\)/;
+  const line = page.locator('.flag-line');
+  await expect(line).toContainText(sent, WAIT);
+  await line.getByRole('button', { name: 'Details' }).click();
   const flag = page.getByRole('region', { name: 'Flagged by Spark' });
-  await expect(flag).toContainText(
-    /sent data to docs\.example\.com after reading private work data \(spark_chats\)/,
-    WAIT,
-  );
+  await expect(flag).toContainText(sent);
   await expect(card(page, /click and type on this site\?/)).toHaveCount(1);
 
   const audit = await browserAudit();

@@ -27,7 +27,7 @@ interface ConnectionRow {
   focus_names: string[];
   phone_alerts: boolean;
   brief_block: boolean;
-  agents_read: boolean;
+  agents_read: boolean | null;
   alert_style: string;
   alert_lead: number;
   auto_join: boolean;
@@ -43,7 +43,7 @@ function settingsOf(row: ConnectionRow): CalendarSettings {
     focusNames: row.focus_names,
     phoneAlerts: row.phone_alerts,
     briefBlock: row.brief_block,
-    agentsRead: row.agents_read,
+    agentsRead: row.agents_read ?? CALENDAR_DEFAULT_SETTINGS.agentsRead,
     alertStyle: row.alert_style,
     alertLead: row.alert_lead,
     autoJoin: row.auto_join,
@@ -302,13 +302,20 @@ export async function calendarMarks(
     'SELECT uid, occurrence_start, kind FROM calendar_marks WHERE workspace_id = $1',
     [workspaceId],
   );
-  const remind = new Set<string>();
-  const hold = new Set<string>();
+  const marks = {
+    remind: new Set<string>(),
+    hold: new Set<string>(),
+    dismissed: new Set<string>(),
+  };
+  const byKind: Record<CalendarMarkKind, Set<string>> = {
+    remind_5: marks.remind,
+    hold: marks.hold,
+    dismiss: marks.dismissed,
+  };
   for (const row of rows) {
-    const key = `${row.uid}@${row.occurrence_start.toISOString()}`;
-    (row.kind === 'hold' ? hold : remind).add(key);
+    byKind[row.kind]?.add(`${row.uid}@${row.occurrence_start.toISOString()}`);
   }
-  return { remind, hold };
+  return marks;
 }
 
 export async function forgetMarksOf(

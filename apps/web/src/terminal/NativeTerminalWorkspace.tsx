@@ -15,6 +15,8 @@ import { TERMINAL_NOT_RUNNING, TERMINAL_WAITING } from './draft-target.ts';
 import { RestartNotice } from './RestartNotice.tsx';
 import { useTerminalLinks } from './use-terminal-links.tsx';
 import { nativeTerminalApi, nativeTerminalKey } from './terminal-api.ts';
+import { loadTerminalLive, sessionOf } from './terminal-live.ts';
+import { terminalUsageKey } from './usage/terminal-usage-api.ts';
 import { shownSession, terminalEnded, terminalRelaunch } from './native-state.ts';
 import { TerminalBar, type TerminalLink } from './TerminalBar.tsx';
 import { TerminalDictation } from '../voice/TerminalDictation.tsx';
@@ -44,7 +46,11 @@ export function NativeTerminalWorkspace({
   const { remote } = useRemoteClient();
   const session = useQuery({
     queryKey: nativeTerminalKey(chat.id),
-    queryFn: () => nativeTerminalApi.get(chat.id),
+    queryFn: async () => {
+      const live = await loadTerminalLive(chat.id);
+      if (live.usage) client.setQueryData(terminalUsageKey(chat.id), live.usage);
+      return sessionOf(live);
+    },
     refetchInterval: 2000,
     enabled: !remote,
   });

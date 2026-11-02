@@ -36,6 +36,7 @@ async function ask(page: Page, message: string) {
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(message);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
 }
 
@@ -48,6 +49,13 @@ const agentTab = (page: Page, command: string) =>
 const pane = (page: Page) =>
   dock(page).getByRole('group', { name: /, run by the agent, read-only$/ });
 const rows = (scope: Locator) => scope.locator('.xterm-rows');
+const toggle = (box: Locator) => box.locator('.run-cmd-toggle');
+
+async function unfold(box: Locator) {
+  await expect(toggle(box)).toHaveAttribute('aria-expanded', 'false', { timeout: 15_000 });
+  await toggle(box).click();
+  await expect(toggle(box)).toHaveAttribute('aria-expanded', 'true');
+}
 const status = (page: Page) => pane(page).getByRole('status');
 
 test('Open in terminal mirrors a running command in a dock tab and shows how it ended', async ({
@@ -55,6 +63,7 @@ test('Open in terminal mirrors a running command in a dock tab and shows how it 
 }) => {
   await ask(page, 'Run the tests #terminal=pass 500ms');
   const box = mini(page, PASS);
+  await unfold(box);
   await expect(rows(box)).toContainText('turns.test.ts', { timeout: 15_000 });
   await expect(dock(page)).toHaveCount(0);
 
@@ -90,6 +99,7 @@ test('the tab is reachable by keyboard, Stop turn stops the turn and a saved com
 }) => {
   await ask(page, 'Dev server #terminal=hang 20ms');
   const box = mini(page, HANG);
+  await unfold(box);
   await expect(rows(box)).toContainText('ready on http://localhost:5173', { timeout: 15_000 });
 
   await openButton(box).focus();
@@ -128,6 +138,7 @@ test('the tab is reachable by keyboard, Stop turn stops the turn and a saved com
 test('says output shows at the end for an agent that reports it once', async ({ page }) => {
   await ask(page, 'End only #terminal=final 2500ms');
   const box = mini(page, 'git status --short');
+  await unfold(box);
   await expect(box.locator('.run-cmd-note')).toHaveText('Output shows when the command ends.', {
     timeout: 15_000,
   });
@@ -177,7 +188,8 @@ test('shell and preview tabs still work next to an agent tab', async ({ page }) 
     await input.fill('Run the tests #terminal=pass 30ms');
     await input.press('Enter');
     const box = mini(page, PASS);
-    await expect(box.locator('.run-cmd-state')).toHaveText(/exit 0/, { timeout: 30_000 });
+    await expect(box.locator('.run-cmd-state')).toHaveText(/passed · \d+s/, { timeout: 30_000 });
+    await unfold(box);
     await openButton(box).click();
     await expect(agentTab(page, PASS)).toHaveAttribute('aria-pressed', 'true');
     await expect(rows(pane(page))).toContainText('Tests 23 passed');
@@ -216,6 +228,7 @@ for (const theme of ['light', 'dark']) {
     await page.addInitScript((saved) => localStorage.setItem('spark-outpost.theme', saved), theme);
     await ask(page, 'Dev server #terminal=hang 20ms');
     const box = mini(page, HANG);
+    await unfold(box);
     await expect(rows(box)).toContainText('ready on http://localhost:5173', { timeout: 15_000 });
     await shot(box, `chat-button-${theme}`);
     await openButton(box).click();

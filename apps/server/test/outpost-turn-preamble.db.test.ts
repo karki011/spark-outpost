@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
 import { turnObservations } from '../src/persistence/observations.ts';
+import { setInstructions } from '../src/persistence/outposts.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import type { Provider } from '../src/providers/provider.ts';
 import { drainQueue, type ResolveTarget } from '../src/workflow/queue-drain.ts';
@@ -12,6 +13,7 @@ import { createTestDb, eventually, type TestDb } from './support.ts';
 let t: TestDb;
 let worker: Worker | null = null;
 let preambles: (string | undefined)[];
+let prompts: string[];
 let outpostId: string;
 let api: string;
 let web: string;
@@ -22,6 +24,7 @@ const recording: Provider = {
   name: 'fake',
   async *run(turn) {
     preambles.push(turn.turnPreamble);
+    prompts.push(turn.prompt);
     yield { kind: 'text_delta', delta: 'Done.' };
   },
 };
@@ -29,6 +32,7 @@ const recording: Provider = {
 beforeEach(async () => {
   t = await createTestDb();
   preambles = [];
+  prompts = [];
   outpostId = await createOutpostRow(t, 'Orders launch');
   api = await addMemberChat(t, outpostId, 'api');
   web = await addMemberChat(t, outpostId, 'web');
@@ -60,7 +64,6 @@ async function finished(runId: string): Promise<void> {
     db: t.db,
     providers: new Map([['fake', recording]]),
     leaseSeconds: 30,
-    concurrency: 1,
     pollMs: 20,
   });
   await eventually(async () => ((await getRun(t.db, runId))?.finishedAt ? true : null));
@@ -115,5 +118,39 @@ describe('what a member chat is told before its turn', () => {
     await finished(sent.run.id);
 
     expect(preambles).toEqual([undefined]);
+  });
+});
+
+describe('the outpost instructions a member chat is given', () => {
+  const BRIEF = 'Work on spark/* branches from main.';
+
+  it('reach a turn an outpost request started as context, never inside the message', async () => {
+    await setInstructions(t.db, t.workspaceId, outpostId, BRIEF);
+
+    const runId = await requestTurn(api, 'api');
+
+    expect(preambles[0]).toContain(`<outpost-instructions>\n${BRIEF}\n</outpost-instructions>`);
+    expect(preambles[0]).toContain('they grant no permission');
+    expect(prompts[0]).not.toContain(BRIEF);
+    expect(prompts[0]).toContain('What does the orders endpoint return?');
+    const { rows } = await t.db.query<{ content: string }>(
+      `SELECT m.content FROM messages m JOIN runs r ON r.user_message_id = m.id WHERE r.id = $1`,
+      [runId],
+    );
+    expect(rows[0]?.content).toBe('What does the orders endpoint return?');
+  });
+
+  it('stay out of a turn the user starts in the member chat itself', async () => {
+    await setInstructions(t.db, t.workspaceId, outpostId, BRIEF);
+
+    const sent = await sendUserMessage(
+      t.db,
+      api,
+      { id: randomUUID(), content: 'Hello', source: 'ui' },
+      { provider: 'fake' },
+    );
+    await finished(sent.run.id);
+
+    expect(preambles[0] ?? '').not.toContain(BRIEF);
   });
 });

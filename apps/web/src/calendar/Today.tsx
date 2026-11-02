@@ -9,6 +9,7 @@ import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { CopyToasts } from './copy-toast.tsx';
 import { DayView, type TodayProps } from './DayView.tsx';
 import { MonthView } from './MonthView.tsx';
+import { RefreshCalendar } from './RefreshCalendar.tsx';
 import { TodayStatePage } from './TodayStates.tsx';
 import { todayState } from './today-model.ts';
 import { localDate, useCalendarStatus } from './use-calendar.ts';
@@ -77,13 +78,16 @@ function TodayViews(props: TodayProps) {
   );
   useTodayEventRequests(showEvent);
   const switcher = (
-    <div className="td-views">
-      <Segmented
-        ariaLabel="Calendar view"
-        options={VIEWS}
-        value={view}
-        onChange={(id) => setView(id as CalendarView)}
-      />
+    <div className="td-tools">
+      <RefreshCalendar />
+      <div className="td-views">
+        <Segmented
+          ariaLabel="Calendar view"
+          options={VIEWS}
+          value={view}
+          onChange={(id) => setView(id as CalendarView)}
+        />
+      </div>
     </div>
   );
   if (view === 'day') {

@@ -3,44 +3,46 @@ title: Work across chats in an outpost
 section: Chats
 type: how-to
 order: 232
-summary: Put several chats in one outpost, ask each for work with @ and its handle, and read every answer in one thread.
+summary: Message agents and read their answers together.
 ---
 
-Ask several chats from one thread. About 3 minutes. See [When to use an outpost](when-to-use-an-outpost.md).
+Ask chats together. About 3 minutes. [When to use an outpost](when-to-use-an-outpost.md).
 
 ## Create an outpost
 
 1. Select **New outpost** (**+**) beside **Outposts** and enter a **Name**.
 2. Add each **Existing chat**, or a **New chat** with a **Project**, **Agent** and **Permissions**. Check its handle, like `api`.
 3. Optionally **Add a first message** and files: your first request.
-4. Select **Continue**, check the review, then **Start outpost**. The thread introduces each chat.
+4. Select **Continue**, check the review, then **Start outpost**.
 
-Or select **Add to outpost** in a chat's row menu. A chat joins one outpost and is listed under it; Terminal sessions can't.
+Or use **Add to outpost** in a chat's row menu. A chat joins one outpost; Terminal sessions can't.
 
 ## Send a request
 
-1. Type a request with `@api` anywhere, several handles or `@all`. **Asks:** lists them; remove one to only mention it. Then **Send request**.
-2. Each final reply lands under it with [state](statuses-and-limits.md#outpost-requests), branch, files, **Pushed**, pull request.
-3. **Needs you**: the chat has a question or an approval card. Select **Answer**, then **Send answer**; both stay there. For a card, **Open in chat**.
+1. Type and **Send message** to the displayed lead. Choose another agent, or use `@api`, several handles or `@all`. **Asks:** lists recipients.
+2. Each chat shows its [state](statuses-and-limits.md#outpost-requests), branch and pull request, plus **Answer**, **Review PR**, **Open** or **Stop…** as fits. Agent requests say **not from you**.
+3. **Open** shows that chat's thread; typing there **Sends to @api as you**.
 
-No handle: **Post note** starts no work.
+**Post note** saves without a reply. Unknown or missing recipients block sending. Failed messages **Retry** their original destination.
 
-| Select                 | To                                                        |
-| ---------------------- | --------------------------------------------------------- |
-| **Cancel**             | Stop a request.                                           |
-| **Pause** / **Resume** | Hold requests that haven't started. Running turns finish. |
-| **Edit outpost**       | Rename, change chats and handles, or delete. Chats stay.  |
+| Select                    | To                                                        |
+| ------------------------- | --------------------------------------------------------- |
+| **Overview** (panel icon) | Threads by state, **Library** files, **Pull requests**.   |
+| **Pause** / **Resume**    | Hold requests that haven't started. Running turns finish. |
+| The outpost's name        | **Rename…**, **Outpost Settings…** or **Instructions…**.  |
+
+**Instructions…** go beside every request: never your message, granting nothing.
 
 ## In the chat
 
-| You see                          | Means                                                                                |
-| -------------------------------- | ------------------------------------------------------------------------------------ |
-| A chip with the outpost's name   | Opens it.                                                                            |
-| **From you**, heading a turn     | A request started this turn, under this chat's mode and autonomy.                    |
-| **Outpost request** in the queue | The chat is busy, or its last turn failed or stopped (**Send now**). Removable only. |
+| You see                          | Means                                                             |
+| -------------------------------- | ----------------------------------------------------------------- |
+| A chip with the outpost's name   | Opens it.                                                         |
+| **From you**, heading a turn     | A request started this turn, under this chat's mode and autonomy. |
+| **Outpost request** in the queue | The chat is busy or its last turn stopped (**Send now**).         |
 
-A request you type counts as your message: "open a PR" [publishes](ship-and-pull-requests.md#when-the-agent-publishes), and `@api /plan` is a command, or text with several handles. Why: [What an outpost request may do](outpost-permissions.md).
+Your typed requests carry [your authority](outpost-permissions.md): "open a PR" [publishes](ship-and-pull-requests.md#when-the-agent-publishes).
 
-Agents can [ask each other](outpost-asks.md) and [start sub-tasks](outpost-stories.md). A [paired device](use-your-phone.md) can read, post, cancel, pause, rename and start drafts, nothing more.
+Agents can [ask each other](outpost-asks.md) and [start sub-tasks](outpost-stories.md). A [paired device](use-your-phone.md) can read, post, answer, cancel, pause, rename and start drafts, nothing more.
 
 **Next:** [Choose where a chat works](where-spark-works.md)

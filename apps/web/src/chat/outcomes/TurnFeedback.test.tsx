@@ -58,15 +58,13 @@ describe('TurnFeedback comment', () => {
 });
 
 describe('TurnFeedback under a turn', () => {
-  it('never shows the question, and stays quiet unless the turn was nudged', () => {
-    show({ prompt: 'sampled', feedback: null });
-    expect(group('How did it go?').className).not.toContain('quiet');
-    expect(screen.getByText('How did it go?').className).toBe('sr-only');
-    cleanup();
-
-    show({ prompt: null, feedback: null });
-    expect(group('How did it go?').className).toContain('quiet');
-    expect(screen.getByText('How did it go?').className).toBe('sr-only');
+  it('never shows the question and is never dimmed', () => {
+    for (const prompt of ['sampled', null] as const) {
+      show({ prompt, feedback: null });
+      expect(group('How did it go?').className).not.toContain('quiet');
+      expect(screen.getByText('How did it go?').className).toBe('sr-only');
+      cleanup();
+    }
   });
 
   it('stays a pair of thumbs on the result line, and asks out loud after a revert', () => {
@@ -75,6 +73,10 @@ describe('TurnFeedback under a turn', () => {
     cleanup();
 
     show({ prompt: 'mixed', feedback: null }, 'reverted');
+    expect(screen.getByText('What went wrong?').className).toBe('fb-q');
+    cleanup();
+
+    show({ prompt: null, feedback: null }, 'reverted');
     expect(screen.getByText('What went wrong?').className).toBe('fb-q');
   });
 });

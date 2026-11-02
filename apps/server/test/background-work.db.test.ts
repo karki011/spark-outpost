@@ -8,7 +8,7 @@ import {
 } from '@spark-outpost/contracts';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
-import { listQueue } from '../src/persistence/chat-queue.ts';
+import { addToQueue, listQueue } from '../src/persistence/chat-queue.ts';
 import {
   createConversation,
   getConversationDetail,
@@ -40,7 +40,6 @@ function begin(leaseSeconds = 30) {
     db: t.db,
     providers: new Map([['claude', provider]]),
     leaseSeconds,
-    concurrency: 1,
     parked: new ParkedTurns(),
     pollMs: 20,
     cancelPollMs: 20,
@@ -99,7 +98,6 @@ describe('a Claude chat whose turn ends with background work running', { timeout
     const events = await storedEvents(t.db, runId);
     expect(backgroundWaits(events)).toEqual([
       { waitingOn: 1 },
-      { waitingOn: 0 },
       { waitingOn: 1, background: { agents: 1, tasks: 0, names: ['Schema'] } },
       { waitingOn: 0 },
     ]);
@@ -154,7 +152,35 @@ describe('a Claude chat whose turn ends with background work running', { timeout
     await settled(runId);
   });
 
-  it('frees its worker slot while it waits, so other chats still run', async () => {
+  it('hands the user’s queued messages to the agent once it only waits, in order', async () => {
+    const { conversationId, runId } = await send('#backgroundforever');
+    const queued = async (content: string, origin?: 'assistant') => {
+      const id = randomUUID();
+      await addToQueue(t.db, conversationId, { id, content, ...(origin ? { origin } : {}) });
+      return id;
+    };
+    const first = await queued('Queued first');
+    const fromAsk = await queued('From Ask Spark', 'assistant');
+    const second = await queued('Queued second');
+    begin();
+
+    const text = await eventually(async () => {
+      const said = (await storedEvents(t.db, runId))
+        .map((event) => (event.type === EventType.TEXT_MESSAGE_CONTENT ? event.delta : ''))
+        .join('');
+      return said.includes('Queued second') ? said : null;
+    }, 20_000);
+    expect(text.indexOf('Queued first')).toBeLessThan(text.indexOf('Queued second'));
+    expect((await listQueue(t.db, conversationId)).map((item) => item.id)).toEqual([fromAsk]);
+    for (const id of [first, second]) {
+      expect((await getMemberMessage(t.db, id))?.status).toBe('delivered');
+    }
+    expect((await getRun(t.db, runId))?.status).toBe('running');
+    await stopRun(t.db, runId);
+    await settled(runId);
+  });
+
+  it('lets other chats run while it waits', async () => {
     begin();
     const waiting = await send('#backgroundforever');
     await eventually(

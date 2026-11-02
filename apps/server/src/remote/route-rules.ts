@@ -21,6 +21,7 @@ GET /api/runs/:id/changes
 POST /api/approvals/:id/decision
 POST /api/approvals/:id/hold
 POST /api/approvals/:id/retry
+GET /api/spark-rules
 POST /api/runs/:id/revert
 GET /api/tasks/:id/changes/revert-file
 POST /api/tasks/:id/changes/revert-file
@@ -50,11 +51,18 @@ POST /api/conversations/:id/update
 POST /api/spark-assistant
 GET /api/spark-assistant/settings
 GET /api/spark-assistant/events
+GET /api/spark-assistant/history
+POST /api/spark-assistant/topic
 GET /api/conversations/:id/agent-commands
 GET /api/conversations/:id/agent-terminals
 PATCH /api/conversations/:id
 POST /api/conversations/:id/fresh-session
 POST /api/conversations/:id/seen
+GET /api/attention
+POST /api/attention/chats/:id/read
+POST /api/attention/:key/read
+POST /api/attention/:key/set-aside
+POST /api/attention/:key/dismiss
 PUT /api/conversations/pinned-order
 GET /api/home/digest
 GET /api/home/today
@@ -94,7 +102,8 @@ POST /api/conversations/:id/queue
 POST /api/conversations/:id/queue/:itemId/send-now
 POST /api/conversations/:id/queue/send-now
 PUT /api/conversations/:id/queue/order
-POST /api/runs/:id/messages
+POST /api/conversations/:id/steers/:itemId/resend
+DELETE /api/conversations/:id/steers/:itemId
 GET /api/outposts
 GET /api/outposts/:id
 GET /api/conversations/:id/outpost-drafts
@@ -107,7 +116,7 @@ GET /api/conversations
 GET /api/conversations/:id
 GET /api/conversations/:id/annotations
 GET /api/runs/:id
-GET /api/runs/:id/events
+GET /api/run-events
 GET /api/runs/:id/reasoning/:messageId
 GET /api/runs/:id/commands/:commandId/output
 GET /api/runs/:id/orchestration
@@ -160,6 +169,18 @@ POST /api/tickets/:source/:key/transition
 `;
 
 const NEVER = `
+POST /api/browser-history
+GET /api/browser-history
+POST /api/browser-history/clear
+PUT /api/spark-rules/rule
+PUT /api/spark-rules/gh-allowed
+POST /api/spark-rules/recommended
+POST /api/spark-rules/outside-change
+GET /api/artifacts/:id/versions/:version/file
+GET /api/chat-files/:id/content
+GET /api/projects/:id/pull-requests/open
+POST /api/conversations/:id/workspace/adopt
+POST /api/approvals/:id/spark-rule
 GET /api/calendar/status
 POST /api/calendar/connect
 POST /api/calendar/disconnect
@@ -169,6 +190,7 @@ PATCH /api/calendar/settings
 GET /api/calendar/day
 GET /api/calendar/range
 GET /api/calendar/now
+POST /api/calendar/refresh
 PUT /api/calendar/marks
 POST /api/calendar/open
 POST /api/calendar/event
@@ -176,6 +198,8 @@ GET /api/calendar/google/sign-in
 POST /api/calendar/google/sign-in
 DELETE /api/calendar/google/sign-in
 DELETE /api/calendar/google/accounts/:id
+GET /api/island/requests
+POST /api/island/requests/:id/claim
 GET /api/remote/access
 PUT /api/remote/access
 PATCH /api/remote/switches
@@ -199,6 +223,7 @@ GET /api/terminal/sessions/:id/busy
 POST /api/terminal/sessions
 POST /api/terminal/sessions/:id/attach
 GET /api/conversations/:id/terminal/usage
+GET /api/terminal-live
 GET /api/conversations/:id/terminal/start
 POST /api/conversations/:id/terminal
 POST /api/conversations/:id/terminal/images
@@ -220,6 +245,7 @@ POST /api/setup/git/install
 POST /api/outposts
 GET /api/outposts/drafts/:id
 DELETE /api/outposts/:id
+PUT /api/outposts/:id/instructions
 PUT /api/outposts/:id/members/:conversationId
 DELETE /api/outposts/:id/members/:conversationId
 GET /api/a2a/chats/:chatId/.well-known/agent-card.json
@@ -291,7 +317,9 @@ PUT /api/tickets/connections/:source
 `,
   projects: `
 GET /api/folders
+POST /api/folders
 POST /api/projects
+POST /api/projects/:id/git-init
 POST /api/projects/restore
 POST /api/project-clones
 POST /api/project-clones/:id/cancel
@@ -329,11 +357,19 @@ POST /api/conversations/:id/terminal/approval
   notifications: `
 PUT /api/remote/push/subscription
 `,
+  artifacts: `
+GET /api/artifacts/:id/versions/:version/view
+GET /api/artifacts/:id/versions/:version/page
+`,
 };
 
 export const AGENT_MODE_FIELDS: Record<string, readonly string[]> = {
   'PATCH /api/conversations/:id/settings': ['agentMode', 'permission', 'level'],
   'PATCH /api/providers/:provider/defaults': ['agentMode', 'permission', 'level'],
+};
+
+export const HIGH_RISK_FIELDS: Record<string, readonly string[]> = {
+  'POST /api/tickets/:source/:key/comments': ['visibility'],
 };
 
 export const CARD_ROUTE = 'POST /api/approvals/:id/decision';

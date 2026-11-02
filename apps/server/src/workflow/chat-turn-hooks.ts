@@ -7,6 +7,7 @@ import type { RunInput } from './run-input.ts';
 
 export interface ChatTurnDeps extends PublishStepDeps {
   checkpointTimeoutMs?: number;
+  chatFolders?: string;
 }
 
 export interface ChatTurnContext {

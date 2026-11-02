@@ -1,9 +1,10 @@
 import { homedir } from 'node:os';
 import type * as acp from '@agentclientprotocol/sdk';
 import type { PathPolicy } from '../../projects/path-policy.ts';
-import type { PermissionGate } from '../../providers/provider.ts';
+import { isQuiet, type PermissionGate } from '../../providers/provider.ts';
 import { writeTextFile } from './fs-handlers.ts';
 import { approvalRequestFrom, permissionResponse } from './permission-request.ts';
+import { toolNameOf } from './tool-titles.ts';
 import type { SubagentAsker } from './subagent-updates.ts';
 
 export interface DoWorkspace {
@@ -18,8 +19,11 @@ export interface DoWorkspace {
   shownPlan?: () => string | null;
 }
 
-export function runsCommand(params: acp.RequestPermissionRequest): boolean {
-  return params.toolCall.kind === 'execute';
+const READING_TURN_GATED_TOOLS = new Set(['WebFetch', 'WebSearch', 'Monitor']);
+
+export function readingTurnReviews(params: acp.RequestPermissionRequest): boolean {
+  if (params.toolCall.kind === 'execute') return true;
+  return READING_TURN_GATED_TOOLS.has(toolNameOf(params.toolCall) ?? '');
 }
 
 export async function reviewPermission(
@@ -38,7 +42,7 @@ export async function reviewPermission(
     subagent: asker?.name ?? null,
   });
   const answer = await workspace.gate.review(request, workspace.signal);
-  workspace.annotate(answer.note, asker?.id);
+  if (!isQuiet(answer)) workspace.annotate(answer.note, asker?.id);
   return permissionResponse(answer);
 }
 

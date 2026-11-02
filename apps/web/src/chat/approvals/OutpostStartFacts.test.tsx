@@ -24,6 +24,7 @@ const action: StartOutpostAction = {
       agentMode: null,
       dependsOn: null,
       stacked: false,
+      existing: false,
       task: 'Summarise api.md.',
     },
     {
@@ -33,7 +34,18 @@ const action: StartOutpostAction = {
       agentMode: 'auto',
       dependsOn: 'api',
       stacked: true,
+      existing: false,
       task: 'Summarise web.md.',
+    },
+    {
+      handle: 'docs',
+      title: 'Check the docs chat',
+      project: 'shop',
+      agentMode: null,
+      dependsOn: 'web',
+      stacked: false,
+      existing: true,
+      task: 'Check the docs match.',
     },
   ],
 };
@@ -92,9 +104,12 @@ describe('the card for starting sub-chats', () => {
   it('lists each chat with its place and mode, and offers Start and Discard', () => {
     show(seam(true));
     expect(screen.getByText('Start these sub-chats?')).toBeTruthy();
-    expect(screen.getByText(/Bolt wants to start 2 sub-chats/)).toBeTruthy();
+    expect(screen.getByText(/Bolt wants to start 3 sub-chats/)).toBeTruthy();
     expect(screen.getByText('@api')).toBeTruthy();
     expect(screen.getByText(/Stacked on @api · Mode: auto/)).toBeTruthy();
+    expect(
+      screen.getByText(/Existing chat · gets a request · shop · Starts after @web/),
+    ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Start' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Discard' })).toBeTruthy();
   });

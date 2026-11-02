@@ -5,8 +5,8 @@ import {
   autoUpdater as nativeUpdater,
   BrowserWindow,
   dialog,
+  powerSaveBlocker,
   session,
-  shell,
   type IpcMainInvokeEvent,
 } from 'electron';
 import { BROWSER_HOST_ENV, isBetaVersion, parseSparkChatLink } from '@spark-outpost/contracts';
@@ -25,7 +25,7 @@ import { appLayout } from './layout.ts';
 import { freePort, LOOPBACK, portIsFree } from './ports.ts';
 import { DUMP_TOOL_DIRS } from './data-backup.ts';
 import { guardDownloads } from './downloads.ts';
-import { FileLog } from './file-log.ts';
+import { FileLog, sourceLogger } from './file-log.ts';
 import { scheduleHeartbeat, type HeartbeatTimer } from './heartbeat.ts';
 import { startHelp, type Help } from './help.ts';
 import { aboutVersion } from './help-menu.ts';
@@ -41,6 +41,7 @@ import {
   type ServerLaunch,
 } from './server-env.ts';
 import { startAgentHosts, type AgentHosts } from './agent-hosts.ts';
+import { historyPoster } from './browser/history-client.ts';
 import type { ServiceOptions } from './service.ts';
 import { RuntimeServices } from './runtime-services.ts';
 import { createQuitPolicy } from './quit-policy.ts';
@@ -57,6 +58,8 @@ import { readFeedUrl, updateConfigFile } from './update-feed.ts';
 import { guardMigrations, readSkippedVersion, skippedVersionFile } from './update-migration.ts';
 import { startUpdater, type Updater } from './updater.ts';
 import { fetchActiveRuns } from './active-runs.ts';
+import { showFailureDialog } from './error-dialog.ts';
+import { readKeepAwake, startKeepAwake, type KeepAwake } from './keep-awake.ts';
 import { apiOrigin, targetsApi } from './api-token.ts';
 import { IPC } from './ipc-channels.ts';
 import { openSparkWindow, type SparkWindow } from './spark-window.ts';
@@ -101,16 +104,12 @@ let updater: Updater | null = null;
 let help: Help | null = null;
 let privacy: Privacy | null = null;
 let heartbeat: HeartbeatTimer | null = null;
+let keepAwake: KeepAwake | null = null;
 let storage: StorageSync | null = null;
 let browser: AgentHosts | null = null;
 const fileLog = new FileLog({ dir: paths.logs });
 
-function log(source: string) {
-  return (line: string) => {
-    console.log(`[${source}] ${line}`);
-    fileLog.write(source, line);
-  };
-}
+const log = (source: string) => sourceLogger(fileLog, source);
 
 const mainLog = log('main');
 const bootTeasers = startBootTeasers({
@@ -161,6 +160,8 @@ function closeWindows(): void {
   browser = null;
   heartbeat?.dispose();
   heartbeat = null;
+  keepAwake?.dispose();
+  keepAwake = null;
   updater?.dispose();
   updater = null;
   help?.dispose();
@@ -172,20 +173,8 @@ function closeWindows(): void {
   for (const open of BrowserWindow.getAllWindows()) open.destroy();
 }
 
-async function showError(message: string, detail: string): Promise<void> {
-  const help = failureHelp;
-  const buttons = help ? ['Open previous version instructions', 'Quit'] : ['OK'];
-  const { response } = await dialog.showMessageBox({
-    type: 'error',
-    title: `${config.appName} could not continue`,
-    message,
-    detail,
-    buttons,
-    defaultId: buttons.length - 1,
-    cancelId: buttons.length - 1,
-  });
-  if (help && response === 0) await shell.openPath(help);
-}
+const showError = (message: string, detail: string) =>
+  showFailureDialog(config.appName, failureHelp, message, detail);
 
 const quitPolicy = createQuitPolicy();
 const shutdown = createShutdown({
@@ -328,6 +317,7 @@ async function launch(): Promise<void> {
       userData: paths.userData,
       blockedPorts: [apiPort, databaseOptions.port],
       log: log('browser'),
+      history: historyPoster(apiUrl, token),
     },
     { helperPath: layout.macControlBin, origin: () => origin, preload, trusted, log: log('mac') },
     { helperPath: layout.calendarBin, seedPath: layout.calendarSeedBin, log: log('calendar') },
@@ -368,16 +358,19 @@ async function launch(): Promise<void> {
   help = startHelp({
     version: app.getVersion(),
     logsFolder: paths.logs,
+    rulesFile: path.join(paths.userData, config.branchPrefix, 'settings.json'),
     apiUrl,
     token,
     trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
     showSpark,
+    openChat: (id) => companionHost?.openChat(id),
+    preload,
+    theme: () => savedTheme,
     mainWindow: () => spark?.window ?? null,
+    paneShortcut: (shortcut) => browserHost.menuShortcut(shortcut),
     log: log('help'),
   });
-  privacy = startPrivacy({
-    trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
-  });
+  privacy = startPrivacy({ trusted });
   updater = await startUpdater({
     enabled: config.autoUpdate,
     version: app.getVersion(),
@@ -409,6 +402,11 @@ async function launch(): Promise<void> {
     userData: paths.userData,
     devChannel: config.channel === 'dev',
     env: process.env,
+  });
+  keepAwake = startKeepAwake({
+    read: () => readKeepAwake(apiUrl, token),
+    blocker: powerSaveBlocker,
+    log: log('keep-awake'),
   });
   bootTeasers.watch(apiUrl, token);
   companionHost = await startCompanionHost({

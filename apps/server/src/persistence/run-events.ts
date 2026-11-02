@@ -1,4 +1,4 @@
-import type { ReasoningText, RunEvent, RunStatus } from '@spark-outpost/contracts';
+import type { PlanEntry, ReasoningText, RunEvent, RunStatus } from '@spark-outpost/contracts';
 import { writeArtifact, type ArtifactWrite } from './artifacts.ts';
 import { applyAutoTitle } from './auto-title.ts';
 import { withTransaction, type Db, type DbClient, type Queryable } from './db.ts';
@@ -27,6 +27,7 @@ export interface AppendOptions {
   transition?: RunTransition;
   assistantMessage?: AssistantMessageRecord;
   artifact?: ArtifactWrite;
+  todo?: readonly PlanEntry[];
   expectExpired?: boolean;
 }
 
@@ -59,6 +60,12 @@ export async function appendRunEvents(
     }
     if (options.artifact) {
       await writeArtifact(client, lease.runId, options.artifact);
+    }
+    if (options.todo) {
+      await client.query('UPDATE runs SET todo = $2 WHERE id = $1', [
+        lease.runId,
+        JSON.stringify(options.todo),
+      ]);
     }
     if (options.transition) {
       await applyTransition(client, lease, options.transition);

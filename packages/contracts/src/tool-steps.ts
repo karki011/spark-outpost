@@ -23,11 +23,23 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_sparks: 'Looking at Sparks',
   spark_guide: 'Reading the Spark guide',
   spark_docs: 'Reading the user guide',
+  spark_execute: 'Using Code Mode',
   spark_pull_requests: 'Checking pull requests',
   spark_pr: 'Reading a pull request',
   spark_pr_follow_up: 'Checking PR follow-up',
   spark_create_ticket: 'Creating a ticket',
   spark_comment_ticket: 'Commenting on a ticket',
+  spark_start_chat: 'Starting a chat',
+  spark_send_to_chat: 'Sending a message to a chat',
+  spark_stop_chat: 'Stopping a chat',
+  spark_archive_chat: 'Archiving a chat',
+  spark_answer_card: 'Answering a card',
+  spark_pause: 'Pausing or resuming Spark',
+  spark_start_ticket: 'Starting work on a ticket',
+  spark_post_outpost: 'Posting in an outpost',
+  spark_clear_finished: 'Clearing a finished chat',
+  spark_set_aside: 'Setting a card aside',
+  spark_meeting: 'Handling a meeting alert',
   spark_transition_ticket: 'Moving a ticket',
   spark_assign_ticket: 'Assigning a ticket',
   spark_open_pr: 'Opening a PR',
@@ -48,10 +60,13 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_mac_act: 'Acting in a Mac app',
   spark_calendar: 'Reading your calendar',
   spark_calendar_edit: 'Changing your calendar',
+  spark_rules_edit: 'Asking to change Spark rules',
   spark_jira: 'Reading Jira',
   spark_jira_edit: 'Changing Jira',
   spark_confluence: 'Reading Confluence',
   spark_confluence_edit: 'Changing Confluence',
+  spark_servicenow: 'Reading ServiceNow',
+  spark_servicenow_edit: 'Changing ServiceNow',
   spark_browser_tabs: 'Looking at browser tabs',
   spark_browser_read: 'Reading a page',
   spark_browser_screenshot: 'Taking a screenshot of a page',
@@ -62,6 +77,7 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_browser_sign_in: 'Signing in with a saved sign-in',
   spark_slack: 'Reading Slack',
   spark_slack_post: 'Posting to Slack',
+  spark_artifact: 'Making an artifact',
   spark_outpost: 'Reading the outpost',
   spark_outpost_ask: 'Asking another chat',
   spark_outpost_note: 'Leaving a note in the outpost',
@@ -88,6 +104,10 @@ const AGENT_TOOL_STEPS: Readonly<Record<string, string>> = {
   Grep: 'Searching files',
   WebFetch: 'Fetching a page',
   WebSearch: 'Searching the web',
+  Monitor: 'Watching a command',
+  TaskStop: 'Stopping a background task',
+  ListMcpResources: 'Listing MCP resources',
+  ReadMcpResource: 'Reading an MCP resource',
   TodoWrite: 'Updating the to-do list',
   ToolSearch: 'Loading tools',
   Skill: 'Loading a skill',
@@ -117,8 +137,12 @@ export function humanizeToolName(name: string): string {
     .toLowerCase();
 }
 
+function isSparkServer(server: string): boolean {
+  return server === 'spark' || server === 'spark_outpost';
+}
+
 function mcpStep({ server, tool }: McpTool): string {
-  const spark = SPARK_TOOL_STEPS[tool];
+  const spark = isSparkServer(server) ? SPARK_TOOL_STEPS[tool] : undefined;
   if (spark) return spark;
   return `Using ${humanizeToolName(tool)} (${humanizeToolName(server)})`;
 }
@@ -141,24 +165,119 @@ function grepStep(title: string): string | null {
   return `Search for \`${match[1]}\`${where}`;
 }
 
-const FETCH_TITLE = /^Fetch https?:\/\/(?:[^@/?#\s]*@)?([^/?#:\s]+)\S*$/;
+const FETCH_TITLE = /^(?:Fetch|Open page:) https?:\/\/(?:[^@/?#\s]*@)?([^/?#:\s]+)\S*$/;
+const WEB_SEARCH_STEP = 'Searched the web';
+const WEB_SEARCH_TITLE = /^(?:Search ".*"|Web search(?:: .*)?)$/s;
 
-function fetchStep(title: string): string | null {
+function webStep(title: string): string | null {
+  if (WEB_SEARCH_TITLE.test(title)) return WEB_SEARCH_STEP;
   const host = FETCH_TITLE.exec(title)?.[1];
-  return host ? `Fetch ${host}` : null;
+  return host ? `Fetched ${host}` : null;
 }
 
-export function friendlyStep(title: string): string {
+export function isWebToolTitle(title: string): boolean {
+  return webStep(title.trim()) !== null;
+}
+
+export function isMcpToolName(name: string): boolean {
+  return parseMcpTool(name) !== null || Object.hasOwn(SPARK_TOOL_STEPS, name.trim());
+}
+
+export function friendlyStep(title: string, input?: unknown): string {
   const trimmed = title.trim();
   const mcp = parseMcpTool(trimmed);
+  if (
+    (mcp
+      ? isSparkServer(mcp.server) && mcp.tool === 'spark_execute'
+      : trimmed === 'spark_execute') &&
+    input &&
+    typeof input === 'object'
+  ) {
+    const args =
+      'arguments' in input && input.arguments && typeof input.arguments === 'object'
+        ? input.arguments
+        : input;
+    return 'code' in args && typeof args.code === 'string' && args.code.trim()
+      ? 'Combining reads with Code Mode'
+      : 'Finding Code Mode tools';
+  }
   if (mcp) return mcpStep(mcp);
   const named = SPARK_TOOL_STEPS[trimmed] ?? AGENT_TOOL_STEPS[trimmed];
   if (named) return named;
-  return grepStep(trimmed) ?? fetchStep(trimmed) ?? snakeStep(trimmed);
+  return grepStep(trimmed) ?? webStep(trimmed) ?? snakeStep(trimmed);
 }
 
 const SNAKE_NAME = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/;
 
 function snakeStep(title: string): string {
   return SNAKE_NAME.test(title) ? `Using ${humanizeToolName(title)}` : title;
+}
+
+export const WRITE_UP_STEP = 'Writing up results';
+export const CONTINUED_SESSION_STEP = 'Continued session';
+
+const SPARK_NOTES = [
+  /^Working on \S+ in (?:this chat's worktree|your checkout)\./,
+  /^Denied: .+ \(you denied it\)$/s,
+  /^Using .+ · \S+ effort$/,
+  /^Using .+'s defaults$/,
+];
+
+export function placeNoteText(branch: string, inPlace: boolean): string {
+  return inPlace
+    ? `Working on ${branch} in your checkout.`
+    : `Working on ${branch} in this chat's worktree.`;
+}
+
+const ALLOWED_NOTE = /^Allowed .+ \(((?:[^()]|\([^()]*\))+)\)$/s;
+export const ALLOWED_REASONS = {
+  allowlist: 'on the project allowlist',
+  runRule: 'allowed for this run',
+  safeRead: 'a read-only command inside the project',
+  planning: 'planning changes no files',
+  publishAsked: 'you asked to push or open a PR',
+  publishFullAuto: 'Full auto → PR',
+  publishFollowUp: "a fix for this chat's open pull request",
+  askAuto: 'Automatic in an Ask turn',
+} as const;
+const GATE_REASONS: ReadonlySet<string> = new Set(Object.values(ALLOWED_REASONS));
+
+function isGateReason(reason: string): boolean {
+  return (
+    GATE_REASONS.has(reason) ||
+    reason.endsWith(' mode') ||
+    /^you (?:allowed|always allow) it/.test(reason)
+  );
+}
+
+function isAllowedNote(name: string): boolean {
+  const reason = ALLOWED_NOTE.exec(name)?.[1];
+  return reason !== undefined && isGateReason(reason);
+}
+
+export function isSparkNote(name: string): boolean {
+  if (name === WRITE_UP_STEP || name === CONTINUED_SESSION_STEP) return true;
+  return isAllowedNote(name) || SPARK_NOTES.some((note) => note.test(name));
+}
+
+const TOOL_LABELS: Readonly<Record<string, string>> = {
+  WebFetch: 'Web fetch',
+  WebSearch: 'Web search',
+  TodoWrite: 'To-do',
+  PowerShell: 'PowerShell',
+};
+
+const UNNAMED_TOOLS = new Set(['exec_command', 'write_stdin']);
+
+function sentenceCase(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function toolLabel(name: string | null | undefined): string | null {
+  const trimmed = name?.trim() ?? '';
+  if (!trimmed || UNNAMED_TOOLS.has(trimmed)) return null;
+  const mcp = parseMcpTool(trimmed);
+  if (mcp) return SPARK_TOOL_STEPS[mcp.tool] ?? `${mcp.server} · ${mcp.tool}`;
+  const known = TOOL_LABELS[trimmed] ?? SPARK_TOOL_STEPS[trimmed];
+  return known ?? sentenceCase(humanizeToolName(trimmed));
 }

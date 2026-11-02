@@ -16,7 +16,7 @@ export interface SendAttempt {
   submittedAt: number;
 }
 
-export type SendPhase = 'starting' | 'slow' | 'failed';
+export type SendPhase = 'starting' | 'slow' | 'failed' | 'accepted';
 
 export interface PendingSend {
   message: OutgoingMessage;
@@ -33,7 +33,15 @@ function latest(attempts: SendAttempt[]): SendAttempt | undefined {
 }
 
 function pendingSend(attempts: SendAttempt[], now: number): PendingSend | null {
-  if (attempts.some((attempt) => attempt.status === 'success')) return null;
+  const accepted = latest(attempts.filter((attempt) => attempt.status === 'success'));
+  if (accepted) {
+    return {
+      message: accepted.message,
+      phase: 'accepted',
+      error: null,
+      submittedAt: accepted.submittedAt,
+    };
+  }
   const inFlight = latest(attempts.filter((attempt) => attempt.status === 'pending'));
   if (inFlight) {
     const slow = now - inFlight.submittedAt >= SEND_SLOW_MS;

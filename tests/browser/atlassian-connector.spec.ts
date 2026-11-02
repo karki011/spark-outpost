@@ -1,4 +1,3 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   SPARK_ACTION_OPTION,
@@ -7,8 +6,12 @@ import {
   type SparkAction,
 } from '../../packages/contracts/src/index.ts';
 import { JIRA_EMAIL, JIRA_TOKEN } from '../../apps/server/test/fake-jira.ts';
-import { THEMES } from '../../scripts/contrast/theme.ts';
-import { connectorCard, connectorHead, connectorStatus } from './connector-cards.ts';
+import {
+  axeInEveryTheme,
+  connectorCard,
+  connectorHead,
+  connectorStatus,
+} from './connector-cards.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { animationsSettled } from './settle.ts';
@@ -34,23 +37,6 @@ async function products(page: Page) {
     connections: { source: string; atlassian: Record<string, { on: boolean }> | null }[];
   };
   return body.connections.find((entry) => entry.source === 'jira')?.atlassian ?? null;
-}
-
-async function axeInEveryTheme(page: Page, include: string) {
-  await page.mouse.move(0, 0);
-  for (const theme of THEMES) {
-    await page.emulateMedia({ colorScheme: theme === 'system-dark' ? 'dark' : 'light' });
-    await page.evaluate((skin) => {
-      if (skin.startsWith('system')) delete document.documentElement.dataset.skin;
-      else document.documentElement.dataset.skin = skin;
-    }, theme);
-    await animationsSettled(page);
-    const scan = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-      .include(include)
-      .analyze();
-    expect(scan.violations, theme).toEqual([]);
-  }
 }
 
 async function shoot(page: Page, name: string, target: Locator) {
@@ -126,7 +112,15 @@ test('asks before Disconnect in a dialog, and Esc keeps the connection', async (
   await page.getByRole('menuitem', { name: 'Disconnect…' }).click();
   const dialog = page.getByRole('alertdialog', { name: 'Disconnect Atlassian?' });
   await expect(dialog).toContainText('Nothing changes on your Atlassian site.');
-  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  const cancel = dialog.getByRole('button', { name: 'Cancel' });
+  const confirm = dialog.getByRole('button', { name: 'Disconnect', exact: true });
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(confirm).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(confirm).toBeFocused();
   await shoot(page, 'atlassian-disconnect', page.locator('body'));
   await axeInEveryTheme(page, '.cx-confirm');
   await page.keyboard.press('Escape');

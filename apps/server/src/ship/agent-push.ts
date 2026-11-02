@@ -1,6 +1,7 @@
 import type { PublishBasis, TaskBranch } from '../approvals/publish-policy.ts';
 import { otherBranchReason, parentNotPushedReason } from '../approvals/publish-policy.ts';
 import { pushedSecretFiles } from '../approvals/secret-send.ts';
+import type { RuleEffect } from '../spark-rules/rules-file.ts';
 import { trustFor } from '../agent-config/trust-store.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
@@ -39,6 +40,7 @@ export interface AgentPushOptions {
   signal?: AbortSignal | undefined;
   timeoutMs?: number | undefined;
   audit?: ProtocolObserver | undefined;
+  secretSend?: RuleEffect | null | undefined;
 }
 
 export const UNTRUSTED_FOLDER_NOTE =
@@ -103,7 +105,8 @@ export async function pushForAgent(
       remote.name,
     );
   }
-  const secret = await pushedSecretFiles(publish.root, branch);
+  const lifted = options.secretSend === null || options.secretSend === 'allow';
+  const secret = lifted ? [] : await pushedSecretFiles(publish.root, branch);
   if (secret.length > 0) return refuse(secretValueLine(branch, secret), remote.name);
   const hosted = parseRemoteUrl(remote.url);
   const secretsWithheld = await withholdsSecrets(deps, publish.root);

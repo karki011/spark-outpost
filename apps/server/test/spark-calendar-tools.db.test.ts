@@ -83,15 +83,15 @@ describe('which sessions get the calendar tools', () => {
     expect(await h.toolNames()).toEqual([]);
   });
 
-  it('gives the Ask Spark session no calendar tools', async () => {
+  it('gives the Ask Spark session both calendar tools, like a chat', async () => {
     await h.newChat('auto');
     await h.t.db.query(
       `INSERT INTO profiles (workspace_id, assistant_conversation_id) VALUES ($1, $2)
        ON CONFLICT (workspace_id) DO UPDATE SET assistant_conversation_id = $2`,
       [h.t.workspaceId, h.chat.conversationId],
     );
-    await h.start({ mode: 'auto', scope: { readOnly: true } });
-    expect(await h.toolNames()).toEqual([]);
+    await h.start({ mode: 'auto', scope: { readOnly: true, assistant: true } });
+    expect(await h.toolNames()).toEqual(['spark_calendar', 'spark_calendar_edit']);
   });
 
   it('never lets a paired device answer a calendar card', async () => {

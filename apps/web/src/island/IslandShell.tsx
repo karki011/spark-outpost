@@ -10,30 +10,28 @@ import './island-skin.css';
 import './island-bubble.css';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { setMotionMode } from '../app/idle-motion.ts';
+import { useIdleAfter } from '../ui/use-idle-after.ts';
+import { usePageHidden } from '../ui/use-page-hidden.ts';
 import { leaveAsGhost } from './home-motion.ts';
-import { chatWidth, peekClearance, viewWidth, type IslandView } from './island-model.ts';
+import { viewWidth, type IslandView } from './island-model.ts';
 import { useViewportWidth } from './island-parts.tsx';
 import { wingsFor } from './island-wings.tsx';
 import { keyHint } from './key-hints.tsx';
-import { PeekRow } from './PeekRow.tsx';
 import { CalendarLineView } from './CalendarRestLine.tsx';
-import { RestLine, scoutLabel, ScoutMarks } from './RestLine.tsx';
+import { scoutLabel, ScoutMarks } from './RestLine.tsx';
 import { DropScene } from './DropScene.tsx';
 import { ViewBody, type IslandShellProps } from './ShellBody.tsx';
 import { notchFit, restLineTop, restPose, restsQuietly, stripHeight } from './island-fit.ts';
-import { restMetrics, type RestMetrics } from './island-size.ts';
+import { restMetrics, useIslandHeight, type RestMetrics } from './island-size.ts';
 import { useIslandShape, type ScoutSpot } from './use-island-shape.ts';
 
 interface ShellRefs {
   islandRef: RefObject<HTMLDivElement | null>;
-  rowRef: RefObject<HTMLDivElement | null>;
 }
 
 const KHINT_HEIGHT = 18;
 const PANEL_MIN_WIDTH = 320;
 const PANEL_SIDE_GAP = 16;
-const ROW_BLOB = 22;
-const FLAT_ROW_BLOB = 28;
 const NOTCH_MARGIN = 8;
 const ISLAND_BORDER = 1;
 const PEEK_ROW_RISE = 7;
@@ -51,9 +49,10 @@ function scoutSpot(
   rest: RestMetrics,
   docked: boolean,
   out: boolean,
+  height: number,
 ): ScoutSpot {
   if (view.kind === 'peek') {
-    const pose = restPose({ docked, edge: top, tuck: rest.tuck, out });
+    const pose = restPose({ docked, edge: top, tuck: rest.tuck, out, height, blob: rest.blob });
     const x = width / 2 - rest.blob / 2 - ISLAND_BORDER;
     return { x, y: pose.y, size: rest.blob, edge: pose.edge };
   }
@@ -73,8 +72,11 @@ function viewKey(view: IslandView): string {
   }
 }
 
-export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & ShellRefs) {
+const REST_AFTER_IDLE_MS = 10_000;
+
+export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRefs) {
   const { view, geometry, size } = props;
+  const height = useIslandHeight();
   const scoutRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
   const fit = notchFit(geometry);
@@ -88,19 +90,17 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   const top = bare || loose ? 0 : stripHeight(fit, quiet);
   const out = props.hover || !restsQuietly(props.mood);
   const { docked } = geometry;
-  const pose = peeking ? restPose({ docked, edge: top, tuck: rest.tuck, out }) : null;
+  const pose = peeking
+    ? restPose({ docked, edge: top, tuck: rest.tuck, out, height, blob: rest.blob })
+    : null;
   const gap = hugsNotch ? geometry.notchWidth + 2 * NOTCH_MARGIN : 0;
   const notchSpan = loose ? 0 : view.kind === 'peek' ? geometry.notchWidth : gap;
   const viewport = useViewportWidth();
   const screenWidth = window.screen.width;
   const room = Math.max(PANEL_MIN_WIDTH, viewport - PANEL_SIDE_GAP);
-  const chatting = view.kind === 'panel' && view.panel === 'sessions' && props.selected !== null;
-  const width = bare
-    ? rest.blob
-    : Math.min(chatting ? chatWidth(screenWidth) : viewWidth(view, notchSpan, screenWidth), room);
+  const width = bare ? rest.blob : Math.min(viewWidth(view, notchSpan, screenWidth), room);
   const hint = keyHint(view);
-  const scout = scoutSpot(view, width, top, rest, docked, out);
-  const rowShift = view.kind === 'peek' ? scout.x + scout.size / 2 - width / 2 : 0;
+  const scout = scoutSpot(view, width, top, rest, docked, out, height);
   const setTarget = useIslandShape(
     islandRef,
     scoutRef,
@@ -110,10 +110,13 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   const rowTop = Math.max(top, notchHeight + PEEK_ROW_RISE);
   const threadTop = rest.blob * SCOUT_FEET;
   const lineTop = Math.max(restLineTop(flat, rowTop) - (pose?.y ?? 0), threadTop + THREAD);
-  const hanging = peeking && (props.line !== null || props.calendarLine !== null);
-  const wings = wingsFor({ ...props, hugsNotch });
+  const hanging = peeking && props.calendarLine !== null;
+  const wings = wingsFor(props);
   const resting = (quiet || view.kind === 'now') && !props.hover;
-  useEffect(() => setMotionMode(resting ? 'paused' : 'live'), [resting]);
+  const hidden = usePageHidden();
+  const idle = useIdleAfter(REST_AFTER_IDLE_MS);
+  const motion = resting || hidden ? 'paused' : idle ? 'rest' : 'live';
+  useEffect(() => setMotionMode(motion), [motion]);
   const reducedRef = useRef(props.reduced);
   useEffect(() => {
     reducedRef.current = props.reduced;
@@ -130,13 +133,13 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   useLayoutEffect(() => {
     const measure = () => {
       const body = quiet ? 0 : (viewRef.current?.scrollHeight ?? 0);
-      const height = top + body + (hint && !quiet ? KHINT_HEIGHT : 0);
+      const panelHeight = top + body + (hint && !quiet ? KHINT_HEIGHT : 0);
       setTarget(
         {
           width,
-          height,
+          height: panelHeight,
           radius: quiet ? 14 : 22,
-          scout: scoutSpot(view, width, top, rest, docked, out),
+          scout: scoutSpot(view, width, top, rest, docked, out, height),
         },
         view.kind === 'peek' ? 0.62 : 0.5,
       );
@@ -147,7 +150,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
     const observer = new ResizeObserver(measure);
     observer.observe(watched);
     return () => observer.disconnect();
-  }, [view, width, top, quiet, hint, setTarget, rest, docked, out]);
+  }, [view, width, top, quiet, hint, setTarget, rest, docked, out, height]);
 
   const classes = [
     'isl',
@@ -160,7 +163,12 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   ].filter(Boolean);
 
   return (
-    <div className="isl-root" data-rm={props.reduced || undefined} data-rest={resting || undefined}>
+    <div
+      className="isl-root"
+      data-rm={props.reduced || undefined}
+      data-rest={resting || undefined}
+      data-hidden={hidden || undefined}
+    >
       <div className="sr-only" aria-live="polite">
         {props.announcement}
       </div>
@@ -236,30 +244,10 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
               }
             />
           )}
-          {peeking && props.line && (
-            <RestLine key={props.line.key} line={props.line} top={lineTop} onOpen={props.onLine} />
-          )}
           {peeking && props.calendarLine && (
             <CalendarLineView line={props.calendarLine} top={lineTop} calendar={props.calendar} />
           )}
         </div>
-      </div>
-      <div
-        ref={rowRef}
-        className="isl-peekrow-wrap"
-        data-flat={flat || undefined}
-        style={{ '--top': `${rowTop}px`, '--cx': `${rowShift}px` } as CSSProperties}
-      >
-        <PeekRow
-          sessions={props.peek.sessions}
-          more={props.peek.more}
-          shown={quiet}
-          size={flat ? FLAT_ROW_BLOB : ROW_BLOB}
-          clearance={peekClearance(flat, rest.blob)}
-          sleepy={props.sleepy}
-          onOpen={props.onPeekOpen}
-          onMore={() => props.onTab('sessions')}
-        />
       </div>
     </div>
   );

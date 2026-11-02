@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { channelConfig, channelPaths } from './channel.ts';
-import { apiEnv, workerEnv, type ServerLaunch } from './server-env.ts';
+import { apiEnv, browserWorkerEnv, workerEnv, type ServerLaunch } from './server-env.ts';
 
 const config = channelConfig('dev');
 const paths = channelPaths('/Users/me/Library/Application Support', config);
@@ -49,12 +49,24 @@ describe('server environment', () => {
     expect(workerEnv(launch).SPARK_API_TOKEN).toBeUndefined();
   });
 
-  it('tells the API where the logs and data folder are, for diagnostics', () => {
+  it('tells the API where the logs are, for diagnostics', () => {
     expect(apiEnv(launch)).toMatchObject({
       SPARK_APP_VERSION: '0.1.0-beta.1',
       SPARK_LOG_DIR: '/Users/me/Library/Application Support/Spark Outpost Dev/logs',
-      SPARK_DATA_DIR: '/Users/me/Library/Application Support/Spark Outpost Dev',
     });
     expect(workerEnv(launch).SPARK_LOG_DIR).toBeUndefined();
+  });
+
+  it('gives the API, the worker and migrations the same data folder', () => {
+    const userData = '/Users/me/Library/Application Support/Spark Outpost Dev';
+    expect(paths.userData).toBe(userData);
+    for (const env of [apiEnv(launch), workerEnv(launch), browserWorkerEnv(launch)]) {
+      expect(env.SPARK_DATA_DIR).toBe(userData);
+    }
+  });
+
+  it('never passes on an inherited data folder', () => {
+    const inherited = { ...launch, baseEnv: { ...launch.baseEnv, SPARK_DATA_DIR: '/elsewhere' } };
+    expect(workerEnv(inherited).SPARK_DATA_DIR).toBe(paths.userData);
   });
 });

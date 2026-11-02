@@ -35,6 +35,7 @@ function event(title: string, from: number, to: number, extra: Partial<CalendarE
     focus: false,
     remind: false,
     hold: false,
+    dismissed: false,
     ...extra,
   } satisfies CalendarEvent;
 }

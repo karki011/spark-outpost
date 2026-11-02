@@ -10,17 +10,18 @@ Run Claude Code and Codex side by side on your Mac. Follow every step, answer th
 
 <!-- release-downloads:start -->
 
-<a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.24-arm64.dmg"><img alt="Download for Mac, Apple silicon" src="https://img.shields.io/badge/Download_for_Mac-Apple_silicon-2bb39a?style=for-the-badge&logo=apple&logoColor=white"></a> <a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.24-x64.dmg"><img alt="Download for Mac, Intel" src="https://img.shields.io/badge/Download_for_Mac-Intel-555555?style=for-the-badge&logo=apple&logoColor=white"></a>
+<a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-latest-arm64.dmg"><img alt="Download for Mac, Apple silicon" src="https://img.shields.io/badge/Download_for_Mac-Apple_silicon-2bb39a?style=for-the-badge&logo=apple&logoColor=white"></a> <a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-latest-x64.dmg"><img alt="Download for Mac, Intel" src="https://img.shields.io/badge/Download_for_Mac-Intel-555555?style=for-the-badge&logo=apple&logoColor=white"></a>
 
-Free beta · [0.1.0-beta.24](releases/0.1.0-beta.24.md) · macOS 12+ (Mac control needs 14) · [All versions](releases/README.md)
+Free beta · [0.1.0-beta.38](releases/0.1.0-beta.38.md) · macOS 12+ (Mac control needs 14) · [All versions](releases/README.md)
 
 <!-- release-downloads:end -->
 
 <p>
-<a href="apps/desktop/CHANGELOG.md"><img alt="Version 0.1.0-beta.24" src="https://img.shields.io/badge/version-0.1.0--beta.24-2bb39a"></a>
+<a href="apps/desktop/CHANGELOG.md"><img alt="Version 0.1.0-beta.38" src="https://img.shields.io/badge/version-0.1.0--beta.38-2bb39a"></a>
 <img alt="macOS 12 or later" src="https://img.shields.io/badge/macOS-12%2B-111111?logo=apple&logoColor=white">
 <img alt="Apple silicon and Intel" src="https://img.shields.io/badge/arch-arm64%20%7C%20x64-555555">
 <img alt="Agent Client Protocol" src="https://img.shields.io/badge/protocol-ACP-6e56cf">
+<a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-555555"></a>
 </p>
 
 <a href="#features">Features</a> · <a href="#local-first-stated-honestly">Privacy</a> · <a href="docs/guide/getting-started.md">User guide</a> · <a href="#develop">Develop</a>
@@ -42,7 +43,7 @@ Free beta · [0.1.0-beta.24](releases/0.1.0-beta.24.md) · macOS 12+ (Mac contro
 
 ### Your agents, your modes
 
-Claude Code and Codex with their own permission modes, shown with their own names. Spark keeps a safety floor in every mode: secret files, git hooks and config, and pushes are guarded. Each chat keeps its agent running between messages; its sub-agents appear as cards in the Work panel, and the agent can start sub-chats in an outpost when the work spans repos.
+Claude Code and Codex with their own permission modes, shown with their own names. Spark’s recommended rules guard secret files, git hooks and config, and publishing; with no rules, the agent’s mode decides. Each chat keeps its agent running between messages; its sub-agents appear as cards in the Work panel, and the agent can start sub-chats in an outpost when the work spans repos.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/guide/images/chats-and-modes-permissions-dark.png">
@@ -68,9 +69,18 @@ Each chat gets its own branch in a worktree. **Full auto → PR** opens the pull
 
 ### Browser pane with developer tools
 
-Agents open pages in the chat's Browser pane, click and type there, and read the console, network log and page performance. Their tabs start signed out, and page content is treated as untrusted. [Use the browser](docs/guide/use-the-browser.md)
+Agents open pages in the chat's Browser pane, click and type there, and read the console, network log and page performance. One profile serves every chat, so agents are signed in where you are, and page content is treated as untrusted. Use **Select** to point an agent at elements on the page. [Use the browser](docs/guide/use-the-browser.md)
 
 </td>
+<td width="50%" valign="top">
+
+### A browser of your own
+
+The Browser view has Spaces, pinned folders, split view, Peek and a command bar. Its **Personal** profile is closed to every agent; a page reaches a chat only when you attach its text or hand over its address. [Browse on your own](docs/guide/browse-on-your-own.md)
+
+</td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 ### Mac control and terminals
@@ -81,6 +91,13 @@ Let an agent read another Mac app and press its buttons and menus, after you all
   <source media="(prefers-color-scheme: dark)" srcset="docs/guide/images/terminals-stop-dark.png">
   <img alt="A docked terminal tab with its Stop control" src="docs/guide/images/terminals-stop-light.png" width="100%">
 </picture>
+
+</td>
+<td width="50%" valign="top">
+
+### Ask Spark and Spark Island
+
+Scout rests at the top of your screen with what needs you: answer a request, see working chats, or ask Spark about any of them. It asks before acting unless you switch it to **Act**. [Use Spark Island](docs/guide/desktop-companion.md)
 
 </td>
 </tr>
@@ -94,9 +111,9 @@ Google and Mac calendars beside your chats, with one-click Join. Before a meetin
 </td>
 <td width="50%" valign="top">
 
-### Atlassian, Slack, GitHub, Linear
+### Atlassian, ServiceNow, Slack, GitHub, Linear
 
-Start a chat from a ticket, let agents read and update Jira and Confluence, and keep tickets in step with pull requests.
+Start a chat from a ticket, let agents read and update Jira, Confluence and ServiceNow, and keep tickets in step with pull requests.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/guide/images/tickets-start-dark.png">
@@ -108,12 +125,21 @@ Start a chat from a ticket, let agents read and update Jira and Confluence, and 
 <tr>
 <td width="50%" valign="top">
 
+### Voice
+
+Push to talk, off until you turn it on. Dictate a message or speak a command; speech becomes text on your Mac, and nothing is sent until you confirm it. [Talk to Spark](docs/guide/voice.md)
+
+</td>
+<td width="50%" valign="top">
+
 ### From your phone
 
 Pair a phone or another computer over Tailscale (never Funnel) to follow chats, answer approvals you allow and get a push when a chat needs you. [Use your phone](docs/guide/use-your-phone.md)
 
 </td>
-<td width="50%" valign="top">
+</tr>
+<tr>
+<td colspan="2" valign="top">
 
 ### Local-first, stated honestly
 
@@ -123,13 +149,13 @@ Chats, settings and code stay on your Mac, keys live in the keychain, and voice 
 </tr>
 </table>
 
-**Works with** Claude Code · Codex · GitHub · Jira · Confluence · Linear · Slack · Google Calendar · Mac Calendar · Tailscale
+**Works with** Claude Code · Codex · GitHub · Jira · Confluence · ServiceNow · Linear · Slack · Google Calendar · Mac Calendar · Tailscale
 
 ## Getting started
 
-1. Download the dmg for your Mac above, open it and drag **Spark Outpost** to **Applications**. The first start sets up a local database and takes up to a minute.
+1. Download the dmg for your Mac above (the links always fetch the newest build), open it and drag **Spark Outpost** to **Applications**. The first start sets up a local database and takes up to a minute.
 2. Connect a provider: the Claude Code CLI, the Codex CLI, or an Anthropic, OpenAI or Z.ai API key. Git is needed for code work.
-3. Optionally connect GitHub, Atlassian, Linear, Slack or a calendar.
+3. Optionally connect GitHub, Atlassian, ServiceNow, Linear, Slack or a calendar.
 4. Start a chat. Ask a question about a project, or link a repo and ask for a small change.
 
 Requires macOS 12 or later (Mac control needs macOS 14) and about 2 GB of disk space. The app updates itself on the **Stable** or **Beta** channel, and never while an agent is working.
@@ -156,7 +182,7 @@ pnpm desktop:dev    # the Electron desktop app
 pnpm check          # format, lint, typecheck, source rules, knip, unit tests
 ```
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for every command, the repo layout and testing. Contributors and coding agents: read [AGENTS.md](AGENTS.md) first. Releases, signing and the update feed are in [docs/architecture/RELEASES.md](docs/architecture/RELEASES.md); `pnpm release:downloads` regenerates the download links above and [releases/](releases/README.md).
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for every command, the repo layout and testing. Contributors: read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) first; report security problems as [SECURITY.md](SECURITY.md) says. Releases, signing and the update feed are in [docs/architecture/RELEASES.md](docs/architecture/RELEASES.md); `pnpm release:downloads` regenerates the download section above and [releases/](releases/README.md).
 
 ### Docs
 

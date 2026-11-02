@@ -27,9 +27,10 @@ import { primaryPull } from '../pull-request/pull-request-model.ts';
 import { RailCrew } from './RailCrew.tsx';
 import { RailToggleIcon } from './RailIcons.tsx';
 import { RailSummary } from './RailSummary.tsx';
-import { RailTasks } from './RailTasks.tsx';
+import { RailTodo } from './RailTodo.tsx';
 import { RailTv } from './RailTv.tsx';
-import { railCrew, railRows, type RailAction } from './rail-model.ts';
+import { useLeadSteps } from '../../crew/lead-steps.ts';
+import { latestFollowing, railCrew, railRows, type RailAction } from './rail-model.ts';
 import { useRoomInThread } from './use-rail-layout.ts';
 
 interface ChatRailProps {
@@ -122,9 +123,10 @@ function OpenRail({
     contextPercent: reading ? contextPercent(reading.used, reading.size) : null,
     hasTask: taskId !== null,
     hasStoredCrew: storedCrew(detail) !== null,
+    following: latestFollowing(detail),
   });
-  const openTasks = useCallback(() => onTab('tasks'), [onTab]);
-  const crew = railCrew(detail, running);
+  const openTodo = useCallback(() => onTab('todo'), [onTab]);
+  const crew = railCrew(detail, running, useLeadSteps());
 
   const act = (action: RailAction) => {
     if (action.kind === 'project') requestProjectMenu(conversationId);
@@ -140,7 +142,7 @@ function OpenRail({
         <RailToggle open onToggle={() => onCollapse(true)} />
       </div>
       <RailSummary rows={rows} provider={provider} onAction={act} />
-      {task && <RailTasks task={task} onOpen={openTasks} />}
+      {task && <RailTodo task={task} onOpen={openTodo} />}
       <AnimatePresence>
         {crew.stage.length > 0 && (
           <RailTv key="tv" conversationId={conversationId} agents={crew.stage} />

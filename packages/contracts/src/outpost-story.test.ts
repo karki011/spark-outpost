@@ -156,6 +156,7 @@ describe('outpost story', () => {
     const outpost = {
       id: OUTPOST,
       name: 'Orders launch',
+      instructions: '',
       pausedAt: null,
       createdAt: AT,
       updatedAt: AT,
@@ -324,6 +325,19 @@ describe('storyProblems', () => {
     ]);
   });
 
+  it('reports an existing chat named under two handles', () => {
+    const reused = { chatId: '00000000-0000-4000-8000-0000000000aa' };
+    expect(
+      storyProblems([{ ...chat('api'), ...reused }, chat('web'), { ...chat('docs'), ...reused }]),
+    ).toEqual([
+      {
+        kind: 'duplicate_chat',
+        handle: 'docs',
+        text: '@docs names the same existing chat as @api.',
+      },
+    ]);
+  });
+
   it('reports every problem of a draft, duplicates first and cycles last', () => {
     const problems = storyProblems([
       chat('a', 'b'),
@@ -386,6 +400,12 @@ describe('storyOrder', () => {
 describe('isStacked', () => {
   it('is stacked on a parent in the same project', () => {
     expect(isStacked({ projectId: PROJECT }, { projectId: PROJECT })).toBe(true);
+  });
+
+  it('never stacks an existing chat, which keeps its own branch, but stacks a new chat on one', () => {
+    const existing = { projectId: PROJECT, chatId: 'chat-1' };
+    expect(isStacked(existing, { projectId: PROJECT })).toBe(false);
+    expect(isStacked({ projectId: PROJECT }, existing)).toBe(true);
   });
 
   it('is order only across projects, with no parent, or with no project', () => {

@@ -36,6 +36,7 @@ function actionOf(proposal: Proposal): StartOutpostAction {
       agentMode: chat.agentMode ?? null,
       dependsOn: chat.dependsOn ?? null,
       stacked: lines[index]?.stacked ?? false,
+      existing: chat.chatId !== undefined,
       task: clipAtWord(chat.task.replace(/\s+/g, ' '), START_OUTPOST_TASK_MAX),
     })),
   };
@@ -67,7 +68,7 @@ export const outpostStartTool = sparkTool({
   needs: 'outpost_start',
   acts: true,
   description:
-    'Create and start sub-task chats now, with the same input as spark_outpost_draft: Spark creates the outpost and chats and sends each its first message. Follows your mode like other Spark actions: at once in modes that act without asking, otherwise the user confirms a card that shows the draft. Sub-chats run in modes no higher than yours; their first messages are your text, never the user’s. Use spark_outpost_draft when the user should review first.',
+    'Create and start sub-task chats now, with the same input as spark_outpost_draft: Spark creates the outpost and new chats and sends each chat its first message (an existing chat named with chat gets it as a request). Follows your mode like other Spark actions: at once in modes that act without asking, otherwise the user confirms a card that shows the draft. Sub-chats run in modes no higher than yours; their first messages are your text, never the user’s. Use spark_outpost_draft when the user should review first.',
   input: proposalInput,
   run: (args, context) => start(context, args),
 });

@@ -8,20 +8,20 @@ summary: Run commands beside a chat, or work with Claude Code or Codex in a Term
 
 Open an AI terminal. About 1 minute.
 
-> **Important:** A Terminal session runs the provider's CLI under the agent's mode. Spark's cards, [protected paths](protected-paths.md) and audit don't apply. Spark records state, tool names and times, tokens and cost, no commands or replies unless [recorded](settings.md#record-terminal-sessions).
+> **Important:** Terminal sessions follow the provider’s mode, without Spark’s approval cards or [path protection](protected-paths.md). [Recording](settings.md#record-terminal-sessions) adds details and audit for Claude with Spark’s mod; new profiles default on, existing choices stay. Codex keeps metadata only.
 
 ## Start a Terminal session
 
-1. Select **New chat**, then **Terminal** above the message box.
-2. Select **Choose project → Choose a folder…**, then **Use this folder**.
+1. Select **New chat**, then **Chat** → **Terminal** below the box.
+2. Select **Choose project**, then a project or **Add folder…**.
 3. Beside **Start terminal**, pick **Claude Code** or **Codex** and permissions.
 4. Describe the work; press **Enter**.
 
-A line shows while dependencies copy. Pull requests aren't automatic.
+The lead [delegates implementation](how-spark-works.md#how-work-is-split). New sessions and resumes receive instructions; existing processes keep theirs. Pull requests aren't automatic.
 
 **Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events; idle Claude shows its [cache](statuses-and-limits.md#prompt-cache). Esc before a reply stays **Running** until you send. **Open**: no tracking. Drops insert paths.
 
-Selection copies, with **Add to terminal**, **Ask about this**, **Comment** and **New chat with this**. You press Enter. Hold Option to select when the agent uses the mouse. [Browser pane](use-the-browser.md#point-at-something) picks land there.
+Selection copies; **Add to terminal**, **Ask about this**, **Comment** and **New chat with this** reuse it. Press Enter to send. Hold Option for selection. [Browser picks](use-the-browser.md#point-at-something) land there.
 
 **Focus terminal** (**⌘⇧F**) hides the chat list and Work panel. **⋯** has **Copy folder path**, **Reconnect** and **Stop session** (hold). [Paired devices](use-your-phone.md) can follow.
 

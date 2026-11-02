@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  APPROVAL_REQUESTED,
   EventType,
   OWN_SUBAGENT_METADATA,
   SUBAGENTS_ACTIVITY,
@@ -15,6 +16,7 @@ import {
   viewSteps,
   type RunProjection,
 } from './run-projection.ts';
+import { approval } from './approvals/test-approval.ts';
 
 const events: RunEvent[] = [
   { type: EventType.RUN_STARTED, runId: 'r', threadId: 't' },
@@ -35,6 +37,24 @@ function replay(list: [number, RunEvent][]): RunProjection {
 }
 
 describe('applyRunEvent', () => {
+  it('notes how much reply text had arrived when each card was asked, once', () => {
+    const asked = (id: string): RunEvent => ({
+      type: EventType.CUSTOM,
+      name: APPROVAL_REQUESTED,
+      value: { ...approval, id },
+    });
+    const state = replay([
+      [1, { type: EventType.TEXT_MESSAGE_START, messageId: 'm', role: 'assistant' }],
+      [2, { type: EventType.TEXT_MESSAGE_CONTENT, messageId: 'm', delta: 'Creating it. ' }],
+      [3, asked(approval.id)],
+      [4, { type: EventType.TEXT_MESSAGE_CONTENT, messageId: 'm', delta: 'Done.' }],
+      [5, asked(approval.id)],
+      [6, { type: EventType.TEXT_MESSAGE_END, messageId: 'm', timestamp: 42 }],
+    ]);
+    expect(state.approvalAt).toEqual({ [approval.id]: 13 });
+    expect(state.replyEnd?.at).toBe(42);
+  });
+
   it('builds steps, text, and the final status', () => {
     const state = replay(events.map((event, index) => [index + 1, event]));
     expect(state).toMatchObject({
@@ -229,6 +249,34 @@ describe('a model switch during a run', () => {
     expect(modelSwitchText(change)).toBe(
       "Your ChatGPT sign-in can't use GPT-6.1 Sol, so this turn ran on 6 Sol instead.",
     );
+  });
+});
+
+describe("the agent's to-do during a run", () => {
+  const todo = (entries: unknown[]): RunEvent => ({
+    type: EventType.ACTIVITY_SNAPSHOT,
+    messageId: 'todo',
+    activityType: 'todo',
+    content: { entries },
+    replace: true,
+  });
+  const entry = (content: string, status: string) => ({ content, priority: 'medium', status });
+
+  it('starts empty and keeps the latest list as items tick', () => {
+    expect(initialRunProjection.todo).toBeNull();
+    const state = replay([
+      [1, todo([entry('Read', 'in_progress'), entry('Fix', 'pending')])],
+      [2, todo([entry('Read', 'completed'), entry('Fix', 'in_progress')])],
+    ]);
+    expect(state.todo?.map((item) => item.status)).toEqual(['completed', 'in_progress']);
+  });
+
+  it('ignores a malformed list and keeps the last good one', () => {
+    const state = replay([
+      [1, todo([entry('Read', 'completed')])],
+      [2, todo([{ content: 'Read', status: 'nonsense' }])],
+    ]);
+    expect(state.todo).toEqual([entry('Read', 'completed')]);
   });
 });
 

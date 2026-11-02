@@ -1,4 +1,8 @@
-import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
+import {
+  approvalAttentionKey,
+  type Approval,
+  type ConversationSummary,
+} from '@spark-outpost/contracts';
 import { terminalMood } from '../terminal/native-state.ts';
 import {
   terminalStateEntry,
@@ -6,9 +10,10 @@ import {
   terminalTurnDone,
   terminalTurnFinished,
 } from '../terminal/turn-done.ts';
-import { isRunning, needsInput, rowState } from '../conversations/row-state.ts';
+import { needsInput, rowState } from '../conversations/row-state.ts';
+import { askedChoices } from './asked-question.ts';
 
-export type Panel = 'home' | 'quick' | 'sessions' | 'ask';
+export type Panel = 'home' | 'quick' | 'ask';
 
 export type CardKind = 'approval' | 'force' | 'question' | 'open';
 
@@ -29,44 +34,49 @@ export interface IslandInputs {
   note: boolean;
   panel: Panel | null;
   cards: readonly Card[];
+  aside: readonly Card[];
   review: string | null;
-  nudge: boolean;
-  full?: boolean;
-  hoverOnly?: boolean;
+  hoverLine: boolean;
 }
 
 export type IslandView =
   | { kind: 'note' }
   | { kind: 'panel'; panel: Panel }
   | { kind: 'card'; card: Card; index: number; total: number }
-  | { kind: 'now'; card: Card | null }
+  | { kind: 'now' }
   | { kind: 'peek' };
+
+function queuePlace(card: Card, inputs: IslandInputs): { index: number; total: number } {
+  const queue = inputs.cards.filter((candidate) => !inputs.aside.includes(candidate));
+  const index = queue.indexOf(card);
+  return index < 0 ? { index: 1, total: 1 } : { index: index + 1, total: queue.length };
+}
 
 export function islandView(inputs: IslandInputs): IslandView {
   if (inputs.note) return { kind: 'note' };
   if (inputs.panel) return { kind: 'panel', panel: inputs.panel };
-  const total = inputs.cards.length;
-  const reviewed = inputs.cards.findIndex((card) => card.chat.id === inputs.review);
-  if (reviewed >= 0) {
-    return { kind: 'card', card: inputs.cards[reviewed]!, index: reviewed + 1, total };
-  }
-  if (inputs.hoverOnly) return { kind: 'peek' };
-  const first = (inputs.nudge && inputs.cards[0]) || null;
-  if (inputs.full) return { kind: 'now', card: first };
-  return { kind: 'peek' };
+  const card = inputs.cards.find((candidate) => candidate.chat.id === inputs.review);
+  if (card) return { kind: 'card', card, ...queuePlace(card, inputs) };
+  return inputs.hoverLine ? { kind: 'now' } : { kind: 'peek' };
 }
 
 export type QuickShortcutTarget =
   { kind: 'review'; chatId: string } | { kind: 'close' } | { kind: 'quick' };
 
+export type PanelOpener = 'hover' | 'user';
+
+export function shortcutClosesPanel(panel: Panel | null, opener: PanelOpener): boolean {
+  return panel !== null && opener === 'user';
+}
+
 export function quickShortcutTarget(
   panel: Panel | null,
   view: IslandView,
   pending: Card | null = null,
+  opener: PanelOpener = 'user',
 ): QuickShortcutTarget {
-  if (panel) return { kind: 'close' };
-  const card =
-    view.kind === 'card' || view.kind === 'now' ? view.card : view.kind === 'peek' ? pending : null;
+  if (shortcutClosesPanel(panel, opener)) return { kind: 'close' };
+  const card = view.kind === 'card' ? view.card : view.kind === 'note' ? null : pending;
   if (!card) return { kind: 'quick' };
   if (card.loading || card.kind === 'approval' || card.kind === 'force') {
     return { kind: 'review', chatId: card.chat.id };
@@ -74,12 +84,8 @@ export function quickShortcutTarget(
   return { kind: 'quick' };
 }
 
-export type HoverOpen = { kind: 'home' } | { kind: 'card'; card: Card } | null;
-
-export function hoverOpens(view: IslandView, pending: Card | null = null): HoverOpen {
-  if (view.kind === 'peek') return pending ? { kind: 'card', card: pending } : { kind: 'home' };
-  if (view.kind === 'now') return view.card ? { kind: 'card', card: view.card } : { kind: 'home' };
-  return null;
+export function hoverOpensHome(view: IslandView, hoverLine: boolean): boolean {
+  return view.kind === 'peek' && !hoverLine;
 }
 
 const CARD_WIDTHS = {
@@ -89,11 +95,10 @@ const CARD_WIDTHS = {
   open: 520,
 } as const;
 const NOTE_WIDTH = 420;
-const NOW_WIDTH = 400;
+const NOW_WIDTH = 460;
 const NOW_WING = 104;
-const HOME_WIDTH = { share: 0.5, min: 720, max: 920 } as const;
+const HOME_WIDTH = { share: 0.42, min: 640, max: 760 } as const;
 const PANEL_WIDTH = { share: 0.42, min: 640, max: 760 } as const;
-const CHAT_MIN_WIDTH = 690;
 
 function scaled(screenWidth: number, range: { share: number; min: number; max: number }): number {
   return Math.round(Math.min(range.max, Math.max(range.min, screenWidth * range.share)));
@@ -101,10 +106,6 @@ function scaled(screenWidth: number, range: { share: number; min: number; max: n
 
 export function panelWidth(panel: Panel, screenWidth: number): number {
   return scaled(screenWidth, panel === 'home' ? HOME_WIDTH : PANEL_WIDTH);
-}
-
-export function chatWidth(screenWidth: number): number {
-  return Math.max(CHAT_MIN_WIDTH, scaled(screenWidth, PANEL_WIDTH));
 }
 
 export function viewWidth(view: IslandView, notchWidth: number, screenWidth: number): number {
@@ -166,17 +167,25 @@ function cardKind(chat: ConversationSummary, approval: Approval | null): CardKin
   const checkpoint = approval.payload.checkpoint;
   if (checkpoint) {
     const simple = checkpoint.kind === 'clarify' && checkpoint.questions.length === 0;
-    return simple && checkpoint.choices.length > 0 ? 'question' : 'open';
+    if (simple && checkpoint.choices.length > 0) return 'question';
+    return askedChoices(approval) ? 'question' : 'open';
   }
   if (approval.payload.sparkAction || approval.payload.plan) return 'open';
   if (chat.attention?.kind !== 'permission') return 'open';
   return 'approval';
 }
 
+function pickApproval(
+  pending: readonly Approval[],
+  wanted: string | null | undefined,
+): Approval | null {
+  return pending.find((candidate) => candidate.id === wanted) ?? pending.at(-1) ?? null;
+}
+
 export function pendingCards(
   chats: readonly ConversationSummary[],
   approvalsByChat: ReadonlyMap<string, readonly Approval[]>,
-  snoozed: ReadonlySet<string>,
+  putOff: (approvalId: string) => boolean = () => false,
 ): Card[] {
   return chats
     .filter((chat) => !chat.archivedAt && needsInput(chat))
@@ -185,8 +194,8 @@ export function pendingCards(
         (approval) => approval.status === 'pending',
       );
       const wanted = chat.attention?.approvalId;
-      const approval =
-        pending.find((candidate) => candidate.id === wanted) ?? pending.at(-1) ?? null;
+      const active = pending.filter((approval) => !putOff(approval.id));
+      const approval = pickApproval(active, wanted) ?? pickApproval(pending, wanted);
       return {
         kind: cardKind(chat, approval),
         chat,
@@ -195,7 +204,6 @@ export function pendingCards(
           (chat.sessionType !== 'terminal' || chat.needsInput) && !approvalsByChat.has(chat.id),
       };
     })
-    .filter((card) => !snoozed.has(cardKey(card)))
     .sort((a, b) => cardTime(a).localeCompare(cardTime(b)));
 }
 
@@ -204,7 +212,9 @@ function cardTime(card: Card): string {
 }
 
 export function cardKey(card: Card): string {
-  return card.approval?.id ?? `chat:${card.chat.id}:${card.chat.updatedAt}`;
+  return card.approval
+    ? approvalAttentionKey(card.approval.id)
+    : `chat:${card.chat.id}:${card.chat.updatedAt}`;
 }
 
 export type SessionState = 'working' | 'waiting' | 'done' | 'failed' | 'idle';
@@ -218,77 +228,4 @@ export function sessionState(chat: ConversationSummary): SessionState {
   if (tone === 'error') return 'failed';
   if (chat.latestRun?.status === 'succeeded') return 'done';
   return 'idle';
-}
-
-const SESSION_RANK: Record<SessionState, number> = {
-  waiting: 0,
-  working: 1,
-  failed: 2,
-  done: 3,
-  idle: 4,
-};
-
-export function rankedSessions(
-  chats: readonly ConversationSummary[],
-  hidden: ReadonlySet<string>,
-): ConversationSummary[] {
-  return chats
-    .filter((chat) => !chat.archivedAt && !hidden.has(chat.id))
-    .map((chat) => ({ chat, rank: SESSION_RANK[sessionState(chat)] }))
-    .toSorted((a, b) => a.rank - b.rank || b.chat.updatedAt.localeCompare(a.chat.updatedAt))
-    .map((item) => item.chat);
-}
-
-export const ACTIVE_MS = 20 * 60_000;
-export const PEEK_LIMIT = 5;
-
-export interface PeekRow {
-  sessions: ConversationSummary[];
-  more: number;
-}
-
-export function peekRow(
-  chats: readonly ConversationSummary[],
-  hidden: ReadonlySet<string>,
-  now: number,
-): PeekRow {
-  const active = chats
-    .filter((chat) => !chat.archivedAt && !hidden.has(chat.id))
-    .filter(
-      (chat) =>
-        isRunning(chat) || needsInput(chat) || now - Date.parse(chat.updatedAt) <= ACTIVE_MS,
-    )
-    .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  return { sessions: active.slice(0, PEEK_LIMIT), more: Math.max(0, active.length - PEEK_LIMIT) };
-}
-
-const SLOT_GAP = 26;
-const NOTCH_ROOM = 23;
-const FLAT_SPREAD = 1.25;
-const FLAT_BADGE_ROOM = 30;
-
-export function peekClearance(flat: boolean, blob: number): number {
-  if (!flat) return Math.ceil(blob / 2) + NOTCH_ROOM;
-  return Math.ceil((blob / 2 + FLAT_BADGE_ROOM) / FLAT_SPREAD);
-}
-
-export function peekOffset(slot: number, clearance: number): number {
-  const side = slot % 2 === 0 ? 1 : -1;
-  return side * (clearance + Math.floor(slot / 2) * SLOT_GAP);
-}
-
-export function waitingCount(chats: readonly ConversationSummary[], hidden: ReadonlySet<string>) {
-  return chats.filter((chat) => !chat.archivedAt && !hidden.has(chat.id) && needsInput(chat))
-    .length;
-}
-
-export function matchesQuery(
-  chat: ConversationSummary,
-  projectNames: ReadonlyMap<string, string>,
-  query: string,
-): boolean {
-  const wanted = query.trim().toLowerCase();
-  if (!wanted) return true;
-  const projects = chat.projectIds.map((id) => projectNames.get(id) ?? '').join(' ');
-  return `${chat.title} ${projects}`.toLowerCase().includes(wanted);
 }

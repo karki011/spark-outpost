@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { expandSection } from './provider-screen.ts';
 import {
-  autonomyChip,
+  autonomyLevels,
+  openWorkPanel,
   permissionChip,
   pickAutonomy,
   pickerPanel,
@@ -124,23 +125,21 @@ test('the permission chip names the mode and opens the picker on Permissions', a
   await expect(pickerButton(page)).toBeFocused();
 });
 
-test('the permission chip keeps the composer bar on one line at phone width', async ({ page }) => {
+test('the permission chip keeps the footer under the box on one line at phone width', async ({
+  page,
+}) => {
   await linkedChat(page, repo);
   await page.setViewportSize({ width: 360, height: 780 });
   const chip = permissionChip(page);
   await expect(chip).toHaveAccessibleName('Permissions: Plan');
   await expect(chip.locator('.pchip-name')).toBeHidden();
   await expect(chip.locator('svg')).toBeVisible();
+  const foot = page.locator('.comp-foot');
+  await expect(foot.getByRole('button', { name: /^Permissions: / })).toBeVisible();
+  const [chipBox, footBox] = [await chip.boundingBox(), await foot.boundingBox()];
+  expect(footBox!.height).toBeLessThan(chipBox!.height * 2);
+  expect(await foot.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   const bar = page.locator('.comp-bar');
-  const send = bar.locator('.send');
-  const [chipBox, sendBox] = [await chip.boundingBox(), await send.boundingBox()];
-  expect(
-    Math.abs(
-      (chipBox?.y ?? 0) +
-        (chipBox?.height ?? 0) / 2 -
-        ((sendBox?.y ?? 0) + (sendBox?.height ?? 0) / 2),
-    ),
-  ).toBeLessThan(6);
   expect(await bar.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await chip.click();
   await expect(pickerPanel(page).getByRole('tab', { name: /Permissions/ })).toHaveAttribute(
@@ -149,25 +148,23 @@ test('the permission chip keeps the composer bar on one line at phone width', as
   );
 });
 
-test('Spark autonomy lives in the Work panel and the context bar chip opens it', async ({
-  page,
-}) => {
+test('Spark autonomy lives in the Work panel, not the context bar', async ({ page }) => {
   await linkedChat(page, repo);
-  const chip = autonomyChip(page);
-  await expect(chip).toHaveAccessibleName('Spark autonomy: Full auto → PR');
-  await expect(chip).toHaveText('Full auto → PR');
+  await expect(page.locator('.ctxbar')).toBeVisible();
+  await expect(
+    page.locator('.ctxbar').getByRole('button', { name: /^Spark autonomy/ }),
+  ).toHaveCount(0);
   await expect(workPanel(page)).not.toHaveClass(/\bon\b/);
 
-  await chip.click();
+  await openWorkPanel(page);
   const panel = page.getByRole('complementary', { name: 'Work panel' });
   await expect(panel).toBeVisible();
-  const levels = panel.getByRole('radiogroup', { name: 'Spark autonomy' });
+  const levels = autonomyLevels(page);
   await expect(levels.getByRole('radio')).toHaveText([
     /^Automatic.*Keeps changes without stopping/,
     /^Full auto → PR.*opens a PR/,
   ]);
   const fullAuto = levels.getByRole('radio', { name: 'Full auto → PR', exact: true });
-  await expect(fullAuto).toBeFocused();
   await expect(fullAuto).toHaveAttribute('aria-checked', 'true');
   await expect(panel).toContainText('Applies to this chat. New chats start with your defaults.');
 
@@ -176,7 +173,6 @@ test('Spark autonomy lives in the Work panel and the context bar chip opens it',
   );
   await levels.getByRole('radio', { name: 'Automatic', exact: true }).click();
   expect((await saved).request().postDataJSON()).toEqual({ level: 'hands-off' });
-  await expect(chip).toHaveAccessibleName('Spark autonomy: Automatic');
   await expect(panel.getByRole('button', { name: /^Spark autonomy/ })).toContainText('Automatic');
   await expect(pickerButton(page)).not.toContainText('Automatic');
 
@@ -184,17 +180,14 @@ test('Spark autonomy lives in the Work panel and the context bar chip opens it',
   await expect(panel).toBeHidden();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await autonomyChip(page).click();
+  await openWorkPanel(page);
   const sheet = page.getByRole('complementary', { name: 'Work panel' });
   await expect(sheet).toBeInViewport();
-  const back = sheet
-    .getByRole('radiogroup', { name: 'Spark autonomy' })
-    .getByRole('radio', { name: 'Full auto → PR', exact: true });
+  const back = autonomyLevels(page).getByRole('radio', { name: 'Full auto → PR', exact: true });
   await back.click();
   await expect(back).toHaveAttribute('aria-checked', 'true');
   await page.keyboard.press('Escape');
   await expect(sheet).toBeHidden();
-  await expect(autonomyChip(page)).toHaveAccessibleName('Spark autonomy: Full auto → PR');
 });
 
 test('modes and options reported by a live run show up in the picker', async ({ page }) => {
@@ -229,38 +222,44 @@ test("the approval card offers every option the agent sent, with the agent's wor
   test.setTimeout(120_000);
   await projectChat(page, repo, 'Ask before edits');
   const choices: [string, string, RegExp][] = [
-    ['Yes', 'yes', /^Chose: Yes\./],
-    ["Yes, and don't ask again for npm run lint commands", 'yes-always', /Allowed for this run\./],
-    ['No', 'no', /^Chose: No\./],
-    ["No, and don't ask again", 'no-always', /Rejected for the rest of this run\./],
+    ['Yes', 'yes', /^You allowed it once · /],
+    [
+      "Yes, and don't ask again for npm run lint commands",
+      'yes-always',
+      /^You allowed it for this run · /,
+    ],
+    ['No', 'no', /^You denied it · /],
+    ["No, and don't ask again", 'no-always', /^You denied it · /],
   ];
+  const answers = page.locator('.run-cmd-answer');
   for (const [index, [label, optionId, result]] of choices.entries()) {
     await send(page, `Run the tests #fourkinds #build ${index}`);
-    const approval = card(page, /Run a command\?/).last();
+    const approval = card(page, /^Run .+\?$/).last();
     await expect(approval.getByRole('button')).toHaveText(
-      [
-        'Yes',
-        "Yes, and don't ask again for npm run lint commands",
-        'Always allow in this project',
-        'No',
-        "No, and don't ask again",
-      ],
+      [/^Yes/, /^Always allow/, /^No/, "No, and don't ask again", 'Details'],
       { timeout: 30_000 },
     );
     await expect(approval.getByRole('button', { name: 'Yes', exact: true })).toHaveClass(/primary/);
     await expect(approval.getByRole('button', { name: 'No', exact: true })).toHaveClass(/deny/);
-    await approval.getByRole('button', { name: label, exact: true }).click();
-    await expect(approval.getByRole('status')).toContainText(`Chose: ${label}.`);
-    await expect(approval.getByRole('status')).toContainText(result);
+    if (optionId === 'yes-always') {
+      await approval.getByRole('button', { name: 'Always allow' }).click();
+      const menu = page.getByRole('menu', { name: 'Always allow' });
+      await expect(menu.getByRole('menuitem')).toHaveText([label, 'Always allow in this project']);
+      await menu.getByRole('menuitem', { name: label }).click();
+    } else {
+      await approval.getByRole('button', { name: label, exact: true }).click();
+    }
     await expect(page.getByText(`permission=${optionId}`, { exact: true })).toBeVisible({
       timeout: 30_000,
     });
     await turnDone(page, 30_000);
+    await expect(card(page, /^Run .+\?$/)).toHaveCount(0);
+    const step = page.locator('.msg.ai').last().locator('.run-cmd-toggle').last();
+    if ((await step.getAttribute('aria-expanded')) !== 'true') await step.click();
+    await expect(answers.last()).toHaveText(result);
   }
   await page.reload();
-  await expect(card(page, /Run a command\?/).getByRole('status')).toHaveText(
-    choices.map(([, , result]) => result),
-  );
+  await expect(card(page, /^Run .+\?$/)).toHaveCount(0);
 });
 
 test('retiring models stay hidden until you ask for them', async ({ page }) => {
@@ -312,11 +311,8 @@ test('Settings sets the default mode and autonomy that new chats start with', as
 
   await linkedChat(page, repo);
   await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Accept edits');
-  await expect(autonomyChip(page)).toHaveAccessibleName('Spark autonomy: Full auto → PR');
-  await autonomyChip(page).click();
+  await openWorkPanel(page);
   await expect(
-    workPanel(page)
-      .getByRole('radiogroup', { name: 'Spark autonomy' })
-      .getByRole('radio', { name: 'Full auto → PR', exact: true }),
+    autonomyLevels(page).getByRole('radio', { name: 'Full auto → PR', exact: true }),
   ).toHaveAttribute('aria-checked', 'true');
 });

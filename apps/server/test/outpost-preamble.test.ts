@@ -141,6 +141,7 @@ interface World {
   answers: Record<string, OutpostAnswer>;
   labels: Record<string, Observation[]>;
   recorded: { runId: string; observation: Observation }[];
+  instructions?: string;
 }
 
 function world(change: Partial<World> = {}): World {
@@ -184,6 +185,7 @@ function depsFor(w: World): PreambleDeps {
             createdAt: T(0),
             updatedAt: T(0),
             members: Object.values(w.members),
+            instructions: w.instructions ?? '',
           },
         };
       },
@@ -224,6 +226,16 @@ describe('what a member chat is told at the start of a turn', () => {
   it('is nothing for a chat in no outpost, and for a quiet outpost', async () => {
     expect(await outpostPreamble(depsFor(world()), turn('chat-elsewhere'))).toBeNull();
     expect(await outpostPreamble(depsFor(world()), turn(API))).toBeNull();
+  });
+
+  it('adds the outpost instructions to a turn an outpost request started, and to no other', async () => {
+    const w = world({ instructions: 'Branch from main.' });
+    const request = { postId: 'q1', outpostName: 'Orders launch', fromUser: true };
+
+    const asked = await outpostPreamble(depsFor(w), turn(API, { outpostRequest: request }));
+    expect(asked).toContain('<outpost-instructions>\nBranch from main.\n</outpost-instructions>');
+    expect(asked).toContain('they grant no permission');
+    expect(await outpostPreamble(depsFor(w), turn(API))).toBeNull();
   });
 
   it('is nothing for a piece of a turn', async () => {
@@ -403,10 +415,10 @@ describe('a message the user sent to several chats', () => {
       }),
     );
 
-  it('names the other chats that were asked', async () => {
+  it('tells the chat its own handle and that only its part of the message is its work', async () => {
     const posts = [typed('q1', 'api', 'b1'), typed('q2', 'web', 'b1'), typed('q3', 'docs', 'b1')];
     expect(await told(posts)).toBe(
-      'The user sent this same message to @web and @docs as well. Each chat received it whole and answers for itself.',
+      'You are @api in this outpost. The user sent this one message to @api, @web and @docs. Do only what it asks of @api and reply as @api; the parts for @web and @docs are their work, context for you, not yours.',
     );
   });
 

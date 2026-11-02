@@ -5,14 +5,13 @@ import './chat-row.css';
 import './chat-menu.css';
 import './sidebar-layout.css';
 import { memo, useCallback, useDeferredValue, useEffect, useRef, useState } from 'react';
-import { AnimatePresence } from 'motion/react';
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConversationSummary, Outpost, Project } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { useOutpostSeam } from '../chat/outpost/outpost-seam.ts';
-import { projectKeys, projectsApi } from '../api/projects.ts';
+import { projectKeys } from '../api/projects.ts';
 import { isConnectionLoss } from '../app/connection/connection-failure.ts';
-import { FolderDialog } from '../chat/project/FolderDialog.tsx';
+import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
 import {
   isFiltering,
@@ -30,10 +29,19 @@ import { ChatRow } from './ChatRow.tsx';
 import { ChatRows } from './ChatRows.tsx';
 import { SidebarDndContext } from './SidebarDnd.tsx';
 import { HistoryChats } from './HistoryChats.tsx';
+import { OlderChatsMore } from './OlderChatsMore.tsx';
+import { useOlderChats } from './use-older-chats.ts';
 import { ProjectMenu } from './ProjectMenu.tsx';
-import { membersByOutpost, memberships, outsideOutposts } from './outpost-members.ts';
+import {
+  membersByOutpost,
+  memberships,
+  outsideOutposts,
+  type MemberChat,
+} from './outpost-members.ts';
+import { roleLine } from '../outposts/member-roles.ts';
 import { attention } from './row-state.ts';
-import { activeGroups } from './sidebar-groups.ts';
+import { useAlertingChats } from '../attention/use-attention.ts';
+import { activeGroups, mergedOrder, projectsWithChats } from './sidebar-groups.ts';
 import { NO_PROJECT, chatLayout, groupOf, listIn, pinnedIn } from './sidebar-order.ts';
 import {
   LIST_PANEL_ID,
@@ -101,11 +109,12 @@ export const ConversationList = memo(function ConversationList({
   const [projectMenu, setProjectMenu] = useState<OpenProjectMenu | null>(null);
   const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null);
   const projectActions = useProjectActions(toaster, folds.open);
-  const [addingProject, setAddingProject] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const all = conversations.data ?? [];
+  const older = useOlderChats(conversations.data);
+  const all = older.chats;
+  const alerting = useAlertingChats();
   const actions = useChatActions({
     toaster,
     projects: projectList,
@@ -126,15 +135,31 @@ export const ConversationList = memo(function ConversationList({
   );
   const byId = new Map([...chats, ...visible].map((chat) => [chat.id, chat]));
   const activeCount = chats.filter((chat) => !chat.archivedAt).length;
-  const waiting = attention(chats, selectedId);
+  const waiting = attention(chats, selectedId, alerting);
 
   const projectAdded = async (project: Project) => {
-    setAddingProject(false);
     folds.open(project.id);
-    toaster.show({ text: `Added project ${project.name}` });
+    toaster.show({ text: `Added project ${project.name}. Start a chat in it.` });
+    onNewInProject(project.id);
     await client.invalidateQueries({ queryKey: projectKeys.all });
   };
-  const addProject = useMutation({ mutationFn: projectsApi.create, onSuccess: projectAdded });
+  const moveTarget = useRef<ConversationSummary | null>(null);
+  const adder = useAddFolder({
+    onAdded: (project) => {
+      const chat = moveTarget.current;
+      moveTarget.current = null;
+      if (chat) actions.move(chat, project.id);
+      else void projectAdded(project);
+    },
+  });
+  const moveActions = (chat: ConversationSummary) =>
+    adder.actions.map((action) => ({
+      ...action,
+      onSelect: () => {
+        moveTarget.current = chat;
+        action.onSelect();
+      },
+    }));
 
   const openChat = (id: string) => {
     onSelect(id);
@@ -148,9 +173,13 @@ export const ConversationList = memo(function ConversationList({
     [...membership].map(([chatId, member]) => `${chatId}:${member.outpostId}`).join(),
   );
   const projectById = new Map(projectList.map((project) => [project.id, project]));
+  const allProjectIds = projectList.map((project) => project.id);
+  const withChats = projectsWithChats(
+    activeGroups(outsideOutposts(chats, membership), projectList).groups,
+  );
   const dnd = useSidebarDnd({
     layout: chatLayout(grouped),
-    projectIds: projectList.map((project) => project.id),
+    projectIds: allProjectIds.filter((id) => withChats.has(id)),
     chatTitle: (id) => byId.get(id)?.title ?? 'Chat',
     updatedAt: (id) => byId.get(id)?.updatedAt ?? '',
     projectName: (id) => projectById.get(id)?.name ?? 'the project',
@@ -159,7 +188,7 @@ export const ConversationList = memo(function ConversationList({
       const group = groupOf(drop.to);
       if (chat) actions.drop(chat, group === NO_PROJECT ? null : group, drop.order);
     },
-    onProjectsDrop: projectActions.reorder,
+    onProjectsDrop: (shown) => projectActions.reorder(mergedOrder(allProjectIds, shown)),
     onHold: (chatId, point) => {
       const row = listRef.current?.querySelector<HTMLElement>(`[data-chat="${chatId}"]`);
       if (row) setMenu({ chatId, anchor: anchorFor(row, point) });
@@ -216,6 +245,13 @@ export const ConversationList = memo(function ConversationList({
     setRenamingId(null);
     if (title) actions.rename(chat, title);
   });
+  const prepareChat = useStableCallback((id: string) => {
+    void client.prefetchQuery({
+      queryKey: queryKeys.conversation(id),
+      queryFn: () => api.getConversation(id),
+      staleTime: 5_000,
+    });
+  });
   const handleRestore = useStableCallback((chat: ConversationSummary) =>
     actions.archive(chat, false),
   );
@@ -225,7 +261,7 @@ export const ConversationList = memo(function ConversationList({
     chat: ConversationSummary,
     sortable: boolean,
     index: number,
-    handle?: string,
+    member?: MemberChat,
   ) => (
     <ChatRow
       key={chat.id}
@@ -236,8 +272,11 @@ export const ConversationList = memo(function ConversationList({
       settling={dnd.busy}
       flash={chat.id === actions.flashId}
       index={index}
-      handle={handle}
+      handle={member?.handle}
+      faceless={member ? !member.face : false}
+      relation={member ? roleLine(member.role) : null}
       onOpen={handleOpen}
+      onPrepare={prepareChat}
       onMenu={handleMenu}
       onRename={handleRename}
       onRestore={handleRestore}
@@ -326,7 +365,6 @@ export const ConversationList = memo(function ConversationList({
                   searching={searching}
                   canDrag={canDrag}
                   hasChats={chats.length > 0}
-                  hasProjects={projectList.length > 0}
                   projectById={projectById}
                   dnd={dnd}
                   folds={folds}
@@ -335,9 +373,10 @@ export const ConversationList = memo(function ConversationList({
                   renderRows={renderRows}
                   renderRow={renderRow}
                   members={membersByOutpost(visible, membership)}
+                  canAddProject={adder.allowed}
                   onAddProject={() => {
-                    addProject.reset();
-                    setAddingProject(true);
+                    moveTarget.current = null;
+                    adder.openDialog();
                   }}
                   onNewInProject={onNewInProject}
                   onProjectMenu={(projectId, element) =>
@@ -356,6 +395,9 @@ export const ConversationList = memo(function ConversationList({
                   renderRow={renderRow}
                 />
               )}
+              {older.hasMore && !searching && (
+                <OlderChatsMore loading={older.loading} failed={older.failed} onMore={older.more} />
+              )}
             </div>
           </div>
         </SidebarDndContext>
@@ -370,6 +412,7 @@ export const ConversationList = memo(function ConversationList({
           projects={projectList}
           actions={actions}
           toaster={toaster}
+          folderActions={moveActions(menuChat)}
           onClose={closeMenu}
           onRename={() => setRenamingId(menuChat.id)}
         />
@@ -384,18 +427,7 @@ export const ConversationList = memo(function ConversationList({
           onRemove={() => projectActions.remove(menuProject)}
         />
       )}
-      <AnimatePresence>
-        {addingProject && (
-          <FolderDialog
-            key="add-project"
-            linking={addProject.isPending}
-            error={addProject.isError ? addProject.error.message : null}
-            onUse={(rootPath) => addProject.mutate(rootPath)}
-            onCloned={(project) => void projectAdded(project)}
-            onClose={() => setAddingProject(false)}
-          />
-        )}
-      </AnimatePresence>
+      {adder.flow}
     </nav>
   );
 });

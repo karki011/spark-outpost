@@ -1,10 +1,13 @@
 import { z } from 'zod';
 import { promptCacheSchema } from './prompt-cache.ts';
 import { browserShotSchema } from './browser.ts';
+import { chatFileSchema } from './chat-files.ts';
+import { artifactPageSchema } from './artifact-pages.ts';
 import { commandRunSchema } from './command-runs.ts';
 import { adviceSummarySchema } from './advice.ts';
 import { ANNOTATIONS_PER_MESSAGE, annotationInputSchema } from './annotations.ts';
 import { approvalSchema } from './approvals.ts';
+import { assistantTopicSchema } from './assistant-history.ts';
 import { ATTACHMENTS_PER_MESSAGE, attachmentSchema } from './attachments.ts';
 import { categorySchema, titleSourceSchema } from './categories.ts';
 import { chatSettingsSchema } from './chat-settings.ts';
@@ -32,6 +35,12 @@ import {
 
 export const TITLE_MAX_LENGTH = 40;
 export const UNTITLED_CONVERSATION = 'New chat';
+
+export function shownChatTitle(title: string): string {
+  return title.trim() || UNTITLED_CONVERSATION;
+}
+
+export const CHAT_LIST_PAGE = 500;
 
 export const messageSchema = z.object({
   id: z.uuid(),
@@ -105,6 +114,7 @@ export const conversationSummarySchema = z.object({
     })
     .nullable(),
   archivedAt: z.string().nullable(),
+  autoArchivedDays: z.number().int().positive().optional(),
   pinnedAt: z.string().nullable(),
   pinnedOrder: z.number().int().nullable().default(null),
   projectOrder: z.number().int().nullable().default(null),
@@ -123,6 +133,10 @@ export const conversationSummarySchema = z.object({
   match: searchMatchSchema.optional(),
 });
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>;
+
+export function archivedInactiveLine(days: number): string {
+  return `Archived after ${days} ${days === 1 ? 'day' : 'days'} without activity`;
+}
 
 export const RENAMED_TITLE_MAX_LENGTH = 100;
 export const CONVERSATION_SEARCH_MAX_LENGTH = 200;
@@ -149,6 +163,14 @@ export const activityStepSchema = z.object({
   done: z.boolean(),
   reasoningId: z.string().optional(),
   subagent: z.boolean().optional(),
+  textOffset: z.number().int().nonnegative().optional(),
+  textBefore: z.string().optional(),
+  textHeld: z.number().int().nonnegative().optional(),
+  startedAt: z.number().optional(),
+  finishedAt: z.number().optional(),
+  toolKind: z.string().optional(),
+  toolName: z.string().optional(),
+  target: z.string().optional(),
 });
 export type ActivityStep = z.infer<typeof activityStepSchema>;
 
@@ -166,10 +188,13 @@ export const conversationDetailSchema = z.object({
   plans: conversationPlansSchema.optional(),
   compactions: z.array(compactionSchema).optional(),
   continuedIn: z.array(continuationSchema).optional(),
+  topics: z.array(assistantTopicSchema).optional(),
   queue: z.array(queuedMessageSchema).optional(),
   memberMessages: z.array(memberMessageSchema).optional(),
   railFlags: z.array(railFlagSchema).optional(),
   browserShots: z.array(browserShotSchema).optional(),
+  chatFiles: z.array(chatFileSchema).optional(),
+  artifactPages: z.array(artifactPageSchema).optional(),
   commands: z.array(commandRunSchema).optional(),
   interruption: interruptionSchema.nullable().optional(),
   subagents: z.record(z.string(), z.array(subagentRowSchema)).optional(),

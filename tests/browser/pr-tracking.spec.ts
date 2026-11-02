@@ -225,8 +225,15 @@ test('Refresh reads a pull request Spark stopped checking, from the row and from
   await expect(state).toHaveText('Closed');
   await card.getByRole('button', { name: 'Pull request acme/widgets#7 details' }).click();
   await card.getByRole('button', { name: 'Show in Links' }).click();
-  await expect(row(page, 7)).toContainText('Closed');
+  const linksState = row(page, 7).locator('.prl-facts > .spill').first();
+  await expect(linksState).toHaveText('Closed');
+  const refreshed = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      /\/pull-requests\/[^/]+\/refresh$/.test(response.url()),
+  );
   await row(page, 7).getByRole('button', { name: 'Refresh pull request #7' }).press('Space');
-  await expect(row(page, 7)).toContainText('Open');
+  expect((await refreshed).ok()).toBe(true);
+  await expect(linksState).toHaveText('Open');
   await expect(state).toHaveText('Open');
 });

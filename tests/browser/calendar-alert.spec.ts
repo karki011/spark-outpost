@@ -1,10 +1,9 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { calendarNowSchema, type MeetingAlertPayload } from '../../packages/contracts/src/index.ts';
-import { apiNow, matchApiClock } from './api-clock.ts';
+import { apiNow, matchApiClock, setPageClock } from './api-clock.ts';
 import { resetTestDatabase } from './database.ts';
 import { island, openNotchIsland } from './island-notch-desktop.ts';
-import { animationsSettled } from './settle.ts';
 import { FAKE_CALENDAR_STATE } from './stub-config.ts';
 
 test.skip(process.env.SPARK_FAKE_CALENDAR !== '1', 'needs SPARK_FAKE_CALENDAR=1');
@@ -19,7 +18,7 @@ interface AlertWindow {
   alertRegions: { boxes: unknown[] }[];
   alertFocus: number;
   alertAction: (action: unknown) => void;
-  alertFeed: { payload: (value: unknown) => void; leave: () => void };
+  alertFeed: { payload: (value: unknown) => void; leave: () => void; takeFocus: () => void };
 }
 
 async function recordIslandAlerts(page: Page) {
@@ -49,9 +48,14 @@ async function openOverlay(page: Page, payload: MeetingAlertPayload) {
     let onPayload: (value: unknown) => void = () => undefined;
     let onPlace: (value: unknown) => void = () => undefined;
     let onLeave: () => void = () => undefined;
+    let onTakeFocus: () => void = () => undefined;
     Object.assign(window, { alertActs: acts, alertRegions: regions, alertFocus: 0 });
     Object.assign(window, {
-      alertFeed: { payload: (value: unknown) => onPayload(value), leave: () => onLeave() },
+      alertFeed: {
+        payload: (value: unknown) => onPayload(value),
+        leave: () => onLeave(),
+        takeFocus: () => onTakeFocus(),
+      },
       sparkDesktop: {
         platform: 'darwin',
         meetingAlert: {
@@ -65,6 +69,10 @@ async function openOverlay(page: Page, payload: MeetingAlertPayload) {
           },
           onLeave: (callback: () => void) => {
             onLeave = callback;
+            return () => undefined;
+          },
+          onTakeFocus: (callback: () => void) => {
+            onTakeFocus = callback;
             return () => undefined;
           },
           ready: () => {
@@ -97,6 +105,7 @@ async function standupPayload(page: Page): Promise<MeetingAlertPayload> {
     events: [standup],
     calendars: { [standup.calendarKey]: 'Spark Work' },
     countdown: null,
+    notice: { title: 'Standup', body: 'Zoom' },
   };
 }
 
@@ -153,20 +162,33 @@ test('Bubble from Scout keeps the island bubble and sends no centre alert', asyn
   expect(await page.evaluate(() => (window as unknown as AlertWindow).alertShows)).toEqual([]);
 });
 
+function landing(page: Page): Promise<number> {
+  return page.evaluate(
+    () =>
+      document
+        .getAnimations()
+        .filter((animation) => animation.playState === 'running')
+        .map((animation) => (animation as CSSAnimation).animationName)
+        .filter((name) => name.startsWith('ma-') && name !== 'ma-bob').length,
+  );
+}
+
 test('the hanging card offers Join, Snooze and Dismiss, and Esc dismisses once clicked', async ({
   page,
 }) => {
   const payload = await standupPayload(page);
   await openOverlay(page, payload);
-  const card = page.getByRole('alertdialog', { name: /^Standup starts in \d min$/ });
+  const card = page.getByRole('alertdialog', { name: /^Meeting\. Standup starts in \d min$/ });
   await expect(card).toBeVisible();
   await expect(card).toContainText(/\d+:\d{2}( [AP]M)?–\d+:\d{2} [AP]M · Zoom · 3 people/);
   await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeVisible();
-  await expect(card).toHaveAccessibleDescription('Esc dismisses · ⌘J joins');
+  await expect(card).toHaveAccessibleDescription(
+    'Esc dismisses · ⌘J joins · ⌃⌥⌘M focuses this card',
+  );
   await expect
     .poll(() => alertWindow(page, (window) => window.alertRegions.at(-1)?.boxes.length ?? 0))
     .toBe(2);
-  await animationsSettled(page);
+  await expect.poll(() => landing(page)).toBe(0);
 
   await card.getByRole('button', { name: 'Snooze 1 min' }).click({ force: true });
   expect(await alertWindow(page, (window) => window.alertFocus)).toBe(0);
@@ -180,6 +202,52 @@ test('the hanging card offers Join, Snooze and Dismiss, and Esc dismisses once c
 
   await page.evaluate(() => (window as unknown as AlertWindow).alertFeed.leave());
   await expect(card).toBeHidden();
+});
+
+test('assistive technology gets focus on the card, Tab reaches each button and Esc dismisses', async ({
+  page,
+}) => {
+  const payload = await standupPayload(page);
+  await openOverlay(page, payload);
+  const card = page.getByRole('alertdialog', { name: /^Meeting\. Standup starts in \d min$/ });
+  await expect(card).toBeVisible();
+  await expect(card).not.toBeFocused();
+  await page.evaluate(() => (window as unknown as AlertWindow).alertFeed.takeFocus());
+  await expect(card).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(card.getByRole('button', { name: 'Snooze 1 min' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(card.getByRole('button', { name: 'Dismiss' })).toBeFocused();
+  await page.screenshot({ path: 'test-results/meeting-card/keyboard-focus.png' });
+  await page.keyboard.press('Escape');
+  expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
+    { kind: 'dismiss', key: payload.key, eventKey: null },
+  ]);
+});
+
+test('a card that comes back at the start says it starts now straight away', async ({ page }) => {
+  const payload = await standupPayload(page);
+  const start = Date.parse(payload.events[0]!.start);
+  await setPageClock(page, start - 2 * MINUTE);
+  await openOverlay(page, payload);
+  await page.clock.pauseAt(start - 90_000);
+  await expect(
+    page.getByRole('alertdialog', { name: 'Meeting. Standup starts in 2 min' }),
+  ).toBeVisible();
+
+  await page.evaluate(() => (window as unknown as AlertWindow).alertFeed.leave());
+  await page.clock.runFor(1_000);
+  await expect(page.getByRole('alertdialog')).toBeHidden();
+  await page.clock.setSystemTime(start);
+  await page.evaluate(
+    (value) => (window as unknown as AlertWindow).alertFeed.payload(value),
+    payload,
+  );
+  await expect(
+    page.getByRole('alertdialog', { name: 'Meeting. Standup starts now' }),
+  ).toBeVisible();
 });
 
 test('meetings that start together share one card with a Join for each', async ({ page }) => {
@@ -197,7 +265,7 @@ test('meetings that start together share one card with a Join for each', async (
     key: `${design.key}|${standup!.key}`,
     events: [design, standup!],
   });
-  const card = page.getByRole('alertdialog', { name: /^2 meetings start in \d min$/ });
+  const card = page.getByRole('alertdialog', { name: /^Meeting\. 2 meetings start in \d min$/ });
   await expect(card.getByRole('listitem')).toHaveCount(2);
   await expect(card.getByRole('button', { name: 'Join Google Meet' })).toBeVisible();
   await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeVisible();

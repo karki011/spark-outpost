@@ -2,10 +2,12 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import {
   API_TOKEN_HEADER,
+  attentionListSchema,
   attentionReport,
   conversationSummarySchema,
   parseAppEvent,
   type AppEventKind,
+  type AttentionItem,
   type AttentionReport,
   type ConversationSummary,
 } from '@spark-outpost/contracts';
@@ -14,10 +16,12 @@ const RECONNECT_MS = 2_000;
 const LIST_TIMEOUT_MS = 10_000;
 const LIST_KINDS: readonly AppEventKind[] = [
   'conversation',
+  'seen',
   'run',
   'approval',
   'task',
   'outpost_changed',
+  'attention',
 ];
 const chatListSchema = z.array(conversationSummarySchema);
 
@@ -64,19 +68,23 @@ export function startAttentionFeed(options: AttentionFeedOptions): AttentionFeed
   let stale = false;
   let reported: string | null = null;
 
-  const chatList = async (): Promise<ConversationSummary[] | null> => {
+  const fetchJson = async (path: string): Promise<unknown> => {
     try {
-      const response = await fetchImpl(`${options.origin}/api/conversations`, {
+      const response = await fetchImpl(`${options.origin}${path}`, {
         headers,
         signal: AbortSignal.any([stopped.signal, AbortSignal.timeout(LIST_TIMEOUT_MS)]),
       });
-      if (!response.ok) return null;
-      const parsed = chatListSchema.safeParse(await response.json());
-      return parsed.success ? parsed.data : null;
+      return response.ok ? await response.json() : null;
     } catch {
       return null;
     }
   };
+
+  const chatList = async (): Promise<ConversationSummary[] | null> =>
+    chatListSchema.safeParse(await fetchJson('/api/conversations')).data ?? null;
+
+  const attentionItems = async (): Promise<AttentionItem[] | null> =>
+    attentionListSchema.safeParse(await fetchJson('/api/attention')).data?.items ?? null;
 
   const reportChanged = (report: AttentionReport) => {
     const next = JSON.stringify(report);
@@ -93,9 +101,9 @@ export function startAttentionFeed(options: AttentionFeedOptions): AttentionFeed
     loading = true;
     do {
       stale = false;
-      const chats = await chatList();
+      const [chats, items] = await Promise.all([chatList(), attentionItems()]);
       if (stopped.signal.aborted) return;
-      if (chats) reportChanged(attentionReport(chats));
+      if (chats && items) reportChanged(attentionReport(chats, items));
     } while (stale);
     loading = false;
   };

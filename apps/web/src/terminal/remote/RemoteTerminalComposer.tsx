@@ -6,6 +6,7 @@ import { SendButton } from '../../chat/composer/SendButton.tsx';
 import { enterAction } from '../../chat/queue/send-choice.ts';
 import { SecretWarning } from '../../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../../ui/use-secret-guard.ts';
+import { restoreFailedDraft } from '../../chat/composer/use-chat-draft.ts';
 
 const LABEL = 'Message the agent';
 
@@ -35,8 +36,11 @@ export function RemoteTerminalComposer({
     lastNow.current = now;
     if (!ready || secrets.blocks(text)) return;
     setSending(true);
+    setText('');
     try {
-      if (await onSend(text, now)) setText('');
+      if (!(await onSend(text, now))) setText((current) => restoreFailedDraft(current, text));
+    } catch {
+      setText((current) => restoreFailedDraft(current, text));
     } finally {
       setSending(false);
     }
@@ -52,7 +56,6 @@ export function RemoteTerminalComposer({
           onSendAnyway={() => void send(lastNow.current)}
         />
       }
-      context={null}
       bar={
         <SendButton
           busy={working}

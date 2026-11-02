@@ -6,7 +6,7 @@ import { Blobatar } from 'blobatar/react';
 import * as expressions from 'blobatar/expression';
 import { BlobScout } from '../../brand/BlobScout.tsx';
 import { usePopover } from '../../ui/use-popover.ts';
-import { branchRows, placeLabel } from './place-picker-model.ts';
+import { branchRows, placeLabel, showsPlaceMenu } from './place-picker-model.ts';
 import {
   useChatWorkspace,
   useFetchBranches,
@@ -14,6 +14,7 @@ import {
   useUpdateWorkspace,
 } from './use-chat-workspace.ts';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
+import { AdoptPullList } from './AdoptPullList.tsx';
 
 interface WorkPlaceMenuProps {
   conversationId: string;
@@ -39,9 +40,7 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
   const refresh = useFetchBranches(projectId);
   const update = useUpdateWorkspace(conversationId);
   const data = workspace.data;
-  if (!data) return null;
-  if (data.current) return null;
-  if (!checkoutBranch && data.place === 'worktree' && !data.requestedBranch) return null;
+  if (!showsPlaceMenu(data, checkoutBranch)) return null;
 
   const pick = (body: UpdateChatWorkspaceRequest) => {
     update.mutate(body);
@@ -221,6 +220,7 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
             {update.error.message}
           </p>
         )}
+        <AdoptPullList conversationId={conversationId} projectId={projectId} />
         <div className="pp-foot">
           <button
             type="button"

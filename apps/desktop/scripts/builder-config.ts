@@ -16,6 +16,7 @@ import { checkTmuxBinary } from './tmux-bundle.ts';
 import { MAC_CONTROL_BINARY, macControlCheck } from './mac-control-bundle.ts';
 import { checkStagedCalendar } from './calendar-bundle.ts';
 import { checkStagedVoice } from './voice-bundle.ts';
+import { NO_ACTIVATE_ADDON, noActivateCheck } from './no-activate-bundle.ts';
 
 export const UPDATE_FEED_ENV = 'SPARK_UPDATE_FEED_URL';
 const UPDATE_FEED_URL = '';
@@ -163,6 +164,8 @@ async function copyRuntime(stageDir: string, arch: MacArch, resources: string): 
   await checkStagedCalendar(path.join(resources, 'calendar'), arch);
   await copy(path.join(stageDir, arch, 'voice'), 'voice');
   await checkStagedVoice(path.join(resources, 'voice'), arch);
+  await copy(path.join(stageDir, arch, 'no-activate'), 'no-activate');
+  await noActivateCheck(path.join(resources, 'no-activate', NO_ACTIVATE_ADDON), arch);
 }
 
 export interface BuilderOptions {

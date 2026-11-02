@@ -25,6 +25,7 @@ const HANDLE_CONSTRAINT = 'outpost_members_handle';
 interface OutpostRow {
   id: string;
   name: string;
+  instructions: string;
   paused_at: Date | null;
   created_at: Date;
   updated_at: Date;
@@ -36,10 +37,27 @@ interface MemberRow {
   handle: string;
   position: number;
   joined_at: Date;
+  story_position?: number | null;
+  story_lead?: string | null;
+  story_after?: string | null;
 }
 
-const OUTPOST_COLUMNS = 'o.id, o.name, o.paused_at, o.created_at, o.updated_at';
+const OUTPOST_COLUMNS = 'o.id, o.name, o.instructions, o.paused_at, o.created_at, o.updated_at';
 const MEMBER_COLUMNS = 'outpost_id, conversation_id, handle, position, joined_at';
+const LISTED_MEMBER_COLUMNS = `m.outpost_id, m.conversation_id, m.handle, m.position, m.joined_at,
+  t.position AS story_position, t.lead_conversation_id AS story_lead,
+  t.depends_on_conversation_id AS story_after`;
+
+function memberStory(row: MemberRow): Pick<OutpostMember, 'story'> {
+  if (row.story_position === null || row.story_position === undefined) return {};
+  return {
+    story: {
+      lead: row.story_lead ?? null,
+      after: row.story_after ?? null,
+      position: row.story_position,
+    },
+  };
+}
 
 function toMember(row: MemberRow): OutpostMember {
   return {
@@ -47,6 +65,7 @@ function toMember(row: MemberRow): OutpostMember {
     handle: row.handle,
     position: row.position,
     joinedAt: row.joined_at.toISOString(),
+    ...memberStory(row),
   };
 }
 
@@ -58,14 +77,17 @@ function toOutpost(row: OutpostRow, members: OutpostMember[]): StoredOutpost {
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
     members,
+    instructions: row.instructions,
   };
 }
 
 async function withMembers(db: Queryable, rows: OutpostRow[]): Promise<StoredOutpost[]> {
   if (rows.length === 0) return [];
   const found = await db.query<MemberRow>(
-    `SELECT ${MEMBER_COLUMNS} FROM outpost_members
-     WHERE outpost_id = ANY($1::uuid[]) ORDER BY position, joined_at, conversation_id`,
+    `SELECT ${LISTED_MEMBER_COLUMNS} FROM outpost_members m
+     LEFT JOIN outpost_story_tasks t
+       ON t.conversation_id = m.conversation_id AND t.outpost_id = m.outpost_id
+     WHERE m.outpost_id = ANY($1::uuid[]) ORDER BY m.position, m.joined_at, m.conversation_id`,
     [rows.map((row) => row.id)],
   );
   return rows.map((row) =>
@@ -162,6 +184,19 @@ export const setName: OutpostStore['setName'] = async (db, workspaceId, id, name
   await db.query(
     'UPDATE outposts SET name = $3, updated_at = now() WHERE workspace_id = $1 AND id = $2',
     [workspaceId, id, name],
+  );
+  return getOutpost(db, workspaceId, id);
+};
+
+export const setInstructions: OutpostStore['setInstructions'] = async (
+  db,
+  workspaceId,
+  id,
+  instructions,
+) => {
+  await db.query(
+    'UPDATE outposts SET instructions = $3, updated_at = now() WHERE workspace_id = $1 AND id = $2',
+    [workspaceId, id, instructions],
   );
   return getOutpost(db, workspaceId, id);
 };

@@ -135,7 +135,11 @@ describe('approval gate', () => {
     expect(await allowed).toMatchObject({ optionId: 'yes-always', allowed: true });
     expect(
       await gate.review({ ...other, toolCallId: 'call-4' }, new AbortController().signal),
-    ).toMatchObject({ allowed: true, note: 'Allowed `pnpm lint` (allowed for this run)' });
+    ).toMatchObject({
+      allowed: true,
+      note: 'Allowed `pnpm lint` (allowed for this run)',
+      quiet: true,
+    });
   });
 
   it('waits for the user, emits requested and decided events, and answers the chosen option', async () => {
@@ -171,6 +175,7 @@ describe('approval gate', () => {
     expect(answer).toMatchObject({
       allowed: true,
       note: 'Allowed `ls -la` (a read-only command inside the project)',
+      quiet: true,
     });
     const { rows } = await t.db.query(
       `SELECT decided_by, status FROM approvals WHERE run_id = $1`,

@@ -57,6 +57,10 @@ export const PULL_REQUESTS_ICON = (
   </>
 );
 
+export const SPARK_RULES_ICON = (
+  <path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6zM9 12l2 2 4-4" />
+);
+
 export const CONNECTORS_ICON = <path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5" />;
 
 export const MCP_ICON = (
@@ -97,3 +101,10 @@ export const HELP_ICON = (
 );
 
 export const RESET_ICON = <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8M3 3v5h5" />;
+
+export const BROWSER_ICON = (
+  <>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M3 9h18M6.5 6.5h.01M9 6.5h.01" />
+  </>
+);

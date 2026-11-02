@@ -1,6 +1,6 @@
 import { argumentWords, commandTree } from './command-tree.ts';
 import { programName } from './commands.ts';
-import { ghOnlyReads } from './gh-reads.ts';
+import { ghArgs, ghOnlyReads, ghRevealsToken } from './gh-reads.ts';
 import { gitConfigUse, type GitConfigUse } from './git-config.ts';
 import { withoutDataHeredocs } from './inline-code.ts';
 
@@ -181,11 +181,24 @@ function gitPublishes(command: string, publishing: readonly string[]): boolean {
   });
 }
 
+const GH_IN_TEXT = /(?:^|[^\w.-])gh((?:[ \t]+[^\s;|&()`$"'<>]+)+)/g;
+
+function opaqueTokenCommands(command: string): string[][] {
+  return [...command.matchAll(GH_IN_TEXT)]
+    .map((found) => ['gh', ...found[1]!.trim().split(/\s+/)])
+    .filter((program) => ghRevealsToken(program.slice(1)));
+}
+
 export function hostingCommands(command: string): string[][] {
   const tree = commandTree(withoutDataHeredocs(command));
-  return tree.commands
+  const commands = tree.opaque
+    ? [...tree.commands, ...opaqueTokenCommands(withoutDataHeredocs(command))]
+    : tree.commands;
+  const hosting = commands
     .filter((program) => HOSTING_CLIS.includes(programName(program)))
-    .map((program) => argumentWords(tree, program));
+    .map((program) => argumentWords(tree, program))
+    .map((words) => (programName(words) === 'gh' ? [words[0]!, ...ghArgs(words.slice(1))] : words));
+  return [...new Map(hosting.map((program) => [JSON.stringify(program), program])).values()];
 }
 
 export function hostingRead(program: readonly string[]): boolean {

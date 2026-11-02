@@ -11,7 +11,7 @@ You'll set the three privacy choices only the Mac app has. About 2 minutes.
 ## Anonymous heartbeat
 
 1. Open **Settings → Help**.
-2. Turn **Send anonymous heartbeat** off or on. It's on by default.
+2. Turn **Send anonymous heartbeat** off (on by default).
 
 About 30 seconds after starting, then daily, the app sends this to the Spark Outpost team:
 
@@ -25,13 +25,13 @@ Cloudflare receives it and adds the country. Spark in a browser sends nothing.
 
 ## Full Disk Access
 
-Optional: it stops macOS asking each time an agent reads a protected folder, such as `~/Library`, Desktop, Documents or Downloads.
+Optional: it stops macOS asking each time Spark reads a protected folder, such as `~/Library`, Desktop, Documents or Downloads.
 
 1. Open **Settings → Help** and find **Full Disk Access**.
 2. Select **Open System Settings**.
 3. Under **Privacy & Security → Full Disk Access**, switch on **Spark Outpost**.
 
-Without it, macOS may ask once per folder; you allow each. It doesn't replace Spark's own [approvals](approvals.md).
+Without it, macOS may ask once per folder. It doesn't replace Spark's [approvals](approvals.md).
 
 ## Keychain prompt
 
@@ -39,6 +39,6 @@ The first time Spark reads a key, macOS may ask whether Spark Outpost may use it
 
 1. Select **Always Allow**. Updates keep that permission.
 
-Spark keeps working while the prompt is open. After 10 seconds it stops waiting, and a test message says it's waiting for the keychain.
+Spark keeps working meanwhile; after 10 seconds it stops waiting, and a test message says it's waiting for the keychain.
 
 **Next:** [Manage providers, models and Jev](providers-and-models.md)

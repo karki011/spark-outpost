@@ -13,6 +13,7 @@ import {
   postColumns,
   queueRows,
   replyRow,
+  pendingApproval,
   setRunStatus,
 } from './a2a-fixtures.ts';
 import { addMemberChat, createOutpostRow, insertRequestRow } from './outpost-fixtures.ts';
@@ -108,6 +109,7 @@ describe('SendStreamingMessage', () => {
     const stream = client.sendMessageStream(sendParams(postId));
     await firstTask(stream);
     const runId = await startedRun(postId);
+    await pendingApproval(t.db, runId);
     await setRunStatus(t.db, runId, 'awaiting_approval');
     expect((await nextStatus(stream)).state).toBe(TaskState.TASK_STATE_INPUT_REQUIRED);
     expect((await stream.next()).done).toBe(true);
@@ -156,8 +158,13 @@ describe('SubscribeToTask', () => {
     const stream = client.resubscribeTask({ tenant: '', id: task.id });
     expect((await firstTask(stream)).status?.state).toBe(TaskState.TASK_STATE_WORKING);
 
+    await pendingApproval(t.db, runId);
     await setRunStatus(t.db, runId, 'awaiting_approval');
     expect((await nextStatus(stream)).state).toBe(TaskState.TASK_STATE_INPUT_REQUIRED);
+    await t.db.query(
+      "UPDATE approvals SET status = 'allowed', decided_at = now() WHERE run_id = $1",
+      [runId],
+    );
     await setRunStatus(t.db, runId, 'running');
     expect((await nextStatus(stream)).state).toBe(TaskState.TASK_STATE_WORKING);
     await setRunStatus(t.db, runId, 'failed');

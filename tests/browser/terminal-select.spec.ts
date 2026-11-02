@@ -3,7 +3,7 @@ import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { SESSION_START_MS, typeLine } from './native-terminal-fixture.ts';
-import { openChats } from './navigation.ts';
+import { chooseSessionType, openChats } from './navigation.ts';
 
 const READY = 'Ready for terminal input. No provider request is made.';
 const SHOTS = '.local/report';
@@ -13,10 +13,7 @@ async function startTerminal(page: Page): Promise<{ conversationId: string; work
   await page.setViewportSize({ width: 1440, height: 900 });
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await page
-    .getByRole('radiogroup', { name: 'Session type' })
-    .getByRole('radio', { name: 'Terminal' })
-    .click();
+  await chooseSessionType(page, 'Terminal');
   await page.getByRole('button', { name: /^Terminal agent: / }).click();
   await page
     .getByRole('dialog', { name: 'Terminal agent and permissions' })

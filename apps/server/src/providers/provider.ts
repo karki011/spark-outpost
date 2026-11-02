@@ -1,5 +1,7 @@
 import type {
   AgentCommand,
+  AgentContent,
+  AgentForm,
   AgentModeOption,
   ConfigOptionInfo,
   ConfigValues,
@@ -48,12 +50,16 @@ export interface ModeRequests {
   subscribe(listener: (mode: string) => void): () => void;
 }
 
+export type ProviderMessage = string | { text: string; attachments: readonly TurnAttachment[] };
+
+export type SteerOutcome = boolean | 'later';
+
 export interface SteerRequests {
-  attach(send: (text: string) => Promise<boolean>): () => void;
+  attach(send: (text: ProviderMessage) => Promise<SteerOutcome>): () => void;
 }
 
 export interface TurnInbox {
-  take(): Promise<string | null>;
+  take(): Promise<ProviderMessage | null>;
 }
 
 export interface StoredSession {
@@ -91,6 +97,7 @@ export interface ProviderTurn {
   history: ConversationTurn[];
   settings: AgentSettings;
   projectRoots?: readonly string[];
+  chatFolder?: boolean;
   signal: AbortSignal;
   observe?: (output: ProviderOutput) => void;
   audit?: ProtocolObserver;
@@ -103,6 +110,7 @@ export interface ProviderTurn {
   steering?: SteerRequests;
   inbox?: TurnInbox;
   approvals?: PermissionGate;
+  questions?: QuestionGate;
   askTitle?: boolean;
   session?: SessionTarget;
   preamble?: string;
@@ -123,11 +131,34 @@ export type GateAnswer =
       note: string;
       approvalId?: string;
       denial?: string;
+      quiet?: boolean;
     }
   | { outcome: 'cancelled'; note: string };
 
+export function isQuiet(answer: GateAnswer): boolean {
+  return answer.outcome === 'selected' && answer.quiet === true;
+}
+
 export interface PermissionGate {
   review(request: ApprovalRequest, signal: AbortSignal): Promise<GateAnswer>;
+}
+
+export interface AgentQuestion {
+  toolCallId: string;
+  rpcId: string | null;
+  agent: string;
+  form: AgentForm;
+}
+
+export type QuestionReply =
+  { action: 'accept'; content: AgentContent } | { action: 'decline' } | { action: 'cancel' };
+
+export interface QuestionGate {
+  ask(
+    question: AgentQuestion,
+    signal: AbortSignal,
+    agentCancel: AbortSignal,
+  ): Promise<QuestionReply>;
 }
 
 export interface AuditMarks {
@@ -219,7 +250,9 @@ export type ProviderOutput =
       name: string;
       tool?: boolean;
       toolKind?: string;
+      toolName?: string;
       target?: string;
+      path?: string;
       subagent?: string;
       waits?: boolean;
     }
@@ -228,7 +261,9 @@ export type ProviderOutput =
       name: string;
       tool?: boolean;
       toolKind?: string;
+      toolName?: string;
       target?: string;
+      path?: string;
       subagent?: string;
       waits?: boolean;
     }
@@ -239,7 +274,13 @@ export type ProviderOutput =
   | { kind: 'subagent_started'; id: string; parentId: string | null; name: string; task: string }
   | { kind: 'subagent_finished'; id: string; state: 'done' | 'failed' | 'cancelled' }
   | { kind: 'subagent_report'; id: string; report: SubagentReported }
-  | { kind: 'background_work'; agents: number; tasks: number; names: string[] }
+  | {
+      kind: 'background_work';
+      agents: number;
+      tasks: number;
+      names: string[];
+      wakesAt?: number;
+    }
   | { kind: 'tool_input'; id: string; input: unknown; secret: boolean }
   | { kind: 'tool_result'; id: string; output: unknown; secret: boolean }
   | { kind: 'capabilities'; report: ProviderCapabilityReport }
@@ -274,12 +315,22 @@ export type ProviderOutput =
       live?: boolean;
     }
   | { kind: 'link'; url: string; title: string; source: Exclude<TaskLinkSource, 'user'> }
+  | { kind: 'artifact_link'; conversationId: string; artifactId: string }
   | { kind: 'commands'; commands: AgentCommand[] }
   | { kind: 'instructions'; files: string[] }
   | { kind: 'rail_flag'; flag: ObservedRail }
   | { kind: 'secret_read'; paths: string[] }
-  | { kind: 'command_started'; id: string; command: string; cwd: string | null; live: boolean }
+  | { kind: 'web_read'; labels: string[] }
+  | {
+      kind: 'command_started';
+      id: string;
+      command: string;
+      description?: string | null;
+      cwd: string | null;
+      live: boolean;
+    }
   | { kind: 'command_output'; id: string; data: string; replace?: boolean }
+  | { kind: 'command_described'; id: string; description: string }
   | { kind: 'command_finished'; id: string; failed: boolean; exitCode: number | null }
   | { kind: 'account'; account: ProviderAccount };
 

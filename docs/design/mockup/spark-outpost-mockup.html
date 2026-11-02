@@ -1514,7 +1514,7 @@ chats.push(makeChat({id:"c4",title:"Worktree cleanup script",project:"ph"}));
 chats.push(makeChat({id:"c5",title:"Tray icon states",project:"ph"}));
 chats.push(makeChat({id:"c6",title:"Vitest mock for fetch retries",status:"error",sub:"Stopped: rate limit reached"}));
 chats.push(makeChat({id:"c7",title:"Dark mode tokens"}));
-[["h1","Dimension Studio drag handles","This week"],["h2","Cutting Board to CZ Next","This week"],["h3","AI Signals empty states","Last month"],["h4","Snowflake daily spend query","Last month"]].forEach(([id,title,when])=>{
+[["h1","Dimension Studio drag handles","This week"],["h2","Cutting Board to CZ Next","This week"],["h3","Order Insights empty states","Last month"],["h4","Snowflake daily spend query","Last month"]].forEach(([id,title,when])=>{
   const c=makeChat({id,title,archived:true,when});chats.push(c);
   seedSimple(c,`Let's pick up "${title}".`,"That work is wrapped up. The notes and the final diff are above in this chat.","Mon","Mon");
 });
@@ -2318,7 +2318,7 @@ const TICKETS={
       desc:"After a hard refresh, the thread list renders two Today dividers when messages were sent near midnight UTC.",ac:["Only one divider per calendar day, in the viewer's time zone","A test covers messages that cross midnight"]},
     {key:"WEB-421",title:"Filter chips overflow the Explorer toolbar on small screens",status:"In progress",pri:2,project:"web",mine:true,updated:"1 hour ago",labels:["ui"],chat:"c2",
       desc:"Below 768px, filter chips push the toolbar past the viewport and the Apply button disappears.",ac:["Toolbar never scrolls sideways","Overflowing chips collapse into a +N more button"]},
-    {key:"WEB-425",title:"Add empty states for AI Signals outcomes",status:"To do",pri:2,project:"web",mine:true,updated:"Yesterday",labels:["ai-signals","copy"],
+    {key:"WEB-425",title:"Add empty states for Order Insights outcomes",status:"To do",pri:2,project:"web",mine:true,updated:"Yesterday",labels:["ai-signals","copy"],
       desc:"New accounts see a blank table on the outcomes tab. Add an empty state that explains what outcomes are and how to create the first one.",ac:["Empty state with a clear first action","Copy reviewed by design"]},
     {key:"WEB-430",title:"Keyboard shortcut to jump between projects",status:"To do",pri:1,project:"web",mine:false,updated:"2 days ago",labels:["a11y"],
       desc:"Power users want to switch projects without the mouse.",ac:["Cmd+1 to Cmd+9 opens projects in sidebar order","Shortcut listed in the help menu"]},

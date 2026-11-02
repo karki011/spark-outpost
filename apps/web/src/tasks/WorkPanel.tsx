@@ -5,8 +5,9 @@ import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import type { InvolvementLevel, Orchestration, Run, TaskOverview } from '@spark-outpost/contracts';
 import type { CrewAgent } from '../crew/crew-model.ts';
 import { GlobeIcon } from '../browser/BrowserIcons.tsx';
-import { ShieldIcon } from '../ui/icons.tsx';
+import { ArtifactIcon, ShieldIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
+import { AdoptPullSection } from './AdoptPullSection.tsx';
 import { AutonomySection } from './AutonomySection.tsx';
 import { AgentsSection } from '../chat/subagents/AgentsSection.tsx';
 import { TerminalWork } from '../terminal/usage/TerminalWork.tsx';
@@ -15,6 +16,9 @@ import { CloseIcon, PanelIcon } from './TaskIcons.tsx';
 import type { PanelWidthLimits } from '../ui/panel-width.ts';
 import { WORK_PANEL_LIMITS, type PanelView } from './work-panel-state.ts';
 import { WorkPanelResizer } from './WorkPanelResizer.tsx';
+import { PaneResizer } from '../browser/PaneResizer.tsx';
+import { openingPaneWidth } from '../browser/pane-width.ts';
+import { usePhone } from '../ui/breakpoints.ts';
 
 interface AutonomySetting {
   level: InvolvementLevel;
@@ -41,44 +45,55 @@ interface WorkPanelProps {
   view?: PanelView;
   onView?: (view: PanelView) => void;
   browser?: ((chrome: PanelChrome) => ReactNode) | null;
+  artifact?: { title: string; render: (chrome: PanelChrome) => ReactNode } | null;
   terminal?: boolean;
 }
 
 export interface PanelChrome {
   views: ReactNode;
   close: ReactNode;
+  setWidth: ((width: number) => void) | null;
 }
 
-const VIEW_NAMES: Record<PanelView, string> = { work: 'Work', browser: 'Browser' };
+interface PanelTab {
+  id: PanelView;
+  name: string;
+}
+
+const VIEW_ICONS: Record<PanelView, ReactNode> = {
+  work: <PanelIcon />,
+  browser: <GlobeIcon />,
+  artifact: <ArtifactIcon />,
+};
 
 interface ViewSwitchProps {
+  tabs: readonly PanelTab[];
   view: PanelView;
   onView(view: PanelView): void;
 }
 
-function ViewTab({ id, view, onView }: ViewSwitchProps & { id: PanelView }) {
-  const tip = useTooltip(VIEW_NAMES[id]);
+function ViewTab({ tab, view, onView }: { tab: PanelTab } & Omit<ViewSwitchProps, 'tabs'>) {
+  const tip = useTooltip(tab.name);
   return (
     <>
       <button
         type="button"
         role="tab"
-        aria-label={VIEW_NAMES[id]}
-        aria-selected={view === id}
+        aria-label={tab.name}
+        aria-selected={view === tab.id}
         aria-controls="work-panel"
-        tabIndex={view === id ? 0 : -1}
+        tabIndex={view === tab.id ? 0 : -1}
         {...tip.triggerProps}
-        onClick={() => onView(id)}
+        onClick={() => onView(tab.id)}
       >
-        {id === 'work' ? <PanelIcon /> : <GlobeIcon />}
+        {VIEW_ICONS[tab.id]}
       </button>
       {tip.tooltip}
     </>
   );
 }
 
-function ViewSwitch({ view, onView }: ViewSwitchProps) {
-  const other: PanelView = view === 'work' ? 'browser' : 'work';
+function ViewSwitch({ tabs, view, onView }: ViewSwitchProps) {
   return (
     <div
       className="wp-switch"
@@ -87,15 +102,26 @@ function ViewSwitch({ view, onView }: ViewSwitchProps) {
       onKeyDown={(event) => {
         if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
         event.preventDefault();
-        onView(other);
-        const tabs = event.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]');
-        tabs[other === 'work' ? 0 : 1]?.focus();
+        const step = event.key === 'ArrowRight' ? 1 : -1;
+        const at = tabs.findIndex((tab) => tab.id === view);
+        const next = (at + step + tabs.length) % tabs.length;
+        onView(tabs[next]!.id);
+        event.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]')[next]?.focus();
       }}
     >
-      <ViewTab id="work" view={view} onView={onView} />
-      <ViewTab id="browser" view={view} onView={onView} />
+      {tabs.map((tab) => (
+        <ViewTab key={tab.id} tab={tab} view={view} onView={onView} />
+      ))}
     </div>
   );
+}
+
+function panelTabs(hasWork: boolean, browser: boolean, artifact: string | null): PanelTab[] {
+  return [
+    ...(hasWork ? [{ id: 'work' as const, name: 'Work' }] : []),
+    ...(browser ? [{ id: 'browser' as const, name: 'Browser' }] : []),
+    ...(artifact !== null ? [{ id: 'artifact' as const, name: artifact }] : []),
+  ];
 }
 
 export function WorkPanel({
@@ -118,10 +144,17 @@ export function WorkPanel({
   view = 'work',
   onView,
   browser = null,
+  artifact = null,
   terminal = false,
 }: WorkPanelProps) {
   const hasWork = task !== null || autonomy !== null || terminal;
   const browsing = browser !== null && view === 'browser';
+  const reading = artifact !== null && view === 'artifact';
+  const wideView = browsing || reading;
+  const tabs = panelTabs(hasWork, browser !== null, artifact?.title ?? null);
+  const phone = usePhone();
+  const resizable = open && onWidth !== undefined && (wide || (wideView && !phone));
+  const fallback = wideView ? openingPaneWidth(limits.fallback, !wide) : limits.fallback;
   const heading = useRef<HTMLHeadingElement>(null);
   const title = useRef<HTMLElement>(null);
   const closeTip = useTooltip('Hide work panel');
@@ -139,7 +172,7 @@ export function WorkPanel({
     />
   );
 
-  const views = browser !== null && hasWork && onView && <ViewSwitch view={view} onView={onView} />;
+  const views = tabs.length > 1 && onView && <ViewSwitch tabs={tabs} view={view} onView={onView} />;
   const close = (
     <>
       <button
@@ -161,22 +194,32 @@ export function WorkPanel({
         <div className={open ? 'wp-scrim on' : 'wp-scrim'} aria-hidden="true" onClick={onClose} />
       )}
       <aside
-        className={`wp${open ? ' on' : ''}${wide ? '' : ' over'}${browsing ? ' browser' : ''}`}
+        className={`wp${open ? ' on' : ''}${wide ? '' : ' over'}${wideView ? ' browser' : ''}`}
         id="work-panel"
         aria-label="Work panel"
         data-chat-links=""
         inert={!open}
-        style={{ '--wp-w': `${width ?? limits.fallback}px` } as CSSProperties}
+        style={{ '--wp-w': `${width ?? fallback}px` } as CSSProperties}
         onKeyDown={(event) => {
           if (event.key === 'Escape' && !wide) onClose();
         }}
       >
-        {wide && open && onWidth && (
+        {resizable && wideView && (
+          <PaneResizer
+            key={view}
+            label={browsing ? 'Resize browser pane' : 'Resize work panel'}
+            page={browsing}
+            width={width}
+            limits={{ ...limits, fallback }}
+            onWidth={onWidth}
+          />
+        )}
+        {resizable && !wideView && (
           <WorkPanelResizer width={width} onWidth={onWidth} limits={limits} />
         )}
         <div className="wp-in">
           <span className="wp-grab" aria-hidden="true" />
-          {!browsing && (
+          {!wideView && (
             <div className="wp-head">
               {views}
               <b ref={title} tabIndex={-1}>
@@ -185,10 +228,13 @@ export function WorkPanel({
               {close}
             </div>
           )}
-          <div className={browsing ? 'wp-body browser' : 'wp-body'}>
-            {!browsing && <AgentsSection />}
-            {browsing ? (
-              browser({ views, close })
+          <div className={wideView ? 'wp-body browser' : 'wp-body'}>
+            {!wideView && <AgentsSection />}
+            {!wideView && !terminal && <AdoptPullSection conversationId={conversationId} />}
+            {reading ? (
+              artifact.render({ views, close, setWidth: null })
+            ) : browsing ? (
+              browser({ views, close, setWidth: resizable ? onWidth : null })
             ) : task ? (
               <TaskDetails
                 conversationId={conversationId}
@@ -213,7 +259,7 @@ export function WorkPanel({
               autonomySection
             )}
           </div>
-          {onAudit && !browsing && (
+          {onAudit && !wideView && (
             <div className="wp-foot">
               <button type="button" className="btn ghost sm" onClick={onAudit}>
                 <ShieldIcon />

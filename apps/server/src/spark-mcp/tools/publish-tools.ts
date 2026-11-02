@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { SPARK_TEXT_MAX, SPARK_TITLE_MAX } from '@spark-outpost/contracts';
 import { chatWorktreeAt } from '../../persistence/chat-worktrees.ts';
 import { opensDraftPullRequests } from '../../persistence/pr-settings.ts';
+import { sparkRulesForRun } from '../../persistence/spark-rules.ts';
+import { floorEffect } from '../../spark-rules/resolve.ts';
 import { pushForAgent, type PublishScope } from '../../ship/agent-push.ts';
 import { pickRemote, remoteHasBranch } from '../../ship/git.ts';
 import { connectionsFor } from '../../ship/github/access.ts';
@@ -11,7 +13,7 @@ import { gitHubDepsFor } from '../deps.ts';
 import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
 
 export const NOT_AUTHORIZED =
-  "Publishing isn't authorized in this turn. It needs the user's message to ask for a push or pull request, the chat at Full auto → PR, or an Auto or Bypass permissions (Full access) mode, in a chat working on its own spark/ branch. Leave the change in the working tree and tell the user.";
+  "Publishing isn't authorized in this turn. It needs the user's message to ask for a push or pull request, the chat at Full auto → PR, or an Auto or Bypass permissions (Full access) mode, in a chat working on its own spark/ branch or the pull request branch the user adopted for it. Leave the change in the working tree and tell the user.";
 
 export const PUSH_ONLY =
   "The user's message asked for the push and no pull request, and nothing else in this turn allows one. Tell the user the branch is pushed.";
@@ -28,11 +30,19 @@ function nextAfterPush(publish: PublishScope): string {
     : 'Open the pull request now (gh pr create, or spark_pull_request when you have it) and give the user its link.';
 }
 
+async function secretSendEffect(context: SparkToolContext) {
+  const { runId } = context.scope;
+  if (!runId) return undefined;
+  const { rules } = await sparkRulesForRun(context.deps.db, runId);
+  return floorEffect(rules, 'SecretSend');
+}
+
 async function push(context: SparkToolContext) {
   const publish = authorized(context);
   const result = await pushForAgent(gitHubDepsFor(context.deps, context.scope), publish, {
     signal: context.signal,
     audit: context.scope.actions?.audit,
+    secretSend: await secretSendEffect(context),
   });
   const pushed = result.outcome === 'pushed';
   return {
@@ -56,7 +66,7 @@ export const pushTool = sparkTool({
   acts: true,
   needs: 'publish',
   description:
-    "Push this chat's own spark/ branch to its remote, run by Spark in the user's login-shell environment so the repository's pre-push hook has the registry and tool logins a terminal has (your own shell does not). Use it instead of `git push` when publishing is authorized. Never skips hooks, never force-pushes, pushes no other branch. Returns whether it pushed and the last lines of git and hook output with secrets hidden; a hook can take minutes.",
+    "Push this chat's own branch (its spark/ branch, or the pull request branch the user adopted for it) to its remote, run by Spark in the user's login-shell environment so the repository's pre-push hook has the registry and tool logins a terminal has (your own shell does not). Use it instead of `git push` when publishing is authorized. Never skips hooks, never force-pushes, pushes no other branch. Returns whether it pushed and the last lines of git and hook output with secrets hidden; a hook can take minutes.",
   input: {},
   run: (_args, context) => push(context),
 });

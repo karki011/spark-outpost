@@ -17,6 +17,8 @@ import {
   conversationWorkdirs,
 } from '../persistence/provider-sessions.ts';
 import { removeWorkdirs } from '../workflow/turn-session.ts';
+import { removeChatFolder } from '../chat-files/folders.ts';
+import { finishArchive } from '../workflow/archive-chat.ts';
 import { releaseConversation } from '../projects/chat-worktree-cleanup.ts';
 import { allowedCommands } from '../agents/acp/slash-commands.ts';
 import { resolveChatSettings } from '../persistence/chat-settings.ts';
@@ -32,6 +34,7 @@ export interface ConversationActionDeps {
   terminals: Pick<TerminalSessions, 'endChat'>;
   deleteSettleMs?: number;
   nativeTerminals?: NativeRuntime;
+  chatFolders?: string;
 }
 
 export function conversationActionRoutes({
@@ -40,6 +43,7 @@ export function conversationActionRoutes({
   terminals,
   nativeTerminals,
   deleteSettleMs = DEFAULT_SETTLE_MS,
+  chatFolders,
 }: ConversationActionDeps): Router {
   const router = Router();
 
@@ -53,11 +57,7 @@ export function conversationActionRoutes({
     const update = parseBody(updateConversationRequestSchema, req);
     const id = paramId(req);
     const summary = await updateConversation(db, workspaceId, id, update);
-    if (update.archived === true) {
-      await nativeTerminals?.stop(id);
-      await closeConversationSessions(db, workspaceId, id, SESSION_CLOSE_REASONS.archived);
-      await releaseConversation(db, id, 'archived');
-    }
+    if (update.archived === true) await finishArchive(db, workspaceId, id, nativeTerminals);
     res.json(summary);
   });
 
@@ -94,6 +94,7 @@ export function conversationActionRoutes({
     await releaseConversation(db, id, 'deleted');
     await deleteConversation(db, workspaceId, id);
     await removeWorkdirs(workdirs);
+    if (chatFolders) await removeChatFolder(chatFolders, id);
     res.status(204).end();
   });
 

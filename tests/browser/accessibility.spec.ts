@@ -28,7 +28,9 @@ const THEMES = [
   'sage',
   'aurora',
   'iris',
+  'loam',
   'contrast',
+  'contrast-dark',
 ] as const;
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const BLOCKING_IMPACTS = new Set(['serious', 'critical']);
@@ -66,8 +68,9 @@ async function openWorkedChat(page: Page) {
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('Task 6/6', { timeout: 20_000 });
+  await expect(page.locator('.todo-line')).toContainText('3 of 3 done', { timeout: 20_000 });
 }
 
 async function useTheme(page: Page, theme: string) {

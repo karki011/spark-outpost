@@ -1,6 +1,6 @@
 import type { DraftChat, RequestState, StackWarning, StoryPullState } from './outposts.ts';
 
-export type StoryProblemKind = 'cycle' | 'self' | 'unknown' | 'duplicate_handle';
+export type StoryProblemKind = 'cycle' | 'self' | 'unknown' | 'duplicate_handle' | 'duplicate_chat';
 
 export interface StoryProblem {
   kind: StoryProblemKind;
@@ -8,7 +8,8 @@ export interface StoryProblem {
   text: string;
 }
 
-export type StoryChat = Pick<DraftChat, 'handle' | 'dependsOn'>;
+export type StoryChat = Pick<DraftChat, 'handle' | 'dependsOn'> &
+  Partial<Pick<DraftChat, 'chatId'>>;
 
 export interface StoryOrderItem {
   conversationId: string;
@@ -18,6 +19,7 @@ export interface StoryOrderItem {
 
 export interface StackSide {
   projectId: string | null;
+  chatId?: string | undefined;
 }
 
 export interface StackFacts {
@@ -61,6 +63,25 @@ function duplicateProblems(chats: readonly StoryChat[]): StoryProblem[] {
       });
     }
     seen.add(handle);
+  }
+  return problems;
+}
+
+function duplicateChatProblems(chats: readonly StoryChat[]): StoryProblem[] {
+  const first = new Map<string, string>();
+  const problems: StoryProblem[] = [];
+  for (const { handle, chatId } of chats) {
+    if (chatId === undefined) continue;
+    const earlier = first.get(chatId);
+    if (earlier === undefined) {
+      first.set(chatId, handle);
+      continue;
+    }
+    problems.push({
+      kind: 'duplicate_chat',
+      handle,
+      text: `@${handle} names the same existing chat as @${earlier}.`,
+    });
   }
   return problems;
 }
@@ -110,7 +131,12 @@ export const storyProblems: StoryProblems = (chats) => {
   const dependencies = chats
     .map((chat) => dependencyProblem(chat, known))
     .filter((problem) => problem !== null);
-  return [...duplicateProblems(chats), ...dependencies, ...cycleProblems(known)];
+  return [
+    ...duplicateProblems(chats),
+    ...duplicateChatProblems(chats),
+    ...dependencies,
+    ...cycleProblems(known),
+  ];
 };
 
 function byPosition<Item extends StoryOrderItem>(tasks: readonly Item[]): Item[] {
@@ -145,7 +171,10 @@ export const storyOrder: StoryOrder = <Item extends StoryOrderItem>(tasks: reado
 };
 
 export const isStacked: IsStacked = (task, parent) =>
-  parent !== null && task.projectId !== null && task.projectId === parent.projectId;
+  parent !== null &&
+  task.chatId === undefined &&
+  task.projectId !== null &&
+  task.projectId === parent.projectId;
 
 export interface StackedChat extends StackSide {
   handle: string;

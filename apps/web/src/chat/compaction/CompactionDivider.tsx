@@ -1,8 +1,8 @@
-import './compaction.css';
 import { useId, useState } from 'react';
 import type { Compaction, Continuation } from '@spark-outpost/contracts';
 import { Markdown } from '../markdown/Markdown.tsx';
 import { compactionTitle, tokensLine } from './compaction-text.ts';
+import { DividerLine } from './DividerLine.tsx';
 
 interface CompactionDividerProps {
   compaction: Compaction;
@@ -16,14 +16,10 @@ export function CompactionDivider({ compaction, onOpenChat }: CompactionDividerP
   const from = compaction.fromConversationId;
   return (
     <div className="compact-divider" role="group" aria-label={compactionTitle(compaction)}>
-      <div className="compact-line">
-        <span className="compact-rule" aria-hidden="true" />
-        <span className="compact-label">
-          <b>{compactionTitle(compaction)}</b>
-          {tokens && <span className="compact-tokens">{tokens}</span>}
-        </span>
-        <span className="compact-rule" aria-hidden="true" />
-      </div>
+      <DividerLine>
+        <b>{compactionTitle(compaction)}</b>
+        {tokens && <span className="compact-tokens">{tokens}</span>}
+      </DividerLine>
       <div className="compact-acts">
         {compaction.summary && (
           <button
@@ -59,14 +55,10 @@ interface ContinuedDividerProps {
 export function ContinuedDivider({ continuation, onOpenChat }: ContinuedDividerProps) {
   return (
     <div className="compact-divider" role="group" aria-label="Continued in a fresh chat">
-      <div className="compact-line">
-        <span className="compact-rule" aria-hidden="true" />
-        <span className="compact-label">
-          <b>Continued in a fresh chat</b>
-          <span className="compact-tokens">{continuation.title}</span>
-        </span>
-        <span className="compact-rule" aria-hidden="true" />
-      </div>
+      <DividerLine>
+        <b>Continued in a fresh chat</b>
+        <span className="compact-tokens">{continuation.title}</span>
+      </DividerLine>
       <div className="compact-acts">
         <button
           type="button"

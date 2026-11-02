@@ -57,6 +57,7 @@ interface FactsRow extends PostRow {
   run_status: RunStatus | null;
   run_error: string | null;
   run_asking_reply: string | null;
+  run_asks_question: boolean | null;
   waiting_handle: string | null;
   waiting_deleted: boolean;
   waiting_failed: boolean;
@@ -92,12 +93,15 @@ const FACTS_QUERY = `
       WHERE last.conversation_id = p.to_conversation_id AND last.parent_run_id IS NULL
       ORDER BY last.created_at DESC LIMIT 1
     ) AS held,
-    r.status AS run_status,
+    CASE WHEN r.status = 'awaiting_approval' AND pending.kind IS NULL
+      THEN 'running' ELSE r.status END AS run_status,
     r.error AS run_error,
     CASE WHEN r.status = 'succeeded' THEN (
       SELECT CASE WHEN strpos(work.text, '${NEEDS_YOU_PREFIX}') > 0 THEN work.text END
       FROM (${workReply('r.id')}) work
     ) END AS run_asking_reply,
+    CASE WHEN r.status = 'awaiting_approval' THEN pending.kind = 'clarify'
+      END AS run_asks_question,
     CASE WHEN w.to_conversation_id IS NOT NULL THEN w.to_handle END AS waiting_handle,
     (w.id IS NOT NULL AND w.to_conversation_id IS NULL) AS waiting_deleted,
     COALESCE(
@@ -109,6 +113,12 @@ const FACTS_QUERY = `
   FROM outpost_posts p
   JOIN outposts o ON o.id = p.outpost_id
   LEFT JOIN runs r ON r.id = p.run_id
+  LEFT JOIN LATERAL (
+    SELECT a.kind FROM approvals a JOIN runs ar ON ar.id = a.run_id
+    WHERE r.status = 'awaiting_approval' AND a.status = 'pending'
+      AND (ar.id = r.id OR ar.parent_run_id = r.id)
+    ORDER BY a.created_at, a.id LIMIT 1
+  ) pending ON true
   LEFT JOIN outpost_posts w ON w.id = p.after_post_id AND p.task_id IS NULL
   LEFT JOIN runs wr ON wr.id = w.run_id`;
 
@@ -155,6 +165,7 @@ function toFacts(row: FactsRow): RequestFacts | null {
     queued: row.queued,
     runStatus: row.run_status,
     runNeedsYou: needsYouLines(row.run_asking_reply ?? '')[0] ?? null,
+    ...(row.run_asks_question ? { runAsksQuestion: true } : {}),
     paused: row.paused,
     held: row.held,
     chatDeleted: row.to_conversation_id === null,
@@ -229,21 +240,35 @@ export async function attachmentsFree(
   attachmentIds: readonly string[],
 ): Promise<boolean> {
   if (attachmentIds.length === 0) return true;
-  const { rows } = await db.query<{ free: number }>(
-    `SELECT count(*)::int AS free FROM attachments a
-     WHERE a.id = ANY($2::uuid[]) AND a.workspace_id = $1 AND a.message_id IS NULL
-       AND NOT EXISTS (SELECT 1 FROM outpost_posts p WHERE a.id = ANY(p.attachment_ids))`,
+  const { rowCount } = await db.query(
+    `SELECT 1 FROM attachments
+     WHERE id = ANY($2::uuid[]) AND workspace_id = $1 AND message_id IS NULL
+     ORDER BY id FOR UPDATE`,
     [workspaceId, attachmentIds],
   );
-  return rows[0]?.free === attachmentIds.length;
+  if (rowCount !== attachmentIds.length) return false;
+  const reserved = await db.query(
+    `SELECT 1 FROM outpost_posts WHERE attachment_ids && $1::uuid[]
+     UNION ALL
+     SELECT 1 FROM chat_queue WHERE attachment_ids && $1::uuid[]
+     UNION ALL
+     SELECT 1 FROM member_messages WHERE attachment_ids && $1::uuid[]
+     LIMIT 1`,
+    [attachmentIds],
+  );
+  return reserved.rowCount === 0;
 }
 
-export async function postAttachmentIds(db: Queryable, postId: string): Promise<string[]> {
-  const { rows } = await db.query<{ attachment_ids: string[] }>(
-    'SELECT attachment_ids FROM outpost_posts WHERE id = $1',
+export async function copyPostAttachments(db: Queryable, postId: string): Promise<string[]> {
+  const { rows } = await db.query<{ id: string }>(
+    `INSERT INTO attachments (id, workspace_id, name, media_type, kind, size, data, source_path)
+     SELECT gen_random_uuid(), a.workspace_id, a.name, a.media_type, a.kind, a.size, a.data, a.source_path
+     FROM outpost_posts p JOIN attachments a ON a.id = ANY(p.attachment_ids)
+     WHERE p.id = $1
+     RETURNING id`,
     [postId],
   );
-  return rows[0]?.attachment_ids ?? [];
+  return rows.map((row) => row.id);
 }
 
 export const insertPosts: PostStore['insertPosts'] = async (db, posts) => {

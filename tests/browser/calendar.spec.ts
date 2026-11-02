@@ -124,7 +124,7 @@ test('connects from Today through the Calendar connector card', async ({ page })
   await expect(card.getByText('shared')).toBeVisible();
   const agents = card.getByRole('switch', { name: 'Let agents read my calendar' });
   await expect(agents).toBeEnabled();
-  await expect(agents).toHaveAttribute('aria-checked', 'false');
+  await expect(agents).toHaveAttribute('aria-checked', 'true');
   await expect(card.getByRole('switch', { name: 'Nudge, Spark Work' })).toHaveAttribute(
     'aria-checked',
     'true',
@@ -369,4 +369,18 @@ test('has no serious accessibility problems on Today', async ({ page }) => {
   expect(
     results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
   ).toEqual([]);
+});
+
+test('Refresh now re-reads the calendars and says it is up to date', async ({ page }) => {
+  await connect(page);
+  await openToday(page);
+  const refreshes: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().endsWith('/api/calendar/refresh')) refreshes.push(request.method());
+  });
+  await today(page).getByRole('button', { name: 'Refresh now' }).click();
+  await expect(
+    today(page).getByRole('status').filter({ hasText: 'Updated just now' }),
+  ).toBeVisible();
+  expect(refreshes).toEqual(['POST']);
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChatSharePreview, ConversationSummary } from '@spark-outpost/contracts';
-import { sharedChatView } from './shared-chat.ts';
+import { projectSummary, sharedChatView, summaryChatView } from './shared-chat.ts';
 
 const ID = '0f0e0d0c-1a2b-4c3d-8e9f-001122334455';
 
@@ -71,5 +71,22 @@ describe('sharedChatView', () => {
       tone: 'deleted',
       state: 'Deleted',
     });
+  });
+});
+
+describe('summaryChatView', () => {
+  it('names an untitled chat the way the sidebar does and lists every project', () => {
+    expect(summaryChatView(chat({ title: '  ' }), ['web', 'api'])).toMatchObject({
+      title: 'New chat',
+      project: 'web, api',
+    });
+  });
+});
+
+describe('projectSummary', () => {
+  it('shows the first project and counts the rest', () => {
+    expect(projectSummary([])).toEqual({ name: 'No project', more: null });
+    expect(projectSummary(['web'])).toEqual({ name: 'web', more: null });
+    expect(projectSummary(['web', 'api', 'docs'])).toEqual({ name: 'web', more: '+2' });
   });
 });

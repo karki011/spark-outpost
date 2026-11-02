@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
@@ -106,8 +105,6 @@ export async function buildTurn(turn: FakeTurn): Promise<acp.StopReason | null> 
   if (turn.text.includes('#slowbuild')) {
     for (;;) await sleep(50, turn.signal);
   }
-  const gate = /#holdbuild=(\S+)/.exec(turn.text)?.[1];
-  while (gate && !existsSync(gate)) await sleep(50, turn.signal);
   if (turn.text.includes('#quietbuild')) return 'end_turn';
   await turn.say(`Built it after ${priorPrompts(turn.sessionId)} earlier prompts.`);
   return 'end_turn';

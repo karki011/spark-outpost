@@ -104,7 +104,6 @@ export async function fakeHomeDesktop(page: Page, theme = 'graphite', sparkFocus
             },
             sparkFocused: async () => sparkFocused,
             onSparkFocus: none,
-            pickFolder: async () => null,
             pathForFile: () => null,
             setInteractive: () => undefined,
             setFocusable: () => undefined,
@@ -134,18 +133,20 @@ export async function openIsland(page: Page) {
   await expect(island(page)).toBeVisible();
 }
 
+export const homeTab = (page: Page) =>
+  island(page).getByRole('group', { name: 'Spark Island' }).getByRole('button', { name: /^Home/ });
+
+export const homeBody = (page: Page) => island(page).locator('.isl-home');
+
 export async function openHome(page: Page) {
   await page.mouse.move(640, 600);
   await island(page)
-    .getByRole('button', { name: /Open Spark Island/ })
+    .getByRole('button', { name: /Open Spark Island$/ })
+    .first()
     .click();
-  await expect(island(page).getByRole('tab', { name: 'Home' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
+  await expect(homeTab(page)).toHaveAttribute('aria-pressed', 'true');
+  await expect(homeBody(page)).toBeVisible();
 }
-
-export const nowCard = (page: Page) => island(page).getByRole('region', { name: /^Now/ });
 
 export async function shot(page: Page, name: string, settle = 900) {
   if (!SHOTS) return;

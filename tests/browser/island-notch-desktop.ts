@@ -32,6 +32,7 @@ export interface NotchWindow {
   islandRegions: IslandRegions[];
   sparkFocus(focused: boolean): void;
   islandCommand(action: string): void;
+  setIslandHeight(height: number): void;
 }
 
 export interface Box {
@@ -66,7 +67,21 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
       const drags: string[] = [];
       const takesClicks: string[] = [];
       const regions: unknown[] = [];
+      const listeners = new Set<(status: unknown) => void>();
+      const status = {
+        supported: true,
+        enabled: true,
+        shortcuts: { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' },
+        failed: [],
+        islandSize: setup.size,
+        islandHeight: 0,
+        autoExpand: setup.autoExpand,
+      };
       Object.assign(window, {
+        setIslandHeight: (height: number) => {
+          status.islandHeight = height;
+          listeners.forEach((listener) => listener({ ...status }));
+        },
         islandRegions: regions,
         islandFocus: focus,
         islandRest: rest,
@@ -75,15 +90,11 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
         sparkDesktop: {
           platform: 'darwin',
           companion: {
-            get: async () => ({
-              supported: true,
-              enabled: true,
-              shortcuts: { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' },
-              failed: [],
-              islandSize: setup.size,
-              autoExpand: setup.autoExpand,
-            }),
-            onChange: none,
+            get: async () => ({ ...status }),
+            onChange: (listener: (next: unknown) => void) => {
+              listeners.add(listener);
+              return () => listeners.delete(listener);
+            },
           },
           island: {
             geometry: async () => ({
@@ -106,7 +117,6 @@ export async function openNotchIsland(page: Page, setup: NotchSetup) {
               Object.assign(window, { sparkFocus: callback });
               return () => undefined;
             },
-            pickFolder: async () => null,
             pathForFile: () => null,
             setInteractive: (on: boolean) => {
               const view = document.querySelector<HTMLElement>('.isl')?.dataset.view;

@@ -7,6 +7,7 @@ import {
   crewTitle,
   type ApprovalDecidedValue,
   type CheckpointPayload,
+  type QuestionAnswerInput,
 } from '@spark-outpost/contracts';
 import { approvalsApi } from '../../api/approvals.ts';
 import { queryKeys } from '../../api/client.ts';
@@ -185,10 +186,18 @@ function CheckpointHeading({ payload, title }: { payload: CheckpointPayload; tit
   );
 }
 
+interface Decision {
+  optionId: string;
+  note?: string;
+  answers?: QuestionAnswerInput[];
+}
+
 function lead(approval: CheckpointApproval): string | null {
   const checkpoint = approval.payload.checkpoint;
   if (checkpoint.kind === 'retry') return retryLine(checkpoint);
-  return null;
+  const form = approval.payload.form;
+  if (!form?.message || form.fields.some((field) => field.question === form.message)) return null;
+  return form.message;
 }
 
 export function CheckpointCard({ approval: incoming }: { approval: CheckpointApproval }) {
@@ -197,12 +206,13 @@ export function CheckpointCard({ approval: incoming }: { approval: CheckpointApp
   const [local, setLocal] = useState<ApprovalDecidedValue | null>(null);
   const approval = local ? (mergeDecision([incoming], local)[0] as CheckpointApproval) : incoming;
   const mutation = useMutation({
-    mutationFn: ({ optionId, note }: { optionId: string; note?: string }) =>
+    mutationFn: ({ optionId, note, answers }: Decision) =>
       approvalsApi.decide(approval.id, {
         optionId,
         scope: 'once',
         payloadHash: approval.payloadHash,
         ...(note ? { note } : {}),
+        ...(answers ? { answers } : {}),
       }),
     onSuccess: (decided) => {
       setLocal(decided);
@@ -212,9 +222,13 @@ export function CheckpointCard({ approval: incoming }: { approval: CheckpointApp
   const { countdown, hold } = useAutoContinue(approval);
   const followRequests = use(FollowContext);
   const decide: Decide = Object.assign(
-    (optionId: string, note?: string) => {
+    (optionId: string, note?: string, answers?: QuestionAnswerInput[]) => {
       followRequests?.request();
-      mutation.mutate(note === undefined ? { optionId } : { optionId, note });
+      mutation.mutate({
+        optionId,
+        ...(note === undefined ? {} : { note }),
+        ...(answers ? { answers } : {}),
+      });
     },
     { busy: mutation.isPending, countdown, hold },
   );
@@ -226,6 +240,8 @@ export function CheckpointCard({ approval: incoming }: { approval: CheckpointApp
 
   const title = checkpointTitle(checkpoint);
   const questions = asksQuestions(checkpoint);
+  const heading =
+    questions && checkpoint.questions.length === 1 ? checkpoint.questions[0]!.question : title;
   const said = saidNote(approval);
 
   return (
@@ -246,7 +262,7 @@ export function CheckpointCard({ approval: incoming }: { approval: CheckpointApp
             <i className={pending ? 'appr-dia' : 'appr-dia still'} />
           </span>
           <span id={headingId}>
-            <CheckpointHeading payload={checkpoint} title={title} />{' '}
+            <CheckpointHeading payload={checkpoint} title={heading} />{' '}
             {checkpointQuestion(checkpoint)}
           </span>
         </div>

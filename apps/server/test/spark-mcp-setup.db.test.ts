@@ -135,6 +135,7 @@ describe('spark_connectors', () => {
     expect(body.tickets).toEqual([
       expect.objectContaining({ source: 'Linear', connected: true, account: 'alex@example.test' }),
       { source: 'Jira (Atlassian)', connected: false },
+      { source: 'ServiceNow', connected: false },
     ]);
     expect(body.mcpServers).toEqual([
       expect.objectContaining({ name: 'slack', transport: 'http' }),
@@ -269,6 +270,7 @@ describe('the Spark tools server', () => {
       'spark_activity',
       'spark_add_mcp_server',
       'spark_analytics',
+      'spark_artifact',
       'spark_assign_ticket',
       'spark_attention',
       'spark_audit',
@@ -309,7 +311,10 @@ describe('the Spark tools server', () => {
       'spark_pull_requests',
       'spark_push',
       'spark_remove_mcp_server',
+      'spark_rules_edit',
       'spark_run',
+      'spark_servicenow',
+      'spark_servicenow_edit',
       'spark_settings',
       'spark_slack',
       'spark_slack_post',
@@ -327,6 +332,7 @@ describe('the Spark tools server', () => {
     const acting = listed.tools.filter((tool) => tool.annotations?.readOnlyHint === false);
     expect(acting.map((tool) => tool.name).sort()).toEqual([
       'spark_add_mcp_server',
+      'spark_artifact',
       'spark_assign_ticket',
       'spark_calendar_edit',
       'spark_comment_ticket',
@@ -341,6 +347,8 @@ describe('the Spark tools server', () => {
       'spark_pull_request',
       'spark_push',
       'spark_remove_mcp_server',
+      'spark_rules_edit',
+      'spark_servicenow_edit',
       'spark_slack_post',
       'spark_switch_mcp_server',
       'spark_terminal_run',

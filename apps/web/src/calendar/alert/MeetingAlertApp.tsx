@@ -9,7 +9,6 @@ import type {
 } from '@spark-outpost/contracts';
 import { BlobScout } from '../../brand/BlobScout.tsx';
 import { sparkDesktop } from '../../desktop/desktop-bridge.ts';
-import { useThemeSync } from '../../island/use-theme-sync.ts';
 import { useReducedMotion } from '../../ui/motion.ts';
 import { joinLabel } from '../meeting-card.ts';
 import { openJoin } from '../today-model.ts';
@@ -22,6 +21,7 @@ import {
   parsePayload,
   parsePlace,
   rigFor,
+  shortcutJoin,
 } from './alert-model.ts';
 
 const CLIMB_MS = 600;
@@ -33,12 +33,14 @@ function useAlertFeed() {
   const [payload, setPayload] = useState<MeetingAlertPayload | null>(null);
   const [place, setPlace] = useState<MeetingAlertPlace | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [receivedAt, setReceivedAt] = useState(0);
   useEffect(() => {
     if (!bridge) return;
     const offPayload = bridge.onPayload((value) => {
       const next = parsePayload(value);
       if (!next) return;
       setPayload(next);
+      setReceivedAt(Date.now());
       setLeaving(false);
     });
     const offPlace = bridge.onPlace((value) => setPlace(parsePlace(value)));
@@ -54,7 +56,7 @@ function useAlertFeed() {
     setPayload(null);
     setLeaving(false);
   };
-  return { payload, place, leaving, clear };
+  return { payload, place, leaving, receivedAt, clear };
 }
 
 function useNow(active: boolean): number {
@@ -108,17 +110,33 @@ function Countdown({ payload, at, act }: { payload: MeetingAlertPayload; at: num
 }
 
 export function MeetingAlertApp() {
-  useThemeSync();
   const reduced = useReducedMotion();
   const bridge = sparkDesktop()?.meetingAlert;
-  const { payload, place, leaving, clear } = useAlertFeed();
-  const at = useNow(payload !== null && !leaving);
+  const { payload, place, leaving, receivedAt, clear } = useAlertFeed();
+  const ticked = useNow(payload !== null && !leaving);
+  const at = Math.max(ticked, receivedAt);
   const cardRef = useRef<HTMLDivElement>(null);
   const clearRef = useRef(clear);
   useEffect(() => {
     clearRef.current = clear;
   });
   const scoutRef = useRef<HTMLDivElement>(null);
+  const focusPending = useRef(false);
+
+  useEffect(
+    () =>
+      bridge?.onTakeFocus(() => {
+        if (cardRef.current) cardRef.current.focus();
+        else focusPending.current = true;
+      }),
+    [bridge],
+  );
+
+  useEffect(() => {
+    if (!focusPending.current || !cardRef.current) return;
+    focusPending.current = false;
+    cardRef.current.focus();
+  }, [payload, place]);
 
   const act: Act = (kind, eventKey = null) => {
     if (payload) bridge?.act({ kind, key: payload.key, eventKey });
@@ -170,10 +188,12 @@ export function MeetingAlertApp() {
     }
     if (key.key.toLowerCase() === 'j' && key.metaKey) {
       key.preventDefault();
-      const joinable = payload.events.find((event) => joinState(event, at) === 'open');
+      const joinable = shortcutJoin(payload.events, at);
       if (joinable?.link) {
         openJoin(joinable.link.url);
         act('joined', joinable.key);
+      } else {
+        cardRef.current?.querySelector<HTMLButtonElement>('.ma-btn.primary')?.focus();
       }
     }
   };
@@ -201,7 +221,7 @@ export function MeetingAlertApp() {
             ref={cardRef}
             className="ma-card"
             role="alertdialog"
-            aria-labelledby="ma-title"
+            aria-labelledby="ma-kind ma-title"
             aria-describedby="ma-hint"
             onPointerDown={(down) => {
               if ((down.target as Element).closest('button')) return;
@@ -211,6 +231,9 @@ export function MeetingAlertApp() {
             tabIndex={-1}
             onKeyDown={onKeyDown}
           >
+            <span id="ma-kind" className="sr-only">
+              Meeting.
+            </span>
             <h1 id="ma-title" className="ma-title">
               {alertTitle(payload.events, at)}
             </h1>
@@ -252,7 +275,7 @@ export function MeetingAlertApp() {
               </>
             )}
             <p id="ma-hint" className="ma-hint">
-              Esc dismisses · ⌘J joins
+              Esc dismisses · ⌘J joins · ⌃⌥⌘M focuses this card
             </p>
           </div>
         </div>

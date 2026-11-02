@@ -4,7 +4,11 @@ import { parseColor, type Rgba } from './color.ts';
 export type Tokens = Map<string, string>;
 type Block = { selector: string; media: string | undefined; declarations: Tokens };
 
-export const THEME_CSS = ['apps/web/public/theme.css', 'apps/web/public/theme-map.css'];
+export const THEME_CSS = [
+  'apps/web/public/theme-base.css',
+  'apps/web/public/theme.css',
+  'apps/web/public/theme-map.css',
+];
 export const COMPONENT_TOKEN_CSS = ['apps/web/src/chat/markdown/code-tokens.css'];
 
 export const THEMES = [
@@ -21,7 +25,9 @@ export const THEMES = [
   'sage',
   'aurora',
   'iris',
+  'loam',
   'contrast',
+  'contrast-dark',
 ] as const;
 export type ThemeId = (typeof THEMES)[number];
 
@@ -34,7 +40,7 @@ function readDeclarations(body: string): Tokens {
 }
 
 export function parseBlocks(css: string, media?: string): Block[] {
-  const source = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const source = css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@import[^;]*;/g, '');
   const blocks: Block[] = [];
   let cursor = 0;
   while (cursor < source.length) {

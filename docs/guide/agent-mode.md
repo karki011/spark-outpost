@@ -25,26 +25,16 @@ The agent picks models for its sub-agents.
 ## Set the effort
 
 1. Select the **Effort** tab.
-2. Pick a level, from **Low** (quick) to **Max** (deepest and slowest).
-
-Higher effort is slower and costlier.
+2. Pick a level, from **Low** (quick) to **Max** (deepest, slowest and costliest).
 
 ## Pick the agent's mode
 
-1. Select the **Permissions** tab, or the permissions chip next to the model button.
+1. Select the **Permissions** tab, or the mode chip under the box.
 2. Pick a mode under **Agent mode**. The provider's default has a **Default** tag.
 
 ![The Permissions tab listing Claude's modes](images/chats-and-modes-permissions-light.png)
 
-| You want                             | Claude and Z.ai        | Codex              |
-| ------------------------------------ | ---------------------- | ------------------ |
-| Answers only, nothing changes        | **Plan**               | **Read-only**      |
-| To approve every edit and command    | **Manual**             | **Ask every time** |
-| Edits to go through, commands to ask | **Accept edits**       | none               |
-| The agent to decide what to ask      | **Auto**               | **Approve for me** |
-| No questions from the agent          | **Bypass permissions** | **Full access**    |
-
-A read-only mode never changes files: switch modes, then ask for the change.
+What each mode allows: [Agent modes](modes-and-levels.md#agent-modes). A read-only mode never changes files: switch modes, then ask.
 
 > **Important:** No mode switches off the [protected paths](protected-paths.md). Modes that never ask are recorded as [ran without review](approvals.md#actions-that-ran-without-review).
 

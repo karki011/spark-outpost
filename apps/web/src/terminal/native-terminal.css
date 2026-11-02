@@ -16,26 +16,6 @@
 .tk-start .session-choice {
   margin: 0 0 18px;
 }
-.ctxbar .session-choice {
-  flex: none;
-  flex-wrap: nowrap;
-  margin-right: 4px;
-}
-.ctxbar .session-choice > .seg {
-  width: 168px;
-  background: color-mix(in srgb, var(--panel) 70%, transparent);
-}
-.ctxbar .session-choice > .seg button {
-  padding: 3px 0;
-}
-@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
-  .ctxbar:has(.session-choice) {
-    flex-wrap: wrap;
-  }
-  .ctxbar .session-choice {
-    flex-basis: 100%;
-  }
-}
 .native-intro {
   margin: auto;
 }

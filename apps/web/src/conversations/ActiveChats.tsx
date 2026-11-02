@@ -5,7 +5,12 @@ import { useOutpostSeam } from '../chat/outpost/outpost-seam.ts';
 import { PlusIcon } from '../ui/icons.tsx';
 import { ChatRows } from './ChatRows.tsx';
 import { LooseChats, type RenderRows } from './LooseChats.tsx';
-import { outpostFoldKey, outpostRowsId, type OutpostMembers } from './outpost-members.ts';
+import {
+  outpostFoldKey,
+  outpostRowsId,
+  type MemberChat,
+  type OutpostMembers,
+} from './outpost-members.ts';
 import { OutpostRows } from './OutpostRows.tsx';
 import { ProjectGroup } from './ProjectGroup.tsx';
 import { NO_PROJECT, listIn, pinnedIn, LOOSE } from './sidebar-order.ts';
@@ -13,12 +18,13 @@ import { useSidebarLayout } from './sidebar-layout.tsx';
 import type { SidebarDnd } from './use-sidebar-dnd.ts';
 import type { SidebarFolds } from './use-sidebar-folds.ts';
 import { listSorting, projectDragId } from './sidebar-dnd-geometry.ts';
+import { PHONE_SWITCH_OFF } from '../phone/use-remote-client.ts';
 
 type RenderRow = (
   chat: ConversationSummary,
   sortable: boolean,
   index: number,
-  handle?: string,
+  member?: MemberChat,
 ) => ReactNode;
 
 interface ActiveChatsProps {
@@ -26,7 +32,6 @@ interface ActiveChatsProps {
   searching: boolean;
   canDrag: boolean;
   hasChats: boolean;
-  hasProjects: boolean;
   projectById: ReadonlyMap<string, Project>;
   dnd: SidebarDnd;
   folds: SidebarFolds;
@@ -36,6 +41,7 @@ interface ActiveChatsProps {
   renderRow: RenderRow;
   members: OutpostMembers;
   onAddProject: () => void;
+  canAddProject: boolean;
   onNewInProject: (projectId: string) => void;
   onProjectMenu: (projectId: string, element: HTMLElement) => void;
   onProjectRename: (project: Project, name: string | null) => void;
@@ -46,7 +52,6 @@ export function ActiveChats({
   searching,
   canDrag,
   hasChats,
-  hasProjects,
   projectById,
   dnd,
   folds,
@@ -56,6 +61,7 @@ export function ActiveChats({
   renderRow,
   members,
   onAddProject,
+  canAddProject,
   onNewInProject,
   onProjectMenu,
   onProjectRename,
@@ -98,7 +104,7 @@ export function ActiveChats({
               id={outpostRowsId(id)}
               chats={listed.map((member) => member.chat)}
               sortable={false}
-              renderRow={(chat, index) => renderRow(chat, false, index, listed[index]?.handle)}
+              renderRow={(chat, index) => renderRow(chat, false, index, listed[index])}
             />
           )}
         />
@@ -109,7 +115,8 @@ export function ActiveChats({
           type="button"
           className="icon-btn"
           aria-label="Add project"
-          title="Add project"
+          title={canAddProject ? 'Add project' : PHONE_SWITCH_OFF}
+          disabled={!canAddProject}
           onClick={onAddProject}
         >
           <PlusIcon />
@@ -148,10 +155,10 @@ export function ActiveChats({
           pinned={loosePinned}
           unpinned={looseRest}
           empty={
-            hasChats
+            blocks.length > 0
               ? 'Drag a chat here to take it out of its project.'
-              : hasProjects
-                ? null
+              : hasChats
+                ? 'No active chats. Start one with New chat.'
                 : 'No chats yet. Start one with New chat.'
           }
           searching={searching}

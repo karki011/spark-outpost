@@ -89,12 +89,24 @@ describe('folder picker', () => {
       'src-link',
       'Zeta',
     ]);
-    expect(listing.folders[1]).toEqual({ name: 'src', path: join(root, 'src') });
+    expect(listing.folders[1]).toEqual({ name: 'src', path: join(root, 'src'), repository: false });
   });
 
-  it('defaults to the home folder and reports the root parent as null', async () => {
-    const home = (await get('/api/folders').expect(200)).body as FolderListing;
-    expect(home.path).toBe(await realpath(homedir()));
+  it('defaults to Documents in the home folder and reports the root parent as null', async () => {
+    const realHomeEnv = process.env.HOME;
+    const home = join(base, 'home');
+    await mkdir(join(home, 'Documents'), { recursive: true });
+    process.env.HOME = home;
+    try {
+      const start = (await get('/api/folders').expect(200)).body as FolderListing;
+      expect(start.path).toBe(join(home, 'Documents'));
+      expect(start.places.slice(0, 2)).toEqual([
+        { name: 'Home', path: home },
+        { name: 'Documents', path: join(home, 'Documents') },
+      ]);
+    } finally {
+      process.env.HOME = realHomeEnv;
+    }
     const top = (await get('/api/folders?path=/').expect(200)).body as FolderListing;
     expect(top.parent).toBeNull();
   });
@@ -120,7 +132,6 @@ describe('projects', () => {
       createdAt: expect.any(String),
       commandAllowlist: [],
       workPlace: 'checkout',
-      browserKeepSignIns: true,
       preview: null,
     });
     const again = await post('/api/projects', { rootPath: root }).expect(200);

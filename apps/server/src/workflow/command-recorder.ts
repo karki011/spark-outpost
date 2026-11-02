@@ -2,6 +2,7 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import {
   COMMAND_CHUNK_CHARS,
+  COMMAND_DESCRIBED,
   COMMAND_FINISHED,
   COMMAND_LIVE_CHARS,
   COMMAND_OUTPUT,
@@ -11,6 +12,7 @@ import {
   EventType,
   createOutputSanitizer,
   outputTail,
+  type CommandDescribed,
   type CommandFinished,
   type CommandOutput,
   type CommandStarted,
@@ -26,7 +28,12 @@ import {
 import { shotAnchor } from '../persistence/browser-screenshots.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
-import { finishCommand, insertCommand, saveCommandOutput } from '../persistence/run-commands.ts';
+import {
+  describeCommand,
+  finishCommand,
+  insertCommand,
+  saveCommandOutput,
+} from '../persistence/run-commands.ts';
 import type { ProviderOutput } from '../providers/provider.ts';
 
 export const COMMAND_FLUSH_MS = 100;
@@ -34,7 +41,7 @@ export const COMMAND_SAVE_MS = 1_000;
 
 type CommandEvent = Extract<
   ProviderOutput,
-  { kind: 'command_started' | 'command_output' | 'command_finished' }
+  { kind: 'command_started' | 'command_described' | 'command_output' | 'command_finished' }
 >;
 
 export interface CommandRecorderOptions {
@@ -43,6 +50,7 @@ export interface CommandRecorderOptions {
   append: (event: RunEvent) => Promise<unknown>;
   secretValues: readonly string[];
   projectRoots: readonly string[];
+  chatFolder?: boolean;
   replySoFar: () => { shown: string; held: number };
   flushMs?: number;
   saveMs?: number;
@@ -71,6 +79,7 @@ interface OpenCommand {
 function isCommandEvent(output: ProviderOutput): output is CommandEvent {
   return (
     output.kind === 'command_started' ||
+    output.kind === 'command_described' ||
     output.kind === 'command_output' ||
     output.kind === 'command_finished'
   );
@@ -85,6 +94,14 @@ export function cwdLabel(cwd: string | null, roots: readonly string[]): string |
   }
   const home = homedir();
   return cwd === home || cwd.startsWith(`${home}${path.sep}`) ? `~${cwd.slice(home.length)}` : cwd;
+}
+
+function shownCwd(
+  cwd: string | null,
+  options: Pick<CommandRecorderOptions, 'projectRoots' | 'chatFolder'>,
+): string | null {
+  const label = cwdLabel(cwd, options.projectRoots);
+  return options.chatFolder && label === './' ? null : label;
 }
 
 const custom = (name: string, value: unknown): RunEvent => ({
@@ -107,12 +124,27 @@ export function createCommandRecorder(options: CommandRecorderOptions): CommandR
     return next;
   };
 
+  const stored = (text: string) =>
+    redactSecrets(storableText(text), secretValues).slice(0, COMMAND_TEXT_MAX);
+
+  const describe = async (output: Extract<CommandEvent, { kind: 'command_described' }>) => {
+    const command = open.get(output.id);
+    if (!command) return;
+    const described: CommandDescribed = { id: command.id, description: stored(output.description) };
+    await inOrder(async () => {
+      await describeCommand(db, described);
+      await append(custom(COMMAND_DESCRIBED, described));
+    });
+  };
+
   const start = async (output: Extract<CommandEvent, { kind: 'command_started' }>) => {
     if (open.has(output.id)) return;
     const started: CommandStarted = {
       id: newId(),
-      command: redactSecrets(storableText(output.command), secretValues).slice(0, COMMAND_TEXT_MAX),
-      cwd: cwdLabel(output.cwd ?? options.projectRoots[0] ?? null, options.projectRoots),
+      command: stored(output.command),
+      description: output.description ? stored(output.description) : null,
+      toolCallId: output.id.slice(0, COMMAND_TEXT_MAX),
+      cwd: shownCwd(output.cwd ?? options.projectRoots[0] ?? null, options),
       live: output.live,
       startedAt: new Date(now()).toISOString(),
       ...shotAnchor(options.replySoFar().shown, options.replySoFar().held),
@@ -223,6 +255,7 @@ export function createCommandRecorder(options: CommandRecorderOptions): CommandR
     async observe(output) {
       if (!isCommandEvent(output)) return;
       if (output.kind === 'command_started') await start(output);
+      if (output.kind === 'command_described') await describe(output);
       if (output.kind === 'command_output') await add(output);
       if (output.kind === 'command_finished') {
         await finish(output.id, output.failed ? 'failed' : 'completed', output.exitCode);

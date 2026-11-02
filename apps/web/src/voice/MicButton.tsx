@@ -1,33 +1,40 @@
 import './speech.css';
 import { MicIcon } from '../ui/icons.tsx';
-import { useDictation } from './use-dictation.ts';
+import type { useDictation } from './use-dictation.ts';
 
 interface MicButtonProps {
-  onText: (text: string) => void;
+  dictation: ReturnType<typeof useDictation>;
   className?: string;
 }
 
-export function MicButton({ onText, className = 'icon-btn' }: MicButtonProps) {
-  const dictation = useDictation(onText);
+export function MicButton({ dictation, className = 'icon-btn' }: MicButtonProps) {
   if (!dictation.available) return null;
   const { state } = dictation;
   const partial = state.phase === 'listening' || state.phase === 'working' ? state.partial : '';
-  const label = dictation.active ? 'Stop dictating' : 'Dictate';
+  const label =
+    state.phase === 'starting'
+      ? 'Starting dictation'
+      : state.phase === 'working'
+        ? 'Transcribing dictation'
+        : dictation.active
+          ? 'Stop dictating'
+          : 'Dictate';
+  const status =
+    state.phase === 'starting'
+      ? 'Starting dictation…'
+      : state.phase === 'working'
+        ? 'Working it out…'
+        : dictation.active
+          ? partial || 'Listening… Esc to cancel'
+          : '';
   return (
     <span className="mic-wrap">
-      {(partial || dictation.problem || dictation.active) && (
-        <span className="mic-status" aria-live="polite">
-          {partial ? (
-            <span className="mic-partial">{partial}</span>
-          ) : dictation.active ? (
-            state.phase === 'working' ? (
-              'Working it out…'
-            ) : (
-              'Listening… Esc to cancel'
-            )
-          ) : (
-            dictation.problem
-          )}
+      <span className="sr-only" role="status">
+        {status}
+      </span>
+      {dictation.problem && (
+        <span className="mic-error" role="alert">
+          {dictation.problem}
         </span>
       )}
       <button
@@ -39,7 +46,24 @@ export function MicButton({ onText, className = 'icon-btn' }: MicButtonProps) {
         data-listening={dictation.active || undefined}
         onClick={dictation.toggle}
       >
-        <MicIcon />
+        {dictation.active ? (
+          <svg
+            className="mic-wave"
+            data-working={state.phase === 'working' || undefined}
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <rect x="3" y="8" width="3" height="8" rx="1.5" />
+            <rect x="8" y="4" width="3" height="16" rx="1.5" />
+            <rect x="13" y="6" width="3" height="12" rx="1.5" />
+            <rect x="18" y="9" width="3" height="6" rx="1.5" />
+          </svg>
+        ) : (
+          <MicIcon />
+        )}
       </button>
     </span>
   );

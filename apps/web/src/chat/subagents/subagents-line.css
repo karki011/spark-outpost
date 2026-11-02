@@ -1,66 +1,48 @@
 .sl {
-  margin: 0 0 10px;
+  margin: 20px 0 10px;
+}
+
+.sl-line,
+.sl-workers,
+.sl-worker {
+  display: flex;
+  align-items: center;
 }
 
 .sl-line {
-  display: inline-flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
+  gap: 8px 16px;
   max-width: 100%;
-  padding: 6px 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r);
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted);
 }
 
-.sl-scouts {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 4px;
+.sl-workers {
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.sl-scout {
-  display: inline-flex;
-  opacity: 0.55;
+.sl-worker {
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 
-.sl-scout[data-working] {
-  opacity: 1;
-  animation: sl-bob 1.2s ease-in-out infinite;
+.sl-name {
+  overflow-wrap: anywhere;
 }
 
-.sl-scout[data-working]:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.sl-scout[data-working]:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-.sl-scout[data-working]:nth-child(4) {
-  animation-delay: 0.6s;
-}
-
-.sl-scout[data-working]:nth-child(5) {
-  animation-delay: 0.8s;
-}
-
-@keyframes sl-bob {
-  50% {
-    transform: translateY(-3px);
-  }
-}
-
-.sl-more {
-  font-size: 12px;
+.sl-state {
   color: var(--faint);
 }
 
-.sl-text {
-  min-width: 0;
-  overflow-wrap: anywhere;
+.sl-worker[data-state='failed'] .sl-state {
+  color: var(--danger);
 }
 
 .sl-view {
@@ -77,8 +59,16 @@
   margin-top: 8px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .sl-scout[data-working] {
-    animation: none;
+.sl-done {
+  margin: 0;
+}
+
+.sl-view {
+  min-height: 28px;
+}
+
+@media (pointer: coarse) {
+  .sl-view {
+    min-height: 44px;
   }
 }

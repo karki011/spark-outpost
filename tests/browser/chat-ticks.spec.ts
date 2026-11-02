@@ -8,7 +8,6 @@ import { useSystemTheme } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
 import {
   COLUMN,
-  INDENT,
   PROMPTS,
   SHOTS,
   ask,
@@ -85,21 +84,21 @@ test.describe('plain chats', () => {
     await expect(header(page)).toBeInViewport({ ratio: 1 });
     await shoot(page, 'outline-2000');
 
-    const table = (await page.locator('.md-table').boundingBox())!;
-    const longCode = (await page.locator('.md-code').first().boundingBox())!;
-    const shortCode = (await page.locator('.md-code').nth(1).boundingBox())!;
+    const table = (await page.locator('.col .md-table').boundingBox())!;
+    const longCode = (await page.locator('.col .md-code').first().boundingBox())!;
+    const shortCode = (await page.locator('.col .md-code').nth(1).boundingBox())!;
     const column = (await page.locator('.col').boundingBox())!;
     const railBox = (await rail(page).boundingBox())!;
     expect(Math.abs(column.width - COLUMN)).toBeLessThan(1);
     for (const block of [table, longCode, shortCode]) {
-      expect(Math.abs(block.x - column.x - INDENT)).toBeLessThan(2);
+      expect(Math.abs(block.x - column.x)).toBeLessThan(2);
       expect(Math.abs(block.x + block.width - column.x - column.width)).toBeLessThan(2);
       expect(block.x + block.width).toBeLessThan(railBox.x);
     }
     const composer = (await page.locator('.composer').boundingBox())!;
     expect(Math.abs(composer.width - column.width)).toBeLessThan(2);
-    const prose = (await page.locator('.md p').first().boundingBox())!;
-    expect(Math.abs(prose.x - column.x - INDENT)).toBeLessThan(2);
+    const prose = (await page.locator('.col .msg.ai .md > p').first().boundingBox())!;
+    expect(Math.abs(prose.x - column.x)).toBeLessThan(2);
     expect(Math.abs(prose.x + prose.width - column.x - column.width)).toBeLessThan(2);
     expect(await pageScroll(page)).toBe(0);
 
@@ -147,7 +146,7 @@ test.describe('plain chats', () => {
     test.setTimeout(120_000);
     await longChat(page);
     await widenSecondReply(page);
-    await expect(page.getByRole('group', { name: 'How did it go?' })).toHaveCount(4);
+    await expect(page.locator('.turn-meta')).toHaveCount(4);
     await animationsSettled(page);
     const thread = page.locator('.thread');
     const place = async () => ({

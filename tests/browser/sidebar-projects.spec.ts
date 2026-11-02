@@ -43,7 +43,8 @@ async function openProjectMenu(page: Page, name: string) {
 
 test('renames a project from its menu', async ({ page }) => {
   await openChats(page);
-  await createProject(page, 'live-crew');
+  const project = await createProject(page, 'live-crew');
+  await seedChats([{ title: 'Crew chat', projectIds: [project.id] }]);
   await page.reload();
   const menu = await openProjectMenu(page, 'live-crew');
   await expect(menu.getByRole('menuitem')).toHaveText([

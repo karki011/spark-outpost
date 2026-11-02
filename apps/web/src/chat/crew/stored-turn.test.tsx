@@ -6,7 +6,7 @@ import type { Run } from '@spark-outpost/contracts';
 import { CrewTurn } from './CrewTurn.tsx';
 import { orchestrationSchema } from '@spark-outpost/contracts';
 import released from '../../../../../packages/contracts/src/stored-crew-turn.fixture.json' with { type: 'json' };
-import { CLOSING_REPLY, crewTurn } from './stored-turn-fixture.ts';
+import { BOLT, CLOSING_REPLY, TURN, crewTurn } from './stored-turn-fixture.ts';
 
 class QuietEventSource {
   onmessage: ((message: MessageEvent<string>) => void) | null = null;
@@ -26,12 +26,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function show(status: Run['status']) {
-  const turn = crewTurn(status);
+function show(status: Run['status'], memberRuns: Run[] = []) {
+  const base = crewTurn(status);
+  const turn = { ...base, detail: { ...base.detail, runs: [...base.detail.runs, ...memberRuns] } };
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const tree = (current: ReturnType<typeof crewTurn>) => (
     <QueryClientProvider client={client}>
-      <CrewTurn {...current} repo={null} taskCard={null} />
+      <CrewTurn {...current} repo={null} />
     </QueryClientProvider>
   );
   const view = render(tree(turn));
@@ -80,6 +81,33 @@ describe('a stored crew turn', () => {
     expect(messageButtons()).toEqual([]);
   });
 
+  it("shows a helper's whole to-do, folded once it finished, even when an earlier turn had the same items", () => {
+    const todo = [
+      { content: 'Build the store', priority: 'medium', status: 'completed' },
+      { content: 'Export it', priority: 'medium', status: 'completed' },
+    ] as const;
+    const bolt = {
+      id: BOLT,
+      createdAt: '2026-09-26T10:03:00.000Z',
+      parentRunId: TURN,
+      status: 'succeeded',
+      todo,
+    } as unknown as Run;
+    const earlier = {
+      id: '00000000-0000-4000-8000-0000000000b9',
+      createdAt: '2026-09-26T09:00:00.000Z',
+      parentRunId: null,
+      status: 'succeeded',
+      todo,
+    } as unknown as Run;
+    const { view } = show('succeeded', [earlier, bolt]);
+    fireEvent.click(within(parallel('Worked')).getByRole('button', { name: /Bolt/ }));
+    const block = view.container.querySelector('.par-body [data-agent]')!;
+    expect(
+      within(block as HTMLElement).getByRole('button', { name: 'To-do: 2 of 2 done' }),
+    ).toBeTruthy();
+  });
+
   it('keeps a message the user sent a helper during the turn and the saved plan line', () => {
     const { view } = show('succeeded');
     const steered = view.container.querySelector('.msg.me.steered')!;
@@ -102,10 +130,38 @@ describe('a stored crew turn', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const view = render(
       <QueryClientProvider client={client}>
-        <CrewTurn {...turn} orchestration={stored} repo={null} taskCard={null} />
+        <CrewTurn {...turn} orchestration={stored} repo={null} />
       </QueryClientProvider>,
     );
     expect(view.container.querySelector('.crew-summary')?.textContent).toBe(CLOSING_REPLY);
+  });
+
+  it('places a flag by its time, before the blocks that came after it', () => {
+    const base = crewTurn('succeeded');
+    const flag = {
+      id: 'flag-1',
+      runId: base.run.id,
+      turnRunId: base.run.id,
+      conversationId: base.detail.conversation.id,
+      rail: 'sent_out' as const,
+      title: 'Claude sent data out',
+      paths: [],
+      inside: false,
+      originals: [],
+      status: 'open' as const,
+      createdAt: '2000-01-01T00:00:00.000Z',
+    };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(
+      <QueryClientProvider client={client}>
+        <CrewTurn {...base} detail={{ ...base.detail, railFlags: [flag] }} repo={null} />
+      </QueryClientProvider>,
+    );
+    const line = view.container.querySelector('.flag-line')!;
+    const firstAgent = view.container.querySelector('.agent-block:not(.jev), .agent-group')!;
+    expect(
+      line.compareDocumentPosition(firstAgent) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('keeps a card the user already answered', () => {

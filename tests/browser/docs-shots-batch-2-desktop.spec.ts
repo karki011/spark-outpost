@@ -127,10 +127,7 @@ test('Desktop companion screenshots', async ({ page }) => {
   await seedDemo(page, repo);
   await runsByClaude();
   await openIsland(page);
-  await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  await expect(
-    page.getByRole('toolbar', { name: 'Active chats' }).getByRole('button').first(),
-  ).toBeVisible();
+  await expect(island(page)).toHaveAttribute('data-view', /peek|now/);
 
   await page.keyboard.press('Alt+Space');
   const message = island(page).getByRole('textbox', { name: 'Message' });
@@ -139,21 +136,6 @@ test('Desktop companion screenshots', async ({ page }) => {
   await shootClip(page, 'companion-island-chat', { ...ISLAND_CLIP, height: 200 });
   await message.fill('');
   await page.keyboard.press('Escape');
-
-  await page.keyboard.press('Alt+Shift+Space');
-  const search = island(page).getByRole('combobox', { name: 'Search sessions' });
-  await expect(search).toBeFocused();
-  await search.fill('CSV');
-  await page.keyboard.press('Enter');
-  await island(page).getByRole('button', { name: 'Ask for update' }).click();
-  await expect(island(page).getByRole('status').filter({ hasText: 'Next:' })).toBeVisible({
-    timeout: 20_000,
-  });
-  await shootClip(page, 'companion-island-sessions', ISLAND_CLIP);
-  await page.keyboard.press('Escape');
-  await page.keyboard.press('Escape');
-  await page.mouse.move(640, 600);
-  await expect(island(page)).not.toHaveAttribute('data-view', 'panel', { timeout: 10_000 });
 
   await seedChats([
     {
@@ -171,10 +153,12 @@ test('Desktop companion screenshots', async ({ page }) => {
   await shootClip(page, 'companion-island-card', { ...ISLAND_CLIP, height: 260 });
 
   await page.mouse.move(640, 600);
+  await page.keyboard.press('Escape');
   await page.keyboard.press('Alt+Shift+Space');
-  await page.keyboard.press('Meta+1');
-  await expect(island(page).getByRole('region', { name: /^Now/ })).toBeVisible();
-  await shootClip(page, 'companion-island-home', { x: 290, y: 0, width: 700, height: 240 });
+  await expect(
+    island(page).getByRole('article', { name: 'Run the invoice tests needs you' }),
+  ).toBeVisible();
+  await shootClip(page, 'companion-island-home', { x: 240, y: 0, width: 800, height: 400 });
 });
 
 test('Companion settings and updates screenshots', async ({ page }) => {

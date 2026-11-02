@@ -21,20 +21,17 @@ async function ask(page: Page, message: string) {
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 15_000 });
 }
 
-const thinking = (page: Page) => page.getByRole('button', { name: 'Thinking', exact: true });
+const thinking = (page: Page) => page.getByRole('button', { name: /^Thought( for \d+s)?$/ });
 const thought = (page: Page) => page.getByRole('group', { name: 'Thinking' });
 
 test('the thinking text is closed until asked for, opens from the keyboard, and survives a reload', async ({
   page,
 }) => {
   await ask(page, 'Explain yourself #think');
-  const steps = page.locator('.steps-head', { hasText: /worked for \d+s/ });
-  await steps.click();
   await expect(thinking(page)).toHaveAttribute('aria-expanded', 'false');
   await expect(thought(page)).toHaveCount(0);
-  await expect(
-    page.locator('.steps li', { hasText: 'Writing a reply' }).getByRole('button'),
-  ).toHaveCount(0);
+  await expect(page.locator('.trow', { hasText: 'Writing a reply' })).toBeVisible();
+  await expect(page.locator('button.trow', { hasText: 'Writing a reply' })).toHaveCount(0);
 
   const top = await page.locator('.thread').evaluate((thread) => thread.scrollTop);
   await thinking(page).focus();
@@ -49,7 +46,7 @@ test('the thinking text is closed until asked for, opens from the keyboard, and 
     await page.evaluate((skin) => {
       document.documentElement.dataset.skin = skin === 'light' ? 'light' : 'graphite';
     }, scheme);
-    const axe = await new AxeBuilder({ page }).include('.steps').analyze();
+    const axe = await new AxeBuilder({ page }).include('.trows').analyze();
     expect(axe.violations, scheme).toEqual([]);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `thinking-open-${scheme}.png`) });
   }
@@ -60,14 +57,12 @@ test('the thinking text is closed until asked for, opens from the keyboard, and 
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'thinking-closed-dark.png') });
 
   await page.reload();
-  await page.locator('.steps-head', { hasText: /worked for \d+s/ }).click();
   await thinking(page).click();
   await expect(thought(page)).toHaveText(THOUGHT);
 });
 
 test('a run without thinking shows its steps as plain rows', async ({ page }) => {
   await ask(page, 'Just answer');
-  await page.locator('.steps-head', { hasText: /worked for \d+s/ }).click();
-  await expect(page.locator('.steps li', { hasText: 'Writing a reply' })).toBeVisible();
-  await expect(page.locator('.steps li').getByRole('button')).toHaveCount(0);
+  await expect(page.locator('.msg.ai .trow', { hasText: 'Writing a reply' })).toBeVisible();
+  await expect(page.locator('.msg.ai .trows').getByRole('button')).toHaveCount(0);
 });

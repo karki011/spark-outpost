@@ -1,6 +1,6 @@
-import { memo, use, useEffect, useId, useRef, useState } from 'react';
+import { memo, use, useEffect, useId, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { plainOutput } from '@spark-outpost/contracts';
+import { isMcpToolName, plainOutput } from '@spark-outpost/contracts';
 import { openCommandTab } from '../../terminal/dock/shell-store.ts';
 import { CheckIcon, ChevronIcon, CopyIcon, TerminalIcon } from '../../ui/icons.tsx';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
@@ -8,12 +8,15 @@ import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { useCopyFeedback } from '../../ui/use-copy-feedback.ts';
 import { commandOutputKey, fetchCommandOutput } from './command-api.ts';
 import { CommandDockContext } from './command-dock.ts';
+import type { CommandAnswer } from './command-answers.ts';
 import { commandOutcome, type CommandView } from './command-model.ts';
+import { commandTitle } from './command-title.ts';
 import { CommandScreen } from './CommandScreen.tsx';
-import { Elapsed, stateText, StatusMark } from './CommandStatus.tsx';
+import { CommandWord } from './CommandStatus.tsx';
+import { useCommandUi } from './command-ui.ts';
+import { RowIcon } from '../rows/RowIcon.tsx';
 import './command-terminal.css';
 
-const COLLAPSE_AFTER_MS = 1500;
 const KB = 1024;
 
 function sizeNote(command: CommandView, shown: number): string | null {
@@ -22,45 +25,53 @@ function sizeNote(command: CommandView, shown: number): string | null {
   return `Showing the last ${kb(shown)} of ${kb(command.outputChars)}.`;
 }
 
-function useOpenState(command: CommandView, waiting: boolean) {
-  const [wasRunning] = useState(command.status === 'running');
-  const [settled, setSettled] = useState(false);
-  const [choice, setChoice] = useState<boolean | null>(null);
-  const touched = useRef(false);
-  const lingers = command.status === 'completed' && wasRunning && command.live && !settled;
-
+function useTerminalUi(command: CommandView) {
+  const [ui, update] = useCommandUi(command.id);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const refocus = useRef(ui.focused);
   useEffect(() => {
-    if (!lingers) return;
-    const timer = setTimeout(() => {
-      if (!touched.current) setSettled(true);
-    }, COLLAPSE_AFTER_MS);
-    return () => clearTimeout(timer);
-  }, [lingers]);
-
-  const held = waiting && command.status === 'running';
-  const open = choice ?? (command.status === 'completed' ? lingers : !held);
+    if (refocus.current && document.activeElement === document.body) toggleRef.current?.focus();
+  }, []);
+  const open = ui.open ?? (command.status === 'failed' || command.status === 'interrupted');
   return {
     open,
+    tall: ui.tall,
+    toggleRef,
     touch: () => {
-      touched.current = true;
+      if (ui.open === null) update({ open });
     },
-    toggle: () => {
-      touched.current = true;
-      setChoice(!open);
-    },
+    toggle: () => update({ open: !open }),
+    setTall: (tall: boolean) => update({ open, tall }),
+    focus: (focused: boolean) => update({ focused }),
   };
+}
+
+function CommandTitle({ command }: { command: CommandView }) {
+  return (
+    <span className="trow-text">
+      {!isMcpToolName(command.command) && (
+        <>
+          <span className="trow-verb">{command.status === 'running' ? 'Running' : 'Ran'}</span>{' '}
+        </>
+      )}
+      <span className="trow-name">{commandTitle(command)}</span>
+    </span>
+  );
 }
 
 interface CommandTerminalProps {
   command: CommandView;
   waiting?: boolean;
+  answer?: CommandAnswer | null;
 }
 
 function sameTerminal(before: CommandTerminalProps, after: CommandTerminalProps): boolean {
   const [was, now] = [before.command, after.command];
   return (
     before.waiting === after.waiting &&
+    before.answer?.line === after.answer?.line &&
     was.id === now.id &&
+    was.description === now.description &&
     was.runId === now.runId &&
     was.status === now.status &&
     was.output === now.output &&
@@ -75,11 +86,12 @@ function sameTerminal(before: CommandTerminalProps, after: CommandTerminalProps)
 export const CommandTerminal = memo(function CommandTerminal({
   command,
   waiting = false,
+  answer = null,
 }: CommandTerminalProps) {
   const bodyId = useId();
+  const tool = isMcpToolName(command.command);
   const dockChatId = use(CommandDockContext);
-  const { open, touch, toggle } = useOpenState(command, waiting);
-  const [tall, setTall] = useState(false);
+  const { open, tall, toggleRef, touch, toggle, setTall, focus } = useTerminalUi(command);
   const { state: copyState, copy } = useCopyFeedback();
   const queryClient = useQueryClient();
   const running = command.status === 'running';
@@ -102,92 +114,102 @@ export const CommandTerminal = memo(function CommandTerminal({
   return (
     <section
       className={`run-cmd ${command.status}${open ? ' open' : ''}`}
-      aria-label={`Command: ${command.command}`}
+      aria-label={tool ? `Tool: ${commandTitle(command)}` : `Command: ${command.command}`}
       data-command={command.id}
     >
       <div className="run-cmd-head">
         <button
           type="button"
-          className="run-cmd-toggle"
+          ref={toggleRef}
+          className="run-cmd-toggle trow"
           aria-expanded={open}
           aria-controls={bodyId}
-          title={command.command}
+          title={command.cwd ? `${command.command}\n${command.cwd}` : command.command}
           onClick={toggle}
+          onFocus={() => focus(true)}
+          onBlur={(event) => {
+            if (event.relatedTarget) focus(false);
+          }}
         >
-          <ChevronIcon />
-          <StatusMark command={command} waiting={waiting} />
-          <code className={tall && open ? 'run-cmd-line full' : 'run-cmd-line'}>
-            {command.command}
-          </code>
-          {command.cwd && <span className="run-cmd-cwd">{command.cwd}</span>}
-          <span className="run-cmd-state">
-            {running ? (
-              waiting ? (
-                'waiting for you'
-              ) : (
-                <Elapsed command={command} />
-              )
-            ) : (
-              stateText(command)
-            )}
+          <RowIcon name={tool ? 'other' : 'run'} />
+          <CommandTitle command={command} />
+          <span className="trow-end run-cmd-state">
+            <CommandWord command={command} waiting={waiting} denied={answer?.denied ?? false} />
+            <ChevronIcon />
           </span>
-        </button>
-        {open && !awaitsEnd && (
-          <button
-            type="button"
-            className="icon-btn run-cmd-size"
-            aria-pressed={tall}
-            aria-label="Taller output"
-            title={tall ? 'Shorter' : 'Taller'}
-            onClick={() => {
-              touch();
-              setTall(!tall);
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-              <path
-                d={
-                  tall
-                    ? 'M3.5 5 7 1.8 10.5 5M3.5 9 7 12.2 10.5 9'
-                    : 'M3.5 4 7 7.2 10.5 4M3.5 8 7 11.2 10.5 8'
-                }
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.4"
-              />
-            </svg>
-          </button>
-        )}
-        {dockChatId && (
-          <button
-            type="button"
-            className="icon-btn run-cmd-dock"
-            aria-label="Open in terminal"
-            title="Open in terminal"
-            onClick={() => {
-              touch();
-              openCommandTab(dockChatId, command.runId, command.id);
-            }}
-          >
-            <TerminalIcon />
-          </button>
-        )}
-        <button
-          type="button"
-          className="icon-btn run-cmd-copy"
-          aria-label={copied ? 'Copied' : 'Copy output'}
-          title={copied ? 'Copied' : 'Copy output'}
-          disabled={awaitsEnd}
-          onClick={copyOutput}
-        >
-          {copied ? <CheckIcon className="run-cmd-ok" /> : <CopyIcon />}
         </button>
       </div>
       <span className="sr-only" role="status">
-        {running ? `Running ${command.command.slice(0, 120)}` : commandOutcome(command)}
+        {running
+          ? `${tool ? '' : 'Running '}${commandTitle(command).slice(0, 120)}`
+          : commandOutcome(command)}
       </span>
       <div className="run-cmd-body" id={bodyId} hidden={!open}>
-        {open && awaitsEnd && <p className="run-cmd-note">Output shows when the command ends.</p>}
+        {open && (
+          <div className="run-cmd-tools">
+            <span className="run-cmd-label">{tool ? 'Tool result' : 'Terminal'}</span>
+            {!awaitsEnd && (
+              <button
+                type="button"
+                className="icon-btn run-cmd-size"
+                aria-pressed={tall}
+                aria-label="Taller output"
+                title={tall ? 'Shorter' : 'Taller'}
+                onClick={() => setTall(!tall)}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                  <path
+                    d={
+                      tall
+                        ? 'M3.5 5 7 1.8 10.5 5M3.5 9 7 12.2 10.5 9'
+                        : 'M3.5 4 7 7.2 10.5 4M3.5 8 7 11.2 10.5 8'
+                    }
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                  />
+                </svg>
+              </button>
+            )}
+            {dockChatId && !tool && (
+              <button
+                type="button"
+                className="icon-btn run-cmd-dock"
+                aria-label="Open in terminal"
+                title="Open in terminal"
+                onClick={() => {
+                  touch();
+                  openCommandTab(dockChatId, command.runId, command.id);
+                }}
+              >
+                <TerminalIcon />
+              </button>
+            )}
+            <button
+              type="button"
+              className="icon-btn run-cmd-copy"
+              aria-label={copied ? 'Copied' : 'Copy output'}
+              title={copied ? 'Copied' : 'Copy output'}
+              disabled={awaitsEnd}
+              onClick={copyOutput}
+            >
+              {copied ? <CheckIcon className="run-cmd-ok" /> : <CopyIcon />}
+            </button>
+          </div>
+        )}
+        {open && !tool && (
+          <pre className="run-cmd-cmd">
+            <span aria-hidden="true">$ </span>
+            {command.command}
+          </pre>
+        )}
+        {open && awaitsEnd && (
+          <p className="run-cmd-note">
+            {tool
+              ? 'Results appear when the tool finishes.'
+              : 'Output shows when the command ends.'}
+          </p>
+        )}
         {open && !awaitsEnd && text === null && (
           <div className="run-cmd-wait-load">
             <QueryWait query={loaded} what="the command output">
@@ -196,7 +218,9 @@ export const CommandTerminal = memo(function CommandTerminal({
           </div>
         )}
         {open && !awaitsEnd && text === '' && command.status !== 'interrupted' && !running && (
-          <p className="run-cmd-note">No output.</p>
+          <p className="run-cmd-note">
+            {tool ? 'No result was captured for this tool call.' : 'No output.'}
+          </p>
         )}
         {open && !awaitsEnd && text !== null && (text !== '' || running) && (
           <CommandScreen
@@ -204,6 +228,7 @@ export const CommandTerminal = memo(function CommandTerminal({
             appended={command.output === null ? text.length : command.appended}
             epoch={command.epoch}
             tall={tall}
+            fit={!running}
             onTouched={touch}
           />
         )}
@@ -215,6 +240,7 @@ export const CommandTerminal = memo(function CommandTerminal({
           </p>
         )}
         {open && note && <p className="run-cmd-note">{note}</p>}
+        {open && answer && <p className="run-cmd-note run-cmd-answer">{answer.line}</p>}
       </div>
     </section>
   );

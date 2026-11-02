@@ -1,28 +1,22 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { type Approval, type ApprovalOption, type ApprovalScope } from '@spark-outpost/contracts';
+import { projectAllowOption } from '../chat/approvals/approval-outcome.ts';
 import {
-  clarifyOptionId,
-  type Approval,
-  type ApprovalOption,
-  type ApprovalScope,
-} from '@spark-outpost/contracts';
-import { approvalsApi } from '../api/approvals.ts';
-import { projectAllowOption, shownOptions } from '../chat/approvals/approval-outcome.ts';
-import { isCheckpoint, type CheckpointApproval } from '../chat/checkpoints/checkpoint-model.ts';
+  asksQuestions,
+  checkpointTitle,
+  isCheckpoint,
+  type CheckpointApproval,
+} from '../chat/checkpoints/checkpoint-model.ts';
 import { useAutoContinue } from '../chat/checkpoints/use-auto-continue.ts';
 import { attentionLine } from '../conversations/row-state.ts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
-import { baseName } from './home-model.ts';
-import { approvalHunk } from './island-diff.ts';
+import { askedPrompt, pickDecision, questionPicks, type QuestionPick } from './asked-question.ts';
+import { approvalHunk, baseName } from './island-diff.ts';
 import { IslandDiff } from './IslandDiff.tsx';
 import type { Card } from './island-model.ts';
 import { Kbd, useArmed, Who } from './island-parts.tsx';
 import type { ChatAgent } from './use-island-data.ts';
-
-export interface Decided {
-  title: string;
-  sub: string;
-}
+import { findOption, useDecide, type Decided } from './use-decide.ts';
 
 interface CardViewProps {
   card: Card;
@@ -42,11 +36,7 @@ function shortCwd(cwd: string | null): string | null {
   return cwd.replace(/^\/Users\/[^/]+/, '~');
 }
 
-function findOption(approval: Approval, kind: ApprovalOption['kind']) {
-  return shownOptions(approval).find((option) => option.kind === kind && !option.unavailableReason);
-}
-
-function heading(card: Card, who: string): string {
+export function cardHeading(card: Card, who: string): string {
   const approval = card.approval;
   if (card.kind === 'force') return `${who} wants to force-push`;
   if (!approval) return attentionLine(card.chat.attention);
@@ -56,10 +46,13 @@ function heading(card: Card, who: string): string {
       ? `${who} wants to change files`
       : `${who} wants to change a file`;
   }
+  if (approval.payload.sparkAction) return approval.title;
+  const checkpoint = approval.payload.checkpoint;
+  if (checkpoint && asksQuestions(checkpoint)) return checkpointTitle(checkpoint);
   return `${who} wants to ${approval.title}`;
 }
 
-function Target({ approval }: { approval: Approval }) {
+export function Target({ approval }: { approval: Approval }) {
   const command = approval.payload.command;
   const cwd = shortCwd(approval.payload.cwd);
   if (command) {
@@ -82,36 +75,6 @@ function Target({ approval }: { approval: Approval }) {
     );
   }
   return <div className="isl-code">{approval.title}</div>;
-}
-
-function useDecide(approval: Approval | null, onDecided: (decided: Decided) => void, who: string) {
-  return useMutation({
-    mutationFn: ({
-      option,
-      scope,
-    }: {
-      option: ApprovalOption;
-      scope: ApprovalScope;
-      said?: Decided;
-    }) =>
-      approvalsApi.decide(approval!.id, {
-        optionId: option.optionId,
-        scope,
-        payloadHash: approval!.payloadHash,
-      }),
-    onSuccess: (_result, { option, scope, said }) => {
-      const allowed = option.kind.startsWith('allow');
-      if (said) {
-        onDecided(said);
-      } else if (scope === 'project') {
-        onDecided({ title: 'Allowed in this project', sub: 'It won’t ask again here.' });
-      } else if (allowed) {
-        onDecided({ title: 'Allowed once', sub: `${who} carries on.` });
-      } else {
-        onDecided({ title: 'Denied', sub: `${who} will try another way.` });
-      }
-    },
-  });
 }
 
 function ForceActions({
@@ -194,7 +157,7 @@ function ForceActions({
   );
 }
 
-function QuestionChoices({
+export function QuestionChoices({
   approval,
   armed,
   busy,
@@ -203,10 +166,10 @@ function QuestionChoices({
   approval: CheckpointApproval;
   armed: boolean;
   busy: boolean;
-  onPick: (optionId: string, label: string) => void;
+  onPick: (pick: QuestionPick) => void;
 }) {
   const auto = useAutoContinue(approval);
-  const choices = approval.payload.checkpoint.choices;
+  const picks = questionPicks(approval);
   const [paused, setPaused] = useState(false);
   const total = approval.autoContinueAt
     ? Math.max(
@@ -223,16 +186,16 @@ function QuestionChoices({
       }}
     >
       <div className="isl-opts">
-        {choices.map((choice, index) => (
+        {picks.map((pick, index) => (
           <button
-            key={choice}
+            key={pick.label}
             type="button"
             className={index === 0 ? 'isl-btn opt def' : 'isl-btn opt'}
             data-arming={!armed || undefined}
             disabled={!armed || busy}
-            onClick={() => onPick(clarifyOptionId(index), choice)}
+            onClick={() => onPick(pick)}
           >
-            {choice}
+            {pick.label}
           </button>
         ))}
       </div>
@@ -273,7 +236,7 @@ export function CardView({
   const armed = useArmed(approval?.id ?? card.chat.id);
   const decide = useDecide(approval, onDecided, agent.name);
   const cardRef = useRef<HTMLDivElement>(null);
-  const title = heading(card, agent.name);
+  const title = cardHeading(card, agent.name);
 
   useEffect(() => {
     if (focusSignal > 0) cardRef.current?.focus({ preventScroll: true });
@@ -354,20 +317,12 @@ export function CardView({
         )}
       {card.kind === 'question' && approval && isCheckpoint(approval) && (
         <>
-          {approval.payload.checkpoint.question && (
-            <p className="isl-hint">{approval.payload.checkpoint.question}</p>
-          )}
+          {askedPrompt(approval) && <p className="isl-hint">{askedPrompt(approval)}</p>}
           <QuestionChoices
             approval={approval}
             armed={armed}
             busy={decide.isPending}
-            onPick={(optionId, label) =>
-              decide.mutate({
-                option: { optionId, name: label, kind: 'allow_once' },
-                scope: 'once',
-                said: { title: `Got it, using ${label}`, sub: `${agent.name} carries on.` },
-              })
-            }
+            onPick={(pick) => decide.mutate(pickDecision(pick, agent.name))}
           />
         </>
       )}

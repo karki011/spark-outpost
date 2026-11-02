@@ -28,7 +28,6 @@ beforeEach(async () => {
     db: t.db,
     providers: new Map([['codex', provider]]),
     leaseSeconds: 30,
-    concurrency: 1,
     pollMs: 20,
     cancelPollMs: 20,
   });
@@ -97,11 +96,10 @@ describe('AG-UI events from an ACP agent', { timeout: 40_000 }, () => {
     expect(JSON.stringify(events)).not.toContain(SECRET);
 
     const detail = await getConversationDetail(t.db, conversationId);
-    expect(detail?.activity[runId]?.find((step) => step.name === 'Thinking')).toEqual({
-      name: 'Thinking',
-      done: true,
-      reasoningId: span.messageId,
-    });
+    const stored = detail?.activity[runId]?.find((step) => step.name === 'Thinking');
+    expect(stored).toMatchObject({ name: 'Thinking', done: true, reasoningId: span.messageId });
+    expect(stored?.finishedAt).toBeGreaterThanOrEqual(stored?.startedAt ?? Infinity);
+    expect(stored?.textOffset).toBe(0);
     const app = createTestApp(t);
     const read = (id: string) =>
       request(app).get(`/api/runs/${runId}/reasoning/${id}`).set(LOCAL_HEADERS);
@@ -132,7 +130,7 @@ describe('AG-UI events from an ACP agent', { timeout: 40_000 }, () => {
     const searchSteps = [EventType.STEP_STARTED, EventType.STEP_FINISHED].map((type) =>
       events.filter((event) => event.type === type && named(event)),
     );
-    expect(searchSteps.map((steps) => steps.map(stepMark))).toEqual([
+    expect(searchSteps.map((steps) => steps.map(stepMark))).toMatchObject([
       [{ toolCallId: 'twin-1' }],
       [{ toolCallId: 'twin-1' }],
     ]);
@@ -178,7 +176,7 @@ describe('AG-UI events from an ACP agent', { timeout: 40_000 }, () => {
       EventType.STEP_FINISHED,
       EventType.RUN_FINISHED,
     ]);
-    expect(ofType(closing, EventType.STEP_FINISHED).map(stepMark)).toEqual([
+    expect(ofType(closing, EventType.STEP_FINISHED).map(stepMark)).toMatchObject([
       { toolCallId: 'twin-1', interrupted: true },
       { interrupted: true },
     ]);

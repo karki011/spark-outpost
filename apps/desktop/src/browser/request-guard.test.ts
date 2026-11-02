@@ -2,19 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   AGENT_OPEN_REFUSALS,
   agentOpenProblem,
-  agentPartition,
   insideRoots,
-  isBrowserPartition,
   navigationAllowed,
-  partitionFor,
-  projectPartition,
   requestAllowed,
-  tabPartition,
   withoutSparkToken,
 } from './request-guard.ts';
 
-const CHAT = '11111111-2222-4333-8444-555555555555';
-const PROJECT = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const facts = { blockedPorts: new Set([32682, 55050, 61884]), roots: ['/Users/me/app'] };
 
 describe('what a page in the pane may request', () => {
@@ -136,59 +129,5 @@ describe('where a page may take a tab, by link, script or redirect', () => {
     ]) {
       expect(requestAllowed(hop, facts), hop).toBe(false);
     }
-  });
-});
-
-describe('browser partitions', () => {
-  it('keeps sign-ins per project and never names the app session', () => {
-    const kept = partitionFor({ chatId: CHAT, projectId: PROJECT, keepSignIns: true });
-    expect(kept).toBe(`persist:spark-browser-${PROJECT}`);
-    expect(kept).toBe(projectPartition(PROJECT));
-    expect(isBrowserPartition(kept)).toBe(true);
-    expect(isBrowserPartition('')).toBe(false);
-    expect(isBrowserPartition('persist:main')).toBe(false);
-  });
-
-  it('uses an in-memory partition per chat without a project or with sign-ins off', () => {
-    const none = partitionFor({ chatId: CHAT, projectId: null, keepSignIns: true });
-    const off = partitionFor({ chatId: CHAT, projectId: PROJECT, keepSignIns: false });
-    expect(none).toBe(`spark-browser-chat-${CHAT}`);
-    expect(off).toBe(none);
-    expect(none.startsWith('persist:')).toBe(false);
-  });
-
-  it('refuses ids that are not ids', () => {
-    expect(() => partitionFor({ chatId: '', projectId: null, keepSignIns: true })).toThrow();
-    expect(() => projectPartition('../default')).toThrow();
-  });
-
-  it.each([
-    ['user', 'https://example.com/', 'user'],
-    ['user', 'http://localhost:5173/', 'user'],
-    ['user', 'file:///Users/me/app/index.html', 'user'],
-    ['user', 'about:blank', 'user'],
-    ['agent', 'http://localhost:5173/', 'user'],
-    ['agent', 'http://app.test:4000/', 'user'],
-    ['agent', 'file:///Users/me/app/index.html', 'user'],
-    ['agent', 'about:blank', 'user'],
-    ['agent', 'https://example.com/', 'agent'],
-    ['agent', 'http://192.168.1.20:3000/', 'agent'],
-    ['agent', 'http://localhost.evil.example/', 'agent'],
-    ['agent', 'javascript:alert(1)', 'agent'],
-    ['agent', 'not a url', 'agent'],
-  ] as const)('puts a tab the %s owns on %s in the %s’s storage', (owner, url, whose) => {
-    const kept = { chatId: CHAT, projectId: PROJECT, keepSignIns: true };
-    const expected = whose === 'agent' ? agentPartition(CHAT) : projectPartition(PROJECT);
-    expect(tabPartition(kept, { owner, url })).toBe(expected);
-  });
-
-  it('keeps the agent’s storage per chat, in memory, apart from the chat’s own', () => {
-    const chatOnly = { chatId: CHAT, projectId: null, keepSignIns: true };
-    const mine = tabPartition(chatOnly, { owner: 'user', url: 'https://example.com/' });
-    const agents = tabPartition(chatOnly, { owner: 'agent', url: 'https://example.com/' });
-    expect(agents).toBe(`spark-browser-agent-${CHAT}`);
-    expect(agents).not.toBe(mine);
-    expect(isBrowserPartition(agents)).toBe(true);
-    expect(() => agentPartition('../default')).toThrow();
   });
 });

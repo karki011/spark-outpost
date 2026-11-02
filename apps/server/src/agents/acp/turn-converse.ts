@@ -22,6 +22,7 @@ import {
   sessionOutput,
   type OpenedSession,
 } from './session-open.ts';
+import { withPermissionRules, withSparkFloor } from './repo-session.ts';
 import { newSessionRequest } from './session-request.ts';
 import { extraRoots, sessionMeta } from './session-start.ts';
 import { slashPrompt } from './slash-commands.ts';
@@ -34,6 +35,7 @@ import type { Workspace } from './turn-launch.ts';
 import { createRequestLog, runPrompts } from './turn-loop.ts';
 import { createTurnTokens } from './turn-tokens.ts';
 import { updateSink } from './update-sink.ts';
+import { createWebReadWatch } from './web-reads.ts';
 
 export interface TurnContext {
   connection: LiveConnection;
@@ -69,7 +71,10 @@ async function startSession(context: TurnContext, gates: TurnGates): Promise<Ses
   assertProtocolVersion(definition.name, init);
   const spark = sparkAcpServer(tools, definition, init);
   const claude = withClaudeSpark(
-    workspace.repo?.claude ?? null,
+    withSparkFloor(
+      withPermissionRules(workspace.repo?.claude ?? null, workspace.rules),
+      workspace.floor,
+    ),
     turn.spark,
     policy !== null,
     spark ? workspace.spark : null,
@@ -108,7 +113,16 @@ function liveSession(connection: LiveConnection): SessionStart {
 export async function converse(context: TurnContext): Promise<acp.StopReason> {
   const { connection, definition, workspace, turn, signal, mapper, push } = context;
   const { policy } = workspace;
-  const gates = turnGates(policy, workspace.cwd, workspace.changing, turn, signal, mapper, push);
+  const gates = turnGates(
+    policy,
+    workspace.cwd,
+    workspace.changing,
+    turn,
+    signal,
+    mapper,
+    push,
+    definition.cli,
+  );
   const requests = createRequestLog();
   const unbind = connection.bind(
     turnHandlers({
@@ -173,6 +187,7 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
       attachments: turn.attachments ?? [],
       support,
       projectRoots: policy?.roots.map((root) => root.path) ?? [],
+      chatFolder: turn.chatFolder === true,
       changesAllowed: gates.doing !== null,
       commandsAllowed: gates.gated !== null,
       toolsAvailable:
@@ -204,6 +219,7 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
         commands: createCommandTracker(definition.streamsCommandOutput === true),
         rails: gates.rails,
         flagsRails: gates.doing !== null,
+        webReads: createWebReadWatch(),
         push,
       }),
       background: connection.background,

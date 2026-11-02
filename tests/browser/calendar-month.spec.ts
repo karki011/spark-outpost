@@ -83,19 +83,25 @@ test('moves across days with the arrows, crosses months and opens a day with Ent
   await page.keyboard.press('ArrowRight');
   await expect(cell(page, now + DAY)).toBeFocused();
   await expect(cell(page, now + DAY)).toHaveAttribute('aria-selected', 'true');
-  await expect(cell(page, now)).toHaveAttribute('tabindex', '-1');
+  if (dayKey(now).slice(0, 7) === dayKey(now + DAY).slice(0, 7)) {
+    await expect(cell(page, now)).toHaveAttribute('tabindex', '-1');
+  }
   await expect(scheduled(page).locator('.rl-card', { hasText: 'Demo day' })).toBeVisible();
 
   await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('PageDown');
   const next = new Date(now);
+  next.setDate(1);
   next.setMonth(next.getMonth() + 1);
   await expect(today(page).getByRole('heading', { level: 1 })).toContainText(
     next.toLocaleDateString(undefined, { month: 'long' }),
   );
   await expect(grid(page).locator('[aria-selected="true"]')).toBeFocused();
   await page.keyboard.press('PageUp');
-  await expect(cell(page, now)).toBeFocused();
+  await expect(today(page).getByRole('heading', { level: 1 })).toContainText(
+    new Date(now).toLocaleDateString(undefined, { month: 'long' }),
+  );
+  await expect(grid(page).locator('[aria-selected="true"]')).toBeFocused();
 
   await page.keyboard.press('Enter');
   await expect(today(page).getByRole('radio', { name: 'Day' })).toHaveAttribute(

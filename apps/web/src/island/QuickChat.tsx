@@ -17,16 +17,17 @@ import { PICK_PROJECT_HINT } from '../chat/project/repo-list.ts';
 import { providerName } from '../chat/provider-name.ts';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
-import { FolderDialog } from '../chat/project/FolderDialog.tsx';
 import { ProjectMenu } from './ProjectMenu.tsx';
 import { AttachmentChips } from '../chat/attachments/AttachmentChips.tsx';
 import type { AttachmentsState } from '../chat/attachments/use-attachments.ts';
-import type { useAddProject } from './use-add-project.ts';
+import type { AddFolder } from '../projects/use-add-folder.tsx';
 import { ticketsApi } from '../tickets/tickets-api.ts';
 import type { TicketRef } from '../voice/commands.ts';
 import { MicButton } from '../voice/MicButton.tsx';
 import { useSeed } from '../voice/speech-seed.tsx';
-import { joinDictation } from '../voice/use-dictation.ts';
+import { useDictationDraft } from '../voice/use-dictation-draft.ts';
+
+export type FollowUp = Pick<ConversationSummary, 'id' | 'title'>;
 
 export interface QuickDraft {
   text: string;
@@ -36,7 +37,7 @@ export interface QuickDraft {
 
 export interface Compose {
   attachments: AttachmentsState;
-  adder: ReturnType<typeof useAddProject>;
+  adder: AddFolder;
   added: { project: Project; signal: number } | null;
   note: string | null;
 }
@@ -45,7 +46,7 @@ interface QuickChatProps {
   compose: Compose;
   draftId: string;
   draft: QuickDraft;
-  followUp: ConversationSummary | null;
+  followUp: FollowUp | null;
   projects: readonly Project[];
   focusDelay: number;
   onDraft: (draft: QuickDraft) => void;
@@ -74,6 +75,12 @@ function useDefaults() {
 export function QuickChat(props: QuickChatProps) {
   const { draftId, draft, followUp, projects, onDraft, onSent } = props;
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const voice = useDictationDraft(
+    draft.text,
+    (text) => onDraft({ ...draft, text }),
+    followUp?.id ?? draftId,
+    () => textRef.current?.focus({ preventScroll: true }),
+  );
   const chipRef = useRef<HTMLButtonElement>(null);
   const { attachments, adder, added } = props.compose;
   const [menuAt, setMenuAt] = useState<number | null>(null);
@@ -137,7 +144,14 @@ export function QuickChat(props: QuickChatProps) {
 
   const submit = () => {
     const content = draft.text.trim();
-    if (!content || !ready || send.isPending || secrets.blocks(draft.text)) return;
+    if (
+      voice.dictation.active ||
+      !content ||
+      !ready ||
+      send.isPending ||
+      secrets.blocks(draft.text)
+    )
+      return;
     send.mutate(content);
   };
 
@@ -157,6 +171,16 @@ export function QuickChat(props: QuickChatProps) {
     submit,
   );
 
+  useSeed(
+    'reply',
+    (seed) => {
+      if (followUp?.id !== seed.chatId) return;
+      onDraft({ ...draft, text: seed.text });
+      textRef.current?.focus({ preventScroll: true });
+    },
+    submit,
+  );
+
   const pick = (id: string | null) => {
     onDraft({ ...draft, projectId: id });
     setMenu(false);
@@ -168,21 +192,8 @@ export function QuickChat(props: QuickChatProps) {
     onDraft({ ...draft, level: AUTONOMY_LEVELS[(index + 1) % AUTONOMY_LEVELS.length]!.id });
   };
 
-  if (adder.browsing) {
-    return (
-      <div className="isl-panel isl-picker">
-        <FolderDialog
-          inline
-          linking={adder.adding}
-          error={adder.error}
-          onUse={adder.linkFolder}
-          onClose={adder.close}
-          fallback={
-            adder.pickNative && { label: 'Use the Mac folder dialog', onPick: adder.pickNative }
-          }
-        />
-      </div>
-    );
+  if (adder.showing) {
+    return <div className="isl-panel isl-picker">{adder.flow}</div>;
   }
 
   return (
@@ -242,8 +253,8 @@ export function QuickChat(props: QuickChatProps) {
           ref={textRef}
           rows={2}
           placeholder={followUp ? 'Reply…' : 'Start a new chat…'}
-          value={draft.text}
-          onChange={(event) => onDraft({ ...draft, text: event.target.value })}
+          value={voice.value}
+          onChange={(event) => voice.change(event.target.value)}
           onKeyDown={onKeyDown}
         />
         <div className="isl-qc-bar">
@@ -297,15 +308,12 @@ export function QuickChat(props: QuickChatProps) {
           <span className="isl-qc-hint">
             {send.isPending ? 'Sending…' : attachments.uploading ? 'Uploading…' : ''}
           </span>
-          <MicButton
-            className="isl-chip"
-            onText={(heard) => onDraft({ ...draft, text: joinDictation(draft.text, heard) })}
-          />
+          <MicButton className="isl-chip" dictation={voice.dictation} />
           <button
             type="button"
             className="isl-send"
             aria-label="Send"
-            disabled={!draft.text.trim() || !ready || send.isPending}
+            disabled={voice.dictation.active || !draft.text.trim() || !ready || send.isPending}
             onClick={submit}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
@@ -328,13 +336,15 @@ export function QuickChat(props: QuickChatProps) {
         <ProjectMenu
           projects={projects}
           selected={draft.projectId}
-          adding={adder.adding}
+          busy={adder.busy}
           error={adder.error}
+          actions={adder.actions}
           chipRef={chipRef}
           onPick={pick}
-          onAdd={() => {
+          onAction={(action) => {
             setMenu(false);
-            adder.start();
+            chipRef.current?.focus();
+            action.onSelect();
           }}
           onClose={() => setMenu(false)}
         />

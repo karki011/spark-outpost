@@ -84,7 +84,7 @@ test.afterAll(() => {
   rmSync(FAKE_CALENDAR_STATE, { force: true });
 });
 
-test('the meeting card hangs from Scout with its details, opens Today and snoozes', async ({
+test('the meeting card hangs from Scout with its details, snoozes through a reload and opens Today for good', async ({
   page,
 }) => {
   await openNotchIsland(page, { size: 'large', autoExpand: false });
@@ -97,27 +97,78 @@ test('the meeting card hangs from Scout with its details, opens Today and snooze
   await expect(bubble(page)).toContainText('Daily sync: what changed since yesterday.');
   await expect(bubble(page).getByRole('button', { name: 'Join Zoom: Standup' })).toBeEnabled();
 
+  const response = await page.request.get('/api/calendar/now');
+  const meeting = calendarNowSchema
+    .parse(await response.json())
+    .upcoming.find((event) => event.title === 'Standup')!;
+  await bubble(page).getByRole('button', { name: 'Snooze until start' }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        JSON.parse(localStorage.getItem('spark-outpost.calendar-snoozes') ?? '[]'),
+      ),
+    )
+    .toContainEqual([meeting.key, Date.parse(meeting.end), Date.parse(meeting.start)]);
+  await expect(bubble(page)).toBeHidden();
+  await page.reload();
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await page.waitForTimeout(1_000);
+  await expect(bubble(page)).toBeHidden();
+  await page.evaluate(() => localStorage.removeItem('spark-outpost.calendar-snoozes'));
+  await page.reload();
+  await expect(bubble(page)).toBeVisible();
+
   await bubble(page).getByRole('button', { name: 'Open' }).click();
   const standup = await eventKeyOf(page, 'Standup', apiNow(), apiNow() + DAY);
   await expect.poll(() => opened(page)).toEqual([`settings:today:${standup}`]);
   await expect(bubble(page)).toBeHidden();
   await page.reload();
-
-  await bubble(page).getByRole('button', { name: 'Snooze 2 min' }).click();
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await page.waitForTimeout(1_000);
   await expect(bubble(page)).toBeHidden();
 });
 
-test('× and Esc dismiss the nudge for that meeting', async ({ page }) => {
+async function undismiss(page: Page) {
+  const response = await page.request.get('/api/calendar/now');
+  const standup = calendarNowSchema
+    .parse(await response.json())
+    .upcoming.find((event) => event.title === 'Standup')!;
+  const reset = await page.request.put('/api/calendar/marks', {
+    data: { eventKey: standup.key, end: standup.end, kind: 'dismiss', on: false },
+  });
+  expect(reset.ok()).toBe(true);
+}
+
+async function dismissedNow(page: Page): Promise<boolean | undefined> {
+  const response = await page.request.get('/api/calendar/now');
+  return calendarNowSchema
+    .parse(await response.json())
+    .upcoming.find((event) => event.title === 'Standup')?.dismissed;
+}
+
+test('Dismiss, × and Esc dismiss that meeting for good, even after a reload', async ({ page }) => {
   await openNotchIsland(page, { size: 'large', autoExpand: false });
   await expect(bubble(page)).toBeVisible();
-  await bubble(page).getByRole('button', { name: 'Dismiss the nudge for Standup' }).focus();
-  await page.keyboard.press('Escape');
+  await bubble(page).getByRole('button', { name: 'Dismiss', exact: true }).click();
   await expect(bubble(page)).toBeHidden();
+  await expect.poll(() => dismissedNow(page)).toBe(true);
+  await page.reload();
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await page.waitForTimeout(1_000);
+  await expect(bubble(page)).toBeHidden();
+
+  await undismiss(page);
   await page.reload();
   await bubble(page).getByRole('button', { name: 'Dismiss the nudge for Standup' }).click();
   await expect(bubble(page)).toBeHidden();
-  await page.waitForTimeout(1_000);
+  await expect.poll(() => dismissedNow(page)).toBe(true);
+
+  await undismiss(page);
+  await page.reload();
+  await bubble(page).getByRole('button', { name: 'Dismiss the nudge for Standup' }).focus();
+  await page.keyboard.press('Escape');
   await expect(bubble(page)).toBeHidden();
+  await expect.poll(() => dismissedNow(page)).toBe(true);
 });
 
 test('Open from the island lands on that day with the meeting selected and in view', async ({
@@ -125,6 +176,7 @@ test('Open from the island lands on that day with the meeting selected and in vi
 }) => {
   await fakeMainDesktop(page);
   await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
   const tomorrow = apiNow() + DAY;
   const demo = await eventKeyOf(page, 'Demo day', tomorrow, tomorrow + DAY);
   await openFromIsland(page, `today:${demo}`);

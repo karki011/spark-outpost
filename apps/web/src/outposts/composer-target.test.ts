@@ -7,6 +7,7 @@ import {
   handleQuery,
   matchingHandles,
   withHandle,
+  uniqueLead,
   type Answering,
 } from './composer-target.ts';
 
@@ -56,43 +57,68 @@ describe('composerTarget', () => {
     });
   });
 
-  it('is a note that says so when every addressed chat was left out', () => {
-    expect(composerTarget('@fe draw what @api returns', HANDLES, null, ['api', 'fe'])).toEqual({
-      action: 'note',
-      label: 'Post note',
+  it('blocks when every explicit recipient was removed', () => {
+    expect(
+      composerTarget('@fe draw what @api returns', HANDLES, null, ['api', 'fe'], {
+        conversationId: 'lead',
+        handle: 'fe',
+      }),
+    ).toMatchObject({
+      action: 'request',
       hint: NOBODY_HINT,
       to: [],
-      body: '@fe draw what @api returns',
+      ready: false,
+    });
+  });
+
+  it('sends ordinary text unchanged to the chosen lead', () => {
+    expect(
+      composerTarget('where are we', HANDLES, null, [], { conversationId: 'lead', handle: 'fe' }),
+    ).toMatchObject({
+      action: 'request',
+      to: ['fe'],
+      toConversationId: 'lead',
+      body: 'where are we',
       ready: true,
     });
   });
 
-  it('reads anything else as a note', () => {
-    const target = composerTarget('the contract is settled', HANDLES, null);
-    expect(target.action).toBe('note');
-    expect(target.label).toBe('Post note');
-    expect(target.body).toBe('the contract is settled');
-    expect(target.ready).toBe(true);
+  it('requires an available agent and nonempty message', () => {
+    expect(composerTarget('where are we', HANDLES, null)).toMatchObject({
+      ready: false,
+      hint: EMPTY_HINT,
+    });
+    expect(
+      composerTarget('   ', HANDLES, null, [], { conversationId: 'lead', handle: 'fe' }).ready,
+    ).toBe(false);
   });
 
-  it('has nothing to send for an empty box and explains the two kinds', () => {
-    const target = composerTarget('   ', HANDLES, null);
-    expect(target.action).toBe('note');
-    expect(target.ready).toBe(false);
-    expect(target.hint).toBe(EMPTY_HINT);
+  it('only makes a note when explicitly chosen, including literal mentions', () => {
+    expect(
+      composerTarget('@all the contract is settled', HANDLES, null, [], null, true),
+    ).toMatchObject({
+      action: 'note',
+      body: '@all the contract is settled',
+      to: [],
+      ready: true,
+    });
   });
 
-  it('promises nothing about who reads a note', () => {
-    expect(composerTarget('The contract is settled.', HANDLES, null).hint).toBe(
-      'A note starts no work.',
-    );
-    expect(composerTarget('mail someone@api.dev', HANDLES, null).action).toBe('note');
-  });
-
-  it('says so when the leading handle is not a member', () => {
-    const target = composerTarget('@docs write it up', HANDLES, null);
-    expect(target.action).toBe('note');
-    expect(target.hint).toBe('No chat here is called @docs. This posts as a note.');
+  it('blocks unknown handles anywhere without silently asking the lead', () => {
+    for (const text of ['@docs write it up', 'please ask @docs about it', '@fe ask @docs']) {
+      expect(
+        composerTarget(text, HANDLES, null, [], { conversationId: 'lead', handle: 'fe' }),
+      ).toMatchObject({
+        ready: false,
+        hint: 'No chat here is called @docs. Choose a member or correct the handle.',
+      });
+    }
+    expect(
+      composerTarget('mail someone@api.dev', HANDLES, null, [], {
+        conversationId: 'lead',
+        handle: 'fe',
+      }).ready,
+    ).toBe(true);
   });
 
   it('sends everything to the selected request while answering', () => {
@@ -169,5 +195,31 @@ describe('withHandle', () => {
       text: 'ask @api for it',
       caret: 9,
     });
+  });
+});
+
+describe('uniqueLead', () => {
+  const members = [
+    { conversationId: 'first', archived: false },
+    { conversationId: 'second', archived: false },
+    { conversationId: 'old', archived: true },
+  ];
+  it('uses one valid lead even across multiple stories', () => {
+    expect(
+      uniqueLead(members, [
+        { leadConversationId: 'second' },
+        { leadConversationId: 'second' },
+        { leadConversationId: 'old' },
+        { leadConversationId: 'gone' },
+      ]),
+    ).toBe('second');
+  });
+  it('falls back when stories disagree or have no active lead', () => {
+    expect(
+      uniqueLead(members, [{ leadConversationId: 'first' }, { leadConversationId: 'second' }]),
+    ).toBeNull();
+    expect(
+      uniqueLead(members, [{ leadConversationId: 'old' }, { leadConversationId: null }]),
+    ).toBeNull();
   });
 });

@@ -22,6 +22,9 @@
   flex-direction: column;
   width: var(--crail-w);
   max-height: 60dvh;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   color: var(--muted);
   font-size: 12.5px;
   line-height: 1.35;
@@ -45,7 +48,7 @@
 .crail-title {
   margin: 0;
   color: var(--faint);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.02em;
 }
@@ -169,6 +172,10 @@
   display: none;
 }
 
+.crail-tv-stage .tv-n b {
+  font-size: max(12px, 0.96em);
+}
+
 .crail-tv-stage .tv-l.on {
   animation: none;
 }
@@ -286,7 +293,7 @@
 }
 
 .crail-tasks li[data-state='done'] .crail-task-mark {
-  color: var(--accent);
+  color: var(--success);
 }
 
 .crail-tasks li[data-state='failed'] .crail-task-mark {

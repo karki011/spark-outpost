@@ -35,6 +35,10 @@ vi.mock('../api/projects.ts', () => ({
   projectKeys: { all: ['projects'] },
   projectsApi: { list: async () => [] },
 }));
+vi.mock('../phone/use-remote-client.ts', () => ({
+  PHONE_SWITCH_OFF: 'Turned off for remote control on your Mac',
+  useRemoteClient: () => ({ remote: false, allows: () => true }),
+}));
 vi.mock('./terminal-api.ts', () => ({
   terminalStartKey: (id: string) => ['terminal-start', id],
   nativeTerminalApi: { launch: fake.launch, startPhase: fake.phase },

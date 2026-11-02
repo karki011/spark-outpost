@@ -167,7 +167,7 @@ test('pastes an address, clones it and adds the project from the sidebar', async
   await expect(page.getByText('Added project widgets')).toBeVisible({ timeout: 20_000 });
   await expect(dialog).toHaveCount(0);
   await expect(
-    page.getByRole('navigation', { name: 'Chats' }).getByText('widgets', { exact: true }),
+    page.getByRole('main').getByRole('button', { name: 'Project folders: widgets' }),
   ).toBeVisible();
   expect(readFileSync(path.join(DOCUMENTS, 'widgets', 'README.md'), 'utf8')).toBe('# Widgets\n');
   const projects = (await (await page.request.get('/api/projects')).json()) as {
@@ -306,6 +306,7 @@ test('keeps keyboard focus inside the dialog and offers cloning from the empty M
     await page.keyboard.press('Tab');
     expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   }
+  await expect(dialog.getByRole('button', { name: 'Clone', exact: true })).toBeEnabled();
   await address.press('Enter');
   await expect(page.getByRole('heading', { name: 'Your code, as a night sky' })).toHaveCount(0, {
     timeout: 20_000,

@@ -4,6 +4,7 @@ export interface NewPost {
   id: string;
   text: string;
   to?: string[];
+  toConversationId?: string;
 }
 
 function drawn(detail: OutpostDetail, id: string, body: string, now: string): OutpostPost {
@@ -45,11 +46,17 @@ export function optimisticPosts(
   newId: () => string = () => crypto.randomUUID(),
 ): OutpostPost[] {
   const members = detail.outpost.members;
-  const address = userAddress(
-    input.text,
-    members.map((member) => member.handle),
-    input.to,
-  );
+  const recipient = input.toConversationId
+    ? members.find((member) => member.conversationId === input.toConversationId)
+    : null;
+  if (input.toConversationId && !recipient) return [];
+  const address = recipient
+    ? { kind: 'request' as const, to: [recipient.handle], body: input.text.trim() }
+    : userAddress(
+        input.text,
+        members.map((member) => member.handle),
+        input.to,
+      );
   if (address.kind === 'note') return [drawn(detail, input.id, address.body, now)];
   const batchId = address.to.length > 1 ? newId() : null;
   const reason = detail.outpost.pausedAt !== null ? 'Paused' : 'Not sent yet';

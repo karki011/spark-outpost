@@ -7,10 +7,10 @@ import { openChats } from './navigation.ts';
 
 const SHOTS = process.env.CHAT_QUESTIONS_SHOTS ?? '';
 const BOXED =
-  '.head > *, .head-r > *, .ctxbar > *, .composer, .appr, .ai-head > *, .md pre, .cs-wrap';
+  '.head > *, .head-r > *, .ctxbar > *, .composer, .appr, .trow, .turn-working, .turn-meta > *, .md pre, .cs-wrap';
 
 const thread = (page: Page) => page.locator('.thread');
-const waitingCard = (page: Page) => thread(page).getByRole('group', { name: /Change a file\?/ });
+const waitingCard = (page: Page) => thread(page).getByRole('group', { name: /^Edit .+\?$/ });
 const message = (page: Page) => page.getByRole('textbox', { name: 'Message' });
 const workPanel = (page: Page) => page.getByRole('complementary', { name: 'Work panel' });
 const rail = (page: Page) => page.getByRole('region', { name: 'Chat context' });
@@ -95,15 +95,8 @@ test.describe('a waiting card', () => {
     }
     await page.setViewportSize({ width: 1440, height: 900 });
     await expect(rail(page)).toBeVisible();
-    const tasks = rail(page).getByRole('region', { name: 'Tasks' });
-    await expect(tasks.getByRole('listitem')).toHaveCount(3);
-    await expect(tasks.locator('li[aria-current="step"]').first()).toBeVisible();
-    await expect(thread(page).getByRole('button', { name: /^Task: / })).toHaveCount(0);
-    await tasks.getByRole('button', { name: /tasks done\. Open the work panel$/ }).click();
-    await expect(workPanel(page).getByRole('tab', { name: 'Tasks' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    await expect(rail(page).getByRole('region', { name: 'To-do' })).toHaveCount(0);
+    await expect(thread(page).locator('.todo-card, .todo-line')).toHaveCount(0);
   });
 });
 
@@ -112,7 +105,7 @@ test.describe('one status', () => {
     await resetTestDatabase({ onboarded: true });
   });
 
-  test('a running turn shows its status once: in the turn header, or above the message box when the header is out of view', async ({
+  test('a running turn shows its status once: in the Working line, or above the message box when that line is out of view', async ({
     page,
   }) => {
     test.setTimeout(60_000);
@@ -120,8 +113,11 @@ test.describe('one status', () => {
     await openChats(page);
     await page.getByRole('button', { name: 'New chat' }).first().click();
     await send(page, 'Keep going until I stop you #slowbuild');
-    const turnHead = thread(page).locator('.ai-head').last();
-    await expect(turnHead.locator('.mood')).toHaveText('working');
+    const working = thread(page).locator('.turn-working').last();
+    const mood = thread(page).locator('.msg.ai .mood').last();
+    await expect(mood).toHaveText('working');
+    await expect(working).toBeInViewport();
+    await expect(working).toContainText('Esc to stop');
     await expect(statusLine(page)).toHaveCount(0);
     await expect(thread(page).locator('.dots')).toHaveCount(0);
     await expect(page.locator('.cstatus').getByRole('status')).toHaveText(/is thinking/);
@@ -130,13 +126,14 @@ test.describe('one status', () => {
 
     await page.addStyleTag({ content: '.thread .col { padding-bottom: 200vh; }' });
     await page.locator('.thread').evaluate((element) => (element.scrollTop = element.scrollHeight));
-    await expect(turnHead).not.toBeInViewport();
+    await expect(working).not.toBeInViewport();
     await expect(statusLine(page)).toHaveText(/is thinking…$/);
     await page.getByRole('button', { name: 'Stop', exact: true }).click();
-    await expect(turnHead.locator('.mood')).toHaveText('stopped');
+    await expect(mood).toHaveText('stopped');
+    await expect(thread(page).locator('.turn-working')).toHaveCount(0);
   });
 
-  test('a finished task lists in the rail on a roomy window, and keeps one line in the thread without it', async ({
+  test('a finished to-do lists in the rail on a roomy window, and keeps one line in the thread', async ({
     page,
   }) => {
     test.setTimeout(60_000);
@@ -145,16 +142,17 @@ test.describe('one status', () => {
     await page.getByRole('button', { name: 'New chat' }).first().click();
     await send(page, 'Fix the date divider #plan');
     await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 20_000 });
-    const tasks = rail(page).getByRole('region', { name: 'Tasks' });
-    await expect(tasks.getByRole('listitem')).toHaveCount(6);
-    await expect(tasks).toContainText('6 of 6');
-    await expect(tasks.getByRole('listitem').first()).toContainText('Done:');
-    await expect(thread(page).locator('.taskc')).toHaveCount(0);
+    const todo = rail(page).getByRole('region', { name: 'To-do' });
+    await expect(todo.getByRole('listitem')).toHaveCount(3);
+    await expect(todo).toContainText('3 of 3');
+    await expect(todo.getByRole('listitem').first()).toContainText('Done:');
+    const line = thread(page).getByRole('button', { name: 'To-do: 3 of 3 done' });
+    await expect(line).toBeVisible();
     await shot(page, 'status-tasks-rail');
 
     await rail(page).getByRole('button', { name: 'Hide context rail' }).click();
-    await expect(thread(page).locator('.taskc')).toContainText('Task 6/6 · Done');
+    await expect(line).toBeVisible();
     await page.setViewportSize({ width: 1280, height: 900 });
-    await expect(thread(page).locator('.taskc')).toContainText('Task 6/6 · Done');
+    await expect(line).toBeVisible();
   });
 });

@@ -1,17 +1,28 @@
 globalThis.__zod_globalConfig = { jitless: true };
-if (location.pathname === '/island' || location.pathname === '/meeting-alert') {
-  document.documentElement.dataset.island = '';
-}
-try {
-  var key = 'spark-outpost.theme';
-  var desktop = window.sparkDesktop && window.sparkDesktop.theme;
-  var skin = localStorage.getItem(key);
-  if (!skin && desktop && desktop.saved) {
-    skin = desktop.saved;
-    localStorage.setItem(key, skin);
+(function () {
+  var root = document.documentElement;
+  var island = location.pathname === '/island' || location.pathname === '/meeting-alert';
+  if (island) root.dataset.island = '';
+  if (location.pathname === '/settings' && window.sparkDesktop) root.dataset.settingsWindow = '';
+
+  function readStored() {
+    try {
+      var key = 'spark-outpost.theme';
+      var desktop = window.sparkDesktop && window.sparkDesktop.theme;
+      var stored = localStorage.getItem(key);
+      if (!stored && desktop && desktop.saved) {
+        stored = desktop.saved;
+        localStorage.setItem(key, stored);
+      }
+      return stored;
+    } catch {
+      return null;
+    }
   }
-  skin = skin || 'graphite';
-  if (skin !== 'system') document.documentElement.dataset.skin = skin;
-} catch {
-  document.documentElement.dataset.skin = 'graphite';
-}
+
+  try {
+    root.dataset.skin = window.sparkAppearance.skin(readStored(), island);
+  } catch {
+    root.dataset.skin = 'graphite';
+  }
+})();

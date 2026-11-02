@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   isPushEndpoint,
+  closePush,
   pushMessage,
   quietDevice,
   SentKeys,
   TerminalWaits,
-  unseenPushes,
 } from './push-plan.ts';
 
 const CHAT = '0190a3b5-0000-7000-8000-000000000001';
@@ -50,6 +50,14 @@ describe('pushMessage', () => {
       body: 'Needs your approval (2) · Has changes for you to review',
       chatId: CHAT,
       tag: `spark-chat-${CHAT}`,
+      keys: ['approval:1', 'approval:2', 'approval:3'],
+    });
+  });
+
+  it('closes a chat’s notification by its tag, carrying the keys it showed', () => {
+    expect(closePush(CHAT, ['approval:1'])).toEqual({
+      close: `spark-chat-${CHAT}`,
+      keys: ['approval:1'],
     });
   });
 
@@ -77,27 +85,6 @@ describe('pushMessage', () => {
       title: 'Untitled chat',
       body: 'Has a plan for you to review',
     });
-  });
-});
-
-describe('unseenPushes', () => {
-  const at = Date.parse('2026-10-19T10:00:00Z');
-  const item = {
-    key: 'approval:a',
-    source: 'approval:a',
-    kind: 'approval' as const,
-    detail: null,
-    at,
-  };
-
-  it('keeps a card the user has not looked at since it appeared', () => {
-    expect(unseenPushes([item], null)).toEqual([item]);
-    expect(unseenPushes([item], new Date(at - 1000))).toEqual([item]);
-  });
-
-  it('drops a card the user looked at after it appeared', () => {
-    expect(unseenPushes([item], new Date(at))).toEqual([]);
-    expect(unseenPushes([item], new Date(at + 5000))).toEqual([]);
   });
 });
 

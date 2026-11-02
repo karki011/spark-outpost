@@ -6,6 +6,7 @@ import { useIsMutating, useQuery } from '@tanstack/react-query';
 import { terminalStartText, type ChatSettings } from '@spark-outpost/contracts';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
 import { ComposerShell, composerRows } from '../chat/composer/ComposerShell.tsx';
+import { useChatDraft } from '../chat/composer/use-chat-draft.ts';
 import { SendButton } from '../chat/composer/SendButton.tsx';
 import { ProjectFolders } from '../chat/project/ProjectFolders.tsx';
 import { chatReposMutationKey, useLinkedProjects } from '../chat/project/use-chat-repos.ts';
@@ -65,11 +66,18 @@ export function TerminalComposer({
       capabilities.data?.defaultMode ??
       null)
     : null;
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useChatDraft(`terminal:${conversationId}`);
   const promptInput = useRef<HTMLTextAreaElement>(null);
   const inputId = useId();
   const secrets = useSecretGuard(prompt);
-  const launch = useTerminalStart({ onStarting, onLaunched, onFailed });
+  const launch = useTerminalStart({
+    onStarting,
+    onLaunched: () => {
+      setPrompt('');
+      onLaunched?.();
+    },
+    onFailed,
+  });
   const blocked = terminalModeBlocked(provider, mode);
   const ready = prompt.trim().length > 0 && !launch.busy && !folderPending && !blocked;
   const start = () => {
@@ -109,17 +117,15 @@ export function TerminalComposer({
             onSendAnyway={start}
           />
         }
-        context={
-          <ProjectFolders
-            conversationId={conversationId}
-            repos={repos}
-            popover={folders}
-            lead={sessionPicker}
-          >
-            <span className="ctx-unlinked" title={WORKTREE_HINT}>
-              {WORKTREE_HINT}
-            </span>
-          </ProjectFolders>
+        foot={
+          <>
+            <ProjectFolders conversationId={conversationId} repos={repos} popover={folders}>
+              <span className="ctx-unlinked" title={WORKTREE_HINT}>
+                {WORKTREE_HINT}
+              </span>
+            </ProjectFolders>
+            {sessionPicker}
+          </>
         }
         bar={
           <>

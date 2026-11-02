@@ -67,15 +67,15 @@ Agent modes come from the provider, with its own names: Claude offers Manual, Ac
 
 Automatic: approval cards follow the agent's mode; Ask turns run commands without asking. Changes are kept ("Changes kept"); Revert is always there. Spark has no plan card and saves no plan of its own: to approve a plan first, use /plan or Plan mode; the approved plan shows as one line ("Plan saved"). In a Plan-mode chat every message plans first.
 
-Full auto → PR (default): the same; then, when the turn changed files, Spark sends the agent one publish prompt and the agent pushes the chat's branch and opens a PR (a draft only when you ask or Open pull requests as says so). Nothing merges. A failed or stopped publish keeps the change and says "Not published: …". The level never makes a Spark action skip its card.
+Full auto → PR (default): the same; then, when the turn changed files, Spark sends the agent one publish prompt and the agent pushes the chat's branch and opens a PR (a draft only when you ask or Open pull requests as says so). Nothing merges. A failed or stopped publish keeps the change ("Not published: …"). The level never makes a Spark action skip its card.
 
-The safety floor holds at every level.`,
+Spark's rules (none by default) apply at all levels.`,
   },
   {
     id: 'read-then-send',
     title: 'Read, then send',
     keywords: ['exfiltration', 'curl', 'sensitive', 'network', 'egress', 'secret', 'send data'],
-    text: `Once a chat has seen sensitive data — a secret file the agent read, secret values in a tool's output (env, printenv, config dumps) a web page, or private work data from spark_tickets, spark_slack, spark_pr and similar tools (not this chat's own task or history) — anything that sends data off this computer asks first, at every level and mode: curl, wget, ssh, scp, nc, dig, git push, gh and cloud CLIs, package publishing, one-liners that open connections, user MCP tools and web fetches. The card names what was read (never values) and where the data would go. Requests to localhost stay unasked; the allowlist, run rules and Always allow can't skip it.`,
+    text: `Once a turn has seen sensitive data (a secret file read directly or by a script, secret values in tool output such as env or config dumps, a web page, or private work data from spark_tickets, spark_slack, spark_pr and similar tools), a send off this computer gets a note, never a card of its own: when the mode would run it, it runs with an audit entry and a non-blocking flag ("sent data … after reading …"); when the mode asks, its card carries the note. The note names what was read (never values) and where the data went, and ends with the turn. Sends include curl, wget, ssh, git push, gh, cloud CLIs, publishing, user MCP tools and web fetches; localhost and the chat's own repo and PR don't count. With the recommended rules, a push or upload holding a secret file's value asks with hold to confirm.`,
   },
   {
     id: 'safety-floor',
@@ -94,11 +94,9 @@ The safety floor holds at every level.`,
       'budget',
       'spend cap',
     ],
-    text: `The backend's approval gate follows the agent's own mode: a card only when the mode asks or the agent asks itself (shown with its reason, e.g. a sandbox block). A floor no mode loosens: changing a secret file (.env, keys) asks or is refused, reading one follows the mode, audited by path (.sparkignore ones ask); agents push only the chat's own spark/ branch and its gh PR, and only when asked, at Full auto → PR or in Auto/Bypass (else Ship pushes); no writes or deletes outside the linked folders (temp folders fine); everything goes to a hash-chained audit log.
+    text: `The approval gate follows the agent's mode: a card only when the mode or the agent asks. Spark's rules (settings.json in Spark's data folder; managed-settings.json) add a floor. With no file, the default, every rule follows the mode: Auto or Bypass may force push, push any branch, edit secret files, hooks and instruction files, write outside the project and publish unasked. With the recommended rules: changing a secret file asks or is refused (.sparkignore reads ask); agents push only the chat's own spark/ or adopted PR branch and its PR, only when asked, at Full auto → PR or in Auto/Bypass; writes outside the linked folders ask (temp folders fine); a --force-with-lease to a named, non-default branch asks with hold to confirm, other force pushes are refused.
 
-Force pushes: git push --force-with-lease to a named, non-default branch always asks with a "Force push?" card you press and hold to confirm, with no Always allow. Plain --force, +refspec, mirror, unnamed and default-branch force pushes are refused.
-
-No run budgets: Spark never caps time, tool calls or cost; usage is only measured. "Always allow" becomes a scoped rule, never a bypass of the floor.`,
+Recommended rules also refuse merges, approvals, --admin, gh api writes and gh auth, including credential commands. Always refused: Spark's rules files and ports, --no-verify, Spark's browser data. All audited; no run budgets.`,
   },
   {
     id: 'worktrees',
@@ -124,7 +122,7 @@ In my files, new chats edit the folder directly. Such a chat has no branch of it
     id: 'ship',
     title: 'Ship: commit, push, open a PR',
     keywords: ['ship', 'commit', 'push', 'draft pr', 'pull request', 'merge', 'ready for review'],
-    text: `Ship turns a chat's changes into git history: commit only, push, or open a pull request. Settings → Spark → Open pull requests as picks Ready for review (default) or Draft; a pull request is a draft only when that setting says so or you ask for one. Nothing merges. It never pushes a branch carrying Spark's internal snapshot commits, only its own spark/<slug>-<id> branches.
+    text: `Ship turns a chat's changes into git history: commit only, push, or open a pull request. Settings → Spark → Open pull requests as picks Ready for review (default) or Draft; a pull request is a draft only when that setting says so or you ask for one. Nothing merges. It never pushes a branch carrying Spark's internal snapshot commits, only its own spark/<slug>-<id> branches or an adopted PR branch.
 
 A turn that changed files ends in a "Changes kept" record (files, lines, branch, PR) that needs no answer; expanded, it offers "Bring changes into <your branch>". Ship is in the Work panel's Changes tab. At Full auto → PR when the turn changed files, or when you ask for a PR, Spark sends the agent one publish prompt after its reply: spark_push (with your shell logins, so hooks pass), then gh pr create or spark_pull_request. Spark runs no checks first; hooks and CI do. Spark checks GitHub and gives the link, or says no PR was opened. A push with no reason is refused, not asked about.`,
   },
@@ -180,25 +178,25 @@ Hooks and a repo's permissions.allow rules are off until you trust the folder (o
     id: 'spark-own-tools',
     title: "Spark's own tools (the spark MCP server)",
     keywords: ['spark_', 'tools', 'mcp server', 'spark tools', 'self-service', 'action card'],
-    text: `Every agent session gets an MCP server named "spark" with the tools its chat can use: ticket, Slack and PR tools need their connector; PR tools, spark_map and spark_find need a linked project.
+    text: `Every agent session gets an MCP server named "spark" with the tools its chat can use: ticket, Slack, PR tools need their connector; PR tools, spark_map and spark_find need a linked project. Ask Spark gets the same tools behind the same switches (any project for PR tools, spark_map and spark_find), except spark_push, spark_pull_request, spark_pr_follow_up, spark_pr_follow_up_round, spark_terminal_run, spark_outpost_ask, spark_outpost_start, spark_browser_sign_in and spark_rules_edit; its tools that ask follow When Ask Spark acts. A missing tool's note names its setting.
 
-Read tools need no card; section spark-tools maps questions.
+Read tools need no card; see section spark-tools.
 
-Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, spark_create_spark, spark_update_spark, spark_*_mcp_server, spark_calendar_edit, spark_jira_edit, spark_confluence_edit. In Auto, Bypass or Full auto → PR Spark does them at once; otherwise you confirm on a card. Audited. Agents open PRs themselves.`,
+Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, spark_create_spark, spark_update_spark, spark_*_mcp_server, spark_calendar_edit, spark_jira_edit, spark_confluence_edit, spark_servicenow_edit. In Auto, Bypass or Full auto → PR Spark does them at once; else a card; spark_rules_edit: always. Audited; agents open PRs themselves.`,
   },
   {
     id: 'spark-tools',
     title: 'Which Spark tool answers which question',
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
-    text: `Needs me? spark_attention. Run: spark_run. Plan, files: spark_task. Chats: spark_chats, spark_chat. Old turns: spark_chat_history. Agent steps: spark_audit. Recent: spark_activity, spark_brief.
-Spend: spark_spend. Trends: spark_analytics. Models: spark_models.
-Agents: spark_providers. Connectors: spark_connectors. Slack: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas: spark_map. Code: spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr, spark_pr_follow_up. Sparks, @Spark jobs, replies: spark_sparks. How Spark works: spark_guide. How-tos: spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview, spark_browser_signins. Mac apps: spark_mac_apps, spark_mac_read. Calendar: spark_calendar. Atlassian: spark_jira, spark_confluence. Outposts: spark_outpost, spark_outpost_note, spark_outpost_draft.`,
+    text: `Attention: spark_attention. Run: spark_run. Task: spark_task. Chats: spark_chats, spark_chat. Old turns: spark_chat_history. Steps: spark_audit. Recent: spark_activity, spark_brief.
+Spend: spark_spend, spark_analytics. Models: spark_models. Combine reads: spark_execute.
+Agents: spark_providers. Connectors: spark_connectors. Slack: spark_slack. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, code: spark_map, spark_find. Terminals: spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr, spark_pr_follow_up. Sparks: spark_sparks. Guide: spark_guide, spark_docs. Browser: spark_browser_tabs, spark_browser_open, spark_browser_read, spark_browser_screenshot, spark_browser_logs, spark_browser_preview, spark_browser_signins. Mac: spark_mac_apps, spark_mac_read. Calendar: spark_calendar. Atlassian: spark_jira, spark_confluence. ServiceNow: spark_servicenow. Outposts: spark_outpost, spark_outpost_note, spark_outpost_draft.`,
   },
   {
     id: 'compaction',
     title: 'When a chat gets full: compaction',
     keywords: ['compact', 'compaction', 'context', 'full', 'ring', 'summary', 'tokens'],
-    text: `The ring warns at 60%; Spark compacts at 80% between turns (both in Settings → Spark, spark_settings). Spark uses the agent's /compact or a Spark summary; with automatic compaction off it asks: Compact now, a fresh chat with a summary, or Keep going. A divider shows it. spark_chat_history reads earlier turns.`,
+    text: `The ring warns at 60%; Spark compacts at 80% between turns (both in Settings → Chats & autonomy, spark_settings). Spark uses the agent's /compact or a Spark summary; with automatic compaction off it asks: Compact now, a fresh chat with a summary, or Keep going. A divider shows it. spark_chat_history reads earlier turns.`,
   },
   {
     id: 'settings-spark',
@@ -267,7 +265,7 @@ The chain lets Spark detect tampering: verifying it walks every row and reports 
     id: 'browser-pane',
     title: 'The Browser pane',
     keywords: ['browser', 'pane', 'page', 'screenshot', 'localhost', 'dev server', 'console'],
-    text: `Mac app: each chat has a Browser pane (Work panel → Browser). The user browses anywhere and watches. Agents open any http(s) address or project file, read an outline, text, screenshot or logs, and act with spark_browser_act (click, type, keys, scroll, back). Page content is untrusted. A site outside this computer follows the agent mode; acting on a tab the user owns always asks. Never typed by agents: password, card and code fields. Refused: Spark's own ports. The user's cookies are kept per project; your tabs on websites start signed out, in storage of their own per chat. Saved sign-ins (Settings → Projects): spark_browser_sign_in types a test login after a card; you never see the values. Dev server: spark_browser_preview.`,
+    text: `Mac app: each chat has a Browser pane (Work panel → Browser). The user browses anywhere and watches. Agents open any http(s) address or project file, read an outline, text, screenshot or logs, and act with spark_browser_act (click, type, keys, scroll, back). Page content is untrusted. A site outside this computer follows the agent mode; acting on a tab the user owns always asks. Never typed by agents: password, card and code fields. Refused: Spark's own ports. Your tabs share the user's pane cookies and sign-ins (one profile for every chat); devtools storage never shows cookie values and masks auth-looking ones. Saved sign-ins (Settings → Projects): spark_browser_sign_in types a test login after a card; you never see the values. Dev server: spark_browser_preview.`,
   },
   {
     id: 'heartbeat',

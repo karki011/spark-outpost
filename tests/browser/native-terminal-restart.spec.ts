@@ -1,12 +1,12 @@
-import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type APIRequestContext } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
-import { fakeHomeDesktop, nowCard, openHome, openIsland } from './island-home-desktop.ts';
+import { fakeHomeDesktop, island, openHome, openIsland } from './island-home-desktop.ts';
 import { pointOf, startFixtureTerminal, typeLine } from './native-terminal-fixture.ts';
 import { setTerminalState } from './terminal-seed.ts';
-import { API_PORT, API_RESTART_FLAG, PACKAGED } from './stub-config.ts';
+import { killApi, restartApi } from './api-restart.ts';
+import { PACKAGED } from './stub-config.ts';
 
 const built = path.resolve('.local/tmux', process.arch, 'bin/tmux');
 const EVENTS_RECONNECT_MS = 20_000;
@@ -14,15 +14,6 @@ const EVENTS_RECONNECT_MS = 20_000;
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
 });
-
-async function restartApi(request: APIRequestContext): Promise<void> {
-  killApi();
-  await expect
-    .poll(async () => (await request.get('/api/health').catch(() => null))?.ok() ?? false, {
-      timeout: 60_000,
-    })
-    .toBe(true);
-}
 
 async function terminalChatId(): Promise<string> {
   const db = openTestDb();
@@ -35,15 +26,6 @@ async function terminalChatId(): Promise<string> {
   } finally {
     await db.end();
   }
-}
-
-function killApi(): void {
-  mkdirSync(path.dirname(API_RESTART_FLAG), { recursive: true });
-  writeFileSync(API_RESTART_FLAG, '');
-  const pid = execFileSync('lsof', ['-ti', `tcp:${API_PORT}`, '-sTCP:LISTEN'], {
-    encoding: 'utf8',
-  });
-  process.kill(Number(pid.trim().split('\n')[0]), 'SIGKILL');
 }
 
 test('a Terminal session keeps running when the server is killed and says so after the restart', async ({
@@ -104,7 +86,7 @@ test('the sidebar, the palette, the island and the companion follow a re-adopted
   await fakeHomeDesktop(islandPage);
   await openIsland(islandPage);
   await openHome(islandPage);
-  const islandNote = nowCard(islandPage).locator('.isl-now-note');
+  const islandRunning = island(islandPage).getByRole('region', { name: /^Working/ });
   const homePage = await context.newPage();
   await homePage.addInitScript(() => localStorage.setItem('spark-outpost.view', 'home'));
   await homePage.goto('/');
@@ -114,7 +96,7 @@ test('the sidebar, the palette, the island and the companion follow a re-adopted
   await setTerminalState(await terminalChatId(), 'working');
   await expect(bar).toHaveText('Running');
   await expect(row).toHaveAttribute('title', /Terminal session · Running · /);
-  await expect(islandNote).toContainText('Running');
+  await expect(islandRunning.getByRole('listitem')).toHaveCount(1);
   await expect(running).toBeVisible();
 
   await restartApi(request);
@@ -123,7 +105,7 @@ test('the sidebar, the palette, the island and the companion follow a re-adopted
   await expect(bar).toHaveText('Open');
   const reconnected = { timeout: EVENTS_RECONNECT_MS };
   await expect(row).toHaveAttribute('title', /Terminal session · Open · /, reconnected);
-  await expect(islandNote).toHaveText('Terminal sessionOpen', reconnected);
+  await expect(islandRunning).toHaveCount(0, reconnected);
   await expect(running).toHaveCount(0, reconnected);
   const dismiss = notice.getByRole('button', { name: 'Dismiss' });
   const colours = await dismiss.evaluate((button) => {
@@ -149,5 +131,5 @@ test('the sidebar, the palette, the island and the companion follow a re-adopted
   await page.keyboard.press('Control+D');
   await expect(bar).toHaveText('Exited');
   await expect(row).toHaveAttribute('title', /Terminal session · Exited · /);
-  await expect(islandNote).toHaveText('Terminal sessionExited');
+  await expect(islandRunning).toHaveCount(0);
 });

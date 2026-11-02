@@ -1,15 +1,19 @@
-import {
-  waitingOnLabel,
-  type ActivityStep,
-  type BackgroundWait,
-  type Run,
-} from '@spark-outpost/contracts';
+import { type ActivityStep, type BackgroundWait, type Run } from '@spark-outpost/contracts';
 import { timedOut, WAITED_LABEL } from '../chat/approvals/timed-out.ts';
 import { AGENT_DEFAULT } from '../chat/composer/model-options.ts';
 import { providerName } from '../chat/provider-name.ts';
+import type { LeadStep } from '../chat/turn/live-label.ts';
+import { waitLabel } from '../chat/wait-label.ts';
 import { prettyModelId } from '../tasks/model-names.ts';
 import { CHAT_AGENT_ROLE, type CrewAgent, type CrewState } from './crew-model.ts';
 import { runState, stepLine } from './crew-projection.ts';
+
+const LINE_CHARS = 60;
+
+function leadLine(step: LeadStep): string {
+  const line = stepLine(step.label);
+  return line.length > LINE_CHARS ? `${line.slice(0, LINE_CHARS - 1).trimEnd()}…` : line;
+}
 
 const SETTLED_LINES: Partial<Record<CrewState, string>> = {
   queued: 'queued',
@@ -19,12 +23,19 @@ const SETTLED_LINES: Partial<Record<CrewState, string>> = {
   done: 'done',
 };
 
-function agentState(run: Run, steps: readonly ActivityStep[], asking: boolean): CrewState {
+function agentState(
+  run: Run,
+  steps: readonly ActivityStep[],
+  asking: boolean,
+  live: LeadStep | null,
+  current: string | null,
+): CrewState {
   if (timedOut(run.error)) return 'stopped';
   const state = runState(run.status);
   if (state !== 'working') return state;
   if (asking) return 'waiting';
-  return steps.length > 0 ? 'working' : 'thinking';
+  if (live) return live.label === 'Thinking' ? 'thinking' : 'working';
+  return steps.length > 0 || current ? 'working' : 'thinking';
 }
 
 function agentLine(
@@ -33,16 +44,19 @@ function agentLine(
   steps: readonly ActivityStep[],
   waitingOn: number,
   background: BackgroundWait | null,
+  live: LeadStep | null,
+  current: string | null,
 ): string {
   if (timedOut(run.error)) return WAITED_LABEL;
   const settled = SETTLED_LINES[state];
   if (settled) return settled;
-  if (waitingOn > 0) return waitingOnLabel(waitingOn, background).toLowerCase();
-  const open = steps.findLast((step) => !step.done);
-  return open ? stepLine(open.name) : 'thinking';
+  if (waitingOn > 0) return waitLabel(waitingOn, background).toLowerCase();
+  if (live) return leadLine(live);
+  const open = steps.findLast((step) => !step.done)?.name ?? current;
+  return open ? stepLine(open) : 'thinking';
 }
 
-function modelOf(run: Run): string | null {
+export function modelOf(run: Run): string | null {
   const ran = run.usedModel ?? run.model;
   return ran && ran !== AGENT_DEFAULT ? prettyModelId(ran) : null;
 }
@@ -59,8 +73,10 @@ export function chatAgent(
   asking = false,
   waitingOn = 0,
   background: BackgroundWait | null = null,
+  live: LeadStep | null = null,
+  current: string | null = null,
 ): CrewAgent {
-  const state = agentState(run, steps, asking);
+  const state = agentState(run, steps, asking, live, current);
   return {
     id: run.id,
     role: CHAT_AGENT_ROLE,
@@ -69,7 +85,7 @@ export function chatAgent(
     model: modelOf(run),
     effort: run.effort,
     state,
-    line: agentLine(run, state, steps, waitingOn, background),
+    line: agentLine(run, state, steps, waitingOn, background, live, current),
     tokens: run.usage?.tokens?.total ?? null,
     costUsd: run.usage?.costUsd ?? null,
     costSource: run.usage?.costSource ?? null,

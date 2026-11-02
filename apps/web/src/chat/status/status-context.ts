@@ -25,15 +25,26 @@ function openStep(steps: readonly RunStep[]): string | null {
 }
 
 export function useLiveReport(
-  { id, name, provider, kind, doing }: Worker,
+  { id, name, provider, kind, doing, todo }: Worker,
   working: boolean,
   steps: readonly RunStep[],
+  startedAt: number | null = null,
 ): void {
   const store = use(StatusContext);
   const step = working ? openStep(steps) : null;
   useEffect(() => {
-    store?.report({ id, name, provider, kind, working, step, ...(doing ? { doing } : {}) });
-  }, [store, id, name, provider, kind, doing, working, step]);
+    store?.report({
+      id,
+      name,
+      provider,
+      kind,
+      working,
+      step,
+      ...(step && startedAt !== null ? { startedAt } : {}),
+      ...(doing ? { doing } : {}),
+      ...(todo ? { todo } : {}),
+    });
+  }, [store, id, name, provider, kind, doing, todo, working, step, startedAt]);
   useEffect(() => () => store?.forget(id), [store, id]);
 }
 
@@ -67,33 +78,18 @@ export function usePendingArrival(onArrival: () => void): void {
   }, [store, onArrival]);
 }
 
-const SHORT_TURN_PX = 320;
-
 export function useLiveHead(id: string | null) {
   const store = use(StatusContext);
   return useCallback(
     (element: HTMLElement | null) => {
       if (!element || !store || !id || typeof IntersectionObserver !== 'function') return;
-      const block = element.parentElement ?? element;
-      let seen = false;
-      let short = block.getBoundingClientRect().height <= SHORT_TURN_PX;
-      const report = () => store.showHead(id, seen && short);
       const view = new IntersectionObserver(
-        (entries) => {
-          seen = entries.at(-1)?.isIntersecting ?? false;
-          report();
-        },
+        (entries) => store.showHead(id, entries.at(-1)?.isIntersecting ?? false),
         { root: element.closest('.thread') },
       );
-      const size = new ResizeObserver((entries) => {
-        short = (entries.at(-1)?.contentRect.height ?? 0) <= SHORT_TURN_PX;
-        report();
-      });
       view.observe(element);
-      size.observe(block);
       return () => {
         view.disconnect();
-        size.disconnect();
         store.showHead(id, false);
       };
     },

@@ -1,0 +1,125 @@
+.preview-sync-demo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.preview-sync-demo > span:nth-child(2) {
+  flex: 1;
+}
+.preview-sync-demo button {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  min-height: 28px;
+}
+.preview-sync-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 8%, transparent);
+  font-size: 13px;
+}
+.preview-sync-error button {
+  margin-left: auto;
+  min-height: 28px;
+}
+.preview-ticket-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.preview-ticket-views {
+  flex: none;
+  width: 205px;
+  padding: 22px 12px;
+  border-right: 1px solid var(--line);
+}
+.preview-ticket-views > small {
+  color: var(--faint);
+  padding: 0 10px;
+  font-size: 12px;
+}
+.preview-ticket-views button {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 10px;
+  margin-top: 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: left;
+}
+.preview-ticket-views button[aria-pressed='true'] {
+  background: var(--raise);
+}
+.preview-ticket-views button > span:last-child {
+  margin-left: auto;
+  color: var(--faint);
+}
+.preview-ticket-list {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+.preview-ticket-list h2 {
+  font-size: 13px;
+  padding: 16px 20px;
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+  font-weight: 500;
+}
+.preview-ticket-list h2 span {
+  color: var(--faint);
+  margin-left: 8px;
+}
+.preview-ticket-list > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) 120px 50px;
+  gap: 10px;
+  align-items: center;
+  padding: 14px 20px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.preview-ticket-list > button[aria-pressed='true'] {
+  background: var(--raise);
+}
+.preview-ticket-detail {
+  width: 340px;
+  padding: 24px;
+  border-left: 1px solid var(--line);
+  overflow: auto;
+  font-size: 13px;
+}
+.preview-ticket-detail h2 {
+  font-size: 19px;
+  line-height: 1.45;
+  font-weight: 500;
+  margin: 18px 0;
+}
+.preview-ticket-detail h3 {
+  font-size: 13px;
+  margin-top: 30px;
+}
+.preview-ticket-detail dl {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  row-gap: 18px;
+  margin: 28px 0;
+}
+.preview-ticket-detail dt {
+  color: var(--faint);
+}
+.preview-ticket-detail dd {
+  margin: 0;
+}

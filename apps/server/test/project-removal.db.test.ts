@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, realpath, rm, stat } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   PROJECT_NAME_MAX,
@@ -10,7 +9,7 @@ import {
   type Project,
   type RemovedProject,
 } from '@spark-outpost/contracts';
-import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
+import { createTestApp, localClient } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -39,9 +38,9 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
+const get = (path: string) => localClient(app).get(path);
 const send = (method: 'post' | 'patch' | 'delete', path: string, body: object = {}) =>
-  request(app)[method](path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
+  localClient(app).send(method, path, body);
 
 async function project(folder: string): Promise<Project> {
   return (await send('post', '/api/projects', { rootPath: folder }).expect(201)).body as Project;
@@ -114,11 +113,8 @@ describe('renaming a project', () => {
 
     const other = randomUUID();
     await link(other, [appRepo.id]);
-    await request(app)
-      .put(`/api/conversations/${other}/workspace`)
-      .set(LOCAL_HEADERS)
-      .set('Origin', ORIGIN)
-      .send({ place: 'checkout' })
+    await localClient(app)
+      .send('put', `/api/conversations/${other}/workspace`, { place: 'checkout' })
       .expect(200);
     const projects = (await get('/api/projects').expect(200)).body as Project[];
     expect(projects.find((candidate) => candidate.id === appRepo.id)?.workPlace).toBe('checkout');

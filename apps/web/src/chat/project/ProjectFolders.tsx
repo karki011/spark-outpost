@@ -1,23 +1,30 @@
 import './context-bar.css';
-import { useEffect, useId, useState, type ReactNode } from 'react';
-import { AnimatePresence } from 'motion/react';
+import { useEffect, useId, type KeyboardEvent, type ReactNode } from 'react';
 import type { Project } from '@spark-outpost/contracts';
-import { ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
+import { FolderIcon } from '../../ui/icons.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
+import { useAddFolder } from '../../projects/use-add-folder.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
-import { FolderDialog } from './FolderDialog.tsx';
 import { RepoMenu } from './RepoMenu.tsx';
 import { onProjectMenuRequest } from './project-menu-request.ts';
-import { PICK_PROJECT_HINT, recentProjects, repoSummary } from './repo-list.ts';
-import { useChatRepos, useProjects, type RepoRequest } from './use-chat-repos.ts';
+import { PICK_PROJECT_HINT, recentProjects, repoSummary, type RepoChange } from './repo-list.ts';
+import { useChatRepos, useProjects } from './use-chat-repos.ts';
 
 type RepoPopover = ReturnType<typeof usePopover<HTMLButtonElement, HTMLDivElement>>;
+
+interface ContextDetails {
+  id: string;
+  open: boolean;
+  showProject?: boolean;
+  items: ReactNode;
+  onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
+}
 
 interface ProjectFoldersProps {
   conversationId: string;
   repos: Project[];
   popover: RepoPopover;
-  lead?: ReactNode;
+  details?: ContextDetails | undefined;
   children?: ReactNode;
 }
 
@@ -27,11 +34,10 @@ export function ProjectFolders({
   conversationId,
   repos,
   popover,
-  lead = null,
+  details,
   children,
 }: ProjectFoldersProps) {
   const { open, toggle, setOpen, anchorRef, panelRef } = popover;
-  const [browsing, setBrowsing] = useState(false);
   const projects = useProjects();
   const change = useChatRepos(conversationId);
   const menuId = useId();
@@ -52,77 +58,87 @@ export function ProjectFolders({
     [conversationId, setOpen, anchorRef],
   );
 
-  const apply = (request: RepoRequest) => {
+  const apply = (request: RepoChange) => {
     change.mutate(request, {
       onSuccess: () => {
-        if (browsing) {
-          setBrowsing(false);
-          anchorRef.current?.focus();
-        }
+        if (request.type !== 'add') return;
+        setOpen(false);
+        anchorRef.current?.focus();
       },
     });
   };
+  const adder = useAddFolder({
+    onAdded: (project) => apply({ type: 'add', projectId: project.id }),
+  });
 
-  const openBrowser = () => {
+  const startAdding = (start: () => void) => {
     change.reset();
     setOpen(false);
-    setBrowsing(true);
-  };
-
-  const closeBrowser = () => {
-    setBrowsing(false);
     anchorRef.current?.focus();
+    start();
   };
 
-  const error = change.isError && !browsing ? change.error.message : null;
+  const error = change.isError ? change.error.message : null;
 
+  const folderChip = (
+    <>
+      <button
+        ref={anchorRef}
+        type="button"
+        className={primary ? 'ctx-repo' : 'ctx-repo unset'}
+        aria-label={primary ? `Project folders: ${names.join(', ')}` : 'Choose project'}
+        aria-description={primary ? undefined : PICK_PROJECT_HINT}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={menuId}
+        {...projectTip.triggerProps}
+        onClick={() => {
+          change.reset();
+          toggle();
+        }}
+      >
+        <FolderIcon />
+        <span className="ctx-name">{primary ? repoSummary(names) : 'Choose project'}</span>
+      </button>
+      {projectTip.tooltip}
+    </>
+  );
   return (
-    <div className="ctxbar-wrap">
-      <div className="ctxbar">
-        {lead}
-        <button
-          ref={anchorRef}
-          type="button"
-          className={primary ? 'ctx-repo' : 'ctx-repo unset'}
-          aria-label={primary ? `Project folders: ${names.join(', ')}` : 'Choose project'}
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          aria-controls={menuId}
-          {...projectTip.triggerProps}
-          onClick={() => {
-            change.reset();
-            toggle();
-          }}
+    <div
+      className={details ? 'ctxbar compact' : 'ctxbar'}
+      role="group"
+      aria-label="Project and branch"
+      onKeyDown={details?.onKeyDown}
+    >
+      {(!details || details.showProject) && folderChip}
+      {children}
+      {details && (
+        <div
+          id={details.id}
+          className="ctx-more"
+          role="group"
+          aria-label="Chat details"
+          hidden={!details.open}
         >
-          <FolderIcon />
-          <span className="ctx-name">{primary ? repoSummary(names) : 'Choose project'}</span>
-          <ChevronIcon />
-        </button>
-        {projectTip.tooltip}
-        {children}
-      </div>
+          {!details.showProject && folderChip}
+          {details.items}
+        </div>
+      )}
       <RepoMenu
         id={menuId}
         open={open}
         panelRef={panelRef}
         linked={repos}
         recent={recent}
-        busy={change.isPending}
+        busy={change.isPending || adder.busy}
         error={error ?? (projects.isError ? projects.error.message : null)}
+        actions={adder.actions.map((action) => ({
+          ...action,
+          onSelect: () => startAdding(action.onSelect),
+        }))}
         onChange={apply}
-        onBrowse={openBrowser}
       />
-      <AnimatePresence>
-        {browsing && (
-          <FolderDialog
-            key="folders"
-            linking={change.isPending}
-            error={change.isError ? change.error.message : null}
-            onUse={(rootPath) => apply({ type: 'add', rootPath })}
-            onClose={closeBrowser}
-          />
-        )}
-      </AnimatePresence>
+      {adder.flow}
     </div>
   );
 }

@@ -43,7 +43,8 @@ export function BrowserShots({ shots }: { shots: readonly BrowserShot[] }) {
       })}
       {shown && (
         <ImageLightbox
-          attachment={shown.attachment}
+          name={shown.attachment.name}
+          src={attachmentUrl(shown.attachment.id)}
           alt={`Screenshot of ${shown.title || shown.page}`}
           onClose={close}
         />

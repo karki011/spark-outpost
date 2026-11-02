@@ -98,9 +98,11 @@ const card = (page: Page, name: RegExp) => page.getByRole('group', { name });
 test('asks before a command and runs it after Allow, from the keyboard', async ({ page }) => {
   await doChat(page);
   await send(page, 'Run the tests #approve');
-  const approval = card(page, /Run a command\?/);
+  const approval = card(page, /^Run .+\?$/);
   await expect(approval).toBeVisible({ timeout: 15_000 });
-  await expect(approval.locator('pre')).toHaveText('$ pnpm lint -- groupMessages');
+  await expect(approval.locator('pre')).toHaveText('pnpm lint -- groupMessages');
+  await expect(approval).not.toContainText("It isn't on the project's allowlist yet");
+  await approval.getByRole('button', { name: 'Details' }).click();
   await expect(approval).toContainText("It isn't on the project's allowlist yet");
   await expect(turnMood(page)).toHaveText('waiting for you');
   await expect(page.getByRole('button', { name: 'Stop' })).toBeVisible();
@@ -108,21 +110,23 @@ test('asks before a command and runs it after Allow, from the keyboard', async (
 
   await page.reload();
   const status = page.locator('.cstatus').getByRole('button', { name: /^Waiting for you/ });
+  const question = card(page, /^Run .+\?$/).locator('.appr-h');
+  await expect(question).toBeInViewport();
+  await expect(status).toHaveCount(0);
+  await page.locator('.thread .col').evaluate((element) => (element.style.paddingBottom = '200vh'));
+  await page.locator('.thread').evaluate((element) => (element.scrollTop = element.scrollHeight));
+  await expect(question).not.toBeInViewport();
   await expect(status).toContainText('approve pnpm lint -- groupMessages');
-  const allow = card(page, /Run a command\?/).getByRole('button', { name: 'Allow', exact: true });
   await status.focus();
   await page.keyboard.press('Enter');
-  await expect(allow).toBeFocused();
+  await expect(question).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(card(page, /Run a command\?/).getByRole('status')).toContainText('Chose: Allow.');
+  await expect(card(page, /^Run .+\?$/).getByRole('status')).toContainText('Chose: Allow.');
   await expect(page.locator('.md', { hasText: 'Done. fake-run=allowed' })).toBeVisible({
     timeout: 15_000,
   });
-  await page
-    .getByRole('button', { name: /worked for|steps/ })
-    .first()
-    .click();
-  await expect(page.getByText('(you allowed it)')).toBeVisible();
+  await expect(card(page, /^Run .+\?$/).getByRole('status')).toContainText('Chose: Allow.');
+  await expect(page.locator('.trow', { hasText: '(you allowed it)' })).toHaveCount(0);
 });
 
 test('shows the diff for an edit and leaves the file alone after Deny', async ({ page }) => {
@@ -130,11 +134,11 @@ test('shows the diff for an edit and leaves the file alone after Deny', async ({
   writeFileSync(notes(), `${original}\n`);
   await doChat(page);
   await send(page, 'Add a line to the notes #edit');
-  const approval = card(page, /Change a file\?/);
+  const approval = card(page, /^Edit .+\?$/);
   await expect(approval).toBeVisible({ timeout: 15_000 });
   const figure = approval.getByRole('figure');
   await expect(figure).toContainText('notes.txt');
-  await expect(figure.locator('.appr-count')).toHaveText('+1 −0');
+  await expect(approval.locator('.appr-h .appr-count')).toHaveText('+1 −0');
   await expect(figure.getByText('New file')).toHaveCount(0);
   const added = figure.locator('.dv-row.add');
   await expect(added).toHaveText('31+AddedEdited by the fake agent');
@@ -163,7 +167,7 @@ test('marks a new file in the diff', async ({ page }) => {
   rmSync(notes());
   await doChat(page);
   await send(page, 'Start the notes #edit');
-  const approval = card(page, /Change a file\?/);
+  const approval = card(page, /^Edit .+\?$/);
   await expect(approval).toBeVisible({ timeout: 15_000 });
   const figure = approval.getByRole('figure');
   await expect(figure.getByText('New file')).toBeVisible();
@@ -177,9 +181,10 @@ test('marks a new file in the diff', async ({ page }) => {
 test('"Always allow in this project" adds the command to the allowlist', async ({ page }) => {
   await doChat(page);
   await send(page, 'Run the tests #approve');
-  await card(page, /Run a command\?/)
-    .getByRole('button', { name: 'Always allow in this project' })
+  await card(page, /^Run .+\?$/)
+    .getByRole('button', { name: 'Always allow' })
     .click();
+  await page.getByRole('menuitem', { name: 'Always allow in this project' }).click();
   await expect(page.locator('.md', { hasText: 'fake-run=allowed' })).toBeVisible({
     timeout: 15_000,
   });
@@ -196,8 +201,8 @@ test('"Always allow in this project" adds the command to the allowlist', async (
   await expect(page.locator('.md', { hasText: 'Done. fake-run=allowed' }).nth(1)).toBeVisible({
     timeout: 15_000,
   });
-  await expect(card(page, /Run a command\?/)).toHaveCount(1);
-  await expect(card(page, /Run a command\?/).getByRole('status')).toContainText(
+  await expect(card(page, /^Run .+\?$/)).toHaveCount(1);
+  await expect(card(page, /^Run .+\?$/).getByRole('status')).toContainText(
     'Always allowed in this project.',
   );
 
@@ -212,17 +217,17 @@ test('"Always allow in this project" adds the command to the allowlist', async (
 test('Stop while waiting cancels the approval and the run', async ({ page }) => {
   await doChat(page);
   await send(page, 'Run the tests #approve');
-  await expect(card(page, /Run a command\?/)).toBeVisible({ timeout: 15_000 });
+  await expect(card(page, /^Run .+\?$/)).toBeVisible({ timeout: 15_000 });
   await page.getByRole('button', { name: 'Stop' }).click();
   await expect(turnMood(page)).toHaveText('stopped', { timeout: 15_000 });
-  await expect(card(page, /Run a command\?/)).toHaveCount(0);
+  await expect(card(page, /^Run .+\?$/)).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible();
 });
 
 test('reverts an allowed edit after one confirmation', async ({ page }) => {
   await doChat(page);
   await send(page, 'Add a line to the notes #edit');
-  await card(page, /Change a file\?/)
+  await card(page, /^Edit .+\?$/)
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await expect(page.locator('.md', { hasText: 'fake-edit=allowed' })).toBeVisible({
@@ -284,7 +289,7 @@ test('Codex offers Do with its own copy', async ({ page }) => {
   await shot(page, 'codex-do');
   await page.keyboard.press('Escape');
   await send(page, 'Run the tests #approve');
-  const approval = card(page, /Run a command\?/);
+  const approval = card(page, /^Run .+\?$/);
   await expect(approval).toBeVisible({ timeout: 15_000 });
   await expect(approval).not.toContainText('sandbox');
   await approval.getByRole('button', { name: 'Deny', exact: true }).click();
@@ -297,7 +302,7 @@ test('the approval card works on a phone and in every theme', async ({ page }) =
   test.setTimeout(60_000);
   await doChat(page);
   await send(page, 'Run the tests #approve');
-  const approval = card(page, /Run a command\?/);
+  const approval = card(page, /^Run .+\?$/);
   await expect(approval).toBeVisible({ timeout: 15_000 });
   await page.setViewportSize({ width: 390, height: 844 });
   await approval.scrollIntoViewIfNeeded();
@@ -364,7 +369,7 @@ test('asks before an agent instruction file, with Allow once, for this chat, or 
   await turnDone(page, 15_000);
 
   await send(page, 'Once more #instructions');
-  const third = card(page, /Change a file\?/);
+  const third = card(page, /^Edit .+\?$/);
   await expect(third).toBeVisible({ timeout: 15_000 });
   await expect(third).not.toContainText('always ask');
   await third.getByRole('button', { name: 'Allow', exact: true }).click();
@@ -378,7 +383,7 @@ test('a shell write to an agent instruction file gets the same three choices', a
   await doChat(page);
   await send(page, 'Note the test runner in the agent rules #shellinstructions');
   const approval = card(page, /Change agent instructions\?/);
-  const buttons = ['Allow once', 'Allow for this chat', 'Deny'];
+  const buttons = [/^Allow once/, /^Allow for this chat$/, /^Deny/, /^Details$/];
   await expect(approval.getByRole('button')).toHaveText(buttons, { timeout: 15_000 });
   await approval.getByRole('button', { name: 'Allow for this chat' }).click();
   const done = page.locator('.md', { hasText: 'fake-instructions-shell=allowed' });
@@ -442,6 +447,14 @@ test('reads .env and runs curl in an Ask chat at Automatic with no card, and fla
     page.locator('.md', { hasText: 'Done. fake-read-env=allowed fake-curl=allowed' }),
   ).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.appr:not(.resolved)')).toHaveCount(0);
+  const line = page.locator('.flag-line');
+  await expect(line).toHaveCount(1);
+  await expect(line).toContainText('sent data to example.com after reading .env');
+  await line.getByRole('button', { name: 'Details' }).click();
+  await expect(line.getByRole('button', { name: 'Details' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
   const flag = page.getByRole('region', { name: 'Flagged by Spark' });
   await expect(flag).toHaveCount(1);
   await expect(flag).toContainText('sent data to example.com after reading .env');
@@ -454,6 +467,6 @@ test('runs a command in an Ask chat at Automatic without asking', async ({ page 
   await expect(page.locator('.md', { hasText: 'Done. fake-curl=allowed' })).toBeVisible({
     timeout: 15_000,
   });
-  await expect(card(page, /Run a command\?/)).toHaveCount(0);
+  await expect(card(page, /^Run .+\?$/)).toHaveCount(0);
   expect(readFileSync(notes(), 'utf8')).toBe('Remember the milk\n');
 });

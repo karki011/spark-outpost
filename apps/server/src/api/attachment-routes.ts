@@ -4,6 +4,7 @@ import { getAttachmentContent, saveAttachment } from '../persistence/attachments
 import type { Db } from '../persistence/db.ts';
 import { UploadTooLargeError, isTooLarge, paramId } from './validation.ts';
 import { UPLOAD_NAME_HEADER } from './security.ts';
+import { contentDisposition } from './content-disposition.ts';
 
 export interface AttachmentRouteDeps {
   db: Db;
@@ -26,17 +27,6 @@ function uploadName(req: Request): string {
   } catch {
     return raw;
   }
-}
-
-function asciiFallback(name: string): string {
-  return name.replace(/[^\x20-\x7e]|["\\]/g, '_');
-}
-
-function encodeFilename(name: string): string {
-  return encodeURIComponent(name).replace(
-    /['()*]/g,
-    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
-  );
 }
 
 export function attachmentRoutes({ db, workspaceId }: AttachmentRouteDeps): Router {
@@ -63,7 +53,7 @@ export function attachmentRoutes({ db, workspaceId }: AttachmentRouteDeps): Rout
       'Content-Length': String(file.data.length),
       'X-Content-Type-Options': 'nosniff',
       'Content-Security-Policy': "default-src 'none'; sandbox",
-      'Content-Disposition': `inline; filename="${asciiFallback(file.name)}"; filename*=UTF-8''${encodeFilename(file.name)}`,
+      'Content-Disposition': contentDisposition('inline', file.name),
       'Cache-Control': 'private, max-age=31536000, immutable',
     });
     res.end(file.data);

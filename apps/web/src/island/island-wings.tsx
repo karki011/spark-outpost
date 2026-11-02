@@ -1,21 +1,17 @@
 import type { ReactNode } from 'react';
-import type { ConversationSummary } from '@spark-outpost/contracts';
 import type { IslandView, Panel } from './island-model.ts';
 import { Kbd } from './island-parts.tsx';
 
 export interface WingProps {
   view: IslandView;
-  waiting: number;
   greeting: string | null;
-  followUp: ConversationSummary | null;
-  hugsNotch: boolean;
+  followUp: { title: string } | null;
   onTab: (panel: Panel) => void;
 }
 
 const PANEL_LABELS: Record<Panel, string> = {
   home: 'Spark',
   quick: 'New chat',
-  sessions: 'Chats',
   ask: 'Ask Spark',
 };
 
@@ -24,7 +20,7 @@ function panelLabel(panel: Panel, followUp: boolean): string {
 }
 
 export function wingsFor(props: WingProps): { left: ReactNode; right: ReactNode } {
-  const { view, waiting, greeting } = props;
+  const { view, greeting } = props;
   switch (view.kind) {
     case 'card':
       return {
@@ -48,26 +44,7 @@ export function wingsFor(props: WingProps): { left: ReactNode; right: ReactNode 
           view.panel === 'home' && greeting
             ? greeting
             : panelLabel(view.panel, props.followUp !== null),
-        right:
-          view.panel === 'sessions' && waiting > 0 ? (
-            <>
-              <span className="isl-badge">{waiting}</span>
-              <span>need you</span>
-            </>
-          ) : (
-            <Kbd>⌥ Space</Kbd>
-          ),
-      };
-    case 'now':
-      return {
-        left: props.hugsNotch ? null : 'Spark',
-        right:
-          !props.hugsNotch && waiting > 1 ? (
-            <>
-              <span className="isl-badge">{waiting}</span>
-              <span>need you</span>
-            </>
-          ) : null,
+        right: <Kbd>⌥ Space</Kbd>,
       };
     default:
       return { left: null, right: null };

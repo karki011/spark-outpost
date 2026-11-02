@@ -97,6 +97,7 @@ describe('what a Spark tools session can use', () => {
       pull_request_create: false,
       browser: false,
       mac: false,
+      meetings: false,
       outpost: false,
       outpost_draft: false,
       outpost_start: false,
@@ -104,7 +105,22 @@ describe('what a Spark tools session can use', () => {
       calendar_edit: false,
       jira: false,
       confluence: false,
+      servicenow: false,
+      ticket_create: false,
+      rules_edit: false,
+      howTo: {},
     });
+  });
+
+  it('offers spark_rules_edit to a chat turn on the Mac, never to Ask Spark or a spoken turn', async () => {
+    const chat = await startChat(t, 'Let gh release create follow my mode');
+    const turn = { ...scopeOf(chat.conversationId), runId: chat.runId };
+    expect((await sparkAvailability(deps(), turn)).rules_edit).toBe(true);
+    expect((await sparkAvailability(deps(), { ...turn, assistant: true })).rules_edit).toBe(false);
+    await t.db.query("UPDATE runs SET source = 'voice' WHERE id = $1", [chat.runId]);
+    const spoken = await sparkAvailability(deps(), turn);
+    expect(spoken.rules_edit).toBe(false);
+    expect(spoken.howTo?.rules_edit).toContain('never for a spoken message');
   });
 
   it('offers the outpost tools to a turn of a chat that is in an outpost', async () => {
@@ -119,10 +135,12 @@ describe('what a Spark tools session can use', () => {
     expect(await sparkAvailability(deps(), turn)).toMatchObject({
       outpost: true,
       outpost_draft: true,
+      outpost_start: true,
     });
     expect(await sparkAvailability(deps(), scopeOf(chat.conversationId))).toMatchObject({
       outpost: false,
       outpost_draft: false,
+      outpost_start: false,
     });
   });
 
@@ -130,7 +148,11 @@ describe('what a Spark tools session can use', () => {
     await saveLinearRow();
     expect((await sparkAvailability(deps(), scopeOf(null))).tickets).toBe(false);
     await secrets.set('ticket:linear', 'lin_api_key');
-    expect((await sparkAvailability(deps(), scopeOf(null))).tickets).toBe(true);
+    expect(await sparkAvailability(deps(), scopeOf(null))).toMatchObject({
+      tickets: true,
+      ticket_create: true,
+      servicenow: false,
+    });
   });
 
   it('counts Slack only when its bot token is saved too', async () => {
@@ -187,7 +209,7 @@ describe('a running Spark tools session', () => {
     const before = (await running.listTools()).tools.map((tool) => tool.name);
     expect(before).not.toContain('spark_tickets');
     expect(running.getInstructions()).toContain(
-      'connect Atlassian or Linear in Settings → Connectors',
+      'connect Atlassian, Linear or ServiceNow in Settings → Connectors',
     );
 
     await saveLinearRow();

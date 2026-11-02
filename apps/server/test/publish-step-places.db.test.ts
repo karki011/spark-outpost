@@ -60,20 +60,106 @@ async function turn(conversationId: string, text: string, level: InvolvementLeve
 }
 
 describe('where a change stays when there is no pull request to open', { timeout: 120_000 }, () => {
-  it('with no remote Spark commits the change on the chat’s branch and says it was not pushed', async () => {
+  it('with no remote the agent commits on the chat’s branch and Spark reports the observed commit', async () => {
     const chat = await chatOnItsBranch(t, base, `widgets-${chats}`, 'full-auto', 'none');
     const { replies, prompts } = await turn(chat.conversationId, BUILD);
 
-    expect(prompts).toBe(1);
-    expect(replies).toHaveLength(1);
-    expect(replies[0]).toMatch(
-      new RegExp(`Committed [0-9a-f]{7} on ${CHAT_BRANCH}, not pushed\\. .*no remote`),
+    expect(prompts).toBe(2);
+    expect(replies).toHaveLength(2);
+    expect(replies[1]).toMatch(
+      new RegExp(`HEAD changed to [0-9a-f]{7} on ${CHAT_BRANCH}\\. .*no remote`),
     );
     expect(git(chat.repo.root, 'status', '--porcelain', 'notes.txt')).toBe('');
     expect(git(chat.repo.root, 'log', '-1', '--format=%s', CHAT_BRANCH)).toMatch(
-      /^The divider shows/,
+      /^Publish the change/,
     );
   });
+
+  it.each([
+    { request: 'Open a PR for this work.', ahead: false },
+    { request: 'Push this branch.', ahead: false },
+    { request: 'Open a PR for this work.', ahead: true },
+    { request: 'Push this branch.', ahead: true },
+  ])(
+    'does not repeat a local publish turn on a clean checkout: $request (ahead=$ahead)',
+    async ({ request, ahead }) => {
+      const chat = await chatOnItsBranch(t, base, `clean-${chats}`, 'full-auto', 'none');
+      const baseHead = git(chat.repo.root, 'rev-parse', 'HEAD');
+      if (ahead) {
+        await writeFile(path.join(chat.repo.root, 'notes.txt'), 'already committed work\n');
+        git(chat.repo.root, 'add', 'notes.txt');
+        git(chat.repo.root, 'commit', '-qm', 'Existing local work');
+        expect(git(chat.repo.root, 'rev-list', '--count', `${baseHead}..HEAD`)).toBe('1');
+      }
+      expect(git(chat.repo.root, 'status', '--porcelain')).toBe('');
+      const before = git(chat.repo.root, 'rev-parse', 'HEAD');
+      const { prompts } = await turn(chat.conversationId, request);
+      expect(prompts).toBe(1);
+      expect(git(chat.repo.root, 'rev-parse', 'HEAD')).toBe(before);
+    },
+  );
+
+  it('includes pre-existing uncommitted work in an explicitly requested local publish', async () => {
+    const chat = await chatOnItsBranch(t, base, `existing-${chats}`, 'full-auto', 'none');
+    await writeFile(path.join(chat.repo.root, 'notes.txt'), 'pre-existing work\n');
+    const before = git(chat.repo.root, 'rev-parse', 'HEAD');
+    const { prompts } = await turn(chat.conversationId, 'Open a PR for this work.');
+    expect(prompts).toBe(2);
+    expect(git(chat.repo.root, 'rev-parse', 'HEAD')).not.toBe(before);
+    expect(git(chat.repo.root, 'status', '--porcelain')).toBe('');
+  });
+
+  it.each(['none', 'github'] as const)(
+    'keeps explicit no-commit work dirty with a %s remote and leaves saved autonomy unchanged',
+    async (remote) => {
+      const chat = await chatOnItsBranch(t, base, `restricted-${chats}`, 'full-auto', remote);
+      const before = git(chat.repo.root, 'rev-parse', 'HEAD');
+      const { replies, prompts } = await turn(
+        chat.conversationId,
+        `${BUILD} Do not commit, push or open a PR. #nocommit`,
+      );
+      expect(prompts).toBe(2);
+      expect(git(chat.repo.root, 'rev-parse', 'HEAD')).toBe(before);
+      expect(git(chat.repo.root, 'status', '--porcelain', 'notes.txt')).not.toBe('');
+      expect(stub.github.pulls).toEqual([]);
+      expect(replies.join('\n')).toContain('Left the changes uncommitted as requested.');
+      if (remote === 'none') {
+        expect(replies.at(-1)).toContain('No additional commit was made.');
+        expect(replies.at(-1)).not.toMatch(/Committed [0-9a-f]{7}/);
+      }
+      const { rows } = await t.db.query<{ level: string }>(
+        "SELECT overrides->'claude'->>'level' AS level FROM conversations WHERE id = $1",
+        [chat.conversationId],
+      );
+      expect(rows[0]?.level).toBe('full-auto');
+    },
+  );
+
+  it.each(['fails', 'cancels'] as const)(
+    'keeps local changes uncommitted when the agent publish continuation %s',
+    async (outcome) => {
+      await worker.stop();
+      worker = startTurnWorker(t, {
+        shipAccess: shipAccessTo(stub.url),
+        sessions: path.join(base, `sessions-${chats}-failing`),
+        agentEnv: {
+          [outcome === 'fails' ? 'FAKE_ACP_PUBLISH_FAILS' : 'FAKE_ACP_PUBLISH_CANCELS']: '1',
+        },
+      });
+      const chat = await chatOnItsBranch(t, base, `failed-${chats}`, 'full-auto', 'none');
+      const before = git(chat.repo.root, 'rev-parse', 'HEAD');
+      const { replies, prompts } = await turn(chat.conversationId, BUILD);
+      expect(prompts).toBe(2);
+      expect(replies.at(-1)).toContain(
+        outcome === 'fails'
+          ? 'Not published: the publish step failed.'
+          : 'No additional commit was made.',
+      );
+      expect(git(chat.repo.root, 'rev-parse', 'HEAD')).toBe(before);
+      expect(git(chat.repo.root, 'status', '--porcelain', 'notes.txt')).not.toBe('');
+      expect(stub.github.pulls).toEqual([]);
+    },
+  );
 
   it('a chat working in your checkout keeps the change and pushes nothing', async () => {
     const repo = await repoWithRemote(base, `widgets-${chats}`);

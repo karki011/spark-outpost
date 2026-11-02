@@ -4,6 +4,7 @@ const VIEW_KEY = 'spark-outpost.view';
 const VIEWS: readonly AppView[] = [
   'home',
   'chats',
+  'browser',
   'today',
   'analytics',
   'tickets',

@@ -161,6 +161,20 @@ describe(
       expect(remoteBranches()).not.toContain(BRANCH);
     });
 
+    it('pushes commits that hold a secret value once the SecretSend rule is removed', async () => {
+      const value = 'tok_live_0a1b2c3d4e5f6789';
+      writeFileSync(path.join(root, '.gitignore'), '.env\n');
+      writeFileSync(path.join(root, '.env'), `API_TOKEN=${value}\n`);
+      writeFileSync(path.join(root, 'config.ts'), `export const token = '${value}';\n`);
+      git('add', '.gitignore', 'config.ts');
+      git('commit', '-qm', 'config');
+      const asked = await pushForAgent(deps(), scope(), { secretSend: 'ask' });
+      expect(asked.outcome).toBe('refused');
+      const pushed = await pushForAgent(deps(), scope(), { secretSend: null });
+      expect(pushed.outcome).toBe('pushed');
+      expect(remoteBranches()).toContain(BRANCH);
+    });
+
     it("leaves the agent's own shell without the variable", async () => {
       const launched = { ...process.env, ...loginShell(), GH_TOKEN: 'ghp_fromTheUsersShell0000' };
       const env = await agentEnvironment(

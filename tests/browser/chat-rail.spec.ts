@@ -1,6 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import type { ConversationDetail } from '../../packages/contracts/src/conversations.ts';
@@ -11,6 +9,7 @@ import {
   projectChat,
   resetWithAgents,
   send,
+  turnDone,
 } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { useSystemTheme } from './docs-seed.ts';
@@ -242,34 +241,44 @@ test.describe('working chats', () => {
     repo = chatRepo();
     await page.setViewportSize(WIDE);
     await projectChat(page, repo, 'Full auto');
-    const gate = path.join(mkdtempSync(path.join(tmpdir(), 'spark-rail-tv-')), 'done');
-    await send(page, `${BUILD_REQUEST} #build #holdbuild=${gate}`);
+    await send(page, `${BUILD_REQUEST} #build`);
+    await turnDone(page);
+    const gate = `${repo.root}/.git/agent-tv-release`;
+    const script = JSON.stringify([
+      { say: 'Working on the notes.' },
+      { waitFor: gate },
+      { say: 'All done.' },
+    ]);
+    await send(page, `${BUILD_REQUEST} #build #sparkscript ${script}`);
 
     const dock = rail(page).locator('.crail-tv');
-    await expect(dock).toBeVisible({ timeout: 30_000 });
-    await expect(dock.locator('.tv-n').first()).toBeVisible();
-    const stage = (await dock.locator('.crail-tv-stage').boundingBox())!;
-    const dockRail = (await rail(page).boundingBox())!;
-    expect(stage.width).toBeGreaterThanOrEqual(280);
-    expect(stage.width).toBeLessThanOrEqual(dockRail.width);
-    expect(stage.height).toBeGreaterThanOrEqual(175);
-    await expect(rail(page).getByRole('list', { name: 'This chat' })).toContainText(
-      'Full auto → PR',
-    );
-    await expect(rail(page).getByRole('list', { name: 'This chat' })).toContainText('worktree');
-    await shoot(page, 'agent-run-2000');
-
-    const before = (await page.locator('.col').boundingBox())!;
-    await dock.getByRole('button', { name: /^Open Agent TV/ }).click();
     const tv = page.getByRole('dialog', { name: 'Agent TV' });
-    await expect(tv).toBeVisible();
-    await tv.getByRole('button', { name: 'Close Agent TV' }).click();
-    await expect(tv).toBeHidden();
-    writeFileSync(gate, '');
+    let before!: { x: number; width: number };
+    try {
+      await expect(dock).toBeVisible({ timeout: 30_000 });
+      await expect(dock.locator('.tv-n').first()).toBeVisible();
+      const stage = (await dock.locator('.crail-tv-stage').boundingBox())!;
+      const dockRail = (await rail(page).boundingBox())!;
+      expect(stage.width).toBeGreaterThanOrEqual(280);
+      expect(stage.width).toBeLessThanOrEqual(dockRail.width);
+      expect(stage.height).toBeGreaterThanOrEqual(175);
+      await expect(rail(page).getByRole('list', { name: 'This chat' })).toContainText(
+        'Full auto → PR',
+      );
+      await expect(rail(page).getByRole('list', { name: 'This chat' })).toContainText('worktree');
+      await shoot(page, 'agent-run-2000');
 
-    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0, {
-      timeout: 120_000,
-    });
+      before = (await page.locator('.col').boundingBox())!;
+      await dock.getByRole('button', { name: /^Open Agent TV/ }).click();
+      await expect(tv).toBeVisible();
+      await tv.getByRole('button', { name: 'Close Agent TV' }).click();
+      await expect(tv).toBeHidden();
+    } finally {
+      writeFileSync(gate, '');
+      await expect(page.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0, {
+        timeout: 120_000,
+      });
+    }
     await expect(dock).toHaveCount(0);
     const after = (await page.locator('.col').boundingBox())!;
     expect(after.x).toBe(before.x);
@@ -302,31 +311,30 @@ test.describe('working chats', () => {
     await expect(members).toHaveCount(1);
   });
 
-  test('tasks read as a plain list: one row per step with its state, the current one marked, no filled rows', async ({
+  test("the agent's to-do reads as a plain list: one row per item with its state, the current one marked, no filled rows", async ({
     page,
   }) => {
     test.setTimeout(120_000);
-    await resetWithAgents();
+    await resetTestDatabase({ onboarded: true, catalog: true });
     await useSystemTheme(page);
     await page.emulateMedia({ colorScheme: 'light' });
-    repo = chatRepo();
     await page.setViewportSize({ width: 1440, height: 900 });
-    await projectChat(page, repo, 'Ask before edits');
-    await send(page, 'Fix the divider #build');
-    await expect(page.getByRole('group', { name: /Change a file\?/ })).toBeVisible({
-      timeout: 30_000,
-    });
+    await openChats(page);
+    await page.getByRole('button', { name: 'New chat' }).first().click();
+    await send(page, 'Fix the divider #plan #slow');
 
-    const tasks = rail(page).getByRole('region', { name: 'Tasks' });
-    await expect(tasks.getByRole('button', { name: /^1 of 3 tasks done/ })).toHaveText('1 of 3');
-    const steps = tasks.getByRole('list', { name: 'Task steps' });
+    const todo = rail(page).getByRole('region', { name: 'To-do' });
+    await expect(todo.getByRole('button', { name: /^1 of 3 to-do items done/ })).toHaveText(
+      '1 of 3',
+      { timeout: 30_000 },
+    );
+    const steps = todo.getByRole('list', { name: 'To-do items' });
     const rows = steps.getByRole('listitem');
     await expect(rows).toHaveCount(3);
     await expect(rows.first()).toHaveText(/^Done: /);
     await expect(rows.first()).not.toHaveAttribute('aria-current');
     const current = steps.locator('li[aria-current="step"]');
-    await expect(current.first()).toHaveText(/^(Waiting for you|In progress): /);
-    await expect(steps.locator('li[data-state="waiting"]')).toContainText('Waiting for you');
+    await expect(current).toHaveText('In progress: Look through the code');
 
     const layout = await steps.evaluate((list) =>
       [...list.querySelectorAll('li')].map((row) => {
@@ -358,8 +366,8 @@ test.describe('working chats', () => {
       const detail = (await response.json()) as ConversationDetail;
       const tasks = detail.tasks.map((task) => ({
         ...task,
-        items: Array.from({ length: 12 }, (_, index) => ({
-          ...task.items[index % task.items.length]!,
+        todo: Array.from({ length: 12 }, (_, index) => ({
+          ...task.todo[index % task.todo.length]!,
           id: `long-${index}`,
           label: LONG_TASKS[index % LONG_TASKS.length]!,
         })),
@@ -411,8 +419,7 @@ test.describe('working chats', () => {
     const composer = (await page.locator('.composer').boundingBox())!;
     expect(card.y + card.height).toBeLessThanOrEqual(composer.y);
     const item = (await page.locator('.prc-item').boundingBox())!;
-    const context = (await page.locator('.ctxbar').boundingBox())!;
-    expect(Math.abs(item.width - context.width)).toBeLessThan(2);
+    expect(Math.abs(item.width - (composer.width - 24))).toBeLessThan(2);
     await shoot(page, 'pr-2000');
   });
 });

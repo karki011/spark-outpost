@@ -5,13 +5,24 @@ const PLAIN_CHAT_MAX_CHARS = 27_000;
 const INSTRUCTIONS_MAX_CHARS = 1_700;
 const BROWSER_GROUP_MAX_CHARS = 7_500;
 const ATLASSIAN_GROUPS_MAX_CHARS = 4_600;
+const SERVICENOW_GROUP_MAX_CHARS = 3_000;
+const ARTIFACT_TOOL_MAX_CHARS = 1_500;
+const RULES_EDIT_TOOL_MAX_CHARS = 1_000;
 
 describe('the size of the Spark tool list a session is sent', () => {
   it('stays within the budget for a plain chat with nothing connected', async () => {
     const size = await advertisedSize(SESSION_CASES['plain chat, nothing connected']);
     expect(size.chars).toBeLessThanOrEqual(PLAIN_CHAT_MAX_CHARS);
     expect(size.instructionChars).toBeLessThanOrEqual(INSTRUCTIONS_MAX_CHARS);
-    expect(Object.keys(size.groups).sort()).toEqual(['mcp_servers', 'other', 'sparks']);
+    expect(Object.keys(size.groups).sort()).toEqual([
+      'artifacts',
+      'mcp_servers',
+      'other',
+      'rules_edit',
+      'sparks',
+    ]);
+    expect(size.groups.artifacts).toBeLessThanOrEqual(ARTIFACT_TOOL_MAX_CHARS);
+    expect(size.groups.rules_edit).toBeLessThanOrEqual(RULES_EDIT_TOOL_MAX_CHARS);
   });
 
   it('adds the outpost tools only for a chat that can use them', async () => {
@@ -32,6 +43,15 @@ describe('the size of the Spark tool list a session is sent', () => {
     );
     expect(atlassian.groups.other).toBe(plain.groups.other);
     expect(atlassian.instructionChars).toBeLessThan(plain.instructionChars);
+  });
+
+  it('adds three ticket tools and the two ServiceNow tools, within budget, with ServiceNow connected', async () => {
+    const plain = await advertisedSize(SESSION_CASES['plain chat, nothing connected']);
+    const serviceNow = await advertisedSize(SESSION_CASES['plain chat, ServiceNow connected']);
+    expect(serviceNow.tools - plain.tools).toBe(6);
+    expect(serviceNow.groups.ticket_create).toBeUndefined();
+    expect(serviceNow.groups.servicenow).toBeLessThanOrEqual(SERVICENOW_GROUP_MAX_CHARS);
+    expect(serviceNow.groups.other).toBe(plain.groups.other);
   });
 
   it('grows only by the groups a session can use', async () => {

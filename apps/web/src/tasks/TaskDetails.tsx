@@ -4,6 +4,7 @@ import {
   isTerminalRunStatus,
   type Orchestration,
   type Run,
+  type TaskDetail,
   type TaskOverview,
 } from '@spark-outpost/contracts';
 import type { CrewAgent } from '../crew/crew-model.ts';
@@ -12,19 +13,20 @@ import { ChangesPane } from './ChangesPane.tsx';
 import { CostPane } from './CostPane.tsx';
 import { CrewPane } from './CrewPane.tsx';
 import { LinksPane } from './LinksPane.tsx';
-import { PlanPane } from './PlanPane.tsx';
+import { AgreedPlan } from './AgreedPlan.tsx';
+import { TodoPane } from './TodoPane.tsx';
 import { taskApi, taskKeys } from './task-api.ts';
 import { TerminalCost } from '../terminal/usage/TerminalCost.tsx';
 import { TerminalSteps } from '../terminal/usage/TerminalSteps.tsx';
-import { progressPercent } from './TaskCard.tsx';
-import { TaskList, WaitingItems } from './TaskList.tsx';
+import { WaitingItems } from './TaskList.tsx';
+import { hasTodo, todoPercent } from '../todo/task-todo.ts';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton, type SkeletonShape } from '../ui/loading/Skeleton.tsx';
 
-export type WorkTab = 'tasks' | 'steps' | 'plan' | 'crew' | 'links' | 'changes' | 'cost';
+export type WorkTab = 'todo' | 'steps' | 'plan' | 'crew' | 'links' | 'changes' | 'cost';
 
 const PANE_SHAPES: Record<WorkTab, SkeletonShape> = {
-  tasks: 'list',
+  todo: 'list',
   steps: 'list',
   plan: 'lines',
   crew: 'list',
@@ -33,10 +35,10 @@ const PANE_SHAPES: Record<WorkTab, SkeletonShape> = {
   cost: 'cards',
 };
 
-const NO_DETAIL: ReadonlySet<WorkTab> = new Set(['tasks', 'steps', 'changes', 'crew']);
+const NO_DETAIL: ReadonlySet<WorkTab> = new Set(['todo', 'steps', 'changes', 'crew']);
 
 const tabNames: Record<WorkTab, string> = {
-  tasks: 'Tasks',
+  todo: 'To-do',
   steps: 'Steps',
   plan: 'Plan',
   crew: 'Crew',
@@ -57,11 +59,11 @@ function tabAfterKey(tabs: readonly WorkTab[], current: WorkTab, key: string): W
 
 function statusPill(task: TaskOverview): { className: string; label: string } {
   if (task.summary.waiting > 0) return { className: 'spill rev', label: 'Needs you' };
-  if (task.items.some((item) => item.state === 'active')) {
-    return { className: 'spill prog', label: 'Working' };
+  if (task.summary.runState === 'working') return { className: 'spill prog', label: 'Working' };
+  if (task.summary.runState === 'stopped') return { className: 'spill bad', label: 'Stopped' };
+  if (task.summary.done < task.summary.total) {
+    return { className: 'spill', label: 'Not finished' };
   }
-  const lastRun = task.items.findLast((item) => item.id.startsWith('run:'));
-  if (lastRun?.state === 'failed') return { className: 'spill bad', label: 'Stopped' };
   return { className: 'spill ok', label: 'Done' };
 }
 
@@ -74,6 +76,11 @@ function orchestrationPill(
   if (isTerminalRunStatus(orchestration.status))
     return { className: 'spill bad', label: 'Stopped' };
   return { className: 'spill prog', label: 'Working' };
+}
+
+function AgreedPlanPane({ plans }: { plans: TaskDetail['agreedPlans'] }) {
+  if (plans && plans.documents.length > 0) return <AgreedPlan plans={plans} />;
+  return <p className="wsec wnote">No agreed plan yet.</p>;
 }
 
 interface TaskDetailsProps {
@@ -111,16 +118,17 @@ export function TaskDetails({
   autonomy,
   terminal = false,
 }: TaskDetailsProps) {
-  const items = task.items;
   const detail = useQuery({
     queryKey: taskKeys.task(task.id),
     queryFn: () => taskApi.get(task.id),
     enabled: open,
   });
-  const hasPlan = Boolean(task.planVersion || task.agreedPlanVersion);
+  const listed = hasTodo(task);
+  const showsTodo = listed || task.recorded.some((item) => item.state !== 'waiting');
+  const hasPlan = Boolean(task.agreedPlanVersion);
   const storedCrew = orchestration !== null && agents.length > 0;
   const tabs: WorkTab[] = [
-    'tasks',
+    ...(showsTodo ? (['todo'] as const) : []),
     ...(terminal ? (['steps'] as const) : []),
     ...(hasPlan ? (['plan'] as const) : []),
     ...(storedCrew ? (['crew'] as const) : []),
@@ -128,7 +136,7 @@ export function TaskDetails({
     'changes',
     'cost',
   ];
-  const current = tabs.includes(tab) ? tab : 'tasks';
+  const current = tabs.includes(tab) ? tab : tabs[0]!;
   const pill = orchestration ? orchestrationPill(orchestration, task) : statusPill(task);
 
   const onTabKey = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -141,25 +149,27 @@ export function TaskDetails({
 
   return (
     <>
-      <WaitingItems items={items} roots={roots} {...(wide ? {} : { onReview: onClose })} />
+      <WaitingItems items={task.recorded} roots={roots} {...(wide ? {} : { onReview: onClose })} />
       <section className="wtask">
         <div className="wt-h">
           <h2 ref={heading} tabIndex={-1}>
-            {task.title}
+            {listed ? 'To-do' : 'This chat'}
           </h2>
-          <span className={pill.className}>{pill.label}</span>
+          {(listed || orchestration) && <span className={pill.className}>{pill.label}</span>}
         </div>
-        <p className="wprog">{task.summary.text}</p>
-        <div
-          className="wbar"
-          role="progressbar"
-          aria-label="Task progress"
-          aria-valuemin={0}
-          aria-valuemax={task.summary.total}
-          aria-valuenow={task.summary.done}
-        >
-          <i style={{ transform: `scaleX(${progressPercent(task) / 100})` }} />
-        </div>
+        {task.summary.text && <p className="wprog">{task.summary.text}</p>}
+        {listed && (
+          <div
+            className="wbar"
+            role="progressbar"
+            aria-label="To-do progress"
+            aria-valuemin={0}
+            aria-valuemax={task.summary.total}
+            aria-valuenow={task.summary.done}
+          >
+            <i style={{ transform: `scaleX(${todoPercent(task) / 100})` }} />
+          </div>
+        )}
       </section>
       {autonomy}
       <div className="wtabs" role="tablist" aria-label="Task details">
@@ -175,32 +185,33 @@ export function TaskDetails({
             onClick={() => setTab(id)}
             onKeyDown={onTabKey}
           >
-            {tabNames[id]}
+            {id === 'todo' && !listed ? 'Recorded' : tabNames[id]}
           </button>
         ))}
       </div>
       <div className="wpane" id="wpane" role="tabpanel" aria-labelledby={`wtab-${current}`}>
-        {current === 'tasks' && <TaskList items={items} roots={roots} />}
+        {current === 'todo' && (
+          <TodoPane
+            taskId={task.id}
+            todo={task.todo}
+            recorded={task.recorded}
+            detail={detail.data}
+            roots={roots}
+          />
+        )}
         {current === 'crew' && orchestration && (
           <CrewPane agents={agents} labels={pieceLabels(orchestration)} />
         )}
         {current === 'steps' && <TerminalSteps conversationId={conversationId} />}
         {current === 'cost' && terminal && <TerminalCost conversationId={conversationId} />}
-        {!NO_DETAIL.has(current) && !detail.data && (
+        {open && !NO_DETAIL.has(current) && !detail.data && (
           <div className="wsec">
             <QueryWait query={detail} what={`the ${tabNames[current].toLowerCase()}`}>
               <Skeleton label={`Opening ${tabNames[current]}`} shape={PANE_SHAPES[current]} />
             </QueryWait>
           </div>
         )}
-        {current === 'plan' && detail.data && (
-          <PlanPane
-            taskId={task.id}
-            versions={detail.data.planVersions}
-            runs={detail.data.runs}
-            agreed={detail.data.agreedPlans}
-          />
-        )}
+        {current === 'plan' && detail.data && <AgreedPlanPane plans={detail.data.agreedPlans} />}
         {current === 'links' && detail.data && (
           <LinksPane taskId={task.id} conversationId={conversationId} links={detail.data.links} />
         )}

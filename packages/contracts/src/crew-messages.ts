@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { annotationInputSchema } from './annotations.ts';
 
 export const MEMBER_MESSAGE_ACTIVITY = 'member_message';
 export const memberMessageStatusSchema = z.enum([
@@ -18,28 +19,19 @@ export const memberMessageSchema = z.object({
   id: z.uuid(),
   runId: z.uuid(),
   body: z.string(),
+  attachmentIds: z.array(z.uuid()).optional(),
+  annotations: z.array(annotationInputSchema).optional(),
   urgency: memberMessageUrgencySchema,
   status: memberMessageStatusSchema,
   messageId: z.uuid().nullable(),
   createdAt: z.string(),
   deliveredAt: z.string().nullable(),
   deliveredRunId: z.uuid().nullable().optional(),
+  textOffset: z.number().int().nonnegative().nullable().optional(),
+  textBefore: z.string().nullable().optional(),
+  textHeld: z.number().int().nonnegative().nullable().optional(),
 });
 export type MemberMessage = z.infer<typeof memberMessageSchema>;
-
-export const memberMessageRequestSchema = z.object({
-  id: z.uuid(),
-  text: z.string().trim().min(1),
-  continue: z.boolean().default(false),
-});
-export type MemberMessageRequest = z.infer<typeof memberMessageRequestSchema>;
-
-export const memberMessageResponseSchema = z.object({
-  message: memberMessageSchema.nullable(),
-  queued: z.boolean(),
-  reply: z.string(),
-});
-export type MemberMessageResponse = z.infer<typeof memberMessageResponseSchema>;
 
 export const queuedMessageSchema = z.object({
   id: z.uuid(),
@@ -48,5 +40,9 @@ export const queuedMessageSchema = z.object({
   continueRunId: z.uuid().nullable(),
   createdAt: z.string(),
   outpostPostId: z.uuid().nullable().optional(),
+  sparkRuleCardId: z.uuid().optional(),
+  origin: z.enum(['voice', 'assistant', 'pages']).optional(),
+  attachmentIds: z.array(z.uuid()).optional(),
+  annotations: z.array(annotationInputSchema).optional(),
 });
 export type QueuedMessage = z.infer<typeof queuedMessageSchema>;

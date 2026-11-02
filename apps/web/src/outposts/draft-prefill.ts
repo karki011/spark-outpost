@@ -71,6 +71,33 @@ function newChat(chat: DraftChat, base: PrefillBase, lead: DraftLead, newId?: Ne
   };
 }
 
+function existingChat(
+  chat: DraftChat,
+  chatId: string,
+  base: PrefillBase,
+  newId?: NewId,
+): ChatDraft {
+  return {
+    ...emptyChat(base.defaults, newId),
+    kind: 'existing',
+    chatId,
+    open: false,
+    added: true,
+    touched: true,
+    handle: chat.handle,
+    handleTyped: true,
+    messageOpen: true,
+    text: chat.task,
+    storyTitle: chat.title,
+  };
+}
+
+function proposedChat(chat: DraftChat, base: PrefillBase, lead: DraftLead, newId?: NewId) {
+  return chat.chatId === undefined
+    ? newChat(chat, base, lead, newId)
+    : existingChat(chat, chat.chatId, base, newId);
+}
+
 function withEdges(chats: readonly ChatDraft[], proposed: readonly DraftChat[]): ChatDraft[] {
   const keyOf = new Map<string, string>();
   for (const chat of chats) if (!keyOf.has(chat.handle)) keyOf.set(chat.handle, chat.key);
@@ -101,7 +128,7 @@ export function fromDraft(
 ): CreateDraft {
   const proposed = draft.body.chats;
   const chats = withEdges(
-    proposed.map((chat) => newChat(chat, base, lead, newId)),
+    proposed.map((chat) => proposedChat(chat, base, lead, newId)),
     proposed,
   );
   const name = (draft.body.name ?? draft.body.title).slice(0, OUTPOST_NAME_MAX);

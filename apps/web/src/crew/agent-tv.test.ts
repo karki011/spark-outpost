@@ -5,10 +5,14 @@ import { run } from './test-run.ts';
 import { tvCaption } from './tv-caption.ts';
 import {
   bubbleBox,
-  clampToViewport,
+  chatArea,
+  clampInto,
+  dockInto,
+  stageRoom,
   handoffPath,
   stageLayout,
   STAGES,
+  tvStage,
   watchStage,
   dockStage,
 } from './tv-layout.ts';
@@ -75,10 +79,61 @@ describe('Agent TV stage layout', () => {
     expect(centre).toMatchObject({ left: 90, width: 120, arrow: 60, below: false, edge: 121 });
   });
 
-  it('keeps a dragged panel inside the viewport', () => {
+  it('keeps a dragged panel inside the chat area', () => {
     const size = { width: 300, height: 320 };
-    const viewport = { width: 1000, height: 700 };
-    expect(clampToViewport({ x: -40, y: 900 }, size, viewport)).toEqual({ x: 8, y: 372 });
+    const area = { left: 100, top: 50, right: 1000, bottom: 700 };
+    expect(clampInto({ x: -40, y: 900 }, size, area)).toEqual({ x: 108, y: 372 });
+    expect(clampInto({ x: 900, y: 0 }, size, area)).toEqual({ x: 692, y: 58 });
+  });
+
+  it('docks inside the chat column, left of a side pane', () => {
+    const column = { left: 300, top: 60, right: 1400, bottom: 860 };
+    const pane = { left: 1000, top: 0, right: 1680, bottom: 1000 };
+    const area = chatArea(column, pane);
+    expect(area.right).toBe(1000);
+    expect(chatArea(column, { ...pane, left: 1500, right: 1600 })).toBe(column);
+    expect(dockInto(area, { width: 1680, height: 1000 })).toEqual({
+      right: 696,
+      bottom: 156,
+      maxWidth: 668,
+      maxHeight: 768,
+    });
+  });
+
+  it('picks the largest stage that fits and shortens it for a lone agent', () => {
+    const roomy = { width: 1000, height: 800 };
+    expect(tvStage('l', null, 2)).toBe(STAGES.l);
+    expect(tvStage('l', { width: 400, height: 800 }, 2)).toBe(STAGES.m);
+    expect(tvStage('l', { width: 360, height: 800 }, 2)).toBe(STAGES.s);
+    expect(tvStage('m', roomy, 0)).toMatchObject({ width: 380, height: 234 });
+    expect(tvStage('s', { width: 240, height: 800 }, 1).width).toBe(240);
+  });
+
+  it('keeps the fallback stage within a room smaller than its preferred minimum', () => {
+    const room = { width: 160, height: 100 };
+    for (const crew of [0, 3]) {
+      const stage = tvStage('l', room, crew);
+      expect(stage.width).toBeLessThanOrEqual(room.width);
+      expect(stage.height).toBeLessThanOrEqual(room.height);
+      expect(stage.width).toBeGreaterThan(0);
+      expect(stage.height).toBeGreaterThan(0);
+    }
+  });
+
+  it('picks a stage that fits a short window under the header, caption and sub-agents', () => {
+    const dock = dockInto(
+      { left: 300, top: 60, right: 1300, bottom: 480 },
+      { width: 1400, height: 600 },
+    );
+    const room = stageRoom(dock, true);
+    expect(room.height).toBe(388 - 76 - 90);
+    const messagingRoom = stageRoom(dock, true, true);
+    expect(messagingRoom.height).toBeLessThanOrEqual(room.height - 100);
+    expect(tvStage('l', messagingRoom, 3).height).toBeLessThanOrEqual(messagingRoom.height);
+    const short = tvStage('l', room, 3);
+    expect(short.height).toBeLessThanOrEqual(room.height);
+    expect(short.width).toBeLessThanOrEqual(room.width);
+    expect(tvStage('l', { width: 1000, height: 300 }, 3)).toBe(STAGES.m);
   });
 });
 
@@ -131,7 +186,7 @@ describe('Agent TV caption', () => {
 describe('dockStage', () => {
   it('keeps the base size when the rail is narrow or not measured yet', () => {
     expect(dockStage(0)).toEqual(dockStage(200));
-    expect(dockStage(200)).toMatchObject({ width: 200, height: 128, leadSize: 34, fontSize: 11 });
+    expect(dockStage(200)).toMatchObject({ width: 200, height: 128, leadSize: 34, fontSize: 12 });
   });
 
   it('grows every part with the rail and stops at the cap', () => {
@@ -145,5 +200,32 @@ describe('dockStage', () => {
       fontSize: 13,
     });
     expect(dockStage(900)).toEqual(dockStage(320));
+  });
+
+  it('keeps a small team in the existing arc', () => {
+    expect(dockStage(300, 3)).toEqual(dockStage(300));
+  });
+
+  it('gives every worker a readable, non-overlapping row seat in a crowded rail', () => {
+    for (const width of [200, 260, 300, 320]) {
+      for (const count of [4, 5, 8, 12, 20]) {
+        const stage = dockStage(width, count);
+        const { lead, seats } = stageLayout(count, stage);
+        expect(seats).toHaveLength(count);
+        expect(stage.fontSize).toBeGreaterThanOrEqual(12);
+        for (const [index, seat] of seats.entries()) {
+          expect(seat.x - stage.labelWidth / 2).toBeGreaterThanOrEqual(0);
+          expect(seat.x + stage.labelWidth / 2).toBeLessThanOrEqual(stage.width);
+          expect(seat.y - stage.crewSize / 2).toBeGreaterThanOrEqual(0);
+          expect(seat.y + stage.crewSize / 2 + 20).toBeLessThan(lead.y - stage.leadSize / 2);
+          for (const other of seats.slice(index + 1)) {
+            const separateColumns = Math.abs(other.x - seat.x) >= stage.labelWidth;
+            const separateRows = Math.abs(other.y - seat.y) >= stage.crewSize + 20;
+            expect(separateColumns || separateRows).toBe(true);
+          }
+        }
+        expect(lead.y + stage.leadSize / 2 + 20).toBeLessThanOrEqual(stage.height);
+      }
+    }
   });
 });

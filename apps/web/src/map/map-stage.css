@@ -219,7 +219,7 @@
 }
 
 .map-lg-abc {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
   color: var(--map-gold);
@@ -291,7 +291,7 @@
   padding: 0 6px;
   border-radius: 999px;
   background: var(--raise);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 17px;
   color: var(--muted);

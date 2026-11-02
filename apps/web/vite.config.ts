@@ -6,10 +6,11 @@ import { defineConfig } from 'vite';
 import {
   API_TOKEN_ENV,
   API_TOKEN_HEADER,
-  APP_CONTENT_SECURITY_POLICY,
   CONTENT_SECURITY_POLICY_HEADER,
   DEV_API_TOKEN_FILE,
-  DEV_CONTENT_SECURITY_POLICY,
+  appContentSecurityPolicy,
+  artifactOrigin,
+  devContentSecurityPolicy,
 } from '@spark-outpost/contracts';
 import { bundledFontsPlugin } from './bundled-fonts.ts';
 
@@ -45,7 +46,9 @@ export default defineConfig({
     host: '127.0.0.1',
     port: webPort,
     strictPort: true,
-    headers: { [CONTENT_SECURITY_POLICY_HEADER]: DEV_CONTENT_SECURITY_POLICY },
+    headers: {
+      [CONTENT_SECURITY_POLICY_HEADER]: devContentSecurityPolicy(artifactOrigin(apiPort)),
+    },
     watch: { useFsEvents: false },
     proxy: {
       '/api': {
@@ -61,6 +64,8 @@ export default defineConfig({
     },
   },
   preview: {
-    headers: { [CONTENT_SECURITY_POLICY_HEADER]: APP_CONTENT_SECURITY_POLICY },
+    headers: {
+      [CONTENT_SECURITY_POLICY_HEADER]: appContentSecurityPolicy(artifactOrigin(apiPort)),
+    },
   },
 });

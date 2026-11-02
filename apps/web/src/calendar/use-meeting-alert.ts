@@ -8,6 +8,7 @@ import {
   type MeetingCountdown,
 } from '@spark-outpost/contracts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
+import { alertNotice, joinState } from './alert/alert-model.ts';
 import { useEventClock } from './event-clock.ts';
 import {
   AUTO_JOIN_COUNTDOWN_MS,
@@ -16,10 +17,10 @@ import {
   type AutoJoinPlan,
   type Presence,
 } from './meeting-alert.ts';
-import { dismissNudge, snoozeNudgeFor, type NudgeMarks } from './nudge-marks.ts';
+import { dismissNudge, snoozeNudgeFor, withJoined, type NudgeMarks } from './nudge-marks.ts';
 import { openJoin } from './today-model.ts';
 
-const ALERT_SNOOZE_MS = 60_000;
+export const ALERT_SNOOZE_MS = 60_000;
 const HERE: Presence = { idleSeconds: 0, locked: false, asleep: false };
 
 interface MeetingAlertOptions {
@@ -31,14 +32,15 @@ interface MeetingAlertOptions {
   setMarks: (update: (marks: NudgeMarks) => NudgeMarks) => void;
   names: ReadonlyMap<string, string>;
   note: (text: string) => void;
+  onDismissed: (events: readonly CalendarEvent[]) => void;
 }
 
 function alertTimes(live: CalendarNow | null, settings: CalendarSettings | null): number[] {
   if (!live || !settings) return [];
   const lead = settings.alertLead * 60_000;
   return live.upcoming.flatMap((event) => {
-    const { start } = spanOf(event);
-    return [start - lead, start];
+    const { start, end } = spanOf(event);
+    return [start - lead, start, end];
   });
 }
 
@@ -67,7 +69,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
   const canShow = sparkDesktop()?.meetingAlert !== undefined;
   const alert =
     settings && canShow
-      ? meetingAlert({ now: live, settings, at, held, marks: marksWithout(marks, joined) })
+      ? meetingAlert({ now: live, settings, at, held, marks: withJoined(marks, joined) })
       : null;
 
   const join = (event: CalendarEvent, automatic: boolean) => {
@@ -151,14 +153,19 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
     if (target) join(target, true);
   };
 
-  const handlers = useRef({ cancelJoin, joinNow });
-  useEffect(() => {
-    handlers.current = { cancelJoin, joinNow };
-  });
-
   const alertRef = useRef(alert);
   useEffect(() => {
     alertRef.current = alert;
+  });
+
+  const joinFromNotice = (eventKey: string) => {
+    const target = alertRef.current?.events.find((event) => event.key === eventKey);
+    if (target && joinState(target, Date.now()) === 'open') join(target, false);
+  };
+
+  const handlers = useRef({ cancelJoin, joinNow, joinFromNotice });
+  useEffect(() => {
+    handlers.current = { cancelJoin, joinNow, joinFromNotice };
   });
 
   const payload = alert
@@ -172,6 +179,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
           ]),
         ),
         countdown,
+        notice: alertNotice(alert.events),
       }
     : null;
   const payloadKey = JSON.stringify(payload);
@@ -198,6 +206,9 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
       const inAlert = shown && shown.key === action.key ? shown.events : [];
       if (action.kind === 'cancel-join') handlers.current.cancelJoin();
       if (action.kind === 'join-now') handlers.current.joinNow();
+      if (action.kind === 'join' && action.eventKey && shown?.key === action.key) {
+        handlers.current.joinFromNotice(action.eventKey);
+      }
       if (action.kind === 'joined' && action.eventKey) {
         setJoined((current) => new Set(current).add(action.eventKey!));
       }
@@ -217,16 +228,11 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
             current,
           ),
         );
+        latest.current.onDismissed(inAlert);
       }
     });
   }, [setMarks]);
 
-  return { alert, countdown, cancelJoin, joinNow, markJoined };
-}
-
-function marksWithout(marks: NudgeMarks, joined: ReadonlySet<string>): NudgeMarks {
-  if (joined.size === 0) return marks;
-  const next = new Map(marks);
-  for (const key of joined) next.set(key, { end: Infinity, dismissed: true, snoozedUntil: null });
-  return next;
+  const joinEvent = (event: CalendarEvent) => join(event, false);
+  return { alert, countdown, joined, cancelJoin, joinNow, markJoined, joinEvent };
 }

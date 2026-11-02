@@ -6,6 +6,7 @@ import { runStatusSchema } from './runs.ts';
 import { SPARK_TEXT_MAX } from './spark-actions.ts';
 import {
   OUTPOST_HANDLE_PATTERN,
+  OUTPOST_INSTRUCTIONS_MAX,
   OUTPOST_MEMBERS_MAX,
   OUTPOST_NAME_MAX,
   OUTPOST_STORY_TITLE_MAX,
@@ -13,6 +14,7 @@ import {
 
 export {
   OUTPOST_HANDLE_PATTERN,
+  OUTPOST_INSTRUCTIONS_MAX,
   OUTPOST_MEMBERS_MAX,
   OUTPOST_NAME_MAX,
   OUTPOST_STORY_TITLE_MAX,
@@ -47,6 +49,7 @@ export const requestFactsSchema = z.object({
   queued: z.boolean(),
   runStatus: runStatusSchema.nullable(),
   runNeedsYou: z.string().nullable(),
+  runAsksQuestion: z.boolean().optional(),
   paused: z.boolean(),
   held: z.enum(['failed', 'stopped']).nullable(),
   chatDeleted: z.boolean(),
@@ -61,11 +64,19 @@ export interface DerivedRequestState {
   reason: string | null;
 }
 
+export const memberStorySchema = z.object({
+  lead: z.uuid().nullable(),
+  after: z.uuid().nullable(),
+  position: z.number().int(),
+});
+export type MemberStory = z.infer<typeof memberStorySchema>;
+
 export const outpostMemberSchema = z.object({
   conversationId: z.uuid(),
   handle: outpostHandleSchema,
   position: z.number(),
   joinedAt: z.string(),
+  story: memberStorySchema.optional(),
 });
 export type OutpostMember = z.infer<typeof outpostMemberSchema>;
 
@@ -76,6 +87,7 @@ export const outpostSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   members: z.array(outpostMemberSchema),
+  instructions: z.string().default(''),
   needsYou: z.number().int().nonnegative(),
 });
 export type Outpost = z.infer<typeof outpostSchema>;
@@ -281,12 +293,25 @@ export const updateOutpostRequestSchema = z
   });
 export type UpdateOutpostRequest = z.infer<typeof updateOutpostRequestSchema>;
 
-export const createPostRequestSchema = z.object({
-  id: z.uuid(),
-  text: postTextSchema,
-  to: z.array(z.string().min(1).max(64)).max(OUTPOST_MEMBERS_MAX).optional(),
-  guestConversationId: z.uuid().optional(),
+export const outpostInstructionsRequestSchema = z.object({
+  instructions: z.string().trim().max(OUTPOST_INSTRUCTIONS_MAX),
 });
+export type OutpostInstructionsRequest = z.infer<typeof outpostInstructionsRequestSchema>;
+
+export const createPostRequestSchema = z
+  .object({
+    id: z.uuid(),
+    text: postTextSchema,
+    to: z.array(z.string().min(1).max(64)).max(OUTPOST_MEMBERS_MAX).optional(),
+    toConversationId: z.uuid().optional(),
+    guestConversationId: z.uuid().optional(),
+  })
+  .refine(
+    (request) =>
+      request.toConversationId === undefined ||
+      (request.to === undefined && request.guestConversationId === undefined),
+    { message: 'Choose one way to address the message.', path: ['toConversationId'] },
+  );
 export type CreatePostRequest = z.infer<typeof createPostRequestSchema>;
 
 export const pinPostRequestSchema = z.object({ pinned: z.boolean() });
@@ -296,6 +321,7 @@ export const draftChatSchema = z.object({
   handle: outpostHandleSchema,
   title: storyTitleSchema,
   projectId: z.uuid(),
+  chatId: z.uuid().optional(),
   agent: providerIdSchema.optional(),
   agentMode: z.string().min(1).max(200).optional(),
   task: postTextSchema,

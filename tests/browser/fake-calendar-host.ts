@@ -245,6 +245,7 @@ function answer(request: CalendarHostRequest): unknown {
     };
   }
   if (request.op === 'window') return window();
+  if (request.op === 'refresh') return { refreshed: true };
   if (request.op === 'range') {
     const inside = eventsInSpan(events(), Date.parse(request.from), Date.parse(request.to));
     return { events: inside, truncated: false };
@@ -275,11 +276,24 @@ function reply(raw: unknown) {
   });
 }
 
+interface FakePort {
+  postMessage: (raw: unknown) => void;
+  on: (event: 'message', listener: Listener) => void;
+}
+
+const otherHost = (process as { parentPort?: FakePort }).parentPort;
+
 process.env[BROWSER_HOST_ENV] = '1';
 Object.defineProperty(process, 'parentPort', {
   configurable: true,
   value: {
-    postMessage: reply,
-    on: (_event: 'message', listener: Listener) => listeners.add(listener),
+    postMessage: (raw: unknown) => {
+      reply(raw);
+      otherHost?.postMessage(raw);
+    },
+    on: (event: 'message', listener: Listener) => {
+      listeners.add(listener);
+      otherHost?.on(event, listener);
+    },
   },
 });

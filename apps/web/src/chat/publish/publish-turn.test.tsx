@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ConversationDetail, Message, Run } from '@spark-outpost/contracts';
@@ -42,7 +42,13 @@ function reply(id: string, content: string, createdAt: string): Message {
   };
 }
 
-function show(messages: Message[]) {
+interface Extra {
+  run?: Record<string, unknown>;
+  command?: Record<string, unknown>;
+  approvals?: unknown[];
+}
+
+function show(messages: Message[], extra: Extra = {}) {
   const run = {
     id: TURN,
     conversationId: CHAT,
@@ -55,6 +61,7 @@ function show(messages: Message[]) {
     revertedAt: null,
     error: null,
     createdAt: '2026-10-10T10:00:00.000Z',
+    ...extra.run,
   } as unknown as Run;
   const detail = {
     conversation: { id: CHAT },
@@ -62,7 +69,7 @@ function show(messages: Message[]) {
     runs: [run],
     activity: {},
     tasks: [],
-    approvals: [],
+    approvals: extra.approvals ?? [],
     commands: [
       {
         id: '00000000-0000-4000-8000-0000000000c1',
@@ -78,6 +85,7 @@ function show(messages: Message[]) {
         textOffset: 0,
         textBefore: null,
         textHeld: null,
+        ...extra.command,
       },
     ],
   } as unknown as ConversationDetail;
@@ -102,21 +110,50 @@ describe('a turn that ended with a publish step', () => {
     reply('m2', PUBLISHED, '2026-10-10T10:00:12.000Z'),
   ];
 
-  it('shows the work reply, then the publish result, under one agent header', () => {
+  it('shows the work reply, then the publish result, in one turn with no agent header', () => {
     const view = show(messages);
     const text = view.container.textContent ?? '';
     expect(text).toContain(WORK);
     expect(text.indexOf(WORK)).toBeLessThan(text.indexOf(PUBLISHED));
-    expect(view.container.querySelectorAll('.ai-head')).toHaveLength(1);
-    expect(view.container.querySelectorAll('.provider-name')).toHaveLength(1);
+    expect(view.container.querySelectorAll('.msg.ai')).toHaveLength(1);
+    expect(view.container.querySelector('.ai-head')).toBeNull();
   });
 
   it('keeps the publish reply and its push command in the publish result', () => {
     show(messages);
     const result = screen.getByRole('group', { name: 'Publish result' });
     expect(result.textContent).toContain(PUBLISHED);
-    expect(result.textContent).toContain('git push origin spark/fix');
+    expect(result.textContent).toContain('Ran git push…');
+    expect(screen.getByRole('region', { name: 'Command: git push origin spark/fix' })).toBeTruthy();
     expect(result.textContent).not.toContain(WORK);
+  });
+
+  it('shows the answer to the push card on the push command', () => {
+    const approval = {
+      id: '00000000-0000-4000-8000-0000000000a1',
+      runId: TURN,
+      conversationId: CHAT,
+      kind: 'execute',
+      status: 'allowed',
+      scope: 'once',
+      decidedBy: 'user',
+      decidedAt: '2026-10-10T10:00:08.000Z',
+      createdAt: '2026-10-10T10:00:07.000Z',
+      toolCallId: 'call-push',
+      note: null,
+    };
+    show(messages, { command: { toolCallId: 'call-push' }, approvals: [approval] });
+    const result = screen.getByRole('group', { name: 'Publish result' });
+    fireEvent.click(within(result).getByRole('button', { name: /git push/ }));
+    expect(result.textContent).toMatch(/You allowed it once · /);
+  });
+
+  it('names a running push on the working line', () => {
+    show(messages, {
+      run: { status: 'running', startedAt: '2026-10-10T10:00:00.000Z' },
+      command: { status: 'running', finishedAt: null, exitCode: null },
+    });
+    expect(document.querySelector('.turn-working b')?.textContent).toBe('Running git push…');
   });
 
   it('shows no publish result for a turn with one reply', () => {

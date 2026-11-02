@@ -4,6 +4,7 @@ import {
   createOutpostRequestSchema,
   createPostRequestSchema,
   needsYouCount,
+  outpostInstructionsRequestSchema,
   stackedCount,
   updateOutpostRequestSchema,
   type ChatDrafts,
@@ -27,6 +28,7 @@ import {
   notifyOutpostChanged,
   OUTPOST_NOT_FOUND,
   OutpostError,
+  setInstructions,
   setName,
   setPaused,
 } from '../persistence/outposts.ts';
@@ -208,6 +210,15 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
     res.json(await detail(id));
   });
 
+  router.put('/outposts/:id/instructions', async (req, res) => {
+    const id = paramId(req);
+    const { instructions } = parseBody(outpostInstructionsRequestSchema, req);
+    await known(id);
+    await setInstructions(db, workspaceId, id, instructions);
+    await notifyOutpostChanged(db, id);
+    res.json(await detail(id));
+  });
+
   router.delete('/outposts/:id', async (req, res) => {
     const id = paramId(req);
     if (!(await deleteOutpost(db, workspaceId, id))) throw new OutpostError(404, OUTPOST_NOT_FOUND);
@@ -242,6 +253,7 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
       id: request.id,
       text: request.text,
       ...(request.to ? { to: request.to } : {}),
+      ...(request.toConversationId ? { toConversationId: request.toConversationId } : {}),
       ...(request.guestConversationId ? { guestConversationId: request.guestConversationId } : {}),
     });
     res.status(201).json(await detail(outpostId));

@@ -40,7 +40,7 @@ export function stackParent(
   chats: readonly ConversationSummary[],
 ): ChatDraft | null {
   const parent = parentOf(draft, chat);
-  if (parent === null) return null;
+  if (parent === null || chat.kind !== 'new') return null;
   const stacked = isStacked(
     { projectId: projectOf(chat, chats) },
     { projectId: projectOf(parent, chats) },
@@ -48,17 +48,34 @@ export function stackParent(
   return stacked ? parent : null;
 }
 
+export interface OrderParts {
+  after: string | null;
+  detail: string | null;
+}
+
+export function orderParts(
+  draft: CreateDraft,
+  chat: ChatDraft,
+  chats: readonly ConversationSummary[],
+): OrderParts {
+  const parent = parentOf(draft, chat);
+  if (parent === null) return { after: null, detail: null };
+  const detail =
+    stackParent(draft, chat, chats) !== null
+      ? 'stacked on its branch'
+      : chat.kind !== 'new'
+        ? 'order only, it keeps its own branch'
+        : 'different repo, order only';
+  return { after: parent.handle, detail };
+}
+
 export function orderLine(
   draft: CreateDraft,
   chat: ChatDraft,
   chats: readonly ConversationSummary[],
 ): string {
-  const parent = parentOf(draft, chat);
-  if (parent === null) return 'Starts right away';
-  const after = `Starts after @${parent.handle}`;
-  return stackParent(draft, chat, chats) === null
-    ? `${after} · different repo, order only`
-    : `${after} · stacked on its branch`;
+  const { after, detail } = orderParts(draft, chat, chats);
+  return after === null ? 'Starts right away' : `Starts after @${after} · ${detail}`;
 }
 
 export interface PublishFacts {
@@ -103,7 +120,7 @@ export function unpushedParent(
   facts: PublishFacts,
 ): string | null {
   const parent = stackParent(draft, chat, facts.chats);
-  if (parent === null || chat.kind !== 'new' || parent.kind !== 'new') return null;
+  if (parent === null || chat.kind !== 'new') return null;
   if (!publishes(chat, facts) || publishes(parent, facts)) return null;
   return `@${parent.handle} opens no pull request, so @${chat.handle} cannot push until @${parent.handle}'s branch is pushed.`;
 }

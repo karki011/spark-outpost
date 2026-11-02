@@ -1,9 +1,11 @@
 import { appendFileSync } from 'node:fs';
-import { app, BrowserWindow, session, shell } from 'electron';
+import { app, BrowserWindow, dialog, session, shell } from 'electron';
 import { targetsApi, withApiToken } from './api-token.ts';
 import type { ChannelConfig } from './channel.ts';
+import { attachContextMenu } from './context-menu.ts';
 import { linkTarget } from './link-target.ts';
 import { guardSessionMedia } from './media-guard.ts';
+import { allowArtifactFrames, fromArtifactPage, guardSubframes } from './artifact-frames.ts';
 import { hourCycleArgs } from './hour-cycle-arg.ts';
 import { systemHourCycle } from './hour-cycle.ts';
 import { themeArgs } from './theme-arg.ts';
@@ -39,12 +41,31 @@ function openLink(url: string, origin: string): void {
 }
 
 export function attachApiToken(origin: string, token: string): void {
+  allowArtifactFrames(Number(new URL(origin).port));
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-    callback({ requestHeaders: withApiToken(details.requestHeaders, details.url, origin, token) });
+    const target = fromArtifactPage(details.frame?.url) ? '' : details.url;
+    callback({ requestHeaders: withApiToken(details.requestHeaders, target, origin, token) });
   });
 }
 
+async function confirmArtifactLink(window: BrowserWindow, address: string): Promise<boolean> {
+  const { response } = await dialog.showMessageBox(window, {
+    type: 'question',
+    message: 'Open this link in your browser?',
+    detail: `An artifact asked to open:\n${address}`,
+    buttons: ['Open in Browser', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+  });
+  return response === 0;
+}
+
 export function guardNavigation(window: BrowserWindow, origin: string): void {
+  guardSubframes(window.webContents, {
+    confirm: (address) => confirmArtifactLink(window, address),
+    open: openExternal,
+    now: Date.now,
+  });
   window.webContents.setWindowOpenHandler(({ url }) => {
     openLink(url, origin);
     return { action: 'deny' };
@@ -78,5 +99,6 @@ export function openWindow({ config, preload, theme }: WindowOptions): BrowserWi
     event.preventDefault();
     window.setTitle(title);
   });
+  attachContextMenu(window);
   return window;
 }

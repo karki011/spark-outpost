@@ -17,8 +17,11 @@
     .btog-z,
     .mh-dust,
     .mh-star,
-    .isl-sstatus .shim
+    .isl-sstatus .shim,
+    .hdot.running,
+    .tm-dot.working
   ),
-:root:is([data-motion='rest'], [data-motion='paused']) .bst.asleep .bst-blob::after {
+:root:is([data-motion='rest'], [data-motion='paused']) .bst.asleep .bst-blob::after,
+:root[data-motion='paused'] .hprog.wait i {
   animation-play-state: paused !important;
 }

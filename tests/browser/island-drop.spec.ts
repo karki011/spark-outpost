@@ -3,7 +3,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
-import { seedChats } from './sidebar-seed.ts';
 
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
 const PNG =
@@ -59,7 +58,6 @@ async function openResting(page: Page) {
             onEscape: none,
             sparkFocused: async () => true,
             onSparkFocus: none,
-            pickFolder: async () => null,
             pathForFile: (file: File) => (file.name === 'my-repo' ? folderPath : null),
             setInteractive: () => undefined,
             setFocusable: () => undefined,
@@ -131,8 +129,8 @@ test('dropping an image and a text file grabs them into a new chat', async ({ pa
   ];
   await drag(page, 'dragenter', files, BLOB);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
-  await expect(island(page).getByRole('tab', { name: 'New chat' })).toHaveAttribute(
-    'aria-selected',
+  await expect(island(page).getByRole('button', { name: 'New chat', exact: true })).toHaveAttribute(
+    'aria-pressed',
     'true',
   );
   await expect(scene(page)).toHaveAttribute('data-phase', 'enter');
@@ -221,25 +219,26 @@ test('Add as project links the folder and goes back; Escape links nothing', asyn
   await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
 });
 
-test('files dropped on an open chat go to a reply in that chat', async ({ page }) => {
+test('files dropped while replying to a Spark go to that reply', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
-  await seedChats([{ title: 'Tidy the release notes', run: { status: 'succeeded' } }]);
+  const made = await page.request.post('/api/teammates', {
+    data: { name: 'Docs', role: 'Helper', face: { shape: 'boxy', color: 'moss' } },
+  });
+  expect(made.status()).toBe(201);
   await openResting(page);
   await island(page)
     .getByRole('button', { name: /Open Spark Island/ })
     .click();
-  await island(page).getByRole('tab', { name: 'Chats' }).click();
-  await island(page)
-    .getByRole('option', { name: /Tidy the release notes/ })
-    .click();
-  await expect(island(page).getByRole('textbox', { name: /^Reply to/ })).toBeVisible();
+  await island(page).getByRole('button', { name: 'New chat' }).click();
+  await island(page).getByRole('region', { name: 'Your Sparks' }).getByText('Docs').click();
+  await expect(island(page)).toContainText('Following up in Docs');
   const files = [{ name: 'notes.md', type: 'text/markdown' }];
   await drag(page, 'dragenter', files, PANEL);
   await expect(scene(page)).toContainText('Drop to add to your reply');
   await drag(page, 'drop', files, PANEL);
   await expect(scene(page)).toContainText('Added to your reply', { timeout: 4000 });
   await expect(scene(page)).toBeHidden({ timeout: 3000 });
-  await expect(island(page)).toContainText('Following up in Tidy the release notes');
+  await expect(island(page)).toContainText('Following up in Docs');
   await expect(
     island(page).getByRole('group', { name: 'Attachments' }).getByText('notes.md'),
   ).toBeVisible();

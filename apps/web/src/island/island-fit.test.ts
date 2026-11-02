@@ -99,6 +99,32 @@ describe('the resting blob', () => {
     expect(pose('xlarge', 38, true)).toEqual({ y: 42, tucked: false, edge: 38 });
   });
 
+  it('raises and lowers the working blob without moving the notch edge', () => {
+    const base = { docked: true, edge: 38, tuck: 31, out: true, blob: 58 };
+    expect(restPose({ ...base, height: -32 })).toEqual({ y: 10, tucked: true, edge: 38 });
+    expect(restPose({ ...base, height: 32 })).toEqual({ y: 74, tucked: false, edge: 38 });
+    expect(restPose({ ...base, height: 0 })).toEqual(pose('large', 38, true));
+  });
+
+  it('keeps a visible clickable portion at the highest position for every size', () => {
+    for (const size of ['full', 'small', 'medium', 'large', 'xlarge'] as const) {
+      const { blob, tuck } = restMetrics(size);
+      for (const edge of [0, 38]) {
+        for (const out of [false, true]) {
+          const raised = restPose({ docked: true, edge, tuck, out, blob, height: -32 });
+          const box = { x: 0, y: raised.y, width: blob, height: blob };
+          expect(shownBox(box, raised.edge).height).toBeGreaterThanOrEqual(16);
+          expect(raised.edge).toBe(edge || null);
+        }
+      }
+      expect(restPose({ docked: false, edge: 38, tuck, out: true, blob, height: 32 })).toEqual({
+        y: 0,
+        tucked: false,
+        edge: null,
+      });
+    }
+  });
+
   it('is whole and unclipped when the island floats, out or not', () => {
     for (const out of [false, true]) {
       expect(pose('xlarge', 0, out, false)).toEqual({ y: 0, tucked: false, edge: null });

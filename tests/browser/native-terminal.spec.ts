@@ -2,10 +2,11 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
+import { ADD_FOLDER, keepPlainFolder } from './add-folder-kit.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { startFixtureTerminal } from './native-terminal-fixture.ts';
 import { pickTerminalAgent } from './native-terminal-support.ts';
-import { openChats } from './navigation.ts';
+import { chooseSessionType, openChats } from './navigation.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
@@ -22,10 +23,7 @@ test('terminal uses the chat folder browser and preserves linked folders at laun
   try {
     await openChats(page);
     await page.getByRole('button', { name: 'New chat' }).first().click();
-    await page
-      .getByRole('radiogroup', { name: 'Session type' })
-      .getByRole('radio', { name: 'Terminal' })
-      .click();
+    await chooseSessionType(page, 'Terminal');
     const input = page.getByRole('textbox', { name: 'What would you like to work on?' });
     await input.fill('Inspect the selected folder.');
     await page.getByRole('button', { name: 'Choose project', exact: true }).click();
@@ -40,7 +38,7 @@ test('terminal uses the chat folder browser and preserves linked folders at laun
       .toBeLessThanOrEqual(projectButton.y);
     await page
       .getByRole('dialog', { name: 'Project folders' })
-      .getByRole('button', { name: 'Choose a folder…' })
+      .getByRole('button', { name: ADD_FOLDER })
       .click();
     const browser = page.getByRole('dialog', { name: 'Choose a project folder' });
     await expect(browser).toBeVisible();
@@ -49,7 +47,7 @@ test('terminal uses the chat folder browser and preserves linked folders at laun
     await page.getByRole('button', { name: 'Choose project', exact: true }).click();
     await page
       .getByRole('dialog', { name: 'Project folders' })
-      .getByRole('button', { name: 'Choose a folder…' })
+      .getByRole('button', { name: ADD_FOLDER })
       .click();
     await browser
       .getByRole('navigation', { name: 'Folder path' })
@@ -76,21 +74,16 @@ test('terminal uses the chat folder browser and preserves linked folders at laun
     await expect(page.getByRole('button', { name: 'Linking folder…', exact: true })).toBeDisabled();
     releaseFolder();
     await expect(browser).toBeHidden();
+    await keepPlainFolder(page, 'terminal-project');
     await expect(
       page.getByRole('button', { name: 'Project folders: terminal-project' }),
     ).toBeFocused();
     await expect(input).toHaveValue('Inspect the selected folder.');
-    await page
-      .getByRole('radiogroup', { name: 'Session type' })
-      .getByRole('radio', { name: 'Chat', exact: true })
-      .click();
+    await chooseSessionType(page, 'Chat');
     await expect(
       page.getByRole('button', { name: 'Project folders: terminal-project' }),
     ).toBeVisible();
-    await page
-      .getByRole('radiogroup', { name: 'Session type' })
-      .getByRole('radio', { name: 'Terminal' })
-      .click();
+    await chooseSessionType(page, 'Terminal');
     const projects = (await (await page.request.get('/api/projects')).json()) as {
       id: string;
       rootPath: string;
@@ -131,10 +124,7 @@ test('native terminal keeps its process across reconnects, fills the pane in foc
   await page.addInitScript(() => localStorage.setItem('spark-outpost.theme', 'dark'));
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await page
-    .getByRole('radiogroup', { name: 'Session type' })
-    .getByRole('radio', { name: 'Terminal' })
-    .click();
+  await chooseSessionType(page, 'Terminal');
   await pickTerminalAgent(page, 'Codex');
   await page
     .getByRole('textbox', { name: 'What would you like to work on?' })
@@ -330,10 +320,7 @@ test('an exited terminal session starts again in the same chat @packaged', async
   test.setTimeout(60_000);
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await page
-    .getByRole('radiogroup', { name: 'Session type' })
-    .getByRole('radio', { name: 'Terminal' })
-    .click();
+  await chooseSessionType(page, 'Terminal');
   await pickTerminalAgent(page, 'Codex');
   await page
     .getByRole('textbox', { name: 'What would you like to work on?' })

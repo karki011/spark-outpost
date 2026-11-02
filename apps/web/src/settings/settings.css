@@ -71,7 +71,7 @@
 .set-nav-group {
   display: block;
   margin: 12px 10px 3px;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--faint);
@@ -282,6 +282,12 @@
   cursor: pointer;
 }
 
+.set-projects-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
 .set-projects-bar {
   position: sticky;
   top: -12px;
@@ -415,4 +421,11 @@
   .set-project-title .chev {
     transition: none;
   }
+}
+
+.set-history-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }

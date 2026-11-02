@@ -30,12 +30,22 @@ function AddThisSite({ project, signIn }: { project: Project; signIn: SavedSignI
     onSuccess: () => queryClient.invalidateQueries({ queryKey: signInKeys.project(project.id) }),
   });
   const site = signIn.refusedSite;
-  if (site === null) return null;
+  if (site === null)
+    return add.isSuccess ? (
+      <p className="signin-refused" role="status">
+        <span>
+          Approved <code>{add.variables}</code> for {signIn.label}. Return to your chat and ask the
+          agent to retry this saved sign-in. Spark will ask before filling it on the changed site
+          list.
+        </span>
+      </p>
+    ) : null;
   return (
     <p className="signin-refused" role="status">
       <span>
         An agent’s tab ended on <code>{site}</code>, so Spark typed nothing. Add it only if this is
-        where the app sends you to sign in.
+        where the app sends you to sign in. You can then ask the agent to retry this saved sign-in
+        without entering the password again.
       </span>
       <button
         type="button"

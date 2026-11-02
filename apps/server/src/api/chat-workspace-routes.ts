@@ -81,14 +81,20 @@ function branchView(record: ChatWorktree | null): ChatWorkspace['current'] {
     baseBranch: record.baseBranch,
     baseRef: record.baseRef ?? null,
     createdAt: record.createdAt ?? null,
+    adopted: record.adopted ?? null,
   };
 }
 
-async function workspaceOf(db: Db, conversationId: string): Promise<ChatWorkspace> {
+export async function workspaceOf(db: Db, conversationId: string): Promise<ChatWorkspace> {
   const projectId = await primaryProjectId(db, conversationId);
   const choice = await placeChoice(db, conversationId, projectId);
   const current = await primaryChatWorktree(db, conversationId);
-  return { place: choice.place, requestedBranch: choice.branch, current: branchView(current) };
+  return {
+    place: choice.place,
+    requestedBranch: choice.branch,
+    current: branchView(current),
+    projectId,
+  };
 }
 
 function conflict(res: Response, message: string): void {

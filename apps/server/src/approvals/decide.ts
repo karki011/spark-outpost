@@ -1,38 +1,55 @@
-import type { ApprovalKind, ApprovalOption, FileDiff, ModePosture } from '@spark-outpost/contracts';
-import { protectedPath, refusalFor, type GitDirs } from '../projects/path-policy.ts';
-import { commandTree, treeWords } from './command-tree.ts';
-import { allowlistCovers, normalizeCommand, resolveCommandPath } from './commands.ts';
-import {
-  forcePush,
-  isGitPush,
-  publishesBesidesPush,
-  publishesCode,
-  skipsPushHooks,
-  gitConfigUses,
-  type ForcePush,
-} from './git-commands.ts';
-import { GLOBAL_GIT_CONFIG, REPO_GIT_CONFIG, SYSTEM_GIT_CONFIG } from './git-config.ts';
-import { gitControlLabel } from './git-dirs.ts';
+import { ALLOWED_REASONS } from '@spark-outpost/contracts';
+import type {
+  ApprovalKind,
+  ApprovalOption,
+  FileDiff,
+  ModePosture,
+  SparkRuleRefusal,
+} from '@spark-outpost/contracts';
+import { refusalFor, type GitDirs } from '../projects/path-policy.ts';
+import { commandTree } from './command-tree.ts';
+import { allowlistCovers, normalizeCommand } from './commands.ts';
+import { forcePush, isGitPush, skipsPushHooks, type ForcePush } from './git-commands.ts';
+import { guardedTargets, heldGuards } from './guarded-targets.ts';
+export { secretLabels } from './guarded-targets.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
+import type { SparkRuleContext } from './gh-rules.ts';
 import {
-  onlyRepliesOnOwnPull,
-  publishRefusal,
-  publishVerdict,
-  type PublishBasis,
+  askedForRule,
+  followsAtOnce,
+  sparkRuleAsk,
+  sparkRuleRefusal,
+} from './gh-rule-decisions.ts';
+import { modeAllows } from './mode-allows.ts';
+import { ownAgentStop, publishAllowed, publishing } from './decide-publish.ts';
+import { floorDenial, heldForce, holds, railsWith, rulesOf } from './floor-rules.ts';
+import {
+  adoptedForceReason,
+  ruled,
   type PublishContext,
+  type PublishStop,
   type PublishVerdict,
+  type TaskBranch,
 } from './publish-policy.ts';
 import { stackedPushRefusal } from './stacked-push.ts';
 import type { OwnRepo } from './own-repo.ts';
 import type { SecretSend } from './secret-send.ts';
 import { secretSendReason, sentOut, type SentOut } from './taint.ts';
-import { writeTargets } from './write-targets.ts';
-import { commandCwd, isSecretTarget, outsideRoots, place, placedLabel } from './request-place.ts';
-import { alwaysAsk, type RailAsk } from './rails.ts';
+import { webAddressRefusal } from './web-address.ts';
+import {
+  BROWSER_DATA_REASON,
+  browserDataDir,
+  SPARK_RULES_REASON,
+  touchesBrowserData,
+  touchesSparkRules,
+} from './browser-data.ts';
+import { commandCwd, outsideRoots, place, placedLabel } from './request-place.ts';
+import { alwaysAsk, type RailFound } from './rails.ts';
 import type { ShellScript } from './shell-parse.ts';
 import { withResolvedVariables } from './shell-variables.ts';
+import { isFloorRuleId, type FloorRuleId } from '../spark-rules/rule-ids.ts';
 import { onlyReads, partRequests, shellView, type ShellView } from './shell-view.ts';
 
 export interface RequestRoot {
@@ -55,6 +72,7 @@ export interface ApprovalRequest {
   roots: readonly RequestRoot[];
   home: string;
   plan?: string | null;
+  address?: string | null;
   mode?: string | null;
   mcpServer?: string | null;
   agentReason?: string | null;
@@ -66,10 +84,11 @@ export type RunRule =
 
 export type Decision =
   | { verdict: 'allow'; by: 'level' | 'run_rule' | 'allowlist'; why?: string; sent?: SentOut }
-  | { verdict: 'reject'; reason: string }
+  | { verdict: 'reject'; reason: string; sparkRule?: SparkRuleRefusal; rule?: string }
   | {
       verdict: 'ask';
       reason: string | null;
+      rule?: string;
       forcePush?: string[];
       instructionFiles?: string[];
       gitControl?: string[];
@@ -85,11 +104,15 @@ export const FS_WRITE_TOOL_KIND = 'write_text_file';
 export const PUSH_REASON = 'Pushing publishes outside this computer';
 export const PUSH_HOOKS_REASON =
   "Pushes never skip this repository's hooks. Read what the hook reports and fix it, or tell the user what it needs";
-export const CHAT_PUBLISH_REASON =
-  "This chat's agent pushes and opens a pull request only when the user's message asks for it, the chat is at Full auto → PR, or its mode is Auto or Bypass permissions (Full access)";
+export {
+  CHAT_PUBLISH_REASON,
+  PUBLISH_ASKED_WHY,
+  PUBLISH_FOLLOW_UP_WHY,
+  PUBLISH_FULL_AUTO_WHY,
+} from './decide-publish.ts';
 export { OUTSIDE_DELETE_REASON, OUTSIDE_WRITE_REASON, SECRET_REASON } from './rails.ts';
-export const SAFE_READ_WHY = 'a read-only command inside the project';
-export const ASK_AUTO_WHY = 'Automatic in an Ask turn';
+export const SAFE_READ_WHY = ALLOWED_REASONS.safeRead;
+export const ASK_AUTO_WHY = ALLOWED_REASONS.askAuto;
 export const ASK_TURN_ASKS =
   'Spark asks before commands in a question turn, unless they only read files';
 
@@ -100,50 +123,6 @@ export const GIT_CONTROL_REASON =
 
 export function forcePushReason(branches: readonly string[]): string {
   return `This rewrites history on ${branches.join(', ')} on the remote`;
-}
-
-interface Guarded {
-  instructions: string[];
-  gitControl: string[];
-}
-
-function writtenPaths(request: ApprovalRequest): string[] {
-  if (request.kind === 'edit' || request.toolKind === 'move') return request.paths;
-  if (!request.command) return [];
-  return writeTargets(request.command, commandCwd(request), request.home) ?? [];
-}
-
-function configTargets(request: ApprovalRequest): { files: string[]; labels: string[] } {
-  const writes = request.command ? gitConfigUses(request.command).filter((use) => use.writes) : [];
-  const cwd = commandCwd(request);
-  const places = new Set(writes.map((use) => use.where));
-  return {
-    files: writes.flatMap((use) =>
-      use.file === null ? [] : [resolveCommandPath(use.file, cwd, request.home)],
-    ),
-    labels: [
-      ...(places.has('repo') ? [REPO_GIT_CONFIG] : []),
-      ...(places.has('global') ? [GLOBAL_GIT_CONFIG] : []),
-      ...(places.has('system') ? [SYSTEM_GIT_CONFIG] : []),
-    ],
-  };
-}
-
-export function guardedTargets(asked: ApprovalRequest): Guarded {
-  const request = withResolvedVariables(asked);
-  const config = configTargets(request);
-  const targets = [...writtenPaths(request), ...config.files];
-  const relatives = targets.flatMap((target) => {
-    const { relative } = place(request.roots, target);
-    return relative === null ? [] : [relative];
-  });
-  const unique = [...new Set(relatives)];
-  const control = unique.filter((relative) => protectedPath(relative) === 'git_control');
-  const realGitDir = targets.flatMap((target) => gitControlLabel(request.roots, target) ?? []);
-  return {
-    instructions: unique.filter((relative) => protectedPath(relative) === 'instructions'),
-    gitControl: [...new Set([...control, ...realGitDir, ...config.labels])],
-  };
 }
 
 export interface DecideOptions {
@@ -160,29 +139,12 @@ export interface DecideOptions {
   shell?: ShellScript | null;
   agentAsks?: boolean;
   publish?: PublishContext;
+  sparkRules?: SparkRuleContext;
+  browserData?: string | null;
 }
 
-export function namedSecrets(
-  request: ApprovalRequest,
-  secret: (target: string) => boolean,
-): string[] {
-  const cwd = commandCwd(request);
-  const words = request.command ? treeWords(commandTree(request.command)) : [];
-  const targets = [
-    ...request.paths,
-    ...words
-      .filter((word) => word !== '' && !word.startsWith('-'))
-      .map((word) => resolveCommandPath(word, cwd, request.home)),
-  ].filter(secret);
-  return [...new Set(targets.map((target) => placedLabel(request.roots, request.home, target)))];
-}
-
-export const UNNAMED_SECRET = 'a secret file';
-
-export function secretLabels(asked: ApprovalRequest): string[] {
-  const request = withResolvedVariables(asked);
-  const labels = namedSecrets(request, (target) => isSecretTarget(request.roots, target));
-  return labels.length > 0 ? labels : [UNNAMED_SECRET];
+function asRule(rule: string | null | undefined): FloorRuleId | null {
+  return rule && isFloorRuleId(rule) ? rule : null;
 }
 
 function noted(decision: Decision, sent: SentOut | null): Decision {
@@ -191,9 +153,11 @@ function noted(decision: Decision, sent: SentOut | null): Decision {
   return { ...decision, observed: sent.observed, sendsTo: sent.target };
 }
 
-function soloLeasePush(command: string, options: DecideOptions, forced: ForcePush | null) {
-  if (forced?.kind !== 'ask') return false;
-  return !publishesBesidesPush(command);
+function adoptedForce(forced: ForcePush | null, task: TaskBranch | null): ForcePush | null {
+  if (forced?.kind !== 'ask' || !task?.adopted || !forced.branches.includes(task.branch)) {
+    return forced;
+  }
+  return { kind: 'refuse', reason: adoptedForceReason(task.branch, task.adopted) };
 }
 
 function askRunChange(request: ApprovalRequest, view: ShellView | null): string | null {
@@ -217,30 +181,32 @@ function planningRuns(
   return { verdict: 'allow', by: 'level', why: options.planningWhy };
 }
 
-function ownAgentRefusal(
-  request: ApprovalRequest,
-  options: DecideOptions,
-  forced: ForcePush | null,
-  published: PublishVerdict | null,
-): string | null {
-  const { command } = request;
-  if (!options.changesProject || !command || !publishesCode(command)) return null;
-  if (published) return published.kind === 'refuse' ? published.reason : null;
-  if (onlyRepliesOnOwnPull(command, options.own ?? null)) return null;
-  if (!soloLeasePush(command, options, forced)) return CHAT_PUBLISH_REASON;
-  return publishRefusal(command, options.publish?.task ?? null);
+type Stopped = Pick<PublishStop, 'kind' | 'reason'> & { rule?: string | null };
+
+function refused(reason: string | null): Stopped | null {
+  return reason ? { kind: 'refuse', reason } : null;
 }
 
 function refusal(
   request: ApprovalRequest,
   options: DecideOptions,
   forced: ForcePush | null,
-  guarded: Guarded,
   view: ShellView | null,
   published: PublishVerdict | null,
+): Stopped | null {
+  const address = request.address ? webAddressRefusal(request.address) : null;
+  if (address) return refused(address);
+  const ownAgent = ownAgentStop(request, options, forced, published);
+  if (ownAgent?.kind === 'refuse') return ownAgent;
+  return refused(fixedRefusal(request, options, forced, view)) ?? ownAgent;
+}
+
+function fixedRefusal(
+  request: ApprovalRequest,
+  options: DecideOptions,
+  forced: ForcePush | null,
+  view: ShellView | null,
 ): string | null {
-  const ownAgent = ownAgentRefusal(request, options, forced, published);
-  if (ownAgent) return ownAgent;
   const stacked = request.command
     ? stackedPushRefusal(request.command, options.publish?.task ?? null)
     : null;
@@ -299,12 +265,23 @@ export interface RunRules {
 
 export const NO_RUN_RULES: RunRules = { allow: [], reject: [] };
 
-function modeAllows(posture: ModePosture, request: ApprovalRequest): boolean {
-  if (posture === 'full_access' || posture === 'auto') return true;
-  return posture === 'edits' && request.kind === 'edit';
+export interface RuledDecision {
+  decision: Decision;
+  rule: string | null;
 }
 
-export function decide(
+export function decideRuled(...args: Parameters<typeof ruledDecide>): RuledDecision {
+  const decided = ruledDecide(...args);
+  if (decided.verdict === 'allow' || !decided.rule) return { decision: decided, rule: null };
+  const { rule, ...decision } = decided;
+  return { decision, rule };
+}
+
+export function decide(...args: Parameters<typeof ruledDecide>): Decision {
+  return decideRuled(...args).decision;
+}
+
+function ruledDecide(
   posture: ModePosture,
   asked: ApprovalRequest,
   runRules: RunRules,
@@ -312,16 +289,54 @@ export function decide(
   options: DecideOptions = {},
 ): Decision {
   const request = withResolvedVariables(asked);
-  const forced = request.command ? forcePush(request.command, options.defaultBranch ?? null) : null;
-  const guarded = guardedTargets(request);
+  const browserData = options.browserData === undefined ? browserDataDir() : options.browserData;
+  if (touchesBrowserData(request, browserData)) {
+    return { verdict: 'reject', reason: BROWSER_DATA_REASON };
+  }
+  if (touchesSparkRules(request)) {
+    return { verdict: 'reject', reason: SPARK_RULES_REASON };
+  }
+  const forced = heldForce(
+    adoptedForce(
+      request.command ? forcePush(request.command, options.defaultBranch ?? null) : null,
+      options.publish?.task ?? null,
+    ),
+    rulesOf(options.sparkRules),
+  );
+  const rules = rulesOf(options.sparkRules);
+  const guarded = heldGuards(guardedTargets(request), rules);
   const view = shellView(request, options.shell ?? null);
+  const ghRefused = sparkRuleRefusal(request, options);
+  if (ghRefused) return ghRefused;
   const published = publishing(posture, request, options);
-  const refused = refusal(request, options, forced, guarded, view, published);
-  if (refused) return { verdict: 'reject', reason: refused };
+  const stopped = refusal(request, options, forced, view, published);
+  if (stopped?.kind === 'refuse') {
+    return { verdict: 'reject', reason: stopped.reason, ...ruled(asRule(stopped.rule)) };
+  }
   if (runRules.reject.some((rule) => matchesRule(asked, rule))) {
     return { verdict: 'reject', reason: RUN_REJECTED_REASON };
   }
-  const found = options.secretSend?.kind === 'found' ? options.secretSend.files : null;
+  if (stopped) return { verdict: 'ask', reason: stopped.reason, ...ruled(asRule(stopped.rule)) };
+  const ghAsked = sparkRuleAsk(request, options);
+  if (ghAsked) return ghAsked;
+  const sending = options.secretSend?.kind === 'found' ? options.secretSend.files : null;
+  const found = sending && holds(rules, 'SecretSend') ? sending : null;
+  const denied = floorDenial(
+    {
+      forcePush: forced?.kind === 'ask' ? forced.branches : null,
+      gitControl: guarded.gitControl,
+      instructions: guarded.instructions,
+      secretSend: found,
+    },
+    rules,
+    {
+      forcePush: forcePushReason,
+      gitControl: GIT_CONTROL_REASON,
+      instructions: INSTRUCTION_REASON,
+      secretSend: secretSendReason,
+    },
+  );
+  if (denied) return denied;
   if (forced?.kind === 'ask') {
     return {
       verdict: 'ask',
@@ -359,12 +374,18 @@ function byMode(
   allowlist: readonly string[],
   options: DecideOptions,
 ): Decision {
-  const always = alwaysAsk(request, files, view);
+  const rules = rulesOf(options.sparkRules);
+  const railDenied = alwaysAsk(request, files, view, railsWith(rules, 'deny'));
+  if (railDenied) return { verdict: 'reject', reason: railDenied.reason, rule: railDenied.rule };
+  const always = alwaysAsk(request, files, view, railsWith(rules, 'ask'));
   if (always) return railAsked(request, always);
   if (runRules.allow.some((rule) => matchesRule(asked, rule))) {
     return { verdict: 'allow', by: 'run_rule' };
   }
-  if (published?.kind === 'allow') return publishAllowed(published.basis);
+  if (published?.kind === 'allow' && !askedForRule(posture, request, options)) {
+    return publishAllowed(published.basis);
+  }
+  if (followsAtOnce(posture, request, options)) return { verdict: 'allow', by: 'level' };
   if (request.kind === 'other' && request.title === ENTER_PLAN_MODE_TITLE) {
     return { verdict: 'allow', by: 'level', why: ENTER_PLAN_MODE_WHY };
   }
@@ -400,7 +421,7 @@ function byMode(
   return unapproved(posture);
 }
 
-function railAsked(request: ApprovalRequest, asked: RailAsk): Decision {
+function railAsked(request: ApprovalRequest, asked: RailFound): Decision {
   if (asked.rail !== 'secret') return { verdict: 'ask', reason: asked.reason };
   const secretFiles = asked.paths.map((target) => placedLabel(request.roots, request.home, target));
   return { verdict: 'ask', reason: asked.reason, secretFiles: [...new Set(secretFiles)] };
@@ -422,26 +443,6 @@ function agentAsked(
   const planning = planningRuns(request, view, options);
   if (planning) return planning;
   return allowlistCovers(allowlist, request.command) ? { verdict: 'allow', by: 'allowlist' } : ASK;
-}
-
-function publishing(
-  posture: ModePosture,
-  request: ApprovalRequest,
-  options: DecideOptions,
-): PublishVerdict | null {
-  if (!request.command || !options.publish) return null;
-  return publishVerdict(request.command, posture, options.publish, options.own ?? null);
-}
-
-export const PUBLISH_ASKED_WHY = 'you asked to push or open a PR';
-export const PUBLISH_FULL_AUTO_WHY = 'Full auto → PR';
-export const PUBLISH_FOLLOW_UP_WHY = "a fix for this chat's open pull request";
-
-function publishAllowed(basis: PublishBasis): Decision {
-  if (basis === 'requested') return { verdict: 'allow', by: 'level', why: PUBLISH_ASKED_WHY };
-  if (basis === 'full_auto') return { verdict: 'allow', by: 'level', why: PUBLISH_FULL_AUTO_WHY };
-  if (basis === 'follow_up') return { verdict: 'allow', by: 'level', why: PUBLISH_FOLLOW_UP_WHY };
-  return { verdict: 'allow', by: 'level' };
 }
 
 function unapproved(posture: ModePosture): Decision {

@@ -22,6 +22,7 @@ async function ask(page: Page, message: string) {
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(message);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
 }
 
@@ -43,27 +44,26 @@ async function unfold(box: Locator) {
   await toggle(box).click();
 }
 
-test('shows live output where the command runs, then folds a passing command to one line', async ({
+test('shows a running command as one row, then passed, with its output on unfold', async ({
   page,
 }) => {
   await askInChats(page, 'Run the tests #terminal=pass 400ms');
   const box = terminal(page, PASS);
   await expect(box).toBeVisible({ timeout: 15_000 });
-  await expect(toggle(box)).toHaveAttribute('aria-expanded', 'true');
-  await expect(rows(box)).toContainText('turns.test.ts', { timeout: 10_000 });
+  await expect(toggle(box)).toHaveAttribute('aria-expanded', 'false');
+  await expect(toggle(box)).toContainText('Running');
   await expect(box.locator('.spin')).toBeVisible();
   await expect(box.locator('.run-cmd-cwd')).toHaveCount(0);
   await expect(page.locator('.md', { hasText: 'Finished pass.' })).toHaveCount(0);
-  const heightWhileRunning = (await box.boundingBox())!.height;
   await shot(page, 'running');
-  await expect(rows(box)).toContainText('run-projection.test.ts');
-  expect((await box.boundingBox())!.height).toBe(heightWhileRunning);
 
-  await expect(state(box)).toHaveText(/exit 0 · \d+s/, { timeout: 15_000 });
-  await expect(rows(box)).toContainText('Tests 23 passed');
-  await expect(toggle(box)).toHaveAttribute('aria-expanded', 'false', { timeout: 5_000 });
+  await expect(state(box)).toHaveText(/passed · \d+s/, { timeout: 15_000 });
+  await expect(toggle(box)).toContainText('Ran');
+  await expect(toggle(box)).toHaveAttribute('aria-expanded', 'false');
   await expect(box.locator('.xterm')).toHaveCount(0);
   await expect(done(page)).toBeVisible();
+  await unfold(box);
+  await expect(rows(box)).toContainText('Tests 23 passed');
   await shot(page, 'finished');
 
   const order = await page
@@ -85,7 +85,7 @@ test('keeps a failed command open, and expands, collapses and copies by keyboard
   await askInChats(page, 'Lint it #terminal=fail,pass 30ms');
   await expect(done(page)).toBeVisible({ timeout: 20_000 });
   const failed = terminal(page, FAIL);
-  await expect(state(failed)).toHaveText(/exit 1 · \d+s/);
+  await expect(state(failed)).toHaveText(/failed · exit 1 · \d+s/);
   await page.waitForTimeout(2_200);
   await expect(toggle(failed)).toHaveAttribute('aria-expanded', 'true');
   await expect(rows(failed)).toContainText('1 problem (1 error, 0 warnings)');
@@ -127,7 +127,7 @@ test('shows stored output after a reload and the reader text without colour code
   const passed = terminal(page, PASS);
   const failed = terminal(page, FAIL);
   await expect(toggle(passed)).toHaveAttribute('aria-expanded', 'false');
-  await expect(state(passed)).toHaveText(/exit 0/);
+  await expect(state(passed)).toHaveText(/passed/);
   await expect(toggle(failed)).toHaveAttribute('aria-expanded', 'true');
   await expect(rows(failed)).toContainText('1 problem (1 error, 0 warnings)');
   await unfold(passed);
@@ -155,9 +155,9 @@ test('strips unsafe sequences and secrets before output reaches the page', async
 test('a very long output stays capped and the chat stays usable', async ({ page }) => {
   await askInChats(page, 'Noisy #terminal=huge 5ms');
   const box = terminal(page, 'seq 40000');
+  await unfold(box);
   await expect(rows(box)).toContainText(/row \d+/, { timeout: 15_000 });
   await expect(done(page)).toBeVisible({ timeout: 30_000 });
-  await unfold(box);
   await expect(rows(box)).toContainText('row 39999');
   await expect(box.locator('.run-cmd-note')).toHaveText(/Showing the last \d+ KB of [\d,]+ KB\./);
   const kept = await box.locator('.xterm-rows > div').count();
@@ -167,19 +167,19 @@ test('a very long output stays capped and the chat stays usable', async ({ page 
 test('says when an agent only reports output at the end', async ({ page }) => {
   await askInChats(page, 'End only #terminal=final 300ms');
   const box = terminal(page, 'git status --short');
+  await unfold(box);
   await expect(box.locator('.run-cmd-note')).toHaveText('Output shows when the command ends.', {
     timeout: 15_000,
   });
   await expect(box.locator('.xterm')).toHaveCount(0);
-  await expect(state(box)).toHaveText(/done · \d+s/, { timeout: 15_000 });
-  await expect(toggle(box)).toHaveAttribute('aria-expanded', 'false');
-  await unfold(box);
+  await expect(state(box)).toHaveText(/passed · \d+s/, { timeout: 15_000 });
   await expect(rows(box)).toContainText('?? notes.txt');
 });
 
 test('marks a command that was running when the turn stopped as interrupted', async ({ page }) => {
   await askInChats(page, 'Dev server #terminal=hang 20ms');
   const box = terminal(page, 'pnpm dev');
+  await unfold(box);
   await expect(rows(box)).toContainText('ready on http://localhost:5173', { timeout: 15_000 });
   await page.getByRole('button', { name: 'Stop' }).click();
   await expect(state(box)).toHaveText('interrupted', { timeout: 15_000 });
@@ -223,6 +223,41 @@ test('at phone width the output scrolls sideways inside its box with large contr
   expect(sizes.smallestControl).toBeGreaterThanOrEqual(44);
   await shot(page, 'phone');
   await page.context().close();
+});
+
+const WHOAMI = 'aws sts get-caller-identity --query Arn --output text';
+const COUNT =
+  'python -m scripts.run_query --format json --sql "SELECT org_id, count(*) FROM events"';
+
+test('groups commands and thoughts into one line, titled by the agent, and opens a failure', async ({
+  page,
+}) => {
+  await askInChats(page, 'Check live #steps=whoami,think,count,think,fetch 30ms');
+  await expect(done(page)).toBeVisible({ timeout: 20_000 });
+  const group = page.getByRole('button', { name: /^Ran 3 commands, thought 2 times/ });
+  await expect(group).toHaveAttribute('aria-expanded', 'true');
+  await expect(group.locator('.trow-word')).toHaveText(['1 failed', '2 passed']);
+  await expect(group.locator('.trow-word').first()).toHaveClass(/bad/);
+
+  const checked = terminal(page, WHOAMI);
+  await expect(toggle(checked)).toHaveText(/^Ran Check which account the profile uses/);
+  await expect(toggle(checked)).not.toContainText('aws sts');
+  await expect(toggle(checked)).toHaveAttribute('aria-expanded', 'false');
+  const failed = terminal(page, COUNT);
+  await expect(toggle(failed)).toHaveAttribute('aria-expanded', 'true');
+  await expect(failed.locator('.run-cmd-cmd')).toHaveText(`$ ${COUNT}`);
+  await expect(rows(failed)).toContainText('security token included in the request is expired');
+  await expect(page.locator('.msg.ai .trow', { hasText: /^Thought/ })).toHaveCount(2);
+  await expect(page.locator('.run-cmd-answer')).toHaveCount(0);
+
+  await group.click();
+  await expect(group).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('.run-cmd')).toHaveCount(0);
+  await page.reload();
+  await page.getByRole('navigation', { name: 'Chats' }).getByText('Check live').click();
+  await expect(
+    page.getByRole('button', { name: /^Ran 3 commands, thought 2 times/ }),
+  ).toBeVisible();
 });
 
 for (const theme of ['light', 'graphite', 'contrast']) {

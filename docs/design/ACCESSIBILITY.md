@@ -1,6 +1,6 @@
 # Accessibility rules
 
-Spark Outpost targets **WCAG 2.2 AA** in every theme (Light, Graphite, Apricot, Void, Fjord, Moss, Lagoon, Plum, Sage, Aurora, Iris, High contrast, and the system light and dark pair). This page lists the rules we enforce, where each one comes from, and how it is checked.
+Spark Outpost targets **WCAG 2.2 AA** in every colour set (Light, Graphite, Apricot, Plum, Lagoon, Moss, Iris, Aurora, Fjord, Void, Sage, Loam, High contrast, High contrast dark, and the system light and dark pair). This page lists the rules we enforce, where each one comes from, and how it is checked.
 
 The per-theme before and after numbers are in [`accessibility-report.html`](accessibility-report.html).
 
@@ -47,6 +47,32 @@ Keep feature CSS on these tokens and never hard-code palette values (see `AGENTS
 
 Use `color: var(--accent-text)`, not `var(--accent)`, whenever accent colour is used for text or `currentColor` icons.
 
+### Modes, tints and Increase contrast
+
+Spark follows Apple's guidance to follow the system appearance rather than offer an app-only one. Settings → Appearance has three choices:
+
+- **Appearance:** **Automatic** (the default, follows `prefers-color-scheme`), **Light** or **Dark**.
+- **Tint:** six pairs, each with a light and a dark colour set, so a tint looks right in both modes.
+- **Increase contrast:** **Follow system** (the default) uses the high-contrast set while `prefers-contrast: more` matches, which macOS sets from Accessibility → Display → Increase contrast. **Always** keeps it on. The light side uses High contrast and the dark side High contrast dark.
+
+| Tint          | Light side | Dark side |
+| ------------- | ---------- | --------- |
+| Graphite      | Light      | Graphite  |
+| Apricot · Plum | Apricot   | Plum      |
+| Lagoon · Moss | Lagoon     | Moss      |
+| Iris · Aurora | Iris       | Aurora    |
+| Fjord · Void  | Fjord      | Void      |
+| Sage · Loam   | Sage       | Loam      |
+
+The choice is stored as `mode.tint.contrast` (for example `auto.graphite.system`) under `spark-outpost.theme`. `public/appearance.js` resolves it to a `data-skin` before React mounts, in `app-boot.js`, the desktop boot page and the pairing page; `theme/theme.ts` holds the same rules for the app, and a unit test keeps the two in step. A stored theme name from before tints keeps its look: a light theme becomes its tint plus **Light**, a dark one its tint plus **Dark**, **Match system** becomes **Automatic**, and High contrast becomes **Light** with contrast **Always**. Spark Island and the meeting card always use the tint's dark side, or High contrast dark.
+
+Loam is Sage's new dark partner: a dark earth canvas with a lighter clay accent.
+
+| Theme              | Mood                     | Canvas / rail / panel             | Accent (fill / text)  | Success / danger, hue gap |
+| ------------------ | ------------------------ | --------------------------------- | --------------------- | ------------------------- |
+| Loam               | Dark earth, clay         | `#13120d` / `#0d0c08` / `#1a1913` | `#e39a6b` / `#eba57a` | `#9fd38a` / `#f47c78`, 114° |
+| High contrast dark | Black, white lines, blue | `#000` / `#0d0d0d` / `#000`       | `#7cc4ff` / `#8fd0ff` | `#6ff09a` / `#ff8f8f`, 132° |
+
 ### Lagoon, Plum and Sage
 
 These three themes follow Apricot's recipe: tinted surfaces instead of neutral grey, one confident accent, a rail that sits one step deeper than the canvas, and a raised tone between canvas and panel. Each block in `theme.css` defines every token itself, including `--scout-eye`, the scrollbar thumbs, `--r` and `--r-sm`, so nothing falls back to another theme's colours. The diff, Shiki code-token and terminal colours derive from these tokens.
@@ -77,7 +103,7 @@ Both pass every pair in `pnpm a11y:contrast` with only the standard allowlist ex
 
 The provider colours fill the cost bar and its legend swatches in the work panel, and they draw the active wires and packets in Agent TV. They are never used as text. The audit checks each one as non-text UI at 3:1 against canvas, rail, panel and raise.
 
-Each provider keeps one OKLCH hue in every theme: Claude 40°, Codex 225°, Z.ai 115° and Jev 330°. Only the lightness and chroma change. `:root` holds a darker light set that serves every light theme. The system dark block and one grouped block for Graphite, Void, Moss, Plum and Aurora keep the original set.
+Each provider keeps one OKLCH hue in every theme: Claude 40°, Codex 225°, Z.ai 115° and Jev 330°. Only the lightness and chroma change. `:root` holds a darker light set that serves every light theme. The system dark block and one grouped block for Graphite, Void, Moss, Plum, Aurora and Loam keep the original set; High contrast dark sets a lighter one of its own.
 
 | Set   | Claude                 | Codex                    | Z.ai                   | Jev                    | Lowest ratio          |
 | ----- | ---------------------- | ------------------------ | ---------------------- | ---------------------- | --------------------- |
@@ -90,7 +116,7 @@ Two uses are decorative and are not held to 3:1. The lighter shades that mark ch
 
 ### Automated check
 
-`pnpm a11y:contrast` (part of `pnpm check`) resolves the tokens for every theme from `apps/web/public/theme.css` and `chat/markdown/code-tokens.css`. It composites the translucent layers (`color-mix`, `rgba`), then checks 300 text and UI pairings plus one hue check per theme. The diff tints (`--diff-add`, `--diff-remove` and their `-word` and `-edge` steps) live in `theme.css`; every syntax colour is checked on the line tint, and its `--code-word-*` ink on the word highlight. It prints a table per theme and exits non-zero on any failure. The pairings are listed in `scripts/contrast/*-pairs.ts`. When a feature puts text on a new surface, add a pair for it.
+`pnpm a11y:contrast` (part of `pnpm check`) resolves the tokens for every theme from `apps/web/public/theme-base.css`, `theme.css` and `chat/markdown/code-tokens.css`. It composites the translucent layers (`color-mix`, `rgba`), then checks 300 text and UI pairings plus one hue check per theme. The diff tints (`--diff-add`, `--diff-remove` and their `-word` and `-edge` steps) live in `theme.css`; every syntax colour is checked on the line tint, and its `--code-word-*` ink on the word highlight. It prints a table per theme and exits non-zero on any failure. The pairings are listed in `scripts/contrast/*-pairs.ts`. When a feature puts text on a new surface, add a pair for it.
 
 The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every entry gives its reason:
 
@@ -98,13 +124,13 @@ The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every en
 - `offline.zz`: the decorative, `aria-hidden` "z" glyphs on the offline mascot.
 - `provider.cost-tier-shade`: the lighter tier shades in the cost bar, which repeat what the legend text says.
 
-`tests/browser/accessibility.spec.ts` runs axe-core on the main screens (chat with work panel, Settings, Home and Tickets) in all twelve themes. It fails on any serious or critical `color-contrast` or `aria-*` violation.
+`tests/browser/accessibility.spec.ts` runs axe-core on the main screens (chat with work panel, Settings, Home and Tickets) in all fourteen colour sets. It fails on any serious or critical `color-contrast` or `aria-*` violation.
 
 ## Typography
 
 | Rule                                                                                                                                  | Source             |
 | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| Body text is 15px with line-height 1.6. UCLA and IW recommend 16px; 15px Geist is kept for density and is paired with the higher line-height. | UCLA, IW           |
+| Use Inter: interface text is 15px/1.6, conversation text 16px/1.7 and composer text 16px/1.6. | UCLA, IW           |
 | No UI text below 12px: metadata, chips, keyboard hints and badges are all 12px or larger.                                             | IW (11px is "too small") |
 | Line-height is at least 1.5 for body and chat text, and paragraph spacing (0.8em) is larger than the gap between lines.               | IW, WCAG 1.4.12    |
 | Chat paragraphs and lists are capped at 75ch. Code blocks and tables keep the full width.                                             | IW (45–75 characters) |
@@ -118,6 +144,7 @@ The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every en
 
 - Every interactive element shows a focus ring that is at least 2px of `--accent` and at least 3:1, on keyboard focus only (`:focus-visible`). The global rule in `app/base.css` draws a 2px outline with `outline-offset: -1px`, so it sits on the element's own border instead of floating outside it; there is no second ring. Primary buttons, whose fill is the accent, get an inset `--accent-ink` ring instead, and danger controls use `--danger`. Text fields never get that outline. They share one treatment instead: the border turns `--accent` and `--focus-ring` (from `theme.css`) adds a 1px `--accent` shadow plus a soft `--accent-soft` halo, so the solid ring is 2px with no gap. `.inp` uses it in `ui/controls.css`; wrappers such as the composer and the sidebar search apply the same token on `:focus-within`, and invalid fields use `--focus-ring-bad`. Menu items keep the outline rather than relying on a hover tint.
 - Targets are at least 24×24px (WCAG 2.5.8), and a browser test enforces this on the chat screen. Following Fitts's law, key actions are larger: Send, New chat and primary buttons are at least 32px tall.
+- Floating panels that never activate Spark (the meeting card) still have a keyboard path. With VoiceOver, Full Keyboard Access or keyboard navigation on, the card takes focus as a named `alertdialog` (the container, not its primary button). **⌃⌥⌘M** focuses it from any app, and a silent native notification mirrors its **Join** and **Snooze** in Notification Center. See `docs/architecture/CALENDAR.md`.
 
 ## Motion
 
@@ -149,6 +176,6 @@ The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every en
 - **Theme switch:** the circular reveal (650ms, `theme/reveal.ts`) runs longer than 250ms and doesn't use ease-out. It is skipped under reduced motion.
 - **Spinners:** they keep rotating under reduced motion because they show progress.
 - **Sidebar:** the collapse and expand animation and the resize handle are being reworked to the motion rules separately.
-- **Error dot:** the sidebar's error dot draws its `!` glyph at 10px inside a 14px circle. The glyph gives it a shape cue, and the status element has an accessible label.
+- **Font floor:** `pnpm check:source` fails on a `font-size` or `font` size below 12px (px or rem) in `apps/web` stylesheets. Sizes in `em`, `var()` or `max()` and sizes set from script aren't checked. The only exceptions are the decorative glyphs listed with their reason in `scripts/font-floor.ts`, matched by file and selector: the sleeping Zs, the panic `!` and the sleeping-blob `z`, the `!` inside the 13px error dot, and the count dots drawn on Scout and on chat blobs, which are hidden from assistive technology and repeated in text.
 - **Agent TV:** labels are sized in `em` relative to the stage scale, and the smallest reaches about 11px at the default scale.
 

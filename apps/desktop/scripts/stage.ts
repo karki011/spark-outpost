@@ -13,6 +13,7 @@ import { stageTmux } from './tmux-bundle.ts';
 import { buildMacControl, stageMacControl } from './mac-control-bundle.ts';
 import { buildCalendar, stageCalendar } from './calendar-bundle.ts';
 import { buildVoice, stageVoice } from './voice-bundle.ts';
+import { buildNoActivate, stageNoActivate } from './no-activate-bundle.ts';
 
 const run = promisify(execFile);
 
@@ -55,7 +56,7 @@ async function deploy(
 }
 
 async function stageRuntime(runtimeDir: string, arch: MacArch): Promise<void> {
-  await deploy('@spark-outpost/desktop', arch, runtimeDir, ['src', 'scripts', 'build']);
+  await deploy('@spark-outpost/desktop', arch, runtimeDir, ['src', 'scripts', 'build', 'release']);
   await pruneRuntime(runtimeDir);
   const postgres = postgresNativeDir(runtimeDir, arch);
   await prunePostgres(postgres);
@@ -78,6 +79,7 @@ async function stageArch(stageDir: string, arch: MacArch): Promise<void> {
   await stageMacControl(await buildMacControl(repoRoot, arch), arch, archDir);
   await stageCalendar(await buildCalendar(repoRoot, arch), arch, archDir);
   await stageVoice(await buildVoice(repoRoot, arch), arch, archDir);
+  await stageNoActivate(await buildNoActivate(repoRoot, arch), arch, archDir);
 }
 
 async function stageApp(stageDir: string, version: string): Promise<void> {

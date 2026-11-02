@@ -189,18 +189,48 @@ describe('attention', () => {
       attention: ask({ kind: 'permission', title: 'run ls' }),
     });
     const third = asking('00000000-0000-4000-8000-00000000000c', 'Docs');
-    expect(attention([first], null)).toMatchObject({ count: 1, text: 'Deploy needs your input' });
-    expect(attention([first], first.id)).toEqual({ count: 1, others: [], text: null });
-    expect(attention([first, second], first.id)).toEqual({
+    const all = new Set([first.id, second.id, third.id]);
+    expect(attention([first], null, all)).toMatchObject({
+      count: 1,
+      text: 'Deploy needs your input',
+    });
+    expect(attention([first], first.id, all)).toEqual({ count: 1, others: [], text: null });
+    expect(attention([first, second], first.id, all)).toEqual({
       count: 2,
       others: [second],
       text: 'Migrate needs your permission',
     });
-    expect(attention([first, second, third], null)).toMatchObject({
+    expect(attention([first, second, third], null, all)).toMatchObject({
       count: 3,
       text: '3 chats need you',
     });
-    expect(attention([{ ...first, archivedAt: '2026-09-26T00:00:00.000Z' }], null).count).toBe(0);
+    const archived = { ...first, archivedAt: '2026-09-26T00:00:00.000Z' };
+    expect(attention([archived], null, all).count).toBe(0);
+  });
+
+  it('counts only chats with an unread request, as the island and the Dock do', () => {
+    const first = asking('00000000-0000-4000-8000-00000000000a', 'Deploy');
+    expect(attention([first], null, new Set()).count).toBe(0);
+  });
+});
+
+describe('rowState for a chat Spark flagged', () => {
+  it('shows the flag as a status that never counts as waiting', () => {
+    const flag: ConversationAttention = {
+      kind: 'flag',
+      title: 'Claude sent data to example.com after reading .env',
+      agentName: null,
+      provider: null,
+      approvalId: null,
+    };
+    const flagged = chat({ attention: flag, latestRun: run('succeeded') });
+    expect(rowState(flagged, false)).toEqual({
+      tone: 'done',
+      label: 'Flagged by Spark',
+      sub: flag.title,
+    });
+    expect(attention([flagged], null, new Set()).count).toBe(0);
+    expect(rowState({ ...flagged, latestRun: run('running') }, false).tone).toBe('running');
   });
 });
 

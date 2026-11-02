@@ -2,13 +2,20 @@ import {
   REMOTE_SWITCH_LABELS,
   approvalPayloadSchema,
   atlassianDeletes,
+  serviceNowAsksAlways,
   isCalendarAction,
   isMacAction,
   isSecretFileName,
   type RemoteSwitch,
   type RemoteSwitches,
 } from '@spark-outpost/contracts';
-import { AGENT_MODE_FIELDS, CARD_ROUTE, ROUTE_RULES, type RemoteRule } from './route-rules.ts';
+import {
+  AGENT_MODE_FIELDS,
+  CARD_ROUTE,
+  HIGH_RISK_FIELDS,
+  ROUTE_RULES,
+  type RemoteRule,
+} from './route-rules.ts';
 
 const WEB_APP_ROUTE = 'GET /{*path}';
 const API_PREFIX = '/api';
@@ -23,7 +30,12 @@ interface Pattern {
 export type RemoteDecision =
   | { kind: 'refuse'; reason: string }
   | { kind: 'pairing' }
-  | { kind: 'allow'; blockedFields: readonly string[]; card: boolean };
+  | {
+      kind: 'allow';
+      blockedFields: readonly string[];
+      highRiskFields: readonly string[];
+      card: boolean;
+    };
 
 function segmentsOf(path: string): string[] {
   return path
@@ -91,9 +103,13 @@ export function remoteDecision(
   const blockedFields = switches.agentMode
     ? []
     : matched.flatMap(({ route }) => AGENT_MODE_FIELDS[route] ?? []);
+  const highRiskFields = switches.highRiskCards
+    ? []
+    : matched.flatMap(({ route }) => HIGH_RISK_FIELDS[route] ?? []);
   return {
     kind: 'allow',
     blockedFields,
+    highRiskFields,
     card: matched.some(({ route }) => route === CARD_ROUTE),
   };
 }
@@ -108,12 +124,12 @@ function baseName(path: string): string {
 }
 
 export const MAC_CARD_REFUSAL =
-  'Mac control, calendar and browser sign-in cards are answered on your Mac.';
+  'Mac control, calendar, Spark rules and browser sign-in cards are answered on your Mac.';
 
 export function macOnlyCard(payload: unknown): boolean {
   const parsed = approvalPayloadSchema.safeParse(payload);
   const action = parsed.success ? parsed.data.sparkAction?.action : undefined;
-  if (action === 'browser_handoff') return true;
+  if (action === 'browser_handoff' || action === 'rules_edit') return true;
   return action !== undefined && (isMacAction(action) || isCalendarAction(action));
 }
 
@@ -123,10 +139,12 @@ export function cardSwitch(payload: unknown): RemoteSwitch | null {
   const card = parsed.data;
   const action = card.sparkAction;
   if (action?.action === 'browser_sign_in') return 'signIns';
+  if (action?.action === 'ask_spark' && action.op === 'answer_card') return 'highRiskCards';
   const editsAtlassian = action?.action === 'jira_edit' || action?.action === 'confluence_edit';
   if (editsAtlassian && atlassianDeletes(action)) {
     return 'highRiskCards';
   }
+  if (action && serviceNowAsksAlways(action)) return 'highRiskCards';
   const paths = [...card.paths, ...(card.fullPaths ?? [])];
   const highRisk =
     card.gitControl !== undefined ||

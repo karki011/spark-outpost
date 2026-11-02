@@ -1,23 +1,22 @@
 import { useState, type RefObject } from 'react';
 import type { CalendarLine } from '../calendar/island-calendar.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
-import type { ConversationDetail, ConversationSummary, Project } from '@spark-outpost/contracts';
+import type { ConversationDetail, Project } from '@spark-outpost/contracts';
 import type { ScoutMood } from '../brand/BlobScout.tsx';
 import type { IslandGeometry, IslandSize } from '../desktop/desktop-bridge.ts';
 import type { Voice } from '../spark/voice.ts';
-import type { FastState } from './ask-fast-path.ts';
 import { AskSpark } from './AskSpark.tsx';
-import { CardView, type Decided } from './CardView.tsx';
-import type { Card, IslandView, Panel, PeekRow as PeekRowData } from './island-model.ts';
-import type { RestLine } from './island-rest-line.ts';
+import { CardView } from './CardView.tsx';
+import type { Decided } from './use-decide.ts';
+import type { Card, IslandView, Panel } from './island-model.ts';
 import { IslandHome, type HomeBundle } from './IslandHome.tsx';
-import { NowBar } from './NowBar.tsx';
-import { IslandBar, PANEL_ORDER, type BarActions } from './PanelTabs.tsx';
-import { QuickChat, type Compose, type QuickDraft } from './QuickChat.tsx';
-import { SparkTiles } from './SparkTiles.tsx';
-import { Sessions } from './Sessions.tsx';
+import { RestStrip, type StripData } from './RestStrip.tsx';
+import { IslandBar, PANEL_ORDER, type BarActions, type BarCounts } from './PanelTabs.tsx';
+import { QuickChat, type Compose, type FollowUp, type QuickDraft } from './QuickChat.tsx';
+import { SparkTiles, type SparkTileActions } from './SparkTiles.tsx';
 import type { Grab } from './use-island-drop.ts';
 import { chatAgent } from './use-island-data.ts';
+import type { AskSession } from './use-ask-session.ts';
 import { SpeechScreen } from '../voice/SpeechScreen.tsx';
 import type { SpeechScreenModel } from '../voice/use-speech-island.ts';
 
@@ -42,7 +41,6 @@ export interface IslandShellProps {
   waiting: number;
   asking: number;
   setAside: number;
-  line: RestLine | null;
   calendar: IslandCalendar;
   calendarLine: CalendarLine | null;
   voice: Voice;
@@ -51,29 +49,26 @@ export interface IslandShellProps {
   note: Decided | null;
   detailFor: (chatId: string) => ConversationDetail | undefined;
   focusSignal: number;
-  sessions: ConversationSummary[];
   home: HomeBundle;
+  strip: StripData;
+  sparks: SparkTileActions;
   bar: BarActions;
-  peek: PeekRowData;
+  counts: BarCounts;
   sleepy: boolean;
-  projectNames: ReadonlyMap<string, string>;
   projects: readonly Project[];
-  selected: string | null;
   draftId: string;
   draft: QuickDraft;
-  followUp: ConversationSummary | null;
-  fast: FastState;
+  followUp: FollowUp | null;
+  askSession: AskSession;
   announcement: string;
   onDraft: (draft: QuickDraft) => void;
   onTab: (panel: Panel) => void;
-  onSelect: (id: string | null) => void;
   onOpenChat: (id: string, runId?: string) => void;
   onDecided: (decided: Decided) => void;
   onLater: () => void;
   onReview: (card: Card) => void;
-  onLine: (line: RestLine) => void;
+  onReviewChat: (chatId: string) => void;
   onScout: () => void;
-  onPeekOpen: (id: string) => void;
   onSent: (id: string, title: string, project: string | null) => void;
 }
 
@@ -87,9 +82,7 @@ function PanelPane({ panel, props }: { panel: Panel; props: IslandShellProps }) 
         <IslandHome
           home={props.home}
           calendar={props.calendar}
-          sleepy={props.sleepy}
-          reduced={props.reduced}
-          onTab={props.onTab}
+          now={props.now}
           onOpenChat={props.onOpenChat}
         />
       );
@@ -104,34 +97,22 @@ function PanelPane({ panel, props }: { panel: Panel; props: IslandShellProps }) 
           focusDelay={focusDelay}
           onDraft={props.onDraft}
           onSent={props.onSent}
-          footer={
-            <SparkTiles
-              onOpenHere={props.home.onOpenHere}
-              onMakeSpark={props.home.onMakeSpark}
-              onEditSpark={props.home.onEditSpark}
-            />
-          }
-        />
-      );
-    case 'sessions':
-      return (
-        <Sessions
-          chats={props.sessions}
-          projectNames={props.projectNames}
-          selected={props.selected}
-          now={props.now}
-          focusDelay={focusDelay}
-          onSelect={props.onSelect}
-          onOpenChat={props.onOpenChat}
+          footer={<SparkTiles {...props.sparks} />}
         />
       );
     case 'ask':
       return (
         <AskSpark
-          fast={props.fast}
           voice={props.voice}
           focusDelay={focusDelay}
-          onOpenChat={props.onOpenChat}
+          session={props.askSession}
+          links={{
+            reviewable: new Set(
+              [...props.home.cards, ...props.home.aside].map((card) => card.chat.id),
+            ),
+            onReview: props.onReviewChat,
+            onOpenChat: props.onOpenChat,
+          }}
         />
       );
   }
@@ -148,7 +129,7 @@ function PanelBody({ panel, props }: { panel: Panel; props: IslandShellProps }) 
   }
   return (
     <div className="isl-body">
-      <IslandBar panel={panel} waiting={props.waiting} actions={props.bar} onTab={props.onTab} />
+      <IslandBar panel={panel} counts={props.counts} actions={props.bar} onTab={props.onTab} />
       <div key={panel} className="isl-pane" data-dir={shown.direction}>
         {props.speech && !props.speech.keepsPanel ? (
           <div className="isl-panel">
@@ -197,10 +178,11 @@ export function ViewBody({ props }: { props: IslandShellProps }) {
     case 'now':
       return (
         <div className="isl-body">
-          <NowBar
-            chat={props.home.sessions[0] ?? null}
-            card={view.card}
-            onReview={props.onReview}
+          <RestStrip
+            strip={props.strip}
+            calendar={props.calendar}
+            onOpen={props.onScout}
+            onDecided={props.home.onDecided}
           />
         </div>
       );

@@ -1,4 +1,9 @@
-import { modePosture, type ModePosture, type SparkActionName } from '@spark-outpost/contracts';
+import {
+  modePosture,
+  type AssistantActs,
+  type ModePosture,
+  type SparkActionName,
+} from '@spark-outpost/contracts';
 import { userText, type UserTextInput } from '../../outposts/user-asked.ts';
 import type { Queryable } from '../../persistence/db.ts';
 
@@ -18,6 +23,9 @@ function asked(verbs: string, nouns: string): RegExp {
 }
 
 const MCP_NOUN = 'mcp|mcp servers?';
+const TICKET_NOUN = 'tickets?|issues?|[A-Z][A-Z0-9]+-\\d+|[A-Z]{2,8}\\d{4,12}';
+const RECORD_NOUN =
+  'servicenow|records?|incidents?|requests?|tasks?|problems?|changes?|tickets?|[A-Z]{2,8}\\d{4,12}';
 
 const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   open_pr: asked('open|create|make|raise|submit|send|ship|put up', 'pr|prs|pull requests?'),
@@ -25,12 +33,12 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     'create|file|open|make|raise|add|log',
     'tickets?|issues?|bugs?|stor(?:y|ies)',
   ),
-  comment_ticket: asked('comment|reply|post|note|write', 'tickets?|issues?|[A-Z][A-Z0-9]+-\\d+'),
+  comment_ticket: asked('comment|reply|post|note|write', TICKET_NOUN),
   transition_ticket: asked(
     'move|transition|mark|set|close|resolve',
-    'tickets?|issues?|[A-Z][A-Z0-9]+-\\d+|done|in progress|in review',
+    `${TICKET_NOUN}|done|in progress|in review`,
   ),
-  assign_ticket: asked('assign|unassign|take', 'tickets?|issues?|[A-Z][A-Z0-9]+-\\d+|me'),
+  assign_ticket: asked('assign|unassign|take', `${TICKET_NOUN}|me`),
   pr_follow_up: null,
   pr_follow_up_round: asked('follow[- ]?up|address|fix|handle', 'feedback|comments?|reviews?'),
   create_teammate: asked('add|create|make|set up', 'sparks?|teammates?'),
@@ -53,6 +61,7 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   ),
   browser_sign_in: null,
   browser_handoff: null,
+  ask_spark: null,
   mac_use_app: null,
   mac_act: asked(
     'press|click|use|operate|control|calculate|choose|select|scroll|open',
@@ -62,6 +71,10 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   post_slack: asked(
     'post|send|share|reply|tell|message|notify|announce|update',
     'slack|channel|thread',
+  ),
+  publish_artifact: asked(
+    'make|build|create|draw|show|publish|update|change|render|chart|plot|design',
+    'artifacts?|pages?|dashboards?|charts?|diagrams?|reports?|graphs?|visuali[sz]ations?|apps?|slides?|mockups?',
   ),
   calendar_read: asked(
     "what|what's|whats|when|show|list|check|read|look|see|find|am i|do i|tell me",
@@ -79,10 +92,19 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     'change|update|edit|rename|retitle|rewrite|set|fix|delete|remove|label|reprioriti[sz]e',
     'tickets?|issues?|comments?|[A-Z][A-Z0-9]+-\\d+|summary|description|labels?|priority',
   ),
+  servicenow_read: asked(
+    'read|look|check|see|find|search|show|list|summari[sz]e|open|query',
+    RECORD_NOUN,
+  ),
+  servicenow_edit: asked(
+    'change|update|edit|set|note|comment|reply|tell|move|resolve|close|cancel|reprioriti[sz]e',
+    `${RECORD_NOUN}|callers?|work notes?`,
+  ),
   start_outpost: asked(
     'start|split|spin up|kick off|launch|create',
     'sub-?chats?|outposts?|sub-?tasks?|parallel chats?|separate chats?',
   ),
+  rules_edit: null,
   confluence_edit: asked(
     'create|write|add|draft|publish|change|update|edit|rename|rewrite|delete|remove|trash|comment|post',
     'confluence|wiki|pages?|docs?|comments?',
@@ -91,6 +113,10 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
 
 export function explicitlyAsked(action: SparkActionName, request: string): boolean {
   return REQUESTS[action]?.test(request) ?? false;
+}
+
+export function assistantPosture(acts: AssistantActs): ModePosture {
+  return acts === 'act' ? 'auto' : 'asks';
 }
 
 export function actionPath(facts: ActionFacts): ActionPath {
@@ -105,6 +131,9 @@ interface RunFacts {
   request: string | null;
   outpost_run: boolean | null;
   from_user: boolean | null;
+  spark_rule_retry?: boolean | null;
+  assistant_sent?: boolean | null;
+  assistant_acts?: AssistantActs | null;
 }
 
 async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
@@ -116,6 +145,13 @@ async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
                 ELSE r.agent_mode END) END AS mode,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'outpost' AS outpost_run,
+            COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
+              = 'spark_rule' AS spark_rule_retry,
+            COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
+              = 'assistant' AS assistant_sent,
+            (SELECT pf.assistant_acts FROM profiles pf
+             WHERE pf.workspace_id = c.workspace_id
+               AND pf.assistant_conversation_id = c.id) AS assistant_acts,
             (SELECT post.from_user FROM outpost_posts post
              WHERE post.id = r.user_message_id) AS from_user
      FROM runs r JOIN conversations c ON c.id = r.conversation_id
@@ -132,6 +168,8 @@ function runText(run: RunFacts): UserTextInput {
   return {
     userRequest: run.request ?? '',
     outpostRequest: run.outpost_run === true ? { fromUser: run.from_user === true } : null,
+    sparkRuleRetry: run.spark_rule_retry === true,
+    assistantSent: run.assistant_sent === true,
   };
 }
 
@@ -142,7 +180,9 @@ export async function actionFacts(
 ): Promise<ActionFacts> {
   const run = await runFacts(db, runId);
   return {
-    posture: modePosture(run.provider, run.mode),
+    posture: run.assistant_acts
+      ? assistantPosture(run.assistant_acts)
+      : modePosture(run.provider, run.mode),
     requested: explicitlyAsked(action, userText(runText(run))),
   };
 }

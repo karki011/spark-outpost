@@ -7,6 +7,7 @@ import {
   faceFromName,
   teammateFaceSchema,
   titleSourceSchema,
+  todoListSchema,
   subagentWaitSchema,
   waitingOnLabel,
   agentsWorkingLabel,
@@ -48,6 +49,7 @@ export interface RunRow {
   user_message_id: string | null;
   provider: string;
   source?: string | null;
+  todo?: unknown;
   status: RunStatus;
   error: string | null;
   cancel_requested_at: Date | null;
@@ -110,6 +112,7 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   latest_run_asking_reply?: string | null;
   latest_run_progress: { done: number; active: number; total: number } | null;
   archived_at: Date | null;
+  auto_archived_days?: number | null;
   pinned_at: Date | null;
   pinned_order: number | null;
   project_order: number | null;
@@ -176,6 +179,7 @@ export function toRun(row: RunRow): Run {
     agentLabel: row.agent_label ?? null,
     category: categorySchema.safeParse(row.category).data ?? null,
     following: row.followed_instructions ?? null,
+    todo: todoListSchema.safeParse(row.todo).data ?? null,
     continuesRunId: row.continues_run_id ?? null,
     interruptionChoice: row.interruption_choice ?? null,
     modelSwitch: modelSwitchSchema.safeParse(row.model_switch).data ?? null,
@@ -255,7 +259,9 @@ function latestAgents(row: ConversationSummaryRow): { working: number; total: nu
 function latestStep(row: ConversationSummaryRow): string | null {
   const wait = latestWait(row);
   const agents = latestAgents(row);
-  if (wait && agents.working > 0) return agentsWorkingLabel(agents.working, agents.total);
+  if (wait && agents.working > 0 && !wait.background) {
+    return agentsWorkingLabel(agents.working, agents.total);
+  }
   if (wait) return waitingOnLabel(wait.waitingOn, wait.background);
   return row.latest_run_step === null ? null : friendlyStep(row.latest_run_step);
 }
@@ -285,6 +291,9 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
           }
         : null,
     archivedAt: iso(row.archived_at),
+    ...(row.archived_at && row.auto_archived_days
+      ? { autoArchivedDays: row.auto_archived_days }
+      : {}),
     pinnedAt: iso(row.pinned_at),
     pinnedOrder: row.pinned_order,
     projectOrder: row.project_order,
@@ -293,7 +302,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
     seenAt: iso(row.seen_at ?? null),
     waitingSince: row.needs_input ? iso(row.waiting_since ?? null) : null,
     needsInput: row.needs_input,
-    attention: row.needs_input ? toAttention(row) : null,
+    attention: row.needs_input || row.flag_title ? toAttention(row) : null,
     titleSource: titleSourceSchema.safeParse(row.title_source).data ?? 'message',
     category: categorySchema.safeParse(row.category).data ?? null,
     teammate: toTeammateTag(row),

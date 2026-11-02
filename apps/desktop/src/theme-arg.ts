@@ -1,4 +1,4 @@
-const THEME_NAME = /^[a-z]{1,24}$/;
+const THEME_NAME = /^[a-z]{1,24}(\.[a-z]{1,24}){0,2}$/;
 const THEME_ARG = '--spark-theme=';
 
 export function isThemeName(value: unknown): value is string {

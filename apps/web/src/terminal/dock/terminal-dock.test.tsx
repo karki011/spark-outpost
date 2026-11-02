@@ -138,6 +138,31 @@ describe('chat terminal dock', () => {
     expect(opened[0]!.focused).toBe(1);
   });
 
+  it('names the tab as soon as the shell is created, before its stream connects', () => {
+    render(<Chat id="a" />);
+    toggleKey();
+    const connection = opened[0]!;
+    expect(connection.handlers.startEarly).toBe(true);
+    act(() =>
+      connection.handlers.onCreated?.({
+        id: 'session-early',
+        token: 't',
+        cwd: '/Users/me/widgets',
+        label: 'my files · widgets',
+        kind: 'project',
+        note: 'This chat’s worktree was removed.',
+      }),
+    );
+    expect(screen.queryByText('Opening terminal')).toBeNull();
+    const tab = screen.getByRole('button', { name: 'my files · widgets' });
+    expect(tab.querySelector('.term-light.starting')).not.toBeNull();
+    expect(connection.notices).toEqual([]);
+
+    started(connection, { note: 'This chat’s worktree was removed.' });
+    expect(tab.querySelector('.term-light.open')).not.toBeNull();
+    expect(connection.notices).toEqual(['This chat’s worktree was removed.']);
+  });
+
   it('hides without closing shells and shows them again with Ctrl+`', () => {
     render(<Chat id="a" />);
     toggleKey();

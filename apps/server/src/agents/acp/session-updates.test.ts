@@ -1,6 +1,7 @@
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { describe, expect, it } from 'vitest';
-import { THINKING_STEP, createUpdateMapper, describeTool, toolTarget } from './session-updates.ts';
+import { THINKING_STEP, createUpdateMapper } from './session-updates.ts';
+import { describeTool, toolTarget } from './tool-titles.ts';
 
 const link = (uri: string, name: string): SessionUpdate => ({
   sessionUpdate: 'agent_message_chunk',
@@ -15,6 +16,26 @@ const text = (value: string, messageId?: string) =>
   }) as const;
 
 describe('ACP session update mapping', () => {
+  it('normalizes Codex MCP execution to named tool activity', () => {
+    const mapper = createUpdateMapper();
+    const outputs = mapper.map({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'mode',
+      title: 'mcp.spark.spark_execute',
+      kind: 'execute',
+      status: 'in_progress',
+      rawInput: { tool: 'spark_execute', server: 'spark', arguments: { code: 'return 1;' } },
+    });
+    expect(outputs).toContainEqual(
+      expect.objectContaining({
+        kind: 'step_started',
+        name: 'Combining reads with Code Mode',
+        toolKind: 'other',
+        toolName: 'mcp.spark.spark_execute',
+      }),
+    );
+  });
+
   it('turns thought chunks into one Thinking step that closes when text starts', () => {
     const mapper = createUpdateMapper();
     const thought = {

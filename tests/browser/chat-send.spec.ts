@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { seedChats } from './sidebar-seed.ts';
 
 const SEND_URL = /\/api\/conversations\/[^/]+\/messages$/;
 
@@ -51,7 +52,9 @@ test('shows the message as starting at once and offers Retry while the server is
   await expect(page.getByRole('button', { name: 'Send' })).toBeDisabled();
 
   const slow = pending.getByRole('alert');
-  await expect(slow).toContainText('Spark hasn’t accepted this message yet.', { timeout: 8_000 });
+  await expect(slow).toContainText('Still waiting for Spark to confirm receipt.', {
+    timeout: 8_000,
+  });
   await slow.getByRole('button', { name: 'Retry' }).click();
   await expect(pending.getByRole('status')).toHaveText('Starting…');
 
@@ -63,6 +66,49 @@ test('shows the message as starting at once and offers Retry while the server is
   await expect(page.locator('.send-status')).toHaveCount(0);
   expect(ids).toHaveLength(2);
   expect(new Set(ids).size).toBe(1);
+});
+
+test('an accepted message stays sent while conversation history is delayed', async ({ page }) => {
+  const [chat] = await seedChats([{ title: 'Delayed conversation refresh' }]);
+  await openChats(page);
+  await page
+    .getByRole('navigation', { name: 'Chats' })
+    .getByText('Delayed conversation refresh')
+    .click();
+  const input = page.getByRole('textbox', { name: 'Message' });
+  await expect(input).toBeVisible();
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let refreshes = 0;
+  await page.route(`**/api/conversations/${chat}`, async (route) => {
+    refreshes += 1;
+    await held;
+    await route.continue();
+  });
+  const marker = `Accepted with slow history ${Date.now()}`;
+  const ids = sentIds(page);
+  await page.clock.install();
+  await input.fill(marker);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
+  const accepted = page.waitForResponse(
+    (response) => SEND_URL.test(response.url()) && response.request().method() === 'POST',
+  );
+  await input.press('Enter');
+  expect((await accepted).ok()).toBe(true);
+  const pending = page.locator('.msg.me', { hasText: marker });
+  await expect(pending.getByRole('status')).toHaveText('Sent');
+  await expect.poll(() => refreshes).toBeGreaterThan(0);
+  await page.clock.fastForward(6_000);
+  await expect(pending.getByRole('status')).toHaveText('Sent');
+  await expect(pending.getByRole('button', { name: 'Retry' })).toHaveCount(0);
+  await input.fill('A separate draft');
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
+  expect(ids).toHaveLength(1);
+  release();
+  await expect(page.locator('.bubble', { hasText: marker })).toHaveCount(1);
+  await expect(pending.locator('.send-status')).toHaveCount(0);
 });
 
 test('keeps a failed message with Retry and resends it with the same key', async ({ page }) => {
@@ -152,6 +198,7 @@ test('a message the server finds too large says so and Edit gives the text back'
   const input = await newChat(page);
 
   await input.fill(marker);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
 
   const failed = page.locator('.msg.me', { hasText: marker }).getByRole('alert');

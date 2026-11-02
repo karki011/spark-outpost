@@ -1,5 +1,4 @@
 import './crew-turn.css';
-import type { ReactNode } from 'react';
 import {
   isCheckApproval,
   isTerminalRunStatus,
@@ -9,6 +8,8 @@ import {
   type Project,
   type Run,
 } from '@spark-outpost/contracts';
+import { turnTodo } from '../../todo/todo-model.ts';
+import { TurnTodo } from '../../todo/TurnTodo.tsx';
 import { agentAnchor } from '../../crew/conversation-crew.ts';
 import { crewTotals, totalsLine } from '../../crew/crew-model.ts';
 import { crewAgents, runAgent } from '../../crew/crew-projection.ts';
@@ -18,7 +19,7 @@ import { BrowserShots } from '../../browser/BrowserShots.tsx';
 import { turnShots } from '../../browser/browser-check.ts';
 import { ShotReply } from '../../browser/ShotReply.tsx';
 import { runCommands } from '../commands/command-model.ts';
-import { RailFlags } from '../approvals/RailFlags.tsx';
+import { FlagLine } from '../approvals/RailFlags.tsx';
 import { RevertRun } from '../approvals/RevertRun.tsx';
 import { askedBeforeTimeout, isLatestTurn, timedOut } from '../approvals/timed-out.ts';
 import { TimedOutNote } from '../approvals/TimedOutNote.tsx';
@@ -28,6 +29,7 @@ import { CheckpointCard } from '../checkpoints/CheckpointCard.tsx';
 import type { CheckpointApproval } from '../checkpoints/checkpoint-model.ts';
 import { keepCardHost } from '../outcomes/feedback-host.ts';
 import { TurnFeedback } from '../outcomes/TurnFeedback.tsx';
+import { useFeedbackTurn } from '../outcomes/use-feedback-turn.ts';
 import { ResultBlock } from '../outcomes/ResultBlock.tsx';
 import { AgreedReplyLine } from '../plans/AgreedReplyLine.tsx';
 import { PlanSavedLine } from '../plans/PlanSavedLine.tsx';
@@ -63,12 +65,11 @@ interface CrewTurnProps {
   detail: ConversationDetail;
   orchestration: Orchestration;
   repo: Project | null;
-  taskCard: ReactNode;
 }
 
 const NO_STEPS: RunStep[] = [];
 
-export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTurnProps) {
+export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
   const runsById = new Map(detail.runs.map((candidate) => [candidate.id, candidate]));
   const handedOffAt = handOffAt(orchestration.crew, run.id);
   const textByRun = memberTexts(detail.messages, run.id, handedOffAt);
@@ -92,6 +93,14 @@ export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTur
   const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals, run.id));
   const last = lastAgentIndex(items);
   const steers = steerSlots(items.map(itemStartedAt), turnSteers(detail, run.id));
+  const flags = steerSlots(
+    items.map(itemStartedAt),
+    (detail.railFlags ?? []).filter((flag) => flag.turnRunId === run.id),
+  );
+  const flagsAfter = (index: number) =>
+    (flags.get(index) ?? []).map((flag) => (
+      <FlagLine key={flag.id} flag={flag} conversationId={detail.conversation.id} />
+    ));
   const steeredAfter = (index: number) =>
     (steers.get(index) ?? []).flatMap((message) => [
       <SteeredMessage key={message.id} message={message} detail={detail} run={run} crew />,
@@ -124,6 +133,7 @@ export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTur
   });
   const crewTimedOut = orchestration.crew.some((member) => timedOut(member.error));
   const kept = checkpoints.find((approval) => approval.id === host?.approvalId) ?? null;
+  const feedbackTurn = useFeedbackTurn(detail.conversation.id, crewRunIds);
   const checkpointCard = (approval: CheckpointApproval) =>
     approval === kept ? null : <CheckpointCard key={approval.id} approval={approval} />;
 
@@ -150,6 +160,12 @@ export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTur
         repo={repo}
         waited={waitedOn([member.runId])}
         changes={changedBy(member.runId)}
+        todo={
+          <TurnTodo
+            entries={turnTodo(detail.runs, member.runId, runsById.get(member.runId)?.todo ?? [])}
+            live={!isTerminalRunStatus(member.status)}
+          />
+        }
         after={item.checkpoints.map(checkpointCard)}
       />
     );
@@ -193,10 +209,14 @@ export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTur
           anchor={agentAnchor(orchestration.runId, 'jev')}
           status={jevStatus}
         />
-        {taskCard}
       </div>
+      {flagsAfter(-1)}
       {steeredAfter(-1)}
-      {items.flatMap((item, index) => [itemBlock(item, index), ...steeredAfter(index)])}
+      {items.flatMap((item, index) => [
+        itemBlock(item, index),
+        ...flagsAfter(index),
+        ...steeredAfter(index),
+      ])}
       {summary && (
         <div className="msg ai crew-summary">
           <ShotReply text={summary} shots={otherShots}>
@@ -218,7 +238,6 @@ export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTur
             />
           )
         : orchestration.error && <p className="error-line">{orchestration.error}</p>}
-      <RailFlags detail={detail} runId={run.id} />
       {!summary && <BrowserShots shots={otherShots} />}
       <PlanSavedLine detail={detail} runId={run.id} />
       <AgreedReplyLine
@@ -235,11 +254,11 @@ export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTur
         <ResultBlock
           approval={kept}
           variant={host.variant}
-          runId={run.id}
           runIds={crewRunIds}
           revertible={finished && run.mode === 'do' && run.snapshot ? run : null}
           taskId={run.mode === 'do' ? (changeTask?.id ?? null) : null}
           conversationId={detail.conversation.id}
+          onReview={null}
         />
       )}
       <div className="turn-foot">
@@ -255,7 +274,13 @@ export function CrewTurn({ run, detail, orchestration, repo, taskCard }: CrewTur
             runIds={crewRunIds}
           />
         )}
-        {finished && !kept && <TurnFeedback runId={run.id} variant="turn" />}
+        {finished && feedbackTurn && (
+          <TurnFeedback
+            key={host?.variant ?? 'turn'}
+            runId={run.id}
+            variant={kept ? (host?.variant ?? 'turn') : 'turn'}
+          />
+        )}
         {run.mode === 'do' && run.snapshot && finished && !kept && <RevertRun run={run} compact />}
       </div>
     </div>

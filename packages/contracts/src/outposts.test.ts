@@ -41,6 +41,7 @@ const detail: OutpostDetail = {
     id: OUTPOST,
     name: 'Orders launch',
     pausedAt: null,
+    instructions: '',
     createdAt: AT,
     updatedAt: AT,
     members: [
@@ -188,6 +189,17 @@ describe('outpost schemas', () => {
     expect(createPostRequestSchema.safeParse({ text: '@api ship it' }).success).toBe(false);
     expect(
       createPostRequestSchema.safeParse({ id: POST, text: 'x'.repeat(SPARK_TEXT_MAX + 1) }).success,
+    ).toBe(false);
+  });
+
+  it('accepts one direct member target without changing text and refuses mixed addressing', () => {
+    const request = { id: POST, text: 'where are we', toConversationId: BACKEND };
+    expect(createPostRequestSchema.parse(request)).toEqual(request);
+    for (const extra of [{ to: [] }, { to: ['api'] }, { guestConversationId: BACKEND }]) {
+      expect(createPostRequestSchema.safeParse({ ...request, ...extra }).success).toBe(false);
+    }
+    expect(
+      createPostRequestSchema.safeParse({ ...request, toConversationId: 'missing' }).success,
     ).toBe(false);
   });
 

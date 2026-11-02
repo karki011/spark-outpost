@@ -13,8 +13,13 @@ import {
   asPairedPhone,
   asksLine,
   box,
+  cancelRequest,
+  cardOf,
+  expectTopmost,
   chip,
   openOutpost,
+  openSettings,
+  openThread,
   outpostPage,
   outpostRow,
   outpostsSection,
@@ -29,6 +34,7 @@ import {
   stateOf,
   strip,
   thread,
+  threadPane,
   toast,
 } from './outposts-kit.ts';
 import {
@@ -47,13 +53,14 @@ test.beforeEach(async ({ page }) => {
 test('typing @ offers the handles and the send button says what will happen', async ({ page }) => {
   await seeded(page);
   await openOutpost(page);
-  await expect(sendButton(page)).toHaveText('Post note');
+  await expect(sendButton(page)).toHaveText('Send message');
   await expect(sendButton(page)).toBeDisabled();
 
   await box(page).pressSequentially('@');
   const picker = page.getByRole('listbox', { name: 'Chats in this outpost' });
   await expect(picker.getByRole('option')).toHaveText([/^@fe/, /^@api/]);
   await expect(picker.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
+  await expectTopmost(picker);
   await box(page).press('ArrowDown');
   await expect(picker.getByRole('option').nth(1)).toHaveAttribute('aria-selected', 'true');
   await box(page).press('Enter');
@@ -67,11 +74,11 @@ test('typing @ offers the handles and the send button says what will happen', as
   await expect(asksLine(page)).toHaveText('Asks:@api');
 
   await box(page).fill('The orders response is now paged.');
-  await expect(sendButton(page)).toHaveText('Post note');
-  await expect(page.locator('.op-hint')).toHaveText('A note starts no work.');
+  await expect(sendButton(page)).toHaveText('Send message');
+  await expect(page.locator('.op-hint')).toContainText('To @fe');
   await box(page).fill('@nobody hello');
   await expect(page.locator('.op-hint')).toHaveText(
-    'No chat here is called @nobody. This posts as a note.',
+    'No chat here is called @nobody. Choose a member or correct the handle.',
   );
 });
 
@@ -91,24 +98,28 @@ test('a request is Sent, then Working, then Answered with the answer under it @p
 
   await say(page, '@api What does the orders response look like?');
   const request = post(page, 'What does the orders response look like?');
-  await expect(stateOf(request)).toHaveText('Sent');
-  await expect(request.locator('.op-reason')).toHaveText('Not sent yet');
+  await expect(stateOf(request)).toHaveText('Queued');
+  await expect(request.locator('.op-card-meta')).toHaveText('Not sent yet');
   await expect(box(page)).toHaveValue('');
 
   release();
   await expect(stateOf(request)).toHaveText('Working', { timeout: TURN_TIMEOUT });
   await expect(chip(page, 'api')).toContainText('Working');
-  await expect(stateOf(request)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
-  const answer = request.locator('.op-reply');
-  await expect(answer).toContainText('@api');
-  await expect(answer).toContainText('This reply comes from the fake provider');
-  await expect(request.getByRole('button', { name: /^Cancel request/ })).toHaveCount(0);
+  await expect(stateOf(request)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
+  const card = cardOf(request);
+  await expect(card).toContainText('@api');
+  await expect(card.locator('.op-card-meta')).toContainText(
+    'This reply comes from the fake provider',
+  );
+  await expect(request.getByRole('button', { name: /the request to @api…$/ })).toHaveCount(0);
   await expect(thread(page).locator('.op-post')).toHaveCount(1);
 });
 
 test('a note is posted with no state and starts no work', async ({ page }) => {
   await seeded(page);
   await openOutpost(page);
+  await page.getByRole('button', { name: 'Message destination' }).click();
+  await page.getByRole('menuitemradio', { name: /^Post note/ }).click();
   await say(page, 'The orders response is now paged.');
   const note = post(page, 'The orders response is now paged.');
   await expect(note).toBeVisible();
@@ -126,10 +137,10 @@ test('a Needs you request is answered from the main message box', async ({ page 
   await openOutpost(page);
   await say(page, '@api Deploy the orders service\n\nNeeds you: which region?\n\nThanks');
   const request = post(page, 'Deploy the orders service');
-  await expect(stateOf(request)).toHaveText('Needs you', { timeout: TURN_TIMEOUT });
+  await expect(stateOf(request)).toHaveText('Waiting on you', { timeout: TURN_TIMEOUT });
   await expect(outpostRow(page, NAME)).toHaveAccessibleName(`${NAME}, 1 needs you`);
 
-  await request.getByRole('button', { name: 'Answer', exact: true }).click();
+  await request.getByRole('button', { name: 'Answer @api', exact: true }).click();
   const answerBox = page.getByRole('combobox', { name: 'Answer @api' });
   await expect(answerBox).toBeFocused();
   await expect(page.locator('.op-answering')).toHaveText(/Answering\s*@api/);
@@ -139,8 +150,9 @@ test('a Needs you request is answered from the main message box', async ({ page 
   await answerBox.fill('eu-west');
   await answerBox.press('Enter');
   await expect(page.locator('.op-answering')).toHaveCount(0);
-  await expect(stateOf(request)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
-  await expect(request.locator('.op-reply')).toContainText('eu-west');
+  await expect(stateOf(request)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
+  await openThread(request, 'api');
+  await expect(threadPane(page, 'api')).toContainText('eu-west');
   await expect(outpostRow(page, NAME)).toHaveAccessibleName(NAME);
 });
 
@@ -154,10 +166,10 @@ test('a working request is cancelled with a request that has no content @package
   const request = post(page, 'Summarise');
   await expect(stateOf(request)).toHaveText('Working', { timeout: TURN_TIMEOUT });
 
-  await request.getByRole('button', { name: 'Cancel request to @api' }).click();
+  await cancelRequest(request, 'api');
   await expect(stateOf(request)).toHaveText('Cancelled', { timeout: TURN_TIMEOUT });
-  await expect(request.getByRole('button', { name: /^Cancel request/ })).toHaveCount(0);
-  await expect(request.locator('.op-reply')).toHaveCount(0);
+  await expect(request.getByRole('button', { name: /the request to @api…$/ })).toHaveCount(0);
+  await expect(request.locator('.op-card-meta')).toHaveCount(0);
   expect(cancels).toHaveLength(1);
   expect(cancels[0]?.postData() ?? '{}').toBe('{}');
   await expect(chip(page, 'api')).not.toContainText('Working', { timeout: TURN_TIMEOUT });
@@ -171,17 +183,17 @@ test('pause holds a new request and resume sends it', async ({ page }) => {
   await expect(resume).toHaveAttribute('aria-pressed', 'true');
   await expect(resume.locator('svg')).toBeVisible();
   await expect(main.getByRole('status').filter({ hasText: 'Paused.' })).toBeVisible();
-  await expect(page.locator('.op-hint')).not.toContainText('Paused');
+  await expect(page.locator('.op-hint')).toHaveText('Paused. @fe gets this when you resume.');
 
   await box(page).fill('@api ping');
   await expect(asksLine(page)).toContainText('Paused. @api gets this when you resume.');
   await box(page).press('Enter');
   const request = post(page, 'ping');
-  await expect(stateOf(request)).toHaveText('Sent');
-  await expect(request.locator('.op-reason')).toHaveText('Paused');
+  await expect(stateOf(request)).toHaveText('Queued');
+  await expect(request.locator('.op-card-meta')).toHaveText('Paused');
   await openChats(page);
   await openOutpost(page);
-  await expect(stateOf(post(page, 'ping'))).toHaveText('Sent');
+  await expect(stateOf(post(page, 'ping'))).toHaveText('Queued');
   await expect(chip(page, 'api')).toContainText('Idle');
   const results = await new AxeBuilder({ page })
     .include('.main.op')
@@ -191,7 +203,7 @@ test('pause holds a new request and resume sends it', async ({ page }) => {
 
   await outpostPage(page, NAME).getByRole('button', { name: 'Resume' }).click();
   await expect(outpostPage(page, NAME).getByRole('button', { name: 'Pause' })).toBeVisible();
-  await expect(stateOf(post(page, 'ping'))).toHaveText('Answered', { timeout: TURN_TIMEOUT });
+  await expect(stateOf(post(page, 'ping'))).toHaveText('Idle', { timeout: TURN_TIMEOUT });
 });
 
 test('the member strip moves with the arrow keys and opens a chat', async ({ page }) => {
@@ -222,16 +234,15 @@ test('a member chat shows the outpost chip and a From you header that opens the 
   const outpostId = await seeded(page);
   await openOutpost(page);
   await say(page, '@api List the order fields');
-  await expect(stateOf(post(page, 'List the order fields'))).toHaveText('Answered', {
+  await expect(stateOf(post(page, 'List the order fields'))).toHaveText('Idle', {
     timeout: TURN_TIMEOUT,
   });
   await postNotes(page, outpostId, 16);
   await expect(post(page, 'Filler 16')).toBeInViewport();
   await expect(post(page, 'List the order fields')).not.toBeInViewport();
   await thread(page).evaluate((list) => list.closest('.thread')?.scrollTo(0, 0));
-  await post(page, 'List the order fields')
-    .getByRole('button', { name: 'Open @api in chat' })
-    .click();
+  await openThread(post(page, 'List the order fields'), 'api');
+  await threadPane(page, 'api').getByRole('button', { name: 'Open @api in chat' }).click();
 
   await expect(page.locator('.chat-title')).toHaveText('Orders API');
   const memberChip = page.getByRole('button', {
@@ -252,7 +263,7 @@ test('a member chat shows the outpost chip and a From you header that opens the 
   await expect(outpostPage(page, NAME)).toBeVisible();
   await expect(outpostRow(page, NAME)).toHaveAttribute('aria-current', 'page');
   await expect(post(page, 'List the order fields')).toBeInViewport();
-  await expect(post(page, 'List the order fields')).toHaveClass(/\bflash\b/);
+  await expect(cardOf(post(page, 'List the order fields'))).toHaveClass(/\bflash\b/);
   await expect(post(page, 'Filler 16')).not.toBeInViewport();
   await expect(outpostPage(page, NAME).getByRole('button', { name: 'Jump to latest' })).toHaveClass(
     /\bshow\b/,
@@ -269,9 +280,8 @@ test('editing renames the outpost and swaps two handles, and holding deletes it'
   await seeded(page);
   const main = await openOutpost(page);
   const puts = requestsTo(page, MEMBER_URL, 'PUT');
-  const edit = main.getByRole('button', { name: 'Edit outpost' });
-  await edit.click();
-  const dialog = sheet(page, 'Edit outpost');
+  await expect(main).toBeVisible();
+  const dialog = await openSettings(page, NAME);
   await dialog.getByRole('textbox', { name: /^Name/ }).fill('Orders relaunch');
   await dialog.getByRole('textbox', { name: 'Handle for Frontend' }).fill('api');
   await dialog.getByRole('textbox', { name: 'Handle for Orders API' }).fill('fe');
@@ -280,7 +290,7 @@ test('editing renames the outpost and swaps two handles, and holding deletes it'
 
   const renamed = outpostPage(page, 'Orders relaunch');
   await expect(renamed.getByRole('heading', { level: 1 })).toHaveText('Orders relaunch');
-  await expect(renamed.getByRole('button', { name: 'Edit outpost' })).toBeFocused();
+  await expect(renamed.getByRole('button', { name: 'Orders relaunch', exact: true })).toBeFocused();
   await expect(outpostRow(page, 'Orders relaunch')).toHaveAttribute('aria-current', 'page');
   await expect(strip(page).getByRole('button').filter({ hasText: 'Frontend' })).toContainText(
     '@api',
@@ -294,8 +304,8 @@ test('editing renames the outpost and swaps two handles, and holding deletes it'
     'api',
   ]);
 
-  await renamed.getByRole('button', { name: 'Edit outpost' }).click();
-  const hold = sheet(page, 'Edit outpost').getByRole('button', { name: 'Hold to delete outpost' });
+  const settings = await openSettings(page, 'Orders relaunch');
+  const hold = settings.getByRole('button', { name: 'Hold to delete outpost' });
   await hold.focus();
   await page.keyboard.down(' ');
   await expect(renamed).toBeHidden({ timeout: 10_000 });
@@ -315,7 +325,7 @@ test('an outpost request waiting in a chat queue can be removed but not edited',
     timeout: TURN_TIMEOUT,
   });
   await say(page, '@api Second ask');
-  await expect(stateOf(post(page, 'Second ask'))).toHaveText('Sent');
+  await expect(stateOf(post(page, 'Second ask'))).toHaveText('Queued');
 
   await chip(page, 'api').click();
   const queued = page.getByRole('list', { name: 'Queued messages' }).getByRole('listitem');
@@ -330,7 +340,7 @@ test('an outpost request waiting in a chat queue can be removed but not edited',
   await expect(stateOf(post(page, 'Second ask'))).toHaveText('Cancelled', {
     timeout: TURN_TIMEOUT,
   });
-  await post(page, 'First word0').getByRole('button', { name: 'Cancel request to @api' }).click();
+  await cancelRequest(post(page, 'First word0'), 'api');
   await expect(stateOf(post(page, 'First word0'))).toHaveText('Cancelled', {
     timeout: TURN_TIMEOUT,
   });
@@ -400,7 +410,8 @@ test('a paired phone renames and pauses but cannot create, delete or change the 
 
   const main = await openOutpost(page);
   await expect(main.getByRole('button', { name: 'Pause' })).toBeVisible();
-  await main.getByRole('button', { name: 'Edit outpost' }).click();
+  await main.getByRole('button', { name: NAME, exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Rename…' }).click();
   const dialog = sheet(page, 'Edit outpost');
   await expect(dialog.getByRole('textbox')).toHaveCount(1);
   await expect(dialog.getByRole('button', { name: 'Add a chat' })).toHaveCount(0);

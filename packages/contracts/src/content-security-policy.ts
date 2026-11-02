@@ -1,6 +1,6 @@
 export const CONTENT_SECURITY_POLICY_HEADER = 'Content-Security-Policy';
 
-function policy(scriptSources: string): string {
+function policy(scriptSources: string, frameSources: string): string {
   return [
     "default-src 'self'",
     `script-src ${scriptSources}`,
@@ -9,7 +9,7 @@ function policy(scriptSources: string): string {
     "font-src 'self'",
     "connect-src 'self'",
     "worker-src 'self'",
-    "frame-src 'none'",
+    `frame-src 'self' ${frameSources}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -17,6 +17,10 @@ function policy(scriptSources: string): string {
   ].join('; ');
 }
 
-export const APP_CONTENT_SECURITY_POLICY = policy("'self'");
+export function appContentSecurityPolicy(artifactOrigin: string): string {
+  return policy("'self'", artifactOrigin);
+}
 
-export const DEV_CONTENT_SECURITY_POLICY = policy("'self' 'unsafe-inline'");
+export function devContentSecurityPolicy(artifactOrigin: string): string {
+  return policy("'self' 'unsafe-inline'", artifactOrigin);
+}

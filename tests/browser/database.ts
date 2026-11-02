@@ -5,6 +5,8 @@ import {
   FAKE_CLAUDE_BIN,
   FAKE_CODEX_STATE,
   FAKE_GH_STATE,
+  SPARK_RULES_DIR,
+  SPARK_RULES_FILE,
   TEST_DATABASE_URL,
 } from './stub-config.ts';
 import { DEFAULT_INVOLVEMENT_LEVEL } from '../../packages/contracts/src/approvals.ts';
@@ -13,6 +15,7 @@ import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { truncateTables } from '../../apps/server/src/persistence/truncate.ts';
 import { FAKE_CLAUDE_MODES, FAKE_CODEX_MODES } from '../../apps/server/src/providers/fake.ts';
+import { recommendedRulesText } from '../../apps/server/src/spark-rules/recommended.ts';
 import { stopLeftoverTerminals } from './leftover-terminals.ts';
 
 export function testDatabaseUrl(): string {
@@ -44,6 +47,8 @@ interface ResetOptions {
   jev?: boolean;
   catalog?: boolean;
   defaultLevel?: InvolvementLevel;
+  sparkRules?: 'recommended' | 'none';
+  collapseTurns?: boolean;
 }
 
 const RESET_TABLES = [
@@ -82,6 +87,7 @@ const RESET_TABLES = [
   'calendar_calendars',
   'calendar_google_accounts',
   'calendar_marks',
+  'browser_history',
 ];
 const LEFTOVER_RUN_WAIT_MS = 5000;
 
@@ -113,9 +119,16 @@ export async function resetTestDatabase({
   jev = false,
   catalog = false,
   defaultLevel = DEFAULT_INVOLVEMENT_LEVEL,
+  sparkRules = 'recommended',
+  collapseTurns = false,
 }: ResetOptions): Promise<void> {
   rmSync(FAKE_CODEX_STATE, { force: true });
   rmSync(FAKE_GH_STATE, { force: true });
+  rmSync(SPARK_RULES_DIR, { recursive: true, force: true });
+  if (sparkRules === 'recommended') {
+    mkdirSync(SPARK_RULES_DIR, { recursive: true });
+    writeFileSync(SPARK_RULES_FILE, recommendedRulesText());
+  }
   installFakeClaude();
   const db = openTestDb();
   try {
@@ -126,14 +139,22 @@ export async function resetTestDatabase({
     const workspaceId = await ensureLocalWorkspace(db);
     await db.query(
       `INSERT INTO profiles
-         (workspace_id, display_name, default_provider, onboarding_completed_at, default_level)
-       VALUES ($1, 'Test User', $2, $3, $4)
+         (workspace_id, display_name, default_provider, onboarding_completed_at, default_level,
+          collapse_finished_turns)
+       VALUES ($1, 'Test User', $2, $3, $4, $5)
        ON CONFLICT (workspace_id) DO UPDATE SET
          display_name = EXCLUDED.display_name,
          default_provider = EXCLUDED.default_provider,
          onboarding_completed_at = EXCLUDED.onboarding_completed_at,
-         default_level = EXCLUDED.default_level`,
-      [workspaceId, connected[0] ?? null, onboarded ? new Date() : null, defaultLevel],
+         default_level = EXCLUDED.default_level,
+         collapse_finished_turns = EXCLUDED.collapse_finished_turns`,
+      [
+        workspaceId,
+        connected[0] ?? null,
+        onboarded ? new Date() : null,
+        defaultLevel,
+        collapseTurns,
+      ],
     );
     for (const provider of connected) {
       await db.query(

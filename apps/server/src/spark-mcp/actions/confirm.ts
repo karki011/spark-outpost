@@ -6,11 +6,15 @@ import {
   calendarAuditFacts,
   isAtlassianAction,
   isCalendarAction,
+  isServiceNowAction,
+  rulesEditAuditFacts,
+  serviceNowAuditFacts,
   SPARK_ACTION_OPTION,
   sparkActionLabels,
   sparkActionQuestion,
   sparkResultFinished,
   type Approval,
+  type ApprovalOption,
   type SparkAction,
 } from '@spark-outpost/contracts';
 import { redactValue } from '../../audit/redact.ts';
@@ -22,6 +26,9 @@ import { runEvents } from '../../workflow/run-events.ts';
 import type { SparkActionHooks, SparkScope } from '../deps.ts';
 import { SparkToolError, type SparkToolContext } from '../tool.ts';
 import { actionFacts, actionPath, type ActionPath } from './action-policy.ts';
+import { assistantPath, assistantRefusal } from './ask-spark-limits.ts';
+
+export const ASK_SPARK_ACTOR = 'Ask Spark';
 
 export const RESULT_WAIT_MS = 40_000;
 
@@ -42,6 +49,7 @@ const SENDS_TO: Partial<Record<SparkAction['action'], string>> = {
   post_slack: 'to Slack',
   jira_edit: 'to Jira',
   confluence_edit: 'to Confluence',
+  servicenow_edit: 'to ServiceNow',
 };
 
 export interface ActionRun {
@@ -68,6 +76,8 @@ async function quietly(work: Promise<unknown>): Promise<void> {
 }
 
 function cardTitle(action: SparkAction): string {
+  if (action.action === 'ask_spark') return action.summary;
+  if (action.action === 'rules_edit') return sparkActionQuestion(action);
   const question = sparkActionQuestion(action);
   if (
     action.action === 'browser_sign_in' ||
@@ -78,7 +88,16 @@ function cardTitle(action: SparkAction): string {
   ) {
     return question;
   }
-  if (action.action === 'calendar_read' || action.action === 'atlassian_read') return question;
+  if (
+    action.action === 'calendar_read' ||
+    action.action === 'atlassian_read' ||
+    action.action === 'servicenow_read'
+  ) {
+    return question;
+  }
+  if (action.action === 'servicenow_edit') {
+    return `${question} ${action.record.number} ${action.record.title}`;
+  }
   if (action.action === 'jira_edit' || action.action === 'confluence_edit') {
     return `${question} ${atlassianCardSubject(action)}`;
   }
@@ -86,6 +105,7 @@ function cardTitle(action: SparkAction): string {
     return `${question} ${action.after?.title ?? action.before?.title ?? ''}`.trim();
   }
   if (action.action === 'create_ticket') return `${question} ${action.title}`;
+  if (action.action === 'publish_artifact') return `${question} ${action.title}`;
   if (action.action === 'start_outpost') return `${question} ${action.outpostName}`;
   if (action.action === 'open_pr') return `${question} ${action.title}`;
   if (action.action === 'post_slack') return `${question} #${action.channel.name}`;
@@ -113,14 +133,32 @@ export interface CardPlan {
   secretSend?: readonly string[];
   confirmName?: string;
   declineName?: string;
+  options?: readonly ApprovalOption[];
+}
+
+function cardOptions(action: SparkAction, plan: CardPlan): ApprovalOption[] {
+  if (plan.options) return [...plan.options];
+  return [
+    {
+      optionId: SPARK_ACTION_OPTION.confirm,
+      name: plan.confirmName ?? sparkActionLabels[action.action].confirm,
+      kind: 'allow_once',
+    },
+    {
+      optionId: SPARK_ACTION_OPTION.decline,
+      name: plan.declineName ?? 'Don’t',
+      kind: 'reject_once',
+    },
+  ];
 }
 
 export async function postCard(
   db: Queryable,
   run: ActionRun,
   action: SparkAction,
-  { path, requested, observed, secretSend, confirmName, declineName }: CardPlan,
+  plan: CardPlan,
 ): Promise<Approval> {
+  const { path, requested, observed, secretSend } = plan;
   const card = await insertApproval(
     db,
     {
@@ -141,18 +179,7 @@ export async function postCard(
         ...(observed.length > 0 ? { observed: [...observed] } : {}),
         ...(secretSend && secretSend.length > 0 ? { secretSend: [...secretSend] } : {}),
       },
-      options: [
-        {
-          optionId: SPARK_ACTION_OPTION.confirm,
-          name: confirmName ?? sparkActionLabels[action.action].confirm,
-          kind: 'allow_once',
-        },
-        {
-          optionId: SPARK_ACTION_OPTION.decline,
-          name: declineName ?? 'Don’t',
-          kind: 'reject_once',
-        },
-      ],
+      options: cardOptions(action, plan),
       reason: null,
     },
     path === 'perform'
@@ -176,6 +203,10 @@ export function auditedAction(action: SparkAction): unknown {
   ) {
     return atlassianAuditFacts(action);
   }
+  if (action.action === 'servicenow_read' || action.action === 'servicenow_edit') {
+    return serviceNowAuditFacts(action);
+  }
+  if (action.action === 'rules_edit') return rulesEditAuditFacts(action);
   return action;
 }
 
@@ -186,7 +217,11 @@ export function auditAction(
 ): void {
   run.hooks.audit?.message('harness', {
     method: `spark/${action.action}`,
-    params: redactValue({ action: auditedAction(action), ...outcome }),
+    params: redactValue({
+      action: auditedAction(action),
+      ...(run.scope.assistant ? { by: ASK_SPARK_ACTOR } : {}),
+      ...outcome,
+    }),
   });
 }
 
@@ -218,6 +253,9 @@ function finished(approval: Approval) {
 
 export interface ProposeOptions {
   alwaysAsk?: boolean;
+  path?: ActionPath;
+  options?: readonly ApprovalOption[];
+  audit?: Record<string, unknown>;
   sendsTo?: string | null;
   sendSubject?: string;
   confirmName?: string;
@@ -230,9 +268,28 @@ export async function proposeAction(
   options: ProposeOptions = {},
 ) {
   const run = actionRun(context.scope);
+  const assistant = run.scope.assistant === true;
+  if (assistant) {
+    const refusal = await assistantRefusal(
+      context.deps.db,
+      run.scope.workspaceId,
+      run.runId,
+      action,
+    );
+    if (refusal) {
+      auditAction(run, action, { outcome: 'refused', reason: refusal });
+      throw new SparkToolError(refusal);
+    }
+  }
   const observed = (await run.scope.observations?.labels()) ?? [];
   const facts = await actionFacts(context.deps.db, run.runId, action.action);
-  const path = options.alwaysAsk ? 'confirm' : actionPath(facts);
+  const path = options.path
+    ? options.path
+    : options.alwaysAsk
+      ? 'confirm'
+      : assistant
+        ? await assistantPath(context.deps.db, run.scope.workspaceId, run.runId, action)
+        : actionPath(facts);
   const failedBefore = await lastFailedAttempt(
     context.deps.db,
     run.scope.conversationId,
@@ -244,9 +301,14 @@ export async function proposeAction(
     observed,
     ...(options.confirmName ? { confirmName: options.confirmName } : {}),
     ...(options.declineName ? { declineName: options.declineName } : {}),
+    ...(options.options ? { options: options.options } : {}),
   });
   if (path === 'confirm') {
-    auditAction(run, action, { outcome: 'waiting_for_user', approvalId: card.id });
+    auditAction(run, action, {
+      outcome: 'waiting_for_user',
+      approvalId: card.id,
+      ...options.audit,
+    });
     return {
       outcome: 'waiting_for_user',
       approvalId: card.id,
@@ -257,7 +319,10 @@ export async function proposeAction(
   auditAction(run, action, {
     outcome: 'performing',
     approvalId: card.id,
-    ...(isCalendarAction(action.action) || isAtlassianAction(action.action)
+    ...options.audit,
+    ...(isCalendarAction(action.action) ||
+    isAtlassianAction(action.action) ||
+    isServiceNowAction(action.action)
       ? { ranWithoutReview: true }
       : {}),
   });

@@ -4,7 +4,7 @@ import {
   remoteSwitchSchema,
   type RemoteSwitches,
 } from '@spark-outpost/contracts';
-import { blockedFieldIn, cardSwitch, remoteDecision } from './policy.ts';
+import { blockedFieldIn, cardSwitch, macOnlyCard, remoteDecision } from './policy.ts';
 import { ROUTE_RULES } from './route-rules.ts';
 
 const ID = '0198c0de-0000-7000-8000-000000000001';
@@ -37,12 +37,38 @@ describe('remote policy', () => {
     }
   });
 
+  it('lets a paired device follow live runs on the shared run stream, with the switches off', () => {
+    expect(remoteDecision('GET', '/api/run-events', ALL_OFF).kind).toBe('allow');
+    expect(remoteDecision('POST', '/api/run-events', ALL_ON).kind).toBe('refuse');
+    expect(remoteDecision('GET', `/api/runs/${ID}/events`, ALL_ON).kind).toBe('refuse');
+  });
+
+  it('keeps the merged Terminal poll on the Mac whatever the switches say', () => {
+    expect(remoteDecision('GET', '/api/terminal-live', ALL_ON).kind).toBe('refuse');
+  });
+
+  it('lets a paired device read the inbox and mark its items, with the switches off', () => {
+    expect(remoteDecision('GET', '/api/attention', ALL_OFF).kind).toBe('allow');
+    for (const mark of ['read', 'set-aside', 'dismiss']) {
+      const path = `/api/attention/approval:${ID}/${mark}`;
+      expect([mark, remoteDecision('POST', path, ALL_OFF).kind]).toEqual([mark, 'allow']);
+    }
+    expect(remoteDecision('POST', `/api/attention/chats/${ID}/read`, ALL_OFF).kind).toBe('allow');
+    expect(remoteDecision('POST', `/api/attention/approval:${ID}/allow`, ALL_ON).kind).toBe(
+      'refuse',
+    );
+    expect(remoteDecision('DELETE', `/api/attention/approval:${ID}/read`, ALL_ON).kind).toBe(
+      'refuse',
+    );
+  });
+
   it('lets a paired device start a proposed draft as proposed, but not create or edit outposts', () => {
     expect(remoteDecision('POST', `/api/outposts/drafts/${ID}/start`, ALL_OFF).kind).toBe('allow');
     expect(remoteDecision('GET', `/api/outposts/drafts/${ID}`, ALL_ON).kind).toBe('refuse');
     expect(remoteDecision('POST', '/api/outposts', ALL_ON).kind).toBe('refuse');
     expect(remoteDecision('DELETE', `/api/outposts/${ID}`, ALL_ON).kind).toBe('refuse');
     expect(remoteDecision('PUT', `/api/outposts/${ID}/members/${ID}`, ALL_ON).kind).toBe('refuse');
+    expect(remoteDecision('PUT', `/api/outposts/${ID}/instructions`, ALL_ON).kind).toBe('refuse');
   });
 
   it('lets a paired device answer a start-sub-chats card like other Spark action cards', () => {
@@ -66,6 +92,24 @@ describe('remote policy', () => {
     };
     const payload = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
     expect(cardSwitch({ ...payload, sparkAction: action })).toBeNull();
+  });
+
+  it('needs High-risk cards on a paired device for an Ask Spark card that answers another card', () => {
+    const payload = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
+    const ask = {
+      action: 'ask_spark' as const,
+      summary: 'Allow once: Run pnpm deploy',
+      conversationId: null,
+      projectId: null,
+      approvalId: '11111111-1111-4111-8111-111111111111',
+      answer: 'allow_once' as const,
+      ticket: null,
+      text: null,
+    };
+    expect(cardSwitch({ ...payload, sparkAction: { ...ask, op: 'answer_card' } })).toBe(
+      'highRiskCards',
+    );
+    expect(cardSwitch({ ...payload, sparkAction: { ...ask, op: 'stop_turn' } })).toBeNull();
   });
 
   it('lets a paired device pause and resume Spark whatever the switches say', () => {
@@ -207,6 +251,17 @@ describe('remote policy', () => {
     expect(blockedFieldIn({ model: 'x' }, ['agentMode', 'level'])).toBeNull();
   });
 
+  it('needs High-risk cards for a ticket comment the caller sees', () => {
+    const path = '/api/tickets/servicenow/INC0010023/comments';
+    const off = remoteDecision('POST', path, { ...ALL_ON, highRiskCards: false });
+    expect(off).toMatchObject({ kind: 'allow', highRiskFields: ['visibility'] });
+    expect(remoteDecision('POST', path, ALL_ON)).toMatchObject({ highRiskFields: [] });
+    expect(blockedFieldIn({ body: 'hi', visibility: 'customer' }, ['visibility'])).toBe(
+      'visibility',
+    );
+    expect(blockedFieldIn({ body: 'a work note' }, ['visibility'])).toBeNull();
+  });
+
   it('sorts cards into ordinary, high-risk and sign-in', () => {
     const base = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
     expect(cardSwitch({ ...base, command: 'pnpm test' })).toBeNull();
@@ -216,6 +271,29 @@ describe('remote policy', () => {
     expect(cardSwitch({ ...base, paths: ['config/.env'] })).toBe('highRiskCards');
     expect(cardSwitch({ ...base, fullPaths: ['/repo/.env.local'] })).toBe('highRiskCards');
     expect(cardSwitch({ unexpected: true })).toBe('highRiskCards');
+  });
+
+  it('lets a paired device answer an agent’s question like an ordinary card', () => {
+    const base = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
+    const field = {
+      key: 'name',
+      kind: 'text',
+      question: 'What should the cache be called?',
+      options: [],
+      required: true,
+      noteKey: null,
+      otherValue: null,
+      minimum: null,
+      maximum: null,
+      minLength: null,
+      maxLength: null,
+      minItems: null,
+      maxItems: null,
+      default: null,
+    };
+    const question = { ...base, form: { message: 'Codex needs your input.', fields: [field] } };
+    expect(cardSwitch(question)).toBeNull();
+    expect(macOnlyCard(question)).toBe(false);
   });
 
   it('keeps Jira and Confluence deletes behind the high-risk switch and other changes ordinary', () => {
@@ -253,6 +331,45 @@ describe('remote policy', () => {
     expect(cardSwitch(jira('delete_comment'))).toBe('highRiskCards');
     expect(cardSwitch(confluence('comment'))).toBeNull();
     expect(cardSwitch(confluence('delete'))).toBe('highRiskCards');
+  });
+
+  it('keeps a ServiceNow comment the caller sees and a final move behind the high-risk switch', () => {
+    const base = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
+    const serviceNowCard = (op: string, final: boolean) => ({
+      ...base,
+      sparkAction: {
+        action: 'servicenow_edit',
+        op,
+        record: {
+          table: 'incident',
+          number: 'INC0010023',
+          sysId: 'a1b2c3',
+          title: 'VPN drops',
+          url: 'https://acme.service-now.com/x',
+          caller: null,
+        },
+        updated: '2026-10-20 14:03:11',
+        changes: {},
+        before: null,
+        after: null,
+        note: op === 'move' ? null : 'Text',
+        move:
+          op === 'move'
+            ? {
+                from: 'New',
+                to: final ? 'Resolved' : 'In Progress',
+                value: '6',
+                final,
+                closeCode: null,
+                closeNotes: final ? 'Done' : null,
+              }
+            : null,
+      },
+    });
+    expect(cardSwitch(serviceNowCard('work_note', false))).toBeNull();
+    expect(cardSwitch(serviceNowCard('move', false))).toBeNull();
+    expect(cardSwitch(serviceNowCard('comment', false))).toBe('highRiskCards');
+    expect(cardSwitch(serviceNowCard('move', true))).toBe('highRiskCards');
   });
 
   it('lets a paired device answer the browser’s site cards, and keeps saved sign-ins behind their switch', () => {

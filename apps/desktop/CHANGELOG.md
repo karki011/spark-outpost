@@ -2,6 +2,135 @@
 
 Newest first. Each release adds a section before packaging; the release script turns this file into `release-notes.html` on the update feed.
 
+Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
+
+## 0.1.0-beta.38
+
+- Select on a page is rebuilt: the highlight glides between elements, ⇧ click picks several, ↑ and ↓ move to the parent and back, a drag picks a region and the wheel still scrolls. A pick on a very large page takes about half a second instead of nearly three.
+- Select also works after scrolling, and in the Browser view, where picks land in the new-chat dock. A pick from Personal goes as text only.
+- Browser tabs get Mute with a Playing or Muted label, page zoom kept per site, drag to reorder, Print and Picture in Picture, in chats and the Browser view.
+- The Browser view gets split view and Peek: show two tabs side by side, or Shift-click a link to preview it over the page.
+- The Browser view gets Spaces, folders for pinned tabs, Back to pinned address and auto-archive after 12 hours, with an Archived list and a setting to change or turn it off.
+- Clearing all browser history also clears saved page zooms.
+
+## 0.1.0-beta.37
+
+- A quieter composer: project, branch, session and mode move under the box. Finished turns fold under one row, with a setting to turn that off; replies after a steered message stay visible.
+- Answered cards, action results and flags stay where they happened and scroll up with the turn. Only a card still waiting on you stays near the composer.
+- The Working line and Agent TV show the lead's current step and how long it has run, with the turn total beside it. Finished workers fold into one chip, and sub-agents show as working until their background work really ends.
+- Fix a turn that stayed on Thinking after a steered message landed in the agent's own follow-up. Queued messages now reach an agent that is only waiting on background work, and queue, Send now and steer edge cases are more reliable.
+- One shared live stream per window keeps connections free, so the Terminal dock opens quickly even with several helpers running. Live updates need fewer requests, and chats past the first 500 load as you scroll.
+- Spark uses less CPU and memory at rest: Settings and onboarding load when opened, Spark Island rests when hidden, and chats you left are dropped from memory.
+- Small Mac controls reach 28px, inline code reaches 12px, and unread rows carry a word as well as a dot.
+
+## 0.1.0-beta.36
+
+- Send or queue screenshots and files while an agent works, including attachment-only messages. Background work continues, queued files survive reloads, and failed sends keep the draft and attachments for retry.
+
+## 0.1.0-beta.35
+
+- Chat messages show **Sent** after the server accepts them, even while history refreshes. Slow or failed refreshes no longer mislabel accepted messages or offer duplicate retries.
+
+- Fix Tickets dimming and blocking clicks after Browser preloads or Sessions opens. Ticket spacers no longer inherit the session palette backdrop.
+- Outpost requests clear “Waiting on you” once their last pending question or approval is answered. Answered cards remain in history, and other pending questions stay visible.
+
+## 0.1.0-beta.34
+
+- Dictation shows live transcription in the existing message input with a compact listening animation. Partial words replace earlier previews; Escape restores the draft, and sending waits until dictation finishes.
+- Upcoming Scout meeting reminders offer **Snooze until start**. Snoozes survive refresh, and ended reminders disappear automatically without user action.
+- GitHub credential commands, including token substitution for private package installs, follow the agent permission mode and configured Spark rules instead of an unconditional refusal. Secret redaction remains enabled.
+- Mac diagnostic exports include content-free overlay geometry and click-target metadata to investigate blocked interfaces. This adds diagnostic evidence; the reported intermittent Jira overlay issue is not yet confirmed fixed.
+
+## 0.1.0-beta.33
+
+- Adjust **Spark Island height** in Settings → Notifications to raise or lower the docked blob, including while agents work. The slider previews changes live, saves when you finish adjusting, and offers **Reset** to restore the default. Expanded panels keep their clearance below the notch.
+
+## 0.1.0-beta.32
+
+- The chat sidebar shows the same worker blobs as Agent TV, with consistent identities and room for larger teams. Finished workers keep their outcomes visible.
+- Ordinary Outpost messages go to the displayed lead. Choose another agent, use `@agent` or `@all`, or explicitly select **Post note** to save without asking for a reply.
+- Chats start loading when you hover or focus their sidebar row. You can keep typing while history opens, and **Try again** recovers a failed load without losing your draft.
+- Outpost requests to different chats are delivered in parallel, while requests within each chat keep their order.
+- Failed Outpost messages keep their original recipient and text for **Retry**, separate from your next draft. Retries reuse the original message ID to avoid duplicate work, and finishing an older answer preserves your newer answer target.
+
+## 0.1.0-beta.31
+
+- Calmer chat: easier-to-read Inter text, a narrower reading column, quieter composer controls, and formatting tucked into the add menu. Drafts survive chat switches and queued-message editing preserves what you are typing.
+- Agent TV shows delegated workers with role-specific blobs and clear working/done states. Message an Outpost member or ask the lead to redirect a worker without leaving the work behind. Controls fit short windows and wrapped touch targets, and dragged positions stay within the chat area.
+- Code Mode is on by default. Agents can combine supported ticket, pull request, docs and guide reads locally; turn it off in Settings → Chats & autonomy. Existing permissions, cancellation and audit apply to every inner read.
+- Tool activity distinguishes discovering Code Mode tools from combining reads, keeps details folded, and counts commands passed separately from tools completed. MCP tools no longer look like terminal commands.
+- New profiles record Claude Code Terminal sessions like chats when Spark’s mod is loaded. Existing recording preferences are preserved; Codex recording is unchanged.
+- Saved sign-ins show approved sites clearly and tell you when to retry. Read-only and unchanged turns avoid unnecessary publishing, while local changes and publishing restrictions are reported accurately.
+
+## 0.1.0-beta.30
+
+- Spark rules live in a settings.json file, like Claude's settings: allow, ask or deny each rule (pushes, force pushes, pull requests, each gh command, secret files, instruction files, git hooks and config, writes outside the project, secret sends, remotes). Empty by default, so your agent's mode decides everything; Use recommended rules in Settings → Spark rules restores the old protections. A company can lock rules in /Library/Application Support/SparkOutpost/managed-settings.json.
+- Settings → Spark rules shows every rule with Agent's mode, Allow, Ask or Refuse, which file set it, and entries Spark doesn't use. Open settings.json edits it by hand.
+- Agents change your rules only through a card showing before and after: Allow for this session, Allow once or Deny. Switching the agent or its mode asks again; a rules file changed outside Spark waits for your review. Printing your GitHub token is always refused.
+- Good result and Bad result now show once per chat, under the turn that opened its pull request.
+- Fixes: gh -R owner/repo pr checks no longer counts as publishing, a refused step says what was refused and why, and Needs sign-in clears once a test message passes.
+
+## 0.1.0-beta.29
+
+- Quieter turns: steps between replies fold into one line, like Ran 4 commands, thought 2 times, titled by what each command does. Open it for the commands and output; a failed step opens by itself. Commands your mode ran without asking no longer add an Allowed row, and an answered card shows inside its step.
+- Messages you send while a turn runs show where the agent took them in: Sent, then Claude took this in, with its answer below. After a stop, Send as next message or Edit.
+- Bypass permissions: scripts in /tmp, and scripts that only read a secret file, follow your mode instead of asking. Changing a secret file still asks, and the card names the file.
+- Browser pane: resize it from a 320 px page to nearly the whole window, with the width shown as you drag and Page width presets.
+- Outposts: a draft opens on one sheet with every proposed chat, Edit and Remove; a lead can give a sub-task to a chat already working in that repo; the sidebar shows the lead with its face and · Lead on its chip. Suggested threads lines up with the messages, and starting one opens its thread.
+- Pull requests: items close once their thread is resolved, their check passes or the reviewer reviews again, review comments read as plain text, and your agent's own replies no longer come back as work.
+- The prompt cache shows as a small badge on the context ring instead of a chip in the message box.
+- Mac app: Settings opens larger.
+- Fixes: the add-a-chat picker and other composer menus no longer cut titles or overlap, a command row no longer splits a word in the reply, and Tab stays inside dialogs opened from Settings.
+
+## 0.1.0-beta.28
+
+- Browser view: Browser in the left bar keeps your own tabs apart from every chat, in a Personal profile no agent or phone can reach, or a Work profile that shares agents' sign-ins. Favorites, pinned tabs and tabs that come back after a relaunch; Hand to chat gives a chat the page.
+- Browser view: ⌘T or ⌘L opens a command bar with your tabs, favorites and this profile's history, which stays on this Mac. Only choosing its last row sends what you typed to your search engine (DuckDuckGo unless you pick another).
+- Browser view: New chat (⌘⇧O) or a right-click starts a chat from a page, a selection or a link, and Ask Spark (⌥⌘A) answers about tabs you @-mention. Pages go as untrusted text when you send; only what you type is your message.
+- Downloads: a file saves only after your own click, to the place you choose, marked as downloaded from the internet. Downloads an agent or a page starts are cancelled; Downloads lists both.
+- Browser pane: one profile for every chat and project, so a sign-in anywhere works everywhere, agent tabs included. Sign in again once. Settings → Browser pane lists signed-in sites with Sign out.
+- Quieter chat: tool calls are rows named by tool, cards wait at the end of the turn, details show on hover, and Esc stops the turn.
+- The message box styles Markdown as you type; Aa and a selection toolbar format it, and ⌘B bolds.
+- To-do replaces Tasks: the turn and the Work panel show the agent's to-do list.
+- Agents ask with question cards. Spark Island answers one-pick questions, and its count skips cards you set aside.
+- Chats without a project get their own folder, and files a turn makes show as its attachments. Agents can show pages they make beside the chat; a link in one opens only after you confirm its address.
+- Every chat's turn starts as soon as you send it; there's no limit on how many chats run at once.
+- Chats idle for 2 days, including ones from before this update, move to History (Archive inactive chats in Settings changes or stops it), and projects with no chats leave Projects.
+- Add folder… and Clone a repository… end every project picker.
+- Agents get their own tools: Claude agents can search the web, fetch pages and edit notebooks, following your mode. Turn tools off with Claude Code's or Codex's own settings. Most edits show as diffs.
+- Claude agents can sleep until a wakeup: the turn shows Sleeping until 10:48, then picks up.
+- Ask Spark has the tools a chat has. Let agents read my calendar is now on; turn it off if you had it off. A spoken question you send acts like a typed one.
+- Outposts: request cards, Overview (threads, files, pull requests), a thread pane and Instructions…. In a message to several chats each does only its part, questions offer Answer, and the Browser pane no longer sits left of the thread.
+- ServiceNow: connect an instance with a username and a password or API key. Incidents, requests, tasks, changes and problems join Tickets, and agents can search and read them and update, comment on and move them, following your mode; changes stay read only.
+- Meetings: the centre card comes down at the start (Alert at sets it earlier), island meeting lines count down on time, wrap-ups name the chat, and joined or dismissed meetings drop off. Meeting cards are reachable by keyboard and VoiceOver (⌃⌥⌘M).
+- Appearance follows the system (Automatic, Light or Dark) with a Tint; a theme you picked stays. Light, Apricot and Fjord buttons are a shade darker.
+- Mac app: Settings… opens in its own window (⌘,), View › Hide Sidebar (⌃⌘S), right-click editing, and one-answer questions show radio buttons.
+- Mac app: the menu bar icon is off by default; Show in menu bar in Settings brings it back, and right-clicking the Dock icon shows or hides Spark Island.
+- Fixes: clicking Spark Island or a meeting card no longer brings Spark to the front, the island comes back after you close Spark's window, and the Browser pane's badge is readable in every theme.
+
+## 0.1.0-beta.27
+
+- Spark Island rests as Scout again: working chats change Scout's mood and requests show as its count, and the island never opens into a wide panel on its own. Hover on Scout shows the top request in one line, or opens Home when nothing needs you; a click opens Home.
+
+## 0.1.0-beta.26
+
+- Spark Island is one big card for what needs you: the asking chat's own blob, the command or question, and Allow, Deny and Later. A meeting takes the card when it starts, or rides along as a strip; working chats show as small tiles. At rest it's Scout with a count, and it opens only when you rest the pointer on it, not when you click other menu bar icons.
+- One notification state for the island and Spark: answering or opening a request anywhere clears it everywhere, including the Dock badge, Mac notifications and phone notifications. Only requests that block an agent count as needs you; warnings and finished or failed runs never count or chime, and a chat's open cards are pinned at its top.
+- Ask Spark sends every question to the model, typed or spoken, keeps its history with New topic, and can act: start and message chats, stop, pause and archive, cards, outposts, the Inbox, meetings and tickets, with Do it in Manual.
+- Agent TV stays inside the chat, clear of the Browser pane and the message box, and sub-agent cards show one Now line.
+- Browser pane: × and ⌘W always close a tab, including one stuck after a sign-in page closed itself; closing a tab waiting on your sign-in cancels it for the agent.
+- Home keeps your mode and project across reloads, and a chat with no project says No file tools without a project.
+
+## 0.1.0-beta.25
+
+- Spark Island is an inbox: Needs you, Running and Finished, with Allow, Deny and Later right on the card. Acting in the island no longer switches to Spark; only opening a row, Answer in Spark or ⌘O does. The island's chat list and chat view are gone.
+- Meetings: Snooze now brings the alert back once, and Dismiss keeps it from showing again, even after a restart. Today and the Calendar card have Refresh now.
+- Browser pane: tabs share one set of sign-ins, so an agent's tab is signed in where you are. Agents still can't read cookie values or anything that looks like a token.
+- Browser pane: copy buttons on pages work when you click them, and pages can't read your clipboard. New keys: ⌘⇧C copies the address, ⌘T, ⌘W, ⌘⇧T, ⌘L, ⌘R, ⌘[ and ⌘], ⌘1–9, ⌃Tab and ⌘F to find in the page.
+- Spark rules in Settings shows what Spark lets an agent do. Running a GitHub workflow now follows the chat's mode, you can allow more gh commands, and a refused command shows a card with Allow and retry.
+- Work on a pull request: pick another developer's open pull request and the chat works on its branch, pushing follow-ups without force.
+- Phones: the bar above the message box no longer overlaps; extra items sit behind ⋯. The autonomy chip is gone from that bar; set the level in the Work panel.
+
 ## 0.1.0-beta.24
 
 - Chats keep one agent session running between messages, so replies start sooner. Background agents keep working after the reply: the turn shows Waiting on… until they finish, work the agent starts on its own appears as Continued on its own, and an idle chat's session closes after 30 minutes.

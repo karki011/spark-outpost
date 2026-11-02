@@ -1,0 +1,18 @@
+.set-window {
+  display: flex;
+  height: var(--viewport-h, 100dvh);
+  background: var(--panel);
+}
+
+.set-window .set-nav {
+  padding-top: 12px;
+}
+
+.set-window .set-nav h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -9,16 +9,15 @@ import { openChats } from './navigation.ts';
 import {
   NAME,
   TURN_TIMEOUT,
+  openThread,
   outpostPage,
   post,
-  proceed,
   requestsTo,
   sheet,
   sidebar,
-  startButton,
   stateOf,
-  stepNow,
   thread,
+  threadPane,
 } from './outposts-kit.ts';
 import { seedChats } from './sidebar-seed.ts';
 
@@ -119,8 +118,8 @@ async function inBothThemes(page: Page, name: string, area: string): Promise<voi
   }, before);
 }
 
-const newChatRows = (dialog: Locator) =>
-  dialog.getByRole('listitem').filter({ hasText: /Usage (endpoint|page|docs)/ });
+const newChatCards = (dialog: Locator) =>
+  dialog.locator('.op-draft-card').filter({ hasText: /Usage (endpoint|page|docs)/ });
 
 async function reviewAndStart(page: Page): Promise<void> {
   const line = page.locator('section[data-turn] .op-line');
@@ -129,22 +128,31 @@ async function reviewAndStart(page: Page): Promise<void> {
   await line.getByRole('button', { name: 'Review and start' }).focus();
   await page.keyboard.press('Enter');
 
-  const dialog = sheet(page, 'New outpost');
-  const name = dialog.getByRole('textbox', { name: /^Name/ });
-  await expect(name).toBeFocused();
-  await expect(name).toHaveValue(NAME);
-  await inBothThemes(page, '2-sheet-name', '[role="dialog"]');
-  await page.keyboard.press('Enter');
-  await expect(stepNow(dialog)).toContainText('Chats');
+  const dialog = sheet(page, 'Start a new outpost with 3 new chats');
+  const start = dialog.getByRole('button', { name: 'Start outpost' });
+  await expect(start).toBeFocused();
+  await expect(dialog.getByRole('textbox', { name: 'Outpost name' })).toHaveValue(NAME);
+  await expect(dialog.getByRole('list', { name: 'Steps' })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Close' })).toHaveCount(0);
+  await inBothThemes(page, '2-sheet', '[role="dialog"]');
 
   await dialog.getByRole('textbox', { name: 'Handle for Checkout plan' }).fill('lead');
-  await expect(newChatRows(dialog)).toHaveCount(3);
-  for (const row of await newChatRows(dialog).all()) await expect(row).toContainText('· Plan');
-  await expect(newChatRows(dialog).nth(1)).toContainText('Starts after @api');
-  await expect(newChatRows(dialog).nth(2)).toContainText('Starts after @fe');
+  await expect(dialog).toContainText("First messages are sent as @lead's, not yours.");
+  const cards = newChatCards(dialog);
+  await expect(cards).toHaveCount(3);
+  for (const card of await cards.all()) {
+    await expect(card).toContainText('· Plan');
+    await expect(card).toContainText('No pull request in a read-only mode');
+  }
+  await expect(cards.nth(0)).toContainText('Starts right away');
+  await expect(cards.nth(1).locator('.op-draft-after')).toHaveText('Starts after @api');
+  await expect(cards.nth(1)).toContainText('stacked on its branch');
+  await expect(cards.nth(2).locator('.op-draft-after')).toHaveText('Starts after @fe');
+  await expect(cards.nth(0).locator('.op-draft-message')).toContainText(API_TASK);
 
   await dialog.getByRole('button', { name: 'Edit Usage endpoint' }).click();
-  await expect(dialog.getByText('No pull request in a read-only mode')).toBeVisible();
+  const form = dialog.getByRole('group', { name: 'Chat 2' });
+  await expect(form.getByText('No pull request in a read-only mode')).toBeVisible();
   await dialog.getByRole('button', { name: 'Permissions: Plan' }).click();
   await page
     .getByRole('radiogroup', { name: 'Agent mode' })
@@ -156,15 +164,10 @@ async function reviewAndStart(page: Page): Promise<void> {
   );
   await inBothThemes(page, '3-sheet-chat', '[role="dialog"]');
   await dialog.getByRole('button', { name: 'Done' }).click();
-  await expect(newChatRows(dialog).first()).toContainText('· Accept edits');
-
-  await proceed(dialog).click();
-  await expect(stepNow(dialog)).toContainText('Review');
-  await expect(dialog).toContainText("First messages are sent as @lead's, not yours.");
-  await expect(dialog).toContainText('Starts after @api · stacked on its branch');
-  await expect(dialog).toContainText('Starts right away · Pull request, parallel');
-  await inBothThemes(page, '4-sheet-review', '[role="dialog"]');
-  await startButton(dialog).click();
+  await expect(cards.first()).toContainText('· Accept edits');
+  await expect(cards.first().locator('.op-draft-order')).toContainText('Pull request, parallel');
+  await inBothThemes(page, '4-sheet-edited', '[role="dialog"]');
+  await start.click();
   await expect(outpostPage(page, NAME)).toBeVisible({ timeout: TURN_TIMEOUT });
 }
 
@@ -174,12 +177,17 @@ test('a chat proposes sub-chats, the user starts them, held ones follow, and the
   await leadInPlanMode(page);
   await send(page, proposal());
   await reviewAndStart(page);
+  const opened = threadPane(page, 'api');
+  await expect(opened).toBeVisible();
+  await opened.getByRole('button', { name: 'Back to Overview' }).click();
 
   const [api, fe, docs] = [post(page, API_TASK), post(page, FE_TASK), post(page, DOCS_TASK)];
-  await expect(api.locator('.op-post-head').first()).toContainText('@leadnot from youto@api');
+  await expect(api.locator('.op-post-head').first()).toContainText(
+    '@leadstarted by you, not written by youto@api',
+  );
   await expect(stateOf(api)).toHaveText('Working', { timeout: TURN_TIMEOUT });
-  await expect(fe.locator('.op-reason')).toHaveText('Waiting for @api');
-  await expect(docs.locator('.op-reason')).toHaveText('Waiting for @fe');
+  await expect(fe.locator('.op-card-meta')).toHaveText('Waiting for @api');
+  await expect(docs.locator('.op-card-meta')).toHaveText('Waiting for @fe');
 
   const summary = page.getByRole('region', { name: 'Stories' }).locator('summary');
   await expect(summary).toContainText(`${STORY}0 of 3 answered`);
@@ -193,11 +201,10 @@ test('a chat proposes sub-chats, the user starts them, held ones follow, and the
 
   const starts = requestsTo(page, START_NOW_URL, 'POST');
   finish('api');
-  await expect(stateOf(api)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
-  await expect(fe.locator('.op-reason')).toHaveCount(0, { timeout: TURN_TIMEOUT });
+  await expect(stateOf(api)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
   await expect(stateOf(fe)).toHaveText('Working', { timeout: TURN_TIMEOUT });
   expect(starts).toHaveLength(0);
-  await expect(docs.locator('.op-reason')).toHaveText('Waiting for @fe');
+  await expect(docs.locator('.op-card-meta')).toHaveText('Waiting for @fe');
 
   const startAnyway = docs.getByRole('button', { name: 'Start the request to @docs anyway' });
   await startAnyway.focus();
@@ -208,18 +215,19 @@ test('a chat proposes sub-chats, the user starts them, held ones follow, and the
   await expect(thread(page).locator('.op-post', { hasText: 'has ended' })).toHaveCount(0);
 
   finish('docs');
-  await expect(stateOf(docs)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
+  await expect(stateOf(docs)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
   finish('fe');
-  await expect(stateOf(fe)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
+  await expect(stateOf(fe)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
 
   const wrapUp = post(page, `Every sub-task of the story "${STORY}" has ended.`);
   await expect(wrapUp).toHaveCount(1, { timeout: TURN_TIMEOUT });
   await expect(wrapUp.locator('.op-post-head').first()).toContainText('Sparknot from youto@lead');
-  await expect(stateOf(wrapUp)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
+  await expect(stateOf(wrapUp)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
   await expect(summary).toContainText('3 of 3 answered');
   await inBothThemes(page, '6-wrap-up', '.main.op');
 
-  await wrapUp.getByRole('button', { name: 'Open @lead in chat' }).click();
+  await openThread(wrapUp, 'lead');
+  await threadPane(page, 'lead').getByRole('button', { name: 'Open @lead in chat' }).click();
   await expect(page.locator('.chat-title')).toHaveText('Checkout plan');
   const header = page.locator('.bubble.from', { hasText: 'has ended' });
   await expect(header.locator('.from-head b')).toHaveText('From Spark');

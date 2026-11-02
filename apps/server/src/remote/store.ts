@@ -23,6 +23,7 @@ const SWITCH_COLUMNS: Record<RemoteSwitch, string> = {
   terminal: 'can_terminal',
   terminalApprove: 'can_terminal_approve',
   notifications: 'can_notifications',
+  artifacts: 'can_artifacts',
 };
 
 const SWITCH_IDS = Object.keys(SWITCH_COLUMNS) as RemoteSwitch[];

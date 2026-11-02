@@ -2,22 +2,31 @@ import { MEMBER_MESSAGE_ACTIVITY, type MemberMessage } from '@spark-outpost/cont
 import { addToQueue } from '../persistence/chat-queue.ts';
 import { withTransaction, type Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
+import { handQueueToWaitingTurn } from '../persistence/queue-handoff.ts';
 import {
   claimMemberMessages,
   markMissedMessages,
+  markUnreadOnStop,
   removeMemberMessages,
   setMemberMessageStatus,
 } from '../persistence/member-messages.ts';
 import { runWaitingOn } from '../persistence/subagents.ts';
 import { requestCancel } from '../persistence/runs.ts';
-import type { SteerRequests, TurnInbox } from '../providers/provider.ts';
+import { shotAnchor } from '../persistence/browser-screenshots.ts';
+import { queuedAttachmentFiles } from '../persistence/attachments.ts';
+import type {
+  ProviderMessage,
+  SteerOutcome,
+  SteerRequests,
+  TurnInbox,
+} from '../providers/provider.ts';
 import type { Append } from './agent-turn.ts';
 import { runEvents } from './run-events.ts';
 
 export const MESSAGE_HEADING = '## Message from the user';
 
 export interface MemberInbox extends SteerRequests, TurnInbox {
-  dispose(): Promise<void>;
+  dispose(stopped?: boolean): Promise<void>;
 }
 
 interface InboxOptions {
@@ -26,19 +35,26 @@ interface InboxOptions {
   topRunId: string;
   pollMs: number;
   append: Append;
+  replySoFar?: () => { shown: string; held: number };
 }
 
 export function messagePrompt(messages: readonly Pick<MemberMessage, 'body'>[]): string {
   const bodies = messages.map((message) => message.body.trim());
   const shown = bodies.length === 1 ? bodies[0]! : bodies.map((body) => `- ${body}`).join('\n');
-  return `${MESSAGE_HEADING}\n${shown}\n\nThe user sent this to you directly while you work. Act on it before anything else, then reply with what you changed.`;
+  return `${MESSAGE_HEADING}\n${shown}\n\nThe user sent this to you directly while you work. Act on it first, then finish what you were doing and reply with both.`;
 }
 
 export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
   const { conversationId, runId, topRunId, append } = options;
-  let send: ((text: string) => Promise<boolean>) | null = null;
+  const anchor = () => {
+    const reply = options.replySoFar?.();
+    return reply ? shotAnchor(reply.shown, reply.held) : null;
+  };
+  let send: ((text: ProviderMessage) => Promise<SteerOutcome>) | null = null;
   let busy = false;
   let done = false;
+  const handedBack = new Set<string>();
+  const handedOver = new Set<string>();
   const announce = (messages: readonly MemberMessage[], status: string) =>
     append(
       runEvents.activity(newId(), MEMBER_MESSAGE_ACTIVITY, {
@@ -55,31 +71,93 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     await announce(messages, 'interrupting');
     await requestCancel(db, topRunId);
   };
+  const missed = async (messages: readonly MemberMessage[]) => {
+    await setMemberMessageStatus(
+      db,
+      messages.map((message) => message.id),
+      'missed',
+    );
+    await announce(messages, 'missed').catch(() => undefined);
+  };
   const queueForLater = async (messages: readonly MemberMessage[]) => {
-    await withTransaction(db, async (client) => {
-      for (const { id, body } of messages) {
-        await addToQueue(client, conversationId, { id, content: body });
-      }
-      await removeMemberMessages(
-        client,
-        messages.map((message) => message.id),
-      );
-    });
+    for (const message of messages) handedBack.add(message.id);
+    try {
+      await withTransaction(db, async (client) => {
+        await client.query('SELECT id FROM conversations WHERE id = $1 FOR UPDATE', [
+          conversationId,
+        ]);
+        await removeMemberMessages(
+          client,
+          messages.map((message) => message.id),
+        );
+        for (const { id, body, attachmentIds, annotations } of [...messages].reverse()) {
+          await addToQueue(
+            client,
+            conversationId,
+            { id, content: body, attachmentIds, annotations },
+            'front',
+          );
+        }
+      });
+    } catch {
+      await missed(messages);
+      return;
+    }
     await announce(messages, 'queued');
   };
   const sendUnsteered = async (messages: readonly MemberMessage[]) => {
-    const onlyWaiting = (await runWaitingOn(db, topRunId)) > 0;
-    await (onlyWaiting ? queueForLater(messages) : interrupt(messages));
+    const queued = messages.filter((message) => handedOver.has(message.id));
+    const sentNow = messages.filter((message) => !handedOver.has(message.id));
+    if (queued.length > 0) await queueForLater(queued);
+    if (sentNow.length === 0) return;
+    const onlyWaiting =
+      sentNow.some((message) => message.attachmentIds?.length) ||
+      (await runWaitingOn(db, topRunId)) > 0;
+    await (onlyWaiting ? queueForLater(sentNow) : interrupt(sentNow));
+  };
+  const prompt = async (messages: readonly MemberMessage[]): Promise<ProviderMessage | null> => {
+    const text = messagePrompt(messages);
+    const ids = messages.flatMap((message) => message.attachmentIds ?? []);
+    try {
+      return ids.length
+        ? { text, attachments: await queuedAttachmentFiles(db, conversationId, ids) }
+        : text;
+    } catch {
+      await missed(messages);
+      return null;
+    }
+  };
+  const handQueue = async () => {
+    if (runId !== topRunId || !send) return;
+    const moved = await handQueueToWaitingTurn(db, conversationId, topRunId, [...handedBack]);
+    for (const id of moved) {
+      handedBack.add(id);
+      handedOver.add(id);
+    }
   };
   const poll = async () => {
     if (busy || done) return;
     busy = true;
     try {
-      const claimed = await claimMemberMessages(db, runId, topRunId, send === null);
+      await handQueue().catch(() => undefined);
+      const claimed = await claimMemberMessages(db, runId, topRunId, send === null, anchor());
       if (claimed.length === 0) return;
-      if (send && (await send(messagePrompt(claimed)))) {
-        await announce(claimed, 'delivered');
-        return;
+      if (send) {
+        const message = await prompt(claimed);
+        if (message === null) return;
+        const outcome = await send(message);
+        if (outcome === 'later') {
+          await setMemberMessageStatus(
+            db,
+            claimed.map((item) => item.id),
+            'queued',
+          );
+          return;
+        }
+        if (outcome) {
+          await announce(claimed, 'delivered');
+          return;
+        }
       }
       const urgent = claimed.filter((message) => message.urgency === 'now');
       const later = claimed.filter((message) => message.urgency !== 'now');
@@ -103,14 +181,17 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     },
     async take() {
       if (done) return null;
-      const claimed = await claimMemberMessages(db, runId, topRunId, false);
+      const claimed = await claimMemberMessages(db, runId, topRunId, false, anchor());
       if (claimed.length === 0) return null;
+      const message = await prompt(claimed);
+      if (message === null) return null;
       await announce(claimed, 'delivered').catch(() => undefined);
-      return messagePrompt(claimed);
+      return message;
     },
-    async dispose() {
+    async dispose(stopped = false) {
       done = true;
       clearInterval(timer);
+      if (stopped) await markUnreadOnStop(db, runId);
       await markMissedMessages(db, runId);
     },
   };

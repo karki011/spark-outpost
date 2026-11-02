@@ -46,7 +46,7 @@ Limits: the user installs Tailscale on the Mac and the phone and enables HTTPS c
 | T1  | Done. Remote gateway: devices and pairing, cookie sessions, allowlist, switches, audit, per-client focus  | A paired fake device can read a chat and answer a card; blocked routes return 403; local traffic is unchanged |
 | T2  | Done. Tailscale: detect, turn Serve on and off, accept the Serve hostname, the Phone page with the QR     | With a fake Tailscale CLI, turning it on yields an address and a QR; turning it off closes remote access      |
 | T3  | Part done (manifest, service worker, layout pass, Mac-only parts hidden). Left: asleep and offline states | The full flow passes in a phone-sized browser through a local HTTPS proxy standing in for Serve               |
-| T4  | Part done (needs-you notifications, guide pages). Left: finished and failed, keep-awake, real-phone test  | A card on the Mac reaches a real phone on the tailnet and is answered from it                                 |
+| T4  | Part done (needs-you notifications, guide pages, keep-awake). Left: finished and failed, real-phone test  | A card on the Mac reaches a real phone on the tailnet and is answered from it                                 |
 
 The relay version follows and replaces only the reach, sign-in transport and encryption parts.
 
@@ -133,7 +133,9 @@ Decisions the plan left open:
 - **Raise agent mode or autonomy** is enforced as "change": with the switch off, a phone request to chat settings or provider defaults that carries `agentMode`, `permission` or `level` is refused. Agent modes are provider-defined and have no order to compare.
 - **Answer high-risk cards** covers cards with git hooks or git config, force push, agent instruction files or a secret file in their paths, and rail flags. A card that approves a saved sign-in needs the sign-ins switch. The Browser pane's site cards are ordinary cards by the owner's decision of 2026-10-12: a paired device may answer **Let the agent open this site?**, **Let the agent read this page?**, **Let the agent click and type on this site?** and the hold-to-confirm **Send a secret value?** card with no switch, as it may answer the same hold card for a push. `cardSwitch` returns null for them and `policy.test.ts` says so; the pane itself stays on the Mac.
 - **Pair another device and manage devices** is stored but opens no route: changing switches, starting or confirming pairing, device management, the hostname, Tailscale Serve and the phone audit are Mac-only, so a lost phone cannot widen its own access. It stays off and the Phone page does not show it.
-- Deleting a chat and unlinking a project sit behind **Reset or delete data**. Listing folders on the Mac sits behind **Link a new folder or clone a repo**.
+- Deleting a chat and unlinking a project sit behind **Reset or delete data**. Listing folders on the Mac sits behind **Link a new folder or clone a repo**, and so do making a new folder (`POST /api/folders`) and making a project a git repository (`POST /api/projects/:id/git-init`).
+- `POST /api/folders` takes `{ parent, name }`. The name is checked at the boundary (`folderNameProblem` in contracts: no `/`, `:` or control characters, no leading dot, at most 255 bytes) and the parent must resolve, through links, to the home folder or a folder inside it; the folder is made with `mkdir` (never recursive) and an existing one is refused. Linking it still refuses the home folder and the disk root. A device's folder is recorded as a `folder_created` remote audit entry with its path, besides the gateway's request entry.
+- With the switch off, every project picker on the device still shows **Add folder…** and **Clone a repository…**, disabled, with "Turned off for remote control on your Mac", and the sidebar's add-project button is disabled. Devices and the Mac use the same in-app folder browser, with **New folder**; Spark never opens the macOS folder dialog.
 
 Decided by the owner on 2026-10-06: a phone does everything the Mac app does except the Browser pane, preview and terminal. Changed by the owner on 2026-10-14: a running Terminal session may be followed, typed into, stopped and approved from a paired device behind two switches.
 
@@ -146,7 +148,7 @@ Decided by the owner on 2026-10-06: a phone does everything the Mac app does exc
 Added with outposts ([A2A_CHATS.md](A2A_CHATS.md), October 9, 2026), with no new switch:
 
 - Always allowed: `GET /api/outposts`, `GET /api/outposts/:id`, `PATCH /api/outposts/:id` (rename, pause and resume share this route), `POST /api/outposts/:id/posts` (a request or a note) and `POST /api/outposts/:id/posts/:postId/cancel`. A request posted from a phone starts a turn in the receiving chat under that chat's own mode and autonomy, as `POST /api/conversations/:id/messages` does, and a Needs you is answered through that existing route.
-- Never from a phone: `POST /api/outposts` (create), `DELETE /api/outposts/:id`, and `PUT` and `DELETE /api/outposts/:id/members/:conversationId` (add a chat, change a handle, remove a chat). These stay on the Mac until the owner decides otherwise.
+- Never from a phone: `POST /api/outposts` (create), `DELETE /api/outposts/:id`, `PUT` and `DELETE /api/outposts/:id/members/:conversationId` (add a chat, change a handle, remove a chat) and `PUT /api/outposts/:id/instructions` (the outpost's instructions, which a phone reads in `GET /api/outposts/:id`). These stay on the Mac until the owner decides otherwise.
 - Never from a phone: both A2A routes, `GET /api/a2a/chats/:chatId/.well-known/agent-card.json` and `POST /api/a2a/chats/:chatId`. A paired phone has no A2A endpoint, and a remote request never passes the launch-token check those routes need.
 - Added with release 2 of outposts, always allowed: `POST /api/outposts/:id/posts/:postId/start-now` (Start anyway on a held request, like cancel) and `GET /api/conversations/:id/outpost-drafts` (the draft line under a turn; counts and ids only).
 - Never from a phone: `GET /api/outposts/drafts/:id`, the draft the create sheet opens from. Starting a story through the sheet is `POST /api/outposts`, which is create and membership and stays on the Mac.
@@ -283,7 +285,7 @@ Done on `feat/phone-ready`. The rules live in `docs/design/RESPONSIVE.md`.
 
 - **One phone query.** `(max-width: 640px), (max-height: 500px) and (pointer: coarse)` in CSS and in `apps/web/src/ui/breakpoints.ts`, so a phone on its side gets the phone shell and the tab-strip Settings.
 - **Tab bar.** Home, Chats, Analytics, Tickets, Map and More; Docs, Phone and Settings are under More, which shows as active while one of its pages is open.
-- **Mac-only parts hidden.** `useRemoteClient` (`apps/web/src/phone/use-remote-client.ts`) reads `GET /api/remote/session`. On a paired device the Terminal menu item and dock, the Browser menu item, the update mark, Full Disk Access, Export diagnostics, a project's Preview and "Keep sign-ins in the browser", and "Open the worktree folder" are not rendered, and the clone dialog says "on your Mac". A Settings section whose switch is off is dimmed, inert and headed "Turned off for phones on your Mac".
+- **Mac-only parts hidden.** `useRemoteClient` (`apps/web/src/phone/use-remote-client.ts`) reads `GET /api/remote/session`. On a paired device the Terminal menu item and dock, the Browser menu item, the update mark, Full Disk Access, Export diagnostics, a project's Preview, the Browser pane section's signed-in sites, and "Open the worktree folder" are not rendered, and the clone dialog and **Add folder…** say "your Mac". A Settings section whose switch is off is dimmed, inert and headed "Turned off for phones on your Mac".
 - **Install.** `manifest.webmanifest`, 192 and 512 icons, an apple-touch-icon and `theme-color` (kept in step with the chosen theme). The gateway serves these few files to an unpaired phone too, like `theme.css`; the manifest link asks for credentials so a paired phone gets it through the cookie.
 - **Viewport.** `viewport-fit=cover`, `interactive-widget=resizes-content`, a `100dvh` shell, safe-area padding, and the tab bar hidden while the keyboard is open.
 - **Touch.** 44px hit areas for the shared controls and 16px inputs under `(pointer: coarse)`.
@@ -448,6 +450,8 @@ Every remote request is audited with the device id. The Mac shows a "phone conne
 ### Keeping the Mac awake
 
 While phone access is on and a run is active or a phone is connected, Spark holds a power assertion. A closed lid on battery still sleeps the Mac; the phone then shows "Your Mac is asleep or offline" with the last-seen time.
+
+Built: the Mac app checks every 30 seconds (`apps/desktop/src/keep-awake.ts`). Remote control is on when a Serve hostname is saved (`GET /api/remote/access`); a run is active when `GET /api/runs/active` counts one, which includes a turn sleeping until a wakeup and a working Terminal session turn; a phone is connected when `GET /api/remote/devices` shows a device with an open stream. While all that holds, Electron's `prevent-app-suspension` blocker is held; it is released when it no longer holds, when the API can't be read and on quit. The "Your Mac is asleep or offline" state is not built yet.
 
 ## Phases for the relay version
 

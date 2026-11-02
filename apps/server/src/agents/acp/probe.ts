@@ -111,7 +111,7 @@ export async function probeCapabilities(
     throw toProviderError(definition.name, error, agent?.stderrTail() ?? '');
   } finally {
     timer.abort();
-    agent?.kill();
+    await agent?.kill();
     await rm(workdir, { recursive: true, force: true });
   }
 }

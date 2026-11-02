@@ -2,7 +2,8 @@ import type { RefObject } from 'react';
 import type { Project } from '@spark-outpost/contracts';
 import { FolderIcon, PlusIcon, TickIcon, XIcon } from '../../ui/icons.tsx';
 import { AllowlistEditor } from './AllowlistEditor.tsx';
-import type { RepoRequest } from './use-chat-repos.ts';
+import type { PickerAction } from '../../ui/ChoicePicker.tsx';
+import type { RepoChange } from './repo-list.ts';
 
 interface RepoMenuProps {
   id: string;
@@ -12,8 +13,8 @@ interface RepoMenuProps {
   recent: Project[];
   busy: boolean;
   error: string | null;
-  onChange: (request: RepoRequest) => void;
-  onBrowse: () => void;
+  actions: readonly PickerAction[];
+  onChange: (request: RepoChange) => void;
 }
 
 function RepoText({ project }: { project: Project }) {
@@ -34,7 +35,7 @@ function LinkedRepo({
   project: Project;
   primary: boolean;
   busy: boolean;
-  onChange: (request: RepoRequest) => void;
+  onChange: (request: RepoChange) => void;
 }) {
   return (
     <li className="repo-row" title={project.rootPath}>
@@ -76,8 +77,8 @@ export function RepoMenu({
   recent,
   busy,
   error,
+  actions,
   onChange,
-  onBrowse,
 }: RepoMenuProps) {
   return (
     <div
@@ -119,13 +120,6 @@ export function RepoMenu({
           <RepoText project={project} />
         </button>
       ))}
-      <div className="repo-sep" />
-      <button type="button" className="mopt" onClick={onBrowse}>
-        <span className="mi">
-          <PlusIcon />
-        </span>
-        <b>{linked.length > 0 ? 'Add another repo…' : 'Choose a folder…'}</b>
-      </button>
       <button
         type="button"
         className="mopt"
@@ -147,6 +141,24 @@ export function RepoMenu({
         <b>No project folder</b>
         <TickIcon />
       </button>
+      <div className="repo-sep" />
+      {actions.map((action) => (
+        <button
+          key={action.id}
+          type="button"
+          className="mopt"
+          disabled={busy || action.disabled}
+          onClick={action.onSelect}
+        >
+          <span className="mi">
+            <PlusIcon />
+          </span>
+          <span className="repo-text">
+            <b>{action.label}</b>
+            {action.description && <small>{action.description}</small>}
+          </span>
+        </button>
+      ))}
       {error && (
         <p className="mpop-error" role="alert">
           {error}

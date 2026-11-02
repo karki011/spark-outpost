@@ -13,6 +13,7 @@ import { followedFiles } from '../agent-config/instructions.ts';
 import { fakeApprovalTurn, wantsApproval } from './fake-approvals.ts';
 import { fakePublishTurn, wantsPublish } from './fake-publish.ts';
 import { editStreamPlan, fakeEditStream } from './fake-edit-stream.ts';
+import { fakeFilesTurn, wantsFiles } from './fake-files.ts';
 import { commandPlan, fakeCommandTurn } from './fake-commands.ts';
 import { asFinalMessage, fakeCommentary } from './fake-phases.ts';
 import { ZAI_EFFORTS, ZAI_MODELS } from '../agents/acp/zai.ts';
@@ -29,6 +30,8 @@ const FAKE_FAILURE_TRIGGER = '#fail';
 export const FAKE_REJECTED_MODEL = 'gpt-6.1-sol';
 export const FAKE_REJECTION_BODY = `{"type":"error","status":400,"error":{"type":"invalid_request_error","message":"The '${FAKE_REJECTED_MODEL}' model is not supported when using Codex with a ChatGPT account."}}`;
 const FAKE_PLAN_TRIGGER = '#plan';
+const FAKE_SLOW_PLAN_TRIGGER = '#slow';
+const FAKE_SLOW_PLAN_MS = 2_500;
 const FAKE_MID_TURN_MS = 8_000;
 const FAKE_TITLE_TRIGGER = '#title';
 export const FAKE_TITLE = 'Tidy the fake reply';
@@ -327,6 +330,10 @@ async function* fakeTurn(
     yield* fakeCommandTurn(turn, commands);
     return;
   }
+  if (wantsFiles(turn.prompt)) {
+    yield* fakeFilesTurn(turn);
+    return;
+  }
   const editStream = editStreamPlan(turn.prompt);
   if (editStream) {
     yield* fakeEditStream(turn, editStream);
@@ -346,14 +353,17 @@ async function* fakeTurn(
   const outputs = (
     turn.prompt.includes(FAKE_DIGEST_TRIGGER)
       ? replyOutputs(fakeDigestReply(turn.prompt))
-      : fakeProviderPlan(turn.prompt, turn.attachments, turn.projectRoots)
+      : fakeProviderPlan(turn.prompt, turn.attachments, turn.chatFolder ? [] : turn.projectRoots)
   ).map((output) => withFakeContext(turn, output));
   if (titled) outputs.push({ kind: 'text_delta', delta: `\n\nTitle: ${FAKE_TITLE}` });
+  const planMs = turn.prompt.includes(FAKE_SLOW_PLAN_TRIGGER) ? FAKE_SLOW_PLAN_MS : timing.stepMs;
   for (const output of outputs) {
     const wait =
-      output.kind === 'step_started' || output.kind === 'step_finished' || output.kind === 'plan'
-        ? timing.stepMs
-        : timing.wordMs;
+      output.kind === 'plan'
+        ? planMs
+        : output.kind === 'step_started' || output.kind === 'step_finished'
+          ? timing.stepMs
+          : timing.wordMs;
     await delay(wait, undefined, { signal: turn.signal });
     yield output;
   }

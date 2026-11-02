@@ -7,6 +7,7 @@ import { CrewBlob } from './CrewBlob.tsx';
 import { crewStateWord, type CrewAgent, type CrewState } from './crew-model.ts';
 
 const TONES: Record<CrewState, string> = {
+  inactive: 'pending',
   thinking: 'active',
   working: 'active',
   waiting: 'waiting',
@@ -26,7 +27,13 @@ interface CrewMemberRowProps {
 export function CrewMemberRow({ agent, job, blobSize = 30, children }: CrewMemberRowProps) {
   return (
     <li className="crow" data-state={agent.state}>
-      <CrewBlob name={agent.name} provider={agent.provider} state={agent.state} size={blobSize} />
+      <CrewBlob
+        name={agent.name}
+        provider={agent.provider}
+        state={agent.state}
+        size={blobSize}
+        blobId={agent.blobId}
+      />
       <span className="nm">
         <b>
           {agent.name}

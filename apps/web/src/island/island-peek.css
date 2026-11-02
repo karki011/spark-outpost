@@ -52,7 +52,7 @@
   top: calc(var(--top) - 6px);
   border-radius: 8px;
   font:
-    600 9.5px Geist,
+    600 12px Inter,
     sans-serif;
   background: var(--raise);
   color: var(--muted);
@@ -104,16 +104,6 @@
   translate: 0 9px;
 }
 
-.isl-hhead {
-  margin: 0 0 2px;
-  padding: 0 8px;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
 .isl-peekblob:focus-visible,
 .isl-peekmore:focus-visible {
   outline: 2px solid var(--accent);
@@ -136,7 +126,7 @@
   max-width: 240px;
   text-align: left;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   background: var(--panel);
   border: 1px solid var(--line);
@@ -183,6 +173,7 @@
   fill: var(--scout-eye);
 }
 
+:root[data-motion='rest'] .isl-root .scout:not(.working) *,
 .isl-root[data-rest] .scout:not(.working) * {
   animation-play-state: paused;
 }

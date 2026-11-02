@@ -1,5 +1,6 @@
 import { useState, type KeyboardEvent, type RefObject } from 'react';
 import type { Project } from '@spark-outpost/contracts';
+import type { PickerAction } from '../ui/ChoicePicker.tsx';
 
 const FILTER_FROM = 7;
 
@@ -12,11 +13,12 @@ export function recentProjects(projects: readonly Project[]): Project[] {
 interface ProjectMenuProps {
   projects: readonly Project[];
   selected: string | null | undefined;
-  adding: boolean;
+  busy: boolean;
   error: string | null;
+  actions: readonly PickerAction[];
   chipRef: RefObject<HTMLButtonElement | null>;
   onPick: (id: string | null) => void;
-  onAdd: () => void;
+  onAction: (action: PickerAction) => void;
   onClose: () => void;
 }
 
@@ -100,16 +102,20 @@ export function ProjectMenu(props: ProjectMenuProps) {
           <small>Chat only, no files</small>
         </button>
       </div>
-      <button
-        type="button"
-        role="menuitem"
-        className="isl-menu-add"
-        disabled={props.adding}
-        onClick={props.onAdd}
-      >
-        <span aria-hidden="true">+</span>
-        <span>{props.adding ? 'Adding the project…' : 'Add a project…'}</span>
-      </button>
+      {props.actions.map((action) => (
+        <button
+          key={action.id}
+          type="button"
+          role="menuitem"
+          className="isl-menu-add"
+          disabled={props.busy || action.disabled}
+          title={action.description}
+          onClick={() => props.onAction(action)}
+        >
+          <span aria-hidden="true">+</span>
+          <span>{action.label}</span>
+        </button>
+      ))}
       {props.error && (
         <p className="isl-menu-empty bad" role="alert">
           {props.error}

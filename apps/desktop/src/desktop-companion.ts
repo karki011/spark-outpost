@@ -2,7 +2,6 @@ import path from 'node:path';
 import {
   app,
   BrowserWindow,
-  dialog,
   globalShortcut,
   ipcMain,
   Menu,
@@ -11,7 +10,7 @@ import {
   type IpcMainEvent,
   type IpcMainInvokeEvent,
 } from 'electron';
-import { parseIslandRegions } from '@spark-outpost/contracts';
+import { isIslandHeight, parseIslandRegions } from '@spark-outpost/contracts';
 import { createCompanion, type Companion, type CompanionStatus } from './companion.ts';
 import {
   isIslandSize,
@@ -25,10 +24,15 @@ import { targetsApi } from './api-token.ts';
 import { startAttentionHost, type AttentionHost } from './attention-host.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { isSize } from './island-geometry.ts';
-import { trayTemplate } from './island-options.ts';
+import { islandToggle, trayTemplate } from './island-options.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
 import { appLayout } from './layout.ts';
+import { menuBarItem, type MenuBarTray } from './menu-bar.ts';
+import { noActivate } from './no-activate.ts';
+import { readAssistiveTech } from './assistive-tech.ts';
 import { startMeetingAlertHost } from './meeting-alert-host.ts';
+import { electronNotices, meetingNotifier } from './meeting-notification.ts';
+import { watchSparkFocus } from './spark-focus.ts';
 import { startViewingHost } from './viewing-host.ts';
 import { watchHourCycle } from './hour-cycle.ts';
 import { startVoiceHost, type VoiceHost } from './voice/host.ts';
@@ -77,10 +81,15 @@ function broadcast(channel: string, payload: unknown): void {
   }
 }
 
-function trayIcon(file: string) {
-  const image = nativeImage.createFromPath(file);
+function openTray(iconFile: string, toolTip: string): MenuBarTray {
+  const image = nativeImage.createFromPath(iconFile);
   image.setTemplateImage(true);
-  return image;
+  const tray = new Tray(image);
+  tray.setToolTip(toolTip);
+  return {
+    setMenu: (template) => tray.setContextMenu(Menu.buildFromTemplate(template)),
+    destroy: () => tray.destroy(),
+  };
 }
 
 export async function startCompanionHost(options: CompanionHostOptions): Promise<CompanionHost> {
@@ -88,35 +97,52 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   let island: IslandWindow | null = null;
   let pendingChat: { id: string; runId: string | null } | null = null;
   let pendingSettings: string | null = null;
-  let saving = Promise.resolve();
   let attention: AttentionHost | null = null;
-  const tray = new Tray(trayIcon(options.trayIcon));
-  tray.setToolTip(options.appName);
+  const menuBar = menuBarItem(() => openTray(options.trayIcon, options.appName));
 
   const fromSpark = (event: IpcMainEvent | IpcMainInvokeEvent) =>
     targetsApi(event.senderFrame?.url ?? '', options.origin);
   const fromIsland = (event: IpcMainEvent | IpcMainInvokeEvent) =>
     fromSpark(event) && island !== null && island.owns(event.sender.id);
 
-  const refreshTray = (status: CompanionStatus) => {
-    tray.setContextMenu(
-      Menu.buildFromTemplate(
-        trayTemplate(
-          { appName: options.appName, companionOn: status.enabled, supported: status.supported },
-          {
-            openSpark: options.showSpark,
-            toggleCompanion: (on) => companion.setEnabled(on),
-            quit: options.quit,
-          },
-        ),
-      ),
+  const refreshMenus = (status: CompanionStatus) => {
+    const state = {
+      appName: options.appName,
+      companionOn: status.enabled,
+      supported: status.supported,
+    };
+    const toggleCompanion = (on: boolean) => companion.setEnabled(on);
+    menuBar.update(
+      status.menuBar,
+      trayTemplate(state, { openSpark: options.showSpark, toggleCompanion, quit: options.quit }),
     );
+    app.dock?.setMenu(Menu.buildFromTemplate(islandToggle(state, toggleCompanion)));
   };
 
-  const save = (settings: CompanionSettings) => {
-    saving = saving
-      .then(() => saveSettings(options.settingsPath, settings))
-      .catch((error: Error) => console.error(`[companion] Could not save: ${error.message}`));
+  const save = async (settings: CompanionSettings) => {
+    try {
+      await saveSettings(options.settingsPath, settings);
+    } catch (error) {
+      console.error(
+        `[companion] Could not save: ${error instanceof Error ? error.message : error}`,
+      );
+      throw error;
+    }
+  };
+
+  const layout = appLayout({
+    isPackaged: app.isPackaged,
+    appPath: app.getAppPath(),
+    resourcesPath: process.resourcesPath,
+  });
+  const preventActivation = noActivate(layout.noActivateAddon, options.log);
+
+  const registerShortcut = (accelerator: string, run: () => void) => {
+    try {
+      return globalShortcut.register(accelerator, run);
+    } catch {
+      return false;
+    }
   };
 
   const companion = createCompanion(initial, {
@@ -129,6 +155,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         size: () => companion.status().islandSize,
         hideInShare: () => companion.status().hideInShare,
         savePosition: (position) => companion.setPosition(position),
+        preventActivation,
         log: options.log,
         onGone: () => {
           if (island === opened) island = null;
@@ -139,22 +166,17 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       opened.sparkFocus(sparkFocused());
       return opened;
     },
-    register: (accelerator, run) => {
-      try {
-        return globalShortcut.register(accelerator, run);
-      } catch {
-        return false;
-      }
-    },
+    register: registerShortcut,
     unregister: (accelerator) => globalShortcut.unregister(accelerator),
     save,
+    preview: (status) => broadcast(IPC.companionChanged, status),
     changed: (status) => {
-      refreshTray(status);
+      refreshMenus(status);
       attention?.refresh();
       broadcast(IPC.companionChanged, status);
     },
   });
-  refreshTray(companion.status());
+  refreshMenus(companion.status());
 
   const sparkFocused = () =>
     BrowserWindow.getAllWindows().some(
@@ -169,20 +191,8 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       focused = next;
       island?.sparkFocus(next);
     });
-  app.on('browser-window-focus', reportFocus);
-  app.on('browser-window-blur', reportFocus);
-  app.on('did-become-active', reportFocus);
+  const stopFocusWatch = watchSparkFocus(app, BrowserWindow.getAllWindows(), reportFocus);
   ipcMain.handle(IPC.islandSparkFocused, (event) => fromIsland(event) && sparkFocused());
-  ipcMain.handle(IPC.islandPickFolder, async (event) => {
-    if (!fromIsland(event)) return null;
-    app.focus({ steal: true });
-    const picked = await dialog.showOpenDialog({
-      title: 'Choose a project folder',
-      buttonLabel: 'Use this folder',
-      properties: ['openDirectory', 'createDirectory'],
-    });
-    return picked.canceled ? null : (picked.filePaths[0] ?? null);
-  });
 
   ipcMain.handle(IPC.companionGet, (event) => (fromSpark(event) ? companion.status() : null));
   ipcMain.handle(IPC.companionSetEnabled, (event, on: unknown) =>
@@ -207,6 +217,15 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     island?.sizeChanged();
     return status;
   });
+  ipcMain.handle(IPC.companionSetIslandHeight, (event, height: unknown) => {
+    if (!fromSpark(event) || !isIslandHeight(height)) return companion.status();
+    return companion.setIslandHeight(height);
+  });
+  ipcMain.handle(IPC.companionPreviewIslandHeight, (event, height: unknown) =>
+    fromSpark(event) && isIslandHeight(height)
+      ? companion.previewIslandHeight(height)
+      : companion.status(),
+  );
   ipcMain.handle(IPC.companionSetAutoExpand, (event, on: unknown) =>
     fromSpark(event) && typeof on === 'boolean' ? companion.setAutoExpand(on) : companion.status(),
   );
@@ -219,6 +238,9 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   });
   ipcMain.handle(IPC.companionSetNotify, (event, on: unknown) =>
     fromSpark(event) && typeof on === 'boolean' ? companion.setNotify(on) : companion.status(),
+  );
+  ipcMain.handle(IPC.companionSetMenuBar, (event, on: unknown) =>
+    fromSpark(event) && typeof on === 'boolean' ? companion.setMenuBar(on) : companion.status(),
   );
   ipcMain.handle(IPC.islandGeometry, (event) => (fromIsland(event) ? island!.geometry() : null));
   ipcMain.handle(IPC.pendingChat, (event) => {
@@ -299,14 +321,14 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     islandCenter: () => island?.center() ?? null,
     sendToIsland: (channel, payload) => island?.post(channel, payload),
     hideInShare: () => companion.status().hideInShare,
+    preventActivation,
+    assistive: readAssistiveTech,
+    register: registerShortcut,
+    unregister: (accelerator) => globalShortcut.unregister(accelerator),
+    notifier: meetingNotifier(electronNotices(options.log)),
     log: options.log,
   });
 
-  const layout = appLayout({
-    isPackaged: app.isPackaged,
-    appPath: app.getAppPath(),
-    resourcesPath: process.resourcesPath,
-  });
   const voice: VoiceHost | null = await startVoiceHost({
     helperPath: layout.voiceBin,
     modelsDir: layout.voiceModels,
@@ -350,12 +372,14 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.companionSetShortcut,
         IPC.companionSetSound,
         IPC.companionSetIslandSize,
+        IPC.companionSetIslandHeight,
+        IPC.companionPreviewIslandHeight,
         IPC.companionSetAutoExpand,
         IPC.companionSetHideInShare,
         IPC.companionSetNotify,
+        IPC.companionSetMenuBar,
         IPC.islandGeometry,
         IPC.islandSparkFocused,
-        IPC.islandPickFolder,
         IPC.pendingChat,
         IPC.pendingSettings,
       ]) {
@@ -374,10 +398,8 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       ]) {
         ipcMain.removeAllListeners(channel);
       }
-      app.off('browser-window-focus', reportFocus);
-      app.off('browser-window-blur', reportFocus);
-      app.off('did-become-active', reportFocus);
-      tray.destroy();
+      stopFocusWatch();
+      menuBar.dispose();
     },
   };
 }

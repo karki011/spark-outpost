@@ -140,4 +140,28 @@ describe('sub-agent progress', () => {
       expect.objectContaining({ content: { waitingOn: 0 } }),
     ]);
   });
+
+  it('keeps waiting on background work while the main agent only waits for its output', () => {
+    const { see, all } = progress();
+    see({ kind: 'background_work', agents: 1, tasks: 1, names: ['Builder', 'CI'] });
+    const wait = { name: 'TaskOutput', tool: true, waits: true } as const;
+    see({ kind: 'step_started', ...wait });
+    see({ kind: 'step_started', name: 'Read routes.ts', tool: true });
+    see({ kind: 'step_finished', name: 'Read routes.ts', tool: true });
+    see({ kind: 'step_finished', ...wait });
+    expect(waits(all)).toEqual([2, 0, 2]);
+  });
+
+  it('counts a scheduled wakeup as one thing the turn waits on, with its time', () => {
+    const { see } = progress();
+    const wakesAt = 1_792_680_480_000;
+    expect(see({ kind: 'background_work', agents: 0, tasks: 0, names: [], wakesAt })).toEqual([
+      expect.objectContaining({
+        content: { waitingOn: 1, background: { agents: 0, tasks: 0, names: [], wakesAt } },
+      }),
+    ]);
+    expect(see({ kind: 'background_work', agents: 0, tasks: 0, names: [] })).toEqual([
+      expect.objectContaining({ content: { waitingOn: 0 } }),
+    ]);
+  });
 });

@@ -1,3 +1,4 @@
+import type { AgentRuntime } from '../agents/acp/spark-tools.ts';
 import type { BrowserHost } from '../browser/host-client.ts';
 import type { AgentCalendarHosts } from '../calendar/agent/access.ts';
 import type { MacHost } from '../mac-control/host-client.ts';
@@ -17,11 +18,9 @@ import type { InboxDeps } from '../tickets/inbox.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
 import type { StackGit } from '../outposts/ports.ts';
 import type { RequestWakes } from '../outposts/request-wait.ts';
-import type { ParkedTurns } from '../workflow/parked-turns.ts';
 
 export interface OutpostToolDeps {
   wakes: RequestWakes;
-  parked?: Pick<ParkedTurns, 'park'>;
   stackGit?: StackGit;
 }
 
@@ -43,6 +42,8 @@ export interface SparkToolDeps {
   calendar?: AgentCalendarHosts | undefined;
   shotDir?: string;
   outposts?: OutpostToolDeps | undefined;
+  agentRuntime?: AgentRuntime | undefined;
+  chatFolders?: string | undefined;
 }
 
 export interface ReplySoFar {
@@ -66,12 +67,14 @@ export interface SparkScope {
   conversationId: string | null;
   runId: string | null;
   readOnly?: boolean;
+  assistant?: boolean;
   actions?: SparkActionHooks;
   observations?: RunObservations | undefined;
   publish?: PublishScope | null | undefined;
   commands?: SparkCommandScope;
   beforeToolCall?: () => Promise<void>;
   rebinds?: boolean;
+  codeMode?: boolean;
 }
 
 export function ticketDepsFor(deps: SparkToolDeps, scope: SparkScope): TicketDeps {

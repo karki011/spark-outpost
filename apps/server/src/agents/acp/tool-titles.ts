@@ -1,0 +1,96 @@
+import type * as acp from '@agentclientprotocol/sdk';
+import { friendlyStep, isMcpToolName } from '@spark-outpost/contracts';
+import { objectFields } from './object-fields.ts';
+
+export function toolNameOf(toolCall: Pick<acp.ToolCallUpdate, '_meta' | 'title'>): string | null {
+  const named = objectFields(toolCall).name;
+  if (typeof named === 'string' && named.trim()) return named.trim();
+  const meta = objectFields(objectFields(toolCall._meta).claudeCode).toolName;
+  if (typeof meta === 'string' && meta.trim()) return meta.trim();
+  return toolCall.title && isMcpToolName(toolCall.title) ? toolCall.title.trim() : null;
+}
+
+const ABSOLUTE_PATH = /(^|[\s(])(\/[^\s`'")]+)/g;
+
+function asCommand(title: string, kind: string | null | undefined): string {
+  const runs = kind === 'execute' && title !== 'Terminal' && !title.includes('`');
+  return runs ? `\`${title}\`` : title;
+}
+
+export function describeTool(title: string, kind?: string | null, input?: unknown): string {
+  const trimmed = title.trim();
+  if (!trimmed) return 'Using a tool';
+  const friendly = friendlyStep(trimmed, input);
+  if (friendly !== trimmed) return friendly;
+  return asCommand(trimmed, kind)
+    .split('`')
+    .map((part, index) =>
+      index % 2 === 1
+        ? part
+        : part.replace(ABSOLUTE_PATH, (_match, lead: string, path: string) => {
+            const name = path.split('/').filter(Boolean).at(-1) ?? path;
+            return `${lead}\`${name}\``;
+          }),
+    )
+    .join('`');
+}
+
+const UNADDRESSED_FETCH = 'Fetch';
+
+export function awaitsAddress(title: string, kind: string | null | undefined): boolean {
+  return kind === 'fetch' && title.trim() === UNADDRESSED_FETCH;
+}
+
+const TARGET_CHARS = 400;
+
+const OPENS_PULL_REQUEST =
+  /\bgh\s+pr\s+create\b|\bhub\s+pull-request\b|\bglab\s+mr\s+create\b|create_pull_request/i;
+
+export function opensPullRequest(title: string | null | undefined, rawInput: unknown): boolean {
+  if (title && OPENS_PULL_REQUEST.test(title)) return true;
+  if (rawInput === undefined || rawInput === null) return false;
+  try {
+    return OPENS_PULL_REQUEST.test(JSON.stringify(rawInput) ?? '');
+  } catch {
+    return false;
+  }
+}
+
+function isEmptyInput(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length === 0;
+  return typeof value === 'object' && value !== null && Object.keys(value).length === 0;
+}
+
+export function toolTarget(
+  locations: readonly { path: string; line?: number | null }[] | null | undefined,
+  rawInput: unknown,
+): string | null {
+  const paths = (locations ?? []).map((location) => `${location.path}:${location.line ?? ''}`);
+  let input = '';
+  if (rawInput !== undefined && rawInput !== null && !isEmptyInput(rawInput)) {
+    try {
+      input = JSON.stringify(rawInput) ?? '';
+    } catch {
+      input = '';
+    }
+  }
+  const target = [paths.join(','), input].filter(Boolean).join(' ');
+  return target ? target.slice(0, TARGET_CHARS) : null;
+}
+
+const PATH_KEYS = ['file_path', 'notebook_path', 'path'];
+
+export function toolPath(
+  locations: readonly { path: string }[] | null | undefined,
+  rawInput: unknown,
+): string | null {
+  const located = locations?.find((location) => location.path)?.path;
+  if (located) return located;
+  if (typeof rawInput !== 'object' || rawInput === null) return null;
+  const input = rawInput as Record<string, unknown>;
+  for (const key of PATH_KEYS) {
+    const value = input[key];
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return null;
+}

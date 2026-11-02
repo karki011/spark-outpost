@@ -91,7 +91,10 @@ test('a sign-in keeps its other sites, and Add this site adds the one an agent w
     .getByRole('button', { name: 'Add this site, https://costs.okta.example, to Cost app' })
     .click();
   await expect(item).toContainText('https://app.costs.example +2');
-  await expect(item.getByRole('status')).toHaveCount(0);
+  await expect(item.getByRole('status')).toContainText(
+    'Return to your chat and ask the agent to retry',
+  );
+  await expect(item.getByRole('status')).not.toContainText('An agent’s tab ended on');
   await item.getByRole('button', { name: 'Edit sign-in Cost app' }).click();
   await expect(page.getByLabel('Other sign-in sites')).toHaveValue(
     'https://auth.costs.example, https://costs.okta.example',

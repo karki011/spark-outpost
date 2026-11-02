@@ -1,17 +1,22 @@
 import { join, resolve } from 'node:path';
-import { DEV_API_TOKEN_FILE, isKeepTerminalsStop } from '@spark-outpost/contracts';
-import { loadConfig } from '../config.ts';
+import { DEV_API_TOKEN_FILE, artifactPortFor, isKeepTerminalsStop } from '@spark-outpost/contracts';
+import { LOCAL_DATA_DIR, loadConfig, sparkDataDir } from '../config.ts';
+import { chatFoldersBase } from '../chat-files/folders.ts';
+import { startArtifactOrigin } from '../artifacts/origin-server.ts';
 import { startMorningBrief } from '../digest/morning.ts';
 import { ensureLocalWorkspace } from '../persistence/conversations.ts';
+import { acceptRulesBaseline } from '../spark-rules/rules-store.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
 import { startOutcomeSweep } from '../outcomes/sweep.ts';
+import { startArchiveSweep } from '../workflow/archive-inactive.ts';
 import { configuredBackup } from '../persistence/startup-backup.ts';
 import { migrateOrExit } from '../persistence/migrate-startup.ts';
 import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
 import { configuredSecretStore } from '../setup/secrets.ts';
+import { processKillsSent } from '../terminal/process-group.ts';
 import { loginShellSpawner } from '../terminal/pty.ts';
 import { savedPort, savePort } from '../terminal/tmux/stable-port.ts';
 import { chooseTmux, killTmuxServer, tmuxChoiceLine } from '../terminal/tmux/tmux-host.ts';
@@ -53,7 +58,8 @@ import { CALENDAR_WRITTEN_CHANNEL, agentCalendarHosts } from '../calendar/agent/
 import { generateVapidKeys, webPushSend } from '../remote/push-send.ts';
 import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { startSlackSocket } from '../slack/socket.ts';
-import { pruneOldRows } from './startup-prune.ts';
+import { armShutdownWatchdog, runShutdownSteps } from './shutdown-steps.ts';
+import { schedulePrune, type PruneSchedule } from './startup-prune.ts';
 import { cloneJobsFor } from './project-clone-routes.ts';
 import { connectDesktopBrowser } from '../browser/host-client.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
@@ -76,6 +82,9 @@ await migrateOrExit(db, { backup: configuredBackup(config) });
 
 const workspaceId = await ensureLocalWorkspace(db);
 await seedModelStats(db);
+await acceptRulesBaseline().catch((error: unknown) => {
+  console.error("Could not record Spark's accepted rules", error);
+});
 const hub = new RunEventHub();
 const activeWork = new ActiveWork();
 const stopLagMonitor = startLagMonitor({ processName: 'API', work: activeWork });
@@ -173,8 +182,9 @@ const cloneDeps = {
       : null,
   reservedFolders: [config.SPARK_DATA_DIR, config.SPARK_LOG_DIR, config.BACKUP_DIR],
 };
-const localDir = resolve(import.meta.dirname, '../../../..', '.local');
-const nativeDataDir = config.SPARK_DATA_DIR ?? localDir;
+const localDir = LOCAL_DATA_DIR;
+const nativeDataDir = sparkDataDir(config);
+const chatFolders = chatFoldersBase(nativeDataDir, config.BRANCH_PREFIX);
 const nativeSessionsDir = join(nativeDataDir, config.BRANCH_PREFIX, 'terminal-sessions');
 const perInstance = config.SPARK_DATA_DIR ? '' : `-${config.API_PORT}`;
 const terminalTmux = chooseTmux(
@@ -217,6 +227,7 @@ const nativeMcp = await startSparkMcpHost(
     codeScan: createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) }),
     browser: desktopBrowser?.host,
     mac: desktopBrowser?.mac,
+    chatFolders,
     calendar: agentCalendarHosts(desktopCalendar, {
       db,
       secrets,
@@ -250,7 +261,20 @@ const nativeTerminals = await createNativeRuntime({
     appEvents.publish(JSON.stringify({ kind: 'terminal_start', conversationId, runId: null })),
 });
 await nativeTerminals.recover();
-desktopBrowser?.blockPorts([nativeMcp.port, nativeTerminals.port]);
+const artifactPages = await startArtifactOrigin({
+  db,
+  chatFolders,
+  port: artifactPortFor(config.API_PORT),
+  frameAncestors: [`http://127.0.0.1:${config.API_PORT}`, ...config.ALLOWED_ORIGINS],
+}).catch((error: unknown) => {
+  console.error('Could not start the artifact page server', (error as Error).message);
+  return null;
+});
+desktopBrowser?.blockPorts([
+  nativeMcp.port,
+  nativeTerminals.port,
+  artifactPortFor(config.API_PORT),
+]);
 const clones = cloneJobsFor(cloneDeps);
 await clones.recover();
 const { app, reconcileRemote } = createAppParts({
@@ -273,6 +297,8 @@ const { app, reconcileRemote } = createAppParts({
   }),
   agentRuntime: config.AGENT_RUNTIME,
   loginShell,
+  chatFolders,
+  artifactOriginDown: artifactPages === null,
   terminals,
   nativeTerminals,
   previews,
@@ -310,6 +336,7 @@ const { app, reconcileRemote } = createAppParts({
 const outcomeSweep = startOutcomeSweep(db, workspaceId, {
   sampleRate: config.OUTCOME_SAMPLE_RATE,
 });
+const archiveSweep = config.ARCHIVE_SWEEP ? startArchiveSweep(db, workspaceId) : null;
 const morningBrief = config.MORNING_BRIEF
   ? startMorningBrief(db, workspaceId, () =>
       loadInbox({
@@ -323,9 +350,15 @@ const morningBrief = config.MORNING_BRIEF
     )
   : null;
 
+let pruneSchedule: PruneSchedule | null = null;
 const server = app.listen(config.API_PORT, config.API_HOST, () => {
   console.log(`API listening on http://${config.API_HOST}:${config.API_PORT}`);
-  void pruneOldRows({ db, workspaceId, auditRetentionDays: config.AUDIT_RETENTION_DAYS });
+  pruneSchedule = schedulePrune({
+    db,
+    workspaceId,
+    auditRetentionDays: config.AUDIT_RETENTION_DAYS,
+    chatFolders,
+  });
   void slackSocket.refresh();
   outposts.start();
   reconcileRemote().catch((error: unknown) => {
@@ -342,30 +375,45 @@ let stopping = false;
 const shutdown = async (keepTerminals = false) => {
   if (stopping) return;
   stopping = true;
-  clones.stopAll();
-  if (keepTerminals) await nativeTerminals.detach();
-  else await nativeTerminals.dispose();
-  terminals.killAll();
-  if (terminalTmux.host && !keepTerminals) killTmuxServer(terminalTmux.host);
-  await nativeMcp.close();
-  await nativeApprovalListener.close();
-  await calendarWrittenListener.close();
-  await previews.stopAll('shutdown').catch(() => undefined);
-  await agentTerminals.stopAll().catch(() => undefined);
-  stopLagMonitor();
-  outcomeSweep.stop();
-  morningBrief?.stop();
-  slackSocket.stop();
-  await slackNotifier.stop();
-  calendarTicker?.stop();
-  googleCalendar?.stop();
-  await pushNotifier.stop();
-  await outposts.close();
-  server.close();
-  server.closeAllConnections();
-  await listener.close();
-  await appEventListener.close();
-  await db.end();
+  armShutdownWatchdog((code) => process.exit(code));
+  await runShutdownSteps([
+    ['clones', () => clones.stopAll()],
+    [
+      'Terminal sessions',
+      () => (keepTerminals ? nativeTerminals.detach() : nativeTerminals.dispose()),
+    ],
+    ['terminals', () => terminals.killAll()],
+    ['process kills', () => processKillsSent()],
+    [
+      'tmux',
+      () => {
+        if (terminalTmux.host && !keepTerminals) killTmuxServer(terminalTmux.host);
+      },
+    ],
+    ['native MCP', () => nativeMcp.close()],
+    ['artifact pages', () => artifactPages?.close()],
+    ['approval listener', () => nativeApprovalListener.close()],
+    ['calendar listener', () => calendarWrittenListener.close()],
+    ['previews', () => previews.stopAll('shutdown')],
+    ['agent terminals', () => agentTerminals.stopAll()],
+    ['lag monitor', () => stopLagMonitor()],
+    ['outcome sweep', () => outcomeSweep.stop()],
+    ['archive sweep', () => archiveSweep?.stop()],
+    ['prune schedule', () => pruneSchedule?.stop()],
+    ['morning brief', () => morningBrief?.stop()],
+    ['Slack socket', () => slackSocket.stop()],
+    ['Slack notifier', () => slackNotifier.stop()],
+    ['calendar ticker', () => calendarTicker?.stop()],
+    ['Google Calendar', () => googleCalendar?.stop()],
+    ['push notifier', () => pushNotifier.stop()],
+    ['outposts', () => outposts.close()],
+    ['HTTP server', () => server.close()],
+    ['HTTP connections', () => server.closeAllConnections()],
+    ['database listener', () => listener.close()],
+    ['app event listener', () => appEventListener.close()],
+    ['pending process kills', () => processKillsSent()],
+    ['database pool', () => db.end()],
+  ]);
   process.exit(0);
 };
 process.once('SIGINT', () => void shutdown());

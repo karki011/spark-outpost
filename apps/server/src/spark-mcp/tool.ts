@@ -8,8 +8,19 @@ export interface SparkToolContext {
   callId?: string;
 }
 
+export interface SparkResourceLink {
+  type: 'resource_link';
+  uri: string;
+  name: string;
+  title?: string;
+  mimeType?: string;
+  _meta?: Record<string, unknown>;
+}
+
 export type SparkBlock =
-  { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
+  | { type: 'text'; text: string }
+  | { type: 'image'; data: string; mimeType: string }
+  | SparkResourceLink;
 
 export class SparkBlocks {
   readonly blocks: readonly SparkBlock[];
@@ -33,14 +44,19 @@ export type SparkToolNeed =
   | 'outpost_start'
   | 'calendar_read'
   | 'calendar_edit'
+  | 'meetings'
   | 'jira'
-  | 'confluence';
+  | 'confluence'
+  | 'servicenow'
+  | 'ticket_create'
+  | 'rules_edit';
 
 export interface SparkTool {
   name: string;
   title: string;
   description: string;
   acts?: boolean;
+  assistantOnly?: boolean;
   privateData?: boolean | PrivateData<unknown>;
   needs?: SparkToolNeed;
   input: z.ZodRawShape;

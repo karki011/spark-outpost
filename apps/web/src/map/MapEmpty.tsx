@@ -1,11 +1,7 @@
 import './map-empty.css';
-import { useState, type ReactNode } from 'react';
-import { AnimatePresence } from 'motion/react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { projectKeys, projectsApi } from '../api/projects.ts';
+import type { ReactNode } from 'react';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
-import { FolderDialog } from '../chat/project/FolderDialog.tsx';
 import { useVoice } from '../spark/use-voice.ts';
 import { mapIntro } from '../spark/voice.ts';
 import { PlusIcon } from '../ui/icons.tsx';
@@ -71,15 +67,13 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
-export function MapEmpty() {
+interface MapEmptyProps {
+  canAdd: boolean;
+  onAdd: () => void;
+}
+
+export function MapEmpty({ canAdd, onAdd }: MapEmptyProps) {
   const voice = useVoice();
-  const client = useQueryClient();
-  const [adding, setAdding] = useState(false);
-  const projectAdded = async () => {
-    setAdding(false);
-    await client.invalidateQueries({ queryKey: projectKeys.all });
-  };
-  const addProject = useMutation({ mutationFn: projectsApi.create, onSuccess: projectAdded });
   return (
     <Shell>
       <SkyDoodle />
@@ -96,14 +90,7 @@ export function MapEmpty() {
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        className="btn primary mh-add"
-        onClick={() => {
-          addProject.reset();
-          setAdding(true);
-        }}
-      >
+      <button type="button" className="btn primary mh-add" disabled={!canAdd} onClick={onAdd}>
         <PlusIcon />
         Add a project
       </button>
@@ -112,18 +99,6 @@ export function MapEmpty() {
         areas, never secret files.
         <InfoTip topic="what Jev reads" text={PRIVACY} doc={{ page: 'sparkignore' }} />
       </p>
-      <AnimatePresence>
-        {adding && (
-          <FolderDialog
-            key="map-add-project"
-            linking={addProject.isPending}
-            error={addProject.isError ? addProject.error.message : null}
-            onUse={(rootPath) => addProject.mutate(rootPath)}
-            onCloned={() => void projectAdded()}
-            onClose={() => setAdding(false)}
-          />
-        )}
-      </AnimatePresence>
     </Shell>
   );
 }

@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'nod
 import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { ADD_FOLDER, keepPlainFolder } from './add-folder-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
@@ -83,7 +84,7 @@ test('picks a folder from the context bar and shows it in the bar and header', a
       return menu.y + menu.height;
     })
     .toBeLessThanOrEqual(projectButton.y);
-  await repoMenu(page).getByRole('button', { name: 'Choose a folder…' }).click();
+  await repoMenu(page).getByRole('button', { name: ADD_FOLDER }).click();
   const dialog = page.getByRole('dialog', { name: 'Choose a project folder' });
   await expect(dialog).toBeVisible();
   await dialog.getByRole('navigation', { name: 'Folder path' }).getByRole('button').first().click();
@@ -97,6 +98,7 @@ test('picks a folder from the context bar and shows it in the bar and header', a
   }
   await dialog.getByRole('button', { name: 'Use this folder' }).click();
   await expect(dialog).toBeHidden();
+  await keepPlainFolder(page, 'app');
 
   const bar = page.getByRole('button', { name: 'Project folders: app' });
   await expect(bar).toBeVisible();

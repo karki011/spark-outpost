@@ -22,9 +22,12 @@ import {
 } from '../../usage/format.ts';
 import '../../usage/usage.css';
 import { setupApi, setupKey } from '../../api/setup.ts';
+import { CacheBadgeGlyph, CacheRow, useRingCache } from '../../usage/RingCache.tsx';
+import { useIdleCache } from '../project/chat-cache.ts';
 import { formatTokens } from './model-options.ts';
 
 const RING = 50.27;
+const SHOWN_ABOVE_PERCENT = 50;
 
 function ringNote(level: ContextLevel, thresholds: CompactionThresholds): string {
   const at = thresholds.compactPercent;
@@ -51,6 +54,7 @@ function useThresholds(): CompactionThresholds {
 }
 
 interface ContextRingProps {
+  conversationId: string;
   runs: Run[];
   provider: string | null;
   usageTotals: ConversationUsage;
@@ -85,7 +89,13 @@ function advisorLine(entry: AdvisorUsage): string {
   return [calls, usageLine(entry.inputTokens, entry.costUsd, 'estimated')].join(' · ');
 }
 
-export function ContextRing({ runs, provider, usageTotals, onAudit }: ContextRingProps) {
+export function ContextRing({
+  conversationId,
+  runs,
+  provider,
+  usageTotals,
+  onAudit,
+}: ContextRingProps) {
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
     HTMLButtonElement,
     HTMLDivElement
@@ -97,107 +107,136 @@ export function ContextRing({ runs, provider, usageTotals, onAudit }: ContextRin
   const percent = contextPercent(used, size);
   const thresholds = useThresholds();
   const level = contextLevel(percent, thresholds);
-  const label = ringLabel(reading, percent);
+  const cache = useRingCache(useIdleCache(conversationId));
+  const label = cache.badge
+    ? `${ringLabel(reading, percent)}. ${cache.badge.sentence}`
+    : ringLabel(reading, percent);
   const chat = chatLine(usageTotals);
   const showProviders = usageTotals.byProvider.length > 1;
+  const filling = reading !== null && (percent > SHOWN_ABOVE_PERCENT || level !== 'ok');
+  const live = (
+    <>
+      <span className="sr-only" aria-live="polite">
+        {cache.announcement}
+      </span>
+      {cache.clock}
+    </>
+  );
+
+  const showRing = filling || cache.badge !== null;
 
   return (
     <div className="ctxwrap">
-      <button
-        ref={anchorRef}
-        type="button"
-        className="ctxbtn"
-        data-level={level}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={panelId}
-        aria-label={label}
-        title={chat ? `${label}\nThis chat: ${chat}` : label}
-        onClick={toggle}
-      >
-        <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true">
-          <circle cx="10" cy="10" r="8" className="ring-bg" />
-          <circle
-            cx="10"
-            cy="10"
-            r="8"
-            className="ring-fg"
-            style={{ strokeDashoffset: RING * (1 - Math.max(percent, reading ? 2 : 0) / 100) }}
-          />
-        </svg>
-        {reading && <span className="ctxpct">{percent}%</span>}
-      </button>
-      <div
-        ref={panelRef}
-        id={panelId}
-        className={open ? 'mpop ctxpop open' : 'mpop ctxpop'}
-        role="dialog"
-        aria-label="Context window"
-      >
-        <div className="ctx-h">
-          <b>Context window</b>
-          <span>
-            {reading
-              ? `${formatTokens(used)} of ${formatTokens(size)} tokens (${percent}%)`
-              : 'No data yet'}
-          </span>
-        </div>
-        <div className="ctx-bar" role="img" aria-label={`${percent}% of the context window used`}>
-          <i style={{ transform: `scaleX(${percent / 100})` }} />
-        </div>
-        <div className="ctx-legend">
-          <div>
-            <i className="used" />
-            <span>Used by the last reply</span>
-            <b>{formatTokens(used)}</b>
-          </div>
-          <div className="free">
-            <i />
-            <span>Free</span>
-            <b>{formatTokens(Math.max(0, size - used))}</b>
-          </div>
-        </div>
-        <p className={`ctx-note ${level}`}>
-          {reading
-            ? ringNote(level, thresholds)
-            : 'Send a message to see how much of the context window it uses.'}
-        </p>
-        {chat && (
-          <div className="ctx-usage">
-            <div title={costTip(usageTotals.costSource)}>
-              <span>This chat</span>
-              <b>{chat}</b>
-            </div>
-            {showProviders &&
-              usageTotals.byProvider.map((entry) => (
-                <div key={entry.provider} title={costTip(entry.costSource)}>
-                  <span>{providerName(entry.provider)}</span>
-                  <b>{providerLine(entry)}</b>
-                </div>
-              ))}
-            {usageTotals.advisors?.map((entry) => (
-              <div key={entry.advisor}>
-                <span>{advisorLabel(entry.advisor)}</span>
-                <b>{advisorLine(entry)}</b>
-              </div>
-            ))}
-          </div>
-        )}
-        {onAudit && (
+      {showRing && (
+        <>
           <button
+            ref={anchorRef}
             type="button"
-            className="btn ghost sm ctx-audit"
-            onClick={() => {
-              setOpen(false);
-              anchorRef.current?.focus();
-              onAudit();
-            }}
+            className="ctxbtn"
+            data-level={level}
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            aria-controls={panelId}
+            aria-label={label}
+            title={chat ? `${label}\nThis chat: ${chat}` : label}
+            onClick={toggle}
           >
-            <ShieldIcon />
-            Audit this chat
+            <span className="ctxring">
+              <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="10" cy="10" r="8" className="ring-bg" />
+                <circle
+                  cx="10"
+                  cy="10"
+                  r="8"
+                  className="ring-fg"
+                  style={{
+                    strokeDashoffset: RING * (1 - Math.max(percent, reading ? 2 : 0) / 100),
+                  }}
+                />
+              </svg>
+              {cache.badge && <CacheBadgeGlyph badge={cache.badge} />}
+            </span>
+            {filling && <span className="ctxpct">{percent}% context</span>}
           </button>
-        )}
-      </div>
+          <div
+            ref={panelRef}
+            id={panelId}
+            className={open ? 'mpop ctxpop open' : 'mpop ctxpop'}
+            role="dialog"
+            aria-label="Context window"
+          >
+            <div className="ctx-h">
+              <b>Context window</b>
+              <span>
+                {reading
+                  ? `${formatTokens(used)} of ${formatTokens(size)} tokens (${percent}%)`
+                  : 'No data yet'}
+              </span>
+            </div>
+            <div
+              className="ctx-bar"
+              role="img"
+              aria-label={`${percent}% of the context window used`}
+            >
+              <i style={{ transform: `scaleX(${percent / 100})` }} />
+            </div>
+            <div className="ctx-legend">
+              <div>
+                <i className="used" />
+                <span>Used by the last reply</span>
+                <b>{formatTokens(used)}</b>
+              </div>
+              <div className="free">
+                <i />
+                <span>Free</span>
+                <b>{formatTokens(Math.max(0, size - used))}</b>
+              </div>
+            </div>
+            <p className={`ctx-note ${level}`}>
+              {reading
+                ? ringNote(level, thresholds)
+                : 'Send a message to see how much of the context window it uses.'}
+            </p>
+            {cache.badge && <CacheRow badge={cache.badge} />}
+            {chat && (
+              <div className="ctx-usage">
+                <div title={costTip(usageTotals.costSource)}>
+                  <span>This chat</span>
+                  <b>{chat}</b>
+                </div>
+                {showProviders &&
+                  usageTotals.byProvider.map((entry) => (
+                    <div key={entry.provider} title={costTip(entry.costSource)}>
+                      <span>{providerName(entry.provider)}</span>
+                      <b>{providerLine(entry)}</b>
+                    </div>
+                  ))}
+                {usageTotals.advisors?.map((entry) => (
+                  <div key={entry.advisor}>
+                    <span>{advisorLabel(entry.advisor)}</span>
+                    <b>{advisorLine(entry)}</b>
+                  </div>
+                ))}
+              </div>
+            )}
+            {onAudit && (
+              <button
+                type="button"
+                className="btn ghost sm ctx-audit"
+                onClick={() => {
+                  setOpen(false);
+                  anchorRef.current?.focus();
+                  onAudit();
+                }}
+              >
+                <ShieldIcon />
+                Audit this chat
+              </button>
+            )}
+          </div>
+        </>
+      )}
+      {live}
     </div>
   );
 }

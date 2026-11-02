@@ -1,4 +1,4 @@
-import type { TicketView } from '@spark-outpost/contracts';
+import { isReadOnlyTable, type TicketView } from '@spark-outpost/contracts';
 import { useId, useState } from 'react';
 import { UserBlob } from '../brand/UserBlob.tsx';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
@@ -6,6 +6,7 @@ import { ChevronIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
 import { StatusBadge } from './StatusChip.tsx';
 import { safeUrl } from './ticket-model.ts';
+import { ServiceNowNotes, VisibilityTag } from './ServiceNowNotes.tsx';
 import { DetailSkeleton } from './TicketsSkeleton.tsx';
 
 interface TicketBodyProps {
@@ -41,6 +42,8 @@ export function TicketBody({ view, loading, error, source }: TicketBodyProps) {
   }
   const { ticket } = view;
   const commentsOpen = commentsOpenFor === ticket.key;
+  const plain = ticket.source === 'servicenow';
+  const writable = plain && !isReadOnlyTable(ticket.project);
   return (
     <>
       <section className="tk-sec">
@@ -49,7 +52,11 @@ export function TicketBody({ view, loading, error, source }: TicketBodyProps) {
         </h4>
         {ticket.description.trim() ? (
           <div className="tk-desc" tabIndex={0} aria-label="Description">
-            <Markdown text={ticket.description} />
+            {plain ? (
+              <p className="tk-plain">{ticket.description}</p>
+            ) : (
+              <Markdown text={ticket.description} />
+            )}
           </div>
         ) : (
           <p className="tk-quiet">No description.</p>
@@ -102,14 +109,38 @@ export function TicketBody({ view, loading, error, source }: TicketBodyProps) {
                     <UserBlob displayName={comment.author ?? 'Someone'} size={22} />
                     <b>{comment.author ?? 'Someone'}</b>
                     <time dateTime={comment.createdAt}>{relativeTime(comment.createdAt)}</time>
+                    {comment.visibility && <VisibilityTag visibility={comment.visibility} />}
                   </div>
-                  <Markdown text={comment.body} />
+                  {plain ? (
+                    <p className="tk-plain">{comment.body}</p>
+                  ) : (
+                    <Markdown text={comment.body} />
+                  )}
                 </li>
               ))}
             </ol>
           )}
         </section>
       )}
+      {(ticket.attachments ?? []).length > 0 && (
+        <section className="tk-sec">
+          <h4>Attachments</h4>
+          <ul className="tk-attach">
+            {ticket.attachments?.map((file) => (
+              <li key={file.name}>
+                {file.name} · {formatBytes(file.bytes)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {writable && <ServiceNowNotes key={`${ticket.source}:${ticket.key}`} ticket={ticket} />}
     </>
   );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

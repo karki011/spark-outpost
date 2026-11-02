@@ -10,9 +10,9 @@ You'll choose what Spark does with finished work. About 1 minute.
 
 ## For one chat
 
-1. Link a project. The autonomy chip appears in the context bar.
-2. Select it. The **Work** panel opens at **Spark autonomy**.
-3. Pick a level.
+1. Link a project.
+2. Open the **Work** panel.
+3. Pick a level under **Spark autonomy**.
 
 ![The Work panel with the Spark autonomy levels](images/chats-and-modes-autonomy-light.png)
 
@@ -21,7 +21,7 @@ You'll choose what Spark does with finished work. About 1 minute.
 | **Automatic**                | Keeps changes. You ship.                               |
 | **Full auto → PR** (default) | Keeps changes, then has the agent open a pull request. |
 
-Neither level waits on a plan. The agent's [Plan mode](plan-card.md) does.
+Explicit publishing restrictions take precedence. For a plan approval, use [Plan mode](plan-card.md).
 
 ## For every new chat
 

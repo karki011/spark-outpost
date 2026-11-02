@@ -14,6 +14,7 @@ import type { Observation } from '../persistence/observations.ts';
 
 export type RequestAuthor =
   | { kind: 'user' }
+  | { kind: 'assistant'; runId: string }
   | {
       kind: 'chat';
       conversationId: string;
@@ -96,6 +97,12 @@ export interface OutpostStore {
     workspaceId: string,
     id: string,
     name: string,
+  ): Promise<StoredOutpost | null>;
+  setInstructions(
+    db: Queryable,
+    workspaceId: string,
+    id: string,
+    instructions: string,
   ): Promise<StoredOutpost | null>;
   setPaused(
     db: Queryable,

@@ -11,6 +11,7 @@ import {
   TURN_TIMEOUT,
   chip,
   newOutpost,
+  openThread,
   outpostPage,
   outpostRow,
   outpostsSection,
@@ -23,6 +24,7 @@ import {
   stateOf,
   stepNow,
   thread,
+  threadPane,
 } from './outposts-kit.ts';
 import { expectNoSidewaysScroll, openTouch, PHONE } from './responsive-kit.ts';
 import { seedChats } from './sidebar-seed.ts';
@@ -101,7 +103,9 @@ test('two existing chats become an outpost with the keyboard alone', async ({ pa
   const main = outpostPage(page, NAME);
   await expect(main).toBeVisible();
   await expect(outpostRow(page, NAME)).toHaveAttribute('aria-current', 'page');
-  await expect(main.getByRole('button', { name: /^You and 2 chats/ })).toBeVisible();
+  await expect(
+    main.getByRole('toolbar', { name: 'Chats in this outpost' }).getByRole('button'),
+  ).toHaveCount(2);
   await expect(notices(page)).toHaveCount(2);
   await expect(notices(page).filter({ hasText: '@frontend joined · Claude Opus 5.5' })).toHaveCount(
     1,
@@ -198,19 +202,23 @@ test('a new chat with a first message and a file starts working when the outpost
   const request = post(page, 'Add an optional userId filter');
   await expect(request).toContainText('You');
   await expect(request.locator('.op-attached')).toHaveText('1 file');
-  await expect(stateOf(request)).toHaveText(/Working|Answered/, { timeout: TURN_TIMEOUT });
-  await expect(stateOf(request)).toHaveText('Answered', { timeout: TURN_TIMEOUT });
+  await expect(stateOf(request)).toHaveText(/Working|Idle/, { timeout: TURN_TIMEOUT });
+  await expect(stateOf(request)).toHaveText('Idle', { timeout: TURN_TIMEOUT });
   await expect(thread(page).locator('.op-post')).toHaveCount(1);
 
   await expect(chip(page, 'storefront2')).toBeVisible();
   await chip(page, 'storefront2').click();
+  await page.getByRole('button', { name: /^Chat details/ }).click();
   await expect(
     page.getByRole('button', {
       name: new RegExp(`^Open outpost ${NAME}\\. This chat is @storefront2`),
     }),
   ).toBeVisible();
   await outpostRow(page, NAME).click();
-  await request.getByRole('button', { name: 'Open @storefront in chat' }).click();
+  await openThread(request, 'storefront');
+  await threadPane(page, 'storefront')
+    .getByRole('button', { name: 'Open @storefront in chat' })
+    .click();
   await expect(page.locator('.msg-atts', { hasText: 'usage-contract.md' }).first()).toBeVisible();
 });
 

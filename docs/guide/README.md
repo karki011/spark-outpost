@@ -112,6 +112,7 @@ A code change needs a doc change in the same commit when it adds, renames or rem
 - the guide is over 15,000 words in all;
 - a how-to lacks its time estimate or numbered steps, a how-to or start page lacks its `**Next:**` link, or a Next link's text isn't the target's title;
 - a link to a page or heading is broken;
+- a table has no header row, or a row has a different number of cells than its header;
 - a shown image is missing its light or dark file, or an image is shown nowhere;
 - a Spark tool has no entry in `spark-tools.md`, or a Settings section has none in `settings.md`;
 - `spark_docs` would clip the page list or a page (60 list items, 4,000 characters per section, 20,000 per answer).

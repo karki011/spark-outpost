@@ -14,11 +14,13 @@ export interface Worker {
   provider: string;
   kind: WorkerKind;
   doing?: string;
+  todo?: string;
 }
 
 export interface LiveInput extends Worker {
   working: boolean;
   step: string | null;
+  startedAt?: number;
 }
 
 export interface LiveReport extends LiveInput {
@@ -60,8 +62,10 @@ function sameReport(a: LiveReport | undefined, b: LiveInput): boolean {
     a.kind === b.kind &&
     a.provider === b.provider &&
     a.doing === b.doing &&
+    a.todo === b.todo &&
     a.working === b.working &&
-    a.step === b.step
+    a.step === b.step &&
+    a.startedAt === b.startedAt
   );
 }
 
@@ -91,7 +95,7 @@ export function createStatusStore(now: () => number = Date.now): StatusStore {
     report(input) {
       const known = state.live.find((report) => report.id === input.id);
       if (sameReport(known, input)) return;
-      const since = known && known.step === input.step ? known.since : now();
+      const since = input.startedAt ?? (known && known.step === input.step ? known.since : now());
       const others = state.live.filter((report) => report.id !== input.id);
       publish({ ...state, live: [...others, { ...input, since }] });
     },

@@ -1,48 +1,6 @@
-.isl-now-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  height: 20px;
-  margin: 0 0 0 -5px;
-  padding: 0 5px;
-  border: 0;
-  border-radius: 6px;
-  background: none;
-  color: inherit;
-  font: inherit;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.isl-now-row:hover {
-  background: color-mix(in srgb, var(--text) 9%, transparent);
-}
-
-.isl-now-row:focus-visible,
-.isl-pd-back:focus-visible,
-.isl-diff-body:focus-visible,
-.isl-file-body:focus-visible {
+.isl-diff-body:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
-}
-
-.isl-now-count {
-  flex: none;
-  font:
-    11.5px/1 'Geist Mono',
-    ui-monospace,
-    monospace;
-  font-variant-numeric: tabular-nums;
-}
-
-.isl-now-count .plus {
-  color: var(--success);
-}
-
-.isl-now-count .minus {
-  color: var(--danger);
 }
 
 .isl-now[data-peek] {
@@ -53,43 +11,6 @@
 .isl-pd {
   min-width: 0;
   animation: isl-code-in 0.22s ease-out both;
-}
-
-.isl-pd-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  margin-bottom: 8px;
-}
-
-.isl-pd-back.isl-back {
-  flex: none;
-  margin: 0 0 0 -4px;
-}
-
-.isl-pd-name {
-  flex: none;
-  max-width: 50%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-}
-
-.isl-pd-path {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--faint);
-  font-size: 11.5px;
-}
-
-.isl-pd-keys {
-  margin-left: auto;
-  color: var(--faint);
-  font-size: 11.5px;
 }
 
 .isl-pd .isl-acts {
@@ -108,14 +29,14 @@
 }
 
 .isl-diff .dv-body table {
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .isl-diff-gap td {
   padding: 2px 10px;
   color: var(--faint);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 12px;
   user-select: none;
 }
 
@@ -126,122 +47,6 @@
   font-size: 12px;
 }
 
-.isl-now-said {
-  display: -webkit-box;
-  margin: 6px 0 0;
-  overflow: hidden;
-  color: var(--text);
-  font-size: 12.5px;
-  line-height: 1.4;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-}
-
-.isl-now:has(.isl-file) {
-  grid-column: 1 / -1;
-}
-
-.isl-now-page:has(> .isl-file) {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
-  gap: 12px;
-  align-items: start;
-}
-
-.isl-file {
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid var(--card-line);
-  border-radius: var(--r-sm);
-  background: var(--code);
-  animation: isl-code-in 0.22s ease-out both;
-}
-
-.isl-file-tab {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 5px 10px;
-  border-bottom: 1px solid var(--card-line);
-  font-size: 12px;
-}
-
-.isl-file-name,
-.isl-file-path {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.isl-file-name {
-  flex: none;
-  max-width: 55%;
-}
-
-.isl-file-path {
-  min-width: 0;
-  color: var(--faint);
-  font-size: 11px;
-}
-
-.isl-file-state {
-  flex: none;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.isl-file-state[data-current] {
-  color: var(--accent-text);
-}
-
-.isl-file-body {
-  max-height: 126px;
-  overflow: auto;
-  overscroll-behavior: contain;
-}
-
-.isl-file-body table {
-  width: max-content;
-  min-width: 100%;
-  border-collapse: collapse;
-  color: var(--code-foreground);
-  font:
-    11.5px/1.55 'Geist Mono',
-    ui-monospace,
-    monospace;
-}
-
-.isl-file-n {
-  position: sticky;
-  left: 0;
-  box-sizing: border-box;
-  width: 44px;
-  min-width: 44px;
-  padding: 0 8px 0 6px;
-  background: var(--code);
-  color: var(--faint);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  user-select: none;
-}
-
-.isl-file-c {
-  padding: 0 12px 0 8px;
-  white-space: pre;
-}
-
-.isl-file-body tr[data-marked] .isl-file-c {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-}
-
-.isl-file-body tr[data-marked] .isl-file-n {
-  color: var(--accent-text);
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-
 @keyframes isl-code-in {
   from {
     opacity: 0;
@@ -249,7 +54,6 @@
   }
 }
 
-.isl-root[data-rm] .isl-pd,
-.isl-root[data-rm] .isl-file {
+.isl-root[data-rm] .isl-pd {
   animation: none;
 }

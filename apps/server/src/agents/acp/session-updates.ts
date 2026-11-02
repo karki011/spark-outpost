@@ -4,7 +4,8 @@ import type {
   SessionUpdate,
   ToolCallContent,
 } from '@agentclientprotocol/sdk';
-import { friendlyStep, type ConfigValues, type PlanEntry } from '@spark-outpost/contracts';
+import { isMcpToolName } from '@spark-outpost/contracts';
+import type { ConfigValues, PlanEntry } from '@spark-outpost/contracts';
 import type { ProviderOutput } from '../../providers/provider.ts';
 import { currentValue } from './session-config.ts';
 import { currentValues } from './capabilities.ts';
@@ -16,6 +17,15 @@ import { shortWindowNote } from './long-context.ts';
 import { planOutputs, usageOutputs } from './plan-limits.ts';
 import { createFocusTracker } from './file-focus.ts';
 import { messagePhase } from './message-phase.ts';
+import { artifactLinks } from './artifact-links.ts';
+import {
+  awaitsAddress,
+  describeTool,
+  opensPullRequest,
+  toolNameOf,
+  toolPath,
+  toolTarget,
+} from './tool-titles.ts';
 
 export const THINKING_STEP = 'Thinking';
 export const FAILED_PREFIX = 'Failed: ';
@@ -93,77 +103,30 @@ const PROVIDER_ISSUES = new Set([
   'transport_lost',
 ]);
 
-const ABSOLUTE_PATH = /(^|[\s(])(\/[^\s`'")]+)/g;
-
-function asCommand(title: string, kind: string | null | undefined): string {
-  const runs = kind === 'execute' && title !== 'Terminal' && !title.includes('`');
-  return runs ? `\`${title}\`` : title;
-}
-
-export function describeTool(title: string, kind?: string | null): string {
-  const trimmed = title.trim();
-  if (!trimmed) return 'Using a tool';
-  const friendly = friendlyStep(trimmed);
-  if (friendly !== trimmed) return friendly;
-  return asCommand(trimmed, kind)
-    .split('`')
-    .map((part, index) =>
-      index % 2 === 1
-        ? part
-        : part.replace(ABSOLUTE_PATH, (_match, lead: string, path: string) => {
-            const name = path.split('/').filter(Boolean).at(-1) ?? path;
-            return `${lead}\`${name}\``;
-          }),
-    )
-    .join('`');
-}
-
-const TARGET_CHARS = 400;
-
 interface OpenTool {
   name: string;
   kind: string | null;
+  toolName: string | null;
   target: string | null;
+  path: string | null;
   opensPr: boolean;
   linked: boolean;
+  shown: boolean;
 }
 
-const OPENS_PULL_REQUEST =
-  /\bgh\s+pr\s+create\b|\bhub\s+pull-request\b|\bglab\s+mr\s+create\b|create_pull_request/i;
-
-export function opensPullRequest(title: string | null | undefined, rawInput: unknown): boolean {
-  if (title && OPENS_PULL_REQUEST.test(title)) return true;
-  if (rawInput === undefined || rawInput === null) return false;
-  try {
-    return OPENS_PULL_REQUEST.test(JSON.stringify(rawInput) ?? '');
-  } catch {
-    return false;
-  }
+function stepOf(kind: 'step_started' | 'step_finished', open: OpenTool): ProviderOutput {
+  return {
+    kind,
+    name: open.name,
+    tool: true,
+    ...(open.kind ? { toolKind: open.kind } : {}),
+    ...(open.toolName ? { toolName: open.toolName } : {}),
+    ...(open.target ? { target: open.target } : {}),
+    ...(open.path ? { path: open.path } : {}),
+  };
 }
 
 type ToolCallUpdate = Extract<SessionUpdate, { sessionUpdate: 'tool_call_update' }>;
-
-function isEmptyInput(value: unknown): boolean {
-  if (Array.isArray(value)) return value.length === 0;
-  return typeof value === 'object' && value !== null && Object.keys(value).length === 0;
-}
-
-export function toolTarget(
-  locations: readonly { path: string; line?: number | null }[] | null | undefined,
-  rawInput: unknown,
-): string | null {
-  const paths = (locations ?? []).map((location) => `${location.path}:${location.line ?? ''}`);
-  let input = '';
-  if (rawInput !== undefined && rawInput !== null && !isEmptyInput(rawInput)) {
-    try {
-      input = JSON.stringify(rawInput) ?? '';
-    } catch {
-      input = '';
-    }
-  }
-  const target = [paths.join(','), input].filter(Boolean).join(' ');
-  return target ? target.slice(0, TARGET_CHARS) : null;
-}
 
 const NOTICE_LABELS: Record<string, string> = { error: 'Error', warning: 'Warning' };
 
@@ -253,24 +216,32 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
     if (open === undefined) return [];
     openTools.delete(id);
     focus.done(id);
-    const outputs: ProviderOutput[] = [
-      {
-        kind: 'step_finished',
-        name: open.name,
-        tool: true,
-        ...(open.kind ? { toolKind: open.kind } : {}),
-        ...(open.target ? { target: open.target } : {}),
-      },
+    const outputs = [
+      ...(open.shown ? [] : [stepOf('step_started', open)]),
+      stepOf('step_finished', open),
     ];
     if (failed) outputs.push(...noteSteps(FAILED_PREFIX + open.name));
     return outputs;
+  };
+
+  const reveal = (update: ToolCallUpdate): ProviderOutput[] => {
+    const open = openTools.get(update.toolCallId);
+    if (!open || open.shown || !update.title) return [];
+    if (awaitsAddress(update.title, update.kind ?? open.kind)) return [];
+    open.name = describeTool(update.title, update.kind ?? open.kind, update.rawInput);
+    open.shown = true;
+    return [stepOf('step_started', open)];
   };
 
   const retarget = (update: ToolCallUpdate) => {
     const open = openTools.get(update.toolCallId);
     if (!open) return;
     open.opensPr ||= opensPullRequest(update.title, update.rawInput);
-    const title = update.title ? describeTool(update.title, update.kind ?? open.kind) : null;
+    open.toolName = toolNameOf(update) ?? open.toolName;
+    const title = update.title
+      ? describeTool(update.title, update.kind ?? open.kind, update.rawInput)
+      : null;
+    open.path = toolPath(update.locations, update.rawInput) ?? open.path;
     open.target =
       toolTarget(update.locations, update.rawInput) ??
       (title && title !== open.name ? title : open.target);
@@ -345,10 +316,12 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
           return [{ kind: 'step_started', name: THINKING_STEP }, ...thought];
         }
         case 'agent_message_chunk': {
-          const linked =
-            update.content.type === 'resource_link'
+          const linked = [
+            ...artifactLinks(update.content),
+            ...(update.content.type === 'resource_link'
               ? links([[update.content.uri, 'resource_link']])
-              : [];
+              : []),
+          ];
           const chunk = messageText(update.content);
           if (chunk === '') return [...stopThinking(), ...linked];
           const messageId = update.messageId ?? null;
@@ -365,16 +338,21 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
         case 'tool_call': {
           rememberPlan(update.kind, update.rawInput, update.content);
           const outputs = [...stopThinking(), ...finishTool(update.toolCallId)];
-          const name = describeTool(update.title, update.kind);
+          const name = describeTool(update.title, update.kind, update.rawInput);
           worked = true;
-          const target = toolTarget(update.locations, update.rawInput);
-          openTools.set(update.toolCallId, {
+          const opened: OpenTool = {
             name,
-            kind: update.kind ?? null,
-            target,
+            kind: isMcpToolName(toolNameOf(update) ?? update.title)
+              ? 'other'
+              : (update.kind ?? null),
+            toolName: toolNameOf(update),
+            target: toolTarget(update.locations, update.rawInput),
+            path: toolPath(update.locations, update.rawInput),
             opensPr: opensPullRequest(update.title, update.rawInput),
             linked: false,
-          });
+            shown: !awaitsAddress(update.title, update.kind),
+          };
+          openTools.set(update.toolCallId, opened);
           outputs.push(
             ...focus.see(
               update.toolCallId,
@@ -384,13 +362,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
               update.content,
             ),
           );
-          outputs.push({
-            kind: 'step_started',
-            name,
-            tool: true,
-            ...(update.kind ? { toolKind: update.kind } : {}),
-            ...(target ? { target } : {}),
-          });
+          if (opened.shown) outputs.push(stepOf('step_started', opened));
           outputs.push(
             ...openedLink(update.toolCallId, toolTexts(update.content, update.rawOutput)),
           );
@@ -408,6 +380,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
           retarget(update);
           const open = openTools.get(update.toolCallId);
           const linked = [
+            ...reveal(update),
             ...(open
               ? focus.see(
                   update.toolCallId,
@@ -418,6 +391,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
                 )
               : []),
             ...openedLink(update.toolCallId, toolTexts(update.content, update.rawOutput)),
+            ...artifactLinks(update.content),
           ];
           if (update.status === 'completed' || update.status === 'failed') {
             return [...linked, ...finishTool(update.toolCallId, update.status === 'failed')];

@@ -9,7 +9,13 @@ const PNG_MAX_BYTES = 3_500_000;
 const JPEG_QUALITY = 82;
 
 interface LayoutMetrics {
-  cssVisualViewport: { pageX: number; pageY: number; clientWidth: number; clientHeight: number };
+  cssVisualViewport: {
+    pageX: number;
+    pageY: number;
+    clientWidth: number;
+    clientHeight: number;
+    zoom?: number;
+  };
   cssContentSize: { width: number; height: number };
 }
 
@@ -18,6 +24,8 @@ export interface ShotRequest {
   fullPage?: boolean;
   maxWidth?: number;
   filled?: ReadonlySet<number>;
+  sensitive?: ReadonlySet<number>;
+  showing?: boolean;
 }
 
 export interface Shot {
@@ -28,13 +36,27 @@ export interface Shot {
   masked: number;
 }
 
-async function sensitiveBoxes(cdp: Cdp, filled: ReadonlySet<number>): Promise<BrowserBox[]> {
+async function sensitiveBoxes(
+  cdp: Cdp,
+  filled: ReadonlySet<number>,
+  known: ReadonlySet<number> | undefined,
+): Promise<BrowserBox[]> {
   const boxes: BrowserBox[] = [];
-  for (const backendNodeId of new Set([...(await sensitiveBackendIds(cdp)), ...filled])) {
+  const ids = known ?? new Set([...(await sensitiveBackendIds(cdp)), ...filled]);
+  for (const backendNodeId of ids) {
     const box = await boxOf(cdp, backendNodeId);
     if (box && box.width > 0 && box.height > 0) boxes.push(box);
   }
   return boxes;
+}
+
+function inside(area: BrowserBox, frame: BrowserBox): boolean {
+  return (
+    area.x >= frame.x &&
+    area.y >= frame.y &&
+    area.x + area.width <= frame.x + frame.width &&
+    area.y + area.height <= frame.y + frame.height
+  );
 }
 
 function overlaps(box: BrowserBox, clip: BrowserBox): boolean {
@@ -55,6 +77,7 @@ function encoded(image: NativeImage): Pick<Shot, 'data' | 'mediaType'> {
 export async function capturePage(cdp: Cdp, request: ShotRequest): Promise<Shot> {
   const metrics = await cdp.send<LayoutMetrics>('Page.getLayoutMetrics');
   const viewport = metrics.cssVisualViewport;
+  const pageZoom = viewport.zoom ?? 1;
   const scroll = { x: viewport.pageX, y: viewport.pageY };
   const visible = { x: 0, y: 0, width: viewport.clientWidth, height: viewport.clientHeight };
   const whole = {
@@ -69,12 +92,12 @@ export async function capturePage(cdp: Cdp, request: ShotRequest): Promise<Shot>
   }
   const { data } = await cdp.send<{ data: string }>('Page.captureScreenshot', {
     format: 'png',
-    captureBeyondViewport: true,
+    captureBeyondViewport: !(request.showing && inside(area, visible)),
     clip: {
-      x: area.x + scroll.x,
-      y: area.y + scroll.y,
-      width: area.width,
-      height: area.height,
+      x: (area.x + scroll.x) * pageZoom,
+      y: (area.y + scroll.y) * pageZoom,
+      width: area.width * pageZoom,
+      height: area.height * pageZoom,
       scale: 1,
     },
   });
@@ -85,8 +108,8 @@ export async function capturePage(cdp: Cdp, request: ShotRequest): Promise<Shot>
       ? captured.resize({ width: maxWidth, quality: 'good' })
       : captured;
   const size = sized.getSize();
-  const hidden = (await sensitiveBoxes(cdp, request.filled ?? new Set())).filter((box) =>
-    overlaps(box, area),
+  const hidden = (await sensitiveBoxes(cdp, request.filled ?? new Set(), request.sensitive)).filter(
+    (box) => overlaps(box, area),
   );
   if (hidden.length === 0) return { ...encoded(sized), ...size, masked: 0 };
   const scale = size.width / area.width;

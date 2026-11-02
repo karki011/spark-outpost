@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FailedMember } from '@spark-outpost/contracts';
 import { CreateSheet } from './create/CreateSheet.tsx';
+import { DraftSheet } from './create/DraftSheet.tsx';
 import {
   emptyChat,
   listedChats,
@@ -10,15 +11,16 @@ import {
 } from './create/create-draft.ts';
 import { buildCreateRequest } from './create/create-request.ts';
 import { DraftGone } from './create/DraftGone.tsx';
-import type { DraftChange } from './create/StepChats.tsx';
+import type { DraftChange } from './create/use-chat-actions.ts';
 import { useCreateBase, useCreateData, type CreateBase } from './create/use-create-data.ts';
 import { useDraftStart, type ReadyDraft } from './create/use-draft-start.ts';
+import { startedThread } from './started-thread.ts';
 import { useCreateOutpost } from './use-outposts.ts';
 
 interface OutpostCreateProps {
   firstChatId?: string | null;
   draftId?: string | null;
-  onCreated: (outpostId: string) => void;
+  onCreated: (outpostId: string, threadId: string | null) => void;
   onClose: () => void;
 }
 
@@ -26,7 +28,7 @@ interface CreateFlowProps {
   base: CreateBase;
   seed: () => CreateDraft;
   intoOutpostId: string | null;
-  onCreated: (outpostId: string) => void;
+  onCreated: (outpostId: string, threadId: string | null) => void;
   onClose: () => void;
 }
 
@@ -52,21 +54,26 @@ function CreateFlow({ base, seed, intoOutpostId, onCreated, onClose }: CreateFlo
   const [draft, setDraft] = useState(initial);
   const [failure, setFailure] = useState<string | null>(null);
   const [failed, setFailed] = useState<FailedMember[] | null>(null);
+  const [threadId, setThreadId] = useState<string | null>(null);
   const data = useCreateData(base, pickedChats(draft));
 
   const start = async () => {
     setFailure(null);
     try {
-      const started = await create.mutateAsync(buildCreateRequest(outpostId, draft));
-      if (started.failed.length === 0) onCreated(outpostId);
+      const request = buildCreateRequest(outpostId, draft);
+      const started = await create.mutateAsync(request);
+      const opening = startedThread(started.stories, request.draftId);
+      setThreadId(opening);
+      if (started.failed.length === 0) onCreated(outpostId, opening);
       else setFailed(started.failed);
     } catch (error) {
       setFailure(error instanceof Error ? error.message : START_FAILED);
     }
   };
 
+  const Sheet = initial.origin ? DraftSheet : CreateSheet;
   return (
-    <CreateSheet
+    <Sheet
       initial={initial}
       draft={draft}
       data={data}
@@ -75,7 +82,7 @@ function CreateFlow({ base, seed, intoOutpostId, onCreated, onClose }: CreateFlo
       failed={failed}
       onChange={(change: DraftChange) => setDraft(change)}
       onStart={() => void start()}
-      onOpenOutpost={() => onCreated(outpostId)}
+      onOpenOutpost={() => onCreated(outpostId, threadId)}
       onClose={onClose}
     />
   );
@@ -84,7 +91,7 @@ function CreateFlow({ base, seed, intoOutpostId, onCreated, onClose }: CreateFlo
 interface DraftCreateProps {
   base: CreateBase | null;
   draftId: string;
-  onCreated: (outpostId: string) => void;
+  onCreated: (outpostId: string, threadId: string | null) => void;
   onClose: () => void;
 }
 
@@ -95,7 +102,7 @@ function DraftCreate({ base, draftId, onCreated, onClose }: DraftCreateProps) {
   const startedIn = opened === null && start.status === 'started' ? start.outpostId : null;
 
   useEffect(() => {
-    if (startedIn !== null) onCreated(startedIn);
+    if (startedIn !== null) onCreated(startedIn, null);
   }, [startedIn, onCreated]);
 
   if (opened !== null && base !== null) {

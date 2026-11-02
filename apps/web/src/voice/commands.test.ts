@@ -123,23 +123,11 @@ describe('matchCommand', () => {
     expect(command.project.heard).toBe('zebra crossing');
   });
 
-  it('recognises the instant questions', () => {
-    expect(matchCommand('Who needs me?', lists)).toMatchObject({
-      intent: 'ask_fast',
-      question: 'needs',
-    });
-    expect(matchCommand('What’s running', lists)).toMatchObject({
-      intent: 'ask_fast',
-      question: 'running',
-    });
-    expect(matchCommand('what did I spend today', lists)).toMatchObject({ question: 'spend' });
-    expect(matchCommand('What tickets do I have pending?', lists)).toMatchObject({
-      question: 'tickets',
-    });
+  it('sends questions about Spark to Ask Spark as text, never to an instant answer', () => {
+    expect(matchCommand('Who needs me?', lists)).toEqual({ intent: 'none', text: 'Who needs me' });
+    expect(matchCommand('What’s running', lists)).toMatchObject({ intent: 'none' });
     expect(matchCommand("What's the status of C P one two", lists)).toMatchObject({
-      intent: 'ask_fast',
-      question: 'ticket_status',
-      ticket: { key: 'CP-12', known: true },
+      intent: 'none',
     });
   });
 

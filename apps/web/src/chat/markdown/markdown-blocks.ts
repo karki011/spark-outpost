@@ -4,7 +4,7 @@ export function withoutClarifyBlock(text: string): string {
   return text.replace(CLARIFY_BLOCK, '\n').trimEnd();
 }
 
-const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+export const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 const LIST_ITEM = /^ {0,3}([-*+]|\d{1,9}[.)])(\s|$)/;
 const REFERENCE_DEFINITION = /^ {0,3}\[[^\]]+\]:/m;
 
@@ -18,7 +18,7 @@ function startsNewBlock(line: string, current: readonly string[]): boolean {
   return !(LIST_ITEM.test(line) && LIST_ITEM.test(first));
 }
 
-function closesFence(line: string, fence: string): boolean {
+export function closesFence(line: string, fence: string): boolean {
   const marker = FENCE.exec(line)?.[1];
   return (
     marker !== undefined &&

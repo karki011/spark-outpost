@@ -22,6 +22,7 @@ import { writeKeptRecord } from '../workflow/kept-record-writer.ts';
 import { startRailFlags } from '../workflow/rail-flags.ts';
 import { createReplyText } from '../workflow/reply-text.ts';
 import type { RunInput } from '../workflow/run-input.ts';
+import { floorRulesNow } from '../spark-rules/rules-store.ts';
 import { createTurnEvents } from '../workflow/turn-events.ts';
 import {
   permissionAsked,
@@ -88,7 +89,12 @@ export async function startChatRecord(
   });
   const snapshot = roots[0] ? await snapshotRun(db, runId, roots[0]) : null;
   const rails = await startRailFlags({ db, runId, projectRoots: roots, audit });
-  const watch = createRailWatch({ roots: roots.map((path) => ({ path, ignore: [] })), cwd });
+  const watch = createRailWatch({
+    roots: roots.map((path) => ({ path, ignore: [] })),
+    cwd,
+    cli: 'claude',
+    rules: () => floorRulesNow(),
+  });
   const mapper = createTurnMapper(AGENT_NAME, false);
   const tracker = createCommandTracker(false);
   const reply = createReplyText(append);
@@ -102,7 +108,7 @@ export async function startChatRecord(
     projectRoots: roots,
     replySoFar,
   });
-  const events = createTurnEvents({ append, secretValues });
+  const events = createTurnEvents({ append, secretValues, replySoFar });
   const tools = new Map<string, RecordedTool>();
   const done = new Set<string>();
   let replies = 0;

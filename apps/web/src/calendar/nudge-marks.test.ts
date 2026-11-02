@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextBoundary } from './event-clock.ts';
+import { nextBoundary, nextMinuteMark } from './event-clock.ts';
 import {
   dismissNudge,
   NO_NUDGE_MARKS,
@@ -7,6 +7,7 @@ import {
   purgeMarks,
   snoozeEnds,
   snoozeNudge,
+  withServerDismissed,
 } from './nudge-marks.ts';
 
 describe('nudge marks', () => {
@@ -27,10 +28,42 @@ describe('nudge marks', () => {
   });
 });
 
+describe('dismissals Spark saved', () => {
+  it('hide the meeting even in a fresh island, and leave other occurrences alone', () => {
+    const end = '2026-10-16T10:45:00.000Z';
+    const events = [
+      { key: 'daily@2026-10-16T10:30:00.000Z', end, dismissed: true },
+      { key: 'daily@2026-10-17T10:30:00.000Z', end, dismissed: false },
+    ];
+    const marks = withServerDismissed(NO_NUDGE_MARKS, events);
+    expect(nudgeHidden(marks, 'daily@2026-10-16T10:30:00.000Z', 0)).toBe(true);
+    expect(nudgeHidden(marks, 'daily@2026-10-17T10:30:00.000Z', 0)).toBe(false);
+    expect(withServerDismissed(marks, events)).toBe(marks);
+    expect(withServerDismissed(NO_NUDGE_MARKS, [events[1]!])).toBe(NO_NUDGE_MARKS);
+  });
+});
+
 describe('the next clock boundary', () => {
   it('is the earliest end still ahead, or none', () => {
     expect(nextBoundary([300, 100, 200], 150)).toBe(200);
     expect(nextBoundary([100], 100)).toBeNull();
     expect(nextBoundary([], 0)).toBeNull();
+  });
+});
+
+describe('the next countdown minute', () => {
+  const MINUTE = 60_000;
+  const span = { start: 100 * MINUTE + 7_000, end: 130 * MINUTE + 7_000 };
+
+  it('wakes on the whole minutes counted from the start, from an hour before to the end', () => {
+    expect(nextMinuteMark([span], 0)).toBe(40 * MINUTE + 7_000);
+    expect(nextMinuteMark([span], 98 * MINUTE + 30_000)).toBe(99 * MINUTE + 7_000);
+    expect(nextMinuteMark([span], 99 * MINUTE + 7_000)).toBe(100 * MINUTE + 7_000);
+    expect(nextMinuteMark([span], 129 * MINUTE + 7_000)).toBeNull();
+  });
+
+  it('stays one mark per meeting, however long the meeting runs', () => {
+    const year = { start: span.start, end: span.start + 365 * 24 * 60 * MINUTE };
+    expect(nextMinuteMark([year, span], 200 * MINUTE)).toBe(200 * MINUTE + 7_000);
   });
 });

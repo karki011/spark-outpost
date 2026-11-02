@@ -71,7 +71,7 @@ export function SpinnerIcon() {
   return <i className="spin" aria-hidden="true" />;
 }
 
-function StrokeIcon({ path }: { path: string }) {
+export function StrokeIcon({ path }: { path: string }) {
   return (
     <svg
       width="14"
@@ -139,6 +139,14 @@ export function MergedIcon() {
 
 export function PlusIcon() {
   return <StrokeIcon path="M12 5v14M5 12h14" />;
+}
+
+export function HandOffIcon() {
+  return <StrokeIcon path="M4 12h11M11 8l4 4-4 4M20 5v14" />;
+}
+
+export function MinusIcon() {
+  return <StrokeIcon path="M5 12h14" />;
 }
 
 export function ArrowUpIcon() {
@@ -267,6 +275,10 @@ export function DownloadIcon() {
   return <StrokeIcon path="M12 4v12M7 11l5 5 5-5M5 20h14" />;
 }
 
+export function ArtifactIcon() {
+  return <StrokeIcon path="M4 5h16v14H4zM4 9h16M9 9v10" />;
+}
+
 export function CopyIcon() {
   return (
     <StrokeIcon path="M9 9h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1ZM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
@@ -313,12 +325,14 @@ export function SearchIcon() {
   return <StrokeIcon path="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm9 2-3.5-3.5" />;
 }
 
-export function SessionsIcon() {
-  return <StrokeIcon path="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />;
+export function HomeIcon() {
+  return (
+    <StrokeIcon path="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1v-7.5Z" />
+  );
 }
 
-export function HomeIcon() {
-  return <StrokeIcon path="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z" />;
+export function SessionsIcon() {
+  return <StrokeIcon path="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />;
 }
 
 export function GearIcon() {
@@ -360,6 +374,10 @@ export function ChatPlusIcon() {
 
 export function WarnIcon() {
   return <StrokeIcon path="M12 3l9 16H3zM12 10v4M12 17h.01" />;
+}
+
+export function FileIcon() {
+  return <StrokeIcon path="M14 3H6v18h12V7zM14 3v4h4" />;
 }
 
 export function LockIcon() {

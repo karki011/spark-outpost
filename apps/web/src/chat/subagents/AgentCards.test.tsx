@@ -51,8 +51,17 @@ describe('AgentCards', () => {
     expect(cards[0]!.textContent).toContain('Done');
     expect(cards[1]!.dataset.state).toBe('working');
     expect(cards[1]!.textContent).toContain('Now: Read chat-store.ts');
-    expect(cards[1]!.textContent).toContain('grep -rn "useQuery" apps/web/src/chat');
+    expect(cards[1]!.textContent).not.toContain('grep -rn');
+    expect(cards[1]!.querySelectorAll('.ac-now')).toHaveLength(1);
     expect(cards[1]!.textContent).toContain('2 steps');
+  });
+
+  it('marks stale working workers inactive and offers no redirect after the turn ends', () => {
+    render(<AgentCards rows={rows.slice(1)} live={false} onRedirect={() => {}} />);
+    expect(screen.getByText('Inactive')).toBeTruthy();
+    expect(screen.queryByText('Working')).toBeNull();
+    expect(screen.queryByText(/Now:/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ask lead to redirect' })).toBeNull();
   });
 
   it('opens a card to all its steps and its report', () => {

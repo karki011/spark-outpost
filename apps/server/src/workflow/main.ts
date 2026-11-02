@@ -1,7 +1,8 @@
 import { loginShellEnv, loginShellPath } from '../setup/login-path.ts';
 import type { IntakeDeps } from '../advisor/jev-types.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
-import { loadConfig } from '../config.ts';
+import { loadConfig, sparkDataDir } from '../config.ts';
+import { chatFoldersBase } from '../chat-files/folders.ts';
 import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { configuredBackup } from '../persistence/startup-backup.ts';
@@ -33,8 +34,10 @@ import { connectDesktopCalendar } from '../calendar/host-client.ts';
 import { parseAppEvent } from '@spark-outpost/contracts';
 import { TaskWakes } from '../a2a/task-wakes.ts';
 import { stackGit } from '../outposts/stack-git.ts';
+import { processKillsSent } from '../terminal/process-group.ts';
 
 const config = loadConfig();
+const chatFolders = chatFoldersBase(sparkDataDir(config), config.BRANCH_PREFIX);
 const db = createDb(config.DATABASE_URL, { max: POOL_MAX.worker });
 await migrateOrExit(db, { backup: configuredBackup(config) });
 
@@ -75,7 +78,9 @@ const sparkDeps: SparkToolDeps = {
     fetch,
     client: googleClientConfig(config),
   }),
-  outposts: { wakes: outpostWakes, parked: parkedTurns, stackGit },
+  outposts: { wakes: outpostWakes, stackGit },
+  agentRuntime: config.AGENT_RUNTIME,
+  chatFolders,
 };
 const sparkTools = await startSparkMcpHost(sparkDeps);
 desktopBrowser?.blockPorts([sparkTools.port]);
@@ -96,13 +101,13 @@ const worker = startWorker({
   sessionLimits: {
     idleMs: config.SESSION_IDLE_MINUTES * 60_000,
   },
-  concurrency: config.WORKER_CONCURRENCY,
   assistantIdleLimits: {
     idleMs: config.ASSISTANT_IDLE_COMPACT_SECONDS * 1000,
     minTokens: config.ASSISTANT_IDLE_COMPACT_TOKENS,
   },
   parked: parkedTurns,
   branchPrefix: config.BRANCH_PREFIX,
+  chatFolders,
   shipAccess: {
     secrets,
     runCommand,
@@ -155,9 +160,7 @@ const outpostListener = await keepListening(
   },
   { onBack: () => outpostWakes.wakeAll() },
 );
-console.log(
-  `Worker running with concurrency ${config.WORKER_CONCURRENCY} and ${config.AGENT_RUNTIME} agents.`,
-);
+console.log(`Worker running with ${config.AGENT_RUNTIME} agents.`);
 
 const shutdown = async () => {
   stopLagMonitor();
@@ -171,6 +174,7 @@ const shutdown = async () => {
   await flushBufferedText();
   await sparkActions.stop();
   await sparkTools.close();
+  await processKillsSent();
   await db.end();
   process.exit(0);
 };

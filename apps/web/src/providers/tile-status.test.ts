@@ -96,4 +96,27 @@ describe('tileStatus', () => {
       hint: 'Rate limited · 2 min ago',
     });
   });
+
+  it('clears a sign-in failure once a test message or login check passes after it', () => {
+    const lastTest = (ok: boolean, testedAt: string) => ({ ok, message: 'ok', testedAt });
+    const status = (changes: Partial<ProviderConnection>) =>
+      tileStatus({ ...codex, connection: { ...connection, ...changes } }, issue('auth'), null, when)
+        .label;
+    expect(status({ lastTest: lastTest(true, '2026-10-02T10:05:00Z') })).toBe(
+      'Connected · Local CLI',
+    );
+    expect(status({ verifiedAt: '2026-10-02T10:05:00Z' })).toBe('Connected · Local CLI');
+    expect(status({ lastTest: lastTest(true, '2026-10-02T09:55:00Z') })).toBe('Needs sign-in');
+    expect(status({ lastTest: lastTest(false, '2026-10-02T10:05:00Z') })).toBe('Needs sign-in');
+  });
+
+  it('keeps a limit error after a later passing test', () => {
+    const tested = {
+      ...connection,
+      lastTest: { ok: true, message: 'ok', testedAt: '2026-10-02T10:05:00Z' },
+    };
+    expect(
+      tileStatus({ ...codex, connection: tested }, issue('rate_limit'), null, when).label,
+    ).toBe('Error');
+  });
 });

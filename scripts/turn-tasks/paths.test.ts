@@ -23,8 +23,8 @@ describe('scratch paths', () => {
     expect(() => assertScratchPath(tmpdir())).toThrow('system temp folder');
     expect(() => assertScratchPath(homedir())).toThrow('system temp folder');
     expect(() => assertScratchPath(WORKTREE_ROOT)).toThrow('system temp folder');
-    expect(() => assertScratchPath(join(homedir(), 'Documents', 'feature-web-apps'))).toThrow(
-      'off limits',
+    expect(() => assertScratchPath(join(homedir(), 'Documents', 'orders-web-app'))).toThrow(
+      'system temp folder',
     );
   });
 

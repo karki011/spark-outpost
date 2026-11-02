@@ -31,6 +31,7 @@ import { nativeTerminalTarget } from '../persistence/native-terminal-settings.ts
 export interface StartDeps extends TicketDeps {
   runTarget(conversationId: string): Promise<RunTarget>;
   offersSparkTools(provider: string): boolean;
+  sentByAssistant?: boolean;
 }
 
 async function hasMessages(db: Queryable, conversationId: string): Promise<boolean> {
@@ -116,7 +117,7 @@ export async function startTicket(
         canReadTicket: terminal || deps.offersSparkTools(target.provider),
       }),
       attachmentIds: context.attachments.map((file) => file.id),
-      source: 'ticket',
+      source: deps.sentByAssistant ? 'assistant' : 'ticket',
     },
     target,
     deps.workspaceId,

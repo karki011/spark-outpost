@@ -4,8 +4,9 @@ import type { RunInput } from '../workflow/run-input.ts';
 import type { OutpostStore, PostStore, PostWithFacts, StoryStore } from './ports.ts';
 import type { ReadLabels } from './read-labels.ts';
 import {
-  alsoAskedLine,
   answersPreamble,
+  batchLine,
+  instructionsPreamble,
   notesPreamble,
   stackLine,
   type PreambleAnswer,
@@ -130,14 +131,17 @@ async function newAnswers(
   return answers;
 }
 
-function alsoAsked(posts: readonly PostWithFacts[], turn: PreambleTurn): string | null {
+function batchNote(posts: readonly PostWithFacts[], turn: PreambleTurn): string | null {
   const postId = turn.outpostRequest?.postId;
   const own = posts.find((found) => found.post.id === postId)?.post;
   if (!own?.fromUser || own.batchId === null) return null;
   const others = posts
     .map((found) => found.post)
     .filter((post) => post.batchId === own.batchId && post.id !== own.id);
-  return alsoAskedLine(others.map((post) => post.toHandle));
+  return batchLine(
+    own.toHandle,
+    others.map((post) => post.toHandle),
+  );
 }
 
 async function stackNote(deps: PreambleDeps, chatId: string): Promise<string | null> {
@@ -171,9 +175,13 @@ export async function outpostPreamble(
   if (answers.length > 0) {
     await deps.labels.recordOutpostRead(deps.db, turn.identity.runId, 'answer');
   }
+  const brief = turn.outpostRequest
+    ? instructionsPreamble(found.outpost.name, found.outpost.instructions)
+    : null;
   const parts = [
+    brief,
     await stackNote(deps, chatId),
-    alsoAsked(posts, turn),
+    batchNote(posts, turn),
     notesPreamble(notes),
     answersPreamble(answers),
   ].filter((part): part is string => part !== null);

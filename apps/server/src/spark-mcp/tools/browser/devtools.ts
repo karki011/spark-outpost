@@ -7,7 +7,10 @@ import {
   browserDevtoolsActionSchema,
   redactText,
   untrustedPage,
+  withoutValue,
+  withoutStorageSecrets,
   type BrowserDevtoolsAction,
+  type BrowserStorageResult,
 } from '@spark-outpost/contracts';
 import { renderResult } from '../../format.ts';
 import { SparkBlocks, SparkToolError, sparkTool, type SparkToolContext } from '../../tool.ts';
@@ -38,14 +41,24 @@ interface DevtoolsArgs {
 }
 
 const EVAL_NOTE =
-  'The value the page returned, as JSON when it can be. Values of password, card and code fields and of fields Spark filled are replaced with [masked] wherever they appear; anything else the page holds can be in it.';
+  'The value the page returned, as JSON when it can be. Values of password, card and code fields, of fields Spark filled, of the page’s cookies and of auth-looking storage are replaced with [masked] wherever they appear; anything else the page holds can be in it.';
 const NOTES: Record<Exclude<BrowserDevtoolsAction, 'eval'>, string> = {
   inspect: 'Attributes, a subset of computed styles, the box and the accessible role and name.',
   performance:
     'Navigation timing in ms from navigation start, resource counts and the slowest five, and LCP, CLS, INP and long tasks where the page recorded them (null when it did not).',
   storage:
-    'Keys and sizes; cookie names, domains and flags. Values only with values true, and only in your own tab storage on a website, never the user’s.',
+    'Keys and sizes; cookie names, domains and flags, never cookie values. Storage values only with values true and only in your own tab; auth-looking ones are masked.',
 };
+
+function withoutSecrets(found: BrowserStorageResult): BrowserStorageResult {
+  const item = found.owner === 'agent' ? withoutStorageSecrets : withoutValue;
+  return {
+    ...found,
+    local: found.local.map(item),
+    session: found.session.map(item),
+    cookies: found.cookies.map(withoutValue),
+  };
+}
 
 function hashOf(text: string): string {
   return createHash('sha256').update(text).digest('hex');
@@ -156,7 +169,8 @@ async function readTool(args: DevtoolsArgs, context: SparkToolContext) {
   if (!cleared.cleared) return cleared.result;
   const hidden = await pageScrub(context);
   const { tabId, url, place } = found;
-  const data = Object.fromEntries(Object.entries(found).filter(([key]) => !TAB_KEYS.has(key)));
+  const shown = action === 'storage' ? withoutSecrets(found as BrowserStorageResult) : found;
+  const data = Object.fromEntries(Object.entries(shown).filter(([key]) => !TAB_KEYS.has(key)));
   const facts = {
     tab: tabId,
     url: hidden(url),
@@ -174,7 +188,7 @@ export const browserDevtoolsTool = sparkTool({
   acts: true,
   title: 'Page developer tools',
   description:
-    "Developer tools for a tab. eval runs JavaScript in the page (awaited, 10 s, capped, field values masked) and counts as acting: external sites follow the agent mode, a user's tab always asks. inspect: an element by ref or selector. performance: timings, LCP/CLS/INP, long tasks. storage: storage and cookies; values only in your own website tab.",
+    "Developer tools for a tab. eval runs JavaScript in the page (awaited, 10 s, capped, field values masked) and counts as acting: external sites follow the agent mode, a user's tab always asks. inspect: an element by ref or selector. performance: timings, LCP/CLS/INP, long tasks. storage: storage and cookies; no cookie values, storage values only in your own tab, auth-looking ones masked.",
   input: {
     action: browserDevtoolsActionSchema,
     expression: z.string().max(BROWSER_EVAL_EXPRESSION_MAX).optional(),

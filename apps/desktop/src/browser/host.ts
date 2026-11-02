@@ -1,26 +1,33 @@
 import {
   Menu,
   ipcMain,
+  webContents,
   type BrowserWindow,
   type ContextMenuParams,
   type IpcMainInvokeEvent,
   type MenuItemConstructorOptions,
 } from 'electron';
 import {
-  addressToUrl,
+  BROWSER_FOCUS_SHORTCUTS,
+  BROWSER_TABS_MAX,
   browserCommandSchema,
   browserIdSchema,
   browserSignOutSchema,
   browserPlacementSchema,
   type BrowserCommand,
-  type BrowserPick,
+  type BrowserFound,
   type BrowserSelectedText,
+  type BrowserShortcut,
+  type BrowserShortcutEvent,
 } from '@spark-outpost/contracts';
 import { IPC } from '../ipc-channels.ts';
 import { runBrowserOp } from './agent-ops.ts';
 import { connectWorkerBridge, type BridgePort, type WorkerBridge } from './bridge.ts';
+import { startDownloadsHost, type DownloadsHost } from './downloads-host.ts';
+import { runPaneCommand } from './pane-command.ts';
+import { savedPageZooms } from './page-zoom.ts';
 import { BrowserPanes } from './panes.ts';
-import { startPick, type PickSession } from './picker.ts';
+import { pickRunner } from './pick-runner.ts';
 import { loadRecentOrigins } from './recent-origins.ts';
 import {
   readPageSelection,
@@ -29,7 +36,13 @@ import {
   type SelectionIntent,
   type SelectionMenuItem,
 } from './selection-menu.ts';
-import { signOut, signedInSites } from './sessions.ts';
+import { removeRetiredPartitions } from './retired-partitions.ts';
+import { BROWSER_PARTITION } from './request-guard.ts';
+import { signOut, signedInSites, type SessionGuards } from './sessions.ts';
+import { startBrowserViewHost, type BrowserViewHost } from './view-host.ts';
+import type { HistorySink } from './view-history.ts';
+import { loadSavedView } from './view-saved.ts';
+import { handToChat, toView } from './view-transfer.ts';
 import type { PaneTab } from './tab.ts';
 
 export interface BrowserHostOptions {
@@ -38,11 +51,13 @@ export interface BrowserHostOptions {
   userData: string;
   blockedPorts: readonly number[];
   log(line: string): void;
+  history?: HistorySink;
 }
 
 export interface DesktopBrowserHost {
   connectWorker(port: BridgePort): WorkerBridge;
   windowClosed(): void;
+  menuShortcut(shortcut: BrowserShortcut): boolean;
   dispose(): void;
 }
 
@@ -53,6 +68,8 @@ const CHANNELS = [
   IPC.browserStart,
   IPC.browserSites,
   IPC.browserSignOut,
+  IPC.browserViewHand,
+  IPC.browserToView,
 ];
 
 function menuTemplate(
@@ -69,20 +86,53 @@ function menuTemplate(
 
 export async function startBrowserHost(options: BrowserHostOptions): Promise<DesktopBrowserHost> {
   const blocked = new Set<number>(options.blockedPorts);
+  await removeRetiredPartitions(options.userData, options.log);
   const origins = await loadRecentOrigins(options.userData, options.log);
-  const picks = new Map<string, PickSession>();
+  const saved = await loadSavedView(options.userData, options.log);
   const send = (channel: string, payload: unknown) => {
     const window = options.window();
     if (window && !window.isDestroyed()) window.webContents.send(channel, payload);
   };
-  const panes = new BrowserPanes({
+  const paneShortcut = (tab: PaneTab, shortcut: BrowserShortcut) => {
+    if (BROWSER_FOCUS_SHORTCUTS.has(shortcut)) options.window()?.webContents.focus();
+    const event: BrowserShortcutEvent = { chatId: tab.chatId, shortcut };
+    send(IPC.browserShortcut, event);
+  };
+  let view: BrowserViewHost | null = null;
+  let downloads: DownloadsHost | null = null;
+  const guards: SessionGuards = {
+    blockedPorts: () => blocked,
+    roots: (contents) => panes.rootsOfContents(contents),
+    log: options.log,
+    inputMarks: (contents) =>
+      panes.inputMarks(contents) ?? view?.panes.inputMarks(contents) ?? null,
+    download: (item, contents) =>
+      downloads?.decide(
+        item,
+        panes.tabOfContents(contents) ?? view?.panes.tabOfContents(contents) ?? null,
+      ) ?? false,
+  };
+  const zoomChanged = () => {
+    panes.noteAll();
+    view?.panes.noteAll();
+  };
+  const workZooms = savedPageZooms(saved, 'work', zoomChanged);
+  const panes: BrowserPanes = new BrowserPanes({
     window: options.window,
+    partition: () => BROWSER_PARTITION,
+    pageZooms: () => workZooms,
+    guards,
     blockedPorts: () => blocked,
     stateChanged: (state) => send(IPC.browserStateChanged, state),
     snapshot: (chatId, image) => send(IPC.browserSnapshot, { chatId, image }),
     localOriginSeen: (projectId, origin) => origins.note(projectId, origin),
     contextMenu: (tab, params) => showSelectionMenu(tab, params),
     addShortcut: (tab) => void addSelection(tab),
+    paneShortcut,
+    found: (tab, active, matches) => {
+      const result: BrowserFound = { chatId: tab.chatId, tabId: tab.id, active, matches };
+      send(IPC.browserFound, result);
+    },
     log: options.log,
   });
 
@@ -107,7 +157,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     const template = menuTemplate(
       items,
       (intent) => sendSelection(tab, params.selectionText, intent),
-      () => tab.view()?.webContents.copy(),
+      () => tab.contents()?.copy(),
     );
     Menu.buildFromTemplate(template).popup({ window });
   };
@@ -122,89 +172,19 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     }
   };
 
-  const stopPick = async (tab: PaneTab) => {
-    const session = picks.get(tab.id);
-    picks.delete(tab.id);
-    tab.picking = false;
-    await session?.cancel();
-    panes.noteChange(tab.chatId);
-  };
+  const picker = pickRunner({
+    panes: () => panes,
+    window: options.window,
+    picked: (pick) => send(IPC.browserPicked, pick),
+    keepsImage: () => true,
+  });
 
-  const pick = async (tab: PaneTab, mode: 'element' | 'region' | 'off') => {
-    await stopPick(tab);
-    if (mode === 'off') return;
-    const { cdp, view } = await tab.wake();
-    tab.picking = true;
-    panes.noteChange(tab.chatId);
-    view.webContents.focus();
-    const session = await startPick(
-      cdp,
-      mode,
-      (picked) => {
-        picks.delete(tab.id);
-        tab.picking = false;
-        panes.noteChange(tab.chatId);
-        if (!picked) return;
-        const result: BrowserPick = {
-          chatId: tab.chatId,
-          url: tab.currentUrl().slice(0, 4096),
-          title: tab.currentTitle().slice(0, 300),
-          ...picked,
-        };
-        send(IPC.browserPicked, result);
-        options.window()?.webContents.focus();
-      },
-      tab.filled,
-    );
-    picks.set(tab.id, session);
-  };
-
-  const navigate = async (chatId: string, tab: PaneTab, typed: string) => {
-    const url = addressToUrl(typed);
-    if (!url) return;
-    if (!tab.handoff) {
-      tab.owner = 'user';
-      tab.runId = null;
-    }
-    tab.lastAction = null;
-    await tab.load(url);
-    panes.noteChange(chatId);
-    panes.layout();
-  };
-
-  const command = async (chatId: string, action: BrowserCommand) => {
-    if (action.command === 'new_tab') {
-      const url = action.url ? addressToUrl(action.url) : null;
-      const tab = panes.createTab(chatId, {
-        owner: 'user',
-        runId: null,
-        url: url ?? 'about:blank',
-      });
-      if (!tab) return;
-      panes.select(chatId, tab.id);
-      if (url) await navigate(chatId, tab, url);
-      return;
-    }
-    const tab = panes.tab(chatId, action.tabId);
-    if (!tab) return;
-    if (action.command === 'navigate') await navigate(chatId, tab, action.url);
-    else if (action.command === 'select') panes.select(chatId, tab.id);
-    else if (action.command === 'close') {
-      await stopPick(tab);
-      panes.close(chatId, tab.id);
-    } else if (action.command === 'pin') {
-      tab.pinned = action.pinned;
-      panes.noteChange(chatId);
-    } else if (action.command === 'devtools') {
-      tab.openDevtools();
-    } else if (action.command === 'pick') {
-      tab.keep();
-      await pick(tab, action.mode);
-    } else {
-      tab.keep();
-      tab.history(action.command);
-    }
-  };
+  const command = (chatId: string, action: BrowserCommand) =>
+    runPaneCommand(panes, chatId, action, {
+      tabsMax: BROWSER_TABS_MAX,
+      pick: picker.pick,
+      closed: (tab) => void picker.stop(tab).catch(() => undefined),
+    });
 
   const guarded =
     <T>(run: (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<T> | T) =>
@@ -218,6 +198,34 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
       }
     };
 
+  const viewHost = startBrowserViewHost({
+    window: options.window,
+    blockedPorts: () => blocked,
+    guards,
+    saved,
+    zooms: (profile) =>
+      profile === 'work' ? workZooms : savedPageZooms(saved, profile, zoomChanged),
+    zoomsCleared: () => panes.syncZooms(),
+    send,
+    guarded,
+    log: options.log,
+    history: options.history,
+  });
+  view = viewHost;
+  downloads = startDownloadsHost({ send, guarded, log: options.log });
+  ipcMain.handle(
+    IPC.browserViewHand,
+    guarded((_event, raw) => handToChat(panes, viewHost, raw)),
+  );
+  ipcMain.handle(
+    IPC.browserToView,
+    guarded((_event, raw) => toView(panes, viewHost, raw)),
+  );
+
+  ipcMain.on(IPC.browserPageCopyAllowed, (event) => {
+    event.returnValue =
+      panes.pageCopyAllowed(event.sender) || viewHost.panes.pageCopyAllowed(event.sender);
+  });
   ipcMain.handle(
     IPC.browserState,
     guarded((_event, chatId) => panes.state(browserIdSchema.parse(chatId))),
@@ -232,8 +240,11 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
   ipcMain.handle(
     IPC.browserCommand,
     guarded(async (_event, chatId, action) => {
-      await command(browserIdSchema.parse(chatId), browserCommandSchema.parse(action));
-      return true;
+      const result = await command(
+        browserIdSchema.parse(chatId),
+        browserCommandSchema.parse(action),
+      );
+      return result ?? true;
     }),
   );
   ipcMain.handle(
@@ -249,14 +260,14 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
   );
   ipcMain.handle(
     IPC.browserSites,
-    guarded((_event, projectId) => signedInSites(browserIdSchema.parse(projectId))),
+    guarded(() => signedInSites()),
   );
   ipcMain.handle(
     IPC.browserSignOut,
     guarded(async (_event, raw) => {
-      const { projectId, origin } = browserSignOutSchema.parse(raw);
-      await signOut(projectId, origin);
-      return signedInSites(projectId);
+      const { origin } = browserSignOutSchema.parse(raw);
+      await signOut(origin);
+      return signedInSites();
     }),
   );
 
@@ -269,10 +280,28 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
         },
       });
     },
-    windowClosed: () => panes.sleepAll(),
+    windowClosed: () => {
+      panes.sleepAll();
+      viewHost.panes.sleepAll();
+    },
+    menuShortcut(shortcut) {
+      const focused = webContents.getFocusedWebContents();
+      const tab = panes.tabOfContents(focused);
+      if (tab) {
+        paneShortcut(tab, shortcut);
+        return true;
+      }
+      const viewTab = viewHost.panes.tabOfContents(focused);
+      if (!viewTab) return false;
+      viewHost.shortcut(viewTab, shortcut);
+      return true;
+    },
     dispose() {
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);
+      ipcMain.removeAllListeners(IPC.browserPageCopyAllowed);
+      downloads?.dispose();
       try {
+        viewHost.dispose();
         panes.dispose();
       } catch (error) {
         options.log(`Could not close the browser pane cleanly: ${(error as Error).message}`);

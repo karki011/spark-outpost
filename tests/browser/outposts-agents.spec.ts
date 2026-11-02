@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { send } from './project-chat-kit.ts';
+import { calls, withDesktopBrowser } from './desktop-browser.ts';
+import { toggleHeaderPane } from './header-menu.ts';
 import { resetTestDatabase } from './database.ts';
 import { animationsSettled } from './settle.ts';
 import {
@@ -8,11 +10,14 @@ import {
   TURN_TIMEOUT,
   chip,
   openOutpost,
+  openThread,
   outpostPage,
   post,
   stateOf,
   seeded,
+  say,
   thread,
+  threadPane,
 } from './outposts-kit.ts';
 
 const SHOTS = process.env.SPARK_REVIEW_SHOTS;
@@ -87,12 +92,12 @@ test('an agent asks another member, waits for the answer, and both chats and the
   await inBothThemes(page, 'agent-thread', '.main.op', async () => {
     await expect(asked).toBeInViewport();
     await expect(asked.locator('.op-post-head').first()).toContainText('@fenot from youto@api');
-    await expect(asked.locator('.op-post-head .chat-face')).toHaveCount(3);
-    await expect(stateOf(asked)).toHaveText('Answered');
-    await expect(asked.locator('.op-reply .op-mood')).toHaveText('answered');
+    await expect(asked.locator('.chat-face')).toHaveCount(2);
+    await expect(stateOf(asked)).toHaveText('Idle');
   });
 
-  await asked.getByRole('button', { name: 'Open @api in chat' }).click();
+  await openThread(asked, 'api');
+  await threadPane(page, 'api').getByRole('button', { name: 'Open @api in chat' }).click();
   await expect(page.locator('.chat-title')).toHaveText('Orders API');
   const header = page.locator('.bubble.from', { hasText: ASK });
   await inBothThemes(page, 'agent-received', 'section[data-turn]', async () => {
@@ -115,6 +120,81 @@ test('an agent leaves a note in the thread, and it starts no work', async ({ pag
   const note = post(page, NOTE);
   await expect(note.locator('.op-post-head')).toContainText('@fe');
   await expect(note.locator('.op-kind')).toHaveText('note');
-  await expect(thread(page).locator('.op-state')).toHaveCount(0);
+  await expect(thread(page).locator('.op-pill')).toHaveCount(0);
   await expect(chip(page, 'api')).toContainText('Idle');
+});
+
+test('answering an agent question clears the Outpost request and header while retaining its answer', async ({
+  page,
+}) => {
+  const id = await seeded(page);
+  await openOutpost(page);
+  await say(page, '@api Choose the cache store #askclaude #build');
+  const requested = post(page, 'Choose the cache store');
+  await expect(stateOf(requested)).toHaveText('Waiting on you', { timeout: TURN_TIMEOUT });
+  await requested.getByRole('button', { name: 'Answer @api', exact: true }).click();
+  const pane = threadPane(page, 'api');
+  const questions = pane.getByRole('group', { name: /has questions/ });
+  await expect(questions).toBeVisible();
+  await animationsSettled(page);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}-question-pending.png` });
+  await questions.getByRole('radio', { name: /^Postgres/ }).check();
+  await questions.getByRole('radio', { name: /^Postgres/ }).press('Enter');
+  await questions.getByRole('checkbox', { name: /^Lint/ }).check();
+  await questions.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(questions.getByRole('status')).toContainText('Answered.');
+  await expect(pane.locator('.op-thread-head .op-pill')).toHaveText('Idle', {
+    timeout: TURN_TIMEOUT,
+  });
+  await expect(pane.getByRole('button', { name: 'Answer @api', exact: true })).toHaveCount(0);
+  await expect(questions).toContainText('Which store should the cache use? → Postgres');
+  await expect(pane).toContainText('asked=accept');
+  const response = await page.request.get(`/api/outposts/${id}`);
+  expect(response.ok()).toBe(true);
+  const detail = await response.json();
+  expect(
+    detail.posts.find((item: { body: string }) => item.body.includes('#askclaude')).state,
+  ).toBe('answered');
+  await pane.getByRole('button', { name: 'Back to Overview' }).click();
+  await expect(stateOf(requested)).toHaveText('Idle');
+  await expect(requested.getByRole('button', { name: 'Answer @api', exact: true })).toHaveCount(0);
+  await openThread(requested, 'api');
+  await expect(threadPane(page, 'api').getByRole('group', { name: /has questions/ })).toContainText(
+    'Answered.',
+  );
+  await animationsSettled(page);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}-question-answered.png` });
+  await page.reload();
+  await openOutpost(page);
+  await expect(stateOf(requested)).toHaveText('Idle');
+  await openThread(requested, 'api');
+  await expect(pane.locator('.op-thread-head .op-pill')).toHaveText('Idle');
+  await expect(pane.getByRole('button', { name: 'Answer @api', exact: true })).toHaveCount(0);
+  await expect(questions).toContainText('Answered.');
+});
+
+test("a chat's Browser pane stays with its chat and never sits beside the outpost", async ({
+  page,
+}) => {
+  await withDesktopBrowser(page);
+  await seeded(page);
+  await openMember(page, 'fe', 'Frontend');
+  await toggleHeaderPane(page, 'Browser');
+  const panel = page.getByRole('complementary', { name: 'Work panel' });
+  const pane = page.getByRole('region', { name: 'Browser' });
+  await expect(pane).toBeVisible();
+
+  const lastBounds = async () =>
+    ((await calls(page, 'place')) as { bounds: unknown }[]).at(-1)?.bounds ?? null;
+  await openOutpost(page);
+  await expect(panel).toBeHidden();
+  await expect.poll(lastBounds).toBeNull();
+
+  await chip(page, 'fe').click();
+  await expect(page.locator('.chat-title')).toHaveText('Frontend');
+  await expect(pane).toBeVisible();
+  await expect.poll(lastBounds).not.toBeNull();
+  const chat = (await page.locator('.main:not(.op)').boundingBox())!;
+  const side = (await panel.boundingBox())!;
+  expect(side.x).toBeGreaterThanOrEqual(chat.x + chat.width);
 });

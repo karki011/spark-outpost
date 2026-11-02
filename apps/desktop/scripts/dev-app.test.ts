@@ -252,12 +252,13 @@ describe('desktopDir', () => {
 });
 
 describe('missingPrerequisites', () => {
-  it('requires the built shell and web app and only warns about the Mac control helper', () => {
+  it('requires the built shell and web app and only warns about the helper and the addon', () => {
     const present = new Set(['/r/apps/desktop/dist/main.js']);
     const result = missingPrerequisites('/r/apps/desktop', 'arm64', (file) => present.has(file));
     expect(result.missing).toEqual(['/r/apps/web/dist/index.html']);
-    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings).toHaveLength(2);
     expect(result.warnings[0]).toContain('/r/.local/mac-control/arm64/spark-mac-control');
+    expect(result.warnings[1]).toContain('/r/.local/no-activate/arm64/no-activate.node');
   });
 });
 

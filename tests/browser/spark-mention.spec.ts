@@ -40,7 +40,7 @@ test('suggests the matching Spark, stays quiet once dismissed, and applies on cl
   page,
 }) => {
   const input = await newChat(page);
-  await expect(input).toHaveAttribute('placeholder', /@ to hand a job to a Spark/);
+  await expect(input).toHaveAttribute('placeholder', /@ for a Spark/);
 
   await input.fill('add a dark mode toggle');
   await expect(suggestion(page)).toHaveCount(0);
@@ -119,7 +119,7 @@ test('a mention runs the Spark as its own labelled turn and skips the main agent
   await expect(block.locator('.agent-role')).toHaveText('Code reviewer');
   await expect(block.locator('.md')).toContainText('review the login change', { timeout: 20_000 });
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 20_000 });
-  await expect(turn.locator('.provider-name')).toHaveCount(0);
+  await expect(turn.locator('.msg.ai.solo')).toHaveCount(0);
   await expect(turn).not.toContainText('Hand-off note');
   expect((await scan(page, 'section[data-turn]')).violations).toEqual([]);
   await page.screenshot({ path: shot('turn') });
@@ -163,7 +163,8 @@ test('the main agent continues with a hand-off note when the message hands the w
   await expect(main.locator('.md')).toContainText('Hand-off note from Spark Outpost', {
     timeout: 30_000,
   });
-  await expect(main.locator('.provider-name')).toHaveText('Claude');
+  await expect(main).toHaveClass(/\bsolo\b/);
+  await expect(main.locator(':scope > .sr-only')).toContainText(/^Claude /);
   await expect(blocks).toHaveCount(1);
   await page.screenshot({ path: shot('turn-then-main') });
 });

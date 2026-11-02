@@ -1,18 +1,11 @@
 import './browser-pane.css';
-import {
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-  type KeyboardEvent,
-  type ReactNode,
-} from 'react';
-import { addressToUrl, type BrowserPaneTab } from '@spark-outpost/contracts';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import type { BrowserPaneTab } from '@spark-outpost/contracts';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
-import { useTooltip } from '../ui/Tooltip.tsx';
 import {
   DevtoolsIcon,
+  GlobeIcon,
   NavBackIcon,
   NavForwardIcon,
   PickElementIcon,
@@ -28,102 +21,35 @@ import {
   setPaneNotice,
   useChatBrowser,
 } from './browser-store.ts';
+import { browserViewAvailable, openChatTabInView } from '../browser-view/view-store.ts';
+import { AddressBar } from './AddressBar.tsx';
+import { ToolButton } from './ToolButton.tsx';
 import { BrowserTabs } from './BrowserTabs.tsx';
+import { FindBar } from './FindBar.tsx';
 import { HandoffBanner } from './HandoffBanner.tsx';
 import { defaultBrowserUrl, openInDefaultBrowser } from './chat-links.ts';
+import {
+  PANE_KEYS,
+  chatPaneCommands,
+  chromeShortcut,
+  runPaneShortcut,
+  usePageShortcuts,
+} from './pane-shortcuts.ts';
+import { PageTools, ZoomBadge } from './PageTools.tsx';
+import { PageWidthMenu } from './PageWidthMenu.tsx';
 import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
 import { hiddenPlacement, useViewPlacement, type BrowserHome } from './use-view-placement.ts';
+
+const COPIED_MS = 1600;
+const REFOCUS_MS = 1500;
 
 interface BrowserPaneProps {
   home: BrowserHome;
   shown: boolean;
   lead?: ReactNode;
   trail?: ReactNode;
-}
-
-interface ToolButtonProps {
-  label: string;
-  disabled?: boolean;
-  pressed?: boolean;
-  onClick(): void;
-  children: ReactNode;
-}
-
-function ToolButton({ label, disabled = false, pressed, onClick, children }: ToolButtonProps) {
-  const tip = useTooltip(label, { side: 'top' });
-  return (
-    <>
-      <button
-        type="button"
-        className="icon-btn bp-tool"
-        aria-label={label}
-        aria-pressed={pressed}
-        disabled={disabled}
-        {...tip.triggerProps}
-        onClick={onClick}
-      >
-        {children}
-      </button>
-      {tip.tooltip}
-    </>
-  );
-}
-
-function AddressBar({ chatId, tab }: { chatId: string; tab: BrowserPaneTab | null }) {
-  const [draft, setDraft] = useState<string | null>(null);
-  const [invalid, setInvalid] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
-  const url = tab?.url ?? '';
-
-  useEffect(() => {
-    if (tab && tab.url === '' && !tab.loading) input.current?.focus();
-  }, [tab?.id, tab?.url, tab?.loading, tab]);
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const typed = draft ?? url;
-    if (!addressToUrl(typed)) {
-      setInvalid(true);
-      return;
-    }
-    setInvalid(false);
-    if (tab) sendBrowserCommand(chatId, { command: 'navigate', tabId: tab.id, url: typed });
-    else sendBrowserCommand(chatId, { command: 'new_tab', url: typed });
-    input.current?.blur();
-  };
-
-  return (
-    <form className="bp-address" onSubmit={submit}>
-      <input
-        ref={input}
-        className="inp bp-url"
-        type="text"
-        inputMode="url"
-        spellCheck={false}
-        autoCapitalize="off"
-        autoComplete="off"
-        aria-label="Address"
-        aria-invalid={invalid}
-        aria-describedby={invalid ? 'bp-address-error' : undefined}
-        placeholder="localhost:5173 or a web address"
-        value={draft ?? url}
-        onChange={(event) => {
-          setDraft(event.target.value);
-          setInvalid(false);
-        }}
-        onFocus={(event) => event.target.select()}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') setDraft(null);
-        }}
-      />
-      {invalid && (
-        <p id="bp-address-error" className="bp-address-error" role="alert">
-          Type a web address, like localhost:5173 or example.com.
-        </p>
-      )}
-    </form>
-  );
+  setWidth?: ((width: number) => void) | null;
 }
 
 function StartPage({ chatId, tab }: { chatId: string; tab: BrowserPaneTab | null }) {
@@ -184,13 +110,52 @@ function AgentTabNote({ chatId, tab }: { chatId: string; tab: BrowserPaneTab }) 
   );
 }
 
-export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserPaneProps) {
+export function BrowserPane({
+  home,
+  shown,
+  lead = null,
+  trail = null,
+  setWidth = null,
+}: BrowserPaneProps) {
   const { chatId } = home;
+  const commands = chatPaneCommands(chatId);
   const browser = useChatBrowser(chatId);
   const view = useRef<HTMLDivElement>(null);
+  const section = useRef<HTMLElement>(null);
   const tab = activeTab(browser);
   const started = useRef(false);
+  const [finding, setFinding] = useState<{ tabId: string; request: number } | null>(null);
+  const [copied, setCopied] = useState(0);
   useViewPlacement(view, home, shown);
+
+  useEffect(() => {
+    if (copied === 0) return;
+    const timer = setTimeout(() => setCopied(0), COPIED_MS);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  const shortcutUi = {
+    focusAddress: () => {
+      const address = section.current?.querySelector<HTMLInputElement>('input.bp-url');
+      address?.focus();
+      address?.select();
+    },
+    openFind: () => {
+      if (tab) setFinding((open) => ({ tabId: tab.id, request: (open?.request ?? 0) + 1 }));
+    },
+    copiedUrl: () => setCopied((count) => count + 1),
+  };
+  const runShortcut = (shortcut: Parameters<typeof runPaneShortcut>[2]) =>
+    runPaneShortcut(commands, browser.tabs, shortcut, shortcutUi);
+  usePageShortcuts(chatId, runShortcut, shown);
+  const shortcutAt = useRef(0);
+  const tabKey = `${tab?.id ?? ''}:${tab?.url ?? ''}`;
+
+  useEffect(() => {
+    const recent = Date.now() - shortcutAt.current < REFOCUS_MS;
+    if (!recent || document.activeElement !== document.body) return;
+    section.current?.querySelector<HTMLInputElement>('input.bp-url')?.focus();
+  }, [tabKey]);
 
   useEffect(() => {
     if (!shown || started.current) return;
@@ -216,9 +181,18 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
 
   return (
     <section
+      ref={section}
       className="bp"
       aria-label="Browser"
       onKeyDown={(event) => {
+        const shortcut = chromeShortcut(event);
+        if (shortcut) {
+          event.preventDefault();
+          event.stopPropagation();
+          shortcutAt.current = Date.now();
+          runShortcut(shortcut);
+          return;
+        }
         if (!tab || blank || !isDevtoolsKey(event)) return;
         event.preventDefault();
         sendBrowserCommand(chatId, { command: 'devtools', tabId: tab.id });
@@ -233,10 +207,20 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
         {trail}
       </div>
       <div className="bp-bar">
-        <ToolButton label="Back" disabled={!tab?.canGoBack} onClick={() => act('back')}>
+        <ToolButton
+          label="Back"
+          keys={PANE_KEYS.back}
+          disabled={!tab?.canGoBack}
+          onClick={() => act('back')}
+        >
           <NavBackIcon />
         </ToolButton>
-        <ToolButton label="Forward" disabled={!tab?.canGoForward} onClick={() => act('forward')}>
+        <ToolButton
+          label="Forward"
+          keys={PANE_KEYS.forward}
+          disabled={!tab?.canGoForward}
+          onClick={() => act('forward')}
+        >
           <NavForwardIcon />
         </ToolButton>
         {tab?.loading ? (
@@ -244,17 +228,23 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
             <StopIcon />
           </ToolButton>
         ) : (
-          <ToolButton label="Reload" disabled={blank} onClick={() => act('reload')}>
+          <ToolButton
+            label="Reload"
+            keys={PANE_KEYS.reload}
+            disabled={blank}
+            onClick={() => act('reload')}
+          >
             <ReloadIcon />
           </ToolButton>
         )}
         {tab?.picking ? (
           <p className="bp-picking" role="status">
-            Click or drag a box. Esc cancels.
+            Click to select, ⇧ click for more, ↑↓ parent or child, drag a box. Esc finishes.
           </p>
         ) : (
-          <AddressBar key={`${tab?.id ?? ''}:${tab?.url ?? ''}`} chatId={chatId} tab={tab} />
+          <AddressBar key={tabKey} commands={commands} tab={tab} />
         )}
+        <ZoomBadge tab={tab} commands={commands} />
         <ToolButton
           label={tab?.picking ? 'Stop selecting' : `Select an element for ${destination}`}
           disabled={blank}
@@ -277,6 +267,14 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
         >
           <DevtoolsIcon />
         </ToolButton>
+        <PageTools
+          tab={tab}
+          commands={commands}
+          onNotice={(notice) => setPaneNotice(chatId, notice)}
+        />
+        {setWidth && (
+          <PageWidthMenu setWidth={setWidth} onNotice={(notice) => setPaneNotice(chatId, notice)} />
+        )}
         <ToolButton
           label="Open in default browser"
           disabled={outside === null}
@@ -284,8 +282,38 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
         >
           <ExternalLinkIcon />
         </ToolButton>
+        {browserViewAvailable() && (
+          <ToolButton
+            label="Open in Browser view (Work)"
+            disabled={blank}
+            onClick={() => {
+              if (!tab) return;
+              void openChatTabInView(chatId, tab.id).then((result) => {
+                if (!result.ok) setPaneNotice(chatId, result.reason);
+              });
+            }}
+          >
+            <GlobeIcon />
+          </ToolButton>
+        )}
       </div>
+      {finding && tab && finding.tabId === tab.id && !blank && (
+        <FindBar
+          chatId={chatId}
+          tabId={tab.id}
+          request={finding.request}
+          onClose={() => {
+            setFinding(null);
+            sendBrowserCommand(chatId, { command: 'focus', tabId: tab.id });
+          }}
+        />
+      )}
       <div className="bp-status" aria-live="polite">
+        {copied > 0 && (
+          <span className="bp-copied" role="status">
+            Copied URL
+          </span>
+        )}
         {browser.notice && (
           <span className="bp-notice" role="alert">
             <span>{browser.notice}</span>
@@ -311,7 +339,7 @@ export function BrowserPane({ home, shown, lead = null, trail = null }: BrowserP
         <PreviewBadge chatId={chatId} />
       </div>
       {tab?.handoff && <HandoffBanner key={tab.handoff.approvalId} handoff={tab.handoff} />}
-      <div className="bp-view" id="bp-view" ref={view}>
+      <div className="bp-view" id="bp-view" data-page-zoom={tab?.zoom ?? 1} ref={view}>
         {blank && <StartPage chatId={chatId} tab={tab} />}
         {!blank && browser.snapshot && (
           <img className="bp-snapshot" src={browser.snapshot} alt="" />

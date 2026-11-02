@@ -10,12 +10,7 @@ export interface PushCandidate {
 }
 
 export interface QueuedPush extends PushCandidate {
-  at: number;
-}
-
-export function unseenPushes(items: readonly QueuedPush[], seenAt: Date | null): QueuedPush[] {
-  if (!seenAt) return [...items];
-  return items.filter((item) => item.at > seenAt.getTime());
+  seen: boolean;
 }
 
 export interface PushMessage {
@@ -23,6 +18,20 @@ export interface PushMessage {
   body: string;
   chatId: string;
   tag: string;
+  keys: string[];
+}
+
+export interface ClosePush {
+  close: string;
+  keys: string[];
+}
+
+function chatTag(conversationId: string): string {
+  return `spark-chat-${conversationId}`;
+}
+
+export function closePush(conversationId: string, keys: readonly string[]): ClosePush {
+  return { close: chatTag(conversationId), keys: [...keys] };
 }
 
 const PUSH_HOSTS = [
@@ -82,7 +91,8 @@ export function pushMessage(
     title,
     body: counted(candidates.map(candidateLine)).join(' · '),
     chatId: chat.conversationId,
-    tag: `spark-chat-${chat.conversationId}`,
+    tag: chatTag(chat.conversationId),
+    keys: candidates.map((candidate) => candidate.source),
   };
 }
 

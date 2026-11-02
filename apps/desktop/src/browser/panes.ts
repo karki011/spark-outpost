@@ -1,23 +1,28 @@
 import { randomUUID } from 'node:crypto';
-import type { BrowserWindow, ContextMenuParams, WebContentsView } from 'electron';
+import type {
+  BrowserWindow,
+  ContextMenuParams,
+  Input,
+  WebContents,
+  WebContentsView,
+} from 'electron';
 import {
   BROWSER_TABS_MAX,
   browserOrigin,
   classifyBrowserUrl,
+  movedTabs,
   type BrowserBounds,
+  type BrowserClosedTab,
   type BrowserPaneState,
   type BrowserPlacement,
+  type BrowserShortcut,
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
-import {
-  partitionFor,
-  requestAllowed,
-  tabPartition,
-  type GuardFacts,
-  type PartitionChoice,
-} from './request-guard.ts';
+import { CLIPBOARD_WRITE, pagePermissionAllowed, type InputMarks } from './clipboard-permission.ts';
+import type { PageZooms } from './page-zoom.ts';
+import { BROWSER_PARTITION, requestAllowed, type GuardFacts } from './request-guard.ts';
 import type { SendsTo } from './selection-menu.ts';
-import { browserSession, devtoolsSession } from './sessions.ts';
+import { browserSession, devtoolsSession, type SessionGuards } from './sessions.ts';
 import { PaneTab } from './tab.ts';
 
 export interface PanesOptions {
@@ -28,13 +33,24 @@ export interface PanesOptions {
   localOriginSeen(projectId: string, origin: string): void;
   contextMenu(tab: PaneTab, params: ContextMenuParams): void;
   addShortcut(tab: PaneTab): void;
+  paneShortcut(tab: PaneTab, shortcut: BrowserShortcut): void;
+  found(tab: PaneTab, active: number, matches: number): void;
   log(line: string): void;
   idleMs?: number;
+  tabsMax?: number;
+  partition?(key: string): string;
+  guards?: SessionGuards;
+  visited?(tab: PaneTab, url: string, sameDocument: boolean): void;
+  titled?(tab: PaneTab, title: string): void;
+  pageZooms?(key: string): PageZooms;
+  shiftedLink?(opener: PaneTab, url: string): boolean;
+  slotBounds?(tab: PaneTab): BrowserBounds | null | undefined;
+  tabUsed?(tab: PaneTab): void;
+  pageKey?(tab: PaneTab, input: Input): boolean;
 }
 
 export interface ChatHome {
   projectId: string | null;
-  keepSignIns: boolean;
   roots: readonly string[];
 }
 
@@ -45,6 +61,7 @@ interface ChatPane {
   sendsTo: SendsTo;
   idle: NodeJS.Timeout | null;
   notify: boolean;
+  closed: string[];
 }
 
 const BLANK = 'about:blank';
@@ -52,11 +69,12 @@ const IDLE_MS = 10 * 60_000;
 const DRIVING_HOLD_MS = 1200;
 const HIDDEN_BOUNDS = { x: 0, y: 0, width: 1280, height: 800 };
 const SNAPSHOT_QUALITY = 70;
+const CLOSED_KEPT = 20;
 
 export class BrowserPanes {
   private readonly chats = new Map<string, ChatPane>();
-  private readonly rootsByPartition = new Map<string, Set<string>>();
   private readonly driving = new Map<string, NodeJS.Timeout>();
+  private readonly byContents = new Map<number, PaneTab>();
   private placement: BrowserPlacement | null = null;
   private readonly options: PanesOptions;
 
@@ -70,43 +88,25 @@ export class BrowserPanes {
       pane = {
         chatId,
         tabs: [],
-        home: home ?? { projectId: null, keepSignIns: true, roots: [] },
+        home: home ?? { projectId: null, roots: [] },
         sendsTo: 'chat',
         idle: null,
         notify: false,
+        closed: [],
       };
       this.chats.set(chatId, pane);
     }
-    if (home) {
-      pane.home = home;
-      this.allowRoots(pane);
-    }
+    if (home) pane.home = home;
     return pane;
   }
 
-  private choiceOf(pane: ChatPane): PartitionChoice {
-    return {
-      chatId: pane.chatId,
-      projectId: pane.home.projectId,
-      keepSignIns: pane.home.keepSignIns,
-    };
-  }
-
-  private partitionOf(pane: ChatPane): string {
-    return partitionFor(this.choiceOf(pane));
-  }
-
-  private allowRoots(pane: ChatPane): void {
-    const partition = this.partitionOf(pane);
-    const roots = this.rootsByPartition.get(partition) ?? new Set<string>();
-    for (const root of pane.home.roots) roots.add(root);
-    this.rootsByPartition.set(partition, roots);
+  private rootsOf(chatId: string | null): string[] {
+    const pane = chatId ? this.chats.get(chatId) : undefined;
+    return pane ? [...pane.home.roots] : [];
   }
 
   guardFacts(chatId: string): GuardFacts {
-    const pane = this.chats.get(chatId);
-    const roots = pane ? (this.rootsByPartition.get(this.partitionOf(pane)) ?? []) : [];
-    return { blockedPorts: this.options.blockedPorts(), roots: [...roots] };
+    return { blockedPorts: this.options.blockedPorts(), roots: this.rootsOf(chatId) };
   }
 
   sendsTo(chatId: string): SendsTo {
@@ -159,41 +159,55 @@ export class BrowserPanes {
 
   createTab(
     chatId: string,
-    init: { owner: BrowserTabOwner; runId: string | null; url: string },
+    init: {
+      owner: BrowserTabOwner;
+      runId: string | null;
+      url: string;
+      title?: string;
+      peek?: boolean;
+    },
     home?: ChatHome,
   ): PaneTab | null {
     const pane = this.chat(chatId, home);
-    if (pane.tabs.length >= BROWSER_TABS_MAX) return null;
-    const projectId = pane.home.keepSignIns ? pane.home.projectId : null;
+    if (pane.tabs.length >= (this.options.tabsMax ?? BROWSER_TABS_MAX)) return null;
     const tab: PaneTab = new PaneTab(
       { id: randomUUID().slice(0, 8), chatId, ...init },
       {
-        partition: (owner, url) => tabPartition(this.choiceOf(pane), { owner, url }),
         allowed: (url) => requestAllowed(url, this.guardFacts(pane.chatId)),
-        session: (partition) =>
-          browserSession(partition, {
-            blockedPorts: this.options.blockedPorts,
-            roots: (name) => [...(this.rootsByPartition.get(name) ?? [])],
-            log: this.options.log,
-          }),
+        session: () =>
+          browserSession(
+            this.options.partition?.(pane.chatId) ?? BROWSER_PARTITION,
+            this.options.guards ?? this.ownGuards(),
+          ),
         changed: () => this.changed(pane),
-        popup: (url, opener) => this.openPopup(pane, url, opener),
-        viewCreated: (view) => this.attach(view),
-        viewClosed: (view) => this.detach(view),
-        visited: (url) => this.visited(pane, projectId, url),
+        popup: (url, opener, shifted) => this.openPopup(pane, url, opener, shifted),
+        viewCreated: (view) => this.attach(view, tab),
+        viewClosed: (view) => this.detach(view, tab),
+        gone: (owner) => this.close(chatId, owner.id),
+        visited: (url, sameDocument) => {
+          this.visited(pane, url);
+          this.options.visited?.(tab, url, sameDocument);
+        },
+        titled: (title) => this.options.titled?.(tab, title),
         contextMenu: (owner, params) => this.options.contextMenu(owner, params),
         addShortcut: (owner) => this.options.addShortcut(owner),
+        paneShortcut: (owner, shortcut) => this.options.paneShortcut(owner, shortcut),
+        found: (owner, active, matches) => this.options.found(owner, active, matches),
         devtoolsSession: () =>
           devtoolsSession({ blockedPorts: this.options.blockedPorts, log: this.options.log }),
+        zoomOf: (url) => this.options.pageZooms?.(chatId).of(url) ?? 1,
+        used: (owner) => this.options.tabUsed?.(owner),
+        pageKey: (owner, input) => this.options.pageKey?.(owner, input) ?? false,
       },
     );
     pane.tabs.push(tab);
-    if (!pane.tabs.some((other) => other.active)) tab.active = true;
+    if (!tab.peek && !pane.tabs.some((other) => other.active)) tab.active = true;
     this.changed(pane);
     return tab;
   }
 
-  private visited(pane: ChatPane, projectId: string | null, url: string): void {
+  private visited(pane: ChatPane, url: string): void {
+    const projectId = pane.home.projectId;
     const origin = browserOrigin(url);
     if (projectId && origin && classifyBrowserUrl(url) === 'local') {
       this.options.localOriginSeen(projectId, origin);
@@ -201,24 +215,57 @@ export class BrowserPanes {
     this.scheduleIdle(pane);
   }
 
-  private openPopup(pane: ChatPane, url: string, opener: PaneTab): void {
+  private openPopup(pane: ChatPane, url: string, opener: PaneTab, shifted: boolean): void {
+    if (shifted && this.options.shiftedLink?.(opener, url)) return;
     const tab = this.createTab(pane.chatId, {
       owner: opener.owner,
       runId: opener.runId,
       url: BLANK,
     });
     if (!tab) return;
-    if (opener.active) this.select(pane.chatId, tab.id);
-    void tab.load(url).then(() => this.layout());
+    if (opener.active || opener.peek) this.select(pane.chatId, tab.id);
+    void tab
+      .load(url)
+      .then(() => this.layout())
+      .catch(() => undefined);
   }
 
-  private attach(view: WebContentsView): void {
+  private ownGuards(): SessionGuards {
+    return {
+      blockedPorts: this.options.blockedPorts,
+      roots: (contents) => this.rootsOfContents(contents),
+      log: this.options.log,
+      inputMarks: (contents) => this.inputMarks(contents),
+    };
+  }
+
+  rootsOfContents(contents: WebContents | null): string[] {
+    return this.rootsOf(this.tabOfContents(contents)?.chatId ?? null);
+  }
+
+  tabOfContents(contents: WebContents | null): PaneTab | null {
+    return contents ? (this.byContents.get(contents.id) ?? null) : null;
+  }
+
+  inputMarks(contents: WebContents | null): InputMarks | null {
+    return this.tabOfContents(contents)?.inputMarks() ?? null;
+  }
+
+  pageCopyAllowed(contents: WebContents): boolean {
+    return pagePermissionAllowed(CLIPBOARD_WRITE, this.inputMarks(contents), Date.now());
+  }
+
+  private attach(view: WebContentsView, tab: PaneTab): void {
+    this.byContents.set(view.webContents.id, tab);
     view.setBounds(HIDDEN_BOUNDS);
     this.options.window()?.contentView.addChildView(view);
     this.layout();
   }
 
-  private detach(view: WebContentsView): void {
+  private detach(view: WebContentsView, tab: PaneTab): void {
+    for (const [id, owner] of this.byContents) {
+      if (owner === tab) this.byContents.delete(id);
+    }
     const window = this.options.window();
     if (!window || window.isDestroyed()) return;
     window.contentView.removeChildView(view);
@@ -237,11 +284,70 @@ export class BrowserPanes {
     const pane = this.chats.get(chatId);
     const tab = pane?.tabs.find((candidate) => candidate.id === tabId);
     if (!pane || !tab) return;
-    tab.sleep();
     pane.tabs = pane.tabs.filter((candidate) => candidate !== tab);
-    if (tab.active && pane.tabs.length > 0) pane.tabs.at(-1)!.active = true;
+    const next = pane.tabs.filter((candidate) => !candidate.peek).at(-1);
+    if (tab.active && next) next.active = true;
     this.changed(pane);
+    try {
+      tab.close();
+    } catch (error) {
+      this.options.log(`Could not close a browser tab cleanly: ${(error as Error).message}`);
+    }
     this.layout();
+  }
+
+  move(chatId: string, tabId: string, before: string | null): void {
+    const pane = this.chats.get(chatId);
+    if (!pane) return;
+    pane.tabs = movedTabs(pane.tabs, tabId, before);
+    this.changed(pane);
+  }
+
+  pageZooms(chatId: string): PageZooms | null {
+    return this.options.pageZooms?.(chatId) ?? null;
+  }
+
+  logLine(line: string): void {
+    this.options.log(line);
+  }
+
+  syncZooms(): void {
+    for (const pane of this.chats.values()) {
+      for (const tab of pane.tabs) if (tab.shown) tab.media.syncZoom();
+    }
+    this.noteAll();
+  }
+
+  noteAll(): void {
+    for (const pane of this.chats.values()) this.changed(pane);
+  }
+
+  resync(chatId: string): void {
+    this.options.stateChanged(this.state(chatId));
+  }
+
+  keepFocus(chatId: string, change: () => void): void {
+    const focused = this.tabsOf(chatId).some((tab) => tab.contents()?.isFocused() ?? false);
+    change();
+    if (!focused) return;
+    const active = this.tabsOf(chatId).find((tab) => tab.active);
+    const contents = active?.contents();
+    if (contents) contents.focus();
+    else this.options.window()?.webContents.focus();
+  }
+
+  closeByUser(chatId: string, tabId: string): BrowserClosedTab {
+    const pane = this.chats.get(chatId);
+    const tab = this.tab(chatId, tabId);
+    const url = tab?.currentUrl();
+    if (pane && url && url !== BLANK) pane.closed = [...pane.closed, url].slice(-CLOSED_KEPT);
+    const closed = { handoff: tab?.handoff ?? null };
+    this.close(chatId, tabId);
+    return closed;
+  }
+
+  takeClosed(chatId: string): string | null {
+    return this.chats.get(chatId)?.closed.pop() ?? null;
   }
 
   closeRunTabs(chatId: string, runId: string): number {
@@ -269,6 +375,7 @@ export class BrowserPanes {
       return await work();
     } finally {
       tab.agentBusy -= 1;
+      tab.agentDoneAt = Date.now();
       const timer = setTimeout(() => {
         this.driving.delete(tab.id);
         tab.driving = false;
@@ -281,7 +388,7 @@ export class BrowserPanes {
 
   async place(next: BrowserPlacement): Promise<void> {
     const before = this.placement;
-    const home = { projectId: next.projectId, keepSignIns: next.keepSignIns, roots: next.roots };
+    const home = { projectId: next.projectId, roots: next.roots };
     const pane = this.chat(next.chatId, home);
     pane.sendsTo = next.sendsTo;
     if (next.covered && before?.chatId === next.chatId && !before.covered) {
@@ -303,14 +410,25 @@ export class BrowserPanes {
     if (active && !active.view() && active.currentUrl() !== BLANK) await active.wake();
   }
 
+  wakeShowing(chatId: string): void {
+    const pane = this.chats.get(chatId);
+    if (pane && this.shown(chatId)) void this.wakeActive(pane).catch(() => undefined);
+  }
+
+  async capture(tab: PaneTab): Promise<string | null> {
+    const view = tab.view();
+    if (!view || view.webContents.isDestroyed()) return null;
+    const image = await view.webContents.capturePage();
+    if (image.isEmpty()) return null;
+    return `data:image/jpeg;base64,${image.toJPEG(SNAPSHOT_QUALITY).toString('base64')}`;
+  }
+
   private async sendSnapshot(pane: ChatPane): Promise<void> {
-    const view = pane.tabs.find((tab) => tab.active)?.view();
-    if (!view || view.webContents.isDestroyed()) return;
+    const active = pane.tabs.find((tab) => tab.active);
+    if (!active?.view() || active.view()!.webContents.isDestroyed()) return;
     try {
-      const image = await view.webContents.capturePage();
-      if (image.isEmpty()) return;
-      const jpeg = image.toJPEG(SNAPSHOT_QUALITY).toString('base64');
-      this.options.snapshot(pane.chatId, `data:image/jpeg;base64,${jpeg}`);
+      const image = await this.capture(active);
+      if (image) this.options.snapshot(pane.chatId, image);
     } catch {
       this.options.snapshot(pane.chatId, null);
     }
@@ -333,17 +451,18 @@ export class BrowserPanes {
       for (const tab of pane.tabs) {
         const view = tab.view();
         if (!view) continue;
+        const slot = this.options.slotBounds?.(tab);
+        const showsActive =
+          placement?.chatId === pane.chatId && !placement.covered && tab.active && !tab.peek;
+        const bounds = slot !== undefined ? slot : showsActive ? placement.bounds : null;
         const visible =
-          placement !== null &&
-          placement.chatId === pane.chatId &&
-          placement.bounds !== null &&
-          placement.bounds.width > 0 &&
-          placement.bounds.height > 0 &&
-          !placement.covered &&
-          tab.active &&
-          tab.currentUrl() !== BLANK;
-        if (visible) view.setBounds(this.zoomed(placement.bounds!));
+          bounds !== null && bounds.width > 0 && bounds.height > 0 && tab.currentUrl() !== BLANK;
+        if (visible) view.setBounds(this.zoomed(bounds));
+        if (visible && !tab.shown) tab.media.syncZoom();
         view.setVisible(visible);
+        if (visible) tab.pickOverlay?.setBounds(this.zoomed(bounds));
+        tab.pickOverlay?.setVisible(visible);
+        tab.shown = visible;
       }
     }
   }
@@ -359,7 +478,7 @@ export class BrowserPanes {
     const pane = this.chats.get(chatId);
     if (!pane) return;
     if (pane.idle) clearTimeout(pane.idle);
-    for (const tab of pane.tabs) tab.sleep();
+    for (const tab of pane.tabs) tab.close();
     this.chats.delete(chatId);
   }
 

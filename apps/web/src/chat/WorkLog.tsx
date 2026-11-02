@@ -1,8 +1,7 @@
-import { useId, useState } from 'react';
-import { friendlyStep } from '@spark-outpost/contracts';
-import type { TurnState } from './AiTurn.tsx';
+import type { ReactNode } from 'react';
+import { friendlyStep, isSparkNote } from '@spark-outpost/contracts';
+export type TurnState = 'working' | 'waiting' | 'done' | 'failed' | 'stopped';
 import { viewSteps, type RunStep, type StepView } from './run-projection.ts';
-import { StepThought, ThoughtToggle } from './StepThought.tsx';
 
 export function StepName({ name }: { name: string }) {
   return friendlyStep(name)
@@ -31,6 +30,10 @@ export function turnHeading(
   return current ? `${current} · ${stepCount(steps)}` : stepCount(steps);
 }
 
+export function loggedSteps(steps: readonly RunStep[]): StepView[] {
+  return viewSteps(steps).filter((step) => !isSparkNote(step.name));
+}
+
 export interface StepLog {
   open: boolean;
   runId: string | null;
@@ -40,32 +43,12 @@ export interface StepLog {
   toggle(): void;
 }
 
-export function useStepLog(
-  steps: readonly RunStep[],
-  state: TurnState,
-  runId: string | null = null,
-): StepLog | null {
-  const working = state === 'working' || state === 'waiting';
-  const [choice, setChoice] = useState<boolean | null>(null);
-  const listId = useId();
-  if (steps.length === 0) return null;
-  const open = choice ?? false;
-  return {
-    open,
-    runId,
-    listId,
-    views: viewSteps(steps),
-    working,
-    toggle: () => setChoice(!open),
-  };
-}
-
 export function StepToggle({
   log,
   label,
 }: {
   log: Pick<StepLog, 'open' | 'listId' | 'toggle'>;
-  label: string;
+  label: ReactNode;
 }) {
   return (
     <button
@@ -87,7 +70,7 @@ export function StepIcon({ step, working }: { step: StepView; working: boolean }
   if (step.status === 'done') {
     return (
       <svg width="12" height="12" viewBox="0 0 12 12" role="img" aria-label="Done">
-        <path d="m2.5 6.5 2.5 2.5 4.5-5" fill="none" stroke="var(--accent)" strokeWidth="1.6" />
+        <path d="m2.5 6.5 2.5 2.5 4.5-5" fill="none" stroke="var(--success)" strokeWidth="1.6" />
       </svg>
     );
   }
@@ -100,77 +83,4 @@ export function StepIcon({ step, working }: { step: StepView; working: boolean }
   }
   if (working) return <span className="spin" role="img" aria-label="In progress" />;
   return <span className="step-open" role="img" aria-label="Not finished" />;
-}
-
-function StepRow({ step, log }: { step: StepView; log: StepLog }) {
-  const [reading, setReading] = useState(false);
-  const thoughtId = useId();
-  const thinking = step.reasoningId && log.runId ? step.reasoningId : null;
-  return (
-    <li className={thinking && reading ? 'reading' : undefined}>
-      <StepIcon step={step} working={log.working} />
-      {thinking ? (
-        <ThoughtToggle open={reading} controls={thoughtId} onToggle={() => setReading(!reading)}>
-          <StepName name={step.name} />
-        </ThoughtToggle>
-      ) : (
-        <span>
-          <StepName name={step.name} />
-        </span>
-      )}
-      {thinking && reading && (
-        <StepThought
-          id={thoughtId}
-          runId={log.runId!}
-          reasoningId={thinking}
-          live={step.thought}
-          streaming={log.working && step.status === 'open'}
-        />
-      )}
-    </li>
-  );
-}
-
-export function StepList({ log }: { log: StepLog }) {
-  const [wasOpen, setWasOpen] = useState(log.open);
-  const [closing, setClosing] = useState(false);
-  if (wasOpen !== log.open) {
-    setWasOpen(log.open);
-    setClosing(!log.open);
-  }
-  return (
-    <div
-      className="steps-body"
-      id={log.listId}
-      inert={!log.open}
-      onTransitionEnd={(event) => {
-        if (event.target === event.currentTarget && !log.open) setClosing(false);
-      }}
-    >
-      {(log.open || closing) && (
-        <ul>
-          {log.views.map((step, index) => (
-            <StepRow key={`${step.name}-${index}`} step={step} log={log} />
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-interface WorkLogProps {
-  steps: RunStep[];
-  state: TurnState;
-  runId?: string;
-}
-
-export function WorkLog({ steps, state, runId }: WorkLogProps) {
-  const log = useStepLog(steps, state, runId);
-  if (!log) return null;
-  return (
-    <div className={log.open ? 'steps open' : 'steps'}>
-      <StepToggle log={log} label={stepCount(log.views)} />
-      <StepList log={log} />
-    </div>
-  );
 }

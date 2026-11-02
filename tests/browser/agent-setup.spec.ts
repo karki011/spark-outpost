@@ -37,6 +37,7 @@ async function chatWithRepo(page: Page) {
   await repos.getByRole('button', { name: /^app/ }).click();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Project folders: app' })).toBeVisible();
+  await page.getByRole('button', { name: /^Chat details/ }).click();
   return input;
 }
 
@@ -46,6 +47,9 @@ const card = (page: Page, title: string) =>
   setup(page).getByRole('region', { name: new RegExp(`^${title}`) });
 
 async function openSetup(page: Page) {
+  if (!(await setupButton(page).isVisible())) {
+    await page.getByRole('button', { name: /^Chat details/ }).click();
+  }
   await setupButton(page).click();
   await expect(setup(page)).toBeVisible();
   await expect(card(page, 'Instructions')).toBeVisible();
@@ -192,6 +196,7 @@ test('fits a narrow window and a dark theme', async ({ page }) => {
   await chatWithRepo(page);
   await page.setViewportSize({ width: 390, height: 780 });
   await page.emulateMedia({ colorScheme: 'dark' });
+  await page.getByRole('button', { name: /^Chat details/ }).click();
   await openSetup(page);
   const box = await setup(page).boundingBox();
   expect(box).not.toBeNull();
@@ -201,11 +206,15 @@ test('fits a narrow window and a dark theme', async ({ page }) => {
   expect(scrollWidth).toBeLessThanOrEqual(390);
 });
 
-test('the turn header names the instruction files the agent followed', async ({ page }) => {
+test('the chat context names the instruction files the agent followed', async ({ page }) => {
+  await page.setViewportSize({ width: 2000, height: 1100 });
   const input = await chatWithRepo(page);
   await input.fill('Hello there');
   await input.press('Enter');
-  await expect(page.locator('.ai-following')).toHaveText(
+  const rows = page
+    .getByRole('region', { name: 'Chat context' })
+    .getByRole('list', { name: 'This chat' });
+  await expect(rows.locator('[data-row="following"]')).toHaveText(
     'Following: CLAUDE.md, CLAUDE.local.md, AGENTS.md, .cursorrules, .github/copilot-instructions.md, .cursor/rules/style.mdc',
     { timeout: 15_000 },
   );

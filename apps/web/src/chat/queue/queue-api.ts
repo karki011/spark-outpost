@@ -1,13 +1,30 @@
-import { queueResponseSchema, type QueueResponse } from '@spark-outpost/contracts';
+import {
+  queueResponseSchema,
+  type AnnotationInput,
+  type QueueResponse,
+} from '@spark-outpost/contracts';
 import { request } from '../../api/client.ts';
 
 const path = (conversationId: string, rest = '') => `/conversations/${conversationId}/queue${rest}`;
 
 export const queueApi = {
-  add: (conversationId: string, id: string, content: string): Promise<QueueResponse> =>
+  add: (
+    conversationId: string,
+    id: string,
+    content: string,
+    origin?: 'voice' | 'pages',
+    attachmentIds: readonly string[] = [],
+    annotations: readonly AnnotationInput[] = [],
+  ): Promise<QueueResponse> =>
     request(queueResponseSchema, path(conversationId), {
       method: 'POST',
-      body: JSON.stringify({ id, content }),
+      body: JSON.stringify({
+        id,
+        content,
+        ...(origin ? { origin } : {}),
+        ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
+        ...(annotations.length > 0 ? { annotations } : {}),
+      }),
     }),
   edit: (conversationId: string, id: string, content: string): Promise<QueueResponse> =>
     request(queueResponseSchema, path(conversationId, `/${id}`), {
@@ -24,14 +41,30 @@ export const queueApi = {
       method: 'DELETE',
       body: '{}',
     }),
-  sendFirst: (conversationId: string, id: string, content: string): Promise<QueueResponse> =>
+  sendFirst: (
+    conversationId: string,
+    id: string,
+    content: string,
+    attachmentIds: readonly string[] = [],
+    annotations: readonly AnnotationInput[] = [],
+  ): Promise<QueueResponse> =>
     request(queueResponseSchema, path(conversationId, '/send-now'), {
       method: 'POST',
-      body: JSON.stringify({ id, content }),
+      body: JSON.stringify({ id, content, attachmentIds, annotations }),
     }),
   sendNow: (conversationId: string, id: string): Promise<QueueResponse> =>
     request(queueResponseSchema, path(conversationId, `/${id}/send-now`), {
       method: 'POST',
+      body: '{}',
+    }),
+  resendSteer: (conversationId: string, id: string): Promise<QueueResponse> =>
+    request(queueResponseSchema, `/conversations/${conversationId}/steers/${id}/resend`, {
+      method: 'POST',
+      body: '{}',
+    }),
+  dropSteer: (conversationId: string, id: string): Promise<QueueResponse> =>
+    request(queueResponseSchema, `/conversations/${conversationId}/steers/${id}`, {
+      method: 'DELETE',
       body: '{}',
     }),
 };

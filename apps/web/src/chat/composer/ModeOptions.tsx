@@ -58,7 +58,7 @@ export function ModeOptions({
           />
         ))}
       </div>
-      {hasRepos && <p className="eff-note mode-line">{combinationLine(facts)}</p>}
+      <p className="eff-note mode-line">{combinationLine(facts)}</p>
       {warning && (
         <p className="mode-warn" role="note">
           {warning}

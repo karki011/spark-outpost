@@ -65,7 +65,7 @@
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--accent-text);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -159,6 +159,10 @@
 .qs-error {
   margin: 4px;
   color: var(--danger);
+}
+
+.qs-stranded {
+  padding: 0 4px 4px;
 }
 
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {

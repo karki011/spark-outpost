@@ -1,0 +1,63 @@
+.todo-card {
+  margin: 0;
+}
+
+.todo-head b {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.todo-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.todo-list {
+  margin: 0;
+  padding: 0 0 4px 2px;
+  list-style: none;
+}
+
+.todo-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 3px 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.todo-list .ic {
+  margin-top: 2px;
+}
+
+.todo-list li[data-state='done'] {
+  color: var(--muted);
+}
+
+.todo-list li[data-state='active'] {
+  font-weight: 500;
+}
+
+.todo-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.todo-done {
+  margin: 0;
+}
+
+.todo-done .todo-list {
+  padding: 2px 0 4px 16px;
+}
+
+.wsec .todo-list {
+  padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .todo-list .ic.spin {
+    animation: none;
+  }
+}

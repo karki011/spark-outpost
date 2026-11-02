@@ -3,8 +3,7 @@ import { advisorUsageSchema } from './advice.ts';
 import { runModeSchema } from './approvals.ts';
 import { planVersionSchema, type PlanEntry } from './artifacts.ts';
 import { agreedPlansSchema } from './plans.ts';
-import { costSourceSchema, totalCostSourceSchema, type CostSource } from './audit.ts';
-import { agentRoleSchema, type AgentRole } from './roles.ts';
+import { costSourceSchema, totalCostSourceSchema } from './audit.ts';
 import { runStatusSchema, type RunStatus } from './runs.ts';
 
 export const TASK_TITLE_MAX_LENGTH = 120;
@@ -16,13 +15,6 @@ export type TaskStatus = z.infer<typeof taskStatusSchema>;
 export const taskItemStateSchema = z.enum(['done', 'active', 'waiting', 'pending', 'failed']);
 export type TaskItemState = z.infer<typeof taskItemStateSchema>;
 
-export const taskAgentSchema = z.object({
-  provider: z.string(),
-  model: z.string().nullable(),
-  effort: z.string().nullable(),
-});
-export type TaskAgent = z.infer<typeof taskAgentSchema>;
-
 export const taskListItemSchema = z.object({
   id: z.string(),
   label: z.string(),
@@ -33,13 +25,6 @@ export const taskListItemSchema = z.object({
   command: z.boolean().optional(),
   action: z.boolean().optional(),
   url: z.string().optional(),
-  agent: taskAgentSchema.optional(),
-  role: agentRoleSchema.optional(),
-  runId: z.uuid().optional(),
-  name: z.string().optional(),
-  tokens: z.number().optional(),
-  costUsd: z.number().optional(),
-  costSource: costSourceSchema.optional(),
 });
 export type TaskListItem = z.infer<typeof taskListItemSchema>;
 
@@ -68,6 +53,7 @@ export const taskSummarySchema = z.object({
   done: z.number().int(),
   total: z.number().int(),
   waiting: z.number().int(),
+  runState: z.enum(['working', 'stopped', 'ended']),
   text: z.string(),
 });
 export type TaskSummary = z.infer<typeof taskSummarySchema>;
@@ -82,7 +68,8 @@ export const taskOverviewSchema = z.object({
   runIds: z.array(z.uuid()),
   planVersion: z.number().int().nullable(),
   agreedPlanVersion: z.number().int().nullable().optional(),
-  items: z.array(taskListItemSchema),
+  todo: z.array(taskListItemSchema),
+  recorded: z.array(taskListItemSchema),
   summary: taskSummarySchema,
   costUsd: z.number().nullable(),
   costSource: totalCostSourceSchema.nullable().optional(),
@@ -124,42 +111,24 @@ export type AddTaskLinkRequest = z.infer<typeof addTaskLinkRequestSchema>;
 export interface TaskListRun {
   id: string;
   provider: string;
-  model: string | null;
-  effort: string | null;
   status: RunStatus;
-  tokens: number | null;
-  costUsd: number | null;
-  costSource?: CostSource | null | undefined;
-  request: string;
-  label?: string | null | undefined;
-  step?: string | null | undefined;
-  role?: AgentRole | null | undefined;
   name?: string | null | undefined;
 }
 
 export interface TaskListEvent {
   id: string;
-  kind: 'waiting' | 'check' | 'review' | 'shortcut';
+  kind: 'waiting';
   label: string;
   state: TaskItemState;
-  runId: string;
   hint?: string;
   detail?: string;
-  output?: string;
   command?: boolean;
   action?: boolean;
   url?: string;
 }
 
-export interface TaskListTask {
-  status: TaskStatus;
-  links: readonly Pick<TaskLink, 'kind' | 'url' | 'title' | 'source'>[];
-}
-
 export interface TaskListPlan {
-  version: number;
   entries: readonly PlanEntry[];
-  sourceRunId: string | null;
 }
 
 const providerLabels: Record<string, string> = {
@@ -175,176 +144,87 @@ export function providerLabel(provider: string): string {
 
 const liveStatuses: ReadonlySet<RunStatus> = new Set(['queued', 'running', 'awaiting_approval']);
 
-const runStates: Record<RunStatus, TaskItemState> = {
-  queued: 'pending',
-  running: 'active',
-  awaiting_approval: 'waiting',
-  succeeded: 'done',
-  failed: 'failed',
-  cancelled: 'failed',
-  outcome_unknown: 'failed',
-};
-
-const runVerbs: Record<RunStatus, string> = {
-  queued: 'Queued',
-  running: 'Working',
-  awaiting_approval: 'Waiting for you',
-  succeeded: 'Replied',
+const stoppedVerbs: Partial<Record<RunStatus, string>> = {
   failed: 'Hit a problem',
   cancelled: 'Stopped',
   outcome_unknown: 'Outcome unknown',
 };
 
-function agentOf(run: TaskListRun): TaskAgent {
-  return { provider: run.provider, model: run.model, effort: run.effort };
-}
-
-function ownerOf(run: TaskListRun): Pick<TaskListItem, 'agent' | 'role' | 'runId' | 'name'> {
-  return {
-    agent: agentOf(run),
-    runId: run.id,
-    ...(run.role ? { role: run.role } : {}),
-    ...(run.name ? { name: run.name } : {}),
-  };
-}
-
-function excerpt(text: string, max = 60): string {
-  const line = text.trim().split('\n')[0] ?? '';
-  return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
-}
-
-function usage(run: TaskListRun): Pick<TaskListItem, 'tokens' | 'costUsd'> {
-  return {
-    ...(run.tokens !== null ? { tokens: run.tokens } : {}),
-    ...(run.costUsd !== null ? { costUsd: run.costUsd } : {}),
-    ...(run.costUsd !== null && run.costSource ? { costSource: run.costSource } : {}),
-  };
-}
-
-function understoodItem(runs: readonly TaskListRun[]): TaskListItem {
-  const first = runs[0];
-  const state: TaskItemState = !first ? 'pending' : first.status === 'queued' ? 'active' : 'done';
-  return { id: 'understood', label: 'Understood the request', state };
-}
-
-function entryState(entry: PlanEntry, live: boolean, stopped: boolean): TaskItemState {
+function todoState(entry: PlanEntry, live: boolean): TaskItemState {
   if (entry.status === 'completed') return 'done';
   if (entry.status === 'failed') return 'failed';
-  if (entry.status === 'pending') return 'pending';
-  if (live) return 'active';
-  return stopped ? 'failed' : 'pending';
+  if (entry.status === 'in_progress' && live) return 'active';
+  return 'pending';
 }
 
-function planItems(plan: TaskListPlan, runs: readonly TaskListRun[]): TaskListItem[] {
-  const source =
-    runs.find((run) => run.id === plan.sourceRunId && run.role !== 'builder') ??
-    runs.findLast((run) => run.role === 'architect');
-  const agent = source ? { agent: agentOf(source) } : {};
-  const owner = source ? ownerOf(source) : {};
-  const started = new Set(runs.flatMap((run) => (run.step ? run.step.split('\n') : [])));
+export function todoItems(
+  plan: TaskListPlan | null,
+  runs: readonly Pick<TaskListRun, 'status'>[],
+): TaskListItem[] {
+  if (!plan) return [];
   const live = runs.some((run) => liveStatuses.has(run.status));
-  const last = runs.at(-1);
-  const stopped = !!last && runStates[last.status] === 'failed';
-  return [
-    {
-      id: 'planned',
-      label: 'Made a plan',
-      state: 'done',
-      detail: `plan v${plan.version}`,
-      ...owner,
-    },
-    ...plan.entries.flatMap((entry, index): TaskListItem[] =>
-      started.has(entry.content)
-        ? []
-        : [
-            {
-              id: `plan:${index}`,
-              label: entry.content,
-              state: entryState(entry, live, stopped),
-              ...agent,
-            },
-          ],
-    ),
-  ];
-}
-
-function runLabel(run: TaskListRun, index: number): string {
-  if (run.label) return run.step ? `${run.label}: ${excerpt(run.step)}` : run.label;
-  const followUp = index > 0 && run.request.trim() !== '';
-  return followUp ? `Follow-up: ${excerpt(run.request)}` : 'Worked on the request';
-}
-
-function runItem(run: TaskListRun, index: number, asking: ReadonlySet<string>): TaskListItem {
-  const waitingElsewhere = run.status === 'awaiting_approval' && asking.has(run.id);
-  return {
-    id: `run:${run.id}`,
-    label: runLabel(run, index),
-    state: waitingElsewhere ? 'active' : runStates[run.status],
-    detail: runVerbs[run.status],
-    ...ownerOf(run),
-    ...usage(run),
-  };
-}
-
-const OWN_PR_SOURCES: ReadonlySet<TaskLinkSource> = new Set(['ship', 'tool_output', 'user']);
-
-function ownPullRequest(link: Pick<TaskLink, 'kind' | 'source'>): boolean {
-  return link.kind === 'pr' && OWN_PR_SOURCES.has(link.source);
-}
-
-function prItems(task: TaskListTask): TaskListItem[] {
-  return task.links.filter(ownPullRequest).map((link) => ({
-    id: `pr:${link.url}`,
-    label: `Opened ${link.title ?? 'a pull request'}`,
-    state: 'done',
+  return plan.entries.map((entry, index) => ({
+    id: `todo:${index}`,
+    label: entry.content,
+    state: todoState(entry, live),
   }));
 }
 
-export function taskList(
-  task: TaskListTask,
-  runs: readonly TaskListRun[],
-  events: readonly TaskListEvent[],
-  plan: TaskListPlan | null,
-): TaskListItem[] {
-  const asking = new Set(
-    events.filter((event) => event.state === 'waiting').map((event) => event.runId),
+export function recordedItems(events: readonly TaskListEvent[]): TaskListItem[] {
+  return events.map((event) => ({
+    id: `${event.kind}:${event.id}`,
+    label: event.label,
+    state: event.state,
+    ...(event.hint ? { hint: event.hint } : {}),
+    ...(event.detail ? { detail: event.detail } : {}),
+    ...(event.command ? { command: true } : {}),
+    ...(event.action ? { action: true } : {}),
+    ...(event.url ? { url: event.url } : {}),
+  }));
+}
+
+function liveRun(runs: readonly TaskListRun[]): TaskListRun | undefined {
+  return (
+    runs.find((run) => run.status === 'running') ?? runs.find((run) => run.status === 'queued')
   );
-  return [
-    understoodItem(runs),
-    ...(plan && plan.entries.length > 0 ? planItems(plan, runs) : []),
-    ...events.map((event): TaskListItem => ({
-      id: `${event.kind}:${event.id}`,
-      label: event.label,
-      state: event.state,
-      runId: event.runId,
-      ...(event.hint ? { hint: event.hint } : {}),
-      ...(event.detail ? { detail: event.detail } : {}),
-      ...(event.output ? { output: event.output } : {}),
-      ...(event.command ? { command: true } : {}),
-      ...(event.action ? { action: true } : {}),
-      ...(event.url ? { url: event.url } : {}),
-    })),
-    ...runs.map((run, index) => runItem(run, index, asking)),
-    ...prItems(task),
-  ];
+}
+
+function stoppedVerb(runs: readonly TaskListRun[]): string | undefined {
+  if (liveRun(runs)) return undefined;
+  const last = runs.at(-1);
+  return last && stoppedVerbs[last.status];
+}
+
+function runState(runs: readonly TaskListRun[]): TaskSummary['runState'] {
+  if (runs.some((run) => liveStatuses.has(run.status))) return 'working';
+  return stoppedVerb(runs) ? 'stopped' : 'ended';
+}
+
+function runStatusText(runs: readonly TaskListRun[]): string {
+  const live = liveRun(runs);
+  if (live) {
+    const who = live.name ?? providerLabel(live.provider);
+    return `${who} ${live.status === 'running' ? 'working' : 'queued'}`;
+  }
+  return stoppedVerb(runs) ?? '';
 }
 
 export function taskSummary(
-  items: readonly TaskListItem[],
+  todo: readonly TaskListItem[],
+  recorded: readonly TaskListItem[],
   runs: readonly TaskListRun[],
 ): TaskSummary {
-  const done = items.filter((item) => item.state === 'done').length;
-  const waiting = items.filter((item) => item.state === 'waiting').length;
-  const counts = `${done} of ${items.length} done`;
-  const live =
-    runs.find((run) => run.status === 'running') ?? runs.find((run) => run.status === 'queued');
-  const last = runs.at(-1);
-  let status = '';
-  if (waiting > 0) status = 'Waiting for you';
-  else if (live)
-    status = `${live.name ?? providerLabel(live.provider)} ${live.status === 'running' ? 'working' : 'queued'}`;
-  else if (last && runStates[last.status] === 'failed') status = runVerbs[last.status];
-  return { done, total: items.length, waiting, text: status ? `${counts} · ${status}` : counts };
+  const done = todo.filter((item) => item.state === 'done').length;
+  const waiting = recorded.filter((item) => item.state === 'waiting').length;
+  const status = waiting > 0 ? 'Waiting for you' : runStatusText(runs);
+  const counts = todo.length > 0 ? `${done} of ${todo.length} done` : '';
+  return {
+    done,
+    total: todo.length,
+    waiting,
+    runState: runState(runs),
+    text: [counts, status].filter(Boolean).join(' · '),
+  };
 }
 
 export function waitingApprovalId(item: Pick<TaskListItem, 'id'>): string | null {

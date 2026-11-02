@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EVERYTHING_AVAILABLE, unavailableNote, type SparkAvailability } from './availability.ts';
 import { sparkInstructionsFor, sparkToolsFor } from './server.ts';
+import { CALENDAR_HOW_TO } from './tools/calendar/offered.ts';
 
 const NOTHING: SparkAvailability = {
   tickets: false,
@@ -16,20 +17,18 @@ const NOTHING: SparkAvailability = {
   outpost_start: false,
   calendar_read: false,
   calendar_edit: false,
+  meetings: false,
   jira: false,
   confluence: false,
+  servicenow: false,
+  ticket_create: false,
+  rules_edit: false,
 };
 
 const GROUPS: [keyof SparkAvailability, string[]][] = [
   [
     'tickets',
-    [
-      'spark_tickets',
-      'spark_create_ticket',
-      'spark_comment_ticket',
-      'spark_transition_ticket',
-      'spark_assign_ticket',
-    ],
+    ['spark_tickets', 'spark_comment_ticket', 'spark_transition_ticket', 'spark_assign_ticket'],
   ],
   ['slack', ['spark_slack', 'spark_slack_post']],
   [
@@ -57,7 +56,9 @@ const GROUPS: [keyof SparkAvailability, string[]][] = [
   ['outpost', ['spark_outpost', 'spark_outpost_ask', 'spark_outpost_note']],
   ['outpost_draft', ['spark_outpost_draft']],
   ['outpost_start', ['spark_outpost_start']],
+  ['ticket_create', ['spark_create_ticket']],
   ['jira', ['spark_jira', 'spark_jira_edit']],
+  ['servicenow', ['spark_servicenow', 'spark_servicenow_edit']],
   ['confluence', ['spark_confluence', 'spark_confluence_edit']],
 ];
 
@@ -104,7 +105,7 @@ describe('which Spark tools a session is offered', () => {
 describe('what a session is told about tools it was not offered', () => {
   it('says how to get each missing group and when it arrives', () => {
     const note = unavailableNote(NOTHING);
-    expect(note).toContain('connect Atlassian or Linear in Settings → Connectors');
+    expect(note).toContain('connect Atlassian, Linear or ServiceNow in Settings → Connectors');
     expect(note).toContain('connect Slack in Settings → Connectors');
     expect(note).toContain('connect GitHub in Settings → Connectors and link a project');
     expect(note).toContain('spark_map and spark_find (link a project to the chat)');
@@ -125,6 +126,19 @@ describe('what a session is told about tools it was not offered', () => {
     expect(sparkInstructionsFor({ ...NOTHING, outpost_draft: true })).toContain('spark_outpost*');
     expect(sparkInstructionsFor(NOTHING)).not.toContain('spark_outpost*');
     expect(unavailableNote(NOTHING)).not.toContain('outpost');
+  });
+
+  it('uses the exact setting the session reported for a missing tool', () => {
+    const note = unavailableNote({
+      ...EVERYTHING_AVAILABLE,
+      calendar_read: false,
+      howTo: { calendar_read: CALENDAR_HOW_TO.read },
+    });
+    expect(note).toContain(
+      'turn on Let agents read my calendar on the Calendar card in Settings → Connectors → Calendar',
+    );
+    expect(note).toContain('never a guess');
+    expect(unavailableNote({ ...EVERYTHING_AVAILABLE, calendar_read: false })).toBe('');
   });
 
   it('mentions the Browser pane only when its tools are offered', () => {

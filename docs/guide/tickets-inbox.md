@@ -8,7 +8,7 @@ summary: Find what needs you in the Tickets inbox, start a chat from a ticket, a
 
 You'll start work from a ticket. About 2 minutes.
 
-First [connect Atlassian or Linear](tickets-and-github.md#connect-atlassian-or-linear).
+First [connect a tracker](tickets-and-github.md#connect-a-ticket-tracker).
 
 ## Find your tickets
 
@@ -27,7 +27,7 @@ Select a ticket for **Development**, including linked pull requests.
 ## Start a chat from a ticket
 
 1. Point at a ticket's row and select **Start**.
-2. Pick **Chat** or **Terminal**; Terminal also asks for **Claude Code** or **Codex**.
+2. Pick **Chat** or **Terminal**; Terminal asks for **Claude Code** or **Codex**.
 3. Under **How to start**, pick **Plan first** or **Build**.
 4. Pick the **Project folder**.
 5. Leave **Move** _KEY_ **to In progress** on to update your tracker.
@@ -36,9 +36,15 @@ Select a ticket for **Development**, including linked pull requests.
 
 ![Start work on a ticket, with Plan first selected](images/tickets-start-light.png)
 
-Both types receive the ticket brief and your context. Terminal uses the native agent with Spark tools; answer questions there.
+In Terminal, the agent has Spark tools and you answer there.
 
 Ticket text is data, never instructions. For a link or a folder, Spark sends only the address or path. Secret files are refused.
+
+## ServiceNow records
+
+Records keep their own states; **Resolved** is in review. **Show** on the ServiceNow card picks **Assigned to me** or **Me and my groups**.
+
+**Add work note** is internal; **Post comment the caller sees…** asks first. **Move** never resolves, closes or cancels; an agent can, on a card that always asks, like its comments. **Changes** are read only.
 
 ## Follow it to a pull request
 

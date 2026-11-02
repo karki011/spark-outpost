@@ -44,7 +44,7 @@ export type PrChecks = z.infer<typeof prChecksSchema>;
 export const prReviewSchema = z.enum(['none', 'approved', 'changes_requested']);
 export type PrReview = z.infer<typeof prReviewSchema>;
 
-export const prOpenedViaSchema = z.enum(['ship', 'agent', 'terminal', 'discovery']);
+export const prOpenedViaSchema = z.enum(['ship', 'agent', 'terminal', 'discovery', 'adopted']);
 export type PrOpenedVia = z.infer<typeof prOpenedViaSchema>;
 
 export const prFailingCheckSchema = z.object({ name: z.string(), url: z.string().nullable() });

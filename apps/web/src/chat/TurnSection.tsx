@@ -1,15 +1,11 @@
-import { memo, use } from 'react';
+import { memo } from 'react';
 import {
-  isTerminalRunStatus,
   type ConversationDetail,
   type Message,
   type Project,
   type Run,
 } from '@spark-outpost/contracts';
 import { isCrewTurn, isSparkLed, sparkMembers } from '../crew/conversation-crew.ts';
-import { crewAgents } from '../crew/crew-projection.ts';
-import { TaskCard, TaskCount } from '../tasks/TaskCard.tsx';
-import { showsTaskCard } from '../tasks/task-card-shown.ts';
 import { MessageAttachments } from './attachments/MessageAttachments.tsx';
 import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivider.tsx';
 import { compactionsByRun } from './compaction/compaction-text.ts';
@@ -19,7 +15,6 @@ import { SparkTag } from '../teammates/SparkCrewFace.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
 import { QuotedText } from './quotes/QuotedText.tsx';
 import { turnAnchor } from './outline/outline-model.ts';
-import { RailTaskContext } from './rail/rail-context.ts';
 import { SoloTurn } from './SoloTurn.tsx';
 import { TurnSteers } from './steer/SteeredMessage.tsx';
 import { sameTurnDetail, turnRunIds } from './turn-props.ts';
@@ -32,17 +27,14 @@ import { memberChatId, useOutpostSeam } from './outpost/outpost-seam.ts';
 import { TurnOutpostLines } from './outpost/TurnOutpostLines.tsx';
 import { OutpostFaces } from '../outposts/MemberFace.tsx';
 
-type Task = ConversationDetail['tasks'][number];
-
 interface TurnSectionProps {
   run: Run;
   userMessage: Message | null;
   assistantMessage: Message | null;
   laterMessages: readonly Message[];
+  previous: Run | null;
   detail: ConversationDetail;
   repo: Project | null;
-  task: Task | null;
-  onOpenTask?: ((taskId: string) => void) | undefined;
   onOpenChat: (conversationId: string) => void;
 }
 
@@ -73,9 +65,8 @@ function sameSection(before: TurnSectionProps, after: TurnSectionProps): boolean
     before.userMessage === after.userMessage &&
     before.assistantMessage === after.assistantMessage &&
     sameMessages(before.laterMessages, after.laterMessages) &&
+    before.previous === after.previous &&
     before.repo === after.repo &&
-    before.task === after.task &&
-    before.onOpenTask === after.onOpenTask &&
     before.onOpenChat === after.onOpenChat &&
     sameTurnDetail(before.detail, after.detail, after.run)
   );
@@ -86,31 +77,15 @@ export const TurnSection = memo(function TurnSection({
   userMessage,
   assistantMessage,
   laterMessages,
+  previous,
   detail,
   repo,
-  task,
-  onOpenTask,
   onOpenChat,
 }: TurnSectionProps) {
   const orchestration = detail.orchestrations?.[run.id] ?? null;
   const sparkLed = isSparkLed(orchestration) ? orchestration : null;
   const crew = !sparkLed && isCrewTurn(orchestration) ? orchestration : null;
   const handedTo = sparkMembers(orchestration);
-  const inRail = use(RailTaskContext) === task?.id;
-  const shownTask = onOpenTask && task && !inRail && showsTaskCard(task) ? task : null;
-  const live = !isTerminalRunStatus(run.status);
-  const taskCount =
-    shownTask && onOpenTask && live ? (
-      <TaskCount task={shownTask} onOpen={() => onOpenTask(shownTask.id)} />
-    ) : null;
-  const taskCard =
-    onOpenTask && task && !inRail ? (
-      <TaskCard
-        task={task}
-        onOpen={() => onOpenTask(task.id)}
-        agents={crew ? crewAgents(crew, detail.activity) : []}
-      />
-    ) : null;
   const compactions = compactionsByRun(detail.compactions).get(run.id) ?? [];
   return (
     <section
@@ -161,21 +136,18 @@ export const TurnSection = memo(function TurnSection({
       {run.agentCycle && <p className="on-its-own">Continued on its own</p>}
       {sparkLed && <SparkJobs run={run} detail={detail} orchestration={sparkLed} repo={repo} />}
       {sparkLed && !mainAgentRan(sparkLed) ? null : crew ? (
-        <CrewTurn run={run} detail={detail} orchestration={crew} repo={repo} taskCard={taskCard} />
+        <CrewTurn run={run} detail={detail} orchestration={crew} repo={repo} />
       ) : (
-        <>
-          <SoloTurn
-            run={run}
-            detail={detail}
-            assistantMessage={assistantMessage}
-            laterMessages={laterMessages}
-            repo={repo}
-            taskCount={taskCount}
-          />
-          {shownTask && !live && taskCard}
-        </>
+        <SoloTurn
+          run={run}
+          detail={detail}
+          assistantMessage={assistantMessage}
+          laterMessages={laterMessages}
+          previous={previous}
+          repo={repo}
+        />
       )}
-      {!crew && <TurnSteers detail={detail} run={run} />}
+      {sparkLed && !mainAgentRan(sparkLed) && <TurnSteers detail={detail} run={run} />}
       <TurnOutpostLines conversation={detail.conversation} run={run} />
       <OpenedPullRequests
         conversationId={detail.conversation.id}

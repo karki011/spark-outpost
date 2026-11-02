@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
+import { acceptedRecordPath } from '../../spark-rules/accepted.ts';
 import { codexPermissionProfiles } from './codex-permissions.ts';
 
 type Profile = {
@@ -29,5 +30,23 @@ describe('codexPermissionProfiles', () => {
       network: { enabled: true },
     });
     expect(profiles['agent-full-access']).not.toHaveProperty('extends');
+  });
+
+  it("denies Spark's browser data in every mode, beside the project's secret files", () => {
+    const withData = codexPermissionProfiles('/nowhere/Spark Outpost') as Record<string, Profile>;
+    for (const profile of Object.values(withData)) {
+      expect(profile.filesystem).toMatchObject({
+        '/nowhere/Spark Outpost/Partitions': 'deny',
+        '/nowhere/Spark Outpost/postgres': 'deny',
+        '/nowhere/Spark Outpost/postgres-password': 'deny',
+        '/nowhere/Spark Outpost/browser-origins.json': 'deny',
+      });
+      expect(profile.filesystem).not.toHaveProperty('/nowhere/Spark Outpost');
+      expect(profile.filesystem).toMatchObject({
+        [acceptedRecordPath(process.env.SPARK_RULES_FILE!)]: 'deny',
+      });
+    }
+    const plain = codexPermissionProfiles(null) as Record<string, Profile>;
+    expect(Object.keys(plain.agent!.filesystem)).toEqual([':project_roots']);
   });
 });

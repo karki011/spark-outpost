@@ -22,6 +22,7 @@ export const calendarHostRequestSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('request') }),
   z.object({ op: z.literal('calendars') }),
   z.object({ op: z.literal('window') }),
+  z.object({ op: z.literal('refresh') }),
   z.object({
     op: z.literal('range'),
     from: z.iso.datetime({ offset: true }),
@@ -63,6 +64,7 @@ export const calendarHostResultSchemas = {
   remove: z.object({ removed: z.literal(true) }),
   open_settings: z.object({ opened: z.boolean() }),
   stop: z.object({ stopped: z.boolean() }),
+  refresh: z.object({ refreshed: z.boolean() }),
 } satisfies Record<CalendarHostOp, z.ZodType>;
 
 export const calendarHostErrorCodeSchema = z.enum([

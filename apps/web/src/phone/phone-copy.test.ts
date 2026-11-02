@@ -59,6 +59,18 @@ describe('activity', () => {
     expect(activityLine(entry({ action: 'refused' }))).toBe('A device was refused');
   });
 
+  it('names the folder a device made on the Mac', () => {
+    const made = entry({
+      action: 'folder_created',
+      deviceName: 'Pixel',
+      method: 'POST',
+      path: '/api/folders',
+      detail: { folder: '/Users/maya/Code/invoice-tool' },
+    });
+    expect(activityLine(made)).toBe('Pixel made a new folder');
+    expect(activityDetail(made)).toBe('/Users/maya/Code/invoice-tool');
+  });
+
   it('says a phone paired again and why one was shown the pairing page', () => {
     expect(
       activityLine(entry({ action: 'device_paired_again', deviceName: 'Kitchen phone' })),

@@ -12,6 +12,10 @@ export const OUTPOST_PAUSED = 'The outpost is paused. Requests wait until the us
 export const REQUEST_STARTED_TURN =
   "This turn was started by another chat's request, so it cannot send requests. Answer in your reply.";
 
+export const ASSISTANT_HANDLE = 'ask-spark';
+export const ASSISTANT_ONE_CHAT =
+  'Ask Spark addresses one chat per post, for example @api, or leaves a note.';
+
 export function notMemberRefusal(handle: string): string {
   return `@${handle} is not in this outpost.`;
 }
@@ -177,6 +181,50 @@ function chatPost(
   }
 }
 
+type AssistantAuthor = Extract<RequestAuthor, { kind: 'assistant' }>;
+
+function assistantPost(
+  author: AssistantAuthor,
+  address: PlanAddress,
+  members: readonly OutpostMember[],
+  outpost: PlanOutpost,
+): PostPlan | Refusal {
+  const origin = {
+    fromUser: false,
+    fromConversationId: null,
+    fromHandle: ASSISTANT_HANDLE,
+    fromRunId: author.runId,
+  };
+  switch (address.kind) {
+    case 'all':
+    case 'several':
+      return refusal(ASSISTANT_ONE_CHAT);
+    case 'note':
+      return {
+        kind: 'plan',
+        posts: [{ outpostId: outpost.id, kind: 'note', body: address.body, ...origin }],
+      };
+    case 'request': {
+      if (outpost.paused) return refusal(OUTPOST_PAUSED);
+      const member = members.find((candidate) => candidate.handle === address.to);
+      if (!member) return refusal(notMemberRefusal(address.to));
+      return {
+        kind: 'plan',
+        posts: [
+          {
+            outpostId: outpost.id,
+            kind: 'request',
+            body: address.body,
+            ...origin,
+            toHandle: member.handle,
+            toConversationId: member.conversationId,
+          },
+        ],
+      };
+    }
+  }
+}
+
 export function planPost(
   author: RequestAuthor,
   address: PlanAddress,
@@ -189,5 +237,9 @@ export function planPost(
       return userPost(address, members, outpost, guestConversationId);
     case 'chat':
       return chatPost(author, address, members, outpost, guestConversationId);
+    case 'assistant':
+      return guestConversationId === null
+        ? assistantPost(author, address, members, outpost)
+        : refusal(GUESTS_NOT_AVAILABLE);
   }
 }

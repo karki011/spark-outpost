@@ -22,7 +22,8 @@ import {
 } from '../providers/provider.ts';
 import { createTitleFilter, hidesTitleLine } from '../titles/title-line.ts';
 import { createRedactionFilter } from '../audit/redact-stream.ts';
-import { projectSecretValues, withoutSecretValues } from '../audit/secret-values.ts';
+import { withoutSecretValues } from '../audit/secret-values.ts';
+import { turnSecretValues } from '../approvals/secret-send.ts';
 import {
   APPROVAL_POLL_MS,
   APPROVAL_TIMEOUT_MESSAGE,
@@ -31,7 +32,7 @@ import {
 } from './approval-gate.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
-import { prepareAskRun, prepareDoRun } from './do-run.ts';
+import { prepareAskRun, prepareDoRun, prepareQuestions } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
 import { publishGrant, publishScope, startBasis } from './publish-context.ts';
 import { openMemberInbox } from './member-inbox.ts';
@@ -77,6 +78,7 @@ import { createRunObservations } from '../observations/run-observations.ts';
 import { conversationHasSlackContext } from '../persistence/slack.ts';
 import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
 import { startRailFlags } from './rail-flags.ts';
+import { linkedArtifactActivity } from '../artifacts/activity.ts';
 import { withBrowserCheck } from './browser-check.ts';
 import { createObservedEdits } from './observed-edits.ts';
 import { observeSession } from './session-audit.ts';
@@ -159,7 +161,7 @@ export async function runAgentTurn(
   });
   const startedAt = Date.now();
   const live = createLiveCost(input.provider, input.settings.model);
-  const secretValues = await projectSecretValues(input.projectRoots);
+  const secretValues = await turnSecretValues(input.projectRoots);
   const audit = createAuditRecorder({
     write: (entries) =>
       insertProtocolEntries(
@@ -180,7 +182,7 @@ export async function runAgentTurn(
     observations.record({ source: 'private_data', label: SLACK_CONTEXT_OBSERVATION });
   }
   const edits =
-    input.mode === 'do'
+    input.mode === 'do' && !input.chatFolder
       ? createObservedEdits({
           db: deps.db,
           workspaceId: input.workspaceId,
@@ -232,9 +234,10 @@ export async function runAgentTurn(
         topRunId: input.parentRunId ?? lease.runId,
         pollMs: deps.inboxPollMs ?? INBOX_POLL_MS,
         append,
+        replySoFar: () => replySoFar(),
       });
   const redaction = createRedactionFilter(secretValues);
-  const parking = backgroundParking(deps.parked, lease.runId, () => control.stop('quit'));
+  const parking = backgroundParking(deps.parked, () => control.stop('quit'));
   const watch = { ...input, db: deps.db, runId: lease.runId, observations };
   const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
@@ -244,7 +247,7 @@ export async function runAgentTurn(
   });
   const guard = { ...input, db: deps.db, runId: lease.runId, append };
   const commands = createCommandRecorder({ ...guard, secretValues, replySoFar });
-  const events = createTurnEvents({ append, secretValues });
+  const events = createTurnEvents({ append, secretValues, replySoFar });
   try {
     if (await isCancelRequested(deps.db, lease.runId)) control.stop('cancelled');
     if (control.signal.aborted && control.reason() !== 'lease_lost') {
@@ -282,6 +285,7 @@ export async function runAgentTurn(
             ...gateOptions,
             changesProject,
             projectRoots: input.projectRoots,
+            keepsCopies: !input.chatFolder,
             backupAlsoFor: options.backupAlsoFor,
             observe: options.observeEdits,
             plans: plans.hooks,
@@ -291,6 +295,8 @@ export async function runAgentTurn(
         : asking
           ? prepareAskRun({ ...gateOptions, conversationId: input.identity.threadId })
           : undefined;
+    const asksUser = input.parentRunId === null && !input.assistant;
+    const questions = asksUser ? prepareQuestions(gateOptions, approvals) : undefined;
     const rails =
       input.mode === 'do'
         ? await startRailFlags({ ...input, db: deps.db, runId: lease.runId, audit })
@@ -352,10 +358,12 @@ export async function runAgentTurn(
       audit: observer,
       ...(input.mode ? { mode: input.mode } : {}),
       ...(changesProject ? { changesProject: true } : {}),
-      ...(changesProject && startBasis(input) ? { publishes: true } : {}),
+      ...(changesProject && !input.chatFolder && startBasis(input) ? { publishes: true } : {}),
+      ...(input.chatFolder ? { chatFolder: true } : {}),
       ...(plansThisTurn(input) ? { planning: true } : {}),
       ...(input.plansFirst ? { plansFirst: true } : {}),
       ...(approvals ? { approvals } : {}),
+      ...(questions ? { questions } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
       ...(inbox ? { steering: inbox } : {}),
       ...(inbox ? { inbox } : {}),
@@ -368,10 +376,11 @@ export async function runAgentTurn(
       ...(userMcp.length > 0 ? { userMcp } : {}),
       spark,
       sparkScope: {
+        codeMode: spark.codeMode,
         workspaceId: input.workspaceId,
         conversationId: input.identity.threadId,
         runId: lease.runId,
-        ...(input.assistant ? { readOnly: true } : {}),
+        ...(input.assistant ? { readOnly: true, assistant: true } : {}),
         observations,
         publish: await publishScope(deps.db, input),
         commands: await sparkCommandScope(deps.db, lease.runId, input, { observations }),
@@ -414,8 +423,15 @@ export async function runAgentTurn(
         await recordFollowedInstructions(deps.db, lease.runId, output.files);
       }
       if (output.kind === 'rail_flag') await rails?.record(output.flag);
+      if (output.kind === 'artifact_link') {
+        const shown = await linkedArtifactActivity(deps.db, input.identity.threadId, output);
+        if (shown) await append(shown);
+      }
       if (output.kind === 'secret_read') {
         for (const label of output.paths) observations.record({ source: 'secret_file', label });
+      }
+      if (output.kind === 'web_read') {
+        for (const label of output.labels) observations.record({ source: 'web_page', label });
       }
       if (output.kind === 'account') {
         await recordAccount(deps.db, input.workspaceId, input.provider, output.account);
@@ -477,7 +493,7 @@ export async function runAgentTurn(
     parking.release();
     modeWatch?.dispose();
     await inbox
-      ?.dispose()
+      ?.dispose(control.reason() === 'cancelled')
       .catch((error: unknown) => console.error('Could not close the message inbox', error));
     audit.discard();
   }

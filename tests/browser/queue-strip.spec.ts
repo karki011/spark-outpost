@@ -28,11 +28,11 @@ const composer = (page: Page) => page.getByRole('textbox', { name: 'Message' });
 async function waitingTurn(page: Page) {
   await projectChat(page, repo, 'Ask before edits');
   await send(page, `${BUILD_REQUEST} #build`);
-  await expect(card(page, /Change a file\?/)).toBeVisible({ timeout: 30_000 });
+  await expect(card(page, /^Edit .+\?$/)).toBeVisible({ timeout: 30_000 });
 }
 
 async function allowEditsUntil(page: Page, done: () => Promise<boolean>, timeoutMs = 60_000) {
-  const allow = card(page, /Change a file\?/)
+  const allow = card(page, /^Edit .+\?$/)
     .filter({ has: page.getByRole('button', { name: 'Deny' }) })
     .getByRole('button', { name: 'Allow', exact: true });
   await expect(async () => {
@@ -60,7 +60,7 @@ test('the queue strip edits, reorders, removes and keeps messages, then sends th
   await queue(page, 'Second queued');
   await queue(page, 'Third queued');
   await expect(strip(page)).toContainText('3 queued');
-  await expect(page.locator('.cstatus')).toContainText('3 queued');
+  await expect(page.locator('.cstatus')).toHaveAttribute('data-state', 'idle');
 
   const first = queued(page).nth(0);
   await first.getByRole('button', { name: 'Edit' }).click();

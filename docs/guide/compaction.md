@@ -12,8 +12,8 @@ When a chat's context is nearly full, Spark compacts it: the agent carries on fr
 
 ## Check how full the chat is
 
-1. Look at the message box's context ring: amber at 60%, red at 80% by default.
-2. Select it for the numbers.
+1. Past half full, **N% context** shows under the box: amber at 60%, red at 80% by default.
+2. Select it for the numbers and how long the **Prompt cache** stays warm.
 
 ![The context ring open, warning that the chat is getting full](images/compaction-ring-light.png)
 

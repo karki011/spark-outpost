@@ -4,8 +4,8 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { APP_CONTENT_SECURITY_POLICY } from '@spark-outpost/contracts';
-import { createTestApp, localClient } from './app-support.ts';
+import { appContentSecurityPolicy, artifactOrigin } from '@spark-outpost/contracts';
+import { PORT, createTestApp, localClient } from './app-support.ts';
 import {
   ENTERED,
   REMOTE_HOST,
@@ -122,15 +122,21 @@ describe('the web app over the remote host', () => {
       expect((await stranger.get(`/${ENTERED}`).expect(200)).text).toContain('Pair this device');
 
       const local = await localClient(app).get('/').expect(200);
-      expect(local.headers['content-security-policy']).toBe(APP_CONTENT_SECURITY_POLICY);
+      expect(local.headers['content-security-policy']).toBe(
+        appContentSecurityPolicy(artifactOrigin(PORT)),
+      );
 
       const device = await pairDevice(app);
       const phone = remoteClient(app, device.cookie);
       const shell = await phone.get('/').expect(200);
       expect(shell.text).toContain('Spark Outpost app');
-      expect(shell.headers['content-security-policy']).toBe(APP_CONTENT_SECURITY_POLICY);
+      expect(shell.headers['content-security-policy']).toBe(
+        appContentSecurityPolicy(artifactOrigin(PORT)),
+      );
       const deepLink = await phone.get('/chats/anything').expect(200);
-      expect(deepLink.headers['content-security-policy']).toBe(APP_CONTENT_SECURITY_POLICY);
+      expect(deepLink.headers['content-security-policy']).toBe(
+        appContentSecurityPolicy(artifactOrigin(PORT)),
+      );
       expect((await phone.get('/app.js').expect(200)).text).toContain('window.app');
     } finally {
       await rm(webRoot, { recursive: true, force: true });

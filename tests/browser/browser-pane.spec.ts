@@ -100,7 +100,7 @@ test('the Mac app opens the Browser pane and tells the shell where it is', async
     .toEqual([0, 0]);
   await expect
     .poll(async () => (await calls(page, 'place')).at(-1))
-    .toMatchObject({ covered: false, projectId: null, keepSignIns: true });
+    .toMatchObject({ covered: false, projectId: null });
   await expect(page.locator('#work-panel .wp-in')).toHaveCSS('opacity', '1');
 
   const axe = await new AxeBuilder({ page }).include('#work-panel').analyze();
@@ -366,7 +366,7 @@ test('the header is one row of tabs with New tab next to them', async ({ page })
   await push([
     { title: 'My app', url: 'http://localhost:5173/', active: true, picking: true, loading: true },
   ]);
-  await expect(pane.getByRole('status').filter({ hasText: 'Esc cancels' })).toBeVisible();
+  await expect(pane.getByRole('status').filter({ hasText: 'Esc finishes' })).toBeVisible();
   await expect(pane.getByLabel('Address')).toHaveCount(0);
   await expect(pane.getByRole('status').filter({ hasText: 'Page is opening' })).toBeAttached();
   await expect.poll(placed).toEqual([0, 0, 0, 0]);
@@ -403,7 +403,7 @@ test('closing the pane keeps it closed when the chat gets work', async ({ page }
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('Task 6/6', { timeout: 20_000 });
+  await expect(page.locator('.todo-line')).toContainText('3 of 3 done', { timeout: 20_000 });
   await expect(pane).toBeHidden();
   const panel = page.getByRole('complementary', { name: 'Work panel' });
   await expect(panel.getByRole('tab', { name: 'Work' })).toHaveAttribute('aria-selected', 'true');

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { emitVoice, installFakeVoice, press, say, voiceCalls } from './fake-voice.ts';
+import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { connectTickets, resetTicketFakes } from './ticket-seed.ts';
 
@@ -287,22 +288,22 @@ test('Esc while the first listen is still starting cancels it once it resolves',
   expect(listens).toHaveLength(2);
 });
 
-test('an instant answer arms no confirmation: "yes" afterwards sends no draft', async ({
+test('a spoken question waits in Ask Spark until confirmed, and "yes" sends it to the model as text', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
   await installFakeVoice(page);
   await openIsland(page);
-  await say(page, 'What did I spend today?');
-  const ask = island(page).getByRole('textbox', { name: 'Ask Spark' });
-  await ask.fill('Delete every branch I have');
   const before = await userMessages();
   await say(page, 'Who needs me?');
-  await expect(island(page).getByText('Nothing needs you right now.')).toBeVisible();
-  const next = await say(page, 'yes');
-  expect(next.purpose).toBe('command');
+  const ask = island(page).getByRole('textbox', { name: 'Ask Spark' });
+  await expect(ask).toHaveValue('Who needs me');
+  await expect(island(page).getByText('Nothing needs you right now.')).toHaveCount(0);
   await page.waitForTimeout(400);
   expect(await userMessages()).toBe(before);
+  const next = await say(page, 'yes');
+  expect(next.purpose).toBe('confirm');
+  await expect(island(page).getByText('You wrote: "Who needs me"')).toBeVisible();
 });
 
 test('open shows a result card with the best match preselected, and Enter opens it', async ({
@@ -332,7 +333,9 @@ test('open shows a result card with the best match preselected, and Enter opens 
     .toEqual([dashboards]);
 });
 
-test('who needs me answers at once in Ask Spark, read-only, and speaks it', async ({ page }) => {
+test('who needs me goes to Ask Spark as text for the model, unsent and unspoken until Enter', async ({
+  page,
+}) => {
   await resetTestDatabase({ onboarded: true });
   await seedChats([
     {
@@ -345,10 +348,11 @@ test('who needs me answers at once in Ask Spark, read-only, and speaks it', asyn
   await openIsland(page);
   const before = await userMessages();
   await say(page, 'Who needs me?');
-  await expect(island(page).getByText(/1 chat needs you: “Speed up the test suite”/)).toBeVisible();
-  await expect
-    .poll(async () => (await voiceCalls(page)).find((call) => call.op === 'speak')?.args[0])
-    .toMatch(/1 chat needs you/);
+  await expect(island(page).getByRole('textbox', { name: 'Ask Spark' })).toHaveValue(
+    'Who needs me',
+  );
+  await page.waitForTimeout(400);
+  expect((await voiceCalls(page)).filter((call) => call.op === 'speak')).toEqual([]);
   expect(await userMessages()).toBe(before);
 });
 
@@ -396,23 +400,64 @@ test('a denied microphone says so and opens Microphone settings', async ({ page 
   expect((await voiceCalls(page)).at(-1)).toEqual({ op: 'openSettings', args: ['microphone'] });
 });
 
-test('dictation fills the chat composer and is never sent', async ({ page }) => {
+test('live dictation keeps the composer steady and sends only after confirmation', async ({
+  page,
+}, testInfo) => {
   await resetTestDatabase({ onboarded: true });
-  const [chat] = await seedChats([{ title: 'Write the release notes' }]);
+  await seedChats([{ title: 'Write the release notes' }]);
   await installFakeVoice(page);
-  await page.goto(`/?chat=${chat}`);
+  await openChats(page);
+  await page
+    .getByRole('navigation', { name: 'Chats' })
+    .getByText('Write the release notes')
+    .click();
   const before = await userMessages();
+  const composer = page.locator('.composer');
+  const input = page.getByRole('textbox', { name: 'Message' });
   const mic = page.getByRole('button', { name: 'Dictate' });
+  await input.fill('Check this branch.');
+  const geometry = async () => ({
+    composer: await composer.boundingBox(),
+    mic: await page.locator('.mic-btn').boundingBox(),
+    send: await page.getByRole('button', { name: 'Send', exact: true }).boundingBox(),
+  });
+  await expect(mic).toBeVisible();
+  const idle = await geometry();
+  const layoutShift = async () => {
+    const current = await geometry();
+    return Math.max(
+      ...(['composer', 'mic', 'send'] as const).flatMap((element) => {
+        const before = idle[element];
+        const after = current[element];
+        if (!before || !after) return [Infinity];
+        return (['x', 'y', 'width', 'height'] as const).map((axis) =>
+          Math.abs(after[axis] - before[axis]),
+        );
+      }),
+    );
+  };
   await expect(mic).toHaveAttribute('aria-pressed', 'false');
   await mic.click();
   await expect(page.getByRole('button', { name: 'Stop dictating' })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
+  await expect.poll(layoutShift).toBeLessThanOrEqual(1);
   const id = 'listen-1';
-  await emitVoice(page, { kind: 'partial', id, text: 'please check the login' });
-  await expect(page.getByText('please check the login')).toBeVisible();
+  await emitVoice(page, { kind: 'partial', id, text: 'please check' });
+  await expect(input).toHaveValue('Check this branch. please check');
+  await emitVoice(page, { kind: 'partial', id, text: 'please check the login redirect' });
+  await expect(input).toHaveValue('Check this branch. please check the login redirect');
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
+  await input.press('Enter');
+  await expect(input).toHaveValue('Check this branch. please check the login redirect');
+  expect(await userMessages()).toBe(before);
+  await expect.poll(layoutShift).toBeLessThanOrEqual(1);
+  await expect(page.locator('.mic-wrap').getByRole('status')).toHaveCSS('position', 'absolute');
+  await page.screenshot({ path: testInfo.outputPath('dictation-listening.png') });
   await page.getByRole('button', { name: 'Stop dictating' }).click();
+  await expect.poll(layoutShift).toBeLessThanOrEqual(1);
+  expect(await userMessages()).toBe(before);
   await emitVoice(page, {
     kind: 'final',
     id,
@@ -420,10 +465,36 @@ test('dictation fills the chat composer and is never sent', async ({ page }) => 
     reason: 'stopped',
   });
   await expect(page.getByRole('textbox', { name: 'Message' })).toHaveValue(
-    'please check the login redirect. then add a test.',
+    'Check this branch. please check the login redirect. then add a test.',
   );
-  await page.waitForTimeout(400);
+  await expect(page.getByRole('button', { name: 'Dictate' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+  await expect(input).toBeFocused();
+  expect(await userMessages()).toBe(before);
+  await emitVoice(page, {
+    kind: 'final',
+    id,
+    text: 'please check the login redirect. then add a test.',
+    reason: 'stopped',
+  });
+  const final = 'Check this branch. please check the login redirect. then add a test.';
+  await expect(input).toHaveValue(final);
+  await page.getByRole('button', { name: 'Dictate' }).click();
+  await expect
+    .poll(async () => (await voiceCalls(page)).filter((call) => call.op === 'resolved').length)
+    .toBe(2);
+  await emitVoice(page, { kind: 'partial', id: 'listen-2', text: 'discard this' });
+  await expect(input).toHaveValue(`${final} discard this`);
+  await page.keyboard.press('Escape');
+  await expect(input).toHaveValue(final);
+  await emitVoice(page, { kind: 'final', id: 'listen-2', text: 'discard this', reason: 'stopped' });
+  await expect(input).toHaveValue(final);
   expect(await userMessages()).toBe(before);
   const ops = (await voiceCalls(page)).map((call) => call.op);
-  expect(ops.filter((op) => op !== 'resolved')).toEqual(['listen', 'stop']);
+  expect(ops.filter((op) => op !== 'resolved')).toEqual(['listen', 'stop', 'listen', 'cancel']);
+  await input.focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(userMessages).toBe(before + 1);
 });

@@ -1,11 +1,10 @@
-import { useEffect, type RefObject } from 'react';
+import { useCallback, useEffect, type RefObject } from 'react';
 import type { BrowserBounds, BrowserPlacement } from '@spark-outpost/contracts';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 
 export interface BrowserHome {
   chatId: string;
   projectId: string | null;
-  keepSignIns: boolean;
   roots: readonly string[];
   sendsTo: 'chat' | 'terminal';
 }
@@ -14,7 +13,6 @@ export function hiddenPlacement(home: BrowserHome): BrowserPlacement {
   return {
     chatId: home.chatId,
     projectId: home.projectId,
-    keepSignIns: home.keepSignIns,
     roots: [...home.roots].slice(0, 16),
     bounds: null,
     covered: false,
@@ -23,8 +21,13 @@ export function hiddenPlacement(home: BrowserHome): BrowserPlacement {
 }
 
 const PROBE_INSET = 6;
+const RECHECK_EVENT = 'spark:native-placement';
+
+export function recheckNativePlacement(): void {
+  window.dispatchEvent(new Event(RECHECK_EVENT));
+}
 const SETTLE_MS = 320;
-const DRAG_HANDLES = '[role="separator"]';
+const DRAG_HANDLES = '[role="separator"]:not([data-live-drag])';
 
 function boundsOf(element: HTMLElement): BrowserBounds | null {
   if (!element.isConnected || !element.checkVisibility({ visibilityProperty: true })) return null;
@@ -65,21 +68,36 @@ function overlapped(element: HTMLElement, bounds: BrowserBounds): boolean {
   });
 }
 
+export type PlaceView = (bounds: BrowserBounds | null, covered: boolean) => void;
+
 export function useViewPlacement(
   target: RefObject<HTMLElement | null>,
   home: BrowserHome,
   shown: boolean,
 ): void {
-  const { chatId, projectId, keepSignIns, sendsTo } = home;
+  const { chatId, projectId, sendsTo } = home;
   const rootsKey = home.roots.join('\n');
+  const place = useCallback<PlaceView>(
+    (bounds, covered) => {
+      const roots = rootsKey === '' ? [] : rootsKey.split('\n').slice(0, 16);
+      const placement: BrowserPlacement = { chatId, projectId, roots, bounds, covered, sendsTo };
+      void desktopBrowser()?.place(placement);
+    },
+    [chatId, projectId, rootsKey, sendsTo],
+  );
+  useNativePlacement(target, shown && desktopBrowser() !== null, place);
+}
 
+export function useNativePlacement(
+  target: RefObject<HTMLElement | null>,
+  shown: boolean,
+  place: PlaceView,
+): void {
   useEffect(() => {
-    const browser = desktopBrowser();
     const element = target.current;
-    if (!browser || !element) return;
+    if (!element) return;
     const panel = element.closest('.wp');
     const inner = panel?.querySelector(':scope > .wp-in') ?? null;
-    const roots = rootsKey === '' ? [] : rootsKey.split('\n').slice(0, 16);
     let sent = '';
     let frame = 0;
     let settle = 0;
@@ -99,19 +117,10 @@ export function useViewPlacement(
       const bounds = shown ? boundsOf(element) : null;
       const covered = bounds !== null && (dragging || overlapped(element, bounds));
       watchOverlay(covered);
-      const placement: BrowserPlacement = {
-        chatId,
-        projectId,
-        keepSignIns,
-        roots,
-        bounds,
-        covered,
-        sendsTo,
-      };
-      const key = JSON.stringify(placement);
+      const key = JSON.stringify({ bounds, covered });
       if (key === sent) return;
       sent = key;
-      void browser.place(placement);
+      place(bounds, covered);
     };
     function schedule() {
       frame ||= requestAnimationFrame(report);
@@ -154,6 +163,7 @@ export function useViewPlacement(
     window.addEventListener('pointercancel', onPointerUp, true);
     window.addEventListener('keyup', scheduleSettled, true);
     window.addEventListener('focusin', scheduleSettled, true);
+    window.addEventListener(RECHECK_EVENT, scheduleSettled);
     scheduleSettled();
 
     return () => {
@@ -168,18 +178,11 @@ export function useViewPlacement(
       window.removeEventListener('pointercancel', onPointerUp, true);
       window.removeEventListener('keyup', scheduleSettled, true);
       window.removeEventListener('focusin', scheduleSettled, true);
+      window.removeEventListener(RECHECK_EVENT, scheduleSettled);
       cancelAnimationFrame(frame);
       cancelAnimationFrame(animating);
       clearTimeout(settle);
-      void browser.place({
-        chatId,
-        projectId,
-        keepSignIns,
-        roots,
-        bounds: null,
-        covered: false,
-        sendsTo,
-      });
+      place(null, false);
     };
-  }, [target, chatId, projectId, keepSignIns, rootsKey, shown, sendsTo]);
+  }, [target, shown, place]);
 }

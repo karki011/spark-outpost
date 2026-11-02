@@ -26,9 +26,16 @@ const neverAsked: PermissionGate = {
 };
 
 let root: string;
+let data: string;
+const savedData = process.env.SPARK_DATA_DIR;
 
 beforeAll(async () => {
   root = await realpath(await mkdtemp(join(tmpdir(), 'spark-codex-secrets-')));
+  data = await realpath(await mkdtemp(join(tmpdir(), 'spark-codex-data-')));
+  process.env.SPARK_DATA_DIR = data;
+  await mkdir(join(data, 'Partitions', 'spark-browser-personal'), { recursive: true });
+  await writeFile(join(data, 'Partitions', 'spark-browser-personal', 'Cookies'), `${SECRET}\n`);
+  await writeFile(join(data, 'postgres-password'), `${SECRET}\n`);
   await mkdir(join(root, 'config'));
   await writeFile(join(root, 'README.md'), '# app\n');
   await writeFile(join(root, '.env'), `MATHLIB_API_TOKEN=${SECRET}\n`);
@@ -38,6 +45,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await rm(root, { recursive: true, force: true });
+  await rm(data, { recursive: true, force: true });
+  if (savedData === undefined) delete process.env.SPARK_DATA_DIR;
+  else process.env.SPARK_DATA_DIR = savedData;
 });
 
 async function reply(prompt: string, turn: Partial<ProviderTurn> = {}): Promise<string> {
@@ -85,5 +95,18 @@ describe.skipIf(process.platform !== 'darwin')(
         expect(text).not.toContain(SECRET);
       },
     );
+
+    it.each(CODEX_MODES)("blocks Spark's browser data in the %s mode", async (mode) => {
+      const read = `#sandboxed cat "${data}/postgres-password"; cat "${data}/Partitions/spark-browser-personal/Cookies"; echo done`;
+      const text = await reply(read, {
+        mode: mode === 'read-only' ? 'ask' : 'do',
+        settings: { method: 'cli', model: null, modelLabel: null, effort: null, mode },
+        approvals: neverAsked,
+      });
+      expect(text).toContain(`sandbox=${mode}`);
+      expect(text).toContain('postgres-password: Operation not permitted');
+      expect(text).toContain('Cookies: Operation not permitted');
+      expect(text).not.toContain(SECRET);
+    });
   },
 );

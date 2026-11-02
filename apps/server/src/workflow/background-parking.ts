@@ -8,7 +8,6 @@ export interface BackgroundParking {
 
 export function backgroundParking(
   parked: Pick<ParkedTurns, 'park'> | undefined,
-  runId: string,
   onQuit: () => void,
 ): BackgroundParking {
   let unpark: (() => void) | null = null;
@@ -19,8 +18,8 @@ export function backgroundParking(
   return {
     observe(output) {
       if (output.kind !== 'background_work') return false;
-      if (output.agents + output.tasks === 0) release();
-      else unpark ??= parked?.park(runId, onQuit) ?? null;
+      if (output.agents + output.tasks === 0 && output.wakesAt === undefined) release();
+      else unpark ??= parked?.park(onQuit) ?? null;
       return true;
     },
     release,

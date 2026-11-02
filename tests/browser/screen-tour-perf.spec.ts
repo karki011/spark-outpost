@@ -82,6 +82,7 @@ async function realChat(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Audit the date helpers #plan');
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 30_000 });
 }
@@ -126,7 +127,7 @@ test('every screen opens and stays smooth with heavy data', async ({ page }) => 
   );
   const show = page.getByRole('button', { name: 'Show work panel' });
   if (await show.isVisible()) await show.click();
-  for (const tab of ['Plan', 'Crew', 'Cost', 'Tasks']) {
+  for (const tab of ['Plan', 'Crew', 'Cost', 'To-do']) {
     const target = work.getByRole('tab', { name: tab });
     if ((await target.count()) === 0) continue;
     steps[`work ${tab}`] = await measure(page, target, target, async () => undefined);

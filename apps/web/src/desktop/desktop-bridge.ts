@@ -4,6 +4,14 @@ import type {
   BrowserPaneState,
   BrowserPick,
   BrowserPlacement,
+  BrowserDownloadAction,
+  BrowserProfile,
+  BrowserSearchEngine,
+  BrowserViewPlacement,
+  BrowserViewSlot,
+  BrowserHandToChat,
+  BrowserToView,
+  BrowserViewCommand,
   BrowserSelectedText,
   DesktopHelpInfo,
   DiagnosticsExport,
@@ -15,6 +23,7 @@ import type {
   MacControlStatus,
   MacIndicator,
   SignedInSite,
+  SparkRulesOpenResult,
   UpdateChannel,
   UpdateStatus,
 } from '@spark-outpost/contracts';
@@ -33,10 +42,12 @@ export interface CompanionStatus {
   failed: IslandAction[];
   sound?: boolean;
   islandSize?: IslandSize;
+  islandHeight?: number;
   autoExpand?: boolean;
   hideInShare?: boolean;
   notify?: boolean;
   notifyBlocked?: boolean;
+  menuBar?: boolean;
 }
 
 export type ShortcutResult = { ok: true } | { ok: false; error: string };
@@ -63,12 +74,40 @@ export interface DesktopBrowser {
   place(placement: BrowserPlacement): Promise<unknown>;
   command(chatId: string, command: BrowserCommand): Promise<unknown>;
   start(placement: BrowserPlacement): Promise<BrowserPaneState | null>;
-  sites(projectId: string): Promise<SignedInSite[] | null>;
-  signOut(projectId: string, origin: string | null): Promise<SignedInSite[] | null>;
+  sites(): Promise<SignedInSite[] | null>;
+  signOut(origin: string | null): Promise<SignedInSite[] | null>;
   onState(callback: (state: BrowserPaneState) => void): Unsubscribe;
   onSnapshot(callback: (snapshot: BrowserSnapshot) => void): Unsubscribe;
   onPicked(callback: (pick: BrowserPick) => void): Unsubscribe;
   onSelectedText(callback: (selected: BrowserSelectedText) => void): Unsubscribe;
+  onShortcut(callback: (event: unknown) => void): Unsubscribe;
+  onFound(callback: (found: unknown) => void): Unsubscribe;
+  zoom?(): number;
+}
+
+export interface DesktopBrowserView {
+  state(profile: BrowserProfile): Promise<unknown>;
+  place(placement: BrowserViewPlacement): Promise<unknown>;
+  placeSlot(slot: BrowserViewSlot): Promise<unknown>;
+  command(profile: BrowserProfile, command: BrowserViewCommand): Promise<unknown>;
+  archive(): Promise<unknown>;
+  setArchive(setting: unknown): Promise<unknown>;
+  start(profile: BrowserProfile): Promise<unknown>;
+  handToChat(request: BrowserHandToChat): Promise<unknown>;
+  fromChat(request: BrowserToView): Promise<unknown>;
+  pageText(profile: BrowserProfile, tabId: string): Promise<unknown>;
+  clearZooms(profile: BrowserProfile): Promise<unknown>;
+  onPicked(callback: (pick: unknown) => void): Unsubscribe;
+  downloads(): Promise<unknown>;
+  downloadAct(request: BrowserDownloadAction): Promise<unknown>;
+  onDownloads(callback: (list: unknown) => void): Unsubscribe;
+  searchEngine(): Promise<unknown>;
+  setSearchEngine(engine: BrowserSearchEngine): Promise<unknown>;
+  onIntent(callback: (intent: unknown) => void): Unsubscribe;
+  onState(callback: (state: unknown) => void): Unsubscribe;
+  onSnapshot(callback: (snapshot: unknown) => void): Unsubscribe;
+  onShortcut(callback: (event: unknown) => void): Unsubscribe;
+  onFound(callback: (found: unknown) => void): Unsubscribe;
 }
 
 export interface DesktopMacControl {
@@ -79,6 +118,20 @@ export interface DesktopMacControl {
   resume(): Promise<void>;
   indicator(): Promise<MacIndicator | null>;
   onIndicator(callback: (state: MacIndicator | null) => void): Unsubscribe;
+}
+
+export interface SettingsWindowTarget {
+  route: string;
+  focus: string | null;
+}
+
+export interface DesktopSettingsWindow {
+  open(route: string, focus: string | null): void;
+  take(): Promise<SettingsWindowTarget | null>;
+  onChange(callback: () => void): Unsubscribe;
+  openChat(id: string): void;
+  openDoc(link: string): void;
+  onDoc(callback: (link: string) => void): Unsubscribe;
 }
 
 export interface SparkDesktop {
@@ -94,9 +147,12 @@ export interface SparkDesktop {
     setShortcut(action: IslandAction, accelerator: string | null): Promise<ShortcutResult>;
     setSound?(on: boolean): Promise<CompanionStatus>;
     setIslandSize?(size: IslandSize): Promise<CompanionStatus>;
+    setIslandHeight?(height: number): Promise<CompanionStatus>;
+    previewIslandHeight?(height: number): Promise<CompanionStatus>;
     setAutoExpand?(on: boolean): Promise<CompanionStatus>;
     setHideInShare?(on: boolean): Promise<CompanionStatus>;
     setNotify?(on: boolean): Promise<CompanionStatus>;
+    setMenuBar?(on: boolean): Promise<CompanionStatus>;
     onChange(callback: (status: CompanionStatus) => void): Unsubscribe;
   };
   attention?: {
@@ -115,6 +171,7 @@ export interface SparkDesktop {
     gone(): void;
     ready(): void;
     focus(): void;
+    onTakeFocus(callback: () => void): Unsubscribe;
     setRegions(regions: IslandRegions): void;
     pointerMoved(): void;
   };
@@ -134,7 +191,6 @@ export interface SparkDesktop {
     onEscape(callback: () => void): Unsubscribe;
     onPointer?(callback: (point: { x: number; y: number }) => void): Unsubscribe;
     sparkFocused(): Promise<boolean>;
-    pickFolder(): Promise<string | null>;
     pathForFile(file: File): string | null;
     onSparkFocus(callback: (focused: boolean) => void): Unsubscribe;
     setInteractive(on: boolean): void;
@@ -160,13 +216,21 @@ export interface SparkDesktop {
     info(): Promise<DesktopHelpInfo | null>;
     exportDiagnostics(): Promise<DiagnosticsExport | null>;
     showLogs(): Promise<void>;
-    onOpenFeedback(callback: () => void): Unsubscribe;
   };
   privacy?: {
     openFullDiskAccess(): Promise<void>;
   };
+  sparkRules?: {
+    openFile(): Promise<SparkRulesOpenResult | null>;
+  };
   browser?: DesktopBrowser;
+  browserView?: DesktopBrowserView;
   macControl?: DesktopMacControl;
+  menu?: {
+    onCommand(callback: (command: unknown) => void): Unsubscribe;
+    reportSidebar(shown: boolean): void;
+  };
+  settingsWindow?: DesktopSettingsWindow;
   onOpenChat(callback: (id: string, runId: string | null) => void): Unsubscribe;
   onOpenSettings?(callback: (target: IslandSettingsTarget) => void): Unsubscribe;
 }
@@ -182,6 +246,10 @@ export function afterPaint(run: () => void): void {
 
 export function desktopBrowser(): DesktopBrowser | null {
   return sparkDesktop()?.browser ?? null;
+}
+
+export function desktopBrowserView(): DesktopBrowserView | null {
+  return sparkDesktop()?.browserView ?? null;
 }
 
 export function desktopMacControl(): DesktopMacControl | null {

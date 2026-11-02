@@ -61,10 +61,12 @@ describe('companion settings file', () => {
       position: { docked: true },
       sound: false,
       islandSize: 'full',
+      islandHeight: 0,
       islandSizePicked: false,
       autoExpand: true,
       hideInShare: true,
       notify: true,
+      menuBar: false,
     });
   });
 
@@ -93,6 +95,17 @@ describe('companion settings file', () => {
     expect(parseSettings(JSON.stringify({ islandSize: 'xlarge' })).islandSize).toBe('full');
   });
 
+  it('keeps valid island heights and restores the default for malformed stored values', () => {
+    for (const value of [-32, -1, 0, 14, 32]) {
+      expect(parseSettings(JSON.stringify({ islandHeight: value })).islandHeight).toBe(value);
+    }
+    for (const value of [-33, 33, 2.5, '12', null, {}, []]) {
+      expect(parseSettings(JSON.stringify({ islandHeight: value })).islandHeight).toBe(0);
+    }
+    expect(parseSettings('{"islandHeight":1e400}').islandHeight).toBe(0);
+    expect(parseSettings('{}').islandHeight).toBe(0);
+  });
+
   it('opens requests by itself unless that was turned off', () => {
     expect(parseSettings('{}').autoExpand).toBe(true);
     expect(parseSettings(JSON.stringify({ autoExpand: false })).autoExpand).toBe(false);
@@ -109,6 +122,19 @@ describe('companion settings file', () => {
     expect(parseSettings('{}').notify).toBe(true);
     expect(parseSettings(JSON.stringify({ notify: false })).notify).toBe(false);
     expect(parseSettings(JSON.stringify({ notify: 0 })).notify).toBe(true);
+  });
+
+  it('keeps the menu bar item off unless the user turned it on, existing files included', () => {
+    expect(DEFAULT_SETTINGS.menuBar).toBe(false);
+    expect(parseSettings('{}').menuBar).toBe(false);
+    const existing = { ...DEFAULT_SETTINGS } as Partial<typeof DEFAULT_SETTINGS>;
+    delete existing.menuBar;
+    expect(parseSettings(JSON.stringify({ ...existing, enabled: false }))).toEqual({
+      ...DEFAULT_SETTINGS,
+      enabled: false,
+    });
+    expect(parseSettings(JSON.stringify({ menuBar: true })).menuBar).toBe(true);
+    expect(parseSettings(JSON.stringify({ menuBar: 'yes' })).menuBar).toBe(false);
   });
 
   it('falls back to the defaults when both shortcuts collide', () => {
@@ -128,10 +154,12 @@ describe('companion settings file', () => {
       position: { docked: false as const, x: 40, y: 200 },
       sound: true,
       islandSize: 'small' as const,
+      islandHeight: -12,
       islandSizePicked: true,
       autoExpand: false,
       hideInShare: false,
       notify: false,
+      menuBar: true,
     };
     await saveSettings(file, settings);
     expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(settings);

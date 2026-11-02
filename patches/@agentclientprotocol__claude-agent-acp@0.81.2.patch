@@ -1,5 +1,5 @@
 diff --git a/dist/acp-agent.js b/dist/acp-agent.js
-index beba2ff4f21e6805099c55215345a95a046c608a..1fce6bda6774e803e2ca4b43b3a780bcad233506 100644
+index beba2ff4f21e6805099c55215345a95a046c608a..5d17c586fbe7071a70059c3fbea3c7351a39e599 100644
 --- a/dist/acp-agent.js
 +++ b/dist/acp-agent.js
 @@ -3311,6 +3311,7 @@ export class ClaudeAcpAgent {
@@ -19,7 +19,17 @@ index beba2ff4f21e6805099c55215345a95a046c608a..1fce6bda6774e803e2ca4b43b3a780bc
                                  await asyncTasks.taskNotification({
                                      task_id: message.task_id,
                                      status: message.status,
-@@ -4654,6 +4655,15 @@ export class ClaudeAcpAgent {
+@@ -3594,7 +3595,8 @@ export class ClaudeAcpAgent {
+                         // the user's prompt's. Autonomous results must never touch the
+                         // user-turn lifecycle (stop reason, settles, failActive,
+                         // slash-command output forwarding), though their cost is real.
+-                        const isAutonomousResult = message.origin != null && AUTONOMOUS_RESULT_ORIGINS.has(message.origin.kind);
++                        const answersSend = (message.user_message_uuids ?? (message.user_message_uuid !== undefined ? [message.user_message_uuid] : [])).some((uuid) => findUnsettledTurn(uuid) !== undefined || (isSteering(session.activeTurn) && session.activeTurn.steeredUuids?.has(uuid)));
++                        const isAutonomousResult = message.origin != null && AUTONOMOUS_RESULT_ORIGINS.has(message.origin.kind) && !answersSend;
+                         const pendingExitPlanModeInterruption = session.pendingExitPlanModeInterruption;
+                         const pendingExitPlanContextReset = session.pendingExitPlanContextReset;
+                         try {
+@@ -4654,6 +4656,15 @@ export class ClaudeAcpAgent {
                                  }),
                              });
                          }

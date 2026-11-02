@@ -2,10 +2,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   API_TOKEN_HEADER,
-  browserPlaceOf,
   classifyBrowserUrl,
   parseBrowserUrl,
-  type BrowserTabOwner,
   type ParsedUrl,
 } from '@spark-outpost/contracts';
 
@@ -16,7 +14,8 @@ const DEFAULT_PORTS: Record<string, number> = {
   'wss:': 443,
 };
 const PAGE_SCHEMES = new Set(['http:', 'https:', 'ws:', 'wss:', 'data:', 'blob:', 'about:']);
-const PARTITION_PREFIX = 'spark-browser-';
+export const BROWSER_PARTITION = 'persist:spark-browser-profile';
+export const PERSONAL_PARTITION = 'persist:spark-browser-personal';
 
 export interface GuardFacts {
   blockedPorts: ReadonlySet<number>;
@@ -77,42 +76,4 @@ export function withoutSparkToken(headers: Record<string, string>): Record<strin
   return Object.fromEntries(
     Object.entries(headers).filter(([name]) => name.toLowerCase() !== API_TOKEN_HEADER),
   );
-}
-
-export interface PartitionChoice {
-  chatId: string;
-  projectId: string | null;
-  keepSignIns: boolean;
-}
-
-const SAFE_ID = /^[0-9a-f-]{36}$/i;
-
-export function projectPartition(projectId: string): string {
-  if (!SAFE_ID.test(projectId)) throw new Error('A browser partition needs a project id.');
-  return `persist:${PARTITION_PREFIX}${projectId}`;
-}
-
-export function partitionFor(choice: PartitionChoice): string {
-  if (choice.projectId && choice.keepSignIns) return projectPartition(choice.projectId);
-  if (!SAFE_ID.test(choice.chatId)) throw new Error('A browser partition needs a chat id.');
-  return `${PARTITION_PREFIX}chat-${choice.chatId}`;
-}
-
-export function agentPartition(chatId: string): string {
-  if (!SAFE_ID.test(chatId)) throw new Error('A browser partition needs a chat id.');
-  return `${PARTITION_PREFIX}agent-${chatId}`;
-}
-
-export interface TabPlace {
-  owner: BrowserTabOwner;
-  url: string;
-}
-
-export function tabPartition(choice: PartitionChoice, tab: TabPlace): string {
-  const agentOnSite = tab.owner === 'agent' && browserPlaceOf(tab.url) === 'external';
-  return agentOnSite ? agentPartition(choice.chatId) : partitionFor(choice);
-}
-
-export function isBrowserPartition(name: string): boolean {
-  return name.startsWith(PARTITION_PREFIX) || name.startsWith(`persist:${PARTITION_PREFIX}`);
 }

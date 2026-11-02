@@ -1,4 +1,4 @@
-.view.in-outpost > .main:not(.op) {
+.view.in-outpost > :is(.main:not(.op), .wp, .wp-scrim) {
   display: none;
 }
 

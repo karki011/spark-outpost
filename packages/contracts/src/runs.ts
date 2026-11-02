@@ -5,6 +5,7 @@ import { modelSwitchSchema } from './model-access.ts';
 import { runUsageSchema } from './usage.ts';
 import { agentRoleSchema } from './roles.ts';
 import { categorySchema } from './categories.ts';
+import { todoListSchema } from './artifacts.ts';
 
 export const runStatusSchema = z.enum([
   'queued',
@@ -72,6 +73,7 @@ export const runSchema = z.object({
   agentLabel: z.string().nullable().optional(),
   category: categorySchema.nullable().optional(),
   following: z.array(z.string()).nullable().optional(),
+  todo: todoListSchema.nullable().optional(),
   continuesRunId: z.uuid().nullable().optional(),
   interruptionChoice: interruptionChoiceSchema.nullable().optional(),
   modelSwitch: modelSwitchSchema.nullable().optional(),

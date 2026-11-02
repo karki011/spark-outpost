@@ -33,6 +33,7 @@ async function newChat(page: Page) {
 async function sendAndWait(page: Page, text: string, turns: number) {
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(text);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await input.press('Enter');
   await expect(page.locator('.mood', { hasText: 'done' })).toHaveCount(turns, { timeout: 20_000 });
 }
@@ -80,7 +81,7 @@ test('the ring warns at 60%, the card compacts at 80%, and the divider shows the
     'true',
   );
   await expect(divider).toContainText('Compacted the conversation');
-  await expect(page.getByRole('button', { name: /Context window: 6% used/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Context window/ })).toHaveCount(0);
 });
 
 test('without /compact Spark writes the summary itself', async ({ page }) => {

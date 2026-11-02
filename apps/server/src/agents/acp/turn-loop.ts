@@ -1,10 +1,12 @@
 import type * as acp from '@agentclientprotocol/sdk';
 import type {
+  ProviderMessage,
   ProviderOutput,
   ProviderTurn,
   RequestUsage,
   SteerRequests,
 } from '../../providers/provider.ts';
+import { WRITE_UP_STEP } from '@spark-outpost/contracts';
 import { setTimeout as delay } from 'node:timers/promises';
 import { endsAgentCycle, type BackgroundCount, type BackgroundWork } from './background-work.ts';
 import { startsAgentCycle } from './agent-cycle.ts';
@@ -54,7 +56,6 @@ export interface PromptLoop {
   writeUpMs?: number;
 }
 
-export const WRITE_UP_STEP = 'Writing up results';
 const WRITE_UP_MS = 15_000;
 
 type Woken =
@@ -103,15 +104,19 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
   let quiet: Promise<Woken> = never;
   let writeUpTimer: AbortController | null = null;
   let shown = '';
+  let sleeping = false;
 
   const report = (count: BackgroundCount) => {
     const key = JSON.stringify(count);
     if (key === shown) return;
     shown = key;
+    sleeping = count.wakesAt !== undefined;
     push([{ kind: 'background_work', ...count }]);
   };
-  const sendPrompt = (text: string) => {
-    failure = untilFailure(session.prompt(followUpBlocks(text, loop.followUp)));
+  const sendPrompt = (message: ProviderMessage) => {
+    const text = typeof message === 'string' ? message : message.text;
+    const attachments = typeof message === 'string' ? [] : message.attachments;
+    failure = untilFailure(session.prompt(followUpBlocks(text, { ...loop.followUp, attachments })));
   };
   const startWaiting = () => {
     waiting = true;
@@ -190,17 +195,31 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
     }
     await loop.see(message.update);
     background?.see(message.update);
-    if (subagentMark(message.update)?.event === 'ended') handedBack = true;
+    const mark = subagentMark(message.update);
+    if (mark?.event === 'ended') handedBack = true;
     if (!waiting) continue;
-    worked ||= startsAgentCycle(message.update);
+    if (!mark && startsAgentCycle(message.update)) inbox.hold(true);
+    if (!worked && startsAgentCycle(message.update)) {
+      worked = true;
+      background?.cycleStarted();
+    }
     if (worked) endWriteUp();
     const count = background?.count();
-    if (count && count.agents + count.tasks > 0) report(count);
+    if (count && (count.agents + count.tasks > 0 || sleeping)) report(count);
     if (!worked || !endsAgentCycle(message.update)) continue;
     push(loop.tokens.addCycle(loop.requests.take(), mapper.takeSubagentTokens()));
+    const next = await nextMessage(loop.turn, 'end_turn', signal);
+    if (next) {
+      endWriteUp();
+      stopWaiting();
+      sendPrompt(next);
+      continue;
+    }
     if (!background?.busy()) {
       stopWaiting();
       return 'end_turn';
     }
+    inbox.hold(false);
+    worked = false;
   }
 }

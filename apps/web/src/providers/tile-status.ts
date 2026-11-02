@@ -4,7 +4,7 @@ import type {
   ProviderSetup,
   VerifyFailureCode,
 } from '@spark-outpost/contracts';
-import { problemText } from '../home/provider-status.ts';
+import { liveIssue, problemText } from '../home/provider-status.ts';
 import { methodTitle } from './verify-log.ts';
 
 export type TileTone = 'off' | 'ok' | 'warn' | 'bad';
@@ -66,7 +66,7 @@ export function tileStatus(
     return { tone: 'off', label: 'Not set up', hint: connectHint(setup) };
   }
   const problem = problemText(connection, issue, when);
-  if (problem && issue?.kind === 'auth') {
+  if (problem && liveIssue(connection, issue)?.kind === 'auth') {
     return { tone: 'warn', label: 'Needs sign-in', hint: problem };
   }
   if (problem) return { tone: 'bad', label: 'Error', hint: problem };

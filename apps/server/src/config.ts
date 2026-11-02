@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { isAbsolute, resolve } from 'node:path';
 import { z } from 'zod';
 import { connectableIdSchema } from '@spark-outpost/contracts';
 import { DEFAULT_BRANCH_PREFIX } from './projects/worktrees.ts';
@@ -50,7 +52,6 @@ const configSchema = z.object({
     .string()
     .default('http://localhost:5173,http://127.0.0.1:5173')
     .transform((value) => value.split(',').map((origin) => origin.trim())),
-  WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(2),
   LEASE_SECONDS: z.coerce.number().int().min(5).default(30),
   SESSION_IDLE_MINUTES: z.coerce.number().int().min(1).default(240),
   ASSISTANT_IDLE_COMPACT_SECONDS: z.coerce
@@ -130,6 +131,10 @@ const configSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((value) => value === 'true'),
+  ARCHIVE_SWEEP: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -143,4 +148,21 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     );
   }
   return result.data;
+}
+
+const REPO_ROOT = resolve(import.meta.dirname, '../../..');
+export const LOCAL_DATA_DIR = resolve(REPO_ROOT, '.local');
+const RUNS_FROM_CHECKOUT = existsSync(resolve(REPO_ROOT, 'pnpm-workspace.yaml'));
+
+export function sparkDataDir(
+  config: Pick<Config, 'SPARK_DATA_DIR'>,
+  fromCheckout: boolean = RUNS_FROM_CHECKOUT,
+): string {
+  const dataDir = config.SPARK_DATA_DIR;
+  if (dataDir !== undefined) {
+    if (!isAbsolute(dataDir)) throw new Error('SPARK_DATA_DIR must be an absolute path.');
+    return dataDir;
+  }
+  if (fromCheckout) return LOCAL_DATA_DIR;
+  throw new Error('SPARK_DATA_DIR is not set, and Spark is not running from a source checkout.');
 }

@@ -6,6 +6,7 @@ import type { RailWatch } from './rail-watch.ts';
 import type { RanModelWatch } from './ran-model.ts';
 import { subagentMark } from './subagent-stream.ts';
 import type { TurnMapper } from './subagent-updates.ts';
+import type { WebReadWatch } from './web-reads.ts';
 
 export interface UpdateSink {
   agentName: string;
@@ -15,6 +16,7 @@ export interface UpdateSink {
   commands: CommandTracker;
   rails: RailWatch | null;
   flagsRails: boolean;
+  webReads: WebReadWatch;
   push: (outputs: ProviderOutput[]) => void;
 }
 
@@ -33,6 +35,8 @@ export function updateSink(sink: UpdateSink): (update: SessionUpdate) => Promise
     if (observed?.secretReads.length) {
       push([{ kind: 'secret_read', paths: observed.secretReads }]);
     }
+    const webReads = sink.webReads.see(update);
+    if (webReads.length > 0) push([{ kind: 'web_read', labels: webReads }]);
     const unsafe = mapper.unsafeModeChange();
     if (unsafe) {
       throw new ProviderError(

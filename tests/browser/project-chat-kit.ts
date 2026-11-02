@@ -92,6 +92,7 @@ export async function projectChat(page: Page, repo: ChatRepo, level: Level): Pro
 export async function send(page: Page, text: string): Promise<void> {
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(text);
+  await expect(page.getByRole('button', { name: /^(Send|Send now|Queue message)$/ })).toBeEnabled();
   await input.press('Enter');
 }
 
@@ -106,7 +107,7 @@ export async function turnDone(page: Page, timeout = 30_000): Promise<void> {
 }
 
 export async function allowEdit(page: Page): Promise<void> {
-  const edit = card(page, /Change a file\?/).filter({
+  const edit = card(page, /^Edit .+\?$/).filter({
     has: page.getByRole('button', { name: 'Deny' }),
   });
   await edit.getByRole('button', { name: 'Allow', exact: true }).click();

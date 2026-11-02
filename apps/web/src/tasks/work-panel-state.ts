@@ -3,6 +3,8 @@ import { useSidebarLayout } from '../conversations/sidebar-layout.tsx';
 import { DOCK_QUERY, PHONE_QUERY, ROOMY_DOCK_QUERY, useMediaQuery } from '../ui/breakpoints.ts';
 import type { TaskOverview } from '@spark-outpost/contracts';
 import type { BrowserPaneChoice } from '../browser/pane-open.ts';
+import type { ArtifactPaneChoice } from '../chat/artifacts/artifact-pane-store.ts';
+import { PAGE_MIN_WIDTH } from '../browser/pane-width.ts';
 import {
   clampPanelWidth,
   readPanelWidth,
@@ -25,12 +27,12 @@ export const WORK_PANEL_LIMITS: PanelWidthLimits = {
 
 export const BROWSER_PANEL_LIMITS: PanelWidthLimits = {
   key: 'spark-outpost.browser-pane.width',
-  min: 380,
-  max: 1200,
+  min: PAGE_MIN_WIDTH,
+  max: 8000,
   fallback: 640,
 };
 
-export type PanelView = 'work' | 'browser';
+export type PanelView = 'work' | 'browser' | 'artifact';
 
 function readSaved(): boolean | null {
   try {
@@ -144,35 +146,45 @@ export function useTaskPanel(
   hasSettings: boolean,
   opensByDefault = true,
   browser: BrowserPaneChoice | null = null,
+  artifact: ArtifactPaneChoice | null = null,
 ): TaskPanel {
   const state = useWorkPanelState(opensByDefault);
   const [chosen, setChosen] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const task = tasks.find((candidate) => candidate.id === chosen) ?? tasks.at(-1) ?? null;
   const hasWork = task !== null || hasSettings;
-  const browsing = browser !== null && browser.open;
+  const reading = artifact?.current.shown === true;
+  const browsing = !reading && browser !== null && browser.open;
   const workOpen = task ? state.open : hasSettings && settingsOpen;
-  const view: PanelView = browsing || (browser !== null && !hasWork) ? 'browser' : 'work';
+  const view: PanelView = reading
+    ? 'artifact'
+    : browsing || (browser !== null && !hasWork)
+      ? 'browser'
+      : 'work';
+  const wideView = view !== 'work';
   const setWorkOpen = (open: boolean) => {
     if (task) state.setOpen(open);
     else setSettingsOpen(open);
   };
   return {
     task,
-    available: hasWork || browser !== null,
-    open: browsing || workOpen,
+    available: hasWork || browser !== null || artifact !== null,
+    open: reading || browsing || workOpen,
     wide: state.wide,
-    width: view === 'browser' ? state.browserWidth : state.width,
+    width: wideView ? state.browserWidth : state.width,
     view,
-    limits: view === 'browser' ? BROWSER_PANEL_LIMITS : WORK_PANEL_LIMITS,
-    setWidth: view === 'browser' ? state.setBrowserWidth : state.setWidth,
+    limits: wideView ? BROWSER_PANEL_LIMITS : WORK_PANEL_LIMITS,
+    setWidth: wideView ? state.setBrowserWidth : state.setWidth,
     setOpen(open) {
-      if (open && !hasWork) browser?.setOpen(true);
+      if (open && !hasWork && !artifact) browser?.setOpen(true);
+      if (open && !hasWork && artifact) artifact.setShown(true);
       if (open && hasWork) setWorkOpen(true);
+      if (!open && reading) artifact.setShown(false);
       if (!open && browsing) browser.setOpen(false);
       if (!open && workOpen) setWorkOpen(false);
     },
     setView(next) {
+      artifact?.setShown(next === 'artifact');
       browser?.setOpen(next === 'browser');
       if (next === 'work') setWorkOpen(true);
     },
@@ -181,6 +193,7 @@ export function useTaskPanel(
     },
     openTask(taskId) {
       setChosen(taskId);
+      artifact?.setShown(false);
       browser?.setOpen(false);
       state.setOpen(true);
     },

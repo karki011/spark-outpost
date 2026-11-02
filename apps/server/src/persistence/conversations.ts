@@ -1,5 +1,6 @@
 import { promptCacheFor } from './prompt-cache.ts';
 import {
+  CHAT_LIST_PAGE,
   PERMISSION_DO,
   UNTITLED_CONVERSATION,
   titleFromMessage,
@@ -28,12 +29,13 @@ import { attachmentsForMessages, linkAttachments } from './attachments.ts';
 import { resolveChatSettings } from './chat-settings.ts';
 import { withChatBranches } from './chat-worktrees.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
+import { conversationTopics } from './assistant-topics.ts';
 import { listCompactions, listContinuations } from './compactions.ts';
 import { listBrowserShots } from './browser-screenshots.ts';
 import { listCommands } from './run-commands.ts';
 import { listRailFlags } from './rail-flags.ts';
 import { newId } from './ids.ts';
-import { CHAT_LIST_LIMIT, LISTED_CHAT, searchConversations } from './conversation-search.ts';
+import { LISTED_CHAT, searchConversations } from './conversation-search.ts';
 import { summaryQuery } from './summary-query.ts';
 import { taskForNewRun } from './tasks.ts';
 import { listQueue } from './chat-queue.ts';
@@ -45,6 +47,8 @@ import { withNativeTerminals } from './native-terminals.ts';
 import { applyConversationOptions } from './conversation-options.ts';
 import { continueOpenRequest } from '../outposts/continuation.ts';
 import { deviceStartingRun } from '../remote/run-mark.ts';
+import { listChatFiles } from '../chat-files/store.ts';
+import { listArtifactPages } from '../artifacts/store.ts';
 import {
   MESSAGE_COLUMNS,
   RUN_OUTPOST_COLUMNS,
@@ -82,6 +86,9 @@ export async function ensureLocalWorkspace(db: Queryable): Promise<string> {
   return rows[0]!.id;
 }
 
+const CHAT_LIST_ORDER = `ORDER BY c.pinned_at DESC NULLS LAST, c.updated_at DESC, c.id DESC
+  LIMIT ${CHAT_LIST_PAGE}`;
+
 export async function listConversations(
   db: Queryable,
   workspaceId: string,
@@ -90,9 +97,25 @@ export async function listConversations(
   const text = search.trim();
   if (text !== '') return searchConversations(db, workspaceId, text);
   const { rows } = await db.query<ConversationSummaryRow>(
-    `${summaryQuery} WHERE ${LISTED_CHAT}
-     ORDER BY c.pinned_at DESC NULLS LAST, c.updated_at DESC LIMIT ${CHAT_LIST_LIMIT}`,
+    `${summaryQuery} WHERE ${LISTED_CHAT} ${CHAT_LIST_ORDER}`,
     [workspaceId],
+  );
+  return withChatBranches(db, await withNativeTerminals(db, rows.map(toConversationSummary)));
+}
+
+export async function listConversationsAfter(
+  db: Queryable,
+  workspaceId: string,
+  afterId: string,
+): Promise<ConversationSummary[]> {
+  const { rows } = await db.query<ConversationSummaryRow>(
+    `${summaryQuery} WHERE ${LISTED_CHAT}
+       AND (COALESCE(c.pinned_at, '-infinity'), c.updated_at, c.id) < (
+         SELECT COALESCE(a.pinned_at, '-infinity'), a.updated_at, a.id
+         FROM conversations a WHERE a.id = $2
+       )
+     ${CHAT_LIST_ORDER}`,
+    [workspaceId, afterId],
   );
   return withChatBranches(db, await withNativeTerminals(db, rows.map(toConversationSummary)));
 }
@@ -155,10 +178,13 @@ export async function getConversationDetail(
     plans,
     compactions,
     continuedIn,
+    topics,
     queue,
     memberMessages,
     railFlags,
     browserShots,
+    chatFiles,
+    artifactPages,
     commands,
     interruption,
     subagents,
@@ -177,7 +203,10 @@ export async function getConversationDetail(
     db.query<StepEventRow>(
       `SELECT e.run_id, e.type,
          COALESCE(e.payload->>'stepName', e.payload->>'messageId') AS name,
-         e.payload ? 'subagentRunId' AS subagent
+         e.payload ? 'subagentRunId' AS subagent,
+         e.payload->'metadata'->'spark' AS mark,
+         COALESCE((e.payload->>'timestamp')::double precision,
+           EXTRACT(EPOCH FROM e.created_at) * 1000) AS at
        FROM run_events e
        JOIN runs r ON r.id = e.run_id
        WHERE r.conversation_id = $1
@@ -194,10 +223,13 @@ export async function getConversationDetail(
     conversationPlans(db, id),
     listCompactions(db, id),
     listContinuations(db, id),
+    conversationTopics(db, id),
     listQueue(db, id),
     listMemberMessages(db, id),
     listRailFlags(db, id),
     listBrowserShots(db, id),
+    listChatFiles(db, id),
+    listArtifactPages(db, id),
     listCommands(db, id),
     findInterruption(db, id),
     conversationSubagents(db, id),
@@ -227,7 +259,10 @@ export async function getConversationDetail(
     queue,
     memberMessages,
     railFlags,
+    ...(topics.length > 0 ? { topics } : {}),
     ...(browserShots.length > 0 ? { browserShots } : {}),
+    ...(chatFiles.length > 0 ? { chatFiles } : {}),
+    ...(artifactPages.length > 0 ? { artifactPages } : {}),
     ...(commands.length > 0 ? { commands } : {}),
     ...(interruption ? { interruption } : {}),
     ...(Object.keys(subagents).length > 0 ? { subagents } : {}),
@@ -251,11 +286,15 @@ export async function runMode(
   conversationId: string,
   permission: string | null,
 ): Promise<RunMode> {
-  const { rows } = await db.query<{ linked: boolean }>(
-    'SELECT EXISTS (SELECT 1 FROM conversation_projects WHERE conversation_id = $1) AS linked',
+  const { rows } = await db.query<{ linked: boolean; talks_only: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM conversation_projects WHERE conversation_id = $1) AS linked,
+            EXISTS (SELECT 1 FROM profiles WHERE assistant_conversation_id = $1)
+              OR EXISTS (SELECT 1 FROM conversations
+                         WHERE id = $1 AND session_type = 'terminal') AS talks_only`,
     [conversationId],
   );
-  if (!rows[0]?.linked) return 'chat';
+  const chat = rows[0];
+  if (!chat || (!chat.linked && chat.talks_only)) return 'chat';
   return permission === PERMISSION_DO ? 'do' : 'ask';
 }
 
@@ -265,7 +304,18 @@ export type SendMessageInput = Omit<
 > & {
   attachmentIds?: readonly string[];
   annotations?: SendMessageRequest['annotations'];
-  source?: MessageSource | 'ticket' | 'pr_follow_up' | 'queue' | 'slack' | 'outpost' | undefined;
+  source?:
+    | MessageSource
+    | 'ticket'
+    | 'pr_follow_up'
+    | 'queue'
+    | 'slack'
+    | 'outpost'
+    | 'spark_rule'
+    | 'voice'
+    | 'assistant'
+    | 'pages'
+    | undefined;
   startAs?: StartAs;
   continuesRunId?: string;
 };
@@ -358,7 +408,8 @@ export async function sendInTransaction(
       ? titleFromMessage(request.content || attachments.map((file) => file.name).join(', '))
       : current.title;
   await client.query(
-    'UPDATE conversations SET title = $2, updated_at = now(), archived_at = NULL WHERE id = $1',
+    `UPDATE conversations SET title = $2, updated_at = now(), archived_at = NULL,
+       auto_archived_days = NULL WHERE id = $1`,
     [conversationId, title],
   );
   if (!terminal) await client.query(`SELECT pg_notify('jobs', $1)`, [runId]);

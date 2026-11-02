@@ -172,14 +172,18 @@ async function dragTo(page: Page, source: Locator, target: Locator) {
 test('drags a chat into a project and back out, with keyboard moves in the menu', async ({
   page,
 }) => {
-  await seedChats([{ title: 'Loose chat' }]);
   await openChats(page);
   const project = await createProject(page, 'web-apps');
+  await seedChats([{ title: 'Loose chat' }]);
   await page.reload();
   const group = sidebar(page).locator('.pblock', { hasText: project });
-  await expect(group.getByRole('button', { name: 'New chat', exact: true })).toBeVisible();
+  await expect(group).toHaveCount(0);
 
-  await dragTo(page, row(page, 'Loose chat'), group);
+  const menu = await openMenu(page, 'Loose chat');
+  await menu.getByRole('menuitem', { name: 'Move to project' }).focus();
+  await page.keyboard.press('ArrowRight');
+  const moveMenu = page.getByRole('menu', { name: 'Move to project' });
+  await moveMenu.getByRole('menuitemradio', { name: project }).click();
   await expect(group.getByRole('listitem')).toHaveText(['Loose chat']);
   await expect(toast(page, `Moved to ${project}`)).toBeVisible();
   await expect(page.locator('.crumb')).toHaveText(`${project} /`);
@@ -190,28 +194,34 @@ test('drags a chat into a project and back out, with keyboard moves in the menu'
   await expect(toast(page, `Removed from ${project}`)).toBeVisible();
   await toast(page, `Removed from ${project}`).getByRole('button', { name: 'Undo' }).click();
   await expect(group.getByRole('listitem')).toHaveText(['Loose chat']);
-
-  const menu = await openMenu(page, 'Loose chat');
-  await menu.getByRole('menuitem', { name: 'Move to project' }).focus();
-  await page.keyboard.press('ArrowRight');
-  const moveMenu = page.getByRole('menu', { name: 'Move to project' });
-  await expect(moveMenu.getByRole('menuitemradio', { name: project })).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
-  await moveMenu.getByRole('menuitemradio', { name: 'No project' }).click();
-  await expect(chatsBlock.getByRole('listitem')).toHaveText(['Loose chat']);
-
   await group.getByRole('button', { name: new RegExp(`^${project}`) }).click();
   await expect(group).not.toHaveClass(/open/);
   await page.reload();
-  await expect(sidebar(page).locator('.pblock', { hasText: project })).not.toHaveClass(/open/);
+  await expect(group).not.toHaveClass(/open/);
+  await group.getByRole('button', { name: new RegExp(`^${project}`) }).click();
+  await expect(group).toHaveClass(/open/);
+
+  const again = await openMenu(page, 'Loose chat');
+  await again.getByRole('menuitem', { name: 'Move to project' }).focus();
+  await page.keyboard.press('ArrowRight');
+  const moveAgain = page.getByRole('menu', { name: 'Move to project' });
+  await expect(moveAgain.getByRole('menuitemradio', { name: project })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await moveAgain.getByRole('menuitemradio', { name: 'No project' }).click();
+  await expect(chatsBlock.getByRole('listitem')).toHaveText(['Loose chat']);
+  await expect(group).toHaveCount(0);
 });
 
 test('row states and the attention banner jump to the chat that needs input', async ({ page }) => {
   await seedChats([
     { title: 'Current chat', run: { status: 'succeeded' } },
-    { title: 'Deploy the site', run: { status: 'awaiting_approval' } },
+    {
+      title: 'Deploy the site',
+      run: { status: 'awaiting_approval' },
+      approval: { kind: 'clarify', title: 'Which environment?' },
+    },
     { title: 'Mock fetch', run: { status: 'failed', error: 'Rate limit reached.' } },
   ]);
   await openChats(page);
@@ -231,8 +241,7 @@ test('row states and the attention banner jump to the chat that needs input', as
   ).toHaveText('1');
 
   const banner = sidebar(page).getByRole('button', {
-    name: 'Deploy the site needs your input Needs your input',
-    exact: true,
+    name: /^Deploy the site needs your input /,
   });
   await banner.click();
   await expect(page.locator('.chat-title')).toHaveText('Deploy the site');

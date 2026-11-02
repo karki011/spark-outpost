@@ -37,6 +37,7 @@ function meeting(title: string, from: number, to: number, extra: Partial<Calenda
     focus: false,
     remind: false,
     hold: false,
+    dismissed: false,
     ...extra,
   } satisfies CalendarEvent;
 }

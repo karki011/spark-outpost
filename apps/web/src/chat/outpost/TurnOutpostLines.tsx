@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ChatDraft, ConversationSummary } from '@spark-outpost/contracts';
 import { outpostKeys, outpostsApi } from '../../outposts/outposts-api.ts';
+import { startedThread } from '../../outposts/started-thread.ts';
 import { chatDraftsQuery } from './chat-drafts.ts';
 import { draftsInTurn, sentInTurn, type TurnWindow } from './chat-lines.ts';
 import { DraftLine, type DraftStartState } from './DraftLine.tsx';
@@ -30,10 +31,24 @@ function SentLines({ outpostId, chatId, run, seam }: SentLinesProps) {
   ));
 }
 
-function useStartDraft(chatId: string, draftId: string): DraftStartState {
+function useStartDraft(
+  chatId: string,
+  draftId: string,
+  onStarted: (outpostId: string, threadId: string | null) => void,
+): DraftStartState {
   const client = useQueryClient();
   const start = useMutation({
     mutationFn: () => outpostsApi.startDraft(draftId),
+    onSuccess: async ({ outpostId }) => {
+      const detail = await client
+        .fetchQuery({
+          queryKey: outpostKeys.detail(outpostId),
+          queryFn: () => outpostsApi.get(outpostId),
+          staleTime: 0,
+        })
+        .catch(() => null);
+      onStarted(outpostId, startedThread(detail?.stories ?? [], draftId));
+    },
     onSettled: () =>
       Promise.all([
         client.invalidateQueries({ queryKey: chatDraftsQuery(chatId).queryKey }),
@@ -54,8 +69,10 @@ interface ChatDraftLineProps {
   onOpenDraft: (draftId: string) => void;
 }
 
-function ChatDraftLine({ chatId, draft, seam, onOpenDraft }: ChatDraftLineProps) {
-  const start = useStartDraft(chatId, draft.id);
+export function ChatDraftLine({ chatId, draft, seam, onOpenDraft }: ChatDraftLineProps) {
+  const start = useStartDraft(chatId, draft.id, (outpostId, threadId) =>
+    seam.onOpenOutpost(outpostId, threadId ?? undefined, true),
+  );
   const outpostId = draft.outpostId;
   const outpost = seam.outposts.find((listed) => listed.id === outpostId);
   return (

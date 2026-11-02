@@ -14,21 +14,30 @@ import type { BrowserPanes } from './panes.ts';
 import { agentOpenProblem } from './request-guard.ts';
 import { SIGN_IN_TIMING, SignInError, signInOnPage } from './sign-in.ts';
 import { textFieldNodes, type DomNode } from './sensitive-nodes.ts';
-import type { PaneTab } from './tab.ts';
+import { TabClosedError, type PaneTab } from './tab.ts';
 import { BrowserOpError, refuseHeld, tabFacts, targetTab } from './op-tab.ts';
 import { chooseOpenTab } from './tab-rules.ts';
 import { isDevtoolsOp, runDevtoolsOp } from './devtools-ops.ts';
+
+const DOWNLOAD_WAIT_MS = 50;
+const DOWNLOAD_WAITS = 6;
+
+async function downloadRefused(tab: PaneTab): Promise<boolean> {
+  for (let wait = 0; wait < DOWNLOAD_WAITS && !tab.downloadRefused; wait += 1) {
+    await new Promise((resolve) => setTimeout(resolve, DOWNLOAD_WAIT_MS));
+  }
+  return tab.downloadRefused;
+}
+
+const DOWNLOAD_REFUSED =
+  'That address is a download. Spark cancelled it: agents can’t download files, and only the user can save one.';
 
 type Request<Op extends BrowserHostRequest['op']> = Extract<BrowserHostRequest, { op: Op }>;
 
 export { BrowserOpError };
 
 async function open(panes: BrowserPanes, request: Request<'open'>, signal: AbortSignal) {
-  const home = {
-    projectId: request.projectId,
-    keepSignIns: request.keepSignIns,
-    roots: request.roots,
-  };
+  const home = { projectId: request.projectId, roots: request.roots };
   panes.touch(request.chatId, home);
   const problem = agentOpenProblem(request.url, panes.guardFacts(request.chatId));
   if (problem) throw new BrowserOpError('not_allowed', problem);
@@ -58,6 +67,9 @@ async function open(panes: BrowserPanes, request: Request<'open'>, signal: Abort
     const userIsElsewhere = tabs.some((other) => other.active && other.owner === 'user');
     if (!userIsElsewhere) panes.select(request.chatId, tab.id);
     panes.layout();
+    if (tab.error && (await downloadRefused(tab))) {
+      throw new BrowserOpError('load_failed', DOWNLOAD_REFUSED);
+    }
     if (tab.error) throw new BrowserOpError('load_failed', `The page did not load: ${tab.error}`);
     const reused = choice.action === 'reuse' || choice.action === 'reload';
     return { ...tabFacts(tab), status: tab.status, reused };
@@ -271,6 +283,7 @@ export async function runBrowserOp(
     return await endRun(panes, request);
   } catch (error) {
     if (error instanceof BrowserOpError) throw error;
+    if (error instanceof TabClosedError) throw new BrowserOpError('no_tab', error.message);
     if (error instanceof PageToolError) throw new BrowserOpError(error.code, error.message);
     if (error instanceof RefError) throw new BrowserOpError('no_ref', error.message);
     if (error instanceof SignInError) throw new BrowserOpError(error.code, error.message);
