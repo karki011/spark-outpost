@@ -60,6 +60,7 @@ export interface SparkActionHooks {
   onTimeout?: () => void;
   audit?: ProtocolObserver | undefined;
   replySoFar?: () => ReplySoFar;
+  settledReply?: () => Promise<ReplySoFar>;
 }
 
 export interface SparkScope {

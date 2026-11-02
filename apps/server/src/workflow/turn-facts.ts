@@ -4,12 +4,22 @@ import { subagentBrief } from '../persistence/spark-mentions.ts';
 import { teammateBrief } from '../persistence/teammate-chats.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
 import type { LiveTurn } from '../providers/provider.ts';
+import { withBrowserCheck } from './browser-check.ts';
 import type { RunInput } from './run-input.ts';
 import type { TurnSession } from './turn-session.ts';
 
 export function editsFiles(input: RunInput): boolean {
   if (input.mode !== 'do' || input.assistant || plansThisTurn(input)) return false;
   return input.role === null;
+}
+
+export function promptWithBrowserCheck(prompt: string, input: RunInput, browserPane: boolean) {
+  return withBrowserCheck({
+    prompt,
+    userRequest: input.userRequest,
+    editsFiles: editsFiles(input),
+    browserPane,
+  });
 }
 
 export async function sessionBrief(db: Db, input: RunInput) {

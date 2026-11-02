@@ -53,7 +53,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await api?.close();
-  rmSync(base, { recursive: true, force: true });
+  rmSync(base, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 type Kind = Pick<ProviderTurn, 'mode' | 'planning' | 'plansFirst' | 'changesProject' | 'live'> & {

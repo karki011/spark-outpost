@@ -45,7 +45,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await api?.close();
-  rmSync(base, { recursive: true, force: true });
+  rmSync(base, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 async function steps(): Promise<ProviderOutput[]> {

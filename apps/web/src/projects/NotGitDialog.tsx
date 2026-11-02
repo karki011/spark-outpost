@@ -42,6 +42,15 @@ export function NotGitDialog({ project, problem, inline, onDone }: NotGitDialogP
   }, []);
 
   useEffect(() => {
+    if (inline) return;
+    const keepFocus = (event: FocusEvent) => {
+      if (!panelRef.current?.contains(event.target as Node)) doneRef.current?.focus();
+    };
+    document.addEventListener('focusin', keepFocus);
+    return () => document.removeEventListener('focusin', keepFocus);
+  }, [inline]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const buttons = [...(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
       wrapTabFocus(event, () => buttons);

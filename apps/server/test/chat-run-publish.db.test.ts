@@ -52,7 +52,7 @@ beforeEach(async () => {
     path: root,
     branch: BRANCH,
     baseBranch: 'main',
-    baseCommit: 'a'.repeat(40),
+    baseCommit: git(root, 'rev-parse', 'HEAD').trim(),
     landedCommit: null,
     inPlace: false,
     ownsBranch: true,
