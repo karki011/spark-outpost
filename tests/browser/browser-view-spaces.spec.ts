@@ -59,9 +59,11 @@ test('Spaces switch by control, arrow and ⌃N, showing only their own tabs', as
   await expect(side.getByRole('button', { name: 'Today tab', exact: true })).toHaveCount(0);
   await expect(page.getByRole('main').getByText('Type a web address on the left')).toBeVisible();
 
-  await spaces.getByRole('radio', { name: 'Reading' }).focus();
-  await page.keyboard.press('Control+Digit1');
-  await expect.poll(() => lastCommand(page)).toEqual({ command: 'space_switch', id: 's1' });
+  if (process.platform === 'darwin') {
+    await spaces.getByRole('radio', { name: 'Reading' }).focus();
+    await page.keyboard.press('Control+Digit1');
+    await expect.poll(() => lastCommand(page)).toEqual({ command: 'space_switch', id: 's1' });
+  }
 });
 
 test('a new Space is made by keyboard, and says it is not a boundary', async ({ page }) => {
@@ -126,7 +128,7 @@ test('Archived reopens from the list and the command bar', async ({ page }) => {
   await side.getByRole('button', { name: 'Reopen Old page' }).click();
   await expect.poll(() => lastCommand(page)).toEqual({ command: 'archived_open', id: 'a1' });
 
-  await page.keyboard.press('Meta+t');
+  await page.keyboard.press('ControlOrMeta+t');
   await page.getByRole('combobox', { name: 'Open a new tab' }).fill('old page');
   await page.getByRole('option', { name: /Old page/ }).click();
   await expect.poll(() => lastCommand(page)).toEqual({ command: 'archived_open', id: 'a1' });

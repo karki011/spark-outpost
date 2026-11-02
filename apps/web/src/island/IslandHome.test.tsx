@@ -154,9 +154,9 @@ describe('the island home', () => {
     const bundle = home();
     const cal = calendar();
     const onOpenChat = show(bundle, cal);
-    const focus = screen.getByRole('article', { name: 'feature-web-apps needs you' });
+    const focus = screen.getByRole('article', { name: 'orders-web-app needs you' });
     expect(focus.textContent).toContain('wants to run a command');
-    expect(focus.textContent).toContain('gh workflow run cd-alfa.yml');
+    expect(focus.textContent).toContain('gh workflow run cd-staging.yml');
     expect(screen.getByRole('region', { name: 'Next meeting' }).textContent).toContain(
       'Standup in 8 min',
     );
@@ -213,13 +213,13 @@ describe('the island home', () => {
     show(home(), cal);
     const meeting = screen.getByRole('article', { name: 'Meeting: Standup' });
     expect(meeting.textContent).toContain('in 1 min');
-    expect(screen.getByRole('status').textContent).toContain('feature-web-apps');
+    expect(screen.getByRole('status').textContent).toContain('orders-web-app');
     fireEvent.click(screen.getByRole('button', { name: 'Snooze 1 min' }));
     expect(cal.onSnoozeAlert).toHaveBeenCalledWith(standup);
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(cal.onDismissNudge).toHaveBeenCalledWith(standup);
     fireEvent.click(screen.getByRole('button', { name: 'Show ›' }));
-    expect(screen.getByRole('article', { name: 'feature-web-apps needs you' })).toBeTruthy();
+    expect(screen.getByRole('article', { name: 'orders-web-app needs you' })).toBeTruthy();
   });
 
   it('says nothing needs you and lists the meetings left today when all is clear', () => {

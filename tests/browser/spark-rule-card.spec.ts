@@ -14,7 +14,7 @@ import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { SPARK_RULES_FILE } from './stub-config.ts';
 
-const WORKFLOW = 'gh workflow run cd-alfa.yml';
+const WORKFLOW = 'gh workflow run cd-staging.yml';
 const RELEASE = 'gh release create v1.2.0';
 
 interface Refused {
@@ -57,7 +57,7 @@ async function refusedChat(refused: readonly Refused[]): Promise<void> {
     const record = acceptedRecordText(acceptedOf({ kind: 'text', text }));
     writeFileSync(acceptedRecordPath(SPARK_RULES_FILE), record);
     const conversationId = await seedConversation(db, workspaceId);
-    const runId = await seedTurn(db, conversationId, { request: 'Deploy alfa' });
+    const runId = await seedTurn(db, conversationId, { request: 'Deploy staging' });
     for (const card of refused) await storeRefused(db, runId, card);
   } finally {
     await db.end();

@@ -29,7 +29,7 @@ import { answerRuleCard } from '../src/workflow/spark-rule-cards.ts';
 import { commandRequest, doRun, recordingAppend, type LinkedRun } from './approval-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
-const WORKFLOW = 'gh workflow run cd-alfa.yml';
+const WORKFLOW = 'gh workflow run cd-staging.yml';
 const RELEASE = 'gh release create v1.2.0 --notes "Release"';
 
 let t: TestDb;

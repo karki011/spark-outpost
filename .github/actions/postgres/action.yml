@@ -1,0 +1,24 @@
+name: Start PostgreSQL
+description: Start a throwaway PostgreSQL 17 on 127.0.0.1:5432 with the C locale and room for parallel test pools.
+runs:
+  using: composite
+  steps:
+    - name: Start PostgreSQL 17
+      shell: bash
+      run: |
+        docker run --detach --name spark-postgres \
+          --publish 127.0.0.1:5432:5432 \
+          --env POSTGRES_USER=spark \
+          --env POSTGRES_PASSWORD=spark-ci \
+          --env POSTGRES_DB=spark_outpost_test \
+          --env POSTGRES_INITDB_ARGS="--locale=C --encoding=UTF8" \
+          postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3 \
+          -c max_connections=300
+        for _ in $(seq 1 60); do
+          if docker exec spark-postgres pg_isready --host=127.0.0.1 --username=spark --dbname=spark_outpost_test >/dev/null 2>&1; then
+            exit 0
+          fi
+          sleep 1
+        done
+        docker logs spark-postgres
+        exit 1

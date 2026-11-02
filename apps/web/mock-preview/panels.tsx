@@ -42,7 +42,7 @@ export function Inspector({
             </div>
             <div className="preview-fact">
               <span>▱</span>
-              <span>feature-web-apps</span>
+              <span>orders-web-app</span>
             </div>
             <div className="preview-fact">
               <PullRequestIcon />
@@ -77,7 +77,7 @@ export function Inspector({
         <button className="preview-pr" onClick={() => onPane('changes')}>
           <PullRequestIcon />
           <div>
-            AI Signals built-in reports<small>feature-web-apps · #2453</small>
+            Order Insights built-in reports<small>orders-web-app · #2453</small>
             <span className="preview-success">
               ✓ Checks passed <span className="preview-muted">· Review requested</span>
             </span>
@@ -122,7 +122,7 @@ export function Inspector({
             </div>
             <div className="preview-fact">
               <Glyph name="circle" />
-              <span>CloudZero</span>
+              <span>Acme</span>
               {signedIn ? (
                 <small className="preview-success">Signed in</small>
               ) : (
@@ -220,7 +220,7 @@ export function AgentPanel() {
             {stopped.includes(selected) ? 'Resume' : 'Stop'}
           </button>
         </div>
-        <small className="preview-muted">AI Signals built-in reports</small>
+        <small className="preview-muted">Order Insights built-in reports</small>
         <div className="preview-agent-transcript">
           <p>
             {selected === agents[0]
@@ -275,7 +275,7 @@ export function SignInPanel({ signedIn, onSignIn }: { signedIn: boolean; onSignI
     <div className="preview-signin">
       <div className="preview-address">
         <Glyph name="circle" />
-        <span>auth-dev-alfa.cloudzero.com</span>
+        <span>auth-dev.acme.example</span>
       </div>
       {signedIn ? (
         <div className="preview-signin-content">
@@ -296,14 +296,14 @@ export function SignInPanel({ signedIn, onSignIn }: { signedIn: boolean; onSignI
             {manual
               ? 'Spark waits while you complete SSO, a passkey, or MFA in the browser.'
               : approved
-                ? 'Spark can use the saved CloudZero sign-in on this exact development site.'
-                : 'The development app uses a different sign-in address. Allow this site once to reuse your CloudZero sign-in here.'}
+                ? 'Spark can use the saved Acme sign-in on this exact development site.'
+                : 'The development app uses a different sign-in address. Allow this site once to reuse your Acme sign-in here.'}
           </p>
           <dl>
             <dt>Saved sign-in</dt>
-            <dd>CloudZero · Work</dd>
+            <dd>Acme · Work</dd>
             <dt>Additional site</dt>
-            <dd>https://auth-dev-alfa.cloudzero.com</dd>
+            <dd>https://auth-dev.acme.example</dd>
           </dl>
           <p className="preview-muted">
             Credentials stay in Keychain. Manage approved sites in Settings → Projects → Saved

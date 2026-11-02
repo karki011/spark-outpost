@@ -166,7 +166,7 @@ describe('Ask Spark history', () => {
   });
 
   it('links only chats Spark knows by title, never ids or addresses from the answer', async () => {
-    const deploy = await chat('feature-web-apps');
+    const deploy = await chat('orders-web-app');
     const pipeline = await chat('pipeline-poc');
     await chat('Fix');
     const archived = await chat('Old archived work');
@@ -175,7 +175,7 @@ describe('Ask Spark history', () => {
     await asked({
       question: 'Who needs me?',
       answer: [
-        `**pipeline-poc** asks whether to deploy; **feature-web-apps** wants to run a workflow.`,
+        `**pipeline-poc** asks whether to deploy; **orders-web-app** wants to run a workflow.`,
         `Fix it at [this link](spark-outpost://chat/${invented}) or ${invented}.`,
         'Also see Old archived work and pipeline-pocket.',
       ].join('\n'),
@@ -184,7 +184,7 @@ describe('Ask Spark history', () => {
     const { exchanges } = await history();
     expect(exchanges[0]!.links).toEqual([
       { conversationId: pipeline, title: 'pipeline-poc' },
-      { conversationId: deploy, title: 'feature-web-apps' },
+      { conversationId: deploy, title: 'orders-web-app' },
     ]);
   });
 

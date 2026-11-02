@@ -7,10 +7,10 @@ const GOOGLE_FENCE =
   '-::~:~::~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~:~::~:~::-';
 
 const ZOOM_INVITE = [
-  'Hazel Karki is inviting you to a scheduled Zoom meeting.',
+  'Alex Rivera is inviting you to a scheduled Zoom meeting.',
   '',
   'Join Zoom Meeting',
-  'https://cloudzero.zoom.us/j/81234567890?pwd=abcDEF123',
+  'https://acme.zoom.us/j/81234567890?pwd=abcDEF123',
   '',
   'Meeting ID: 812 3456 7890',
   'Passcode: 482913',
@@ -30,7 +30,7 @@ const ZOOM_INVITE = [
   'Meeting ID: 812 3456 7890',
   'Passcode: 482913',
   '',
-  'Find your local number: https://cloudzero.zoom.us/u/kdB2x',
+  'Find your local number: https://acme.zoom.us/u/abc12',
   '',
   'Join by SIP',
   '• 81234567890@zoomcrc.com',

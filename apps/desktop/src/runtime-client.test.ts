@@ -176,6 +176,7 @@ describe('independent local runtime', () => {
         socket.on('data', (chunk: Buffer) => {
           reply += chunk.toString('utf8');
         });
+        socket.on('error', () => {});
         socket.on('close', () => resolve());
       });
       expect(reply).toBe('');
@@ -190,6 +191,7 @@ describe('independent local runtime', () => {
         socket.write(`${JSON.stringify({ kind: 'proof', proof: 'p'.repeat(43) })}\n`);
         socket.write(`${JSON.stringify({ id: randomUUID(), request: { kind: 'info' } })}\n`);
       });
+      socket.on('error', () => {});
       socket.on('close', () => resolve());
     });
     expect(welcome.split('\n').filter(Boolean)).toHaveLength(1);

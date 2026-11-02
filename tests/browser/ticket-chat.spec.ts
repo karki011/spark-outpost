@@ -97,6 +97,7 @@ async function refreshTickets(page: Page) {
 test('Start work links the chat, Ship puts the PR on the ticket, and a merge moves it to Done', async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1400, height: 900 });
   const repo = await repoWithRemote(base, 'widgets');
   writeFileSync(FAKE_GH_STATE, 'octo-cli');
@@ -138,7 +139,7 @@ test('Start work links the chat, Ship puts the PR on the ticket, and a merge mov
   const ticketRow = row(page, 'ENG-1210');
   await expect(
     ticketRow.getByRole('button', { name: /^Open PR #1 for ENG-1210, draft, in your browser/ }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15_000 });
   const chatLink = ticketRow.getByRole('button', { name: /^Open the chat for ENG-1210/ });
   await expect(chatLink).toBeVisible();
 
@@ -155,8 +156,10 @@ test('Start work links the chat, Ship puts the PR on the ticket, and a merge mov
   await expect(ticketRow).toContainText('PR #1 merged');
 
   await page.request.patch('/api/tickets/connections/linear', { data: { moveOnMerge: true } });
-  await refreshTickets(page);
-  await expect(ticketRow).toContainText(/Done.*PR #1 merged/, { timeout: 15_000 });
+  await expect(async () => {
+    await refreshTickets(page);
+    await expect(ticketRow).toContainText(/Done.*PR #1 merged/, { timeout: 3_000 });
+  }).toPass({ timeout: 30_000 });
   await expect(ticketRow.locator('.fchip')).toHaveText('Done');
   await expect(done).toContainText('ENG-1210');
 

@@ -10,4 +10,4 @@ The toolbar switches between Chat, Agent TV, Sign-in and Tickets. Agent TV suppo
 
 Verified in the browser: desktop layout at 1440 × 1000, narrow layout at 390 × 844, warm dark and light themes, agent message delivery simulation, saved-sign-in simulation, ticket search and selection during sync, and retained search/selection after simulated failure. The preview entry and its imports pass TypeScript checking with Vite client types.
 
-The reported live ticket interaction blocker has not been reproduced or fixed. This preview does not validate production login or agent execution; the production changes in this branch are tested separately. The older checkout at `/Users/hazel/Documents/spark-outpost` was not modified.
+The reported live ticket interaction blocker has not been reproduced or fixed. This preview does not validate production login or agent execution; the production changes in this branch are tested separately. The older checkout at `/Users/ada/Documents/spark-outpost` was not modified.

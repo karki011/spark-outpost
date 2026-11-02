@@ -17,7 +17,7 @@ import {
 test.describe.configure({ timeout: 180_000 });
 test.use({ trace: 'off' });
 
-const HANDLE = 'feature-web-apps';
+const HANDLE = 'orders-web-app';
 const WIDTHS = [320, 375, 430];
 const THEMES = ['light', 'dark'] as const;
 

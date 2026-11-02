@@ -24,7 +24,7 @@ const FILES: Record<string, string> = {
     'import { useChartData } from "./use-chart-data";\nexport function LineChart() { const rows = useChartData(7); return <svg>{rows}</svg>; }\n',
   'src/chart/line-chart.test.tsx': 'import { LineChart } from "./line-chart";\nLineChart();\n',
   'src/data/load-series.ts': 'export function loadSeries(days: number) { return [days]; }\n',
-  'src/ui/cz-search-input.tsx': 'export function CZSearchInput() { return null; }\n',
+  'src/ui/acme-search-input.tsx': 'export function AcmeSearchInput() { return null; }\n',
   'src/chart/mocked.test.ts':
     "vi.mock('./use-chart-data', () => { function useChartData() { return []; } return { useChartData }; });\n",
   'node_modules/dep/index.js': 'export const hidden = 1;\n',
@@ -113,7 +113,7 @@ describe('code index cache', () => {
       'src/chart/mocked.test.ts',
       'src/chart/use-chart-data.ts',
       'src/data/load-series.ts',
-      'src/ui/cz-search-input.tsx',
+      'src/ui/acme-search-input.tsx',
     ]);
     expect(indexed['src/chart/mocked.test.ts']?.defs).toEqual([]);
     expect(indexed['src/chart/line-chart.tsx']).toEqual({ language: 'tsx', defs: ['LineChart'] });
@@ -309,10 +309,10 @@ describe('code index cache', () => {
     await scanner.ensureIndexed(root);
     const outcome = await scanner.scan(root, 'Add a compact prop to SearchInput');
     expect(outcome.report?.summary.namedSymbols).toEqual([
-      { name: 'CZSearchInput', definedIn: 1, referencedBy: 0 },
+      { name: 'AcmeSearchInput', definedIn: 1, referencedBy: 0 },
     ]);
     expect(outcome.report?.candidates[0]).toMatchObject({
-      path: 'src/ui/cz-search-input.tsx',
+      path: 'src/ui/acme-search-input.tsx',
       reasons: expect.arrayContaining(['defines a named symbol']),
     });
   });

@@ -26,7 +26,7 @@ const NO_GITHUB: GitHubConnectionStatus = {
 
 const linear = {
   source: 'linear',
-  account: 'hazel@example.com',
+  account: 'ada@example.com',
   siteUrl: null,
   validatedAt: '2026-09-30T10:00:00.000Z',
   keySaved: true,
@@ -50,15 +50,15 @@ describe('done step summary', () => {
     const github: GitHubConnectionStatus = {
       ...NO_GITHUB,
       active: 'gh_cli',
-      ghCli: { installed: true, host: 'github.com', login: 'hazel' },
+      ghCli: { installed: true, host: 'github.com', login: 'ada' },
     };
     const wrapper = seeded(github, {
       connections: [linear, { ...linear, source: 'jira', keySaved: false }],
     });
     const { result } = renderHook(useToolItems, { wrapper });
     expect(result.current.map((item) => [item.key, item.detail])).toEqual([
-      ['github', 'Connected through the gh CLI as hazel'],
-      ['linear', 'Connected to Linear as hazel@example.com'],
+      ['github', 'Connected through the gh CLI as ada'],
+      ['linear', 'Connected to Linear as ada@example.com'],
     ]);
   });
 

@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  renameSync,
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
@@ -37,7 +38,9 @@ export function readFakeSession(sessionId: string): StoredFakeSession {
 function write(sessionId: string, session: StoredFakeSession): void {
   if (!store) return;
   mkdirSync(store, { recursive: true });
-  writeFileSync(fileOf(sessionId), JSON.stringify(session));
+  const partial = `${fileOf(sessionId)}.${process.pid}.tmp`;
+  writeFileSync(partial, JSON.stringify(session));
+  renameSync(partial, fileOf(sessionId));
 }
 
 export function createFakeSession(

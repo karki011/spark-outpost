@@ -7,17 +7,17 @@ import '../src/tickets/ticket-search.css';
 const tickets = [
   {
     key: 'CP-49259',
-    title: 'AI Signals: Sessions and AI Activity in My Work',
+    title: 'Order Insights: Sessions and AI Activity in My Work',
     status: 'In review',
     pr: '#353',
   },
   {
     key: 'CP-50096',
-    title: 'Remove Dimension Workload from roles view',
+    title: 'Remove Order Workload from roles view',
     status: 'In review',
     pr: '#512',
   },
-  { key: 'CP-50285', title: 'Denser layout for CZNext', status: 'In review', pr: '#69' },
+  { key: 'CP-50285', title: 'Denser layout for the new app', status: 'In review', pr: '#69' },
   {
     key: 'CP-49859',
     title: 'Estimated tags on built-in reports',
@@ -130,13 +130,13 @@ export function TicketPreview({
             <dt>Project</dt>
             <dd>CP</dd>
             <dt>Assignee</dt>
-            <dd>Subash Karki (you)</dd>
+            <dd>Alex Rivera (you)</dd>
           </dl>
           <h3>Linked work</h3>
           <button className="preview-pr" onClick={onChat}>
             <Glyph name="pr" />
             <span>
-              {selected.pr} · feature-web-apps<small>✓ Checks passing · Waiting for review</small>
+              {selected.pr} · orders-web-app<small>✓ Checks passing · Waiting for review</small>
             </span>
           </button>
           <h3>Description</h3>

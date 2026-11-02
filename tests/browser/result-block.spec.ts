@@ -244,9 +244,13 @@ test('a Full auto → PR turn shows the work reply, then the publish result, und
     await expect(turn.locator('.msg.ai > .md').first()).toContainText('fake-edit=allowed');
     await expect(publish).toContainText('published=');
     await expect(publish).not.toContainText('fake-edit=allowed');
-    const work = (await turn.locator('.msg.ai > .md').first().boundingBox())!;
-    const result = (await publish.boundingBox())!;
-    expect(work.y + work.height).toBeLessThanOrEqual(result.y);
+    await expect
+      .poll(async () => {
+        const work = (await turn.locator('.msg.ai > .md').first().boundingBox())!;
+        const result = (await publish.boundingBox())!;
+        return result.y - (work.y + work.height);
+      })
+      .toBeGreaterThanOrEqual(0);
   };
   await shown();
   await page.reload();

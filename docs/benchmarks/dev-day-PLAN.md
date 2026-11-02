@@ -46,7 +46,7 @@ stub 4429. Never 4318, 5173 or 4399.
   `https://github.e2e.localhost/e2e-bench/workbench.git`, rewritten by `url.insteadOf` to a local
   bare repo; every other `https://` remote is rewritten to a dead path, so nothing can reach a real
   host.
-- **external**: a `git clone --local --no-hardlinks` of the read-only feature-web-apps clone, whose
+- **external**: a `git clone --local --no-hardlinks` of the read-only orders-web-app clone, whose
   path comes from `DEV_DAY_EXTERNAL_REPO`. The original is fingerprinted (HEAD, status without
   optional locks, refs) before the day and checked after s14.
 
@@ -79,7 +79,7 @@ lists the harness-only expectations, reported beside the outcome and never insid
 | s11 | Story: tags on projects (DB + API + UI) | workbench · tags | Ask before edits | build | hidden: PUT/GET tags, normalising, 400/404, escaped chips, upgrade of an old DB | Builder-sized chunks with no parallel Builders; context handoff at 75% (reported only if it triggers); Critic ran |
 | s12 | Small endpoint, "ship it as a draft PR" | workbench · ship | Full auto | build | hidden tests; harness: a draft PR on the GitHub stub whose branch is on the local bare remote | draft PR |
 | s13 | Stop mid-build, then "continue" | workbench · interrupt | Ask before edits | build | hidden tests including "defined once, tested once" | the second turn continued the same session |
-| s14 | Question on feature-web-apps | external · external | Ask before edits | answer | names the knowledge library path and "classify first"; the original repo unchanged | no crew |
+| s14 | Question on orders-web-app | external · external | Ask before edits | answer | names the knowledge library path and "classify first"; the original repo unchanged | no crew |
 
 Continuations: s09 continues s01's chat (select-to-chat: the quote block and annotation are
 built with the web app's own `composeMessage`), s04 continues s03's chat after "Start fresh",

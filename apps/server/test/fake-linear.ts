@@ -329,6 +329,8 @@ export function fakeLinear(): FakeLinear {
           : null;
       case 'Move':
         target!.stateId = String(variables.stateId);
+        target!.completedAt =
+          stateOf(target!).type === 'completed' ? new Date().toISOString() : null;
         return { issueUpdate: { success: true } };
       case 'Comment':
         target!.comments.push({

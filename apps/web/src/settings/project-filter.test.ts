@@ -6,14 +6,14 @@ const project = (name: string, rootPath: string): Project => ({
   id: `00000000-0000-4000-8000-${name.length.toString().padStart(12, '0')}`,
   name,
   rootPath,
-  displayPath: rootPath.replace('/Users/hazel', '~'),
+  displayPath: rootPath.replace('/Users/alex', '~'),
   createdAt: '2026-10-01T00:00:00Z',
   commandAllowlist: [],
 });
 
-const api = project('api', '/Users/hazel/work/api');
-const web = project('web-console', '/Users/hazel/work/clients/web-console');
-const docs = project('docs', '/Users/hazel/notes/docs');
+const api = project('api', '/Users/alex/work/api');
+const web = project('web-console', '/Users/alex/work/clients/web-console');
+const docs = project('docs', '/Users/alex/notes/docs');
 
 describe('project filter', () => {
   it('keeps every project when the filter is blank', () => {

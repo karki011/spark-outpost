@@ -73,6 +73,21 @@ async function find(args: Record<string, unknown>, readOnly = false) {
   return result;
 }
 
+async function findWhileIndexing(args: Record<string, unknown>) {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const scanner = createCodeScanner(t.db, { deadlineMs: 10_000, scanIndexPace: () => () => held });
+  tools = await startSparkTools(t, { readOnly: false }, { codeScan: scanner });
+  try {
+    return await tools.call('spark_find', args);
+  } finally {
+    release();
+    await scanner.idle();
+  }
+}
+
 describe('spark_find', () => {
   it('ranks files with their Map area and declarations as name@start-end, with no Jev', async () => {
     const jev = fakeJev();
@@ -113,7 +128,7 @@ describe('spark_find', () => {
 
   it('keeps to a folder and says so honestly when the index is not built yet', async () => {
     const body = (
-      await find({ query: 'loadOrders', project: 'shop', under: './server/' })
+      await findWhileIndexing({ query: 'loadOrders', project: 'shop', under: './server/' })
     ).json<Found>();
 
     expect(body.status).toBe('index_building');

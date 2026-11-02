@@ -35,13 +35,13 @@ import Testing
         let password = scene.window.add(FakeNode("AXTextField", title: "Password", subrole: "AXSecureTextField"))
         password.value = "hunter2"
         let name = scene.window.add(FakeNode("AXTextField", title: "Name"))
-        name.value = "Hazel"
+        name.value = "Ada"
         let result = try scene.read()
         let secureNode = try #require(result.nodes.first { $0.identity.title == "Password" })
         #expect(secureNode.secure)
         #expect(secureNode.value == nil)
         #expect(!scene.ax.valueRequests.contains(password))
-        #expect(result.nodes.first { $0.identity.title == "Name" }?.value == "Hazel")
+        #expect(result.nodes.first { $0.identity.title == "Name" }?.value == "Ada")
     }
 
     @Test func secureRoleIsMaskedToo() throws {

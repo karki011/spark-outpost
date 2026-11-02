@@ -23,6 +23,7 @@ What each document is for. Each one describes what runs today plus its open item
 - [ANALYTICS_PLAN.md](architecture/ANALYTICS_PLAN.md): the Analytics page and workflow optimizer; phases 4–6 are open.
 - [PROJECT_MAP.md](architecture/PROJECT_MAP.md): the Project Map builder, storage, API and page.
 - [ELECTRON_PLAN.md](architecture/ELECTRON_PLAN.md): the desktop shell and what packaging still needs.
+- [CI.md](architecture/CI.md): the GitHub Actions jobs, what each runs and on which runner, and the rules for workflows.
 - [REPO_AGENT_CONFIG.md](architecture/REPO_AGENT_CONFIG.md): how a linked repo's agent config, MCP servers and Spark's own tools reach agents.
 - [CODE_MODE.md](architecture/CODE_MODE.md): local read composition, default-on setting, sandbox, cancellation and verified acceptance limits.
 - [NATIVE_TERMINALS.md](architecture/NATIVE_TERMINALS.md): CLI lifecycle, Claude recording defaults and preserved preferences; [TERMINAL_USAGE.md](architecture/TERMINAL_USAGE.md) covers telemetry.

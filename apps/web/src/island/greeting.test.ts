@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { greetingDue, greetingLine } from './greeting.ts';
 import { seedIndex } from './seed-index.ts';
 
-const friendly = { personality: 'friendly' as const, name: 'Subash' };
+const friendly = { personality: 'friendly' as const, name: 'Alex' };
 
 describe('greetings', () => {
   const morning = new Date(2026, 8, 30, 9, 0);
@@ -13,8 +13,8 @@ describe('greetings', () => {
     expect(greetingDue(morning.getTime() - 3 * 3_600_000, '2026-9-30', morning)).toBe(
       'welcome_back',
     );
-    expect(greetingLine(friendly, 'first_open', morning)).toBe('Good morning, Subash!');
-    expect(greetingLine(friendly, 'welcome_back', morning)).toBe('Welcome back, Subash!');
+    expect(greetingLine(friendly, 'first_open', morning)).toBe('Good morning, Alex!');
+    expect(greetingLine(friendly, 'welcome_back', morning)).toBe('Welcome back, Alex!');
   });
 
   it('falls back gracefully without a name', () => {

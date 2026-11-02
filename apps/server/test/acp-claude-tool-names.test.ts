@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -45,7 +45,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await api?.close();
-  rmSync(base, { recursive: true, force: true });
+  rmSync(base, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 async function steps(): Promise<ProviderOutput[]> {
@@ -73,17 +73,20 @@ async function steps(): Promise<ProviderOutput[]> {
   return outputs;
 }
 
-describe('ACP tool names from claude-agent-acp 0.81.2', () => {
-  it('names each step with the Claude tool it ran, on start and finish', async () => {
-    api.useTool({ name: 'Read', input: { file_path: join(repo, 'cart.js') } });
-    api.useTool({ name: 'Grep', input: { pattern: 'total', path: repo } });
-    api.useTool({ name: 'Glob', input: { pattern: '**/*.js', path: repo } });
-    const named = (await steps()).flatMap((output) =>
-      'toolName' in output && output.toolName ? [[output.kind, output.toolName]] : [],
-    );
-    for (const tool of ['Read', 'Grep', 'Glob']) {
-      expect(named).toContainEqual(['step_started', tool]);
-      expect(named).toContainEqual(['step_finished', tool]);
-    }
-  }, 120_000);
-});
+describe.skipIf(spawnSync('claude', ['--version']).status !== 0)(
+  'ACP tool names from claude-agent-acp 0.81.2',
+  () => {
+    it('names each step with the Claude tool it ran, on start and finish', async () => {
+      api.useTool({ name: 'Read', input: { file_path: join(repo, 'cart.js') } });
+      api.useTool({ name: 'Grep', input: { pattern: 'total', path: repo } });
+      api.useTool({ name: 'Glob', input: { pattern: '**/*.js', path: repo } });
+      const named = (await steps()).flatMap((output) =>
+        'toolName' in output && output.toolName ? [[output.kind, output.toolName]] : [],
+      );
+      for (const tool of ['Read', 'Grep', 'Glob']) {
+        expect(named).toContainEqual(['step_started', tool]);
+        expect(named).toContainEqual(['step_finished', tool]);
+      }
+    }, 120_000);
+  },
+);

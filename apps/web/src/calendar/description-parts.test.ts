@@ -14,8 +14,8 @@ describe('descriptionParts', () => {
   });
 
   it('marks a meeting link as a join link', () => {
-    const [, link] = descriptionParts('Join Zoom Meeting\nhttps://cloudzero.zoom.us/j/812?pwd=x.');
-    expect(link).toMatchObject({ kind: 'link', host: 'cloudzero.zoom.us' });
+    const [, link] = descriptionParts('Join Zoom Meeting\nhttps://acme.zoom.us/j/812?pwd=x.');
+    expect(link).toMatchObject({ kind: 'link', host: 'acme.zoom.us' });
     expect(link?.kind === 'link' && link.join?.service).toBe('zoom');
   });
 

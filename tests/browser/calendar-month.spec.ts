@@ -59,7 +59,15 @@ test('opens on the month with today selected and its events in the Scheduled rai
   await expect(cell(page, now)).toHaveAttribute('tabindex', '0');
   await expect(cell(page, now)).toHaveAccessibleName(/today, \d+ events: Company holiday/);
   await expect(cell(page, now).locator('.mo-more')).toHaveText(/^\d+ more$/);
-  await expect(cell(page, now - 6 * DAY)).toHaveAttribute('data-past');
+  const pastMarks = await grid(page)
+    .locator('[data-date]')
+    .evaluateAll((cells) =>
+      cells.map((item) => ({
+        date: (item as HTMLElement).dataset.date!,
+        past: item.hasAttribute('data-past'),
+      })),
+    );
+  expect(pastMarks.filter(({ date, past }) => past !== date < dayKey(now))).toEqual([]);
 
   const standup = scheduled(page).locator('.rl-card', { hasText: 'Standup' });
   await expect(standup).toContainText('Daily sync: what changed since yesterday.');

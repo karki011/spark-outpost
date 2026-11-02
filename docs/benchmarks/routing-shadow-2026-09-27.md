@@ -6,31 +6,31 @@ Run 1 found a loop-guard bug and a useless rerank. Run 2 is after the fix (`567d
 
 ## Run 2 (guard fixed, checks on)
 
-- **Repository:** a fresh throwaway clone of `feature-web-apps`, origin removed. The original was not touched.
+- **Repository:** a fresh throwaway clone of `orders-web-app`, origin removed. The original was not touched.
 - **Stack:** branch `feat/jev-route` at `fb17e2e` plus the driver fix below, `AGENT_RUNTIME=acp`, real Claude, real Jev (`jev-1.13.0`), fresh schemas in `spark_outpost_test_route`, the production worker with the loop guard on, Full auto, Auto routing, only Claude and Jev connected. Candidates offered to Jev: Haiku 4.5 (low), Sonnet 5 (mid), Opus 5.5 (top), plus `uncertain`.
-- **Checks:** the project's own `check` script needs `pnpm install`, and every tarball in its lockfile comes from a private registry (`libraries.cgr.dev`, `npm.pkg.github.com`), so no dependencies could be installed. The check used is the Biome part of that script, `biome check libs apps/web/src` (Biome 2.4.16 installed separately; 2 s, the baseline passes with warnings only). There are no tests, typecheck or ESLint: checks here catch lint and format errors, not wrong behaviour.
+- **Checks:** the project's own `check` script needs `pnpm install`, and every tarball in its lockfile comes from a private registry (private package hosts), so no dependencies could be installed. The check used is the Biome part of that script, `biome check libs apps/web/src` (Biome 2.4.16 installed separately; 2 s, the baseline passes with warnings only). There are no tests, typecheck or ESLint: checks here catch lint and format errors, not wrong behaviour.
 - **Chat model:** task 1 ran on Sonnet 5 and cost $1.27 in one ten-minute turn (see the cap below). To finish more tasks within $3, tasks 2–9 ran with Haiku 4.5 as the chat model, so the rule route is Haiku there and the cumulative rule's baseline tier is low.
 - **Tasks:** requests 1–9 of `scripts/codescan/requests.ts` (the rename was not reached). Task 9 was cancelled 1 s after it started, because the budget required it; it ran on anyway (see below). Tasks 2–8 are the 7 complete tasks.
 - **Spend:** $2.90 agent cost as recorded and $0.011 Jev. One more run, cancelled 30 s in, records $0, so the true total is slightly higher.
 
 | #   | Request (short)                  | Status    | Changed | Scan P/R@5 | Jev P/R@5 | Rule   | Jev text-only       | Jev with evidence   | Check (Biome) | Keep | Verifier | Agent $ |
 | --- | -------------------------------- | --------- | ------: | ---------- | --------- | ------ | ------------------- | ------------------- | ------------- | ---- | -------- | ------: |
-| 1   | useChartNavigation Cmd+Click     | cancelled |       0 | —          | —         | Sonnet | Haiku · choice 0.74 | Sonnet · cumul. 0.48 | —            | —    | —        |   1.267 |
-| 2   | SearchInput compact prop         | succeeded |       2 | 0.20/0.50  | 0.40/1.00 | Haiku  | Sonnet · choice 0.76 | Sonnet · choice 0.86 | passed       | kept | pass     |   0.139 |
-| 3   | formatCurrencyCompact rounding   | succeeded |       2 | 0.20/0.50  | 0.40/1.00 | Haiku  | Haiku · choice 0.93 | Sonnet · cumul. 0.58 | passed        | kept | pass     |   0.100 |
-| 4   | formatDateRange year boundary    | succeeded |       1 | 0.20/1.00  | 0.20/1.00 | Haiku  | Haiku · choice 0.83 | Sonnet · cumul. 0.52 | passed        | kept | pass     |   0.509 |
-| 5   | Budgets upload error toast       | succeeded |       2 | 0.00/0.00  | 0.40/1.00 | Haiku  | Haiku · choice 0.92 | Haiku · choice 0.71  | passed        | kept | pass     |   0.119 |
-| 6   | useFeatureFlag returns false     | succeeded |       1 | 0.20/1.00  | 0.20/1.00 | Haiku  | Opus · cumul. 0.59  | Opus · choice 0.93   | passed        | kept | flag     |   0.107 |
-| 7   | createClient retry on auth error | succeeded |       2 | 0.20/0.50  | 0.40/1.00 | Haiku  | Sonnet · cumul. 0.31 | Sonnet · choice 0.69 | passed       | kept | pass     |   0.115 |
-| 8   | Sparkline showLegend, KpiCard    | succeeded |       2 | 0.40/1.00  | 0.40/1.00 | Haiku  | Sonnet · cumul. 0.36 | Sonnet · choice 0.76 | passed       | kept | pass     |   0.104 |
-| 9   | Prefetch ag-charts on hover      | cancelled |       7 | 0.40/0.29  | 0.40/0.29 | Haiku  | Sonnet · cumul. 0.33 | Sonnet · choice 0.77 | —            | —    | —        |   0.441 |
+| 1   | useTableSort empty rows     | cancelled |       0 | —          | —         | Sonnet | Haiku · choice 0.74 | Sonnet · cumul. 0.48 | —            | —    | —        |   1.267 |
+| 2   | SearchField dense prop         | succeeded |       2 | 0.20/0.50  | 0.40/1.00 | Haiku  | Sonnet · choice 0.76 | Sonnet · choice 0.86 | passed       | kept | pass     |   0.139 |
+| 3   | formatShortNumber rounding   | succeeded |       2 | 0.20/0.50  | 0.40/1.00 | Haiku  | Haiku · choice 0.93 | Sonnet · cumul. 0.58 | passed        | kept | pass     |   0.100 |
+| 4   | formatRange year boundary    | succeeded |       1 | 0.20/1.00  | 0.20/1.00 | Haiku  | Haiku · choice 0.83 | Sonnet · cumul. 0.52 | passed        | kept | pass     |   0.509 |
+| 5   | Invoices import error toast       | succeeded |       2 | 0.00/0.00  | 0.40/1.00 | Haiku  | Haiku · choice 0.92 | Haiku · choice 0.71  | passed        | kept | pass     |   0.119 |
+| 6   | useFlag returns false     | succeeded |       1 | 0.20/1.00  | 0.20/1.00 | Haiku  | Opus · cumul. 0.59  | Opus · choice 0.93   | passed        | kept | flag     |   0.107 |
+| 7   | createApiClient retry on 401 | succeeded |       2 | 0.20/0.50  | 0.40/1.00 | Haiku  | Sonnet · cumul. 0.31 | Sonnet · choice 0.69 | passed       | kept | pass     |   0.115 |
+| 8   | TrendLine showAxis, StatTile    | succeeded |       2 | 0.40/1.00  | 0.40/1.00 | Haiku  | Sonnet · cumul. 0.36 | Sonnet · choice 0.76 | passed       | kept | pass     |   0.104 |
+| 9   | Prefetch charts on hover      | cancelled |       7 | 0.40/0.29  | 0.40/0.29 | Haiku  | Sonnet · cumul. 0.33 | Sonnet · choice 0.77 | —            | —    | —        |   0.441 |
 
 No Critic ran and no task escalated. "Verifier" is the observed Jev diff check; "flag" means it would have flagged the change. No thumbs were given.
 
 ### Files
 
 - Over the 7 complete tasks, mean P/R@5 is **0.20 / 0.64 for the scan order and 0.34 / 1.00 after Jev's ranking**. Jev's five files contained every changed file in all 7; the scan's did in 4.
-- Jev's first file was changed in 6 of 7 (it chose the budgets page in task 5, where the Builder edited the CSV panel and the upload modal, Jev's 3rd and 2nd); the scan's first file in 5 of 7.
+- Jev's first file was changed in 6 of 7 (it chose the invoices page in task 5, where the Builder edited the import panel and the upload modal, Jev's 3rd and 2nd); the scan's first file in 5 of 7.
 - Precision is capped by how few files a task changes (1–2 here), so 0.40 is the best possible for a two-file change.
 
 ### Routes
@@ -45,15 +45,15 @@ Ranking median 503 ms (max 678), text-only route 213 ms (max 265), evidence rout
 
 ### Notes (not fixed)
 
-- **The per-run cost cap overshoot reproduces.** Capped at $0.35, task 1 cost $1.27 (one Sonnet turn of ten minutes that downloaded and read `ag-charts` sources) and task 4 cost $0.51. The cost only arrives at the end of a turn, so a long single turn is never stopped by the cap.
+- **The per-run cost cap overshoot reproduces.** Capped at $0.35, task 1 cost $1.27 (one Sonnet turn of ten minutes that downloaded and read charting library sources) and task 4 cost $0.51. The cost only arrives at the end of a turn, so a long single turn is never stopped by the cap.
 - **The ignored cancel reproduces when the cancel comes before the Builder starts.** Task 9 was cancelled at 19:23:23; its Builder started at 19:23:24 and ran until 19:26:57 ($0.44, 7 files changed). Repeated cancel requests did not stop it. A cancel of a running Builder (task 1) stopped it within 4 s.
 - **Driver bug, fixed:** `Api.cancel` in `scripts/e2e-live/api-driver.ts` sent no JSON body, and the API rejected it silently, so earlier e2e-live timeouts never cancelled. It now sends `{}`.
 
 ### Reproduce
 
 ```sh
-git clone <feature-web-apps clone> /tmp/fwa && git -C /tmp/fwa remote remove origin
-node --import tsx scripts/routing/live.ts --repo /tmp/fwa --out routing-live.json \
+git clone <private repo clone> /tmp/private-repo && git -C /tmp/private-repo remote remove origin
+node --import tsx scripts/routing/live.ts --repo /tmp/private-repo --out routing-live.json \
   --limit 9 --model haiku --timeout-min 5 --run-cap 0.35 --total-cap 1.3 \
   --check "/path/to/biome check libs apps/web/src"
 pnpm routing:labels --out labels.json
@@ -63,9 +63,9 @@ pnpm routing:labels --out labels.json
 
 This run used the two-stage ranking (a rerank Choice over a shortlist), since removed, and the loop guard before `567d642`.
 
-- **Repository:** a throwaway local clone of `feature-web-apps` (5,443 tracked files, 5,426 indexed), origin removed. The original was not touched.
+- **Repository:** a throwaway local clone of `orders-web-app` (5,443 tracked files, 5,426 indexed), origin removed. The original was not touched.
 - **Stack:** API and worker from branch `feat/jev-route`, `AGENT_RUNTIME=acp`, real Claude (Claude Code login), real Jev (`jev-1.13.0`), a fresh schema in `spark_outpost_test_route`. Chat model Sonnet 5 on Auto, Full auto, build style off, no check commands, only Claude and Jev connected. Candidates offered to Jev: Haiku 4.5 (low), Sonnet 5 (mid), Opus 5.5 (top), plus `uncertain`.
-- **Requests:** the ten `feature-web-apps` requests in `scripts/codescan/requests.ts`, the rename moved last. One new chat per request. Driver: `scripts/routing/live.ts`.
+- **Requests:** the ten `orders-web-app` requests in `scripts/codescan/requests.ts`, the rename moved last. One new chat per request. Driver: `scripts/routing/live.ts`.
 - **Spend:** $2.84 of agent cost as recorded (including a one-task trial) and $0.014 of Jev, under the $3 limit. Two cancelled runs record no cost, so the real agent spend is slightly higher.
 
 ### What happened to the tasks
@@ -83,23 +83,23 @@ P/R@5 is precision and recall of the first five predicted files against the file
 
 | #   | Request (short)                    | Changed | Scan P/R@5 | Final P/R@5 | Rule     | Jev text-only        | Jev with evidence     |
 | --- | ---------------------------------- | ------: | ---------- | ----------- | -------- | -------------------- | --------------------- |
-| 1   | useChartNavigation Cmd+Click       |       0 | —          | —           | Sonnet 5 | Haiku · choice 0.81  | Sonnet · cumul. 0.57  |
-| 2   | SearchInput compact prop           |       3 | 0.20/0.33  | 0.20/0.33   | Sonnet 5 | Sonnet · choice 0.76 | Sonnet · choice 0.86  |
-| 3   | formatCurrencyCompact rounding     |       0 | —          | —           | Sonnet 5 | Haiku · choice 0.95  | Sonnet · cumul. 0.56  |
-| 4   | formatDateRange year boundary      |       0 | —          | —           | Sonnet 5 | Haiku · choice 0.77  | Sonnet · cumul. 0.43  |
-| 5   | Budgets upload error toast         |       2 | 0.20/0.50  | 0.20/0.50   | Sonnet 5 | Haiku · choice 0.92  | Haiku · choice 0.66   |
-| 6   | useFeatureFlag returns false       |       2 | 0.20/0.50  | 0.20/0.50   | Sonnet 5 | Opus · cumul. 0.59   | Opus · choice 0.93    |
-| 7   | createClient retry on auth error   |       2 | 0.20/0.50  | 0.40/1.00   | Sonnet 5 | Sonnet · cumul. 0.37 | Sonnet · choice 0.66  |
-| 8   | Sparkline showLegend, KpiCard      |       — | —          | —           | Sonnet 5 | Sonnet · cumul. 0.43 | Sonnet · choice 0.73  |
-| 9   | Prefetch ag-charts on hover        |       — | —          | —           | Sonnet 5 | Sonnet · cumul. 0.39 | Sonnet · choice 0.76  |
-| 10  | Rename KpiCard → MetricCard        |      19 | 0.80/0.21  | 0.80/0.21   | Haiku 4.5 | Sonnet · choice 0.84 | Sonnet · choice 0.82 |
+| 1   | useTableSort empty rows       |       0 | —          | —           | Sonnet 5 | Haiku · choice 0.81  | Sonnet · cumul. 0.57  |
+| 2   | SearchField dense prop           |       3 | 0.20/0.33  | 0.20/0.33   | Sonnet 5 | Sonnet · choice 0.76 | Sonnet · choice 0.86  |
+| 3   | formatShortNumber rounding     |       0 | —          | —           | Sonnet 5 | Haiku · choice 0.95  | Sonnet · cumul. 0.56  |
+| 4   | formatRange year boundary      |       0 | —          | —           | Sonnet 5 | Haiku · choice 0.77  | Sonnet · cumul. 0.43  |
+| 5   | Invoices import error toast         |       2 | 0.20/0.50  | 0.20/0.50   | Sonnet 5 | Haiku · choice 0.92  | Haiku · choice 0.66   |
+| 6   | useFlag returns false       |       2 | 0.20/0.50  | 0.20/0.50   | Sonnet 5 | Opus · cumul. 0.59   | Opus · choice 0.93    |
+| 7   | createApiClient retry on 401   |       2 | 0.20/0.50  | 0.40/1.00   | Sonnet 5 | Sonnet · cumul. 0.37 | Sonnet · choice 0.66  |
+| 8   | TrendLine showAxis, StatTile      |       — | —          | —           | Sonnet 5 | Sonnet · cumul. 0.43 | Sonnet · choice 0.73  |
+| 9   | Prefetch charts on hover        |       — | —          | —           | Sonnet 5 | Sonnet · cumul. 0.39 | Sonnet · choice 0.76  |
+| 10  | Rename StatTile → MetricTile        |      19 | 0.80/0.21  | 0.80/0.21   | Haiku 4.5 | Sonnet · choice 0.84 | Sonnet · choice 0.82 |
 
 #### File ranking
 
-- **Top file.** Jev's first file was a changed file in 4 of the 5 tasks with changes (2, 6, 7, 10); the scan's first file in 3 (6, 7, 10). In task 2 the scan put an unrelated `ai-explorer-link.ts` first and Jev put the edited `cz-search-input.tsx` first. In task 5 both missed: Jev chose the budgets page, the Builder edited the CSV panel (Jev's third file).
+- **Top file.** Jev's first file was a changed file in 4 of the 5 tasks with changes (2, 6, 7, 10); the scan's first file in 3 (6, 7, 10). In task 2 the scan put an unrelated link helper first and Jev put the edited search field component first. In task 5 both missed: Jev chose the invoices page, the Builder edited the import panel (Jev's third file).
 - **P/R@5, mean over the 5 tasks:** scan 0.32 / 0.41, final 0.36 / 0.51. Stage 1 alone gives probability to only 1–4 files, so its own @5 numbers (0.61 / 0.49) come from shorter lists and are not comparable.
 - **Stage 1 is very peaked.** The top file got 0.81–1.00 in 7 of 10 tasks. The shortlist was therefore usually the minimum of 3 files.
-- **The rerank added nothing.** Stage 2 kept stage 1's top file in all 10 tasks. Where it reordered the rest it moved a changed file down twice (task 5: `csv-panel.tsx` from 3rd to 4th; task 7: the new test from 2nd to 3rd) and never moved one up. Recommendation: record stage 1 only, and use per-file Nouls if a multi-file answer is needed (a Choice spreads one unit of probability, so the second changed file gets almost none).
+- **The rerank added nothing.** Stage 2 kept stage 1's top file in all 10 tasks. Where it reordered the rest it moved a changed file down twice (task 5: the import panel from 3rd to 4th; task 7: the new test from 2nd to 3rd) and never moved one up. Recommendation: record stage 1 only, and use per-file Nouls if a multi-file answer is needed (a Choice spreads one unit of probability, so the second changed file gets almost none).
 
 #### Route question
 
@@ -137,7 +137,7 @@ P/R@5 is precision and recall of the first five predicted files against the file
 ### Reproduce (run 1)
 
 ```sh
-git clone <feature-web-apps clone> /tmp/fwa && git -C /tmp/fwa remote remove origin
-node --import tsx scripts/routing/live.ts --repo /tmp/fwa --out routing-live.json --limit 10 --run-cap 0.18 --total-cap 1.2
+git clone <private repo clone> /tmp/private-repo && git -C /tmp/private-repo remote remove origin
+node --import tsx scripts/routing/live.ts --repo /tmp/private-repo --out routing-live.json --limit 10 --run-cap 0.18 --total-cap 1.2
 pnpm routing:labels --out labels.json   # against DATABASE_URL, or --search-path for a live schema
 ```

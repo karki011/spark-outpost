@@ -55,7 +55,7 @@ function run(command: string, waitMs: number): Promise<Ran> {
   });
 }
 
-describe('a command Spark starts in the login shell', () => {
+describe.skipIf(process.platform !== 'darwin')('a command Spark starts in the login shell', () => {
   it('runs although the shell start-up would ask to update', async () => {
     const ran = await run('echo "ran with $PATH"', 8_000);
 

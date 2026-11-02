@@ -63,9 +63,9 @@ describe('setup state', () => {
   it('saves the display name and refuses to finish setup without a provider', async () => {
     const app = appWith();
     const { body } = await app
-      .send('patch', '/api/profile', { displayName: '  Hazel Morgan ' })
+      .send('patch', '/api/profile', { displayName: '  Ada Morgan ' })
       .expect(200);
-    expect(body.profile.displayName).toBe('Hazel Morgan');
+    expect(body.profile.displayName).toBe('Ada Morgan');
     await app.send('patch', '/api/profile', { onboardingCompleted: true }).expect(400);
   });
 });

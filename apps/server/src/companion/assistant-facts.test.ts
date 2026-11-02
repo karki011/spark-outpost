@@ -8,7 +8,7 @@ describe('key facts from what the user wrote', () => {
     expect(factFrom('please remember that my standup is at 9')).toBe('my standup is at 9');
     expect(factFrom('Keep in mind that Friday is a release day')).toBe('Friday is a release day');
     expect(factFrom('I prefer short answers')).toBe('I prefer short answers');
-    expect(factFrom('Call me Hazel')).toBe('Call me Hazel');
+    expect(factFrom('Call me Ada')).toBe('Call me Ada');
   });
 
   it('ignores questions and other messages', () => {

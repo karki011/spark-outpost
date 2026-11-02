@@ -55,7 +55,7 @@ const always = (reason: string) => MODES.map(() => `ask (${reason})`);
 const deletes = (target: string) => always(`This deletes ${target}, which is outside this project`);
 const changes = (target: string) => always(`This changes ${target}, which is outside this project`);
 
-describe('temp folders are scratch space', () => {
+describe.skipIf(process.platform !== 'darwin')('temp folders are scratch space', () => {
   it.each([
     'mkdir /tmp/x && echo hi > /tmp/x/a',
     'rm -rf /tmp/x',
@@ -116,7 +116,7 @@ describe('temp folders are scratch space', () => {
   });
 });
 
-describe('a link out of a temp folder', () => {
+describe.skipIf(process.platform !== 'darwin')('a link out of a temp folder', () => {
   let scratch: string;
   let outside: string;
 

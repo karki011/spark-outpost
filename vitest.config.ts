@@ -42,7 +42,7 @@ export default defineConfig({
           setupFiles: ['apps/server/test/worker-database.ts'],
           environment: 'node',
           maxWorkers: 8,
-          testTimeout: 20_000,
+          testTimeout: process.env.CI ? 60_000 : 20_000,
           hookTimeout: 20_000,
         },
       },

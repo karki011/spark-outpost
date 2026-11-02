@@ -70,7 +70,7 @@ async function screenshot(args: ShotArgs, context: SparkToolContext) {
     data,
   });
   if (scope.runId) {
-    const said = scope.actions?.replySoFar?.();
+    const said = await (scope.actions?.settledReply?.() ?? scope.actions?.replySoFar?.());
     const shotId = await insertBrowserShot(deps.db, {
       runId: scope.runId,
       attachment,

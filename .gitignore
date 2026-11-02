@@ -14,3 +14,4 @@ apps/desktop/release/
 apps/desktop/mac-control/.build/
 apps/desktop/voice/.build/
 apps/desktop/mac-control/.swiftpm/
+.claude/settings.local.json

@@ -4,7 +4,7 @@ import type { RunSnapshot } from '../persistence/run-snapshots.ts';
 import { STOPPED_BY_QUIT, type RunEvent } from '@spark-outpost/contracts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { auditSparkHandoff } from './spark-audit.ts';
-import { editsFiles, liveTurn, sessionBrief } from './turn-facts.ts';
+import { liveTurn, promptWithBrowserCheck, sessionBrief } from './turn-facts.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { recordSuggestedTitle } from '../persistence/auto-title.ts';
@@ -37,6 +37,7 @@ import { watchModeRequests } from './mode-requests.ts';
 import { publishGrant, publishScope, startBasis } from './publish-context.ts';
 import { openMemberInbox } from './member-inbox.ts';
 import { recordAccount } from '../model-access/store.ts';
+import { createOutputQuiet } from './output-quiet.ts';
 import { guardedRun, recordErrorDetails, recordModelSwitch } from './model-guard.ts';
 import { createReplyText } from './reply-text.ts';
 import type { RunInput } from './run-input.ts';
@@ -79,7 +80,6 @@ import { conversationHasSlackContext } from '../persistence/slack.ts';
 import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
 import { startRailFlags } from './rail-flags.ts';
 import { linkedArtifactActivity } from '../artifacts/activity.ts';
-import { withBrowserCheck } from './browser-check.ts';
 import { createObservedEdits } from './observed-edits.ts';
 import { observeSession } from './session-audit.ts';
 import { watchedSends } from '../observations/send-watch.ts';
@@ -245,6 +245,7 @@ export async function runAgentTurn(
     shown: reply.result().text,
     held: redaction.pending() + (titles?.pending() ?? 0),
   });
+  const outputQuiet = createOutputQuiet();
   const guard = { ...input, db: deps.db, runId: lease.runId, append };
   const commands = createCommandRecorder({ ...guard, secretValues, replySoFar });
   const events = createTurnEvents({ append, secretValues, replySoFar });
@@ -337,65 +338,63 @@ export async function runAgentTurn(
     if (input.modelSwitch) {
       await recordModelSwitch(deps.db, lease.runId, append, input.modelSwitch);
     }
-    for await (const output of guardedRun(guard, provider, {
-      prompt: withBrowserCheck({
-        prompt: shown.prompt,
-        userRequest: input.userRequest,
-        editsFiles: editsFiles(input),
-        browserPane: deps.browserPane === true,
-      }),
-      attachments: input.attachments,
-      history: input.seed ? input.history.slice(input.seed.historyFrom) : input.history,
-      settings: input.settings,
-      projectRoots: input.projectRoots,
-      signal: control.signal,
-      observe: (output) => {
-        if (output.kind === 'session') session?.noteSession(output);
-        assistantTurn?.see(output);
-        edits?.see(output);
-        options.onProduced?.(output);
-      },
-      audit: observer,
-      ...(input.mode ? { mode: input.mode } : {}),
-      ...(changesProject ? { changesProject: true } : {}),
-      ...(changesProject && !input.chatFolder && startBasis(input) ? { publishes: true } : {}),
-      ...(input.chatFolder ? { chatFolder: true } : {}),
-      ...(plansThisTurn(input) ? { planning: true } : {}),
-      ...(input.plansFirst ? { plansFirst: true } : {}),
-      ...(approvals ? { approvals } : {}),
-      ...(questions ? { questions } : {}),
-      ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
-      ...(inbox ? { steering: inbox } : {}),
-      ...(inbox ? { inbox } : {}),
-      ...(input.askTitle ? { askTitle: true } : {}),
-      ...(preamble ? { preamble } : {}),
-      ...(turnPreamble ? { turnPreamble } : {}),
-      ...(session ? { session: session.target } : {}),
-      ...liveTurn(input, session),
-      ...(repo.length > 0 ? { repo } : {}),
-      ...(userMcp.length > 0 ? { userMcp } : {}),
-      spark,
-      sparkScope: {
-        codeMode: spark.codeMode,
-        workspaceId: input.workspaceId,
-        conversationId: input.identity.threadId,
-        runId: lease.runId,
-        ...(input.assistant ? { readOnly: true, assistant: true } : {}),
-        observations,
-        publish: await publishScope(deps.db, input),
-        commands: await sparkCommandScope(deps.db, lease.runId, input, { observations }),
-        actions: {
-          append,
-          waiters: deps.approvalWaiters ?? new ApprovalWaiters(),
-          signal: control.signal,
-          timeoutMs: deps.approvalTimeoutMs ?? APPROVAL_TIMEOUT_MS,
-          pollMs: deps.approvalPollMs ?? APPROVAL_POLL_MS,
-          onTimeout: () => control.stop('approval_timeout'),
-          audit,
-          replySoFar,
+    for await (const output of outputQuiet.tracked(
+      guardedRun(guard, provider, {
+        prompt: promptWithBrowserCheck(shown.prompt, input, deps.browserPane === true),
+        attachments: input.attachments,
+        history: input.seed ? input.history.slice(input.seed.historyFrom) : input.history,
+        settings: input.settings,
+        projectRoots: input.projectRoots,
+        signal: control.signal,
+        observe: (output) => {
+          if (output.kind === 'session') session?.noteSession(output);
+          assistantTurn?.see(output);
+          edits?.see(output);
+          options.onProduced?.(output);
         },
-      },
-    })) {
+        audit: observer,
+        ...(input.mode ? { mode: input.mode } : {}),
+        ...(changesProject ? { changesProject: true } : {}),
+        ...(changesProject && !input.chatFolder && startBasis(input) ? { publishes: true } : {}),
+        ...(input.chatFolder ? { chatFolder: true } : {}),
+        ...(plansThisTurn(input) ? { planning: true } : {}),
+        ...(input.plansFirst ? { plansFirst: true } : {}),
+        ...(approvals ? { approvals } : {}),
+        ...(questions ? { questions } : {}),
+        ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
+        ...(inbox ? { steering: inbox } : {}),
+        ...(inbox ? { inbox } : {}),
+        ...(input.askTitle ? { askTitle: true } : {}),
+        ...(preamble ? { preamble } : {}),
+        ...(turnPreamble ? { turnPreamble } : {}),
+        ...(session ? { session: session.target } : {}),
+        ...liveTurn(input, session),
+        ...(repo.length > 0 ? { repo } : {}),
+        ...(userMcp.length > 0 ? { userMcp } : {}),
+        spark,
+        sparkScope: {
+          codeMode: spark.codeMode,
+          workspaceId: input.workspaceId,
+          conversationId: input.identity.threadId,
+          runId: lease.runId,
+          ...(input.assistant ? { readOnly: true, assistant: true } : {}),
+          observations,
+          publish: await publishScope(deps.db, input),
+          commands: await sparkCommandScope(deps.db, lease.runId, input, { observations }),
+          actions: {
+            append,
+            waiters: deps.approvalWaiters ?? new ApprovalWaiters(),
+            signal: control.signal,
+            timeoutMs: deps.approvalTimeoutMs ?? APPROVAL_TIMEOUT_MS,
+            pollMs: deps.approvalPollMs ?? APPROVAL_POLL_MS,
+            onTimeout: () => control.stop('approval_timeout'),
+            audit,
+            replySoFar,
+            settledReply: () => outputQuiet.settled().then(replySoFar),
+          },
+        },
+      }),
+    )) {
       if (control.signal.aborted) {
         live.observe(output);
         if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);

@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -53,7 +53,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await api?.close();
-  rmSync(base, { recursive: true, force: true });
+  rmSync(base, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 type Kind = Pick<ProviderTurn, 'mode' | 'planning' | 'plansFirst' | 'changesProject' | 'live'> & {
@@ -97,47 +97,50 @@ const doing = (agentMode: string, live = false): Kind => ({
   ...(live ? { live: { conversationId: 'chat-1' } } : {}),
 });
 
-describe('Claude file tools across the turns of one chat, against the real adapter', () => {
-  it('sends Read, Edit and Write on do turns, fresh, live, resumed and in a Plan-mode chat, and never on Ask turns', async () => {
-    const first = await turn(doing('acceptEdits', true));
-    for (const request of first.sent) {
-      expect(request.tools).toEqual(expect.arrayContaining(FILE_TOOLS));
-      expect(request.system).toContain(CHANGE_LINE);
-    }
-    const live = await turn(doing('default', true));
-    for (const request of live.sent) {
-      expect(request.tools).toEqual(expect.arrayContaining(FILE_TOOLS));
-    }
-    const ask = await turn({
-      mode: 'ask',
-      agentMode: 'default',
-      live: { conversationId: 'chat-1' },
-    });
-    for (const request of ask.sent) {
-      expect(request.tools).not.toContain('Edit');
-      expect(request.tools).not.toContain('Write');
-    }
-    const plan = await turn({ mode: 'ask', planning: true, agentMode: 'plan' });
-    for (const request of plan.sent) {
-      expect(request.tools).toEqual(expect.arrayContaining(['Read', 'Write', 'ExitPlanMode']));
-      expect(request.tools).not.toContain('Edit');
-    }
-    const planChat = await turn({ ...doing('plan'), plansFirst: true });
-    for (const request of planChat.sent) {
-      expect(request.tools).toEqual(expect.arrayContaining([...FILE_TOOLS, 'ExitPlanMode']));
-    }
-    const approved = await turn(doing('acceptEdits'));
-    for (const request of approved.sent) {
-      expect(request.tools).toEqual(expect.arrayContaining(FILE_TOOLS));
-      expect(request.system).toContain(CHANGE_LINE);
-    }
-    expect([first, live, ask, plan, planChat, approved].map((step) => step.continued)).toEqual([
-      false,
-      true,
-      true,
-      true,
-      true,
-      true,
-    ]);
-  }, 120_000);
-});
+describe.skipIf(spawnSync('claude', ['--version']).status !== 0)(
+  'Claude file tools across the turns of one chat, against the real adapter',
+  () => {
+    it('sends Read, Edit and Write on do turns, fresh, live, resumed and in a Plan-mode chat, and never on Ask turns', async () => {
+      const first = await turn(doing('acceptEdits', true));
+      for (const request of first.sent) {
+        expect(request.tools).toEqual(expect.arrayContaining(FILE_TOOLS));
+        expect(request.system).toContain(CHANGE_LINE);
+      }
+      const live = await turn(doing('default', true));
+      for (const request of live.sent) {
+        expect(request.tools).toEqual(expect.arrayContaining(FILE_TOOLS));
+      }
+      const ask = await turn({
+        mode: 'ask',
+        agentMode: 'default',
+        live: { conversationId: 'chat-1' },
+      });
+      for (const request of ask.sent) {
+        expect(request.tools).not.toContain('Edit');
+        expect(request.tools).not.toContain('Write');
+      }
+      const plan = await turn({ mode: 'ask', planning: true, agentMode: 'plan' });
+      for (const request of plan.sent) {
+        expect(request.tools).toEqual(expect.arrayContaining(['Read', 'Write', 'ExitPlanMode']));
+        expect(request.tools).not.toContain('Edit');
+      }
+      const planChat = await turn({ ...doing('plan'), plansFirst: true });
+      for (const request of planChat.sent) {
+        expect(request.tools).toEqual(expect.arrayContaining([...FILE_TOOLS, 'ExitPlanMode']));
+      }
+      const approved = await turn(doing('acceptEdits'));
+      for (const request of approved.sent) {
+        expect(request.tools).toEqual(expect.arrayContaining(FILE_TOOLS));
+        expect(request.system).toContain(CHANGE_LINE);
+      }
+      expect([first, live, ask, plan, planChat, approved].map((step) => step.continued)).toEqual([
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+      ]);
+    }, 120_000);
+  },
+);

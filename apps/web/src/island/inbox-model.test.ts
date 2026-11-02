@@ -18,7 +18,7 @@ describe('what a card says', () => {
   it('names the command or the file, and hides secrets', () => {
     expect(cardLine(card('approval'))).toEqual({
       verb: 'Run',
-      code: 'gh workflow run cd-alfa.yml',
+      code: 'gh workflow run cd-staging.yml',
       text: null,
     });
     const edit = card('approval', {
@@ -44,7 +44,7 @@ describe('what a card says', () => {
 
   it('gives a plan or open request a plain line to answer in Spark', () => {
     expect(cardLine(card('open'))).toMatchObject({ verb: null, code: null });
-    expect(cardLine(card('open')).text).toContain('feature-web-apps');
+    expect(cardLine(card('open')).text).toContain('orders-web-app');
   });
 });
 

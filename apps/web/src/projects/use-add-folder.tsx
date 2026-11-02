@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom';
 import { useState, type ReactNode } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -95,8 +96,8 @@ export function useAddFolder({ onAdded, inline = false }: AddFolderOptions): Add
   };
 
   const closePlain = () => {
+    flushSync(() => setPlain(null));
     focusBack(plain?.opener ?? null);
-    setPlain(null);
   };
 
   const opener = dialog?.opener ?? null;

@@ -305,7 +305,8 @@ test('shows Upcoming and the calendar block beside the brief on Home', async ({ 
   });
   await expect(block).toContainText(/Longest free block|No free block/);
   const card = page.getByRole('region', { name: 'Upcoming' });
-  await expect(card).toContainText('⌘J joins the next');
+  const joinKey = process.platform === 'darwin' ? '⌘J' : 'Ctrl+J';
+  await expect(card).toContainText(`${joinKey} joins the next`);
   await expect(card).toContainText('Standup');
   await expect(card.getByRole('button', { name: 'Join Standup' })).toBeEnabled();
   await expect(

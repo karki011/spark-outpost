@@ -21,6 +21,7 @@ Free beta · [0.1.0-beta.38](releases/0.1.0-beta.38.md) · macOS 12+ (Mac contro
 <img alt="macOS 12 or later" src="https://img.shields.io/badge/macOS-12%2B-111111?logo=apple&logoColor=white">
 <img alt="Apple silicon and Intel" src="https://img.shields.io/badge/arch-arm64%20%7C%20x64-555555">
 <img alt="Agent Client Protocol" src="https://img.shields.io/badge/protocol-ACP-6e56cf">
+<a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-555555"></a>
 </p>
 
 <a href="#features">Features</a> · <a href="#local-first-stated-honestly">Privacy</a> · <a href="docs/guide/getting-started.md">User guide</a> · <a href="#develop">Develop</a>
@@ -66,6 +67,22 @@ Each chat gets its own branch in a worktree. **Full auto → PR** opens the pull
 <tr>
 <td width="50%" valign="top">
 
+### Make your own Spark
+
+Give a teammate a name, a face and a role, with its own chat, default provider, model and mode, and standing instructions. Talk to it directly, or type `@` in any chat to hand it one job, which it does read-only. Approvals and protected paths never change. [Make a Spark](docs/guide/sparks.md)
+
+</td>
+<td width="50%" valign="top">
+
+### Ask Spark and Spark Island
+
+Scout rests at the top of your screen with what needs you: answer a request, see working chats, or ask Spark about any of them. It asks before acting unless you switch it to **Act**. [Use Spark Island](docs/guide/desktop-companion.md)
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
 ### Browser pane with developer tools
 
 Agents open pages in the chat's Browser pane, click and type there, and read the console, network log and page performance. One profile serves every chat, so agents are signed in where you are, and page content is treated as untrusted. Use **Select** to point an agent at elements on the page. [Use the browser](docs/guide/use-the-browser.md)
@@ -94,9 +111,9 @@ Let an agent read another Mac app and press its buttons and menus, after you all
 </td>
 <td width="50%" valign="top">
 
-### Ask Spark and Spark Island
+### Voice
 
-Scout rests at the top of your screen with what needs you: answer a request, see working chats, or ask Spark about any of them. It asks before acting unless you switch it to **Act**. [Use Spark Island](docs/guide/desktop-companion.md)
+Push to talk, off until you turn it on. Dictate a message or speak a command; speech becomes text on your Mac, and nothing is sent until you confirm it. [Talk to Spark](docs/guide/voice.md)
 
 </td>
 </tr>
@@ -110,9 +127,9 @@ Google and Mac calendars beside your chats, with one-click Join. Before a meetin
 </td>
 <td width="50%" valign="top">
 
-### Atlassian, ServiceNow, Slack, GitHub, Linear
+### Connect your tools
 
-Start a chat from a ticket, let agents read and update Jira, Confluence and ServiceNow, and keep tickets in step with pull requests.
+Connect GitHub, Jira and Confluence, ServiceNow, Linear, Slack and your calendars, or add your own MCP server. Start a chat from a ticket, let agents read and update your tools, and keep tickets in step with pull requests.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/guide/images/tickets-start-dark.png">
@@ -124,21 +141,12 @@ Start a chat from a ticket, let agents read and update Jira, Confluence and Serv
 <tr>
 <td width="50%" valign="top">
 
-### Voice
-
-Push to talk, off until you turn it on. Dictate a message or speak a command; speech becomes text on your Mac, and nothing is sent until you confirm it. [Talk to Spark](docs/guide/voice.md)
-
-</td>
-<td width="50%" valign="top">
-
 ### From your phone
 
 Pair a phone or another computer over Tailscale (never Funnel) to follow chats, answer approvals you allow and get a push when a chat needs you. [Use your phone](docs/guide/use-your-phone.md)
 
 </td>
-</tr>
-<tr>
-<td colspan="2" valign="top">
+<td width="50%" valign="top">
 
 ### Local-first, stated honestly
 
@@ -163,6 +171,8 @@ Requires macOS 12 or later (Mac control needs macOS 14) and about 2 GB of disk s
 
 **Free beta.** Expect rough edges. There is no Windows or Linux build.
 
+Spark Outpost doesn't take pull requests. You're welcome to [open an issue](https://github.com/karki011/spark-outpost/issues) or fork it under the [MIT License](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 Found something? Open **Settings → Help → Send feedback** (or **Help → Send Feedback…**), turn on **Include diagnostics** for bugs, and send the draft. Diagnostics hold versions, settings and recent logs, never chats, prompts, file contents, keys or tokens. Nothing is sent without you.
 
 The Mac app sends one anonymous heartbeat a day (a random install ID, the app version and OS; Cloudflare adds the country) so we know how many people use it. Turn it off in **Settings → Help → Send anonymous heartbeat**. See [Mac privacy](docs/guide/mac-privacy.md#anonymous-heartbeat).
@@ -181,7 +191,7 @@ pnpm desktop:dev    # the Electron desktop app
 pnpm check          # format, lint, typecheck, source rules, knip, unit tests
 ```
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for every command, the repo layout and testing. Contributors and coding agents: read [AGENTS.md](AGENTS.md) first. Releases, signing and the update feed are in [docs/architecture/RELEASES.md](docs/architecture/RELEASES.md); `pnpm release:downloads` regenerates the download section above and [releases/](releases/README.md).
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for every command, the repo layout and testing. Working on a fork: read [AGENTS.md](AGENTS.md) first. Report security problems as [SECURITY.md](SECURITY.md) says. Releases, signing and the update feed are in [docs/architecture/RELEASES.md](docs/architecture/RELEASES.md); `pnpm release:downloads` regenerates the download section above and [releases/](releases/README.md).
 
 ### Docs
 
@@ -201,6 +211,10 @@ Architecture notes are in [`docs/architecture`](docs/architecture). The full doc
 ### Built with
 
 Electron · React and Vite · Express · PostgreSQL 17 (embedded in the desktop app) · TypeScript and Zod contracts · Agent Client Protocol · MCP · Vitest and Playwright
+
+## License
+
+Spark Outpost is released under the [MIT License](LICENSE).
 
 <div align="center">
 <sub>Made for people who want agents to do the work and still sleep at night.</sub>

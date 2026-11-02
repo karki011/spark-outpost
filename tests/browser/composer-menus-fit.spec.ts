@@ -12,9 +12,9 @@ import { seedChats } from './sidebar-seed.ts';
 
 const PROJECTS = [
   'feature-ai-telemetry-pipeline',
-  'feature-web-apps',
+  'orders-web-app',
   'feature-ai-control-plane',
-  'feature-data-access-controls',
+  'orders-data-access-controls',
 ];
 const LONG_TITLE = 'CP-49259 Wire the telemetry ingest endpoints into the grant checks';
 const MAC = { width: 1280, height: 800 };
@@ -66,9 +66,9 @@ async function checkPicker(page: Page, touch: boolean): Promise<void> {
 
   const untitled = picker.getByRole('option', { name: /^New chat, / });
   await expect(untitled).toHaveAccessibleName(
-    'New chat, feature-data-access-controls, feature-web-apps, Done',
+    'New chat, orders-data-access-controls, orders-web-app, Done',
   );
-  await expect(untitled.locator('.chat-proj')).toHaveText('feature-data-access-controls+1');
+  await expect(untitled.locator('.chat-proj')).toHaveText('orders-data-access-controls+1');
 
   const many = picker.getByRole('option', { name: /^CP-49301/ });
   await expect(many.locator('.chat-proj-more')).toHaveText('+3');

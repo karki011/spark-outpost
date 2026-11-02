@@ -12,7 +12,7 @@ let base = '';
 
 test.beforeAll(() => {
   base = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'spark-voice-')));
-  mkdirSync(path.join(base, 'feature-web-apps'));
+  mkdirSync(path.join(base, 'orders-web-app'));
 });
 
 test.afterAll(() => rmSync(base, { recursive: true, force: true }));
@@ -37,7 +37,7 @@ async function openIsland(page: Page) {
 
 async function linkProject(page: Page) {
   const response = await page.request.post('/api/projects', {
-    data: { rootPath: path.join(base, 'feature-web-apps') },
+    data: { rootPath: path.join(base, 'orders-web-app') },
   });
   expect(response.ok()).toBe(true);
 }
@@ -138,12 +138,12 @@ test('a spoken new chat opens prefilled and starts nothing until "send"', async 
   await emitVoice(page, {
     kind: 'final',
     id: listen.id,
-    text: 'Start a chat in feature web apps to add creator email.',
+    text: 'Start a chat in orders web app to add creator email.',
     reason: 'paused',
   });
   const box = island(page).getByRole('textbox', { name: 'Message' });
   await expect(box).toHaveValue('add creator email');
-  await expect(island(page).getByRole('button', { name: 'feature-web-apps' })).toBeVisible();
+  await expect(island(page).getByRole('button', { name: 'orders-web-app' })).toBeVisible();
   await page.waitForTimeout(400);
   expect(await userMessages()).toBe(before);
   const confirm = await say(page, 'send it');
@@ -170,13 +170,13 @@ test('a project linked after the island loaded is matched by a spoken command', 
   await emitVoice(page, {
     kind: 'final',
     id: listen.id,
-    text: 'Start a chat in feature web apps to add creator email.',
+    text: 'Start a chat in orders web app to add creator email.',
     reason: 'paused',
   });
   await expect(island(page).getByRole('textbox', { name: 'Message' })).toHaveValue(
     'add creator email',
   );
-  await expect(island(page).getByRole('button', { name: 'feature-web-apps' })).toBeVisible();
+  await expect(island(page).getByRole('button', { name: 'orders-web-app' })).toBeVisible();
 });
 
 test('listening starts at once and a release before the project list loads still matches', async ({
@@ -201,14 +201,14 @@ test('listening starts at once and a release before the project list loads still
   await emitVoice(page, {
     kind: 'final',
     id: listen.id,
-    text: 'Start a chat in feature web apps to add creator email.',
+    text: 'Start a chat in orders web app to add creator email.',
     reason: 'stopped',
   });
   answerProjects();
   await expect(island(page).getByRole('textbox', { name: 'Message' })).toHaveValue(
     'add creator email',
   );
-  await expect(island(page).getByRole('button', { name: 'feature-web-apps' })).toBeVisible();
+  await expect(island(page).getByRole('button', { name: 'orders-web-app' })).toBeVisible();
   await page.unroute('**/api/projects');
 });
 
@@ -222,9 +222,9 @@ test('a spoken ticket start keeps the autonomy level and project picked in the c
   await linkProject(page);
   await connectTickets(page, ['linear']);
   await openIsland(page);
-  await say(page, 'Work on E N G one two one zero in feature web apps fix the copy');
+  await say(page, 'Work on E N G one two one zero in orders web app fix the copy');
   await expect(island(page).getByText('ENG-1210')).toBeVisible();
-  await expect(island(page).getByRole('button', { name: 'feature-web-apps' })).toBeVisible();
+  await expect(island(page).getByRole('button', { name: 'orders-web-app' })).toBeVisible();
   const level = island(page).getByRole('button', { name: /^Spark autonomy:/ });
   await expect(level).toHaveAccessibleName('Spark autonomy: Full auto → PR');
   await level.click();
@@ -247,7 +247,7 @@ test('a spoken ticket start keeps the autonomy level and project picked in the c
           ).rows[0],
         { timeout: 20_000 },
       )
-      .toEqual({ level: 'hands-off', project: 'feature-web-apps' });
+      .toEqual({ level: 'hands-off', project: 'orders-web-app' });
   } finally {
     await db.end();
   }

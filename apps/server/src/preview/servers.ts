@@ -261,7 +261,9 @@ export class PreviewServers {
     for (const viewer of live.viewers) viewer.output(data);
     live.logTimer ??= setTimeout(() => {
       live.logTimer = null;
-      void savePreviewLog(this.db, live.row.id, logTail(live.output)).catch(() => undefined);
+      void this.serialize(() =>
+        savePreviewLog(this.db, live.row.id, logTail(live.output)).catch(() => undefined),
+      );
     }, this.timings.logFlushMs);
   }
 
@@ -308,12 +310,12 @@ export class PreviewServers {
     live.phase = 'ready';
     live.url = url;
     live.readyAt = Date.now();
-    await this.save(live, { status: 'ready', url, pid: live.process?.pid ?? null });
     await this.event(live, 'ready', {
       url,
       port: portOf(url),
       movedFrom: portOf(url) === portOf(live.config.url) ? null : portOf(live.config.url),
     });
+    await this.save(live, { status: 'ready', url, pid: live.process?.pid ?? null });
   }
 
   private async exited(live: Live, generation: number, exitCode: number | null): Promise<void> {
@@ -362,8 +364,10 @@ export class PreviewServers {
     this.drop(live);
     const lines = lastLines(logTail(live.output), FAILURE_LINES);
     const detail = lines ? `${reason}\n${lines}` : reason;
+    await this.event(live, 'failed', { reason }).catch((error: unknown) =>
+      console.error('A preview server event was not recorded', error),
+    );
     await this.save(live, { status: 'failed', wanted: 'stopped', detail });
-    await this.event(live, 'failed', { reason });
   }
 
   private async finish(live: Live): Promise<void> {

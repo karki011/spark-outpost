@@ -30,10 +30,10 @@ export const BUSY_ZOOM_NOTES = [
   'Doc: https://docs.example.com/d/launch',
   '',
   GOOGLE_FENCE,
-  'Hazel Karki is inviting you to a scheduled Zoom meeting.',
+  'Alex Rivera is inviting you to a scheduled Zoom meeting.',
   '',
   'Join Zoom Meeting',
-  'https://cloudzero.zoom.us/j/81234567890?pwd=abc123',
+  'https://acme.zoom.us/j/81234567890?pwd=abc123',
   '',
   'Meeting ID: 812 3456 7890',
   'Passcode: 482913',
@@ -59,12 +59,12 @@ const me: FakeAttendee = { name: 'Spark Tester', isMe: true, status: 'accepted' 
 
 function team(count: number): FakeAttendee[] {
   const people = [
-    { name: 'Alexandra Wong-Fitzgerald', email: 'alexandra.wong-fitzgerald@cloudzero.example' },
-    { name: 'Ivan Marsh', email: 'ivan.marsh@cloudzero.example' },
-    { name: 'Team Engineering', email: 'team-engineering@cloudzero.example' },
-    { name: 'Priya Natarajan', email: 'priya@cloudzero.example' },
+    { name: 'Alexandra Wong-Fitzgerald', email: 'alexandra.wong-fitzgerald@acme.example' },
+    { name: 'Ivan Marsh', email: 'ivan.marsh@acme.example' },
+    { name: 'Team Engineering', email: 'team-engineering@acme.example' },
+    { name: 'Priya Natarajan', email: 'priya@acme.example' },
     { name: 'sam.lee@partner.example', email: 'sam.lee@partner.example' },
-    { name: 'Jordan Blake', email: 'jordan@cloudzero.example' },
+    { name: 'Jordan Blake', email: 'jordan@acme.example' },
   ];
   return people.slice(0, count).map((person) => ({ ...person, isMe: false, status: 'accepted' }));
 }
@@ -81,7 +81,7 @@ export function busyEvents(event: MakeEvent, anchor: number, dayStart: number): 
   const at = (hours: number, minutes = 0) => dayStart + (hours * 60 + minutes) * MINUTE;
   return [
     event('busy-now', 'Launch review', 'fake-work', anchor + 4 * MINUTE, 30, {
-      noteLinks: ['https://cloudzero.zoom.us/j/81234567890?pwd=abc123'],
+      noteLinks: ['https://acme.zoom.us/j/81234567890?pwd=abc123'],
       notes: BUSY_ZOOM_NOTES,
       attendees: [me, ...team(6), room],
       attendeeCount: 8,

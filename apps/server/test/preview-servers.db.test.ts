@@ -164,6 +164,22 @@ describe('a Spark-managed preview server', () => {
     expect((await events()).at(-1)).toMatchObject({ action: 'failed', asked_by: 'spark' });
   });
 
+  it('still saves the failure and starts nothing more when the event cannot be recorded', async () => {
+    await t.db.query(
+      `ALTER TABLE preview_events ADD CONSTRAINT refuse_failed CHECK (action <> 'failed')`,
+    );
+    try {
+      await start();
+      fake.spawned[0]!.exit(127);
+      const failed = await status('failed');
+      expect(failed.wanted).toBe('stopped');
+      await previews.sync();
+      expect(fake.spawned).toHaveLength(1);
+    } finally {
+      await t.db.query('ALTER TABLE preview_events DROP CONSTRAINT refuse_failed');
+    }
+  });
+
   it('fails when nothing answers in time, and a new request starts it again', async () => {
     await start();
     const failed = await status('failed');

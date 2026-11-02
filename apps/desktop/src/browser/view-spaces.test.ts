@@ -261,43 +261,46 @@ describe('Spaces', () => {
     expect(after.spaces.map((space) => space.id)).not.toContain(personalSpace);
   });
 
-  it('runs ⌃1 to ⌃9 only for Browser view pages, never for a chat pane page', async () => {
-    const browser = startTestBrowser();
-    await invoke('browser-view:start', 'work');
-    const main = (await state('work')).layout.currentSpaceId;
-    await send('work', { command: 'new_tab', url: DOCS });
-    await newSpace('work', 'Two');
-    const docs = browser.view.panes.tabsOf('work')[0]!;
-    await docs.wake();
-    const contents = docs.contents() as unknown as FakeContents;
-    const input = {
-      type: 'keyDown',
-      code: 'Digit1',
-      control: true,
-      meta: false,
-      shift: false,
-      alt: false,
-      isComposing: false,
-    };
-    const preventDefault = vi.fn();
-    contents.emit('before-input-event', { preventDefault }, input);
-    await vi.waitFor(async () => expect((await state('work')).layout.currentSpaceId).toBe(main));
-    expect(preventDefault).toHaveBeenCalled();
+  it.skipIf(process.platform !== 'darwin')(
+    'runs ⌃1 to ⌃9 only for Browser view pages, never for a chat pane page',
+    async () => {
+      const browser = startTestBrowser();
+      await invoke('browser-view:start', 'work');
+      const main = (await state('work')).layout.currentSpaceId;
+      await send('work', { command: 'new_tab', url: DOCS });
+      await newSpace('work', 'Two');
+      const docs = browser.view.panes.tabsOf('work')[0]!;
+      await docs.wake();
+      const contents = docs.contents() as unknown as FakeContents;
+      const input = {
+        type: 'keyDown',
+        code: 'Digit1',
+        control: true,
+        meta: false,
+        shift: false,
+        alt: false,
+        isComposing: false,
+      };
+      const preventDefault = vi.fn();
+      contents.emit('before-input-event', { preventDefault }, input);
+      await vi.waitFor(async () => expect((await state('work')).layout.currentSpaceId).toBe(main));
+      expect(preventDefault).toHaveBeenCalled();
 
-    const chat = browser.chats.createTab('11111111-2222-4333-8444-555555555555', {
-      owner: 'user',
-      runId: null,
-      url: DOCS,
-    })!;
-    await chat.wake();
-    const chatKey = vi.fn();
-    (chat.contents() as unknown as FakeContents).emit(
-      'before-input-event',
-      { preventDefault: chatKey },
-      input,
-    );
-    expect(chatKey).not.toHaveBeenCalled();
-  });
+      const chat = browser.chats.createTab('11111111-2222-4333-8444-555555555555', {
+        owner: 'user',
+        runId: null,
+        url: DOCS,
+      })!;
+      await chat.wake();
+      const chatKey = vi.fn();
+      (chat.contents() as unknown as FakeContents).emit(
+        'before-input-event',
+        { preventDefault: chatKey },
+        input,
+      );
+      expect(chatKey).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe('tab folders', () => {

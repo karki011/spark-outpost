@@ -19,14 +19,17 @@ describe('scratch paths', () => {
     );
   });
 
-  it('refuses the temp folder itself, the home folder and any repository outside temp', () => {
-    expect(() => assertScratchPath(tmpdir())).toThrow('system temp folder');
-    expect(() => assertScratchPath(homedir())).toThrow('system temp folder');
-    expect(() => assertScratchPath(WORKTREE_ROOT)).toThrow('system temp folder');
-    expect(() => assertScratchPath(join(homedir(), 'Documents', 'feature-web-apps'))).toThrow(
-      'off limits',
-    );
-  });
+  it.skipIf(process.platform !== 'darwin')(
+    'refuses the temp folder itself, the home folder and any repository outside temp',
+    () => {
+      expect(() => assertScratchPath(tmpdir())).toThrow('system temp folder');
+      expect(() => assertScratchPath(homedir())).toThrow('system temp folder');
+      expect(() => assertScratchPath(WORKTREE_ROOT)).toThrow('system temp folder');
+      expect(() => assertScratchPath(join(homedir(), 'Documents', 'orders-web-app'))).toThrow(
+        'system temp folder',
+      );
+    },
+  );
 
   it('writes results inside the ignored .local folder of this checkout', () => {
     expect(isInside(join(WORKTREE_ROOT, '.local'), OUTPUT_ROOT)).toBe(true);

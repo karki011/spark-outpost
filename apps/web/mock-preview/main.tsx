@@ -88,7 +88,7 @@ function Chat({ onPane, signedIn }: { onPane: (pane: Pane) => void; signedIn: bo
             <button className="preview-attention" onClick={() => onPane('signin')}>
               <Glyph name="info" />
               <span>
-                Approve the development sign-in site <small>Use your saved CloudZero sign-in</small>
+                Approve the development sign-in site <small>Use your saved Acme sign-in</small>
               </span>
               <span>Review →</span>
             </button>
@@ -247,13 +247,13 @@ function Preview() {
                 <h3>Chats</h3>
                 <input aria-label="Search chats" placeholder="Search" />
                 <p className="preview-muted">Projects</p>
-                <p>⌄ feature-web-apps</p>
+                <p>⌄ orders-web-app</p>
                 <button className="preview-selected" onClick={() => setSidebar(false)}>
                   <ProviderBlob providerId="claude" size={18} />
-                  AI Signals reports
+                  Order Insights reports
                 </button>
-                <p>⌄ feature-data-access</p>
-                <span className="preview-muted">Remove Dimension Workload</span>
+                <p>⌄ orders-data-access</p>
+                <span className="preview-muted">Remove Order Workload</span>
               </aside>
             )}
             <main className="main preview-main">
@@ -265,8 +265,8 @@ function Preview() {
                 >
                   ☷
                 </button>
-                <span className="preview-project">feature-web-apps /</span>
-                <h1 className="chat-title">AI Signals built-in reports</h1>
+                <span className="preview-project">orders-web-app /</span>
+                <h1 className="chat-title">Order Insights built-in reports</h1>
                 <div className="head-r preview-head-actions">
                   <button onClick={() => showPane('changes')} className="preview-diff">
                     +194 <span>−46</span>
