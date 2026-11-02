@@ -171,6 +171,8 @@ Requires macOS 12 or later (Mac control needs macOS 14) and about 2 GB of disk s
 
 **Free beta.** Expect rough edges. There is no Windows or Linux build.
 
+Spark Outpost doesn't take pull requests. You're welcome to [open an issue](https://github.com/karki011/spark-outpost/issues) or fork it under the [MIT License](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 Found something? Open **Settings → Help → Send feedback** (or **Help → Send Feedback…**), turn on **Include diagnostics** for bugs, and send the draft. Diagnostics hold versions, settings and recent logs, never chats, prompts, file contents, keys or tokens. Nothing is sent without you.
 
 The Mac app sends one anonymous heartbeat a day (a random install ID, the app version and OS; Cloudflare adds the country) so we know how many people use it. Turn it off in **Settings → Help → Send anonymous heartbeat**. See [Mac privacy](docs/guide/mac-privacy.md#anonymous-heartbeat).
@@ -189,7 +191,7 @@ pnpm desktop:dev    # the Electron desktop app
 pnpm check          # format, lint, typecheck, source rules, knip, unit tests
 ```
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for every command, the repo layout and testing. Contributors: read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) first; report security problems as [SECURITY.md](SECURITY.md) says. Releases, signing and the update feed are in [docs/architecture/RELEASES.md](docs/architecture/RELEASES.md); `pnpm release:downloads` regenerates the download section above and [releases/](releases/README.md).
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for every command, the repo layout and testing. Working on a fork: read [AGENTS.md](AGENTS.md) first. Report security problems as [SECURITY.md](SECURITY.md) says. Releases, signing and the update feed are in [docs/architecture/RELEASES.md](docs/architecture/RELEASES.md); `pnpm release:downloads` regenerates the download section above and [releases/](releases/README.md).
 
 ### Docs
 
