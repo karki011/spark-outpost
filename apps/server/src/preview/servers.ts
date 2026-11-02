@@ -364,7 +364,9 @@ export class PreviewServers {
     this.drop(live);
     const lines = lastLines(logTail(live.output), FAILURE_LINES);
     const detail = lines ? `${reason}\n${lines}` : reason;
-    await this.event(live, 'failed', { reason });
+    await this.event(live, 'failed', { reason }).catch((error: unknown) =>
+      console.error('A preview server event was not recorded', error),
+    );
     await this.save(live, { status: 'failed', wanted: 'stopped', detail });
   }
 

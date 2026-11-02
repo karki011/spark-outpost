@@ -23,9 +23,9 @@ import {
 } from './dev-app.ts';
 
 const FIND_IDENTITY = `
-  1) 18D6F1EADE7A0A5F2F6BD25D37054395847AC0E0 "Local Signing"
-  2) B9E61D4DC21AE981B59F5E27C311189189241EC1 "Apple Development: Pat Doe (AAAAAAAAAA)"
-  3) 5456F3240831FDFD31B019F56CF254DF1C40C7B9 "Developer ID Application: Pat Doe (ABCDE12345)"
+  1) 1111111111111111111111111111111111111111 "Local Signing"
+  2) 2222222222222222222222222222222222222222 "Apple Development: Pat Doe (AAAAAAAAAA)"
+  3) 3333333333333333333333333333333333333333 "Developer ID Application: Pat Doe (ABCDE12345)"
      3 valid identities found
 `;
 
@@ -48,7 +48,7 @@ describe('pickIdentity', () => {
     const identity = await pickIdentity({}, () => Promise.resolve(FIND_IDENTITY));
     expect(identity).toEqual({
       kind: 'developer-id',
-      sign: '5456F3240831FDFD31B019F56CF254DF1C40C7B9',
+      sign: '3333333333333333333333333333333333333333',
       label: 'Developer ID Application: Pat Doe (ABCDE12345)',
     });
   });

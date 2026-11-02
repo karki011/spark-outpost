@@ -22,7 +22,7 @@ GitHub Actions runs `.github/workflows/ci.yml` on demand (`workflow_dispatch`, A
 
 ## Minutes
 
-While the repository is private, the free plan has 2,000 Actions minutes a month and counts macOS minutes ten times, so CI runs only when started by hand. Standard Linux runners on a private repository have 2 CPUs, which is why the db tests are sharded and the browser specs get one retry. A run uses roughly 150–200 Linux minutes. Once the repository is public, standard runners are free and have 4 CPUs, and the Swift jobs run whenever a helper changes.
+While the repository is private, Actions usage counts against the plan ([GitHub billing](https://docs.github.com/en/billing/reference/product-usage-included)), so CI runs only when started by hand. Standard Linux runners on a private repository have 2 CPUs, which is why the db tests are sharded and the browser specs get one retry. A run uses roughly 150–200 Linux minutes. Once the repository is public, standard runners are free and have 4 CPUs, and the Swift jobs run whenever a helper changes.
 
 ## Security
 

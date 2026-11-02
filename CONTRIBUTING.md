@@ -34,7 +34,7 @@ pnpm test:db:changed
 pnpm test:browser:changed
 ```
 
-CI runs `pnpm check`, `pnpm test:db` and the browser specs in eight shards on every pull request (by hand while the repository is private); see [docs/architecture/CI.md](docs/architecture/CI.md). A pull request merges once `ci-ok` passes and every review conversation is resolved.
+CI runs `pnpm check`, `pnpm test:db`, the browser specs in eight shards plus a `fake-hosts` job on every pull request, and the Swift helper tests when a helper changes (all by hand while the repository is private); see [docs/architecture/CI.md](docs/architecture/CI.md). A pull request merges once `ci-ok` passes and every review conversation is resolved.
 
 ## Pull requests
 

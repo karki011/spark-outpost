@@ -55,7 +55,7 @@ Ranking median 503 ms (max 678), text-only route 213 ms (max 265), evidence rout
 git clone <private repo clone> /tmp/private-repo && git -C /tmp/private-repo remote remove origin
 node --import tsx scripts/routing/live.ts --repo /tmp/private-repo --out routing-live.json \
   --limit 9 --model haiku --timeout-min 5 --run-cap 0.35 --total-cap 1.3 \
-  --check "/path/to/biome check ."
+  --check "/path/to/biome check libs apps/web/src"
 pnpm routing:labels --out labels.json
 ```
 
@@ -96,7 +96,7 @@ P/R@5 is precision and recall of the first five predicted files against the file
 
 #### File ranking
 
-- **Top file.** Jev's first file was a changed file in 4 of the 5 tasks with changes (2, 6, 7, 10); the scan's first file in 3 (6, 7, 10). In task 2 the scan put an unrelated an unrelated link helper first and Jev put the edited the search field component first. In task 5 both missed: Jev chose the budgets page, the Builder edited the CSV panel (Jev's third file).
+- **Top file.** Jev's first file was a changed file in 4 of the 5 tasks with changes (2, 6, 7, 10); the scan's first file in 3 (6, 7, 10). In task 2 the scan put an unrelated link helper first and Jev put the edited search field component first. In task 5 both missed: Jev chose the invoices page, the Builder edited the import panel (Jev's third file).
 - **P/R@5, mean over the 5 tasks:** scan 0.32 / 0.41, final 0.36 / 0.51. Stage 1 alone gives probability to only 1–4 files, so its own @5 numbers (0.61 / 0.49) come from shorter lists and are not comparable.
 - **Stage 1 is very peaked.** The top file got 0.81–1.00 in 7 of 10 tasks. The shortlist was therefore usually the minimum of 3 files.
 - **The rerank added nothing.** Stage 2 kept stage 1's top file in all 10 tasks. Where it reordered the rest it moved a changed file down twice (task 5: the import panel from 3rd to 4th; task 7: the new test from 2nd to 3rd) and never moved one up. Recommendation: record stage 1 only, and use per-file Nouls if a multi-file answer is needed (a Choice spreads one unit of probability, so the second changed file gets almost none).
