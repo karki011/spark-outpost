@@ -21,7 +21,7 @@ export function parseChangelog(markdown: string): Release[] {
   return releases.filter((release) => release.notes.length > 0);
 }
 
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
   return text
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
