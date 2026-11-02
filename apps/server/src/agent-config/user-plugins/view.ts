@@ -4,14 +4,14 @@ import type { ReviewedPlugin } from './review-result.ts';
 import type { ScannedPlugin } from './scan.ts';
 import { findingKey, type PluginChoice } from './store.ts';
 
-function confirmed(plugin: ScannedPlugin, choice: PluginChoice | undefined): boolean {
+export function pluginConfirmed(plugin: ScannedPlugin, choice: PluginChoice | undefined): boolean {
   if (choice?.enabled !== true || choice.fingerprint !== plugin.fingerprint) return false;
   const seen = new Set(choice.confirmedFindings);
   return plugin.findings.every((finding) => seen.has(findingKey(finding)));
 }
 
 export function pluginLoads(plugin: ScannedPlugin, choice: PluginChoice | undefined): boolean {
-  return confirmed(plugin, choice) && plugin.unloadableReason === null;
+  return pluginConfirmed(plugin, choice) && plugin.unloadableReason === null;
 }
 
 export function userPluginView(
@@ -49,6 +49,6 @@ export function userPluginView(
       agentReviewError: error,
     },
     enabled,
-    changed: enabled && !confirmed(plugin, choice),
+    changed: enabled && !pluginConfirmed(plugin, choice),
   };
 }

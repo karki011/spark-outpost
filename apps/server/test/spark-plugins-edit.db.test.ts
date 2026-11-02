@@ -189,6 +189,17 @@ describe('spark_plugins_edit always asks the user', () => {
     expect((await ask('egm@google', false)).facts.outcome).toBe('unchanged');
   });
 
+  it('asks again for a plugin that is on but has findings the user never confirmed', async () => {
+    const plugin = (await scanUserPlugins(config)).find((p) => p.installed.key === 'tools@m')!;
+    await t.db.query(
+      `INSERT INTO user_plugin_trust (workspace_id, plugin_key, enabled, fingerprint, snapshot, decided_at)
+       VALUES ($1, 'tools@m', true, $2, '{"findings": []}', now())`,
+      [t.workspaceId, plugin.fingerprint],
+    );
+    expect((await ask('tools@m')).facts.outcome).toBe('waiting_for_user');
+    expect(cardAction(await pendingCard(t))).toMatchObject({ key: 'tools@m', hold: true });
+  });
+
   it('refuses a spoken run and is never offered to Ask Spark', async () => {
     await setRun('bypassPermissions', 'voice');
     const result = await ask('egm@google');

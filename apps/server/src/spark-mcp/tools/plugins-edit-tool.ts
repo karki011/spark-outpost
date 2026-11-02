@@ -13,6 +13,7 @@ import {
   PLUGIN_REVIEW_RUNNING,
 } from '../../agent-config/user-plugins/choice.ts';
 import type { ReviewedPlugin } from '../../agent-config/user-plugins/review-result.ts';
+import { pluginConfirmed } from '../../agent-config/user-plugins/view.ts';
 import type { Queryable } from '../../persistence/db.ts';
 import { actionRun, proposeAction, WAITING_MESSAGE } from '../actions/confirm.ts';
 import {
@@ -144,7 +145,7 @@ async function edit(args: EditArgs, context: SparkToolContext) {
   const found = findPlugin(plugins, args.key);
   if (!found) throw new SparkToolError(PLUGIN_GONE);
   const choice = choices.get(args.key);
-  const alreadyOn = choice?.enabled === true && choice.fingerprint === found.plugin.fingerprint;
+  const alreadyOn = pluginConfirmed(found.plugin, choice);
   const alreadyOff = choice?.enabled !== true;
   if (args.enabled ? alreadyOn : alreadyOff) {
     return { outcome: 'unchanged', message: `It is already ${args.enabled ? 'on' : 'off'}.` };

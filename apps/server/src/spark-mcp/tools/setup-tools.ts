@@ -10,6 +10,7 @@ import {
 } from '@spark-outpost/contracts';
 import { conversationProjectIds } from '../../agent-config/store.ts';
 import { loadUserPlugins } from '../../agent-config/user-plugins/choice.ts';
+import { pluginConfirmed } from '../../agent-config/user-plugins/view.ts';
 import { runFromDevice } from '../../remote/run-mark.ts';
 import { effectiveFor } from '../../mcp/effective.ts';
 import { enablementsFor, listUserMcp } from '../../mcp/store.ts';
@@ -177,7 +178,7 @@ async function claudePlugins({ deps, scope }: SparkToolContext) {
   const { plugins, choices } = await loadUserPlugins(deps.db, scope.workspaceId, false);
   return plugins.map(({ plugin, agentReview }) => {
     const choice = choices.get(plugin.installed.key);
-    const changed = choice?.enabled === true && choice.fingerprint !== plugin.fingerprint;
+    const changed = choice?.enabled === true && !pluginConfirmed(plugin, choice);
     return {
       key: plugin.installed.key,
       name: plugin.parsed.name ?? plugin.installed.name,
