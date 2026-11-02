@@ -41,6 +41,7 @@ import { previewRoutes } from './preview-routes.ts';
 import { signInRoutes } from './sign-in-routes.ts';
 import { taskChangeRoutes } from './task-change-routes.ts';
 import { taskRoutes } from './task-routes.ts';
+import { userPluginRoutes } from './user-plugin-routes.ts';
 import { queueRoutes } from './queue-routes.ts';
 import { sparkPauseRoutes } from './spark-pause-routes.ts';
 import { browserHistoryRoutes } from './browser-history-routes.ts';
@@ -140,6 +141,7 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', projectCloneRoutes(options));
   app.use('/api', mapRoutes(options));
   app.use('/api', agentConfigRoutes(options));
+  app.use('/api', userPluginRoutes(options));
   app.use('/api', mcpRoutes(options));
   app.use('/api', auditRoutes(options));
   app.use('/api', taskRoutes(options));

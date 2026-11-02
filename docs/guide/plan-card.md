@@ -12,7 +12,7 @@ The agent plans before changing anything. About 1 minute.
 2. Read the agent's plan on its **Approve the plan?** card.
 3. Approve it to build, or keep planning.
 
-The card is the agent's own. A mode that never asks, such as **Full access**, approves it at once.
+A mode that never asks, such as **Full access**, approves it at once.
 
 While planning in **Auto** or **Bypass permissions**, commands that change no files run without a card; ones that change files still ask.
 
@@ -24,7 +24,7 @@ Spark has no plan card and saves no plan of its own. Without `/plan` or **Plan**
 
 The plan you approve becomes the chat's agreed plan. The thread shows **Plan saved**; select it to open the plan in **Work**. A revised plan you approve is saved as a new version.
 
-Codex's plan setting stops no edit, so `/plan` runs a Codex turn in **Read-only**: it replies with a plan, changes nothing and shows no line; **Work** lists it as **Proposed plan**. Your next message builds.
+Codex's plan setting stops no edit, so `/plan` runs a Codex turn in **Read-only**: it replies with a plan and shows no line; **Work** lists it as **Proposed plan**. Your next message builds.
 
 Older chats keep lines such as **Plan saved · 4 pieces**.
 

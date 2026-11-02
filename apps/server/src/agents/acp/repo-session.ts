@@ -18,6 +18,7 @@ export interface ClaudeRepoOptions {
   hooks: HooksConfig | null;
   skillTool: boolean;
   agentTool: boolean;
+  skillShell?: boolean;
   allowRules?: readonly string[];
   denyRules?: readonly string[];
   askRules?: readonly string[];
@@ -38,7 +39,12 @@ export function withPermissionRules(
   rules: PermissionRules,
 ): ClaudeRepoOptions | null {
   if (rules.deny.length === 0 && rules.ask.length === 0) return repo;
-  return { ...(repo ?? NO_CLAUDE_REPO), denyRules: rules.deny, askRules: rules.ask };
+  const base = repo ?? NO_CLAUDE_REPO;
+  return {
+    ...base,
+    denyRules: [...(base.denyRules ?? []), ...rules.deny],
+    askRules: [...(base.askRules ?? []), ...rules.ask],
+  };
 }
 
 export function withSparkFloor(
@@ -79,10 +85,16 @@ function mergedHooks(launch: RepoLaunch): HooksConfig | null {
 
 const safeName = (name: string) => name.replace(/[^A-Za-z0-9_-]/g, '_').replace(/_{2,}/g, '_');
 
+export interface LabelledMcpServer {
+  label: string;
+  config: McpServerConfig;
+}
+
 export function namedMcpServers(
   launch: RepoLaunch,
   user: readonly McpServerConfig[] = [],
   reserved: readonly string[] = [],
+  plugins: readonly LabelledMcpServer[] = [],
 ): NamedMcpServer[] {
   const taken = new Set(reserved);
   const named: NamedMcpServer[] = [];
@@ -97,6 +109,7 @@ export function namedMcpServers(
   for (const root of launch) {
     for (const config of root.mcpServers) add(config, root.label);
   }
+  for (const plugin of plugins) add(plugin.config, plugin.label);
   return named;
 }
 
@@ -115,12 +128,12 @@ function mergedRedirects(launch: RepoLaunch): RedirectSettings | null {
   return merged;
 }
 
-async function claudePlugins(launch: RepoLaunch): Promise<string[]> {
+async function claudePlugins(launch: RepoLaunch, skillShell: boolean): Promise<string[]> {
   const taken = new Set<string>();
   const dirs: string[] = [];
   for (const root of launch) {
     const name = pluginName(root.label, taken);
-    const files = await pluginFiles(root, name);
+    const files = await pluginFiles(root, name, skillShell);
     if (files.length === 0) continue;
     taken.add(name);
     dirs.push(await writePluginDir(files));
@@ -128,10 +141,10 @@ async function claudePlugins(launch: RepoLaunch): Promise<string[]> {
   return dirs;
 }
 
-async function claudeOptions(launch: RepoLaunch): Promise<ClaudeRepoOptions> {
+async function claudeOptions(launch: RepoLaunch, skillShell: boolean): Promise<ClaudeRepoOptions> {
   return {
     appendPrompt: instructionsPrompt(launch),
-    plugins: await claudePlugins(launch),
+    plugins: await claudePlugins(launch, skillShell),
     hooks: mergedHooks(launch),
     skillTool: launch.some((root) => (root.skills?.length ?? 0) > 0),
     agentTool: launch.some((root) => root.subagents.length > 0),
@@ -157,12 +170,14 @@ export async function prepareRepoSession(
   style: RepoStyle,
   user: readonly McpServerConfig[] = [],
   reserved: readonly string[] = [],
+  plugins: readonly LabelledMcpServer[] = [],
+  skillShell = false,
 ): Promise<RepoSession> {
-  const mcpServers = namedMcpServers(launch, user, reserved);
+  const mcpServers = namedMcpServers(launch, user, reserved, plugins);
   return {
     following: followedFiles(launch),
     mcpServers,
-    claude: style === 'claude' ? await claudeOptions(launch) : null,
+    claude: style === 'claude' ? await claudeOptions(launch, skillShell) : null,
     codex: style === 'codex' ? codexOptions(launch) : null,
   };
 }

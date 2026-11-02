@@ -31,7 +31,7 @@
       "ignoreDependencies": ["@fontsource-variable/inter", "@fontsource-variable/geist-mono"]
     },
     "apps/site": {
-      "entry": ["src/changelog/page.ts"],
+      "entry": ["src/changelog/page.ts", "src/docs/page.ts"],
       "project": ["src/**/*.ts"]
     },
     "apps/desktop": {

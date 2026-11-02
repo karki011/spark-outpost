@@ -59,7 +59,7 @@ export async function digestState(db: Db, workspaceId: string, now = new Date())
   return (await snapshot(db, workspaceId, now)).state;
 }
 
-async function modelFor(db: Db, workspaceId: string, provider: ProviderId) {
+export async function digestModelFor(db: Db, workspaceId: string, provider: ProviderId) {
   const capabilities = await getCapabilities(db, workspaceId, provider);
   const efforts = capabilities?.efforts.length
     ? capabilities.efforts.map((effort) => effort.id)
@@ -108,7 +108,7 @@ export async function requestDigest(
     chats,
     flagged,
   });
-  const model = await modelFor(db, workspaceId, provider);
+  const model = await digestModelFor(db, workspaceId, provider);
   await startDigest(
     db,
     workspaceId,

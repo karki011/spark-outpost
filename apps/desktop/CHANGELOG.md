@@ -4,6 +4,17 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.39
+
+- Use your installed Claude plugins in chats. **Settings → Chats & autonomy → Plugins** lists what you installed with `claude plugin install`, and each one loads in Claude chats only after you turn it on. Spark checks every plugin and has Claude review it once per version, shows what it runs and what the review found, and asks you to hold before turning on one that needs review. An update turns a plugin off until you turn it on again.
+- Agents can ask to turn a plugin on or off. It's always a card only you answer, on your Mac.
+- A plugin's or a repo's slash command now runs when it's a chat's first message, and plugin commands show in the `/` menu.
+- The user guide is on the website under Docs, with light and dark screenshots.
+- Cards show the agent's mode by name, such as Manual, and answered cards no longer repeat their title.
+- Fix a rare stall when a message was queued while a turn was finishing.
+- A screenshot stays after the text the agent wrote before taking it, and the plain-folder notice keeps keyboard focus on **Done**.
+- Spark no longer stops when a git command it feeds file names to exits early, for example after a chat's folder is removed.
+
 ## 0.1.0-beta.38
 
 - Select on a page is rebuilt: the highlight glides between elements, ⇧ click picks several, ↑ and ↓ move to the parent and back, a drag picks a region and the wheel still scrolls. A pick on a very large page takes about half a second instead of nearly three.

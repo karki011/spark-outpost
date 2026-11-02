@@ -38,23 +38,23 @@ summary: What agents can look up about Spark, the confirm card they show before 
 
 ## Tools that act
 
-| Action                                               | Tool                                                                                                    |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Create, comment on, move or assign a ticket          | `spark_create_ticket`, `spark_comment_ticket`, `spark_transition_ticket`, `spark_assign_ticket`         |
-| Post to an allowed Slack channel or thread           | `spark_slack_post`                                                                                      |
-| Start a PR follow-up round                           | `spark_pr_follow_up_round`                                                                              |
-| Push the chat's branch, open its PR                  | `spark_push`, `spark_pull_request` (no card)                                                            |
-| Add or change a Spark                                | `spark_create_spark`, `spark_update_spark`                                                              |
-| Manage MCP servers                                   | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
-| Open a site, act, debug                              | `spark_browser_open`, `spark_browser_act`, `spark_browser_devtools`                                     |
-| Sign in, or hand you the tab (always asks)           | `spark_browser_sign_in`                                                                                 |
-| Use a [Mac app](mac-control.md)                      | `spark_mac_apps`, `spark_mac_read`, `spark_mac_act`                                                     |
-| Run a command past the turn                          | `spark_terminal_run`                                                                                    |
-| Show a page beside the chat                          | `spark_artifact`                                                                                        |
-| Change a calendar event                              | `spark_calendar_edit`                                                                                   |
-| Change or delete Jira; change ServiceNow             | `spark_jira_edit`, `spark_servicenow_edit`                                                              |
-| Change Confluence pages                              | `spark_confluence_edit`                                                                                 |
-| Change [Spark rules](protected-paths.md#spark-rules) | `spark_rules_edit`                                                                                      |
+| Action                                                                                                  | Tool                                                                                                    |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Create, comment on, move or assign a ticket                                                             | `spark_create_ticket`, `spark_comment_ticket`, `spark_transition_ticket`, `spark_assign_ticket`         |
+| Post to an allowed Slack channel or thread                                                              | `spark_slack_post`                                                                                      |
+| Start a PR follow-up round                                                                              | `spark_pr_follow_up_round`                                                                              |
+| Push the chat's branch, open its PR                                                                     | `spark_push`, `spark_pull_request` (no card)                                                            |
+| Add or change a Spark                                                                                   | `spark_create_spark`, `spark_update_spark`                                                              |
+| Manage MCP servers                                                                                      | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
+| Open a site, act, debug                                                                                 | `spark_browser_open`, `spark_browser_act`, `spark_browser_devtools`                                     |
+| Sign in, or hand you the tab (always asks)                                                              | `spark_browser_sign_in`                                                                                 |
+| Use a [Mac app](mac-control.md)                                                                         | `spark_mac_apps`, `spark_mac_read`, `spark_mac_act`                                                     |
+| Run a command past the turn                                                                             | `spark_terminal_run`                                                                                    |
+| Show a page beside the chat                                                                             | `spark_artifact`                                                                                        |
+| Change a calendar event                                                                                 | `spark_calendar_edit`                                                                                   |
+| Change or delete Jira; change ServiceNow                                                                | `spark_jira_edit`, `spark_servicenow_edit`                                                              |
+| Change Confluence pages                                                                                 | `spark_confluence_edit`                                                                                 |
+| Change [Spark rules](protected-paths.md#spark-rules) or a [plugin](use-claude-plugins.md) (always asks) | `spark_rules_edit`, `spark_plugins_edit`                                                                |
 
 MCP server cards show the command; fill values in **Settings → MCP servers**.
 
@@ -74,7 +74,7 @@ Sub-chats and Sparks' jobs get no `spark_outpost_start`. Another chat's text is 
 
 ## Ask Spark tools
 
-[Ask Spark](companion-quick-chat.md#let-ask-spark-act) gets these too, minus publishing, follow-up, terminal runs, sign-ins, outpost asks and starts, artifacts, Spark rules. Its own:
+[Ask Spark](companion-quick-chat.md#let-ask-spark-act) gets these too, minus publishing, follow-up, terminal runs, sign-ins, outpost asks and starts, artifacts, Spark rules and plugins. Its own:
 
 | It can                                        | Tool                                                                                                                   |
 | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |

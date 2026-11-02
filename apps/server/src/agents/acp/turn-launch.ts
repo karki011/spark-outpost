@@ -28,6 +28,11 @@ import {
   type RepoSession,
 } from './repo-session.ts';
 import { openProject } from './session-start.ts';
+import {
+  prepareUserPlugins,
+  withUserPlugins,
+  type UserPluginSession,
+} from './user-plugin-session.ts';
 import { replayFilter, type ReplayFilter } from './session-open.ts';
 import {
   auditCodexInstructions,
@@ -54,6 +59,16 @@ export interface Workspace {
   spark: SparkToolsHint | null;
   rules: PermissionRules;
   floor: SparkFloor;
+}
+
+function withPluginSession(
+  repo: RepoSession | null,
+  plugins: UserPluginSession | null,
+  mcpServers: NamedMcpServer[],
+): RepoSession | null {
+  if (!plugins) return repo;
+  const claude = withUserPlugins(repo?.claude ?? null, plugins, mcpServers);
+  return { following: [], codex: null, ...repo, mcpServers, claude };
 }
 
 export interface LaunchPlan {
@@ -111,16 +126,22 @@ export async function planLaunch(
       : [];
   const spark = sparkToolsHint(options.sparkTools, turn.sparkScope, own);
   const reserved = sparkReserved(own);
-  const repo =
+  const plugins =
+    definition.repoStyle === 'claude' ? await prepareUserPlugins(turn.userPlugins ?? []) : null;
+  const pluginMcp = plugins?.mcpServers ?? [];
+  const projectRepo =
     policy && turn.repo
       ? await prepareRepoSession(
           turn.repo.filter((entry) => roots.includes(entry.root)),
           definition.repoStyle,
           userMcp,
           reserved,
+          pluginMcp,
+          plugins?.skillShell === true,
         )
       : null;
-  const mcpServers = repo?.mcpServers ?? namedMcpServers([], userMcp, reserved);
+  const mcpServers = projectRepo?.mcpServers ?? namedMcpServers([], userMcp, reserved, pluginMcp);
+  const repo = withPluginSession(projectRepo, plugins, mcpServers);
   const rules =
     definition.repoStyle === 'claude'
       ? await loadPermissionRules(
@@ -146,6 +167,9 @@ export async function planLaunch(
     legacyPermissions,
     mcp: mcpServers,
     repo: repo ? { claude: repo.claude, codex: repo.codex } : null,
+    ...(plugins
+      ? { userPlugins: (turn.userPlugins ?? []).map((plugin) => plugin.fingerprint) }
+      : {}),
     instructions: turn.spark ?? null,
     sparkTools: spark,
     session: [turn.changesProject === true, turn.planning === true],

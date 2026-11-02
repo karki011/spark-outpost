@@ -124,12 +124,14 @@ function baseName(path: string): string {
 }
 
 export const MAC_CARD_REFUSAL =
-  'Mac control, calendar, Spark rules and browser sign-in cards are answered on your Mac.';
+  'Mac control, calendar, Spark rules, plugin and browser sign-in cards are answered on your Mac.';
 
 export function macOnlyCard(payload: unknown): boolean {
   const parsed = approvalPayloadSchema.safeParse(payload);
   const action = parsed.success ? parsed.data.sparkAction?.action : undefined;
-  if (action === 'browser_handoff' || action === 'rules_edit') return true;
+  if (action === 'browser_handoff' || action === 'rules_edit' || action === 'plugins_edit') {
+    return true;
+  }
   return action !== undefined && (isMacAction(action) || isCalendarAction(action));
 }
 

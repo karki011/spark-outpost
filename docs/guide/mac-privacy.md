@@ -25,13 +25,13 @@ Cloudflare receives it and adds the country. Spark in a browser sends nothing.
 
 ## Full Disk Access
 
-Optional: it stops macOS asking each time Spark reads a protected folder, such as `~/Library`, Desktop, Documents or Downloads.
+Optional: it stops macOS asking once per protected folder Spark reads, such as `~/Library`, Desktop, Documents or Downloads.
 
 1. Open **Settings → Help** and find **Full Disk Access**.
 2. Select **Open System Settings**.
 3. Under **Privacy & Security → Full Disk Access**, switch on **Spark Outpost**.
 
-Without it, macOS may ask once per folder. It doesn't replace Spark's [approvals](approvals.md).
+It doesn't replace Spark's [approvals](approvals.md).
 
 ## Keychain prompt
 

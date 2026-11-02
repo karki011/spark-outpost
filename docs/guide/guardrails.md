@@ -27,7 +27,7 @@ Outposts add their own: [requests](outpost-permissions.md) and [stacked pull req
 | Running your tests and lint  | The agent runs them. Hooks and CI run on a push; Spark never skips them. |
 | Reviewing the diff           | Read it in [**Changes**](review-changes.md), or ask another chat.        |
 | Retrying on a stronger model | Stop the turn, then redirect it or pick another model.                   |
-| Asking before a build        | Use `/plan` or **Plan** mode to [approve a plan first](plan-card.md).    |
+| Asking before a build        | [Approve a plan first](plan-card.md).                                    |
 
 ## No budgets
 

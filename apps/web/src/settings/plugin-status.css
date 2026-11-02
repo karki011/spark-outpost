@@ -1,0 +1,18 @@
+.plug-status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.plug-status[data-status='clean'] {
+  color: var(--success);
+}
+.plug-status[data-status='review'] {
+  color: var(--warn);
+}
+.plug-status[data-status='flagged'] {
+  color: var(--danger);
+}

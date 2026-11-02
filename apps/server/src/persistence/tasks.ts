@@ -83,13 +83,12 @@ async function lockRunConversation(
   runId: string,
 ): Promise<{ conversation_id: string; task_id: string | null }> {
   const { rows } = await db.query<{ conversation_id: string; task_id: string | null }>(
-    `SELECT r.conversation_id, r.task_id FROM runs r
-     JOIN conversations c ON c.id = r.conversation_id
-     WHERE r.id = $1 FOR UPDATE OF c`,
+    'SELECT conversation_id, task_id FROM runs WHERE id = $1 FOR UPDATE',
     [runId],
   );
   const run = rows[0];
   if (!run) throw new Error(`Run ${runId} was not found.`);
+  await db.query('SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE', [run.conversation_id]);
   return run;
 }
 

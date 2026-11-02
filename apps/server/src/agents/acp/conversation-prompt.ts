@@ -168,12 +168,11 @@ export function contextSteps(
   return steps;
 }
 
-export function conversationBlocks(
+function conversationParts(
   history: readonly ConversationTurn[],
   prompt: string,
-  options: PromptOptions = {},
-): acp.ContentBlock[] {
-  prompt = prompt.trim() || 'Look at the attached files.';
+  options: PromptOptions,
+): Part[] {
   const support = options.support ?? TEXT_ONLY;
   const current = options.attachments ?? [];
   const budget = Math.max(0, (options.budget ?? HISTORY_BUDGET_BYTES) - textBytes(current));
@@ -187,8 +186,9 @@ export function conversationBlocks(
       : projectNote(roots, options.commandsAllowed === true);
   const chatIntro = options.toolsAvailable ? CHAT_TOOLS_NOTE : CHAT_ONLY_NOTE;
   const intro = roots.length > 0 ? projectIntro : chatIntro;
+  const asked = prompt ? [prompt] : [];
   if (kept.length === 0 && omitted === 0) {
-    return toBlocks([intro, prompt, ...currentParts]);
+    return [intro, ...asked, ...currentParts];
   }
   const note =
     omitted > 0
@@ -200,15 +200,36 @@ export function conversationBlocks(
     `${speaker(turn)}: ${turn.content}`,
     ...(turn.attachments ?? []).flatMap((attachment) => attachmentParts(attachment, support)),
   ]);
-  return toBlocks([
+  return [
     intro,
     'This is a continuing conversation. Earlier messages, oldest first:',
     ...note,
     ...turns,
     'Reply to the latest message:',
-    prompt,
+    ...asked,
     ...currentParts,
-  ]);
+  ];
+}
+
+export function conversationBlocks(
+  history: readonly ConversationTurn[],
+  prompt: string,
+  options: PromptOptions = {},
+): acp.ContentBlock[] {
+  return toBlocks(
+    conversationParts(history, prompt.trim() || 'Look at the attached files.', options),
+  );
+}
+
+export function commandFirstBlocks(
+  history: readonly ConversationTurn[],
+  before: string,
+  command: string,
+  options: PromptOptions = {},
+): acp.ContentBlock[] {
+  const support = { ...(options.support ?? TEXT_ONLY), embeddedContext: false };
+  const context = toBlocks(conversationParts(history, before.trim(), { ...options, support }));
+  return [...context, { type: 'text', text: command }];
 }
 
 export function followUpBlocks(prompt: string, options: PromptOptions = {}): acp.ContentBlock[] {
@@ -249,4 +270,9 @@ export function promptText(
   const before = [continued ? null : turn.preamble, turn.turnPreamble].filter(Boolean);
   const primed = [...before, asked].join('\n\n');
   return turn.askTitle ? `${primed}\n\n${TITLE_REQUEST}` : primed;
+}
+
+export function commandPreamble(turn: ProviderTurn): string {
+  const title = turn.askTitle ? TITLE_REQUEST : null;
+  return [turn.preamble, turn.turnPreamble, title].filter(Boolean).join('\n\n');
 }

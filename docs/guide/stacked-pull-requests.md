@@ -6,7 +6,7 @@ order: 324
 summary: How a sub-task that starts after another in the same project builds on that branch, where its pull request points, and how to update and merge the stack.
 ---
 
-A sub-task that starts after another in the same project branches from that chat's `spark/*` branch, and its pull request targets it. Spark first commits the chat's kept changes there. Updating is a merge; nothing rebases.
+A stacked sub-task builds on the earlier chat's `spark/*` branch, where Spark first commits that chat's kept changes. Updating is a merge; nothing rebases.
 
 ## Parallel or stacked
 

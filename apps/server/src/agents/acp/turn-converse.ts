@@ -1,10 +1,13 @@
 import * as acp from '@agentclientprotocol/sdk';
+import { pluginCommandNames } from '../../agent-config/user-plugins/parse.ts';
 import { ProviderError, type ProviderOutput, type ProviderTurn } from '../../providers/provider.ts';
 import type { AgentDefinition } from './agents.ts';
 import { applySessionSettings, modeName, settingsOutputs } from './apply-settings.ts';
 import { CLIENT_INFO, turnCapabilities } from './client-info.ts';
 import { createCommandTracker } from './command-output.ts';
 import {
+  commandFirstBlocks,
+  commandPreamble,
   contextSteps,
   conversationBlocks,
   followUpBlocks,
@@ -197,7 +200,7 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
     };
     const blocks = turn.live?.continuation
       ? null
-      : firstBlocks(turn, continued, promptOptions, mapper, push, definition.name);
+      : firstBlocks(turn, continued, promptOptions, mapper, push, definition);
     const stopReason = await runPrompts({
       session: {
         prompt: (sent) => session.prompt(sent),
@@ -237,23 +240,38 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
 
 type PromptOptions = Parameters<typeof conversationBlocks>[2];
 
+function firstTurnCommands(turn: ProviderTurn, definition: AgentDefinition): string[] {
+  if (definition.cli !== 'claude') return [];
+  const plugins = (turn.userPlugins ?? []).flatMap((plugin) =>
+    pluginCommandNames(plugin.name, plugin.parsed),
+  );
+  const repo = (turn.repo ?? []).flatMap((root) =>
+    [...(root.skills ?? []), ...root.commands].map((entry) => entry.name),
+  );
+  return [...plugins, ...repo];
+}
+
 function firstBlocks(
   turn: ProviderTurn,
   continued: boolean,
   promptOptions: PromptOptions,
   mapper: TurnMapper,
   push: (outputs: ProviderOutput[]) => void,
-  agentName: string,
+  definition: AgentDefinition,
 ): acp.ContentBlock[] {
   const sent = afterOpening(turn, continued);
   for (const step of contextSteps(sent.history, promptOptions)) push(mapper.note(step));
   const request = continued ? (sent.session?.followUp ?? turn.prompt) : turn.prompt;
   const slash = slashPrompt(
     request,
-    agentName,
+    definition.name,
     continued ? (turn.session?.resume?.commands ?? []) : null,
+    firstTurnCommands(turn, definition),
   );
   if (slash.note) push(mapper.note(slash.note));
+  if (!continued && slash.kind === 'command') {
+    return commandFirstBlocks(sent.history, commandPreamble(sent), slash.text, promptOptions);
+  }
   const text = promptText(sent, request, slash, continued);
   return continued
     ? followUpBlocks(text, promptOptions)

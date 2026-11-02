@@ -6,7 +6,7 @@ order: 222
 summary: Read the diff in the Changes drawer, undo a run or one file, and bring kept changes into your own checkout.
 ---
 
-You'll read what the agent changed and keep or undo it. About 2 minutes.
+Read what the agent changed and keep or undo it. About 2 minutes.
 
 ## Read the diff
 

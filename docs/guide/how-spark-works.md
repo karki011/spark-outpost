@@ -20,7 +20,7 @@ One chat is one agent session. Your message goes to the agent as typed; Spark ad
 
 ## How work is split
 
-The lead delegates implementation slices to available provider sub-agents, choosing roles, count and slices per worker. There is no fixed pipeline.
+The lead delegates implementation slices to available provider sub-agents, choosing roles, count and slices per worker.
 
 | Responsibility     | Work                                                                 |
 | ------------------ | -------------------------------------------------------------------- |
@@ -32,6 +32,6 @@ The lead delegates implementation slices to available provider sub-agents, choos
 
 Assignments carry scope, interfaces, dependencies and done criteria. Workers return files, checks and blockers. Plans and results stay in session tools or transcripts.
 
-Questions, planning and assigned slices need no recursive delegation. For separate repositories, branches or independently messaged chats, use an [outpost](when-to-use-an-outpost.md).
+Questions, planning and assigned slices need no recursive delegation. Across repositories or chats, use an [outpost](when-to-use-an-outpost.md).
 
 Codex keeps your delegation settings. Without available workers, the agent explains and asks. Reports identify workers, checks and remaining limits.

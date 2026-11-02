@@ -6,22 +6,20 @@ order: 218
 summary: Allow or deny a command or file change an agent asks about, hold to confirm the risky ones, and let trusted commands run without asking.
 ---
 
-You'll answer an agent that's waiting for your permission. About 1 minute.
+Answer an agent waiting for your permission. About 1 minute.
 
-1. Find the card at the end of the turn, or press **⌘⇧Y** to jump to it.
+1. Find the card at the end of the turn, or press **⌘⇧Y**.
 2. Read the command or diff; **Details** shows where it runs and why. A sub-agent's card names it.
 
    ![An approval card asking to run a command](images/approvals-command-light.png)
 
-3. Select a button; labels vary a little by agent.
+3. Select a button; labels vary by agent.
 
 | Button           | Does                                                           |
 | ---------------- | -------------------------------------------------------------- |
 | **Allow** (⏎)    | Runs it this once.                                             |
 | **Always allow** | For the rest of this run, or **Always allow in this project**. |
 | **Deny** (Esc)   | Doesn't run it; the agent tries another way.                   |
-
-An unanswered card is declined after 30 minutes and says **Expired**.
 
 ## Hold to confirm
 

@@ -16,7 +16,7 @@ Providers: [Providers and keys](trouble-providers.md). Runs: [Runs and pull requ
 | "Spark Outpost could not continue"          | Database or server didn't start, or an update failed. | Quit and reopen. After an update: [**Open previous version instructions**](updates.md#your-data-during-an-update). |
 | "Git is not installed"                      | The Mac app needs Git.                                | Run `xcode-select --install` in Terminal.                                                                          |
 | "Another app is using this shortcut"        | Another app has those keys.                           | **Settings → Notifications**: **Change** or **Reset**.                                                             |
-| "You have 12 terminals open"                | 12 is the limit across chats.                         | Close a tab, or reload to end them all.                                                                            |
+| "You have 12 terminals open"                | The limit across chats.                               | Close a tab, or reload to end them all.                                                                            |
 
 > **Important:** Don't delete `~/Library/Application Support/Spark Outpost` to fix start-up: it holds chats and backups.
 

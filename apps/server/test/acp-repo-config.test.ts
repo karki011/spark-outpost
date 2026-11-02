@@ -99,7 +99,9 @@ describe('repo agent config reaches the agent over ACP', { timeout: 20_000 }, ()
       disableAllHooks: true,
       disableSkillShellExecution: true,
     });
-    expect(options.plugins).toEqual([{ type: 'local', path: expect.any(String) }]);
+    expect(options.plugins).toEqual([
+      { type: 'local', path: expect.any(String), skipMcpDiscovery: true },
+    ]);
     expect(received.mcpServers.map((server) => server.name)).toEqual(['echo']);
     expect(steps).toContain("Claude can't use the SSE MCP server stream; skipped it");
     expect(following).toEqual({

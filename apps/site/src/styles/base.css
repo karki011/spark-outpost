@@ -324,7 +324,7 @@ h2 {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .nav-link {
+  .nav-link:not(.nav-docs) {
     display: none;
   }
 }
@@ -332,6 +332,10 @@ h2 {
 @media (max-width: 480px) {
   :root {
     --gutter: 16px;
+  }
+
+  .nav {
+    gap: 16px;
   }
 
   body {

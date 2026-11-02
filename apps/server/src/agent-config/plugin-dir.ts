@@ -14,6 +14,8 @@ const KEPT_FIELDS = {
 
 type Kind = keyof typeof KEPT_FIELDS;
 
+const ZERO_WIDTH_SPACE = '\u200b';
+
 interface PluginFile {
   path: string;
   text: string;
@@ -30,14 +32,24 @@ export function pluginName(label: string, taken: ReadonlySet<string>): string {
   return name;
 }
 
-function sanitizedDefinition(kind: Kind, text: string, note: string | null): string {
+function inertShell(body: string): string {
+  return body.replaceAll('!`', `!${ZERO_WIDTH_SPACE}\``);
+}
+
+function sanitizedDefinition(
+  kind: Kind,
+  text: string,
+  note: string | null,
+  skillShell: boolean,
+): string {
   const { fields, body } = parseFrontmatter(text);
   const kept = Object.fromEntries(
     Object.entries(fields).filter(([key]) =>
       (KEPT_FIELDS[kind] as readonly string[]).includes(key),
     ),
   );
-  return renderFrontmatter(kept, note ? `${body.trimEnd()}\n\n${note}\n` : body);
+  const shown = skillShell ? inertShell(body) : body;
+  return renderFrontmatter(kept, note ? `${shown.trimEnd()}\n\n${note}\n` : shown);
 }
 
 function skillDir(definition: ScannedDefinition): string {
@@ -74,6 +86,7 @@ async function definitionFiles(
   root: string,
   kind: Kind,
   definitions: readonly ScannedDefinition[],
+  skillShell: boolean,
 ): Promise<PluginFile[]> {
   const files: PluginFile[] = [];
   const seen = new Set<string>();
@@ -91,16 +104,20 @@ async function definitionFiles(
       kind === 'skills'
         ? `Other files for this skill are in ${join(root, skillDir(definition))}.`
         : null;
-    files.push({ path, text: sanitizedDefinition(kind, text, note) });
+    files.push({ path, text: sanitizedDefinition(kind, text, note, skillShell) });
   }
   return files;
 }
 
-export async function pluginFiles(launch: RepoRootLaunch, name: string): Promise<PluginFile[]> {
+export async function pluginFiles(
+  launch: RepoRootLaunch,
+  name: string,
+  skillShell = false,
+): Promise<PluginFile[]> {
   const content = [
-    ...(await definitionFiles(launch.root, 'skills', launch.skills ?? [])),
-    ...(await definitionFiles(launch.root, 'commands', launch.commands)),
-    ...(await definitionFiles(launch.root, 'agents', launch.subagents)),
+    ...(await definitionFiles(launch.root, 'skills', launch.skills ?? [], skillShell)),
+    ...(await definitionFiles(launch.root, 'commands', launch.commands, skillShell)),
+    ...(await definitionFiles(launch.root, 'agents', launch.subagents, skillShell)),
   ];
   if (content.length === 0) return [];
   const manifest = {

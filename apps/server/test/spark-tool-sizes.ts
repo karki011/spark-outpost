@@ -24,6 +24,7 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   servicenow: false,
   ticket_create: false,
   rules_edit: true,
+  plugins_edit: true,
 };
 
 export const SESSION_CASES = {

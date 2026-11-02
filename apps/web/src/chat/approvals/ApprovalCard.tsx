@@ -47,7 +47,8 @@ function ResolvedApproval({ approval }: { approval: Approval }) {
   const headingId = useId();
   const result = outcome(approval);
   const title = cardTitle(approval);
-  const shown = title.code ? null : subject(approval);
+  const about = title.code ? null : subject(approval);
+  const shown = about === title.before ? null : about;
   const denied = result.icon === 'no';
   const action = approval.payload.sparkAction;
   useActionReport(

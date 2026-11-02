@@ -178,11 +178,11 @@ Hooks and a repo's permissions.allow rules are off until you trust the folder (o
     id: 'spark-own-tools',
     title: "Spark's own tools (the spark MCP server)",
     keywords: ['spark_', 'tools', 'mcp server', 'spark tools', 'self-service', 'action card'],
-    text: `Every agent session gets an MCP server named "spark" with the tools its chat can use: ticket, Slack, PR tools need their connector; PR tools, spark_map and spark_find need a linked project. Ask Spark gets the same tools behind the same switches (any project for PR tools, spark_map and spark_find), except spark_push, spark_pull_request, spark_pr_follow_up, spark_pr_follow_up_round, spark_terminal_run, spark_outpost_ask, spark_outpost_start, spark_browser_sign_in and spark_rules_edit; its tools that ask follow When Ask Spark acts. A missing tool's note names its setting.
+    text: `Each agent session gets the "spark" MCP server with its chat's tools: ticket, Slack, PR tools need their connector; PR tools, spark_map and spark_find need a linked project. Ask Spark gets the same tools behind the same switches (any project for PR tools, spark_map and spark_find), except spark_push, spark_pull_request, spark_pr_follow_up, spark_pr_follow_up_round, spark_terminal_run, spark_outpost_ask, spark_outpost_start, spark_browser_sign_in, spark_rules_edit and spark_plugins_edit; its tools that ask follow When Ask Spark acts. A missing tool's note names its setting.
 
-Read tools need no card; see section spark-tools.
+Read tools need no card (section spark-tools).
 
-Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, spark_create_spark, spark_update_spark, spark_*_mcp_server, spark_calendar_edit, spark_jira_edit, spark_confluence_edit, spark_servicenow_edit. In Auto, Bypass or Full auto → PR Spark does them at once; else a card; spark_rules_edit: always. Audited; agents open PRs themselves.`,
+Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, spark_create_spark, spark_update_spark, spark_*_mcp_server, spark_calendar_edit, spark_jira_edit, spark_confluence_edit, spark_servicenow_edit. In Auto, Bypass or Full auto → PR they run at once; else a card; spark_rules_edit, spark_plugins_edit: always. Audited; agents open PRs themselves.`,
   },
   {
     id: 'spark-tools',

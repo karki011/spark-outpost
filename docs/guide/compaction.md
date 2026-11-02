@@ -6,7 +6,7 @@ order: 224
 summary: Watch the context ring, choose when Spark compacts a long chat, and read the summary it leaves behind.
 ---
 
-You'll keep a long chat inside the model's context. About 2 minutes.
+Keep a long chat inside the model's context. About 2 minutes.
 
 When a chat's context is nearly full, Spark compacts it: the agent carries on from a summary; your transcript stays.
 
@@ -30,7 +30,7 @@ It ends with **Exact identifiers**: PR numbers, commits, branches, files, ticket
 
 1. Open **Settings → Chats & autonomy** and find **Context compaction**.
 2. Set **Warn when context is** (30% to 90%). It only colours the ring.
-3. Set **Compact automatically at** (40% to 95%), or switch it off to be asked.
+3. Set **Compact automatically at** (40% to 95%), or switch it off.
 
 ## Answer the card
 

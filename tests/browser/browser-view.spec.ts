@@ -5,6 +5,7 @@ import { openBrowserView, pushView, rail, viewCommands } from './browser-view-su
 import { calls, withDesktopBrowser } from './desktop-browser.ts';
 import { toggleHeaderPane } from './header-menu.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { animationsSettled } from './settle.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude'] });
@@ -105,6 +106,7 @@ test('page keys reach the profile that owns the focused page', async ({ page }) 
 
 test('the Browser view passes an accessibility check', async ({ page }) => {
   await openBrowserView(page);
+  await animationsSettled(page);
   const results = await new AxeBuilder({ page }).include('.bv').analyze();
   expect(results.violations).toEqual([]);
 });

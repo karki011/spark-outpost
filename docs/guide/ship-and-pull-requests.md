@@ -19,7 +19,7 @@ Ship commits only the task's own files, without secret files. Once a PR exists, 
 
 ## When the agent publishes
 
-Ask for a PR, or set **Full auto → PR**. After changes, the agent handles publishing, including dirty local work without a remote. Your explicit “do not commit/push/open a PR” instructions take precedence over that default.
+Ask for a PR, or set **Full auto → PR**. After changes, the agent handles publishing, including dirty local work without a remote. Your explicit “do not commit/push/open a PR” instructions win.
 
 In an outpost: [requests](outpost-permissions.md), [stacks](stacked-pull-requests.md).
 

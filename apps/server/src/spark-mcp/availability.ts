@@ -41,6 +41,7 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   servicenow: true,
   ticket_create: true,
   rules_edit: true,
+  plugins_edit: true,
 };
 
 async function chatHasProject(deps: SparkToolDeps, scope: SparkScope): Promise<boolean> {
@@ -61,6 +62,11 @@ const MAC_HOW_TO: Partial<Record<MacRefusedRun, string>> = {
 const RULES_HOW_TO: Partial<Record<RulesRefusedRun, string>> = {
   voice: 'spark_rules_edit (never for a spoken message; type it on the Mac)',
   remote: 'spark_rules_edit (not in a turn started from a paired device; ask from the Mac)',
+};
+
+const PLUGINS_HOW_TO: Partial<Record<RulesRefusedRun, string>> = {
+  voice: 'spark_plugins_edit (never for a spoken message; type it on the Mac)',
+  remote: 'spark_plugins_edit (not in a turn started from a paired device; ask from the Mac)',
 };
 
 const ASK_SPARK_HOW_TO: Partial<Record<SparkToolNeed, string>> = {
@@ -108,6 +114,7 @@ export async function sparkAvailability(
   const chat = scope.assistant !== true;
   const macHowTo = macRefused ? MAC_HOW_TO[macRefused] : undefined;
   const rulesHowTo = rulesRefused ? RULES_HOW_TO[rulesRefused] : undefined;
+  const pluginsHowTo = rulesRefused ? PLUGINS_HOW_TO[rulesRefused] : undefined;
   return {
     tickets: sources.length > 0,
     ticket_create: sources.some((open) => open.connection.source !== 'servicenow'),
@@ -125,12 +132,14 @@ export async function sparkAvailability(
     jira,
     confluence,
     rules_edit: rulesRefused === null,
+    plugins_edit: rulesRefused === null,
     ...outposts,
     howTo: {
       ...(calendar.howTo.read ? { calendar_read: calendar.howTo.read } : {}),
       ...(calendar.howTo.edit ? { calendar_edit: calendar.howTo.edit } : {}),
       ...(macHowTo ? { mac: macHowTo } : {}),
       ...(rulesHowTo ? { rules_edit: rulesHowTo } : {}),
+      ...(pluginsHowTo ? { plugins_edit: pluginsHowTo } : {}),
       ...(chat ? {} : ASK_SPARK_HOW_TO),
     },
   };
@@ -153,6 +162,7 @@ const HOW_TO_GET: Record<
     | 'servicenow'
     | 'ticket_create'
     | 'rules_edit'
+    | 'plugins_edit'
   >,
   string
 > = {

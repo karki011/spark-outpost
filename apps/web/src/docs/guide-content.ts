@@ -1,5 +1,5 @@
 import {
-  guideNextSlug,
+  guideNeighbours,
   loadGuidePages,
   resolveGuideLink,
   type GuideLink,
@@ -29,22 +29,15 @@ export interface OpenDoc {
   next: GuidePage | null;
 }
 
-function neighbours(page: GuidePage): Pick<OpenDoc, 'previous' | 'next'> {
-  const section = guidePages.filter((entry) => entry.section === page.section);
-  const index = section.indexOf(page);
-  const nextSlug = guideNextSlug(page);
-  return {
-    previous:
-      guidePages.find((entry) => guideNextSlug(entry) === page.slug) ?? section[index - 1] ?? null,
-    next: (nextSlug ? bySlug.get(nextSlug) : section[index + 1]) ?? null,
-  };
-}
-
 export function openDocFor(route: GuideLink | null): OpenDoc | null {
   const target = route?.slug ? resolveGuideLink(guidePages, route) : null;
   const page = (target && bySlug.get(target.slug)) ?? guidePages[0];
   if (!page) return null;
-  return { page, anchor: target?.slug === page.slug ? target.anchor : null, ...neighbours(page) };
+  return {
+    page,
+    anchor: target?.slug === page.slug ? target.anchor : null,
+    ...guideNeighbours(guidePages, page),
+  };
 }
 
 const imageUrls = new Map(

@@ -59,6 +59,7 @@ export const APP_ORIGIN = `http://127.0.0.1:${PACKAGED ? API_PORT : WEB_PORT}`;
 export const REJECTED_KEY_MARKER = 'rejected';
 export const FAKE_CODEX_STATE = path.join(TEST_TMPDIR, 'fake-codex-logged-in');
 export const FAKE_CLAUDE_BIN = path.join(TEST_TMPDIR, 'fake-claude-bin');
+export const CLAUDE_CONFIG_DIR = path.join(TEST_TMPDIR, 'claude-config');
 export const FAKE_GH_STATE = path.join(TEST_TMPDIR, 'fake-gh-login');
 export const SPARK_RULES_DIR = path.join(TEST_TMPDIR, 'spark-rules');
 export const SPARK_RULES_FILE = path.join(SPARK_RULES_DIR, 'settings.json');

@@ -49,7 +49,8 @@ export type SparkToolNeed =
   | 'confluence'
   | 'servicenow'
   | 'ticket_create'
-  | 'rules_edit';
+  | 'rules_edit'
+  | 'plugins_edit';
 
 export interface SparkTool {
   name: string;

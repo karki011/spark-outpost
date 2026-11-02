@@ -13,6 +13,7 @@ import { openMap, tree } from './map-page.ts';
 import { openChats } from './navigation.ts';
 import { connectTickets, resetTicketFakes } from './ticket-seed.ts';
 import { toggleHeaderPane } from './header-menu.ts';
+import { fixtures, mockPlugins, openPlugins } from './user-plugin-fixtures.ts';
 
 const IMAGES = path.resolve('docs/guide/images');
 
@@ -123,4 +124,24 @@ test('Spark tools screenshots', async ({ page }) => {
   await expect(card).toContainText('Nothing happens until you confirm');
   await shoot(page, IMAGES, 'spark-tools-action-card', card);
   await card.getByRole('button', { name: 'Don’t' }).click();
+});
+
+test('Claude plugins screenshots', async ({ page }) => {
+  test.setTimeout(90_000);
+  await seedDemo(page, repo);
+  const plugins = fixtures().map((item) =>
+    item.key === 'egm@egm' ? { ...item, enabled: true } : item,
+  );
+  await mockPlugins(page, plugins);
+  await page.goto('/');
+  const group = await openPlugins(page);
+  await expect(group.getByRole('switch', { name: 'egm', exact: true })).toBeChecked();
+  await shoot(page, IMAGES, 'use-claude-plugins-list', group);
+
+  await openChats(page);
+  await page.getByRole('button', { name: 'New chat' }).first().click();
+  await page.getByRole('textbox', { name: 'Message' }).fill('/egm');
+  const menu = page.getByRole('listbox', { name: 'Commands' });
+  await expect(menu.getByRole('option')).toHaveCount(3);
+  await shoot(page, IMAGES, 'use-claude-plugins-commands', page.locator('.slashpop'));
 });

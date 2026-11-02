@@ -22,6 +22,7 @@ summary: One-line definitions of the words you see in Spark Outpost - agent, mod
 | **Story**                 | A job a chat [split into sub-tasks](outpost-stories.md), one chat each.                |
 | **Stacked**               | A sub-task whose branch and PR [build on another's](stacked-pull-requests.md).         |
 | **Publish step**          | Spark's one request to the agent to [push and open the PR](ship-and-pull-requests.md). |
+| **Plugin**                | A Claude Code add-on you [turn on](use-claude-plugins.md) for Claude chats.            |
 | **Protected path**        | [Something](protected-paths.md) that always asks or is refused.                        |
 | **Ran without review**    | An audited action in a mode that never asks.                                           |
 | **Scout**                 | Spark's blob, on Spark Island and the app's corner.                                    |

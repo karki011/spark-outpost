@@ -192,6 +192,20 @@ export function guideNextSlug(page: GuidePage): string | null {
   return match ? (guideHrefTarget(match[1]!)?.slug ?? null) : null;
 }
 
+export function guideNeighbours(
+  pages: readonly GuidePage[],
+  page: GuidePage,
+): { previous: GuidePage | null; next: GuidePage | null } {
+  const section = pages.filter((entry) => entry.section === page.section);
+  const index = section.indexOf(page);
+  const nextSlug = guideNextSlug(page);
+  return {
+    previous:
+      pages.find((entry) => guideNextSlug(entry) === page.slug) ?? section[index - 1] ?? null,
+    next: (nextSlug ? pages.find((entry) => entry.slug === nextSlug) : section[index + 1]) ?? null,
+  };
+}
+
 export function guideBodyWithoutNext(page: GuidePage): string {
   return page.body.replace(NEXT_LINK, '\n');
 }
