@@ -24,7 +24,7 @@ Free beta · [0.1.0-beta.38](releases/0.1.0-beta.38.md) · macOS 12+ (Mac contro
 <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-555555"></a>
 </p>
 
-<a href="#features">Features</a> · <a href="#local-first-stated-honestly">Privacy</a> · <a href="docs/guide/getting-started.md">User guide</a> · <a href="#develop">Develop</a>
+<a href="https://spark-outpost.karki011.workers.dev">Website</a> · <a href="#features">Features</a> · <a href="#local-first-stated-honestly">Privacy</a> · <a href="docs/guide/getting-started.md">User guide</a> · <a href="#develop">Develop</a>
 
 <br><br>
 
