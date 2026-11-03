@@ -129,6 +129,7 @@ export const IPC = {
   voiceRemoveModel: 'voice:remove-model',
   voiceSelectModel: 'voice:select-model',
   voiceUpdate: 'voice:update',
+  voiceSetShortcut: 'voice:set-shortcut',
   voiceListen: 'voice:listen',
   voiceStop: 'voice:stop',
   voiceCancel: 'voice:cancel',

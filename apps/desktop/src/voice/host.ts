@@ -38,6 +38,7 @@ export interface VoiceHostOptions {
   userData: string;
   trusted(event: IpcMainInvokeEvent): boolean;
   island(): Electron.WebContents | null;
+  takenBy(accelerator: string): string | null;
   log(line: string): void;
 }
 
@@ -55,6 +56,7 @@ const INVOKE = [
   IPC.voiceRemoveModel,
   IPC.voiceSelectModel,
   IPC.voiceUpdate,
+  IPC.voiceSetShortcut,
   IPC.voiceListen,
   IPC.voiceStop,
   IPC.voiceCancel,
@@ -146,6 +148,7 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
       }
     },
     unregister: (accelerator) => globalShortcut.unregister(accelerator),
+    takenBy: options.takenBy,
     sendTo: (owner, event: VoiceEvent) => {
       const target = webContents.fromId(owner);
       if (target && !target.isDestroyed()) target.send(IPC.voiceEvent, event);
@@ -191,6 +194,14 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
     guard((_event, patch) => {
       const parsed = patchFrom(patch);
       return parsed ? voice.update(parsed) : voice.status();
+    }, null),
+  );
+  ipcMain.handle(
+    IPC.voiceSetShortcut,
+    guard((_event, accelerator) => {
+      if (accelerator === null || typeof accelerator === 'string')
+        return voice.setShortcut(accelerator);
+      return voice.status().then((status) => ({ status, error: 'Not allowed.' }));
     }, null),
   );
   ipcMain.handle(

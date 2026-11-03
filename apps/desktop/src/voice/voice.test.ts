@@ -34,6 +34,7 @@ async function setup(
   const sent: { owner: number; event: VoiceEvent }[] = [];
   const island: VoiceEvent[] = [];
   const registered = new Map<string, () => void>();
+  const elsewhere = new Set<string>();
   const saved: unknown[] = [];
   const published: VoiceStatus[] = [];
   let mic: VoiceMicPermission = options.mic ?? 'granted';
@@ -53,10 +54,12 @@ async function setup(
     vadPath: '/vad.bin',
     fetch: vi.fn(async () => new Response('nope', { status: 500 })),
     register: (accelerator, run) => {
+      if (elsewhere.has(accelerator)) return false;
       registered.set(accelerator, run);
       return true;
     },
     unregister: (accelerator) => registered.delete(accelerator),
+    takenBy: (accelerator) => (accelerator === 'Alt+Space' ? 'Quick chat' : null),
     sendTo: (owner, event) => sent.push({ owner, event }),
     sendIsland: (event) => island.push(event),
     voiceOver: () => false,
@@ -66,7 +69,7 @@ async function setup(
     changed: (status) => published.push(status),
     log: () => undefined,
   });
-  return { voice, sent, island, registered, saved, helper, dir, published };
+  return { voice, sent, island, registered, elsewhere, saved, helper, dir, published };
 }
 
 const settle = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -89,6 +92,46 @@ describe('Voice', () => {
     expect(status.mic).toBe('granted');
     expect(status.model).toBe('ready');
     expect([...scene.registered.keys()]).toEqual(['Alt+Shift+V']);
+    scene.voice.dispose();
+  });
+
+  it('a new shortcut replaces the old one, is saved, and Reset brings back ⌥⇧V', async () => {
+    const scene = await setup();
+    await scene.voice.turnOn();
+    const changed = scene.voice.setShortcut('Control+Alt+M');
+    expect(changed.error).toBeNull();
+    expect(changed.status.settings.shortcut).toBe('Control+Alt+M');
+    expect([...scene.registered.keys()]).toEqual(['Control+Alt+M']);
+    expect(scene.saved.at(-1)).toMatchObject({ shortcut: 'Control+Alt+M' });
+    scene.registered.get('Control+Alt+M')!();
+    expect(scene.island.at(-1)).toEqual({ kind: 'press' });
+    expect(scene.voice.setShortcut(null).status.settings.shortcut).toBe('Alt+Shift+V');
+    expect([...scene.registered.keys()]).toEqual(['Alt+Shift+V']);
+    scene.voice.dispose();
+  });
+
+  it('refuses a shortcut with no modifier, one Spark uses, or one another app holds', async () => {
+    const scene = await setup();
+    await scene.voice.turnOn();
+    scene.elsewhere.add('Control+Alt+M');
+    expect(scene.voice.setShortcut('M').error).toMatch(/modifier/);
+    expect(scene.voice.setShortcut('Alt+Space').error).toBe(
+      'This shortcut already opens Quick chat.',
+    );
+    const taken = scene.voice.setShortcut('Control+Alt+M');
+    expect(taken.error).toMatch(/Another app/);
+    expect(taken.status.settings.shortcut).toBe('Alt+Shift+V');
+    expect(taken.status.shortcutFailed).toBe(false);
+    expect([...scene.registered.keys()]).toEqual(['Alt+Shift+V']);
+    scene.voice.dispose();
+  });
+
+  it('a shortcut picked while Voice is off is saved and bound when it turns on', async () => {
+    const scene = await setup();
+    expect(scene.voice.setShortcut('Control+Alt+M').error).toBeNull();
+    expect(scene.registered.size).toBe(0);
+    await scene.voice.turnOn();
+    expect([...scene.registered.keys()]).toEqual(['Control+Alt+M']);
     scene.voice.dispose();
   });
 

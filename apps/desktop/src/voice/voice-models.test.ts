@@ -51,6 +51,7 @@ async function setup(options: { downloaded?: VoiceModelId[]; settings?: Partial<
     fetch,
     register: () => true,
     unregister: () => undefined,
+    takenBy: () => null,
     sendTo: () => undefined,
     sendIsland: () => undefined,
     voiceOver: () => false,

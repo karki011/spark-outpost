@@ -10,8 +10,12 @@ import {
   type VoiceModel,
   type VoiceModelId,
   type VoiceSettings,
+  type VoiceShortcutResult,
   type VoiceStatus,
+  VOICE_DEFAULT_SHORTCUT,
 } from '@spark-outpost/contracts';
+import { SHORTCUT_INVALID, SHORTCUT_TAKEN } from '../companion.ts';
+import { isAccelerator } from '../companion-settings.ts';
 import type { VoiceHelper } from './helper-process.ts';
 import type { FetchModel } from './model.ts';
 import { createModelStore } from './model-store.ts';
@@ -29,6 +33,7 @@ export interface VoiceEffects {
   fetch: FetchModel;
   register(accelerator: string, run: () => void): boolean;
   unregister(accelerator: string): void;
+  takenBy(accelerator: string): string | null;
   sendTo(owner: number, event: VoiceEvent): void;
   sendIsland(event: VoiceEvent): void;
   voiceOver(): boolean;
@@ -108,6 +113,20 @@ export function createVoice(effects: VoiceEffects) {
     if (!wanted) return;
     if (effects.register(wanted, () => press())) registered = wanted;
     else shortcutFailed = true;
+  };
+
+  const rebind = (next: string): boolean => {
+    const previous = registered;
+    if (previous) effects.unregister(previous);
+    registered = null;
+    if (effects.register(next, () => press())) {
+      registered = next;
+      shortcutFailed = false;
+      return true;
+    }
+    if (previous && effects.register(previous, () => press())) registered = previous;
+    else shortcutFailed = true;
+    return false;
   };
 
   const watchKeys = async () => {
@@ -320,6 +339,22 @@ export function createVoice(effects: VoiceEffects) {
       if (patch.speakAnswers === false) hush();
       await applyKeys();
       return snapshot();
+    },
+
+    setShortcut(accelerator: string | null): VoiceShortcutResult {
+      const fail = (error: string) => ({ status: snapshot(), error });
+      const next = accelerator ?? VOICE_DEFAULT_SHORTCUT;
+      if (!isAccelerator(next)) return fail(SHORTCUT_INVALID);
+      const owner = effects.takenBy(next);
+      if (owner) return fail(`This shortcut already opens ${owner}.`);
+      if (next === settings.shortcut) return { status: snapshot(), error: null };
+      if (settings.enabled && !rebind(next)) {
+        publish();
+        return fail(SHORTCUT_TAKEN);
+      }
+      commit({ ...settings, shortcut: next });
+      publish();
+      return { status: snapshot(), error: null };
     },
 
     shortcut: () => (settings.enabled ? settings.shortcut : null),

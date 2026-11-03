@@ -5,6 +5,7 @@ import type {
   VoiceModelId,
   VoicePurpose,
   VoiceSettings,
+  VoiceShortcutResult,
   VoiceStatus,
 } from '@spark-outpost/contracts';
 
@@ -23,6 +24,7 @@ export interface DesktopSpeech {
   update(
     patch: Partial<Pick<VoiceSettings, 'speakAnswers' | 'shortcutMode' | 'hold'>>,
   ): Promise<VoiceStatus | null>;
+  setShortcut(accelerator: string | null): Promise<VoiceShortcutResult | null>;
   listen(purpose: VoicePurpose, hint: string, file?: string): Promise<VoiceListenResult>;
   stop(id: string): Promise<void>;
   cancel(id: string): Promise<void>;

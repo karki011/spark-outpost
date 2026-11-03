@@ -1,4 +1,4 @@
-import { useId, useState, type KeyboardEvent } from 'react';
+import { useId } from 'react';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import {
   companionAvailable,
@@ -6,13 +6,12 @@ import {
   type CompanionStatus,
   type IslandAction,
 } from '../desktop/desktop-bridge.ts';
-import { acceleratorFromKey, shortcutKeys } from '../desktop/shortcut-keys.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 import type { DocTarget } from '../ui/DocLink.tsx';
-import { Keys } from '../ui/Keys.tsx';
 import { ISLAND_HEIGHT_LABEL, IslandHeightSetting } from './IslandHeightSetting.tsx';
 import { ISLAND_SIZE_LABEL, IslandSizeSetting } from './IslandSizeSetting.tsx';
 import { SettingRow } from './SettingRow.tsx';
+import { RECORDING_HINT, ShortcutPicker, useShortcutPicker } from './ShortcutPicker.tsx';
 import { SHOW_ISLAND_LABEL } from './setting-labels.ts';
 
 const CHIMES = 'Island chimes';
@@ -71,35 +70,19 @@ function ShortcutSetting({
   status: CompanionStatus;
 }) {
   const hintId = useId();
-  const [recording, setRecording] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const accelerator = status.shortcuts[action];
   const failed = status.failed.includes(action);
-
-  const save = async (next: string | null) => {
+  const picker = useShortcutPicker(async (next) => {
     const result = await sparkDesktop()!.companion.setShortcut(action, next);
-    setError(result.ok ? null : result.error);
-  };
-
-  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (!recording) return;
-    event.preventDefault();
-    if (event.key === 'Escape') {
-      setRecording(false);
-      return;
-    }
-    const next = acceleratorFromKey(event);
-    if (!next) return;
-    setRecording(false);
-    void save(next);
-  };
+    return result.ok ? null : result.error;
+  });
 
   const shown =
-    error ??
+    picker.error ??
     (failed
       ? 'Another app is using this shortcut. Pick a different one.'
-      : recording
-        ? 'Press the new keys, or Escape to cancel.'
+      : picker.recording
+        ? RECORDING_HINT
         : hint);
   return (
     <SettingRow
@@ -108,29 +91,13 @@ function ShortcutSetting({
       hint={shown}
       hintId={hintId}
     >
-      <span className="desk-shortcut">
-        <Keys keys={shortcutKeys(accelerator)} />
-        <button
-          type="button"
-          className="btn line sm"
-          aria-describedby={hintId}
-          aria-label={recording ? `Recording ${label}` : `Change ${label}`}
-          onClick={() => setRecording(!recording)}
-          onKeyDown={onKeyDown}
-          onBlur={() => setRecording(false)}
-        >
-          {recording ? 'Press keys…' : 'Change'}
-        </button>
-        <button
-          type="button"
-          className="btn ghost sm"
-          disabled={accelerator === DEFAULTS[action]}
-          onClick={() => void save(null)}
-          aria-label={`Reset ${label}`}
-        >
-          Reset
-        </button>
-      </span>
+      <ShortcutPicker
+        label={label}
+        accelerator={accelerator}
+        isDefault={accelerator === DEFAULTS[action]}
+        describedBy={hintId}
+        picker={picker}
+      />
     </SettingRow>
   );
 }

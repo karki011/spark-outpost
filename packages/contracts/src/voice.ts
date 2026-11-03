@@ -222,6 +222,11 @@ export interface VoiceStatus {
   language: string;
 }
 
+export interface VoiceShortcutResult {
+  status: VoiceStatus;
+  error: string | null;
+}
+
 export type VoiceEvent =
   | { kind: 'press'; file?: string }
   | { kind: 'release' }

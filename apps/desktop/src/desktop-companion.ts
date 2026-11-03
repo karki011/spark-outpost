@@ -11,7 +11,12 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron';
 import { isIslandHeight, parseIslandRegions } from '@spark-outpost/contracts';
-import { createCompanion, type Companion, type CompanionStatus } from './companion.ts';
+import {
+  createCompanion,
+  SHORTCUT_NAMES,
+  type Companion,
+  type CompanionStatus,
+} from './companion.ts';
 import {
   isIslandSize,
   loadSettings,
@@ -338,6 +343,11 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       BrowserWindow.getAllWindows().find(
         (window) => !window.isDestroyed() && island?.owns(window.webContents.id),
       )?.webContents ?? null,
+    takenBy: (accelerator) => {
+      const { shortcuts } = companion.status();
+      const action = SHORTCUT_ACTIONS.find((each) => shortcuts[each] === accelerator);
+      return action ? SHORTCUT_NAMES[action] : null;
+    },
     log: options.log,
   });
 

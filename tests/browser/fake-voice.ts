@@ -31,6 +31,7 @@ export async function installFakeVoice(page: Page, options: FakeVoiceOptions = {
       enabled: settings.enabled ?? true,
       speakAnswers: settings.speakAnswers ?? false,
       shortcutMode: 'keys',
+      shortcut: 'Alt+Shift+V',
       hold: false,
       model: settings.model ?? 'whisper-base',
     };
@@ -51,7 +52,7 @@ export async function installFakeVoice(page: Page, options: FakeVoiceOptions = {
         enabled: state.enabled,
         speakAnswers: state.speakAnswers,
         shortcutMode: state.shortcutMode,
-        shortcut: 'Alt+Shift+V',
+        shortcut: state.shortcut,
         hold: state.hold,
         model: state.model,
       },
@@ -169,6 +170,14 @@ export async function installFakeVoice(page: Page, options: FakeVoiceOptions = {
             Object.assign(state, patch);
             publish();
             return status();
+          },
+          setShortcut: async (accelerator: string | null) => {
+            record('setShortcut', accelerator);
+            if (accelerator === 'Alt+Space')
+              return { status: status(), error: 'This shortcut already opens Quick chat.' };
+            state.shortcut = accelerator ?? 'Alt+Shift+V';
+            publish();
+            return { status: status(), error: null };
           },
           listen: async (purpose: string, hint: string) => {
             record('listen', purpose, hint);

@@ -37,7 +37,7 @@ The usage string: "Spark Outpost listens only while you press the Voice shortcut
 
 ## The shortcut
 
-**Fn pressed twice, like macOS Dictation, when the Fn monitor can run; otherwise ⌥⇧V**, changeable in Settings → Spark → Around the app (`parseShortcuts` keeps it distinct from the other two).
+**Fn pressed twice, like macOS Dictation, when the Fn monitor can run; otherwise a key shortcut**, ⌥⇧V by default and recorded in Settings → Voice → **Shortcut** (Change, Reset). `setShortcut` (IPC only) refuses keys without a modifier and keys the island's shortcuts use, and the island refuses the Voice shortcut; when another app holds the keys, the old shortcut is bound again and the card says so.
 
 - **Fn needs a key monitor.** Electron's `globalShortcut` can't register a modifier. The helper runs a listen-only `CGEventTap` on `flagsChanged` (`maskSecondaryFn`), which needs Input Monitoring; an `NSEvent` global monitor would need Accessibility. Two Fn presses within 400 ms with no other key between count. While secure input is on, macOS sends the tap nothing; ⌥⇧V still works.
 - **macOS may already use Fn.** **Press 🌐 key to** (input source, Emoji, Dictation) and the Dictation shortcut (**Press 🌐 twice**) act on the same presses, and a listen-only tap can't stop them. Spark offers Fn twice only when 🌐 does nothing and Dictation doesn't use it; otherwise it names the setting in the way and uses ⌥⇧V. The preference keys are **to verify** (`AppleFnUsageType` in `com.apple.HIToolbox` is expected).
@@ -251,7 +251,7 @@ No Phase 1 PR is done until each check below has run on this Mac and the PR repo
 How Phase 1 settles what the design left open:
 
 - **Settings live in Electron main** (`voice-settings.json` beside `companion.json`), reached over IPC only: no route, no migration, nothing a paired device can reach.
-- **The shortcut is ⌥⇧V**, fixed for now; the island's shortcuts refuse it. Changing it waits for the Settings regrouping.
+- **The shortcut is ⌥⇧V** by default; Phase 2 lets the user record another (see [The shortcut](#the-shortcut)).
 - **Protocol:** every message carries `id` and `event`; `load` also takes the bundled VAD path; `stop` and `cancel` name the listen's id; a third `listen` purpose, `confirm`, ends like a command.
 - **File input** is accepted only when the host starts the helper with `--allow-file-input`, which only an unpackaged app with `SPARK_VOICE_FILE_INPUT=1` does; that app also exposes `testPress(wav)`, which presses the shortcut with a WAV in place of the mic.
 - **Fn twice is offered** when `AppleFnUsageType` in `com.apple.HIToolbox` is 0 and `Dictation Enabled` in `com.apple.assistant.support` is off. An absent `AppleFnUsageType` counts as Emoji (the macOS default). Dictation's own shortcut key is not read, so Dictation on with another shortcut still blocks Fn twice. **Hold to talk** listens while the second Fn press is held.

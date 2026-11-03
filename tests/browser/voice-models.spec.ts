@@ -43,6 +43,48 @@ test('Settings: picking a model that isn’t downloaded downloads it, then uses 
   await card.screenshot({ path: testInfo.outputPath('speech-model-dark.png') });
 });
 
+test('Settings: the Voice shortcut is recorded from the keys pressed and can be reset', async ({
+  page,
+}, testInfo) => {
+  await resetTestDatabase({ onboarded: true });
+  await installFakeVoice(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Voice' }).click();
+  const card = page.getByRole('dialog', { name: 'Voice' }).getByRole('region', {
+    name: 'Voice shortcut',
+  });
+  await expect(card.getByRole('radio', { name: 'Use ⌥⇧V' })).toBeChecked();
+  await expect(card.getByRole('button', { name: 'Reset Voice shortcut' })).toBeDisabled();
+
+  await card.getByRole('button', { name: 'Change Voice shortcut' }).click();
+  const recording = card.getByRole('button', { name: 'Recording Voice shortcut' });
+  await expect(recording).toBeFocused();
+  await expect(card).toContainText('Press the new keys, or Escape to cancel.');
+  await page.keyboard.press('Alt+Space');
+  await expect(card).toContainText('This shortcut already opens Quick chat.');
+
+  await card.getByRole('button', { name: 'Change Voice shortcut' }).click();
+  await page.keyboard.press('M');
+  await expect(recording).toBeFocused();
+  await page.keyboard.press('Control+Alt+M');
+  await expect(card.getByRole('radio', { name: 'Use ⌃⌥M' })).toBeChecked();
+  await expect(card).toContainText('Any modifier with a letter, number or Space.');
+  await page.screenshot({ path: testInfo.outputPath('voice-shortcut.png') });
+
+  await card.getByRole('button', { name: 'Change Voice shortcut' }).click();
+  await page.keyboard.press('Escape');
+  await expect(card.getByRole('radio', { name: 'Use ⌃⌥M' })).toBeChecked();
+
+  await card.getByRole('button', { name: 'Reset Voice shortcut' }).click();
+  await expect(card.getByRole('radio', { name: 'Use ⌥⇧V' })).toBeChecked();
+  expect(await ops(page)).toEqual([
+    'setShortcut Alt+Space',
+    'setShortcut Control+Alt+M',
+    'setShortcut ',
+  ]);
+});
+
 test('Settings: a download can be cancelled and the model in use stays', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await installFakeVoice(page, { downloaded: ['whisper-base'], downloadStepMs: 2_000 });

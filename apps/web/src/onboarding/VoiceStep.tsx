@@ -70,8 +70,8 @@ export function VoiceStep({ choice, recommended, onChoose }: VoiceStepProps) {
     <>
       <h2 id="onbTitle">Talk to Spark</h2>
       <p className="lede">
-        Press <kbd>⌥⇧V</kbd>, speak, and Spark turns it into text on this Mac. Pick a speech model,
-        or skip and turn Voice on later in Settings.
+        Press <kbd>⌥⇧V</kbd> (or your own shortcut, set in Settings → Voice), speak, and Spark turns
+        it into text on this Mac. Pick a speech model, or skip and turn Voice on later.
       </p>
       <div className="voice-opts" role="radiogroup" aria-labelledby="onbTitle">
         {VOICE_MODELS.map((model) => (
