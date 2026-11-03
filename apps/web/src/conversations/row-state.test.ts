@@ -190,27 +190,32 @@ describe('attention', () => {
     });
     const third = asking('00000000-0000-4000-8000-00000000000c', 'Docs');
     const all = new Set([first.id, second.id, third.id]);
-    expect(attention([first], null, all)).toMatchObject({
+    expect(attention([first], [], all)).toMatchObject({
       count: 1,
       text: 'Deploy needs your input',
     });
-    expect(attention([first], first.id, all)).toEqual({ count: 1, others: [], text: null });
-    expect(attention([first, second], first.id, all)).toEqual({
+    expect(attention([first], [first.id], all)).toEqual({ count: 1, others: [], text: null });
+    expect(attention([first, second], [first.id], all)).toEqual({
       count: 2,
       others: [second],
       text: 'Migrate needs your permission',
     });
-    expect(attention([first, second, third], null, all)).toMatchObject({
+    expect(attention([first, second], [first.id, second.id], all)).toEqual({
+      count: 2,
+      others: [],
+      text: null,
+    });
+    expect(attention([first, second, third], [], all)).toMatchObject({
       count: 3,
       text: '3 chats need you',
     });
     const archived = { ...first, archivedAt: '2026-09-26T00:00:00.000Z' };
-    expect(attention([archived], null, all).count).toBe(0);
+    expect(attention([archived], [], all).count).toBe(0);
   });
 
   it('counts only chats with an unread request, as the island and the Dock do', () => {
     const first = asking('00000000-0000-4000-8000-00000000000a', 'Deploy');
-    expect(attention([first], null, new Set()).count).toBe(0);
+    expect(attention([first], [], new Set()).count).toBe(0);
   });
 });
 
@@ -229,7 +234,7 @@ describe('rowState for a chat Spark flagged', () => {
       label: 'Flagged by Spark',
       sub: flag.title,
     });
-    expect(attention([flagged], null, new Set()).count).toBe(0);
+    expect(attention([flagged], [], new Set()).count).toBe(0);
     expect(rowState({ ...flagged, latestRun: run('running') }, false).tone).toBe('running');
   });
 });

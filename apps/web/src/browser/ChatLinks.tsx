@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { usePaneFocused } from '../chat/split/chat-pane.ts';
 import { anchorFor } from '../conversations/menu-anchor.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { anchorOf, linkAction, linkFacts, openInPane, paneTarget } from './chat-links.ts';
@@ -8,8 +9,10 @@ import type { BrowserHome } from './use-view-placement.ts';
 export function ChatLinks({ home }: { home: BrowserHome }) {
   const [menu, setMenu] = useState<OpenLinkMenu | null>(null);
   const open = useStableCallback((url: string) => void openInPane(home, url));
+  const focused = usePaneFocused();
 
   useEffect(() => {
+    if (!focused) return;
     const onClick = (event: MouseEvent) => {
       const anchor = anchorOf(event.target);
       if (!anchor) return;
@@ -32,7 +35,7 @@ export function ChatLinks({ home }: { home: BrowserHome }) {
       document.removeEventListener('click', onClick);
       document.removeEventListener('contextmenu', onContextMenu);
     };
-  }, [open]);
+  }, [open, focused]);
 
   if (!menu) return null;
   return <LinkMenu menu={menu} openInPane={open} onClose={() => setMenu(null)} />;

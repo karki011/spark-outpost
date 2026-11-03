@@ -22,7 +22,7 @@ Only your name and one provider are required. Change the rest in **Settings**.
 ## Bring in your tools
 
 1. [Connect an AI provider](connect-a-provider.md): Claude, Codex or Z.ai.
-2. On **Tools**, check the **Git** card. If Git is missing, select **Install Xcode Command Line Tools**, then **Check again**.
+2. On **Tools**, check the **Git** card; if missing, select **Install Xcode Command Line Tools**, then **Check again**.
 3. Optionally connect **GitHub**, **Atlassian** or **Linear**, then **Continue**.
 
 ![The Bring in your tools step with Git found](images/getting-started-tools-light.png)
@@ -34,7 +34,7 @@ Spark needs Git to change code. The Mac app adds optional **Mac access** ([Full 
 1. On **You're all set**, select **Open Spark Outpost**.
 2. Select **New chat** (**⌘⇧O**).
 3. Select **Choose project** and pick a folder.
-4. Type a small task, such as `Add a dark mode toggle to the dashboard`, and press **Enter**.
+4. Type a small task, such as `Add a dark mode toggle`, and press **Enter**.
 
 ![The final step summarising name, appearance, provider and tools](images/getting-started-done-light.png)
 

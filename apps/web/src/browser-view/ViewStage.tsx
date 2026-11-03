@@ -7,7 +7,8 @@ import { useNativePlacement, type PlaceView } from '../browser/use-view-placemen
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { SpinnerIcon } from '../ui/icons.tsx';
-import { SplitDivider, useSplitRatio } from './SplitDivider.tsx';
+import { SplitDivider, percent } from '../ui/SplitDivider.tsx';
+import { useSplitRatio } from './split-ratio.ts';
 import { sendViewCommand } from './view-store.ts';
 
 export function StartPage({
@@ -118,7 +119,13 @@ export function SplitStage({ profile, split, tabs, images }: SplitStageProps) {
   return (
     <div className="bv-split" style={{ '--bv-split': ratio } as CSSProperties}>
       <SplitSide key={left.id} profile={profile} tab={left} image={images[left.id] ?? null} />
-      <SplitDivider ratio={ratio} move={move} commit={commit} />
+      <SplitDivider
+        ratio={ratio}
+        label="Resize split view"
+        valueText={`Left page ${percent(ratio)} percent. Arrow keys resize, Enter resets.`}
+        move={move}
+        commit={commit}
+      />
       <SplitSide key={right.id} profile={profile} tab={right} image={images[right.id] ?? null} />
     </div>
   );

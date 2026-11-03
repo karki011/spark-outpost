@@ -17,6 +17,7 @@ interface ChatRowMenuProps {
   folderActions: readonly PickerAction[];
   onClose: () => void;
   onRename: () => void;
+  onOpenBeside: (() => void) | null;
 }
 
 export function ChatRowMenu({
@@ -29,6 +30,7 @@ export function ChatRowMenu({
   folderActions,
   onClose,
   onRename,
+  onOpenBeside,
 }: ChatRowMenuProps) {
   const outpostSeam = useOutpostSeam();
   const pinned = chat.pinnedAt && !chat.archivedAt ? pinnedSiblings(chats, chat) : [];
@@ -58,6 +60,7 @@ export function ChatRowMenu({
       }
       onClose={onClose}
       onRename={onRename}
+      onOpenBeside={onOpenBeside}
       onAutoTitle={(on) => actions.setAutoTitle(chat, on)}
       onPin={() => actions.pin(chat)}
       onCopyLink={() => actions.copyLink(chat)}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSidebarLayout } from '../conversations/sidebar-layout.tsx';
 import { MAC } from '../ui/shortcuts.ts';
+import { usePaneFocused } from '../chat/split/chat-pane.ts';
 
 const FOCUS_KEY = 'spark-outpost.terminal.focus';
 
@@ -59,6 +60,7 @@ export function useTerminalFocus(chatId: string, panel: FocusPanel | null, avail
     latest.current = { sidebar, panel };
   });
   const active = focused && available;
+  const paneFocused = usePaneFocused();
   const sidebarShown = sidebar !== null && !sidebar.narrow && !sidebar.collapsed;
   const panelOpen = panel?.open ?? false;
 
@@ -95,7 +97,7 @@ export function useTerminalFocus(chatId: string, panel: FocusPanel | null, avail
   });
 
   useEffect(() => {
-    if (!available) return;
+    if (!available || !paneFocused) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (!isFocusShortcut(event)) return;
       if (document.querySelector('[aria-modal="true"]')) return;
@@ -105,7 +107,7 @@ export function useTerminalFocus(chatId: string, panel: FocusPanel | null, avail
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [available]);
+  }, [available, paneFocused]);
 
   return { focused: active, toggle };
 }

@@ -1,4 +1,4 @@
-.view.in-outpost > :is(.main:not(.op), .wp, .wp-scrim) {
+.view.in-outpost > :is(.main:not(.op), .cpanes) {
   display: none;
 }
 
@@ -90,7 +90,8 @@
     opacity: 0;
   }
 
-  .view > .main {
+  .view > .main,
+  .view > .cpanes > .cpane > .main {
     transition:
       margin-left var(--panel-dur) var(--panel-ease),
       border-color 0.15s;
@@ -103,7 +104,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .side,
-  .view > .main {
+  .view > .main,
+  .view > .cpanes > .cpane > .main {
     transition: none;
   }
 

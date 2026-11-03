@@ -1,16 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { onScreenChatId } from './on-screen.ts';
+import { onScreenChatIds } from './on-screen.ts';
 
-const SHOWN = { chatsView: true, outpostOpen: false, settingsOpen: false, activeId: 'chat-a' };
+const SHOWN = {
+  chatsView: true,
+  outpostOpen: false,
+  settingsOpen: false,
+  shownIds: ['chat-a'],
+};
 
-describe('onScreenChatId', () => {
+describe('onScreenChatIds', () => {
   it('is the active chat while the chat pane shows it', () => {
-    expect(onScreenChatId(SHOWN)).toBe('chat-a');
+    expect(onScreenChatIds(SHOWN)).toEqual(['chat-a']);
+  });
+
+  it('is both chats of a split', () => {
+    expect(onScreenChatIds({ ...SHOWN, shownIds: ['chat-a', 'chat-b'] })).toEqual([
+      'chat-a',
+      'chat-b',
+    ]);
   });
 
   it('is no chat while another view, an outpost or Settings covers the chat pane', () => {
-    expect(onScreenChatId({ ...SHOWN, chatsView: false })).toBeNull();
-    expect(onScreenChatId({ ...SHOWN, outpostOpen: true })).toBeNull();
-    expect(onScreenChatId({ ...SHOWN, settingsOpen: true })).toBeNull();
+    expect(onScreenChatIds({ ...SHOWN, chatsView: false })).toEqual([]);
+    expect(onScreenChatIds({ ...SHOWN, outpostOpen: true })).toEqual([]);
+    expect(onScreenChatIds({ ...SHOWN, settingsOpen: true })).toEqual([]);
   });
 });

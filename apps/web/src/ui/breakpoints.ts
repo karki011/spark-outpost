@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 export const PHONE_QUERY = '(max-width: 640px), (max-height: 500px) and (pointer: coarse)';
+export const TABLET_QUERY = '(max-width: 899px)';
 export const DOCK_QUERY = '(min-width: 1101px)';
 export const ROOMY_DOCK_QUERY = '(min-width: 1280px)';
 export const TOUCH_QUERY = '(pointer: coarse)';

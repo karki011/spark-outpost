@@ -4,16 +4,18 @@ export interface ScreenState {
   chatsView: boolean;
   outpostOpen: boolean;
   settingsOpen: boolean;
-  activeId: string | null;
+  shownIds: readonly string[];
 }
 
-export function onScreenChatId(screen: ScreenState): string | null {
-  if (!screen.chatsView || screen.outpostOpen || screen.settingsOpen) return null;
-  return screen.activeId;
+const NONE: readonly string[] = [];
+
+export function onScreenChatIds(screen: ScreenState): readonly string[] {
+  if (!screen.chatsView || screen.outpostOpen || screen.settingsOpen) return NONE;
+  return screen.shownIds;
 }
 
-export const OnScreenChat = createContext<string | null>(null);
+export const OnScreenChat = createContext<readonly string[]>(NONE);
 
 export function useChatOnScreen(chatId: string): boolean {
-  return useContext(OnScreenChat) === chatId;
+  return useContext(OnScreenChat).includes(chatId);
 }

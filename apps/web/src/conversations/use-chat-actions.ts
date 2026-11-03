@@ -56,6 +56,7 @@ interface ChatActionsOptions {
   nextChatId: (excluding: string) => string | null;
   onSelect: (id: string) => void;
   onNew: () => string;
+  onLeave: (id: string) => boolean;
 }
 
 export function useChatActions({
@@ -65,6 +66,7 @@ export function useChatActions({
   nextChatId,
   onSelect,
   onNew,
+  onLeave,
 }: ChatActionsOptions) {
   const client = useQueryClient();
   const [deleting, setDeleting] = useState<ReadonlySet<string>>(new Set());
@@ -183,7 +185,8 @@ export function useChatActions({
       toaster.show({ text: `Restored ${chat.title} to Active` });
       return;
     }
-    const newChatId = wasOpen ? onNew() : null;
+    const left = onLeave(chat.id);
+    const newChatId = wasOpen && !left ? onNew() : null;
     toaster.show({
       text: `Archived ${chat.title}`,
       undo: () => {
@@ -225,7 +228,7 @@ export function useChatActions({
 
   const remove = (chat: ConversationSummary) => {
     setDeletingId(chat.id, true);
-    if (chat.id === selectedId) {
+    if (!onLeave(chat.id) && chat.id === selectedId) {
       const next = nextChatId(chat.id);
       if (next) onSelect(next);
       else onNew();

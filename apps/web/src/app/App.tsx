@@ -1,9 +1,9 @@
 import {
   lazy,
-  memo,
   Suspense,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -14,7 +14,8 @@ import type { ConversationSummary, SetupState } from '@spark-outpost/contracts';
 import { AnalyticsSkeleton } from '../analytics/AnalyticsSkeleton.tsx';
 import { api, newDraftId, queryKeys } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
-import { ChatView } from '../chat/ChatView.tsx';
+import { ChatPanes } from '../chat/split/ChatPanes.tsx';
+import { useChatSplit } from '../chat/split/use-chat-split.ts';
 import { queueDraft } from '../chat/composer/pending-draft.ts';
 import { StatusCompanion } from '../companion/StatusCompanion.tsx';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
@@ -24,9 +25,8 @@ import { turnAnchor } from '../chat/outline/outline-model.ts';
 import { ConversationList } from '../conversations/ConversationList.tsx';
 import { attention, isRunning, rowState } from '../conversations/row-state.ts';
 import { SidebarLayoutProvider, useSidebarLayoutState } from '../conversations/sidebar-layout.tsx';
-import { useChatViewed } from '../conversations/use-chat-viewed.ts';
-import { useMarkSeen } from '../conversations/use-mark-seen.ts';
-import { OnScreenChat, onScreenChatId } from '../conversations/on-screen.ts';
+import { useSeenChats } from '../conversations/use-chat-viewed.ts';
+import { OnScreenChat, onScreenChatIds } from '../conversations/on-screen.ts';
 import { isDocLinkOpen, leaveDocs, useDocLinks } from '../docs/doc-route.ts';
 import { DocsSkeleton } from '../docs/DocsSkeleton.tsx';
 import { Home } from '../home/Home.tsx';
@@ -78,7 +78,6 @@ import { useAlertingChats } from '../attention/use-attention.ts';
 import { useAttentionReport } from '../desktop/use-attention-report.ts';
 import { useChatRequests } from './chat-request.ts';
 import { useSlackPresence } from '../slack/use-slack-presence.ts';
-import { useCloseSeenNotifications } from '../phone/close-seen-notifications.ts';
 import { useNotificationChats } from '../phone/use-notification-chats.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { useChatRetention } from './chat-retention.ts';
@@ -88,7 +87,7 @@ import '../ui/controls.css';
 import { openTodayEvent, useTodayOpener } from '../calendar/today-request.ts';
 import { browserViewAvailable, useBrowserViewOpener } from '../browser-view/view-store.ts';
 
-const StableChatView = memo(ChatView);
+const NO_IDS: readonly string[] = [];
 
 const MapPage = lazy(() =>
   import('../map/MapPage.tsx').then((module) => ({ default: module.MapPage })),
@@ -102,15 +101,20 @@ function ChatShell({ entering }: { entering: boolean }) {
   const queryClient = useQueryClient();
   const live = useAppEvents();
   const connection = useConnection();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const { route: outpost, show: showOutpost, close: closeOutpost } = useOutpostRoute();
   const openOutpostId = outpost?.id ?? null;
+  const conversations = useQuery({
+    queryKey: queryKeys.conversations,
+    queryFn: api.listConversations,
+  });
+  const split = useChatSplit(conversations.data);
+  const showInPane = split.show;
   const selectChat = useCallback(
     (id: string) => {
-      setSelectedId(id);
+      showInPane(id);
       closeOutpost();
     },
-    [closeOutpost],
+    [showInPane, closeOutpost],
   );
   const [draftId, setDraftId] = useState(newDraftId);
   const [settings, setSettings] = useSettingsState();
@@ -141,13 +145,9 @@ function ChatShell({ entering }: { entering: boolean }) {
     [setView, queryClient],
   );
   useTicketRequests(openTicket);
-  const conversations = useQuery({
-    queryKey: queryKeys.conversations,
-    queryFn: api.listConversations,
-  });
   const chats = conversations.data ?? [];
   const alerting = useAlertingChats();
-  const waiting = attention(chats, null, alerting).count;
+  const waiting = attention(chats, [], alerting).count;
   const { inbox } = useTicketInbox();
   const ticketsWaiting = (inbox.data?.tickets ?? []).filter(
     (ticket) => ticket.section === 'attention',
@@ -234,19 +234,28 @@ function ChatShell({ entering }: { entering: boolean }) {
   };
 
   const activeId =
-    selectedId ??
+    split.primary ??
     chats.find((chat) => !chat.archivedAt)?.id ??
     (conversations.data ? draftId : null);
-  const onScreenId = onScreenChatId({
+  const besideId = activeId ? split.secondary : null;
+  const shownIds = useMemo(
+    () => [activeId, besideId].filter((id): id is string => id !== null),
+    [activeId, besideId],
+  );
+  const onScreenIds = onScreenChatIds({
     chatsView: view === 'chats',
     outpostOpen: openOutpostId !== null,
     settingsOpen: settings !== null,
-    activeId,
+    shownIds,
   });
-  useChatRetention(activeId);
-  const viewedHere = useChatViewed(onScreenId);
-  useMarkSeen(viewedHere ? onScreenId : null, chats);
-  useCloseSeenNotifications(remote, chats, viewedHere ? onScreenId : null);
+  const listedIds = openOutpostId ? NO_IDS : shownIds;
+  useChatRetention(split.focus === 'secondary' ? besideId : activeId);
+  useSeenChats(onScreenIds, chats, remote);
+  const openBeside = useStableCallback((id: string) => {
+    split.openBeside(id, activeId);
+    closeOutpost();
+    setView('chats');
+  });
 
   const classes = [
     'app',
@@ -279,10 +288,12 @@ function ChatShell({ entering }: { entering: boolean }) {
           />
           <div className={openOutpostId ? 'view in-outpost' : 'view'} hidden={view !== 'chats'}>
             <FreezeWhileHidden hidden={view !== 'chats'}>
-              <OnScreenChat.Provider value={onScreenId}>
+              <OnScreenChat.Provider value={onScreenIds}>
                 <ConversationList
-                  selectedId={openOutpostId ? null : activeId}
+                  selectedIds={listedIds}
                   onSelect={selectChat}
+                  onOpenBeside={split.canSplit ? openBeside : null}
+                  onLeave={split.leave}
                   onNew={startDraft}
                   onNewInProject={startDraftInProject}
                 />
@@ -290,7 +301,7 @@ function ChatShell({ entering }: { entering: boolean }) {
               <div className="scrim" aria-hidden="true" onClick={layout.closeDrawer} />
               <FreezeWhileHidden hidden={openOutpostId !== null}>
                 {activeId ? (
-                  <StableChatView key={activeId} conversationId={activeId} onOpenChat={openChat} />
+                  <ChatPanes primary={activeId} control={split} onOpenChat={openChat} />
                 ) : (
                   <main className="main" aria-busy="true" />
                 )}

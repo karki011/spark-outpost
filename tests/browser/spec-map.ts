@@ -45,6 +45,7 @@ export const SPEC_GROUPS = {
     'chat-rail',
     'chat-send',
     'chat-share',
+    'chat-split',
     'chat-ticks',
     'compaction',
     'composer-menus-fit',

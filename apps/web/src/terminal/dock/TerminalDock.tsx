@@ -25,6 +25,7 @@ import {
 import { StopShellConfirm } from './StopShellConfirm.tsx';
 import { CHAT_MENU_BUTTON_ID } from '../../audit/ChatHeaderMenu.tsx';
 import { TERMINAL_DOCK_ID } from './terminal-pane.tsx';
+import { usePaneId } from '../../chat/split/chat-pane.ts';
 
 interface Stopping {
   tabId: string;
@@ -126,6 +127,8 @@ function OpenDock({ chatId, shells }: { chatId: string; shells: ChatShells }) {
   const body = useRef<HTMLDivElement>(null);
   const [stopping, setStopping] = useState<Stopping | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const dockId = usePaneId(TERMINAL_DOCK_ID);
+  const menuButtonId = usePaneId(CHAT_MENU_BUTTON_ID);
   const addTip = useTooltip('New terminal');
   const hideTip = useTooltip('Hide terminal');
   const active = shells.tabs.find((tab) => tab.id === shells.activeId) ?? null;
@@ -166,13 +169,13 @@ function OpenDock({ chatId, shells }: { chatId: string; shells: ChatShells }) {
     setStopping(null);
     setAnnouncement(`Stopped ${command}.`);
     closeShell(chatId, tabId, true);
-    if (chatOf(chatId).tabs.length === 0) document.getElementById(CHAT_MENU_BUTTON_ID)?.focus();
+    if (chatOf(chatId).tabs.length === 0) document.getElementById(menuButtonId)?.focus();
   };
 
   return (
     <section
       ref={section}
-      id={TERMINAL_DOCK_ID}
+      id={dockId}
       className="term-dock"
       aria-label="Terminal"
       style={{ '--term-h': `${height}px` } as CSSProperties}
@@ -213,7 +216,7 @@ function OpenDock({ chatId, shells }: { chatId: string; shells: ChatShells }) {
           {...hideTip.triggerProps}
           onClick={() => {
             hideShells(chatId);
-            document.getElementById(CHAT_MENU_BUTTON_ID)?.focus();
+            document.getElementById(menuButtonId)?.focus();
           }}
         >
           <svg

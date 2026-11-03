@@ -92,35 +92,6 @@
   background: var(--raise);
 }
 
-.bv-divider {
-  position: relative;
-  cursor: col-resize;
-  touch-action: none;
-  background: var(--line);
-}
-
-.bv-divider::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 4px;
-  height: 36px;
-  border-radius: 2px;
-  background: var(--line-strong);
-  transform: translate(-50%, -50%);
-}
-
-.bv-divider:hover,
-.bv-divider:focus-visible {
-  background: var(--accent-soft);
-}
-
-.bv-divider:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
 .bv-loading svg {
   width: 16px;
   height: 16px;

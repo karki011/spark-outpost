@@ -11,9 +11,9 @@ Read what the agent changed and keep or undo it. About 2 minutes.
 ## Read the diff
 
 1. Select the changed-lines chip in the chat header, or press **⌘D**.
-2. Pick a file on the left, or type in **Filter files**.
-3. Switch between **Unified** and **Split**, select **Wrap** for long lines, and press **⌘F** to search.
-4. Press **Esc** to close the drawer.
+2. Pick a file, or type in **Filter files**.
+3. Switch **Unified** and **Split**, select **Wrap** for long lines; **⌘F** searches.
+4. **Esc** closes the drawer.
 
 ![The Changes drawer with the file list and a diff](images/chats-and-modes-diff-drawer-light.png)
 
@@ -21,7 +21,7 @@ Big, generated and binary files stay folded until you select **Load full file** 
 
 ## Keep or revert
 
-Spark keeps changes by itself, in a **Changes kept** record: files, lines, commit and pull request.
+Spark keeps changes itself, in a **Changes kept** record: files, lines, commit and pull request.
 
 | To                                   | Select                                                      |
 | ------------------------------------ | ----------------------------------------------------------- |

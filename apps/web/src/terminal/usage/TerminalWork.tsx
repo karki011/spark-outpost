@@ -1,6 +1,7 @@
 import { useState, type KeyboardEvent } from 'react';
 import { TerminalCost } from './TerminalCost.tsx';
 import { TerminalSteps } from './TerminalSteps.tsx';
+import { useChatPane } from '../../chat/split/chat-pane.ts';
 
 const TABS = ['steps', 'cost'] as const;
 type UsageTab = (typeof TABS)[number];
@@ -8,12 +9,13 @@ const TAB_NAMES: Record<UsageTab, string> = { steps: 'Steps', cost: 'Cost' };
 
 export function TerminalWork({ conversationId }: { conversationId: string }) {
   const [tab, setTab] = useState<UsageTab>('steps');
+  const { idSuffix } = useChatPane();
   const onKey = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
     event.preventDefault();
     const next = tab === 'steps' ? 'cost' : 'steps';
     setTab(next);
-    document.getElementById(`tutab-${next}`)?.focus();
+    document.getElementById(`tutab-${next}${idSuffix}`)?.focus();
   };
   return (
     <>
@@ -23,9 +25,9 @@ export function TerminalWork({ conversationId }: { conversationId: string }) {
             key={id}
             type="button"
             role="tab"
-            id={`tutab-${id}`}
+            id={`tutab-${id}${idSuffix}`}
             aria-selected={tab === id}
-            aria-controls="tupane"
+            aria-controls={`tupane${idSuffix}`}
             tabIndex={tab === id ? 0 : -1}
             onClick={() => setTab(id)}
             onKeyDown={onKey}
@@ -34,7 +36,12 @@ export function TerminalWork({ conversationId }: { conversationId: string }) {
           </button>
         ))}
       </div>
-      <div className="wpane" id="tupane" role="tabpanel" aria-labelledby={`tutab-${tab}`}>
+      <div
+        className="wpane"
+        id={`tupane${idSuffix}`}
+        role="tabpanel"
+        aria-labelledby={`tutab-${tab}${idSuffix}`}
+      >
         {tab === 'steps' ? (
           <TerminalSteps conversationId={conversationId} />
         ) : (
