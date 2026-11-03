@@ -1,3 +1,5 @@
 # Unreleased changes
 
 Changes through 0.1.0-beta.40 are recorded in [the changelog](../apps/desktop/CHANGELOG.md). Add new changes here before the next release.
+
+- Home is wider on a wide window, so its cards wrap less.
