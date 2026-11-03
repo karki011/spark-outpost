@@ -4,6 +4,12 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.40
+
+- Pick a speech model for Voice in **Settings → Voice**: Parakeet (fast and accurate in 25 European languages), Whisper base or Whisper large v3 turbo, each downloaded once with Cancel and Remove. The Voice step in setup recommends one for your Mac and language.
+- Your words show as you speak, in Spark Island and as a dictation preview.
+- Record your own Voice shortcut in **Settings → Voice** with **Change**, or go back to ⌥⇧V with **Reset**. Keys another app or Spark Island already uses are refused.
+
 ## 0.1.0-beta.39
 
 - Use your installed Claude plugins in chats. **Settings → Chats & autonomy → Plugins** lists what you installed with `claude plugin install`, and each one loads in Claude chats only after you turn it on. Spark checks every plugin and has Claude review it once per version, shows what it runs and what the review found, and asks you to hold before turning on one that needs review. An update turns a plugin off until you turn it on again.
