@@ -159,6 +159,29 @@ describe('turn events', () => {
     ]);
   });
 
+  it('keeps a callout target on any step, with secret values taken out', async () => {
+    const written = await eventsFor([
+      {
+        kind: 'step_started',
+        name: 'Opening a page in the browser',
+        tool: true,
+        toolKind: 'other',
+        toolName: 'mcp__spark__spark_browser_open',
+        callout: 'cloudzero.com',
+      },
+      {
+        kind: 'step_started',
+        name: 'Searched the web',
+        tool: true,
+        callout: 'docs for hunter2-value',
+      },
+    ]);
+    const marks = written.filter((event) => event.type === EventType.STEP_STARTED).map(stepMark);
+    expect(marks[0]).toMatchObject({ toolKind: 'other', target: 'cloudzero.com' });
+    expect(marks[1]!.target).not.toContain('hunter2-value');
+    expect(marks[1]!.target).toMatch(/^docs for /);
+  });
+
   it('stores the tool name on the step, from the start or else from the finish', async () => {
     const long = `mcp__server__${'x'.repeat(200)}`;
     const events = await eventsFor([

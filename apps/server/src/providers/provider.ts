@@ -255,6 +255,7 @@ export type ProviderOutput =
       toolName?: string;
       target?: string;
       path?: string;
+      callout?: string;
       subagent?: string;
       waits?: boolean;
     }
@@ -266,6 +267,7 @@ export type ProviderOutput =
       toolName?: string;
       target?: string;
       path?: string;
+      callout?: string;
       subagent?: string;
       waits?: boolean;
     }

@@ -4,7 +4,7 @@ import type {
   SessionUpdate,
   ToolCallContent,
 } from '@agentclientprotocol/sdk';
-import { isMcpToolName } from '@spark-outpost/contracts';
+import { awaitsCalloutInput, calloutTarget, isMcpToolName } from '@spark-outpost/contracts';
 import type { ConfigValues, PlanEntry } from '@spark-outpost/contracts';
 import type { ProviderOutput } from '../../providers/provider.ts';
 import { currentValue } from './session-config.ts';
@@ -109,6 +109,8 @@ interface OpenTool {
   toolName: string | null;
   target: string | null;
   path: string | null;
+  callout: string | null;
+  awaitsInput: boolean;
   opensPr: boolean;
   linked: boolean;
   shown: boolean;
@@ -123,6 +125,7 @@ function stepOf(kind: 'step_started' | 'step_finished', open: OpenTool): Provide
     ...(open.toolName ? { toolName: open.toolName } : {}),
     ...(open.target ? { target: open.target } : {}),
     ...(open.path ? { path: open.path } : {}),
+    ...(open.callout ? { callout: open.callout } : {}),
   };
 }
 
@@ -226,9 +229,10 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
 
   const reveal = (update: ToolCallUpdate): ProviderOutput[] => {
     const open = openTools.get(update.toolCallId);
-    if (!open || open.shown || !update.title) return [];
-    if (awaitsAddress(update.title, update.kind ?? open.kind)) return [];
-    open.name = describeTool(update.title, update.kind ?? open.kind, update.rawInput);
+    if (!open || open.shown || open.awaitsInput) return [];
+    const kind = update.kind ?? open.kind;
+    if (awaitsAddress(update.title ?? open.name, kind)) return [];
+    if (update.title) open.name = describeTool(update.title, kind, update.rawInput);
     open.shown = true;
     return [stepOf('step_started', open)];
   };
@@ -242,6 +246,10 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
       ? describeTool(update.title, update.kind ?? open.kind, update.rawInput)
       : null;
     open.path = toolPath(update.locations, update.rawInput) ?? open.path;
+    open.callout = calloutTarget(open.toolName, update.title, update.rawInput) ?? open.callout;
+    if (update.rawInput !== undefined) {
+      open.awaitsInput = awaitsCalloutInput(open.toolName, update.rawInput);
+    }
     open.target =
       toolTarget(update.locations, update.rawInput) ??
       (title && title !== open.name ? title : open.target);
@@ -340,17 +348,19 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
           const outputs = [...stopThinking(), ...finishTool(update.toolCallId)];
           const name = describeTool(update.title, update.kind, update.rawInput);
           worked = true;
+          const toolName = toolNameOf(update);
+          const awaitsInput = awaitsCalloutInput(toolName, update.rawInput);
           const opened: OpenTool = {
             name,
-            kind: isMcpToolName(toolNameOf(update) ?? update.title)
-              ? 'other'
-              : (update.kind ?? null),
-            toolName: toolNameOf(update),
+            kind: isMcpToolName(toolName ?? update.title) ? 'other' : (update.kind ?? null),
+            toolName,
             target: toolTarget(update.locations, update.rawInput),
             path: toolPath(update.locations, update.rawInput),
+            callout: calloutTarget(toolName, update.title, update.rawInput),
+            awaitsInput,
             opensPr: opensPullRequest(update.title, update.rawInput),
             linked: false,
-            shown: !awaitsAddress(update.title, update.kind),
+            shown: !awaitsAddress(update.title, update.kind) && !awaitsInput,
           };
           openTools.set(update.toolCallId, opened);
           outputs.push(

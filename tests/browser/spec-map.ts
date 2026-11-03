@@ -70,6 +70,7 @@ export const SPEC_GROUPS = {
     'send-or-queue',
     'slash-commands',
     'start-fresh',
+    'step-callouts',
     'stored-crew-turn',
     'stream-scroll',
     'thinking-step',

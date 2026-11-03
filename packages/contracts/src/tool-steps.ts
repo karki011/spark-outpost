@@ -138,7 +138,7 @@ export function humanizeToolName(name: string): string {
     .toLowerCase();
 }
 
-function isSparkServer(server: string): boolean {
+export function isSparkServer(server: string): boolean {
   return server === 'spark' || server === 'spark_outpost';
 }
 
