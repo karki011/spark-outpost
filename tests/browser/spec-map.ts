@@ -53,6 +53,7 @@ export const SPEC_GROUPS = {
     'delete-busy-chat',
     'feedback',
     'interrupted-turn',
+    'link-cards',
     'markdown-composer',
     'message-actions',
     'mid-turn-messages',

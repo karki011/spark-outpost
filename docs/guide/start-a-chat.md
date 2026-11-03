@@ -15,24 +15,24 @@ About 1 minute.
 
 ![A new chat with project and branch under the message box](images/chats-and-modes-new-chat-light.png)
 
-Or type in **Start a new chat** on **Home**.
+Or use **Start a new chat** on **Home**.
 
-Choose **Terminal** for native Claude Code or Codex: [Open a terminal](terminals.md).
+[**Terminal**](terminals.md) runs native Claude Code or Codex.
 
-While loading, drafts stay editable; sending waits. **Try again** recovers failed loads.
+Drafts stay editable while loading; sending waits. **Try again** recovers failed loads.
 
 ## Link a project
 
 Without one, the agent works in a private folder; files show under its reply.
 
 1. Under the box, select **Choose project**.
-2. Pick a folder under **Recent**, **Add folder…** to pick or make one, or **Clone a repository…**.
+2. Pick a **Recent** folder, **Add folder…** or **Clone a repository…**.
 
 Plain folders offer **Make it a git repository**.
 
 ![The message box with a linked project, its branch and agent setup](images/chats-and-modes-project-light.png)
 
-To unlink, select **No project folder** in the menu.
+To unlink, select **No project folder**.
 
 ## Write a message
 
@@ -42,9 +42,11 @@ To unlink, select **No project folder** in the menu.
 | **/**                             | Run a command: `/plan`, `/review`, `/model`, `/effort`, `/mcp`, `/fresh` |
 | **+** (**Add files and context**) | **Upload a file**, **Add a screenshot**, **Add from repo**, another chat |
 
-**Sent** confirms receipt while history refreshes. **Retry** reuses the message ID.
+**Sent** confirms receipt; **Retry** reuses the message ID.
 
-Markdown styles as you type. Select text or open **+ → Formatting**; **⌘B**, **⌘I**, **⌘⇧X** work too. In code blocks, **Enter** adds a line; **⌘Enter** sends. Agent setup is in **…** under the box.
+Markdown styles as you type; select text, open **+ → Formatting** or press **⌘B**, **⌘I**, **⌘⇧X**. In code blocks, **Enter** adds a line; **⌘Enter** sends. Agent setup is in **…** under the box.
+
+Typed web links show as cards built from the address; nothing is fetched.
 
 ## Share a chat with another chat
 

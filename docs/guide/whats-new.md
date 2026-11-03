@@ -13,5 +13,6 @@ Earlier releases: **Settings → Updates → Release notes**.
 | What changed              | What to do                                                                        |
 | ------------------------- | --------------------------------------------------------------------------------- |
 | Speech models, live words | [Pick a model](voice.md#pick-a-speech-model) and [shortcut](voice.md#turn-it-on). |
+| Link cards                | Under [your messages](start-a-chat.md#write-a-message).                           |
 | Claude plugins            | [Use them in Claude chats](use-claude-plugins.md); agents ask with a card.        |
 | First-message commands    | Plugin and repo `/` commands run from a chat's first message.                     |
