@@ -328,7 +328,21 @@ Built in this change: the model manifest and recommendation (`packages/contracts
 
 ### Real tests (Phase 2)
 
-To fill in after the real runs on this Mac, as in [Required real tests](#required-real-tests-on-this-mac): each model downloaded through the app with its size and sha256, the phrases through the mic and as WAVs with each model, partials during a command and a dictation, switching models with and without a listen in progress, and Intel timings.
+On 2026-11-02 and 2026-11-03, in the signed **Spark Outpost Dev** shell on an Apple M4 (macOS 26), throwaway data folder, microphone and Input Monitoring granted, 🌐 on Emoji, the WAVs (`say` voices Daniel and Samantha) through `testPress`:
+
+| Test                       | Result                                                                                                                                                                |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Setup's Voice step         | Parakeet preselected; **Download 549 MB and continue** moved on in about 2 s; the download finished in about 15 s with size and sha256 matching                       |
+| Parakeet commands, no hint | "start a chat in spark outpost to fix the login redirect on the settings page" opened New chat with **spark-outpost** and the task, nothing sent; 5 of 6 others exact |
+| Live words                 | Parakeet partials from 686 ms ("Start a ch") to 4,240 ms, final at 4,621 ms; about 70 ms a decode                                                                     |
+| Whisper base               | Downloaded and switched by radio; the project name came through thanks to the hint                                                                                    |
+| Whisper large v3 turbo     | Cancel at 9% left no file; download and switch about 15 s, sha256 matching; fewer partials, as expected                                                               |
+| Switch during a listen     | The running listen finished on the old model; the next used the new one                                                                                               |
+| Network                    | `lsof` showed no sockets for `spark-voice`                                                                                                                            |
+| Own shortcut               | ⌃⌥M recorded through IPC, posted as a key event: listening started and ⌥⇧V did nothing; Reset bound ⌥⇧V again; Quick chat's keys and a bare letter refused            |
+| Microphone                 | The owner spoke commands and dictation through the built-in mic with Parakeet: working                                                                                |
+
+Not run: Intel (no Rosetta run of the x64 helper), Metal on macOS 12, and the CPU fallback after a Metal failure.
 
 ## Licences
 
