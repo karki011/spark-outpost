@@ -71,26 +71,42 @@ final class Microphone {
 }
 
 final class FileInput {
-    private var stopped = false
+    private var playing = 0
 
-    func play(path: String, onFrames: ([Float]) -> Void, onEnd: () -> Void) -> ErrorCode? {
+    func play(
+        path: String, queue: DispatchQueue, onFrames: @escaping ([Float]) -> Void,
+        onEnd: @escaping () -> Void
+    ) -> ErrorCode? {
         guard let file = try? AVAudioFile(forReading: URL(fileURLWithPath: path)),
               let converter = AVAudioConverter(from: file.processingFormat, to: target)
         else { return .failed }
-        stopped = false
+        playing += 1
+        let token = playing
         let chunk = AVAudioFrameCount(file.processingFormat.sampleRate / 10)
-        while !stopped {
+        let start = DispatchTime.now()
+        var sent = 0
+        func next() {
+            guard playing == token else { return }
             guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: chunk),
                   (try? file.read(into: buffer, frameCount: chunk)) != nil, buffer.frameLength > 0
-            else { break }
+            else {
+                onEnd()
+                return
+            }
             converter.reset()
             onFrames(convert(buffer, with: converter))
+            guard buffer.frameLength == chunk else {
+                if playing == token { onEnd() }
+                return
+            }
+            sent += 1
+            queue.asyncAfter(deadline: start + .milliseconds(100 * sent)) { next() }
         }
-        if !stopped { onEnd() }
+        queue.async { next() }
         return nil
     }
 
     func stop() {
-        stopped = true
+        playing += 1
     }
 }

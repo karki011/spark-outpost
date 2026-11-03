@@ -5,7 +5,7 @@ import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 type Request = Record<string, unknown> & { id: string; op: string };
 
 const SPOKEN_MS = 200;
-const HEARD_MS = 150;
+const WORD_MS = 40;
 
 export function fakeVoiceHelper(): ChildProcessWithoutNullStreams {
   const events = new EventEmitter();
@@ -14,9 +14,14 @@ export function fakeVoiceHelper(): ChildProcessWithoutNullStreams {
   const stderr = new PassThrough();
   const say = (message: Record<string, unknown>) => stdout.write(`${JSON.stringify(message)}\n`);
   const transcript = process.env.SPARK_FAKE_VOICE_TEXT ?? 'who needs me';
-  const listening = new Map<string, NodeJS.Timeout | null>();
+  const listening = new Map<string, NodeJS.Timeout[]>();
   let speaking: { id: string; timer: NodeJS.Timeout } | null = null;
   let buffer = '';
+
+  const end = (id: string) => {
+    for (const timer of listening.get(id) ?? []) clearTimeout(timer);
+    listening.delete(id);
+  };
 
   const hush = () => {
     if (!speaking) return;
@@ -47,30 +52,34 @@ export function fakeVoiceHelper(): ChildProcessWithoutNullStreams {
         const text = typeof request.file === 'string' ? request.file : transcript;
         say({ id, event: 'level', level: 0.4 });
         say({ id, event: 'speech' });
-        if (request.purpose === 'dictation') {
-          say({ id, event: 'partial', text });
-          listening.set(id, null);
-          return undefined;
-        }
-        listening.set(
-          id,
-          setTimeout(() => {
-            listening.delete(id);
-            say({ id, event: 'final', text, reason: 'paused' });
-          }, HEARD_MS),
+        const words = text.split(' ');
+        const timers = words.map((_, index) =>
+          setTimeout(
+            () => say({ id, event: 'partial', text: words.slice(0, index + 1).join(' ') }),
+            WORD_MS * (index + 1),
+          ),
         );
+        if (request.purpose !== 'dictation')
+          timers.push(
+            setTimeout(
+              () => {
+                end(id);
+                say({ id, event: 'final', text, reason: 'paused' });
+              },
+              WORD_MS * (words.length + 1),
+            ),
+          );
+        listening.set(id, timers);
         return undefined;
       }
       case 'stop': {
         if (!listening.has(id)) return undefined;
-        clearTimeout(listening.get(id) ?? undefined);
-        listening.delete(id);
+        end(id);
         return say({ id, event: 'final', text: transcript, reason: 'stopped' });
       }
       case 'cancel': {
         if (!listening.has(id)) return undefined;
-        clearTimeout(listening.get(id) ?? undefined);
-        listening.delete(id);
+        end(id);
         return say({ id, event: 'cancelled' });
       }
       case 'speak':
@@ -108,7 +117,7 @@ export function fakeVoiceHelper(): ChildProcessWithoutNullStreams {
     stderr,
     pid: 0,
     kill: () => {
-      for (const timer of listening.values()) clearTimeout(timer ?? undefined);
+      for (const id of [...listening.keys()]) end(id);
       if (speaking) clearTimeout(speaking.timer);
       events.emit('exit', null);
       return true;

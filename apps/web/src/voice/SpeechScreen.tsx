@@ -29,19 +29,34 @@ function heading(command: Command, count: number): string {
   }
 }
 
+const LIVE_CHARS = 140;
+
+export function liveWords(text: string): string {
+  const words = text.trim();
+  if (words.length <= LIVE_CHARS) return words;
+  const tail = words.slice(-LIVE_CHARS);
+  return `…${tail.slice(tail.indexOf(' ') + 1)}`;
+}
+
 function Listening({ screen }: { screen: SpeechScreenModel }) {
   const listen = screen.state.listen!;
   const working = listen.phase === 'working';
   const confirming = listen.purpose === 'confirm';
+  const words = liveWords(listen.partial);
   return (
     <div className="speech-screen">
-      <p className="speech-state">
+      <p className="speech-state" aria-live="polite">
         {working
           ? 'Working it out…'
           : confirming
             ? 'Say “yes” or “no”… Esc to cancel'
             : 'Listening… Esc to cancel'}
       </p>
+      {words && (
+        <p className="speech-live" aria-hidden="true" data-testid="speech-live">
+          {words}
+        </p>
+      )}
       {!working && (
         <div className="speech-meter" aria-hidden="true">
           <span style={{ transform: `scaleX(${Math.max(0.04, listen.level)})` }} />
@@ -102,13 +117,7 @@ function Choices({ screen }: { screen: SpeechScreenModel }) {
 
 export function SpeechScreen({ screen }: { screen: SpeechScreenModel }) {
   const { state, shown } = screen;
-  if (state.listen) {
-    return (
-      <div aria-live="polite">
-        <Listening screen={screen} />
-      </div>
-    );
-  }
+  if (state.listen) return <Listening screen={screen} />;
   if (!shown) {
     const notice = state.notice ?? 'failed';
     return (

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type {
   VoiceEvent,
   VoiceListenResult,
+  VoiceModelId,
   VoicePurpose,
   VoiceSettings,
   VoiceStatus,
@@ -13,8 +14,12 @@ export type PrivacyPage = 'microphone' | 'input-monitoring' | 'keyboard';
 
 export interface DesktopSpeech {
   status(): Promise<VoiceStatus | null>;
-  turnOn(): Promise<VoiceStatus | null>;
+  turnOn(model?: VoiceModelId): Promise<VoiceStatus | null>;
   turnOff(): Promise<VoiceStatus | null>;
+  download(model: VoiceModelId): Promise<VoiceStatus | null>;
+  cancelDownload(model: VoiceModelId): Promise<VoiceStatus | null>;
+  remove(model: VoiceModelId): Promise<VoiceStatus | null>;
+  select(model: VoiceModelId): Promise<VoiceStatus | null>;
   update(
     patch: Partial<Pick<VoiceSettings, 'speakAnswers' | 'shortcutMode' | 'hold'>>,
   ): Promise<VoiceStatus | null>;

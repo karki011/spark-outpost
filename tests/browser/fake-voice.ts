@@ -6,6 +6,11 @@ export interface FakeVoiceOptions {
   mic?: 'granted' | 'denied' | 'not_determined';
   listenError?: string;
   listenDelayMs?: number;
+  arch?: 'arm64' | 'x64';
+  language?: string;
+  model?: string;
+  downloaded?: string[];
+  downloadStepMs?: number;
 }
 
 export interface VoiceCall {
@@ -21,13 +26,24 @@ export async function installFakeVoice(page: Page, options: FakeVoiceOptions = {
     const changes: ((status: unknown) => void)[] = [];
     const opened: string[] = [];
     let counter = 0;
+    const ids = ['parakeet-v3', 'whisper-base', 'whisper-large-v3-turbo'];
     const state = {
       enabled: settings.enabled ?? true,
       speakAnswers: settings.speakAnswers ?? false,
       shortcutMode: 'keys',
       hold: false,
-      model: settings.enabled === false ? 'missing' : 'ready',
+      model: settings.model ?? 'whisper-base',
     };
+    type Row = { state: string; progress: number | null; problem: string | null };
+    const downloaded =
+      settings.downloaded ?? (settings.enabled === false ? [] : [settings.model ?? 'whisper-base']);
+    const models: Record<string, Row> = Object.fromEntries(
+      ids.map((id) => [
+        id,
+        { state: downloaded.includes(id) ? 'ready' : 'missing', progress: null, problem: null },
+      ]),
+    );
+    let downloading: { id: string; timer: number; switchAfter: boolean } | null = null;
     const status = () => ({
       supported: true,
       helper: 'ready',
@@ -37,19 +53,38 @@ export async function installFakeVoice(page: Page, options: FakeVoiceOptions = {
         shortcutMode: state.shortcutMode,
         shortcut: 'Alt+Shift+V',
         hold: state.hold,
+        model: state.model,
       },
       mic: settings.mic ?? 'granted',
       inputMonitoring: false,
       fnSetting: 'emoji',
       fnActive: false,
       shortcutFailed: false,
-      model: state.model,
-      progress: null,
-      problem: null,
-      language: 'en',
+      model: models[state.model]!.state,
+      models: Object.fromEntries(ids.map((id) => [id, { ...models[id] }])),
+      arch: settings.arch ?? 'arm64',
+      language: settings.language ?? 'en',
     });
     const record = (op: string, ...args: unknown[]) => calls.push({ op, args });
     const publish = () => changes.forEach((change) => change(status()));
+    const download = (id: string, switchAfter: boolean) => {
+      if (downloading) return;
+      models[id] = { state: 'downloading', progress: 0, problem: null };
+      const timer = window.setInterval(() => {
+        const row = models[id]!;
+        const progress = Math.min(1, Math.round(((row.progress ?? 0) + 0.25) * 100) / 100);
+        if (progress < 1) {
+          models[id] = { ...row, progress };
+        } else {
+          window.clearInterval(timer);
+          downloading = null;
+          models[id] = { state: 'ready', progress: null, problem: null };
+          if (switchAfter) state.model = id;
+        }
+        publish();
+      }, settings.downloadStepMs ?? 400);
+      downloading = { id, timer, switchAfter };
+    };
     Object.assign(window, {
       voiceCalls: calls,
       openedChats: opened,
@@ -80,16 +115,52 @@ export async function installFakeVoice(page: Page, options: FakeVoiceOptions = {
         },
         speech: {
           status: async () => status(),
-          turnOn: async () => {
-            record('turnOn');
+          turnOn: async (model?: string) => {
+            record('turnOn', ...(model ? [model] : []));
             state.enabled = true;
-            state.model = 'ready';
+            if (model) state.model = model;
+            if (models[state.model]!.state !== 'ready') download(state.model, false);
+            publish();
+            return status();
+          },
+          download: async (id: string) => {
+            record('download', id);
+            download(id, false);
+            publish();
+            return status();
+          },
+          cancelDownload: async (id: string) => {
+            record('cancelDownload', id);
+            if (downloading?.id === id) {
+              window.clearInterval(downloading.timer);
+              downloading = null;
+              models[id] = { state: 'missing', progress: null, problem: null };
+            }
+            publish();
+            return status();
+          },
+          remove: async (id: string) => {
+            record('remove', id);
+            if (id !== state.model)
+              models[id] = { state: 'missing', progress: null, problem: null };
+            publish();
+            return status();
+          },
+          select: async (id: string) => {
+            record('select', id);
+            if (models[id]!.state === 'ready') state.model = id;
+            else download(id, true);
             publish();
             return status();
           },
           turnOff: async () => {
             record('turnOff');
             state.enabled = false;
+            if (downloading) {
+              window.clearInterval(downloading.timer);
+              models[downloading.id] = { state: 'missing', progress: null, problem: null };
+              downloading = null;
+            }
             publish();
             return status();
           },

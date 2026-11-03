@@ -5,6 +5,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   VOICE_DEFAULT_SETTINGS,
+  VOICE_MODELS,
   VOICE_WHISPER_BASE,
   type VoiceEvent,
   type VoiceMicPermission,
@@ -48,6 +49,7 @@ async function setup(
       return true;
     }),
     modelDir: dir,
+    models: VOICE_MODELS,
     vadPath: '/vad.bin',
     fetch: vi.fn(async () => new Response('nope', { status: 500 })),
     register: (accelerator, run) => {
@@ -59,6 +61,7 @@ async function setup(
     sendIsland: (event) => island.push(event),
     voiceOver: () => false,
     language: 'en',
+    arch: 'arm64',
     allowFileInput: false,
     changed: (status) => published.push(status),
     log: () => undefined,
@@ -92,8 +95,14 @@ describe('Voice', () => {
   it('a failed download keeps Voice from listening and says why', async () => {
     const scene = await setup({ model: false });
     const status = await scene.voice.turnOn();
-    expect(status.model).toBe('failed');
-    expect(status.problem).toBe('The download failed (500).');
+    expect(status.model).toBe('downloading');
+    expect(status.settings.enabled).toBe(true);
+    await settle(50);
+    expect(scene.published.at(-1)?.models['whisper-base']).toEqual({
+      state: 'failed',
+      progress: null,
+      problem: 'The download failed (500).',
+    });
     expect(await scene.voice.listen(1, 'command', '', undefined)).toEqual({
       ok: false,
       error: 'model_missing',
@@ -110,8 +119,14 @@ describe('Voice', () => {
     expect(kinds).toEqual([
       [7, 'level'],
       [7, 'speech'],
+      [7, 'partial'],
+      [7, 'partial'],
+      [7, 'partial'],
       [7, 'final'],
     ]);
+    expect(
+      scene.sent.filter((entry) => entry.event.kind === 'partial').at(-1)?.event,
+    ).toMatchObject({ text: 'who needs me' });
     expect(scene.sent.at(-1)?.event).toMatchObject({ text: 'who needs me', reason: 'paused' });
     scene.voice.dispose();
   });

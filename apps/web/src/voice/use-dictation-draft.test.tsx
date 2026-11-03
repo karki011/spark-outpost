@@ -173,3 +173,20 @@ it('rejects a final delivered during the new scope commit before passive effects
   expect(hook.result.current.value).toBe('second');
   expect(hook.result.current.dictation.active).toBe(false);
 });
+
+it('replaces revised tentative words on every partial and commits only the final', async () => {
+  const hook = draft();
+  await act(async () => hook.result.current.dictation.toggle());
+  for (const words of [
+    'I scream',
+    'ice cream for',
+    'ice cream for every',
+    'ice cream for everyone',
+  ])
+    emit(partial(words));
+  expect(hook.result.current.value).toBe('Typed draft ice cream for everyone');
+  expect(hook.result.current.committed).toBe('Typed draft');
+  act(() => hook.result.current.dictation.toggle());
+  emit(final('Ice cream for everyone.'));
+  expect(hook.result.current.committed).toBe('Typed draft Ice cream for everyone.');
+});

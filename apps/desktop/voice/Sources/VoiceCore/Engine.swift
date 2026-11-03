@@ -17,6 +17,9 @@ public final class Engine {
         let session: ListenSession
         let generation: Int
         var pending = 0
+        var closed = 0
+        var drafting = false
+        var shown = ""
         var texts: [String] = []
         var reason: EndReason?
         var leftover: [Float] = []
@@ -29,6 +32,8 @@ public final class Engine {
         }
 
         var text: String { cleanTranscript(texts.joined(separator: " ")) }
+
+        func text(with draft: String) -> String { cleanTranscript((texts + [draft]).joined(separator: " ")) }
     }
 
     public init(platform: Platform, rules: ListenRules = ListenRules(), emit: @escaping Emit) {
@@ -146,7 +151,10 @@ public final class Engine {
             switch action {
             case .level(let level): emit(current.id, .level(level))
             case .speech: emit(current.id, .speech)
-            case .segment(let samples): transcribe(samples, for: current)
+            case .segment(let samples):
+                current.closed += 1
+                transcribe(samples, for: current)
+            case .interim(let samples): draft(samples, for: current)
             case .end(let reason):
                 current.reason = reason
                 platform.stopInput()
@@ -159,19 +167,38 @@ public final class Engine {
         guard let model else { return }
         current.pending += 1
         let request = current.request
-        model.transcribe(
-            samples, language: request.language, hint: request.hint,
-            single: request.purpose != .dictation
-        ) { [weak self] text in
+        model.transcribe(samples, language: request.language, hint: request.hint, draft: false) {
+            [weak self] text in
             guard let self, current.generation == self.generation else { return }
             current.pending -= 1
             let cleaned = cleanTranscript(text)
-            if !cleaned.isEmpty { current.texts.append(cleaned) }
-            if request.purpose == .dictation && current.reason == nil && !cleaned.isEmpty {
-                self.emit(current.id, .partial(current.text))
+            if !cleaned.isEmpty {
+                current.texts.append(cleaned)
+                self.showPartial(current.text, for: current)
             }
             self.finishIfDone(current)
         }
+    }
+
+    private func draft(_ samples: [Float], for current: Listening) {
+        guard let model, current.reason == nil, !current.drafting else { return }
+        current.drafting = true
+        let segment = current.closed
+        let request = current.request
+        model.transcribe(samples, language: request.language, hint: request.hint, draft: true) {
+            [weak self] text in
+            guard let self, current.generation == self.generation else { return }
+            current.drafting = false
+            let tentative = cleanTranscript(text)
+            guard current.closed == segment, !tentative.isEmpty else { return }
+            self.showPartial(current.text(with: tentative), for: current)
+        }
+    }
+
+    private func showPartial(_ text: String, for current: Listening) {
+        guard current.reason == nil, listening === current, text != current.shown else { return }
+        current.shown = text
+        emit(current.id, .partial(text))
     }
 
     private func finishIfDone(_ current: Listening) {

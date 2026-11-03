@@ -9,9 +9,9 @@ import Testing
         scene.play(frames(seconds: 0.5, speech: false))
         scene.play(frames(seconds: 1.2, speech: true))
         scene.play(frames(seconds: 1.0, speech: false))
-        #expect(scene.events == [.speech])
+        #expect(scene.events == [.speech, .partial("draft1"), .partial("draft2")])
         scene.play(frames(seconds: 0.6, speech: false))
-        #expect(scene.events == [.speech, .final(text: "part1", reason: .paused)])
+        #expect(scene.events.last == .final(text: "part1", reason: .paused))
         #expect(scene.platform.inputStops == 1)
         #expect(!scene.engine.isListening)
     }
@@ -24,7 +24,10 @@ import Testing
         scene.play(frames(seconds: 1, speech: true))
         scene.play(frames(seconds: 2, speech: false))
         scene.play(frames(seconds: 0.5, speech: true))
-        #expect(scene.events == [.speech, .partial("part1"), .partial("part1 part2")])
+        #expect(scene.events == [
+            .speech, .partial("draft1"), .partial("part1"), .partial("part1 draft2"),
+            .partial("part1 draft3"), .partial("part1 part2"), .partial("part1 part2 draft4"),
+        ])
         scene.send(#"{"id":"d","op":"stop"}"#)
         #expect(scene.events.last == .final(text: "part1 part2 part3", reason: .stopped))
     }
@@ -61,9 +64,9 @@ import Testing
         scene.play(frames(seconds: 2.5, speech: false))
         scene.play(frames(seconds: 1, speech: true))
         scene.play(frames(seconds: 1.4, speech: false))
-        #expect(scene.events == [.speech])
+        #expect(!scene.events.contains(.final(text: "part1", reason: .paused)))
         scene.play(frames(seconds: 0.2, speech: false))
-        #expect(scene.events == [.speech, .final(text: "part1", reason: .paused)])
+        #expect(scene.events.last == .final(text: "part1", reason: .paused))
     }
 
     @Test func thirtySecondsAfterTheLastSpeechStopsADictation() {

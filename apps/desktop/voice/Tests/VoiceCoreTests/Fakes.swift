@@ -10,6 +10,8 @@ func frames(seconds: Double, speech: Bool) -> [Float] {
 
 final class FakeModel: SpeechModel {
     var transcribed: [Int] = []
+    var drafted: [Int] = []
+    var draftText: String?
     var deferred: [() -> Void] = []
     var holdTranscripts = false
     var resets = 0
@@ -19,11 +21,17 @@ final class FakeModel: SpeechModel {
     func probability(_ frame: [Float]) -> Float { (frame.first ?? 0) > 0.25 ? 0.9 : 0.05 }
 
     func transcribe(
-        _ samples: [Float], language: String, hint: String, single: Bool,
+        _ samples: [Float], language: String, hint: String, draft: Bool,
         done: @escaping (String) -> Void
     ) {
-        transcribed.append(samples.count)
-        let text = "part\(transcribed.count)"
+        let text: String
+        if draft {
+            drafted.append(samples.count)
+            text = draftText ?? "draft\(drafted.count)"
+        } else {
+            transcribed.append(samples.count)
+            text = "part\(transcribed.count)"
+        }
         if holdTranscripts { deferred.append { done(text) } } else { done(text) }
     }
 }

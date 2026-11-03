@@ -1,23 +1,23 @@
 # Voice
 
-> **Status: Phase 1 built (2026-10-15); see [Built in Phase 1](#built-in-phase-1) for what it settled, the real tests run so far and what is still open.** Push-to-talk speech on the Mac: dictation into Spark drafts, spoken commands that open a prefilled, confirmable screen ("Spark, start a chat in spark-outpost for CP-49084 to fix the login redirect"), and questions about Spark that it can answer out loud. Speech becomes text, and answers become speech, on this Mac; audio never leaves it. Mac app only, off until the user turns it on. The owner's decisions are in [Decided](#decided).
+> **Status: Phase 1 built (2026-10-15); see [Built in Phase 1](#built-in-phase-1) for what it settled, the real tests run so far and what is still open. Phase 2 in progress: a choice of [speech models](#models), Parakeet among them, through transcribe.cpp, and live words while listening; see [Phase 2](#phase-2-speech-models-and-live-words).** Push-to-talk speech on the Mac: dictation into Spark drafts, spoken commands that open a prefilled, confirmable screen ("Spark, start a chat in spark-outpost for CP-49084 to fix the login redirect"), and questions about Spark that it can answer out loud. Speech becomes text, and answers become speech, on this Mac; audio never leaves it. Mac app only, off until the user turns it on. The owner's decisions are in [Decided](#decided).
 
 ## Pieces
 
 | Piece     | Where                                      | Does                                                                                                 |
 | --------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| Helper    | `apps/desktop/voice/` (Swift package)      | `spark-voice`: mic, Silero VAD, whisper.cpp, the Fn monitor, spoken answers                          |
-| Host      | `apps/desktop/src/voice/`                  | Starts the helper; shortcuts, permissions, model download                                            |
+| Helper    | `apps/desktop/voice/` (Swift package)      | `spark-voice`: mic, Silero VAD, transcribe.cpp, the Fn monitor, spoken answers                       |
+| Host      | `apps/desktop/src/voice/`                  | Starts the helper; shortcuts, permissions, model downloads and switching                             |
 | Contracts | `packages/contracts/src/voice.ts`          | Helper messages, the bridge, the model manifest                                                      |
 | Matcher   | `apps/web/src/voice/commands.ts`           | Templates and fuzzy matching, pure like `ask-fast-path.ts`                                           |
 | UI        | `apps/web/src/voice/`, island and composer | Mic button, listening view, result screens (`speech` names: `spark/voice.ts` is Scout's personality) |
-| Settings  | Settings → **Voice**                       | Switch, model, language, shortcut, hold to talk, **Speak answers**                                   |
+| Settings  | Settings → **Voice**, setup's **Voice**    | Switch, **Speech model**, shortcut, hold to talk, **Speak answers**                                  |
 
 ## Process and permissions
 
 ### A helper, like Mac control
 
-**Recommendation: one signed Swift command-line helper, `spark-voice`, started by Electron main on first use, kept with its model loaded, and spoken to as JSON lines over stdin and stdout**, the [Mac control](MAC_CONTROL.md#a-swift-helper-not-a-node-addon) pattern. It records with `AVAudioEngine` and speaks with `AVSpeechSynthesizer`; whisper.cpp (pinned to a release, v1.9.5 today) is linked in as a static library, with Metal on arm64 and Accelerate and AVX on x64. A crash or hang never touches main or the window. `pnpm desktop:voice` builds it into `.local/voice/<arch>/` (macOS 12.0 minimum, both arches); packaging stages it, the Silero model and licence notices to `Contents/Resources/voice/`, checked in `afterPack` like [Bundled tmux](RELEASES.md#bundled-tmux).
+**Recommendation: one signed Swift command-line helper, `spark-voice`, started by Electron main on first use, kept with its model loaded, and spoken to as JSON lines over stdin and stdout**, the [Mac control](MAC_CONTROL.md#a-swift-helper-not-a-node-addon) pattern. It records with `AVAudioEngine` and speaks with `AVSpeechSynthesizer`; transcribe.cpp (pinned to a release, v0.4.1 today; it replaced whisper.cpp in Phase 2) is linked in as a static library, with Metal on arm64 and the CPU path (AVX2, FMA, F16C, tinyBLAS) on x64. A crash or hang never touches main or the window. `pnpm desktop:voice` builds it into `.local/voice/<arch>/` (macOS 12.0 minimum, both arches); packaging stages it, the Silero model and licence notices to `Contents/Resources/voice/`, checked in `afterPack` like [Bundled tmux](RELEASES.md#bundled-tmux).
 
 ### Permissions
 
@@ -50,7 +50,7 @@ Requests carry an `id`; the host validates every message with zod.
 | Request  | Fields                                                                                  | Answer                                               |
 | -------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | `status` | none                                                                                    | `mic`, `inputMonitoring`, `model`, `fnSetting`, arch |
-| `load`   | `path`, `sha256`                                                                        | `loaded`, or `bad_model`                             |
+| `load`   | `path`, `sha256`, `vad`                                                                 | `loaded`, or `bad_model`; replaces the loaded model  |
 | `listen` | `purpose` (`command`, `dictation`, `confirm`), `language`, `hint`, `file` (test builds) | events, then `final`                                 |
 | `stop`   | `id`                                                                                    | transcribes the open segment, then `final`           |
 | `cancel` | `id`                                                                                    | `cancelled`; audio and text dropped                  |
@@ -58,11 +58,14 @@ Requests carry an `id`; the host validates every message with zod.
 | `hush`   | none                                                                                    | stops speaking at once                               |
 | `keys`   | `fn`, `hold`                                                                            | `fn_twice`, `key_down`, `key_up` events              |
 
-Events: `level` (for the meter), `speech`, `partial` (dictation) and `final` (`text`, `reason`: `stopped`, `paused`, `silence`); errors `mic_denied`, `no_input_device`, `model_missing`, `busy`.
+Events: `level` (for the meter), `speech`, `partial` and `final` (`text`, `reason`: `stopped`, `paused`, `silence`); errors `mic_denied`, `no_input_device`, `model_missing`, `busy`.
+
+- **Partials for every purpose.** From Phase 2 the helper sends `partial` (`text`) about every 0.5 s while speech goes on, for `command`, `confirm` and `dictation` alike: the committed text plus the open segment's tentative words, so a later partial may change earlier words. No `partial` follows `final`. The host forwards them unchanged to the window that asked; a command is matched on `final` only.
+- **The engine is chosen by the file.** `load` is unchanged; the helper tells a Whisper file from a Parakeet one itself. The host sends `load` only while nothing listens, so a listen keeps the model it started with.
 
 - **Bounded memory.** Samples are never written to disk or sent over the pipe. Each speech segment VAD closes (or cuts at 30 s, whisper's window) is transcribed at once and dropped, so the helper holds one segment (about 2 MB) plus text.
 - **Whisper invents text on silence** ("Thank you."): only VAD's speech spans are transcribed, and an empty result shows **Didn't catch that**.
-- **Hint** is whisper's initial prompt, built locally from project names, chat titles and ticket prefixes so `spark-outpost` and `CP` are recognised.
+- **Hint** is whisper's initial prompt, built locally from project names, chat titles and ticket prefixes so `spark-outpost` and `CP` are recognised. Parakeet takes no hint; the host still sends it and the helper ignores it.
 
 ### When listening ends
 
@@ -74,20 +77,63 @@ Events: `level` (for the meter), `speech`, `partial` (dictation) and `final` (`t
 
 ## Models
 
-| Model                             | File and size                           | How                            |
-| --------------------------------- | --------------------------------------- | ------------------------------ |
-| Silero VAD v6.2.0                 | `ggml-silero-v6.2.0.bin`, 885,098 bytes | Bundled                        |
-| Whisper base, multilingual, 5-bit | `ggml-base-q5_1.bin`, 59,707,625 bytes  | Downloaded on turning Voice on |
-| Whisper small, large-v3-turbo     | Pinned when added (Phase 2)             | Optional, Settings             |
+| Model                               | File and size                                         | Languages                                                                      | How                    |
+| ----------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------- |
+| Silero VAD v6.2.0                   | `ggml-silero-v6.2.0.bin`, 885,098 bytes               |                                                                                | Bundled                |
+| `whisper-base`: Whisper base, 5-bit | `ggml-base-q5_1.bin`, 59,707,625 bytes                | 99                                                                             | Downloaded when picked |
+| `parakeet-v3`: Parakeet TDT 0.6B v3 | `parakeet-tdt-0.6b-v3-Q5_K_M.gguf`, 548,946,272 bytes | 25: bg hr cs da nl en et fi fr de el hu it lv lt mt pl pt ro ru sk sl es sv uk | Downloaded when picked |
+| `whisper-large-v3-turbo`, 5-bit     | `ggml-large-v3-turbo-q5_0.bin`, 574,041,195 bytes     | 99                                                                             | Downloaded when picked |
 
-Pinned sha256 (the Hugging Face LFS oid, read 2026-10-15):
+Pinned sha256 (the Hugging Face LFS oid):
 
 - `ggml-silero-v6.2.0.bin`: `2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987`
 - `ggml-base-q5_1.bin`: `422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898`
+- `parakeet-tdt-0.6b-v3-Q5_K_M.gguf`: `cc722e76adc1a629fc0b2535de879d99b8160d07ad4c0215e2ca7d7ea0ae4b8f`
+- `ggml-large-v3-turbo-q5_0.bin`: `394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2`
 
-**Why multilingual base, downloaded.** Dictation works in the user's language; **Language** defaults to the Mac's preferred one, since detection on a two-second command is unreliable, and the command grammar is English in Phase 1. OpenAI's [Whisper README](https://github.com/openai/whisper#available-models-and-languages) says the `.en` models "tend to perform better" for English, especially at base, so English accuracy on names and keys is **to measure**, with Intel latency. Voice is off by default, so a one-time 60 MB download beats growing every install and update.
+Pinned URLs, each at a commit, never `main`:
 
-**Integrity.** The manifest holds these hashes and sizes and URLs pinned to a commit, never `main`: `https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base-q5_1.bin` (Silero from `ggml-org/whisper-vad` at `9ffd54a1e1ee413ddf265af9913beaf518d1639b`). Main downloads with Electron `net` to `<userData>/voice/<sha256>.partial`, hashing as it streams; a wrong size or hash deletes it (**The download didn't check out**), otherwise it is renamed into place. The helper checks the hash again on `load`.
+- Whisper base: `https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base-q5_1.bin`
+- Parakeet: `https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/resolve/85ac09ea12fc4b1112fa76810059364bc6adc9de/parakeet-tdt-0.6b-v3-Q5_K_M.gguf`
+- Whisper large v3 turbo: `https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo-q5_0.bin`
+- Silero: `ggml-org/whisper-vad` at `9ffd54a1e1ee413ddf265af9913beaf518d1639b`
+
+The manifest is `VOICE_MODELS` in `packages/contracts/src/voice.ts`.
+
+| Model                  | Shown as                   | What the UI says                                                                                                                                      |
+| ---------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Parakeet               | **Parakeet**               | Most accurate for English and European languages, detects the language itself; fast on Apple silicon (about 70 ms per short phrase measured on an M4) |
+| Whisper base           | **Whisper base**           | Small and quick; misses more names                                                                                                                    |
+| Whisper large v3 turbo | **Whisper large v3 turbo** | Best Whisper for languages Parakeet lacks; slower, especially on Intel                                                                                |
+
+Parakeet English (`parakeet-tdt-0.6b-v2`) is not offered: its GGUF conversion is under the NVIDIA Open Model License, not CC-BY-4.0.
+
+**Why multilingual base first.** Phase 1 shipped Whisper base alone: dictation works in the user's language, the command grammar is English, and a one-time 60 MB download beats growing every install and update. It stays the default, so an existing `voice-settings.json` without `model` parses to `whisper-base` and nothing downloads again on upgrade; an unknown `model` falls back to it without turning Voice off.
+
+**Integrity.** Main downloads with Electron `net` to `<userData>/voice/<sha256>.partial`, hashing as it streams; a wrong size or hash deletes it (**The download didn't check out**), otherwise it is renamed to the model's file name. The helper checks the hash again on `load`.
+
+### Choosing and switching
+
+- **Recommended** (setup's **Voice** step, `recommendedVoiceModel`): Parakeet when the Mac is Apple silicon (`VoiceStatus.arch`, `arm64` also under Rosetta through `app.runningUnderARM64Translation`) and the Mac's language (`VoiceStatus.language`) is in Parakeet's list; otherwise Whisper base.
+- **State per model** (`apps/desktop/src/voice/model-store.ts`): missing, downloading (with progress), ready (on disk) or failed (with the reason, a download or a load that failed); `VoiceStatus.models` holds all three and `VoiceStatus.model` the one in use. One download at a time.
+- **Cancel** aborts the fetch through an `AbortController` and deletes the `.partial`; the model goes back to missing with no problem shown.
+- **Remove** deletes the file and any `.partial`; the model in use can't be removed.
+- **Select** a downloaded model: the setting is saved, the loaded model is dropped and the new one is loaded at once when nothing listens, or by the next listen otherwise, so a listen in progress keeps its model. Select one that isn't downloaded: it downloads and becomes the model in use once it checks out; a failed or cancelled download leaves the old one in use. A new choice cancels a download still waiting to switch.
+- **Turn on** (`turnOn(model?)`) saves the switch and the model, asks for the microphone and returns; the download runs in the background, publishing progress, and the model loads when it checks out.
+
+### Bridge
+
+Electron IPC only, never an HTTP route, so paired devices can't reach it; every handler checks the sender and validates the model id with `voiceModelIdSchema`.
+
+| Channel                 | Preload (`sparkDesktop.speech`) | Does                                      |
+| ----------------------- | ------------------------------- | ----------------------------------------- |
+| `voice:turn-on`         | `turnOn(model?)`                | Voice on, the model in use set when given |
+| `voice:download`        | `download(model)`               | Starts a download                         |
+| `voice:cancel-download` | `cancelDownload(model)`         | Cancels it                                |
+| `voice:remove-model`    | `remove(model)`                 | Deletes a model that isn't in use         |
+| `voice:select-model`    | `select(model)`                 | Switches, downloading first when needed   |
+
+Each answers with the new `VoiceStatus`, and `voice:changed` broadcasts every change. With `SPARK_FAKE_VOICE=1` an unpackaged app serves small fake model files (`fake-models.ts`) streamed in steps, with matching hashes, so downloads, cancel, remove and switching run without Hugging Face.
 
 ## Commands and questions
 
@@ -114,7 +160,7 @@ Matching runs locally in TypeScript with a subset of Home Assistant's [hassil](h
 
 ## UI flows
 
-1. **Listening:** the island opens with Scout listening, a meter and **Listening… Esc to cancel**, and takes focus.
+1. **Listening:** the island opens with Scout listening, a meter and **Listening… Esc to cancel**, and takes focus. The words heard so far show under it in a muted line, replaced by each `partial`, the end of a long one kept. That line is `aria-hidden`: tentative words every 0.5 s would talk over the user, so only the state line is `aria-live` and the transcript is read on the result. It has no animation.
 2. **Working it out** while whisper runs; the transcript then shows above the result.
 3. **The result**, focused on its confirm button or text box:
 
@@ -131,7 +177,11 @@ With a ticket, Send uses the existing ticket start route (`projectId`, `note` = 
 
 **Dictation:** a mic button in the chat composer (`Composer.tsx`) and the island's text boxes, with a fixed-size animated listening indicator and screen-reader status; the draft is never sent. In a Terminal session the user sends through the existing `POST /conversations/:id/terminal/message` route, its refusals unchanged (an agent waiting for an answer, a CLI menu, a leading `/` or `!`); a spoken "slash" stays a word. Paired devices use their keyboard's dictation.
 
-**First run:** **Turn on Voice** (Settings, or the first mic press) asks for the mic, downloads the model, then offers **Use Fn twice** (asks for Input Monitoring, or names the Keyboard setting using 🌐 and opens it) or **Use ⌥⇧V**.
+**First run:** setup has a **Voice** step after **Mac access**, in the Mac app only (where `desktopSpeech()` exists, and not when the helper is missing). It offers the three models and **Not now**, the recommended one preselected and marked **Recommended for you**, each with its size and language count. The primary button names the size (**Download 549 MB and continue**; **Continue** for **Not now** or a model already on disk), and the footer says macOS asks for the microphone. A model turns Voice on through the same `turnOn` as Settings, without waiting for the download; going back and picking again calls `select`, and **Not now** after that turns Voice off. **Turn on Voice** in Settings, or the first mic press, does the same with the saved model, then **Use Fn twice** (asks for Input Monitoring, or names the Keyboard setting using 🌐 and opens it) or **Use ⌥⇧V**.
+
+**Settings → Voice → Speech model:** a radio group of the three models, each with its size, a state (**In use**, **Downloaded**, **Downloading N%** with a progress bar, **Not downloaded**, or the failure text) and **Download**, **Cancel** or **Remove** (disabled for the model in use). The header shows the total on disk. Arrow keys move focus without choosing, and Space, Enter or a click chooses: with arrows that choose, moving through the list would start a 549 MB download. When the Mac's language isn't one the model in use understands, the card says so. Under it, the credit: Parakeet by NVIDIA, CC BY 4.0, converted to GGUF; Whisper by OpenAI, MIT; downloaded from Hugging Face at a pinned version and checked before use.
+
+**Live words in dictation:** the composer and the Terminal session's box already preview `partial` text in place, replacing the previous partial, and commit `final` once; they now get partials more often and with tentative words, and nothing is sent until the user sends it.
 
 ## Safety
 
@@ -247,7 +297,8 @@ Not run that day: Fn twice, the mic through the speakers, the Browser pane's `ge
 ## Phases
 
 1. **Push-to-talk, commands, questions, dictation and spoken answers:** the helper, permissions, the base model, Fn twice and ⌥⇧V, the matcher, island screens, mic buttons, Speak answers with Apple system voices, Settings → **Voice**.
-2. **Better voices and models:** Kokoro-82M as an optional download only if it runs without espeak-ng (misaki's lexicon alone, unknown words spelled out); small and large-v3-turbo; Parakeet through FluidAudio on macOS 14+, with whisper.cpp the floor for Intel and macOS 12–13.
+2. **Speech models and live words:** the helper moves from whisper.cpp to transcribe.cpp, which runs Whisper and NVIDIA Parakeet TDT 0.6B v3 from one engine on both arches; Settings and setup pick among Whisper base, Parakeet and Whisper large v3 turbo; partials for every purpose. This replaces the earlier plan to run Parakeet through FluidAudio's CoreML conversion on macOS 14+, which would have needed a second engine and left Intel and macOS 12–13 on whisper.cpp.
+3. **Better voices:** Kokoro-82M as an optional download only if it runs without espeak-ng (misaki's lexicon alone, unknown words spelled out).
 
 ## Decided
 
@@ -259,22 +310,44 @@ Chosen by default: toggle as the model, a download rather than a bundle, ticket 
 
 ## Open questions
 
-1. **Parakeet's licence:** the NVIDIA cards say CC-BY-4.0 (attribution in the licences screen); confirm the exact FluidAudio CoreML conversion before shipping it.
+1. **Parakeet's licence:** settled for the conversion shipped. NVIDIA's v3 card says CC-BY-4.0; the GGUF conversion Spark downloads is attributed in Settings → Voice and in the licence notices. Parakeet English (v2) is left out because its conversion is under the NVIDIA Open Model License.
+
+## Phase 2: speech models and live words
+
+Built in this change: the model manifest and recommendation (`packages/contracts/src/voice.ts`), per-model downloads with cancel and remove and switching (`model.ts`, `model-store.ts`, `voice.ts`), the IPC above, the fake models, Settings → Voice → **Speech model** (`apps/web/src/settings/SpeechModels.tsx`), setup's **Voice** step (`apps/web/src/onboarding/VoiceStep.tsx`) and live words in the island (`SpeechScreen.tsx`).
+
+**Helper and build.** `scripts/voice-bundle.ts` builds transcribe.cpp v0.4.1 from its release tarball (sha256 `96a3993c075770bf3ca7aeaa86cc55c3673c24d7176643b60cc6a1f46dcab4a5`) as static libraries with examples, tests, tools and OpenMP off and the deployment target 12.0: Metal with its library embedded on arm64, Metal off and AVX2, FMA and F16C on for x64 (set explicitly, since transcribe.cpp picks its default from the build machine). The build stops if transcribe.cpp's `transcribe-link.json` names a library Spark does not link. Both helpers have minos 12.0 and link only system libraries and frameworks; arm64 grew from 7.1 MB to 8.7 MB, x64 from 2.2 MB to 4.2 MB.
+
+- **One engine, any model:** `Transcriber.swift` loads the file with `transcribe_model_load_file`, which tells GGUF Parakeet from a legacy whisper.cpp `.bin` by its magic, so the existing `ggml-base-q5_1.bin` and `ggml-silero-v6.2.0.bin` load unchanged. `VoiceDetector.swift` runs Silero through transcribe.cpp's streaming VAD on the CPU, one probability per 512-sample frame as before.
+- **The hint** goes to a model only when `transcribe_model_supports` reports the initial prompt (Whisper); Parakeet takes none and gets none. With the same hint, Whisper's transcripts matched the whisper.cpp helper's word for word on the test WAVs.
+- **Language:** a language Parakeet doesn't list, or `auto`, falls back to its own detection.
+- **A backend error** in a run reloads the model on the CPU and retries once.
+- **Live words:** while speech is open, every 0.5 s of new audio (once the segment is 0.6 s long) the engine decodes the open segment as a draft and emits `partial` with the committed text plus the draft. At most one draft runs, a tick is skipped while one does, none starts once the listen has an end reason, a draft whose segment has closed is dropped, nothing follows `final` or `cancelled`, and repeated text is not re-sent. Drafts skip Whisper's temperature fallback. A draft holds a second copy of the open segment (about 2 MB) while it runs; nothing is written to disk.
+- **File input** is now paced in real time, so a `SPARK_VOICE_FILE_INPUT` run lasts as long as the clip and shows the same partials as speech.
+- **`load` replaces the loaded model;** the host sends it only while nothing is listening.
+
+### Real tests (Phase 2)
+
+To fill in after the real runs on this Mac, as in [Required real tests](#required-real-tests-on-this-mac): each model downloaded through the app with its size and sha256, the phrases through the mic and as WAVs with each model, partials during a command and a dictation, switching models with and without a listen in progress, and Intel timings.
 
 ## Licences
 
-Read 2026-10-15. Notices for whisper.cpp, the weights and Silero ship in `Contents/Resources/voice/licenses/`, as tmux's do; Apple system voices are part of macOS.
+Read 2026-10-15; Phase 2 rows read 2026-11-02. Notices for the speech engine, the weights and Silero ship in `Contents/Resources/voice/licenses/`, as tmux's do; Apple system voices are part of macOS. Settings → Voice credits Parakeet (NVIDIA, CC BY 4.0, converted to GGUF) and Whisper (OpenAI, MIT) under the **Speech model** card.
 
-| Component                | Licence                                 | Source                                                                                                                                                         |
-| ------------------------ | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| whisper.cpp              | MIT                                     | [ggml-org/whisper.cpp LICENSE](https://github.com/ggml-org/whisper.cpp/blob/master/LICENSE)                                                                    |
-| Whisper weights (ggml)   | MIT                                     | [openai/whisper LICENSE](https://github.com/openai/whisper/blob/main/LICENSE), [ggerganov/whisper.cpp card](https://huggingface.co/ggerganov/whisper.cpp)      |
-| Silero VAD               | MIT                                     | [snakers4/silero-vad LICENSE](https://github.com/snakers4/silero-vad/blob/master/LICENSE), [ggml-org/whisper-vad](https://huggingface.co/ggml-org/whisper-vad) |
-| hassil (syntax only)     | Apache-2.0                              | [OHF-Voice/hassil LICENSE](https://github.com/OHF-Voice/hassil/blob/main/LICENSE.md)                                                                           |
-| Kokoro-82M (Phase 2)     | Apache-2.0                              | [hexgrad/Kokoro-82M card](https://huggingface.co/hexgrad/Kokoro-82M)                                                                                           |
-| misaki (Kokoro's G2P)    | Apache-2.0; falls back to espeak-ng     | [hexgrad/misaki](https://github.com/hexgrad/misaki)                                                                                                            |
-| espeak-ng (not used)     | GPL-3.0                                 | [espeak-ng/espeak-ng](https://github.com/espeak-ng/espeak-ng)                                                                                                  |
-| Parakeet TDT 0.6B v2, v3 | CC-BY-4.0                               | [nvidia/parakeet-tdt-0.6b-v3 card](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3)                                                                         |
-| FluidAudio               | Apache-2.0 code; macOS 14+              | [FluidInference/FluidAudio](https://github.com/FluidInference/FluidAudio)                                                                                      |
-| openWakeWord (not used)  | Apache-2.0 code, models CC BY-NC-SA 4.0 | [dscripka/openWakeWord README](https://github.com/dscripka/openWakeWord#license)                                                                               |
-| Porcupine (not used)     | Needs a Picovoice Console AccessKey     | [Picovoice/porcupine README](https://github.com/Picovoice/porcupine)                                                                                           |
+| Component                   | Licence                                    | Source                                                                                                                                                         |
+| --------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| transcribe.cpp              | MIT; its third-party list (ggml, miniz)    | [handy-computer/transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) v0.4.1, `LICENSE` and `THIRD-PARTY-LICENSES.md` shipped                      |
+| tinyBLAS                    | MIT (Mozilla Foundation)                   | Compiled into transcribe.cpp's ggml, missing from its list; notice shipped                                                                                     |
+| whisper.cpp (Phase 1 only)  | MIT                                        | [ggml-org/whisper.cpp LICENSE](https://github.com/ggml-org/whisper.cpp/blob/master/LICENSE)                                                                    |
+| Whisper weights (ggml)      | MIT                                        | [openai/whisper LICENSE](https://github.com/openai/whisper/blob/main/LICENSE), [ggerganov/whisper.cpp card](https://huggingface.co/ggerganov/whisper.cpp)      |
+| Silero VAD                  | MIT                                        | [snakers4/silero-vad LICENSE](https://github.com/snakers4/silero-vad/blob/master/LICENSE), [ggml-org/whisper-vad](https://huggingface.co/ggml-org/whisper-vad) |
+| hassil (syntax only)        | Apache-2.0                                 | [OHF-Voice/hassil LICENSE](https://github.com/OHF-Voice/hassil/blob/main/LICENSE.md)                                                                           |
+| Kokoro-82M (Phase 2)        | Apache-2.0                                 | [hexgrad/Kokoro-82M card](https://huggingface.co/hexgrad/Kokoro-82M)                                                                                           |
+| misaki (Kokoro's G2P)       | Apache-2.0; falls back to espeak-ng        | [hexgrad/misaki](https://github.com/hexgrad/misaki)                                                                                                            |
+| espeak-ng (not used)        | GPL-3.0                                    | [espeak-ng/espeak-ng](https://github.com/espeak-ng/espeak-ng)                                                                                                  |
+| Parakeet TDT 0.6B v3        | CC-BY-4.0                                  | [nvidia/parakeet-tdt-0.6b-v3 card](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3)                                                                         |
+| Parakeet v3 GGUF            | CC-BY-4.0 (NVIDIA's weights, converted)    | [handy-computer/parakeet-tdt-0.6b-v3-gguf](https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf) at `85ac09ea12fc4b1112fa76810059364bc6adc9de`      |
+| Parakeet English (not used) | NVIDIA Open Model License (its conversion) | Left out for its licence                                                                                                                                       |
+| FluidAudio (not used)       | Apache-2.0 code; macOS 14+                 | [FluidInference/FluidAudio](https://github.com/FluidInference/FluidAudio)                                                                                      |
+| openWakeWord (not used)     | Apache-2.0 code, models CC BY-NC-SA 4.0    | [dscripka/openWakeWord README](https://github.com/dscripka/openWakeWord#license)                                                                               |
+| Porcupine (not used)        | Needs a Picovoice Console AccessKey        | [Picovoice/porcupine README](https://github.com/Picovoice/porcupine)                                                                                           |

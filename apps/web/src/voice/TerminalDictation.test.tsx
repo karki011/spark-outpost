@@ -51,3 +51,24 @@ it('returns focus from Stop dictating to the terminal message without sending au
   );
   client.clear();
 });
+
+it('previews live words in the terminal message without sending them', async () => {
+  fake.message.mockClear();
+  const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <TerminalDictation chatId="terminal" agentName="Claude" />
+    </QueryClientProvider>,
+  );
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Dictate' })));
+  act(() => fake.event?.({ kind: 'partial', id: 'listen', text: 'Please' }));
+  act(() => fake.event?.({ kind: 'partial', id: 'listen', text: 'Please inspect the' }));
+  const input = screen.getByRole('textbox', { name: 'Dictated message for Claude' });
+  expect((input as HTMLInputElement).value).toBe('Please inspect the');
+  expect(
+    (screen.getByRole('button', { name: 'Send to Claude' }) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  fireEvent.submit(screen.getByRole('form', { name: 'Dictated message' }));
+  expect(fake.message).not.toHaveBeenCalled();
+  client.clear();
+});

@@ -12,11 +12,11 @@ import { macControlStamp, swiftEnv } from './mac-control-bundle.ts';
 const run = promisify(execFile);
 const BUFFER = 256 * 1024 * 1024;
 
-export const WHISPER_CPP = {
-  version: '1.9.5',
-  url: 'https://github.com/ggml-org/whisper.cpp/archive/refs/tags/v1.9.5.tar.gz',
-  sha256: 'ff1a9053feb509ff9d7729703355541ae9690073a6b1c40eb692c962e0dc1720',
-  folder: 'whisper.cpp-1.9.5',
+export const TRANSCRIBE_CPP = {
+  version: '0.4.1',
+  url: 'https://github.com/handy-computer/transcribe.cpp/archive/refs/tags/v0.4.1.tar.gz',
+  sha256: '96a3993c075770bf3ca7aeaa86cc55c3673c24d7176643b60cc6a1f46dcab4a5',
+  folder: 'transcribe.cpp-0.4.1',
 };
 
 export const voicePackage = (repoRoot: string) => path.join(repoRoot, 'apps/desktop/voice');
@@ -24,7 +24,7 @@ export const voiceBuiltDir = (repoRoot: string, arch: MacArch) =>
   path.join(repoRoot, '.local/voice', arch);
 const voiceCache = (repoRoot: string) => path.join(repoRoot, '.local/voice/cache');
 
-export function whisperCmakeArgs(arch: MacArch, source: string, build: string, prefix: string) {
+export function transcribeCmakeArgs(arch: MacArch, source: string, build: string, prefix: string) {
   const metal = arch === 'arm64' ? 'ON' : 'OFF';
   return [
     '-S',
@@ -32,29 +32,33 @@ export function whisperCmakeArgs(arch: MacArch, source: string, build: string, p
     '-B',
     build,
     '-DCMAKE_BUILD_TYPE=Release',
-    '-DBUILD_SHARED_LIBS=OFF',
-    '-DGGML_OPENMP=OFF',
+    '-DTRANSCRIBE_BUILD_SHARED=OFF',
+    '-DTRANSCRIBE_BUILD_TESTS=OFF',
+    '-DTRANSCRIBE_BUILD_EXAMPLES=OFF',
+    '-DTRANSCRIBE_BUILD_TOOLS=OFF',
+    '-DTRANSCRIBE_USE_OPENMP=OFF',
+    '-DTRANSCRIBE_INSTALL=ON',
+    `-DTRANSCRIBE_METAL=${metal}`,
+    `-DGGML_METAL_EMBED_LIBRARY=${metal}`,
     '-DGGML_NATIVE=OFF',
     '-DGGML_CCACHE=OFF',
-    `-DGGML_METAL=${metal}`,
-    `-DGGML_METAL_EMBED_LIBRARY=${metal}`,
-    '-DGGML_BLAS=ON',
-    '-DGGML_BLAS_VENDOR=Apple',
-    '-DGGML_ACCELERATE=ON',
     ...(arch === 'x64'
       ? ['-DGGML_AVX=ON', '-DGGML_AVX2=ON', '-DGGML_FMA=ON', '-DGGML_F16C=ON']
       : []),
-    '-DWHISPER_BUILD_EXAMPLES=OFF',
-    '-DWHISPER_BUILD_TESTS=OFF',
-    '-DWHISPER_BUILD_SERVER=OFF',
-    '-DWHISPER_SDL2=OFF',
-    '-DWHISPER_CURL=OFF',
     `-DCMAKE_OSX_ARCHITECTURES=${clangArch(arch)}`,
     `-DCMAKE_OSX_DEPLOYMENT_TARGET=${DEPLOYMENT_TARGET}`,
     '-DCMAKE_IGNORE_PREFIX_PATH=/opt/homebrew;/usr/local',
     `-DCMAKE_INSTALL_PREFIX=${prefix}`,
   ];
 }
+
+const transcribeLibraries = (arch: MacArch) => [
+  'transcribe',
+  'ggml',
+  'ggml-cpu',
+  ...(arch === 'arm64' ? ['ggml-metal'] : []),
+  'ggml-base',
+];
 
 export function swiftLinkArgs(arch: MacArch, prefix: string): string[] {
   const flags = [`-L${prefix}/lib`, '-framework', 'Accelerate', '-framework', 'Foundation'];
@@ -84,27 +88,44 @@ function cmake(): string {
   return process.env.CMAKE ?? 'cmake';
 }
 
-async function buildWhisper(repoRoot: string, arch: MacArch): Promise<string> {
+function transcribeStamp(arch: MacArch): string {
+  const flags = transcribeCmakeArgs(arch, '', '', '').join(' ');
+  return `${TRANSCRIBE_CPP.sha256}:${createHash('sha256').update(flags).digest('hex')}`;
+}
+
+export function linkManifestProblem(manifest: string, arch: MacArch): string | null {
+  const libraries = (JSON.parse(manifest) as { libraries?: unknown }).libraries;
+  const expected = transcribeLibraries(arch);
+  const same =
+    Array.isArray(libraries) &&
+    libraries.length === expected.length &&
+    expected.every((name) => libraries.includes(name));
+  return same
+    ? null
+    : `transcribe.cpp wants ${JSON.stringify(libraries)} linked, the voice helper links ${JSON.stringify(expected)}`;
+}
+
+async function buildTranscribe(repoRoot: string, arch: MacArch): Promise<string> {
   const cache = voiceCache(repoRoot);
-  const prefix = path.join(cache, 'whisper', arch);
+  const prefix = path.join(cache, 'transcribe', arch);
   const stamp = path.join(prefix, 'stamp');
-  if ((await readFile(stamp, 'utf8').catch(() => null)) === WHISPER_CPP.sha256) return prefix;
+  if ((await readFile(stamp, 'utf8').catch(() => null)) === transcribeStamp(arch)) return prefix;
   const tarball = await download(
-    WHISPER_CPP.url,
-    WHISPER_CPP.sha256,
-    path.join(cache, 'src', `whisper.cpp-${WHISPER_CPP.version}.tar.gz`),
+    TRANSCRIBE_CPP.url,
+    TRANSCRIBE_CPP.sha256,
+    path.join(cache, 'src', `transcribe.cpp-${TRANSCRIBE_CPP.version}.tar.gz`),
   );
   const work = path.join(cache, 'work', arch);
   await rm(work, { recursive: true, force: true });
   await rm(prefix, { recursive: true, force: true });
   await mkdir(work, { recursive: true });
   await run('tar', ['-xzf', tarball, '-C', work]);
-  const source = path.join(work, WHISPER_CPP.folder);
+  const source = path.join(work, TRANSCRIBE_CPP.folder);
   const build = path.join(work, 'build');
-  console.log(`Building whisper.cpp ${WHISPER_CPP.version} for ${arch}.`);
+  console.log(`Building transcribe.cpp ${TRANSCRIBE_CPP.version} for ${arch}.`);
   const options = { maxBuffer: BUFFER, env: swiftEnv(process.env) };
   try {
-    await run(cmake(), whisperCmakeArgs(arch, source, build, prefix), options);
+    await run(cmake(), transcribeCmakeArgs(arch, source, build, prefix), options);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT')
       throw new Error(
@@ -115,8 +136,17 @@ async function buildWhisper(repoRoot: string, arch: MacArch): Promise<string> {
   }
   await run(cmake(), ['--build', build, '-j', String(os.availableParallelism())], options);
   await run(cmake(), ['--install', build], options);
+  const problem = linkManifestProblem(
+    await readFile(path.join(prefix, 'lib', 'transcribe-link.json'), 'utf8'),
+    arch,
+  );
+  if (problem) throw new Error(`${problem}.`);
   await cp(path.join(source, 'LICENSE'), path.join(prefix, 'LICENSE'));
-  await writeFile(stamp, WHISPER_CPP.sha256);
+  await cp(
+    path.join(source, 'THIRD-PARTY-LICENSES.md'),
+    path.join(prefix, 'THIRD-PARTY-LICENSES.md'),
+  );
+  await writeFile(stamp, transcribeStamp(arch));
   return prefix;
 }
 
@@ -148,8 +178,8 @@ export async function checkVoiceAnswers(binary: string): Promise<void> {
     throw new Error(`The voice helper answered "${line.slice(0, 200)}" to a status request.`);
 }
 
-async function stampFor(repoRoot: string): Promise<string> {
-  return `${WHISPER_CPP.sha256}:${await macControlStamp(voicePackage(repoRoot))}`;
+async function stampFor(repoRoot: string, arch: MacArch): Promise<string> {
+  return `${transcribeStamp(arch)}:${await macControlStamp(voicePackage(repoRoot))}`;
 }
 
 function swiftArgs(repoRoot: string, arch: MacArch, prefix: string): string[] {
@@ -172,14 +202,18 @@ async function stageSupportFiles(repoRoot: string, built: string, prefix: string
   await mkdir(models, { recursive: true });
   await mkdir(licenses, { recursive: true });
   await cp(await downloadModel(repoRoot, VOICE_SILERO), path.join(models, VOICE_SILERO.file));
-  await cp(path.join(prefix, 'LICENSE'), path.join(licenses, 'whisper.cpp-LICENSE'));
+  await cp(path.join(prefix, 'LICENSE'), path.join(licenses, 'transcribe.cpp-LICENSE'));
+  await cp(
+    path.join(prefix, 'THIRD-PARTY-LICENSES.md'),
+    path.join(licenses, 'transcribe.cpp-THIRD-PARTY-LICENSES.md'),
+  );
   await cp(path.join(voicePackage(repoRoot), 'licenses'), licenses, { recursive: true });
 }
 
 export async function buildVoice(repoRoot: string, arch: MacArch): Promise<string> {
   const built = voiceBuiltDir(repoRoot, arch);
   const binary = path.join(built, VOICE_HELPER_NAME);
-  const stamp = await stampFor(repoRoot);
+  const stamp = await stampFor(repoRoot, arch);
   const saved = await readFile(path.join(built, 'stamp'), 'utf8').catch(() => null);
   const current =
     saved === stamp &&
@@ -188,7 +222,7 @@ export async function buildVoice(repoRoot: string, arch: MacArch): Promise<strin
       () => false,
     ));
   if (!current) {
-    const prefix = await buildWhisper(repoRoot, arch);
+    const prefix = await buildTranscribe(repoRoot, arch);
     console.log(`Building the voice helper for ${arch}.`);
     const env = swiftEnv(process.env);
     const args = swiftArgs(repoRoot, arch, prefix);
@@ -208,7 +242,7 @@ export async function buildVoice(repoRoot: string, arch: MacArch): Promise<strin
 
 export async function testVoice(repoRoot: string): Promise<void> {
   const arch: MacArch = os.arch() === 'arm64' ? 'arm64' : 'x64';
-  const prefix = await buildWhisper(repoRoot, arch);
+  const prefix = await buildTranscribe(repoRoot, arch);
   await run(
     'swift',
     ['test', '--package-path', voicePackage(repoRoot), ...swiftLinkArgs(arch, prefix)],
@@ -217,8 +251,11 @@ export async function testVoice(repoRoot: string): Promise<void> {
 }
 
 export const VOICE_LICENSES = [
-  'whisper.cpp-LICENSE',
+  'transcribe.cpp-LICENSE',
+  'transcribe.cpp-THIRD-PARTY-LICENSES.md',
+  'tinyblas-LICENSE',
   'whisper-weights-LICENSE',
+  'parakeet-weights-LICENSE',
   'silero-vad-LICENSE',
 ] as const;
 

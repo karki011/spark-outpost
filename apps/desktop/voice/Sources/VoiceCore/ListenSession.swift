@@ -18,6 +18,7 @@ public enum SessionAction: Equatable, Sendable {
     case speech
     case level(Float)
     case segment([Float])
+    case interim([Float])
     case end(EndReason)
 }
 
@@ -33,6 +34,8 @@ public struct ListenRules: Sendable {
     public var commandNoSpeechLimit: Double = 3
     public var segmentLimit: Double = 30
     public var preRoll: Double = 0.3
+    public var interimEvery: Double = 0.5
+    public var interimMinimum: Double = 0.6
 
     public init() {}
 }
@@ -44,6 +47,7 @@ public final class ListenSession {
     private var heardSpeech = false
     private var inSpeech = false
     private var segment: [Float] = []
+    private var interimAt = 0
     private var recent: [Float] = []
     private var quietSeconds: Double = 0
     private var sinceSpeech: Double = 0
@@ -67,6 +71,10 @@ public final class ListenSession {
 
     private var segmentLimitSamples: Int {
         Int(rules.segmentLimit * Double(ListenRules.sampleRate))
+    }
+
+    private func samples(_ seconds: Double) -> Int {
+        Int(seconds * Double(ListenRules.sampleRate))
     }
 
     public func feed(frame: [Float], probability: Float) -> [SessionAction] {
@@ -94,6 +102,7 @@ public final class ListenSession {
     public func cancel() {
         ended = true
         segment = []
+        interimAt = 0
         recent = []
     }
 
@@ -124,14 +133,24 @@ public final class ListenSession {
         if segment.count >= segmentLimitSamples {
             let cut = SessionAction.segment(segment)
             segment = []
+            interimAt = 0
             return [cut]
         }
-        return []
+        return quietSeconds == 0 ? interimIfDue() : []
+    }
+
+    private func interimIfDue() -> [SessionAction] {
+        guard segment.count >= samples(rules.interimMinimum),
+              segment.count - interimAt >= samples(rules.interimEvery)
+        else { return [] }
+        interimAt = segment.count
+        return [.interim(segment)]
     }
 
     private func closeSegment() -> [SessionAction] {
         inSpeech = false
         quietSeconds = 0
+        interimAt = 0
         let closed = segment
         segment = []
         return closed.isEmpty ? [] : [.segment(closed)]
