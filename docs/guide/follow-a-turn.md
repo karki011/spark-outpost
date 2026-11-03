@@ -10,17 +10,18 @@ About 2 minutes.
 
 ## See what's happening
 
-1. The working line names the current step and its time.
-2. Answered cards and flags stay in place; waiting cards sit last.
+1. The working line shows the step and time.
+2. Answered cards and flags stay put; waiting cards sit last.
 3. Summaries separate commands **passed** from tools **done**.
-4. Code Mode labels discovery and reads; failures expand.
-5. The to-do folds when done.
-6. Sidebar blobs show the **Agent TV** team.
-7. **View agents** opens **Work**; done workers fold.
-8. **Message** opens that chat’s composer; Outposts show handles.
-9. **Ask lead to redirect** drafts in that chat.
+4. Browser, web, page and Mac steps get rows that open.
+5. Code Mode labels discovery and reads; failures expand.
+6. A done to-do folds.
+7. Sidebar blobs show the **Agent TV** team.
+8. **View agents** opens **Work**; done workers fold.
+9. **Message** opens that chat’s composer; Outposts show handles.
+10. **Ask lead to redirect** drafts in that chat.
 
-**Open in terminal** shows failed output in a [dock tab](terminals.md#watch-an-agents-command).
+**Open in terminal** shows failures in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
@@ -28,25 +29,25 @@ About 2 minutes.
 
 ## Background work
 
-During **Waiting on 1 background agent** or Claude’s **Sleeping until 10:48**, **Stop background tasks** or **Stop waiting** ends it.
+**Stop background tasks** or **Stop waiting** ends **Waiting on 1 background agent** or Claude’s **Sleeping until 10:48**.
 
 Waits last 30 idle minutes; resumed turns show **Continued on its own**.
 
 ## Queue messages
 
-Send files without text. Queues survive restarts; drafts don't.
+Files need no text. Queues survive restarts; drafts don't.
 
-1. While a turn runs, **Enter** queues a message.
+1. During a turn, **Enter** queues a message.
 2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.
-3. While the agent only waits, **Enter** sends now; the queue follows.
+3. While the agent waits, **Enter** sends now; the queue follows.
 4. Queued: **Edit**, **Move up**, **Move down**, **Remove**, **Send now**; **Retry** ones are read-only.
 
 | When                      | Spark                                 |
 | ------------------------- | ------------------------------------- |
 | The turn finishes         | Sends the queue in order.             |
-| Stopped or failed         | Queue pauses until **Send now**.      |
+| Stopped or failed         | Paused until **Send now**.            |
 | You stop before it's read | **Send as next message** or **Edit**. |
-| Agent can't take it       | Queues it first.                      |
+| Agent can't take it       | Queued first.                         |
 
 ## Delete a running chat
 
@@ -61,7 +62,7 @@ Steps fold under **Worked for …**; steered replies don't.
 | -------------------------------- | ----------------------------------------------------------- |
 | **Good result** / **Bad result** | Rate the PR turn.                                           |
 | Selected text                    | **Add to chat**, **Ask about this**, **Comment**, **Copy**. |
-| `/fresh` or **… → Start fresh**  | Restart without old context.                                |
-| Ticks left of the thread         | Jump to a message.                                          |
+| `/fresh` or **… → Start fresh**  | Drop old context.                                           |
+| Ticks left of the thread         | Jump to messages.                                           |
 
 **Next:** [Answer an approval card](answer-approvals.md)

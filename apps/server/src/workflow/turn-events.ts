@@ -44,14 +44,28 @@ function filePath(path: string | undefined): string | null {
   return trimmed ? trimmed.slice(-TARGET_CHARS) : null;
 }
 
-function kindMark(output: { toolKind?: string; toolName?: string; path?: string }): StepMark {
+interface KindOutput {
+  toolKind?: string;
+  toolName?: string;
+  path?: string;
+  callout?: string;
+}
+
+function calloutMark(callout: string | undefined, secretValues: readonly string[]): string | null {
+  const shown = callout ? storableText(redactSecrets(callout, secretValues)).trim() : '';
+  return shown ? shown.slice(0, TARGET_CHARS) : null;
+}
+
+function kindMark(output: KindOutput, secretValues: readonly string[]): StepMark {
   const named = output.toolName ? { toolName: output.toolName.slice(0, TOOL_NAME_CHARS) } : {};
-  if (!output.toolKind) return named;
+  const callout = calloutMark(output.callout, secretValues);
+  if (!output.toolKind) return { ...named, ...(callout ? { target: callout } : {}) };
   const path = FILE_KINDS.has(output.toolKind) ? filePath(output.path) : null;
+  const target = path ?? callout;
   return {
     toolKind: output.toolKind.slice(0, 40),
     ...named,
-    ...(path ? { target: path } : {}),
+    ...(target ? { target } : {}),
   };
 }
 
@@ -166,10 +180,10 @@ export function createTurnEvents({
   return {
     async observe(output) {
       if (output.kind === 'step_started') {
-        await startStep(output.name, output.subagent, output.waits, kindMark(output));
+        await startStep(output.name, output.subagent, output.waits, kindMark(output, secretValues));
       }
       if (output.kind === 'step_finished') {
-        await finishStep(output.name, output.subagent, kindMark(output));
+        await finishStep(output.name, output.subagent, kindMark(output, secretValues));
       }
       if (output.kind === 'file_focus') await append(runEvents.fileFocus(output));
       if (output.kind === 'thought_delta') await think(output.delta);

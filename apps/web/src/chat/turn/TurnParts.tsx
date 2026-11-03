@@ -4,7 +4,7 @@ import type { Run } from '@spark-outpost/contracts';
 import { AgentBlob } from '../../brand/AgentBlob.tsx';
 import { formatTokens } from '../composer/model-options.ts';
 import { providerName } from '../provider-name.ts';
-import { Spinner } from '../rows/Rows.tsx';
+import { Spinner } from '../rows/RowStatus.tsx';
 import { useLiveHead } from '../status/status-context.ts';
 import { clockText } from '../status/status-text.ts';
 import { useNow } from '../status/use-status-line.ts';

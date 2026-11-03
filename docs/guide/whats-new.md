@@ -12,6 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed              | What to do                                                                        |
 | ------------------------- | --------------------------------------------------------------------------------- |
+| Highlighted steps         | [Open one](follow-a-turn.md#see-whats-happening) for its tool.                    |
 | Speech models, live words | [Pick a model](voice.md#pick-a-speech-model) and [shortcut](voice.md#turn-it-on). |
 | Claude plugins            | [Use them in Claude chats](use-claude-plugins.md); agents ask with a card.        |
 | First-message commands    | Plugin and repo `/` commands run from a chat's first message.                     |
