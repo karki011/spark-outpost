@@ -69,10 +69,22 @@ describe('replyOptions offers a closing list of choices', () => {
     ]);
   });
 
-  it('accepts six items and an item of exactly 80 characters', () => {
-    const long = 'x'.repeat(80);
+  it('accepts six items and an item of exactly 140 characters', () => {
+    const long = 'x'.repeat(140);
     const six = ['a1', 'b2', 'c3', 'd4', 'e5', long];
     expect(replyOptions(`Which one?\n\n${six.map((item) => `- ${item}`).join('\n')}`)).toEqual(six);
+  });
+  it('accepts a real reply with longer choices', () => {
+    const items = [
+      'Check both pages live and correct anything I got wrong above',
+      'Compare cmux with Spark Outpost or other agent terminals (Warp, Ghostty, tmux setups)',
+      'Write a short evaluation of whether cmux fits your workflow, with pros, cons and open questions',
+    ];
+    expect(
+      replyOptions(
+        `Which of these would you like next?\n\n${items.map((item) => `- ${item}`).join('\n')}`,
+      ),
+    ).toEqual(items);
   });
 });
 
@@ -104,7 +116,7 @@ describe('replyOptions leaves other lists alone', () => {
   });
 
   it('ignores long items', () => {
-    none(`Which one?\n\n- ${'x'.repeat(81)}\n- Short`);
+    none(`Which one?\n\n- ${'x'.repeat(141)}\n- Short`);
   });
 
   it('ignores one item or more than six', () => {

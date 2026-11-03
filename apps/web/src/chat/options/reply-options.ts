@@ -2,7 +2,7 @@ import { FENCE, LIST_ITEM, splitBlocks } from '../markdown/markdown-blocks.ts';
 
 const MIN_OPTIONS = 2;
 const MAX_OPTIONS = 6;
-const MAX_OPTION_LENGTH = 80;
+const MAX_OPTION_LENGTH = 140;
 
 const CLARIFY_FENCE = /^ {0,3}(`{3,}|~{3,})\s*clarify/m;
 const MARKER = /^([-*+]|\d{1,9}[.)])\s*/;
