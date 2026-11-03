@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { replyOptions, turnReplyOptions, type OptionTurn } from './reply-options.ts';
+import {
+  replyOptions,
+  turnReplyOptions,
+  withoutOptionList,
+  type OptionTurn,
+} from './reply-options.ts';
 
 const done: OptionTurn = { streaming: false, succeeded: true, latest: true, asked: false };
 
@@ -162,5 +167,17 @@ describe('turnReplyOptions shows choices only on a finished latest turn', () => 
     expect(turnReplyOptions(text, { ...done, succeeded: false })).toEqual([]);
     expect(turnReplyOptions(text, { ...done, latest: false })).toEqual([]);
     expect(turnReplyOptions(text, { ...done, asked: true })).toEqual([]);
+  });
+});
+
+describe('withoutOptionList', () => {
+  it('drops the closing list and keeps its lead in the same block', () => {
+    expect(withoutOptionList('Done.\n\nWhich one?\n- Postgres\n- SQLite\n')).toBe(
+      'Done.\n\nWhich one?',
+    );
+  });
+
+  it('drops a loose list and keeps a separate lead paragraph', () => {
+    expect(withoutOptionList('Which one?\n\n- Postgres\n\n- SQLite')).toBe('Which one?');
   });
 });

@@ -61,7 +61,7 @@ Steps fold under **Worked for …**; steered replies don't.
 | -------------------------------- | ----------------------------------------------------------- |
 | **Good result** / **Bad result** | Rate the PR turn.                                           |
 | Selected text                    | **Add to chat**, **Ask about this**, **Comment**, **Copy**. |
-| **Reply with**                   | Only fills the message box; **Enter** sends.                |
+| Choices                          | Only fill the message box, or **Show as list**.             |
 | `/fresh` or **… → Start fresh**  | Restart without old context.                                |
 | Ticks left of the thread         | Jump to a message.                                          |
 

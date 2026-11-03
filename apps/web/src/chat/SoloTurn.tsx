@@ -18,7 +18,7 @@ import { decidedFirst, hasPending } from './approvals/approval-events.ts';
 import { BrowserCheckMeta } from '../browser/BrowserCheckMeta.tsx';
 import { turnShots } from '../browser/browser-check.ts';
 import { askedBeforeTimeout, isLatestTurn } from './approvals/timed-out.ts';
-import { askedQuestions, ReplyOptions } from './options/ReplyOptions.tsx';
+import { askedQuestions, OptionReply } from './options/ReplyOptions.tsx';
 import { turnReplyOptions } from './options/reply-options.ts';
 import { taskForRuns } from './changes/FilesChanged.tsx';
 import { ChatFiles } from './files/ChatFiles.tsx';
@@ -327,12 +327,18 @@ export function SoloTurn({
         cards={cardsAt}
         fold={fold}
       >
-        {(part, last) => (
-          <>
+        {(part, last) =>
+          last && options.length > 0 ? (
+            <OptionReply
+              text={part}
+              options={options}
+              runId={run.id}
+              conversationId={conversationId}
+            />
+          ) : (
             <Markdown text={part} streaming={last && leads && active && !publishing} />
-            {last && <ReplyOptions conversationId={conversationId} options={options} />}
-          </>
-        )}
+          )
+        }
       </TurnRows>
       <ChatFiles files={(detail.chatFiles ?? []).filter((file) => file.runId === run.id)} />
       <ArtifactCards chatId={detail.conversation.id} runId={run.id} pages={detail.artifactPages} />

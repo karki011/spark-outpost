@@ -121,6 +121,14 @@ export function replyOptions(text: string): string[] {
   return leadOffers(list.lead, list.ordered) || itemsOffer(options) ? options : [];
 }
 
+export function withoutOptionList(text: string): string {
+  const lines = text.trimEnd().split('\n');
+  while (lines.length > 0 && (isItem(lines.at(-1) ?? '') || lines.at(-1)?.trim() === '')) {
+    lines.pop();
+  }
+  return lines.join('\n');
+}
+
 export function turnReplyOptions(text: string, turn: OptionTurn): string[] {
   if (turn.streaming || !turn.succeeded || !turn.latest || turn.asked) return [];
   return replyOptions(text);
