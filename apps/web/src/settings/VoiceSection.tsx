@@ -7,7 +7,7 @@ import {
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { shortcutKeys } from '../desktop/shortcut-keys.ts';
 import { CheckIcon } from '../ui/icons.tsx';
-import { Keys, keysText } from '../ui/Keys.tsx';
+import { Keys } from '../ui/Keys.tsx';
 import { desktopSpeech, useSpeechStatusState } from '../voice/speech-bridge.ts';
 import { SettingRow } from './SettingRow.tsx';
 import { RECORDING_HINT, ShortcutPicker, useShortcutPicker } from './ShortcutPicker.tsx';
@@ -142,7 +142,7 @@ function Shortcut({
               <input
                 type="radio"
                 name="voice-shortcut"
-                aria-label={`Use ${keysText(keys)}`}
+                aria-label={`Use ${keys.join('')}`}
                 checked={!fn}
                 onChange={() => void speech.update({ shortcutMode: 'keys' }).then(onStatus)}
               />{' '}
