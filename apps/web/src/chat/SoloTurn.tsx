@@ -18,6 +18,8 @@ import { decidedFirst, hasPending } from './approvals/approval-events.ts';
 import { BrowserCheckMeta } from '../browser/BrowserCheckMeta.tsx';
 import { turnShots } from '../browser/browser-check.ts';
 import { askedBeforeTimeout, isLatestTurn } from './approvals/timed-out.ts';
+import { askedQuestions, ReplyOptions } from './options/ReplyOptions.tsx';
+import { turnReplyOptions } from './options/reply-options.ts';
 import { taskForRuns } from './changes/FilesChanged.tsx';
 import { ChatFiles } from './files/ChatFiles.tsx';
 import { ArtifactCards } from './artifacts/ArtifactCards.tsx';
@@ -290,6 +292,17 @@ export function SoloTurn({
   const fold = foldable
     ? { open: foldOpen, seconds: runSeconds(run), onToggle: () => setFoldOpen(!foldOpen) }
     : null;
+  const options = turnReplyOptions(text, {
+    streaming: leads && active,
+    succeeded: run.status === 'succeeded',
+    latest: isLatestTurn(detail, run.id),
+    asked:
+      cards.pending.length > 0 ||
+      askedQuestions([
+        ...checkpoints,
+        ...detail.approvals.filter((approval) => changeRunIds.includes(approval.runId)),
+      ]),
+  });
   const usageRun = child?.usage ? child : run;
   const meta = metaLine(run, modelOf(usageRun) ?? modelOf(run));
 
@@ -315,7 +328,10 @@ export function SoloTurn({
         fold={fold}
       >
         {(part, last) => (
-          <Markdown text={part} streaming={last && leads && active && !publishing} />
+          <>
+            <Markdown text={part} streaming={last && leads && active && !publishing} />
+            {last && <ReplyOptions conversationId={conversationId} options={options} />}
+          </>
         )}
       </TurnRows>
       <ChatFiles files={(detail.chatFiles ?? []).filter((file) => file.runId === run.id)} />

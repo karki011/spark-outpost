@@ -10,7 +10,7 @@ About 2 minutes.
 
 ## See what's happening
 
-1. The working line names the current step and its time.
+1. The working line shows the current step and time.
 2. Answered cards and flags stay in place; waiting cards sit last.
 3. Summaries separate commands **passed** from tools **done**.
 4. Code Mode labels discovery and reads; failures expand.
@@ -61,6 +61,7 @@ Steps fold under **Worked for …**; steered replies don't.
 | -------------------------------- | ----------------------------------------------------------- |
 | **Good result** / **Bad result** | Rate the PR turn.                                           |
 | Selected text                    | **Add to chat**, **Ask about this**, **Comment**, **Copy**. |
+| **Reply with**                   | Only fills the message box; **Enter** sends.                |
 | `/fresh` or **… → Start fresh**  | Restart without old context.                                |
 | Ticks left of the thread         | Jump to a message.                                          |
 

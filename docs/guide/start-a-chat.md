@@ -11,13 +11,13 @@ About 1 minute.
 ## Start a chat
 
 1. Select **Chats** in the rail, then **New chat** (**⌘⇧O**).
-2. Leave **Chat** selected, type your message and press **Enter**.
+2. Leave **Chat** selected, type, then press **Enter**.
 
 ![A new chat with project and branch under the message box](images/chats-and-modes-new-chat-light.png)
 
-Or type in **Start a new chat** on **Home**.
+Or use **Start a new chat** on **Home**.
 
-Choose **Terminal** for native Claude Code or Codex: [Open a terminal](terminals.md).
+**Terminal** opens native Claude Code or Codex: [Open a terminal](terminals.md).
 
 While loading, drafts stay editable; sending waits. **Try again** recovers failed loads.
 
@@ -44,7 +44,7 @@ To unlink, select **No project folder** in the menu.
 
 **Sent** confirms receipt while history refreshes. **Retry** reuses the message ID.
 
-Markdown styles as you type. Select text or open **+ → Formatting**; **⌘B**, **⌘I**, **⌘⇧X** work too. In code blocks, **Enter** adds a line; **⌘Enter** sends. Agent setup is in **…** under the box.
+Markdown styles as you type; select text or open **+ → Formatting** (**⌘B**, **⌘I**, **⌘⇧X**). In code blocks, **Enter** adds a line; **⌘Enter** sends. Agent setup is in **…** under the box.
 
 ## Share a chat with another chat
 

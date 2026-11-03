@@ -61,6 +61,7 @@ export const SPEC_GROUPS = {
     'queue-strip',
     'quiet-composer',
     'quote-to-chat',
+    'reply-options',
     'responsive-chat',
     'result-block',
     'run-stream',
