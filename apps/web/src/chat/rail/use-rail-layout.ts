@@ -1,10 +1,11 @@
 import { useLayoutEffect, useState, type RefObject } from 'react';
 import { RAIL_MIN_ROOM } from './wide-layout.ts';
+import { layoutParent } from '../../ui/layout-parent.ts';
 
 const COLLAPSED_KEY = 'spark-outpost.chat-rail.collapsed';
 
 function roomBeside(main: HTMLElement): number {
-  const frame = main.parentElement ?? main;
+  const frame = layoutParent(main) ?? main;
   return frame.getBoundingClientRect().right - main.getBoundingClientRect().left;
 }
 
@@ -17,7 +18,8 @@ export function useRoomy(main: RefObject<HTMLElement | null>): boolean {
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
-    if (element.parentElement) observer.observe(element.parentElement);
+    const frame = layoutParent(element);
+    if (frame) observer.observe(frame);
     return () => observer.disconnect();
   }, [main]);
   return roomy;

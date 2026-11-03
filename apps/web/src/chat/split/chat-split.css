@@ -1,0 +1,96 @@
+.cpanes,
+.cpane {
+  display: contents;
+}
+
+.cpanes.split {
+  --cpanes-divider: 6px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: grid;
+  grid-template-columns:
+    minmax(0, calc((100% - var(--cpanes-divider)) * var(--cpanes-split, 0.5)))
+    var(--cpanes-divider)
+    minmax(0, 1fr);
+}
+
+.cpanes.split > .cpane {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  height: 100%;
+}
+
+.cpanes.split > .cpane[data-side='primary'] > .main {
+  margin-right: 2px;
+}
+
+.cpanes.split > .cpane[data-side='secondary'] > .main {
+  margin-left: 2px;
+}
+
+.cpanes.split > .split-divider {
+  margin: 8px 0;
+  border-radius: 3px;
+  background: transparent;
+}
+
+.cpanes.split > .split-divider:hover,
+.cpanes.split > .split-divider:focus-visible {
+  background: var(--accent-soft);
+}
+
+.cpanes.split > .cpane[data-focused='true'] > .main {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.cpanes.split > .cpane::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 23;
+  pointer-events: none;
+  border-radius: calc(var(--r) + 4px);
+  background: color-mix(in srgb, var(--bg) 30%, transparent);
+  opacity: 0;
+  transition: opacity 0.15s var(--out);
+}
+
+.cpanes.split > .cpane[data-focused='false']::after {
+  opacity: 1;
+}
+
+.cpanes.split > .cpane > .wp.over {
+  position: absolute;
+  width: min(420px, calc(100% - 16px));
+}
+
+.cpanes.split > .cpane > .wp-scrim {
+  position: absolute;
+  border-radius: calc(var(--r) + 4px);
+}
+
+.cpane-close svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cpanes.split > .cpane::after {
+    transition: none;
+  }
+}
+
+.bp-elsewhere {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 16px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}

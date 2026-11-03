@@ -6,7 +6,13 @@ import {
   type IpcMainInvokeEvent,
   type WebContents,
 } from 'electron';
-import { parseViewedChat, sameChats, viewedChats, type MainWindowState } from './chat-viewing.ts';
+import {
+  parseViewedChat,
+  parseViewedChats,
+  sameChats,
+  viewedChats,
+  type MainWindowState,
+} from './chat-viewing.ts';
 import { IPC } from './ipc-channels.ts';
 
 type SparkEvent = IpcMainEvent | IpcMainInvokeEvent;
@@ -36,13 +42,13 @@ function windowState(window: BrowserWindow | null): MainWindowState {
 
 export function startViewingHost(options: ViewingHostOptions): ViewingHost {
   let mainWindow: BrowserWindow | null = null;
-  let mainChat: string | null = null;
+  let mainChats: readonly string[] = [];
   let islandChat: string | null = null;
   let viewed: readonly string[] = [];
   const islandPages = new WeakSet<WebContents>();
 
   const recompute = () => {
-    const next = viewedChats({ main: windowState(mainWindow), mainChat, islandChat });
+    const next = viewedChats({ main: windowState(mainWindow), mainChats, islandChat });
     if (sameChats(next, viewed)) return;
     viewed = next;
     for (const window of BrowserWindow.getAllWindows()) {
@@ -61,9 +67,9 @@ export function startViewingHost(options: ViewingHostOptions): ViewingHost {
 
   const onReport = (event: IpcMainEvent, value: unknown) => {
     if (!options.trusted(event)) return;
-    const chat = parseViewedChat(value);
-    if (chat === undefined) return;
     if (options.fromIsland(event)) {
+      const chat = parseViewedChat(value);
+      if (chat === undefined) return;
       islandChat = chat;
       if (!islandPages.has(event.sender)) {
         islandPages.add(event.sender);
@@ -73,10 +79,11 @@ export function startViewingHost(options: ViewingHostOptions): ViewingHost {
         });
       }
     } else {
+      const chats = parseViewedChats(value);
       const window = BrowserWindow.fromWebContents(event.sender);
-      if (!window) return;
+      if (chats === undefined || !window) return;
       follow(window);
-      mainChat = chat;
+      mainChats = chats;
     }
     recompute();
   };

@@ -17,7 +17,7 @@ export interface TurnFoldState {
 interface TurnRowsProps {
   parts: readonly TurnRowPart[];
   context: RowContext;
-  children: (text: string, last: boolean) => ReactNode;
+  children: (text: string, last: boolean, lastText: boolean) => ReactNode;
   steers?: (ids: readonly string[], index: number) => ReactNode;
   cards?: (ids: readonly string[]) => ReactNode;
   fold?: TurnFoldState | null;
@@ -75,6 +75,7 @@ function FoldedWork({ fold, ...shared }: PartsProps & { fold: TurnFoldState }) {
 
 function Parts({ parts, context, children, steers, cards, shown = () => true }: PartsProps) {
   const lastShown = parts.findLastIndex((part) => part.kind !== 'steers' && part.kind !== 'cards');
+  const lastText = parts.findLastIndex((part) => part.kind === 'text');
   return parts.map((part, index) => {
     if (!shown(index)) return null;
     if (part.kind === 'steers') {
@@ -98,6 +99,10 @@ function Parts({ parts, context, children, steers, cards, shown = () => true }: 
         </div>
       );
     }
-    return <Fragment key={part.key}>{children(part.text, index === lastShown)}</Fragment>;
+    return (
+      <Fragment key={part.key}>
+        {children(part.text, index === lastShown, index === lastText)}
+      </Fragment>
+    );
   });
 }

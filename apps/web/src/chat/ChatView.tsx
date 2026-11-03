@@ -52,6 +52,8 @@ import { ChatTicketBar } from './tickets/ChatTicketBar.tsx';
 import { ChatTicketChips } from './tickets/ChatTicketChips.tsx';
 import { useChatTickets } from './tickets/use-chat-tickets.ts';
 import { useChatWorkspace } from './project/use-chat-workspace.ts';
+import { useChatBrowserHome } from './project/chat-browser-home.ts';
+import { paneLabel, useChatPane } from './split/chat-pane.ts';
 import { ChatRail } from './rail/ChatRail.tsx';
 import { hasTodo } from '../todo/task-todo.ts';
 import { RailContext } from './rail/rail-context.ts';
@@ -137,7 +139,8 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   });
 
   const running = activeRun(detail.data);
-  useEscapeStop(running !== null, stop.stop);
+  const pane = useChatPane();
+  useEscapeStop(running !== null && pane.focused, stop.stop);
   const waitingOn = running ? (detail.data?.conversation.latestRun?.waitingOn ?? 0) : 0;
   usePreviewDockTab(conversationId);
   const queue = useChatQueue(conversationId, detail.data?.queue);
@@ -225,7 +228,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     if (browsing) panel.closeBrowser();
     else panel.setView('browser');
   });
-  const firstRepo = repos[0] ?? null;
   const view = sessionView(detail.data, terminalLaunching);
   const terminalSession = view === 'terminal';
   const assistantChat = detail.data?.conversation.assistant === true;
@@ -240,20 +242,14 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const sessionPicker = newSession ? (
     <SessionTypeChip value={sessionChoice} onChange={chooseSession} disabled={terminalLaunching} />
   ) : null;
-  const panelRoots = useMemo(
-    () => [
-      ...(chatBranch?.worktree ? [chatBranch.path] : []),
-      ...repos.map((repo) => repo.rootPath),
-    ],
-    [chatBranch, repos],
+  const { roots: panelRoots, home: browserHome } = useChatBrowserHome(
+    conversationId,
+    chatBranch,
+    repos,
+    terminalSession,
   );
-  const browserHome = {
-    chatId: conversationId,
-    projectId: firstRepo?.id ?? null,
-    roots: panelRoots,
-    sendsTo: terminalSession ? ('terminal' as const) : ('chat' as const),
-  };
 
+  const Landmark = pane.landmark;
   return (
     <ChatContexts
       viewChanges={viewChanges}
@@ -263,8 +259,9 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
       openAgents={panel.available ? openAgents : null}
     >
       <FileSheetProvider>
-        <main
+        <Landmark
           ref={mainRef}
+          aria-label={paneLabel(pane, title)}
           className={rail === 'hidden' ? 'main' : `main crail-${rail}`}
           data-chat-links=""
           {...(terminalSession || terminalDraft ? {} : drop.handlers)}
@@ -302,6 +299,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 canStartFresh={!terminalSession}
                 terminalDock={!terminalSession && !terminalDraft}
               />
+              {pane.closer}
             </div>
           </header>
           <ChatTicketBar chat={tickets} />
@@ -387,6 +385,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               />
               <Composer
                 conversationId={conversationId}
+                autoFocus={pane.focused}
                 repos={repos}
                 settings={settings}
                 providers={connected}
@@ -440,7 +439,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             <TerminalDock chatId={conversationId} preload={repos.length > 0} />
           )}
           <DropOverlay visible={drop.dragging} />
-        </main>
+        </Landmark>
         {panel.available && (
           <WorkPanel
             conversationId={conversationId}

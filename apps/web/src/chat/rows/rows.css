@@ -153,6 +153,48 @@ button.trow:hover {
   margin: 2px 0 6px;
 }
 
+.trow-callout .row-ico {
+  color: var(--accent-text);
+}
+
+.trow-callout .trow-name {
+  color: var(--text);
+}
+
+.trow-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 0;
+  padding: 8px 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.trow-facts > div {
+  display: contents;
+}
+
+.trow-facts dt {
+  color: var(--muted);
+}
+
+.trow-facts dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.trow-facts code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.trow-facts .trow-word {
+  display: inline-flex;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .trow-spin,
   .turn-working .spin {

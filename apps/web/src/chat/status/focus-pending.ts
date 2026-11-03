@@ -6,6 +6,7 @@ import type { PendingEntry } from './status-store.ts';
 const FOCUSABLE =
   'textarea, input, button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
 const FOCUS_TRIES = 30;
+const CHAT_PANE = '.cpane';
 
 function focusCard(anchor: string, tries: number) {
   const card = document.getElementById(anchor);
@@ -32,10 +33,14 @@ function pendingCardHas(entries: readonly PendingEntry[], target: EventTarget | 
 
 export function useFocusHandoff(entries: readonly PendingEntry[]): void {
   const hadFocus = useRef(false);
+  const pane = useRef<ParentNode>(document);
   const shown = useRef<readonly PendingEntry[]>(entries);
   useEffect(() => {
     const onFocus = (event: FocusEvent) => {
       hadFocus.current = pendingCardHas(shown.current, event.target);
+      if (hadFocus.current && event.target instanceof Element) {
+        pane.current = event.target.closest(CHAT_PANE) ?? document;
+      }
     };
     document.addEventListener('focusin', onFocus);
     return () => document.removeEventListener('focusin', onFocus);
@@ -53,6 +58,6 @@ export function useFocusHandoff(entries: readonly PendingEntry[]): void {
       focusPending(next.id);
       return;
     }
-    document.querySelector<HTMLElement>('.composer textarea')?.focus({ preventScroll: true });
+    pane.current.querySelector<HTMLElement>('.composer textarea')?.focus({ preventScroll: true });
   }, [entries]);
 }

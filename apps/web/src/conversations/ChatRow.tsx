@@ -34,6 +34,7 @@ interface ChatRowProps {
   faceless?: boolean;
   relation?: string | null;
   onOpen: (id: string) => void;
+  onOpenBeside?: ((id: string) => void) | undefined;
   onPrepare?: (id: string) => void;
   onMenu: (id: string, element: HTMLElement, point: { x: number; y: number } | null) => void;
   onRename: (chat: ConversationSummary, title: string | null) => void;
@@ -236,7 +237,16 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
           className="row-open"
           aria-current={selected ? 'page' : undefined}
           title={tooltip.join(' · ')}
-          onClick={() => onOpen(chat.id)}
+          aria-keyshortcuts={props.onOpenBeside ? 'Alt+Enter' : undefined}
+          onClick={(event) => {
+            if (event.altKey && props.onOpenBeside) props.onOpenBeside(chat.id);
+            else onOpen(chat.id);
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' || !event.altKey || !props.onOpenBeside) return;
+            event.preventDefault();
+            props.onOpenBeside(chat.id);
+          }}
           onFocus={(event) => {
             if (event.currentTarget.matches(':focus-visible')) {
               marquee.start();

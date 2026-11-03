@@ -23,6 +23,7 @@ import {
   OutpostPick,
   type AddToOutpostActions,
 } from './AddToOutpost.tsx';
+import { SplitViewIcon } from '../browser/BrowserIcons.tsx';
 import type { PickerAction } from '../ui/ChoicePicker.tsx';
 import { MenuItem as Item, MenuShell, type MenuAnchor } from './MenuShell.tsx';
 
@@ -47,6 +48,7 @@ export interface ChatMenuActions {
 interface ChatMenuProps extends ChatMenuActions {
   onMoveUp?: (() => void) | null;
   onMoveDown?: (() => void) | null;
+  onOpenBeside?: (() => void) | null;
   chat: ConversationSummary;
   anchor: MenuAnchor;
   projects: readonly Project[];
@@ -64,6 +66,7 @@ export function ChatMenu({
   onClose,
   onMoveUp,
   onMoveDown,
+  onOpenBeside = null,
   ...actions
 }: ChatMenuProps) {
   const [page, setPage] = useState<Page>('main');
@@ -99,6 +102,9 @@ export function ChatMenu({
 
   const mainItems = (
     <>
+      {onOpenBeside && (
+        <Item icon={<SplitViewIcon />} label="Open in split" onSelect={run(onOpenBeside)} />
+      )}
       <Item icon={<PenIcon />} label="Rename" onSelect={run(actions.onRename)} />
       <Item
         icon={<SparkleIcon />}

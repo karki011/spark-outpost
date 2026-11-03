@@ -58,4 +58,55 @@ describe('web steps in the work log', () => {
     };
     expect(steps(mapper.map(search))).toEqual([['step_started', 'Searched the web']]);
   });
+
+  it('starts a callout step once its input streams in, with a short target', () => {
+    const mapper = createUpdateMapper();
+    const callouts = (outputs: ProviderOutput[]) =>
+      outputs.flatMap((output) =>
+        output.kind === 'step_started' || output.kind === 'step_finished'
+          ? [[output.kind, output.callout]]
+          : [],
+      );
+    const opened = mapper.map({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'b1',
+      title: 'mcp__spark__spark_browser_open',
+      kind: 'other',
+      status: 'pending',
+      rawInput: {},
+    });
+    expect(callouts(opened)).toEqual([]);
+    const addressed = mapper.map({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'b1',
+      rawInput: { url: 'https://cloudzero.com/pricing?x=1' },
+    });
+    expect(callouts(addressed)).toEqual([['step_started', 'cloudzero.com']]);
+    const finished = mapper.map({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'b1',
+      status: 'completed',
+    });
+    expect(callouts(finished)).toEqual([['step_finished', 'cloudzero.com']]);
+  });
+
+  it('still shows a callout that ends before its input arrives', () => {
+    const mapper = createUpdateMapper();
+    mapper.map({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'a1',
+      title: 'mcp__spark__spark_artifact',
+      kind: 'other',
+      status: 'pending',
+    });
+    const ended = mapper.map({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'a1',
+      status: 'completed',
+    });
+    expect(steps(ended)).toEqual([
+      ['step_started', 'Making an artifact'],
+      ['step_finished', 'Making an artifact'],
+    ]);
+  });
 });

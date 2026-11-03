@@ -117,11 +117,11 @@ export function waitingHeadline(chat: ConversationSummary): string {
 
 export function attention(
   chats: readonly ConversationSummary[],
-  openId: string | null,
+  openIds: readonly string[],
   alerting: ReadonlySet<string>,
 ): Attention {
   const asking = chats.filter((chat) => !chat.archivedAt && alerting.has(chat.id));
-  const others = asking.filter((chat) => chat.id !== openId);
+  const others = asking.filter((chat) => !openIds.includes(chat.id));
   const text =
     others.length === 0
       ? null

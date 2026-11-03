@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { parseViewedChat, sameChats, viewedChats, type ViewingState } from './chat-viewing.ts';
+import {
+  parseViewedChat,
+  parseViewedChats,
+  sameChats,
+  viewedChats,
+  type ViewingState,
+} from './chat-viewing.ts';
 
 const CHAT = '11111111-2222-4333-8444-555555555555';
 const OTHER = '66666666-7777-4888-8999-aaaaaaaaaaaa';
 const SHOWN = { focused: true, visible: true, minimized: false };
 
 function state(overrides: Partial<ViewingState>): ViewingState {
-  return { main: SHOWN, mainChat: CHAT, islandChat: null, ...overrides };
+  return { main: SHOWN, mainChats: [CHAT], islandChat: null, ...overrides };
 }
 
 describe('viewedChats', () => {
@@ -28,7 +34,26 @@ describe('viewedChats', () => {
   });
 
   it('has nothing when no chat is open', () => {
-    expect(viewedChats(state({ mainChat: null }))).toEqual([]);
+    expect(viewedChats(state({ mainChats: [] }))).toEqual([]);
+  });
+
+  it('counts both chats of a split', () => {
+    expect(viewedChats(state({ mainChats: [CHAT, OTHER] }))).toEqual([CHAT, OTHER]);
+    expect(
+      viewedChats(state({ mainChats: [CHAT, OTHER], main: { ...SHOWN, focused: false } })),
+    ).toEqual([]);
+  });
+});
+
+describe('parseViewedChats', () => {
+  it('takes one chat, null or up to two chats and refuses anything else', () => {
+    expect(parseViewedChats(CHAT)).toEqual([CHAT]);
+    expect(parseViewedChats(null)).toEqual([]);
+    expect(parseViewedChats([CHAT, OTHER])).toEqual([CHAT, OTHER]);
+    expect(parseViewedChats([CHAT, CHAT])).toEqual([CHAT]);
+    expect(parseViewedChats([CHAT, OTHER, CHAT])).toBeUndefined();
+    expect(parseViewedChats([CHAT, 'not-a-chat'])).toBeUndefined();
+    expect(parseViewedChats([null])).toBeUndefined();
   });
 });
 

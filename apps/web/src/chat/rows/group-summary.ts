@@ -1,4 +1,4 @@
-import { isMcpToolName } from '@spark-outpost/contracts';
+import { isMcpToolName, type CalloutKind } from '@spark-outpost/contracts';
 import type { StepTimes } from '../run-projection.ts';
 import {
   spanSeconds,
@@ -11,11 +11,12 @@ import {
 export type GroupKind = 'run' | 'edit' | 'read' | 'search' | 'tool';
 
 interface Counted {
-  kind: GroupKind | 'thought';
+  kind: GroupKind | CalloutKind | 'thought';
   count: number;
 }
 
-function stepKind(item: GroupedItem): GroupKind | 'thought' {
+function stepKind(item: GroupedItem): Counted['kind'] {
+  if (item.kind === 'tool' && item.callout) return item.callout.kind;
   if (item.kind === 'command' && isMcpToolName(item.command.command)) return 'tool';
   if (item.kind === 'tool' && item.tone === 'tool') return 'tool';
   if (item.kind === 'command' || item.kind === 'thought') {
@@ -36,7 +37,29 @@ function plural(count: number, one: string, many = `${one}s`): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
-const ORDER: readonly Counted['kind'][] = ['run', 'edit', 'read', 'search', 'tool', 'thought'];
+const ORDER: readonly Counted['kind'][] = [
+  'run',
+  'edit',
+  'read',
+  'search',
+  'tool',
+  'browser',
+  'web',
+  'page',
+  'mac',
+  'thought',
+];
+
+const CALLOUT_PHRASES: Record<CalloutKind, (count: number) => string> = {
+  browser: (count) => `used the browser ${times(count)}`,
+  web: (count) => `used the web ${times(count)}`,
+  page: (count) => `worked on pages ${times(count)}`,
+  mac: (count) => `acted in Mac apps ${times(count)}`,
+};
+
+function isCalloutKind(kind: Counted['kind']): kind is CalloutKind {
+  return Object.hasOwn(CALLOUT_PHRASES, kind);
+}
 
 function counts(group: RowGroup): Counted[] {
   const byKind = (kind: Counted['kind']) => group.items.filter((item) => stepKind(item) === kind);
@@ -49,6 +72,7 @@ function counts(group: RowGroup): Counted[] {
 }
 
 function phrase({ kind, count }: Counted): string {
+  if (isCalloutKind(kind)) return CALLOUT_PHRASES[kind](count);
   if (kind === 'tool') return `used ${plural(count, 'tool')}`;
   if (kind === 'run') return `ran ${plural(count, 'command')}`;
   if (kind === 'edit') return `edited ${plural(count, 'file')}`;
@@ -61,6 +85,10 @@ function capitalized(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+function isGroupKind(kind: Counted['kind']): kind is GroupKind {
+  return kind !== 'thought' && !isCalloutKind(kind);
+}
+
 export interface GroupWords {
   lead: string;
   rest: string;
@@ -69,7 +97,7 @@ export interface GroupWords {
 
 export function groupWords(group: RowGroup): GroupWords {
   const [first, ...others] = counts(group);
-  const kind = first && first.kind !== 'thought' ? first.kind : 'run';
+  const kind = first && isGroupKind(first.kind) ? first.kind : 'run';
   return {
     lead: first ? capitalized(phrase(first)) : '',
     rest: others.map((entry) => `, ${phrase(entry)}`).join(''),

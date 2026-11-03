@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { AgentCards } from './AgentCards.tsx';
 import { useAgentsFocusRequest, useShownAgents } from './agent-board.ts';
+import { usePaneId } from '../split/chat-pane.ts';
 
 export function AgentsSection() {
   const shown = useShownAgents();
   const focusRequest = useAgentsFocusRequest();
   const heading = useRef<HTMLHeadingElement>(null);
+  const headingId = usePaneId('wp-agents');
 
   useEffect(() => {
     if (focusRequest === 0) return;
@@ -18,8 +20,8 @@ export function AgentsSection() {
 
   if (!shown || shown.rows.length === 0) return null;
   return (
-    <section className="wsec ac-section" aria-labelledby="wp-agents">
-      <h2 id="wp-agents" ref={heading} tabIndex={-1} className="ac-head">
+    <section className="wsec ac-section" aria-labelledby={headingId}>
+      <h2 id={headingId} ref={heading} tabIndex={-1} className="ac-head">
         Agents · {shown.rows.length}
       </h2>
       <AgentCards rows={shown.rows} live={shown.live} />

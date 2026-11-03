@@ -307,17 +307,18 @@ describe('turn rows named by the ACP tool name', () => {
     });
   });
 
-  it('spells out web tools and drops a target that only restates the tool', () => {
+  it('calls out web tools with a plain verb, from older runs without a target too', () => {
     const search = { toolKind: 'fetch', toolName: 'WebSearch' };
     expect(onlyRow(done('Searched the web', search))).toMatchObject({
       tone: 'web',
-      verb: 'Web search',
+      verb: 'Searched the web',
       target: null,
       label: 'Searched the web',
+      callout: { tool: 'WebSearch', kind: 'web' },
     });
     const fetch = { toolKind: 'fetch', toolName: 'WebFetch' };
     expect(onlyRow(done('Fetched example.com', fetch))).toMatchObject({
-      verb: 'Web fetch',
+      verb: 'Fetched',
       target: 'example.com',
     });
   });

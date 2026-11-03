@@ -74,16 +74,18 @@ export function useViewPlacement(
   target: RefObject<HTMLElement | null>,
   home: BrowserHome,
   shown: boolean,
+  placing = true,
 ): void {
   const { chatId, projectId, sendsTo } = home;
   const rootsKey = home.roots.join('\n');
   const place = useCallback<PlaceView>(
     (bounds, covered) => {
+      if (!placing) return;
       const roots = rootsKey === '' ? [] : rootsKey.split('\n').slice(0, 16);
       const placement: BrowserPlacement = { chatId, projectId, roots, bounds, covered, sendsTo };
       void desktopBrowser()?.place(placement);
     },
-    [chatId, projectId, rootsKey, sendsTo],
+    [chatId, projectId, rootsKey, sendsTo, placing],
   );
   useNativePlacement(target, shown && desktopBrowser() !== null, place);
 }

@@ -13,6 +13,8 @@ import { usePhone } from '../ui/breakpoints.ts';
 import { SlidersIcon } from '../ui/icons.tsx';
 import { BROWSER_KEYS } from '../ui/Keys.tsx';
 import { MAC } from '../ui/shortcuts.ts';
+import { usePaneId } from './split/chat-pane.ts';
+import { WORK_PANEL_ID } from '../tasks/WorkPanel.tsx';
 
 interface ChatHeadToolsProps {
   conversationId: string;
@@ -37,6 +39,7 @@ export function ChatHeadTools({
   const { remote } = useRemoteClient();
   const tv = useAgentTv();
   const menuButton = useRef<HTMLButtonElement>(null);
+  const workPanelId = usePaneId(WORK_PANEL_ID);
   const browserPane = browser && !remote ? browser : null;
   useBrowserShortcut(browserPane ? browserPane.onToggle : null);
   const terminalPane = useTerminalPane(conversationId, menuButton, !remote && terminalDock);
@@ -51,7 +54,7 @@ export function ChatHeadTools({
             open: browserPane.open,
             keys: BROWSER_KEYS,
             ariaKeys: MAC ? 'Meta+Shift+B' : 'Control+Shift+B',
-            controls: 'work-panel',
+            controls: workPanelId,
             onToggle: browserPane.onToggle,
           },
         ]

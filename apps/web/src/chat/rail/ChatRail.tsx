@@ -32,6 +32,7 @@ import { RailTv } from './RailTv.tsx';
 import { useLeadSteps } from '../../crew/lead-steps.ts';
 import { latestFollowing, railCrew, railRows, type RailAction } from './rail-model.ts';
 import { useRoomInThread } from './use-rail-layout.ts';
+import { usePaneId } from '../split/chat-pane.ts';
 
 interface ChatRailProps {
   detail: ConversationDetail;
@@ -47,9 +48,12 @@ interface ChatRailProps {
   onChanges(): void;
 }
 
+const RAIL_ID = 'chat-rail';
+
 function RailToggle({ open, onToggle }: { open: boolean; onToggle(): void }) {
   const label = open ? 'Hide context rail' : 'Show context rail';
   const tip = useTooltip(label);
+  const railId = usePaneId(RAIL_ID);
   return (
     <>
       <button
@@ -57,7 +61,7 @@ function RailToggle({ open, onToggle }: { open: boolean; onToggle(): void }) {
         className={open ? 'crail-toggle' : 'crail-toggle crail-show'}
         aria-label={label}
         aria-expanded={open}
-        aria-controls="chat-rail"
+        aria-controls={railId}
         {...tip.triggerProps}
         onClick={onToggle}
       >
@@ -89,6 +93,7 @@ function OpenRail({
 }: ChatRailProps) {
   const conversationId = detail.conversation.id;
   const railRef = useRef<HTMLElement>(null);
+  const railId = usePaneId(RAIL_ID);
   useRoomInThread(railRef);
   const { settings } = detail;
   const provider = settings.provider ?? '';
@@ -136,7 +141,7 @@ function OpenRail({
   };
 
   return (
-    <section ref={railRef} className="crail" id="chat-rail" aria-label="Chat context">
+    <section ref={railRef} className="crail" id={railId} aria-label="Chat context">
       <div className="crail-head">
         <h3 className="crail-title">Context</h3>
         <RailToggle open onToggle={() => onCollapse(true)} />

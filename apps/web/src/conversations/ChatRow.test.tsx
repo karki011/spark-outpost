@@ -48,7 +48,7 @@ function renderRow(
   onPrepare?: (id: string) => void,
 ) {
   render(
-    <OnScreenChat.Provider value={onScreenId}>
+    <OnScreenChat.Provider value={onScreenId ? [onScreenId] : []}>
       <ul>
         <ChatRow
           chat={row}

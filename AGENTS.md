@@ -67,6 +67,7 @@ Read `docs/product/PLAN.md` for product direction and `docs/architecture/PROTOCO
 - Keep onboarding and Integrations on the same connection components and query cache. Show only supported connection methods and backend-reported status.
 - Every picker of a project or folder ends with **Add folder…** and **Clone a repository…** from `useAddFolder` (`apps/web/src/projects/`), which opens Spark's own folder browser everywhere, the Mac included (no macOS dialog): it starts next to the newest project or in Documents, has places, a typed path, keys, **New folder**, project and git marks, and a line saying how to allow access when macOS refuses a folder; the new project is selected in place.
 - Use shared outline icons, restrained accent colors and visible keyboard focus; preserve mounted conversations when changing appearance.
+- Two chats can show side by side (split chat, `apps/web/src/chat/split/`): a window- or document-level listener inside a chat acts only while `usePaneFocused()` is true, and a DOM id that ARIA or `getElementById` references inside a chat comes from `usePaneId()`.
 
 ## Changes and refactoring
 

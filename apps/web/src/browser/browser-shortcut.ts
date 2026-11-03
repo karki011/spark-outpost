@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { MAC } from '../ui/shortcuts.ts';
+import { usePaneFocused } from '../chat/split/chat-pane.ts';
 
 function isBrowserShortcut(event: KeyboardEvent): boolean {
   const modifier = MAC ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
@@ -7,8 +8,9 @@ function isBrowserShortcut(event: KeyboardEvent): boolean {
 }
 
 export function useBrowserShortcut(onToggle: (() => void) | null) {
+  const focused = usePaneFocused();
   useEffect(() => {
-    if (!onToggle) return;
+    if (!onToggle || !focused) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (!isBrowserShortcut(event)) return;
       if (document.querySelector('[aria-modal="true"]')) return;
@@ -18,5 +20,5 @@ export function useBrowserShortcut(onToggle: (() => void) | null) {
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [onToggle]);
+  }, [onToggle, focused]);
 }

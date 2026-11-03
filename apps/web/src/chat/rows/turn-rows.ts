@@ -1,4 +1,5 @@
 import {
+  calloutWords,
   friendlyStep,
   isMcpToolName,
   isSparkNote,
@@ -9,13 +10,12 @@ import { anchorIndex, outsideFence, type TextAnchor } from '../../browser/shot-o
 import type { AgentTerminalView } from '../commands/agent-terminal-model.ts';
 import type { CommandView } from '../commands/command-model.ts';
 import type { StepStatus, StepTimes, StepView } from '../run-projection.ts';
+import { stepCallout, type Callout } from './callouts.ts';
 import { cardAt, type CardMark } from './card-place.ts';
 import { REFUSED_VERB, stepActivity } from '../status/step-activity.ts';
 
 const THINKING = 'Thinking';
 const SENTENCE_END = /[.!?:]\s*$/;
-const WEB_STEP = /^(?:Fetched |Searched the web$)/;
-const WEB_SEARCHED = 'Searched the web';
 
 export type ToolTone = 'read' | 'search' | 'edit' | 'run' | 'web' | 'tool' | 'other';
 
@@ -29,6 +29,7 @@ export interface ToolItem {
   path: string | null;
   label: string;
   detail?: string;
+  callout?: Callout;
   startedAt: number | undefined;
   finishedAt: number | undefined;
 }
@@ -146,10 +147,6 @@ function namedItem(step: StepView, base: ToolBase, open: boolean, ranCommands: b
     const target = activity.kind === 'run' ? activity.target : base.label;
     return { ...base, tone: 'run' as const, verb: open ? 'Running' : 'Ran', target };
   }
-  if (WEB_STEP.test(base.label)) {
-    const [verb = '', ...rest] = base.label.split(' ');
-    return { ...base, tone: 'web' as const, verb, target: rest.join(' ') || null };
-  }
   if (activity.kind === 'edit' && activity.target) {
     const verb = DONE_VERBS.edit[open ? 1 : 0];
     return { ...base, tone: 'edit' as const, verb, target: activity.target };
@@ -177,12 +174,9 @@ const NAME_TONES: Readonly<Record<string, ToolTone>> = {
   NotebookEdit: 'edit',
   Bash: 'run',
   PowerShell: 'run',
-  WebFetch: 'web',
-  WebSearch: 'web',
 };
 
 function namedTarget(item: ToolItem, toolName: string, verb: string): string | null {
-  if (item.tone === 'web') return item.label === WEB_SEARCHED ? null : item.target;
   if (item.tone !== 'other') return item.target;
   const restated = item.label === verb || item.label === plainName(toolName);
   return restated ? null : item.label;
@@ -205,6 +199,12 @@ function toolItem(step: StepView, key: string, ranCommands: boolean): ToolItem |
     startedAt: step.startedAt,
     finishedAt: step.finishedAt,
   };
+  const callout = stepCallout(step, base.label);
+  if (callout) {
+    const { verb, target } = calloutWords(callout.tool, callout.target, open);
+    const tone = callout.kind === 'web' ? 'web' : 'tool';
+    return { ...base, tone, verb, target, path: null, callout };
+  }
   if (step.toolName && isMcpToolName(step.toolName) && step.toolKind !== 'execute') {
     return { ...base, tone: 'tool', verb: base.label, target: null, path: null };
   }
@@ -331,7 +331,12 @@ const GROUPED_TONES = new Set<ToolTone>(['read', 'search', 'edit', 'run', 'tool'
 function groupable(item: RowItem): item is GroupedItem {
   if (item.kind === 'command') return item.command.status !== 'running';
   if (item.kind === 'thought') return item.step.status !== 'open';
-  return item.kind === 'tool' && item.status !== 'open' && GROUPED_TONES.has(item.tone);
+  if (item.kind !== 'tool' || item.callout) return false;
+  return item.status !== 'open' && GROUPED_TONES.has(item.tone);
+}
+
+function isCallout(row: Row): boolean {
+  return row.kind === 'tool' && Boolean(row.callout);
 }
 
 function isLive(item: RowItem): item is LiveItem {
@@ -351,6 +356,7 @@ function withLiveTail(rows: Row[]): Row[] {
   const last = rows.at(-1);
   const before = rows.at(-2);
   if (!last || before?.kind !== 'group' || last.kind === 'group' || !isLive(last)) return rows;
+  if (isCallout(last)) return rows;
   return [...rows.slice(0, -2), { ...before, live: last }];
 }
 

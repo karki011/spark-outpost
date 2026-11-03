@@ -72,7 +72,8 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     onHourCycle: (callback: (cycle: unknown) => void) => listen(IPC.hourCycleChanged, callback),
   },
   viewing: {
-    report: (chatId: string | null) => ipcRenderer.send(IPC.viewingReport, chatId),
+    report: (chats: string | readonly string[] | null) =>
+      ipcRenderer.send(IPC.viewingReport, chats),
     get: () => ipcRenderer.invoke(IPC.viewedGet),
     onChange: (callback: (viewed: unknown) => void) => listen(IPC.viewedChanged, callback),
   },

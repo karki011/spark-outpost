@@ -12,6 +12,7 @@ import { compactionsByRun } from './compaction/compaction-text.ts';
 import { CrewTurn } from './crew/CrewTurn.tsx';
 import { SparkJobs, mainAgentRan } from './crew/SparkJobs.tsx';
 import { SparkTag } from '../teammates/SparkCrewFace.tsx';
+import { LinkCards } from './link-cards/LinkCards.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
 import { QuotedText } from './quotes/QuotedText.tsx';
 import { turnAnchor } from './outline/outline-model.ts';
@@ -110,6 +111,7 @@ export const TurnSection = memo(function TurnSection({
                   <QuotedText text={userMessage.content} />
                 </div>
               )}
+              <LinkCards text={userMessage.content} />
               <MessageActions
                 text={userMessage.content}
                 createdAt={userMessage.createdAt}

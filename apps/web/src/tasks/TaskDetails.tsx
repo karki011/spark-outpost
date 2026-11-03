@@ -22,6 +22,7 @@ import { WaitingItems } from './TaskList.tsx';
 import { hasTodo, todoPercent } from '../todo/task-todo.ts';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton, type SkeletonShape } from '../ui/loading/Skeleton.tsx';
+import { useChatPane } from '../chat/split/chat-pane.ts';
 
 export type WorkTab = 'todo' | 'steps' | 'plan' | 'crew' | 'links' | 'changes' | 'cost';
 
@@ -118,6 +119,7 @@ export function TaskDetails({
   autonomy,
   terminal = false,
 }: TaskDetailsProps) {
+  const { idSuffix } = useChatPane();
   const detail = useQuery({
     queryKey: taskKeys.task(task.id),
     queryFn: () => taskApi.get(task.id),
@@ -144,7 +146,7 @@ export function TaskDetails({
     if (!next) return;
     event.preventDefault();
     setTab(next);
-    document.getElementById(`wtab-${next}`)?.focus();
+    document.getElementById(`wtab-${next}${idSuffix}`)?.focus();
   };
 
   return (
@@ -178,9 +180,9 @@ export function TaskDetails({
             key={id}
             type="button"
             role="tab"
-            id={`wtab-${id}`}
+            id={`wtab-${id}${idSuffix}`}
             aria-selected={current === id}
-            aria-controls="wpane"
+            aria-controls={`wpane${idSuffix}`}
             tabIndex={current === id ? 0 : -1}
             onClick={() => setTab(id)}
             onKeyDown={onTabKey}
@@ -189,7 +191,12 @@ export function TaskDetails({
           </button>
         ))}
       </div>
-      <div className="wpane" id="wpane" role="tabpanel" aria-labelledby={`wtab-${current}`}>
+      <div
+        className="wpane"
+        id={`wpane${idSuffix}`}
+        role="tabpanel"
+        aria-labelledby={`wtab-${current}${idSuffix}`}
+      >
         {current === 'todo' && (
           <TodoPane
             taskId={task.id}

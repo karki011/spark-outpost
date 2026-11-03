@@ -180,7 +180,7 @@ export interface SparkDesktop {
     onHourCycle(callback: (cycle: unknown) => void): Unsubscribe;
   };
   viewing?: {
-    report(chatId: string | null): void;
+    report(chats: string | readonly string[] | null): void;
     get(): Promise<unknown>;
     onChange(callback: (viewed: unknown) => void): Unsubscribe;
   };

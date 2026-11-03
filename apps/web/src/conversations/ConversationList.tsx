@@ -70,19 +70,24 @@ const HOVER_OPEN_MS = 550;
 const NO_OUTPOSTS: readonly Outpost[] = [];
 
 interface ConversationListProps {
-  selectedId: string | null;
+  selectedIds: readonly string[];
   onSelect: (id: string) => void;
+  onOpenBeside: ((id: string) => void) | null;
+  onLeave: (id: string) => boolean;
   onNew: () => string;
   onNewInProject: (projectId: string) => void;
 }
 
 export const ConversationList = memo(function ConversationList({
-  selectedId,
+  selectedIds,
   onSelect,
+  onOpenBeside,
+  onLeave,
   onNew,
   onNewInProject,
 }: ConversationListProps) {
   const client = useQueryClient();
+  const selectedId = selectedIds[0] ?? null;
   const layout = useSidebarLayout();
   const outpostSeam = useOutpostSeam();
   const conversations = useQuery({
@@ -125,6 +130,7 @@ export const ConversationList = memo(function ConversationList({
       )?.id ?? null,
     onSelect,
     onNew,
+    onLeave,
   });
   const present = (chat: ConversationSummary) => !actions.deleting.has(chat.id);
   const chats = all.filter(present);
@@ -135,7 +141,7 @@ export const ConversationList = memo(function ConversationList({
   );
   const byId = new Map([...chats, ...visible].map((chat) => [chat.id, chat]));
   const activeCount = chats.filter((chat) => !chat.archivedAt).length;
-  const waiting = attention(chats, selectedId, alerting);
+  const waiting = attention(chats, selectedIds, alerting);
 
   const projectAdded = async (project: Project) => {
     folds.open(project.id);
@@ -237,6 +243,10 @@ export const ConversationList = memo(function ConversationList({
     }
     openChat(id);
   });
+  const handleOpenBeside = useStableCallback((id: string) => {
+    onOpenBeside?.(id);
+    layout?.closeDrawer();
+  });
   const handleMenu = useStableCallback(
     (chatId: string, element: HTMLElement, point: Point | null) =>
       setMenu({ chatId, anchor: anchorFor(element, point) }),
@@ -266,7 +276,7 @@ export const ConversationList = memo(function ConversationList({
     <ChatRow
       key={chat.id}
       chat={chat}
-      selected={chat.id === selectedId}
+      selected={selectedIds.includes(chat.id)}
       renaming={chat.id === renamingId}
       sortable={sortable}
       settling={dnd.busy}
@@ -276,6 +286,7 @@ export const ConversationList = memo(function ConversationList({
       faceless={member ? !member.face : false}
       relation={member ? roleLine(member.role) : null}
       onOpen={handleOpen}
+      onOpenBeside={onOpenBeside ? handleOpenBeside : undefined}
       onPrepare={prepareChat}
       onMenu={handleMenu}
       onRename={handleRename}
@@ -415,6 +426,11 @@ export const ConversationList = memo(function ConversationList({
           folderActions={moveActions(menuChat)}
           onClose={closeMenu}
           onRename={() => setRenamingId(menuChat.id)}
+          onOpenBeside={
+            onOpenBeside && !menuChat.archivedAt && !selectedIds.includes(menuChat.id)
+              ? () => handleOpenBeside(menuChat.id)
+              : null
+          }
         />
       )}
       {projectMenu && menuProject && (

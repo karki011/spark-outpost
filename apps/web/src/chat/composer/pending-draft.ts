@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 export interface PendingDraft {
   text: string;
   afterTyped: boolean;
+  replaces?: readonly string[];
 }
 
 const drafts = new Map<string, PendingDraft>();
@@ -25,6 +26,14 @@ export function queueDraft(conversationId: string, text: string): void {
 
 export function queueDraftAfterTyped(conversationId: string, text: string): void {
   setPendingDraft(conversationId, { text, afterTyped: true });
+}
+
+export function queueOption(
+  conversationId: string,
+  text: string,
+  options: readonly string[],
+): void {
+  setPendingDraft(conversationId, { text, afterTyped: true, replaces: options });
 }
 
 export function takeDraft(conversationId: string): PendingDraft | null {

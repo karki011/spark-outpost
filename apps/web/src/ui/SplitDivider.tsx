@@ -1,37 +1,28 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import './split-divider.css';
+import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react';
 import {
   SPLIT_RATIO_DEFAULT,
   SPLIT_RATIO_MAX,
   SPLIT_RATIO_MIN,
   clampSplitRatio,
-  type BrowserProfile,
 } from '@spark-outpost/contracts';
-import { sendViewCommand } from './view-store.ts';
 
 const STEP = 0.02;
 const BIG_STEP = 0.1;
 
-export function useSplitRatio(profile: BrowserProfile, saved: number) {
-  const [moving, setMoving] = useState<number | null>(null);
-  if (moving === saved) setMoving(null);
-  const commit = (ratio: number) => {
-    setMoving(ratio);
-    sendViewCommand(profile, { command: 'split_ratio', ratio });
-  };
-  return { ratio: moving ?? saved, move: setMoving, commit };
-}
-
-function percent(ratio: number): number {
+export function percent(ratio: number): number {
   return Math.round(ratio * 100);
 }
 
 interface SplitDividerProps {
   ratio: number;
+  label: string;
+  valueText: string;
   move(ratio: number): void;
   commit(ratio: number): void;
 }
 
-export function SplitDivider({ ratio, move, commit }: SplitDividerProps) {
+export function SplitDivider({ ratio, label, valueText, move, commit }: SplitDividerProps) {
   const frame = useRef(0);
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
@@ -83,15 +74,15 @@ export function SplitDivider({ ratio, move, commit }: SplitDividerProps) {
 
   return (
     <div
-      className="bv-divider"
+      className="split-divider"
       data-live-drag=""
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize split view"
+      aria-label={label}
       aria-valuemin={percent(SPLIT_RATIO_MIN)}
       aria-valuemax={percent(SPLIT_RATIO_MAX)}
       aria-valuenow={percent(ratio)}
-      aria-valuetext={`Left page ${percent(ratio)} percent. Arrow keys resize, Enter resets.`}
+      aria-valuetext={valueText}
       tabIndex={0}
       onPointerDown={onPointerDown}
       onDoubleClick={() => commit(SPLIT_RATIO_DEFAULT)}

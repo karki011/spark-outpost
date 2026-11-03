@@ -16,6 +16,7 @@ import { clockText } from './status-text.ts';
 import type { PendingEntry, StatusStore } from './status-store.ts';
 import { useCardsInView } from './use-cards-in-view.ts';
 import { useHeadInView, useStatusLine, useThrottled, type StatusLine } from './use-status-line.ts';
+import { usePaneFocused } from '../split/chat-pane.ts';
 
 const ANNOUNCE_GAP_MS = 4_000;
 const NO_ENTRIES: readonly PendingEntry[] = [];
@@ -37,9 +38,10 @@ function statusState(line: StatusLine | null): string {
 }
 
 function useWaitingShortcut(entries: readonly PendingEntry[]) {
+  const focused = usePaneFocused();
   useEffect(() => {
     const first = entries[0];
-    if (!first) return;
+    if (!first || !focused) return;
     const onKey = (event: KeyboardEvent) => {
       if (!hasModifier(event) || !event.shiftKey || event.altKey) return;
       if (event.key.toLowerCase() !== 'y') return;
@@ -48,7 +50,7 @@ function useWaitingShortcut(entries: readonly PendingEntry[]) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [entries]);
+  }, [entries, focused]);
 }
 
 function WaitingLine({

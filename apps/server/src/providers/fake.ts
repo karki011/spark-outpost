@@ -14,6 +14,7 @@ import { fakeApprovalTurn, wantsApproval } from './fake-approvals.ts';
 import { fakePublishTurn, wantsPublish } from './fake-publish.ts';
 import { editStreamPlan, fakeEditStream } from './fake-edit-stream.ts';
 import { fakeFilesTurn, wantsFiles } from './fake-files.ts';
+import { fakeCalloutTurn, wantsCallouts } from './fake-callouts.ts';
 import { commandPlan, fakeCommandTurn } from './fake-commands.ts';
 import { asFinalMessage, fakeCommentary } from './fake-phases.ts';
 import { ZAI_EFFORTS, ZAI_MODELS } from '../agents/acp/zai.ts';
@@ -332,6 +333,10 @@ async function* fakeTurn(
   }
   if (wantsFiles(turn.prompt)) {
     yield* fakeFilesTurn(turn);
+    return;
+  }
+  if (wantsCallouts(turn.prompt)) {
+    yield* fakeCalloutTurn(turn);
     return;
   }
   const editStream = editStreamPlan(turn.prompt);

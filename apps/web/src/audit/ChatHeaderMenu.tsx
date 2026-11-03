@@ -5,6 +5,7 @@ import { CopyIcon, DotsIcon, RestoreIcon, ShieldIcon, TickIcon } from '../ui/ico
 import { Keys, type ShortcutKeys } from '../ui/Keys.tsx';
 import { usePopover } from '../ui/use-popover.ts';
 import { useTooltip } from '../ui/Tooltip.tsx';
+import { usePaneId } from '../chat/split/chat-pane.ts';
 
 export const CHAT_MENU_BUTTON_ID = 'chat-menu-button';
 
@@ -65,6 +66,7 @@ export function ChatHeaderMenu({
   buttonRef,
 }: ChatHeaderMenuProps) {
   const link = useCopyChatLink(chatId);
+  const menuButtonId = usePaneId(CHAT_MENU_BUTTON_ID);
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
     HTMLButtonElement,
     HTMLDivElement
@@ -91,7 +93,7 @@ export function ChatHeaderMenu({
       {link.toast}
       <button
         ref={attach}
-        id={CHAT_MENU_BUTTON_ID}
+        id={menuButtonId}
         type="button"
         className="icon-btn"
         aria-label={['Chat actions', ...summaries].map((part) => `${part}.`).join(' ')}

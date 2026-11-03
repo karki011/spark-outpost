@@ -54,8 +54,11 @@
 }
 
 .view:has(.side-resize:hover) > .main,
+.view:has(.side-resize:hover) > .cpanes > [data-side='primary'] > .main,
 .view:has(.side-resize:focus-visible) > .main,
-.view:has(.side.dragging) > .main {
+.view:has(.side-resize:focus-visible) > .cpanes > [data-side='primary'] > .main,
+.view:has(.side.dragging) > .main,
+.view:has(.side.dragging) > .cpanes > [data-side='primary'] > .main {
   border-left-color: color-mix(in srgb, var(--accent) 70%, var(--line));
 }
 

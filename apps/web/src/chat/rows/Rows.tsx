@@ -20,6 +20,8 @@ import {
   type GroupKind,
 } from './group-summary.ts';
 import { RowIcon, type RowIconName } from './RowIcon.tsx';
+import { CalloutRow } from './CalloutRow.tsx';
+import { FailedWord, Spinner } from './RowStatus.tsx';
 import {
   spanSeconds,
   type CommandItem,
@@ -59,19 +61,8 @@ const KIND_ICONS: Record<GroupKind, RowIconName> = {
   search: 'search',
 };
 
-export function Spinner() {
-  return <span className="spin trow-spin" role="img" aria-label="In progress" />;
-}
-
 function ToolEnd({ item, live }: { item: ToolItem; live: boolean }) {
-  if (item.status === 'failed') {
-    return (
-      <span className="trow-word bad">
-        <XIcon />
-        failed
-      </span>
-    );
-  }
+  if (item.status === 'failed') return <FailedWord />;
   if (item.status === 'open') return live ? <Spinner /> : null;
   return null;
 }
@@ -351,6 +342,9 @@ export function RowView({ row, context }: { row: Row; context: RowContext }) {
   if (row.kind === 'command') {
     const answer = context.answers.get(row.command.toolCallId ?? '') ?? null;
     return <CommandTerminal command={row.command} waiting={context.waiting} answer={answer} />;
+  }
+  if (row.callout) {
+    return <CalloutRow item={row} callout={row.callout} working={context.working} />;
   }
   return <ToolRow item={row} context={context} />;
 }

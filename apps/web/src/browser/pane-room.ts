@@ -1,6 +1,7 @@
 import { useLayoutEffect, useState, type RefObject } from 'react';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import { dockedRoom, overlayRoom, paneRange, type PaneRange } from './pane-width.ts';
+import { layoutParent } from '../ui/layout-parent.ts';
 
 const PANE_EDGE = 8;
 const OVERLAY_GAPS = 16;
@@ -31,12 +32,13 @@ function pageInset(panel: HTMLElement): number {
 
 function room(panel: HTMLElement): number {
   const chat = panel.parentElement?.querySelector<HTMLElement>(':scope > .main');
-  if (panel.classList.contains('over') || !chat || !panel.parentElement) {
+  const row = layoutParent(panel);
+  if (panel.classList.contains('over') || !chat || !row) {
     return overlayRoom(window.innerWidth, OVERLAY_GAPS);
   }
   const chatGap = parseFloat(getComputedStyle(chat).marginRight) || 0;
   return dockedRoom({
-    rowRight: panel.parentElement.getBoundingClientRect().right - PANE_EDGE,
+    rowRight: row.getBoundingClientRect().right - PANE_EDGE,
     chatLeft: chat.getBoundingClientRect().left,
     gaps: chatGap,
   });
@@ -65,6 +67,7 @@ export function usePaneRoom(handle: RefObject<HTMLElement | null>, initial: Pane
     let frame = 0;
     const update = () => {
       frame = 0;
+      if (panel.getClientRects().length === 0) return;
       const next = measurePane(panel);
       panel.style.setProperty(CAP, `${next.range.max}px`);
       setMeasure((current) => (same(current, next) ? current : next));
@@ -74,7 +77,8 @@ export function usePaneRoom(handle: RefObject<HTMLElement | null>, initial: Pane
     };
     update();
     const observer = new ResizeObserver(schedule);
-    if (panel.parentElement) observer.observe(panel.parentElement);
+    const row = layoutParent(panel);
+    if (row) observer.observe(row);
     const chat = panel.parentElement?.querySelector(':scope > .main');
     if (chat) observer.observe(chat);
     const page = panel.querySelector('#bp-view');

@@ -257,6 +257,12 @@ export function ExternalLinkIcon() {
   );
 }
 
+export function GlobeIcon() {
+  return (
+    <StrokeIcon path="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z" />
+  );
+}
+
 export function RefreshIcon() {
   return (
     <StrokeIcon path="M20 11a8 8 0 0 0-14.6-3.5M4 4v4h4M4 13a8 8 0 0 0 14.6 3.5M20 20v-4h-4" />

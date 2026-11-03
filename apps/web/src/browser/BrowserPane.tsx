@@ -1,6 +1,7 @@
 import './browser-pane.css';
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { BrowserPaneTab } from '@spark-outpost/contracts';
+import { usePaneFocused } from '../chat/split/chat-pane.ts';
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
 import {
@@ -126,7 +127,9 @@ export function BrowserPane({
   const started = useRef(false);
   const [finding, setFinding] = useState<{ tabId: string; request: number } | null>(null);
   const [copied, setCopied] = useState(0);
-  useViewPlacement(view, home, shown);
+  const focused = usePaneFocused();
+  const showing = shown && focused;
+  useViewPlacement(view, home, showing, focused);
 
   useEffect(() => {
     if (copied === 0) return;
@@ -147,7 +150,7 @@ export function BrowserPane({
   };
   const runShortcut = (shortcut: Parameters<typeof runPaneShortcut>[2]) =>
     runPaneShortcut(commands, browser.tabs, shortcut, shortcutUi);
-  usePageShortcuts(chatId, runShortcut, shown);
+  usePageShortcuts(chatId, runShortcut, showing);
   const shortcutAt = useRef(0);
   const tabKey = `${tab?.id ?? ''}:${tab?.url ?? ''}`;
 
@@ -158,10 +161,10 @@ export function BrowserPane({
   }, [tabKey]);
 
   useEffect(() => {
-    if (!shown || started.current) return;
+    if (!showing || started.current) return;
     started.current = true;
     void desktopBrowser()?.start(hiddenPlacement(home)).then(acceptBrowserState);
-  }, [shown, home]);
+  }, [showing, home]);
 
   const act = (command: 'back' | 'forward' | 'reload' | 'stop') => {
     if (tab) sendBrowserCommand(chatId, { command, tabId: tab.id });
@@ -340,7 +343,8 @@ export function BrowserPane({
       </div>
       {tab?.handoff && <HandoffBanner key={tab.handoff.approvalId} handoff={tab.handoff} />}
       <div className="bp-view" id="bp-view" data-page-zoom={tab?.zoom ?? 1} ref={view}>
-        {blank && <StartPage chatId={chatId} tab={tab} />}
+        {!focused && <p className="bp-elsewhere">The page shows while this chat is focused.</p>}
+        {focused && blank && <StartPage chatId={chatId} tab={tab} />}
         {!blank && browser.snapshot && (
           <img className="bp-snapshot" src={browser.snapshot} alt="" />
         )}

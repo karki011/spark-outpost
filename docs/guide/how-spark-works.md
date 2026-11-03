@@ -15,7 +15,7 @@ One chat is one agent session. Your message goes to the agent as typed; Spark ad
 | 1. Place   | In a mode that can change files, the chat gets its own [worktree](where-spark-works.md) and branch, or a private folder without a project. |
 | 2. Plan    | Only when you ask: `/plan` or **Plan** mode has the agent [plan first](plan-card.md).                                                      |
 | 3. Work    | The agent answers or changes code. Every action passes the [approval gate](approvals.md) and the audit.                                    |
-| 4. Keep    | Changed files are kept, with a **Changes kept** record you can [revert](review-changes.md).                                                |
+| 4. Keep    | Changed files are kept, with a **Changes kept** record to [revert](review-changes.md).                                                     |
 | 5. Publish | You [ship](ship-and-pull-requests.md), or the agent pushes and opens the PR. Spark then [handles PR feedback](pr-follow-up.md).            |
 
 ## How work is split

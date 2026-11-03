@@ -33,3 +33,12 @@ export function useReportViewedChat(chatId: string | null): void {
   }, [viewing, chatId]);
   useEffect(() => () => viewing?.report(null), [viewing]);
 }
+
+export function useReportViewedChats(chats: readonly string[]): void {
+  const viewing = sparkDesktop()?.viewing;
+  const key = chats.join(',');
+  useEffect(() => {
+    viewing?.report(key === '' ? [] : key.split(','));
+  }, [viewing, key]);
+  useEffect(() => () => viewing?.report(null), [viewing]);
+}

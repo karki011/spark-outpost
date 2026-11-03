@@ -4,7 +4,7 @@ import { ChevronIcon } from '../../ui/icons.tsx';
 import { AgentTerminalRow } from '../commands/AgentTerminalRow.tsx';
 import type { AgentTerminalView } from '../commands/agent-terminal-model.ts';
 import { RowIcon } from './RowIcon.tsx';
-import { Spinner } from './Rows.tsx';
+import { Spinner } from './RowStatus.tsx';
 
 export function backgroundLine(terminals: readonly AgentTerminalView[]): string {
   const running = terminals.filter((terminal) => agentTerminalLive(terminal.state)).length;

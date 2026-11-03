@@ -4,16 +4,17 @@ import type { ChangeSummary } from '@spark-outpost/contracts';
 import { DiffStat, LineTotals } from '../chat/changes/FileChangeList.tsx';
 import { DIFF_KEYS } from '../ui/Keys.tsx';
 import { MAC } from '../ui/shortcuts.ts';
-import { TERMINAL_DOCK_ID } from '../terminal/dock/terminal-pane.tsx';
+import { TERMINAL_DOCK_SELECTOR } from '../terminal/dock/terminal-pane.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { diffApi, diffKeys } from './diff-api.ts';
 import { matchesDiffShortcut } from './diff-shortcut.ts';
+import { usePaneFocused } from '../chat/split/chat-pane.ts';
 
 const DIFF_SHORTCUT_ARIA = MAC ? 'Meta+D' : 'Control+D';
 
 function typingEndOfInput(event: KeyboardEvent): boolean {
   if (MAC || event.shiftKey) return false;
-  return Boolean(document.activeElement?.closest(`#${TERMINAL_DOCK_ID}`));
+  return Boolean(document.activeElement?.closest(TERMINAL_DOCK_SELECTOR));
 }
 
 export function diffChipLabel(added: number, removed: number, files: number): string {
@@ -37,10 +38,12 @@ export function DiffChip({ taskId, open, onToggle }: DiffChipProps) {
   const visible = taskId !== null && (summary.data?.files ?? 0) > 0;
   const slot = useRef<HTMLSpanElement>(null);
   const toggle = useRef(onToggle);
+  const focused = usePaneFocused();
   useEffect(() => {
     toggle.current = onToggle;
   }, [onToggle]);
   useEffect(() => {
+    if (!focused) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (!matchesDiffShortcut(event, MAC)) return;
       if (!slot.current || slot.current.closest('[hidden]')) return;
@@ -52,7 +55,7 @@ export function DiffChip({ taskId, open, onToggle }: DiffChipProps) {
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, []);
+  }, [focused]);
   return (
     <span ref={slot} className="dchip-slot">
       {visible && summary.data && (

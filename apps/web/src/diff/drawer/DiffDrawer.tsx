@@ -9,6 +9,7 @@ import { CloseIcon } from '../../tasks/TaskIcons.tsx';
 import { diffApi, diffKeys } from '../diff-api.ts';
 import type { DiffMode } from './code-view.ts';
 import { DiffPane } from './DiffPane.tsx';
+import { usePaneFocused } from '../../chat/split/chat-pane.ts';
 import { DRAWER_DEFAULT_WIDTH, useDrawerWidth, usePref } from './drawer-prefs.ts';
 import { DrawerResizer } from './DrawerResizer.tsx';
 import { entryKey, FileList } from './FileList.tsx';
@@ -54,6 +55,7 @@ export function DiffDrawer({ taskId, target, onClose }: DiffDrawerProps) {
   const [mode, setMode] = usePref<DiffMode>('spark-outpost.diff-drawer.mode', MODES, 'unified');
   const [wrap, setWrap] = usePref('spark-outpost.diff-drawer.wrap', WRAPS, 'off');
   const [width, setWidth] = useDrawerWidth();
+  const paneFocused = usePaneFocused();
   const shown = width ?? DRAWER_DEFAULT_WIDTH;
   const data = summary.data;
   const empty = taskId === null || data?.files === 0;
@@ -72,14 +74,14 @@ export function DiffDrawer({ taskId, target, onClose }: DiffDrawerProps) {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       const focus = document.activeElement;
-      const inside = focus?.closest('.dd');
-      if (!inside && focus !== document.body) return;
+      const inside = focus !== null && panel.current?.contains(focus);
+      if (!inside && !(paneFocused && focus === document.body)) return;
       event.preventDefault();
       onClose();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  }, [onClose, paneFocused]);
 
   const label = data && !empty ? `Changes · ${filesLabel(data.files)}` : 'Changes';
   return (

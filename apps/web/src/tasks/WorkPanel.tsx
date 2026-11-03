@@ -19,6 +19,7 @@ import { WorkPanelResizer } from './WorkPanelResizer.tsx';
 import { PaneResizer } from '../browser/PaneResizer.tsx';
 import { openingPaneWidth } from '../browser/pane-width.ts';
 import { usePhone } from '../ui/breakpoints.ts';
+import { usePaneId } from '../chat/split/chat-pane.ts';
 
 interface AutonomySetting {
   level: InvolvementLevel;
@@ -72,8 +73,11 @@ interface ViewSwitchProps {
   onView(view: PanelView): void;
 }
 
+export const WORK_PANEL_ID = 'work-panel';
+
 function ViewTab({ tab, view, onView }: { tab: PanelTab } & Omit<ViewSwitchProps, 'tabs'>) {
   const tip = useTooltip(tab.name);
+  const panelId = usePaneId(WORK_PANEL_ID);
   return (
     <>
       <button
@@ -81,7 +85,7 @@ function ViewTab({ tab, view, onView }: { tab: PanelTab } & Omit<ViewSwitchProps
         role="tab"
         aria-label={tab.name}
         aria-selected={view === tab.id}
-        aria-controls="work-panel"
+        aria-controls={panelId}
         tabIndex={view === tab.id ? 0 : -1}
         {...tip.triggerProps}
         onClick={() => onView(tab.id)}
@@ -147,6 +151,7 @@ export function WorkPanel({
   artifact = null,
   terminal = false,
 }: WorkPanelProps) {
+  const panelId = usePaneId(WORK_PANEL_ID);
   const hasWork = task !== null || autonomy !== null || terminal;
   const browsing = browser !== null && view === 'browser';
   const reading = artifact !== null && view === 'artifact';
@@ -195,7 +200,7 @@ export function WorkPanel({
       )}
       <aside
         className={`wp${open ? ' on' : ''}${wide ? '' : ' over'}${wideView ? ' browser' : ''}`}
-        id="work-panel"
+        id={panelId}
         aria-label="Work panel"
         data-chat-links=""
         inert={!open}
