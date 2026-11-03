@@ -13,12 +13,12 @@ About 2 minutes.
 1. The working line shows the step and time.
 2. Answered cards and flags stay put; waiting cards sit last.
 3. Summaries separate commands **passed** from tools **done**.
-4. Browser, web, page and Mac steps get rows that open.
+4. Browser, web, page and Mac steps get rows.
 5. Code Mode labels discovery and reads; failures expand.
 6. A done to-do folds.
 7. Sidebar blobs show the **Agent TV** team.
 8. **View agents** opens **Work**; done workers fold.
-9. **Message** opens that chat’s composer; Outposts show handles.
+9. **Message** opens that chat’s composer.
 10. **Ask lead to redirect** drafts in that chat.
 
 **Open in terminal** shows failures in a [dock tab](terminals.md#watch-an-agents-command).
@@ -62,6 +62,7 @@ Steps fold under **Worked for …**; steered replies don't.
 | -------------------------------- | ----------------------------------------------------------- |
 | **Good result** / **Bad result** | Rate the PR turn.                                           |
 | Selected text                    | **Add to chat**, **Ask about this**, **Comment**, **Copy**. |
+| Choices                          | Only fill the message box, or **Show as list**.             |
 | `/fresh` or **… → Start fresh**  | Drop old context.                                           |
 | Ticks left of the thread         | Jump to messages.                                           |
 

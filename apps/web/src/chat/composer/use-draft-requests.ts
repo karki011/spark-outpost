@@ -9,7 +9,8 @@ import {
 } from './pending-draft.ts';
 
 function withTyped(typed: string, pending: PendingDraft): string {
-  if (!pending.afterTyped || typed.trim() === '') return pending.text;
+  const kept = typed.trim();
+  if (!pending.afterTyped || kept === '' || pending.replaces?.includes(kept)) return pending.text;
   return `${typed.trimEnd()}\n\n${pending.text}`;
 }
 

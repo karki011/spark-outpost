@@ -11,7 +11,7 @@ About 1 minute.
 ## Start a chat
 
 1. Select **Chats** in the rail, then **New chat** (**⌘⇧O**).
-2. Leave **Chat** selected, type your message and press **Enter**.
+2. Leave **Chat** selected, type, then press **Enter**.
 
 ![A new chat with project and branch under the message box](images/chats-and-modes-new-chat-light.png)
 
@@ -46,7 +46,7 @@ Plain folders offer **Make it a git repository**.
 
 Markdown styles as you type; select text or open **+ → Formatting** ([keys](keyboard-shortcuts.md#chats)). Agent setup is in **…** under the box.
 
-Typed web links show as cards built from the address; nothing is fetched.
+Web links show as cards; nothing is fetched.
 
 ## Share a chat with another chat
 
@@ -58,7 +58,7 @@ Group chats in an [outpost](outposts.md).
 
 ## Open two chats side by side
 
-**⌥**-click a chat (**⌥Enter**) or use **Open in split**. Clicking or typing in a side focuses it; opened chats, **⌘D** and panels go there. The other dims, still working. **✕** closes.
+**⌥**-click a chat (**⌥Enter**) or use **Open in split**. Click or type in a side to focus it; chats you open, **⌘D** and panels follow. The other dims, still working. **✕** closes.
 
 ## Jump between sessions
 

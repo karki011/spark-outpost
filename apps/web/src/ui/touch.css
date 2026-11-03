@@ -20,7 +20,8 @@
     .session-chip,
     .theme-menu button,
     .mdf-tool,
-    .mdf-toggle
+    .mdf-toggle,
+    .reply-options-toggle
   ) {
     position: relative;
   }
@@ -45,7 +46,8 @@
     .ctx-details,
     .session-chip,
     .mdf-tool,
-    .mdf-toggle
+    .mdf-toggle,
+    .reply-options-toggle
   )::before {
     content: '';
     position: absolute;

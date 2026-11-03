@@ -5,7 +5,7 @@ export function withoutClarifyBlock(text: string): string {
 }
 
 export const FENCE = /^ {0,3}(`{3,}|~{3,})/;
-const LIST_ITEM = /^ {0,3}([-*+]|\d{1,9}[.)])(\s|$)/;
+export const LIST_ITEM = /^ {0,3}([-*+]|\d{1,9}[.)])(\s|$)/;
 const REFERENCE_DEFINITION = /^ {0,3}\[[^\]]+\]:/m;
 
 function isBlank(line: string): boolean {

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   queueDraft,
   queueDraftAfterTyped,
+  queueOption,
   requestComposerFocus,
   takeDraft,
   useComposerFocusRequest,
@@ -106,5 +107,28 @@ describe('text put back in the composer', () => {
     const { result } = typedComposer('Old words');
     act(() => queueDraft(CHAT, 'About `a.ts`: '));
     expect(result.current).toBe('About `a.ts`: ');
+  });
+});
+
+describe('a reply option put in the composer', () => {
+  const options = ['Use Postgres', 'Use SQLite'];
+
+  it('fills an empty composer with the option', () => {
+    const { result } = typedComposer('');
+    act(() => queueOption(CHAT, 'Use Postgres', options));
+    expect(result.current).toBe('Use Postgres');
+  });
+
+  it('swaps one option for another instead of stacking them', () => {
+    const { result } = typedComposer('');
+    act(() => queueOption(CHAT, 'Use Postgres', options));
+    act(() => queueOption(CHAT, 'Use SQLite', options));
+    expect(result.current).toBe('Use SQLite');
+  });
+
+  it('keeps what the user typed and adds the option after it', () => {
+    const { result } = typedComposer('Thanks, and');
+    act(() => queueOption(CHAT, 'Use SQLite', options));
+    expect(result.current).toBe('Thanks, and\n\nUse SQLite');
   });
 });

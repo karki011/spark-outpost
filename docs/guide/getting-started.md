@@ -6,7 +6,7 @@ order: 110
 summary: Go from first launch to your first chat in about five minutes.
 ---
 
-From first launch to your first chat. About 5 minutes.
+First launch to first chat. About 5 minutes.
 
 Only your name and one provider are required. Change the rest in **Settings**.
 
@@ -38,6 +38,6 @@ Spark needs Git to change code. The Mac app adds optional **Mac access** ([Full 
 
 ![The final step summarising name, appearance, provider and tools](images/getting-started-done-light.png)
 
-The agent works in its own project copy; you can revert.
+The agent works in a copy you can revert.
 
 **Next:** [Connect an AI provider](connect-a-provider.md)
