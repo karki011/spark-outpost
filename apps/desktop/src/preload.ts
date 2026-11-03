@@ -125,9 +125,15 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
   },
   speech: {
     status: () => ipcRenderer.invoke(IPC.voiceStatus),
-    turnOn: () => ipcRenderer.invoke(IPC.voiceTurnOn),
+    turnOn: (model?: string) => ipcRenderer.invoke(IPC.voiceTurnOn, model),
     turnOff: () => ipcRenderer.invoke(IPC.voiceTurnOff),
+    download: (model: string) => ipcRenderer.invoke(IPC.voiceDownload, model),
+    cancelDownload: (model: string) => ipcRenderer.invoke(IPC.voiceCancelDownload, model),
+    remove: (model: string) => ipcRenderer.invoke(IPC.voiceRemoveModel, model),
+    select: (model: string) => ipcRenderer.invoke(IPC.voiceSelectModel, model),
     update: (patch: unknown) => ipcRenderer.invoke(IPC.voiceUpdate, patch),
+    setShortcut: (accelerator: string | null) =>
+      ipcRenderer.invoke(IPC.voiceSetShortcut, accelerator),
     listen: (purpose: string, hint: string, file?: string) =>
       ipcRenderer.invoke(IPC.voiceListen, purpose, hint, file),
     stop: (id: string) => ipcRenderer.invoke(IPC.voiceStop, id),

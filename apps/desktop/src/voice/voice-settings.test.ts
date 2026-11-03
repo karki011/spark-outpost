@@ -22,4 +22,27 @@ describe('parseVoiceSettings', () => {
     );
     expect(parseVoiceSettings(JSON.stringify({ shortcut: 'V' })).shortcut).toBe('Alt+Shift+V');
   });
+
+  it('a file from before speech models keeps Whisper base, so nothing downloads again', () => {
+    const before = JSON.stringify({
+      enabled: true,
+      speakAnswers: false,
+      shortcutMode: 'keys',
+      shortcut: 'Alt+Shift+V',
+      hold: false,
+    });
+    expect(parseVoiceSettings(before)).toEqual({
+      ...VOICE_DEFAULT_SETTINGS,
+      enabled: true,
+      model: 'whisper-base',
+    });
+  });
+
+  it('keeps a chosen model, and an unknown one falls back without turning Voice off', () => {
+    expect(parseVoiceSettings(JSON.stringify({ model: 'parakeet-v3' })).model).toBe('parakeet-v3');
+    expect(parseVoiceSettings(JSON.stringify({ enabled: true, model: 'parakeet-en' }))).toEqual({
+      ...VOICE_DEFAULT_SETTINGS,
+      enabled: true,
+    });
+  });
 });

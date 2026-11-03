@@ -5,6 +5,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   VOICE_DEFAULT_SETTINGS,
+  VOICE_MODELS,
   VOICE_WHISPER_BASE,
   type VoiceEvent,
   type VoiceMicPermission,
@@ -33,6 +34,7 @@ async function setup(
   const sent: { owner: number; event: VoiceEvent }[] = [];
   const island: VoiceEvent[] = [];
   const registered = new Map<string, () => void>();
+  const elsewhere = new Set<string>();
   const saved: unknown[] = [];
   const published: VoiceStatus[] = [];
   let mic: VoiceMicPermission = options.mic ?? 'granted';
@@ -48,22 +50,26 @@ async function setup(
       return true;
     }),
     modelDir: dir,
+    models: VOICE_MODELS,
     vadPath: '/vad.bin',
     fetch: vi.fn(async () => new Response('nope', { status: 500 })),
     register: (accelerator, run) => {
+      if (elsewhere.has(accelerator)) return false;
       registered.set(accelerator, run);
       return true;
     },
     unregister: (accelerator) => registered.delete(accelerator),
+    takenBy: (accelerator) => (accelerator === 'Alt+Space' ? 'Quick chat' : null),
     sendTo: (owner, event) => sent.push({ owner, event }),
     sendIsland: (event) => island.push(event),
     voiceOver: () => false,
     language: 'en',
+    arch: 'arm64',
     allowFileInput: false,
     changed: (status) => published.push(status),
     log: () => undefined,
   });
-  return { voice, sent, island, registered, saved, helper, dir, published };
+  return { voice, sent, island, registered, elsewhere, saved, helper, dir, published };
 }
 
 const settle = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -89,11 +95,57 @@ describe('Voice', () => {
     scene.voice.dispose();
   });
 
+  it('a new shortcut replaces the old one, is saved, and Reset brings back ⌥⇧V', async () => {
+    const scene = await setup();
+    await scene.voice.turnOn();
+    const changed = scene.voice.setShortcut('Control+Alt+M');
+    expect(changed.error).toBeNull();
+    expect(changed.status.settings.shortcut).toBe('Control+Alt+M');
+    expect([...scene.registered.keys()]).toEqual(['Control+Alt+M']);
+    expect(scene.saved.at(-1)).toMatchObject({ shortcut: 'Control+Alt+M' });
+    scene.registered.get('Control+Alt+M')!();
+    expect(scene.island.at(-1)).toEqual({ kind: 'press' });
+    expect(scene.voice.setShortcut(null).status.settings.shortcut).toBe('Alt+Shift+V');
+    expect([...scene.registered.keys()]).toEqual(['Alt+Shift+V']);
+    scene.voice.dispose();
+  });
+
+  it('refuses a shortcut with no modifier, one Spark uses, or one another app holds', async () => {
+    const scene = await setup();
+    await scene.voice.turnOn();
+    scene.elsewhere.add('Control+Alt+M');
+    expect(scene.voice.setShortcut('M').error).toMatch(/modifier/);
+    expect(scene.voice.setShortcut('Alt+Space').error).toBe(
+      'This shortcut already opens Quick chat.',
+    );
+    const taken = scene.voice.setShortcut('Control+Alt+M');
+    expect(taken.error).toMatch(/Another app/);
+    expect(taken.status.settings.shortcut).toBe('Alt+Shift+V');
+    expect(taken.status.shortcutFailed).toBe(false);
+    expect([...scene.registered.keys()]).toEqual(['Alt+Shift+V']);
+    scene.voice.dispose();
+  });
+
+  it('a shortcut picked while Voice is off is saved and bound when it turns on', async () => {
+    const scene = await setup();
+    expect(scene.voice.setShortcut('Control+Alt+M').error).toBeNull();
+    expect(scene.registered.size).toBe(0);
+    await scene.voice.turnOn();
+    expect([...scene.registered.keys()]).toEqual(['Control+Alt+M']);
+    scene.voice.dispose();
+  });
+
   it('a failed download keeps Voice from listening and says why', async () => {
     const scene = await setup({ model: false });
     const status = await scene.voice.turnOn();
-    expect(status.model).toBe('failed');
-    expect(status.problem).toBe('The download failed (500).');
+    expect(status.model).toBe('downloading');
+    expect(status.settings.enabled).toBe(true);
+    await settle(50);
+    expect(scene.published.at(-1)?.models['whisper-base']).toEqual({
+      state: 'failed',
+      progress: null,
+      problem: 'The download failed (500).',
+    });
     expect(await scene.voice.listen(1, 'command', '', undefined)).toEqual({
       ok: false,
       error: 'model_missing',
@@ -110,8 +162,14 @@ describe('Voice', () => {
     expect(kinds).toEqual([
       [7, 'level'],
       [7, 'speech'],
+      [7, 'partial'],
+      [7, 'partial'],
+      [7, 'partial'],
       [7, 'final'],
     ]);
+    expect(
+      scene.sent.filter((entry) => entry.event.kind === 'partial').at(-1)?.event,
+    ).toMatchObject({ text: 'who needs me' });
     expect(scene.sent.at(-1)?.event).toMatchObject({ text: 'who needs me', reason: 'paused' });
     scene.voice.dispose();
   });

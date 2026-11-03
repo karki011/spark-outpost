@@ -5,7 +5,7 @@ public protocol SpeechModel: AnyObject {
     func resetDetector()
     func probability(_ frame: [Float]) -> Float
     func transcribe(
-        _ samples: [Float], language: String, hint: String, single: Bool,
+        _ samples: [Float], language: String, hint: String, draft: Bool,
         done: @escaping (String) -> Void
     )
 }

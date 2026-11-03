@@ -16,6 +16,92 @@ export const VOICE_WHISPER_BASE: VoiceModelFile = {
   size: 59_707_625,
 };
 
+export const voiceModelIdSchema = z.enum(['whisper-base', 'parakeet-v3', 'whisper-large-v3-turbo']);
+export type VoiceModelId = z.infer<typeof voiceModelIdSchema>;
+
+export const VOICE_DEFAULT_MODEL: VoiceModelId = 'whisper-base';
+
+export const VOICE_WHISPER_LANGUAGE_COUNT = 99;
+
+export const VOICE_PARAKEET_LANGUAGES = [
+  'bg',
+  'hr',
+  'cs',
+  'da',
+  'nl',
+  'en',
+  'et',
+  'fi',
+  'fr',
+  'de',
+  'el',
+  'hu',
+  'it',
+  'lv',
+  'lt',
+  'mt',
+  'pl',
+  'pt',
+  'ro',
+  'ru',
+  'sk',
+  'sl',
+  'es',
+  'sv',
+  'uk',
+] as const;
+
+export interface VoiceModel extends VoiceModelFile {
+  id: VoiceModelId;
+  name: string;
+  languages: readonly string[] | null;
+}
+
+export const VOICE_PARAKEET_V3: VoiceModelFile = {
+  file: 'parakeet-tdt-0.6b-v3-Q5_K_M.gguf',
+  url: 'https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/resolve/85ac09ea12fc4b1112fa76810059364bc6adc9de/parakeet-tdt-0.6b-v3-Q5_K_M.gguf',
+  sha256: 'cc722e76adc1a629fc0b2535de879d99b8160d07ad4c0215e2ca7d7ea0ae4b8f',
+  size: 548_946_272,
+};
+
+export const VOICE_WHISPER_LARGE_TURBO: VoiceModelFile = {
+  file: 'ggml-large-v3-turbo-q5_0.bin',
+  url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo-q5_0.bin',
+  sha256: '394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2',
+  size: 574_041_195,
+};
+
+export const VOICE_MODELS: readonly VoiceModel[] = [
+  {
+    id: 'parakeet-v3',
+    name: 'Parakeet',
+    languages: VOICE_PARAKEET_LANGUAGES,
+    ...VOICE_PARAKEET_V3,
+  },
+  { id: 'whisper-base', name: 'Whisper base', languages: null, ...VOICE_WHISPER_BASE },
+  {
+    id: 'whisper-large-v3-turbo',
+    name: 'Whisper large v3 turbo',
+    languages: null,
+    ...VOICE_WHISPER_LARGE_TURBO,
+  },
+];
+
+export function voiceModel(id: VoiceModelId): VoiceModel {
+  return VOICE_MODELS.find((model) => model.id === id)!;
+}
+
+export function voiceModelHears(model: VoiceModel, language: string): boolean {
+  return model.languages === null || model.languages.includes(language);
+}
+
+export type VoiceArch = 'arm64' | 'x64';
+
+export function recommendedVoiceModel(arch: VoiceArch, language: string): VoiceModelId {
+  const parakeet = voiceModel('parakeet-v3');
+  return arch === 'arm64' && voiceModelHears(parakeet, language) ? parakeet.id : 'whisper-base';
+}
+
 export const VOICE_SILERO: VoiceModelFile = {
   file: 'ggml-silero-v6.2.0.bin',
   url: 'https://huggingface.co/ggml-org/whisper-vad/resolve/9ffd54a1e1ee413ddf265af9913beaf518d1639b/ggml-silero-v6.2.0.bin',
@@ -98,6 +184,7 @@ export const voiceSettingsSchema = z.object({
   shortcutMode: voiceShortcutModeSchema,
   shortcut: z.string().max(60),
   hold: z.boolean(),
+  model: voiceModelIdSchema,
 });
 export type VoiceSettings = z.infer<typeof voiceSettingsSchema>;
 
@@ -107,9 +194,18 @@ export const VOICE_DEFAULT_SETTINGS: VoiceSettings = {
   shortcutMode: 'keys',
   shortcut: VOICE_DEFAULT_SHORTCUT,
   hold: false,
+  model: VOICE_DEFAULT_MODEL,
 };
 
 export type VoiceModelState = 'missing' | 'downloading' | 'ready' | 'failed';
+
+export interface VoiceModelStatus {
+  state: VoiceModelState;
+  progress: number | null;
+  problem: string | null;
+}
+
+export type VoiceModelStatuses = Record<VoiceModelId, VoiceModelStatus>;
 
 export interface VoiceStatus {
   supported: boolean;
@@ -121,9 +217,14 @@ export interface VoiceStatus {
   fnActive: boolean;
   shortcutFailed: boolean;
   model: VoiceModelState;
-  progress: number | null;
-  problem: string | null;
+  models: VoiceModelStatuses;
+  arch: VoiceArch;
   language: string;
+}
+
+export interface VoiceShortcutResult {
+  status: VoiceStatus;
+  error: string | null;
 }
 
 export type VoiceEvent =

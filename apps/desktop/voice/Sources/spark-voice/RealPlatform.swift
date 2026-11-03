@@ -41,13 +41,15 @@ final class RealPlatform: Platform {
     }
 
     func loadModel(path: String, vad: String) -> SpeechModel? {
-        WhisperModel(path: path, vad: vad, reply: queue)
+        Transcriber(path: path, vad: vad, reply: queue)
     }
 
     func startInput(
         file: String?, onFrames: @escaping ([Float]) -> Void, onEnd: @escaping () -> Void
     ) -> ErrorCode? {
-        if let file { return fileInput.play(path: file, onFrames: onFrames, onEnd: onEnd) }
+        if let file {
+            return fileInput.play(path: file, queue: queue, onFrames: onFrames, onEnd: onEnd)
+        }
         return microphone.start(queue: queue, onFrames: onFrames)
     }
 

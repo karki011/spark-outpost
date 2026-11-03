@@ -13,7 +13,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | Section                   | Holds                                                                                                                             | More                                                    |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | **Profile & personality** | **What should Spark call you?** and **Personality** (**Friendly**).                                                               | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
-| **Voice**                 | Mac app: push to talk.                                                                                                            | [Voice](voice.md)                                       |
+| **Voice**                 | Mac app: push to talk, **Speech model**, **Shortcut**.                                                                            | [Voice](voice.md)                                       |
 | **Appearance**            | **Automatic**, **Tint** (**Graphite**), **Increase contrast**. Terminals: [SF Mono](https://developer.apple.com/fonts/) or Menlo. | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
 
 ### Spark assistant

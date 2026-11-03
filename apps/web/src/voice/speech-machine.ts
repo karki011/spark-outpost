@@ -9,6 +9,7 @@ export interface Listen {
   purpose: VoicePurpose;
   level: number;
   heard: boolean;
+  partial: string;
 }
 
 export interface SpeechResult {
@@ -32,6 +33,7 @@ export type SpeechAction =
   | { type: 'refused'; error: VoiceErrorCode }
   | { type: 'level'; id: string; level: number }
   | { type: 'speech'; id: string }
+  | { type: 'partial'; id: string; text: string }
   | { type: 'stopping' }
   | { type: 'heard'; id: string; text: string; command: Command | null }
   | { type: 'cancelled'; id: string }
@@ -56,7 +58,14 @@ export function speechReducer(state: SpeechState, action: SpeechAction): SpeechS
       return {
         ...state,
         notice: null,
-        listen: { phase: 'starting', id: null, purpose: action.purpose, level: 0, heard: false },
+        listen: {
+          phase: 'starting',
+          id: null,
+          purpose: action.purpose,
+          level: 0,
+          heard: false,
+          partial: '',
+        },
       };
     case 'started':
       if (!state.listen || state.listen.phase !== 'starting') return state;
@@ -70,6 +79,12 @@ export function speechReducer(state: SpeechState, action: SpeechAction): SpeechS
     case 'speech': {
       const listen = ours(state, action.id);
       return listen ? { ...state, listen: { ...listen, heard: true } } : state;
+    }
+    case 'partial': {
+      const listen = ours(state, action.id);
+      return listen
+        ? { ...state, listen: { ...listen, heard: true, partial: action.text } }
+        : state;
     }
     case 'stopping':
       if (!state.listen || state.listen.phase !== 'listening') return state;

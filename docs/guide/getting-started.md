@@ -27,7 +27,7 @@ Only your name and one provider are required. Change the rest in **Settings**.
 
 ![The Bring in your tools step with Git found](images/getting-started-tools-light.png)
 
-Spark needs Git to change code. The Mac app adds an optional **Mac access** step for [Full Disk Access](mac-privacy.md#full-disk-access).
+Spark needs Git to change code. The Mac app adds optional **Mac access** ([Full Disk Access](mac-privacy.md#full-disk-access)) and [**Voice**](voice.md#pick-a-speech-model) steps.
 
 ## Send your first message
 

@@ -1,7 +1,7 @@
 import Foundation
 import VoiceCore
 
-WhisperModel.silenceLogs()
+Transcriber.silenceLogs()
 
 let output = NSLock()
 func writeLine(_ line: String) {

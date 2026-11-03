@@ -15,8 +15,11 @@ import {
   VOICE_INPUT_MONITORING_SETTINGS_URL,
   VOICE_KEYBOARD_SETTINGS_URL,
   VOICE_MICROPHONE_SETTINGS_URL,
+  VOICE_MODELS,
   VOICE_SILERO,
+  voiceModelIdSchema,
   voiceShortcutModeSchema,
+  type VoiceArch,
   type VoiceEvent,
   type VoiceListenResult,
   type VoiceMicPermission,
@@ -24,6 +27,7 @@ import {
 } from '@spark-outpost/contracts';
 import { IPC } from '../ipc-channels.ts';
 import { fakeVoiceHelper } from './fake-helper.ts';
+import { fakeVoiceModels } from './fake-models.ts';
 import { spawnVoiceBinary, startVoiceHelper } from './helper-process.ts';
 import { createVoice, type SettingsPatch } from './voice.ts';
 import { loadVoiceSettings, saveVoiceSettings, voiceSettingsFile } from './voice-settings.ts';
@@ -34,6 +38,7 @@ export interface VoiceHostOptions {
   userData: string;
   trusted(event: IpcMainInvokeEvent): boolean;
   island(): Electron.WebContents | null;
+  takenBy(accelerator: string): string | null;
   log(line: string): void;
 }
 
@@ -46,7 +51,12 @@ const INVOKE = [
   IPC.voiceStatus,
   IPC.voiceTurnOn,
   IPC.voiceTurnOff,
+  IPC.voiceDownload,
+  IPC.voiceCancelDownload,
+  IPC.voiceRemoveModel,
+  IPC.voiceSelectModel,
   IPC.voiceUpdate,
+  IPC.voiceSetShortcut,
   IPC.voiceListen,
   IPC.voiceStop,
   IPC.voiceCancel,
@@ -73,6 +83,15 @@ function language(): string {
   return preferred.split(/[-_]/)[0]?.toLowerCase() || 'en';
 }
 
+function arch(): VoiceArch {
+  return process.arch === 'arm64' || app.runningUnderARM64Translation ? 'arm64' : 'x64';
+}
+
+function modelIdFrom(value: unknown) {
+  const parsed = voiceModelIdSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
 function patchFrom(value: unknown): SettingsPatch | null {
   if (!value || typeof value !== 'object') return null;
   const record = value as Record<string, unknown>;
@@ -94,6 +113,13 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
   const fake = !app.isPackaged && process.env.SPARK_FAKE_VOICE === '1';
   const allowFileInput = !app.isPackaged && process.env.SPARK_VOICE_FILE_INPUT === '1';
   const settingsPath = voiceSettingsFile(options.userData);
+  const downloads = fake
+    ? fakeVoiceModels()
+    : {
+        models: VOICE_MODELS,
+        fetch: (url: string, init: { signal: AbortSignal }) =>
+          net.fetch(url, { bypassCustomProtocolHandlers: true, signal: init.signal }),
+      };
   const helper = startVoiceHelper({
     spawn: fake ? fakeVoiceHelper : spawnVoiceBinary(options.helperPath, allowFileInput),
     log: options.log,
@@ -111,8 +137,9 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
     micStatus: fake ? () => 'granted' : micStatus,
     askMic: () => systemPreferences.askForMediaAccess('microphone'),
     modelDir: path.join(options.userData, 'voice'),
+    models: downloads.models,
     vadPath: path.join(options.modelsDir, VOICE_SILERO.file),
-    fetch: (url) => net.fetch(url, { bypassCustomProtocolHandlers: true }),
+    fetch: downloads.fetch,
     register: (accelerator, run) => {
       try {
         return globalShortcut.register(accelerator, run);
@@ -121,6 +148,7 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
       }
     },
     unregister: (accelerator) => globalShortcut.unregister(accelerator),
+    takenBy: options.takenBy,
     sendTo: (owner, event: VoiceEvent) => {
       const target = webContents.fromId(owner);
       if (target && !target.isDestroyed()) target.send(IPC.voiceEvent, event);
@@ -128,6 +156,7 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
     sendIsland: (event) => options.island()?.send(IPC.voiceEvent, event),
     voiceOver: () => app.accessibilitySupportEnabled,
     language: language(),
+    arch: arch(),
     allowFileInput,
     changed: broadcast,
     log: options.log,
@@ -144,8 +173,18 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
   );
   ipcMain.handle(
     IPC.voiceTurnOn,
-    guard(() => voice.turnOn(), null),
+    guard((_event, model) => voice.turnOn(modelIdFrom(model) ?? undefined), null),
   );
+  const forModel =
+    (run: (id: NonNullable<ReturnType<typeof modelIdFrom>>) => unknown) =>
+    (_event: IpcMainInvokeEvent, model: unknown) => {
+      const id = modelIdFrom(model);
+      return id ? run(id) : voice.status();
+    };
+  ipcMain.handle(IPC.voiceDownload, guard(forModel(voice.download), null));
+  ipcMain.handle(IPC.voiceCancelDownload, guard(forModel(voice.cancelDownload), null));
+  ipcMain.handle(IPC.voiceRemoveModel, guard(forModel(voice.remove), null));
+  ipcMain.handle(IPC.voiceSelectModel, guard(forModel(voice.select), null));
   ipcMain.handle(
     IPC.voiceTurnOff,
     guard(() => voice.turnOff(), null),
@@ -155,6 +194,14 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
     guard((_event, patch) => {
       const parsed = patchFrom(patch);
       return parsed ? voice.update(parsed) : voice.status();
+    }, null),
+  );
+  ipcMain.handle(
+    IPC.voiceSetShortcut,
+    guard((_event, accelerator) => {
+      if (accelerator === null || typeof accelerator === 'string')
+        return voice.setShortcut(accelerator);
+      return voice.status().then((status) => ({ status, error: 'Not allowed.' }));
     }, null),
   );
   ipcMain.handle(

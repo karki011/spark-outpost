@@ -1,18 +1,24 @@
 import { randomUUID } from 'node:crypto';
 import {
-  VOICE_WHISPER_BASE,
   voicePurposeSchema,
+  type VoiceArch,
   type VoiceEvent,
   type VoiceFnSetting,
   type VoiceHelperMessage,
   type VoiceListenResult,
   type VoiceMicPermission,
-  type VoiceModelState,
+  type VoiceModel,
+  type VoiceModelId,
   type VoiceSettings,
+  type VoiceShortcutResult,
   type VoiceStatus,
+  VOICE_DEFAULT_SHORTCUT,
 } from '@spark-outpost/contracts';
+import { SHORTCUT_INVALID, SHORTCUT_TAKEN } from '../companion.ts';
+import { isAccelerator } from '../companion-settings.ts';
 import type { VoiceHelper } from './helper-process.ts';
-import { downloadModel, modelPath, modelPresent, type FetchModel } from './model.ts';
+import type { FetchModel } from './model.ts';
+import { createModelStore } from './model-store.ts';
 
 export interface VoiceEffects {
   helper: VoiceHelper;
@@ -22,14 +28,17 @@ export interface VoiceEffects {
   micStatus(): VoiceMicPermission;
   askMic(): Promise<boolean>;
   modelDir: string;
+  models: readonly VoiceModel[];
   vadPath: string;
   fetch: FetchModel;
   register(accelerator: string, run: () => void): boolean;
   unregister(accelerator: string): void;
+  takenBy(accelerator: string): string | null;
   sendTo(owner: number, event: VoiceEvent): void;
   sendIsland(event: VoiceEvent): void;
   voiceOver(): boolean;
   language: string;
+  arch: VoiceArch;
   allowFileInput: boolean;
   changed(status: VoiceStatus): void;
   log(line: string): void;
@@ -42,10 +51,9 @@ const NOT_READY: VoiceListenResult = { ok: false, error: 'model_missing' };
 export function createVoice(effects: VoiceEffects) {
   const { helper } = effects;
   let settings = { ...effects.settings };
-  let model: VoiceModelState = 'missing';
-  let progress: number | null = null;
-  let problem: string | null = null;
   let loaded: Promise<boolean> | null = null;
+  let switchingTo: VoiceModelId | null = null;
+  let fetching: Promise<void> = Promise.resolve();
   let registered: string | null = null;
   let shortcutFailed = false;
   let fnActive = false;
@@ -54,6 +62,14 @@ export function createVoice(effects: VoiceEffects) {
   const listens = new Map<string, number>();
   let speaking: { id: string; owner: number } | null = null;
   let disposed = false;
+
+  const store = createModelStore({
+    dir: effects.modelDir,
+    models: effects.models,
+    fetch: effects.fetch,
+    changed: () => publish(),
+    log: effects.log,
+  });
 
   const snapshot = (): VoiceStatus => ({
     supported: true,
@@ -64,9 +80,9 @@ export function createVoice(effects: VoiceEffects) {
     fnSetting,
     fnActive,
     shortcutFailed,
-    model,
-    progress,
-    problem,
+    model: store.state(settings.model).state,
+    models: store.snapshot(),
+    arch: effects.arch,
     language: effects.language,
   });
   const publish = () => effects.changed(snapshot());
@@ -99,6 +115,20 @@ export function createVoice(effects: VoiceEffects) {
     else shortcutFailed = true;
   };
 
+  const rebind = (next: string): boolean => {
+    const previous = registered;
+    if (previous) effects.unregister(previous);
+    registered = null;
+    if (effects.register(next, () => press())) {
+      registered = next;
+      shortcutFailed = false;
+      return true;
+    }
+    if (previous && effects.register(previous, () => press())) registered = previous;
+    else shortcutFailed = true;
+    return false;
+  };
+
   const watchKeys = async () => {
     const want = settings.enabled && settings.shortcutMode === 'fn' && fnSetting === 'free';
     if (!want && !fnActive) return;
@@ -120,25 +150,22 @@ export function createVoice(effects: VoiceEffects) {
 
   const ensureLoaded = (): Promise<boolean> => {
     if (loaded) return loaded;
+    const id = settings.model;
     const attempt = (async () => {
-      if (!(await modelPresent(effects.modelDir, VOICE_WHISPER_BASE))) {
-        model = 'missing';
-        return false;
-      }
+      if (!(await store.present(id))) return false;
       const answer = await helper
         .ask(
           {
             op: 'load',
-            path: modelPath(effects.modelDir, VOICE_WHISPER_BASE),
-            sha256: VOICE_WHISPER_BASE.sha256,
+            path: store.path(id),
+            sha256: store.model(id).sha256,
             vad: effects.vadPath,
           },
           (message) => message.event === 'loaded' || message.event === 'error',
         )
         .catch(() => null);
       const ok = answer?.event === 'loaded';
-      model = ok ? 'ready' : 'failed';
-      problem = ok ? null : 'The speech model could not be loaded.';
+      if (!ok) store.failed(id, 'The speech model could not be loaded.');
       return ok;
     })();
     loaded = attempt;
@@ -149,33 +176,28 @@ export function createVoice(effects: VoiceEffects) {
     return attempt;
   };
 
-  const download = async () => {
-    model = 'downloading';
-    progress = 0;
-    problem = null;
-    publish();
-    try {
-      await downloadModel({
-        dir: effects.modelDir,
-        model: VOICE_WHISPER_BASE,
-        fetch: effects.fetch,
-        progress: (fraction) => {
-          const rounded = Math.floor(fraction * 100) / 100;
-          if (rounded === progress) return;
-          progress = rounded;
-          publish();
-        },
-      });
-      progress = null;
-      return true;
-    } catch (error) {
-      model = 'failed';
-      progress = null;
-      problem = (error as Error).message || 'The download didn’t check out.';
-      effects.log(`Voice model download failed: ${problem}`);
-      publish();
-      return false;
+  const use = async (id: VoiceModelId) => {
+    switchingTo = null;
+    if (id !== settings.model) {
+      commit({ ...settings, model: id });
+      loaded = null;
     }
+    if (settings.enabled && listens.size === 0) await ensureLoaded();
+    publish();
+  };
+
+  const fetchModel = (id: VoiceModelId, switchAfter: boolean) => {
+    if (store.downloading() !== null) return;
+    if (switchAfter) switchingTo = id;
+    fetching = finishFetch(id);
+  };
+
+  const finishFetch = async (id: VoiceModelId) => {
+    const outcome = await store.download(id);
+    const switching = switchingTo === id;
+    if (switching) switchingTo = null;
+    if (outcome !== 'ready') return;
+    if (switching || id === settings.model) await use(id);
   };
 
   const press = () => {
@@ -239,7 +261,6 @@ export function createVoice(effects: VoiceEffects) {
   helper.onMessage(route);
   helper.onExit(() => {
     loaded = null;
-    if (model === 'ready') model = 'missing';
     for (const [id, owner] of listens)
       effects.sendTo(owner, { kind: 'error', id, error: 'failed' });
     listens.clear();
@@ -251,29 +272,61 @@ export function createVoice(effects: VoiceEffects) {
   return {
     async status(): Promise<VoiceStatus> {
       await refreshHelperStatus();
-      if (model !== 'downloading' && model !== 'ready')
-        model = (await modelPresent(effects.modelDir, VOICE_WHISPER_BASE)) ? 'ready' : model;
+      await store.refresh();
       return snapshot();
     },
 
     async start() {
+      await store.refresh();
       if (!settings.enabled) return;
       await applyKeys();
     },
 
-    async turnOn(): Promise<VoiceStatus> {
-      commit({ ...settings, enabled: true });
+    async turnOn(model?: VoiceModelId): Promise<VoiceStatus> {
+      if (model && model !== settings.model) loaded = null;
+      commit({ ...settings, enabled: true, model: model ?? settings.model });
       if (effects.micStatus() !== 'granted') await effects.askMic();
+      await store.refresh();
       publish();
-      if (!(await modelPresent(effects.modelDir, VOICE_WHISPER_BASE)) && !(await download()))
-        return snapshot();
-      await ensureLoaded();
+      if (await store.present(settings.model)) await ensureLoaded();
+      else fetchModel(settings.model, false);
       await applyKeys();
+      return snapshot();
+    },
+
+    download(id: VoiceModelId): VoiceStatus {
+      fetchModel(id, false);
+      return snapshot();
+    },
+
+    cancelDownload(id: VoiceModelId): VoiceStatus {
+      if (switchingTo === id) switchingTo = null;
+      store.cancel(id);
+      return snapshot();
+    },
+
+    async remove(id: VoiceModelId): Promise<VoiceStatus> {
+      if (id !== settings.model) await store.remove(id);
+      return snapshot();
+    },
+
+    async select(id: VoiceModelId): Promise<VoiceStatus> {
+      const other = store.downloading();
+      if (other !== null && other !== id && (other === switchingTo || other === settings.model)) {
+        switchingTo = null;
+        store.cancel(other);
+        await fetching;
+      }
+      if (store.state(id).state !== 'failed' && (await store.present(id))) await use(id);
+      else fetchModel(id, true);
       return snapshot();
     },
 
     async turnOff(): Promise<VoiceStatus> {
       commit({ ...settings, enabled: false });
+      switchingTo = null;
+      const downloading = store.downloading();
+      if (downloading !== null) store.cancel(downloading);
       for (const id of listens.keys()) helper.send({ op: 'cancel', id });
       hush();
       await applyKeys();
@@ -286,6 +339,22 @@ export function createVoice(effects: VoiceEffects) {
       if (patch.speakAnswers === false) hush();
       await applyKeys();
       return snapshot();
+    },
+
+    setShortcut(accelerator: string | null): VoiceShortcutResult {
+      const fail = (error: string) => ({ status: snapshot(), error });
+      const next = accelerator ?? VOICE_DEFAULT_SHORTCUT;
+      if (!isAccelerator(next)) return fail(SHORTCUT_INVALID);
+      const owner = effects.takenBy(next);
+      if (owner) return fail(`This shortcut already opens ${owner}.`);
+      if (next === settings.shortcut) return { status: snapshot(), error: null };
+      if (settings.enabled && !rebind(next)) {
+        publish();
+        return fail(SHORTCUT_TAKEN);
+      }
+      commit({ ...settings, shortcut: next });
+      publish();
+      return { status: snapshot(), error: null };
     },
 
     shortcut: () => (settings.enabled ? settings.shortcut : null),
@@ -353,6 +422,7 @@ export function createVoice(effects: VoiceEffects) {
       disposed = true;
       if (registered) effects.unregister(registered);
       registered = null;
+      store.dispose();
       helper.kill();
     },
   };

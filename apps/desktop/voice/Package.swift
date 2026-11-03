@@ -9,8 +9,8 @@ let package = Package(
     ],
     targets: [
         .target(name: "VoiceCore"),
-        .systemLibrary(name: "CWhisper", path: "Sources/CWhisper"),
-        .executableTarget(name: "spark-voice", dependencies: ["VoiceCore", "CWhisper"]),
+        .systemLibrary(name: "CTranscribe", path: "Sources/CTranscribe"),
+        .executableTarget(name: "spark-voice", dependencies: ["VoiceCore", "CTranscribe"]),
         .testTarget(name: "VoiceCoreTests", dependencies: ["VoiceCore"]),
     ]
 )

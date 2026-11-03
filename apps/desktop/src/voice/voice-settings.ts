@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   VOICE_DEFAULT_SETTINGS,
+  voiceModelIdSchema,
   voiceSettingsSchema,
   type VoiceSettings,
 } from '@spark-outpost/contracts';
@@ -18,7 +19,12 @@ export function parseVoiceSettings(raw: string | null): VoiceSettings {
     return { ...VOICE_DEFAULT_SETTINGS };
   }
   const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
-  const merged = voiceSettingsSchema.safeParse({ ...VOICE_DEFAULT_SETTINGS, ...record });
+  const model = voiceModelIdSchema.safeParse(record.model);
+  const merged = voiceSettingsSchema.safeParse({
+    ...VOICE_DEFAULT_SETTINGS,
+    ...record,
+    model: model.success ? model.data : VOICE_DEFAULT_SETTINGS.model,
+  });
   if (!merged.success) return { ...VOICE_DEFAULT_SETTINGS };
   const settings = merged.data;
   if (!isAccelerator(settings.shortcut)) settings.shortcut = VOICE_DEFAULT_SETTINGS.shortcut;
@@ -28,6 +34,7 @@ export function parseVoiceSettings(raw: string | null): VoiceSettings {
     shortcutMode: settings.shortcutMode,
     shortcut: settings.shortcut,
     hold: settings.hold,
+    model: settings.model,
   };
 }
 

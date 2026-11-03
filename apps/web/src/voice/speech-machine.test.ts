@@ -117,4 +117,20 @@ describe('speechReducer', () => {
     ]);
     expect(state.result).toBeNull();
   });
+
+  it('keeps the latest live words for its own listen, through working it out', () => {
+    const state = run([
+      { type: 'start', purpose: 'command' },
+      { type: 'started', id: 'a' },
+      { type: 'partial', id: 'a', text: 'open the' },
+      { type: 'partial', id: 'b', text: 'someone else' },
+      { type: 'partial', id: 'a', text: 'open the dashboards' },
+      { type: 'stopping' },
+    ]);
+    expect(state.listen).toMatchObject({
+      phase: 'working',
+      heard: true,
+      partial: 'open the dashboards',
+    });
+  });
 });

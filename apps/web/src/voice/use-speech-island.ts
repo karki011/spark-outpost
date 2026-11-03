@@ -335,6 +335,8 @@ export function useSpeechIsland(options: SpeechIslandOptions) {
         return dispatch({ type: 'level', id: event.id, level: event.level });
       case 'speech':
         return dispatch({ type: 'speech', id: event.id });
+      case 'partial':
+        return dispatch({ type: 'partial', id: event.id, text: event.text });
       case 'final':
         return void heard(event);
       case 'cancelled':

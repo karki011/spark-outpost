@@ -12,11 +12,18 @@ import { ProviderStep } from './ProviderStep.tsx';
 import { DoneStep } from './DoneStep.tsx';
 import { ThemeStep } from './ThemeStep.tsx';
 import { ToolsStep } from './ToolsStep.tsx';
+import { desktopSpeech, useSpeechStatus } from '../voice/speech-bridge.ts';
+import {
+  recommendedChoice,
+  voiceContinueLabel,
+  VoiceStep,
+  type VoiceChoice,
+} from './VoiceStep.tsx';
 import { Stepper } from './Stepper.tsx';
 import '../ui/controls.css';
 import './onboarding.css';
 
-type StepId = 'meet' | 'theme' | 'provider' | 'tools' | 'mac-access' | 'done';
+type StepId = 'meet' | 'theme' | 'provider' | 'tools' | 'mac-access' | 'voice' | 'done';
 
 const STEP_LABELS: Record<StepId, string> = {
   meet: 'Meet Spark',
@@ -24,6 +31,7 @@ const STEP_LABELS: Record<StepId, string> = {
   provider: 'AI provider',
   tools: 'Tools',
   'mac-access': 'Mac access',
+  voice: 'Voice',
   done: 'Done',
 };
 
@@ -45,10 +53,19 @@ export function Onboarding({ onFinished }: OnboardingProps) {
   const queryClient = useQueryClient();
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const fullDiskAccess = useQuery(fullDiskAccessQuery);
-  const steps: StepId[] =
-    fullDiskAccess.data && fullDiskAccess.data.status !== 'unsupported'
-      ? ['meet', 'theme', 'provider', 'tools', 'mac-access', 'done']
-      : ['meet', 'theme', 'provider', 'tools', 'done'];
+  const speech = desktopSpeech();
+  const voiceStatus = useSpeechStatus();
+  const macAccess = fullDiskAccess.data && fullDiskAccess.data.status !== 'unsupported';
+  const voice = speech !== null && voiceStatus?.helper !== 'missing';
+  const steps: StepId[] = [
+    'meet',
+    'theme',
+    'provider',
+    'tools',
+    ...(macAccess ? (['mac-access'] as const) : []),
+    ...(voice ? (['voice'] as const) : []),
+    'done',
+  ];
   const providerStepIndex = steps.indexOf('provider');
   const resumeAt = setup.data?.profile.displayName.trim() ? providerStepIndex : 0;
   const [step, setStep] = useState(resumeAt);
@@ -57,6 +74,8 @@ export function Onboarding({ onFinished }: OnboardingProps) {
   const [displayName, setDisplayName] = useState(setup.data?.profile.displayName ?? '');
   const [scoutMood, setScoutMood] = useState<ScoutMood>(null);
   const [leaving, setLeaving] = useState(false);
+  const [voicePick, setVoicePick] = useState<VoiceChoice | null>(null);
+  const voiceStarted = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   if (!setup.data || fullDiskAccess.isPending) return null;
@@ -64,6 +83,7 @@ export function Onboarding({ onFinished }: OnboardingProps) {
   const connected = providers.filter((provider) => provider.connection);
   const current = steps[step] ?? 'meet';
   const lastStep = steps.length - 1;
+  const voiceChoice = voicePick ?? recommendedChoice(voiceStatus);
 
   function go(next: number) {
     setDirection(next >= step ? 1 : -1);
@@ -114,8 +134,20 @@ export function Onboarding({ onFinished }: OnboardingProps) {
     }, LEAVE_ANIMATION_MS);
   }
 
+  function applyVoice() {
+    if (!speech) return;
+    if (voiceChoice === 'none') {
+      if (voiceStarted.current) void speech.turnOff();
+      voiceStarted.current = false;
+      return;
+    }
+    void (voiceStarted.current ? speech.select(voiceChoice) : speech.turnOn(voiceChoice));
+    voiceStarted.current = true;
+  }
+
   function handleNext() {
     if (!canGoNext) return;
+    if (current === 'voice') applyVoice();
     if (step === lastStep) void handleFinish();
     else go(step + 1);
   }
@@ -131,7 +163,9 @@ export function Onboarding({ onFinished }: OnboardingProps) {
           ? 'Everything here is optional.'
           : current === 'mac-access'
             ? 'Optional. You can do this later in Settings.'
-            : '';
+            : current === 'voice' && voiceChoice !== 'none' && voiceStatus?.mic !== 'granted'
+              ? 'macOS asks for the microphone when you continue.'
+              : '';
 
   return (
     <div className={`onb${leaving ? ' leave' : ''}`}>
@@ -195,6 +229,13 @@ export function Onboarding({ onFinished }: OnboardingProps) {
                     <FullDiskAccess />
                   </>
                 )}
+                {current === 'voice' && (
+                  <VoiceStep
+                    choice={voiceChoice}
+                    recommended={recommendedChoice(voiceStatus)}
+                    onChoose={setVoicePick}
+                  />
+                )}
                 {current === 'done' && (
                   <DoneStep
                     displayName={displayName}
@@ -225,7 +266,11 @@ export function Onboarding({ onFinished }: OnboardingProps) {
                 disabled={!canGoNext}
                 onClick={handleNext}
               >
-                {step === lastStep ? 'Open Spark Outpost' : 'Continue'}
+                {step === lastStep
+                  ? 'Open Spark Outpost'
+                  : current === 'voice'
+                    ? voiceContinueLabel(voiceChoice, voiceStatus)
+                    : 'Continue'}
               </button>
             </div>
           </div>

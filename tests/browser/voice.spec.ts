@@ -67,9 +67,9 @@ test('Settings: Voice starts off, Speak answers starts off, turning on asks the 
   await voice.focus();
   await page.keyboard.press('Space');
   await expect(voice).toBeChecked();
-  await expect(settings.getByRole('region', { name: 'Microphone and speech model' })).toContainText(
-    'Ready',
-  );
+  const models = settings.getByRole('region', { name: 'Speech model' });
+  await expect(models.getByRole('radio', { name: 'Whisper base' })).toBeChecked();
+  await expect(models).toContainText('In use');
   await settings.getByRole('radio', { name: 'Use Fn twice' }).check();
   await expect(settings.getByText(/macOS uses the 🌐 key for Show Emoji & Symbols/)).toBeVisible();
   await settings.getByRole('button', { name: 'Open Keyboard settings' }).click();

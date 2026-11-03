@@ -1,0 +1,9 @@
+module CTranscribe [system] {
+    header "shim.h"
+    link "transcribe"
+    link "ggml"
+    link "ggml-cpu"
+    link "ggml-base"
+    link "c++"
+    export *
+}

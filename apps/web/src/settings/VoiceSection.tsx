@@ -1,9 +1,17 @@
 import { useId, useRef, useState } from 'react';
-import type { VoiceFnSetting, VoiceStatus } from '@spark-outpost/contracts';
+import {
+  VOICE_DEFAULT_SHORTCUT,
+  type VoiceFnSetting,
+  type VoiceStatus,
+} from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { shortcutKeys } from '../desktop/shortcut-keys.ts';
 import { CheckIcon } from '../ui/icons.tsx';
+import { Keys } from '../ui/Keys.tsx';
 import { desktopSpeech, useSpeechStatusState } from '../voice/speech-bridge.ts';
 import { SettingRow } from './SettingRow.tsx';
+import { RECORDING_HINT, ShortcutPicker, useShortcutPicker } from './ShortcutPicker.tsx';
+import { SPEECH_MODEL_LABEL, SpeechModels } from './SpeechModels.tsx';
 import { useSettingFocus } from './setting-focus.ts';
 import '../providers/providers.css';
 import './full-disk-access.css';
@@ -26,7 +34,10 @@ const VOICE_INFO = {
       label: 'Stays on the Mac',
       text: 'Audio and spoken answers. Text leaves only when you send it.',
     },
-    { label: 'Download', text: 'A 60 MB speech model, once, from Hugging Face.' },
+    {
+      label: 'Download',
+      text: 'One speech model you pick, 60 to 574 MB, once, from Hugging Face.',
+    },
   ],
 };
 
@@ -36,11 +47,19 @@ const SPEAK_INFO = {
 };
 
 const SHORTCUT_LABEL = 'Shortcut';
+const SHORTCUT_TAKEN =
+  'Another app is using this shortcut, so only Fn twice and the mic buttons work. Pick a different one.';
 const HOLD_LABEL = 'Hold to talk';
 
-export const VOICE_ROWS = ['Voice', SHORTCUT_LABEL, HOLD_LABEL, 'Speak answers'] as const;
+export const VOICE_ROWS = [
+  'Voice',
+  SPEECH_MODEL_LABEL,
+  SHORTCUT_LABEL,
+  HOLD_LABEL,
+  'Speak answers',
+] as const;
 
-const SHOWN_WHEN_OFF: readonly string[] = [SHORTCUT_LABEL, HOLD_LABEL];
+const SHOWN_WHEN_OFF: readonly string[] = [SPEECH_MODEL_LABEL, SHORTCUT_LABEL, HOLD_LABEL];
 const SHOWN_WITH_FN: readonly string[] = [HOLD_LABEL];
 
 function hiddenRows(on: boolean, fn: boolean): readonly string[] | undefined {
@@ -56,14 +75,6 @@ function Pill({ ok, text }: { ok: boolean; text: string }) {
       {text}
     </span>
   );
-}
-
-function modelLine(status: VoiceStatus): string {
-  if (status.model === 'ready') return 'Ready';
-  if (status.model === 'downloading')
-    return `Downloading… ${Math.round((status.progress ?? 0) * 100)}%`;
-  if (status.model === 'failed') return status.problem ?? 'The download didn’t check out.';
-  return 'Downloads when you turn Voice on';
 }
 
 function Switch(props: {
@@ -109,6 +120,10 @@ function Shortcut({
   const speech = desktopSpeech()!;
   const fn = status.settings.shortcutMode === 'fn';
   const blocked = status.fnSetting !== 'free';
+  const keys = shortcutKeys(status.settings.shortcut);
+  const hintId = useId();
+  const picker = useShortcutPicker(async (next) => (await speech.setShortcut(next))?.error ?? null);
+  const problem = picker.error ?? (status.shortcutFailed ? SHORTCUT_TAKEN : null);
   const card = useRef<HTMLElement>(null);
   const choices = useRef<HTMLDivElement>(null);
   useSettingFocus(SHORTCUT_LABEL, card, choices);
@@ -121,16 +136,26 @@ function Shortcut({
         </span>
       </div>
       <div className="pc-body">
-        <div ref={choices} className="mac-actions" role="radiogroup" aria-label="Voice shortcut">
-          <label>
-            <input
-              type="radio"
-              name="voice-shortcut"
-              checked={!fn}
-              onChange={() => void speech.update({ shortcutMode: 'keys' }).then(onStatus)}
-            />{' '}
-            Use <kbd>⌥⇧V</kbd>
-          </label>
+        <div ref={choices} className="voice-modes" role="radiogroup" aria-label="Voice shortcut">
+          <span className="voice-mode">
+            <label>
+              <input
+                type="radio"
+                name="voice-shortcut"
+                aria-label={`Use ${keys.join('')}`}
+                checked={!fn}
+                onChange={() => void speech.update({ shortcutMode: 'keys' }).then(onStatus)}
+              />{' '}
+              Use
+            </label>
+            <ShortcutPicker
+              label="Voice shortcut"
+              accelerator={status.settings.shortcut}
+              isDefault={status.settings.shortcut === VOICE_DEFAULT_SHORTCUT}
+              describedBy={hintId}
+              picker={picker}
+            />
+          </span>
           <label>
             <input
               type="radio"
@@ -141,11 +166,15 @@ function Shortcut({
             Use Fn twice
           </label>
         </div>
+        <p id={hintId} className={problem ? 'fda-note' : 'voice-keys-hint'}>
+          {problem ??
+            (picker.recording ? RECORDING_HINT : 'Any modifier with a letter, number or Space.')}
+        </p>
         {fn && blocked && (
           <p className="fda-note">
             macOS uses the 🌐 key for {FN_USES[status.fnSetting as Exclude<VoiceFnSetting, 'free'>]}
-            , so Spark uses <kbd>⌥⇧V</kbd>. In Keyboard settings, set <b>Press 🌐 key to</b> Do
-            Nothing and give Dictation another shortcut.{' '}
+            , so Spark uses <Keys keys={keys} />. In Keyboard settings, set <b>Press 🌐 key to</b>{' '}
+            Do Nothing and give Dictation another shortcut.{' '}
             <button
               type="button"
               className="btn sm"
@@ -169,12 +198,7 @@ function Shortcut({
         )}
         {fn && status.fnActive && (
           <p>
-            Fn twice starts listening. <kbd>⌥⇧V</kbd> still works.
-          </p>
-        )}
-        {status.shortcutFailed && (
-          <p className="fda-note">
-            Another app is using ⌥⇧V, so only Fn twice and the mic buttons work.
+            Fn twice starts listening. <Keys keys={keys} /> still works.
           </p>
         )}
       </div>
@@ -186,7 +210,7 @@ function Setup({ status }: { status: VoiceStatus }) {
   const speech = desktopSpeech()!;
   const micOk = status.mic === 'granted';
   return (
-    <section className="pcard fda-card" aria-label="Microphone and speech model">
+    <section className="pcard fda-card" aria-label="Microphone">
       <div className="pc-head">
         <span className="nm">
           <b>Microphone</b>
@@ -206,16 +230,9 @@ function Setup({ status }: { status: VoiceStatus }) {
             </button>
           </div>
         )}
-        <dl className="fda-facts">
-          <div>
-            <dt>Speech model</dt>
-            <dd role="status">{modelLine(status)}</dd>
-          </div>
-          <div>
-            <dt>Language</dt>
-            <dd>{status.language}, your Mac’s language. Commands are English for now.</dd>
-          </div>
-        </dl>
+        <p className="fda-note">
+          Spoken commands are English for now; dictation follows the model.
+        </p>
       </div>
     </section>
   );
@@ -253,6 +270,7 @@ export function VoiceSection() {
         }
         onChange={(next) => void toggle(next)}
       />
+      {on && <SpeechModels status={status} onStatus={take} />}
       {on && <Setup status={status} />}
       {on && <Shortcut status={status} onStatus={take} />}
       {on && status.settings.shortcutMode === 'fn' && (
