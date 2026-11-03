@@ -19,14 +19,14 @@ Or use **Start a new chat** on **Home**.
 
 Pick **Terminal** for the native CLI: [Open a terminal](terminals.md).
 
-While loading, drafts stay editable; sending waits. **Try again** recovers failed loads.
+Drafts stay editable while loading; sending waits. **Try again** recovers failed loads.
 
 ## Link a project
 
 Without one, the agent works in a private folder; files show under replies.
 
 1. Under the box, select **Choose project**.
-2. Pick a folder under **Recent**, **Add folder…** to pick or make one, or **Clone a repository…**.
+2. Pick a **Recent** folder, **Add folder…** or **Clone a repository…**.
 
 Plain folders offer **Make it a git repository**.
 
@@ -45,6 +45,8 @@ Plain folders offer **Make it a git repository**.
 **Sent** confirms receipt; **Retry** reuses the message ID.
 
 Markdown styles as you type; select text or open **+ → Formatting** ([keys](keyboard-shortcuts.md#chats)). Agent setup is in **…** under the box.
+
+Typed web links show as cards built from the address; nothing is fetched.
 
 ## Share a chat with another chat
 
