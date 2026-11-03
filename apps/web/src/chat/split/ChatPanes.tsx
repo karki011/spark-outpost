@@ -64,6 +64,7 @@ function usePane(side: PaneSide, split: boolean, focused: boolean, closer: React
     () =>
       split
         ? {
+            split: true,
             focused,
             idSuffix: side === 'secondary' ? '-split' : '',
             name: PANE_NAMES[side],

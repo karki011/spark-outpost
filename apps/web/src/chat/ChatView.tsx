@@ -385,6 +385,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               />
               <Composer
                 conversationId={conversationId}
+                autoFocus={pane.focused}
                 repos={repos}
                 settings={settings}
                 providers={connected}

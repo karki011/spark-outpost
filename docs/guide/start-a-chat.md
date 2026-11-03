@@ -56,7 +56,7 @@ Group chats in an [outpost](outposts.md).
 
 ## Open two chats side by side
 
-**⌥**-click a chat (**⌥Enter**) or use its **Open in split**. Clicking or typing in a side focuses it; the other dims, still working. Picks, **⌘D** and panels follow focus. **✕** closes.
+**⌥**-click a chat (**⌥Enter**) or use **Open in split**. Clicking or typing in a side focuses it; opened chats, **⌘D** and panels go there. The other dims, still working. **✕** closes.
 
 ## Jump between sessions
 

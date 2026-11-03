@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useInSplit } from '../chat/split/chat-pane.ts';
 import { useSidebarLayout } from '../conversations/sidebar-layout.tsx';
 import { DOCK_QUERY, PHONE_QUERY, ROOMY_DOCK_QUERY, useMediaQuery } from '../ui/breakpoints.ts';
 import type { TaskOverview } from '@spark-outpost/contracts';
@@ -71,7 +72,8 @@ function usePanelDocks(): boolean {
   const roomy = useMediaQuery(ROOMY_DOCK_QUERY);
   const phone = useMediaQuery(PHONE_QUERY);
   const sidebar = useSidebarLayout();
-  return docks && !phone && (roomy || (sidebar?.collapsed ?? true));
+  const inSplit = useInSplit();
+  return docks && !phone && !inSplit && (roomy || (sidebar?.collapsed ?? true));
 }
 
 export interface WorkPanelState {

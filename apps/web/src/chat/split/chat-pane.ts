@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 
 export interface ChatPane {
+  split: boolean;
   focused: boolean;
   idSuffix: string;
   name: string | null;
@@ -9,6 +10,7 @@ export interface ChatPane {
 }
 
 export const SINGLE_PANE: ChatPane = {
+  split: false,
   focused: true,
   idSuffix: '',
   name: null,
@@ -24,6 +26,10 @@ export function useChatPane(): ChatPane {
 
 export function usePaneFocused(): boolean {
   return useContext(ChatPaneContext).focused;
+}
+
+export function useInSplit(): boolean {
+  return useContext(ChatPaneContext).split;
 }
 
 export function usePaneId(base: string): string {

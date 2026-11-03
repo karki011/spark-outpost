@@ -202,12 +202,14 @@ test('the pair, focus and divider come back after a reload, and narrow windows s
   await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('ArrowLeft');
   await expect(divider(page)).toHaveAttribute('aria-valuenow', '46');
-  await composer(right(page)).focus();
+  await composer(left(page)).focus();
+  await expect(left(page)).toHaveAccessibleName(/, focused$/);
 
   await page.reload();
   await expect(left(page).getByRole('heading', { level: 1 })).toHaveText(LEFT);
   await expect(right(page).getByRole('heading', { level: 1 })).toHaveText(RIGHT);
-  await expect(right(page)).toHaveAccessibleName(/, focused$/);
+  await expect(left(page)).toHaveAccessibleName(`Left chat: ${LEFT}, focused`);
+  await expect(right(page)).toHaveAccessibleName(`Right chat: ${RIGHT}`);
   await expect(divider(page)).toHaveAttribute('aria-valuenow', '46');
   const leftWidth = (await pane(page, 'primary').boundingBox())!.width;
   const rightWidth = (await pane(page, 'secondary').boundingBox())!.width;
@@ -226,4 +228,44 @@ test('the pair, focus and divider come back after a reload, and narrow windows s
     await animationsSettled(page);
     await page.screenshot({ path: `${SHOTS}/split-chat-${colorScheme}.png` });
   }
+});
+
+test('a pane keeps its chat mounted and room for the column with its Work panel open', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await openChats(page);
+  await page.getByRole('button', { name: 'New chat' }).first().click();
+  const input = composer(left(page));
+  await input.fill('Fix the date divider #plan');
+  await input.press('Enter');
+  await expect(left(page).locator('.todo-line')).toContainText('3 of 3 done', { timeout: 20_000 });
+  const mounted = await left(page).elementHandle();
+
+  await rowButton(page, RIGHT).click({ modifiers: ['Alt'] });
+  await expect(right(page).getByRole('heading', { level: 1 })).toHaveText(RIGHT);
+  expect(await mounted!.evaluate((element) => element.isConnected)).toBe(true);
+
+  const toggle = left(page).getByRole('button', { name: /work panel$/ });
+  if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+  const panel = pane(page, 'primary').locator('.wp.on .wp-in');
+  await expect(panel).toBeVisible();
+  await animationsSettled(page);
+  const column = (await left(page).boundingBox())!;
+  const panelBox = (await panel.boundingBox())!;
+  const rightBox = (await pane(page, 'secondary').boundingBox())!;
+  expect(column.width).toBeGreaterThanOrEqual(320);
+  expect(panelBox.x + panelBox.width).toBeLessThanOrEqual(rightBox.x);
+
+  if (SHOTS) {
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme });
+      await animationsSettled(page);
+      await page.screenshot({ path: `${SHOTS}/split-chat-work-panel-${colorScheme}.png` });
+    }
+  }
+
+  await right(page).getByRole('button', { name: 'Close right chat' }).click();
+  await expect(right(page)).toHaveCount(0);
+  expect(await mounted!.evaluate((element) => element.isConnected)).toBe(true);
 });
