@@ -67,6 +67,7 @@ export function usePaneRoom(handle: RefObject<HTMLElement | null>, initial: Pane
     let frame = 0;
     const update = () => {
       frame = 0;
+      if (panel.getClientRects().length === 0) return;
       const next = measurePane(panel);
       panel.style.setProperty(CAP, `${next.range.max}px`);
       setMeasure((current) => (same(current, next) ? current : next));
