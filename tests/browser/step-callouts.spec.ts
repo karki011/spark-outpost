@@ -92,7 +92,7 @@ test('a finished turn folds its callouts too and names them in the summary', asy
 
   const fold = turn(page).getByRole('button', { name: /^Worked/ });
   await expect(fold).toHaveText(
-    /^Worked( for \d+s)? · read 4 files, used the browser 2 times, used the web once, made 1 page, acted in Mac apps once$/,
+    /^Worked( for \d+s)? · read 4 files, used the browser 2 times, used the web once, worked on pages once, acted in Mac apps once$/,
   );
   await expect(row(page, /^Opened www\.cloudzero\.com/)).toBeHidden();
   await expect(turn(page).getByText('The pricing page lists three plans.')).toBeVisible();

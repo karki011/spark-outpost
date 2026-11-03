@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ConversationSummary } from '@spark-outpost/contracts';
+import { CHAT_LIST_PAGE, type ConversationSummary } from '@spark-outpost/contracts';
 import {
   NO_SPLIT,
   closePane,
@@ -112,5 +112,12 @@ describe('a saved split', () => {
       restoredSplit(PAIR, [summary('a'), summary('b', '2026-11-01T00:00:00.000Z')]),
     ).toMatchObject({ primary: 'a', secondary: null });
     expect(restoredSplit(PAIR, [summary('b')])).toMatchObject({ primary: 'b', secondary: null });
+  });
+
+  it('keeps a chat that may be on a later page of a full chat list', () => {
+    const page = Array.from({ length: CHAT_LIST_PAGE }, (_, index) => summary(`chat-${index}`));
+    expect(restoredSplit(PAIR, [summary('a'), ...page.slice(1)])).toBe(PAIR);
+    const archived = [summary('a'), summary('b', '2026-11-01T00:00:00.000Z'), ...page.slice(2)];
+    expect(restoredSplit(PAIR, archived)).toMatchObject({ primary: 'a', secondary: null });
   });
 });

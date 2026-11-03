@@ -1,4 +1,5 @@
 import {
+  CHAT_LIST_PAGE,
   SPLIT_RATIO_DEFAULT,
   SPLIT_RATIO_MAX,
   SPLIT_RATIO_MIN,
@@ -71,14 +72,17 @@ export function leaveChat(split: ChatSplit, id: string): ChatSplit | null {
   return side ? closePane(split, side) : null;
 }
 
-function present(chats: readonly ConversationSummary[], id: string | null): boolean {
-  return id !== null && chats.some((chat) => chat.id === id && !chat.archivedAt);
+function gone(chats: readonly ConversationSummary[], id: string | null): boolean {
+  if (id === null) return true;
+  const chat = chats.find((candidate) => candidate.id === id);
+  if (chat) return Boolean(chat.archivedAt);
+  return chats.length < CHAT_LIST_PAGE;
 }
 
 export function restoredSplit(split: ChatSplit, chats: readonly ConversationSummary[]): ChatSplit {
   if (split.secondary === null) return split;
-  if (!present(chats, split.secondary)) return closePane(split, 'secondary');
-  if (!present(chats, split.primary)) return closePane(split, 'primary');
+  if (gone(chats, split.secondary)) return closePane(split, 'secondary');
+  if (gone(chats, split.primary)) return closePane(split, 'primary');
   return split;
 }
 

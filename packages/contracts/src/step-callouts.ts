@@ -108,13 +108,15 @@ function browserActTarget(args: Record<string, unknown>): string | null {
   return words(action.data, action.data === 'key' && key.success ? key.data : null);
 }
 
+const UNKNOWN_KEY = 'a-key';
+
 function macActTarget(args: Record<string, unknown>): string | null {
   const action = field(args, 'action');
   const app = field(args, 'app');
   if (!action || !app) return null;
   if (action === 'key') {
     const key = macHelperKeySchema.safeParse(args.key);
-    return key.success ? words(action, key.data, app) : words(action, app);
+    return words(action, key.success ? key.data : UNKNOWN_KEY, app);
   }
   const menu = z.array(shortText).safeParse(args.menu);
   const path = action === 'menu' && menu.success ? menu.data : [];
@@ -212,7 +214,8 @@ function macActWords(target: string | null, live: boolean): CalloutWords {
   }
   const verb = tensed(tense, live);
   if (action === 'key') {
-    const [key, app] = split(rest);
+    const [slot, app] = split(rest);
+    const key = slot === UNKNOWN_KEY ? 'a key' : slot;
     return app ? { verb: `${verb} ${key} in`, target: app } : { verb, target: key };
   }
   if (action === 'menu') {

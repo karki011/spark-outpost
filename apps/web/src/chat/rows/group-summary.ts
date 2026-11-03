@@ -53,7 +53,7 @@ const ORDER: readonly Counted['kind'][] = [
 const CALLOUT_PHRASES: Record<CalloutKind, (count: number) => string> = {
   browser: (count) => `used the browser ${times(count)}`,
   web: (count) => `used the web ${times(count)}`,
-  page: (count) => `made ${plural(count, 'page')}`,
+  page: (count) => `worked on pages ${times(count)}`,
   mac: (count) => `acted in Mac apps ${times(count)}`,
 };
 

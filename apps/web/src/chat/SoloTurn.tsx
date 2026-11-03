@@ -327,8 +327,8 @@ export function SoloTurn({
         cards={cardsAt}
         fold={fold}
       >
-        {(part, last) =>
-          last && options.length > 0 ? (
+        {(part, last, lastText) =>
+          lastText && options.length > 0 ? (
             <OptionReply
               text={part}
               options={options}

@@ -75,4 +75,15 @@ describe('linkAddresses', () => {
     expect(hrefs(text)).toEqual(['https://example.com/mine']);
     expect(hrefs('> https://example.com/typed-quote')).toEqual(['https://example.com/typed-quote']);
   });
+
+  it('keeps a fence open past a line that only starts like a closing fence', () => {
+    const text = '```\n```not-a-close\nhttps://example.com/inside\n```\nhttps://example.com/after';
+    expect(hrefs(text)).toEqual(['https://example.com/after']);
+  });
+
+  it('trims thousands of unmatched closers quickly', () => {
+    const started = performance.now();
+    expect(hrefs(`https://example.com/a${')'.repeat(20_000)}`)).toEqual(['https://example.com/a']);
+    expect(performance.now() - started).toBeLessThan(500);
+  });
 });

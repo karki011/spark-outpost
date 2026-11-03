@@ -113,4 +113,14 @@ describe('step callouts in the turn rows', () => {
     });
     expect(foldSummary(parts)).toBe('read 2 files, used the browser 2 times, used the web once');
   });
+
+  it('never says a turn made a page when it only read one', () => {
+    const readPage = done('Reading an artifact', {
+      toolKind: 'other',
+      toolName: 'mcp__spark__spark_artifact',
+      target: 'read',
+    });
+    const parts = turnRowParts({ text: 'Done.', steps: [readPage], commands: [] });
+    expect(foldSummary(parts)).toBe('worked on pages once');
+  });
 });

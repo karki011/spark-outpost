@@ -7,23 +7,27 @@ export interface LinkAddress {
 }
 
 const CANDIDATE = /(?<![a-z0-9])https?:\/\/[^\s<>`"]+/gi;
-const FENCED_CODE = /^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^ {0,3}\1[^\n]*$|(?![\s\S]))/gm;
+const FENCED_CODE = /^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^ {0,3}\1[`~]*[ \t]*$|(?![\s\S]))/gm;
 const INLINE_CODE = /(`+)[\s\S]*?\1/g;
 const TRAILING_PUNCTUATION = /[.,:;!?'*_~]$/;
 const PAIRS: Record<string, string> = { ')': '(', ']': '[' };
 
-function count(text: string, character: string): number {
-  return text.split(character).length - 1;
+function counts(text: string): Map<string, number> {
+  const found = new Map<string, number>();
+  for (const character of text) found.set(character, (found.get(character) ?? 0) + 1);
+  return found;
 }
 
 function trimTrailing(candidate: string): string {
-  let text = candidate;
+  const seen = counts(candidate);
+  let end = candidate.length;
   for (;;) {
-    const last = text.at(-1) ?? '';
+    const last = candidate[end - 1] ?? '';
     const opener = PAIRS[last];
-    if (TRAILING_PUNCTUATION.test(last)) text = text.slice(0, -1);
-    else if (opener && count(text, last) > count(text, opener)) text = text.slice(0, -1);
-    else return text;
+    const unmatched = opener && (seen.get(last) ?? 0) > (seen.get(opener) ?? 0);
+    if (!TRAILING_PUNCTUATION.test(last) && !unmatched) return candidate.slice(0, end);
+    seen.set(last, (seen.get(last) ?? 0) - 1);
+    end -= 1;
   }
 }
 

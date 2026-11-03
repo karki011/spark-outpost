@@ -113,4 +113,19 @@ describe('step callouts', () => {
     });
     expect(calloutWords('spark_mac_act', null, false).verb).toBe('Acted in a Mac app');
   });
+
+  it('never mistakes the app for the key when a Mac key step has no known key', () => {
+    for (const key of ['cmd+s', undefined]) {
+      const target = calloutTarget('spark_mac_act', null, {
+        action: 'key',
+        app: 'Google Chrome',
+        key,
+      });
+      expect(target).toBe('key a-key Google Chrome');
+      expect(calloutWords('spark_mac_act', target, false)).toEqual({
+        verb: 'Pressed a key in',
+        target: 'Google Chrome',
+      });
+    }
+  });
 });
