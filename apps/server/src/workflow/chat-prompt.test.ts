@@ -210,6 +210,7 @@ describe('chatPrompt', () => {
       expect(prompt).toContain('never add a dependency for a few lines');
       expect(prompt).toContain('Be lazy about the solution, never about the change');
       expect(prompt).toContain('Never cut validation at trust boundaries');
+      expect(prompt).toContain('Add no comment that restates what the code does');
       expect(prompt).toContain('what was skipped or not checked and any risk the user must know');
     }
   });
