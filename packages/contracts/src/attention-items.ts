@@ -6,6 +6,7 @@ export const attentionItemKindSchema = z.enum([
   'flag',
   'run-done',
   'run-failed',
+  'shell-alert',
 ]);
 export type AttentionItemKind = z.infer<typeof attentionItemKindSchema>;
 
@@ -30,19 +31,21 @@ export type AttentionMark = z.infer<typeof attentionMarkSchema>;
 
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const KEY_PATTERN = new RegExp(
-  `^(?:(approval|flag|run-done|run-failed):(${UUID})|terminal:(${UUID}):(\\d{1,9}):(\\d{1,15}))$`,
+  `^(?:(approval|flag|run-done|run-failed|shell-alert):(${UUID})|terminal:(${UUID}):(\\d{1,9}):(\\d{1,15}))$`,
   'i',
 );
 
+type IdKeyKind = 'approval' | 'flag' | 'run-done' | 'run-failed' | 'shell-alert';
+
 export type ParsedAttentionKey =
-  | { kind: 'approval' | 'flag' | 'run-done' | 'run-failed'; id: string }
+  | { kind: IdKeyKind; id: string }
   | { kind: 'terminal'; id: string; generation: number; since: number };
 
 export function parseAttentionKey(key: string): ParsedAttentionKey | null {
   const match = KEY_PATTERN.exec(key);
   if (!match) return null;
   if (match[1] && match[2]) {
-    return { kind: match[1] as 'approval' | 'flag' | 'run-done' | 'run-failed', id: match[2] };
+    return { kind: match[1] as IdKeyKind, id: match[2] };
   }
   return {
     kind: 'terminal',

@@ -12,6 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed              | What to do                                                             |
 | ------------------------- | ---------------------------------------------------------------------- |
+| Shell tab alerts          | [On the chat's row](terminals.md#open-a-shell-beside-chat).            |
 | Split chat                | [Two chats side by side](start-a-chat.md#open-two-chats-side-by-side). |
 | Wider Home                | Cards wrap less.                                                       |
 | Highlighted steps         | [Their own rows](follow-a-turn.md#see-whats-happening).                |

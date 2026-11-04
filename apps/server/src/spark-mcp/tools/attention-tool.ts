@@ -64,7 +64,7 @@ function updateLine(item: AttentionItem, titles: ReadonlyMap<string, string>) {
   return {
     chat: { id: item.conversationId, title: titles.get(item.conversationId) ?? '' },
     kind: item.kind,
-    ...(item.detail ? { detail: item.detail } : {}),
+    ...(item.detail && item.kind !== 'shell-alert' ? { detail: item.detail } : {}),
     at: item.at,
   };
 }

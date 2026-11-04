@@ -6,6 +6,7 @@ export interface OpenShell {
   label: string;
   cwd: string;
   pid: number;
+  agent?: boolean;
 }
 
 export interface ShellRow extends OpenShell {

@@ -98,6 +98,7 @@ export interface RunRow {
 
 export interface ConversationSummaryRow extends PendingApprovalRow {
   id: string;
+  shell_alert?: string | null;
   title: string;
   updated_at: Date;
   project_ids: string[];
@@ -303,6 +304,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
     waitingSince: row.needs_input ? iso(row.waiting_since ?? null) : null,
     needsInput: row.needs_input,
     attention: row.needs_input || row.flag_title ? toAttention(row) : null,
+    ...(row.shell_alert ? { shellAlert: row.shell_alert } : {}),
     titleSource: titleSourceSchema.safeParse(row.title_source).data ?? 'message',
     category: categorySchema.safeParse(row.category).data ?? null,
     teammate: toTeammateTag(row),

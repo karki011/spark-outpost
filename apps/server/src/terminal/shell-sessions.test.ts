@@ -6,7 +6,9 @@ import type { TerminalServerMessage } from '@spark-outpost/contracts';
 import { isAlive } from './process-group.ts';
 import { loginShellSpawner } from './pty.ts';
 import type { OpenShell } from '../persistence/terminal-shells.ts';
+import type { ShellAlert } from '../persistence/shell-alerts.ts';
 import { defaultLimits, TerminalLimitError, TerminalSessions } from './sessions.ts';
+import { shellAlerts } from './shell-alerts.ts';
 
 const size = { cols: 80, rows: 24 };
 let sessions: TerminalSessions;
@@ -148,6 +150,23 @@ describe('chat shells', () => {
     sessions.kill(setup.id);
     expect(ended).toEqual([created.id]);
   });
+
+  it('turns a notify sequence a shell prints into an alert for its chat', async () => {
+    const alerts: ShellAlert[] = [];
+    sessions = new TerminalSessions(
+      loginShellSpawner('/bin/sh'),
+      defaultLimits,
+      shellAlerts((alert) => alerts.push(alert)),
+    );
+    const created = sessions.createShell({ cwd: folder, conversationId: 'chat-a', label: 'app' });
+    const terminal = sessions.attach(created.id, created.token, recorder().client, size);
+    terminal.input("printf '\\033]777;notify;Build;done\\007'\r");
+    await until(async () => alerts.length > 0);
+    expect(alerts).toEqual([
+      { conversationId: 'chat-a', shellId: created.id, label: 'app', message: 'Build: done' },
+    ]);
+    terminal.close();
+  }, 30_000);
 
   it('counts shells separately from setup terminals', () => {
     useLimits({ ...defaultLimits, maxSessions: 1, maxShells: 2 });

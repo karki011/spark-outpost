@@ -26,6 +26,9 @@ import { defaultLimits, TerminalSessions } from '../terminal/sessions.ts';
 import { shellRegistry } from '../terminal/shell-registry.ts';
 import { shellWatchers } from '../terminal/shell-watchers.ts';
 import { pullRequestScan } from '../terminal/pull-request-scan.ts';
+import { shellAlerts } from '../terminal/shell-alerts.ts';
+import { recordShellAlert } from '../persistence/shell-alerts.ts';
+import { notifyAttention } from '../persistence/attention-items.ts';
 import { terminalPullTracker } from '../pr-tracking/terminal.ts';
 import { forgetAllShells } from '../persistence/terminal-shells.ts';
 import { stopAllPreviewRows } from '../persistence/preview-servers.ts';
@@ -202,6 +205,11 @@ const terminals = new TerminalSessions(
     pullRequestScan(
       terminalPullTracker(gitHubDepsOf({ ...githubDeps, githubApiUrl: config.GITHUB_API_URL })),
     ),
+    shellAlerts((alert) => {
+      void recordShellAlert(db, workspaceId, alert)
+        .then((saved) => (saved ? notifyAttention(db, alert.conversationId) : undefined))
+        .catch((error: unknown) => console.error('Could not save a shell tab alert', error));
+    }),
   ),
 );
 const desktopBrowser = connectDesktopBrowser(process.env, process);

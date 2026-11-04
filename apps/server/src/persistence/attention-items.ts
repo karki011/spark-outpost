@@ -59,6 +59,9 @@ const ITEMS = `
     SELECT 'flag:' || f.id, 'flag', false, l.id, f.title, f.created_at, l.seen_at
     FROM latest l JOIN rail_flags f ON f.conversation_id = l.id AND f.status = 'open'
     UNION ALL
+    SELECT 'shell-alert:' || s.id, 'shell-alert', false, l.id, s.message, s.created_at, l.seen_at
+    FROM latest l JOIN shell_alerts s ON s.conversation_id = l.id
+    UNION ALL
     SELECT CASE l.status WHEN 'failed' THEN 'run-failed:' ELSE 'run-done:' END || l.run_id,
       CASE l.status WHEN 'failed' THEN 'run-failed' ELSE 'run-done' END, false, l.id,
       CASE l.status WHEN 'failed' THEN l.error END, l.finished_at, l.seen_at
@@ -110,6 +113,8 @@ const OWNERS: Record<ParsedAttentionKey['kind'], string> = {
     JOIN conversations c ON c.id = r.conversation_id WHERE r.id = $1 AND c.workspace_id = $2`,
   'run-failed': `SELECT r.conversation_id FROM runs r
     JOIN conversations c ON c.id = r.conversation_id WHERE r.id = $1 AND c.workspace_id = $2`,
+  'shell-alert': `SELECT s.conversation_id FROM shell_alerts s
+    JOIN conversations c ON c.id = s.conversation_id WHERE s.id = $1 AND c.workspace_id = $2`,
   terminal: `SELECT t.conversation_id FROM native_terminal_sessions t
     JOIN conversations c ON c.id = t.conversation_id WHERE t.id = $1 AND c.workspace_id = $2`,
 };
