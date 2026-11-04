@@ -12,12 +12,12 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed              | What to do                                                             |
 | ------------------------- | ---------------------------------------------------------------------- |
-| Leaner changes            | [Reuse before writing](how-spark-works.md#how-work-is-split).          |
+| Leaner changes            | [Reuse first](how-spark-works.md#how-work-is-split).                   |
 | Split chat                | [Two chats side by side](start-a-chat.md#open-two-chats-side-by-side). |
-| Wider Home                | Cards wrap less.                                                       |
+| Wider Home                | Cards, meeting times wrap less.                                        |
 | Highlighted steps         | [Their own rows](follow-a-turn.md#see-whats-happening).                |
 | Choice buttons            | [Fill the message box](follow-a-turn.md#after-a-turn).                 |
 | Link cards                | [In messages](start-a-chat.md#write-a-message).                        |
-| Speech models, live words | [Pick a model](voice.md#pick-a-speech-model).                          |
+| Speech models, live words | [Pick one](voice.md#pick-a-speech-model).                              |
 | Claude plugins            | [Use them in chats](use-claude-plugins.md).                            |
 | First-message commands    | `/` commands run.                                                      |

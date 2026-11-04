@@ -304,6 +304,16 @@ test('shows Upcoming and the calendar block beside the brief on Home', async ({ 
     timeout: 15_000,
   });
   await expect(block).toContainText(/Longest free block|No free block/);
+  const times = block.locator('.cal-brief-list time');
+  await expect(times.first()).toBeVisible();
+  const lines = await times.evaluateAll((all) =>
+    all.map((time) => {
+      const range = document.createRange();
+      range.selectNodeContents(time);
+      return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
+    }),
+  );
+  expect(lines.every((count) => count === 1)).toBe(true);
   const card = page.getByRole('region', { name: 'Upcoming' });
   const joinKey = process.platform === 'darwin' ? '⌘J' : 'Ctrl+J';
   await expect(card).toContainText(`${joinKey} joins the next`);
