@@ -319,9 +319,11 @@ function placedItems(input: TurnRowInput): Placed[] {
       id: card.id,
     })),
   );
+  const shotLast = (item: Placed) => (item.kind === 'shot' ? 1 : 0);
   return placed.sort(
     (left, right) =>
       left.at - right.at ||
+      shotLast(left) - shotLast(right) ||
       (left.time !== null && right.time !== null ? left.time - right.time : 0),
   );
 }
