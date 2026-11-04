@@ -4,6 +4,14 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.41
+
+- Split chat: open a second chat beside the current one with **Open in split** in a chat's menu or ⌥-click (⌥Enter). The side you click or type in is focused; the other dims and keeps working, and both count as read. Wide windows only.
+- Home is wider on a wide window, so its cards wrap less.
+- An `http` or `https` address in your message shows as a link card under it. Nothing is fetched to build it.
+- Important steps get their own row instead of hiding in the folded group: Browser pane pages, web fetches and searches, pages an agent makes and Mac control actions.
+- When an agent's reply ends with a short list of choices after a question, the choices show as buttons that fill the message box. Nothing is sent until you press Enter; **Show as list** shows the original list.
+
 ## 0.1.0-beta.40
 
 - Pick a speech model for Voice in **Settings → Voice**: Parakeet (fast and accurate in 25 European languages), Whisper base or Whisper large v3 turbo, each downloaded once with Cancel and Remove. The Voice step in setup recommends one for your Mac and language.
