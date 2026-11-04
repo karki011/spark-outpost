@@ -204,6 +204,16 @@ describe('chatPrompt', () => {
     expect(prompt).not.toContain('Small or single-area change: do it yourself');
   });
 
+  it('asks the lead and its workers for the smallest complete change and a short risk line', () => {
+    for (const prompt of [build({}), build({ assignedWork: true })]) {
+      expect(prompt).toContain('stop at the first rung that holds: 1. Does it need to exist?');
+      expect(prompt).toContain('never add a dependency for a few lines');
+      expect(prompt).toContain('Be lazy about the solution, never about the change');
+      expect(prompt).toContain('Never cut validation at trust boundaries');
+      expect(prompt).toContain('what was skipped or not checked and any risk the user must know');
+    }
+  });
+
   it('keeps assigned workers bounded even when chat creation tools are present', () => {
     const prompt = build({ assignedWork: true, outpostStartTool: true });
     expect(prompt).toContain('Execute that assignment and return evidence to the lead');
