@@ -14,6 +14,7 @@ const PROBE_MAX_BYTES = 8 * 1024 * 1024;
 interface Ran {
   stdout: string;
   failed: boolean;
+  cutOff: boolean;
 }
 
 function run(
@@ -26,7 +27,12 @@ function run(
       bin,
       args,
       { ...options, encoding: 'utf8', timeout: PROBE_TIMEOUT_MS, maxBuffer: PROBE_MAX_BYTES },
-      (error, stdout) => resolve({ stdout: stdout ?? '', failed: error !== null }),
+      (error, stdout) =>
+        resolve({
+          stdout: stdout ?? '',
+          failed: error !== null,
+          cutOff: error?.killed === true || error?.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER',
+        }),
     );
     child.stdin?.end();
   });
@@ -41,7 +47,7 @@ export function systemPortProbe(tmux: TmuxHost | null): PortProbe {
     },
     async listening(pids) {
       if (pids.length === 0) return new Map();
-      const { stdout } = await run('/usr/sbin/lsof', [
+      const { stdout, cutOff } = await run('/usr/sbin/lsof', [
         '-nP',
         '-a',
         '-iTCP',
@@ -50,6 +56,7 @@ export function systemPortProbe(tmux: TmuxHost | null): PortProbe {
         pids.join(','),
         '-Fpn',
       ]);
+      if (cutOff) throw new Error('lsof did not finish');
       return listeningPorts(stdout);
     },
     async panes() {
