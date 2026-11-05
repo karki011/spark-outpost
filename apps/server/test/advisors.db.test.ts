@@ -52,6 +52,7 @@ describe('Jev connection', () => {
       'claude',
       'codex',
       'zai',
+      'custom',
     ]);
     expect(body.advisors).toEqual([
       expect.objectContaining({

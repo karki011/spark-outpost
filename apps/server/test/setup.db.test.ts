@@ -54,6 +54,7 @@ describe('setup state', () => {
       'claude',
       'codex',
       'zai',
+      'custom',
     ]);
     expect(
       body.providers.every((provider: { connection: unknown }) => provider.connection === null),

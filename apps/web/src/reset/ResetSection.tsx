@@ -70,8 +70,8 @@ export function ResetSection() {
           <span>{KEEP_KEYS_LABEL}</span>
         </label>
         <p id={keepHintId} className="set-hint">
-          Claude, Codex, Z.ai and Jev keys stay in your keychain. GitHub, ticket and MCP tokens are
-          still removed.
+          Provider keys, custom endpoint settings and the Jev key stay in your keychain. GitHub,
+          ticket and MCP tokens are still removed.
         </p>
       </div>
       <HoldToConfirm

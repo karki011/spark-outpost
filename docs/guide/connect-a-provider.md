@@ -10,7 +10,7 @@ Connect one provider and check that it answers. About 2 minutes.
 
 ## Before you start
 
-Spark runs the CLIs installed on your computer: `npm i -g @anthropic-ai/claude-code` for `claude`, `npm i -g @openai/codex` for `codex`.
+Spark runs your installed CLIs: `npm i -g @anthropic-ai/claude-code` for `claude`, `npm i -g @openai/codex` for `codex`.
 
 | Provider            | Needs CLI | Connects with                        |
 | ------------------- | --------- | ------------------------------------ |

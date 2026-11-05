@@ -10,7 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                  | What to do                                                      |
 | ----------------------------- | --------------------------------------------------------------- |
-| Custom endpoint               | [Use a local model](custom-endpoint.md).                        |
+| Custom endpoint               | [Connect it](custom-endpoint.md).                               |
 | Fewer leftover agent sessions | Nothing.                                                        |
 | Context compacted line        | [Manage a long chat](compaction.md#check-how-full-the-chat-is). |
 | Jump to latest centred        | Nothing.                                                        |

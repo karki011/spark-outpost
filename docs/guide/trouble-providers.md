@@ -38,8 +38,12 @@ In **Settings → AI providers**, select the provider's tile: the message under 
 | You see                                                                          | Fix                                                                 |
 | -------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | "rejected the stored key (401)" or "the stored key is missing from the keychain" | Paste it again; **Verify key**.                                     |
-| "is rate limiting this key (429)" or "is rate limited"                           | Wait a minute, or switch provider.                                  |
+| "is rate limiting this key (429)"                                                | Wait a minute.                                                      |
 | "no default model is selected"                                                   | Pick a **Model** under **Defaults for new chats**.                  |
 | "`claude` is no longer on your PATH"                                             | Reinstall the CLI; **Detect and verify**.                           |
 | "didn't answer within 90 seconds"                                                | Check your connection.                                              |
 | Waiting for the keychain                                                         | Answer the macOS [keychain prompt](mac-privacy.md#keychain-prompt). |
+
+## A provider is rate limited
+
+Wait a minute or switch provider in the picker.

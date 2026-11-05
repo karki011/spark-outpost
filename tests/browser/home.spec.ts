@@ -390,7 +390,7 @@ test('the provider strip shows status, model labels, problems and a fix link', a
   await openHome(page);
 
   const strip = home(page).getByRole('list', { name: 'AI providers' });
-  await expect(strip.getByRole('button')).toHaveCount(4);
+  await expect(strip.getByRole('button')).toHaveCount(5);
   await expect(
     strip.getByRole('button', { name: /^Claude · Fake Fast · Needs attention · Verify failed$/ }),
   ).toBeVisible();
@@ -398,9 +398,12 @@ test('the provider strip shows status, model labels, problems and a fix link', a
     strip.getByRole('button', { name: /^Codex · .* · Rate limited · just now$/ }),
   ).toBeVisible();
   await expect(strip.getByRole('button', { name: 'Z.ai (GLM) · Not connected' })).toBeVisible();
+  await expect(
+    strip.getByRole('button', { name: 'Custom endpoint · Not connected' }),
+  ).toBeVisible();
   await expect(strip.getByRole('button', { name: 'Jev · jev-latest · Connected' })).toBeVisible();
   await expect(home(page).locator('.ps-mark.warn')).toHaveCount(2);
-  await expect(home(page).locator('.ps-mark.off')).toHaveCount(1);
+  await expect(home(page).locator('.ps-mark.off')).toHaveCount(2);
 
   const warning = home(page).locator('.ps-warn');
   await expect(warning).toContainText('Claude: Verify failed (+1 more)');
