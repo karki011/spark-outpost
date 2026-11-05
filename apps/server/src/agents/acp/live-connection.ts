@@ -18,7 +18,7 @@ import { startsAgentCycle } from './agent-cycle.ts';
 import { parseRequestUsage, SDK_MESSAGE_METHOD } from './request-usage.ts';
 import type { RequestUsage } from '../../providers/provider.ts';
 import type { LiveTools } from './live-tools.ts';
-import { closeQuietly } from './session-open.ts';
+import { closeQuietly, deleteQuietly } from './session-open.ts';
 import { routeSubagents } from './subagent-stream.ts';
 
 export type SessionMessage = Awaited<ReturnType<acp.ActiveSession['nextUpdate']>>;
@@ -60,6 +60,7 @@ export interface LiveConnection {
   onUnbound(listener: () => void): void;
   onGone(listener: () => void): void;
   close(): Promise<void>;
+  discard(): Promise<void>;
   kill(): Promise<void>;
 }
 
@@ -217,6 +218,12 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
     },
     async close() {
       if (!isGone && opened) await closeQuietly(ctx, opened.init, opened.session.sessionId);
+      const killing = agent.kill();
+      await markGone();
+      await killing;
+    },
+    async discard() {
+      if (!isGone && opened) await deleteQuietly(ctx, opened.init, opened.session.sessionId);
       const killing = agent.kill();
       await markGone();
       await killing;

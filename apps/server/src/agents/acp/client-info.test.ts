@@ -19,4 +19,13 @@ describe('client capabilities', () => {
     expect(turnCapabilities(false, false).elicitation).toEqual({ form: {} });
     expect(CLIENT_CAPABILITIES.elicitation).toBeUndefined();
   });
+
+  it('asks for compaction updates on a turn and keeps the other session capabilities', () => {
+    expect(turnCapabilities(true, true).session).toEqual({
+      notices: {},
+      configOptions: { boolean: {} },
+      compaction: {},
+    });
+    expect(CLIENT_CAPABILITIES.session?.compaction).toBeUndefined();
+  });
 });

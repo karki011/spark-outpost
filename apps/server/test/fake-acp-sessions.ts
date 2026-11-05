@@ -67,6 +67,13 @@ export function recordCancel(sessionId: string): void {
   if (log) appendFileSync(log, `${sessionId}\n`);
 }
 
+export async function deleteFakeSession(sessionId: string): Promise<acp.DeleteSessionResponse> {
+  recordMethod(`session/delete ${sessionId}`);
+  if (process.env.FAKE_ACP_DELETE === 'hang') await new Promise(() => undefined);
+  if (process.env.FAKE_ACP_DELETE === 'fail') throw acp.RequestError.internalError();
+  return {};
+}
+
 export function recordClose(sessionId: string): void {
   if (!store) return;
   const session = readFakeSession(sessionId);

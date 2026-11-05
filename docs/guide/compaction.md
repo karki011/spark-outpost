@@ -19,6 +19,8 @@ When a chat's context is nearly full, Spark compacts it: the agent carries on fr
 
 Past the red point, Spark compacts before your next message, never mid-reply or while a card waits.
 
+If the agent compacts mid-reply, the work log shows **Context compacted**.
+
 ## Read the summary
 
 1. Find the **Compacted** divider.

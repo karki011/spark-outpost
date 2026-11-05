@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
 import { probeCapabilities } from '../src/agents/acp/probe.ts';
@@ -20,6 +23,28 @@ describe('capability probe against a fake agent', { timeout: 20_000 }, () => {
     const report = await probe({ FAKE_ACP_LEGACY: '1' });
     expect(report.models.map((model) => model.id)).toEqual(['fast-1', 'smart-2']);
     expect(report.efforts).toEqual([]);
+  });
+
+  it.each([
+    ['answers', {}],
+    ['never answers', { FAKE_ACP_DELETE: 'hang' }],
+  ])('deletes its session and still reports when the delete %s', async (_name, extra) => {
+    const log = join(mkdtempSync(join(tmpdir(), 'acp-probe-')), 'methods.log');
+    const started = Date.now();
+    const report = await probe({
+      FAKE_ACP_SESSION_CAPABILITIES: JSON.stringify({ delete: {} }),
+      FAKE_ACP_METHOD_LOG: log,
+      ...extra,
+    });
+    expect(report.models.map((model) => model.id)).toEqual(['fast-1', 'smart-2']);
+    expect(readFileSync(log, 'utf8')).toContain('session/delete fake-session');
+    expect(Date.now() - started).toBeLessThan(10_000);
+  });
+
+  it('does not delete when the agent does not offer it', async () => {
+    const log = join(mkdtempSync(join(tmpdir(), 'acp-probe-')), 'methods.log');
+    await probe({ FAKE_ACP_METHOD_LOG: log });
+    expect(readFileSync(log, 'utf8')).not.toContain('session/delete');
   });
 
   it('refuses an agent that answers with another protocol version', async () => {

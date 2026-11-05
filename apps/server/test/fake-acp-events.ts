@@ -66,6 +66,25 @@ const done = (toolCallId: string, text: string): acp.SessionUpdate => ({
   content: [{ type: 'content', content: { type: 'text', text } }],
 });
 
+const compacting = (status: string): acp.SessionUpdate => ({
+  sessionUpdate: 'compaction_update',
+  compactionId: 'compaction-1',
+  status,
+});
+
+export async function compactionTurn(update: Update, say: Say): Promise<acp.StopReason> {
+  await update(compacting('in_progress'));
+  await update({
+    sessionUpdate: 'compaction_summary_chunk',
+    compactionId: 'compaction-1',
+    content: { type: 'text', text: 'Summary of the earlier work.' },
+  });
+  await update(compacting('completed'));
+  await update(compacting('completed'));
+  await say('Carried on after compacting.');
+  return 'end_turn';
+}
+
 export async function eventsTurn(
   text: string,
   update: Update,
