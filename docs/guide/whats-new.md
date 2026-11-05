@@ -11,8 +11,6 @@ summary: What changed in recent releases and what to do next.
 | What changed           | What to do                                                                  |
 | ---------------------- | --------------------------------------------------------------------------- |
 | More Terminal agents   | [Start Gemini CLI, OpenCode or Amp](terminals.md#start-a-terminal-session). |
-| Row ports              | [Open in the pane](terminals.md#open-a-shell-beside-chat).                  |
-| First public beta      | [Get started](getting-started.md).                                          |
 | Jump to latest centred | Nothing to do.                                                              |
 | Row ports              | [Open in the pane](terminals.md#open-a-shell-beside-chat).                  |
 | First public beta      | [Get started](getting-started.md).                                          |
