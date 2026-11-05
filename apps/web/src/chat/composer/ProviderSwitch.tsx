@@ -16,10 +16,11 @@ interface ProviderSwitchProps {
 interface SwitchTabProps {
   provider: SwitchProvider;
   selected: boolean;
+  focusable: boolean;
   onSelect: (id: ProviderId) => void;
 }
 
-function SwitchTab({ provider, selected, onSelect }: SwitchTabProps) {
+function SwitchTab({ provider, selected, focusable, onSelect }: SwitchTabProps) {
   const { triggerProps, tooltip } = useTooltip(
     selected ? `${provider.name} · in use` : `Switch to ${provider.name}`,
   );
@@ -30,7 +31,7 @@ function SwitchTab({ provider, selected, onSelect }: SwitchTabProps) {
       data-provider={provider.id}
       aria-label={provider.name}
       aria-selected={selected}
-      tabIndex={selected ? 0 : -1}
+      tabIndex={focusable ? 0 : -1}
       onClick={() => onSelect(provider.id)}
       {...triggerProps}
     >
@@ -72,11 +73,12 @@ export function ProviderSwitch({ providers, active, onSelect }: ProviderSwitchPr
   };
   return (
     <div className="pswitch" role="tablist" aria-label="AI provider" onKeyDown={onKeyDown}>
-      {providers.map((provider) => (
+      {providers.map((provider, position) => (
         <SwitchTab
           key={provider.id}
           provider={provider}
           selected={provider.id === active}
+          focusable={position === index}
           onSelect={onSelect}
         />
       ))}

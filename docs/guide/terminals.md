@@ -15,9 +15,7 @@ Open an AI terminal. About 1 minute.
 1. Select **New chat**, then **Chat** → **Terminal** below the box.
 2. Select **Choose project**, then a project or **Add folder…**.
 3. Beside **Start terminal**, pick **Claude Code** or **Codex** and permissions, or an installed **Gemini CLI**, **OpenCode** or **Amp**.
-4. Describe the work; press **Enter**.
-
-They start empty; Spark records only whether they run.
+4. Claude Code or Codex: describe the work; press **Enter**. Others start empty, untracked.
 
 The lead [delegates implementation](how-spark-works.md#how-work-is-split). Pull requests aren't automatic.
 
