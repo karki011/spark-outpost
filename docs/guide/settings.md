@@ -18,7 +18,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 
 ### Spark assistant
 
-**Spark assistant** sets [Ask Spark](companion-quick-chat.md#ask-spark)'s **Provider**, **Model** (**Fast (recommended)**: Sonnet 5.5), **Effort**, **When Ask Spark acts** (**Manual** or **Act**) and **Key facts**. **View conversation** opens its hidden chat, marking where each **New topic** began.
+**Spark assistant** sets [Ask Spark](companion-quick-chat.md#ask-spark)'s **Provider**, **Model** (**Fast (recommended)**: Sonnet 5.5), **Effort**, **When Ask Spark acts** (**Manual** or **Act**) and **Key facts**. **View conversation** opens its hidden chat.
 
 ## Agents
 
@@ -53,11 +53,11 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 
 ### Code Mode
 
-Agents can combine supported reads locally, beside direct tools. Off means direct tools only from the next turn; pending combined reads stop. Terminal sessions are unchanged. An installation override can disable it.
+Agents combine supported reads locally beside direct tools. Off: direct tools only, from the next turn. Terminal sessions are unchanged; an installation override can turn it off.
 
 ### Record Terminal sessions
 
-On for new profiles; existing choices stay. With Spark’s mod, Claude [Terminal](terminals.md) turns keep tool inputs/outputs, replies, changed files and an audit. Secret-file values are hidden.
+With Spark’s mod, Claude [Terminal](terminals.md) turns keep tool inputs/outputs, replies, changed files and an audit. Secret-file values are hidden.
 
 Pushes to other branches, force pushes, protected files and writes outside the project are flagged, not stopped. Not for Codex.
 
