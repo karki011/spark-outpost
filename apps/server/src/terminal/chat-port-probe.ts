@@ -35,7 +35,8 @@ function run(
 export function systemPortProbe(tmux: TmuxHost | null): PortProbe {
   return {
     async children() {
-      const { stdout } = await run('/bin/ps', ['-A', '-o', 'pid=,ppid=']);
+      const { stdout, failed } = await run('/bin/ps', ['-A', '-o', 'pid=,ppid=']);
+      if (failed) throw new Error('ps could not list processes');
       return childrenByParent(stdout);
     },
     async listening(pids) {
