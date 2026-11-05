@@ -12,6 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed              | What to do                                                             |
 | ------------------------- | ---------------------------------------------------------------------- |
+| Leaner changes            | [Reuse first](how-spark-works.md#how-work-is-split).                   |
 | Split chat                | [Two chats side by side](start-a-chat.md#open-two-chats-side-by-side). |
 | Wider Home                | Cards, meeting times wrap less.                                        |
 | Highlighted steps         | [Their own rows](follow-a-turn.md#see-whats-happening).                |
