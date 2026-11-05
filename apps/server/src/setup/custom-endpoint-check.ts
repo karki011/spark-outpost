@@ -118,7 +118,7 @@ export async function askEndpoint(
         'The endpoint answered, but not in the Anthropic Messages format. Spark needs a server that speaks the Anthropic Messages API (POST /v1/messages).',
     };
   }
-  return { ok: true, model: typeof payload.model === 'string' ? payload.model : endpoint.model };
+  return { ok: true, model: endpoint.model };
 }
 
 const started = (label: string): VerifyStep => ({ type: 'step_started', label });

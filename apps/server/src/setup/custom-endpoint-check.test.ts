@@ -67,4 +67,14 @@ describe('askEndpoint', () => {
       'The endpoint responded with 500. The server said: model not loaded',
     );
   });
+
+  it('names the configured model, never what the server put in its reply', async () => {
+    const reply = await askEndpoint(
+      endpoint,
+      KEY,
+      replying(200, { type: 'message', model: `echo ${KEY}`, content: [] }),
+      1000,
+    );
+    expect(reply).toEqual({ ok: true, model: 'qwen3' });
+  });
 });
