@@ -2,7 +2,7 @@ import {
   DEFAULT_INVOLVEMENT_LEVEL,
   defaultModeFor,
   permissionFor,
-  type NativeTerminalProvider,
+  type TrackedTerminalProvider,
   type InvolvementLevel,
 } from '@spark-outpost/contracts';
 import type { RunTarget } from './conversations.ts';
@@ -11,7 +11,7 @@ import type { Queryable } from './db.ts';
 export async function nativeTerminalTarget(
   db: Queryable,
   conversationId: string,
-  provider: NativeTerminalProvider,
+  provider: TrackedTerminalProvider,
   plan = false,
 ): Promise<RunTarget> {
   const { rows } = await db.query<{

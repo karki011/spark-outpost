@@ -50,6 +50,9 @@ export function nativeTerminalRoutes(runtime?: NativeRuntime): Router {
       return res.status(503).json({ error: 'Terminal agents are unavailable on this host.' });
     return next();
   };
+  router.get('/terminal-agents', available, async (_req, res) => {
+    res.json(await runtime!.agents());
+  });
   router.get('/terminal-live', available, async (req, res) => {
     const chats = parseTerminalLiveChats(req.query.chats);
     if (!chats) {

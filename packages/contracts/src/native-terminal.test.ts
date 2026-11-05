@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { startTicketRequestSchema } from './tickets.ts';
 import {
+  isTrackedTerminalProvider,
+  nativeTerminalProviderSchema,
   terminalDependenciesText,
+  terminalProviderName,
   terminalStartPhaseSchema,
   terminalStartSchema,
   terminalStartText,
@@ -48,5 +52,36 @@ describe('what a starting Terminal session says it is doing', () => {
   it('accepts only known phases from the server', () => {
     expect(terminalStartSchema.parse({ phase: null })).toEqual({ phase: null });
     expect(terminalStartSchema.safeParse({ phase: '/Users/me/project' }).success).toBe(false);
+  });
+});
+
+describe('which agents a Terminal session can run', () => {
+  it('runs Claude Code and Codex tracked, and Gemini CLI, OpenCode and Amp untracked', () => {
+    expect(
+      nativeTerminalProviderSchema.options.map((provider) => [
+        terminalProviderName(provider),
+        isTrackedTerminalProvider(provider),
+      ]),
+    ).toEqual([
+      ['Claude Code', true],
+      ['Codex', true],
+      ['Gemini CLI', false],
+      ['OpenCode', false],
+      ['Amp', false],
+    ]);
+    expect(nativeTerminalProviderSchema.safeParse('cursor').success).toBe(false);
+  });
+
+  it('starts a ticket only with a tracked agent, since it needs a first message', () => {
+    const request = {
+      conversationId: '00000000-0000-4000-8000-000000000001',
+      messageId: '00000000-0000-4000-8000-000000000002',
+    };
+    expect(
+      startTicketRequestSchema.safeParse({ ...request, terminalProvider: 'codex' }).success,
+    ).toBe(true);
+    expect(
+      startTicketRequestSchema.safeParse({ ...request, terminalProvider: 'gemini' }).success,
+    ).toBe(false);
   });
 });

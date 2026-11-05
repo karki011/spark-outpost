@@ -4,10 +4,19 @@ interface RadioRowProps {
   hint: string | null;
   tag?: string | null;
   checked: boolean;
+  disabled?: boolean;
   onSelect: () => void;
 }
 
-export function RadioRow({ id, label, hint, tag = null, checked, onSelect }: RadioRowProps) {
+export function RadioRow({
+  id,
+  label,
+  hint,
+  tag = null,
+  checked,
+  disabled = false,
+  onSelect,
+}: RadioRowProps) {
   const tagId = `${id}-tag`;
   const hintId = `${id}-hint`;
   const described = [tag ? tagId : null, hint ? hintId : null].filter(Boolean).join(' ');
@@ -19,6 +28,7 @@ export function RadioRow({ id, label, hint, tag = null, checked, onSelect }: Rad
       aria-checked={checked}
       aria-label={label}
       aria-describedby={described || undefined}
+      disabled={disabled}
       onClick={onSelect}
     >
       <i className="radio" />

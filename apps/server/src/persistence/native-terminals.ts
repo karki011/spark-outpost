@@ -1,6 +1,8 @@
 import {
   nativeTerminalSessionSchema,
+  terminalProviderName,
   type ConversationSummary,
+  type NativeTerminalProvider,
   type NativeTerminalSession,
 } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
@@ -8,7 +10,7 @@ import type { Queryable } from './db.ts';
 export interface NativeTerminalRow {
   id: string;
   conversation_id: string;
-  provider: 'claude' | 'codex';
+  provider: NativeTerminalProvider;
   state: NativeTerminalSession['state'];
   cwd: string;
   label: string;
@@ -106,7 +108,7 @@ export async function withNativeTerminals(
                 terminal.state === 'waiting_for_permission'
                   ? 'The agent is waiting for permission in the terminal.'
                   : 'The agent needs your answer in the terminal.',
-              agentName: terminal.provider === 'claude' ? 'Claude Code' : 'Codex',
+              agentName: terminalProviderName(terminal.provider),
               provider: terminal.provider,
               approvalId: null,
             }

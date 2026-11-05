@@ -1,6 +1,10 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { permissionFor } from '@spark-outpost/contracts';
+import {
+  isTrackedTerminalProvider,
+  permissionFor,
+  type TrackedTerminalProvider,
+} from '@spark-outpost/contracts';
 import { sendUserMessage } from '../persistence/conversations.ts';
 import type { Db } from '../persistence/db.ts';
 import { nativeTerminalTarget } from '../persistence/native-terminal-settings.ts';
@@ -70,7 +74,12 @@ export function nativeObserver({
   control: ReturnType<typeof nativeControl>;
   usage: NativeUsage;
 }) {
-  const turn = async (session: LiveSession, event: NativeHookEvent, eventId: string) => {
+  const turn = async (
+    session: LiveSession,
+    provider: TrackedTerminalProvider,
+    event: NativeHookEvent,
+    eventId: string,
+  ) => {
     if ((session.seedPending || session.currentPromptEventId === eventId) && session.context)
       session.seedPending = false;
     else {
@@ -81,12 +90,8 @@ export function nativeObserver({
           'A new prompt arrived before completion was observed.',
         );
       session.currentPromptEventId = eventId;
-      const target = await nativeTerminalTarget(
-        db,
-        session.row.conversation_id,
-        session.row.provider,
-      );
-      const mode = session.mode ?? (session.row.provider === 'claude' ? 'plan' : 'read-only');
+      const target = await nativeTerminalTarget(db, session.row.conversation_id, provider);
+      const mode = session.mode ?? (provider === 'claude' ? 'plan' : 'read-only');
       const sent = await sendUserMessage(
         db,
         session.row.conversation_id,
@@ -94,7 +99,7 @@ export function nativeObserver({
           id: eventId,
           content: event.prompt || 'Continue in the native terminal.',
         },
-        { ...target, agentMode: mode, permission: permissionFor(session.row.provider, mode) },
+        { ...target, agentMode: mode, permission: permissionFor(provider, mode) },
       );
       if (
         !(await setNativeRun(db, {
@@ -118,6 +123,8 @@ export function nativeObserver({
     syncScope(session);
   };
   const observe = async (session: LiveSession, event: NativeHookEvent, eventId: string) => {
+    const provider = session.row.provider;
+    if (!isTrackedTerminalProvider(provider)) return;
     const retryCompletion = session.completedEvents.has(eventId);
     if (retryCompletion && session.completedEvents.get(eventId) !== session.currentPromptEventId)
       return;
@@ -161,16 +168,16 @@ export function nativeObserver({
       return;
     if (event.permissionMode !== undefined) {
       const mode = boundedNativeMode(
-        session.row.provider,
+        provider,
         session.ceiling,
-        observedNativeMode(session.row.provider, event),
+        observedNativeMode(provider, event),
       );
       if (mode !== session.mode) {
         session.mode = mode;
         await session.context?.mode(mode);
       }
     }
-    if (event.kind === 'prompt') await turn(session, event, eventId);
+    if (event.kind === 'prompt') await turn(session, provider, event, eventId);
     if (event.tool?.agentId) usage.agentRun(session, event.tool.agentId);
     if (event.tool && session.context && !retryCompletion)
       await recordNativeStep(db, session.context.input.identity.runId, event.tool);

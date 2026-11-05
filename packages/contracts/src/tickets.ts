@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ATTACHMENTS_PER_MESSAGE } from './attachments.ts';
 import { ticketDevelopmentSchema } from './ticket-development.ts';
-import { nativeTerminalProviderSchema, sessionTypeSchema } from './native-terminal.ts';
+import { sessionTypeSchema, trackedTerminalProviderSchema } from './native-terminal.ts';
 import { atlassianProductLive, atlassianProductsSchema } from './atlassian.ts';
 import {
   serviceNowConnectionSchema,
@@ -263,7 +263,7 @@ export type TicketStartMode = z.infer<typeof ticketStartModeSchema>;
 export const startTicketRequestSchema = z.object({
   conversationId: z.uuid(),
   sessionType: sessionTypeSchema.optional(),
-  terminalProvider: nativeTerminalProviderSchema.optional(),
+  terminalProvider: trackedTerminalProviderSchema.optional(),
   messageId: z.uuid(),
   projectId: z.uuid().optional(),
   mode: ticketStartModeSchema.default('build'),

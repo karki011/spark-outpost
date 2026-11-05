@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { conversationSummarySchema } from '@spark-outpost/contracts';
+import { conversationSummarySchema, isTrackedTerminalProvider } from '@spark-outpost/contracts';
 import { api, forgetDraft, queryKeys, request } from '../api/client.ts';
 import { nativeTerminalApi } from './terminal-api.ts';
 import type { SessionChoice } from './SessionTypePicker.tsx';
@@ -44,16 +44,13 @@ export function useTerminalStart(events: TerminalStartEvents) {
       });
       created = true;
       forgetDraft(conversationId);
-      if (agentMode)
-        await api.updateChatSettings(conversationId, {
-          provider: choice.terminalProvider,
-          agentMode,
-        });
-      await nativeTerminalApi.launch(conversationId, {
-        provider: choice.terminalProvider,
-        prompt,
-        messageId,
-      });
+      const provider = choice.terminalProvider;
+      if (agentMode && isTrackedTerminalProvider(provider))
+        await api.updateChatSettings(conversationId, { provider, agentMode });
+      await nativeTerminalApi.launch(
+        conversationId,
+        prompt ? { provider, prompt, messageId } : { provider },
+      );
       await Promise.all([
         client.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) }),
         client.invalidateQueries({ queryKey: queryKeys.conversations }),

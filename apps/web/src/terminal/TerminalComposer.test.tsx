@@ -9,6 +9,7 @@ const fake = vi.hoisted(() => ({
   launch: vi.fn(),
   choice: vi.fn(),
   phase: vi.fn(),
+  agents: vi.fn(),
 }));
 vi.mock('../api/client.ts', () => ({
   api: { updateChatSettings: fake.settings },
@@ -41,7 +42,7 @@ vi.mock('../phone/use-remote-client.ts', () => ({
 }));
 vi.mock('./terminal-api.ts', () => ({
   terminalStartKey: (id: string) => ['terminal-start', id],
-  nativeTerminalApi: { launch: fake.launch, startPhase: fake.phase },
+  nativeTerminalApi: { launch: fake.launch, startPhase: fake.phase, agents: fake.agents },
 }));
 const { TerminalComposer } = await import('./TerminalComposer.tsx');
 const SETTLE = { timeout: 20_000 };
@@ -53,6 +54,7 @@ beforeEach(() => {
   fake.settings.mockResolvedValue({});
   fake.launch.mockResolvedValue({});
   fake.phase.mockResolvedValue({ phase: null });
+  fake.agents.mockResolvedValue([]);
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 });
 afterEach(() => {
@@ -238,4 +240,46 @@ it('switches between the two terminal agents from the composer picker', async ()
   expect(screen.getByText('Claude Code starts with its default mode.')).toBeTruthy();
   fireEvent.click(screen.getByRole('tab', { name: 'Codex' }));
   expect(fake.choice).toHaveBeenCalledWith({ sessionType: 'terminal', terminalProvider: 'codex' });
+});
+
+function composer(provider: 'claude' | 'gemini') {
+  return (
+    <QueryClientProvider client={client}>
+      <TerminalComposer
+        conversationId="untracked"
+        choice={{ sessionType: 'terminal', terminalProvider: provider }}
+        onChoice={fake.choice}
+        projectIds={[]}
+        settings={null}
+        connected={true}
+      />
+    </QueryClientProvider>
+  );
+}
+
+it('starts Gemini CLI without a first message and offers no agent that is not installed', async () => {
+  fake.agents.mockResolvedValue([
+    { id: 'claude', name: 'Claude Code', installed: true },
+    { id: 'codex', name: 'Codex', installed: true },
+    { id: 'gemini', name: 'Gemini CLI', installed: true },
+    { id: 'opencode', name: 'OpenCode', installed: false },
+    { id: 'amp', name: 'Amp', installed: false },
+  ]);
+  const view = render(composer('claude'));
+  fireEvent.click(screen.getByRole('button', { name: 'Terminal agent: Claude Code' }));
+  const opencode = await screen.findByRole('radio', { name: 'OpenCode' }, SETTLE);
+  expect((opencode as HTMLButtonElement).disabled).toBe(true);
+  expect(opencode.textContent).toBe('OpenCodeNot installed');
+  fireEvent.click(screen.getByRole('radio', { name: 'Gemini CLI' }));
+  expect(fake.choice).toHaveBeenCalledWith({ sessionType: 'terminal', terminalProvider: 'gemini' });
+
+  view.rerender(composer('gemini'));
+  expect(screen.queryByRole('textbox', { name: 'What would you like to work on?' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /^Permissions:/ })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Start terminal' }));
+  await waitFor(
+    () => expect(fake.launch).toHaveBeenCalledWith('untracked', { provider: 'gemini' }),
+    SETTLE,
+  );
+  expect(fake.settings).not.toHaveBeenCalled();
 });

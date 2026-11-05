@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { costSourceSchema } from './audit.ts';
-import { nativeTerminalProviderSchema, type NativeTerminalProvider } from './native-terminal.ts';
+import {
+  nativeTerminalProviderSchema,
+  terminalProviderName,
+  type NativeTerminalProvider,
+} from './native-terminal.ts';
 import { promptCacheSchema } from './prompt-cache.ts';
 import { runStatusSchema } from './runs.ts';
 import { tokenUsageSchema } from './usage.ts';
@@ -60,18 +64,13 @@ export type NativeTerminalUsage = z.infer<typeof nativeTerminalUsageSchema>;
 
 export type UsageOrigin = 'estimated' | 'reported' | 'unknown';
 
-const CLI_NAMES: Record<NativeTerminalProvider, string> = {
-  claude: 'Claude Code',
-  codex: 'Codex',
-};
-
 export function usageOriginLabel(
   origin: UsageOrigin,
   provider: NativeTerminalProvider | null = null,
 ): string {
   if (origin === 'estimated') return 'estimated from tokens';
   if (origin === 'unknown') return 'unknown';
-  return `reported by ${provider ? CLI_NAMES[provider] : 'the CLI'}`;
+  return `reported by ${provider ? terminalProviderName(provider) : 'the CLI'}`;
 }
 
 export function turnCostOrigin(

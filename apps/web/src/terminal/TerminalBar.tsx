@@ -2,6 +2,8 @@ import './terminal-bar.css';
 import type { ReactNode } from 'react';
 import {
   defaultModeFor,
+  isTrackedTerminalProvider,
+  terminalProviderName,
   type ConversationSummary,
   type NativeTerminalSession,
   type Project,
@@ -17,7 +19,6 @@ import { useTooltip } from '../ui/Tooltip.tsx';
 import { terminalLabel } from './native-state.ts';
 import { TerminalCache } from './TerminalCache.tsx';
 import { TerminalCompanion } from './TerminalCompanion.tsx';
-import { terminalAgentName } from './terminal-agents.ts';
 
 export type TerminalLink = 'connecting' | 'connected' | 'disconnected';
 
@@ -67,13 +68,16 @@ export function TerminalBar({
 }: TerminalBarProps) {
   const provider = native?.provider ?? 'claude';
   const state = native?.state ?? 'starting';
-  const mode = native ? (native.agentMode ?? defaultModeFor(provider)) : null;
+  const mode =
+    native && isTrackedTerminalProvider(provider)
+      ? (native.agentMode ?? defaultModeFor(provider))
+      : null;
   const permission = mode ? modePermission(provider, mode, capabilities) : null;
   const folder = repos.length > 0 ? repoSummary(repos.map((repo) => repo.name)) : native?.label;
   return (
     <div className="tbar">
       <TerminalCompanion chat={chat} state={state} size={24} />
-      <b className="tbar-agent">{terminalAgentName(provider)} · Terminal</b>
+      <b className="tbar-agent">{terminalProviderName(provider)} · Terminal</b>
       <p className="tbar-state" role="status">
         {terminalLabel(state)}
         {link && link !== 'connected'

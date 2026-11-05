@@ -1,4 +1,7 @@
-import type { NativeTerminalProvider } from '@spark-outpost/contracts';
+import {
+  nativeTerminalProviderSchema,
+  type NativeTerminalProvider,
+} from '@spark-outpost/contracts';
 
 export const START_PHASES = [
   'locate_cli',
@@ -53,7 +56,7 @@ export interface StartTimer {
 const SESSION_ID = /^[a-zA-Z0-9_-]{1,100}$/;
 const ERROR_NAME = /^[A-Za-z][A-Za-z0-9_]{0,59}$/;
 const ERROR_CODE = /^[A-Z][A-Z0-9_]{0,39}$/;
-const PROVIDERS: readonly string[] = ['claude', 'codex'];
+const PROVIDERS: readonly string[] = nativeTerminalProviderSchema.options;
 
 const ms = (value: number) => String(Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0);
 

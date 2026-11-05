@@ -126,6 +126,7 @@ export const SPEC_GROUPS = {
     'native-terminal-launch',
     'native-terminal-links',
     'native-terminal-restart',
+    'native-terminal-untracked',
     'native-terminal-usage',
     'terminal-prompt-cache',
     'terminal-remote',

@@ -1,4 +1,8 @@
-import type { NativeTerminalLaunchRequest, NativeTerminalProvider } from '@spark-outpost/contracts';
+import type {
+  NativeTerminalLaunchRequest,
+  NativeTerminalProvider,
+  TrackedTerminalProvider,
+} from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import type { NativeTerminalRow } from '../persistence/native-terminals.ts';
 import { NativeTerminalConflictError } from '../persistence/native-terminal-turns.ts';
@@ -21,7 +25,7 @@ export function providerToLaunch(
   previous: NativeTerminalRow | null,
 ): NativeTerminalProvider {
   const provider = request.provider ?? previous?.provider ?? chosen;
-  if (!provider) throw new NativeRuntimeError('Choose Claude Code or Codex for this terminal.');
+  if (!provider) throw new NativeRuntimeError('Choose an agent for this terminal.');
   if (previous && !['exited', 'error', 'interrupted'].includes(previous.state))
     throw new NativeTerminalConflictError('That terminal agent is already running.');
   if (previous?.native_session_id && !request.resume)
@@ -50,4 +54,27 @@ export function ownedTerminalChat(db: Queryable, workspaceId: string) {
     if (!rows[0]) throw new NativeRuntimeError('Conversation not found.', 404);
     return rows[0];
   };
+}
+
+export async function launchMessageId(
+  db: Queryable,
+  prepared: { runId: string | null; input: { identity: { runId: string } } },
+): Promise<string | null> {
+  if (!prepared.runId || prepared.input.identity.runId !== prepared.runId) return null;
+  const { rows } = await db.query<{ user_message_id: string }>(
+    'SELECT user_message_id FROM runs WHERE id = $1',
+    [prepared.runId],
+  );
+  return rows[0]!.user_message_id;
+}
+
+export function launchReason(
+  observation: 'hooks' | 'unsupported',
+  provider: TrackedTerminalProvider,
+): string {
+  if (observation === 'unsupported')
+    return 'Lifecycle hook compatibility could not be verified. Native terminal permissions still apply.';
+  if (provider === 'codex')
+    return 'Waiting for trusted lifecycle events. Review Spark hooks with /hooks in Codex.';
+  return 'Waiting for native lifecycle events.';
 }

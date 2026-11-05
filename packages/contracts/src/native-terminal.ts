@@ -5,8 +5,45 @@ import { createShellResponseSchema } from './terminal-shell.ts';
 export const sessionTypeSchema = z.enum(['chat', 'terminal']);
 export type SessionType = z.infer<typeof sessionTypeSchema>;
 
-export const nativeTerminalProviderSchema = z.enum(['claude', 'codex']);
+export const trackedTerminalProviderSchema = z.enum(['claude', 'codex']);
+export type TrackedTerminalProvider = z.infer<typeof trackedTerminalProviderSchema>;
+
+export const untrackedTerminalProviderSchema = z.enum(['gemini', 'opencode', 'amp']);
+
+export const nativeTerminalProviderSchema = z.enum([
+  ...trackedTerminalProviderSchema.options,
+  ...untrackedTerminalProviderSchema.options,
+]);
 export type NativeTerminalProvider = z.infer<typeof nativeTerminalProviderSchema>;
+
+const TERMINAL_PROVIDER_NAMES: Record<NativeTerminalProvider, string> = {
+  claude: 'Claude Code',
+  codex: 'Codex',
+  gemini: 'Gemini CLI',
+  opencode: 'OpenCode',
+  amp: 'Amp',
+};
+
+export function terminalProviderName(provider: NativeTerminalProvider): string {
+  return TERMINAL_PROVIDER_NAMES[provider];
+}
+
+export function isTrackedTerminalProvider(
+  provider: NativeTerminalProvider,
+): provider is TrackedTerminalProvider {
+  return trackedTerminalProviderSchema.safeParse(provider).success;
+}
+
+export function untrackedTerminalRefusal(provider: NativeTerminalProvider): string {
+  return `Spark doesn’t follow ${terminalProviderName(provider)} sessions. Use it on your Mac.`;
+}
+
+export const terminalAgentSchema = z.object({
+  id: nativeTerminalProviderSchema,
+  name: z.string(),
+  installed: z.boolean(),
+});
+export type TerminalAgent = z.infer<typeof terminalAgentSchema>;
 
 export const nativeTerminalStateSchema = z.enum([
   'starting',

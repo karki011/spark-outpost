@@ -1,7 +1,9 @@
 import { randomBytes, randomUUID } from 'node:crypto';
-import type {
-  NativeTerminalLaunchRequest,
-  NativeTerminalLaunchResponse,
+import {
+  isTrackedTerminalProvider,
+  terminalProviderName,
+  type NativeTerminalLaunchRequest,
+  type NativeTerminalLaunchResponse,
 } from '@spark-outpost/contracts';
 import { loginShellLocator } from '../agents/acp/agent-cli.ts';
 import {
@@ -38,7 +40,15 @@ import { placeChat } from '../orchestration/chat-place.ts';
 import { dependenciesLine, startTimer, type StartTimer } from './start-timing.ts';
 import { sessionDeps } from './session-deps.ts';
 import { startPhases } from './start-phases.ts';
-import { assertTerminalChat, ownedTerminalChat, providerToLaunch } from './native-launch-checks.ts';
+import {
+  assertTerminalChat,
+  launchMessageId,
+  launchReason,
+  ownedTerminalChat,
+  providerToLaunch,
+} from './native-launch-checks.ts';
+import { launchUntracked } from './untracked-launch.ts';
+import { terminalAgents } from './terminal-agents.ts';
 import { writeAdoptRecord } from './tmux/adopt-record.ts';
 import { readoptTmuxSessions } from './tmux/readopt.ts';
 import { terminalApprovals } from './remote/approvals.ts';
@@ -73,6 +83,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     return next;
   };
   const owned = ownedTerminalChat(deps.db, deps.workspaceId);
+  const locate = deps.locateCli ?? loginShellLocator(process.env.SHELL || '/bin/zsh');
   const usage = nativeUsage(deps.db, deps.watchTranscript ?? watchTranscript, enqueue);
   const control = nativeControl(deps.db, live, tokens, usage);
   const { syncScope, finish } = control;
@@ -143,13 +154,24 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     const provider = providerToLaunch(conversation.terminal_provider, request, previous);
     timer.provider(provider);
     phases.set(conversationId, 'preparing');
-    const command = await timer.time('locate_cli', () =>
-      (deps.locateCli ?? loginShellLocator(process.env.SHELL || '/bin/zsh'))(provider),
-    );
+    const command = await timer.time('locate_cli', () => locate(provider));
     if (!command)
       throw new NativeRuntimeError(
-        `Install ${provider === 'claude' ? 'Claude Code' : 'Codex'} before opening its terminal.`,
+        `Install ${terminalProviderName(provider)} before opening its terminal.`,
       );
+    if (!isTrackedTerminalProvider(provider))
+      return launchUntracked({
+        ...deps,
+        live,
+        conversationId,
+        provider,
+        command,
+        request,
+        previous,
+        timer,
+        onExit: exited,
+        stopped: () => disposed || stoppedLaunches.has(conversationId),
+      });
     const prepared = await timer.time('prepare_session', () =>
       prepareNativeSession(
         {
@@ -177,16 +199,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       cwd: prepared.folder.cwd,
       label: prepared.folder.label,
       runId: prepared.runId,
-      messageId: prepared.runId
-        ? prepared.input.identity.runId === prepared.runId
-          ? (
-              await deps.db.query<{ user_message_id: string }>(
-                'SELECT user_message_id FROM runs WHERE id = $1',
-                [prepared.runId],
-              )
-            ).rows[0]!.user_message_id
-          : null
-        : null,
+      messageId: await launchMessageId(deps.db, prepared),
       resume: request.resume,
       observation: 'unsupported',
       reason: null,
@@ -278,12 +291,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       }
       live.set(conversationId, session);
       if (launch.observation === 'hooks') tokens.set(session.hookKey, session);
-      const reason =
-        launch.observation === 'unsupported'
-          ? 'Lifecycle hook compatibility could not be verified. Native terminal permissions still apply.'
-          : provider === 'codex'
-            ? 'Waiting for trusted lifecycle events. Review Spark hooks with /hooks in Codex.'
-            : 'Waiting for native lifecycle events.';
+      const reason = launchReason(launch.observation, provider);
       await setNativeTerminalState(deps.db, { ...row, state: 'unknown', reason });
       const cancelled = prepared.runId ? await isCancelRequested(deps.db, prepared.runId) : false;
       if (
@@ -405,6 +413,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       if (row) await usage.catchUpStored(row).catch(() => undefined);
       return nativeTerminalUsage(deps.db, conversationId);
     },
+    agents: () => terminalAgents(locate),
     async startPhase(conversationId) {
       await owned(conversationId);
       return phases.get(conversationId);
