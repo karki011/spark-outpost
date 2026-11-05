@@ -109,3 +109,32 @@ test('a short label in a wide reply table stays on one line', async ({ page }) =
     });
   for (const lines of heights) expect(lines).toBe(1);
 });
+
+test('jump to latest sits under the centre of the chat column', async ({ page }) => {
+  test.setTimeout(120_000);
+  await longChat(page);
+  const jump = page.getByRole('button', { name: 'Jump to latest' });
+  const centred = async () => {
+    await page.locator('.thread').hover();
+    await page.mouse.wheel(0, -2000);
+    await expect(jump).toBeVisible();
+    await expect
+      .poll(async () => {
+        const [button, column] = await Promise.all([
+          jump.boundingBox(),
+          page.locator('.col').last().boundingBox(),
+        ]);
+        return Math.abs(button!.x + button!.width / 2 - (column!.x + column!.width / 2));
+      })
+      .toBeLessThan(2);
+  };
+
+  for (const width of [1920, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(rail(page)).toBeVisible();
+    await centred();
+  }
+  await rail(page).getByRole('button', { name: 'Hide context rail' }).click();
+  await expect(rail(page)).toHaveCount(0);
+  await centred();
+});

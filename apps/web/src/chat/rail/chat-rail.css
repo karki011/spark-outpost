@@ -369,3 +369,7 @@
   display: inline;
   margin-left: 8px;
 }
+
+.main.crail-open .thread-wrap > .jump {
+  left: calc(50% - var(--crail-strip) / 2);
+}
