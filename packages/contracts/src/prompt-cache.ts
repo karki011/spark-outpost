@@ -29,7 +29,7 @@ export const promptCacheSchema = z.object({
 });
 export type PromptCache = z.infer<typeof promptCacheSchema>;
 
-const CACHE_OUTSIDE_INPUT = new Set(['claude', 'zai']);
+const CACHE_OUTSIDE_INPUT = new Set(['claude', 'zai', 'custom']);
 
 export function countsCacheOutsideInput(provider: string): boolean {
   return CACHE_OUTSIDE_INPUT.has(provider);

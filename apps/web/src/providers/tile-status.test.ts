@@ -41,6 +41,18 @@ const issue = (kind: ProviderIssue['kind']): ProviderIssue => ({
 });
 
 describe('tileStatus', () => {
+  it('names a custom endpoint by its address, not by a key', () => {
+    const custom: ProviderSetup = { ...codex, id: 'custom', methods: ['api_key'], cli: 'claude' };
+    expect(tileStatus(custom, null, null, when).hint).toBe(
+      'Connect with a server address and model',
+    );
+    const connected = {
+      ...custom,
+      connection: { ...connection, method: 'api_key' as const, detail: 'http://localhost:11434' },
+    };
+    expect(tileStatus(connected, null, null, when).label).toBe('Connected · Endpoint');
+  });
+
   it('says how to connect when nothing is set up', () => {
     expect(tileStatus(codex, null, null, when)).toEqual({
       tone: 'off',

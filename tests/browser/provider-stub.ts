@@ -45,6 +45,14 @@ function credential(req: IncomingMessage): string {
   return String(req.headers['x-api-key'] ?? req.headers.authorization ?? '');
 }
 
+async function customMessage(req: IncomingMessage, res: ServerResponse) {
+  let text = '';
+  for await (const chunk of req) text += String(chunk);
+  const { model } = JSON.parse(text) as { model: string };
+  if (model === 'missing-model') return send(res, 404, { error: { message: 'model not found' } });
+  send(res, 200, { type: 'message', model, content: [{ type: 'text', text: 'OK' }] });
+}
+
 let github = fakeGitHub();
 
 async function updatePull(req: IncomingMessage, res: ServerResponse, number: number) {
@@ -200,6 +208,7 @@ const server = createServer((req, res) => {
   if (path === '/zai/v1/messages' && req.method === 'POST') {
     return send(res, 200, { model: 'glm-5.3-flash', content: [{ type: 'text', text: 'OK' }] });
   }
+  if (path === '/custom/v1/messages' && req.method === 'POST') return void customMessage(req, res);
   if (path === '/openai/v1/models') return send(res, 200, openaiModels);
   if (path === '/typesafe/v1/models') return send(res, 200, typesafeModels);
   if (path === '/typesafe/v1/systemone' && req.method === 'POST') return void systemOne(req, res);

@@ -47,7 +47,8 @@ async function baseEnvironment(
     const key = await options.secrets?.get(definition.id).catch(() => null);
     if (!key) {
       throw new ProviderError(
-        `${definition.name} has no stored API key. Paste the key again in Settings.`,
+        definition.keyMissing ??
+          `${definition.name} has no stored API key. Paste the key again in Settings.`,
       );
     }
     return definition.keyEnvironment(key);

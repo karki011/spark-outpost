@@ -47,3 +47,13 @@ export function methodLabel(method: 'cli' | 'api_key'): string {
 export function methodTitle(method: 'cli' | 'api_key'): string {
   return method === 'cli' ? 'Local CLI' : 'API key';
 }
+
+export const ENDPOINT_TITLE = 'Endpoint';
+
+export function isEndpoint(setup: { id: string }): boolean {
+  return setup.id === 'custom';
+}
+
+export function connectionTitle(setup: { id: string }, method: 'cli' | 'api_key'): string {
+  return isEndpoint(setup) ? ENDPOINT_TITLE : methodTitle(method);
+}

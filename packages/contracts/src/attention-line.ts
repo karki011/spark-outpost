@@ -6,6 +6,7 @@ const PROVIDER_NAMES: Record<string, string> = {
   claude: 'Claude',
   codex: 'Codex',
   zai: 'Z.ai (GLM)',
+  custom: 'Custom endpoint',
 };
 
 export function providerName(provider: string): string {

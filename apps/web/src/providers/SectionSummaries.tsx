@@ -4,15 +4,18 @@ import { useDefaultsSummary } from './ProviderDefaults.tsx';
 import type { TestMessage } from './test-message.ts';
 import type { TileStatus } from './tile-status.ts';
 import type { ProviderConnect } from './use-provider-connect.ts';
-import { methodTitle } from './verify-log.ts';
+import { connectionTitle, ENDPOINT_TITLE, isEndpoint, methodTitle } from './verify-log.ts';
 
 type Setup = ProviderSetup | AdvisorSetup;
 
 export function connectSummary(setup: Setup, status: TileStatus): string {
   const connection = setup.connection;
-  if (connection)
-    return `${methodTitle(connection.method)} · ${connection.summary ?? connection.detail}`;
+  if (connection) {
+    const shown = isEndpoint(setup) ? connection.detail : (connection.summary ?? connection.detail);
+    return `${connectionTitle(setup, connection.method)} · ${shown}`;
+  }
   if (status.tone !== 'off') return status.label;
+  if (isEndpoint(setup)) return ENDPOINT_TITLE;
   return setup.methods.map(methodTitle).join(' or ');
 }
 

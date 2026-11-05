@@ -10,17 +10,23 @@ export const guideSections: GuideSection[] = [
     id: 'overview',
     title: 'What Spark Outpost is',
     keywords: ['spark', 'outpost', 'overview', 'what', 'product'],
-    text: `Spark Outpost is a local-first workspace where you give a goal to an AI agent, follow meaningful progress, make decisions when needed, and get results. One chat is one agent session (Claude, Codex or Z.ai): the user's message goes to the agent as typed, and the agent decides whether to plan, use its own sub-agents, or split the work into sub-chats in an outpost, which it starts itself (asking first when its mode asks) or proposes for the user to start.
+    text: `Spark Outpost is a local-first workspace where you give a goal to an AI agent, follow meaningful progress, make decisions when needed, and get results. One chat is one agent session (Claude, Codex, Z.ai or a custom endpoint): the user's message goes to the agent as typed, and the agent decides whether to plan, use its own sub-agents, or split the work into sub-chats in an outpost, which it starts itself (asking first when its mode asks) or proposes for the user to start.
 
 Spark moderates around the agent: the approval gate and safety floor, the audit, a worktree and branch per chat, the publish step, pull request follow-up and its own tools. Spark splits no turn into roles, runs no checks of its own and picks no model. A conversation is a durable record; a provider session is one replaceable execution resource inside it.`,
   },
   {
     id: 'providers',
-    title: 'Connecting providers: Claude, Codex, Z.ai',
+    title: 'Connecting providers: Claude, Codex, Z.ai, custom endpoint',
     keywords: ['provider', 'connect', 'claude', 'codex', 'zai', 'z.ai', 'glm', 'login', 'api key'],
     text: `Spark runs coding agents through the Agent Client Protocol (ACP): Claude via claude-agent-acp, Codex via a patched codex-acp, and Z.ai (GLM) by running the same Claude Code agent against Z.ai's Anthropic-compatible endpoint with an isolated config directory.
 
 Connect Claude and Codex with your existing CLI login (\`claude\` / \`codex\`), which Spark detects; API-key connections for them are not wired up yet. Z.ai connects with an API key only, verified with one small test call and stored in the OS keychain. Z.ai never touches your Claude.ai login: it runs in a clean environment with no ANTHROPIC_*, CLAUDE_*, AWS_* or OPENAI_* variables inherited, and \`--hide-claude-auth\` refuses any session that would bill a claude.ai subscription.`,
+  },
+  {
+    id: 'custom-endpoint',
+    title: 'Custom endpoint: local models and gateways',
+    keywords: ['custom endpoint', 'ollama', 'lm studio', 'llama.cpp', 'litellm', 'local model'],
+    text: `A custom endpoint runs the same Claude Code agent, in the same clean environment with its own config directory, against any server that speaks the Anthropic Messages API (for example Ollama, LM Studio, a llama.cpp server or LiteLLM). The user enters the server address (https, or http only for localhost), the model name, an optional fast model and an optional API key in Settings → AI providers; the settings and key are stored together in the OS keychain and checked with one small test request. There is no OpenAI-format adapter, and how well tools work depends on the model.`,
   },
   {
     id: 'jev',
@@ -229,7 +235,7 @@ There is no switch between a Spark workflow and a direct agent: every chat goes 
       'projects',
       'connectors',
     ],
-    text: `Settings has these sections: Spark (see settings-spark); AI providers (a tile and screen each for Claude, Codex, Z.ai and Jev); Models (cost, benchmark and when Spark uses each model); Usage (tokens and cost per provider and category, last 30 days or all time); Projects (linked folders, trust and Where Spark works); Connectors (GitHub, Jira, Linear, Slack); MCP servers; Appearance (themes); Reset (hold to reset, then 10 seconds to Undo; optionally Keep my API keys).
+    text: `Settings has these sections: Spark (see settings-spark); AI providers (a tile and screen each for Claude, Codex, Z.ai, Custom endpoint and Jev); Models (cost, benchmark and when Spark uses each model); Usage (tokens and cost per provider and category, last 30 days or all time); Projects (linked folders, trust and Where Spark works); Connectors (GitHub, Jira, Linear, Slack); MCP servers; Appearance (themes); Reset (hold to reset, then 10 seconds to Undo; optionally Keep my API keys).
 
 spark_settings returns the non-secret settings; spark_projects returns each project's Where Spark works.`,
   },

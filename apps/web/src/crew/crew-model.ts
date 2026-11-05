@@ -36,7 +36,7 @@ export const CHAT_AGENT_ROLE = 'agent';
 
 export const SAME_PROVIDER_REVIEW = 'same provider, no cross-model review';
 
-const HUES: Record<string, number> = { claude: 24, codex: 205, zai: 112, jev: 318 };
+const HUES: Record<string, number> = { claude: 24, codex: 205, zai: 112, custom: 265, jev: 318 };
 
 const EXPRESSIONS: Record<CrewState, BlobExpression> = {
   thinking: 'thinking',

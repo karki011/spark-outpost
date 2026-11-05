@@ -12,6 +12,7 @@ import { api, queryKeys } from '../api/client.ts';
 import { setupKey, verifyProvider } from '../api/setup.ts';
 import type { BlobExpression } from '../brand/blob-expression.ts';
 import type { VerifyFailure } from './tile-status.ts';
+import { endpointFieldsOf, type EndpointFields } from './endpoint-fields.ts';
 import { appendLogLine, resolveLastLine, type VerifyLogLine } from './verify-log.ts';
 
 export type ProviderMood = Extract<BlobExpression, 'idle' | 'thinking' | 'happy' | 'sad'>;
@@ -33,6 +34,16 @@ function useFlag(durationMs: number) {
   return [on, () => setOn(true)] as const;
 }
 
+function verifyBody(
+  id: ProviderSetup['id'] | AdvisorSetup['id'],
+  method: ConnectionMethod,
+  apiKey: string,
+  endpoint: EndpointFields,
+): VerifyRequest {
+  if (id === 'custom') return { method: 'endpoint', endpoint, apiKey: apiKey.trim() };
+  return method === 'api_key' ? { method: 'api_key', apiKey: apiKey.trim() } : { method: 'cli' };
+}
+
 export function useProviderConnect(
   provider: ProviderSetup | AdvisorSetup,
   callbacks: ConnectCallbacks,
@@ -45,6 +56,7 @@ export function useProviderConnect(
   const [changing, setChanging] = useState(false);
   const [reauth, setReauth] = useState(false);
   const [apiKey, setApiKey] = useState('');
+  const [endpoint, setEndpoint] = useState<EndpointFields>(() => endpointFieldsOf(connection));
   const [showKey, setShowKey] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [log, setLog] = useState<VerifyLogLine[]>([]);
@@ -121,8 +133,7 @@ export function useProviderConnect(
     setVerifying(true);
     setMood('thinking');
     latest.current.onVerifyStart?.();
-    const body: VerifyRequest =
-      method === 'api_key' ? { method: 'api_key', apiKey: apiKey.trim() } : { method: 'cli' };
+    const body = verifyBody(provider.id, method, apiKey, endpoint);
 
     setFailureCode(null);
     const fail = (label: string, code?: VerifyFailureCode) => {
@@ -173,8 +184,13 @@ export function useProviderConnect(
     failureCode,
     cliFailed,
     setApiKey,
+    endpoint,
+    setEndpoint,
     toggleShowKey: () => setShowKey((value) => !value),
-    startChanging: () => setChanging(true),
+    startChanging: () => {
+      setEndpoint(endpointFieldsOf(connection));
+      setChanging(true);
+    },
     keepCurrent: () => setChanging(false),
     closeTerminal: () => setTerminalOpen(false),
     nudge: startShake,

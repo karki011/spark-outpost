@@ -8,13 +8,13 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 
 ## Provider tiles
 
-| Status                                  | Means                        |
-| --------------------------------------- | ---------------------------- |
-| **Not set up**                          | Nothing connected.           |
-| **CLI not installed**                   | Install `claude` or `codex`. |
-| **Needs sign-in**                       | Sign in, or pass a **Test**. |
-| **Connected · Local CLI** / **API key** | Ready.                       |
-| **Error**                               | **Test** says what's wrong.  |
+| Status                                                 | Means                        |
+| ------------------------------------------------------ | ---------------------------- |
+| **Not set up**                                         | Nothing connected.           |
+| **CLI not installed**                                  | Install `claude` or `codex`. |
+| **Needs sign-in**                                      | Sign in, or pass a **Test**. |
+| **Connected · Local CLI** / **API key** / **Endpoint** | Ready.                       |
+| **Error**                                              | **Test** says what's wrong.  |
 
 ## Chat list
 

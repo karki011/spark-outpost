@@ -6,27 +6,6 @@ export const ZAI_CHECK_MODEL = 'glm-5.3-flash';
 export const zaiModels = (): ProviderModel[] =>
   ZAI_MODELS.map((model) => ({ id: model.slot, label: model.label }));
 
-export function zaiMessageRequest(
-  baseUrl: string,
-  key: string,
-  model: string,
-  prompt: string,
-): Request {
-  return new Request(`${baseUrl}/v1/messages`, {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${key}`,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 16,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-}
-
 const QUOTA_CODES = new Set(['1308', '1309', '1310', '1311', '1313', '1314', '1315']);
 
 function errorCode(payload: unknown): string | null {

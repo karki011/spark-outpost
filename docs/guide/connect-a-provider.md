@@ -3,20 +3,21 @@ title: Connect an AI provider
 section: Get started
 type: start
 order: 120
-summary: Connect Claude, Codex or Z.ai with the local CLI or an API key, then send a test message.
+summary: Connect Claude, Codex, Z.ai or a custom endpoint with the local CLI, an API key or a server address, then send a test message.
 ---
 
 Connect one provider and check that it answers. About 2 minutes.
 
 ## Before you start
 
-Spark runs the CLIs installed on your computer; it doesn't include them.
+Spark runs the CLIs installed on your computer: `npm i -g @anthropic-ai/claude-code` for `claude`, `npm i -g @openai/codex` for `codex`.
 
-| Provider       | Needs CLI | Connects with                | Install the CLI                      |
-| -------------- | --------- | ---------------------------- | ------------------------------------ |
-| **Claude**     | `claude`  | **Local CLI** or **API key** | `npm i -g @anthropic-ai/claude-code` |
-| **Codex**      | `codex`   | **Local CLI** or **API key** | `npm i -g @openai/codex`             |
-| **Z.ai (GLM)** | `claude`  | **API key** only             | `npm i -g @anthropic-ai/claude-code` |
+| Provider            | Needs CLI | Connects with                        |
+| ------------------- | --------- | ------------------------------------ |
+| **Claude**          | `claude`  | **Local CLI** or **API key**         |
+| **Codex**           | `codex`   | **Local CLI** or **API key**         |
+| **Z.ai (GLM)**      | `claude`  | **API key** only                     |
+| **Custom endpoint** | `claude`  | [Server address](custom-endpoint.md) |
 
 Z.ai bills its own key, never your Claude account.
 

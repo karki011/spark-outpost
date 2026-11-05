@@ -21,7 +21,7 @@ Only your name and one provider are required. Change the rest in **Settings**.
 
 ## Bring in your tools
 
-1. [Connect an AI provider](connect-a-provider.md): Claude, Codex or Z.ai.
+1. [Connect an AI provider](connect-a-provider.md).
 2. On **Tools**, check the **Git** card; if missing, select **Install Xcode Command Line Tools**, then **Check again**.
 3. Optionally connect **GitHub**, **Atlassian** or **Linear**, then **Continue**.
 

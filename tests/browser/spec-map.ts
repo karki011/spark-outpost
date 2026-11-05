@@ -205,6 +205,7 @@ export const SPEC_GROUPS = {
     'spark-plugins-edit',
     'spark-rules-settings',
     'terminal-record-setting',
+    'custom-endpoint',
     'zai',
   ],
   home: [

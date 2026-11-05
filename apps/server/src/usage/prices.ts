@@ -11,7 +11,7 @@ export interface ModelPrice {
   cacheWritePerMillion?: number;
 }
 
-const ESTIMATED_PROVIDERS = new Set(['codex', 'zai']);
+const ESTIMATED_PROVIDERS = new Set(['codex', 'zai', 'custom']);
 const BILLED_CACHE_WRITES = new Set(['claude']);
 
 function cardPrice(card: ModelCard): ModelPrice | null {

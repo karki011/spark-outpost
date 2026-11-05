@@ -5,7 +5,7 @@ import type {
   VerifyFailureCode,
 } from '@spark-outpost/contracts';
 import { liveIssue, problemText } from '../home/provider-status.ts';
-import { methodTitle } from './verify-log.ts';
+import { connectionTitle, isEndpoint } from './verify-log.ts';
 
 export type TileTone = 'off' | 'ok' | 'warn' | 'bad';
 
@@ -23,6 +23,7 @@ export interface TileStatus {
 type TileSetup = ProviderSetup | AdvisorSetup;
 
 function connectHint(setup: TileSetup): string {
+  if (isEndpoint(setup)) return 'Connect with a server address and model';
   const viaCli = setup.methods.includes('cli');
   const viaKey = setup.methods.includes('api_key');
   if (viaCli && viaKey) return `Connect with the ${setup.cli} CLI or an API key`;
@@ -72,7 +73,7 @@ export function tileStatus(
   if (problem) return { tone: 'bad', label: 'Error', hint: problem };
   return {
     tone: 'ok',
-    label: `Connected · ${methodTitle(connection.method)}`,
+    label: `Connected · ${connectionTitle(setup, connection.method)}`,
     hint: connectedHint(setup, when),
   };
 }

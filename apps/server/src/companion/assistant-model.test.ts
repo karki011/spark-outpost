@@ -19,10 +19,21 @@ const EFFORTS = ['low', 'medium', 'high'];
 const FAST = { modelChoice: 'fast', model: null, effort: null } as const;
 
 describe('Ask Spark fast tier', () => {
-  it('names a model card Spark knows for every provider', () => {
+  it('names a model card Spark knows for every provider with fixed models', () => {
     for (const tier of Object.values(ASK_SPARK_FAST_TIER)) {
-      expect(cardById(tier.card)).not.toBeNull();
+      if (tier) expect(cardById(tier.card)).not.toBeNull();
     }
+  });
+
+  it('has no fast tier for a custom endpoint, so Ask Spark keeps its default model', () => {
+    const offered = [{ id: 'opus', label: 'qwen3-coder' }];
+    expect(fastModelFor('custom', offered)).toBeNull();
+    expect(assistantPick(FAST, 'custom', offered, ['low', 'high'])).toEqual({
+      model: null,
+      effort: null,
+      fastEffort: null,
+      noFastModel: true,
+    });
   });
 
   it('runs Claude on Sonnet 5.5 at low effort, found through the alias Claude offers', () => {
