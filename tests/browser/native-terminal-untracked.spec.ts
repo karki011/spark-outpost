@@ -2,6 +2,7 @@ import { rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { installFakeVoice } from './fake-voice.ts';
 import { SESSION_START_MS } from './native-terminal-fixture.ts';
 import { chooseSessionType, openChats } from './navigation.ts';
 import { FAKE_CLAUDE_BIN } from './stub-config.ts';
@@ -28,6 +29,7 @@ test('an installed CLI starts as an untracked Terminal session, and one not inst
   page,
 }) => {
   test.setTimeout(60_000);
+  await installFakeVoice(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
@@ -56,6 +58,7 @@ test('an installed CLI starts as an untracked Terminal session, and one not inst
     timeout: SESSION_START_MS,
   });
   await expect(workspace).toContainText('OpenCode · Terminal');
+  await expect(workspace.getByRole('button', { name: 'Dictate', exact: true })).toHaveCount(0);
   await workspace.locator('.xterm-helper-textarea').focus();
   await page.keyboard.type('hello');
   await page.keyboard.press('Enter');

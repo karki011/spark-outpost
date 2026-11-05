@@ -173,7 +173,7 @@ export function NativeTerminalWorkspace({
             {relaunch === 'resume' ? 'Resume session' : 'Start again'}
           </button>
         )}
-        {native && !ended && (
+        {native && tracked && !ended && (
           <TerminalDictation chatId={chat.id} agentName={terminalProviderName(native.provider)} />
         )}
         <TerminalMenu
