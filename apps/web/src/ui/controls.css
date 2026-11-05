@@ -261,8 +261,12 @@
     border-color 0.2s,
     background 0.2s;
 }
-.rrow:hover {
+.rrow:hover:not(:disabled) {
   border-color: var(--faint);
+}
+.rrow:disabled {
+  color: var(--faint);
+  cursor: default;
 }
 .rrow[aria-checked='true'] {
   border-color: var(--accent);

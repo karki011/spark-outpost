@@ -1,7 +1,8 @@
 import { basename, dirname, isAbsolute, join } from 'node:path';
+import type { TrackedTerminalProvider } from '@spark-outpost/contracts';
 import { isRecord } from '../agent-config/records.ts';
 
-export type NativeProvider = 'claude' | 'codex';
+export type NativeProvider = TrackedTerminalProvider;
 export type NativeHookKind =
   | 'session_start'
   | 'prompt'

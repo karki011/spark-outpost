@@ -10,8 +10,9 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                  | What to do                                                      |
 | ----------------------------- | --------------------------------------------------------------- |
+| More Terminal agents          | [Start one](terminals.md#start-a-terminal-session).             |
 | Fewer leftover agent sessions | Nothing.                                                        |
 | Context compacted line        | [Manage a long chat](compaction.md#check-how-full-the-chat-is). |
-| Jump to latest centred        | Nothing to do.                                                  |
+| Jump to latest centred        | Nothing.                                                        |
 | Row ports                     | [Open in the pane](terminals.md#open-a-shell-beside-chat).      |
 | First public beta             | [Get started](getting-started.md).                              |

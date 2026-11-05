@@ -5,12 +5,14 @@ import {
   createShellResponseSchema,
   createTerminalResponseSchema,
   shellBusyResponseSchema,
+  terminalAgentSchema,
   terminalStartSchema,
   terminalRemoteViewSchema,
   terminalImageResponseSchema,
   type TerminalApprovalDecision,
   type CreateShellResponse,
   type CreateTerminalResponse,
+  type NativeTerminalProvider,
   type ProviderId,
   type TerminalStep,
 } from '@spark-outpost/contracts';
@@ -89,6 +91,7 @@ export const terminalRemoteApi = {
 };
 
 export const nativeTerminalApi = {
+  agents: () => request(z.array(terminalAgentSchema), '/terminal-agents'),
   startPhase: (conversationId: string) =>
     request(terminalStartSchema, `/conversations/${conversationId}/terminal/start`),
   stop: (conversationId: string) =>
@@ -98,7 +101,7 @@ export const nativeTerminalApi = {
   launch: (
     conversationId: string,
     body: {
-      provider?: 'claude' | 'codex';
+      provider?: NativeTerminalProvider;
       prompt?: string;
       messageId?: string;
       resume?: boolean;

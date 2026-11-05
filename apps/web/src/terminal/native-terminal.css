@@ -115,3 +115,10 @@
     transform: none;
   }
 }
+.picker-pane.native-modes.untracked,
+.picker-pane.native-others {
+  min-height: 0;
+}
+.picker-pane.native-others {
+  border-top: 1px solid var(--line);
+}

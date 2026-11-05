@@ -1,6 +1,6 @@
 # Native Terminal sessions
 
-Terminal sessions run the installed Claude Code or Codex interactive CLI in a pane of a tmux server that Spark owns ([tmux](#tmux)); without a usable tmux they run in a Spark-owned PTY as before. Chat sessions continue through ACP. Terminal sessions do not start chat runs and cannot switch a live Chat conversation into a native terminal.
+Terminal sessions run the installed Claude Code or Codex interactive CLI, or an [untracked agent](#untracked-agents), in a pane of a tmux server that Spark owns ([tmux](#tmux)); without a usable tmux they run in a Spark-owned PTY as before. Chat sessions continue through ACP. Terminal sessions do not start chat runs and cannot switch a live Chat conversation into a native terminal.
 
 ## Agent-led delegation
 
@@ -38,6 +38,12 @@ An attach token is single-use: after its socket disconnects, reattaching needs a
 Terminal output replay is bounded to 256,000 JavaScript characters in memory. It is not a durable terminal transcript; after a re-adoption it starts from what tmux still holds of the screen and scrollback. Reattachment preserves a running process; provider-native resume creates another process from provider history and does not restore an interrupted shell command exactly.
 
 Spark manages only its own child processes, the tmux server on its own socket, and recorded session IDs. It never adopts or kills an external terminal by executable name, and never talks to the default tmux socket. PTYs start in the session's project workspace; a working directory does not provide a filesystem sandbox. Native CLI permission modes continue to govern native execution.
+
+## Untracked agents
+
+Gemini CLI (`gemini`), OpenCode (`opencode`) and Amp (`amp`) run as untracked Terminal sessions (`untrackedTerminalProviderSchema` in `packages/contracts/src/native-terminal.ts`; migration 0229 widens the provider checks on `conversations.terminal_provider` and `native_terminal_sessions.provider`). `GET /api/terminal-agents` reports each agent as installed when `locateCli` finds its binary, the same lookup Claude Code and Codex use (`which`, then the login shell's `command -v` unless `CLI_LOOKUP_LOGIN_SHELL` is off); it is Mac only. The picker lists untracked agents under **Other agents** and disables one that is not installed with **Not installed**.
+
+`untracked-launch.ts` starts the CLI with no arguments and no extra environment, under tmux like any session, in the chat's shell folder (`shellFolder`: the chat's existing worktree, else its first linked folder, else the private `terminal-workspaces/<chat>` folder). No worktree is created, because placing a chat needs a run. Spark records only the `native_terminal_sessions` row: its provider, folder and state, which stays `unknown` (shown as **Open**) until the pane exits, is stopped or is interrupted. There is no run, message, Spark tools grant, hook, mod, session-file reading, usage, Kept record or audit. A first message is refused, since Spark passes these CLIs no arguments; **Start again** starts the CLI again with nothing. Re-adoption after a restart rebuilds the same record without a grant or observer file. A paired device sees the session's state with no transcript; its message, Stop and approval routes are refused with "Spark doesn’t follow … sessions. Use it on your Mac." Ticket starts stay Claude Code and Codex only, since a ticket hands the agent a first message.
 
 ## tmux
 
