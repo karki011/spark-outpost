@@ -18,7 +18,7 @@ import { planOutputs, usageOutputs } from './plan-limits.ts';
 import { createFocusTracker } from './file-focus.ts';
 import { messagePhase } from './message-phase.ts';
 import { artifactLinks } from './artifact-links.ts';
-import { createCompactionLines } from './compaction-lines.ts';
+import { COMPACTED_LINE, createCompactionLines } from './compaction-lines.ts';
 import {
   awaitsAddress,
   describeTool,
@@ -431,8 +431,8 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
         case 'notice':
           return note(`${noticeLabel(update.severity)}: ${update.title}`);
         case 'compaction_update': {
-          worked = true;
           const line = compactionLine(update);
+          if (line === COMPACTED_LINE) worked = true;
           return line ? note(line) : [];
         }
         case 'available_commands_update':

@@ -64,4 +64,18 @@ describe('ACP compaction updates', () => {
     ]);
     expect(lines(outputs)).toEqual([COMPACTION_FAILED_LINE]);
   });
+
+  it('counts only a completed compaction as work', () => {
+    for (const updates of [
+      [compaction('c1', 'in_progress')],
+      [compaction('c1', 'cancelled')],
+      [compaction('c1', 'paused')],
+      [compaction('c1', 'failed', 'too large')],
+    ]) {
+      expect(mapAll(updates).mapper.didWork()).toBe(false);
+    }
+    expect(
+      mapAll([compaction('c1', 'completed'), compaction('c1', 'completed')]).mapper.didWork(),
+    ).toBe(true);
+  });
 });
