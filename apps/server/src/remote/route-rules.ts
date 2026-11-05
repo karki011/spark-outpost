@@ -232,6 +232,7 @@ POST /api/conversations/:id/terminal
 POST /api/conversations/:id/terminal/images
 DELETE /api/conversations/:id/terminal
 POST /api/terminal/shells
+GET /api/chat-ports
 POST /api/terminal/previews
 GET /api/conversations/:id/agent-terminals/:terminalId/output
 POST /api/conversations/:id/agent-terminals/:terminalId/view

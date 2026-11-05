@@ -65,6 +65,9 @@ import { useSidebarShortcuts } from './use-sidebar-shortcuts.ts';
 import { useToast } from './use-toast.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { requestMessageJump } from '../chat/message-jump.ts';
+import { queuePaneUrl } from '../browser/pending-pane-url.ts';
+import { desktopBrowser } from '../desktop/desktop-bridge.ts';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
 
 const HOVER_OPEN_MS = 550;
 const NO_OUTPOSTS: readonly Outpost[] = [];
@@ -243,6 +246,12 @@ export const ConversationList = memo(function ConversationList({
     }
     openChat(id);
   });
+  const { remote } = useRemoteClient();
+  const portsShown = desktopBrowser() !== null && !remote;
+  const handleOpenPort = useStableCallback((id: string, url: string) => {
+    queuePaneUrl(id, url);
+    handleOpen(id);
+  });
   const handleOpenBeside = useStableCallback((id: string) => {
     onOpenBeside?.(id);
     layout?.closeDrawer();
@@ -288,6 +297,7 @@ export const ConversationList = memo(function ConversationList({
       onOpen={handleOpen}
       onOpenBeside={onOpenBeside ? handleOpenBeside : undefined}
       onPrepare={prepareChat}
+      onOpenPort={portsShown ? handleOpenPort : undefined}
       onMenu={handleMenu}
       onRename={handleRename}
       onRestore={handleRestore}

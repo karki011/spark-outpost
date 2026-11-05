@@ -57,6 +57,7 @@ import { terminalRoutes } from '../terminal/routes.ts';
 import type { TerminalSessions } from '../terminal/sessions.ts';
 import type { PreviewServers } from '../preview/servers.ts';
 import { agentTerminalRoutes } from '../terminal/agent-terminal-routes.ts';
+import { chatPortRoutes, type ChatPortRouteDeps } from '../terminal/chat-port-routes.ts';
 import type { AgentTerminals } from '../terminal/agent-terminals.ts';
 import type { NativeRuntime } from '../terminal/native-runtime.ts';
 import { nativeTerminalRoutes } from '../terminal/native-routes.ts';
@@ -78,7 +79,8 @@ export interface AppOptions
     Pick<McpRouteDeps, 'probeMcp'>,
     Pick<ConversationActionDeps, 'deleteSettleMs' | 'chatFolders'>,
     Pick<CloneRouteDeps, 'clones' | 'cloneTest' | 'reservedFolders'>,
-    Pick<ChatShareRouteDeps, 'linkScheme'> {
+    Pick<ChatShareRouteDeps, 'linkScheme'>,
+    ChatPortRouteDeps {
   terminals: TerminalSessions;
   nativeTerminals?: NativeRuntime;
   previews: PreviewServers;
@@ -173,6 +175,7 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', nativeTerminalRoutes(options.nativeTerminals));
   app.use('/api', previewRoutes(options));
   app.use('/api', agentTerminalRoutes(options));
+  app.use('/api', chatPortRoutes(options));
   app.use('/api', signInRoutes(options));
   app.use(
     '/api',

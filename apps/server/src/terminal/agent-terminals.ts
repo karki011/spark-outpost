@@ -13,6 +13,7 @@ import {
 import type { Db } from '../persistence/db.ts';
 import { commandEnvironment } from '../preview/launch.ts';
 import type { PreviewProcess } from '../preview/servers.ts';
+import type { PortRoot } from './chat-ports.ts';
 import { recordTerminalStops } from './agent-terminal-audit.ts';
 import { createAgentTerminalRecord, type AgentTerminalRecord } from './agent-terminal-output.ts';
 import type { AgentTerminalRuntime } from './agent-terminal-process.ts';
@@ -31,6 +32,7 @@ export const defaultAgentTerminalTimings: AgentTerminalTimings = {
 
 interface Live {
   id: string;
+  conversationId: string;
   cwd: string;
   process: PreviewProcess;
   record: AgentTerminalRecord;
@@ -56,6 +58,13 @@ export class AgentTerminals {
 
   running(id: string): boolean {
     return this.live.has(id);
+  }
+
+  roots(): PortRoot[] {
+    return [...this.live.values()].map((live) => ({
+      conversationId: live.conversationId,
+      pid: live.process.pid,
+    }));
   }
 
   async recover(): Promise<void> {
@@ -148,6 +157,7 @@ export class AgentTerminals {
     }
     const live: Live = {
       id: row.id,
+      conversationId: row.conversationId,
       cwd: row.cwd,
       process,
       record: createAgentTerminalRecord(secretValues),

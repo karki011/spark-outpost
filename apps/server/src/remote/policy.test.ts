@@ -135,6 +135,7 @@ describe('remote policy', () => {
     const refused: [string, string][] = [
       ['POST', '/api/terminal/sessions'],
       ['POST', '/api/terminal/shells'],
+      ['GET', '/api/chat-ports'],
       ['POST', `/api/terminal/sessions/${ID}/attach`],
       ['POST', `/api/conversations/${ID}/terminal`],
       ['GET', `/api/conversations/${ID}/terminal/usage`],

@@ -20,6 +20,7 @@ import { useChatOnScreen } from './on-screen.ts';
 import { RowTitle, useMarquee } from './RowTitle.tsx';
 import { useSortableMotion } from './use-sortable-motion.ts';
 import { RowFace } from './RowFace.tsx';
+import { RowPorts } from './RowPorts.tsx';
 import { pointerStart } from './sidebar-dnd-geometry.ts';
 
 interface ChatRowProps {
@@ -36,6 +37,7 @@ interface ChatRowProps {
   onOpen: (id: string) => void;
   onOpenBeside?: ((id: string) => void) | undefined;
   onPrepare?: (id: string) => void;
+  onOpenPort?: ((id: string, url: string) => void) | undefined;
   onMenu: (id: string, element: HTMLElement, point: { x: number; y: number } | null) => void;
   onRename: (chat: ConversationSummary, title: string | null) => void;
   onRestore: (chat: ConversationSummary) => void;
@@ -294,6 +296,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
       ) : (
         !renaming && (
           <>
+            {props.onOpenPort && <RowPorts chatId={chat.id} onOpenPort={props.onOpenPort} />}
             {chat.pinnedAt && (
               <span className="rpin" role="img" aria-label="Pinned">
                 <PinIcon />

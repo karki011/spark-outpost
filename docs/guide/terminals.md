@@ -35,7 +35,9 @@ Selection copies; **Add to terminal**, **Ask about this**, **Comment** and **New
 
 It starts in the chat's worktree, checkout or home. A busy tab asks **Hold to stop**; **Keep running** cancels.
 
-A shell's alert (OSC 9, 777 or 99), like "Build done", shows when you hover the chat's row until opened, never counting or chiming.
+A shell's alert (OSC 9, 777 or 99), like "Build done", shows in the chat row's tooltip until opened, silently.
+
+Listening ports, like **:5173**, show on the chat's row; in the Mac app, select one to open it in the Browser pane.
 
 ![Hold to stop a busy terminal](images/terminals-stop-light.png)
 

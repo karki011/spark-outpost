@@ -283,3 +283,31 @@
 .row-state[data-state='failed'] {
   color: var(--danger);
 }
+
+.row-ports {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.row-port {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 28px;
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  color: var(--accent-text);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.row-port:hover {
+  background: var(--accent-soft);
+}
+
+.row-port svg {
+  width: 12px;
+  height: 12px;
+}
