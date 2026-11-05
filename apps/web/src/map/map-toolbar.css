@@ -1,0 +1,137 @@
+.map-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-pill,
+.map-toggle,
+.map-quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+}
+
+.map-pill {
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-pill.busy {
+  color: var(--text);
+}
+
+.map-pill.bad {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  color: var(--danger);
+}
+
+.map-pill:hover,
+.map-quiet:hover,
+.map-toggle:not([aria-disabled='true']):hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.map-ring {
+  transform: rotate(-90deg);
+}
+
+.map-ring circle {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.map-ring-track {
+  stroke: var(--line);
+}
+
+.map-ring-fill {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s var(--out);
+}
+
+.map-toggle {
+  border: 1px solid var(--line);
+}
+
+.map-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.map-toggle[aria-checked='true'] {
+  border-color: color-mix(in srgb, var(--switch-on) 55%, transparent);
+  background: color-mix(in srgb, var(--switch-on) 13%, transparent);
+  color: var(--text);
+}
+
+.map-toggle[aria-checked='true'] svg {
+  color: var(--switch-on);
+}
+
+.map-toggle[aria-disabled='true'] {
+  opacity: 0.55;
+}
+
+.map-quiet[aria-expanded='true'] {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.map-cnt,
+.map-badge {
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-cnt {
+  background: var(--switch-on);
+  color: var(--switch-on-ink);
+}
+
+.map-badge {
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  color: var(--warn);
+}
+
+@media (max-width: 1300px) {
+  .map-quiet .map-lbl {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1100px) {
+  .map-toggle:has(svg) .map-lbl {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}

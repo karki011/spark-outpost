@@ -1,0 +1,295 @@
+.cmp {
+  --cmp-size: 48px;
+  --cmp-gap: 20px;
+  position: fixed;
+  z-index: 25;
+}
+
+.cmp[data-corner$='right'] {
+  right: var(--cmp-gap);
+}
+
+.cmp[data-corner$='left'] {
+  left: calc(70px + var(--cmp-gap));
+}
+
+.cmp[data-corner^='top'] {
+  top: var(--cmp-gap);
+}
+
+.cmp[data-corner^='bottom'] {
+  bottom: var(--cmp-gap);
+}
+
+.cmp-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--cmp-size);
+  height: var(--cmp-size);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: grab;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cmp-btn .cmp-scout {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22));
+  transition:
+    filter 0.2s var(--out),
+    scale 0.2s var(--out);
+}
+
+.cmp-btn:hover .cmp-scout {
+  filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.28));
+  scale: 1.06;
+}
+
+.cmp[data-dragging] .cmp-btn {
+  cursor: grabbing;
+}
+
+.cmp[data-mood='alert'] .cmp-btn::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 2px solid var(--warn);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: cmp-pulse 2.4s var(--out) infinite;
+}
+
+.cmp-float {
+  display: grid;
+  place-items: center;
+  animation: cmp-float 5s ease-in-out infinite;
+}
+
+.cmp .cmp-scout {
+  pointer-events: none;
+}
+
+.cmp .scout.working .sc-spark {
+  animation-duration: 2.4s;
+  filter: none;
+}
+
+.cmp .scout.working .sc-look {
+  animation-duration: 3.2s;
+}
+
+.cmp .scout.alert .sc-ant {
+  animation-duration: 1.4s;
+}
+
+.cmp .scout.alert .sc-spark {
+  animation-duration: 2.4s;
+}
+
+.cmp .scout.happy .sc-hop {
+  animation: none;
+}
+
+.cmp[data-celebrate] .cmp-hop {
+  animation: cmp-bounce 0.24s var(--out);
+}
+
+.cmp-hop {
+  display: grid;
+  place-items: center;
+}
+
+.cmp-run {
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 12px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 0 0 1px var(--line-strong);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
+}
+
+.cmp-run:not(:has(i)) {
+  height: 16px;
+  bottom: -9px;
+  padding: 0 5px;
+}
+
+.cmp-run i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.cmp-fail {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: var(--panel);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--panel);
+  animation: cmp-pop 0.2s var(--out);
+}
+
+.cmp[data-dragging] *,
+.cmp[data-dragging] .cmp-btn::after,
+.cmp[data-paused] *,
+.cmp[data-paused] .cmp-btn::after {
+  animation-play-state: paused;
+}
+
+.cmp-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--warn);
+  color: var(--warn-ink);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--panel);
+  animation: cmp-pop 0.2s var(--out);
+}
+
+@keyframes cmp-float {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes cmp-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  70%,
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+@keyframes cmp-bounce {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes cmp-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes cmp-panel-in {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+}
+
+.app:has(.cmp[data-corner^='bottom']) .home-wrap {
+  padding-bottom: calc(56px + 64px);
+}
+
+@media (max-width: 1100px) {
+  .app:has(.cmp[data-corner^='top']) .home-wrap {
+    padding-top: calc(44px + 56px);
+  }
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .cmp {
+    --cmp-size: 40px;
+    --cmp-gap: 12px;
+  }
+
+  .cmp[data-corner$='left'] {
+    left: var(--cmp-gap);
+  }
+
+  .cmp[data-corner^='top'] {
+    top: calc(env(safe-area-inset-top, 0px) + var(--cmp-gap));
+  }
+
+  .cmp[data-corner^='bottom'] {
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px) + var(--cmp-gap));
+  }
+
+  .cmp .cmp-scout {
+    width: 30px;
+    height: 30px;
+  }
+
+  .cmp-panel {
+    max-height: calc(100dvh - 160px - env(safe-area-inset-bottom, 0px));
+  }
+
+  .app:has(.cmp[data-corner^='bottom']) .home-wrap {
+    padding-bottom: calc(32px + 56px);
+  }
+
+  .app:has(.cmp[data-corner^='bottom']) :is(.tk .ib-main, .an, .ph-scroll)::after {
+    content: '';
+    display: block;
+    flex-shrink: 0;
+    height: 56px;
+  }
+
+  .app:has(.cmp[data-corner^='top']) .home-wrap {
+    padding-top: calc(26px + 48px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes cmp-panel-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes cmp-pop {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .cmp-float,
+  .cmp[data-celebrate] .cmp-hop,
+  .cmp[data-mood='alert'] .cmp-btn::after {
+    animation: none;
+  }
+
+  .cmp[data-mood='alert'] .cmp-btn::after {
+    opacity: 0.7;
+  }
+}

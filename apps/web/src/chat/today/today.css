@@ -1,0 +1,154 @@
+.today {
+  display: grid;
+  gap: 8px;
+  width: min(460px, 100%);
+  margin-top: 18px;
+  padding: 12px 12px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+  text-align: left;
+  animation: rise 0.3s var(--out) both;
+}
+
+.today h3 {
+  margin: 0 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.today-quiet {
+  margin: 0 2px 4px;
+}
+
+.today-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.today-stats li {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--raise);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.today-stats b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.today-stats li[data-attention] {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.today-stats li[data-attention] b {
+  color: var(--accent-text);
+}
+
+.today-chats {
+  display: grid;
+  margin: 0 -4px;
+  padding: 0;
+  list-style: none;
+}
+
+.today-chats li {
+  animation: rise 0.3s var(--out) both;
+  animation-delay: calc(var(--i, 0) * 60ms + 80ms);
+}
+
+.today-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  text-align: left;
+  transition: background-color 0.15s var(--out);
+}
+
+button.today-row:hover {
+  background: var(--raise);
+}
+
+.today-blob {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+}
+
+.today-blob svg {
+  display: block;
+  overflow: visible;
+}
+
+.today-row .t {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-row .k {
+  flex-shrink: 0;
+  max-width: 45%;
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-shim {
+  display: inline-block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--raise) 25%, var(--line) 50%, var(--raise) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+
+.today-shim.pill {
+  height: 20px;
+  border-radius: 999px;
+}
+
+.today-shim.dot {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.today-sk {
+  display: grid;
+  gap: 8px;
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse), (max-height: 820px) {
+  .today {
+    margin-top: 12px;
+  }
+
+  .today-chats li:nth-child(n + 3) {
+    display: none;
+  }
+}

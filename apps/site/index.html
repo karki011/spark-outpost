@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en" data-skin="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spark Outpost: a home base for autonomous work</title>
+    <meta
+      name="description"
+      content="Run Claude Code and Codex on your Mac. Follow every step, answer the approvals that matter, and get pull requests back. Free beta for macOS 12 and later."
+    />
+    <meta name="theme-color" content="#0c0f12" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Spark Outpost" />
+    <meta property="og:title" content="Spark Outpost: a home base for autonomous work" />
+    <meta
+      property="og:description"
+      content="Run Claude Code and Codex on your Mac. Answer the approvals that matter and get pull requests back."
+    />
+    <meta property="og:image" content="https://spark-outpost.karki011.workers.dev/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="top">
+      <nav class="nav wrap" aria-label="Main">
+        <a class="brand" href="/" aria-label="Spark Outpost home">
+          <img src="/scout.svg" alt="" width="30" height="30" />
+          <span>Spark Outpost</span>
+        </a>
+        <a class="nav-link" href="#agents">Features</a>
+        <a class="nav-link" href="#privacy">Privacy</a>
+        <a class="nav-link nav-docs" href="/docs/">Docs</a>
+        <a class="nav-link" href="/changelog.html">Changelog</a>
+        <a class="nav-link" href="https://github.com/karki011/spark-outpost">GitHub</a>
+        <a class="button small" href="#download">Download</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">Free beta for macOS</p>
+          <h1 id="hero-title">A home base for autonomous work.</h1>
+          <p class="lead">
+            Run Claude Code and Codex side by side on your Mac. Follow every step, answer the
+            approvals that matter, and get pull requests back.
+          </p>
+          <div class="download-row">
+            <a
+              class="button large"
+              data-download
+              href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-latest-arm64.dmg"
+            >
+              Download for Mac · <span data-download-arch>Apple silicon</span>
+            </a>
+            <a
+              class="text-link"
+              data-download-other
+              href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-latest-x64.dmg"
+              >Intel Mac?</a
+            >
+          </div>
+          <p class="fine">Free beta · macOS 12+ · Apple silicon and Intel</p>
+        </div>
+        <div class="scout-stage" data-scout-stage>
+          <img
+            class="scout-poster"
+            src="/scout.svg"
+            alt="Scout, the Spark Outpost mascot: a teal blob with two eyes and a spark on its antenna"
+            width="320"
+            height="320"
+            fetchpriority="high"
+          />
+          <button class="poke" type="button" data-scout-poke hidden>Squish Scout</button>
+        </div>
+      </section>
+
+      <section class="feature wrap" id="agents" aria-labelledby="agents-title">
+        <div class="feature-copy">
+          <p class="eyebrow">Agents and modes</p>
+          <h2 id="agents-title">Your agent, in the mode you pick.</h2>
+          <p>
+            Choose Claude Code or Codex and one of its own permission modes, shown with the agent's
+            own names. When the mode asks, you get a card with the agent's reason.
+          </p>
+          <p>
+            Each chat keeps its agent running between messages. Its sub-agents show as cards with
+            what each one is doing, and the agent can start sub-chats in an outpost when the work
+            spans repos.
+          </p>
+          <p>
+            A safety floor holds in every chat: only the chat's own <code>spark/</code> branch is
+            pushed, never with plain force, and instruction files and git hooks ask first. Where a
+            mode never asks, Spark can't stop a step; it marks it ran without review and flags any
+            crossing.
+          </p>
+        </div>
+        <div class="demo" data-demo="modes"></div>
+      </section>
+
+      <section class="feature flip wrap" id="ship" aria-labelledby="ship-title">
+        <div class="feature-copy">
+          <p class="eyebrow">Chat to pull request</p>
+          <h2 id="ship-title">From a chat to a pull request.</h2>
+          <p>
+            Each chat works on its own <code>spark/</code> branch in a worktree. At
+            <strong>Full auto → PR</strong>, the agent pushes and opens the pull request, then
+            follows up on review comments.
+          </p>
+          <p>Nothing ever merges for you. That click stays yours.</p>
+        </div>
+        <div class="demo" data-demo="branch"></div>
+      </section>
+
+      <section class="feature wrap" id="browser" aria-labelledby="browser-title">
+        <div class="feature-copy">
+          <p class="eyebrow">Browser pane</p>
+          <h2 id="browser-title">A browser your agent can debug.</h2>
+          <p>
+            Open your app beside the chat. The agent reads the page, console errors with stacks, and
+            a network log with each request's start and end, so overlapping requests stand out.
+          </p>
+          <p>
+            It can click, type, inspect and run scripts, following your mode. It never sees password
+            or card fields, and your own tabs always ask.
+          </p>
+        </div>
+        <div class="demo" data-demo="waterfall"></div>
+      </section>
+
+      <section class="feature flip wrap" id="mac" aria-labelledby="mac-title">
+        <div class="feature-copy">
+          <p class="eyebrow">Mac control and terminals</p>
+          <h2 id="mac-title">Mac apps, and terminals that keep running.</h2>
+          <p>
+            Turn on Mac control and an agent can read another app and press its buttons and menus,
+            one app per chat, on macOS 14 or later. A first use, a send or a delete asks in every
+            mode; purchases, passwords and System Settings are refused.
+          </p>
+          <p>
+            Terminal sessions run Claude Code or Codex under tmux and survive restarts, updates and
+            crashes.
+          </p>
+        </div>
+        <div class="demo" data-demo="mac"></div>
+      </section>
+
+      <section class="feature wrap" id="calendar" aria-labelledby="calendar-title">
+        <div class="feature-copy">
+          <p class="eyebrow">Calendar</p>
+          <h2 id="calendar-title">Scout keeps you on time.</h2>
+          <p>
+            Connect Mac Calendar or Google Calendar. A minute before a meeting, Scout lowers a card
+            to the middle of your screen on a thread: <strong>Join</strong>,
+            <strong>Snooze 1 min</strong> or <strong>Dismiss</strong>.
+          </p>
+          <p>Join opens Zoom, Meet, Teams or Webex links in your browser. Try it.</p>
+        </div>
+        <div class="demo" data-demo="meeting"></div>
+      </section>
+
+      <section class="feature flip wrap" id="connectors" aria-labelledby="connectors-title">
+        <div class="feature-copy">
+          <p class="eyebrow">Connectors</p>
+          <h2 id="connectors-title">Bring your tickets and your team.</h2>
+          <p>
+            Connect GitHub, Atlassian (Jira and Confluence), ServiceNow, Linear and Slack, or add an
+            MCP server. Start a chat from a ticket and move it to In review when the pull request
+            opens.
+          </p>
+          <p>Every connection is optional, and Spark actions follow the agent's mode.</p>
+        </div>
+        <div class="demo" data-demo="connectors"></div>
+      </section>
+
+      <section class="feature wrap" id="phone" aria-labelledby="phone-title">
+        <div class="feature-copy">
+          <p class="eyebrow">Phone remote</p>
+          <h2 id="phone-title">Answer from your phone.</h2>
+          <p>
+            Pair a phone over Tailscale to follow chats, answer approval cards and get a push when a
+            chat needs you. Pairing is confirmed on the Mac, and the work stays there.
+          </p>
+          <p>Mac control, the Browser pane and starting Terminal sessions stay on the Mac.</p>
+        </div>
+        <div class="demo" data-demo="phone"></div>
+      </section>
+
+      <section class="feature flip wrap" id="privacy" aria-labelledby="privacy-title">
+        <div class="feature-copy">
+          <p class="eyebrow">Local-first</p>
+          <h2 id="privacy-title">Local-first, said honestly.</h2>
+          <p>
+            Your chats, settings and code stay on your Mac, and keys live in your Keychain. Spark
+            has no account for you to create.
+          </p>
+          <p>
+            What leaves is what the work needs: your AI provider receives your messages and what the
+            agent reads, and connected tools get what you or the agent send them. Select a line to
+            see it.
+          </p>
+        </div>
+        <div class="demo" data-demo="privacy"></div>
+      </section>
+
+      <section class="gallery wrap" aria-labelledby="gallery-title">
+        <h2 id="gallery-title">The real app</h2>
+        <p class="fine">Screenshots from the Spark Outpost user guide, made with demo data.</p>
+        <div class="shots">
+          <figure>
+            <img
+              src="../../docs/guide/images/chats-and-modes-permissions-dark.png"
+              alt="A new chat with the agent mode picker open, showing Claude's Manual, Accept edits, Plan, Auto and Bypass permissions modes"
+              width="1280"
+              height="800"
+              loading="lazy"
+              decoding="async"
+            />
+            <figcaption>Pick the agent's own mode for each chat.</figcaption>
+          </figure>
+          <figure>
+            <img
+              src="../../docs/guide/images/terminals-dock-dark.png"
+              alt="A chat with a shell terminal dock open below the message box"
+              width="1280"
+              height="800"
+              loading="lazy"
+              decoding="async"
+            />
+            <figcaption>A shell beside every chat, in the chat's worktree.</figcaption>
+          </figure>
+          <figure>
+            <img
+              src="../../docs/guide/images/ship-panel-dark.png"
+              alt="The Ship this task panel with Commit, Push and PR options, the branch, the remote and a pull request title"
+              width="394"
+              height="277"
+              loading="lazy"
+              decoding="async"
+            />
+            <figcaption>Or ship by hand: commit, push or open a PR.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="cta wrap" id="download" aria-labelledby="download-title">
+        <img src="/scout.svg" alt="" width="72" height="72" loading="lazy" />
+        <h2 id="download-title">Try the beta.</h2>
+        <p>Free while in beta. Updates download in the app, and you pick when to restart.</p>
+        <div class="download-row center">
+          <a
+            class="button large"
+            data-download
+            href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-latest-arm64.dmg"
+          >
+            Download for Mac · <span data-download-arch>Apple silicon</span>
+          </a>
+          <a
+            class="text-link"
+            data-download-other
+            href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-latest-x64.dmg"
+            >Intel Mac?</a
+          >
+        </div>
+        <p class="fine">
+          macOS 12+. Uses your own Claude Code or Codex CLI sign-in, or an API key.
+          <a href="/changelog.html">What's new</a>
+        </p>
+      </section>
+    </main>
+
+    <footer class="footer wrap">
+      <span>Spark Outpost · free beta · source available (FSL-1.1-MIT)</span>
+      <a href="/docs/">Docs</a>
+      <a href="/changelog.html">Changelog</a>
+      <a href="https://github.com/karki011/spark-outpost">Source code</a>
+      <span>This site sets no cookies and runs no analytics.</span>
+    </footer>
+  </body>
+</html>

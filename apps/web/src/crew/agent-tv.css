@@ -1,0 +1,234 @@
+.tv {
+  position: fixed;
+  z-index: 40;
+  right: var(--tv-right, 24px);
+  bottom: var(--tv-bottom, 24px);
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  max-width: var(--tv-max-w, calc(100vw - 16px));
+  max-height: var(--tv-max-h, calc(100dvh - 16px));
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--r) + 4px);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.32);
+  overflow: hidden;
+  animation: tv-in 0.45s var(--spring);
+  transition: right 0.38s var(--out);
+}
+.tv:focus {
+  outline: none;
+}
+.tv:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 18px 60px rgba(0, 0, 0, 0.32);
+}
+.tv > .tv-stage {
+  flex: none;
+}
+.tv > .tvl {
+  min-height: 0;
+}
+@keyframes tv-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+}
+.tv.watch {
+  z-index: 60;
+  inset: 0;
+  margin: auto;
+  width: fit-content;
+  height: fit-content;
+  animation: tv-zoom 0.4s var(--spring);
+}
+@keyframes tv-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+.tv-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+  backdrop-filter: blur(3px);
+  animation: tv-fade 0.3s var(--out);
+}
+@keyframes tv-fade {
+  from {
+    opacity: 0;
+  }
+}
+.tv-h {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 5px 5px 12px;
+  border-bottom: 1px solid var(--line);
+  cursor: grab;
+  font-size: 13px;
+  font-weight: 600;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.tv-h:active {
+  cursor: grabbing;
+}
+.tv.watch .tv-h {
+  cursor: default;
+}
+.tv-h > span {
+  flex: 1;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+.tv-h > .tv-title {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+.tv-branch {
+  flex: 1;
+  min-width: 0;
+  contain: inline-size;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+}
+.tv-h > .tv-size {
+  flex: none;
+  display: flex;
+  margin: 0;
+}
+.tv-h small {
+  font-weight: 400;
+  color: var(--faint);
+  font-size: 12px;
+}
+.tv-h .icon-btn {
+  width: 28px;
+  height: 28px;
+}
+.tv-h .icon-btn[aria-pressed='true'] {
+  background: var(--raise);
+  color: var(--text);
+}
+.tv-h .seg {
+  width: 78px;
+  margin-right: 2px;
+  padding: 2px;
+}
+.tv-h .seg button {
+  padding: 2px 0;
+  font-size: 12px;
+}
+.tv-h .seg .seg-ind {
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc((100% - 4px) / var(--n, 4));
+}
+.tv-live {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: tv-pulse 1.4s ease-in-out infinite;
+}
+@keyframes tv-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+.tv-subagents {
+  contain: inline-size;
+  min-height: 72px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+}
+.tv-subagents:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.tv-messages {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  max-height: 100px;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+}
+.tv-cap {
+  flex: none;
+  contain: inline-size;
+  margin: 0;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.tv-cap b {
+  color: var(--text);
+  font-weight: 500;
+}
+.tv.watch .tv-cap {
+  font-size: 14px;
+  text-align: center;
+}
+.tv.paused *,
+.tv.paused *::before,
+.tv.paused *::after {
+  animation-play-state: paused !important;
+}
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .tv-messages button,
+  .tv-subagents .btn {
+    min-height: 44px;
+  }
+  .tv:not(.watch) {
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    width: auto;
+    top: auto;
+  }
+  .tv-h {
+    cursor: default;
+  }
+  .tv-h .tv-size {
+    display: none;
+  }
+}
+@media (pointer: coarse) {
+  .tv-messages button,
+  .tv-subagents .btn {
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tv {
+    transition: none;
+  }
+  .tv,
+  .tv.watch,
+  .tv-dim,
+  .tv-live {
+    animation: none;
+  }
+}

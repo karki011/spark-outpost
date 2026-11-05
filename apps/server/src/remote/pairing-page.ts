@@ -1,0 +1,285 @@
+import { randomBytes } from 'node:crypto';
+import type { Response } from 'express';
+import {
+  PAIRING_CODE_LENGTH,
+  REMOTE_DEVICE_NAME_MAX,
+  SCOUT_ANTENNA,
+  SCOUT_BODY,
+  SCOUT_SPARK,
+} from '@spark-outpost/contracts';
+import { PAIRING_PAGE_STYLES } from './pairing-page-styles.ts';
+
+const POLL_MS = 2000;
+const PAIRED_MOMENT_MS = 1200;
+
+const BLOB = `
+<svg class="blob" viewBox="0 0 64 64" width="72" height="72" aria-hidden="true">
+<g class="hop"><g class="body">
+<path class="ant" d="${SCOUT_ANTENNA}" fill="none" stroke-width="3" stroke-linecap="round"/>
+<path class="spark" d="${SCOUT_SPARK}"/>
+<path class="skin" d="${SCOUT_BODY}"/>
+<circle class="cheek" cx="18.5" cy="46.5" r="2.7"/>
+<circle class="cheek" cx="45.5" cy="46.5" r="2.7"/>
+<g class="look">
+<rect class="eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/>
+<rect class="eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/>
+<path class="smile" d="M22.4 40.5Q25.3 34.5 28.2 40.5M35.8 40.5Q38.7 34.5 41.6 40.5"/>
+</g></g></g>
+</svg>`;
+
+const THEME_KEY = 'spark-outpost.theme';
+const DEFAULT_SKIN = 'graphite';
+
+const THEME_SCRIPT = `
+  let saved = null;
+  try {
+    saved = localStorage.getItem('${THEME_KEY}');
+  } catch {
+    saved = null;
+  }
+  try {
+    document.documentElement.dataset.skin = window.sparkAppearance.skin(saved, false);
+  } catch {
+    document.documentElement.dataset.skin = '${DEFAULT_SKIN}';
+  }
+`;
+
+const SCRIPT = `
+  const main = document.querySelector('main');
+  const form = document.getElementById('pair');
+  const wait = document.getElementById('wait');
+  const done = document.getElementById('done');
+  const retry = document.getElementById('retry');
+  const passkey = document.getElementById('passkey');
+  const canPasskey = Boolean(passkey && window.PublicKeyCredential && navigator.credentials);
+  const show = (stage) => {
+    main.dataset.stage = stage;
+    form.hidden = stage !== 'enter';
+    if (passkey) passkey.hidden = stage !== 'enter' || !canPasskey;
+    wait.hidden = stage !== 'waiting';
+    done.hidden = stage !== 'paired';
+    retry.hidden = stage !== 'ended';
+  };
+  document.addEventListener('visibilitychange', () => {
+    main.toggleAttribute('data-paused', document.hidden);
+  });
+  const status = document.getElementById('status');
+  const code = document.getElementById('code');
+  const name = document.getElementById('name');
+  const grouped = (text) =>
+    (text.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, ${PAIRING_CODE_LENGTH}).match(/.{1,4}/g) || [])
+      .join('-');
+  const fromLink = new URLSearchParams(location.hash.slice(1)).get('code');
+  if (fromLink) {
+    code.value = grouped(fromLink);
+    history.replaceState(null, '', location.pathname);
+    name.focus();
+  } else if (location.search) history.replaceState(null, '', location.pathname);
+  code.addEventListener('input', () => {
+    code.removeAttribute('aria-invalid');
+    if (code.selectionStart === code.value.length) code.value = grouped(code.value);
+  });
+  code.addEventListener('blur', () => {
+    code.value = grouped(code.value);
+  });
+  const say = (text, kind) => {
+    status.textContent = text;
+    status.dataset.kind = kind || '';
+  };
+  const post = (path, body) =>
+    fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  const failed = async (response) => {
+    const body = await response.json().catch(() => ({}));
+    form.querySelector('button').disabled = false;
+    show('ended');
+    say(body.error || 'Pairing did not work. Try again.', 'error');
+    retry.focus();
+  };
+  const poll = async (claim) => {
+    const response = await post('/api/remote/pair/claim', { claim }).catch(() => null);
+    if (response && response.ok) {
+      const body = await response.json();
+      if (body.status === 'paired') {
+        show('paired');
+        say('Paired. Opening Spark Outpost…');
+        setTimeout(() => location.replace('/'), ${PAIRED_MOMENT_MS});
+        return;
+      }
+    } else if (response) {
+      await failed(response);
+      return;
+    }
+    setTimeout(() => poll(claim), ${POLL_MS});
+  };
+  retry.addEventListener('click', () => {
+    code.value = '';
+    show('enter');
+    say('');
+    code.focus();
+  });
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    form.querySelector('button').disabled = true;
+    say('Checking the code…');
+    const response = await post('/api/remote/pair', {
+      code: code.value,
+      deviceName: name.value,
+    }).catch(() => null);
+    if (!response) {
+      form.querySelector('button').disabled = false;
+      say('Your Mac did not answer. Try again.', 'error');
+      return;
+    }
+    if (!response.ok) {
+      const refused = await response.json().catch(() => ({}));
+      form.querySelector('button').disabled = false;
+      code.setAttribute('aria-invalid', 'true');
+      say(refused.error || 'Pairing did not work. Try again.', 'error');
+      code.focus();
+      code.select();
+      return;
+    }
+    const body = await response.json();
+    document.getElementById('match').textContent = body.matchCode;
+    show('waiting');
+    say('Waiting for you to confirm on your Mac…');
+    poll(body.claim);
+  });
+`;
+
+const PASSKEY_SCRIPT = `
+  const passkeyButton = document.getElementById('passkey-button');
+  const NO_ANSWER = 'Your Mac did not answer. Try again.';
+  const NOT_USED = 'No passkey was used. Try again, or pair with a code from your Mac.';
+  const bytes = (text) =>
+    Uint8Array.from(atob(text.replaceAll('-', '+').replaceAll('_', '/')), (char) =>
+      char.charCodeAt(0));
+  const encoded = (buffer) =>
+    btoa(String.fromCharCode(...new Uint8Array(buffer)))
+      .replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+  const answerOf = async (path, body) => {
+    const response = await post(path, body).catch(() => null);
+    if (!response) return { error: NO_ANSWER };
+    const answer = await response.json().catch(() => ({}));
+    return response.ok ? { body: answer } : { error: answer.error || NOT_USED };
+  };
+  const askPasskey = (options) =>
+    navigator.credentials
+      .get({
+        publicKey: {
+          challenge: bytes(options.challenge),
+          rpId: options.rpId,
+          timeout: options.timeout,
+          userVerification: options.userVerification,
+        },
+      })
+      .catch(() => null);
+  const assertionOf = (credential) => {
+    const { clientDataJSON, authenticatorData, signature, userHandle } = credential.response;
+    return {
+      id: credential.id,
+      rawId: encoded(credential.rawId),
+      type: credential.type,
+      response: {
+        clientDataJSON: encoded(clientDataJSON),
+        authenticatorData: encoded(authenticatorData),
+        signature: encoded(signature),
+        ...(userHandle && userHandle.byteLength ? { userHandle: encoded(userHandle) } : {}),
+      },
+    };
+  };
+  const signInWithPasskey = async () => {
+    const options = await answerOf('/api/remote/passkey/sign-in/options', {});
+    if (options.error) return options.error;
+    const credential = await askPasskey(options.body);
+    if (!credential) return NOT_USED;
+    const signedIn = await answerOf('/api/remote/passkey/sign-in', assertionOf(credential));
+    return signedIn.error || null;
+  };
+  if (canPasskey) {
+    passkey.hidden = false;
+    passkeyButton.addEventListener('click', async () => {
+      passkeyButton.disabled = true;
+      say('Asking for your passkey…');
+      const problem = await signInWithPasskey();
+      if (problem) {
+        passkeyButton.disabled = false;
+        say(problem, 'error');
+        passkeyButton.focus();
+        return;
+      }
+      show('paired');
+      say('Signed in. Opening Spark Outpost…');
+      setTimeout(() => location.replace('/'), ${PAIRED_MOMENT_MS});
+    });
+  }
+`;
+
+const PASSKEY_SECTION = `
+<section id="passkey" hidden>
+<p class="or">Paired this device before?</p>
+<button type="button" id="passkey-button" class="quiet">Sign in with a passkey</button>
+</section>`;
+
+export interface PairingPageOptions {
+  passkeys: boolean;
+}
+
+function page(nonce: string, options: PairingPageOptions): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Pair with Spark Outpost</title>
+<link rel="stylesheet" href="/theme.css">
+<script nonce="${nonce}" src="/appearance.js"></script>
+<script nonce="${nonce}">${THEME_SCRIPT}</script>
+<style nonce="${nonce}">${PAIRING_PAGE_STYLES}</style>
+</head>
+<body>
+<main data-stage="enter">
+<div class="scene">${BLOB}<i class="shadow"></i></div>
+<h1>Pair this device</h1>
+<form id="pair">
+<p>Start pairing in Spark Outpost on your Mac, then type the code it shows.</p>
+<label for="code">Pairing code</label>
+<input id="code" name="code" required maxlength="40" inputmode="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="next" aria-describedby="status" placeholder="XXXX-XXXX-XXXX">
+<label for="name">Device name</label>
+<input id="name" name="name" required maxlength="${REMOTE_DEVICE_NAME_MAX}" autocomplete="off" autocapitalize="words" enterkeyhint="go" placeholder="My device">
+<button type="submit">Pair</button>
+</form>${options.passkeys ? PASSKEY_SECTION : ''}
+<section id="wait" hidden>
+<p>Confirm on your Mac. It should show this code.</p>
+<p class="match" id="match"></p>
+</section>
+<section id="done" hidden>
+<p>This device is paired.</p>
+</section>
+<button type="button" id="retry" hidden>Try again</button>
+<p id="status" role="status" aria-live="polite"></p>
+</main>
+<script nonce="${nonce}">${SCRIPT}${options.passkeys ? PASSKEY_SCRIPT : ''}</script>
+</body>
+</html>`;
+}
+
+export function sendPairingPage(res: Response, options: PairingPageOptions): void {
+  const nonce = randomBytes(16).toString('base64');
+  res
+    .status(200)
+    .set({
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'Referrer-Policy': 'no-referrer',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Content-Security-Policy': `default-src 'none'; style-src 'self' 'nonce-${nonce}'; script-src 'nonce-${nonce}'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
+    })
+    .send(page(nonce, options));
+}

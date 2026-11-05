@@ -1,0 +1,227 @@
+.btog {
+  --btog-body: var(--line-strong);
+  --btog-extra: color-mix(in srgb, var(--line-strong) 65%, var(--panel));
+  --btog-ink: var(--scout-eye);
+  --btog-delay: 0s;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.btog[data-on='true'] {
+  --btog-body: var(--switch-on);
+  --btog-extra: var(--warn);
+  --btog-ink: var(--switch-on-ink);
+}
+.btog-live[data-on='false'] {
+  --btog-delay: 0.55s;
+}
+.btog:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.btog.sm {
+  width: 34px;
+  height: 34px;
+}
+.btog.sm .btog-blob {
+  width: 28px;
+  height: 28px;
+  margin-top: -4px;
+}
+.btog-face {
+  cursor: inherit;
+}
+.btog-blob {
+  width: 38px;
+  height: 38px;
+  margin-top: -6px;
+  overflow: visible;
+  opacity: 0.7;
+  transition:
+    opacity 0.25s var(--btog-delay),
+    transform 0.2s var(--out);
+}
+.btog[data-on='true'] .btog-blob {
+  opacity: 1;
+}
+.btog:hover:not(:disabled) .btog-blob {
+  transform: translateY(-1px);
+}
+.btog-hop,
+.btog-body {
+  transform-box: view-box;
+  transform-origin: 32px 58px;
+}
+.btog-body {
+  transform: translateY(2px) scale(1.1, 0.82);
+  transition: transform 0.35s var(--spring) var(--btog-delay);
+}
+.btog[data-on='true'] .btog-body {
+  transform: none;
+}
+.btog-skin {
+  fill: var(--btog-body);
+  transition: fill 0.25s var(--btog-delay);
+}
+.btog-extra {
+  fill: var(--btog-extra);
+  transition: fill 0.25s var(--btog-delay);
+}
+.btog-ant {
+  fill: none;
+  stroke: var(--btog-body);
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  transform-box: view-box;
+  transform-origin: 38px 19px;
+  transform: rotate(52deg);
+  transition:
+    transform 0.35s var(--spring) var(--btog-delay),
+    stroke 0.25s var(--btog-delay);
+}
+.btog[data-on='true'] .btog-ant {
+  transform: none;
+}
+.btog-spark {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0.4);
+  transition:
+    opacity 0.2s var(--btog-delay),
+    transform 0.35s var(--spring) var(--btog-delay);
+}
+.btog[data-on='true'] .btog-spark {
+  opacity: 1;
+  transform: none;
+}
+.btog-sun {
+  transform: translateY(21px);
+  transition: transform 0.5s var(--spring) var(--btog-delay);
+}
+.btog[data-on='true'] .btog-sun {
+  transform: none;
+}
+.btog-rays {
+  fill: none;
+  stroke: var(--btog-extra);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  opacity: 0;
+  transition: opacity 0.2s var(--btog-delay);
+}
+.btog[data-on='true'] .btog-rays {
+  opacity: 1;
+}
+.btog-line {
+  fill: none;
+  stroke: var(--btog-ink);
+  stroke-width: 3.4;
+  stroke-linecap: round;
+}
+.btog-mouth {
+  fill: var(--btog-ink);
+}
+.btog-cheek {
+  fill: var(--warn);
+  opacity: 0.6;
+}
+.btog-awake,
+.btog-asleep {
+  transition: opacity 0.15s var(--btog-delay);
+}
+.btog-awake,
+.btog[data-on='true'] .btog-asleep {
+  opacity: 0;
+}
+.btog[data-on='true'] .btog-awake {
+  opacity: 1;
+}
+.btog-yawn {
+  fill: var(--btog-ink);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.btog-z {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: btog-doze 2.6s ease-in-out infinite;
+}
+.btog[data-on='true'] .btog-z {
+  opacity: 0;
+  animation: none;
+}
+@keyframes btog-doze {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: translate(-2px, 3px) scale(0.75);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(1px, -2px) scale(1);
+  }
+}
+.btog-live[data-on='true'] .btog-hop {
+  animation: btog-hop 0.7s var(--out);
+}
+@keyframes btog-hop {
+  15% {
+    transform: scale(1.14, 0.84);
+  }
+  42% {
+    transform: translateY(-13px) scale(0.9, 1.14);
+  }
+  66% {
+    transform: translateY(0) scale(1.16, 0.84);
+  }
+  84% {
+    transform: scale(0.97, 1.04);
+  }
+}
+.btog-live[data-on='false'] .btog-hop {
+  animation: btog-stretch 0.9s ease-in-out;
+}
+@keyframes btog-stretch {
+  35% {
+    transform: scale(0.94, 1.1);
+  }
+  60% {
+    transform: scale(0.97, 1.06);
+  }
+}
+.btog-live[data-on='false'] .btog-yawn {
+  animation: btog-yawn 0.9s ease-in-out;
+}
+@keyframes btog-yawn {
+  20%,
+  60% {
+    opacity: 1;
+    transform: scale(1, 1.15);
+  }
+  80% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btog *,
+  .btog-blob {
+    animation: none !important;
+    transition: none !important;
+  }
+}

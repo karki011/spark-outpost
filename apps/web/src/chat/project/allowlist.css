@@ -1,0 +1,71 @@
+.allowlist {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  padding-top: 4px;
+}
+.allow-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  text-align: left;
+  font-size: 13px;
+}
+.allow-head:hover {
+  background: var(--raise);
+}
+.allow-head > span {
+  flex: 1;
+  min-width: 0;
+}
+.allow-head small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.allow-head svg {
+  transform: rotate(-90deg);
+  transition: transform 0.2s var(--out);
+}
+.allow-head[aria-expanded='true'] svg {
+  transform: none;
+}
+.allow-body {
+  padding: 2px 10px 6px;
+}
+.allow-body ul {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+}
+.allow-body li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  min-width: 0;
+}
+.allow-body li code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.allow-add {
+  display: flex;
+  gap: 6px;
+}
+.allow-add .inp {
+  flex: 1;
+  min-width: 0;
+}
+.allow-note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--faint);
+  line-height: 1.4;
+}

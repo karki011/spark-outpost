@@ -1,0 +1,36 @@
+.md,
+.dd-code,
+.dv {
+  --code-foreground: var(--text);
+  --code-background: transparent;
+  --code-token-comment: var(--faint);
+  --code-token-keyword: var(--accent-text);
+  --code-token-constant: color-mix(in srgb, var(--warn) 85%, var(--text));
+  --code-token-string: color-mix(in srgb, var(--accent) 45%, var(--text));
+  --code-token-string-expression: color-mix(in srgb, var(--accent) 45%, var(--text));
+  --code-token-function: color-mix(in srgb, var(--warn) 55%, var(--accent-text));
+  --code-token-parameter: var(--muted);
+  --code-token-punctuation: var(--muted);
+  --code-token-link: var(--accent-text);
+  --code-word-comment: color-mix(in srgb, var(--code-token-comment) 65%, var(--code-foreground));
+  --code-word-keyword: color-mix(in srgb, var(--code-token-keyword) 65%, var(--code-foreground));
+  --code-word-constant: color-mix(in srgb, var(--code-token-constant) 65%, var(--code-foreground));
+  --code-word-string: color-mix(in srgb, var(--code-token-string) 65%, var(--code-foreground));
+  --code-word-string-expression: color-mix(
+    in srgb,
+    var(--code-token-string-expression) 65%,
+    var(--code-foreground)
+  );
+  --code-word-function: color-mix(in srgb, var(--code-token-function) 65%, var(--code-foreground));
+  --code-word-parameter: color-mix(
+    in srgb,
+    var(--code-token-parameter) 65%,
+    var(--code-foreground)
+  );
+  --code-word-punctuation: color-mix(
+    in srgb,
+    var(--code-token-punctuation) 65%,
+    var(--code-foreground)
+  );
+  --code-word-link: color-mix(in srgb, var(--code-token-link) 65%, var(--code-foreground));
+}

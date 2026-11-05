@@ -1,0 +1,129 @@
+.ph-scene .scout {
+  transform-origin: 50% 100%;
+}
+.ph-scene .scout .sc-look {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.ph-scene:is([data-blob='working'], [data-blob='unsure']) .ph-scene-blob {
+  opacity: 1;
+}
+.ph-scene[data-blob='working'] .ph-scene-blob {
+  animation: ph-perk 0.5s var(--spring) both;
+}
+.ph-scene[data-blob='working'] .scout {
+  animation: ph-bob 1.6s ease-in-out 0.5s infinite;
+}
+.ph-scene[data-blob='unsure'] .ph-scene-blob {
+  transform: rotate(-7deg);
+  animation: ph-shrug 0.6s var(--out) both;
+}
+.ph-scene[data-blob='unsure'] .ph-scene-line {
+  color: var(--text);
+}
+.ph-scene[data-blob='idle'] .scout {
+  animation: ph-bob 5s ease-in-out infinite;
+}
+.ph-scene[data-blob='idle'] .scout .sc-look {
+  animation: ph-glance 12s ease-in-out infinite;
+}
+.ph-scene[data-blob='alert'] .scout {
+  animation: ph-hop 2.4s var(--out) infinite;
+}
+.ph-scene:is([data-blob='alert'], [data-blob='urgent']) .scout .sc-look {
+  animation: ph-watch 2.4s ease-in-out infinite;
+}
+.ph-scene[data-blob='urgent'] .ph-scene-blob {
+  animation: ph-nudge 0.8s ease-in-out infinite;
+}
+.ph-scene[data-blob='expectant'] .scout {
+  animation: ph-lean 3.2s ease-in-out 0.5s infinite;
+}
+.ph-scene[data-blob='expectant'] .scout .sc-look {
+  animation: ph-expect 6.4s ease-in-out 0.5s infinite;
+}
+@keyframes ph-bob {
+  50% {
+    transform: translateY(-2px);
+  }
+}
+@keyframes ph-glance {
+  0%,
+  28%,
+  50%,
+  62%,
+  84%,
+  90%,
+  94%,
+  100% {
+    transform: none;
+  }
+  33%,
+  45% {
+    transform: translate(-1.8px, 1.6px);
+  }
+  67%,
+  79% {
+    transform: translate(1.8px, 1.6px);
+  }
+  92% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes ph-hop {
+  0%,
+  26%,
+  100% {
+    transform: none;
+  }
+  10% {
+    transform: translateY(-4px) scale(0.98, 1.03);
+  }
+  20% {
+    transform: scale(1.03, 0.97);
+  }
+}
+@keyframes ph-watch {
+  0%,
+  66%,
+  100% {
+    transform: translate(1.8px, 1.8px);
+  }
+  76%,
+  90% {
+    transform: none;
+  }
+}
+@keyframes ph-lean {
+  50% {
+    transform: translateX(1.5px) rotate(3deg);
+  }
+}
+@keyframes ph-expect {
+  0%,
+  52%,
+  100% {
+    transform: translate(2.6px, 0.4px);
+  }
+  62%,
+  88% {
+    transform: translate(0.8px, 2.2px);
+  }
+}
+.ph-scene[data-paused] :is(.ph-scene-blob, .ph-scene-phone, .scout, .scout *),
+:root[data-motion='paused'] .ph-scene :is(.ph-scene-blob, .ph-scene-phone, .scout) {
+  animation-play-state: paused !important;
+}
+:root[data-motion='paused'] .ph-scene .scout {
+  --motion-paused: 1;
+}
+@container style(--motion-paused: 1) {
+  .ph-scene .scout * {
+    animation-play-state: paused !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ph-scene .scout {
+    animation: none !important;
+  }
+}

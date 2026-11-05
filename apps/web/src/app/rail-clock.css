@@ -1,0 +1,62 @@
+.rail-clock {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  flex-shrink: 0;
+  max-width: 68px;
+  min-height: 24px;
+  margin-top: 2px;
+  padding: 3px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  background: var(--rail);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+button.rail-clock:hover {
+  background: var(--raise);
+}
+
+.rail-clock-face {
+  display: block;
+  max-width: 60px;
+}
+
+.rail-clock-period {
+  color: var(--muted);
+}
+
+.rail-clock-digits {
+  display: inline-block;
+}
+
+.rail-clock-digits.flip {
+  animation: rail-clock-flip 0.32s var(--out);
+}
+
+@keyframes rail-clock-flip {
+  from {
+    opacity: 0;
+    transform: perspective(40px) rotateX(-70deg) translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail-clock-digits.flip {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .rail-clock {
+    display: none;
+  }
+}

@@ -1,0 +1,51 @@
+.signin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.signin-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  font-size: 12.5px;
+}
+.signin-label {
+  flex-shrink: 0;
+  font-weight: 500;
+  color: var(--text);
+}
+.signin-origin,
+.signin-user {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.signin-user {
+  flex: 1;
+  color: var(--faint);
+}
+.signin-form {
+  padding-top: 6px;
+}
+.signin-refused {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .signin-item {
+    flex-wrap: wrap;
+    row-gap: 2px;
+    padding: 4px 0;
+  }
+}

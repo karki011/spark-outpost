@@ -1,0 +1,51 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "workspaces": {
+    ".": {
+      "entry": [
+        "scripts/*.ts",
+        "scripts/codescan/{bench,load,loop-bench,requests}.ts",
+        "scripts/turn-tasks/{runner,report,scratch-repo}/cli.ts",
+        "tests/browser/*.spec.ts",
+        "tests/browser/provider-stub.ts",
+        "tests/browser/ensure-database.ts",
+        "tests/browser/fake-browser-host.ts",
+        "tests/browser/fake-calendar-host.ts",
+        "tests/browser/bin/gh-fake.ts",
+        "tests/browser/terminal-usage-cli.ts",
+        "tests/browser/bin/tailscale-fake.ts",
+        "tests/fixtures/browser-pane/serve.ts",
+        "infra/heartbeat-worker/src/worker.ts"
+      ],
+      "project": ["scripts/**/*.ts", "tests/**/*.ts", "infra/**/*.ts"],
+      "ignore": ["scripts/bench/fixture/**"]
+    },
+    "apps/server": {
+      "entry": ["test/fake-*.ts", "test/echo-mcp-server.mjs"],
+      "project": ["src/**/*.ts", "test/**/*.{ts,mjs}"]
+    },
+    "apps/web": {
+      "entry": ["src/chat/approvals/diff-worker.ts"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["@fontsource-variable/inter", "@fontsource-variable/geist-mono"]
+    },
+    "apps/site": {
+      "entry": ["src/changelog/page.ts", "src/docs/page.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "apps/desktop": {
+      "entry": [
+        "src/server-entry.ts",
+        "src/boot-preload.ts",
+        "src/media-guard-preload.ts",
+        "src/copy-guard-preload.ts",
+        "src/runtime-host.ts"
+      ],
+      "project": ["src/**/*.ts", "scripts/**/*.ts"]
+    },
+    "packages/contracts": {
+      "project": ["src/**/*.ts"]
+    }
+  }
+}

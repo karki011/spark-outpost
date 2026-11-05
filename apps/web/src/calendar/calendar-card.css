@@ -1,0 +1,172 @@
+.cal-source {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-source + .cal-source {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.cal-source h3 {
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.cal-notice {
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+}
+
+.cal-src-h {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+
+.cal-src-h h3 {
+  flex: none;
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.cal-src-h small {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.cal-muted {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.cal-accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-acct-h {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cal-acct-h small {
+  flex: none;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.cal-rows-h {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0 2px;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.cal-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+
+.cal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 2px 6px 2px 10px;
+}
+
+.cal-row + .cal-row {
+  border-top: 1px solid var(--line);
+}
+
+.cal-row[data-off] .cal-title {
+  color: var(--muted);
+}
+
+.cal-row[data-off] .cal-sw {
+  opacity: 0.55;
+}
+
+.cal-include {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.cal-title {
+  flex: 0 1 auto;
+  font-size: 13.5px;
+}
+
+.cal-end {
+  margin-left: auto;
+}
+
+.cal-col {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  width: 92px;
+}
+
+.cal-more {
+  align-self: flex-start;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.cal-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cal-foot .cal-muted {
+  margin-right: auto;
+}
+
+.cal-nudge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.cal-nudge-list-h {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.cal-nudge-list-h small {
+  color: var(--muted);
+  font-size: 12.5px;
+}

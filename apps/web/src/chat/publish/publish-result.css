@@ -1,0 +1,33 @@
+.publish-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 28px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.publish-result > .row-ico {
+  flex: none;
+  margin-top: 6px;
+  color: var(--faint);
+}
+
+.publish-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.publish-body .md {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.publish-body .md p {
+  margin: 4px 0;
+}
+
+.publish-body .md a {
+  color: var(--text);
+}

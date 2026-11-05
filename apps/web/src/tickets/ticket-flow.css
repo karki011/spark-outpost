@@ -1,0 +1,97 @@
+.tk .fchip {
+  --tone: var(--muted);
+  justify-self: start;
+  min-width: 0;
+  max-width: 100%;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px 0 5px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--tone);
+  white-space: nowrap;
+}
+
+.tk .fchip.in_progress {
+  --tone: var(--accent-text);
+}
+
+.tk .fchip.in_review {
+  --tone: var(--warn);
+}
+
+.tk .fchip.blocked {
+  --tone: var(--danger);
+}
+
+.tk .fchip.done {
+  --tone: var(--success);
+}
+
+.tk .fchip > svg {
+  flex-shrink: 0;
+}
+
+.tk .fchip-l {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tk .fchip:is(.in_progress, .in_review, .blocked) {
+  background: color-mix(in srgb, var(--tone) 11%, var(--panel));
+}
+
+.tk .fchip:is(.todo, .done) {
+  border-color: var(--line);
+}
+
+.tk .fchip.ci {
+  flex-shrink: 0;
+}
+
+.tk .fchip.ci.unseen::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin-left: 1px;
+  border-radius: 50%;
+  background: var(--tone);
+}
+
+.tk .ir-who {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.tk .ir-who.none {
+  border: 1.5px dashed var(--line-strong);
+}
+
+.tk .why-r > :is(.tm-face, .agent-blob) {
+  flex-shrink: 0;
+}
+
+.tk .sk.sk-chip {
+  width: 96px;
+  height: 18px;
+  border-radius: 999px;
+}
+
+.tk .sk.sk-who {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+
+.tk .dlg-head .fchip {
+  margin-top: 6px;
+}

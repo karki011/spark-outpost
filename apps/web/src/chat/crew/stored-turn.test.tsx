@@ -1,0 +1,172 @@
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Run } from '@spark-outpost/contracts';
+import { CrewTurn } from './CrewTurn.tsx';
+import { orchestrationSchema } from '@spark-outpost/contracts';
+import released from '../../../../../packages/contracts/src/stored-crew-turn.fixture.json' with { type: 'json' };
+import { BOLT, CLOSING_REPLY, TURN, crewTurn } from './stored-turn-fixture.ts';
+
+class QuietEventSource {
+  onmessage: ((message: MessageEvent<string>) => void) | null = null;
+  close() {}
+}
+
+beforeEach(() => {
+  vi.stubGlobal('EventSource', QuietEventSource);
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response('{}', { status: 404 })),
+  );
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+function show(status: Run['status'], memberRuns: Run[] = []) {
+  const base = crewTurn(status);
+  const turn = { ...base, detail: { ...base.detail, runs: [...base.detail.runs, ...memberRuns] } };
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const tree = (current: ReturnType<typeof crewTurn>) => (
+    <QueryClientProvider client={client}>
+      <CrewTurn {...current} repo={null} />
+    </QueryClientProvider>
+  );
+  const view = render(tree(turn));
+  return { view };
+}
+
+const board = () => screen.queryByRole('region', { name: 'Pieces' });
+const messageButtons = () => screen.queryAllByRole('button', { name: /^Message / });
+const parallel = (word: string) =>
+  screen.getByRole('group', { name: `${word} in parallel: Bolt and Rivet` });
+
+describe('a stored crew turn', () => {
+  it('shows no piece board, no Message button on any helper and no dispatch line', () => {
+    const { view } = show('succeeded');
+    expect(board()).toBeNull();
+    expect(messageButtons()).toEqual([]);
+    expect(view.container.querySelector('.jevline')).toBeNull();
+  });
+
+  it("keeps the transcript: each helper's reply, model and cost, and the turn total", () => {
+    const { view } = show('succeeded');
+    const group = parallel('Worked');
+    expect(
+      within(group)
+        .getAllByRole('button')
+        .map((head) => head.textContent),
+    ).toEqual([
+      'BoltP1 · shared tree · owns 1 fileDone',
+      'RivetP2 · shared tree · owns 1 fileDone',
+    ]);
+    expect(view.container.querySelector('[data-agent]')?.textContent).toContain(
+      'Here is the split.',
+    );
+    expect(view.container.querySelector('.crew-foot')?.textContent).toBe(
+      'Done 3 agents · 38.1K tokens · $0.09 · Jev ~<$0.001',
+    );
+  });
+
+  it('opens a helper to its reply, model and cost, still with no Message button', () => {
+    const { view } = show('succeeded');
+    fireEvent.click(within(parallel('Worked')).getByRole('button', { name: /Bolt/ }));
+    const bolt = view.container.querySelector('.par-body [data-agent]')!;
+    expect(bolt.textContent).toContain('Store built with a Map.');
+    expect(bolt.querySelector('.ah-meta')?.textContent).toContain('Sonnet 5');
+    expect(bolt.querySelector('.ah-meta')?.textContent).toContain('$0.03');
+    expect(messageButtons()).toEqual([]);
+  });
+
+  it("shows a helper's whole to-do, folded once it finished, even when an earlier turn had the same items", () => {
+    const todo = [
+      { content: 'Build the store', priority: 'medium', status: 'completed' },
+      { content: 'Export it', priority: 'medium', status: 'completed' },
+    ] as const;
+    const bolt = {
+      id: BOLT,
+      createdAt: '2026-09-26T10:03:00.000Z',
+      parentRunId: TURN,
+      status: 'succeeded',
+      todo,
+    } as unknown as Run;
+    const earlier = {
+      id: '00000000-0000-4000-8000-0000000000b9',
+      createdAt: '2026-09-26T09:00:00.000Z',
+      parentRunId: null,
+      status: 'succeeded',
+      todo,
+    } as unknown as Run;
+    const { view } = show('succeeded', [earlier, bolt]);
+    fireEvent.click(within(parallel('Worked')).getByRole('button', { name: /Bolt/ }));
+    const block = view.container.querySelector('.par-body [data-agent]')!;
+    expect(
+      within(block as HTMLElement).getByRole('button', { name: 'To-do: 2 of 2 done' }),
+    ).toBeTruthy();
+  });
+
+  it('keeps a message the user sent a helper during the turn and the saved plan line', () => {
+    const { view } = show('succeeded');
+    const steered = view.container.querySelector('.msg.me.steered')!;
+    expect(steered.textContent).toContain('Use a Map for the store');
+    expect(view.container.textContent).toContain('Plan saved · 2 pieces');
+  });
+
+  it("shows the turn's own closing reply once, after the helpers", () => {
+    const { view } = show('succeeded');
+    const closing = view.container.querySelector('.crew-summary');
+    expect(closing?.textContent).toBe(CLOSING_REPLY);
+    const text = view.container.textContent ?? '';
+    expect(text.split(CLOSING_REPLY)).toHaveLength(2);
+    expect(text.indexOf('Here is the split.')).toBeLessThan(text.indexOf(CLOSING_REPLY));
+  });
+
+  it('shows the closing reply of a turn the released version stored', () => {
+    const turn = crewTurn('succeeded');
+    const stored = orchestrationSchema.parse(released.orchestration);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(
+      <QueryClientProvider client={client}>
+        <CrewTurn {...turn} orchestration={stored} repo={null} />
+      </QueryClientProvider>,
+    );
+    expect(view.container.querySelector('.crew-summary')?.textContent).toBe(CLOSING_REPLY);
+  });
+
+  it('places a flag by its time, before the blocks that came after it', () => {
+    const base = crewTurn('succeeded');
+    const flag = {
+      id: 'flag-1',
+      runId: base.run.id,
+      turnRunId: base.run.id,
+      conversationId: base.detail.conversation.id,
+      rail: 'sent_out' as const,
+      title: 'Claude sent data out',
+      paths: [],
+      inside: false,
+      originals: [],
+      status: 'open' as const,
+      createdAt: '2000-01-01T00:00:00.000Z',
+    };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(
+      <QueryClientProvider client={client}>
+        <CrewTurn {...base} detail={{ ...base.detail, railFlags: [flag] }} repo={null} />
+      </QueryClientProvider>,
+    );
+    const line = view.container.querySelector('.flag-line')!;
+    const firstAgent = view.container.querySelector('.agent-block:not(.jev), .agent-group')!;
+    expect(
+      line.compareDocumentPosition(firstAgent) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('keeps a card the user already answered', () => {
+    const { view } = show('succeeded');
+    fireEvent.click(within(parallel('Worked')).getByRole('button', { name: /Bolt/ }));
+    expect(view.container.querySelector('.par-body')?.textContent).toContain('Which store?');
+  });
+});

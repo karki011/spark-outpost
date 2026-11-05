@@ -1,0 +1,62 @@
+.isl-menu-list {
+  display: grid;
+  gap: 1px;
+  max-height: 188px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.isl-menu-filter {
+  height: 28px;
+  margin: 2px 2px 4px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.isl-menu-filter:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.isl-menu-empty {
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.isl-menu-empty.bad {
+  color: var(--danger);
+}
+
+.isl-menu .isl-menu-add {
+  grid-template-columns: 14px 1fr;
+  margin-top: 2px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 8px 8px;
+  color: var(--accent-text);
+  font-weight: 500;
+}
+
+.isl-menu .isl-menu-add:disabled {
+  cursor: progress;
+  color: var(--muted);
+}
+
+.isl-picker .fdlg {
+  max-width: none;
+  max-height: 420px;
+  border-color: var(--card-line);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: none;
+}
+
+.isl-picker .fdlg-list {
+  min-height: 150px;
+}

@@ -1,0 +1,405 @@
+.term-park {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: 900px;
+  height: 320px;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.term-dock {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  height: var(--term-h, 280px);
+  min-height: 140px;
+  max-height: calc(100% - 160px);
+  border-top: 1px solid var(--line);
+  background: var(--code);
+  animation: fade 0.15s var(--out);
+}
+
+.term-resize {
+  position: absolute;
+  z-index: 2;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.term-dock:has(.term-resize:hover),
+.term-dock:has(.term-resize:focus-visible),
+.term-dock.dragging {
+  border-top-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+}
+
+.term-dock-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 4px 8px 4px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.term-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.term-tab {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  max-width: 260px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.term-tab:hover {
+  color: var(--text);
+}
+
+.term-tab.on {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.term-tab.ended .term-tab-name {
+  text-decoration: line-through;
+  text-decoration-color: var(--faint);
+}
+
+.term-tab-pick {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 4px 0 10px;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.term-tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.term-tab-agent {
+  display: inline-grid;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.term-tab-agent svg {
+  width: 12px;
+  height: 12px;
+}
+
+.term-tab.on .term-tab-agent {
+  color: var(--accent);
+}
+
+.term-tab-skel {
+  display: inline-block;
+  width: 88px;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--raise) 25%, var(--line) 50%, var(--raise) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+
+.term-tab-x {
+  width: 24px;
+  height: 24px;
+  margin-right: 2px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.term-tab-x svg {
+  width: 10px;
+  height: 10px;
+}
+
+.term-tab-x .xic {
+  color: inherit;
+}
+
+.term-tab-x:hover {
+  background: var(--line);
+  color: var(--text);
+}
+
+.term-add,
+.term-hide {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.term-where {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: right;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.term-hide {
+  margin-left: auto;
+}
+
+.term-dock-body {
+  flex: 1;
+  min-height: 0;
+  padding: 6px 4px 4px 12px;
+}
+
+.term-host {
+  width: 100%;
+  height: 100%;
+}
+
+.term-host .xterm-viewport {
+  background: transparent !important;
+}
+
+.cmd-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+}
+
+.cmd-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.cmd-tab-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 2px 8px 6px 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.cmd-tab.interrupted .run-cmd-mark {
+  color: var(--muted);
+}
+
+.cmd-tab-line {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0;
+  background: none;
+  font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.cmd-tab-line::before {
+  content: '$ ';
+  color: var(--faint);
+}
+
+.cmd-tab-chip {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.cmd-tab-state {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cmd-tab.failed .cmd-tab-state,
+.cmd-tab-error {
+  color: var(--danger);
+}
+
+.cmd-tab-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.cmd-tab-body .run-cmd-screen {
+  padding: 0;
+}
+
+.cmd-tab-note {
+  margin: 0;
+  padding: 6px 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.cmd-tab-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  margin: 0 4px 0 -12px;
+  padding: 6px 6px 2px 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.cmd-tab-foot p {
+  margin: 0;
+  min-width: 0;
+}
+
+@media (pointer: coarse) {
+  .cmd-tab-foot .btn {
+    min-height: 44px;
+  }
+}
+
+.term-dock-ended {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 6px 10px 6px 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .term-dock {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    height: auto;
+    max-height: none;
+    border-top: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .term-resize {
+    display: none;
+  }
+
+  .term-where {
+    display: none;
+  }
+
+  .term-tabs {
+    flex: 1;
+  }
+}
+
+.term-dock-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  border-top: 1px solid color-mix(in srgb, var(--danger) 45%, var(--line));
+  background: var(--panel);
+  animation: fade 0.15s var(--out);
+}
+
+.term-confirm-text {
+  min-width: 0;
+}
+
+.term-confirm-q {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.term-confirm-q code {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.term-confirm-why {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.term-dock-confirm .hold {
+  align-items: flex-end;
+  gap: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term-tab-skel,
+  .term-dock-confirm {
+    animation: none;
+  }
+}
+.term-screen[data-file-drag='true'] {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.agent-tab .cmd-tab-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-tab-screen {
+  flex: 1;
+  min-height: 0;
+}
+
+.agent-tab.stopped .run-cmd-mark svg,
+.agent-tab.interrupted .run-cmd-mark svg {
+  color: var(--muted);
+}
+
+.agent-tab .cmd-tab-note .btn {
+  margin-left: 6px;
+}

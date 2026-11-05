@@ -1,0 +1,471 @@
+import { onEach, SURFACES, type Pair } from './pair-types.ts';
+
+export const ACCENT: Pair[] = [
+  ...onEach(
+    'Accent',
+    'accent.text',
+    'var(--accent-text)',
+    ['canvas', 'panel', 'raise', 'rail', 'selected'],
+    'text',
+  ),
+  {
+    id: 'accent.button-label',
+    group: 'Accent',
+    label: 'button label (accent-ink on accent)',
+    fg: 'var(--accent-ink)',
+    bg: ['var(--accent)'],
+    kind: 'text',
+  },
+  {
+    id: 'accent.link',
+    group: 'Accent',
+    label: 'markdown link on panel',
+    fg: 'var(--accent-text)',
+    bg: ['var(--panel)'],
+    kind: 'text',
+  },
+  {
+    id: 'accent.user-bubble',
+    group: 'Accent',
+    label: 'user bubble text',
+    fg: 'var(--user-text)',
+    bg: ['var(--user)'],
+    kind: 'text',
+  },
+];
+
+export const STATUS: Pair[] = [
+  ...onEach('Status text', 'status.danger', 'var(--danger)', ['panel', 'raise', 'canvas'], 'text'),
+  {
+    id: 'status.danger-on-soft',
+    group: 'Status text',
+    label: 'danger on danger-soft',
+    fg: 'var(--danger)',
+    bg: ['var(--panel)', 'var(--danger-soft)'],
+    kind: 'text',
+  },
+  ...onEach('Status text', 'status.warn', 'var(--warn)', ['panel', 'raise', 'canvas'], 'text'),
+  {
+    id: 'status.warn-on-tint',
+    group: 'Status text',
+    label: 'warn on warn tint',
+    fg: 'var(--warn)',
+    bg: ['var(--panel)', 'color-mix(in srgb, var(--warn) 13%, transparent)'],
+    kind: 'text',
+  },
+  {
+    id: 'status.warn-on-attention',
+    group: 'Status text',
+    label: 'warn on hovered attention card',
+    fg: 'var(--warn)',
+    bg: [
+      'var(--bg)',
+      'color-mix(in srgb, var(--warn) 13%, transparent)',
+      'color-mix(in srgb, var(--warn) 9%, transparent)',
+    ],
+    kind: 'text',
+  },
+  {
+    id: 'status.muted-on-attention',
+    group: 'Status text',
+    label: 'muted on hovered attention card',
+    fg: 'var(--muted)',
+    bg: [
+      'var(--bg)',
+      'color-mix(in srgb, var(--warn) 13%, transparent)',
+      'color-mix(in srgb, var(--warn) 9%, transparent)',
+    ],
+    kind: 'text',
+  },
+  ...onEach('Status text', 'status.success', 'var(--success)', ['panel', 'raise', 'code'], 'text'),
+  ...onEach('Status icons', 'icon.accent', 'var(--accent)', ['canvas', 'panel', 'raise'], 'ui'),
+  ...onEach('Status icons', 'icon.warn', 'var(--warn)', ['canvas', 'panel', 'raise'], 'ui'),
+  ...onEach('Status icons', 'icon.danger', 'var(--danger)', ['canvas', 'panel', 'raise'], 'ui'),
+  ...onEach('Status icons', 'icon.success', 'var(--success)', ['canvas', 'panel', 'raise'], 'ui'),
+  {
+    id: 'badge.warn-count',
+    group: 'Status icons',
+    label: 'attention count (warn-ink on warn)',
+    fg: 'var(--warn-ink)',
+    bg: ['var(--warn)'],
+    kind: 'text',
+  },
+  {
+    id: 'badge.error-dot',
+    group: 'Status icons',
+    label: 'error dot glyph (panel on danger)',
+    fg: 'var(--panel)',
+    bg: ['var(--danger)'],
+    kind: 'text',
+  },
+  {
+    id: 'button.danger-label',
+    group: 'Status text',
+    label: 'Disconnect button label (panel on danger)',
+    fg: 'var(--panel)',
+    bg: ['var(--danger)'],
+    kind: 'text',
+  },
+];
+
+export const FORMS: Pair[] = [
+  {
+    id: 'form.placeholder-input',
+    group: 'Forms',
+    label: 'placeholder in input',
+    fg: 'var(--faint)',
+    bg: ['var(--bg)'],
+    kind: 'text',
+  },
+  {
+    id: 'form.placeholder-composer',
+    group: 'Forms',
+    label: 'placeholder in composer',
+    fg: 'var(--faint)',
+    bg: ['var(--panel)'],
+    kind: 'text',
+  },
+  ...onEach('Forms', 'form.field-border', 'var(--line-strong)', ['canvas', 'panel', 'raise'], 'ui'),
+  ...onEach('Forms', 'form.switch-on', 'var(--switch-on)', ['panel', 'raise'], 'ui'),
+  {
+    id: 'form.switch-on-face',
+    group: 'Forms',
+    label: 'switch face (switch-on-ink on switch-on)',
+    fg: 'var(--switch-on-ink)',
+    bg: ['var(--switch-on)'],
+    kind: 'ui',
+  },
+  {
+    id: 'form.selected-border',
+    group: 'Forms',
+    label: 'selected option border',
+    fg: 'var(--accent)',
+    bg: SURFACES.panel,
+    kind: 'ui',
+  },
+  ...onEach(
+    'Focus',
+    'focus.ring',
+    'var(--accent)',
+    ['canvas', 'panel', 'raise', 'rail', 'code', 'selected'],
+    'focus',
+  ),
+  ...onEach(
+    'Focus',
+    'focus.composer',
+    'var(--composer-focus-line)',
+    ['canvas', 'panel', 'raise'],
+    'focus',
+  ),
+  {
+    id: 'disabled.button-label',
+    group: 'Disabled (exempt)',
+    label: 'disabled primary button label',
+    fg: 'var(--accent-ink)',
+    bg: ['var(--panel)', 'color-mix(in srgb, var(--accent) 35%, transparent)'],
+    fgAlpha: 0.35,
+    kind: 'disabled',
+  },
+  {
+    id: 'disabled.button-ghost',
+    group: 'Disabled (exempt)',
+    label: 'disabled ghost button label',
+    fg: 'var(--muted)',
+    bg: ['var(--panel)'],
+    fgAlpha: 0.35,
+    kind: 'disabled',
+  },
+];
+
+export const CHIPS: Pair[] = [
+  {
+    id: 'chip.accent',
+    group: 'Chips and tags',
+    label: 'accent chip (version, new, connected)',
+    fg: 'var(--accent-text)',
+    bg: ['var(--panel)', 'var(--accent-soft)'],
+    kind: 'text',
+  },
+  {
+    id: 'chip.accent-on-raise',
+    group: 'Chips and tags',
+    label: 'accent chip on raise',
+    fg: 'var(--accent-text)',
+    bg: ['var(--raise)', 'var(--accent-soft)'],
+    kind: 'text',
+  },
+  {
+    id: 'chip.neutral',
+    group: 'Chips and tags',
+    label: 'neutral tag (muted on raise)',
+    fg: 'var(--muted)',
+    bg: ['var(--raise)'],
+    kind: 'text',
+  },
+  {
+    id: 'chip.outline',
+    group: 'Chips and tags',
+    label: 'outline tag (muted on panel)',
+    fg: 'var(--muted)',
+    bg: ['var(--panel)'],
+    kind: 'text',
+  },
+  {
+    id: 'chip.danger',
+    group: 'Chips and tags',
+    label: 'deleted tag',
+    fg: 'var(--danger)',
+    bg: ['var(--panel)', 'var(--danger-soft)'],
+    kind: 'text',
+  },
+  {
+    id: 'chip.tooltip',
+    group: 'Chips and tags',
+    label: 'tooltip',
+    fg: 'var(--panel)',
+    bg: ['var(--text)'],
+    kind: 'text',
+  },
+];
+
+const DROP_TINT = 'color-mix(in srgb, var(--accent-soft) 45%, transparent)';
+const DROP_BASES = { canvas: 'var(--bg)', panel: 'var(--panel)' };
+const DROP_INKS = { text: 'var(--text)', muted: 'var(--muted)', faint: 'var(--faint)' };
+
+export const DROP_TARGET: Pair[] = Object.entries(DROP_BASES).flatMap(([surface, base]) =>
+  Object.entries(DROP_INKS).map(([ink, fg]) => ({
+    id: `drag.${ink}-on-target-${surface}`,
+    group: 'Sidebar drag target',
+    label: `${ink} in the tinted target project (${surface})`,
+    fg,
+    bg: [base, DROP_TINT],
+    kind: 'text' as const,
+  })),
+);
+
+const BLOB_FILLS = {
+  working: 'var(--accent)',
+  waiting: 'var(--warn)',
+  done: 'var(--success)',
+  failed: 'var(--danger)',
+};
+
+export const SIDEBAR_BLOBS: Pair[] = Object.entries(BLOB_FILLS).map(([state, fg]) => ({
+  id: `sidebar.blob-${state}`,
+  group: 'Chat list blobs',
+  label: `${state} blob on a chat row, resting or hovered`,
+  fg,
+  bg: ['var(--bg)', 'var(--raise)'],
+  kind: 'ui' as const,
+}));
+
+const PROVIDER_IDS = ['claude', 'codex', 'zai', 'jev'] as const;
+
+export const PROVIDERS: Pair[] = [
+  ...PROVIDER_IDS.flatMap((provider) =>
+    onEach(
+      'Provider colours',
+      `provider.${provider}`,
+      `var(--c-${provider})`,
+      ['canvas', 'rail', 'panel', 'raise'],
+      'ui',
+    ),
+  ),
+  {
+    id: 'provider.test-typing-dots',
+    group: 'Provider colours',
+    label: 'typing dots in the test-message speech bubble',
+    fg: 'var(--muted)',
+    bg: ['var(--raise)'],
+    kind: 'ui',
+  },
+  {
+    id: 'provider.test-answered-check',
+    group: 'Provider colours',
+    label: 'answered check in the test-message speech bubble',
+    fg: 'var(--accent-text)',
+    bg: ['var(--raise)'],
+    kind: 'ui',
+  },
+  {
+    id: 'provider.cost-tier-shade',
+    group: 'Provider colours',
+    label: 'cheapest-tier cost slice (36% shade) on the bar track',
+    fg: 'color-mix(in srgb, var(--c-claude) 36%, var(--panel))',
+    bg: ['var(--raise)'],
+    kind: 'decorative',
+  },
+];
+
+const ASKING_CARD = ['var(--panel)', 'color-mix(in srgb, var(--warn) 6%, transparent)'];
+
+export const HOME: Pair[] = [
+  ...Object.entries({
+    text: 'var(--text)',
+    muted: 'var(--muted)',
+    faint: 'var(--faint)',
+    warn: 'var(--warn)',
+  }).map(([ink, fg]) => ({
+    id: `home.${ink}-on-asking-card`,
+    group: 'Home',
+    label: `${ink} on the tinted Needs you card`,
+    fg,
+    bg: ASKING_CARD,
+    kind: 'text' as const,
+  })),
+  {
+    id: 'home.asking-dot',
+    group: 'Home',
+    label: 'waiting dot on the tinted Needs you card',
+    fg: 'var(--warn)',
+    bg: ASKING_CARD,
+    kind: 'ui',
+  },
+  {
+    id: 'home.answer-button',
+    group: 'Home',
+    label: 'Answer button label (panel on text)',
+    fg: 'var(--panel)',
+    bg: ['var(--text)'],
+    kind: 'text',
+  },
+  {
+    id: 'home.progress',
+    group: 'Home',
+    label: 'plan progress bar on its track',
+    fg: 'var(--accent)',
+    bg: ['var(--raise)'],
+    kind: 'ui',
+  },
+  {
+    id: 'home.savings',
+    group: 'Home',
+    label: 'routing savings text on the accent tint',
+    fg: 'var(--accent-text)',
+    bg: ['var(--panel)', 'var(--accent-soft)'],
+    kind: 'text',
+  },
+  {
+    id: 'home.savings-note',
+    group: 'Home',
+    label: 'savings note (muted) on the accent tint',
+    fg: 'var(--muted)',
+    bg: ['var(--panel)', 'var(--accent-soft)'],
+    kind: 'text',
+  },
+];
+
+export const COMPANION: Pair[] = [
+  {
+    id: 'companion.button-edge',
+    group: 'Companion',
+    label: 'floating companion button border on the page',
+    fg: 'var(--line-strong)',
+    bg: ['var(--bg)', 'var(--panel)', 'var(--raise)'],
+    kind: 'ui',
+  },
+  {
+    id: 'companion.scout-on-button',
+    group: 'Companion',
+    label: 'Scout body on the companion button',
+    fg: 'var(--accent)',
+    bg: ['var(--panel)'],
+    kind: 'ui',
+  },
+  {
+    id: 'companion.alert-ring',
+    group: 'Companion',
+    label: 'needs-you ring around the companion',
+    fg: 'var(--warn)',
+    bg: ['var(--bg)', 'var(--panel)', 'var(--raise)'],
+    kind: 'ui',
+  },
+  {
+    id: 'companion.failed-mark',
+    group: 'Companion',
+    label: 'failed ! mark (panel on danger)',
+    fg: 'var(--panel)',
+    bg: ['var(--danger)'],
+    kind: 'text',
+  },
+  {
+    id: 'companion.running-dots',
+    group: 'Companion',
+    label: 'running dots on the companion pill',
+    fg: 'var(--accent)',
+    bg: ['var(--panel)'],
+    kind: 'ui',
+  },
+  {
+    id: 'companion.running-pill-edge',
+    group: 'Companion',
+    label: 'running pill outline on the button',
+    fg: 'var(--line-strong)',
+    bg: ['var(--panel)'],
+    kind: 'ui',
+  },
+  {
+    id: 'companion.badge-count',
+    group: 'Companion',
+    label: 'needs-you count (warn-ink on warn)',
+    fg: 'var(--warn-ink)',
+    bg: ['var(--warn)'],
+    kind: 'text',
+  },
+  {
+    id: 'companion.error-line',
+    group: 'Companion',
+    label: 'error reason in the status panel',
+    fg: 'var(--danger)',
+    bg: ['var(--panel)', 'var(--raise)'],
+    kind: 'text',
+  },
+  {
+    id: 'companion.muted-on-hover-row',
+    group: 'Companion',
+    label: 'row detail (muted) on a hovered panel row',
+    fg: 'var(--muted)',
+    bg: ['var(--raise)'],
+    kind: 'text',
+  },
+  {
+    id: 'companion.home-link',
+    group: 'Companion',
+    label: 'Open Home link in the status panel',
+    fg: 'var(--accent-text)',
+    bg: ['var(--panel)'],
+    kind: 'text',
+  },
+  {
+    id: 'companion.answer-button',
+    group: 'Companion',
+    label: 'Answer button label (panel on text)',
+    fg: 'var(--panel)',
+    bg: ['var(--text)'],
+    kind: 'text',
+  },
+];
+
+const TICKS = 'Chat tick rail';
+
+export const CHAT_TICKS: Pair[] = [
+  ...onEach(TICKS, 'tick.rest', 'var(--line-strong)', ['panel'], 'ui'),
+  ...onEach(TICKS, 'tick.current', 'var(--text)', ['panel'], 'ui'),
+  ...onEach(TICKS, 'tick.hover', 'var(--accent)', ['panel'], 'ui'),
+  ...onEach(
+    TICKS,
+    'tick.error',
+    'color-mix(in srgb, var(--danger) 70%, var(--line-strong))',
+    ['panel'],
+    'ui',
+  ),
+  ...onEach(
+    TICKS,
+    'tick.approval',
+    'color-mix(in srgb, var(--warn) 70%, var(--line-strong))',
+    ['panel'],
+    'ui',
+  ),
+  ...onEach(TICKS, 'context-rail.task-done', 'var(--accent)', ['canvas', 'rail'], 'ui'),
+  ...onEach(TICKS, 'context-rail.checks-pass', 'var(--success)', ['canvas', 'rail'], 'ui'),
+];

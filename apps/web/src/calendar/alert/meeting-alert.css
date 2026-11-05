@@ -1,0 +1,280 @@
+.ma-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  color: var(--text);
+  font:
+    13px/1.4 Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  --drop-ease: cubic-bezier(0.18, 0.82, 0.24, 1);
+}
+
+.ma-rig {
+  position: absolute;
+  left: var(--rig-x);
+  top: var(--rig-y);
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  animation: ma-sway 1.6s ease-out 0.2s both;
+}
+
+.ma-thread {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--thread-w);
+  height: calc(var(--drop) + 6px);
+  translate: -50% 0;
+  border-radius: 1px;
+  background: var(--thread);
+  transform-origin: 50% 0;
+  animation: ma-thread-down 1.4s var(--drop-ease) both;
+}
+
+.ma-hang {
+  position: absolute;
+  left: -200px;
+  top: var(--drop);
+  display: flex;
+  width: 400px;
+  flex-direction: column;
+  align-items: center;
+  animation:
+    ma-drop 1.4s var(--drop-ease) both,
+    ma-bob 3.2s ease-in-out 1.8s infinite;
+}
+
+.ma-scout {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  margin-bottom: -6px;
+  pointer-events: auto;
+}
+
+.ma-card {
+  position: relative;
+  width: 380px;
+  box-sizing: border-box;
+  padding: 18px 20px 14px;
+  border: 1px solid var(--island-line);
+  border-radius: 18px;
+  background: var(--island);
+  box-shadow: var(--island-shadow);
+  color: var(--text);
+  pointer-events: auto;
+  transform-origin: 50% 0;
+  animation: ma-unfold 1.3s var(--drop-ease) both;
+}
+
+.ma-card:focus,
+.ma-card:focus-within {
+  outline: none;
+}
+
+.ma-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.ma-detail {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ma-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.ma-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ma-row-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+.ma-row-text span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ma-acts,
+.ma-countdown {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ma-countdown {
+  margin-bottom: 10px;
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ma-btn {
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--island-line);
+  border-radius: 15px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ma-btn.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.ma-btn:hover {
+  border-color: var(--muted);
+}
+
+.ma-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ma-later {
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ma-hint {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ma-root[data-leaving] .ma-rig {
+  animation: none;
+}
+
+.ma-root[data-leaving] .ma-thread {
+  animation: ma-thread-up 0.6s ease-in both;
+}
+
+.ma-root[data-leaving] .ma-hang {
+  animation: ma-climb 0.6s ease-in both;
+}
+
+.ma-root[data-leaving] .ma-card {
+  animation: ma-fold 0.6s ease-in both;
+}
+
+.ma-root[data-rm] .ma-rig,
+.ma-root[data-rm] .ma-thread,
+.ma-root[data-rm] .ma-hang,
+.ma-root[data-rm] .ma-card {
+  animation: none;
+}
+
+.ma-root[data-rm] {
+  animation: ma-fade 0.2s ease-out both;
+}
+
+.ma-root[data-rm][data-leaving] {
+  animation: ma-fade-out 0.16s ease-in both;
+}
+
+@keyframes ma-thread-down {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes ma-thread-up {
+  to {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes ma-drop {
+  from {
+    translate: 0 calc(var(--drop) * -1 - 70px);
+  }
+}
+
+@keyframes ma-climb {
+  to {
+    translate: 0 calc(var(--drop) * -1 - 70px);
+  }
+}
+
+@keyframes ma-sway {
+  0% {
+    rotate: 0deg;
+  }
+  35% {
+    rotate: 2.4deg;
+  }
+  60% {
+    rotate: -1.4deg;
+  }
+  80% {
+    rotate: 0.6deg;
+  }
+  100% {
+    rotate: 0deg;
+  }
+}
+
+@keyframes ma-bob {
+  50% {
+    translate: 0 3px;
+  }
+}
+
+@keyframes ma-unfold {
+  from {
+    opacity: 0.35;
+    transform: scaleY(0.12);
+  }
+}
+
+@keyframes ma-fold {
+  to {
+    opacity: 0;
+    transform: scaleY(0.12);
+  }
+}
+
+@keyframes ma-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ma-fade-out {
+  to {
+    opacity: 0;
+  }
+}

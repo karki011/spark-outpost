@@ -1,0 +1,36 @@
+{
+  "name": "@spark-outpost/desktop",
+  "version": "0.1.0-beta.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "esbuild src/main.ts src/server-entry.ts src/runtime-host.ts --bundle --platform=node --format=esm --target=node24 --outdir=dist --loader:.md=text --external:electron --external:embedded-postgres --external:pg --external:tsx --external:electron-updater && esbuild src/preload.ts src/boot-preload.ts src/media-guard-preload.ts src/copy-guard-preload.ts --bundle --platform=node --format=cjs --target=node24 --outdir=dist --out-extension:.js=.cjs --external:electron",
+    "dev": "pnpm build && electron .",
+    "typecheck": "tsc -p tsconfig.json",
+    "package": "node --import tsx scripts/package.ts",
+    "tmux": "node --import tsx scripts/build-tmux-cli.ts",
+    "mac-control": "node --import tsx scripts/build-mac-control-cli.ts",
+    "calendar": "node --import tsx scripts/build-calendar-cli.ts",
+    "voice": "node --import tsx scripts/build-voice-cli.ts",
+    "no-activate": "node --import tsx scripts/build-no-activate-cli.ts",
+    "dev-app": "node --import tsx scripts/dev-app-cli.ts",
+    "e2e:update": "node --import tsx scripts/e2e-update.ts",
+    "release": "node --import tsx scripts/release.ts",
+    "icons": "node --import tsx scripts/icons.ts"
+  },
+  "dependencies": {
+    "@spark-outpost/contracts": "workspace:*",
+    "electron-updater": "6.8.9",
+    "embedded-postgres": "17.10.0-beta.17",
+    "pg": "^8.23.0",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2",
+    "sharp": "0.35.5"
+  }
+}

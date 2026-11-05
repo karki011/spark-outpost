@@ -1,0 +1,371 @@
+.main.crail-open {
+  --crail-w: clamp(216px, 18cqi, 320px);
+  --crail-strip: calc(var(--crail-w) + 32px);
+}
+
+.main.crail-open :is(.thread, .composer-wrap, .cstatus, .qwrap) {
+  padding-right: calc(var(--chat-gutter) + var(--crail-strip));
+}
+
+.crail-slot {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 0;
+}
+
+.crail {
+  position: absolute;
+  top: 6px;
+  right: calc(16px - var(--chat-gutter) - var(--crail-strip));
+  display: flex;
+  flex-direction: column;
+  width: var(--crail-w);
+  max-height: 60dvh;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.35;
+  animation: crail-in 0.2s var(--out) both;
+}
+
+@keyframes crail-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.crail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  padding-left: 6px;
+}
+
+.crail-title {
+  margin: 0;
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.crail-toggle {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-sm);
+  color: var(--faint);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.crail-toggle:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.crail-show {
+  position: absolute;
+  top: 6px;
+  right: calc(12px - var(--chat-gutter));
+}
+
+.crail-rows {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.crail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  text-align: left;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+:is(button, a).crail-row:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.crail-ico {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 16px;
+  height: 17px;
+  color: var(--faint);
+}
+
+.crail-ico svg {
+  width: 14px;
+  height: 14px;
+}
+
+.crail-row.ok .crail-ico {
+  color: var(--success);
+}
+
+.crail-row.warn .crail-ico {
+  color: var(--warn);
+}
+
+.crail-row.bad .crail-ico {
+  color: var(--danger);
+}
+
+.crail-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.crail-main,
+.crail-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crail-main .chf-n {
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+.crail-detail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.crail-detail svg {
+  width: 11px;
+  height: 11px;
+}
+
+.crail-tv {
+  position: relative;
+  flex-shrink: 0;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.crail-tv-stage .tv-role,
+.crail-tv-stage .tv-line {
+  display: none;
+}
+
+.crail-tv-stage .tv-n b {
+  font-size: max(12px, 0.96em);
+}
+
+.crail-tv-stage .tv-l.on {
+  animation: none;
+}
+
+.crail-tv-cap {
+  margin: 0;
+  padding: 0 6px 2px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crail-tv-cap b {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.crail-tv-open {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.crail-tv-open:hover {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+.crail-tv.paused *,
+.crail-tv.paused *::before,
+.crail-tv.paused *::after {
+  animation-play-state: paused !important;
+}
+
+.crail-tv.still .tv-b,
+.crail-tv.still .tv-sq,
+.crail-tv.still .tv-l.on {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crail {
+    animation: none;
+  }
+}
+
+.crail-tasks {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 64px;
+  margin-top: 14px;
+}
+
+.crail-tasks-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 4px 6px;
+}
+
+.crail-tasks-count {
+  padding: 1px 6px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.crail-tasks-count:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.crail-tasks ol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.crail-tasks li {
+  display: grid;
+  flex: none;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: start;
+  min-height: 26px;
+  padding: 4px 6px;
+  color: var(--muted);
+}
+
+.crail-tasks li[aria-current] {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.crail-task-mark {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 17px;
+  color: var(--faint);
+}
+
+.crail-tasks li[data-state='done'] .crail-task-mark {
+  color: var(--success);
+}
+
+.crail-tasks li[data-state='failed'] .crail-task-mark {
+  color: var(--danger);
+}
+
+.crail-task-dot {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+.crail-tasks li[data-state='waiting'] .crail-task-dot {
+  border-color: var(--warn);
+  background: var(--warn);
+}
+
+.crail-task-label {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.crail-task-detail {
+  display: block;
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.crail-crew {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 64px;
+  margin-top: 14px;
+}
+
+.crail-crew ul {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.crail-crew .crow {
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 0 8px;
+  align-items: start;
+  padding: 4px 6px;
+}
+
+.crail-crew .crow .nm b {
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.crail-crew .crow .num {
+  grid-column: 2;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  text-overflow: ellipsis;
+}
+
+.crail-crew .crow .num small {
+  display: inline;
+  margin-left: 8px;
+}

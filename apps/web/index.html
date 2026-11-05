@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" content="#eaecf0" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#07090b" media="(prefers-color-scheme: dark)" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Spark" />
+    <title>Spark Outpost</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
+    <link
+      rel="preload"
+      href="/fonts/geist-mono-latin-wght-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
+    <link rel="stylesheet" href="/theme.css" />
+    <link rel="stylesheet" href="/theme-map.css" />
+    <link rel="stylesheet" href="/shell.css" />
+    <script src="/appearance.js"></script>
+    <script src="/app-boot.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <div class="shell-sk" id="shell-skeleton" aria-hidden="true">
+      <div class="shell-sk-rail">
+        <span class="shell-sk-logo"></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span class="shell-sk-end"></span>
+      </div>
+      <div class="shell-sk-main">
+        <div class="shell-sk-col">
+          <div class="shell-sk-hello">
+            <span class="shell-sk-blob"></span>
+            <span class="shell-sk-title"></span>
+          </div>
+          <span class="shell-sk-line"></span>
+          <span class="shell-sk-composer"></span>
+          <span class="shell-sk-head"></span>
+          <span class="shell-sk-card"></span>
+          <span class="shell-sk-card"></span>
+          <span class="shell-sk-card"></span>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

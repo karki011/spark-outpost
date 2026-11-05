@@ -1,0 +1,259 @@
+import { isIslandHeight } from '@spark-outpost/contracts';
+import {
+  DEFAULT_SHORTCUTS,
+  isAccelerator,
+  SHORTCUT_ACTIONS,
+  type CompanionSettings,
+  type IslandPosition,
+  type IslandSize,
+  type ShortcutAction,
+} from './companion-settings.ts';
+
+export interface IslandHandle {
+  destroy(): void;
+  command(action: ShortcutAction): void;
+}
+
+export interface CompanionStatus {
+  supported: boolean;
+  enabled: boolean;
+  shortcuts: Record<ShortcutAction, string>;
+  failed: ShortcutAction[];
+  sound: boolean;
+  islandSize: IslandSize;
+  islandHeight: number;
+  autoExpand: boolean;
+  hideInShare: boolean;
+  notify: boolean;
+  notifyBlocked: boolean;
+  menuBar: boolean;
+}
+
+export type ShortcutResult = { ok: true } | { ok: false; error: string };
+
+export interface CompanionEffects {
+  supported: boolean;
+  openIsland: (onGone: () => void) => IslandHandle;
+  register: (accelerator: string, run: () => void) => boolean;
+  unregister: (accelerator: string) => void;
+  save: (settings: CompanionSettings) => void | Promise<void>;
+  changed: (status: CompanionStatus) => void;
+  preview: (status: CompanionStatus) => void;
+}
+
+export interface Companion {
+  resume(): void;
+  status(): CompanionStatus;
+  running(): boolean;
+  position(): IslandPosition;
+  setEnabled(on: boolean): CompanionStatus;
+  setShortcut(action: ShortcutAction, accelerator: string | null): ShortcutResult;
+  setSound(on: boolean): CompanionStatus;
+  setIslandSize(size: IslandSize): CompanionStatus;
+  setIslandHeight(height: number): Promise<CompanionStatus>;
+  previewIslandHeight(height: number): CompanionStatus;
+  setAutoExpand(on: boolean): CompanionStatus;
+  setHideInShare(on: boolean): CompanionStatus;
+  setNotify(on: boolean): CompanionStatus;
+  setMenuBar(on: boolean): CompanionStatus;
+  setNotifyBlocked(on: boolean): void;
+  setPosition(position: IslandPosition): void;
+  shutdown(): void;
+}
+
+export const SHORTCUT_NAMES: Record<ShortcutAction, string> = {
+  quick: 'Quick chat',
+  sessions: 'Inbox',
+};
+
+export const SHORTCUT_TAKEN = 'Another app is using this shortcut. Pick a different one.';
+export const SHORTCUT_INVALID = 'Use at least one modifier key with a letter, number or Space.';
+
+export function createCompanion(initial: CompanionSettings, effects: CompanionEffects): Companion {
+  let settings = initial;
+  let island: IslandHandle | null = null;
+  const active = new Map<ShortcutAction, string>();
+  const failed = new Set<ShortcutAction>();
+  let notifyBlocked = false;
+  let previewHeight: number | null = null;
+  let previewRevision = 0;
+  let saving: Promise<void> | null = null;
+
+  const status = (): CompanionStatus => ({
+    supported: effects.supported,
+    enabled: effects.supported && settings.enabled,
+    shortcuts: { ...settings.shortcuts },
+    failed: SHORTCUT_ACTIONS.filter((action) => failed.has(action)),
+    sound: settings.sound,
+    islandSize: settings.islandSize,
+    islandHeight: previewHeight ?? settings.islandHeight,
+    autoExpand: settings.autoExpand,
+    hideInShare: settings.hideInShare,
+    notify: settings.notify,
+    notifyBlocked,
+    menuBar: effects.supported && settings.menuBar,
+  });
+
+  const publish = () => effects.changed(status());
+
+  const persist = (write: () => void | Promise<void>): Promise<void> => {
+    let result: void | Promise<void>;
+    try {
+      result = saving ? saving.then(write) : write();
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    if (!result) return Promise.resolve();
+    const tail = Promise.resolve(result).catch(() => {});
+    saving = tail;
+    void tail.then(() => {
+      if (saving === tail) saving = null;
+    });
+    return Promise.resolve(result);
+  };
+
+  const commit = (next: CompanionSettings) => {
+    settings = next;
+    void persist(() => effects.save(settings)).catch(() => {});
+  };
+
+  const tryRegister = (action: ShortcutAction, accelerator: string): boolean => {
+    if (!effects.register(accelerator, () => island?.command(action))) return false;
+    active.set(action, accelerator);
+    failed.delete(action);
+    return true;
+  };
+
+  const bind = (action: ShortcutAction) => {
+    if (!tryRegister(action, settings.shortcuts[action])) failed.add(action);
+  };
+
+  const unbind = (action: ShortcutAction) => {
+    const accelerator = active.get(action);
+    if (accelerator) effects.unregister(accelerator);
+    active.delete(action);
+    failed.delete(action);
+  };
+
+  const start = () => {
+    if (island) return;
+    const handle = effects.openIsland(() => {
+      if (island === handle) island = null;
+    });
+    island = handle;
+    SHORTCUT_ACTIONS.forEach(bind);
+  };
+
+  const stop = () => {
+    SHORTCUT_ACTIONS.forEach(unbind);
+    const handle = island;
+    island = null;
+    handle?.destroy();
+  };
+
+  return {
+    resume() {
+      if (effects.supported && settings.enabled) start();
+    },
+    status,
+    running: () => island !== null,
+    position: () => settings.position,
+    setEnabled(on) {
+      if (!effects.supported) return status();
+      if (!on) {
+        previewRevision += 1;
+        previewHeight = null;
+      }
+      commit({ ...settings, enabled: on });
+      if (on) start();
+      else stop();
+      publish();
+      return status();
+    },
+    setShortcut(action, accelerator) {
+      const next = accelerator ?? DEFAULT_SHORTCUTS[action];
+      if (!isAccelerator(next)) return { ok: false, error: SHORTCUT_INVALID };
+      const clash = SHORTCUT_ACTIONS.find(
+        (other) => other !== action && settings.shortcuts[other] === next,
+      );
+      if (clash)
+        return { ok: false, error: `This shortcut already opens ${SHORTCUT_NAMES[clash]}.` };
+      if (island && active.get(action) !== next) {
+        const previous = active.get(action);
+        unbind(action);
+        if (!tryRegister(action, next)) {
+          if (!previous || !tryRegister(action, previous)) failed.add(action);
+          publish();
+          return { ok: false, error: SHORTCUT_TAKEN };
+        }
+      }
+      commit({ ...settings, shortcuts: { ...settings.shortcuts, [action]: next } });
+      publish();
+      return { ok: true };
+    },
+    setSound(on) {
+      commit({ ...settings, sound: on });
+      publish();
+      return status();
+    },
+    setIslandSize(size) {
+      commit({ ...settings, islandSize: size, islandSizePicked: true });
+      publish();
+      return status();
+    },
+    async setIslandHeight(height) {
+      if (!isIslandHeight(height)) return status();
+      if (!saving && height === settings.islandHeight && previewHeight === null) return status();
+      const revision = previewRevision;
+      try {
+        await persist(async () => {
+          if (height === settings.islandHeight) return;
+          await effects.save({ ...settings, islandHeight: height });
+          settings = { ...settings, islandHeight: height };
+        });
+      } finally {
+        if (revision === previewRevision) previewHeight = null;
+        publish();
+      }
+      return status();
+    },
+    previewIslandHeight(height) {
+      if (!isIslandHeight(height) || height === (previewHeight ?? settings.islandHeight))
+        return status();
+      previewRevision += 1;
+      previewHeight = height;
+      effects.preview(status());
+      return status();
+    },
+    setAutoExpand(on) {
+      commit({ ...settings, autoExpand: on });
+      publish();
+      return status();
+    },
+    setHideInShare(on) {
+      commit({ ...settings, hideInShare: on });
+      publish();
+      return status();
+    },
+    setNotify(on) {
+      commit({ ...settings, notify: on });
+      publish();
+      return status();
+    },
+    setMenuBar(on) {
+      if (!effects.supported) return status();
+      commit({ ...settings, menuBar: on });
+      publish();
+      return status();
+    },
+    setNotifyBlocked(on) {
+      if (on === notifyBlocked) return;
+      notifyBlocked = on;
+      publish();
+    },
+    setPosition(position) {
+      commit({ ...settings, position });
+    },
+    shutdown: stop,
+  };
+}

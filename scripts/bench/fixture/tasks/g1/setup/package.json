@@ -1,0 +1,10 @@
+{
+  "name": "ledger-lite",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "node scripts/check-api.ts",
+    "test": "node --test \"test/**/*.test.ts\""
+  }
+}

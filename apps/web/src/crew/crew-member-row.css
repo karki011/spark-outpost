@@ -1,0 +1,67 @@
+.crow {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto auto;
+  gap: 0 10px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.crow .nm b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.crow .nm small {
+  display: block;
+  font-size: 12px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crow .num {
+  font:
+    12px/1.45 'Geist Mono',
+    ui-monospace,
+    monospace;
+  color: var(--muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.crow .num small {
+  display: block;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.cst {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--faint);
+}
+
+.cst.active {
+  color: var(--accent-text);
+}
+
+.cst.waiting {
+  color: var(--warn);
+}
+
+.cst.done {
+  color: var(--muted);
+}
+
+.cst.failed {
+  color: var(--danger);
+}
+
+.crow .msg-member {
+  width: 28px;
+  height: 28px;
+}

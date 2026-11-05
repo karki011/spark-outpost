@@ -1,0 +1,31 @@
+name: Set up the workspace
+description: Install pnpm, Node from .nvmrc and the workspace dependencies from the frozen lockfile.
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+    - name: Set a git identity for tests that commit
+      shell: bash
+      run: |
+        git config --global user.name "Spark CI"
+        git config --global user.email "ci@example.invalid"
+    - name: Match the Mac shell and sandbox on Linux
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        echo "CPUs: $(nproc)"
+        if ! command -v zsh >/dev/null; then
+          sudo apt-get update --quiet || true
+          sudo apt-get install --yes --no-install-recommends zsh
+        fi
+        if [ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+        fi
+        echo "SHELL=/bin/zsh" >> "$GITHUB_ENV"

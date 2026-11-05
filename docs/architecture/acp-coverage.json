@@ -1,0 +1,386 @@
+{
+  "agent-method:initialize": {
+    "status": "partial",
+    "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/probe.ts, apps/server/src/agents/acp/errors.ts",
+    "note": "Runs and the capability probe both refuse an agent that answers with another protocolVersion (errors.ts assertProtocolVersion). agentInfo and authMethods in the response are ignored. clientInfo.version is hard-coded to 0.0.0."
+  },
+  "agent-method:authenticate": {
+    "status": "missing",
+    "note": "Never called. Sign-in happens outside ACP through each agent's CLI, and API-key runs are refused in acp-provider.ts."
+  },
+  "agent-method:logout": {
+    "status": "not_applicable",
+    "note": "Never called. Clients must not call it unless auth.logout is advertised."
+  },
+  "agent-method:session/new": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/probe.ts",
+    "note": "cwd is the primary linked repo. A chat without a project uses its own folder (<data>/<channel>/chats/<chat>/work) as cwd, and a chat-mode turn (such as Ask Spark's hidden chat) gets a private folder per conversation and agent key under $TMPDIR/spark-outpost-sessions, so a resumed session keeps its cwd; a child run without a resumeKey gets a new temp folder. additionalDirectories carries the other linked repos when the agent advertises the capability. mcpServers carries the user-level servers enabled for the chat and the project .mcp.json servers the user turned on (see REPO_AGENT_CONFIG.md). Vendor _meta comes from agents.ts."
+  },
+  "agent-method:session/load": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-open.ts, apps/server/src/agents/acp/acp-provider.ts, apps/server/src/workflow/turn-session.ts",
+    "note": "Used only when loadSession is advertised and sessionCapabilities.resume isn't. The run's update routing is attached after the load response, and the audit tap drops session/update notifications until it arrives, so replayed history is neither shown, counted as tool calls, nor stored. Neither pinned adapter needs it: both advertise resume."
+  },
+  "agent-method:session/list": {
+    "status": "not_applicable",
+    "note": "Postgres is the source of truth for chats."
+  },
+  "agent-method:session/delete": {
+    "status": "missing",
+    "note": "Not called. Every run leaves a throwaway session in the agent's own history."
+  },
+  "agent-method:session/resume": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-open.ts, apps/server/src/agents/acp/acp-provider.ts, apps/server/src/workflow/turn-session.ts",
+    "note": "A chat turn (or an orchestration child with a resumeKey) resumes its stored session in a new agent process when the settings hash, cwd and extra directories match and nothing else wrote to the chat since its last reply; only the new message is sent. Any mismatch, or a resume error, starts a new session with the history as before and records why. Verified live across processes for claude-agent-acp 0.81.2 and codex-acp 1.13.1 (patched)."
+  },
+  "agent-method:session/close": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-open.ts",
+    "note": "Sent when advertised at the end of every tracked turn (3 s cap), before the process is stopped, so the adapter shuts its session down cleanly. It can't close a session held by an earlier process: Claude's closeSession only knows in-memory sessions. Closing a stored session (settings or repos changed, Start fresh, archive, idle, eviction) is a database state in provider_sessions."
+  },
+  "agent-method:session/set_mode": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/apply-settings.ts, apps/server/src/agents/acp/legacy-options.ts",
+    "note": "Legacy fallback, used only when the agent reports modes and no mode config option. Modes are shown with their names, descriptions and _meta.kind."
+  },
+  "agent-method:session/set_config_option": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/apply-settings.ts, apps/server/src/agents/acp/session-config.ts, apps/server/src/agents/acp/acp-provider.ts",
+    "note": "Mode, model and thought_level by category, and every other option (model_config, unknown categories such as Codex collaboration_mode) by id with the value the chat chose, select or boolean. Only values the agent offered are sent. Also used for live mode switches while a turn runs."
+  },
+  "agent-method:session/prompt": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/conversation-prompt.ts",
+    "note": "One prompt per session. The history is resent as text within a 36 KB budget; a resumed session gets only the new message. PromptResponse.usage is saved on the run (prompt-usage.ts); that field is unstable in SDK 1.5.0 and absent from the stable v1 schema, so it is read only when present."
+  },
+  "agent-method:_*": {
+    "status": "not_applicable",
+    "note": "We send no extension methods."
+  },
+  "client-method:fs/write_text_file": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/fs-handlers.ts, apps/server/src/agents/acp/do-handlers.ts",
+    "note": "Do mode only: writeTextFile is advertised and each write goes through projects/path-policy.ts (absolute paths inside a linked root after symlinks, secret files and .git refused as invalid_params -32602), then the approval gate with the old and new text as a diff. Allowed writes create missing folders; denied writes answer invalid_request -32600 (ACP defines no code for a user refusal); a write cancelled by Stop answers request_cancelled -32800. A path allowed by an earlier edit approval in the run is written without asking again. Ask and chat runs don't advertise it, so a call answers method_not_found -32601 and records a Declined step. Neither real adapter calls it (claude-agent-acp 0.81.2, codex-acp 1.13.1), so it is exercised by the fake agent."
+  },
+  "client-method:fs/read_text_file": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/fs-handlers.ts, apps/server/src/agents/acp/acp-provider.ts",
+    "note": "Registered only when a project folder is linked. Goes through the project path policy, honors line and limit, returns -32002 for a missing file and records a Read step."
+  },
+  "client-method:session/request_permission": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/permission-request.ts, apps/server/src/agents/acp/do-handlers.ts, apps/server/src/agents/acp/permissions.ts, apps/server/src/approvals/decide.ts, apps/server/src/workflow/approval-gate.ts",
+    "note": "Do mode: kind, title, rawInput (command, cwd, file_path), content diffs and locations become an approval request. decide() applies the safety floor, run rules, the project allowlist and the posture of the agent's mode; asking stores a pending approval, emits approval_requested, sets the run to awaiting_approval and keeps the request open until the user answers (NOTIFY plus a 1 s poll). The user's chosen option (any of the four kinds) is sent straight back, and *_always choices are also stored as run rules; when the gate decides by itself it answers allow_once or reject_once. Stop answers cancelled; after 30 minutes it answers reject_once and fails the run. Every answer is stored as a receipt with the JSON-RPC id. Ask and chat runs still decline with reject_once."
+  },
+  "client-method:terminal/create": {
+    "status": "missing",
+    "note": "terminal is advertised false. Agents run commands with their own tools, behind request_permission. The chat shows their output from tool_call updates instead."
+  },
+  "client-method:terminal/output": {
+    "status": "missing",
+    "note": "No terminal support."
+  },
+  "client-method:terminal/release": {
+    "status": "missing",
+    "note": "No terminal support."
+  },
+  "client-method:terminal/wait_for_exit": {
+    "status": "missing",
+    "note": "No terminal support."
+  },
+  "client-method:terminal/kill": {
+    "status": "missing",
+    "note": "No terminal support."
+  },
+  "client-method:elicitation/create": {
+    "status": "supported",
+    "where": "elicitation-form.ts, questions.ts, apps/server/src/workflow/question-gate.ts, apps/server/src/persistence/approvals.ts",
+    "note": "Form mode only. The restricted schema is validated at the boundary (flat object; string, enum and oneOf strings, number, integer, boolean, enum and anyOf string arrays; at most 20 fields and 50 options) and shown as a question card (a clarify approval with the form in its payload): the run waits as awaiting_approval and the chat needs you. Claude's and Codex's companion free-text fields (_meta._askUserQuestionCustomAnswer, _meta.codex.role user_note) become the question's own text box. Send answers accept with content checked against the schema, Skip answers decline, Stop answers cancel, the agent's $/cancel_request closes the card and answers cancel, a run with no place to ask (a Spark handed a job, Ask Spark) answers decline so the agent carries on, and a card left by a restart expires. A malformed form, url mode or a Codex isSecret field answers invalid_params -32602 (the spec forbids secrets in form mode). pattern and format are not checked; the agent validates its own answer. Covered with claude-agent-acp 0.81.2's own AskUserQuestion request and response mapping and a codex-acp 1.13.1 request_user_input fixture."
+  },
+  "client-method:_*": {
+    "status": "not_applicable",
+    "note": "We handle no extension methods. The SDK answers -32601."
+  },
+  "agent-notification:session/update": {
+    "status": "partial",
+    "where": "apps/server/src/agents/acp/session-updates.ts",
+    "note": "Received and mapped to steps, text and usage. Several variants are partial or ignored; see Session updates. Updates sent between session/cancel and the prompt response are dropped because the worker stops reading on cancel (workflow/execute-run.ts)."
+  },
+  "agent-notification:elicitation/complete": {
+    "status": "missing",
+    "note": "Only form elicitation is advertised; complete belongs to URL mode."
+  },
+  "agent-notification:_*": {
+    "status": "partial",
+    "where": "auth-status.ts, acp-provider.ts, probe.ts",
+    "note": "One extension notification is read: _auth/status_update, which claude-agent-acp 0.81.2 and codex-acp 1.13.1 push with the sign-in the agent uses. Only authStatus.kind, label and account.plan are kept (validated with zod; the email is dropped) and stored with the provider's model availability. A payload that doesn't parse is ignored. Every other extension notification is ignored by the SDK."
+  },
+  "client-notification:session/cancel": {
+    "status": "partial",
+    "where": "apps/server/src/agents/acp/acp-provider.ts",
+    "note": "Sent on Stop and the process is killed after a 5 s grace period. Open tool steps are dropped rather than marked cancelled, and late updates after the cancel are not read."
+  },
+  "client-notification:_*": {
+    "status": "not_applicable",
+    "note": "We send no extension notifications."
+  },
+  "protocol-notification:$/cancel_request": {
+    "status": "supported",
+    "note": "Handled by the SDK, which answers -32800. Our handlers answer at once. We never cancel our own requests."
+  },
+  "session-update:user_message_chunk": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-open.ts",
+    "note": "Only arrives during session/load replay, which is suppressed; the mapper ignores it anywhere else."
+  },
+  "session-update:agent_message_chunk": {
+    "status": "partial",
+    "where": "apps/server/src/agents/acp/session-updates.ts",
+    "note": "Text streams, and a new messageId inserts a blank line. http and https resource_link blocks become Markdown links, and a ui://spark/<chat>/<id> resource_link becomes an artifact link (artifact-links.ts); other URIs, image, audio and resource blocks are dropped."
+  },
+  "session-update:agent_thought_chunk": {
+    "status": "partial",
+    "where": "apps/server/src/agents/acp/session-updates.ts",
+    "note": "Shown as a Thinking step only. The thought text is dropped."
+  },
+  "session-update:tool_call": {
+    "status": "partial",
+    "where": "apps/server/src/agents/acp/session-updates.ts",
+    "note": "Becomes a step named from the title, with absolute paths shortened to file names, and opens a task for the chat. kind becomes the step kind and locations and rawInput its target. For read and edit kinds, the first location's path and line (with rawInput.limit for a read) are stored as a file_focus activity event (`file-focus.ts`), which Spark Island's file view reads; secret file names are skipped. GitHub pull request URLs in text content, resource_link content and rawOutput are saved as task links. name is kept on the step as toolName (permission-request.ts reads it too, falling back to _meta.claudeCode.toolName) and names the chat's row; claude-agent-acp 0.81.2 sends it on every tool_call (contract test acp-claude-tool-names.test.ts), codex-acp 1.13.1 only for shell (exec_command, write_stdin), view_image and function tools, per its source, so its file changes, web searches and MCP calls keep the title. Pending status (looks like in_progress), content text and diffs are not kept on the step."
+  },
+  "session-update:tool_call_update": {
+    "status": "partial",
+    "where": "apps/server/src/agents/acp/session-updates.ts",
+    "note": "A completed or failed status closes the step; failed adds a Failed step. Title, locations and rawInput update the step target, and a non-empty name replaces the step's tool name (null or omitted leaves it), and a changed read or edit location stores a new file_focus event. GitHub pull request URLs in text content, resource_link content and rawOutput are saved as task links, and a ui://spark/<chat>/<id> resource_link in content becomes an artifact link (artifact-links.ts). Diffs are not kept."
+  },
+  "session-update:plan": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/workflow/task-recorder.ts",
+    "note": "Passed through whole as a plan output with content, priority and status. The worker opens or joins the chat's task, stores a new plan version when it differs (200 per task, then the latest is overwritten), marks the previous version superseded when more than half of the entries changed, records the version on the run, and streams it as an ACTIVITY_SNAPSHOT. The work panel shows it with history and Markdown export; there is no Plan card in the turn yet. The orchestrator's Architect runs read-only with Claude's task tools, which claude-agent-acp reports as `plan` updates."
+  },
+  "session-update:available_commands_update": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/slash-commands.ts, apps/server/src/persistence/session-commands.ts, apps/web/src/chat/composer/slash.ts",
+    "note": "Each update replaces the session's command list (name, description, input hint), stored on provider_sessions.available_commands. The composer's / menu lists them after Spark Outpost's own commands, minus the blocked list in packages/contracts/src/agent-commands.ts (mode, model, permissions, session, setup and sign-in commands). An advertised, unblocked command is sent as the first text of a continued session (\"/name args\"); any other text starting with / is escaped with a leading note so neither adapter parses it as a command, and blocked commands are refused in the composer."
+  },
+  "session-update:current_mode_update": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/acp-provider.ts",
+    "note": "Deprecated in favour of config options, still handled: the new mode shows as a step and becomes the run's mode for the approval gate, unless the run doesn't allow it (then a warning and the run stops)."
+  },
+  "session-update:config_option_update": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/acp-provider.ts",
+    "note": "Model, effort, mode and every other option are tracked and reported as session settings (the run's used model, effort and mode). A mode change the run allows shows as a step; one it doesn't allow (a worktree-only mode on the checkout, anything but read-only in Ask) stops the run."
+  },
+  "session-update:session_info_update": {
+    "status": "partial",
+    "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/errors.ts",
+    "note": "Only the jetbrains.air.sessionFailure extension in _meta is read; an error fails the run, anything else is a warning step. title and updatedAt are ignored."
+  },
+  "session-update:usage_update": {
+    "status": "partial",
+    "where": "apps/server/src/agents/acp/session-updates.ts",
+    "note": "used, size and cost are saved. Cost is kept only in USD (neither pinned adapter sends another currency)."
+  },
+  "session-update:notice": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/client-info.ts",
+    "note": "Unstable in SDK 1.5.0 (session notices RFD, schema 1.23.0 unstable), not in the stable v1 schema. Info, warning, error and custom severities become Note, Warning and Error steps. As the RFD requires, an error notice is advisory: it never fails the run; failures come from the stop reason, a JSON-RPC error or the sessionFailure extension. Both pinned adapters fall back to plain message text when the capability is missing."
+  },
+  "content-block:text": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/conversation-prompt.ts, apps/server/src/agents/acp/session-updates.ts",
+    "note": "Sent in prompts and streamed from replies."
+  },
+  "content-block:image": {
+    "status": "partial",
+    "where": "apps/server/src/agents/acp/conversation-prompt.ts",
+    "note": "Image attachments are sent only when promptCapabilities.image is advertised, otherwise the run is refused. Images in agent replies are dropped."
+  },
+  "content-block:audio": {
+    "status": "not_applicable",
+    "note": "We never send audio, and audio in replies is dropped."
+  },
+  "content-block:resource_link": {
+    "status": "partial",
+    "where": "apps/server/src/agents/acp/session-updates.ts",
+    "note": "http and https links in replies become Markdown links, a GitHub pull request link is saved as a task link, and a ui://spark/<chat>/<id> link opens the artifact (ARTIFACTS.md). We never send resource_link in prompts, although every agent must accept it; project files and @-mentions should use it."
+  },
+  "content-block:resource": {
+    "status": "partial",
+    "where": "apps/server/src/agents/acp/conversation-prompt.ts",
+    "note": "Text attachments are sent as embedded text resources when embeddedContext is advertised, otherwise as fenced text. Blob resources are never sent, and resource blocks in replies are dropped."
+  },
+  "tool-call-content:content": {
+    "status": "partial",
+    "note": "Text is scanned for pull request links and used as the plan text of Claude's ExitPlanMode request. The text of a finished execute tool is shown as that command's output. Otherwise not shown.",
+    "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/plans/plan-mode.ts, apps/server/src/agents/acp/command-output.ts"
+  },
+  "tool-call-content:diff": {
+    "status": "partial",
+    "note": "Shown on edit approval cards. Diffs in tool_call updates that need no approval are not kept.",
+    "where": "apps/server/src/agents/acp/permission-request.ts"
+  },
+  "tool-call-content:terminal": {
+    "status": "partial",
+    "note": "The terminal content block itself is ignored (no terminal capability, so nothing to embed). The output codex-acp sends beside it in _meta.terminal_output_delta, with _meta.terminal_info.cwd and _meta.terminal_exit, is shown live in the chat's command terminal. Claude sends it only when _meta.terminal_output is advertised, which we don't.",
+    "where": "apps/server/src/agents/acp/command-output.ts"
+  },
+  "agent-capability:loadSession": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-open.ts",
+    "note": "Read from initialize; session/load is used when it is true and resume isn't advertised."
+  },
+  "agent-capability:promptCapabilities.image": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/acp-provider.ts",
+    "note": "Gates image attachments."
+  },
+  "agent-capability:promptCapabilities.audio": {
+    "status": "not_applicable",
+    "note": "We never send audio."
+  },
+  "agent-capability:promptCapabilities.embeddedContext": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/conversation-prompt.ts",
+    "note": "Gates embedded resources; falls back to fenced text."
+  },
+  "agent-capability:mcpCapabilities.http": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/repo-session.ts, apps/server/src/agents/acp/session-request.ts",
+    "note": "An enabled HTTP server from .mcp.json is sent only when the agent advertises it; otherwise it is skipped with a note."
+  },
+  "agent-capability:mcpCapabilities.sse": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/repo-session.ts, apps/server/src/agents/acp/session-request.ts",
+    "note": "An enabled SSE server from .mcp.json is sent only when the agent advertises it (Claude does, Codex doesn't); otherwise it is skipped with a note."
+  },
+  "agent-capability:sessionCapabilities.list": {
+    "status": "not_applicable",
+    "note": "We don't call session/list."
+  },
+  "agent-capability:sessionCapabilities.delete": {
+    "status": "missing",
+    "note": "Ignored. Needed before session/delete."
+  },
+  "agent-capability:sessionCapabilities.additionalDirectories": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-request.ts, apps/server/src/agents/acp/acp-provider.ts",
+    "note": "Read from initialize. When a chat links several repos, the extra ones are sent as session/new additionalDirectories only if it is advertised; otherwise the run keeps the primary repo and adds a step. Codex gets them too; with our patched readOnly sandbox they stay read-only."
+  },
+  "agent-capability:sessionCapabilities.resume": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-open.ts",
+    "note": "Read from initialize; preferred over session/load. Without either, a stored session is ignored and the turn starts fresh without a note."
+  },
+  "agent-capability:sessionCapabilities.close": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-open.ts",
+    "note": "Read from initialize; session/close is only sent when it is advertised."
+  },
+  "agent-capability:auth.logout": {
+    "status": "not_applicable",
+    "note": "We never call logout."
+  },
+  "client-capability:fs.readTextFile": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/client-info.ts",
+    "note": "true only when the run has project folders to read (a linked project, or a chat's own folder when it has none; turn-launch.ts planLaunch). The probe sends false. Neither real adapter calls fs/read_text_file."
+  },
+  "client-capability:fs.writeTextFile": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/client-info.ts",
+    "note": "Advertised true only for Do runs in a linked project or a chat's own folder."
+  },
+  "client-capability:terminal": {
+    "status": "missing",
+    "where": "apps/server/src/agents/acp/client-info.ts",
+    "note": "Advertised false. The terminal capability is deferred in the harness plan."
+  },
+  "client-capability:session.configOptions.boolean": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/client-info.ts, apps/server/src/agents/acp/apply-settings.ts",
+    "note": "Advertised in every session and the probe. Boolean options (Claude fast, Codex fast-mode) are reported, shown in the picker and set with type \"boolean\"."
+  },
+  "client-capability:auth.terminal": {
+    "status": "missing",
+    "note": "Not advertised. Settings can't run an agent's terminal login."
+  },
+  "client-capability:elicitation.form": {
+    "status": "supported",
+    "where": "client-info.ts",
+    "note": "Advertised as {} in every turn's initialize, never in the probe. It makes claude-agent-acp 0.81.2 allow AskUserQuestion (also in Spark's tool lists) and forward MCP form elicitations and its refusal-fallback prompt, and codex-acp 1.13.1 send request_user_input and MCP form elicitations instead of answering them empty."
+  },
+  "client-capability:elicitation.url": {
+    "status": "missing",
+    "note": "Not advertised. A url-mode request answers invalid_params."
+  },
+  "stop-reason:end_turn": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/acp-provider.ts",
+    "note": "With no reply text, the run fails if the agent did no work, otherwise a note step is added."
+  },
+  "stop-reason:max_tokens": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/acp-provider.ts",
+    "note": "Adds a note step."
+  },
+  "stop-reason:max_turn_requests": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/acp-provider.ts",
+    "note": "Fails the run with a readable message."
+  },
+  "stop-reason:refusal": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/acp-provider.ts",
+    "note": "Fails the run with a readable message."
+  },
+  "stop-reason:cancelled": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/acp-provider.ts",
+    "note": "Ends the run as cancelled; a failure reported during the turn is not raised."
+  },
+  "permission-option-kind:allow_once": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/permission-request.ts, apps/server/src/workflow/approval-gate.ts",
+    "note": "Shown on the approval card with the agent's label and sent straight back. Also chosen for Always allow in this project, and for requests the agent's mode, a run rule or the allowlist allows."
+  },
+  "permission-option-kind:allow_always": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/permission-request.ts, apps/server/src/workflow/approval-gate.ts, apps/web/src/chat/approvals/ApprovalCard.tsx",
+    "note": "Shown on the approval card with the agent's label and sent straight back. The harness also records it as a run rule, so the same request isn't asked again in the run. Hidden on cards for actions that always ask (secret files, package installs, changes or deletes outside the repo), because an agent-side always rule could let the next one skip the gate."
+  },
+  "permission-option-kind:reject_once": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/permissions.ts, apps/server/src/workflow/approval-gate.ts",
+    "note": "Shown on the approval card with the agent's label and sent straight back. Chosen for refusals (reads outside the project, edits in .git, a Builder publishing), on approval timeout, and for every request outside Do mode. When the gate answers by itself and several reject_once options are offered, the first is used; our codex-acp patch puts decline (continue the turn) before cancel (end the turn)."
+  },
+  "permission-option-kind:reject_always": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/permission-request.ts, apps/server/src/workflow/approval-gate.ts, apps/web/src/chat/approvals/ApprovalCard.tsx",
+    "note": "Shown on the approval card with the agent's label and sent straight back; recorded as a run rule that refuses the same request later in the run. Only Codex sends it today (block a network host)."
+  },
+  "plan-entry:content": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-updates.ts",
+    "note": "Trimmed, capped at 2000 characters, and empty entries are dropped. Plan history compares versions by entry text, so two identical entries count once in the diff."
+  },
+  "plan-entry:priority": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-updates.ts",
+    "note": "Stored with each plan version and shown as a high or low tag in the Plan tab."
+  },
+  "plan-entry:status": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-updates.ts",
+    "note": "pending, in_progress and completed are stored and drive the task list: done, working, not started. An unfinished entry shows as not finished once the run stopped or failed."
+  },
+  "client-capability:session.notices": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/client-info.ts",
+    "note": "Unstable ClientSessionCapabilities.notices from the session notices RFD, advertised as {}. It is a spec field, not our extension, so it stays at session.notices (moving it under _meta would hide it from both adapters, which check exactly this field). Keep the SDK pinned while it is unstable."
+  }
+}

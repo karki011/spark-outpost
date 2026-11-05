@@ -1,0 +1,54 @@
+.wbar {
+  display: block;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--raise);
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.wbar i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transform-origin: left;
+  transition: transform 0.25s var(--out);
+}
+
+.spill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+  background: var(--raise);
+  color: var(--muted);
+}
+
+.spill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.spill.prog,
+.spill.ok {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.spill.rev {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 13%, transparent);
+}
+
+.spill.bad {
+  color: var(--danger);
+  background: var(--danger-soft);
+}

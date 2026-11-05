@@ -1,0 +1,114 @@
+.theme-menu {
+  position: relative;
+}
+
+.theme-menu .icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  transition:
+    background 0.15s,
+    color 0.15s,
+    transform 0.2s var(--out);
+}
+
+.theme-menu .icon-btn:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.theme-menu .icon-btn:active {
+  transform: scale(0.9);
+}
+
+.theme-menu .theme-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) 0 50%, var(--text) 0);
+  box-shadow:
+    0 0 0 2px var(--panel),
+    0 0 0 3px var(--line);
+}
+
+.theme-menu .pop {
+  position: absolute;
+  right: 0;
+  top: 40px;
+  z-index: 30;
+  width: 200px;
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  transform-origin: top right;
+  transform: scale(0.95) translateY(-4px);
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    transform 0.15s var(--out),
+    opacity 0.15s,
+    visibility 0s 0.15s;
+}
+
+.theme-menu .pop.open {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+  transition:
+    transform 0.2s var(--out),
+    opacity 0.15s;
+}
+
+.theme-menu .pop button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  text-align: left;
+}
+
+.theme-menu .pop button:hover {
+  background: var(--raise);
+}
+
+.theme-menu .sw {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: conic-gradient(var(--a) 0 50%, var(--b) 0);
+  box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.35);
+}
+
+.theme-menu .tick {
+  margin-left: auto;
+  opacity: 0;
+  color: var(--accent-text);
+}
+
+.theme-menu .pop button[aria-checked='true'] .tick {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-menu .pop {
+    transition: opacity 0.15s;
+  }
+}
+
+.theme-menu-tints {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}

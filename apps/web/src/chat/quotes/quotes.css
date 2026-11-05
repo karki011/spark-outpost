@@ -1,0 +1,230 @@
+.quote-toolbar {
+  position: absolute;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: calc(100% - 16px);
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(4px) scale(0.97);
+}
+.quote-toolbar[data-side='above'] {
+  transform: translateY(-4px) scale(0.97);
+}
+.quote-toolbar[data-shown='true'] {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.15s var(--out),
+    transform 0.18s var(--out);
+}
+
+.qt-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--text);
+  transition: background 0.15s var(--out);
+}
+.qt-btn svg {
+  color: var(--muted);
+}
+.qt-btn:hover {
+  background: var(--raise);
+}
+.qt-btn:hover svg {
+  color: var(--text);
+}
+.qt-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 2px;
+  background: var(--line);
+}
+
+.quote-toolbar[data-compact='true'] .qt-btn {
+  padding: 0 8px;
+}
+.quote-toolbar[data-compact='true'] .qt-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.qt-note {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: min(320px, 100%);
+}
+.qt-note input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--raise);
+  color: var(--text);
+  font-size: 13px;
+  outline: 0;
+}
+.qt-note input:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.qt-save {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 500;
+}
+.qt-save:hover {
+  background: color-mix(in srgb, var(--accent) 88%, var(--text));
+}
+
+::highlight(spark-quote-note) {
+  background-color: color-mix(in srgb, var(--accent) 24%, transparent);
+  text-decoration: underline dashed;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+::highlight(spark-annotation) {
+  background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.thread[data-mark-hover] {
+  cursor: pointer;
+}
+
+.mark-tip {
+  position: absolute;
+  z-index: 24;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: min(260px, calc(100% - 16px));
+  padding: 7px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
+  font-size: 13px;
+  pointer-events: none;
+  animation: rise 0.15s var(--out) both;
+}
+.mark-tip-note {
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.mark-tip-hint {
+  font-size: 12px;
+  color: var(--faint);
+}
+::highlight(spark-quote-draft) {
+  background-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.thread .md-code figcaption {
+  user-select: none;
+}
+
+.quote-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 10px 0;
+}
+.quote-chip {
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px;
+  animation: rise 0.2s var(--out) both;
+}
+.quote-chip.open {
+  width: 100%;
+}
+.qc-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 1px 4px;
+  border-radius: 5px;
+  text-align: left;
+}
+.qc-body > svg {
+  margin-top: 2px;
+  color: var(--accent-text);
+}
+.qc-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.qc-text {
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.qc-note {
+  max-width: 420px;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.quote-chip.open .qc-body {
+  flex: 1;
+}
+.quote-chip.open .qc-text,
+.quote-chip.open .qc-note {
+  max-width: none;
+  max-height: 180px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.chip .qc-note {
+  color: var(--muted);
+}
+
+.bubble .msg-quote {
+  margin: 2px 0 6px;
+  padding: 1px 0 1px 10px;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  color: var(--muted);
+}
+.bubble .msg-quote-text,
+.bubble .msg-quote-lead {
+  display: block;
+}
+.bubble .msg-quote-lead {
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.bubble .msg-quote-text + .msg-quote {
+  margin-top: 8px;
+}

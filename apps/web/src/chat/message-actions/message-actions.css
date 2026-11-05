@@ -1,0 +1,101 @@
+.msg-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  font-size: 12px;
+  color: var(--faint);
+}
+.msg-actions.user {
+  flex-direction: row-reverse;
+  opacity: 0;
+  transition: opacity 0.2s var(--out);
+}
+.msg.me:hover .msg-actions,
+.msg.me:focus-within .msg-actions {
+  opacity: 1;
+}
+@media (hover: none), (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .msg-actions.user {
+    opacity: 1;
+  }
+}
+
+.msg-time {
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.msg-act.icon-btn {
+  width: 28px;
+  height: 28px;
+  color: var(--faint);
+}
+.msg-act.icon-btn:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+.msg-act svg {
+  width: 14px;
+  height: 14px;
+}
+.msg-act.copied {
+  color: var(--accent-text);
+}
+
+.turn-foot {
+  container-type: inline-size;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 4px;
+  margin-top: 4px;
+}
+.turn-foot > .run-meta,
+.turn-foot > .crew-foot,
+.turn-foot > .revert-btn {
+  margin-top: 0;
+}
+@container (max-width: 580px) {
+  .turn-foot > .run-meta,
+  .turn-foot > .crew-foot {
+    flex-basis: 100%;
+  }
+}
+.turn-foot > .crew-foot {
+  margin-right: 6px;
+}
+.turn-foot > .revert-confirm,
+.turn-foot > .revert-done {
+  flex-basis: 100%;
+}
+.turn-foot > .fb {
+  margin: 0;
+}
+.turn-foot > .fb.open {
+  flex-basis: 100%;
+}
+.turn-foot > .fb .fb-thumb {
+  padding: 4px;
+}
+.turn-foot > .fb .fb-thumb svg {
+  width: 12px;
+  height: 12px;
+}
+.turn-foot:has(> .crew-foot) {
+  margin-top: 14px;
+}
+.turn-foot > .revert-btn {
+  gap: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--faint);
+}
+.turn-foot > .revert-btn:hover {
+  color: var(--text);
+}
+.turn-foot > .revert-btn svg {
+  width: 12px;
+  height: 12px;
+}

@@ -1,0 +1,272 @@
+.tm-face {
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.tm-roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tm-card {
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+  transition:
+    border-color 0.2s var(--out),
+    transform 0.2s var(--out);
+}
+
+.home-live .tm-card {
+  animation: rise 0.22s var(--out) both;
+}
+
+.home-live.enter .tm-card {
+  animation-delay: calc(min(var(--i, 0), 8) * 40ms);
+}
+
+.tm-card:hover {
+  border-color: var(--faint);
+  transform: translateY(-1px);
+}
+
+.tm-card:has(.tm-open:focus-visible) {
+  border-color: var(--accent);
+}
+
+.tm-card.st-needs_you {
+  border-color: var(--warn);
+}
+
+.tm-open {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 132px;
+  padding: 14px 14px 12px;
+  border-radius: inherit;
+  text-align: left;
+}
+
+.tm-open:focus-visible {
+  outline: none;
+}
+
+.tm-open:disabled {
+  cursor: progress;
+}
+
+.tm-blob {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 8px;
+}
+
+.tm-dot {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+
+.tm-dot.working {
+  background: var(--accent);
+  animation: hdot-pulse 1.4s ease-in-out infinite;
+}
+
+.tm-dot.needs_you {
+  background: var(--warn);
+}
+
+.tm-dot.done {
+  background: var(--success);
+}
+
+.tm-dot.failed {
+  background: var(--danger);
+}
+
+.tm-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-role {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-last {
+  display: -webkit-box;
+  max-width: 100%;
+  margin-top: auto;
+  padding-top: 6px;
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 12px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.tm-edit {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.15s var(--out);
+}
+
+.tm-card:hover .tm-edit,
+.tm-edit:focus-visible {
+  opacity: 1;
+}
+
+.tm-add {
+  border-style: dashed;
+  background: transparent;
+}
+
+.tm-add .tm-open {
+  justify-content: center;
+  align-items: center;
+  color: var(--muted);
+}
+
+.tm-plus {
+  border: 1px dashed var(--line-strong);
+  border-radius: 50%;
+}
+
+.tm-sk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 132px;
+  padding: 14px;
+}
+
+.tm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.tm-lede {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tm-starters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tm-starter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+
+.tm-starter .tm-blob {
+  width: 40px;
+  height: 40px;
+  margin: 0;
+}
+
+.tm-starter-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.tm-starter-main b {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tm-starter-main small {
+  display: block;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-starter-acts {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.tm-new-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tm-error {
+  margin: 6px 0 0;
+  color: var(--danger);
+  font-size: 12.5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-dot.working {
+    animation: none;
+  }
+
+  .tm-card:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .tm-roster {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tm-edit {
+    opacity: 1;
+  }
+
+  .tm-starter {
+    flex-wrap: wrap;
+  }
+}

@@ -1,0 +1,28 @@
+.split-divider {
+  position: relative;
+  cursor: col-resize;
+  touch-action: none;
+  background: var(--line);
+}
+
+.split-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 36px;
+  border-radius: 2px;
+  background: var(--line-strong);
+  transform: translate(-50%, -50%);
+}
+
+.split-divider:hover,
+.split-divider:focus-visible {
+  background: var(--accent-soft);
+}
+
+.split-divider:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}

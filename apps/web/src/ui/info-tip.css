@@ -1,0 +1,20 @@
+.info-tip {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin: -4px 0;
+  border-radius: 50%;
+  color: var(--faint);
+  cursor: help;
+  transition: color 0.15s;
+}
+.info-tip:hover,
+.info-tip:focus-visible {
+  color: var(--text);
+}
+.info-tip svg {
+  width: 16px;
+  height: 16px;
+}

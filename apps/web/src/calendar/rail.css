@@ -1,0 +1,272 @@
+.rl-wrap {
+  --rl-cap: max(280px, calc(100cqw - 480px));
+  position: relative;
+  width: min(var(--rl-w, 352px), var(--rl-cap));
+  min-width: 0;
+  min-height: 0;
+}
+
+.rl-resize {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.rl-resize:focus-visible {
+  outline: none;
+}
+
+.rl-wrap:has(.rl-resize:hover) .rl,
+.rl-wrap:has(.rl-resize:focus-visible) .rl,
+.rl-wrap.dragging .rl {
+  border-left-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--accent) 70%, var(--line));
+}
+
+.rl-wrap.dragging {
+  user-select: none;
+}
+
+.rl {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding-left: 16px;
+  overflow-y: auto;
+  border-left: 1px solid var(--line);
+  contain: size;
+}
+
+.rl-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.rl-head h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.rl-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rl-quiet {
+  margin: 4px 0;
+}
+
+.rl-day {
+  align-self: flex-start;
+  margin-top: auto;
+  padding: 4px 2px;
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.rl-day:hover {
+  text-decoration: underline;
+}
+
+.rl-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rl-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 10px 10px 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+}
+
+.rl-card:hover {
+  border-color: var(--line-strong);
+}
+
+.rl-card[data-focus] {
+  background: var(--accent-soft);
+}
+
+.rl-card[data-selected] {
+  background: var(--accent-soft);
+}
+
+.rl-card[data-free] {
+  border-style: dashed;
+}
+
+.rl-card[data-past] {
+  background: var(--panel);
+}
+
+.rl-card[data-past] .rl-open,
+.rl-card[data-past] .rl-time,
+.rl-card[data-past] .rl-notes {
+  color: var(--faint);
+}
+
+.rl-card[data-selected] .rl-open,
+.rl-card[data-selected] .rl-time {
+  color: var(--accent-text);
+}
+
+.rl-card[data-past] .rl-strip {
+  opacity: 0.45;
+}
+
+.rl-strip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--cal-color, var(--line-strong));
+}
+
+.rl-open {
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.rl-open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.rl-open:focus-visible {
+  outline: none;
+}
+
+.rl-card:has(.rl-open:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.rl-notes {
+  display: -webkit-box;
+  margin: -2px 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.rl-time {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.rl-tags {
+  display: flex;
+  margin: 0;
+}
+
+.rl-people {
+  min-width: 0;
+}
+
+.rl-card .cal-person,
+.rl-card .cal-link {
+  position: relative;
+  z-index: 1;
+}
+
+.rl-card .cal-where {
+  font-size: 12px;
+}
+
+.rl-video {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.rl-video small {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.rl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.rl-join {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+}
+
+.rl-free {
+  margin: 0;
+  list-style: none;
+  padding: 6px 10px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-sm);
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+@container (max-width: 900px) {
+  .rl-wrap {
+    width: auto;
+  }
+
+  .rl-resize {
+    display: none;
+  }
+
+  .rl {
+    height: auto;
+    margin-top: 16px;
+    padding: 16px 0 0;
+    overflow: visible;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+    contain: none;
+  }
+}
+
+.rl-people:empty {
+  display: none;
+}

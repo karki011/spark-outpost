@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"]
+  },
+  "include": [
+    "scripts",
+    "tests",
+    "infra/heartbeat-worker/src",
+    "vitest.config.ts",
+    "playwright.config.ts"
+  ],
+  "exclude": ["scripts/bench/fixture"]
+}

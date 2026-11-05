@@ -1,0 +1,122 @@
+import { redactText } from '../audit/redact.ts';
+import { TicketApiError } from './source.ts';
+
+const REQUEST_TIMEOUT_MS = 20_000;
+const USER_AGENT = 'Spark-Outpost';
+
+export interface JsonCall {
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  url: string;
+  authorization?: string;
+  headers?: Record<string, string>;
+  redirect?: 'follow' | 'manual';
+  body?: unknown;
+  timeoutMs?: number;
+}
+
+export interface JsonAnswer {
+  status: number;
+  data: unknown;
+  retryAfter?: string | null;
+}
+
+function parseJson(text: string): unknown {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+export async function callJson(
+  fetchImpl: typeof fetch,
+  sourceName: string,
+  call: JsonCall,
+): Promise<JsonAnswer> {
+  let response: Response;
+  try {
+    response = await fetchImpl(call.url, {
+      method: call.method,
+      headers: {
+        accept: 'application/json',
+        ...(call.authorization ? { authorization: call.authorization } : {}),
+        ...call.headers,
+        'user-agent': USER_AGENT,
+        ...(call.body === undefined ? {} : { 'content-type': 'application/json' }),
+      },
+      ...(call.body === undefined ? {} : { body: JSON.stringify(call.body) }),
+      ...(call.redirect ? { redirect: call.redirect } : {}),
+      signal: AbortSignal.timeout(call.timeoutMs ?? REQUEST_TIMEOUT_MS),
+    });
+  } catch {
+    throw new TicketApiError(
+      0,
+      `Couldn't reach ${sourceName}. Check your connection and the site address, then try again.`,
+    );
+  }
+  return {
+    status: response.status,
+    data: parseJson(await response.text()),
+    retryAfter: response.headers.get('retry-after'),
+  };
+}
+
+function detailOf(data: unknown): string {
+  if (!data || typeof data !== 'object') return '';
+  const record = data as Record<string, unknown>;
+  const messages = Array.isArray(record.errorMessages) ? record.errorMessages : [];
+  const errors = Array.isArray(record.errors) ? record.errors : [];
+  const firstError =
+    errors[0] && typeof errors[0] === 'object'
+      ? (errors[0] as { message?: unknown; title?: unknown; detail?: unknown })
+      : null;
+  const nested =
+    record.error && typeof record.error === 'object'
+      ? (record.error as { message?: unknown }).message
+      : undefined;
+  const first =
+    messages[0] ??
+    firstError?.message ??
+    firstError?.detail ??
+    firstError?.title ??
+    record.message ??
+    nested;
+  return typeof first === 'string' ? redactText(first).slice(0, 200) : '';
+}
+
+export function failure(
+  sourceName: string,
+  action: string,
+  answer: JsonAnswer,
+  thing = 'ticket',
+): TicketApiError {
+  if (answer.status === 401) {
+    return new TicketApiError(
+      401,
+      `${sourceName} rejected the saved credentials while ${action} (401). Reconnect it in Settings → Connectors.`,
+    );
+  }
+  if (answer.status === 403 || answer.status === 404) {
+    return new TicketApiError(
+      answer.status,
+      `${sourceName} denied access while ${action} (${answer.status}). Check that your account can see this ${thing}.`,
+    );
+  }
+  if (answer.status === 429) {
+    const seconds = Number(answer.retryAfter);
+    const wait =
+      Number.isFinite(seconds) && seconds > 0 ? `in ${Math.ceil(seconds)} seconds` : 'in a minute';
+    return new TicketApiError(
+      429,
+      `${sourceName} is limiting requests (429) while ${action}. Nothing changed; try again ${wait}.`,
+    );
+  }
+  const detail = detailOf(answer.data);
+  return new TicketApiError(
+    answer.status,
+    `${sourceName} responded with ${answer.status} while ${action}${detail ? `: ${detail}` : '.'}`,
+  );
+}
+
+export const isOk = (answer: JsonAnswer) => answer.status >= 200 && answer.status < 300;

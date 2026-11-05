@@ -1,0 +1,104 @@
+import { useEffect, useId, useRef } from 'react';
+import { RANGE_DAYS, type AnalyticsRange } from '@spark-outpost/contracts';
+import { preloadDayCalendar } from '../ui/DayCalendar.tsx';
+import { Segmented } from '../ui/Segmented.tsx';
+import { usePopover } from '../ui/use-popover.ts';
+import { CalendarPopover } from './calendar/CalendarPopover.tsx';
+import {
+  addIsoDays,
+  formatRangeLabel,
+  formatShortRange,
+  localToday,
+} from './calendar/date-math.ts';
+import type { RangeChoice } from './analytics-api.ts';
+
+const PRESETS = [
+  { id: '7d', label: '7 days' },
+  { id: '30d', label: '30 days' },
+  { id: '90d', label: '90 days' },
+];
+
+interface RangePickerProps {
+  value: RangeChoice;
+  onChange: (next: RangeChoice) => void;
+}
+
+function customLabel(value: RangeChoice, today: string) {
+  if (value.range !== 'custom' || value.from > value.to) return 'Custom';
+  return (
+    <span title={formatRangeLabel(value.from, value.to)}>
+      <span className="sr-only">Custom: </span>
+      {formatShortRange(value.from, value.to, today)}
+    </span>
+  );
+}
+
+export function RangePicker({ value, onChange }: RangePickerProps) {
+  const id = useId();
+  const today = localToday();
+  const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
+    HTMLDivElement,
+    HTMLDivElement
+  >();
+  const wasOpen = useRef(false);
+  const invalid = value.range === 'custom' && value.from > value.to;
+  const shown =
+    value.range === 'custom'
+      ? value
+      : { from: addIsoDays(today, 1 - RANGE_DAYS[value.range]), to: today };
+
+  useEffect(() => {
+    if (wasOpen.current && !open) {
+      anchorRef.current?.querySelector<HTMLButtonElement>('[data-option="custom"]')?.focus();
+    }
+    wasOpen.current = open;
+  }, [open, anchorRef]);
+
+  const pick = (range: string, via: 'navigate' | 'activate') => {
+    if (range === 'custom') {
+      if (via === 'activate') toggle();
+      else setOpen(false);
+      return;
+    }
+    setOpen(false);
+    onChange({ ...value, range: range as AnalyticsRange });
+  };
+
+  return (
+    <div className="an-range">
+      <div
+        ref={anchorRef}
+        className="an-cal-anchor"
+        data-calendar={open ? id : undefined}
+        onPointerEnter={preloadDayCalendar}
+        onFocusCapture={preloadDayCalendar}
+      >
+        <Segmented
+          ariaLabel="Time range"
+          options={[...PRESETS, { id: 'custom', label: customLabel(value, today) }]}
+          value={value.range}
+          onChange={pick}
+        />
+        {open && (
+          <CalendarPopover
+            id={`${id}-cal`}
+            from={shown.from}
+            to={shown.to}
+            today={today}
+            panelRef={panelRef}
+            onCancel={() => setOpen(false)}
+            onApply={(from, to) => {
+              onChange({ range: 'custom', from, to });
+              setOpen(false);
+            }}
+          />
+        )}
+      </div>
+      {invalid && (
+        <div className="an-dates">
+          <span role="alert">The start date must be on or before the end date.</span>
+        </div>
+      )}
+    </div>
+  );
+}

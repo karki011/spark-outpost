@@ -1,0 +1,470 @@
+import {
+  compactionThresholdError,
+  defaultModeFor,
+  modePosture,
+  permissionFor,
+  type AgentModeOption,
+  type ArchiveInactiveDays,
+  type BusyEnterAction,
+  type CompactionThresholds,
+  type InvolvementLevel,
+  type Personality,
+  type Profile,
+  type ProviderConnection,
+  type ProviderId,
+  type ProviderModel,
+  type ProviderSetup,
+  type SetupState,
+  type SparkSessionPrefs,
+  type UpdateProfileRequest,
+  type WideWindowLayout,
+} from '@spark-outpost/contracts';
+import { effectiveDefaultModel, retirementOf, usableDefault } from '../model-cards/cards.ts';
+import { catalog, catalogEntry } from '../providers/catalog.ts';
+import { INITIAL_PROVIDER_EFFORT } from '../providers/efforts.ts';
+import type { TestOutcome } from '../setup/test-message.ts';
+import type { VerifiedConnection } from '../setup/verify.ts';
+import {
+  instructionsFileNote,
+  loadAgentInstructions,
+  readAgentInstructions,
+} from '../setup/agent-instructions.ts';
+import { listAdvisors } from './advisors.ts';
+import type { Queryable } from './db.ts';
+
+interface ProfileRow {
+  display_name: string;
+  default_provider: ProviderId | null;
+  onboarding_completed_at: Date | null;
+  auto_continue_seconds: number | null;
+  pr_ready_for_review: boolean;
+  pr_follow_up: boolean;
+  pr_follow_up_checks: boolean;
+  pr_follow_up_reviews: boolean;
+  pr_follow_up_replies: boolean;
+  pr_follow_up_ask: boolean;
+  personality: Personality;
+  agent_instructions: string;
+  agent_instructions_file: string;
+  default_level: InvolvementLevel;
+  default_level_notice: boolean;
+  morning_brief: boolean;
+  morning_brief_time: string;
+  compact_warn_percent: number;
+  compact_at_percent: number;
+  auto_compact: boolean;
+  heartbeat: boolean;
+  wide_window: WideWindowLayout;
+  busy_enter: BusyEnterAction;
+  archive_inactive_days: ArchiveInactiveDays;
+  terminal_record_like_chat: boolean;
+  mac_control: boolean;
+  code_mode: boolean;
+  collapse_finished_turns: boolean;
+}
+
+export interface ConnectionRow {
+  provider: ProviderId;
+  method: 'cli' | 'api_key';
+  detail: string;
+  models: ProviderModel[];
+  model: string | null;
+  permission: string;
+  agent_mode: string | null;
+  effort: string | null;
+  verified_at: Date;
+  disconnected_at: Date | null;
+  summary: string | null;
+  last_test_at: Date | null;
+  last_test_ok: boolean | null;
+  last_test_message: string | null;
+}
+
+export class InvalidDefaultError extends Error {}
+
+export function assertModeOffered(
+  provider: ProviderId,
+  mode: string,
+  modes: readonly AgentModeOption[],
+): void {
+  const offered =
+    modes.length > 0
+      ? modes.some((option) => option.id === mode)
+      : modePosture(provider, mode) !== 'unknown';
+  if (!offered)
+    throw new InvalidDefaultError(`${catalogEntry(provider).name} doesn't offer that mode.`);
+}
+
+async function ensureProfile(db: Queryable, workspaceId: string): Promise<ProfileRow> {
+  await db.query('INSERT INTO profiles (workspace_id) VALUES ($1) ON CONFLICT DO NOTHING', [
+    workspaceId,
+  ]);
+  const { rows } = await db.query<ProfileRow>(
+    `SELECT display_name, default_provider, onboarding_completed_at, auto_continue_seconds,
+       pr_ready_for_review, pr_follow_up, pr_follow_up_checks,
+       pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, personality, agent_instructions, agent_instructions_file, default_level,
+       default_level_notice,
+       morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
+       heartbeat, wide_window, busy_enter, archive_inactive_days, terminal_record_like_chat,
+       mac_control, code_mode, collapse_finished_turns,
+       to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
+     FROM profiles WHERE workspace_id = $1`,
+    [workspaceId],
+  );
+  return rows[0]!;
+}
+
+export async function connectionRows(db: Queryable, workspaceId: string): Promise<ConnectionRow[]> {
+  const { rows } = await db.query<ConnectionRow>(
+    'SELECT * FROM provider_connections WHERE workspace_id = $1',
+    [workspaceId],
+  );
+  return rows;
+}
+
+export function toConnection(row: ConnectionRow | undefined): ProviderConnection | null {
+  if (!row || row.disconnected_at) return null;
+  return {
+    method: row.method,
+    detail: row.detail,
+    summary: row.summary,
+    lastTest:
+      row.last_test_at && row.last_test_ok !== null && row.last_test_message
+        ? {
+            ok: row.last_test_ok,
+            message: row.last_test_message,
+            testedAt: row.last_test_at.toISOString(),
+          }
+        : null,
+    models: row.models,
+    model: usableDefault(row.provider, row.model),
+    permission: row.permission,
+    agentMode: row.agent_mode ?? defaultModeFor(row.provider),
+    effort: row.effort,
+    verifiedAt: row.verified_at.toISOString(),
+  };
+}
+
+function connectedIds(rows: ConnectionRow[]): ProviderId[] {
+  return rows.filter((row) => !row.disconnected_at).map((row) => row.provider);
+}
+
+export async function getSetupState(db: Queryable, workspaceId: string): Promise<SetupState> {
+  const [profile, rows, advisors] = await Promise.all([
+    ensureProfile(db, workspaceId),
+    connectionRows(db, workspaceId),
+    listAdvisors(db, workspaceId),
+  ]);
+  const connected = connectedIds(rows);
+  const defaultProvider =
+    profile.default_provider && connected.includes(profile.default_provider)
+      ? profile.default_provider
+      : (connected[0] ?? null);
+  const providers: ProviderSetup[] = catalog.map((entry) => ({
+    id: entry.id,
+    name: entry.name,
+    maker: entry.maker,
+    cli: entry.cli,
+    keyPrefix: entry.keyPrefix,
+    keyHint: entry.keyHint,
+    keyLink: entry.keyLink,
+    note: entry.note,
+    installCommand: entry.installCommand,
+    methods: entry.methods,
+    efforts: entry.efforts,
+    defaultEffort: entry.defaultEffort,
+    connection: toConnection(rows.find((row) => row.provider === entry.id)),
+  }));
+  const instructionsFile = await loadAgentInstructions('', profile.agent_instructions_file);
+  const result: Profile = {
+    displayName: profile.display_name,
+    defaultProvider,
+    onboardingCompleted: profile.onboarding_completed_at !== null && connected.length > 0,
+    autoContinueSeconds: profile.auto_continue_seconds,
+    prReadyForReview: profile.pr_ready_for_review,
+    prFollowUp: profile.pr_follow_up,
+    prFollowUpChecks: profile.pr_follow_up_checks,
+    prFollowUpReviews: profile.pr_follow_up_reviews,
+    prFollowUpReplies: profile.pr_follow_up_replies,
+    prFollowUpAsk: profile.pr_follow_up_ask,
+    personality: profile.personality,
+    agentInstructions: profile.agent_instructions,
+    agentInstructionsFile: profile.agent_instructions_file,
+    agentInstructionsFileSet: profile.agent_instructions_file !== '',
+    agentInstructionsFileError: instructionsFile.fileError,
+    defaultLevel: profile.default_level,
+    defaultLevelNotice: profile.default_level_notice,
+    morningBrief: profile.morning_brief,
+    morningBriefTime: profile.morning_brief_time,
+    compactWarnPercent: profile.compact_warn_percent,
+    compactAtPercent: profile.compact_at_percent,
+    autoCompact: profile.auto_compact,
+    heartbeat: profile.heartbeat,
+    wideWindow: profile.wide_window,
+    busyEnter: profile.busy_enter,
+    archiveInactiveDays: profile.archive_inactive_days,
+    terminalRecordLikeChat: profile.terminal_record_like_chat,
+    macControl: profile.mac_control,
+    codeMode: profile.code_mode && process.env.SPARK_CODE_MODE !== '0',
+    ...(process.env.SPARK_CODE_MODE === '0' ? { codeModeUnavailable: true } : {}),
+    collapseFinishedTurns: profile.collapse_finished_turns,
+  };
+  return { profile: result, providers, advisors };
+}
+
+function assertThresholds(profile: ProfileRow, update: UpdateProfileRequest): void {
+  const error = compactionThresholdError(
+    update.compactWarnPercent ?? profile.compact_warn_percent,
+    update.compactAtPercent ?? profile.compact_at_percent,
+  );
+  if (error) throw new InvalidDefaultError(error);
+}
+
+export async function updateProfile(
+  db: Queryable,
+  workspaceId: string,
+  update: UpdateProfileRequest,
+): Promise<void> {
+  assertThresholds(await ensureProfile(db, workspaceId), update);
+  if (update.agentInstructionsFile?.trim())
+    await readAgentInstructions(update.agentInstructions ?? '', update.agentInstructionsFile);
+  if (update.defaultProvider) {
+    const connected = connectedIds(await connectionRows(db, workspaceId));
+    if (!connected.includes(update.defaultProvider)) {
+      throw new InvalidDefaultError('Connect this provider before making it the default.');
+    }
+  }
+  if (update.onboardingCompleted) {
+    const connected = connectedIds(await connectionRows(db, workspaceId));
+    if (connected.length === 0)
+      throw new InvalidDefaultError('Connect a provider before finishing setup.');
+  }
+  await db.query(
+    `UPDATE profiles SET
+       display_name = COALESCE($2, display_name),
+       default_provider = COALESCE($3, default_provider),
+       onboarding_completed_at = CASE WHEN $4 THEN COALESCE(onboarding_completed_at, now()) ELSE onboarding_completed_at END,
+       auto_continue_seconds = CASE WHEN $5 THEN $6::integer ELSE auto_continue_seconds END,
+       personality = COALESCE($7, personality),
+       default_level = COALESCE($8, default_level),
+       morning_brief = COALESCE($9, morning_brief),
+       morning_brief_time = COALESCE($10::time, morning_brief_time),
+       pr_ready_for_review = COALESCE($11, pr_ready_for_review),
+       pr_follow_up = COALESCE($12, pr_follow_up),
+       pr_follow_up_checks = COALESCE($13, pr_follow_up_checks),
+       pr_follow_up_reviews = COALESCE($14, pr_follow_up_reviews),
+       pr_follow_up_replies = COALESCE($15, pr_follow_up_replies),
+       compact_warn_percent = COALESCE($16, compact_warn_percent),
+       compact_at_percent = COALESCE($17, compact_at_percent),
+       auto_compact = COALESCE($18, auto_compact),
+       heartbeat = COALESCE($19, heartbeat),
+       wide_window = COALESCE($20, wide_window),
+       busy_enter = COALESCE($21, busy_enter),
+       pr_follow_up_ask = COALESCE($22, pr_follow_up_ask),
+       default_level_notice = default_level_notice AND $23,
+       agent_instructions = COALESCE($24, agent_instructions),
+       agent_instructions_file = COALESCE($25, agent_instructions_file),
+       terminal_record_like_chat = COALESCE($26, terminal_record_like_chat),
+       mac_control = COALESCE($27, mac_control),
+       archive_inactive_days = CASE WHEN $28 THEN $29::integer ELSE archive_inactive_days END,
+       code_mode = COALESCE($30, code_mode),
+       collapse_finished_turns = COALESCE($31, collapse_finished_turns),
+       updated_at = now()
+     WHERE workspace_id = $1`,
+    [
+      workspaceId,
+      update.displayName?.trim() ?? null,
+      update.defaultProvider ?? null,
+      update.onboardingCompleted ?? false,
+      update.autoContinueSeconds !== undefined,
+      update.autoContinueSeconds ?? null,
+      update.personality ?? null,
+      update.defaultLevel ?? null,
+      update.morningBrief ?? null,
+      update.morningBriefTime ?? null,
+      update.prReadyForReview ?? null,
+      update.prFollowUp ?? null,
+      update.prFollowUpChecks ?? null,
+      update.prFollowUpReviews ?? null,
+      update.prFollowUpReplies ?? null,
+      update.compactWarnPercent ?? null,
+      update.compactAtPercent ?? null,
+      update.autoCompact ?? null,
+      update.heartbeat ?? null,
+      update.wideWindow ?? null,
+      update.busyEnter ?? null,
+      update.prFollowUpAsk ?? null,
+      update.defaultLevel === undefined && update.defaultLevelNotice === undefined,
+      update.agentInstructions?.trim() ?? null,
+      update.agentInstructionsFile?.trim() ?? null,
+      update.terminalRecordLikeChat ?? null,
+      update.macControl ?? null,
+      update.archiveInactiveDays !== undefined,
+      update.archiveInactiveDays ?? null,
+      update.codeMode ?? null,
+      update.collapseFinishedTurns ?? null,
+    ],
+  );
+}
+
+export interface SparkPreferences extends SparkSessionPrefs {
+  codeMode: boolean;
+  instructionsNote: string | null;
+}
+
+export async function sparkPreferences(
+  db: Queryable,
+  workspaceId: string,
+): Promise<SparkPreferences> {
+  const profile = await ensureProfile(db, workspaceId);
+  const instructions = await loadAgentInstructions(
+    profile.agent_instructions,
+    profile.agent_instructions_file,
+  );
+  return {
+    displayName: profile.display_name,
+    personality: profile.personality,
+    agentInstructions: instructions.text,
+    instructionsNote: instructions.fileError && instructionsFileNote(instructions.fileError),
+    codeMode: profile.code_mode && process.env.SPARK_CODE_MODE !== '0',
+  };
+}
+
+export interface MorningBriefSetting {
+  enabled: boolean;
+  time: string;
+}
+
+export async function morningBriefSetting(
+  db: Queryable,
+  workspaceId: string,
+): Promise<MorningBriefSetting> {
+  const profile = await ensureProfile(db, workspaceId);
+  return { enabled: profile.morning_brief, time: profile.morning_brief_time };
+}
+
+export async function claimMorningBrief(
+  db: Queryable,
+  workspaceId: string,
+  day: string,
+): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE profiles SET morning_brief_tried_on = $2::date
+     WHERE workspace_id = $1
+       AND (morning_brief_tried_on IS NULL OR morning_brief_tried_on < $2::date)`,
+    [workspaceId, day],
+  );
+  return rowCount === 1;
+}
+
+export async function autoContinueSeconds(
+  db: Queryable,
+  workspaceId: string,
+): Promise<number | null> {
+  return (await ensureProfile(db, workspaceId)).auto_continue_seconds;
+}
+
+export async function compactionThresholds(
+  db: Queryable,
+  workspaceId: string,
+): Promise<CompactionThresholds> {
+  const profile = await ensureProfile(db, workspaceId);
+  return {
+    warnPercent: profile.compact_warn_percent,
+    compactPercent: profile.compact_at_percent,
+    autoCompact: profile.auto_compact,
+  };
+}
+
+export async function saveConnection(
+  db: Queryable,
+  workspaceId: string,
+  provider: ProviderId,
+  verified: VerifiedConnection,
+): Promise<ProviderConnection> {
+  const defaultMode = defaultModeFor(provider);
+  const defaultModel = effectiveDefaultModel(
+    provider,
+    verified.models,
+    verified.models[0]?.id ?? null,
+  );
+  const { rows } = await db.query<ConnectionRow>(
+    `INSERT INTO provider_connections
+       (workspace_id, provider, method, detail, models, model, permission, effort, verified_at,
+        summary, agent_mode)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9, $10)
+     ON CONFLICT (workspace_id, provider) DO UPDATE SET
+       method = EXCLUDED.method,
+       detail = EXCLUDED.detail,
+       summary = EXCLUDED.summary,
+       last_test_at = NULL,
+       last_test_ok = NULL,
+       last_test_message = NULL,
+       models = EXCLUDED.models,
+       model = CASE
+         WHEN provider_connections.model IS NOT NULL
+           AND EXCLUDED.models @> jsonb_build_array(jsonb_build_object('id', provider_connections.model))
+           AND NOT provider_connections.model = ANY($11::text[])
+         THEN provider_connections.model
+         ELSE EXCLUDED.model
+       END,
+       agent_mode = COALESCE(provider_connections.agent_mode, EXCLUDED.agent_mode),
+       verified_at = now(),
+       disconnected_at = NULL
+     RETURNING *`,
+    [
+      workspaceId,
+      provider,
+      verified.method,
+      verified.detail,
+      JSON.stringify(verified.models),
+      defaultModel,
+      permissionFor(provider, defaultMode),
+      INITIAL_PROVIDER_EFFORT,
+      verified.summary,
+      defaultMode,
+      verified.models.flatMap((model) => (retirementOf(model, provider) ? [model.id] : [])),
+    ],
+  );
+  return toConnection(rows[0])!;
+}
+
+export async function activeConnection(
+  db: Queryable,
+  workspaceId: string,
+  provider: ProviderId,
+): Promise<ProviderConnection | null> {
+  const row = (await connectionRows(db, workspaceId)).find(
+    (candidate) => candidate.provider === provider,
+  );
+  return toConnection(row);
+}
+
+export async function recordTest(
+  db: Queryable,
+  workspaceId: string,
+  provider: ProviderId,
+  outcome: TestOutcome,
+): Promise<void> {
+  await db.query(
+    `UPDATE provider_connections
+     SET last_test_at = now(), last_test_ok = $3, last_test_message = $4,
+       verified_at = CASE WHEN $3 THEN now() ELSE verified_at END
+     WHERE workspace_id = $1 AND provider = $2 AND disconnected_at IS NULL`,
+    [workspaceId, provider, outcome.ok, outcome.message],
+  );
+}
+
+export async function disconnectProvider(
+  db: Queryable,
+  workspaceId: string,
+  provider: ProviderId,
+): Promise<void> {
+  const connected = connectedIds(await connectionRows(db, workspaceId));
+  if (!connected.includes(provider)) return;
+  await db.query(
+    `UPDATE provider_connections SET disconnected_at = now()
+     WHERE workspace_id = $1 AND provider = $2`,
+    [workspaceId, provider],
+  );
+}

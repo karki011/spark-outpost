@@ -1,0 +1,351 @@
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { setupApi, setupKey } from '../api/setup.ts';
+import type { ScoutMood } from '../brand/BlobScout.tsx';
+import type { BlobExpression } from '../brand/blob-expression.ts';
+import { UserBlob } from '../brand/UserBlob.tsx';
+import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.tsx';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
+import { CALENDAR_PATH } from '../ui/icons.tsx';
+import { browserViewAvailable } from '../browser-view/view-store.ts';
+import { useSparkPause } from './pause/use-spark-pause.ts';
+import { RailClock } from './RailClock.tsx';
+import { RailMore } from './RailMore.tsx';
+import { UpdateBlob } from './UpdateBlob.tsx';
+import { PlanRing } from './PlanRing.tsx';
+import './rail.css';
+
+export type AppView =
+  'home' | 'chats' | 'browser' | 'today' | 'analytics' | 'tickets' | 'map' | 'docs' | 'phone';
+
+interface RailProps {
+  view: AppView;
+  waiting: number;
+  ticketsWaiting: number;
+  ticketNotices: number;
+  mood: ScoutMood;
+  onView: (view: AppView) => void;
+  onIntent: (view: AppView) => void;
+  onSettingsIntent: () => void;
+  onSettings: () => void;
+  onProfile: () => void;
+}
+
+const ICON = {
+  width: 20,
+  height: 20,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.8,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  'aria-hidden': true,
+} as const;
+
+const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
+  {
+    id: 'home',
+    label: 'Home',
+    icon: (
+      <svg {...ICON}>
+        <path d="M3 11 12 4l9 7v8a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'chats',
+    label: 'Chats',
+    icon: (
+      <svg {...ICON}>
+        <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'browser',
+    label: 'Browser',
+    icon: (
+      <svg {...ICON}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18" />
+      </svg>
+    ),
+  },
+  {
+    id: 'today',
+    label: 'Today',
+    icon: (
+      <svg {...ICON}>
+        <path d={CALENDAR_PATH} />
+      </svg>
+    ),
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: (
+      <svg {...ICON}>
+        <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+      </svg>
+    ),
+  },
+  {
+    id: 'tickets',
+    label: 'Tickets',
+    icon: (
+      <svg {...ICON}>
+        <path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" />
+        <path d="M10 9v6" />
+      </svg>
+    ),
+  },
+  {
+    id: 'map',
+    label: 'Map',
+    icon: (
+      <svg {...ICON}>
+        <path d="m5 18 5-9 7 3 2-7" />
+        <circle cx="5" cy="18" r="1.8" fill="currentColor" />
+        <circle cx="10" cy="9" r="1.8" fill="currentColor" />
+        <circle cx="17" cy="12" r="2.2" fill="currentColor" />
+        <circle cx="19" cy="5" r="1.4" fill="currentColor" />
+      </svg>
+    ),
+  },
+  {
+    id: 'docs',
+    label: 'Docs',
+    icon: (
+      <svg {...ICON}>
+        <path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5v-15Z" />
+        <path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M9 7h6M9 10.5h4" />
+      </svg>
+    ),
+  },
+];
+
+const MAC_ONLY: ReadonlySet<AppView> = new Set(['browser', 'today']);
+const PHONE_VIEWS = VIEWS.filter((item) => item.id !== 'map' && !MAC_ONLY.has(item.id));
+const REMOTE_VIEWS = VIEWS.filter((item) => !MAC_ONLY.has(item.id));
+const NO_BROWSER_VIEWS = VIEWS.filter((item) => item.id !== 'browser');
+
+const REMOTE_ICON = (
+  <svg {...ICON}>
+    <path d="M8 16H5a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2h10.5a2 2 0 0 1 2 2V9" />
+    <rect x="11" y="12" width="10" height="7.5" rx="1.8" />
+  </svg>
+);
+
+const SETTINGS_ICON = (
+  <svg {...ICON}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+  </svg>
+);
+
+const PAUSE_ICON = (
+  <svg {...ICON}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M10 9v6M14 9v6" />
+  </svg>
+);
+
+const RESUME_ICON = (
+  <svg {...ICON}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="m10 8.5 5 3.5-5 3.5z" />
+  </svg>
+);
+
+const MOOD_EXPRESSIONS: Record<NonNullable<ScoutMood>, BlobExpression> = {
+  working: 'thinking',
+  alert: 'unsure',
+  happy: 'happy',
+  sad: 'sad',
+  sleep: 'sleepy',
+};
+
+function useIndicator(view: AppView) {
+  const railRef = useRef<HTMLElement>(null);
+  const [box, setBox] = useState<{ top: number; height: number } | null>(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const button = railRef.current?.querySelector<HTMLElement>(`[data-view="${view}"]`);
+      if (button) setBox({ top: button.offsetTop, height: button.offsetHeight });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [view]);
+  return { railRef, box };
+}
+
+export function Rail({
+  view,
+  waiting,
+  ticketsWaiting,
+  ticketNotices,
+  mood,
+  onView,
+  onIntent,
+  onSettingsIntent,
+  onSettings,
+  onProfile,
+}: RailProps) {
+  const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
+  const name = setup.data?.profile.displayName.trim() || 'You';
+  const { railRef, box } = useIndicator(view);
+  const layout = useSidebarLayout();
+  const phone = layout?.narrow ?? false;
+  const { remote } = useRemoteClient();
+  const reopens = layout?.collapsed && !phone;
+  const primary = phone
+    ? PHONE_VIEWS
+    : remote
+      ? REMOTE_VIEWS
+      : browserViewAvailable()
+        ? VIEWS
+        : NO_BROWSER_VIEWS;
+  const pause = useSparkPause();
+  const pauseLabel = pause.paused ? 'Resume Spark' : 'Pause Spark';
+  const pauseIcon = pause.paused ? RESUME_ICON : PAUSE_ICON;
+  const togglePause = () => pause.setPaused(!pause.paused);
+  const more = [
+    {
+      id: 'pause',
+      label: pauseLabel,
+      icon: pauseIcon,
+      current: false,
+      onSelect: togglePause,
+    },
+    {
+      id: 'phone',
+      label: 'Remote control',
+      icon: REMOTE_ICON,
+      current: view === 'phone',
+      onSelect: () => onView('phone'),
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: SETTINGS_ICON,
+      current: false,
+      onSelect: onSettings,
+    },
+  ];
+
+  return (
+    <nav ref={railRef} className="rail" aria-label="Main" data-bottom-bar={phone ? '' : undefined}>
+      <button
+        type="button"
+        className="rail-logo"
+        aria-label={`Your profile, ${name}`}
+        title={name}
+        onPointerEnter={onSettingsIntent}
+        onFocus={onSettingsIntent}
+        onClick={onProfile}
+      >
+        <UserBlob
+          displayName={name}
+          size={40}
+          expression={mood ? MOOD_EXPRESSIONS[mood] : 'idle'}
+          animate="always"
+        />
+      </button>
+      <span
+        className="rail-ind"
+        aria-hidden="true"
+        style={box ? { transform: `translateY(${box.top}px)`, height: box.height } : { opacity: 0 }}
+      />
+      {primary.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          className="rail-btn"
+          data-view={item.id}
+          aria-current={view === item.id ? 'page' : undefined}
+          title={
+            item.id === 'chats' && reopens ? `Show chats sidebar (${SIDEBAR_HINT})` : undefined
+          }
+          onPointerEnter={() => onIntent(item.id)}
+          onFocus={() => onIntent(item.id)}
+          onClick={() => onView(item.id)}
+        >
+          {item.icon}
+          {item.label}
+          {item.id === 'chats' && waiting > 0 && (
+            <i
+              className="rbadge"
+              aria-label={`${waiting} ${waiting === 1 ? 'chat needs' : 'chats need'} your input`}
+            >
+              {waiting}
+            </i>
+          )}
+          {item.id === 'tickets' && ticketsWaiting > 0 && (
+            <i
+              className="rbadge"
+              aria-label={`${ticketsWaiting} ${ticketsWaiting === 1 ? 'ticket needs' : 'tickets need'} attention`}
+            >
+              {ticketsWaiting}
+            </i>
+          )}
+          {item.id === 'tickets' && ticketNotices > 0 && (
+            <i
+              className={ticketsWaiting > 0 ? 'rdot beside' : 'rdot'}
+              aria-label={`${ticketNotices} ticket ${ticketNotices === 1 ? 'update' : 'updates'} to look at`}
+            />
+          )}
+        </button>
+      ))}
+      {phone ? (
+        <RailMore items={more} />
+      ) : (
+        <>
+          <span className="rail-sp" />
+          {!remote && <UpdateBlob />}
+          <PlanRing />
+          <button
+            type="button"
+            className="rail-btn"
+            aria-label={pauseLabel}
+            title={pause.paused ? 'Resume automatic work' : 'Hold automatic work'}
+            disabled={pause.saving}
+            onClick={togglePause}
+          >
+            {pauseIcon}
+            {pause.paused ? 'Resume' : 'Pause'}
+          </button>
+          <button
+            type="button"
+            className="rail-btn"
+            data-view="phone"
+            aria-label="Remote control"
+            title="Remote control"
+            aria-current={view === 'phone' ? 'page' : undefined}
+            onPointerEnter={() => onIntent('phone')}
+            onFocus={() => onIntent('phone')}
+            onClick={() => onView('phone')}
+          >
+            {REMOTE_ICON}
+            Remote
+          </button>
+          <button
+            type="button"
+            className="rail-btn"
+            onPointerEnter={onSettingsIntent}
+            onFocus={onSettingsIntent}
+            onClick={onSettings}
+          >
+            {SETTINGS_ICON}
+            Settings
+          </button>
+          <RailClock
+            onOpen={remote ? undefined : () => onView('today')}
+            onIntent={() => onIntent('today')}
+          />
+        </>
+      )}
+    </nav>
+  );
+}

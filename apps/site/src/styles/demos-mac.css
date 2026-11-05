@@ -1,0 +1,256 @@
+.mac-stage {
+  display: grid;
+  gap: 14px;
+}
+
+.mac-app .window-body {
+  min-height: 190px;
+}
+
+.app-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.app-button {
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  font-size: 13px;
+  transition:
+    transform 120ms,
+    background 200ms;
+}
+
+.app-button.pressed {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  transform: scale(0.94);
+}
+
+.app-button.hot {
+  border-color: var(--warn);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 18%, transparent);
+}
+
+.app-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.app-list li {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--raise);
+}
+
+.cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--text);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
+  transform: translate(70%, 150px);
+  transition: transform 700ms var(--out);
+  rotate: -90deg;
+}
+
+.app-card {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  gap: 4px;
+  max-width: 260px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--line));
+  border-radius: 12px;
+  background: var(--panel);
+  font-size: 13px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 260ms,
+    transform 260ms var(--out);
+}
+
+.app-card span:not(.chip) {
+  color: var(--muted);
+}
+
+.app-card .chip {
+  justify-self: start;
+  margin-top: 6px;
+}
+
+.app-card.on {
+  opacity: 1;
+  transform: none;
+}
+
+.mac-panel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--raise);
+  font-size: 13px;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.kbd {
+  margin-left: auto;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.terminal .window-body {
+  padding: 0;
+  background: var(--code);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.terminal-lines {
+  min-height: 150px;
+  margin: 0;
+  padding: 12px 14px;
+  list-style: none;
+}
+
+.terminal-lines li {
+  white-space: pre-wrap;
+  animation: rise 240ms var(--out) both;
+}
+
+.terminal-lines .prompt {
+  color: var(--text);
+}
+
+.terminal-lines .tool {
+  color: var(--accent-text);
+}
+
+.terminal-lines .out {
+  color: var(--muted);
+}
+
+.terminal-lines .note {
+  color: var(--warn);
+}
+
+.tmux-status {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 14px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.desk {
+  position: relative;
+  height: 340px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: radial-gradient(70% 60% at 50% 40%, var(--accent-soft), transparent 70%), var(--rail);
+}
+
+.desk-window {
+  position: absolute;
+  inset: 40px 30px -20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  opacity: 0.55;
+}
+
+.rig {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  display: grid;
+  justify-items: center;
+  width: min(330px, 90%);
+  translate: -50% -100%;
+  transition: translate 900ms var(--spring);
+}
+
+.rig.down {
+  translate: -50% 0;
+}
+
+.thread {
+  width: 1.5px;
+  height: 64px;
+  background: var(--muted);
+}
+
+.rig-scout {
+  margin-bottom: -10px;
+  z-index: 1;
+}
+
+.meeting-card {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: var(--bg);
+  box-shadow: 0 24px 50px -16px rgb(0 0 0 / 0.7);
+}
+
+.meeting-card p {
+  margin: 0;
+}
+
+.meeting-when {
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.meeting-title {
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.meeting-detail {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.meeting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.desk-status {
+  min-height: 1.5em;
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}

@@ -1,0 +1,86 @@
+.cgrid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.cx-card {
+  animation: rise 0.35s var(--out) both;
+}
+.cx-card:nth-child(2) {
+  animation-delay: 50ms;
+}
+.cx-card:nth-child(3) {
+  animation-delay: 100ms;
+}
+.cx-card:nth-child(4) {
+  animation-delay: 150ms;
+}
+.cx-card .pc-head > .chev {
+  flex: none;
+}
+.cx-logo {
+  position: relative;
+}
+.cx-glyph {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 20px;
+  height: 20px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: var(--panel);
+  color: var(--muted);
+  box-shadow: 0 0 0 1.5px var(--panel);
+}
+.cx-glyph svg {
+  width: 12px;
+  height: 12px;
+}
+.cx-card .pc-head .nm small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cx-card.soon .pc-head {
+  cursor: default;
+}
+.cx-card.soon .nm b {
+  color: var(--muted);
+}
+.cx-soon {
+  flex: none;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px dashed var(--line);
+}
+.cx-sk {
+  flex: none;
+  width: 76px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--raise);
+}
+.cx-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cx-body > p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.cx-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}

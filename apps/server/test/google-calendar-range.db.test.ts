@@ -1,0 +1,148 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  addLocalDays,
+  calendarEventDetailSchema,
+  calendarRangeSchema,
+  localDayStart,
+} from '@spark-outpost/contracts';
+import { dateKey } from '../src/calendar/service.ts';
+import {
+  EMAIL,
+  MINUTE,
+  SUBJECT,
+  googleHarness,
+  meeting,
+  signIn,
+  status,
+  type Harness,
+} from './google-calendar-support.ts';
+import { createTestDb, type TestDb } from './support.ts';
+
+const DAY_MINUTES = 24 * 60;
+
+let t: TestDb;
+let h: Harness;
+
+beforeEach(async () => {
+  t = await createTestDb();
+  h = googleHarness(t);
+});
+
+afterEach(async () => {
+  h.google.stop();
+  await t.cleanup();
+});
+
+function dayKey(daysFromToday: number): string {
+  return dateKey(addLocalDays(localDayStart(Date.now()), daysFromToday));
+}
+
+const eventCalls = () => h.fake.requests.filter((request) => request.path.endsWith('/events'));
+
+async function range(from: string, to: string) {
+  const response = await h.client.get(`/api/calendar/range?from=${from}&to=${to}`);
+  expect(response.status).toBe(200);
+  return calendarRangeSchema.parse(response.body);
+}
+
+describe('a Google range outside the synced window', () => {
+  beforeEach(async () => {
+    h.fake.putEvent(SUBJECT, EMAIL, meeting('today', 0));
+    h.fake.putEvent(
+      SUBJECT,
+      EMAIL,
+      meeting('planning', 20 * DAY_MINUTES, {
+        description: 'Agenda<br>Join: https://meet.google.com/abc-defg-hij',
+        htmlLink: 'https://www.google.com/calendar/event?eid=plan',
+        attendees: [
+          { self: true, email: EMAIL },
+          { displayName: 'Alex Wong', email: 'alex@example.com' },
+          { email: 'ivan@example.com' },
+          { resource: true, displayName: 'Room 4' },
+        ],
+      }),
+    );
+    await signIn(h);
+  });
+
+  it('reads it once with timeMin and timeMax, keeps it for a while, and never touches the sync token', async () => {
+    const before = eventCalls().length;
+    const month = await range(dayKey(-7), dayKey(35));
+    expect(month.events.map((event) => event.title)).toEqual(['today', 'planning']);
+    const fetched = eventCalls().slice(before);
+    expect(fetched).toHaveLength(1);
+    expect(fetched[0]!.query).toMatchObject({ singleEvents: 'true' });
+    expect(fetched[0]!.query.timeMin).toBeDefined();
+    expect(fetched[0]!.query.syncToken).toBeUndefined();
+
+    await range(dayKey(-7), dayKey(35));
+    expect(eventCalls().length - before).toBe(1);
+
+    await h.google.syncNow();
+    const synced = eventCalls().at(-1)!;
+    expect(synced.query.syncToken).toBeDefined();
+  });
+
+  it('fetches the details of an event outside the synced window by id, with attendee names', async () => {
+    const month = await range(dayKey(-7), dayKey(35));
+    const planning = month.events.find((event) => event.title === 'planning')!;
+    const before = h.fake.requests.length;
+    const response = await h.client.send('post', '/api/calendar/event', {
+      eventId: planning.id,
+      start: planning.start,
+      calendarKey: planning.calendarKey,
+    });
+    expect(response.status).toBe(200);
+    expect(calendarEventDetailSchema.parse(response.body)).toEqual({
+      title: 'planning',
+      notes: 'Agenda\nJoin: https://meet.google.com/abc-defg-hij',
+      agenda: 'Agenda\nJoin: https://meet.google.com/abc-defg-hij',
+      conference: '',
+      snippet: 'Agenda Join:',
+      link: 'https://www.google.com/calendar/event?eid=plan',
+      location: 'Room 4',
+      attendees: [
+        { name: 'Alex Wong', email: 'alex@example.com' },
+        { name: 'ivan@example.com', email: 'ivan@example.com' },
+      ],
+    });
+    expect(h.fake.requests.slice(before).map((request) => request.path)).toEqual([
+      `/calendar/v3/calendars/${encodeURIComponent(EMAIL)}/events/planning`,
+    ]);
+  });
+
+  it('asks to sign in again when the token refresh is refused while fetching an event', async () => {
+    const month = await range(dayKey(-7), dayKey(35));
+    const planning = month.events.find((event) => event.title === 'planning')!;
+    h.fake.expireRefreshTokens();
+    h.fake.failNext(`/calendar/v3/calendars/${encodeURIComponent(EMAIL)}/events/planning`, {
+      status: 401,
+    });
+    const response = await h.client.send('post', '/api/calendar/event', {
+      eventId: planning.id,
+      start: planning.start,
+      calendarKey: planning.calendarKey,
+    });
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({ error: 'Sign in to Google again to see this event.' });
+    expect((await status(h)).google.accounts[0]).toMatchObject({ state: 'sign_in_again' });
+  });
+});
+
+describe('a Google range just after midnight', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('reads the range from Google until the next poll moves the stored window', async () => {
+    const lateEvening = new Date(2026, 5, 10, 23, 50);
+    vi.useFakeTimers({ toFake: ['Date'], now: lateEvening });
+    h.fake.putEvent(SUBJECT, EMAIL, meeting('edge', 8 * DAY_MINUTES));
+    await signIn(h);
+    vi.setSystemTime(lateEvening.getTime() + 15 * MINUTE);
+    const before = eventCalls().length;
+    const edgeDay = await range(dayKey(7), dayKey(8));
+    expect(edgeDay.events.map((event) => event.title)).toEqual(['edge']);
+    expect(eventCalls().slice(before)[0]!.query.timeMin).toBeDefined();
+  });
+});

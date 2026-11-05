@@ -1,0 +1,51 @@
+.cx-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+}
+
+.cx-account p {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+
+.cx-account small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cx-account .icon-btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+}
+
+.cx-account .icon-btn:hover,
+.cx-account .icon-btn[aria-expanded='true'] {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.cx-account .icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.ctx.cx-account-menu {
+  z-index: 110;
+}

@@ -1,0 +1,27 @@
+:root:is([data-motion='rest'], [data-motion='paused'])
+  :is(.mo-root, .row.st-running .tt, .rblob-slot) {
+  --motion-rest: 1;
+}
+@container style(--motion-rest: 1) {
+  :is(.mo-root *, .row.st-running .tt > span, .rblob.working) {
+    animation-play-state: paused !important;
+  }
+}
+:root:is([data-motion='rest'], [data-motion='paused'])
+  :is(
+    .scout .sc-body,
+    .scout:not(.alert, .sad, .happy, .sleep) .sc-eye,
+    .scout:not(.working, .alert, .sad, .sleep) .sc-spark,
+    .scout.alert :is(.sc-ant, .sc-spark),
+    .cmp-float,
+    .btog-z,
+    .mh-dust,
+    .mh-star,
+    .isl-sstatus .shim,
+    .hdot.running,
+    .tm-dot.working
+  ),
+:root:is([data-motion='rest'], [data-motion='paused']) .bst.asleep .bst-blob::after,
+:root[data-motion='paused'] .hprog.wait i {
+  animation-play-state: paused !important;
+}

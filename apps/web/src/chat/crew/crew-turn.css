@@ -1,0 +1,226 @@
+.agent-block + .agent-block {
+  margin-top: 24px;
+}
+.agent-block.folded + .agent-block.folded {
+  margin-top: 4px;
+}
+.agent-head {
+  display: flex;
+  align-items: center;
+  gap: var(--turn-gap, 8px);
+  min-width: 0;
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+  scroll-margin: 80px;
+}
+.agent-ava {
+  width: var(--turn-avatar, 30px);
+  height: var(--turn-avatar, 30px);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.agent-ava.sm {
+  width: 20px;
+  height: 20px;
+}
+.agent-ava svg {
+  display: block;
+  overflow: visible;
+}
+.agent-name {
+  white-space: nowrap;
+  color: var(--text);
+}
+.agent-who {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+.agent-role {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.agent-state {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--faint);
+  animation: fade 0.2s var(--out);
+}
+.agent-state.working,
+.agent-state.thinking {
+  color: var(--accent-text);
+}
+.agent-state.waiting {
+  color: var(--warn);
+}
+.agent-state.failed {
+  color: var(--danger);
+}
+.ah-meta {
+  min-width: 0;
+  font-weight: 400;
+  color: var(--faint);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+.agent-fold {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 5px 8px;
+  margin: 0 -8px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  text-align: left;
+  color: var(--muted);
+  scroll-margin: 80px;
+  transition: background 0.2s;
+}
+.agent-fold:hover {
+  background: var(--raise);
+}
+.agent-fold .agent-name {
+  font-weight: 500;
+}
+.fold-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fold-meta {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.agent-fold .chev {
+  flex-shrink: 0;
+  color: var(--faint);
+}
+.agent-unfold {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--faint);
+}
+.agent-unfold:hover {
+  color: var(--text);
+}
+.crew-foot {
+  display: flex;
+  gap: 6px;
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.crew-foot span {
+  color: var(--muted);
+}
+.agent-head.flash,
+.agent-fold.flash {
+  animation: agent-flash 1.1s var(--out);
+}
+@keyframes agent-flash {
+  0%,
+  40% {
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 6px var(--accent-soft);
+    border-radius: var(--r-sm);
+  }
+}
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .fold-meta {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-head.flash,
+  .agent-fold.flash {
+    animation: none;
+  }
+}
+.agent-head > .agent-who {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+}
+.agent-head > .agent-who .agent-role {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.agent-head > .agent-who .agent-role::before {
+  content: '· ';
+}
+.agent-head > .ah-meta {
+  flex-shrink: 1000;
+}
+.ah-effort {
+  display: inline-flex;
+  margin: 0 0 0 6px;
+  vertical-align: baseline;
+}
+.ah-effort .meter {
+  height: 9px;
+}
+.par-group {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+.par-h {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.par-heads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+.par-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  transition: background 0.2s;
+}
+.par-head:hover,
+.par-head[aria-expanded='true'] {
+  background: var(--raise);
+}
+.par-head .agent-role {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.par-head .agent-state {
+  margin-left: auto;
+}
+.par-body {
+  margin-top: 8px;
+}
+.agent-block .md > p + p {
+  margin-top: -0.25em;
+}

@@ -1,0 +1,59 @@
+.msg.me.steered {
+  gap: 4px;
+  scroll-margin-top: 8px;
+}
+
+.msg.me.steered .steer-item {
+  scroll-margin-top: 8px;
+}
+
+.steer-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 82%;
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: right;
+}
+
+.steer-status svg {
+  flex: none;
+}
+
+.msg.me.steered.ok .steer-status svg {
+  color: var(--success);
+}
+
+.steer-at {
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.msg.me.steered.miss .bubble {
+  outline: 1px dashed var(--warn);
+  outline-offset: -1px;
+}
+
+.msg.me.steered.miss .steer-status {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.steer-acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.steer-acts .btn {
+  min-height: 28px;
+}
+
+.steer-error {
+  color: var(--danger);
+  font-size: 13px;
+}

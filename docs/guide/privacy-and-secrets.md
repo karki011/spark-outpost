@@ -1,0 +1,46 @@
+---
+title: Privacy and secrets
+section: Understand Spark
+type: concept
+order: 522
+summary: Where your keys are stored, what leaves your computer and where it goes, and how Spark redacts secrets.
+---
+
+Chats, settings and code stay on your computer; keys stay in your keychain. Only what your AI provider, Jev and connected tools need leaves.
+
+## What leaves your computer
+
+| Goes to                                    | What                                                                                                          | Stop it                                                          |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **Your AI provider**                       | Your messages; files, output, Slack messages and events the agent reads.                                      | [`.sparkignore`](sparkignore.md) for files                       |
+| **Claude**                                 | Each installed plugin, once per version, for its [review](use-claude-plugins.md#what-the-agent-review-sends). | Uninstall it                                                     |
+| **Jev**, if connected                      | Redacted PR comments, short turn facts, Map file contents.                                                    | [What Jev reads](jev.md#what-jev-reads)                          |
+| **GitHub, Atlassian, Linear, MCP servers** | What you or an agent sends; a clone talks to its host.                                                        | Disconnect them                                                  |
+| **Sites agents open**                      | Addresses, typed text, your cookies there.                                                                    | [Agent tools](modes-and-levels.md#agent-tools)                   |
+| **Apple or Google push**                   | Encrypted notifications; sender contact.                                                                      | **Notify this device**                                           |
+| **Slack**                                  | Notifications, confirmed posts; never direct messages.                                                        | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
+| **Hugging Face**                           | Speech models you pick, once.                                                                                 | [Voice](voice.md)                                                |
+| **Meeting services, Google**               | The meeting you **Join**; calendar reads and changes.                                                         | [Calendar](calendar.md)                                          |
+| **Spark Outpost team**                     | Anonymous heartbeat.                                                                                          | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
+
+## Where your keys live
+
+- Your Keychain holds, under **Spark Outpost**, provider, Jev, connector and MCP keys and tokens, and saved sign-ins.
+- Logs never hold keys.
+- A **Local CLI** sign-in stays in that CLI, unread by Spark.
+
+See [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).
+
+## How Spark redacts secrets
+
+In replies, audit logs, tool results, errors, Jev and [recorded Terminal sessions](settings.md#record-terminal-sessions), secret-looking text becomes `[redacted:…]`: keys, tokens, URL passwords, `KEY=value` lines, secret-file values.
+
+## What agents can't reach
+
+- Anything in `.sparkignore`. [Secret files](protected-paths.md#secret-files) are readable, so your provider sees them. Ship commits neither.
+- Through [Spark's own tools](spark-tools.md#what-the-tools-never-return): file contents, terminal output, secrets, keys.
+- [Browser pane](use-the-browser.md): password and card fields, saved sign-ins. Cookies stay on this Mac.
+
+## When you reset
+
+**Settings → Reset** removes connector and MCP tokens and saved sign-ins; **Keep my API keys** keeps provider and Jev keys. See [Start over](trouble-setup-and-reset.md#start-over).

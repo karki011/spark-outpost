@@ -1,0 +1,267 @@
+import {
+  AUTONOMY_LEVELS,
+  autonomyLabel,
+  reaskPercent,
+  slackPlaceLabel,
+  ticketSourceIdSchema,
+  ticketSourceNames,
+  type ProviderSetup,
+  type SlackConnection,
+} from '@spark-outpost/contracts';
+import { conversationProjectIds } from '../../agent-config/store.ts';
+import { loadUserPlugins } from '../../agent-config/user-plugins/choice.ts';
+import { pluginConfirmed } from '../../agent-config/user-plugins/view.ts';
+import { runFromDevice } from '../../remote/run-mark.ts';
+import { effectiveFor } from '../../mcp/effective.ts';
+import { enablementsFor, listUserMcp } from '../../mcp/store.ts';
+import { getAttentionSettings } from '../../persistence/attention-settings.ts';
+import { draftChatSettings } from '../../persistence/chat-settings.ts';
+import { providerIssues } from '../../persistence/provider-health.ts';
+import { getSetupState } from '../../persistence/setup.ts';
+import { fullDiskAccessStatus } from '../../setup/full-disk-access.ts';
+import { gitHubStatus } from '../../ship/github/access.ts';
+import { GITHUB_VIA } from '../../ship/github/connection.ts';
+import { ticketConnections } from '../../tickets/connections.ts';
+import { slackStatus } from '../../slack/connection.ts';
+import { gitHubDepsFor, slackDepsFor, ticketDepsFor } from '../deps.ts';
+import { sparkTool, type SparkToolContext } from '../tool.ts';
+import { reportedModel } from '../../providers/reported-model.ts';
+
+function providerLine(provider: ProviderSetup, defaultProvider: string | null) {
+  const connection = provider.connection;
+  return {
+    id: provider.id,
+    name: provider.name,
+    connected: connection !== null,
+    default: provider.id === defaultProvider,
+    ...(connection
+      ? {
+          method: connection.method === 'cli' ? 'local CLI login' : 'API key (stored in keychain)',
+          account: connection.summary || connection.detail,
+          ...reportedModel(provider.id, connection.model),
+          effort: connection.effort,
+          agentMode: connection.agentMode,
+          lastTest: connection.lastTest,
+          connectedAt: connection.verifiedAt,
+        }
+      : { connectWith: provider.methods }),
+  };
+}
+
+async function providers({ deps, scope }: SparkToolContext) {
+  const [setup, issues] = await Promise.all([
+    getSetupState(deps.db, scope.workspaceId),
+    providerIssues(deps.db, scope.workspaceId),
+  ]);
+  const defaultProvider = setup.profile.defaultProvider;
+  return {
+    defaultProvider,
+    providers: setup.providers.map((provider) => providerLine(provider, defaultProvider)),
+    advisors: setup.advisors.map((advisor) => ({
+      id: advisor.id,
+      name: advisor.name,
+      role: advisor.role,
+      connected: advisor.connection !== null,
+      model: advisor.connection?.model ?? null,
+    })),
+    problemsLast24h: issues,
+  };
+}
+
+async function mcpServers({ deps, scope }: SparkToolContext) {
+  const servers = await listUserMcp(deps.db, scope.workspaceId);
+  const rows = await enablementsFor(
+    deps.db,
+    servers.map((server) => server.id),
+  );
+  const chatId = scope.conversationId;
+  const chatProjects = chatId ? await conversationProjectIds(deps.db, chatId) : [];
+  return servers.map((server) => ({
+    name: server.name,
+    transport: server.transport,
+    onForAllChats: effectiveFor(server, rows, null, []).enabled,
+    onInProjects: rows.filter(
+      (row) => row.serverId === server.id && row.scope === 'project' && row.enabled,
+    ).length,
+    ...(chatId ? { onInThisChat: effectiveFor(server, rows, chatId, chatProjects).enabled } : {}),
+    lastCheck: server.check
+      ? { ok: server.check.ok, tools: server.check.tools, at: server.check.checkedAt }
+      : null,
+  }));
+}
+
+function slackFacts(connection: SlackConnection | null) {
+  if (!connection) return { connected: false };
+  return {
+    connected: true,
+    workspace: connection.team,
+    method: connection.method,
+    state: connection.state,
+    bot: connection.method === 'sign_in' ? null : connection.botName,
+    notifies: connection.member?.name ?? null,
+    tokens: connection.tokens,
+    capabilities: connection.capabilities,
+    allowedChannels: connection.allowedChannels.map((channel) => `#${channel.name}`),
+    allowedDirectMessages: connection.settings.allDirectMessages
+      ? 'all'
+      : connection.directMessages.allowed.map((dm) => slackPlaceLabel(dm)),
+    notify: connection.settings.notify,
+    quietWhenFocused: connection.settings.quietWhenFocused,
+    postUpdatesToThread: connection.settings.postUpdatesToThread,
+    checkedAt: connection.validatedAt,
+    ...(connection.lastProblem ? { lastProblem: connection.lastProblem } : {}),
+  };
+}
+
+async function connectors(context: SparkToolContext) {
+  const { deps, scope } = context;
+  const [tickets, github, mcp, slack] = await Promise.all([
+    ticketConnections(ticketDepsFor(deps, scope)),
+    gitHubStatus(gitHubDepsFor(deps, scope)),
+    mcpServers(context),
+    slackStatus(slackDepsFor(deps, scope)),
+  ]);
+  const ticketSources = ticketSourceIdSchema.options.map((source) => {
+    const connection = tickets.connections.find((entry) => entry.source === source);
+    return {
+      source: source === 'jira' ? 'Jira (Atlassian)' : ticketSourceNames[source],
+      connected: connection !== undefined && connection.keySaved,
+      ...(connection
+        ? {
+            account: connection.account,
+            site: connection.siteUrl,
+            checkedAt: connection.validatedAt,
+            moveOnShip: connection.moveOnShip,
+            moveOnMerge: connection.moveOnMerge,
+            moveStatuses: connection.moveStatuses,
+            ...(connection.atlassian ? { atlassian: connection.atlassian } : {}),
+            ...(connection.servicenow ? { servicenow: connection.servicenow } : {}),
+            ...(connection.keySaved ? {} : { problem: 'The saved key is missing; reconnect it.' }),
+          }
+        : {}),
+    };
+  });
+  return {
+    github: {
+      connected: github.active !== null,
+      via: github.active ? GITHUB_VIA[github.active] : null,
+      appSignIn: github.app.available
+        ? {
+            state: github.app.state,
+            login: github.app.login,
+            repos: github.app.repos.length,
+            projects: github.app.projects,
+            checkedAt: github.app.checkedAt,
+          }
+        : null,
+      ghCli: github.ghCli,
+      patAccount: github.token
+        ? {
+            host: github.token.host,
+            login: github.token.login,
+            scopes: github.token.scopes,
+            expiresAt: github.token.expiresAt,
+            checkedAt: github.token.validatedAt,
+            repos: github.token.repos,
+          }
+        : null,
+    },
+    tickets: ticketSources,
+    mcpServers: mcp,
+    slack: slackFacts(slack.connection),
+    note: 'Spark connects GitHub, Jira, Linear and Slack itself; other services only as MCP servers.',
+  };
+}
+
+async function claudePlugins({ deps, scope }: SparkToolContext) {
+  if (scope.runId && (await runFromDevice(deps.db, scope.runId))) return 'Shown on the Mac only.';
+  const { plugins, choices } = await loadUserPlugins(deps.db, scope.workspaceId, false);
+  return plugins.map(({ plugin, agentReview }) => {
+    const choice = choices.get(plugin.installed.key);
+    const changed = choice?.enabled === true && !pluginConfirmed(plugin, choice);
+    return {
+      key: plugin.installed.key,
+      name: plugin.parsed.name ?? plugin.installed.name,
+      version: plugin.installed.version,
+      on: choice?.enabled === true && !changed,
+      changedSinceTurnedOn: changed,
+      loadable: plugin.unloadableReason === null,
+      status: plugin.status,
+      findings: plugin.findings.length,
+      agentReview,
+    };
+  });
+}
+
+async function settings(context: SparkToolContext) {
+  const { deps, scope } = context;
+  const [setup, attention, chatDefaults, fullDiskAccess, plugins] = await Promise.all([
+    getSetupState(deps.db, scope.workspaceId),
+    getAttentionSettings(deps.db, scope.workspaceId),
+    draftChatSettings(deps.db, scope.workspaceId),
+    fullDiskAccessStatus(),
+    claudePlugins(context),
+  ]);
+  const { profile } = setup;
+  return {
+    displayName: profile.displayName,
+    defaultProvider: profile.defaultProvider,
+    defaultAutonomy: autonomyLabel(profile.defaultLevel),
+    autonomyLevels: AUTONOMY_LEVELS.map((level) => ({ name: level.label, means: level.hint })),
+    personality: profile.personality,
+    morningBrief: { on: profile.morningBrief, time: profile.morningBriefTime },
+    autoContinueSeconds: profile.autoContinueSeconds,
+    contextCompaction: {
+      warnAtPercent: profile.compactWarnPercent,
+      compactAtPercent: profile.compactAtPercent,
+      compactAutomatically: profile.autoCompact,
+      askAgainAfterKeepGoingAtPercent: reaskPercent(profile.compactAtPercent),
+    },
+    openPullRequestsAs: profile.prReadyForReview ? 'ready for review' : 'draft',
+    prFollowUp: {
+      on: profile.prFollowUp,
+      fixFailingChecks: profile.prFollowUpChecks,
+      handleReviewComments: profile.prFollowUpReviews,
+      replyOnGitHub: profile.prFollowUpReplies,
+      askBeforePushingAndReplying: profile.prFollowUpAsk,
+    },
+    anonymousHeartbeat: profile.heartbeat,
+    fullDiskAccess: fullDiskAccess.status,
+    newChatDefaults: {
+      provider: chatDefaults.provider,
+      ...reportedModel(chatDefaults.provider, chatDefaults.model),
+      effort: chatDefaults.effort,
+      agentMode: chatDefaults.agentMode,
+      autonomy: chatDefaults.level ? autonomyLabel(chatDefaults.level) : null,
+    },
+    ticketAttention: attention,
+    claudePlugins: plugins,
+  };
+}
+
+export const setupTools = [
+  sparkTool({
+    name: 'spark_providers',
+    title: 'AI providers',
+    description:
+      'Which AI agents (Claude, Codex, Z.ai) and advisors (Jev) are connected to Spark, how (CLI login or API key; keys are never shown), their default model, effort and mode, which one is the default, and provider problems from the last 24 hours.',
+    input: {},
+    run: (_args, context) => providers(context),
+  }),
+  sparkTool({
+    name: 'spark_connectors',
+    title: 'Connectors',
+    description:
+      "Whether GitHub, Jira, Linear and Slack are connected (account, site, last check; for Slack the workspace, which token types are saved, what each allows, allowed channels and notification choices) and the user's MCP servers (on or off, last connection test). Never returns tokens. Ticket, Slack and pull request tools are offered only while their connector is connected (Settings → Connectors); after the user connects one they arrive with the next message.",
+    input: {},
+    run: (_args, context) => connectors(context),
+  }),
+  sparkTool({
+    name: 'spark_settings',
+    title: 'Spark settings',
+    description:
+      'Non-secret Settings → Spark values: default autonomy level (Automatic, Full auto → PR) and what each means, personality, auto-continue wait, context compaction thresholds (warn, compact, automatic on or off), morning brief time, whether the desktop app sends its anonymous daily heartbeat and whether it has macOS Full Disk Access (Settings → Help), new-chat defaults, ticket attention rules and Claude Code plugins. Per-project Builders at once and Where Spark works are in spark_projects.',
+    input: {},
+    run: (_args, context) => settings(context),
+  }),
+];

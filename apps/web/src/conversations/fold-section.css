@@ -1,0 +1,85 @@
+.fold > .sec {
+  padding-left: 6px;
+}
+
+.fold.bucket > .sec {
+  min-height: 20px;
+  padding-top: 8px;
+  padding-bottom: 2px;
+}
+
+.sec-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--faint);
+  transition: color 0.15s;
+}
+
+.sec-head:hover {
+  color: var(--muted);
+}
+
+.sec-head .chev {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  transform: rotate(90deg);
+  opacity: 0;
+  transition:
+    transform 0.2s var(--out),
+    opacity 0.15s;
+}
+
+.sec-head:hover .chev,
+.sec-head:focus-visible .chev,
+.fold:not(.open) > .sec .chev {
+  opacity: 1;
+}
+
+.fold:not(.open) > .sec .chev {
+  transform: none;
+}
+
+.fold-body {
+  display: grid;
+  grid-template-rows: 0fr;
+}
+
+.fold.open > .fold-body {
+  grid-template-rows: 1fr;
+}
+
+.fold-body > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (hover: none) {
+  .sec-head .chev {
+    opacity: 1;
+  }
+}
+
+.chats-rule {
+  height: 1px;
+  margin: 14px 8px 6px;
+  border: 0;
+  background: var(--line);
+}
+
+.fold > .fold-body > div {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.fold.open > .fold-body > div {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.2s var(--out);
+}

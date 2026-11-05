@@ -1,0 +1,71 @@
+import { useId } from 'react';
+import type { Project, ProjectTrust } from '@spark-outpost/contracts';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
+import { ChevronIcon } from '../ui/icons.tsx';
+import { ProjectPreview } from './ProjectPreview.tsx';
+import { ProjectSignIns } from './ProjectSignIns.tsx';
+import { ProjectWorkPlace } from './ProjectWorkPlace.tsx';
+
+function trustLabel(trust: ProjectTrust | undefined): string {
+  if (!trust) return 'Not asked yet';
+  if (!trust.trusted) return 'Not trusted';
+  return trust.redirectsConfirmed ? 'Trusted, with key and proxy settings' : 'Trusted';
+}
+
+interface ProjectRowProps {
+  project: Project;
+  trust: ProjectTrust | undefined;
+  open: boolean;
+  busy: boolean;
+  onToggle: () => void;
+  onRevoke: () => void;
+}
+
+export function ProjectRow({ project, trust, open, busy, onToggle, onRevoke }: ProjectRowProps) {
+  const bodyId = useId();
+  const { remote } = useRemoteClient();
+  return (
+    <li className={open ? 'set-project open' : 'set-project'}>
+      <div className="set-project-head">
+        <h4 className="set-project-title">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={open ? bodyId : undefined}
+            onClick={onToggle}
+          >
+            <ChevronIcon />
+            <span className="set-project-name">{project.name}</span>
+            <span className="set-project-path">{project.displayPath}</span>
+            {project.preview && <span className="set-project-chip">Preview</span>}
+            <span className="set-project-trust">{trustLabel(trust)}</span>
+          </button>
+        </h4>
+        {trust?.trusted && (
+          <button
+            type="button"
+            className="btn line sm"
+            aria-label={`Stop trusting ${project.name}`}
+            disabled={busy}
+            onClick={onRevoke}
+          >
+            Stop trusting
+          </button>
+        )}
+      </div>
+      {open && (
+        <div
+          id={bodyId}
+          className="set-project-body"
+          role="group"
+          aria-label={`Settings for ${project.name}`}
+        >
+          <p className="set-project-root">{project.rootPath}</p>
+          <ProjectWorkPlace project={project} />
+          <ProjectSignIns project={project} />
+          {!remote && <ProjectPreview project={project} />}
+        </div>
+      )}
+    </li>
+  );
+}

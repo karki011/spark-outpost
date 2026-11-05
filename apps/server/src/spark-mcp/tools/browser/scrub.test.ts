@@ -1,0 +1,48 @@
+import { describe, expect, it } from 'vitest';
+import { SIGN_IN_HIDDEN, scrubberFor, secretFileScrubber } from './scrub.ts';
+
+const secret = { username: 'vault-user@example.test', password: 'p@ss "word" 1' };
+const scrub = scrubberFor([secret])!;
+
+describe('hiding saved sign-ins in what agents read', () => {
+  it('does nothing when there is nothing saved', () => {
+    expect(scrubberFor([])).toBeNull();
+  });
+
+  it('hides the values wherever they appear', () => {
+    expect(scrub(`hello ${secret.username}, your password is ${secret.password}.`)).toBe(
+      `hello ${SIGN_IN_HIDDEN}, your password is ${SIGN_IN_HIDDEN}.`,
+    );
+  });
+
+  it('hides them as they look in an address, a form body and a JSON string', () => {
+    const address = `http://localhost/?u=${encodeURIComponent(secret.username)}&p=${encodeURIComponent(secret.password)}`;
+    expect(scrub(address)).toBe(`http://localhost/?u=${SIGN_IN_HIDDEN}&p=${SIGN_IN_HIDDEN}`);
+    expect(scrub('p=p%40ss+%22word%22+1')).toBe(`p=${SIGN_IN_HIDDEN}`);
+    expect(scrub(JSON.stringify({ password: secret.password }))).toBe(
+      `{"password":"${SIGN_IN_HIDDEN}"}`,
+    );
+  });
+
+  it('hides the start of a value that was cut off by a clipped line', () => {
+    expect(scrub(`token ${secret.password.slice(0, 7)}…`)).toBe(`token ${SIGN_IN_HIDDEN}…`);
+    expect(scrub('nothing cut here… and more')).toBe('nothing cut here… and more');
+  });
+
+  it('leaves other text alone', () => {
+    expect(scrub('Dashboard for example.test')).toBe('Dashboard for example.test');
+  });
+});
+
+describe('hiding secret file values in what agents read', () => {
+  const value = 'sk_live_51Hx9Qa/Z';
+  const files = secretFileScrubber([value])!;
+
+  it('hides a value from a secret file, also URL-encoded, with its own mark', () => {
+    expect(files(`https://api.example/x?key=${value}&q=1`)).toBe(
+      'https://api.example/x?key=[redacted:secret_value]&q=1',
+    );
+    expect(files(`?t=${encodeURIComponent(value)}`)).toBe('?t=[redacted:secret_value]');
+    expect(secretFileScrubber([])).toBeNull();
+  });
+});

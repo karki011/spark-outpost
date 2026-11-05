@@ -1,0 +1,90 @@
+.dchip-slot {
+  display: contents;
+}
+
+.dchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font:
+    12px/1 'Geist Mono',
+    ui-monospace,
+    monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.dchip:hover,
+.dchip[aria-expanded='true'] {
+  background: var(--raise);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+
+.dd {
+  --dd-w: 1040px;
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--dd-w), calc(100vw - 20px));
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, #000 8%, transparent),
+    0 18px 48px -12px color-mix(in srgb, #000 30%, transparent);
+  overflow: hidden;
+  animation: dd-in 0.22s var(--out) both;
+}
+
+.dd:focus-visible {
+  outline: none;
+}
+
+.dd-shell {
+  display: grid;
+  grid-template-columns: minmax(220px, 30%) 1fr;
+  gap: 16px;
+  flex: 1;
+  padding: 56px 18px 18px;
+}
+
+@keyframes dd-in {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .dd {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    height: 92dvh;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .dd-shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dd {
+    animation: none;
+  }
+}

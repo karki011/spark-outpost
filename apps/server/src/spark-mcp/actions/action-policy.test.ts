@@ -1,0 +1,71 @@
+import { describe, expect, it } from 'vitest';
+import { actionPath, explicitlyAsked, type ActionFacts } from './action-policy.ts';
+
+const facts = (overrides: Partial<ActionFacts>): ActionFacts => ({
+  posture: 'asks',
+  requested: false,
+  ...overrides,
+});
+
+describe('actionPath', () => {
+  it.each([
+    ['auto', 'perform'],
+    ['full_access', 'perform'],
+    ['asks', 'confirm'],
+    ['read_only', 'confirm'],
+    ['denies', 'confirm'],
+    ['unknown', 'confirm'],
+    ['edits', 'confirm'],
+  ] as const)('in a %s mode it chooses %s', (posture, path) => {
+    expect(actionPath(facts({ posture }))).toBe(path);
+  });
+
+  it('performs in Accept edits only when the user asked', () => {
+    expect(actionPath(facts({ posture: 'edits', requested: true }))).toBe('perform');
+    expect(actionPath(facts({ posture: 'asks', requested: true }))).toBe('confirm');
+  });
+});
+
+describe('explicitlyAsked', () => {
+  it.each([
+    ['open_pr', 'open pr', true],
+    ['open_pr', 'Open PR', true],
+    ['open_pr', 'please create a pull request for this', true],
+    ['open_pr', 'what does this PR change?', false],
+    ['open_pr', 'fix the filter bug', false],
+    ['post_slack', 'fix it and post an update to the Slack channel', true],
+    ['post_slack', 'reply in the thread when done', true],
+    ['post_slack', 'read the Slack thread and fix the bug', false],
+    ['post_slack', 'what did the channel say?', false],
+    ['create_ticket', 'file a bug for the crash', true],
+    ['create_ticket', 'look at the ticket', false],
+    ['transition_ticket', 'move ENG-12 to done', true],
+    ['assign_ticket', 'assign it to me', true],
+    ['pr_follow_up', 'open pr', false],
+    ['add_mcp_server', 'add the GitHub MCP server', true],
+    ['add_mcp_server', 'set up an mcp for Slack', true],
+    ['add_mcp_server', 'which MCP servers do I have?', false],
+    ['update_mcp_server', 'point the docs MCP server at staging', true],
+    ['switch_mcp_server', 'turn off the files mcp for this chat', true],
+    ['remove_mcp_server', 'remove the old MCP server', true],
+    ['remove_mcp_server', 'add an MCP server', false],
+    ['calendar_read', "what's on my calendar tomorrow", true],
+    ['calendar_read', 'am I free at 3?', true],
+    ['calendar_read', 'fix the calendar view bug', false],
+    ['calendar_edit', 'add an event called Spark 1b test tomorrow at 15:00', true],
+    ['calendar_edit', 'create "Spark 1b test" tomorrow at 15:00 on Spark Test', true],
+    ['calendar_edit', 'move the header 10px to the left', false],
+    ['calendar_edit', 'move the standup to 11', false],
+    ['calendar_edit', 'move that event to 17:00', true],
+    ['calendar_edit', 'delete the meeting', true],
+    ['calendar_edit', "what's on my calendar tomorrow", false],
+    ['start_outpost', 'Split this into two parallel sub-chats and start them', true],
+    ['start_outpost', 'start an outpost for the api and web work', true],
+    ['start_outpost', 'kick off two separate chats for this', true],
+    ['start_outpost', 'run the chat tests', false],
+    ['start_outpost', "open this chat's settings", false],
+    ['start_outpost', 'create a chat title helper', false],
+  ] as const)('%s for "%s" is %s', (action, request, expected) => {
+    expect(explicitlyAsked(action, request)).toBe(expected);
+  });
+});

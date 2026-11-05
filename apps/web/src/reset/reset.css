@@ -1,0 +1,78 @@
+.reset-busy {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  cursor: progress;
+}
+
+.reset-skel {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--panel) 55%, transparent),
+    transparent
+  );
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: reset-skel 1.2s var(--panel-ease, ease-in-out) infinite;
+}
+
+@keyframes reset-skel {
+  from {
+    background-position: -100% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+.reset-lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 0 0 20px;
+}
+
+.reset-list {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--bg);
+}
+
+.reset-list h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.reset-list ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.reset-keep {
+  margin: 0 0 18px;
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .reset-lists {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reset-skel {
+    animation: none;
+    background: color-mix(in srgb, var(--panel) 35%, transparent);
+  }
+}

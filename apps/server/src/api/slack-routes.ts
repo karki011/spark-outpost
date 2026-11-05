@@ -1,0 +1,257 @@
+import { Router } from 'express';
+import {
+  SLACK_CHANNEL_NOT_ALLOWED,
+  allowSlackChannelsRequestSchema,
+  allowSlackDmsRequestSchema,
+  putSlackConnectionRequestSchema,
+  slackChannelIdSchema,
+  slackConversationIdSchema,
+  slackLinkRequestSchema,
+  slackPresenceRequestSchema,
+  slackSignInCallbackRequestSchema,
+  slackSignInFlowSchema,
+  startSlackRequestSchema,
+  startSlackSignInRequestSchema,
+  updateSlackSettingsRequestSchema,
+  type SlackNotAllowed,
+  type SlackSignInFlow,
+} from '@spark-outpost/contracts';
+import type { Db } from '../persistence/db.ts';
+import type { SecretStore } from '../setup/secrets.ts';
+import type { ApiEndpoints } from '../setup/verify.ts';
+import { allowOneSlackChannel, allowSlackChannels, listSlackChannels } from '../slack/channels.ts';
+import {
+  changeSlackSettings,
+  refreshSlackScopes,
+  removeSlack,
+  saveSlack,
+  slackStatus,
+  type SlackDeps,
+} from '../slack/connection.ts';
+import { slackContextFromLink } from '../slack/context.ts';
+import { allowOneSlackDm, allowSlackDms, listSlackDms } from '../slack/direct.ts';
+import type { SlackNotifier } from '../slack/notifier.ts';
+import { createSlackSignIn } from '../slack/sign-in.ts';
+import type { SlackSignInConfig } from '../slack/sign-in-config.ts';
+import { sendTestNotification } from '../slack/test-message.ts';
+import type { SlackSocket } from '../slack/socket.ts';
+import { SlackStartRefusedError, startFromSlack } from '../slack/start.ts';
+import { requireSlackRef } from '../slack/thread.ts';
+import {
+  SlackApiError,
+  SlackChannelNotAllowedError,
+  SlackNotConnectedError,
+} from '../slack/web-api.ts';
+import { presenceClientOf } from '../remote/principal.ts';
+import { resolveRunTarget } from './run-target.ts';
+import { BadRequestError, parseBody } from './validation.ts';
+
+export interface SlackRouteDeps {
+  db: Db;
+  workspaceId: string;
+  secrets: SecretStore;
+  endpoints: ApiEndpoints;
+  fixedRunProvider?: string;
+  slackApiUrl?: string | undefined;
+  slackSignIn?: SlackSignInConfig | null | undefined;
+  slackNotifier?: Pick<SlackNotifier, 'setFocused'>;
+  slackSocket?: Pick<SlackSocket, 'state' | 'refresh'>;
+}
+
+const USER_ERRORS = new Set([
+  'invalid_auth',
+  'not_authed',
+  'token_revoked',
+  'token_expired',
+  'account_inactive',
+  'not_bot_token',
+  'team_mismatch',
+  'bad_link',
+  'direct_message',
+  'direct_messages_off',
+  'direct_messages_unavailable',
+  'not_direct_message',
+  'not_allowed_token_type',
+  'user_not_found',
+  'needs_own_app',
+  'bad_callback',
+  'bad_state',
+  'sign_in_refused',
+  'not_user_token',
+]);
+
+const SIGN_IN_NOT_SET_UP = 'Signing in with Slack is not set up in this build.';
+const NO_SIGN_IN: SlackSignInFlow = slackSignInFlowSchema.parse({
+  status: 'idle',
+  authorizeUrl: null,
+  expiresAt: null,
+  message: null,
+});
+
+export function slackErrorStatus(error: unknown): { status: number; message: string } | null {
+  if (error instanceof SlackNotConnectedError || error instanceof SlackStartRefusedError) {
+    return { status: 409, message: error.message };
+  }
+  if (error instanceof SlackChannelNotAllowedError) return { status: 409, message: error.message };
+  if (error instanceof SlackApiError) {
+    if (error.code === 'method_switch') return { status: 409, message: error.message };
+    return { status: USER_ERRORS.has(error.code) ? 400 : 502, message: error.message };
+  }
+  return null;
+}
+
+function notAllowedBody(error: SlackChannelNotAllowedError): SlackNotAllowed {
+  const { id, name, kind } = error.channel;
+  return {
+    error: error.message,
+    code: SLACK_CHANNEL_NOT_ALLOWED,
+    channel: { id, name, kind: kind ?? 'channel' },
+  };
+}
+
+const pageCursor = (value: unknown): string | null =>
+  typeof value === 'string' && value ? value.slice(0, 500) : null;
+
+export function slackRoutes(routeDeps: SlackRouteDeps): Router {
+  const deps: SlackDeps = {
+    db: routeDeps.db,
+    workspaceId: routeDeps.workspaceId,
+    secrets: routeDeps.secrets,
+    fetch: routeDeps.endpoints.fetch,
+    slackApiUrl: routeDeps.slackApiUrl,
+    signIn: routeDeps.slackSignIn,
+  };
+  const signIn = deps.signIn ? createSlackSignIn({ ...deps, signIn: deps.signIn }) : null;
+  const socketState = () => routeDeps.slackSocket?.state() ?? 'off';
+  const status = () => slackStatus(deps, socketState());
+  const refreshed = async () => {
+    await routeDeps.slackSocket?.refresh();
+    return status();
+  };
+  const router = Router();
+
+  router.get('/slack', async (_req, res) => {
+    res.json(await status());
+  });
+
+  router.put('/slack/connection', async (req, res) => {
+    const { replace, ...tokens } = parseBody(putSlackConnectionRequestSchema, req);
+    await saveSlack(deps, tokens, { replace });
+    signIn?.cancel();
+    res.json(await refreshed());
+  });
+
+  router.delete('/slack/connection', async (_req, res) => {
+    signIn?.cancel();
+    await removeSlack(deps);
+    res.json(await refreshed());
+  });
+
+  router.get('/slack/sign-in', (_req, res) => {
+    res.json(signIn?.state() ?? NO_SIGN_IN);
+  });
+
+  router.post('/slack/sign-in', async (req, res) => {
+    if (!signIn) throw new BadRequestError(SIGN_IN_NOT_SET_UP);
+    res.json(await signIn.start(parseBody(startSlackSignInRequestSchema, req)));
+  });
+
+  router.delete('/slack/sign-in', (_req, res) => {
+    res.json(signIn?.cancel() ?? NO_SIGN_IN);
+  });
+
+  router.post('/slack/sign-in/callback', async (req, res) => {
+    if (!signIn) throw new BadRequestError(SIGN_IN_NOT_SET_UP);
+    const flow = await signIn.complete(parseBody(slackSignInCallbackRequestSchema, req).url);
+    await routeDeps.slackSocket?.refresh();
+    res.json(flow);
+  });
+
+  router.patch('/slack/settings', async (req, res) => {
+    await changeSlackSettings(deps, parseBody(updateSlackSettingsRequestSchema, req));
+    res.json(await refreshed());
+  });
+
+  router.get('/slack/channels', async (req, res) => {
+    res.json(await listSlackChannels(deps, pageCursor(req.query.cursor)));
+  });
+
+  router.put('/slack/channels', async (req, res) => {
+    await allowSlackChannels(deps, parseBody(allowSlackChannelsRequestSchema, req));
+    res.json(await status());
+  });
+
+  router.post('/slack/channels/:channelId/allow', async (req, res) => {
+    const channelId = slackChannelIdSchema.safeParse(req.params.channelId);
+    if (!channelId.success) throw new BadRequestError('Unknown Slack channel.');
+    await allowOneSlackChannel(deps, channelId.data);
+    res.json(await status());
+  });
+
+  router.get('/slack/direct-messages', async (req, res) => {
+    res.json(await listSlackDms(deps, pageCursor(req.query.cursor)));
+  });
+
+  router.put('/slack/direct-messages', async (req, res) => {
+    await allowSlackDms(deps, parseBody(allowSlackDmsRequestSchema, req));
+    res.json(await status());
+  });
+
+  router.post('/slack/direct-messages/:channelId/allow', async (req, res) => {
+    const channelId = slackConversationIdSchema.safeParse(req.params.channelId);
+    if (!channelId.success) throw new BadRequestError('Unknown Slack conversation.');
+    await allowOneSlackDm(deps, channelId.data);
+    res.json(await status());
+  });
+
+  router.post('/slack/scopes/check', async (_req, res) => {
+    await refreshSlackScopes(deps);
+    res.json(await status());
+  });
+
+  router.post('/slack/test', async (_req, res) => {
+    res.json(await sendTestNotification(deps));
+  });
+
+  router.post('/slack/presence', (req, res) => {
+    const { focused, clientId } = parseBody(slackPresenceRequestSchema, req);
+    routeDeps.slackNotifier?.setFocused(focused, presenceClientOf(res, clientId));
+    res.status(204).end();
+  });
+
+  router.post('/slack/context', async (req, res) => {
+    const { url } = parseBody(slackLinkRequestSchema, req);
+    try {
+      res.status(201).json(await slackContextFromLink(deps, url));
+    } catch (error) {
+      if (!(error instanceof SlackChannelNotAllowedError)) throw error;
+      res.status(409).json(notAllowedBody(error));
+    }
+  });
+
+  router.post('/slack/start', async (req, res) => {
+    const request = parseBody(startSlackRequestSchema, req);
+    const runTarget = (conversationId: string) => resolveRunTarget(routeDeps, conversationId);
+    try {
+      const started = await startFromSlack(
+        { ...deps, runTarget },
+        {
+          source: 'link',
+          ref: requireSlackRef(request.url),
+          userId: null,
+          conversationId: request.conversationId,
+          messageId: request.messageId,
+          projectId: request.projectId,
+          mode: request.mode,
+          note: request.note,
+        },
+      );
+      res.status(201).json(started);
+    } catch (error) {
+      if (!(error instanceof SlackChannelNotAllowedError)) throw error;
+      res.status(409).json(notAllowedBody(error));
+    }
+  });
+
+  return router;
+}

@@ -1,0 +1,67 @@
+import {
+  isReadOnlyPosture,
+  modeForLegacy,
+  modePosture,
+  PERMISSION_ASK,
+  type InvolvementLevel,
+} from '@spark-outpost/contracts';
+import { resolveChatSettings } from '../persistence/chat-settings.ts';
+import type { Db } from '../persistence/db.ts';
+import type { RunInput } from '../workflow/run-input.ts';
+import { PLAN_MODE_ID } from './plan-mode.ts';
+
+const PLAN_COMMAND = /^\s*\/plan(?:\s+|$)/i;
+
+export function planCommandText(prompt: string): string | null {
+  if (!PLAN_COMMAND.test(prompt)) return null;
+  return prompt.replace(PLAN_COMMAND, '').trim();
+}
+
+function pickedPlanMode(input: RunInput): boolean {
+  return input.agentMode === PLAN_MODE_ID || input.settings.mode === PLAN_MODE_ID;
+}
+
+function mayPlan(input: RunInput): boolean {
+  return input.parentRunId === null && !input.assistant && input.projectRoots.length > 0;
+}
+
+export function isPlanCommand(input: RunInput): boolean {
+  return mayPlan(input) && planCommandText(input.userRequest) !== null;
+}
+
+export function isPlanModeChat(input: RunInput): boolean {
+  return mayPlan(input) && pickedPlanMode(input);
+}
+
+function buildingMode(input: RunInput): string | null {
+  const mode = input.settings.mode ?? null;
+  return isReadOnlyPosture(modePosture(input.provider, mode)) ? null : mode;
+}
+
+function agentHoldsThePlan(provider: string): boolean {
+  return modeForLegacy(provider, PERMISSION_ASK, null) === PLAN_MODE_ID;
+}
+
+export function asPlanTurn(input: RunInput): RunInput {
+  if (!agentHoldsThePlan(input.provider)) return { ...input, mode: 'ask', planning: true };
+  const asked = planCommandText(input.userRequest);
+  const request = asked === null || asked === '' ? input.userRequest : asked;
+  return {
+    ...input,
+    prompt: asked === null ? input.prompt : request,
+    userRequest: request,
+    mode: 'do',
+    planning: false,
+    plansFirst: true,
+    settings: { ...input.settings, mode: buildingMode(input) },
+  };
+}
+
+export async function markPlanTurn(db: Db, input: RunInput): Promise<RunInput> {
+  const chat = await resolveChatSettings(db, input.identity.threadId);
+  const { rows } = await db.query<{ level: InvolvementLevel }>(
+    `UPDATE runs SET mode = $3, level = COALESCE(level, $2) WHERE id = $1 RETURNING level`,
+    [input.identity.runId, chat.level, input.mode],
+  );
+  return { ...input, level: rows[0]?.level ?? input.level };
+}

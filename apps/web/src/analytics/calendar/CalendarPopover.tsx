@@ -1,0 +1,137 @@
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import type { DateRange } from 'react-day-picker';
+import { DayCalendar } from '../../ui/DayCalendar.tsx';
+import { wrapTabFocus } from '../../ui/focus-trap.ts';
+import {
+  CALENDAR_PRESETS,
+  formatIsoLocal,
+  isCappedOut,
+  isFutureIso,
+  parseIsoLocal,
+} from './date-math.ts';
+import './calendar-popover.css';
+
+interface CalendarPopoverProps {
+  from: string;
+  to: string;
+  today: string;
+  onApply: (from: string, to: string) => void;
+  onCancel: () => void;
+  panelRef: RefObject<HTMLDivElement | null>;
+  id: string;
+}
+
+function focusableIn(container: HTMLElement): HTMLElement[] {
+  return [
+    ...container.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    ),
+  ].filter((element) => element.offsetParent !== null || element === document.activeElement);
+}
+
+export function CalendarPopover({
+  from,
+  to,
+  today,
+  onApply,
+  onCancel,
+  panelRef,
+  id,
+}: CalendarPopoverProps) {
+  const headingId = useId();
+  const [draft, setDraft] = useState<DateRange | undefined>({
+    from: parseIsoLocal(from),
+    to: parseIsoLocal(to),
+  });
+  const firstFieldRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => firstFieldRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const onTrapKeyDown = (event: KeyboardEvent<HTMLDivElement>) =>
+    wrapTabFocus(event, () => (panelRef.current ? focusableIn(panelRef.current) : []));
+
+  const disabled = (date: Date) => {
+    const iso = formatIsoLocal(date);
+    if (isFutureIso(iso, today)) return true;
+    if (draft?.from && !draft?.to && isCappedOut(formatIsoLocal(draft.from), iso)) return true;
+    return false;
+  };
+
+  const applyPreset = (presetFrom: string, presetTo: string) => {
+    setDraft({ from: parseIsoLocal(presetFrom), to: parseIsoLocal(presetTo) });
+    onApply(presetFrom, presetTo);
+  };
+
+  const picked =
+    draft?.from && draft?.to ? [formatIsoLocal(draft.from), formatIsoLocal(draft.to)].sort() : null;
+  const canApply = picked !== null && (picked[0] !== from || picked[1] !== to);
+
+  return (
+    <div
+      id={id}
+      ref={panelRef}
+      className="an-cal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={headingId}
+      onKeyDown={onTrapKeyDown}
+    >
+      <div className="an-cal-body">
+        <div className="an-cal-presets" role="group" aria-label="Quick ranges">
+          <h2 id={headingId} className="sr-only">
+            Choose a custom date range
+          </h2>
+          {CALENDAR_PRESETS.map((preset, index) => (
+            <button
+              key={preset.id}
+              ref={index === 0 ? firstFieldRef : undefined}
+              type="button"
+              className="an-cal-preset"
+              onClick={() => {
+                const range = preset.range(today);
+                applyPreset(range.from, range.to);
+              }}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <DayCalendar
+          mode="range"
+          selected={draft}
+          onSelect={setDraft}
+          disabled={disabled}
+          defaultMonth={draft?.to ?? draft?.from ?? parseIsoLocal(today)}
+          today={parseIsoLocal(today)}
+        />
+      </div>
+      {draft?.from && !draft?.to && (
+        <p className="an-cal-hint">
+          Pick an end date within 366 days of {formatIsoLocal(draft.from)}.
+        </p>
+      )}
+      <div className="an-cal-foot">
+        <button type="button" className="btn ghost sm" onClick={onCancel}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn primary sm"
+          disabled={!canApply}
+          onClick={() => {
+            if (draft?.from && draft?.to) {
+              const a = formatIsoLocal(draft.from);
+              const b = formatIsoLocal(draft.to);
+              onApply(a <= b ? a : b, a <= b ? b : a);
+            }
+          }}
+        >
+          Apply
+        </button>
+      </div>
+    </div>
+  );
+}

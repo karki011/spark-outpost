@@ -1,0 +1,179 @@
+.hpanel {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+
+.hspend .seg {
+  width: 168px;
+  padding: 2px;
+}
+
+.hspend .seg button {
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.hspend .seg-ind {
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc((100% - 4px) / var(--n, 4));
+}
+
+.hspend .cost-total b {
+  font-size: 22px;
+}
+
+.hspend .cost-total > span,
+.hnote {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.hnote {
+  margin: 10px 0 0;
+}
+
+.spend-est {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.hpanel .hlink {
+  display: block;
+  margin: 12px 0 0 -6px;
+  color: var(--accent-text);
+}
+
+.home-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 8px;
+}
+
+.pstrip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.ps-list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ps-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: background-color 0.15s;
+}
+
+.ps-btn:hover {
+  background: var(--raise);
+}
+
+.ps-btn svg {
+  display: block;
+  overflow: visible;
+}
+
+.ps-mark {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 12px;
+  height: 12px;
+  overflow: visible;
+}
+
+.ps-mark circle,
+.ps-mark path {
+  stroke: var(--panel);
+  stroke-width: 2;
+  paint-order: stroke;
+}
+
+.ps-mark.ok circle {
+  fill: var(--success);
+}
+
+.ps-mark.warn path {
+  fill: var(--warn);
+  stroke-linejoin: round;
+}
+
+.ps-mark.off circle {
+  fill: var(--panel);
+  stroke: var(--muted);
+}
+
+.ps-warn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 3px 4px 3px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--warn) 13%, transparent);
+  color: var(--warn);
+  font-size: 12.5px;
+}
+
+.ps-warn svg {
+  flex-shrink: 0;
+}
+
+.ps-warn-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ps-warn .hlink {
+  margin: 0;
+  color: var(--warn);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.home-started {
+  min-height: 20px;
+  margin: 8px 2px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.home-started span {
+  animation: fade-out 6s var(--out) both;
+}
+
+.home-started .hlink {
+  margin: 0;
+  color: var(--accent-text);
+}
+
+@keyframes fade-out {
+  0%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

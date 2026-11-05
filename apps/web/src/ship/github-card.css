@@ -1,0 +1,272 @@
+.gh-active {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+.gh-disclose {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 0;
+  font-size: 12.5px;
+  color: var(--accent-text);
+  font-weight: 500;
+}
+.gh-disclose:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.gh-disclose .chev {
+  transition: transform 0.2s var(--out);
+}
+.gh-disclose[aria-expanded='true'] .chev {
+  transform: rotate(90deg);
+}
+.gh-collapse {
+  overflow: hidden;
+}
+.gh-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 2px;
+}
+.gh-body .seg {
+  max-width: 380px;
+}
+.gh-method {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.gh-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+.gh-state::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+.gh-state.ok::before {
+  background: var(--success);
+}
+.gh-state.warn::before {
+  background: var(--warn);
+}
+.gh-note,
+.gh-err {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.gh-active,
+.gh-body .gh-state {
+  color: var(--text);
+}
+.gh-note code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--raise);
+  color: var(--text);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+}
+.gh-err {
+  color: var(--danger);
+}
+.gh-form,
+.gh-token {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  max-width: 520px;
+}
+.gh-label {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.gh-keyrow {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+.gh-keyrow .inp {
+  flex: 1;
+  min-width: 0;
+}
+.gh-host {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.gh-form > .btn.primary {
+  margin-top: 4px;
+}
+.gh-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  margin: 0;
+  font-size: 12.5px;
+}
+.gh-facts dt {
+  color: var(--muted);
+}
+.gh-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.gh-route {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.gh-route p {
+  margin: 0;
+}
+.gh-route b {
+  font-weight: 500;
+}
+.gh-test {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gh-test .gh-state {
+  display: block;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.gh-test .gh-state::before {
+  display: inline-block;
+  margin-right: 7px;
+  vertical-align: middle;
+}
+.gh-app,
+.gh-code {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  max-width: 520px;
+}
+.gh-code-skel {
+  width: 100%;
+  max-width: 320px;
+}
+.gh-code-row,
+.gh-actions,
+.gh-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.gh-code-value {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--raise);
+  color: var(--text);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  user-select: all;
+}
+.gh-actions .btn svg,
+.gh-link svg {
+  width: 12px;
+  height: 12px;
+}
+.gh-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.gh-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--accent-text);
+}
+.gh-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.gh-avatar {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--raise);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.gh-cover {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gh-cover li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.gh-cover .gh-state {
+  font-weight: 400;
+}
+.gh-cover b {
+  font-weight: 500;
+}
+.gh-cover-repo {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.gh-repos {
+  width: 100%;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.gh-repos summary {
+  cursor: pointer;
+}
+.gh-repos ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--text);
+}
+.gh-actions a.btn {
+  text-decoration: none;
+}

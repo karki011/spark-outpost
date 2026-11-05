@@ -1,0 +1,2632 @@
+<!doctype html>
+<html lang="en" data-skin="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spark Outpost · Outposts (mockup)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Design mockup for Outposts (docs/architecture/A2A_CHATS.md). Static: no product code.
+         The two token blocks are copied verbatim from apps/web/public/theme.css (light and dark).
+         Component rules follow the app's own CSS (rail, sidebar, chat row, thread, composer,
+         context bar, chat rail, crew row, menu, controls). Blob faces are blobatar 2.7.0 output
+         for the app's provider seeds; see BLOBATAR-LICENSE.txt. */
+      [data-skin='light'] {
+        color-scheme: light;
+        --bg: #f4f5f7;
+        --rail: #eaecf0;
+        --panel: #ffffff;
+        --raise: #eef0f3;
+        --line: #e2e5ea;
+        --line-strong: #85888d;
+        --text: #16191e;
+        --muted: #495160;
+        --faint: #575f6a;
+        --accent: #078470;
+        --accent-ink: #fff;
+        --accent-text: #00715d;
+        --accent-soft: rgba(7, 132, 112, 0.11);
+        --user: #e8f3f0;
+        --user-text: #16191e;
+        --danger: #bb3430;
+        --danger-soft: rgba(187, 52, 48, 0.09);
+        --warn: #8a4a00;
+        --warn-ink: #fff;
+        --success: #007460;
+        --code: #f5f6f8;
+        --scout-eye: #0c0f12;
+        --r: 14px;
+        --r-sm: 8px;
+      }
+      [data-skin='dark'] {
+        color-scheme: dark;
+        --bg: #0c0f12;
+        --rail: #07090b;
+        --panel: #12161a;
+        --raise: #1a1f25;
+        --line: #232a31;
+        --line-strong: #646c74;
+        --text: #e7eaee;
+        --muted: #a3aebc;
+        --faint: #909aa7;
+        --accent: #34c3a3;
+        --accent-ink: #05231c;
+        --accent-text: #34c3a3;
+        --accent-soft: rgba(52, 195, 163, 0.13);
+        --user: #172a2a;
+        --user-text: #e7eaee;
+        --danger: #f06b63;
+        --danger-soft: rgba(240, 107, 99, 0.11);
+        --warn: #e8b04b;
+        --warn-ink: #1b1300;
+        --success: #34c3a3;
+        --code: #0e1215;
+        --scout-eye: #0c0f12;
+        --r: 14px;
+        --r-sm: 8px;
+      }
+      [data-skin] {
+        color: var(--text);
+        --focus-ring: 0 0 0 1px var(--accent), 0 0 0 4px var(--accent-soft);
+        --composer-line: color-mix(in srgb, var(--line-strong) 35%, var(--line));
+        --composer-focus-line: color-mix(in srgb, var(--accent) 55%, var(--line-strong));
+        --composer-focus: 0 0 0 3px var(--accent-soft);
+        --pop-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 40px 0 80px;
+        background: var(--rail);
+        font:
+          15px/1.6 'Geist',
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+        border: 0;
+        background: none;
+        padding: 0;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      svg {
+        flex-shrink: 0;
+        display: block;
+      }
+      h1,
+      h2,
+      p,
+      ul {
+        margin: 0;
+        padding: 0;
+      }
+      ul {
+        list-style: none;
+      }
+      code,
+      .mono {
+        font-family: 'Geist Mono', ui-monospace, monospace;
+      }
+      .sprite {
+        position: absolute;
+        width: 0;
+        height: 0;
+      }
+      .i {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .chev {
+        stroke-width: 2.4;
+      }
+      .chev.down {
+        transform: rotate(90deg);
+      }
+      .caret {
+        display: inline-block;
+        width: 1.5px;
+        height: 1.15em;
+        margin-left: 1px;
+        vertical-align: -0.2em;
+        background: var(--accent);
+      }
+
+      /* sheet */
+      .sheet-head,
+      .frame {
+        width: 1440px;
+        margin: 0 auto;
+      }
+      .sheet-head h1 {
+        font-size: 22px;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+      }
+      .sheet-head p {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .sheet-head code {
+        font-size: 0.86em;
+      }
+      .frame {
+        margin-top: 40px;
+      }
+      .frame-title {
+        margin-bottom: 10px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .frame-title span {
+        margin-left: 8px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 400;
+      }
+      .win {
+        position: relative;
+        display: flex;
+        width: 1440px;
+        height: 900px;
+        overflow: hidden;
+        border-radius: 12px;
+        background: var(--rail);
+        box-shadow:
+          0 0 0 1px var(--line-strong),
+          0 24px 60px rgba(0, 0, 0, 0.18);
+      }
+
+      /* left bar */
+      .rail {
+        position: relative;
+        width: 70px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 14px 0 12px;
+        background: var(--rail);
+      }
+      .rail-logo {
+        width: 52px;
+        height: 52px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 10px;
+      }
+      .scout .sc-ant {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 3;
+        stroke-linecap: round;
+      }
+      .scout .sc-spark {
+        fill: var(--warn);
+      }
+      .scout .sc-body {
+        fill: var(--accent);
+      }
+      .scout .sc-eye {
+        fill: var(--scout-eye);
+      }
+      .rail-ind {
+        position: absolute;
+        left: 7px;
+        top: 134px;
+        width: 56px;
+        height: 52px;
+        border-radius: 13px;
+        background: var(--accent-soft);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
+      }
+      .rail-ind::before {
+        content: '';
+        position: absolute;
+        left: -7px;
+        top: 15px;
+        bottom: 15px;
+        width: 3px;
+        border-radius: 0 3px 3px 0;
+        background: var(--accent);
+      }
+      .rail-btn {
+        position: relative;
+        z-index: 1;
+        width: 56px;
+        height: 54px;
+        padding: 8px 0 6px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        border-radius: 13px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.3;
+      }
+      .rail-btn[aria-current='page'] {
+        color: var(--text);
+      }
+      .rail-btn[aria-current='page'] svg {
+        color: var(--accent-text);
+      }
+      .rbadge {
+        position: absolute;
+        top: 3px;
+        right: 9px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        display: grid;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--warn);
+        color: var(--warn-ink);
+        font-size: 12px;
+        font-style: normal;
+        font-weight: 700;
+        box-shadow: 0 0 0 2px var(--rail);
+      }
+      .rail-sp {
+        flex: 1;
+      }
+
+      /* sidebar */
+      .view {
+        flex: 1;
+        min-width: 0;
+        height: 100%;
+        display: flex;
+      }
+      .side {
+        width: 300px;
+        flex-shrink: 0;
+        margin: 8px 0;
+        background: var(--bg);
+        border-radius: calc(var(--r) + 4px);
+        box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent);
+      }
+      .side-in {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 14px 10px 10px;
+      }
+      .icon-btn {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        border-radius: var(--r-sm);
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+      .icon-btn.sm {
+        width: 24px;
+        height: 24px;
+      }
+      .icon-btn.on {
+        background: var(--line);
+        color: var(--text);
+      }
+      .side-top {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-height: 32px;
+        padding: 0 4px 10px;
+      }
+      .side-top b {
+        flex: 1;
+        padding-left: 6px;
+        font-weight: 600;
+      }
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 2px 8px;
+        padding: 7px 10px;
+        border-radius: var(--r-sm);
+        box-shadow: inset 0 0 0 1px var(--line-strong);
+        color: var(--faint);
+        font-size: 14px;
+      }
+      .tabs {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin: 0 2px 8px;
+        padding: 3px;
+        background: var(--raise);
+        border-radius: var(--r-sm);
+      }
+      .tabs button {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 5px 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .tabs button[aria-selected='true'] {
+        color: var(--text);
+        font-weight: 500;
+      }
+      .tabs .cnt {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--faint);
+      }
+      .tab-ind {
+        position: absolute;
+        top: 3px;
+        bottom: 3px;
+        left: 3px;
+        width: calc((100% - 6px) / 2);
+        border-radius: calc(var(--r-sm) - 2px);
+        background: var(--panel);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      }
+      .list {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
+      .sec {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 24px;
+        padding: 12px 6px 4px 12px;
+        font-size: 12px;
+        color: var(--faint);
+      }
+      .sec.bucket {
+        padding-top: 4px;
+      }
+      .sec .icon-btn {
+        width: 24px;
+        height: 24px;
+      }
+      .rows {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .proj {
+        position: relative;
+        display: flex;
+        align-items: center;
+        padding-right: 4px;
+        border-radius: var(--r-sm);
+      }
+      .proj.active {
+        background: var(--raise);
+      }
+      .proj.active::before,
+      .row.active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 8px;
+        bottom: 8px;
+        width: 2px;
+        border-radius: 2px;
+        background: var(--accent);
+      }
+      .proj-head {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 6px 7px 10px;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .proj-head .chev {
+        color: var(--faint);
+        transform: rotate(90deg);
+      }
+      .proj-head svg:not(.chev) {
+        color: var(--muted);
+      }
+      .proj.active .proj-head {
+        font-weight: 500;
+      }
+      .proj.active .proj-head svg:not(.chev) {
+        color: var(--accent-text);
+      }
+      .proj-head .nm {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .proj-head .c {
+        font-size: 12px;
+        color: var(--faint);
+      }
+      .unread {
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        display: grid;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--accent);
+        color: var(--accent-ink);
+        font-size: 11.5px;
+        font-weight: 600;
+        line-height: 1;
+      }
+      .row {
+        position: relative;
+        display: flex;
+        align-items: center;
+        padding-right: 4px;
+        border-radius: var(--r-sm);
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .row.active,
+      .row.hovered {
+        background: var(--raise);
+        color: var(--text);
+      }
+      .row-open {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 6px 4px 6px 32px;
+      }
+      .row-open.loose {
+        padding-left: 35px;
+      }
+      .tt {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .rh {
+        flex-shrink: 0;
+        color: var(--text);
+        font-weight: 500;
+      }
+      .row.st-running .tt {
+        color: var(--text);
+      }
+      .in-outpost {
+        display: grid;
+        flex-shrink: 0;
+        color: var(--faint);
+      }
+      .rename-wrap {
+        flex-shrink: 0;
+        min-width: 78px;
+      }
+      .rename {
+        display: block;
+        border-bottom: 1px solid var(--accent);
+        box-shadow: 0 1px 0 var(--accent);
+        color: var(--text);
+        font-weight: 500;
+      }
+      .chats-rule {
+        height: 1px;
+        margin: 14px 8px 6px;
+        border: 0;
+        background: var(--line);
+      }
+      .side-new {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin: 8px 2px 0;
+        padding: 8px 10px;
+        border-radius: var(--r-sm);
+        box-shadow: inset 0 0 0 1px var(--line);
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .side-new svg {
+        color: var(--muted);
+      }
+      .side-new > span:not(.keys) {
+        flex: 1;
+      }
+      .keys {
+        display: inline-flex;
+        gap: 3px;
+      }
+      .keys kbd {
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        display: grid;
+        place-items: center;
+        border-radius: 4px;
+        background: var(--raise);
+        box-shadow: inset 0 -1px 0 var(--line);
+        color: color-mix(in srgb, var(--muted) 70%, var(--text));
+        font: 500 11.5px/1 ui-sans-serif, system-ui, sans-serif;
+      }
+
+      /* status glyphs */
+      .st {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+      }
+      .orb {
+        display: block;
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: conic-gradient(from 40deg, transparent 0 20%, var(--accent));
+        -webkit-mask: radial-gradient(circle, transparent 3.6px, #000 4.2px);
+        mask: radial-gradient(circle, transparent 3.6px, #000 4.2px);
+      }
+      .orb.sm {
+        width: 11px;
+        height: 11px;
+        -webkit-mask: radial-gradient(circle, transparent 2.8px, #000 3.4px);
+        mask: radial-gradient(circle, transparent 2.8px, #000 3.4px);
+      }
+      .ask {
+        display: block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        border: 2px solid var(--warn);
+      }
+      .ask.sm {
+        width: 8px;
+        height: 8px;
+      }
+      .udot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .errdot {
+        width: 12px;
+        height: 12px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--danger);
+        color: var(--panel);
+        font-size: 9px;
+        font-style: normal;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .cst {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--faint);
+      }
+      .cst.active {
+        color: var(--accent-text);
+      }
+      .cst.waiting {
+        color: var(--warn);
+      }
+      .cst.done {
+        color: var(--muted);
+      }
+
+      /* main panel */
+      .main {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        margin: 8px 8px 8px 4px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: calc(var(--r) + 4px);
+        overflow: hidden;
+        --chat-col: 880px;
+        --chat-gutter: 56px;
+        --chat-measure: 560px;
+      }
+      .head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        min-height: 52px;
+        flex-shrink: 0;
+      }
+      .chat-head {
+        position: relative;
+        z-index: 3;
+        box-shadow: 0 1px 0 var(--line);
+      }
+      .head-ico {
+        display: grid;
+        color: var(--accent-text);
+      }
+      .chat-title {
+        font-size: 15px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .crumb {
+        color: var(--muted);
+      }
+      .head .chat-title + .icon-btn {
+        width: 28px;
+        height: 28px;
+        margin-left: -4px;
+        color: var(--faint);
+      }
+      .head-count {
+        margin-left: 2px;
+        padding: 3px 8px;
+        border-radius: var(--r-sm);
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .head-r {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: auto;
+      }
+      .head-r .btn {
+        margin-right: 6px;
+      }
+      .theme-dot circle {
+        fill: none;
+        stroke: var(--text);
+        stroke-width: 2.4;
+      }
+      .theme-dot path {
+        fill: var(--accent);
+      }
+      .head-diff {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-right: 6px;
+        padding: 4px 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        font-size: 12px;
+      }
+      .add {
+        color: var(--success);
+      }
+      .del {
+        color: var(--danger);
+      }
+      .bars {
+        display: inline-flex;
+        gap: 2px;
+      }
+      .bars i {
+        width: 6px;
+        height: 6px;
+        border-radius: 1px;
+        background: var(--line);
+      }
+      .bars i.a {
+        background: var(--success);
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 9px 16px;
+        border-radius: var(--r-sm);
+        font-size: 14px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .btn.sm {
+        padding: 6px 12px;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      .btn.primary {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+      .btn.ghost {
+        color: var(--muted);
+      }
+      .btn.line {
+        border: 1px solid var(--line);
+      }
+      .btn.line svg {
+        color: var(--muted);
+      }
+
+      /* agent strip */
+      .ostrip-wrap {
+        flex-shrink: 0;
+        padding: 0 var(--chat-gutter);
+        border-bottom: 1px solid var(--line);
+        background: var(--bg);
+      }
+      .ostrip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+        max-width: var(--chat-col);
+        margin: 0 auto;
+        padding: 6px 0;
+      }
+      .omem {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        padding: 5px 10px 5px 8px;
+        border-radius: var(--r-sm);
+        text-align: left;
+      }
+      .om-text {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        line-height: 1.35;
+      }
+      .om-top {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .om-top b {
+        font-size: 13.5px;
+        font-weight: 500;
+      }
+      .om-text small {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--faint);
+        font-size: 12px;
+      }
+
+      /* thread */
+      .thread-wrap {
+        flex: 1;
+        position: relative;
+        min-height: 0;
+      }
+      .thread {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        padding: 8px var(--chat-gutter) 10px;
+      }
+      .othread {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+      }
+      .col {
+        width: 100%;
+        max-width: var(--chat-col);
+        margin: 0 auto;
+      }
+      .pinned {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 6px 7px 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+        background: var(--bg);
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .pinned > svg {
+        color: var(--faint);
+      }
+      .pin-text {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .pin-text b {
+        margin-right: 4px;
+        color: var(--text);
+        font-weight: 500;
+      }
+      .pin-by {
+        flex-shrink: 0;
+        color: var(--faint);
+        font-size: 12px;
+      }
+      .pin-more {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        flex-shrink: 0;
+        padding: 2px 8px;
+        border-radius: var(--r-sm);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      code {
+        font-size: 0.86em;
+        background: var(--raise);
+        padding: 1px 5px;
+        border-radius: 5px;
+      }
+      .pinned code {
+        background: var(--panel);
+        box-shadow: inset 0 0 0 1px var(--line);
+      }
+      .hd {
+        color: var(--accent-text);
+        font-weight: 500;
+      }
+      .post {
+        display: grid;
+        grid-template-columns: 30px minmax(0, 1fr);
+        column-gap: 10px;
+        margin-top: 13px;
+      }
+      .ai-avatar {
+        width: 30px;
+        height: 30px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+      }
+      .post-body > p,
+      .reply > p {
+        max-width: var(--chat-measure);
+        font-size: 14.5px;
+        line-height: 1.5;
+      }
+      .post-head,
+      .reply-head {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 22px;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      .post-head b,
+      .reply-head b {
+        font-weight: 500;
+      }
+      .post-head .to {
+        color: var(--faint);
+      }
+      .post-head time,
+      .reply-head time,
+      .delivered,
+      .kind,
+      .mood {
+        color: var(--faint);
+        font-size: 12px;
+      }
+      .mood.warn {
+        color: var(--warn);
+      }
+      .kind {
+        padding: 0 7px;
+        border-radius: 999px;
+        box-shadow: inset 0 0 0 1px var(--line);
+        color: var(--muted);
+      }
+      .delivered::before {
+        content: '· ';
+      }
+      .pinmark {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--faint);
+        font-size: 12px;
+      }
+      .ost {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 1px 8px 1px 6px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.5;
+        white-space: nowrap;
+      }
+      .ost.sent {
+        color: var(--muted);
+        box-shadow: inset 0 0 0 1px var(--line);
+      }
+      .g-sent {
+        width: 7px;
+        height: 7px;
+        border: 1.5px solid var(--faint);
+        border-radius: 50%;
+      }
+      .ost.working {
+        color: var(--accent-text);
+        background: var(--accent-soft);
+      }
+      .ost.needs {
+        color: var(--warn);
+        background: color-mix(in srgb, var(--warn) 11%, transparent);
+      }
+      .ost.answered {
+        color: var(--muted);
+        background: var(--raise);
+      }
+      .ost.answered svg {
+        color: var(--success);
+        stroke-width: 2.8;
+      }
+      .ost.failed {
+        color: var(--danger);
+        background: var(--danger-soft);
+      }
+      .ost.cancelled {
+        color: var(--faint);
+        background: var(--raise);
+      }
+      .reply {
+        margin: 6px 0 0 2px;
+        padding: 1px 0 1px 14px;
+        border-left: 1px solid var(--line);
+      }
+      .reply > p {
+        max-width: calc(var(--chat-measure) - 16px);
+        font-size: 14px;
+      }
+      .results {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .res {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--text);
+        font-size: 12.5px;
+        line-height: 1.5;
+      }
+      .res.mono,
+      .res .mono {
+        font-size: 12px;
+      }
+      .res svg {
+        color: var(--muted);
+      }
+      .res-files {
+        color: var(--faint);
+      }
+      .progress {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .progress.bad {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--danger);
+      }
+      .textbtn {
+        padding: 0 6px;
+        border-radius: 5px;
+        color: var(--accent-text);
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .textbtn:first-of-type {
+        margin-left: 4px;
+      }
+      .answer {
+        max-width: 440px;
+        margin-top: 8px;
+        border: 1px solid var(--composer-line);
+        border-radius: var(--r-sm);
+        background: var(--panel);
+      }
+      .answer.focused {
+        border-color: var(--accent);
+        box-shadow: var(--focus-ring);
+      }
+      .answer-text {
+        padding: 7px 11px 0;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .answer-bar {
+        display: flex;
+        align-items: center;
+        padding: 2px 6px 6px 11px;
+      }
+      .answer-bar .hint {
+        margin: 0;
+        opacity: 1;
+      }
+      .answer-bar .send {
+        margin-left: auto;
+      }
+
+      /* composer */
+      .composer-wrap {
+        flex-shrink: 0;
+        padding: 0 var(--chat-gutter) 16px;
+      }
+      .composer {
+        position: relative;
+        z-index: 1;
+        max-width: var(--chat-col);
+        margin: 0 auto;
+        border: 1px solid var(--composer-line);
+        border-radius: var(--r);
+        background: var(--panel);
+      }
+      .ta {
+        padding: 12px 14px 4px;
+      }
+      .ta.placeholder {
+        color: var(--faint);
+      }
+      .comp-bar {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 6px 8px 8px;
+      }
+      .hint {
+        flex: 1;
+        margin-left: 6px;
+        white-space: nowrap;
+        font-size: 12px;
+        color: var(--faint);
+      }
+      .send {
+        flex-shrink: 0;
+        margin-left: 6px;
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        background: var(--accent);
+        color: var(--accent-ink);
+        display: grid;
+        place-items: center;
+      }
+      .send.sm {
+        width: 26px;
+        height: 26px;
+        border-radius: 8px;
+      }
+      .send.idle {
+        opacity: 0.25;
+      }
+      .send svg {
+        stroke-width: 2.4;
+      }
+      .caret-anchor {
+        position: relative;
+        display: inline-block;
+        width: 1.5px;
+        height: 1.15em;
+        margin-left: 1px;
+        vertical-align: -0.2em;
+        background: var(--text);
+      }
+      .mpop {
+        position: absolute;
+        z-index: 30;
+        padding: 5px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        box-shadow: var(--pop-shadow);
+      }
+      .atpop {
+        bottom: calc(100% + 10px);
+        left: -14px;
+        width: 268px;
+        display: flex;
+        flex-direction: column;
+      }
+      .mgroup {
+        padding: 5px 9px 3px;
+        font-size: 12px;
+        color: var(--faint);
+      }
+      .mopt {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 5px 9px;
+        border-radius: var(--r-sm);
+        white-space: nowrap;
+      }
+      .mopt.on {
+        background: var(--raise);
+      }
+      .mopt b {
+        flex-shrink: 0;
+        font-size: 13.5px;
+        font-weight: 500;
+      }
+      .mopt small {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .mopt .mi {
+        width: 22px;
+        height: 22px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+
+      /* member chat */
+      .main.crail-open {
+        --crail-w: 216px;
+        --crail-strip: 248px;
+        --chat-col: 720px;
+        --chat-gutter: 40px;
+      }
+      .main.crail-open .thread,
+      .main.crail-open .composer-wrap {
+        padding-right: calc(var(--chat-gutter) + var(--crail-strip));
+      }
+      .main.crail-open .thread-wrap::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: -200px;
+        width: var(--crail-strip);
+        border-left: 1px solid var(--line);
+        background: var(--bg);
+      }
+      .crail {
+        position: absolute;
+        top: 10px;
+        right: 16px;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        width: var(--crail-w);
+        color: var(--muted);
+        font-size: 12.5px;
+        line-height: 1.35;
+      }
+      .crail-head,
+      .crail-tasks-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 24px;
+        padding-left: 6px;
+      }
+      .crail-tasks-head {
+        padding: 0 2px 4px 6px;
+      }
+      .crail-title {
+        color: var(--faint);
+        font-size: 11.5px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+      }
+      .crail-toggle {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        color: var(--faint);
+      }
+      .crail-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 4px 6px;
+        border-radius: var(--r-sm);
+      }
+      .crail-ico {
+        display: grid;
+        flex-shrink: 0;
+        place-items: center;
+        width: 16px;
+        height: 17px;
+        color: var(--faint);
+      }
+      .crail-text {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .crail-main,
+      .crail-detail {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .crail-detail {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--faint);
+        font-size: 12px;
+      }
+      .crail-tasks-count {
+        padding: 1px 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .crail-crew {
+        margin-top: 14px;
+      }
+      .crow {
+        display: grid;
+        grid-template-columns: 22px minmax(0, 1fr);
+        gap: 0 8px;
+        align-items: start;
+        padding: 4px 6px;
+      }
+      .crow .nm b {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text);
+        font-size: 12.5px;
+        font-weight: 500;
+      }
+      .crow .nm small {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--faint);
+        font-size: 12px;
+      }
+      .crow .num {
+        grid-column: 2;
+        font: 12px/1.45 'Geist Mono', ui-monospace, monospace;
+        color: var(--muted);
+      }
+      .crow .num small {
+        margin-left: 8px;
+        color: var(--faint);
+        font-size: 12px;
+      }
+      .crail-outpost {
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+      }
+      .op-name .crail-main {
+        color: var(--text);
+        font-weight: 500;
+      }
+      .op-name .crail-ico {
+        color: var(--accent-text);
+      }
+      .msg {
+        margin-top: 20px;
+      }
+      .msg.me {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+      }
+      .bubble {
+        max-width: min(82%, var(--chat-measure));
+        background: var(--user);
+        color: var(--user-text);
+        padding: 8px 14px;
+        border-radius: var(--r);
+      }
+      .bubble.from {
+        display: block;
+        background: var(--panel);
+        color: var(--text);
+        box-shadow: inset 0 0 0 1px var(--composer-line);
+      }
+      .from-head {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 2px;
+        font-size: 12.5px;
+      }
+      .from-head b {
+        font-weight: 500;
+      }
+      .from-where {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--faint);
+        font-size: 12px;
+      }
+      .x-open {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+        padding-left: 12px;
+        color: var(--faint);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .ai-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+      .provider-name {
+        font-weight: 500;
+      }
+      .ai-head .chev.faint {
+        color: var(--faint);
+        margin-left: -4px;
+      }
+      .ai-jev {
+        margin-left: 6px;
+        color: var(--faint);
+        font-size: 12px;
+      }
+      .md p {
+        max-width: var(--chat-measure);
+        margin: 0 0 0.8em;
+      }
+      .md p.needs {
+        margin-bottom: 0;
+      }
+      .md p.needs b {
+        font-weight: 600;
+        color: var(--warn);
+      }
+      .xline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 640px;
+        margin: 0 0 12px;
+        padding: 6px 10px 6px 11px;
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+        background: var(--bg);
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .xline > svg {
+        color: var(--faint);
+      }
+      .x-text {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--text);
+      }
+      .kept {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: var(--r-sm);
+        background: var(--bg);
+        font-size: 13px;
+      }
+      .kept .ok {
+        color: var(--success);
+        stroke-width: 2.6;
+      }
+      .kept b {
+        font-weight: 500;
+      }
+      .sha {
+        color: var(--faint);
+        font-size: 12px;
+      }
+      .kept-note {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .turn-foot {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 8px;
+        color: var(--faint);
+        font-size: 12px;
+      }
+      .ctxbar-wrap {
+        position: relative;
+        max-width: var(--chat-col);
+        margin: 0 auto -12px;
+        padding: 0 12px;
+      }
+      .ctxbar {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 6px 16px;
+        border: 1px solid var(--line);
+        border-bottom: 0;
+        border-radius: var(--r) var(--r) 0 0;
+        background: var(--raise);
+        font-size: 12.5px;
+      }
+      .ctx-repo,
+      .ctx-outpost {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: var(--r-sm);
+      }
+      .ctx-repo svg,
+      .ctx-branch svg {
+        color: var(--muted);
+      }
+      .ctx-repo .chev,
+      .ctx-branch .chev {
+        color: var(--faint);
+      }
+      .ctx-name {
+        font-weight: 500;
+      }
+      .ctx-branch {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 6px;
+        color: var(--muted);
+        font-family: 'Geist Mono', ui-monospace, monospace;
+        font-size: 12px;
+      }
+      .ctx-wt {
+        color: var(--faint);
+      }
+      .ctx-outpost {
+        margin-left: 2px;
+        padding: 3px 9px;
+        background: var(--panel);
+        box-shadow: inset 0 0 0 1px var(--line);
+      }
+      .ctx-outpost svg {
+        color: var(--accent-text);
+      }
+      .ctx-handle {
+        color: var(--accent-text);
+        font-weight: 500;
+      }
+      .ctx-autonomy {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-left: auto;
+        padding: 4px 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .ctx-autonomy svg {
+        color: var(--faint);
+      }
+      .mbtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+        padding: 5px 8px 5px 10px;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .mbtn .chev {
+        color: var(--faint);
+      }
+      .meter {
+        display: inline-flex;
+        gap: 2px;
+        align-items: flex-end;
+        height: 11px;
+      }
+      .meter i {
+        width: 3px;
+        border-radius: 1px;
+        background: var(--accent);
+      }
+      .pchip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 8px;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .pchip svg {
+        color: var(--muted);
+      }
+      .ctxbtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 32px;
+        padding: 0 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .ring {
+        transform: rotate(-90deg);
+      }
+      .ring-bg,
+      .ring-fg {
+        fill: none;
+        stroke: var(--line);
+        stroke-width: 2.6;
+      }
+      .ring-fg {
+        stroke: var(--accent);
+        stroke-linecap: round;
+      }
+
+      /* create and add */
+      .main.free {
+        overflow: visible;
+      }
+      .scrim {
+        border-radius: inherit;
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        background: color-mix(in srgb, var(--text) 28%, transparent);
+      }
+      .dlg {
+        position: absolute;
+        z-index: 6;
+        top: 96px;
+        left: 452px;
+        width: 560px;
+        padding: 18px 20px 16px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: calc(var(--r) + 2px);
+        box-shadow: var(--pop-shadow);
+      }
+      .dlg-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .dlg-head h2 {
+        font-size: 17px;
+        font-weight: 600;
+      }
+      .dlg-lede {
+        margin: 2px 0 14px;
+        color: var(--muted);
+        font-size: 13.5px;
+        line-height: 1.5;
+      }
+      .field {
+        display: block;
+        margin-bottom: 14px;
+      }
+      .field > span:first-child {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .field > span small {
+        display: block;
+        color: var(--muted);
+        font-size: 12.5px;
+        font-weight: 400;
+      }
+      .inp {
+        display: block;
+        width: 100%;
+        padding: 6px 11px;
+        border-radius: var(--r-sm);
+        border: 1px solid var(--line-strong);
+        background: var(--bg);
+        font-size: 13.5px;
+        line-height: 20px;
+      }
+      .inp.handle {
+        width: 92px;
+        flex-shrink: 0;
+        padding: 4px 9px;
+        font-weight: 500;
+      }
+      .inp.focus {
+        border-color: var(--accent);
+        box-shadow: var(--focus-ring);
+      }
+      .dms {
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+      }
+      .dm {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 8px 8px 10px;
+      }
+      .dm + .dm {
+        border-top: 1px solid var(--line);
+      }
+      .dm-text {
+        flex: 1;
+        min-width: 0;
+        line-height: 1.35;
+      }
+      .dm-text b {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13.5px;
+        font-weight: 500;
+      }
+      .dm-text small {
+        display: block;
+        color: var(--faint);
+        font-family: 'Geist Mono', ui-monospace, monospace;
+        font-size: 12px;
+      }
+      .dm.new {
+        background: var(--bg);
+        border-radius: 0 0 var(--r-sm) var(--r-sm);
+      }
+      .dm-plus {
+        width: 26px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+      .field-button {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 10px;
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+        background: var(--panel);
+        font-size: 13.5px;
+        line-height: 20px;
+      }
+      .field-button svg {
+        color: var(--muted);
+      }
+      .field-value {
+        flex: 1;
+      }
+      .dm-note {
+        flex-basis: 100%;
+        padding-left: 36px;
+        color: var(--muted);
+        font-size: 12.5px;
+        line-height: 1.4;
+      }
+      .dlg-add {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .dlg-foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+      .ctx {
+        position: absolute;
+        z-index: 8;
+        top: 392px;
+        left: -44px;
+        width: 216px;
+        padding: 5px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        box-shadow: var(--pop-shadow);
+      }
+      .ctx.sub {
+        top: 478px;
+        left: 176px;
+        width: 232px;
+      }
+      .ctx button {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: var(--r-sm);
+        font-size: 13.5px;
+        line-height: 1.5;
+        text-align: left;
+      }
+      .ctx button > span:first-of-type {
+        flex: 1;
+      }
+      .ctx button svg {
+        color: var(--muted);
+      }
+      .ctx button.on {
+        background: var(--raise);
+      }
+      .ctx button small {
+        color: var(--faint);
+        font-size: 12px;
+      }
+      .ctx .lab {
+        padding: 6px 8px 4px;
+        font-size: 12px;
+        color: var(--faint);
+      }
+      .ctx hr {
+        margin: 5px 0;
+        border: 0;
+        border-top: 1px solid var(--line);
+      }
+      .ctx .danger,
+      .ctx .danger svg {
+        color: var(--danger);
+      }
+      .ctx .sub-chev svg {
+        color: var(--faint);
+      }
+      .ctx-handle-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 4px 8px 6px 31px;
+      }
+      .lab2 {
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+
+    </style>
+  </head>
+  <body>
+    <svg class="sprite" aria-hidden="true">
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v8a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></symbol>
+      <symbol id="i-analytics" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+      <symbol id="i-tickets" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/><path d="M10 9v6"/></symbol>
+      <symbol id="i-map" viewBox="0 0 24 24"><path d="m5 18 5-9 7 3 2-7"/><circle cx="5" cy="18" r="1.8" fill="currentColor"/><circle cx="10" cy="9" r="1.8" fill="currentColor"/><circle cx="17" cy="12" r="2.2" fill="currentColor"/><circle cx="19" cy="5" r="1.4" fill="currentColor"/></symbol>
+      <symbol id="i-docs" viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5v-15Z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M9 7h6M9 10.5h4"/></symbol>
+      <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+      <symbol id="i-side" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></symbol>
+      <symbol id="i-railpanel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/></symbol>
+      <symbol id="i-newchat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M13 9v6M10 12h6"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+      <symbol id="i-branch" viewBox="0 0 24 24"><path d="M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 9a9 9 0 0 1-9 9"/></symbol>
+      <symbol id="i-pr" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5v7M18 15.5V10a4 4 0 0 0-4-4h-2"/></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 6 4 4H6l4-4z"/></symbol>
+      <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/></symbol>
+      <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
+      <symbol id="i-tv" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="m8 3 4 4 4-4"/></symbol>
+      <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3M13 15h4"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+      <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6zM9 12l2 2 4-4"/></symbol>
+      <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M7 4v5M7 13v7M17 4v9M17 17v3M4 11h6M14 15h6"/></symbol>
+      <symbol id="i-usage" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9h-9z" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-changes" viewBox="0 0 24 24"><path d="M12 5v8M8 9h8M8 18h8"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1ZM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+      <symbol id="i-archive" viewBox="0 0 24 24"><path d="M4 4h16a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1ZM5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+      <symbol id="i-move" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+      <symbol id="i-unlock" viewBox="0 0 24 24"><path d="M6 11h12v9H6zM8.5 11V7.5a3.5 3.5 0 0 1 6.8-1.2"/></symbol>
+      <symbol id="i-outpost" viewBox="0 0 24 24"><path d="M6 21V4M6 5h11l-2.5 3.5L17 12H6"/></symbol>
+      <symbol id="b-claude-idle" viewBox="0 0 100 100"><g fill="#d75553"><path d="M87.34 48.87C87.34 71.35 73.81 84.13 50.02 84.13C26.22 84.13 12.69 71.35 12.69 48.87C12.69 26.39 26.22 13.6 50.02 13.6C73.81 13.6 87.34 26.39 87.34 48.87Z"/></g><g fill="#170c0b"><path d="M43.01 48.23C43.04 55.16 42.61 56.13 39.46 56.15C36.32 56.17 35.87 55.2 35.84 48.27C35.8 41.34 36.23 40.37 39.38 40.36C42.53 40.34 42.97 41.31 43.01 48.23Z"/><path d="M62.82 49.24C62.52 55.48 62.07 56.34 59.21 56.2C56.34 56.06 55.98 55.17 56.28 48.92C56.58 42.68 57.03 41.82 59.89 41.96C62.76 42.1 63.12 42.99 62.82 49.24Z"/></g></symbol>
+      <symbol id="b-claude-happy" viewBox="0 0 100 100"><g transform="translate(0 -2.2)"><g fill="#d75553"><path d="M87.34 48.87C87.34 71.35 73.81 84.13 50.02 84.13C26.22 84.13 12.69 71.35 12.69 48.87C12.69 26.39 26.22 13.6 50.02 13.6C73.81 13.6 87.34 26.39 87.34 48.87Z"/></g><g fill="#170c0b"><path d="M44.03 45.89C44.32 47.95 43.61 48.35 38.25 49.1C32.89 49.85 32.1 49.67 31.81 47.61C31.52 45.55 32.23 45.16 37.59 44.41C42.95 43.65 43.74 43.84 44.03 45.89Z"/><path d="M66.89 46.76C67.19 48.93 66.52 49.33 61.4 50.05C56.28 50.77 55.52 50.57 55.22 48.4C54.91 46.23 55.58 45.83 60.7 45.11C65.82 44.39 66.58 44.59 66.89 46.76Z"/></g></g></symbol>
+      <symbol id="b-claude-unsure" viewBox="0 0 100 100"><g fill="#d75553"><path d="M87.34 48.87C87.34 71.35 73.81 84.13 50.02 84.13C26.22 84.13 12.69 71.35 12.69 48.87C12.69 26.39 26.22 13.6 50.02 13.6C73.81 13.6 87.34 26.39 87.34 48.87Z"/></g><g fill="#170c0b"><path d="M42.52 47.81C43.01 54.86 42.66 55.88 39.68 56.09C36.7 56.3 36.22 55.34 35.72 48.29C35.23 41.24 35.58 40.23 38.56 40.02C41.54 39.81 42.03 40.77 42.52 47.81Z"/><path d="M63.63 47.94C64.51 51.45 64.17 52.06 60.85 52.89C57.53 53.72 56.95 53.34 56.07 49.82C55.19 46.3 55.53 45.7 58.85 44.87C62.17 44.04 62.75 44.42 63.63 47.94Z"/></g></symbol>
+      <symbol id="b-claude-sleepy" viewBox="0 0 100 100"><g transform="translate(0 1.2)"><g fill="#d75553"><path d="M87.34 48.87C87.34 71.35 73.81 84.13 50.02 84.13C26.22 84.13 12.69 71.35 12.69 48.87C12.69 26.39 26.22 13.6 50.02 13.6C73.81 13.6 87.34 26.39 87.34 48.87Z"/></g><g fill="#170c0b"><path d="M43.21 50.65C43.21 52.18 42.71 52.39 39.12 52.39C35.54 52.39 35.03 52.18 35.03 50.65C35.03 49.13 35.54 48.92 39.12 48.92C42.71 48.92 43.21 49.13 43.21 50.65Z"/><path d="M63.44 51.73C63.33 53.29 62.88 53.48 59.73 53.26C56.57 53.04 56.15 52.79 56.26 51.23C56.37 49.67 56.82 49.48 59.97 49.7C63.13 49.92 63.55 50.17 63.44 51.73Z"/></g></g></symbol>
+      <symbol id="b-codex-idle" viewBox="0 0 100 100"><g fill="#00becd"><circle cx="27.76" cy="44.98" r="16.51"/><circle cx="36.33" cy="37.6" r="16.15"/><circle cx="50.2" cy="34.79" r="16.39"/><circle cx="64.08" cy="37.6" r="15.91"/><circle cx="72.65" cy="44.98" r="17.07"/><path d="M81.44 49.54C81.36 57.88 75.45 69.19 69.13 74.26C62.81 79.33 50.44 82.19 43.54 79.95C36.64 77.71 31.72 68.45 27.72 60.82C23.72 53.18 16.7 40.24 19.52 34.15C22.34 28.05 36.32 25.9 44.66 24.24C53 22.59 63.45 20.02 69.58 24.23C75.71 28.45 81.51 41.2 81.44 49.54Z"/></g><g fill="#051214"><path d="M43.17 45.74C43.83 52.88 43.83 52.88 41.08 53.14C38.32 53.4 38.32 53.4 37.66 46.26C36.99 39.12 36.99 39.12 39.75 38.86C42.5 38.6 42.5 38.6 43.17 45.74Z"/><path d="M63.13 45.78C63.81 52.1 63.81 52.1 61.56 52.34C59.31 52.58 59.31 52.58 58.62 46.26C57.94 39.94 57.94 39.94 60.19 39.7C62.44 39.46 62.44 39.46 63.13 45.78Z"/></g></symbol>
+      <symbol id="b-codex-unsure" viewBox="0 0 100 100"><g fill="#00becd"><circle cx="27.76" cy="44.98" r="16.51"/><circle cx="36.33" cy="37.6" r="16.15"/><circle cx="50.2" cy="34.79" r="16.39"/><circle cx="64.08" cy="37.6" r="15.91"/><circle cx="72.65" cy="44.98" r="17.07"/><path d="M81.44 49.54C81.36 57.88 75.45 69.19 69.13 74.26C62.81 79.33 50.44 82.19 43.54 79.95C36.64 77.71 31.72 68.45 27.72 60.82C23.72 53.18 16.7 40.24 19.52 34.15C22.34 28.05 36.32 25.9 44.66 24.24C53 22.59 63.45 20.02 69.58 24.23C75.71 28.45 81.51 41.2 81.44 49.54Z"/></g><g fill="#051214"><path d="M42.74 45.62C43.25 52.91 43.25 52.91 40.62 53.1C38 53.28 38 53.28 37.49 45.99C36.98 38.69 36.98 38.69 39.6 38.5C42.23 38.32 42.23 38.32 42.74 45.62Z"/><path d="M63.79 45.17C64.68 48.74 64.68 48.74 62.07 49.4C59.45 50.05 59.45 50.05 58.56 46.47C57.67 42.89 57.67 42.89 60.28 42.24C62.9 41.59 62.9 41.59 63.79 45.17Z"/></g></symbol>
+      <symbol id="b-codex-happy" viewBox="0 0 100 100"><g transform="translate(0 -2.2)"><g fill="#00becd"><circle cx="27.76" cy="44.98" r="16.51"/><circle cx="36.33" cy="37.6" r="16.15"/><circle cx="50.2" cy="34.79" r="16.39"/><circle cx="64.08" cy="37.6" r="15.91"/><circle cx="72.65" cy="44.98" r="17.07"/><path d="M81.44 49.54C81.36 57.88 75.45 69.19 69.13 74.26C62.81 79.33 50.44 82.19 43.54 79.95C36.64 77.71 31.72 68.45 27.72 60.82C23.72 53.18 16.7 40.24 19.52 34.15C22.34 28.05 36.32 25.9 44.66 24.24C53 22.59 63.45 20.02 69.58 24.23C75.71 28.45 81.51 41.2 81.44 49.54Z"/></g><g fill="#051214"><path d="M43.63 43.84C43.93 45.97 43.93 45.97 39.21 46.63C34.5 47.29 34.5 47.29 34.2 45.16C33.9 43.03 33.9 43.03 38.61 42.37C43.33 41.71 43.33 41.71 43.63 43.84Z"/><path d="M66.41 43.95C66.72 46.16 66.72 46.16 62.68 46.72C58.65 47.29 58.65 47.29 58.34 45.09C58.03 42.88 58.03 42.88 62.06 42.32C66.1 41.75 66.1 41.75 66.41 43.95Z"/></g></g></symbol>
+      <symbol id="b-codex-sleepy" viewBox="0 0 100 100"><g transform="translate(0 1.2)"><g fill="#00becd"><circle cx="27.76" cy="44.98" r="16.51"/><circle cx="36.33" cy="37.6" r="16.15"/><circle cx="50.2" cy="34.79" r="16.39"/><circle cx="64.08" cy="37.6" r="15.91"/><circle cx="72.65" cy="44.98" r="17.07"/><path d="M81.44 49.54C81.36 57.88 75.45 69.19 69.13 74.26C62.81 79.33 50.44 82.19 43.54 79.95C36.64 77.71 31.72 68.45 27.72 60.82C23.72 53.18 16.7 40.24 19.52 34.15C22.34 28.05 36.32 25.9 44.66 24.24C53 22.59 63.45 20.02 69.58 24.23C75.71 28.45 81.51 41.2 81.44 49.54Z"/></g><g fill="#051214"><path d="M43.27 48.4C43.27 49.98 43.27 49.98 40.11 49.98C36.96 49.98 36.96 49.98 36.96 48.4C36.96 46.82 36.96 46.82 40.11 46.82C43.27 46.82 43.27 46.82 43.27 48.4Z"/><path d="M63.66 48.59C63.55 50.18 63.55 50.18 61.06 50C58.58 49.83 58.58 49.83 58.69 48.25C58.8 46.66 58.8 46.66 61.29 46.83C63.77 47.01 63.77 47.01 63.66 48.59Z"/></g></g></symbol>
+      <symbol id="b-zai-sleepy" viewBox="0 0 100 100"><g transform="translate(0 1.2)"><g fill="#d7dac5"><circle cx="25.73" cy="52.38" r="5.54"/><circle cx="30.5" cy="36.61" r="5.54"/><circle cx="44.29" cy="27.59" r="5.54"/><circle cx="60.65" cy="29.54" r="5.54"/><circle cx="71.93" cy="41.55" r="5.54"/><circle cx="72.85" cy="58" r="5.54"/><circle cx="62.98" cy="71.2" r="5.54"/><circle cx="46.93" cy="74.96" r="5.54"/><circle cx="32.22" cy="67.53" r="5.54"/><path d="M72.95 51.04C72.95 62.81 62.34 72.76 49.79 72.76C37.23 72.76 26.62 62.81 26.62 51.04C26.62 39.27 37.23 29.32 49.79 29.32C62.34 29.32 72.95 39.27 72.95 51.04Z"/></g><g fill="#101006"><path d="M43 54.5C43 55.26 42.73 55.39 41.02 55.39C39.31 55.39 39.04 55.26 39.04 54.5C39.04 53.74 39.31 53.62 41.02 53.62C42.73 53.62 43 53.74 43 54.5Z"/><path d="M56.57 53.83C56.51 54.69 56.27 54.81 54.83 54.71C53.4 54.61 53.18 54.45 53.24 53.6C53.29 52.75 53.54 52.63 54.97 52.73C56.41 52.83 56.63 52.98 56.57 53.83Z"/></g></g></symbol>
+      <symbol id="b-zai-happy" viewBox="0 0 100 100"><g transform="translate(0 -2.2)"><g fill="#d7dac5"><circle cx="25.73" cy="52.38" r="5.54"/><circle cx="30.5" cy="36.61" r="5.54"/><circle cx="44.29" cy="27.59" r="5.54"/><circle cx="60.65" cy="29.54" r="5.54"/><circle cx="71.93" cy="41.55" r="5.54"/><circle cx="72.85" cy="58" r="5.54"/><circle cx="62.98" cy="71.2" r="5.54"/><circle cx="46.93" cy="74.96" r="5.54"/><circle cx="32.22" cy="67.53" r="5.54"/><path d="M72.95 51.04C72.95 62.81 62.34 72.76 49.79 72.76C37.23 72.76 26.62 62.81 26.62 51.04C26.62 39.27 37.23 29.32 49.79 29.32C62.34 29.32 72.95 39.27 72.95 51.04Z"/></g><g fill="#101006"><path d="M42.78 50.19C42.93 51.21 42.54 51.44 39.99 51.8C37.43 52.16 37 52.05 36.86 51.02C36.71 49.99 37.1 49.77 39.65 49.41C42.2 49.05 42.64 49.16 42.78 50.19Z"/><path d="M58.81 49.44C58.98 50.62 58.63 50.86 56.3 51.19C53.96 51.52 53.56 51.38 53.39 50.2C53.23 49.02 53.58 48.77 55.91 48.44C58.24 48.12 58.64 48.25 58.81 49.44Z"/></g></g></symbol>
+      <symbol id="b-zai-idle" viewBox="0 0 100 100"><g fill="#d7dac5"><circle cx="25.73" cy="52.38" r="5.54"/><circle cx="30.5" cy="36.61" r="5.54"/><circle cx="44.29" cy="27.59" r="5.54"/><circle cx="60.65" cy="29.54" r="5.54"/><circle cx="71.93" cy="41.55" r="5.54"/><circle cx="72.85" cy="58" r="5.54"/><circle cx="62.98" cy="71.2" r="5.54"/><circle cx="46.93" cy="74.96" r="5.54"/><circle cx="32.22" cy="67.53" r="5.54"/><path d="M72.95 51.04C72.95 62.81 62.34 72.76 49.79 72.76C37.23 72.76 26.62 62.81 26.62 51.04C26.62 39.27 37.23 29.32 49.79 29.32C62.34 29.32 72.95 39.27 72.95 51.04Z"/></g><g fill="#101006"><path d="M43.03 51.79C43.66 55.19 43.52 55.78 42.05 56.06C40.58 56.33 40.24 55.82 39.61 52.42C38.98 49.01 39.11 48.42 40.59 48.15C42.06 47.88 42.4 48.38 43.03 51.79Z"/><path d="M56.09 51C56.8 54.34 56.71 54.92 55.43 55.19C54.15 55.47 53.83 54.97 53.12 51.63C52.41 48.29 52.5 47.71 53.78 47.44C55.06 47.17 55.38 47.66 56.09 51Z"/></g></symbol>
+      <symbol id="b-jev-happy" viewBox="0 0 100 100"><g transform="translate(0 -2.2)"><g fill="#dfd2e4"><circle cx="28.92" cy="44.54" r="16.24"/><circle cx="37.52" cy="37.14" r="14.69"/><circle cx="51.44" cy="34.31" r="16.49"/><circle cx="65.36" cy="37.14" r="17.16"/><circle cx="73.96" cy="44.54" r="17.96"/><path d="M81.45 49.11C82.08 55.93 78.93 66.43 73.93 71.47C68.93 76.52 58.33 79.99 51.44 79.38C44.56 78.77 37.71 72.86 32.63 67.81C27.56 62.77 21.29 55.64 21 49.11C20.7 42.58 25.79 32.82 30.86 28.65C35.94 24.47 44.9 23.76 51.44 24.08C57.99 24.39 65.13 26.36 70.13 30.53C75.13 34.7 80.81 42.28 81.45 49.11Z"/></g><g fill="#130d15"><path d="M46.75 48.83C46.96 50.33 46.71 50.46 42.73 51.02C38.76 51.58 38.47 51.52 38.26 50.03C38.05 48.53 38.31 48.39 42.28 47.83C46.26 47.28 46.54 47.34 46.75 48.83Z"/><path d="M66.07 49.39C66.25 50.62 66.03 50.74 62.59 51.22C59.16 51.7 58.92 51.65 58.74 50.42C58.57 49.19 58.79 49.07 62.22 48.59C65.66 48.11 65.9 48.16 66.07 49.39Z"/></g></g></symbol>
+      <symbol id="b-user" viewBox="0 0 100 100"><g fill="#699700"><path d="M83.75 49.55C83.53 56.26 73.61 64.39 67.03 68.88C60.45 73.38 51.43 77.72 44.29 76.53C37.14 75.33 28.35 68.62 24.16 61.71C19.97 54.81 15.9 42.07 19.14 35.1C22.39 28.13 35.44 20.96 43.64 19.88C51.84 18.81 61.66 23.71 68.35 28.66C75.03 33.6 83.97 42.85 83.75 49.55Z"/></g><g fill="#0d1108"><path d="M43.08 46.39C43.49 50.98 43.33 51.39 40.94 51.6C38.55 51.81 38.32 51.44 37.9 46.85C37.49 42.26 37.66 41.85 40.05 41.64C42.43 41.43 42.67 41.8 43.08 46.39Z"/><path d="M59.73 45.74C60.15 50.57 59.96 51 57.29 51.23C54.62 51.46 54.36 51.07 53.95 46.23C53.54 41.4 53.73 40.97 56.4 40.74C59.06 40.51 59.32 40.9 59.73 45.74Z"/></g></symbol>
+    </svg>
+
+    <header class="sheet-head">
+      <h1>Outposts</h1>
+      <p>
+        Static design mockup for <code>docs/architecture/A2A_CHATS.md</code>. Sample data only: every
+        name, branch and pull request is made up. Nothing here is built.
+      </p>
+    </header>
+
+    <section class="frame" id="frame-a">
+      <h2 class="frame-title">A. Outpost thread <span>The shared room: agent strip, pinned note, requests with their state and answer, a Needs you answered in place, and handle completion in the message box.</span></h2>
+      <div class="win" data-skin="light">
+      <nav class="rail" aria-label="Main">
+        <span class="rail-logo"><svg class="scout" width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><path class="sc-ant" d="M38 18C39 13 42 10 46 9"/><path class="sc-spark" d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"/><path class="sc-body" d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"/><rect class="sc-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect class="sc-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/></svg></span>
+        <span class="rail-ind"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg>Home</span>
+        <span class="rail-btn" aria-current="page"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-chat"/></svg>Chats<i class="rbadge">1</i></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-analytics"/></svg>Analytics</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-tickets"/></svg>Tickets</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-map"/></svg>Map</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-docs"/></svg>Docs</span>
+        <span class="rail-sp"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-phone"/></svg>Phone</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-gear"/></svg>Settings</span>
+      </nav>
+      <div class="view">
+      <aside class="side">
+        <div class="side-in">
+          <div class="side-top"><b>Chats</b><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-side"/></svg></span></div>
+          <div class="search"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span></div>
+          <div class="tabs">
+            <span class="tab-ind"></span>
+            <button aria-selected="true">Active <span class="cnt">6</span></button>
+            <button>History</button>
+          </div>
+          <div class="list">
+            <div class="sec"><span>Outposts</span><span class="icon-btn" title="New outpost"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj active">
+                <span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-outpost"/></svg><span class="nm">Usage by user</span></span>
+              </div>
+              <ul class="rows">
+                <li class="row st-asking"><span class="row-open"><span class="st"><i class="ask"></i></span><b class="rh">@fe</b><span class="tt">Usage page: filter by user</span></span></li>
+                <li class="row "><span class="row-open"><span class="st"></span><b class="rh">@api</b><span class="tt">Usage endpoint: userId filter</span></span></li>
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><b class="rh">@docs</b><span class="tt">API reference: usage</span></span></li>
+              </ul>
+            </div>
+            <div class="sec"><span>Projects</span><span class="icon-btn"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">web</span><span class="c">2</span></span></div>
+              <ul class="rows">
+                <li class="row st-asking"><span class="row-open"><span class="st"><i class="ask"></i></span><span class="tt">Usage page: filter by user</span><span class="in-outpost" title="In Usage by user"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-outpost"/></svg></span></span></li>
+                <li class="row "><span class="row-open"><span class="st"></span><span class="tt">Fix chart legend overflow</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">api</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row "><span class="row-open"><span class="st"></span><span class="tt">Usage endpoint: userId filter</span><span class="in-outpost" title="In Usage by user"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-outpost"/></svg></span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">handbook</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><span class="tt">API reference: usage</span><span class="in-outpost" title="In Usage by user"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-outpost"/></svg></span></span></li>
+              </ul>
+            </div>
+            <hr class="chats-rule" />
+            <div class="sec bucket"><span>Today</span></div>
+            <ul class="rows">
+              <li class="row"><span class="row-open loose"><span class="tt">Compare the queue backends</span></span></li>
+              <li class="row"><span class="row-open loose"><span class="tt">Why is the nightly build slow</span></span></li>
+            </ul>
+          </div>
+          <div class="side-new"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-newchat"/></svg><span>New chat</span><span class="keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd></span></div>
+        </div>
+      </aside>
+      <main class="main">
+        <header class="head chat-head">
+          <span class="head-ico"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-outpost"/></svg></span>
+          <h1 class="chat-title">Usage by user</h1>
+          <button class="icon-btn" aria-label="Rename outpost"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-pen"/></svg></button>
+          <button class="head-count" aria-label="Members: you and 3 chats">You and 3 chats</button>
+          <span class="head-r">
+            <button class="btn sm line"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-pause"/></svg>Pause</button>
+            <button class="icon-btn" aria-label="Agent TV"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-tv"/></svg></button>
+            <button class="icon-btn" aria-label="More"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-dots"/></svg></button>
+            <button class="icon-btn" aria-label="Appearance"><svg class="theme-dot" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z"/></svg></button>
+          </span>
+        </header>
+        <div class="ostrip-wrap">
+          <div class="ostrip" aria-label="Chats in this outpost">
+            <button class="omem">
+              <svg class="blob" width="28" height="28" aria-hidden="true"><use href="#b-claude-unsure"/></svg>
+              <span class="om-text">
+                <span class="om-top"><b>@fe</b><span class="cst waiting">Needs you</span></span>
+                <small>web · spark/usage-user-filter</small>
+              </span>
+            </button>
+            <button class="omem">
+              <svg class="blob" width="28" height="28" aria-hidden="true"><use href="#b-codex-sleepy"/></svg>
+              <span class="om-text">
+                <span class="om-top"><b>@api</b><span class="cst ">Idle</span></span>
+                <small>api · spark/usage-userid-filter</small>
+              </span>
+            </button>
+            <button class="omem">
+              <svg class="blob" width="28" height="28" aria-hidden="true"><use href="#b-zai-idle"/></svg>
+              <span class="om-text">
+                <span class="om-top"><b>@docs</b><span class="cst active">Working</span></span>
+                <small>handbook · spark/usage-reference</small>
+              </span>
+            </button>
+          </div>
+        </div>
+        <div class="thread-wrap">
+          <div class="thread othread">
+            <div class="col">
+              <div class="pinned">
+                <svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-pin"/></svg>
+                <span class="pin-text"><b>API contract</b> <code>GET /usage?userId=&lt;id&gt;</code> is optional. Unknown user returns 404.</span>
+                <span class="pin-by"><span class="hd">@api</span> · 10:11</span>
+                <button class="pin-more">2 pinned <svg class="i chev down" width="11" height="11" aria-hidden="true"><use href="#i-chev"/></svg></button>
+              </div>
+
+              <article class="post">
+                <span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-user"/></svg></span>
+                <div class="post-body">
+                  <div class="post-head"><b>You</b><svg class="i to" width="12" height="12" aria-hidden="true"><use href="#i-move"/></svg><b>@all</b><time>10:02</time><span class="delivered">Delivered to 3 chats</span></div>
+                  <p>The Usage page gets a per-user filter. Agree the endpoint first, then build.</p>
+                </div>
+              </article>
+
+              <article class="post">
+                <span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-claude-happy"/></svg></span>
+                <div class="post-body">
+                  <div class="post-head"><b>@fe</b><svg class="i to" width="12" height="12" aria-hidden="true"><use href="#i-move"/></svg><b>@api</b><span class="ost answered"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-check"/></svg>Answered</span><time>10:04</time></div>
+                  <p>Add an optional userId filter to <code>GET /usage</code>. I need the same rows, only for that user.</p>
+                  <div class="reply">
+                    <div class="reply-head"><svg class="blob" width="20" height="20" aria-hidden="true"><use href="#b-codex-happy"/></svg><b>@api</b><span class="mood">answered after 6m 40s</span><time>10:11</time></div>
+                    <p>Done. <code>userId</code> is optional, and an unknown user returns 404 rather than an empty list. The contract is pinned above.</p>
+                    <div class="results">
+                      <a class="res mono"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-branch"/></svg>spark/usage-userid-filter</a>
+                      <a class="res mono"><span class="add">+42</span><span class="del">−7</span><span class="res-files">3 files</span></a>
+                      <a class="res"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-pr"/></svg>Pull request <span class="mono">#2241</span></a>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="post">
+                <span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-codex-idle"/></svg></span>
+                <div class="post-body">
+                  <div class="post-head"><b>@api</b><span class="kind">note</span><time>10:11</time><span class="pinmark"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-pin"/></svg>Pinned</span></div>
+                  <p>Contract: <code>GET /usage?userId=&lt;id&gt;</code>, optional. Unknown user returns 404.</p>
+                </div>
+              </article>
+
+              <article class="post">
+                <span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-codex-idle"/></svg></span>
+                <div class="post-body">
+                  <div class="post-head"><b>@api</b><svg class="i to" width="12" height="12" aria-hidden="true"><use href="#i-move"/></svg><b>@docs</b><span class="ost working"><i class="orb sm"></i>Working</span><time>10:12</time></div>
+                  <p>Add the userId filter to the usage page of the API reference.</p>
+                  <div class="progress">Working for 1m 12s · reading <code>docs/api/usage.md</code></div>
+                </div>
+              </article>
+
+              <article class="post">
+                <span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-zai-idle"/></svg></span>
+                <div class="post-body">
+                  <div class="post-head"><b>@docs</b><svg class="i to" width="12" height="12" aria-hidden="true"><use href="#i-move"/></svg><b>@fe</b><span class="ost needs"><i class="ask sm"></i>Needs you</span><time>10:13</time></div>
+                  <p>Send me a screenshot of the Usage page with the filter open, for the guide.</p>
+                  <div class="reply">
+                    <div class="reply-head"><svg class="blob" width="20" height="20" aria-hidden="true"><use href="#b-claude-unsure"/></svg><b>@fe</b><span class="mood">is waiting for you</span><time>10:14</time></div>
+                    <p>Needs you: should the screenshot use the light or the dark theme?</p>
+                    <div class="answer focused">
+                      <div class="answer-text">Light, with the filter open and one user picked.<i class="caret"></i></div>
+                      <div class="answer-bar"><span class="hint">Goes to <span class="hd">@fe</span> as your message</span><button class="send sm" aria-label="Send answer"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-up"/></svg></button></div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="post">
+                <span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-user"/></svg></span>
+                <div class="post-body">
+                  <div class="post-head"><b>You</b><svg class="i to" width="12" height="12" aria-hidden="true"><use href="#i-move"/></svg><b>@api</b><span class="ost failed"><i class="errdot">!</i>Failed</span><time>10:15</time></div>
+                  <p>Run the contract tests against <code>spark/usage-user-filter</code>.</p>
+                  <div class="progress bad">The tests could not start: Postgres is not running in api. <button class="textbtn">Try again</button><button class="textbtn">Open chat</button></div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+        <div class="composer-wrap">
+          <div class="composer">
+            <div class="ta">Thanks, all. Once the reference page is in, open both pull requests, then tell @<span class="caret-anchor"><span class="mpop atpop" role="listbox" aria-label="Chats in this outpost">
+                <span class="mgroup">Address a chat</span>
+                <span class="mopt on" role="option" aria-selected="true"><span class="mi"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-outpost"/></svg></span><b>@all</b><small>Everyone in this outpost</small></span>
+                <span class="mopt" role="option"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-claude-idle"/></svg><b>@fe</b><small>Usage page: filter by user</small></span>
+                <span class="mopt" role="option"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-codex-idle"/></svg><b>@api</b><small>Usage endpoint: userId filter</small></span>
+                <span class="mopt" role="option"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-zai-idle"/></svg><b>@docs</b><small>API reference: usage</small></span>
+              </span></span></div>
+            <div class="comp-bar">
+              <span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-plus"/></svg></span>
+              <span class="hint shown">@ a chat to ask it for work. Without a handle, it is a note.</span>
+              <span class="send"><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-up"/></svg></span>
+            </div>
+          </div>
+        </div>
+      </main>
+      </div>
+      </div>
+    </section>
+
+    <section class="frame" id="frame-b">
+      <h2 class="frame-title">B. Member chat (@fe) <span>The chat keeps its own thread. Each exchange is one line that opens the outpost at that message.</span></h2>
+      <div class="win" data-skin="light">
+      <nav class="rail" aria-label="Main">
+        <span class="rail-logo"><svg class="scout" width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><path class="sc-ant" d="M38 18C39 13 42 10 46 9"/><path class="sc-spark" d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"/><path class="sc-body" d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"/><rect class="sc-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect class="sc-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/></svg></span>
+        <span class="rail-ind"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg>Home</span>
+        <span class="rail-btn" aria-current="page"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-chat"/></svg>Chats<i class="rbadge">1</i></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-analytics"/></svg>Analytics</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-tickets"/></svg>Tickets</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-map"/></svg>Map</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-docs"/></svg>Docs</span>
+        <span class="rail-sp"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-phone"/></svg>Phone</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-gear"/></svg>Settings</span>
+      </nav>
+      <div class="view">
+      <aside class="side">
+        <div class="side-in">
+          <div class="side-top"><b>Chats</b><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-side"/></svg></span></div>
+          <div class="search"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span></div>
+          <div class="tabs">
+            <span class="tab-ind"></span>
+            <button aria-selected="true">Active <span class="cnt">6</span></button>
+            <button>History</button>
+          </div>
+          <div class="list">
+            <div class="sec"><span>Outposts</span><span class="icon-btn" title="New outpost"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj">
+                <span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-outpost"/></svg><span class="nm">Usage by user</span><span class="unread" aria-label="2 unread">2</span></span>
+              </div>
+              <ul class="rows">
+                <li class="row st-asking"><span class="row-open"><span class="st"><i class="ask"></i></span><b class="rh">@fe</b><span class="tt">Usage page: filter by user</span></span></li>
+                <li class="row "><span class="row-open"><span class="st"></span><b class="rh">@api</b><span class="tt">Usage endpoint: userId filter</span></span></li>
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><b class="rh">@docs</b><span class="tt">API reference: usage</span></span></li>
+              </ul>
+            </div>
+            <div class="sec"><span>Projects</span><span class="icon-btn"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">web</span><span class="c">2</span></span></div>
+              <ul class="rows">
+                <li class="row st-asking active"><span class="row-open"><span class="st"><i class="ask"></i></span><span class="tt">Usage page: filter by user</span><span class="in-outpost" title="In Usage by user"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-outpost"/></svg></span></span></li>
+                <li class="row "><span class="row-open"><span class="st"></span><span class="tt">Fix chart legend overflow</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">api</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row "><span class="row-open"><span class="st"></span><span class="tt">Usage endpoint: userId filter</span><span class="in-outpost" title="In Usage by user"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-outpost"/></svg></span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">handbook</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><span class="tt">API reference: usage</span><span class="in-outpost" title="In Usage by user"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-outpost"/></svg></span></span></li>
+              </ul>
+            </div>
+            <hr class="chats-rule" />
+            <div class="sec bucket"><span>Today</span></div>
+            <ul class="rows">
+              <li class="row"><span class="row-open loose"><span class="tt">Compare the queue backends</span></span></li>
+              <li class="row"><span class="row-open loose"><span class="tt">Why is the nightly build slow</span></span></li>
+            </ul>
+          </div>
+          <div class="side-new"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-newchat"/></svg><span>New chat</span><span class="keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd></span></div>
+        </div>
+      </aside>
+      <main class="main crail-open">
+        <header class="head chat-head">
+          <span class="crumb">web /</span>
+          <h1 class="chat-title">Usage page: filter by user</h1>
+          <span class="head-r">
+            <span class="head-diff mono"><span class="add">+118</span><span class="del">−12</span><span class="bars"><i class="a"></i><i class="a"></i><i class="a"></i><i class="a"></i><i></i></span></span>
+            <button class="icon-btn" aria-label="Context panel"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-railpanel"/></svg></button>
+            <button class="icon-btn" aria-label="More"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-dots"/></svg></button>
+            <button class="icon-btn" aria-label="Agent TV"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-tv"/></svg></button>
+            <button class="icon-btn" aria-label="Terminal"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-terminal"/></svg></button>
+            <button class="icon-btn" aria-label="Appearance"><svg class="theme-dot" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z"/></svg></button>
+          </span>
+        </header>
+        <div class="thread-wrap">
+          <div class="thread">
+            <aside class="crail" aria-label="Context">
+              <div class="crail-head"><h2 class="crail-title">Context</h2><span class="crail-toggle"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-chev"/></svg></span></div>
+              <ul class="crail-rows">
+                <li class="crail-row "><span class="crail-ico"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-folder"/></svg></span><span class="crail-text"><span class="crail-main">web</span><span class="crail-detail"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-branch"/></svg>spark/usage-user-filter</span></span></li>
+                <li class="crail-row "><span class="crail-ico"><svg class="blob" width="14" height="14" aria-hidden="true"><use href="#b-claude-idle"/></svg></span><span class="crail-text"><span class="crail-main">Claude · Opus 5.5</span><span class="crail-detail">Accept edits</span></span></li>
+                <li class="crail-row "><span class="crail-ico"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-shield"/></svg></span><span class="crail-text"><span class="crail-main">Full auto → PR</span><span class="crail-detail">Opens a pull request when done</span></span></li>
+                <li class="crail-row "><span class="crail-ico"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-changes"/></svg></span><span class="crail-text"><span class="crail-main">4 files changed <span class="add">+118</span> <span class="del">−12</span></span><span class="crail-detail">Not pushed yet</span></span></li>
+                <li class="crail-row "><span class="crail-ico"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-usage"/></svg></span><span class="crail-text"><span class="crail-main">41.2K tokens · $0.38</span><span class="crail-detail">22% context</span></span></li>
+              </ul>
+              <section class="crail-crew">
+                <div class="crail-tasks-head"><h2 class="crail-title">Crew · 2 agents</h2><span class="crail-tasks-count">Agent TV</span></div>
+                <ul>
+                  <li class="crow"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-jev-happy"/></svg><span class="nm"><b>Jev<span class="cst done">Done</span></b><small>Dispatcher · router</small></span><span class="num">2.5K tok <small>0.4s</small></span></li>
+                  <li class="crow"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-claude-unsure"/></svg><span class="nm"><b>Bolt<span class="cst waiting">Waiting for you</span></b><small>Builder · Opus 5.5 · high</small></span><span class="num">38.7K tok <small>4m 02s</small></span></li>
+                </ul>
+              </section>
+              <section class="crail-crew crail-outpost">
+                <div class="crail-tasks-head"><h2 class="crail-title">Outpost</h2><span class="crail-tasks-count">Open</span></div>
+                <a class="crail-row op-name"><span class="crail-ico"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-outpost"/></svg></span><span class="crail-text"><span class="crail-main">Usage by user</span><span class="crail-detail">You and 3 chats · 1 needs you</span></span></a>
+                <ul>
+                  <li class="crow"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-claude-unsure"/></svg><span class="nm"><b>@fe<span class="cst waiting">Needs you</span></b><small>This chat</small></span></li>
+                  <li class="crow"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-codex-sleepy"/></svg><span class="nm"><b>@api<span class="cst ">Idle</span></b><small>api · spark/usage-userid-filter</small></span></li>
+                  <li class="crow"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-zai-idle"/></svg><span class="nm"><b>@docs<span class="cst active">Working</span></b><small>handbook · spark/usage-reference</small></span></li>
+                </ul>
+              </section>
+            </aside>
+            <div class="col">
+              <section>
+                <div class="msg me"><div class="bubble">Add a user filter to the Usage page. Ask @api for whatever the endpoint needs.</div></div>
+              </section>
+              <section>
+                <div class="msg">
+                  <div class="ai-head"><span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-claude-happy"/></svg></span><span class="provider-name">Claude</span><span class="mood">done · worked for 9m 18s</span><svg class="i chev faint" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><span class="ai-jev">Jev: build it · 88% sure</span></div>
+                  <div class="md">
+                    <p>The Usage page has a user picker now. It needed one thing from the endpoint first, so I asked for it in the outpost and built on the answer.</p>
+                    <a class="xline">
+                      <svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-outpost"/></svg>
+                      <span class="x-text">Asked <span class="hd">@api</span>: userId filter on the usage endpoint</span>
+                      <span class="ost answered"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-check"/></svg>Answered</span>
+                      <span class="x-open">Open in outpost <svg class="i chev" width="11" height="11" aria-hidden="true"><use href="#i-chev"/></svg></span>
+                    </a>
+                    <p>The picker sends <code>userId</code> only when a user is chosen, and shows "No such user" on a 404.</p>
+                  </div>
+                  <div class="kept"><svg class="i ok" width="14" height="14" aria-hidden="true"><use href="#i-check"/></svg><b>Kept · 4 files · +118 −12</b><span class="mono sha">c41d9e2</span><span class="kept-note">Committed on spark/usage-user-filter, not pushed.</span></div>
+                  <div class="turn-foot"><span>41.2K tokens · $0.38</span><span>6 min ago</span><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-copy"/></svg></div>
+                </div>
+              </section>
+              <section>
+                <div class="msg me">
+                  <a class="bubble from">
+                    <span class="from-head"><svg class="blob" width="18" height="18" aria-hidden="true"><use href="#b-zai-idle"/></svg><b>From @docs</b><span class="from-where"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-outpost"/></svg>Usage by user</span><span class="x-open">Open in outpost <svg class="i chev" width="11" height="11" aria-hidden="true"><use href="#i-chev"/></svg></span></span>
+                    Send me a screenshot of the Usage page with the filter open, for the guide.
+                  </a>
+                </div>
+              </section>
+              <section>
+                <div class="msg">
+                  <div class="ai-head"><span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-claude-unsure"/></svg></span><span class="provider-name">Claude</span><span class="mood warn">waiting for you</span><span class="ai-jev">Jev: unclear, asks first</span></div>
+                  <div class="md">
+                    <p>I can take it from the running preview, but the guide has both kinds of screenshot.</p>
+                    <p class="needs"><b>Needs you:</b> should the screenshot use the light or the dark theme?</p>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+        <div class="composer-wrap">
+          <div class="ctxbar-wrap">
+            <div class="ctxbar">
+              <span class="ctx-repo"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-folder"/></svg><span class="ctx-name">web</span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span>
+              <span class="ctx-branch"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-branch"/></svg><span class="ctx-branch-name">spark/usage-user-filter</span><span class="ctx-wt">· worktree</span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span>
+              <span class="ctx-outpost" title="This chat is @fe in Usage by user"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-outpost"/></svg><span class="ctx-name">Usage by user</span><span class="ctx-handle">@fe</span></span>
+              <span class="ctx-autonomy"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-shield"/></svg><span>Full auto → PR</span></span>
+              <span class="icon-btn sm"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-sliders"/></svg></span>
+            </div>
+          </div>
+          <div class="composer">
+            <div class="ta placeholder">Ask anything, @ to add a file, / for commands</div>
+            <div class="comp-bar">
+              <span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-plus"/></svg></span>
+              <span class="mbtn"><svg class="blob" width="16" height="16" aria-hidden="true"><use href="#b-claude-idle"/></svg><span class="mname">Auto · Opus this turn</span><span class="meter"><i class="on" style="height:4px"></i><i class="on" style="height:7px"></i><i class="on" style="height:9px"></i><i class="on" style="height:11px"></i></span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span>
+              <span class="pchip"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-pen"/></svg>Accept edits</span>
+              <span class="ctxbtn"><svg width="16" height="16" viewBox="0 0 24 24" class="ring" aria-hidden="true"><circle cx="12" cy="12" r="9" class="ring-bg"/><path d="M12 3a9 9 0 0 1 8.8 7.1" class="ring-fg"/></svg>22%</span>
+              <span class="send idle"><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-up"/></svg></span>
+            </div>
+          </div>
+        </div>
+      </main>
+      </div>
+      </div>
+    </section>
+
+    <section class="frame" id="frame-c">
+      <h2 class="frame-title">C. Create and add <span>Three states drawn together: the New outpost dialog, Add to outpost on a chat row, and a handle being renamed in the sidebar.</span></h2>
+      <div class="win" data-skin="light">
+      <nav class="rail" aria-label="Main">
+        <span class="rail-logo"><svg class="scout" width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><path class="sc-ant" d="M38 18C39 13 42 10 46 9"/><path class="sc-spark" d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"/><path class="sc-body" d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"/><rect class="sc-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect class="sc-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/></svg></span>
+        <span class="rail-ind"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg>Home</span>
+        <span class="rail-btn" aria-current="page"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-chat"/></svg>Chats<i class="rbadge">1</i></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-analytics"/></svg>Analytics</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-tickets"/></svg>Tickets</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-map"/></svg>Map</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-docs"/></svg>Docs</span>
+        <span class="rail-sp"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-phone"/></svg>Phone</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-gear"/></svg>Settings</span>
+      </nav>
+      <div class="view">
+      <aside class="side">
+        <div class="side-in">
+          <div class="side-top"><b>Chats</b><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-side"/></svg></span></div>
+          <div class="search"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span></div>
+          <div class="tabs">
+            <span class="tab-ind"></span>
+            <button aria-selected="true">Active <span class="cnt">6</span></button>
+            <button>History</button>
+          </div>
+          <div class="list">
+            <div class="sec"><span>Outposts</span><span class="icon-btn" title="New outpost"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj">
+                <span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-outpost"/></svg><span class="nm">Usage by user</span><span class="unread" aria-label="2 unread">2</span></span>
+              </div>
+              <ul class="rows">
+                <li class="row st-asking"><span class="row-open"><span class="st"><i class="ask"></i></span><b class="rh">@fe</b><span class="tt">Usage page: filter by user</span></span></li>
+                <li class="row "><span class="row-open"><span class="st"></span><span class="rename-wrap"><span class="rename">@backend<i class="caret"></i></span></span><span class="tt">Usage endpoint: userId filter</span></span></li>
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><b class="rh">@docs</b><span class="tt">API reference: usage</span></span></li>
+              </ul>
+            </div>
+            <div class="sec"><span>Projects</span><span class="icon-btn"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">web</span><span class="c">2</span></span></div>
+              <ul class="rows">
+                <li class="row st-asking"><span class="row-open"><span class="st"><i class="ask"></i></span><span class="tt">Usage page: filter by user</span><span class="in-outpost" title="In Usage by user"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-outpost"/></svg></span></span></li>
+                <li class="row hovered"><span class="row-open"><span class="st"></span><span class="tt">Fix chart legend overflow</span></span><span class="rmenu icon-btn on"><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-dots"/></svg></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">api</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row "><span class="row-open"><span class="st"></span><span class="tt">Usage endpoint: userId filter</span><span class="in-outpost" title="In Usage by user"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-outpost"/></svg></span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">handbook</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><span class="tt">API reference: usage</span><span class="in-outpost" title="In Usage by user"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-outpost"/></svg></span></span></li>
+              </ul>
+            </div>
+            <hr class="chats-rule" />
+            <div class="sec bucket"><span>Today</span></div>
+            <ul class="rows">
+              <li class="row"><span class="row-open loose"><span class="tt">Compare the queue backends</span></span></li>
+              <li class="row"><span class="row-open loose"><span class="tt">Why is the nightly build slow</span></span></li>
+            </ul>
+          </div>
+          <div class="side-new"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-newchat"/></svg><span>New chat</span><span class="keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd></span></div>
+        </div>
+      </aside>
+      <main class="main free">
+        <header class="head chat-head"><h1 class="chat-title">Fix chart legend overflow</h1><span class="head-r"><button class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-dots"/></svg></button><button class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-tv"/></svg></button><button class="icon-btn"><svg class="theme-dot" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z"/></svg></button></span></header>
+        <div class="thread-wrap"></div>
+        <div class="scrim"></div>
+        <section class="dlg" role="dialog" aria-label="New outpost">
+          <header class="dlg-head"><h2>New outpost</h2><button class="icon-btn" aria-label="Close"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-x"/></svg></button></header>
+          <p class="dlg-lede">A shared room where chats ask each other for work. Each chat keeps its own project, agent, mode and branch.</p>
+          <label class="field"><span>Name</span><span class="inp">Usage by user</span></label>
+          <div class="field">
+            <span>Chats <small>Each one gets a short handle the others use to address it. You can rename it later.</small></span>
+            <ul class="dms">
+              <li class="dm">
+                  <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-claude-idle"/></svg>
+                  <span class="inp handle">@fe</span>
+                  <span class="dm-text"><b>Usage page: filter by user</b><small>web · spark/usage-user-filter</small></span>
+                  <button class="icon-btn sm" aria-label="Remove Usage page: filter by user"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+                </li>
+              <li class="dm">
+                  <svg class="blob" width="26" height="26" aria-hidden="true"><use href="#b-codex-idle"/></svg>
+                  <span class="inp handle">@api</span>
+                  <span class="dm-text"><b>Usage endpoint: userId filter</b><small>api · spark/usage-userid-filter</small></span>
+                  <button class="icon-btn sm" aria-label="Remove Usage endpoint: userId filter"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+                </li>
+              <li class="dm new">
+                <span class="dm-plus"><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-newchat"/></svg></span>
+                <span class="inp handle focus">@docs<i class="caret"></i></span>
+                <span class="field-button"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-folder"/></svg><span class="field-value">handbook</span><svg class="i chev down" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span>
+                <button class="icon-btn sm" aria-label="Remove new chat"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-x"/></svg></button>
+                <small class="dm-note">New chat in handbook. It starts on its own spark/ branch when it first runs.</small>
+              </li>
+            </ul>
+            <div class="dlg-add">
+              <button class="btn sm line"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-plus"/></svg>Add a chat</button>
+              <button class="btn sm line"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-newchat"/></svg>New chat in this outpost</button>
+            </div>
+          </div>
+          <footer class="dlg-foot"><button class="btn sm ghost">Cancel</button><button class="btn sm primary">Create outpost</button></footer>
+        </section>
+
+        <div class="ctx" role="menu" aria-label="Chat actions">
+          <button role="menuitem"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-pen"/></svg><span>Rename</span></button>
+          <button role="menuitem"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-pin"/></svg><span>Pin</span></button>
+          <button role="menuitem"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy chat link</span></button>
+          <button role="menuitem" class="on"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-outpost"/></svg><span>Add to outpost</span><span class="sub-chev"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span></button>
+          <button role="menuitem"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-move"/></svg><span>Move to project</span><span class="sub-chev"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg></span></button>
+          <button role="menuitem"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-archive"/></svg><span>Archive</span></button>
+          <hr />
+          <button role="menuitem" class="danger"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-trash"/></svg><span>Delete</span></button>
+        </div>
+        <div class="ctx sub" role="menu" aria-label="Add to outpost">
+          <p class="lab">Add to outpost</p>
+          <button role="menuitem" class="on"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-outpost"/></svg><span>Usage by user</span><small>3 chats</small></button>
+          <div class="ctx-handle-row"><span class="lab2">Handle</span><span class="inp handle">@charts</span></div>
+          <hr />
+          <button role="menuitem"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg><span>New outpost</span></button>
+        </div>
+      </main>
+      </div>
+      </div>
+    </section>
+
+    <section class="frame" id="frame-d">
+      <h2 class="frame-title">D. Outpost thread, dark <span>Frame A in the dark theme.</span></h2>
+      <div class="win" data-skin="dark">
+      <nav class="rail" aria-label="Main">
+        <span class="rail-logo"><svg class="scout" width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><path class="sc-ant" d="M38 18C39 13 42 10 46 9"/><path class="sc-spark" d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"/><path class="sc-body" d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"/><rect class="sc-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect class="sc-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/></svg></span>
+        <span class="rail-ind"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-home"/></svg>Home</span>
+        <span class="rail-btn" aria-current="page"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-chat"/></svg>Chats<i class="rbadge">1</i></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-analytics"/></svg>Analytics</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-tickets"/></svg>Tickets</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-map"/></svg>Map</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-docs"/></svg>Docs</span>
+        <span class="rail-sp"></span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-phone"/></svg>Phone</span>
+        <span class="rail-btn"><svg class="i" width="20" height="20" aria-hidden="true"><use href="#i-gear"/></svg>Settings</span>
+      </nav>
+      <div class="view">
+      <aside class="side">
+        <div class="side-in">
+          <div class="side-top"><b>Chats</b><span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-side"/></svg></span></div>
+          <div class="search"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span></div>
+          <div class="tabs">
+            <span class="tab-ind"></span>
+            <button aria-selected="true">Active <span class="cnt">6</span></button>
+            <button>History</button>
+          </div>
+          <div class="list">
+            <div class="sec"><span>Outposts</span><span class="icon-btn" title="New outpost"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj active">
+                <span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-outpost"/></svg><span class="nm">Usage by user</span></span>
+              </div>
+              <ul class="rows">
+                <li class="row st-asking"><span class="row-open"><span class="st"><i class="ask"></i></span><b class="rh">@fe</b><span class="tt">Usage page: filter by user</span></span></li>
+                <li class="row "><span class="row-open"><span class="st"></span><b class="rh">@api</b><span class="tt">Usage endpoint: userId filter</span></span></li>
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><b class="rh">@docs</b><span class="tt">API reference: usage</span></span></li>
+              </ul>
+            </div>
+            <div class="sec"><span>Projects</span><span class="icon-btn"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-plus"/></svg></span></div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">web</span><span class="c">2</span></span></div>
+              <ul class="rows">
+                <li class="row st-asking"><span class="row-open"><span class="st"><i class="ask"></i></span><span class="tt">Usage page: filter by user</span><span class="in-outpost" title="In Usage by user"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-outpost"/></svg></span></span></li>
+                <li class="row "><span class="row-open"><span class="st"></span><span class="tt">Fix chart legend overflow</span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">api</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row "><span class="row-open"><span class="st"></span><span class="tt">Usage endpoint: userId filter</span><span class="in-outpost" title="In Usage by user"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-outpost"/></svg></span></span></li>
+              </ul>
+            </div>
+            <div class="pblock open">
+              <div class="proj"><span class="proj-head"><svg class="i chev" width="12" height="12" aria-hidden="true"><use href="#i-chev"/></svg><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-folder"/></svg><span class="nm">handbook</span><span class="c">1</span></span></div>
+              <ul class="rows">
+                <li class="row st-running"><span class="row-open"><span class="st"><i class="orb"></i></span><span class="tt">API reference: usage</span><span class="in-outpost" title="In Usage by user"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-outpost"/></svg></span></span></li>
+              </ul>
+            </div>
+            <hr class="chats-rule" />
+            <div class="sec bucket"><span>Today</span></div>
+            <ul class="rows">
+              <li class="row"><span class="row-open loose"><span class="tt">Compare the queue backends</span></span></li>
+              <li class="row"><span class="row-open loose"><span class="tt">Why is the nightly build slow</span></span></li>
+            </ul>
+          </div>
+          <div class="side-new"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-newchat"/></svg><span>New chat</span><span class="keys"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>O</kbd></span></div>
+        </div>
+      </aside>
+      <main class="main">
+        <header class="head chat-head">
+          <span class="head-ico"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-outpost"/></svg></span>
+          <h1 class="chat-title">Usage by user</h1>
+          <button class="icon-btn" aria-label="Rename outpost"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-pen"/></svg></button>
+          <button class="head-count" aria-label="Members: you and 3 chats">You and 3 chats</button>
+          <span class="head-r">
+            <button class="btn sm line"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-pause"/></svg>Pause</button>
+            <button class="icon-btn" aria-label="Agent TV"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-tv"/></svg></button>
+            <button class="icon-btn" aria-label="More"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-dots"/></svg></button>
+            <button class="icon-btn" aria-label="Appearance"><svg class="theme-dot" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z"/></svg></button>
+          </span>
+        </header>
+        <div class="ostrip-wrap">
+          <div class="ostrip" aria-label="Chats in this outpost">
+            <button class="omem">
+              <svg class="blob" width="28" height="28" aria-hidden="true"><use href="#b-claude-unsure"/></svg>
+              <span class="om-text">
+                <span class="om-top"><b>@fe</b><span class="cst waiting">Needs you</span></span>
+                <small>web · spark/usage-user-filter</small>
+              </span>
+            </button>
+            <button class="omem">
+              <svg class="blob" width="28" height="28" aria-hidden="true"><use href="#b-codex-sleepy"/></svg>
+              <span class="om-text">
+                <span class="om-top"><b>@api</b><span class="cst ">Idle</span></span>
+                <small>api · spark/usage-userid-filter</small>
+              </span>
+            </button>
+            <button class="omem">
+              <svg class="blob" width="28" height="28" aria-hidden="true"><use href="#b-zai-idle"/></svg>
+              <span class="om-text">
+                <span class="om-top"><b>@docs</b><span class="cst active">Working</span></span>
+                <small>handbook · spark/usage-reference</small>
+              </span>
+            </button>
+          </div>
+        </div>
+        <div class="thread-wrap">
+          <div class="thread othread">
+            <div class="col">
+              <div class="pinned">
+                <svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-pin"/></svg>
+                <span class="pin-text"><b>API contract</b> <code>GET /usage?userId=&lt;id&gt;</code> is optional. Unknown user returns 404.</span>
+                <span class="pin-by"><span class="hd">@api</span> · 10:11</span>
+                <button class="pin-more">2 pinned <svg class="i chev down" width="11" height="11" aria-hidden="true"><use href="#i-chev"/></svg></button>
+              </div>
+
+              <article class="post">
+                <span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-user"/></svg></span>
+                <div class="post-body">
+                  <div class="post-head"><b>You</b><svg class="i to" width="12" height="12" aria-hidden="true"><use href="#i-move"/></svg><b>@all</b><time>10:02</time><span class="delivered">Delivered to 3 chats</span></div>
+                  <p>The Usage page gets a per-user filter. Agree the endpoint first, then build.</p>
+                </div>
+              </article>
+
+              <article class="post">
+                <span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-claude-happy"/></svg></span>
+                <div class="post-body">
+                  <div class="post-head"><b>@fe</b><svg class="i to" width="12" height="12" aria-hidden="true"><use href="#i-move"/></svg><b>@api</b><span class="ost answered"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-check"/></svg>Answered</span><time>10:04</time></div>
+                  <p>Add an optional userId filter to <code>GET /usage</code>. I need the same rows, only for that user.</p>
+                  <div class="reply">
+                    <div class="reply-head"><svg class="blob" width="20" height="20" aria-hidden="true"><use href="#b-codex-happy"/></svg><b>@api</b><span class="mood">answered after 6m 40s</span><time>10:11</time></div>
+                    <p>Done. <code>userId</code> is optional, and an unknown user returns 404 rather than an empty list. The contract is pinned above.</p>
+                    <div class="results">
+                      <a class="res mono"><svg class="i" width="12" height="12" aria-hidden="true"><use href="#i-branch"/></svg>spark/usage-userid-filter</a>
+                      <a class="res mono"><span class="add">+42</span><span class="del">−7</span><span class="res-files">3 files</span></a>
+                      <a class="res"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-pr"/></svg>Pull request <span class="mono">#2241</span></a>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="post">
+                <span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-codex-idle"/></svg></span>
+                <div class="post-body">
+                  <div class="post-head"><b>@api</b><span class="kind">note</span><time>10:11</time><span class="pinmark"><svg class="i" width="11" height="11" aria-hidden="true"><use href="#i-pin"/></svg>Pinned</span></div>
+                  <p>Contract: <code>GET /usage?userId=&lt;id&gt;</code>, optional. Unknown user returns 404.</p>
+                </div>
+              </article>
+
+              <article class="post">
+                <span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-codex-idle"/></svg></span>
+                <div class="post-body">
+                  <div class="post-head"><b>@api</b><svg class="i to" width="12" height="12" aria-hidden="true"><use href="#i-move"/></svg><b>@docs</b><span class="ost working"><i class="orb sm"></i>Working</span><time>10:12</time></div>
+                  <p>Add the userId filter to the usage page of the API reference.</p>
+                  <div class="progress">Working for 1m 12s · reading <code>docs/api/usage.md</code></div>
+                </div>
+              </article>
+
+              <article class="post">
+                <span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-zai-idle"/></svg></span>
+                <div class="post-body">
+                  <div class="post-head"><b>@docs</b><svg class="i to" width="12" height="12" aria-hidden="true"><use href="#i-move"/></svg><b>@fe</b><span class="ost needs"><i class="ask sm"></i>Needs you</span><time>10:13</time></div>
+                  <p>Send me a screenshot of the Usage page with the filter open, for the guide.</p>
+                  <div class="reply">
+                    <div class="reply-head"><svg class="blob" width="20" height="20" aria-hidden="true"><use href="#b-claude-unsure"/></svg><b>@fe</b><span class="mood">is waiting for you</span><time>10:14</time></div>
+                    <p>Needs you: should the screenshot use the light or the dark theme?</p>
+                    <div class="answer focused">
+                      <div class="answer-text">Light, with the filter open and one user picked.<i class="caret"></i></div>
+                      <div class="answer-bar"><span class="hint">Goes to <span class="hd">@fe</span> as your message</span><button class="send sm" aria-label="Send answer"><svg class="i" width="13" height="13" aria-hidden="true"><use href="#i-up"/></svg></button></div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="post">
+                <span class="ai-avatar"><svg class="blob" width="30" height="30" aria-hidden="true"><use href="#b-user"/></svg></span>
+                <div class="post-body">
+                  <div class="post-head"><b>You</b><svg class="i to" width="12" height="12" aria-hidden="true"><use href="#i-move"/></svg><b>@api</b><span class="ost failed"><i class="errdot">!</i>Failed</span><time>10:15</time></div>
+                  <p>Run the contract tests against <code>spark/usage-user-filter</code>.</p>
+                  <div class="progress bad">The tests could not start: Postgres is not running in api. <button class="textbtn">Try again</button><button class="textbtn">Open chat</button></div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+        <div class="composer-wrap">
+          <div class="composer">
+            <div class="ta">Thanks, all. Once the reference page is in, open both pull requests, then tell @<span class="caret-anchor"><span class="mpop atpop" role="listbox" aria-label="Chats in this outpost">
+                <span class="mgroup">Address a chat</span>
+                <span class="mopt on" role="option" aria-selected="true"><span class="mi"><svg class="i" width="14" height="14" aria-hidden="true"><use href="#i-outpost"/></svg></span><b>@all</b><small>Everyone in this outpost</small></span>
+                <span class="mopt" role="option"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-claude-idle"/></svg><b>@fe</b><small>Usage page: filter by user</small></span>
+                <span class="mopt" role="option"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-codex-idle"/></svg><b>@api</b><small>Usage endpoint: userId filter</small></span>
+                <span class="mopt" role="option"><svg class="blob" width="22" height="22" aria-hidden="true"><use href="#b-zai-idle"/></svg><b>@docs</b><small>API reference: usage</small></span>
+              </span></span></div>
+            <div class="comp-bar">
+              <span class="icon-btn"><svg class="i" width="16" height="16" aria-hidden="true"><use href="#i-plus"/></svg></span>
+              <span class="hint shown">@ a chat to ask it for work. Without a handle, it is a note.</span>
+              <span class="send"><svg class="i" width="15" height="15" aria-hidden="true"><use href="#i-up"/></svg></span>
+            </div>
+          </div>
+        </div>
+      </main>
+      </div>
+      </div>
+    </section>
+  </body>
+</html>

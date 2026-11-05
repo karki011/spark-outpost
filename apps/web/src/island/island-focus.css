@@ -1,0 +1,369 @@
+.isl-home {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.isl-focus {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 22px;
+  padding: 26px;
+  border: 1px solid var(--card-line);
+  border-radius: 26px;
+  background: var(--card);
+  font-size: 15px;
+  animation: isl-focus-in 0.32s var(--out) both;
+}
+
+.isl-focus[data-seen] .isl-focus-ask {
+  background: var(--faint);
+}
+
+@keyframes isl-focus-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+}
+
+[data-rm] .isl-focus {
+  animation: none;
+}
+
+.isl-focus-who {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.isl-focus-blob {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 10px;
+}
+
+.isl-focus-ask {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--warn);
+  color: var(--accent-ink);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.isl-focus-chat {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.isl-focus-sub {
+  color: var(--muted);
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+
+.isl-focus-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.isl-focus-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 21px;
+  font-weight: 650;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.isl-focus .isl-code {
+  padding: 14px 18px;
+  border-radius: 14px;
+  font-size: 15px;
+}
+
+.isl-focus-why {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.isl-focus-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.isl-btn.big {
+  height: 42px;
+  padding: 0 22px;
+  border-radius: 13px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.isl-btn.deny {
+  color: var(--danger);
+}
+
+.isl-focus-open {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.isl-focus-open:hover {
+  color: var(--text);
+}
+
+.isl-focus-open:focus-visible,
+.isl-pager button:focus-visible,
+.isl-work-tile:focus-visible,
+.isl-aside-row:focus-visible,
+.isl-meet-row-text:focus-visible,
+.isl-meetstrip-text:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.isl-focus-open svg {
+  width: 14px;
+  height: 14px;
+}
+
+.isl-focus-choices .isl-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  counter-reset: isl-choice;
+}
+
+.isl-focus-choices .isl-btn.opt {
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
+  min-height: 48px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  font-size: 15px;
+  text-align: left;
+  counter-increment: isl-choice;
+}
+
+.isl-focus-choices .isl-btn.opt::before {
+  content: counter(isl-choice);
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+.isl-pager {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.isl-pager-step {
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.isl-pager-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--faint);
+  cursor: pointer;
+}
+
+.isl-pager-dot[aria-current] {
+  background: var(--warn);
+}
+
+.isl-pager-text {
+  margin-left: 4px;
+}
+
+.isl-clear {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 26px;
+  border: 1px solid var(--card-line);
+  border-radius: 26px;
+  background: var(--card);
+}
+
+.isl-clear-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.isl-clear-text b {
+  font-size: 19px;
+}
+
+.isl-clear-text span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.isl-clear .isl-meet-rows {
+  grid-column: 1 / -1;
+}
+
+.isl-working h3,
+.isl-aside-list h3 {
+  margin: 4px 6px 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.isl-working ul,
+.isl-aside-list ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.isl-work-tile,
+.isl-aside-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--card-line);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.isl-aside-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.isl-work-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.isl-work-text b,
+.isl-aside-row b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.isl-work-text span,
+.isl-aside-row span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.isl-work-spin {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}
+
+.isl-askcards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@container (max-width: 560px) {
+  .isl-focus {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.isl-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.isl-inbox-seen {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.isl-inbox-ask {
+  display: grid;
+  gap: 2px;
+  padding: 4px;
+}
+
+.isl-inbox-ask-from {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.isl-home :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

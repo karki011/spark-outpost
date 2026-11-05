@@ -1,0 +1,110 @@
+.spark-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 18px;
+}
+.spark-bubble {
+  position: relative;
+  margin: 0;
+  padding: 8px 13px;
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 14px 4px;
+  background: var(--raise);
+  color: var(--text);
+  font-size: 14px;
+}
+.spark-group + .spark-group {
+  margin-top: 22px;
+}
+.spark-group h4 {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.inp.spark-name {
+  width: 330px;
+}
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .set-row:has(.spark-name) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .set-row:has(.spark-name) .set-row-control {
+    grid-row: auto;
+    grid-column: 1;
+    margin-top: 8px;
+  }
+  .inp.spark-name {
+    width: 100%;
+  }
+}
+.spark-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.spark-money {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.inp.spark-num {
+  width: 84px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.inp.spark-num.spark-pct {
+  width: 56px;
+}
+.inp.spark-time {
+  width: 116px;
+  font-variant-numeric: tabular-nums;
+}
+
+.spark-instructions fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.spark-instructions label {
+  display: block;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.spark-instructions .inp {
+  width: 100%;
+}
+.spark-instructions textarea {
+  resize: vertical;
+}
+.spark-instructions details {
+  margin-top: 10px;
+}
+.spark-instructions details small {
+  display: block;
+  margin-top: 6px;
+  color: var(--danger);
+}
+.spark-instructions summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.spark-instructions-save {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+.spark-instructions-remote,
+.spark-instructions-save small {
+  color: var(--muted);
+}
+.spark-instructions-remote {
+  margin: 10px 0 0;
+  font-size: 12px;
+}

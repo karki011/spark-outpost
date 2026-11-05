@@ -1,0 +1,117 @@
+.session-choice {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.session-choice > .seg {
+  width: 200px;
+}
+.session-choice > .choice-picker {
+  width: 170px;
+}
+.tk-start .session-choice {
+  margin: 0 0 18px;
+}
+.native-intro {
+  margin: auto;
+}
+.native-workspace {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.native-workspace.remote {
+  padding: 18px 24px;
+}
+.native-workspace > .error-line,
+.native-workspace > .native-note {
+  margin: 0;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.native-companion {
+  display: inline-flex;
+  flex: none;
+  transition: transform 0.2s var(--out);
+}
+.native-companion:hover {
+  transform: rotate(-8deg) scale(1.08);
+}
+.native-companion[data-motion='off'] *,
+.native-companion[data-motion='off'] {
+  animation-play-state: paused !important;
+}
+.native-stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  background: var(--code);
+}
+.native-stage > .native-screen {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.native-detached {
+  flex: 1;
+  display: grid;
+  place-content: center;
+  color: var(--muted);
+  text-align: center;
+}
+.native-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.native-restart {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.native-restart .xic {
+  color: inherit;
+}
+.native-stop {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  z-index: 5;
+  max-width: min(420px, calc(100% - 28px));
+  border: 1px solid var(--line);
+  padding: 12px;
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 22%);
+}
+.native-stop > p {
+  margin: 0 0 10px;
+}
+.native-approvals {
+  flex: none;
+  max-height: 45%;
+  overflow-y: auto;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+@media (prefers-reduced-motion: reduce) {
+  .native-companion {
+    transition: none;
+  }
+  .native-companion:hover {
+    transform: none;
+  }
+}

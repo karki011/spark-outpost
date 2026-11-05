@@ -1,0 +1,156 @@
+.prd {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.prd:empty {
+  display: none;
+}
+
+.prd-section {
+  display: grid;
+  gap: 6px;
+}
+
+.prd ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prd-title {
+  margin: 0;
+  font-weight: 500;
+  color: var(--danger);
+}
+
+.prd-fold > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 24px;
+  cursor: pointer;
+}
+
+.prd-fold[open] > summary {
+  margin-bottom: 6px;
+}
+
+.prd-label {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.prd-line {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prd-row {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.prd-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.prd-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prd-state,
+.prd-when {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.prd-state.failing,
+.prd-state.changes_requested {
+  color: var(--danger);
+}
+
+.prd-state.passing,
+.prd-state.approved,
+.prd-state.fixed,
+.prd-state.answered {
+  color: var(--success);
+}
+
+.prd-state.running,
+.prd-state.fixing {
+  color: var(--accent-text);
+}
+
+.prd-state.needs_you,
+.prd-state.pushed_back {
+  color: var(--warn);
+}
+
+.prd-when {
+  margin-left: auto;
+  color: var(--faint);
+}
+
+.prd-text {
+  overflow-wrap: anywhere;
+}
+
+.prd-text.clamp {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.prd-more {
+  width: fit-content;
+  min-height: 24px;
+  margin-top: 6px;
+  padding: 0;
+  color: var(--accent-text);
+  font-size: 12px;
+}
+
+.prd-more:hover {
+  text-decoration: underline;
+}
+
+.prd-rest {
+  margin: 6px 0 0;
+  color: var(--faint);
+}
+
+.prd-fold > summary:focus-visible,
+.prd-name:focus-visible,
+.prd-more:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+@media (pointer: coarse) {
+  .prd-fold > summary,
+  .prd-more {
+    min-height: 44px;
+    align-items: center;
+  }
+}

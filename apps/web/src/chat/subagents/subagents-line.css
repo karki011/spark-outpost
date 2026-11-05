@@ -1,0 +1,74 @@
+.sl {
+  margin: 20px 0 10px;
+}
+
+.sl-line,
+.sl-workers,
+.sl-worker {
+  display: flex;
+  align-items: center;
+}
+
+.sl-line {
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  max-width: 100%;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sl-workers {
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sl-worker {
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sl-name {
+  overflow-wrap: anywhere;
+}
+
+.sl-state {
+  color: var(--faint);
+}
+
+.sl-worker[data-state='failed'] .sl-state {
+  color: var(--danger);
+}
+
+.sl-view {
+  color: var(--accent-text);
+  font-weight: 500;
+  border-radius: var(--r-sm);
+}
+
+.sl-view:hover {
+  text-decoration: underline;
+}
+
+.sl-cards {
+  margin-top: 8px;
+}
+
+.sl-done {
+  margin: 0;
+}
+
+.sl-view {
+  min-height: 28px;
+}
+
+@media (pointer: coarse) {
+  .sl-view {
+    min-height: 44px;
+  }
+}

@@ -1,0 +1,58 @@
+.compact-divider {
+  margin: 18px 0 14px;
+}
+
+.compact-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.compact-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.compact-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.compact-label b {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.compact-tokens {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.compact-acts {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.compact-acts:empty {
+  display: none;
+}
+
+.compact-summary {
+  margin-top: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  font-size: 13px;
+  max-height: 360px;
+  overflow-y: auto;
+}

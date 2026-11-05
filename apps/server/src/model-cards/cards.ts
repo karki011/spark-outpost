@@ -1,0 +1,143 @@
+import {
+  retirementState,
+  vendorCardsFileSchema,
+  type ModelCard,
+  type RetirementState,
+  type ModelTier,
+  type ProviderCard,
+} from '@spark-outpost/contracts';
+import vendorJson from './vendor-cards.json' with { type: 'json' };
+
+export const VENDOR_CARDS = vendorCardsFileSchema.parse(vendorJson);
+
+export const TIER_RANK: Readonly<Record<ModelTier, number>> = {
+  small: 0,
+  mid: 1,
+  top: 2,
+  frontier: 3,
+};
+export const FRONTIER_RANK = TIER_RANK.frontier;
+
+export const DAY_MS = 86_400_000;
+
+export function utcDayStart(day: string): number {
+  return Date.parse(`${day}T00:00:00Z`);
+}
+
+export interface CardModel {
+  id: string;
+  label?: string | null;
+}
+
+function bareId(id: string): string {
+  return id.replace(/\[[^\]]*\]$/, '');
+}
+
+export function cardFor(
+  model: CardModel,
+  provider: string | null = null,
+  cards: readonly ModelCard[] = VENDOR_CARDS.cards,
+): ModelCard | null {
+  const pool = provider ? cards.filter((card) => card.provider === provider) : cards;
+  const label = model.label?.trim() ?? '';
+  if (label) {
+    const byLabel = pool.find((card) => card.match.labels.includes(label));
+    if (byLabel) return byLabel;
+  }
+  const byId = pool.find(
+    (card) => card.match.ids.includes(model.id) || card.match.ids.includes(bareId(model.id)),
+  );
+  if (!byId) return null;
+  if (label && !byId.match.labels.includes(label)) return null;
+  return byId;
+}
+
+export function aliasFamily(
+  id: string,
+  provider: string,
+  cards: readonly ModelCard[] = VENDOR_CARDS.cards,
+): ModelCard[] {
+  const alias = bareId(id).toLowerCase();
+  return cards.filter(
+    (card) => card.provider === provider && card.id.split(/[^a-z0-9]+/).includes(alias),
+  );
+}
+
+export function cardById(id: string): ModelCard | null {
+  return VENDOR_CARDS.cards.find((card) => card.id === id) ?? null;
+}
+
+export function providerCard(provider: string): ProviderCard | null {
+  return VENDOR_CARDS.providers.find((card) => card.provider === provider) ?? null;
+}
+
+export function cardRetiring(card: ModelCard, now: Date = new Date()): boolean {
+  return retirementState(card, now) !== null;
+}
+
+export function cardRetired(card: ModelCard, now: Date = new Date()): boolean {
+  return retirementState(card, now) === 'retired';
+}
+
+export interface Retirement {
+  state: RetirementState;
+  on: string | null;
+}
+
+export function retirementOf(
+  model: CardModel,
+  provider: string | null = null,
+  now: Date = new Date(),
+): Retirement | null {
+  const card = cardFor(model, provider);
+  const state = card ? retirementState(card, now) : null;
+  return card && state ? { state, on: card.retiresNotBefore } : null;
+}
+
+export function retirementText(retirement: Retirement, verb: 'retiring' | 'retires'): string {
+  if (retirement.state === 'retired') {
+    return retirement.on ? `retired on ${retirement.on}` : 'retired';
+  }
+  return `${verb} on ${retirement.on}`;
+}
+
+export function usableDefault(
+  provider: string,
+  model: string | null,
+  now: Date = new Date(),
+): string | null {
+  return model !== null && retirementOf({ id: model }, provider, now) !== null ? null : model;
+}
+
+export function effortKeepsCache(model: CardModel, provider: string | null = null): boolean {
+  return cardFor(model, provider)?.reasoning.effortKeepsCache === true;
+}
+
+export function isFrontier(model: CardModel, provider: string | null = null): boolean {
+  return cardFor(model, provider)?.tier === 'frontier';
+}
+
+export function effectiveDefaultModel(
+  provider: string,
+  models: readonly CardModel[],
+  adapterDefault: string | null,
+  now: Date = new Date(),
+): string | null {
+  const everyday = providerCard(provider)?.everydayModel ?? null;
+  if (everyday) {
+    const offered = models.find((model) => {
+      const card = cardFor(model, provider);
+      return card?.id === everyday && !cardRetiring(card, now);
+    });
+    if (offered) return offered.id;
+  }
+  if (adapterDefault === null) return null;
+  const fallback = models.find((model) => model.id === adapterDefault);
+  const retiring = retirementOf(fallback ?? { id: adapterDefault }, provider, now) !== null;
+  if (!retiring && (!fallback || !isFrontier(fallback, provider))) return adapterDefault;
+  const usable = models
+    .map((model) => ({ model, card: cardFor(model, provider) }))
+    .filter(({ card }) => card !== null && card.tier !== 'frontier' && !cardRetiring(card, now))
+    .sort((a, b) => TIER_RANK[b.card!.tier] - TIER_RANK[a.card!.tier]);
+  return usable[0]?.model.id ?? adapterDefault;
+}

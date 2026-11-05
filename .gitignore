@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.local/
+.env
+.env.*
+*.log
+coverage/
+playwright-report/
+test-results/
+.DS_Store
+*.tsbuildinfo
+apps/desktop/release/
+.wrangler/
+apps/desktop/mac-control/.build/
+apps/desktop/voice/.build/
+apps/desktop/mac-control/.swiftpm/
+.claude/settings.local.json

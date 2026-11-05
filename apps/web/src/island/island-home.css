@@ -1,0 +1,44 @@
+.isl-view[data-panel='home'] {
+  animation: none;
+}
+
+.isl-hcard {
+  position: relative;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--card-line);
+  border-radius: 18px;
+  background: var(--card);
+  animation: isl-card-in 0.56s var(--spring-soft) calc(60ms + var(--i, 0) * 70ms) both;
+}
+
+.isl-now {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 112px;
+  touch-action: pan-y;
+}
+
+.isl-hnote {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  padding: 7px 8px 7px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--warn) 13%, transparent);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.isl-hnote-act {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: var(--warn);
+  font-weight: 600;
+  text-decoration: underline;
+}

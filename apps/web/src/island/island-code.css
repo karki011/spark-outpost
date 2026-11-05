@@ -1,0 +1,59 @@
+.isl-diff-body:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.isl-now[data-peek] {
+  display: block;
+  grid-column: 1 / -1;
+}
+
+.isl-pd {
+  min-width: 0;
+  animation: isl-code-in 0.22s ease-out both;
+}
+
+.isl-pd .isl-acts {
+  margin-top: 8px;
+}
+
+.isl-diff .isl-diff-body {
+  margin: 0;
+  max-height: 200px;
+  border: 1px solid var(--card-line);
+}
+
+.isl-diff[data-mode='hunk'] .isl-diff-body {
+  max-height: 132px;
+  margin: 0 0 8px;
+}
+
+.isl-diff .dv-body table {
+  font-size: 12px;
+}
+
+.isl-diff-gap td {
+  padding: 2px 10px;
+  color: var(--faint);
+  font-family: inherit;
+  font-size: 12px;
+  user-select: none;
+}
+
+.isl-diff-none {
+  margin: 0;
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@keyframes isl-code-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.isl-root[data-rm] .isl-pd {
+  animation: none;
+}

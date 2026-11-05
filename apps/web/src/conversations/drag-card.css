@@ -1,0 +1,175 @@
+.drag-lift {
+  pointer-events: none;
+}
+
+.drag-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 100%;
+  max-height: 44px;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  color: var(--text);
+  font-size: 14px;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    0 14px 16px -8px rgba(0, 0, 0, 0.28);
+  transform: scale(1.03);
+  transition: transform 0.2s var(--out);
+  animation: dc-lift 0.18s var(--out);
+  cursor: grabbing;
+}
+
+.drag-card.in-project {
+  padding-left: 32px;
+}
+
+.drag-card.project {
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+}
+
+.drag-card.project svg {
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+}
+
+.drag-card.project .chev {
+  color: var(--faint);
+}
+
+.landing .drag-card {
+  transform: none;
+}
+
+.dc-blob {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  animation: dc-wiggle 0.24s var(--out);
+}
+
+.dc-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-count {
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes dc-lift {
+  from {
+    transform: none;
+  }
+}
+
+@keyframes dc-wiggle {
+  30% {
+    transform: rotate(-8deg) scale(1.06);
+  }
+  65% {
+    transform: rotate(5deg);
+  }
+}
+
+.row.placeholder,
+.pblock.placeholder {
+  opacity: 0.4;
+}
+
+.list[data-projection='out'] .row.placeholder .row-open {
+  animation: ghost-outdent 0.2s var(--out);
+}
+
+.list[data-projection='in'] .row.placeholder .row-open {
+  animation: ghost-indent 0.2s var(--out);
+}
+
+@keyframes ghost-outdent {
+  from {
+    transform: translateX(20px);
+  }
+}
+
+@keyframes ghost-indent {
+  from {
+    transform: translateX(-20px);
+  }
+}
+
+.pblock.landed .proj {
+  position: relative;
+  isolation: isolate;
+  animation: pl-pulse 0.24s var(--out);
+}
+
+.pblock.landed .proj::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--accent-soft);
+  opacity: 0;
+  pointer-events: none;
+  animation: pl-glow 0.24s var(--out);
+}
+
+.pblock.landed .proj-head svg:not(.chev) {
+  animation: pl-folder 0.24s var(--out);
+}
+
+@keyframes pl-pulse {
+  40% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes pl-glow {
+  40% {
+    opacity: 1;
+  }
+}
+
+@keyframes pl-folder {
+  45% {
+    transform: scale(1.25) rotate(-8deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drag-card,
+  .landing .drag-card {
+    transform: none;
+    animation: dc-fade 0.15s linear;
+  }
+
+  .dc-blob,
+  .pblock.landed .proj-head svg:not(.chev),
+  .list[data-projection] .row.placeholder .row-open {
+    animation: none;
+  }
+
+  .pblock.landed .proj {
+    animation: none;
+  }
+
+  @keyframes dc-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}

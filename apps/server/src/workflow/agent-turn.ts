@@ -1,0 +1,493 @@
+import { backgroundParking } from './background-parking.ts';
+import type { ParkedTurns } from './parked-turns.ts';
+import type { RunSnapshot } from '../persistence/run-snapshots.ts';
+import { STOPPED_BY_QUIT, type RunEvent } from '@spark-outpost/contracts';
+import { sparkPreferences } from '../persistence/setup.ts';
+import { auditSparkHandoff } from './spark-audit.ts';
+import { liveTurn, promptWithBrowserCheck, sessionBrief } from './turn-facts.ts';
+import { insertProtocolEntries } from '../persistence/audit-log.ts';
+import type { Db } from '../persistence/db.ts';
+import { recordSuggestedTitle } from '../persistence/auto-title.ts';
+import type { Lease } from '../persistence/jobs.ts';
+import {
+  LeaseLostError,
+  isCancelRequested,
+  type AppendOptions,
+} from '../persistence/run-events.ts';
+import {
+  ProviderError,
+  type Provider,
+  type ProviderOutput,
+  type RequestUsage,
+} from '../providers/provider.ts';
+import { createTitleFilter, hidesTitleLine } from '../titles/title-line.ts';
+import { createRedactionFilter } from '../audit/redact-stream.ts';
+import { withoutSecretValues } from '../audit/secret-values.ts';
+import { turnSecretValues } from '../approvals/secret-send.ts';
+import {
+  APPROVAL_POLL_MS,
+  APPROVAL_TIMEOUT_MESSAGE,
+  APPROVAL_TIMEOUT_MS,
+  type EditObserver,
+} from './approval-gate.ts';
+import { ApprovalWaiters } from './approval-waiters.ts';
+import { createAuditRecorder } from './audit-recorder.ts';
+import { prepareAskRun, prepareDoRun, prepareQuestions } from './do-run.ts';
+import { watchModeRequests } from './mode-requests.ts';
+import { publishGrant, publishScope, startBasis } from './publish-context.ts';
+import { openMemberInbox } from './member-inbox.ts';
+import { recordAccount } from '../model-access/store.ts';
+import { createOutputQuiet } from './output-quiet.ts';
+import { guardedRun, recordErrorDetails, recordModelSwitch } from './model-guard.ts';
+import { createReplyText } from './reply-text.ts';
+import type { RunInput } from './run-input.ts';
+import {
+  knownModes,
+  recordCapabilities,
+  recordFollowedInstructions,
+  recordRunMetrics,
+  recordSessionSettings,
+  recordTokens,
+  spendRecorder,
+} from './run-metadata.ts';
+import { TEST_RUNNER_ALLOWLIST } from '../approvals/command-kinds.ts';
+import { proposedPlan } from '../plans/codex-plan.ts';
+import { plansThisTurn } from '../plans/plan-mode.ts';
+import { createPlanRecorder } from './plan-recorder.ts';
+import { createTaskRecorder } from './task-recorder.ts';
+import { createCommandRecorder } from './command-recorder.ts';
+import { sparkCommandScope } from './command-scope.ts';
+import { createTurnEvents } from './turn-events.ts';
+import { createLiveCost } from '../usage/live-cost.ts';
+import { recordPlan, withResetTime } from '../usage/plan-limits.ts';
+import { recordRequestUsage } from '../persistence/prompt-cache.ts';
+import { turnSessionFor, type TurnSession } from './turn-session.ts';
+import { asAgentReads } from '../outposts/agent-prompt.ts';
+import { preambleDeps } from '../outposts/preamble-stores.ts';
+import { answersDelivered, outpostPreamble } from '../outposts/turn-preamble.ts';
+import type { SweepLimits } from '../persistence/provider-sessions.ts';
+import { repoScanner } from '../agent-config/discovery.ts';
+import { loadRepoLaunch } from '../agent-config/launch.ts';
+import { commandAllowlistFromRules } from '../agent-config/allow-rules.ts';
+import { loadTurnExtensions } from './turn-extensions.ts';
+import { withMoveNote } from './project-move.ts';
+import { ASSISTANT_PREAMBLE } from '../companion/assistant.ts';
+import { startAssistantTurn, type AssistantTurn } from '../companion/assistant-turn.ts';
+import type { AssistantIdleCompaction } from '../companion/assistant-idle.ts';
+import { createRunObservations } from '../observations/run-observations.ts';
+import { conversationHasSlackContext } from '../persistence/slack.ts';
+import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
+import { startRailFlags } from './rail-flags.ts';
+import { linkedArtifactActivity } from '../artifacts/activity.ts';
+import { createObservedEdits } from './observed-edits.ts';
+import { observeSession } from './session-audit.ts';
+import { watchedSends } from '../observations/send-watch.ts';
+import { scannedObserver } from '../observations/output-scan.ts';
+import type { RunControl, StopReason } from './run-control.ts';
+
+export { startControl, type RunControl, type StopReason } from './run-control.ts';
+
+const INBOX_POLL_MS = 1000;
+
+export type Append = (event: RunEvent, options?: AppendOptions) => Promise<number | null>;
+
+export interface TurnDeps {
+  db: Db;
+  providers: ReadonlyMap<string, Provider>;
+  leaseSeconds: number;
+  cancelPollMs?: number;
+  approvalWaiters?: ApprovalWaiters;
+  approvalPollMs?: number;
+  approvalTimeoutMs?: number;
+  sessionLimits?: SweepLimits;
+  inboxPollMs?: number;
+  browserPane?: boolean;
+  assistantIdle?: AssistantIdleCompaction;
+  parked?: Pick<ParkedTurns, 'park'>;
+}
+
+export interface TurnOptions {
+  onOutput?: (output: ProviderOutput) => void;
+  onProduced?: (output: ProviderOutput) => void;
+  backupAlsoFor?: string;
+  recordsPlan?: boolean;
+  observeEdits?: EditObserver | undefined;
+  stopNow?: AbortSignal;
+  keepSnapshot?: RunSnapshot | undefined;
+  secondPrompt?: boolean;
+}
+
+export interface TurnResult {
+  outcome: 'succeeded' | 'failed' | 'cancelled' | 'lease_lost';
+  error: string | null;
+  text: string;
+  messageId: string | null;
+  finalReply?: string | null;
+}
+
+const GENERIC_PROVIDER_FAILURE =
+  'The provider stopped with an unexpected error. Nothing after the last completed step was changed.';
+
+function failureMessage(error: unknown, reason: StopReason | null): string {
+  if (reason === 'approval_timeout') return APPROVAL_TIMEOUT_MESSAGE;
+  if (error instanceof ProviderError) return error.message;
+  console.error('Run failed unexpectedly', error);
+  return GENERIC_PROVIDER_FAILURE;
+}
+
+export async function runAgentTurn(
+  deps: TurnDeps,
+  lease: Lease,
+  input: RunInput,
+  append: Append,
+  control: Pick<RunControl, 'signal' | 'reason' | 'stop'>,
+  options: TurnOptions = {},
+): Promise<TurnResult> {
+  const tasks = createTaskRecorder(
+    deps.db,
+    lease.runId,
+    input.prompt,
+    append,
+    options.recordsPlan ?? true,
+  );
+  const plans = createPlanRecorder({
+    db: deps.db,
+    runId: lease.runId,
+    conversationId: input.identity.threadId,
+    root: input.projectRoots[0] ?? null,
+    taskId: () => tasks.taskId(),
+    append,
+  });
+  const startedAt = Date.now();
+  const live = createLiveCost(input.provider, input.settings.model);
+  const secretValues = await turnSecretValues(input.projectRoots);
+  const audit = createAuditRecorder({
+    write: (entries) =>
+      insertProtocolEntries(
+        deps.db,
+        lease,
+        entries.map((entry) => ({
+          ...entry,
+          payload: withoutSecretValues(entry.payload, secretValues),
+        })),
+      ),
+  });
+  const observations = createRunObservations({
+    db: deps.db,
+    runId: lease.runId,
+    audit,
+  });
+  if (await conversationHasSlackContext(deps.db, input.identity.threadId).catch(() => false)) {
+    observations.record({ source: 'private_data', label: SLACK_CONTEXT_OBSERVATION });
+  }
+  const edits =
+    input.mode === 'do' && !input.chatFolder
+      ? createObservedEdits({
+          db: deps.db,
+          workspaceId: input.workspaceId,
+          runId: lease.runId,
+          alsoFor: options.backupAlsoFor,
+        })
+      : null;
+  let auditSettled = false;
+  const settleAudit = async () => {
+    if (auditSettled) return;
+    auditSettled = true;
+    await edits?.settled();
+    await observations.settled();
+    if (control.reason() === 'lease_lost') return audit.discard();
+    await audit.close();
+    const estimate = control.signal.aborted ? live.unreported() : 0;
+    await recordRunMetrics(
+      deps.db,
+      lease.runId,
+      { durationMs: Date.now() - startedAt, toolCallCount: audit.toolCallCount() },
+      estimate,
+    ).catch((error: unknown) => console.error('Could not record run metrics', error));
+  };
+
+  const reply = createReplyText(append);
+  const say = reply.say;
+  const titles = hidesTitleLine(input) ? createTitleFilter() : null;
+  let turnSession: TurnSession | null = null;
+  let assistantTurn: AssistantTurn | null = null;
+  const ended = async (settled: TurnResult) => {
+    await assistantTurn?.settled();
+    await turnSession
+      ?.finished({ ...settled, stopReason: control.reason() })
+      .catch((error: unknown) => console.error('Could not record the agent session', error));
+    return settled;
+  };
+  const result = (outcome: TurnResult['outcome'], error: string | null = null): TurnResult => ({
+    outcome,
+    error,
+    ...reply.result(),
+  });
+  const modeWatch =
+    input.mode === 'do' ? watchModeRequests(deps.db, lease.runId, deps.cancelPollMs ?? 250) : null;
+  const inbox = input.assistant
+    ? null
+    : openMemberInbox(deps.db, {
+        conversationId: input.identity.threadId,
+        runId: lease.runId,
+        topRunId: input.parentRunId ?? lease.runId,
+        pollMs: deps.inboxPollMs ?? INBOX_POLL_MS,
+        append,
+        replySoFar: () => replySoFar(),
+      });
+  const redaction = createRedactionFilter(secretValues);
+  const parking = backgroundParking(deps.parked, () => control.stop('quit'));
+  const watch = { ...input, db: deps.db, runId: lease.runId, observations };
+  const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
+  const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
+  const replySoFar = () => ({
+    shown: reply.result().text,
+    held: redaction.pending() + (titles?.pending() ?? 0),
+  });
+  const outputQuiet = createOutputQuiet();
+  const guard = { ...input, db: deps.db, runId: lease.runId, append };
+  const commands = createCommandRecorder({ ...guard, secretValues, replySoFar });
+  const events = createTurnEvents({ append, secretValues, replySoFar });
+  try {
+    if (await isCancelRequested(deps.db, lease.runId)) control.stop('cancelled');
+    if (control.signal.aborted && control.reason() !== 'lease_lost') {
+      await settleAudit();
+      return result('cancelled');
+    }
+    const provider = deps.providers.get(input.provider);
+    if (!provider) throw new ProviderError(`Provider "${input.provider}" is not available.`);
+    const repo = await loadRepoLaunch(
+      deps.db,
+      repoScanner,
+      input.identity.threadId,
+      input.projectRoots,
+    ).catch(() => []);
+    const trustedCommands = commandAllowlistFromRules(repo.flatMap((root) => root.allowRules));
+    const gateOptions = {
+      db: deps.db,
+      runId: lease.runId,
+      provider: input.provider,
+      mode: input.agentMode,
+      modes: await knownModes(deps.db, input),
+      extraAllowlist: () => [...trustedCommands, ...TEST_RUNNER_ALLOWLIST],
+      append,
+      waiters: deps.approvalWaiters,
+      pollMs: deps.approvalPollMs,
+      timeoutMs: deps.approvalTimeoutMs,
+      onTimeout: () => control.stop('approval_timeout'),
+      observations,
+    };
+    const changesProject = input.mode === 'do' && input.parentRunId === null;
+    const asking = input.mode === 'ask' && input.role === null && input.projectRoots.length > 0;
+    const approvals =
+      input.mode === 'do'
+        ? await prepareDoRun({
+            ...gateOptions,
+            changesProject,
+            projectRoots: input.projectRoots,
+            keepsCopies: !input.chatFolder,
+            backupAlsoFor: options.backupAlsoFor,
+            observe: options.observeEdits,
+            plans: plans.hooks,
+            publish: publishGrant(input),
+            snapshot: options.keepSnapshot,
+          })
+        : asking
+          ? prepareAskRun({ ...gateOptions, conversationId: input.identity.threadId })
+          : undefined;
+    const asksUser = input.parentRunId === null && !input.assistant;
+    const questions = asksUser ? prepareQuestions(gateOptions, approvals) : undefined;
+    const rails =
+      input.mode === 'do'
+        ? await startRailFlags({ ...input, db: deps.db, runId: lease.runId, audit })
+        : null;
+    const shown = asAgentReads(input);
+    turnSession = await turnSessionFor(deps, shown);
+    const session = turnSession;
+    const recordSpend = spendRecorder(deps.db, lease.runId, input.provider, session);
+    const recordRequest = (request: RequestUsage) =>
+      recordRequestUsage(deps.db, lease.runId, request, new Date());
+    const { userMcp, userPlugins } = await loadTurnExtensions(deps.db, input);
+    const spark = {
+      ...(await sparkPreferences(deps.db, input.workspaceId)),
+      teammate: await sessionBrief(deps.db, input),
+    };
+    auditSparkHandoff(audit, input, spark.teammate);
+    const preamble = input.assistant ? ASSISTANT_PREAMBLE : withMoveNote(input);
+    assistantTurn = input.assistant
+      ? await startAssistantTurn(
+          deps.db,
+          input.workspaceId,
+          lease.runId,
+          audit,
+          session?.target ?? null,
+        )
+      : null;
+    const outposts = preambleDeps(deps.db, input.workspaceId);
+    const outpost =
+      input.assistant || options.secondPrompt ? null : await outpostPreamble(outposts, shown);
+    const turnPreamble = assistantTurn ? assistantTurn.note : outpost?.text;
+
+    if (input.modelSwitch) {
+      await recordModelSwitch(deps.db, lease.runId, append, input.modelSwitch);
+    }
+    for await (const output of outputQuiet.tracked(
+      guardedRun(guard, provider, {
+        prompt: promptWithBrowserCheck(shown.prompt, input, deps.browserPane === true),
+        attachments: input.attachments,
+        history: input.seed ? input.history.slice(input.seed.historyFrom) : input.history,
+        settings: input.settings,
+        projectRoots: input.projectRoots,
+        signal: control.signal,
+        observe: (output) => {
+          if (output.kind === 'session') session?.noteSession(output);
+          assistantTurn?.see(output);
+          edits?.see(output);
+          options.onProduced?.(output);
+        },
+        audit: observer,
+        ...(input.mode ? { mode: input.mode } : {}),
+        ...(changesProject ? { changesProject: true } : {}),
+        ...(changesProject && !input.chatFolder && startBasis(input) ? { publishes: true } : {}),
+        ...(input.chatFolder ? { chatFolder: true } : {}),
+        ...(plansThisTurn(input) ? { planning: true } : {}),
+        ...(input.plansFirst ? { plansFirst: true } : {}),
+        ...(approvals ? { approvals } : {}),
+        ...(questions ? { questions } : {}),
+        ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
+        ...(inbox ? { steering: inbox } : {}),
+        ...(inbox ? { inbox } : {}),
+        ...(input.askTitle ? { askTitle: true } : {}),
+        ...(preamble ? { preamble } : {}),
+        ...(turnPreamble ? { turnPreamble } : {}),
+        ...(session ? { session: session.target } : {}),
+        ...liveTurn(input, session),
+        ...(repo.length > 0 ? { repo } : {}),
+        ...(userPlugins.length > 0 ? { userPlugins } : {}),
+        ...(userMcp.length > 0 ? { userMcp } : {}),
+        spark,
+        sparkScope: {
+          codeMode: spark.codeMode,
+          workspaceId: input.workspaceId,
+          conversationId: input.identity.threadId,
+          runId: lease.runId,
+          ...(input.assistant ? { readOnly: true, assistant: true } : {}),
+          observations,
+          publish: await publishScope(deps.db, input),
+          commands: await sparkCommandScope(deps.db, lease.runId, input, { observations }),
+          actions: {
+            append,
+            waiters: deps.approvalWaiters ?? new ApprovalWaiters(),
+            signal: control.signal,
+            timeoutMs: deps.approvalTimeoutMs ?? APPROVAL_TIMEOUT_MS,
+            pollMs: deps.approvalPollMs ?? APPROVAL_POLL_MS,
+            onTimeout: () => control.stop('approval_timeout'),
+            audit,
+            replySoFar,
+            settledReply: () => outputQuiet.settled().then(replySoFar),
+          },
+        },
+      }),
+    )) {
+      if (control.signal.aborted) {
+        live.observe(output);
+        if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
+        if (output.kind === 'request_usage') await recordRequest(output.request);
+        if (output.kind === 'usage') await recordSpend(output);
+        if (output.kind === 'subagent_finished') await events.observe(output);
+        continue;
+      }
+      options.onOutput?.(output);
+      await events.observe(output);
+      if (output.kind === 'capabilities') await recordCapabilities(deps.db, input, output.report);
+      if (output.kind === 'usage') await recordSpend(output);
+      if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
+      if (output.kind === 'request_usage') await recordRequest(output.request);
+      live.observe(output);
+      await tasks.observe(output);
+      await observeSession({ audit, input, session }, output);
+      if (output.kind === 'plan_proposed') {
+        await plans.propose(output.plan, output.source, output.toolCallId);
+      }
+      if (output.kind === 'session_settings') {
+        await recordSessionSettings(deps.db, lease.runId, output);
+      }
+      if (output.kind === 'instructions') {
+        await recordFollowedInstructions(deps.db, lease.runId, output.files);
+      }
+      if (output.kind === 'rail_flag') await rails?.record(output.flag);
+      if (output.kind === 'artifact_link') {
+        const shown = await linkedArtifactActivity(deps.db, input.identity.threadId, output);
+        if (shown) await append(shown);
+      }
+      if (output.kind === 'secret_read') {
+        for (const label of output.paths) observations.record({ source: 'secret_file', label });
+      }
+      if (output.kind === 'web_read') {
+        for (const label of output.labels) observations.record({ source: 'web_page', label });
+      }
+      if (output.kind === 'account') {
+        await recordAccount(deps.db, input.workspaceId, input.provider, output.account);
+      }
+      if (output.kind === 'plan_limits') await recordPlan(deps.db, input, output);
+      if (output.kind === 'text_delta') {
+        const finalStarts = reply.mark(output.phase, replySoFar().held);
+        if (output.newMessage) titles?.endMessage(redaction.pending());
+        if (finalStarts) titles?.startMessage(redaction.pending());
+        await sayText(redaction.push(output.delta));
+      }
+      if (parking.observe(output)) await sayText(redaction.finish());
+      await commands.observe(output);
+    }
+    await events.close();
+    await commands.close();
+    await rails?.finish();
+    await sayText(redaction.finish());
+    if (titles) {
+      const ending = titles.finish();
+      await say(ending.text);
+      if (ending.title && input.askTitle) {
+        await recordSuggestedTitle(deps.db, lease.runId, ending.title);
+      }
+    }
+
+    if (control.reason() === 'approval_timeout') throw new ProviderError(APPROVAL_TIMEOUT_MESSAGE);
+    await settleAudit();
+    if (control.reason() === 'lease_lost') return result('lease_lost');
+    if (outpost && !control.signal.aborted) await answersDelivered(outposts, outpost);
+    const { text } = reply.result();
+    await tasks.replied(text);
+    const codexPlan = proposedPlan(text);
+    if (codexPlan) await plans.propose(codexPlan, 'codex');
+    if (control.reason() === 'quit') return await ended(result('cancelled', STOPPED_BY_QUIT));
+    return await ended(result(control.signal.aborted ? 'cancelled' : 'succeeded'));
+  } catch (error) {
+    if (error instanceof LeaseLostError || control.reason() === 'lease_lost') {
+      audit.discard();
+      return result('lease_lost');
+    }
+    await sayText(redaction.finish()).catch((failure: unknown) =>
+      console.error('Could not save the end of the reply', failure),
+    );
+    await events.close().catch(() => undefined);
+    await commands.close().catch(() => undefined);
+    await settleAudit();
+    const reason = control.reason();
+    if (reason === 'cancelled') return ended(result('cancelled'));
+    if (reason === 'quit') return ended(result('cancelled', STOPPED_BY_QUIT));
+    await recordErrorDetails(deps.db, lease.runId, error).catch(() => undefined);
+    const failed = failureMessage(error, reason);
+    const { workspaceId, provider } = input;
+    const shown = await withResetTime(deps.db, workspaceId, provider, error, failed).catch(
+      () => failed,
+    );
+    return ended(result('failed', shown));
+  } finally {
+    parking.release();
+    modeWatch?.dispose();
+    await inbox
+      ?.dispose(control.reason() === 'cancelled')
+      .catch((error: unknown) => console.error('Could not close the message inbox', error));
+    audit.discard();
+  }
+}

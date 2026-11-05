@@ -1,0 +1,94 @@
+@media (pointer: coarse) {
+  :where(
+    .icon-btn,
+    .info-tip,
+    .btn,
+    .seg button,
+    .rmenu,
+    .rgrip,
+    .pchip,
+    .mbtn,
+    .send,
+    .send-caret,
+    .qs-btn,
+    .tk .qa,
+    .tk .kref,
+    .vstep,
+    .ctx-repo,
+    .ctx-branch,
+    .ctx-details,
+    .session-chip,
+    .theme-menu button,
+    .mdf-tool,
+    .mdf-toggle,
+    .reply-options-toggle
+  ) {
+    position: relative;
+  }
+
+  :is(
+    .icon-btn,
+    .info-tip,
+    .btn,
+    .seg button,
+    .rmenu,
+    .rgrip,
+    .pchip,
+    .mbtn,
+    .send,
+    .send-caret,
+    .qs-btn,
+    .tk .qa,
+    .tk .kref,
+    .vstep,
+    .ctx-repo,
+    .ctx-branch,
+    .ctx-details,
+    .session-chip,
+    .mdf-tool,
+    .mdf-toggle,
+    .reply-options-toggle
+  )::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+
+  :is(.fopt, .mopt) {
+    min-height: 44px;
+  }
+
+  :is(
+    input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
+    textarea,
+    select
+  ),
+  [contenteditable='true']:not(.cm-content) {
+    font-size: 16px !important;
+  }
+}
+
+@media (hover: none) {
+  :root .tm-card .tm-edit,
+  :root .as-open {
+    opacity: 1;
+    transform: none;
+  }
+
+  :root .run-usage:focus .usage-tip {
+    opacity: 1;
+    transform: none;
+    visibility: visible;
+  }
+
+  :root .tk .kbd,
+  :root .map-kbd,
+  :root .send-key,
+  :root .composer .hint:not(.shown) {
+    display: none;
+  }
+}

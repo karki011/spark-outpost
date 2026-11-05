@@ -1,0 +1,172 @@
+import './phone.css';
+import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { RemoteSession } from '@spark-outpost/contracts';
+import { QueryWait } from '../ui/loading/QueryWait.tsx';
+import { Skeleton } from '../ui/loading/Skeleton.tsx';
+import { usePageHidden } from '../ui/use-page-hidden.ts';
+import { activationOf, turnFailure } from './pair-flow.ts';
+import { PairPhone } from './PairPhone.tsx';
+import { phoneApi, phoneKeys } from './phone-api.ts';
+import { PhoneActivity } from './PhoneActivity.tsx';
+import { PhoneDevices } from './PhoneDevices.tsx';
+import { PhoneNotifications } from './PhoneNotifications.tsx';
+import { PhonePasskey } from './PhonePasskey.tsx';
+import { PhoneStatus } from './PhoneStatus.tsx';
+import { PhoneSwitches, PhoneSwitchesReadOnly } from './PhoneSwitches.tsx';
+import { PushContact } from './PushContact.tsx';
+
+const STATE_POLL_MS = 10_000;
+const LIST_POLL_MS = 5000;
+const FRESH_MS = 9000;
+
+function MacPhonePage({ session }: { session: RemoteSession }) {
+  const queryClient = useQueryClient();
+  const hidden = usePageHidden();
+  const [freshAfter, setFreshAfter] = useState<number | null>(null);
+  const tailscale = useQuery({
+    queryKey: phoneKeys.tailscale,
+    queryFn: phoneApi.tailscale,
+    refetchInterval: hidden ? false : STATE_POLL_MS,
+  });
+  const listPoll = hidden ? false : freshAfter === null ? LIST_POLL_MS : 1000;
+  const devices = useQuery({
+    queryKey: phoneKeys.devices,
+    queryFn: phoneApi.devices,
+    refetchInterval: listPoll,
+  });
+  const audit = useQuery({
+    queryKey: phoneKeys.audit,
+    queryFn: phoneApi.audit,
+    refetchInterval: hidden ? false : LIST_POLL_MS,
+  });
+  const turn = useMutation({
+    mutationFn: phoneApi.turn,
+    onSuccess: (next) => {
+      if (next.status !== 'error') queryClient.setQueryData(phoneKeys.tailscale, next);
+      void queryClient.invalidateQueries({ queryKey: phoneKeys.all });
+    },
+  });
+  const failure = turnFailure(turn.error, turn.data);
+
+  useEffect(() => {
+    if (freshAfter === null) return;
+    const timer = setTimeout(() => setFreshAfter(null), FRESH_MS);
+    return () => clearTimeout(timer);
+  }, [freshAfter]);
+
+  if (!tailscale.data) {
+    return (
+      <QueryWait query={tailscale} what="remote control">
+        <Skeleton label="Loading remote control" shape="cards" rows={3} />
+      </QueryWait>
+    );
+  }
+  const list = devices.data ?? [];
+  return (
+    <>
+      <PhoneStatus
+        state={tailscale.data}
+        wanted={session.address !== null}
+        connected={list.some((device) => device.connected && !device.revokedAt)}
+        checking={tailscale.isFetching}
+        turning={turn.isPending}
+        failure={failure}
+        onCheck={() => void tailscale.refetch()}
+        onTurn={(to) => turn.mutate(to)}
+      />
+      <PairPhone
+        tailscale={tailscale.data}
+        activation={activationOf(
+          {
+            pending: turn.isPending ? (turn.variables ?? null) : null,
+            failed: failure === null ? null : (turn.variables ?? null),
+          },
+          tailscale.data,
+        )}
+        onPaired={() => {
+          setFreshAfter(Date.now());
+          void queryClient.invalidateQueries({ queryKey: phoneKeys.devices });
+        }}
+      />
+      <PhoneDevices
+        devices={devices.data}
+        freshAfter={freshAfter}
+        passkeysAllowed={session.switches.passkeys}
+        wait={
+          <QueryWait query={devices} what="devices">
+            <Skeleton label="Loading devices" shape="list" rows={2} />
+          </QueryWait>
+        }
+      />
+      <PhoneSwitches switches={session.switches}>
+        {session.switches.notifications && <PushContact poll={hidden ? false : LIST_POLL_MS} />}
+      </PhoneSwitches>
+      <PhoneActivity
+        entries={audit.data}
+        wait={
+          <QueryWait query={audit} what="remote activity">
+            <Skeleton label="Loading remote activity" shape="list" rows={3} />
+          </QueryWait>
+        }
+      />
+    </>
+  );
+}
+
+function RemotePhonePage({ session }: { session: RemoteSession }) {
+  return (
+    <>
+      <section className="ph-card" aria-labelledby="ph-status-title">
+        <h2 id="ph-status-title" data-status="on">
+          <i className="ph-dot" aria-hidden="true" />
+          Connected to your Mac
+        </h2>
+        {session.address && (
+          <div className="ph-address">
+            <span className="ph-address-label">Address</span>
+            <code>{session.address}</code>
+          </div>
+        )}
+      </section>
+      <section className="ph-card" aria-labelledby="ph-device-title">
+        <h2 id="ph-device-title">This device</h2>
+        <p className="ph-note">
+          {session.device ? <b>{session.device.name}</b> : 'This device'} is paired. To rename or
+          remove it, open Remote control on your Mac.
+        </p>
+      </section>
+      <PhoneNotifications session={session} />
+      <PhonePasskey session={session} />
+      <PhoneSwitchesReadOnly switches={session.switches} />
+    </>
+  );
+}
+
+export function PhonePage() {
+  const session = useQuery({ queryKey: phoneKeys.session, queryFn: phoneApi.session });
+  return (
+    <main className="page ph" aria-labelledby="ph-title">
+      <div className="ph-scroll">
+        <div className="ph-wrap">
+          <header className="ph-head">
+            <h1 id="ph-title">Remote control</h1>
+            <p>
+              Use Spark Outpost from another device while the work stays on{' '}
+              {session.data?.remote ? 'your' : 'this'} Mac.
+            </p>
+          </header>
+          <QueryWait query={session} what="remote control">
+            <Skeleton label="Loading remote control" shape="cards" rows={3} />
+          </QueryWait>
+          {session.data &&
+            (session.data.remote ? (
+              <RemotePhonePage session={session.data} />
+            ) : (
+              <MacPhonePage session={session.data} />
+            ))}
+        </div>
+      </div>
+    </main>
+  );
+}

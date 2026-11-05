@@ -1,0 +1,27 @@
+.chat-head {
+  position: relative;
+  z-index: 3;
+  background: var(--panel);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.main.crail-open .thread-wrap::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: -100vh;
+  width: var(--crail-strip);
+  border-left: 1px solid var(--line);
+  background: var(--bg);
+}
+
+:where(.wp:not(.over)) > .wp-in {
+  background: var(--bg);
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .chat-head .crumb {
+    display: none;
+  }
+}

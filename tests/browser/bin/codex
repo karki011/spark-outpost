@@ -1,0 +1,73 @@
+#!/bin/sh
+if command -v codex-usage-fixture >/dev/null 2>&1; then
+  case " $* " in
+    *" --version "*|*" app-server "*|*"features.hooks=true"*) exec codex-usage-fixture "$@" ;;
+  esac
+fi
+state="${FAKE_CODEX_STATE:?}"
+case "$1" in
+  --version) echo "codex-cli 0.99.0" ;;
+  login)
+    if [ "$2" = "status" ]; then
+      if [ -f "$state" ]; then echo "Logged in using ChatGPT"; exit 0; fi
+      echo "Not logged in"
+      exit 1
+    fi
+    touch "$state"
+    echo "Successfully logged in"
+    ;;
+  exec)
+    echo '{"type":"thread.started","thread_id":"fake"}'
+    echo '{"type":"item.completed","item":{"type":"agent_message","text":"OK"}}'
+    echo '{"type":"turn.completed","model":"gpt-5-codex"}'
+    ;;
+  --approve-for-me|--sandbox|--dangerously-bypass-approvals-and-sandbox)
+    printf '\033[36mSpark native terminal fixture · PID %s\033[0m\n' "$$"
+    if [ -z "${NO_COLOR+x}" ] && [ "$COLORTERM" = truecolor ]; then printf 'Color mode: truecolor\n'; fi
+    printf 'Ready for terminal input. No provider request is made.\n'
+    while IFS= read -r line; do
+      case "$line" in
+        *'fixture focus on'*) printf '\033[?1004h' ;;
+        *'fixture mouse on'*) printf '\033[?1000h\033[?1006h' ;;
+        *'fixture links'*)
+          printf 'Plain https://example.com/plain-link here\n'
+          printf 'See \033]8;;https://example.com/osc-link\033\\the docs\033]8;;\033\\ too\n'
+          ;;
+        *'fixture background'*)
+          stty raw -echo min 0 time 5
+          printf '\033]11;?\007'
+          reply=$(cat | tr -d '\033\007\\')
+          stty sane
+          printf 'background[%s]\n' "$reply"
+          ;;
+        *'fixture fonts'*)
+          printf '┌──────────┬──────────┐\n'
+          printf '│ \033[1mname\033[0m     │ \033[1mwidth\033[0m    │\n'
+          printf '├──────────┼──────────┤\n'
+          printf '│ regular  │ iiiiWWWW │\n'
+          printf '│ \033[1mbold\033[0m     │ \033[1miiiiWWWW\033[0m │\n'
+          printf '│ \033[2mdim\033[0m      │ \033[2miiiiWWWW\033[0m │\n'
+          printf '└──────────┴──────────┘\n'
+          ;;
+        *'fixture repaint'*) (sleep 2; printf '\0337\033[3;1H\033[2KRepainted in place.\0338') & ;;
+        *'fixture motion on'*)
+          esc=$(printf '\033')
+          report=0
+          stty -icanon -echo
+          printf '\033[?1004h\033[?1003h\033[?1006h'
+          while IFS= read -r -n 1 -d '' byte; do
+            if [ "$byte" = "$esc" ]; then report=1; continue; fi
+            if [ "$report" = 0 ]; then printf '%s' "$byte"; continue; fi
+            case "$byte" in
+              M) report=0; printf '\0337\033[3;1H\033[2KReady for terminal input. No provider request is made.\0338' ;;
+              O) report=0; printf '\033[?1003h\0337\033[3;1H\033[2KReady for terminal input. No provider request is made.\0338' ;;
+              I|m) report=0 ;;
+            esac
+          done
+          ;;
+      esac
+      printf 'received[%s]: %s\n' "$$" "$line"
+    done
+    ;;
+  *) echo "fake codex does not support: $*"; exit 2 ;;
+esac

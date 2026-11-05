@@ -1,0 +1,123 @@
+.view.in-outpost > :is(.main:not(.op), .cpanes) {
+  display: none;
+}
+
+.view[hidden] {
+  display: none;
+}
+
+.side-toggle {
+  position: relative;
+  margin-left: -4px;
+}
+
+.side-toggle.alert::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warn);
+  box-shadow: 0 0 0 2px var(--panel);
+  animation: sb-popin 0.2s var(--out);
+}
+
+.scrim {
+  display: none;
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .side,
+  .app.collapsed .side {
+    position: fixed;
+    z-index: 20;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 288px;
+    opacity: 1;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--bg);
+    transform: translateX(-100%);
+    transition: transform var(--panel-dur) var(--panel-ease);
+  }
+
+  .side-in {
+    width: 288px;
+  }
+
+  .app.drawer .side {
+    transform: none;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.25);
+  }
+
+  .app.drawer .scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    background: rgba(0, 0, 0, 0.35);
+    animation: sb-fade 0.25s;
+  }
+}
+
+@media not ((max-width: 640px) or ((max-height: 500px) and (pointer: coarse))) {
+  .side {
+    contain: layout;
+    will-change: width;
+    margin: 8px 0;
+    background: var(--bg);
+    border-radius: calc(var(--r) + 4px);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent);
+    transition: width var(--panel-dur) var(--panel-ease);
+  }
+
+  .app.collapsed .side {
+    box-shadow: none;
+  }
+
+  .side-in {
+    transition:
+      transform var(--panel-dur) var(--panel-ease),
+      opacity var(--panel-dur) var(--panel-ease);
+  }
+
+  .app.collapsed .side-in {
+    transform: translateX(calc(var(--panel-slide) * -1));
+    opacity: 0;
+  }
+
+  .view > .main,
+  .view > .cpanes > .cpane > .main {
+    transition:
+      margin-left var(--panel-dur) var(--panel-ease),
+      border-color 0.15s;
+  }
+
+  .side-toggle {
+    animation: panel-toggle-in 0.12s var(--out) var(--panel-dur) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side,
+  .view > .main,
+  .view > .cpanes > .cpane > .main {
+    transition: none;
+  }
+
+  .side-in {
+    transition: opacity 120ms linear;
+  }
+
+  .app.collapsed .side-in {
+    transform: none;
+  }
+
+  .side-toggle {
+    animation-delay: 0s;
+  }
+}

@@ -1,0 +1,139 @@
+import { executePluginReview } from '../agent-config/user-plugins/review.ts';
+import { isPluginReviewRun } from '../agent-config/user-plugins/review-store.ts';
+import type { ActiveWork } from '../diagnostics/event-loop-lag.ts';
+import { executeDigest } from '../digest/execute.ts';
+import type { Db } from '../persistence/db.ts';
+import { isDigestRun } from '../persistence/digests.ts';
+import { claimNextJob, type Lease } from '../persistence/jobs.ts';
+import { cleanOrphanedCopies } from '../orchestration/solo-copy.ts';
+import { startWorktreeSweeper } from '../projects/chat-worktree-sweep.ts';
+import { runChatTurn } from './chat-turn.ts';
+import type { ChatTurnDeps } from './chat-turn-hooks.ts';
+import { recoverExpiredLeases } from './recovery.ts';
+import { sweepSessions } from './turn-session.ts';
+import { assistantIdleCompaction, type IdleLimits } from '../companion/assistant-idle.ts';
+import type { ParkedTurns } from './parked-turns.ts';
+import { chatTarget, drainQueue, drainWaiting, type ResolveTarget } from './queue-drain.ts';
+import { watchLiveSessions } from './live-sessions.ts';
+
+export interface WorkerOptions extends ChatTurnDeps {
+  pollMs?: number;
+  recoveryEveryMs?: number;
+  activeWork?: ActiveWork;
+  queueTarget?: ResolveTarget;
+  parked?: ParkedTurns;
+  assistantIdleLimits?: IdleLimits;
+}
+
+export interface Worker {
+  wake(): void;
+  stop(): Promise<void>;
+  idle(): Promise<void>;
+}
+
+async function runLease(options: WorkerOptions, lease: Lease): Promise<void> {
+  if (await isPluginReviewRun(options.db, lease.runId)) return executePluginReview(options, lease);
+  if (await isDigestRun(options.db, lease.runId)) return executeDigest(options, lease);
+  await runChatTurn(options, lease);
+  await sendNextQueued(options, lease.runId);
+}
+
+async function sendNextQueued(options: WorkerOptions, runId: string): Promise<void> {
+  const { rows } = await options.db.query<{ conversation_id: string }>(
+    'SELECT conversation_id FROM runs WHERE id = $1 AND parent_run_id IS NULL',
+    [runId],
+  );
+  const conversationId = rows[0]?.conversation_id;
+  if (!conversationId) return;
+  await drainQueue(options.db, conversationId, queueTarget(options)).catch((error: unknown) =>
+    console.error(`Could not send the queued message for chat ${conversationId}`, error),
+  );
+}
+
+function queueTarget(options: WorkerOptions): ResolveTarget {
+  return options.queueTarget ?? chatTarget(options.db);
+}
+
+export function startWorker(given: WorkerOptions): Worker {
+  const assistantIdle =
+    given.assistantIdle ??
+    assistantIdleCompaction(given.db, given.providers, given.assistantIdleLimits);
+  const options = { ...given, assistantIdle };
+  const active = new Set<Promise<void>>();
+  let stopped = false;
+  let wakeUp: (() => void) | null = null;
+  let lastRecovery = 0;
+
+  const wake = () => {
+    wakeUp?.();
+  };
+
+  const sleep = (ms: number) =>
+    new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, ms);
+      wakeUp = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+    });
+
+  const startQueued = async (db: Db) => {
+    while (!stopped) {
+      const lease = await sweeper.exclusive(() => claimNextJob(db, options.leaseSeconds));
+      if (!lease) return;
+      const done = options.activeWork?.begin(`run ${lease.runId}`);
+      const task = runLease(options, lease)
+        .catch((error) => console.error(`Run ${lease.runId} crashed`, error))
+        .finally(() => {
+          done?.();
+          active.delete(task);
+          wake();
+        });
+      active.add(task);
+    }
+  };
+
+  const sweeper = startWorktreeSweeper(options.db);
+  const live = watchLiveSessions(options.db, options.providers, queueTarget(options), wake);
+
+  const loop = (async () => {
+    while (!stopped) {
+      try {
+        if (Date.now() - lastRecovery >= (options.recoveryEveryMs ?? 5000)) {
+          lastRecovery = Date.now();
+          const done = options.activeWork?.begin('recovery sweep');
+          try {
+            await recoverExpiredLeases(options.db);
+            await cleanOrphanedCopies(options.db);
+            await live.sweep();
+            await sweepSessions(options.db, options.sessionLimits, live.workdirs());
+            await assistantIdle.sweep();
+            await drainWaiting(options.db, queueTarget(options));
+          } finally {
+            done?.();
+          }
+        }
+        await startQueued(options.db);
+      } catch (error) {
+        console.error('Worker loop error', error);
+      }
+      await sleep(options.pollMs ?? 1000);
+    }
+  })();
+
+  return {
+    wake,
+    async stop() {
+      stopped = true;
+      wake();
+      await loop;
+      await sweeper.stop();
+      options.parked?.quit();
+      await Promise.allSettled([...active]);
+      await live.closeAll();
+    },
+    async idle() {
+      while (active.size > 0) await Promise.allSettled([...active]);
+    },
+  };
+}

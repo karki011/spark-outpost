@@ -1,0 +1,104 @@
+.hold {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.hold-btn {
+  position: relative;
+  overflow: hidden;
+  gap: 10px;
+  color: var(--danger);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.hold-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--danger-soft);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s var(--out);
+}
+
+.hold-btn > * {
+  position: relative;
+}
+
+.hold-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--line));
+}
+
+.hold-btn:focus-visible {
+  outline-color: var(--danger);
+}
+
+.hold-btn:active:not(:disabled) {
+  transform: none;
+}
+
+.hold-btn[data-phase='holding'],
+.hold-btn[data-phase='done'] {
+  border-color: var(--danger);
+}
+
+.hold-btn[data-phase='holding']::before,
+.hold-btn[data-phase='done']::before {
+  transform: scaleX(1);
+  transition: transform var(--hold-ms) linear;
+}
+
+.hold-ring {
+  flex: none;
+  transform: rotate(-90deg);
+}
+
+.hold-ring-bg {
+  fill: none;
+  stroke: color-mix(in srgb, var(--danger) 25%, var(--panel));
+  stroke-width: 2.6;
+}
+
+.hold-ring-fg {
+  fill: none;
+  stroke: var(--danger);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-dashoffset: 50.27;
+  transition: stroke-dashoffset 0.25s var(--out);
+}
+
+.hold-btn[data-phase='holding'] .hold-ring-fg,
+.hold-btn[data-phase='done'] .hold-ring-fg {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset var(--hold-ms) linear;
+}
+
+.hold-hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hold-btn::before,
+  .hold-ring-fg {
+    display: none;
+  }
+
+  .hold-btn[data-phase='holding'],
+  .hold-btn[data-phase='done'] {
+    background: var(--danger-soft);
+  }
+}
+
+.hold-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}

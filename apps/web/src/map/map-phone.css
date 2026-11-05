@@ -1,0 +1,56 @@
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .map-views {
+    order: 10;
+    width: 100%;
+  }
+
+  .map-views .seg {
+    width: 100%;
+  }
+
+  .map-viewtip {
+    bottom: 12px;
+    max-width: calc(100% - 24px);
+  }
+
+  .map-legend {
+    right: 60px;
+    width: auto;
+  }
+
+  .map-crumb .map-kbar,
+  .map-crumb .map-jev {
+    display: none;
+  }
+
+  .map-sheet,
+  .map-review {
+    top: auto;
+    width: 100%;
+    height: 78%;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 18px 18px 0 0;
+    animation-name: map-rise-sheet;
+  }
+
+  .map-unm {
+    left: 14px;
+    right: 14px;
+    top: auto;
+    bottom: 60px;
+    width: auto;
+    max-height: 45%;
+  }
+
+  .map-pathcard {
+    bottom: 60px;
+    max-width: calc(100% - 28px);
+  }
+}
+
+@keyframes map-rise-sheet {
+  from {
+    transform: translateY(104%);
+  }
+}

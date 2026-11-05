@@ -1,0 +1,258 @@
+.pscout {
+  --ps-cycle: 2.8s;
+  position: relative;
+  flex: none;
+  display: inline-grid;
+  width: 40px;
+  height: 32px;
+  margin: -4px -4px -4px -6px;
+}
+.pscout .scout {
+  cursor: default;
+}
+.ps-shake {
+  position: absolute;
+  left: 2px;
+  bottom: 0;
+  animation: ps-shake var(--ps-cycle) linear infinite;
+}
+.ps-face {
+  position: absolute;
+  inset: 0;
+  width: 30px;
+  height: 30px;
+  overflow: visible;
+}
+.ps-mouth {
+  fill: var(--scout-eye);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ps-scream var(--ps-cycle) ease-in-out infinite;
+}
+.ps-sweat {
+  position: absolute;
+  top: 6px;
+  left: 1px;
+  width: 4px;
+  height: 6px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: color-mix(in srgb, var(--accent) 45%, #7cc4ff);
+  opacity: 0;
+  animation: ps-sweat var(--ps-cycle) ease-in infinite;
+}
+.ps-sweat.two {
+  left: 26px;
+  top: 4px;
+  animation-delay: 0.35s;
+}
+.ps-bang {
+  position: absolute;
+  top: -8px;
+  right: 2px;
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  opacity: 0;
+  animation: ps-bang var(--ps-cycle) var(--out) infinite;
+}
+.ps-wrench {
+  position: absolute;
+  right: -1px;
+  bottom: 3px;
+  width: 13px;
+  height: 13px;
+  fill: var(--muted);
+  opacity: 0;
+  transform-origin: 20% 80%;
+  animation: ps-wrench var(--ps-cycle) ease-in-out infinite;
+}
+.ps-sparks {
+  position: absolute;
+  right: -3px;
+  bottom: 12px;
+  width: 8px;
+  height: 8px;
+}
+.ps-sparks i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--warn);
+  opacity: 0;
+  animation: ps-spark var(--ps-cycle) ease-out infinite;
+}
+.ps-sparks i:nth-child(2) {
+  --dx: 5px;
+  --dy: -6px;
+  animation-delay: 0.12s;
+}
+.ps-sparks i:nth-child(3) {
+  --dx: -2px;
+  --dy: -8px;
+  animation-delay: 0.24s;
+}
+
+.pscout.fixing {
+  --ps-cycle: 0.9s;
+}
+.pscout.fixing .ps-shake,
+.pscout.fixing .ps-mouth,
+.pscout.fixing .ps-bang,
+.pscout.fixing .ps-sweat {
+  animation: none;
+  opacity: 0;
+}
+.pscout.fixing .ps-shake {
+  opacity: 1;
+}
+.pscout.fixing .ps-wrench {
+  opacity: 1;
+  animation-name: ps-wrench-fast;
+}
+.pscout.fixing .ps-sparks i {
+  animation-name: ps-spark-fast;
+}
+
+@keyframes ps-shake {
+  0%,
+  45%,
+  100% {
+    transform: none;
+  }
+  3%,
+  11%,
+  19%,
+  27%,
+  35% {
+    transform: translate(-1.5px, 0) rotate(-4deg);
+  }
+  7%,
+  15%,
+  23%,
+  31%,
+  39% {
+    transform: translate(1.5px, -1px) rotate(4deg);
+  }
+}
+@keyframes ps-scream {
+  0%,
+  44% {
+    transform: scale(1.15, 1.3);
+  }
+  50%,
+  100% {
+    transform: scale(0.55, 0.3);
+  }
+}
+@keyframes ps-sweat {
+  0%,
+  4% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  8% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0;
+    transform: translate(-2px, 14px);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ps-bang {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  6%,
+  38% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  44%,
+  100% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+@keyframes ps-wrench {
+  0%,
+  46% {
+    opacity: 0;
+    transform: rotate(0);
+  }
+  52%,
+  64%,
+  76%,
+  88% {
+    opacity: 1;
+    transform: rotate(-35deg);
+  }
+  58%,
+  70%,
+  82%,
+  94% {
+    opacity: 1;
+    transform: rotate(15deg);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ps-wrench-fast {
+  0%,
+  100% {
+    transform: rotate(-35deg);
+  }
+  50% {
+    transform: rotate(15deg);
+  }
+}
+@keyframes ps-spark {
+  0%,
+  58% {
+    opacity: 0;
+    transform: none;
+  }
+  60% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 0;
+    transform: translate(var(--dx, 6px), var(--dy, -3px));
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ps-spark-fast {
+  0%,
+  45% {
+    opacity: 0;
+    transform: none;
+  }
+  50% {
+    opacity: 1;
+  }
+  90%,
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx, 6px), var(--dy, -3px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pscout *,
+  .pscout .scout * {
+    animation: none !important;
+  }
+  .ps-wrench {
+    opacity: 1;
+  }
+  .ps-mouth {
+    transform: scale(0.8, 0.9);
+  }
+}

@@ -1,0 +1,200 @@
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test, type Page } from '@playwright/test';
+import { send } from './project-chat-kit.ts';
+import { calls, withDesktopBrowser } from './desktop-browser.ts';
+import { toggleHeaderPane } from './header-menu.ts';
+import { resetTestDatabase } from './database.ts';
+import { animationsSettled } from './settle.ts';
+import {
+  NAME,
+  TURN_TIMEOUT,
+  chip,
+  openOutpost,
+  openThread,
+  outpostPage,
+  post,
+  stateOf,
+  seeded,
+  say,
+  thread,
+  threadPane,
+} from './outposts-kit.ts';
+
+const SHOTS = process.env.SPARK_REVIEW_SHOTS;
+const ASK = 'Which fields does the orders response have?';
+const NOTE = 'The table needs a total column.';
+const THEMES = [
+  ['light', 'light'],
+  ['dark', 'graphite'],
+] as const;
+
+test.beforeEach(async ({ page }) => {
+  test.slow();
+  await resetTestDatabase({ onboarded: true, connected: ['claude'], catalog: true });
+  await page.setViewportSize({ width: 1400, height: 900 });
+});
+
+async function inBothThemes(
+  page: Page,
+  name: string,
+  area: string,
+  check: () => Promise<void>,
+): Promise<void> {
+  const root = page.locator('html');
+  const before = await root.getAttribute('data-skin');
+  for (const [scheme, skin] of THEMES) {
+    await root.evaluate((html, value) => (html.dataset.skin = value), skin);
+    await animationsSettled(page);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}-${name}-${scheme}.png` });
+    await check();
+    const results = await new AxeBuilder({ page })
+      .include(area)
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+      .analyze();
+    expect(results.violations.map((violation) => violation.id)).toEqual([]);
+  }
+  await root.evaluate((html, value) => {
+    if (value === null) delete html.dataset.skin;
+    else html.dataset.skin = value;
+  }, before);
+}
+
+async function openMember(page: Page, handle: 'fe' | 'api', title: string): Promise<void> {
+  await openOutpost(page);
+  await chip(page, handle).click();
+  await expect(page.locator('.chat-title')).toHaveText(title);
+}
+
+test('an agent asks another member, waits for the answer, and both chats and the thread show it', async ({
+  page,
+}) => {
+  await seeded(page);
+  await openMember(page, 'fe', 'Frontend');
+
+  await send(page, `#build #spark spark_outpost_ask {"to":"api","text":"${ASK}"}`);
+  const result = page.getByText(/spark spark_outpost_ask=/);
+  await expect(result).toBeVisible({ timeout: TURN_TIMEOUT });
+  await expect(result).toContainText(/"state":\s*"answered"/);
+  await expect(result).toContainText(/"waited":\s*true/);
+
+  const line = page.locator('section[data-turn] .op-line');
+  await inBothThemes(page, 'agent-sent', 'section[data-turn]', async () => {
+    await expect(line).toHaveCount(1);
+    await expect(line).toContainText(`To @api${ASK}`);
+    await expect(line.locator('.op-line-state')).toHaveText('Answered');
+  });
+
+  const open = line.getByRole('button', { name: 'Open the request to @api in the outpost' });
+  await open.focus();
+  await page.keyboard.press('Enter');
+  await expect(outpostPage(page, NAME)).toBeVisible();
+  const asked = post(page, ASK);
+  await inBothThemes(page, 'agent-thread', '.main.op', async () => {
+    await expect(asked).toBeInViewport();
+    await expect(asked.locator('.op-post-head').first()).toContainText('@fenot from youto@api');
+    await expect(asked.locator('.chat-face')).toHaveCount(2);
+    await expect(stateOf(asked)).toHaveText('Idle');
+  });
+
+  await openThread(asked, 'api');
+  await threadPane(page, 'api').getByRole('button', { name: 'Open @api in chat' }).click();
+  await expect(page.locator('.chat-title')).toHaveText('Orders API');
+  const header = page.locator('.bubble.from', { hasText: ASK });
+  await inBothThemes(page, 'agent-received', 'section[data-turn]', async () => {
+    await expect(header.locator('.from-head b')).toHaveText('From @fe');
+    await expect(header.locator('.from-note')).toHaveText('not from you');
+    await expect(header).not.toContainText('outpost-request');
+  });
+  await expect(page.locator('section[data-turn] .op-line')).toHaveCount(0);
+});
+
+test('an agent leaves a note in the thread, and it starts no work', async ({ page }) => {
+  await seeded(page);
+  await openMember(page, 'fe', 'Frontend');
+
+  await send(page, `#build #spark spark_outpost_note {"text":"${NOTE}"}`);
+  await expect(page.getByText(/spark spark_outpost_note=/)).toBeVisible({ timeout: TURN_TIMEOUT });
+  await expect(page.locator('section[data-turn] .op-line')).toHaveCount(0);
+
+  await openOutpost(page);
+  const note = post(page, NOTE);
+  await expect(note.locator('.op-post-head')).toContainText('@fe');
+  await expect(note.locator('.op-kind')).toHaveText('note');
+  await expect(thread(page).locator('.op-pill')).toHaveCount(0);
+  await expect(chip(page, 'api')).toContainText('Idle');
+});
+
+test('answering an agent question clears the Outpost request and header while retaining its answer', async ({
+  page,
+}) => {
+  const id = await seeded(page);
+  await openOutpost(page);
+  await say(page, '@api Choose the cache store #askclaude #build');
+  const requested = post(page, 'Choose the cache store');
+  await expect(stateOf(requested)).toHaveText('Waiting on you', { timeout: TURN_TIMEOUT });
+  await requested.getByRole('button', { name: 'Answer @api', exact: true }).click();
+  const pane = threadPane(page, 'api');
+  const questions = pane.getByRole('group', { name: /has questions/ });
+  await expect(questions).toBeVisible();
+  await animationsSettled(page);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}-question-pending.png` });
+  await questions.getByRole('radio', { name: /^Postgres/ }).check();
+  await questions.getByRole('radio', { name: /^Postgres/ }).press('Enter');
+  await questions.getByRole('checkbox', { name: /^Lint/ }).check();
+  await questions.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(questions.getByRole('status')).toContainText('Answered.');
+  await expect(pane.locator('.op-thread-head .op-pill')).toHaveText('Idle', {
+    timeout: TURN_TIMEOUT,
+  });
+  await expect(pane.getByRole('button', { name: 'Answer @api', exact: true })).toHaveCount(0);
+  await expect(questions).toContainText('Which store should the cache use? → Postgres');
+  await expect(pane).toContainText('asked=accept');
+  const response = await page.request.get(`/api/outposts/${id}`);
+  expect(response.ok()).toBe(true);
+  const detail = await response.json();
+  expect(
+    detail.posts.find((item: { body: string }) => item.body.includes('#askclaude')).state,
+  ).toBe('answered');
+  await pane.getByRole('button', { name: 'Back to Overview' }).click();
+  await expect(stateOf(requested)).toHaveText('Idle');
+  await expect(requested.getByRole('button', { name: 'Answer @api', exact: true })).toHaveCount(0);
+  await openThread(requested, 'api');
+  await expect(threadPane(page, 'api').getByRole('group', { name: /has questions/ })).toContainText(
+    'Answered.',
+  );
+  await animationsSettled(page);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}-question-answered.png` });
+  await page.reload();
+  await openOutpost(page);
+  await expect(stateOf(requested)).toHaveText('Idle');
+  await openThread(requested, 'api');
+  await expect(pane.locator('.op-thread-head .op-pill')).toHaveText('Idle');
+  await expect(pane.getByRole('button', { name: 'Answer @api', exact: true })).toHaveCount(0);
+  await expect(questions).toContainText('Answered.');
+});
+
+test("a chat's Browser pane stays with its chat and never sits beside the outpost", async ({
+  page,
+}) => {
+  await withDesktopBrowser(page);
+  await seeded(page);
+  await openMember(page, 'fe', 'Frontend');
+  await toggleHeaderPane(page, 'Browser');
+  const panel = page.getByRole('complementary', { name: 'Work panel' });
+  const pane = page.getByRole('region', { name: 'Browser' });
+  await expect(pane).toBeVisible();
+
+  const lastBounds = async () =>
+    ((await calls(page, 'place')) as { bounds: unknown }[]).at(-1)?.bounds ?? null;
+  await openOutpost(page);
+  await expect(panel).toBeHidden();
+  await expect.poll(lastBounds).toBeNull();
+
+  await chip(page, 'fe').click();
+  await expect(page.locator('.chat-title')).toHaveText('Frontend');
+  await expect(pane).toBeVisible();
+  await expect.poll(lastBounds).not.toBeNull();
+  const chat = (await page.locator('.main:not(.op)').boundingBox())!;
+  const side = (await panel.boundingBox())!;
+  expect(side.x).toBeGreaterThanOrEqual(chat.x + chat.width);
+});

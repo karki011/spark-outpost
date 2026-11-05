@@ -1,0 +1,347 @@
+.tk-cform {
+  display: grid;
+  gap: 12px;
+}
+.tk-cform .inp {
+  font-size: 13.5px;
+  padding: 7px 11px;
+}
+.tk-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.tk-field > label,
+.tk-field-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+}
+.tk-keyrow {
+  display: flex;
+  gap: 6px;
+}
+.tk-keyrow .inp {
+  flex: 1;
+  min-width: 0;
+}
+.tk-keyrow .btn {
+  min-width: 56px;
+}
+.tk-cform .inp[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+.tk-field-help,
+.tk-cform .tk-hint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.tk-help-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--accent-text);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent-text) 35%, transparent);
+  text-underline-offset: 2px;
+  transition: text-decoration-color 0.15s var(--out);
+}
+.tk-help-link:hover {
+  text-decoration-color: currentColor;
+}
+.tk-help-link svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.2s var(--spring);
+}
+.tk-help-link:hover svg {
+  transform: translate(1px, -1px);
+}
+.tk-field-err,
+.tk-cform-err {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  background: var(--danger-soft);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text);
+}
+.tk-cform-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+}
+.tk-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.tk-check-say {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.tk-check-say:empty {
+  display: none;
+}
+
+.cb {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 46px;
+  flex: none;
+}
+.cb .scout {
+  cursor: default;
+}
+.cb-walk {
+  display: grid;
+  animation: cb-waddle 0.5s var(--out);
+}
+.cb-body {
+  display: grid;
+  transform-origin: 50% 90%;
+  transition: transform 0.35s var(--spring);
+}
+.cb-glass {
+  position: absolute;
+  left: 2px;
+  top: 14px;
+  width: 22px;
+  height: 22px;
+  fill: color-mix(in srgb, var(--panel) 45%, transparent);
+  stroke: var(--text);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  opacity: 0;
+  transform: scale(0.4) rotate(-30deg);
+  transition:
+    opacity 0.2s var(--out),
+    transform 0.3s var(--spring);
+}
+.cb-mark {
+  position: absolute;
+  top: -8px;
+  right: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-text);
+  opacity: 0;
+  transform: translateY(4px) scale(0.6);
+  transition:
+    opacity 0.2s var(--out),
+    transform 0.3s var(--spring);
+}
+.cb-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.cb-burst i {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--warn);
+  opacity: 0;
+}
+.cb-burst i:nth-child(even) {
+  background: var(--accent);
+}
+
+.cb[data-mood='checking'] .cb-glass {
+  opacity: 1;
+  transform: none;
+  animation: cb-inspect 1.3s ease-in-out infinite;
+}
+.cb[data-mood='checking'] .sc-ant {
+  animation: sc-wiggle 0.45s ease-in-out infinite;
+}
+.cb[data-mood='checking'] .sc-eye:first-of-type {
+  animation: none;
+  transform: scaleY(0.4);
+}
+.cb[data-mood='checking'] .cb-body {
+  transform: rotate(-6deg);
+}
+.cb[data-mood='happy'] .cb-burst i {
+  animation: cb-burst 0.7s var(--out) 0.1s both;
+}
+.cb[data-mood='happy'] .cb-burst i:nth-child(1) {
+  --dx: -20px;
+  --dy: -14px;
+}
+.cb[data-mood='happy'] .cb-burst i:nth-child(2) {
+  --dx: -8px;
+  --dy: -22px;
+}
+.cb[data-mood='happy'] .cb-burst i:nth-child(3) {
+  --dx: 6px;
+  --dy: -24px;
+}
+.cb[data-mood='happy'] .cb-burst i:nth-child(4) {
+  --dx: 18px;
+  --dy: -16px;
+}
+.cb[data-mood='happy'] .cb-burst i:nth-child(5) {
+  --dx: 22px;
+  --dy: -2px;
+}
+.cb[data-mood='sad'] .cb-body {
+  transform: translateY(2px) scale(1.04, 0.94);
+}
+.cb[data-mood='puzzled'] .cb-body {
+  transform: rotate(-12deg);
+}
+.cb[data-mood='puzzled'] .sc-ant {
+  transform: rotate(-20deg);
+}
+.cb[data-mood='puzzled'] .cb-mark {
+  opacity: 1;
+  transform: none;
+  animation: cb-bob 1.6s ease-in-out infinite;
+}
+.tk-check:has(.cb[data-mood='happy']) .tk-check-say {
+  color: var(--success);
+  animation: cb-pop 0.4s var(--spring);
+}
+
+@keyframes cb-waddle {
+  0% {
+    transform: rotate(-10deg) translateY(-2px);
+  }
+  30% {
+    transform: rotate(8deg) translateY(0);
+  }
+  60% {
+    transform: rotate(-5deg) translateY(-2px);
+  }
+}
+@keyframes cb-inspect {
+  0%,
+  100% {
+    transform: translate(-3px, 1px) rotate(-8deg);
+  }
+  50% {
+    transform: translate(9px, -1px) rotate(6deg);
+  }
+}
+@keyframes cb-burst {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1);
+  }
+}
+@keyframes cb-bob {
+  50% {
+    transform: translateY(-3px) rotate(8deg);
+  }
+}
+@keyframes cb-pop {
+  0% {
+    transform: scale(0.7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cb-walk,
+  .cb[data-mood] .cb-glass,
+  .cb[data-mood] .cb-mark,
+  .cb[data-mood] .sc-ant,
+  .tk-check:has(.cb) .tk-check-say {
+    animation: none;
+  }
+  .cb-burst {
+    display: none;
+  }
+}
+
+.tk-src-body .tk-cform p {
+  flex: none;
+}
+.tk-src-body {
+  margin: 0 -4px;
+  padding: 12px 4px 4px;
+  border-top: 1px solid var(--line);
+}
+.tk-connect-wrap {
+  overflow: hidden;
+  margin: 0 -4px;
+  padding: 0 4px 4px;
+}
+.tk-empty .tk-cta {
+  overflow: hidden;
+  margin: -4px;
+  padding: 4px;
+}
+.tk-src-body .tk-cform {
+  max-width: 520px;
+}
+.tk-sync {
+  display: grid;
+  gap: 10px;
+  padding: 4px 0 2px;
+}
+.tk-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.tk-switch + .tk-field-help {
+  margin: 2px 0 0 42px;
+}
+.tk-empty .tk-cform p {
+  margin: 0;
+}
+.tk-move-title {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+.tk-move-title + .tk-field-help {
+  margin-top: 2px;
+}
+.tk-move {
+  display: grid;
+  gap: 4px;
+  max-width: 320px;
+  margin: 6px 0 0 42px;
+}
+.tk-move-title ~ .tk-move {
+  margin-left: 0;
+}
+.tk-move-notes {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.tk-move-notes b {
+  font-weight: 600;
+  color: var(--text);
+}
+.tk-move-notes .warn {
+  color: var(--warn);
+}

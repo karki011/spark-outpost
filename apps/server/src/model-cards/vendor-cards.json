@@ -1,0 +1,883 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-09-26",
+  "providers": [
+    {
+      "provider": "claude",
+      "label": "Claude",
+      "adapter": "claude-agent-acp 0.81.2",
+      "doMode": "yes",
+      "asksBeforeCommands": "every",
+      "sandbox": "No OS sandbox. Tools are limited per mode and secret file edits are denied; Bash runs unsandboxed after approval, and Claude's own tools bypass our path policy.",
+      "resume": "yes",
+      "review": "yes",
+      "coldStartSeconds": [8, 10],
+      "costSource": "reported",
+      "strengths": [
+        "Do mode through the approval gate: every edit and command reaches session/request_permission",
+        "Plans through its task tools, which become versioned plans"
+      ],
+      "limits": [
+        "Slower cold start (8 to 10 s, mostly SDK start-up)",
+        "Bash is unsandboxed once approved; Read/Grep/Glob bypass our path policy (known gap)"
+      ],
+      "sources": [
+        {
+          "url": "docs/architecture/ACP_AGENTS.md#do-in-project-folders-m2",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "docs/architecture/ACP_AGENTS.md#spike-findings-claude-agent-acp-0812-codex-acp-1131-sdk-150",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "docs/architecture/HARNESS_PLAN.md#m6-status-september-26-2026",
+          "checkedAt": "2026-09-26"
+        }
+      ],
+      "everydayModel": "claude-opus-5-5",
+      "jevNote": "plans with its task tools"
+    },
+    {
+      "provider": "codex",
+      "label": "Codex",
+      "adapter": "codex-acp 1.13.1 (patched read-only, upstream #480)",
+      "doMode": "no",
+      "asksBeforeCommands": "outside-sandbox-only",
+      "sandbox": "Patched read-only mode is a true readOnly sandbox (no writes, no network) but can read the whole disk, including secret files. In chats its file editor can still write under /tmp.",
+      "resume": "yes",
+      "review": "yes",
+      "coldStartSeconds": [4, 9],
+      "costSource": "estimated",
+      "strengths": [
+        "Independent second opinion: the default Critic when the chat is on Claude",
+        "Faster cold start (4 to 9 s) and cheap per token"
+      ],
+      "limits": [
+        "No Do mode: agent mode ran ls and wrote a file without asking (September 26 live check)",
+        "Cost is estimated from tokens; Critic runs took over a minute on R1"
+      ],
+      "sources": [
+        {
+          "url": "docs/architecture/ACP_AGENTS.md#do-in-project-folders-m2",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "docs/architecture/ACP_AGENTS.md#ask-in-project-folders-m1",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "docs/benchmarks/harness-vs-direct-2026-09-26-round3.md#round-4-september-26-2026",
+          "checkedAt": "2026-09-26"
+        }
+      ],
+      "everydayModel": "gpt-6-sol",
+      "jevNote": "good independent reviewer"
+    },
+    {
+      "provider": "zai",
+      "label": "Z.ai (GLM)",
+      "adapter": "claude-agent-acp 0.81.2 against Z.ai's Anthropic-compatible endpoint",
+      "doMode": "yes",
+      "asksBeforeCommands": "every",
+      "sandbox": "Same hardening as Claude (Claude Code is the agent): no OS sandbox, tools limited, secret file edits denied, Bash unsandboxed after approval; isolated config home and a clean environment.",
+      "resume": "yes",
+      "review": "yes",
+      "coldStartSeconds": [8, 11],
+      "costSource": "estimated",
+      "everydayModel": null,
+      "strengths": [
+        "Do mode through the approval gate, like Claude",
+        "Very cheap: GLM-5.3 is $1.40/$4.40 per million tokens"
+      ],
+      "limits": [
+        "Cost is estimated at pay-as-you-go rates; a Coding Plan is a quota, so the estimate overstates it",
+        "Rate limits are not public; GLM-5.3 is text only",
+        "Cold start measured once (about 10 s for a short Ask)"
+      ],
+      "jevNote": "cheap GLM models",
+      "sources": [
+        {
+          "url": "docs/architecture/ACP_AGENTS.md#zai-glm-september-26-2026",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "docs/reference/zai/GLM_NOTES.md",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "provider": "claude",
+      "id": "claude-haiku-5-5",
+      "label": "Haiku 5.5",
+      "match": {
+        "ids": ["claude-haiku-5-5"],
+        "labels": ["Haiku 5.5"]
+      },
+      "tier": "small",
+      "price": {
+        "inputPerMillion": 0.1,
+        "cachedInputPerMillion": 0.01,
+        "cacheWritePerMillion": 0.125,
+        "outputPerMillion": 0.5,
+        "note": "Prompts up to 100K tokens. Over 100K tokens: $0.50 input, $0.05 cache read, $0.625 cache write, $2.50 output. Cache write is the 5-minute rate; the 1-hour write is $0.20 ($1 over 100K)."
+      },
+      "contextTokens": 1000000,
+      "maxOutputTokens": 128000,
+      "speed": "fastest",
+      "reasoning": {
+        "mode": "adaptive",
+        "efforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "medium",
+        "note": "The vendor suggests medium for most work, low for chat, short tool tasks and simple high-volume requests, and high for longer agent tasks and strict instruction following."
+      },
+      "strengths": [
+        "High-volume, latency-sensitive tasks such as classification, extraction and routing",
+        "Sub-agent tasks",
+        "Fastest and lowest-priced model in the Claude lineup"
+      ],
+      "weakSpots": [
+        "Sonnet 5.5 is the better choice for complex agentic coding, per the vendor",
+        "Prompts over 100K tokens cost five times as much",
+        "At low effort it may skip a search, stop early or skip a check in long agent prompts",
+        "New tokenizer: about 30% more tokens than Haiku 4.5 for the same text"
+      ],
+      "blurb": "classification, routing, sub-agent work; 5x over 100K",
+      "knowledgeCutoff": "2026-06",
+      "retiresNotBefore": "2027-10-07",
+      "sources": [
+        {
+          "url": "https://platform.claude.com/docs/en/models/overview",
+          "checkedAt": "2026-10-07"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/models/haiku-5-5/overview",
+          "checkedAt": "2026-10-07"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/build-with-claude/effort",
+          "checkedAt": "2026-10-07"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+          "checkedAt": "2026-10-07"
+        },
+        {
+          "url": "https://www.anthropic.com/claude-haiku-5-5",
+          "checkedAt": "2026-10-07"
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "id": "claude-haiku-4-5",
+      "label": "Haiku 4.5",
+      "match": {
+        "ids": ["claude-haiku-4-5", "claude-haiku-4-5-20251001"],
+        "labels": ["Haiku 4.5"]
+      },
+      "tier": "small",
+      "price": {
+        "inputPerMillion": 1,
+        "cachedInputPerMillion": 0.1,
+        "cacheWritePerMillion": 1.25,
+        "outputPerMillion": 5,
+        "note": "Cache write is the 5-minute rate; the 1-hour write is $2."
+      },
+      "contextTokens": 200000,
+      "maxOutputTokens": 64000,
+      "speed": "fastest",
+      "reasoning": {
+        "mode": "extended",
+        "efforts": [],
+        "defaultEffort": null,
+        "note": "The API effort parameter is not supported (extended thinking with budget_tokens). How Claude Code maps its effort setting to Haiku is unverified."
+      },
+      "strengths": [
+        "Lowest latency and price in the Claude lineup",
+        "Sub-agent and high-volume tasks",
+        "Near-frontier intelligence per the vendor"
+      ],
+      "weakSpots": [
+        "200K context and 64K output, the smallest in the lineup",
+        "Oldest knowledge (Feb 2025)",
+        "Retires October 15, 2026; Spark no longer picks it"
+      ],
+      "blurb": "retiring 2026-10-15; chat only, the harness skips it",
+      "knowledgeCutoff": "2025-02",
+      "retiresNotBefore": "2026-10-15",
+      "sources": [
+        {
+          "url": "https://platform.claude.com/docs/en/models/haiku-4-5/overview",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/about-claude/models/choosing-a-model",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "id": "claude-sonnet-5",
+      "label": "Sonnet 5",
+      "match": {
+        "ids": ["claude-sonnet-5"],
+        "labels": ["Sonnet 5"]
+      },
+      "tier": "mid",
+      "price": {
+        "inputPerMillion": 2,
+        "cachedInputPerMillion": 0.2,
+        "cacheWritePerMillion": 2.5,
+        "outputPerMillion": 10,
+        "note": "The $2/$10 launch price became standard; the planned rise to $3/$15 on September 1, 2026 did not happen."
+      },
+      "contextTokens": 1000000,
+      "maxOutputTokens": 128000,
+      "speed": "fast",
+      "reasoning": {
+        "mode": "adaptive",
+        "efforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "high",
+        "note": "Medium is comparable to Sonnet 4.6 at high; xhigh is for the hardest coding and agentic tasks."
+      },
+      "strengths": [
+        "Best speed and intelligence balance",
+        "Everyday coding, code generation, agentic tool use",
+        "Largest gains over Sonnet 4.6 are in coding and agentic tasks"
+      ],
+      "weakSpots": [
+        "New tokenizer: about 30% more tokens for the same text",
+        "Real-time cybersecurity safeguards may refuse security work",
+        "No sampling parameters or prefill"
+      ],
+      "blurb": "everyday coding and agentic tool use",
+      "knowledgeCutoff": "2026-01",
+      "retiresNotBefore": "2027-06-30",
+      "sources": [
+        {
+          "url": "https://platform.claude.com/docs/en/models/overview",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/models/sonnet-5/whats-new-sonnet-5",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/build-with-claude/effort",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "id": "claude-sonnet-5-5",
+      "label": "Sonnet 5.5",
+      "match": {
+        "ids": ["claude-sonnet-5-5"],
+        "labels": ["Sonnet 5.5"]
+      },
+      "tier": "mid",
+      "price": {
+        "inputPerMillion": 2,
+        "cachedInputPerMillion": 0.2,
+        "cacheWritePerMillion": 2.5,
+        "outputPerMillion": 10,
+        "note": "Cache write is the 5-minute rate; the 1-hour write is $4."
+      },
+      "contextTokens": 1000000,
+      "maxOutputTokens": 128000,
+      "speed": "fast",
+      "reasoning": {
+        "mode": "adaptive",
+        "efforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "high",
+        "note": "Effort levels are recalibrated from Sonnet 5; the vendor suggests medium for well-specified agentic coding and high for harder work."
+      },
+      "strengths": [
+        "Best combination of speed and intelligence",
+        "Agentic coding and multistep tool use"
+      ],
+      "weakSpots": [
+        "No forced tool use",
+        "Text between tool calls arrives as thinking blocks",
+        "No sampling parameters"
+      ],
+      "blurb": "fast everyday coding and tool use",
+      "knowledgeCutoff": "2026-06",
+      "retiresNotBefore": "2027-09-28",
+      "sources": [
+        {
+          "url": "https://platform.claude.com/docs/en/models/overview",
+          "checkedAt": "2026-10-06"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
+          "checkedAt": "2026-10-06"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/build-with-claude/effort",
+          "checkedAt": "2026-10-06"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+          "checkedAt": "2026-10-06"
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "id": "claude-opus-5-5",
+      "label": "Opus 5.5",
+      "match": {
+        "ids": ["claude-opus-5-5"],
+        "labels": ["Opus 5.5"]
+      },
+      "tier": "top",
+      "price": {
+        "inputPerMillion": 4,
+        "cachedInputPerMillion": 0.2,
+        "cacheWritePerMillion": 5,
+        "outputPerMillion": 20,
+        "note": "Cache reads are 0.05x input. Flat price across the 1M window. Fast mode is $8/$40."
+      },
+      "contextTokens": 1000000,
+      "maxOutputTokens": 128000,
+      "speed": "moderate",
+      "reasoning": {
+        "mode": "adaptive-always",
+        "efforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "medium",
+        "note": "Thinking cannot be turned off; effort is the only depth control and it thinks more per turn than Opus 5 at the same level.",
+        "effortKeepsCache": true
+      },
+      "strengths": [
+        "Long-running agentic coding and knowledge work",
+        "Large-scale refactoring and complex systems engineering",
+        "Vendor's recommended default for most workloads"
+      ],
+      "weakSpots": [
+        "Moderate latency; always thinks",
+        "No forced tool use",
+        "Text between tool calls arrives as thinking blocks"
+      ],
+      "blurb": "long agentic coding, large refactors, planning",
+      "knowledgeCutoff": "2026-06",
+      "retiresNotBefore": "2027-09-22",
+      "sources": [
+        {
+          "url": "https://platform.claude.com/docs/en/models/overview",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/models/opus-5-5/whats-new-opus-5-5",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://code.claude.com/docs/en/prompt-caching",
+          "checkedAt": "2026-09-30"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/about-claude/models/choosing-a-model",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "id": "claude-fable-5-1",
+      "label": "Fable 5.1",
+      "match": {
+        "ids": ["claude-fable-5-1[1m]", "claude-fable-5-1"],
+        "labels": ["Fable 5.1"]
+      },
+      "tier": "frontier",
+      "price": {
+        "inputPerMillion": 10,
+        "cachedInputPerMillion": 0.25,
+        "cacheWritePerMillion": 12.5,
+        "outputPerMillion": 50,
+        "note": "Cache reads are 0.025x input."
+      },
+      "contextTokens": 1000000,
+      "maxOutputTokens": 128000,
+      "speed": "slower",
+      "reasoning": {
+        "mode": "adaptive-always",
+        "efforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "high",
+        "note": "Vendor advice: use it when Opus at xhigh or max still falls short."
+      },
+      "strengths": [
+        "Most capable generally available Claude model",
+        "Hours-long agentic coding: multi-file features, migrations, debugging, review",
+        "Long-context and multistep research"
+      ],
+      "weakSpots": [
+        "Slowest and 2.5x Opus 5.5's price",
+        "More whole-file rewrites for small edits",
+        "Fewer parallel tool calls and progress updates"
+      ],
+      "blurb": "hardest long-horizon work; slow and costly",
+      "knowledgeCutoff": "2026-06",
+      "retiresNotBefore": "2027-09-01",
+      "sources": [
+        {
+          "url": "https://platform.claude.com/docs/en/models/overview",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/models/fable-5-1/whats-new-fable-5-1",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/about-claude/models/choosing-a-model",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "id": "gpt-6-luna",
+      "label": "GPT-6 Luna",
+      "match": {
+        "ids": ["gpt-6-luna"],
+        "labels": ["6 Luna", "GPT-6 Luna"]
+      },
+      "tier": "small",
+      "price": {
+        "inputPerMillion": 0.1,
+        "cachedInputPerMillion": 0.01,
+        "cacheWritePerMillion": 0.125,
+        "outputPerMillion": 0.5,
+        "note": "Over 272K input tokens: 2x input and cache, 1.5x output for the whole request."
+      },
+      "contextTokens": 1050000,
+      "maxOutputTokens": 128000,
+      "speed": "fast",
+      "reasoning": {
+        "mode": "reasoning-effort",
+        "efforts": ["none", "low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "medium",
+        "note": "Vendor reasoning rating: High."
+      },
+      "strengths": [
+        "Most efficient GPT-6 model",
+        "Focused, high-volume tasks: summarisation, extraction, focused coding"
+      ],
+      "weakSpots": ["Lowest reasoning rating of the GPT-6 family (High, not Highest)"],
+      "blurb": "cheapest; focused coding, extraction",
+      "knowledgeCutoff": "2026-05-18",
+      "retiresNotBefore": null,
+      "sources": [
+        {
+          "url": "https://developers.openai.com/api/docs/models/gpt-6-luna",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://developers.openai.com/api/docs/pricing",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://learn.chatgpt.com/docs/models",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "id": "gpt-6-sol",
+      "label": "GPT-6 Sol",
+      "match": {
+        "ids": ["gpt-6-sol"],
+        "labels": ["6 Sol", "GPT-6 Sol"]
+      },
+      "tier": "mid",
+      "price": {
+        "inputPerMillion": 2,
+        "cachedInputPerMillion": 0.2,
+        "cacheWritePerMillion": 2.5,
+        "outputPerMillion": 10,
+        "note": "Over 272K input tokens: 2x input and cache, 1.5x output for the whole request."
+      },
+      "contextTokens": 1050000,
+      "maxOutputTokens": 128000,
+      "speed": "fast",
+      "reasoning": {
+        "mode": "reasoning-effort",
+        "efforts": ["none", "low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "medium",
+        "note": "Vendor reasoning rating: Highest. Codex docs: start with Medium."
+      },
+      "strengths": [
+        "Complex coding and agentic workflows",
+        "Everyday coding with stronger factual reliability",
+        "Same token price as Sonnet 5"
+      ],
+      "weakSpots": ["Long-context surcharge above 272K input tokens"],
+      "blurb": "complex coding and agentic work",
+      "knowledgeCutoff": "2026-04-20",
+      "retiresNotBefore": null,
+      "sources": [
+        {
+          "url": "https://developers.openai.com/api/docs/models/gpt-6-sol",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://developers.openai.com/api/docs/pricing",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://learn.chatgpt.com/docs/models",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "id": "gpt-6-astra",
+      "label": "GPT-6 Astra",
+      "match": {
+        "ids": ["gpt-6-astra"],
+        "labels": ["6 Astra", "GPT-6 Astra"]
+      },
+      "tier": "frontier",
+      "price": {
+        "inputPerMillion": 10,
+        "cachedInputPerMillion": 1,
+        "cacheWritePerMillion": 12.5,
+        "outputPerMillion": 50,
+        "note": "Over 272K input tokens: 2x input and cache, 1.5x output for the whole request."
+      },
+      "contextTokens": 1050000,
+      "maxOutputTokens": 128000,
+      "speed": "fast",
+      "reasoning": {
+        "mode": "reasoning-effort",
+        "efforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": null,
+        "note": "No 'none' level; the vendor page names no default. Vendor reasoning rating: Highest."
+      },
+      "strengths": [
+        "Most capable OpenAI model",
+        "Hardest end-to-end work: complex reasoning, coding, research",
+        "Sustained multi-step workflows"
+      ],
+      "weakSpots": [
+        "5x 6 Sol's price, the same as Fable 5.1",
+        "Codex's default model, so an unpinned Codex run costs the most",
+        "Frontier tier: off the automatic ladder, runs on Auto only when allowed for Codex and Jev is at 0.95 or more"
+      ],
+      "blurb": "hardest end-to-end work; costly",
+      "knowledgeCutoff": "2026-04-30",
+      "retiresNotBefore": null,
+      "sources": [
+        {
+          "url": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://developers.openai.com/api/docs/pricing",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://learn.chatgpt.com/docs/models",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "id": "gpt-5.6-luna",
+      "label": "GPT-5.6 Luna",
+      "match": {
+        "ids": ["gpt-5.6-luna"],
+        "labels": ["GPT-5.6 Luna", "5.6 Luna"]
+      },
+      "tier": "small",
+      "price": {
+        "inputPerMillion": 0.2,
+        "cachedInputPerMillion": 0.02,
+        "cacheWritePerMillion": 0.25,
+        "outputPerMillion": 1.2,
+        "note": "Over 272K input tokens: 2x input, 1.5x output."
+      },
+      "contextTokens": 1050000,
+      "maxOutputTokens": 128000,
+      "speed": "fast",
+      "reasoning": {
+        "mode": "reasoning-effort",
+        "efforts": ["none", "low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "medium",
+        "note": "Vendor reasoning rating: High. Roughly the old nano tier."
+      },
+      "strengths": ["Cost-sensitive, high-volume work"],
+      "weakSpots": ["Superseded by 6 Luna, which is cheaper", "Not offered by Codex today"],
+      "blurb": "previous generation, high-volume work",
+      "knowledgeCutoff": "2026-02-16",
+      "retiresNotBefore": null,
+      "sources": [
+        {
+          "url": "https://developers.openai.com/api/docs/models/gpt-5.6-luna",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://developers.openai.com/api/docs/pricing",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "id": "gpt-5.6-terra",
+      "label": "GPT-5.6 Terra",
+      "match": {
+        "ids": ["gpt-5.6-terra"],
+        "labels": ["GPT-5.6 Terra", "5.6 Terra"]
+      },
+      "tier": "mid",
+      "price": {
+        "inputPerMillion": 2,
+        "cachedInputPerMillion": 0.2,
+        "cacheWritePerMillion": 2.5,
+        "outputPerMillion": 12,
+        "note": "Over 272K input tokens: 2x input, 1.5x output."
+      },
+      "contextTokens": 1050000,
+      "maxOutputTokens": 128000,
+      "speed": "fast",
+      "reasoning": {
+        "mode": "reasoning-effort",
+        "efforts": ["none", "low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "medium",
+        "note": "Vendor reasoning rating: Higher. Roughly the old mini tier."
+      },
+      "strengths": ["Balances intelligence and cost"],
+      "weakSpots": ["Superseded by 6 Sol at a lower output price", "Not offered by Codex today"],
+      "blurb": "previous generation, balanced",
+      "knowledgeCutoff": "2026-02-16",
+      "retiresNotBefore": null,
+      "sources": [
+        {
+          "url": "https://developers.openai.com/api/docs/models/gpt-5.6-terra",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://developers.openai.com/api/docs/pricing",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "id": "gpt-5.6-sol",
+      "label": "GPT-5.6 Sol",
+      "match": {
+        "ids": ["gpt-5.6-sol", "gpt-5.6"],
+        "labels": ["GPT-5.6 Sol", "5.6 Sol"]
+      },
+      "tier": "top",
+      "price": {
+        "inputPerMillion": 4,
+        "cachedInputPerMillion": 0.4,
+        "cacheWritePerMillion": 5,
+        "outputPerMillion": 20,
+        "note": "Promotional price at least through November 21, 2026. Over 272K input tokens: 2x input, 1.5x output."
+      },
+      "contextTokens": 1050000,
+      "maxOutputTokens": 128000,
+      "speed": "fast",
+      "reasoning": {
+        "mode": "reasoning-effort",
+        "efforts": ["none", "low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "medium",
+        "note": "Vendor reasoning rating: Highest. Flagship of the 5.6 family."
+      },
+      "strengths": ["Flagship for complex professional work (5.6 family)"],
+      "weakSpots": [
+        "Superseded by the GPT-6 family",
+        "Promotional price may end after November 21, 2026",
+        "Not offered by Codex today"
+      ],
+      "blurb": "previous-generation flagship",
+      "knowledgeCutoff": "2026-02-16",
+      "retiresNotBefore": null,
+      "sources": [
+        {
+          "url": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://developers.openai.com/api/docs/pricing",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "id": "gpt-5.5",
+      "label": "GPT-5.5",
+      "match": {
+        "ids": ["gpt-5.5"],
+        "labels": ["GPT-5.5", "5.5"]
+      },
+      "tier": "top",
+      "price": {
+        "inputPerMillion": 5,
+        "cachedInputPerMillion": 0.5,
+        "cacheWritePerMillion": null,
+        "outputPerMillion": 30,
+        "note": "Over 272K input tokens: 2x input, 1.5x output for the whole session."
+      },
+      "contextTokens": 1050000,
+      "maxOutputTokens": 128000,
+      "speed": "fast",
+      "reasoning": {
+        "mode": "reasoning-effort",
+        "efforts": ["none", "low", "medium", "high", "xhigh"],
+        "defaultEffort": "medium",
+        "note": "No max level. Vendor reasoning rating: Highest."
+      },
+      "strengths": ["Flagship for complex coding and professional work (previous generation)"],
+      "weakSpots": [
+        "Retires from ChatGPT products (Codex sign-in) on October 14, 2026",
+        "Oldest knowledge (Dec 2025)",
+        "Not offered by Codex today"
+      ],
+      "blurb": "retiring flagship; prefer 6 Sol",
+      "knowledgeCutoff": "2025-12-01",
+      "retiresNotBefore": "2026-10-14",
+      "sources": [
+        {
+          "url": "https://developers.openai.com/api/docs/models/gpt-5.5",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://learn.chatgpt.com/docs/models",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "provider": "zai",
+      "id": "glm-5.3-flash",
+      "label": "GLM-5.3-Flash",
+      "match": {
+        "ids": ["glm-5.3-flash", "glm-5.3-flash[1m]"],
+        "labels": ["GLM-5.3-Flash"]
+      },
+      "tier": "small",
+      "price": {
+        "inputPerMillion": 0.15,
+        "cachedInputPerMillion": 0.03,
+        "cacheWritePerMillion": null,
+        "outputPerMillion": 0.5,
+        "note": "Pay-as-you-go. Cache storage is free for a limited time. On the Coding Plan it uses 1.2x quota at peak, 0.4x off-peak."
+      },
+      "contextTokens": 1000000,
+      "maxOutputTokens": 128000,
+      "speed": "fast",
+      "reasoning": {
+        "mode": "always-on",
+        "efforts": ["low", "high", "max"],
+        "defaultEffort": "max",
+        "note": "Claude Code's effort maps to Z.ai's low, high and max; thinking cannot be turned off."
+      },
+      "strengths": [
+        "About a tenth of GLM-5.3's price",
+        "Reads images, video and files",
+        "1M context"
+      ],
+      "weakSpots": [
+        "Weaker than GLM-5.3 on hard coding work (vendor positions it as the fast, cheap model)",
+        "Rate limits are not published"
+      ],
+      "blurb": "cheap and fast; reads images",
+      "knowledgeCutoff": "not documented",
+      "retiresNotBefore": null,
+      "sources": [
+        {
+          "url": "https://docs.z.ai/guides/vlm/glm-5.3-flash",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://docs.z.ai/guides/overview/pricing",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://docs.z.ai/devpack/tool/claude",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    },
+    {
+      "provider": "zai",
+      "id": "glm-5.3",
+      "label": "GLM-5.3",
+      "match": {
+        "ids": ["glm-5.3", "glm-5.3[1m]"],
+        "labels": ["GLM-5.3"]
+      },
+      "tier": "top",
+      "price": {
+        "inputPerMillion": 1.4,
+        "cachedInputPerMillion": 0.26,
+        "cacheWritePerMillion": null,
+        "outputPerMillion": 4.4,
+        "note": "Pay-as-you-go. On the Coding Plan it uses 3x quota at peak (weekdays 14:00-18:00 UTC+8), 1x off-peak."
+      },
+      "contextTokens": 1000000,
+      "maxOutputTokens": 128000,
+      "speed": "moderate",
+      "reasoning": {
+        "mode": "always-on",
+        "efforts": ["low", "high", "max"],
+        "defaultEffort": "max",
+        "note": "Claude Code's effort maps to Z.ai's low, high and max; thinking cannot be turned off. Speed is not documented."
+      },
+      "strengths": ["Z.ai's strongest GLM for coding and agent work", "1M context at a low price"],
+      "weakSpots": [
+        "Text only: an image attachment fails",
+        "Rate limits are not published",
+        "tool_choice supports only auto"
+      ],
+      "blurb": "Z.ai's strongest coding model; text only",
+      "knowledgeCutoff": "not documented",
+      "retiresNotBefore": null,
+      "sources": [
+        {
+          "url": "https://docs.z.ai/guides/llm/glm-5.3",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://docs.z.ai/guides/overview/pricing",
+          "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://docs.z.ai/devpack/tool/claude",
+          "checkedAt": "2026-09-26"
+        }
+      ]
+    }
+  ]
+}

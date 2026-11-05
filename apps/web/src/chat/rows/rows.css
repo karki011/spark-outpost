@@ -1,0 +1,245 @@
+.trows {
+  display: flex;
+  flex-direction: column;
+  margin: 2px 0 8px;
+}
+
+.trow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% + 12px);
+  min-height: 28px;
+  margin-left: -6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted);
+  text-align: left;
+  background: none;
+}
+
+button.trow {
+  cursor: pointer;
+}
+
+button.trow:hover {
+  background: var(--raise);
+}
+
+.trow .row-ico {
+  flex: none;
+  color: var(--faint);
+}
+
+.trow-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trow-text-wrap {
+  padding: 4px 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.trow-text b {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.trow.quiet .trow-text {
+  color: var(--muted);
+}
+
+.trow-target {
+  margin-left: 6px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.trow-end {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.trow .chev {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--faint);
+  transition: transform 0.15s var(--out);
+}
+
+.trow[aria-expanded='true'] .chev {
+  transform: rotate(90deg);
+}
+
+.trow-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.trow-word svg {
+  width: 12px;
+  height: 12px;
+}
+
+.trow-word.ok,
+.trow-word.ok .ok {
+  color: var(--success);
+}
+
+.trow-word.bad {
+  color: var(--danger);
+}
+
+.trow-end .chf-n {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.trow-spin {
+  width: 12px;
+  height: 12px;
+}
+
+.trow-nest {
+  margin: 0 0 4px 14px;
+}
+
+.trow-card {
+  margin: 2px 0 6px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+
+.trow-card > * + * {
+  border-top: 1px solid var(--line);
+}
+
+.trow-card > .trow,
+.trow-card > .run-cmd > .run-cmd-head > .trow {
+  border-radius: 0;
+}
+
+.trow-card > .trow-nest {
+  border-top: 0;
+}
+
+.trow-verb {
+  color: var(--muted);
+}
+
+.trow-name {
+  color: var(--text);
+}
+
+.trow-nest .step-thought {
+  margin: 2px 0 6px;
+}
+
+.trow-callout .row-ico {
+  color: var(--accent-text);
+}
+
+.trow-callout .trow-name {
+  color: var(--text);
+}
+
+.trow-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 0;
+  padding: 8px 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.trow-facts > div {
+  display: contents;
+}
+
+.trow-facts dt {
+  color: var(--muted);
+}
+
+.trow-facts dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.trow-facts code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.trow-facts .trow-word {
+  display: inline-flex;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trow-spin,
+  .turn-working .spin {
+    animation: none;
+    border-color: var(--accent);
+    background: var(--accent);
+    transform: scale(0.6);
+  }
+  .trow .chev {
+    transition: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .trow {
+    min-height: 44px;
+  }
+}
+
+.turn-fold {
+  margin: 0 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.turn-fold > .steps-head {
+  min-height: 28px;
+  width: 100%;
+  text-align: left;
+}
+
+.turn-fold > .steps-head b {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.turn-fold-sum {
+  color: var(--muted);
+}
+
+.turn-fold-body {
+  padding: 4px 0 6px;
+}
+
+@media (pointer: coarse) {
+  .turn-fold > .steps-head {
+    min-height: 44px;
+  }
+}

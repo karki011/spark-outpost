@@ -1,0 +1,149 @@
+.sac-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 10px 0 0;
+  font-size: 12.5px;
+}
+.sac-facts dt {
+  color: var(--muted);
+}
+.sac-facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sac-edit {
+  margin: 8px 0 0;
+}
+.sac-facts code {
+  font-size: 12px;
+}
+.sac-text {
+  max-height: 160px;
+  margin: 0;
+  padding: 6px 8px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  color: var(--text);
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sac-files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sac-files span,
+.sac-more {
+  color: var(--muted);
+}
+.sac-fields {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+}
+.sac-fields textarea {
+  resize: vertical;
+}
+.sac-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .sac-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.sac-pr {
+  display: block;
+}
+.sac-pr-head {
+  margin: 0 0 6px;
+}
+.sac-items {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sac-check {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  cursor: pointer;
+}
+.sac-check input {
+  margin-top: 2px;
+}
+.sac-reply {
+  display: block;
+  color: var(--muted);
+}
+.sac-pr-head a {
+  color: var(--accent-text);
+}
+.sac-pr-head a:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+}
+
+.mcp-fact-cmd {
+  white-space: pre-wrap;
+}
+.mcp-fact-name {
+  margin-right: 8px;
+}
+.sac-link {
+  display: inline;
+  padding: 0;
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.sac-caller {
+  box-shadow: inset 0 0 0 1.5px var(--warn);
+}
+.sac-caller .sn-vis {
+  margin-bottom: 4px;
+}
+.sac-caller .appr-h .ic {
+  color: var(--warn);
+}
+.sac .appr-acts .hold {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.sac-plug {
+  align-items: baseline;
+}
+.sac-plug code {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12.5px;
+}
+.sac-plug .sac-items {
+  gap: 2px;
+}
+.sac-plug-rule {
+  color: var(--faint);
+  font-size: 12px;
+}
+.sac-plug-more {
+  min-height: 28px;
+  font-size: 12.5px;
+}
+@media (pointer: coarse) {
+  .sac-plug-more {
+    min-height: 44px;
+  }
+}

@@ -1,0 +1,101 @@
+.an-skel {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+}
+
+.an-skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--panel);
+  opacity: 0;
+  animation: an-skel-pulse 1s var(--out) infinite;
+}
+
+@keyframes an-skel-pulse {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.an-skel-card {
+  pointer-events: none;
+}
+
+.an-skel-card .an-card-h .an-skel {
+  border-radius: 4px;
+}
+
+.an-skel-heat {
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: 3px;
+}
+
+.an-skel-heat .an-skel {
+  aspect-ratio: 1;
+  border-radius: 3px;
+}
+
+.an-skel-tree {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 2fr 1fr;
+  grid-template-areas: 'a b' 'a c' 'd c';
+  gap: 4px;
+  height: 180px;
+}
+
+.an-skel-tree .an-skel {
+  height: 100%;
+  width: 100%;
+}
+
+.an-skel-bars {
+  display: grid;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.an-skel-bars .an-skel {
+  height: 22px;
+}
+
+.an-skel-rings {
+  display: flex;
+  gap: 24px;
+  padding: 6px 0;
+}
+
+.an-skel-ring {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+}
+
+.an-skel-rows {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.an-skel-rows .an-skel {
+  height: 14px;
+}
+
+.an-skel-rows span:nth-child(2) {
+  width: 92%;
+}
+
+.an-skel-rows span:nth-child(3) {
+  width: 78%;
+}

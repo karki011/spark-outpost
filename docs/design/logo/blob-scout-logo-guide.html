@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blob Scout, the Spark Outpost logo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M38 18C39 13 42 10 46 9' fill='none' stroke='%232bb39a' stroke-width='3.6' stroke-linecap='round'/%3E%3Cpath d='M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z' fill='%23f2b54a'/%3E%3Cpath d='M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z' fill='%232bb39a'/%3E%3Crect x='22.5' y='32' width='5.6' height='11' rx='2.8' fill='%230c0f12'/%3E%3Crect x='35.9' y='32' width='5.6' height='11' rx='2.8' fill='%230c0f12'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Geist:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--page:#eef1f4;--ink:#141a21;--muted:#5d6876;--line:#d9dee5;--chip:#fff;--a:#2bb39a;--b:#f2b54a;--eye:#0c0f12;--out:cubic-bezier(.2,.8,.2,1);--spring:cubic-bezier(.3,1.4,.5,1)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#0f1317;--ink:#e8ebef;--muted:#8d97a4;--line:#242b33;--chip:#171c22}}
+:root[data-theme="dark"]{--page:#0f1317;--ink:#e8ebef;--muted:#8d97a4;--line:#242b33;--chip:#171c22}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.55 "Geist",ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+:focus-visible{outline:2px solid var(--a);outline-offset:3px;border-radius:8px}
+.wrap{max-width:1040px;margin:0 auto;padding:40px 28px 72px}
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:40px;align-items:center;margin-bottom:44px}
+.stage{aspect-ratio:1;border-radius:40px;background:#0c0f12;display:grid;place-items:center}
+.stage .scout{width:58%;height:58%}
+h1{font:800 clamp(40px,6vw,64px)/1 "Bricolage Grotesque",sans-serif;letter-spacing:-.04em;margin:0 0 14px}
+.lede{color:var(--muted);margin:0 0 22px;max-width:44ch}
+.moods{display:flex;flex-wrap:wrap;gap:6px}
+.moods button{padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--chip);font-size:13.5px;transition:transform .2s var(--spring),background .2s}
+.moods button:active{transform:scale(.95)}
+.moods button[aria-pressed="true"]{background:var(--a);border-color:transparent;color:#06231d;font-weight:500}
+.hint{font-size:13px;color:var(--muted);margin-top:10px}
+h2{font:700 22px/1.2 "Bricolage Grotesque",sans-serif;letter-spacing:-.02em;margin:0 0 14px}
+section{padding:30px 0;border-top:1px solid var(--line)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.spec{border-radius:22px;padding:22px;display:flex;flex-direction:column;gap:22px}
+.spec.d{background:#161b21;color:#eef1f4}.spec.l{background:#fff;color:#141a21;box-shadow:inset 0 0 0 1px #e3e7ec}
+.sizes{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap}
+.sizes figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:11.5px}
+.sizes .cap{opacity:.6}
+.appicon{width:72px;height:72px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(160deg,#1d242c,#0c0f12)}
+.spec.l .appicon{background:linear-gradient(160deg,#fff,#eef1f4);box-shadow:inset 0 0 0 1px #e3e7ec}
+.appicon svg{width:46px;height:46px}
+.lockup{display:flex;align-items:center;gap:12px}
+.lockup svg{width:40px;height:40px}
+.word{font:800 30px/1 "Bricolage Grotesque",sans-serif;letter-spacing:-.045em}
+.colors{display:flex;gap:10px;flex-wrap:wrap}
+.sw{display:flex;align-items:center;gap:12px;padding:10px 14px 10px 10px;border:1px solid var(--line);border-radius:16px;background:var(--chip);min-width:210px}
+.sw i{width:40px;height:40px;border-radius:12px;box-shadow:inset 0 0 0 1px rgba(128,128,128,.2)}
+.sw b{display:block;font-weight:500}.sw code{font:12.5px ui-monospace,Menlo,monospace;color:var(--muted)}
+.files{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin:0;padding:0;list-style:none}
+.files li{display:flex;justify-content:space-between;gap:10px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--chip);font-size:13.5px}
+.files code{font:12.5px ui-monospace,Menlo,monospace}.files span{color:var(--muted)}
+.rules{margin:0;padding-left:20px;color:var(--muted);max-width:68ch}.rules li{margin:6px 0}.rules b{color:var(--ink);font-weight:500}
+/* scout */
+.scout{overflow:visible;cursor:pointer}
+.scout .sc-body{transform-box:view-box;transform-origin:32px 58px;animation:br 3.4s ease-in-out infinite}
+@keyframes br{50%{transform:scale(1.03,.97)}}
+.scout .sc-eye{fill:var(--eye);transform-box:fill-box;transform-origin:center;animation:bl 4.8s infinite;transition:opacity .2s}
+@keyframes bl{0%,91%,97%,100%{transform:scaleY(1)}94%{transform:scaleY(.1)}}
+.scout .sc-look{transition:transform .3s var(--out)}
+.scout .sc-spark{transform-box:fill-box;transform-origin:center;animation:tw 3s ease-in-out infinite}
+@keyframes tw{50%{transform:rotate(45deg) scale(.78);opacity:.8}}
+.scout .sc-ant{transform-box:view-box;transform-origin:38px 19px}
+.scout .sc-happy{fill:none;stroke:var(--eye);stroke-width:2.8;stroke-linecap:round;opacity:0;transition:opacity .2s}
+.scout .sc-cheeks{fill:var(--b);opacity:0;transition:opacity .3s}
+.scout.working .sc-spark{animation:sp .9s linear infinite;filter:drop-shadow(0 0 3px var(--b))}@keyframes sp{to{transform:rotate(360deg)}}
+.scout.working .sc-look{animation:sc 2.2s ease-in-out infinite}@keyframes sc{0%,100%{transform:translate(-1.8px,-1px)}50%{transform:translate(1.8px,-1px)}}
+.scout.alert .sc-ant{animation:wg .45s ease-in-out infinite}@keyframes wg{50%{transform:rotate(-12deg)}}
+.scout.alert .sc-spark{animation:pg .9s ease-in-out infinite}@keyframes pg{50%{transform:scale(1.4)}}
+.scout.happy .sc-eye{opacity:0}.scout.happy .sc-happy{opacity:1}.scout.happy .sc-cheeks{opacity:.55}
+.scout.happy .sc-hop{animation:hp .55s var(--spring) infinite alternate}@keyframes hp{to{transform:translateY(-5px)}}
+.scout.sad .sc-eye{animation:none;transform:translateY(2px) scaleY(.62)}.scout.sad .sc-spark{animation:none;opacity:.35}.scout.sad .sc-ant{transform:rotate(18deg)}
+.scout.poke .sc-body{animation:sq .5s var(--spring)}@keyframes sq{30%{transform:scale(1.14,.84)}60%{transform:scale(.94,1.07)}}
+@media (max-width:760px){.hero,.two{grid-template-columns:1fr}.stage{max-width:360px}.wrap{padding:26px 16px 56px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<div class="wrap">
+  <div class="hero">
+    <div class="stage" id="stage"></div>
+    <div>
+      <h1>Blob Scout</h1>
+      <p class="lede">The Spark Outpost logo. A little scout with a spark on its antenna. In the app it breathes, blinks, watches your cursor, and changes mood with your agents.</p>
+      <div class="moods" role="group" aria-label="Preview a mood" id="moods"></div>
+      <p class="hint">Tap Blob Scout to poke it.</p>
+    </div>
+  </div>
+
+  <section><h2>On dark and light</h2>
+    <div class="two">
+      <div class="spec d"><div class="sizes" data-t="d"></div><div class="lockup"><span data-mark></span><span class="word">spark outpost</span></div></div>
+      <div class="spec l"><div class="sizes" data-t="l"></div><div class="lockup"><span data-mark></span><span class="word">spark outpost</span></div></div>
+    </div>
+  </section>
+
+  <section><h2>Colors</h2>
+    <div class="colors">
+      <div class="sw"><i style="background:#2bb39a"></i><div><b>Glacier</b><code>#2BB39A</code></div></div>
+      <div class="sw"><i style="background:#f2b54a"></i><div><b>Spark</b><code>#F2B54A</code></div></div>
+      <div class="sw"><i style="background:#0c0f12"></i><div><b>Eyes and icon background</b><code>#0C0F12</code></div></div>
+    </div>
+  </section>
+
+  <section><h2>Using it</h2>
+    <ul class="rules">
+      <li><b>Leave space around it</b> equal to the height of one eye.</li>
+      <li><b>Smallest size</b> is 16 px. Below 24 px, use the favicon file, which has a thicker antenna.</li>
+      <li><b>One color</b>: use the black or white file. The eyes are cut out, so it works on any background.</li>
+      <li><b>Wordmark</b> is "spark outpost" in lowercase Bricolage Grotesque, weight 800, tight letter spacing.</li>
+      <li><b>Don't</b> recolor the eyes, stretch the body, or remove the spark.</li>
+    </ul>
+  </section>
+
+  <section><h2>Files</h2>
+    <ul class="files">
+      <li><code>blob-scout-mark.svg</code><span>Full color</span></li>
+      <li><code>blob-scout-app-icon.svg</code><span>1024 app icon</span></li>
+      <li><code>blob-scout-favicon.svg</code><span>Browser tab</span></li>
+      <li><code>blob-scout-mark-black.svg</code><span>One color</span></li>
+      <li><code>blob-scout-mark-white.svg</code><span>One color</span></li>
+      <li><code>blob-scout-lockup-dark.svg</code><span>With wordmark</span></li>
+      <li><code>blob-scout-lockup-light.svg</code><span>With wordmark</span></li>
+    </ul>
+  </section>
+</div>
+<script>
+(function(){
+const BODY="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z",SPARK="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z";
+const scout=(cls="",look)=>`<svg class="scout ${cls}" ${look?'data-look="1"':""} viewBox="0 0 64 64" aria-hidden="true"><g class="sc-hop"><g class="sc-body"><path class="sc-ant" d="M38 18C39 13 42 10 46 9" fill="none" stroke="var(--a)" stroke-width="3" stroke-linecap="round"/><path class="sc-spark" d="${SPARK}" fill="var(--b)"/><path d="${BODY}" fill="var(--a)"/><g class="sc-cheeks"><circle cx="18.5" cy="46.5" r="2.7"/><circle cx="45.5" cy="46.5" r="2.7"/></g><g class="sc-look"><rect class="sc-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect class="sc-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/><path class="sc-happy" d="M22.4 40.5Q25.3 34.5 28.2 40.5M35.8 40.5Q38.7 34.5 41.6 40.5"/></g></g></g></svg>`;
+const mono=c=>`<svg viewBox="0 0 64 64" aria-hidden="true"><defs><mask id="m${c.slice(1)}"><rect width="64" height="64" fill="#fff"/><rect x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect x="35.9" y="32" width="5.6" height="11" rx="2.8"/></mask></defs><path d="M38 18C39 13 42 10 46 9" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round"/><path d="${SPARK}" fill="${c}"/><path d="${BODY}" fill="${c}" mask="url(#m${c.slice(1)})"/></svg>`;
+const stage=document.getElementById("stage");stage.innerHTML=scout("",1);
+document.querySelectorAll("[data-mark]").forEach(e=>e.innerHTML=scout());
+document.querySelectorAll(".sizes").forEach(el=>{const d=el.dataset.t==="d";el.innerHTML=`<figure><span class="appicon">${scout()}</span><span class="cap">App icon</span></figure><figure><span style="width:32px;height:32px;display:block">${scout()}</span><span class="cap">32 px</span></figure><figure><span style="width:16px;height:16px;display:block">${scout()}</span><span class="cap">16 px</span></figure><figure><span style="width:32px;height:32px;display:block">${mono(d?"#eef1f4":"#141a21")}</span><span class="cap">One color</span></figure>`});
+document.querySelectorAll(".sizes svg,.lockup svg").forEach(s=>{s.style.width="100%";s.style.height="100%"});
+document.querySelectorAll(".lockup [data-mark]").forEach(e=>{e.style.cssText="width:40px;height:40px;display:block"});
+const M=[["idle","Idle"],["working","Working"],["alert","Needs you"],["happy","Done"],["sad","Problem"]];let cur="idle";
+const moods=document.getElementById("moods");
+function draw(){moods.innerHTML=M.map(([k,l])=>`<button data-m="${k}" aria-pressed="${k===cur}">${l}</button>`).join("")}
+draw();
+moods.onclick=e=>{const b=e.target.closest("[data-m]");if(!b)return;cur=b.dataset.m;const s=stage.querySelector(".scout");["working","alert","happy","sad"].forEach(k=>s.classList.toggle(k,k===cur));draw()};
+stage.onclick=()=>{const s=stage.querySelector(".scout");s.classList.remove("poke");void s.getBoundingClientRect();s.classList.add("poke")};
+let raf=0;addEventListener("pointermove",e=>{if(raf)return;raf=requestAnimationFrame(()=>{raf=0;const s=stage.querySelector(".scout"),r=s.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height*.6),d=Math.hypot(dx,dy)||1,k=2.8*Math.min(1,d/260);s.querySelector(".sc-look").style.transform=`translate(${dx/d*k}px,${dy/d*k*.8}px)`})},{passive:true});
+})();
+</script></body></html>

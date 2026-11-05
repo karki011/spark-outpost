@@ -1,0 +1,64 @@
+import { describe, expect, it } from 'vitest';
+import { askKeyAction, type AskKey } from './ask-keys.ts';
+
+const press = (key: string, change: Partial<AskKey> = {}): AskKey => ({
+  key,
+  shift: false,
+  modifier: false,
+  composing: false,
+  target: 'option',
+  caretAtStart: false,
+  ...change,
+});
+
+describe('askKeyAction', () => {
+  it('continues on Enter from an option, a radio or the answer field', () => {
+    expect(askKeyAction(press('Enter'))).toEqual({ kind: 'onward' });
+    expect(askKeyAction(press('Enter', { target: 'radio' }))).toEqual({ kind: 'onward' });
+    expect(askKeyAction(press('Enter', { target: 'answer' }))).toEqual({ kind: 'onward' });
+  });
+
+  it('leaves Enter to the button it is pressed on, and Shift+Enter to the text field', () => {
+    expect(askKeyAction(press('Enter', { target: 'other' }))).toBeNull();
+    expect(askKeyAction(press('Enter', { target: 'answer', shift: true }))).toBeNull();
+  });
+
+  it('sends from anywhere with a modifier and Enter', () => {
+    expect(askKeyAction(press('Enter', { target: 'other', modifier: true }))).toEqual({
+      kind: 'send',
+    });
+  });
+
+  it('ignores keys while an input method is composing', () => {
+    expect(askKeyAction(press('Enter', { target: 'answer', composing: true }))).toBeNull();
+  });
+
+  it('moves between options with the arrows and leaves a text field only from its start', () => {
+    expect(askKeyAction(press('ArrowDown'))).toEqual({ kind: 'move', by: 1 });
+    expect(askKeyAction(press('ArrowUp'))).toEqual({ kind: 'move', by: -1 });
+    expect(askKeyAction(press('ArrowUp', { target: 'answer' }))).toBeNull();
+    expect(askKeyAction(press('ArrowUp', { target: 'answer', caretAtStart: true }))).toEqual({
+      kind: 'move',
+      by: -1,
+    });
+    expect(askKeyAction(press('ArrowDown', { target: 'answer', caretAtStart: true }))).toBeNull();
+  });
+
+  it('moves between radios with all four arrows, and leaves Left and Right to other rows', () => {
+    expect(askKeyAction(press('ArrowRight', { target: 'radio' }))).toEqual({ kind: 'move', by: 1 });
+    expect(askKeyAction(press('ArrowLeft', { target: 'radio' }))).toEqual({ kind: 'move', by: -1 });
+    expect(askKeyAction(press('ArrowDown', { target: 'radio' }))).toEqual({ kind: 'move', by: 1 });
+    expect(askKeyAction(press('ArrowRight'))).toBeNull();
+    expect(askKeyAction(press('ArrowLeft', { target: 'answer', caretAtStart: true }))).toBeNull();
+    expect(askKeyAction(press('ArrowRight', { target: 'other' }))).toBeNull();
+  });
+
+  it('picks by number outside text fields only', () => {
+    expect(askKeyAction(press('2'))).toEqual({ kind: 'pick', index: 1 });
+    expect(askKeyAction(press('2', { target: 'other' }))).toEqual({ kind: 'pick', index: 1 });
+    expect(askKeyAction(press('3', { target: 'radio' }))).toEqual({ kind: 'pick', index: 2 });
+    expect(askKeyAction(press('2', { target: 'answer' }))).toBeNull();
+    expect(askKeyAction(press('2', { modifier: true }))).toBeNull();
+    expect(askKeyAction(press('0'))).toBeNull();
+  });
+});

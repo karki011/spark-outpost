@@ -1,0 +1,355 @@
+import path from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test, type Page } from '@playwright/test';
+import {
+  BUILD_REQUEST,
+  card,
+  chatRepo,
+  type ChatRepo,
+  projectChat,
+  resetWithAgents,
+  send,
+} from './project-chat-kit.ts';
+
+const SHOTS = process.env.SEND_OR_QUEUE_SHOTS ?? '';
+
+let repo: ChatRepo;
+
+test.beforeEach(async ({ page }) => {
+  await resetWithAgents();
+  repo = chatRepo();
+  await page.setViewportSize({ width: 1400, height: 900 });
+});
+
+test.afterEach(() => repo.remove());
+
+const composer = (page: Page) => page.getByRole('textbox', { name: 'Message' });
+const queued = (page: Page) =>
+  page.getByRole('list', { name: 'Queued messages' }).getByRole('listitem');
+const mine = (page: Page) => page.locator('.msg.me');
+const hint = (page: Page) => page.locator('.comp-bar .hint');
+const caret = (page: Page) => page.getByRole('button', { name: 'Choose message timing' });
+const menu = (page: Page) => page.getByRole('menu', { name: 'Queue or send now' });
+const notice = (page: Page) => page.locator('.composer-notice[role="status"]:not(:empty)');
+
+async function shot(page: Page, name: string) {
+  if (!SHOTS) return;
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: path.join(SHOTS, `send-or-queue-${name}.png`) });
+}
+
+async function otherKey(page: Page): Promise<string> {
+  const mac = await page.evaluate(() => navigator.platform.startsWith('Mac'));
+  return mac ? '⌘Enter' : 'Ctrl+Enter';
+}
+
+async function waitingCrew(page: Page) {
+  await projectChat(page, repo, 'Ask before edits');
+  await send(page, `${BUILD_REQUEST} #build`);
+  await expect(card(page, /^Edit .+\?$/)).toBeVisible({ timeout: 30_000 });
+}
+
+async function noAxeViolations(page: Page, selector: string) {
+  const results = await new AxeBuilder({ page })
+    .include(selector)
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+  expect(results.violations.map((violation) => violation.id)).toEqual([]);
+}
+
+async function setBusyEnter(page: Page, choice: string) {
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('tab', { name: 'Chats & autonomy' })
+    .click();
+  const group = page
+    .getByRole('dialog', { name: 'Chats & autonomy' })
+    .getByRole('radiogroup', { name: 'While the agent is working, Enter' });
+  await group.scrollIntoViewIfNeeded();
+  const saved = page.waitForResponse(
+    (response) => response.url().endsWith('/api/profile') && response.ok(),
+  );
+  await group.getByRole('radio', { name: choice }).click();
+  await saved;
+  await expect(group.getByRole('radio', { name: choice })).toBeChecked();
+  return group;
+}
+
+test('Enter queues and ⌘Enter sends now while a turn runs, ahead of the queue @packaged', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await waitingCrew(page);
+  const other = await otherKey(page);
+  await composer(page).focus();
+  await expect(hint(page)).toHaveText('');
+  await expect(page.getByRole('button', { name: 'Queue message' })).toHaveAttribute(
+    'title',
+    `Queue: sends when this turn ends (Enter) · ${other} to send now`,
+  );
+  await shot(page, 'hint');
+
+  await composer(page).fill('Later please');
+  await composer(page).press('Enter');
+  await expect(queued(page)).toHaveText([/Later please/]);
+
+  await composer(page).fill('Do this now');
+  const sent = page.waitForResponse(
+    (response) => response.url().endsWith('/queue/send-now') && response.status() === 202,
+  );
+  await composer(page).press('ControlOrMeta+Enter');
+  expect((await (await sent).json()).outcome).toBe('steering');
+  await expect(composer(page)).toHaveValue('');
+  await expect(queued(page)).toHaveText([/Later please/]);
+  await expect(notice(page)).toHaveText('Stopped the turn to send your message', {
+    timeout: 30_000,
+  });
+  await expect(mine(page).filter({ hasText: 'Do this now' })).toBeVisible();
+  await expect(page.locator('.msg.ai').first()).toContainText('Stopped before finishing.');
+  await expect(queued(page)).toHaveText([/Later please/]);
+  await shot(page, 'stopped-to-send');
+});
+
+test('the split send button offers both actions by mouse and keyboard', async ({ page }) => {
+  test.setTimeout(120_000);
+  await waitingCrew(page);
+  const other = await otherKey(page);
+  const main = page.getByRole('button', { name: 'Queue message' });
+  await expect(main).toBeDisabled();
+
+  await caret(page).click();
+  await expect(caret(page)).toHaveAttribute('aria-expanded', 'true');
+  const items = menu(page).getByRole('menuitem');
+  await expect(items).toHaveText([
+    new RegExp(`^Queue\\s*Sends when this turn ends\\s*Enter$`),
+    new RegExp(`^Send now\\s*Steers or interrupts the turn\\s*${other.replace('+', '\\+')}$`),
+  ]);
+  await expect(items.nth(0)).toBeFocused();
+  await expect(items.nth(0)).toHaveAttribute('aria-disabled', 'true');
+  await expect(menu(page)).toContainText('Type a message first.');
+  await page.keyboard.press('Escape');
+  await expect(menu(page)).toBeHidden();
+  await expect(caret(page)).toBeFocused();
+
+  await composer(page).fill('Queued by keyboard');
+  await caret(page).focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(items.nth(0)).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(items.nth(1)).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(items.nth(0)).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(items.nth(1)).toBeFocused();
+  await noAxeViolations(page, '.composer');
+  await shot(page, 'menu');
+  await page.keyboard.press('Home');
+  await page.keyboard.press('Enter');
+  await expect(menu(page)).toBeHidden();
+  await expect(queued(page)).toHaveText([/Queued by keyboard/]);
+  await expect(composer(page)).toBeFocused();
+  await expect(composer(page)).toHaveValue('');
+
+  await page.setViewportSize({ width: 420, height: 800 });
+  await composer(page).fill('From the menu');
+  await expect(main).toBeVisible();
+  await caret(page).click();
+  const box = (await menu(page).boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(420);
+  await shot(page, 'menu-narrow');
+  await items.nth(1).click();
+  await expect(menu(page)).toBeHidden();
+  await expect(composer(page)).toHaveValue('');
+  await expect(mine(page).filter({ hasText: 'From the menu' })).toBeVisible({ timeout: 30_000 });
+  await expect(queued(page)).toHaveText([/Queued by keyboard/]);
+});
+
+test('the Enter setting flips the default, the button and the hint', async ({ page }) => {
+  test.setTimeout(120_000);
+  await waitingCrew(page);
+  const other = await otherKey(page);
+  const group = await setBusyEnter(page, 'Sends it now');
+  await expect(group).toHaveAccessibleDescription(
+    `The agent reads it mid-turn, or the turn stops and your message goes first. ${other} queues it instead.`,
+  );
+  await noAxeViolations(page, '.seg');
+  await shot(page, 'setting');
+  await page.keyboard.press('Escape');
+  expect((await (await page.request.get('/api/setup')).json()).profile.busyEnter).toBe('now');
+
+  await composer(page).focus();
+  await expect(hint(page)).toHaveText('');
+  await expect(composer(page)).toHaveAttribute('placeholder', 'Send a message to the running turn');
+  const main = page.getByRole('button', { name: 'Send now', exact: true });
+  await expect(main).toHaveAttribute(
+    'title',
+    `Send now: steers or interrupts the turn (Enter) · ${other} to queue`,
+  );
+  await caret(page).click();
+  await expect(menu(page).getByRole('menuitem').nth(0)).toContainText(other);
+  await expect(menu(page).getByRole('menuitem').nth(1)).toContainText(/Enter$/);
+  await shot(page, 'setting-flipped');
+  await page.keyboard.press('Escape');
+
+  await composer(page).fill('Queued with the other key');
+  await composer(page).press('ControlOrMeta+Enter');
+  await expect(queued(page)).toHaveText([/Queued with the other key/]);
+
+  await composer(page).fill('Sent with Enter');
+  await composer(page).press('Enter');
+  await expect(mine(page).filter({ hasText: 'Sent with Enter' })).toBeVisible({ timeout: 30_000 });
+  await expect(queued(page)).toHaveText([/Queued with the other key/]);
+});
+
+test('a failed Send now keeps the draft and shows the error', async ({ page }) => {
+  test.setTimeout(90_000);
+  await waitingCrew(page);
+  await page.route('**/queue/send-now', (route) =>
+    route.fulfill({ status: 500, json: { error: 'Could not send that message.' } }),
+  );
+  await composer(page).fill('Keep me');
+  await composer(page).press('ControlOrMeta+Enter');
+  await expect(page.locator('.composer-error[role="alert"]')).toHaveText(
+    'Could not send that message.',
+  );
+  await expect(composer(page)).toHaveValue('Keep me');
+  await expect(queued(page)).toHaveCount(0);
+  await expect(mine(page).filter({ hasText: 'Keep me' })).toHaveCount(0);
+});
+
+const PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGMwObwYiBggFAArKgZp8w3CnwAAAABJRU5ErkJggg==';
+
+async function attachBusyFiles(page: Page, withTextFile = false) {
+  await page.getByRole('button', { name: 'Add files and context' }).click();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('menuitem', { name: 'Upload a file' }).click();
+  await (
+    await chooser
+  ).setFiles([
+    { name: 'busy.png', mimeType: 'image/png', buffer: Buffer.from(PNG_BASE64, 'base64') },
+    ...(withTextFile
+      ? [{ name: 'busy.txt', mimeType: 'text/plain', buffer: Buffer.from('Follow-up details\n') }]
+      : []),
+  ]);
+  await expect(page.getByRole('button', { name: 'Remove busy.png' })).toBeVisible();
+  await expect(page.getByRole('progressbar')).toHaveCount(0);
+}
+
+async function allowUntilAttachmentDelivered(page: Page, names: string, steered = false) {
+  const reply = page.locator('.md').filter({ hasText: `Attachments: ${names}.` });
+  const imageReceipt = page.locator('.md').filter({
+    hasText: `[Image not shown: ${names.split(', ')[0]}]`,
+  });
+  await expect(async () => {
+    const allow = card(page, /^Edit .+\?$/).getByRole('button', { name: 'Allow', exact: true });
+    if (await allow.first().isVisible()) await allow.first().click();
+    await expect(steered ? reply.or(imageReceipt).first() : reply).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 60_000 });
+}
+
+test('an image-only busy message queues, survives reload and reaches the agent @packaged', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await waitingCrew(page);
+  await attachBusyFiles(page);
+  await expect(composer(page)).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Queue message' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Queue message' }).click();
+  await expect(queued(page)).toHaveCount(1);
+  await expect(queued(page)).toContainText('1 attachment');
+  await expect(page.getByRole('button', { name: 'Remove busy.png' })).toHaveCount(0);
+  if (process.env.BUSY_ATTACHMENT_SHOT) {
+    await page.screenshot({ path: process.env.BUSY_ATTACHMENT_SHOT, animations: 'disabled' });
+  }
+  await page.reload();
+  await expect(queued(page)).toContainText('1 attachment');
+  await allowUntilAttachmentDelivered(page, 'busy.png');
+  await expect(queued(page)).toHaveCount(0);
+  await expect(mine(page).getByRole('button', { name: 'View busy.png' })).toBeVisible();
+});
+
+test('Send now delivers a screenshot and text file while a turn is waiting @packaged', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await waitingCrew(page);
+  await attachBusyFiles(page, true);
+  await composer(page).fill('Use these follow-up files');
+  await composer(page).press('ControlOrMeta+Enter');
+  await expect(composer(page)).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Remove busy.png' })).toHaveCount(0);
+  await allowUntilAttachmentDelivered(page, 'busy.png, busy.txt', true);
+  const acpReply = page
+    .locator('.msg.ai .md')
+    .filter({
+      hasText: 'Attached file busy.txt:',
+    })
+    .filter({ hasText: 'Follow-up details' });
+  const fakeReply = page.locator('.msg.ai .md').filter({
+    hasText: 'Attachments: busy.png, busy.txt.',
+  });
+  await expect(acpReply.or(fakeReply).first()).toBeVisible();
+  const bubble = mine(page).filter({ hasText: 'Use these follow-up files' });
+  await expect(bubble).toHaveCount(1);
+  await expect(
+    bubble
+      .getByRole('button', { name: 'View busy.png' })
+      .or(bubble.getByText('2 attachments', { exact: true })),
+  ).toBeVisible();
+  await expect(queued(page)).toHaveCount(0);
+});
+
+test('a failed busy attachment send keeps its image and text for retry', async ({ page }) => {
+  test.setTimeout(90_000);
+  await waitingCrew(page);
+  await attachBusyFiles(page);
+  await page.route('**/queue/send-now', (route) =>
+    route.fulfill({ status: 500, json: { error: 'Could not send those files.' } }),
+  );
+  await composer(page).fill('Keep this image');
+  await composer(page).press('ControlOrMeta+Enter');
+  await expect(page.locator('.composer-error[role="alert"]')).toHaveText(
+    'Could not send those files.',
+  );
+  await expect(composer(page)).toHaveValue('Keep this image');
+  await expect(page.getByRole('button', { name: 'Remove busy.png' })).toBeVisible();
+  await expect(queued(page)).toHaveCount(0);
+  await page.unroute('**/queue/send-now');
+  await composer(page).press('ControlOrMeta+Enter');
+  await allowUntilAttachmentDelivered(page, 'busy.png', true);
+  await expect(mine(page).filter({ hasText: 'Keep this image' })).toHaveCount(1);
+});
+
+test('a failed image-only queue keeps the image and can send it now instead @packaged', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await waitingCrew(page);
+  await attachBusyFiles(page);
+  await page.route('**/queue', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({ status: 500, json: { error: 'Could not queue that image.' } });
+    } else {
+      await route.continue();
+    }
+  });
+  await page.getByRole('button', { name: 'Queue message' }).click();
+  await expect(page.locator('.composer-error[role="alert"]')).toHaveText(
+    'Could not queue that image.',
+  );
+  await expect(composer(page)).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Remove busy.png' })).toBeVisible();
+  await expect(queued(page)).toHaveCount(0);
+  await page.unroute('**/queue');
+  await composer(page).press('ControlOrMeta+Enter');
+  await allowUntilAttachmentDelivered(page, 'busy.png', true);
+  await expect(
+    mine(page)
+      .getByRole('button', { name: 'View busy.png' })
+      .or(mine(page).getByText('1 attachment', { exact: true })),
+  ).toHaveCount(1);
+});

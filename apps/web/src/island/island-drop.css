@@ -1,0 +1,404 @@
+.isl-drop {
+  position: absolute;
+  inset: var(--top) 0 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 0 0 var(--island-r) var(--island-r);
+  background: color-mix(in srgb, var(--island) 94%, transparent);
+  pointer-events: none;
+  text-align: center;
+  animation: isl-fade 0.18s both;
+}
+
+.isl-drop[hidden] {
+  display: none;
+}
+
+.isl-drop[data-phase='choose'] {
+  pointer-events: auto;
+}
+
+.isl-drop[data-phase='enter'] {
+  --reach: 0.35;
+}
+
+.isl-drop[data-phase='over'] {
+  --reach: 1;
+}
+
+.isl-drop:not([data-phase='enter'], [data-phase='over'], [data-phase='drop']) {
+  --lean: 0 !important;
+}
+
+.isl-drop[data-phase='leave'] {
+  animation: isl-retreat 0.65s var(--out) both;
+}
+
+.isl-drop-words {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  max-width: 90%;
+}
+
+.isl-drop-words strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.isl-drop-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.isl-drop-stage {
+  position: relative;
+  width: 120px;
+  height: 74px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  transform: translateX(calc(var(--lean, 0) * 56px));
+  transition: transform 0.4s var(--spring-soft);
+}
+
+.isl-drop-blob {
+  display: block;
+  transform-origin: 50% 100%;
+}
+
+.isl-drop-blob svg.scout {
+  display: block;
+  transform-origin: 50% 90%;
+  transform: rotate(calc(var(--lean, 0) * 10deg));
+  transition: transform 0.2s var(--out);
+}
+
+.isl-drop[data-phase='enter'] .sc-eye,
+.isl-drop[data-phase='over'] .sc-eye {
+  animation: none;
+  transform: scale(1.12, 1.3);
+}
+
+.isl-drop[data-phase='over'] .isl-drop-blob {
+  animation: isl-eager 0.5s ease-in-out infinite alternate;
+}
+
+.isl-drop[data-phase='drop'] .isl-drop-blob {
+  animation: isl-gulp 0.5s var(--spring-pop) 0.3s both;
+}
+
+.isl-drop[data-phase='chew'] .isl-drop-blob {
+  animation: isl-chew 0.38s ease-in-out infinite alternate;
+}
+
+.isl-drop[data-phase='reject'] .isl-drop-blob {
+  animation: isl-headshake 0.5s ease-in-out 0.35s;
+}
+
+.isl-drop[data-phase='leave'] .isl-drop-blob {
+  transform: translateY(4px) scaleY(0.92);
+  transition: transform 0.3s var(--out);
+}
+
+.isl-arms {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  width: 80px;
+  height: 40px;
+  margin-left: -40px;
+  overflow: visible;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: opacity 0.25s;
+}
+
+.isl-drop:not([data-phase='enter'], [data-phase='over'], [data-phase='drop']) .isl-arms {
+  opacity: 0;
+}
+
+.isl-arm {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  transition: transform 0.45s var(--spring-pop);
+}
+
+.isl-arm.l {
+  transform: translate(-21px, 0)
+    rotate(calc(-30deg + var(--reach, 0) * -18deg + var(--lean, 0) * 24deg))
+    scale(1, calc(0.55 + var(--reach, 0) * 0.65));
+}
+
+.isl-arm.r {
+  transform: translate(21px, 0)
+    rotate(calc(30deg + var(--reach, 0) * 18deg + var(--lean, 0) * 24deg))
+    scale(1, calc(0.55 + var(--reach, 0) * 0.65));
+}
+
+.isl-hand {
+  stroke-width: 3.5;
+  transform-box: view-box;
+  transform-origin: 0 -22px;
+}
+
+.isl-drop[data-phase='enter'] .isl-hand,
+.isl-drop[data-phase='over'] .isl-hand {
+  animation: isl-grabby 0.42s ease-in-out infinite alternate;
+}
+
+.isl-drop[data-phase='drop'] .isl-hand {
+  transform: scale(0.35, 1);
+}
+
+.isl-drop-item {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--raise);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  opacity: 0;
+}
+
+.isl-drop-item img,
+.isl-drop-chip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.isl-drop-item svg,
+.isl-drop-chip svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.isl-drop[data-phase='drop'] .isl-drop-item {
+  animation: isl-tug 0.45s cubic-bezier(0.5, 0, 0.7, 1) both;
+}
+
+.isl-drop[data-phase='reject'] .isl-drop-item {
+  animation: isl-bounce-out 0.8s ease-in-out both;
+}
+
+.isl-drop-chip {
+  max-width: min(260px, 80%);
+  height: 24px;
+  padding: 0 9px 0 4px;
+  border: 1px solid var(--card-line);
+  border-radius: 12px;
+  background: var(--card);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  animation: isl-chip-out 0.4s var(--spring-pop) both;
+}
+
+.isl-drop-chip img {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.isl-drop-chip span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.isl-drop-chip b {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.isl-drop-choice {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+  animation: isl-line-in 0.3s var(--out) both;
+}
+
+.isl-drop-btn {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--card-line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.isl-drop-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--card-line));
+}
+
+.isl-drop-btn.primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.isl-drop-btn.quiet {
+  border-color: transparent;
+  background: none;
+  color: var(--muted);
+}
+
+.isl-drop-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@keyframes isl-tug {
+  from {
+    opacity: 1;
+    transform: translate(calc(var(--from-x, 0px) - var(--lean, 0) * 56px), var(--from-y, -40px))
+      scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.3);
+  }
+}
+
+@keyframes isl-bounce-out {
+  0% {
+    opacity: 1;
+    transform: translate(calc(var(--from-x, 0px) - var(--lean, 0) * 56px), var(--from-y, -40px));
+  }
+  45% {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(70px, -30px) scale(1) rotate(25deg);
+  }
+}
+
+@keyframes isl-grabby {
+  to {
+    transform: scale(0.45, 1);
+  }
+}
+
+@keyframes isl-eager {
+  to {
+    transform: translateY(-3px) scale(1.02, 0.98);
+  }
+}
+
+@keyframes isl-gulp {
+  35% {
+    transform: scale(1.16, 0.82);
+  }
+  70% {
+    transform: scale(0.94, 1.08);
+  }
+}
+
+@keyframes isl-chew {
+  from {
+    transform: scale(1.05, 0.94);
+  }
+  to {
+    transform: scale(0.97, 1.04);
+  }
+}
+
+@keyframes isl-chip-out {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.5);
+  }
+}
+
+@keyframes isl-retreat {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes isl-headshake {
+  20%,
+  60% {
+    transform: rotate(-9deg);
+  }
+  40%,
+  80% {
+    transform: rotate(9deg);
+  }
+}
+
+.isl-root[data-rm] .isl-arms,
+.isl-root[data-rm] .isl-drop-item {
+  display: none;
+}
+
+.isl-root[data-rm] .isl-drop-stage,
+.isl-root[data-rm] .isl-drop-blob,
+.isl-root[data-rm] .isl-drop-blob svg.scout {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .isl-arms,
+  .isl-drop-item {
+    display: none;
+  }
+
+  .isl-drop-stage,
+  .isl-drop-blob,
+  .isl-drop-blob svg.scout {
+    transform: none;
+  }
+}
+
+.isl-view[data-drop] {
+  min-height: 178px;
+}
+
+.isl-drop-root {
+  position: fixed;
+  inset: 0;
+}
+
+.isl-qc .chips {
+  padding: 8px 10px 0;
+}
+
+.isl-qnote {
+  margin: 6px 2px 0;
+  font-size: 12px;
+  color: var(--muted);
+}

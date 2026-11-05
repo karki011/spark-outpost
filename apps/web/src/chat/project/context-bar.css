@@ -1,0 +1,233 @@
+.ctxbar {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.ctx-repo,
+.ctx-branch {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: 13px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.ctx-repo:hover,
+.ctx-repo[aria-expanded='true'],
+.ctx-place:hover,
+.ctx-place[aria-expanded='true'] {
+  background: var(--raise);
+  color: var(--text);
+}
+.ctx-repo svg,
+.ctx-branch svg {
+  flex-shrink: 0;
+}
+.ctx-repo .chev,
+.ctx-place .chev {
+  color: var(--faint);
+  transform: rotate(90deg);
+}
+.ctx-name,
+.ctx-branch-name {
+  min-width: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ctx-branch {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+}
+
+.ctx-unlinked {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.mpop.repopop {
+  left: 12px;
+  width: 340px;
+  max-width: calc(100cqw - 24px);
+}
+.repopop .mopt > span:not(.mi) {
+  flex: 1;
+  min-width: 0;
+}
+.repopop .mopt[aria-pressed='true'] .tick {
+  opacity: 1;
+  transform: none;
+}
+.repo-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.repo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px 6px 10px;
+  border-radius: var(--r-sm);
+}
+.repo-row:hover,
+.repo-row:focus-within {
+  background: var(--raise);
+}
+.repo-row .mi {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.repo-row:hover .mi,
+.repo-row:focus-within .mi {
+  background: var(--panel);
+}
+.repo-text {
+  flex: 1;
+  min-width: 0;
+}
+.repo-text b {
+  display: block;
+  font-weight: 500;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.repo-text small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.repo-tag {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 12px;
+}
+.repo-act {
+  flex-shrink: 0;
+  padding: 3px 6px;
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+.repo-row:hover .repo-act,
+.repo-act:focus-visible {
+  opacity: 1;
+}
+.repo-act:hover {
+  background: var(--line);
+  color: var(--text);
+}
+.repo-sep {
+  margin: 6px 4px;
+  border-top: 1px solid var(--line);
+}
+.repopop .repo-note {
+  margin-top: 6px;
+  padding: 8px 10px 4px;
+  border-top: 1px solid var(--line);
+}
+@media (hover: none) {
+  .repo-act {
+    opacity: 1;
+  }
+}
+
+@container composer (max-width: 600px) {
+  .ctx-unlinked {
+    display: none;
+  }
+  .ctx-name,
+  .ctx-branch-name {
+    max-width: 120px;
+  }
+}
+
+@container composer (max-width: 400px) {
+  .ctxbar > .ctx-repo .ctx-name,
+  .ctxbar > .ctx-branch .ctx-branch-name {
+    display: none;
+  }
+  .ctxbar,
+  .ctxbar > .ctx-repo,
+  .ctxbar > .ctx-branch {
+    flex-shrink: 0;
+  }
+}
+
+.ctx-details {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.ctx-details:hover,
+.ctx-details[aria-expanded='true'] {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.ctx-more:not([hidden]) {
+  position: absolute;
+  right: 8px;
+  bottom: calc(100% + 8px);
+  left: 8px;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+}
+.ctx-more .ctx-setup,
+.ctx-more .ctx-trust {
+  margin-left: 0;
+}
+.ctx-more .ctx-name,
+.ctx-more .ctx-branch-name {
+  max-width: 220px;
+}

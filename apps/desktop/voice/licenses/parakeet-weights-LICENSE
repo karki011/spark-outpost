@@ -1,0 +1,14 @@
+Parakeet TDT 0.6B v3 model weights
+
+Model: parakeet-tdt-0.6b-v3
+Author: NVIDIA Corporation
+Source: https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3
+Licence: Creative Commons Attribution 4.0 International (CC BY 4.0)
+Licence text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Modified: converted to GGUF and quantised to Q5_K_M by handy-computer
+(parakeet-tdt-0.6b-v3-Q5_K_M.gguf), published at
+https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf
+
+The weights are not bundled with Spark Outpost; they are downloaded on
+request and run on the Mac with transcribe.cpp. The weights are provided as is, without warranties of any kind.
