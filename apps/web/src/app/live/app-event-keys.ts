@@ -2,6 +2,7 @@ import type { QueryKey } from '@tanstack/react-query';
 import type { AppEvent } from '@spark-outpost/contracts';
 import { analyticsKeys } from '../../analytics/analytics-api.ts';
 import { agentTerminalKeys } from '../../api/agent-terminals.ts';
+import { chatPortsKey } from '../../api/chat-ports.ts';
 import { queryKeys } from '../../api/client.ts';
 import { outcomeKeys } from '../../api/outcomes.ts';
 import { previewKeys } from '../../api/preview.ts';
@@ -47,6 +48,7 @@ export const LIVE_ROOTS: readonly string[] = [
   previewKeys.all[0],
   outpostKeys.all[0],
   agentTerminalKeys.all[0],
+  chatPortsKey[0],
   calendarKeys.all[0],
   islandRequestsKey[0],
   attentionKey[0],
@@ -189,6 +191,8 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
       return [{ queryKey: islandRequestsKey, exact: true }];
     case 'attention':
       return [list];
+    case 'chat_ports':
+      return [{ queryKey: chatPortsKey, exact: true }];
   }
 }
 

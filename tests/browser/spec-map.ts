@@ -118,6 +118,7 @@ export const SPEC_GROUPS = {
     'browser-view-spaces',
     'browser-view-split',
     'chat-links',
+    'chat-ports',
     'chat-terminal',
     'shell-alerts',
     'native-terminal',

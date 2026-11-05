@@ -4,12 +4,22 @@ import { anchorFor } from '../conversations/menu-anchor.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { anchorOf, linkAction, linkFacts, openInPane, paneTarget } from './chat-links.ts';
 import { LinkMenu, type OpenLinkMenu } from './LinkMenu.tsx';
+import { onPaneUrl, takePaneUrl } from './pending-pane-url.ts';
 import type { BrowserHome } from './use-view-placement.ts';
 
 export function ChatLinks({ home }: { home: BrowserHome }) {
   const [menu, setMenu] = useState<OpenLinkMenu | null>(null);
   const open = useStableCallback((url: string) => void openInPane(home, url));
   const focused = usePaneFocused();
+
+  useEffect(() => {
+    const takePending = () => {
+      const url = takePaneUrl(home.chatId);
+      if (url) open(url);
+    };
+    takePending();
+    return onPaneUrl(takePending);
+  }, [home.chatId, open]);
 
   useEffect(() => {
     if (!focused) return;

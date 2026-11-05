@@ -48,6 +48,9 @@ import { gitHubDepsOf, shipDepsOf } from './ship-routes.ts';
 import { gitHubAppConfig } from '../ship/github/app-config.ts';
 import { loadInbox } from '../tickets/inbox.ts';
 import { RunEventHub } from './run-event-hub.ts';
+import { systemPortProbe } from '../terminal/chat-port-probe.ts';
+import { chatPortWatcher, type ChatPortWatcher } from '../terminal/chat-port-watcher.ts';
+import { postgresPort } from '../terminal/chat-ports.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { FOCUS_TTL_MS, startSlackNotifier } from '../slack/notifier.ts';
 import { ClientFocus } from '../slack/client-focus.ts';
@@ -121,6 +124,7 @@ const googleCalendar = desktopCalendar
   : null;
 await googleCalendar?.start();
 let calendarTicker: CalendarTicker | null = null;
+let chatPorts: ChatPortWatcher | null = null;
 const pushNotifier = startPushNotifier({
   db,
   workspaceId,
@@ -167,7 +171,10 @@ const appEvents = new AppEventFeed(undefined, (event) => {
   pushNotifier.changed(event);
   outposts.changed(event);
   if (event.kind === 'preview') void previews.sync();
-  if (event.kind === 'agent_terminal') void agentTerminals.sync();
+  if (event.kind === 'agent_terminal') {
+    void agentTerminals.sync();
+    chatPorts?.wake();
+  }
 });
 const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);
 const cloneDeps = {
@@ -197,6 +204,16 @@ const terminalTmux = chooseTmux(
 );
 if (terminalTmux.host) console.log(tmuxChoiceLine(terminalTmux));
 else console.warn(tmuxChoiceLine(terminalTmux));
+const sparkPorts = new Set([config.API_PORT, artifactPortFor(config.API_PORT)]);
+const databasePort = postgresPort(config.DATABASE_URL);
+if (databasePort) sparkPorts.add(databasePort);
+chatPorts = chatPortWatcher({
+  probe: systemPortProbe(terminalTmux.host),
+  agentRoots: () => agentTerminals.roots(),
+  excluded: sparkPorts,
+  changed: () =>
+    appEvents.publish(JSON.stringify({ kind: 'chat_ports', conversationId: null, runId: null })),
+});
 const terminals = new TerminalSessions(
   tmuxSpawner(loginShellSpawner(), terminalTmux.host),
   defaultLimits,
@@ -210,6 +227,7 @@ const terminals = new TerminalSessions(
         .then((saved) => (saved ? notifyAttention(db, alert.conversationId) : undefined))
         .catch((error: unknown) => console.error('Could not save a shell tab alert', error));
     }),
+    chatPorts,
   ),
 );
 const desktopBrowser = connectDesktopBrowser(process.env, process);
@@ -278,6 +296,7 @@ const artifactPages = await startArtifactOrigin({
   console.error('Could not start the artifact page server', (error as Error).message);
   return null;
 });
+sparkPorts.add(nativeMcp.port).add(nativeTerminals.port);
 desktopBrowser?.blockPorts([
   nativeMcp.port,
   nativeTerminals.port,
@@ -287,6 +306,7 @@ const clones = cloneJobsFor(cloneDeps);
 await clones.recover();
 const { app, reconcileRemote } = createAppParts({
   clones,
+  chatPorts,
   cloneTest: cloneDeps.cloneTest,
   db,
   hub,
@@ -404,6 +424,7 @@ const shutdown = async (keepTerminals = false) => {
     ['calendar listener', () => calendarWrittenListener.close()],
     ['previews', () => previews.stopAll('shutdown')],
     ['agent terminals', () => agentTerminals.stopAll()],
+    ['chat ports', () => chatPorts?.stop()],
     ['lag monitor', () => stopLagMonitor()],
     ['outcome sweep', () => outcomeSweep.stop()],
     ['archive sweep', () => archiveSweep?.stop()],
