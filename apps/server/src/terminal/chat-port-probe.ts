@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { childrenByParent, listeningPorts, panePids } from './chat-ports.ts';
 import { tmuxArgs, type TmuxHost } from './tmux/tmux-host.ts';
 
@@ -9,6 +10,8 @@ export interface PortProbe {
 }
 
 const PROBE_TIMEOUT_MS = 2_000;
+const LSOF =
+  ['/usr/sbin/lsof', '/usr/bin/lsof'].find((path) => existsSync(path)) ?? '/usr/sbin/lsof';
 const PROBE_MAX_BYTES = 8 * 1024 * 1024;
 
 interface Ran {
@@ -47,7 +50,7 @@ export function systemPortProbe(tmux: TmuxHost | null): PortProbe {
     },
     async listening(pids) {
       if (pids.length === 0) return new Map();
-      const { stdout, cutOff } = await run('/usr/sbin/lsof', [
+      const { stdout, cutOff } = await run(LSOF, [
         '-nP',
         '-a',
         '-iTCP',
