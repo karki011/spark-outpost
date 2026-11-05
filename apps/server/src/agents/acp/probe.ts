@@ -21,6 +21,7 @@ import {
 import { findOption } from './session-config.ts';
 import { CLIENT_CAPABILITIES, CLIENT_INFO } from './client-info.ts';
 import { assertProtocolVersion, toProviderError } from './errors.ts';
+import { deleteQuietly } from './session-open.ts';
 
 export interface ProbeOptions {
   launch?: AgentLaunch;
@@ -32,6 +33,36 @@ export interface ProbeOptions {
 
 const DEFAULT_TIMEOUT_MS = 45_000;
 const ACCOUNT_WAIT_MS = 400;
+
+type WithAccess = (
+  report: ProviderCapabilityReport,
+  initial: readonly acp.SessionConfigOption[],
+) => Promise<ProviderCapabilityReport>;
+
+async function readReport(
+  ctx: acp.ClientContext,
+  session: acp.NewSessionResponse,
+  withAccess: WithAccess,
+): Promise<ProviderCapabilityReport> {
+  const report = sessionCapabilities(session);
+  const initial = session.configOptions ?? [];
+  if (report.efforts.length > 0) return withAccess(report, initial);
+  const modelOption = findOption(initial, 'model');
+  if (!modelOption) return withAccess(report, initial);
+  const efforts = new Map(report.efforts.map((effort) => [effort.id, effort]));
+  for (const model of report.models) {
+    if (model.id === report.defaultModel) continue;
+    const response = await ctx.request(acp.methods.agent.session.setConfigOption, {
+      sessionId: session.sessionId,
+      configId: modelOption.id,
+      value: model.id,
+    });
+    for (const effort of capabilitiesFrom(response.configOptions).efforts) {
+      if (!efforts.has(effort.id)) efforts.set(effort.id, effort);
+    }
+  }
+  return withAccess({ ...report, efforts: [...efforts.values()] }, initial);
+}
 
 export async function probeCapabilities(
   definition: AgentDefinition,
@@ -57,10 +88,7 @@ export async function probeCapabilities(
       .onNotification(AUTH_STATUS_METHOD, parseAuthStatus, (notified) => {
         account = notified.params ?? account;
       });
-    const withAccess = async (
-      report: ProviderCapabilityReport,
-      initial: readonly acp.SessionConfigOption[],
-    ): Promise<ProviderCapabilityReport> => {
+    const withAccess: WithAccess = async (report, initial) => {
       if (definition.reportsModelAccess && account === null) await delay(ACCOUNT_WAIT_MS);
       const offered = offeredCapabilities(report, definition.offers);
       const access = reportedAccess(definition, initial);
@@ -81,24 +109,11 @@ export async function probeCapabilities(
         mcpServers: [],
         _meta: definition.probeSessionMeta ?? definition.conversationSessionMeta?.() ?? null,
       });
-      const report = sessionCapabilities(session);
-      const initial = session.configOptions ?? [];
-      if (report.efforts.length > 0) return withAccess(report, initial);
-      const modelOption = findOption(initial, 'model');
-      if (!modelOption) return withAccess(report, initial);
-      const efforts = new Map(report.efforts.map((effort) => [effort.id, effort]));
-      for (const model of report.models) {
-        if (model.id === report.defaultModel) continue;
-        const response = await ctx.request(acp.methods.agent.session.setConfigOption, {
-          sessionId: session.sessionId,
-          configId: modelOption.id,
-          value: model.id,
-        });
-        for (const effort of capabilitiesFrom(response.configOptions).efforts) {
-          if (!efforts.has(effort.id)) efforts.set(effort.id, effort);
-        }
+      try {
+        return await readReport(ctx, session, withAccess);
+      } finally {
+        await deleteQuietly(ctx, init, session.sessionId);
       }
-      return withAccess({ ...report, efforts: [...efforts.values()] }, initial);
     });
     const timeout = delay(options.timeoutMs ?? DEFAULT_TIMEOUT_MS, undefined, {
       signal: timer.signal,

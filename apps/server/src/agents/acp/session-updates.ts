@@ -18,6 +18,7 @@ import { planOutputs, usageOutputs } from './plan-limits.ts';
 import { createFocusTracker } from './file-focus.ts';
 import { messagePhase } from './message-phase.ts';
 import { artifactLinks } from './artifact-links.ts';
+import { createCompactionLines } from './compaction-lines.ts';
 import {
   awaitsAddress,
   describeTool,
@@ -190,6 +191,7 @@ function toolTexts(
 export function createUpdateMapper(agentName = 'The agent', checksWindow = false): UpdateMapper {
   const openTools = new Map<string, OpenTool>();
   const focus = createFocusTracker();
+  const compactionLine = createCompactionLines();
   const seenLinks = new Set<string>();
   let thinking = false;
   let lastMessageId: string | null = null;
@@ -428,6 +430,11 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
         }
         case 'notice':
           return note(`${noticeLabel(update.severity)}: ${update.title}`);
+        case 'compaction_update': {
+          worked = true;
+          const line = compactionLine(update);
+          return line ? note(line) : [];
+        }
         case 'available_commands_update':
           return [{ kind: 'commands', commands: agentCommands(update.availableCommands) }];
         case 'usage_update': {

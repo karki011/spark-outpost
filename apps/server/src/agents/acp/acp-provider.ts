@@ -201,14 +201,18 @@ async function runSession(
   } finally {
     signal.removeEventListener('abort', onAbort);
     if (graceTimer) clearTimeout(graceTimer);
-    if (connection && !kept)
-      await endConnection(connection, finished && !signal.aborted && turn.session !== undefined);
+    if (connection && !kept) await endConnection(connection, turn, finished && !signal.aborted);
   }
   if (retryWithoutProfiles) await runSession(options, pool, turn, signal, channel, true);
 }
 
-async function endConnection(connection: LiveConnection, closesSession: boolean): Promise<void> {
-  if (closesSession) await connection.close();
+async function endConnection(
+  connection: LiveConnection,
+  turn: ProviderTurn,
+  settled: boolean,
+): Promise<void> {
+  if (turn.session === undefined) await connection.discard();
+  else if (settled) await connection.close();
   else await connection.kill();
 }
 

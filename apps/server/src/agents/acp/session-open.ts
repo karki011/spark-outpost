@@ -51,6 +51,11 @@ export function supportsClose(init: acp.InitializeResponse): boolean {
   return close !== undefined && close !== null;
 }
 
+function supportsDelete(init: acp.InitializeResponse): boolean {
+  const remove = init.agentCapabilities?.sessionCapabilities?.delete;
+  return remove !== undefined && remove !== null;
+}
+
 function isSessionUpdate(message: unknown): boolean {
   return (
     message !== null &&
@@ -167,21 +172,34 @@ export async function whyResumeFailed(
   }
 }
 
+async function requestQuietly(sent: Promise<unknown>): Promise<void> {
+  const timer = new AbortController();
+  try {
+    await Promise.race([
+      sent.catch(() => undefined),
+      delay(CLOSE_WAIT_MS, undefined, { signal: timer.signal }).catch(() => undefined),
+    ]);
+  } finally {
+    timer.abort();
+  }
+}
+
 export async function closeQuietly(
   ctx: acp.ClientContext,
   init: acp.InitializeResponse,
   sessionId: string,
 ): Promise<void> {
   if (!supportsClose(init)) return;
-  const timer = new AbortController();
-  try {
-    await Promise.race([
-      ctx.request(acp.methods.agent.session.close, { sessionId }).catch(() => undefined),
-      delay(CLOSE_WAIT_MS, undefined, { signal: timer.signal }).catch(() => undefined),
-    ]);
-  } finally {
-    timer.abort();
-  }
+  await requestQuietly(ctx.request(acp.methods.agent.session.close, { sessionId }));
+}
+
+export async function deleteQuietly(
+  ctx: acp.ClientContext,
+  init: acp.InitializeResponse,
+  sessionId: string,
+): Promise<void> {
+  if (!supportsDelete(init)) return;
+  await requestQuietly(ctx.request(acp.methods.agent.session.delete, { sessionId }));
 }
 
 export function sessionOutput(
