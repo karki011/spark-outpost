@@ -67,6 +67,9 @@ export function rowState(chat: ConversationSummary, open: boolean): RowState {
   if (chat.attention?.kind === 'flag' && !isRunning(chat)) {
     return { tone: 'done', label: 'Flagged by Spark', sub: chat.attention.title };
   }
+  if (chat.shellAlert && !isRunning(chat)) {
+    return { tone: 'done', label: `Shell tab: ${chat.shellAlert}`, sub: chat.shellAlert };
+  }
   const run = chat.latestRun;
   if (!run) return IDLE;
   switch (run.status) {

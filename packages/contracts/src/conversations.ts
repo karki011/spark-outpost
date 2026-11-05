@@ -124,6 +124,7 @@ export const conversationSummarySchema = z.object({
   seenAt: z.string().nullable().optional(),
   waitingSince: z.string().nullable().optional(),
   attention: conversationAttentionSchema.nullable().default(null),
+  shellAlert: z.string().max(200).optional(),
   titleSource: titleSourceSchema.default('message'),
   category: categorySchema.nullable().default(null),
   branch: z.string().nullable().optional(),

@@ -239,6 +239,19 @@ describe('rowState for a chat Spark flagged', () => {
   });
 });
 
+describe('rowState for a chat whose shell tab sent an alert', () => {
+  it('shows the alert as an update that never counts as waiting', () => {
+    const alerted = chat({ shellAlert: 'Build: done', latestRun: run('succeeded') });
+    expect(rowState(alerted, false)).toEqual({
+      tone: 'done',
+      label: 'Shell tab: Build: done',
+      sub: 'Build: done',
+    });
+    expect(attention([alerted], [], new Set()).count).toBe(0);
+    expect(rowState({ ...alerted, latestRun: run('running') }, false).tone).toBe('running');
+  });
+});
+
 describe('rowState for a Builder the loop guard stopped', () => {
   it('says the Builder was repeating itself and still asks for you', () => {
     const stuck = chat({

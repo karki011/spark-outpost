@@ -240,6 +240,7 @@ export class TerminalSessions {
         label: kind.label ?? kind.cwd,
         cwd: kind.cwd,
         pid: pty.pid,
+        ...(kind.agent ? { agent: true } : {}),
       });
     }
     let prefilled = kind.type === 'shell';

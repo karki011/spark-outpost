@@ -87,6 +87,7 @@ describe('parseAttentionKey', () => {
   it('reads each kind of key and refuses anything else', () => {
     expect(parseAttentionKey(`approval:${CARD}`)).toEqual({ kind: 'approval', id: CARD });
     expect(parseAttentionKey(`run-done:${CARD}`)).toEqual({ kind: 'run-done', id: CARD });
+    expect(parseAttentionKey(`shell-alert:${CARD}`)).toEqual({ kind: 'shell-alert', id: CARD });
     expect(parseAttentionKey(`terminal:${CARD}:3:1700000000000`)).toEqual({
       kind: 'terminal',
       id: CARD,

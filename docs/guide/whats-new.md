@@ -12,6 +12,7 @@ Earlier releases: **Settings → Updates → Release notes**.
 
 | What changed              | What to do                                                             |
 | ------------------------- | ---------------------------------------------------------------------- |
+| Shell tab alerts          | [On the chat's row](terminals.md#open-a-shell-beside-chat).            |
 | Leaner changes            | [Reuse first](how-spark-works.md#how-work-is-split).                   |
 | Split chat                | [Two chats side by side](start-a-chat.md#open-two-chats-side-by-side). |
 | Wider Home                | Cards, meeting times wrap less.                                        |

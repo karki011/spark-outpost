@@ -58,6 +58,7 @@ export const summaryQuery = `
     pl.latest_pending_at AS waiting_since,
     COALESCE(r.status = 'awaiting_approval' OR p.pending_id IS NOT NULL, false) AS needs_input,
     fl.flag_title,
+    sa.shell_alert,
     COALESCE((
       SELECT bool_or(w.pr_state = 'merged') AND NOT bool_or(w.pr_state = 'open')
       FROM pr_watches w WHERE w.conversation_id = c.id
@@ -117,4 +118,14 @@ export const summaryQuery = `
         AND am.dismissed_at IS NOT NULL
     )
     ORDER BY f.created_at DESC LIMIT 1
-  ) fl ON true`;
+  ) fl ON true
+  LEFT JOIN LATERAL (
+    SELECT s.message AS shell_alert
+    FROM shell_alerts s
+    WHERE s.conversation_id = c.id AND s.created_at > COALESCE(c.seen_at, '-infinity'::timestamptz)
+      AND NOT EXISTS (
+        SELECT 1 FROM attention_marks am
+        WHERE am.workspace_id = c.workspace_id AND am.key = 'shell-alert:' || s.id
+      )
+    ORDER BY s.created_at DESC LIMIT 1
+  ) sa ON true`;
