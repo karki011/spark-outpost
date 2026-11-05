@@ -137,8 +137,7 @@ export async function toStories(
   const stories: OutpostStory[] = [];
   for (const group of byStory(rows)) {
     const lead = group.find((row) => row.task.leadConversationId !== null);
-    const tasks: StoryTask[] = [];
-    for (const row of inOrder(group)) tasks.push(await toStoryTask(row, byChat, git));
+    const tasks = await Promise.all(inOrder(group).map((row) => toStoryTask(row, byChat, git)));
     stories.push({
       draftId: group[0]?.task.draftId ?? null,
       title: group[0]?.storyTitle ?? null,
