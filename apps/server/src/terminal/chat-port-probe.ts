@@ -17,7 +17,7 @@ const PROBE_MAX_BYTES = 8 * 1024 * 1024;
 interface Ran {
   stdout: string;
   failed: boolean;
-  cutOff: boolean;
+  exitCode: number | null;
 }
 
 function run(
@@ -34,7 +34,12 @@ function run(
         resolve({
           stdout: stdout ?? '',
           failed: error !== null,
-          cutOff: error?.killed === true || error?.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER',
+          exitCode:
+            error === null
+              ? 0
+              : !error.killed && typeof error.code === 'number'
+                ? error.code
+                : null,
         }),
     );
     child.stdin?.end();
@@ -50,7 +55,7 @@ export function systemPortProbe(tmux: TmuxHost | null): PortProbe {
     },
     async listening(pids) {
       if (pids.length === 0) return new Map();
-      const { stdout, cutOff } = await run(LSOF, [
+      const { stdout, failed, exitCode } = await run(LSOF, [
         '-nP',
         '-a',
         '-iTCP',
@@ -59,7 +64,7 @@ export function systemPortProbe(tmux: TmuxHost | null): PortProbe {
         pids.join(','),
         '-Fpn',
       ]);
-      if (cutOff) throw new Error('lsof did not finish');
+      if (failed && exitCode !== 1) throw new Error('lsof could not list listeners');
       return listeningPorts(stdout);
     },
     async panes() {
