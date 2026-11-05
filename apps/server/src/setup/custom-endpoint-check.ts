@@ -17,8 +17,13 @@ export type EndpointReply = { ok: true; model: string } | { ok: false; reason: s
 
 const PROMPT = 'Reply with the single word OK.';
 const REASON_MAX = 300;
+const REDACTED_KEY_MIN = 8;
 
-function serverMessage(payload: unknown): string | null {
+function withoutKey(text: string, apiKey: string): string {
+  return apiKey.length >= REDACTED_KEY_MIN ? text.split(apiKey).join('[redacted]') : text;
+}
+
+function serverMessage(payload: unknown, apiKey: string): string | null {
   if (!payload || typeof payload !== 'object' || !('error' in payload)) return null;
   const error = (payload as { error?: unknown }).error;
   const message =
@@ -28,11 +33,11 @@ function serverMessage(payload: unknown): string | null {
         ? (error as { message?: unknown }).message
         : null;
   if (typeof message !== 'string' || !message.trim()) return null;
-  return redactText(message.trim()).slice(0, REASON_MAX);
+  return redactText(withoutKey(message.trim(), apiKey)).slice(0, REASON_MAX);
 }
 
-function withServerMessage(reason: string, payload: unknown): string {
-  const message = serverMessage(payload);
+function withServerMessage(reason: string, payload: unknown, apiKey: string): string {
+  const message = serverMessage(payload, apiKey);
   return message ? `${reason} The server said: ${message}` : reason;
 }
 
@@ -57,18 +62,23 @@ function failureReason(
   }
   if (status === 401 || status === 403) {
     const advice = apiKey ? 'Check the API key.' : 'This endpoint needs an API key.';
-    return withServerMessage(`The endpoint refused the request (${status}). ${advice}`, payload);
+    return withServerMessage(
+      `The endpoint refused the request (${status}). ${advice}`,
+      payload,
+      apiKey,
+    );
   }
   if (status === 404) {
     return withServerMessage(
       `Nothing answered at ${endpoint.baseUrl}/v1/messages for ${model} (404). Check the address and the model name.`,
       payload,
+      apiKey,
     );
   }
   if (status === 429) {
-    return withServerMessage('The endpoint is rate limiting requests (429).', payload);
+    return withServerMessage('The endpoint is rate limiting requests (429).', payload, apiKey);
   }
-  return withServerMessage(`The endpoint responded with ${status}.`, payload);
+  return withServerMessage(`The endpoint responded with ${status}.`, payload, apiKey);
 }
 
 export async function askEndpoint(

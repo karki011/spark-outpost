@@ -8,13 +8,13 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 
 ## Provider tiles
 
-| Status                                                 | Means                        |
-| ------------------------------------------------------ | ---------------------------- |
-| **Not set up**                                         | Nothing connected.           |
-| **CLI not installed**                                  | Install `claude` or `codex`. |
-| **Needs sign-in**                                      | Sign in, or pass a **Test**. |
-| **Connected · Local CLI** / **API key** / **Endpoint** | Ready.                       |
-| **Error**                                              | **Test** says what's wrong.  |
+| Status                                  | Means                        |
+| --------------------------------------- | ---------------------------- |
+| **Not set up**                          | Nothing connected.           |
+| **CLI not installed**                   | Install `claude` or `codex`. |
+| **Needs sign-in**                       | Sign in, or pass a **Test**. |
+| **Connected · Local CLI** / **API key** | Ready.                       |
+| **Error**                               | **Test** says what's wrong.  |
 
 ## Chat list
 
@@ -27,7 +27,7 @@ A dot marks changes since your last visit; point at it.
 | **Done**: green             | A turn finished.                                     |
 | **Couldn't finish**: red    | A turn failed or was interrupted.                    |
 
-**Archive inactive chats** moves a chat to **History** (**Unarchive** restores it) after 2 quiet days. Pinned, working and waiting chats, running Terminal sessions and open outpost requests stay.
+**History** holds archived chats; **Unarchive** brings one back. **Archive inactive chats** moves a chat there after 2 days with no message, turn or answered card. Pinned, working and waiting chats, running Terminal sessions and outposts with an open request stay.
 
 **Projects** lists a project only while it has an active chat; pick a hidden one under **Choose project**.
 

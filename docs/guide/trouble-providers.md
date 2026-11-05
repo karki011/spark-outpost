@@ -18,13 +18,16 @@ In **Settings → AI providers**, select the provider's tile: the message under 
 | "Couldn't reach …"                                       | Check your connection.                                                                      |
 | In a chat: "… isn't signed in" or "… couldn't sign in"   | Reconnect the provider, then resend.                                                        |
 
+Still stuck? **Detect and verify** (**Local CLI**) reruns every check.
+
 ## A key was rejected
 
-| You see                                | Fix                                            |
-| -------------------------------------- | ---------------------------------------------- |
-| "rejected this key (401 Unauthorized)" | Copy it again; **Verify key**.                 |
-| "denied access (403 Forbidden)"        | Check the key's permissions with the provider. |
-| "can't use any models"                 | Check the key's project.                       |
+| You see                                                        | Fix                                            |
+| -------------------------------------------------------------- | ---------------------------------------------- |
+| "rejected this key (401 Unauthorized)"                         | Copy it again; **Verify key**.                 |
+| "denied access (403 Forbidden)"                                | Check the key's permissions with the provider. |
+| "can't use any models"                                         | Check the key's project.                       |
+| "This looks like an OpenAI key. Paste it under Codex instead." | Paste it under the right provider.             |
 
 ## No models in the picker
 
@@ -46,4 +49,4 @@ In **Settings → AI providers**, select the provider's tile: the message under 
 
 ## A provider is rate limited
 
-Wait a minute or switch provider in the picker.
+For "… is rate limited. Try again in a minute.", wait a minute or switch provider in the picker.
