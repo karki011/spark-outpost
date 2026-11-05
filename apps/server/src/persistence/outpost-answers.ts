@@ -23,8 +23,34 @@ interface AnswerRow {
   pull_requests: string[];
 }
 
+type BranchState = Pick<AnswerPublish, 'committed' | 'pushed'>;
+type TaskRuns = Awaited<ReturnType<typeof taskChanges>>['runs'];
+
+export interface AnswerCache {
+  branches: Map<string, Promise<BranchState>>;
+  tasks: Map<string, Promise<TaskRuns | null>>;
+}
+
+export function answerCache(): AnswerCache {
+  return { branches: new Map(), tasks: new Map() };
+}
+
 export interface AnswerOptions {
   maxChars?: number;
+  cache?: AnswerCache;
+}
+
+function remembered<T>(
+  cache: Map<string, Promise<T>> | undefined,
+  key: string,
+  load: () => Promise<T>,
+): Promise<T> {
+  if (!cache) return load();
+  const known = cache.get(key);
+  if (known) return known;
+  const loading = load();
+  cache.set(key, loading);
+  return loading;
 }
 
 function answerText(reply: string | null, maxChars: number | undefined): string {
@@ -38,28 +64,34 @@ async function changedPaths(
   workspaceId: string,
   taskId: string | null,
   runIds: readonly string[],
+  cache: AnswerCache | undefined,
 ): Promise<string[]> {
   if (taskId === null) return [];
-  try {
-    const { runs } = await taskChanges(db, workspaceId, taskId);
-    const files = runs
-      .filter((run) => !run.revertedAt && runIds.includes(run.runId))
-      .flatMap((run) => run.files);
-    return [...new Set(files.map((file) => file.path))];
-  } catch {
-    return [];
-  }
+  const runs = await remembered(cache?.tasks, taskId, () =>
+    taskChanges(db, workspaceId, taskId).then(
+      (changes) => changes.runs,
+      () => null,
+    ),
+  );
+  if (!runs) return [];
+  const files = runs
+    .filter((run) => !run.revertedAt && runIds.includes(run.runId))
+    .flatMap((run) => run.files);
+  return [...new Set(files.map((file) => file.path))];
 }
 
-async function branchState(row: AnswerRow): Promise<Pick<AnswerPublish, 'committed' | 'pushed'>> {
+async function branchState(row: AnswerRow, cache: AnswerCache | undefined): Promise<BranchState> {
   const unknown = { committed: null, pushed: null };
-  if (!row.worktree_path || !row.branch || !row.base_commit || !row.owns_branch) return unknown;
-  try {
-    const work = await branchWork(row.worktree_path, row.branch, row.base_commit);
-    return { committed: work.commits && !work.uncommitted, pushed: work.commits && work.pushed };
-  } catch {
-    return unknown;
-  }
+  const { worktree_path: root, branch, base_commit: base } = row;
+  if (!root || !branch || !base || !row.owns_branch) return unknown;
+  return remembered(cache?.branches, `${root}\0${branch}\0${base}`, async () => {
+    try {
+      const work = await branchWork(root, branch, base);
+      return { committed: work.commits && !work.uncommitted, pushed: work.commits && work.pushed };
+    } catch {
+      return unknown;
+    }
+  });
 }
 
 export async function requestAnswer(
@@ -102,13 +134,16 @@ export async function requestAnswer(
   );
   const row = rows[0];
   if (!row) return null;
-  const changes = await changedPaths(db, workspaceId, row.task_id, row.run_ids);
+  const changes = await changedPaths(db, workspaceId, row.task_id, row.run_ids, options.cache);
   const reason = row.pull_requests.length > 0 ? null : row.publish_reason;
   return {
     text: answerText(row.reply, options.maxChars),
     branch: row.branch,
     changes,
     pullRequests: row.pull_requests,
-    publish: changes.length > 0 || reason !== null ? { ...(await branchState(row)), reason } : null,
+    publish:
+      changes.length > 0 || reason !== null
+        ? { ...(await branchState(row, options.cache)), reason }
+        : null,
   };
 }

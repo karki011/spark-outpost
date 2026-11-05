@@ -5,7 +5,11 @@ import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { queueWrapUps } from '../src/outposts/story-wrap-ups.ts';
 import { insertChatWorktree } from '../src/persistence/chat-worktrees.ts';
-import { requestAnswer } from '../src/persistence/outpost-answers.ts';
+import {
+  answerCache,
+  requestAnswer,
+  type AnswerCache,
+} from '../src/persistence/outpost-answers.ts';
 import { markStarted, saveDraft } from '../src/persistence/outpost-drafts.ts';
 import { getPost, insertPosts, listPosts } from '../src/persistence/outpost-posts.ts';
 import { insertTasks } from '../src/persistence/outpost-stories.ts';
@@ -135,8 +139,17 @@ async function answerRequest(chat: string, postId: string): Promise<void> {
   expect(run.status).toBe('succeeded');
 }
 
-async function answerOf(postId: string) {
-  return (await requestAnswer(t.db, t.workspaceId, (await getPost(t.db, postId))!))!;
+async function answerOf(postId: string, cache?: AnswerCache) {
+  const request = (await getPost(t.db, postId))!;
+  return (await requestAnswer(t.db, t.workspaceId, request, cache ? { cache } : {}))!;
+}
+
+async function worktreeOf(chat: string): Promise<string> {
+  const { rows } = await t.db.query<{ path: string }>(
+    'SELECT path FROM chat_worktrees WHERE conversation_id = $1 AND removed_at IS NULL',
+    [chat],
+  );
+  return rows[0]!.path;
 }
 
 async function wrapUpBody(): Promise<string> {
@@ -216,6 +229,12 @@ describe('the facts under a story’s answers and in its wrap-up', { timeout: 18
     expect(webLine).toContain(`committed on ${WEB_BRANCH} · pushed`);
     expect(webLine).toContain('started after @api');
     expect(body).toContain("Spark's own record");
+
+    const view = answerCache();
+    expect(await answerOf(posts.api, view)).toEqual(first);
+    await writeFile(path.join(await worktreeOf(api), 'later.txt'), 'not committed yet\n');
+    expect((await answerOf(posts.api, view)).publish).toEqual(first.publish);
+    expect((await answerOf(posts.api)).publish).toMatchObject({ committed: false });
   });
 
   it('say a sub-chat was not published, with the reason, when its publish step failed', async () => {
