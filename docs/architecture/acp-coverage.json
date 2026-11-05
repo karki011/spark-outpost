@@ -27,8 +27,9 @@
     "note": "Postgres is the source of truth for chats."
   },
   "agent-method:session/delete": {
-    "status": "missing",
-    "note": "Not called. Every run leaves a throwaway session in the agent's own history."
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-open.ts, apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/probe.ts",
+    "note": "Sent only when sessionCapabilities.delete is advertised, for sessions Spark never resumes: a turn with no session target (a child run without a resumeKey, the plugin review) when it ends, stopped turns included, and the capability probe's session. Capped at 3 s; an error or no answer is ignored and the process is stopped as before. A chat's own session is closed, never deleted. Both pinned adapters advertise it (claude-agent-acp 0.81.2, codex-acp 1.13.1); tested against the fake agent (acp-session-lifecycle.test.ts), not yet against a live provider."
   },
   "agent-method:session/resume": {
     "status": "supported",
@@ -106,7 +107,7 @@
   "agent-notification:session/update": {
     "status": "partial",
     "where": "apps/server/src/agents/acp/session-updates.ts",
-    "note": "Received and mapped to steps, text and usage. Several variants are partial or ignored; see Session updates. Updates sent between session/cancel and the prompt response are dropped because the worker stops reading on cancel (workflow/execute-run.ts)."
+    "note": "Received and mapped to steps, text and usage. Several variants are partial or ignored; see Session updates. After session/cancel the provider keeps reading until the prompt response; the worker then records only tokens, requests, cost and sub-agent ends, not new steps or text (workflow/agent-turn.ts)."
   },
   "agent-notification:elicitation/complete": {
     "status": "missing",
@@ -120,7 +121,7 @@
   "client-notification:session/cancel": {
     "status": "partial",
     "where": "apps/server/src/agents/acp/acp-provider.ts",
-    "note": "Sent on Stop and the process is killed after a 5 s grace period. Open tool steps are dropped rather than marked cancelled, and late updates after the cancel are not read."
+    "note": "Sent once as a notification on Stop while a prompt runs; the provider keeps reading until the prompt response and ends the run on stopReason cancelled (an error after the cancel ends it as stopped too). The process is stopped after that answer, or after a 5 s grace if the agent doesn't answer. Open tool steps are dropped rather than marked cancelled, and updates after the cancel record only usage. Covered by acp-session-lifecycle.test.ts and acp-provider.test.ts."
   },
   "client-notification:_*": {
     "status": "not_applicable",
@@ -263,8 +264,9 @@
     "note": "We don't call session/list."
   },
   "agent-capability:sessionCapabilities.delete": {
-    "status": "missing",
-    "note": "Ignored. Needed before session/delete."
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-open.ts",
+    "note": "Read from initialize; session/delete is only sent when it is advertised."
   },
   "agent-capability:sessionCapabilities.additionalDirectories": {
     "status": "supported",
@@ -382,5 +384,20 @@
     "status": "supported",
     "where": "apps/server/src/agents/acp/client-info.ts",
     "note": "Unstable ClientSessionCapabilities.notices from the session notices RFD, advertised as {}. It is a spec field, not our extension, so it stays at session.notices (moving it under _meta would hide it from both adapters, which check exactly this field). Keep the SDK pinned while it is unstable."
+  },
+  "session-update:compaction_update": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/compaction-lines.ts, apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/client-info.ts",
+    "note": "Unstable in SDK 1.5.0 (context compaction), not in the stable v1 schema. A completed compaction shows one Context compacted line, a failed one a Warning line with its error; in_progress and cancelled show nothing. A repeated or late terminal update for the same compactionId is shown once. The summary is not kept. Both pinned adapters send it only when the client advertises session.compaction; without it claude-agent-acp 0.81.2 sent a Compact conversation tool call and codex-acp 1.13.1 a notice. Tested against the fake agent, not yet against a live provider."
+  },
+  "session-update:compaction_summary_chunk": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-updates.ts",
+    "note": "Unstable in SDK 1.5.0. Ignored on purpose: the retained summary never becomes reply text or a step."
+  },
+  "client-capability:session.compaction": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/client-info.ts",
+    "note": "Unstable ClientSessionCapabilities.compaction, advertised as {} on a turn's connection, never on the capability probe. Keep the SDK pinned while it is unstable."
   }
 }

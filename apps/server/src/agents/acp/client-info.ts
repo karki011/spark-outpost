@@ -19,8 +19,10 @@ export function clientCapabilities(readFiles: boolean, writeFiles = false): Clie
 export const CLIENT_CAPABILITIES = clientCapabilities(false);
 
 export function turnCapabilities(readFiles: boolean, writeFiles: boolean): ClientCapabilities {
+  const base = clientCapabilities(readFiles, writeFiles);
   return {
-    ...clientCapabilities(readFiles, writeFiles),
+    ...base,
+    session: { ...base.session, compaction: {} },
     elicitation: { form: {} },
     _meta: {
       jetbrains: {

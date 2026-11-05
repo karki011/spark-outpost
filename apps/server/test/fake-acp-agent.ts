@@ -13,7 +13,7 @@ import { terminalCommands } from './fake-acp-terminal.ts';
 import { publishTurn } from './fake-acp-publish.ts';
 import { sparkTurn } from './fake-acp-spark.ts';
 import { describeBlock, rememberConfig, restoreConfig } from './fake-acp-support.ts';
-import { eventsTurn, leakSecrets } from './fake-acp-events.ts';
+import { compactionTurn, eventsTurn, leakSecrets } from './fake-acp-events.ts';
 import {
   heldTitleTurn,
   orphanedCommandTurn,
@@ -39,6 +39,7 @@ import { windowTurn } from './fake-acp-window.ts';
 import { requestsTurn } from './fake-acp-requests.ts';
 import {
   createFakeSession,
+  deleteFakeSession,
   legacySession,
   listFakeSessions,
   loadSessionAdvertised,
@@ -322,6 +323,7 @@ async function turn(
   if (text.includes('#auth')) throw acp.RequestError.authRequired();
   if (text.includes('#refuse')) return 'refusal';
   if (text.includes('#secret')) return leakSecrets(update, say);
+  if (text.includes('#compacting')) return compactionTurn(update, say);
   if (text.includes('#twins') || text.includes('#hang'))
     return eventsTurn(text, update, say, signal);
   if (text.includes('#failure')) {
@@ -446,6 +448,7 @@ acp
     recordClose(ctx.params.sessionId);
     return {};
   })
+  .onRequest(acp.methods.agent.session.delete, (ctx) => deleteFakeSession(ctx.params.sessionId))
   .onRequest(acp.methods.agent.session.setMode, (ctx) => {
     config.mode = ctx.params.modeId;
     return {};
