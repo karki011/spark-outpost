@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DEFAULT_BUSY_ENTER,
+  isTrackedTerminalProvider,
   terminalLabel,
+  terminalProviderName,
+  untrackedTerminalRefusal,
   type ConversationSummary,
   type TerminalRemoteView,
 } from '@spark-outpost/contracts';
@@ -12,7 +15,6 @@ import { PHONE_SWITCH_OFF, useRemoteClient } from '../../phone/use-remote-client
 import { LiveElapsed } from '../../ui/LiveElapsed.tsx';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
-import { terminalAgentName } from '../terminal-agents.ts';
 import { terminalRemoteApi, terminalRemoteKey } from '../terminal-api.ts';
 import { RemoteTerminalApproval } from './RemoteTerminalApproval.tsx';
 import { RemoteTerminalComposer } from './RemoteTerminalComposer.tsx';
@@ -28,6 +30,7 @@ function failure(error: unknown): string {
 
 function blockedReason(view: TerminalRemoteView): string | null {
   if (!view.running) return 'This session isn’t running. Start it again on your Mac.';
+  if (!isTrackedTerminalProvider(view.provider)) return untrackedTerminalRefusal(view.provider);
   if (view.approval) return 'Answer the agent first, then send your message.';
   if (view.state === 'waiting_for_permission')
     return 'The agent is waiting for permission. Answer it on your Mac.';
@@ -88,7 +91,7 @@ function RemoteTerminalSession({ chat, approve }: { chat: ConversationSummary; a
     <section className="native-workspace remote rt" aria-label="Terminal session">
       <p className="rt-status">
         <span role="status">
-          {terminalAgentName(data.provider)} · {terminalLabel(data.state)}
+          {terminalProviderName(data.provider)} · {terminalLabel(data.state)}
         </span>
         {data.workingSince && (
           <span className="rt-since">

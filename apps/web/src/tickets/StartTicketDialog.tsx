@@ -1,7 +1,11 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ticketSourceNames, type TicketStartMode } from '@spark-outpost/contracts';
+import {
+  ticketSourceNames,
+  type TicketStartMode,
+  type TrackedTerminalProvider,
+} from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { FolderDialog } from '../chat/project/FolderDialog.tsx';
@@ -38,7 +42,7 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
   const titleId = useId();
   const queryClient = useQueryClient();
   const panelRef = useRef<HTMLDivElement>(null);
-  const [sessionChoice, setSessionChoice] = useState<SessionChoice>({
+  const [sessionChoice, setSessionChoice] = useState<SessionChoice<TrackedTerminalProvider>>({
     sessionType: 'chat',
     terminalProvider: 'claude',
   });

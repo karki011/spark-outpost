@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ConversationDetail, ConversationSummary } from '@spark-outpost/contracts';
+import {
+  isTrackedTerminalProvider,
+  terminalProviderName,
+  type ConversationDetail,
+  type ConversationSummary,
+} from '@spark-outpost/contracts';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery, queryKeys } from '../api/client.ts';
 import { ApprovalCard } from '../chat/approvals/ApprovalCard.tsx';
 import { OpenRailFlags } from '../chat/approvals/RailFlags.tsx';
@@ -20,7 +25,6 @@ import { terminalUsageKey } from './usage/terminal-usage-api.ts';
 import { shownSession, terminalEnded, terminalRelaunch } from './native-state.ts';
 import { TerminalBar, type TerminalLink } from './TerminalBar.tsx';
 import { TerminalDictation } from '../voice/TerminalDictation.tsx';
-import { terminalAgentName } from './terminal-agents.ts';
 import { TerminalMenu } from './TerminalMenu.tsx';
 import { TerminalScreen } from './TerminalScreen.tsx';
 import { RemoteTerminalView } from './remote/RemoteTerminalView.tsx';
@@ -73,10 +77,11 @@ export function NativeTerminalWorkspace({
   const showsScreen = !session.isPending && (!ended || opened);
   const repos = useLinkedProjects(chat.projectIds);
   const links = useTerminalLinks(browserHome, repos);
+  const tracked = native && isTrackedTerminalProvider(native.provider) ? native.provider : null;
   const capabilities = useQuery({
-    ...capabilitiesQuery(native?.provider ?? 'claude'),
+    ...capabilitiesQuery(tracked ?? 'claude'),
     staleTime: CAPABILITIES_STALE_MS,
-    enabled: !remote && native !== null,
+    enabled: !remote && tracked !== null,
   });
   const focus = useTerminalFocus(chat.id, panel, !remote);
   const pending = detail.approvals.filter((approval) => approval.status === 'pending');
@@ -169,7 +174,7 @@ export function NativeTerminalWorkspace({
           </button>
         )}
         {native && !ended && (
-          <TerminalDictation chatId={chat.id} agentName={terminalAgentName(native.provider)} />
+          <TerminalDictation chatId={chat.id} agentName={terminalProviderName(native.provider)} />
         )}
         <TerminalMenu
           buttonRef={menuButton}
@@ -263,7 +268,7 @@ export function NativeTerminalWorkspace({
             <ApprovalCard
               key={approval.id}
               approval={approval}
-              provider={native?.provider ?? 'claude'}
+              provider={tracked ?? 'claude'}
               repo={null}
             />
           ))}

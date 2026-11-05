@@ -3,7 +3,7 @@ title: Open a terminal
 section: Chats
 type: how-to
 order: 226
-summary: Run commands beside a chat, or work with Claude Code or Codex in a Terminal session.
+summary: Run commands beside a chat, or work with an agent's own CLI in a Terminal session.
 ---
 
 Open an AI terminal. About 1 minute.
@@ -14,14 +14,16 @@ Open an AI terminal. About 1 minute.
 
 1. Select **New chat**, then **Chat** → **Terminal** below the box.
 2. Select **Choose project**, then a project or **Add folder…**.
-3. Beside **Start terminal**, pick **Claude Code** or **Codex** and permissions.
+3. Beside **Start terminal**, pick **Claude Code** or **Codex** and permissions, or an installed **Gemini CLI**, **OpenCode** or **Amp**.
 4. Describe the work; press **Enter**.
+
+They start empty; Spark records only whether they run.
 
 The lead [delegates implementation](how-spark-works.md#how-work-is-split). Pull requests aren't automatic.
 
 **Running**, **Waiting for input**, **Waiting for permission** and **Idle** follow agent events; idle Claude shows its [cache](statuses-and-limits.md#prompt-cache). **Open**: no tracking. Drops insert paths.
 
-Selection copies; **Add to terminal**, **Ask about this**, **Comment** and **New chat with this** reuse it. Hold Option to select. [Browser picks](use-the-browser.md#point-at-something) land there.
+Selection copies; **Add to terminal**, **Ask about this**, **Comment** and **New chat with this** reuse it (hold Option). [Browser picks](use-the-browser.md#point-at-something) land there.
 
 **Focus terminal** (**⌘⇧F**) hides the chat list and Work panel. **⋯** has **Copy folder path**, **Reconnect** and **Stop session** (hold). [Paired devices](use-your-phone.md) can follow.
 
@@ -35,9 +37,9 @@ Selection copies; **Add to terminal**, **Ask about this**, **Comment** and **New
 
 It starts in the chat's worktree, checkout or home. A busy tab asks **Hold to stop**; **Keep running** cancels.
 
-A shell's alert (OSC 9, 777 or 99), like "Build done", shows in the chat row's tooltip until opened, silently.
+A shell's alert (OSC 9, 777 or 99) shows in the chat row's tooltip until opened, silently.
 
-Listening ports, like **:5173**, show on the chat's row; in the Mac app, select one to open it in the Browser pane.
+Listening ports, like **:5173**, show on the chat's row; select one to open it in the Browser pane (Mac).
 
 ![Hold to stop a busy terminal](images/terminals-stop-light.png)
 
@@ -45,12 +47,12 @@ Listening ports, like **:5173**, show on the chat's row; in the Mac app, select 
 
 1. On a reply's command, select **Open in terminal**.
 
-The read-only tab is **Claude · pnpm dev**. **Stop turn** stops it. Claude and Z.ai output shows when it ends.
+The read-only tab stops with **Stop turn**. Claude and Z.ai output shows when it ends.
 
 ## Close and recover
 
-Switching chats keeps agents running; Terminal sessions survive restarts and crashes. **Quit** stops Spark-owned agents.
+Agents survive switching chats, restarts and crashes; **Quit** stops them.
 
-After reboot or exit, **Resume session** restores history, not running commands; **Start again** resends your first message.
+After reboot or exit, **Resume session** restores history, not running commands; **Start again** resends the first message.
 
 **Next:** [Use the browser](use-the-browser.md)

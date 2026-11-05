@@ -1,7 +1,10 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { NativeTerminalLaunchRequest, NativeTerminalProvider } from '@spark-outpost/contracts';
+import type {
+  NativeTerminalLaunchRequest,
+  TrackedTerminalProvider,
+} from '@spark-outpost/contracts';
 import { nativeTerminalTarget } from '../persistence/native-terminal-settings.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { sendUserMessage } from '../persistence/conversations.ts';
@@ -36,7 +39,7 @@ export async function prepareNativeSession(
     prepareLater?: (job: DepsJob) => void;
   },
   conversationId: string,
-  provider: NativeTerminalProvider,
+  provider: TrackedTerminalProvider,
   request: NativeTerminalLaunchRequest,
   previous: NativeTerminalRow | null,
 ) {

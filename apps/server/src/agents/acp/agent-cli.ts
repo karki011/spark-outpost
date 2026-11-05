@@ -11,7 +11,7 @@ const EXECUTABLE_ENV: Record<AgentCli, string> = {
   codex: 'CODEX_PATH',
 };
 
-export function loginShellLocator(shell: string | null): CliLocator {
+export function loginShellLocator(shell: string | null): (cli: string) => Promise<string | null> {
   return (cli) => locateCli(cli, runCommand, shell);
 }
 

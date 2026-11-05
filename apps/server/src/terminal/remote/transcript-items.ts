@@ -1,4 +1,4 @@
-import type { NativeTerminalProvider, TerminalTranscriptItem } from '@spark-outpost/contracts';
+import type { TerminalTranscriptItem, TrackedTerminalProvider } from '@spark-outpost/contracts';
 import { isRecord } from '../../agent-config/records.ts';
 import { interruptText } from '../claude-transcript.ts';
 import { parseLine } from '../native-transcript.ts';
@@ -144,7 +144,7 @@ function codexRecord(record: Record<string, unknown>, items: Item[]): void {
 }
 
 export function transcriptItems(
-  provider: NativeTerminalProvider,
+  provider: TrackedTerminalProvider,
   lines: readonly string[],
 ): Item[] {
   const items: Item[] = [];

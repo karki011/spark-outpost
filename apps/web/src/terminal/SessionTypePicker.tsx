@@ -1,12 +1,15 @@
+import type { NativeTerminalProvider, TrackedTerminalProvider } from '@spark-outpost/contracts';
 import { Segmented } from '../ui/Segmented.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import './native-terminal.css';
 
-export interface SessionChoice {
+export interface SessionChoice<Provider extends NativeTerminalProvider = NativeTerminalProvider> {
   sessionType: 'chat' | 'terminal';
-  terminalProvider: 'claude' | 'codex';
+  terminalProvider: Provider;
 }
+
+type TicketChoice = SessionChoice<TrackedTerminalProvider>;
 
 export function SessionTypePicker({
   value,
@@ -14,8 +17,8 @@ export function SessionTypePicker({
   disabled = false,
   agent = false,
 }: {
-  value: SessionChoice;
-  onChange: (value: SessionChoice) => void;
+  value: TicketChoice;
+  onChange: (value: TicketChoice) => void;
   disabled?: boolean;
   agent?: boolean;
 }) {
@@ -30,7 +33,7 @@ export function SessionTypePicker({
           { id: 'terminal', label: 'Terminal' },
         ]}
         value={value.sessionType}
-        onChange={(id) => onChange({ ...value, sessionType: id as SessionChoice['sessionType'] })}
+        onChange={(id) => onChange({ ...value, sessionType: id as TicketChoice['sessionType'] })}
       />
       {agent && value.sessionType === 'terminal' && (
         <ChoicePicker
@@ -40,9 +43,7 @@ export function SessionTypePicker({
             { id: 'codex', label: 'Codex' },
           ]}
           value={value.terminalProvider}
-          onChange={(id) =>
-            onChange({ ...value, terminalProvider: id as SessionChoice['terminalProvider'] })
-          }
+          onChange={(id) => onChange({ ...value, terminalProvider: id as TrackedTerminalProvider })}
         />
       )}
     </fieldset>

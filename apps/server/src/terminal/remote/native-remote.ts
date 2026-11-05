@@ -1,8 +1,11 @@
 import { stat } from 'node:fs/promises';
-import type {
-  TerminalApprovalDecision,
-  TerminalRemoteView,
-  TerminalTranscriptItem,
+import {
+  isTrackedTerminalProvider,
+  untrackedTerminalRefusal,
+  type TerminalApprovalDecision,
+  type TerminalRemoteView,
+  type TerminalTranscriptItem,
+  type TrackedTerminalProvider,
 } from '@spark-outpost/contracts';
 import { isRecord } from '../../agent-config/records.ts';
 import type { Db } from '../../persistence/db.ts';
@@ -118,6 +121,8 @@ export function nativeRemote(deps: NativeRemoteDeps) {
   const running = (conversationId: string) => {
     const session = deps.live.get(conversationId);
     if (!session) throw new NativeRuntimeError(NOT_RUNNING, 409);
+    if (!isTrackedTerminalProvider(session.row.provider))
+      throw new NativeRuntimeError(untrackedTerminalRefusal(session.row.provider), 409);
     return session;
   };
   const write = (session: LiveSession, data: string) => {
@@ -129,7 +134,7 @@ export function nativeRemote(deps: NativeRemoteDeps) {
   };
   const items = async (
     conversationId: string,
-    provider: LiveSession['row']['provider'],
+    provider: TrackedTerminalProvider,
     path: string,
   ): Promise<ParsedTail | null> => {
     const file = await stat(path).catch(() => null);
@@ -205,7 +210,10 @@ export function nativeRemote(deps: NativeRemoteDeps) {
       if (!row) throw new NativeRuntimeError('This chat has no Terminal session.', 404);
       const session = deps.live.get(conversationId);
       const path = session?.transcript?.path ?? row.usage_file ?? null;
-      const tail = path ? await items(conversationId, row.provider, path) : null;
+      const tail =
+        path && isTrackedTerminalProvider(row.provider)
+          ? await items(conversationId, row.provider, path)
+          : null;
       const pending = session ? deps.approvals.current(conversationId) : null;
       const working = session !== undefined && row.state === 'working';
       return {

@@ -2,6 +2,8 @@ import { useId, useRef } from 'react';
 import { LayoutGroup } from 'motion/react';
 import {
   DEFAULT_INVOLVEMENT_LEVEL,
+  isTrackedTerminalProvider,
+  terminalProviderName,
   type NativeTerminalProvider,
   type ProviderCapabilities,
 } from '@spark-outpost/contracts';
@@ -11,15 +13,18 @@ import { PermissionChip } from '../chat/composer/PermissionChip.tsx';
 import { ProviderSwitch } from '../chat/composer/ProviderSwitch.tsx';
 import { modePermission } from '../chat/composer/mode-summary.ts';
 import '../chat/composer/model-picker.css';
+import './native-terminal.css';
 import { FreezeWhileHidden } from '../ui/FreezeWhileHidden.tsx';
-import { ChevronIcon } from '../ui/icons.tsx';
+import { ChevronIcon, TerminalIcon } from '../ui/icons.tsx';
+import { RadioRow } from '../ui/RadioRow.tsx';
 import { usePopover } from '../ui/use-popover.ts';
 import {
   CODEX_ASK_UNAVAILABLE,
   TERMINAL_AGENTS,
-  terminalAgentName,
+  UNTRACKED_NOTE,
   terminalModeBlocked,
   terminalModes,
+  useOtherTerminalAgents,
 } from './terminal-agents.ts';
 
 interface TerminalAgentPickerProps {
@@ -30,6 +35,39 @@ interface TerminalAgentPickerProps {
   mode: string | null;
   onMode: (mode: string) => void;
   disabled: boolean;
+}
+
+function OtherAgents({
+  provider,
+  onProvider,
+}: {
+  provider: NativeTerminalProvider;
+  onProvider: (provider: NativeTerminalProvider) => void;
+}) {
+  const prefix = useId();
+  const agents = useOtherTerminalAgents();
+  if (!agents.data?.length) return null;
+  return (
+    <div className="picker-pane native-others">
+      <p className="mgroup" id={`${prefix}-others`}>
+        Other agents
+      </p>
+      <div className="rlist" role="radiogroup" aria-labelledby={`${prefix}-others`}>
+        {agents.data.map((agent) => (
+          <RadioRow
+            key={agent.id}
+            id={`${prefix}-${agent.id}`}
+            label={agent.name}
+            hint={null}
+            tag={agent.installed ? null : 'Not installed'}
+            checked={agent.id === provider}
+            disabled={!agent.installed}
+            onSelect={() => onProvider(agent.id)}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function TerminalAgentPicker({
@@ -48,7 +86,8 @@ export function TerminalAgentPicker({
   const agentButton = useRef<HTMLButtonElement>(null);
   const chip = useRef<HTMLButtonElement>(null);
   const panelId = useId();
-  const name = terminalAgentName(provider);
+  const name = terminalProviderName(provider);
+  const tracked = isTrackedTerminalProvider(provider) ? provider : null;
   const modes = terminalModes(provider, capabilities?.modes ?? []);
   const blocked = terminalModeBlocked(provider, mode);
   const permission = mode ? modePermission(provider, mode, capabilities) : null;
@@ -70,7 +109,11 @@ export function TerminalAgentPicker({
           disabled={disabled}
           onClick={() => openFrom(agentButton.current)}
         >
-          <ProviderBlob providerId={provider} size={18} animate="hover" />
+          {tracked ? (
+            <ProviderBlob providerId={tracked} size={18} animate="hover" />
+          ) : (
+            <TerminalIcon />
+          )}
           <span className="mname">{name}</span>
           <ChevronIcon />
         </button>
@@ -101,12 +144,18 @@ export function TerminalAgentPicker({
               </span>
               <ProviderSwitch
                 providers={TERMINAL_AGENTS}
-                active={provider}
+                active={tracked}
                 onSelect={(id) => onProvider(id as NativeTerminalProvider)}
               />
             </div>
-            <div className="picker-pane native-modes">
-              {mode ? (
+            <div
+              className={
+                tracked ? 'picker-pane native-modes' : 'picker-pane native-modes untracked'
+              }
+            >
+              {!tracked ? (
+                <p className="mempty">{UNTRACKED_NOTE}</p>
+              ) : mode ? (
                 <ModeOptions
                   provider={provider}
                   modes={modes}
@@ -134,6 +183,7 @@ export function TerminalAgentPicker({
                 </p>
               )}
             </div>
+            <OtherAgents provider={provider} onProvider={onProvider} />
           </LayoutGroup>
         </FreezeWhileHidden>
         <div className="picker-foot">Native commands use the agent’s permissions.</div>

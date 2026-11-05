@@ -9,7 +9,7 @@ type SwitchProvider = Pick<ProviderSetup, 'id' | 'name'>;
 
 interface ProviderSwitchProps {
   providers: readonly SwitchProvider[];
-  active: ProviderId;
+  active: ProviderId | null;
   onSelect: (id: ProviderId) => void;
 }
 

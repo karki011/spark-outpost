@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { isTrackedTerminalProvider } from '@spark-outpost/contracts';
 import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isRecord } from '../../agent-config/records.ts';
@@ -16,7 +17,8 @@ import { nativeTurnContext } from '../native-context.ts';
 import { hookTokenDigest } from '../native-observe.ts';
 import type { LiveSession } from '../native-runtime-types.ts';
 import type { AgentRequest, TerminalSessions } from '../sessions.ts';
-import { shellFolder } from '../shell-folder.ts';
+import { shellFolder, type ShellFolder } from '../shell-folder.ts';
+import { untrackedSession } from '../untracked-launch.ts';
 import { readStoredLaunch, sessionRoot, writeObserver } from './adopt-record.ts';
 import type { TmuxHost } from './tmux-host.ts';
 import { killSessionTree, killUnknownSessions, listSessionIds } from './tmux-session.ts';
@@ -78,7 +80,40 @@ async function askedBefore(directory: string): Promise<boolean> {
   return isRecord(observer) && typeof observer.permissionUrl === 'string';
 }
 
+async function adoptedFolder(input: ReadoptInput, row: NativeTerminalRow): Promise<ShellFolder> {
+  const located = await shellFolder(input.db, input.workspaceId, row.conversation_id);
+  return located.cwd === row.cwd
+    ? located
+    : { cwd: row.cwd, label: row.label, kind: 'worktree', note: null };
+}
+
+function adoptPane(input: ReadoptInput, session: LiveSession): void {
+  input.terminals.createAgent({
+    id: session.row.id,
+    conversationId: session.row.conversation_id,
+    cwd: session.row.cwd,
+    label: session.row.label,
+    command: session.row.provider,
+    args: [],
+    adopt: true,
+    onExit: input.onExit(session),
+  });
+}
+
+async function readoptUntracked(input: ReadoptInput, row: NativeTerminalRow): Promise<void> {
+  const session = untrackedSession(input.workspaceId, row, await adoptedFolder(input, row));
+  session.readopted = { at: input.now().toISOString(), stepsComplete: true };
+  input.live.set(row.conversation_id, session);
+  try {
+    adoptPane(input, session);
+  } catch (error) {
+    input.live.delete(row.conversation_id);
+    throw error;
+  }
+}
+
 async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<void> {
+  if (!isTrackedTerminalProvider(row.provider)) return readoptUntracked(input, row);
   const { db } = input;
   const root = sessionRoot(input.dataDir, input.channel, row.id);
   const stored = await readStoredLaunch(root);
@@ -104,11 +139,7 @@ async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<
     runId: row.active_run_id,
     readOnly: true,
   };
-  const located = await shellFolder(db, input.workspaceId, row.conversation_id);
-  const folder =
-    located.cwd === row.cwd
-      ? located
-      : { cwd: row.cwd, label: row.label, kind: 'worktree' as const, note: null };
+  const folder = await adoptedFolder(input, row);
   const turnInput = await openRunInput(db, row.active_run_id);
   const toolsReachable = stored !== null && stored.record.mcpPort === input.mcp.port;
   const grant = toolsReachable
@@ -149,16 +180,7 @@ async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<
   input.live.set(row.conversation_id, session);
   if (observed) input.tokens.set(session.hookKey, session);
   try {
-    input.terminals.createAgent({
-      id: row.id,
-      conversationId: row.conversation_id,
-      cwd: row.cwd,
-      label: row.label,
-      command: row.provider,
-      args: [],
-      adopt: true,
-      onExit: input.onExit(session),
-    });
+    adoptPane(input, session);
     const idle = turnInput === null && row.state === 'ready';
     if (!idle && (await setNativeTerminalState(db, { ...row, state: 'unknown', reason: WAITING })))
       row.state = 'unknown';

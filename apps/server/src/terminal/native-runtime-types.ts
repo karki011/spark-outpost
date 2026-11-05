@@ -4,9 +4,9 @@ import type {
   NativeTerminalLaunchResponse,
   NativeTerminalSession,
   NativeTerminalUsage,
+  TerminalAgent,
   TerminalStartPhase,
 } from '@spark-outpost/contracts';
-import type { CliLocator } from '../agents/acp/agent-cli.ts';
 import type { Db } from '../persistence/db.ts';
 import type { NativeTerminalRow } from '../persistence/native-terminals.ts';
 import type { SparkScope } from '../spark-mcp/deps.ts';
@@ -20,6 +20,7 @@ import type { SessionTranscript } from './native-usage.ts';
 import type { prepareNativeLaunch, NativeLaunch } from './native-launch.ts';
 import type { ShellFolder } from './shell-folder.ts';
 import type { TerminalSessions } from './sessions.ts';
+import type { TerminalCliLocator } from './terminal-agents.ts';
 import type { TmuxHost } from './tmux/tmux-host.ts';
 import type { ModRoutedRemote } from './remote/mod-routing.ts';
 import type { ChatRecord } from './chat-record.ts';
@@ -31,7 +32,7 @@ export interface NativeRuntimeDeps {
   dataDir: string;
   channel: string;
   mcp: SparkMcpHost;
-  locateCli?: CliLocator;
+  locateCli?: TerminalCliLocator;
   branchPrefix?: string;
   approvalWaiters?: ApprovalWaiters;
   prepareLaunch?: typeof prepareNativeLaunch;
@@ -58,6 +59,7 @@ export interface NativeRuntime {
     request: NativeTerminalLaunchRequest,
   ): Promise<NativeTerminalLaunchResponse>;
   usage(conversationId: string): Promise<NativeTerminalUsage>;
+  agents(): Promise<TerminalAgent[]>;
   startPhase(conversationId: string): Promise<TerminalStartPhase | null>;
   hook(token: string, body: unknown): Promise<boolean>;
   stop(conversationId: string): Promise<void>;
