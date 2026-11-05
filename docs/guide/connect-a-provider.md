@@ -19,7 +19,7 @@ Spark runs your installed CLIs: `npm i -g @anthropic-ai/claude-code` for `claude
 | **Z.ai (GLM)**      | `claude`  | **API key** only                     |
 | **Custom endpoint** | `claude`  | [Server address](custom-endpoint.md) |
 
-Z.ai bills its own key, never your Claude account.
+Z.ai bills its own key, never your Claude account. For a custom endpoint, follow [its steps](custom-endpoint.md) instead of the ones below.
 
 ## Connect
 

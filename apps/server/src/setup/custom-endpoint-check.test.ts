@@ -44,15 +44,27 @@ describe('askEndpoint', () => {
     });
   });
 
-  it('leaves the message readable when the key is too short to be a secret', async () => {
+  it('drops the server message when a short key appears in it', async () => {
     const reply = await askEndpoint(
       endpoint,
-      'x',
-      replying(500, { error: 'max tokens exceeded' }),
+      'k9z',
+      replying(401, { error: 'bad token k9z' }),
       1000,
     );
     expect(reply.ok || reply.reason).toBe(
-      'The endpoint responded with 500. The server said: max tokens exceeded',
+      'The endpoint refused the request (401). Check the API key.',
+    );
+  });
+
+  it('keeps the server message when a short key is not in it', async () => {
+    const reply = await askEndpoint(
+      endpoint,
+      'k9z',
+      replying(500, { error: 'model not loaded' }),
+      1000,
+    );
+    expect(reply.ok || reply.reason).toBe(
+      'The endpoint responded with 500. The server said: model not loaded',
     );
   });
 });

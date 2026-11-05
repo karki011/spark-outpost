@@ -33,6 +33,7 @@ function serverMessage(payload: unknown, apiKey: string): string | null {
         ? (error as { message?: unknown }).message
         : null;
   if (typeof message !== 'string' || !message.trim()) return null;
+  if (apiKey && apiKey.length < REDACTED_KEY_MIN && message.includes(apiKey)) return null;
   return redactText(withoutKey(message.trim(), apiKey)).slice(0, REASON_MAX);
 }
 

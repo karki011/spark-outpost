@@ -27,7 +27,9 @@ A dot marks changes since your last visit; point at it.
 | **Done**: green             | A turn finished.                                     |
 | **Couldn't finish**: red    | A turn failed or was interrupted.                    |
 
-**History** holds archived chats; **Unarchive** brings one back. **Archive inactive chats** moves a chat there after 2 days with no message, turn or answered card. Pinned, working and waiting chats, running Terminal sessions and outposts with an open request stay.
+**History** holds archived chats; **Unarchive** brings one back.
+
+**Archive inactive chats** (2 days by default; 7, 30 or **Never** in [Settings](settings.md)) archives a chat that long without a message, turn or answered card. Pinned, working and waiting chats, running Terminal sessions and outposts with an open request stay.
 
 **Projects** lists a project only while it has an active chat; pick a hidden one under **Choose project**.
 
