@@ -36,7 +36,8 @@ async function audit(
   const lean =
     isCalendarAction(action.action) ||
     isAtlassianAction(action.action) ||
-    action.action === 'plugins_edit';
+    action.action === 'plugins_edit' ||
+    action.action === 'link_repo';
   const payload = lean
     ? redactValue({ action: auditedAction(action), outcome: result.state, url: result.url })
     : redactValue({ action, outcome: result.state, result });

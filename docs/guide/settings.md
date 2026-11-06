@@ -31,7 +31,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 
 ## Work
 
-**Projects**: linked folders and **Add folder…**. Open one for trust, **Where Spark works**, **Saved sign-ins** and **Preview** ([Where it works](where-spark-works.md)).
+**Projects**: linked folders, **Add folder…** and **Repos folders** ([find repos by name](where-spark-works.md#link-a-repo-by-name)). Open one for trust, **Where Spark works**, **Saved sign-ins** and **Preview** ([Where it works](where-spark-works.md)).
 
 **Chats & autonomy**:
 

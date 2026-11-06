@@ -33,6 +33,7 @@ export const ASK_SPARK_REFUSALS = {
   macOnly: 'Mac control, calendar and browser sign-in cards stay with you. Answer it yourself.',
   rules: 'A card that changes Spark rules stays with you. Answer it yourself on the Mac.',
   plugins: 'A card that turns a plugin on or off stays with you. Answer it yourself on the Mac.',
+  linkRepo: 'A card that links a repo to a chat stays with you. Answer it yourself.',
   question: 'An agent’s question needs your own answer. Answer it yourself in the chat.',
   callerSees:
     'This card tells a ServiceNow caller something (a comment, or resolving, closing or cancelling), so it stays with you. Answer it yourself in the chat.',
@@ -114,6 +115,7 @@ export function cardRefusal(
   if (approval.payload.form) return ASK_SPARK_REFUSALS.question;
   if (approval.payload.sparkAction?.action === 'rules_edit') return ASK_SPARK_REFUSALS.rules;
   if (approval.payload.sparkAction?.action === 'plugins_edit') return ASK_SPARK_REFUSALS.plugins;
+  if (approval.payload.sparkAction?.action === 'link_repo') return ASK_SPARK_REFUSALS.linkRepo;
   if (macOnlyCard(approval.payload)) return ASK_SPARK_REFUSALS.macOnly;
   const action = approval.payload.sparkAction;
   if (action && serviceNowAsksAlways(action)) return ASK_SPARK_REFUSALS.callerSees;

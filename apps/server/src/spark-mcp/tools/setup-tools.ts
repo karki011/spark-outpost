@@ -252,7 +252,7 @@ export const setupTools = [
     name: 'spark_connectors',
     title: 'Connectors',
     description:
-      "Whether GitHub, Jira, Linear and Slack are connected (account, site, last check; for Slack the workspace, which token types are saved, what each allows, allowed channels and notification choices) and the user's MCP servers (on or off, last connection test). Never returns tokens. Ticket, Slack and pull request tools are offered only while their connector is connected (Settings → Connectors); after the user connects one they arrive with the next message.",
+      "Whether GitHub, Jira, Linear and Slack are connected (account, site, last check; for Slack the workspace, which token types are saved, what each allows, allowed channels and notification choices) and the user's MCP servers (on or off, last connection test). Never returns tokens. Ticket, Slack and pull request tools come only while their connector is connected (Settings → Connectors), from the next message after connecting.",
     input: {},
     run: (_args, context) => connectors(context),
   }),
@@ -260,7 +260,7 @@ export const setupTools = [
     name: 'spark_settings',
     title: 'Spark settings',
     description:
-      'Non-secret Settings → Spark values: default autonomy level (Automatic, Full auto → PR) and what each means, personality, auto-continue wait, context compaction thresholds (warn, compact, automatic on or off), morning brief time, whether the desktop app sends its anonymous daily heartbeat and whether it has macOS Full Disk Access (Settings → Help), new-chat defaults, ticket attention rules and Claude Code plugins. Per-project Builders at once and Where Spark works are in spark_projects.',
+      'Non-secret Settings → Spark values: default autonomy level (Automatic, Full auto → PR) and what each means, personality, auto-continue wait, compaction thresholds (warn, compact, automatic), morning brief time, the anonymous daily heartbeat and macOS Full Disk Access (Settings → Help), new-chat defaults, ticket attention rules and Claude Code plugins. Per-project Builders at once and Where Spark works are in spark_projects.',
     input: {},
     run: (_args, context) => settings(context),
   }),

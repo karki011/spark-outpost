@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                  | What to do                                                      |
 | ----------------------------- | --------------------------------------------------------------- |
+| Link a repo by name           | [Set Repos folders](where-spark-works.md#link-a-repo-by-name).  |
 | Needs macOS 13 or later       | [Get started](getting-started.md).                              |
 | Race fixes                    | Nothing.                                                        |
 | Endpoint key header           | [Pick it](custom-endpoint.md).                                  |

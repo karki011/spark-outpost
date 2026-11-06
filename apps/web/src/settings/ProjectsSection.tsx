@@ -6,6 +6,7 @@ import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { PlusIcon } from '../ui/icons.tsx';
 import { countLabel, filterProjects } from './project-filter.ts';
 import { ProjectRow } from './ProjectRow.tsx';
+import { ReposFoldersSetting } from './ReposFoldersSetting.tsx';
 
 const FILTER_FROM = 6;
 
@@ -50,6 +51,7 @@ export function ProjectsSection() {
         ))}
       </div>
       {adder.flow}
+      <ReposFoldersSetting />
       {error && (
         <p className="set-hint" role="alert">
           {error.message}
