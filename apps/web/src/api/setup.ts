@@ -54,7 +54,12 @@ export async function verifyProvider(
     body: JSON.stringify(body),
   });
   if (!response.ok || !response.body) {
-    throw new ApiError(response.status, `Verification could not start (${response.status}).`);
+    const payload = (await response.json().catch(() => null)) as { error?: unknown } | null;
+    const reason = typeof payload?.error === 'string' ? payload.error : null;
+    throw new ApiError(
+      response.status,
+      reason ?? `Verification could not start (${response.status}).`,
+    );
   }
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
   let buffer = '';

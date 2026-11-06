@@ -52,6 +52,7 @@ const ACCOUNT_SIGN_IN: Record<ProviderId, string> = {
   claude: 'Claude',
   codex: 'ChatGPT',
   zai: 'Z.ai',
+  custom: 'Custom endpoint',
 };
 
 export function signInName(

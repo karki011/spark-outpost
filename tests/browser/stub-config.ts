@@ -105,6 +105,7 @@ const CLAUDE_ACP_MODES: FakeAcpMode[] = [
 export const FAKE_ACP_MODES: Record<string, FakeAcpMode[]> = {
   claude: CLAUDE_ACP_MODES,
   zai: CLAUDE_ACP_MODES,
+  custom: CLAUDE_ACP_MODES,
   codex: [
     ['read-only', 'Ask first', null, null],
     ['ask-every-action', 'Ask every time', null, null],

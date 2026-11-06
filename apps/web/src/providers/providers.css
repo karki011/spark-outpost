@@ -172,6 +172,19 @@
   border-radius: 5px;
   color: var(--text);
 }
+.ep-field {
+  margin-bottom: 10px;
+}
+.ep-field label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.ep-field .keyrow {
+  margin-bottom: 0;
+}
 .keyrow {
   display: flex;
   gap: 8px;

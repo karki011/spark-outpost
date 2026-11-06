@@ -313,6 +313,7 @@ const { app, reconcileRemote } = createAppParts({
   workspaceId,
   secrets,
   endpoints,
+  sparkPorts,
   runCommand,
   probeCapabilities: async (provider) => ({
     provider,

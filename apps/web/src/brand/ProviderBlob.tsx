@@ -7,6 +7,7 @@ const PROVIDER_SEED: Record<ConnectableId, { name: string; hue: number }> = {
   claude: { name: 'claude', hue: 24 },
   codex: { name: 'codex-outpost', hue: 205 },
   zai: { name: 'zai-glm', hue: 112 },
+  custom: { name: 'custom-endpoint', hue: 265 },
   jev: { name: 'jev-typesafe', hue: 318 },
 };
 

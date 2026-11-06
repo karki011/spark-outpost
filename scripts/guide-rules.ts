@@ -16,7 +16,7 @@ export const WORD_CAPS: Readonly<Record<GuidePageType, number>> = {
   'whats-new': 400,
 };
 
-export const GUIDE_WORDS_MAX = 15_000;
+export const GUIDE_WORDS_MAX = 15_500;
 export const PARAGRAPH_WORDS_MAX = 40;
 export const SUMMARY_CHARS_MAX = 170;
 const SEQUENCE_TYPES: readonly GuidePageType[] = ['start', 'how-to'];

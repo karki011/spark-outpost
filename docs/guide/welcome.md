@@ -9,7 +9,7 @@ summary: Pick a task to jump to its page, or search the guide for a button, card
 ## Set up
 
 - [Set up Spark in 5 minutes](getting-started.md)
-- [Connect Claude, Codex or Z.ai](connect-a-provider.md)
+- [Connect an AI provider](connect-a-provider.md)
 - [Connect GitHub and ticket trackers](tickets-and-github.md)
 
 ## Work in a chat

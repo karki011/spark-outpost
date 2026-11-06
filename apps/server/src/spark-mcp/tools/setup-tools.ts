@@ -244,7 +244,7 @@ export const setupTools = [
     name: 'spark_providers',
     title: 'AI providers',
     description:
-      'Which AI agents (Claude, Codex, Z.ai) and advisors (Jev) are connected to Spark, how (CLI login or API key; keys are never shown), their default model, effort and mode, which one is the default, and provider problems from the last 24 hours.',
+      'Which AI agents and advisors (Jev) are connected, how (CLI login or API key; keys are never shown), their default model, effort and mode, which one is the default, and provider problems from the last 24 hours.',
     input: {},
     run: (_args, context) => providers(context),
   }),

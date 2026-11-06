@@ -10,7 +10,7 @@ The agent's mode is the provider's own setting, under its names. To change them,
 
 ## Agent modes
 
-| What it allows                  | Claude and Z.ai        | Codex              | Cards you see              |
+| What it allows                  | Claude, Z.ai, custom   | Codex              | Cards you see              |
 | ------------------------------- | ---------------------- | ------------------ | -------------------------- |
 | Reads only                      | **Plan**               | **Read-only**      | None.                      |
 | Asks before edits and commands  | **Manual**             | **Ask every time** | One per edit and command.  |
@@ -18,11 +18,11 @@ The agent's mode is the provider's own setting, under its names. To change them,
 | Decides what to ask             | **Auto**               | **Approve for me** | What the agent asks about. |
 | Never asks                      | **Bypass permissions** | **Full access**    | None from the agent.       |
 
-| Provider | Default mode       | Default effort |
-| -------- | ------------------ | -------------- |
-| Claude   | **Auto**           | High           |
-| Codex    | **Approve for me** | Medium         |
-| Z.ai     | **Manual**         | High           |
+| Provider              | Default mode       | Default effort |
+| --------------------- | ------------------ | -------------- |
+| Claude                | **Auto**           | High           |
+| Codex                 | **Approve for me** | Medium         |
+| Z.ai, custom endpoint | **Manual**         | High           |
 
 ## What Spark does in each mode
 

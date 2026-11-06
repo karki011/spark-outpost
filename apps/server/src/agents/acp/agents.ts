@@ -38,6 +38,11 @@ import { codexUnlistedModels } from './codex-models.ts';
 import { RAW_REQUEST_MESSAGES } from './request-usage.ts';
 import type { ClaudeRepoOptions, CodexRepoOptions, RepoStyle } from './repo-session.ts';
 import { ZAI_EFFORTS, ZAI_MODELS, zaiLaunchEnvironment, zaiModelId } from './zai.ts';
+import {
+  CUSTOM_EFFORTS,
+  CUSTOM_SLOTS,
+  customEndpointLaunchEnvironment,
+} from './custom-endpoint.ts';
 
 export interface AgentLaunch {
   command: string;
@@ -65,6 +70,7 @@ export interface AgentDefinition {
   cli: AgentCli;
   launch: () => AgentLaunch;
   keyEnvironment?: (apiKey: string) => Promise<Record<string, string>>;
+  keyMissing?: string;
   offers?: AgentOffers;
   reportsModelAccess?: boolean;
   unlistedModels?: (options: readonly SessionConfigOption[]) => string[];
@@ -348,7 +354,7 @@ const claudeSessions = {
 const CLAUDE_ACP = '@agentclientprotocol/claude-agent-acp';
 export const HIDE_CLAUDE_AUTH = '--hide-claude-auth';
 
-function zaiLaunch(): AgentLaunch {
+function keyedClaudeLaunch(): AgentLaunch {
   const launch = packageBin(CLAUDE_ACP);
   return { ...launch, args: [...launch.args, HIDE_CLAUDE_AUTH] };
 }
@@ -391,11 +397,22 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     id: 'zai',
     name: 'Z.ai (GLM)',
     cli: 'claude',
-    launch: zaiLaunch,
+    launch: keyedClaudeLaunch,
     ...claudeSessions,
     keyEnvironment: (apiKey) => zaiLaunchEnvironment(apiKey),
     offers: { models: ZAI_MODELS.map((model) => model.slot), efforts: ZAI_EFFORTS },
     usedModel: zaiModelId,
+    estimatesCost: true,
+  },
+  custom: {
+    id: 'custom',
+    name: 'Custom endpoint',
+    cli: 'claude',
+    launch: keyedClaudeLaunch,
+    ...claudeSessions,
+    keyEnvironment: (secret) => customEndpointLaunchEnvironment(secret),
+    keyMissing: 'The custom endpoint has no stored settings. Connect it again in Settings.',
+    offers: { models: CUSTOM_SLOTS, efforts: CUSTOM_EFFORTS },
     estimatesCost: true,
   },
 };

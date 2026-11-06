@@ -47,6 +47,7 @@ export * from './subagent-report.ts';
 export * from './subagents.ts';
 export * from './runs.ts';
 export * from './setup.ts';
+export * from './custom-endpoint.ts';
 export * from './spark-rules.ts';
 export * from './spark-rules-edit.ts';
 export * from './spark-plugins-edit.ts';

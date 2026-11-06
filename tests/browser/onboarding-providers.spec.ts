@@ -168,7 +168,7 @@ test('the only provider can be disconnected, and setup resumes at the provider s
 test('provider tiles open a configure screen and close back to the same tile', async ({ page }) => {
   await enterName(page, 'Ada');
   const tiles = dialog(page).locator('.ptile');
-  await expect(tiles).toHaveCount(4);
+  await expect(tiles).toHaveCount(5);
   await expect(
     dialog(page).getByRole('button', { name: 'Codex Not set up', exact: true }),
   ).toHaveAccessibleDescription('Connect with the codex CLI or an API key');
@@ -184,7 +184,7 @@ test('provider tiles open a configure screen and close back to the same tile', a
     await expect(section(page, 'claude', name)).toBeVisible();
   await expect(section(page, 'claude', 'Danger zone')).toHaveCount(0);
   await page.keyboard.press('Escape');
-  await expect(tiles).toHaveCount(4);
+  await expect(tiles).toHaveCount(5);
   await expect(tile(page, 'claude')).toBeFocused();
 
   await openTile(page, 'codex');

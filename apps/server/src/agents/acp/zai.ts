@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { inheritedEnvironment } from './inherited-env.ts';
 
 export const ZAI_ANTHROPIC_BASE_URL = 'https://api.z.ai/api/anthropic';
 export const ZAI_API_TIMEOUT_MS = '3000000';
@@ -56,29 +57,6 @@ export function zaiModelFor(model: string | null): ZaiModel | null {
   return ZAI_MODELS.find((entry) => entry.id === id) ?? null;
 }
 
-const INHERITED = new Set([
-  'PATH',
-  'HOME',
-  'USER',
-  'LOGNAME',
-  'SHELL',
-  'LANG',
-  'LANGUAGE',
-  'TMPDIR',
-  'TERM',
-  'TZ',
-  'SSL_CERT_FILE',
-  'SSL_CERT_DIR',
-  'NODE_EXTRA_CA_CERTS',
-  'HTTPS_PROXY',
-  'HTTP_PROXY',
-  'NO_PROXY',
-  'https_proxy',
-  'http_proxy',
-  'no_proxy',
-]);
-const LOCALE = /^LC_[A-Z_]+$/;
-
 function slotEnvironment(slot: string, model: ZaiModel): Record<string, string> {
   const name = `ANTHROPIC_DEFAULT_${slot}_MODEL`;
   return {
@@ -93,12 +71,8 @@ export function zaiEnvironment(
   apiKey: string,
   configDir: string,
 ): Record<string, string> {
-  const env: Record<string, string> = {};
-  for (const [name, value] of Object.entries(parent)) {
-    if (value !== undefined && (INHERITED.has(name) || LOCALE.test(name))) env[name] = value;
-  }
   return {
-    ...env,
+    ...inheritedEnvironment(parent),
     CLAUDE_CONFIG_DIR: configDir,
     ANTHROPIC_BASE_URL: ZAI_ANTHROPIC_BASE_URL,
     ANTHROPIC_AUTH_TOKEN: apiKey,

@@ -13,7 +13,7 @@ export interface CatalogEntry {
   cli: string;
   keyPrefix: string;
   keyHint: string;
-  keyLink: KeyLink;
+  keyLink: KeyLink | null;
   note: string | null;
   installHint: string;
   loginHint: string;
@@ -37,6 +37,12 @@ const effort = (id: string, label: string, description: string): Choice => ({
 const CLAUDE_PACKAGE = '@anthropic-ai/claude-code';
 const CLAUDE_INSTALL_COMMAND = `npm i -g ${CLAUDE_PACKAGE}`;
 const CLAUDE_INSTALL_HINT = `Install it with \`${CLAUDE_INSTALL_COMMAND}\` (or Anthropic's native installer), then try again.`;
+
+const THINKING_EFFORTS: Choice[] = [
+  effort('low', 'Low', 'Light thinking, fastest replies'),
+  effort('high', 'High', 'Thinks longer on hard problems'),
+  effort('max', 'Max', 'Deepest thinking, slowest replies'),
+];
 
 export const catalog: readonly CatalogEntry[] = [
   {
@@ -105,11 +111,27 @@ export const catalog: readonly CatalogEntry[] = [
     loginCommand: '',
     methods: ['api_key'],
     doAvailable: true,
-    efforts: [
-      effort('low', 'Low', 'Light thinking, fastest replies'),
-      effort('high', 'High', 'Thinks longer on hard problems'),
-      effort('max', 'Max', 'Deepest thinking, slowest replies'),
-    ],
+    efforts: THINKING_EFFORTS,
+    defaultEffort: 'high',
+  },
+  {
+    id: 'custom',
+    name: 'Custom endpoint',
+    maker: 'your server',
+    cli: 'claude',
+    keyPrefix: '',
+    keyHint:
+      "Only if your server asks for one. It's stored in your system keychain. Local servers such as Ollama need none.",
+    keyLink: null,
+    note: 'Runs the claude CLI against your own server, which must speak the Anthropic Messages API. How well tools work depends on the model.',
+    installHint: CLAUDE_INSTALL_HINT,
+    loginHint: '',
+    packageName: CLAUDE_PACKAGE,
+    installCommand: CLAUDE_INSTALL_COMMAND,
+    loginCommand: '',
+    methods: ['api_key'],
+    doAvailable: true,
+    efforts: THINKING_EFFORTS,
     defaultEffort: 'high',
   },
 ];

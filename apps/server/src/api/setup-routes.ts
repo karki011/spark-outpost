@@ -35,6 +35,7 @@ import { fullDiskAccessStatus } from '../setup/full-disk-access.ts';
 import { KeychainWaitingError } from '../setup/keychain.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import { sendTestMessage } from '../setup/test-message.ts';
+import { verifyCustomEndpointWithCli } from '../setup/custom-endpoint-check.ts';
 import { GitInstallerError, gitStatus, openGitInstaller } from '../ship/git.ts';
 import {
   verifyApiKey,
@@ -53,6 +54,7 @@ export interface SetupDeps {
   endpoints: ApiEndpoints;
   runCommand: RunCommand;
   loginShell: string | null;
+  sparkPorts?: ReadonlySet<number>;
 }
 
 function providerParam(req: Request): ProviderId {
@@ -123,6 +125,21 @@ export function setupRoutes(deps: SetupDeps): Router {
       return verifyApiKey(advisorEntry(advisor.data), request.apiKey, deps.endpoints);
     }
     const entry = catalogEntry(providerIdSchema.parse(id));
+    if ((request.method === 'endpoint') !== (entry.id === 'custom')) {
+      throw new BadRequestError(
+        entry.id === 'custom'
+          ? 'Connect a custom endpoint with its address and model.'
+          : `${entry.name} has no endpoint to set.`,
+      );
+    }
+    if (request.method === 'endpoint') {
+      return verifyCustomEndpointWithCli(entry, request.endpoint, request.apiKey, {
+        fetch: deps.endpoints.fetch,
+        run: deps.runCommand,
+        loginShell: deps.loginShell,
+        sparkPorts: deps.sparkPorts ?? new Set(),
+      });
+    }
     if (!entry.methods.includes(request.method)) {
       throw new BadRequestError(`${entry.name} connects with an API key.`);
     }
@@ -144,6 +161,10 @@ export function setupRoutes(deps: SetupDeps): Router {
   router.post('/providers/:provider/verify', async (req, res) => {
     const provider = connectableParam(req);
     const request = parseBody(verifyRequestSchema, req);
+    if (provider === 'custom' && isRemote(res)) {
+      res.status(403).json({ error: 'Connect a custom endpoint on your Mac.' });
+      return;
+    }
     const verification = startVerification(provider, request);
 
     res.status(200).set({ 'Content-Type': 'application/x-ndjson', 'Cache-Control': 'no-store' });

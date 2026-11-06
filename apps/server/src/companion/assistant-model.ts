@@ -6,10 +6,11 @@ export interface FastTier {
   effort: string;
 }
 
-export const ASK_SPARK_FAST_TIER: Readonly<Record<ProviderId, FastTier>> = {
+export const ASK_SPARK_FAST_TIER: Readonly<Record<ProviderId, FastTier | null>> = {
   claude: { card: 'claude-sonnet-5-5', effort: 'low' },
   codex: { card: 'gpt-6-luna', effort: 'low' },
   zai: { card: 'glm-5.3-flash', effort: 'low' },
+  custom: null,
 };
 
 export interface OfferedModel {
@@ -34,6 +35,7 @@ export function fastModelFor(
   offered: readonly OfferedModel[],
 ): OfferedModel | null {
   const tier = ASK_SPARK_FAST_TIER[provider];
+  if (!tier) return null;
   return offered.find((model) => cardFor(model, provider)?.id === tier.card) ?? null;
 }
 
@@ -43,7 +45,7 @@ export function assistantPick(
   offered: readonly OfferedModel[],
   efforts: readonly string[],
 ): AssistantPick {
-  const fastEffort = offeredEffort(ASK_SPARK_FAST_TIER[provider].effort, efforts);
+  const fastEffort = offeredEffort(ASK_SPARK_FAST_TIER[provider]?.effort ?? null, efforts);
   const chosenEffort = offeredEffort(settings.effort, efforts);
   if (settings.modelChoice === 'fast') {
     const fast = fastModelFor(provider, offered);

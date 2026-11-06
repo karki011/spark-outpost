@@ -6,9 +6,12 @@ import type { RunCommand } from './command.ts';
 import { KeychainWaitingError } from './keychain.ts';
 import type { SecretStore } from './secrets.ts';
 import { locateCli, type ApiEndpoints } from './verify.ts';
-import { zaiFailureReason, zaiMessageRequest } from './zai-key.ts';
+import { zaiFailureReason } from './zai-key.ts';
+import { bearerMessageRequest } from './messages-request.ts';
 import { zaiModelId } from '../agents/acp/zai.ts';
 import { floorModel } from '../model-access/floor-model.ts';
+import { readStoredEndpoint, type StoredEndpoint } from '../agents/acp/custom-endpoint.ts';
+import { askEndpoint } from './custom-endpoint-check.ts';
 
 export interface TestMessageDeps {
   run: RunCommand;
@@ -215,7 +218,7 @@ function keyedTestRequest(
   deps: TestMessageDeps,
 ): Promise<Response> {
   if (entry.id === 'zai') {
-    const request = zaiMessageRequest(
+    const request = bearerMessageRequest(
       deps.endpoints.zaiBaseUrl,
       key,
       zaiModelId(model) ?? model,
@@ -246,6 +249,20 @@ function keyedTestRequest(
       );
 }
 
+async function testCustomEndpoint(secret: string, deps: TestMessageDeps): Promise<TestOutcome> {
+  let endpoint: StoredEndpoint;
+  try {
+    endpoint = readStoredEndpoint(secret);
+  } catch (error) {
+    return failedWith(
+      error instanceof Error ? error.message : 'the stored settings are unreadable.',
+    );
+  }
+  const startedAt = Date.now();
+  const reply = await askEndpoint(endpoint, endpoint.apiKey, deps.endpoints, API_TIMEOUT_MS);
+  return reply.ok ? answered(startedAt, reply.model) : failedWith(reply.reason);
+}
+
 async function testApiKey(
   entry: CatalogEntry,
   connection: ProviderConnection,
@@ -254,6 +271,7 @@ async function testApiKey(
   const key = await storedKey(entry, deps);
   if (key instanceof KeychainWaitingError) return failedWith(KEYCHAIN_TEST_REASON);
   if (!key) return failedWith('the stored key is missing from the keychain. Verify the key again.');
+  if (entry.id === 'custom') return testCustomEndpoint(key, deps);
   const model = testModel(entry.id, connection) ?? connection.model;
   if (!model) return failedWith('no default model is selected.');
   const startedAt = Date.now();

@@ -83,7 +83,7 @@ const CLAUDE_MODES: ProviderModeTable = {
   skipsGate: ['bypassPermissions'],
 };
 
-const ZAI_MODES: ProviderModeTable = { ...CLAUDE_MODES, defaultMode: 'default' };
+const KEYED_CLAUDE_MODES: ProviderModeTable = { ...CLAUDE_MODES, defaultMode: 'default' };
 
 const CODEX_MODES: ProviderModeTable = {
   defaultMode: 'agent',
@@ -100,7 +100,8 @@ const CODEX_MODES: ProviderModeTable = {
 
 const PROVIDER_MODES: Readonly<Record<string, ProviderModeTable>> = {
   claude: CLAUDE_MODES,
-  zai: ZAI_MODES,
+  zai: KEYED_CLAUDE_MODES,
+  custom: KEYED_CLAUDE_MODES,
   codex: CODEX_MODES,
 };
 

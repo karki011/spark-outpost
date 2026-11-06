@@ -8,6 +8,7 @@ import { TestBubble } from './TestBubble.tsx';
 import type { TestMessage } from './test-message.ts';
 import type { ProviderConnect } from './use-provider-connect.ts';
 import { VerifyLog } from './VerifyLog.tsx';
+import { isEndpoint } from './verify-log.ts';
 
 function LastTest({
   providerName,
@@ -108,9 +109,11 @@ export function TestSection({ setup, connect, test }: TestSectionProps) {
       )}
       {editing && !showLog && (
         <p className="pconf-muted">
-          {connect.method === 'api_key'
-            ? `Verify the key above. Each check ${setup.name} passes shows here.`
-            : `Detect and verify above. Each check ${setup.name} passes shows here.`}
+          {isEndpoint(setup)
+            ? `Test the connection above. Each check ${setup.name} passes shows here.`
+            : connect.method === 'api_key'
+              ? `Verify the key above. Each check ${setup.name} passes shows here.`
+              : `Detect and verify above. Each check ${setup.name} passes shows here.`}
         </p>
       )}
     </>
