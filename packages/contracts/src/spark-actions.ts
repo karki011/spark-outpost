@@ -43,10 +43,9 @@ import { publishArtifactActionSchema, publishArtifactLabels } from './artifact-p
 import { linkRepoActionSchema, linkRepoLabels, linkRepoQuestion } from './repos-folders.ts';
 import {
   cloneRepoActionSchema,
-  cloneRepoQuestion,
   githubReadActionSchema,
-  githubReadQuestion,
   githubRepoLabels,
+  githubRepoQuestion,
 } from './github-repos.ts';
 
 export const SPARK_ACTION_KIND = 'spark_action' as const;
@@ -452,11 +451,10 @@ export function sparkActionQuestion(action: SparkAction): string {
   if (action.action === 'rules_edit') return rulesEditQuestion(action);
   if (action.action === 'plugins_edit') return pluginsEditQuestion(action);
   if (action.action === 'link_repo') return linkRepoQuestion(action);
-  if (action.action === 'github_read') return githubReadQuestion(action);
-  if (action.action === 'clone_repo') return cloneRepoQuestion(action);
   return (
     atlassianQuestion(action) ??
     serviceNowQuestion(action) ??
+    githubRepoQuestion(action) ??
     sparkActionLabels[action.action].question
   );
 }

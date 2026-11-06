@@ -35,14 +35,13 @@ export const githubRepoLabels = {
   },
 };
 
-export function githubReadQuestion(action: GitHubReadAction): string {
-  return action.repo
-    ? `Let the agent copy ${action.repo} to read it?`
+export function githubRepoQuestion(action: { action: string }): string | null {
+  if (action.action === 'clone_repo') return `Clone and link ${(action as CloneRepoAction).repo}?`;
+  if (action.action !== 'github_read') return null;
+  const { repo } = action as GitHubReadAction;
+  return repo
+    ? `Let the agent copy ${repo} to read it?`
     : 'Let the agent search your GitHub repositories?';
-}
-
-export function cloneRepoQuestion(action: CloneRepoAction): string {
-  return `Clone and link ${action.repo}?`;
 }
 
 export function repoSizeText(sizeKb: number): string {
