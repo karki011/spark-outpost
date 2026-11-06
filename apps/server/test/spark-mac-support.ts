@@ -10,7 +10,10 @@ import {
   type MacTarget,
 } from '@spark-outpost/contracts';
 import { MacHostError, type MacHost } from '../src/mac-control/host-client.ts';
-import { createRunObservations } from '../src/observations/run-observations.ts';
+import {
+  createRunObservations,
+  type RunObservations,
+} from '../src/observations/run-observations.ts';
 import { decideApproval } from '../src/persistence/approvals.ts';
 import { startSparkMcpHost, type SparkGrant, type SparkMcpHost } from '../src/spark-mcp/host.ts';
 import type { SparkScope } from '../src/spark-mcp/deps.ts';
@@ -150,6 +153,7 @@ export class MacHarness {
   private host: SparkMcpHost | null = null;
   private client: Client | null = null;
   private grant: SparkGrant | null = null;
+  private observations: RunObservations | null = null;
 
   private constructor(readonly t: TestDb) {}
 
@@ -186,15 +190,20 @@ export class MacHarness {
     await this.host?.close();
     this.host = await startSparkMcpHost(toolDeps(t, { mac: this.fake }));
     const { conversationId, runId } = this.chat;
+    this.observations = createRunObservations({ db: t.db, runId, audit: recorded.hooks.audit });
     const grant = (this.grant = await this.host.grant({
       workspaceId: t.workspaceId,
       conversationId,
       runId,
       ...(options.noCards ? {} : { actions: recorded.hooks }),
-      observations: createRunObservations({ db: t.db, runId, audit: recorded.hooks.audit }),
+      observations: this.observations,
       ...options.scope,
     }));
     this.client = await connectClient(grant);
+  }
+
+  async observationsSaved(): Promise<void> {
+    await this.observations?.settled();
   }
 
   async revoke(): Promise<void> {

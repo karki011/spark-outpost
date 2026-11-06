@@ -51,8 +51,12 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     return reply ? shotAnchor(reply.shown, reply.held) : null;
   };
   let send: ((text: ProviderMessage) => Promise<SteerOutcome>) | null = null;
-  let busy = false;
+  let polling: Promise<void> | null = null;
   let done = false;
+  let leave: () => void = () => undefined;
+  const left = new Promise<'left'>((resolve) => {
+    leave = () => resolve('left');
+  });
   const handedBack = new Set<string>();
   const handedOver = new Set<string>();
   const announce = (messages: readonly MemberMessage[], status: string) =>
@@ -136,42 +140,44 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     }
   };
   const poll = async () => {
-    if (busy || done) return;
-    busy = true;
-    try {
-      await handQueue().catch(() => undefined);
-      const claimed = await claimMemberMessages(db, runId, topRunId, send === null, anchor());
-      if (claimed.length === 0) return;
-      if (send) {
-        const message = await prompt(claimed);
-        if (message === null) return;
-        const outcome = await send(message);
-        if (outcome === 'later') {
-          await setMemberMessageStatus(
-            db,
-            claimed.map((item) => item.id),
-            'queued',
-          );
-          return;
-        }
-        if (outcome) {
-          await announce(claimed, 'delivered');
-          return;
-        }
+    if (done) return;
+    await handQueue().catch(() => undefined);
+    const claimed = await claimMemberMessages(db, runId, topRunId, send === null, anchor());
+    if (claimed.length === 0) return;
+    if (send) {
+      const message = await prompt(claimed);
+      if (message === null) return;
+      const outcome = await Promise.race([send(message), left]);
+      if (outcome === 'left') return;
+      if (outcome === 'later') {
+        await setMemberMessageStatus(
+          db,
+          claimed.map((item) => item.id),
+          'queued',
+        );
+        return;
       }
-      const urgent = claimed.filter((message) => message.urgency === 'now');
-      const later = claimed.filter((message) => message.urgency !== 'now');
-      await setMemberMessageStatus(
-        db,
-        later.map((message) => message.id),
-        'queued',
-      );
-      if (urgent.length > 0) await sendUnsteered(urgent);
-    } finally {
-      busy = false;
+      if (outcome) {
+        await announce(claimed, 'delivered');
+        return;
+      }
     }
+    const urgent = claimed.filter((message) => message.urgency === 'now');
+    const later = claimed.filter((message) => message.urgency !== 'now');
+    await setMemberMessageStatus(
+      db,
+      later.map((message) => message.id),
+      'queued',
+    );
+    if (urgent.length > 0) await sendUnsteered(urgent);
   };
-  const timer = setInterval(() => void poll().catch(() => undefined), options.pollMs);
+  const timer = setInterval(() => {
+    polling ??= poll()
+      .catch(() => undefined)
+      .finally(() => {
+        polling = null;
+      });
+  }, options.pollMs);
   return {
     attach(sender) {
       send = sender;
@@ -191,6 +197,8 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     async dispose(stopped = false) {
       done = true;
       clearInterval(timer);
+      if (stopped) leave();
+      await polling;
       if (stopped) await markUnreadOnStop(db, runId);
       await markMissedMessages(db, runId);
     },

@@ -84,7 +84,7 @@ describe('signing in with the GitHub App', { timeout: 60_000 }, () => {
     app.decision = 'approved';
     const polls = app.polls;
     await new Promise((resolve) => setTimeout(resolve, 100));
-    expect(app.polls).toBeLessThanOrEqual(polls + 1);
+    expect(app.polls).toBe(polls);
     expect(app.issued).toEqual([]);
     expect((await connection(world)).app.state).toBe('signed_out');
     expect(await world.secrets.get('github-app')).toBeNull();
