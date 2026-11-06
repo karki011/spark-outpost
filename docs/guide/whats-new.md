@@ -12,6 +12,7 @@ summary: What changed in recent releases and what to do next.
 | ----------------------------- | --------------------------------------------------------------- |
 | What changed                  | What to do                                                      |
 | ---                           | ---                                                             |
+| Race fixes                    | Nothing.                                                        |
 | Custom endpoint               | [Connect it](custom-endpoint.md).                               |
 | More Terminal agents          | [Start one](terminals.md#start-a-terminal-session).             |
 | Fewer leftover agent sessions | Nothing.                                                        |
