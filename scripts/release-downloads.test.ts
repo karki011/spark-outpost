@@ -53,7 +53,7 @@ describe('release downloads', () => {
     expect(page).toContain('Released 2026-10-19.');
     expect(page).toContain(`(${feed}/Spark-Outpost-0.1.0-beta.3-arm64.dmg)`);
     expect(page).toContain(`(${feed}/Spark-Outpost-0.1.0-beta.3-x64.dmg)`);
-    expect(page).toContain('Requires macOS 12 or later (Mac control needs macOS 14).');
+    expect(page).toContain('Requires macOS 13 or later (Mac control needs macOS 14).');
     expect(page).toContain('- Fixes: Refresh no longer reverts.');
     expect(releaseDate(page)).toBe('2026-10-19');
     expect(renderVersionPage(release, undefined)).not.toContain('Released');

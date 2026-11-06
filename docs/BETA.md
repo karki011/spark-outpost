@@ -27,7 +27,7 @@ Thanks for trying Spark Outpost early. It's a desktop app that runs AI coding ag
 
 ### Install
 
-1. You need macOS 12 or later and about 2 GB of free disk space.
+1. You need macOS 13 or later and about 2 GB of free disk space.
 2. Download the dmg for your Mac: **arm64** for Apple silicon (M1 and later), **x64** for Intel.
 3. Open it and drag **Spark Outpost** to **Applications**, then open it from there.
 4. The first start takes up to a minute while Spark sets up its local database.

@@ -2,7 +2,7 @@ export const FEED_URL = 'https://pub-aae3512121074a13b84ee166f8d153af.r2.dev';
 export const README_START = '<!-- release-downloads:start -->';
 export const README_END = '<!-- release-downloads:end -->';
 
-const REQUIREMENT = 'Requires macOS 12 or later (Mac control needs macOS 14).';
+const REQUIREMENT = 'Requires macOS 13 or later (Mac control needs macOS 14).';
 const VERSION_BADGE =
   /<img alt="Version [^"]*" src="https:\/\/img\.shields\.io\/badge\/version-[^"]*-2bb39a">/;
 const DATE_LINE = /^Released (\d{4}-\d{2}-\d{2})\.$/m;
@@ -95,7 +95,7 @@ export function renderReadmeSection(latest: Release): string {
     '',
     `${downloadButton('arm64', 'Apple silicon', '2bb39a')} ${downloadButton('x64', 'Intel', '555555')}`,
     '',
-    `Free beta · [${version}](releases/${version}.md) · macOS 12+ (Mac control needs 14) · [All versions](releases/README.md)`,
+    `Free beta · [${version}](releases/${version}.md) · macOS 13+ (Mac control needs 14) · [All versions](releases/README.md)`,
     '',
     README_END,
   ].join('\n');
