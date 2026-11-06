@@ -124,7 +124,7 @@ export async function sparkAvailability(
     servicenow: sources.some((open) => open.connection.source === 'servicenow'),
     slack: slack !== null,
     pull_requests: project && gitHub.connected,
-    github: gitHub.connected,
+    github: gitHub.connected && chat,
     project,
     publish: project && chat,
     pull_request_create: project && gitHub.ownLogin && chat,
