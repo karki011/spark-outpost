@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
-import { readFile, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { readFile, rename, writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { z } from 'zod';
 import { isAlive, killProcessTree } from './process-group.ts';
@@ -19,9 +20,24 @@ export async function processStartedAt(pid: number): Promise<string | null> {
   }
 }
 
-export async function recordProcess(file: string, pid: number): Promise<void> {
+const pendingRecords = new Map<string, Promise<void>>();
+
+export function recordProcess(file: string, pid: number): Promise<void> {
+  const previous = pendingRecords.get(file) ?? Promise.resolve();
+  const next = previous.then(() => writeRecord(file, pid)).catch(() => undefined);
+  pendingRecords.set(file, next);
+  void next.then(() => {
+    if (pendingRecords.get(file) === next) pendingRecords.delete(file);
+  });
+  return next;
+}
+
+async function writeRecord(file: string, pid: number): Promise<void> {
   const started = await processStartedAt(pid);
-  if (started) await writeFile(file, JSON.stringify({ pid, started }), { mode: 0o600 });
+  if (!started) return;
+  const partial = `${file}.${randomUUID()}.partial`;
+  await writeFile(partial, JSON.stringify({ pid, started }), { mode: 0o600 });
+  await rename(partial, file);
 }
 
 async function recorded(file: string): Promise<z.infer<typeof recordSchema> | null> {

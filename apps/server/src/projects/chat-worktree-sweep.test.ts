@@ -67,9 +67,8 @@ describe('the worktree sweeper', () => {
     };
     const sweeper = startWorktreeSweeper(db, 1, sweep);
     expect(sweeps).toBe(1);
-    await new Promise((resolve) => setTimeout(resolve, 80));
+    await vi.waitFor(() => expect(sweeps).toBeGreaterThan(2));
     await sweeper.stop();
-    expect(sweeps).toBeGreaterThan(1);
     expect(most).toBe(1);
   });
 
@@ -103,9 +102,8 @@ describe('the worktree sweeper', () => {
       if (sweeps === 1) throw new Error('git is gone');
     };
     const sweeper = startWorktreeSweeper(db, 1, sweep);
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await vi.waitFor(() => expect(sweeps).toBeGreaterThan(1));
     await sweeper.stop();
-    expect(sweeps).toBeGreaterThan(1);
     expect(console.error).toHaveBeenCalledWith('Could not sweep chat worktrees', expect.any(Error));
   });
 

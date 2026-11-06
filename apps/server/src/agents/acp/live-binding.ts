@@ -116,13 +116,13 @@ const HELD_AUDIT_LIMIT = 2_000;
 
 export interface ReboundObserver {
   observer: ProtocolObserver;
-  bind(target: ProtocolObserver | undefined): void;
-  unbind(): void;
+  bind(target: ProtocolObserver | undefined): () => void;
 }
 
 export function reboundObserver(): ReboundObserver {
   let target: ProtocolObserver | undefined;
   let bound = false;
+  let generation = 0;
   const held: ((to: ProtocolObserver) => void)[] = [];
   const send = (deliver: (to: ProtocolObserver) => void) => {
     if (bound) {
@@ -139,12 +139,15 @@ export function reboundObserver(): ReboundObserver {
     bind(next) {
       target = next;
       bound = true;
+      generation += 1;
+      const mine = generation;
       const waiting = held.splice(0);
       if (next) for (const deliver of waiting) deliver(next);
-    },
-    unbind() {
-      target = undefined;
-      bound = false;
+      return () => {
+        if (generation !== mine) return;
+        target = undefined;
+        bound = false;
+      };
     },
   };
 }

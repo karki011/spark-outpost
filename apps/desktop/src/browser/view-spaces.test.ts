@@ -58,7 +58,7 @@ describe('saved Spaces', () => {
   beforeEach(async () => {
     folder = await mkdtemp(path.join(tmpdir(), 'spark-view-'));
   });
-  afterEach(() => rm(folder, { recursive: true, force: true }));
+  afterEach(() => rm(folder, { recursive: true, force: true, maxRetries: 5 }));
 
   it('loads a file from before Spaces with nothing lost, in one default Space', async () => {
     const saved = parseSavedView(OLD_FILE);

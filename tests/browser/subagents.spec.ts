@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { ConversationDetail } from '../../packages/contracts/src/conversations.ts';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
 import { toggleHeaderPane } from './header-menu.ts';
 import { openChats } from './navigation.ts';
 import { resetWithAgents } from './project-chat-kit.ts';
@@ -31,6 +31,24 @@ const mood = (page: Page) => page.locator('.msg.ai .mood').last();
 const cardsIn = (scope: ReturnType<Page['locator']>) =>
   scope.getByRole('list', { name: 'Sub-agents' }).getByRole('listitem');
 const agentsLine = (turn: ReturnType<Page['locator']>) => turn.locator('.sl-text');
+
+type SubagentRows = NonNullable<ConversationDetail['subagents']>[string];
+
+async function rewriteSubagents(route: Route, change: (rows: SubagentRows) => SubagentRows) {
+  const response = await route.fetch().catch(() => null);
+  if (!response) {
+    await route.abort().catch(() => undefined);
+    return;
+  }
+  const detail = (await response.json().catch(() => null)) as ConversationDetail | null;
+  const json = detail && {
+    ...detail,
+    subagents: Object.fromEntries(
+      Object.entries(detail.subagents ?? {}).map(([id, rows]) => [id, change(rows)]),
+    ),
+  };
+  await route.fulfill(json ? { response, json } : { response }).catch(() => undefined);
+}
 
 test('the context rail shows the same worker blobs as Agent TV and preserves their outcomes', async ({
   page,
@@ -71,23 +89,17 @@ test('the context rail shows the same worker blobs as Agent TV and preserves the
 test('a larger sidebar team keeps every worker label separate', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.setViewportSize({ width: 2000, height: 1100 });
-  await page.route(/\/api\/conversations\/[^/]+$/, async (route) => {
-    const response = await route.fetch();
-    const detail = (await response.json()) as ConversationDetail;
-    const subagents = Object.fromEntries(
-      Object.entries(detail.subagents ?? {}).map(([id, rows]) => [
-        id,
-        rows.length
-          ? Array.from({ length: 6 }, (_, index) => ({
-              ...rows[0]!,
-              id: `worker-${index}`,
-              name: `Builder ${index + 1}`,
-            }))
-          : rows,
-      ]),
-    );
-    await route.fulfill({ response, json: { ...detail, subagents } });
-  });
+  await page.route(/\/api\/conversations\/[^/]+$/, (route) =>
+    rewriteSubagents(route, (rows) =>
+      rows.length
+        ? Array.from({ length: 6 }, (_, index) => ({
+            ...rows[0]!,
+            id: `worker-${index}`,
+            name: `Builder ${index + 1}`,
+          }))
+        : rows,
+    ),
+  );
   await ask(page, 'Split the work #build #subagentshold');
   const dock = page.getByRole('region', { name: 'Chat context' }).locator('.crail-tv');
   await expect(dock.locator('.tv-n')).toHaveCount(7, { timeout: 30_000 });
@@ -125,17 +137,11 @@ test('Agent TV redirects through the lead composer without replacing a draft or 
   page,
 }) => {
   const purpose = `Inspect ${'the routes and their existing boundaries '.repeat(8)}`;
-  await page.route(/\/api\/conversations\/[^/]+$/, async (route) => {
-    const response = await route.fetch();
-    const detail = (await response.json()) as ConversationDetail;
-    const subagents = Object.fromEntries(
-      Object.entries(detail.subagents ?? {}).map(([id, rows]) => [
-        id,
-        rows.map((row) => ({ ...row, task: `${purpose}\nDo not copy this task body.` })),
-      ]),
-    );
-    await route.fulfill({ response, json: { ...detail, subagents } });
-  });
+  await page.route(/\/api\/conversations\/[^/]+$/, (route) =>
+    rewriteSubagents(route, (rows) =>
+      rows.map((row) => ({ ...row, task: `${purpose}\nDo not copy this task body.` })),
+    ),
+  );
   const input = await ask(page, 'Split the work #build #subagentshold');
   await expect(page.locator('.msg.ai').last().locator('.turn-working')).toContainText(
     'Running 2 agents',
@@ -354,17 +360,11 @@ test('a Claude turn picks up again on its own when its background work reports',
 test('a finished lead shows stale working workers as inactive after reload', async ({ page }) => {
   await ask(page, 'Split the work #build #subagents');
   await expect(mood(page)).toHaveText('done', { timeout: 30_000 });
-  await page.route(/\/api\/conversations\/[^/]+$/, async (route) => {
-    const response = await route.fetch();
-    const detail = (await response.json()) as ConversationDetail;
-    const subagents = Object.fromEntries(
-      Object.entries(detail.subagents ?? {}).map(([id, rows]) => [
-        id,
-        rows.map((row) => ({ ...row, state: 'working', endedAt: null })),
-      ]),
-    );
-    await route.fulfill({ response, json: { ...detail, subagents } });
-  });
+  await page.route(/\/api\/conversations\/[^/]+$/, (route) =>
+    rewriteSubagents(route, (rows) =>
+      rows.map((row) => ({ ...row, state: 'working', endedAt: null })),
+    ),
+  );
   await page.reload();
   const turn = page.locator('.msg.ai').last();
   await expect(turn.locator('.sl-state')).toHaveText(['Inactive', 'Inactive', 'Inactive']);

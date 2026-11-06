@@ -31,8 +31,8 @@ export function gitHubAppRoutes(deps: GitHubDeps, sleep?: Sleep): Router {
     res.json(await signIn.start());
   });
 
-  router.delete('/github/app/sign-in', (_req, res) => {
-    res.json(signIn?.cancel() ?? IDLE);
+  router.delete('/github/app/sign-in', async (_req, res) => {
+    res.json(signIn ? await signIn.cancel() : IDLE);
   });
 
   router.post('/github/app/repos', async (_req, res) => {
@@ -41,7 +41,7 @@ export function gitHubAppRoutes(deps: GitHubDeps, sleep?: Sleep): Router {
   });
 
   router.delete('/github/app', async (_req, res) => {
-    signIn?.cancel();
+    await signIn?.cancel();
     forgetPrRoutes();
     res.json(await disconnectApp(deps));
   });

@@ -84,6 +84,7 @@ describe('the first use of an app in a chat', () => {
       ['read', 'user_allowed'],
       ['read', 'allowed_earlier'],
     ]);
+    await h.observationsSaved();
     const { rows } = await h.t.db.query(
       'SELECT source, label FROM run_observations WHERE run_id = $1',
       [h.chat.runId],

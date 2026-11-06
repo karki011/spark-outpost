@@ -27,7 +27,7 @@ export interface SignInDeps extends AppTokenDeps {
 export interface AppSignIn {
   state(): GitHubAppSignIn;
   start(): Promise<GitHubAppSignIn>;
-  cancel(): GitHubAppSignIn;
+  cancel(): Promise<GitHubAppSignIn>;
 }
 
 const IDLE: GitHubAppSignIn = {
@@ -115,6 +115,7 @@ async function outcome(
 export function createAppSignIn(deps: SignInDeps): AppSignIn {
   let flow = IDLE;
   let running: AbortController | null = null;
+  let following: Promise<void> = Promise.resolve();
 
   async function follow(code: DeviceCode, controller: AbortController) {
     const result = await outcome(deps, code, controller.signal).catch((error: unknown) =>
@@ -142,7 +143,7 @@ export function createAppSignIn(deps: SignInDeps): AppSignIn {
           expiresAt: new Date(code.expiresAt).toISOString(),
           message: null,
         };
-        void follow(code, controller);
+        following = follow(code, controller);
         return flow;
       } catch (error) {
         if (running === controller) {
@@ -152,10 +153,11 @@ export function createAppSignIn(deps: SignInDeps): AppSignIn {
         throw error;
       }
     },
-    cancel() {
+    async cancel() {
       running?.abort();
       running = null;
       flow = IDLE;
+      await following;
       return flow;
     },
   };

@@ -146,6 +146,80 @@ describe('queued messages while the agent only waits', () => {
     expect(await getMemberMessage(t.db, id)).toMatchObject({ status: 'missed' });
   });
 
+  it('marks a message missed on Stop while the agent has not answered it yet', async () => {
+    const { conversationId, runId } = await waitingTurn();
+    const id = randomUUID();
+    await sendNow(t.db, conversationId, { id, content: 'Steer' }, target);
+    const inbox = openMemberInbox(t.db, {
+      conversationId,
+      runId,
+      topRunId: runId,
+      pollMs: 10,
+      append: async () => null,
+    });
+    let asked = 0;
+    inbox.attach(() => {
+      asked += 1;
+      return new Promise(() => undefined);
+    });
+    await expect.poll(() => asked).toBe(1);
+    await inbox.dispose(true);
+    expect(await getMemberMessage(t.db, id)).toMatchObject({ status: 'missed' });
+  });
+
+  it('keeps the agent’s answer to a message it was still answering when the turn ends', async () => {
+    const { conversationId, runId } = await waitingTurn();
+    const id = randomUUID();
+    await sendNow(t.db, conversationId, { id, content: 'Steer' }, target);
+    const inbox = openMemberInbox(t.db, {
+      conversationId,
+      runId,
+      topRunId: runId,
+      pollMs: 10,
+      append: async () => null,
+    });
+    let answer: (outcome: 'later') => void = () => undefined;
+    let asked = 0;
+    inbox.attach(
+      () =>
+        new Promise((resolve) => {
+          asked += 1;
+          answer = resolve;
+        }),
+    );
+    await expect.poll(() => asked).toBe(1);
+    const disposing = inbox.dispose();
+    answer('later');
+    await disposing;
+    expect(await getMemberMessage(t.db, id)).toMatchObject({ status: 'queued' });
+  });
+
+  it('stops waiting for an answer that never comes when the turn ends', async () => {
+    const { conversationId, runId } = await waitingTurn();
+    const id = randomUUID();
+    await sendNow(t.db, conversationId, { id, content: 'Steer' }, target);
+    const inbox = openMemberInbox(t.db, {
+      conversationId,
+      runId,
+      topRunId: runId,
+      pollMs: 10,
+      answerWaitMs: 50,
+      append: async () => null,
+    });
+    let asked = 0;
+    inbox.attach(() => {
+      asked += 1;
+      return new Promise(() => undefined);
+    });
+    await expect.poll(() => asked).toBe(1);
+    const disposing = inbox.dispose();
+    const next = randomUUID();
+    await sendNow(t.db, conversationId, { id: next, content: 'Then this' }, target);
+    await disposing;
+    expect(await getMemberMessage(t.db, id)).toMatchObject({ status: 'missed' });
+    expect(await getMemberMessage(t.db, next)).toMatchObject({ status: 'queued' });
+  });
+
   it('keeps them queued while the agent works or Spark is paused', async () => {
     const { conversationId, runId, lease } = await waitingTurn();
     await queued(conversationId, 'Typed');
