@@ -57,6 +57,7 @@ import { artifactTool } from './tools/artifact-tool.ts';
 import { rulesEditTool } from './tools/rules-edit-tool.ts';
 import { pluginsEditTool } from './tools/plugins-edit-tool.ts';
 import { findRepoTool, linkRepoTool } from './tools/repo-tools.ts';
+import { cloneRepoTool, githubReposTool, researchRepoTool } from './tools/github-repo-tools.ts';
 import { terminalTool } from './tools/terminal-tool.ts';
 import { usageTools } from './tools/usage-tools.ts';
 import { workTools } from './tools/work-tools.ts';
@@ -72,6 +73,8 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   ...projectTools,
   findTool,
   findRepoTool,
+  githubReposTool,
+  researchRepoTool,
   ...chatTools,
   historyTool,
   attentionTool,
@@ -116,6 +119,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   rulesEditTool,
   pluginsEditTool,
   linkRepoTool,
+  cloneRepoTool,
   ...askSparkTools,
   ...askSparkIslandTools,
 ];
@@ -203,6 +207,9 @@ export const CHAT_TURN_ONLY: ReadonlySet<string> = new Set([
   'spark_rules_edit',
   'spark_plugins_edit',
   'spark_link_repo',
+  'spark_github_repos',
+  'spark_research_repo',
+  'spark_clone_repo',
 ]);
 
 function offeredTo(tool: SparkTool, scope: Partial<SparkScope>): boolean {

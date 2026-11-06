@@ -8,6 +8,7 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   tickets: false,
   slack: false,
   pull_requests: false,
+  github: false,
   project: false,
   publish: false,
   pull_request_create: false,

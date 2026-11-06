@@ -35,6 +35,7 @@ export interface ConversationActionDeps {
   deleteSettleMs?: number;
   nativeTerminals?: NativeRuntime;
   chatFolders?: string;
+  researchCopies?: string;
 }
 
 export function conversationActionRoutes({
@@ -44,6 +45,7 @@ export function conversationActionRoutes({
   nativeTerminals,
   deleteSettleMs = DEFAULT_SETTLE_MS,
   chatFolders,
+  researchCopies,
 }: ConversationActionDeps): Router {
   const router = Router();
 
@@ -95,6 +97,7 @@ export function conversationActionRoutes({
     await deleteConversation(db, workspaceId, id);
     await removeWorkdirs(workdirs);
     if (chatFolders) await removeChatFolder(chatFolders, id);
+    if (researchCopies) await removeChatFolder(researchCopies, id);
     res.status(204).end();
   });
 

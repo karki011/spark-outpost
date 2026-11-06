@@ -2,6 +2,7 @@ import { join, resolve } from 'node:path';
 import { DEV_API_TOKEN_FILE, artifactPortFor, isKeepTerminalsStop } from '@spark-outpost/contracts';
 import { LOCAL_DATA_DIR, loadConfig, sparkDataDir } from '../config.ts';
 import { chatFoldersBase } from '../chat-files/folders.ts';
+import { chatResearchBase } from '../chat-files/research-copies.ts';
 import { startArtifactOrigin } from '../artifacts/origin-server.ts';
 import { startMorningBrief } from '../digest/morning.ts';
 import { ensureLocalWorkspace } from '../persistence/conversations.ts';
@@ -195,6 +196,7 @@ const cloneDeps = {
 const localDir = LOCAL_DATA_DIR;
 const nativeDataDir = sparkDataDir(config);
 const chatFolders = chatFoldersBase(nativeDataDir, config.BRANCH_PREFIX);
+const researchCopies = chatResearchBase(config.BRANCH_PREFIX);
 const nativeSessionsDir = join(nativeDataDir, config.BRANCH_PREFIX, 'terminal-sessions');
 const perInstance = config.SPARK_DATA_DIR ? '' : `-${config.API_PORT}`;
 const terminalTmux = chooseTmux(
@@ -327,6 +329,7 @@ const { app, reconcileRemote } = createAppParts({
   agentRuntime: config.AGENT_RUNTIME,
   loginShell,
   chatFolders,
+  researchCopies,
   artifactOriginDown: artifactPages === null,
   terminals,
   nativeTerminals,
@@ -387,6 +390,7 @@ const server = app.listen(config.API_PORT, config.API_HOST, () => {
     workspaceId,
     auditRetentionDays: config.AUDIT_RETENTION_DAYS,
     chatFolders,
+    researchCopies,
   });
   void slackSocket.refresh();
   outposts.start();
