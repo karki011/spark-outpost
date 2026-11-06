@@ -55,6 +55,7 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
   };
   let send: ((text: ProviderMessage) => Promise<SteerOutcome>) | null = null;
   let polling: Promise<void> | null = null;
+  let inFlight: string[] = [];
   let done = false;
   let leave: () => void = () => undefined;
   const left = new Promise<'left'>((resolve) => {
@@ -150,8 +151,10 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     if (send) {
       const message = await prompt(claimed);
       if (message === null) return;
+      inFlight = claimed.map((item) => item.id);
       const outcome = await Promise.race([send(message), left]);
       if (outcome === 'left') return;
+      inFlight = [];
       if (outcome === 'later') {
         await setMemberMessageStatus(
           db,
@@ -208,7 +211,8 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
       }, options.answerWaitMs ?? ANSWER_WAIT_MS);
       await polling;
       clearTimeout(giveUp);
-      if (stopped || gaveUp) await markUnreadOnStop(db, runId);
+      if (stopped) await markUnreadOnStop(db, runId);
+      else if (gaveUp && inFlight.length > 0) await setMemberMessageStatus(db, inFlight, 'missed');
       await markMissedMessages(db, runId);
     },
   };

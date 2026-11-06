@@ -212,8 +212,12 @@ describe('queued messages while the agent only waits', () => {
       return new Promise(() => undefined);
     });
     await expect.poll(() => asked).toBe(1);
-    await inbox.dispose();
+    const disposing = inbox.dispose();
+    const next = randomUUID();
+    await sendNow(t.db, conversationId, { id: next, content: 'Then this' }, target);
+    await disposing;
     expect(await getMemberMessage(t.db, id)).toMatchObject({ status: 'missed' });
+    expect(await getMemberMessage(t.db, next)).toMatchObject({ status: 'queued' });
   });
 
   it('keeps them queued while the agent works or Spark is paused', async () => {
