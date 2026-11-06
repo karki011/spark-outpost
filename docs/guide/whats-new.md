@@ -10,7 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                  | What to do                                                      |
 | ----------------------------- | --------------------------------------------------------------- |
-| Needs macOS 13 or later | [Get started](getting-started.md). |
+| Needs macOS 13 or later       | [Get started](getting-started.md).                              |
 | Race fixes                    | Nothing.                                                        |
 | Endpoint key header           | [Pick it](custom-endpoint.md).                                  |
 | Custom endpoint               | [Connect it](custom-endpoint.md).                               |
