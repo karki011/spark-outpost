@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { expandSection } from './provider-screen.ts';
 import { resetTestDatabase } from './database.ts';
-import { REJECTED_KEY_MARKER } from './stub-config.ts';
+import { REJECTED_KEY_MARKER, X_API_KEY_MODEL } from './stub-config.ts';
 import { STUB_URL } from './ticket-seed.ts';
 import { openChats } from './navigation.ts';
 import { animationsSettled } from './settle.ts';
@@ -58,7 +58,10 @@ test('a custom endpoint connects with an address and model, then answers a test'
   await expect(custom).toContainText('The server said: model not found');
 
   await model.fill('qwen3-coder');
+  const keyHeader = custom.getByRole('radiogroup', { name: 'Send the key as' });
+  await expect(keyHeader).toHaveCount(0);
   await key.fill(`${REJECTED_KEY_MARKER}-${KEY}`);
+  await expect(keyHeader.getByRole('radio', { name: 'Authorization: Bearer' })).toBeChecked();
   await testButton.click();
   await expect(custom).toContainText('The endpoint refused the request (401). Check the API key.');
 
@@ -103,4 +106,45 @@ test('a custom endpoint connects with an address and model, then answers a test'
   await custom.getByRole('button', { name: 'Test connection' }).click();
   await expect(details).toContainText('qwen3-coder, qwen3-small');
   await expect(details).toContainText('No API key');
+});
+
+test('a custom endpoint can send its key in the x-api-key header', async ({ page }) => {
+  const providers = await openProviders(page);
+  await providers.locator('.ptile[data-prov="custom"]').click();
+  const custom = providers.locator('.pconf[data-prov="custom"]');
+  await custom.getByLabel('Server address').fill(BASE_URL);
+  await custom.getByLabel('Model', { exact: true }).fill(X_API_KEY_MODEL);
+  const key = custom.getByLabel('API key (optional)');
+  await key.fill(KEY);
+  const keyHeader = custom.getByRole('radiogroup', { name: 'Send the key as' });
+  await custom.getByRole('button', { name: 'Test connection' }).click();
+  await expect(custom).toContainText('The server said: send the key in x-api-key');
+
+  const xApiKey = keyHeader.getByRole('radio', { name: 'x-api-key' });
+  await keyHeader.getByRole('radio', { name: 'Authorization: Bearer' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(xApiKey).toBeChecked();
+  await expect(xApiKey).toBeFocused();
+  await key.press('Enter');
+  const details = custom.getByRole('region', { name: 'How to connect' });
+  await expect(details).toContainText('API key in your keychain, sent as x-api-key');
+  await expect(page.locator('body')).not.toContainText(KEY);
+
+  await expandSection(custom, 'Test');
+  await custom.getByRole('button', { name: 'Send test message' }).click();
+  await expect(custom.getByRole('region', { name: 'Test' })).toContainText(
+    new RegExp(`Test message answered in \\d+\\.\\d s by ${X_API_KEY_MODEL}`),
+  );
+
+  await expandSection(custom, 'How to connect');
+  await custom.getByRole('button', { name: 'Change endpoint' }).click();
+  await expect(keyHeader).toHaveCount(0);
+  await custom.getByLabel('API key (optional)').fill(KEY);
+  await expect(keyHeader.getByRole('radio', { name: 'x-api-key' })).toBeChecked();
+  await animationsSettled(page);
+  const results = await new AxeBuilder({ page })
+    .include('.pconf[data-prov="custom"]')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+  expect(results.violations).toEqual([]);
 });

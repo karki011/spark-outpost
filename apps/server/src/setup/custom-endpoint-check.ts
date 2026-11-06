@@ -1,10 +1,17 @@
-import { isLoopbackHost, redactText, type CustomEndpoint } from '@spark-outpost/contracts';
 import {
-  CUSTOM_NO_KEY_TOKEN,
+  CUSTOM_X_API_KEY_SUMMARY,
+  isLoopbackHost,
+  redactText,
+  type CustomEndpoint,
+  type CustomKeyHeader,
+} from '@spark-outpost/contracts';
+import {
+  endpointCredential,
   endpointModels,
   storedEndpointSecret,
+  type StoredEndpoint,
 } from '../agents/acp/custom-endpoint.ts';
-import { bearerMessageRequest } from './messages-request.ts';
+import { messagesRequest } from './messages-request.ts';
 import type { CatalogEntry } from '../providers/catalog.ts';
 import type { RunCommand } from './command.ts';
 import { findCli, type Verification, type VerifyStep } from './verify.ts';
@@ -83,14 +90,13 @@ function failureReason(
 }
 
 export async function askEndpoint(
-  endpoint: CustomEndpoint,
-  apiKey: string,
+  endpoint: StoredEndpoint,
   deps: EndpointFetch,
   timeoutMs: number,
 ): Promise<EndpointReply> {
-  const request = bearerMessageRequest(
+  const request = messagesRequest(
     endpoint.baseUrl,
-    apiKey || CUSTOM_NO_KEY_TOKEN,
+    endpointCredential(endpoint),
     endpoint.model,
     PROMPT,
     'manual',
@@ -108,7 +114,7 @@ export async function askEndpoint(
   if (!response.ok) {
     return {
       ok: false,
-      reason: failureReason(endpoint, apiKey, endpoint.model, response.status, payload),
+      reason: failureReason(endpoint, endpoint.apiKey, endpoint.model, response.status, payload),
     };
   }
   if (!isMessagesReply(payload)) {
@@ -129,6 +135,11 @@ const VERIFY_TIMEOUT_MS = 60_000;
 export const CUSTOM_KEY_SAVED = 'API key in your keychain';
 export const CUSTOM_NO_KEY = 'No API key';
 
+function keySummary(endpoint: StoredEndpoint): string {
+  if (!endpoint.apiKey) return CUSTOM_NO_KEY;
+  return endpoint.keyHeader === 'x-api-key' ? CUSTOM_X_API_KEY_SUMMARY : CUSTOM_KEY_SAVED;
+}
+
 export function sparkPortProblem(baseUrl: string, sparkPorts: ReadonlySet<number>): string | null {
   const url = new URL(baseUrl);
   if (!isLoopbackHost(url.hostname)) return null;
@@ -138,13 +149,23 @@ export function sparkPortProblem(baseUrl: string, sparkPorts: ReadonlySet<number
     : null;
 }
 
+interface EndpointKey {
+  apiKey: string;
+  keyHeader: CustomKeyHeader;
+}
+
+function storedEndpointOf(endpoint: CustomEndpoint, key: EndpointKey): StoredEndpoint {
+  const apiKey = key.apiKey.trim();
+  return { ...endpoint, apiKey, keyHeader: apiKey ? key.keyHeader : 'bearer' };
+}
+
 export async function* verifyCustomEndpoint(
   endpoint: CustomEndpoint,
-  rawKey: string,
+  key: EndpointKey,
   deps: EndpointFetch,
   sparkPorts: ReadonlySet<number>,
 ): Verification {
-  const apiKey = rawKey.trim();
+  const stored = storedEndpointOf(endpoint, key);
   yield started('Checking the address');
   const portProblem = sparkPortProblem(endpoint.baseUrl, sparkPorts);
   if (portProblem) {
@@ -155,7 +176,7 @@ export async function* verifyCustomEndpoint(
 
   yield started(`Sending a test request to ${endpoint.model}`);
   const startedAt = Date.now();
-  const reply = await askEndpoint(endpoint, apiKey, deps, VERIFY_TIMEOUT_MS);
+  const reply = await askEndpoint(stored, deps, VERIFY_TIMEOUT_MS);
   if (!reply.ok) {
     yield failed(reply.reason);
     return null;
@@ -164,9 +185,9 @@ export async function* verifyCustomEndpoint(
   return {
     method: 'api_key',
     detail: endpoint.baseUrl,
-    summary: apiKey ? CUSTOM_KEY_SAVED : CUSTOM_NO_KEY,
+    summary: keySummary(stored),
     models: endpointModels(endpoint),
-    secret: storedEndpointSecret(endpoint, apiKey),
+    secret: storedEndpointSecret(stored),
   };
 }
 
@@ -180,7 +201,7 @@ export interface CustomEndpointVerifyDeps {
 export async function* verifyCustomEndpointWithCli(
   entry: CatalogEntry,
   endpoint: CustomEndpoint,
-  rawKey: string,
+  key: EndpointKey,
   deps: CustomEndpointVerifyDeps,
 ): Verification {
   const found = yield* findCli(
@@ -190,5 +211,5 @@ export async function* verifyCustomEndpointWithCli(
     `${entry.name} also needs the \`${entry.cli}\` CLI installed.`,
   );
   if (!found) return null;
-  return yield* verifyCustomEndpoint(endpoint, rawKey, deps, deps.sparkPorts);
+  return yield* verifyCustomEndpoint(endpoint, key, deps, deps.sparkPorts);
 }

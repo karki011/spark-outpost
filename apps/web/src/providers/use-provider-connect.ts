@@ -4,6 +4,7 @@ import {
   providerIdSchema,
   type AdvisorSetup,
   type ConnectionMethod,
+  type CustomKeyHeader,
   type ProviderSetup,
   type VerifyFailureCode,
   type VerifyRequest,
@@ -12,7 +13,7 @@ import { api, queryKeys } from '../api/client.ts';
 import { setupKey, verifyProvider } from '../api/setup.ts';
 import type { BlobExpression } from '../brand/blob-expression.ts';
 import type { VerifyFailure } from './tile-status.ts';
-import { endpointFieldsOf, type EndpointFields } from './endpoint-fields.ts';
+import { endpointFieldsOf, keyHeaderOf, type EndpointFields } from './endpoint-fields.ts';
 import { appendLogLine, resolveLastLine, type VerifyLogLine } from './verify-log.ts';
 
 export type ProviderMood = Extract<BlobExpression, 'idle' | 'thinking' | 'happy' | 'sad'>;
@@ -34,13 +35,25 @@ function useFlag(durationMs: number) {
   return [on, () => setOn(true)] as const;
 }
 
+interface EndpointKey {
+  fields: EndpointFields;
+  keyHeader: CustomKeyHeader;
+}
+
 function verifyBody(
   id: ProviderSetup['id'] | AdvisorSetup['id'],
   method: ConnectionMethod,
   apiKey: string,
-  endpoint: EndpointFields,
+  endpoint: EndpointKey,
 ): VerifyRequest {
-  if (id === 'custom') return { method: 'endpoint', endpoint, apiKey: apiKey.trim() };
+  if (id === 'custom') {
+    return {
+      method: 'endpoint',
+      endpoint: endpoint.fields,
+      apiKey: apiKey.trim(),
+      keyHeader: endpoint.keyHeader,
+    };
+  }
   return method === 'api_key' ? { method: 'api_key', apiKey: apiKey.trim() } : { method: 'cli' };
 }
 
@@ -57,6 +70,7 @@ export function useProviderConnect(
   const [reauth, setReauth] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [endpoint, setEndpoint] = useState<EndpointFields>(() => endpointFieldsOf(connection));
+  const [keyHeader, setKeyHeader] = useState<CustomKeyHeader>(() => keyHeaderOf(connection));
   const [showKey, setShowKey] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [log, setLog] = useState<VerifyLogLine[]>([]);
@@ -133,7 +147,7 @@ export function useProviderConnect(
     setVerifying(true);
     setMood('thinking');
     latest.current.onVerifyStart?.();
-    const body = verifyBody(provider.id, method, apiKey, endpoint);
+    const body = verifyBody(provider.id, method, apiKey, { fields: endpoint, keyHeader });
 
     setFailureCode(null);
     const fail = (label: string, code?: VerifyFailureCode) => {
@@ -186,9 +200,12 @@ export function useProviderConnect(
     setApiKey,
     endpoint,
     setEndpoint,
+    keyHeader,
+    setKeyHeader,
     toggleShowKey: () => setShowKey((value) => !value),
     startChanging: () => {
       setEndpoint(endpointFieldsOf(connection));
+      setKeyHeader(keyHeaderOf(connection));
       setChanging(true);
     },
     keepCurrent: () => setChanging(false),

@@ -5,9 +5,11 @@ import { z } from 'zod';
 import {
   CUSTOM_ENDPOINT_KEY_MAX,
   customEndpointSchema,
+  customKeyHeaderSchema,
   type CustomEndpoint,
   type ProviderModel,
 } from '@spark-outpost/contracts';
+import type { MessagesCredential } from '../../setup/messages-request.ts';
 import { ProviderError } from '../../providers/provider.ts';
 import { inheritedEnvironment } from './inherited-env.ts';
 
@@ -19,11 +21,23 @@ export const CUSTOM_SLOTS = ['opus', 'haiku'] as const;
 
 const storedEndpointSchema = customEndpointSchema.extend({
   apiKey: z.string().max(CUSTOM_ENDPOINT_KEY_MAX),
+  keyHeader: customKeyHeaderSchema.default('bearer'),
 });
 export type StoredEndpoint = z.infer<typeof storedEndpointSchema>;
 
-export function storedEndpointSecret(endpoint: CustomEndpoint, apiKey: string): string {
-  return JSON.stringify({ ...endpoint, apiKey });
+export function storedEndpointSecret(endpoint: StoredEndpoint): string {
+  return JSON.stringify(endpoint);
+}
+
+export function endpointCredential(endpoint: StoredEndpoint): MessagesCredential {
+  if (!endpoint.apiKey) return { header: 'bearer', key: CUSTOM_NO_KEY_TOKEN };
+  return { header: endpoint.keyHeader, key: endpoint.apiKey };
+}
+
+function credentialEnvironment(credential: MessagesCredential): Record<string, string> {
+  return credential.header === 'x-api-key'
+    ? { ANTHROPIC_API_KEY: credential.key }
+    : { ANTHROPIC_AUTH_TOKEN: credential.key };
 }
 
 export function readStoredEndpoint(secret: string): StoredEndpoint {
@@ -74,7 +88,7 @@ export function customEndpointEnvironment(
     ...inheritedEnvironment(parent),
     CLAUDE_CONFIG_DIR: configDir,
     ANTHROPIC_BASE_URL: endpoint.baseUrl,
-    ANTHROPIC_AUTH_TOKEN: endpoint.apiKey || CUSTOM_NO_KEY_TOKEN,
+    ...credentialEnvironment(endpointCredential(endpoint)),
     ...slotEnvironment('OPUS', endpoint.model, MAIN_DESCRIPTION),
     ...slotEnvironment('SONNET', endpoint.model, MAIN_DESCRIPTION),
     ...slotEnvironment('FABLE', endpoint.model, MAIN_DESCRIPTION),

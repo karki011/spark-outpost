@@ -86,6 +86,7 @@ describe('custom endpoint connection', () => {
       model: 'qwen3-coder:30b',
       fastModel: '',
       apiKey: '',
+      keyHeader: 'bearer',
     });
     expect((await customOf(app)).connection).toMatchObject({
       method: 'api_key',
@@ -127,6 +128,81 @@ describe('custom endpoint connection', () => {
     const stored = await t.db.query('SELECT * FROM provider_connections');
     expect(JSON.stringify(stored.rows)).not.toContain(KEY);
     expect(JSON.stringify(custom)).not.toContain(KEY);
+  });
+
+  it('sends the key only in x-api-key when chosen, and the test message does too', async () => {
+    const requests: Request[] = [];
+    const app = appWith(async (input) => {
+      requests.push(input as Request);
+      return reply();
+    });
+    const { raw } = await app.verify({
+      method: 'endpoint',
+      endpoint: ENDPOINT,
+      apiKey: KEY,
+      keyHeader: 'x-api-key',
+    });
+    expect(raw).not.toContain(KEY);
+    expect(requests[0]?.headers.get('x-api-key')).toBe(KEY);
+    expect(requests[0]?.headers.get('authorization')).toBeNull();
+    expect(JSON.parse((await secrets.get('custom')) ?? '')).toMatchObject({
+      apiKey: KEY,
+      keyHeader: 'x-api-key',
+    });
+    const custom = await customOf(app);
+    expect(custom.connection.summary).toBe('API key in your keychain, sent as x-api-key');
+    const stored = await t.db.query('SELECT * FROM provider_connections');
+    expect(JSON.stringify(stored.rows)).not.toContain(KEY);
+
+    await app.send('post', '/api/providers/custom/test').expect(200);
+    expect(requests.at(-1)?.headers.get('x-api-key')).toBe(KEY);
+    expect(requests.at(-1)?.headers.get('authorization')).toBeNull();
+  });
+
+  it('keeps bearer with no key, and refuses an unknown key header', async () => {
+    const requests: Request[] = [];
+    const app = appWith(async (input) => {
+      requests.push(input as Request);
+      return reply();
+    });
+    await app.verify({
+      method: 'endpoint',
+      endpoint: ENDPOINT,
+      apiKey: '',
+      keyHeader: 'x-api-key',
+    });
+    expect(requests[0]?.headers.get('authorization')).toBe('Bearer spark-outpost-no-key');
+    expect(requests[0]?.headers.get('x-api-key')).toBeNull();
+    expect(JSON.parse((await secrets.get('custom')) ?? '')).toMatchObject({ keyHeader: 'bearer' });
+    await app
+      .send('post', '/api/providers/custom/verify', {
+        method: 'endpoint',
+        endpoint: ENDPOINT,
+        apiKey: KEY,
+        keyHeader: 'cookie',
+      })
+      .expect(400);
+  });
+
+  it('tests a keychain entry saved before the key header choice with bearer', async () => {
+    const requests: Request[] = [];
+    const app = appWith(async (input) => {
+      requests.push(input as Request);
+      return reply();
+    });
+    await app.verify({ method: 'endpoint', endpoint: ENDPOINT, apiKey: KEY });
+    await secrets.set(
+      'custom',
+      JSON.stringify({
+        baseUrl: 'http://localhost:11434',
+        model: 'qwen3-coder:30b',
+        fastModel: '',
+        apiKey: KEY,
+      }),
+    );
+    await app.send('post', '/api/providers/custom/test').expect(200);
+    expect(requests.at(-1)?.headers.get('authorization')).toBe(`Bearer ${KEY}`);
+    expect(requests.at(-1)?.headers.get('x-api-key')).toBeNull();
   });
 
   it('refuses addresses that are not https or local, carry a login or end in /v1', async () => {

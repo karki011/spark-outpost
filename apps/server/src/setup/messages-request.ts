@@ -1,6 +1,19 @@
-export function bearerMessageRequest(
+import type { CustomKeyHeader } from '@spark-outpost/contracts';
+
+export interface MessagesCredential {
+  header: CustomKeyHeader;
+  key: string;
+}
+
+function credentialHeaders(credential: MessagesCredential): Record<string, string> {
+  return credential.header === 'x-api-key'
+    ? { 'x-api-key': credential.key }
+    : { authorization: `Bearer ${credential.key}` };
+}
+
+export function messagesRequest(
   baseUrl: string,
-  key: string,
+  credential: MessagesCredential,
   model: string,
   prompt: string,
   redirect: 'follow' | 'manual' = 'follow',
@@ -9,7 +22,7 @@ export function bearerMessageRequest(
     method: 'POST',
     redirect,
     headers: {
-      authorization: `Bearer ${key}`,
+      ...credentialHeaders(credential),
       'anthropic-version': '2023-06-01',
       'content-type': 'application/json',
     },

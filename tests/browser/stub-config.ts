@@ -57,6 +57,7 @@ export const PACKAGED = process.env.SPARK_PACKAGED === '1';
 export const TEST_DATA_DIR = path.join(TEST_TMPDIR, 'data');
 export const APP_ORIGIN = `http://127.0.0.1:${PACKAGED ? API_PORT : WEB_PORT}`;
 export const REJECTED_KEY_MARKER = 'rejected';
+export const X_API_KEY_MODEL = 'x-api-key-only';
 export const FAKE_CODEX_STATE = path.join(TEST_TMPDIR, 'fake-codex-logged-in');
 export const FAKE_CLAUDE_BIN = path.join(TEST_TMPDIR, 'fake-claude-bin');
 export const CLAUDE_CONFIG_DIR = path.join(TEST_TMPDIR, 'claude-config');
