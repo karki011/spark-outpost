@@ -20,7 +20,19 @@ export async function processStartedAt(pid: number): Promise<string | null> {
   }
 }
 
-export async function recordProcess(file: string, pid: number): Promise<void> {
+const pendingRecords = new Map<string, Promise<void>>();
+
+export function recordProcess(file: string, pid: number): Promise<void> {
+  const previous = pendingRecords.get(file) ?? Promise.resolve();
+  const next = previous.then(() => writeRecord(file, pid)).catch(() => undefined);
+  pendingRecords.set(file, next);
+  void next.then(() => {
+    if (pendingRecords.get(file) === next) pendingRecords.delete(file);
+  });
+  return next;
+}
+
+async function writeRecord(file: string, pid: number): Promise<void> {
   const started = await processStartedAt(pid);
   if (!started) return;
   const partial = `${file}.${randomUUID()}.partial`;
