@@ -2,7 +2,7 @@
 
 Every Spark Outpost version with a download, newest first. Once installed, the app updates itself.
 
-Requires macOS 12 or later (Mac control needs macOS 14).
+Requires macOS 13 or later (Mac control needs macOS 14).
 
 The full history is in the [changelog](../apps/desktop/CHANGELOG.md).
 

@@ -12,13 +12,13 @@ Run Claude Code and Codex side by side on your Mac. Follow every step, answer th
 
 <a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-latest-arm64.dmg"><img alt="Download for Mac, Apple silicon" src="https://img.shields.io/badge/Download_for_Mac-Apple_silicon-2bb39a?style=for-the-badge&logo=apple&logoColor=white"></a> <a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-latest-x64.dmg"><img alt="Download for Mac, Intel" src="https://img.shields.io/badge/Download_for_Mac-Intel-555555?style=for-the-badge&logo=apple&logoColor=white"></a>
 
-Free beta · [0.1.0-beta.2](releases/0.1.0-beta.2.md) · macOS 12+ (Mac control needs 14) · [All versions](releases/README.md)
+Free beta · [0.1.0-beta.2](releases/0.1.0-beta.2.md) · macOS 13+ (Mac control needs 14) · [All versions](releases/README.md)
 
 <!-- release-downloads:end -->
 
 <p>
 <a href="apps/desktop/CHANGELOG.md"><img alt="Version 0.1.0-beta.2" src="https://img.shields.io/badge/version-0.1.0--beta.2-2bb39a"></a>
-<img alt="macOS 12 or later" src="https://img.shields.io/badge/macOS-12%2B-111111?logo=apple&logoColor=white">
+<img alt="macOS 13 or later" src="https://img.shields.io/badge/macOS-13%2B-111111?logo=apple&logoColor=white">
 <img alt="Apple silicon and Intel" src="https://img.shields.io/badge/arch-arm64%20%7C%20x64-555555">
 <img alt="Agent Client Protocol" src="https://img.shields.io/badge/protocol-ACP-6e56cf">
 <a href="LICENSE"><img alt="FSL-1.1-MIT license" src="https://img.shields.io/badge/license-FSL--1.1--MIT-555555"></a>
@@ -165,7 +165,7 @@ Chats, settings and code stay on your Mac, keys live in the keychain, and voice 
 3. Optionally connect GitHub, Atlassian, ServiceNow, Linear, Slack or a calendar.
 4. Start a chat. Ask a question about a project, or link a repo and ask for a small change.
 
-Requires macOS 12 or later (Mac control needs macOS 14) and about 2 GB of disk space. The app updates itself on the **Stable** or **Beta** channel, and never while an agent is working.
+Requires macOS 13 or later (Mac control needs macOS 14) and about 2 GB of disk space. The app updates itself on the **Stable** or **Beta** channel, and never while an agent is working.
 
 ## Status and feedback
 

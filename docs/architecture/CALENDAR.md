@@ -74,7 +74,7 @@ Decided with the owner, 2026-10-16. Code in `apps/server/src/calendar/google/`; 
 | Need             | Where                                                                                                       |
 | ---------------- | ----------------------------------------------------------------------------------------------------------- |
 | macOS 14+        | `NSCalendarsFullAccessUsageDescription`, `requestFullAccessToEvents`                                        |
-| macOS 12–13      | `NSCalendarsUsageDescription`, `requestAccess(to: .event)` (the app's minimum is 12.0)                      |
+| macOS 12–13      | `NSCalendarsUsageDescription`, `requestAccess(to: .event)` (the app's minimum is 13.0)                      |
 | Hardened runtime | `com.apple.security.personal-information.calendars` in `build/entitlements.mac.plist` and the inherited set |
 | Info.plist       | Both strings through `mac.extendInfo` in `scripts/builder-config.ts`                                        |
 | Denied           | **Open Calendar settings** (Privacy & Security → Calendars); status refreshes on focus                      |

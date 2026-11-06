@@ -6,6 +6,7 @@ Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
 ## 0.1.0-beta.2
 
+- Spark Outpost needs macOS 13 or later, as its Electron version does; the app, download pages and site no longer claim macOS 12.
 - When the agent compacts its context mid-reply, the work log shows one **Context compacted** line (or a warning when it fails) instead of a "Compact conversation" step.
 - Short-lived agent sessions Spark never resumes (model checks, child runs without a session, plugin reviews) are deleted from Claude Code's and Codex's own session lists when they end, where the agent supports it.
 - A port that a chat's shell tab, Terminal session or agent command listens on shows on the chat's row, like `:5173`; in the Mac app, selecting it opens that page in the chat's Browser pane.

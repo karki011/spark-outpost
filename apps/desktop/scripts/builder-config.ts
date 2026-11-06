@@ -233,7 +233,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
       hardenedRuntime: true,
       entitlements: options.entitlements,
       entitlementsInherit: options.entitlements,
-      minimumSystemVersion: '12.0',
+      minimumSystemVersion: '13.0',
       extendInfo: {
         NSMicrophoneUsageDescription: MICROPHONE_USAGE,
         NSCalendarsFullAccessUsageDescription: CALENDARS_USAGE,
