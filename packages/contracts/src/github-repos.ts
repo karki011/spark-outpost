@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const GITHUB_REPO_SLUG = /^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/;
+export const GITHUB_REPO_SLUG = /^[A-Za-z0-9-]{1,39}\/(?!\.{1,2}$)[A-Za-z0-9._-]{1,100}$/;
 
 const slugSchema = z.string().regex(GITHUB_REPO_SLUG);
 

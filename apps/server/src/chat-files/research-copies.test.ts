@@ -16,5 +16,8 @@ describe('where research copies live', () => {
     const chat = '0190f0a0-0000-7000-8000-000000000001';
     expect(researchCopyFolder('/base', chat, 'acme/widgets')).toBe(`/base/${chat}/acme/widgets`);
     expect(() => researchCopyFolder('/base', '../x', 'acme/widgets')).toThrow();
+    for (const slug of ['acme/..', 'acme/.', '../widgets']) {
+      expect(() => researchCopyFolder('/base', chat, slug)).toThrow();
+    }
   });
 });

@@ -3,7 +3,7 @@ import { realpathSync } from 'node:fs';
 import { access, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import type { CloneJob } from '@spark-outpost/contracts';
+import { GITHUB_REPO_SLUG, type CloneJob } from '@spark-outpost/contracts';
 import type { CloneJobs } from '../projects/clone/clone-jobs.ts';
 import { chatHome } from './folders.ts';
 
@@ -17,6 +17,7 @@ export function chatResearchBase(
 }
 
 export function researchCopyFolder(base: string, conversationId: string, slug: string): string {
+  if (!GITHUB_REPO_SLUG.test(slug)) throw new Error(`Not a GitHub repo: ${slug}`);
   const [owner = '', repo = ''] = slug.split('/');
   return join(chatHome(base, conversationId), owner, repo);
 }

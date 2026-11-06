@@ -115,10 +115,29 @@ function commandOf(pid: number): Promise<string> {
   });
 }
 
-async function stopOrphan(marker: CloneMarker): Promise<void> {
-  if (!marker.pid) return;
+function parentOf(pid: number): Promise<number | null> {
+  return new Promise((resolve) => {
+    execFile('ps', ['-o', 'ppid=', '-p', String(pid)], { timeout: PS_TIMEOUT_MS }, (_e, out) => {
+      const parent = Number.parseInt(String(out).trim(), 10);
+      resolve(Number.isFinite(parent) ? parent : null);
+    });
+  });
+}
+
+async function runningClone(marker: CloneMarker): Promise<boolean> {
+  if (!marker.pid) return false;
   const command = await commandOf(marker.pid);
-  if (!command.includes(' clone ') || !command.includes(marker.destination)) return;
+  return command.includes(' clone ') && command.includes(marker.destination);
+}
+
+async function ownedElsewhere(marker: CloneMarker): Promise<boolean> {
+  if (!marker.pid || !(await runningClone(marker))) return false;
+  const parent = await parentOf(marker.pid);
+  return parent !== null && parent > 1 && parent !== process.pid;
+}
+
+async function stopOrphan(marker: CloneMarker): Promise<void> {
+  if (!marker.pid || !(await runningClone(marker))) return;
   try {
     process.kill(-marker.pid, 'SIGKILL');
   } catch {
@@ -326,7 +345,7 @@ export function createCloneJobs(deps: CloneJobsDeps): CloneJobs {
     async recover() {
       const home = await deps.home();
       for (const marker of await cloneMarkers(deps.db, deps.workspaceId)) {
-        if (entries.has(marker.id)) continue;
+        if (entries.has(marker.id) || (await ownedElsewhere(marker))) continue;
         await stopOrphan(marker);
         const removed = await removeClaimed(marker.destination, marker.identity);
         await deleteCloneMarker(deps.db, marker.id);
