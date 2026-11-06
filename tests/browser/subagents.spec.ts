@@ -36,7 +36,10 @@ type SubagentRows = NonNullable<ConversationDetail['subagents']>[string];
 
 async function rewriteSubagents(route: Route, change: (rows: SubagentRows) => SubagentRows) {
   const response = await route.fetch().catch(() => null);
-  if (!response) return;
+  if (!response) {
+    await route.abort().catch(() => undefined);
+    return;
+  }
   const detail = (await response.json().catch(() => null)) as ConversationDetail | null;
   const json = detail && {
     ...detail,
