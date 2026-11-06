@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -178,6 +178,18 @@ describe('spark_link_repo', () => {
     const names = (await listProjects(t.db, t.workspaceId)).map((project) => project.name);
     expect(names).not.toContain('feature-identity');
     expect(await conversationProjectIds(t.db, chat.conversationId)).toEqual(full);
+  });
+
+  it('links nothing when the folder was swapped after the card was shown', async () => {
+    const folder = join(code, 'swapped');
+    await repo(folder, null);
+    await tools.call('spark_link_repo', { repo: '~/code/swapped' });
+    await rename(folder, join(base, 'swapped-away'));
+    await symlink(join(code, 'existing'), folder);
+    const card = await answerCard(t, SPARK_ACTION_OPTION.confirm);
+    const done = await cardResult(t, card.id);
+    expect(done.payload.sparkResult?.message).toContain('changed after the card was shown');
+    expect(await conversationProjectIds(t.db, chat.conversationId)).toEqual([existing]);
   });
 
   it('refuses a turn from a paired device unless its link switch is on', async () => {

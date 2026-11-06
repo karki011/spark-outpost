@@ -30,6 +30,11 @@ export async function performLinkRepo(
   if (!conversationId) throw new Error('Repositories are linked only to a chat.');
   const outcome = await withTransaction(context.deps.db, async (client) => {
     const target = await linkTarget(client, workspaceId, action.path, sparkReposRules());
+    if (target.path !== action.path || target.origin !== action.origin) {
+      throw new Error(
+        `${action.displayPath} changed after the card was shown, so nothing was linked. Ask again to link it.`,
+      );
+    }
     const projectId =
       target.projectId ?? (await createProject(client, workspaceId, target.path)).project.id;
     const appended = await appendConversationProject(
