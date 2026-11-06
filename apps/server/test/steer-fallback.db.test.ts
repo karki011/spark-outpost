@@ -213,7 +213,7 @@ describe('queued messages while the agent only waits', () => {
     });
     await expect.poll(() => asked).toBe(1);
     await inbox.dispose();
-    expect(await getMemberMessage(t.db, id)).toMatchObject({ status: 'delivered' });
+    expect(await getMemberMessage(t.db, id)).toMatchObject({ status: 'missed' });
   });
 
   it('keeps them queued while the agent works or Spark is paused', async () => {

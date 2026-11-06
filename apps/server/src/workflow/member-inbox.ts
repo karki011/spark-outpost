@@ -201,10 +201,14 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
       done = true;
       clearInterval(timer);
       if (stopped) leave();
-      const giveUp = setTimeout(leave, options.answerWaitMs ?? ANSWER_WAIT_MS);
+      let gaveUp = false;
+      const giveUp = setTimeout(() => {
+        gaveUp = true;
+        leave();
+      }, options.answerWaitMs ?? ANSWER_WAIT_MS);
       await polling;
       clearTimeout(giveUp);
-      if (stopped) await markUnreadOnStop(db, runId);
+      if (stopped || gaveUp) await markUnreadOnStop(db, runId);
       await markMissedMessages(db, runId);
     },
   };
