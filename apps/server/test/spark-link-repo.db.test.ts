@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { SPARK_ACTION_OPTION } from '@spark-outpost/contracts';
+import { CONVERSATION_PROJECTS_MAX, SPARK_ACTION_OPTION } from '@spark-outpost/contracts';
 import { conversationProjectIds } from '../src/agent-config/store.ts';
 import { setConversationProjects } from '../src/persistence/conversation-projects.ts';
 import { createProject, listProjects } from '../src/projects/projects.ts';
@@ -162,6 +162,22 @@ describe('spark_link_repo', () => {
     expect(outside.text).toContain('is not in a repos folder');
     const plain = await tools.call('spark_link_repo', { repo: '~/code/plain' });
     expect(plain.text).toBe('~/code/plain is not a git repository.');
+  });
+
+  it('adds no project when the chat already has the most repos it can link', async () => {
+    const full = [existing];
+    for (let index = 1; index < CONVERSATION_PROJECTS_MAX; index += 1) {
+      const folder = join(base, 'full', `repo-${index}`);
+      await mkdir(folder, { recursive: true });
+      full.push((await createProject(t.db, t.workspaceId, folder)).project.id);
+    }
+    await setConversationProjects(t.db, t.workspaceId, chat.conversationId, full);
+    await tools.call('spark_link_repo', { repo: '~/code/feature-identity' });
+    const card = await answerCard(t, SPARK_ACTION_OPTION.confirm);
+    await cardResult(t, card.id);
+    const names = (await listProjects(t.db, t.workspaceId)).map((project) => project.name);
+    expect(names).not.toContain('feature-identity');
+    expect(await conversationProjectIds(t.db, chat.conversationId)).toEqual(full);
   });
 
   it('refuses a turn from a paired device unless its link switch is on', async () => {

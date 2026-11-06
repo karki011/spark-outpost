@@ -38,6 +38,7 @@ export async function performLinkRepo(
       conversationId,
       projectId,
     );
+    if (appended === 'full') throw new Error(resultLine(appended, action.repo));
     if (appended === 'linked') {
       await closeConversationSessions(
         client,
@@ -48,6 +49,5 @@ export async function performLinkRepo(
     }
     return appended;
   });
-  if (outcome === 'full') throw new Error(resultLine(outcome, action.repo));
   return { message: resultLine(outcome, action.repo), url: null };
 }
