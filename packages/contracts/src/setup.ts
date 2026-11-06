@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import { providerIdSchema, type ProviderId } from './provider-ids.ts';
 import type { TeammateBrief } from './teammates.ts';
-import { CUSTOM_ENDPOINT_KEY_MAX, customEndpointSchema } from './custom-endpoint.ts';
+import {
+  CUSTOM_ENDPOINT_KEY_MAX,
+  customEndpointSchema,
+  customKeyHeaderSchema,
+} from './custom-endpoint.ts';
 import { DEFAULT_INVOLVEMENT_LEVEL } from './approvals.ts';
 import { involvementLevelSchema } from './involvement-levels.ts';
 import {
@@ -233,6 +237,7 @@ export const verifyRequestSchema = z.discriminatedUnion('method', [
     method: z.literal('endpoint'),
     endpoint: customEndpointSchema,
     apiKey: z.string().trim().max(CUSTOM_ENDPOINT_KEY_MAX),
+    keyHeader: customKeyHeaderSchema.default('bearer'),
   }),
 ]);
 export type VerifyRequest = z.infer<typeof verifyRequestSchema>;

@@ -133,7 +133,7 @@ export function setupRoutes(deps: SetupDeps): Router {
       );
     }
     if (request.method === 'endpoint') {
-      return verifyCustomEndpointWithCli(entry, request.endpoint, request.apiKey, {
+      return verifyCustomEndpointWithCli(entry, request.endpoint, request, {
         fetch: deps.endpoints.fetch,
         run: deps.runCommand,
         loginShell: deps.loginShell,

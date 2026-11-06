@@ -87,6 +87,10 @@ export const customEndpointSchema = z.object({
 });
 export type CustomEndpoint = z.infer<typeof customEndpointSchema>;
 
+export const customKeyHeaderSchema = z.enum(['bearer', 'x-api-key']);
+export type CustomKeyHeader = z.infer<typeof customKeyHeaderSchema>;
+export const CUSTOM_X_API_KEY_SUMMARY = 'API key in your keychain, sent as x-api-key';
+
 export function customEndpointProblem(fields: {
   baseUrl: string;
   model: string;

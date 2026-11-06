@@ -9,7 +9,7 @@ import type { CatalogEntry } from '../providers/catalog.ts';
 import type { RunCommand } from './command.ts';
 import { modelSummary, parseModels } from './model-list.ts';
 import { ZAI_CHECK_MODEL, zaiFailureReason, zaiModels } from './zai-key.ts';
-import { bearerMessageRequest } from './messages-request.ts';
+import { messagesRequest } from './messages-request.ts';
 
 export type VerifyStep =
   | { type: 'step_started'; label: string }
@@ -78,7 +78,12 @@ function failureMessage(entry: KeyedService, status: number): string {
 
 function checkRequest(entry: KeyedService, key: string, endpoints: ApiEndpoints): Request {
   if (entry.id === 'zai') {
-    return bearerMessageRequest(endpoints.zaiBaseUrl, key, ZAI_CHECK_MODEL, 'Reply with OK.');
+    return messagesRequest(
+      endpoints.zaiBaseUrl,
+      { header: 'bearer', key },
+      ZAI_CHECK_MODEL,
+      'Reply with OK.',
+    );
   }
   return modelsRequest(entry, key, endpoints);
 }
