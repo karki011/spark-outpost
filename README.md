@@ -43,7 +43,7 @@ Free beta · [0.1.0-beta.1](releases/0.1.0-beta.1.md) · macOS 12+ (Mac control 
 
 ### Your agents, your modes
 
-Claude Code and Codex with their own permission modes, shown with their own names. Spark’s recommended rules guard secret files, git hooks and config, and publishing; with no rules, the agent’s mode decides. Each chat keeps its agent running between messages; its sub-agents appear as cards in the Work panel, and the agent can start sub-chats in an outpost when the work spans repos.
+Claude Code and Codex with their own permission modes, shown with their own names, or a local model through any server that speaks the Anthropic Messages API, such as Ollama or LM Studio. Spark’s recommended rules guard secret files, git hooks and config, and publishing; with no rules, the agent’s mode decides. Each chat keeps its agent running between messages; its sub-agents appear as cards in the Work panel, and the agent can start sub-chats in an outpost when the work spans repos.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/guide/images/chats-and-modes-permissions-dark.png">
@@ -156,12 +156,12 @@ Chats, settings and code stay on your Mac, keys live in the keychain, and voice 
 </tr>
 </table>
 
-**Works with** Claude Code · Codex · GitHub · Jira · Confluence · ServiceNow · Linear · Slack · Google Calendar · Mac Calendar · Tailscale
+**Works with** Claude Code · Codex · Ollama and other local models · Gemini CLI, OpenCode and Amp in Terminal sessions · GitHub · Jira · Confluence · ServiceNow · Linear · Slack · Google Calendar · Mac Calendar · Tailscale
 
 ## Getting started
 
 1. Download the dmg for your Mac above (the links always fetch the newest build), open it and drag **Spark Outpost** to **Applications**. The first start sets up a local database and takes up to a minute.
-2. Connect a provider: the Claude Code CLI, the Codex CLI, or an Anthropic, OpenAI or Z.ai API key. Git is needed for code work.
+2. Connect a provider: the Claude Code CLI, the Codex CLI, an Anthropic, OpenAI or Z.ai API key, or a custom endpoint for a local model. Git is needed for code work.
 3. Optionally connect GitHub, Atlassian, ServiceNow, Linear, Slack or a calendar.
 4. Start a chat. Ask a question about a project, or link a repo and ask for a small change.
 
