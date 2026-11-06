@@ -34,9 +34,12 @@ interface InboxOptions {
   runId: string;
   topRunId: string;
   pollMs: number;
+  answerWaitMs?: number;
   append: Append;
   replySoFar?: () => { shown: string; held: number };
 }
+
+const ANSWER_WAIT_MS = 5_000;
 
 export function messagePrompt(messages: readonly Pick<MemberMessage, 'body'>[]): string {
   const bodies = messages.map((message) => message.body.trim());
@@ -198,7 +201,9 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
       done = true;
       clearInterval(timer);
       if (stopped) leave();
+      const giveUp = setTimeout(leave, options.answerWaitMs ?? ANSWER_WAIT_MS);
       await polling;
+      clearTimeout(giveUp);
       if (stopped) await markUnreadOnStop(db, runId);
       await markMissedMessages(db, runId);
     },

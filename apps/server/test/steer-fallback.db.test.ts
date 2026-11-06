@@ -187,6 +187,24 @@ describe('queued messages while the agent only waits', () => {
     expect(await getMemberMessage(t.db, id)).toMatchObject({ status: 'queued' });
   });
 
+  it('stops waiting for an answer that never comes when the turn ends', async () => {
+    const { conversationId, runId } = await waitingTurn();
+    const id = randomUUID();
+    await sendNow(t.db, conversationId, { id, content: 'Steer' }, target);
+    const inbox = openMemberInbox(t.db, {
+      conversationId,
+      runId,
+      topRunId: runId,
+      pollMs: 10,
+      answerWaitMs: 50,
+      append: async () => null,
+    });
+    inbox.attach(() => new Promise(() => undefined));
+    await expect.poll(async () => (await getMemberMessage(t.db, id))?.status).toBe('delivered');
+    await inbox.dispose();
+    expect(await getMemberMessage(t.db, id)).toMatchObject({ status: 'delivered' });
+  });
+
   it('keeps them queued while the agent works or Spark is paused', async () => {
     const { conversationId, runId, lease } = await waitingTurn();
     await queued(conversationId, 'Typed');
