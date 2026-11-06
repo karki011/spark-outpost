@@ -51,7 +51,6 @@ export function ProjectsSection() {
         ))}
       </div>
       {adder.flow}
-      <ReposFoldersSetting />
       {error && (
         <p className="set-hint" role="alert">
           {error.message}
@@ -89,6 +88,7 @@ export function ProjectsSection() {
           />
         ))}
       </ul>
+      <ReposFoldersSetting />
     </>
   );
 }

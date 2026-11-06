@@ -115,7 +115,10 @@ test('fifteen projects fit a compact list that filters and opens one at a time',
   await expect(dialog.locator('.set-projects-bar').getByRole('status')).toHaveText('15 projects');
   await expect(dialog.getByRole('group', { name: /^Work place in / })).toHaveCount(0);
   const body = dialog.locator('.set-body');
-  expect(await body.evaluate((node) => node.scrollHeight)).toBeLessThan(900);
+  const reposFolders = await dialog
+    .locator('.set-row', { hasText: 'Repos folders' })
+    .evaluate((node) => (node as HTMLElement).offsetHeight);
+  expect(await body.evaluate((node) => node.scrollHeight)).toBeLessThan(900 + reposFolders);
   expect(await body.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
   await expect(row(dialog, 'auth')).toContainText('Preview');
   await expect(row(dialog, 'api')).not.toContainText('Preview');

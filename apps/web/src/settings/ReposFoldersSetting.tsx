@@ -2,7 +2,6 @@ import './repos-folders.css';
 import { useId, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ReposFolder } from '@spark-outpost/contracts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { FolderDialog } from '../chat/project/FolderDialog.tsx';
 import { PlusIcon, XIcon } from '../ui/icons.tsx';
@@ -11,11 +10,7 @@ import { SettingRow } from './SettingRow.tsx';
 export const REPOS_FOLDERS_LABEL = 'Repos folders';
 
 const HINT =
-  'Where you clone repos. When you ask a chat about a repo it doesn’t have, the agent looks here and asks before linking one. A wider folder, even your home folder, lets agents find more. Clone a repository starts in the first one.';
-
-function savedPaths(folders: readonly ReposFolder[]): string[] {
-  return folders.filter((folder) => !folder.suggested).map((folder) => folder.path);
-}
+  'Where you clone repos. Agents find a repo here and ask before linking it. A wider folder, even home, finds more.';
 
 export function ReposFoldersSetting() {
   const hintId = useId();
@@ -50,7 +45,11 @@ export function ReposFoldersSetting() {
                 <span className="repos-folders-path" title={folder.path}>
                   {folder.displayPath}
                 </span>
-                {folder.suggested && <span className="repos-folders-tag">Suggested</span>}
+                {folder.suggested && (
+                  <span className="repos-folders-tag" title="It holds your projects">
+                    Suggested
+                  </span>
+                )}
                 <button
                   type="button"
                   className="icon-btn"
@@ -75,11 +74,8 @@ export function ReposFoldersSetting() {
           }}
         >
           <PlusIcon />
-          Add folder…
+          Add repos folder…
         </button>
-        {savedPaths(shown).length === 0 && shown.length > 0 && (
-          <p className="set-hint">Suggested from where your projects are until you change them.</p>
-        )}
         {error && (
           <p className="set-hint" role="alert">
             {error.message}
