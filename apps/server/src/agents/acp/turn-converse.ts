@@ -1,4 +1,3 @@
-import { setImmediate as readsAlreadyWaiting } from 'node:timers/promises';
 import * as acp from '@agentclientprotocol/sdk';
 import { pluginCommandNames } from '../../agent-config/user-plugins/parse.ts';
 import { ProviderError, type ProviderOutput, type ProviderTurn } from '../../providers/provider.ts';
@@ -235,7 +234,6 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
     signal.removeEventListener('abort', cancel);
     return stopReason;
   } finally {
-    await readsAlreadyWaiting();
     unbind();
   }
 }

@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { z } from 'zod';
@@ -22,7 +23,7 @@ export async function processStartedAt(pid: number): Promise<string | null> {
 export async function recordProcess(file: string, pid: number): Promise<void> {
   const started = await processStartedAt(pid);
   if (!started) return;
-  const partial = `${file}.partial`;
+  const partial = `${file}.${randomUUID()}.partial`;
   await writeFile(partial, JSON.stringify({ pid, started }), { mode: 0o600 });
   await rename(partial, file);
 }

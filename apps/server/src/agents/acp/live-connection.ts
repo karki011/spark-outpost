@@ -197,13 +197,13 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
     },
     bind(handlers) {
       const unbind = slot.bind(handlers);
-      tap.bind(handlers.audit);
+      const unbindAudit = tap.bind(handlers.audit);
       wanted = false;
       for (const usage of heldRequests.splice(0)) handlers.request(usage);
       return () => {
         updates.release();
-        tap.unbind();
         unbind();
+        setImmediate(unbindAudit);
       };
     },
     bound: () => slot.current() !== null,

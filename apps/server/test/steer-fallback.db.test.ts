@@ -179,8 +179,15 @@ describe('queued messages while the agent only waits', () => {
       append: async () => null,
     });
     let answer: (outcome: 'later') => void = () => undefined;
-    inbox.attach(() => new Promise((resolve) => (answer = resolve)));
-    await expect.poll(async () => (await getMemberMessage(t.db, id))?.status).toBe('delivered');
+    let asked = 0;
+    inbox.attach(
+      () =>
+        new Promise((resolve) => {
+          asked += 1;
+          answer = resolve;
+        }),
+    );
+    await expect.poll(() => asked).toBe(1);
     const disposing = inbox.dispose();
     answer('later');
     await disposing;
@@ -199,8 +206,12 @@ describe('queued messages while the agent only waits', () => {
       answerWaitMs: 50,
       append: async () => null,
     });
-    inbox.attach(() => new Promise(() => undefined));
-    await expect.poll(async () => (await getMemberMessage(t.db, id))?.status).toBe('delivered');
+    let asked = 0;
+    inbox.attach(() => {
+      asked += 1;
+      return new Promise(() => undefined);
+    });
+    await expect.poll(() => asked).toBe(1);
     await inbox.dispose();
     expect(await getMemberMessage(t.db, id)).toMatchObject({ status: 'delivered' });
   });
