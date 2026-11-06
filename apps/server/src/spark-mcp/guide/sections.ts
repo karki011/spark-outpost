@@ -26,7 +26,7 @@ Connect Claude and Codex with your existing CLI login (\`claude\` / \`codex\`), 
     id: 'custom-endpoint',
     title: 'Custom endpoint: local models and gateways',
     keywords: ['custom endpoint', 'ollama', 'lm studio', 'llama.cpp', 'litellm', 'local model'],
-    text: `A custom endpoint runs the same Claude Code agent, in the same clean environment with its own config directory, against any server that speaks the Anthropic Messages API (for example Ollama, LM Studio, a llama.cpp server or LiteLLM). The user enters the server address (https, or http only for localhost), the model name, an optional fast model and an optional API key in Settings → AI providers; the settings and key are stored together in the OS keychain and checked with one small test request. There is no OpenAI-format adapter, and how well tools work depends on the model.`,
+    text: `A custom endpoint runs the same Claude Code agent, in the same clean environment with its own config directory, against any server that speaks the Anthropic Messages API (for example Ollama, LM Studio, a llama.cpp server or LiteLLM). The user enters the server address (https, or http only for localhost), the model name, an optional fast model and an optional API key, sent as Authorization: Bearer or, when chosen under Send the key as, x-api-key, in Settings → AI providers; the settings and key are stored together in the OS keychain and checked with one small test request. There is no OpenAI-format adapter, and how well tools work depends on the model.`,
   },
   {
     id: 'jev',

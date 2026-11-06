@@ -7,7 +7,7 @@ import { KeychainWaitingError } from './keychain.ts';
 import type { SecretStore } from './secrets.ts';
 import { locateCli, type ApiEndpoints } from './verify.ts';
 import { zaiFailureReason } from './zai-key.ts';
-import { bearerMessageRequest } from './messages-request.ts';
+import { messagesRequest } from './messages-request.ts';
 import { zaiModelId } from '../agents/acp/zai.ts';
 import { floorModel } from '../model-access/floor-model.ts';
 import { readStoredEndpoint, type StoredEndpoint } from '../agents/acp/custom-endpoint.ts';
@@ -218,9 +218,9 @@ function keyedTestRequest(
   deps: TestMessageDeps,
 ): Promise<Response> {
   if (entry.id === 'zai') {
-    const request = bearerMessageRequest(
+    const request = messagesRequest(
       deps.endpoints.zaiBaseUrl,
-      key,
+      { header: 'bearer', key },
       zaiModelId(model) ?? model,
       PROMPT,
     );
@@ -259,7 +259,7 @@ async function testCustomEndpoint(secret: string, deps: TestMessageDeps): Promis
     );
   }
   const startedAt = Date.now();
-  const reply = await askEndpoint(endpoint, endpoint.apiKey, deps.endpoints, API_TIMEOUT_MS);
+  const reply = await askEndpoint(endpoint, deps.endpoints, API_TIMEOUT_MS);
   return reply.ok ? answered(startedAt, reply.model) : failedWith(reply.reason);
 }
 

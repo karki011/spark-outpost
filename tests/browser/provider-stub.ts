@@ -3,7 +3,7 @@ import { fakeGitHub, type FakePull } from '../../apps/server/test/fake-github.ts
 import type { FakeGitHubApp } from '../../apps/server/test/fake-github-app.ts';
 import type { DevStatusMode, FakeDevelopment } from '../../apps/server/test/fake-jira-dev.ts';
 import { jevAnswers, type StubRequest } from './jev-stub.ts';
-import { REJECTED_KEY_MARKER, STUB_PORT } from './stub-config.ts';
+import { REJECTED_KEY_MARKER, STUB_PORT, X_API_KEY_MODEL } from './stub-config.ts';
 import { SLACK_LEGACY_USER_SCOPES, fakeSlack } from '../../apps/server/test/fake-slack.ts';
 import { ticketFakes } from './ticket-stub.ts';
 import { handleGoogle, handlesGoogle } from './google-stub.ts';
@@ -50,6 +50,9 @@ async function customMessage(req: IncomingMessage, res: ServerResponse) {
   for await (const chunk of req) text += String(chunk);
   const { model } = JSON.parse(text) as { model: string };
   if (model === 'missing-model') return send(res, 404, { error: { message: 'model not found' } });
+  if (model === X_API_KEY_MODEL && !req.headers['x-api-key']) {
+    return send(res, 401, { error: { message: 'send the key in x-api-key' } });
+  }
   send(res, 200, { type: 'message', model, content: [{ type: 'text', text: 'OK' }] });
 }
 

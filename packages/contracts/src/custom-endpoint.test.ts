@@ -91,6 +91,7 @@ describe('custom endpoint settings', () => {
       method: 'endpoint',
       endpoint,
       apiKey: '',
+      keyHeader: 'bearer',
     });
     expect(verifyRequestSchema.safeParse({ method: 'api_key', apiKey: '' }).success).toBe(false);
     expect(
@@ -100,5 +101,16 @@ describe('custom endpoint settings', () => {
         apiKey: '',
       }).success,
     ).toBe(false);
+  });
+
+  it('sends the key as a bearer token unless x-api-key is chosen', () => {
+    const endpoint = { baseUrl: 'http://localhost:11434', model: 'qwen3', fastModel: '' };
+    const parse = (keyHeader: unknown) =>
+      verifyRequestSchema.safeParse({ method: 'endpoint', endpoint, apiKey: 'k', keyHeader });
+    expect(parse('x-api-key')).toMatchObject({ success: true, data: { keyHeader: 'x-api-key' } });
+    expect(parse('bearer')).toMatchObject({ success: true, data: { keyHeader: 'bearer' } });
+    expect(parse(undefined)).toMatchObject({ success: true, data: { keyHeader: 'bearer' } });
+    expect(parse('cookie').success).toBe(false);
+    expect(parse('X-Api-Key').success).toBe(false);
   });
 });

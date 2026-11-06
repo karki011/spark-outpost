@@ -1,5 +1,10 @@
 import { useId, type FormEvent } from 'react';
-import { customEndpointProblem, type ProviderSetup } from '@spark-outpost/contracts';
+import {
+  customEndpointProblem,
+  customKeyHeaderSchema,
+  type ProviderSetup,
+} from '@spark-outpost/contracts';
+import { Segmented } from '../ui/Segmented.tsx';
 import type { ProviderConnect } from './use-provider-connect.ts';
 import type { EndpointFields } from './endpoint-fields.ts';
 
@@ -9,6 +14,12 @@ const FIELDS: { key: FieldKey; label: string; placeholder: string; type: 'url' |
   { key: 'baseUrl', label: 'Server address', placeholder: 'http://localhost:11434', type: 'url' },
   { key: 'model', label: 'Model', placeholder: 'qwen3-coder:30b', type: 'text' },
   { key: 'fastModel', label: 'Fast model (optional)', placeholder: 'Same as Model', type: 'text' },
+];
+
+const KEY_HEADER_LABEL = 'Send the key as';
+const KEY_HEADERS = [
+  { id: 'bearer', label: 'Authorization: Bearer' },
+  { id: 'x-api-key', label: 'x-api-key' },
 ];
 
 function started(fields: EndpointFields): boolean {
@@ -77,6 +88,17 @@ export function EndpointPanel({
           </button>
         </div>
       </div>
+      {connect.apiKey.trim() !== '' && (
+        <fieldset className="ep-field ep-choice" disabled={disabled}>
+          <legend>{KEY_HEADER_LABEL}</legend>
+          <Segmented
+            ariaLabel={KEY_HEADER_LABEL}
+            options={KEY_HEADERS}
+            value={connect.keyHeader}
+            onChange={(value) => connect.setKeyHeader(customKeyHeaderSchema.parse(value))}
+          />
+        </fieldset>
+      )}
       <div className={`hintline${shownProblem ? ' bad' : ''}`} role="status">
         {shownProblem ?? setup.keyHint}
       </div>

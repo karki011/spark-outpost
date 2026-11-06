@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                  | What to do                                                      |
 | ----------------------------- | --------------------------------------------------------------- |
 | Race fixes                    | Nothing.                                                        |
+| Endpoint key header           | [Pick it](custom-endpoint.md).                                  |
 | Custom endpoint               | [Connect it](custom-endpoint.md).                               |
 | More Terminal agents          | [Start one](terminals.md#start-a-terminal-session).             |
 | Fewer leftover agent sessions | Nothing.                                                        |

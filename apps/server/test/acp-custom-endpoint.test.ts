@@ -4,8 +4,10 @@ import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
+import type { CustomKeyHeader } from '@spark-outpost/contracts';
 import {
   customEndpointLaunchEnvironment,
+  readStoredEndpoint,
   storedEndpointSecret,
 } from '../src/agents/acp/custom-endpoint.ts';
 import { probeCapabilities } from '../src/agents/acp/probe.ts';
@@ -71,8 +73,8 @@ const definition: AgentDefinition = {
   }),
 };
 
-const storedWith = (apiKey: string) =>
-  memorySecretStore({ custom: storedEndpointSecret(ENDPOINT, apiKey) });
+const storedWith = (apiKey: string, keyHeader: CustomKeyHeader = 'bearer') =>
+  memorySecretStore({ custom: storedEndpointSecret({ ...ENDPOINT, apiKey, keyHeader }) });
 
 async function run(prompt: string, secrets = storedWith(KEY)) {
   const provider = createAcpProvider({ definition, launch, secrets, cancelGraceMs: 2_000 });
@@ -138,6 +140,17 @@ describe('custom endpoint provider against the fake agent', { timeout: 20_000 },
     expect(report).toMatchObject({ token: 'set', tokenLength: 'spark-outpost-no-key'.length });
   });
 
+  it('passes the key only as ANTHROPIC_API_KEY when it is sent as x-api-key', async () => {
+    const { text, error } = await run('#env', storedWith(KEY, 'x-api-key'));
+    expect(error).toBeNull();
+    const report = JSON.parse(text) as Record<string, unknown>;
+    expect(report).toMatchObject({ baseUrl: 'http://127.0.0.1:11434', token: 'missing' });
+    const names = report.names as string[];
+    expect(names).toContain('ANTHROPIC_API_KEY');
+    expect(names).not.toContain('ANTHROPIC_AUTH_TOKEN');
+    expect(names).not.toContain('CLAUDE_CODE_OAUTH_TOKEN');
+  });
+
   it('never puts the key in run outputs, protocol messages or stderr records', async () => {
     const { outputs, written } = await run('#env');
     expect(JSON.stringify(outputs)).not.toContain(KEY);
@@ -169,10 +182,27 @@ describe('custom endpoint provider against the fake agent', { timeout: 20_000 },
     const tampered = await run(
       'Hi',
       memorySecretStore({
-        custom: storedEndpointSecret({ ...ENDPOINT, baseUrl: 'http://evil.example.com' }, ''),
+        custom: storedEndpointSecret({
+          ...ENDPOINT,
+          baseUrl: 'http://evil.example.com',
+          apiKey: '',
+          keyHeader: 'bearer',
+        }),
       }),
     );
     expect((tampered.error as Error).message).toContain('Connect the custom endpoint again');
+    const badHeader = await run(
+      'Hi',
+      memorySecretStore({
+        custom: JSON.stringify({ ...ENDPOINT, apiKey: KEY, keyHeader: 'cookie' }),
+      }),
+    );
+    expect((badHeader.error as Error).message).toContain('Connect the custom endpoint again');
+  });
+
+  it('reads an entry saved before the key header choice as bearer', () => {
+    const saved = JSON.stringify({ ...ENDPOINT, apiKey: KEY });
+    expect(readStoredEndpoint(saved).keyHeader).toBe('bearer');
   });
 
   it('probes and offers only the two slots', async () => {
