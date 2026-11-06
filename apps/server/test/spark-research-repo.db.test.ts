@@ -128,6 +128,27 @@ describe('spark_research_repo', () => {
     expect(rows).toHaveLength(1);
   });
 
+  it('makes one copy when the same repo is asked for twice at once', async () => {
+    const clones = testCloneJobs(t, world);
+    await open(clones);
+    const [first, second] = await Promise.all([copy({ refresh: true }), copy({ refresh: true })]);
+    expect(first.json<Copied>().path).toBe(second.json<Copied>().path);
+    expect(await exists(path.join(first.json<Copied>().path, 'README.md'))).toBe(true);
+    expect(clones.list()).toHaveLength(1);
+  });
+
+  it('asks before searching GitHub in Manual and says so when the user declines', async () => {
+    await open(testCloneJobs(t, world), 'default');
+    const call = tools.call('spark_github_repos', { query: 'widgets' });
+    const card = await answerCard(t, SPARK_ACTION_OPTION.decline);
+    expect(card.title).toBe('Let the agent search your GitHub repositories?');
+    expect((await call).json<{ outcome: string; message: string }>()).toEqual({
+      outcome: 'declined',
+      message:
+        'The user did not let you read your GitHub repositories. Do not try again unless they ask.',
+    });
+  });
+
   it('stops the copy and removes its folder when the turn is stopped', async () => {
     const clones = testCloneJobs(t, world, await stallingGit(world));
     await open(clones);

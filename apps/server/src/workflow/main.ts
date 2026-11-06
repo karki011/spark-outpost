@@ -90,7 +90,7 @@ const sparkDeps: SparkToolDeps = {
   agentRuntime: config.AGENT_RUNTIME,
   chatFolders,
   clones: clones.jobsFor,
-  researchCopies: chatResearchBase(config.BRANCH_PREFIX),
+  researchCopies: chatResearchBase(sparkDataDir(config), config.BRANCH_PREFIX),
 };
 const sparkTools = await startSparkMcpHost(sparkDeps);
 desktopBrowser?.blockPorts([sparkTools.port]);

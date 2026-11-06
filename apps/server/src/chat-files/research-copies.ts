@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { realpathSync } from 'node:fs';
 import { access, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -6,8 +7,13 @@ import type { CloneJob } from '@spark-outpost/contracts';
 import type { CloneJobs } from '../projects/clone/clone-jobs.ts';
 import { chatHome } from './folders.ts';
 
-export function chatResearchBase(channel: string, temp = realpathSync(tmpdir())): string {
-  return join(temp, 'spark-outpost-research', channel);
+export function chatResearchBase(
+  dataDir: string,
+  channel: string,
+  temp = realpathSync(tmpdir()),
+): string {
+  const instance = createHash('sha256').update(dataDir).digest('hex').slice(0, 12);
+  return join(temp, 'spark-outpost-research', instance, channel);
 }
 
 export function researchCopyFolder(base: string, conversationId: string, slug: string): string {
@@ -46,6 +52,8 @@ export async function researchCopySettled(
   return settled;
 }
 
+const startingCopies = new Map<string, Promise<CloneJob>>();
+
 export async function startResearchCopy(
   clones: CloneJobs,
   base: string,
@@ -54,6 +62,23 @@ export async function startResearchCopy(
   url: string,
 ): Promise<CloneJob> {
   const folder = researchCopyFolder(base, conversationId, slug);
+  const starting = startingCopies.get(folder);
+  if (starting) return starting;
+  const started = freshCopy(clones, base, folder, url);
+  startingCopies.set(folder, started);
+  try {
+    return await started;
+  } finally {
+    startingCopies.delete(folder);
+  }
+}
+
+async function freshCopy(
+  clones: CloneJobs,
+  base: string,
+  folder: string,
+  url: string,
+): Promise<CloneJob> {
   const running = clones
     .list()
     .find((job) => job.destination === folder && job.status === 'cloning');
