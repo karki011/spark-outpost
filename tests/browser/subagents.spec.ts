@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { ConversationDetail } from '../../packages/contracts/src/conversations.ts';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
 import { toggleHeaderPane } from './header-menu.ts';
 import { openChats } from './navigation.ts';
 import { resetWithAgents } from './project-chat-kit.ts';
@@ -31,6 +31,15 @@ const mood = (page: Page) => page.locator('.msg.ai .mood').last();
 const cardsIn = (scope: ReturnType<Page['locator']>) =>
   scope.getByRole('list', { name: 'Sub-agents' }).getByRole('listitem');
 const agentsLine = (turn: ReturnType<Page['locator']>) => turn.locator('.sl-text');
+
+async function fetchedDetail(route: Route) {
+  try {
+    const response = await route.fetch();
+    return { response, detail: (await response.json()) as ConversationDetail };
+  } catch {
+    return null;
+  }
+}
 
 test('the context rail shows the same worker blobs as Agent TV and preserves their outcomes', async ({
   page,
@@ -72,8 +81,9 @@ test('a larger sidebar team keeps every worker label separate', async ({ page })
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.setViewportSize({ width: 2000, height: 1100 });
   await page.route(/\/api\/conversations\/[^/]+$/, async (route) => {
-    const response = await route.fetch();
-    const detail = (await response.json()) as ConversationDetail;
+    const fetched = await fetchedDetail(route);
+    if (!fetched) return;
+    const { response, detail } = fetched;
     const subagents = Object.fromEntries(
       Object.entries(detail.subagents ?? {}).map(([id, rows]) => [
         id,
@@ -126,8 +136,9 @@ test('Agent TV redirects through the lead composer without replacing a draft or 
 }) => {
   const purpose = `Inspect ${'the routes and their existing boundaries '.repeat(8)}`;
   await page.route(/\/api\/conversations\/[^/]+$/, async (route) => {
-    const response = await route.fetch();
-    const detail = (await response.json()) as ConversationDetail;
+    const fetched = await fetchedDetail(route);
+    if (!fetched) return;
+    const { response, detail } = fetched;
     const subagents = Object.fromEntries(
       Object.entries(detail.subagents ?? {}).map(([id, rows]) => [
         id,
@@ -355,8 +366,9 @@ test('a finished lead shows stale working workers as inactive after reload', asy
   await ask(page, 'Split the work #build #subagents');
   await expect(mood(page)).toHaveText('done', { timeout: 30_000 });
   await page.route(/\/api\/conversations\/[^/]+$/, async (route) => {
-    const response = await route.fetch();
-    const detail = (await response.json()) as ConversationDetail;
+    const fetched = await fetchedDetail(route);
+    if (!fetched) return;
+    const { response, detail } = fetched;
     const subagents = Object.fromEntries(
       Object.entries(detail.subagents ?? {}).map(([id, rows]) => [
         id,
