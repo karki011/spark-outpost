@@ -20,6 +20,7 @@ import {
   type RunSnapshot,
 } from '../persistence/run-snapshots.ts';
 import { laneOfRun } from '../persistence/worktrees.ts';
+import { readBefore, type FileBefore } from './file-before.ts';
 import { relativeInside } from './path-policy.ts';
 import { liveRunBase, runBaseUntil } from './run-base.ts';
 import { gitChanges, isGitWorkTree, revertGitChanges, takeGitSnapshot } from './snapshot.ts';
@@ -100,11 +101,13 @@ export async function backupBeforeEdit(
   runId: string,
   snapshot: RunSnapshot,
   targets: readonly string[],
+  read: (target: string) => Promise<FileBefore> = readBefore,
 ): Promise<void> {
   if (snapshot.kind !== 'files') return;
   for (const target of targets) {
     if (relativeInside(snapshot.root, target) === null) continue;
-    const content = await readIfPresent(target);
+    const content = await read(target);
+    if (content === 'not-a-file') continue;
     await saveBackup(db, runId, { path: target, existed: content !== null, content });
   }
 }

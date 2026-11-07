@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -15,7 +16,7 @@ let t: TestDb;
 let folder: string;
 let worker: Worker;
 
-function editing(files: Record<string, string>): Provider {
+function editing(files: Record<string, string>, atOnce = false): Provider {
   return {
     name: 'claude',
     async *run(turn) {
@@ -30,8 +31,9 @@ function editing(files: Record<string, string>): Provider {
           action: 'edit',
         };
         turn.observe?.(seen);
+        if (atOnce) writeFileSync(target, content);
         yield seen;
-        await writeFile(target, content);
+        if (!atOnce) await writeFile(target, content);
       }
       yield { kind: 'text_delta', delta: 'Edited the notes.' };
     },
@@ -80,6 +82,27 @@ describe('an edit the agent made without asking, in a folder that is not a git r
     );
     expect(rows[0]?.kept).toBe(true);
 
+    await revertRun(t.db, t.workspaceId, runId);
+    expect(await readFile(path.join(folder, 'notes.txt'), 'utf8')).toBe('draft\n');
+    await expect(readFile(path.join(folder, 'new.txt'), 'utf8')).rejects.toThrow();
+  });
+
+  it('keeps the text from before an edit written the moment it is announced', async () => {
+    await worker.stop();
+    const agent = editing({ 'notes.txt': 'final\n', 'new.txt': 'added\n' }, true);
+    worker = startTurnWorker(t, { providers: new Map([[agent.name, agent]]) });
+    const conversationId = await openChat(t, { root: folder, level: 'full-auto' });
+    const runId = await sendMessage(t, conversationId, 'Finish the notes.', {
+      permission: 'do',
+      agentMode: 'bypassPermissions',
+      level: 'full-auto',
+    });
+    await driveToEnd(t, conversationId, runId);
+
+    expect((await changesOf(t, runId)).files).toEqual([
+      { path: 'new.txt', change: 'added' },
+      { path: 'notes.txt', change: 'modified' },
+    ]);
     await revertRun(t.db, t.workspaceId, runId);
     expect(await readFile(path.join(folder, 'notes.txt'), 'utf8')).toBe('draft\n');
     await expect(readFile(path.join(folder, 'new.txt'), 'utf8')).rejects.toThrow();
