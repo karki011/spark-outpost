@@ -80,7 +80,7 @@ The job runs per project, outside any turn, through the same gate as the project
 4. **Dream (phase 2, one more model run).**
    - From the gathered requests, write a few practice questions about the project ("where is X configured?", "what must I run before committing?") and answer each once with no notes and once for each proposed note that matches the question, with that note alone, so each note's effect is measured on its own.
    - Answers are checked against the repository (do the named files exist, does the quoted line exist), not by asking the model whether it did well.
-   - A proposed note is kept only when an answer with it is better than the same answer without it (right with it and wrong without, or naming more of the right files). A note that made no difference, or made an answer wrong, is dropped.
+   - A proposed note is kept only when an answer with it is better than the same answer without it (right with it and wrong without, or naming more of the right files). A note that made no difference, or made an answer wrong, is dropped. A note that matches no practice question is not tested here and is kept or dropped by the Verify step alone.
 5. **Apply.**
    - Accepted changes are saved, and each is one line in the project's history: "Sleep added 3 notes, retired 1".
    - A pinned or user-edited note is never changed by sleep. Sleep may propose a change and show it to the user.
