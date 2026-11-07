@@ -132,3 +132,48 @@ test('a blob shows what each chat did since you last looked, and opening it clea
   await expect(row(page, 'Chat C').getByRole('img', { name: 'Waiting for you' })).toBeVisible();
   await expect(blob(page, 'Chat B')).toHaveCount(0);
 });
+
+test("a working chat's title keeps pulsing while Spark rests and stops in the background", async ({
+  page,
+}) => {
+  await seedChats([
+    { title: 'Fix billing totals', run: { status: 'running' } },
+    { title: 'Quiet chat' },
+  ]);
+  await openChats(page);
+  const working = row(page, 'Fix billing totals').locator('.tt > span');
+  const playState = () =>
+    working.evaluate((element) => {
+      const animation = element.getAnimations()[0] as CSSAnimation | undefined;
+      return animation ? `${animation.animationName}:${animation.playState}` : 'none';
+    });
+  const opacity = () => working.evaluate((element) => Number(getComputedStyle(element).opacity));
+
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.dataset.motion))
+    .toBe('rest');
+  expect(await playState()).toBe('row-working:running');
+  const seen = new Set<number>();
+  for (let sample = 0; sample < 8; sample += 1) {
+    seen.add(Math.round((await opacity()) * 10));
+    await page.waitForTimeout(200);
+  }
+  expect(seen.size).toBeGreaterThan(2);
+  await expect(row(page, 'Quiet chat').locator('.tt > span')).toHaveCSS('opacity', '1');
+
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.dataset.motion))
+    .toBe('paused');
+  await expect.poll(playState).toBe('row-working:paused');
+});
+
+test("a working chat's title stays still with Reduce Motion on", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await seedChats([{ title: 'Fix billing totals', run: { status: 'running' } }]);
+  await openChats(page);
+  const working = row(page, 'Fix billing totals').locator('.tt > span');
+  await expect(working).toBeVisible();
+  expect(await working.evaluate((element) => element.getAnimations().length)).toBe(0);
+  await expect(working).toHaveCSS('opacity', '1');
+});
