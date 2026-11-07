@@ -4,6 +4,14 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.3
+
+- Ask a chat about a repo it doesn't have, like "the identity repo", and the agent finds it by folder or origin name among your projects and **Repos folders** (Settings → Projects; by default the folders that hold your projects), then asks on a **Link** card in every mode. Linking adds it to the chat from your next message. **Clone a repository…** starts in the first repos folder.
+- With GitHub connected, an agent can search your account and organizations for a repo that isn't on this Mac (`spark_github_repos`) and ask on a **Clone and link** card, in every mode, to clone it into your first repos folder and link it from your next message; a repo already on this Mac with the same origin gets the **Link** card instead. To answer a question it can make a shallow, read-only copy (`spark_research_repo`): no hooks, submodules or LFS files, reused in the chat and deleted with it, in a temporary folder Claude reads without a prompt per file. Searching and copying follow the agent's mode, count as reading work data, and are not offered to Ask Spark; a turn from a paired device needs **Link a new folder or clone a repo**.
+- The chat column is wider (880px instead of 760px), so tables and code blocks in replies fit better.
+- Reply text is 15px with tighter line and paragraph spacing, interface text is 14px, and headings, bold text and inline code are lighter.
+- A working chat's title in the chat list pulses slowly, and keeps pulsing while you read instead of stopping after a few seconds. It stops when Spark is in the background or Reduce Motion is on.
+
 ## 0.1.0-beta.2
 
 - Spark Outpost needs macOS 13 or later, as its Electron version does; the app, download pages and site no longer claim macOS 12.
