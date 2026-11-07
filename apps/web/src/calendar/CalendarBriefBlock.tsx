@@ -1,8 +1,15 @@
 import './upcoming.css';
-import { localDayStart, longestFree, spanOf, workWindow } from '@spark-outpost/contracts';
+import {
+  isMeeting,
+  localDayStart,
+  longestFree,
+  spanOf,
+  workWindow,
+} from '@spark-outpost/contracts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { duration, span } from './calendar-format.ts';
 import { DayShapeBar } from './DayShapeBar.tsx';
+import { openTodayEvent } from './today-request.ts';
 import { localDate, useCalendarDay, useCalendarState } from './use-calendar.ts';
 
 export function CalendarBriefBlock({ now }: { now: number }) {
@@ -15,6 +22,7 @@ export function CalendarBriefBlock({ now }: { now: number }) {
   if (!on || !day) return null;
   const longest = longestFree(day.free);
   const focus = day.events.find((event) => event.focus && !event.allDay);
+  const meetings = day.events.filter(isMeeting);
   const holds = status?.settings.holdRule !== 'never';
   const work = workWindow(localDayStart(now));
   const hours = span(work.start, work.end);
@@ -44,6 +52,18 @@ export function CalendarBriefBlock({ now }: { now: number }) {
           </>
         )}
       </p>
+      {meetings[0] && (
+        <p className="cal-brief-line">
+          {meetings.length === 1 ? '1 meeting today.' : `${meetings.length} meetings today.`}{' '}
+          <button
+            type="button"
+            className="hlink cal-brief-all"
+            onClick={() => openTodayEvent(meetings[0]!.key)}
+          >
+            See all in Today
+          </button>
+        </p>
+      )}
     </section>
   );
 }

@@ -304,7 +304,10 @@ test('shows meetings in Upcoming and only free time in the brief on Home', async
     timeout: 15_000,
   });
   await expect(block).toContainText(/Longest free block|No free block/);
-  await expect(block).not.toContainText('Standup');
+  for (const title of next.map((item) => item.title)) {
+    await expect(block).not.toContainText(title);
+  }
+  await expect(block).toContainText(/\d+ meetings? today\./);
   const card = page.getByRole('region', { name: 'Upcoming' });
   const joinKey = process.platform === 'darwin' ? '⌘J' : 'Ctrl+J';
   await expect(card).toContainText(`${joinKey} joins the next`);
@@ -313,6 +316,8 @@ test('shows meetings in Upcoming and only free time in the brief on Home', async
   await expect(
     card.getByRole('button', { name: /^Customer call at \d+:\d+ [AP]M, Join opens at / }),
   ).toBeDisabled();
+  await block.getByRole('button', { name: 'See all in Today' }).click();
+  await expect(today(page)).toBeVisible();
 });
 
 test('lists the calendar rows in Notifications and in Settings search', async ({ page }) => {
