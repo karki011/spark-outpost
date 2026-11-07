@@ -57,14 +57,13 @@ The ablation is the most useful lesson: **the check is not optional.** A summari
 
 ### The sleep job
 
-The job runs per project, outside any turn, through the same gate as the project map: it pauses while any run is queued or running, and it runs when the Mac is idle or at night. It has two stages, each with a pure decision core and its effects at the edges.
+The job runs per project, outside any turn, through the same gate as the project map: it pauses while any run is queued or running, and it runs when the Mac is idle or at night. It has five steps, each with a pure decision core and its effects at the edges.
 
 1. **Gather (rules only).**
    - Take turns finished since the last sleep in chats of that project.
    - Skip Ask Spark, Terminal sessions without recording, and turns that read a secret file or a `.sparkignore` file.
-
-- In phase 1, also skip every turn that read untrusted content: the Browser pane, WebFetch or WebSearch, tickets, Atlassian, ServiceNow, Slack, calendar, MCP results, Mac control and untrusted attachments. One page an agent read once must not plant a note that steers every later chat. Asking the model to keep only facts about the code is not a control.
-- Rank the turns by outcome signal strength and keep the top k plus b random ones. This is the paper's importance score, with outcome signals in place of gradients.
+   - In phase 1, also skip every turn that read untrusted content: the Browser pane, WebFetch or WebSearch, tickets, Atlassian, ServiceNow, Slack, calendar, MCP results, Mac control and untrusted attachments. One page an agent read once must not plant a note that steers every later chat. Asking the model to keep only facts about the code is not a control.
+   - Rank the turns by outcome signal strength and keep the top k plus b random ones. This is the paper's importance score, with outcome signals in place of gradients.
 
 2. **Consolidate (one model run, a child run like the morning digest, read-only).**
    - Input: the chosen turns' messages and kept-file summaries, plus the current notes.
@@ -105,13 +104,13 @@ Jev is a cheap classifier with calibrated probabilities ($0.042 per million inpu
 | Verify      | Noul: "the note is a specific, checkable fact, not advice that applies to any project". | A cited path is required.             |
 | Prune       | Choice per stale note: keep, rewrite, retire.                                           | Retire when every cited path is gone. |
 
-Every Jev answer is validated and recorded with its policy version, as JEV.md requires. It acts only above a threshold tuned on labelled data (`pnpm jev:thresholds`), and is recorded as observed-only until then.
+Every Jev answer is validated and recorded with its policy version, as JEV.md requires. It acts only above a threshold tuned on labelled data (a threshold report is planned, not built yet), and is recorded as observed-only until then.
 
 ### Safety
 
 - **Notes are data, never authority.** A note can't authorise a push, a pull request, a Spark action or a mode change, and the preamble says so.
 - **What's left out:**
-  - Turns that read work data, such as pages, tickets or Slack, are summarised only as facts about the project's code, and the note says where they came from.
+  - Phase 1 skips every turn that read work data or other untrusted content (pages, tickets, Slack, MCP results). Whether a later phase may summarise them as facts about the code, with their source named, is left open.
   - Turns that read a secret file are skipped entirely.
 - **Never in a note:** secret values. The input and the output are scrubbed, and a note that still holds a secret-looking value is dropped.
 - **Off by default.** The setting is per project (**Project notes**, off), with **Sleep now** on the project page. The cost of each sleep is shown with the run, as Spark shows every cost, with no limit.
