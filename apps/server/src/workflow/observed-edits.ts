@@ -1,22 +1,19 @@
-import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import type { Db } from '../persistence/db.ts';
 import { getSnapshot, type RunSnapshot } from '../persistence/run-snapshots.ts';
-import { backupBeforeEdit, readIfPresent } from '../projects/run-changes.ts';
+import { readBefore, readBeforeNow, type FileBefore } from '../projects/file-before.ts';
+import { backupBeforeEdit } from '../projects/run-changes.ts';
 import type { ProviderOutput } from '../providers/provider.ts';
 
-const READ_AT_ONCE_BYTES = 1024 * 1024;
+const READ_AT_ONCE_BYTES = 8 * 1024 * 1024;
 
-function contentNow(target: string): Promise<Buffer | null> | null {
+function captureNow(target: string): Promise<FileBefore> | null {
   try {
-    const stat = statSync(target);
-    if (!stat.isFile()) return null;
-    if (stat.size <= READ_AT_ONCE_BYTES) return Promise.resolve(readFileSync(target));
+    const before = readBeforeNow(target, READ_AT_ONCE_BYTES);
+    return before === 'too-large' ? null : Promise.resolve(before);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return Promise.resolve(null);
     return Promise.reject(error);
   }
-  return readIfPresent(target);
 }
 
 export interface ObservedEdits {
@@ -28,6 +25,7 @@ export interface ObservedEditsOptions {
   db: Db;
   workspaceId: string;
   runId: string;
+  root?: string | null | undefined;
   alsoFor?: string | undefined;
 }
 
@@ -41,22 +39,31 @@ export function createObservedEdits(options: ObservedEditsOptions): ObservedEdit
     loaded ??= getSnapshot(db, workspaceId, runId).then((state) => state?.snapshot ?? null);
     return loaded;
   };
-  const backUp = async (target: string, before: Promise<Buffer | null> | null) => {
+  const backUp = async (
+    target: string,
+    early: { file: string; before: Promise<FileBefore> } | null,
+  ) => {
     const taken = await snapshot();
     if (taken?.kind !== 'files') return;
     const file = path.resolve(taken.root, target);
-    const read = before && file === target ? () => before : readIfPresent;
+    const read = early?.file === file ? () => early.before : readBefore;
     for (const id of runIds) await backupBeforeEdit(db, id, taken, [file], read);
+  };
+  const capture = (target: string) => {
+    const file = options.root ? path.resolve(options.root, target) : target;
+    if (!path.isAbsolute(file)) return null;
+    const before = captureNow(file);
+    if (!before) return null;
+    before.catch(() => undefined);
+    return { file, before };
   };
   return {
     see(output) {
       if (output.kind !== 'file_focus' || output.action !== 'edit') return;
       if (started.has(output.path)) return;
       started.add(output.path);
-      const before = path.isAbsolute(output.path) ? contentNow(output.path) : null;
-      before?.catch(() => undefined);
       pending.push(
-        backUp(output.path, before).catch((error: unknown) =>
+        backUp(output.path, capture(output.path)).catch((error: unknown) =>
           console.error('Could not record a file the agent edited', error),
         ),
       );

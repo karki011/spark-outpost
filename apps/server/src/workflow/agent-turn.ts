@@ -186,6 +186,7 @@ export async function runAgentTurn(
           db: deps.db,
           workspaceId: input.workspaceId,
           runId: lease.runId,
+          root: input.projectRoots[0] ?? null,
           alsoFor: options.backupAlsoFor,
         })
       : null;

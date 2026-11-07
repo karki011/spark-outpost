@@ -105,5 +105,6 @@ describe('an edit the agent made without asking, in a folder that is not a git r
     ]);
     await revertRun(t.db, t.workspaceId, runId);
     expect(await readFile(path.join(folder, 'notes.txt'), 'utf8')).toBe('draft\n');
+    await expect(readFile(path.join(folder, 'new.txt'), 'utf8')).rejects.toThrow();
   });
 });
