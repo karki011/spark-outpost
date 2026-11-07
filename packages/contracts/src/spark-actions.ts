@@ -40,6 +40,7 @@ import { browserActionLabels, browserActionSchemas, browserQuestion } from './br
 import { startOutpostActionSchema, startOutpostLabels } from './outpost-start-action.ts';
 import { askSparkActionSchema, askSparkLabels } from './ask-spark-action.ts';
 import { publishArtifactActionSchema, publishArtifactLabels } from './artifact-pages.ts';
+import { linkRepoActionSchema, linkRepoLabels, linkRepoQuestion } from './repos-folders.ts';
 
 export const SPARK_ACTION_KIND = 'spark_action' as const;
 
@@ -241,6 +242,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   publishArtifactActionSchema,
   rulesEditActionSchema,
   pluginsEditActionSchema,
+  linkRepoActionSchema,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
 export type SparkActionName = SparkAction['action'];
@@ -296,6 +298,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   publish_artifact: [],
   rules_edit: [],
   plugins_edit: [],
+  link_repo: [],
 };
 
 export function editableFields(action: SparkActionName): readonly (keyof SparkActionEdits)[] {
@@ -421,6 +424,7 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
   ...publishArtifactLabels,
   ...rulesEditLabels,
   ...pluginsEditLabels,
+  ...linkRepoLabels,
 };
 
 const SLACK_POST_AS_YOU_QUESTION = 'Post this to Slack as you?';
@@ -435,6 +439,7 @@ export function sparkActionQuestion(action: SparkAction): string {
   if (action.action === 'calendar_edit') return calendarEditQuestion(action);
   if (action.action === 'rules_edit') return rulesEditQuestion(action);
   if (action.action === 'plugins_edit') return pluginsEditQuestion(action);
+  if (action.action === 'link_repo') return linkRepoQuestion(action);
   return (
     atlassianQuestion(action) ??
     serviceNowQuestion(action) ??

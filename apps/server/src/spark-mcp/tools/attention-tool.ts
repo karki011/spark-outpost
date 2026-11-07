@@ -112,7 +112,7 @@ export const attentionTool = sparkTool({
   privateData: true,
   title: 'What needs you',
   description:
-    'Does anyone need anything? needsYou is true only when something blocks on the user: cards waiting across all chats (permission, questions, plans, checkpoints, Spark action cards) not set aside, with the chat, who asks, wait time and choices, or a waiting Terminal session. setAsideCards are cards the user put off with Later: still unanswered, never in needsYou; call them set aside. Also unread updates (Spark flags, finished and failed turns), failed chats and flagged tickets, which never set needsYou. Oldest first.',
+    'Does anyone need anything? needsYou is true only when something blocks on the user: cards waiting in any chat (permission, questions, plans, checkpoints, Spark actions) not set aside, with chat, asker, wait and choices, or a waiting Terminal session. setAsideCards: put off with Later, still unanswered, never in needsYou; call them set aside. Also unread updates (Spark flags, finished and failed turns), failed chats and flagged tickets, which never set needsYou. Oldest first.',
   input: { limit: limitInput(20, 50) },
   run: (args, context) => attention(context, args.limit),
 });

@@ -9,6 +9,7 @@ import {
   projectFilesResponseSchema,
   projectSchema,
   removedProjectSchema,
+  reposFoldersSchema,
   type Attachment,
   type CreatedFolder,
   type FolderListing,
@@ -18,6 +19,7 @@ import {
   type ProjectFilesResponse,
   type ProjectGit,
   type RemovedProject,
+  type ReposFolders,
   type UpdateProjectRequest,
 } from '@spark-outpost/contracts';
 import { request } from './client.ts';
@@ -33,6 +35,7 @@ const FOLDERS_ONLY: FolderPick = { files: null, hidden: false };
 
 export const projectKeys = {
   all: ['projects'] as const,
+  reposFolders: ['repos-folders'] as const,
   folders: (path: string | null, pick: FolderPick = FOLDERS_ONLY) =>
     ['folders', path, pick.files, pick.hidden] as const,
   instructionsFile: (path: string) => ['instructions-file', path] as const,
@@ -64,6 +67,12 @@ function withQuery(path: string, params: Record<string, string | null>): string 
 
 export const projectsApi = {
   list: (): Promise<Project[]> => request(z.array(projectSchema), '/projects'),
+  reposFolders: (): Promise<ReposFolders> => request(reposFoldersSchema, '/repos-folders'),
+  saveReposFolders: (folders: string[]): Promise<ReposFolders> =>
+    request(reposFoldersSchema, '/repos-folders', {
+      method: 'PUT',
+      body: JSON.stringify({ folders }),
+    }),
   create: (rootPath: string): Promise<Project> =>
     request(projectSchema, '/projects', { method: 'POST', body: JSON.stringify({ rootPath }) }),
   rename: (projectId: string, name: string): Promise<Project> =>

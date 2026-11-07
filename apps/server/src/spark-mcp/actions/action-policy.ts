@@ -106,6 +106,7 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   ),
   rules_edit: null,
   plugins_edit: null,
+  link_repo: null,
   confluence_edit: asked(
     'create|write|add|draft|publish|change|update|edit|rename|rewrite|delete|remove|trash|comment|post',
     'confluence|wiki|pages?|docs?|comments?',

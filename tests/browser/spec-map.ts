@@ -145,6 +145,7 @@ export const SPEC_GROUPS = {
   ],
   'sidebar-projects': [
     'add-folder',
+    'repos-folders',
     'archive-current',
     'compact-chrome',
     'project-clone',
