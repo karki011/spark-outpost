@@ -4,6 +4,7 @@ import { shoot, useSystemTheme } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { expectNoHeaderPane, toggleHeaderPane } from './header-menu.ts';
+import { COLUMN } from './chat-rail-kit.ts';
 
 const SHOTS = process.env.CHAT_CLEAN_SHOTS ?? '';
 
@@ -138,7 +139,7 @@ test('a finished answer keeps one quiet meta row and no plan or Jev lines', asyn
 
   const column = (await page.locator('.col').boundingBox())!;
   const composer = (await page.locator('.composer').boundingBox())!;
-  expect(column.width).toBe(760);
+  expect(column.width).toBe(COLUMN);
   expect(Math.abs(column.width - composer.width)).toBeLessThan(2);
   await shots(page, 'finished-wide');
 
