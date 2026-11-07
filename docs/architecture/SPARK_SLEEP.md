@@ -72,15 +72,15 @@ The job runs per project, outside any turn, through the same gate as the project
    - Model: the cheapest model the project's default provider offers that is good enough to write project instructions (`digestModel` picks this way today).
    - Scrub secret values from the input and the output.
 3. **Verify.**
-   - **Citations (code, no model):** every cited path and symbol must still exist in the project (`git ls-files`, `git grep`). This checks citations, not facts: a wrong command can cite a real file.
+   - **Citations (code, no model):** every cited path and symbol must still exist in the project (`git ls-files` and `git grep` in a repository; the file system and a plain text search in a folder that is not one). This checks citations, not facts: a wrong command can cite a real file.
    - **Facts (one read-only child run per note, read tools only, on the project's current commit):** the agent reads the cited files and searches as needed, and answers true, stale or unsupported. Only true notes are kept. In the prototype, half the proposed notes failed this check and most were wrong when written, not made stale later.
    - The fact check is strict and sometimes rejects a true note. A rejected note is listed on the project page as rejected, with the reason, and the user can keep it by hand, which pins it.
-   - Each kept note records the commit it was checked at. A later sleep checks it again when any cited file has changed since then.
+   - Each kept note records what it was checked against: the commit in a repository, or each cited file's content hash in a folder that is not one. A later sleep checks it again when any cited file has changed since then.
    - An edit or retirement must point to a newer source that contradicts the note it replaces. A newer source about the same file is not enough, since two facts can cite one file. This is the teacher rule: an old fact survives unless something newer says otherwise. When contradiction isn't clear, both notes are kept and the project page asks the user.
 4. **Dream (phase 2, one more model run).**
    - From the gathered requests, write a few practice questions about the project ("where is X configured?", "what must I run before committing?") and answer each twice, once with the proposed notes and once without.
    - Answers are checked against the repository (do the named files exist, does the quoted line exist), not by asking the model whether it did well.
-   - A proposed note that no question used, or that made an answer wrong, is dropped.
+   - A proposed note is kept only when an answer with it is better than the same answer without it (right with it and wrong without, or naming more of the right files). A note that made no difference, or made an answer wrong, is dropped.
 5. **Apply.**
    - Accepted changes are saved, and each is one line in the project's history: "Sleep added 3 notes, retired 1".
    - A pinned or user-edited note is never changed by sleep. Sleep may propose a change and show it to the user.
@@ -91,7 +91,7 @@ Jev is never called inside a turn, and recall must not add a model call, so reca
 
 - **Each turn gets only the notes that match its request.** Spark matches the user's message against the project's notes in the database (cited paths and symbols named in the message, then a full-text match on the note text) and adds the best few to that turn's preamble, labelled as notes that grant nothing, the same way outpost instructions are. Pinned notes are added to every turn, within the size cap below, and a stale pinned note is left out like any other. Apart from pinned notes, a request that matches nothing gets no notes. The prototype showed why: a fixed set of notes almost never touched what the next request was about.
 - **Size:** the matched notes are held to a fixed number of characters, so they leave room for the conversation and the reply. Notes beyond it stay searchable through `spark_project_notes`.
-- **No stale notes are shown.** A note whose cited files changed since it was checked is left out until a sleep checks it again. This is a git comparison, not a model call.
+- **No stale notes are shown.** A note whose cited files changed since it was checked is left out until a sleep checks it again. This is a git comparison, or a hash of the cited files in a folder that is not a repository, not a model call.
 - **Changes:** the notes go with the turn, not the session, so a change needs no session reopen. Spark records which notes each session has seen. When one of them is edited, retired or goes stale (a cited file changed since it was checked), the session's next turn carries the new text, or a line withdrawing the note until a sleep checks it again, marked as replacing the earlier one, whether or not that turn matches it.
 - With **Project notes** off, no notes are added and the tool is not offered.
 - **A new Spark tool, `spark_project_notes`**, lets the agent search the rest of a project's notes when it needs them. It is read-only and follows the agent's mode like other reads.
