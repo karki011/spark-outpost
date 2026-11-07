@@ -105,16 +105,16 @@
 
 .msg .md,
 .bubble {
-  font-size: 16px;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.5;
 }
 
 .msg .md p {
-  margin-bottom: 1em;
+  margin-bottom: 0.75em;
 }
 
 .msg .md li {
-  margin-block: 0.35em;
+  margin-block: 0.4em;
 }
 
 .msg .md > :last-child {

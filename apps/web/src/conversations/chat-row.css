@@ -119,7 +119,17 @@
 
 .row.st-running .tt > span {
   color: var(--text);
-  animation: glow 1.8s ease-in-out infinite alternate;
+  animation: row-working 3.2s ease-in-out infinite;
+}
+
+@keyframes row-working {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .row.st-done .tt {
