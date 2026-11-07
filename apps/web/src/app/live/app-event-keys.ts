@@ -66,6 +66,7 @@ const changeSummaries: Invalidation = { queryKey: diffKeys.summaries };
 const spend: Invalidation = { queryKey: homeKeys.spendAll };
 const health: Invalidation = { queryKey: homeKeys.health, exact: true };
 const digest: Invalidation = { queryKey: homeKeys.digest, exact: true };
+const recap: Invalidation = { queryKey: homeKeys.recap, exact: true };
 const today: Invalidation = { queryKey: homeKeys.today, exact: true };
 const usage: Invalidation = { queryKey: queryKeys.usageSummary, exact: true };
 const planUsage: Invalidation = { queryKey: queryKeys.planUsage, exact: true };
@@ -153,7 +154,7 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
     case 'task':
       return [list, ...conversationScoped(event, false), tasks, today];
     case 'digest':
-      return [digest, spend];
+      return [digest, recap, spend];
     case 'outcome':
       return [...outcome(event), analytics];
     case 'map':

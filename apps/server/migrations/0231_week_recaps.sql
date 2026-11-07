@@ -44,3 +44,14 @@ CREATE TABLE week_recap_refines (
 CREATE INDEX week_recap_refines_recap_idx ON week_recap_refines (recap_id, created_at DESC);
 CREATE UNIQUE INDEX week_recap_refines_one_running_idx ON week_recap_refines (recap_id)
   WHERE status = 'running';
+
+CREATE TRIGGER week_recaps_insert_change AFTER INSERT ON week_recaps
+  FOR EACH ROW EXECUTE FUNCTION digest_row_changed();
+CREATE TRIGGER week_recaps_status_change AFTER UPDATE ON week_recaps
+  FOR EACH ROW WHEN (OLD.status IS DISTINCT FROM NEW.status)
+  EXECUTE FUNCTION digest_row_changed();
+CREATE TRIGGER week_recap_refines_insert_change AFTER INSERT ON week_recap_refines
+  FOR EACH ROW EXECUTE FUNCTION digest_row_changed();
+CREATE TRIGGER week_recap_refines_status_change AFTER UPDATE ON week_recap_refines
+  FOR EACH ROW WHEN (OLD.status IS DISTINCT FROM NEW.status)
+  EXECUTE FUNCTION digest_row_changed();

@@ -1,5 +1,8 @@
 import {
   digestStateSchema,
+  recapStateSchema,
+  type RecapRefineRequest,
+  type RecapState,
   providerHealthSchema,
   type DigestState,
   type DigestTrigger,
@@ -19,6 +22,7 @@ export const homeKeys = {
   health: ['home', 'provider-health'] as const,
   digest: ['home', 'digest'] as const,
   today: ['home', 'today'] as const,
+  recap: ['home', 'recap'] as const,
 };
 
 export function viewerTimeZone(): string {
@@ -44,4 +48,12 @@ export const homeApi = {
       `/home/digest?${new URLSearchParams({ tz: viewerTimeZone() }).toString()}`,
       { method: 'POST', body: JSON.stringify({ trigger }) },
     ),
+  recap: (): Promise<RecapState> => request(recapStateSchema, '/home/recap'),
+  requestRecap: (): Promise<RecapState> =>
+    request(recapStateSchema, '/home/recap', { method: 'POST', body: '{}' }),
+  refineRecap: (id: string, refine: RecapRefineRequest): Promise<RecapState> =>
+    request(recapStateSchema, `/home/recap/${encodeURIComponent(id)}/refine`, {
+      method: 'POST',
+      body: JSON.stringify(refine),
+    }),
 };

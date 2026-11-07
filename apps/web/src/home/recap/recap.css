@@ -1,0 +1,101 @@
+.hpanel.recap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hpanel.recap .hnote {
+  margin: 0;
+}
+
+.recap-sub,
+.recap-meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hpanel.recap .seg {
+  align-self: flex-start;
+  width: 240px;
+  padding: 2px;
+}
+
+.hpanel.recap .seg button {
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.recap-sec h3 {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.recap-sec ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recap-sec li {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.hpanel.recap .recap-sec .hlink {
+  display: inline;
+  margin: 0 0 0 6px;
+  font-size: 12px;
+}
+
+.hpanel.recap .recap-sec > .hlink {
+  display: block;
+  margin: 4px 0 0;
+}
+
+.recap-edit {
+  display: grid;
+  gap: 8px;
+}
+
+.recap-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.recap-box {
+  width: 100%;
+  min-height: 112px;
+  resize: vertical;
+  font: 12px/1.5 var(--font-mono);
+}
+
+.recap-refine {
+  display: flex;
+  gap: 8px;
+}
+
+.recap-refine .inp {
+  flex: 1;
+  min-width: 0;
+}
+
+.recap-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hrecap.early .hpanel {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
