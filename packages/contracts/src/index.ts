@@ -66,6 +66,7 @@ export * from './lean.ts';
 export * from './model-cards.ts';
 export * from './home.ts';
 export * from './digest.ts';
+export * from './recap.ts';
 export * from './outcomes.ts';
 export * from './plans.ts';
 export * from './pieces.ts';

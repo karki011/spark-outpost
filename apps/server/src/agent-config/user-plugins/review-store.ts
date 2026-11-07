@@ -1,6 +1,6 @@
 import type { PluginFinding, ProviderId } from '@spark-outpost/contracts';
 import { withTransaction, type Db, type Queryable } from '../../persistence/db.ts';
-import { newId } from '../../persistence/ids.ts';
+import { insertHiddenRun } from '../../persistence/hidden-runs.ts';
 import { needsReview, type StoredReview } from './review-result.ts';
 
 interface ReviewRow {
@@ -59,37 +59,6 @@ export interface ReviewRequest {
   prompt: string;
 }
 
-async function insertReviewRun(
-  client: Queryable,
-  workspaceId: string,
-  prompt: string,
-  model: ReviewModel,
-): Promise<string> {
-  const conversationId = newId();
-  const messageId = newId();
-  const runId = newId();
-  await client.query(
-    `INSERT INTO conversations (id, workspace_id, title, kind, title_source, archived_at)
-     VALUES ($1, $2, 'Plugin review', 'digest', 'user', now())`,
-    [conversationId, workspaceId],
-  );
-  await client.query(
-    `INSERT INTO messages (id, conversation_id, role, content) VALUES ($1, $2, 'user', $3)`,
-    [messageId, conversationId, prompt],
-  );
-  await client.query(
-    `INSERT INTO runs (id, conversation_id, user_message_id, provider, model, effort, status,
-       mode, role, picked_mode, source)
-     VALUES ($1, $2, $3, $4, $5, $6, 'queued', 'chat', 'digest', 'chat', 'digest')`,
-    [runId, conversationId, messageId, model.provider, model.model, model.effort],
-  );
-  await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [
-    newId(),
-    runId,
-  ]);
-  return runId;
-}
-
 export async function startPluginReview(
   db: Db,
   workspaceId: string,
@@ -108,7 +77,12 @@ export async function startPluginReview(
     );
     const existing = rows[0] ? storedReview(rows[0]) : undefined;
     if (!needsReview(existing, again)) return false;
-    const runId = await insertReviewRun(client, workspaceId, prompt, model);
+    const { runId } = await insertHiddenRun(client, workspaceId, {
+      title: 'Plugin review',
+      archived: true,
+      prompt,
+      ...model,
+    });
     await client.query(
       `INSERT INTO user_plugin_reviews (workspace_id, plugin_key, fingerprint, run_id, created_at)
        VALUES ($1, $2, $3, $4, now())

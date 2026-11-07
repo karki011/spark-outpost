@@ -87,6 +87,7 @@ const serverEnv = {
   AGENT_RUNTIME: 'fake',
   OUTCOME_SAMPLE_RATE: '0',
   MORNING_BRIEF: 'false',
+  WEEK_RECAP: 'false',
   ARCHIVE_SWEEP: 'false',
   MAP_ROOT_PREFIX,
   CLONE_TEST_ROOT,
