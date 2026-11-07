@@ -322,10 +322,17 @@ test('a failed chat load offers retry without discarding the typed draft', async
     animations: 'disabled',
   });
   const retry = page.getByRole('button', { name: 'Try again', exact: true });
-  await retry.evaluate((button) => {
-    button.addEventListener('click', () => {
-      document.documentElement.dataset.retryRequested = 'true';
-    });
+  await page.evaluate(() => {
+    document.addEventListener(
+      'click',
+      (event) => {
+        const button = (event.target as Element).closest('button');
+        if (button?.textContent?.trim() === 'Try again') {
+          document.documentElement.dataset.retryRequested = 'true';
+        }
+      },
+      true,
+    );
   });
   await retry.click();
   await expect(page.locator('.bubble', { hasText: 'Recover loading fixture' })).toBeVisible();
