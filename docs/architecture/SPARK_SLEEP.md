@@ -184,6 +184,7 @@ What this means for the plan:
 
 ## Open questions
 
+- **Recall and verification after the tests.** The prototype tests argue against parts of this proposal that are not revised yet: the fixed preamble snapshot under How chats use the notes, showing Unverified notes under Verify, and the preamble in Phase 1. The alternative is per-request selection (the `spark_project_notes` search, or a match on paths and words) and a fact check against the code before a note is kept or shown. Until the user decides, build none of those three as written.
 - **Is the preamble a work-data read?** Notes come from other chats, and AGENTS.md counts lists across chats as work data for the send flag. Either the preamble counts as a work-data read on every turn that has notes, so a later send carries the flag, or notes are treated as Spark's own data about the project, which phase 1's skipping of untrusted turns supports. This is the user's decision.
 - **The holdout.** With one user, a 20% holdout gives small, noisy samples, and those turns run without notes on purpose. Should it be on, and should those turns say so?
 
