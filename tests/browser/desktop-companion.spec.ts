@@ -139,6 +139,7 @@ test('Island height previews a drag, saves once on release, and resets after rel
   await page.getByRole('switch', { name: 'Show Spark Island' }).click();
   const slider = page.getByRole('slider', { name: 'Spark Island height' });
   await expect(slider).toHaveValue('0');
+  await slider.scrollIntoViewIfNeeded();
   const bounds = (await slider.boundingBox())!;
   await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
   await page.mouse.down();
