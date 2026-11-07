@@ -44,7 +44,7 @@ Spark doesn't train weights, and agents run through Claude and Codex. The struct
 | Dreaming                   | Make practice questions from past requests in the project, answer them with and without the notes, and keep a note only if it helps.                               |
 | Importance score           | Prefer episodes with strong outcome signals (corrections, re-asks, reverted changes, review comments, merged pull requests), plus a few random ones for diversity. |
 
-The ablation is the most useful lesson: **the check is not optional.** A summarizer that writes notes nobody verifies is the "no dreaming" row, roughly 13 points worse in the paper. Spark Sleep aims to keep a note only when evidence shows it helps. Phase 1 checks that each note is true (a fact check against the code before it is kept), not that it helps; the holdout measures notes per project, not per note. The per-note "does it help" check is phase 2's dreaming.
+The ablation is the most useful lesson: **the check is not optional.** A summarizer that writes notes nobody verifies is the "no dreaming" row, roughly 13 points worse in the paper. Spark Sleep aims to keep a note only when evidence shows it helps. Phase 1 checks that each note is true (a fact check against the code before it is kept), not that it helps; the holdout measures notes per project, not per note. The per-note "does it help" check is phase 2's dreaming. Phase 1 is a deliberate exception to "the check is not optional": it shows fact-checked notes before dreaming tests that they help, with the holdout as the guard and notes off by default.
 
 ## Proposal
 
@@ -92,7 +92,7 @@ Jev is never called inside a turn, and recall must not add a model call, so reca
 - **Each turn gets only the notes that match its request.** Spark matches the user's message against the project's notes in the database (cited paths and symbols named in the message, then a full-text match on the note text) and adds the best few to that turn's preamble, labelled as notes that grant nothing, the same way outpost instructions are. Pinned notes are added to every turn, within the size cap below, and a stale pinned note is left out like any other. Apart from pinned notes, a request that matches nothing gets no notes. The prototype showed why: a fixed set of notes almost never touched what the next request was about.
 - **Size:** the matched notes are held to a fixed number of characters, so they leave room for the conversation and the reply. Notes beyond it stay searchable through `spark_project_notes`.
 - **No stale notes are shown.** A note whose cited files changed since it was checked is left out until a sleep checks it again. This is a git comparison, not a model call.
-- **Changes:** the notes go with the turn, not the session, so a change needs no session reopen. When a note the session already saw has been edited or retired, the next turn that matches it carries the new text, or a line saying it was retired, marked as replacing the earlier one.
+- **Changes:** the notes go with the turn, not the session, so a change needs no session reopen. Spark records which notes each session has seen. When one of them is edited, retired or goes stale (a cited file changed since it was checked), the session's next turn carries the new text, or a line withdrawing the note until a sleep checks it again, marked as replacing the earlier one, whether or not that turn matches it.
 - With **Project notes** off, no notes are added and the tool is not offered.
 - **A new Spark tool, `spark_project_notes`**, lets the agent search the rest of a project's notes when it needs them. It is read-only and follows the agent's mode like other reads.
   - It is offered only in a chat linked to a project with **Project notes** on, which keeps the plain-chat tool list (about 2 characters under its 27,000 cap) unchanged.
@@ -130,7 +130,7 @@ Every Jev answer is validated and recorded with its policy version, as JEV.md re
 The paper's reward is "1 if performance improves". Spark already records outcome signals per turn, so:
 
 - Hold back a random 20% of chats (not turns) in each project with notes. A held-back chat gets no matched notes and no `spark_project_notes` tool for its whole life, resumed sessions included, so it can't use notes from an earlier turn or a search.
-- Compare corrections, re-asks, reverted changes and checks failed between turns with notes and without, per project, in Analytics.
+- Compare corrections, re-asks, reverted changes and checks failed across all eligible turns by assigned chat group (notes on or held back), per project, in Analytics. A turn in a notes chat that matched no notes still counts in the notes group, since it can use earlier notes or the tool.
 - If notes don't beat no notes after a fair sample, say so on the project page and suggest turning them off.
 
 ## Prototype test (November 7, 2026)
