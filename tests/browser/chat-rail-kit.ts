@@ -4,7 +4,7 @@ import { openChats } from './navigation.ts';
 
 export const SHOTS = process.env.CHAT_WIDE_SHOTS ?? 'test-results/chat-rail';
 export const WIDE = { width: 2000, height: 1100 };
-export const COLUMN = 760;
+export const COLUMN = 880;
 export const PROMPTS = [
   'Fix the date divider #plan',
   'Compare the queue backends in a table',
