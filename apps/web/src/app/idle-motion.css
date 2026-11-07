@@ -1,5 +1,5 @@
-:root:is([data-motion='rest'], [data-motion='paused'])
-  :is(.mo-root, .row.st-running .tt, .rblob-slot) {
+:root:is([data-motion='rest'], [data-motion='paused']) :is(.mo-root, .rblob-slot),
+:root[data-motion='paused'] .row.st-running .tt {
   --motion-rest: 1;
 }
 @container style(--motion-rest: 1) {
