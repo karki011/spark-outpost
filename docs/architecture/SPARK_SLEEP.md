@@ -1,6 +1,6 @@
 # Spark Sleep (plan)
 
-> **Status: plan, not built (November 6, 2026).** Nothing here is implemented. It applies the ideas of "Language Models Need Sleep" (arXiv 2606.03979, Google Research) to Spark, without training any model.
+> **Status: plan, not built (November 6, 2026).** Nothing here is implemented. The prototype tests below argue against the fixed preamble and against showing unverified notes; the proposal is not revised yet. It applies the ideas of "Language Models Need Sleep" (arXiv 2606.03979, Google Research) to Spark, without training any model.
 
 ## The paper in one page
 
@@ -156,7 +156,8 @@ What it showed:
 
 ### Second test: fact check and real turns
 
-- **Fact check:** a Haiku agent with read tools checked each of the 41 notes against the current code and docs. It judged 12 true, 20 stale and 9 unsupported, for $0.20. A hand check of a sample found most stale verdicts right (Atlassian deletes, Terminal recording, `gh workflow run`). It was also too strict in places: it rejected true notes, such as the shared attention state, when the cited file didn't say the fact outright.
+- **Fact check:** a Haiku agent with read tools checked each of the 41 notes against the current code and docs. It judged 12 true, 20 stale and 9 unsupported, for $0.20. A hand check of 11 verdicts agreed with 8, including the stale Atlassian deletes, Terminal recording and `gh workflow run` notes. The checker was too strict in places: it rejected true notes, such as the shared attention state, when the cited file didn't say the fact outright.
+- **Stale, or wrong from the start?** The 20 stale notes were checked again against the code of October 24, just after the work they came from. Only 5 were true then (11 stale, 4 unsupported, $0.11). Most were wrong when consolidation wrote them, not made stale later.
 - **Real turns:** 24 later requests each ran as a Haiku agent with read tools, on the repository as it was when the request was made. The agent named the files it would change. Each ran three times without notes and with the 12 checked notes, and twice with all 41.
 
 | Context          | Right files (runs) | Average | Right folder | Agent steps |
@@ -165,14 +166,13 @@ What it showed:
 | 12 checked notes | 17%, 17%, 19%      | 18%     | 24%          | 10.3        |
 | All 41 notes     | 17%, 17%           | 17%     | 26%          | 10.4        |
 
-- **No measurable effect.** The spread between runs without notes (13% to 21%) is larger than any difference between conditions. Notes saved about one step in eleven, which is within that noise.
-- **Why:** only 1 of the 24 later requests touched a file any note mentioned, and none touched a file a checked note mentioned. Work moved on to new areas, and within two weeks half the notes were already stale. In a project that changes this fast, notes about finished features rarely help the next request.
-- **Cost:** about $1.55.
+- **This history can't test the idea.** Only 1 of the 24 later requests touched a file any note mentioned, and none touched a file a checked note mentioned. Work moved on to new areas, so no result here could show a gain. The equal scores are expected, not evidence that notes don't help.
+- **Noise:** the spread between runs without notes (13% to 21%) is larger than any difference between conditions.
+- **Cost:** about $1.65.
 
 What this means for the plan:
 
-- Notes need to be picked per request, not as a fixed preamble. That means the `spark_project_notes` search, or a cheap match between the request and each note's paths and words.
-- The fact check has to run again before a note is shown, not only when it's written, because notes go stale within days.
+- The write-time check matters most: most rejected notes were wrong when written. Verify needs a fact check against the code before a note is kept, not only the path check. This is the paper's lesson again.
 - Lasting value is more likely in notes about stable conventions (commands, rules, where things live) than in notes about recent changes. Consolidate should be told to prefer those.
 - A positive result needs a slower-moving project or a longer history than this one gives.
 
