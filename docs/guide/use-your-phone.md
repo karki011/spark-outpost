@@ -18,7 +18,7 @@ Use Spark from another device; work stays on the Mac. About 5 minutes. Needs Tai
 
 See what [outposts](outposts.md) allow here.
 
-**Link a new folder or clone a repo** also allows **New folder**.
+**Link a new folder or clone a repo** also allows **New folder**, and agents' repo copies and clones.
 
 Devices answer browser cards. **Open artifacts** (off) shows artifacts.
 

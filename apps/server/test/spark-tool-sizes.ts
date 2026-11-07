@@ -8,6 +8,7 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   tickets: false,
   slack: false,
   pull_requests: false,
+  github: false,
   project: false,
   publish: false,
   pull_request_create: false,
@@ -34,6 +35,7 @@ export const SESSION_CASES = {
     project: true,
     publish: true,
     pull_requests: true,
+    github: true,
     outpost_draft: true,
   },
   'chat in an outpost, nothing connected': {

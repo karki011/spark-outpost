@@ -3,6 +3,7 @@ import {
   isAtlassianAction,
   isCalendarAction,
   type SparkAction,
+  type SparkActionName,
   type SparkResult,
 } from '@spark-outpost/contracts';
 import { redactValue } from '../../audit/redact.ts';
@@ -24,6 +25,7 @@ export interface SparkActionFollowThrough {
 }
 
 const SWEEP_MS = 5_000;
+const DETACHED: ReadonlySet<SparkActionName> = new Set(['clone_repo']);
 
 export const RESTARTED_MESSAGE = 'Spark restarted before this finished, so it may be half done.';
 
@@ -37,7 +39,9 @@ async function audit(
     isCalendarAction(action.action) ||
     isAtlassianAction(action.action) ||
     action.action === 'plugins_edit' ||
-    action.action === 'link_repo';
+    action.action === 'link_repo' ||
+    action.action === 'github_read' ||
+    action.action === 'clone_repo';
   const payload = lean
     ? redactValue({ action: auditedAction(action), outcome: result.state, url: result.url })
     : redactValue({ action, outcome: result.state, result });
@@ -80,13 +84,22 @@ async function perform(deps: SparkToolDeps, claimed: ClaimedSparkAction): Promis
   }
 }
 
-export async function followThroughOnce(deps: SparkToolDeps): Promise<boolean> {
-  const claimed = await claimSparkAction(deps.db);
-  if (!claimed) return false;
+async function settle(deps: SparkToolDeps, claimed: ClaimedSparkAction): Promise<void> {
   const result = await perform(deps, claimed);
   await finishSparkAction(deps.db, claimed.approval.id, result);
   const action = claimed.approval.payload.sparkAction!;
   await audit(deps, claimed.approval.runId, action, result).catch(() => undefined);
+}
+
+export async function followThroughOnce(
+  deps: SparkToolDeps,
+  aside?: (work: Promise<void>) => void,
+): Promise<boolean> {
+  const claimed = await claimSparkAction(deps.db);
+  if (!claimed) return false;
+  const work = settle(deps, claimed);
+  if (aside && DETACHED.has(claimed.approval.payload.sparkAction!.action)) aside(work);
+  else await work;
   return true;
 }
 
@@ -103,9 +116,16 @@ export async function startSparkActionFollowThrough(
   let running: Promise<void> | null = null;
   let again = false;
   let stopped = false;
+  const asides = new Set<Promise<void>>();
+  const aside = (work: Promise<void>) => {
+    const tracked = work.catch(failed).then(() => {
+      asides.delete(tracked);
+    });
+    asides.add(tracked);
+  };
 
   const drain = async () => {
-    while (!stopped && (await followThroughOnce(deps).catch(failed)));
+    while (!stopped && (await followThroughOnce(deps, aside).catch(failed)));
   };
 
   const wake = () => {
@@ -132,6 +152,7 @@ export async function startSparkActionFollowThrough(
       stopped = true;
       clearInterval(timer);
       await running;
+      await Promise.all(asides);
     },
   };
 }

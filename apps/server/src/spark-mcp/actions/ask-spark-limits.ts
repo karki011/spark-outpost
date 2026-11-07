@@ -115,7 +115,8 @@ export function cardRefusal(
   if (approval.payload.form) return ASK_SPARK_REFUSALS.question;
   if (approval.payload.sparkAction?.action === 'rules_edit') return ASK_SPARK_REFUSALS.rules;
   if (approval.payload.sparkAction?.action === 'plugins_edit') return ASK_SPARK_REFUSALS.plugins;
-  if (approval.payload.sparkAction?.action === 'link_repo') return ASK_SPARK_REFUSALS.linkRepo;
+  const repoAction = approval.payload.sparkAction?.action;
+  if (repoAction === 'link_repo' || repoAction === 'clone_repo') return ASK_SPARK_REFUSALS.linkRepo;
   if (macOnlyCard(approval.payload)) return ASK_SPARK_REFUSALS.macOnly;
   const action = approval.payload.sparkAction;
   if (action && serviceNowAsksAlways(action)) return ASK_SPARK_REFUSALS.callerSees;

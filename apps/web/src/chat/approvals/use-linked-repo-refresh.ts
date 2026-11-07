@@ -5,8 +5,9 @@ import { queryKeys } from '../../api/client.ts';
 import { projectKeys } from '../../api/projects.ts';
 
 function linked(approval: Approval): boolean {
+  const action = approval.payload.sparkAction?.action;
   return (
-    approval.payload.sparkAction?.action === 'link_repo' &&
+    (action === 'link_repo' || action === 'clone_repo') &&
     approval.payload.sparkResult?.state === 'done'
   );
 }

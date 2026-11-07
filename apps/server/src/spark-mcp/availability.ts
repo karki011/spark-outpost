@@ -25,6 +25,7 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   tickets: true,
   slack: true,
   pull_requests: true,
+  github: true,
   project: true,
   publish: true,
   pull_request_create: true,
@@ -69,6 +70,8 @@ const PLUGINS_HOW_TO: Partial<Record<RulesRefusedRun, string>> = {
   remote: 'spark_plugins_edit (not in a turn started from a paired device; ask from the Mac)',
 };
 
+const NO_PROJECT_PULL_REQUESTS = 'pull request tools (link a project to the chat)';
+
 const ASK_SPARK_HOW_TO: Partial<Record<SparkToolNeed, string>> = {
   project: 'spark_map and spark_find (add a project in Spark first)',
   pull_requests:
@@ -110,7 +113,7 @@ export async function sparkAvailability(
     meetingsOffer(deps, scope),
     rulesRunRefusal(deps.db, scope),
   ]);
-  const gitHub = project ? await gitHubReach(deps, scope) : { connected: false, ownLogin: false };
+  const gitHub = await gitHubReach(deps, scope);
   const chat = scope.assistant !== true;
   const macHowTo = macRefused ? MAC_HOW_TO[macRefused] : undefined;
   const rulesHowTo = rulesRefused ? RULES_HOW_TO[rulesRefused] : undefined;
@@ -120,10 +123,11 @@ export async function sparkAvailability(
     ticket_create: sources.some((open) => open.connection.source !== 'servicenow'),
     servicenow: sources.some((open) => open.connection.source === 'servicenow'),
     slack: slack !== null,
-    pull_requests: gitHub.connected,
+    pull_requests: project && gitHub.connected,
+    github: gitHub.connected && chat,
     project,
     publish: project && chat,
-    pull_request_create: gitHub.ownLogin && chat,
+    pull_request_create: project && gitHub.ownLogin && chat,
     browser: deps.browser !== undefined,
     mac: macRefused === null,
     calendar_read: calendar.read,
@@ -140,6 +144,7 @@ export async function sparkAvailability(
       ...(macHowTo ? { mac: macHowTo } : {}),
       ...(rulesHowTo ? { rules_edit: rulesHowTo } : {}),
       ...(pluginsHowTo ? { plugins_edit: pluginsHowTo } : {}),
+      ...(gitHub.connected ? { pull_requests: NO_PROJECT_PULL_REQUESTS } : {}),
       ...(chat ? {} : ASK_SPARK_HOW_TO),
     },
   };
@@ -149,6 +154,7 @@ const HOW_TO_GET: Record<
   Exclude<
     SparkToolNeed,
     | 'browser'
+    | 'github'
     | 'mac'
     | 'publish'
     | 'pull_request_create'
@@ -171,7 +177,7 @@ const HOW_TO_GET: Record<
     'spark_confluence and spark_confluence_edit (connect Atlassian in Settings → Connectors and turn on its Confluence switch)',
   slack: 'Slack tools (connect Slack in Settings → Connectors)',
   pull_requests:
-    'pull request tools (connect GitHub in Settings → Connectors and link a project to the chat)',
+    'pull request and GitHub repo tools (connect GitHub in Settings → Connectors; PRs also need a linked project)',
   project: 'spark_map and spark_find (link a project to the chat)',
 };
 

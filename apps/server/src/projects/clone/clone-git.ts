@@ -17,6 +17,7 @@ export interface GitCloneRequest {
   destination: string;
   env: Record<string, string>;
   config: readonly string[];
+  shallow?: boolean;
   onLine: (line: string) => void;
 }
 
@@ -48,7 +49,11 @@ export function cloneEnvironment(
   };
 }
 
-export function cloneArguments(request: Pick<GitCloneRequest, 'url' | 'destination' | 'config'>) {
+const SHALLOW = ['--depth', '1', '--single-branch'];
+
+export function cloneArguments(
+  request: Pick<GitCloneRequest, 'url' | 'destination' | 'config' | 'shallow'>,
+) {
   return [
     ...request.config,
     '-c',
@@ -58,6 +63,7 @@ export function cloneArguments(request: Pick<GitCloneRequest, 'url' | 'destinati
     'clone',
     '--progress',
     '--no-recurse-submodules',
+    ...(request.shallow ? SHALLOW : []),
     '--',
     request.url,
     request.destination,

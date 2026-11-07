@@ -3,7 +3,7 @@ import {
   appendConversationProject,
   type AppendedProject,
 } from '../../persistence/conversation-projects.ts';
-import { withTransaction } from '../../persistence/db.ts';
+import { withTransaction, type Queryable } from '../../persistence/db.ts';
 import {
   SESSION_CLOSE_REASONS,
   closeConversationSessions,
@@ -22,6 +22,24 @@ function resultLine(outcome: AppendedProject, repo: string): string {
   return `Linked ${repo}. This chat can use it from your next message.`;
 }
 
+export async function linkProjectToChat(
+  client: Queryable,
+  workspaceId: string,
+  conversationId: string,
+  projectId: string,
+): Promise<AppendedProject> {
+  const appended = await appendConversationProject(client, workspaceId, conversationId, projectId);
+  if (appended === 'linked') {
+    await closeConversationSessions(
+      client,
+      workspaceId,
+      conversationId,
+      SESSION_CLOSE_REASONS.repos,
+    );
+  }
+  return appended;
+}
+
 export async function performLinkRepo(
   context: SparkToolContext,
   action: LinkRepoAction,
@@ -37,21 +55,8 @@ export async function performLinkRepo(
     }
     const projectId =
       target.projectId ?? (await createProject(client, workspaceId, target.path)).project.id;
-    const appended = await appendConversationProject(
-      client,
-      workspaceId,
-      conversationId,
-      projectId,
-    );
+    const appended = await linkProjectToChat(client, workspaceId, conversationId, projectId);
     if (appended === 'full') throw new Error(resultLine(appended, action.repo));
-    if (appended === 'linked') {
-      await closeConversationSessions(
-        client,
-        workspaceId,
-        conversationId,
-        SESSION_CLOSE_REASONS.repos,
-      );
-    }
     return appended;
   });
   return { message: resultLine(outcome, action.repo), url: null };

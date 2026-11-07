@@ -1,6 +1,7 @@
 import {
   SPARK_ACTION_KIND,
   type AtlassianReadAction,
+  type GitHubReadAction,
   type ServiceNowReadAction,
 } from '@spark-outpost/contracts';
 import type { Queryable } from '../../persistence/db.ts';
@@ -11,13 +12,14 @@ import { cardDecision } from './browser/gate.ts';
 
 export type ReadDecision = 'mode' | 'allowed_earlier' | 'user_allowed';
 
-export type GatedRead = AtlassianReadAction | ServiceNowReadAction;
+export type GatedRead = AtlassianReadAction | ServiceNowReadAction | GitHubReadAction;
 
 export type ReadClearance =
   | { cleared: true; decision: ReadDecision }
   | { cleared: false; outcome: 'waiting_for_user' | 'declined'; message: string };
 
 const productOf = (action: GatedRead) => ('product' in action ? action.product : null);
+const repoOf = (action: GatedRead) => ('repo' in action ? action.repo : null);
 
 async function readAllowedInChat(
   db: Queryable,
@@ -30,10 +32,18 @@ async function readAllowedInChat(
        AND a.decided_by = 'user'
        AND a.payload->'sparkAction'->>'action' = $3
        AND ($4::text IS NULL OR a.payload->'sparkAction'->>'product' = $4)
+       AND a.payload->'sparkAction'->>'repo' IS NOT DISTINCT FROM $5::text
      LIMIT 1`,
-    [conversationId, SPARK_ACTION_KIND, action.action, productOf(action)],
+    [conversationId, SPARK_ACTION_KIND, action.action, productOf(action), repoOf(action)],
   );
   return rows.length > 0;
+}
+
+export async function readCleared(context: SparkToolContext, action: GatedRead): Promise<boolean> {
+  const { scope, deps } = context;
+  if (!scope.runId || !scope.conversationId) return false;
+  if (await readAllowedInChat(deps.db, scope.conversationId, action)) return true;
+  return actionPath(await actionFacts(deps.db, scope.runId, action.action)) === 'perform';
 }
 
 export async function clearRead(

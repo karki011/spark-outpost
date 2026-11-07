@@ -29,6 +29,7 @@ import { performStartOutpost } from './outpost-actions.ts';
 import { performRulesEdit } from './rules-edit-perform.ts';
 import { performPluginsEdit } from './plugins-edit-perform.ts';
 import { performLinkRepo } from './link-repo-perform.ts';
+import { performCloneRepo } from './clone-repo-perform.ts';
 import type { StartedBy } from '../../outposts/start-outpost.ts';
 
 export const OPEN_PR_RETIRED =
@@ -134,5 +135,14 @@ export function performSparkAction(
       return performPluginsEdit(context, action);
     case 'link_repo':
       return performLinkRepo(context, action);
+    case 'github_read':
+      return Promise.resolve({
+        message: action.repo
+          ? `The agent can copy ${action.repo} to read it in this chat.`
+          : 'The agent can search your GitHub repositories in this chat.',
+        url: null,
+      });
+    case 'clone_repo':
+      return performCloneRepo(context, action);
   }
 }

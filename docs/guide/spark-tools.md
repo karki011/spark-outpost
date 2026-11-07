@@ -17,7 +17,7 @@ summary: What agents can look up about Spark, the confirm card they show before 
 | Pull requests, checks, reviews                           | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                                               |
 | Setup and projects                                       | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects`                             |
 | The Map, what breaks if a file changes                   | `spark_map`                                                                                                           |
-| Where code lives, or a repo by name                      | `spark_find`, `spark_find_repo`                                                                                       |
+| Where code lives; a repo here or on GitHub               | `spark_find`, `spark_find_repo`, `spark_github_repos`, `spark_research_repo`                                          |
 | MCP servers and where each is on                         | `spark_mcp_servers`                                                                                                   |
 | Open terminals                                           | `spark_terminals`                                                                                                     |
 | The Browser pane                                         | `spark_browser_tabs`, `spark_browser_read`, `spark_browser_screenshot`, `spark_browser_logs`, `spark_browser_preview` |
@@ -56,7 +56,7 @@ summary: What agents can look up about Spark, the confirm card they show before 
 | Change Confluence pages                                                                                 | `spark_confluence_edit`                                                                                 |
 | Change [Spark rules](protected-paths.md#spark-rules) or a [plugin](use-claude-plugins.md) (always asks) | `spark_rules_edit`, `spark_plugins_edit`                                                                |
 
-`spark_link_repo` always asks to [link a repo](where-spark-works.md#link-a-repo-by-name) to the chat.
+`spark_link_repo` and `spark_clone_repo` always ask ([repos](link-a-repo.md)).
 
 MCP server cards show the command; fill values in **Settings → MCP servers**.
 
@@ -76,7 +76,7 @@ Sub-chats and Sparks' jobs get no `spark_outpost_start`. Another chat's text is 
 
 ## Ask Spark tools
 
-[Ask Spark](companion-quick-chat.md#let-ask-spark-act) gets these too, minus publishing, follow-up, terminal runs, sign-ins, outpost asks and starts, artifacts, Spark rules, plugins and linking repos. Its own:
+[Ask Spark](companion-quick-chat.md#let-ask-spark-act) gets these too, minus publishing, follow-up, terminal runs, sign-ins, outpost asks and starts, artifacts, Spark rules, plugins and repo tools. Its own:
 
 | It can                                        | Tool                                                                                                                   |
 | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
