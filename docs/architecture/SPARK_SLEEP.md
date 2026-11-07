@@ -126,6 +126,34 @@ The paper's reward is "1 if performance improves". Spark already records outcome
 - Compare corrections, re-asks, reverted changes and checks failed between turns with notes and without, per project, in Analytics.
 - If notes don't beat no notes after a fair sample, say so on the project page and suggest turning them off.
 
+## Prototype test (November 7, 2026)
+
+A throwaway script ran the gather, consolidate and verify steps, plus a with-and-without check, on this repository's own Claude Code history. Spark's dev database held only 2 chats.
+
+- **Data:** 466 typed requests from October 13 to November 7. Notes were made from those before October 23, and test questions came from those after.
+- **Gather:** 297 requests before the split. 17 were dropped as untrusted and 34 for reading a secret file (mostly sourcing `.local/credentials.env`). 150 of the remaining 246 were chosen.
+- **Consolidate:** one Haiku call proposed 43 notes for $0.02. 41 passed the path check.
+- **Test:** 29 later requests whose changed files still exist. For each, a model with no tools listed the files it expected to need. It was given the repository's directories plus nothing, the notes' cited paths only, or the full notes.
+
+| Answer model             | Context    | Exact files | Right folder | Made-up paths |
+| ------------------------ | ---------- | ----------- | ------------ | ------------- |
+| Haiku (2 runs, averaged) | Nothing    | 2%          | 9%           | 34%           |
+|                          | Paths only | 2%          | 14%          | 13%           |
+|                          | Full notes | 2%          | 15%          | 16%           |
+| Sonnet                   | Nothing    | 3%          | 8%           | 16%           |
+|                          | Paths only | 3%          | 13%          | 6%            |
+|                          | Full notes | 3%          | 18%          | 14%           |
+
+What it showed:
+
+- **Notes cut made-up paths and pointed to the right folder more often, but a bare list of the same paths did almost as well.** The sample is small and the test has no tools, so it measures orientation, not finished work.
+- **The path check is too weak.** At least four of the 41 kept notes were stale when tested, and all passed because their files still exist. Examples: Atlassian deletes asking every time, Terminal recording being off by default, Ask Spark being read-only, and Calendar phase 1 being read-only. One note cited a file that has nothing to do with it.
+- **Consequences for the plan:**
+  - Verify needs a fact check against the current code and docs, not only path existence. This matches the paper's ablation.
+  - Phase 2's dreaming check should come before notes are shown to agents, not after.
+  - A fair test needs real turns with tools, measuring steps, time and corrections, which spends real usage.
+- **Cost:** about $12 in all, $11.20 of it for the one Sonnet answer run.
+
 ## Phases
 
 1. **Phase 1:** the table, the project page list, the gather, consolidate, verify and apply steps, the preamble, `spark_project_notes`, the setting, the guide page and the holdout measurement. Jev is not used yet.
