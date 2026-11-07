@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { lstat, mkdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -323,6 +323,30 @@ describe('a clone the app quit in the middle of', () => {
     await exited;
     expect(orphan.signalCode).toBe('SIGKILL');
     expect(await exists(target)).toBe(false);
+  });
+
+  it('leaves a clone that another live Spark process still runs', async () => {
+    const { target, dev, ino } = await leftover('widgets');
+    const owner = spawn(
+      'sh',
+      ['-c', '"$0" clone -- "$1" "$2" & wait', await stallingGit(world), world.sourceUrl, target],
+      {
+        detached: true,
+        stdio: 'ignore',
+      },
+    );
+    const child = await eventually(async () => {
+      const found = await new Promise<string>((resolve) =>
+        execFile('pgrep', ['-P', String(owner.pid)], (_e, out) => resolve(String(out).trim())),
+      );
+      return found ? Number(found) : null;
+    }, 10_000);
+    await mark(target, dev, ino, child);
+    const jobs = await restart();
+    expect(jobs).toEqual([]);
+    expect(await exists(target)).toBe(true);
+    expect(await markerCount()).toBe(1);
+    process.kill(-owner.pid!, 'SIGKILL');
   });
 
   it('never signals an unrelated process that reused the pid', async () => {

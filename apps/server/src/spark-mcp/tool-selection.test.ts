@@ -7,6 +7,7 @@ const NOTHING: SparkAvailability = {
   tickets: false,
   slack: false,
   pull_requests: false,
+  github: false,
   project: false,
   publish: false,
   pull_request_create: false,
@@ -36,6 +37,7 @@ const GROUPS: [keyof SparkAvailability, string[]][] = [
     'pull_requests',
     ['spark_pull_requests', 'spark_pr', 'spark_pr_follow_up', 'spark_pr_follow_up_round'],
   ],
+  ['github', ['spark_github_repos', 'spark_research_repo', 'spark_clone_repo']],
   ['project', ['spark_map', 'spark_find', 'spark_terminal_run']],
   ['publish', ['spark_push']],
   ['pull_request_create', ['spark_pull_request']],
@@ -100,6 +102,15 @@ describe('which Spark tools a session is offered', () => {
     const offered = sparkToolsFor({ readOnly: true }, EVERYTHING_AVAILABLE);
     expect(offered.some((tool) => tool.acts)).toBe(false);
     expect(offered.map((tool) => tool.name)).toContain('spark_tickets');
+    expect(offered.map((tool) => tool.name)).toContain('spark_research_repo');
+  });
+
+  it('gives Ask Spark none of the GitHub repo tools', () => {
+    const offered = sparkToolsFor({ assistant: true, readOnly: true }, EVERYTHING_AVAILABLE);
+    const offeredNames = offered.map((tool) => tool.name);
+    expect(offeredNames).not.toContain('spark_github_repos');
+    expect(offeredNames).not.toContain('spark_research_repo');
+    expect(offeredNames).not.toContain('spark_clone_repo');
   });
 });
 
@@ -108,7 +119,7 @@ describe('what a session is told about tools it was not offered', () => {
     const note = unavailableNote(NOTHING);
     expect(note).toContain('connect Atlassian, Linear or ServiceNow in Settings → Connectors');
     expect(note).toContain('connect Slack in Settings → Connectors');
-    expect(note).toContain('connect GitHub in Settings → Connectors and link a project');
+    expect(note).toContain('GitHub repo tools (connect GitHub in Settings → Connectors');
     expect(note).toContain('spark_map and spark_find (link a project to the chat)');
     expect(note).toContain('next message');
     expect(sparkInstructionsFor(NOTHING)).toContain(note);

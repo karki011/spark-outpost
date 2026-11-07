@@ -141,7 +141,7 @@ export function cardSwitch(payload: unknown): RemoteSwitch | null {
   const card = parsed.data;
   const action = card.sparkAction;
   if (action?.action === 'browser_sign_in') return 'signIns';
-  if (action?.action === 'link_repo') return 'projects';
+  if (action?.action === 'link_repo' || action?.action === 'clone_repo') return 'projects';
   if (action?.action === 'ask_spark' && action.op === 'answer_card') return 'highRiskCards';
   const editsAtlassian = action?.action === 'jira_edit' || action?.action === 'confluence_edit';
   if (editsAtlassian && atlassianDeletes(action)) {

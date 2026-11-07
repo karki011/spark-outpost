@@ -3,6 +3,7 @@ import type { BrowserHost } from '../browser/host-client.ts';
 import type { AgentCalendarHosts } from '../calendar/agent/access.ts';
 import type { MacHost } from '../mac-control/host-client.ts';
 import type { CodeScanner } from '../codescan/scanner.ts';
+import type { CloneJobs } from '../projects/clone/clone-jobs.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ProtocolObserver } from '../providers/provider.ts';
 import type { Append } from '../workflow/agent-turn.ts';
@@ -44,6 +45,8 @@ export interface SparkToolDeps {
   outposts?: OutpostToolDeps | undefined;
   agentRuntime?: AgentRuntime | undefined;
   chatFolders?: string | undefined;
+  clones?: ((workspaceId: string) => CloneJobs) | undefined;
+  researchCopies?: string | undefined;
 }
 
 export interface ReplySoFar {

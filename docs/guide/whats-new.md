@@ -10,7 +10,9 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                  | What to do                                                      |
 | ----------------------------- | --------------------------------------------------------------- |
-| Link a repo by name           | [Set Repos folders](where-spark-works.md#link-a-repo-by-name).  |
+| Undo after quick edits        | Nothing.                                                        |
+| Clone or read GitHub repos    | [See how](link-a-repo.md#clone-or-read-a-repo-from-github).     |
+| Link a repo by name           | [Set Repos folders](link-a-repo.md#set-your-repos-folders).     |
 | Working chats pulse           | Nothing.                                                        |
 | Wider chat, tighter text      | Nothing.                                                        |
 | Needs macOS 13 or later       | [Get started](getting-started.md).                              |

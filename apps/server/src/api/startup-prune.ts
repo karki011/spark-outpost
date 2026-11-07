@@ -13,6 +13,7 @@ export interface StartupPrune {
   workspaceId: string;
   auditRetentionDays: number;
   chatFolders?: string;
+  researchCopies?: string;
   report?: (message: string, error: unknown) => void;
 }
 
@@ -26,9 +27,12 @@ export async function pruneOldRows(options: StartupPrune): Promise<void> {
     ['old Slack log rows', () => pruneSlackLog(db, options.auditRetentionDays)],
     ['old remote control entries', () => pruneRemoteAudit(db, options.auditRetentionDays)],
   ];
-  const { chatFolders } = options;
+  const { chatFolders, researchCopies } = options;
   if (chatFolders)
     steps.push(['folders of removed chats', () => pruneChatFolders(db, chatFolders)]);
+  if (researchCopies) {
+    steps.push(['research copies of removed chats', () => pruneChatFolders(db, researchCopies)]);
+  }
   for (const [name, prune] of steps) {
     await prune().catch((error: unknown) => report(`Could not prune ${name}`, error));
   }

@@ -19,6 +19,19 @@ describe('git clone invocation', () => {
     expect(args.join(' ')).not.toMatch(/--template|--recurse-submodules\b|--depth/);
   });
 
+  it('makes a research copy shallow and single-branch, still without hooks or submodules', () => {
+    const args = cloneArguments({
+      url: 'https://github.com/acme/widgets.git',
+      destination: '/tmp/research/acme/widgets',
+      config: [],
+      shallow: true,
+    });
+    expect(args).toEqual(expect.arrayContaining(['--depth', '1', '--single-branch']));
+    expect(args).toContain('--no-recurse-submodules');
+    expect(args).toContain('core.hooksPath=/dev/null');
+    expect(args.slice(-3)[0]).toBe('--');
+  });
+
   it('allows only https and ssh and can never prompt', () => {
     const env = cloneEnvironment(
       {

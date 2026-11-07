@@ -5,6 +5,7 @@ import {
   ARTIFACT_KIND_LABELS,
   editableFields,
   holdsToConfirm,
+  repoSizeText,
   serviceNowAsksAlways,
   sparkActionQuestion,
   ticketSourceNames,
@@ -167,6 +168,21 @@ function Facts({ action }: { action: SparkAction }) {
           </Fact>
         </dl>
       );
+    case 'github_read':
+      return (
+        <dl className="sac-facts">
+          <Fact label="What">{action.what}</Fact>
+          {action.repo && <Fact label="Repository">{action.repo}</Fact>}
+        </dl>
+      );
+    case 'clone_repo':
+      return (
+        <dl className="sac-facts">
+          <Fact label="Repository">{action.repo}</Fact>
+          <Fact label="Into">{action.displayPath}</Fact>
+          {action.sizeKb !== null && <Fact label="Size">{repoSizeText(action.sizeKb)}</Fact>}
+        </dl>
+      );
     case 'publish_artifact':
       return (
         <dl className="sac-facts">
@@ -216,6 +232,14 @@ function confirmNote(action: SparkAction, secretFiles?: readonly string[]): stri
   if (mac) return mac;
   if (action.action === 'link_repo') {
     return 'The agent can then read and change files there, as in the chat’s other repos. It applies from your next message.';
+  }
+  if (action.action === 'clone_repo') {
+    return 'Spark clones it with your GitHub sign-in, adds it as a project and links it to this chat from your next message. Its hooks don’t run.';
+  }
+  if (action.action === 'github_read') {
+    return action.repo
+      ? 'Spark makes a shallow copy the agent reads now, deleted with this chat. What it reads goes to its model provider and is treated as untrusted. Allowing covers this repo for the rest of this chat.'
+      : 'Spark searches your repos with your GitHub sign-in. The names go to the agent’s model provider. Allowing covers searching for the rest of this chat.';
   }
   if (action.action === 'pr_follow_up') {
     return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';

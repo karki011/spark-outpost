@@ -7,7 +7,7 @@ export function chatFoldersBase(dataDir: string, channel: string): string {
   return join(dataDir, channel, 'chats');
 }
 
-function chatHome(base: string, conversationId: string): string {
+export function chatHome(base: string, conversationId: string): string {
   if (!UUID.test(conversationId)) throw new Error('A chat folder needs a chat id.');
   return join(base, conversationId);
 }

@@ -34,6 +34,7 @@ export type SparkToolNeed =
   | 'tickets'
   | 'slack'
   | 'pull_requests'
+  | 'github'
   | 'project'
   | 'publish'
   | 'pull_request_create'
