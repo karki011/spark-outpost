@@ -14,4 +14,3 @@ export const morningBriefTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d
 export const DEFAULT_WEEK_RECAP_DAY = 5;
 export const DEFAULT_WEEK_RECAP_TIME = '15:00';
 export const weekRecapDaySchema = z.number().int().min(1).max(7);
-export const weekRecapTimeSchema = morningBriefTimeSchema;

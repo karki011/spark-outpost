@@ -4,7 +4,6 @@ import { copyButtonText, useCopyFeedback } from '../../ui/use-copy-feedback.ts';
 import { copyText, latestRefined, plainText } from './recap-model.ts';
 
 interface RecapEditorProps {
-  recapId: string;
   body: RecapBody;
   voice: RecapVoice;
   refines: readonly RecapRefine[];
@@ -20,15 +19,13 @@ function startText(body: RecapBody, refines: readonly RecapRefine[], voice: Reca
 }
 
 export function RecapEditor(props: RecapEditorProps) {
-  const { recapId, body, voice, refines, rewriting, refineError, onRefine } = props;
+  const { body, voice, refines, rewriting, refineError, onRefine } = props;
   const [drafts, setDrafts] = useState<Drafts>({});
   const [instruction, setInstruction] = useState('');
   const markdown = useCopyFeedback();
   const plain = useCopyFeedback();
   const boxId = useId();
   const seen = useRef(new Set(refines.map((refine) => refine.id)));
-
-  useEffect(() => setDrafts({}), [recapId]);
 
   useEffect(() => {
     for (const refine of refines) {
@@ -73,7 +70,9 @@ export function RecapEditor(props: RecapEditorProps) {
         <input
           className="inp"
           aria-label="Ask Spark to change the message"
-          placeholder={rewriting ? 'Rewriting…' : 'Ask for a change, like “shorter” or “less technical”'}
+          placeholder={
+            rewriting ? 'Rewriting…' : 'Ask for a change, like “shorter” or “less technical”'
+          }
           value={instruction}
           disabled={rewriting}
           maxLength={500}
@@ -89,7 +88,7 @@ export function RecapEditor(props: RecapEditorProps) {
         </p>
       )}
       <div className="recap-actions">
-        <button type="button" className="btn sm" onClick={() => markdown.copy(text)}>
+        <button type="button" className="btn primary sm" onClick={() => markdown.copy(text)}>
           {copyButtonText(markdown.state)}
         </button>
         <button type="button" className="btn sm line" onClick={() => plain.copy(plainText(text))}>

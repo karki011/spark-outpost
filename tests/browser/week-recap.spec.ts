@@ -62,10 +62,9 @@ test('Home writes a week recap in two voices, refines it on request and copies i
   await box.fill('**Done this week:** Shipped downloads.');
   await recap.getByRole('textbox', { name: 'Ask Spark to change the message' }).fill('shorter');
   await recap.getByRole('button', { name: 'Refine' }).click();
-  await expect(box).toHaveValue(
-    '**Done this week:** Shipped downloads.\n\n_Refined: shorter_',
-    { timeout: 15_000 },
-  );
+  await expect(box).toHaveValue('**Done this week:** Shipped downloads.\n\n_Refined: shorter_', {
+    timeout: 15_000,
+  });
   await recap.getByRole('button', { name: 'Undo' }).click();
   await expect(box).toHaveValue('**Done this week:** Shipped downloads.');
 

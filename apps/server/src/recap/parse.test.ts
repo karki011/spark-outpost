@@ -31,7 +31,13 @@ const reply = (value: unknown) => JSON.stringify(value);
 it('keeps items that cite facts and links them to the fact with an address', () => {
   const body = parseRecapReply(
     reply({
-      done: [{ me: 'I shipped downloads (#182).', manager: 'Downloads ask first (#182).', facts: ['c1', 'p1'] }],
+      done: [
+        {
+          me: 'I shipped downloads (#182).',
+          manager: 'Downloads ask first (#182).',
+          facts: ['c1', 'p1'],
+        },
+      ],
       you: [{ me: 'A chat waits on your answer.', manager: 'ignored', facts: ['c1'] }],
     }),
     facts,
@@ -75,7 +81,9 @@ it('keeps things waiting on the user out of the manager-facing help list', () =>
 
 it('fails a reply that is not JSON or keeps nothing', () => {
   expect(parseRecapReply('Sorry, I cannot help.', facts)).toBeNull();
-  expect(parseRecapReply(reply({ done: [{ me: 'x', manager: 'y', facts: [] }] }), facts)).toBeNull();
+  expect(
+    parseRecapReply(reply({ done: [{ me: 'x', manager: 'y', facts: [] }] }), facts),
+  ).toBeNull();
   expect(parseRecapReply(reply({}), [])).toEqual({ done: [], progress: [], help: [], you: [] });
 });
 
@@ -90,7 +98,11 @@ it('finds pull request numbers and ticket keys', () => {
 it('removes numbers a rewrite made up and keeps those from the facts or the draft', () => {
   const draft = '*Done:* downloads (#182) and ABC-7';
   expect(
-    groundRefinedText('```\n*Done:* downloads (#182), ABC-7 and (#400) SPK-12, BAD-1.\n```', facts, draft),
+    groundRefinedText(
+      '```\n*Done:* downloads (#182), ABC-7 and (#400) SPK-12, BAD-1.\n```',
+      facts,
+      draft,
+    ),
   ).toBe('*Done:* downloads (#182), ABC-7 and SPK-12.');
   expect(groundRefinedText('   ', facts, draft)).toBeNull();
 });

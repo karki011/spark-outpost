@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { weekRecapTimeSchema } from '@spark-outpost/contracts';
+import { morningBriefTimeSchema } from '@spark-outpost/contracts';
 import { useProfileSetting } from '../settings/use-profile-setting.ts';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { SwitchValueSetting } from './SwitchValueSetting.tsx';
@@ -12,7 +12,10 @@ const INFO = {
       label: 'What',
       text: 'A recap on Home of what you got done, what is in progress and where someone could help, ready to copy.',
     },
-    { label: 'When', text: 'Once a week on this day after this time, in this computer’s time zone.' },
+    {
+      label: 'When',
+      text: 'Once a week on this day after this time, in this computer’s time zone.',
+    },
     { label: 'Model', text: 'Your default provider’s middle-tier model, at medium effort.' },
   ],
   footer: 'Nothing is sent anywhere; you copy it yourself.',
@@ -67,7 +70,7 @@ export function WeekRecapSetting({ enabled, day, time }: WeekRecapSettingProps) 
             value={draft}
             onChange={(event) => {
               setDraft(event.target.value);
-              const parsed = weekRecapTimeSchema.safeParse(event.target.value);
+              const parsed = morningBriefTimeSchema.safeParse(event.target.value);
               if (parsed.success && parsed.data !== at.value) at.set(parsed.data);
             }}
           />

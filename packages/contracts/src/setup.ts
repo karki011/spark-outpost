@@ -22,7 +22,6 @@ import {
   morningBriefTimeSchema,
   personalitySchema,
   weekRecapDaySchema,
-  weekRecapTimeSchema,
 } from './spark.ts';
 
 export { providerIdSchema, type ProviderId };
@@ -164,7 +163,7 @@ export const profileSchema = z.object({
   morningBriefTime: morningBriefTimeSchema.default(DEFAULT_MORNING_BRIEF_TIME),
   weekRecap: z.boolean().default(true),
   weekRecapDay: weekRecapDaySchema.default(DEFAULT_WEEK_RECAP_DAY),
-  weekRecapTime: weekRecapTimeSchema.default(DEFAULT_WEEK_RECAP_TIME),
+  weekRecapTime: morningBriefTimeSchema.default(DEFAULT_WEEK_RECAP_TIME),
   compactWarnPercent: compactWarnPercentSchema.default(COMPACT_WARN_DEFAULT),
   compactAtPercent: compactAtPercentSchema.default(COMPACT_AT_DEFAULT),
   autoCompact: z.boolean().default(true),
@@ -215,7 +214,7 @@ export const updateProfileRequestSchema = z
     morningBriefTime: morningBriefTimeSchema,
     weekRecap: z.boolean(),
     weekRecapDay: weekRecapDaySchema,
-    weekRecapTime: weekRecapTimeSchema,
+    weekRecapTime: morningBriefTimeSchema,
     compactWarnPercent: compactWarnPercentSchema,
     compactAtPercent: compactAtPercentSchema,
     autoCompact: z.boolean(),

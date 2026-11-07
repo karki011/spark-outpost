@@ -112,7 +112,7 @@ export function RecapCard({ recap, onOpenId }: { recap: Recap; onOpenId: (id: st
               />
             ))}
             <RecapEditor
-              recapId={current.id}
+              key={current.id}
               body={body}
               voice={voice}
               refines={recap.refines}
@@ -134,8 +134,15 @@ export function RecapEarly({ recap }: { recap: Recap }) {
   return (
     <HomeSection id="home-recap" title="Week recap" className="hrecap early">
       <div className="hpanel recap">
-        <p className="hnote">Your recap comes on the day you chose. Want one for the week so far?</p>
-        <button type="button" className="btn sm line" disabled={recap.writing} onClick={recap.write}>
+        <p className="hnote">
+          Your recap comes on the day you chose. Want one for the week so far?
+        </p>
+        <button
+          type="button"
+          className="btn sm line"
+          disabled={recap.writing}
+          onClick={recap.write}
+        >
           {recap.writing ? 'Writing…' : 'This week so far'}
         </button>
       </div>

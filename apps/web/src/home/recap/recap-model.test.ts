@@ -13,7 +13,14 @@ const body: RecapBody = {
     { me: 'I fixed a typo.', manager: 'Typo fixed.', url: null, chatId: null },
   ],
   progress: [],
-  help: [{ me: 'Release waits on Apple.', manager: 'Need the Apple account owner.', url: null, chatId: null }],
+  help: [
+    {
+      me: 'Release waits on Apple.',
+      manager: 'Need the Apple account owner.',
+      url: null,
+      chatId: null,
+    },
+  ],
   you: [{ me: 'A chat waits on my answer.', manager: null, url: null, chatId: null }],
 };
 
@@ -39,7 +46,12 @@ it('uses the latest finished rewrite for a voice', () => {
     ({ voice, textOut, status }) as RecapRefine;
   expect(
     latestRefined(
-      [refine('manager', 'one'), refine('me', 'mine'), refine('manager', 'two'), refine('manager', null, 'running')],
+      [
+        refine('manager', 'one'),
+        refine('me', 'mine'),
+        refine('manager', 'two'),
+        refine('manager', null, 'running'),
+      ],
       'manager',
     ),
   ).toBe('two');

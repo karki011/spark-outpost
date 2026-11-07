@@ -19,7 +19,11 @@ export class RecapNotFoundError extends Error {}
 export class RecapNotReadyError extends Error {}
 
 function weekLabel(since: Date, now: Date): string {
-  const format = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  const format = new Intl.DateTimeFormat('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
   return `${format.format(since)} – ${format.format(now)}`;
 }
 
@@ -73,7 +77,8 @@ export async function refineRecap(
 ): Promise<RecapState> {
   const found = await recapForRefine(db, workspaceId, recapId);
   if (!found) throw new RecapNotFoundError('That recap no longer exists.');
-  if (found.recap.status !== 'ready') throw new RecapNotReadyError('The recap is still being written.');
+  if (found.recap.status !== 'ready')
+    throw new RecapNotReadyError('The recap is still being written.');
   await startRefine(db, workspaceId, recapId, {
     voice: request.voice,
     instruction: request.instruction,
