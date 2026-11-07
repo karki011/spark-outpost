@@ -70,6 +70,10 @@ export async function resolveDestination(
   return { path: target, state: await stateOf(target) };
 }
 
+export async function destinationAt(target: string): Promise<Destination> {
+  return { path: target, state: await stateOf(target) };
+}
+
 function occupied(target: string): CloneRefusedError {
   return new CloneRefusedError(
     `${target} already exists and is not empty. Choose another name or folder.`,

@@ -107,6 +107,11 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   rules_edit: null,
   plugins_edit: null,
   link_repo: null,
+  github_read: asked(
+    'read|look|check|see|find|search|show|list|explain|study|research|explore|clone|copy|download',
+    'github|repos?|repositor(?:y|ies)|code|codebase|source',
+  ),
+  clone_repo: null,
   confluence_edit: asked(
     'create|write|add|draft|publish|change|update|edit|rename|rewrite|delete|remove|trash|comment|post',
     'confluence|wiki|pages?|docs?|comments?',

@@ -22,8 +22,10 @@ import { createProject, displayPath, listProjects } from '../projects.ts';
 import {
   claimDestination,
   CloneRefusedError,
+  destinationAt,
   removeClaimed,
   resolveDestination,
+  type Destination,
 } from './clone-destination.ts';
 import {
   canRetryWithToken,
@@ -45,8 +47,16 @@ export interface CloneJobsDeps {
   allowFileProtocol?: boolean;
 }
 
+export interface ResearchCopy {
+  destination: string;
+}
+
 export interface CloneJobs {
-  start(request: StartCloneRequest): Promise<{ job: CloneJob; started: boolean }>;
+  start(
+    request: StartCloneRequest,
+    research?: ResearchCopy,
+  ): Promise<{ job: CloneJob; started: boolean }>;
+  settled(id: string): Promise<CloneJob | null>;
   cancel(id: string): Promise<CloneJob | null>;
   dismiss(id: string): boolean;
   list(): CloneJob[];
@@ -67,6 +77,7 @@ interface Entry {
   identity: DirectoryIdentity | null;
   process: GitCloneProcess | null;
   cancelled: boolean;
+  research: boolean;
   finished: Promise<void>;
 }
 
@@ -79,6 +90,7 @@ const LEAKED: CloneFailure = {
   detail: 'The clone would have saved a sign-in in its git settings, so Spark removed it.',
 };
 const CREDENTIALS_IN_CONFIG = /:\/\/[^/\s@]+:[^/\s@]+@/;
+const RESEARCH_ENV = { GIT_LFS_SKIP_SMUDGE: '1' };
 
 function toJob(entry: Entry): CloneJob {
   return {
@@ -103,10 +115,29 @@ function commandOf(pid: number): Promise<string> {
   });
 }
 
-async function stopOrphan(marker: CloneMarker): Promise<void> {
-  if (!marker.pid) return;
+function parentOf(pid: number): Promise<number | null> {
+  return new Promise((resolve) => {
+    execFile('ps', ['-o', 'ppid=', '-p', String(pid)], { timeout: PS_TIMEOUT_MS }, (_e, out) => {
+      const parent = Number.parseInt(String(out).trim(), 10);
+      resolve(Number.isFinite(parent) ? parent : null);
+    });
+  });
+}
+
+async function runningClone(marker: CloneMarker): Promise<boolean> {
+  if (!marker.pid) return false;
   const command = await commandOf(marker.pid);
-  if (!command.includes(' clone ') || !command.includes(marker.destination)) return;
+  return command.includes(' clone ') && command.includes(marker.destination);
+}
+
+async function ownedElsewhere(marker: CloneMarker): Promise<boolean> {
+  if (!marker.pid || !(await runningClone(marker))) return false;
+  const parent = await parentOf(marker.pid);
+  return parent !== null && parent > 1 && parent !== process.pid;
+}
+
+async function stopOrphan(marker: CloneMarker): Promise<void> {
+  if (!marker.pid || !(await runningClone(marker))) return;
   try {
     process.kill(-marker.pid, 'SIGKILL');
   } catch {
@@ -137,6 +168,7 @@ export function createCloneJobs(deps: CloneJobsDeps): CloneJobs {
     const env = {
       ...cloneEnvironment(process.env, { allowFileProtocol }),
       ...(await deps.loginEnv()),
+      ...(entry.research ? RESEARCH_ENV : {}),
       ...extraEnv,
     };
     if (entry.cancelled) return { code: -1, output: '' };
@@ -146,12 +178,13 @@ export function createCloneJobs(deps: CloneJobsDeps): CloneJobs {
       destination: entry.destination,
       env,
       config,
+      shallow: entry.research,
       onLine: (line) => {
         entry.progress = advance(entry.progress, line);
       },
     });
     entry.process = running;
-    if (entry.identity) {
+    if (entry.identity && !entry.research) {
       await updateCloneMarker(deps.db, entry.id, { identity: entry.identity, pid: running.pid });
     }
     if (entry.cancelled) running.stop();
@@ -192,7 +225,7 @@ export function createCloneJobs(deps: CloneJobsDeps): CloneJobs {
     try {
       failure = await cloneWithCredentials(entry, used);
       if (!failure && (await configLeak(entry.destination, used))) failure = LEAKED;
-      if (!failure) {
+      if (!failure && !entry.research) {
         entry.project = (await createProject(deps.db, deps.workspaceId, entry.destination)).project;
       }
     } catch (error) {
@@ -215,17 +248,26 @@ export function createCloneJobs(deps: CloneJobsDeps): CloneJobs {
     entry.status = entry.cancelled ? 'cancelled' : 'failed';
   }
 
+  async function destinationOf(
+    request: StartCloneRequest,
+    home: string,
+    research: ResearchCopy | undefined,
+  ): Promise<Destination> {
+    if (research) return destinationAt(research.destination);
+    const projects = await listProjects(deps.db, deps.workspaceId);
+    return resolveDestination(request.parentPath, request.name, {
+      home,
+      projectRoots: projects.map((project) => project.rootPath),
+      reserved: deps.reserved,
+    });
+  }
+
   return {
-    async start(request) {
+    async start(request, research) {
       const parsed = parseCloneUrl(request.url, { allowFile: allowFileProtocol });
       if (!parsed.ok) throw new CloneRefusedError(parsed.message);
       const home = await deps.home();
-      const projects = await listProjects(deps.db, deps.workspaceId);
-      const destination = await resolveDestination(request.parentPath, request.name, {
-        home,
-        projectRoots: projects.map((project) => project.rootPath),
-        reserved: deps.reserved,
-      });
+      const destination = await destinationOf(request, home, research);
       const running = [...entries.values()].find(
         (candidate) => candidate.status === 'cloning' && candidate.destination === destination.path,
       );
@@ -243,17 +285,20 @@ export function createCloneJobs(deps: CloneJobsDeps): CloneJobs {
         identity: null,
         process: null,
         cancelled: false,
+        research: research !== undefined,
         finished: Promise.resolve(),
       };
       entries.set(entry.id, entry);
       try {
         entry.identity = await claimDestination(destination);
-        await saveCloneMarker(deps.db, deps.workspaceId, {
-          id: entry.id,
-          source: entry.source,
-          destination: entry.destination,
-          identity: entry.identity,
-        });
+        if (!entry.research) {
+          await saveCloneMarker(deps.db, deps.workspaceId, {
+            id: entry.id,
+            source: entry.source,
+            destination: entry.destination,
+            identity: entry.identity,
+          });
+        }
       } catch (error) {
         entries.delete(entry.id);
         if (entry.identity) await removeClaimed(entry.destination, entry.identity);
@@ -265,6 +310,13 @@ export function createCloneJobs(deps: CloneJobsDeps): CloneJobs {
         entry.status = 'failed';
       });
       return { job: toJob(entry), started: true };
+    },
+
+    async settled(id) {
+      const entry = entries.get(id);
+      if (!entry) return null;
+      await entry.finished;
+      return toJob(entry);
     },
 
     async cancel(id) {
@@ -293,7 +345,7 @@ export function createCloneJobs(deps: CloneJobsDeps): CloneJobs {
     async recover() {
       const home = await deps.home();
       for (const marker of await cloneMarkers(deps.db, deps.workspaceId)) {
-        if (entries.has(marker.id)) continue;
+        if (entries.has(marker.id) || (await ownedElsewhere(marker))) continue;
         await stopOrphan(marker);
         const removed = await removeClaimed(marker.destination, marker.identity);
         await deleteCloneMarker(deps.db, marker.id);
@@ -317,6 +369,7 @@ export function createCloneJobs(deps: CloneJobsDeps): CloneJobs {
           identity: null,
           process: null,
           cancelled: false,
+          research: false,
           finished: Promise.resolve(),
         });
       }

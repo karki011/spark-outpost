@@ -65,6 +65,7 @@ describe('the size of the Spark tool list a session is sent', () => {
       linked.groups.project! +
         linked.groups.publish! +
         linked.groups.pull_requests! +
+        linked.groups.github! +
         linked.groups.outpost_draft!,
     );
     expect(everything.tools).toBeGreaterThan(linked.tools);

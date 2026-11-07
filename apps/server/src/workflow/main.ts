@@ -3,6 +3,8 @@ import type { IntakeDeps } from '../advisor/jev-types.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
 import { loadConfig, sparkDataDir } from '../config.ts';
 import { chatFoldersBase } from '../chat-files/folders.ts';
+import { chatResearchBase } from '../chat-files/research-copies.ts';
+import { agentClones } from '../projects/clone/agent-clones.ts';
 import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { configuredBackup } from '../persistence/startup-backup.ts';
@@ -52,6 +54,19 @@ const codeScan = createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) })
 const desktopBrowser = connectDesktopBrowser(process.env, process);
 const outpostWakes = new TaskWakes();
 const parkedTurns = new ParkedTurns();
+const sparkGitHub = {
+  runCommand,
+  apiUrl: config.GITHUB_API_URL,
+  app: githubApp,
+  locateGh: () => locateCli('gh', runCommand, loginShell),
+  loginPath: loginShellPath(runCommand, loginShell),
+  loginEnv: loginShellEnv(runCommand, loginShell),
+};
+const clones = agentClones({ ...sparkGitHub, db, secrets, fetch }, [
+  config.SPARK_DATA_DIR,
+  config.SPARK_LOG_DIR,
+  config.BACKUP_DIR,
+]);
 const sparkDeps: SparkToolDeps = {
   db,
   secrets,
@@ -59,14 +74,7 @@ const sparkDeps: SparkToolDeps = {
   linearApiUrl: config.LINEAR_API_URL,
   slackApiUrl: config.SLACK_API_URL,
   slackSignIn: slackSignInConfig(config),
-  github: {
-    runCommand,
-    apiUrl: config.GITHUB_API_URL,
-    app: githubApp,
-    locateGh: () => locateCli('gh', runCommand, loginShell),
-    loginPath: loginShellPath(runCommand, loginShell),
-    loginEnv: loginShellEnv(runCommand, loginShell),
-  },
+  github: sparkGitHub,
   branchPrefix: config.BRANCH_PREFIX,
   linkScheme: config.SPARK_LINK_SCHEME,
   codeScan,
@@ -81,6 +89,8 @@ const sparkDeps: SparkToolDeps = {
   outposts: { wakes: outpostWakes, stackGit },
   agentRuntime: config.AGENT_RUNTIME,
   chatFolders,
+  clones: clones.jobsFor,
+  researchCopies: chatResearchBase(sparkDataDir(config), config.BRANCH_PREFIX),
 };
 const sparkTools = await startSparkMcpHost(sparkDeps);
 desktopBrowser?.blockPorts([sparkTools.port]);
@@ -172,6 +182,7 @@ const shutdown = async () => {
   await prFollowUp.stop();
   await worker.stop();
   await flushBufferedText();
+  clones.stopAll();
   await sparkActions.stop();
   await sparkTools.close();
   await processKillsSent();

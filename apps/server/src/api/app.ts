@@ -77,7 +77,7 @@ export interface AppOptions
     Pick<ChatWorkspaceDeps, 'openFolder'>,
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
     Pick<McpRouteDeps, 'probeMcp'>,
-    Pick<ConversationActionDeps, 'deleteSettleMs' | 'chatFolders'>,
+    Pick<ConversationActionDeps, 'deleteSettleMs' | 'chatFolders' | 'researchCopies'>,
     Pick<CloneRouteDeps, 'clones' | 'cloneTest' | 'reservedFolders'>,
     Pick<ChatShareRouteDeps, 'linkScheme'>,
     ChatPortRouteDeps {
