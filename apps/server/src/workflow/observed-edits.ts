@@ -7,9 +7,11 @@ import type { ProviderOutput } from '../providers/provider.ts';
 
 const READ_AT_ONCE_BYTES = 1024 * 1024;
 
-function contentNow(target: string): Promise<Buffer | null> {
+function contentNow(target: string): Promise<Buffer | null> | null {
   try {
-    if (statSync(target).size <= READ_AT_ONCE_BYTES) return Promise.resolve(readFileSync(target));
+    const stat = statSync(target);
+    if (!stat.isFile()) return null;
+    if (stat.size <= READ_AT_ONCE_BYTES) return Promise.resolve(readFileSync(target));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return Promise.resolve(null);
     return Promise.reject(error);
