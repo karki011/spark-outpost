@@ -44,7 +44,7 @@ Spark doesn't train weights, and agents run through Claude and Codex. The struct
 | Dreaming                   | Make practice questions from past requests in the project, answer them with and without the notes, and keep a note only if it helps.                               |
 | Importance score           | Prefer episodes with strong outcome signals (corrections, re-asks, reverted changes, review comments, merged pull requests), plus a few random ones for diversity. |
 
-The ablation is the most useful lesson: **the check is not optional.** A summarizer that writes notes nobody verifies is the "no dreaming" row, roughly 13 points worse in the paper. Spark Sleep keeps a note only when evidence shows it helps.
+The ablation is the most useful lesson: **the check is not optional.** A summarizer that writes notes nobody verifies is the "no dreaming" row, roughly 13 points worse in the paper. Spark Sleep aims to keep a note only when evidence shows it helps. Phase 1 can't promise that: it checks citations and recency, and the holdout measures notes per project, not per note. The per-note check is phase 2's dreaming, and until it ships, notes are shown as unverified.
 
 ## Proposal
 
@@ -62,7 +62,7 @@ The job runs per project, outside any turn, through the same gate as the project
 1. **Gather (rules only).**
    - Take turns finished since the last sleep in chats of that project.
    - Skip Ask Spark, Terminal sessions without recording, and turns that read a secret file or a `.sparkignore` file.
-   - In phase 1, also skip every turn that read untrusted content: the Browser pane, WebFetch or WebSearch, tickets, Atlassian, ServiceNow, Slack, calendar, MCP results, Mac control and untrusted attachments. One page an agent read once must not plant a note that steers every later chat. Asking the model to keep only facts about the code is not a control.
+   - In phase 1, also skip every turn that read untrusted content, or whose session did earlier (a live or resumed session keeps what it read, so a later turn can repeat it without reading again). The run records the first untrusted read per session, and every later turn in that session counts as having read it. Untrusted content means the Browser pane, WebFetch or WebSearch, tickets, Atlassian, ServiceNow, Slack, calendar, MCP results, Mac control and untrusted attachments. One page an agent read once must not plant a note that steers every later chat. Asking the model to keep only facts about the code is not a control.
    - Rank the turns by outcome signal strength and keep the top k plus b random ones. This is the paper's importance score, with outcome signals in place of gradients.
 
 2. **Consolidate (one model run, a child run like the morning digest, read-only).**
@@ -71,8 +71,9 @@ The job runs per project, outside any turn, through the same gate as the project
    - Model: the cheapest model the project's default provider offers that is good enough to write project instructions (`digestModel` picks this way today).
    - Scrub secret values from the input and the output.
 3. **Verify (code, no model).**
-   - Every cited path and symbol must still exist in the project (`git ls-files`, `git grep`).
-   - An edit or retirement must point to a newer source than the note it replaces. This is the teacher rule: an old fact survives unless something newer says otherwise.
+   - Every cited path and symbol must still exist in the project (`git ls-files`, `git grep`). This checks citations, not facts: a wrong command can cite a real file. The prototype found stale notes that passed it.
+   - Until phase 2's fact check runs, a note that passed only this check is marked **Unverified** on the project page and in the preamble.
+   - An edit or retirement must point to a newer source that contradicts the note it replaces. A newer source about the same file is not enough, since two facts can cite one file. This is the teacher rule: an old fact survives unless something newer says otherwise. When contradiction isn't clear, both notes are kept and the project page asks the user.
 4. **Dream (phase 2, one more model run).**
    - From the gathered requests, write a few practice questions about the project ("where is X configured?", "what must I run before committing?") and answer each twice, once with the proposed notes and once without.
    - Answers are checked against the repository (do the named files exist, does the quoted line exist), not by asking the model whether it did well.
@@ -85,8 +86,8 @@ The job runs per project, outside any turn, through the same gate as the project
 
 Jev is never called inside a turn, and recall must not add a model call, so recall stays simple:
 
-- **Every turn in a project chat** gets a snapshot of the project's pinned notes and its most-used notes in the turn preamble. They are labelled as notes that grant nothing, the same way outpost instructions are. The size is shown in the tool budget script, not capped.
-- **The snapshot is frozen per live session.** It is ordered the same way every time and changes only after a sleep applies changes, so it doesn't rewrite the prompt cache each turn. The snapshot's id is part of the session key, so a sleep that changes notes reopens the session (with resume) on its next turn, once.
+- **Every turn in a project chat** gets a snapshot of the project's pinned notes and its most-used notes in the turn preamble. They are labelled as notes that grant nothing, the same way outpost instructions are. The snapshot holds notes up to a fixed share of the model's context window, so it leaves room for the conversation and the reply. Notes beyond it stay searchable through `spark_project_notes`. With **Project notes** off, no snapshot is sent, including in a reopened session.
+- **The snapshot is frozen per live session.** It is ordered the same way every time and changes only when notes change (a sleep applies changes, or the user edits, pins, retires or deletes a note), so it doesn't rewrite the prompt cache each turn. The snapshot's id is part of the session key, so any change reopens the session (with resume) on its next turn, once, with a line telling the agent that earlier notes in its context are replaced by the new snapshot.
 - **A new Spark tool, `spark_project_notes`**, lets the agent search the rest of a project's notes when it needs them. It is read-only and follows the agent's mode like other reads.
   - It is offered only in a chat linked to a project with **Project notes** on, which keeps the plain-chat tool list (about 2 characters under its 27,000 cap) unchanged.
   - Turning notes on or off changes the offered tools and reopens a live session, as any tool change does.
@@ -100,7 +101,7 @@ Jev is a cheap classifier with calibrated probabilities ($0.042 per million inpu
 | Step        | Jev question                                                                            | Rules fallback                        |
 | ----------- | --------------------------------------------------------------------------------------- | ------------------------------------- |
 | Gather      | Noul per turn: "this turn taught something reusable about the project".                 | Outcome-signal ranking only.          |
-| Consolidate | Noul per proposed note against each close existing note: "A is superseded by B".        | Same cited path and newer source.     |
+| Consolidate | Noul per proposed note against each close existing note: "A is superseded by B".        | Keep both and ask the user.           |
 | Verify      | Noul: "the note is a specific, checkable fact, not advice that applies to any project". | A cited path is required.             |
 | Prune       | Choice per stale note: keep, rewrite, retire.                                           | Retire when every cited path is gone. |
 
@@ -121,7 +122,7 @@ Every Jev answer is validated and recorded with its policy version, as JEV.md re
 
 The paper's reward is "1 if performance improves". Spark already records outcome signals per turn, so:
 
-- Hold back a random 20% of eligible turns in each project with notes, and give them no notes in the preamble.
+- Hold back a random 20% of chats (not turns) in each project with notes. A held-back chat gets no snapshot and no `spark_project_notes` tool for its whole life, resumed sessions included, so it can't use notes from an earlier turn or a search.
 - Compare corrections, re-asks, reverted changes and checks failed between turns with notes and without, per project, in Analytics.
 - If notes don't beat no notes after a fair sample, say so on the project page and suggest turning them off.
 
