@@ -33,7 +33,7 @@ export function digestModel(
   cards: readonly ModelCard[] = VENDOR_CARDS.cards,
   now: Date = new Date(),
 ): DigestModel {
-  const effort = efforts.includes('low') ? 'low' : null;
+  const effort = ['medium', 'low'].find((level) => efforts.includes(level)) ?? null;
   const ranked = cheapestFirst(provider, cards, now);
   if (offered.length === 0) {
     const card = ranked[0];

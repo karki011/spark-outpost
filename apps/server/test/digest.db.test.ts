@@ -154,7 +154,7 @@ describe('home digest', () => {
       role: 'digest',
       mode: 'chat',
       model: 'claude-sonnet-5',
-      effort: 'low',
+      effort: 'medium',
     });
     expect((await getRun(t.db, rows[0]!.id))?.status).toBe('succeeded');
     const listed = await listConversations(t.db, t.workspaceId);
