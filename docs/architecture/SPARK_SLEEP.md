@@ -89,7 +89,7 @@ The job runs per project, outside any turn, through the same gate as the project
 
 Jev is never called inside a turn, and recall must not add a model call, so recall is a plain search:
 
-- **Each turn gets only the notes that match its request.** Spark matches the user's message against the project's notes in the database (cited paths and symbols named in the message, then a full-text match on the note text) and adds the best few to that turn's preamble, labelled as notes that grant nothing, the same way outpost instructions are. Pinned notes are always added. A request that matches nothing gets no notes. The prototype showed why: a fixed set of notes almost never touched what the next request was about.
+- **Each turn gets only the notes that match its request.** Spark matches the user's message against the project's notes in the database (cited paths and symbols named in the message, then a full-text match on the note text) and adds the best few to that turn's preamble, labelled as notes that grant nothing, the same way outpost instructions are. Pinned notes are added to every turn, within the size cap below, and a stale pinned note is left out like any other. Apart from pinned notes, a request that matches nothing gets no notes. The prototype showed why: a fixed set of notes almost never touched what the next request was about.
 - **Size:** the matched notes are held to a fixed number of characters, so they leave room for the conversation and the reply. Notes beyond it stay searchable through `spark_project_notes`.
 - **No stale notes are shown.** A note whose cited files changed since it was checked is left out until a sleep checks it again. This is a git comparison, not a model call.
 - **Changes:** the notes go with the turn, not the session, so a change needs no session reopen. When a note the session already saw has been edited or retired, the next turn that matches it carries the new text, or a line saying it was retired, marked as replacing the earlier one.
@@ -192,8 +192,8 @@ What this means for the plan:
 ## Open questions
 
 - **Are matched notes a work-data read?** Notes come from other chats, and AGENTS.md counts lists across chats as work data for the send flag. Either a turn that got notes counts as having read work data, so a later send carries the flag, or notes are treated as Spark's own data about the project, which phase 1's skipping of untrusted turns supports. This is the user's decision.
-- **The holdout.** With one user, a 20% holdout gives small, noisy samples, and those chats run without notes on purpose.
-- **Is matching good enough?** A word match misses requests that describe a file without naming it. If it misses too often, a local embedding index is the next step, still with no model call inside a turn. Should it be on, and should those turns say so?
+- **The holdout.** With one user, a 20% holdout gives small, noisy samples, and those chats run without notes on purpose. Should it be on, and should those chats say so?
+- **Is matching good enough?** A word match misses requests that describe a file without naming it. If it misses too often, a local embedding index is the next step, still with no model call inside a turn.
 
 - Should notes be shared across projects for one user (for example "always uses pnpm")? Not in phase 1. Those belong in the user's own instruction files.
 - Codex has its own memory features and Claude Code has auto-memory. Should Spark read them as extra episodes? Not in phase 1, since Spark reads no user memory files today.
