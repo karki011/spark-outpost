@@ -111,7 +111,7 @@ Every Jev answer is validated and recorded with its policy version, as JEV.md re
 
 - **Notes are data, never authority.** A note can't authorise a push, a pull request, a Spark action or a mode change, and the preamble says so.
 - **What's left out:**
-  - Phase 1 skips every turn that read work data or other untrusted content (pages, tickets, Slack, MCP results). Whether a later phase may summarise them as facts about the code, with their source named, is left open.
+  - Phase 1 skips every turn that read work data or other untrusted content (pages, tickets, Slack, MCP results). Later phases keep excluding them until an enforceable replacement control is specified; asking the model to keep only facts about the code is not one.
   - Turns that read a secret file are skipped entirely.
 - **Never in a note:** secret values. The input and the output are scrubbed, and a note that still holds a secret-looking value is dropped.
 - **Off by default.** The setting is per project (**Project notes**, off), with **Sleep now** on the project page. The cost of each sleep is shown with the run, as Spark shows every cost, with no limit.
