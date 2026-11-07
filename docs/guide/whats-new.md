@@ -10,6 +10,8 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                  | What to do                                                      |
 | ----------------------------- | --------------------------------------------------------------- |
+| Working chats pulse           | Nothing.                                                        |
+| Wider chat, tighter text      | Nothing.                                                        |
 | Needs macOS 13 or later       | [Get started](getting-started.md).                              |
 | Race fixes                    | Nothing.                                                        |
 | Endpoint key header           | [Pick it](custom-endpoint.md).                                  |
