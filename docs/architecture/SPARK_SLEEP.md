@@ -73,12 +73,12 @@ The job runs per project, outside any turn, through the same gate as the project
    - Scrub secret values from the input and the output.
 3. **Verify.**
    - **Citations (code, no model):** every cited path and symbol must still exist in the project (`git ls-files` and `git grep` in a repository; the file system and a plain text search in a folder that is not one). This checks citations, not facts: a wrong command can cite a real file.
-   - **Facts (one read-only child run per note, read tools only, on the project's current commit):** the agent reads the cited files and searches as needed, and answers true, stale or unsupported. Only true notes are kept. In the prototype, half the proposed notes failed this check and most were wrong when written, not made stale later.
+   - **Facts (one read-only child run per note, read tools only, on the project's current commit, or on its files as they are now in a folder that is not a repository):** the agent reads the cited files and searches as needed, and answers true, stale or unsupported. Only true notes are kept. In the prototype, half the proposed notes failed this check and most were wrong when written, not made stale later.
    - The fact check is strict and sometimes rejects a true note. A rejected note is listed on the project page as rejected, with the reason, and the user can keep it by hand, which pins it.
    - Each kept note records what it was checked against: the commit in a repository, or each cited file's content hash in a folder that is not one. A later sleep checks it again when any cited file has changed since then.
    - An edit or retirement must point to a newer source that contradicts the note it replaces. A newer source about the same file is not enough, since two facts can cite one file. This is the teacher rule: an old fact survives unless something newer says otherwise. When contradiction isn't clear, both notes are kept and the project page asks the user.
 4. **Dream (phase 2, one more model run).**
-   - From the gathered requests, write a few practice questions about the project ("where is X configured?", "what must I run before committing?") and answer each twice, once with the proposed notes and once without.
+   - From the gathered requests, write a few practice questions about the project ("where is X configured?", "what must I run before committing?") and answer each once with no notes and once for each proposed note that matches the question, with that note alone, so each note's effect is measured on its own.
    - Answers are checked against the repository (do the named files exist, does the quoted line exist), not by asking the model whether it did well.
    - A proposed note is kept only when an answer with it is better than the same answer without it (right with it and wrong without, or naming more of the right files). A note that made no difference, or made an answer wrong, is dropped.
 5. **Apply.**
