@@ -14,10 +14,11 @@ describe('digestModel', () => {
       effort: 'medium',
     });
     expect(digestModel('claude', offered, ['medium', 'high']).effort).toBe('medium');
+    expect(digestModel('claude', offered, ['low', 'high']).effort).toBe('low');
     expect(digestModel('codex', [{ id: 'gpt-6-sol' }, { id: 'gpt-6-luna' }], ['low'])).toEqual({
       model: 'gpt-6-sol',
       label: 'GPT-6 Sol',
-      effort: null,
+      effort: 'low',
     });
   });
 
