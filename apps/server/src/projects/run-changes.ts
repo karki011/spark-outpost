@@ -100,11 +100,12 @@ export async function backupBeforeEdit(
   runId: string,
   snapshot: RunSnapshot,
   targets: readonly string[],
+  read: (target: string) => Promise<Buffer | null> = readIfPresent,
 ): Promise<void> {
   if (snapshot.kind !== 'files') return;
   for (const target of targets) {
     if (relativeInside(snapshot.root, target) === null) continue;
-    const content = await readIfPresent(target);
+    const content = await read(target);
     await saveBackup(db, runId, { path: target, existed: content !== null, content });
   }
 }
