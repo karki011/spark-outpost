@@ -33,6 +33,7 @@ GET /api/conversations/:id/audit/summary
 GET /api/runs/:id/audit/log
 GET /api/runs/:id/audit/verify
 GET /api/chat-settings/defaults
+GET /api/repos-folders
 GET /api/conversations/:id/share
 GET /api/conversations/:id/tickets
 GET /api/conversations/:id/workspace
@@ -321,6 +322,7 @@ PATCH /api/tickets/connections/:source
 PUT /api/tickets/connections/:source
 `,
   projects: `
+PUT /api/repos-folders
 GET /api/folders
 POST /api/folders
 POST /api/projects

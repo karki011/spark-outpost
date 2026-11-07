@@ -28,6 +28,7 @@ import { CLEAR_HISTORY_LABEL } from './BrowserHistorySetting.tsx';
 import { ARCHIVE_LABEL } from './BrowserArchiveSetting.tsx';
 import { SEARCH_ENGINE_LABEL } from './BrowserSearchSetting.tsx';
 import { ChatsSection } from './ChatsSection.tsx';
+import { REPOS_FOLDERS_LABEL } from './ReposFoldersSetting.tsx';
 import { COMPANION_LABEL } from './CompanionSetting.tsx';
 import { islandRows } from './DesktopCompanionSetting.tsx';
 import { MAC_CONTROL_LABEL, MacControlSection } from './MacControlSection.tsx';
@@ -176,6 +177,7 @@ export const SETTINGS_SECTIONS = [
     label: 'Projects',
     icon: icons.PROJECTS_ICON,
     remoteSwitch: 'settings',
+    rows: () => [REPOS_FOLDERS_LABEL],
     render: () => <ProjectsSection />,
   },
   {

@@ -29,6 +29,13 @@ Hovering the chip shows where the branch started and how pull requests open.
 1. In **Settings → Projects**, select the project.
 2. Under **Where Spark works**, pick **Each chat in its own worktree (recommended)** or **In my files**.
 
+## Link a repo by name
+
+Ask about a repo the chat lacks, like "the identity repo". The agent searches projects and **Repos folders**, then asks on a **Link** card in every mode.
+
+1. In **Settings → Projects**, under **Repos folders**, select **Add repos folder…**.
+2. Choose where you clone repos.
+
 ## What to expect
 
 | Choice   | Where changes land                | To get them into your checkout                          |

@@ -24,7 +24,7 @@ import { Segmented } from '../../ui/Segmented.tsx';
 import { reveal } from '../../ui/transitions.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 
-type FolderPurpose = 'project' | 'reference' | 'instructions';
+type FolderPurpose = 'project' | 'reference' | 'instructions' | 'repos';
 type Mode = 'browse' | 'clone' | 'clone-parent';
 
 const FOCUSABLE = 'button:not(:disabled), input:not(:disabled)';
@@ -61,6 +61,11 @@ const COPY: Record<FolderPurpose, { title: string; lede: string; use: string }> 
   project: {
     title: 'Choose a project folder',
     lede: "Your AI can read files in this folder to answer questions. It won't change them.",
+    use: 'Use this folder',
+  },
+  repos: {
+    title: 'Choose a repos folder',
+    lede: 'Agents look for repos up to three folders deep inside it when you ask about one this chat doesn’t have.',
     use: 'Use this folder',
   },
   reference: {

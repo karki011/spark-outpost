@@ -1,3 +1,4 @@
+import { CONVERSATION_PROJECTS_MAX } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
 import { ProjectNotFoundError } from '../projects/projects.ts';
 
@@ -33,4 +34,24 @@ export async function conversationRoots(db: Queryable, conversationId: string): 
     [conversationId],
   );
   return rows.map((row) => row.root_path);
+}
+
+export type AppendedProject = 'linked' | 'already_linked' | 'full';
+
+export async function appendConversationProject(
+  db: Queryable,
+  workspaceId: string,
+  conversationId: string,
+  projectId: string,
+): Promise<AppendedProject> {
+  const { rows } = await db.query<{ project_id: string }>(
+    `SELECT project_id FROM conversation_projects
+     WHERE conversation_id = $1 ORDER BY position, created_at FOR UPDATE`,
+    [conversationId],
+  );
+  const linked = rows.map((row) => row.project_id);
+  if (linked.includes(projectId)) return 'already_linked';
+  if (linked.length >= CONVERSATION_PROJECTS_MAX) return 'full';
+  await setConversationProjects(db, workspaceId, conversationId, [...linked, projectId]);
+  return 'linked';
 }

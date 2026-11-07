@@ -157,6 +157,16 @@ function Facts({ action }: { action: SparkAction }) {
       return <RulesEditFacts action={action} />;
     case 'plugins_edit':
       return <PluginEditFacts action={action} />;
+    case 'link_repo':
+      return (
+        <dl className="sac-facts">
+          <Fact label="Folder">{action.displayPath}</Fact>
+          {action.origin && <Fact label="Origin">{action.origin}</Fact>}
+          <Fact label="Project">
+            {action.projectId ? 'Already a Spark project' : 'Spark adds it as a project'}
+          </Fact>
+        </dl>
+      );
     case 'publish_artifact':
       return (
         <dl className="sac-facts">
@@ -204,6 +214,9 @@ function confirmNote(action: SparkAction, secretFiles?: readonly string[]): stri
     rulesNote(action) ??
     pluginsNote(action);
   if (mac) return mac;
+  if (action.action === 'link_repo') {
+    return 'The agent can then read and change files there, as in the chat’s other repos. It applies from your next message.';
+  }
   if (action.action === 'pr_follow_up') {
     return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';
   }

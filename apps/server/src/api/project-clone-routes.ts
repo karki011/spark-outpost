@@ -7,9 +7,10 @@ import {
   type CloneJobs as CloneJobList,
   type CloneOptions,
 } from '@spark-outpost/contracts';
-import { CloneRefusedError } from '../projects/clone/clone-destination.ts';
+import { CloneRefusedError, isWithin } from '../projects/clone/clone-destination.ts';
 import { createCloneJobs, type CloneJobs } from '../projects/clone/clone-jobs.ts';
 import { realHome } from '../projects/projects.ts';
+import { effectiveReposFolders, sparkReposRules } from '../projects/repos-folders.ts';
 import { cloneableRepos } from '../ship/github/clone-repos.ts';
 import { loginEnv, tokensForRemote } from '../ship/push.ts';
 import { gitHubDepsOf, type GitHubRouteDeps } from './ship-routes.ts';
@@ -64,12 +65,17 @@ export function cloneJobsFor(deps: CloneRouteDeps): CloneJobs {
   });
 }
 
-async function defaultParent(home: string): Promise<string> {
-  const documents = path.join(home, DEFAULT_PARENT);
-  const isFolder = await stat(documents)
+async function isFolder(target: string): Promise<boolean> {
+  return stat(target)
     .then((stats) => stats.isDirectory())
     .catch(() => false);
-  return isFolder ? documents : home;
+}
+
+async function defaultParent(deps: CloneRouteDeps, home: string): Promise<string> {
+  const [first] = await effectiveReposFolders(deps.db, deps.workspaceId, sparkReposRules());
+  if (first && isWithin(first.path, home) && (await isFolder(first.path))) return first.path;
+  const documents = path.join(home, DEFAULT_PARENT);
+  return (await isFolder(documents)) ? documents : home;
 }
 
 export function cloneErrorStatus(error: unknown): { status: number; message: string } | null {
@@ -85,7 +91,7 @@ export function projectCloneRoutes(deps: CloneRouteDeps): Router {
   router.get('/project-clones/options', async (_req, res) => {
     const home = deps.cloneTest ? await real(deps.cloneTest.root) : await real(homedir());
     const options: CloneOptions = {
-      defaultParent: await defaultParent(home),
+      defaultParent: await defaultParent(deps, home),
       ...(await cloneableRepos(github)),
     };
     res.json(options);

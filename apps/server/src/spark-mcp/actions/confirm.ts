@@ -78,7 +78,11 @@ async function quietly(work: Promise<unknown>): Promise<void> {
 
 function cardTitle(action: SparkAction): string {
   if (action.action === 'ask_spark') return action.summary;
-  if (action.action === 'rules_edit' || action.action === 'plugins_edit') {
+  if (
+    action.action === 'rules_edit' ||
+    action.action === 'plugins_edit' ||
+    action.action === 'link_repo'
+  ) {
     return sparkActionQuestion(action);
   }
   const question = sparkActionQuestion(action);
@@ -211,6 +215,7 @@ export function auditedAction(action: SparkAction): unknown {
   }
   if (action.action === 'rules_edit') return rulesEditAuditFacts(action);
   if (action.action === 'plugins_edit') return pluginsEditAuditFacts(action);
+  if (action.action === 'link_repo') return { action: action.action, path: action.path };
   return action;
 }
 

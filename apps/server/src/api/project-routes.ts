@@ -13,6 +13,7 @@ import {
   projectOrderRequestSchema,
   removedProjectSchema,
   updateProjectRequestSchema,
+  updateReposFoldersRequestSchema,
   type ProjectFileContent,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
@@ -25,6 +26,11 @@ import { listProjectFiles } from '../projects/project-files.ts';
 import { projectPolicy, readProjectFile } from '../projects/project-fs.ts';
 import { PathRefusedError, type PathPolicy, type RefusalReason } from '../projects/path-policy.ts';
 import { removeProject, restoreProject } from '../projects/project-removal.ts';
+import {
+  effectiveReposFolders,
+  saveReposFolders,
+  sparkReposRules,
+} from '../projects/repos-folders.ts';
 import {
   createProject,
   getProject,
@@ -140,6 +146,15 @@ export function projectRoutes({
     const { rootPath } = parseBody(createProjectRequestSchema, req);
     const { project, created } = await createProject(db, workspaceId, rootPath);
     res.status(created ? 201 : 200).json(project);
+  });
+
+  router.get('/repos-folders', async (_req, res) => {
+    res.json({ folders: await effectiveReposFolders(db, workspaceId, sparkReposRules()) });
+  });
+
+  router.put('/repos-folders', async (req, res) => {
+    const { folders } = parseBody(updateReposFoldersRequestSchema, req);
+    res.json({ folders: await saveReposFolders(db, workspaceId, folders, sparkReposRules()) });
   });
 
   router.put('/projects/order', async (req, res) => {

@@ -134,7 +134,7 @@ export const docsTool = sparkTool({
   name: 'spark_docs',
   title: 'Spark user guide',
   description:
-    'The Spark Outpost user guide, the same pages the user sees under Docs in the app, with the real button and setting names. Each page has a `type`: how-to (steps for one task), start (setup), concept (how it works), reference (tables: settings, modes, cards, protected paths, tools, shortcuts, statuses, glossary), troubleshooting (you see, why, fix) or whats-new. No arguments lists every page by section; `query` searches by task and returns the best section of each page; `type` narrows the list or the search; `page` (a page id from the list) reads one page, optionally only the section under `heading` (an anchor or heading text). Give the user the `link` (#/docs/…) so they can open the page in Docs.',
+    'The Spark Outpost user guide: the Docs pages in the app, with real button and setting names. Page types: how-to, start, concept, reference (settings, modes, cards, protected paths, tools, shortcuts, statuses, glossary), troubleshooting, whats-new. No arguments lists pages by section; `query` searches and returns each page’s best section; `type` narrows; `page` (an id) reads one page, or only the section under `heading`. Give the user the `link` (#/docs/…).',
   input: {
     query: z.string().max(300).optional(),
     page: z.string().max(80).optional(),
