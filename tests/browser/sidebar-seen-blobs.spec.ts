@@ -144,7 +144,7 @@ test("a working chat's title keeps pulsing while Spark rests and stops in the ba
   const working = row(page, 'Fix billing totals').locator('.tt > span');
   const playState = () =>
     working.evaluate((element) => {
-      const animation = element.getAnimations()[0];
+      const animation = element.getAnimations()[0] as CSSAnimation | undefined;
       return animation ? `${animation.animationName}:${animation.playState}` : 'none';
     });
   const opacity = () => working.evaluate((element) => Number(getComputedStyle(element).opacity));
