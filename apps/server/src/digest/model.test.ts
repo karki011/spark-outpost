@@ -2,21 +2,21 @@ import { describe, expect, it } from 'vitest';
 import { digestModel } from './model.ts';
 
 describe('digestModel', () => {
-  it('picks the cheapest offered middle-or-top model at low effort, never the fast tier', () => {
+  it('picks the cheapest offered middle-or-top model at medium effort, never the fast tier', () => {
     const offered = [
       { id: 'opus[1m]', label: 'Opus 5.5' },
       { id: 'sonnet', label: 'Sonnet 5' },
       { id: 'haiku', label: 'Haiku 4.5' },
     ];
-    expect(digestModel('claude', offered, ['low', 'high'])).toEqual({
+    expect(digestModel('claude', offered, ['low', 'medium', 'high'])).toEqual({
       model: 'sonnet',
       label: 'Sonnet 5',
-      effort: 'low',
+      effort: 'medium',
     });
     expect(digestModel('codex', [{ id: 'gpt-6-sol' }, { id: 'gpt-6-luna' }], ['low'])).toEqual({
       model: 'gpt-6-sol',
       label: 'GPT-6 Sol',
-      effort: 'low',
+      effort: null,
     });
   });
 
