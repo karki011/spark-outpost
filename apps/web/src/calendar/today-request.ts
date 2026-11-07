@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { localDate } from './use-calendar.ts';
 
 export interface TodayEventRequest {
-  eventKey: string;
+  eventKey: string | null;
   date: string | null;
 }
 
@@ -15,10 +15,18 @@ export function eventDate(eventKey: string): string | null {
   return Number.isNaN(at) ? null : localDate(at);
 }
 
-export function openTodayEvent(eventKey: string): void {
-  pending = { eventKey, date: eventDate(eventKey) };
+function request(asked: TodayEventRequest): void {
+  pending = asked;
   appOpeners.forEach((open) => open());
   listeners.forEach((listener) => listener());
+}
+
+export function openTodayEvent(eventKey: string): void {
+  request({ eventKey, date: eventDate(eventKey) });
+}
+
+export function openTodayDay(): void {
+  request({ eventKey: null, date: localDate(Date.now()) });
 }
 
 function takeTodayEvent(): TodayEventRequest | null {
