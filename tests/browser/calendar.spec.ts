@@ -290,7 +290,7 @@ test('starts a prefilled New chat for an event and sends nothing', async ({ page
   expect(await chats.json()).toEqual([]);
 });
 
-test('shows Upcoming and the calendar block beside the brief on Home', async ({ page }) => {
+test('shows meetings in Upcoming and only free time in the brief on Home', async ({ page }) => {
   await connect(page);
   const [failed] = await seedChats([
     { title: 'Mock fetch retries', run: { status: 'failed', error: 'Claude is rate limited.' } },
@@ -299,21 +299,12 @@ test('shows Upcoming and the calendar block beside the brief on Home', async ({ 
   const next = await upcoming(page);
   expect(next.map((item) => item.title)).toEqual(['Standup', 'Customer call', 'Vendor sync']);
   await page.goto('/');
-  const block = page.getByRole('region', { name: 'Today’s meetings' });
+  const block = page.getByRole('region', { name: 'Free time today' });
   await expect(block).toContainText('From your calendar · on this Mac, not sent to a model', {
     timeout: 15_000,
   });
   await expect(block).toContainText(/Longest free block|No free block/);
-  const times = block.locator('.cal-brief-list time');
-  await expect(times.first()).toBeVisible();
-  const lines = await times.evaluateAll((all) =>
-    all.map((time) => {
-      const range = document.createRange();
-      range.selectNodeContents(time);
-      return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
-    }),
-  );
-  expect(lines.every((count) => count === 1)).toBe(true);
+  await expect(block).not.toContainText('Standup');
   const card = page.getByRole('region', { name: 'Upcoming' });
   const joinKey = process.platform === 'darwin' ? '⌘J' : 'Ctrl+J';
   await expect(card).toContainText(`${joinKey} joins the next`);
