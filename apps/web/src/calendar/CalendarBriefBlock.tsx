@@ -9,7 +9,7 @@ import {
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { duration, span } from './calendar-format.ts';
 import { DayShapeBar } from './DayShapeBar.tsx';
-import { openTodayEvent } from './today-request.ts';
+import { openTodayDay } from './today-request.ts';
 import { localDate, useCalendarDay, useCalendarState } from './use-calendar.ts';
 
 export function CalendarBriefBlock({ now }: { now: number }) {
@@ -55,11 +55,7 @@ export function CalendarBriefBlock({ now }: { now: number }) {
       {meetings[0] && (
         <p className="cal-brief-line">
           {meetings.length === 1 ? '1 meeting today.' : `${meetings.length} meetings today.`}{' '}
-          <button
-            type="button"
-            className="hlink cal-brief-all"
-            onClick={() => openTodayEvent(meetings[0]!.key)}
-          >
+          <button type="button" className="hlink cal-brief-all" onClick={openTodayDay}>
             See all in Today
           </button>
         </p>

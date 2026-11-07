@@ -290,7 +290,9 @@ test('starts a prefilled New chat for an event and sends nothing', async ({ page
   expect(await chats.json()).toEqual([]);
 });
 
-test('shows meetings in Upcoming and only free time in the brief on Home', async ({ page }) => {
+test('shows meetings in Upcoming and free time with a meeting count in the brief on Home', async ({
+  page,
+}) => {
   await connect(page);
   const [failed] = await seedChats([
     { title: 'Mock fetch retries', run: { status: 'failed', error: 'Claude is rate limited.' } },
@@ -318,6 +320,10 @@ test('shows meetings in Upcoming and only free time in the brief on Home', async
   ).toBeDisabled();
   await block.getByRole('button', { name: 'See all in Today' }).click();
   await expect(today(page)).toBeVisible();
+  await expect(today(page).getByRole('button', { name: /^Standup, / })).not.toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
 });
 
 test('lists the calendar rows in Notifications and in Settings search', async ({ page }) => {
