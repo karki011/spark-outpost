@@ -71,7 +71,7 @@ function TodayViews(props: TodayProps) {
       pickDate(request.date ?? localDate(Date.now()));
       setSelected(request.eventKey);
       setRequested(request);
-      setFlash((count) => count + 1);
+      if (request.eventKey) setFlash((count) => count + 1);
       setView('day');
     },
     [pickDate, setView],

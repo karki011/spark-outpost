@@ -290,7 +290,9 @@ test('starts a prefilled New chat for an event and sends nothing', async ({ page
   expect(await chats.json()).toEqual([]);
 });
 
-test('shows Upcoming and the calendar block beside the brief on Home', async ({ page }) => {
+test('shows meetings in Upcoming and free time with a meeting count in the brief on Home', async ({
+  page,
+}) => {
   await connect(page);
   const [failed] = await seedChats([
     { title: 'Mock fetch retries', run: { status: 'failed', error: 'Claude is rate limited.' } },
@@ -299,21 +301,15 @@ test('shows Upcoming and the calendar block beside the brief on Home', async ({ 
   const next = await upcoming(page);
   expect(next.map((item) => item.title)).toEqual(['Standup', 'Customer call', 'Vendor sync']);
   await page.goto('/');
-  const block = page.getByRole('region', { name: 'Today’s meetings' });
+  const block = page.getByRole('region', { name: 'Free time today' });
   await expect(block).toContainText('From your calendar · on this Mac, not sent to a model', {
     timeout: 15_000,
   });
   await expect(block).toContainText(/Longest free block|No free block/);
-  const times = block.locator('.cal-brief-list time');
-  await expect(times.first()).toBeVisible();
-  const lines = await times.evaluateAll((all) =>
-    all.map((time) => {
-      const range = document.createRange();
-      range.selectNodeContents(time);
-      return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
-    }),
-  );
-  expect(lines.every((count) => count === 1)).toBe(true);
+  for (const title of next.map((item) => item.title)) {
+    await expect(block).not.toContainText(title);
+  }
+  await expect(block).toContainText(/\d+ meetings? today\./);
   const card = page.getByRole('region', { name: 'Upcoming' });
   const joinKey = process.platform === 'darwin' ? '⌘J' : 'Ctrl+J';
   await expect(card).toContainText(`${joinKey} joins the next`);
@@ -322,6 +318,12 @@ test('shows Upcoming and the calendar block beside the brief on Home', async ({ 
   await expect(
     card.getByRole('button', { name: /^Customer call at \d+:\d+ [AP]M, Join opens at / }),
   ).toBeDisabled();
+  await block.getByRole('button', { name: 'See all in Today' }).click();
+  await expect(today(page)).toBeVisible();
+  await expect(today(page).getByRole('button', { name: /^Standup, / })).not.toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
 });
 
 test('lists the calendar rows in Notifications and in Settings search', async ({ page }) => {
