@@ -119,7 +119,12 @@
 
 .row.st-running .tt > span {
   color: var(--text);
-  animation: row-working 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .row.st-running .tt > span {
+    animation: row-working 3.2s ease-in-out infinite;
+  }
 }
 
 @keyframes row-working {

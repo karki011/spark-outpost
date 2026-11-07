@@ -167,3 +167,13 @@ test("a working chat's title keeps pulsing while Spark rests and stops in the ba
     .toBe('paused');
   await expect.poll(playState).toBe('row-working:paused');
 });
+
+test("a working chat's title stays still with Reduce Motion on", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await seedChats([{ title: 'Fix billing totals', run: { status: 'running' } }]);
+  await openChats(page);
+  const working = row(page, 'Fix billing totals').locator('.tt > span');
+  await expect(working).toBeVisible();
+  expect(await working.evaluate((element) => element.getAnimations().length)).toBe(0);
+  await expect(working).toHaveCSS('opacity', '1');
+});
