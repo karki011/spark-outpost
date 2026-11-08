@@ -1,17 +1,14 @@
 import type { AssistantSettings, ProviderId } from '@spark-outpost/contracts';
 import { cardFor } from '../model-cards/cards.ts';
 
-export interface FastTier {
-  card: string;
-  effort: string;
-}
-
-export const ASK_SPARK_FAST_TIER: Readonly<Record<ProviderId, FastTier | null>> = {
-  claude: { card: 'claude-sonnet-5-5', effort: 'low' },
-  codex: { card: 'gpt-6-luna', effort: 'low' },
-  zai: { card: 'glm-5.3-flash', effort: 'low' },
+export const ASK_SPARK_FAST_TIER: Readonly<Record<ProviderId, string | null>> = {
+  claude: 'claude-sonnet-5-5',
+  codex: 'gpt-6-luna',
+  zai: 'glm-5.3-flash',
   custom: null,
 };
+
+const FAST_EFFORTS = ['medium', 'low'];
 
 export interface OfferedModel {
   id: string;
@@ -25,6 +22,12 @@ export interface AssistantPick {
   noFastModel: boolean;
 }
 
+function fastEffortFor(provider: ProviderId, efforts: readonly string[]): string | null {
+  if (!ASK_SPARK_FAST_TIER[provider]) return null;
+  if (efforts.length === 0) return FAST_EFFORTS[0] ?? null;
+  return FAST_EFFORTS.find((effort) => efforts.includes(effort)) ?? null;
+}
+
 function offeredEffort(effort: string | null, efforts: readonly string[]): string | null {
   if (effort === null) return null;
   return efforts.length === 0 || efforts.includes(effort) ? effort : null;
@@ -34,9 +37,9 @@ export function fastModelFor(
   provider: ProviderId,
   offered: readonly OfferedModel[],
 ): OfferedModel | null {
-  const tier = ASK_SPARK_FAST_TIER[provider];
-  if (!tier) return null;
-  return offered.find((model) => cardFor(model, provider)?.id === tier.card) ?? null;
+  const card = ASK_SPARK_FAST_TIER[provider];
+  if (!card) return null;
+  return offered.find((model) => cardFor(model, provider)?.id === card) ?? null;
 }
 
 export function assistantPick(
@@ -45,7 +48,7 @@ export function assistantPick(
   offered: readonly OfferedModel[],
   efforts: readonly string[],
 ): AssistantPick {
-  const fastEffort = offeredEffort(ASK_SPARK_FAST_TIER[provider]?.effort ?? null, efforts);
+  const fastEffort = fastEffortFor(provider, efforts);
   const chosenEffort = offeredEffort(settings.effort, efforts);
   if (settings.modelChoice === 'fast') {
     const fast = fastModelFor(provider, offered);

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { assistantSettingsViewSchema, sparkAssistantSchema } from '@spark-outpost/contracts';
+import { followAssistantChat } from '../src/companion/assistant.ts';
 import { resolveChatSettings, updateChatSettings } from '../src/persistence/chat-settings.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import { connectCliProvider, createTestDb, type TestDb } from './support.ts';
@@ -78,21 +79,21 @@ async function settingsOf(id: string) {
 }
 
 describe('Spark assistant settings', () => {
-  it('defaults to the fast tier and runs the hidden chat on Sonnet 5.5 at low effort', async () => {
+  it('defaults to the fast tier and runs the hidden chat on Sonnet 5.5 at medium effort', async () => {
     const id = await assistantId();
     expect((await view()).settings).toEqual(FAST);
     expect((await view()).runsOn).toEqual({
       provider: 'claude',
       model: 'sonnet',
       modelLabel: 'Sonnet 5.5',
-      effort: 'low',
-      fastEffort: 'low',
+      effort: 'medium',
+      fastEffort: 'medium',
       noFastModel: false,
     });
     expect(await settingsOf(id)).toEqual({
       provider: 'claude',
       model: 'sonnet',
-      effort: 'low',
+      effort: 'medium',
     });
   });
 
@@ -133,7 +134,7 @@ describe('Spark assistant settings', () => {
     expect(await settingsOf(id)).toMatchObject({
       provider: 'codex',
       model: 'gpt-6-luna',
-      effort: 'low',
+      effort: 'medium',
     });
     expect((await view()).runsOn).toMatchObject({ provider: 'codex', modelLabel: 'GPT-6 Luna' });
   });
@@ -141,8 +142,12 @@ describe('Spark assistant settings', () => {
   it('says so and keeps the default model when the provider offers no fast model', async () => {
     await capture('claude', [{ id: 'opus[1m]', label: 'Opus 5.5', description: null }], 'opus[1m]');
     const id = await assistantId();
-    expect((await view()).runsOn).toMatchObject({ model: null, noFastModel: true, effort: 'low' });
-    expect(await settingsOf(id)).toMatchObject({ model: null, effort: 'low' });
+    expect((await view()).runsOn).toMatchObject({
+      model: null,
+      noFastModel: true,
+      effort: 'medium',
+    });
+    expect(await settingsOf(id)).toMatchObject({ model: null, effort: 'medium' });
   });
 
   it('refuses a provider that is not connected and a pick without a model', async () => {
@@ -156,15 +161,30 @@ describe('Spark assistant settings', () => {
     expect((await save({ ...FAST, modelChoice: 'bogus' })).status).toBe(400);
   });
 
+  it('moves a chat applied before an update to the current fast default at startup', async () => {
+    const id = await assistantId();
+    await updateChatSettings(t.db, id, { effort: 'low' });
+    await t.db.query(`UPDATE profiles SET assistant_applied = 'before' WHERE workspace_id = $1`, [
+      t.workspaceId,
+    ]);
+    await followAssistantChat(t.db, t.workspaceId);
+    expect(await settingsOf(id)).toMatchObject({ model: 'sonnet', effort: 'medium' });
+    const { rows } = await t.db.query<{ detail: string }>(
+      'SELECT detail FROM assistant_events WHERE workspace_id = $1',
+      [t.workspaceId],
+    );
+    expect(rows).toEqual([{ detail: 'Claude · Sonnet 5.5 · medium effort' }]);
+  });
+
   it('records a settings change for the audit of the next turn', async () => {
     await assistantId();
-    await save({ ...FAST, effort: 'medium' });
+    await save({ ...FAST, effort: 'high' });
     const { rows } = await t.db.query<{ kind: string; detail: string; audited: boolean }>(
       'SELECT kind, detail, audited FROM assistant_events WHERE workspace_id = $1',
       [t.workspaceId],
     );
     expect(rows).toEqual([
-      { kind: 'settings_changed', detail: 'Claude · Sonnet 5.5 · medium effort', audited: false },
+      { kind: 'settings_changed', detail: 'Claude · Sonnet 5.5 · high effort', audited: false },
     ]);
   });
 });

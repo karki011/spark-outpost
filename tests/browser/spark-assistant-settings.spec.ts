@@ -40,23 +40,23 @@ test('Spark assistant starts on the fast model and keeps the provider, model and
   await pick(page, 'Ask Spark provider', /^Codex/);
   await expect(section.getByText('Ask Spark answers with GPT-6 Luna.')).toBeVisible();
   await expect(section.getByRole('button', { name: 'Ask Spark effort' })).toHaveText(
-    'Fast default (low)',
+    'Fast default (medium)',
   );
-  await expect(section.getByText('Ask Spark thinks at low effort.')).toBeVisible();
-
-  await pick(page, 'Ask Spark effort', /^medium/);
   await expect(section.getByText('Ask Spark thinks at medium effort.')).toBeVisible();
+
+  await pick(page, 'Ask Spark effort', /^high/);
+  await expect(section.getByText('Ask Spark thinks at high effort.')).toBeVisible();
 
   await page.reload();
   const again = await openSection(page);
   await expect(again.getByRole('button', { name: 'Ask Spark provider' })).toHaveText('Codex');
-  await expect(again.getByRole('button', { name: 'Ask Spark effort' })).toHaveText('medium');
+  await expect(again.getByRole('button', { name: 'Ask Spark effort' })).toHaveText('high');
   const saved = await (await page.request.get('/api/spark-assistant/settings')).json();
   expect(saved.settings).toEqual({
     provider: 'codex',
     modelChoice: 'fast',
     model: null,
-    effort: 'medium',
+    effort: 'high',
     acts: 'manual',
   });
   await expect(again.getByText('None yet. Say “remember …” to add one.')).toBeVisible();
