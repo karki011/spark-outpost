@@ -1,0 +1,36 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { RecapRefineRequest, RecapState } from '@spark-outpost/contracts';
+import { homeApi, homeKeys } from '../home-api.ts';
+import { lastRefineError, recapView, refining } from './recap-model.ts';
+
+export function useRecap() {
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: homeKeys.recap, queryFn: homeApi.recap });
+  const store = (state: RecapState) => queryClient.setQueryData(homeKeys.recap, state);
+  const write = useMutation({
+    mutationFn: (_shownRecap: string | null) => homeApi.requestRecap(),
+    onSuccess: store,
+  });
+  const refine = useMutation({
+    mutationFn: ({ id, request }: { id: string; request: RecapRefineRequest }) =>
+      homeApi.refineRecap(id, request),
+    onSuccess: store,
+  });
+  const state = query.data;
+  const refines = state?.refines ?? [];
+  return {
+    state,
+    view: recapView(state),
+    recap: state?.recap ?? null,
+    refines,
+    writing: write.isPending || state?.recap?.status === 'running',
+    writeError:
+      write.isError && (state?.recap?.id ?? null) === write.variables ? write.error.message : null,
+    write: () => write.mutate(state?.recap?.id ?? null),
+    rewriting: refine.isPending || refining(refines) !== null,
+    refineError: refine.isError ? refine.error.message : lastRefineError(refines),
+    refine: (id: string, request: RecapRefineRequest) => refine.mutate({ id, request }),
+  };
+}
+
+export type Recap = ReturnType<typeof useRecap>;

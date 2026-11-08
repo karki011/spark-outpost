@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { fakeRecapText } from './fake-recap.ts';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { PlanEntry, TokenUsage } from '@spark-outpost/contracts';
 import type {
@@ -355,10 +356,13 @@ async function* fakeTurn(
     await delay(FAKE_MID_TURN_MS, undefined, { signal: turn.signal });
   }
   const titled = turn.askTitle && turn.prompt.includes(FAKE_TITLE_TRIGGER);
+  const recapText = fakeRecapText(turn.prompt);
   const outputs = (
-    turn.prompt.includes(FAKE_DIGEST_TRIGGER)
-      ? replyOutputs(fakeDigestReply(turn.prompt))
-      : fakeProviderPlan(turn.prompt, turn.attachments, turn.chatFolder ? [] : turn.projectRoots)
+    recapText !== null
+      ? replyOutputs(recapText)
+      : turn.prompt.includes(FAKE_DIGEST_TRIGGER)
+        ? replyOutputs(fakeDigestReply(turn.prompt))
+        : fakeProviderPlan(turn.prompt, turn.attachments, turn.chatFolder ? [] : turn.projectRoots)
   ).map((output) => withFakeContext(turn, output));
   if (titled) outputs.push({ kind: 'text_delta', delta: `\n\nTitle: ${FAKE_TITLE}` });
   const planMs = turn.prompt.includes(FAKE_SLOW_PLAN_TRIGGER) ? FAKE_SLOW_PLAN_MS : timing.stepMs;

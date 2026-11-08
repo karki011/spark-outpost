@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                  | What to do                                                      |
 | ----------------------------- | --------------------------------------------------------------- |
+| Week recap on Home            | Pick its day in **Settings → Notifications**.                   |
 | Brief reasons more            | Nothing.                                                        |
 | Meetings shown once on Home   | Nothing.                                                        |
 | Undo after quick edits        | Nothing.                                                        |

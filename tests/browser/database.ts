@@ -140,9 +140,10 @@ export async function resetTestDatabase({
     await db.query(
       `INSERT INTO profiles
          (workspace_id, display_name, default_provider, onboarding_completed_at, default_level,
-          collapse_finished_turns)
-       VALUES ($1, 'Test User', $2, $3, $4, $5)
+          collapse_finished_turns, week_recap)
+       VALUES ($1, 'Test User', $2, $3, $4, $5, false)
        ON CONFLICT (workspace_id) DO UPDATE SET
+         week_recap = false,
          display_name = EXCLUDED.display_name,
          default_provider = EXCLUDED.default_provider,
          onboarding_completed_at = EXCLUDED.onboarding_completed_at,

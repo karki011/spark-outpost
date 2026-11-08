@@ -1,4 +1,5 @@
 import { remoteDeviceOf } from '../remote/principal.ts';
+import { RecapNotFoundError, RecapNotReadyError } from '../recap/service.ts';
 import { z } from 'zod';
 import { Router } from 'express';
 import {
@@ -255,12 +256,17 @@ export function statusForError(error: unknown): { status: number; message: strin
   if (
     error instanceof ProjectNotFoundError ||
     error instanceof ChatNotFoundError ||
-    error instanceof AttentionItemNotFoundError
+    error instanceof AttentionItemNotFoundError ||
+    error instanceof RecapNotFoundError
   ) {
     return { status: 404, message: error.message };
   }
   if (error instanceof TaskNotFoundError) return { status: 404, message: 'Task not found.' };
-  if (error instanceof PlanDocumentError || error instanceof AgentConfigConflictError) {
+  if (
+    error instanceof PlanDocumentError ||
+    error instanceof AgentConfigConflictError ||
+    error instanceof RecapNotReadyError
+  ) {
     return { status: 409, message: error.message };
   }
   if (error instanceof MessageConflictError) {

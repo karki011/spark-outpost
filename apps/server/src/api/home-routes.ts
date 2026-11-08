@@ -1,14 +1,19 @@
 import { Router } from 'express';
-import { digestTriggerSchema, spendRangeSchema } from '@spark-outpost/contracts';
+import {
+  digestTriggerSchema,
+  recapRefineRequestSchema,
+  spendRangeSchema,
+} from '@spark-outpost/contracts';
 import { digestState, requestDigest } from '../digest/service.ts';
 import { todaySummary } from '../digest/today.ts';
 import type { Db } from '../persistence/db.ts';
 import { appConnection } from '../persistence/github-app.ts';
 import { providerIssues } from '../persistence/provider-health.ts';
 import { spendSummary } from '../persistence/spend.ts';
+import { recapState, refineRecap, requestRecap } from '../recap/service.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import { timeZoneParam } from './time-zone-param.ts';
-import { BadRequestError, parseBody } from './validation.ts';
+import { BadRequestError, paramId, parseBody } from './validation.ts';
 
 export interface HomeRouteDeps {
   db: Db;
@@ -44,6 +49,19 @@ export function homeRoutes({ db, workspaceId, secrets }: HomeRouteDeps): Router 
   router.post('/home/digest', async (req, res) => {
     const { trigger } = parseBody(digestTriggerSchema, req);
     res.json(await requestDigest(db, workspaceId, trigger, timeZoneParam(req.query.tz)));
+  });
+
+  router.get('/home/recap', async (_req, res) => {
+    res.json(await recapState(db, workspaceId));
+  });
+
+  router.post('/home/recap', async (_req, res) => {
+    res.json(await requestRecap(db, workspaceId));
+  });
+
+  router.post('/home/recap/:id/refine', async (req, res) => {
+    const request = parseBody(recapRefineRequestSchema, req);
+    res.json(await refineRecap(db, workspaceId, paramId(req), request));
   });
 
   return router;

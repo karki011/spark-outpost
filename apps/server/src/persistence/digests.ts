@@ -14,10 +14,9 @@ import type { LastDigest } from '../digest/policy.ts';
 import { EMPTY_DIGEST_STATS } from '../digest/stats.ts';
 import { listConversations } from './conversations.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
+import { abandonedRun, insertHiddenRun } from './hidden-runs.ts';
 import { newId } from './ids.ts';
 
-const STALE_RUNNING_MS = 10 * 60_000;
-const UNFINISHED_AFTER_RUN_MS = 60_000;
 const STALE_MESSAGE = 'The digest did not finish. Try again.';
 
 interface DigestRow {
@@ -43,12 +42,12 @@ function effectiveStatus(
   now: Date,
 ): { status: DigestStatus; error: string | null } {
   if (row.status !== 'running') return { status: row.status, error: row.error };
-  const runEnded =
-    row.run_status !== null && ['failed', 'cancelled', 'outcome_unknown'].includes(row.run_status);
-  const runEndedAt = row.run_finished_at ?? row.created_at;
-  const abandoned = runEnded && now.getTime() - runEndedAt.getTime() > UNFINISHED_AFTER_RUN_MS;
-  const stale = now.getTime() - row.created_at.getTime() > STALE_RUNNING_MS;
-  return abandoned || stale
+  const progress = {
+    runStatus: row.run_status,
+    runFinishedAt: row.run_finished_at,
+    createdAt: row.created_at,
+  };
+  return abandonedRun(progress, now)
     ? { status: 'failed', error: STALE_MESSAGE }
     : { status: 'running', error: null };
 }
@@ -253,29 +252,15 @@ export async function startDigest(
       [workspaceId, minGapMs / 1000],
     );
     if (recent.rowCount) return null;
-    const conversationId = newId();
-    const messageId = newId();
-    const runId = newId();
+    const { conversationId, runId } = await insertHiddenRun(client, workspaceId, {
+      title: 'Digest',
+      archived: false,
+      prompt: digest.prompt,
+      provider: digest.provider,
+      model: digest.model,
+      effort: digest.effort,
+    });
     const digestId = newId();
-    await client.query(
-      `INSERT INTO conversations (id, workspace_id, title, kind, title_source)
-       VALUES ($1, $2, 'Digest', 'digest', 'user')`,
-      [conversationId, workspaceId],
-    );
-    await client.query(
-      `INSERT INTO messages (id, conversation_id, role, content) VALUES ($1, $2, 'user', $3)`,
-      [messageId, conversationId, digest.prompt],
-    );
-    await client.query(
-      `INSERT INTO runs (id, conversation_id, user_message_id, provider, model, effort, status,
-         mode, role, picked_mode, source)
-       VALUES ($1, $2, $3, $4, $5, $6, 'queued', 'chat', 'digest', 'chat', 'digest')`,
-      [runId, conversationId, messageId, digest.provider, digest.model, digest.effort],
-    );
-    await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [
-      newId(),
-      runId,
-    ]);
     await client.query(
       `INSERT INTO digests (id, workspace_id, conversation_id, run_id, status, since, until,
          chat_ids, provider, model, model_label, stats, flagged, flagged_hash)

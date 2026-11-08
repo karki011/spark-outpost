@@ -50,6 +50,9 @@ interface ProfileRow {
   default_level_notice: boolean;
   morning_brief: boolean;
   morning_brief_time: string;
+  week_recap: boolean;
+  week_recap_day: number;
+  week_recap_time: string;
   compact_warn_percent: number;
   compact_at_percent: number;
   auto_compact: boolean;
@@ -107,6 +110,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
        morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
        heartbeat, wide_window, busy_enter, archive_inactive_days, terminal_record_like_chat,
        mac_control, code_mode, collapse_finished_turns,
+       week_recap, week_recap_day, to_char(week_recap_time, 'HH24:MI') AS week_recap_time,
        to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
@@ -196,6 +200,9 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     defaultLevelNotice: profile.default_level_notice,
     morningBrief: profile.morning_brief,
     morningBriefTime: profile.morning_brief_time,
+    weekRecap: profile.week_recap,
+    weekRecapDay: profile.week_recap_day,
+    weekRecapTime: profile.week_recap_time,
     compactWarnPercent: profile.compact_warn_percent,
     compactAtPercent: profile.compact_at_percent,
     autoCompact: profile.auto_compact,
@@ -269,6 +276,9 @@ export async function updateProfile(
        archive_inactive_days = CASE WHEN $28 THEN $29::integer ELSE archive_inactive_days END,
        code_mode = COALESCE($30, code_mode),
        collapse_finished_turns = COALESCE($31, collapse_finished_turns),
+       week_recap = COALESCE($32, week_recap),
+       week_recap_day = COALESCE($33, week_recap_day),
+       week_recap_time = COALESCE($34::time, week_recap_time),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -303,6 +313,9 @@ export async function updateProfile(
       update.archiveInactiveDays ?? null,
       update.codeMode ?? null,
       update.collapseFinishedTurns ?? null,
+      update.weekRecap ?? null,
+      update.weekRecapDay ?? null,
+      update.weekRecapTime ?? null,
     ],
   );
 }

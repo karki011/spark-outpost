@@ -4,6 +4,8 @@ import type { ActiveWork } from '../diagnostics/event-loop-lag.ts';
 import { executeDigest } from '../digest/execute.ts';
 import type { Db } from '../persistence/db.ts';
 import { isDigestRun } from '../persistence/digests.ts';
+import { recapRunKind } from '../persistence/week-recaps.ts';
+import { executeRecap } from '../recap/execute.ts';
 import { claimNextJob, type Lease } from '../persistence/jobs.ts';
 import { cleanOrphanedCopies } from '../orchestration/solo-copy.ts';
 import { startWorktreeSweeper } from '../projects/chat-worktree-sweep.ts';
@@ -33,6 +35,8 @@ export interface Worker {
 
 async function runLease(options: WorkerOptions, lease: Lease): Promise<void> {
   if (await isPluginReviewRun(options.db, lease.runId)) return executePluginReview(options, lease);
+  const recap = await recapRunKind(options.db, lease.runId);
+  if (recap) return executeRecap(options, lease, recap);
   if (await isDigestRun(options.db, lease.runId)) return executeDigest(options, lease);
   await runChatTurn(options, lease);
   await sendNextQueued(options, lease.runId);

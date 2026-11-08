@@ -5,6 +5,7 @@ import { chatFoldersBase } from '../chat-files/folders.ts';
 import { chatResearchBase } from '../chat-files/research-copies.ts';
 import { startArtifactOrigin } from '../artifacts/origin-server.ts';
 import { startMorningBrief } from '../digest/morning.ts';
+import { startWeekRecap } from '../recap/schedule.ts';
 import { ensureLocalWorkspace } from '../persistence/conversations.ts';
 import { acceptRulesBaseline } from '../spark-rules/rules-store.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
@@ -381,6 +382,7 @@ const morningBrief = config.MORNING_BRIEF
       }),
     )
   : null;
+const weekRecap = config.WEEK_RECAP ? startWeekRecap(db, workspaceId) : null;
 
 let pruneSchedule: PruneSchedule | null = null;
 const server = app.listen(config.API_PORT, config.API_HOST, () => {
@@ -435,6 +437,7 @@ const shutdown = async (keepTerminals = false) => {
     ['archive sweep', () => archiveSweep?.stop()],
     ['prune schedule', () => pruneSchedule?.stop()],
     ['morning brief', () => morningBrief?.stop()],
+    ['week recap', () => weekRecap?.stop()],
     ['Slack socket', () => slackSocket.stop()],
     ['Slack notifier', () => slackNotifier.stop()],
     ['calendar ticker', () => calendarTicker?.stop()],

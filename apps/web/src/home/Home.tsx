@@ -21,6 +21,8 @@ import { briefEntries, feedRows, needsMode, type BriefEntry } from './needs-mode
 import { NeedsToday } from './NeedsToday.tsx';
 import { ProviderStrip } from './ProviderStrip.tsx';
 import { SpendCard } from './SpendCard.tsx';
+import { RecapCard, RecapEarly } from './recap/RecapCard.tsx';
+import { useRecap } from './recap/use-recap.ts';
 import { TeammateRoster } from '../teammates/TeammateRoster.tsx';
 import { useAttentionSettings, useBrief } from './use-brief.ts';
 
@@ -104,6 +106,8 @@ export function Home(props: HomeProps) {
     return (first && projectById.get(first)) ?? 'No project';
   };
   const brief = useBrief({ writeOnOpen: true });
+  const recap = useRecap();
+  const recapShown = recap.view !== 'hidden' && recap.view !== 'early';
   const hint = useConnectHint();
   const titleOf = useTicketTitles();
   const entries = briefEntries(brief.current, chats, titleOf);
@@ -185,6 +189,7 @@ export function Home(props: HomeProps) {
               onDismissHint={hint.dismiss}
             />
             <UpcomingCard chats={chats} now={now} />
+            {recapShown && <RecapCard recap={recap} onOpenId={props.onOpenId} />}
             <RunningNow
               items={running}
               offset={need.length}
@@ -205,6 +210,7 @@ export function Home(props: HomeProps) {
             )}
             <div className="hsecondary">
               <SpendCard onUsage={props.onUsage} />
+              {recap.view === 'early' && <RecapEarly recap={recap} />}
             </div>
           </div>
         </div>
