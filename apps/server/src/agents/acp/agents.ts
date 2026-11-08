@@ -192,6 +192,10 @@ function repoTools(repo: ClaudeRepoOptions | null): string[] {
   return [...(repo.skillTool ? ['Skill'] : []), ...(repo.agentTool ? ['Agent'] : [])];
 }
 
+const NO_IDLE_COMPACTION = {
+  CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS: String(Number.MAX_SAFE_INTEGER),
+};
+
 export function claudeSessionMeta(
   tools: readonly string[],
   extraRoots: readonly string[],
@@ -228,6 +232,8 @@ export function claudeSessionMeta(
         tools: [...tools, ...repoTools(repo)],
         disallowedTools: deny,
         settingSources: [],
+        promptSuggestions: false,
+        env: NO_IDLE_COMPACTION,
         ...(plugins.length > 0
           ? { plugins: plugins.map((path) => ({ type: 'local', path, skipMcpDiscovery: true })) }
           : {}),
