@@ -1,4 +1,5 @@
 @import url('theme-base.css');
+@import url('theme-bold.css');
 
 [data-skin='apricot'] {
   color-scheme: light;
@@ -311,7 +312,10 @@
 [data-skin='moss'],
 [data-skin='plum'],
 [data-skin='aurora'],
-[data-skin='loam'] {
+[data-skin='loam'],
+[data-skin='ember'],
+[data-skin='volt'],
+[data-skin='ultra'] {
   --c-claude: oklch(0.68 0.15 40);
   --c-codex: oklch(0.64 0.12 225);
   --c-zai: oklch(0.66 0.14 115);
@@ -338,6 +342,9 @@
 [data-skin='plum'],
 [data-skin='aurora'],
 [data-skin='loam'],
+[data-skin='ember'],
+[data-skin='volt'],
+[data-skin='ultra'],
 [data-skin='contrast-dark'] {
   --cache-warm: #63d69c;
   --cache-expiring: #8db1ff;

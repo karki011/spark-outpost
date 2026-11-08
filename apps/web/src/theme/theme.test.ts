@@ -126,6 +126,29 @@ describe('the skin a choice shows', () => {
     expect(new Set(sides).size).toBe(sides.length);
   });
 
+  it('defines a skin in the theme styles for every tint side', () => {
+    const publicDir = path.join(import.meta.dirname, '../../public');
+    const styles = ['theme-base.css', 'theme-bold.css', 'theme.css']
+      .map((file) => readFileSync(path.join(publicDir, file), 'utf8'))
+      .join('\n');
+    for (const tint of tints) {
+      for (const skin of [tint.light, tint.dark]) {
+        expect(styles, skin).toMatch(
+          new RegExp(`\\[data-skin='${skin}'\\][^{]*\\{\\s*color-scheme`),
+        );
+      }
+    }
+  });
+
+  it('pairs the cloud grey and jet black tints with their dark sides', () => {
+    const pairs = Object.fromEntries(tints.map((tint) => [tint.id, [tint.light, tint.dark]]));
+    expect(pairs).toMatchObject({
+      blaze: ['blaze', 'ember'],
+      acid: ['acid', 'volt'],
+      violet: ['violet', 'ultra'],
+    });
+  });
+
   it('uses the high-contrast set on the matching side when Increase contrast is on', () => {
     const iris: Appearance = { ...DEFAULT_APPEARANCE, tint: 'iris' };
     expect(resolveSkin(iris, { dark: false, moreContrast: true })).toBe('contrast');
