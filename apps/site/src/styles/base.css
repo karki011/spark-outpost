@@ -3,7 +3,7 @@
   --font-mono: 'Geist Mono Variable', ui-monospace, Menlo, monospace;
   --page: 1180px;
   --gutter: 24px;
-  --amber: var(--warn);
+  --amber: var(--accent);
   --glow: color-mix(in srgb, var(--brand) 34%, transparent);
   --dot: color-mix(in srgb, var(--text) 13%, transparent);
 }
@@ -175,21 +175,30 @@ code {
   font-size: 15px;
 }
 
-.eyebrow {
-  margin: 0 0 10px;
-  color: var(--accent-text);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 h1,
 h2 {
   margin: 0 0 16px;
   font-weight: 800;
   letter-spacing: -0.035em;
   line-height: 1.04;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+li,
+figcaption {
+  text-wrap: pretty;
+}
+
+.fine,
+.demo,
+.release h2 {
+  font-variant-numeric: tabular-nums;
 }
 
 h1 {

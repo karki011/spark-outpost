@@ -1,50 +1,28 @@
 import {
-  AdditiveBlending,
-  BufferGeometry,
   CanvasTexture,
   Clock,
   Color,
-  CylinderGeometry,
   DirectionalLight,
-  Float32BufferAttribute,
   HemisphereLight,
   Mesh,
   MeshBasicMaterial,
-  MeshStandardMaterial,
   NeutralToneMapping,
   PerspectiveCamera,
   PlaneGeometry,
   PMREMGenerator,
   PointLight,
-  Points,
-  PointsMaterial,
   Scene,
   WebGLRenderer,
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { onPaletteChange } from '../accent.ts';
 import { onVisibility } from '../motion.ts';
-import { createOrbitCards, type CardPalette } from './orbit-cards.ts';
 import { createScout } from './scout-mesh.ts';
 
-const SPARK_COUNT = 70;
 const REST_AFTER_MS = 6000;
 
 function token(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
-function palette(): CardPalette {
-  return {
-    panel: token('--panel'),
-    line: token('--line-strong'),
-    text: token('--text'),
-    muted: token('--muted'),
-    faint: token('--faint'),
-    claude: token('--c-claude'),
-    codex: token('--c-codex'),
-    accent: token('--accent'),
-  };
 }
 
 function shadowTexture(): CanvasTexture {
@@ -62,32 +40,6 @@ function shadowTexture(): CanvasTexture {
 
 function brand(): Color {
   return new Color(token('--brand'));
-}
-
-function floatingSparks(): Points {
-  const positions: number[] = [];
-  for (let index = 0; index < SPARK_COUNT; index += 1) {
-    positions.push((Math.random() - 0.5) * 6, Math.random() * 4 - 1.2, (Math.random() - 0.5) * 3);
-  }
-  const geometry = new BufferGeometry();
-  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
-  return new Points(
-    geometry,
-    new PointsMaterial({
-      size: 0.035,
-      transparent: true,
-      opacity: 0.7,
-      blending: AdditiveBlending,
-      depthWrite: false,
-    }),
-  );
-}
-
-function outpostBase(): Mesh<CylinderGeometry, MeshStandardMaterial> {
-  return new Mesh(
-    new CylinderGeometry(1.25, 1.4, 0.14, 6),
-    new MeshStandardMaterial({ emissiveIntensity: 0.06, roughness: 0.5, metalness: 0.3 }),
-  );
 }
 
 export interface PointerTarget {
@@ -123,9 +75,6 @@ export function startScoutScene(host: HTMLElement, poke: HTMLButtonElement): Pro
   const glow = new PointLight(0xffffff, 1.2, 2.5);
   scout.star.add(glow);
 
-  const base = outpostBase();
-  base.position.y = -0.98;
-  scene.add(base);
   const shadow = new Mesh(
     new PlaneGeometry(2.4, 2.4),
     new MeshBasicMaterial({ map: shadowTexture(), transparent: true, depthWrite: false }),
@@ -134,22 +83,11 @@ export function startScoutScene(host: HTMLElement, poke: HTMLButtonElement): Pro
   shadow.position.y = -0.895;
   scene.add(shadow);
 
-  const sparks = floatingSparks();
-  scene.add(sparks);
-
-  const fontFamily = getComputedStyle(document.body).fontFamily;
-  const cards = createOrbitCards(palette(), fontFamily);
-  scene.add(cards.group);
-
   const paint = () => {
     const color = brand();
     scout.paint(color, new Color(token('--text')));
     rim.color.copy(color);
     glow.color.copy(color);
-    (sparks.material as PointsMaterial).color.copy(color);
-    base.material.color.set(token('--raise'));
-    base.material.emissive.copy(color);
-    cards.repaint(palette());
   };
   paint();
 
@@ -160,7 +98,6 @@ export function startScoutScene(host: HTMLElement, poke: HTMLButtonElement): Pro
   let hop = 0;
   let hopSpeed = 0;
   let nextBlink = 2.5;
-  let narrow = false;
   let lastActive = performance.now();
   let resting = false;
 
@@ -183,10 +120,8 @@ export function startScoutScene(host: HTMLElement, poke: HTMLButtonElement): Pro
   const resize = () => {
     const width = host.clientWidth;
     const height = host.clientHeight;
-    narrow = width < 520;
     renderer.setSize(width, height, false);
     camera.aspect = width / Math.max(1, height);
-    camera.position.z = narrow ? 8.2 : 7;
     camera.updateProjectionMatrix();
   };
   new ResizeObserver(resize).observe(host);
@@ -231,9 +166,6 @@ export function startScoutScene(host: HTMLElement, poke: HTMLButtonElement): Pro
     if (nextBlink < -0.14) nextBlink = 2.5 + Math.random() * 3;
 
     shadow.scale.setScalar(1 - (bob + hop * 0.35) * 0.4);
-    sparks.rotation.y = time * 0.03;
-    sparks.position.y = (time * 0.08) % 0.6;
-    cards.update(time, camera, narrow ? 1.3 : 1.65);
 
     renderer.render(scene, camera);
     if (firstFrame) {
