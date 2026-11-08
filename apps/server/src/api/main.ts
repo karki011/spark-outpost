@@ -6,6 +6,7 @@ import { chatResearchBase } from '../chat-files/research-copies.ts';
 import { startArtifactOrigin } from '../artifacts/origin-server.ts';
 import { startMorningBrief } from '../digest/morning.ts';
 import { startWeekRecap } from '../recap/schedule.ts';
+import { followAssistantChat } from '../companion/assistant.ts';
 import { ensureLocalWorkspace } from '../persistence/conversations.ts';
 import { acceptRulesBaseline } from '../spark-rules/rules-store.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
@@ -396,6 +397,9 @@ const server = app.listen(config.API_PORT, config.API_HOST, () => {
   });
   void slackSocket.refresh();
   outposts.start();
+  followAssistantChat(db, workspaceId).catch((error: unknown) => {
+    console.error('Could not apply the Ask Spark settings', (error as Error).message);
+  });
   reconcileRemote().catch((error: unknown) => {
     console.error('Could not check Tailscale Serve', (error as Error).message);
   });

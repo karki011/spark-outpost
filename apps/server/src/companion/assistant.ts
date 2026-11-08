@@ -16,6 +16,17 @@ export const ASSISTANT_PREAMBLE = [
 
 export class AssistantUnavailableError extends Error {}
 
+export async function followAssistantChat(db: Db, workspaceId: string): Promise<void> {
+  await withTransaction(db, async (client) => {
+    const { rows } = await client.query<{ id: string | null }>(
+      `SELECT assistant_conversation_id AS id FROM profiles WHERE workspace_id = $1 FOR UPDATE`,
+      [workspaceId],
+    );
+    const id = rows[0]?.id;
+    if (id) await followAssistantSettings(client, workspaceId, id);
+  });
+}
+
 export async function ensureAssistantChat(db: Db, workspaceId: string): Promise<string> {
   return withTransaction(db, async (client) => {
     const { rows } = await client.query<{ id: string | null }>(

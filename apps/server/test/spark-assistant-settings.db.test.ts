@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { assistantSettingsViewSchema, sparkAssistantSchema } from '@spark-outpost/contracts';
+import { followAssistantChat } from '../src/companion/assistant.ts';
 import { resolveChatSettings, updateChatSettings } from '../src/persistence/chat-settings.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import { connectCliProvider, createTestDb, type TestDb } from './support.ts';
@@ -158,6 +159,21 @@ describe('Spark assistant settings', () => {
     expect((await save({ ...FAST, provider: 'codex' })).status).toBe(400);
     expect((await save({ ...FAST, modelChoice: 'pick' })).status).toBe(400);
     expect((await save({ ...FAST, modelChoice: 'bogus' })).status).toBe(400);
+  });
+
+  it('moves a chat applied before an update to the current fast default at startup', async () => {
+    const id = await assistantId();
+    await updateChatSettings(t.db, id, { effort: 'low' });
+    await t.db.query(`UPDATE profiles SET assistant_applied = 'before' WHERE workspace_id = $1`, [
+      t.workspaceId,
+    ]);
+    await followAssistantChat(t.db, t.workspaceId);
+    expect(await settingsOf(id)).toMatchObject({ model: 'sonnet', effort: 'medium' });
+    const { rows } = await t.db.query<{ detail: string }>(
+      'SELECT detail FROM assistant_events WHERE workspace_id = $1',
+      [t.workspaceId],
+    );
+    expect(rows).toEqual([{ detail: 'Claude · Sonnet 5.5 · medium effort' }]);
   });
 
   it('records a settings change for the audit of the next turn', async () => {
