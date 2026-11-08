@@ -1,6 +1,7 @@
 import type { BufferAttribute } from 'three';
 import {
   CapsuleGeometry,
+  Color,
   CubicBezierCurve3,
   ExtrudeGeometry,
   Group,
@@ -13,9 +14,9 @@ import {
   Vector3,
 } from 'three';
 
-export const SCOUT_TEAL = 0x2bb39a;
-export const SPARK_AMBER = 0xf2b54a;
-const EYE_INK = 0x0c0f12;
+const EYE_INK = 0x111316;
+const SHEEN_LIFT = 0.5;
+const WHITE = new Color(0xffffff);
 
 export interface Scout {
   root: Group;
@@ -24,6 +25,7 @@ export interface Scout {
   star: Mesh;
   wobble: (time: number, energy: number) => void;
   blink: (amount: number) => void;
+  paint: (body: Color, spark: Color) => void;
 }
 
 function shapeBlob(geometry: SphereGeometry): Float32Array {
@@ -76,12 +78,10 @@ function eye(material: MeshStandardMaterial, x: number): Mesh {
 
 export function createScout(): Scout {
   const skin = new MeshPhysicalMaterial({
-    color: SCOUT_TEAL,
     roughness: 0.28,
     clearcoat: 1,
     clearcoatRoughness: 0.18,
     sheen: 0.6,
-    sheenColor: 0x7ff0d6,
     sheenRoughness: 0.4,
   });
   const geometry = new SphereGeometry(1, 96, 64);
@@ -109,15 +109,8 @@ export function createScout(): Scout {
     ),
     skin,
   );
-  const star = new Mesh(
-    sparkStar(),
-    new MeshStandardMaterial({
-      color: SPARK_AMBER,
-      emissive: SPARK_AMBER,
-      emissiveIntensity: 0.9,
-      roughness: 0.35,
-    }),
-  );
+  const sparkMaterial = new MeshStandardMaterial({ emissiveIntensity: 0.9, roughness: 0.35 });
+  const star = new Mesh(sparkStar(), sparkMaterial);
   star.position.set(0.6, 1.3, 0);
 
   const body = new Group();
@@ -146,5 +139,12 @@ export function createScout(): Scout {
     for (const child of eyes.children) child.scale.y = 1 - amount * 0.9;
   };
 
-  return { root, body, eyes, star, wobble, blink };
+  const paint = (bodyColor: Color, spark: Color) => {
+    skin.color.copy(bodyColor);
+    skin.sheenColor.copy(bodyColor).lerp(WHITE, SHEEN_LIFT);
+    sparkMaterial.color.copy(spark);
+    sparkMaterial.emissive.copy(spark);
+  };
+
+  return { root, body, eyes, star, wobble, blink, paint };
 }

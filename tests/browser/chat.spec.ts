@@ -103,6 +103,9 @@ test('the theme menu sets the mode and a tint that follows the system', async ({
     'Iris · Aurora',
     'Fjord · Void',
     'Sage · Loam',
+    'Blaze · Ember',
+    'Acid · Volt',
+    'Violet · Ultra',
   ]);
   await expect(page.getByRole('menuitemradio', { name: 'Automatic' })).toHaveAttribute(
     'aria-checked',
@@ -113,6 +116,7 @@ test('the theme menu sets the mode and a tint that follows the system', async ({
   const tints = [
     { name: 'Lagoon · Moss', light: 'lagoon', dark: 'moss', darkPanel: '#171b13' },
     { name: 'Iris · Aurora', light: 'iris', dark: 'aurora', darkPanel: '#18152f' },
+    { name: 'Violet · Ultra', light: 'violet', dark: 'ultra', darkPanel: '#181b1f' },
     { name: 'Sage · Loam', light: 'sage', dark: 'loam', darkPanel: '#1a1913' },
   ];
   const panel = () =>

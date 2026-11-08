@@ -29,6 +29,12 @@ const THEMES = [
   'aurora',
   'iris',
   'loam',
+  'blaze',
+  'ember',
+  'acid',
+  'volt',
+  'violet',
+  'ultra',
   'contrast',
   'contrast-dark',
 ] as const;
