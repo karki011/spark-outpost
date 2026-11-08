@@ -99,8 +99,8 @@ async function restart(): Promise<void> {
 describe('the persistent Ask Spark session', { timeout: 240_000 }, () => {
   it('answers on the fast model and keeps one session across a restart', async () => {
     const first = await ask('remember the word pineapple');
-    expect(first.reply).toContain('model=sonnet effort=low');
-    expect(first.run).toMatchObject({ model: 'sonnet', effort: 'low' });
+    expect(first.reply).toContain('model=sonnet effort=medium');
+    expect(first.run).toMatchObject({ model: 'sonnet', effort: 'medium' });
 
     await restart();
     const second = await ask('what word did I ask you to remember?');
@@ -141,7 +141,7 @@ describe('the persistent Ask Spark session', { timeout: 240_000 }, () => {
     );
     const next = await ask('what word did I ask you to remember?');
 
-    expect(next.run).toMatchObject({ provider: 'codex', model: 'gpt-6-luna', effort: 'low' });
+    expect(next.run).toMatchObject({ provider: 'codex', model: 'gpt-6-luna', effort: 'medium' });
     expect(next.reply).toContain('the word pineapple');
     expect(await auditedKinds(next.run.id)).toEqual(['settings_changed', 'session_reseeded']);
   });
