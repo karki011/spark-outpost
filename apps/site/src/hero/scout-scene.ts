@@ -3,6 +3,7 @@ import {
   BufferGeometry,
   CanvasTexture,
   Clock,
+  Color,
   CylinderGeometry,
   DirectionalLight,
   Float32BufferAttribute,
@@ -21,9 +22,10 @@ import {
   WebGLRenderer,
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { onPaletteChange } from '../accent.ts';
 import { onVisibility } from '../motion.ts';
 import { createOrbitCards, type CardPalette } from './orbit-cards.ts';
-import { createScout, SCOUT_TEAL, SPARK_AMBER } from './scout-mesh.ts';
+import { createScout } from './scout-mesh.ts';
 
 const SPARK_COUNT = 70;
 const REST_AFTER_MS = 6000;
@@ -58,6 +60,10 @@ function shadowTexture(): CanvasTexture {
   return new CanvasTexture(canvas);
 }
 
+function brand(): Color {
+  return new Color(token('--brand'));
+}
+
 function floatingSparks(): Points {
   const positions: number[] = [];
   for (let index = 0; index < SPARK_COUNT; index += 1) {
@@ -68,7 +74,6 @@ function floatingSparks(): Points {
   return new Points(
     geometry,
     new PointsMaterial({
-      color: SCOUT_TEAL,
       size: 0.035,
       transparent: true,
       opacity: 0.7,
@@ -78,16 +83,10 @@ function floatingSparks(): Points {
   );
 }
 
-function outpostBase(): Mesh {
+function outpostBase(): Mesh<CylinderGeometry, MeshStandardMaterial> {
   return new Mesh(
     new CylinderGeometry(1.25, 1.4, 0.14, 6),
-    new MeshStandardMaterial({
-      color: token('--raise'),
-      emissive: SCOUT_TEAL,
-      emissiveIntensity: 0.06,
-      roughness: 0.5,
-      metalness: 0.3,
-    }),
+    new MeshStandardMaterial({ emissiveIntensity: 0.06, roughness: 0.5, metalness: 0.3 }),
   );
 }
 
@@ -107,11 +106,11 @@ export function startScoutScene(host: HTMLElement, poke: HTMLButtonElement): Pro
   const environment = new PMREMGenerator(renderer);
   scene.environment = environment.fromScene(new RoomEnvironment(), 0.04).texture;
   environment.dispose();
-  scene.add(new HemisphereLight(0xdffaf3, 0x0c0f12, 0.6));
+  scene.add(new HemisphereLight(0xffffff, 0x111316, 0.6));
   const key = new DirectionalLight(0xffffff, 1.6);
   key.position.set(2.5, 4, 3);
   scene.add(key);
-  const rim = new DirectionalLight(SCOUT_TEAL, 2.2);
+  const rim = new DirectionalLight(0xffffff, 2.2);
   rim.position.set(-3, 1.5, -2.5);
   scene.add(rim);
 
@@ -121,7 +120,7 @@ export function startScoutScene(host: HTMLElement, poke: HTMLButtonElement): Pro
 
   const scout = createScout();
   scene.add(scout.root);
-  const glow = new PointLight(SPARK_AMBER, 1.2, 2.5);
+  const glow = new PointLight(0xffffff, 1.2, 2.5);
   scout.star.add(glow);
 
   const base = outpostBase();
@@ -141,6 +140,18 @@ export function startScoutScene(host: HTMLElement, poke: HTMLButtonElement): Pro
   const fontFamily = getComputedStyle(document.body).fontFamily;
   const cards = createOrbitCards(palette(), fontFamily);
   scene.add(cards.group);
+
+  const paint = () => {
+    const color = brand();
+    scout.paint(color, new Color(token('--text')));
+    rim.color.copy(color);
+    glow.color.copy(color);
+    (sparks.material as PointsMaterial).color.copy(color);
+    base.material.color.set(token('--raise'));
+    base.material.emissive.copy(color);
+    cards.repaint(palette());
+  };
+  paint();
 
   const pointer: PointerTarget = { x: 0, y: 0 };
   const look: PointerTarget = { x: 0, y: 0 };
@@ -256,5 +267,9 @@ export function startScoutScene(host: HTMLElement, poke: HTMLButtonElement): Pro
     }
   });
   document.addEventListener('visibilitychange', sync);
+  onPaletteChange(() => {
+    paint();
+    wake();
+  });
   return ready;
 }

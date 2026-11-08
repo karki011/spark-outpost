@@ -29,7 +29,11 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/web/public/**/*.js', 'tests/fixtures/browser-pane/*.js'],
+    files: [
+      'apps/web/public/**/*.js',
+      'apps/site/public/**/*.js',
+      'tests/fixtures/browser-pane/*.js',
+    ],
     languageOptions: { globals: { ...globals.browser } },
   },
   {

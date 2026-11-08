@@ -51,11 +51,14 @@ function roundedRect(
   context.roundRect(x, y, w, h, 34);
 }
 
-function drawCard(spec: CardSpec, palette: CardPalette, fontFamily: string): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = WIDTH;
-  canvas.height = HEIGHT;
+function drawCard(
+  canvas: HTMLCanvasElement,
+  spec: CardSpec,
+  palette: CardPalette,
+  fontFamily: string,
+): void {
   const context = canvas.getContext('2d')!;
+  context.clearRect(0, 0, WIDTH, HEIGHT);
   roundedRect(context, 4, 4, WIDTH - 8, HEIGHT - 8);
   context.fillStyle = palette.panel;
   context.fill();
@@ -75,19 +78,29 @@ function drawCard(spec: CardSpec, palette: CardPalette, fontFamily: string): HTM
   context.fillStyle = palette.faint;
   context.font = `400 28px ${fontFamily}`;
   context.fillText(spec.detail, 38, 168, WIDTH - 76);
-  return canvas;
 }
 
 export interface OrbitCards {
   group: Group;
   update: (time: number, camera: Camera, radius: number) => void;
+  repaint: (palette: CardPalette) => void;
 }
 
 export function createOrbitCards(palette: CardPalette, fontFamily: string): OrbitCards {
   const group = new Group();
   const geometry = new PlaneGeometry(1.4, 0.5);
-  const cards = CARDS.map((spec) => {
-    const texture = new CanvasTexture(drawCard(spec, palette, fontFamily));
+  const canvases = CARDS.map(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = WIDTH;
+    canvas.height = HEIGHT;
+    return canvas;
+  });
+  const textures = CARDS.map((spec, index) => {
+    const canvas = canvases[index]!;
+    drawCard(canvas, spec, palette, fontFamily);
+    return new CanvasTexture(canvas);
+  });
+  const cards = textures.map((texture) => {
     texture.colorSpace = SRGBColorSpace;
     texture.anisotropy = 4;
     const mesh = new Mesh(
@@ -114,5 +127,12 @@ export function createOrbitCards(palette: CardPalette, fontFamily: string): Orbi
     });
   };
 
-  return { group, update };
+  const repaint = (next: CardPalette) => {
+    CARDS.forEach((spec, index) => {
+      drawCard(canvases[index]!, spec, next, fontFamily);
+      textures[index]!.needsUpdate = true;
+    });
+  };
+
+  return { group, update, repaint };
 }

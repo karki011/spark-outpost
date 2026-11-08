@@ -1,32 +1,88 @@
 .hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-  gap: 40px;
+  padding-block: 28px 72px;
+  text-align: center;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 28px;
+  color: var(--muted);
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.meta-row span::before {
+  content: '+';
+  margin-right: 10px;
+  color: var(--faint);
+  font-weight: 300;
+}
+
+.hero-copy {
+  max-width: 920px;
+  margin-inline: auto;
+}
+
+.hero .eyebrow {
+  display: inline-flex;
   align-items: center;
-  min-height: min(760px, calc(100svh - 64px));
-  padding-block: 48px 64px;
+  gap: 8px;
+  color: var(--text);
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 15px;
+}
+
+.hero .eyebrow::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--jet) 20%, transparent);
+}
+
+.hero h1 {
+  font-size: clamp(44px, 6.6vw, 84px);
+  letter-spacing: -0.05em;
+  line-height: 0.96;
+  margin-bottom: 18px;
 }
 
 .lead {
   color: var(--muted);
   font-size: 20px;
   max-width: 34em;
-  margin: 0 0 28px;
+  margin: 0 auto 28px;
+}
+
+.hero .download-row {
+  justify-content: center;
 }
 
 .hero .fine {
   margin-top: 16px;
 }
 
+.hero-visual {
+  position: relative;
+  max-width: 1040px;
+  margin: 16px auto 0;
+}
+
 .scout-stage {
   position: relative;
-  aspect-ratio: 1 / 0.92;
-  width: 100%;
+  aspect-ratio: 1 / 0.74;
+  width: min(100%, 560px);
+  margin-inline: auto;
   overflow: hidden;
-  border-radius: 28px;
+  border-radius: 50%;
   background:
-    radial-gradient(60% 55% at 50% 58%, var(--glow), transparent 70%),
-    radial-gradient(90% 70% at 50% 100%, var(--raise), transparent 70%);
+    radial-gradient(closest-side, var(--glow), transparent 72%),
+    radial-gradient(closest-side, transparent 97%, var(--line) 97.4%, transparent 98%);
 }
 
 .scout-stage canvas {
@@ -41,10 +97,11 @@
 .scout-poster {
   position: absolute;
   left: 50%;
-  top: 52%;
-  width: 52%;
+  top: 54%;
+  width: 46%;
+  height: auto;
   translate: -50% -50%;
-  filter: drop-shadow(0 30px 40px rgb(0 0 0 / 0.45));
+  filter: drop-shadow(0 30px 30px color-mix(in srgb, var(--jet) 30%, transparent));
   transition: opacity 500ms var(--out);
 }
 
@@ -84,14 +141,115 @@
   font-size: 13px;
 }
 
+.callouts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.callout {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 18px 7px 7px;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--jet) 8%, transparent);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.callout-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--panel);
+}
+
+.callout-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (min-width: 1000px) {
+  .callouts {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    pointer-events: none;
+  }
+
+  .callout {
+    position: absolute;
+  }
+
+  .callout::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 96px;
+    height: 1px;
+    background: var(--line-strong);
+  }
+
+  .callout:nth-child(odd) {
+    left: 5%;
+  }
+
+  .callout:nth-child(odd)::after {
+    left: 100%;
+  }
+
+  .callout:nth-child(even) {
+    right: 5%;
+  }
+
+  .callout:nth-child(even)::after {
+    right: 100%;
+  }
+
+  .callout:nth-child(-n + 2) {
+    top: 30%;
+  }
+
+  .callout:nth-child(n + 3) {
+    top: 68%;
+  }
+}
+
 @media (max-width: 860px) {
   .hero {
-    grid-template-columns: minmax(0, 1fr);
-    min-height: 0;
-    padding-block: 32px 48px;
+    padding-block: 20px 48px;
   }
 
   .lead {
     font-size: 18px;
+  }
+}
+
+@media (max-width: 560px) {
+  .meta-row span:last-child {
+    display: none;
+  }
+
+  .callout {
+    font-size: 14px;
+  }
+
+  .swatch {
+    border-radius: 28px;
+  }
+
+  .swatch-name {
+    min-width: 0;
   }
 }
