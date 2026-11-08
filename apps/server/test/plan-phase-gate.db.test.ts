@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { APPROVAL_REQUESTED, EventType, type AgentModeOption } from '@spark-outpost/contracts';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { reviewPermission } from '../src/agents/acp/do-handlers.ts';

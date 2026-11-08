@@ -1,4 +1,4 @@
-import type { ContentBlock, ToolCallContent } from '@agentclientprotocol/sdk';
+import type { ContentBlock, ToolCallContent } from '@agentclientprotocol/sdk/unstable';
 import { parseArtifactUri } from '@spark-outpost/contracts';
 import type { ProviderOutput } from '../../providers/provider.ts';
 

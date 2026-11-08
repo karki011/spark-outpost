@@ -1,4 +1,4 @@
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { describe, expect, it } from 'vitest';
 import { createUpdateMapper } from './session-updates.ts';
 import { watchRanModel } from './ran-model.ts';

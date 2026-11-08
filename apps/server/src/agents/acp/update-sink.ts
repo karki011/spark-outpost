@@ -1,4 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { ProviderError, type ProviderOutput } from '../../providers/provider.ts';
 import { modeName, type SettingsSession } from './apply-settings.ts';
 import type { CommandTracker } from './command-output.ts';

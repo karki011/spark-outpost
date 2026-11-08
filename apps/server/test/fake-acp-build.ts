@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { readFakeSession } from './fake-acp-sessions.ts';
 
 export const THREAD_REPLY_COMMAND =

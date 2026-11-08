@@ -1,5 +1,5 @@
 import { Readable, Writable } from 'node:stream';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { currentRequest, planReplies, planTurn } from './fake-acp-plans.ts';
 import { buildTurn } from './fake-acp-build.ts';
 import { pushAuthStatus, rejectedTurn, signedOut } from './fake-acp-access.ts';

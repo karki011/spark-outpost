@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { approvalRequestFrom } from '../agents/acp/permission-request.ts';
 import { objectFields } from '../agents/acp/object-fields.ts';
 import { sparkReserved } from '../agents/acp/spark-tools.ts';

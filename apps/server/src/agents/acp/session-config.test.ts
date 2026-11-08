@@ -1,4 +1,4 @@
-import type { SessionConfigOption } from '@agentclientprotocol/sdk';
+import type { SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
 import { describe, expect, it } from 'vitest';
 import { findOption, planConfig } from './session-config.ts';
 

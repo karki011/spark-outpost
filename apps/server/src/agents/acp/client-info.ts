@@ -1,4 +1,4 @@
-import type { ClientCapabilities, Implementation } from '@agentclientprotocol/sdk';
+import type { ClientCapabilities, Implementation } from '@agentclientprotocol/sdk/unstable';
 import { ASYNC_TASKS_CAPABILITY, SUBAGENT_SESSIONS_CAPABILITY } from './subagent-stream.ts';
 
 export const CLIENT_INFO: Implementation = {

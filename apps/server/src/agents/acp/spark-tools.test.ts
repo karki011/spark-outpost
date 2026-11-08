@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { agentDefinitions } from './agents.ts';
 import {
   openSparkTools,

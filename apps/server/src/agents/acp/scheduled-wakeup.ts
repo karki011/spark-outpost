@@ -1,4 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { z } from 'zod';
 import { CLAUDE_WAIT_TOOLS } from './claude-tools.ts';
 import { objectFields } from './object-fields.ts';

@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { PathPolicy } from '../../projects/path-policy.ts';
 import { isQuiet, type PermissionGate } from '../../providers/provider.ts';
 import { writeTextFile } from './fs-handlers.ts';

@@ -1,4 +1,4 @@
-import type { Usage } from '@agentclientprotocol/sdk';
+import type { Usage } from '@agentclientprotocol/sdk/unstable';
 import type { ProviderOutput } from '../../providers/provider.ts';
 
 function count(value: unknown): number | null {

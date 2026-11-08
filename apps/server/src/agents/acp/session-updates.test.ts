@@ -1,4 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { describe, expect, it } from 'vitest';
 import { THINKING_STEP, createUpdateMapper } from './session-updates.ts';
 import { describeTool, toolTarget } from './tool-titles.ts';

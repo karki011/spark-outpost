@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import type { AgentForm } from '@spark-outpost/contracts';
 import type { QuestionGate } from '../../providers/provider.ts';
 import { agentForm } from './elicitation-form.ts';

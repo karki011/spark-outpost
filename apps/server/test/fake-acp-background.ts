@@ -1,5 +1,5 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 
 type Say = (chunk: string, messageId?: string) => Promise<void>;
 

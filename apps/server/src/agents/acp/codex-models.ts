@@ -1,4 +1,4 @@
-import type { SessionConfigOption } from '@agentclientprotocol/sdk';
+import type { SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
 import { choices, findOption } from './session-config.ts';
 
 export function codexUnlistedModels(options: readonly SessionConfigOption[]): string[] {

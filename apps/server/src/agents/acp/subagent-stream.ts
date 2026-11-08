@@ -1,4 +1,4 @@
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { z } from 'zod';
 import { objectFields } from './object-fields.ts';
 import { reportedByAdapter, reportedSchema } from './subagent-report.ts';

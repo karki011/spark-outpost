@@ -1,4 +1,4 @@
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import {
   AGENT_QUESTION_FIELDS_MAX,
   agentFormSchema,

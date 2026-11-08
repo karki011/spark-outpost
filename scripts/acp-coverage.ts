@@ -12,7 +12,7 @@ const END_MARKER = '<!-- acp-coverage:end -->';
 const WHERE_PREFIX = 'apps/server/src/agents/acp/';
 const OUTSIDE_SCHEMA = 'Unstable (outside the stable v1 schema)';
 const SDK_PACKAGE = '@agentclientprotocol/sdk';
-const UNSTABLE_SCHEMA = `${SDK_PACKAGE}/schema/schema.json`;
+const UNSTABLE_SCHEMA = `${SDK_PACKAGE}/schema/v1/schema.unstable.json`;
 
 interface JsonSchema {
   $ref?: string;

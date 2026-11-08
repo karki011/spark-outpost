@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { FS_WRITE_TOOL_KIND, type ApprovalRequest } from '../../approvals/decide.ts';
 import { readProjectText, resolveInProject } from '../../projects/project-fs.ts';
 import {

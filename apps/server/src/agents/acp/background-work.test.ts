@@ -1,4 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { describe, expect, it } from 'vitest';
 import { createBackgroundWork, endsAgentCycle } from './background-work.ts';
 import { createSubagentRouter } from './subagent-stream.ts';

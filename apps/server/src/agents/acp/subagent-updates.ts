@@ -1,6 +1,6 @@
 import { firstGenerationId, friendlyStep } from '@spark-outpost/contracts';
 import type { ProviderOutput, SubagentReported } from '../../providers/provider.ts';
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { startedTaskId } from './background-work.ts';
 import { objectFields } from './object-fields.ts';
 import { createUpdateMapper, type UpdateMapper } from './session-updates.ts';

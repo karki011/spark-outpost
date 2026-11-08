@@ -1,4 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { createRailWatch } from '../agents/acp/rail-watch.ts';
 import { createCommandTracker } from '../agents/acp/command-output.ts';
 import { createTurnMapper } from '../agents/acp/subagent-updates.ts';

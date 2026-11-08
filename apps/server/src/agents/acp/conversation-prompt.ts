@@ -1,4 +1,4 @@
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { ConversationTurn, ProviderTurn, TurnAttachment } from '../../providers/provider.ts';
 import { TITLE_REQUEST } from '../../titles/title-line.ts';
 import type { SlashPrompt } from './slash-commands.ts';

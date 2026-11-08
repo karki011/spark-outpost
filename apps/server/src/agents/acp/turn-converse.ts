@@ -1,4 +1,4 @@
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { pluginCommandNames } from '../../agent-config/user-plugins/parse.ts';
 import { ProviderError, type ProviderOutput, type ProviderTurn } from '../../providers/provider.ts';
 import type { AgentDefinition } from './agents.ts';

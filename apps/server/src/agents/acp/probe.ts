@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { ProviderError, type ProviderCapabilityReport } from '../../providers/provider.ts';
 import type { SecretStore } from '../../setup/secrets.ts';
 import type { AgentDefinition, AgentLaunch } from './agents.ts';

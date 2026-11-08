@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 
 type Say = (chunk: string) => Promise<void>;
 

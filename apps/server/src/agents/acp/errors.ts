@@ -1,4 +1,8 @@
-import { PROTOCOL_VERSION, RequestError, type InitializeResponse } from '@agentclientprotocol/sdk';
+import {
+  PROTOCOL_VERSION,
+  RequestError,
+  type InitializeResponse,
+} from '@agentclientprotocol/sdk/unstable';
 import { redactText } from '../../audit/redact.ts';
 import { ModelRejectedError, ProviderError, UsageLimitError } from '../../providers/provider.ts';
 import { AgentExitedError } from './agent-process.ts';

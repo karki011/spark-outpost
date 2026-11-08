@@ -1,4 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { z } from 'zod';
 import { limitStatusSchema, PLAN_WINDOWS, type PlanWindowId } from '@spark-outpost/contracts';
 import type {

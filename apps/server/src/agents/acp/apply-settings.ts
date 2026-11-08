@@ -1,4 +1,4 @@
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import type { ConfigValues } from '@spark-outpost/contracts';
 import {
   ProviderError,

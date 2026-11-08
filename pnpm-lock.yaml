@@ -259,8 +259,8 @@ importers:
         specifier: 1.13.1
         version: 1.13.1(patch_hash=43afa29ba49da6c4a9aa855f8f6106c224388a0a6ae46a2adce63d4c3cdb15b6)
       '@agentclientprotocol/sdk':
-        specifier: 1.5.0
-        version: 1.5.0(zod@4.6.5)
+        specifier: 2.4.0
+        version: 2.4.0(zod@4.6.5)
       '@modelcontextprotocol/sdk':
         specifier: 1.30.1
         version: 1.30.1(supports-color@10.2.2)(zod@4.6.5)
@@ -613,6 +613,15 @@ packages:
     resolution: {integrity: sha512-524jwbB2iYWA+kWWyv9fhKbhU89dH/lu9u5EXwVNmfYzopV8BujCDxByBDZhxRUkB7RWIJzISCnwivdDk+bdVg==}
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
+
+  '@agentclientprotocol/sdk@2.4.0':
+    resolution: {integrity: sha512-7qJ8nnyj7WesC5ve185ioTpB2/svQoeGV4HA4nLEhgDUrcmBe54/08VcXc/oL4p14tDbxxECZzdYmUYQ+4l+Wg==}
+    peerDependencies:
+      '@modelcontextprotocol/server': ^2.4.0
+      zod: ^3.25.76 || ^4.0.0
+    peerDependenciesMeta:
+      '@modelcontextprotocol/server':
+        optional: true
 
   '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.280':
     resolution: {integrity: sha512-Yws14X5g5hgDtF565Tld/+dILAhH9QZpundjKMyO3dFasq9miXZlhU0NwXqwTO2xP0jDjJ54zduIiJwkcfcvGw==}
@@ -5105,6 +5114,10 @@ snapshots:
       zod: 4.6.5
 
   '@agentclientprotocol/sdk@1.5.0(zod@4.6.5)':
+    dependencies:
+      zod: 4.6.5
+
+  '@agentclientprotocol/sdk@2.4.0(zod@4.6.5)':
     dependencies:
       zod: 4.6.5
 

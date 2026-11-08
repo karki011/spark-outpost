@@ -1,4 +1,4 @@
-import type { NewSessionResponse, SessionConfigOption } from '@agentclientprotocol/sdk';
+import type { NewSessionResponse, SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
 import type { AgentModeOption, ConfigOptionInfo, ConfigValues } from '@spark-outpost/contracts';
 import type {
   CapabilityChoice,

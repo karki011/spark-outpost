@@ -1,4 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { firstGenerationId } from '@spark-outpost/contracts';
 import { z } from 'zod';
 import { objectFields } from './object-fields.ts';

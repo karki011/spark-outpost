@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 import path from 'node:path';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { RailKind, RailOriginal } from '@spark-outpost/contracts';
 import type { ApprovalRequest, RequestRoot } from '../../approvals/decide.ts';
 import { railCrossings, type RailCrossing } from '../../approvals/rail-crossings.ts';

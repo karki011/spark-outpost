@@ -1,4 +1,4 @@
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { resolveModelPreference } from '@agentclientprotocol/claude-agent-acp/dist/session-model.js';
 import { describe, expect, it } from 'vitest';
 import type { AgentSettings } from '../../providers/provider.ts';

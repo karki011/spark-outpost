@@ -1,4 +1,4 @@
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { ProviderAccount } from '@spark-outpost/contracts';
 import type { ProtocolObserver, RequestUsage } from '../../providers/provider.ts';
 

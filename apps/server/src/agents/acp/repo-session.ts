@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { followedFiles, instructionsPrompt, isAgentsMd } from '../../agent-config/instructions.ts';
 import type { RepoLaunch } from '../../agent-config/launch.ts';
 import { expandReferences, type McpServerConfig } from '../../agent-config/mcp-json.ts';

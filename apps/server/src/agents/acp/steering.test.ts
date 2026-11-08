@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { ProviderMessage } from '../../providers/provider.ts';
 import { attachSteering, STEER_METHOD, steeringSupported } from './steering.ts';
 

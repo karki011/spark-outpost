@@ -1,4 +1,4 @@
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 
 export const FOUR_KINDS_TRIGGER = '#fourkinds';
 

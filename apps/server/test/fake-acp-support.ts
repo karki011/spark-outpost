@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { AgentLaunch } from '../src/agents/acp/agents.ts';
 import type { ProviderOutput } from '../src/providers/provider.ts';
 import { readFakeSession } from './fake-acp-sessions.ts';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { ProtocolEntry } from '../../audit/protocol-entry.ts';
 import { createReviewTracker } from '../../audit/review-tracker.ts';
 import { createAuditRecorder } from '../../workflow/audit-recorder.ts';

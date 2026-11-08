@@ -1,6 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { Readable, Writable } from 'node:stream';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { isAlive, killProcessTree, processTreeNow } from '../../terminal/process-group.ts';
 import type { ProtocolObserver } from '../../providers/provider.ts';
 import type { AgentLaunch } from './agents.ts';

@@ -1,4 +1,4 @@
-import type { NewSessionResponse, SessionConfigOption } from '@agentclientprotocol/sdk';
+import type { NewSessionResponse, SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
 import { objectFields } from './object-fields.ts';
 
 export const LEGACY_MODE_OPTION = 'spark-outpost/legacy-mode';

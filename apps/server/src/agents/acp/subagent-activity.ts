@@ -1,4 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { objectFields } from './object-fields.ts';
 
 const CHANGES = new Set(['edit', 'delete', 'move']);
