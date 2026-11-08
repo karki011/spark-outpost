@@ -44,18 +44,17 @@ Written by Claude Sonnet 5.5 · medium · $0.01
 
 ## Facts
 
-Gathered in `apps/server/src/recap/facts.ts`, chats only (Terminal sessions come later), for the workspace's visible chats with a turn, message or answered card in the week. Each fact has an id (`c1`, `p3`, `t2`, `b1`) so the reply can cite it:
+Gathered by `recapRows` (`apps/server/src/persistence/recap-facts.ts`) and turned into facts in `apps/server/src/recap/facts.ts`, chats only (Terminal sessions, and ticket events from them, come later), for the workspace's visible chats with a turn in the week, archived ones included. Each fact has an id (`c1`, `p3`, `t2`) so the reply can cite it, and the numbers and keys it may name (`refs`):
 
-| Kind                    | From                                                                                                                              | Section it suggests                                          |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| chat                    | `loadActivity` (title, project, turns, last reply line, kept changes via `chatWins`)                                              | any                                                          |
-| pull request merged     | `pr_watches` with `pr_state='merged'` and `updated_at` in the week (covers adopted pull requests; `outcome_signals` misses those) | Done                                                         |
-| pull request open       | `pr_watches` with `pr_state='open'`: title, draft, checks, review, age                                                            | In progress                                                  |
-| ticket moved or linked  | `ticket_events` `outcome='succeeded'` in the week, with the ticket's current status                                               | Done when `done`, otherwise In progress                      |
-| waiting on someone else | open, non-draft pull requests with no approving review, a review asking for changes or failing checks; tickets in `in_review`     | Could use your help                                          |
-| waiting on you          | blocked attention items (cards, Terminal waits)                                                                                   | For me only, as "Waiting on you"; never in the manager voice |
+| Kind                   | From                                                                                                                       | Section it suggests                                            |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| chat                   | up to 25 chats: title, project, turns, failed turns, kept changes, files changed, last reply line; refs found in that text | any                                                            |
+| pull request merged    | `pr_watches` with `pr_state='merged'` and `merged_at` (set when Spark first sees the merge) in the week                    | Done                                                           |
+| pull request open      | `pr_watches` with `pr_state='open'`: title, draft, checks, review, age                                                     | In progress, or Could use your help                            |
+| ticket moved or linked | `ticket_events` `outcome='succeeded'` in the week, with the ticket's current status                                        | Done when done, otherwise In progress                          |
+| waiting on you         | a pending card in a chat on the list                                                                                       | For me only, as "Waiting on you"; never in Could use your help |
 
-No calendar data, no file contents, no commands. Text is redacted and capped as the brief's input is (`buildDigestPrompt`'s rules: 20 chats, 12,000 characters).
+Totals are counted by their own query, so the limits on facts (25 chats, 30 pull requests, 25 tickets) never lower them. No calendar data, no file contents, no commands. Text is redacted and clipped, and the facts block is capped at 16,000 characters (`fittedFacts`).
 
 ## Model
 
@@ -66,7 +65,7 @@ No calendar data, no file contents, no commands. Text is redacted and capped as 
 
 ## Storage
 
-Migration `0231_week_recaps.sql`:
+Migration `0231_week_recaps.sql` (and `0232_pr_merged_at.sql`, which adds `pr_watches.merged_at`):
 
 - `week_recaps`: `id`, `workspace_id`, `conversation_id`, `run_id`, `status` (`running`, `ready`, `failed`), `week_start` (date), `since`, `until`, `facts` jsonb, `body` jsonb (sections, `me`, `manager`), `model`, `model_label`, `error`, `created_at`, `finished_at`.
 - `profiles`: `week_recap_enabled` (true), `week_recap_day` (5), `week_recap_time` ('15:00'), `week_recap_tried_on` (date).

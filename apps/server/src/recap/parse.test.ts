@@ -72,11 +72,28 @@ it('keeps things waiting on the user out of the manager-facing help list', () =>
   const body = parseRecapReply(
     reply({
       done: [{ me: 'I moved SPK-12.', manager: 'SPK-12 moved.', facts: ['t1'] }],
-      help: [{ me: 'Waiting on my answer.', manager: 'Needs an answer.', facts: ['c1'] }],
+      help: [
+        { me: 'Waiting on my answer.', manager: 'Needs an answer.', facts: ['c1'] },
+        { me: 'Waiting on me for #182.', manager: '#182 needs a review.', facts: ['c1', 'p1'] },
+      ],
     }),
     facts,
   );
   expect(body?.help).toEqual([]);
+});
+
+it('links the fact whose number the item names', () => {
+  const second: RecapFact = {
+    ...facts[1]!,
+    id: 'p2',
+    refs: ['#190'],
+    url: 'https://github.com/o/r/pull/190',
+  };
+  const body = parseRecapReply(
+    reply({ done: [{ me: 'I merged #190.', manager: 'Merged #190.', facts: ['p1', 'p2'] }] }),
+    [...facts, second],
+  );
+  expect(body?.done[0]?.url).toBe('https://github.com/o/r/pull/190');
 });
 
 it('fails a reply that is not JSON or keeps nothing', () => {

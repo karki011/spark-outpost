@@ -32,10 +32,18 @@ export function itemText(item: RecapItem, voice: RecapVoice): string {
   return voice === 'manager' ? (item.manager ?? item.me) : item.me;
 }
 
+const REFERENCE = /#\d+\b|\b[A-Z][A-Z0-9]{1,9}-\d+\b|\b[A-Z]{2,6}\d{5,}\b/g;
+
+function pointsAt(url: string, ref: string): boolean {
+  return ref.startsWith('#')
+    ? url.replace(/\/+$/, '').endsWith(`/${ref.slice(1)}`)
+    : url.includes(ref);
+}
+
 function linked(text: string, url: string | null): string {
   if (!url) return text;
-  const ref = /#\d+\b|\b[A-Z][A-Z0-9]{1,9}-\d+\b|\b[A-Z]{2,6}\d{5,}\b/.exec(text);
-  if (!ref) return text;
+  const ref = [...text.matchAll(REFERENCE)].find((match) => pointsAt(url, match[0]));
+  if (ref?.index === undefined) return text;
   return `${text.slice(0, ref.index)}[${ref[0]}](${url})${text.slice(ref.index + ref[0].length)}`;
 }
 
@@ -54,7 +62,7 @@ export function plainText(markdown: string): string {
   return markdown
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
     .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/(^|\W)[*_]([^*_\n]+)[*_](?=\W|$)/g, '$1$2');
+    .replace(/(^|\W)([*_])(\S(?:[^*_\n]*\S)?)\2(?=\W|$)/g, '$1$3');
 }
 
 export function latestRefined(refines: readonly RecapRefine[], voice: RecapVoice): string | null {
@@ -87,12 +95,10 @@ export function totalsLine(totals: RecapTotals): string {
 }
 
 export function weekRange(recap: WeekRecap): string {
-  const format = new Intl.DateTimeFormat(undefined, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
-  return `${format.format(new Date(recap.since))} – ${format.format(new Date(recap.until))}`;
+  const options = { weekday: 'short', day: 'numeric', month: 'short' } as const;
+  const start = new Intl.DateTimeFormat(undefined, { ...options, timeZone: 'UTC' });
+  const end = new Intl.DateTimeFormat(undefined, options);
+  return `${start.format(new Date(`${recap.weekStart}T00:00:00Z`))} – ${end.format(new Date(recap.until))}`;
 }
 
 export function recapMeta(recap: WeekRecap, refines: readonly RecapRefine[]): string {
@@ -111,11 +117,10 @@ export function recapMeta(recap: WeekRecap, refines: readonly RecapRefine[]): st
 export type RecapView = 'hidden' | 'early' | 'offer' | 'writing' | 'ready' | 'failed';
 
 export function recapView(state: RecapState | undefined): RecapView {
-  if (!state || !state.available) return 'hidden';
+  if (!state || !state.available || !state.enabled) return 'hidden';
   const status = state.recap?.status;
   if (status === 'running') return 'writing';
   if (status === 'ready') return 'ready';
   if (status === 'failed') return 'failed';
-  if (!state.enabled) return 'hidden';
   return state.due ? 'offer' : 'early';
 }

@@ -34,10 +34,23 @@ describe('copy text', () => {
     expect(copyText(body, 'me')).not.toContain('waits on my answer');
   });
 
+  it('links the number its link points at', () => {
+    const item = {
+      me: 'Merged #182 and #190.',
+      manager: 'Merged #182 and #190.',
+      url: 'https://github.com/o/r/pull/190',
+      chatId: null,
+    };
+    expect(copyText({ ...body, done: [item], help: [] }, 'me')).toBe(
+      '**Done this week:** Merged #182 and [#190](https://github.com/o/r/pull/190).',
+    );
+  });
+
   it('turns Markdown into plain text', () => {
     expect(plainText('**Done:** _shipped_ [#1](https://x.dev/1)')).toBe(
       'Done: shipped #1 (https://x.dev/1)',
     );
+    expect(plainText('Linted *.ts and *.js files')).toBe('Linted *.ts and *.js files');
   });
 });
 
@@ -71,4 +84,7 @@ it('shows the card when due, offers it early, and hides it without a provider or
   expect(recapView(base)).toBe('early');
   expect(recapView({ ...base, due: true })).toBe('offer');
   expect(recapView({ ...base, enabled: false, due: true })).toBe('hidden');
+  const ready = { ...base, recap: { status: 'ready' } } as RecapState;
+  expect(recapView(ready)).toBe('ready');
+  expect(recapView({ ...ready, enabled: false })).toBe('hidden');
 });

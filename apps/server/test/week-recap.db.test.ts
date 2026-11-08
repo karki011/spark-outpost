@@ -196,6 +196,39 @@ it('writes the scheduled recap once a week, after the chosen time', async () => 
   expect(rows).toHaveLength(1);
 });
 
+it('writes the scheduled recap after one asked for earlier in the week', async () => {
+  await chat('Busy week');
+  const today = ((new Date().getDay() + 6) % 7) + 1;
+  await t.db.query(
+    `UPDATE profiles SET week_recap_day = $2, week_recap_time = '00:00' WHERE workspace_id = $1`,
+    [t.workspaceId, today],
+  );
+  startFakeWorker();
+  await post();
+  await ready();
+  await t.db.query(
+    `UPDATE week_recaps SET created_at = date_trunc('day', now()) - interval '1 minute'`,
+  );
+  const schedule = startWeekRecap(t.db, t.workspaceId, 60_000);
+  await schedule.tick();
+  await schedule.tick();
+  schedule.stop();
+  expect((await t.db.query('SELECT id FROM week_recaps')).rows).toHaveLength(2);
+});
+
+it('counts a pull request merged before the week as not merged this week', async () => {
+  const id = await chat('Old work');
+  await mergedPull(id, 150, 'Merged last month');
+  await t.db.query(
+    `UPDATE pr_watches SET merged_at = now() - interval '30 days', updated_at = now()`,
+  );
+  startFakeWorker();
+  await post();
+  const { recap } = await ready();
+  expect(recap?.totals).toMatchObject({ merged: 0 });
+  expect(JSON.stringify(recap?.body)).not.toContain('#150');
+});
+
 it('writes no scheduled recap when the recap is off', async () => {
   await chat('Busy week');
   await t.db.query(

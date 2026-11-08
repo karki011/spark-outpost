@@ -1,8 +1,14 @@
 import type { Db } from '../persistence/db.ts';
 import { sparkPaused } from '../persistence/spark-pause.ts';
-import { claimWeekRecap, latestRecap, recapSetting } from '../persistence/week-recaps.ts';
+import { getSetupState } from '../persistence/setup.ts';
+import {
+  claimWeekRecap,
+  latestRecap,
+  recapSetting,
+  releaseWeekRecap,
+} from '../persistence/week-recaps.ts';
 import { requestRecap } from './service.ts';
-import { localDay, recapDue, weekStart } from './week.ts';
+import { localDay, recapDue, recapDueAt, weekStart } from './week.ts';
 
 const CHECK_EVERY_MS = 10 * 60_000;
 
@@ -22,10 +28,20 @@ export function startWeekRecap(
     const setting = await recapSetting(db, workspaceId);
     if (!setting.enabled || !recapDue(now, setting.day, setting.time)) return;
     if (await sparkPaused(db, workspaceId)) return;
+    if (!(await getSetupState(db, workspaceId)).profile.defaultProvider) return;
+    const latest = await latestRecap(db, workspaceId, week, now);
+    if (latest?.status === 'running') return;
     triedWeek = week;
-    if (await latestRecap(db, workspaceId, week, now)) return;
+    const dueAt = recapDueAt(now, setting.day, setting.time);
+    if (latest?.status === 'ready' && new Date(latest.createdAt) >= dueAt) return;
     if (!(await claimWeekRecap(db, workspaceId, week))) return;
-    await requestRecap(db, workspaceId, now);
+    try {
+      await requestRecap(db, workspaceId, now);
+    } catch (error) {
+      triedWeek = null;
+      await releaseWeekRecap(db, workspaceId, week);
+      throw error;
+    }
   };
   const tick = async () => {
     const now = new Date();

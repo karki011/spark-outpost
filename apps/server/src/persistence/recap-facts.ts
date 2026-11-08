@@ -41,10 +41,18 @@ export interface RecapTicketRow {
   actions: string[];
 }
 
+export interface RecapCounts {
+  chats: number;
+  merged: number;
+  open: number;
+  tickets: number;
+}
+
 export interface RecapRows {
   chats: RecapChatRow[];
   pulls: RecapPullRow[];
   tickets: RecapTicketRow[];
+  counts: RecapCounts;
 }
 
 const VISIBLE_CHAT = `c.workspace_id = $1 AND c.kind = 'chat' AND c.session_type = 'chat'
@@ -87,12 +95,17 @@ async function pullRows(db: Queryable, workspaceId: string, since: Date) {
        w.checks, w.review, w.created_at
      FROM pr_watches w JOIN conversations c ON c.id = w.conversation_id
      WHERE ${VISIBLE_CHAT}
-       AND (w.pr_state = 'open' OR (w.pr_state = 'merged' AND w.updated_at >= $2))
+       AND (w.pr_state = 'open' OR (w.pr_state = 'merged' AND w.merged_at >= $2))
      ORDER BY (w.pr_state = 'merged') DESC, w.updated_at DESC LIMIT $3`,
     [workspaceId, since, RECAP_PR_LIMIT],
   );
   return rows;
 }
+
+const WEEK_TICKET_EVENT = `e.workspace_id = $1 AND e.at >= $2 AND e.outcome = 'succeeded'
+  AND e.ticket_key IS NOT NULL AND e.action IN ('start', 'transition', 'comment', 'link_pr')
+  AND NOT EXISTS (SELECT 1 FROM tasks tk JOIN conversations tc ON tc.id = tk.conversation_id
+    WHERE tk.id = e.task_id AND tc.session_type <> 'chat')`;
 
 async function ticketRows(db: Queryable, workspaceId: string, since: Date) {
   const { rows } = await db.query<RecapTicketRow>(
@@ -104,9 +117,7 @@ async function ticketRows(db: Queryable, workspaceId: string, since: Date) {
      LEFT JOIN tickets t ON t.workspace_id = e.workspace_id AND t.source = e.source
        AND t.key = e.ticket_key
      LEFT JOIN tasks k ON k.id = e.task_id
-     WHERE e.workspace_id = $1 AND e.at >= $2 AND e.outcome = 'succeeded'
-       AND e.ticket_key IS NOT NULL
-       AND e.action IN ('start', 'transition', 'comment', 'link_pr')
+     WHERE ${WEEK_TICKET_EVENT}
      GROUP BY e.source, e.ticket_key, t.title, t.status, t.url
      ORDER BY max(e.at) DESC LIMIT $3`,
     [workspaceId, since, RECAP_TICKET_LIMIT],
@@ -114,15 +125,33 @@ async function ticketRows(db: Queryable, workspaceId: string, since: Date) {
   return rows;
 }
 
+async function counts(db: Queryable, workspaceId: string, since: Date) {
+  const { rows } = await db.query<RecapCounts>(
+    `SELECT
+       (SELECT count(DISTINCT c.id) FROM conversations c JOIN runs r ON r.conversation_id = c.id
+        WHERE ${VISIBLE_CHAT} AND r.parent_run_id IS NULL AND r.role IS DISTINCT FROM 'digest'
+          AND (r.created_at >= $2 OR r.finished_at >= $2))::int AS chats,
+       (SELECT count(*) FROM pr_watches w JOIN conversations c ON c.id = w.conversation_id
+        WHERE ${VISIBLE_CHAT} AND w.pr_state = 'merged' AND w.merged_at >= $2)::int AS merged,
+       (SELECT count(*) FROM pr_watches w JOIN conversations c ON c.id = w.conversation_id
+        WHERE ${VISIBLE_CHAT} AND w.pr_state = 'open')::int AS open,
+       (SELECT count(DISTINCT (e.source, e.ticket_key)) FROM ticket_events e
+        WHERE ${WEEK_TICKET_EVENT})::int AS tickets`,
+    [workspaceId, since],
+  );
+  return rows[0] ?? { chats: 0, merged: 0, open: 0, tickets: 0 };
+}
+
 export async function recapRows(
   db: Queryable,
   workspaceId: string,
   since: Date,
 ): Promise<RecapRows> {
-  const [chats, pulls, tickets] = await Promise.all([
+  const [chats, pulls, tickets, totals] = await Promise.all([
     chatRows(db, workspaceId, since),
     pullRows(db, workspaceId, since),
     ticketRows(db, workspaceId, since),
+    counts(db, workspaceId, since),
   ]);
-  return { chats, pulls, tickets };
+  return { chats, pulls, tickets, counts: totals };
 }

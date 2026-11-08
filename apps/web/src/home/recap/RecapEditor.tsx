@@ -1,5 +1,10 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
-import type { RecapBody, RecapRefine, RecapVoice } from '@spark-outpost/contracts';
+import {
+  RECAP_REFINE_TEXT_MAX_LENGTH,
+  type RecapBody,
+  type RecapRefine,
+  type RecapVoice,
+} from '@spark-outpost/contracts';
 import { copyButtonText, useCopyFeedback } from '../../ui/use-copy-feedback.ts';
 import { copyText, latestRefined, plainText } from './recap-model.ts';
 
@@ -45,10 +50,11 @@ export function RecapEditor(props: RecapEditorProps) {
     setDrafts((current) => ({ ...current, [voice]: [...history.slice(0, -1), next] }));
   const undo = () => setDrafts((current) => ({ ...current, [voice]: history.slice(0, -1) }));
 
+  const tooLong = text.trim().length > RECAP_REFINE_TEXT_MAX_LENGTH;
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const ask = instruction.trim();
-    if (!ask || !text.trim() || rewriting) return;
+    if (!ask || !text.trim() || tooLong || rewriting) return;
     onRefine(voice, text, ask);
     setInstruction('');
   };
@@ -64,6 +70,7 @@ export function RecapEditor(props: RecapEditorProps) {
         rows={5}
         value={text}
         aria-busy={rewriting}
+        readOnly={rewriting}
         onChange={(event) => setText(event.target.value)}
       />
       <form className="recap-refine" onSubmit={submit}>
@@ -78,10 +85,20 @@ export function RecapEditor(props: RecapEditorProps) {
           maxLength={500}
           onChange={(event) => setInstruction(event.target.value)}
         />
-        <button type="submit" className="btn sm line" disabled={rewriting || !instruction.trim()}>
+        <button
+          type="submit"
+          className="btn sm line"
+          disabled={rewriting || tooLong || !instruction.trim()}
+        >
           {rewriting ? 'Rewriting…' : 'Refine'}
         </button>
       </form>
+      {tooLong && (
+        <p className="home-error" role="alert">
+          Refine works on up to {RECAP_REFINE_TEXT_MAX_LENGTH.toLocaleString()} characters. Shorten
+          the message first.
+        </p>
+      )}
       {refineError && (
         <p className="home-error" role="alert">
           {refineError}

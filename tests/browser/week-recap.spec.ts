@@ -80,10 +80,8 @@ test('the recap waits for its day, and This week so far writes one early', async
   await seedChats([{ title: 'Download prompt', run: { status: 'succeeded' } }]);
   const db = openTestDb();
   try {
-    const today = ((new Date().getDay() + 6) % 7) + 1;
     await db.query(
-      `UPDATE profiles SET week_recap = true, week_recap_day = $1, week_recap_time = '23:59'`,
-      [today],
+      `UPDATE profiles SET week_recap = true, week_recap_day = 7, week_recap_time = '23:59'`,
     );
   } finally {
     await db.end();

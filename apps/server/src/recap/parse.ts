@@ -54,8 +54,11 @@ function grounded(
   const allowed = new Set(cited.flatMap((fact) => fact.refs));
   const named = [...referencesIn(me), ...referencesIn(manager ?? '')];
   if (named.some((ref) => !allowed.has(ref))) return null;
-  if (section === 'help' && cited.every((fact) => fact.waitingOnYou)) return null;
-  const linked = cited.find((fact) => fact.url) ?? null;
+  if (section === 'help' && cited.some((fact) => fact.waitingOnYou)) return null;
+  const linked =
+    cited.find((fact) => fact.url && fact.refs.includes(named[0] ?? '')) ??
+    cited.find((fact) => fact.url) ??
+    null;
   return {
     me,
     manager,

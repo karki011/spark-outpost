@@ -1,6 +1,7 @@
 import type { RecapTotals } from '@spark-outpost/contracts';
 import { redactText } from '../audit/redact.ts';
 import { ellipsize, oneLine } from '../digest/text.ts';
+import { referencesIn } from './parse.ts';
 import type {
   RecapChatRow,
   RecapPullRow,
@@ -38,20 +39,22 @@ function tail(text: string, max: number): string {
 }
 
 function chatFact(row: RecapChatRow, index: number): RecapFact {
+  const title = clip(row.title, TITLE_CHARS);
+  const lastReply = row.last_reply ? tail(row.last_reply, REPLY_CHARS) : null;
   return {
     id: `c${index + 1}`,
     kind: 'chat',
     data: {
-      title: clip(row.title, TITLE_CHARS),
+      title,
       ...(row.project ? { project: clip(row.project, TITLE_CHARS) } : {}),
       turnsFinished: row.turns,
       ...(row.failed > 0 ? { turnsFailed: row.failed } : {}),
       ...(row.kept > 0 ? { changesKept: row.kept } : {}),
       ...(row.files_changed > 0 ? { filesChanged: row.files_changed } : {}),
       ...(row.waiting_on ? { waitingOnYou: clip(row.waiting_on, TITLE_CHARS) } : {}),
-      ...(row.last_reply ? { lastReply: tail(row.last_reply, REPLY_CHARS) } : {}),
+      ...(lastReply ? { lastReply } : {}),
     },
-    refs: [],
+    refs: [...new Set([...referencesIn(title), ...referencesIn(lastReply ?? '')])],
     url: null,
     chatId: row.id,
     waitingOnYou: row.waiting_on !== null,
@@ -110,11 +113,6 @@ export function buildRecapFacts(rows: RecapRows): RecapFacts {
   ];
   return {
     facts,
-    totals: {
-      chats: rows.chats.length,
-      merged: rows.pulls.filter((pull) => pull.pr_state === 'merged').length,
-      open: rows.pulls.filter((pull) => pull.pr_state === 'open').length,
-      tickets: rows.tickets.length,
-    },
+    totals: rows.counts,
   };
 }

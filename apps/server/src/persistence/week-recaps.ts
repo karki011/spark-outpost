@@ -12,6 +12,7 @@ import type { RecapFact } from '../recap/facts.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { abandonedRun, insertHiddenRun } from './hidden-runs.ts';
 import { newId } from './ids.ts';
+import { requestCancel } from './runs.ts';
 
 const STALE_MESSAGE = 'The recap did not finish. Try again.';
 const REFINE_STALE_MESSAGE = 'The rewrite did not finish. Try again.';
@@ -45,6 +46,18 @@ export async function claimWeekRecap(
     [workspaceId, weekStartDay],
   );
   return rowCount === 1;
+}
+
+export async function releaseWeekRecap(
+  db: Queryable,
+  workspaceId: string,
+  weekStartDay: string,
+): Promise<void> {
+  await db.query(
+    `UPDATE profiles SET week_recap_tried_on = NULL
+     WHERE workspace_id = $1 AND week_recap_tried_on = $2::date`,
+    [workspaceId, weekStartDay],
+  );
 }
 
 export interface StoredFacts {
@@ -88,9 +101,22 @@ function effective(row: Progress, now: Date, stale: string) {
     : { status: 'running' as const, error: null };
 }
 
+async function cancelStaleRun(client: Queryable, runId: string) {
+  await requestCancel(client, runId);
+  await client.query(
+    `UPDATE jobs SET status = 'done', lease_token = NULL, lease_expires_at = NULL, updated_at = now()
+     WHERE run_id = $1 AND status = 'queued'`,
+    [runId],
+  );
+  await client.query(
+    `UPDATE runs SET status = 'cancelled', finished_at = now() WHERE id = $1 AND status = 'queued'`,
+    [runId],
+  );
+}
+
 async function closeAbandoned(client: Queryable, table: string, where: string, value: string) {
-  const { rows } = await client.query<Progress & { id: string }>(
-    `SELECT x.id, x.status, x.error, x.created_at, r.status AS run_status,
+  const { rows } = await client.query<Progress & { id: string; run_id: string | null }>(
+    `SELECT x.id, x.run_id, x.status, x.error, x.created_at, r.status AS run_status,
        r.finished_at AS run_finished_at
      FROM ${table} x LEFT JOIN runs r ON r.id = x.run_id
      WHERE x.${where} = $1 AND x.status = 'running'`,
@@ -104,6 +130,7 @@ async function closeAbandoned(client: Queryable, table: string, where: string, v
        WHERE id = $1 AND status = 'running'`,
       [row.id, table === 'week_recaps' ? STALE_MESSAGE : REFINE_STALE_MESSAGE],
     );
+    if (row.run_id) await cancelStaleRun(client, row.run_id);
   }
   return rows.length - abandoned.length;
 }

@@ -20,6 +20,13 @@ function minutesOf(time: string): number {
   return hour * 60 + minute;
 }
 
+export function recapDueAt(now: Date, day: number, time: string): Date {
+  const due = weekStart(now);
+  due.setDate(due.getDate() + day - 1);
+  due.setMinutes(minutesOf(time));
+  return due;
+}
+
 export function recapDue(now: Date, day: number, time: string): boolean {
   const today = isoWeekday(now);
   if (today !== day) return today > day;
