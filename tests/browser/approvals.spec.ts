@@ -268,6 +268,7 @@ test('Codex offers Do with its own copy', async ({ page }) => {
   await expect(modes.getByRole('radio')).toHaveText([
     /^Read-only/,
     /^Ask every time/,
+    /^Workspace access/,
     /^Auto review/,
     /^Full access/,
   ]);

@@ -100,7 +100,7 @@ export function nativeModeArgs(provider: NativeProvider, mode: string): string[]
       ];
     case 'ask-every-action':
       throw new NativeRuntimeError(
-        'Ask every time is unavailable in this Codex terminal. Choose Read-only, Auto review, or Full access.',
+        'Ask every time is unavailable in this Codex terminal. Choose Read-only, Workspace access, Auto review, or Full access.',
       );
     case 'workspace-write':
       return [

@@ -11,7 +11,7 @@ Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 - The chat column is wider (880px instead of 760px), so tables and code blocks in replies fit better.
 - Reply text is 15px with tighter line and paragraph spacing, interface text is 14px, and headings, bold text and inline code are lighter.
 - A working chat's title in the chat list pulses slowly, and keeps pulsing while you read instead of stopping after a few seconds. It stops when Spark is in the background or Reduce Motion is on.
-- When an agent edits a file without asking (Bypass permissions, Accept edits, or Codex Auto review and Full access), Spark keeps the file's text from before the edit even if the agent writes it at once. Before, the Kept record could miss that file and undo could leave it empty.
+- When an agent edits a file without asking (Bypass permissions, Accept edits, or Codex Approve for me and Full access), Spark keeps the file's text from before the edit even if the agent writes it at once. Before, the Kept record could miss that file and undo could leave it empty.
 
 ## 0.1.0-beta.2
 
