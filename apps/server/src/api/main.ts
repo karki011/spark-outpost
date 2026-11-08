@@ -99,6 +99,9 @@ const activeWork = new ActiveWork();
 const stopLagMonitor = startLagMonitor({ processName: 'API', work: activeWork });
 ensureSpawnHelperExecutable();
 await forgetAllShells(db, workspaceId);
+await followAssistantChat(db, workspaceId).catch((error: unknown) => {
+  console.error('Could not apply the Ask Spark settings', (error as Error).message);
+});
 await stopAllPreviewRows(db, workspaceId);
 const previews = new PreviewServers(db, workspaceId, previewRuntime());
 const agentTerminals = new AgentTerminals(db, workspaceId, agentTerminalRuntime());
@@ -397,9 +400,6 @@ const server = app.listen(config.API_PORT, config.API_HOST, () => {
   });
   void slackSocket.refresh();
   outposts.start();
-  followAssistantChat(db, workspaceId).catch((error: unknown) => {
-    console.error('Could not apply the Ask Spark settings', (error as Error).message);
-  });
   reconcileRemote().catch((error: unknown) => {
     console.error('Could not check Tailscale Serve', (error as Error).message);
   });
