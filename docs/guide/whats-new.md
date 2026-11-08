@@ -12,6 +12,7 @@ summary: What changed in recent releases and what to do next.
 | ----------------------------- | --------------------------------------------------------------- |
 | Week recap on Home            | Pick its day in **Settings → Notifications**.                   |
 | Brief reasons more            | Nothing.                                                        |
+| Ask Spark reasons more        | Nothing.                                                        |
 | Meetings shown once on Home   | Nothing.                                                        |
 | Undo after quick edits        | Nothing.                                                        |
 | Clone or read GitHub repos    | [See how](link-a-repo.md#clone-or-read-a-repo-from-github).     |

@@ -20,8 +20,8 @@ const FAST = { modelChoice: 'fast', model: null, effort: null } as const;
 
 describe('Ask Spark fast tier', () => {
   it('names a model card Spark knows for every provider with fixed models', () => {
-    for (const tier of Object.values(ASK_SPARK_FAST_TIER)) {
-      if (tier) expect(cardById(tier.card)).not.toBeNull();
+    for (const card of Object.values(ASK_SPARK_FAST_TIER)) {
+      if (card) expect(cardById(card)).not.toBeNull();
     }
   });
 
@@ -36,20 +36,20 @@ describe('Ask Spark fast tier', () => {
     });
   });
 
-  it('runs Claude on Sonnet 5.5 at low effort, found through the alias Claude offers', () => {
+  it('runs Claude on Sonnet 5.5 at medium effort, found through the alias Claude offers', () => {
     expect(fastModelFor('claude', CLAUDE)?.id).toBe('sonnet');
     expect(assistantPick(FAST, 'claude', CLAUDE, EFFORTS)).toEqual({
       model: 'sonnet',
-      effort: 'low',
-      fastEffort: 'low',
+      effort: 'medium',
+      fastEffort: 'medium',
       noFastModel: false,
     });
   });
 
-  it('runs Codex on 6 Luna and Z.ai on GLM-5.3-Flash, both at low effort', () => {
+  it('runs Codex on 6 Luna at medium, and Z.ai, which offers no medium, at low', () => {
     expect(assistantPick(FAST, 'codex', CODEX, EFFORTS)).toMatchObject({
       model: 'gpt-6-luna',
-      effort: 'low',
+      effort: 'medium',
     });
     expect(assistantPick(FAST, 'zai', ZAI, ['low', 'high', 'max'])).toMatchObject({
       model: 'glm-5.3-flash',
@@ -61,19 +61,21 @@ describe('Ask Spark fast tier', () => {
     const older = [{ id: 'sonnet', label: 'Sonnet 5' }];
     expect(assistantPick(FAST, 'claude', older, EFFORTS)).toEqual({
       model: null,
-      effort: 'low',
-      fastEffort: 'low',
+      effort: 'medium',
+      fastEffort: 'medium',
       noFastModel: true,
     });
   });
 
   it('drops an effort the provider does not offer', () => {
-    expect(assistantPick(FAST, 'claude', CLAUDE, ['medium', 'high'])).toMatchObject({
+    expect(assistantPick(FAST, 'claude', CLAUDE, ['high', 'max'])).toMatchObject({
       model: 'sonnet',
       effort: null,
       fastEffort: null,
     });
-    expect(assistantPick({ ...FAST, effort: 'max' }, 'claude', CLAUDE, EFFORTS).effort).toBe('low');
+    expect(assistantPick({ ...FAST, effort: 'max' }, 'claude', CLAUDE, EFFORTS).effort).toBe(
+      'medium',
+    );
   });
 
   it('lets a picked effort replace the fast default', () => {
@@ -90,7 +92,7 @@ describe('Ask Spark fast tier', () => {
         CLAUDE,
         EFFORTS,
       ),
-    ).toEqual({ model: null, effort: null, fastEffort: 'low', noFastModel: false });
+    ).toEqual({ model: null, effort: null, fastEffort: 'medium', noFastModel: false });
     const picked = { modelChoice: 'pick', model: 'opus[1m]', effort: 'medium' } as const;
     expect(assistantPick(picked, 'claude', CLAUDE, EFFORTS)).toMatchObject({
       model: 'opus[1m]',
