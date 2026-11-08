@@ -35,9 +35,8 @@ export function itemText(item: RecapItem, voice: RecapVoice): string {
 const REFERENCE = /#\d+\b|\b[A-Z][A-Z0-9]{1,9}-\d+\b|\b[A-Z]{2,6}\d{5,}\b/g;
 
 function pointsAt(url: string, ref: string): boolean {
-  return ref.startsWith('#')
-    ? url.replace(/\/+$/, '').endsWith(`/${ref.slice(1)}`)
-    : url.includes(ref);
+  if (ref.startsWith('#')) return url.replace(/\/+$/, '').endsWith(`/${ref.slice(1)}`);
+  return new RegExp(`(^|[^A-Za-z0-9])${ref}($|[^A-Za-z0-9])`).test(url);
 }
 
 function linked(text: string, url: string | null): string {

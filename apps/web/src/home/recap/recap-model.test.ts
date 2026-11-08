@@ -46,6 +46,18 @@ describe('copy text', () => {
     );
   });
 
+  it('links a ticket key only where the link names that exact key', () => {
+    const item = {
+      me: 'Moved SPK-1 and SPK-12.',
+      manager: 'Moved SPK-1 and SPK-12.',
+      url: 'https://example.atlassian.net/browse/SPK-12',
+      chatId: null,
+    };
+    expect(copyText({ ...body, done: [item], help: [] }, 'me')).toBe(
+      '**Done this week:** Moved SPK-1 and [SPK-12](https://example.atlassian.net/browse/SPK-12).',
+    );
+  });
+
   it('turns Markdown into plain text', () => {
     expect(plainText('**Done:** _shipped_ [#1](https://x.dev/1)')).toBe(
       'Done: shipped #1 (https://x.dev/1)',
