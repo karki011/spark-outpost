@@ -17,7 +17,7 @@ const MODES: [provider: string, mode: string, name: string, asks: boolean][] = [
   ['claude', 'acceptEdits', 'Accept edits', true],
   ['claude', 'default', 'Manual', true],
   ['claude', 'plan', 'Plan', true],
-  ['codex', 'agent', 'Approve for me', false],
+  ['codex', 'agent', 'Auto review', false],
   ['codex', 'agent-full-access', 'Full access', false],
   ['codex', 'ask-every-action', 'Ask every time', true],
   ['codex', 'read-only', 'Read-only', true],
@@ -39,7 +39,7 @@ describe('pressing follows the mode the user picked, in a chat with no project',
     });
   }
 
-  it('still asks for a send press in Approve for me', async () => {
+  it('still asks for a send press in Auto review', async () => {
     await h.start({ mode: 'agent', provider: 'codex' });
     await h.allowFirstUse();
     const pressing = h.call('spark_mac_act', { action: 'press', app: 'Calculator', ref: 'ax_4' });

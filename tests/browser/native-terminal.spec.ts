@@ -227,7 +227,7 @@ test('native terminal keeps its process across reconnects, fills the pane in foc
 
     await expect(workspace.getByRole('button', { name: 'Hide view' })).toHaveCount(0);
     await expect(workspace.locator('.tbar-place')).toHaveAttribute('title', /terminal-workspaces/);
-    await expect(workspace.locator('.tbar-mode')).toContainText('Approve for me');
+    await expect(workspace.locator('.tbar-mode')).toContainText('Auto review');
     const attached = page.waitForResponse(
       (candidate) =>
         candidate.url().endsWith(`/api/terminal/sessions/${session.id}/attach`) &&

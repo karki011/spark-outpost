@@ -257,8 +257,14 @@ export const FAKE_CODEX_MODES = [
     'standard',
   ),
   mode(
+    'workspace-write',
+    'Workspace access',
+    'Edit workspace files; ask before writing outside the workspace or accessing the network.',
+    'standard',
+  ),
+  mode(
     'agent',
-    'Approve for me',
+    'Auto review',
     'Only ask for actions detected as potentially unsafe',
     'auto_review',
   ),

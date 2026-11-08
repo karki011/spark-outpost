@@ -209,7 +209,7 @@ describe('the steps to a new outpost', () => {
     expect(within(review).getByText('Usage by user')).toBeTruthy();
     expect(within(review).getByText('@fe')).toBeTruthy();
     expect(within(review).getByText('New chat in api')).toBeTruthy();
-    expect(within(review).getByText('api · Codex GPT-5 · Approve for me')).toBeTruthy();
+    expect(within(review).getByText('api · Codex GPT-5 · Auto review')).toBeTruthy();
     expect(within(review).getByText('Add an optional userId filter.')).toBeTruthy();
     expect(within(review).getByText('Creates 1 new chat')).toBeTruthy();
     expect(within(review).getByText('Sends 1 first request')).toBeTruthy();

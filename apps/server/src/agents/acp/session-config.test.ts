@@ -11,7 +11,7 @@ const options: SessionConfigOption[] = [
     currentValue: 'agent',
     options: [
       { value: 'read-only', name: 'Ask for approval' },
-      { value: 'agent', name: 'Approve for me' },
+      { value: 'agent', name: 'Auto review' },
     ],
   },
   {

@@ -86,11 +86,11 @@ Sub-chats and Sparks' jobs get no `spark_outpost_start`. Another chat's text is 
 
 ## When actions ask first
 
-| Agent mode                                                              | Spark                                            |
-| ----------------------------------------------------------------------- | ------------------------------------------------ |
-| **Auto**, **Bypass permissions**, **Approve for me** or **Full access** | At once, with a link.                            |
-| **Accept edits**                                                        | Does it if your message asked; otherwise a card. |
-| **Manual**, **Plan** and read-only modes                                | Always a card.                                   |
+| Agent mode                                                           | Spark                                            |
+| -------------------------------------------------------------------- | ------------------------------------------------ |
+| **Auto**, **Bypass permissions**, **Auto review** or **Full access** | At once, with a link.                            |
+| **Accept edits**                                                     | Does it if your message asked; otherwise a card. |
+| **Manual**, **Plan** and read-only modes                             | Always a card.                                   |
 
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 

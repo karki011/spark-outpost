@@ -95,7 +95,7 @@ describe('OutpostCreate', () => {
     expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Handle' }).value).toBe('api');
     expect(button('Agent: Codex GPT-5')).toBeTruthy();
 
-    fireEvent.click(button('Permissions: Approve for me'));
+    fireEvent.click(button('Permissions: Auto review'));
     fireEvent.click(screen.getByRole('radio', { name: 'Read-only' }));
     expect(button('Permissions: Read-only')).toBeTruthy();
 

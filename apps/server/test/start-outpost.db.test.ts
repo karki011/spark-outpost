@@ -167,7 +167,7 @@ describe('starting an outpost', () => {
 
     expect(lines).toEqual([
       {
-        body: '@fe joined · Codex GPT-5 · Approve for me',
+        body: '@fe joined · Codex GPT-5 · Auto review',
         intro: { conversationId: web, task: null },
       },
       {

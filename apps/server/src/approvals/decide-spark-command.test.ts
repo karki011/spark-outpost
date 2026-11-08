@@ -229,7 +229,7 @@ describe('the agent’s own commands are treated as before', () => {
     });
   });
 
-  it('still skips the gate in Bypass permissions, Approve for me and Full access', () => {
+  it('still skips the gate in Bypass permissions, Auto review and Full access', () => {
     expect(modeSkipsGate('claude', 'bypassPermissions')).toBe(true);
     expect(modeSkipsGate('codex', 'agent')).toBe(true);
     expect(modeSkipsGate('codex', 'agent-full-access')).toBe(true);

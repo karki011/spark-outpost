@@ -14,8 +14,8 @@ describe('agentLabel', () => {
 describe('introLine', () => {
   it('says who joined, where it works, with which agent and under which mode', () => {
     expect(
-      introLine({ handle: 'api', project: 'api', agent: 'Codex GPT-5', mode: 'Approve for me' }),
-    ).toBe('@api joined · api · Codex GPT-5 · Approve for me');
+      introLine({ handle: 'api', project: 'api', agent: 'Codex GPT-5', mode: 'Auto review' }),
+    ).toBe('@api joined · api · Codex GPT-5 · Auto review');
   });
 
   it('leaves out what is not known', () => {

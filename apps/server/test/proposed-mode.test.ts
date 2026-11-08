@@ -41,7 +41,7 @@ describe('the mode a draft names for a chat', () => {
 
   it('lists the valid modes when the value is none of them', () => {
     expect(unknownProposedMode('web', 'Turbo', codex)).toBe(
-      '@web: "Turbo" is not a mode of this agent. Modes: Read-only (read-only), Ask every time (ask-every-action), Approve for me (agent), Full access (agent-full-access). Use one of these, or leave the mode out.',
+      '@web: "Turbo" is not a mode of this agent. Modes: Read-only (read-only), Ask every time (ask-every-action), Workspace access (workspace-write), Auto review (agent), Full access (agent-full-access). Use one of these, or leave the mode out.',
     );
   });
 });

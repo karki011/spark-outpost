@@ -200,7 +200,7 @@ A failed delivery is logged without tokens, recorded on the delivery row and sho
 | Situation                                                                           | Result                                          |
 | ----------------------------------------------------------------------------------- | ----------------------------------------------- |
 | A direct or group message, or a post as you (signed in with your own Slack account) | Confirm card in every mode                      |
-| Auto, Bypass permissions, Approve for me or Full access                             | Posted at once                                  |
+| Auto, Bypass permissions, Auto review or Full access                                | Posted at once                                  |
 | Accept edits and the message asked to post to Slack                                 | Posted at once                                  |
 | Anything else                                                                       | Confirm card with the channel and editable text |
 

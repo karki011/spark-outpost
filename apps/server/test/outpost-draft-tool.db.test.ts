@@ -215,7 +215,7 @@ describe('spark_outpost_draft', () => {
     it('is refused when it is no mode of that agent, with the modes it has', async () => {
       const unknown = [chat('api', { agent: 'codex', agentMode: 'Turbo' })];
       await expect(propose(lead, unknown).result).rejects.toThrow(
-        '@api: "Turbo" is not a mode of this agent. Modes: read-only, ask-every-action, agent, agent-full-access.',
+        '@api: "Turbo" is not a mode of this agent. Modes: read-only, ask-every-action, workspace-write, agent, agent-full-access.',
       );
       expect(await count('outpost_drafts')).toBe(0);
     });

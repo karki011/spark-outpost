@@ -84,7 +84,7 @@ export const CODEX_CAPABILITIES: ProviderCapabilities = {
   defaultModel: 'gpt-5',
   modes: [
     { id: 'read-only', label: 'Read-only', description: 'Reads only.', kind: 'standard' },
-    { id: 'agent', label: 'Approve for me', description: 'Asks when unsafe.', kind: 'auto_review' },
+    { id: 'agent', label: 'Auto review', description: 'Asks when unsafe.', kind: 'auto_review' },
   ],
   defaultMode: 'agent',
   options: [],

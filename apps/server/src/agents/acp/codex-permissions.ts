@@ -29,6 +29,7 @@ export function codexPermissionProfiles(
       extends: ':workspace',
       filesystem: { ':slash_tmp': 'read', ...denied },
     },
+    'workspace-write': { extends: ':workspace', filesystem: denied },
     agent: { extends: ':workspace', filesystem: denied },
     'agent-full-access': {
       filesystem: { ':root': 'write', ...denied },

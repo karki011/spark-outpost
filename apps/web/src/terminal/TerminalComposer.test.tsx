@@ -27,7 +27,7 @@ vi.mock('../api/client.ts', () => ({
       modes: [
         { id: 'read-only', label: 'Read-only', description: null, kind: null },
         { id: 'ask-every-action', label: 'Ask every time', description: null, kind: null },
-        { id: 'agent', label: 'Approve for me', description: null, kind: null },
+        { id: 'agent', label: 'Auto review', description: null, kind: null },
       ],
     }),
   }),

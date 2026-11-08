@@ -167,7 +167,7 @@ The worker is forked by main, so the channel is the utility process's `parentPor
 
 ## Preview server
 
-An agent's sandbox cannot be relied on to hold a dev server: Codex in Approve for me may not listen on a port, and a server started in a Claude shell ends with the turn. So Spark runs it.
+An agent's sandbox cannot be relied on to hold a dev server: Codex in Auto review may not listen on a port, and a server started in a Claude shell ends with the turn. So Spark runs it.
 
 - **Setting.** Settings → Projects → **Preview** saves `projects.preview` (migration 0121): the command, a local address, an optional folder inside the project, and an optional address to wait for. `GET /projects/:id/preview` also returns suggestions read from `package.json` (dev scripts, the package manager from the lockfile, the usual port of the framework) and from an existing `.claude/launch.json` (`runtimeExecutable`, `runtimeArgs`, `port`, `url`). That file is read, never written.
 - **Owner.** `PreviewServers` lives in the API process, next to the terminals, and spawns `$SHELL -ilc <command>` in a pty. The worker's tools and the API's own routes both ask through the `preview_servers` row (`wanted`, `status`); its change trigger sends a `preview` app event, which the API reconciles and the web app refetches on. A requester polls the row until it leaves `starting`, and repeats the notification while it waits.
@@ -199,7 +199,7 @@ Verified in the adapters' sources, not with a live model: `claude-agent-acp` 0.8
 
 ## Policy
 
-On a site outside this computer, opening, reading and acting use the Spark action policy (`actionPath`), the same one tickets, Slack and MCP servers use: no card in Auto, Bypass permissions, Approve for me and Full access, or in Accept edits when the user's message asked; a card otherwise. The autonomy level plays no part. Local pages never show a card.
+On a site outside this computer, opening, reading and acting use the Spark action policy (`actionPath`), the same one tickets, Slack and MCP servers use: no card in Auto, Bypass permissions, Auto review and Full access, or in Accept edits when the user's message asked; a card otherwise. The autonomy level plays no part. Local pages never show a card.
 
 | Call                                                            | Card                                                                                                                             | Recorded                                    |
 | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |

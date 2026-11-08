@@ -36,7 +36,7 @@ const MODES: Record<'Claude' | 'Codex', Mode[]> = {
       command: 'card',
     },
     {
-      name: 'Approve for me',
+      name: 'Auto review',
       summary: 'The agent decides what to ask',
       edit: 'unreviewed',
       command: 'unreviewed',

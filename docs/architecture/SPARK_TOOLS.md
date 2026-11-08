@@ -8,7 +8,7 @@ Every agent session (Ask, Do, chats without a project) gets the `spark` MCP serv
 - Results pass through `renderResult`: secrets and tokens are redacted, long text and lists are clipped, and paging is explicit.
 - Tools marked private record a `private_data` run observation, so the read-then-send guard (`approvals/egress.ts`, `taint.ts`) notes a later send out of that run: a non-blocking flag, or a note on the card when the mode asks.
 - Tools never return file contents, terminal output, secrets or API keys. Two exceptions: `spark_browser_preview` returns the recent output of the preview server Spark runs, and `spark_terminal_run` returns the recent output of a command Spark runs for the agent; both are redacted, clipped and marked untrusted.
-- Read tools change nothing. Actions follow the agent's mode (`actionPath`): at once in Auto, Bypass permissions, Approve for me and Full access, and in Accept edits when the user's message asked; otherwise a `spark_action` confirm card, and Spark does it after the user confirms.
+- Read tools change nothing. Actions follow the agent's mode (`actionPath`): at once in Auto, Bypass permissions, Auto review and Full access, and in Accept edits when the user's message asked; otherwise a `spark_action` confirm card, and Spark does it after the user confirms.
 
 ## Code Mode read composition
 
@@ -110,7 +110,7 @@ Terminals live in the API process and Spark tools run in the worker, so the API 
 
 `spark_mcp_servers` (`tools/mcp-tool.ts`) lists the user's own MCP servers from `mcp_servers` and `mcp_server_enablements`: id, name, where it came from, transport, the exact command and arguments or URL, the names of its environment variables and headers, which names still have no saved value (`valuesMissing`), where it is on (all chats, this chat, projects), whether it changed since it was reviewed, and the last connection test. Secret values are never read.
 
-Four action tools (`actions/mcp-actions.ts`, performed by `actions/mcp-perform.ts`) follow the same policy as every Spark action (`actionPath`): Spark does it at once in Auto, Bypass permissions, Approve for me or Full access, and in Accept edits when the user's message asked for it; otherwise the tool returns `waiting_for_user` and the user confirms a card.
+Four action tools (`actions/mcp-actions.ts`, performed by `actions/mcp-perform.ts`) follow the same policy as every Spark action (`actionPath`): Spark does it at once in Auto, Bypass permissions, Auto review or Full access, and in Accept edits when the user's message asked for it; otherwise the tool returns `waiting_for_user` and the user confirms a card.
 
 | Tool                      | Action              | Does                                                                                                                                 |
 | ------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |

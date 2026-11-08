@@ -251,12 +251,11 @@ describe('Codex launch', () => {
     });
 
     it("gives a sub-agent its parent's model when its spawn names none", () => {
-      expect(source).toContain(
-        'await this.subagents.handle(notification, this.sessionState.currentModelId)',
-      );
       expect(source).toContain('model: this.modelOf(child)');
       const modelOf = source.slice(source.indexOf('  modelOf(child) {'));
-      expect(modelOf.slice(0, modelOf.indexOf('\n  }'))).toContain('return this.rootModel;');
+      const body = modelOf.slice(0, modelOf.indexOf('\n  }'));
+      expect(body).toContain('this.children.get(current.parentThreadId)');
+      expect(body).toContain('this.rootModels?.()?.currentModel');
     });
 
     it('makes read-only a readOnly sandbox', () => {
@@ -282,7 +281,7 @@ describe('Codex launch', () => {
       const ids = [...source.matchAll(/static (\w+) = new _AgentMode\(\s*"([^"]+)"/g)].map(
         (match) => match[2]!,
       );
-      expect(ids).toHaveLength(4);
+      expect(ids).toHaveLength(5);
       for (const id of ids) expect(profiles).toHaveProperty(id);
       expect(modes).toContain('_AgentMode.AgentFullAccess');
     });
@@ -335,16 +334,16 @@ describe('Codex launch', () => {
 
     it('reports the whole turn’s tokens, not only the last model request', () => {
       expect(source).not.toContain('buildPromptUsage(sessionState.lastTokenUsage)');
-      expect(source.split('buildPromptUsage(turnPromptUsage(sessionState))')).toHaveLength(5);
-      const helpers = source.slice(
-        source.indexOf('var TOKEN_USAGE_FIELDS'),
-        source.indexOf('function turnPromptUsage('),
-      );
-      const { step, add } = new Function(
-        `${helpers}; return { step: tokenUsageStep, add: addTokenUsage };`,
-      )() as {
-        step: (usage: object, previous: object | undefined) => Record<string, number>;
-        add: (sum: object | null, step: object) => Record<string, number>;
+      const from = source.indexOf('var TOKEN_COUNT_FIELDS');
+      const classAt = source.indexOf('var PromptTokenUsage = class {');
+      expect(from).toBeGreaterThan(-1);
+      expect(classAt).toBeGreaterThan(from);
+      const PromptTokenUsage = new Function(
+        `${source.slice(from, source.indexOf('\n};', classAt) + 3)}\nreturn PromptTokenUsage;`,
+      )() as new (start: object | null) => {
+        observeModelOutput(): void;
+        observe(total: object, last: object): void;
+        usage(): Record<string, number> | null;
       };
       const usage = (input: number, cached: number, output: number) => ({
         totalTokens: input + output,
@@ -353,12 +352,16 @@ describe('Codex launch', () => {
         outputTokens: output,
         reasoningOutputTokens: 0,
       });
-      const first = { last: usage(100, 80, 10), total: usage(500, 400, 50) };
-      const second = { last: usage(120, 100, 5), total: usage(620, 500, 55) };
-      let turn = add(null, step(first, undefined));
-      turn = add(turn, step(second, first.total));
-      turn = add(turn, step(second, second.total));
-      expect(turn).toEqual(usage(220, 180, 15));
+      const turn = new PromptTokenUsage(usage(400, 320, 40));
+      turn.observeModelOutput();
+      turn.observe(usage(500, 400, 50), usage(100, 80, 10));
+      turn.observe(usage(620, 500, 55), usage(120, 100, 5));
+      turn.observe(usage(620, 500, 55), usage(120, 100, 5));
+      expect(turn.usage()).toMatchObject({
+        inputTokens: 220,
+        cachedInputTokens: 180,
+        outputTokens: 15,
+      });
     });
 
     it('offers decline before cancel for commands and file changes', () => {

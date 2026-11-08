@@ -30,7 +30,7 @@ describe('mode summary', () => {
     const codexModes = [
       { id: 'read-only', label: 'Read-only', description: null, kind: 'read_only' },
       { id: 'ask-every-action', label: 'Ask every time', description: null, kind: null },
-      { id: 'agent', label: 'Approve for me', description: null, kind: 'auto_review' },
+      { id: 'agent', label: 'Auto review', description: null, kind: 'auto_review' },
       { id: 'agent-full-access', label: 'Full access', description: null, kind: 'full_access' },
     ];
     const capabilities = (
@@ -78,7 +78,7 @@ describe('mode summary', () => {
     it('falls back to the default mode before a mode is saved', () => {
       expect(permissionState(settings('claude', null), claude).label).toBe('Auto');
       expect(permissionState(settings('claude', null), undefined).mode).toBe('auto');
-      expect(permissionState(settings('codex', null), codex).label).toBe('Approve for me');
+      expect(permissionState(settings('codex', null), codex).label).toBe('Auto review');
     });
 
     it('marks Ask (read-only) modes as reading only', () => {
