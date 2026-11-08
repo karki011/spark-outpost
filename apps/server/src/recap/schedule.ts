@@ -31,14 +31,19 @@ export function startWeekRecap(
     if (!(await getSetupState(db, workspaceId)).profile.defaultProvider) return;
     const latest = await latestRecap(db, workspaceId, week, now);
     if (latest?.status === 'running') return;
-    triedWeek = week;
     const dueAt = recapDueAt(now, setting.day, setting.time);
-    if (latest?.status === 'ready' && new Date(latest.createdAt) >= dueAt) return;
-    if (!(await claimWeekRecap(db, workspaceId, week))) return;
+    if (latest?.status === 'ready' && new Date(latest.createdAt) >= dueAt) {
+      triedWeek = week;
+      return;
+    }
+    if (!(await claimWeekRecap(db, workspaceId, week))) {
+      triedWeek = week;
+      return;
+    }
     try {
       await requestRecap(db, workspaceId, now);
+      triedWeek = week;
     } catch (error) {
-      triedWeek = null;
       await releaseWeekRecap(db, workspaceId, week);
       throw error;
     }

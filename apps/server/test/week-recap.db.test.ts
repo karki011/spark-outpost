@@ -206,9 +206,8 @@ it('writes the scheduled recap after one asked for earlier in the week', async (
   startFakeWorker();
   await post();
   await ready();
-  await t.db.query(
-    `UPDATE week_recaps SET created_at = date_trunc('day', now()) - interval '1 minute'`,
-  );
+  const beforeDue = new Date(new Date().setHours(0, 0, 0, 0) - 60_000);
+  await t.db.query('UPDATE week_recaps SET created_at = $1', [beforeDue]);
   const schedule = startWeekRecap(t.db, t.workspaceId, 60_000);
   await schedule.tick();
   await schedule.tick();

@@ -112,7 +112,7 @@ export function RecapEditor(props: RecapEditorProps) {
           {plain.state === 'idle' ? 'Copy as plain text' : copyButtonText(plain.state)}
         </button>
         {history.length > 1 && (
-          <button type="button" className="btn sm line" onClick={undo}>
+          <button type="button" className="btn sm line" onClick={undo} disabled={rewriting}>
             Undo
           </button>
         )}
