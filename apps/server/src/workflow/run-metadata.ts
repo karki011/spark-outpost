@@ -134,6 +134,18 @@ export async function recordSessionSettings(
   if (label) await db.query('UPDATE runs SET agent_label = $2 WHERE id = $1', [runId, label]);
 }
 
+export async function recordAgentInfo(
+  db: Db,
+  runId: string,
+  info: Extract<ProviderOutput, { kind: 'agent_info' }>,
+): Promise<void> {
+  await db.query('UPDATE runs SET adapter_name = $2, adapter_version = $3 WHERE id = $1', [
+    runId,
+    info.name,
+    info.version,
+  ]);
+}
+
 export async function recordFollowedInstructions(
   db: Db,
   runId: string,

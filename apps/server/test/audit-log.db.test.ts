@@ -9,6 +9,7 @@ import {
   pruneProtocolLog,
   verifyRunLog,
 } from '../src/persistence/audit-log.ts';
+import { conversationAuditRuns } from '../src/persistence/audit-summary.ts';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
 import { claimNextJob, type Lease } from '../src/persistence/jobs.ts';
 import { LeaseLostError } from '../src/persistence/run-events.ts';
@@ -195,7 +196,7 @@ describe('protocol log storage', () => {
 });
 
 describe('worker audit recording with an ACP agent', { timeout: 30_000 }, () => {
-  it('stores every protocol message and the settings, duration, and tool calls it used', async () => {
+  it('stores every protocol message and the settings, adapter, duration, and tool calls it used', async () => {
     const provider = createAcpProvider({
       definition: { ...agentDefinitions.codex, name: 'Fake', ...FAKE_AGENT_MODES },
       launch: FAKE_ACP_LAUNCH,
@@ -237,17 +238,24 @@ describe('worker audit recording with an ACP agent', { timeout: 30_000 }, () => 
     expect((await verifyRunLog(t.db, runId)).intact).toBe(true);
 
     const { rows: metrics } = await t.db.query(
-      `SELECT used_model, used_effort, used_mode, tool_call_count, duration_ms > 0 AS timed,
-         cost_source FROM runs WHERE id = $1`,
+      `SELECT used_model, used_effort, used_mode, adapter_name, adapter_version, tool_call_count,
+         duration_ms > 0 AS timed, cost_source FROM runs WHERE id = $1`,
       [runId],
     );
     expect(metrics[0]).toEqual({
       used_model: 'smart-2',
       used_effort: 'high',
       used_mode: 'read-only',
+      adapter_name: '@fake/fake-acp-agent',
+      adapter_version: '1.2.3',
       tool_call_count: 2,
       timed: true,
       cost_source: null,
+    });
+    const audited = await conversationAuditRuns(t.db, conversation.id);
+    expect(audited?.find((summary) => summary.runId === runId)?.adapter).toEqual({
+      name: '@fake/fake-acp-agent',
+      version: '1.2.3',
     });
   });
 });

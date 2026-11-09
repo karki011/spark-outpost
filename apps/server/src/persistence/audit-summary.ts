@@ -50,6 +50,8 @@ interface RunAuditRow {
   category: string | null;
   file_reads: number | null;
   route: unknown;
+  adapter_name: string | null;
+  adapter_version: string | null;
 }
 
 interface WaitRow {
@@ -104,7 +106,13 @@ function toRunSummary(row: RunAuditRow, approvalWaits: ApprovalWait[]): AuditRun
     ...(row.file_reads === null ? {} : { fileReads: row.file_reads }),
     ...(row.unreviewed_count > 0 ? { unreviewedCount: row.unreviewed_count } : {}),
     ...(route ? { route } : {}),
+    ...adapterOf(row),
   };
+}
+
+function adapterOf(row: RunAuditRow): Pick<AuditRunSummary, 'adapter'> {
+  if (!row.adapter_name || !row.adapter_version) return {};
+  return { adapter: { name: row.adapter_name, version: row.adapter_version } };
 }
 
 const ORCHESTRATION_ROLE = 'Orchestration';
@@ -155,7 +163,7 @@ export async function conversationAuditRuns(
        r.cached_write_tokens, r.thought_tokens,
        COALESCE(r.total_tokens, r.input_tokens + r.output_tokens) AS total_tokens,
        r.cost_usd::float8 AS cost_usd, r.cost_source,
-       (r.route->>'fileReads')::int AS file_reads, r.route,
+       (r.route->>'fileReads')::int AS file_reads, r.route, r.adapter_name, r.adapter_version,
        r.protocol_log_pruned_at IS NOT NULL AS log_pruned,
        (SELECT count(*)::int FROM run_protocol_log l WHERE l.run_id = r.id) AS log_entries,
        (SELECT count(*)::int FROM run_protocol_log l

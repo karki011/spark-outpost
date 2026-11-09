@@ -143,6 +143,7 @@ export const auditRunSummarySchema = z.object({
   fileReads: z.number().int().nullable().optional(),
   unreviewedCount: count.optional(),
   route: auditRunRouteSchema.optional(),
+  adapter: z.object({ name: z.string(), version: z.string() }).optional(),
 });
 export type AuditRunSummary = z.infer<typeof auditRunSummarySchema>;
 

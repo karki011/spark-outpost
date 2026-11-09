@@ -13,6 +13,7 @@ import { terminalCommands } from './fake-acp-terminal.ts';
 import { publishTurn } from './fake-acp-publish.ts';
 import { sparkTurn } from './fake-acp-spark.ts';
 import { describeBlock, rememberConfig, restoreConfig } from './fake-acp-support.ts';
+import { FAKE_AGENT_INFO, fakeMcpCapabilities } from './fake-acp-init.ts';
 import { compactionTurn, eventsTurn, leakSecrets } from './fake-acp-events.ts';
 import {
   heldTitleTurn,
@@ -408,10 +409,9 @@ acp
         loadSession: loadSessionAdvertised,
         promptCapabilities,
         sessionCapabilities,
-        ...(process.env.FAKE_ACP_MCP_CAPABILITIES
-          ? { mcpCapabilities: JSON.parse(process.env.FAKE_ACP_MCP_CAPABILITIES) as object }
-          : {}),
+        ...fakeMcpCapabilities(),
       },
+      agentInfo: FAKE_AGENT_INFO,
     };
   })
   .onRequest(acp.methods.agent.session.new, (ctx) => {

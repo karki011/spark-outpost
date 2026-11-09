@@ -1,6 +1,7 @@
 import * as acp from '@agentclientprotocol/sdk/unstable';
 import { pluginCommandNames } from '../../agent-config/user-plugins/parse.ts';
 import { ProviderError, type ProviderOutput, type ProviderTurn } from '../../providers/provider.ts';
+import { agentInfoOutputs } from './agent-info.ts';
 import type { AgentDefinition } from './agents.ts';
 import { applySessionSettings, modeName, settingsOutputs } from './apply-settings.ts';
 import { CLIENT_INFO, turnCapabilities } from './client-info.ts';
@@ -168,6 +169,7 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
     );
     connection.keepSettings(applied.live);
     push(settingsOutputs(applied, workspace.repo?.following ?? null));
+    push(agentInfoOutputs(init));
     const sessionNotes = turn.session ? [sessionNote(opened, turn.session)] : [];
     const notes = [applied.using, ...sessionNotes, ...workspace.notes, ...started.notes];
     for (const note of [...notes, ...applied.notes]) {

@@ -179,6 +179,7 @@ export function AuditSummaryPane({ summary }: { summary: AuditSummary }) {
           'Source',
           'Time',
           'Reads',
+          'Adapter',
         ]}
         numeric={[0, 5, 6, 8, 9]}
         rows={runs.map((run, index) => ({
@@ -197,6 +198,7 @@ export function AuditSummaryPane({ summary }: { summary: AuditSummary }) {
             <SourceTag key="s" source={run.costUsd === null ? null : run.costSource} />,
             formatDuration(run.durationMs),
             readsCell(run),
+            adapterCell(run),
           ],
         }))}
       />
@@ -207,4 +209,14 @@ export function AuditSummaryPane({ summary }: { summary: AuditSummary }) {
 function readsCell(run: AuditRunSummary): string {
   if (run.fileReads === undefined || run.fileReads === null) return '—';
   return `${run.fileReads}`;
+}
+
+function adapterCell(run: AuditRunSummary) {
+  if (!run.adapter) return '—';
+  const { name, version } = run.adapter;
+  return (
+    <span key="a" title={`${name} ${version}`}>
+      {name.split('/').at(-1)} {version}
+    </span>
+  );
 }

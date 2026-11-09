@@ -44,6 +44,7 @@ import type { RunInput } from './run-input.ts';
 import {
   knownModes,
   recordCapabilities,
+  recordAgentInfo,
   recordFollowedInstructions,
   recordRunMetrics,
   recordSessionSettings,
@@ -402,6 +403,7 @@ export async function runAgentTurn(
       options.onOutput?.(output);
       await events.observe(output);
       if (output.kind === 'capabilities') await recordCapabilities(deps.db, input, output.report);
+      if (output.kind === 'agent_info') await recordAgentInfo(deps.db, lease.runId, output);
       if (output.kind === 'usage') await recordSpend(output);
       if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
       if (output.kind === 'request_usage') await recordRequest(output.request);
