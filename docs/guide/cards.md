@@ -12,17 +12,17 @@ Cards wait at the end of the turn and on [Spark Island](desktop-companion.md#ans
 
 These come from the agent's mode, a [protected path](protected-paths.md) or its question, never go on alone.
 
-| Card                            | Means                                                                                | Buttons                                                                 |
-| ------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| **Run** _command_**?**          | A command.                                                                           | **Allow**, **Always allow**, **Always allow in this project**, **Deny** |
-| **Edit** _file_**?**            | A file edit.                                                                         | **Allow**, **Always allow**, **Deny**                                   |
-| **Change agent instructions?**  | Edits `AGENTS.md`, `CLAUDE.md` and similar.                                          | **Allow once**, **Allow for this chat**, **Deny**                       |
-| **Change git hooks or config?** | Edits `.git/hooks`, `.git/config` or `git config`.                                   | **Hold to allow once**, **Deny**                                        |
-| **Force push?**                 | Rewrites remote history.                                                             | **Hold to force push**, **Deny**                                        |
-| **Send a secret value?**        | A push, upload or typed site text holds a secret file's value.                       | **Hold to allow once**, **Deny** or **Don't**                           |
-| **Claude has a question**       | Asked instead of guessing. Arrows or 1–9 pick; ⏎ sends.                              | **Send**, **Skip**                                                      |
-| **Codex has a question**        | Codex keeps working; an answer after its turn ends is dropped.                       | **Send**, **Skip**                                                      |
-| **Open this address?**          | A sign-in or other page, often for an MCP server. Opens in your browser, on the Mac. | **Open** (**Hold to open** if it holds a secret), **Don't**             |
+| Card                            | Means                                                          | Buttons                                                                 |
+| ------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Run** _command_**?**          | A command.                                                     | **Allow**, **Always allow**, **Always allow in this project**, **Deny** |
+| **Edit** _file_**?**            | A file edit.                                                   | **Allow**, **Always allow**, **Deny**                                   |
+| **Change agent instructions?**  | Edits `AGENTS.md`, `CLAUDE.md` and similar.                    | **Allow once**, **Allow for this chat**, **Deny**                       |
+| **Change git hooks or config?** | Edits `.git/hooks`, `.git/config` or `git config`.             | **Hold to allow once**, **Deny**                                        |
+| **Force push?**                 | Rewrites remote history.                                       | **Hold to force push**, **Deny**                                        |
+| **Send a secret value?**        | A push, upload or typed site text holds a secret file's value. | **Hold to allow once**, **Deny** or **Don't**                           |
+| **Claude has a question**       | Asked instead of guessing. Arrows or 1–9 pick; ⏎ sends.        | **Send**, **Skip**                                                      |
+| **Codex has a question**        | Codex keeps working; an answer after its turn ends is dropped. | **Send**, **Skip**                                                      |
+| **Open this address?**          | A sign-in page, often an MCP server's; opens in your browser.  | **Open** (held if it holds a secret), **Don't**                         |
 
 Spark adds no card around a build; the agent's [plan card](plan-card.md) is an approval card.
 
