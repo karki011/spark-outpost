@@ -26,7 +26,6 @@ Chats, settings and code stay on your computer; keys stay in your keychain. Only
 ## Where your keys live
 
 - Your Keychain holds, under **Spark Outpost**, provider, Jev, connector and MCP keys and tokens, and saved sign-ins.
-- Logs never hold keys.
 - A **Local CLI** sign-in stays in that CLI, unread by Spark.
 
 See [Keep keys out of chats](sparkignore.md#keep-keys-out-of-chats).
@@ -40,6 +39,7 @@ In replies, audit logs, tool results, errors, Jev and [recorded Terminal session
 - Anything in `.sparkignore`. [Secret files](protected-paths.md#secret-files) are readable, so your provider sees them. Ship commits neither.
 - Through [Spark's own tools](spark-tools.md#what-the-tools-never-return): file contents, terminal output, secrets, keys.
 - [Browser pane](use-the-browser.md): password and card fields, saved sign-ins. Cookies stay on this Mac.
+- Secret-named shell variables (`NPM_TOKEN`); agents get the rest.
 
 ## When you reset
 

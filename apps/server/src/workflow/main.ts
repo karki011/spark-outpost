@@ -106,6 +106,7 @@ const worker = startWorker({
     secrets,
     sparkTools,
     loginShellLocator(loginShell),
+    loginShellEnv(runCommand, loginShell),
   ),
   leaseSeconds: config.LEASE_SECONDS,
   sessionLimits: {

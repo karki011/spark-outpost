@@ -16,9 +16,12 @@ function withHiddenServers(env: Record<string, string>, names: readonly string[]
   };
 }
 
+export type LoginShellEnv = () => Promise<Record<string, string> | null>;
+
 export interface AgentEnvironmentOptions {
   definition: AgentDefinition;
   env?: Record<string, string> | undefined;
+  loginEnv?: LoginShellEnv | undefined;
   secrets?: Pick<SecretStore, 'get'> | undefined;
   codexProfiles?: boolean | undefined;
   floor?: SparkFloor | undefined;
@@ -34,6 +37,21 @@ export function withoutPushing(env: Record<string, string>): Record<string, stri
     [`GIT_CONFIG_KEY_${index}`]: `url.${NO_PUSH_URL}.pushInsteadOf`,
     [`GIT_CONFIG_VALUE_${index}`]: '',
   };
+}
+
+export function withLoginShell(
+  own: Record<string, string>,
+  login: Record<string, string> | null,
+): Record<string, string> {
+  return login ? { ...childEnvironment(login), ...own } : own;
+}
+
+export async function processEnvironment(
+  options: Pick<AgentEnvironmentOptions, 'env' | 'loginEnv'>,
+): Promise<Record<string, string>> {
+  if (options.env) return options.env;
+  const login = (await options.loginEnv?.().catch(() => null)) ?? null;
+  return withLoginShell(childEnvironment(process.env), login);
 }
 
 async function baseEnvironment(
@@ -53,7 +71,7 @@ async function baseEnvironment(
     }
     return definition.keyEnvironment(key);
   }
-  const base = options.env ?? childEnvironment(process.env);
+  const base = await processEnvironment(options);
   if (definition.repoStyle !== 'codex') {
     return {
       ...base,
