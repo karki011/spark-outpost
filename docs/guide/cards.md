@@ -21,6 +21,7 @@ These come from the agent's mode, a [protected path](protected-paths.md) or its 
 | **Force push?**                 | Rewrites remote history.                                       | **Hold to force push**, **Deny**                                        |
 | **Send a secret value?**        | A push, upload or typed site text holds a secret file's value. | **Hold to allow once**, **Deny** or **Don't**                           |
 | **Claude has a question**       | Asked instead of guessing. Arrows or 1–9 pick; ⏎ sends.        | **Send**, **Skip**                                                      |
+| **Codex has a question**        | Codex keeps working; an answer after its turn ends is dropped. | **Send**, **Skip**                                                      |
 
 Spark adds no card around a build; the agent's [plan card](plan-card.md) is an approval card.
 
