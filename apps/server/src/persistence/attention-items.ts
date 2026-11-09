@@ -62,6 +62,12 @@ const ITEMS = `
     SELECT 'shell-alert:' || s.id, 'shell-alert', false, l.id, s.message, s.created_at, l.seen_at
     FROM latest l JOIN shell_alerts s ON s.conversation_id = l.id
     UNION ALL
+    SELECT 'pr-clean:' || w.id || ':' || w.head_sha, 'pr-clean', false, l.id,
+      w.owner || '/' || w.repo || '#' || w.number, w.clean_since, l.seen_at
+    FROM latest l JOIN pr_watches w ON w.conversation_id = l.id
+    WHERE w.pr_state = 'open' AND w.clean_since IS NOT NULL AND w.head_sha IS NOT NULL
+      AND w.clean_head_sha = w.head_sha AND w.head_sha ~ '^[0-9a-f]{7,64}$'
+    UNION ALL
     SELECT CASE l.status WHEN 'failed' THEN 'run-failed:' ELSE 'run-done:' END || l.run_id,
       CASE l.status WHEN 'failed' THEN 'run-failed' ELSE 'run-done' END, false, l.id,
       CASE l.status WHEN 'failed' THEN l.error END, l.finished_at, l.seen_at
@@ -117,6 +123,8 @@ const OWNERS: Record<ParsedAttentionKey['kind'], string> = {
     JOIN conversations c ON c.id = s.conversation_id WHERE s.id = $1 AND c.workspace_id = $2`,
   terminal: `SELECT t.conversation_id FROM native_terminal_sessions t
     JOIN conversations c ON c.id = t.conversation_id WHERE t.id = $1 AND c.workspace_id = $2`,
+  'pr-clean': `SELECT w.conversation_id FROM pr_watches w
+    JOIN conversations c ON c.id = w.conversation_id WHERE w.id = $1 AND c.workspace_id = $2`,
 };
 
 async function ownerOf(db: Queryable, workspaceId: string, key: string): Promise<string> {

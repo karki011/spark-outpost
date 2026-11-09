@@ -9,9 +9,9 @@ import {
 import { saveGitHubToken } from '../src/persistence/github-tokens.ts';
 import { addTaskLink } from '../src/persistence/tasks.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
-import { syncTicketsAfterShip } from '../src/tickets/ship-sync.ts';
 import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
 import { JIRA_EMAIL, JIRA_TOKEN } from './fake-jira.ts';
+import { syncShipped } from './pull-ticket-support.ts';
 import { startGitHubStub, type GitHubStub } from './ship-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 import { startTicketStubs, type TicketStubs } from './ticket-support.ts';
@@ -170,9 +170,8 @@ describe('the merged pull request move', () => {
 describe('the review and start-work moves', () => {
   it('moves to the review status by name when a pull request opens', async () => {
     const { taskId } = await startWork('WEB-418', true);
-    await syncTicketsAfterShip({ db: t.db, workspaceId: t.workspaceId, secrets, fetch }, taskId, {
+    await syncShipped({ db: t.db, workspaceId: t.workspaceId, secrets, fetch }, taskId, {
       url: PULL,
-      title: 'acme/widgets#1',
     });
 
     expect(jiraStatus('WEB-418')).toBe('Code Review');

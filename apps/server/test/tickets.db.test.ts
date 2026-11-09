@@ -7,10 +7,11 @@ import {
   ticketViewSchema,
 } from '@spark-outpost/contracts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
-import { syncTicketsAfterShip } from '../src/tickets/ship-sync.ts';
+import { syncRecordedPull } from '../src/tickets/ship-sync.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import { JIRA_EMAIL, JIRA_TOKEN } from './fake-jira.ts';
 import { LINEAR_KEY } from './fake-linear.ts';
+import { syncShipped } from './pull-ticket-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 import { startTicketStubs, type TicketStubs } from './ticket-support.ts';
 
@@ -255,11 +256,9 @@ describe('tickets', () => {
     await connectLinear();
     const started = await startTicket('linear', 'ENG-12');
     const pull = { url: 'https://github.com/acme/widgets/pull/9', title: 'acme/widgets#9' };
-    await syncTicketsAfterShip(
-      { db: t.db, workspaceId: t.workspaceId, secrets, fetch },
-      started.taskId,
-      pull,
-    );
+    await syncShipped({ db: t.db, workspaceId: t.workspaceId, secrets, fetch }, started.taskId, {
+      url: pull.url,
+    });
     const issue = stubs.linear.issues[0]!;
     expect(issue.attachments).toEqual([pull]);
     expect(issue.stateId).toBe('eng-review');
@@ -274,10 +273,7 @@ describe('tickets', () => {
     const eng = await startTicket('linear', 'ENG-12');
     const ops = await startTicket('linear', 'OPS-4');
     const deps = { db: t.db, workspaceId: t.workspaceId, secrets, fetch };
-    await syncTicketsAfterShip(deps, ops.taskId, {
-      url: 'https://github.com/acme/ops/pull/1',
-      title: 'acme/ops#1',
-    });
+    await syncShipped(deps, ops.taskId, { url: 'https://github.com/acme/ops/pull/1' });
     const opsIssue = stubs.linear.issues.find((issue) => issue.identifier === 'OPS-4')!;
     expect(opsIssue.stateId).toBe('ops-doing');
     const skipped = await t.db.query<{ outcome: string; detail: { message: string } }>(
@@ -288,22 +284,18 @@ describe('tickets', () => {
     expect(skipped.rows[0]!.detail.message).toContain('No status maps to In review in OPS');
 
     await send('patch', '/api/tickets/connections/linear', { moveOnShip: false }).expect(200);
-    await syncTicketsAfterShip(deps, eng.taskId, {
-      url: 'https://github.com/acme/widgets/pull/3',
-      title: 'acme/widgets#3',
-    });
+    await syncShipped(deps, eng.taskId, { url: 'https://github.com/acme/widgets/pull/3' });
     expect(stubs.linear.issues[0]!.stateId).toBe('eng-progress');
     expect(stubs.linear.issues[0]!.attachments).toHaveLength(1);
 
     await secrets.delete('ticket:linear');
     await expect(
-      syncTicketsAfterShip(deps, eng.taskId, {
-        url: 'https://github.com/acme/widgets/pull/4',
-        title: 'x',
-      }),
-    ).resolves.toBeUndefined();
+      syncShipped(deps, eng.taskId, { url: 'https://github.com/acme/widgets/pull/4' }),
+    ).resolves.toEqual([
+      { source: 'linear', key: 'ENG-12', outcome: 'skipped', message: "Linear isn't connected." },
+    ]);
     await expect(
-      syncTicketsAfterShip(deps, randomUUID(), { url: 'https://x.test', title: 'x' }),
+      syncRecordedPull(deps, { host: 'github.com', owner: 'x', repo: 'y', number: 1 }),
     ).resolves.toBeUndefined();
   });
 

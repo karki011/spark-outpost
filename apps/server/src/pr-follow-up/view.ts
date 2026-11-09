@@ -6,6 +6,7 @@ import {
 import type { Queryable } from '../persistence/db.ts';
 import { feedbackFor, feedbackView, type StoredFeedback } from '../persistence/pr-watches.ts';
 import { trackedPullsOf, type TrackedPull } from '../persistence/tracked-pulls.ts';
+import { shownClean } from '../pr-tracking/clean.ts';
 
 import { noteKind, type NoteKind } from './prompt.ts';
 
@@ -74,6 +75,8 @@ export async function watchView(db: Queryable, watch: TrackedPull, excerptChars?
         status: threadStatus(bySource.get(thread.key)),
       })),
     },
+    ticketSync: watch.ticketSync,
+    clean: shownClean(watch),
   };
   return view;
 }

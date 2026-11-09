@@ -7,6 +7,7 @@ export const attentionItemKindSchema = z.enum([
   'run-done',
   'run-failed',
   'shell-alert',
+  'pr-clean',
 ]);
 export type AttentionItemKind = z.infer<typeof attentionItemKindSchema>;
 
@@ -31,7 +32,7 @@ export type AttentionMark = z.infer<typeof attentionMarkSchema>;
 
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const KEY_PATTERN = new RegExp(
-  `^(?:(approval|flag|run-done|run-failed|shell-alert):(${UUID})|terminal:(${UUID}):(\\d{1,9}):(\\d{1,15}))$`,
+  `^(?:(approval|flag|run-done|run-failed|shell-alert):(${UUID})|terminal:(${UUID}):(\\d{1,9}):(\\d{1,15})|pr-clean:(${UUID}):([0-9a-f]{7,64}))$`,
   'i',
 );
 
@@ -39,13 +40,17 @@ type IdKeyKind = 'approval' | 'flag' | 'run-done' | 'run-failed' | 'shell-alert'
 
 export type ParsedAttentionKey =
   | { kind: IdKeyKind; id: string }
-  | { kind: 'terminal'; id: string; generation: number; since: number };
+  | { kind: 'terminal'; id: string; generation: number; since: number }
+  | { kind: 'pr-clean'; id: string; head: string };
 
 export function parseAttentionKey(key: string): ParsedAttentionKey | null {
   const match = KEY_PATTERN.exec(key);
   if (!match) return null;
   if (match[1] && match[2]) {
     return { kind: match[1] as IdKeyKind, id: match[2] };
+  }
+  if (match[6] && match[7]) {
+    return { kind: 'pr-clean', id: match[6], head: match[7].toLowerCase() };
   }
   return {
     kind: 'terminal',
@@ -61,6 +66,10 @@ export function approvalAttentionKey(approvalId: string): string {
 
 export function terminalAttentionKey(sessionId: string, generation: number, since: Date): string {
   return `terminal:${sessionId}:${generation}:${since.getTime()}`;
+}
+
+export function prCleanAttentionKey(pullId: string, headSha: string): string {
+  return `pr-clean:${pullId}:${headSha}`;
 }
 
 export function alerting(item: AttentionItem): boolean {

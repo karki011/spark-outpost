@@ -40,4 +40,6 @@ Each switch, and **Start work**, has a picker of your projects' statuses. **Auto
 
 When several fit, Spark flags the ticket. It always adds the PR link, never a comment.
 
+A PR moves the chat's ticket, or one keyed in its branch or title, without a card; failures say why.
+
 **Next:** [Work from the Tickets inbox](tickets-inbox.md)

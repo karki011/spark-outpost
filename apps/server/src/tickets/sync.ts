@@ -64,7 +64,7 @@ export async function linkPullRequest(
   open: OpenSource,
   key: string,
   pull: TicketRef,
-  taskId: string,
+  taskId: string | null,
 ): Promise<TicketSync> {
   let sync: TicketSync = { outcome: 'succeeded', message: null };
   try {

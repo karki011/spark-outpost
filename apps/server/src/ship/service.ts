@@ -41,7 +41,7 @@ import {
   type ShipPlan,
 } from './prepare.ts';
 import { repoSlug } from './remote.ts';
-import { syncTicketsAfterShip } from '../tickets/ship-sync.ts';
+import { syncRecordedPull } from '../tickets/ship-sync.ts';
 
 const running = new Map<string, Promise<unknown>>();
 
@@ -292,7 +292,12 @@ async function pullRequestStep(
   });
   progress.link = link;
   await watchShipped(deps, plan, pull, plan.branch, !existing && draft);
-  await syncTicketsAfterShip(deps, plan.task.id, { url: pull.url, title: link.title ?? pull.url });
+  void syncRecordedPull(deps, {
+    host: repo.host,
+    owner: repo.owner,
+    repo: repo.name,
+    number: pull.number,
+  });
 }
 
 async function audit(

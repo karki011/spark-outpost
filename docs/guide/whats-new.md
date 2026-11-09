@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                           | What to do                                                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Ticket moves, clean PR line            | [Ship](ship-and-pull-requests.md#when-the-agent-publishes).                                 |
 | Shell variables for agents             | [Details](privacy-and-secrets.md#what-agents-cant-reach).                                   |
 | Links open in Spark                    | [Settings](settings.md#mac).                                                                |
 | Join at start, **Join opens**, Dismiss | [See your day](calendar.md#use-it).                                                         |
@@ -31,7 +32,6 @@ summary: What changed in recent releases and what to do next.
 | Clone or read GitHub repos             | [See how](link-a-repo.md#clone-or-read-a-repo-from-github).                                 |
 | Link a repo by name                    | [Repos folders](link-a-repo.md#set-your-repos-folders).                                     |
 | Custom endpoint and key header         | [Connect it](custom-endpoint.md).                                                           |
-| Custom endpoint, key header            | [Connect it](custom-endpoint.md).                                                           |
 | More Terminal agents                   | [Start one](terminals.md#start-a-terminal-session).                                         |
 | Context compacted line                 | [Long chats](compaction.md#check-how-full-the-chat-is).                                     |
 | Row ports                              | [Open them](terminals.md#open-a-shell-beside-chat).                                         |
