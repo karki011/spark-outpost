@@ -17,10 +17,10 @@ function unique(events: readonly CalendarEvent[]): CalendarEvent[] {
   });
 }
 
-export function joinChoice(now: CalendarNow | null, at: number): JoinChoice {
+export function joinChoice(now: CalendarNow | null, at: number, leadMs: number): JoinChoice {
   if (!now) return null;
   const group = now.nudge ? nudgeGroupOf(now.nudge) : [];
-  const joinable = joinableMeetings([...now.upcoming, ...group], at);
+  const joinable = joinableMeetings([...now.upcoming, ...group], at, leadMs);
   const [only] = joinable;
   if (!only) return null;
   if (joinable.length === 1) return { join: only };

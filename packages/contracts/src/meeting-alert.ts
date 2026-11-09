@@ -15,6 +15,7 @@ export const meetingAlertPayloadSchema = z.object({
   events: z.array(calendarEventSchema).min(1).max(CALENDAR_GROUP_MAX),
   calendars: z.record(z.string().max(KEY_MAX), z.string().max(300)),
   countdown: meetingCountdownSchema.nullable(),
+  joinLeadMs: z.number().finite().min(0),
   notice: z.object({ title: z.string().max(400), body: z.string().max(400) }),
 });
 export type MeetingAlertPayload = z.infer<typeof meetingAlertPayloadSchema>;
@@ -26,6 +27,8 @@ export const MEETING_ALERT_ACTIONS = [
   'cancel-join',
   'join-now',
   'join',
+  'join-at-start',
+  'cancel-join-at-start',
 ] as const;
 export const meetingAlertActionSchema = z.object({
   kind: z.enum(MEETING_ALERT_ACTIONS),

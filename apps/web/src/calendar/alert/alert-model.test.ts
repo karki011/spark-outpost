@@ -10,6 +10,7 @@ import {
   shortcutJoin,
 } from './alert-model.ts';
 
+const LEAD = 10 * 60_000;
 const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });
 const design = event('Design sync', at(10), at(10, 30));
 
@@ -23,10 +24,10 @@ describe('alert card', () => {
   });
 
   it('offers Join only inside the join window and while the meeting runs', () => {
-    expect(joinState(standup, at(9, 30))).toBe('later');
-    expect(joinState(standup, at(9, 55))).toBe('open');
-    expect(joinState(standup, at(10, 20))).toBe('none');
-    expect(joinState(design, at(10))).toBe('none');
+    expect(joinState(standup, at(9, 30), LEAD)).toBe('later');
+    expect(joinState(standup, at(9, 55), LEAD)).toBe('open');
+    expect(joinState(standup, at(10, 20), LEAD)).toBe('none');
+    expect(joinState(design, at(10), LEAD)).toBe('none');
   });
 
   it('hangs the card under the menu bar, kept on screen near an edge', () => {
@@ -43,9 +44,9 @@ describe('alert card', () => {
 
   it('lets ⌘J join only when one meeting on the card can be joined', () => {
     const vendor = event('Vendor sync', at(10), at(10, 30), { link: link('meet') });
-    expect(shortcutJoin([standup, design], at(9, 59))?.key).toBe(standup.key);
-    expect(shortcutJoin([standup, vendor], at(9, 59))).toBeNull();
-    expect(shortcutJoin([standup], at(9, 30))).toBeNull();
+    expect(shortcutJoin([standup, design], at(9, 59), LEAD)?.key).toBe(standup.key);
+    expect(shortcutJoin([standup, vendor], at(9, 59), LEAD)).toBeNull();
+    expect(shortcutJoin([standup], at(9, 30), LEAD)).toBeNull();
   });
 });
 

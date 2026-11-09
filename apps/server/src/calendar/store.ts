@@ -31,6 +31,7 @@ interface ConnectionRow {
   alert_style: string;
   alert_lead: number;
   auto_join: boolean;
+  join_lead: number;
   notice: string | null;
 }
 
@@ -47,6 +48,7 @@ function settingsOf(row: ConnectionRow): CalendarSettings {
     alertStyle: row.alert_style,
     alertLead: row.alert_lead,
     autoJoin: row.auto_join,
+    joinLead: row.join_lead,
   });
   return parsed.success ? parsed.data : CALENDAR_DEFAULT_SETTINGS;
 }
@@ -97,6 +99,7 @@ const SETTING_COLUMNS: Record<keyof CalendarSettingsPatch, string> = {
   alertStyle: 'alert_style',
   alertLead: 'alert_lead',
   autoJoin: 'auto_join',
+  joinLead: 'join_lead',
 };
 
 export async function updateSettings(
@@ -306,11 +309,13 @@ export async function calendarMarks(
     remind: new Set<string>(),
     hold: new Set<string>(),
     dismissed: new Set<string>(),
+    joinAtStart: new Set<string>(),
   };
   const byKind: Record<CalendarMarkKind, Set<string>> = {
     remind_5: marks.remind,
     hold: marks.hold,
     dismiss: marks.dismissed,
+    join_at_start: marks.joinAtStart,
   };
   for (const row of rows) {
     byKind[row.kind]?.add(`${row.uid}@${row.occurrence_start.toISOString()}`);

@@ -35,11 +35,17 @@ export function clashText(titles: readonly string[]): string | null {
   return `clashes with ${titles.length} meetings`;
 }
 
-export function joinableMeetings(events: readonly CalendarEvent[], now: number): CalendarEvent[] {
+export function joinableMeetings(
+  events: readonly CalendarEvent[],
+  now: number,
+  leadMs: number,
+): CalendarEvent[] {
   const seen = new Set<string>();
   return events
     .filter((event) => {
-      if (!event.link || seen.has(event.key) || !joinOpen(spanOf(event), now)) return false;
+      if (!event.link || seen.has(event.key) || !joinOpen(spanOf(event), now, leadMs)) {
+        return false;
+      }
       seen.add(event.key);
       return true;
     })

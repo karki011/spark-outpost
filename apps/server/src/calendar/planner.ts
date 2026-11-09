@@ -8,6 +8,7 @@ import {
   meetingsOverlap,
   isMeeting,
   localDayStart,
+  remindUntil,
   spanOf,
   type CalendarCapture,
   type CalendarClash,
@@ -32,7 +33,6 @@ export interface Plan {
   capture: CalendarCapture | null;
 }
 
-export const NOW_GRACE_MS = 5 * 60_000;
 const MINUTE = 60_000;
 const WRAP_UP_CHATS = 3;
 
@@ -71,11 +71,11 @@ function dueRemind(event: CalendarEvent, now: number): boolean {
 }
 
 function dueBefore(event: CalendarEvent, settings: CalendarSettings, now: number): boolean {
-  const { start } = spanOf(event);
+  const span = spanOf(event);
   return (
     nudgeable(event, now) &&
-    now >= start - settings.beforeMinutes * MINUTE &&
-    now < start + NOW_GRACE_MS
+    now >= span.start - settings.beforeMinutes * MINUTE &&
+    now < remindUntil(span)
   );
 }
 

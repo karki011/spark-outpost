@@ -16,6 +16,7 @@ import {
   visibleEvents,
 } from './today-model.ts';
 
+const LEAD = 10 * 60_000;
 function chat(running: boolean, archived = false): ConversationSummary {
   return {
     id: '00000000-0000-4000-8000-000000000001',
@@ -261,15 +262,15 @@ describe('Join', () => {
   const noLink = event('Lunch', at(9, 20), at(10));
 
   it('picks the earliest meeting whose Join is open for ⌘J', () => {
-    expect(joinTarget([review, standup, noLink], at(9, 36))?.title).toBe('Standup');
-    expect(joinTarget([review, standup], at(9, 25))?.title).toBe('Standup');
-    expect(joinTarget([review, standup], at(9, 46))?.title).toBe('Design review');
+    expect(joinTarget([review, standup, noLink], at(9, 36), LEAD)?.title).toBe('Standup');
+    expect(joinTarget([review, standup], at(9, 25), LEAD)?.title).toBe('Standup');
+    expect(joinTarget([review, standup], at(9, 46), LEAD)?.title).toBe('Design review');
   });
 
   it('finds nothing before ten minutes ahead or after the end', () => {
-    expect(joinTarget([standup], at(9, 19))).toBeNull();
-    expect(joinTarget([standup], at(9, 20))?.title).toBe('Standup');
-    expect(joinTarget([standup], at(9, 45))).toBeNull();
-    expect(joinTarget([noLink], at(9, 30))).toBeNull();
+    expect(joinTarget([standup], at(9, 19), LEAD)).toBeNull();
+    expect(joinTarget([standup], at(9, 20), LEAD)?.title).toBe('Standup');
+    expect(joinTarget([standup], at(9, 45), LEAD)).toBeNull();
+    expect(joinTarget([noLink], at(9, 30), LEAD)).toBeNull();
   });
 });

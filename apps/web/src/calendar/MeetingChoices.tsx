@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { joinOpen, spanOf, type CalendarEvent } from '@spark-outpost/contracts';
 import { clock } from './calendar-format.ts';
 import { openJoin } from './today-model.ts';
+import { useJoinLeadMs } from './use-calendar.ts';
 
 interface MeetingChoicesProps {
   meetings: readonly CalendarEvent[];
@@ -22,8 +23,9 @@ function ChoiceAction(props: {
   buttonClass: { join: string; open: string };
 }) {
   const { event } = props;
+  const leadMs = useJoinLeadMs();
   const link = event.link;
-  if (link && joinOpen(spanOf(event), props.now)) {
+  if (link && joinOpen(spanOf(event), props.now, leadMs)) {
     return (
       <button
         type="button"

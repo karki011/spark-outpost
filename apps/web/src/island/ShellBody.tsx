@@ -8,6 +8,7 @@ import type { Voice } from '../spark/voice.ts';
 import { AskSpark } from './AskSpark.tsx';
 import { CardView } from './CardView.tsx';
 import type { Decided } from './use-decide.ts';
+import { XIcon } from '../ui/icons.tsx';
 import type { Card, IslandView, Panel } from './island-model.ts';
 import { IslandHome, type HomeBundle } from './IslandHome.tsx';
 import { RestStrip, type StripData } from './RestStrip.tsx';
@@ -25,6 +26,10 @@ interface DropProps {
   note: string | null;
   replyingTo: string | null;
   sceneRef: RefObject<HTMLDivElement | null>;
+}
+
+export interface IslandNote extends Decided {
+  closeMs?: number;
 }
 
 export interface IslandShellProps {
@@ -46,7 +51,8 @@ export interface IslandShellProps {
   voice: Voice;
   speech: SpeechScreenModel | null;
   now: number;
-  note: Decided | null;
+  note: IslandNote | null;
+  onCloseNote: () => void;
   detailFor: (chatId: string) => ConversationDetail | undefined;
   focusSignal: number;
   home: HomeBundle;
@@ -155,6 +161,16 @@ export function ViewBody({ props }: { props: IslandShellProps }) {
           <div className="isl-card isl-note" data-wash="accent" role="status">
             <div className="isl-ttl">{props.note?.title}</div>
             <div className="isl-hint">{props.note?.sub}</div>
+            {props.note?.closeMs !== undefined && (
+              <button
+                type="button"
+                className="isl-note-x"
+                aria-label={`Close: ${props.note.title}`}
+                onClick={props.onCloseNote}
+              >
+                <XIcon />
+              </button>
+            )}
           </div>
         </div>
       );

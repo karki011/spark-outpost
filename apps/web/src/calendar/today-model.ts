@@ -180,10 +180,14 @@ export function timelineSpan(
   return { start, end };
 }
 
-export function joinTarget(events: readonly CalendarEvent[], now: number): CalendarEvent | null {
+export function joinTarget(
+  events: readonly CalendarEvent[],
+  now: number,
+  leadMs: number,
+): CalendarEvent | null {
   return (
     events
-      .filter((event) => event.link && joinOpen(spanOf(event), now))
+      .filter((event) => event.link && joinOpen(spanOf(event), now, leadMs))
       .toSorted((a, b) => spanOf(a).start - spanOf(b).start)[0] ?? null
   );
 }
