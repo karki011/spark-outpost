@@ -38,7 +38,7 @@ test('settings opens from the sidebar and lets a CLI provider sign in again', as
   await providers.getByRole('tab', { name: 'Appearance' }).click();
   await expect(page).not.toHaveURL(/#\/settings/);
   const cards = page.getByRole('dialog', { name: 'Appearance' }).locator('.tcard');
-  await expect(cards).toHaveCount(6);
+  await expect(cards).toHaveCount(9);
   const lefts = await cards.evaluateAll((all) =>
     all.map((card) => Math.round(card.getBoundingClientRect().left)),
   );

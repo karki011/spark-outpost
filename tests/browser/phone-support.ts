@@ -19,6 +19,7 @@ const PUBLIC = path.resolve(import.meta.dirname, '../../apps/web/public');
 const PUBLIC_FILES: Record<string, string> = {
   '/theme.css': 'text/css',
   '/theme-base.css': 'text/css',
+  '/theme-bold.css': 'text/css',
   '/appearance.js': 'text/javascript',
 };
 

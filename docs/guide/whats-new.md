@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                  | What to do                                                      |
 | ----------------------------- | --------------------------------------------------------------- |
+| Blaze, Acid and Violet tints  | Pick one in **Settings → Appearance**.                          |
 | Week recap on Home            | Pick its day in **Settings → Notifications**.                   |
 | Brief reasons more            | Nothing.                                                        |
 | Ask Spark reasons more        | Nothing.                                                        |

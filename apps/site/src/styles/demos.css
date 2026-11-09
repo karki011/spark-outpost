@@ -26,7 +26,6 @@
 .window-title {
   overflow: hidden;
   color: var(--muted);
-  font-family: var(--font-mono);
   font-size: 12px;
   white-space: nowrap;
   text-overflow: ellipsis;

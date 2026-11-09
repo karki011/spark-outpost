@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-skin="dark">
+<html lang="en" data-skin="blaze" data-accent="blaze">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,8 +8,10 @@
       name="description"
       content="Run Claude Code and Codex on your Mac. Follow every step, answer the approvals that matter, and get pull requests back. Free beta for macOS 13 and later."
     />
-    <meta name="theme-color" content="#0c0f12" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#e9ecef" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111316" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <script src="/accent.js"></script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:type" content="website" />
@@ -26,11 +28,34 @@
     <script type="module" src="/src/main.ts"></script>
   </head>
   <body>
+    <svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
+      <symbol id="scout" viewBox="0 0 64 64">
+        <path
+          d="M38 18C39 13 42 10 46 9"
+          fill="none"
+          style="stroke: var(--brand)"
+          stroke-width="3"
+          stroke-linecap="round"
+        />
+        <path
+          d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"
+          style="fill: var(--text)"
+        />
+        <path
+          d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"
+          style="fill: var(--brand)"
+        />
+        <g style="fill: var(--jet)">
+          <rect x="22.5" y="32" width="5.6" height="11" rx="2.8" />
+          <rect x="35.9" y="32" width="5.6" height="11" rx="2.8" />
+        </g>
+      </symbol>
+    </svg>
     <a class="skip" href="#main">Skip to content</a>
     <header class="top">
       <nav class="nav wrap" aria-label="Main">
         <a class="brand" href="/" aria-label="Spark Outpost home">
-          <img src="/scout.svg" alt="" width="30" height="30" />
+          <svg class="scout-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#scout" /></svg>
           <span>Spark Outpost</span>
         </a>
         <a class="nav-link" href="#agents">Features</a>
@@ -45,11 +70,10 @@
     <main id="main">
       <section class="hero wrap" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Free beta for macOS</p>
-          <h1 id="hero-title">A home base for autonomous work.</h1>
+          <h1 id="hero-title">Run Claude Code and Codex on your Mac.</h1>
           <p class="lead">
-            Run Claude Code and Codex side by side on your Mac. Follow every step, answer the
-            approvals that matter, and get pull requests back.
+            Follow every step, answer the approvals your agent's mode asks for, and see the time,
+            tokens and cost of each turn.
           </p>
           <div class="download-row">
             <a
@@ -68,22 +92,114 @@
           </div>
           <p class="fine">Free beta · macOS 13+ · Apple silicon and Intel</p>
         </div>
-        <div class="scout-stage" data-scout-stage>
+        <div class="hero-visual">
+          <figure class="product">
+            <picture>
+              <source
+                srcset="/docs/images/chats-and-modes-permissions-dark.png"
+                media="(prefers-color-scheme: dark)"
+              />
+              <img
+                src="/docs/images/chats-and-modes-permissions-light.png"
+                alt="Spark Outpost with a chat open and Claude's agent modes listed: Manual, Accept edits, Plan, Auto and Bypass permissions"
+                width="1280"
+                height="800"
+                fetchpriority="high"
+              />
+            </picture>
+          </figure>
           <img
-            class="scout-poster"
-            src="/scout.svg"
-            alt="Scout, the Spark Outpost mascot: a teal blob with two eyes and a spark on its antenna"
-            width="320"
-            height="320"
-            fetchpriority="high"
+            class="island-card"
+            src="/docs/images/companion-island-card-dark.png"
+            alt="Spark Island asking: Claude wants to run a command, pnpm test, with Deny, Allow once and Always in this project"
+            width="600"
+            height="260"
           />
-          <button class="poke" type="button" data-scout-poke hidden>Squish Scout</button>
+          <div class="scout-stage" data-scout-stage>
+            <svg
+              class="scout-poster scout-mark"
+              viewBox="0 0 64 64"
+              role="img"
+              aria-label="Scout, the Spark Outpost mascot: a round blob with two eyes and a spark on its antenna"
+            >
+              <use href="#scout" />
+            </svg>
+            <button class="poke" type="button" data-scout-poke hidden>Squish Scout</button>
+          </div>
+        </div>
+        <ul class="claims">
+          <li>
+            <span class="claim-icon" aria-hidden="true"
+              ><svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M4 6l4 4-4 4M10.5 14.5h5.5" /></svg
+            ></span>
+            Claude Code and Codex, each in its own permission modes
+          </li>
+          <li>
+            <span class="claim-icon" aria-hidden="true"
+              ><svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="10" cy="11" r="6.5" />
+                <path d="M10 11l3-3M10 2.5v2" /></svg
+            ></span>
+            Time, tokens and cost for every turn, never capped
+          </li>
+          <li>
+            <span class="claim-icon" aria-hidden="true"
+              ><svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="6" cy="4.5" r="2" />
+                <circle cx="6" cy="15.5" r="2" />
+                <circle cx="14" cy="8" r="2" />
+                <path d="M6 6.5v7M14 10c0 2.5-3 3.5-6 3.5" /></svg
+            ></span>
+            Pull requests come back to you. Merging stays yours.
+          </li>
+        </ul>
+        <div class="swatch" role="radiogroup" aria-labelledby="accent-label" data-accent-picker>
+          <span id="accent-label">Accent</span>
+          <strong class="swatch-name" data-accent-name aria-hidden="true">Blaze Orange</strong>
+          <span class="swatch-options">
+            <label class="swatch-option" data-accent="blaze">
+              <input class="sr-only" type="radio" name="accent" value="blaze" checked />
+              <span class="swatch-dot"></span>
+              <span class="sr-only">Blaze Orange</span>
+            </label>
+            <label class="swatch-option" data-accent="acid">
+              <input class="sr-only" type="radio" name="accent" value="acid" />
+              <span class="swatch-dot"></span>
+              <span class="sr-only">Acid Lime</span>
+            </label>
+            <label class="swatch-option" data-accent="violet">
+              <input class="sr-only" type="radio" name="accent" value="violet" />
+              <span class="swatch-dot"></span>
+              <span class="sr-only">Electric Violet</span>
+            </label>
+          </span>
         </div>
       </section>
 
       <section class="feature wrap" id="agents" aria-labelledby="agents-title">
         <div class="feature-copy">
-          <p class="eyebrow">Agents and modes</p>
           <h2 id="agents-title">Your agent, in the mode you pick.</h2>
           <p>
             Choose Claude Code or Codex and one of its own permission modes, shown with the agent's
@@ -108,7 +224,6 @@
 
       <section class="feature flip wrap" id="ship" aria-labelledby="ship-title">
         <div class="feature-copy">
-          <p class="eyebrow">Chat to pull request</p>
           <h2 id="ship-title">From a chat to a pull request.</h2>
           <p>
             Each chat works on its own <code>spark/</code> branch in a worktree. At
@@ -122,7 +237,6 @@
 
       <section class="feature wrap" id="browser" aria-labelledby="browser-title">
         <div class="feature-copy">
-          <p class="eyebrow">Browser pane</p>
           <h2 id="browser-title">A browser your agent can debug.</h2>
           <p>
             Open your app beside the chat. The agent reads the page, console errors with stacks, and
@@ -138,7 +252,6 @@
 
       <section class="feature flip wrap" id="mac" aria-labelledby="mac-title">
         <div class="feature-copy">
-          <p class="eyebrow">Mac control and terminals</p>
           <h2 id="mac-title">Mac apps, and terminals that keep running.</h2>
           <p>
             Turn on Mac control and an agent can read another app and press its buttons and menus,
@@ -155,7 +268,6 @@
 
       <section class="feature wrap" id="calendar" aria-labelledby="calendar-title">
         <div class="feature-copy">
-          <p class="eyebrow">Calendar</p>
           <h2 id="calendar-title">Scout keeps you on time.</h2>
           <p>
             Connect Mac Calendar or Google Calendar. A minute before a meeting, Scout lowers a card
@@ -169,7 +281,6 @@
 
       <section class="feature flip wrap" id="connectors" aria-labelledby="connectors-title">
         <div class="feature-copy">
-          <p class="eyebrow">Connectors</p>
           <h2 id="connectors-title">Bring your tickets and your team.</h2>
           <p>
             Connect GitHub, Atlassian (Jira and Confluence), ServiceNow, Linear and Slack, or add an
@@ -183,7 +294,6 @@
 
       <section class="feature wrap" id="phone" aria-labelledby="phone-title">
         <div class="feature-copy">
-          <p class="eyebrow">Phone remote</p>
           <h2 id="phone-title">Answer from your phone.</h2>
           <p>
             Pair a phone over Tailscale to follow chats, answer approval cards and get a push when a
@@ -196,7 +306,6 @@
 
       <section class="feature flip wrap" id="privacy" aria-labelledby="privacy-title">
         <div class="feature-copy">
-          <p class="eyebrow">Local-first</p>
           <h2 id="privacy-title">Local-first, said honestly.</h2>
           <p>
             Your chats, settings and code stay on your Mac, and keys live in your Keychain. Spark
@@ -217,18 +326,18 @@
         <div class="shots">
           <figure>
             <img
-              src="../../docs/guide/images/chats-and-modes-permissions-dark.png"
-              alt="A new chat with the agent mode picker open, showing Claude's Manual, Accept edits, Plan, Auto and Bypass permissions modes"
-              width="1280"
-              height="800"
+              src="/docs/images/chats-and-modes-diff-drawer-dark.png"
+              alt="The Changes drawer listing two changed files beside a unified diff of totals.ts"
+              width="1400"
+              height="900"
               loading="lazy"
               decoding="async"
             />
-            <figcaption>Pick the agent's own mode for each chat.</figcaption>
+            <figcaption>Review every changed file before you keep it.</figcaption>
           </figure>
           <figure>
             <img
-              src="../../docs/guide/images/terminals-dock-dark.png"
+              src="/docs/images/terminals-dock-dark.png"
               alt="A chat with a shell terminal dock open below the message box"
               width="1280"
               height="800"
@@ -239,7 +348,7 @@
           </figure>
           <figure>
             <img
-              src="../../docs/guide/images/ship-panel-dark.png"
+              src="/docs/images/ship-panel-dark.png"
               alt="The Ship this task panel with Commit, Push and PR options, the branch, the remote and a pull request title"
               width="394"
               height="277"
@@ -252,9 +361,9 @@
       </section>
 
       <section class="cta wrap" id="download" aria-labelledby="download-title">
-        <img src="/scout.svg" alt="" width="72" height="72" loading="lazy" />
-        <h2 id="download-title">Try the beta.</h2>
-        <p>Free while in beta. Updates download in the app, and you pick when to restart.</p>
+        <svg class="scout-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#scout" /></svg>
+        <h2 id="download-title">Download the free beta.</h2>
+        <p>Updates download in the app, and you pick when to restart.</p>
         <div class="download-row center">
           <a
             class="button large"
