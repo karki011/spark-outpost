@@ -11,6 +11,7 @@ import {
   type BrowserViewLayout,
   type BrowserViewSplit,
 } from '@spark-outpost/contracts';
+import { openOutside } from '../browser/outside-link.ts';
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
 
 export interface ProfileTabs {
@@ -152,6 +153,44 @@ export async function openChatTabInView(chatId: string, tabId: string): Promise<
   chooseProfile('work');
   viewOpeners.forEach((open) => open());
   return result;
+}
+
+const VIEW_FULL = 'The Browser view has too many tabs. Close one, then open the link again.';
+let linkProblem: string | null = null;
+
+export async function openLinkInView(url: string): Promise<void> {
+  const view = desktopBrowserView();
+  if (!view) return;
+  if (viewOpeners.size === 0) {
+    openOutside(url);
+    return;
+  }
+  const opened = await view.openTab(chosen, url).catch(() => false);
+  if (opened !== true) {
+    linkProblem = VIEW_FULL;
+    emit();
+  }
+  viewOpeners.forEach((open) => open());
+}
+
+export function useLinkProblem(): string | null {
+  return useSyncExternalStore(subscribe, () => linkProblem);
+}
+
+export function clearLinkProblem(): void {
+  if (linkProblem === null) return;
+  linkProblem = null;
+  emit();
+}
+
+export function useLinksToView(): void {
+  useEffect(() => {
+    const view = desktopBrowserView();
+    if (!view) return;
+    return view.onOpenLink((raw) => {
+      if (typeof raw === 'string') void openLinkInView(raw);
+    });
+  }, []);
 }
 
 export function useBrowserViewOpener(open: () => void): void {

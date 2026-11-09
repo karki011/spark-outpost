@@ -11,7 +11,7 @@ import { hourCycleArgs } from './hour-cycle-arg.ts';
 import { systemHourCycle } from './hour-cycle.ts';
 import { IPC } from './ipc-channels.ts';
 import { themeArgs } from './theme-arg.ts';
-import { guardNavigation } from './window.ts';
+import { guardNavigation, openLink } from './window.ts';
 
 export const SETTINGS_PATH = '/settings';
 const DEFAULT_SETTINGS_ROUTE = '#/settings/spark';
@@ -103,7 +103,7 @@ function createWindow(options: SettingsWindowOptions, route: string): BrowserWin
     },
   });
   guardNavigation(window, options.origin);
-  attachContextMenu(window);
+  attachContextMenu(window, openLink);
   window.once('ready-to-show', () => window.show());
   void window.loadURL(`${options.origin}${SETTINGS_PATH}${route}`);
   return window;

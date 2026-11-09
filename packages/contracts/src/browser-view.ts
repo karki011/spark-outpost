@@ -4,6 +4,7 @@ import {
   browserBoundsSchema,
   browserCommandSchema,
   browserPaneTabSchema,
+  classifyBrowserUrl,
   parseBrowserUrl,
 } from './browser.ts';
 import { BROWSER_SHORTCUTS } from './browser-keys.ts';
@@ -145,3 +146,20 @@ export const SEARCH_ENGINES: Record<BrowserSearchEngine, { label: string; base: 
 export function searchUrl(engine: BrowserSearchEngine, text: string): string {
   return `${SEARCH_ENGINES[engine].base}${encodeURIComponent(text.trim())}`;
 }
+
+export const browserLinksInSchema = z.enum(['spark', 'browser']);
+export type BrowserLinksIn = z.infer<typeof browserLinksInSchema>;
+export const DEFAULT_LINKS_IN: BrowserLinksIn = 'spark';
+export const BROWSER_OUTSIDE_TARGET = 'spark-outside';
+
+const WEB_ADDRESS = /^https?:\/\//i;
+
+function webAddress(url: string): boolean {
+  const kind = classifyBrowserUrl(url);
+  return WEB_ADDRESS.test(url) && (kind === 'local' || kind === 'external');
+}
+
+export const browserViewOpenTabSchema = z.object({
+  profile: browserProfileSchema,
+  url: z.string().max(BROWSER_URL_MAX).refine(webAddress),
+});

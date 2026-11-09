@@ -10,6 +10,7 @@ import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { copyButtonText, useCopyFeedback } from '../ui/use-copy-feedback.ts';
 import { githubApi, shipKeys } from './ship-api.ts';
+import { outsideTarget } from '../browser/outside-link.ts';
 
 const POLL_MS = 2000;
 const SHOWN_REPOS = 8;
@@ -77,7 +78,12 @@ function CodePanel({
         </span>
       </div>
       <div className="gh-actions">
-        <a className="btn primary sm" href={flow.verificationUri} target="_blank" rel="noreferrer">
+        <a
+          className="btn primary sm"
+          href={flow.verificationUri}
+          target={outsideTarget()}
+          rel="noreferrer"
+        >
           Open GitHub
           <ExternalLinkIcon />
         </a>
@@ -107,7 +113,7 @@ function Coverage({ app }: { app: GitHubAppStatus }) {
             {project.covered ? 'covered' : 'not covered'}
           </span>
           {!project.covered && app.installUrl && (
-            <a className="gh-link" href={app.installUrl} target="_blank" rel="noreferrer">
+            <a className="gh-link" href={app.installUrl} target={outsideTarget()} rel="noreferrer">
               Give Spark access to this repo
               <ExternalLinkIcon />
             </a>
@@ -259,7 +265,7 @@ export function GitHubAppPanel({ app, flow, onUseToken }: AppPanelProps) {
         <p className="gh-note">
           No repositories picked yet.{' '}
           {app.installUrl && (
-            <a className="gh-link" href={app.installUrl} target="_blank" rel="noreferrer">
+            <a className="gh-link" href={app.installUrl} target={outsideTarget()} rel="noreferrer">
               Pick repositories on GitHub
               <ExternalLinkIcon />
             </a>
@@ -289,7 +295,7 @@ export function GitHubAppPanel({ app, flow, onUseToken }: AppPanelProps) {
         >
           Disconnect
         </button>
-        <a className="gh-link" href={REVOKE_URL} target="_blank" rel="noreferrer">
+        <a className="gh-link" href={REVOKE_URL} target={outsideTarget()} rel="noreferrer">
           Revoke on GitHub
           <ExternalLinkIcon />
         </a>
