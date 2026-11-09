@@ -133,6 +133,16 @@ describe('what a session is told about tools it was not offered', () => {
     expect(unavailableNote(EVERYTHING_AVAILABLE)).toBe('');
   });
 
+  it('points to spark_terminal_run for dev servers only when that tool is offered', () => {
+    const told = (readOnly: boolean, project: boolean) => {
+      const available = { ...EVERYTHING_AVAILABLE, project };
+      return sparkInstructionsFor(available, sparkToolsFor({ readOnly }, available));
+    };
+    expect(told(false, true)).toContain('spark_terminal_run for dev servers and watchers');
+    expect(told(true, true)).not.toContain('spark_terminal_run');
+    expect(told(false, false)).not.toContain('spark_terminal_run');
+  });
+
   it('mentions the outpost tools only when one of them is offered', () => {
     expect(sparkInstructionsFor({ ...NOTHING, outpost: true })).toContain('spark_outpost*');
     expect(sparkInstructionsFor({ ...NOTHING, outpost_draft: true })).toContain('spark_outpost*');

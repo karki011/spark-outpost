@@ -219,6 +219,7 @@ test("a card for a meeting set to join at start says when it opens and offers Do
   await expect(card.getByRole('button', { name: 'Join at start' })).toHaveCount(0);
   await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeVisible();
   await expect(card.getByRole('button', { name: 'Snooze 1 min' })).toBeVisible();
+  await expect.poll(() => landing(page)).toBe(0);
   await card.getByRole('button', { name: /^Don't open/ }).click({ force: true });
   expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
     { kind: 'cancel-join-at-start', key: payload.key, eventKey: marked.key },

@@ -29,8 +29,6 @@ Every page has one job and one `type`. Docs shows the type as a badge, and `spar
 | `troubleshooting` | Fix a symptom               | A table row or a list per symptom: **You see**, **Why**, **Fix**                                | 350      |
 | `whats-new`       | Say what changed            | One table row per change: what changed, what to do. Newest first                                | 400      |
 
-The whole guide may have 15,500 words. To add a page or a section, cut or merge something first.
-
 Words are counted without frontmatter, table rules, image syntax and link targets.
 
 ## Sections
@@ -109,7 +107,6 @@ A code change needs a doc change in the same commit when it adds, renames or rem
 
 - a page has bad frontmatter, an unknown `type` or a repeated title;
 - a page is over its word cap, has a paragraph over 40 words, a `#` heading or a second Tip;
-- the guide is over 15,500 words in all;
 - a how-to lacks its time estimate or numbered steps, a how-to or start page lacks its `**Next:**` link, or a Next link's text isn't the target's title;
 - a link to a page or heading is broken;
 - a table has no header row, or a row has a different number of cells than its header;

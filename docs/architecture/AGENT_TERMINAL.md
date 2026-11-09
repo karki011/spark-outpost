@@ -134,7 +134,7 @@ Rules of the tool:
 - It runs in the user's login shell, as the preview server does, with Spark's own variables removed from the environment.
 - There is no action that sends input. An agent must not be able to start a shell and then feed it lines the gate never saw. Each `start` is one command and one decision.
 - The command text is refused when it looks like it holds a secret, the same check MCP server commands get (`spark-mcp/actions/mcp-config.ts`). The exact text is stored locally so the runner can start it.
-- The description tells the agent to use it only for commands that must keep running after the turn, and to use its own command tool for everything else.
+- The description tells the agent to use it for a dev server, a watcher or another long-lived command, and its own command tool for everything else. Long-lived means past the turn or past the provider's own background limit: Claude Code stops a background `Bash` command at its time limit, so a dev server started that way died mid-test in issue #228. The description says the tool has no time limit and that `status` (state, exit code) and `output` show readiness and crashes, and the Spark MCP server's instructions carry one line saying so whenever the tool is offered (Claude Code defers MCP tool descriptions behind its tool search, while server instructions are always in the prompt). That line raised the instructions cap in `spark-tool-budget.test.ts` from 1,700 to 1,800 characters.
 
 How it runs, following the preview server:
 
