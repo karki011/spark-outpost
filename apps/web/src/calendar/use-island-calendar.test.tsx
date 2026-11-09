@@ -290,7 +290,7 @@ describe('useIslandCalendar island line', () => {
     expect(bridge.shown.at(-1)?.notice.title).toBe('Standup');
     act(() => bridge.act({ kind: 'join', key: standup.key, eventKey: standup.key }));
     await act(async () => vi.advanceTimersByTimeAsync(10));
-    expect(opened).toHaveBeenCalledWith(standup.link!.url, '_blank', 'noopener,noreferrer');
+    expect(opened).toHaveBeenCalledWith(standup.link!.url, 'spark-outside', 'noopener,noreferrer');
     expect(bridge.shown.at(-1)).toBeNull();
     opened.mockRestore();
   });

@@ -5,6 +5,7 @@ import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { DocLink } from '../ui/DocLink.tsx';
 import { BrowserHistorySetting } from './BrowserHistorySetting.tsx';
 import { BrowserArchiveSetting } from './BrowserArchiveSetting.tsx';
+import { BrowserLinksSetting } from './BrowserLinksSetting.tsx';
 import { BrowserSearchSetting } from './BrowserSearchSetting.tsx';
 
 export const SIGNED_IN_SITES_LABEL = 'Signed-in sites';
@@ -69,6 +70,7 @@ export function BrowserSection() {
         sign in to in the Browser pane stays signed in everywhere, and agent tabs use it too.{' '}
         <DocLink topic="Browser pane" doc={{ page: 'use-the-browser' }} />
       </p>
+      <BrowserLinksSetting />
       <SignedInSites />
       <BrowserSearchSetting />
       <BrowserArchiveSetting />

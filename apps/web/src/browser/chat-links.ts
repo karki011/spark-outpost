@@ -9,11 +9,11 @@ import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import { knownTabs, sendBrowserCommand } from './browser-store.ts';
 import { setBrowserPaneOpen } from './pane-open.ts';
 import { hiddenPlacement, type BrowserHome } from './use-view-placement.ts';
+import { openOutside } from './outside-link.ts';
 
 const CHAT_LINKS_ATTRIBUTE = 'data-chat-links';
 
 const WEB_LINK = /^https?:\/\//i;
-const NEW_WINDOW = 'noopener,noreferrer';
 
 export interface ClickFacts {
   button: number;
@@ -110,5 +110,5 @@ export async function openInPane(home: BrowserHome, url: string): Promise<void> 
 
 export function openInDefaultBrowser(href: string): void {
   const url = defaultBrowserUrl(href, window.location.origin);
-  if (url) window.open(url, '_blank', NEW_WINDOW);
+  if (url) openOutside(url);
 }

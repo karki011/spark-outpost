@@ -13,6 +13,7 @@ import {
 import { isRunning } from '../conversations/row-state.ts';
 import { countLabel } from '../ui/count-label.ts';
 import { duration, minutesUntil } from './calendar-format.ts';
+import { openOutside } from '../browser/outside-link.ts';
 
 export type TodayState = 'web' | 'helper' | 'denied' | 'connect' | 'none' | 'ready';
 
@@ -193,5 +194,5 @@ export function joinTarget(
 }
 
 export function openJoin(url: string): void {
-  window.open(url, '_blank', 'noopener,noreferrer');
+  openOutside(url);
 }

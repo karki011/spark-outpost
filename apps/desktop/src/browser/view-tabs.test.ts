@@ -74,6 +74,36 @@ describe('the saved Browser view', () => {
     expect(await invoke('browser-view:search-engine')).toBe('bing');
   });
 
+  it('keeps Open links in, with Spark for a new or unknown choice', async () => {
+    expect(parseSavedView('{}').linksIn).toBe('spark');
+    const file = (linksIn: unknown) =>
+      JSON.stringify({
+        version: 1,
+        profiles: { personal: { tabs: [], favorites: [] }, work: { tabs: [], favorites: [] } },
+        linksIn,
+      });
+    expect(parseSavedView(file('browser')).linksIn).toBe('browser');
+    expect(parseSavedView(file('chrome')).linksIn).toBe('spark');
+
+    startTestBrowser();
+    expect(await invoke('browser-view:links-in')).toBe('spark');
+    expect(await invoke('browser-view:set-links-in', 'browser')).toBe('browser');
+    await expect(invoke('browser-view:set-links-in', 'safari')).rejects.toThrow();
+    expect(await invoke('browser-view:links-in')).toBe('browser');
+  });
+
+  it('opens a clicked link in a new tab of the profile asked for, web addresses only', async () => {
+    const { view } = startTestBrowser();
+    expect(await invoke('browser-view:open-tab', 'work', NEWS)).toBe(true);
+    expect(view.panes.tabsOf('work').map((tab) => tab.currentUrl())).toEqual([NEWS]);
+    expect(view.panes.tabsOf('personal')).toEqual([]);
+    for (const url of ['file:///etc/passwd', 'javascript:alert(1)', 'https://a:b@example.com/']) {
+      await expect(invoke('browser-view:open-tab', 'work', url)).rejects.toThrow();
+    }
+    await expect(invoke('browser-view:open-tab', CHAT, NEWS)).rejects.toThrow();
+    expect(view.panes.tabsOf('work')).toHaveLength(1);
+  });
+
   it('keeps no blank tab', () => {
     const blank = { url: 'about:blank', title: '', pinned: false, active: true };
     expect(keptTabs([blank, { ...blank, url: NEWS }])).toEqual([{ ...blank, url: NEWS }]);
