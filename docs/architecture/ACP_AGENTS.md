@@ -330,7 +330,7 @@ Live check, October 6, 2026, in a throwaway repo under the temp folder with the 
 
 ## Extensibility and other agents
 
-- Our `_meta` use follows the extensibility rules: vendor-namespaced keys in `clientCapabilities._meta` and `session/new._meta`, no custom methods, and no new root fields. `session.notices` is an unstable spec field in SDK 1.5.0 (not ours), so keep the SDK version pinned. The full audit is in [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md). The run and the capability probe share `CLIENT_CAPABILITIES` and `CLIENT_INFO` from `client-info.ts`, so both advertise `sessionFailure` and notices.
+- Our `_meta` use follows the extensibility rules: vendor-namespaced keys in `clientCapabilities._meta` and `session/new._meta`, no custom methods, and no new root fields. `session.notices` is a stable v1 spec field in SDK 2.4.0 (not ours). The full audit is in [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md). The run and the capability probe share `CLIENT_CAPABILITIES` and `CLIENT_INFO` from `client-info.ts`, so both advertise `sessionFailure` and notices.
 - **Gemini CLI** (`gemini --acp`) as another provider needs:
   - model selection through `unstable_setSessionModel` once the SDK exposes it. The legacy `modes` and `models` fallback already covers mode switching and model capabilities.
   - a per-run config that turns off the user's MCP servers and local file tools. It adds servers from `~/.gemini/settings.json` even when we pass none, and reads the disk directly when client fs is off.

@@ -189,7 +189,7 @@
   "session-update:notice": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/client-info.ts",
-    "note": "Unstable in SDK 2.4.0 (session notices RFD, schema 1.23.0 unstable), not in the stable v1 schema. Info, warning, error and custom severities become Note, Warning and Error steps. As the RFD requires, an error notice is advisory: it never fails the run; failures come from the stop reason, a JSON-RPC error or the sessionFailure extension. Both pinned adapters fall back to plain message text when the capability is missing."
+    "note": "Stable v1 in SDK 2.4.0 (session notices RFD). Info, warning, error and custom severities become Note, Warning and Error steps. As the RFD requires, an error notice is advisory: it never fails the run; failures come from the stop reason, a JSON-RPC error or the sessionFailure extension. Both pinned adapters fall back to plain message text when the capability is missing."
   },
   "content-block:text": {
     "status": "supported",
@@ -383,21 +383,21 @@
   "client-capability:session.notices": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/client-info.ts",
-    "note": "Unstable ClientSessionCapabilities.notices from the session notices RFD, advertised as {}. It is a spec field, not our extension, so it stays at session.notices (moving it under _meta would hide it from both adapters, which check exactly this field). Keep the SDK pinned while it is unstable."
+    "note": "Stable v1 ClientSessionCapabilities.notices (SDK 2.4.0) from the session notices RFD, advertised as {}. It is a spec field, not our extension, so it stays at session.notices (moving it under _meta would hide it from both adapters, which check exactly this field)."
   },
   "session-update:compaction_update": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/compaction-lines.ts, apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/client-info.ts",
-    "note": "Unstable in SDK 2.4.0 (context compaction), not in the stable v1 schema. A completed compaction shows one Context compacted line, a failed one a Warning line with its error; in_progress and cancelled show nothing. A repeated or late terminal update for the same compactionId is shown once. The summary is not kept. Both pinned adapters send it only when the client advertises session.compaction; without it claude-agent-acp 0.81.2 sent a Compact conversation tool call and codex-acp 1.13.1 a notice. Tested against the fake agent, not yet against a live provider."
+    "note": "Stable v1 in SDK 2.4.0 (context compaction). A completed compaction shows one Context compacted line, a failed one a Warning line with its error; in_progress and cancelled show nothing. A repeated or late terminal update for the same compactionId is shown once. The summary is not kept. Both pinned adapters send it only when the client advertises session.compaction; without it claude-agent-acp 0.81.2 sent a Compact conversation tool call and codex-acp 1.13.1 a notice. Tested against the fake agent, not yet against a live provider."
   },
   "session-update:compaction_summary_chunk": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/session-updates.ts",
-    "note": "Unstable in SDK 2.4.0. Ignored on purpose: the retained summary never becomes reply text or a step."
+    "note": "Stable v1 in SDK 2.4.0. Ignored on purpose: the retained summary never becomes reply text or a step."
   },
   "client-capability:session.compaction": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/client-info.ts",
-    "note": "Unstable ClientSessionCapabilities.compaction, advertised as {} on a turn's connection, never on the capability probe. Keep the SDK pinned while it is unstable."
+    "note": "Stable v1 ClientSessionCapabilities.compaction (SDK 2.4.0), advertised as {} on a turn's connection, never on the capability probe."
   }
 }
