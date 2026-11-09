@@ -6,6 +6,9 @@
     iris: ['iris', 'aurora'],
     fjord: ['fjord', 'void'],
     sage: ['sage', 'loam'],
+    blaze: ['blaze', 'ember'],
+    acid: ['acid', 'volt'],
+    violet: ['violet', 'ultra'],
   };
   var MODES = ['auto', 'light', 'dark'];
   var CONTRASTS = ['system', 'always'];

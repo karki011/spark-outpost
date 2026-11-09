@@ -6,6 +6,7 @@ type Block = { selector: string; media: string | undefined; declarations: Tokens
 
 export const THEME_CSS = [
   'apps/web/public/theme-base.css',
+  'apps/web/public/theme-bold.css',
   'apps/web/public/theme.css',
   'apps/web/public/theme-map.css',
 ];
@@ -26,6 +27,12 @@ export const THEMES = [
   'aurora',
   'iris',
   'loam',
+  'blaze',
+  'ember',
+  'acid',
+  'volt',
+  'violet',
+  'ultra',
   'contrast',
   'contrast-dark',
 ] as const;

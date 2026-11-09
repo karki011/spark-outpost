@@ -1,13 +1,14 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-skin="blaze" data-accent="blaze">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Docs · Spark Outpost</title>
     <meta name="description" content="Spark Outpost user guide." />
-    <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0c0f12" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#e9ecef" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111316" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
+    <script src="/accent.js"></script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:title" content="Spark Outpost docs" />
@@ -15,11 +16,34 @@
     <script type="module" src="/src/docs/page.ts"></script>
   </head>
   <body>
+    <svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
+      <symbol id="scout" viewBox="0 0 64 64">
+        <path
+          d="M38 18C39 13 42 10 46 9"
+          fill="none"
+          style="stroke: var(--brand)"
+          stroke-width="3"
+          stroke-linecap="round"
+        />
+        <path
+          d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"
+          style="fill: var(--text)"
+        />
+        <path
+          d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"
+          style="fill: var(--brand)"
+        />
+        <g style="fill: var(--jet)">
+          <rect x="22.5" y="32" width="5.6" height="11" rx="2.8" />
+          <rect x="35.9" y="32" width="5.6" height="11" rx="2.8" />
+        </g>
+      </symbol>
+    </svg>
     <a class="skip" href="#main">Skip to content</a>
     <header class="top">
       <nav class="nav wrap" aria-label="Main">
         <a class="brand" href="/" aria-label="Spark Outpost home">
-          <img src="/scout.svg" alt="" width="30" height="30" />
+          <svg class="scout-mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#scout" /></svg>
           <span>Spark Outpost</span>
         </a>
         <a class="nav-link" href="/#agents">Features</a>

@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                  | What to do                                                                                      |
 | ----------------------------- | ----------------------------------------------------------------------------------------------- |
 | Codex mode names              | Approve for me is now **Auto review**; see [Workspace access](modes-and-levels.md#agent-modes). |
+| Blaze, Acid and Violet tints  | Pick one in **Settings → Appearance**.                                                          |
 | Week recap on Home            | Pick its day in **Settings → Notifications**.                                                   |
 | Brief reasons more            | Nothing.                                                                                        |
 | Ask Spark reasons more        | Nothing.                                                                                        |
