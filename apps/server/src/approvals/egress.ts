@@ -15,7 +15,6 @@ import {
   bareHost,
   codeHosts,
   devNetHosts,
-  isLocalHost,
   remoteHost,
   resolvedUrlHost,
   remoteHosts,
@@ -51,7 +50,27 @@ const HOST_CLIENTS = new Set([
 const REMOTE_COPIES = new Set(['scp', 'rsync']);
 const HOST_VALUE_FLAGS = new Set([
   ...['-x', '--proxy', '--preproxy', '--socks4', '--socks4a', '--socks5', '--socks5-hostname'],
-  ...['--connect-to', '--resolve', '--doh-url', '-J', '-W'],
+  ...['--connect-to', '--resolve', '--doh-url', '--url', '-J', '-W'],
+]);
+const PLAIN_FLAGS = new Map<string, { letters: RegExp; long: ReadonlySet<string> }>([
+  [
+    'curl',
+    {
+      letters: /^-[0-46aBfgGiIjklLMnNOpqRsSvVZ#]+$/,
+      long: new Set([
+        ...['--silent', '--show-error', '--fail', '--fail-with-body', '--insecure', '--location'],
+        ...['--head', '--include', '--verbose', '--compressed', '--globoff', '--get'],
+        ...['--no-buffer', '--remote-name', '--http1.1', '--http2', '--ipv4', '--ipv6'],
+      ]),
+    },
+  ],
+  [
+    'wget',
+    {
+      letters: /^-[qvScNrkp]+$/,
+      long: new Set(['--quiet', '--verbose', '--server-response', '--continue', '--spider']),
+    },
+  ],
 ]);
 const ADDRESS_FILE_FLAGS = new Map<string, ReadonlySet<string>>([
   ['curl', new Set(['-K', '--config'])],
@@ -91,13 +110,14 @@ function argumentHost(word: string, lenient: boolean): string[] {
   const url = resolvedUrlHost(word);
   if (url) return [url];
   if (unresolved(word)) return lenient ? [UNKNOWN_HOST] : [];
-  const host = lenient ? bareHost(word) : (urlHost(word) ?? loopbackHost(word));
+  const host = lenient ? bareHost(word) : urlHost(word);
   return host ? [host] : [];
 }
 
-function loopbackHost(word: string): string | null {
-  const host = bareHost(word);
-  return host && isLocalHost(host) ? host : null;
+function takesValue(name: string, flag: string): boolean {
+  if (!flag.startsWith('-') || flag.includes('=')) return false;
+  const plain = PLAIN_FLAGS.get(name);
+  return !plain || !(plain.long.has(flag) || (!flag.startsWith('--') && plain.letters.test(flag)));
 }
 
 function hostArgs(name: string, args: readonly string[]): string[] {
@@ -112,7 +132,7 @@ function hostArgs(name: string, args: readonly string[]): string[] {
       continue;
     }
     const previous = args[index - 1];
-    const afterFlag = previous !== undefined && previous.startsWith('-') && !previous.includes('=');
+    const afterFlag = previous !== undefined && takesValue(name, previous);
     const lenient = !afterFlag || HOST_VALUE_FLAGS.has(previous);
     if (previous === '-o' && /proxy/i.test(word)) hosts.push(UNKNOWN_HOST);
     else if (addressFiles.has(previous ?? '')) hosts.push(UNKNOWN_HOST);
