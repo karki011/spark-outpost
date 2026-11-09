@@ -201,6 +201,14 @@ describe('switches', () => {
       .send('patch', '/api/profile', { agentInstructionsFile: '/tmp/instructions.md' })
       .expect(403);
     await phone.send('patch', '/api/profile', { agentInstructionsFile: '' }).expect(403);
+    await phone
+      .send('patch', '/api/profile', { prFollowUpBots: ['coderabbitai[bot]'] })
+      .expect(403);
+    await localClient(app)
+      .send('patch', '/api/profile', { prFollowUpBots: ['coderabbitai[bot]'] })
+      .expect(200);
+    const listed = (await phone.get('/api/setup').expect(200)).body.profile.prFollowUpBots;
+    expect(listed).toEqual(['coderabbitai[bot]']);
     const file = join(root, 'instructions.md');
     await writeFile(file, 'Use tests.');
     const local = await localClient(app)

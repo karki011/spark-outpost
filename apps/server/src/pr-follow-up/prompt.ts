@@ -68,8 +68,15 @@ export function branchUpdateLine(target: RoundTarget): string | null {
   return `${said} ${base}. Update it by merging: \`git fetch ${remote} ${base}\`, then \`git merge ${remote}/${base}\`, resolve any conflicts and commit the merge. Never rebase or force push. If you can't resolve a conflict safely, run \`git merge --abort\` and say which files conflict in your summary, in a line starting "Needs you:".`;
 }
 
+const COPILOT_REVIEWER = 'copilot-pull-request-reviewer[bot]';
+
+function requestable(name: string): boolean {
+  if (!PLAIN_NAME.test(name)) return false;
+  return !name.endsWith('[bot]') || name === COPILOT_REVIEWER;
+}
+
 export function rerequestLine(target: RoundTarget): string | null {
-  const names = (target.reviewers ?? []).filter((name) => PLAIN_NAME.test(name));
+  const names = (target.reviewers ?? []).filter(requestable);
   if (names.length === 0) return null;
   return `After Spark asks you to push and the push succeeds, you may re-request review on PR #${target.number} from reviewers already on it (${names.join(', ')}), only those whose feedback the push addressed: \`gh pr edit ${target.number} --add-reviewer <login>\`. Never add anyone else; Spark refuses new reviewers.`;
 }

@@ -144,8 +144,12 @@ describe('round prompt', () => {
 
   it('offers to re-request review only from reviewers already on the pull request', () => {
     const target = { repo: 'acme/widgets', number: 7, branch: 'spark/x', round: 1 };
-    const prompt = roundPrompt({ ...target, reviewers: ['alice', 'coderabbitai[bot]'] }, []);
-    expect(prompt).toContain('(alice, coderabbitai[bot])');
+    const reviewers = ['alice', 'coderabbitai[bot]', 'copilot-pull-request-reviewer[bot]'];
+    const prompt = roundPrompt({ ...target, reviewers }, []);
+    expect(prompt).toContain('(alice, copilot-pull-request-reviewer[bot])');
+    expect(roundPrompt({ ...target, reviewers: ['coderabbitai[bot]'] }, [])).not.toContain(
+      're-request',
+    );
     expect(prompt).toContain('`gh pr edit 7 --add-reviewer <login>`');
     expect(prompt).toContain('Never add anyone else');
     expect(roundPrompt({ ...target, reviewers: [] }, [])).not.toContain('re-request');

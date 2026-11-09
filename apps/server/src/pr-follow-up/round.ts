@@ -125,7 +125,7 @@ export async function startRound(
       round,
       remote: ship?.remote ?? 'origin',
       base: branch.base,
-      mergeState: branch.mergeState,
+      mergeState: asks ? null : branch.mergeState,
       reviewers: asks ? [] : watch.knownReviewers,
     },
     queued,
