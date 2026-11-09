@@ -1,8 +1,10 @@
 import {
   DEFAULT_BROWSER_ARCHIVE,
+  DEFAULT_LINKS_IN,
   DEFAULT_SEARCH_ENGINE,
   type BrowserArchiveSetting,
   type BrowserFavorite,
+  type BrowserLinksIn,
   type BrowserProfile,
   type BrowserSearchEngine,
 } from '@spark-outpost/contracts';
@@ -46,6 +48,7 @@ export function memorySaved(
   };
   let engine: BrowserSearchEngine = DEFAULT_SEARCH_ENGINE;
   let archive: BrowserArchiveSetting = DEFAULT_BROWSER_ARCHIVE;
+  let linksIn: BrowserLinksIn = DEFAULT_LINKS_IN;
   const store: SavedViewStore = {
     get: (profile) => profiles[profile],
     setTabs: (profile, tabs: readonly SavedTab[]) => {
@@ -71,6 +74,10 @@ export function memorySaved(
     archive: () => archive,
     setArchive: (next) => {
       archive = next;
+    },
+    linksIn: () => linksIn,
+    setLinksIn: (next) => {
+      linksIn = next;
     },
   };
   return { store, profiles };

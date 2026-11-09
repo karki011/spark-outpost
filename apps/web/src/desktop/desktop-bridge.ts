@@ -7,6 +7,7 @@ import type {
   BrowserDownloadAction,
   BrowserProfile,
   BrowserSearchEngine,
+  BrowserLinksIn,
   BrowserViewPlacement,
   BrowserViewSlot,
   BrowserHandToChat,
@@ -103,6 +104,10 @@ export interface DesktopBrowserView {
   onDownloads(callback: (list: unknown) => void): Unsubscribe;
   searchEngine(): Promise<unknown>;
   setSearchEngine(engine: BrowserSearchEngine): Promise<unknown>;
+  linksIn(): Promise<unknown>;
+  setLinksIn(choice: BrowserLinksIn): Promise<unknown>;
+  openTab(profile: BrowserProfile, url: string): Promise<unknown>;
+  onOpenLink(callback: (url: unknown) => void): Unsubscribe;
   onIntent(callback: (intent: unknown) => void): Unsubscribe;
   onState(callback: (state: unknown) => void): Unsubscribe;
   onSnapshot(callback: (snapshot: unknown) => void): Unsubscribe;

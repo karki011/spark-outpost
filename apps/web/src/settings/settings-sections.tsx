@@ -26,6 +26,7 @@ import { BUSY_ENTER_LABEL } from './BusyEnterSetting.tsx';
 import { BrowserSection, SIGNED_IN_SITES_LABEL, SIGN_OUT_ALL_LABEL } from './BrowserSection.tsx';
 import { CLEAR_HISTORY_LABEL } from './BrowserHistorySetting.tsx';
 import { ARCHIVE_LABEL } from './BrowserArchiveSetting.tsx';
+import { LINKS_IN_LABEL } from './BrowserLinksSetting.tsx';
 import { SEARCH_ENGINE_LABEL } from './BrowserSearchSetting.tsx';
 import { ChatsSection } from './ChatsSection.tsx';
 import { REPOS_FOLDERS_LABEL } from './ReposFoldersSetting.tsx';
@@ -254,6 +255,7 @@ export const SETTINGS_SECTIONS = [
     label: 'Browser pane',
     icon: icons.BROWSER_ICON,
     rows: () => [
+      LINKS_IN_LABEL,
       SIGNED_IN_SITES_LABEL,
       SIGN_OUT_ALL_LABEL,
       SEARCH_ENGINE_LABEL,

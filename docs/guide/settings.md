@@ -53,7 +53,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 
 ### Code Mode
 
-Agents can combine supported reads locally, beside direct tools. Off means direct tools only from the next turn; pending combined reads stop. Terminal sessions are unchanged. An installation override can disable it.
+Agents combine supported reads locally beside direct tools. Off: direct tools only from the next turn; pending combined reads stop. Terminal sessions don't change. An installation override can disable it.
 
 ### Record Terminal sessions
 
@@ -86,7 +86,7 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 
 **Mac control** (Mac app): **Let agents control other Mac apps** and Accessibility permission ([Mac control](mac-control.md)).
 
-**Browser pane** (Mac app): signed-in sites, **Sign out of everything**, **Search engine**, **Archive tabs not shown for**, **Clear browser history**.
+**Browser pane** (Mac app): **Open links in**, signed-in sites, **Sign out of everything**, **Search engine**, **Archive tabs not shown for**, **Clear browser history**.
 
 **Notifications**:
 

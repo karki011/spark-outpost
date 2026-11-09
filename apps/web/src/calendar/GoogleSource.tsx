@@ -10,6 +10,7 @@ import { CalendarRows, RowsHeader, type ChangeChoice } from './CalendarAccounts.
 import { ConnectedPill, EDIT_HINT } from './MacSource.tsx';
 import { SourceCard } from './SourceCard.tsx';
 import type { GoogleCalendar } from './use-google-calendar.ts';
+import { outsideTarget } from '../browser/outside-link.ts';
 
 export const GOOGLE_CALENDAR = 'Google Calendar';
 export const SIGN_IN_WITH_GOOGLE = 'Sign in with Google';
@@ -114,7 +115,7 @@ export function GoogleSignInStatus({ google }: { google: GoogleCalendar }) {
               <a
                 className="btn line sm"
                 href={google.flow.authorizeUrl}
-                target="_blank"
+                target={outsideTarget()}
                 rel="noreferrer"
               >
                 Open Google again

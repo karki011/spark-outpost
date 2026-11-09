@@ -1,4 +1,7 @@
-import { Menu, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
+import { Menu, clipboard, type BrowserWindow, type MenuItemConstructorOptions } from 'electron';
+import { targetsApi } from './api-token.ts';
+import type { LinkIntent } from './link-target.ts';
+import { otherLinkTarget } from './link-opening.ts';
 
 const MAX_SUGGESTIONS = 5;
 
@@ -30,7 +33,41 @@ function spellingItems(context: EditingContext, spelling: SpellingActions) {
   ] satisfies MenuItemConstructorOptions[];
 }
 
+export interface LinkMenu {
+  other: 'spark' | 'browser' | null;
+  openOther: () => void;
+  copy: () => void;
+}
+
+const OTHER_LABEL = { spark: 'Open in Spark', browser: 'Open in Default Browser' } as const;
+const OUTSIDE_LINK = /^(https?:|mailto:)/i;
+
+function linkItems(link: LinkMenu | null): MenuItemConstructorOptions[] {
+  if (!link) return [];
+  const other: MenuItemConstructorOptions[] = link.other
+    ? [{ label: OTHER_LABEL[link.other], click: link.openOther }]
+    : [];
+  return [...other, { label: 'Copy Link', click: link.copy }];
+}
+
+function withLink(
+  link: LinkMenu | null,
+  items: MenuItemConstructorOptions[],
+): MenuItemConstructorOptions[] {
+  const forLink = linkItems(link);
+  if (forLink.length === 0 || items.length === 0) return [...forLink, ...items];
+  return [...forLink, { type: 'separator' }, ...items];
+}
+
 export function contextMenuTemplate(
+  context: EditingContext,
+  spelling: SpellingActions,
+  link: LinkMenu | null = null,
+): MenuItemConstructorOptions[] {
+  return withLink(link, editingItems(context, spelling));
+}
+
+function editingItems(
   context: EditingContext,
   spelling: SpellingActions,
 ): MenuItemConstructorOptions[] {
@@ -49,13 +86,35 @@ export function contextMenuTemplate(
   return [];
 }
 
-export function attachContextMenu(window: BrowserWindow): void {
+export type OpenLink = (url: string, origin: string, intent: LinkIntent) => void;
+
+function pageOrigin(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+
+function linkMenu(url: string, page: string, openLink: OpenLink): LinkMenu | null {
+  const origin = pageOrigin(page);
+  if (!origin || !OUTSIDE_LINK.test(url) || targetsApi(url, origin)) return null;
+  return {
+    other: otherLinkTarget(url, origin),
+    openOther: () => openLink(url, origin, 'other'),
+    copy: () => clipboard.writeText(url),
+  };
+}
+
+export function attachContextMenu(window: BrowserWindow, openLink: OpenLink): void {
   const contents = window.webContents;
   contents.on('context-menu', (_event, params) => {
-    const template = contextMenuTemplate(params, {
+    const link = params.linkURL ? linkMenu(params.linkURL, contents.getURL(), openLink) : null;
+    const spelling: SpellingActions = {
       replace: (word) => contents.replaceMisspelling(word),
       learn: (word) => contents.session.addWordToSpellCheckerDictionary(word),
-    });
+    };
+    const template = contextMenuTemplate(params, spelling, link);
     if (template.length === 0) return;
     Menu.buildFromTemplate(template).popup({ window });
   });

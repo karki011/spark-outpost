@@ -22,6 +22,7 @@ import { settingsFile } from './companion-settings.ts';
 import { startCompanionHost, type CompanionHost } from './desktop-companion.ts';
 import { detectGit, GIT_MISSING } from './git.ts';
 import { appLayout } from './layout.ts';
+import { focusingLinks, setLinkOpening } from './link-opening.ts';
 import { freePort, LOOPBACK, portIsFree } from './ports.ts';
 import { DUMP_TOOL_DIRS } from './data-backup.ts';
 import { guardDownloads } from './downloads.ts';
@@ -323,6 +324,7 @@ async function launch(): Promise<void> {
     { helperPath: layout.calendarBin, seedPath: layout.calendarSeedBin, log: log('calendar') },
   );
   browser = browserHost;
+  setLinkOpening(focusingLinks(browserHost.links, () => spark?.focus()));
   let apiReady = false;
   supervise(
     'Spark Outpost API',

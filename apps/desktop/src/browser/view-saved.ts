@@ -9,12 +9,14 @@ import {
   BROWSER_URL_MAX,
   BROWSER_VIEW_TABS_MAX,
   DEFAULT_BROWSER_ARCHIVE,
+  DEFAULT_LINKS_IN,
   DEFAULT_SEARCH_ENGINE,
   browserArchiveSettingSchema,
   browserArchivedTabSchema,
   SPLIT_RATIO_MAX,
   SPLIT_RATIO_MIN,
   browserFavoriteSchema,
+  browserLinksInSchema,
   browserOrigin,
   browserSearchEngineSchema,
   browserZoomSchema,
@@ -23,6 +25,7 @@ import {
   classifyBrowserUrl,
   type BrowserArchiveSetting,
   type BrowserFavorite,
+  type BrowserLinksIn,
   type BrowserProfile,
   type BrowserSearchEngine,
   type BrowserSpace,
@@ -87,6 +90,7 @@ const savedViewSchema = z.object({
   archive: browserArchiveSettingSchema
     .catch(DEFAULT_BROWSER_ARCHIVE)
     .default(DEFAULT_BROWSER_ARCHIVE),
+  linksIn: browserLinksInSchema.catch(DEFAULT_LINKS_IN).default(DEFAULT_LINKS_IN),
 });
 export type SavedView = z.infer<typeof savedViewSchema>;
 
@@ -113,6 +117,7 @@ export function emptySavedView(): SavedView {
     profiles: { personal: EMPTY_PROFILE, work: EMPTY_PROFILE },
     searchEngine: DEFAULT_SEARCH_ENGINE,
     archive: DEFAULT_BROWSER_ARCHIVE,
+    linksIn: DEFAULT_LINKS_IN,
   };
 }
 
@@ -167,6 +172,7 @@ export function parseSavedView(text: string): SavedView {
       },
       searchEngine: parsed.data.searchEngine,
       archive: parsed.data.archive,
+      linksIn: parsed.data.linksIn,
     };
   } catch {
     return emptySavedView();
@@ -190,6 +196,8 @@ export interface SavedViewStore {
   clearZooms(profile: BrowserProfile): void;
   archive(): BrowserArchiveSetting;
   setArchive(setting: BrowserArchiveSetting): void;
+  linksIn(): BrowserLinksIn;
+  setLinksIn(choice: BrowserLinksIn): void;
 }
 
 export async function loadSavedView(
@@ -237,6 +245,11 @@ export async function loadSavedView(
     archive: () => saved.archive,
     setArchive: (setting) => {
       saved = { ...saved, archive: setting };
+      save();
+    },
+    linksIn: () => saved.linksIn,
+    setLinksIn: (choice) => {
+      saved = { ...saved, linksIn: choice };
       save();
     },
   };

@@ -69,7 +69,7 @@ The artifact origin puts one script before the page (after a leading doctype, `a
 
 - refuses it unless it comes from an artifact frame, within 1 second of a real mouse-up (`before-mouse-event`) or Enter or Space (`before-input-event`) in that window, with no other link question open; one click allows one question;
 - reads only `http(s)` addresses without a user name or password, shown as the parsed address (punycode for other scripts);
-- shows a dialog naming the address, **Open in Browser** or **Cancel** (the default), and opens it with the external-link path (`openExternal`) only on **Open in Browser**.
+- shows a dialog naming the address, **Open in Spark** or **Open in Browser** (by **Open links in**) or **Cancel** (the default), and only then opens it through the shell's `openLink`, so it follows **Open links in** ([BROWSER.md](BROWSER.md#the-shells-chokepoint)); an address on the API origin still goes to the external-link path, never a viewer window with the launch token.
 
 A page script cannot open anything on its own: popups are blocked by the sandbox, a direct navigation is blocked by `frame-src`, and an `/open` request without a real click in the last second is dropped. A script that runs at the moment the user clicks somewhere in the window can still ask, but only the dialog, with the address in it, opens a link. The origin itself answers `/open` with 404, so outside the Mac app (a browser in development) a link opens nothing. On paired devices the `page` route gets no script: links there behave as the device's browser treats a sandboxed frame.
 

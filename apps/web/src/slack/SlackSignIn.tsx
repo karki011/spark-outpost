@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SlackSignInFlow } from '@spark-outpost/contracts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { slackApi, slackKeys } from './slack-api.ts';
+import { openOutside } from '../browser/outside-link.ts';
 
 const POLL_MS = 2000;
 
@@ -84,7 +85,7 @@ export function SlackSignInPanel({
     onSuccess: (next) => {
       setFlow(next);
       setConfirming(false);
-      if (next.authorizeUrl) window.open(next.authorizeUrl, '_blank', 'noopener,noreferrer');
+      if (next.authorizeUrl) openOutside(next.authorizeUrl);
     },
   });
   const cancel = useMutation({ mutationFn: slackApi.cancelSignIn, onSuccess: setFlow });
