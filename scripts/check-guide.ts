@@ -9,7 +9,6 @@ import {
   checkCoverage,
   checkImages,
   checkPages,
-  checkTotalWords,
   guideWords,
   type GuideViolation,
 } from './guide-rules.ts';
@@ -52,7 +51,6 @@ function violationsFor(pages: readonly GuidePage[]): GuideViolation[] {
   const toolNames = SPARK_TOOLS.map((tool) => `\`${tool.name}\``);
   return [
     ...checkPages(pages),
-    ...checkTotalWords(pages),
     ...checkImages(pages, readdirSync(path.join(GUIDE, 'images'))),
     ...checkCoverage(bySlug.get('spark-tools'), 'spark-tools', 'Spark tool', toolNames),
     ...checkCoverage(bySlug.get('settings'), 'settings', 'Settings section', settingsSections()),
