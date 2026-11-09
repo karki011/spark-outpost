@@ -40,6 +40,23 @@ describe('the environment an agent session starts with', () => {
     expect(withLoginShell(own, login)).toEqual({ ...own, EDITOR: 'vim' });
   });
 
+  it('never takes from the login shell what changes where Spark, git or gh look', () => {
+    const login = {
+      CLAUDE_CONFIG_DIR: '/Users/me/.claude-work',
+      CODEX_HOME: '/Users/me/.codex-work',
+      NODE_OPTIONS: '--require /tmp/hook.js',
+      GIT_DIR: '/elsewhere/.git',
+      GIT_WORK_TREE: '/elsewhere',
+      GIT_CONFIG_COUNT: '1',
+      GIT_CONFIG_KEY_0: 'core.hooksPath',
+      GIT_CONFIG_VALUE_0: '/tmp/hooks',
+      GH_REPO: 'someone/else',
+      GH_HOST: 'github.example.test',
+      GIT_SSH_COMMAND: 'ssh -i ~/.ssh/work',
+    };
+    expect(withLoginShell(own, login)).toEqual({ ...own, GIT_SSH_COMMAND: 'ssh -i ~/.ssh/work' });
+  });
+
   it('starts with the app environment when the login shell cannot be read', async () => {
     expect(withLoginShell(own, null)).toBe(own);
     const failing = () => Promise.reject(new Error('shell timed out'));

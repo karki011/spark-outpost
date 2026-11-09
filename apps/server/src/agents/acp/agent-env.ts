@@ -39,11 +39,24 @@ export function withoutPushing(env: Record<string, string>): Record<string, stri
   };
 }
 
+const NOT_FROM_LOGIN = new Set([
+  ...['CLAUDE_CONFIG_DIR', 'CODEX_HOME', 'NODE_OPTIONS', 'GH_HOST', 'GH_REPO'],
+  ...['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_OBJECT_DIRECTORY'],
+  ...['GIT_CONFIG_COUNT', 'GIT_CONFIG_PARAMETERS', 'GIT_CONFIG_GLOBAL', 'GIT_CONFIG_SYSTEM'],
+]);
+const GIT_CONFIG_ENTRY = /^GIT_CONFIG_(?:KEY|VALUE)_\d+$/;
+
+function fromLogin(name: string): boolean {
+  return !NOT_FROM_LOGIN.has(name) && !GIT_CONFIG_ENTRY.test(name);
+}
+
 export function withLoginShell(
   own: Record<string, string>,
   login: Record<string, string> | null,
 ): Record<string, string> {
-  return login ? { ...childEnvironment(login), ...own } : own;
+  if (!login) return own;
+  const filled = Object.entries(childEnvironment(login)).filter(([name]) => fromLogin(name));
+  return { ...Object.fromEntries(filled), ...own };
 }
 
 export async function processEnvironment(
