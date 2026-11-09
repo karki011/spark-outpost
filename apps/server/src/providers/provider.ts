@@ -113,6 +113,7 @@ export interface ProviderTurn {
   approvals?: PermissionGate;
   questions?: QuestionGate;
   askTitle?: boolean;
+  sessionTitle?: string;
   session?: SessionTarget;
   preamble?: string;
   turnPreamble?: string;
