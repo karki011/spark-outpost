@@ -39,7 +39,7 @@ In replies, audit logs, tool results, errors, Jev and [recorded Terminal session
 - Anything in `.sparkignore`. [Secret files](protected-paths.md#secret-files) are readable, so your provider sees them. Ship commits neither.
 - Through [Spark's own tools](spark-tools.md#what-the-tools-never-return): file contents, terminal output, secrets, keys.
 - [Browser pane](use-the-browser.md): password and card fields, saved sign-ins. Cookies stay on this Mac.
-- Secret-named shell variables (`NPM_TOKEN`); agents get the rest.
+- Secret-named shell variables (`NPM_TOKEN`); agents get others.
 
 ## When you reset
 

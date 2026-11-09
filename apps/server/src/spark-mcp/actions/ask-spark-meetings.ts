@@ -1,4 +1,5 @@
 import {
+  joinLeadMs,
   joinOpen,
   spanOf,
   type AskSparkAction,
@@ -43,12 +44,14 @@ const MEETING_DONE: Record<MeetingOp, string> = {
 export interface MeetingTimes {
   now: number;
   alertLeadMs: number;
+  joinLeadMs: number;
 }
 
 function fits(op: MeetingOp, event: CalendarEvent, times: MeetingTimes): boolean {
   const span = spanOf(event);
   if (event.dismissed && op !== 'join_meeting') return false;
-  if (op === 'join_meeting') return event.link !== null && joinOpen(span, times.now);
+  if (op === 'join_meeting')
+    return event.link !== null && joinOpen(span, times.now, times.joinLeadMs);
   if (op === 'snooze_meeting') {
     return times.now >= span.start - times.alertLeadMs && times.now < span.end;
   }
@@ -94,7 +97,11 @@ async function meetingTimes(context: SparkToolContext) {
   const sorted = state.events.toSorted((a, b) => spanOf(a).start - spanOf(b).start);
   return {
     upcoming: upcomingMeetings(sorted, at),
-    times: { now: at, alertLeadMs: state.settings.alertLead * 60_000 },
+    times: {
+      now: at,
+      alertLeadMs: state.settings.alertLead * 60_000,
+      joinLeadMs: joinLeadMs(state.settings),
+    },
   };
 }
 

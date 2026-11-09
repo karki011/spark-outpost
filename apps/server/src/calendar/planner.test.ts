@@ -36,6 +36,7 @@ function event(title: string, from: number, to: number, extra: Partial<CalendarE
     remind: false,
     hold: false,
     dismissed: false,
+    joinAtStart: false,
     ...extra,
   } satisfies CalendarEvent;
 }
@@ -67,6 +68,20 @@ describe('planNudges', () => {
       minutes: 0,
     });
     expect(planNudges([event('Standup', -5, 25)], NO_CHATS, settings(), NOW).nudge).toBeNull();
+  });
+
+  it('stops nudging a meeting shorter than 5 min when it ends', () => {
+    expect(planNudges([event('Quick', -2, 3)], NO_CHATS, settings(), NOW).nudge).toMatchObject({
+      title: 'Quick',
+    });
+    expect(planNudges([event('Quick', -3, 0)], NO_CHATS, settings(), NOW).nudge).toBeNull();
+  });
+
+  it('still nudges a meeting set to join at start before it starts', () => {
+    const asked = { joinAtStart: true };
+    expect(
+      planNudges([event('Standup', 3, 25, asked)], NO_CHATS, settings(), NOW).nudge,
+    ).toMatchObject({ kind: 'before', title: 'Standup' });
   });
 
   it('follows the before-a-meeting setting', () => {

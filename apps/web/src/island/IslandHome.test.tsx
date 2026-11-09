@@ -37,9 +37,12 @@ function calendar(overrides: Partial<IslandCalendar> = {}): IslandCalendar {
     onCapture: vi.fn(),
     onDismiss: vi.fn(),
     onSnooze: vi.fn(),
+    onJoinAtStart: vi.fn(),
+    onCancelJoinAtStart: vi.fn(),
     onSnoozeAlert: vi.fn(),
     onDismissNudge: vi.fn(),
     countdown: null,
+    joinLeadMs: 10 * 60_000,
     onCancelJoin: vi.fn(),
     onJoinNow: vi.fn(),
     onJoined: vi.fn(),
@@ -220,6 +223,19 @@ describe('the island home', () => {
     expect(cal.onDismissNudge).toHaveBeenCalledWith(standup);
     fireEvent.click(screen.getByRole('button', { name: 'Show ›' }));
     expect(screen.getByRole('article', { name: 'orders-web-app needs you' })).toBeTruthy();
+  });
+
+  it("shows when a meeting set to join at start opens, with Don't open in its place", () => {
+    const marked = { ...standup, joinAtStart: true };
+    const cal = calendar({ at: at(10, 7, 30), upcoming: [marked] });
+    show(home(), cal);
+    const meeting = screen.getByRole('article', { name: 'Meeting: Standup' });
+    expect(meeting.textContent).toMatch(/Opens at 10:08/);
+    expect(screen.queryByRole('button', { name: /^Join at start/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Don't open Standup at 10:08/ }));
+    expect(cal.onCancelJoinAtStart).toHaveBeenCalledWith(marked);
+    expect(screen.getByRole('button', { name: 'Snooze 1 min' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toBeTruthy();
   });
 
   it('says nothing needs you and lists the meetings left today when all is clear', () => {

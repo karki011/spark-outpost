@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { joinLink, joinOpen } from './calendar-join.ts';
+import { joinLeadMs, joinLink, joinOpen } from './calendar-join.ts';
 
 const fromUrl = (url: string) => joinLink({ url, location: null, noteLinks: [] });
 
@@ -90,10 +90,16 @@ describe('joinOpen', () => {
   const start = Date.parse('2026-10-16T09:30:00Z');
   const end = start + 15 * 60_000;
 
-  it('opens five minutes before the start and closes at the end', () => {
-    expect(joinOpen({ start, end }, start - 10 * 60_000 - 1)).toBe(false);
-    expect(joinOpen({ start, end }, start - 10 * 60_000)).toBe(true);
-    expect(joinOpen({ start, end }, end - 1)).toBe(true);
-    expect(joinOpen({ start, end }, end)).toBe(false);
+  it.each([10, 5, 2, 0])('opens %i min before the start and closes at the end', (minutes) => {
+    const lead = minutes * 60_000;
+    expect(joinOpen({ start, end }, start - lead - 1, lead)).toBe(false);
+    expect(joinOpen({ start, end }, start - lead, lead)).toBe(true);
+    expect(joinOpen({ start, end }, end - 1, lead)).toBe(true);
+    expect(joinOpen({ start, end }, end, lead)).toBe(false);
+  });
+
+  it('reads the lead from the Join opens setting', () => {
+    expect(joinLeadMs({ joinLead: 10 })).toBe(600_000);
+    expect(joinLeadMs({ joinLead: 0 })).toBe(0);
   });
 });

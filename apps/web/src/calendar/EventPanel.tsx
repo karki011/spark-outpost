@@ -17,6 +17,7 @@ import { dateOf, span } from './calendar-format.ts';
 import { EventInfo } from './EventDetails.tsx';
 import { JoinButton } from './JoinButton.tsx';
 import { openJoin } from './today-model.ts';
+import { useJoinLeadMs } from './use-calendar.ts';
 
 interface EventPanelProps {
   id: string;
@@ -52,9 +53,10 @@ function Act(props: {
 }
 
 function JoinRow({ event, now }: { event: CalendarEvent; now: number }) {
+  const leadMs = useJoinLeadMs();
   const link = event.link;
   if (!link) return null;
-  const open = joinOpen(spanOf(event), now);
+  const open = joinOpen(spanOf(event), now, leadMs);
   const host = link.unwrappedFrom
     ? `${link.host}, unwrapped from ${link.unwrappedFrom}`
     : link.host;
