@@ -58,3 +58,7 @@ Merged or declined pull requests Spark did not open are listed but never move a 
 "Mine" means Spark opened it, or its GitHub author is one of the connected GitHub logins. A pull request that is not mine can place the ticket in In review / PR open, but never raises `pr-approved`, `pr-changes`, the failing-checks notice, or `review-slow` (unless the ticket's own status is in review). A pull request whose status came from the ticket system is never mine.
 
 For a ticket not in review in the ticket system, `review-slow` counts from the later of the status change and the pull request's opening.
+
+## Moving the ticket when a pull request opens
+
+A pull request a chat opened (publish step, Ship, the agent's `gh pr create` or `spark_pull_request`) moves the chat's tickets to their review status once per pull request; see `PR_FOLLOW_UP.md#when-a-pull-request-opens`. A ticket counts when the chat was started from it or the user linked it, or when its key is in the branch or pull request title and it is a Jira or Linear ticket in a connected source (cached, or found with `getSummary` when the key is written in capitals). Key matching here is separate from the inbox's `matched` origin above and never links the ticket to the task, so merging moves only the task's tickets, as before. The source's move-on-open switch, the move rules and ServiceNow's refusal hold.

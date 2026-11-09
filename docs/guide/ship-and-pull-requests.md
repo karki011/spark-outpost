@@ -36,6 +36,8 @@ The push uses your shell's logins; tokens never reach the agent. Without `gh`, t
 
 Chat and terminal pull requests appear above the composer and under **Links**, with checks, reviews and comments. **Refresh** re-reads GitHub.
 
+**PR is clean · ready to merge** under the PR row means checks pass and no review thread or follow-up item is open. You merge.
+
 ## Ready for review or draft
 
 In **Settings → Pull requests**, set **Open pull requests as** to **Ready for review** (default) or **Draft**. Or ask for a draft in your message.

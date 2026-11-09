@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { PrWatch } from '@spark-outpost/contracts';
-import { ChevronIcon, XIcon } from '../../ui/icons.tsx';
+import { CheckIcon, ChevronIcon, XIcon } from '../../ui/icons.tsx';
 import { LineTotals } from '../changes/FileChangeList.tsx';
 import { PullRequestIcon } from '../rail/RailIcons.tsx';
 import { prWatchesQuery } from './pr-follow-up-api.ts';
@@ -29,6 +29,8 @@ import {
   pullState,
   repoLabels,
 } from './pull-request-model.ts';
+import { CLEAN_LINE } from './post-open-model.ts';
+import { PostOpenLines } from './PullOpenedLines.tsx';
 import { PullPanel } from './PullPanel.tsx';
 import { RefreshPullButton } from './RefreshPullButton.tsx';
 import { useDismissedPulls } from './use-dismissed-pulls.ts';
@@ -45,6 +47,7 @@ interface ExpandingProps {
   panel: ReactNode;
   trailing?: ReactNode;
   note?: string | null;
+  status?: string | null;
 }
 
 function Expanding({
@@ -55,6 +58,7 @@ function Expanding({
   panel,
   trailing,
   note = null,
+  status = null,
 }: ExpandingProps) {
   const [open, setOpen] = useState(false);
   const toggle = useRef<HTMLButtonElement>(null);
@@ -114,6 +118,12 @@ function Expanding({
           {note}
         </p>
       )}
+      {status && (
+        <p className="prc-clean">
+          <CheckIcon />
+          {status}
+        </p>
+      )}
       {open && (
         <div id={panelId} className="prc-panel">
           {panel}
@@ -128,11 +138,29 @@ interface PrRowProps {
   repo: string;
   nested?: boolean;
   context: WatchContext;
+  dismissed: ReadonlySet<string>;
   onDismiss: (key: string) => void;
   onOpenLinks: (() => void) | null;
 }
 
-function PrRow({ watch, repo, nested = false, context, onDismiss, onOpenLinks }: PrRowProps) {
+function PrRow(props: PrRowProps) {
+  const { watch, context, dismissed, onDismiss } = props;
+  return (
+    <>
+      <PrRowItem {...props} />
+      {watch.opened.runId === null && (
+        <PostOpenLines
+          watch={watch}
+          mode={context.mode}
+          dismissed={dismissed}
+          onDismiss={onDismiss}
+        />
+      )}
+    </>
+  );
+}
+
+function PrRowItem({ watch, repo, nested = false, context, onDismiss, onOpenLinks }: PrRowProps) {
   const state = pullState(watch);
   const lines = lineChange(watch);
   const refresh = usePullRefresh(watch);
@@ -176,6 +204,7 @@ function PrRow({ watch, repo, nested = false, context, onDismiss, onOpenLinks }:
         </>
       }
       note={refresh.problem}
+      status={watch.clean ? CLEAN_LINE : null}
       trailing={
         <>
           <RefreshPullButton number={watch.number} refresh={refresh} />
@@ -204,7 +233,8 @@ function PrRow({ watch, repo, nested = false, context, onDismiss, onOpenLinks }:
 }
 
 function announced(watch: PrWatch, mode: WatchContext['mode']): string {
-  return [rowSummary(watch), watchLabel(watch, mode)].filter(Boolean).join(', ');
+  const clean = watch.clean ? CLEAN_LINE : '';
+  return [rowSummary(watch), watchLabel(watch, mode), clean].filter(Boolean).join(', ');
 }
 
 interface PrCardProps {
@@ -221,6 +251,7 @@ export function PrCard({ conversationId, onOpenLinks }: PrCardProps) {
     <PrRows
       conversationId={conversationId}
       shown={shown}
+      dismissed={dismissed}
       onDismiss={dismiss}
       onOpenLinks={onOpenLinks}
     />
@@ -229,10 +260,11 @@ export function PrCard({ conversationId, onOpenLinks }: PrCardProps) {
 
 interface PrRowsProps extends PrCardProps {
   shown: readonly PrWatch[];
+  dismissed: ReadonlySet<string>;
   onDismiss: (key: string) => void;
 }
 
-function PrRows({ conversationId, shown, onDismiss, onOpenLinks }: PrRowsProps) {
+function PrRows({ conversationId, shown, dismissed, onDismiss, onOpenLinks }: PrRowsProps) {
   const context = useWatchContext(conversationId);
   const grouped = shown.length > GROUP_OVER;
   const count = `${shown.length} pull requests`;
@@ -265,6 +297,7 @@ function PrRows({ conversationId, shown, onDismiss, onOpenLinks }: PrRowsProps) 
               repo={repos.get(watch.repo) ?? watch.repo}
               nested
               context={context}
+              dismissed={dismissed}
               onDismiss={onDismiss}
               onOpenLinks={onOpenLinks}
             />
@@ -277,6 +310,7 @@ function PrRows({ conversationId, shown, onDismiss, onOpenLinks }: PrRowsProps) 
             watch={watch}
             repo={repos.get(watch.repo) ?? watch.repo}
             context={context}
+            dismissed={dismissed}
             onDismiss={onDismiss}
             onOpenLinks={onOpenLinks}
           />

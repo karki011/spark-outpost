@@ -96,6 +96,7 @@ export const SPEC_GROUPS = {
     'github-app',
     'pr-card',
     'pr-follow-up',
+    'pr-post-open',
     'pr-tracking',
     'pr-watching',
     'ship',

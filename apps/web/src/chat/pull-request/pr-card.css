@@ -93,6 +93,20 @@
   color: var(--danger);
 }
 
+.prc-clean {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0 10px 6px;
+  font-size: 12px;
+  color: var(--success);
+}
+
+.prc-clean svg {
+  flex-shrink: 0;
+}
+
 .prc-facts {
   display: flex;
   flex: 0 1 auto;

@@ -5,7 +5,7 @@ import { addTaskLink } from '../persistence/tasks.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
 import type { Published } from '../ship/published.ts';
 import { repoSlug } from '../ship/remote.ts';
-import { syncTicketsAfterShip } from '../tickets/ship-sync.ts';
+import { syncRecordedPull } from '../tickets/ship-sync.ts';
 
 export interface PublishedChat {
   workspaceId: string;
@@ -45,5 +45,10 @@ export async function recordPullRequest(
     prUrl: pull.url,
     prNumber: pull.number,
   });
-  await syncTicketsAfterShip(deps, taskId, { url: pull.url, title });
+  void syncRecordedPull(deps, {
+    host: repo.host,
+    owner: repo.owner,
+    repo: repo.name,
+    number: pull.number,
+  });
 }

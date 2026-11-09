@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                                                   | What to do                                                                                  |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Ticket moves by key, follow-up offer, clean PR line                            | [Ship](ship-and-pull-requests.md#when-the-agent-publishes).                                 |
 | Links open in Spark                                                            | [Settings](settings.md#mac).                                                                |
 | Join at start, **Join opens**, Dismiss                                         | [See your day](calendar.md#use-it).                                                         |
 | Dev servers run untimed                                                        | Nothing.                                                                                    |
