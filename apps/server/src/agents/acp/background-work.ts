@@ -77,7 +77,7 @@ export function createBackgroundWork(now: () => number = Date.now): BackgroundWo
           names.set(firstGenerationId(mark.id), mark.name);
       }
       if (mark.event === 'ended') agents.delete(mark.id);
-      if (mark.event === 'task') {
+      if (mark.event === 'task' && !mark.turn) {
         if (mark.ended) tasks.delete(mark.id);
         else tasks.add(mark.id);
         if (mark.name) names.set(mark.id, mark.name);

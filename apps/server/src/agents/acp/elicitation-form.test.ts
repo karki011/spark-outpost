@@ -14,7 +14,7 @@ import { agentForm, SECRET_REFUSAL } from './elicitation-form.ts';
 type Questions = (typeof storeQuestion)[];
 
 function claudeRequest(questions: Questions): acp.CreateElicitationRequest {
-  return askUserQuestionsToCreateRequest(questions, 'session-1', 'toolu_1');
+  return askUserQuestionsToCreateRequest(questions, 'session-1', 'toolu_1', true);
 }
 
 function claudeAnswers(questions: Questions, content: Record<string, unknown>) {
@@ -66,7 +66,7 @@ const codexRequest: acp.CreateElicitationRequest = {
   _meta: { codex: { autoResolutionMs: null } },
 };
 
-describe('a Claude AskUserQuestion elicitation (claude-agent-acp 0.81.2)', () => {
+describe('a Claude AskUserQuestion elicitation (claude-agent-acp 0.101.0, to an AIR client)', () => {
   it('becomes one card question per question, with the Other box folded in', () => {
     const form = agentForm(claudeRequest([storeQuestion, checksQuestion]));
     expect(form.message).toBe('Please answer the following questions.');

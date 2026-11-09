@@ -120,7 +120,10 @@ const REASON_PREFIX = /^Reason:\s*/i;
 const AGENT_REASON_MAX = 500;
 
 function agentReasonOf(params: acp.RequestPermissionRequest): string | null {
-  const description = objectFields(objectFields(params._meta).permission).description;
+  const meta = objectFields(params._meta);
+  const air = objectFields(objectFields(meta.jetbrains).air);
+  const permission = objectFields(air.permission ?? meta.permission);
+  const description = permission.description;
   if (typeof description !== 'string') return null;
   const reason = description.replace(REASON_PREFIX, '').trim();
   return reason ? reason.slice(0, AGENT_REASON_MAX) : null;

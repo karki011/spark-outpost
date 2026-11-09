@@ -74,7 +74,7 @@ async function steps(): Promise<ProviderOutput[]> {
 }
 
 describe.skipIf(spawnSync('claude', ['--version']).status !== 0)(
-  'ACP tool names from claude-agent-acp 0.81.2',
+  'ACP tool names from claude-agent-acp 0.101.0',
   () => {
     it('names each step with the Claude tool it ran, on start and finish', async () => {
       api.useTool({ name: 'Read', input: { file_path: join(repo, 'cart.js') } });

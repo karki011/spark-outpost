@@ -45,6 +45,18 @@ describe('a wakeup the agent scheduled', () => {
     expect(work.count().wakesAt).toBe(1_067_000);
   });
 
+  it('reads the time from the result content when the adapter sends no raw output', () => {
+    const work = sleeper({ now: 1_000_000 });
+    work.see({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'wake-1',
+      status: 'completed',
+      content: [{ type: 'content', content: { type: 'text', text: SCHEDULED } }],
+      _meta: { claudeCode: { toolName: 'ScheduleWakeup', toolResponse: { status: 'ok' } } },
+    });
+    expect(work.count().wakesAt).toBe(1_067_000);
+  });
+
   it('ends when the agent stops it or the wakeup is not scheduled', () => {
     const at = { now: WAKES_AT - 60_000 };
     const stopped = sleeper(at);
