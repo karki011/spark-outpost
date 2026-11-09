@@ -10,6 +10,7 @@ import {
 import type { AgentDefinition, AgentLaunch } from './agents.ts';
 import { AgentExitedError, type AgentProcess } from './agent-process.ts';
 import type { CliLocator } from './agent-cli.ts';
+import type { LoginShellEnv } from './agent-env.ts';
 import { codexConfigFailed } from './codex-launch.ts';
 import { openSparkTools, type SparkToolsAccess } from './spark-tools.ts';
 import { Channel } from './channel.ts';
@@ -31,6 +32,7 @@ export interface AcpProviderOptions {
   launch?: AgentLaunch;
   locateCli?: CliLocator;
   env?: Record<string, string>;
+  loginEnv?: LoginShellEnv;
   secrets?: Pick<SecretStore, 'get'>;
   cancelGraceMs?: number;
   sparkTools?: SparkToolsAccess;
