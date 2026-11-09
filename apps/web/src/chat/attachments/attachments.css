@@ -343,6 +343,24 @@
   white-space: nowrap;
   color: var(--muted);
 }
+.lightbox-steps {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.lightbox-steps .icon-btn[aria-disabled='true'] {
+  opacity: 0.35;
+  cursor: default;
+  background: none;
+}
+.lightbox-place {
+  min-width: 52px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
 .lightbox-size {
   flex: none;
   padding: 3px 8px;

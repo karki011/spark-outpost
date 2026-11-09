@@ -64,7 +64,7 @@ function FileText({ file }: { file: ChatFile }) {
 }
 
 export function ChatFiles({ files }: { files: readonly ChatFile[] }) {
-  const [viewing, setViewing] = useState<ChatFile | null>(null);
+  const [viewing, setViewing] = useState<number | null>(null);
   const { remote } = useRemoteClient();
   if (files.length === 0) return null;
   if (remote) {
@@ -76,15 +76,22 @@ export function ChatFiles({ files }: { files: readonly ChatFile[] }) {
       </div>
     );
   }
+  const pictures = files.filter((file) => file.kind === 'image');
+  const images = pictures.map((file) => ({ name: file.name, src: fileUrl(file) }));
   return (
     <div className="chat-files" role="group" aria-label="Files from this turn">
       {files.map((file) => (
-        <FileChip key={file.id} file={file} onView={setViewing} />
+        <FileChip
+          key={file.id}
+          file={file}
+          onView={(picked) => setViewing(pictures.indexOf(picked))}
+        />
       ))}
-      {viewing && (
+      {viewing !== null && (
         <ImageLightbox
-          name={viewing.name}
-          src={fileUrl(viewing)}
+          {...images[viewing]!}
+          images={images}
+          index={viewing}
           onClose={() => setViewing(null)}
         />
       )}
