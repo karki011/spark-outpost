@@ -4,6 +4,16 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.4
+
+- Three new tints in **Settings → Appearance**: **Blaze**, **Acid** and **Violet**, each with a Cloud Grey light side and a Jet Black dark side. Graphite stays the default.
+- Codex modes use Codex's own names: **Approve for me** is now **Auto review**, and the new **Workspace access** mode lets Codex work in the project without asking. Like Auto review and Full access, it shows no approval cards; Spark marks its actions ran without review and flags a crossing of your Spark rules.
+- Claude runs on claude-agent-acp 0.101.0 and Codex on codex-acp 2.5.0, with the ACP SDK 2.4. Claude no longer makes model calls Spark can't show or measure: predicted next prompts and compaction of an idle chat are off.
+- Home shows a **Week recap** on Fridays from 15:00 (a setting): what you got done, what is in progress, and where someone could help, written by your default provider's middle-tier model from your chats, pull requests and tickets, with **For me** and **For my manager** voices, **Refine** to ask for changes, and Copy. **This week so far** writes one early. Nothing is sent anywhere.
+- Ask Spark's **Fast (recommended)** model answers at medium effort instead of low (low where a provider offers low but no medium), unless you pick an effort in **Settings → Spark assistant**.
+- The morning brief (on your default provider) and plugin reviews (on Claude) run a middle-tier model at medium effort instead of low (low where a provider has no medium), so they reason a little more before writing. A brief still costs about $0.01.
+- Home shows today's meetings once, in **Upcoming**. The brief's calendar block keeps today's free time (the day shape, the longest free block and any focus block) and says how many meetings today has, with **See all in Today**.
+
 ## 0.1.0-beta.3
 
 - Ask a chat about a repo it doesn't have, like "the identity repo", and the agent finds it by folder or origin name among your projects and **Repos folders** (Settings → Projects; by default the folders that hold your projects), then asks on a **Link** card in every mode. Linking adds it to the chat from your next message. **Clone a repository…** starts in the first repos folder.
