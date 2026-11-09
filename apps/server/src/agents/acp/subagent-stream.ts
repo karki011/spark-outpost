@@ -36,6 +36,7 @@ const markSchema = z.discriminatedUnion('event', [
     id: z.string().min(1),
     ended: z.boolean(),
     name: z.string().optional(),
+    turn: z.boolean().optional(),
   }),
 ]);
 export type SubagentMark = z.infer<typeof markSchema>;
@@ -54,7 +55,10 @@ const stateSchema = z.object({
 const TASK_END_STATES = new Set(['completed', 'failed', 'stopped']);
 
 const taskSchema = z.object({ asyncTaskId: z.string().min(1) });
-const spawnedTaskSchema = taskSchema.extend({ name: z.string().optional() });
+const spawnedTaskSchema = taskSchema.extend({
+  name: z.string().optional(),
+  taskType: z.string().optional(),
+});
 const taskStateSchema = taskSchema.extend({ state: z.string() });
 
 const updateSchema = z.looseObject({
@@ -89,17 +93,30 @@ function control(message: UpdateMessage, sessionId: string, mark: SubagentMark):
   };
 }
 
-function taskMark(update: UpdateMessage['params']['update']): SubagentMark | null {
+function taskMark(
+  update: UpdateMessage['params']['update'],
+  turns: Set<string>,
+): SubagentMark | null {
   if (update.sessionUpdate === 'async_task_spawned') {
     const spawned = spawnedTaskSchema.safeParse(update);
     if (!spawned.success) return null;
-    const { asyncTaskId: id, name } = spawned.data;
-    return { event: 'task', id, ended: false, ...(name ? { name } : {}) };
+    const { asyncTaskId: id, name, taskType } = spawned.data;
+    const turn = taskType === 'turn';
+    if (turn) turns.add(id);
+    return {
+      event: 'task',
+      id,
+      ended: false,
+      ...(name ? { name } : {}),
+      ...(turn ? { turn } : {}),
+    };
   }
   const changed = taskStateSchema.safeParse(update);
   if (update.sessionUpdate !== 'async_task_state_update' || !changed.success) return null;
-  const ended = TASK_END_STATES.has(changed.data.state);
-  return ended ? { event: 'task', id: changed.data.asyncTaskId, ended } : null;
+  const id = changed.data.asyncTaskId;
+  if (!TASK_END_STATES.has(changed.data.state)) return null;
+  const turn = turns.delete(id);
+  return { event: 'task', id, ended: true, ...(turn ? { turn } : {}) };
 }
 
 function unmarked(update: UpdateMessage['params']['update']): UpdateMessage['params']['update'] {
@@ -111,6 +128,7 @@ function unmarked(update: UpdateMessage['params']['update']): UpdateMessage['par
 
 export function createSubagentRouter(): (message: unknown) => unknown {
   const parents = new Map<string, string>();
+  const turns = new Set<string>();
   const rootOf = (sessionId: string): string => {
     let current = sessionId;
     const seen = new Set<string>();
@@ -125,7 +143,7 @@ export function createSubagentRouter(): (message: unknown) => unknown {
     if (!parsed.success) return message;
     const { sessionId, update } = parsed.data.params;
     if (update.sessionUpdate.startsWith('async_task_')) {
-      const mark = taskMark(update);
+      const mark = taskMark(update, turns);
       return mark ? control(parsed.data, rootOf(sessionId), mark) : null;
     }
     if (update.sessionUpdate === 'subagent_spawned') {

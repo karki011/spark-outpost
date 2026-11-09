@@ -59,6 +59,24 @@ describe('background work', () => {
     expect(feed([task('t1', 'npm test'), taskEnded('t1', 'stopped')]).busy()).toBe(false);
   });
 
+  it('does not count a turn the agent started on its own as background work', () => {
+    const turn = {
+      sessionId: ROOT,
+      update: {
+        sessionUpdate: 'async_task_spawned',
+        asyncTaskId: 'autonomous-turn-1',
+        name: 'Claude is working',
+        taskType: 'turn',
+      },
+    };
+    expect(feed([turn]).busy()).toBe(false);
+    expect(feed([turn, task('t1', 'npm test'), taskEnded('autonomous-turn-1')]).count()).toEqual({
+      agents: 0,
+      tasks: 1,
+      names: ['npm test'],
+    });
+  });
+
   it('folds a resumed generation into the sub-agent it continues', () => {
     const work = feed([spawned('a', 'Schema'), ended('a'), spawned('a:generation:2', 'Schema')]);
     expect(work.count()).toEqual({ agents: 1, tasks: 0, names: ['Schema'] });
