@@ -7,6 +7,7 @@ import { childEnvironment } from '../setup/environment.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import type { AgentRuntime, SparkToolsAccess } from '../agents/acp/spark-tools.ts';
 import { cliSignedIn, type CliLocator } from '../agents/acp/agent-cli.ts';
+import type { LoginShellEnv } from '../agents/acp/agent-env.ts';
 
 const FAKE_ACP_TRIGGER = '#build';
 
@@ -64,6 +65,7 @@ export function createProviders(
   secrets?: Secrets,
   sparkTools?: SparkToolsAccess,
   locateCli?: CliLocator,
+  loginEnv?: LoginShellEnv,
 ): Map<string, Provider> {
   const fake = createFakeProvider();
   const providers = new Map<string, Provider>([[FAKE_PROVIDER_NAME, fake]]);
@@ -75,6 +77,7 @@ export function createProviders(
           definition,
           signedIn: () => cliSignedIn(definition.cli, locateCli),
           ...(locateCli ? { locateCli } : {}),
+          ...(loginEnv ? { loginEnv } : {}),
           ...(secrets ? { secrets } : {}),
           ...(sparkTools ? { sparkTools } : {}),
         }),

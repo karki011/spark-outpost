@@ -1,7 +1,9 @@
 export const UNKNOWN_HOST = '?';
 
-const LOCAL_HOST = /^(?:localhost|[\w.-]+\.localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0|::1|\[::1\])$/i;
+const LOCAL_HOST =
+  /^(?:localhost|[\w.-]+\.localhost|127(?:\.\d{1,3}){1,3}|0\.0\.0\.0|::1|\[::1\])$/i;
 const URL_WORD = /^[a-z][a-z0-9+.-]*:\/\/(?:[^@/\s]*@)?(\[[^\]\s]+\]|[^/:?#\s]*)/i;
+const URL_AUTHORITY = /^[a-z][a-z0-9+.-]*:\/\/[^/?#\s]*/i;
 const FILE_URL = /^file:\/\//i;
 const REMOTE_WORD = /^(?:[\w.+-]+@)?(\[[0-9a-f:.]+\]|[a-z0-9][\w.-]*):(?!\/\/)/i;
 const USER_AT_HOST = /^[\w.+-]+@(\[[0-9a-f:.]+\]|[a-z0-9][\w.-]*)(?::\d+)?$/i;
@@ -39,6 +41,12 @@ export function bareHost(word: string): string | null {
 
 export function unresolved(word: string): boolean {
   return UNRESOLVED.test(word);
+}
+
+export function resolvedUrlHost(word: string): string | null {
+  const authority = URL_AUTHORITY.exec(word)?.[0];
+  if (!authority || UNRESOLVED.test(authority)) return null;
+  return urlHost(word);
 }
 
 export function devNetHosts(command: string): string[] {

@@ -30,7 +30,7 @@ Drag the pane's edge, or pick a **Page width**.
 | Open any web address or project file     | Reach Spark's ports               |
 | Read a page, its logs, a screenshot      | See or fill password, card fields |
 | Click, type, press keys, scroll, go back | Navigate your tab; download files |
-| Run scripts, inspect, check speed        | Click a covered element           |
+| Run scripts, inspect, wait, check speed  | Click a covered element           |
 
 One profile serves every chat: agents are signed in where you are; **Settings** → **Browser pane** signs out. Agent tabs close with the turn unless pinned or used. **Open developer tools** (**⌥⌘I**) is yours.
 

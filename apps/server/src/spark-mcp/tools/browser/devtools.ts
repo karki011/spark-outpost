@@ -27,6 +27,7 @@ import {
 } from './context.ts';
 import { clearPage } from './read-flow.ts';
 import { pageScrub, type Scrub } from './scrub.ts';
+import { NO_WAIT_SELECTOR, WAIT_MAX_SECONDS, waitForSelector } from './devtools-wait.ts';
 
 const TOOL = 'spark_browser_devtools';
 const TAB_KEYS = new Set(['tabId', 'url', 'title', 'place', 'owner']);
@@ -37,13 +38,17 @@ interface DevtoolsArgs {
   ref?: string | undefined;
   selector?: string | undefined;
   values?: boolean | undefined;
+  seconds?: number | undefined;
   tab?: string | undefined;
 }
 
 const EVAL_NOTE =
   'The value the page returned, as JSON when it can be. Values of password, card and code fields, of fields Spark filled, of the page’s cookies and of auth-looking storage are replaced with [masked] wherever they appear; anything else the page holds can be in it.';
+const INSPECT_NOTE =
+  'Attributes, a subset of computed styles, the box and the accessible role and name.';
 const NOTES: Record<Exclude<BrowserDevtoolsAction, 'eval'>, string> = {
-  inspect: 'Attributes, a subset of computed styles, the box and the accessible role and name.',
+  inspect: INSPECT_NOTE,
+  wait: `appeared says whether the selector matched before seconds ran out; when it did, the element as inspect shows it. Call wait again to keep waiting. ${INSPECT_NOTE}`,
   performance:
     'Navigation timing in ms from navigation start, resource counts and the slowest five, and LCP, CLS, INP and long tasks where the page recorded them (null when it did not).',
   storage:
@@ -149,8 +154,9 @@ async function evaluate(args: DevtoolsArgs, context: SparkToolContext) {
   return blocks(facts, done.url, done.exception ?? done.value, hidden);
 }
 
-async function readTool(args: DevtoolsArgs, context: SparkToolContext) {
-  const action = args.action as Exclude<BrowserDevtoolsAction, 'eval'>;
+type ReadAction = Exclude<BrowserDevtoolsAction, 'eval' | 'wait'>;
+
+function readOnce(action: ReadAction, args: DevtoolsArgs, context: SparkToolContext) {
   const session = browserSession(context);
   const where = { chatId: session.chatId, runId: session.runId, tab: args.tab };
   const request =
@@ -162,10 +168,35 @@ async function readTool(args: DevtoolsArgs, context: SparkToolContext) {
   if (action === 'inspect' && !args.ref && !args.selector) {
     throw new SparkToolError('Pass a ref from spark_browser_read or a CSS selector.');
   }
-  const found = await session.host.request(request, context.signal).catch((error: unknown) => {
+  return session.host.request(request, context.signal).catch((error: unknown) => {
     throw asToolError(error);
   });
-  const cleared = await clearPage(context, TOOL, 'read', found, true);
+}
+
+async function waitCleared(args: DevtoolsArgs, context: SparkToolContext) {
+  if (!args.selector?.trim()) throw new SparkToolError(NO_WAIT_SELECTOR);
+  const session = browserSession(context);
+  const where = { chatId: session.chatId, runId: session.runId, tab: args.tab };
+  const page = await session.host
+    .request({ op: 'page', ...where }, context.signal)
+    .catch((error: unknown) => {
+      throw asToolError(error);
+    });
+  const before = await clearPage(context, TOOL, 'read', page, true);
+  if (!before.cleared) return { before, waited: null, cleared: before };
+  const waited = await waitForSelector(args, context);
+  const sameSite = pageParts(waited.found.url).origin === pageParts(page.url).origin;
+  const cleared = sameSite ? before : await clearPage(context, TOOL, 'read', waited.found, true);
+  return { before, waited, cleared };
+}
+
+async function readTool(args: DevtoolsArgs, context: SparkToolContext) {
+  const action = args.action as Exclude<BrowserDevtoolsAction, 'eval'>;
+  const waiting = action === 'wait' ? await waitCleared(args, context) : null;
+  if (waiting && !waiting.before.cleared) return waiting.before.result;
+  const waited = waiting?.waited ?? null;
+  const found = waited ? waited.found : await readOnce(action as ReadAction, args, context);
+  const cleared = waiting ? waiting.cleared : await clearPage(context, TOOL, 'read', found, true);
   if (!cleared.cleared) return cleared.result;
   const hidden = await pageScrub(context);
   const { tabId, url, place } = found;
@@ -176,6 +207,7 @@ async function readTool(args: DevtoolsArgs, context: SparkToolContext) {
     url: hidden(url),
     place,
     action,
+    ...(waited ? { appeared: waited.appeared, waitedMs: waited.waitedMs } : {}),
     ...allowedNote(cleared.decision),
     note: `${NOTES[action]} ${UNTRUSTED_PAGE_NOTE}`,
   };
@@ -188,13 +220,14 @@ export const browserDevtoolsTool = sparkTool({
   acts: true,
   title: 'Page developer tools',
   description:
-    "Developer tools for a tab. eval runs JavaScript in the page (awaited, 10 s, capped, field values masked) and counts as acting: external sites follow the agent mode, a user's tab always asks. inspect: an element by ref or selector. performance: timings, LCP/CLS/INP, long tasks. storage: storage and cookies; no cookie values, storage values only in your own tab, auth-looking ones masked.",
+    "Developer tools for a tab. eval runs JavaScript in the page (awaited, 10 s, capped, field values masked) and counts as acting: external sites follow the agent mode, a user's tab always asks. inspect: an element by ref or selector. wait: until a selector matches or seconds (30) pass; repeat to wait longer. performance: timings, LCP/CLS/INP, long tasks. storage: storage and cookies; no cookie values, storage values only in your own tab, auth-looking ones masked.",
   input: {
     action: browserDevtoolsActionSchema,
     expression: z.string().max(BROWSER_EVAL_EXPRESSION_MAX).optional(),
     ref: z.string().max(20).optional(),
     selector: z.string().max(BROWSER_SELECTOR_MAX).optional(),
     values: z.boolean().optional(),
+    seconds: z.number().int().min(1).max(WAIT_MAX_SECONDS).optional(),
     tab: tabInput,
   },
   run: (args, context) =>

