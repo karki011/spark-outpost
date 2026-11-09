@@ -1,4 +1,4 @@
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { ProviderError, type ProviderTurn } from '../../providers/provider.ts';
 import type { AcpProviderOptions } from './acp-provider.ts';
 import { changedParts } from './connection-key.ts';

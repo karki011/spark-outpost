@@ -1,4 +1,4 @@
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { SparkScope } from '../../spark-mcp/deps.ts';
 import type { SparkGrant, SparkMcpHost } from '../../spark-mcp/host.ts';
 import { SPARK_MCP_NAME } from '../../spark-mcp/server.ts';

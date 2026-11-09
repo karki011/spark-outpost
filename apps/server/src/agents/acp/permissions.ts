@@ -1,4 +1,7 @@
-import type { RequestPermissionRequest, RequestPermissionResponse } from '@agentclientprotocol/sdk';
+import type {
+  RequestPermissionRequest,
+  RequestPermissionResponse,
+} from '@agentclientprotocol/sdk/unstable';
 import { exitPlanText, isExitPlanKind } from '../../plans/plan-mode.ts';
 import type { ProviderOutput } from '../../providers/provider.ts';
 import { ASK_RUN_REASON } from '../../approvals/ask-run.ts';

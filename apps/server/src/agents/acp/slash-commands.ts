@@ -1,4 +1,4 @@
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import {
   AGENT_COMMAND_NAME_MAX,
   AGENT_COMMAND_TEXT_MAX,

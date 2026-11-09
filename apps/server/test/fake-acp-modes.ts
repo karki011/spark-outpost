@@ -1,4 +1,4 @@
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 
 export const MODE_SWITCH_TRIGGER = '#modeswitch';
 export const MODE_WAIT_TRIGGER = '#waitmode';

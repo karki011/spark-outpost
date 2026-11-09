@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import type { FakeTurn } from './fake-acp-build.ts';
 import { readFakeSession } from './fake-acp-sessions.ts';
 

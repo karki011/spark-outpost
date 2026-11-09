@@ -1,4 +1,4 @@
-import type { NewSessionResponse, SessionConfigOption } from '@agentclientprotocol/sdk';
+import type { NewSessionResponse, SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
 import { describe, expect, it } from 'vitest';
 import { capabilitiesFrom, sessionCapabilities } from './capabilities.ts';
 

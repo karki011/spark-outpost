@@ -1,4 +1,4 @@
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { ProtocolObserver } from '../../providers/provider.ts';
 
 function observeSafely(observer: ProtocolObserver, run: (target: ProtocolObserver) => void) {

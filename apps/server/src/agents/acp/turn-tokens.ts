@@ -1,4 +1,4 @@
-import type { Usage } from '@agentclientprotocol/sdk';
+import type { Usage } from '@agentclientprotocol/sdk/unstable';
 import type { TokenUsage } from '@spark-outpost/contracts';
 import { z } from 'zod';
 import type { ProviderOutput, RequestUsage } from '../../providers/provider.ts';

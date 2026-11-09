@@ -1,4 +1,4 @@
-import type { NewSessionResponse } from '@agentclientprotocol/sdk';
+import type { NewSessionResponse } from '@agentclientprotocol/sdk/unstable';
 import { describe, expect, it } from 'vitest';
 import { LEGACY_MODE_OPTION, legacyOptions } from './legacy-options.ts';
 

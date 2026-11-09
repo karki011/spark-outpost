@@ -1,4 +1,4 @@
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { CODEX_SANDBOX_TRIGGER, runSandboxed } from './fake-codex-sandbox.ts';
 
 const CODEX_DO_TRIGGER = '#codex ';

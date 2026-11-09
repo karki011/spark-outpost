@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import type { FakeTurn } from './fake-acp-build.ts';
 
 export const PLAN_MODE_TRIGGER = '#planmode';

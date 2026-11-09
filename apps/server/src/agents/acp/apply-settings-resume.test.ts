@@ -1,4 +1,4 @@
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { describe, expect, it } from 'vitest';
 import type { AgentSettings } from '../../providers/provider.ts';
 import { agentDefinitions } from './agents.ts';

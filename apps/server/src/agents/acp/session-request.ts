@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { acpMcpServer, supportsTransport, type NamedMcpServer } from './repo-session.ts';
 import { withSparkServer } from './spark-tools.ts';
 

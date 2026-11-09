@@ -1,4 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { describe, expect, it } from 'vitest';
 import type { ProviderOutput } from '../../providers/provider.ts';
 import { COMPACTED_LINE, COMPACTION_FAILED_LINE } from './compaction-lines.ts';

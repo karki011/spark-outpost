@@ -1,4 +1,4 @@
-import type { SessionConfigOption, SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionConfigOption, SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import type { ModelCard } from '@spark-outpost/contracts';
 import { aliasFamily, cardFor } from '../../model-cards/cards.ts';
 import type { ProviderOutput } from '../../providers/provider.ts';

@@ -1,4 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { subagentMark } from './subagent-stream.ts';
 
 const WORK_UPDATES = new Set<SessionUpdate['sessionUpdate']>([

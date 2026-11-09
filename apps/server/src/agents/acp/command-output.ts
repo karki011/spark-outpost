@@ -1,4 +1,4 @@
-import type { SessionUpdate, ToolCallContent } from '@agentclientprotocol/sdk';
+import type { SessionUpdate, ToolCallContent } from '@agentclientprotocol/sdk/unstable';
 import { isMcpToolName } from '@spark-outpost/contracts';
 import { toolNameOf } from './tool-titles.ts';
 import type { ProviderOutput } from '../../providers/provider.ts';

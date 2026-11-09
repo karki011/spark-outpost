@@ -1,4 +1,4 @@
-import { RequestError } from '@agentclientprotocol/sdk';
+import { RequestError } from '@agentclientprotocol/sdk/unstable';
 import { describe, expect, it, vi } from 'vitest';
 import { UsageLimitError } from '../../providers/provider.ts';
 import { failureError, toProviderError } from './errors.ts';

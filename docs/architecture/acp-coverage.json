@@ -54,7 +54,7 @@
   "agent-method:session/prompt": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/conversation-prompt.ts",
-    "note": "One prompt per session. The history is resent as text within a 36 KB budget; a resumed session gets only the new message. PromptResponse.usage is saved on the run (prompt-usage.ts); that field is unstable in SDK 1.5.0 and absent from the stable v1 schema, so it is read only when present."
+    "note": "One prompt per session. The history is resent as text within a 36 KB budget; a resumed session gets only the new message. PromptResponse.usage is saved on the run (prompt-usage.ts); that field is unstable in SDK 2.4.0 and absent from the stable v1 schema, so it is read only when present."
   },
   "agent-method:_*": {
     "status": "not_applicable",
@@ -189,7 +189,7 @@
   "session-update:notice": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/client-info.ts",
-    "note": "Unstable in SDK 1.5.0 (session notices RFD, schema 1.23.0 unstable), not in the stable v1 schema. Info, warning, error and custom severities become Note, Warning and Error steps. As the RFD requires, an error notice is advisory: it never fails the run; failures come from the stop reason, a JSON-RPC error or the sessionFailure extension. Both pinned adapters fall back to plain message text when the capability is missing."
+    "note": "Unstable in SDK 2.4.0 (session notices RFD, schema 1.23.0 unstable), not in the stable v1 schema. Info, warning, error and custom severities become Note, Warning and Error steps. As the RFD requires, an error notice is advisory: it never fails the run; failures come from the stop reason, a JSON-RPC error or the sessionFailure extension. Both pinned adapters fall back to plain message text when the capability is missing."
   },
   "content-block:text": {
     "status": "supported",
@@ -388,12 +388,12 @@
   "session-update:compaction_update": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/compaction-lines.ts, apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/client-info.ts",
-    "note": "Unstable in SDK 1.5.0 (context compaction), not in the stable v1 schema. A completed compaction shows one Context compacted line, a failed one a Warning line with its error; in_progress and cancelled show nothing. A repeated or late terminal update for the same compactionId is shown once. The summary is not kept. Both pinned adapters send it only when the client advertises session.compaction; without it claude-agent-acp 0.81.2 sent a Compact conversation tool call and codex-acp 1.13.1 a notice. Tested against the fake agent, not yet against a live provider."
+    "note": "Unstable in SDK 2.4.0 (context compaction), not in the stable v1 schema. A completed compaction shows one Context compacted line, a failed one a Warning line with its error; in_progress and cancelled show nothing. A repeated or late terminal update for the same compactionId is shown once. The summary is not kept. Both pinned adapters send it only when the client advertises session.compaction; without it claude-agent-acp 0.81.2 sent a Compact conversation tool call and codex-acp 1.13.1 a notice. Tested against the fake agent, not yet against a live provider."
   },
   "session-update:compaction_summary_chunk": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/session-updates.ts",
-    "note": "Unstable in SDK 1.5.0. Ignored on purpose: the retained summary never becomes reply text or a step."
+    "note": "Unstable in SDK 2.4.0. Ignored on purpose: the retained summary never becomes reply text or a step."
   },
   "client-capability:session.compaction": {
     "status": "supported",

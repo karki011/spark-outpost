@@ -1,4 +1,4 @@
-import type { SessionUpdate, ToolCallContent } from '@agentclientprotocol/sdk';
+import type { SessionUpdate, ToolCallContent } from '@agentclientprotocol/sdk/unstable';
 import { mentionsSecretFile } from '../../audit/redact.ts';
 import type { ProviderOutput } from '../../providers/provider.ts';
 import type { UpdateMapper } from './session-updates.ts';

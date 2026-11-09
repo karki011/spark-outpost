@@ -1,4 +1,4 @@
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { FakeTurn } from './fake-acp-build.ts';
 
 const TRIGGER = /#term=([a-z,]+)(?: (\d{1,4})ms)?/;

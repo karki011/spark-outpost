@@ -3,7 +3,7 @@ import type {
   SessionConfigOption,
   SessionUpdate,
   ToolCallContent,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import { awaitsCalloutInput, calloutTarget, isMcpToolName } from '@spark-outpost/contracts';
 import type { ConfigValues, PlanEntry } from '@spark-outpost/contracts';
 import type { ProviderOutput } from '../../providers/provider.ts';

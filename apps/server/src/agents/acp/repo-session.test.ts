@@ -1,7 +1,7 @@
 import { readFile, readdir, mkdir, mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { FIXTURE_RULE, makeConfiguredRepo } from '../../../test/repo-config-fixture.ts';
 import { createRepoScanner, type RepoScan } from '../../agent-config/discovery.ts';

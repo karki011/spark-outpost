@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 
 type Update = (value: acp.SessionUpdate) => Promise<void>;
 type Say = (chunk: string) => Promise<void>;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { buildClaudePermissionPresentation } from '@agentclientprotocol/claude-agent-acp/dist/permissions/presentation.js';
 import { readingTurnReviews } from './do-handlers.ts';
 import { approvalRequestFrom } from './permission-request.ts';

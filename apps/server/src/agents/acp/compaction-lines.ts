@@ -1,4 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 
 type CompactionUpdate = Extract<SessionUpdate, { sessionUpdate: 'compaction_update' }>;
 

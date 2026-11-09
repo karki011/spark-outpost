@@ -1,4 +1,4 @@
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 
 type Update = (value: acp.SessionUpdate) => Promise<void>;
 type Say = (chunk: string) => Promise<void>;
