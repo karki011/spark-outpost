@@ -27,7 +27,7 @@ Spark, not the model, runs the checks, so no agent can approve its own request.
 
 ## Actions that ran without review
 
-In **Bypass permissions**, **Approve for me** or **Full access**, Spark watches without asking; [always refused](protected-paths.md#what-is-always-refused) actions still stop:
+In **Bypass permissions**, **Workspace access**, **Auto review** or **Full access**, Spark watches without asking; [always refused](protected-paths.md#what-is-always-refused) actions still stop, except as [noted](protected-paths.md#what-is-always-refused) for Codex's own sandbox:
 
 - Each tool call is marked **Ran without review** in the audit log.
 - Crossing a rule you [set](protected-paths.md#spark-rules), such as pushing a branch not the chat's own, gets a flag with **Revert** and **Got it**, pinned; it never counts as needing you. With no rules, there is only the audit entry.

@@ -56,7 +56,7 @@ Jev is never called inside a turn. Spark uses it outside turns: labelling the Ma
 
 Ask: the agent reads the folders and runs read-only commands directly, loops and $(…) included. Other commands run without asking at Automatic or in an Auto or Bypass mode, and show a "Run a command?" card otherwise. Changing files, installing or pushing is refused — for Do work, ask for the change in a message, or leave a read-only mode. Do: the agent may also edit files and run commands.
 
-Agent modes come from the provider, with its own names: Claude offers Manual, Accept edits, Plan, Auto (default) and Bypass permissions; Codex offers Read-only, Ask every time, Approve for me and Full access. Read-only modes are Ask; the rest are Do. Spark autonomy is a separate choice.`,
+Agent modes come from the provider, with its own names: Claude offers Manual, Accept edits, Plan, Auto (default) and Bypass permissions; Codex offers Read-only, Ask every time, Workspace access, Auto review and Full access. Read-only modes are Ask; the rest are Do. Spark autonomy is a separate choice.`,
   },
   {
     id: 'autonomy-levels',

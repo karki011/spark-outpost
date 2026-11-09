@@ -16,7 +16,7 @@ export const TERMINAL_AGENTS = trackedTerminalProviderSchema.options.map((id) =>
 export const CODEX_ASK_MODE = 'ask-every-action';
 
 export const CODEX_ASK_UNAVAILABLE =
-  'Ask every time is unavailable in this Codex terminal. Choose Read-only, Approve for me, or Full access, or use Chat.';
+  'Ask every time is unavailable in this Codex terminal. Choose Read-only, Workspace access, Auto review, or Full access, or use Chat.';
 
 export const UNTRACKED_NOTE =
   'Spark starts it in this session’s folder and records only whether it is running: no steps, usage, approvals or phone messages.';

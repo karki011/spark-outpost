@@ -100,8 +100,17 @@ export function nativeModeArgs(provider: NativeProvider, mode: string): string[]
       ];
     case 'ask-every-action':
       throw new NativeRuntimeError(
-        'Ask every time is unavailable in this Codex terminal. Choose Read-only, Approve for me, or Full access.',
+        'Ask every time is unavailable in this Codex terminal. Choose Read-only, Workspace access, Auto review, or Full access.',
       );
+    case 'workspace-write':
+      return [
+        '--sandbox',
+        'workspace-write',
+        '--ask-for-approval',
+        'on-request',
+        '-c',
+        'approvals_reviewer="user"',
+      ];
     case 'agent':
       return ['--approve-for-me'];
     case 'agent-full-access':

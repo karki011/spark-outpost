@@ -9,7 +9,7 @@ const CODEX_CAPABILITIES: ProviderCapabilities = {
   defaultModel: null,
   modes: [
     { id: 'read-only', label: 'Read-only', description: null, kind: 'standard' },
-    { id: 'agent', label: 'Approve for me', description: null, kind: 'auto_review' },
+    { id: 'agent', label: 'Auto review', description: null, kind: 'auto_review' },
   ],
   defaultMode: 'agent',
   options: [],

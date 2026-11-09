@@ -57,7 +57,7 @@ Priority is not written: instances usually derive it from impact and urgency.
 ### Approval
 
 - **Reads** follow the agent mode once per chat, through the shared read gate (`spark-mcp/tools/read-gate.ts`, also used by Atlassian):
-  - at once in Auto, Bypass permissions, Approve for me and Full access, and in Accept edits when the user's message asked;
+  - at once in Auto, Bypass permissions, Auto review and Full access, and in Accept edits when the user's message asked;
   - otherwise a `servicenow_read` card.
 - **Writes** are `servicenow_edit` Spark actions:
   - `update`, `work_note` and a non-final `move` follow the mode;

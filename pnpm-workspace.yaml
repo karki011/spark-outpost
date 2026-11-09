@@ -11,4 +11,4 @@ allowBuilds:
   node-pty: true
 patchedDependencies:
   '@agentclientprotocol/claude-agent-acp@0.101.0': patches/@agentclientprotocol__claude-agent-acp@0.101.0.patch
-  '@agentclientprotocol/codex-acp@1.13.1': patches/@agentclientprotocol__codex-acp@1.13.1.patch
+  '@agentclientprotocol/codex-acp@2.5.0': patches/@agentclientprotocol__codex-acp@2.5.0.patch

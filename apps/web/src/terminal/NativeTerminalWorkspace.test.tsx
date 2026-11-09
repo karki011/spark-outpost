@@ -40,7 +40,7 @@ vi.mock('../api/client.ts', async (original) => ({
     queryKey: ['capabilities', 'codex'],
     queryFn: async () => ({
       defaultMode: 'agent',
-      modes: [{ id: 'agent', label: 'Approve for me', description: null, kind: null }],
+      modes: [{ id: 'agent', label: 'Auto review', description: null, kind: null }],
     }),
   }),
 }));
@@ -116,7 +116,7 @@ describe('native terminal lifecycle controls', () => {
     expect((await screen.findAllByRole('status'))[0]!.textContent).toBe('Running · Connecting');
     await waitFor(() => expect(screen.getAllByRole('status')[0]!.textContent).toBe('Running'));
     expect(screen.getByText('Codex · Terminal')).toBeTruthy();
-    await screen.findByText('Approve for me');
+    await screen.findByText('Auto review');
     expect(screen.getByText('spark-outpost').closest('[title]')?.getAttribute('title')).toBe(
       '/tmp/project',
     );

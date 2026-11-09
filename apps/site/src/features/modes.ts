@@ -36,7 +36,13 @@ const MODES: Record<'Claude' | 'Codex', Mode[]> = {
       command: 'card',
     },
     {
-      name: 'Approve for me',
+      name: 'Workspace access',
+      summary: 'Works in the project without asking',
+      edit: 'unreviewed',
+      command: 'unreviewed',
+    },
+    {
+      name: 'Auto review',
       summary: 'The agent decides what to ask',
       edit: 'unreviewed',
       command: 'unreviewed',
@@ -130,7 +136,10 @@ export function mountModes(host: HTMLElement, still: boolean): void {
     toggle.setAttribute('aria-pressed', String(name === provider));
     toggle.addEventListener('click', () => {
       provider = name;
-      current = MODES[name].find((mode) => mode.command === 'agent') ?? MODES[name][2]!;
+      current =
+        MODES[name].find((mode) => mode.command === 'agent') ??
+        MODES[name].find((mode) => mode.name === 'Auto review') ??
+        MODES[name][0]!;
       for (const other of providers.children) other.setAttribute('aria-pressed', 'false');
       toggle.setAttribute('aria-pressed', 'true');
       renderModes();

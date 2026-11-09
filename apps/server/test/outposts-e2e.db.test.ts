@@ -323,10 +323,10 @@ describe('an outpost started with a new chat and a first message', () => {
     expect(created.posts.map((post) => [post.kind, post.body, post.intro?.task ?? null])).toEqual([
       [
         'notice',
-        `@api joined · ${project.name} · Codex · Approve for me`,
+        `@api joined · ${project.name} · Codex · Auto review`,
         'Task: Follow the contract',
       ],
-      ['notice', `@docs joined · ${project.name} · Codex · Approve for me`, null],
+      ['notice', `@docs joined · ${project.name} · Codex · Auto review`, null],
       ['request', 'Follow the contract', null],
     ]);
     expect(created.posts[2]).toMatchObject({ fromUser: true, toHandle: 'api', files: 1 });

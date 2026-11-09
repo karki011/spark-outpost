@@ -238,7 +238,7 @@ describe('NoticeLine', () => {
     render(
       <ol>
         <NoticeLine
-          post={{ ...notice(3, '@api joined · api · Codex GPT-5 · Approve for me'), intro }}
+          post={{ ...notice(3, '@api joined · api · Codex GPT-5 · Auto review'), intro }}
         />
       </ol>,
     );

@@ -92,10 +92,11 @@ const CODEX_MODES: ProviderModeTable = {
   postures: {
     'read-only': 'read_only',
     'ask-every-action': 'asks',
+    'workspace-write': 'edits',
     agent: 'auto',
     'agent-full-access': 'full_access',
   },
-  skipsGate: ['agent', 'agent-full-access'],
+  skipsGate: ['workspace-write', 'agent', 'agent-full-access'],
 };
 
 const PROVIDER_MODES: Readonly<Record<string, ProviderModeTable>> = {

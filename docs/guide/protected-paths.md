@@ -34,6 +34,8 @@ Even with no rules:
 
 A blocked step reads "Refused …".
 
+When a chat says Codex "ran with Codex's own sandbox instead", the browser data block can't apply there. In a mode that runs without asking, Spark flags a shell command it sees reading it, after it runs.
+
 ## Spark rules
 
 Rules live in Spark's data folder, in `settings.json`. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.

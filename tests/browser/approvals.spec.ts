@@ -268,7 +268,8 @@ test('Codex offers Do with its own copy', async ({ page }) => {
   await expect(modes.getByRole('radio')).toHaveText([
     /^Read-only/,
     /^Ask every time/,
-    /^Approve for me/,
+    /^Workspace access/,
+    /^Auto review/,
     /^Full access/,
   ]);
   await expect(modes.getByRole('radio', { name: 'Read-only', exact: true })).toHaveAttribute(
@@ -277,8 +278,8 @@ test('Codex offers Do with its own copy', async ({ page }) => {
   );
   await pickMode(page, 'Full access');
   await expect(permissionChip(page)).toHaveClass(/risk-full/);
-  await pickMode(page, 'Approve for me');
-  await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Approve for me');
+  await pickMode(page, 'Auto review');
+  await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Auto review');
   await expect(panel.getByRole('note')).toContainText('ran without review');
   await pickMode(page, 'Ask every time');
   await expect(modes.getByRole('radio', { name: 'Ask every time', exact: true })).toContainText(

@@ -10,29 +10,29 @@ The agent's mode is the provider's own setting, under its names. To change them,
 
 ## Agent modes
 
-| What it allows                  | Claude, Z.ai, custom   | Codex              | Cards you see              |
-| ------------------------------- | ---------------------- | ------------------ | -------------------------- |
-| Reads only                      | **Plan**               | **Read-only**      | None.                      |
-| Asks before edits and commands  | **Manual**             | **Ask every time** | One per edit and command.  |
-| Edits freely, asks for commands | **Accept edits**       | none               | One per command.           |
-| Decides what to ask             | **Auto**               | **Approve for me** | What the agent asks about. |
-| Never asks                      | **Bypass permissions** | **Full access**    | None from the agent.       |
+| What it allows                  | Claude, Z.ai, custom   | Codex                | Cards you see                                                                    |
+| ------------------------------- | ---------------------- | -------------------- | -------------------------------------------------------------------------------- |
+| Reads only                      | **Plan**               | **Read-only**        | None.                                                                            |
+| Asks before edits and commands  | **Manual**             | **Ask every time**   | One per edit and command.                                                        |
+| Edits freely, asks for commands | **Accept edits**       | **Workspace access** | One per command (Workspace access: only outside the project or for the network). |
+| Decides what to ask             | **Auto**               | **Auto review**      | What the agent asks about.                                                       |
+| Never asks                      | **Bypass permissions** | **Full access**      | None from the agent.                                                             |
 
-| Provider              | Default mode       | Default effort |
-| --------------------- | ------------------ | -------------- |
-| Claude                | **Auto**           | High           |
-| Codex                 | **Approve for me** | Medium         |
-| Z.ai, custom endpoint | **Manual**         | High           |
+| Provider              | Default mode    | Default effort |
+| --------------------- | --------------- | -------------- |
+| Claude                | **Auto**        | High           |
+| Codex                 | **Auto review** | Medium         |
+| Z.ai, custom endpoint | **Manual**      | High           |
 
 ## What Spark does in each mode
 
-| Mode                                                        | Spark                                                                                                       |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Read-only modes                                             | Runs read-only commands; refuses file changes.                                                              |
-| Modes that ask                                              | Shows the agent's card and reason, adding no ask rules of its own.                                          |
-| **Bypass permissions**, **Approve for me**, **Full access** | Marks and flags [unreviewed actions](approvals.md#actions-that-ran-without-review), never stopping the run. |
-| A mode Spark doesn't recognise                              | The agent decides when to ask.                                                                              |
-| Every mode                                                  | Enforces the [protected paths](protected-paths.md).                                                         |
+| Mode                                                                           | Spark                                                                                                       |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Read-only modes                                                                | Runs read-only commands; refuses file changes.                                                              |
+| Modes that ask                                                                 | Shows the agent's card and reason, adding no ask rules of its own.                                          |
+| **Bypass permissions**, **Workspace access**, **Auto review**, **Full access** | Marks and flags [unreviewed actions](approvals.md#actions-that-ran-without-review), never stopping the run. |
+| A mode Spark doesn't recognise                                                 | The agent decides when to ask.                                                                              |
+| Every mode                                                                     | Enforces the [protected paths](protected-paths.md).                                                         |
 
 ## Agent tools
 

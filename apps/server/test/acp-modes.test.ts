@@ -20,7 +20,7 @@ const env = {
     ['read-only', 'Read-only', null, 'standard'],
     ['ask-every-action', 'Ask every time', null, 'standard'],
     ['acceptEdits', 'Accept edits', 'Automatically accept all file edits', 'standard'],
-    ['agent', 'Approve for me', null, 'auto_review'],
+    ['agent', 'Auto review', null, 'auto_review'],
     ['plan', 'Plan', null, 'plan'],
   ]),
 };

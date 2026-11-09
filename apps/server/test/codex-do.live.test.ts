@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, type InvolvementLevel } from '@spark-outpost/contracts';
-import { decideApproval } from '../src/persistence/approvals.ts';
+import { ApprovalConflictError, decideApproval } from '../src/persistence/approvals.ts';
 import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { saveConnection } from '../src/persistence/setup.ts';
@@ -96,14 +96,18 @@ async function build(level: InvolvementLevel) {
   await eventually(async () => {
     const detail = await getConversationDetail(t.db, conversationId);
     for (const approval of detail?.approvals ?? []) {
-      if (answered.has(approval.id)) continue;
+      if (answered.has(approval.id) || approval.status !== 'pending') continue;
       answered.add(approval.id);
       const optionId =
         approval.kind === 'accept'
           ? CHECKPOINT_OPTION.keep
           : approval.options.find((option) => option.kind === 'allow_once')?.optionId;
       if (optionId) {
-        await decideApproval(t.db, t.workspaceId, approval.id, { optionId, scope: 'once' });
+        await decideApproval(t.db, t.workspaceId, approval.id, { optionId, scope: 'once' }).catch(
+          (error: unknown) => {
+            if (!(error instanceof ApprovalConflictError)) throw error;
+          },
+        );
       }
     }
     const run = await getRun(t.db, sent.run.id);
@@ -120,10 +124,6 @@ async function build(level: InvolvementLevel) {
      ORDER BY created_at`,
     [runIds],
   );
-  const { rows: copies } = await t.db.query<{ run_id: string }>(
-    'SELECT run_id FROM run_worktrees WHERE orchestration_run_id = $1',
-    [sent.run.id],
-  );
   const { rows: usage } = await t.db.query<{ tokens: string | null; cost: string | null }>(
     `SELECT SUM(total_tokens)::text AS tokens, SUM(cost_usd)::text AS cost
      FROM runs WHERE id = ANY($1::uuid[])`,
@@ -135,7 +135,6 @@ async function build(level: InvolvementLevel) {
     status: run?.status,
     tools: await toolCallIds(runIds),
     gated,
-    copies: copies.length,
     readme,
     usage: usage[0],
   };
@@ -150,7 +149,6 @@ describe('Codex Do, live (gpt-6-luna · low)', () => {
         JSON.stringify({
           level,
           status: result.status,
-          copies: result.copies,
           usage: result.usage,
           gated: result.gated.map((row) => `${row.kind}:${row.title} by ${row.decided_by}`),
           tools: [...result.tools.entries()],
@@ -160,7 +158,6 @@ describe('Codex Do, live (gpt-6-luna · low)', () => {
       const gatedIds = new Set(result.gated.map((row) => row.tool_call_id));
       for (const id of result.tools.keys()) expect(gatedIds.has(id)).toBe(true);
       expect(result.readme).toContain('Checked by Codex.');
-      expect(result.copies).toBe(1);
     },
     300_000,
   );

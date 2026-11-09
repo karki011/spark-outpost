@@ -28,7 +28,7 @@ Confluence calls use REST v2 (`/wiki/api/v2/pages`, `/footer-comments`, `/spaces
 
 ### Approval
 
-- Reads follow the agent mode like a Spark action, once per chat per product: at once in Auto, Bypass permissions, Approve for me and Full access (and in Accept edits when the user's message asked), otherwise an `atlassian_read` card that allows the rest of the chat.
+- Reads follow the agent mode like a Spark action, once per chat per product: at once in Auto, Bypass permissions, Auto review and Full access (and in Accept edits when the user's message asked), otherwise an `atlassian_read` card that allows the rest of the chat.
 - Writes are `jira_edit` and `confluence_edit` Spark actions through `proposeAction`: they follow the mode the same way, with a card that shows the change before and after (summary, labels, priority, description, comment text, page title and text, capped at 4,000 characters on the card).
 - Deleting an issue, a comment or a page follows the mode like any other write (owner decision, 2026-10-19); the result line names what was deleted, and a Confluence page is "Moved to trash".
 - When the card is confirmed, Spark reads the item again and changes nothing when it moved on: a Jira issue whose `updated` changed, a comment whose `updated` changed, an issue whose subtasks are not the ones the card listed, or a page whose version is no longer the one on the card (update, comment and delete). `update` also refuses at once when the version the agent passes is not the current one, and a 409 from Confluence is reported the same way, so the agent reads the page again.

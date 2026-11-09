@@ -2,7 +2,7 @@
 
 Can Codex build (Do mode) under Spark Outpost's approval gate? Probed live on September 26, 2026 against codex-acp 1.13.1 (with our read-only patch) and the `codex app-server` it bundles, `@openai/codex` 0.156.1. See [ACP agents](ACP_AGENTS.md#do-in-project-folders-m2) and [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md#adapter-capabilities) for the background, and [PATCHES.md](PATCHES.md) for the patch that shipped from this probe.
 
-**Status: implemented September 26, 2026**, then superseded by provider permission modes (September 28) and chat worktrees (September 29): the picker now shows Codex's own modes (Read-only, Ask every time, Approve for me, Full access), and a Do chat in a git project works in its own worktree by default ([HARNESS_PLAN.md](HARNESS_PLAN.md#current-architecture-the-lean-harness-round-10-september-27-2026)). Ask every time still sends every action to the gate; Approve for me and Full access don't; since October 2 they run wherever the chat works and Spark watches them.
+**Status: implemented September 26, 2026**, then superseded by provider permission modes (September 28) and chat worktrees (September 29): the picker now shows Codex's own modes (Read-only, Ask every time, Workspace access, Auto review, Full access), and a Do chat in a git project works in its own worktree by default ([HARNESS_PLAN.md](HARNESS_PLAN.md#current-architecture-the-lean-harness-round-10-september-27-2026)). Ask every time still sends every action to the gate; Auto review and Full access don't; since October 2 they run wherever the chat works and Spark watches them.
 
 ## Short answer
 
@@ -66,7 +66,7 @@ The patch adds two things to `patches/@agentclientprotocol__codex-acp@1.13.1.pat
 
 - **Agent definition** (`agents.ts`): Codex has `doMode: 'ask-every-action'` and `doPrimaryRootOnly`. `session-modes.ts` applies the chat's chosen mode, falls back to the asking mode when the mode is unavailable, and refuses a worktree-only mode outside a worktree.
 - **Decisions** (`approvals/command-kinds.ts`, `decide.ts`): a safe read-only command inside the project is allowed at every level whose requests reach the gate; a package install always asks unless it only restores the lockfile.
-- **Worktrees** (`orchestration/solo-copy.ts`): a Codex Builder in Approve for me or Full access runs as a child in its own worktree, as does every Full auto → PR task; Checks and fixes run there, and the copy merges into the working tree after each Builder turn.
+- **Worktrees** (`orchestration/solo-copy.ts`): a Codex Builder in Auto review or Full access runs as a child in its own worktree, as does every Full auto → PR task; Checks and fixes run there, and the copy merges into the working tree after each Builder turn.
 - **Tests.** Unit: `command-kinds.test.ts`, `decide.test.ts`, `agents.test.ts`, `routing.test.ts`. Fake-agent provider: `test/acp-codex-do.test.ts`. DB: `test/codex-crew.db.test.ts`, `approvals.db.test.ts`, `chat-settings.db.test.ts`. Browser: `approvals.spec.ts`, `permission-modes.spec.ts`.
 
 ### Live check (September 26)

@@ -11,7 +11,7 @@ One chat splits a job across several chats. About 3 minutes.
 ## Start it from a chat
 
 1. In a chat with a project, ask "split this into two parallel sub-chats and start them".
-2. In **Auto**, **Bypass permissions**, **Approve for me** or **Full access** the agent starts them. Otherwise confirm its **Start these sub-chats?** card: **Start**, **Edit** or **Discard**.
+2. In **Auto**, **Bypass permissions**, **Auto review** or **Full access** the agent starts them. Otherwise confirm its **Start these sub-chats?** card: **Start**, **Edit** or **Discard**.
 3. The reply shows **Started outpost Docs split with 2 chats**. Select **Open**.
 
 To check first, ask it to propose sub-tasks, then select **Review and start**. **Edit** changes a chat's **Agent**, **Permissions**, first message and:

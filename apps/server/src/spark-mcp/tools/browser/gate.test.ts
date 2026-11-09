@@ -19,7 +19,7 @@ describe('a browser tool that reaches a site outside this computer', () => {
     expect(sitePath(facts({ posture: 'unknown' }))).toBe('ask');
   });
 
-  it('runs without a card in Auto, Approve for me, Bypass and Full access', () => {
+  it('runs without a card in Auto, Auto review, Bypass and Full access', () => {
     expect(sitePath(facts({ posture: 'auto' }))).toBe('run');
     expect(sitePath(facts({ posture: 'full_access' }))).toBe('run');
   });

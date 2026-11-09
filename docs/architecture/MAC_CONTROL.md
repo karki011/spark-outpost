@@ -65,7 +65,7 @@ The outline uses the pane's line form, `- button "Send" [ax_12] enabled=false`: 
 
 ### Policy
 
-Approval follows the agent's mode through `actionPath`, unchanged (the new action names get `REQUESTS` entries in `action-policy.ts`, or Accept edits always confirms): at once in Auto, Bypass permissions, Approve for me and Full access, and in Accept edits when the user's message asked; a card otherwise. Autonomy plays no part. The floor and hard limits sit above the mode.
+Approval follows the agent's mode through `actionPath`, unchanged (the new action names get `REQUESTS` entries in `action-policy.ts`, or Accept edits always confirms): at once in Auto, Bypass permissions, Auto review and Full access, and in Accept edits when the user's message asked; a card otherwise. Autonomy plays no part. The floor and hard limits sit above the mode.
 
 | Call                                                                   | Card                                                                                 | Recorded                           |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------- |

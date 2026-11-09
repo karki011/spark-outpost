@@ -180,7 +180,7 @@ describe('OutpostCreate from a draft a chat proposed', () => {
     await screen.findByRole('textbox', { name: 'Outpost name' });
     fireEvent.click(button('Edit Build api'));
     fireEvent.click(button('Permissions: Read-only'));
-    fireEvent.click(screen.getByRole('radio', { name: 'Approve for me' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Auto review' }));
     fireEvent.click(button('Done'));
     fireEvent.click(button(/^Start outpost/));
     await waitFor(() => expect(requests).toHaveLength(1));

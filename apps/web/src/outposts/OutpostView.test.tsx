@@ -22,7 +22,7 @@ describe('OutpostView', () => {
   it('shows the name, the chats, the thread and one message box', () => {
     show(
       detail([
-        notice(1, '@api joined · api · Codex GPT-5 · Approve for me'),
+        notice(1, '@api joined · api · Codex GPT-5 · Auto review'),
         post(2, { state: 'working' }),
         note(3),
       ]),

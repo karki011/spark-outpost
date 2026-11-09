@@ -155,14 +155,14 @@ The agent's own commands are untouched. Their permission prompt, the gate, the a
 For a command started with `spark_terminal_run`, Spark is the one that runs it, so Spark decides, every time, in every mode.
 
 1. **Same gate.** The tool builds the same `ApprovalRequest` an agent's own command produces (`kind: 'execute'`, the command, the folder, the linked roots, the agent's current mode) and hands it to the turn's own `PermissionGate.review`. There is no second rule set.
-2. **The agent's mode asks or runs.** It runs at once in Auto, Bypass permissions, Approve for me and Full access. In every other mode an ordinary approval card appears, with the command and the line "Runs in a Spark terminal, outside the agent's sandbox, and keeps running after the turn." This is the rule Spark action tools already follow.
+2. **The agent's mode asks or runs.** It runs at once in Auto, Bypass permissions, Auto review and Full access. In every other mode an ordinary approval card appears, with the command and the line "Runs in a Spark terminal, outside the agent's sandbox, and keeps running after the turn." This is the rule Spark action tools already follow.
 3. **No shortcuts.** The project allowlist and "always allow in this run" do not apply to these commands, and the card offers only Allow once and Reject (decision 2). Those shortcuts were given for commands the agent runs in its own sandbox.
 4. **The safety floor holds in every mode.** Changing, moving or deleting a secret file and changing an agent instruction file ask. Git hooks and git config ask with hold-to-confirm. Force pushes are refused. Writes and deletes outside the linked repos ask, except in the system temp folders. A file in `.sparkignore` asks to read.
 5. **Publish rules apply as for the chat agent's own `git push` and `gh`.** A push of anything but the chat's own `spark/*` branch, or the pull request branch the user adopted for it, is refused. Publishing needs one of the existing grounds (the message asked, Full auto → PR, the mode, a follow-up round). `--no-verify` is refused. A push that holds a value from a secret file asks with hold-to-confirm.
 6. **Reading then sending.** If the turn read a secret file or other work data, a command that sends off this computer gets the same note and audit entry as today.
 7. **A refusal is an answer, not an error.** The tool returns the gate's reason in one line so the agent can tell the user.
 
-This is stricter than the agent's own commands in one case, on purpose. In Claude Bypass permissions and Codex Approve for me or Full access, the gate never sees the agent's own commands, so Spark can only flag a hard-rail crossing after the fact. A Spark-run command always passes the gate first, so a hard rail stops it or asks before it runs.
+This is stricter than the agent's own commands in one case, on purpose. In Claude Bypass permissions and Codex Workspace access, Auto review or Full access, the gate never sees the agent's own commands, so Spark can only flag a hard-rail crossing after the fact. A Spark-run command always passes the gate first, so a hard rail stops it or asks before it runs.
 
 ### Audit
 
@@ -381,7 +381,7 @@ Not verified by these tests: real adapter behavior. The claim that no adapter ca
 ## Risks
 
 - **New authority.** This is the first Spark tool that runs an agent-chosen command. A gap in the gate is a gap in the safety floor. The gate was written for commands the agent's sandbox or prompt also saw. Mitigation: one code path, the same `decide`, tests per rail, no input action.
-- **Outside the Codex sandbox.** A Codex agent can ask for a command its sandbox would block, such as one that uses the network. The card says so, and shortcuts do not apply, but in Approve for me and Full access it runs at once.
+- **Outside the Codex sandbox.** A Codex agent can ask for a command its sandbox would block, such as one that uses the network. The card says so, and shortcuts do not apply, but in Auto review and Full access it runs at once.
 - **The gate reads shell text.** It cannot see what a script file does when run. This is true of the agent's own commands today. A long-lived process makes it matter for longer.
 - **A long-lived process changes after the decision.** A watcher runs whatever the files say later. The decision covered the command text at start.
 - **Agents may overuse the tool.** If an agent uses it for every command, the user loses the agent's own prompt and the Codex sandbox for those commands. Mitigation: the description, and the stricter card rule makes it slower than the agent's own tool in asking modes.
@@ -397,7 +397,7 @@ Not verified by these tests: real adapter behavior. The claim that no adapter ca
 
 Add to the permissions paragraph, after the sentence about Spark action tools. It lands with the tool lane (2e), not before: until the tool is registered the sentence would describe something an agent cannot do.
 
-> An agent may ask Spark to run one command in a Spark-owned terminal tab that keeps running after the turn (`spark_terminal_run`), in a chat with a project folder and never in an Ask or read-only turn: Spark judges it through the same approval gate as the agent's own commands, in every mode, so it runs at once in Auto, Bypass permissions, Approve for me and Full access and shows an ordinary approval card otherwise (Allow once or Reject only; the allowlist and run rules do not apply), the safety floor and the publish rules hold as they do for a solo Builder's own commands and, unlike the agent's own commands in Bypass permissions, Approve for me and Full access, a hard-rail crossing asks or is refused before the command starts, a start that no card approved is marked ran without review, and each start and stop is an audit entry. Such a tab takes no input, is labelled as the agent's, has no time, idle or count limit, stops when the user or the agent stops it, when the user stops the turn that started it, when the chat is removed or when Spark quits, is never started again by Spark, and is not a Terminal session; like Terminal, it stays on the Mac, and a paired phone sees its state as text only.
+> An agent may ask Spark to run one command in a Spark-owned terminal tab that keeps running after the turn (`spark_terminal_run`), in a chat with a project folder and never in an Ask or read-only turn: Spark judges it through the same approval gate as the agent's own commands, in every mode, so it runs at once in Auto, Bypass permissions, Auto review and Full access and shows an ordinary approval card otherwise (Allow once or Reject only; the allowlist and run rules do not apply), the safety floor and the publish rules hold as they do for a solo Builder's own commands and, unlike the agent's own commands in Bypass permissions, Auto review and Full access, a hard-rail crossing asks or is refused before the command starts, a start that no card approved is marked ran without review, and each start and stop is an audit entry. Such a tab takes no input, is labelled as the agent's, has no time, idle or count limit, stops when the user or the agent stops it, when the user stops the turn that started it, when the chat is removed or when Spark quits, is never started again by Spark, and is not a Terminal session; like Terminal, it stays on the Mac, and a paired phone sees its state as text only.
 
 And one line for the product list near the Browser pane and phone bullets:
 
@@ -409,7 +409,7 @@ The owner settled these on October 9, 2026.
 
 1. **Build order.** Phase 1 (mirror tab), then phase 2 (`spark_terminal_run`).
 2. **Allowlist and run rules for Spark-run commands.** They do not apply. The agent's mode decides, or an ordinary card with Allow once and Reject.
-3. **Stricter than the agent's own commands in Bypass permissions, Approve for me and Full access.** Yes. A hard rail asks or refuses before a Spark-run command starts, where the agent's own command is only flagged. How the agent's own commands are treated does not change.
+3. **Stricter than the agent's own commands in Bypass permissions, Auto review and Full access.** Yes. A hard rail asks or refuses before a Spark-run command starts, where the agent's own command is only flagged. How the agent's own commands are treated does not change.
 4. **Stopping the turn.** It stops the terminals that turn started and keeps earlier ones.
 5. **Typing into an agent tab.** No. The tab is read-only with Stop.
 6. **Who may use the tool in a crew turn.** Void since October 10, 2026: crew turns are removed and the chat's own turn uses the tool. Was: a solo Builder and the integrator only.

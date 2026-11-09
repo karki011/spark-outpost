@@ -19,8 +19,8 @@ const ACCESS: Record<'claude' | 'codex', Record<Permission, Access>> = {
   codex: {
     Ask: { mode: 'Read-only', autonomy: null },
     'Ask before edits': { mode: 'Ask every time', autonomy: 'Automatic' },
-    'Auto-edit': { mode: 'Approve for me', autonomy: 'Automatic' },
-    'Full auto': { mode: 'Approve for me', autonomy: 'Full auto → PR' },
+    'Auto-edit': { mode: 'Auto review', autonomy: 'Automatic' },
+    'Full auto': { mode: 'Auto review', autonomy: 'Full auto → PR' },
   },
 };
 

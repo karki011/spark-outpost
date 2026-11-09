@@ -105,7 +105,7 @@ describe('where it may start', () => {
 });
 
 describe('the agent’s mode decides', () => {
-  it('runs at once in Auto, Bypass permissions, Approve for me and Full access', async () => {
+  it('runs at once in Auto, Bypass permissions, Auto review and Full access', async () => {
     expect(runsAtOnce('auto')).toBe(true);
     expect(runsAtOnce('full_access')).toBe(true);
     for (const posture of ['auto', 'full_access'] as const) {

@@ -75,8 +75,8 @@ describe('migrating the old levels', () => {
     ['claude', 'do', 'full-auto', 'acceptEdits'],
     ['codex', 'ask', 'full-auto', 'read-only'],
     ['codex', 'do', null, 'ask-every-action'],
-    ['codex', 'do', 'hands-off', 'agent'],
-    ['codex', 'do', 'full-auto', 'agent'],
+    ['codex', 'do', 'hands-off', 'workspace-write'],
+    ['codex', 'do', 'full-auto', 'workspace-write'],
     ['zai', 'do', 'hands-off', 'acceptEdits'],
   ] as const)('%s %s %s → %s', (provider, permission, level, mode) => {
     expect(modeForLegacy(provider, permission, level)).toBe(mode);
@@ -85,7 +85,8 @@ describe('migrating the old levels', () => {
 
 describe('crew members on another agent', () => {
   it('pick the closest mode of that agent', () => {
-    expect(translateMode('claude', 'acceptEdits', 'codex')).toBe('agent');
+    expect(translateMode('claude', 'acceptEdits', 'codex')).toBe('workspace-write');
+    expect(translateMode('claude', 'auto', 'codex')).toBe('agent');
     expect(translateMode('claude', 'default', 'codex')).toBe('ask-every-action');
     expect(translateMode('codex', 'agent-full-access', 'claude')).toBe('bypassPermissions');
     expect(translateMode('claude', 'default', 'claude')).toBe('default');

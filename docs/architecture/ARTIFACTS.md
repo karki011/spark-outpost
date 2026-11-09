@@ -12,7 +12,7 @@ An artifact is a page an agent makes for the user: HTML, Markdown or SVG. The us
 | `update {id, content, title?}`   | Adds the next version of an artifact in this chat                                                                                            |
 | `read {id, version?}`            | Returns a version that was shown in this chat (the latest by default), as stored. It is Spark's own data about the chat, so it asks nothing. |
 
-`publish` and `update` follow the agent's mode like other Spark action tools (`publish_artifact`, `action-policy.ts`). They run at once in Auto, Bypass permissions, Approve for me and Full access, and in Accept edits when the user's message asked for a page, chart, dashboard or similar. Otherwise they show a card with the title, kind, version and size.
+`publish` and `update` follow the agent's mode like other Spark action tools (`publish_artifact`, `action-policy.ts`). They run at once in Auto, Bypass permissions, Auto review and Full access, and in Accept edits when the user's message asked for a page, chart, dashboard or similar. Otherwise they show a card with the title, kind, version and size.
 
 Before the card, the content is checked and stored:
 
