@@ -58,8 +58,10 @@ import { ViewTabs } from './ViewTabs.tsx';
 import {
   acceptViewState,
   chooseProfile,
+  clearLinkProblem,
   sendViewCommand,
   useChosenProfile,
+  useLinkProblem,
   useProfileTabs,
 } from './view-store.ts';
 
@@ -117,7 +119,9 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
     slotImages,
   } = useProfileTabs(profile);
   const tabs = tabsInCurrentSpace(allTabs, layout);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [ownProblem, setProblem] = useState<string | null>(null);
+  const linkProblem = useLinkProblem();
+  const problem = ownProblem ?? linkProblem;
   const shown = tabs.find((candidate) => candidate.active) ?? null;
   const tab = peek ?? shown;
   const splitShown = split !== null && splitHolds(split, shown?.id ?? null);
@@ -350,7 +354,14 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
         {problem && (
           <p className="bv-problem" role="alert">
             <span>{problem}</span>
-            <button type="button" className="bp-link" onClick={() => setProblem(null)}>
+            <button
+              type="button"
+              className="bp-link"
+              onClick={() => {
+                setProblem(null);
+                clearLinkProblem();
+              }}
+            >
               Dismiss
             </button>
           </p>

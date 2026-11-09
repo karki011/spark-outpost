@@ -32,7 +32,8 @@ import { islandVisibility } from './island-visibility.ts';
 import type { PreventActivation } from './no-activate.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { revealGate } from './reveal-gate.ts';
-import { guardNavigation } from './window.ts';
+import { attachContextMenu } from './context-menu.ts';
+import { guardNavigation, openLink } from './window.ts';
 
 const READY_FALLBACK_MS = 8_000;
 
@@ -99,6 +100,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   window.setIgnoreMouseEvents(true, { forward: true });
   window.setContentProtection(options.hideInShare());
   guardNavigation(window, options.origin);
+  attachContextMenu(window, openLink);
 
   const geometry = (): IslandGeometry =>
     placed && !window.isDestroyed()

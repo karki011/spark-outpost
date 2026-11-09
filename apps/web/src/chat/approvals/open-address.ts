@@ -1,3 +1,5 @@
+import { openOutside } from '../../browser/outside-link.ts';
+
 export interface AddressParts {
   before: string;
   host: string;
@@ -23,5 +25,5 @@ export const ADDRESS_NOTE =
 export const ADDRESS_ON_THE_MAC = 'Waiting for you on your Mac. Addresses open there.';
 
 export function openInBrowser(url: string): void {
-  window.open(url, '_blank', 'noopener,noreferrer');
+  openOutside(url);
 }

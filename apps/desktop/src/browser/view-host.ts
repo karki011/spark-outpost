@@ -13,6 +13,8 @@ import {
   BROWSER_FOCUS_SHORTCUTS,
   BROWSER_VIEW_TABS_MAX,
   browserArchiveSettingSchema,
+  browserLinksInSchema,
+  browserViewOpenTabSchema,
   browserProfileSchema,
   browserSearchEngineSchema,
   browserSpaceKey,
@@ -91,6 +93,9 @@ const CHANNELS = [
   IPC.browserViewClearZooms,
   IPC.browserViewArchive,
   IPC.browserViewSetArchive,
+  IPC.browserViewLinksIn,
+  IPC.browserViewSetLinksIn,
+  IPC.browserViewOpenTab,
 ];
 
 function profileOf(tab: PaneTab): BrowserProfile {
@@ -387,6 +392,24 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
     }),
   );
   ipcMain.handle(
+    IPC.browserViewLinksIn,
+    options.guarded(() => options.saved.linksIn()),
+  );
+  ipcMain.handle(
+    IPC.browserViewSetLinksIn,
+    options.guarded((_event, raw) => {
+      options.saved.setLinksIn(browserLinksInSchema.parse(raw));
+      return options.saved.linksIn();
+    }),
+  );
+  ipcMain.handle(
+    IPC.browserViewOpenTab,
+    options.guarded((_event, profile, url) => {
+      const request = browserViewOpenTabSchema.parse({ profile, url });
+      return openTab(request.profile, request.url);
+    }),
+  );
+  ipcMain.handle(
     IPC.browserViewStart,
     options.guarded(async (_event, raw) => {
       const profile = browserProfileSchema.parse(raw);
@@ -406,15 +429,17 @@ export function startBrowserViewHost(options: ViewHostOptions): BrowserViewHost 
   };
   const stopSweeping = (options.sweepEvery ?? everyMinute)(sweepAll);
 
+  async function openTab(profile: BrowserProfile, url: string): Promise<boolean> {
+    restore(profile);
+    if (panes.tabsOf(profile).length >= BROWSER_VIEW_TABS_MAX) return false;
+    await command(profile, { command: 'new_tab', url });
+    return true;
+  }
+
   return {
     panes,
     shortcut,
-    async openTab(profile, url) {
-      restore(profile);
-      if (panes.tabsOf(profile).length >= BROWSER_VIEW_TABS_MAX) return false;
-      await command(profile, { command: 'new_tab', url });
-      return true;
-    },
+    openTab,
     dispose() {
       stopSweeping();
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);

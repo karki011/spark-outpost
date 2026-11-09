@@ -67,7 +67,8 @@ vi.mock('electron', () => ({
     off: (event: string) => native.events.delete(event),
   },
 }));
-vi.mock('./window.ts', () => ({ guardNavigation: vi.fn() }));
+vi.mock('./window.ts', () => ({ guardNavigation: vi.fn(), openLink: vi.fn() }));
+vi.mock('./context-menu.ts', () => ({ attachContextMenu: vi.fn() }));
 vi.mock('./notch-probe.ts', () => ({
   emulatedNotch: () => null,
   readNotches: async () => new Map(),
