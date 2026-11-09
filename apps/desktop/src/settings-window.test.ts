@@ -61,7 +61,7 @@ vi.mock('electron', () => ({
     removeHandler: (channel: string) => native.handlers.delete(channel),
   },
 }));
-vi.mock('./window.ts', () => ({ guardNavigation: vi.fn() }));
+vi.mock('./window.ts', () => ({ guardNavigation: vi.fn(), openLink: vi.fn() }));
 vi.mock('./context-menu.ts', () => ({ attachContextMenu: vi.fn() }));
 vi.mock('./hour-cycle.ts', () => ({ systemHourCycle: () => null }));
 
