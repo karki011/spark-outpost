@@ -1,6 +1,18 @@
 import { z } from 'zod';
 
-export const PR_FOLLOW_UP_MAX_ROUNDS = 3;
+export const PR_FOLLOW_UP_BOTS_MAX = 50;
+const GITHUB_LOGIN = /^[a-z0-9](?:[a-z0-9-]{0,38})(?:\[bot\])?$/;
+
+export const githubLoginSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(GITHUB_LOGIN, 'Enter a GitHub login, like coderabbitai[bot].');
+
+export const prFollowUpBotsSchema = z
+  .array(githubLoginSchema)
+  .max(PR_FOLLOW_UP_BOTS_MAX)
+  .transform((logins) => [...new Set(logins)]);
 
 export const feedbackKindSchema = z.enum(['check', 'review_comment', 'review', 'issue_comment']);
 export type FeedbackKind = z.infer<typeof feedbackKindSchema>;
@@ -151,7 +163,7 @@ export const prWatchSchema = z.object({
   review: prReviewSchema,
   unknownReason: z.string().nullable(),
   rounds: z.number().int().nonnegative(),
-  maxRounds: z.number().int().positive(),
+  quiet: z.boolean(),
   newComments: z.number().int().nonnegative(),
   approvalId: z.uuid().nullable(),
   roundRunId: z.uuid().nullable(),

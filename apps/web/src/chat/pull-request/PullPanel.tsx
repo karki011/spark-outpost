@@ -70,7 +70,7 @@ function factsLine(watch: PrWatch): string {
     PULL_STATE_LABELS[pullState(watch)],
     CI_LABELS[ciState(watch)],
     comments,
-    ...(watch.followUp ? [`Round ${watch.rounds} of ${watch.maxRounds}`] : []),
+    ...(watch.followUp ? [`Round ${watch.rounds}`] : []),
   ].join(' · ');
 }
 

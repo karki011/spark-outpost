@@ -43,8 +43,8 @@ function adoptedLine(adopted: AdoptedPrompt): string {
 
 function followUpLines(branch: string, remote?: string): string[] {
   return [
-    `The fix for this pull request's feedback is finished. If you changed files, commit them and ${pushStep(branch, remote)}; the pull request updates itself. If you changed nothing, do nothing.`,
-    "Don't open another pull request, reply on GitHub or resolve threads: Spark posts your per-item lines as the replies.",
+    `The fix for this pull request's feedback is finished. If you changed files or merged the base branch, commit what is uncommitted and ${pushStep(branch, remote)}; the pull request updates itself. If you changed nothing and made no commit, do nothing.`,
+    "Don't open another pull request, reply on GitHub or resolve threads: Spark posts your per-item lines as the replies. After the push you may re-request review only from reviewers already on this pull request, as the round message said.",
     `${LIMITS} ${HOOKS}`,
     UNSEEN,
     'End your reply with the same per-item lines as before.',

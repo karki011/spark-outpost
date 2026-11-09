@@ -35,7 +35,7 @@ export function rowFacts(watch: PrWatch): RowFact[] {
   if (IN_ROUND.has(watch.phase) && watch.rounds > 0) {
     facts.push({
       key: 'round',
-      text: `Round ${watch.rounds} of ${watch.maxRounds}`,
+      text: `Round ${watch.rounds}`,
       tone: 'plain',
     });
   }

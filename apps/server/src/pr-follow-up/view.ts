@@ -1,8 +1,4 @@
-import {
-  PR_FOLLOW_UP_MAX_ROUNDS,
-  type PrThreadStatus,
-  type PrWatch,
-} from '@spark-outpost/contracts';
+import type { PrThreadStatus, PrWatch } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import { feedbackFor, feedbackView, type StoredFeedback } from '../persistence/pr-watches.ts';
 import { trackedPullsOf, type TrackedPull } from '../persistence/tracked-pulls.ts';
@@ -57,7 +53,7 @@ export async function watchView(db: Queryable, watch: TrackedPull, excerptChars?
     review: watch.review,
     unknownReason: watch.statusReason,
     rounds: watch.rounds,
-    maxRounds: PR_FOLLOW_UP_MAX_ROUNDS,
+    quiet: watch.quietHead !== null,
     newComments: items.filter((item) => item.kind !== 'check' && OPEN_STATES.has(item.state))
       .length,
     approvalId: watch.approvalId,

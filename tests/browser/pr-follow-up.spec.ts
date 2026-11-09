@@ -70,6 +70,51 @@ test('PR follow-up is on by default and its options turn off with it', async ({ 
   });
 });
 
+test('the review bots to act on are listed, checked and saved, and turn off with review handling', async ({
+  page,
+}) => {
+  const dialog = await openSparkSettings(page);
+  const input = dialog.getByRole('textbox', { name: 'Review bots to act on' });
+  await expect(input).toHaveAccessibleDescription(
+    'Enter the login as GitHub shows it, like coderabbitai[bot] or gitar-bot.',
+  );
+  await input.fill('not a login!');
+  await input.press('Enter');
+  await expect(input).toHaveAccessibleDescription('Enter a GitHub login, like coderabbitai[bot].');
+  await expect(input).toHaveAttribute('aria-invalid', 'true');
+
+  const added = saved(page);
+  await input.fill('CodeRabbitAI[bot]');
+  await dialog.getByRole('button', { name: 'Add' }).click();
+  await added;
+  const list = dialog.getByRole('list', { name: 'Review bots to act on' });
+  await expect(list.getByRole('listitem')).toHaveText(['coderabbitai[bot]Remove']);
+  await expect(input).toHaveValue('');
+
+  const second = saved(page);
+  await input.fill('gitar-bot');
+  await input.press('Enter');
+  await second;
+  expect((await profile(page)).prFollowUpBots).toEqual(['coderabbitai[bot]', 'gitar-bot']);
+
+  const removed = saved(page);
+  await list.getByRole('button', { name: 'Remove coderabbitai[bot]' }).click();
+  await removed;
+  await expect(list.getByRole('listitem')).toHaveText(['gitar-botRemove']);
+
+  await page.reload();
+  const reopened = await openSparkSettings(page);
+  await expect(
+    reopened.getByRole('list', { name: 'Review bots to act on' }).getByRole('listitem'),
+  ).toHaveText(['gitar-botRemove']);
+
+  const reviewsOff = saved(page);
+  await reopened.getByRole('switch', { name: 'Handle review comments' }).click();
+  await reviewsOff;
+  await expect(reopened.getByRole('textbox', { name: 'Review bots to act on' })).toHaveCount(0);
+  await expect(reopened.getByRole('button', { name: 'Remove gitar-bot' })).toHaveCount(0);
+});
+
 test('the chat shows what Spark is doing with its PR and one card confirms the push and replies', async ({
   page,
 }) => {
@@ -84,7 +129,7 @@ test('the chat shows what Spark is doing with its PR and one card confirms the p
   );
   await expect(pull).toContainText('Checks failing');
   await expect(pull).toContainText('2 new comments');
-  await expect(pull).toContainText('Round 1 of 3');
+  await expect(pull).toContainText('Round 1');
   await expect(page.locator('header.chat-head')).not.toContainText('PR #7');
   await pull.getByRole('button', { name: 'Pull request acme/widgets#7 details' }).click();
   await expect(pull).toContainText(`Spark: ${SEED_DOING}`);

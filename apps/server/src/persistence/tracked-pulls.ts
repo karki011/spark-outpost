@@ -68,6 +68,8 @@ export interface TrackedPull extends PullAddress {
   roundRunId: string | null;
   approvalId: string | null;
   requested: boolean;
+  knownReviewers: string[];
+  quietHead: string | null;
   intervalSeconds: number;
   nextPollAt: Date;
   lastPolledAt: Date | null;
@@ -111,6 +113,8 @@ export interface PullRow {
   round_run_id: string | null;
   approval_id: string | null;
   requested: boolean;
+  known_reviewers: string[];
+  quiet_head: string | null;
   interval_seconds: number;
   next_poll_at: Date;
   last_polled_at: Date | null;
@@ -155,6 +159,8 @@ export function toTrackedPull(row: PullRow): TrackedPull {
     roundRunId: row.round_run_id,
     approvalId: row.approval_id,
     requested: row.requested,
+    knownReviewers: row.known_reviewers,
+    quietHead: row.quiet_head,
     intervalSeconds: row.interval_seconds,
     nextPollAt: row.next_poll_at,
     lastPolledAt: row.last_polled_at,
@@ -265,7 +271,8 @@ export async function savePull(db: Queryable, pull: TrackedPull): Promise<void> 
        interval_seconds = $12, next_poll_at = $13, last_polled_at = $14, last_error = $15,
        title = $16, branch = $17, base = $18, failing_checks = $19, review = $20,
        status_reason = $21, follow_up = $22, details = $23, poll_problem = $24, additions = $25,
-       deletions = $26, refresh_requested = $27, updated_at = now()
+       deletions = $26, refresh_requested = $27, known_reviewers = $28, quiet_head = $29,
+       updated_at = now()
      WHERE id = $1`,
     [
       pull.id,
@@ -295,6 +302,8 @@ export async function savePull(db: Queryable, pull: TrackedPull): Promise<void> 
       pull.additions,
       pull.deletions,
       pull.refreshRequested,
+      pull.knownReviewers,
+      pull.quietHead,
     ],
   );
 }

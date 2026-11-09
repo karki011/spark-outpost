@@ -28,7 +28,14 @@ import { connectTo, shipDepsOf, startRoundRun, type FollowUpDeps } from './deps.
 import { FollowUpBlocked, pendingPush, postReply, pushRound, replyText } from './outward.ts';
 import { followUpMode } from './mode.ts';
 import { itemNotes, noteKind, roundPrompt } from './prompt.ts';
-import { CHAT_BUSY_LINE, heldBackLine, roundLine, splitRound } from './rounds.ts';
+import {
+  CHAT_BUSY_LINE,
+  changedNothing,
+  heldBackLine,
+  QUIET_LINE,
+  roundLine,
+  splitRound,
+} from './rounds.ts';
 
 const NEW_COMMIT = 'the new commit';
 export const PR_REPLY_METHOD = 'ship/pr_reply';
@@ -70,10 +77,16 @@ async function holdBack(deps: FollowUpDeps, watch: Watch, queued: readonly Store
   return { run: split.run, line: heldBackLine(split.unchanged, split.repeated.length) };
 }
 
+export interface PullBranch {
+  base: string | null;
+  mergeState: string | null;
+}
+
 export async function startRound(
   deps: FollowUpDeps,
   watch: Watch,
   all: readonly StoredFeedback[],
+  branch: PullBranch,
 ): Promise<Watch> {
   const conversation = await deps.db.query<{ session_type: string }>(
     'SELECT session_type FROM conversations WHERE id = $1 AND workspace_id = $2',
@@ -103,8 +116,18 @@ export async function startRound(
     if (sync === 'diverged' || sync === 'unreachable') return needsYou(watch, SYNC_LINES[sync]);
   }
   const round = watch.rounds + 1;
+  const asks = (await followUpMode(deps.db, watch)) === 'ask';
   const content = roundPrompt(
-    { repo: `${watch.owner}/${watch.repo}`, number: watch.number, branch: watch.branch, round },
+    {
+      repo: `${watch.owner}/${watch.repo}`,
+      number: watch.number,
+      branch: watch.branch,
+      round,
+      remote: ship?.remote ?? 'origin',
+      base: branch.base,
+      mergeState: branch.mergeState,
+      reviewers: asks ? [] : watch.knownReviewers,
+    },
     queued,
   );
   const runId = await startRoundRun(deps, watch, content);
@@ -120,6 +143,7 @@ export async function startRound(
     rounds: round,
     roundRunId: runId,
     requested: false,
+    quietHead: null,
   };
 }
 
@@ -255,7 +279,8 @@ function doneLine(commit: string | null, replies: number, needs: number): string
   const done = parts.length > 0 ? `${parts.join(' and ')}.` : 'Nothing was pushed.';
   const after = needs > 0 ? ` ${needs} ${needs === 1 ? 'item needs' : 'items need'} you.` : '';
   const head = done.charAt(0).toUpperCase() + done.slice(1);
-  return `${head}${after} ${WATCHING_LINE}`;
+  const next = changedNothing(commit, replies) ? QUIET_LINE : WATCHING_LINE;
+  return `${head}${after} ${next}`;
 }
 
 interface Settlement {
@@ -327,6 +352,7 @@ async function settle(
     if (replyId) replied += 1;
     await updateFeedback(deps.db, [item.id], { state: 'done', replyId });
   }
+  const quiet = changedNothing(commit, replied);
   const line = [unpushedLine(settlement.unpushed), doneLine(commit, replied, needs)]
     .filter(Boolean)
     .join(' ');
@@ -336,6 +362,7 @@ async function settle(
     doing: line,
     roundRunId: null,
     approvalId: null,
+    quietHead: quiet ? (watch.headSha ?? '') : null,
   };
 }
 

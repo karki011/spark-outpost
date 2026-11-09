@@ -1,0 +1,43 @@
+.set-row:has(.review-bots) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.set-row:has(.review-bots) .set-row-control {
+  grid-row: auto;
+  grid-column: 1;
+  margin-top: 8px;
+}
+
+.review-bots {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.review-bots ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-bots li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 28px;
+  font-size: 13px;
+}
+
+.review-bots-add {
+  display: flex;
+  gap: 8px;
+}
+
+.review-bots-add .inp {
+  flex: 1;
+  min-width: 0;
+}

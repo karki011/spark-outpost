@@ -114,7 +114,7 @@ async function startRound(conversationId: string): Promise<string> {
   );
   await runSql(
     `UPDATE pr_watches SET phase = 'fixing', rounds = 2, round_run_id = $1,
-       doing = 'Fixing 1 item (round 2 of 3).', ${FREEZE}`,
+       doing = 'Fixing 1 item (round 2).', ${FREEZE}`,
     [runId],
   );
   return runId;
@@ -181,18 +181,18 @@ test('the row says who is watching, from the first check to the merge, without m
   await expect(mark(page)).not.toHaveClass(/pulse/);
 
   const runId = await startRound(conversationId);
-  await expect(row(page)).toContainText('Checks failingRound 2 of 3Agent is on itOpen');
+  await expect(row(page)).toContainText('Checks failingRound 2Agent is on itOpen');
   await expect(status(page)).toHaveText(
-    'Pull request #7: Open, Checks failing, Round 2 of 3, Agent is on it',
+    'Pull request #7: Open, Checks failing, Round 2, Agent is on it',
   );
   await expect(mark(page)).toHaveClass(/live pulse/);
   await expect(mark(page)).toHaveAccessibleName(
-    'Agent is on it. Fake provider · Bolt · Builder is working on round 2 of 3.',
+    'Agent is on it. Fake provider · Bolt · Builder is working on round 2.',
   );
   expect((await box(row(page))).height).toBe(32);
   await toggle(page).click();
   await expect(detail(page)).toContainText(
-    'Agent is on itFake provider · Bolt · Builder is working on round 2 of 3.',
+    'Agent is on itFake provider · Bolt · Builder is working on round 2.',
   );
   await shoot(page, 'agent-on-it');
   await page.keyboard.press('Escape');
@@ -311,20 +311,22 @@ test('a check that fails pauses watching and says why, and so does missing acces
   expect(await box(row(page))).toEqual(collapsed);
 });
 
-test('used-up rounds and a status-only pull request say what Spark will not do', async ({
+test('a stopped follow-up and a status-only pull request say what Spark will not do', async ({
   page,
   request,
 }) => {
   await addPull(request, { reviews: APPROVED });
   await openFollowed(page);
   await expect(mark(page)).toHaveText('Watching', POLLED);
-  await runSql(`UPDATE pr_watches SET rounds = 3, ${FREEZE}`);
-  await expect(mark(page)).toHaveText('3 of 3 rounds used');
+  await runSql(
+    `UPDATE pr_watches SET rounds = 5, quiet_head = COALESCE(head_sha, 'sha-quiet'), ${FREEZE}`,
+  );
+  await expect(mark(page)).toHaveText('Stopped');
   await expect(mark(page)).toHaveAccessibleName(
-    /^Not following up\. 3 of 3 rounds used\. Ask in the chat for another round\./,
+    /^Stopped following up\. The last round changed nothing, so Spark stopped following up\. New feedback or a new commit starts it again, or ask in the chat for another round\./,
   );
 
-  await runSql('UPDATE pr_watches SET rounds = 0, follow_up = false');
+  await runSql('UPDATE pr_watches SET rounds = 0, quiet_head = NULL, follow_up = false');
   await expect(mark(page)).toHaveText('Tracking');
   await toggle(page).click();
   await expect(detail(page)).toContainText(

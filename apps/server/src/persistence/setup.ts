@@ -43,6 +43,7 @@ interface ProfileRow {
   pr_follow_up_reviews: boolean;
   pr_follow_up_replies: boolean;
   pr_follow_up_ask: boolean;
+  pr_follow_up_bots: string[];
   personality: Personality;
   agent_instructions: string;
   agent_instructions_file: string;
@@ -105,7 +106,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
   const { rows } = await db.query<ProfileRow>(
     `SELECT display_name, default_provider, onboarding_completed_at, auto_continue_seconds,
        pr_ready_for_review, pr_follow_up, pr_follow_up_checks,
-       pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, personality, agent_instructions, agent_instructions_file, default_level,
+       pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, pr_follow_up_bots, personality, agent_instructions, agent_instructions_file, default_level,
        default_level_notice,
        morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
        heartbeat, wide_window, busy_enter, archive_inactive_days, terminal_record_like_chat,
@@ -191,6 +192,7 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     prFollowUpReviews: profile.pr_follow_up_reviews,
     prFollowUpReplies: profile.pr_follow_up_replies,
     prFollowUpAsk: profile.pr_follow_up_ask,
+    prFollowUpBots: profile.pr_follow_up_bots,
     personality: profile.personality,
     agentInstructions: profile.agent_instructions,
     agentInstructionsFile: profile.agent_instructions_file,
@@ -279,6 +281,7 @@ export async function updateProfile(
        week_recap = COALESCE($32, week_recap),
        week_recap_day = COALESCE($33, week_recap_day),
        week_recap_time = COALESCE($34::time, week_recap_time),
+       pr_follow_up_bots = COALESCE($35::text[], pr_follow_up_bots),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -316,6 +319,7 @@ export async function updateProfile(
       update.weekRecap ?? null,
       update.weekRecapDay ?? null,
       update.weekRecapTime ?? null,
+      update.prFollowUpBots ?? null,
     ],
   );
 }

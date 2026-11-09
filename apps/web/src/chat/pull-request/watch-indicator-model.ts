@@ -16,7 +16,7 @@ export type WatchState =
   | 'no_access'
   | 'paused'
   | 'off'
-  | 'rounds_used'
+  | 'stopped'
   | 'waiting_checks'
   | 'waiting_review'
   | 'watching'
@@ -59,7 +59,7 @@ export function watchState(watch: PrWatch, mode: FollowUpMode): WatchState | nul
   }
   if (watch.pollProblem) return 'paused';
   if (watch.followUp && mode === 'off') return 'off';
-  if (watch.followUp && watch.rounds >= watch.maxRounds) return 'rounds_used';
+  if (watch.followUp && watch.quiet) return 'stopped';
   if (watch.checks === 'pending') return 'waiting_checks';
   if (watch.review === 'none' && !watch.draft && watch.checks !== 'failing') {
     return 'waiting_review';
@@ -129,9 +129,12 @@ const STATUS_ONLY =
   'Spark shows checks and reviews here. It follows up only on pull requests from this chat’s own branch.';
 const ASKS_FIRST = 'Spark asks before pushing and replying.';
 
-function roundLabel(watch: Pick<PrWatch, 'rounds' | 'maxRounds'>): string {
-  return `Round ${watch.rounds} of ${watch.maxRounds}`;
+function roundLabel(watch: Pick<PrWatch, 'rounds'>): string {
+  return `Round ${watch.rounds}`;
 }
+
+const STOPPED_LINE =
+  'The last round changed nothing, so Spark stopped following up. New feedback or a new commit starts it again, or ask in the chat for another round.';
 
 function workerLine(worker: RoundWorker | null): string {
   if (!worker) return 'The agent';
@@ -145,9 +148,7 @@ function needsLines(watch: PrWatch): string[] {
   if (waiting > 0) {
     lines.push(`${waiting} ${waiting === 1 ? 'item is' : 'items are'} left for you.`);
   }
-  if (watch.followUp && watch.rounds >= watch.maxRounds && watch.phase !== 'confirming') {
-    lines.push(`${watch.rounds} of ${watch.maxRounds} rounds used.`);
-  }
+  if (watch.followUp && watch.quiet && watch.phase !== 'confirming') lines.push(STOPPED_LINE);
   return lines.length > 0 ? lines : [watch.doing];
 }
 
@@ -214,17 +215,14 @@ function shape(state: WatchState, watch: PrWatch, context: IndicatorContext): Sh
           polled,
         ],
       };
-    case 'rounds_used':
+    case 'stopped':
       return {
         tone: 'quiet',
-        watching: false,
+        watching: true,
         pulse: false,
-        label: 'Not following up',
-        short: `${watch.rounds} of ${watch.maxRounds} rounds used`,
-        lines: [
-          `${watch.rounds} of ${watch.maxRounds} rounds used. Ask in the chat for another round.`,
-          polled,
-        ],
+        label: 'Stopped following up',
+        short: 'Stopped',
+        lines: [STOPPED_LINE, polled],
       };
     case 'waiting_checks':
       return {

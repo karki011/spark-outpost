@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                                                   | What to do                                                                                  |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Review bots, re-requests, no round cap                                         | [PR follow-up](pr-follow-up.md#review-bots).                                                |
 | Links open in Spark                                                            | [Settings](settings.md#mac).                                                                |
 | Join at start, **Join opens**, Dismiss                                         | [See your day](calendar.md#use-it).                                                         |
 | Arrows in zoomed images                                                        | [Keys](keyboard-shortcuts.md#chats).                                                        |

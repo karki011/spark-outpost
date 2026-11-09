@@ -244,6 +244,7 @@ export const ALLOWED_REASONS = {
   publishAsked: 'you asked to push or open a PR',
   publishFullAuto: 'Full auto → PR',
   publishFollowUp: "a fix for this chat's open pull request",
+  rerequestReview: "re-requesting review from this pull request's own reviewers",
   askAuto: 'Automatic in an Ask turn',
 } as const;
 const GATE_REASONS: ReadonlySet<string> = new Set(Object.values(ALLOWED_REASONS));

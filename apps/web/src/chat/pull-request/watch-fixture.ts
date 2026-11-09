@@ -26,7 +26,7 @@ export function watch(fields: Partial<PrWatch> = {}): PrWatch {
     review: 'none',
     unknownReason: null,
     rounds: 0,
-    maxRounds: 3,
+    quiet: false,
     newComments: 0,
     approvalId: null,
     roundRunId: null,

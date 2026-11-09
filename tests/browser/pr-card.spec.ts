@@ -350,12 +350,12 @@ test('a follow-up round shows its round, new comments and what is left for you',
   ]);
   await openChats(page);
   const row = card(page).locator('.prc-row');
-  await expect(row).toContainText('Checks failing2 new commentsRound 1 of 3Needs youOpen');
+  await expect(row).toContainText('Checks failing2 new commentsRound 1Needs youOpen');
 
   await runSql("UPDATE pr_feedback_items SET state = 'needs_user' WHERE id = $1", [
     seeded.items.held,
   ]);
-  await expect(row).toContainText('Checks failing1 need you2 new commentsRound 1 of 3Open');
+  await expect(row).toContainText('Checks failing1 need you2 new commentsRound 1Open');
 
   await toggle(page).click();
   const panel = card(page).locator('.prc-panel');

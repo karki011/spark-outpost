@@ -17,7 +17,7 @@ import {
   DEFAULT_RULE_CONTEXT,
   type SparkRuleContext,
 } from './gh-rules.ts';
-import { namesAnotherRepo, ownPullReply, type OwnRepo } from './own-repo.ts';
+import { namesAnotherRepo, ownPullReply, reviewRequestOf, type OwnRepo } from './own-repo.ts';
 
 export interface FollowUpRound {
   workspaceId: string;
@@ -69,7 +69,7 @@ export interface PublishBrief {
 }
 
 export type PublishVerdict =
-  | { kind: 'allow'; basis: PublishBasis }
+  | { kind: 'allow'; basis: PublishBasis; rerequest?: true }
   | { kind: 'mode' }
   | { kind: 'refuse' | 'ask'; reason: string; rule?: FloorRuleId };
 
@@ -188,7 +188,14 @@ function ghSubcommand(args: readonly string[]): string {
   return ['gh', ...named.filter((word) => !word.startsWith('-'))].join(' ');
 }
 
-function ghRefusal(args: readonly string[], task: TaskBranch, own: OwnRepo | null): string | null {
+function ghRefusal(
+  args: readonly string[],
+  task: TaskBranch,
+  own: OwnRepo | null,
+  followUp: boolean,
+): string | null {
+  const review = followUp && own ? reviewRequestOf(args, own) : null;
+  if (review) return review.kind === 'allowed' ? null : review.reason;
   const [group, verb, ...rest] = args;
   const opens = group === 'pr' && verb !== undefined && GH_PR_WRITES.has(verb);
   if (opens && ownPullTarget(rest, task)) return null;
@@ -221,6 +228,7 @@ function* hostingStops(
   task: TaskBranch,
   judged: (program: Program) => boolean,
   own: OwnRepo | null,
+  followUp: boolean,
 ): Generator<Stop> {
   const followed = namesAnotherRepo(command) ? null : own;
   for (const program of hostingCommands(command)) {
@@ -230,7 +238,7 @@ function* hostingStops(
       continue;
     }
     const args = program.slice(1);
-    const refused = ghRefusal(args, task, followed);
+    const refused = ghRefusal(args, task, followed, followUp);
     if (!refused) continue;
     const owned = ownGhRules(args);
     if (owned.length === 0) yield [refused, opensPull(args) ? 'PullRequest' : null];
@@ -272,6 +280,7 @@ function* stopsAmong(
   task: TaskBranch | null,
   judged: (program: Program) => boolean,
   own: OwnRepo | null,
+  followUp: boolean,
 ): Generator<Stop> {
   if (gitPublishesBesidesPush(command)) yield [REMOTE_RAIL_REASON, 'GitRemote'];
   if (!task) {
@@ -279,7 +288,7 @@ function* stopsAmong(
     yield [NO_TASK_BRANCH_REASON, pushes ? 'Push(other)' : 'PullRequest'];
     return;
   }
-  yield* hostingStops(command, task, judged, own);
+  yield* hostingStops(command, task, judged, own, followUp);
   for (const push of pushTargets(command)) yield* pushStops(push, task);
 }
 
@@ -306,8 +315,22 @@ export function publishStop(
   task: TaskBranch | null,
   own: OwnRepo | null = null,
   rules: SparkRuleContext = DEFAULT_RULE_CONTEXT,
+  followUp = false,
 ): PublishStop | null {
-  return firstStop(stopsAmong(command, task, writesUnder(command, rules), own), rules.rules);
+  const stops = stopsAmong(command, task, writesUnder(command, rules), own, followUp);
+  return firstStop(stops, rules.rules);
+}
+
+function onlyReviewRequests(command: string, own: OwnRepo | null): boolean {
+  if (!own || namesAnotherRepo(command) || publishesThroughGit(command)) return false;
+  const writes = hostingCommands(command).filter(writesHosting);
+  return (
+    writes.length > 0 &&
+    writes.every(
+      (program) =>
+        programName(program) === 'gh' && reviewRequestOf(program.slice(1), own)?.kind === 'allowed',
+    )
+  );
 }
 
 export function onlyRepliesOnOwnPull(command: string, own: OwnRepo | null): boolean {
@@ -352,8 +375,12 @@ export function ruledPublishVerdict(
   if (!publishesUnder(command, rules)) {
     return viewsOwnPull(command, context.task) ? { kind: 'allow', basis } : null;
   }
-  const stop = publishStop(command, context.task, own, rules);
-  if (!stop) return { kind: 'allow', basis };
+  const followUp = Boolean(context.grant.followUp);
+  const stop = publishStop(command, context.task, own, rules, followUp);
+  if (!stop) {
+    const rerequest = followUp && onlyReviewRequests(command, own);
+    return rerequest ? { kind: 'allow', basis, rerequest } : { kind: 'allow', basis };
+  }
   if (stop.kind === 'mode') return { kind: 'mode' };
   return { kind: stop.kind, reason: stop.reason, ...ruled(stop.rule) };
 }

@@ -50,7 +50,9 @@ describe('publishPrompt', () => {
   it('pushes to the open pull request in a follow-up round and opens nothing', () => {
     const prompt = publishPrompt({ ...base, reason: 'follow-up', draftAsked: true }) ?? '';
     expect(prompt).toContain("Don't open another pull request, reply on GitHub or resolve threads");
-    expect(prompt).toContain('If you changed nothing, do nothing.');
+    expect(prompt).toContain('If you changed files or merged the base branch');
+    expect(prompt).toContain('If you changed nothing and made no commit, do nothing.');
+    expect(prompt).toContain('re-request review only from reviewers already on this pull request');
     expect(prompt).toContain('End your reply with the same per-item lines as before.');
     expect(prompt).not.toContain('gh pr create');
     expect(prompt).not.toMatch(/draft/iu);

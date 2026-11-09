@@ -27,17 +27,18 @@ import { detailsOf, threadResolution } from '../pr-tracking/details.ts';
 import type { JevAccess } from '../advisor/jev-calls.ts';
 import type { GitHubConnection } from '../ship/github/connection.ts';
 import { connectTo, nowOf, type FollowUpDeps } from './deps.ts';
-import { readChecks, readComments } from './gather.ts';
-import { afterDecision, finishRound, startRound } from './round.ts';
+import { readChecks, readComments, type PullFacts, type ReviewEntry } from './gather.ts';
+import { afterDecision, finishRound, startRound, type PullBranch } from './round.ts';
 import {
   BUSY_INTERVAL_SECONDS,
-  LIMIT_LINE,
   MAX_INTERVAL_SECONDS,
   nextInterval,
   newSourceKeys,
   PAUSED_LINE,
+  QUIET_LINE,
   roundDecision,
   stateFor,
+  stillQuiet,
 } from './rounds.ts';
 import { triageFeedback } from './triage.ts';
 import { settledNow, settledOnGitHub, type OnGitHub } from './sweep.ts';
@@ -63,18 +64,30 @@ async function jevAccess(
   return { deps: deps.jev, model: rows[0].model ?? advisorEntry('jev').defaultModel };
 }
 
+function reviewersOf(
+  known: readonly string[],
+  facts: PullFacts,
+  reviews: readonly ReviewEntry[],
+): string[] {
+  const reviewed = reviews.flatMap((review) => (review.user ? [review.user.login] : []));
+  const all = [...known, ...facts.requestedReviewers, ...reviewed];
+  return [...new Set(all.map((login) => login.toLowerCase()))].sort();
+}
+
 async function ingest(
   deps: FollowUpDeps,
   watch: Watch,
   connection: GitHubConnection,
   settings: PrFollowUpSettings,
-  prAuthor: string | null,
+  facts: PullFacts,
 ): Promise<number> {
+  const prAuthor = facts.author;
   const repo = { owner: watch.owner, name: watch.repo };
   const checks = await readChecks(connection, repo, watch.headSha!);
   watch.checks = checks.state;
   watch.failingChecks = checks.failingChecks;
   const comments = await readComments(connection, repo, watch.number, prAuthor);
+  watch.knownReviewers = reviewersOf(watch.knownReviewers, facts, comments.reviews);
   const resolved = await threadResolution(connection, repo, watch.number, comments.discussion);
   watch.review = comments.review;
   watch.details = { checkRuns: checks.checkRuns, ...detailsOf(comments.discussion, resolved) };
@@ -105,7 +118,7 @@ async function ingest(
     signal,
   );
   const triaged = fresh.map((item, index) => {
-    const trusted = isTrusted(item, writers);
+    const trusted = isTrusted(item, writers, settings.bots);
     const { triage, by } = readings[index]!;
     return {
       ...item,
@@ -126,26 +139,26 @@ function idleLine(waiting: number): string {
   return `${items}. ${WATCHING_LINE}`;
 }
 
-async function decideNext(deps: FollowUpDeps, watch: Watch): Promise<Watch> {
+async function decideNext(deps: FollowUpDeps, watch: Watch, branch: PullBranch): Promise<Watch> {
   const queued = await feedbackFor(deps.db, watch.id, ['queued']);
-  const decision = roundDecision(watch.rounds, queued.length, watch.requested);
+  const decision = roundDecision(watch.quietHead !== null, queued.length, watch.requested);
   if (decision === 'start' && (await sparkPaused(deps.db, watch.workspaceId))) {
     return { ...watch, phase: 'watching', doing: PAUSED_LINE };
   }
-  if (decision === 'start') return startRound(deps, watch, queued);
-  if (decision === 'limit') {
+  if (decision === 'start') return startRound(deps, watch, queued, branch);
+  if (decision === 'quiet') {
     await updateFeedback(
       deps.db,
       queued.map((item) => item.id),
       { state: 'needs_user' },
     );
-    return { ...watch, phase: 'needs_you', doing: LIMIT_LINE, requested: false };
+    return { ...watch, phase: 'needs_you', doing: QUIET_LINE, requested: false };
   }
   const waiting = (await feedbackFor(deps.db, watch.id, ['needs_user'])).length;
   return {
     ...watch,
     phase: waiting > 0 ? 'needs_you' : 'watching',
-    doing: idleLine(waiting),
+    doing: watch.quietHead !== null ? QUIET_LINE : idleLine(waiting),
     requested: false,
   };
 }
@@ -158,10 +171,12 @@ async function follow(
   seen: Watch,
   connection: GitHubConnection,
   settings: PrFollowUpSettings,
-  prAuthor: string | null,
+  facts: PullFacts,
 ): Promise<TrackedPull> {
-  const added = await ingest(deps, seen, connection, settings, prAuthor);
-  const next = await decideNext(deps, seen);
+  const added = await ingest(deps, seen, connection, settings, facts);
+  const quietHead = stillQuiet(seen.quietHead, seen.headSha, added);
+  const branch = { base: seen.base, mergeState: facts.mergeState };
+  const next = await decideNext(deps, { ...seen, quietHead }, branch);
   return {
     ...next,
     intervalSeconds: nextInterval(watch.intervalSeconds, added > 0 || pending(next)),
@@ -181,7 +196,7 @@ async function observe(
   const seen = reopenedPull(read);
   if (busy(pull)) return seen;
   if (settings.enabled && isWatch(seen) && isWatch(pull)) {
-    return follow(deps, pull, seen, connection, settings, facts.author);
+    return follow(deps, pull, seen, connection, settings, facts);
   }
   const tracked = await trackOpenPull(connection, seen);
   const next = isWatch(seen) ? { ...tracked, doing: FOLLOW_UP_OFF_LINE } : tracked;
