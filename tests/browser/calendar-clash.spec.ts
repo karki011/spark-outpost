@@ -63,6 +63,9 @@ test('Choose lists each meeting with its own Join or Open, and Esc closes it', a
   await expect(line).toContainText(
     /^Meetings in \d+ min · Standup \+ 2 more\d+:\d+( [AP]M)?–\d+:\d+ [AP]M · Choose one/,
   );
+  const lead = await line.locator('.isl-calline-lead').boundingBox();
+  const title = await line.locator('.isl-calline-title').boundingBox();
+  expect(title!.x - (lead!.x + lead!.width)).toBeGreaterThan(8);
   await expect(line.getByRole('button', { name: /^Join/ })).toHaveCount(0);
   await line.getByRole('button', { name: 'Choose one of 3 meetings' }).click();
   const list = choose(page);

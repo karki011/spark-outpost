@@ -42,6 +42,14 @@ describe('CalendarLineView meeting line', () => {
     expect(onDismiss).toHaveBeenCalledWith(shown);
   });
 
+  it('keeps a space on both sides of the dot between the lead and the title', () => {
+    show(line({}));
+    const head = document.querySelector('.isl-calline-head');
+    expect(head?.textContent).toBe('Meeting in 9 min · Standup');
+    const sep = document.querySelector('.isl-calline-sep');
+    expect(sep?.textContent).toBe(' · ');
+  });
+
   it('names every meeting of a grouped line', () => {
     show(line({ choose: [standup, design] }));
     expect(

@@ -48,7 +48,8 @@ function CalendarRestLine({ line, top, calendar }: CalendarRestLineProps) {
         <span className="isl-calline-two">
           <span className="isl-calline-head">
             <b className="isl-calline-lead">{line.meeting.lead}</b>
-            <span className="isl-calline-title"> · {line.meeting.title}</span>
+            <span className="isl-calline-sep"> · </span>
+            <span className="isl-calline-title">{line.meeting.title}</span>
           </span>
           <span className="isl-calline-sub">{line.meeting.sub}</span>
         </span>
