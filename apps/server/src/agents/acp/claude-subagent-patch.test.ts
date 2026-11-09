@@ -29,7 +29,7 @@ function runtime() {
     published.push(notification);
   };
   const logger = { log: () => undefined, error: () => undefined };
-  const built = new NativeSubagentRuntime(true, 'root', {} as never, publish as never, logger);
+  const built = new NativeSubagentRuntime('air', 'root', {} as never, publish as never, logger);
   const subagents = built as unknown as PatchedRuntime;
   const deliver = async () => undefined;
   const started = () =>

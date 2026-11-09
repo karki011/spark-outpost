@@ -20,6 +20,7 @@ import type { RequestUsage } from '../../providers/provider.ts';
 import type { LiveTools } from './live-tools.ts';
 import { closeQuietly, deleteQuietly } from './session-open.ts';
 import { routeSubagents } from './subagent-stream.ts';
+import { rememberToolCalls } from './tool-call-memory.ts';
 
 export type SessionMessage = Awaited<ReturnType<acp.ActiveSession['nextUpdate']>>;
 
@@ -119,7 +120,7 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
   const released = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const done = client.connectWith(routeSubagents(agent.stream), async (ctx) => {
+  const done = client.connectWith(routeSubagents(rememberToolCalls(agent.stream)), async (ctx) => {
     ready(ctx);
     await released;
   });

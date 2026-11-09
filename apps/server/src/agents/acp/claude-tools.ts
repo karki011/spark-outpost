@@ -59,6 +59,7 @@ export const CLAUDE_OFF_TOOLS: Readonly<Record<string, string>> = {
   ProposeGoal: 'sets a goal that re-prompts the agent on its own; Spark decides when a turn ends',
   ReadNotifications: 'reads claude.ai notifications',
   ShowOnboardingRolePicker: 'shows Claude Code onboarding',
+  OfferChromeSetup: 'offers to set up Claude in Chrome; agents use the Browser pane',
 };
 
 export const CLAUDE_OFF_TOOL_NAMES = Object.keys(CLAUDE_OFF_TOOLS);

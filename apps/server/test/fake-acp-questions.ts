@@ -56,7 +56,7 @@ export function codexQuestion(sessionId: string): acp.CreateElicitationRequest {
 type Say = (chunk: string) => Promise<void>;
 
 async function askClaude(client: acp.AgentContext, sessionId: string, say: Say) {
-  const request = askUserQuestionsToCreateRequest(CLAUDE_QUESTIONS, sessionId, 'toolu_ask');
+  const request = askUserQuestionsToCreateRequest(CLAUDE_QUESTIONS, sessionId, 'toolu_ask', true);
   const response = await client.request(acp.methods.client.elicitation.create, request);
   const toolInput = { questions: CLAUDE_QUESTIONS };
   const result = applyAskElicitationResponse(response, toolInput, CLAUDE_QUESTIONS);

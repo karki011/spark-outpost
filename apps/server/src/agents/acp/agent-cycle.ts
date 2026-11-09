@@ -11,5 +11,6 @@ const WORK_UPDATES = new Set<SessionUpdate['sessionUpdate']>([
 
 export function startsAgentCycle(update: SessionUpdate): boolean {
   if (WORK_UPDATES.has(update.sessionUpdate)) return true;
-  return subagentMark(update) !== null;
+  const mark = subagentMark(update);
+  return mark !== null && !(mark.event === 'task' && mark.turn === true && mark.ended);
 }

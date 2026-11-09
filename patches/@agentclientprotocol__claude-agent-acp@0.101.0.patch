@@ -1,41 +1,31 @@
 diff --git a/dist/acp-agent.js b/dist/acp-agent.js
-index beba2ff4f21e6805099c55215345a95a046c608a..5d17c586fbe7071a70059c3fbea3c7351a39e599 100644
+index 970eb82647656c49676685178d62245387b1cb31..ec864516825c887a0b91dae6af3b15b3b534142d 100644
 --- a/dist/acp-agent.js
 +++ b/dist/acp-agent.js
-@@ -3311,6 +3311,7 @@ export class ClaudeAcpAgent {
-                             case "files_persisted":
-                                 break;
-                             case "task_progress":
+@@ -4661,6 +4661,7 @@ export class ClaudeAcpAgent {
+                                     this.logger.log(`Ignoring task_progress for task ${message.task_id} from earlier run ${message.run_id}`);
+                                     break;
+                                 }
 +                                subagents.noteProgress(message.task_id, message.usage);
                                  await asyncTasks.taskProgress({
                                      task_id: message.task_id,
                                      description: message.description,
-@@ -3366,7 +3367,7 @@ export class ClaudeAcpAgent {
-                             case "task_notification":
+@@ -4728,7 +4729,7 @@ export class ClaudeAcpAgent {
+                                     break;
                                  // The task settled — no further tool calls can originate
                                  // from it, so its registry entry can be dropped.
--                                await subagents.finishTask(message.task_id, message.status, sendUpdate, message.tool_use_id);
-+                                await subagents.finishTask(message.task_id, message.status, sendUpdate, message.tool_use_id, { usage: message.usage, summary: message.summary });
+-                                await subagents.finishTask(message.task_id, message.status, sendUpdate, message.tool_use_id, { reason: message.reason });
++                                await subagents.finishTask(message.task_id, message.status, sendUpdate, message.tool_use_id, { reason: message.reason, usage: message.usage, summary: message.summary });
                                  await asyncTasks.taskNotification({
                                      task_id: message.task_id,
                                      status: message.status,
-@@ -3594,7 +3595,8 @@ export class ClaudeAcpAgent {
-                         // the user's prompt's. Autonomous results must never touch the
-                         // user-turn lifecycle (stop reason, settles, failActive,
-                         // slash-command output forwarding), though their cost is real.
--                        const isAutonomousResult = message.origin != null && AUTONOMOUS_RESULT_ORIGINS.has(message.origin.kind);
-+                        const answersSend = (message.user_message_uuids ?? (message.user_message_uuid !== undefined ? [message.user_message_uuid] : [])).some((uuid) => findUnsettledTurn(uuid) !== undefined || (isSteering(session.activeTurn) && session.activeTurn.steeredUuids?.has(uuid)));
-+                        const isAutonomousResult = message.origin != null && AUTONOMOUS_RESULT_ORIGINS.has(message.origin.kind) && !answersSend;
-                         const pendingExitPlanModeInterruption = session.pendingExitPlanModeInterruption;
-                         const pendingExitPlanContextReset = session.pendingExitPlanContextReset;
-                         try {
-@@ -4654,6 +4656,15 @@ export class ClaudeAcpAgent {
+@@ -6274,6 +6275,15 @@ export class ClaudeAcpAgent {
                                  }),
                              });
                          }
 +                        else {
 +                            await sendUpdate({
-+                                sessionId: message.session_id,
++                                sessionId: params.sessionId,
 +                                update: {
 +                                    sessionUpdate: "session_info_update",
 +                                    _meta: { "_claude/rateLimit": message.rate_limit_info },
@@ -46,31 +36,30 @@ index beba2ff4f21e6805099c55215345a95a046c608a..5d17c586fbe7071a70059c3fbea3c735
                      }
                      case "conversation_reset": {
 diff --git a/dist/native-subagents.js b/dist/native-subagents.js
-index 4ac38b00cea1883fd197e998b39ba6eccf304ccb..182ad84b115a721d4380bd71c0c87269004db052 100644
+index 0c0cb9a3190096f1019ef8cf1273294172e131f7..9195f88d09aa4dbc0e57472c6dd0315d7e24de16 100644
 --- a/dist/native-subagents.js
 +++ b/dist/native-subagents.js
-@@ -139,13 +139,34 @@ export class NativeSubagentRuntime {
-             }
-         }
-     }
--    async finishTask(taskId, status, deliver, toolUseId) {
+@@ -580,6 +580,11 @@ export class NativeSubagentRuntime {
+      * Reports that the SDK ended the task's work. `end` has what the SDK says
+      * about it: its text for a failure, and its reason for an unusual end.
+      */
 +    noteProgress(taskId, usage) {
 +        const child = this.children.get(taskId);
 +        if (child && usage)
 +            child.usage = usage;
 +    }
-+    async finishTask(taskId, status, deliver, toolUseId, report) {
+     async finishTask(taskId, status, deliver, toolUseId, end) {
          if (!this.enabled)
              return;
-         const state = nativeSubagentState(status);
+@@ -587,6 +592,22 @@ export class NativeSubagentRuntime {
          const child = toolUseId ? this.childByParentToolUse.get(toolUseId) : this.children.get(taskId);
          if (child && toolUseId && this.taskByToolUse.get(toolUseId) !== taskId)
              return;
-+        if (child && report?.usage)
-+            child.usage = report.usage;
-+        if (child && report?.summary)
-+            child.summary = report.summary;
-+        if (child && child.terminalState !== undefined && (report?.usage || report?.summary)) {
++        if (child && end?.usage)
++            child.usage = end.usage;
++        if (child && end?.summary)
++            child.summary = end.summary;
++        if (this.form === "air" && child && child.terminalState !== undefined && (end?.usage || end?.summary)) {
 +            await this.publish({
 +                sessionId: child.parentSessionId,
 +                update: {
@@ -82,19 +71,11 @@ index 4ac38b00cea1883fd197e998b39ba6eccf304ccb..182ad84b115a721d4380bd71c0c87269
 +            });
 +            return;
 +        }
-         if (!state || !child || child.terminalState !== undefined)
+         if (!state || !child)
              return;
-         const existing = this.taskFinishPromises.get(taskId);
-@@ -301,6 +322,7 @@ export async function finishNativeSubagent(session, taskId, state, publish) {
-                 sessionUpdate: "subagent_state_update",
-                 subagentSessionId: child.sessionId,
-                 state,
-+                ...nativeSubagentReportMeta(child),
-             },
-         });
-         child.terminalState = state;
-@@ -314,6 +336,18 @@ export async function finishNativeSubagent(session, taskId, state, publish) {
-             child.terminalPromise = undefined;
+         if (this.form === "rfd") {
+@@ -1447,6 +1468,18 @@ export async function announceNativeSubagent(child, publish, form, cwd) {
+             child.announcePromise = undefined;
      }
  }
 +function nativeSubagentReportMeta(child) {
@@ -109,9 +90,17 @@ index 4ac38b00cea1883fd197e998b39ba6eccf304ccb..182ad84b115a721d4380bd71c0c87269
 +        },
 +    };
 +}
- export function nativeSubagentState(status) {
-     if (status === "completed")
-         return "completed";
+ export async function finishNativeSubagent(session, taskId, state, publish) {
+     const child = session.nativeSubagentsByTaskId?.get(taskId);
+     if (!child || child.terminalState !== undefined)
+@@ -1461,6 +1494,7 @@ export async function finishNativeSubagent(session, taskId, state, publish) {
+                 sessionUpdate: "subagent_state_update",
+                 subagentSessionId: child.sessionId,
+                 state,
++                ...nativeSubagentReportMeta(child),
+             },
+         });
+         child.terminalState = state;
 diff --git a/dist/permissions/effects.js b/dist/permissions/effects.js
 index f4649e0bdb3b6418ec9adc13f7d67579ba1c9c86..72a68c8f7fb5782596767ac3d49e5b73f759e59b 100644
 --- a/dist/permissions/effects.js
