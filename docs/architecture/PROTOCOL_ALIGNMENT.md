@@ -6,16 +6,17 @@ Read this before changing persistence or agent integration. Product direction is
 
 | Package                                 | Version                                     | Used for                                                                                                                                                                                                                                      |
 | --------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@ag-ui/core`                           | 1.0.2 (exact)                               | Event types and Zod schemas for every run event we store and stream                                                                                                                                                                           |
+| `@ag-ui/core`                           | 1.0.4 (exact)                               | Event types and Zod schemas for every run event we store and stream                                                                                                                                                                           |
 | `zod`                                   | `^4.6.5` in `package.json`, 4.6.5 resolved  | Validation at API, event, and configuration boundaries                                                                                                                                                                                        |
-| `@ag-ui/client`, `rxjs`                 | 1.0.2, 7.8.1 (exact, dev only)              | `verifyEvents` in the db tests (`apps/server/test/agui-conformance.ts`); not in any app bundle                                                                                                                                                |
+| `@ag-ui/client`, `rxjs`                 | 1.0.4, 7.8.1 (exact, dev only)              | `verifyEvents` in the db tests (`apps/server/test/agui-conformance.ts`); not in any app bundle                                                                                                                                                |
 | PostgreSQL                              | 17 (Homebrew `postgresql@17`)               | Source of truth; matches the planned RDS major version                                                                                                                                                                                        |
 | `@agentclientprotocol/sdk`              | 2.4.0, imported from `/unstable`            | ACP client in the worker ([ACP_AGENTS.md](ACP_AGENTS.md), [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md))                                                                                                                                             |
 | `@agentclientprotocol/claude-agent-acp` | 0.101.0 (patched, [PATCHES.md](PATCHES.md)) | Claude adapter, also used for the Z.ai (GLM) and Custom endpoint providers                                                                                                                                                                    |
 | `@agentclientprotocol/codex-acp`        | 2.6.0 (patched, [PATCHES.md](PATCHES.md))   | Codex adapter                                                                                                                                                                                                                                 |
 | `@a2a-js/sdk`                           | 1.3.0 (exact)                               | A2A 1.0 endpoint and loopback client for outpost requests ([A2A_CHATS.md](A2A_CHATS.md)); imported only under `apps/server/src/a2a/` and by the A2A tests. `apps/server/test/a2a-sdk-pin.test.ts` holds the package facts the code depends on |
+| `@modelcontextprotocol/sdk`             | 1.32.2 (exact)                              | Spark's own MCP server (`apps/server/src/spark-mcp/`) and the MCP server test probe (`apps/server/src/mcp/probe.ts`); protocol revisions up to 2025-11-25, not 2026-07-28. `maxToolInputElements` is left unset (no limit)                    |
 
-Not installed: CopilotKit. `@ag-ui/client` is a dev dependency of `apps/server` only, for the conformance check; it brings its own `zod` 3 and a second copy of `@ag-ui/core` 1.0.2 that nothing outside the tests loads.
+Not installed: CopilotKit. `@ag-ui/client` is a dev dependency of `apps/server` only, for the conformance check; since 1.0.4 it takes `zod` as a peer and shares the app's `zod` 4 and its single `@ag-ui/core` 1.0.4.
 
 ## What is implemented
 
@@ -167,7 +168,7 @@ Limits, which bound any claim:
 
 ## MCP Apps: Spark's own artifacts (October 22, 2026)
 
-`spark_artifact` on Spark's MCP server (`@modelcontextprotocol/sdk` 1.30.1) returns an MCP `resource_link` per [SEP-1865](https://modelcontextprotocol.io/seps/1865-mcp-apps-interactive-user-interfaces-for-mcp):
+`spark_artifact` on Spark's MCP server (`@modelcontextprotocol/sdk` 1.32.2) returns an MCP `resource_link` per [SEP-1865](https://modelcontextprotocol.io/seps/1865-mcp-apps-interactive-user-interfaces-for-mcp):
 
 - `uri` is `ui://spark/<chat>/<id>`.
 - `mimeType` is `text/html;profile=mcp-app` for HTML.
