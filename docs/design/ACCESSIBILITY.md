@@ -1,6 +1,6 @@
 # Accessibility rules
 
-Spark Outpost targets **WCAG 2.2 AA** in every colour set (Light, Graphite, Apricot, Plum, Lagoon, Moss, Iris, Aurora, Fjord, Void, Sage, Loam, High contrast, High contrast dark, and the system light and dark pair). This page lists the rules we enforce, where each one comes from, and how it is checked.
+Spark Outpost targets **WCAG 2.2 AA** in every colour set (Light, Graphite, Apricot, Plum, Lagoon, Moss, Iris, Aurora, Fjord, Void, Sage, Loam, Blaze, Ember, Acid, Volt, Violet, Ultra, High contrast, High contrast dark, and the system light and dark pair). This page lists the rules we enforce, where each one comes from, and how it is checked.
 
 The per-theme before and after numbers are in [`accessibility-report.html`](accessibility-report.html).
 
@@ -52,7 +52,7 @@ Use `color: var(--accent-text)`, not `var(--accent)`, whenever accent colour is 
 Spark follows Apple's guidance to follow the system appearance rather than offer an app-only one. Settings → Appearance has three choices:
 
 - **Appearance:** **Automatic** (the default, follows `prefers-color-scheme`), **Light** or **Dark**.
-- **Tint:** six pairs, each with a light and a dark colour set, so a tint looks right in both modes.
+- **Tint:** nine pairs, each with a light and a dark colour set, so a tint looks right in both modes.
 - **Increase contrast:** **Follow system** (the default) uses the high-contrast set while `prefers-contrast: more` matches, which macOS sets from Accessibility → Display → Increase contrast. **Always** keeps it on. The light side uses High contrast and the dark side High contrast dark.
 
 | Tint          | Light side | Dark side |
@@ -63,6 +63,9 @@ Spark follows Apple's guidance to follow the system appearance rather than offer
 | Iris · Aurora | Iris       | Aurora    |
 | Fjord · Void  | Fjord      | Void      |
 | Sage · Loam   | Sage       | Loam      |
+| Blaze · Ember | Blaze | Ember |
+| Acid · Volt | Acid | Volt |
+| Violet · Ultra | Violet | Ultra |
 
 The choice is stored as `mode.tint.contrast` (for example `auto.graphite.system`) under `spark-outpost.theme`. `public/appearance.js` resolves it to a `data-skin` before React mounts, in `app-boot.js`, the desktop boot page and the pairing page; `theme/theme.ts` holds the same rules for the app, and a unit test keeps the two in step. A stored theme name from before tints keeps its look: a light theme becomes its tint plus **Light**, a dark one its tint plus **Dark**, **Match system** becomes **Automatic**, and High contrast becomes **Light** with contrast **Always**. Spark Island and the meeting card always use the tint's dark side, or High contrast dark.
 
@@ -98,6 +101,24 @@ Aurora and Iris follow the same recipe, and each block defines every token itsel
 - **Iris:** the lilac `#e8deff` is the rail. Buttons are `#5b3df5` with white labels (6.1:1). The mascot eye is white, because a dark eye on the indigo body would reach only 3.1:1.
 
 Both pass every pair in `pnpm a11y:contrast` with only the standard allowlist exempt.
+
+### Blaze, Acid and Violet
+
+These three tints follow a 60-30-10 split: Cloud Grey `#e9ecef` or Jet Black `#111316` for the canvas (60%), the other for text (30%), and one bold accent kept to buttons, selection and small marks (10%). The light sides deepen the accent so it still reads as a mark on Cloud Grey; the dark sides use the bright accent itself with Jet Black labels. They live in `public/theme-bold.css`.
+
+| Theme | Mood | Canvas / rail / panel | Accent (fill / text) | Success / danger, hue gap |
+| --- | --- | --- | --- | --- |
+| Blaze | Cloud grey, burnt orange | `#e9ecef` / `#dfe3e7` / `#f8f9fa` | `#d63f0a` / `#a83400` | `#1b6f37` / `#b42a2f`, 126° |
+| Ember | Jet black, blaze orange | `#111316` / `#0b0c0e` / `#181b1f` | `#ff5a1f` / `#ff8a5c` | `#74d696` / `#ff7a7f`, 134° |
+| Acid | Cloud grey, olive lime | `#e9ecef` / `#dfe3e7` / `#f8f9fa` | `#5f8000` / `#4a6000` | `#1b6f37` / `#b42a2f`, 126° |
+| Volt | Jet black, acid lime | `#111316` / `#0b0c0e` / `#181b1f` | `#c2f23a` / `#c9f45a` | `#74d696` / `#ff7a7f`, 134° |
+| Violet | Cloud grey, electric violet | `#e9ecef` / `#dfe3e7` / `#f8f9fa` | `#7b4dff` / `#5a2fe0` | `#1b6f37` / `#b42a2f`, 126° |
+| Ultra | Jet black, soft violet | `#111316` / `#0b0c0e` / `#181b1f` | `#9b7bff` / `#ab93ff` | `#74d696` / `#ff7a7f`, 134° |
+
+- **Light sides:** pure Blaze Orange `#ff5a1f` and Acid Lime `#c2f23a` reach under 3:1 on Cloud Grey, so Blaze uses `#d63f0a` and Acid `#5f8000`, both with white labels (4.6:1). Violet keeps `#7b4dff` with white labels (4.8:1).
+- **Dark sides:** button labels are Jet Black on the accent (Ember 6.0:1, Volt 14.2:1, Ultra 5.9:1). Ultra lifts the violet to `#9b7bff` so it reads as a mark on Jet Black. The mascot eye is Jet Black on the dark sides and white on the light ones.
+
+All six pass every pair in `pnpm a11y:contrast` with only the standard allowlist exempt.
 
 ### Provider colours
 

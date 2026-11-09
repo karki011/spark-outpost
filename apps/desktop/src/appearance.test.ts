@@ -47,6 +47,7 @@ describe('theme handed to the window', () => {
   it('accepts only plain theme names', () => {
     expect(isThemeName('graphite')).toBe(true);
     expect(isThemeName('dark.lagoon.always')).toBe(true);
+    expect(isThemeName('auto.violet.system')).toBe(true);
     for (const value of [
       '',
       'Fjord',

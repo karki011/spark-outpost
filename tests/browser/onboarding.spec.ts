@@ -178,7 +178,7 @@ test('the look step follows the system, pairs tints and remembers the choice', a
     'true',
   );
   const tints = dialog(page).getByRole('radiogroup', { name: 'Tint' });
-  await expect(tints.getByRole('radio')).toHaveCount(6);
+  await expect(tints.getByRole('radio')).toHaveCount(9);
   await expect(tints.getByRole('radio', { name: 'Graphite' })).toHaveAttribute(
     'aria-checked',
     'true',

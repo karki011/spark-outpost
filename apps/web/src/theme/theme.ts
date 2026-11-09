@@ -58,6 +58,30 @@ export const tints = [
     dark: 'loam',
     swatch: { accent: '#a85a2a', background: '#1a1913' },
   },
+  {
+    id: 'blaze',
+    label: 'Blaze · Ember',
+    description: 'Cloud grey and jet black, orange accent',
+    light: 'blaze',
+    dark: 'ember',
+    swatch: { accent: '#ff5a1f', background: '#111316' },
+  },
+  {
+    id: 'acid',
+    label: 'Acid · Volt',
+    description: 'Cloud grey and jet black, lime accent',
+    light: 'acid',
+    dark: 'volt',
+    swatch: { accent: '#c2f23a', background: '#111316' },
+  },
+  {
+    id: 'violet',
+    label: 'Violet · Ultra',
+    description: 'Cloud grey and jet black, violet accent',
+    light: 'violet',
+    dark: 'ultra',
+    swatch: { accent: '#7b4dff', background: '#111316' },
+  },
 ] as const;
 
 export type Mode = (typeof modes)[number]['id'];
