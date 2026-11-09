@@ -6,7 +6,7 @@ order: 421
 summary: Connect Mac Calendar or Google Calendar to see Today beside your chats, join meetings in one click and keep focus time quiet.
 ---
 
-Connect calendars. About 2 minutes.
+About 2 minutes.
 
 1. Open **Settings → Connectors → Calendar**.
 2. Select **Connect** for Mac Calendar, or **Sign in with Google**.
@@ -24,15 +24,15 @@ Connect calendars. About 2 minutes.
 
 At the start, Scout lowers a card: **Join**, **Snooze 1 min** or **Dismiss** (for good). Esc dismisses; **⌘J** joins one meeting.
 
-With VoiceOver or keyboard navigation, the card takes focus (**⌃⌥⌘M**). A silent notification mirrors it.
+VoiceOver and keyboard users get focus (**⌃⌥⌘M**); a silent notification mirrors it.
 
-**Bubble from Scout**: **Snooze until start**, then **Snooze 2 min**. Reminders end 5 min in. **Open** shows Today; **Choose** handles clashes. Lines have **Dismiss**; focus blocks hold chimes.
+**Bubble from Scout**: **Snooze until start**, then **Snooze 2 min**; snoozes survive reloads. Reminders end 5 min in. **Open** shows Today; **Choose** handles clashes. Lines have **Dismiss**; focus blocks hold chimes.
 
-**Join meetings automatically** (off): cancellable 10-second countdown, never in clashes, holds or absence. **Join at start** opens it at the start, even in holds or clashes; reminders then offer **Don't open**. Times follow your Mac.
+**Join meetings automatically** (off): cancellable 10-second countdown, never in clashes, holds or absence. **Join at start** opens one at its start despite holds or clashes; reminders offer **Don't open**. Times follow your Mac.
 
 ## Let agents use it
 
-1. On the Calendar card, **Let agents read my calendar** is on by default.
+1. **Let agents read my calendar** (Calendar card) is on by default.
 2. Turn on **Agents can edit** per calendar; Google asks first.
 
 Agents follow their [mode](spark-tools.md#when-actions-ask-first). Guest events and shared calendars always ask.
