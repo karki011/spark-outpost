@@ -15,7 +15,9 @@ import {
   bareHost,
   codeHosts,
   devNetHosts,
+  isLocalHost,
   remoteHost,
+  resolvedUrlHost,
   remoteHosts,
   unresolved,
   urlHost,
@@ -51,6 +53,10 @@ const HOST_VALUE_FLAGS = new Set([
   ...['-x', '--proxy', '--preproxy', '--socks4', '--socks4a', '--socks5', '--socks5-hostname'],
   ...['--connect-to', '--resolve', '--doh-url', '-J', '-W'],
 ]);
+const ADDRESS_FILE_FLAGS = new Map<string, ReadonlySet<string>>([
+  ['curl', new Set(['-K', '--config'])],
+  ['wget', new Set(['-i', '--input-file'])],
+]);
 const SERVICES = new Set([
   ...['gh', 'hub', 'glab', 'tea', 'aws', 'gcloud', 'gsutil', 'bq', 'az', 'kubectl', 'helm'],
   ...['terraform', 'tofu', 'pulumi', 'doctl', 'flyctl', 'fly', 'heroku', 'vercel', 'netlify'],
@@ -81,21 +87,36 @@ const SUBSTITUTED = '$SUBSTITUTED';
 const GIT_FETCHES = new Set(['clone', 'fetch', 'pull', 'ls-remote', 'archive']);
 const quoted = (name: string) => `\`${name}\``;
 
-function hostArgs(args: readonly string[]): string[] {
+function argumentHost(word: string, lenient: boolean): string[] {
+  const url = resolvedUrlHost(word);
+  if (url) return [url];
+  if (unresolved(word)) return lenient ? [UNKNOWN_HOST] : [];
+  const host = lenient ? bareHost(word) : (urlHost(word) ?? loopbackHost(word));
+  return host ? [host] : [];
+}
+
+function loopbackHost(word: string): string | null {
+  const host = bareHost(word);
+  return host && isLocalHost(host) ? host : null;
+}
+
+function hostArgs(name: string, args: readonly string[]): string[] {
+  const addressFiles = ADDRESS_FILE_FLAGS.get(name) ?? new Set<string>();
   const hosts: string[] = [];
   for (let index = 0; index < args.length; index++) {
     const word = args[index]!;
     if (word.startsWith('-')) {
       const [flag, value] = word.split(/=(.*)/s);
       if (value !== undefined && HOST_VALUE_FLAGS.has(flag!)) hosts.push(bareHost(value) ?? '');
+      if (addressFiles.has(flag!)) hosts.push(UNKNOWN_HOST);
       continue;
     }
     const previous = args[index - 1];
     const afterFlag = previous !== undefined && previous.startsWith('-') && !previous.includes('=');
     const lenient = !afterFlag || HOST_VALUE_FLAGS.has(previous);
     if (previous === '-o' && /proxy/i.test(word)) hosts.push(UNKNOWN_HOST);
-    else if (unresolved(word)) hosts.push(...(lenient ? [UNKNOWN_HOST] : []));
-    else hosts.push((lenient ? bareHost(word) : urlHost(word)) ?? '');
+    else if (addressFiles.has(previous ?? '')) hosts.push(UNKNOWN_HOST);
+    else hosts.push(...argumentHost(word, lenient));
   }
   const found = hosts.filter((host) => host !== '');
   return found.length > 0 ? found : [UNKNOWN_HOST];
@@ -188,7 +209,7 @@ function programReach(
   const name = programName(program);
   const args = program.slice(1);
   if (ownRepoUse(name, unredirected.slice(1), scan)) return null;
-  if (HOST_CLIENTS.has(name)) return { via: quoted(name), hosts: hostArgs(args) };
+  if (HOST_CLIENTS.has(name)) return { via: quoted(name), hosts: hostArgs(name, args) };
   if (REMOTE_COPIES.has(name)) {
     const hosts = copyHosts(args);
     return hosts.length > 0 ? { via: quoted(name), hosts } : null;
