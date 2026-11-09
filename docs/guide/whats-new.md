@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                  | What to do                                                                                      |
 | --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Dev servers in agent terminals                | [Commands after the turn](spark-tools.md#commands-after-the-turn).                              |
 | Arrows in zoomed images                       | [Keys](keyboard-shortcuts.md#chats).                                                            |
 | Open pages agents ask for                     | [See the card](cards.md#approval-cards).                                                        |
 | Codex asks while it works                     | Answer its [question card](cards.md) before the turn ends.                                      |
@@ -22,9 +23,8 @@ summary: What changed in recent releases and what to do next.
 | Clone or read GitHub repos                    | [See how](link-a-repo.md#clone-or-read-a-repo-from-github).                                     |
 | Link a repo by name                           | [Set Repos folders](link-a-repo.md#set-your-repos-folders).                                     |
 | Working chats pulse; small fixes              | Nothing.                                                                                        |
-| Needs macOS 13 or later                       | [Get started](getting-started.md).                                                              |
 | Custom endpoint, key header                   | [Set it up](custom-endpoint.md).                                                                |
 | More Terminal agents                          | [Start one](terminals.md#start-a-terminal-session).                                             |
-| Context compacted line                        | [Manage a long chat](compaction.md#check-how-full-the-chat-is).                                 |
+| Compacted line                                | [Long chats](compaction.md#check-how-full-the-chat-is).                                         |
 | Row ports                                     | [Open in the pane](terminals.md#open-a-shell-beside-chat).                                      |
-| First public beta                             | [Get started](getting-started.md).                                                              |
+| First beta; needs macOS 13                    | [Get started](getting-started.md).                                                              |
