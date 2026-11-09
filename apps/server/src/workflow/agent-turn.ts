@@ -359,6 +359,7 @@ export async function runAgentTurn(
         ...(inbox ? { steering: inbox } : {}),
         ...(inbox ? { inbox } : {}),
         ...(input.askTitle ? { askTitle: true } : {}),
+        ...(input.chatTitle ? { sessionTitle: input.chatTitle } : {}),
         ...(preamble ? { preamble } : {}),
         ...(turnPreamble ? { turnPreamble } : {}),
         ...(session ? { session: session.target } : {}),
