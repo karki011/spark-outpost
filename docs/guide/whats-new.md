@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                 | What to do                                                                                      |
 | ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| Arrows step through images   | Press **←** **→** in a [zoomed image](keyboard-shortcuts.md#chats).                             |
 | Open pages agents ask for    | [See the card](cards.md#approval-cards).                                                        |
 | Codex asks while it works    | Answer its [question card](cards.md) before the turn ends.                                      |
 | Adapter version per run      | See it in the audit's **By run** table.                                                         |

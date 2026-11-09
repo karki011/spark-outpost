@@ -31,11 +31,19 @@ function SentPick({ pick }: { pick: PickPair<Attachment> }) {
 }
 
 export function MessageAttachments({ attachments }: { attachments: Attachment[] }) {
-  const [viewing, setViewing] = useState<Attachment | null>(null);
+  const [viewing, setViewing] = useState<number | null>(null);
   if (attachments.length === 0) return null;
+  const items = groupPicks(attachments);
+  const pictures = items.filter(
+    (item): item is Attachment => !('text' in item) && item.kind === 'image',
+  );
+  const images = pictures.map((picture) => ({
+    name: picture.name,
+    src: attachmentUrl(picture.id),
+  }));
   return (
     <div className="msg-atts" role="group" aria-label="Attachments">
-      {groupPicks(attachments).map((attachment) =>
+      {items.map((attachment) =>
         'text' in attachment ? (
           <SentPick key={attachment.text.id} pick={attachment} />
         ) : attachment.kind === 'image' ? (
@@ -44,7 +52,7 @@ export function MessageAttachments({ attachments }: { attachments: Attachment[] 
             type="button"
             className="msg-att-img"
             aria-label={`View ${attachment.name}`}
-            onClick={() => setViewing(attachment)}
+            onClick={() => setViewing(pictures.indexOf(attachment))}
           >
             <img src={attachmentUrl(attachment.id)} alt={attachment.name} loading="lazy" />
           </button>
@@ -62,10 +70,11 @@ export function MessageAttachments({ attachments }: { attachments: Attachment[] 
           </a>
         ),
       )}
-      {viewing && (
+      {viewing !== null && (
         <ImageLightbox
-          name={viewing.name}
-          src={attachmentUrl(viewing.id)}
+          {...images[viewing]!}
+          images={images}
+          index={viewing}
           onClose={() => setViewing(null)}
         />
       )}

@@ -239,6 +239,10 @@ export function BackIcon() {
   return <StrokeIcon path="m15 6-6 6 6 6" />;
 }
 
+export function ForwardIcon() {
+  return <StrokeIcon path="m9 6 6 6-6 6" />;
+}
+
 export function UnpinIcon() {
   return <StrokeIcon path="M12 17v5M9 3h6l-1 6 4 4H6l4-4zM3 3l18 18" />;
 }

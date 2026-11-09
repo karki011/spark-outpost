@@ -260,3 +260,55 @@ test('at phone width the order holds, thumbnails wrap, and a tap zooms and close
   await expect(page.locator('dialog.lightbox')).toHaveCount(0);
   await expect(thumbs.first()).toBeFocused();
 });
+
+test('in a row of screenshots, the arrow keys and buttons step through them and stop at the ends', async ({
+  page,
+}) => {
+  const turn = await finishedSoloTurn(page, { row: true });
+  const thumbs = turn.getByRole('button', { name: THUMB });
+  await expect(thumbs).toHaveCount(5);
+  const zoomed = page.locator('dialog.lightbox');
+  const place = zoomed.locator('.lightbox-place');
+  const name = zoomed.locator('figcaption a');
+  const previous = zoomed.getByRole('button', { name: 'Previous image' });
+  const next = zoomed.getByRole('button', { name: 'Next image' });
+
+  await thumbs.nth(3).click();
+  await expect(place).toHaveText('2 of 3');
+  const middle = await name.getAttribute('href');
+  await page.keyboard.press('ArrowRight');
+  await expect(place).toHaveText('3 of 3');
+  expect(await name.getAttribute('href')).not.toBe(middle);
+  await expect(next).toHaveAttribute('aria-disabled', 'true');
+  await page.keyboard.press('ArrowRight');
+  await expect(place).toHaveText('3 of 3');
+  await expect(zoomed.getByRole('img', { name: 'Screenshot of Fixture login' })).toBeVisible();
+
+  await previous.click();
+  await previous.click();
+  await expect(place).toHaveText('1 of 3');
+  await expect(previous).toHaveAttribute('aria-disabled', 'true');
+  await expect(previous).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(place).toHaveText('1 of 3');
+  const box = await previous.boundingBox();
+  expect(box!.width).toBeGreaterThanOrEqual(28);
+  expect(box!.height).toBeGreaterThanOrEqual(28);
+  const axe = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .include('dialog.lightbox')
+    .analyze();
+  expect(axe.violations).toEqual([]);
+  await shoot(page, 'shot-order-steps');
+
+  await page.keyboard.press('Escape');
+  await expect(zoomed).toHaveCount(0);
+  await expect(thumbs.nth(3)).toBeFocused();
+
+  await thumbs.first().click();
+  await expect(zoomed).toBeVisible();
+  await expect(place).toHaveCount(0);
+  await expect(next).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(zoomed).toHaveCount(0);
+});

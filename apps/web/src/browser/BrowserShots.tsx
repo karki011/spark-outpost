@@ -9,7 +9,12 @@ export function BrowserShots({ shots }: { shots: readonly BrowserShot[] }) {
   const [opened, setOpened] = useState<string | null>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
   if (shots.length === 0) return null;
-  const shown = shots.find((shot) => shot.id === opened);
+  const shown = shots.findIndex((shot) => shot.id === opened);
+  const images = shots.map((shot) => ({
+    name: shot.attachment.name,
+    src: attachmentUrl(shot.attachment.id),
+    alt: `Screenshot of ${shot.title || shot.page}`,
+  }));
   const close = () => {
     setOpened(null);
     opener.current?.focus();
@@ -41,13 +46,8 @@ export function BrowserShots({ shots }: { shots: readonly BrowserShot[] }) {
           </figure>
         );
       })}
-      {shown && (
-        <ImageLightbox
-          name={shown.attachment.name}
-          src={attachmentUrl(shown.attachment.id)}
-          alt={`Screenshot of ${shown.title || shown.page}`}
-          onClose={close}
-        />
+      {shown >= 0 && (
+        <ImageLightbox {...images[shown]!} images={images} index={shown} onClose={close} />
       )}
     </div>
   );

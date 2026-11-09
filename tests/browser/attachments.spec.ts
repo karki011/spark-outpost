@@ -84,6 +84,7 @@ test('uploads from the file chooser, sends with the message, and survives a relo
   await page.getByRole('button', { name: 'View a.png' }).click();
   const lightbox = page.getByRole('dialog', { name: 'a.png' });
   await expect(lightbox).toBeVisible();
+  await expect(lightbox.getByRole('button', { name: 'Next image' })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(lightbox).toBeHidden();
   await expect(reply).toHaveCount(1);
