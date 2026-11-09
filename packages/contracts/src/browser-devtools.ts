@@ -8,7 +8,13 @@ export const BROWSER_SELECTOR_MAX = 300;
 export const BROWSER_STORAGE_ITEMS_MAX = 200;
 export const BROWSER_STORAGE_VALUE_MAX = 500;
 
-export const browserDevtoolsActionSchema = z.enum(['eval', 'inspect', 'performance', 'storage']);
+export const browserDevtoolsActionSchema = z.enum([
+  'eval',
+  'inspect',
+  'wait',
+  'performance',
+  'storage',
+]);
 export type BrowserDevtoolsAction = z.infer<typeof browserDevtoolsActionSchema>;
 
 const boxSchema = z.object({
