@@ -289,6 +289,7 @@ export type ProviderOutput =
   | { kind: 'tool_input'; id: string; input: unknown; secret: boolean }
   | { kind: 'tool_result'; id: string; output: unknown; secret: boolean }
   | { kind: 'capabilities'; report: ProviderCapabilityReport }
+  | { kind: 'agent_info'; name: string; version: string }
   | {
       kind: 'usage';
       contextUsed: number;

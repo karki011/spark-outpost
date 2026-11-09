@@ -1,8 +1,8 @@
 {
   "agent-method:initialize": {
     "status": "partial",
-    "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/probe.ts, apps/server/src/agents/acp/errors.ts",
-    "note": "Runs and the capability probe both refuse an agent that answers with another protocolVersion (errors.ts assertProtocolVersion). agentInfo and authMethods in the response are ignored. clientInfo.version is hard-coded to 0.0.0."
+    "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/probe.ts, apps/server/src/agents/acp/errors.ts, apps/server/src/agents/acp/agent-info.ts",
+    "note": "Runs and the capability probe both refuse an agent that answers with another protocolVersion (errors.ts assertProtocolVersion). A run stores agentInfo's name and version (printable ASCII, at most 200 and 100 characters; otherwise nothing) and the audit's By run table shows them; its title is ignored, and so are authMethods. clientInfo.version is hard-coded to 0.0.0."
   },
   "agent-method:authenticate": {
     "status": "missing",

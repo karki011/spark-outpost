@@ -138,6 +138,9 @@ describe('ACP provider with one live session per chat', { timeout: 30_000 }, () 
       continued: true,
       live: true,
     });
+    expect(third.outputs.filter((output) => output.kind === 'agent_info')).toEqual([
+      { kind: 'agent_info', name: '@fake/fake-acp-agent', version: '1.2.3' },
+    ]);
     expect(
       third.outputs.some(
         (output) => output.kind === 'step_started' && output.name === 'Continued session',
