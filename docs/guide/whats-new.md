@@ -10,21 +10,21 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                                                   | What to do                                                                                  |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| Agents get your shell variables                                                | [Details](privacy-and-secrets.md#what-agents-cant-reach).                                   |
+| Shell variables for agents                                                     | [Details](privacy-and-secrets.md#what-agents-cant-reach).                                   |
 | Links open in Spark                                                            | [Settings](settings.md#mac).                                                                |
 | Join at start, **Join opens**, Dismiss                                         | [See your day](calendar.md#use-it).                                                         |
 | Arrows in zoomed images                                                        | [Keys](keyboard-shortcuts.md#chats).                                                        |
 | Open pages agents ask for                                                      | [See the card](cards.md#approval-cards).                                                    |
-| Codex asks while it works                                                      | Answer its [question card](cards.md) mid-turn.                                              |
-| Adapter version per run                                                        | In the audit's **By run** table.                                                            |
+| Codex asks while it works                                                      | Answer its [question](cards.md) mid-turn.                                                   |
+| Adapter version per run                                                        | The audit's **By run** table.                                                               |
 | Codex mode names                                                               | Approve for me is now **Auto review**: [Workspace access](modes-and-levels.md#agent-modes). |
 | Blaze, Acid and Violet tints                                                   | **Settings → Appearance**.                                                                  |
 | Smarter brief and Ask Spark, undo, meetings once on Home, pulsing chats, fixes | Nothing.                                                                                    |
 | Week recap on Home                                                             | Its day: **Settings → Notifications**.                                                      |
 | Clone or read GitHub repos                                                     | [See how](link-a-repo.md#clone-or-read-a-repo-from-github).                                 |
-| Link a repo by name                                                            | [Set Repos folders](link-a-repo.md#set-your-repos-folders).                                 |
-| Custom endpoint and key header                                                 | [Connect it](custom-endpoint.md).                                                           |
+| Link a repo by name                                                            | [Repos folders](link-a-repo.md#set-your-repos-folders).                                     |
+| Custom endpoint, key header                                                    | [Connect it](custom-endpoint.md).                                                           |
 | More Terminal agents                                                           | [Start one](terminals.md#start-a-terminal-session).                                         |
-| Context compacted line                                                         | [Manage a long chat](compaction.md#check-how-full-the-chat-is).                             |
-| Row ports                                                                      | [Open in the pane](terminals.md#open-a-shell-beside-chat).                                  |
+| Context compacted line                                                         | [Long chats](compaction.md#check-how-full-the-chat-is).                                     |
+| Row ports                                                                      | [Open them](terminals.md#open-a-shell-beside-chat).                                         |
 | Public beta, macOS 13+                                                         | [Get started](getting-started.md).                                                          |
