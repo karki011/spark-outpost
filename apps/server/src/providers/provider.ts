@@ -156,12 +156,24 @@ export interface AgentQuestion {
 export type QuestionReply =
   { action: 'accept'; content: AgentContent } | { action: 'decline' } | { action: 'cancel' };
 
+export interface AddressAsk {
+  toolCallId: string;
+  rpcId: string | null;
+  agent: string;
+  url: string;
+  message: string;
+  secretFiles: readonly string[];
+}
+
+export type AddressReply = 'accept' | 'decline' | 'cancel';
+
 export interface QuestionGate {
   ask(
     question: AgentQuestion,
     signal: AbortSignal,
     agentCancel: AbortSignal,
   ): Promise<QuestionReply>;
+  open(ask: AddressAsk, signal: AbortSignal, agentCancel: AbortSignal): Promise<AddressReply>;
 }
 
 export interface AuditMarks {

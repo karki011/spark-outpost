@@ -17,6 +17,7 @@ import { providerName } from '../provider-name.ts';
 import { mergeDecision } from './approval-events.ts';
 import { outcome } from './approval-outcome.ts';
 import { cardTitle, titleText } from './approval-title.ts';
+import { OpenAddressCard } from './OpenAddressCard.tsx';
 import { PendingApproval } from './PendingApproval.tsx';
 import { RetryAction } from './RetryAction.tsx';
 import { SparkActionCard } from './SparkActionCard.tsx';
@@ -32,6 +33,7 @@ interface ApprovalCardProps {
 }
 
 function subject(approval: Approval): string | null {
+  if (approval.payload.openAddress) return approval.payload.openAddress.host;
   if (approval.payload.sparkAction) return approval.title;
   if (approval.payload.plan) return null;
   if (approval.payload.command) return approval.payload.command;
@@ -126,6 +128,8 @@ export function ApprovalCard({ approval: incoming, ...rest }: ApprovalCardProps)
     >
       {approval.payload.sparkAction ? (
         <SparkActionCard approval={approval} agent={agent} onDecided={setLocal} />
+      ) : approval.payload.openAddress ? (
+        <OpenAddressCard approval={approval} agent={agent} onDecided={setLocal} />
       ) : (
         <PendingApproval approval={approval} agent={agent} repo={rest.repo} onDecided={setLocal} />
       )}

@@ -297,6 +297,17 @@ describe('remote policy', () => {
     expect(macOnlyCard(question)).toBe(false);
   });
 
+  it('keeps a card that opens an address on the Mac, with or without a secret value', () => {
+    const base = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
+    const openAddress = {
+      url: 'https://auth.example.com/a',
+      host: 'auth.example.com',
+      message: '',
+    };
+    expect(macOnlyCard({ ...base, openAddress })).toBe(true);
+    expect(macOnlyCard({ ...base, openAddress, secretSend: ['.env'] })).toBe(true);
+  });
+
   it('keeps Jira and Confluence deletes behind the high-risk switch and other changes ordinary', () => {
     const base = { command: null, cwd: null, paths: [], diffs: [], truncated: false };
     const ticket = { key: 'WEB-1', title: 'A', url: 'https://acme.atlassian.net/browse/WEB-1' };

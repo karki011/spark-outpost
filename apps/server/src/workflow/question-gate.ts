@@ -1,17 +1,10 @@
-import { homedir } from 'node:os';
 import {
   CHECKPOINT_OPTION,
   checkpointPayloadSchema,
   formQuestions,
   type ApprovalOption,
 } from '@spark-outpost/contracts';
-import type { ApprovalRequest } from '../approvals/decide.ts';
-import {
-  approvalAnswerContent,
-  getApproval,
-  settlePending,
-  type NewApproval,
-} from '../persistence/approvals.ts';
+import { approvalAnswerContent, getApproval, type NewApproval } from '../persistence/approvals.ts';
 import type { Db } from '../persistence/db.ts';
 import type {
   AgentQuestion,
@@ -19,6 +12,9 @@ import type {
   QuestionGate,
   QuestionReply,
 } from '../providers/provider.ts';
+import type { RunObservations } from '../observations/run-observations.ts';
+import { addressOpener } from './address-card.ts';
+import { raiseWithdrawable } from './withdrawable-card.ts';
 import type { ApprovalGate } from './approval-gate.ts';
 
 export const QUESTION_OPTIONS: ApprovalOption[] = [
@@ -57,23 +53,6 @@ export function questionCard(runId: string, question: AgentQuestion): NewApprova
   };
 }
 
-function questionRequest(card: NewApproval): ApprovalRequest {
-  return {
-    toolCallId: card.toolCallId,
-    rpcId: card.rpcId,
-    kind: card.kind,
-    toolKind: null,
-    title: card.title,
-    command: null,
-    cwd: null,
-    paths: [],
-    diffs: [],
-    options: card.options,
-    roots: [],
-    home: homedir(),
-  };
-}
-
 async function reply(db: Db, answer: GateAnswer): Promise<QuestionReply> {
   if (answer.outcome !== 'selected' || !answer.approvalId) return CANCEL;
   const approval = await getApproval(db, answer.approvalId);
@@ -85,30 +64,18 @@ async function reply(db: Db, answer: GateAnswer): Promise<QuestionReply> {
   return content ? { action: 'accept', content } : CANCEL;
 }
 
-export function createQuestionGate(db: Db, runId: string, gate: ApprovalGate): QuestionGate {
+export function createQuestionGate(
+  db: Db,
+  runId: string,
+  gate: ApprovalGate,
+  observations?: RunObservations,
+): QuestionGate {
   return {
     async ask(question, signal, agentCancel) {
       if (signal.aborted || agentCancel.aborted) return CANCEL;
       const card = questionCard(runId, question);
-      let pendingId: string | null = null;
-      const withdraw = () => {
-        if (!pendingId) return;
-        void settlePending(db, pendingId, {
-          status: 'cancelled',
-          decidedBy: 'policy',
-          optionId: null,
-        }).catch(() => undefined);
-      };
-      agentCancel.addEventListener('abort', withdraw, { once: true });
-      try {
-        const answer = await gate.raise(card, questionRequest(card), signal, (id) => {
-          pendingId = id;
-          if (agentCancel.aborted) withdraw();
-        });
-        return await reply(db, answer);
-      } finally {
-        agentCancel.removeEventListener('abort', withdraw);
-      }
+      return reply(db, await raiseWithdrawable(db, gate, card, signal, agentCancel));
     },
+    open: addressOpener({ db, runId, gate, observations }),
   };
 }

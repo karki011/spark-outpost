@@ -33,6 +33,7 @@ function gate(answer: Answer) {
       asked.push(seen);
       return answer(seen);
     },
+    open: async () => 'decline',
   };
   return { stub, asked };
 }

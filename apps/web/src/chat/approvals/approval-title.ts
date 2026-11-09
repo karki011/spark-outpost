@@ -26,6 +26,7 @@ function quoted(before: string, code: string): CardTitle {
 function fixedTitle(approval: Approval): string | null {
   const { payload } = approval;
   if (payload.sparkAction) return sparkActionQuestion(payload.sparkAction);
+  if (payload.openAddress) return 'Open this address?';
   if (payload.plan) return 'Approve the plan?';
   if (payload.forcePush) return 'Force push?';
   if (payload.secretSend) return 'Send a secret value?';

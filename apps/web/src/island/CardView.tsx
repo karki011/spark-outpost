@@ -47,6 +47,9 @@ export function cardHeading(card: Card, who: string): string {
       : `${who} wants to change a file`;
   }
   if (approval.payload.sparkAction) return approval.title;
+  if (approval.payload.openAddress) {
+    return `${who} wants you to open ${approval.payload.openAddress.host}`;
+  }
   const checkpoint = approval.payload.checkpoint;
   if (checkpoint && asksQuestions(checkpoint)) return checkpointTitle(checkpoint);
   return `${who} wants to ${approval.title}`;

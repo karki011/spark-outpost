@@ -117,6 +117,17 @@ describe('cardRefusal', () => {
     ).toBe(ASK_SPARK_REFUSALS.question);
   });
 
+  it('leaves an address an agent wants opened for the user to open', () => {
+    const openAddress = {
+      url: 'https://auth.example.com/a',
+      host: 'auth.example.com',
+      message: '',
+    };
+    expect(
+      cardRefusal(card({ payload: { ...card().payload, openAddress } as never }), chat('c'), 'a'),
+    ).toBe(ASK_SPARK_REFUSALS.openAddress);
+  });
+
   it('refuses its own cards, answered cards and cards without Allow once and Deny', () => {
     expect(cardRefusal(card(), chat('assistant'), 'assistant')).toBe(ASK_SPARK_REFUSALS.ownCard);
     expect(cardRefusal(card({ status: 'allowed' }), chat('c'), 'a')).toBe(

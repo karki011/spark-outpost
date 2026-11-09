@@ -122,5 +122,5 @@ export function prepareQuestions(
 ): QuestionGate {
   const gate =
     approvals ?? createApprovalGate({ ...gateBasics(options), backup: async () => undefined });
-  return createQuestionGate(options.db, options.runId, gate);
+  return createQuestionGate(options.db, options.runId, gate, options.observations);
 }

@@ -250,6 +250,26 @@ describe('the island home', () => {
     expect(cardHeading(action, 'Claude')).toBe('Let the agent read your calendar?');
   });
 
+  it('sends an address to open to the chat, never answering it from the island', () => {
+    const asking = chat(CHAT_B, { needsInput: true, title: 'Docs chat' });
+    const open = approval({
+      runId: asking.latestRun?.id ?? CHAT_B,
+      kind: 'other',
+      title: 'Open this address?',
+      payload: {
+        command: null,
+        cwd: null,
+        paths: [],
+        diffs: [],
+        truncated: false,
+        openAddress: { url: 'https://auth.example.com/a', host: 'auth.example.com', message: '' },
+      },
+    });
+    const [found] = pendingCards([asking], new Map([[CHAT_B, [open]]]));
+    expect(found?.kind).toBe('open');
+    expect(cardHeading(found!, 'Codex')).toBe('Codex wants you to open auth.example.com');
+  });
+
   it('offers an agent question’s choices and sends the pick as the chat would', async () => {
     const asking = chat(CHAT_B, { needsInput: true, title: 'Colour chat' });
     const question = agentQuestion();

@@ -226,8 +226,12 @@ function decoded(address: string): string {
   }
 }
 
+export function addressSecretFiles(address: string, roots: readonly string[]): Promise<string[]> {
+  return secretFilesIn(`${address}\n${decoded(address)}`, roots);
+}
+
 async function addressSecretSend(address: string, roots: readonly string[]): Promise<SecretSend> {
-  const files = await secretFilesIn(`${address}\n${decoded(address)}`, roots);
+  const files = await addressSecretFiles(address, roots);
   return files.length > 0 ? { kind: 'found', files } : { kind: 'clean' };
 }
 
