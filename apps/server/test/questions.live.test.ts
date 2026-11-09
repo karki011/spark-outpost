@@ -40,6 +40,7 @@ async function ask(id: 'claude' | 'codex', extra: Partial<ProviderTurn> = {}) {
       const content = formContent(question.form, firstPicks(question));
       return content.ok ? { action: 'accept', content: content.value } : { action: 'decline' };
     },
+    open: async () => 'decline',
   };
   const outputs: ProviderOutput[] = [];
   for await (const output of createAcpProvider({ definition: agentDefinitions[id] }).run({

@@ -100,6 +100,16 @@ export const fileDiffSchema = z.object({
 });
 export type FileDiff = z.infer<typeof fileDiffSchema>;
 
+export const OPEN_ADDRESS_MESSAGE_MAX = 1000;
+export const OPEN_ADDRESS_OPTION = { open: 'open', dont: 'dont' } as const;
+
+export const openAddressSchema = z.object({
+  url: z.string(),
+  host: z.string(),
+  message: z.string().max(OPEN_ADDRESS_MESSAGE_MAX),
+});
+export type OpenAddress = z.infer<typeof openAddressSchema>;
+
 export const approvalPayloadSchema = z.object({
   command: z.string().nullable(),
   cwd: z.string().nullable(),
@@ -123,6 +133,7 @@ export const approvalPayloadSchema = z.object({
   subagent: z.string().optional(),
   sparkRule: sparkRuleRefusalSchema.optional(),
   form: agentFormSchema.optional(),
+  openAddress: openAddressSchema.optional(),
 });
 export type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;
 

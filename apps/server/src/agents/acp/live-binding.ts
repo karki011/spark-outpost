@@ -12,6 +12,7 @@ export interface TurnHandlers {
     requestId: string | number | null | undefined,
     agentCancel: AbortSignal,
   ): Promise<acp.CreateElicitationResponse>;
+  complete(elicitationId: string): void;
   write(params: acp.WriteTextFileRequest): Promise<acp.WriteTextFileResponse>;
   read(params: acp.ReadTextFileRequest): Promise<acp.ReadTextFileResponse>;
   account(account: ProviderAccount): void;

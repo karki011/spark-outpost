@@ -42,7 +42,7 @@ It has a chat's [Spark tools](spark-tools.md#ask-spark-tools), naming any switch
 
 Each action shows **Do it** and **Don’t** first, in **Needs you** too, unless [When Ask Spark acts](settings.md#spark-assistant) is **Act**. Cards with more to check show **Review in Spark**.
 
-In **Act**, it answers a card only when you ask and name its chat. Hold-to-confirm, Mac, calendar, Terminal and spoken-question cards stay with you. Its messages never authorize a push.
+In **Act**, it answers a card only when you ask and name its chat. Hold-to-confirm, Mac, calendar, open-address, Terminal and spoken-question cards stay with you. Its messages never authorize a push.
 
 ## Change a shortcut
 

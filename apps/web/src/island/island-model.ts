@@ -162,8 +162,8 @@ export function nextStreak(streak: number, moment: Moment): number {
 function cardKind(chat: ConversationSummary, approval: Approval | null): CardKind {
   if (!approval) return 'open';
   if (approval.payload.forcePush) return 'force';
-  const { gitControl, instructionFiles, secretSend } = approval.payload;
-  if (gitControl || instructionFiles || secretSend) return 'open';
+  const { gitControl, instructionFiles, secretSend, openAddress } = approval.payload;
+  if (gitControl || instructionFiles || secretSend || openAddress) return 'open';
   const checkpoint = approval.payload.checkpoint;
   if (checkpoint) {
     const simple = checkpoint.kind === 'clarify' && checkpoint.questions.length === 0;

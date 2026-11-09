@@ -11,11 +11,12 @@ export interface QuestionContext {
   signal: AbortSignal;
   agentCancel: AbortSignal;
   note: (text: string) => void;
+  roots: readonly string[];
 }
 
 const CANCEL: acp.CreateElicitationResponse = { action: 'cancel' };
 
-function toolCallOf(params: acp.CreateElicitationRequest): string {
+export function toolCallOf(params: acp.CreateElicitationRequest): string {
   const scoped = 'toolCallId' in params ? params.toolCallId : null;
   return typeof scoped === 'string' && scoped ? scoped : `elicitation:${randomUUID()}`;
 }
@@ -33,6 +34,10 @@ function readForm(params: acp.CreateElicitationRequest, ctx: QuestionContext): A
   }
 }
 
+export function rpcIdOf(requestId: QuestionContext['requestId']): string | null {
+  return requestId === undefined || requestId === null ? null : String(requestId);
+}
+
 export async function askQuestion(
   params: acp.CreateElicitationRequest,
   ctx: QuestionContext,
@@ -46,7 +51,7 @@ export async function askQuestion(
   return ctx.gate.ask(
     {
       toolCallId: toolCallOf(params),
-      rpcId: ctx.requestId === undefined || ctx.requestId === null ? null : String(ctx.requestId),
+      rpcId: rpcIdOf(ctx.requestId),
       agent: ctx.agent,
       form,
     },

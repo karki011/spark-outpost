@@ -103,6 +103,27 @@ function sparkOutcome(approval: Approval): Outcome | null {
   return { icon: 'busy', label: byMode ? doing : `Confirmed. ${doing}`, detail: '' };
 }
 
+function addressOutcome(approval: Approval): Outcome | null {
+  if (!approval.payload.openAddress) return null;
+  if (approval.status === 'allowed') {
+    return { icon: 'ok', label: 'Opened in your browser.', detail: '' };
+  }
+  if (approval.status === 'denied') {
+    return { icon: 'no', label: 'Chose: Don’t.', detail: 'Nothing was opened.' };
+  }
+  if (approval.status === 'cancelled' && approval.decidedBy === 'policy') {
+    return { icon: 'no', label: 'No longer needed.', detail: 'The agent stopped asking.' };
+  }
+  if (approval.status === 'expired' && approval.decidedBy === 'timeout') {
+    return {
+      icon: 'no',
+      label: 'Expired.',
+      detail: 'Nobody answered within 30 minutes, so nothing was opened.',
+    };
+  }
+  return null;
+}
+
 const RETIRED_OPEN_PR: Outcome = {
   icon: 'no',
   label: 'No longer offered.',
@@ -115,6 +136,8 @@ export function outcome(approval: Approval): Outcome {
   }
   const spark = sparkOutcome(approval);
   if (spark) return spark;
+  const address = addressOutcome(approval);
+  if (address) return address;
   const chosen = chosenOption(approval);
   if (approval.payload.plan) return planOutcome(approval, chosen ? `Chose: ${chosen.name}. ` : '');
   const stopped = stoppedOutcome(approval);

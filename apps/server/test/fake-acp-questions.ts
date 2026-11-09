@@ -7,6 +7,27 @@ import {
 export const ASK_CLAUDE_TRIGGER = '#askclaude';
 export const ASK_CODEX_TRIGGER = '#askcodex';
 export const ASK_WITHDRAW_TRIGGER = '#askwithdraw';
+export const OPEN_URL_TRIGGER = '#openurl';
+export const OPEN_LOCAL_TRIGGER = '#openlocal';
+export const OPEN_COMPLETE_TRIGGER = '#opencomplete';
+export const OPEN_LATER_TRIGGER = '#openlater';
+
+export const OAUTH_URL =
+  'https://auth.example.com/authorize?client_id=docs&redirect_uri=http%3A%2F%2F127.0.0.1%3A5555%2Fcallback';
+
+export function urlElicitation(
+  sessionId: string,
+  url = OAUTH_URL,
+  elicitationId = 'mcp-oauth-1',
+): acp.CreateElicitationRequest {
+  return {
+    sessionId,
+    mode: 'url',
+    message: 'Authenticate with MCP server docs',
+    url,
+    elicitationId,
+  };
+}
 
 type AskedQuestions = Parameters<typeof askUserQuestionsToCreateRequest>[0];
 
@@ -89,6 +110,38 @@ async function askThenWithdraw(client: acp.AgentContext, sessionId: string, say:
   }
 }
 
+async function openUrl(client: acp.AgentContext, request: acp.CreateElicitationRequest, say: Say) {
+  const response = await client.request(acp.methods.client.elicitation.create, request);
+  await say(`opened=${response.action}`);
+}
+
+async function openThenComplete(client: acp.AgentContext, sessionId: string, say: Say) {
+  const asked = client.request(acp.methods.client.elicitation.create, urlElicitation(sessionId));
+  await new Promise((resolve) =>
+    setTimeout(resolve, Number(process.env.FAKE_ACP_WITHDRAW_MS ?? 300)),
+  );
+  await client.notify(acp.methods.client.elicitation.complete, { elicitationId: 'unknown-id' });
+  await client.notify(acp.methods.client.elicitation.complete, { elicitationId: 'mcp-oauth-1' });
+  await say(`opened=${(await asked).action}`);
+}
+
+async function openLater(client: acp.AgentContext, sessionId: string, say: Say) {
+  void Promise.resolve(
+    client.request(acp.methods.client.elicitation.create, urlElicitation(sessionId)),
+  ).catch(() => undefined);
+  await say('asked to open it later');
+}
+
+async function urlTurn(text: string, client: acp.AgentContext, sessionId: string, say: Say) {
+  if (text.includes(OPEN_URL_TRIGGER)) await openUrl(client, urlElicitation(sessionId), say);
+  else if (text.includes(OPEN_LOCAL_TRIGGER)) {
+    await openUrl(client, urlElicitation(sessionId, 'http://localhost:51235/api/health'), say);
+  } else if (text.includes(OPEN_COMPLETE_TRIGGER)) await openThenComplete(client, sessionId, say);
+  else if (text.includes(OPEN_LATER_TRIGGER)) await openLater(client, sessionId, say);
+  else return false;
+  return true;
+}
+
 export async function questionTurn(
   text: string,
   client: acp.AgentContext,
@@ -98,6 +151,6 @@ export async function questionTurn(
   if (text.includes(ASK_CLAUDE_TRIGGER)) await askClaude(client, sessionId, say);
   else if (text.includes(ASK_CODEX_TRIGGER)) await askCodex(client, sessionId, say);
   else if (text.includes(ASK_WITHDRAW_TRIGGER)) await askThenWithdraw(client, sessionId, say);
-  else return null;
+  else if (!(await urlTurn(text, client, sessionId, say))) return null;
   return 'end_turn';
 }

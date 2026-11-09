@@ -35,6 +35,8 @@ export const ASK_SPARK_REFUSALS = {
   plugins: 'A card that turns a plugin on or off stays with you. Answer it yourself on the Mac.',
   linkRepo: 'A card that links a repo to a chat stays with you. Answer it yourself.',
   question: 'An agent’s question needs your own answer. Answer it yourself in the chat.',
+  openAddress:
+    'Only you open an address an agent asks for, in your own browser. Answer it yourself on the Mac.',
   callerSees:
     'This card tells a ServiceNow caller something (a comment, or resolving, closing or cancelling), so it stays with you. Answer it yourself in the chat.',
   notWaiting: 'That card is no longer waiting for an answer.',
@@ -113,6 +115,7 @@ export function cardRefusal(
   if (holdsToConfirm(approval.payload)) return ASK_SPARK_REFUSALS.held;
   if (approval.payload.instructionFiles !== undefined) return ASK_SPARK_REFUSALS.instructions;
   if (approval.payload.form) return ASK_SPARK_REFUSALS.question;
+  if (approval.payload.openAddress) return ASK_SPARK_REFUSALS.openAddress;
   if (approval.payload.sparkAction?.action === 'rules_edit') return ASK_SPARK_REFUSALS.rules;
   if (approval.payload.sparkAction?.action === 'plugins_edit') return ASK_SPARK_REFUSALS.plugins;
   const repoAction = approval.payload.sparkAction?.action;

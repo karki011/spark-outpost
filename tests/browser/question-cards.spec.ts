@@ -88,3 +88,41 @@ test('Skip tells the agent the questions were skipped', async ({ page }) => {
   await turnDone(page);
   await expect(questions.getByRole('status')).toContainText('Skipped.');
 });
+
+const openedAddresses = (page: Parameters<typeof card>[0]) =>
+  page.evaluate(() => (window as unknown as { opened: string[] }).opened);
+
+test('opens an address an agent asks for in the browser, never by itself', async ({ page }) => {
+  await page.addInitScript(() => {
+    const opened: string[] = [];
+    Object.assign(window, { opened });
+    window.open = (url) => {
+      opened.push(String(url));
+      return null;
+    };
+  });
+  await linkedChat(page, repo);
+  await send(page, 'Sign in to the docs server #openurl #build');
+  const address = card(page, /^Open this address\?$/);
+  await expect(address).toContainText('Authenticate with MCP server docs', { timeout: 30_000 });
+  await expect(address.locator('b', { hasText: 'auth.example.com' })).toBeVisible();
+  expect(await openedAddresses(page)).toEqual([]);
+  await address.getByRole('button', { name: /^Open/ }).click();
+  await expect(page.getByText('opened=accept')).toBeVisible({ timeout: 30_000 });
+  await turnDone(page);
+  expect(await openedAddresses(page)).toEqual([
+    expect.stringMatching(/^https:\/\/auth\.example\.com\/authorize\?/),
+  ]);
+  await expect(card(page, /Open this address\?/).getByRole('status')).toContainText(
+    'Opened in your browser.',
+  );
+});
+
+test('Don’t tells the agent the address was not opened', async ({ page }) => {
+  await linkedChat(page, repo);
+  await send(page, 'Sign in to the docs server #openurl #build');
+  const address = card(page, /^Open this address\?$/);
+  await address.getByRole('button', { name: /^Don’t/ }).click({ timeout: 30_000 });
+  await expect(page.getByText('opened=decline')).toBeVisible({ timeout: 30_000 });
+  await turnDone(page);
+});

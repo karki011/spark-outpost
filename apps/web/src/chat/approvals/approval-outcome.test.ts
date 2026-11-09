@@ -190,4 +190,26 @@ describe('approval outcome', () => {
       label: 'No longer offered.',
     });
   });
+
+  it('says whether an address was opened, refused or no longer needed', () => {
+    const address = (change: Partial<Approval>): Approval =>
+      decided({
+        kind: 'other',
+        payload: {
+          ...pending.payload,
+          command: null,
+          openAddress: { url: 'https://a.example/x', host: 'a.example', message: '' },
+        },
+        ...change,
+      });
+    expect(outcome(address({ status: 'allowed' })).label).toBe('Opened in your browser.');
+    expect(outcome(address({ status: 'denied' }))).toMatchObject({
+      label: 'Chose: Don’t.',
+      detail: 'Nothing was opened.',
+    });
+    expect(outcome(address({ status: 'cancelled', decidedBy: 'policy' })).label).toBe(
+      'No longer needed.',
+    );
+    expect(outcome(address({ status: 'cancelled', decidedBy: 'stop' })).label).toBe('Cancelled.');
+  });
 });

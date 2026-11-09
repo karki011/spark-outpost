@@ -97,8 +97,8 @@
   },
   "client-method:elicitation/create": {
     "status": "supported",
-    "where": "elicitation-form.ts, questions.ts, apps/server/src/workflow/question-gate.ts, apps/server/src/persistence/approvals.ts",
-    "note": "Form mode only. The restricted schema is validated at the boundary (flat object; string, enum and oneOf strings, number, integer, boolean, enum and anyOf string arrays; at most 20 fields and 50 options) and shown as a question card (a clarify approval with the form in its payload): the run waits as awaiting_approval and the chat needs you. Claude's and Codex's companion free-text fields (_meta._askUserQuestionCustomAnswer, _meta.codex.role user_note) become the question's own text box. Send answers accept with content checked against the schema, Skip answers decline, Stop answers cancel, the agent's $/cancel_request closes the card and answers cancel, a run with no place to ask (a Spark handed a job, Ask Spark) answers decline so the agent carries on, and a card left by a restart expires. A malformed form, url mode or a Codex isSecret field answers invalid_params -32602 (the spec forbids secrets in form mode). pattern and format are not checked; the agent validates its own answer. Covered with claude-agent-acp 0.81.2's own AskUserQuestion request and response mapping and a codex-acp 1.13.1 request_user_input fixture."
+    "where": "elicitation-form.ts, questions.ts, open-address.ts, turn-handlers.ts, apps/server/src/workflow/question-gate.ts, apps/server/src/workflow/address-card.ts, apps/server/src/persistence/approvals.ts",
+    "note": "Form mode only. The restricted schema is validated at the boundary (flat object; string, enum and oneOf strings, number, integer, boolean, enum and anyOf string arrays; at most 20 fields and 50 options) and shown as a question card (a clarify approval with the form in its payload): the run waits as awaiting_approval and the chat needs you. Claude's and Codex's companion free-text fields (_meta._askUserQuestionCustomAnswer, _meta.codex.role user_note) become the question's own text box. Send answers accept with content checked against the schema, Skip answers decline, Stop answers cancel, the agent's $/cancel_request closes the card and answers cancel, a run with no place to ask (a Spark handed a job, Ask Spark) answers decline so the agent carries on, and a card left by a restart expires. A malformed form or a Codex isSecret field answers invalid_params -32602 (the spec forbids secrets in form mode). pattern and format are not checked; the agent validates its own answer. Covered with claude-agent-acp 0.81.2's own AskUserQuestion request and response mapping and a codex-acp 1.13.1 request_user_input fixture. URL mode: a session-scoped request whose address passes the web-address floor (http(s) only; no login in it; not localhost, loopback or 0.0.0.0, so not Spark's ports) becomes an Open this address? card (an other approval with openAddress in its payload) showing the untrusted message and the full address with its host; anything else answers decline with a step, a request-scoped one too. An address holding a value from a project secret file holds to confirm; what the turn read before is noted on the card as a send to that host. Open opens it in the default browser through the external-link path (window.open, the Mac app's openExternal), never the Browser pane, then answers accept; Don't answers decline; Stop, the turn ending, $/cancel_request and elicitation/complete answer cancel. Ask Spark and paired devices can't answer it. A url request without url or elicitationId answers invalid_params."
   },
   "client-method:_*": {
     "status": "not_applicable",
@@ -110,8 +110,9 @@
     "note": "Received and mapped to steps, text and usage. Several variants are partial or ignored; see Session updates. After session/cancel the provider keeps reading until the prompt response; the worker then records only tokens, requests, cost and sub-agent ends, not new steps or text (workflow/agent-turn.ts)."
   },
   "agent-notification:elicitation/complete": {
-    "status": "missing",
-    "note": "Only form elicitation is advertised; complete belongs to URL mode."
+    "status": "supported",
+    "where": "live-connection.ts, turn-handlers.ts",
+    "note": "Closes the waiting Open this address? card with that elicitationId (cancelled, No longer needed) and answers its request cancel; an unknown id, or one already answered, is ignored. The notification never waits for a turn to bind."
   },
   "agent-notification:_*": {
     "status": "partial",
@@ -317,8 +318,9 @@
     "note": "Advertised as {} in every turn's initialize, never in the probe. It makes claude-agent-acp 0.81.2 allow AskUserQuestion (also in Spark's tool lists) and forward MCP form elicitations and its refusal-fallback prompt, and codex-acp 1.13.1 send request_user_input and MCP form elicitations instead of answering them empty."
   },
   "client-capability:elicitation.url": {
-    "status": "missing",
-    "note": "Not advertised. A url-mode request answers invalid_params."
+    "status": "supported",
+    "where": "client-info.ts",
+    "note": "Advertised as {} in every turn's initialize beside form, never in the probe. It makes claude-agent-acp 0.101.0 forward MCP url elicitations and bridge Claude Code's MCP OAuth (at session start and on /mcp) to url elicitation, and codex-acp 2.6.0 forward MCP url elicitations and run MCP OAuth through them instead of a permission request."
   },
   "stop-reason:end_turn": {
     "status": "supported",

@@ -15,8 +15,8 @@ describe('client capabilities', () => {
     expect(airCapabilities(CLIENT_CAPABILITIES)).toEqual(['sessionFailure']);
   });
 
-  it('offers form questions on a turn, never in the probe and never URL questions', () => {
-    expect(turnCapabilities(false, false).elicitation).toEqual({ form: {} });
+  it('offers form questions and addresses to open on a turn, never in the probe', () => {
+    expect(turnCapabilities(false, false).elicitation).toEqual({ form: {}, url: {} });
     expect(CLIENT_CAPABILITIES.elicitation).toBeUndefined();
   });
 

@@ -5,6 +5,7 @@ import { MUTATING_METHODS, loopbackHosts, refusedForShape } from '../api/securit
 import type { Db } from '../persistence/db.ts';
 import { entryTarget, isEntryReturn, mayHaveLostCookie, sendEntryBounce } from './entry-bounce.ts';
 import { sendPairingPage } from './pairing-page.ts';
+import { servesAddressOrigins } from './address-origins.ts';
 import {
   MAC_CARD_REFUSAL,
   blockedFieldIn,
@@ -235,6 +236,7 @@ export function remoteGateway(deps: GatewayDeps) {
       blocked: decision.blockedFields,
       highRisk: decision.highRiskFields,
     });
+    servesAddressOrigins(res);
     await touchDevice(db, device.id);
     if (isPageRequest(req) && isEntryReturn(req)) {
       res.set('Cache-Control', 'no-store').redirect(302, entryTarget(req));

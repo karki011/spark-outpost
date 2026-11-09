@@ -23,7 +23,7 @@ export function turnCapabilities(readFiles: boolean, writeFiles: boolean): Clien
   return {
     ...base,
     session: { ...base.session, compaction: {} },
-    elicitation: { form: {} },
+    elicitation: { form: {}, url: {} },
     _meta: {
       jetbrains: {
         air: {

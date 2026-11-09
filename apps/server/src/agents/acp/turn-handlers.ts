@@ -7,7 +7,8 @@ import type {
   QuestionGate,
 } from '../../providers/provider.ts';
 import type { AgentDefinition } from './agents.ts';
-import { askQuestion } from './questions.ts';
+import { elicitationIdOf, askToOpen } from './open-address.ts';
+import { askQuestion, type QuestionContext } from './questions.ts';
 import {
   reviewPermission,
   readingTurnReviews,
@@ -77,11 +78,44 @@ export interface HandlerFacts {
   audit: ProtocolObserver | undefined;
 }
 
+function urlAsks() {
+  const waiting = new Map<string, AbortController>();
+  return {
+    async around<T>(
+      id: string | null,
+      agentCancel: AbortSignal,
+      ask: (cancel: AbortSignal) => Promise<T>,
+    ) {
+      const done = new AbortController();
+      if (id) waiting.set(id, done);
+      try {
+        return await ask(AbortSignal.any([agentCancel, done.signal]));
+      } finally {
+        if (id && waiting.get(id) === done) waiting.delete(id);
+      }
+    },
+    complete: (id: string) => waiting.get(id)?.abort(),
+  };
+}
+
 export function turnHandlers(facts: HandlerFacts): TurnHandlers {
   const { definition, policy, signal, mapper, push } = facts;
   const { gated, doing, rails, questions } = facts.gates;
   const report = (name: string) => push(mapper.clientAction(name));
   const secretRead = (label: string) => push([{ kind: 'secret_read', paths: [label] }]);
+  const addresses = urlAsks();
+  const context = (
+    requestId: QuestionContext['requestId'],
+    agentCancel: AbortSignal,
+  ): QuestionContext => ({
+    gate: questions,
+    agent: definition.name,
+    requestId,
+    signal,
+    agentCancel,
+    note: (text) => push(mapper.note(text)),
+    roots: policy?.roots.map((root) => root.path) ?? [],
+  });
   return {
     audit: facts.audit,
     async permission(params, requestId) {
@@ -96,15 +130,13 @@ export function turnHandlers(facts: HandlerFacts): TurnHandlers {
       push(plan.length > 0 ? plan : mapper.clientAction(decision.note));
       return decision.response;
     },
-    question: (params, requestId, agentCancel) =>
-      askQuestion(params, {
-        gate: questions,
-        agent: definition.name,
-        requestId,
-        signal,
-        agentCancel,
-        note: (text) => push(mapper.note(text)),
-      }),
+    question: (params, requestId, agentCancel) => {
+      if (params.mode !== 'url') return askQuestion(params, context(requestId, agentCancel));
+      return addresses.around(elicitationIdOf(params), agentCancel, (cancel) =>
+        askToOpen(params, context(requestId, cancel)),
+      );
+    },
+    complete: (elicitationId) => addresses.complete(elicitationId),
     write: (params) =>
       doing ? writeWithApproval(params, doing) : refuseWrite(params, policy !== null, report),
     read: (params) => {

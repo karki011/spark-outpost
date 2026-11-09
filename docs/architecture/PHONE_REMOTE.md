@@ -161,6 +161,7 @@ What a phone is shown differently (`apps/server/src/remote/redaction.ts`):
 - `GET /api/setup` shortens a saved key's mask to its last four characters.
 - `GET /api/projects/:id/file` and attaching a project file refuse paths inside `.git`.
 - `GET /api/tasks/:id/changes/diff` sends no text for a secret-named file.
+- An **Open this address?** card's address, and the url of an agent's url elicitation in the audit, become the address's origin (scheme, host, port) in every JSON body and every streamed line the gateway serves a device (`remote/address-origins.ts`, applied when a device is admitted). The Mac keeps the whole address, since it opens it. Web Push and attention items carry no address.
 
 Known and left as it is: a phone with the settings or connections switch on sees what the Mac sees in agent setup and MCP server lists, including a credential someone typed into a command argument or URL. Project files outside the secret-name list (`.mcp.json`, `*.tfvars`) are readable as on the Mac.
 

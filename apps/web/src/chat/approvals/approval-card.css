@@ -184,6 +184,18 @@
 .appr .appr-observed {
   color: var(--muted);
 }
+.appr .appr-address code {
+  display: block;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  background: var(--code);
+  color: var(--text);
+  font-size: 12.5px;
+  word-break: break-all;
+}
+.appr .appr-address b {
+  font-weight: 700;
+}
 .appr-plan {
   margin: 10px 0 0;
   padding: 4px 12px;
