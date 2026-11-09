@@ -12,8 +12,7 @@ import { sparkFloor, type SparkFloor } from '../../spark-rules/floor-flags.ts';
 import { floorRulesNow } from '../../spark-rules/rules-store.ts';
 import { resolveUserMcp } from '../../mcp/launch.ts';
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
-import { childEnvironment } from '../../setup/environment.ts';
-import { agentEnvironment } from './agent-env.ts';
+import { agentEnvironment, processEnvironment } from './agent-env.ts';
 import { cliEnvironment } from './agent-cli.ts';
 import { supportsDo, type AgentDefinition } from './agents.ts';
 import { CODEX_PLAIN_SANDBOX_NOTE, prepareCodexLaunch } from './codex-launch.ts';
@@ -122,7 +121,7 @@ export async function planLaunch(
   const userMcp = await resolveUserMcp(turn.userMcp ?? [], options.secrets);
   const own =
     definition.repoStyle === 'codex'
-      ? await codexUserMcpNames(options.env ?? childEnvironment(process.env))
+      ? await codexUserMcpNames(await processEnvironment(options))
       : [];
   const spark = sparkToolsHint(options.sparkTools, turn.sparkScope, own);
   const reserved = sparkReserved(own);

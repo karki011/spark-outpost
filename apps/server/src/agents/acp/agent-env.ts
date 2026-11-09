@@ -16,9 +16,12 @@ function withHiddenServers(env: Record<string, string>, names: readonly string[]
   };
 }
 
+export type LoginShellEnv = () => Promise<Record<string, string> | null>;
+
 export interface AgentEnvironmentOptions {
   definition: AgentDefinition;
   env?: Record<string, string> | undefined;
+  loginEnv?: LoginShellEnv | undefined;
   secrets?: Pick<SecretStore, 'get'> | undefined;
   codexProfiles?: boolean | undefined;
   floor?: SparkFloor | undefined;
@@ -34,6 +37,34 @@ export function withoutPushing(env: Record<string, string>): Record<string, stri
     [`GIT_CONFIG_KEY_${index}`]: `url.${NO_PUSH_URL}.pushInsteadOf`,
     [`GIT_CONFIG_VALUE_${index}`]: '',
   };
+}
+
+const NOT_FROM_LOGIN = new Set([
+  ...['CLAUDE_CONFIG_DIR', 'CODEX_HOME', 'NODE_OPTIONS', 'GH_HOST', 'GH_REPO'],
+  ...['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_OBJECT_DIRECTORY'],
+  ...['GIT_CONFIG_COUNT', 'GIT_CONFIG_PARAMETERS', 'GIT_CONFIG_GLOBAL', 'GIT_CONFIG_SYSTEM'],
+]);
+const GIT_CONFIG_ENTRY = /^GIT_CONFIG_(?:KEY|VALUE)_\d+$/;
+
+function fromLogin(name: string): boolean {
+  return !NOT_FROM_LOGIN.has(name) && !GIT_CONFIG_ENTRY.test(name);
+}
+
+export function withLoginShell(
+  own: Record<string, string>,
+  login: Record<string, string> | null,
+): Record<string, string> {
+  if (!login) return own;
+  const filled = Object.entries(childEnvironment(login)).filter(([name]) => fromLogin(name));
+  return { ...Object.fromEntries(filled), ...own };
+}
+
+export async function processEnvironment(
+  options: Pick<AgentEnvironmentOptions, 'env' | 'loginEnv'>,
+): Promise<Record<string, string>> {
+  if (options.env) return options.env;
+  const login = (await options.loginEnv?.().catch(() => null)) ?? null;
+  return withLoginShell(childEnvironment(process.env), login);
 }
 
 async function baseEnvironment(
@@ -53,7 +84,7 @@ async function baseEnvironment(
     }
     return definition.keyEnvironment(key);
   }
-  const base = options.env ?? childEnvironment(process.env);
+  const base = await processEnvironment(options);
   if (definition.repoStyle !== 'codex') {
     return {
       ...base,
