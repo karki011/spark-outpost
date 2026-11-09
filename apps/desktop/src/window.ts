@@ -1,9 +1,11 @@
 import { appendFileSync } from 'node:fs';
 import { app, BrowserWindow, dialog, session, shell } from 'electron';
+import { BROWSER_OUTSIDE_TARGET } from '@spark-outpost/contracts';
 import { targetsApi, withApiToken } from './api-token.ts';
 import type { ChannelConfig } from './channel.ts';
 import { attachContextMenu } from './context-menu.ts';
-import { linkTarget } from './link-target.ts';
+import type { LinkIntent } from './link-target.ts';
+import { openInSpark, routeLink } from './link-opening.ts';
 import { guardSessionMedia } from './media-guard.ts';
 import { allowArtifactFrames, fromArtifactPage, guardSubframes } from './artifact-frames.ts';
 import { hourCycleArgs } from './hour-cycle-arg.ts';
@@ -34,10 +36,16 @@ function openExternal(url: string): void {
   else void shell.openExternal(url);
 }
 
-function openLink(url: string, origin: string): void {
-  const target = linkTarget(url, origin);
+export function openLink(url: string, origin: string, intent: LinkIntent): void {
+  const target = routeLink(url, origin, intent);
   if (target === 'viewer') openViewer(url, origin);
   if (target === 'browser') openExternal(url);
+  if (target === 'spark' && !openInSpark(url)) openExternal(url);
+}
+
+function openArtifactLink(address: string, origin: string): void {
+  if (routeLink(address, origin, 'follow') === 'viewer') openExternal(address);
+  else openLink(address, origin, 'follow');
 }
 
 export function attachApiToken(origin: string, token: string): void {
@@ -48,12 +56,17 @@ export function attachApiToken(origin: string, token: string): void {
   });
 }
 
-async function confirmArtifactLink(window: BrowserWindow, address: string): Promise<boolean> {
+async function confirmArtifactLink(
+  window: BrowserWindow,
+  address: string,
+  origin: string,
+): Promise<boolean> {
+  const inSpark = routeLink(address, origin, 'follow') === 'spark';
   const { response } = await dialog.showMessageBox(window, {
     type: 'question',
-    message: 'Open this link in your browser?',
+    message: inSpark ? 'Open this link in Spark?' : 'Open this link in your browser?',
     detail: `An artifact asked to open:\n${address}`,
-    buttons: ['Open in Browser', 'Cancel'],
+    buttons: [inSpark ? 'Open in Spark' : 'Open in Browser', 'Cancel'],
     defaultId: 1,
     cancelId: 1,
   });
@@ -62,18 +75,18 @@ async function confirmArtifactLink(window: BrowserWindow, address: string): Prom
 
 export function guardNavigation(window: BrowserWindow, origin: string): void {
   guardSubframes(window.webContents, {
-    confirm: (address) => confirmArtifactLink(window, address),
-    open: openExternal,
+    confirm: (address) => confirmArtifactLink(window, address, origin),
+    open: (address) => openArtifactLink(address, origin),
     now: Date.now,
   });
-  window.webContents.setWindowOpenHandler(({ url }) => {
-    openLink(url, origin);
+  window.webContents.setWindowOpenHandler(({ url, frameName }) => {
+    openLink(url, origin, frameName === BROWSER_OUTSIDE_TARGET ? 'outside' : 'follow');
     return { action: 'deny' };
   });
   window.webContents.on('will-navigate', (event, url) => {
     if (targetsApi(url, origin)) return;
     event.preventDefault();
-    openLink(url, origin);
+    openLink(url, origin, 'follow');
   });
 }
 
@@ -99,6 +112,6 @@ export function openWindow({ config, preload, theme }: WindowOptions): BrowserWi
     event.preventDefault();
     window.setTitle(title);
   });
-  attachContextMenu(window);
+  attachContextMenu(window, openLink);
   return window;
 }

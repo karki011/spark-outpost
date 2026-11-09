@@ -1,4 +1,5 @@
 import { defaultBrowserUrl, paneUrl } from '../browser/chat-links.ts';
+import { outsideTarget } from '../browser/outside-link.ts';
 
 export type OpenWindow = (url: string, target: string, features: string) => unknown;
 
@@ -15,7 +16,7 @@ export function openTerminalLink(
     return false;
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
-  open(url.href, '_blank', 'noopener,noreferrer');
+  open(url.href, outsideTarget(), 'noopener,noreferrer');
   return true;
 }
 

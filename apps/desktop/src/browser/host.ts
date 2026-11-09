@@ -43,6 +43,7 @@ import { startBrowserViewHost, type BrowserViewHost } from './view-host.ts';
 import type { HistorySink } from './view-history.ts';
 import { loadSavedView } from './view-saved.ts';
 import { handToChat, toView } from './view-transfer.ts';
+import type { LinkOpening } from '../link-opening.ts';
 import type { PaneTab } from './tab.ts';
 
 export interface BrowserHostOptions {
@@ -55,6 +56,7 @@ export interface BrowserHostOptions {
 }
 
 export interface DesktopBrowserHost {
+  links: LinkOpening;
   connectWorker(port: BridgePort): WorkerBridge;
   windowClosed(): void;
   menuShortcut(shortcut: BrowserShortcut): boolean;
@@ -272,6 +274,15 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
   );
 
   return {
+    links: {
+      linksIn: () => saved.linksIn(),
+      openInSpark(url) {
+        const window = options.window();
+        if (!window || window.isDestroyed()) return false;
+        send(IPC.browserViewOpenLink, url);
+        return true;
+      },
+    },
     connectWorker(port) {
       return connectWorkerBridge(port, {
         run: (request, signal) => runBrowserOp(panes, request, signal),

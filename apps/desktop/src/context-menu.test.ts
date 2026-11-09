@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { MenuItemConstructorOptions } from 'electron';
-import { contextMenuTemplate, type EditingContext } from './context-menu.ts';
+import { contextMenuTemplate, type EditingContext, type LinkMenu } from './context-menu.ts';
 
+const NO_SPELLING = { replace: () => undefined, learn: () => undefined };
 const ALL_FLAGS = { canCut: true, canCopy: true, canPaste: true, canSelectAll: true };
 
 function context(change: Partial<EditingContext> = {}): EditingContext {
@@ -81,5 +82,36 @@ describe('contextMenuTemplate', () => {
 
   it('shows nothing on a plain right-click outside a field', () => {
     expect(build({ isEditable: false, selectionText: '  ' }).template).toEqual([]);
+  });
+
+  it('offers the other place and Copy Link on a link', () => {
+    const did: string[] = [];
+    const link = (other: LinkMenu['other']): LinkMenu => ({
+      other,
+      openOther: () => did.push('other'),
+      copy: () => did.push('copy'),
+    });
+    const outside = context({ isEditable: false });
+    const toBrowser = contextMenuTemplate(outside, NO_SPELLING, link('browser'));
+    expect(names(toBrowser)).toEqual(['Open in Default Browser', 'Copy Link']);
+    expect(names(contextMenuTemplate(outside, NO_SPELLING, link('spark')))).toEqual([
+      'Open in Spark',
+      'Copy Link',
+    ]);
+    expect(names(contextMenuTemplate(outside, NO_SPELLING, link(null)))).toEqual(['Copy Link']);
+    (toBrowser[0]!.click as () => void)();
+    (toBrowser[1]!.click as () => void)();
+    expect(did).toEqual(['other', 'copy']);
+  });
+
+  it('keeps Copy for a selection after the link items', () => {
+    const selected = context({ isEditable: false, selectionText: 'see the pull request' });
+    const link: LinkMenu = { other: 'browser', openOther: () => undefined, copy: () => undefined };
+    expect(names(contextMenuTemplate(selected, NO_SPELLING, link))).toEqual([
+      'Open in Default Browser',
+      'Copy Link',
+      'separator',
+      'copy',
+    ]);
   });
 });

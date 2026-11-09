@@ -85,7 +85,11 @@ import { startIdleMotion } from './idle-motion.ts';
 import { useDesktopSettingsOpener } from './use-desktop-settings-opener.ts';
 import '../ui/controls.css';
 import { openTodayEvent, useTodayOpener } from '../calendar/today-request.ts';
-import { browserViewAvailable, useBrowserViewOpener } from '../browser-view/view-store.ts';
+import {
+  browserViewAvailable,
+  useBrowserViewOpener,
+  useLinksToView,
+} from '../browser-view/view-store.ts';
 
 const NO_IDS: readonly string[] = [];
 
@@ -444,6 +448,7 @@ export function App() {
   const connection = useConnection();
   const [entering, setEntering] = useState(false);
   useEffect(() => startIdleMotion(), []);
+  useLinksToView();
   useFirstContent(setup.data !== undefined || setup.isError);
 
   function handleOnboardingFinished() {

@@ -49,6 +49,8 @@ export async function withDesktopBrowser(page: Page) {
     let downloadList: unknown[] = [];
     const downloadListeners = new Set<(list: unknown) => void>();
     let searchEngine = 'duckduckgo';
+    let linksIn = 'spark';
+    const openLinkListeners = new Set<(url: unknown) => void>();
     let archiveSetting = { on: true, afterMinutes: 720 };
     Object.assign(window, {
       browserCalls: calls,
@@ -87,6 +89,7 @@ export async function withDesktopBrowser(page: Page) {
         viewShortcutListeners.forEach((listener) => listener(event)),
       browserViewIntent: (intent: unknown) =>
         viewIntentListeners.forEach((listener) => listener(intent)),
+      browserViewOpenLink: (url: string) => openLinkListeners.forEach((listener) => listener(url)),
       sparkDesktop: {
         platform: 'darwin',
         companion: { get: async () => null, onChange: noop },
@@ -135,6 +138,20 @@ export async function withDesktopBrowser(page: Page) {
             calls.push({ kind: 'view-search-engine', payload: engine });
             searchEngine = engine;
             return searchEngine;
+          },
+          linksIn: async () => linksIn,
+          setLinksIn: async (choice: string) => {
+            calls.push({ kind: 'view-links-in', payload: choice });
+            linksIn = choice;
+            return linksIn;
+          },
+          openTab: async (profile: string, url: string) => {
+            calls.push({ kind: 'view-open-tab', payload: { profile, url } });
+            return (window as unknown as { browserViewFull?: boolean }).browserViewFull !== true;
+          },
+          onOpenLink: (listener: (url: unknown) => void) => {
+            openLinkListeners.add(listener);
+            return () => openLinkListeners.delete(listener);
           },
           pageText: async (profile: string, tabId: string) => {
             calls.push({ kind: 'view-page-text', payload: { profile, tabId } });

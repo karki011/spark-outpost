@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CalendarGoogleStatus, GoogleSignInFlow } from '@spark-outpost/contracts';
 import { calendarApi, calendarKeys, type GoogleSignInStart } from './calendar-api.ts';
+import { openOutside } from '../browser/outside-link.ts';
 
 const POLL_MS = 1500;
 
@@ -24,7 +25,7 @@ function useGoogleSignIn(initial: GoogleSignInFlow, enabled: boolean) {
     mutationFn: (request: GoogleSignInStart) => calendarApi.startGoogleSignIn(request),
     onSuccess: (next) => {
       setFlow(next);
-      if (next.authorizeUrl) window.open(next.authorizeUrl, '_blank', 'noopener,noreferrer');
+      if (next.authorizeUrl) openOutside(next.authorizeUrl);
     },
   });
   const cancel = useMutation({ mutationFn: calendarApi.cancelGoogleSignIn, onSuccess: setFlow });
