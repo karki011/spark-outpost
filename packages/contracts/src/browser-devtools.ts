@@ -5,6 +5,7 @@ export const BROWSER_EVAL_EXPRESSION_MAX = 4000;
 export const BROWSER_EVAL_RESULT_MAX = 8000;
 export const BROWSER_EVAL_TIMEOUT_MS = 10_000;
 export const BROWSER_SELECTOR_MAX = 300;
+export const BROWSER_BAD_SELECTOR = 'That is not a CSS selector the page can use.';
 export const BROWSER_STORAGE_ITEMS_MAX = 200;
 export const BROWSER_STORAGE_VALUE_MAX = 500;
 

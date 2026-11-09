@@ -27,7 +27,7 @@ import {
 } from './context.ts';
 import { clearPage } from './read-flow.ts';
 import { pageScrub, type Scrub } from './scrub.ts';
-import { WAIT_MAX_SECONDS, waitForSelector } from './devtools-wait.ts';
+import { NO_WAIT_SELECTOR, WAIT_MAX_SECONDS, waitForSelector } from './devtools-wait.ts';
 
 const TOOL = 'spark_browser_devtools';
 const TAB_KEYS = new Set(['tabId', 'url', 'title', 'place', 'owner']);
@@ -173,11 +173,30 @@ function readOnce(action: ReadAction, args: DevtoolsArgs, context: SparkToolCont
   });
 }
 
+async function waitCleared(args: DevtoolsArgs, context: SparkToolContext) {
+  if (!args.selector?.trim()) throw new SparkToolError(NO_WAIT_SELECTOR);
+  const session = browserSession(context);
+  const where = { chatId: session.chatId, runId: session.runId, tab: args.tab };
+  const page = await session.host
+    .request({ op: 'page', ...where }, context.signal)
+    .catch((error: unknown) => {
+      throw asToolError(error);
+    });
+  const before = await clearPage(context, TOOL, 'read', page, true);
+  if (!before.cleared) return { before, waited: null, cleared: before };
+  const waited = await waitForSelector(args, context);
+  const sameSite = pageParts(waited.found.url).origin === pageParts(page.url).origin;
+  const cleared = sameSite ? before : await clearPage(context, TOOL, 'read', waited.found, true);
+  return { before, waited, cleared };
+}
+
 async function readTool(args: DevtoolsArgs, context: SparkToolContext) {
   const action = args.action as Exclude<BrowserDevtoolsAction, 'eval'>;
-  const waited = action === 'wait' ? await waitForSelector(args, context) : null;
+  const waiting = action === 'wait' ? await waitCleared(args, context) : null;
+  if (waiting && !waiting.before.cleared) return waiting.before.result;
+  const waited = waiting?.waited ?? null;
   const found = waited ? waited.found : await readOnce(action as ReadAction, args, context);
-  const cleared = await clearPage(context, TOOL, 'read', found, true);
+  const cleared = waiting ? waiting.cleared : await clearPage(context, TOOL, 'read', found, true);
   if (!cleared.cleared) return cleared.result;
   const hidden = await pageScrub(context);
   const { tabId, url, place } = found;
