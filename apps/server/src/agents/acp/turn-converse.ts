@@ -35,6 +35,7 @@ import { attachSteering, steeringSupported } from './steering.ts';
 import type { TurnMapper } from './subagent-updates.ts';
 import { turnGates, turnHandlers, type TurnGates } from './turn-handlers.ts';
 import type { Workspace } from './turn-launch.ts';
+import { nameNewSession } from './session-name.ts';
 import { createRequestLog, runPrompts } from './turn-loop.ts';
 import { createTurnTokens } from './turn-tokens.ts';
 import { updateSink } from './update-sink.ts';
@@ -99,6 +100,9 @@ async function startSession(context: TurnContext, gates: TurnGates): Promise<Ses
     workspace.replay,
     signal,
   );
+  if (!opened.continued) {
+    await nameNewSession(ctx, init, opened.session.sessionId, turn.sessionTitle);
+  }
   connection.attach({ init, session: opened.session, request: plan.request });
   return { init, opened, request: plan.request, notes: plan.notes };
 }

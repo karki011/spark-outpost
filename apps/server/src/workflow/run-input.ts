@@ -39,6 +39,7 @@ export interface RunInput {
   userRequest: string;
   role: AgentRole | null;
   askTitle: boolean;
+  chatTitle?: string | null;
   previousMessageId?: string | null;
   resumeKey?: string | null;
   followUp?: string | null;
@@ -128,6 +129,7 @@ interface RunRow extends OutpostRow {
   follow_up: string | null;
   in_chat_worktree: boolean;
   title_source: string;
+  chat_title: string | null;
   assistant: boolean;
   assistant_history_from: Date | null;
   continues_run_id: string | null;
@@ -229,7 +231,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             r.mode AS run_mode, r.start_as, r.level AS run_level, r.agent_mode, r.config_values,
             r.parent_run_id, r.prompt AS run_prompt, r.role AS run_role,
             r.route->>'resumeKey' AS resume_key, r.route->>'followUp' AS follow_up,
-            c.title_source,
+            c.title_source, c.title AS chat_title,
             COALESCE(r.continues_run_id, (
               SELECT p.continues_run_id FROM runs p WHERE p.id = r.parent_run_id
             )) AS continues_run_id,
@@ -323,6 +325,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     },
     role: row.run_role,
     askTitle: row.title_source !== 'user',
+    chatTitle: row.chat_title,
     assistant: row.assistant,
     previousMessageId: history.rows.at(-1)?.id ?? null,
     startAs: row.start_as,

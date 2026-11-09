@@ -49,6 +49,7 @@ async function turn(
   prompt: string,
   session: SessionTarget,
   entries: ProtocolEntry[] = [],
+  sessionTitle?: string,
 ) {
   const audit = createAuditRecorder({
     write: async (batch) => void entries.push(...batch),
@@ -62,6 +63,7 @@ async function turn(
     signal: new AbortController().signal,
     audit,
     session,
+    ...(sessionTitle ? { sessionTitle } : {}),
   })) {
     outputs.push(output);
   }
@@ -91,6 +93,30 @@ const storedPrompts = (sessionId: string) =>
     .prompts;
 
 describe('resuming ACP sessions against the fake agent', { timeout: 30_000 }, () => {
+  it("names a new session with the chat's title and leaves a resumed one alone", async () => {
+    const provider = providerWith({ resume: {}, title: {} });
+    const firstEntries: ProtocolEntry[] = [];
+    const first = await turn(provider, 'Remember PELICAN', fresh, firstEntries, 'Pelican notes');
+    if (first.opened?.kind !== 'session') throw new Error('No session was reported.');
+    const named = firstEntries.filter((entry) => entry.method === 'session/set_title');
+    expect(JSON.stringify(named)).toContain('Pelican notes');
+    const stored: StoredSession = {
+      sessionId: first.opened.sessionId,
+      cwd: first.opened.cwd,
+      additionalDirectories: first.opened.additionalDirectories,
+    };
+    const laterEntries: ProtocolEntry[] = [];
+    const later = await turn(
+      provider,
+      'What word? #recall',
+      { workdir, resume: stored, freshReason: null },
+      laterEntries,
+      'Pelican notes',
+    );
+    expect(later.opened).toMatchObject({ continued: true });
+    expect(laterEntries.map((entry) => entry.method)).not.toContain('session/set_title');
+  });
+
   it('resumes with session/resume and sends only the new message', async () => {
     const provider = providerWith({ resume: {}, close: {} });
     const stored = await firstSession(provider);
