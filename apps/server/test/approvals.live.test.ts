@@ -117,8 +117,8 @@ describe('live Claude Do run with approvals', () => {
     expect(run?.status).toBe('succeeded');
     const kinds = answered.map(({ approval }) => approval.kind);
     expect(kinds).toContain('edit');
-    const push = answered.find(({ approval }) => /push/.test(approval.payload.command ?? ''));
-    expect(push?.approval.reason).toBe('Pushing always asks');
+    const push = receipts.rows.find((row) => /push/.test(row.command ?? ''));
+    expect(push?.reason).toContain("this chat's own spark/ branch");
     expect(git('ls-remote', 'origin')).toBe('');
     expect(await readFile(join(repo, 'README.md'), 'utf8')).toContain('Edited by Spark');
 
