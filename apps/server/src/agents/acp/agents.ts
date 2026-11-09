@@ -296,6 +296,7 @@ function codexEnv(
 ): Record<string, string> {
   return {
     INITIAL_AGENT_MODE: CODEX_READ_ONLY_MODE,
+    CODEX_ACP_PROMPT_SUGGESTIONS: 'false',
     TMPDIR: workdir,
     CODEX_CONFIG: JSON.stringify(codexConfig(browsing, repo, profiles, floor)),
   };

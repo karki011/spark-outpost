@@ -181,7 +181,11 @@ describe('Codex launch', () => {
     expect(agentDefinitions.codex.readsProjectFolders).toBe(true);
     expect(agentDefinitions.codex.projectSessionMeta).toBeUndefined();
     const chat = agentDefinitions.codex.conversationEnv?.('/tmp/run') ?? {};
-    expect(chat).toMatchObject({ INITIAL_AGENT_MODE: 'read-only', TMPDIR: '/tmp/run' });
+    expect(chat).toMatchObject({
+      INITIAL_AGENT_MODE: 'read-only',
+      CODEX_ACP_PROMPT_SUGGESTIONS: 'false',
+      TMPDIR: '/tmp/run',
+    });
     expect(JSON.parse(chat.CODEX_CONFIG ?? '{}')).toEqual({
       features: {
         shell_tool: false,
@@ -230,6 +234,11 @@ describe('Codex launch', () => {
       expect(start).toBeGreaterThan(-1);
       return source.slice(start, source.indexOf(');', start));
     };
+    const modeList = () => {
+      const start = source.indexOf('  static all(permissionProfiles');
+      expect(start).toBeGreaterThan(-1);
+      return source.slice(start, source.indexOf('  static find(', start));
+    };
 
     it('waits for sub-agents without a timer of its own', () => {
       const wait = source.slice(source.indexOf('async wait(signal, timeoutMs ='));
@@ -272,11 +281,11 @@ describe('Codex launch', () => {
       expect(mode).toContain('type: "workspaceWrite"');
       expect(mode).toContain('networkAccess: false');
       expect(mode).toContain('excludeSlashTmp: true');
-      expect(source).toContain('_AgentMode.ReadOnly, _AgentMode.AskEveryAction,');
+      expect(modeList()).toMatch(/_AgentMode\.ReadOnly,\s+_AgentMode\.AskEveryAction,/);
     });
 
     it('gives every Codex mode a permission profile, so no turn falls back to a bare sandbox', () => {
-      const modes = block('static all() {');
+      const modes = modeList();
       const profiles = codexPermissionProfiles();
       const ids = [...source.matchAll(/static (\w+) = new _AgentMode\(\s*"([^"]+)"/g)].map(
         (match) => match[2]!,
@@ -284,6 +293,13 @@ describe('Codex launch', () => {
       expect(ids).toHaveLength(5);
       for (const id of ids) expect(profiles).toHaveProperty(id);
       expect(modes).toContain('_AgentMode.AgentFullAccess');
+    });
+
+    it("offers no mode for a Codex permission profile, which would skip Spark's own profile", () => {
+      const modes = modeList();
+      const list = modes.slice(modes.indexOf('return ['));
+      expect(list).not.toContain('profileModes');
+      expect(list.slice(0, list.indexOf('];'))).toMatch(/AgentFullAccess\s*$/);
     });
 
     it('selects the named profile for a turn instead of the legacy sandbox policy', () => {
@@ -310,7 +326,7 @@ describe('Codex launch', () => {
       expect(new Client({}).turnSandbox(mode, '/work/app', [])).toEqual({
         sandboxPolicy: { type: 'dangerFullAccess' },
       });
-      expect(source).toContain('...this.turnSandbox(agentMode, cwd, additionalDirectories),');
+      expect(source).toContain('} : this.turnSandbox(agentMode, cwd, additionalDirectories),');
     });
 
     it('marks session roots untrusted so a repo’s .codex/config.toml is never loaded', () => {

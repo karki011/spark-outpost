@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                  | What to do                                                                                      |
 | ----------------------------- | ----------------------------------------------------------------------------------------------- |
+| Codex asks while it works     | Answer its [question card](cards.md) before the turn ends.                                      |
 | Codex mode names              | Approve for me is now **Auto review**; see [Workspace access](modes-and-levels.md#agent-modes). |
 | Blaze, Acid and Violet tints  | Pick one in **Settings → Appearance**.                                                          |
 | Week recap on Home            | Pick its day in **Settings → Notifications**.                                                   |

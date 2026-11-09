@@ -1,8 +1,7 @@
 diff --git a/dist/index.js b/dist/index.js
-index 2ce28d2f67d6e977760dd6cb784b8f96e4b6cab3..48ec8489b35fb389e0e512245cc548d38296fefe 100755
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -35169,7 +35169,7 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
+@@ -36435,7 +36435,7 @@
    session;
    onChildSessionEnded;
    rootModels;
@@ -11,7 +10,7 @@ index 2ce28d2f67d6e977760dd6cb784b8f96e4b6cab3..48ec8489b35fb389e0e512245cc548d3
    children = /* @__PURE__ */ new Map();
    pendingSpawns = /* @__PURE__ */ new Map();
    terminalPendingSpawns = /* @__PURE__ */ new Map();
-@@ -35190,6 +35190,14 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
+@@ -36456,6 +36456,14 @@
     */
    appliedSettings = /* @__PURE__ */ new WeakSet();
    async handle(notification) {
@@ -26,7 +25,7 @@ index 2ce28d2f67d6e977760dd6cb784b8f96e4b6cab3..48ec8489b35fb389e0e512245cc548d3
      if (notification.method === "thread/started") {
        const thread = notification.params.thread;
        const ofThisRoot = thread.parentThreadId === this.rootSessionId || thread.parentThreadId !== null && this.children.has(thread.parentThreadId) || this.spawnsInFlight.size > 0;
-@@ -35391,11 +35399,11 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
+@@ -36657,11 +36665,11 @@
          return "timed_out";
        }
        const changed = await new Promise((resolve) => {
@@ -40,7 +39,7 @@ index 2ce28d2f67d6e977760dd6cb784b8f96e4b6cab3..48ec8489b35fb389e0e512245cc548d3
          const onAbort = () => {
            clearTimeout(timeout);
            this.waiters.delete(onChange);
-@@ -35488,7 +35496,8 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
+@@ -36754,7 +36762,8 @@
        await this.session.update({
          sessionUpdate: "subagent_state_update",
          subagentSessionId: child.sessionId,
@@ -50,10 +49,11 @@ index 2ce28d2f67d6e977760dd6cb784b8f96e4b6cab3..48ec8489b35fb389e0e512245cc548d3
        }, child.parentSessionId);
      } catch (error62) {
        if (child.terminalState === state) delete child.terminalState;
-@@ -35570,6 +35579,15 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
+@@ -36835,6 +36844,15 @@
+     if (child.model === previous || child.terminalState !== void 0) return;
      if (previous && this.modelValue(previous.model) === this.modelValue(model.model)) return;
      await this.reportModel(threadId, child.sessionId);
-   }
++  }
 +  modelOf(child) {
 +    let current = child;
 +    while (current) {
@@ -62,11 +62,10 @@ index 2ce28d2f67d6e977760dd6cb784b8f96e4b6cab3..48ec8489b35fb389e0e512245cc548d3
 +    }
 +    const rootModel = this.rootModels?.()?.currentModel;
 +    return typeof rootModel === "string" ? rootModel.replace(/\[.*?]$/, "") : void 0;
-+  }
+   }
    takeEarlyModel(threadId) {
      const model = this.earlyThreadModels.get(threadId);
-     this.earlyThreadModels.delete(threadId);
-@@ -38285,6 +38303,10 @@ function sameNetworkAmendment(left, right) {
+@@ -39611,6 +39629,10 @@
  function commandDecisionOptions(params) {
    const decisions = parseAvailableCommandDecisions(params);
    if (!decisions) return void 0;
@@ -77,20 +76,20 @@ index 2ce28d2f67d6e977760dd6cb784b8f96e4b6cab3..48ec8489b35fb389e0e512245cc548d3
    const options = [];
    let networkIndex = 0;
    for (const decision of decisions) {
-@@ -38358,6 +38380,12 @@ function fileChangeDecisionOptions() {
+@@ -39683,6 +39705,12 @@
+       "Yes, and don't ask again for these files",
        "allow_always",
        "acceptForSession"
-     ),
++    ),
 +    decisionOption(
 +      ApprovalOptionId.Decline,
 +      "No, continue without it",
 +      "reject_once",
 +      "decline"
-+    ),
+     ),
      decisionOption(
        ApprovalOptionId.Cancel,
-       "No, and tell Codex what to do differently",
-@@ -40490,6 +40518,22 @@ var AgentMode = class _AgentMode {
+@@ -41851,6 +41879,22 @@
      { "type": "dangerFullAccess" },
      "danger-full-access"
    );
@@ -113,16 +112,20 @@ index 2ce28d2f67d6e977760dd6cb784b8f96e4b6cab3..48ec8489b35fb389e0e512245cc548d3
    static DEFAULT_AGENT_MODE = _AgentMode.Agent;
    /** Only AIR gets the mode kind, in `_meta.jetbrains.air.kind`. */
    toSessionMode(airClient) {
-@@ -40527,7 +40571,7 @@ var AgentMode = class _AgentMode {
-     };
+@@ -41915,10 +41959,10 @@
+     ));
+     return [
+       _AgentMode.ReadOnly,
++      _AgentMode.AskEveryAction,
+       _AgentMode.WorkspaceWrite,
+       _AgentMode.Agent,
+-      _AgentMode.AgentFullAccess,
+-      ...profileModes
++      _AgentMode.AgentFullAccess
+     ];
    }
-   static all() {
--    return [_AgentMode.ReadOnly, _AgentMode.WorkspaceWrite, _AgentMode.Agent, _AgentMode.AgentFullAccess];
-+    return [_AgentMode.ReadOnly, _AgentMode.AskEveryAction, _AgentMode.WorkspaceWrite, _AgentMode.Agent, _AgentMode.AgentFullAccess];
-   }
-   static find(modeId) {
-     const match = _AgentMode.all().find((m) => m.id === modeId);
-@@ -41914,7 +41958,7 @@ var CodexAcpClient = class _CodexAcpClient {
+   static find(modeId, availableModes = _AgentMode.all()) {
+@@ -43405,7 +43449,7 @@
      const mergedConfig = {
        ...disableUnsupportedSkills(forceGitRootTurnDiffPaths(mergeGatewayConfig(this.config, this.gatewayConfig))),
        projects: Object.fromEntries(sessionRoots.map((root) => [root, {
@@ -131,7 +134,7 @@ index 2ce28d2f67d6e977760dd6cb784b8f96e4b6cab3..48ec8489b35fb389e0e512245cc548d3
        }]))
      };
      const configWithWorkspaceRoots = mergeSandboxWorkspaceWriteRoots(mergedConfig, additionalDirectories);
-@@ -41943,7 +41987,10 @@ var CodexAcpClient = class _CodexAcpClient {
+@@ -43440,7 +43484,10 @@
      return {
        config: {
          ...configWithWorkspaceRoots,
@@ -141,28 +144,27 @@ index 2ce28d2f67d6e977760dd6cb784b8f96e4b6cab3..48ec8489b35fb389e0e512245cc548d3
 +          ...Object.fromEntries(serversToConfigure.map((mcp) => [mcp.name, toCodexMcpServerConfig(mcp.server)]))
 +        }
        },
-       skippedMcpServers
-     };
-@@ -42078,7 +42125,7 @@ var CodexAcpClient = class _CodexAcpClient {
-       input: input2,
-       approvalPolicy: agentMode.approvalPolicy,
-       approvalsReviewer: agentMode.approvalsReviewer,
--      sandboxPolicy: addAdditionalDirectoriesToSandboxPolicy(agentMode.sandboxPolicy, additionalDirectories),
-+      ...this.turnSandbox(agentMode, cwd, additionalDirectories),
+       skippedMcpServers,
+       ...permissionProfileMetadata
+@@ -43593,13 +43640,20 @@
+       ...permissionProfileId ? {
+         permissions: permissionProfileId,
+         runtimeWorkspaceRoots: [cwd, ...additionalDirectories]
+-      } : { sandboxPolicy: addAdditionalDirectoriesToSandboxPolicy(agentMode.sandboxPolicy, additionalDirectories) },
++      } : this.turnSandbox(agentMode, cwd, additionalDirectories),
        summary: disableSummary ? "none" : "auto",
        effort,
        model: modelId.model,
-@@ -42086,6 +42133,13 @@ var CodexAcpClient = class _CodexAcpClient {
+       serviceTier,
        ...clientUserMessageId !== void 0 ? { clientUserMessageId } : {}
      }, onTurnStarted);
-   }
++  }
 +  turnSandbox(agentMode, cwd, additionalDirectories) {
 +    const profiles = isJsonObject(this.config["permissions"]) ? this.config["permissions"] : {};
 +    if (!isJsonObject(profiles[agentMode.id])) {
 +      return { sandboxPolicy: addAdditionalDirectoriesToSandboxPolicy(agentMode.sandboxPolicy, additionalDirectories) };
 +    }
 +    return { permissions: agentMode.id, runtimeWorkspaceRoots: uniqueStrings([cwd, ...additionalDirectories]) };
-+  }
+   }
    async setCollaborationMode(sessionId, mode, currentModelId) {
      await this.codexClient.threadSettingsUpdate({
-       threadId: sessionId,
