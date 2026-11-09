@@ -29,12 +29,20 @@ function now(upcoming = [standup, later]): CalendarNow {
 const centre = { alertStyle: 'center' as const, alertLead: 1 as const };
 
 describe('meetingAlert', () => {
-  it('comes down at the chosen time before the meeting and stays until it ends', () => {
+  it('comes down at the chosen time and stays until 5 min past the start', () => {
     const input = { now: now(), settings: centre, held: false, marks: NO_NUDGE_MARKS };
     expect(meetingAlert({ ...input, at: at(9, 58) })).toBeNull();
     expect(meetingAlert({ ...input, at: at(9, 59) })?.events).toEqual([standup]);
-    expect(meetingAlert({ ...input, at: at(10, 14) })?.events).toEqual([standup]);
-    expect(meetingAlert({ ...input, at: at(10, 15) })).toBeNull();
+    expect(meetingAlert({ ...input, at: at(10, 4, 59) })?.events).toEqual([standup]);
+    expect(meetingAlert({ ...input, at: at(10, 5) })).toBeNull();
+    expect(meetingAlert({ ...input, at: at(10, 14) })).toBeNull();
+  });
+
+  it('stops at the end of a meeting shorter than 5 min', () => {
+    const quick = event('Check-in', at(10), at(10, 3), { link: link('zoom') });
+    const input = { now: now([quick]), settings: centre, held: false, marks: NO_NUDGE_MARKS };
+    expect(meetingAlert({ ...input, at: at(10, 2, 59) })?.events).toEqual([quick]);
+    expect(meetingAlert({ ...input, at: at(10, 3) })).toBeNull();
   });
 
   it('follows the lead: at start or five minutes before', () => {
@@ -96,6 +104,7 @@ function plan(overrides: Partial<AutoJoinInput> = {}) {
     marks: NO_NUDGE_MARKS,
     presence: here,
     joined: new Set(),
+    joinLeadMs: 10 * 60_000,
     ...overrides,
   });
 }
@@ -157,6 +166,50 @@ describe('autoJoinPlan', () => {
   it('skips an all-day event', () => {
     const allDay = { ...standup, allDay: true };
     expect(plan({ events: [allDay] })).toEqual({ skip: 'all-day' });
+  });
+});
+
+describe('autoJoinPlan for Join at start', () => {
+  const asked = { ...standup, joinAtStart: true };
+
+  it('joins the asked meeting at its start with the switch off, in a hold or a clash', () => {
+    expect(plan({ events: [asked, later], autoJoin: false })).toEqual({ join: asked });
+    expect(plan({ events: [asked, later], autoJoin: false, held: true })).toEqual({ join: asked });
+    expect(plan({ events: [asked, design], autoJoin: false })).toEqual({ join: asked });
+    expect(plan({ events: [asked, design] })).toEqual({ join: asked });
+  });
+
+  it('waits for the start', () => {
+    expect(plan({ events: [asked], autoJoin: false, at: at(9, 59) })).toEqual({ skip: 'off' });
+  });
+
+  it('skips when the Mac is away, locked or asleep', () => {
+    const away = { events: [asked], autoJoin: false };
+    expect(plan({ ...away, presence: { ...here, locked: true } })).toEqual({ skip: 'away' });
+    expect(plan({ ...away, presence: { ...here, asleep: true } })).toEqual({ skip: 'away' });
+    expect(plan({ ...away, presence: { ...here, idleSeconds: 301 } })).toEqual({ skip: 'away' });
+  });
+
+  it('skips when more than two minutes late, declined, dismissed or without a link', () => {
+    const one = { autoJoin: false };
+    expect(plan({ ...one, events: [asked], at: at(10, 2, 1) })).toEqual({ skip: 'late' });
+    expect(plan({ ...one, events: [{ ...asked, myStatus: 'declined' }] })).toEqual({
+      skip: 'declined',
+    });
+    const marks = dismissNudge(NO_NUDGE_MARKS, asked.key, at(10, 15));
+    expect(plan({ ...one, events: [asked], marks })).toEqual({ skip: 'dismissed' });
+    expect(plan({ ...one, events: [{ ...asked, link: null }] })).toEqual({ skip: 'no-link' });
+  });
+
+  it('does not join a cancelled or already joined request again', () => {
+    const done = new Set([asked.key]);
+    expect(plan({ events: [asked], autoJoin: false, joined: done })).toEqual({ skip: 'off' });
+    expect(plan({ events: [asked], joined: done })).toEqual({ skip: 'joined' });
+  });
+
+  it('leaves a skipped request to the switch for other meetings', () => {
+    const late = { ...asked, start: new Date(at(9, 50)).toISOString() };
+    expect(plan({ events: [late, later], at: at(11) })).toEqual({ join: later });
   });
 });
 

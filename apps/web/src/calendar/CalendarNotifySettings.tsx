@@ -21,10 +21,12 @@ const PHONE_LABEL = 'Meeting alerts on paired devices';
 const ALERT_STYLE_LABEL = 'Meeting alerts';
 const ALERT_LEAD_LABEL = 'Alert at';
 const AUTO_JOIN_LABEL = 'Join meetings automatically';
+const JOIN_LEAD_LABEL = 'Join opens';
 
 export const CALENDAR_NOTIFY_ROWS = [
   ALERT_STYLE_LABEL,
   ALERT_LEAD_LABEL,
+  JOIN_LEAD_LABEL,
   AUTO_JOIN_LABEL,
   BEFORE_LABEL,
   NUDGE_CALENDARS_LABEL,
@@ -52,6 +54,12 @@ const ALERT_STYLE = [
 const ALERT_LEAD = [
   { id: '5', label: '5 min before' },
   { id: '1', label: '1 min before' },
+  { id: '0', label: 'At start' },
+];
+const JOIN_LEAD = [
+  { id: '10', label: '10 min before' },
+  { id: '5', label: '5 min before' },
+  { id: '2', label: '2 min before' },
   { id: '0', label: 'At start' },
 ];
 const HOLD = [
@@ -198,6 +206,13 @@ export function CalendarMeetingSettings() {
             onChange={(id) => save({ alertLead: Number(id) as CalendarSettings['alertLead'] })}
           />
         )}
+        <ChoiceRow
+          label={JOIN_LEAD_LABEL}
+          hint="When Join, ⌘J and Ask Spark can open a meeting’s link. It stays open until the meeting ends."
+          options={JOIN_LEAD}
+          value={String(settings.joinLead)}
+          onChange={(id) => save({ joinLead: Number(id) as CalendarSettings['joinLead'] })}
+        />
         <SwitchRow
           label={AUTO_JOIN_LABEL}
           hint="At the start, Spark counts down 10 s and opens the meeting link, unless you cancel, are away, declined it, dismissed it or another meeting clashes."

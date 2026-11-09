@@ -19,8 +19,8 @@ interface MeetingProps {
   calendar: IslandCalendar;
 }
 
-function canJoin(event: CalendarEvent, at: number): boolean {
-  return event.link !== null && joinOpen(spanOf(event), at);
+function canJoin(event: CalendarEvent, calendar: IslandCalendar): boolean {
+  return event.link !== null && joinOpen(spanOf(event), calendar.at, calendar.joinLeadMs);
 }
 
 function join(event: CalendarEvent, calendar: IslandCalendar): void {
@@ -40,7 +40,7 @@ function useJoinKey(event: CalendarEvent | null, calendar: IslandCalendar) {
     const onKeyDown = (key: KeyboardEvent) => {
       if (!key.metaKey || key.shiftKey || key.altKey || key.key.toLowerCase() !== 'j') return;
       const shown = latest.current;
-      if (!shown.event || !canJoin(shown.event, shown.calendar.at)) return;
+      if (!shown.event || !canJoin(shown.event, shown.calendar)) return;
       key.preventDefault();
       join(shown.event, shown.calendar);
     };
@@ -67,7 +67,7 @@ function JoinNow({
   shortcut,
   compact,
 }: { event: CalendarEvent; shortcut?: boolean; compact?: boolean } & MeetingProps) {
-  if (!canJoin(event, calendar.at)) return null;
+  if (!canJoin(event, calendar)) return null;
   return (
     <button
       type="button"

@@ -1,11 +1,5 @@
 import { useEffect, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
-import {
-  clashText,
-  JOIN_LEAD_MS,
-  joinOpen,
-  spanOf,
-  type CalendarEvent,
-} from '@spark-outpost/contracts';
+import { clashText, joinOpen, spanOf, type CalendarEvent } from '@spark-outpost/contracts';
 import { clock } from '../calendar/calendar-format.ts';
 import {
   agendaPreview,
@@ -16,6 +10,7 @@ import {
   timeRow,
 } from '../calendar/meeting-card.ts';
 import { openJoin } from '../calendar/today-model.ts';
+import { canAskJoinAtStart } from '../calendar/join-at-start.ts';
 import { countdownSeconds } from '../calendar/alert/alert-model.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
 import { useEventDetail } from '../calendar/use-calendar.ts';
@@ -45,7 +40,7 @@ function JoinAction({ event, calendar }: { event: CalendarEvent; calendar: Islan
   const link = event.link;
   if (!link) return null;
   const { start, end } = spanOf(event);
-  if (joinOpen({ start, end }, at)) {
+  if (joinOpen({ start, end }, at, calendar.joinLeadMs)) {
     return (
       <button
         type="button"
@@ -61,7 +56,7 @@ function JoinAction({ event, calendar }: { event: CalendarEvent; calendar: Islan
     );
   }
   if (at >= end) return null;
-  return <span className="isl-meet-later">Join opens at {clock(start - JOIN_LEAD_MS)}</span>;
+  return <span className="isl-meet-later">Join opens at {clock(start - calendar.joinLeadMs)}</span>;
 }
 
 function AutoJoin({ event, calendar }: { event: CalendarEvent; calendar: IslandCalendar }) {
@@ -152,6 +147,16 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
         >
           {beforeStart ? 'Snooze until start' : 'Snooze 2 min'}
         </button>
+        {canAskJoinAtStart(event, calendar.at) && (
+          <button
+            type="button"
+            className="isl-calline-act"
+            aria-label={`Join at start: ${event.title}`}
+            onClick={() => leave(() => calendar.onJoinAtStart(event))}
+          >
+            Join at start
+          </button>
+        )}
         <button type="button" className="isl-calline-act" onClick={dismiss}>
           Dismiss
         </button>

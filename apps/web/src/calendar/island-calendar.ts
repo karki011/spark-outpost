@@ -1,9 +1,11 @@
-import type {
-  CalendarCapture,
-  CalendarEvent,
-  CalendarNow,
-  CalendarNudge,
-  ConversationSummary,
+import {
+  remindUntil,
+  spanOf,
+  type CalendarCapture,
+  type CalendarEvent,
+  type CalendarNow,
+  type CalendarNudge,
+  type ConversationSummary,
 } from '@spark-outpost/contracts';
 import type { Chime } from '../island/island-sound.ts';
 import { countLabel } from '../ui/count-label.ts';
@@ -26,7 +28,7 @@ export interface CatchUp {
   tally: HeldTally;
 }
 
-export type CalendarLineKind = 'nudge' | 'hold' | 'catch-up' | 'capture' | 'join';
+export type CalendarLineKind = 'nudge' | 'hold' | 'catch-up' | 'capture' | 'join' | 'join-at-start';
 
 export interface CalendarLine {
   kind: CalendarLineKind;
@@ -37,7 +39,7 @@ export interface CalendarLine {
   join: CalendarEvent | null;
   choose: CalendarEvent[] | null;
   capture: CalendarCapture | null;
-  dismiss: 'catch_up' | 'capture' | null;
+  dismiss: 'catch_up' | 'capture' | 'join_at_start' | 'meeting' | null;
   meeting: MeetingParts | null;
 }
 
@@ -49,6 +51,8 @@ export interface CalendarLineInput {
   dismissed: ReadonlySet<string>;
   marks: NudgeMarks;
   chats: ChatStates;
+  joining: string | null;
+  joinLeadMs: number;
 }
 
 export type ChatStates = ReadonlyMap<string, 'running' | 'needs_you'>;
@@ -162,11 +166,15 @@ function shownJoin(now: CalendarNow, input: CalendarLineInput): CalendarEvent | 
   const shown = stillOn(now.upcoming, input.at).filter(
     (event) => !nudgeHidden(input.marks, event.key, input.at),
   );
-  return joinTarget(shown, input.at);
+  return joinTarget(shown, input.at, input.joinLeadMs);
+}
+
+function reminding<T extends CalendarEvent>(events: readonly T[], at: number): T[] {
+  return events.filter((event) => at < remindUntil(spanOf(event)));
 }
 
 function joinLine(now: CalendarNow, input: CalendarLineInput): CalendarLine | null {
-  const target = joinTarget(stillOn(now.upcoming, input.at), input.at);
+  const target = joinTarget(reminding(now.upcoming, input.at), input.at, input.joinLeadMs);
   if (!target?.link || nudgeHidden(input.marks, target.key, input.at)) return null;
   return {
     kind: 'join',
@@ -177,7 +185,7 @@ function joinLine(now: CalendarNow, input: CalendarLineInput): CalendarLine | nu
     join: target,
     choose: null,
     capture: null,
-    dismiss: null,
+    dismiss: 'meeting',
     meeting: meetingParts({
       title: target.title,
       startsAt: target.start,
@@ -225,7 +233,7 @@ function liveNudge(
   if (nudge.kind === 'wrap_up') return fallback && hasEnded(fallback, input.at) ? null : nudge;
   const members = nudge.group.length > 0 ? nudge.group : fallback ? [fallback] : [];
   if (members.length === 0) return nudge;
-  const group = stillOn(members, input.at).filter(
+  const group = reminding(members, input.at).filter(
     (event) => !nudgeHidden(input.marks, event.key, input.at),
   );
   if (group.length === 0) return null;
@@ -259,7 +267,7 @@ function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineIn
       join: null,
       choose: group,
       capture: null,
-      dismiss: null,
+      dismiss: 'meeting' as const,
       meeting,
     };
   }
@@ -273,8 +281,46 @@ function nudgeLine(now: CalendarNow, shown: CalendarNudge, input: CalendarLineIn
     join: nudged?.link ? nudged : shownJoin(now, input),
     choose: null,
     capture: null,
-    dismiss: null,
+    dismiss: 'meeting' as const,
     meeting,
+  };
+}
+
+function joinAtStartLine(
+  now: CalendarNow,
+  input: CalendarLineInput,
+  joining: boolean,
+): CalendarLine | null {
+  const target = now.upcoming.find(
+    (event) =>
+      event.joinAtStart &&
+      !event.dismissed &&
+      input.marks.get(event.key)?.dismissed !== true &&
+      event.link !== null &&
+      (joining ? event.key === input.joining : input.at < spanOf(event).start),
+  );
+  if (!target) return null;
+  const start = spanOf(target).start;
+  const parts = meetingParts({
+    title: target.title,
+    startsAt: target.start,
+    event: target,
+    count: 1,
+    chat: null,
+    waiting: 0,
+    at: input.at,
+  });
+  return {
+    kind: 'join-at-start',
+    key: `join-at-start:${target.key}`,
+    eventKey: target.key,
+    text: `Opens ${target.title} at ${clock(start)}`,
+    event: joining ? target : null,
+    join: null,
+    choose: null,
+    capture: null,
+    dismiss: joining ? null : 'join_at_start',
+    meeting: { ...parts, lead: `Opens at ${clock(start)}` },
   };
 }
 
@@ -282,8 +328,12 @@ export function calendarLine(input: CalendarLineInput): CalendarLine | null {
   const { now } = input;
   const caughtUp = input.catchUp ? catchUpText(input.catchUp) : null;
   if (!now?.active) return caughtUp ? catchUpLine(caughtUp) : null;
+  const joining = input.joining ? joinAtStartLine(now, input, true) : null;
+  if (joining) return joining;
   const nudged = now.nudge ? nudgeLine(now, now.nudge, input) : null;
   if (nudged) return nudged;
+  const asked = joinAtStartLine(now, input, false);
+  if (asked) return asked;
   const held = holdLine(now, shownJoin(now, input));
   if (held) return held;
   if (caughtUp) return catchUpLine(caughtUp);

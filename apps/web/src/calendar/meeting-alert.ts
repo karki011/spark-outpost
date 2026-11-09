@@ -1,5 +1,6 @@
 import {
   joinableMeetings,
+  remindUntil,
   spanOf,
   type CalendarEvent,
   type CalendarNow,
@@ -33,9 +34,11 @@ function quieted(marks: NudgeMarks, eventKey: string, at: number): boolean {
 
 function alerting(event: CalendarEvent, input: MeetingAlertInput): boolean {
   if (event.allDay || !event.nudges || event.myStatus === 'declined') return false;
-  const { start, end } = spanOf(event);
-  const from = start - input.settings.alertLead * MINUTE_MS;
-  return input.at >= from && input.at < end && !quieted(input.marks, event.key, input.at);
+  const span = spanOf(event);
+  const from = span.start - input.settings.alertLead * MINUTE_MS;
+  return (
+    input.at >= from && input.at < remindUntil(span) && !quieted(input.marks, event.key, input.at)
+  );
 }
 
 export function meetingAlert(input: MeetingAlertInput): MeetingAlert | null {
@@ -88,13 +91,14 @@ export interface AutoJoinInput {
   marks: NudgeMarks;
   presence: Presence;
   joined: ReadonlySet<string>;
+  joinLeadMs: number;
 }
 
 export type AutoJoinPlan = { join: CalendarEvent } | { skip: AutoJoinSkip };
 
 function startedNow(event: CalendarEvent, at: number): boolean {
-  const start = spanOf(event).start;
-  return at >= start && at < spanOf(event).end;
+  const { start, end } = spanOf(event);
+  return at >= start && at < end;
 }
 
 function skipFor(event: CalendarEvent, input: AutoJoinInput): AutoJoinSkip | null {
@@ -107,16 +111,32 @@ function skipFor(event: CalendarEvent, input: AutoJoinInput): AutoJoinSkip | nul
   return null;
 }
 
+function away(presence: Presence): boolean {
+  return presence.locked || presence.asleep || presence.idleSeconds > AWAY_SECONDS;
+}
+
+function requestedJoin(input: AutoJoinInput): AutoJoinPlan | null {
+  const asked = input.events.filter(
+    (event) => event.joinAtStart && startedNow(event, input.at) && !input.joined.has(event.key),
+  );
+  if (asked.length === 0) return null;
+  if (away(input.presence)) return { skip: 'away' };
+  const verdicts = asked.map((event) => ({ event, skip: skipFor(event, input) }));
+  const ready = verdicts.filter((verdict) => verdict.skip === null);
+  if (ready.length > 1) return { skip: 'clash' };
+  const chosen = ready[0] ?? verdicts.at(-1)!;
+  return chosen.skip ? { skip: chosen.skip } : { join: chosen.event };
+}
+
 export function autoJoinPlan(input: AutoJoinInput): AutoJoinPlan {
+  const asked = requestedJoin(input);
+  if (asked && ('join' in asked || !input.autoJoin)) return asked;
   if (!input.autoJoin) return { skip: 'off' };
   if (input.held) return { skip: 'held' };
-  const { presence } = input;
-  if (presence.locked || presence.asleep || presence.idleSeconds > AWAY_SECONDS) {
-    return { skip: 'away' };
-  }
+  if (away(input.presence)) return { skip: 'away' };
   const started = input.events.filter((event) => startedNow(event, input.at));
   if (started.length === 0) return { skip: 'none' };
-  const open = joinableMeetings(input.events, input.at).filter(
+  const open = joinableMeetings(input.events, input.at, input.joinLeadMs).filter(
     (event) => !input.joined.has(event.key) && !input.marks.get(event.key)?.dismissed,
   );
   if (open.length > 1) return { skip: 'clash' };

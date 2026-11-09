@@ -4,7 +4,7 @@ import { hasModifier } from '../ui/shortcuts.ts';
 import { ChooseMeetingDialog } from './ChooseMeetingDialog.tsx';
 import { joinChoice } from './join-choice.ts';
 import { openJoin, todayState } from './today-model.ts';
-import { useCalendarNow, useCalendarStatus } from './use-calendar.ts';
+import { useCalendarNow, useCalendarStatus, useJoinLeadMs } from './use-calendar.ts';
 
 function isJoinShortcut(event: KeyboardEvent): boolean {
   return hasModifier(event) && !event.shiftKey && !event.altKey && event.code === 'KeyJ';
@@ -16,16 +16,17 @@ interface Choosing {
 }
 
 function useJoinShortcut(now: CalendarNow | null, choose: (choosing: Choosing) => void) {
-  const latest = useRef({ now, choose });
+  const leadMs = useJoinLeadMs();
+  const latest = useRef({ now, choose, leadMs });
   useEffect(() => {
-    latest.current = { now, choose };
-  }, [now, choose]);
+    latest.current = { now, choose, leadMs };
+  }, [now, choose, leadMs]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!isJoinShortcut(event)) return;
       if (document.querySelector('[aria-modal="true"]')) return;
       const at = Date.now();
-      const choice = joinChoice(latest.current.now, at);
+      const choice = joinChoice(latest.current.now, at, latest.current.leadMs);
       if (!choice) return;
       event.preventDefault();
       if ('join' in choice) {

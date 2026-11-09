@@ -82,6 +82,20 @@ export function withServerDismissed(
   return next;
 }
 
+export function withJoinAtStart(
+  marks: NudgeMarks,
+  events: readonly { key: string; start: string; end: string; joinAtStart: boolean }[],
+): NudgeMarks {
+  const asked = events.filter((event) => event.joinAtStart && !marks.get(event.key)?.dismissed);
+  if (asked.length === 0) return marks;
+  const next = new Map(marks);
+  for (const event of asked) {
+    const until = Math.max(Date.parse(event.start), marks.get(event.key)?.snoozedUntil ?? 0);
+    next.set(event.key, { end: Date.parse(event.end), dismissed: false, snoozedUntil: until });
+  }
+  return next;
+}
+
 const SNOOZE_KEY = 'spark-outpost.calendar-snoozes';
 
 export function readSnoozes(at: number): NudgeMarks {

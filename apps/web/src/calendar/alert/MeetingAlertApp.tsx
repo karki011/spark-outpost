@@ -11,6 +11,7 @@ import { BlobScout } from '../../brand/BlobScout.tsx';
 import { sparkDesktop } from '../../desktop/desktop-bridge.ts';
 import { useReducedMotion } from '../../ui/motion.ts';
 import { joinLabel } from '../meeting-card.ts';
+import { canAskJoinAtStart } from '../join-at-start.ts';
 import { openJoin } from '../today-model.ts';
 import {
   alertDetail,
@@ -69,11 +70,21 @@ function useNow(active: boolean): number {
   return now;
 }
 
-function JoinFor({ event, at, act }: { event: CalendarEvent; at: number; act: Act }) {
-  const state = joinState(event, at);
+function JoinFor({
+  event,
+  at,
+  leadMs,
+  act,
+}: {
+  event: CalendarEvent;
+  at: number;
+  leadMs: number;
+  act: Act;
+}) {
+  const state = joinState(event, at, leadMs);
   if (state === 'none') return null;
   if (state === 'later')
-    return <span className="ma-later">Join opens at {joinOpensAt(event)}</span>;
+    return <span className="ma-later">Join opens at {joinOpensAt(event, leadMs)}</span>;
   return (
     <button
       type="button"
@@ -188,7 +199,7 @@ export function MeetingAlertApp() {
     }
     if (key.key.toLowerCase() === 'j' && key.metaKey) {
       key.preventDefault();
-      const joinable = shortcutJoin(payload.events, at);
+      const joinable = shortcutJoin(payload.events, at, payload.joinLeadMs);
       if (joinable?.link) {
         openJoin(joinable.link.url);
         act('joined', joinable.key);
@@ -242,10 +253,19 @@ export function MeetingAlertApp() {
                 <p className="ma-detail">{alertDetail(first)}</p>
                 <Countdown payload={payload} at={at} act={act} />
                 <div className="ma-acts">
-                  <JoinFor event={first} at={at} act={act} />
+                  <JoinFor event={first} at={at} leadMs={payload.joinLeadMs} act={act} />
                   <button type="button" className="ma-btn" onClick={() => act('snooze')}>
                     Snooze 1 min
                   </button>
+                  {canAskJoinAtStart(first, at) && (
+                    <button
+                      type="button"
+                      className="ma-btn"
+                      onClick={() => act('join-at-start', first.key)}
+                    >
+                      Join at start
+                    </button>
+                  )}
                   <button type="button" className="ma-btn" onClick={() => act('dismiss')}>
                     Dismiss
                   </button>
@@ -260,7 +280,7 @@ export function MeetingAlertApp() {
                         <b>{event.title}</b>
                         <span>{alertDetail(event)}</span>
                       </span>
-                      <JoinFor event={event} at={at} act={act} />
+                      <JoinFor event={event} at={at} leadMs={payload.joinLeadMs} act={act} />
                     </li>
                   ))}
                 </ul>

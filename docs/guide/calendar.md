@@ -14,7 +14,7 @@ Connect calendars. About 2 minutes.
 
 ## Google sign-in
 
-**Disconnect** revokes access. Google sign-ins expire weekly until verification: select **Sign in again**.
+**Disconnect** revokes access. Until verification, Google sign-ins expire weekly: **Sign in again**.
 
 ## Use it
 
@@ -22,13 +22,13 @@ Connect calendars. About 2 minutes.
 - Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before** or **Hold alerts during this**.
 - **Refresh now** re-reads them.
 
-At a meeting's start, Scout lowers a card: **Join**, **Snooze 1 min** or **Dismiss** (for good). Esc dismisses; **⌘J** joins one meeting.
+At the start, Scout lowers a card: **Join**, **Snooze 1 min** or **Dismiss** (for good). Esc dismisses; **⌘J** joins one meeting.
 
-With VoiceOver or keyboard navigation, the card takes focus; **⌃⌥⌘M** focuses it. A silent notification mirrors it.
+With VoiceOver or keyboard navigation, the card takes focus (**⌃⌥⌘M**). A silent notification mirrors it.
 
-**Bubble from Scout**: **Snooze until start**, then **Snooze 2 min**; snoozes survive reloads. Ended reminders disappear. **Open** shows Today; **Choose** handles clashes. Focus blocks hold chimes.
+**Bubble from Scout**: **Snooze until start**, then **Snooze 2 min**. Reminders end 5 min in. **Open** shows Today; **Choose** handles clashes. Lines have **Dismiss**; focus blocks hold chimes.
 
-**Join meetings automatically** (off): cancellable 10-second countdown; never during clashes, holds or absence. Times follow your Mac.
+**Join meetings automatically** (off): cancellable 10-second countdown, never in clashes, holds or absence. **Join at start** quiets a meeting, shows **Opens at 10:00** and **Cancel**, then opens it even in holds or clashes. Times follow your Mac.
 
 ## Let agents use it
 
@@ -37,6 +37,6 @@ With VoiceOver or keyboard navigation, the card takes focus; **⌃⌥⌘M** focu
 
 Agents follow their [mode](spark-tools.md#when-actions-ask-first). Guest events and shared calendars always ask.
 
-[Ask Spark](companion-quick-chat.md#let-ask-spark-act) uses these switches too, and snoozes, dismisses or joins meetings without them.
+[Ask Spark](companion-quick-chat.md#let-ask-spark-act) uses these switches, and snoozes, dismisses or joins meetings without them.
 
 **Next:** [Talk to Spark](voice.md)

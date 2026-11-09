@@ -1,8 +1,12 @@
 // @vitest-environment jsdom
+import type { ReactElement } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CALENDAR_DEFAULT_SETTINGS, type JoinLead } from '@spark-outpost/contracts';
+import { calendarKeys } from './calendar-api.ts';
 import { JoinButton } from './JoinButton.tsx';
-import { at, event, link } from './test-fixtures.ts';
+import { at, event, link, status } from './test-fixtures.ts';
 import { HOP_MS, useMeetingHop } from './use-meeting-hop.ts';
 
 const tones: number[] = [];
@@ -88,11 +92,20 @@ describe('useMeetingHop', () => {
   });
 });
 
+function show(ui: ReactElement, joinLead: JoinLead = 10) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { staleTime: Infinity, retry: false } },
+  });
+  const settings = { ...CALENDAR_DEFAULT_SETTINGS, joinLead };
+  client.setQueryData(calendarKeys.status, status({ settings }));
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
+
 describe('JoinButton', () => {
   const standup = event('Standup', at(10), at(10, 30), { link: link('zoom') });
 
   it('shows the start time before Join opens, ten minutes ahead', () => {
-    render(<JoinButton event={standup} now={at(9, 49)} />);
+    show(<JoinButton event={standup} now={at(9, 49)} />);
     const button = screen.getByRole('button', {
       name: /Standup at 10:00 AM, Join opens at 9:50 AM/,
     });
@@ -103,14 +116,14 @@ describe('JoinButton', () => {
   it('is one click to join from ten minutes before until the end', () => {
     const open = vi.fn();
     vi.stubGlobal('open', open);
-    render(<JoinButton event={standup} now={at(9, 50)} />);
+    show(<JoinButton event={standup} now={at(9, 50)} />);
     const button = screen.getByRole('button', { name: 'Join Standup' });
     button.click();
     expect(open).toHaveBeenCalledWith('https://acme.zoom.us/j/1', '_blank', 'noopener,noreferrer');
   });
 
   it('says ended after the meeting and renders nothing without a link', () => {
-    const { container } = render(
+    const { container } = show(
       <>
         <JoinButton event={standup} now={at(10, 30)} />
         <JoinButton event={{ ...standup, link: null }} now={at(10)} />
@@ -125,12 +138,26 @@ describe('JoinButton', () => {
   it('shows a quiet Join with its opening time in the panels before the window', () => {
     const open = vi.fn();
     vi.stubGlobal('open', open);
-    render(<JoinButton event={standup} now={at(9)} label="Join Zoom" early="subtle" />);
+    show(<JoinButton event={standup} now={at(9)} label="Join Zoom" early="subtle" />);
     const button = screen.getByRole('button', { name: 'Join Zoom Standup' });
     expect(button.getAttribute('aria-disabled')).toBe('true');
     expect(button.getAttribute('title')).toBe('Join opens at 9:50 AM');
     expect(screen.getByText('Opens at 9:50 AM').id).toBe(button.getAttribute('aria-describedby'));
     button.click();
     expect(open).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [5, at(9, 54, 59), at(9, 55), '9:55 AM'],
+    [2, at(9, 57, 59), at(9, 58), '9:58 AM'],
+    [0, at(9, 59, 59), at(10), '10:00 AM'],
+  ] as const)('opens %i min before when Join opens says so', (lead, before, from, opens) => {
+    show(<JoinButton event={standup} now={before} />, lead);
+    expect(
+      screen.getByRole('button', { name: `Standup at 10:00 AM, Join opens at ${opens}` }),
+    ).toBeTruthy();
+    cleanup();
+    show(<JoinButton event={standup} now={from} />, lead);
+    expect(screen.getByRole('button', { name: 'Join Standup' })).toBeTruthy();
   });
 });

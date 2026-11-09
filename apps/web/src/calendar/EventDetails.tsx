@@ -1,7 +1,6 @@
 import { Children, useState, type ReactNode } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import {
-  JOIN_LEAD_MS,
   joinOpen,
   spanOf,
   type CalendarEvent,
@@ -20,7 +19,7 @@ import {
 } from './description-parts.ts';
 import { initials } from './month-model.ts';
 import { openJoin } from './today-model.ts';
-import { useEventDetail } from './use-calendar.ts';
+import { useEventDetail, useJoinLeadMs } from './use-calendar.ts';
 
 interface WithEvent {
   event: CalendarEvent;
@@ -32,9 +31,10 @@ function JoinLinkPart({
   event,
   now,
 }: WithEvent & { part: DescriptionPart & { kind: 'link' } }) {
+  const leadMs = useJoinLeadMs();
   const { start, end } = spanOf(event);
-  const open = joinOpen({ start, end }, now);
-  const why = now >= end ? 'The meeting has ended' : `Join opens at ${clock(start - JOIN_LEAD_MS)}`;
+  const open = joinOpen({ start, end }, now, leadMs);
+  const why = now >= end ? 'The meeting has ended' : `Join opens at ${clock(start - leadMs)}`;
   return (
     <button
       type="button"

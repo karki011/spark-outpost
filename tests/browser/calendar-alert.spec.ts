@@ -105,6 +105,7 @@ async function standupPayload(page: Page): Promise<MeetingAlertPayload> {
     events: [standup],
     calendars: { [standup.calendarKey]: 'Spark Work' },
     countdown: null,
+    joinLeadMs: 10 * 60_000,
     notice: { title: 'Standup', body: 'Zoom' },
   };
 }

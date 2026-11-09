@@ -15,11 +15,12 @@ function meeting(title: string, startIn: number, extra: Partial<CalendarEvent> =
     end: new Date(NOW + (startIn + 30) * MINUTE).toISOString(),
     link: ZOOM,
     dismissed: false,
+    joinAtStart: false,
     ...extra,
   } as CalendarEvent;
 }
 
-const times = { now: NOW, alertLeadMs: MINUTE };
+const times = { now: NOW, alertLeadMs: MINUTE, joinLeadMs: 10 * MINUTE };
 
 describe('pickMeeting', () => {
   it('snoozes only a meeting whose alert is due', () => {
@@ -38,6 +39,17 @@ describe('pickMeeting', () => {
     );
     const soon = meeting('Review', 8);
     expect(pickMeeting('join_meeting', [soon, later], times, null)).toBe(soon);
+  });
+
+  it('follows the Join opens setting, down to At start', () => {
+    const soon = meeting('Review', 3);
+    const refused = MEETING_REFUSALS.join_meeting;
+    const at = (minutes: number) => ({ ...times, joinLeadMs: minutes * MINUTE });
+    expect(pickMeeting('join_meeting', [soon], at(5), null)).toBe(soon);
+    expect(pickMeeting('join_meeting', [soon], at(2), null)).toBe(refused);
+    expect(pickMeeting('join_meeting', [soon], at(0), null)).toBe(refused);
+    const started = meeting('Standup', 0);
+    expect(pickMeeting('join_meeting', [started], at(0), null)).toBe(started);
   });
 
   it('asks which one when meetings overlap, unless the name picks one', () => {

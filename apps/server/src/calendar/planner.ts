@@ -8,6 +8,7 @@ import {
   meetingsOverlap,
   isMeeting,
   localDayStart,
+  remindUntil,
   spanOf,
   type CalendarCapture,
   type CalendarClash,
@@ -32,7 +33,6 @@ export interface Plan {
   capture: CalendarCapture | null;
 }
 
-export const NOW_GRACE_MS = 5 * 60_000;
 const MINUTE = 60_000;
 const WRAP_UP_CHATS = 3;
 
@@ -60,22 +60,28 @@ function base(event: CalendarEvent) {
   return { eventKey: event.key, title: event.title, startsAt: event.start };
 }
 
+function joinsAtStart(event: CalendarEvent, now: number): boolean {
+  return event.joinAtStart && now < spanOf(event).start;
+}
+
 function dueRemind(event: CalendarEvent, now: number): boolean {
   const { start } = spanOf(event);
   return (
     event.remind &&
     !event.dismissed &&
+    !joinsAtStart(event, now) &&
     now >= start - CALENDAR_REMIND_MINUTES * MINUTE &&
     now < start
   );
 }
 
 function dueBefore(event: CalendarEvent, settings: CalendarSettings, now: number): boolean {
-  const { start } = spanOf(event);
+  const span = spanOf(event);
   return (
     nudgeable(event, now) &&
-    now >= start - settings.beforeMinutes * MINUTE &&
-    now < start + NOW_GRACE_MS
+    !joinsAtStart(event, now) &&
+    now >= span.start - settings.beforeMinutes * MINUTE &&
+    now < remindUntil(span)
   );
 }
 

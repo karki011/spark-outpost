@@ -100,6 +100,44 @@ describe('dismissing a meeting alert', () => {
   });
 });
 
+describe('Join at start', () => {
+  function joinAtStart(event: CalendarEvent, on: boolean) {
+    return client.send('put', '/api/calendar/marks', {
+      eventKey: event.key,
+      end: event.end,
+      kind: 'join_at_start',
+      on,
+    });
+  }
+
+  it('saves the request on that occurrence, keeps it quiet until the start and cancels', async () => {
+    const [first, second] = await events();
+    expect((await joinAtStart(first!, true)).status).toBe(200);
+    const after = await events();
+    expect(after.find((event) => event.key === first!.key)).toMatchObject({
+      joinAtStart: true,
+      dismissed: false,
+    });
+    expect(after.find((event) => event.key === second!.key)?.joinAtStart).toBe(false);
+    expect((await now()).nudge).toBeNull();
+    vi.setSystemTime(Date.parse(first!.start));
+    expect((await now()).nudge).toMatchObject({ kind: 'before', eventKey: first!.key });
+    expect((await joinAtStart(first!, false)).status).toBe(200);
+    expect((await events()).find((event) => event.key === first!.key)?.joinAtStart).toBe(false);
+  });
+
+  it('is purged with the other marks and forgotten on Disconnect', async () => {
+    const [first] = await events();
+    await joinAtStart(first!, true);
+    const end = Date.parse(first!.end);
+    const purged = await calendarMarks(t.db, t.workspaceId, new Date(end + MARK_PURGE_MS + 1));
+    expect(purged.joinAtStart.size).toBe(0);
+    await joinAtStart(first!, true);
+    await client.send('post', '/api/calendar/disconnect');
+    expect((await t.db.query('SELECT 1 FROM calendar_marks')).rowCount).toBe(0);
+  });
+});
+
 describe('Refresh now', () => {
   it('re-reads macOS Calendar and says when', async () => {
     const response = await client.send('post', '/api/calendar/refresh');

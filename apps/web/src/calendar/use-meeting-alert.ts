@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  CALENDAR_DEFAULT_SETTINGS,
+  joinLeadMs,
   meetingAlertActionSchema,
+  remindUntil,
   spanOf,
   type CalendarEvent,
   type CalendarNow,
@@ -33,14 +36,15 @@ interface MeetingAlertOptions {
   names: ReadonlyMap<string, string>;
   note: (text: string) => void;
   onDismissed: (events: readonly CalendarEvent[]) => void;
+  onJoinAtStart: (event: CalendarEvent, on: boolean) => void;
 }
 
 function alertTimes(live: CalendarNow | null, settings: CalendarSettings | null): number[] {
   if (!live || !settings) return [];
   const lead = settings.alertLead * 60_000;
   return live.upcoming.flatMap((event) => {
-    const { start, end } = spanOf(event);
-    return [start - lead, start, end];
+    const span = spanOf(event);
+    return [span.start - lead, span.start, remindUntil(span), span.end];
   });
 }
 
@@ -77,6 +81,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
     openJoin(event.link.url);
     setJoined((current) => new Set(current).add(event.key));
     setCountdown(null);
+    if (event.joinAtStart) latest.current.onJoinAtStart(event, false);
     if (!automatic) return;
     sparkDesktop()?.meetingAlert?.autoJoined();
     latest.current.note(`Joined ${event.title} automatically`);
@@ -87,21 +92,24 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
   });
 
   const events = live?.upcoming;
-  const plan = useRef({ events, held, marks, joined, cancelled });
+  const autoJoin = settings?.autoJoin ?? false;
+  const leadMs = joinLeadMs(settings ?? CALENDAR_DEFAULT_SETTINGS);
+  const plan = useRef({ events, autoJoin, leadMs, held, marks, joined, cancelled });
   useEffect(() => {
-    plan.current = { events, held, marks, joined, cancelled };
+    plan.current = { events, autoJoin, leadMs, held, marks, joined, cancelled };
   });
   const planNow = async (at: number): Promise<AutoJoinPlan> => {
     const presence = await (sparkDesktop()?.meetingAlert?.presence() ?? Promise.resolve(HERE));
     const current = plan.current;
     return autoJoinPlan({
       events: current.events ?? [],
-      autoJoin: true,
+      autoJoin: current.autoJoin,
       at,
       held: current.held,
       marks: current.marks,
       presence: parsePresence(presence),
       joined: new Set([...current.joined, ...current.cancelled]),
+      joinLeadMs: current.leadMs,
     });
   };
   const planNowRef = useRef(planNow);
@@ -109,8 +117,9 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
     planNowRef.current = planNow;
   });
 
+  const asked = events?.some((event) => event.joinAtStart) ?? false;
   useEffect(() => {
-    if (!settings?.autoJoin || !events || countdown) return;
+    if ((!autoJoin && !asked) || !events || countdown) return;
     let active = true;
     void planNowRef.current(at).then((next) => {
       if (!active || !('join' in next)) return;
@@ -119,7 +128,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
     return () => {
       active = false;
     };
-  }, [settings?.autoJoin, events, at, held, marks, joined, cancelled, countdown]);
+  }, [autoJoin, asked, events, at, held, marks, joined, cancelled, countdown]);
 
   useEffect(() => {
     if (!countdown) return;
@@ -143,11 +152,21 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
     };
   }, [countdown]);
 
+  const settle = (eventKey: string) => {
+    const event = events?.find((candidate) => candidate.key === eventKey);
+    if (event?.joinAtStart) latest.current.onJoinAtStart(event, false);
+  };
   const cancelJoin = () => {
-    if (countdown) setCancelled((current) => new Set(current).add(countdown.eventKey));
+    if (countdown) {
+      setCancelled((current) => new Set(current).add(countdown.eventKey));
+      settle(countdown.eventKey);
+    }
     setCountdown(null);
   };
-  const markJoined = (eventKey: string) => setJoined((current) => new Set(current).add(eventKey));
+  const markJoined = (eventKey: string) => {
+    setJoined((current) => new Set(current).add(eventKey));
+    settle(eventKey);
+  };
   const joinNow = () => {
     const target = events?.find((event) => event.key === countdown?.eventKey);
     if (target) join(target, true);
@@ -160,12 +179,12 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
 
   const joinFromNotice = (eventKey: string) => {
     const target = alertRef.current?.events.find((event) => event.key === eventKey);
-    if (target && joinState(target, Date.now()) === 'open') join(target, false);
+    if (target && joinState(target, Date.now(), leadMs) === 'open') join(target, false);
   };
 
-  const handlers = useRef({ cancelJoin, joinNow, joinFromNotice });
+  const handlers = useRef({ cancelJoin, joinNow, joinFromNotice, markJoined });
   useEffect(() => {
-    handlers.current = { cancelJoin, joinNow, joinFromNotice };
+    handlers.current = { cancelJoin, joinNow, joinFromNotice, markJoined };
   });
 
   const payload = alert
@@ -179,6 +198,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
           ]),
         ),
         countdown,
+        joinLeadMs: leadMs,
         notice: alertNotice(alert.events),
       }
     : null;
@@ -210,7 +230,11 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
         handlers.current.joinFromNotice(action.eventKey);
       }
       if (action.kind === 'joined' && action.eventKey) {
-        setJoined((current) => new Set(current).add(action.eventKey!));
+        handlers.current.markJoined(action.eventKey);
+      }
+      if (action.kind === 'join-at-start' && action.eventKey) {
+        const target = inAlert.find((event) => event.key === action.eventKey);
+        if (target) latest.current.onJoinAtStart(target, true);
       }
       if (action.kind === 'snooze') {
         setMarks((current) =>

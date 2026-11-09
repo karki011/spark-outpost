@@ -3,6 +3,7 @@ import type { CalendarNow } from '@spark-outpost/contracts';
 import { joinChoice } from './join-choice.ts';
 import { at, event, link } from './test-fixtures.ts';
 
+const LEAD = 10 * 60_000;
 function now(overrides: Partial<CalendarNow>): CalendarNow {
   return {
     active: true,
@@ -22,7 +23,9 @@ const room = event('Room booking', at(10), at(10, 30));
 
 describe('joinChoice', () => {
   it('joins the one open meeting directly', () => {
-    expect(joinChoice(now({ upcoming: [standup, room] }), at(9, 55))).toEqual({ join: standup });
+    expect(joinChoice(now({ upcoming: [standup, room] }), at(9, 55), LEAD)).toEqual({
+      join: standup,
+    });
   });
 
   it('offers a choice when two or more meetings are open, with the group’s other meetings', () => {
@@ -34,7 +37,7 @@ describe('joinChoice', () => {
       minutes: 5,
       group: [standup, design, room],
     };
-    const choice = joinChoice(now({ upcoming: [standup, design], nudge }), at(9, 55));
+    const choice = joinChoice(now({ upcoming: [standup, design], nudge }), at(9, 55), LEAD);
     expect(choice && 'choose' in choice ? choice.choose.map((item) => item.title) : []).toEqual([
       'Standup',
       'Design sync',
@@ -44,13 +47,15 @@ describe('joinChoice', () => {
 
   it('asks at the hand-over between back-to-back calls, when both are open', () => {
     const next = event('Planning', at(10, 15), at(10, 45), { link: link('zoom') });
-    const choice = joinChoice(now({ upcoming: [standup, next] }), at(10, 8));
+    const choice = joinChoice(now({ upcoming: [standup, next] }), at(10, 8), LEAD);
     expect(choice && 'choose' in choice ? choice.choose.length : 0).toBe(2);
-    expect(joinChoice(now({ upcoming: [standup, next] }), at(10, 2))).toEqual({ join: standup });
+    expect(joinChoice(now({ upcoming: [standup, next] }), at(10, 2), LEAD)).toEqual({
+      join: standup,
+    });
   });
 
   it('does nothing when no meeting is open to join', () => {
-    expect(joinChoice(now({ upcoming: [room] }), at(9, 55))).toBeNull();
-    expect(joinChoice(null, at(9, 55))).toBeNull();
+    expect(joinChoice(now({ upcoming: [room] }), at(9, 55), LEAD)).toBeNull();
+    expect(joinChoice(null, at(9, 55), LEAD)).toBeNull();
   });
 });
