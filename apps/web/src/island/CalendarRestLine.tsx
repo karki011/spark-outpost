@@ -84,16 +84,6 @@ function CalendarRestLine({ line, top, calendar }: CalendarRestLineProps) {
           Start a chat
         </button>
       )}
-      {line.dismiss === 'join_at_start' && (
-        <button
-          type="button"
-          className="isl-calline-act"
-          aria-label={`Cancel: ${line.text}`}
-          onClick={() => calendar.onDismiss(line)}
-        >
-          Cancel
-        </button>
-      )}
       {line.dismiss === 'meeting' && (
         <button
           type="button"

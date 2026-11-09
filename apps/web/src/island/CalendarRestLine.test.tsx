@@ -56,18 +56,4 @@ describe('CalendarLineView meeting line', () => {
       screen.getByRole('button', { name: 'Dismiss 2 meetings: Standup, Design sync' }),
     ).toBeTruthy();
   });
-
-  it('offers Cancel, not Dismiss, while a meeting is set to open at its start', () => {
-    show(
-      line({
-        kind: 'join-at-start',
-        dismiss: 'join_at_start',
-        text: 'Opens Standup at 10:30',
-        meeting: { lead: 'Opens at 10:30', title: 'Standup', sub: '10:30–10:45' },
-      }),
-    );
-    expect(screen.getByText('Opens at 10:30')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Cancel: Opens Standup at 10:30' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Dismiss/ })).toBeNull();
-  });
 });

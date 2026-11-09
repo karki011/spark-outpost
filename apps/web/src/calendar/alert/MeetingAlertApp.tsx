@@ -1,15 +1,17 @@
 import '../../island/island-skin.css';
 import './meeting-alert.css';
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import type {
-  CalendarEvent,
-  MeetingAlertAction,
-  MeetingAlertPayload,
-  MeetingAlertPlace,
+import {
+  spanOf,
+  type CalendarEvent,
+  type MeetingAlertAction,
+  type MeetingAlertPayload,
+  type MeetingAlertPlace,
 } from '@spark-outpost/contracts';
 import { BlobScout } from '../../brand/BlobScout.tsx';
 import { sparkDesktop } from '../../desktop/desktop-bridge.ts';
 import { useReducedMotion } from '../../ui/motion.ts';
+import { clock } from '../calendar-format.ts';
 import { joinLabel } from '../meeting-card.ts';
 import { canAskJoinAtStart } from '../join-at-start.ts';
 import { openJoin } from '../today-model.ts';
@@ -95,6 +97,31 @@ function JoinFor({
       }}
     >
       {joinLabel(event)}
+    </button>
+  );
+}
+
+function PlannedOpen({ event, at, act }: { event: CalendarEvent; at: number; act: Act }) {
+  const start = spanOf(event).start;
+  if (event.joinAtStart && at < start) {
+    return (
+      <>
+        <span className="ma-later">Opens at {clock(start)}</span>
+        <button
+          type="button"
+          className="ma-btn"
+          aria-label={`Don't open ${event.title} at ${clock(start)}`}
+          onClick={() => act('cancel-join-at-start', event.key)}
+        >
+          Don't open
+        </button>
+      </>
+    );
+  }
+  if (!canAskJoinAtStart(event, at)) return null;
+  return (
+    <button type="button" className="ma-btn" onClick={() => act('join-at-start', event.key)}>
+      Join at start
     </button>
   );
 }
@@ -257,15 +284,7 @@ export function MeetingAlertApp() {
                   <button type="button" className="ma-btn" onClick={() => act('snooze')}>
                     Snooze 1 min
                   </button>
-                  {canAskJoinAtStart(first, at) && (
-                    <button
-                      type="button"
-                      className="ma-btn"
-                      onClick={() => act('join-at-start', first.key)}
-                    >
-                      Join at start
-                    </button>
-                  )}
+                  <PlannedOpen event={first} at={at} act={act} />
                   <button type="button" className="ma-btn" onClick={() => act('dismiss')}>
                     Dismiss
                   </button>

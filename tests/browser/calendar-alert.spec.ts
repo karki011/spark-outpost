@@ -207,6 +207,24 @@ test('the hanging card offers Join, Snooze, Join at start and Dismiss, and Esc d
   await expect(card).toBeHidden();
 });
 
+test("a card for a meeting set to join at start says when it opens and offers Don't open", async ({
+  page,
+}) => {
+  const plain = await standupPayload(page);
+  const marked = { ...plain.events[0]!, joinAtStart: true };
+  const payload = { ...plain, events: [marked] };
+  await openOverlay(page, payload);
+  const card = page.getByRole('alertdialog', { name: /^Meeting\. Standup starts in \d min$/ });
+  await expect(card).toContainText(/Opens at \d+:\d{2}/);
+  await expect(card.getByRole('button', { name: 'Join at start' })).toHaveCount(0);
+  await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Snooze 1 min' })).toBeVisible();
+  await card.getByRole('button', { name: /^Don't open/ }).click({ force: true });
+  expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
+    { kind: 'cancel-join-at-start', key: payload.key, eventKey: marked.key },
+  ]);
+});
+
 test('assistive technology gets focus on the card, Tab reaches each button and Esc dismisses', async ({
   page,
 }) => {

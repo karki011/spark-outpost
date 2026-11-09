@@ -10,11 +10,11 @@ import {
   timeRow,
 } from '../calendar/meeting-card.ts';
 import { openJoin } from '../calendar/today-model.ts';
-import { canAskJoinAtStart } from '../calendar/join-at-start.ts';
 import { countdownSeconds } from '../calendar/alert/alert-model.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
 import { useEventDetail } from '../calendar/use-calendar.ts';
 import { ClockIcon, PeopleIcon, VideoIcon, WarnIcon, XIcon } from '../ui/icons.tsx';
+import { JoinAtStartAction } from './JoinAtStartAction.tsx';
 import { useLeave } from './use-leave.ts';
 
 interface CalendarBubbleProps {
@@ -147,16 +147,13 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
         >
           {beforeStart ? 'Snooze until start' : 'Snooze 2 min'}
         </button>
-        {canAskJoinAtStart(event, calendar.at) && (
-          <button
-            type="button"
-            className="isl-calline-act"
-            aria-label={`Join at start: ${event.title}`}
-            onClick={() => leave(() => calendar.onJoinAtStart(event))}
-          >
-            Join at start
-          </button>
-        )}
+        <JoinAtStartAction
+          event={event}
+          calendar={calendar}
+          buttonClass="isl-calline-act"
+          noteClass="isl-meet-later"
+          offer
+        />
         <button type="button" className="isl-calline-act" onClick={dismiss}>
           Dismiss
         </button>

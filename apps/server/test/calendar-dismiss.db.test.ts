@@ -110,7 +110,7 @@ describe('Join at start', () => {
     });
   }
 
-  it('saves the request on that occurrence, keeps it quiet until the start and cancels', async () => {
+  it('saves the request on that occurrence, keeps nudging as usual and cancels', async () => {
     const [first, second] = await events();
     expect((await joinAtStart(first!, true)).status).toBe(200);
     const after = await events();
@@ -119,7 +119,7 @@ describe('Join at start', () => {
       dismissed: false,
     });
     expect(after.find((event) => event.key === second!.key)?.joinAtStart).toBe(false);
-    expect((await now()).nudge).toBeNull();
+    expect((await now()).nudge).toMatchObject({ kind: 'before', eventKey: first!.key });
     vi.setSystemTime(Date.parse(first!.start));
     expect((await now()).nudge).toMatchObject({ kind: 'before', eventKey: first!.key });
     expect((await joinAtStart(first!, false)).status).toBe(200);

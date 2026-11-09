@@ -77,13 +77,10 @@ describe('planNudges', () => {
     expect(planNudges([event('Quick', -3, 0)], NO_CHATS, settings(), NOW).nudge).toBeNull();
   });
 
-  it('keeps a meeting set to join at start quiet until it starts', () => {
-    const asked = { joinAtStart: true, remind: true };
+  it('still nudges a meeting set to join at start before it starts', () => {
+    const asked = { joinAtStart: true };
     expect(
       planNudges([event('Standup', 3, 25, asked)], NO_CHATS, settings(), NOW).nudge,
-    ).toBeNull();
-    expect(
-      planNudges([event('Standup', 0, 25, asked)], NO_CHATS, settings(), NOW).nudge,
     ).toMatchObject({ kind: 'before', title: 'Standup' });
   });
 

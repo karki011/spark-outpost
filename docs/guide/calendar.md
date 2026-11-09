@@ -28,7 +28,7 @@ With VoiceOver or keyboard navigation, the card takes focus (**⌃⌥⌘M**). A 
 
 **Bubble from Scout**: **Snooze until start**, then **Snooze 2 min**. Reminders end 5 min in. **Open** shows Today; **Choose** handles clashes. Lines have **Dismiss**; focus blocks hold chimes.
 
-**Join meetings automatically** (off): cancellable 10-second countdown, never in clashes, holds or absence. **Join at start** quiets a meeting, shows **Opens at 10:00** and **Cancel**, then opens it even in holds or clashes. Times follow your Mac.
+**Join meetings automatically** (off): cancellable 10-second countdown, never in clashes, holds or absence. **Join at start** opens it at the start, even in holds or clashes; reminders then offer **Don't open**. Times follow your Mac.
 
 ## Let agents use it
 

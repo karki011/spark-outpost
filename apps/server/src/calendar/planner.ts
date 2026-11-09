@@ -60,16 +60,11 @@ function base(event: CalendarEvent) {
   return { eventKey: event.key, title: event.title, startsAt: event.start };
 }
 
-function joinsAtStart(event: CalendarEvent, now: number): boolean {
-  return event.joinAtStart && now < spanOf(event).start;
-}
-
 function dueRemind(event: CalendarEvent, now: number): boolean {
   const { start } = spanOf(event);
   return (
     event.remind &&
     !event.dismissed &&
-    !joinsAtStart(event, now) &&
     now >= start - CALENDAR_REMIND_MINUTES * MINUTE &&
     now < start
   );
@@ -79,7 +74,6 @@ function dueBefore(event: CalendarEvent, settings: CalendarSettings, now: number
   const span = spanOf(event);
   return (
     nudgeable(event, now) &&
-    !joinsAtStart(event, now) &&
     now >= span.start - settings.beforeMinutes * MINUTE &&
     now < remindUntil(span)
   );

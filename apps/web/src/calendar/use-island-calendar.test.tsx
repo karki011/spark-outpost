@@ -5,6 +5,7 @@ import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CalendarEvent, CalendarNow, MeetingAlertPayload } from '@spark-outpost/contracts';
 import { calendarApi } from './calendar-api.ts';
+import type { IslandHomePanel } from './use-island-calendar.ts';
 import { useMeetingAlert } from './use-meeting-alert.ts';
 import { at, event, link, status } from './test-fixtures.ts';
 
@@ -15,7 +16,8 @@ vi.mock('./use-calendar.ts', () => ({
   useCalendarNow: () => ({ data: calendarState.now, dataUpdatedAt: calendarState.updatedAt }),
 }));
 
-const { DISMISS_RETRY_MS, useIslandCalendar } = await import('./use-island-calendar.ts');
+const { DISMISS_RETRY_MS, JOIN_AT_START_NOTE_MS, useIslandCalendar } =
+  await import('./use-island-calendar.ts');
 
 type Listener = (action: unknown) => void;
 
@@ -57,8 +59,8 @@ function nowWith(meeting: CalendarEvent = standup): CalendarNow {
   };
 }
 
-function mount(minute?: number, open = false) {
-  const home = { open, show: () => undefined, note: () => undefined };
+function mount(minute?: number, open = false, note: IslandHomePanel['note'] = () => undefined) {
+  const home = { open, show: () => undefined, note };
   const client = new QueryClient();
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client }, children);
@@ -363,25 +365,27 @@ describe('useIslandCalendar meeting line Dismiss', () => {
 describe('useIslandCalendar Join at start', () => {
   beforeEach(() => vi.setSystemTime(at(10, 26)));
 
-  it('stays quiet until the start, then joins once with the switch off', async () => {
+  it('confirms for 4 s, keeps reminding, then joins once with the switch off', async () => {
     const opened = vi.spyOn(window, 'open').mockReturnValue(null);
+    const note = vi.fn();
     const bridge = fakeBridge();
-    const hook = mount();
+    const hook = mount(undefined, false, note);
     await act(async () => vi.advanceTimersByTimeAsync(10));
     act(() => hook.result.current.onJoinAtStart(standup));
     await act(async () => vi.advanceTimersByTimeAsync(10));
     expect(marked).toHaveBeenLastCalledWith(
       expect.objectContaining({ eventKey: standup.key, kind: 'join_at_start', on: true }),
     );
-    expect(hook.result.current.line).toMatchObject({
-      kind: 'join-at-start',
-      event: null,
-      dismiss: 'join_at_start',
-    });
-    expect(bridge.shown.filter(Boolean)).toEqual([]);
+    expect(note).toHaveBeenCalledWith(
+      expect.stringMatching(/^Opens at /),
+      standup.title,
+      JOIN_AT_START_NOTE_MS,
+    );
+    expect(JOIN_AT_START_NOTE_MS).toBe(4_000);
+    expect(hook.result.current.line?.kind).toBe('nudge');
     await act(async () => vi.advanceTimersByTimeAsync(4 * 60_000));
+    expect(bridge.shown.at(-1)?.key).toBe(standup.key);
     expect(hook.result.current.countdown?.eventKey).toBe(standup.key);
-    expect(bridge.shown.at(-1)?.countdown?.eventKey).toBe(standup.key);
     await act(async () => vi.advanceTimersByTimeAsync(11_000));
     expect(opened).toHaveBeenCalledTimes(1);
     expect(marked).toHaveBeenLastCalledWith(
@@ -392,17 +396,16 @@ describe('useIslandCalendar Join at start', () => {
     opened.mockRestore();
   });
 
-  it('cancels before the start, and the meeting alerts as usual', async () => {
+  it("clears the mark with Don't open, and nothing opens at the start", async () => {
     const opened = vi.spyOn(window, 'open').mockReturnValue(null);
     const bridge = fakeBridge();
     const hook = mount();
     await act(async () => vi.advanceTimersByTimeAsync(10));
     act(() => hook.result.current.onJoinAtStart(standup));
     await act(async () => vi.advanceTimersByTimeAsync(10));
-    act(() => hook.result.current.onDismiss(hook.result.current.line!));
+    act(() => hook.result.current.onCancelJoinAtStart(standup));
     await act(async () => vi.advanceTimersByTimeAsync(10));
     expect(marked).toHaveBeenLastCalledWith(expect.objectContaining({ on: false }));
-    expect(hook.result.current.line?.kind).toBe('nudge');
     await act(async () => vi.advanceTimersByTimeAsync(4 * 60_000 + 20_000));
     expect(bridge.shown.at(-1)?.key).toBe(standup.key);
     expect(hook.result.current.countdown).toBeNull();
@@ -416,9 +419,9 @@ describe('useIslandCalendar Join at start', () => {
     const bridge = fakeBridge();
     const hook = mount();
     await act(async () => vi.advanceTimersByTimeAsync(10));
-    expect(hook.result.current.line?.kind).toBe('join-at-start');
-    expect(bridge.shown.filter(Boolean)).toEqual([]);
+    expect(hook.result.current.line?.kind).toBe('nudge');
     await act(async () => vi.advanceTimersByTimeAsync(4 * 60_000));
+    expect(bridge.shown.at(-1)?.key).toBe(standup.key);
     await act(async () => vi.advanceTimersByTimeAsync(11_000));
     expect(opened).toHaveBeenCalledTimes(1);
     opened.mockRestore();
@@ -442,5 +445,9 @@ describe('useIslandCalendar Join at start', () => {
     expect(bridge.shown.at(-1)?.key).toBe(standup.key);
     act(() => bridge.act({ kind: 'join-at-start', key: standup.key, eventKey: standup.key }));
     expect(options.onJoinAtStart).toHaveBeenCalledWith(standup, true);
+    act(() =>
+      bridge.act({ kind: 'cancel-join-at-start', key: standup.key, eventKey: standup.key }),
+    );
+    expect(options.onJoinAtStart).toHaveBeenLastCalledWith(standup, false);
   });
 });

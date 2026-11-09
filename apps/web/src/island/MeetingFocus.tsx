@@ -14,6 +14,7 @@ import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
 import { ExternalLinkIcon, VideoIcon } from '../ui/icons.tsx';
 import { afterMeeting, leadProgress, startsIn } from './home-model.ts';
 import { Kbd } from './island-parts.tsx';
+import { JoinAtStartAction } from './JoinAtStartAction.tsx';
 
 interface MeetingProps {
   calendar: IslandCalendar;
@@ -111,6 +112,13 @@ function OneMeeting({ event, calendar }: { event: CalendarEvent } & MeetingProps
         </div>
         <div className="isl-focus-acts">
           <JoinNow event={event} calendar={calendar} shortcut />
+          <JoinAtStartAction
+            event={event}
+            calendar={calendar}
+            buttonClass="isl-btn big"
+            noteClass="isl-meet-later"
+            offer={false}
+          />
           <button
             type="button"
             className="isl-btn big"

@@ -232,9 +232,10 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
       if (action.kind === 'joined' && action.eventKey) {
         handlers.current.markJoined(action.eventKey);
       }
-      if (action.kind === 'join-at-start' && action.eventKey) {
-        const target = inAlert.find((event) => event.key === action.eventKey);
-        if (target) latest.current.onJoinAtStart(target, true);
+      const planned = inAlert.find((event) => event.key === action.eventKey);
+      if (action.kind === 'join-at-start' && planned) latest.current.onJoinAtStart(planned, true);
+      if (action.kind === 'cancel-join-at-start' && planned) {
+        latest.current.onJoinAtStart(planned, false);
       }
       if (action.kind === 'snooze') {
         setMarks((current) =>
