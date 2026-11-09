@@ -4,6 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { apiNow, matchApiClock } from './api-clock.ts';
 import { resetTestDatabase } from './database.ts';
 import { fakeHomeDesktop, fakeState, island, openHome, openIsland } from './island-home-desktop.ts';
+import { animationsSettled } from './settle.ts';
 import { FAKE_CALENDAR_STATE } from './stub-config.ts';
 
 test.skip(process.env.SPARK_FAKE_CALENDAR !== '1', 'needs SPARK_FAKE_CALENDAR=1');
@@ -63,6 +64,7 @@ test('Choose lists each meeting with its own Join or Open, and Esc closes it', a
   await expect(line).toContainText(
     /^Meetings in \d+ min · Standup \+ 2 more\d+:\d+( [AP]M)?–\d+:\d+ [AP]M · Choose one/,
   );
+  await animationsSettled(page);
   const lead = await line.locator('.isl-calline-lead').boundingBox();
   const title = await line.locator('.isl-calline-title').boundingBox();
   expect(title!.x - (lead!.x + lead!.width)).toBeGreaterThan(8);
