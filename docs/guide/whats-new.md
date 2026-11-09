@@ -12,6 +12,7 @@ summary: What changed in recent releases and what to do next.
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
 | Links open in Spark                                                            | [Settings](settings.md#mac).                                                                |
 | Join at start, **Join opens**, Dismiss                                         | [See your day](calendar.md#use-it).                                                         |
+| Dev servers run untimed                                                        | Nothing.                                                                                    |
 | Arrows in zoomed images                                                        | [Keys](keyboard-shortcuts.md#chats).                                                        |
 | Open pages agents ask for                                                      | [See the card](cards.md#approval-cards).                                                    |
 | Codex asks while it works                                                      | Answer its [question card](cards.md) mid-turn.                                              |
