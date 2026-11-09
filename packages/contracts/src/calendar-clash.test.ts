@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CalendarEvent } from './calendar.ts';
 import { clashList, clashText, joinableMeetings, meetingsOverlap } from './calendar-clash.ts';
-import { JOIN_LEAD_MS } from './calendar-join.ts';
 
 const MINUTE = 60_000;
 const NOW = new Date(2026, 9, 16, 10, 0).getTime();
@@ -38,6 +37,7 @@ function meeting(title: string, from: number, to: number, extra: Partial<Calenda
     remind: false,
     hold: false,
     dismissed: false,
+    joinAtStart: false,
     ...extra,
   } satisfies CalendarEvent;
 }
@@ -78,8 +78,19 @@ describe('joinableMeetings', () => {
     const late = meeting('Late', 9, 30, { link: ZOOM });
     const early = meeting('Early', 5, 30, { link: ZOOM });
     const noLink = meeting('Room', 5, 30);
-    const later = meeting('Later', JOIN_LEAD_MS / MINUTE + 1, 60, { link: ZOOM });
-    const open = joinableMeetings([late, early, noLink, later, early], NOW);
+    const later = meeting('Later', 11, 60, { link: ZOOM });
+    const open = joinableMeetings([late, early, noLink, later, early], NOW, 10 * MINUTE);
     expect(open.map((item) => item.title)).toEqual(['Early', 'Late']);
+  });
+
+  it('follows the Join opens setting', () => {
+    const soon = meeting('Soon', 3, 30, { link: ZOOM });
+    const now = meeting('Now', 0, 30, { link: ZOOM });
+    const titles = (leadMinutes: number) =>
+      joinableMeetings([soon, now], NOW, leadMinutes * MINUTE).map((item) => item.title);
+    expect(titles(10)).toEqual(['Now', 'Soon']);
+    expect(titles(5)).toEqual(['Now', 'Soon']);
+    expect(titles(2)).toEqual(['Now']);
+    expect(titles(0)).toEqual(['Now']);
   });
 });

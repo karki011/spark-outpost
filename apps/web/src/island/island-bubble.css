@@ -226,6 +226,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+.isl-calline-sep {
+  flex: none;
+  white-space: pre;
+}
+
 .isl-calline-title {
   min-width: 0;
   overflow: hidden;

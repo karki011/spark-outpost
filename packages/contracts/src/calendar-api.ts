@@ -24,6 +24,8 @@ export const meetingAlertStyleSchema = z.enum(MEETING_ALERT_STYLES);
 export type MeetingAlertStyle = z.infer<typeof meetingAlertStyleSchema>;
 export const meetingAlertLeadSchema = z.union([z.literal(0), z.literal(1), z.literal(5)]);
 export type MeetingAlertLead = z.infer<typeof meetingAlertLeadSchema>;
+export const joinLeadSchema = z.union([z.literal(10), z.literal(5), z.literal(2), z.literal(0)]);
+export type JoinLead = z.infer<typeof joinLeadSchema>;
 
 export const calendarSettingsSchema = z.object({
   beforeMinutes: z.union([z.literal(5), z.literal(10), z.literal(15)]),
@@ -37,6 +39,7 @@ export const calendarSettingsSchema = z.object({
   alertStyle: meetingAlertStyleSchema,
   alertLead: meetingAlertLeadSchema,
   autoJoin: z.boolean(),
+  joinLead: joinLeadSchema,
 });
 export type CalendarSettings = z.infer<typeof calendarSettingsSchema>;
 
@@ -55,6 +58,7 @@ export const CALENDAR_DEFAULT_SETTINGS: CalendarSettings = {
   alertStyle: 'center',
   alertLead: 0,
   autoJoin: false,
+  joinLead: 10,
 };
 
 export const calendarAccountSchema = z.object({
@@ -180,7 +184,7 @@ export type CalendarNow = z.infer<typeof calendarNowSchema>;
 export const calendarRefreshSchema = z.object({ refreshedAt: z.iso.datetime({ offset: true }) });
 export type CalendarRefresh = z.infer<typeof calendarRefreshSchema>;
 
-export const calendarMarkKindSchema = z.enum(['remind_5', 'hold', 'dismiss']);
+export const calendarMarkKindSchema = z.enum(['remind_5', 'hold', 'dismiss', 'join_at_start']);
 export type CalendarMarkKind = z.infer<typeof calendarMarkKindSchema>;
 
 export const calendarMarkRequestSchema = z

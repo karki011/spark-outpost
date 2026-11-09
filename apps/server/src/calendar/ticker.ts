@@ -1,9 +1,14 @@
-import { meetingsOverlap, spanOf, type CalendarEvent } from '@spark-outpost/contracts';
+import {
+  MEETING_REMIND_GRACE_MS,
+  meetingsOverlap,
+  spanOf,
+  type CalendarEvent,
+} from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { SentKeys } from '../remote/push-plan.ts';
 import type { GoogleSource } from './google/source.ts';
 import type { CalendarHost } from './host-client.ts';
-import { activeHold, meetingPushDue, NOW_GRACE_MS } from './planner.ts';
+import { activeHold, meetingPushDue } from './planner.ts';
 import { announceCalendar } from './routes.ts';
 import { calendarState } from './service.ts';
 
@@ -48,7 +53,7 @@ export function startCalendarTicker(deps: CalendarTickerDeps): CalendarTicker {
     const at = now();
     setHolding(activeHold(state.events, state.settings, at) !== null);
     if (!state.settings.phoneAlerts || holding) return;
-    pushed = pushed.filter((lead) => at < spanOf(lead).start + NOW_GRACE_MS);
+    pushed = pushed.filter((lead) => at < spanOf(lead).start + MEETING_REMIND_GRACE_MS);
     for (const event of meetingPushDue(state.events, state.settings, at)) {
       if (!sent.claim(event.key)) continue;
       if (pushed.some((lead) => meetingsOverlap(lead, event))) continue;

@@ -27,6 +27,13 @@ export function CalendarLineView({ line, top, calendar }: CalendarRestLineProps)
   return <CalendarRestLine key={line.key} line={line} top={top} calendar={calendar} />;
 }
 
+function meetingDismissLabel(line: CalendarLine): string {
+  if (line.choose) {
+    return `Dismiss ${line.choose.length} meetings: ${line.choose.map((event) => event.title).join(', ')}`;
+  }
+  return `Dismiss the nudge for ${line.meeting?.title ?? line.text}`;
+}
+
 function CalendarRestLine({ line, top, calendar }: CalendarRestLineProps) {
   return (
     <div
@@ -41,7 +48,8 @@ function CalendarRestLine({ line, top, calendar }: CalendarRestLineProps) {
         <span className="isl-calline-two">
           <span className="isl-calline-head">
             <b className="isl-calline-lead">{line.meeting.lead}</b>
-            <span className="isl-calline-title"> · {line.meeting.title}</span>
+            <span className="isl-calline-sep"> · </span>
+            <span className="isl-calline-title">{line.meeting.title}</span>
           </span>
           <span className="isl-calline-sub">{line.meeting.sub}</span>
         </span>
@@ -76,7 +84,17 @@ function CalendarRestLine({ line, top, calendar }: CalendarRestLineProps) {
           Start a chat
         </button>
       )}
-      {line.dismiss && (
+      {line.dismiss === 'meeting' && (
+        <button
+          type="button"
+          className="isl-calline-act"
+          aria-label={meetingDismissLabel(line)}
+          onClick={() => calendar.onDismiss(line)}
+        >
+          Dismiss
+        </button>
+      )}
+      {(line.dismiss === 'catch_up' || line.dismiss === 'capture') && (
         <button type="button" className="isl-calline-act" onClick={() => calendar.onDismiss(line)}>
           Dismiss
         </button>

@@ -224,8 +224,8 @@ test('joins only an open meeting, from the panel and with ⌘J', async ({ page }
   const events = await todayEvents(page);
   const standup = events.find((item) => item.title === 'Standup')!;
   const customer = events.find((item) => item.title === 'Customer call')!;
-  expect(joinOpen(spanOf(standup), apiNow())).toBe(true);
-  expect(joinOpen(spanOf(customer), apiNow())).toBe(false);
+  expect(joinOpen(spanOf(standup), apiNow(), 10 * 60_000)).toBe(true);
+  expect(joinOpen(spanOf(customer), apiNow(), 10 * 60_000)).toBe(false);
   await openTodayDay(page);
 
   await event(page, 'Customer call').focus();

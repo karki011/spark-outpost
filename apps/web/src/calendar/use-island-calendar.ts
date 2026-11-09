@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  CALENDAR_DEFAULT_SETTINGS,
+  joinLeadMs,
   joinOpen,
+  remindUntil,
   spanOf,
   type CalendarEvent,
   type ConversationSummary,
@@ -35,7 +38,9 @@ import {
   withServerDismissed,
   type NudgeMarks,
 } from './nudge-marks.ts';
+import { useJoinAtStart, withAsked } from './join-at-start.ts';
 import { todayState } from './today-model.ts';
+import { clock } from './calendar-format.ts';
 import { lineUnderAlert } from './meeting-alert.ts';
 import { ALERT_SNOOZE_MS, useMeetingAlert } from './use-meeting-alert.ts';
 import { openTodayEvent } from './today-request.ts';
@@ -85,7 +90,10 @@ export interface IslandCalendar {
   onChoose: (line: CalendarLine) => void;
   onCapture: (line: CalendarLine) => void;
   onDismiss: (line: CalendarLine) => void;
+  joinLeadMs: number;
   onSnooze: (event: CalendarEvent, untilStart?: boolean) => void;
+  onJoinAtStart: (event: CalendarEvent) => void;
+  onCancelJoinAtStart: (event: CalendarEvent) => void;
   onSnoozeAlert: (event: CalendarEvent) => void;
   onDismissNudge: (event: CalendarEvent) => void;
   countdown: MeetingCountdown | null;
@@ -124,7 +132,7 @@ function useHeldChimes(holdLabel: string | null) {
 export interface IslandHomePanel {
   open: boolean;
   show: () => void;
-  note: (text: string) => void;
+  note: (text: string, sub?: string, closeMs?: number) => void;
 }
 
 function useChoosing(home: IslandHomePanel) {
@@ -157,21 +165,30 @@ function useNudgeClock(live: ReturnType<typeof useCalendarNow>['data'] | null, u
   useEffect(() => saveSnoozes(marks), [marks]);
   const nudged = live?.nudge && live.nudge.kind !== 'wrap_up' ? live.nudge.group : null;
   const meetings = useMemo(() => [...(live?.upcoming ?? []), ...(nudged ?? [])], [live, nudged]);
-  const times = useMemo(() => [...eventEnds(meetings), ...snoozeEnds(marks)], [meetings, marks]);
+  const times = useMemo(
+    () => [
+      ...eventEnds(meetings),
+      ...meetings.map((event) => remindUntil(spanOf(event))),
+      ...snoozeEnds(marks),
+    ],
+    [meetings, marks],
+  );
   const spans = useMemo(() => countdownSpans(meetings), [meetings]);
   const clock = useEventClock(times, updatedAt, spans);
   const kept = purgeMarks(marks, clock);
   if (kept !== marks) setMarks(kept);
-  const saved = useMemo(
-    () => withServerDismissed(kept, [...(live?.upcoming ?? []), ...(nudged ?? [])]),
-    [kept, live, nudged],
-  );
+  const saved = useMemo(() => withServerDismissed(kept, meetings), [kept, meetings]);
   return { marks: saved, clock, setMarks };
+}
+
+function joinableNow(event: CalendarEvent, leadMs: number): boolean {
+  return event.link !== null && joinOpen(spanOf(event), Date.now(), leadMs);
 }
 
 const MEETING_REQUESTS = ['snooze_meeting', 'join_meeting'] as const;
 
 export const DISMISS_RETRY_MS = 30_000;
+export const JOIN_AT_START_NOTE_MS = 4_000;
 
 function useDismissForGood() {
   const queryClient = useQueryClient();
@@ -203,10 +220,19 @@ export function useIslandCalendar(
   const status = useCalendarStatus();
   const ready = status.data !== undefined && todayState(status.data) === 'ready';
   const nowQuery = useCalendarNow(ready);
-  const live = ready ? (nowQuery.data ?? null) : null;
+  const joinAtStart = useJoinAtStart();
+  const fetched = ready ? (nowQuery.data ?? null) : null;
+  const live = useMemo(() => withAsked(fetched, joinAtStart.asked), [fetched, joinAtStart.asked]);
   const nudges = useNudgeClock(live, nowQuery.dataUpdatedAt);
   const dismissForGood = useDismissForGood();
   const at = Math.max(minute, nudges.clock);
+  const askJoinAtStart = (event: CalendarEvent) => {
+    joinAtStart.save(event, true);
+    home.note(`Opens at ${clock(spanOf(event).start)}`, event.title, JOIN_AT_START_NOTE_MS);
+  };
+  const leadMs = joinLeadMs(
+    ready && status.data ? status.data.settings : CALENDAR_DEFAULT_SETTINGS,
+  );
   const holdLabel = live?.hold ? (live.hold.focus ? 'Focus' : live.hold.title) : null;
   const held = useHeldChimes(holdLabel);
   const [dismissed, setDismissed] = useState(readDismissed);
@@ -232,6 +258,7 @@ export function useIslandCalendar(
     names,
     note: home.note,
     onDismissed: dismissForGood,
+    onJoinAtStart: (event, on) => (on ? askJoinAtStart(event) : joinAtStart.save(event, false)),
   });
   const line = calendarLine({
     now: live,
@@ -241,12 +268,14 @@ export function useIslandCalendar(
     dismissed,
     marks: withJoined(nudges.marks, autoJoin.joined),
     chats: liveChats,
+    joining: autoJoin.countdown?.eventKey ?? null,
+    joinLeadMs: leadMs,
   });
   useIslandRequests(MEETING_REQUESTS, (pending) => {
     const event = live?.upcoming.find((candidate) => candidate.key === pending.target);
     if (!event) return null;
     if (pending.kind === 'join_meeting') {
-      if (!event.link || !joinOpen(spanOf(event), Date.now())) return null;
+      if (!joinableNow(event, leadMs)) return null;
       return () => autoJoin.joinEvent(event);
     }
     return () =>
@@ -254,6 +283,17 @@ export function useIslandCalendar(
         snoozeNudgeFor(current, event.key, Date.parse(event.end), Date.now(), ALERT_SNOOZE_MS),
       );
   });
+  const dismissMeetings = (events: readonly CalendarEvent[]) => {
+    nudges.setMarks((current) =>
+      events.reduce((next, event) => dismissNudge(next, event.key, Date.parse(event.end)), current),
+    );
+    dismissForGood(events);
+  };
+  const meetingsOf = (shown: CalendarLine): readonly CalendarEvent[] => {
+    if (shown.choose) return shown.choose;
+    const event = live?.upcoming.find((candidate) => candidate.key === shown.eventKey);
+    return event ? [event] : [];
+  };
   const clashes = useMemo(
     () =>
       live ? new Map(live.clashes.map((clash) => [clash.eventKey, clash.titles])) : NO_CLASHES,
@@ -272,6 +312,7 @@ export function useIslandCalendar(
     calendarName: (event) => names.get(event.calendarKey) ?? 'Calendar',
     hopKeys: hopKeys(live),
     countdown: autoJoin.countdown,
+    joinLeadMs: leadMs,
     onCancelJoin: autoJoin.cancelJoin,
     onJoinNow: autoJoin.joinNow,
     onJoined: autoJoin.markJoined,
@@ -283,16 +324,16 @@ export function useIslandCalendar(
           ? snoozeNudgeUntilStart(current, event.key, spanOf(event), Date.now())
           : snoozeNudge(current, event.key, Date.parse(event.end), Date.now()),
       ),
+    onJoinAtStart: askJoinAtStart,
+    onCancelJoinAtStart: (event) => joinAtStart.save(event, false),
     onSnoozeAlert: (event) =>
       nudges.setMarks((current) =>
         snoozeNudgeFor(current, event.key, Date.parse(event.end), Date.now(), ALERT_SNOOZE_MS),
       ),
-    onDismissNudge: (event) => {
-      nudges.setMarks((current) => dismissNudge(current, event.key, Date.parse(event.end)));
-      dismissForGood([event]);
-    },
+    onDismissNudge: (event) => dismissMeetings([event]),
     onDismiss: (shown) => {
       if (shown.dismiss === 'catch_up') held.clearCatchUp();
+      if (shown.dismiss === 'meeting') dismissMeetings(meetingsOf(shown));
       if (shown.capture) dismiss(shown.capture.eventKey);
     },
     onCapture: (shown) => {

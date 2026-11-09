@@ -47,6 +47,7 @@ import { useChimes, useIslandSound } from './island-sound.ts';
 import { useAutoExpandSetting, useIslandSize } from './island-size.ts';
 import { opensByItself, useAutoExpand } from './auto-expand.ts';
 import { IslandShell } from './IslandShell.tsx';
+import type { IslandNote } from './ShellBody.tsx';
 import type { FollowUp, QuickDraft } from './QuickChat.tsx';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
 import { useAddFolder } from '../projects/use-add-folder.tsx';
@@ -93,7 +94,7 @@ export function IslandApp() {
   const sparkFocused = useSparkFocus();
   const [panel, setPanel] = useState<Panel | null>(null);
   const [opener, setOpener] = useState<PanelOpener>('user');
-  const [note, setNote] = useState<Decided | null>(null);
+  const [note, setNote] = useState<IslandNote | null>(null);
   const [review, setReview] = useState<string | null>(null);
   const [selfOpened, setSelfOpened] = useState<string | null>(null);
   const [menuBarBusy, setMenuBarBusy] = useState(false);
@@ -153,7 +154,8 @@ export function IslandApp() {
     {
       open: panel === 'home',
       show: () => openPanel('home'),
-      note: (title) => setNote({ title, sub: '' }),
+      note: (title, sub = '', closeMs) =>
+        setNote(closeMs === undefined ? { title, sub } : { title, sub, closeMs }),
     },
   );
   const strip: StripData = {
@@ -182,7 +184,7 @@ export function IslandApp() {
 
   useEffect(() => {
     if (!note) return;
-    const timer = setTimeout(() => setNote(null), NOTE_MS);
+    const timer = setTimeout(() => setNote(null), note.closeMs ?? NOTE_MS);
     return () => clearTimeout(timer);
   }, [note]);
 
@@ -415,6 +417,7 @@ export function IslandApp() {
           voice={voice}
           now={now}
           note={note}
+          onCloseNote={() => setNote(null)}
           detailFor={(chatId) => data.detailById.get(chatId)}
           focusSignal={focusSignal}
           home={home}

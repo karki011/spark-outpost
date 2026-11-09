@@ -67,6 +67,7 @@ const payload = {
   events: [],
   calendars: {},
   countdown: null,
+  joinLeadMs: 600_000,
   notice: { title: 'Standup', body: '10:00–10:15 · Zoom' },
 };
 

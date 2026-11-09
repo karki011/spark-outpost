@@ -105,6 +105,7 @@ async function standupPayload(page: Page): Promise<MeetingAlertPayload> {
     events: [standup],
     calendars: { [standup.calendarKey]: 'Spark Work' },
     countdown: null,
+    joinLeadMs: 10 * 60_000,
     notice: { title: 'Standup', body: 'Zoom' },
   };
 }
@@ -173,7 +174,7 @@ function landing(page: Page): Promise<number> {
   );
 }
 
-test('the hanging card offers Join, Snooze and Dismiss, and Esc dismisses once clicked', async ({
+test('the hanging card offers Join, Snooze, Join at start and Dismiss, and Esc dismisses once clicked', async ({
   page,
 }) => {
   const payload = await standupPayload(page);
@@ -191,17 +192,37 @@ test('the hanging card offers Join, Snooze and Dismiss, and Esc dismisses once c
   await expect.poll(() => landing(page)).toBe(0);
 
   await card.getByRole('button', { name: 'Snooze 1 min' }).click({ force: true });
+  await card.getByRole('button', { name: 'Join at start' }).click({ force: true });
   expect(await alertWindow(page, (window) => window.alertFocus)).toBe(0);
   await card.getByText('Esc dismisses').click({ force: true });
   expect(await alertWindow(page, (window) => window.alertFocus)).toBe(1);
   await page.keyboard.press('Escape');
   expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
     { kind: 'snooze', key: payload.key, eventKey: null },
+    { kind: 'join-at-start', key: payload.key, eventKey: payload.events[0]!.key },
     { kind: 'dismiss', key: payload.key, eventKey: null },
   ]);
 
   await page.evaluate(() => (window as unknown as AlertWindow).alertFeed.leave());
   await expect(card).toBeHidden();
+});
+
+test("a card for a meeting set to join at start says when it opens and offers Don't open", async ({
+  page,
+}) => {
+  const plain = await standupPayload(page);
+  const marked = { ...plain.events[0]!, joinAtStart: true };
+  const payload = { ...plain, events: [marked] };
+  await openOverlay(page, payload);
+  const card = page.getByRole('alertdialog', { name: /^Meeting\. Standup starts in \d min$/ });
+  await expect(card).toContainText(/Opens at \d+:\d{2}/);
+  await expect(card.getByRole('button', { name: 'Join at start' })).toHaveCount(0);
+  await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Snooze 1 min' })).toBeVisible();
+  await card.getByRole('button', { name: /^Don't open/ }).click({ force: true });
+  expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
+    { kind: 'cancel-join-at-start', key: payload.key, eventKey: marked.key },
+  ]);
 });
 
 test('assistive technology gets focus on the card, Tab reaches each button and Esc dismisses', async ({
@@ -218,6 +239,8 @@ test('assistive technology gets focus on the card, Tab reaches each button and E
   await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(card.getByRole('button', { name: 'Snooze 1 min' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(card.getByRole('button', { name: 'Join at start' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(card.getByRole('button', { name: 'Dismiss' })).toBeFocused();
   await page.screenshot({ path: 'test-results/meeting-card/keyboard-focus.png' });
