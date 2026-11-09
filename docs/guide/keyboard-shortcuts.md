@@ -31,7 +31,7 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **⌃\`**                     | Show or hide the terminal               |
 | **⌘⇧F**                     | Focus a Terminal session, or leave it   |
 | **⌥Tab** / **⌥⇧Tab**        | Leave a Terminal session                |
-| **←** / **→**               | Previous / next zoomed image            |
+| **←** / **→**               | Step through zoomed images              |
 | **Esc**                     | Close Agent TV, a drawer or a menu      |
 | **Esc** in the chat         | Stop the running turn                   |
 
