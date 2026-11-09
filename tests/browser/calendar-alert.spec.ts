@@ -174,7 +174,7 @@ function landing(page: Page): Promise<number> {
   );
 }
 
-test('the hanging card offers Join, Snooze and Dismiss, and Esc dismisses once clicked', async ({
+test('the hanging card offers Join, Snooze, Join at start and Dismiss, and Esc dismisses once clicked', async ({
   page,
 }) => {
   const payload = await standupPayload(page);
@@ -192,12 +192,14 @@ test('the hanging card offers Join, Snooze and Dismiss, and Esc dismisses once c
   await expect.poll(() => landing(page)).toBe(0);
 
   await card.getByRole('button', { name: 'Snooze 1 min' }).click({ force: true });
+  await card.getByRole('button', { name: 'Join at start' }).click({ force: true });
   expect(await alertWindow(page, (window) => window.alertFocus)).toBe(0);
   await card.getByText('Esc dismisses').click({ force: true });
   expect(await alertWindow(page, (window) => window.alertFocus)).toBe(1);
   await page.keyboard.press('Escape');
   expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
     { kind: 'snooze', key: payload.key, eventKey: null },
+    { kind: 'join-at-start', key: payload.key, eventKey: payload.events[0]!.key },
     { kind: 'dismiss', key: payload.key, eventKey: null },
   ]);
 
@@ -219,6 +221,8 @@ test('assistive technology gets focus on the card, Tab reaches each button and E
   await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(card.getByRole('button', { name: 'Snooze 1 min' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(card.getByRole('button', { name: 'Join at start' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(card.getByRole('button', { name: 'Dismiss' })).toBeFocused();
   await page.screenshot({ path: 'test-results/meeting-card/keyboard-focus.png' });
