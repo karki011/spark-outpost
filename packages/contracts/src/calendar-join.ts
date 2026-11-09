@@ -147,8 +147,14 @@ export function joinLink(sources: JoinSources): JoinLink | null {
   return null;
 }
 
-export const JOIN_LEAD_MS = 10 * 60_000;
+export function joinLeadMs(settings: { joinLead: number }): number {
+  return settings.joinLead * 60_000;
+}
 
-export function joinOpen(event: { start: number; end: number }, now: number): boolean {
-  return now >= event.start - JOIN_LEAD_MS && now < event.end;
+export function joinOpen(
+  event: { start: number; end: number },
+  now: number,
+  leadMs: number,
+): boolean {
+  return now >= event.start - leadMs && now < event.end;
 }

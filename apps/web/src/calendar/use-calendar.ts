@@ -1,16 +1,29 @@
 import { useEffect } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type {
-  CalendarChoicePatch,
-  CalendarEvent,
-  CalendarSettingsPatch,
-  CalendarStatus,
+import {
+  CALENDAR_DEFAULT_SETTINGS,
+  joinLeadMs,
+  type CalendarChoicePatch,
+  type CalendarEvent,
+  type CalendarSettingsPatch,
+  type CalendarStatus,
 } from '@spark-outpost/contracts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { calendarApi, calendarKeys } from './calendar-api.ts';
 import { todayState, type TodayState } from './today-model.ts';
 
 const NOW_EVERY_MS = 30_000;
+
+export function useJoinLeadMs(): number {
+  const { remote } = useRemoteClient();
+  const query = useQuery({
+    queryKey: calendarKeys.status,
+    queryFn: calendarApi.status,
+    enabled: !remote,
+    select: (status: CalendarStatus) => joinLeadMs(status.settings),
+  });
+  return query.data ?? joinLeadMs(CALENDAR_DEFAULT_SETTINGS);
+}
 
 export function useCalendarStatus(refetchInterval: number | false = false) {
   const { remote } = useRemoteClient();

@@ -54,6 +54,7 @@ export const calendarEventSchema = z.object({
   remind: z.boolean(),
   hold: z.boolean(),
   dismissed: z.boolean(),
+  joinAtStart: z.boolean(),
 });
 export type CalendarEvent = z.infer<typeof calendarEventSchema>;
 
@@ -66,12 +67,14 @@ export interface CalendarMarks {
   remind: ReadonlySet<string>;
   hold: ReadonlySet<string>;
   dismissed: ReadonlySet<string>;
+  joinAtStart: ReadonlySet<string>;
 }
 
 export const NO_CALENDAR_MARKS: CalendarMarks = {
   remind: new Set(),
   hold: new Set(),
   dismissed: new Set(),
+  joinAtStart: new Set(),
 };
 
 export function eventKey(event: { uid: string | null; id: string; start: string }): string {
@@ -147,6 +150,7 @@ export function mergeEvents(input: MergeInput): CalendarEvent[] {
       remind: input.marks.remind.has(key),
       hold: input.marks.hold.has(key),
       dismissed: input.marks.dismissed.has(key),
+      joinAtStart: input.marks.joinAtStart.has(key),
     });
   }
   return result.toSorted((a, b) => Date.parse(a.start) - Date.parse(b.start));
@@ -154,6 +158,12 @@ export function mergeEvents(input: MergeInput): CalendarEvent[] {
 
 export function spanOf(event: { start: string; end: string }): CalendarSpan {
   return { start: Date.parse(event.start), end: Date.parse(event.end) };
+}
+
+export const MEETING_REMIND_GRACE_MS = 5 * 60_000;
+
+export function remindUntil(span: CalendarSpan): number {
+  return Math.min(span.start + MEETING_REMIND_GRACE_MS, span.end);
 }
 
 export function localDayStart(at: number): number {

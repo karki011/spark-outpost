@@ -50,6 +50,7 @@ export function event(
     remind: false,
     hold: false,
     dismissed: false,
+    joinAtStart: false,
     ...overrides,
   };
 }

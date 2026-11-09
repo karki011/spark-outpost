@@ -1,4 +1,4 @@
-import { spanOf, type CalendarEvent } from '@spark-outpost/contracts';
+import { remindUntil, spanOf, type CalendarEvent } from '@spark-outpost/contracts';
 import type { Card } from './island-model.ts';
 
 const MINUTE_MS = 60_000;
@@ -19,8 +19,8 @@ export function meetingGroup(upcoming: readonly CalendarEvent[]): CalendarEvent[
 }
 
 export function meetingIsOn(event: CalendarEvent, at: number): boolean {
-  const { start, end } = spanOf(event);
-  return start - at <= MEETING_FOCUS_MS && at < end;
+  const span = spanOf(event);
+  return span.start - at <= MEETING_FOCUS_MS && at < remindUntil(span);
 }
 
 export function homeFocus(
@@ -30,7 +30,7 @@ export function homeFocus(
   at: number,
 ): HomeFocus {
   if (choosing && choosing.length > 0) return { kind: 'meeting', events: [...choosing] };
-  const group = meetingGroup(upcoming);
+  const group = meetingGroup(upcoming.filter((event) => at < remindUntil(spanOf(event))));
   if (group[0] && meetingIsOn(group[0], at)) return { kind: 'meeting', events: group };
   return cards.length > 0 ? { kind: 'request' } : { kind: 'clear' };
 }

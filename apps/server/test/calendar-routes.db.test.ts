@@ -221,6 +221,17 @@ describe('the day, the planner and marks', () => {
       focusNames: ['Heads down'],
       phoneAlerts: true,
       agentsRead: true,
+      joinLead: 10,
     });
+  });
+
+  it('saves each Join opens choice and refuses others', async () => {
+    for (const joinLead of [5, 2, 0, 10]) {
+      const response = await client.send('patch', '/api/calendar/settings', { joinLead });
+      expect(response.status).toBe(200);
+      expect((await status()).settings.joinLead).toBe(joinLead);
+    }
+    const bad = await client.send('patch', '/api/calendar/settings', { joinLead: 3 });
+    expect(bad.status).toBe(400);
   });
 });

@@ -1,6 +1,5 @@
 import {
   CALENDAR_SERVICE_NAMES,
-  JOIN_LEAD_MS,
   joinOpen,
   meetingAlertPayloadSchema,
   meetingAlertPlaceSchema,
@@ -61,20 +60,28 @@ export function alertNotice(events: readonly CalendarEvent[]): { title: string; 
   return { title: title.slice(0, NOTICE_MAX), body: alertDetail(first).slice(0, NOTICE_MAX) };
 }
 
-export function joinState(event: CalendarEvent, at: number): 'open' | 'later' | 'none' {
+export function joinState(
+  event: CalendarEvent,
+  at: number,
+  leadMs: number,
+): 'open' | 'later' | 'none' {
   if (!event.link) return 'none';
   const window = spanOf(event);
-  if (joinOpen(window, at)) return 'open';
+  if (joinOpen(window, at, leadMs)) return 'open';
   return at < window.end ? 'later' : 'none';
 }
 
-export function shortcutJoin(events: readonly CalendarEvent[], at: number): CalendarEvent | null {
-  const open = events.filter((event) => joinState(event, at) === 'open');
+export function shortcutJoin(
+  events: readonly CalendarEvent[],
+  at: number,
+  leadMs: number,
+): CalendarEvent | null {
+  const open = events.filter((event) => joinState(event, at, leadMs) === 'open');
   return open.length === 1 ? open[0]! : null;
 }
 
-export function joinOpensAt(event: CalendarEvent): string {
-  return clock(spanOf(event).start - JOIN_LEAD_MS);
+export function joinOpensAt(event: CalendarEvent, leadMs: number): string {
+  return clock(spanOf(event).start - leadMs);
 }
 
 export interface Rig {

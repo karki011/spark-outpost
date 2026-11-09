@@ -54,6 +54,8 @@ const input = (calendar: CalendarNow | null, extra = {}) => ({
   dismissed: new Set<string>(),
   marks: NO_NUDGE_MARKS,
   chats: new Map(),
+  joining: null,
+  joinLeadMs: 10 * 60_000,
   ...extra,
 });
 
@@ -276,9 +278,10 @@ describe('calendarLine', () => {
       nudge: beforeNudge(standup, [standup]),
     });
 
-    it('keeps Join until the meeting ends, then shows nothing', () => {
-      expect(calendarLine(input(single, { at: at(10, 14, 59) }))?.event?.key).toBe(standup.key);
-      expect(calendarLine(input(single, { at: at(10, 15) }))).toBeNull();
+    it('keeps Join until 5 min past the start, then shows nothing', () => {
+      expect(calendarLine(input(single, { at: at(10, 4, 59) }))?.event?.key).toBe(standup.key);
+      expect(calendarLine(input(single, { at: at(10, 5) }))).toBeNull();
+      expect(calendarLine(input(single, { at: at(10, 14) }))).toBeNull();
     });
 
     it('clears a line left showing across sleep once the clock is read past the end', () => {
@@ -291,15 +294,16 @@ describe('calendarLine', () => {
     });
 
     it('drops each Choose meeting as it ends and becomes a single line', () => {
+      const quick = event('Check-in', at(10), at(10, 3), { link: link('zoom') });
       const grouped = now({
-        upcoming: [standup, design],
-        nudge: beforeNudge(standup, [standup, design]),
+        upcoming: [quick, design],
+        nudge: beforeNudge(quick, [quick, design]),
       });
-      expect(calendarLine(input(grouped, { at: at(10, 5) }))?.choose).toHaveLength(2);
-      const later = calendarLine(input(grouped, { at: at(10, 20) }));
+      expect(calendarLine(input(grouped, { at: at(10, 2) }))?.choose).toHaveLength(2);
+      const later = calendarLine(input(grouped, { at: at(10, 3) }));
       expect(later?.choose).toBeNull();
       expect(later?.event?.key).toBe(design.key);
-      expect(calendarLine(input(grouped, { at: at(10, 30) }))).toBeNull();
+      expect(calendarLine(input(grouped, { at: at(10, 5) }))).toBeNull();
     });
 
     it('hides a dismissed meeting for good and a snoozed one for two minutes', () => {
