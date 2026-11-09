@@ -36,6 +36,12 @@ const MODES: Record<'Claude' | 'Codex', Mode[]> = {
       command: 'card',
     },
     {
+      name: 'Workspace access',
+      summary: 'Works in the project without asking',
+      edit: 'unreviewed',
+      command: 'unreviewed',
+    },
+    {
       name: 'Auto review',
       summary: 'The agent decides what to ask',
       edit: 'unreviewed',
