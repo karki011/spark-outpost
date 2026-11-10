@@ -80,6 +80,7 @@ export const runSchema = z.object({
   errorDetails: z.string().nullable().optional(),
   agentCycle: z.boolean().optional(),
   prFollowUp: z.boolean().optional(),
+  typedByUser: z.boolean().optional(),
   outpost: z
     .object({
       postId: z.uuid(),

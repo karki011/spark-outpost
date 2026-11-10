@@ -17,7 +17,7 @@ import { Segmented } from '../ui/Segmented.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { StatusBadge } from './StatusChip.tsx';
 import type { DetailTicket } from './TicketDetail.tsx';
-import { ticketKeys, ticketsApi } from './tickets-api.ts';
+import { refreshTicket, ticketsApi } from './tickets-api.ts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { SessionTypePicker, type SessionChoice } from '../terminal/SessionTypePicker.tsx';
 import { StartContext } from './StartContext.tsx';
@@ -105,7 +105,7 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.conversations }),
-        queryClient.invalidateQueries({ queryKey: ticketKeys.all }),
+        refreshTicket(queryClient, ticket.source, ticket.key),
       ]);
       onStarted(conversationId);
     } catch (error) {

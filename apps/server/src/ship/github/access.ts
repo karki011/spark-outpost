@@ -24,6 +24,7 @@ import { pickRemote } from '../git.ts';
 import { apiBaseFor, parseRemoteUrl, repoSlug, type RemoteRepo } from '../remote.ts';
 import { GITHUB_APP_HOST, installUrl, type GitHubAppConfig } from './app-config.ts';
 import { coversRepo, reachableRepos } from './app-repos.ts';
+import { createTtlCache, GH_CLI_TTL_MS, type TtlCache } from './gh-cli-cache.ts';
 import { appRequest, appTokensSaved, forgetAppTokens } from './app-tokens.ts';
 import { restConnection, type GitHubConnection, type GitHubRequest } from './connection.ts';
 import { validateToken } from './token.ts';
@@ -53,7 +54,35 @@ interface GhCli {
 
 const ACCOUNT = /account (\S+)/;
 
+const ghCliCaches = new WeakMap<RunCommand, TtlCache<GhCli | null>>();
+
+function ghCliCache(deps: GitHubDeps): TtlCache<GhCli | null> {
+  const found = ghCliCaches.get(deps.runCommand);
+  if (found) return found;
+  const created = createTtlCache<GhCli | null>(GH_CLI_TTL_MS);
+  ghCliCaches.set(deps.runCommand, created);
+  return created;
+}
+
+function clock(deps: GitHubDeps): number {
+  return (deps.now ?? Date.now)();
+}
+
+export function forgetGhCli(deps: GitHubDeps): void {
+  ghCliCache(deps).invalidate();
+}
+
 async function ghCli(deps: GitHubDeps, host: string): Promise<GhCli | null> {
+  const cli = await probeGhCli(deps, host);
+  ghCliCache(deps).set(host, clock(deps), cli);
+  return cli;
+}
+
+function cachedGhCli(deps: GitHubDeps, host: string): Promise<GhCli | null> {
+  return ghCliCache(deps).get(host, clock(deps), () => probeGhCli(deps, host));
+}
+
+async function probeGhCli(deps: GitHubDeps, host: string): Promise<GhCli | null> {
   const path = await deps.locateGh();
   if (!path) return null;
   const status = await deps.runCommand(
@@ -169,6 +198,23 @@ async function projectCoverage(deps: GitHubDeps, repos: readonly string[]) {
   return projects;
 }
 
+async function appConnected(deps: GitHubDeps): Promise<boolean> {
+  if (!deps.app) return false;
+  const row = await appConnection(deps.db, deps.workspaceId);
+  return row?.state === 'connected' && (await appTokensSaved(deps));
+}
+
+export async function gitHubReachability(
+  deps: GitHubDeps,
+): Promise<{ saved: boolean; ghLogin: string | null }> {
+  const [token, app, cli] = await Promise.all([
+    savedToken(deps),
+    appConnected(deps),
+    cachedGhCli(deps, DEFAULT_GITHUB_HOST),
+  ]);
+  return { saved: token !== null || app, ghLogin: cli?.login ?? null };
+}
+
 async function appStatus(deps: GitHubDeps): Promise<GitHubAppStatus> {
   if (!deps.app) return GITHUB_APP_SIGNED_OUT;
   const available = { ...GITHUB_APP_SIGNED_OUT, available: true, installUrl: installUrl(deps.app) };
@@ -216,6 +262,7 @@ export async function disconnectApp(deps: GitHubDeps): Promise<GitHubConnectionS
   await deleteAppConnection(deps.db, deps.workspaceId);
   await deps.secrets.delete('github-app').catch(() => undefined);
   forgetAppTokens(deps.workspaceId);
+  forgetGhCli(deps);
   return gitHubStatus(deps);
 }
 
@@ -239,11 +286,13 @@ export async function saveToken(
   const info = await validateToken(host, request, await projectRepos(deps, host));
   await deps.secrets.set('github', token);
   await saveGitHubToken(deps.db, deps.workspaceId, info);
+  forgetGhCli(deps);
   return gitHubStatus(deps);
 }
 
 export async function removeToken(deps: GitHubDeps): Promise<GitHubConnectionStatus> {
   await deleteGitHubToken(deps.db, deps.workspaceId);
   await deps.secrets.delete('github').catch(() => undefined);
+  forgetGhCli(deps);
   return gitHubStatus(deps);
 }

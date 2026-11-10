@@ -29,6 +29,10 @@ const cached: Record<string, QueryKey> = {
   setup: ['setup'],
   mapProject: ['map', 'project', A],
   mapArea: ['map', 'area', A, 'aaaaaaaaaaaa', 120],
+  mapLinks: ['map', 'links', A, B],
+  mapLocate: ['map', 'locate', A, 'src/new.ts'],
+  mapUnmatched: ['map', 'unmatched', A, B],
+  mapNeighbors: ['map', 'neighbors', A, 'src/a.ts', 1, 'v1'],
   ticketInbox: ['tickets', 'inbox'],
   ticketView: ['tickets', 'view', 'linear', 'ENG-1'],
   ticketConnections: ['tickets', 'connections'],
@@ -37,6 +41,8 @@ const cached: Record<string, QueryKey> = {
   previewProject: ['preview', 'project', A],
   outpostList: ['outposts', 'list'],
   outpostDetail: ['outposts', 'detail', A],
+  otherOutpostDetail: ['outposts', 'detail', B],
+  outpostDraft: ['outposts', 'draft', B],
   draftsA: ['conversations', A, 'outpost-drafts'],
   terminalRemoteA: ['terminal-remote', A],
   terminalRemoteB: ['terminal-remote', B],
@@ -77,7 +83,9 @@ describe('app event invalidation', () => {
         'health',
         'list',
         'outcome',
+        'otherOutpostDetail',
         'outpostDetail',
+        'outpostDraft',
         'outpostList',
         'previewA',
         'spendToday',
@@ -98,25 +106,42 @@ describe('app event invalidation', () => {
     ]);
   });
 
-  it('an outpost change refreshes the outposts and the sidebar list, where a chat carries its outpost', async () => {
+  it('an outpost change without an id refreshes every outpost and the sidebar list', async () => {
     expect(await invalidatedBy(event('outpost_changed', null))).toEqual([
       'list',
+      'otherOutpostDetail',
       'outpostDetail',
+      'outpostDraft',
+      'outpostList',
+    ]);
+  });
+
+  it('an outpost change with an id refreshes that outpost, the outposts list and the sidebar list', async () => {
+    expect(await invalidatedBy({ ...event('outpost_changed', null), outpostId: A })).toEqual([
+      'list',
+      'outpostDetail',
+      'outpostDraft',
       'outpostList',
     ]);
   });
 
   it('an outpost change named for a chat also refreshes that chat’s draft lines', async () => {
-    expect(await invalidatedBy(event('outpost_changed', A))).toEqual([
+    expect(await invalidatedBy({ ...event('outpost_changed', A), outpostId: B })).toEqual([
       'draftsA',
       'list',
-      'outpostDetail',
+      'otherOutpostDetail',
+      'outpostDraft',
       'outpostList',
     ]);
   });
 
-  it('map progress refreshes every map on screen and nothing else', async () => {
-    expect(await invalidatedBy(event('map', null))).toEqual(['mapArea', 'mapProject']);
+  it('map progress refreshes the build status and the combined-map queries, not the versioned area pages', async () => {
+    expect(await invalidatedBy(event('map', null))).toEqual([
+      'mapLinks',
+      'mapLocate',
+      'mapProject',
+      'mapUnmatched',
+    ]);
   });
 
   it('a digest status change refreshes the digest and its spend', async () => {
@@ -175,7 +200,9 @@ describe('app event invalidation', () => {
       'changesA',
       'detailA',
       'list',
+      'otherOutpostDetail',
       'outpostDetail',
+      'outpostDraft',
       'outpostList',
       'task',
       'today',

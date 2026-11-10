@@ -156,6 +156,20 @@ export const mapNeighborsSchema = z.object({
 });
 export type MapNeighbors = z.infer<typeof mapNeighborsSchema>;
 
+export const MAP_LOCATE_MAX_PATHS = 50;
+
+export const mapLocateQuerySchema = z.object({
+  path: z.preprocess(
+    (value) => (typeof value === 'string' ? [value] : value),
+    z.array(z.string().min(1).max(1024)).min(1).max(MAP_LOCATE_MAX_PATHS),
+  ),
+});
+
+export const mapLocateSchema = z.object({
+  located: z.array(z.object({ path: z.string(), areaId: z.string().nullable() })),
+});
+export type MapLocate = z.infer<typeof mapLocateSchema>;
+
 export const mapCategoryOverrideRequestSchema = z.object({
   category: mapCategorySchema.nullable(),
 });

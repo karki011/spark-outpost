@@ -4,6 +4,7 @@ import type {
   MapCategory,
   MapFileKind,
   MapKind,
+  MapLocate,
   MapLinks,
   MapStatus,
   ProjectMap,
@@ -236,6 +237,22 @@ export async function areaDetail(
     edges: edges.rows.map((row) => ({ from: row.from_path, to: row.to_path })),
     totalFiles: area.fileCount,
     nextOffset: next < area.fileCount ? next : null,
+  };
+}
+
+export async function locateFiles(
+  db: Queryable,
+  root: string,
+  paths: readonly string[],
+): Promise<MapLocate> {
+  const { rows } = await db.query<{ path: string; area_id: string }>(
+    `SELECT f.path, f.area_id FROM map_files f JOIN map_repos r ON r.id = f.repo_id
+     WHERE r.root_path = $1 AND f.path = ANY($2::text[])`,
+    [root, paths],
+  );
+  const areaByPath = new Map(rows.map((row) => [row.path, row.area_id]));
+  return {
+    located: [...new Set(paths)].map((path) => ({ path, areaId: areaByPath.get(path) ?? null })),
   };
 }
 

@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { rm } from 'node:fs/promises';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { MapArea, MapFile, MapNeighbors } from '@spark-outpost/contracts';
+import type { MapArea, MapFile, MapLocate, MapNeighbors } from '@spark-outpost/contracts';
 import { stopParseWorker } from '../src/codescan/parse-pool.ts';
 import { coreImpact } from '../src/map/impact.ts';
 import { createTestApp, localClient } from './app-support.ts';
@@ -158,6 +158,23 @@ describe('map file facts', () => {
 
     expect((await api.get(url('nope.ts', 1))).status).toBe(404);
     expect((await api.get(url('server/app.ts', 3))).status).toBe(400);
+  });
+
+  it('locates paths to their areas and marks paths that are not on the map', async () => {
+    const { api, files } = await built();
+    const known = files.get('server/store/db.ts')!;
+    const url = (...paths: string[]) =>
+      `/api/projects/${projectId}/map/locate?${paths.map((p) => `path=${encodeURIComponent(p)}`).join('&')}`;
+
+    const body = (await api.get(url('server/store/db.ts', 'logo.png', 'server/store/db.ts')))
+      .body as MapLocate;
+    expect(body.located).toEqual([
+      { path: 'server/store/db.ts', areaId: known.areaId },
+      { path: 'logo.png', areaId: null },
+    ]);
+    expect((await api.get(`/api/projects/${projectId}/map/locate`)).status).toBe(400);
+    const tooMany = Array.from({ length: 51 }, (_, i) => `f${i}.ts`);
+    expect((await api.get(url(...tooMany))).status).toBe(400);
   });
 
   it('reports when each area last changed', async () => {

@@ -24,7 +24,7 @@ import { settledDismissals, type Thresholds, type TicketFacts } from './attentio
 import { connectedSources, type OpenSource } from './connections.ts';
 import { inboxDevelopment, type DevelopmentDeps } from './development.ts';
 import { placeTicket, sortInbox } from './sections.ts';
-import { TicketApiError } from './source.ts';
+import { isTruncated, TicketApiError } from './source.ts';
 import { moveTicket } from './sync.ts';
 
 export const DONE_RECENTLY_DAYS = 7;
@@ -46,9 +46,10 @@ async function fetchMine(open: OpenSource) {
       open.source.listAssigned({}),
       open.source.listAssigned({ status: 'done', doneWithinDays: DONE_RECENTLY_DAYS }),
     ]);
-    return { tickets: [...active, ...done], problem: null };
+    const truncated = isTruncated(active) || isTruncated(done);
+    return { tickets: [...active, ...done], problem: null, truncated };
   } catch (error) {
-    return { tickets: [], problem: problemOf(open, error) };
+    return { tickets: [], problem: problemOf(open, error), truncated: false };
   }
 }
 
@@ -194,6 +195,9 @@ export async function loadInbox(deps: InboxDeps): Promise<TicketInbox> {
     tickets,
     errors: fetched.flatMap((result) => (result.problem ? [result.problem] : [])),
     sources: sources.map((open) => open.connection.source),
+    truncated: sources.flatMap((open, index) =>
+      fetched[index]?.truncated ? [open.connection.source] : [],
+    ),
     syncedAt: now.toISOString(),
     settings,
   };

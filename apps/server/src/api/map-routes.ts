@@ -3,10 +3,18 @@ import {
   mapAreaFilesQuerySchema,
   mapCategoryOverrideRequestSchema,
   mapLinksQuerySchema,
+  mapLocateQuerySchema,
   mapNeighborsQuerySchema,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
-import { areaDetail, findArea, mapLinks, projectMap, setAreaOverride } from '../map/read-store.ts';
+import {
+  areaDetail,
+  findArea,
+  locateFiles,
+  mapLinks,
+  projectMap,
+  setAreaOverride,
+} from '../map/read-store.ts';
 import { fileNeighbors } from '../map/neighbors.ts';
 import { mapUnmatched } from '../map/unmatched.ts';
 import { getProject } from '../projects/projects.ts';
@@ -65,6 +73,13 @@ export function mapRoutes({ db, workspaceId }: MapRouteDeps): Router {
       return;
     }
     res.json(neighbors);
+  });
+
+  router.get('/projects/:id/map/locate', async (req, res) => {
+    const project = await getProject(db, workspaceId, paramId(req));
+    const query = mapLocateQuerySchema.safeParse(req.query);
+    if (!query.success) throw new BadRequestError('Pass 1 to 50 file paths in path.');
+    res.json(await locateFiles(db, project.rootPath, query.data.path));
   });
 
   router.put('/projects/:id/map/areas/:areaId/category', async (req, res) => {

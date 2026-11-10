@@ -4,7 +4,7 @@ import { macRunRefusal, type MacRefusedRun } from '../mac-control/offered.ts';
 import { rulesRunRefusal, type RulesRefusedRun } from './actions/rules-edit-session.ts';
 import { listProjects } from '../projects/projects.ts';
 import { outpostNeeds } from '../outposts/outpost-availability.ts';
-import { gitHubStatus } from '../ship/github/access.ts';
+import { gitHubReachability } from '../ship/github/access.ts';
 import { openSlack } from '../slack/connection.ts';
 import { productLive } from '../atlassian/session.ts';
 import { connectedSources } from '../tickets/connections.ts';
@@ -79,9 +79,8 @@ const ASK_SPARK_HOW_TO: Partial<Record<SparkToolNeed, string>> = {
 };
 
 async function gitHubReach(deps: SparkToolDeps, scope: SparkScope) {
-  const status = await gitHubStatus(gitHubDepsFor(deps, scope));
-  const saved = status.token !== null || status.app.state === 'connected';
-  const gh = status.ghCli.login !== null;
+  const { saved, ghLogin } = await gitHubReachability(gitHubDepsFor(deps, scope));
+  const gh = ghLogin !== null;
   return { connected: saved || gh, ownLogin: saved && !gh };
 }
 

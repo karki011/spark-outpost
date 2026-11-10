@@ -35,7 +35,7 @@ Waits last 30 idle minutes; resumed turns show **Continued on its own**.
 
 ## Queue messages
 
-Files need no text. Queues survive restarts; drafts don't.
+Files need no text. Queues survive restarts; unsent text stays in this browser.
 
 1. During a turn, **Enter** queues a message.
 2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.

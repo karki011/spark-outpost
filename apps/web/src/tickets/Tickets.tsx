@@ -213,6 +213,15 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
               </span>
             </div>
           ))}
+          {(data?.truncated ?? []).map((id) => (
+            <div key={id} className="tk-alert" role="status">
+              <Glyph name="warn" size={16} />
+              <span>
+                <b>{ticketSourceNames[id]} has more tickets than Spark lists.</b> Showing the 500
+                most recently updated.
+              </span>
+            </div>
+          ))}
           {loading ? (
             <TicketsSkeleton sourcesLabel={label} />
           ) : (

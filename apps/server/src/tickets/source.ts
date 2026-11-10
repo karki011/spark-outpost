@@ -93,6 +93,15 @@ export interface TicketSource {
   development?(key: string): Promise<SourceDevelopment>;
 }
 
+const truncatedLists = new WeakSet<readonly TicketSummary[]>();
+
+export function markTruncated<T extends readonly TicketSummary[]>(list: T, truncated: boolean): T {
+  if (truncated) truncatedLists.add(list);
+  return list;
+}
+
+export const isTruncated = (list: readonly TicketSummary[]) => truncatedLists.has(list);
+
 export class TicketApiError extends Error {
   readonly status: number;
 

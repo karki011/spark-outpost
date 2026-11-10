@@ -1,8 +1,10 @@
 import {
   MAP_AREA_FILES_LIMIT,
+  MAP_LOCATE_MAX_PATHS,
   mapAreaDetailSchema,
   mapAreaSchema,
   mapLinksSchema,
+  mapLocateSchema,
   mapNeighborsSchema,
   mapUnmatchedSchema,
   projectMapSchema,
@@ -10,6 +12,7 @@ import {
   type MapAreaDetail,
   type MapCategory,
   type MapLinks,
+  type MapLocate,
   type MapNeighbors,
   type MapUnmatched,
   type ProjectMap,
@@ -20,9 +23,12 @@ export const FIRST_PAGE = 120;
 
 export const mapKeys = {
   all: ['map'] as const,
+  projects: ['map', 'project'] as const,
   project: (projectId: string) => ['map', 'project', projectId] as const,
   area: (projectId: string, areaId: string, limit: number, version: string) =>
     ['map', 'area', projectId, areaId, limit, version] as const,
+  locate: (projectId: string, paths: readonly string[]) =>
+    ['map', 'locate', projectId, ...paths] as const,
   links: (projectIds: readonly string[]) => ['map', 'links', ...projectIds] as const,
   unmatched: (projectIds: readonly string[]) => ['map', 'unmatched', ...projectIds] as const,
   neighbors: (projectId: string, path: string, hops: number, version: string) =>
@@ -43,7 +49,24 @@ async function allPages(projectId: string, areaId: string): Promise<MapAreaDetai
   return detail;
 }
 
+async function locate(projectId: string, paths: readonly string[]): Promise<MapLocate> {
+  const batches: string[][] = [];
+  for (let start = 0; start < paths.length; start += MAP_LOCATE_MAX_PATHS) {
+    batches.push(paths.slice(start, start + MAP_LOCATE_MAX_PATHS));
+  }
+  const results = await Promise.all(
+    batches.map((batch) =>
+      request(
+        mapLocateSchema,
+        `/projects/${projectId}/map/locate?${batch.map((path) => `path=${encodeURIComponent(path)}`).join('&')}`,
+      ),
+    ),
+  );
+  return { located: results.flatMap((result) => result.located) };
+}
+
 export const mapApi = {
+  locate,
   project: (projectId: string): Promise<ProjectMap> =>
     request(projectMapSchema, `/projects/${projectId}/map`),
   page: (

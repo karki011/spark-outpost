@@ -20,6 +20,7 @@ export const outpostKeys = {
   all: ['outposts'] as const,
   list: ['outposts', 'list'] as const,
   detail: (id: string) => ['outposts', 'detail', id] as const,
+  drafts: ['outposts', 'draft'] as const,
   draft: (id: string) => ['outposts', 'draft', id] as const,
 };
 

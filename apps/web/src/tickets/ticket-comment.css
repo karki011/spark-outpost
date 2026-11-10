@@ -1,0 +1,22 @@
+.tk-comment {
+  display: grid;
+  gap: 8px;
+}
+
+.tk-comment-text {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.tk-comment-acts {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.tk .tk-move {
+  margin: -8px 0 16px;
+  max-width: 220px;
+}

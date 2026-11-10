@@ -187,6 +187,7 @@ export function toRun(row: RunRow): Run {
     errorDetails: row.error_details ?? null,
     ...(row.source === 'agent_cycle' ? { agentCycle: true } : {}),
     ...(row.source === 'pr_follow_up' ? { prFollowUp: true } : {}),
+    ...(row.source === 'ui' ? { typedByUser: true } : {}),
     ...runOutpost(row),
   };
 }

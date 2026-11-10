@@ -45,6 +45,7 @@ import { PublishResult } from './publish/PublishResult.tsx';
 import { copiedReply, splitAtPublish, turnReplies } from './publish/turn-replies.ts';
 import { shownSteps, streamLeads, viewSteps, type RunProjection } from './run-projection.ts';
 import { ErrorLine, ModelSwitchNote } from './ModelSwitchNote.tsx';
+import { retryableMessage } from './retry-turn.ts';
 import { providerName } from './provider-name.ts';
 import { useLiveReport } from './status/status-context.ts';
 import { TurnActivity } from './turn/TurnActivity.tsx';
@@ -211,6 +212,7 @@ export function SoloTurn({
       ? null
       : run.error
     : stream.error;
+  const retryTurn = finished ? retryableMessage(detail, run) : null;
   const checkpoints = finished ? turnCheckpoints(run.id, detail) : [];
   const revertible = finished
     ? [run, child].find(
@@ -386,6 +388,7 @@ export function SoloTurn({
           ),
           retryIn: isLatestTurn(detail, run.id) ? detail.conversation.id : null,
         }}
+        retry={retryTurn ? { conversationId, content: retryTurn } : null}
       />
       <TurnActivity
         run={run}

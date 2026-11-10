@@ -26,6 +26,11 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 - **Fix:** **Try again** under the turn.
 - **Still stuck:** [allow the command](answer-approvals.md#let-a-command-run-without-asking) for the project.
 
+## A turn failed
+
+- **You see:** a red error under the latest turn.
+- **Fix:** **Try again** sends your message again as a new turn. It is hidden when the message had files.
+
 ## Spark blocked a step
 
 - **You see:** "Refused" with the command and why, such as "Refused gh pr create — …", or "Declined: … (This changes .env, a secret file)".

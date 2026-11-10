@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
-import { areaForPath } from './map-model.ts';
-import { fileKey, type Scene } from './scene.ts';
+import { useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { mapApi, mapKeys } from './map-api.ts';
+import { areaKey, fileKey, type Scene } from './scene.ts';
 
 export interface Wanted {
   projectId: string;
@@ -14,30 +15,24 @@ interface Step {
   load: string[];
 }
 
-function incomplete(scene: Scene, keys: readonly string[]): string[] {
-  return keys.filter((key) => {
-    const index = scene.areaByKey.get(key);
-    return index !== undefined && !scene.areas[index]!.complete;
-  });
-}
+export type Located = ReadonlyMap<string, string | null>;
 
-export function locateStep(scene: Scene, wanted: Wanted): Step {
+export function locateStep(scene: Scene, wanted: Wanted, located: Located | undefined): Step {
   const missing = wanted.paths.filter(
     (path) => !scene.fileByKey.has(fileKey(wanted.projectId, path)),
   );
   if (missing.length === 0) return { state: 'found', load: [] };
-  const best = new Set<string>();
+  if (!located) return { state: 'looking', load: [] };
+  const keys = new Set<string>();
   for (const path of missing) {
-    const key = areaForPath(scene, wanted.projectId, path);
-    if (key) best.add(key);
+    const areaId = located.get(path);
+    if (areaId) keys.add(areaKey(wanted.projectId, areaId));
   }
-  const first = incomplete(scene, [...best]);
-  if (first.length > 0) return { state: 'looking', load: first };
-  const all = scene.areas
-    .filter((area) => area.projectId === wanted.projectId)
-    .map((area) => area.key);
-  const rest = incomplete(scene, all);
-  return rest.length > 0 ? { state: 'looking', load: rest } : { state: 'missing', load: [] };
+  const load = [...keys].filter((key) => {
+    const index = scene.areaByKey.get(key);
+    return index !== undefined && !scene.areas[index]!.complete;
+  });
+  return load.length > 0 ? { state: 'looking', load } : { state: 'missing', load: [] };
 }
 
 export function useLocate(
@@ -45,7 +40,23 @@ export function useLocate(
   wanted: Wanted | null,
   require: (keys: readonly string[]) => void,
 ): LocateState | null {
-  const step = wanted ? locateStep(scene, wanted) : null;
+  const pathsKey = wanted?.paths.join('\n') ?? '';
+  const paths = useMemo(() => (pathsKey ? pathsKey.split('\n') : []), [pathsKey]);
+  const projectId = wanted?.projectId ?? '';
+  const absent =
+    wanted !== null && paths.some((path) => !scene.fileByKey.has(fileKey(projectId, path)));
+  const query = useQuery({
+    queryKey: mapKeys.locate(projectId, paths),
+    queryFn: () => mapApi.locate(projectId, paths),
+    enabled: absent,
+    gcTime: 0,
+    retry: false,
+  });
+  const located = useMemo<Located | undefined>(() => {
+    if (query.data) return new Map(query.data.located.map((row) => [row.path, row.areaId]));
+    return query.isError ? new Map() : undefined;
+  }, [query.data, query.isError]);
+  const step = wanted ? locateStep(scene, wanted, located) : null;
   const loadKey = step?.load.join(',') ?? '';
   useEffect(() => {
     if (loadKey) require(loadKey.split(','));

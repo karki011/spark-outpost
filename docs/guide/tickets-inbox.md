@@ -20,9 +20,11 @@ First [connect a tracker](tickets-and-github.md#connect-a-ticket-tracker).
 
 Snooze hides a ticket until later. **Dismiss** clears a **Needs you** ticket until something changes.
 
-Failing checks appear under **In review / PR open**.
-
 Select a ticket for **Development**, including linked pull requests.
+
+Spark lists up to 500 Jira tickets, newest first, and says when there are more.
+
+On a Jira or Linear ticket, pick **Move to…** for a status, or type under the description and select **Comment** (⌘↩).
 
 ## Start a chat from a ticket
 
