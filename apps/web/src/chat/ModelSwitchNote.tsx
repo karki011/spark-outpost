@@ -2,6 +2,7 @@ import { modelSwitchText, type ModelSwitch } from '@spark-outpost/contracts';
 import { requestSettings } from '../settings/settings-request.ts';
 import { timedOut } from './approvals/timed-out.ts';
 import { TimedOutNote } from './approvals/TimedOutNote.tsx';
+import { RetryTurn } from './RetryTurn.tsx';
 import './composer/unusable-model.css';
 
 function ModelsLink() {
@@ -31,9 +32,10 @@ interface ErrorLineProps {
   details?: string | null | undefined;
   change?: ModelSwitch | null | undefined;
   waited?: TimedOutFacts | undefined;
+  retry?: { conversationId: string; content: string } | null | undefined;
 }
 
-export function ErrorLine({ error, details, change, waited }: ErrorLineProps) {
+export function ErrorLine({ error, details, change, waited, retry }: ErrorLineProps) {
   if (!error) return null;
   if (timedOut(error)) {
     return <TimedOutNote asked={waited?.asked ?? null} conversationId={waited?.retryIn ?? null} />;
@@ -43,6 +45,7 @@ export function ErrorLine({ error, details, change, waited }: ErrorLineProps) {
       <p className="error-line">
         {error} {change && <ModelsLink />}
       </p>
+      {retry && <RetryTurn conversationId={retry.conversationId} content={retry.content} />}
       {details && (
         <details className="error-details">
           <summary>Details from the provider</summary>
