@@ -4,6 +4,7 @@ import {
   type OutpostAnswer,
 } from '@spark-outpost/contracts';
 import { redactText } from '../audit/redact.ts';
+import { sharedWorkReads, type GitReadCache } from '../outposts/git-read-cache.ts';
 import type { PostWithFacts } from '../outposts/ports.ts';
 import { taskChanges } from '../projects/task-changes.ts';
 import { branchWork } from '../workflow/publish-step-work.ts';
@@ -39,6 +40,7 @@ export function answerCache(): AnswerCache {
 export interface AnswerOptions {
   maxChars?: number;
   cache?: AnswerCache;
+  gitReads?: GitReadCache;
 }
 
 function remembered<T>(
@@ -81,13 +83,19 @@ async function changedPaths(
   return [...new Set(files.map((file) => file.path))];
 }
 
-async function branchState(row: AnswerRow, cache: AnswerCache | undefined): Promise<BranchState> {
+async function branchState(
+  row: AnswerRow,
+  cache: AnswerCache | undefined,
+  gitReads: GitReadCache,
+): Promise<BranchState> {
   const unknown = { committed: null, pushed: null };
   const { worktree_path: root, branch, base_commit: base } = row;
   if (!root || !branch || !base || !row.owns_branch) return unknown;
   return remembered(cache?.branches, `${root}\0${branch}\0${base}`, async () => {
     try {
-      const work = await branchWork(root, branch, base);
+      const work = await gitReads.read(root, `work\0${branch}\0${base}`, () =>
+        branchWork(root, branch, base),
+      );
       return { committed: work.commits && !work.uncommitted, pushed: work.commits && work.pushed };
     } catch {
       return unknown;
@@ -164,7 +172,10 @@ async function answerOf(
     pullRequests: row.pull_requests,
     publish:
       changes.length > 0 || reason !== null
-        ? { ...(await branchState(row, options.cache)), reason }
+        ? {
+            ...(await branchState(row, options.cache, options.gitReads ?? sharedWorkReads)),
+            reason,
+          }
         : null,
   };
 }

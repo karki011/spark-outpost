@@ -34,6 +34,7 @@ import {
   setPaused,
 } from '../persistence/outposts.ts';
 import type { PeerAgent, PostWithFacts, StackGit, StoredOutpost } from '../outposts/ports.ts';
+import { cachedStackGit } from '../outposts/git-read-cache.ts';
 import { introViews } from '../outposts/intro-view.ts';
 import { joinOutpost, leaveOutpost, postToOutpost } from '../outposts/post-service.ts';
 import { toOutpostPost } from '../outposts/post-view.ts';
@@ -80,7 +81,8 @@ function conversationParam(req: Request): string {
 }
 
 export function outpostRoutes(options: OutpostRouteOptions): Router {
-  const { db, workspaceId, peer, drain, folderExists, stackGit = UNKNOWN_STACK } = options;
+  const { db, workspaceId, peer, drain, folderExists } = options;
+  const stackGit = cachedStackGit(options.stackGit ?? UNKNOWN_STACK);
   const router = Router();
   const service = { db, workspaceId, ...(folderExists ? { folderExists } : {}) };
 
