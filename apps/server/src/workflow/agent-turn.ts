@@ -2,7 +2,7 @@ import { backgroundParking } from './background-parking.ts';
 import type { ParkedTurns } from './parked-turns.ts';
 import type { RunSnapshot } from '../persistence/run-snapshots.ts';
 import { STOPPED_BY_QUIT, type RunEvent } from '@spark-outpost/contracts';
-import { sparkPreferences } from '../persistence/setup.ts';
+import { sparkPreferences, type SparkPreferences } from '../persistence/setup.ts';
 import { auditSparkHandoff } from './spark-audit.ts';
 import { liveTurn, promptWithBrowserCheck, sessionBrief } from './turn-facts.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
@@ -117,6 +117,7 @@ export interface TurnOptions {
   stopNow?: AbortSignal;
   keepSnapshot?: RunSnapshot | undefined;
   secondPrompt?: boolean;
+  prefs?: SparkPreferences;
 }
 
 export interface TurnResult {
@@ -312,7 +313,7 @@ export async function runAgentTurn(
       recordRequestUsage(deps.db, lease.runId, request, new Date());
     const { userMcp, userPlugins } = await loadTurnExtensions(deps.db, input);
     const spark = {
-      ...(await sparkPreferences(deps.db, input.workspaceId)),
+      ...(options.prefs ?? (await sparkPreferences(deps.db, input.workspaceId))),
       teammate: await sessionBrief(deps.db, input),
     };
     auditSparkHandoff(audit, input, spark.teammate);

@@ -1,3 +1,4 @@
+import type { RunChanges } from '@spark-outpost/contracts';
 import { prepareTurn } from '../compaction/prepare-turn.ts';
 import { placeChatOrStop } from '../orchestration/chat-place.ts';
 import { handToSparks } from '../orchestration/spark-handoff.ts';
@@ -7,7 +8,7 @@ import { isStoryWrapUp } from '../outposts/user-asked.ts';
 import { replyToWrapUp } from '../outposts/wrap-up-turn.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
-import { sparkPreferences } from '../persistence/setup.ts';
+import { sparkPreferences, type SparkPreferences } from '../persistence/setup.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
 import { runChanges } from '../projects/run-changes.ts';
 import { runAgentTurn, startControl, type TurnResult } from './agent-turn.ts';
@@ -25,37 +26,48 @@ import { loadRunInput, type RunInput } from './run-input.ts';
 
 type Start = Omit<ChatTurnContext, 'input'> & { hooks: ChatTurnHooks };
 
-async function readyToWork(start: Start, asked: RunInput): Promise<RunInput | null> {
+interface Ready {
+  input: RunInput;
+  prefs: SparkPreferences;
+}
+
+async function readyToWork(start: Start, asked: RunInput): Promise<Ready | null> {
   const { deps, lease, append, hooks } = start;
   const prefs = await sparkPreferences(deps.db, asked.workspaceId);
   if (prefs.instructionsNote) await planNote(append, prefs.instructionsNote);
   const input = hooks.planTurn
     ? await hooks.planTurn(deps.db, asked)
     : { ...asked, planning: plansThisTurn(asked) };
-  if (input.mode !== 'do') return input;
+  if (input.mode !== 'do') return { input, prefs };
   const placed = await placeChatOrStop(deps, input, append, true, lease);
-  return placed ? placed.input : null;
+  return placed ? { input: placed.input, prefs } : null;
 }
 
 async function afterReply(
   turn: ChatTurnContext,
   hooks: ChatTurnHooks,
   reply: TurnResult,
+  seen: { changes?: RunChanges },
 ): Promise<TurnResult> {
   if (reply.outcome !== 'succeeded') return reply;
   const { deps, lease, input } = turn;
   const result = hooks.publish ? await hooks.publish(turn, reply) : reply;
   if (!hooks.changesKept || input.mode !== 'do' || result.outcome === 'lease_lost') return result;
   const changes = await runChanges(deps.db, input.workspaceId, lease.runId, true);
+  seen.changes = changes;
   if (changes.files.length > 0) await hooks.changesKept(turn, changes.files);
   return result;
 }
 
-async function runAgentCycle(start: Start, input: RunInput): Promise<void> {
+async function runAgentCycle(
+  start: Start,
+  input: RunInput,
+  seen: { changes?: RunChanges },
+): Promise<void> {
   const { deps, lease, append, control, hooks } = start;
   const reply = await runAgentTurn(deps, lease, input, append, control);
   await keepChatFiles(deps.db, deps.chatFolders, input, lease);
-  const result = await afterReply({ deps, lease, input, append, control }, hooks, reply);
+  const result = await afterReply({ deps, lease, input, append, control }, hooks, reply, seen);
   await finishRun(append, input.identity, result, true);
 }
 
@@ -63,11 +75,12 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
   const append = runAppender(deps.db, lease);
   const control = startControl(deps, lease);
   const start = { deps, lease, append, control, hooks };
+  const seen: { changes?: RunChanges } = {};
   let input = await loadRunInput(deps.db, lease.runId);
   try {
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
     input = await withChatFolder(deps.chatFolders, input);
-    if (input.agentCycle) return await runAgentCycle(start, input);
+    if (input.agentCycle) return await runAgentCycle(start, input, seen);
     await auditOutpostRequest(deps.db, lease, input);
     input = await noteProjectMove(deps.db, input, append, deps.chatFolders);
     const placed = await placeChatOrStop(deps, input, append, false);
@@ -84,13 +97,15 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
     if (handed === 'finished') return;
     const ready = await readyToWork(start, handed);
     if (!ready) return;
-    input = ready;
-    const prompted = await withChatPrompt(deps, input);
-    const reply = await runAgentTurn(prompted, lease, input, append, control);
+    input = ready.input;
+    const prompted = await withChatPrompt(deps, input, ready.prefs);
+    const reply = await runAgentTurn(prompted, lease, input, append, control, {
+      prefs: ready.prefs,
+    });
     await keepChatFiles(deps.db, deps.chatFolders, input, lease);
     if (reply.outcome === 'succeeded') await reverted.delivered();
     const turn = { deps: prompted, lease, input, append, control };
-    const result = await afterReply(turn, hooks, reply);
+    const result = await afterReply(turn, hooks, reply, seen);
     await finishRun(append, input.identity, result, true);
   } catch (error) {
     if (error instanceof LeaseLostError || control.reason() === 'lease_lost') return;
@@ -99,7 +114,7 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
   } finally {
     control.dispose();
     if (input.mode === 'do' && !input.chatFolder) {
-      await recordKeptChanges(deps.db, input.workspaceId, lease.runId);
+      await recordKeptChanges(deps.db, input.workspaceId, lease.runId, seen.changes);
     }
   }
 }

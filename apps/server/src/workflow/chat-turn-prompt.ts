@@ -3,7 +3,7 @@ import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { storyTaskOf } from '../persistence/outpost-stories.ts';
-import { sparkPreferences } from '../persistence/setup.ts';
+import { sparkPreferences, type SparkPreferences } from '../persistence/setup.ts';
 import { currentBranch } from '../projects/chat-worktrees.ts';
 import { isGitWorkTree } from '../projects/snapshot.ts';
 import type { Provider } from '../providers/provider.ts';
@@ -36,12 +36,16 @@ async function projectFacts(db: Queryable, input: RunInput): Promise<ChatPromptP
   };
 }
 
-export async function chatPromptFacts(db: Queryable, input: RunInput): Promise<ChatPromptFacts> {
+export async function chatPromptFacts(
+  db: Queryable,
+  input: RunInput,
+  known?: SparkPreferences,
+): Promise<ChatPromptFacts> {
   const { threadId: conversationId, runId } = input.identity;
   const [project, needs, prefs, storyTask] = await Promise.all([
     projectFacts(db, input),
     outpostNeeds(db, { conversationId, runId }),
-    sparkPreferences(db, input.workspaceId),
+    known ?? sparkPreferences(db, input.workspaceId),
     storyTaskOf(db, conversationId),
   ]);
   return {
@@ -86,10 +90,11 @@ function sendingChatPrompt(provider: Provider, block: string, note: string | nul
 export async function withChatPrompt<Deps extends Pick<TurnDeps, 'db' | 'providers'>>(
   deps: Deps,
   input: RunInput,
+  prefs?: SparkPreferences,
 ): Promise<Deps> {
   const provider = deps.providers.get(input.provider);
   if (!provider || input.assistant) return deps;
-  const facts = await chatPromptFacts(deps.db, input);
+  const facts = await chatPromptFacts(deps.db, input, prefs);
   const providers = new Map(deps.providers);
   providers.set(
     input.provider,

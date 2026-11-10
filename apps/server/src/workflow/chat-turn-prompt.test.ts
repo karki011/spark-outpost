@@ -7,7 +7,8 @@ import type { RunInput } from './run-input.ts';
 vi.mock('../outposts/outpost-availability.ts', () => ({
   outpostNeeds: async () => ({ outpost: true, outpost_draft: true, outpost_start: true }),
 }));
-vi.mock('../persistence/setup.ts', () => ({ sparkPreferences: async () => ({}) }));
+const readPreferences = vi.hoisted(() => vi.fn(async () => ({})));
+vi.mock('../persistence/setup.ts', () => ({ sparkPreferences: readPreferences }));
 vi.mock('../persistence/outpost-stories.ts', () => ({ storyTaskOf: vi.fn() }));
 
 const db = {} as Queryable;
@@ -21,7 +22,17 @@ const input = {
 
 describe('chat delegation context', () => {
   beforeEach(() => {
+    readPreferences.mockClear();
     vi.mocked(storyTaskOf).mockResolvedValue(null);
+  });
+
+  it('reads the preferences itself only when it was not given them', async () => {
+    await chatPromptFacts(db, input);
+    expect(readPreferences).toHaveBeenCalledTimes(1);
+    const given = { agentInstructions: 'Prefer pnpm.' } as never;
+    const facts = await chatPromptFacts(db, input, given);
+    expect(readPreferences).toHaveBeenCalledTimes(1);
+    expect(facts.customInstructions).toBe('Prefer pnpm.');
   });
 
   it('treats an ordinary chat as a lead without requiring an Outpost', async () => {

@@ -1,6 +1,7 @@
 import {
   isTerminalRunStatus,
   runStatusSchema,
+  type RunChanges,
   type SaveFeedback,
   type TurnOutcome,
 } from '@spark-outpost/contracts';
@@ -168,11 +169,16 @@ export async function recordFeedback(
   return after!;
 }
 
-export async function captureKept(db: Queryable, workspaceId: string, runId: string) {
+export async function captureKept(
+  db: Queryable,
+  workspaceId: string,
+  runId: string,
+  known?: RunChanges,
+) {
   const turn = await loadTurn(db, workspaceId, runId);
   if (!turn || turn.reverted_at || turn.snapshot_kind !== 'git' || !turn.snapshot_root) return;
   if (turn.status !== 'succeeded') return;
-  const changes = await runChanges(db, workspaceId, runId);
+  const changes = known ?? (await runChanges(db, workspaceId, runId));
   if (changes.revertedAt || changes.files.length === 0) return;
   const root = turn.snapshot_root;
   const kept = await keptContent(root, changes.files, new Date()).catch(async (error: unknown) => {
@@ -186,8 +192,9 @@ export async function recordKeptChanges(
   db: Queryable,
   workspaceId: string,
   runId: string,
+  known?: RunChanges,
 ): Promise<void> {
-  await captureKept(db, workspaceId, runId).catch((error: unknown) =>
+  await captureKept(db, workspaceId, runId, known).catch((error: unknown) =>
     console.error(`Could not record the kept changes of run ${runId}`, error),
   );
 }

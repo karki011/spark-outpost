@@ -57,6 +57,7 @@ export interface PublishStepTurn {
 interface Publishing extends PublishStepTurn {
   reason: PublishReason;
   ship: ShipDeps;
+  changed?: Promise<boolean>;
 }
 
 function shipDeps(deps: PublishStepDeps, workspaceId: string): ShipDeps {
@@ -74,10 +75,12 @@ function shipDeps(deps: PublishStepDeps, workspaceId: string): ShipDeps {
   };
 }
 
-async function changedFiles(turn: Publishing): Promise<boolean> {
+function changedFiles(turn: Publishing): Promise<boolean> {
   const { db, workspaceId } = turn.ship;
-  const changes = await runChanges(db, workspaceId, turn.lease.runId, true);
-  return changes.files.length > 0;
+  turn.changed ??= runChanges(db, workspaceId, turn.lease.runId, true).then(
+    (changes) => changes.files.length > 0,
+  );
+  return turn.changed;
 }
 
 async function keptWithout(turn: Publishing, line: string): Promise<TurnResult> {
