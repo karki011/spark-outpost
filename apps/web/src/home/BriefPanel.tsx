@@ -1,5 +1,6 @@
 import './digest.css';
 import { useId, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence } from 'motion/react';
 import type { Digest } from '@spark-outpost/contracts';
 import { AuditDialog } from '../audit/AuditDialog.tsx';
@@ -193,15 +194,18 @@ export function BriefPanel(props: BriefPanelProps) {
       )}
       <CalendarBriefBlock now={now} />
       {brief.error && <p className="home-error">{brief.error}</p>}
-      <AnimatePresence>
-        {auditOpen && current?.conversationId && (
-          <AuditDialog
-            conversationId={current.conversationId}
-            title="Brief"
-            onClose={() => setAuditOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+      {createPortal(
+        <AnimatePresence>
+          {auditOpen && current?.conversationId && (
+            <AuditDialog
+              conversationId={current.conversationId}
+              title="Brief"
+              onClose={() => setAuditOpen(false)}
+            />
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import type { Voice } from '../spark/voice.ts';
 import { InfoTip } from '../ui/InfoTip.tsx';
 import { canRefresh, refreshHint } from './digest-model.ts';
 import { BriefPanel } from './BriefPanel.tsx';
-import { HomeCard, Quiet } from './HomeCards.tsx';
+import { HomeCard, Quiet, RowsSkeleton } from './HomeCards.tsx';
 import { ConnectHint, NeedsFeed, SORT_RULE } from './NeedsFeed.tsx';
 import type { NeedsColumn } from './board-model.ts';
 import type { BriefEntry, FeedRow } from './needs-model.ts';
@@ -11,6 +11,7 @@ import type { Brief } from './use-brief.ts';
 
 interface NeedsTodayProps {
   mode: NeedsColumn;
+  loading: boolean;
   brief: Brief;
   rows: readonly FeedRow[];
   entries: readonly BriefEntry[];
@@ -43,6 +44,13 @@ function RefreshButton({ brief, now }: { brief: Brief; now: number }) {
 export function NeedsToday(props: NeedsTodayProps) {
   const { mode, brief, rows, now } = props;
   const needs = mode === 'needs';
+  if (props.loading) {
+    return (
+      <HomeCard id="home-needs-h" title="Needs you" className="hneeds" busy>
+        <RowsSkeleton />
+      </HomeCard>
+    );
+  }
   return (
     <HomeCard
       id="home-needs-h"

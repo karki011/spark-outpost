@@ -29,7 +29,7 @@ test('shows the reconnecting screen while the server restarts, then loads the ap
   await expect(offline.getByRole('button', { name: 'Try now' })).toBeVisible();
   await expect(offline.getByRole('status')).toHaveText('Tried 1 time. Still waiting.');
 
-  await expect(page.getByRole('heading', { level: 1, name: /, Test$/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /, Test\./ })).toBeVisible();
   await expect(offline).toBeHidden();
   await expect(page.getByRole('status').filter({ hasText: 'Back online' })).toBeVisible();
   expect(setupCalls).toBe(3);
@@ -64,7 +64,7 @@ test('the crew keeps Scout company while offline and cheers when the server is b
   await offline.getByRole('button', { name: 'Try now' }).click();
   await expect(page.getByRole('heading', { name: 'Back online!' })).toBeVisible();
   await expect(page.locator('.offline-crew')).toHaveClass(/\bback\b/);
-  await expect(page.getByRole('heading', { level: 1, name: /, Test$/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /, Test\./ })).toBeVisible();
 });
 
 test('with reduced motion the crew stands still', async ({ page }) => {

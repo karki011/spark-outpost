@@ -232,6 +232,7 @@ export function Home(props: HomeProps) {
           <div className="hcol">
             <NeedsToday
               mode={needsColumn(leftover)}
+              loading={props.loading}
               brief={brief}
               rows={feedRows(leftover, now)}
               entries={entries}
