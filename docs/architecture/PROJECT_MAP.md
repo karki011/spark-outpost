@@ -164,6 +164,10 @@ Reset empties all of these (it truncates every table it finds in `information_sc
   `MAP_NEIGHBORS_MAX` (200) per side, with totals) and `impact`: direct dependents, all transitive
   dependents (recursive over `map_edges`), how many areas they sit in, and the Core areas among
   them. 404 when the file is not on the map. Areas also report `lastChangedAt`.
+- `GET /api/projects/:id/map/locate?path=<p>&path=<p>…` (1–50 repo-relative paths, each ≤ 1,024
+  characters) → `located`: for each distinct path the id of the area holding it, or `areaId: null`
+  when the file is not on the map. One query on the `map_files` primary key `(repo_id, path)`. The
+  page uses it to load only the area that holds a searched file.
 - `PUT /api/projects/:id/map/areas/:areaId/category` with `{ "category": "core" | "shared" |
 "feature" | null }` sets or clears the override.
 - `GET /api/map/links?projects=<id>,<id>[,…]` (2–8 projects) → the maps' status, file-level links

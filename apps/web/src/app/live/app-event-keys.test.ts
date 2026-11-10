@@ -30,6 +30,7 @@ const cached: Record<string, QueryKey> = {
   mapProject: ['map', 'project', A],
   mapArea: ['map', 'area', A, 'aaaaaaaaaaaa', 120],
   mapLinks: ['map', 'links', A, B],
+  mapLocate: ['map', 'locate', A, 'src/new.ts'],
   mapUnmatched: ['map', 'unmatched', A, B],
   mapNeighbors: ['map', 'neighbors', A, 'src/a.ts', 1, 'v1'],
   ticketInbox: ['tickets', 'inbox'],
@@ -132,6 +133,7 @@ describe('app event invalidation', () => {
   it('map progress refreshes the build status and the combined-map queries, not the versioned area pages', async () => {
     expect(await invalidatedBy(event('map', null))).toEqual([
       'mapLinks',
+      'mapLocate',
       'mapProject',
       'mapUnmatched',
     ]);

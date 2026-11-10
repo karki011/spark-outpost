@@ -117,28 +117,32 @@ describe('coreImpactText', () => {
 
 describe('locateStep', () => {
   const wanted = { projectId: PROJECT, paths: ['apps/server/src/tickets/store.ts'] };
+  const hit = new Map([[wanted.paths[0]!, SERVER.id]]);
 
-  it('loads the area whose folder matches first', () => {
-    const step = locateStep(buildScene(input, new Map()), wanted);
+  it('waits for the server answer before loading anything', () => {
+    const step = locateStep(buildScene(input, new Map()), wanted, undefined);
+    expect(step).toEqual({ state: 'looking', load: [] });
+  });
+
+  it('loads only the area the server names', () => {
+    const step = locateStep(buildScene(input, new Map()), wanted, hit);
     expect(step).toEqual({ state: 'looking', load: [areaKey(PROJECT, SERVER.id)] });
   });
 
-  it('widens to every area of the project when the folder guess misses', () => {
-    const odd = { projectId: PROJECT, paths: ['apps/server/src/persistence/tickets.ts'] };
-    const partial = new Map([
-      [
-        areaKey(PROJECT, SERVER.id),
-        sampleDetail({ ...SERVER, files: SERVER.files.slice(0, 1) }, EDGES),
-      ],
-    ]);
-    const step = locateStep(buildScene(input, partial), odd);
-    expect(step.load).toEqual([areaKey(PROJECT, WEB.id)]);
+  it('reports missing without loading when the server finds no area', () => {
+    const step = locateStep(
+      buildScene(input, new Map()),
+      wanted,
+      new Map([[wanted.paths[0]!, null]]),
+    );
+    expect(step).toEqual({ state: 'missing', load: [] });
   });
 
-  it('reports found and missing', () => {
-    expect(locateStep(buildScene(input, loaded), wanted).state).toBe('found');
+  it('reports found, and missing when the named area lacks the file', () => {
+    expect(locateStep(buildScene(input, loaded), wanted, undefined).state).toBe('found');
     const gone = { projectId: PROJECT, paths: ['apps/web/src/gone.ts'] };
-    expect(locateStep(buildScene(input, loaded), gone).state).toBe('missing');
+    const named = new Map([[gone.paths[0]!, WEB.id]]);
+    expect(locateStep(buildScene(input, loaded), gone, named).state).toBe('missing');
   });
 
   it('knows each file by project and path', () => {

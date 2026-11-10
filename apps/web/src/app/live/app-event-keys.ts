@@ -79,6 +79,7 @@ const outpostList: Invalidation = { queryKey: outpostKeys.list, exact: true };
 const mapProjects: Invalidation = { queryKey: mapKeys.projects };
 const mapLinks: Invalidation = { queryKey: mapKeys.links([]) };
 const mapUnmatched: Invalidation = { queryKey: mapKeys.unmatched([]) };
+const mapLocated: Invalidation = { queryKey: ['map', 'locate'] };
 
 function changedOutposts(event: AppEvent): Invalidation[] {
   if (!event.outpostId) return [outposts];
@@ -167,7 +168,7 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
     case 'outcome':
       return [...outcome(event), analytics];
     case 'map':
-      return [mapProjects, mapLinks, mapUnmatched];
+      return [mapProjects, mapLinks, mapUnmatched, mapLocated];
     case 'teammate':
       return [teammates, list];
     case 'pull_request':

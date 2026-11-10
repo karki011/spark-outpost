@@ -82,6 +82,7 @@ GET /api/map/unmatched
 GET /api/projects/:id/map
 GET /api/projects/:id/map/areas/:areaId
 GET /api/projects/:id/map/neighbors
+GET /api/projects/:id/map/locate
 PUT /api/projects/:id/map/areas/:areaId/category
 GET /api/conversations/:id/mcp
 GET /api/model-cards
