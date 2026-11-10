@@ -8,7 +8,7 @@ import {
 } from '@spark-outpost/contracts';
 import type { ToastSpec } from '../conversations/use-toast.ts';
 import { ticketId } from './ticket-model.ts';
-import { ticketKeys, ticketsApi } from './tickets-api.ts';
+import { refreshTicket, ticketsApi } from './tickets-api.ts';
 
 export interface AssignableTicket {
   source: TicketSourceId;
@@ -39,7 +39,11 @@ export function useAssign(showToast: (toast: ToastSpec) => void) {
   });
 
   const refresh = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: ticketKeys.all }),
+    (ticket: AssignableTicket) =>
+      Promise.all([
+        refreshTicket(queryClient, ticket.source, ticket.key),
+        queryClient.invalidateQueries({ queryKey: ['tickets', 'search'] }),
+      ]),
     [queryClient],
   );
 
@@ -70,7 +74,7 @@ export function useAssign(showToast: (toast: ToastSpec) => void) {
       } catch (error) {
         settle(id, (error as Error).message, true);
       }
-      await refresh();
+      await refresh(ticket);
     },
     [refresh, settle, showToast],
   );
@@ -93,7 +97,7 @@ export function useAssign(showToast: (toast: ToastSpec) => void) {
       } catch (error) {
         settle(id, (error as Error).message, false);
       }
-      await refresh();
+      await refresh(ticket);
     },
     [refresh, settle, showToast, undo],
   );

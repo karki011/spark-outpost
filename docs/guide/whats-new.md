@@ -10,6 +10,8 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                           | What to do                                                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **Try again**; unsent text is kept     | [A turn failed](trouble-runs.md#a-turn-failed).                                             |
+| Comment on and move tickets            | [Tickets](tickets-inbox.md).                                                                |
 | Relay, the follow-up Spark             | [PR follow-up](pr-follow-up.md#relay).                                                      |
 | Review bots, no round cap              | [PR follow-up](pr-follow-up.md#review-bots).                                                |
 | Ticket moves, clean PR line            | [Ship](ship-and-pull-requests.md#when-the-agent-publishes).                                 |
@@ -35,5 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Link a repo by name                    | [Repos folders](link-a-repo.md#set-your-repos-folders).                                     |
 | Custom endpoint and key header         | [Connect it](custom-endpoint.md).                                                           |
 | More Terminal agents                   | [Start one](terminals.md#start-a-terminal-session).                                         |
-| Context compacted line                 | [Long chats](compaction.md#check-how-full-the-chat-is).                                     |
-| Row ports                              | [Open them](terminals.md#open-a-shell-beside-chat).                                         |

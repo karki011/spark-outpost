@@ -14,6 +14,7 @@ import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { AssignConfirm } from './AssignConfirm.tsx';
+import { MoveMenu } from './MoveMenu.tsx';
 import { DetailResizer } from './DetailResizer.tsx';
 import { DETAIL_DEFAULT_WIDTH } from './detail-width.ts';
 import { SnoozeButton, SnoozedNote, SnoozeError, useSnooze } from './SnoozeControl.tsx';
@@ -215,6 +216,14 @@ export function TicketDetail({
             </>
           )}
         </div>
+        {ticket.source !== 'servicenow' && (
+          <MoveMenu
+            source={ticket.source}
+            ticketKey={ticket.key}
+            current={ticket.status}
+            sourceName={source}
+          />
+        )}
         {confirming && (
           <AssignConfirm ticket={ticket} onCancel={onCancelConfirm} onConfirm={onConfirm} />
         )}

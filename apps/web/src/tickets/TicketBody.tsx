@@ -7,6 +7,7 @@ import { relativeTime } from '../ui/relative-time.ts';
 import { StatusBadge } from './StatusChip.tsx';
 import { safeUrl } from './ticket-model.ts';
 import { ServiceNowNotes, VisibilityTag } from './ServiceNowNotes.tsx';
+import { TicketComment } from './TicketComment.tsx';
 import { DetailSkeleton } from './TicketsSkeleton.tsx';
 
 interface TicketBodyProps {
@@ -133,6 +134,9 @@ export function TicketBody({ view, loading, error, source }: TicketBodyProps) {
             ))}
           </ul>
         </section>
+      )}
+      {!plain && (
+        <TicketComment source={ticket.source} ticketKey={ticket.key} sourceName={source} />
       )}
       {writable && <ServiceNowNotes key={`${ticket.source}:${ticket.key}`} ticket={ticket} />}
     </>

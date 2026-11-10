@@ -6,6 +6,8 @@ import { DEV_STATUS_TIMEOUT_MS, readJiraDevelopment } from './jira-development.t
 import { JIRA_EXTRA_FIELDS, jiraExtraFieldsShape, jiraExtras } from './jira-fields.ts';
 import {
   KEY_QUERY,
+  isTruncated,
+  markTruncated,
   matchesFilter,
   SEARCH_PAGE_SIZE,
   TicketApiError,
@@ -32,6 +34,7 @@ const JIRA_PRIORITY: Record<TicketPriorityName, string> = {
 };
 const createdSchema = z.object({ key: z.string() });
 const PAGE_SIZE = 100;
+const MAX_PAGES = 5;
 const SPRINT_FIELD = 'customfield_10020';
 const SUMMARY_FIELDS = [
   'summary',
@@ -283,17 +286,36 @@ export function jiraSource(
     };
   }
 
-  async function searchIssues(jql: string, maxResults: number, action: string) {
-    const answer = await call(
-      z.object({ issues: z.array(issueSchema) }),
-      {
-        method: 'POST',
-        path: '/rest/api/3/search/jql',
-        body: { jql, fields: SUMMARY_FIELDS, maxResults },
-      },
-      action,
-    );
-    return answer.issues.map(summary);
+  const pageSchema = z.object({
+    issues: z.array(issueSchema),
+    nextPageToken: z.string().nullable().optional(),
+  });
+
+  async function searchIssues(jql: string, maxResults: number, action: string, maxPages = 1) {
+    const found: TicketSummary[] = [];
+    let pageToken: string | null = null;
+    let more = false;
+    for (let page = 0; page < maxPages; page += 1) {
+      const answer: z.infer<typeof pageSchema> = await call(
+        pageSchema,
+        {
+          method: 'POST',
+          path: '/rest/api/3/search/jql',
+          body: {
+            jql,
+            fields: SUMMARY_FIELDS,
+            maxResults,
+            ...(pageToken ? { nextPageToken: pageToken } : {}),
+          },
+        },
+        action,
+      );
+      found.push(...answer.issues.map(summary));
+      pageToken = answer.nextPageToken || null;
+      more = pageToken !== null;
+      if (!pageToken || answer.issues.length === 0) break;
+    }
+    return markTruncated(found, more);
   }
 
   return {
@@ -307,8 +329,16 @@ export function jiraSource(
       return { id: me.accountId, name: me.emailAddress ?? me.displayName };
     },
     async listAssigned(filter) {
-      const found = await searchIssues(assignedJql(filter), PAGE_SIZE, 'listing your tickets');
-      return found.filter((ticket) => matchesFilter(ticket, filter));
+      const found = await searchIssues(
+        assignedJql(filter),
+        PAGE_SIZE,
+        'listing your tickets',
+        MAX_PAGES,
+      );
+      return markTruncated(
+        found.filter((ticket) => matchesFilter(ticket, filter)),
+        isTruncated(found),
+      );
     },
     async search(filter) {
       return searchIssues(searchJql(filter), SEARCH_PAGE_SIZE, 'searching tickets');

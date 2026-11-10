@@ -7,6 +7,7 @@ import {
   ticketInboxSchema,
   ticketMoveOptionsSchema,
   ticketSearchSchema,
+  ticketSyncSchema,
   ticketViewSchema,
   type AssignTicketRequest,
   type AssignTicketResponse,
@@ -18,6 +19,8 @@ import {
   type StartTicketResponse,
   type TicketConnections,
   type TicketInbox,
+  type TicketStatus,
+  type TicketSync,
   type TicketMoveOptions,
   type TicketSearch,
   type TicketSearchQuery,
@@ -26,6 +29,7 @@ import {
   type UpdateAttentionSettings,
   type UpdateTicketSettingsRequest,
 } from '@spark-outpost/contracts';
+import type { QueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { request } from '../api/client.ts';
 
@@ -48,6 +52,17 @@ export const ticketKeys = {
   search: (query: TicketSearchQuery) => ['tickets', 'search', query] as const,
   view: (source: TicketSourceId, key: string) => ['tickets', 'view', source, key] as const,
 };
+
+export function refreshTicket(
+  queryClient: QueryClient,
+  source: TicketSourceId,
+  key: string,
+): Promise<unknown> {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: ticketKeys.inbox }),
+    queryClient.invalidateQueries({ queryKey: ticketKeys.view(source, key) }),
+  ]);
+}
 
 const ticketPath = (source: TicketSourceId, key: string) =>
   `/tickets/${source}/${encodeURIComponent(key)}`;
@@ -96,6 +111,11 @@ export const ticketsApi = {
     request(z.object({ ok: z.boolean() }), `${ticketPath(source, key)}/comments`, {
       method: 'POST',
       body: JSON.stringify(body),
+    }),
+  transition: (source: TicketSourceId, key: string, status: TicketStatus): Promise<TicketSync> =>
+    request(ticketSyncSchema, `${ticketPath(source, key)}/transition`, {
+      method: 'POST',
+      body: JSON.stringify({ status }),
     }),
   assign: (
     source: TicketSourceId,

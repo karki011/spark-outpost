@@ -202,6 +202,7 @@ export const ticketInboxSchema = z.object({
   tickets: z.array(inboxTicketSchema),
   errors: z.array(ticketSourceProblemSchema),
   sources: z.array(ticketSourceIdSchema),
+  truncated: z.array(ticketSourceIdSchema).optional(),
   syncedAt: z.string(),
   settings: attentionSettingsSchema,
 });
