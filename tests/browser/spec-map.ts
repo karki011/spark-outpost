@@ -179,6 +179,7 @@ export const SPEC_GROUPS = {
     'ticket-chat',
     'ticket-start',
     'tickets',
+    'tickets-actions',
     'tickets-detail',
     'tickets-development',
     'tickets-flow',
