@@ -47,6 +47,7 @@ const outpostPaths = {
   posts: (id: string) => `/outposts/${id}/posts`,
   cancelPost: (id: string, postId: string) => `/outposts/${id}/posts/${postId}/cancel`,
   startNow: (id: string, postId: string) => `/outposts/${id}/posts/${postId}/start-now`,
+  pin: (id: string, postId: string) => `/outposts/${id}/posts/${postId}/pin`,
   draft: (id: string) => `/outposts/drafts/${id}`,
   suggestions: (id: string) => `/outposts/${id}/suggestions`,
   library: (id: string) => `/outposts/${id}/library`,
@@ -91,6 +92,8 @@ export const outpostsApi = {
     changed(outpostPaths.cancelPost(id, postId), { method: 'POST', body: '{}' }),
   startNow: (id: string, postId: string): Promise<OutpostDetail> =>
     changed(outpostPaths.startNow(id, postId), { method: 'POST', body: '{}' }),
+  pinPost: (id: string, postId: string, pinned: boolean): Promise<OutpostDetail> =>
+    changed(outpostPaths.pin(id, postId), { method: 'POST', body: JSON.stringify({ pinned }) }),
   getDraft: (id: string): Promise<ProposedDraft> =>
     request(proposedDraftSchema, outpostPaths.draft(id)),
   startDraft: (id: string): Promise<StartDraftResponse> =>

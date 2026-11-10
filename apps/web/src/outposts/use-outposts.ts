@@ -133,6 +133,16 @@ export function useCancel(id: string) {
   });
 }
 
+export function usePin(id: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ postId, pinned }: { postId: string; pinned: boolean }) =>
+      outpostsApi.pinPost(id, postId, pinned),
+    onSuccess: (detail) => keep(client, detail),
+    onError: () => client.invalidateQueries({ queryKey: outpostKeys.detail(id) }),
+  });
+}
+
 export function useStartNow(id: string) {
   const client = useQueryClient();
   return useMutation({

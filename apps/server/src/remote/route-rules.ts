@@ -118,6 +118,7 @@ PATCH /api/outposts/:id
 POST /api/outposts/:id/posts
 POST /api/outposts/:id/posts/:postId/cancel
 POST /api/outposts/:id/posts/:postId/start-now
+POST /api/outposts/:id/posts/:postId/pin
 POST /api/outposts/drafts/:id/start
 GET /api/conversations
 GET /api/conversations/:id

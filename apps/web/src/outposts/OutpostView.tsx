@@ -37,6 +37,7 @@ import {
   useDeleteOutpost,
   useOutpost,
   usePause,
+  usePin,
   usePost,
   useSaveInstructions,
   useSaveOutpost,
@@ -117,6 +118,7 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
   const post = usePost(id);
   const answer = useAnswer(id);
   const cancel = useCancel(id);
+  const pin = usePin(id);
   const startNow = useStartNow(id);
   const pause = usePause(id);
   const save = useSaveOutpost(id);
@@ -173,6 +175,9 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
       toConversationId: failed.toConversationId,
     });
   });
+  const onPin = useStableCallback((postId: string, pinned: boolean) =>
+    pin.mutate({ postId, pinned }),
+  );
   const onStartNow = useStableCallback((postId: string) => startNow.mutate(postId));
 
   const send = async (target: ComposerTarget, text: string, messageId: string) => {
@@ -243,6 +248,7 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
         onCancel={onCancel}
         onStartNow={onStartNow}
         onRetry={onRetry}
+        onPin={onPin}
       />
       <OutpostComposer
         members={members}

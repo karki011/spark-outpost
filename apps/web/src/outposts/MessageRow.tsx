@@ -13,6 +13,7 @@ interface MessageRowProps {
   targets?: readonly string[] | undefined;
   body: string;
   createdAt: string;
+  onPin?: ((postId: string, pinned: boolean) => void) | undefined;
   children?: ReactNode;
 }
 
@@ -32,7 +33,15 @@ function SenderFace({ post }: { post: OutpostPost }) {
   );
 }
 
-function MessageRowView({ post, anchor, targets, body, createdAt, children }: MessageRowProps) {
+function MessageRowView({
+  post,
+  anchor,
+  targets,
+  body,
+  createdAt,
+  onPin,
+  children,
+}: MessageRowProps) {
   const note = requestNote(post);
   const what = post.kind === 'note' ? 'note' : 'request';
   return (
@@ -56,6 +65,17 @@ function MessageRowView({ post, anchor, targets, body, createdAt, children }: Me
               <PinIcon />
               Pinned
             </span>
+          )}
+          {onPin && post.kind === 'note' && (
+            <button
+              type="button"
+              className="btn sm line op-pin-btn"
+              aria-pressed={post.pinnedAt !== null}
+              aria-label={post.pinnedAt ? 'Unpin note' : 'Pin note'}
+              onClick={() => onPin(post.id, post.pinnedAt === null)}
+            >
+              {post.pinnedAt ? 'Unpin' : 'Pin'}
+            </button>
           )}
         </div>
         <PostText text={body} what={what} />
@@ -84,6 +104,7 @@ export const MessageRow = memo(
     before.post === after.post &&
     before.anchor === after.anchor &&
     before.body === after.body &&
+    before.onPin === after.onPin &&
     before.createdAt === after.createdAt &&
     sameTargets(before.targets, after.targets),
 );

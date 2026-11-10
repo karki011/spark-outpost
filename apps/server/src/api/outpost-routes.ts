@@ -5,6 +5,7 @@ import {
   createPostRequestSchema,
   needsYouCount,
   outpostInstructionsRequestSchema,
+  pinPostRequestSchema,
   stackedCount,
   updateOutpostRequestSchema,
   type ChatDraft,
@@ -23,7 +24,13 @@ import { requestsExchanges } from '../persistence/outpost-exchanges.ts';
 import { outpostLibrary } from '../persistence/outpost-library.ts';
 import { needsYouCounts } from '../persistence/outpost-needs-you.ts';
 import { answerCache, requestAnswers } from '../persistence/outpost-answers.ts';
-import { cancelUnsent, getPost, listPosts, releaseHold } from '../persistence/outpost-posts.ts';
+import {
+  cancelUnsent,
+  getPost,
+  listPosts,
+  releaseHold,
+  setPinned,
+} from '../persistence/outpost-posts.ts';
 import { storiesOf } from '../persistence/outpost-stories.ts';
 import {
   deleteOutpost,
@@ -54,6 +61,7 @@ import { paramId, parseBody } from './validation.ts';
 
 export const POST_NOT_FOUND = 'That post does not exist. It may have been deleted.';
 export const ONLY_REQUESTS_CANCEL = 'Only a request can be cancelled.';
+export const ONLY_NOTES_PIN = 'Only a note can be pinned.';
 export const ONLY_REQUESTS_START = 'Only a request can be started.';
 export const REQUEST_FINISHED = 'That request has already finished.';
 export const CANCEL_UNAVAILABLE = 'That request could not be cancelled. Try again.';
@@ -313,6 +321,18 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
     const postId = paramId(req, 'postId');
     await openRequest(outpostId, postId, ONLY_REQUESTS_START);
     if (await releaseHold(db, postId)) await notifyOutpostChanged(db, outpostId);
+    res.json(await detail(outpostId));
+  });
+
+  router.post('/outposts/:id/posts/:postId/pin', async (req, res) => {
+    const outpostId = paramId(req);
+    const postId = paramId(req, 'postId');
+    const { pinned } = parseBody(pinPostRequestSchema, req);
+    await known(outpostId);
+    const found = await getPost(db, postId);
+    if (!found || found.post.outpostId !== outpostId) throw new OutpostError(404, POST_NOT_FOUND);
+    if (found.post.kind !== 'note') throw new OutpostError(409, ONLY_NOTES_PIN);
+    await setPinned(db, postId, pinned);
     res.json(await detail(outpostId));
   });
 
