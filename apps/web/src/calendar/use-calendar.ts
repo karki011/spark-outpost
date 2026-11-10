@@ -43,10 +43,14 @@ export function useCalendarStatus(refetchInterval: number | false = false) {
   return query;
 }
 
-export function useCalendarState(): { state: TodayState | null; status: CalendarStatus | null } {
+export function useCalendarState(): {
+  state: TodayState | null;
+  status: CalendarStatus | null;
+  failed: boolean;
+} {
   const status = useCalendarStatus();
   const data = status.data ?? null;
-  return { state: data ? todayState(data) : null, status: data };
+  return { state: data ? todayState(data) : null, status: data, failed: status.isError };
 }
 
 export function useCalendarNow(enabled: boolean) {

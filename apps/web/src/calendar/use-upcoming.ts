@@ -16,7 +16,7 @@ const NONE: readonly CalendarEvent[] = [];
 
 export function useUpcoming(now: number): Upcoming {
   const { remote } = useRemoteClient();
-  const { state } = useCalendarState();
+  const { state, failed } = useCalendarState();
   const ready = !remote && state === 'ready';
   const query = useCalendarNow(ready);
   const calendars = useMemo(
@@ -34,7 +34,7 @@ export function useUpcoming(now: number): Upcoming {
     [query.data, now, clock],
   );
   return {
-    pending: !remote && (state === null || (ready && !query.data)),
+    pending: !remote && ((state === null && !failed) || (ready && !query.data && !query.isError)),
     available: ready && query.data !== undefined,
     events,
     calendars,
