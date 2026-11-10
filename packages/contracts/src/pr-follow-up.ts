@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ticketSourceIdSchema, ticketSyncSchema } from './tickets.ts';
+import { roundOutcomeSchema } from './relay.ts';
 
 export const PR_FOLLOW_UP_BOTS_MAX = 50;
 const GITHUB_LOGIN = /^[a-z0-9](?:[a-z0-9-]{0,38})(?:\[bot\])?$/;
@@ -182,6 +183,7 @@ export const prWatchSchema = z.object({
   details: prDetailsSchema,
   ticketSync: z.array(prTicketSyncSchema),
   clean: z.boolean(),
+  roundOutcomes: z.array(roundOutcomeSchema).optional(),
 });
 export type PrWatch = z.infer<typeof prWatchSchema>;
 

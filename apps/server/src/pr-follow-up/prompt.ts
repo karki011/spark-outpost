@@ -68,6 +68,11 @@ export function branchUpdateLine(target: RoundTarget): string | null {
   return `${said} ${base}. Update it by merging: \`git fetch ${remote} ${base}\`, then \`git merge ${remote}/${base}\`, resolve any conflicts and commit the merge. Never rebase or force push. If you can't resolve a conflict safely, run \`git merge --abort\` and say which files conflict in your summary, in a line starting "Needs you:".`;
 }
 
+function branchReason(target: RoundTarget): string {
+  const how = target.mergeState === 'dirty' ? 'has merge conflicts with' : 'is behind';
+  return `PR #${target.number} ${how} ${target.base ?? 'its base'}`;
+}
+
 const COPILOT_REVIEWER = 'copilot-pull-request-reviewer[bot]';
 
 function requestable(name: string): boolean {
@@ -91,12 +96,16 @@ export function whyLine(target: RoundTarget, items: readonly StoredFeedback[]): 
     comments > 0
       ? `${comments} review ${comments === 1 ? 'item' : 'items'} arrived on PR #${target.number}`
       : null,
+    branchUpdateLine(target) ? branchReason(target) : null,
   ].filter(Boolean);
   return `Spark: ${reasons.join(' and ')}, so I asked this chat to look. This message was sent by Spark, not typed by you; stop the turn like any other.`;
 }
 
 export const JUDGE_RULE =
   "Judge each item on its merits against the task and this codebase before acting; a reviewer or a bot can be wrong. Fix what is right. Push back, with a short, polite, specific reason, on what is wrong, out of scope, or a matter of taste this project's conventions already settle. For a failing check, fix a failure your change caused; when it also fails on the base branch or is infrastructure flakiness, say so instead of changing unrelated code. Leave for the user anything that changes the scope of the task, is security-sensitive, repeats a request you already pushed back on, or would need a change to CI workflows, hook configuration, secrets or other protected files.";
+
+const BRANCH_ONLY_TAIL =
+  'No review feedback or failing check came with this round: only update the branch. When you finish, end with one short summary for the user: whether the merge went through, and anything left for them.';
 
 export function roundPrompt(target: RoundTarget, items: readonly StoredFeedback[]): string {
   const head = [
@@ -128,6 +137,7 @@ export function roundPrompt(target: RoundTarget, items: readonly StoredFeedback[
     blocks.push(block);
     used += block.length + 2;
   }
+  if (items.length === 0) return `${head}\n\n${BRANCH_ONLY_TAIL}`;
   return `${head}\n\n<${DATA_TAG}>\n${blocks.join('\n\n')}\n</${DATA_TAG}>\n\n${tail}`;
 }
 

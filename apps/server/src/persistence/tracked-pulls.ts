@@ -7,10 +7,12 @@ import {
   type PrReview,
   type PrTicketSync,
   type PrWatchPhase,
+  type RoundOutcome,
 } from '@spark-outpost/contracts';
 import { parseDetails, type StoredDetails } from '../pr-tracking/details.ts';
 import type { Queryable } from './db.ts';
 import { newId } from './ids.ts';
+import { roundOutcomesOf } from './relay.ts';
 
 export const WATCHING_LINE = 'Watching checks and reviews.';
 export const TRACKING_LINE = 'Tracking checks and reviews.';
@@ -72,6 +74,8 @@ export interface TrackedPull extends PullAddress {
   requested: boolean;
   knownReviewers: string[];
   quietHead: string | null;
+  mergeRoundFor: string | null;
+  roundOutcomes: RoundOutcome[];
   intervalSeconds: number;
   nextPollAt: Date;
   lastPolledAt: Date | null;
@@ -121,6 +125,8 @@ export interface PullRow {
   requested: boolean;
   known_reviewers: string[];
   quiet_head: string | null;
+  merge_round_for: string | null;
+  round_outcomes: unknown;
   interval_seconds: number;
   next_poll_at: Date;
   last_polled_at: Date | null;
@@ -176,6 +182,8 @@ export function toTrackedPull(row: PullRow): TrackedPull {
     requested: row.requested,
     knownReviewers: row.known_reviewers,
     quietHead: row.quiet_head,
+    mergeRoundFor: row.merge_round_for,
+    roundOutcomes: roundOutcomesOf(row.round_outcomes),
     intervalSeconds: row.interval_seconds,
     nextPollAt: row.next_poll_at,
     lastPolledAt: row.last_polled_at,
@@ -291,7 +299,7 @@ export async function savePull(db: Queryable, pull: TrackedPull): Promise<void> 
        title = $16, branch = $17, base = $18, failing_checks = $19, review = $20,
        status_reason = $21, follow_up = $22, details = $23, poll_problem = $24, additions = $25,
        deletions = $26, refresh_requested = $27, clean_head_sha = $28, clean_since = $29,
-       known_reviewers = $30, quiet_head = $31,
+       known_reviewers = $30, quiet_head = $31, merge_round_for = $32,
        updated_at = now()
      WHERE id = $1`,
     [
@@ -326,6 +334,7 @@ export async function savePull(db: Queryable, pull: TrackedPull): Promise<void> 
       pull.cleanSince,
       pull.knownReviewers,
       pull.quietHead,
+      pull.mergeRoundFor,
     ],
   );
 }

@@ -40,6 +40,8 @@ import { afterDecision, finishRound, startRound, type PullBranch } from './round
 import {
   BUSY_INTERVAL_SECONDS,
   MAX_INTERVAL_SECONDS,
+  mergeRoundDue,
+  mergeRoundKey,
   nextInterval,
   newSourceKeys,
   PAUSED_LINE,
@@ -147,9 +149,16 @@ function idleLine(waiting: number): string {
   return `${items}. ${WATCHING_LINE}`;
 }
 
-async function decideNext(deps: FollowUpDeps, watch: Watch, branch: PullBranch): Promise<Watch> {
+async function decideNext(
+  deps: FollowUpDeps,
+  watch: Watch,
+  branch: PullBranch,
+  asks: boolean,
+): Promise<Watch> {
   const queued = await feedbackFor(deps.db, watch.id, ['queued']);
-  const decision = roundDecision(watch.quietHead !== null, queued.length, watch.requested);
+  const key = mergeRoundKey(branch.mergeState, watch.headSha, branch.base);
+  const merges = mergeRoundDue(key, watch.mergeRoundFor, asks) ? 1 : 0;
+  const decision = roundDecision(watch.quietHead !== null, queued.length + merges, watch.requested);
   if (decision === 'start' && (await sparkPaused(deps.db, watch.workspaceId))) {
     return { ...watch, phase: 'watching', doing: PAUSED_LINE };
   }
@@ -184,7 +193,7 @@ async function follow(
   const added = await ingest(deps, seen, connection, settings, facts);
   const quietHead = stillQuiet(seen.quietHead, seen.headSha, added);
   const branch = { base: seen.base, mergeState: facts.mergeState };
-  const next = await decideNext(deps, { ...seen, quietHead }, branch);
+  const next = await decideNext(deps, { ...seen, quietHead }, branch, settings.ask);
   return {
     ...next,
     intervalSeconds: nextInterval(watch.intervalSeconds, added > 0 || pending(next)),

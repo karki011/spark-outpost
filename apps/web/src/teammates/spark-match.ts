@@ -5,6 +5,7 @@ export interface MatchableSpark {
   name: string;
   role: string;
   instructions: string;
+  kind?: string | undefined;
 }
 
 const CONCEPT_WORDS: Record<string, readonly string[]> = {
@@ -134,6 +135,7 @@ export function suggestSpark<T extends MatchableSpark>(
   if (words.length < MIN_DRAFT_WORDS) return null;
   let best: { spark: T; scored: Scored } | null = null;
   for (const spark of sparks) {
+    if (spark.kind) continue;
     const scored = scoreSpark(text, words, spark);
     if (scored.score < SUGGEST_AT) continue;
     const better =

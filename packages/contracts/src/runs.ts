@@ -79,6 +79,7 @@ export const runSchema = z.object({
   modelSwitch: modelSwitchSchema.nullable().optional(),
   errorDetails: z.string().nullable().optional(),
   agentCycle: z.boolean().optional(),
+  prFollowUp: z.boolean().optional(),
   outpost: z
     .object({
       postId: z.uuid(),

@@ -1,0 +1,96 @@
+.tm-relay:has(.relay-pulls) {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+}
+
+.tm-relay:has(.relay-pulls) .tm-open {
+  flex: 0 0 168px;
+}
+
+.relay-pulls {
+  display: flex;
+  flex: 1 1 240px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 44px 10px 0;
+  list-style: none;
+}
+
+.relay-pull {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  text-align: left;
+}
+
+.relay-pull:hover {
+  background: var(--raise);
+}
+
+.relay-pull:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.relay-pull-number {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.relay-pull-chat {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relay-pull-state {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.relay-pull-state svg {
+  width: 13px;
+  height: 13px;
+}
+
+.relay-pull-state.round {
+  color: var(--accent);
+}
+
+.relay-pull-state.needs_you {
+  color: var(--warn);
+}
+
+.relay-pull-state.clean {
+  color: var(--success);
+}
+
+@media (max-width: 560px) {
+  .tm-relay:has(.relay-pulls) .tm-open {
+    flex-basis: 100%;
+    min-height: 0;
+  }
+
+  .relay-pulls {
+    padding: 0 8px 10px;
+  }
+
+  .relay-pull {
+    min-height: 44px;
+  }
+}

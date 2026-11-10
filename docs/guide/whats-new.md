@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                           | What to do                                                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Relay, the follow-up Spark             | [PR follow-up](pr-follow-up.md#relay).                                                      |
 | Review bots, no round cap              | [PR follow-up](pr-follow-up.md#review-bots).                                                |
 | Ticket moves, clean PR line            | [Ship](ship-and-pull-requests.md#when-the-agent-publishes).                                 |
 | Shell variables for agents             | [Details](privacy-and-secrets.md#what-agents-cant-reach).                                   |
@@ -36,4 +37,3 @@ summary: What changed in recent releases and what to do next.
 | More Terminal agents                   | [Start one](terminals.md#start-a-terminal-session).                                         |
 | Context compacted line                 | [Long chats](compaction.md#check-how-full-the-chat-is).                                     |
 | Row ports                              | [Open them](terminals.md#open-a-shell-beside-chat).                                         |
-| Public beta, macOS 13+                 | [Get started](getting-started.md).                                                          |

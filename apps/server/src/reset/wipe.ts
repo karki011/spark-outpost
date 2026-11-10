@@ -1,5 +1,6 @@
 import { seedModelStats } from '../model-cards/ingest.ts';
 import type { Db, Queryable } from '../persistence/db.ts';
+import { seedRelay } from '../persistence/relay.ts';
 import { truncateTables } from '../persistence/truncate.ts';
 
 const KEPT_TABLE = 'schema_migrations';
@@ -29,6 +30,7 @@ export async function wipeAppData(db: Db, workspaceId: string): Promise<void> {
         workspace.name,
       ]);
       await seedModelStats(client);
+      await seedRelay(client, workspaceId);
     },
   });
 }
