@@ -24,7 +24,11 @@ export function MoveMenu({ source, ticketKey, current, sourceName }: MoveMenuPro
   const move = useMutation({
     mutationFn: (status: TicketStatus) => ticketsApi.transition(source, ticketKey, status),
     onSuccess: async (sync) => {
-      setNote(sync.outcome === 'succeeded' ? null : sync.message);
+      setNote(
+        sync.outcome === 'succeeded'
+          ? null
+          : (sync.message ?? `Couldn't move ${ticketKey} in ${sourceName}.`),
+      );
       if (sync.outcome === 'succeeded') await refreshTicket(queryClient, source, ticketKey);
     },
   });

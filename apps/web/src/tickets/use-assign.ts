@@ -39,11 +39,7 @@ export function useAssign(showToast: (toast: ToastSpec) => void) {
   });
 
   const refresh = useCallback(
-    (ticket: AssignableTicket) =>
-      Promise.all([
-        refreshTicket(queryClient, ticket.source, ticket.key),
-        queryClient.invalidateQueries({ queryKey: ['tickets', 'search'] }),
-      ]),
+    (ticket: AssignableTicket) => refreshTicket(queryClient, ticket.source, ticket.key),
     [queryClient],
   );
 

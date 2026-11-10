@@ -42,6 +42,7 @@ const cached: Record<string, QueryKey> = {
   outpostList: ['outposts', 'list'],
   outpostDetail: ['outposts', 'detail', A],
   otherOutpostDetail: ['outposts', 'detail', B],
+  outpostDraft: ['outposts', 'draft', B],
   draftsA: ['conversations', A, 'outpost-drafts'],
   terminalRemoteA: ['terminal-remote', A],
   terminalRemoteB: ['terminal-remote', B],
@@ -84,6 +85,7 @@ describe('app event invalidation', () => {
         'outcome',
         'otherOutpostDetail',
         'outpostDetail',
+        'outpostDraft',
         'outpostList',
         'previewA',
         'spendToday',
@@ -109,6 +111,7 @@ describe('app event invalidation', () => {
       'list',
       'otherOutpostDetail',
       'outpostDetail',
+      'outpostDraft',
       'outpostList',
     ]);
   });
@@ -117,6 +120,7 @@ describe('app event invalidation', () => {
     expect(await invalidatedBy({ ...event('outpost_changed', null), outpostId: A })).toEqual([
       'list',
       'outpostDetail',
+      'outpostDraft',
       'outpostList',
     ]);
   });
@@ -126,6 +130,7 @@ describe('app event invalidation', () => {
       'draftsA',
       'list',
       'otherOutpostDetail',
+      'outpostDraft',
       'outpostList',
     ]);
   });
@@ -197,6 +202,7 @@ describe('app event invalidation', () => {
       'list',
       'otherOutpostDetail',
       'outpostDetail',
+      'outpostDraft',
       'outpostList',
       'task',
       'today',

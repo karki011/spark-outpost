@@ -36,6 +36,7 @@ describe('TicketComment', () => {
     expect(invalidatedKeys(invalidate)).toEqual([
       ticketKeys.inbox,
       ticketKeys.view('jira', 'WEB-1'),
+      ticketKeys.searches,
     ]);
   });
 
@@ -93,6 +94,7 @@ describe('MoveMenu', () => {
       expect(invalidatedKeys(invalidate)).toEqual([
         ticketKeys.inbox,
         ticketKeys.view('linear', 'ENG-4'),
+        ticketKeys.searches,
       ]),
     );
   });

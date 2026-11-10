@@ -49,6 +49,7 @@ export const ticketKeys = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
+  searches: ['tickets', 'search'] as const,
   search: (query: TicketSearchQuery) => ['tickets', 'search', query] as const,
   view: (source: TicketSourceId, key: string) => ['tickets', 'view', source, key] as const,
 };
@@ -61,6 +62,7 @@ export function refreshTicket(
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: ticketKeys.inbox }),
     queryClient.invalidateQueries({ queryKey: ticketKeys.view(source, key) }),
+    queryClient.invalidateQueries({ queryKey: ticketKeys.searches }),
   ]);
 }
 

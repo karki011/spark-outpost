@@ -76,6 +76,7 @@ const ticketInbox: Invalidation = { queryKey: ticketKeys.inbox, exact: true };
 const ticketConnections: Invalidation = { queryKey: ticketKeys.connections, exact: true };
 const outposts: Invalidation = { queryKey: outpostKeys.all };
 const outpostList: Invalidation = { queryKey: outpostKeys.list, exact: true };
+const outpostDrafts: Invalidation = { queryKey: outpostKeys.drafts };
 const mapProjects: Invalidation = { queryKey: mapKeys.projects };
 const mapLinks: Invalidation = { queryKey: mapKeys.links([]) };
 const mapUnmatched: Invalidation = { queryKey: mapKeys.unmatched([]) };
@@ -83,7 +84,11 @@ const mapLocated: Invalidation = { queryKey: ['map', 'locate'] };
 
 function changedOutposts(event: AppEvent): Invalidation[] {
   if (!event.outpostId) return [outposts];
-  return [{ queryKey: outpostKeys.detail(event.outpostId), exact: true }, outpostList];
+  return [
+    { queryKey: outpostKeys.detail(event.outpostId), exact: true },
+    outpostList,
+    outpostDrafts,
+  ];
 }
 
 function conversationScoped(event: AppEvent, withAudit: boolean): Invalidation[] {
