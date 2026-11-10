@@ -75,6 +75,15 @@ const teammates: Invalidation = { queryKey: teammateKeys.all };
 const ticketInbox: Invalidation = { queryKey: ticketKeys.inbox, exact: true };
 const ticketConnections: Invalidation = { queryKey: ticketKeys.connections, exact: true };
 const outposts: Invalidation = { queryKey: outpostKeys.all };
+const outpostList: Invalidation = { queryKey: outpostKeys.list, exact: true };
+const mapProjects: Invalidation = { queryKey: mapKeys.projects };
+const mapLinks: Invalidation = { queryKey: mapKeys.links([]) };
+const mapUnmatched: Invalidation = { queryKey: mapKeys.unmatched([]) };
+
+function changedOutposts(event: AppEvent): Invalidation[] {
+  if (!event.outpostId) return [outposts];
+  return [{ queryKey: outpostKeys.detail(event.outpostId), exact: true }, outpostList];
+}
 
 function conversationScoped(event: AppEvent, withAudit: boolean): Invalidation[] {
   const id = event.conversationId;
@@ -158,7 +167,7 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
     case 'outcome':
       return [...outcome(event), analytics];
     case 'map':
-      return [{ queryKey: mapKeys.all }];
+      return [mapProjects, mapLinks, mapUnmatched];
     case 'teammate':
       return [teammates, list];
     case 'pull_request':
@@ -175,9 +184,13 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
     case 'preview':
       return [{ queryKey: previewKeys.all }];
     case 'outpost_changed':
-      return event.conversationId
-        ? [list, outposts, { queryKey: chatDraftsKey(event.conversationId), exact: true }]
-        : [list, outposts];
+      return [
+        list,
+        ...changedOutposts(event),
+        ...(event.conversationId
+          ? [{ queryKey: chatDraftsKey(event.conversationId), exact: true }]
+          : []),
+      ];
     case 'agent_terminal':
       return event.conversationId
         ? [{ queryKey: agentTerminalKeys.chat(event.conversationId), exact: true }]

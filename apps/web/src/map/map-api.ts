@@ -20,6 +20,7 @@ export const FIRST_PAGE = 120;
 
 export const mapKeys = {
   all: ['map'] as const,
+  projects: ['map', 'project'] as const,
   project: (projectId: string) => ['map', 'project', projectId] as const,
   area: (projectId: string, areaId: string, limit: number, version: string) =>
     ['map', 'area', projectId, areaId, limit, version] as const,
