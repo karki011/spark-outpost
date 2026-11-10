@@ -18,6 +18,7 @@ import {
 import type { Db } from '../persistence/db.ts';
 import { draftsOfChat, getDraft } from '../persistence/outpost-drafts.ts';
 import { requestsExchanges } from '../persistence/outpost-exchanges.ts';
+import { needsYouCounts } from '../persistence/outpost-needs-you.ts';
 import { answerCache, requestAnswers } from '../persistence/outpost-answers.ts';
 import { cancelUnsent, getPost, listPosts, releaseHold } from '../persistence/outpost-posts.ts';
 import { storiesOf } from '../persistence/outpost-stories.ts';
@@ -110,11 +111,6 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
     return { outpost: { ...outpost, needsYou: needsYouCount(posts) }, posts, stories };
   };
 
-  const counted = async (outpost: StoredOutpost): Promise<Outpost> => {
-    const posts = (await listPosts(db, outpost.id)).map((post) => toOutpostPost(post, null));
-    return { ...outpost, needsYou: needsYouCount(posts) };
-  };
-
   const openRequest = async (
     outpostId: string,
     postId: string,
@@ -148,9 +144,14 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
   };
 
   router.get('/outposts', async (_req, res) => {
-    const outposts: Outpost[] = await Promise.all(
-      (await listOutposts(db, workspaceId)).map(counted),
-    );
+    const [stored, counts] = await Promise.all([
+      listOutposts(db, workspaceId),
+      needsYouCounts(db, workspaceId),
+    ]);
+    const outposts: Outpost[] = stored.map((outpost) => ({
+      ...outpost,
+      needsYou: counts.get(outpost.id) ?? 0,
+    }));
     res.json(outposts);
   });
 
