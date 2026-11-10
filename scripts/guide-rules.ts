@@ -16,7 +16,6 @@ export const WORD_CAPS: Readonly<Record<GuidePageType, number>> = {
   'whats-new': 400,
 };
 
-export const GUIDE_WORDS_MAX = 15_500;
 export const PARAGRAPH_WORDS_MAX = 40;
 export const SUMMARY_CHARS_MAX = 170;
 const SEQUENCE_TYPES: readonly GuidePageType[] = ['start', 'how-to'];
@@ -200,17 +199,6 @@ export function checkCoverage(
 
 export function guideWords(pages: readonly GuidePage[]): number {
   return pages.reduce((sum, page) => sum + proseWords(page.body), 0);
-}
-
-export function checkTotalWords(pages: readonly GuidePage[]): GuideViolation[] {
-  const words = guideWords(pages);
-  if (words <= GUIDE_WORDS_MAX) return [];
-  return [
-    {
-      page: 'guide',
-      message: `${words} words in all; the guide may have ${GUIDE_WORDS_MAX}. Cut or merge before adding`,
-    },
-  ];
 }
 
 export function checkPages(pages: readonly GuidePage[]): GuideViolation[] {

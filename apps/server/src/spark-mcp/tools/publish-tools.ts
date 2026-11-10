@@ -4,6 +4,7 @@ import { chatWorktreeAt } from '../../persistence/chat-worktrees.ts';
 import { opensDraftPullRequests } from '../../persistence/pr-settings.ts';
 import { sparkRulesForRun } from '../../persistence/spark-rules.ts';
 import { floorEffect } from '../../spark-rules/resolve.ts';
+import { adoptAgentPullRequest } from '../../tasks/agent-pull-request.ts';
 import { pushForAgent, type PublishScope } from '../../ship/agent-push.ts';
 import { pickRemote, remoteHasBranch } from '../../ship/git.ts';
 import { connectionsFor } from '../../ship/github/access.ts';
@@ -110,6 +111,14 @@ async function openWith(github: GitHubConnection, at: Target, head: string, text
 const refusedSignIn = (error: unknown) =>
   error instanceof GitHubApiError && (error.status === 401 || error.status === 403);
 
+async function trackOpened(context: SparkToolContext, url: string): Promise<void> {
+  const { runId } = context.scope;
+  if (!runId) return;
+  await adoptAgentPullRequest(context.deps.db, runId, null, url).catch((error: unknown) =>
+    console.error('Could not track the pull request spark_pull_request opened', error),
+  );
+}
+
 async function pullRequest(
   context: SparkToolContext,
   args: { title: string; body: string; draft?: boolean | undefined },
@@ -124,6 +133,7 @@ async function pullRequest(
   for (const github of await connectionsFor(deps, at.repo)) {
     try {
       const { pull, created } = await openWith(github, at, publish.task.branch, text);
+      await trackOpened(context, pull.url);
       return {
         url: pull.url,
         number: pull.number,

@@ -36,6 +36,8 @@ export function watch(fields: Partial<PrWatch> = {}): PrWatch {
     lastError: null,
     items: [],
     details: { checkRuns: [], reviewers: [], threads: [], threadCount: 0 },
+    ticketSync: [],
+    clean: false,
     ...fields,
   };
 }

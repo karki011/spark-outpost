@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ticketSourceIdSchema, ticketSyncSchema } from './tickets.ts';
 
 export const PR_FOLLOW_UP_BOTS_MAX = 50;
 const GITHUB_LOGIN = /^[a-z0-9](?:[a-z0-9-]{0,38})(?:\[bot\])?$/;
@@ -135,6 +136,12 @@ export const feedbackItemSchema = z.object({
 });
 export type FeedbackItem = z.infer<typeof feedbackItemSchema>;
 
+export const prTicketSyncSchema = ticketSyncSchema.extend({
+  source: ticketSourceIdSchema,
+  key: z.string(),
+});
+export type PrTicketSync = z.infer<typeof prTicketSyncSchema>;
+
 export const prWatchSchema = z.object({
   id: z.uuid(),
   conversationId: z.uuid(),
@@ -173,6 +180,8 @@ export const prWatchSchema = z.object({
   lastError: z.string().nullable(),
   items: z.array(feedbackItemSchema),
   details: prDetailsSchema,
+  ticketSync: z.array(prTicketSyncSchema),
+  clean: z.boolean(),
 });
 export type PrWatch = z.infer<typeof prWatchSchema>;
 

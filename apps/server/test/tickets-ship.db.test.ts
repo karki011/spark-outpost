@@ -120,6 +120,7 @@ describe('Ship with a linked ticket', { timeout: 60_000 }, () => {
     expect(shipped.pullRequest?.url).toBe('https://github.com/acme/widgets/pull/1');
 
     const issue = stubs.linear.issues[0]!;
+    await eventually(async () => (issue.stateId === 'eng-review' ? true : null));
     expect(issue.attachments).toEqual([
       { title: 'acme/widgets#1', url: 'https://github.com/acme/widgets/pull/1' },
     ]);
@@ -174,6 +175,7 @@ describe('Ship with a linked ticket', { timeout: 60_000 }, () => {
     expect(pull.head).toBe(preview.branch);
     expect(pull.body).toContain('## Tickets\n- [ENG-12](https://linear.app/acme/issue/ENG-12)');
     const issue = stubs.linear.issues.find((entry) => entry.identifier === 'ENG-12')!;
+    await eventually(async () => issue.attachments.length > 0);
     expect(issue.attachments).toEqual([
       { title: 'acme/widgets#1', url: 'https://github.com/acme/widgets/pull/1' },
     ]);
@@ -193,10 +195,13 @@ describe('Ship with a linked ticket', { timeout: 60_000 }, () => {
       200,
     );
     expect(github.github.pulls).toHaveLength(1);
-    const { rows } = await t.db.query<{ action: string; outcome: string }>(
-      `SELECT action, outcome FROM ticket_events WHERE task_id = $1 ORDER BY at, id`,
-      [taskId],
-    );
+    const rows = await eventually(async () => {
+      const { rows: found } = await t.db.query<{ action: string; outcome: string }>(
+        `SELECT action, outcome FROM ticket_events WHERE task_id = $1 ORDER BY at, id`,
+        [taskId],
+      );
+      return found.length >= 2 ? found : null;
+    });
     expect(rows).toEqual([
       { action: 'link_pr', outcome: 'failed' },
       { action: 'transition', outcome: 'failed' },

@@ -10,7 +10,7 @@ interface Opener {
 export async function adoptAgentPullRequest(
   db: Db,
   runId: string,
-  taskId: string,
+  taskId: string | null,
   url: string,
 ): Promise<void> {
   const { rows } = await db.query<Opener>(

@@ -1,10 +1,12 @@
-import type {
-  PrChecks,
-  PrFailingCheck,
-  PrOpenedVia,
-  PrPollProblem,
-  PrReview,
-  PrWatchPhase,
+import {
+  prTicketSyncSchema,
+  type PrChecks,
+  type PrFailingCheck,
+  type PrOpenedVia,
+  type PrPollProblem,
+  type PrReview,
+  type PrTicketSync,
+  type PrWatchPhase,
 } from '@spark-outpost/contracts';
 import { parseDetails, type StoredDetails } from '../pr-tracking/details.ts';
 import type { Queryable } from './db.ts';
@@ -75,6 +77,10 @@ export interface TrackedPull extends PullAddress {
   lastPolledAt: Date | null;
   pollProblem: PrPollProblem | null;
   lastError: string | null;
+  ticketSync: PrTicketSync[];
+  ticketSyncClaimedAt: Date | null;
+  cleanHeadSha: string | null;
+  cleanSince: Date | null;
 }
 
 export interface PullRow {
@@ -120,6 +126,15 @@ export interface PullRow {
   last_polled_at: Date | null;
   poll_problem: PrPollProblem | null;
   last_error: string | null;
+  ticket_sync: unknown;
+  ticket_sync_claimed_at: Date | null;
+  clean_head_sha: string | null;
+  clean_since: Date | null;
+}
+
+function parseTicketSync(value: unknown): PrTicketSync[] {
+  const parsed = prTicketSyncSchema.array().safeParse(value);
+  return parsed.success ? parsed.data : [];
 }
 
 export function toTrackedPull(row: PullRow): TrackedPull {
@@ -166,6 +181,10 @@ export function toTrackedPull(row: PullRow): TrackedPull {
     lastPolledAt: row.last_polled_at,
     pollProblem: row.poll_problem,
     lastError: row.last_error,
+    ticketSync: parseTicketSync(row.ticket_sync),
+    ticketSyncClaimedAt: row.ticket_sync_claimed_at,
+    cleanHeadSha: row.clean_head_sha,
+    cleanSince: row.clean_since,
   };
 }
 
@@ -271,7 +290,8 @@ export async function savePull(db: Queryable, pull: TrackedPull): Promise<void> 
        interval_seconds = $12, next_poll_at = $13, last_polled_at = $14, last_error = $15,
        title = $16, branch = $17, base = $18, failing_checks = $19, review = $20,
        status_reason = $21, follow_up = $22, details = $23, poll_problem = $24, additions = $25,
-       deletions = $26, refresh_requested = $27, known_reviewers = $28, quiet_head = $29,
+       deletions = $26, refresh_requested = $27, clean_head_sha = $28, clean_since = $29,
+       known_reviewers = $30, quiet_head = $31,
        updated_at = now()
      WHERE id = $1`,
     [
@@ -302,6 +322,8 @@ export async function savePull(db: Queryable, pull: TrackedPull): Promise<void> 
       pull.additions,
       pull.deletions,
       pull.refreshRequested,
+      pull.cleanHeadSha,
+      pull.cleanSince,
       pull.knownReviewers,
       pull.quietHead,
     ],

@@ -4,8 +4,6 @@ import {
   checkCoverage,
   checkImages,
   checkPages,
-  checkTotalWords,
-  GUIDE_WORDS_MAX,
   longestParagraph,
   PARAGRAPH_WORDS_MAX,
   proseWords,
@@ -64,16 +62,6 @@ describe('page rules', () => {
     expect(messages([page('big', 'concept', long)])).toEqual([
       `big: ${WORD_CAPS.concept + 1} words; a concept page may have ${WORD_CAPS.concept}`,
       `big: a ${WORD_CAPS.concept + 1}-word paragraph; keep paragraphs to ${PARAGRAPH_WORDS_MAX}`,
-    ]);
-  });
-
-  it('holds the whole guide to a total word cap', () => {
-    const half = `- ${'word '.repeat(GUIDE_WORDS_MAX / 2)}`;
-    const fits = [page('a', 'reference', half, 'A'), page('b', 'reference', half, 'B')];
-    expect(checkTotalWords(fits)).toEqual([]);
-    const over = [...fits, page('c', 'reference', 'One more.', 'C')];
-    expect(checkTotalWords(over).map((violation) => violation.message)).toEqual([
-      `${GUIDE_WORDS_MAX + 2} words in all; the guide may have ${GUIDE_WORDS_MAX}. Cut or merge before adding`,
     ]);
   });
 

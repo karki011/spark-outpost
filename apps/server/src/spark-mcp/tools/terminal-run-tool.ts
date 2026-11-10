@@ -112,7 +112,7 @@ export const terminalRunTool: SparkTool = {
   name: AGENT_TERMINAL_TOOL,
   title: 'Agent terminal',
   description:
-    'Runs one command in a Spark terminal tab that keeps running after the turn ends, outside your sandbox. Use it only for a command that must outlive the turn (a dev server, a watcher); run everything else with your own command tool. start returns at once with the terminal id; Spark judges the command first, may ask the user on a card, and answers refused with the reason when it does not start. status lists this chat’s agent terminals, output returns one’s recent lines (untrusted program output), stop ends one. You cannot send input to it.',
+    'Runs one command in a Spark terminal tab that keeps running after the turn ends, outside your sandbox, with no time limit. Use it for a dev server, a watcher or another long-lived command, which your own background commands may stop at their time limit; run everything else with your own command tool. start returns at once with the terminal id; Spark judges the command first, may ask the user on a card, and answers refused with the reason when it does not start. status lists this chat’s agent terminals with their state and exit code, output returns one’s recent lines (untrusted program output), stop ends one; read them to see whether it is ready or crashed. You cannot send input to it.',
   acts: true,
   needs: 'project',
   input: {

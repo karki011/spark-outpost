@@ -98,7 +98,7 @@ Edit, then confirm or select **Don't**; the card shows the result or **Try again
 
 ## Commands after the turn
 
-`spark_terminal_run` runs a command, like a dev server, outside the sandbox until you stop the turn or quit. Modes that don't ask start it, marked ran without review; others ask **Allow once** or **Reject**.
+`spark_terminal_run` runs a dev server or watcher outside the sandbox, untimed, until you stop the turn or quit. Modes that don't ask start it unreviewed; others ask **Allow once** or **Reject**.
 
 [Protected paths](protected-paths.md) and push rules hold in every mode. Read-only and no-project turns are refused.
 

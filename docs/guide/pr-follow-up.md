@@ -48,4 +48,6 @@ On your Mac, add bot logins as GitHub shows them (`coderabbitai[bot]`) to **Revi
 
 In **Settings → Pull requests**, turn off **Follow up on pull requests**, or only **Fix failing checks**, **Handle review comments** or **Reply on GitHub threads**.
 
+While it's off or asks first, a new PR offers **Turn on**, for every PR.
+
 **Next:** [Connect GitHub and ticket trackers](tickets-and-github.md)

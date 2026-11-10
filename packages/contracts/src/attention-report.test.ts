@@ -94,6 +94,12 @@ describe('parseAttentionKey', () => {
       generation: 3,
       since: 1_700_000_000_000,
     });
+    expect(parseAttentionKey(`pr-clean:${CARD}:abc1234`)).toEqual({
+      kind: 'pr-clean',
+      id: CARD,
+      head: 'abc1234',
+    });
+    expect(parseAttentionKey(`pr-clean:${CARD}:not-a-sha`)).toBeNull();
     expect(parseAttentionKey(`chat:${CHAT}:x`)).toBeNull();
     expect(parseAttentionKey(`approval:${CARD}x`)).toBeNull();
     expect(parseAttentionKey('approval:../../etc')).toBeNull();

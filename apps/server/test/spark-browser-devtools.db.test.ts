@@ -4,8 +4,12 @@ import path from 'node:path';
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { SPARK_ACTION_OPTION, type BrowserHostRequest } from '@spark-outpost/contracts';
-import type { BrowserHost } from '../src/browser/host-client.ts';
+import {
+  BROWSER_BAD_SELECTOR,
+  SPARK_ACTION_OPTION,
+  type BrowserHostRequest,
+} from '@spark-outpost/contracts';
+import { BrowserHostError, type BrowserHost } from '../src/browser/host-client.ts';
 import { decideApproval } from '../src/persistence/approvals.ts';
 import { startSparkMcpHost, type SparkMcpHost } from '../src/spark-mcp/host.ts';
 import { linkedConversation, sendDo } from './approval-support.ts';
@@ -27,9 +31,14 @@ class FakeHost implements BrowserHost {
   readonly requests: BrowserHostRequest[] = [];
   url = `${SITE}/cart`;
   owner: 'agent' | 'user' = 'agent';
+  appearsAfter = 0;
+
+  inspectErrors: BrowserHostError[] = [];
 
   request(request: BrowserHostRequest): Promise<never> {
     this.requests.push(request);
+    const failure = request.op === 'inspect' ? this.inspectErrors.shift() : undefined;
+    if (failure) return Promise.reject(failure);
     return Promise.resolve(this.answer(request) as never);
   }
 
@@ -79,6 +88,10 @@ class FakeHost implements BrowserHost {
           },
         ],
       };
+    }
+    if (request.op === 'inspect') {
+      const matched = this.ops('inspect').length > this.appearsAfter ? 1 : 0;
+      return { ...facts, matched, element: matched ? { tag: 'button', role: 'button' } : null };
     }
     if (request.op === 'performance') {
       return {
@@ -229,13 +242,86 @@ describe('spark_browser_devtools', () => {
     expect(stored.body).not.toContain(COOKIE_VALUE);
   });
 
-  it('needs an expression for eval and a ref or selector for inspect', async () => {
+  it('waits for a selector to match, then answers like inspect under the read policy', async () => {
+    await chat('auto');
+    fake.url = 'http://localhost:4200/';
+    fake.appearsAfter = 2;
+    const { facts, body } = await call({ action: 'wait', selector: '#app-ready' });
+    expect(fake.ops('inspect')).toHaveLength(3);
+    expect(fake.ops('inspect')[0]).toMatchObject({ selector: '#app-ready' });
+    expect(facts).toMatchObject({ action: 'wait', appeared: true, place: 'local' });
+    expect(body).toContain('"tag": "button"');
+    expect(fake.ops('evaluate')).toEqual([]);
+  });
+
+  it('answers that the selector did not appear when this call’s seconds run out', async () => {
+    await chat('auto');
+    fake.appearsAfter = Number.POSITIVE_INFINITY;
+    const { facts } = await call({ action: 'wait', selector: '.never', seconds: 1 });
+    expect(facts).toMatchObject({ action: 'wait', appeared: false });
+    expect(facts.waitedMs).toBeGreaterThanOrEqual(1000);
+    expect(fake.ops('inspect').length).toBeGreaterThan(1);
+  });
+
+  it('keeps waiting through a page that is loading, and stops at once on a lasting error', async () => {
+    await chat('auto');
+    fake.url = 'http://localhost:4200/';
+    fake.appearsAfter = 1;
+    fake.inspectErrors = [new BrowserHostError('failed', 'No node with given id found')];
+    const { facts } = await call({ action: 'wait', selector: '#app-ready' });
+    expect(facts).toMatchObject({ appeared: true });
+    expect(fake.ops('inspect')).toHaveLength(2);
+
+    fake.inspectErrors = [new BrowserHostError('no_tab', 'That tab is closed.')];
+    const gone = (await client!.callTool({
+      name: 'spark_browser_devtools',
+      arguments: { action: 'wait', selector: '#app-ready' },
+    })) as CallToolResult;
+    expect(gone.isError).toBe(true);
+    expect(fake.ops('inspect')).toHaveLength(3);
+  });
+
+  it('gives up on a selector the page cannot use after a few tries', async () => {
+    await chat('auto');
+    fake.url = 'http://localhost:4200/';
+    fake.inspectErrors = Array.from(
+      { length: 10 },
+      () => new BrowserHostError('failed', BROWSER_BAD_SELECTOR),
+    );
+    const result = (await client!.callTool({
+      name: 'spark_browser_devtools',
+      arguments: { action: 'wait', selector: 'div[', seconds: 30 },
+    })) as CallToolResult;
+    expect(result.isError).toBe(true);
+    expect(fake.ops('inspect')).toHaveLength(3);
+  });
+
+  it('asks for a website read before it starts waiting in Manual', async () => {
+    await chat('default');
+    const calling = call({ action: 'wait', selector: '#app-ready' });
+    const card = await pendingCard(t);
+    expect(card.payload.sparkAction).toMatchObject({ action: 'read_page', origin: SITE });
+    expect(fake.ops('inspect')).toEqual([]);
+    await decideApproval(t.db, t.workspaceId, card.id, {
+      optionId: SPARK_ACTION_OPTION.decline,
+      scope: 'once',
+    });
+    await calling;
+    expect(fake.ops('inspect')).toEqual([]);
+  });
+
+  it('needs an expression for eval, a ref or selector for inspect and a selector for wait', async () => {
     await chat('auto');
     const result = (await client!.callTool({
       name: 'spark_browser_devtools',
       arguments: { action: 'inspect' },
     })) as CallToolResult;
     expect(result.isError).toBe(true);
+    const waiting = (await client!.callTool({
+      name: 'spark_browser_devtools',
+      arguments: { action: 'wait' },
+    })) as CallToolResult;
+    expect(waiting.isError).toBe(true);
     expect(fake.ops('inspect')).toEqual([]);
   });
 });

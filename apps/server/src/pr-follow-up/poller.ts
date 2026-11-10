@@ -24,6 +24,14 @@ import {
   withFacts,
 } from '../pr-tracking/status.ts';
 import { detailsOf, threadResolution } from '../pr-tracking/details.ts';
+import {
+  isClean,
+  OPEN_FOLLOW_UP_STATES,
+  shownClean,
+  withCleanState,
+} from '../pr-tracking/clean.ts';
+import { notifyAttention } from '../persistence/attention-items.ts';
+import { syncPullTickets, syncsTickets } from '../tickets/ship-sync.ts';
 import type { JevAccess } from '../advisor/jev-calls.ts';
 import type { GitHubConnection } from '../ship/github/connection.ts';
 import { connectTo, nowOf, type FollowUpDeps } from './deps.ts';
@@ -242,6 +250,32 @@ function failed(pull: TrackedPull, error: unknown): TrackedPull {
   };
 }
 
+async function withClean(deps: FollowUpDeps, pull: TrackedPull): Promise<TrackedPull> {
+  const openItems = pull.followUp
+    ? (await feedbackFor(deps.db, pull.id, OPEN_FOLLOW_UP_STATES)).length
+    : 0;
+  return withCleanState(pull, isClean(pull, openItems), nowOf(deps));
+}
+
+async function afterSave(deps: FollowUpDeps, before: TrackedPull, saved: TrackedPull) {
+  const cleanMoved =
+    before.cleanHeadSha !== saved.cleanHeadSha ||
+    before.cleanSince?.getTime() !== saved.cleanSince?.getTime();
+  if (cleanMoved || shownClean(before) !== shownClean(saved)) {
+    await notifyAttention(deps.db, saved.conversationId);
+  }
+  if (!syncsTickets(saved)) return;
+  const ticketDeps = {
+    db: deps.db,
+    workspaceId: saved.workspaceId,
+    secrets: deps.github.secrets,
+    fetch: deps.github.fetch,
+  };
+  await syncPullTickets(ticketDeps, saved).catch((error: unknown) => {
+    console.error(`Ticket sync for ${saved.url} failed`, error);
+  });
+}
+
 export interface Polled {
   pull: TrackedPull;
   rateLimited: boolean;
@@ -257,8 +291,9 @@ async function poll(deps: FollowUpDeps, pull: TrackedPull): Promise<Polled> {
     rateLimited = isRateLimited(error);
     next = failed(pull, error);
   }
-  const saved = { ...schedule(deps, next), refreshRequested: false };
+  const saved = { ...schedule(deps, await withClean(deps, next)), refreshRequested: false };
   await savePull(deps.db, saved);
+  await afterSave(deps, pull, saved);
   return { pull: saved, rateLimited };
 }
 
