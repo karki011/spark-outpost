@@ -257,6 +257,7 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
 
   const overview = (
     <OverviewPane
+      outpostId={id}
       tab={layout.tab}
       cards={cards}
       pulls={pulls}

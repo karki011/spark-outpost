@@ -4,6 +4,8 @@ import {
   startDraftResponseSchema,
   outpostDraftSchema,
   outpostDetailSchema,
+  outpostLibrarySchema,
+  outpostSuggestionsSchema,
   outpostSchema,
   type CreateOutpostRequest,
   type CreateOutpostResponse,
@@ -11,6 +13,8 @@ import {
   type MemberRequest,
   type Outpost,
   type OutpostDetail,
+  type OutpostLibraryChats,
+  type OutpostSuggestions,
   type StartDraftResponse,
   type UpdateOutpostRequest,
 } from '@spark-outpost/contracts';
@@ -22,6 +26,8 @@ export const outpostKeys = {
   detail: (id: string) => ['outposts', 'detail', id] as const,
   drafts: ['outposts', 'draft'] as const,
   draft: (id: string) => ['outposts', 'draft', id] as const,
+  suggestions: (id: string) => ['outposts', 'draft', 'suggested', id] as const,
+  library: (id: string, signal: string) => ['outposts', 'library', id, signal] as const,
 };
 
 export const proposedDraftSchema = z.object({
@@ -42,6 +48,8 @@ const outpostPaths = {
   cancelPost: (id: string, postId: string) => `/outposts/${id}/posts/${postId}/cancel`,
   startNow: (id: string, postId: string) => `/outposts/${id}/posts/${postId}/start-now`,
   draft: (id: string) => `/outposts/drafts/${id}`,
+  suggestions: (id: string) => `/outposts/${id}/suggestions`,
+  library: (id: string) => `/outposts/${id}/library`,
   startDraft: (id: string) => `/outposts/drafts/${id}/start`,
 };
 
@@ -52,6 +60,10 @@ function changed(path: string, init: RequestInit): Promise<OutpostDetail> {
 export const outpostsApi = {
   list: (): Promise<Outpost[]> => request(z.array(outpostSchema), outpostPaths.list),
   get: (id: string): Promise<OutpostDetail> => request(outpostDetailSchema, outpostPaths.one(id)),
+  suggestions: (id: string): Promise<OutpostSuggestions> =>
+    request(outpostSuggestionsSchema, outpostPaths.suggestions(id)),
+  library: (id: string): Promise<OutpostLibraryChats> =>
+    request(outpostLibrarySchema, outpostPaths.library(id)),
   create: (body: CreateOutpostRequest): Promise<CreateOutpostResponse> =>
     request(createOutpostResponseSchema, outpostPaths.list, {
       method: 'POST',

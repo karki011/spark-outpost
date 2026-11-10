@@ -111,6 +111,8 @@ POST /api/conversations/:id/steers/:itemId/resend
 DELETE /api/conversations/:id/steers/:itemId
 GET /api/outposts
 GET /api/outposts/:id
+GET /api/outposts/:id/library
+GET /api/outposts/:id/suggestions
 GET /api/conversations/:id/outpost-drafts
 PATCH /api/outposts/:id
 POST /api/outposts/:id/posts

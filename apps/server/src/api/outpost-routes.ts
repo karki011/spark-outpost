@@ -7,17 +7,20 @@ import {
   outpostInstructionsRequestSchema,
   stackedCount,
   updateOutpostRequestSchema,
+  type ChatDraft,
   type ChatDrafts,
   type CreateOutpostResponse,
   type Outpost,
   type OutpostDetail,
   type OutpostDraft,
   type OutpostPost,
+  type OutpostSuggestions,
   type StartDraftResponse,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
-import { draftsOfChat, getDraft } from '../persistence/outpost-drafts.ts';
+import { draftsOfChat, getDraft, suggestedDrafts } from '../persistence/outpost-drafts.ts';
 import { requestsExchanges } from '../persistence/outpost-exchanges.ts';
+import { outpostLibrary } from '../persistence/outpost-library.ts';
 import { needsYouCounts } from '../persistence/outpost-needs-you.ts';
 import { answerCache, requestAnswers } from '../persistence/outpost-answers.ts';
 import { cancelUnsent, getPost, listPosts, releaseHold } from '../persistence/outpost-posts.ts';
@@ -33,7 +36,13 @@ import {
   setName,
   setPaused,
 } from '../persistence/outposts.ts';
-import type { PeerAgent, PostWithFacts, StackGit, StoredOutpost } from '../outposts/ports.ts';
+import type {
+  PeerAgent,
+  PostWithFacts,
+  StackGit,
+  StoredDraft,
+  StoredOutpost,
+} from '../outposts/ports.ts';
 import { cachedStackGit } from '../outposts/git-read-cache.ts';
 import { introViews } from '../outposts/intro-view.ts';
 import { joinOutpost, leaveOutpost, postToOutpost } from '../outposts/post-service.ts';
@@ -70,6 +79,17 @@ export interface DraftView {
 }
 
 const handleBodySchema = z.object({ handle: z.string() });
+
+function chatDraftView(draft: StoredDraft): ChatDraft {
+  return {
+    id: draft.id,
+    runId: draft.runId,
+    chats: draft.body.chats.length,
+    stacked: stackedCount(draft.body.chats),
+    outpostId: draft.outpostId,
+    startedAt: draft.startedAt,
+  };
+}
 
 export function outpostErrorStatus(error: unknown): { status: number; message: string } | null {
   if (error instanceof OutpostError) return { status: error.status, message: error.message };
@@ -192,17 +212,28 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
 
   router.get('/conversations/:id/outpost-drafts', async (req, res) => {
     const found = await draftsOfChat(db, workspaceId, paramId(req));
-    const view: ChatDrafts = {
-      drafts: found.map((draft) => ({
-        id: draft.id,
-        runId: draft.runId,
-        chats: draft.body.chats.length,
-        stacked: stackedCount(draft.body.chats),
-        outpostId: draft.outpostId,
-        startedAt: draft.startedAt,
-      })),
+    const view: ChatDrafts = { drafts: found.map(chatDraftView) };
+    res.json(view);
+  });
+
+  router.get('/outposts/:id/suggestions', async (req, res) => {
+    const id = paramId(req);
+    await known(id);
+    const found = await suggestedDrafts(db, workspaceId, id);
+    const view: OutpostSuggestions = {
+      drafts: found.flatMap((draft) =>
+        draft.conversationId
+          ? [{ ...chatDraftView(draft), conversationId: draft.conversationId }]
+          : [],
+      ),
     };
     res.json(view);
+  });
+
+  router.get('/outposts/:id/library', async (req, res) => {
+    const id = paramId(req);
+    await known(id);
+    res.json(await outpostLibrary(db, id));
   });
 
   router.get('/outposts/:id', async (req, res) => {

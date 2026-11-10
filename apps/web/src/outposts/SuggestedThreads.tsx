@@ -1,11 +1,11 @@
-import { useId } from 'react';
-import { useQueries } from '@tanstack/react-query';
-import type { ChatDraft } from '@spark-outpost/contracts';
-import { chatDraftsQuery } from '../chat/outpost/chat-drafts.ts';
+import { useId, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import type { ChatDraft, OutpostSuggestions } from '@spark-outpost/contracts';
 import { useOutpostSeam } from '../chat/outpost/outpost-seam.ts';
 import { ChatDraftLine } from '../chat/outpost/TurnOutpostLines.tsx';
 import { MemberFace } from './MemberFace.tsx';
 import type { MemberView } from './member-view.ts';
+import { outpostKeys, outpostsApi } from './outposts-api.ts';
 
 interface SuggestedThreadsProps {
   outpostId: string;
@@ -17,30 +17,25 @@ interface Suggestion {
   draft: ChatDraft;
 }
 
-export function openSuggestions(
-  outpostId: string,
+export function suggestionsOf(
   members: readonly MemberView[],
-  lists: readonly (readonly ChatDraft[] | undefined)[],
+  suggested: OutpostSuggestions | undefined,
 ): Suggestion[] {
-  return members.flatMap((member, index) =>
-    (lists[index] ?? [])
-      .filter((draft) => draft.startedAt === null)
-      .filter((draft) => draft.outpostId === null || draft.outpostId === outpostId)
-      .map((draft) => ({ member, draft })),
-  );
+  const byChat = new Map(members.map((member) => [member.conversationId, member]));
+  return (suggested?.drafts ?? []).flatMap(({ conversationId, ...draft }) => {
+    const member = byChat.get(conversationId);
+    return member ? [{ member, draft }] : [];
+  });
 }
 
 export function SuggestedThreads({ outpostId, members }: SuggestedThreadsProps) {
   const seam = useOutpostSeam();
   const headingId = useId();
-  const lists = useQueries({
-    queries: members.map((member) => chatDraftsQuery(member.conversationId)),
+  const { data } = useQuery({
+    queryKey: outpostKeys.suggestions(outpostId),
+    queryFn: () => outpostsApi.suggestions(outpostId),
   });
-  const suggestions = openSuggestions(
-    outpostId,
-    members,
-    lists.map((list) => list.data?.drafts),
-  );
+  const suggestions = useMemo(() => suggestionsOf(members, data), [members, data]);
   const onOpenDraft = seam?.onOpenDraft;
   if (!seam || !onOpenDraft || suggestions.length === 0) return null;
   return (
