@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { OutpostPost } from '@spark-outpost/contracts';
 import { requestNote } from '../chat/outpost/RequestHeader.tsx';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
@@ -61,7 +62,7 @@ function CardMeta({ card }: { card: ThreadCard }) {
   );
 }
 
-export function RequestCard({
+export const RequestCard = memo(function RequestCard({
   card,
   selected,
   answering = false,
@@ -150,4 +151,4 @@ export function RequestCard({
       </div>
     </article>
   );
-}
+});

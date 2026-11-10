@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import type { OutpostPost } from '@spark-outpost/contracts';
 import { FileIcon } from '../chat/attachments/attachment-icons.tsx';
 import { requestNote } from '../chat/outpost/RequestHeader.tsx';
@@ -32,7 +32,7 @@ function SenderFace({ post }: { post: OutpostPost }) {
   );
 }
 
-export function MessageRow({ post, anchor, targets, body, createdAt, children }: MessageRowProps) {
+function MessageRowView({ post, anchor, targets, body, createdAt, children }: MessageRowProps) {
   const note = requestNote(post);
   const what = post.kind === 'note' ? 'note' : 'request';
   return (
@@ -70,3 +70,20 @@ export function MessageRow({ post, anchor, targets, body, createdAt, children }:
     </li>
   );
 }
+
+function sameTargets(a: readonly string[] | undefined, b: readonly string[] | undefined): boolean {
+  if (a === undefined || b === undefined) return a === b;
+  return a.length === b.length && a.every((handle, index) => handle === b[index]);
+}
+
+export const MessageRow = memo(
+  MessageRowView,
+  (before, after) =>
+    before.children === undefined &&
+    after.children === undefined &&
+    before.post === after.post &&
+    before.anchor === after.anchor &&
+    before.body === after.body &&
+    before.createdAt === after.createdAt &&
+    sameTargets(before.targets, after.targets),
+);

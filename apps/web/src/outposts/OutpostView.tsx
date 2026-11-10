@@ -25,8 +25,10 @@ import { chatActivity } from './chat-activity.ts';
 import { chatsOnApproval, chatsOnQuestion, memberViews } from './member-view.ts';
 import { outpostPulls } from './outpost-pulls.ts';
 import { formOf, hasChanges, sheetChanges, type SheetForm } from './sheet-draft.ts';
-import { threadCards, waitsOnYou } from './thread-cards.ts';
-import { useOutpostChats } from './use-outpost-chats.ts';
+import { reuseCards, threadCards, waitsOnYou } from './thread-cards.ts';
+import { useOutpostChats, useMemberChats } from './use-outpost-chats.ts';
+import { useReconciled } from './use-reconciled.ts';
+import { useStableCallback } from './use-stable-callback.ts';
 import { useOutpostLayout, type PhoneView } from './use-outpost-layout.ts';
 import {
   useAnswer,
@@ -99,7 +101,8 @@ type Sheet = 'settings' | 'instructions' | null;
 
 function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedProps) {
   const { outpost, posts, stories } = detail;
-  const { chats, projectNames } = useOutpostChats();
+  const { chats: allChats, projectNames } = useOutpostChats();
+  const chats = useMemberChats(allChats, outpost.members);
   const { remote } = useRemoteClient();
   const layout = useOutpostLayout();
   const [openedThread, setOpenedThread] = useState<string | null>(null);
@@ -128,10 +131,11 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
   const [questionFor, setQuestionFor] = useState<string | null>(null);
   const activity = useMemo(() => chatActivity(chats), [chats]);
   const pulls = useMemo(() => outpostPulls(posts, stories, chats), [posts, stories, chats]);
-  const cards = useMemo(
+  const freshCards = useMemo(
     () => threadCards(items, pulls, (chatId) => activity.get(chatId ?? '')),
     [items, pulls, activity],
   );
+  const cards = useReconciled(freshCards, reuseCards);
   const cardsById = useMemo(() => new Map(cards.map((card) => [card.post.id, card])), [cards]);
   const storyTags = useMemo(() => storyTagsOf(detail), [detail]);
   const answering = answeringOf(posts, answeringId, approvalChats);
@@ -157,6 +161,9 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
     setAnsweringId(postId);
     layout.showConversation();
   };
+  const onAnswer = useStableCallback(startAnswer);
+  const onCancel = useStableCallback((postId: string) => cancel.mutate(postId));
+  const onStartNow = useStableCallback((postId: string) => startNow.mutate(postId));
 
   const send = async (target: ComposerTarget, text: string, messageId: string) => {
     if (target.action === 'answer' && answering) {
@@ -222,9 +229,9 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
         empty={empty}
         after={<SuggestedThreads outpostId={id} members={members} />}
         onOpenThread={layout.openThread}
-        onAnswer={startAnswer}
-        onCancel={(postId) => cancel.mutate(postId)}
-        onStartNow={(postId) => startNow.mutate(postId)}
+        onAnswer={onAnswer}
+        onCancel={onCancel}
+        onStartNow={onStartNow}
       />
       <OutpostComposer
         members={members}
@@ -251,7 +258,7 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
         layout.backToOverview();
       }}
       onOpenChat={onOpenChat}
-      onCancel={(postId) => cancel.mutate(postId)}
+      onCancel={onCancel}
     />
   );
 

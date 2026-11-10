@@ -155,6 +155,43 @@ export function threadCards(
   );
 }
 
+function samePull(a: OutpostPull | null, b: OutpostPull | null): boolean {
+  if (a === null || b === null) return a === b;
+  return (
+    a.url === b.url &&
+    a.number === b.number &&
+    a.conversationId === b.conversationId &&
+    a.handle === b.handle &&
+    a.postId === b.postId &&
+    a.state === b.state
+  );
+}
+
+function sameCard(a: ThreadCard, b: ThreadCard): boolean {
+  return (
+    a.post === b.post &&
+    a.status === b.status &&
+    a.pill === b.pill &&
+    a.title === b.title &&
+    a.summary === b.summary &&
+    a.git.branch === b.git.branch &&
+    a.git.facts.length === b.git.facts.length &&
+    a.git.facts.every((fact, index) => fact === b.git.facts[index]) &&
+    samePull(a.pull, b.pull)
+  );
+}
+
+export function reuseCards(kept: readonly ThreadCard[], next: ThreadCard[]): ThreadCard[] {
+  const before = new Map(kept.map((card) => [card.post.id, card]));
+  const cards = next.map((card) => {
+    const earlier = before.get(card.post.id);
+    return earlier && sameCard(earlier, card) ? earlier : card;
+  });
+  const unchanged =
+    cards.length === kept.length && cards.every((card, index) => card === kept[index]);
+  return unchanged ? (kept as ThreadCard[]) : cards;
+}
+
 export function groupCards(
   cards: readonly ThreadCard[],
 ): { status: ThreadStatus; cards: ThreadCard[] }[] {
