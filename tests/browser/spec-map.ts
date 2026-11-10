@@ -238,7 +238,7 @@ export const SPEC_GROUPS = {
     'week-recap',
   ],
   'analytics-audit': ['analytics', 'audit'],
-  map: ['project-map', 'project-map-states', 'project-map-views'],
+  map: ['project-map', 'project-map-locate', 'project-map-states', 'project-map-views'],
   outposts: [
     'markdown-composer-outpost',
     'outpost-address',
