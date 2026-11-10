@@ -13,6 +13,7 @@ import {
   devContentSecurityPolicy,
 } from '@spark-outpost/contracts';
 import { bundledFontsPlugin } from './bundled-fonts.ts';
+import { precompressPlugin } from './precompress.ts';
 
 const webPort = Number(process.env.SPARK_WEB_PORT ?? 5173);
 const apiPort = Number(process.env.SPARK_API_PORT ?? 4318);
@@ -41,7 +42,7 @@ function endWithUpstream(proxyRes: IncomingMessage, _req: IncomingMessage, res: 
 }
 
 export default defineConfig({
-  plugins: [react(), bundledFontsPlugin()],
+  plugins: [react(), bundledFontsPlugin(), precompressPlugin()],
   server: {
     host: '127.0.0.1',
     port: webPort,
