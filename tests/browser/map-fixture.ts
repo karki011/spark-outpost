@@ -379,6 +379,14 @@ export async function serveMap(page: Page, fixture: MapFixture): Promise<void> {
         : null;
       return found ? json(route, found) : json(route, { error: 'Not on the map.' }, 404);
     }
+    if (url.pathname.endsWith('/map/locate')) {
+      const areas = [...(fixture.projects.get(projectId)?.files ?? [])];
+      const located = url.searchParams.getAll('path').map((wanted) => ({
+        path: wanted,
+        areaId: areas.find(([, files]) => files.some((file) => file.path === wanted))?.[0] ?? null,
+      }));
+      return json(route, { located });
+    }
     if (!areaId) return json(route, fixture.map(projectId));
     if (tail && route.request().method() === 'PUT') {
       const body = route.request().postDataJSON() as { category: MapArea['category'] | null };
