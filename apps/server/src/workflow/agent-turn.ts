@@ -2,9 +2,9 @@ import { backgroundParking } from './background-parking.ts';
 import type { ParkedTurns } from './parked-turns.ts';
 import type { RunSnapshot } from '../persistence/run-snapshots.ts';
 import { STOPPED_BY_QUIT, type RunEvent } from '@spark-outpost/contracts';
-import { sparkPreferences, type SparkPreferences } from '../persistence/setup.ts';
+import type { SparkPreferences } from '../persistence/setup.ts';
 import { auditSparkHandoff } from './spark-audit.ts';
-import { liveTurn, promptWithBrowserCheck, sessionBrief } from './turn-facts.ts';
+import { liveTurn, promptWithBrowserCheck, sparkSession } from './turn-facts.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { recordSuggestedTitle } from '../persistence/auto-title.ts';
@@ -312,10 +312,7 @@ export async function runAgentTurn(
     const recordRequest = (request: RequestUsage) =>
       recordRequestUsage(deps.db, lease.runId, request, new Date());
     const { userMcp, userPlugins } = await loadTurnExtensions(deps.db, input);
-    const spark = {
-      ...(options.prefs ?? (await sparkPreferences(deps.db, input.workspaceId))),
-      teammate: await sessionBrief(deps.db, input),
-    };
+    const spark = await sparkSession(deps.db, input, options.prefs);
     auditSparkHandoff(audit, input, spark.teammate);
     const preamble = input.assistant ? ASSISTANT_PREAMBLE : withMoveNote(input);
     assistantTurn = input.assistant
