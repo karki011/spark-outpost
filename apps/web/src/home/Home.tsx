@@ -36,7 +36,6 @@ import { briefEntries, feedRows, type BriefEntry } from './needs-model.ts';
 import { capRows, sinceRows, type SinceRow } from './since-model.ts';
 import { useAttentionSettings, useBrief } from './use-brief.ts';
 import { useAwayKeys } from './use-away-keys.ts';
-import { useChatModes } from './use-chat-modes.ts';
 import { useMeetingLead } from './use-meeting-lead.ts';
 
 const ENTER_MS = 700;
@@ -124,10 +123,6 @@ export function Home(props: HomeProps) {
     awayUpdates: updates.length,
     busy: asking.length + running.length,
   });
-  const modes = useChatModes(
-    running.map((item) => item.chat),
-    lead === 'meeting' || lead === 'before-you-go',
-  );
 
   const inLead = new Set<string>(
     lead === 'since-you-left'
@@ -210,12 +205,11 @@ export function Home(props: HomeProps) {
               now={now}
               waiting={asking}
               running={running}
-              modes={modes}
               onOpen={onOpenChat}
             />
           )}
           {lead === 'before-you-go' && (
-            <BeforeLead waiting={asking} running={running} modes={modes} onOpen={onOpenChat} />
+            <BeforeLead waiting={asking} running={running} onOpen={onOpenChat} />
           )}
         </>
       }

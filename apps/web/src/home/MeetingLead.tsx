@@ -6,7 +6,6 @@ import { JoinButton } from '../calendar/JoinButton.tsx';
 import { HomeLead, LeadGroup, Quiet } from './HomeCards.tsx';
 import type { NeedItem, RunItem } from './home-model.ts';
 import { RunRows, WaitingRows } from './LeadRows.tsx';
-import type { ModeInfo } from './mode-groups.ts';
 import type { MeetingLead as MeetingActions } from './use-meeting-lead.ts';
 
 interface MeetingLeadProps {
@@ -16,7 +15,6 @@ interface MeetingLeadProps {
   now: number;
   waiting: readonly NeedItem[];
   running: readonly RunItem[];
-  modes: ReadonlyMap<string, ModeInfo>;
   onOpen: (chat: ConversationSummary) => void;
 }
 
@@ -63,12 +61,7 @@ export function MeetingLead(props: MeetingLeadProps) {
       )}
       {running.length > 0 && (
         <LeadGroup id="lead-working" title="Still working">
-          <RunRows
-            label="Still working"
-            items={running}
-            modes={props.modes}
-            onOpen={props.onOpen}
-          />
+          <RunRows label="Still working" items={running} onOpen={props.onOpen} />
         </LeadGroup>
       )}
       {waiting.length === 0 && running.length === 0 && (

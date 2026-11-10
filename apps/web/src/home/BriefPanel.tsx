@@ -152,7 +152,10 @@ export function BriefPanel(props: BriefPanelProps) {
   return (
     <div className="hpanel dg">
       <div className="dg-head">
-        <BlobScout size={28} mood={brief.view === 'failed' ? 'sad' : quiet ? 'happy' : null} />
+        <BlobScout
+          size={28}
+          mood={brief.view === 'failed' ? 'sad' : quiet && entries.length > 0 ? 'happy' : null}
+        />
         <p className="dg-meta" aria-live="polite">
           {current?.status === 'ready'
             ? readyMeta(current, quiet, brief.state?.newActivity ?? false, voice)

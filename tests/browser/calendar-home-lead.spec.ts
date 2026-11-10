@@ -58,7 +58,6 @@ test('a meeting at its Join time leads Home with what stalls and what is still w
   await expect(stall.getByRole('button', { name: 'Open chat: Deploy the site' })).toBeVisible();
   const working = lead(page).getByRole('group', { name: 'Still working' });
   await expect(working).toContainText('Filter chips overflow');
-  await expect(working).toContainText(/will stop and ask|runs without asking|read only/);
   const after = home(page).getByRole('region', { name: 'After the meeting' });
   await expect(after).toBeVisible();
   await expect(after.locator('.hrow', { hasText: 'Standup' })).toHaveCount(0);
