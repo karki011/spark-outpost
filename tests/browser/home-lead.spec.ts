@@ -53,7 +53,13 @@ test('Since you left puts failed first, then the waiting card, then finished tur
     'Finished · open to review',
   ]);
   await expect(since.locator('.hstat')).toHaveText(['Failed', 'Waiting', 'Finished']);
-  await expect(since.getByRole('button')).toHaveText(['See error', 'Open chat', 'Review']);
+  await expect(since.getByRole('button')).toHaveText([
+    'See error',
+    'Allow',
+    'Deny',
+    'Open chat',
+    'Review',
+  ]);
   await expect(home(page).locator('.home-compose')).toHaveClass(/compact/);
   await expect(lead(page, /^Needs you/)).toHaveCount(0);
   await expect(lead(page, 'Pick up next')).toBeVisible();
