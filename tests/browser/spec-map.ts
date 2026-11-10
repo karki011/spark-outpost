@@ -228,6 +228,7 @@ export const SPEC_GROUPS = {
     'companion',
     'digest',
     'home',
+    'home-answer',
     'home-composer',
     'home-lead',
     'live-updates',

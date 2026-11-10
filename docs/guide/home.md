@@ -21,6 +21,10 @@ Only one lead shows. Spark picks it from what is true now, in this order.
 | **Before you go**  | It is 17:00 to 04:00 and a chat is running or waiting.                                                         | **Waiting on you** cards, then running chats grouped as **Will stop and ask** and **Runs without asking**.                                  |
 | None               | Nothing above applies.                                                                                         | The composer leads.                                                                                                                         |
 
+A waiting row for an ordinary command or file card also has **Allow** (once) and **Deny**. The row leaves at once and comes back with the reason if Spark refuses.
+
+Hold-to-confirm cards, instruction files, changes shown before and after, questions, plans and Mac-only cards keep only **Open chat** or **Answer**.
+
 Opening a row marks its update read, so it leaves the list. Updates that arrive while Home is open go to the board.
 
 ## The board

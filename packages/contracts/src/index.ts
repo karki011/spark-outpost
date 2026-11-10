@@ -110,6 +110,7 @@ export * from './guide.ts';
 export * from './guide-search.ts';
 export * from './secrets.ts';
 export * from './secret-files.ts';
+export * from './quick-answer.ts';
 export * from './teammates.ts';
 export * from './relay.ts';
 export * from './spark-mention.ts';

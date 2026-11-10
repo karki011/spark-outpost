@@ -52,6 +52,13 @@
   align-items: center;
 }
 
+.hrow-err {
+  display: block;
+  margin-top: 4px;
+  color: var(--danger);
+  font-size: 12px;
+}
+
 .hrow-t {
   display: block;
   max-width: 100%;

@@ -1,5 +1,6 @@
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { HomeRow, HomeRows, RowAction, StatusLabel } from './HomeCards.tsx';
+import { RowButtons, RowError } from './RowButtons.tsx';
 import type { NeedItem, RunItem } from './home-model.ts';
 import { runMode, type CapabilitiesByProvider } from './run-mode.ts';
 
@@ -24,14 +25,16 @@ export function WaitingRows({
           title={item.chat.title}
           line={item.sub}
           trailing={
-            <RowAction
+            <RowButtons
+              chat={item.chat}
               label="Open chat"
-              name={`Open chat: ${item.chat.title}`}
               primary
-              onClick={() => onOpen(item.chat)}
+              onOpen={() => onOpen(item.chat)}
             />
           }
-        />
+        >
+          <RowError chatId={item.chat.id} />
+        </HomeRow>
       ))}
     </HomeRows>
   );

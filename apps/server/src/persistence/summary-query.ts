@@ -66,7 +66,9 @@ export const summaryQuery = `
     ), false) AS pull_request_merged,
     p.pending_id, p.pending_kind, p.pending_title, p.pending_command, p.pending_paths,
     p.pending_agent, p.pending_member, p.pending_asker, p.pending_subagent, p.pending_questions,
-    p.pending_plan,
+    p.pending_plan, p.pending_keys, p.pending_payload_command, p.pending_payload_paths,
+    p.pending_payload_full_paths, p.pending_payload_truncated, p.pending_diffs,
+    p.pending_options, p.pending_hash,
     p.pending_provider, p.pending_pr_feedback,
     om.outpost_id, ob.name AS outpost_name, om.handle AS outpost_handle,
     ARRAY(
@@ -93,6 +95,12 @@ export const summaryQuery = `
       a.payload->>'subagent' AS pending_subagent,
       a.payload->'checkpoint'->'questions'->0 IS NOT NULL AS pending_questions,
       a.payload->>'plan' IS NOT NULL AS pending_plan,
+      (SELECT jsonb_agg(pk) FROM jsonb_object_keys(a.payload) pk) AS pending_keys,
+      a.payload->'command' AS pending_payload_command, a.payload->'paths' AS pending_payload_paths,
+      a.payload->'fullPaths' AS pending_payload_full_paths,
+      a.payload->'truncated' AS pending_payload_truncated,
+      COALESCE(jsonb_array_length(a.payload->'diffs'), 0) AS pending_diffs,
+      a.options AS pending_options, a.payload_hash AS pending_hash,
       COALESCE(m.provider, ar.provider) AS pending_provider,
       a.payload->'sparkAction'->>'action' = 'pr_follow_up' AS pending_pr_feedback
     FROM approvals a
