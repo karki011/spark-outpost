@@ -18,7 +18,27 @@ afterEach(async () => {
 });
 
 const RESET_TABLES = ['jobs', 'run_events', 'messages', 'runs', 'conversations'];
-const settle = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const WAIT_TIMEOUT_MS = 15_000;
+const POLL_MS = 10;
+
+async function waitUntilBlockedOnLock(queryPrefix: string): Promise<void> {
+  const deadline = Date.now() + WAIT_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const { rows } = await t.db.query(
+      `SELECT 1 FROM pg_stat_activity
+       WHERE datname = current_database()
+         AND pid <> pg_backend_pid()
+         AND wait_event_type = 'Lock'
+         AND query LIKE $1`,
+      [`${queryPrefix}%`],
+    );
+    if (rows.length > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+  }
+  throw new Error(
+    `No backend running "${queryPrefix}" was waiting on a lock within ${WAIT_TIMEOUT_MS} ms`,
+  );
+}
 
 async function seedRun(): Promise<string> {
   const conversation = await createConversation(t.db, t.workspaceId, randomUUID());
@@ -71,7 +91,7 @@ describe('resetting tables under a live orchestration', () => {
         client.release();
       }
     });
-    await settle(150);
+    await waitUntilBlockedOnLock('TRUNCATE');
     const outcomes = await Promise.all([readRuns(reader, runId), truncating]);
     expect(outcomes).toContainEqual(expect.objectContaining({ code: '40P01' }));
   });
@@ -80,7 +100,7 @@ describe('resetting tables under a live orchestration', () => {
     const runId = await seedRun();
     const reader = await readerHoldingOrchestrations(runId);
     const truncating = truncateTables(t.db, RESET_TABLES);
-    await settle(150);
+    await waitUntilBlockedOnLock('TRUNCATE');
     expect(await readRuns(reader, runId)).toBeNull();
     await truncating;
     const { rows } = await t.db.query('SELECT 1 FROM runs UNION ALL SELECT 1 FROM orchestrations');
@@ -98,7 +118,7 @@ describe('resetting tables under a live orchestration', () => {
         'SELECT o.run_id FROM orchestrations o JOIN runs r ON r.id = o.run_id WHERE o.run_id = $1',
         [runId],
       );
-      await settle(150);
+      await waitUntilBlockedOnLock('SELECT o.run_id');
       await blocker.query('LOCK TABLE orchestrations IN ACCESS EXCLUSIVE MODE');
       await blocker.query('COMMIT');
       const { rows } = await joined;
