@@ -67,6 +67,7 @@ POST /api/attention/:key/dismiss
 PUT /api/conversations/pinned-order
 GET /api/home/digest
 GET /api/home/recap
+GET /api/home/seen
 GET /api/home/today
 GET /api/providers/health
 GET /api/usage/spend
@@ -74,6 +75,7 @@ GET /api/usage/summary
 GET /api/usage/plan-limits
 POST /api/home/digest
 POST /api/home/recap
+POST /api/home/seen
 POST /api/home/recap/:id/refine
 POST /api/runs/:id/continue
 POST /api/runs/:id/start-fresh

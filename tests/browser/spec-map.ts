@@ -229,6 +229,7 @@ export const SPEC_GROUPS = {
     'digest',
     'home',
     'home-answer',
+    'home-away',
     'home-composer',
     'home-lead',
     'live-updates',

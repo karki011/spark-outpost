@@ -1,4 +1,5 @@
 import {
+  AWAY_MS,
   alerting,
   freshUpdate,
   type AttentionItem,
@@ -34,8 +35,20 @@ function isAwayUpdate(item: AttentionItem): boolean {
   return (kind === 'failed' || kind === 'finished' || kind === 'clean') && freshUpdate(item);
 }
 
-export function awayKeys(items: readonly AttentionItem[]): Set<string> {
-  return new Set(items.filter(isAwayUpdate).map((item) => item.key));
+function timeOf(iso: string | null): number | null {
+  const time = iso === null ? Number.NaN : Date.parse(iso);
+  return Number.isNaN(time) ? null : time;
+}
+
+export function awayKeys(
+  items: readonly AttentionItem[],
+  seenAt: string | null,
+  now: number,
+): Set<string> {
+  const seen = timeOf(seenAt);
+  if (seen !== null && now - seen < AWAY_MS) return new Set();
+  const after = (item: AttentionItem) => seen === null || (timeOf(item.at) ?? 0) > seen;
+  return new Set(items.filter((item) => isAwayUpdate(item) && after(item)).map((item) => item.key));
 }
 
 const FALLBACK_LINE: Record<SinceKind, string> = {

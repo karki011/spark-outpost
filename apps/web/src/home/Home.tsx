@@ -108,7 +108,7 @@ export function Home(props: HomeProps) {
   const attention = useAttentionItems();
   const markAttention = useMarkAttention();
   const alerting = useAlertingChats();
-  const away = useAwayKeys(attention.items, attention.loaded);
+  const away = useAwayKeys(attention.items, attention.loaded, now);
   const day = useUpcoming(now);
   const meeting = useMeetingLead(day, now);
 

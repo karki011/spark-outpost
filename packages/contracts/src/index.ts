@@ -157,3 +157,4 @@ export * from './atlassian.ts';
 export * from './atlassian-actions.ts';
 export * from './servicenow-actions.ts';
 export * from './browser-actions.ts';
+export * from './home-seen.ts';

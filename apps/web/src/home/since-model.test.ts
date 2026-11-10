@@ -44,6 +44,8 @@ function item(
   };
 }
 
+const NOW = Date.parse('2026-11-10T12:00:00.000Z');
+
 const chats = [1, 2, 3, 4, 5, 6, 7].map((n) => chat(n));
 
 describe('awayKeys', () => {
@@ -57,9 +59,37 @@ describe('awayKeys', () => {
       item(6, 'flag', '2026-11-10T06:00:00Z'),
       item(7, 'run-done', '2026-11-10T07:00:00Z', { dismissedAt: '2026-11-10T08:00:00Z' }),
     ];
-    expect([...awayKeys(items)].sort()).toEqual(
+    expect([...awayKeys(items, null, NOW)].sort()).toEqual(
       [items[0]!.key, items[1]!.key, items[2]!.key].sort(),
     );
+  });
+
+  describe('the away rule', () => {
+    const SEEN = '2026-11-10T08:00:00.000Z';
+    const seenMs = Date.parse(SEEN);
+    const items = [
+      item(1, 'run-done', '2026-11-10T07:59:59.999Z'),
+      item(2, 'run-done', SEEN),
+      item(3, 'run-failed', '2026-11-10T08:00:00.001Z'),
+      item(4, 'pr-clean', '2026-11-10T08:20:00.000Z'),
+    ];
+    const keys = (now: number) => [...awayKeys(items, SEEN, now)].sort();
+
+    it('shows nothing until the user has been away 30 minutes', () => {
+      expect(keys(seenMs + 29 * 60_000 + 59_999)).toEqual([]);
+    });
+
+    it('is away from exactly 30 minutes and lists only updates after the last visit', () => {
+      expect(keys(seenMs + 30 * 60_000)).toEqual([items[2]!.key, items[3]!.key].sort());
+    });
+
+    it('lists every unread update when Home has never been seen', () => {
+      expect(awayKeys(items, null, NOW).size).toBe(4);
+    });
+
+    it('treats an unreadable last-seen time as never seen', () => {
+      expect(awayKeys(items, 'not a date', NOW).size).toBe(4);
+    });
   });
 });
 
@@ -73,7 +103,7 @@ describe('sinceRows', () => {
   ];
 
   it('puts failed first, then waiting cards, clean pull requests and finished turns', () => {
-    const rows = sinceRows(items, awayKeys(items), chats);
+    const rows = sinceRows(items, awayKeys(items, null, NOW), chats);
     expect(rows.map((row) => [row.chat.title, row.kind])).toEqual([
       ['Chat 5', 'failed'],
       ['Chat 4', 'failed'],
@@ -84,7 +114,7 @@ describe('sinceRows', () => {
   });
 
   it('drops rows once read, unless a card still waits, and skips archived chats', () => {
-    const away = awayKeys(items);
+    const away = awayKeys(items, null, NOW);
     const handled = items.map((entry) =>
       entry.kind === 'run-done' || entry.kind === 'approval'
         ? { ...entry, readAt: '2026-11-10T08:00:00Z' }
@@ -101,7 +131,7 @@ describe('sinceRows', () => {
   });
 
   it('describes each row with a fixed line when the chat has no better one', () => {
-    const rows = sinceRows(items, awayKeys(items), chats);
+    const rows = sinceRows(items, awayKeys(items, null, NOW), chats);
     expect(rows.map((row) => row.line)).toEqual([
       'The turn stopped with an error',
       'The turn stopped with an error',
