@@ -8,7 +8,7 @@ import { openTodayDay, openTodayEvent } from '../calendar/today-request.ts';
 import type { Upcoming } from '../calendar/use-upcoming.ts';
 import { MAC } from '../ui/shortcuts.ts';
 import { HomeCard, HomeRow, HomeRows, Quiet, RowsSkeleton } from './HomeCards.tsx';
-import { dayTitle, splitDays } from './board-model.ts';
+import { dayEvents, dayTitle } from './board-model.ts';
 import type { LeadState } from './lead-state.ts';
 import { ProviderNotice } from './ProviderNotice.tsx';
 import { SpendLine } from './SpendLine.tsx';
@@ -86,12 +86,10 @@ function CalendarCard(props: DayColumnProps) {
     );
   }
   if (!day.available) return null;
-  const days = splitDays(day.events, props.now, props.leadEventKey);
-  const evening = props.lead === 'before-you-go' && days.tomorrow.length > 0;
   return (
     <HomeCard
       id="home-day"
-      title={dayTitle(props.lead, days.tomorrow.length > 0)}
+      title={dayTitle(props.lead)}
       action={
         <span className="hday-a">
           <span className="hday-hint">{MAC ? '⌘J' : 'Ctrl+J'} joins the next</span>
@@ -101,11 +99,11 @@ function CalendarCard(props: DayColumnProps) {
         </span>
       }
     >
-      {evening ? (
-        <Meetings {...props} events={days.tomorrow.slice(0, 3)} empty="" />
-      ) : (
-        <Meetings {...props} events={days.today} empty="No more meetings today." />
-      )}
+      <Meetings
+        {...props}
+        events={dayEvents(day.events, props.leadEventKey)}
+        empty="No more meetings today."
+      />
     </HomeCard>
   );
 }

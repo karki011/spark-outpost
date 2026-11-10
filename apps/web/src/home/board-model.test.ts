@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AttentionItem, ConversationSummary } from '@spark-outpost/contracts';
 import { at, event } from '../calendar/test-fixtures.ts';
-import { dayTitle, leftoverNeeds, needsColumn, reviewItems, splitDays } from './board-model.ts';
+import { dayEvents, dayTitle, leftoverNeeds, needsColumn, reviewItems } from './board-model.ts';
 import type { NeedItem, NeedTone } from './home-model.ts';
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -80,28 +80,25 @@ describe('reviewItems', () => {
 
 describe('dayTitle', () => {
   it('names the calendar column for the state', () => {
-    expect(dayTitle('meeting', true)).toBe('After the meeting');
-    expect(dayTitle('before-you-go', true)).toBe('Tomorrow');
-    expect(dayTitle('before-you-go', false)).toBe('Your day');
-    expect(dayTitle('board', true)).toBe('Your day');
-    expect(dayTitle('since-you-left', true)).toBe('Your day');
+    expect(dayTitle('meeting')).toBe('After the meeting');
+    expect(dayTitle('before-you-go')).toBe('Your day');
+    expect(dayTitle('board')).toBe('Your day');
+    expect(dayTitle('since-you-left')).toBe('Your day');
   });
 });
 
-describe('splitDays', () => {
+describe('dayEvents', () => {
   const standup = event('Standup', at(9, 30), at(9, 45));
   const sync = event('Design sync', at(14, 50), at(15, 20));
-  const tomorrow = event('Review', at(9, 0) + 24 * 3_600_000, at(10, 0) + 24 * 3_600_000);
-  const later = event('Offsite', at(9, 0) + 72 * 3_600_000, at(10, 0) + 72 * 3_600_000);
 
-  it('separates what is left today from tomorrow and drops the rest', () => {
-    const days = splitDays([standup, sync, tomorrow, later], at(8, 0), null);
-    expect(days.today.map((entry) => entry.title)).toEqual(['Standup', 'Design sync']);
-    expect(days.tomorrow.map((entry) => entry.title)).toEqual(['Review']);
+  it('lists the meetings left today', () => {
+    expect(dayEvents([standup, sync], null).map((entry) => entry.title)).toEqual([
+      'Standup',
+      'Design sync',
+    ]);
   });
 
   it('leaves out the meeting the lead already shows', () => {
-    const days = splitDays([standup, sync], at(14, 45), sync.key);
-    expect(days.today.map((entry) => entry.title)).toEqual(['Standup']);
+    expect(dayEvents([standup, sync], sync.key).map((entry) => entry.title)).toEqual(['Standup']);
   });
 });

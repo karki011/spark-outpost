@@ -27,6 +27,8 @@ export function useInboxMarks() {
     rollback(context: MarkContext | undefined) {
       const before = context?.before;
       if (before) write((current) => replaceTicket(current, before));
+      if (queryClient.isMutating({ mutationKey: MARK_MUTATION_KEY }) > 1) return;
+      void queryClient.invalidateQueries({ queryKey: ticketKeys.inbox, exact: true });
     },
     reconcile(inbox: TicketInbox) {
       if (queryClient.isMutating({ mutationKey: MARK_MUTATION_KEY }) > 1) return;

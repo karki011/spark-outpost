@@ -1,6 +1,5 @@
 import {
   freshUpdate,
-  spanOf,
   type CalendarEvent,
   type AttentionItem,
   type ConversationSummary,
@@ -55,27 +54,13 @@ export function reviewItems(
   return [...clean, ...finished].filter((entry) => !inLead.has(entry.chat.id));
 }
 
-export function dayTitle(lead: LeadState, hasTomorrow: boolean): string {
-  if (lead === 'meeting') return 'After the meeting';
-  if (lead === 'before-you-go' && hasTomorrow) return 'Tomorrow';
-  return 'Your day';
+export function dayTitle(lead: LeadState): string {
+  return lead === 'meeting' ? 'After the meeting' : 'Your day';
 }
 
-export function splitDays(
+export function dayEvents(
   events: readonly CalendarEvent[],
-  now: number,
   hideKey: string | null,
-): { today: CalendarEvent[]; tomorrow: CalendarEvent[] } {
-  const midnight = new Date(now);
-  midnight.setHours(24, 0, 0, 0);
-  const after = new Date(midnight);
-  after.setDate(after.getDate() + 1);
-  const shown = events.filter((event) => event.key !== hideKey);
-  return {
-    today: shown.filter((event) => spanOf(event).start < midnight.getTime()),
-    tomorrow: shown.filter((event) => {
-      const { start } = spanOf(event);
-      return start >= midnight.getTime() && start < after.getTime();
-    }),
-  };
+): CalendarEvent[] {
+  return events.filter((event) => event.key !== hideKey);
 }
