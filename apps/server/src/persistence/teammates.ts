@@ -1,4 +1,5 @@
 import {
+  PR_FOLLOW_UP_SPARK,
   TEAMMATES_MAX,
   TEAMMATE_STARTER_IDS,
   faceFromName,
@@ -17,6 +18,7 @@ import {
 } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
 import { newId } from './ids.ts';
+import { relayWatch } from './relay.ts';
 import { ProjectNotFoundError } from '../projects/projects.ts';
 
 export class TeammateNotFoundError extends Error {
@@ -40,6 +42,7 @@ interface TeammateRow {
   instructions: string;
   instructions_path: string | null;
   home_conversation_id: string | null;
+  kind: string | null;
   project_ids: string[];
   created_at: Date;
   updated_at: Date;
@@ -48,7 +51,7 @@ interface TeammateRow {
 const UNIQUE_VIOLATION = '23505';
 
 const teammateColumns = `t.id, t.name, t.role, t.face_shape, t.face_color, t.provider, t.model,
-  t.agent_mode, t.level, t.instructions, t.instructions_path, t.home_conversation_id, t.created_at, t.updated_at,
+  t.agent_mode, t.level, t.instructions, t.instructions_path, t.home_conversation_id, t.kind, t.created_at, t.updated_at,
   ARRAY(
     SELECT tp.project_id::text FROM teammate_projects tp
     WHERE tp.teammate_id = t.id ORDER BY tp.position
@@ -70,6 +73,7 @@ function toTeammate(row: TeammateRow): Teammate {
     instructionsPath: row.instructions_path,
     projectIds: row.project_ids,
     homeConversationId: row.home_conversation_id,
+    ...(row.kind === PR_FOLLOW_UP_SPARK ? { kind: PR_FOLLOW_UP_SPARK } : {}),
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -293,14 +297,18 @@ export async function teammateList(
     dismissedStarters(db, workspaceId),
   ]);
   const taken = new Set(teammates.map((teammate) => teammate.name.toLowerCase()));
+  const relay = teammates.some((teammate) => teammate.kind)
+    ? await relayWatch(db, workspaceId)
+    : null;
   return {
-    teammates: teammates.map((teammate) =>
-      teammateView(
+    teammates: teammates.map((teammate) => {
+      const view = teammateView(
         teammate,
         signals.filter((row) => row.teammate_id === teammate.id),
         now,
-      ),
-    ),
+      );
+      return teammate.kind && relay ? { ...view, relay } : view;
+    }),
     starters: TEAMMATE_STARTER_IDS.filter(
       (id) => !dismissed.includes(id) && !taken.has(id.toLowerCase()),
     ),

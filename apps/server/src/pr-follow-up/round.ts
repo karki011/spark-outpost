@@ -28,10 +28,13 @@ import { connectTo, shipDepsOf, startRoundRun, type FollowUpDeps } from './deps.
 import { FollowUpBlocked, pendingPush, postReply, pushRound, replyText } from './outward.ts';
 import { followUpMode } from './mode.ts';
 import { itemNotes, noteKind, roundPrompt } from './prompt.ts';
+import { noteRoundOutcome, UNFINISHED } from './round-outcome.ts';
 import {
   CHAT_BUSY_LINE,
   changedNothing,
   heldBackLine,
+  mergeRoundDue,
+  mergeRoundKey,
   QUIET_LINE,
   roundLine,
   splitRound,
@@ -107,7 +110,10 @@ export async function startRound(
     return { ...watch, phase: 'watching', doing: CHAT_BUSY_LINE };
   }
   const { run: queued, line } = await holdBack(deps, watch, all);
-  if (queued.length === 0) return needsYou(watch, line);
+  const asks = (await followUpMode(deps.db, watch)) === 'ask';
+  const mergeKey = asks ? null : mergeRoundKey(branch.mergeState, watch.headSha, branch.base);
+  const merges = mergeRoundDue(mergeKey, watch.mergeRoundFor, asks);
+  if (queued.length === 0 && !merges) return needsYou(watch, line);
   const ship = watch.taskId ? await getTaskShip(deps.db, watch.taskId) : null;
   const root = await roundRoot(deps, watch);
   if (!root) return needsYou(watch, 'Spark lost track of the branch this PR came from.');
@@ -116,7 +122,6 @@ export async function startRound(
     if (sync === 'diverged' || sync === 'unreachable') return needsYou(watch, SYNC_LINES[sync]);
   }
   const round = watch.rounds + 1;
-  const asks = (await followUpMode(deps.db, watch)) === 'ask';
   const content = roundPrompt(
     {
       repo: `${watch.owner}/${watch.repo}`,
@@ -144,6 +149,7 @@ export async function startRound(
     roundRunId: runId,
     requested: false,
     quietHead: null,
+    mergeRoundFor: mergeKey ?? watch.mergeRoundFor,
   };
 }
 
@@ -218,7 +224,12 @@ export async function finishRound(deps: FollowUpDeps, watch: Watch): Promise<Wat
   const ids = items.map((item) => item.id);
   if (!run || run.status !== 'succeeded') {
     await updateFeedback(deps.db, ids, { state: 'needs_user' });
-    const how = run?.status === 'cancelled' ? 'was stopped' : 'did not finish';
+    const stopped = run?.status === 'cancelled';
+    await noteRoundOutcome(deps.db, watch, {
+      ...UNFINISHED,
+      ended: stopped ? 'stopped' : 'failed',
+    });
+    const how = stopped ? 'was stopped' : 'did not finish';
     return needsYou(watch, `The fix round ${how}. Ask Spark in the chat to try again.`);
   }
   const notes = itemNotes(run.reply);
@@ -353,6 +364,14 @@ async function settle(
     await updateFeedback(deps.db, [item.id], { state: 'done', replyId });
   }
   const quiet = changedNothing(commit, replied);
+  await noteRoundOutcome(deps.db, watch, {
+    ended: 'settled',
+    pushed: commit !== null,
+    merged: commit !== null && items.length === 0,
+    replied,
+    needs,
+    unpushed: settlement.unpushed,
+  });
   const line = [unpushedLine(settlement.unpushed), doneLine(commit, replied, needs)]
     .filter(Boolean)
     .join(' ');

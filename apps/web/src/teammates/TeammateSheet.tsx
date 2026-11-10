@@ -140,6 +140,13 @@ export function TeammateSheet({ request, editing }: TeammateSheetProps) {
         </header>
         <form className="tm-form" onSubmit={submit} noValidate>
           <div className="tm-body">
+            {editing?.kind && (
+              <p className="tm-builtin">
+                Spark's built-in pull request follow-up Spark. Its standing instructions go into
+                every follow-up round as context and grant nothing; Follow up on pull requests in
+                Settings decides whether rounds run.
+              </p>
+            )}
             <label className="field">
               <span>Name</span>
               <input

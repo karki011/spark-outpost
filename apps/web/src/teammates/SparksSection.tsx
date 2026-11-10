@@ -4,6 +4,7 @@ import { PlusIcon, TrashIcon } from '../ui/icons.tsx';
 import { StarterSuggestions } from './StarterSuggestions.tsx';
 import { TeammateFace } from './TeammateFace.tsx';
 import { openTeammateSheet } from './teammate-store.ts';
+import { userMade } from './use-relay.ts';
 import { useTeammates } from './use-teammates.ts';
 
 export function SparksSection() {
@@ -72,6 +73,9 @@ export function SparksSection() {
           >
             <PlusIcon /> New Spark
           </button>
+          {userMade(teammates).length === 0 && starters.length > 0 && (
+            <StarterSuggestions starters={starters} offerNew={false} />
+          )}
         </>
       )}
     </>

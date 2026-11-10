@@ -66,6 +66,7 @@ import { turnSessionFor, type TurnSession } from './turn-session.ts';
 import { asAgentReads } from '../outposts/agent-prompt.ts';
 import { preambleDeps } from '../outposts/preamble-stores.ts';
 import { answersDelivered, outpostPreamble } from '../outposts/turn-preamble.ts';
+import { withRelayPreamble } from '../pr-follow-up/relay-preamble.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
 import { repoScanner } from '../agent-config/discovery.ts';
 import { loadRepoLaunch } from '../agent-config/launch.ts';
@@ -328,7 +329,9 @@ export async function runAgentTurn(
     const outposts = preambleDeps(deps.db, input.workspaceId);
     const outpost =
       input.assistant || options.secondPrompt ? null : await outpostPreamble(outposts, shown);
-    const turnPreamble = assistantTurn ? assistantTurn.note : outpost?.text;
+    const turnPreamble = assistantTurn
+      ? assistantTurn.note
+      : await withRelayPreamble(deps.db, input, outpost?.text, options.secondPrompt === true);
 
     if (input.modelSwitch) {
       await recordModelSwitch(deps.db, lease.runId, append, input.modelSwitch);

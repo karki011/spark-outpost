@@ -26,6 +26,21 @@ export function roundDecision(quiet: boolean, queued: number, requested: boolean
   return 'start';
 }
 
+const BRANCH_UPDATE_STATES: ReadonlySet<string> = new Set(['behind', 'dirty']);
+
+export function mergeRoundKey(
+  mergeState: string | null,
+  headSha: string | null,
+  base: string | null,
+): string | null {
+  if (!mergeState || !BRANCH_UPDATE_STATES.has(mergeState) || !headSha || !base) return null;
+  return `${headSha}:${base}`;
+}
+
+export function mergeRoundDue(key: string | null, lastKey: string | null, asks: boolean) {
+  return key !== null && key !== lastKey && !asks;
+}
+
 export function stillQuiet(
   quietHead: string | null,
   headSha: string | null,
@@ -57,6 +72,7 @@ export function newSourceKeys<T extends { sourceKey: string }>(
 }
 
 export function roundLine(count: number, round: number): string {
+  if (count === 0) return `Updating the branch from its base (round ${round}).`;
   const items = `${count} ${count === 1 ? 'item' : 'items'}`;
   return `Fixing ${items} (round ${round}).`;
 }

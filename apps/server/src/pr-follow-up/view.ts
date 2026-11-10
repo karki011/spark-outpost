@@ -73,6 +73,7 @@ export async function watchView(db: Queryable, watch: TrackedPull, excerptChars?
     },
     ticketSync: watch.ticketSync,
     clean: shownClean(watch),
+    roundOutcomes: watch.roundOutcomes,
   };
   return view;
 }

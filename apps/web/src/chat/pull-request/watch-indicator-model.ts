@@ -1,12 +1,14 @@
 import {
   agentLabel,
   isTerminalRunStatus,
+  roundOutcomeLine,
   type CrewMember,
   type PrPollProblem,
   type PrWatch,
   type Run,
 } from '@spark-outpost/contracts';
 import { needYou } from './pr-card-model.ts';
+import { lastOutcome } from './relay-model.ts';
 
 export type FollowUpMode = 'on' | 'ask' | 'off';
 
@@ -44,6 +46,7 @@ export interface IndicatorContext {
   mode: FollowUpMode;
   worker: RoundWorker | null;
   now: number;
+  relay?: string | null;
 }
 
 const ACCESS_PROBLEMS: ReadonlySet<PrPollProblem> = new Set(['not_connected', 'no_access']);
@@ -169,8 +172,8 @@ function shape(state: WatchState, watch: PrWatch, context: IndicatorContext): Sh
         tone: 'live',
         watching: true,
         pulse: true,
-        label: 'Agent is on it',
-        short: 'Agent is on it',
+        label: context.relay ? `${context.relay} is on it` : 'Agent is on it',
+        short: context.relay ? `${context.relay} is on it` : 'Agent is on it',
         lines: [`${workerLine(worker)} is working on ${roundLabel(watch).toLowerCase()}.`],
       };
     case 'needs_you':
@@ -220,7 +223,7 @@ function shape(state: WatchState, watch: PrWatch, context: IndicatorContext): Sh
         tone: 'quiet',
         watching: true,
         pulse: false,
-        label: 'Stopped following up',
+        label: context.relay ? `${context.relay} stopped: nothing changed` : 'Stopped following up',
         short: 'Stopped',
         lines: [STOPPED_LINE, polled],
       };
@@ -266,12 +269,24 @@ function offerFor(state: WatchState, watch: PrWatch, mode: FollowUpMode) {
 export function watchIndicator(watch: PrWatch, context: IndicatorContext): WatchIndicator | null {
   const state = watchState(watch, context.mode);
   if (!state) return null;
+  const shaped = shape(state, watch, context);
+  const outcome = context.relay && OUTCOME_STATES.has(state) ? lastOutcome(watch) : null;
   return {
     state,
-    ...shape(state, watch, context),
+    ...shaped,
+    lines: outcome
+      ? [`${roundOutcomeLine(context.relay!, outcome)}.`, ...shaped.lines]
+      : shaped.lines,
     offer: offerFor(state, watch, context.mode),
   };
 }
+
+const OUTCOME_STATES: ReadonlySet<WatchState> = new Set([
+  'needs_you',
+  'waiting_checks',
+  'waiting_review',
+  'watching',
+]);
 
 export function indicatorTitle(indicator: WatchIndicator): string {
   return `${indicator.label}. ${indicator.lines.join(' ')}`;

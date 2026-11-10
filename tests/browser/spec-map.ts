@@ -184,7 +184,7 @@ export const SPEC_GROUPS = {
     'tickets-rows',
   ],
   slack: ['slack-chat', 'slack-settings', 'slack-sign-in'],
-  sparks: ['spark-actions', 'spark-decisions', 'spark-mention', 'spark-sheet', 'sparks'],
+  sparks: ['relay', 'spark-actions', 'spark-decisions', 'spark-mention', 'spark-sheet', 'sparks'],
   'settings-providers': [
     'agent-instructions',
     'keychain-notice',

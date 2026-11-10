@@ -37,6 +37,10 @@ In any chat, type `@` and pick a Spark, or select the **Ask Pip (Code reviewer)?
 - The chat's agent gets a short note, and runs only if your message goes on: `@Pip review this, then fix it`.
 - Up to three Sparks run in turn. Mode and approvals never widen.
 
+## Relay
+
+**Relay** is already on **Home**: Spark's built-in Spark for [PR follow-up](pr-follow-up.md#relay). Its card lists the pull requests it watches. Edit it like any Spark; a deleted Relay doesn't come back.
+
 ## Change or delete one
 
 1. Point at its card on **Home** and select **Edit**, or open **Settings → Crew**.
