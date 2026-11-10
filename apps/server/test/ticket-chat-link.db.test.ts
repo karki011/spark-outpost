@@ -86,7 +86,9 @@ describe('linking a chat to the ticket it works on', () => {
     expect(linked.mentioned).toEqual([]);
 
     await connectJira();
-    const inbox = ticketInboxSchema.parse((await get('/api/tickets/inbox').expect(200)).body);
+    const inbox = ticketInboxSchema.parse(
+      (await get('/api/tickets/inbox').set('Cache-Control', 'no-cache').expect(200)).body,
+    );
     const ticket = inbox.tickets.find((item) => item.key === 'ENG-12')!;
     expect(ticket.chat).toMatchObject({ conversationId: chat });
     expect(ticket.work).toEqual([expect.objectContaining({ conversationId: chat, taskId: null })]);

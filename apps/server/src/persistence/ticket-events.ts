@@ -1,6 +1,6 @@
 import type { TicketLastSync, TicketSourceId } from '@spark-outpost/contracts';
 import { redactValue } from '../audit/redact.ts';
-import type { Queryable } from './db.ts';
+import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
 import { ticketRef } from './tickets.ts';
 
@@ -24,6 +24,14 @@ export interface TicketEvent {
   detail?: Record<string, unknown>;
 }
 
+type TicketEventListener = (db: Queryable, workspaceId: string, event: TicketEvent) => void;
+
+const listeners: TicketEventListener[] = [];
+
+export function afterTicketEvent(listener: TicketEventListener): void {
+  listeners.push(listener);
+}
+
 export async function recordTicketEvent(
   db: Queryable,
   workspaceId: string,
@@ -43,6 +51,7 @@ export async function recordTicketEvent(
       JSON.stringify(redactValue(event.detail ?? {})),
     ],
   );
+  for (const listener of listeners) listener(db, workspaceId, event);
 }
 
 interface LastSyncRow {
@@ -91,4 +100,23 @@ export async function mergeMoveTried(
     [workspaceId, ticket.source, ticket.key, pullUrl],
   );
   return rows[0]?.tried === true;
+}
+
+export async function whileClaimingMergeMove<T>(
+  db: Db,
+  workspaceId: string,
+  ticket: { source: TicketSourceId; key: string },
+  pullUrl: string,
+  work: () => Promise<T>,
+): Promise<T | null> {
+  return withTransaction(db, async (client) => {
+    const claim = `merge-move:${workspaceId}:${ticket.source}:${ticket.key}:${pullUrl}`;
+    const { rows } = await client.query<{ claimed: boolean }>(
+      'SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS claimed',
+      [claim],
+    );
+    if (rows[0]?.claimed !== true) return null;
+    if (await mergeMoveTried(client, workspaceId, ticket, pullUrl)) return null;
+    return work();
+  });
 }

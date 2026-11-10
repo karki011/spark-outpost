@@ -59,7 +59,9 @@ async function connect() {
 }
 
 async function inbox(): Promise<TicketInbox> {
-  return ticketInboxSchema.parse((await get('/api/tickets/inbox').expect(200)).body);
+  return ticketInboxSchema.parse(
+    (await get('/api/tickets/inbox').set('Cache-Control', 'no-cache').expect(200)).body,
+  );
 }
 
 const sectionOf = (list: TicketInbox, key: string) =>

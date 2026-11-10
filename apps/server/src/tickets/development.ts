@@ -19,6 +19,7 @@ import {
 } from './development-merge.ts';
 import { myGitHubLogins, projectOpenPulls, pullsMatchingKey } from './github-pulls.ts';
 import { parsePullUrl, readPullStatuses } from './pull-status.ts';
+import type { PullStatusCache } from './pull-status-cache.ts';
 import type { SourcePull } from './source.ts';
 
 export interface DevelopmentDeps extends TicketDeps {
@@ -75,6 +76,7 @@ async function resolve(
   deps: DevelopmentDeps,
   subjects: readonly Subject[],
   readLimit: number,
+  statusCache?: PullStatusCache,
 ): Promise<Map<string, TicketDev>> {
   const unlinked = (subject: Subject) =>
     subject.spark.length === 0 && linkedPulls(subject).length === 0;
@@ -88,7 +90,7 @@ async function resolve(
   );
   const latest = subjects.map((subject) => subject.spark.at(-1)?.url ?? null);
   const urls = merged.flatMap((pulls, index) => pullsToRead(pulls, latest[index]!, readLimit));
-  const statuses = await readPullStatuses(deps.github, urls);
+  const statuses = await readPullStatuses(deps.github, urls, statusCache);
   const others = merged.some((pulls) => pulls.some((pull) => pull.origin !== 'spark'));
   const logins = others ? await myGitHubLogins(deps.github) : new Set<string>();
   return new Map(
@@ -140,6 +142,7 @@ export async function inboxDevelopment(
       };
     }),
     INBOX_READS,
+    { db: deps.db, now: (deps.now?.() ?? new Date()).getTime() },
   );
   return (ticket) => resolved.get(ticketRef(ticket.source, ticket.key)) ?? NOTHING;
 }

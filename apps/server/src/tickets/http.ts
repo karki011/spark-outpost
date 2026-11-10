@@ -1,4 +1,5 @@
 import { redactText } from '../audit/redact.ts';
+import { backoffMs } from './retry-after.ts';
 import { TicketApiError } from './source.ts';
 
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -110,12 +111,14 @@ export function failure(
     return new TicketApiError(
       429,
       `${sourceName} is limiting requests (429) while ${action}. Nothing changed; try again ${wait}.`,
+      backoffMs(answer.retryAfter, new Date()),
     );
   }
   const detail = detailOf(answer.data);
   return new TicketApiError(
     answer.status,
     `${sourceName} responded with ${answer.status} while ${action}${detail ? `: ${detail}` : '.'}`,
+    answer.status === 503 ? backoffMs(answer.retryAfter, new Date()) : null,
   );
 }
 

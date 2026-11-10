@@ -79,6 +79,8 @@ function searchParams(query: TicketSearchQuery): string {
 
 export const ticketsApi = {
   inbox: (): Promise<TicketInbox> => request(ticketInboxSchema, '/tickets/inbox'),
+  refreshedInbox: (): Promise<TicketInbox> =>
+    request(ticketInboxSchema, '/tickets/inbox', { headers: { 'Cache-Control': 'no-cache' } }),
   connections: (): Promise<TicketConnections> =>
     request(ticketConnectionsSchema, '/tickets/connections'),
   moveOptions: (source: TicketSourceId): Promise<TicketMoveOptions> =>

@@ -56,7 +56,9 @@ const get = (url: string) => request(app).get(url).set(LOCAL_HEADERS);
 const pullUrl = (number: number) => `https://github.com/acme/widgets/pull/${number}`;
 
 async function ticketIn(key: string): Promise<InboxTicket> {
-  const inbox = ticketInboxSchema.parse((await get('/api/tickets/inbox').expect(200)).body);
+  const inbox = ticketInboxSchema.parse(
+    (await get('/api/tickets/inbox').set('Cache-Control', 'no-cache').expect(200)).body,
+  );
   return inbox.tickets.find((ticket) => ticket.key === key)!;
 }
 
