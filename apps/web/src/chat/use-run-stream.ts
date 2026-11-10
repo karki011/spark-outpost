@@ -11,6 +11,7 @@ import { taskKeys } from '../tasks/task-api.ts';
 import { refreshesChat } from './run-refresh.ts';
 import { RunStreamClient } from './run-stream-client.ts';
 import { applyRunEvent, initialRunProjection, type RunProjection } from './run-projection.ts';
+import { invalidateChatDetail } from '../api/chat-detail.ts';
 
 interface StreamState {
   runId: string;
@@ -20,7 +21,7 @@ interface StreamState {
 const clients = new WeakMap<QueryClient, RunStreamClient>();
 function refreshAfter(queryClient: QueryClient, conversationId: string, event: RunEvent): void {
   if (refreshesChat(event)) {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) });
+    void invalidateChatDetail(queryClient, conversationId);
   }
   if (isTaskActivity(event) || isTerminalRunEvent(event) || isApprovalEvent(event)) {
     void queryClient.invalidateQueries({ queryKey: taskKeys.all });
@@ -29,8 +30,9 @@ function refreshAfter(queryClient: QueryClient, conversationId: string, event: R
     void queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true });
   }
   if (isTerminalRunEvent(event)) {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) });
+    void invalidateChatDetail(queryClient, conversationId);
     void queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.annotations(conversationId) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.allCapabilities });
   }
 }

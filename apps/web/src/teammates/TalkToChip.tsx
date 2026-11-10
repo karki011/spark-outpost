@@ -7,6 +7,7 @@ import { usePopover } from '../ui/use-popover.ts';
 import { TeammateFace } from './TeammateFace.tsx';
 import { teammatesApi } from './teammates-api.ts';
 import { useTeammates } from './use-teammates.ts';
+import { invalidateChatDetail } from '../api/chat-detail.ts';
 
 function talkState(detail: ConversationDetail) {
   return { teammate: detail.conversation.teammate ?? null, started: detail.messages.length > 0 };
@@ -29,7 +30,7 @@ export function TalkToChip({ conversationId }: { conversationId: string }) {
     mutationFn: (teammateId: string | null) => teammatesApi.talkTo(conversationId, teammateId),
     onSuccess: () =>
       Promise.all([
-        client.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) }),
+        invalidateChatDetail(client, conversationId),
         client.invalidateQueries({ queryKey: queryKeys.agentCommands(conversationId) }),
       ]),
   });

@@ -16,6 +16,7 @@ import type { AskSession } from './use-ask-session.ts';
 import { MicButton } from '../voice/MicButton.tsx';
 import { useSeed, useSpeechSeeds } from '../voice/speech-seed.tsx';
 import { useDictationDraft } from '../voice/use-dictation-draft.ts';
+import { invalidateChatDetail } from '../api/chat-detail.ts';
 
 interface AskSparkProps {
   voice: Voice;
@@ -102,7 +103,7 @@ export function AskSpark({ voice, focusDelay, session, links }: AskSparkProps) {
     },
     onError: (_error, { id }) => setAsks((list) => list.filter((entry) => entry.id !== id)),
     onSuccess: (assistantId) => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(assistantId) });
+      void invalidateChatDetail(queryClient, assistantId);
       void queryClient.invalidateQueries({ queryKey: assistantKeys.settings, exact: true });
     },
   });

@@ -9,6 +9,7 @@ import { ShieldIcon } from '../../ui/icons.tsx';
 import { copyButtonText, useCopyFeedback } from '../../ui/use-copy-feedback.ts';
 import { RowIcon } from '../rows/RowIcon.tsx';
 import { flagNote } from './rail-flag-text.ts';
+import { invalidateChatDetail } from '../../api/chat-detail.ts';
 
 function Original({ original }: { original: RailOriginal }) {
   const { state, copy } = useCopyFeedback();
@@ -32,7 +33,7 @@ export function RailFlagCard({ flag, conversationId }: { flag: RailFlag; convers
   const decide = useMutation({
     mutationFn: (action: 'dismiss' | 'revert') => approvalsApi.decideFlag(flag.id, { action }),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) });
+      void invalidateChatDetail(queryClient, conversationId);
       void queryClient.invalidateQueries({ queryKey: taskKeys.all });
     },
   });

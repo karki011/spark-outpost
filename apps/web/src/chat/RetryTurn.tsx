@@ -1,6 +1,7 @@
 import './approvals/timed-out.css';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
+import { invalidateChatDetail } from '../api/chat-detail.ts';
 
 interface RetryTurnProps {
   conversationId: string;
@@ -13,7 +14,7 @@ export function RetryTurn({ conversationId, content }: RetryTurnProps) {
     mutationFn: () => api.sendMessage(conversationId, crypto.randomUUID(), content),
     onSuccess: () =>
       Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) }),
+        invalidateChatDetail(queryClient, conversationId),
         queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true }),
       ]),
   });

@@ -3,6 +3,7 @@ import type { MemberMessage } from '@spark-outpost/contracts';
 import { queryKeys } from '../../api/client.ts';
 import { queueDraftAfterTyped, requestComposerFocus } from '../composer/pending-draft.ts';
 import { queueApi } from '../queue/queue-api.ts';
+import { invalidateChatDetail } from '../../api/chat-detail.ts';
 
 type SteerAction = { kind: 'resend' | 'edit'; messages: readonly MemberMessage[] };
 
@@ -34,8 +35,7 @@ export function useSteerActions(conversationId: string) {
   const mutation = useMutation({
     mutationKey: ['steer', conversationId],
     mutationFn: (action: SteerAction) => applySteerAction(conversationId, action),
-    onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) }),
+    onSettled: () => invalidateChatDetail(queryClient, conversationId),
   });
   return {
     pending: mutation.isPending,

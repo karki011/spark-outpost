@@ -13,6 +13,7 @@ import { askAboutTabs } from './ask-tabs.ts';
 import { MentionComposer } from './MentionComposer.tsx';
 import type { PageRef } from './page-chat.ts';
 import { acceptViewState, useProfileTabs } from './view-store.ts';
+import { invalidateChatDetail } from '../api/chat-detail.ts';
 
 interface AskTabsDockProps {
   first: PageRef | null;
@@ -159,7 +160,7 @@ export function AskTabsDock({ first, onOpenAssistant, onClose }: AskTabsDockProp
     const timer = setInterval(() => {
       void queryClient.invalidateQueries({ queryKey: DOCK_HISTORY });
       if (assistant.id) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(assistant.id) });
+        void invalidateChatDetail(queryClient, assistant.id);
       }
     }, WAIT_POLL_MS);
     return () => clearInterval(timer);
