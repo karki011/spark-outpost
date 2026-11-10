@@ -142,3 +142,20 @@ test('no notice shows when nothing was cut off', async ({ page }) => {
   await expect(row(page, 'API-84')).toBeVisible({ timeout: 15_000 });
   await expect(main(page).getByText('has more tickets than Spark lists')).toHaveCount(0);
 });
+
+test('Refresh asks the server for a fresh sync while other refetches do not', async ({ page }) => {
+  await connectTickets(page);
+  const asked: (string | undefined)[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/tickets/inbox') {
+      asked.push(request.headers()['cache-control']);
+    }
+  });
+  await openTickets(page);
+  await expect(row(page, 'API-84')).toBeVisible({ timeout: 15_000 });
+  expect(asked.length).toBeGreaterThan(0);
+  expect(asked.every((header) => header === undefined)).toBe(true);
+
+  await main(page).getByRole('button', { name: 'Refresh tickets' }).click();
+  await expect.poll(() => asked.at(-1)).toBe('no-cache');
+});

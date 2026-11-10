@@ -5,7 +5,14 @@ import { fakeJira, type FakeJira } from './fake-jira.ts';
 import { fakeLinear, type FakeLinear } from './fake-linear.ts';
 import { fakeServiceNow, type FakeServiceNow } from './fake-servicenow.ts';
 
+export interface Traffic {
+  calls: number;
+  fault: { status: number; retryAfter?: string } | null;
+}
+
 export interface TicketStubs {
+  linearTraffic: Traffic;
+  jiraTraffic: Traffic;
   linear: FakeLinear;
   jira: FakeJira;
   confluence: FakeConfluence;
@@ -18,8 +25,16 @@ export interface TicketStubs {
 
 async function serve(
   handle: (req: IncomingMessage, res: ServerResponse) => Promise<void>,
+  traffic?: Traffic,
 ): Promise<{ url: string; server: Server }> {
   const server = createServer((req, res) => {
+    if (traffic) traffic.calls += 1;
+    if (traffic?.fault) {
+      const { status, retryAfter } = traffic.fault;
+      res.writeHead(status, retryAfter ? { 'retry-after': retryAfter } : {});
+      res.end('{}');
+      return;
+    }
     void handle(req, res);
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -34,10 +49,14 @@ export async function startTicketStubs(): Promise<TicketStubs> {
   const jira = fakeJira();
   const confluence = fakeConfluence();
   const servicenow = fakeServiceNow();
-  const linearServer = await serve(linear.handle);
-  const jiraServer = await serve(atlassianHandler(jira, confluence));
+  const linearTraffic: Traffic = { calls: 0, fault: null };
+  const jiraTraffic: Traffic = { calls: 0, fault: null };
+  const linearServer = await serve(linear.handle, linearTraffic);
+  const jiraServer = await serve(atlassianHandler(jira, confluence), jiraTraffic);
   const serviceNowServer = await serve(servicenow.handle);
   return {
+    linearTraffic,
+    jiraTraffic,
     linear,
     jira,
     confluence,

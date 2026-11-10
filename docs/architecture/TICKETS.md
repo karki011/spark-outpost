@@ -62,3 +62,32 @@ For a ticket not in review in the ticket system, `review-slow` counts from the l
 ## Moving the ticket when a pull request opens
 
 A pull request a chat opened (publish step, Ship, the agent's `gh pr create` or `spark_pull_request`) moves the chat's tickets to their review status once per pull request; see `PR_FOLLOW_UP.md#when-a-pull-request-opens`. A ticket counts when the chat was started from it or the user linked it, or when its key is in the branch or pull request title and it is a Jira or Linear ticket in a connected source (cached, or found with `getSummary` when the key is written in capitals). Key matching here is separate from the inbox's `matched` origin above and never links the ticket to the task, so merging moves only the task's tickets, as before. The source's move-on-open switch, the move rules and ServiceNow's refusal hold.
+
+## The inbox snapshot, backoff and caches
+
+`loadInbox` (`tickets/inbox.ts`) is called by `GET /api/tickets/inbox`, the `spark_tickets` list tool and the morning brief. It no longer syncs on every call. State is in memory, per database and workspace (`tickets/inbox-snapshot.ts`), so one workspace never reads another's snapshot.
+
+| Layer                   | What it does                                                                                                                                                                                  |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| In-flight sharing       | Concurrent loads for one workspace share one sync (`shareSync`). A sync started before an invalidation is not joined by later callers.                                                        |
+| Freshness window        | `FRESH_WINDOW_MS` (20 s). A load inside it re-reads only local facts (marks, snooze, dismissals, work and chats, last sync, PR feedback) and re-places the tickets. No source or GitHub call. |
+| Refresh                 | `GET /api/tickets/inbox` with `Cache-Control: no-cache`, sent only by the Tickets header's Refresh button. It skips the window and the pull request cache. It never skips a source's backoff. |
+| Mark routes             | Snooze and dismiss keep their 60 s `reloadInboxMarks` path: marks only, from the last snapshot.                                                                                               |
+| Pull request status     | `tickets/pull-status-cache.ts` keeps each status read for 90 s with in-flight sharing. Only the inbox's `inboxDevelopment` passes it; the ticket detail, Ship and PR follow-up read fresh.    |
+| Development information | Unchanged: `ticket_development`, 10 minutes.                                                                                                                                                  |
+
+### What invalidates the snapshot
+
+`recordTicketEvent` calls `afterTicketEvent` listeners, and `inbox-snapshot.ts` bumps the workspace generation. A snapshot of an older generation is never served, and a sync that finishes under an older generation is stored but not reused. Every change path records a ticket event: moves (the move route, Start work, the PR-open move, the merged move, `spark_transition_ticket`), comments (route and tool), assignments, link-PR, create, and connect, disconnect and settings changes (which also forget that source's backoff and last good read). The API process also drops the snapshot and the whole pull request status cache on a `pull_request` app event (its payload names a chat, not a pull request, so the cache is dropped as a whole); connecting, disconnecting or changing a ticket source drops the status cache too. Otherwise the status cache expires after 90 s or on Refresh.
+
+The chat worker has its own memory. A change made in the API process reaches a worker's `spark_tickets` list only when its window (20 s) ends.
+
+### Rate limits
+
+`failure()` in `tickets/http.ts` attaches `retryAfterMs` to a `TicketApiError` for 429 and 503. `Retry-After` is read as seconds or an HTTP date (`tickets/retry-after.ts`): a missing or unreadable value waits 60 s, and the wait is held between 1 s and 10 minutes.
+
+While a source waits (`tickets/source-backoff.ts`) the inbox does not call it, including its development reads. It lists the source's tickets from the last good read and adds one problem line naming the status and the time Spark asks again. The other sources sync normally. A good read, or connecting, disconnecting or changing the source, clears the wait. Authentication and network errors do not back off and list no tickets, as before.
+
+### Moving a merged ticket to Done
+
+The move that follows a merged pull request still happens in the read path, once per ticket and pull request: the claim is `whileClaimingMergeMove` (`pg_try_advisory_xact_lock` plus a second `mergeMoveTried` check), taken one at a time inside a process, so two loads or two processes cannot both transition it. A load that loses the claim lists the ticket as it was, and the next load shows it done.

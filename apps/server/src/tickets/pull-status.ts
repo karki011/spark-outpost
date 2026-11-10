@@ -1,6 +1,7 @@
 import type { PrReview, PullRequestState, PullRequestStatus } from '@spark-outpost/contracts';
 import { connectionFor, type GitHubDeps } from '../ship/github/access.ts';
 import type { GitHubConnection, PullRequestDetail } from '../ship/github/connection.ts';
+import { cachedPullStatus, type PullStatusCache } from './pull-status-cache.ts';
 
 const PULL_URL = /^https:\/\/([^/]+)\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:[/?#].*)?$/;
 
@@ -67,6 +68,7 @@ async function readOne(
 export async function readPullStatuses(
   deps: GitHubDeps,
   urls: readonly string[],
+  cache?: PullStatusCache,
 ): Promise<Map<string, PullRequestStatus>> {
   const byRepo = new Map<string, { url: string; address: PullAddress }[]>();
   for (const url of new Set(urls)) {
@@ -76,13 +78,21 @@ export async function readPullStatuses(
     byRepo.set(key, [...(byRepo.get(key) ?? []), { url, address }]);
   }
   const statuses = new Map<string, PullRequestStatus>();
-  for (const pulls of byRepo.values()) {
+  for (const [repoKey, pulls] of byRepo) {
     const connection = await connectionFor(deps, pulls[0]!.address).catch(() => null);
     if (!connection) continue;
     const read = await Promise.all(
-      pulls.map((pull) => readOne(connection, pull.url, pull.address)),
+      pulls.map((pull) => {
+        const readThis = () => readOne(connection, pull.url, pull.address);
+        return cache
+          ? cachedPullStatus(cache, `${repoKey}#${pull.address.number}`, readThis)
+          : readThis();
+      }),
     );
-    for (const status of read) if (status) statuses.set(status.url, status);
+    pulls.forEach((pull, index) => {
+      const status = read[index];
+      if (status) statuses.set(pull.url, { ...status, url: pull.url });
+    });
   }
   return statuses;
 }

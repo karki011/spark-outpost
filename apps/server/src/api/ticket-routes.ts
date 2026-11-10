@@ -121,8 +121,9 @@ export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
     res.json(await listTickets(deps, query));
   });
 
-  router.get('/tickets/inbox', async (_req, res) => {
-    res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
+  router.get('/tickets/inbox', async (req, res) => {
+    const refresh = req.get('cache-control')?.includes('no-cache') === true;
+    res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }, { refresh }));
   });
 
   router.get('/tickets/search', async (req, res) => {

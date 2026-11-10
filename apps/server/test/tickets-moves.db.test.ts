@@ -110,7 +110,7 @@ async function mergedPullFor(key: string) {
 
 const inboxTicket = async (key: string) =>
   ticketInboxSchema
-    .parse((await get('/api/tickets/inbox').expect(200)).body)
+    .parse((await get('/api/tickets/inbox').set('Cache-Control', 'no-cache').expect(200)).body)
     .tickets.find((ticket) => ticket.key === key)!;
 
 describe('the merged pull request move', () => {

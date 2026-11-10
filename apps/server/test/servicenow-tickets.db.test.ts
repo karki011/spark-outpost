@@ -54,7 +54,9 @@ describe('ServiceNow tickets', () => {
     const connection = connections.connections.find((entry) => entry.source === 'servicenow');
     expect(connection).toMatchObject({ moveOnShip: false, moveOnMerge: false });
     expect(connection?.servicenow?.inboxScope).toBe('groups');
-    const inbox = ticketInboxSchema.parse((await get('/api/tickets/inbox').expect(200)).body);
+    const inbox = ticketInboxSchema.parse(
+      (await get('/api/tickets/inbox').set('Cache-Control', 'no-cache').expect(200)).body,
+    );
     expect(keysOf(inbox.tickets)).toEqual([
       'CHG0030012',
       'INC0010023',
@@ -67,14 +69,18 @@ describe('ServiceNow tickets', () => {
     expect(vpn).toMatchObject({ statusName: 'In Progress', priorityRank: 2, project: 'incident' });
 
     await send('patch', '/api/tickets/connections/servicenow', { inboxScope: 'me' }).expect(200);
-    const mine = ticketInboxSchema.parse((await get('/api/tickets/inbox').expect(200)).body);
+    const mine = ticketInboxSchema.parse(
+      (await get('/api/tickets/inbox').set('Cache-Control', 'no-cache').expect(200)).body,
+    );
     expect(keysOf(mine.tickets)).not.toContain('SCTASK0010051');
   });
 
   it('keeps the inbox when one of the request tables is denied', async () => {
     await connect();
     stubs.servicenow.denied.add('sc_task');
-    const inbox = ticketInboxSchema.parse((await get('/api/tickets/inbox').expect(200)).body);
+    const inbox = ticketInboxSchema.parse(
+      (await get('/api/tickets/inbox').set('Cache-Control', 'no-cache').expect(200)).body,
+    );
     expect(inbox.errors).toEqual([]);
     expect(keysOf(inbox.tickets)).toContain('INC0010023');
     expect(keysOf(inbox.tickets)).not.toContain('SCTASK0010051');
@@ -86,7 +92,9 @@ describe('ServiceNow tickets', () => {
     await send('patch', '/api/tickets/connections/servicenow', {
       serviceNowTypes: { change: false, problem: false },
     }).expect(200);
-    const inbox = ticketInboxSchema.parse((await get('/api/tickets/inbox').expect(200)).body);
+    const inbox = ticketInboxSchema.parse(
+      (await get('/api/tickets/inbox').set('Cache-Control', 'no-cache').expect(200)).body,
+    );
     expect(keysOf(inbox.tickets)).not.toContain('CHG0030012');
     expect(keysOf(inbox.tickets)).not.toContain('PRB0040007');
     await get('/api/tickets/servicenow/CHG0030012').expect(404);
@@ -103,7 +111,9 @@ describe('ServiceNow tickets', () => {
     );
     expect(byNumber.tickets.map((ticket) => ticket.key)).toEqual(['INC0010027']);
     stubs.servicenow.limited = 10;
-    const limited = ticketInboxSchema.parse((await get('/api/tickets/inbox').expect(200)).body);
+    const limited = ticketInboxSchema.parse(
+      (await get('/api/tickets/inbox').set('Cache-Control', 'no-cache').expect(200)).body,
+    );
     expect(limited.errors).toEqual([
       expect.objectContaining({
         source: 'servicenow',
