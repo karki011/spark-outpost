@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { MemberMessage } from '@spark-outpost/contracts';
-import { queryKeys } from '../../api/client.ts';
 import { queueDraftAfterTyped, requestComposerFocus } from '../composer/pending-draft.ts';
 import { queueApi } from '../queue/queue-api.ts';
 import { invalidateChatDetail } from '../../api/chat-detail.ts';

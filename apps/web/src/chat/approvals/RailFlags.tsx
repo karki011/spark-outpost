@@ -3,7 +3,6 @@ import { useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ConversationDetail, RailFlag, RailOriginal } from '@spark-outpost/contracts';
 import { approvalsApi } from '../../api/approvals.ts';
-import { queryKeys } from '../../api/client.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
 import { ShieldIcon } from '../../ui/icons.tsx';
 import { copyButtonText, useCopyFeedback } from '../../ui/use-copy-feedback.ts';

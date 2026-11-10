@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { holdsToConfirm, SPARK_ACTION_OPTION, type Approval } from '@spark-outpost/contracts';
 import { approvalsApi } from '../api/approvals.ts';
-import { queryKeys } from '../api/client.ts';
 import { invalidateChatDetail } from '../api/chat-detail.ts';
 
 function outcome(approval: Approval): string {

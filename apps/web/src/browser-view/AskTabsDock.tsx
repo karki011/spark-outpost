@@ -3,7 +3,6 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Approval, AssistantExchange } from '@spark-outpost/contracts';
 import { assistantApi, assistantKeys } from '../api/assistant.ts';
-import { queryKeys } from '../api/client.ts';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
 import { assistantQuery, useAssistant } from '../island/ask-assistant.ts';
