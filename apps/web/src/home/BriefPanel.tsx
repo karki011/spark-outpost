@@ -6,6 +6,7 @@ import { AuditDialog } from '../audit/AuditDialog.tsx';
 import { CalendarBriefBlock } from '../calendar/CalendarBriefBlock.tsx';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { briefOffLine, nothingFlagged, type Voice } from '../spark/voice.ts';
+import { HomeRow, HomeRows, RowAction } from './HomeCards.tsx';
 import { readDetailsOpen, writeDetailsOpen } from './digest-details.ts';
 import { canRefresh, digestMeta, refreshHint } from './digest-model.ts';
 import { writingMeta, type BriefEntry } from './needs-model.ts';
@@ -20,30 +21,24 @@ interface BriefItemsProps {
 function BriefItems({ entries, label, onEntry }: BriefItemsProps) {
   if (entries.length === 0) return null;
   return (
-    <ol className="dg-next" aria-label={label}>
+    <HomeRows label={label}>
       {entries.map((entry, index) => (
-        <li key={entry.id}>
-          <span className="num" aria-hidden="true">
-            {index + 1}
-          </span>
-          <span className="dg-next-main">
-            <b>
-              {entry.key && <span className="key">{entry.key}</span>}
-              {entry.title}
-            </b>
-            <small>{entry.text}</small>
-          </span>
-          <button
-            type="button"
-            className="btn sm line"
-            aria-label={`${entry.verb} ${entry.key ?? entry.title}`}
-            onClick={() => onEntry(entry)}
-          >
-            {entry.verb}
-          </button>
-        </li>
+        <HomeRow
+          key={entry.id}
+          index={index}
+          label={<span className="hkey">{entry.key ?? 'Chat'}</span>}
+          title={entry.title || entry.text}
+          line={entry.title ? entry.text : undefined}
+          trailing={
+            <RowAction
+              label={entry.verb}
+              name={`${entry.verb} ${entry.key ?? entry.title}`}
+              onClick={() => onEntry(entry)}
+            />
+          }
+        />
       ))}
-    </ol>
+    </HomeRows>
   );
 }
 

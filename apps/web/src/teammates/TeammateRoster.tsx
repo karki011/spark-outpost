@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { TEAMMATE_STATE_LABELS, type TeammateView } from '@spark-outpost/contracts';
-import { HomeSection } from '../home/HomeCards.tsx';
+import { HomeCard } from '../home/HomeCards.tsx';
 import { PenIcon, PlusIcon } from '../ui/icons.tsx';
 import { RelayCard } from './RelayCard.tsx';
 import { StarterSuggestions } from './StarterSuggestions.tsx';
@@ -87,7 +87,7 @@ export function TeammateRoster({ now, onOpenId }: TeammateRosterProps) {
   if (loading) return <RosterSkeleton />;
   const ownSparks = userMade(teammates);
   return (
-    <HomeSection id="home-sparks" title="Your Sparks" className="tm-section">
+    <HomeCard id="home-sparks" title="Your Sparks" className="tm-section">
       {teammates.length === 0 && <StarterSuggestions starters={starters} />}
       {teammates.length > 0 && (
         <ul className="tm-roster">
@@ -134,6 +134,6 @@ export function TeammateRoster({ now, onOpenId }: TeammateRosterProps) {
           {open.error.message}
         </p>
       )}
-    </HomeSection>
+    </HomeCard>
   );
 }

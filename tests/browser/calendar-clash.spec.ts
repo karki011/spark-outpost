@@ -101,7 +101,7 @@ test('⌘J opens Choose when several meetings are open to join, and joins nothin
 }) => {
   await recordOpens(page);
   await page.goto('/');
-  const card = page.getByRole('region', { name: 'Upcoming' });
+  const card = page.locator('main.page', { has: page.locator('#home-greet') });
   await expect(card).toContainText('clashes with 2 meetings', { timeout: 15_000 });
   await page.keyboard.press('ControlOrMeta+j');
   const dialog = page.getByRole('dialog', { name: 'Choose a meeting' });

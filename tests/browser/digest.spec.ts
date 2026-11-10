@@ -3,7 +3,7 @@ import { resetTestDatabase } from './database.ts';
 import { decorateLatestRun } from './home-seed.ts';
 import { seedChats } from './sidebar-seed.ts';
 
-const today = (page: Page) => page.getByRole('region', { name: /^What needs you today/ });
+const today = (page: Page) => page.getByRole('region', { name: /^(Needs you|Pick up next)/ });
 const brief = (page: Page) => today(page).locator('.hpanel.dg');
 
 async function openHome(page: Page) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import { needsYou, progressPercent, recentChats, runningNow, summaryParts } from './home-model.ts';
+import { needsYou, progressPercent, runningNow } from './home-model.ts';
 
 let next = 0;
 
@@ -55,36 +55,6 @@ const failed = (title: string) =>
 const finished = (title: string) => chat({ title, unread: true, latestRun: run('succeeded') });
 const working = (title: string, extra = {}) => chat({ title, latestRun: run('running', extra) });
 
-describe('summaryParts', () => {
-  const text = (chats: ConversationSummary[]) =>
-    summaryParts(chats, needsYou(chats).length, 'All quiet. Start something new below.')
-      .map((part) => part.text)
-      .join('');
-
-  it('is quiet when nothing runs or waits', () => {
-    expect(text([chat()])).toBe('All quiet. Start something new below.');
-  });
-
-  it('counts everything that needs you, then working agents, in the right number', () => {
-    expect(text([working('A')])).toBe('1 agent is working.');
-    expect(text([working('A'), working('B'), asking('C')])).toBe(
-      '1 thing needs you and 2 agents are working.',
-    );
-    expect(text([asking('A'), finished('B')])).toBe('2 things need you.');
-    const parts = summaryParts([working('A'), asking('B')], 1, '');
-    expect(parts.filter((part) => part.strong)).toHaveLength(2);
-    expect(parts.filter((part) => part.link).map((part) => part.text)).toEqual([
-      '1 thing needs you',
-    ]);
-  });
-
-  it('ignores archived chats', () => {
-    expect(text([{ ...asking('A'), archivedAt: '2026-09-26T10:00:00.000Z' }])).toBe(
-      'All quiet. Start something new below.',
-    );
-  });
-});
-
 describe('needsYou', () => {
   it('orders asking, then errors, then finished chats, with their action and mood', () => {
     const items = needsYou([
@@ -122,7 +92,7 @@ describe('progressPercent', () => {
   });
 });
 
-describe('runningNow and recentChats', () => {
+describe('runningNow', () => {
   it('lists working chats with their step and progress, but not ones waiting on you', () => {
     const items = runningNow([
       working('Busy', { step: 'Reading files', progress: { done: 1, active: 1, total: 3 } }),
@@ -132,20 +102,6 @@ describe('runningNow and recentChats', () => {
     expect(items.map((item) => [item.chat.title, item.step, item.percent])).toEqual([
       ['Busy', 'Reading files', 50],
       ['Queued', 'Starting', null],
-    ]);
-  });
-
-  it('shows up to five other active chats, newest first', () => {
-    const shown = asking('Shown');
-    const others = Array.from({ length: 7 }, (_, index) => chat({ title: `Other ${index}` }));
-    const archived = chat({ title: 'Old', archivedAt: '2026-09-26T10:00:00.000Z' });
-    const recent = recentChats([shown, ...others, archived], [shown]);
-    expect(recent.map((item) => item.title)).toEqual([
-      'Other 6',
-      'Other 5',
-      'Other 4',
-      'Other 3',
-      'Other 2',
     ]);
   });
 });

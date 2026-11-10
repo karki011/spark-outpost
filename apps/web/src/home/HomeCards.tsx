@@ -1,29 +1,30 @@
 import type { CSSProperties, ReactNode } from 'react';
-import type { ConversationSummary } from '@spark-outpost/contracts';
-import { AgentBlob } from '../brand/AgentBlob.tsx';
-import { activeLabel } from '../conversations/recency.ts';
-import { FolderIcon } from '../ui/icons.tsx';
-import type { RunItem } from './home-model.ts';
+import { CheckIcon, ClockIcon, SpinnerIcon, WarnIcon } from '../ui/icons.tsx';
 
-type ProjectName = (chat: ConversationSummary) => string;
-type OpenChat = (chat: ConversationSummary) => void;
+export const stagger = (index: number) => ({ '--i': index }) as CSSProperties;
 
-const stagger = (index: number) => ({ '--i': index }) as CSSProperties;
-
-interface HomeSectionProps {
+interface HomeCardProps {
   id: string;
   title: string;
-  count?: number;
+  count?: number | undefined;
   action?: ReactNode;
   className?: string;
+  busy?: boolean;
   children: ReactNode;
 }
 
-export function HomeSection(props: HomeSectionProps) {
-  const { id, title, count, action, className = '', children } = props;
+export function HomeCard({
+  id,
+  title,
+  count,
+  action,
+  className = '',
+  busy,
+  children,
+}: HomeCardProps) {
   return (
-    <section className={`hsec ${className}`.trim()} aria-labelledby={id}>
-      <div className="hsec-h">
+    <section className={`hcard2 ${className}`.trim()} aria-labelledby={id} aria-busy={busy}>
+      <div className="hcard2-h">
         <h2 id={id}>
           {title}
           {count !== undefined && (
@@ -40,15 +41,150 @@ export function HomeSection(props: HomeSectionProps) {
   );
 }
 
-function Quiet({ children, index }: { children: ReactNode; index: number }) {
+interface HomeLeadProps {
+  id: string;
+  title: string;
+  meta?: ReactNode;
+  action?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}
+
+export function HomeLead({ id, title, meta, action, className = '', children }: HomeLeadProps) {
   return (
-    <p className="hquiet" style={stagger(index)}>
+    <section className={`hlead ${className}`.trim()} aria-labelledby={id}>
+      <div className="hlead-h">
+        <div className="hlead-t">
+          <h2 id={id}>{title}</h2>
+          {meta && <p className="hlead-meta">{meta}</p>}
+        </div>
+        {action}
+      </div>
       {children}
-    </p>
+    </section>
   );
 }
 
-function Progress({ percent }: { percent: number | null }) {
+export function LeadGroup({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="hlead-g" role="group" aria-labelledby={id}>
+      <h3 id={id}>{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+export type StatusTone = 'bad' | 'warn' | 'ok' | 'run' | 'info';
+
+const ICONS: Record<StatusTone, ReactNode> = {
+  bad: <WarnIcon />,
+  warn: <ClockIcon />,
+  ok: <CheckIcon className="" />,
+  run: <SpinnerIcon />,
+  info: <ClockIcon />,
+};
+
+export function StatusLabel({ word, tone }: { word: string; tone: StatusTone }) {
+  return (
+    <span className={`hstat ${tone}`}>
+      <span className="hstat-i" aria-hidden="true">
+        {ICONS[tone]}
+      </span>
+      {word}
+    </span>
+  );
+}
+
+interface HomeRowProps {
+  label: ReactNode;
+  title: string;
+  line?: ReactNode;
+  trailing?: ReactNode;
+  index?: number;
+  dim?: boolean;
+  onTitle?: { name: string; open: () => void };
+  children?: ReactNode;
+}
+
+export function HomeRow({
+  label,
+  title,
+  line,
+  trailing,
+  index = 0,
+  dim,
+  onTitle,
+  children,
+}: HomeRowProps) {
+  return (
+    <li className={dim ? 'hrow dim' : 'hrow'} style={stagger(index)}>
+      <span className="hrow-l">{label}</span>
+      <span className="hrow-m">
+        <b title={title}>
+          {onTitle ? (
+            <button
+              type="button"
+              className="hrow-t"
+              aria-label={onTitle.name}
+              onClick={onTitle.open}
+            >
+              {title}
+            </button>
+          ) : (
+            title
+          )}
+        </b>
+        {line && <small>{line}</small>}
+        {children}
+      </span>
+      {trailing && <span className="hrow-a">{trailing}</span>}
+    </li>
+  );
+}
+
+interface RowActionProps {
+  label: string;
+  name?: string;
+  primary?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}
+
+export function RowAction({ label, name, primary, disabled, onClick }: RowActionProps) {
+  return (
+    <button
+      type="button"
+      className={primary ? 'btn sm primary' : 'btn sm line'}
+      aria-label={name}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
+export function HomeRows({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <ul className="hrows" aria-label={label}>
+      {children}
+    </ul>
+  );
+}
+
+export function Quiet({ children }: { children: ReactNode }) {
+  return <p className="hquiet">{children}</p>;
+}
+
+export function Progress({ percent }: { percent: number | null }) {
   if (percent === null) {
     return (
       <span className="hprog wait" role="progressbar" aria-label="Progress, no plan yet">
@@ -70,140 +206,33 @@ function Progress({ percent }: { percent: number | null }) {
   );
 }
 
-interface RunningNowProps {
-  items: readonly RunItem[];
-  offset: number;
-  projectName: ProjectName;
-  onOpen: OpenChat;
-}
+const SKELETON_WIDTHS = [62, 48, 70];
 
-interface RunCardProps {
-  item: RunItem;
-  project: string;
-  index: number;
-  onOpen: OpenChat;
-}
-
-function RunCard({ item, project, index, onOpen }: RunCardProps) {
-  const { chat, provider } = item;
+export function RowsSkeleton() {
   return (
-    <li className="hcard running" style={stagger(index)}>
-      <span className="hblob" aria-hidden="true">
-        {provider ? (
-          <AgentBlob provider={provider} size={34} expression="thinking" />
-        ) : (
-          <span className="provider-dot" />
-        )}
-        <i className="hdot running" />
-      </span>
-      <span className="hc-main">
-        <b>{chat.title}</b>
-        <small>
-          <span className="pj">{project}</span>
-          {item.step}
-        </small>
-        <Progress percent={item.percent} />
-      </span>
-      <button
-        type="button"
-        className="go"
-        aria-label={`Watch: ${chat.title}`}
-        onClick={() => onOpen(chat)}
-      >
-        Watch
-      </button>
-    </li>
-  );
-}
-
-export function RunningNow({ items, offset, projectName, onOpen }: RunningNowProps) {
-  if (items.length === 0) return null;
-  return (
-    <HomeSection id="home-running" title="Running now" count={items.length}>
-      <ul className="hlist">
-        {items.map((item, index) => (
-          <RunCard
-            key={item.chat.id}
-            item={item}
-            project={projectName(item.chat)}
-            index={offset + index}
-            onOpen={onOpen}
-          />
-        ))}
-      </ul>
-    </HomeSection>
-  );
-}
-
-interface RecentChatsProps {
-  chats: readonly ConversationSummary[];
-  offset: number;
-  now: number;
-  onOpen: OpenChat;
-  onViewAll: () => void;
-}
-
-function RecentIcon({ chat }: { chat: ConversationSummary }) {
-  const provider = chat.latestRun?.provider;
-  if (!provider) return <FolderIcon />;
-  return (
-    <span className="mblob" aria-hidden="true">
-      <AgentBlob provider={provider} size={18} />
-    </span>
-  );
-}
-
-export function RecentChats({ chats, offset, now, onOpen, onViewAll }: RecentChatsProps) {
-  return (
-    <HomeSection
-      id="home-recent"
-      title="Recent chats"
-      action={
-        <button type="button" className="hlink" onClick={onViewAll}>
-          View all
-        </button>
-      }
-    >
-      {chats.length === 0 ? (
-        <Quiet index={offset}>No other chats yet.</Quiet>
-      ) : (
-        <ul className="mlist">
-          {chats.map((chat, index) => (
-            <li key={chat.id} style={stagger(offset + index)}>
-              <button
-                type="button"
-                className="mrow"
-                title={chat.title}
-                onClick={() => onOpen(chat)}
-              >
-                <RecentIcon chat={chat} />
-                <span className="t">{chat.title}</span>
-                <span className="k">{activeLabel(chat.updatedAt, now)}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </HomeSection>
-  );
-}
-
-const SKELETON_WIDTHS = [66, 50, 58, 72, 44];
-
-export function RecentSkeleton() {
-  return (
-    <section className="hsec" aria-hidden="true">
-      <div className="hsec-h">
-        <span className="hsk" style={{ width: 110, height: 14 }} />
-      </div>
-      <ul className="mlist">
-        {SKELETON_WIDTHS.map((width) => (
-          <li key={width} className="mrow">
-            <span className="hsk dot sm" />
+    <ul className="hrows" aria-hidden="true">
+      {SKELETON_WIDTHS.map((width) => (
+        <li key={width} className="hrow">
+          <span className="hrow-l">
+            <span className="hsk" style={{ width: 64 }} />
+          </span>
+          <span className="hrow-m">
             <span className="hsk" style={{ width: `${width}%` }} />
-          </li>
-        ))}
-      </ul>
+            <span className="hsk" style={{ width: '40%', marginTop: 6 }} />
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function LeadSkeleton() {
+  return (
+    <section className="hlead" aria-hidden="true" data-testid="home-lead-skeleton">
+      <div className="hlead-h">
+        <span className="hsk" style={{ width: 160, height: 16 }} />
+      </div>
+      <RowsSkeleton />
     </section>
   );
 }

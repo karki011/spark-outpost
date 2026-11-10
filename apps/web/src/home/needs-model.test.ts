@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationSummary, Digest, DigestBody } from '@spark-outpost/contracts';
 import { needsYou } from './home-model.ts';
-import {
-  briefEntries,
-  feedRows,
-  needsMode,
-  ticketEntries,
-  ticketKeyOf,
-  writingMeta,
-} from './needs-model.ts';
+import { briefEntries, feedRows, ticketEntries, ticketKeyOf, writingMeta } from './needs-model.ts';
 
 const NOW = Date.parse('2026-09-29T10:00:00.000Z');
 let next = 0;
@@ -161,28 +154,6 @@ describe('ticketEntries', () => {
     ]);
     expect(ticketKeyOf('ticket:linear')).toBeNull();
     expect(ticketKeyOf('chat:linear:WEB-1')).toBeNull();
-  });
-});
-
-describe('needsMode', () => {
-  const base = { loading: false, needCount: 0, entryCount: 0, briefOn: true };
-
-  it('shows skeletons while chats load', () => {
-    expect(needsMode({ ...base, loading: true, needCount: 3 })).toBe('loading');
-  });
-
-  it('is today when anything needs you, with or without a brief', () => {
-    expect(needsMode({ ...base, needCount: 2 })).toBe('today');
-    expect(needsMode({ ...base, needCount: 2, briefOn: false })).toBe('today');
-  });
-
-  it('offers only the pick-up items when all is quiet', () => {
-    expect(needsMode({ ...base, entryCount: 2 })).toBe('pickup');
-  });
-
-  it('disappears when all is quiet and there is nothing to pick up or the brief is off', () => {
-    expect(needsMode(base)).toBe('hidden');
-    expect(needsMode({ ...base, entryCount: 2, briefOn: false })).toBe('hidden');
   });
 });
 

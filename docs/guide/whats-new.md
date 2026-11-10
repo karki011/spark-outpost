@@ -10,6 +10,8 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                           | What to do                                                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Home changes through the day           | [Home](home.md).                                                                            |
+| Tickets count updates at once          | Nothing.                                                                                    |
 | **Try again**; unsent text is kept     | [A turn failed](trouble-runs.md#a-turn-failed).                                             |
 | Comment on and move tickets            | [Tickets](tickets-inbox.md).                                                                |
 | Relay, the follow-up Spark             | [PR follow-up](pr-follow-up.md#relay).                                                      |
@@ -35,5 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Week recap on Home                     | Its day: **Settings → Notifications**.                                                      |
 | Clone or read GitHub repos             | [See how](link-a-repo.md#clone-or-read-a-repo-from-github).                                 |
 | Link a repo by name                    | [Repos folders](link-a-repo.md#set-your-repos-folders).                                     |
-| Custom endpoint and key header         | [Connect it](custom-endpoint.md).                                                           |
-| More Terminal agents                   | [Start one](terminals.md#start-a-terminal-session).                                         |
