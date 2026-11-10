@@ -48,7 +48,7 @@ describe('the facts on a pull request row', () => {
       'Checks failing',
       '2 need you',
       '1 new comment',
-      'Round 2 of 3',
+      'Round 2',
     ]);
     expect(rowFacts(watch({ checks: 'pending' }))).toEqual([
       { key: 'ci', text: 'Checks running', tone: 'prog' },

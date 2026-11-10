@@ -98,10 +98,10 @@ describe('what the watching indicator says', () => {
       short: 'Agent is on it',
       tone: 'live',
       pulse: true,
-      lines: ['Claude · Builder is working on round 2 of 3.'],
+      lines: ['Claude · Builder is working on round 2.'],
     });
     expect(shown({ phase: 'fixing', rounds: 1 }).lines).toEqual([
-      'The agent is working on round 1 of 3.',
+      'The agent is working on round 1.',
     ]);
   });
 
@@ -187,16 +187,16 @@ describe('what the watching indicator says', () => {
     expect(indicator.lines.at(-1)).toBe('Spark asks before pushing and replying.');
   });
 
-  it('says the rounds are used up', () => {
-    expect(shown({ rounds: 3, review: 'approved' })).toMatchObject({
-      state: 'rounds_used',
-      label: 'Not following up',
-      short: '3 of 3 rounds used',
-      watching: false,
+  it('says follow-up stopped after a round that changed nothing, however many rounds ran', () => {
+    expect(shown({ rounds: 7, review: 'approved' }).state).toBe('watching');
+    expect(shown({ rounds: 1, quiet: true, review: 'approved' })).toMatchObject({
+      state: 'stopped',
+      label: 'Stopped following up',
+      short: 'Stopped',
     });
-    expect(shown({ rounds: 3, phase: 'needs_you', items: [item('needs_user')] }).lines).toEqual([
+    expect(shown({ quiet: true, phase: 'needs_you', items: [item('needs_user')] }).lines).toEqual([
       '1 item is left for you.',
-      '3 of 3 rounds used.',
+      'The last round changed nothing, so Spark stopped following up. New feedback or a new commit starts it again, or ask in the chat for another round.',
     ]);
   });
 
@@ -211,13 +211,13 @@ describe('what the watching indicator says', () => {
 describe('which state wins when several apply', () => {
   const everything: Partial<PrWatch> = {
     checks: 'pending',
-    rounds: 3,
+    quiet: true,
     pollProblem: 'rate_limit',
     unknownReason: 'No access.',
     items: [item('needs_user')],
   };
 
-  it('ranks a running round, then you, then access, a pause, off, used rounds, checks, review', () => {
+  it('ranks a running round, then you, then access, a pause, off, stopped, checks, review', () => {
     const order: [Partial<PrWatch>, string][] = [
       [{ phase: 'fixing' }, 'agent'],
       [{}, 'needs_you'],
@@ -229,16 +229,18 @@ describe('which state wins when several apply', () => {
       expect(watchState(watch({ ...everything, ...fields }), 'off')).toBe(state);
     }
     const quiet = { items: [], unknownReason: null, pollProblem: null };
-    expect(watchState(watch({ ...everything, ...quiet }), 'on')).toBe('rounds_used');
-    expect(watchState(watch({ ...everything, ...quiet, rounds: 1 }), 'on')).toBe('waiting_checks');
+    expect(watchState(watch({ ...everything, ...quiet }), 'on')).toBe('stopped');
+    expect(watchState(watch({ ...everything, ...quiet, quiet: false }), 'on')).toBe(
+      'waiting_checks',
+    );
     expect(watchState(watch({ ...quiet, checks: 'passing' }), 'on')).toBe('waiting_review');
     expect(watchState(watch({ ...everything, prState: 'merged', phase: 'fixing' }), 'on')).toBe(
       null,
     );
   });
 
-  it('keeps status-only pull requests out of off and used rounds', () => {
-    const unfollowed = watch({ followUp: false, rounds: 3, review: 'approved' });
+  it('keeps status-only pull requests out of off and stopped', () => {
+    const unfollowed = watch({ followUp: false, quiet: true, review: 'approved' });
     expect(watchState(unfollowed, 'off')).toBe('tracking');
     expect(watchState({ ...unfollowed, checks: 'pending' }, 'off')).toBe('waiting_checks');
   });

@@ -13,7 +13,7 @@ import { sendRoundMessage } from '../src/pr-follow-up/deps.ts';
 import { SPARK_REPLY_MARKER } from '../src/pr-follow-up/gather.ts';
 import { pollDue, pollWatch } from '../src/pr-follow-up/poller.ts';
 import { PR_REPLY_METHOD } from '../src/pr-follow-up/round.ts';
-import { CHAT_BUSY_LINE, LIMIT_LINE, PAUSED_LINE } from '../src/pr-follow-up/rounds.ts';
+import { CHAT_BUSY_LINE, PAUSED_LINE } from '../src/pr-follow-up/rounds.ts';
 import { setSparkPaused } from '../src/persistence/spark-pause.ts';
 import { snapshotRun } from '../src/projects/run-changes.ts';
 import type { Worker } from '../src/workflow/worker.ts';
@@ -419,13 +419,12 @@ describe('PR follow-up', { timeout: 60_000 }, () => {
     });
   });
 
-  it('stops after three rounds and hands the rest to the user', async () => {
+  it('keeps following up past three rounds, with no round cap', async () => {
     await saveWatch(t.db, { ...(await current(t, pull.watch)), rounds: 3 });
     fake.pull.checkRuns = [failingCheck];
     const watch = await poll();
-    expect(watch).toMatchObject({ phase: 'needs_you', doing: LIMIT_LINE, rounds: 3 });
-    expect(rounds).toEqual([]);
-    expect((await feedbackFor(t.db, pull.watch.id))[0]!.state).toBe('needs_user');
+    expect(watch).toMatchObject({ phase: 'fixing', doing: 'Fixing 1 item (round 4).', rounds: 4 });
+    expect(rounds).toHaveLength(1);
   });
 
   it('stops polling once the PR is merged', async () => {

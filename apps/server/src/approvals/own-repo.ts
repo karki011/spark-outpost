@@ -14,6 +14,7 @@ export interface OwnRepo {
   slug: string;
   branch: string | null;
   pull: number | null;
+  reviewers?: readonly string[];
 }
 
 const URL_WORD = /^[a-z][a-z0-9+.-]*:\/\/|^[\w.+-]+@[\w.-]+:/i;
@@ -123,6 +124,7 @@ function ownApi(given: readonly string[], own: OwnRepo): boolean {
   if (!endpoint) return false;
   if (isUrl(endpoint)) return apiMethod(args) === 'GET' && ownUrl(endpoint, own);
   if (endpoint === 'graphql') return ownGraphql(args, own);
+  if (reviewRequestOf(['api', ...given], own)?.kind === 'allowed') return true;
   return apiMethod(args) === 'GET' || repliesThroughApi(args, own);
 }
 
@@ -153,4 +155,87 @@ export function ownGhUse(args: readonly string[], own: OwnRepo): boolean {
 
 export function namesAnotherRepo(command: string): boolean {
   return ENV_ELSEWHERE.test(command);
+}
+
+export type ReviewRequest = { kind: 'allowed' } | { kind: 'refused'; reason: string };
+
+const ADD_REVIEWER = new Set(['--add-reviewer']);
+const REVIEWER_FIELD = /^(reviewers|team_reviewers)\[\]=(.+)$/;
+const REVIEW_ROUTE = /^\/?repos\/([^/]+\/[^/]+)\/pulls\/(\d+)\/requested_reviewers\/?$/i;
+const REVIEWER_ALIASES: Readonly<Record<string, string>> = {
+  copilot: 'copilot-pull-request-reviewer[bot]',
+};
+const NOT_OWN_PULL_REASON =
+  "Review can be re-requested only on this chat's own open pull request while Follow up on pull requests is on";
+
+interface Requested {
+  ownPull: boolean;
+  names: string[];
+  plain: boolean;
+}
+
+function reviewerName(word: string): string {
+  return word.trim().replace(/^@/, '').toLowerCase();
+}
+
+function editRequest(rest: readonly string[], own: OwnRepo): Requested | null {
+  const names = flagValues(rest, ADD_REVIEWER).flatMap((value) => value.split(','));
+  if (names.length === 0) return null;
+  const elsewhere = rest.some((word) => isUrl(word) && !ownUrl(word, own));
+  return {
+    ownPull: own.pull !== null && !elsewhere && namesOwnPull(rest, own),
+    names: names.map(reviewerName).filter(Boolean),
+    plain: true,
+  };
+}
+
+function apiRequest(given: readonly string[], own: OwnRepo): Requested | null {
+  const args = apiWords(given);
+  const route = REVIEW_ROUTE.exec(apiEndpoint(args) ?? '');
+  if (!route || apiMethod(args) !== 'POST') return null;
+  const repo = route[1]!.toLowerCase();
+  const org = own.slug.split('/')[0]!;
+  const fields = flagValues(args, API_FIELD_FLAGS).map((field) => REVIEWER_FIELD.exec(field));
+  const names = fields.flatMap((field) => {
+    if (!field) return [];
+    const name = reviewerName(field[2]!);
+    return [field[1] === 'team_reviewers' ? `${org}/${name}` : name];
+  });
+  const ownRepo = repo === REPO_PLACEHOLDER || repo === own.slug;
+  return {
+    ownPull: ownRepo && own.pull !== null && route[2] === String(own.pull),
+    names,
+    plain: fields.every(Boolean) && !args.some((token) => flagName(token) === '--input'),
+  };
+}
+
+function knownReviewer(name: string, known: ReadonlySet<string>): boolean {
+  return known.has(name) || known.has(REVIEWER_ALIASES[name] ?? '');
+}
+
+function judgedRequest(found: Requested, own: OwnRepo): ReviewRequest {
+  if (!found.ownPull) return { kind: 'refused', reason: NOT_OWN_PULL_REASON };
+  if (!found.plain || found.names.length === 0) {
+    return {
+      kind: 'refused',
+      reason: `Re-request review with gh pr edit ${own.pull} --add-reviewer <login>, or POST only reviewers[] and team_reviewers[] fields to this pull request's requested_reviewers`,
+    };
+  }
+  const known = new Set(own.reviewers ?? []);
+  const added = found.names.filter((name) => !knownReviewer(name, known));
+  if (added.length === 0) return { kind: 'allowed' };
+  const already = known.size > 0 ? [...known].join(', ') : 'nobody yet';
+  return {
+    kind: 'refused',
+    reason: `A follow-up re-requests review only from reviewers already on pull request #${own.pull} (${already}); ${added.join(', ')} would be new, and adding reviewers is the user's call`,
+  };
+}
+
+export function reviewRequestOf(args: readonly string[], own: OwnRepo): ReviewRequest | null {
+  if (args.some((token) => GH_ELSEWHERE.test(token))) return null;
+  const [group, verb, ...rest] = args;
+  let found: Requested | null = null;
+  if (group === 'api') found = apiRequest(args.slice(1), own);
+  else if (group === 'pr' && verb === 'edit') found = editRequest(rest, own);
+  return found ? judgedRequest(found, own) : null;
 }

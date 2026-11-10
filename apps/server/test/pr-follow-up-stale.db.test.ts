@@ -61,8 +61,11 @@ const states = async () =>
 const view = async () => (await conversationWatches(t.db, t.workspaceId, pull.conversationId))[0]!;
 const waiting = async () => prFeedbackWaiting(t.db, t.workspaceId, [PR_URL]);
 
-async function roundsUsed() {
-  await t.db.query('UPDATE pr_watches SET rounds = 3 WHERE id = $1', [pull.watch.id]);
+async function leftForYou() {
+  await t.db.query(
+    `UPDATE conversations SET session_type = 'terminal', terminal_provider = 'claude' WHERE id = $1`,
+    [pull.conversationId],
+  );
 }
 
 const botThreads = () => [
@@ -122,8 +125,8 @@ describe(
       expect(items.every((item) => !/<|\*\*|!\[|\]\(/.test(item.excerpt))).toBe(true);
     });
 
-    it('clears items left for the user after the rounds ran out once their thread is resolved', async () => {
-      await roundsUsed();
+    it('clears items left for the user once their thread is resolved', async () => {
+      await leftForYou();
       fake.pull.reviewComments = [
         { id: 21, user: alice, body: 'Please handle the empty list.', path: 'notes.txt', line: 1 },
       ];
@@ -154,7 +157,7 @@ describe(
     });
 
     it('changes nothing when GitHub can’t say which threads are resolved', async () => {
-      await roundsUsed();
+      await leftForYou();
       fake.pull.reviewComments = [
         { id: 21, user: alice, body: 'Please handle the empty list.', path: 'notes.txt', line: 1 },
       ];
@@ -170,7 +173,7 @@ describe(
     });
 
     it('closes a check left for the user once that check passes on a newer commit', async () => {
-      await roundsUsed();
+      await leftForYou();
       fake.pull.checkRuns = [{ id: 11, name: 'test', status: 'completed', conclusion: 'failure' }];
       await poll();
       expect(await states()).toEqual([[`check:test:${pull.sha}`, 'needs_user']]);
@@ -183,7 +186,7 @@ describe(
     });
 
     it('keeps a check open while it still runs on the newer commit', async () => {
-      await roundsUsed();
+      await leftForYou();
       fake.pull.checkRuns = [{ id: 11, name: 'test', status: 'completed', conclusion: 'failure' }];
       await poll();
       fake.pull.sha = 'sha-2';
@@ -217,7 +220,7 @@ describe(
     });
 
     it('keeps a writer’s review request open when they comment again, until they approve', async () => {
-      await roundsUsed();
+      await leftForYou();
       fake.pull.reviews = [
         {
           id: 61,

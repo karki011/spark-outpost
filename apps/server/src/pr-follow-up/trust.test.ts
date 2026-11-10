@@ -13,9 +13,19 @@ describe('trust filter', () => {
 
   it('trusts failing checks from the PR’s own CI and only writers’ comments', () => {
     const writers = new Set(['alice']);
-    expect(isTrusted({ kind: 'check', author: 'github-actions' }, writers)).toBe(true);
-    expect(isTrusted({ kind: 'review_comment', author: 'Alice' }, writers)).toBe(true);
-    expect(isTrusted({ kind: 'issue_comment', author: 'mallory' }, writers)).toBe(false);
+    const none = new Set<string>();
+    expect(isTrusted({ kind: 'check', author: 'github-actions' }, writers, none)).toBe(true);
+    expect(isTrusted({ kind: 'review_comment', author: 'Alice' }, writers, none)).toBe(true);
+    expect(isTrusted({ kind: 'issue_comment', author: 'mallory' }, writers, none)).toBe(false);
+  });
+
+  it('acts on a listed review bot and leaves an unlisted bot alone', () => {
+    const bots = new Set(['coderabbitai[bot]', 'gitar-bot']);
+    const writers = new Set<string>();
+    expect(isTrusted({ kind: 'review', author: 'CodeRabbitAI[bot]' }, writers, bots)).toBe(true);
+    expect(isTrusted({ kind: 'issue_comment', author: 'gitar-bot' }, writers, bots)).toBe(true);
+    expect(isTrusted({ kind: 'review', author: 'copilot[bot]' }, writers, bots)).toBe(false);
+    expect(isTrusted({ kind: 'review', author: 'coderabbitai' }, writers, bots)).toBe(false);
   });
 
   it('asks GitHub once per human author, never for bots, and distrusts failed lookups', async () => {

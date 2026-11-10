@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                           | What to do                                                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Review bots, no round cap              | [PR follow-up](pr-follow-up.md#review-bots).                                                |
 | Ticket moves, clean PR line            | [Ship](ship-and-pull-requests.md#when-the-agent-publishes).                                 |
 | Shell variables for agents             | [Details](privacy-and-secrets.md#what-agents-cant-reach).                                   |
 | Links open in Spark                    | [Settings](settings.md#mac).                                                                |

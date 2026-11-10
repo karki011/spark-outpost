@@ -8,6 +8,7 @@ import {
 } from './custom-endpoint.ts';
 import { DEFAULT_INVOLVEMENT_LEVEL } from './approvals.ts';
 import { involvementLevelSchema } from './involvement-levels.ts';
+import { prFollowUpBotsSchema } from './pr-follow-up.ts';
 import {
   COMPACT_AT_DEFAULT,
   COMPACT_WARN_DEFAULT,
@@ -152,6 +153,7 @@ export const profileSchema = z.object({
   prFollowUpReviews: z.boolean().default(true),
   prFollowUpReplies: z.boolean().default(true),
   prFollowUpAsk: z.boolean().default(false),
+  prFollowUpBots: prFollowUpBotsSchema.default([]),
   personality: personalitySchema.default(DEFAULT_PERSONALITY),
   agentInstructions: z.string().max(8000).optional(),
   agentInstructionsFile: z.string().max(4096).optional(),
@@ -205,6 +207,7 @@ export const updateProfileRequestSchema = z
     prFollowUpReviews: z.boolean(),
     prFollowUpReplies: z.boolean(),
     prFollowUpAsk: z.boolean(),
+    prFollowUpBots: prFollowUpBotsSchema,
     personality: personalitySchema,
     agentInstructions: z.string().max(8000),
     agentInstructionsFile: z.string().max(4096),

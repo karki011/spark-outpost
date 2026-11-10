@@ -1,9 +1,4 @@
-import {
-  PR_FOLLOW_UP_MAX_ROUNDS,
-  type FeedbackKind,
-  type FeedbackState,
-  type FeedbackTriage,
-} from '@spark-outpost/contracts';
+import type { FeedbackKind, FeedbackState, FeedbackTriage } from '@spark-outpost/contracts';
 import type { PrFollowUpSettings } from '../persistence/pr-settings.ts';
 
 export const BASE_INTERVAL_SECONDS = 120;
@@ -23,12 +18,25 @@ export function stateFor(
   return 'queued';
 }
 
-export type RoundDecision = 'none' | 'limit' | 'start';
+export type RoundDecision = 'none' | 'quiet' | 'start';
 
-export function roundDecision(rounds: number, queued: number, requested: boolean): RoundDecision {
+export function roundDecision(quiet: boolean, queued: number, requested: boolean): RoundDecision {
   if (queued === 0) return 'none';
-  if (rounds >= PR_FOLLOW_UP_MAX_ROUNDS && !requested) return 'limit';
+  if (quiet && !requested) return 'quiet';
   return 'start';
+}
+
+export function stillQuiet(
+  quietHead: string | null,
+  headSha: string | null,
+  added: number,
+): string | null {
+  if (quietHead === null || added > 0 || headSha !== quietHead) return null;
+  return quietHead;
+}
+
+export function changedNothing(commit: string | null, replies: number): boolean {
+  return commit === null && replies === 0;
 }
 
 export function nextInterval(current: number, active: boolean): number {
@@ -50,10 +58,11 @@ export function newSourceKeys<T extends { sourceKey: string }>(
 
 export function roundLine(count: number, round: number): string {
   const items = `${count} ${count === 1 ? 'item' : 'items'}`;
-  return `Fixing ${items} (round ${round} of ${PR_FOLLOW_UP_MAX_ROUNDS}).`;
+  return `Fixing ${items} (round ${round}).`;
 }
 
-export const LIMIT_LINE = `Spark made ${PR_FOLLOW_UP_MAX_ROUNDS} rounds on this PR. The rest is yours; ask Spark in the chat for another round.`;
+export const QUIET_LINE =
+  'The last round changed nothing, so Spark stopped following up until new feedback or a new commit arrives. Ask Spark in the chat for another round.';
 
 export interface RoundItem {
   id: string;

@@ -33,6 +33,7 @@ export const CHAT_PUBLISH_REASON =
 export const PUBLISH_ASKED_WHY = ALLOWED_REASONS.publishAsked;
 export const PUBLISH_FULL_AUTO_WHY = ALLOWED_REASONS.publishFullAuto;
 export const PUBLISH_FOLLOW_UP_WHY = ALLOWED_REASONS.publishFollowUp;
+export const REREQUEST_REVIEW_WHY = ALLOWED_REASONS.rerequestReview;
 
 const PULL_WRITES = new Set(['create', 'edit']);
 
@@ -100,7 +101,8 @@ export function publishing(
   );
 }
 
-export function publishAllowed(basis: PublishBasis): Decision {
+export function publishAllowed(basis: PublishBasis, rerequest = false): Decision {
+  if (rerequest) return { verdict: 'allow', by: 'level', why: REREQUEST_REVIEW_WHY };
   if (basis === 'requested') return { verdict: 'allow', by: 'level', why: PUBLISH_ASKED_WHY };
   if (basis === 'full_auto') return { verdict: 'allow', by: 'level', why: PUBLISH_FULL_AUTO_WHY };
   if (basis === 'follow_up') return { verdict: 'allow', by: 'level', why: PUBLISH_FOLLOW_UP_WHY };

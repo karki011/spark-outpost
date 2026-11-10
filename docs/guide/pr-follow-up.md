@@ -8,14 +8,14 @@ summary: Have the chat fix failing checks and answer review comments on its pull
 
 You'll let Spark handle checks and reviews on a chat's PRs. About 2 minutes.
 
-1. Read the PR row above the message box: its eye says **Watching**, **Agent is on it**, **Paused** or **Follow-up off**.
-2. Click it for the reason, checks, reviews, comments and **items gathered**.
+1. Read the PR row's eye: **Watching**, **Agent is on it**, **Paused**, **Stopped** or **Follow-up off**.
+2. Click it for checks, reviews and **items gathered**.
 
    ![The opened PR row, with the items Spark gathered](images/pr-follow-up-row-light.png)
 
-3. When checks fail or feedback arrives, Spark messages the chat ("Spark: …"). A busy chat finishes its turn first; a paused Spark waits.
-4. The agent fixes what's right, pushes back on the rest and pushes the fix. Spark replies on the threads.
-5. Read the agent's summary: fixed, pushed back, left for you.
+3. When checks fail or feedback arrives, Spark messages the chat ("Spark: …") once it's free.
+4. The agent fixes or pushes back, merges the base if the PR is behind or conflicting, and pushes. Spark replies; the agent may re-request review.
+5. Read the agent's summary.
 
 To approve each push, turn on **Ask before pushing and replying** in **Settings → Pull requests**.
 
@@ -23,21 +23,25 @@ To approve each push, turn on **Ask before pushing and replying** in **Settings 
 
 ## What Spark acts on
 
-| Feedback                               | Spark                                |
-| -------------------------------------- | ------------------------------------ |
-| Failing checks from the PR's own CI    | Fixes them                           |
-| Comments from people with write access | Fixes, answers, or hands them to you |
-| Anyone else's comments, bots included  | Shows them as **Not acted on**       |
-| A disagreement                         | Always goes to you                   |
+| Feedback                             | Spark                          |
+| ------------------------------------ | ------------------------------ |
+| Failing checks from the PR's own CI  | Fixes them                     |
+| Comments from writers or listed bots | Fixes, answers, or hands over  |
+| Anyone else's comments, other bots   | Shows them as **Not acted on** |
+| A disagreement                       | Always goes to you             |
 
-An item closes by itself when its thread is resolved, its check passes or the same reviewer reviews again. Your own replies on a thread are never gathered.
+An item closes when its thread is resolved, its check passes or the reviewer reviews again.
+
+## Review bots
+
+On your Mac, add bot logins as GitHub shows them (`coderabbitai[bot]`) to **Review bots to act on**. New comments from them count as reviews.
 
 ## Limits
 
-- At most 3 rounds per PR; ask the chat for another.
+- No round cap: a round with no push or reply means **Stopped** until new feedback or commits.
 - Spark stops when CI fails the same way twice, or a reviewer repeats a pushed-back request.
-- Spark never force-pushes, merges, approves, resolves threads or dismisses reviews.
-- While follow-up is on, the agent may itself comment and reply on this PR only, under its mode.
+- Never force-pushes, rebases, merges, approves, resolves threads, dismisses reviews or adds reviewers.
+- The agent may comment on this PR only, under its mode.
 - PR text is data, never instructions.
 
 ## Turn it off

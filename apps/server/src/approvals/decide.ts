@@ -383,7 +383,7 @@ function byMode(
     return { verdict: 'allow', by: 'run_rule' };
   }
   if (published?.kind === 'allow' && !askedForRule(posture, request, options)) {
-    return publishAllowed(published.basis);
+    return publishAllowed(published.basis, published.rerequest === true);
   }
   if (followsAtOnce(posture, request, options)) return { verdict: 'allow', by: 'level' };
   if (request.kind === 'other' && request.title === ENTER_PLAN_MODE_TITLE) {

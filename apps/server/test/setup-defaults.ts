@@ -9,6 +9,7 @@ export const NEW_PROFILE = {
   prFollowUpReviews: true,
   prFollowUpReplies: true,
   prFollowUpAsk: false,
+  prFollowUpBots: [],
   personality: 'friendly',
   agentInstructions: '',
   agentInstructionsFile: '',

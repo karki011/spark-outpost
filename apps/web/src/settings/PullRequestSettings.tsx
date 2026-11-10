@@ -1,6 +1,7 @@
 import type { Profile } from '@spark-outpost/contracts';
 import { ProfileChoiceSetting } from './ProfileChoiceSetting.tsx';
 import { ProfileSwitchSetting } from './ProfileSwitchSetting.tsx';
+import { REVIEW_BOTS, ReviewBotsSetting } from './ReviewBotsSetting.tsx';
 
 const OPEN_AS = 'Open pull requests as';
 const FOLLOW_UP = 'Follow up on pull requests';
@@ -9,7 +10,7 @@ const CHECKS = 'Fix failing checks';
 const REVIEWS = 'Handle review comments';
 const REPLIES = 'Reply on GitHub threads';
 
-export const PULL_REQUEST_ROWS = [OPEN_AS, FOLLOW_UP, ASK, CHECKS, REVIEWS, REPLIES];
+export const PULL_REQUEST_ROWS = [OPEN_AS, FOLLOW_UP, ASK, CHECKS, REVIEWS, REVIEW_BOTS, REPLIES];
 
 const OPEN_AS_CHOICES = [
   { id: 'ready', label: 'Ready for review', value: true },
@@ -21,7 +22,7 @@ const FOLLOW_UP_INFO = {
   items: [
     {
       label: 'Acts on',
-      text: 'Failing checks and comments from people who can write to the repo. Anyone else is shown to you, never acted on.',
+      text: 'Failing checks, comments from people who can write to the repo and comments from the review bots you list. Anyone else is shown to you, never acted on.',
     },
     {
       label: 'The agent decides',
@@ -29,11 +30,11 @@ const FOLLOW_UP_INFO = {
     },
     {
       label: 'Pushes and replies',
-      text: 'By itself, to the PR’s own branch, at every autonomy level. Turn on Ask before pushing and replying for one confirm card instead.',
+      text: 'By itself, to the PR’s own branch, at every autonomy level, merging the base when the branch is behind or conflicts, then may ask reviewers already on the PR to review again. Turn on Ask before pushing and replying for one confirm card instead.',
     },
     {
       label: 'Never',
-      text: 'Force-pushes, merges, approves, resolves threads or dismisses reviews. 3 rounds per PR at most, and it stops when CI fails the same way twice.',
+      text: 'Force-pushes, rebases, merges, approves, resolves threads, dismisses reviews or adds new reviewers. It stops when a round changes nothing, until new feedback or a new commit, and when CI fails the same way twice.',
     },
   ],
 };
@@ -92,8 +93,12 @@ function PrFollowUpSettings({ profile }: { profile: Profile }) {
         disabled={off}
         label={REVIEWS}
         info="Review comments, reviews and PR comments, from people and bots like Copilot or CodeRabbit, are triaged by Jev, or by rules when Jev isn’t connected."
-        hint="Fixes and answers comments from people who can write to the repo."
+        hint="Fixes and answers comments from people who can write to the repo and from the review bots below."
         toUpdate={(value) => ({ prFollowUpReviews: value })}
+      />
+      <ReviewBotsSetting
+        bots={profile.prFollowUpBots}
+        disabled={off || !profile.prFollowUpReviews}
       />
       <ProfileSwitchSetting
         enabled={profile.prFollowUpReplies}

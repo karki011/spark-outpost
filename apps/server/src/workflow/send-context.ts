@@ -10,11 +10,12 @@ import { taskBranch } from './publish-context.ts';
 interface OpenPull {
   number: number;
   workspace_id: string;
+  known_reviewers: string[];
 }
 
-async function ownOpenPull(db: Queryable, runId: string, branch: string): Promise<number | null> {
+async function ownOpenPull(db: Queryable, runId: string, branch: string): Promise<OpenPull | null> {
   const { rows } = await db.query<OpenPull>(
-    `SELECT w.number, w.workspace_id FROM pr_watches w
+    `SELECT w.number, w.workspace_id, w.known_reviewers FROM pr_watches w
      JOIN runs r ON r.conversation_id = w.conversation_id
      WHERE r.id = $1 AND w.branch = $2 AND w.pr_state = 'open'
        AND w.follow_up AND w.task_id IS NOT NULL
@@ -24,7 +25,7 @@ async function ownOpenPull(db: Queryable, runId: string, branch: string): Promis
   const pull = rows[0];
   if (!pull) return null;
   const settings = await prFollowUpSettings(db, pull.workspace_id);
-  return settings.enabled && !settings.ask ? pull.number : null;
+  return settings.enabled && !settings.ask ? pull : null;
 }
 
 async function ownBranch(db: Queryable, root: string): Promise<string | null> {
@@ -45,5 +46,11 @@ export async function ownRepoFor(
   const hosted = remote ? parseRemoteUrl(remote.url) : null;
   if (!hosted) return null;
   const pull = branch ? await ownOpenPull(db, runId, branch).catch(() => null) : null;
-  return { host: hosted.host.toLowerCase(), slug: repoSlug(hosted).toLowerCase(), branch, pull };
+  return {
+    host: hosted.host.toLowerCase(),
+    slug: repoSlug(hosted).toLowerCase(),
+    branch,
+    pull: pull?.number ?? null,
+    reviewers: pull?.known_reviewers ?? [],
+  };
 }

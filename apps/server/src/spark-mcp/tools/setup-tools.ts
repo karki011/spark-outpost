@@ -224,6 +224,7 @@ async function settings(context: SparkToolContext) {
       handleReviewComments: profile.prFollowUpReviews,
       replyOnGitHub: profile.prFollowUpReplies,
       askBeforePushingAndReplying: profile.prFollowUpAsk,
+      reviewBotsToActOn: profile.prFollowUpBots,
     },
     anonymousHeartbeat: profile.heartbeat,
     fullDiskAccess: fullDiskAccess.status,

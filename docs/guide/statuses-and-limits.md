@@ -110,7 +110,6 @@ A ring above **Pause** shows Claude plan use and resets once a window reaches 70
 | Limit                                | Value                                    |
 | ------------------------------------ | ---------------------------------------- |
 | Approval card expiry                 | 30 minutes                               |
-| Follow-up rounds per PR              | 3                                        |
 | Open terminals, all chats            | 12, 5,000 lines each                     |
 | Chats in an outpost                  | 50                                       |
 | A Spark's standing instructions      | 2,000 characters                         |

@@ -32,6 +32,12 @@ const pullSchema = z.object({
   base: z.object({ ref: z.string().optional() }).optional(),
   additions: z.number().int().nonnegative().optional(),
   deletions: z.number().int().nonnegative().optional(),
+  mergeable_state: z.string().nullable().optional(),
+  requested_reviewers: z.array(loginSchema).nullable().optional(),
+  requested_teams: z
+    .array(z.object({ slug: z.string() }))
+    .nullable()
+    .optional(),
 });
 
 const checkRunSchema = z.object({
@@ -95,6 +101,8 @@ export interface PullFacts {
   createdAt: string | null;
   additions: number | null;
   deletions: number | null;
+  mergeState: string | null;
+  requestedReviewers: string[];
 }
 
 export type Gathered = Omit<NewFeedback, 'trusted'>;
@@ -125,7 +133,15 @@ export async function readPullFacts(
     createdAt: pull.created_at ?? null,
     additions: pull.additions ?? null,
     deletions: pull.deletions ?? null,
+    mergeState: pull.mergeable_state ?? null,
+    requestedReviewers: requestedOf(pull, repo),
   };
+}
+
+function requestedOf(pull: z.infer<typeof pullSchema>, repo: RepoRef): string[] {
+  const people = (pull.requested_reviewers ?? []).map(login);
+  const teams = (pull.requested_teams ?? []).map((team) => `${repo.owner}/${team.slug}`);
+  return [...people, ...teams].map((name) => name.toLowerCase());
 }
 
 async function pages<T>(

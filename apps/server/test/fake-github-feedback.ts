@@ -32,6 +32,10 @@ export interface FakeFeedbackPull {
   resolvedThreads: number[];
   reviews: { id: number; user: Login; body: string; state: string }[];
   issueComments: { id: number; user: Login; body: string }[];
+  requestedReviewers: Login[];
+  requestedTeams: { slug: string }[];
+  mergeableState: string | null;
+  baseRef: string | null;
 }
 
 export interface FakeFeedbackGitHub {
@@ -72,6 +76,10 @@ export function fakeFeedbackGitHub(pull: Partial<FakeFeedbackPull> = {}): FakeFe
       resolvedThreads: [],
       reviews: [],
       issueComments: [],
+      requestedReviewers: [],
+      requestedTeams: [],
+      mergeableState: null,
+      baseRef: null,
       ...pull,
     },
     writers: new Set(['alice']),
@@ -102,6 +110,10 @@ export function fakeFeedbackGitHub(pull: Partial<FakeFeedbackPull> = {}): FakeFe
         merged_at: p.merged ? '2026-10-01T10:00:00Z' : null,
         head: { sha: p.sha },
         user: { login: p.author },
+        mergeable_state: p.mergeableState,
+        ...(p.baseRef ? { base: { ref: p.baseRef } } : {}),
+        requested_reviewers: p.requestedReviewers,
+        requested_teams: p.requestedTeams,
       });
     }
     if (route === `${base}/commits/${p.sha}/check-runs`) {

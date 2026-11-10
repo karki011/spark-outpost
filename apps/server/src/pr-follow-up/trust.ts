@@ -21,9 +21,11 @@ export function isBot(author: string): boolean {
 export function isTrusted(
   item: { kind: FeedbackKind; author: string },
   writers: ReadonlySet<string>,
+  bots: ReadonlySet<string>,
 ): boolean {
   if (item.kind === 'check') return true;
-  return writers.has(item.author.toLowerCase());
+  const author = item.author.toLowerCase();
+  return writers.has(author) || bots.has(author);
 }
 
 async function permissionOf(
