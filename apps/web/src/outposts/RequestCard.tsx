@@ -7,6 +7,7 @@ import { MemberFace } from './MemberFace.tsx';
 import { StatusPill } from './StatusPill.tsx';
 import {
   canCancel,
+  canRetry,
   postAnchor,
   receiverName,
   requestFaceState,
@@ -20,6 +21,7 @@ export interface CardHandlers {
   onAnswer: (postId: string) => void;
   onCancel: (postId: string) => void;
   onStartNow?: ((postId: string) => void) | undefined;
+  onRetry?: ((postId: string) => void) | undefined;
 }
 
 interface RequestCardProps extends CardHandlers {
@@ -72,6 +74,7 @@ export const RequestCard = memo(function RequestCard({
   onAnswer,
   onCancel,
   onStartNow,
+  onRetry,
 }: RequestCardProps) {
   const { post, status } = card;
   const to = receiverName(post);
@@ -133,6 +136,16 @@ export const RequestCard = memo(function RequestCard({
             onClick={() => onStartNow(post.id)}
           >
             Start anyway
+          </button>
+        )}
+        {onRetry && canRetry(post) && (
+          <button
+            type="button"
+            className="btn sm line"
+            aria-label={`Retry the request to ${to}`}
+            onClick={() => onRetry(post.id)}
+          >
+            Retry
           </button>
         )}
         {canCancel(post) && (

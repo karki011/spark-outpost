@@ -25,6 +25,7 @@ import { chatActivity } from './chat-activity.ts';
 import { chatsOnApproval, chatsOnQuestion, memberViews } from './member-view.ts';
 import { outpostPulls } from './outpost-pulls.ts';
 import { formOf, hasChanges, sheetChanges, type SheetForm } from './sheet-draft.ts';
+import { canRetry } from './post-text.ts';
 import { reuseCards, threadCards, waitsOnYou } from './thread-cards.ts';
 import { useOutpostChats, useMemberChats } from './use-outpost-chats.ts';
 import { useReconciled } from './use-reconciled.ts';
@@ -163,6 +164,15 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
   };
   const onAnswer = useStableCallback(startAnswer);
   const onCancel = useStableCallback((postId: string) => cancel.mutate(postId));
+  const onRetry = useStableCallback((postId: string) => {
+    const failed = posts.find((each) => each.id === postId);
+    if (!failed?.toConversationId || !canRetry(failed)) return;
+    post.mutate({
+      id: crypto.randomUUID(),
+      text: failed.body,
+      toConversationId: failed.toConversationId,
+    });
+  });
   const onStartNow = useStableCallback((postId: string) => startNow.mutate(postId));
 
   const send = async (target: ComposerTarget, text: string, messageId: string) => {
@@ -232,6 +242,7 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
         onAnswer={onAnswer}
         onCancel={onCancel}
         onStartNow={onStartNow}
+        onRetry={onRetry}
       />
       <OutpostComposer
         members={members}

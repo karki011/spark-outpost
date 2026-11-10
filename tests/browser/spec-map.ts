@@ -242,6 +242,7 @@ export const SPEC_GROUPS = {
     'outpost-answers',
     'outpost-create',
     'outpost-overview',
+    'outpost-retry',
     'outpost-sidebar',
     'outpost-story-bar',
     'outpost-suggested',
