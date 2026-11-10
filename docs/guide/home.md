@@ -31,11 +31,11 @@ Opening a row marks its update read, so it leaves the list. Updates that arrive 
 
 ## The board
 
-| Column        | Shows                                                                                                                                                                                                                                |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Needs you** | Cards and errors the lead does not show. With none, it becomes **Pick up next**: the morning brief's entries, its **Refresh**, and the **Connect** hint for Linear or Jira.                                                          |
-| **Working**   | Running chats with step and plan progress, **Ready for you to review** (clean pull requests and unread finished chats), and a **Sparks** line that opens your Sparks.                                                                |
-| **Your day**  | Today's meetings with **Join**, or **After the meeting** during a meeting. Without a calendar, or on a phone, the week recap takes its place. Below: today's spend with **Usage**, and a provider that needs attention with **Fix**. |
+| Column        | Shows                                                                                                                                                                                                                                                                                                              |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Needs you** | Cards and errors the lead does not show. With none, it becomes **Pick up next**: the morning brief's entries, its **Refresh**, and the **Connect** hint for Linear or Jira.                                                                                                                                        |
+| **Working**   | Running chats with step and plan progress, **Ready for you to review** (clean pull requests and unread finished chats), and a **Sparks** line that opens your Sparks.                                                                                                                                              |
+| **Your day**  | Today's meetings with **Join**, **After the meeting** during a meeting, or **Tomorrow** with up to three of tomorrow's meetings under **Before you go**. Without a calendar, or on a phone, the week recap takes its place. Below: today's spend with **Usage**, and a provider that needs attention with **Fix**. |
 
 **Recent chats** below the board opens the chat list.
 

@@ -171,6 +171,7 @@ export type CalendarCapture = z.infer<typeof calendarCaptureSchema>;
 export const calendarNowSchema = z.object({
   active: z.boolean(),
   upcoming: z.array(calendarEventSchema),
+  tomorrow: z.array(calendarEventSchema).optional(),
   nudge: calendarNudgeSchema.nullable(),
   hold: calendarHoldSchema.nullable(),
   capture: calendarCaptureSchema.nullable(),
