@@ -1,5 +1,7 @@
 import {
   digestStateSchema,
+  homeSeenSchema,
+  type HomeSeen,
   recapStateSchema,
   type RecapRefineRequest,
   type RecapState,
@@ -23,6 +25,7 @@ export const homeKeys = {
   digest: ['home', 'digest'] as const,
   today: ['home', 'today'] as const,
   recap: ['home', 'recap'] as const,
+  seen: ['home', 'seen'] as const,
 };
 
 export function viewerTimeZone(): string {
@@ -41,6 +44,9 @@ export const homeApi = {
       `/home/today?${new URLSearchParams({ tz: viewerTimeZone() }).toString()}`,
     ),
   health: (): Promise<ProviderHealth> => request(providerHealthSchema, '/providers/health'),
+  seen: (): Promise<HomeSeen> => request(homeSeenSchema, '/home/seen'),
+  markSeen: (): Promise<HomeSeen> =>
+    request(homeSeenSchema, '/home/seen', { method: 'POST', body: '{}' }),
   digest: (): Promise<DigestState> => request(digestStateSchema, '/home/digest'),
   requestDigest: (trigger: DigestTrigger): Promise<DigestState> =>
     request(

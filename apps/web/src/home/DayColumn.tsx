@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { spanOf, type CalendarEvent, type ConversationSummary } from '@spark-outpost/contracts';
-import { span } from '../calendar/calendar-format.ts';
+import { clock, span } from '../calendar/calendar-format.ts';
 import { ClashTag } from '../calendar/ClashTag.tsx';
 import { JoinButton } from '../calendar/JoinButton.tsx';
 import { countdown, overlapChat } from '../calendar/today-model.ts';
@@ -8,7 +8,7 @@ import { openTodayDay, openTodayEvent } from '../calendar/today-request.ts';
 import type { Upcoming } from '../calendar/use-upcoming.ts';
 import { MAC } from '../ui/shortcuts.ts';
 import { HomeCard, HomeRow, HomeRows, Quiet, RowsSkeleton } from './HomeCards.tsx';
-import { dayEvents, dayTitle } from './board-model.ts';
+import { dayChoice } from './board-model.ts';
 import type { LeadState } from './lead-state.ts';
 import { ProviderNotice } from './ProviderNotice.tsx';
 import { SpendLine } from './SpendLine.tsx';
@@ -30,8 +30,9 @@ function DayRow(props: {
   day: Upcoming;
   now: number;
   chats: readonly ConversationSummary[];
+  tomorrow: boolean;
 }) {
-  const { event, now, day } = props;
+  const { event, now, day, tomorrow } = props;
   const { start, end } = spanOf(event);
   const overlap = overlapChat(event, now, props.chats);
   const where = [
@@ -44,7 +45,7 @@ function DayRow(props: {
   return (
     <HomeRow
       index={props.index}
-      label={<span className="hcd">{countdown(event, now)}</span>}
+      label={<span className="hcd">{tomorrow ? clock(start) : countdown(event, now)}</span>}
       title={event.title}
       onTitle={{ name: `Open ${event.title} in Today`, open: () => openTodayEvent(event.key) }}
       line={
@@ -53,12 +54,14 @@ function DayRow(props: {
           {overlap && ` · Overlaps “${overlap.title}”, still running`}
         </>
       }
-      trailing={<JoinButton event={event} now={now} />}
+      trailing={tomorrow ? undefined : <JoinButton event={event} now={now} />}
     />
   );
 }
 
-function Meetings(props: DayColumnProps & { events: readonly CalendarEvent[]; empty: string }) {
+function Meetings(
+  props: DayColumnProps & { events: readonly CalendarEvent[]; empty: string; tomorrow: boolean },
+) {
   if (props.events.length === 0) return <Quiet>{props.empty}</Quiet>;
   return (
     <HomeRows label="Meetings">
@@ -70,6 +73,7 @@ function Meetings(props: DayColumnProps & { events: readonly CalendarEvent[]; em
           day={props.day}
           now={props.now}
           chats={props.chats}
+          tomorrow={props.tomorrow}
         />
       ))}
     </HomeRows>
@@ -86,24 +90,23 @@ function CalendarCard(props: DayColumnProps) {
     );
   }
   if (!day.available) return null;
+  const choice = dayChoice(props.lead, props.leadEventKey, day.events, day.tomorrow);
   return (
     <HomeCard
       id="home-day"
-      title={dayTitle(props.lead)}
+      title={choice.title}
       action={
         <span className="hday-a">
-          <span className="hday-hint">{MAC ? '⌘J' : 'Ctrl+J'} joins the next</span>
+          {!choice.tomorrow && (
+            <span className="hday-hint">{MAC ? '⌘J' : 'Ctrl+J'} joins the next</span>
+          )}
           <button type="button" className="hlink" onClick={openTodayDay}>
             Open Today
           </button>
         </span>
       }
     >
-      <Meetings
-        {...props}
-        events={dayEvents(day.events, props.leadEventKey)}
-        empty="No more meetings today."
-      />
+      <Meetings {...props} events={choice.events} empty={choice.empty} tomorrow={choice.tomorrow} />
     </HomeCard>
   );
 }

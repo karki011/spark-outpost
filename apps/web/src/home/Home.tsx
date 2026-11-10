@@ -37,6 +37,8 @@ import { capRows, sinceRows, type SinceRow } from './since-model.ts';
 import { useAttentionSettings, useBrief } from './use-brief.ts';
 import { useAwayKeys } from './use-away-keys.ts';
 import { useMeetingLead } from './use-meeting-lead.ts';
+import { useRunModes } from './use-run-modes.ts';
+import { HomeAnswersProvider } from './use-answer-card.tsx';
 
 const ENTER_MS = 700;
 const MINUTE_MS = 60_000;
@@ -106,7 +108,7 @@ export function Home(props: HomeProps) {
   const attention = useAttentionItems();
   const markAttention = useMarkAttention();
   const alerting = useAlertingChats();
-  const away = useAwayKeys(attention.items, attention.loaded);
+  const away = useAwayKeys(attention.items, attention.loaded, now);
   const day = useUpcoming(now);
   const meeting = useMeetingLead(day, now);
 
@@ -123,6 +125,7 @@ export function Home(props: HomeProps) {
     awayUpdates: updates.length,
     busy: asking.length + running.length,
   });
+  const capabilities = useRunModes(lead === 'meeting' || lead === 'before-you-go' ? running : []);
 
   const inLead = new Set<string>(
     lead === 'since-you-left'
@@ -182,96 +185,104 @@ export function Home(props: HomeProps) {
     ) : null;
 
   return (
-    <HomeLayout
-      entering={entering}
-      loading={loading}
-      header={
-        <HomeHeader
-          text={headline(voice, facts)}
-          mood={headlineMood(facts, props.mood)}
-          loading={loading}
-          now={now}
-        />
-      }
-      lead={
-        <>
-          {lead === 'loading' && <LeadSkeleton />}
-          {lead === 'since-you-left' && <SinceLead rows={rows} onOpen={openRow} />}
-          {lead === 'meeting' && meeting.event && (
-            <MeetingLead
-              event={meeting.event}
-              clashes={day.clashes.get(meeting.event.key)}
-              actions={meeting}
-              now={now}
-              waiting={asking}
-              running={running}
-              onOpen={onOpenChat}
-            />
-          )}
-          {lead === 'before-you-go' && (
-            <BeforeLead waiting={asking} running={running} onOpen={onOpenChat} />
-          )}
-        </>
-      }
-      composer={
-        <HomeComposer
-          draftId={draftId}
-          onRotate={props.onRotateDraft}
-          onOpenId={props.onOpenId}
-          compact={lead !== 'board'}
-        />
-      }
-      board={
-        <>
-          <div className="hcol">
-            <NeedsToday
-              mode={needsColumn(leftover)}
-              loading={props.loading}
-              brief={brief}
-              rows={feedRows(leftover, now)}
-              entries={entries}
-              connectHint={hint.show}
-              voice={voice}
-              now={now}
-              onOpen={onOpenChat}
-              onOpenId={openById}
-              onEntry={openEntry}
-              onConnect={() => props.onTickets(null)}
-              onDismissHint={hint.dismiss}
-            />
-          </div>
-          <WorkingColumn
-            running={running}
-            review={review}
-            loading={props.loading}
+    <HomeAnswersProvider>
+      <HomeLayout
+        entering={entering}
+        loading={loading}
+        header={
+          <HomeHeader
+            text={headline(voice, facts)}
+            mood={headlineMood(facts, props.mood)}
+            loading={loading}
             now={now}
-            projectName={projectName}
-            onOpen={onOpenChat}
-            onReview={(item) => {
-              if (item.attentionKey) markAttention([item.attentionKey], 'read');
-              onOpenChat(item.chat);
-            }}
+          />
+        }
+        lead={
+          <>
+            {lead === 'loading' && <LeadSkeleton />}
+            {lead === 'since-you-left' && <SinceLead rows={rows} onOpen={openRow} />}
+            {lead === 'meeting' && meeting.event && (
+              <MeetingLead
+                event={meeting.event}
+                clashes={day.clashes.get(meeting.event.key)}
+                actions={meeting}
+                now={now}
+                waiting={asking}
+                running={running}
+                capabilities={capabilities}
+                onOpen={onOpenChat}
+              />
+            )}
+            {lead === 'before-you-go' && (
+              <BeforeLead
+                waiting={asking}
+                running={running}
+                capabilities={capabilities}
+                onOpen={onOpenChat}
+              />
+            )}
+          </>
+        }
+        composer={
+          <HomeComposer
+            draftId={draftId}
+            onRotate={props.onRotateDraft}
             onOpenId={props.onOpenId}
+            compact={lead !== 'board'}
           />
-          <DayColumn
-            day={day}
-            lead={lead}
-            leadEventKey={meeting.event?.key ?? null}
-            chats={chats}
-            now={now}
-            recap={recapNode}
-            onUsage={props.onUsage}
-            onProviders={props.onProviders}
-          />
-        </>
-      }
-      foot={
-        <p className="home-foot">
-          <button type="button" className="hlink" onClick={props.onChats}>
-            Recent chats
-          </button>
-        </p>
-      }
-    />
+        }
+        board={
+          <>
+            <div className="hcol">
+              <NeedsToday
+                mode={needsColumn(leftover)}
+                loading={props.loading}
+                brief={brief}
+                rows={feedRows(leftover, now)}
+                entries={entries}
+                connectHint={hint.show}
+                voice={voice}
+                now={now}
+                onOpen={onOpenChat}
+                onOpenId={openById}
+                onEntry={openEntry}
+                onConnect={() => props.onTickets(null)}
+                onDismissHint={hint.dismiss}
+              />
+            </div>
+            <WorkingColumn
+              running={running}
+              review={review}
+              loading={props.loading}
+              now={now}
+              projectName={projectName}
+              onOpen={onOpenChat}
+              onReview={(item) => {
+                if (item.attentionKey) markAttention([item.attentionKey], 'read');
+                onOpenChat(item.chat);
+              }}
+              onOpenId={props.onOpenId}
+            />
+            <DayColumn
+              day={day}
+              lead={lead}
+              leadEventKey={meeting.event?.key ?? null}
+              chats={chats}
+              now={now}
+              recap={recapNode}
+              onUsage={props.onUsage}
+              onProviders={props.onProviders}
+            />
+          </>
+        }
+        foot={
+          <p className="home-foot">
+            <button type="button" className="hlink" onClick={props.onChats}>
+              Recent chats
+            </button>
+          </p>
+        }
+      />
+    </HomeAnswersProvider>
   );
 }

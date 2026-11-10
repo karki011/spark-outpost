@@ -1,6 +1,7 @@
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { XIcon } from '../ui/icons.tsx';
-import { HomeRow, HomeRows, RowAction, StatusLabel, type StatusTone } from './HomeCards.tsx';
+import { HomeRow, HomeRows, StatusLabel, type StatusTone } from './HomeCards.tsx';
+import { RowButtons, RowError } from './RowButtons.tsx';
 import type { FeedRow, FeedSeverity } from './needs-model.ts';
 
 export const SORT_RULE =
@@ -31,14 +32,16 @@ export function NeedsFeed({ rows, onOpen }: NeedsFeedProps) {
               </>
             }
             trailing={
-              <RowAction
+              <RowButtons
+                chat={chat}
                 label={action}
-                name={`${action}: ${chat.title}`}
                 primary={row.primary}
-                onClick={() => onOpen(chat)}
+                onOpen={() => onOpen(chat)}
               />
             }
-          />
+          >
+            <RowError chatId={chat.id} />
+          </HomeRow>
         );
       })}
     </HomeRows>

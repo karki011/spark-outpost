@@ -22,7 +22,7 @@ export interface SeedChat {
   projectIds?: string[];
   archived?: boolean;
   unread?: boolean;
-  run?: { status: string; error?: string };
+  run?: { status: string; error?: string; provider?: string; agentMode?: string };
   approval?: SeedApproval;
   approvals?: SeedApproval[];
   minutesAgo?: number;
@@ -149,9 +149,18 @@ export async function seedChats(chats: readonly SeedChat[]): Promise<string[]> {
         const runId = randomUUID();
         await db.query(
           `INSERT INTO runs (id, conversation_id, user_message_id, provider, status, error,
-             started_at, finished_at)
-           VALUES ($1, $2, $3, 'fake', $4, $5, now(), CASE WHEN $6 THEN now() END)`,
-          [runId, id, messageId, chat.run.status, chat.run.error ?? null, chat.unread ?? false],
+             started_at, finished_at, agent_mode)
+           VALUES ($1, $2, $3, $7, $4, $5, now(), CASE WHEN $6 THEN now() END, $8)`,
+          [
+            runId,
+            id,
+            messageId,
+            chat.run.status,
+            chat.run.error ?? null,
+            chat.unread ?? false,
+            chat.run.provider ?? 'fake',
+            chat.run.agentMode ?? null,
+          ],
         );
         const approvals = [...(chat.approval ? [chat.approval] : []), ...(chat.approvals ?? [])];
         if (approvals.length > 0) {

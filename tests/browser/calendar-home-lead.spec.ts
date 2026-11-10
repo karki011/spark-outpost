@@ -1,6 +1,6 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { apiNow, matchApiClock } from './api-clock.ts';
+import { apiNow, matchApiClock, setPageClock } from './api-clock.ts';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { FAKE_CALENDAR_STATE } from './stub-config.ts';
@@ -89,4 +89,24 @@ test('a meeting outside its Join time leaves the board as it was', async ({ page
   await expect(home(page).getByRole('region', { name: 'Your day' })).toContainText('Standup');
   await expect(lead(page)).toHaveCount(0);
   await expect(home(page).locator('.home-lead')).toBeEmpty();
+});
+
+test('Before you go previews tomorrow in the day column', async ({ page }) => {
+  await seedChats([{ title: 'Overnight refactor', run: { status: 'running' } }]);
+  startEventsIn(4);
+  await matchApiClock(page);
+  const evening = new Date(apiNow());
+  evening.setHours(18, 0, 0, 0);
+  await setPageClock(page, evening.getTime());
+  const response = await page.request.post('/api/calendar/connect', { data: {} });
+  expect(response.ok()).toBe(true);
+  await page.goto('/');
+
+  await expect(home(page).getByRole('region', { name: 'Before you go' })).toBeVisible({
+    timeout: 20_000,
+  });
+  const tomorrow = home(page).getByRole('region', { name: 'Tomorrow' });
+  await expect(tomorrow.locator('.hrow-m b')).toHaveText(['Demo day']);
+  await expect(tomorrow.getByRole('button', { name: /^Join/ })).toHaveCount(0);
+  await expect(home(page).getByRole('region', { name: 'Your day' })).toHaveCount(0);
 });

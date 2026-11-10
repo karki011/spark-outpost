@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { AttentionItem, ConversationSummary } from '@spark-outpost/contracts';
 import { at, event } from '../calendar/test-fixtures.ts';
-import { dayEvents, dayTitle, leftoverNeeds, needsColumn, reviewItems } from './board-model.ts';
+import {
+  dayChoice,
+  dayEvents,
+  dayTitle,
+  leftoverNeeds,
+  needsColumn,
+  reviewItems,
+} from './board-model.ts';
 import type { NeedItem, NeedTone } from './home-model.ts';
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -101,4 +108,35 @@ describe('dayEvents', () => {
   it('leaves out the meeting the lead already shows', () => {
     expect(dayEvents([standup, sync], sync.key).map((entry) => entry.title)).toEqual(['Standup']);
   });
+});
+
+describe('dayChoice', () => {
+  const standup = event('Standup', at(9, 30), at(9, 45));
+  const sync = event('Design sync', at(14, 50), at(15, 20));
+  const tomorrow = ['Planning', 'Review', 'Retro', 'Demo'].map((title, index) =>
+    event(title, at(9 + index, 0), at(9 + index, 30)),
+  );
+
+  it('previews tomorrow, at most three meetings, before you go', () => {
+    const choice = dayChoice('before-you-go', null, [standup], tomorrow);
+    expect(choice.title).toBe('Tomorrow');
+    expect(choice.tomorrow).toBe(true);
+    expect(choice.events.map((entry) => entry.title)).toEqual(['Planning', 'Review', 'Retro']);
+  });
+
+  it('keeps today when nothing is booked tomorrow', () => {
+    const choice = dayChoice('before-you-go', null, [standup, sync], []);
+    expect(choice.title).toBe('Your day');
+    expect(choice.tomorrow).toBe(false);
+    expect(choice.events.map((entry) => entry.title)).toEqual(['Standup', 'Design sync']);
+  });
+
+  it.each(['board', 'since-you-left', 'meeting', 'loading'] as const)(
+    'keeps today in the %s state',
+    (lead) => {
+      const choice = dayChoice(lead, sync.key, [standup, sync], tomorrow);
+      expect(choice.tomorrow).toBe(false);
+      expect(choice.events.map((entry) => entry.title)).toEqual(['Standup']);
+    },
+  );
 });

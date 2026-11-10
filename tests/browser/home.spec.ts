@@ -212,8 +212,14 @@ test('Needs you lists cards and errors the lead does not show, and jumps to the 
       approval: { kind: 'execute', title: 'Deploy', command: 'pnpm deploy' },
     },
   ]);
+  const seen = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === '/api/home/seen' &&
+      response.request().method() === 'POST',
+  );
   await openHome(page);
   await expect(section(page, 'Since you left')).toBeVisible();
+  await seen;
   await backHome(page);
 
   await expect(home(page).locator('.home-lead')).toBeEmpty();
@@ -227,7 +233,7 @@ test('Needs you lists cards and errors the lead does not show, and jumps to the 
     /^Stopped: rate limit reached · /,
   ]);
   await expect(feed(page).locator('.hstat')).toHaveText(['Waiting', 'Failed']);
-  await expect(feed(page).getByRole('button')).toHaveText(['Answer', 'See error']);
+  await expect(feed(page).getByRole('button')).toHaveText(['Allow', 'Deny', 'Answer', 'See error']);
   await expect(
     section(page, 'Ready for you to review').getByRole('button', {
       name: 'Review: Ship the notes',
