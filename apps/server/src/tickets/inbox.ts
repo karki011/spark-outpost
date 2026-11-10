@@ -1,10 +1,12 @@
 import {
   ticketChatState,
   ticketItemId,
+  type AttentionSettings,
   type InboxTicket,
   type PullRequestStatus,
   type TicketInbox,
   type TicketListItem,
+  type TicketSourceId,
   type TicketSourceProblem,
   type TicketSummary,
 } from '@spark-outpost/contracts';
@@ -22,6 +24,7 @@ import {
 } from '../persistence/tickets.ts';
 import { settledDismissals, type Thresholds, type TicketFacts } from './attention.ts';
 import { connectedSources, type OpenSource } from './connections.ts';
+import { recallInbox, rememberInbox, type InboxSnapshot } from './inbox-snapshot.ts';
 import { inboxDevelopment, type DevelopmentDeps } from './development.ts';
 import { placeTicket, sortInbox } from './sections.ts';
 import { isTruncated, TicketApiError } from './source.ts';
@@ -173,19 +176,13 @@ async function forgetSettledDismissals(
   );
 }
 
-export async function loadInbox(deps: InboxDeps): Promise<TicketInbox> {
-  const now = deps.now?.() ?? new Date();
-  const settings = await getAttentionSettings(deps.db, deps.workspaceId);
-  const sources = await connectedSources(deps);
-  const fetched = await Promise.all(sources.map(fetchMine));
-  const summaries = fetched.flatMap((result) => result.tickets);
-  await cacheTickets(deps.db, deps.workspaceId, summaries, { assignedToMe: true });
-  const facts = await forgetSettledDismissals(
-    deps,
-    await factsFor(deps, sources, summaries),
-    settings,
-    now,
-  );
+async function assembleInbox(
+  deps: InboxDeps,
+  snapshot: Omit<InboxSnapshot, 'at'>,
+  settings: AttentionSettings,
+  now: Date,
+): Promise<TicketInbox> {
+  const facts = await forgetSettledDismissals(deps, snapshot.facts, settings, now);
   const tickets = sortInbox(facts.map((fact) => placeTicket(fact, settings, now)));
   const flagged = tickets
     .filter((ticket) => ticket.section === 'attention')
@@ -193,12 +190,58 @@ export async function loadInbox(deps: InboxDeps): Promise<TicketInbox> {
   await saveAttentionSnapshot(deps.db, deps.workspaceId, flagged);
   return {
     tickets,
+    errors: snapshot.errors,
+    sources: snapshot.sources,
+    truncated: snapshot.truncated,
+    syncedAt: snapshot.syncedAt,
+    settings,
+  };
+}
+
+export async function loadInbox(deps: InboxDeps): Promise<TicketInbox> {
+  const now = deps.now?.() ?? new Date();
+  const settings = await getAttentionSettings(deps.db, deps.workspaceId);
+  const sources = await connectedSources(deps);
+  const fetched = await Promise.all(sources.map(fetchMine));
+  const summaries = fetched.flatMap((result) => result.tickets);
+  await cacheTickets(deps.db, deps.workspaceId, summaries, { assignedToMe: true });
+  const snapshot = {
+    facts: await factsFor(deps, sources, summaries),
     errors: fetched.flatMap((result) => (result.problem ? [result.problem] : [])),
     sources: sources.map((open) => open.connection.source),
     truncated: sources.flatMap((open, index) =>
       fetched[index]?.truncated ? [open.connection.source] : [],
     ),
     syncedAt: now.toISOString(),
-    settings,
   };
+  rememberInbox(deps.db, deps.workspaceId, { ...snapshot, at: now.getTime() });
+  return assembleInbox(deps, snapshot, settings, now);
+}
+
+export async function reloadInboxMarks(
+  deps: InboxDeps,
+  changed: { source: TicketSourceId; key: string },
+): Promise<TicketInbox> {
+  const now = deps.now?.() ?? new Date();
+  const snapshot = recallInbox(deps.db, deps.workspaceId, now);
+  const known = snapshot?.facts.some(
+    ({ ticket }) => ticket.source === changed.source && ticket.key === changed.key,
+  );
+  if (!snapshot || !known) return loadInbox(deps);
+  const times = await ticketTimes(
+    deps.db,
+    deps.workspaceId,
+    snapshot.facts.map((fact) => fact.ticket),
+  );
+  const facts = snapshot.facts.map((fact): TicketFacts => {
+    const marks = times.get(ticketRef(fact.ticket.source, fact.ticket.key));
+    return {
+      ...fact,
+      snooze: marks?.snooze ?? null,
+      dismissed: marks?.dismissed ?? [],
+      noticeSeen: marks?.noticeSeen ?? null,
+    };
+  });
+  const settings = await getAttentionSettings(deps.db, deps.workspaceId);
+  return assembleInbox(deps, { ...snapshot, facts }, settings, now);
 }

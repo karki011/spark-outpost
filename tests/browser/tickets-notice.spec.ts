@@ -133,6 +133,51 @@ test('Dismiss clears a Needs you row by keyboard and Undo brings it back', async
   await expect(rail(page).getByLabel('2 tickets need attention')).toBeVisible();
 });
 
+test('Dismiss drops the rail count at once and leaves the other rows mounted', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await connectTickets(page);
+  await openTickets(page);
+  await expect(section(page, 'Needs you')).toContainText('API-81', { timeout: 15_000 });
+  await expect(rail(page).getByLabel('2 tickets need attention')).toBeVisible();
+
+  const others = section(page, 'Needs you').locator(
+    'li[data-ticket]:not([data-ticket$=":API-81"])',
+  );
+  await expect(others).toHaveCount(1);
+  const sibling = await others.first().evaluateHandle((node) => {
+    (node as HTMLElement & { kept?: boolean }).kept = true;
+    return node;
+  });
+
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/api/tickets/*/*/dismiss', async (route) => {
+    await held;
+    await route.continue();
+  });
+
+  await row(page, 'API-81').locator('.ir-main').click();
+  const dismiss = detailOf(page, 'API-81').getByRole('button', {
+    name: 'Dismiss API-81 from Needs you',
+  });
+  await dismiss.focus();
+  await page.keyboard.press('Enter');
+
+  await expect(rail(page).getByLabel('1 ticket needs attention')).toBeVisible();
+  await expect(section(page, 'Needs you')).not.toContainText('API-81');
+  await expect(row(page, 'API-81').locator('.ir-main')).toBeFocused();
+  expect(await sibling.evaluate((node) => node.isConnected)).toBe(true);
+
+  release();
+  const toast = main(page).getByRole('status').filter({ hasText: 'Dismissed API-81' });
+  await expect(toast).toBeVisible();
+  await expect(rail(page).getByLabel('1 ticket needs attention')).toBeVisible();
+  expect(await sibling.evaluate((node) => (node as { kept?: boolean }).kept)).toBe(true);
+  await expect(others.first()).toBeVisible();
+});
+
 test('the notice states have no accessibility issues and can be captured in light and dark', async ({
   page,
 }) => {

@@ -31,7 +31,7 @@ import {
   ticketConnections,
   type TicketDeps,
 } from '../tickets/connections.ts';
-import { loadInbox } from '../tickets/inbox.ts';
+import { loadInbox, reloadInboxMarks } from '../tickets/inbox.ts';
 import { listTickets, ticketView } from '../tickets/list.ts';
 import { searchTickets } from '../tickets/search.ts';
 import { dismissFlags, markNoticeSeen, snoozeProblem, snoozeTicket } from '../tickets/snooze.ts';
@@ -178,23 +178,23 @@ export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
     const problem = snoozeProblem(new Date(request.until), new Date());
     if (problem) throw new BadRequestError(problem);
     await snoozeTicket(deps, ticketRef(req), request);
-    res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
+    res.json(await reloadInboxMarks({ ...deps, github: gitHubDepsOf(routeDeps) }, ticketRef(req)));
   });
 
   router.delete('/tickets/:source/:key/snooze', async (req, res) => {
     await snoozeTicket(deps, ticketRef(req), null);
-    res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
+    res.json(await reloadInboxMarks({ ...deps, github: gitHubDepsOf(routeDeps) }, ticketRef(req)));
   });
 
   router.put('/tickets/:source/:key/dismiss', async (req, res) => {
     const { flags } = parseBody(dismissTicketRequestSchema, req);
     await dismissFlags(deps, ticketRef(req), flags);
-    res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
+    res.json(await reloadInboxMarks({ ...deps, github: gitHubDepsOf(routeDeps) }, ticketRef(req)));
   });
 
   router.delete('/tickets/:source/:key/dismiss', async (req, res) => {
     await dismissFlags(deps, ticketRef(req), []);
-    res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
+    res.json(await reloadInboxMarks({ ...deps, github: gitHubDepsOf(routeDeps) }, ticketRef(req)));
   });
 
   router.put('/tickets/:source/:key/notice-seen', async (req, res) => {

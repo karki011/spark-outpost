@@ -13,6 +13,7 @@ import {
   liveTicket,
   liveTickets,
   rowChecks,
+  sameEntry,
   rowLine,
   staleChats,
 } from './ticket-flow.ts';
@@ -277,5 +278,18 @@ describe('what an asking chat wants', () => {
   it('says it in a few words', () => {
     expect(askingText(null)).toBe('Waiting for your answer');
     expect(askingText(asking('input').attention)).toBe('Answer a question');
+  });
+});
+
+describe('sameEntry', () => {
+  it('is true for a rebuilt entry of an unchanged ticket and false once the ticket changes', () => {
+    const lookup = chatLookup([]);
+    const item = ticket();
+    const [first] = liveTickets([item], lookup);
+    const [again] = liveTickets([item], lookup);
+    const [moved] = liveTickets([{ ...item, reason: 'Snoozed' }], lookup);
+    expect(again).not.toBe(first);
+    expect(sameEntry(first!, again!)).toBe(true);
+    expect(sameEntry(first!, moved!)).toBe(false);
   });
 });

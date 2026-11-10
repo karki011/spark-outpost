@@ -4,7 +4,7 @@ import { EmptyScene } from '../brand/EmptyScene.tsx';
 import { rowPreview } from './row-preview.ts';
 import { SectionHeader } from './SectionHeader.tsx';
 import { ChecksBadge, SparkFace } from './StatusChip.tsx';
-import { rowChecks, rowLine, type LiveTicket } from './ticket-flow.ts';
+import { rowChecks, rowLine, sameEntry, type LiveTicket } from './ticket-flow.ts';
 import {
   ageTitle,
   attentionRule,
@@ -50,7 +50,7 @@ function syncProblem(ticket: InboxTicket): string | null {
   return `${sync.message ?? 'The last change failed.'} Details and Retry are in the ticket.`;
 }
 
-const InboxRow = memo(function InboxRow({
+function InboxRowView({
   entry,
   now,
   selected,
@@ -114,7 +114,17 @@ const InboxRow = memo(function InboxRow({
       }
     />
   );
-});
+}
+
+const InboxRow = memo(
+  InboxRowView,
+  (before, after) =>
+    sameEntry(before.entry, after.entry) &&
+    before.now === after.now &&
+    before.selected === after.selected &&
+    before.onSelect === after.onSelect &&
+    before.onAction === after.onAction,
+);
 
 const snoozedEntries = (entries: readonly LiveTicket[]) =>
   entries

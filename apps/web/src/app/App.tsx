@@ -43,6 +43,7 @@ import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { useOutpostRoute } from './use-outpost-route.ts';
 import { TicketsViewSkeleton } from '../tickets/TicketsViewSkeleton.tsx';
 import { unseenNotices } from '../tickets/ticket-model.ts';
+import { attentionCount } from '../tickets/ticket-optimistic.ts';
 import { ticketKeys } from '../tickets/tickets-api.ts';
 import { useTicketInbox } from '../tickets/use-ticket-inbox.ts';
 import { useTicketRequests } from '../tickets/ticket-request.ts';
@@ -153,9 +154,7 @@ function ChatShell({ entering }: { entering: boolean }) {
   const alerting = useAlertingChats();
   const waiting = attention(chats, [], alerting).count;
   const { inbox } = useTicketInbox();
-  const ticketsWaiting = (inbox.data?.tickets ?? []).filter(
-    (ticket) => ticket.section === 'attention',
-  ).length;
+  const ticketsWaiting = attentionCount(inbox.data);
   const ticketNotices = unseenNotices(inbox.data?.tickets ?? []);
   const layout = useSidebarLayoutState(waiting > 0);
   const { remote } = useRemoteClient();
