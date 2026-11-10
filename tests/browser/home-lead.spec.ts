@@ -154,3 +154,32 @@ test('the composer keeps its text and focus when a lead appears', async ({ page 
   await expect(input).toHaveValue('half a thought');
   await expect(input).toBeFocused();
 });
+
+test('Before you go groups running chats by agent mode without fetching chat details', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true, catalog: true });
+  await page.clock.setFixedTime(new Date(2026, 10, 10, 18, 0, 0));
+  await seedChats([
+    {
+      title: 'Manual refactor',
+      run: { status: 'running', provider: 'claude', agentMode: 'default' },
+    },
+    { title: 'Auto migration', run: { status: 'running', provider: 'claude', agentMode: 'auto' } },
+  ]);
+  const details: string[] = [];
+  page.on('request', (request) => {
+    const path = new URL(request.url()).pathname;
+    if (/^\/api\/conversations\/[0-9a-f-]{36}(\/|$)/.test(path)) details.push(path);
+  });
+  await page.goto('/');
+
+  const before = lead(page, 'Before you go');
+  const asks = before.getByRole('group', { name: 'Will stop and ask' });
+  const free = before.getByRole('group', { name: 'Runs without asking' });
+  await expect(asks).toContainText('Manual refactor');
+  await expect(asks).toContainText('Manual · will stop and ask');
+  await expect(free).toContainText('Auto migration');
+  await expect(free).toContainText('Auto · runs without asking');
+  expect(details).toEqual([]);
+});

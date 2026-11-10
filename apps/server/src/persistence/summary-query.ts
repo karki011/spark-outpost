@@ -15,7 +15,8 @@ export const summaryQuery = `
        LIMIT 1)
     ) AS category,
     r.id AS latest_run_id, r.status AS latest_run_status, r.error AS latest_run_error,
-    r.provider AS latest_run_provider, r.interruption_choice AS latest_run_interruption_choice,
+    r.provider AS latest_run_provider, r.agent_mode AS latest_run_agent_mode,
+    r.interruption_choice AS latest_run_interruption_choice,
     CASE WHEN r.status IN ('queued', 'running') THEN (
       SELECT jsonb_build_object(
         'done', count(*) FILTER (WHERE entry->>'status' = 'completed'),
@@ -79,7 +80,8 @@ export const summaryQuery = `
   LEFT JOIN outpost_members om ON om.conversation_id = c.id
   LEFT JOIN outposts ob ON ob.id = om.outpost_id
   LEFT JOIN LATERAL (
-    SELECT id, status, error, finished_at, provider, task_id, interruption_choice FROM runs
+    SELECT id, status, error, finished_at, provider, task_id, interruption_choice,
+      COALESCE(used_mode, agent_mode) AS agent_mode FROM runs
     WHERE conversation_id = c.id AND parent_run_id IS NULL ORDER BY created_at DESC LIMIT 1
   ) r ON true
   LEFT JOIN LATERAL (

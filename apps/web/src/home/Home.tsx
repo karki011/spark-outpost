@@ -37,6 +37,7 @@ import { capRows, sinceRows, type SinceRow } from './since-model.ts';
 import { useAttentionSettings, useBrief } from './use-brief.ts';
 import { useAwayKeys } from './use-away-keys.ts';
 import { useMeetingLead } from './use-meeting-lead.ts';
+import { useRunModes } from './use-run-modes.ts';
 
 const ENTER_MS = 700;
 const MINUTE_MS = 60_000;
@@ -123,6 +124,7 @@ export function Home(props: HomeProps) {
     awayUpdates: updates.length,
     busy: asking.length + running.length,
   });
+  const capabilities = useRunModes(lead === 'meeting' || lead === 'before-you-go' ? running : []);
 
   const inLead = new Set<string>(
     lead === 'since-you-left'
@@ -205,11 +207,17 @@ export function Home(props: HomeProps) {
               now={now}
               waiting={asking}
               running={running}
+              capabilities={capabilities}
               onOpen={onOpenChat}
             />
           )}
           {lead === 'before-you-go' && (
-            <BeforeLead waiting={asking} running={running} onOpen={onOpenChat} />
+            <BeforeLead
+              waiting={asking}
+              running={running}
+              capabilities={capabilities}
+              onOpen={onOpenChat}
+            />
           )}
         </>
       }

@@ -109,6 +109,7 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   latest_run_wait?: unknown;
   latest_run_agents?: unknown;
   latest_run_provider: string | null;
+  latest_run_agent_mode?: string | null;
   latest_run_interruption_choice?: InterruptionChoice | null;
   latest_run_asking_reply?: string | null;
   latest_run_progress: { done: number; active: number; total: number } | null;
@@ -283,6 +284,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
             error: row.latest_run_error,
             step: latestStep(row),
             provider: row.latest_run_provider,
+            agentMode: row.latest_run_agent_mode ?? null,
             progress:
               row.latest_run_progress && row.latest_run_progress.total > 0
                 ? row.latest_run_progress

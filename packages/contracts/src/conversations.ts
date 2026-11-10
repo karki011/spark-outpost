@@ -105,6 +105,7 @@ export const conversationSummarySchema = z.object({
       error: z.string().nullable(),
       step: z.string().nullable(),
       provider: z.string().nullable().default(null),
+      agentMode: z.string().nullable().optional(),
       progress: planProgressSchema.nullable().default(null),
       interruptionChoice: interruptionChoiceSchema.nullable().optional(),
       needsYou: z.string().nullable().optional(),
