@@ -58,6 +58,7 @@ async function openNewSpark(page: Page): Promise<Locator> {
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: /^Home/ })
     .click();
+  await page.locator('.hsparks:not([open]) summary').click();
   await page
     .getByRole('region', { name: 'Your Sparks' })
     .getByRole('button', { name: 'New Spark' })
@@ -159,6 +160,7 @@ test('a picked look survives editing and Use name puts the blob back on the name
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: /^Home/ })
     .click();
+  await page.locator('.hsparks:not([open]) summary').click();
   await page.getByRole('button', { name: 'Edit Pip' }).click();
   const form = sheet(page, 'Edit Pip');
   await expect(form).toContainText('You picked this blob.');

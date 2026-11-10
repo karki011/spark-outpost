@@ -339,6 +339,31 @@ describe('tickets inbox', () => {
     expect(sectionOf(await inbox(), 'ENG-12')).toBe('attention');
   });
 
+  it('answers dismiss and undismiss from the last load without syncing the sources again', async () => {
+    await connect();
+    const issue = stubs.linear.issues.find((entry) => entry.identifier === 'ENG-12')!;
+    issue.labels = ['blocked'];
+    const flags = (await ticketIn('ENG-12')).flags.map((flag) => flag.key);
+    issue.labels = [];
+
+    const dismissed = ticketInboxSchema.parse(
+      (await send('put', '/api/tickets/linear/ENG-12/dismiss', { flags }).expect(200)).body,
+    );
+    expect(sectionOf(dismissed, 'ENG-12')).toBe('up_next');
+    const restored = ticketInboxSchema.parse(
+      (
+        await request(app)
+          .delete('/api/tickets/linear/ENG-12/dismiss')
+          .set(LOCAL_HEADERS)
+          .set('Origin', ORIGIN)
+          .expect(200)
+      ).body,
+    );
+    expect(sectionOf(restored, 'ENG-12')).toBe('attention');
+    expect(restored.syncedAt).toBe(dismissed.syncedAt);
+    expect(sectionOf(await inbox(), 'ENG-12')).toBe('up_next');
+  });
+
   it('shows Not available when the pull request cannot be read', async () => {
     await connect();
     await linkPull('ENG-12', 'https://github.com/acme/widgets/pull/9');

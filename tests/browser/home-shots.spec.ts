@@ -38,7 +38,11 @@ async function seedBusyChats() {
       run: { status: 'awaiting_approval' },
       approval: { kind: 'execute', title: 'Run tests', command: 'pnpm test' },
     },
-    { title: 'Migrate billing tables', run: { status: 'failed', error: 'Migration 0042 failed.' } },
+    {
+      title: 'Migrate billing tables',
+      run: { status: 'failed', error: 'Migration 0042 failed.' },
+      unread: true,
+    },
     { title: 'Add dark mode tokens', run: { status: 'succeeded' }, unread: true },
     { title: 'Tidy the webhook retry queue', run: { status: 'running' } },
   ]);
@@ -64,13 +68,15 @@ test('Home screenshots', async ({ page }) => {
   await openTickets(page);
   await expect(page.locator('li[data-ticket$=":WEB-433"]')).toBeVisible({ timeout: 15_000 });
   await goHome(page);
-  const today = page.getByRole('region', { name: /^What needs you today/ });
-  await expect(today.getByRole('list', { name: 'Do these first' })).toBeVisible({
+  const today = page.getByRole('region', { name: /^(Needs you|Pick up next)/ });
+  await expect(
+    today.getByRole('list', { name: /^(Do these first|Pick up where you left off)$/ }),
+  ).toBeVisible({
     timeout: 15_000,
   });
   await shoot(page, 'today');
   await today.getByRole('button', { name: /^Show what happened/ }).click();
-  await today.locator('.lr-main').nth(1).focus();
+  await page.getByRole('region', { name: 'Since you left' }).getByRole('button').first().focus();
   await shoot(page, 'row-action-away');
 
   await page
@@ -100,21 +106,25 @@ test('Home screenshots', async ({ page }) => {
 
   await page.route('**/api/conversations', () => new Promise(() => {}));
   await page.reload();
-  await expect(page.locator('.sk-rows')).toBeVisible();
+  await expect(page.getByTestId('home-lead-skeleton')).toBeVisible();
   await shoot(page, 'loading');
   await page.unroute('**/api/conversations');
 
   await resetTestDatabase({ onboarded: true });
   await seedChats([{ title: 'Explain the checklist', run: { status: 'succeeded' } }]);
   await page.reload();
-  await expect(page.locator('.home-summary')).toHaveText('All quiet. Start something new below.');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('All quiet.');
   await shoot(page, 'quiet');
 
-  await page.setViewportSize({ width: 390, height: 1400 });
   await resetTestDatabase({ onboarded: true });
   await seedBusyChats();
   await page.reload();
-  await expect(page.getByRole('list', { name: 'Needs you' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Since you left' })).toBeVisible();
+  await shoot(page, 'since');
+
+  await page.setViewportSize({ width: 390, height: 1400 });
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'Since you left' })).toBeVisible();
   await shoot(page, 'narrow');
 });
 

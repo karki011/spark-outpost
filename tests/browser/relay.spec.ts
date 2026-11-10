@@ -60,8 +60,7 @@ async function setPhase(conversationId: string, phase: 'fixing' | 'watching') {
   }
 }
 
-const home = (page: Page) =>
-  page.getByRole('main', { name: /^Good (morning|afternoon|evening)|^Working late/ });
+const home = (page: Page) => page.locator('main.page', { has: page.locator('#home-greet') });
 const sparks = (page: Page) => home(page).getByRole('region', { name: 'Your Sparks' });
 
 async function openHome(page: Page) {
@@ -71,6 +70,8 @@ async function openHome(page: Page) {
     .getByRole('button', { name: /^Home/ })
     .click();
   await expect(home(page)).toBeVisible();
+  const roster = home(page).locator('.hsparks');
+  if ((await roster.getAttribute('open')) === null) await roster.locator('summary').click();
 }
 
 async function openCrew(page: Page) {

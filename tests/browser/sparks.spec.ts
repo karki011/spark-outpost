@@ -15,8 +15,7 @@ test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, catalog: true });
 });
 
-const home = (page: Page) =>
-  page.getByRole('main', { name: /^Good (morning|afternoon|evening)|^Working late/ });
+const home = (page: Page) => page.locator('main.page', { has: page.locator('#home-greet') });
 const sparks = (page: Page) => home(page).getByRole('region', { name: 'Your Sparks' });
 const sheet = (page: Page, name: string | RegExp) => page.getByRole('dialog', { name });
 const sidebar = (page: Page) => page.getByRole('navigation', { name: 'Chats' });
@@ -28,6 +27,8 @@ async function openHome(page: Page) {
     .getByRole('button', { name: /^Home/ })
     .click();
   await expect(home(page)).toBeVisible();
+  const roster = home(page).locator('.hsparks');
+  if ((await roster.getAttribute('open')) === null) await roster.locator('summary').click();
 }
 
 async function addSpark(page: Page, data: Record<string, unknown>): Promise<string> {

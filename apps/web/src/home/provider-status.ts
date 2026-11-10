@@ -1,20 +1,9 @@
 import type {
   AdvisorConnection,
-  ConnectableId,
   ProviderConnection,
   ProviderIssue,
   ProviderIssueKind,
 } from '@spark-outpost/contracts';
-
-export type ProviderStatus = 'ok' | 'warn' | 'off';
-
-export interface StripItem {
-  id: ConnectableId;
-  name: string;
-  status: ProviderStatus;
-  model: string | null;
-  problem: string | null;
-}
 
 const ISSUE_LABEL: Record<ProviderIssueKind, string> = {
   auth: 'Sign-in failed',
@@ -68,21 +57,4 @@ export function problemText(
     return 'Verify failed';
   }
   return null;
-}
-
-export function statusOf(connected: boolean, problem: string | null): ProviderStatus {
-  if (!connected) return 'off';
-  return problem ? 'warn' : 'ok';
-}
-
-const STATUS_LABEL: Record<ProviderStatus, string> = {
-  ok: 'Connected',
-  warn: 'Needs attention',
-  off: 'Not connected',
-};
-
-export function stripLabel(item: StripItem): string {
-  return [item.name, item.model, STATUS_LABEL[item.status], item.problem]
-    .filter(Boolean)
-    .join(' · ');
 }

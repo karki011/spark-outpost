@@ -139,7 +139,7 @@ for (const theme of THEMES) {
       .click();
     await expect(page.getByRole('list', { name: 'Needs you' })).toBeVisible();
     await expect(page.locator('.feed-foot')).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Spend' }).locator('.cost-total')).toBeVisible();
+    await expect(page.locator('.hspend')).toBeVisible();
     found.push(...(await blockingViolations(page, 'home')));
 
     expect(found).toEqual([]);
@@ -196,12 +196,11 @@ test('Home and the Tickets brief strip have no serious issues with a brief and a
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: /^Home/ })
     .click();
-  const today = page.getByRole('region', { name: /^What needs you today/ });
+  const today = page.getByRole('region', { name: /^(Needs you|Pick up next)/ });
   await expect(today.getByRole('list', { name: 'Do these first' })).toBeVisible({
     timeout: 15_000,
   });
-  await today.locator('.lr-main').first().focus();
-  await expect(today.locator('.lr-acts').first()).toHaveCSS('opacity', '1');
+  await today.getByRole('list', { name: 'Do these first' }).getByRole('button').first().focus();
   const found = [];
   for (const theme of ['light', 'graphite', 'contrast']) {
     await useTheme(page, theme);

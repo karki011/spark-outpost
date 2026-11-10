@@ -89,21 +89,6 @@ export function briefEntries(
   return [...answers, ...ticketEntries(digest, titleOf), ...others].slice(0, BRIEF_ENTRIES_MAX);
 }
 
-export type NeedsMode = 'loading' | 'today' | 'pickup' | 'hidden';
-
-interface NeedsModeInput {
-  loading: boolean;
-  needCount: number;
-  entryCount: number;
-  briefOn: boolean;
-}
-
-export function needsMode({ loading, needCount, entryCount, briefOn }: NeedsModeInput): NeedsMode {
-  if (loading) return 'loading';
-  if (needCount > 0) return 'today';
-  return briefOn && entryCount > 0 ? 'pickup' : 'hidden';
-}
-
 export function writingMeta(flagged: number): string {
   if (flagged === 0) return 'Reading your recent chats…';
   const items = flagged === 1 ? '1 flagged item' : `${flagged} flagged items`;

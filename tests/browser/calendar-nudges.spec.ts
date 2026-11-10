@@ -113,7 +113,7 @@ test('Join waits until ten minutes before and shows the start time until then', 
   await expect(meetings(page)).toContainText('Standup');
   await expect(meetings(page).getByRole('button', { name: /^Join/ })).toHaveCount(0);
   await page.goto('/');
-  const card = page.getByRole('region', { name: 'Upcoming' });
+  const card = page.getByRole('region', { name: 'Your day' });
   const join = card.getByRole('button', { name: /^Standup at \d+:\d+ [AP]M, Join opens at / });
   await expect(join).toBeDisabled();
   await expect(join).toHaveText(/^\d+:\d+ [AP]M$/);

@@ -1,16 +1,19 @@
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import type { Voice } from '../spark/voice.ts';
+import { InfoTip } from '../ui/InfoTip.tsx';
 import { canRefresh, refreshHint } from './digest-model.ts';
-import { BriefPanel, BriefSkeleton } from './BriefPanel.tsx';
-import { NeedsFeed } from './NeedsFeed.tsx';
-import type { BriefEntry, FeedRow, NeedsMode } from './needs-model.ts';
+import { BriefPanel } from './BriefPanel.tsx';
+import { HomeCard, Quiet, RowsSkeleton } from './HomeCards.tsx';
+import { ConnectHint, NeedsFeed, SORT_RULE } from './NeedsFeed.tsx';
+import type { NeedsColumn } from './board-model.ts';
+import type { BriefEntry, FeedRow } from './needs-model.ts';
 import type { Brief } from './use-brief.ts';
 
 interface NeedsTodayProps {
-  mode: NeedsMode;
+  mode: NeedsColumn;
+  loading: boolean;
   brief: Brief;
   rows: readonly FeedRow[];
-  waiting: number;
   entries: readonly BriefEntry[];
   connectHint: boolean;
   voice: Voice;
@@ -38,85 +41,47 @@ function RefreshButton({ brief, now }: { brief: Brief; now: number }) {
   );
 }
 
-function FeedSkeleton() {
-  return (
-    <ul className="lrows sk-rows" aria-hidden="true">
-      {[62, 48, 70, 54].map((width) => (
-        <li key={width} className="lrow">
-          <span className="lr-main">
-            <span className="hsk dot" />
-            <span className="hsk" style={{ width: `${width}%` }} />
-            <span className="hsk" style={{ width: 120 }} />
-            <span className="hsk" style={{ width: 24 }} />
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 export function NeedsToday(props: NeedsTodayProps) {
   const { mode, brief, rows, now } = props;
-  if (mode === 'hidden') return null;
-  const quiet = mode === 'pickup';
-  if (mode === 'loading') {
+  const needs = mode === 'needs';
+  if (props.loading) {
     return (
-      <section
-        className="hsec hneeds"
-        id="home-needs"
-        aria-labelledby="home-needs-h"
-        aria-busy="true"
-      >
-        <div className="hsec-h">
-          <h2 id="home-needs-h">What needs you today</h2>
-        </div>
-        <p className="sr-only" role="status">
-          Loading what needs you
-        </p>
-        <div className="hpanel dg" aria-hidden="true">
-          <div className="dg-head">
-            <span className="hsk dot" />
-            <span className="hsk" style={{ width: 220 }} />
-          </div>
-          <BriefSkeleton />
-        </div>
-        <FeedSkeleton />
-      </section>
+      <HomeCard id="home-needs-h" title="Needs you" className="hneeds" busy>
+        <RowsSkeleton />
+      </HomeCard>
     );
   }
   return (
-    <section className="hsec hneeds" id="home-needs" aria-labelledby="home-needs-h">
-      <div className="hsec-h">
-        <h2 id="home-needs-h">
-          {quiet ? 'Pick up where you left off' : 'What needs you today'}
-          {!quiet && props.waiting > 0 && (
-            <>
-              {' '}
-              <span className="n">{props.waiting}</span>
-            </>
-          )}
-        </h2>
-        <RefreshButton brief={brief} now={now} />
-      </div>
-      <BriefPanel
-        brief={brief}
-        entries={props.entries}
-        flagged={rows.length}
-        quiet={quiet}
-        voice={props.voice}
-        now={now}
-        onEntry={props.onEntry}
-        onOpenChat={props.onOpenId}
-      />
-      {!quiet && (
-        <NeedsFeed
-          rows={rows}
-          connectHint={props.connectHint}
-          onOpen={props.onOpen}
-          onConnect={props.onConnect}
-          onDismissHint={props.onDismissHint}
+    <HomeCard
+      id="home-needs-h"
+      title={needs ? 'Needs you' : 'Pick up next'}
+      count={needs ? rows.length : undefined}
+      className="hneeds"
+      action={
+        <span className="hday-a">
+          {needs && <InfoTip topic="how this list is sorted" text={SORT_RULE} />}
+          <RefreshButton brief={brief} now={now} />
+        </span>
+      }
+    >
+      {needs && <NeedsFeed rows={rows} onOpen={props.onOpen} />}
+      {brief.available ? (
+        <BriefPanel
+          brief={brief}
+          entries={props.entries}
+          flagged={rows.length}
+          quiet={!needs}
+          voice={props.voice}
+          now={now}
+          onEntry={props.onEntry}
+          onOpenChat={props.onOpenId}
         />
+      ) : (
+        !needs && <Quiet>Nothing to pick up yet.</Quiet>
       )}
-    </section>
+      {props.connectHint && (
+        <ConnectHint onConnect={props.onConnect} onDismiss={props.onDismissHint} />
+      )}
+    </HomeCard>
   );
 }

@@ -10,7 +10,7 @@ Make a named teammate, chat with it and hand it jobs. About 2 minutes.
 
 ## Make one
 
-1. On **Home**, find **Your Sparks**.
+1. On **Home**, open the **Sparks** line under **Working**.
 2. Select **New Spark**, or **Add** on a suggestion such as **Pip · Code reviewer**.
 3. Type a **Name** and **Role**; **Change look** picks the blob.
 4. Under **Defaults for its chats**, pick the **Provider**, **Model**, **Mode**, **Spark autonomy** and **Default project**.
@@ -23,7 +23,7 @@ A file replaces the typed text: Markdown or text, up to 256 KB, first 2,000 char
 
 | To                         | Do                                                                |
 | -------------------------- | ----------------------------------------------------------------- |
-| Open its home chat         | Select its card on **Home**.                                      |
+| Open its home chat         | Select its card in **Sparks** on **Home**.                        |
 | Start another chat with it | Before the first message, select **Talk to…** in the message box. |
 | See only its chats         | Search chats for `with:` plus its name (`with:ada`).              |
 
@@ -43,7 +43,7 @@ In any chat, type `@` and pick a Spark, or select the **Ask Pip (Code reviewer)?
 
 ## Change or delete one
 
-1. Point at its card on **Home** and select **Edit**, or open **Settings → Crew**.
+1. Open the **Sparks** line on **Home**, point at its card and select **Edit**, or open **Settings → Crew**.
 2. Edit and select **Save**.
 3. To delete it, select **Delete** in **Settings → Crew** and hold **Hold to delete**. **Undo** lasts 10 seconds. Its chats stay.
 

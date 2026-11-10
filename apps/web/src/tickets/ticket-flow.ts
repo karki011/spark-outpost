@@ -136,3 +136,10 @@ export function staleChats(tickets: readonly InboxTicket[], chats: ChatLookup): 
     })
     .join(' ');
 }
+
+export const sameEntry = (a: LiveTicket, b: LiveTicket) =>
+  a.ticket === b.ticket &&
+  a.section === b.section &&
+  a.line === b.line &&
+  a.tone === b.tone &&
+  a.chat === b.chat;

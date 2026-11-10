@@ -1,42 +1,6 @@
 import type { ConversationSummary, PlanProgress } from '@spark-outpost/contracts';
 import type { BlobExpression } from '../brand/blob-expression.ts';
 import { isRunning, needsInput, rowState } from '../conversations/row-state.ts';
-import { countLabel } from '../ui/count-label.ts';
-
-interface SummaryPart {
-  text: string;
-  strong: boolean;
-  link?: boolean;
-}
-
-export function summaryParts(
-  chats: readonly ConversationSummary[],
-  flagged: number,
-  quietLine: string,
-): SummaryPart[] {
-  const active = chats.filter((chat) => !chat.archivedAt);
-  const working = active.filter((chat) => isRunning(chat) && !needsInput(chat)).length;
-  const bits: SummaryPart[] = [];
-  if (flagged > 0) {
-    bits.push({
-      text: countLabel(flagged, 'thing needs you', 'things need you'),
-      strong: true,
-      link: true,
-    });
-  }
-  if (working > 0) {
-    bits.push({
-      text: countLabel(working, 'agent is working', 'agents are working'),
-      strong: true,
-    });
-  }
-  if (bits.length === 0) return [{ text: quietLine, strong: false }];
-  const parts = bits.flatMap((bit, index) => [
-    ...(index > 0 ? [{ text: ' and ', strong: false }] : []),
-    bit,
-  ]);
-  return [...parts, { text: '.', strong: false }];
-}
 
 export type NeedTone = 'asking' | 'error' | 'done';
 
@@ -117,17 +81,4 @@ export function runningNow(chats: readonly ConversationSummary[]): RunItem[] {
       provider: chatProvider(chat),
       percent: progressPercent(chat.latestRun?.progress ?? null),
     }));
-}
-
-const RECENT_LIMIT = 5;
-
-export function recentChats(
-  chats: readonly ConversationSummary[],
-  shown: readonly ConversationSummary[],
-): ConversationSummary[] {
-  const seen = new Set(shown.map((chat) => chat.id));
-  return chats
-    .filter((chat) => !chat.archivedAt && !seen.has(chat.id))
-    .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .slice(0, RECENT_LIMIT);
 }

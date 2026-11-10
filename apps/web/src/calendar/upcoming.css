@@ -1,66 +1,3 @@
-.upc-hint {
-  color: var(--faint);
-  font-size: 12px;
-}
-
-.upc-list {
-  list-style: none;
-  margin: 0;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-}
-
-.upc {
-  display: grid;
-  grid-template-columns: 76px minmax(0, 1fr) auto;
-  gap: 2px 12px;
-  align-items: center;
-  padding: 10px 0;
-  border-top: 1px solid var(--line);
-}
-
-.upc:first-child {
-  border-top: 0;
-}
-
-.upc-cd {
-  color: var(--accent-text);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.upc-what {
-  min-width: 0;
-}
-
-.upc-open {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--text);
-  font-weight: 500;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.upc-open:hover {
-  text-decoration: underline;
-}
-
-.upc-what small {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.upc-ov {
-  grid-column: 2 / 4;
-  color: var(--warn);
-  font-size: 12px;
-}
-
 .cal-brief {
   margin-top: 14px;
   padding: 10px 12px;
@@ -86,13 +23,7 @@
   font-size: 13px;
 }
 
-@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
-  .upc {
-    grid-template-columns: 64px minmax(0, 1fr) auto;
-  }
-}
-
-.upc-what .cal-clash {
+.hrow-m .cal-clash {
   display: inline-block;
   margin-left: 8px;
   vertical-align: 1px;

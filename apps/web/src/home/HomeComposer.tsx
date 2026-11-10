@@ -25,6 +25,7 @@ interface HomeComposerProps {
   draftId: string;
   onRotate: (nextDraftId: string) => void;
   onOpenId: (conversationId: string) => void;
+  compact: boolean;
 }
 
 interface Started {
@@ -54,7 +55,7 @@ function useStarted() {
 }
 
 export function HomeComposer(props: HomeComposerProps) {
-  const { draftId, onRotate, onOpenId } = props;
+  const { draftId, onRotate, onOpenId, compact } = props;
   const queryClient = useQueryClient();
   const [started, setStarted] = useStarted();
   const detail = useQuery({
@@ -99,7 +100,10 @@ export function HomeComposer(props: HomeComposerProps) {
   }, [stale, draftId, detail.data, connected, onRotate]);
 
   return (
-    <section className="home-compose" aria-label="Start a new chat">
+    <section
+      className={compact ? 'home-compose compact' : 'home-compose'}
+      aria-label="Start a new chat"
+    >
       <Composer
         conversationId={draftId}
         repos={repos}

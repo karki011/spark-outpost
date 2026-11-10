@@ -1,13 +1,16 @@
 import './snooze.css';
 import { useId, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { SNOOZE_MAX_DAYS, type InboxTicket, type TicketInbox } from '@spark-outpost/contracts';
+import { useMutation } from '@tanstack/react-query';
+import { SNOOZE_MAX_DAYS, type InboxTicket } from '@spark-outpost/contracts';
 import { DayCalendar, preloadDayCalendar } from '../ui/DayCalendar.tsx';
 import { BackIcon } from '../ui/icons.tsx';
 import { usePopover } from '../ui/use-popover.ts';
 import { Glyph } from './ticket-icons.tsx';
-import { morningOf, snoozeChoices, snoozeTime } from './ticket-model.ts';
-import { ticketKeys, ticketsApi } from './tickets-api.ts';
+import { keepListFocus } from './keep-list-focus.ts';
+import { morningOf, snoozeChoices, snoozeTime, ticketId } from './ticket-model.ts';
+import { snoozedTicket, wokenTicket } from './ticket-optimistic.ts';
+import { ticketsApi } from './tickets-api.ts';
+import { useInboxMarks } from './use-inbox-marks.ts';
 
 function addDays(day: Date, days: number): Date {
   const next = new Date(day);
@@ -15,62 +18,28 @@ function addDays(day: Date, days: number): Date {
   return next;
 }
 
-function snoozedLocally(ticket: InboxTicket, until: Date): InboxTicket {
-  const section =
-    ticket.status === 'done'
-      ? 'done'
-      : ticket.chat?.state === 'running'
-        ? 'spark'
-        : ticket.status === 'in_review' || ticket.pullRequest
-          ? 'review'
-          : ticket.status === 'in_progress' || ticket.chat
-            ? 'started'
-            : 'up_next';
-  return {
-    ...ticket,
-    section,
-    flags: [],
-    reason: 'Snoozed',
-    tone: 'none',
-    snooze: { until: until.toISOString(), rules: ticket.flags.map((flag) => flag.rule) },
-  };
-}
-
 export function useSnooze(ticket: InboxTicket | null) {
-  const queryClient = useQueryClient();
-  const saved = (inbox: TicketInbox) => queryClient.setQueryData(ticketKeys.inbox, inbox);
-  const patch = (next: InboxTicket) => {
-    const before = queryClient.getQueryData<TicketInbox>(ticketKeys.inbox);
-    if (before) {
-      queryClient.setQueryData<TicketInbox>(ticketKeys.inbox, {
-        ...before,
-        tickets: before.tickets.map((entry) =>
-          entry.source === next.source && entry.key === next.key ? next : entry,
-        ),
-      });
-    }
-    return { before };
-  };
-  const restore = (
-    _error: Error,
-    _input: unknown,
-    context: { before: TicketInbox | undefined } | undefined,
-  ) => {
-    if (context?.before) queryClient.setQueryData(ticketKeys.inbox, context.before);
-  };
+  const marks = useInboxMarks();
   const snooze = useMutation({
+    mutationKey: marks.key,
     mutationFn: ({ ticket: target, until }: { ticket: InboxTicket; until: Date }) =>
       ticketsApi.snooze(target.source, target.key, {
         until: until.toISOString(),
         rules: target.flags.map((flag) => flag.rule),
       }),
-    onMutate: ({ ticket: target, until }) => patch(snoozedLocally(target, until)),
-    onError: restore,
-    onSuccess: saved,
+    onMutate: ({ ticket: target, until }) => {
+      keepListFocus(ticketId(target));
+      return marks.apply(target, snoozedTicket(target, until));
+    },
+    onError: (_error: Error, _input, context) => marks.rollback(context),
+    onSuccess: marks.reconcile,
   });
   const wake = useMutation({
+    mutationKey: marks.key,
     mutationFn: (target: InboxTicket) => ticketsApi.unsnooze(target.source, target.key),
-    onSuccess: saved,
+    onMutate: (target) => marks.apply(target, wokenTicket(target)),
+    onError: (_error: Error, _target, context) => marks.rollback(context),
+    onSuccess: marks.reconcile,
   });
   return {
     pending: snooze.isPending || wake.isPending,

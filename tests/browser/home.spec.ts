@@ -21,11 +21,16 @@ test.afterAll(() => {
   rmSync(base, { recursive: true, force: true });
 });
 
-const home = (page: Page) =>
-  page.getByRole('main', { name: /^Good (morning|afternoon|evening)|^Working late/ });
+const NOON = new Date(2026, 10, 10, 11, 0, 0);
+
+const home = (page: Page) => page.locator('main.page', { has: page.locator('#home-greet') });
+const headline = (page: Page) => home(page).getByRole('heading', { level: 1 });
 const section = (page: Page, name: string | RegExp) => home(page).getByRole('region', { name });
-const today = (page: Page) => section(page, /^What needs you today/);
 const feed = (page: Page) => home(page).getByRole('list', { name: 'Needs you' });
+
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(NOON);
+});
 
 async function briefSettled(page: Page) {
   await expect
@@ -46,6 +51,13 @@ async function openHome(page: Page) {
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: /^Home/ })
     .click();
+  await expect(home(page)).toBeVisible();
+}
+
+async function backHome(page: Page) {
+  const rail = page.getByRole('navigation', { name: 'Main' });
+  await rail.getByRole('button', { name: /^Chats/ }).click();
+  await rail.getByRole('button', { name: /^Home/ }).click();
   await expect(home(page)).toBeVisible();
 }
 
@@ -84,27 +96,24 @@ test('the app opens on Home and remembers the view the user chose', async ({ pag
   await expect(home(page)).toBeVisible();
 });
 
-test('the quiet Home greets by name and says nothing needs you', async ({ page }) => {
+test('the quiet Home greets by name, says nothing needs you and links to recent chats', async ({
+  page,
+}) => {
   await resetTestDatabase({ onboarded: true });
   await seedChats([{ title: 'Explain the checklist', run: { status: 'succeeded' } }]);
   await openHome(page);
 
-  await expect(home(page).getByRole('heading', { level: 1 })).toHaveText(
-    /^(Good (morning|afternoon|evening)|Working late), Test$/,
-  );
-  await expect(home(page).locator('.home-summary')).toHaveText(
-    'All quiet. Start something new below.',
+  await expect(headline(page)).toHaveText(
+    'Good morning, Test. All quiet. Start something new below.',
   );
   await briefSettled(page);
-  await expect(today(page)).toHaveCount(0);
-  await expect(section(page, 'Pick up where you left off')).toHaveCount(0);
-  await expect(home(page).locator('.hquiet')).toHaveCount(0);
-  await expect(section(page, /^Running now/)).toHaveCount(0);
-  const recent = section(page, 'Recent chats').getByRole('button', {
-    name: /Explain the checklist/,
-  });
-  await expect(recent).toHaveAttribute('title', 'Explain the checklist');
-  await expect(recent.locator('.k')).toHaveText(/^(Just now|\d+m ago)$/);
+  await expect(home(page).locator('.home-lead')).toBeEmpty();
+  await expect(section(page, 'Pick up next')).toBeVisible();
+  await expect(section(page, /^Working/)).toBeVisible();
+  await expect(home(page).locator('.home-compose')).not.toHaveClass(/compact/);
+  await expect(home(page).locator('.hrow', { hasText: 'Explain the checklist' })).toHaveCount(0);
+  await home(page).getByRole('button', { name: 'Recent chats' }).click();
+  await expect(page.getByRole('navigation', { name: 'Chats' })).toBeVisible();
 });
 
 test('the Home composer starts a chat in the background, keeps its model and starts without a project', async ({
@@ -139,8 +148,8 @@ test('the Home composer starts a chat in the background, keeps its model and sta
   await expect(input).toBeFocused();
   await expect(home(page)).toBeVisible();
   await expect(
-    section(page, /^Running now/)
-      .locator('.hcard')
+    section(page, /^Working/)
+      .locator('.hrow')
       .first(),
   ).toContainText('Summarise the home brief');
   await expect(picker).toHaveAccessibleName('Model and effort: Fake Deep');
@@ -188,7 +197,7 @@ test('a sent Home message is not restored when its settings fail to carry over',
   expect(sent).toBe(1);
 });
 
-test('the Needs you feed lists asking, then errors, then finished chats, counts only what waits on you and jumps to the card', async ({
+test('Needs you lists cards and errors the lead does not show, and jumps to the card', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -204,39 +213,34 @@ test('the Needs you feed lists asking, then errors, then finished chats, counts 
     },
   ]);
   await openHome(page);
+  await expect(section(page, 'Since you left')).toBeVisible();
+  await backHome(page);
 
-  await expect(home(page).locator('.home-summary')).toHaveText('1 thing needs you.');
-  await expect(today(page).getByRole('heading', { level: 2 })).toHaveText('What needs you today 1');
-  await home(page).getByRole('button', { name: '1 thing needs you' }).click();
-  await expect(feed(page).locator('.lr-main').first()).toBeFocused();
-  await expect(feed(page).locator('.lr-main .t')).toHaveText([
-    'Deploy the site',
-    'Mock fetch',
-    'Ship the notes',
+  await expect(home(page).locator('.home-lead')).toBeEmpty();
+  await expect(headline(page)).toHaveText('Good morning, Test. 1 thing needs you.');
+  await expect(section(page, /^Needs you/).getByRole('heading', { level: 2 })).toHaveText(
+    'Needs you 2',
+  );
+  await expect(feed(page).locator('.hrow-m b')).toHaveText(['Deploy the site', 'Mock fetch']);
+  await expect(feed(page).locator('.hrow-m small')).toHaveText([
+    /^Fake provider wants to run pnpm deploy · /,
+    /^Stopped: rate limit reached · /,
   ]);
-  await expect(feed(page).locator('.why-r')).toHaveText([
-    'Fake provider wants to run pnpm deploy',
-    'Stopped: rate limit reached',
-    'Finished · open to review',
-  ]);
-  await expect(feed(page).locator('.age').first()).toHaveText(/^(now|\d+m)$/);
-  await expect(feed(page).locator('.qa')).toHaveText(['Answer', 'See error', 'Review']);
-  await expect(home(page).locator('.hcard')).toHaveCount(0);
-  await expect(home(page).locator('.hquiet')).toHaveCount(0);
+  await expect(feed(page).locator('.hstat')).toHaveText(['Waiting', 'Failed']);
+  await expect(feed(page).getByRole('button')).toHaveText(['Answer', 'See error']);
+  await expect(
+    section(page, 'Ready for you to review').getByRole('button', {
+      name: 'Review: Ship the notes',
+    }),
+  ).toBeVisible();
 
-  const first = feed(page).locator('.lr-main').first();
-  await first.focus();
-  const answer = feed(page).getByRole('button', { name: 'Answer: Deploy the site' });
-  await expect(answer).toHaveCSS('opacity', '1');
-  await expect(feed(page).locator('.why-r').first()).toBeHidden();
-  await answer.click();
+  await feed(page).getByRole('button', { name: 'Answer: Deploy the site' }).click();
   await expect(page.locator('.chat-title')).toHaveText('Deploy the site');
   const approval = page.getByRole('group', { name: /^Run .+\?$/ });
   await expect(approval).toBeInViewport();
   await expect(approval).toHaveClass(/flash/);
 
-  await openHome(page);
-  await feed(page).locator('.lrow', { hasText: 'Mock fetch' }).hover();
+  await backHome(page);
   await feed(page).getByRole('button', { name: 'See error: Mock fetch' }).click();
   await expect(page.locator('.chat-title')).toHaveText('Mock fetch');
 });
@@ -248,7 +252,7 @@ test('the Connect Linear or Jira line dismisses for the account and opens Ticket
   await seedChats([{ title: 'Mock fetch', run: { status: 'failed', error: 'Rate limit.' } }]);
   await openHome(page);
 
-  const hint = today(page).locator('.feed-foot');
+  const hint = home(page).locator('.feed-foot');
   await expect(hint).toContainText(
     'Tickets and pull requests from Linear or Jira can show here too.',
   );
@@ -264,13 +268,15 @@ test('the Connect Linear or Jira line dismisses for the account and opens Ticket
   );
   await page.evaluate(() => localStorage.clear());
   await openHome(page);
-  await expect(feed(page)).toBeVisible();
-  await expect(today(page).locator('.feed-foot')).toHaveCount(0);
+  await expect(home(page).locator('.hrow').first()).toBeVisible();
+  await expect(home(page).locator('.feed-foot')).toHaveCount(0);
 });
 
-test('Home shows skeletons shaped like its sections while chats load', async ({ page }) => {
+test('Home reserves the lead with a skeleton while chats load', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
-  await seedChats([{ title: 'Mock fetch', run: { status: 'failed', error: 'Rate limit.' } }]);
+  await seedChats([
+    { title: 'Mock fetch', run: { status: 'failed', error: 'Rate limit.' }, unread: true },
+  ]);
   let release = () => {};
   const held = new Promise<void>((resolve) => (release = resolve));
   await page.route('**/api/conversations', async (route) => {
@@ -278,19 +284,17 @@ test('Home shows skeletons shaped like its sections while chats load', async ({ 
     await route.fallback();
   });
   await page.goto('/');
-  const live = home(page).locator('.home-live');
-  await expect(live).toHaveAttribute('aria-busy', 'true');
-  await expect(
-    home(page).getByRole('status').filter({ hasText: 'Loading what needs you' }),
-  ).toBeAttached();
-  await expect(home(page).locator('.sk-rows .lrow')).toHaveCount(4);
+  const board = home(page).locator('.home-board');
+  await expect(board).toHaveAttribute('aria-busy', 'true');
+  await expect(home(page).getByTestId('home-lead-skeleton')).toBeVisible();
   await expect(home(page).locator('.hsk').first()).toBeVisible();
   release();
-  await expect(feed(page).locator('.lrow')).toHaveCount(1);
-  await expect(live).toHaveAttribute('aria-busy', 'false');
+  await expect(section(page, 'Since you left').locator('.hrow')).toHaveCount(1);
+  await expect(home(page).getByTestId('home-lead-skeleton')).toHaveCount(0);
+  await expect(board).toHaveAttribute('aria-busy', 'false');
 });
 
-test('Running now shows the step and plan progress, and updates live', async ({ page }) => {
+test('Working shows the step and plan progress, and updates live', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   const [, runningId] = await seedChats([
     { title: 'Current chat' },
@@ -304,31 +308,30 @@ test('Running now shows the step and plan progress, and updates live', async ({ 
   });
   await openHome(page);
 
-  await expect(home(page).locator('.home-summary')).toHaveText('2 agents are working.');
-  await expect(today(page)).toHaveCount(0);
-  const running = section(page, /^Running now/);
-  await expect(running.getByRole('heading', { level: 2 })).toHaveText('Running now 2');
-  const card = running.locator('.hcard', { hasText: 'Filter chips overflow' });
+  await expect(headline(page)).toHaveText('Good morning, Test. 2 agents are working.');
+  const running = section(page, /^Working/);
+  await expect(running.getByRole('heading', { level: 2 })).toHaveText('Working 2');
+  const card = running.locator('.hrow', { hasText: 'Filter chips overflow' });
   await expect(card).toContainText('Reading FilterBar.tsx');
   await expect(card.getByRole('progressbar', { name: 'Plan progress' })).toHaveAttribute(
     'aria-valuenow',
     '50',
   );
   await expect(
-    running.locator('.hcard', { hasText: 'Worktree cleanup' }).getByRole('progressbar'),
+    running.locator('.hrow', { hasText: 'Worktree cleanup' }).getByRole('progressbar'),
   ).toHaveAccessibleName('Progress, no plan yet');
 
   await setRun(runningId!, 'succeeded');
-  await expect(feed(page).locator('.lrow', { hasText: 'Filter chips overflow' })).toBeVisible({
-    timeout: 10_000,
-  });
-  await expect(running.locator('.hcard')).toHaveCount(1);
+  await expect(
+    section(page, 'Ready for you to review').locator('.hrow', { hasText: 'Filter chips overflow' }),
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(running.locator('.hrow')).toHaveCount(1);
 
   await running.getByRole('button', { name: 'Watch: Worktree cleanup' }).click();
   await expect(page.locator('.chat-title')).toHaveText('Worktree cleanup');
 });
 
-test('the spend card splits today by provider, Jev included', async ({ page }) => {
+test('the spend line shows today and opens usage', async ({ page }) => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'], jev: true });
   const [claudeChat, codexChat] = await seedChats([
     { title: 'Routed by Jev', run: { status: 'succeeded' } },
@@ -354,30 +357,15 @@ test('the spend card splits today by provider, Jev included', async ({ page }) =
   await briefSettled(page);
   await openHome(page);
 
-  const spend = section(page, 'Spend');
-  await expect(spend.locator('.cost-total')).toContainText('$0.73');
-  await expect(spend.locator('.cost-total')).toContainText('includes estimates');
-  await expect(spend.locator('.cost-total')).toContainText('3 runs · 285K tokens');
-  const legend = spend.getByRole('list', { name: 'Cost by provider' });
-  await expect(legend.getByRole('listitem')).toHaveText([
-    'Claude$0.64',
-    'Codex~$0.08estimated',
-    'Jev~$0.004estimated',
-  ]);
-  await expect(spend).not.toContainText('routing saved');
-
-  await spend.getByRole('radio', { name: 'This week' }).click();
-  await expect(spend.getByRole('radio', { name: 'This week' })).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
-  await expect(spend.locator('.cost-total')).toContainText('$0.73');
-
-  await spend.getByRole('button', { name: 'Open usage and audit' }).click();
+  const spend = home(page).locator('.hspend');
+  await expect(spend).toContainText('$0.73');
+  await expect(spend).toContainText('includes estimates');
+  await expect(spend).toContainText('spent today');
+  await spend.getByRole('button', { name: 'Usage' }).click();
   await expect(page.getByRole('dialog', { name: 'Usage' })).toBeVisible();
 });
 
-test('the provider strip shows status, model labels, problems and a fix link', async ({ page }) => {
+test('Home names a provider that needs attention and links to the fix', async ({ page }) => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'], jev: true });
   const [failed] = await seedChats([
     {
@@ -389,24 +377,9 @@ test('the provider strip shows status, model labels, problems and a fix link', a
   await markVerifyFailed('claude', 'Claude replied with an error.');
   await openHome(page);
 
-  const strip = home(page).getByRole('list', { name: 'AI providers' });
-  await expect(strip.getByRole('button')).toHaveCount(5);
-  await expect(
-    strip.getByRole('button', { name: /^Claude · Fake Fast · Needs attention · Verify failed$/ }),
-  ).toBeVisible();
-  await expect(
-    strip.getByRole('button', { name: /^Codex · .* · Rate limited · just now$/ }),
-  ).toBeVisible();
-  await expect(strip.getByRole('button', { name: 'Z.ai (GLM) · Not connected' })).toBeVisible();
-  await expect(
-    strip.getByRole('button', { name: 'Custom endpoint · Not connected' }),
-  ).toBeVisible();
-  await expect(strip.getByRole('button', { name: 'Jev · jev-latest · Connected' })).toBeVisible();
-  await expect(home(page).locator('.ps-mark.warn')).toHaveCount(2);
-  await expect(home(page).locator('.ps-mark.off')).toHaveCount(2);
-
   const warning = home(page).locator('.ps-warn');
   await expect(warning).toContainText('Claude: Verify failed (+1 more)');
+  await expect(home(page).getByRole('list', { name: 'AI providers' })).toHaveCount(0);
   await warning.getByRole('button', { name: 'Fix' }).click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
   await expect(providers.getByRole('region', { name: 'Claude' })).toContainText('Error');
@@ -418,36 +391,18 @@ test('the provider strip shows status, model labels, problems and a fix link', a
   await page.keyboard.press('Escape');
   await expect(providers).toHaveCount(0);
   await expect(page).not.toHaveURL(/#\/settings/);
-
-  await strip.getByRole('button', { name: 'Z.ai (GLM) · Not connected' }).click();
-  await expect(providers.getByRole('region', { name: 'Z.ai (GLM)' })).toBeVisible();
-});
-
-test('a tooltip near the right edge stays inside the viewport', async ({ page }) => {
-  await resetTestDatabase({ onboarded: true, connected: ['claude'], jev: true });
-  await page.setViewportSize({ width: 700, height: 700 });
-  await openHome(page);
-  const last = home(page).getByRole('list', { name: 'AI providers' }).getByRole('button').last();
-  await last.hover();
-  const tip = page.getByRole('tooltip');
-  await expect(tip).toBeVisible();
-  const box = (await tip.boundingBox())!;
-  expect(box.x).toBeGreaterThanOrEqual(8);
-  expect(box.x + box.width).toBeLessThanOrEqual(700 - 8);
 });
 
 test('Home fits a phone screen without sideways scrolling', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   const title = 'A very long chat title that keeps going well past the edge of a phone screen';
-  const noon = new Date();
-  noon.setHours(12, 0, 0, 0);
-  await page.clock.install({ time: noon });
   await seedChats([
-    { title: 'Stopped', run: { status: 'failed', error: 'Rate limit reached.' } },
-    { title, minutesAgo: (Date.now() - noon.getTime()) / 60_000 + 30 },
+    { title: 'Stopped', run: { status: 'failed', error: 'Rate limit reached.' }, unread: true },
+    { title, run: { status: 'failed', error: 'Rate limit reached.' }, unread: true },
   ]);
   await page.setViewportSize({ width: 360, height: 780 });
   await openHome(page);
+  await expect(section(page, 'Since you left')).toBeVisible();
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
@@ -455,15 +410,18 @@ test('Home fits a phone screen without sideways scrolling', async ({ page }) => 
   const box = await home(page).locator('.home-compose .composer').boundingBox();
   expect(box?.x).toBe(16);
   expect(Math.round((box?.x ?? 0) + (box?.width ?? 0))).toBe(344);
-  const row = section(page, 'Recent chats').getByRole('button', { name: new RegExp(title) });
+  const row = section(page, 'Since you left').locator('.hrow-m b', { hasText: title });
   await expect(row).toHaveAttribute('title', title);
-  await expect(row.locator('.k')).toHaveText('30m ago');
-  const clipped = await row.locator('.t').evaluate((element) => ({
+  const clipped = await row.evaluate((element) => ({
     ellipsis: getComputedStyle(element).textOverflow,
     overflowing: element.scrollWidth > element.clientWidth,
     inside: element.getBoundingClientRect().right <= document.documentElement.clientWidth,
   }));
   expect(clipped).toEqual({ ellipsis: 'ellipsis', overflowing: true, inside: true });
+  const columns = await home(page)
+    .locator('.home-board')
+    .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length);
+  expect(columns).toBe(1);
 });
 
 for (const [name, viewport] of [
@@ -480,7 +438,7 @@ for (const [name, viewport] of [
     );
     await page.setViewportSize(viewport);
     await openHome(page);
-    const providers = section(page, 'Spend');
+    const providers = home(page).getByRole('button', { name: 'Recent chats' });
     await expect(providers).not.toBeInViewport();
     await page.mouse.move(viewport.width / 2, viewport.height / 2);
     for (let turn = 0; turn < 12; turn += 1) await page.mouse.wheel(0, 600);

@@ -201,13 +201,13 @@ test('Open from the island lands on that day with the meeting selected and in vi
   );
 });
 
-test('a row in Home Upcoming opens Today on that meeting', async ({ page }) => {
+test('a row in Home Your day opens Today on that meeting', async ({ page }) => {
   const response = await page.request.get('/api/calendar/now');
   const upcoming = calendarNowSchema.parse(await response.json()).upcoming;
   expect(upcoming.map((event) => event.title)).toContain('Customer call');
   await page.goto('/');
   await page
-    .getByRole('region', { name: 'Upcoming' })
+    .getByRole('region', { name: /^(Your day|After the meeting)$/ })
     .getByRole('button', { name: 'Open Customer call in Today' })
     .click();
   const block = today(page).getByRole('button', { name: /^Customer call, / });

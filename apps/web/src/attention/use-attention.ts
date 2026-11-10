@@ -12,7 +12,10 @@ const NO_ITEMS: AttentionItem[] = [];
 
 export function useAttentionItems(): { items: readonly AttentionItem[]; loaded: boolean } {
   const query = useQuery({ queryKey: attentionKey, queryFn: attentionApi.list });
-  return { items: query.data?.items ?? NO_ITEMS, loaded: query.data !== undefined };
+  return {
+    items: query.data?.items ?? NO_ITEMS,
+    loaded: query.data !== undefined || query.isError,
+  };
 }
 
 export function useAlertingChats(): ReadonlySet<string> {

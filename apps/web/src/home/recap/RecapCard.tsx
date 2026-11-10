@@ -2,7 +2,7 @@ import './recap.css';
 import { useState } from 'react';
 import type { RecapBody, RecapSection, RecapVoice } from '@spark-outpost/contracts';
 import { Segmented } from '../../ui/Segmented.tsx';
-import { HomeSection } from '../HomeCards.tsx';
+import { HomeCard } from '../HomeCards.tsx';
 import { RecapEditor } from './RecapEditor.tsx';
 import {
   itemText,
@@ -79,7 +79,7 @@ export function RecapCard({ recap, onOpenId }: { recap: Recap; onOpenId: (id: st
     </button>
   );
   return (
-    <HomeSection id="home-recap" title="Week recap" className="hrecap" action={refresh}>
+    <HomeCard id="home-recap" title="Week recap" className="hrecap" action={refresh}>
       <div className="hpanel recap" aria-busy={recap.writing}>
         {current && (
           <p className="recap-sub">
@@ -126,13 +126,13 @@ export function RecapCard({ recap, onOpenId }: { recap: Recap; onOpenId: (id: st
           </>
         )}
       </div>
-    </HomeSection>
+    </HomeCard>
   );
 }
 
 export function RecapEarly({ recap }: { recap: Recap }) {
   return (
-    <HomeSection id="home-recap" title="Week recap" className="hrecap early">
+    <HomeCard id="home-recap" title="Week recap" className="hrecap early">
       <div className="hpanel recap">
         <p className="hnote">
           Your recap comes on the day you chose. Want one for the week so far?
@@ -146,6 +146,6 @@ export function RecapEarly({ recap }: { recap: Recap }) {
           {recap.writing ? 'Writing…' : 'This week so far'}
         </button>
       </div>
-    </HomeSection>
+    </HomeCard>
   );
 }
