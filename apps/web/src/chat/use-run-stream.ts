@@ -19,7 +19,11 @@ interface StreamState {
 }
 
 const clients = new WeakMap<QueryClient, RunStreamClient>();
-function refreshAfter(queryClient: QueryClient, conversationId: string, event: RunEvent): void {
+export function refreshAfter(
+  queryClient: QueryClient,
+  conversationId: string,
+  event: RunEvent,
+): void {
   if (refreshesChat(event)) {
     void invalidateChatDetail(queryClient, conversationId);
   }
@@ -30,9 +34,8 @@ function refreshAfter(queryClient: QueryClient, conversationId: string, event: R
     void queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true });
   }
   if (isTerminalRunEvent(event)) {
-    void invalidateChatDetail(queryClient, conversationId);
+    void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.annotations(conversationId) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.allCapabilities });
   }
 }
