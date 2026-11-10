@@ -41,7 +41,8 @@ export function cachedPullStatus(
   if (reading) return reading;
   const started = read()
     .then((status) => {
-      if (status) store.fresh.set(key, { at: cache.now, status });
+      const current = store.reading.get(key) === started;
+      if (status && current) store.fresh.set(key, { at: cache.now, status });
       return status;
     })
     .finally(() => {

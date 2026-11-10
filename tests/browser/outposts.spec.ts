@@ -282,6 +282,7 @@ test('editing renames the outpost and swaps two handles, and holding deletes it'
   const puts = requestsTo(page, MEMBER_URL, 'PUT');
   await expect(main).toBeVisible();
   const dialog = await openSettings(page, NAME);
+  await expect(dialog.getByRole('button', { name: 'Add a chat' })).toBeVisible();
   await dialog.getByRole('textbox', { name: /^Name/ }).fill('Orders relaunch');
   await dialog.getByRole('textbox', { name: 'Handle for Frontend' }).fill('api');
   await dialog.getByRole('textbox', { name: 'Handle for Orders API' }).fill('fe');

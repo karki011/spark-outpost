@@ -372,7 +372,7 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
           <OutpostSheet
             initial={formOf(outpost)}
             joined={outpost.members}
-            chats={chats}
+            chats={allChats}
             projectNames={projectNames}
             outpostId={id}
             canManage={!remote}

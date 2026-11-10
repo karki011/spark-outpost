@@ -38,6 +38,23 @@ describe('pull request status cache', () => {
     expect(read).toHaveBeenCalledTimes(2);
   });
 
+  it('drops a read that was forgotten while it was running', async () => {
+    const db = open();
+    let finishOld: (value: PullRequestStatus) => void = () => undefined;
+    const old = cachedPullStatus(
+      { db, now: 0 },
+      'a/b#1',
+      () => new Promise<PullRequestStatus>((resolve) => (finishOld = resolve)),
+    );
+    forgetPullStatuses(db);
+    await cachedPullStatus({ db, now: 1 }, 'a/b#1', async () => status(2));
+    finishOld(status(1));
+    await old;
+    const read = vi.fn(async () => status(3));
+    expect(await cachedPullStatus({ db, now: 2 }, 'a/b#1', read)).toEqual(status(2));
+    expect(read).not.toHaveBeenCalled();
+  });
+
   it('forgets everything on request and keeps databases apart', async () => {
     const db = open();
     const read = vi.fn(async () => status(1));
