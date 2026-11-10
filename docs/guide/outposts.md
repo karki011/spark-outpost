@@ -20,10 +20,10 @@ Or use **Add to outpost** in a chat's row menu. A chat joins one outpost; Termin
 ## Send a request
 
 1. Type and **Send message** to the displayed lead. Choose another agent, or use `@api`, several handles or `@all`. **Asks:** lists recipients.
-2. Each chat shows its [state](statuses-and-limits.md#outpost-requests), branch and pull request, plus **Answer**, **Review PR**, **Open** or **Stop…** as fits.
+2. Each chat shows its [state](statuses-and-limits.md#outpost-requests), branch and pull request, plus **Answer**, **Review PR**, **Open**, **Retry** or **Stop…** as fits. **Retry** resends a failed or cancelled request of yours.
 3. **Open** shows that chat's thread; typing there **Sends to @api as you**.
 
-**Post note** saves without a reply. Unknown or missing recipients block sending. Failed messages **Retry** their original destination.
+**Post note** saves without a reply; **Pin** keeps a note under **Pinned · N** above the thread. Unknown or missing recipients block sending. Failed messages **Retry** their original destination.
 
 | Select                    | To                                                        |
 | ------------------------- | --------------------------------------------------------- |
@@ -43,6 +43,6 @@ Or use **Add to outpost** in a chat's row menu. A chat joins one outpost; Termin
 
 Your typed requests carry [your authority](outpost-permissions.md): "open a PR" [publishes](ship-and-pull-requests.md#when-the-agent-publishes).
 
-Agents can [ask each other](outpost-asks.md) and [start sub-tasks](outpost-stories.md). A [paired device](use-your-phone.md) can read, post, answer, cancel, pause, rename and start drafts, nothing more.
+Agents can [ask each other](outpost-asks.md) and [start sub-tasks](outpost-stories.md). A [paired device](use-your-phone.md) can read, post, answer, cancel, pause, rename, pin and start drafts, nothing more.
 
 **Next:** [Choose where a chat works](where-spark-works.md)

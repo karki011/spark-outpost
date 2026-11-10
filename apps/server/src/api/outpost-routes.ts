@@ -5,21 +5,32 @@ import {
   createPostRequestSchema,
   needsYouCount,
   outpostInstructionsRequestSchema,
+  pinPostRequestSchema,
   stackedCount,
   updateOutpostRequestSchema,
+  type ChatDraft,
   type ChatDrafts,
   type CreateOutpostResponse,
   type Outpost,
   type OutpostDetail,
   type OutpostDraft,
   type OutpostPost,
+  type OutpostSuggestions,
   type StartDraftResponse,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
-import { draftsOfChat, getDraft } from '../persistence/outpost-drafts.ts';
-import { requestExchanges } from '../persistence/outpost-exchanges.ts';
-import { answerCache, requestAnswer } from '../persistence/outpost-answers.ts';
-import { cancelUnsent, getPost, listPosts, releaseHold } from '../persistence/outpost-posts.ts';
+import { draftsOfChat, getDraft, suggestedDrafts } from '../persistence/outpost-drafts.ts';
+import { requestsExchanges } from '../persistence/outpost-exchanges.ts';
+import { outpostLibrary } from '../persistence/outpost-library.ts';
+import { needsYouCounts } from '../persistence/outpost-needs-you.ts';
+import { answerCache, requestAnswers } from '../persistence/outpost-answers.ts';
+import {
+  cancelUnsent,
+  getPost,
+  listPosts,
+  releaseHold,
+  setPinned,
+} from '../persistence/outpost-posts.ts';
 import { storiesOf } from '../persistence/outpost-stories.ts';
 import {
   deleteOutpost,
@@ -32,7 +43,14 @@ import {
   setName,
   setPaused,
 } from '../persistence/outposts.ts';
-import type { PeerAgent, PostWithFacts, StackGit, StoredOutpost } from '../outposts/ports.ts';
+import type {
+  PeerAgent,
+  PostWithFacts,
+  StackGit,
+  StoredDraft,
+  StoredOutpost,
+} from '../outposts/ports.ts';
+import { cachedStackGit } from '../outposts/git-read-cache.ts';
 import { introViews } from '../outposts/intro-view.ts';
 import { joinOutpost, leaveOutpost, postToOutpost } from '../outposts/post-service.ts';
 import { toOutpostPost } from '../outposts/post-view.ts';
@@ -43,6 +61,7 @@ import { paramId, parseBody } from './validation.ts';
 
 export const POST_NOT_FOUND = 'That post does not exist. It may have been deleted.';
 export const ONLY_REQUESTS_CANCEL = 'Only a request can be cancelled.';
+export const ONLY_NOTES_PIN = 'Only a note can be pinned.';
 export const ONLY_REQUESTS_START = 'Only a request can be started.';
 export const REQUEST_FINISHED = 'That request has already finished.';
 export const CANCEL_UNAVAILABLE = 'That request could not be cancelled. Try again.';
@@ -69,6 +88,17 @@ export interface DraftView {
 
 const handleBodySchema = z.object({ handle: z.string() });
 
+function chatDraftView(draft: StoredDraft): ChatDraft {
+  return {
+    id: draft.id,
+    runId: draft.runId,
+    chats: draft.body.chats.length,
+    stacked: stackedCount(draft.body.chats),
+    outpostId: draft.outpostId,
+    startedAt: draft.startedAt,
+  };
+}
+
 export function outpostErrorStatus(error: unknown): { status: number; message: string } | null {
   if (error instanceof OutpostError) return { status: error.status, message: error.message };
   return null;
@@ -79,7 +109,8 @@ function conversationParam(req: Request): string {
 }
 
 export function outpostRoutes(options: OutpostRouteOptions): Router {
-  const { db, workspaceId, peer, drain, folderExists, stackGit = UNKNOWN_STACK } = options;
+  const { db, workspaceId, peer, drain, folderExists } = options;
+  const stackGit = cachedStackGit(options.stackGit ?? UNKNOWN_STACK);
   const router = Router();
   const service = { db, workspaceId, ...(folderExists ? { folderExists } : {}) };
 
@@ -93,20 +124,21 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
     const outpost = await known(id);
     const found = await listPosts(db, id);
     const intros = await introViews(db, outpost, found);
-    const cache = answerCache();
-    const posts: OutpostPost[] = [];
-    for (const post of found) {
-      const answer = await requestAnswer(db, workspaceId, post, { cache });
-      const exchanges = await requestExchanges(db, post.post);
-      posts.push(toOutpostPost(post, answer, intros.get(post.post.id), exchanges));
-    }
+    const answers = await requestAnswers(db, workspaceId, found, { cache: answerCache() });
+    const exchanges = await requestsExchanges(
+      db,
+      found.map(({ post }) => post),
+    );
+    const posts: OutpostPost[] = found.map((post) =>
+      toOutpostPost(
+        post,
+        answers.get(post.post.id) ?? null,
+        intros.get(post.post.id),
+        exchanges.get(post.post.id),
+      ),
+    );
     const stories = await toStories(await storiesOf(db, id), stackGit);
     return { outpost: { ...outpost, needsYou: needsYouCount(posts) }, posts, stories };
-  };
-
-  const counted = async (outpost: StoredOutpost): Promise<Outpost> => {
-    const posts = (await listPosts(db, outpost.id)).map((post) => toOutpostPost(post, null));
-    return { ...outpost, needsYou: needsYouCount(posts) };
   };
 
   const openRequest = async (
@@ -142,9 +174,14 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
   };
 
   router.get('/outposts', async (_req, res) => {
-    const outposts: Outpost[] = await Promise.all(
-      (await listOutposts(db, workspaceId)).map(counted),
-    );
+    const [stored, counts] = await Promise.all([
+      listOutposts(db, workspaceId),
+      needsYouCounts(db, workspaceId),
+    ]);
+    const outposts: Outpost[] = stored.map((outpost) => ({
+      ...outpost,
+      needsYou: counts.get(outpost.id) ?? 0,
+    }));
     res.json(outposts);
   });
 
@@ -183,17 +220,28 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
 
   router.get('/conversations/:id/outpost-drafts', async (req, res) => {
     const found = await draftsOfChat(db, workspaceId, paramId(req));
-    const view: ChatDrafts = {
-      drafts: found.map((draft) => ({
-        id: draft.id,
-        runId: draft.runId,
-        chats: draft.body.chats.length,
-        stacked: stackedCount(draft.body.chats),
-        outpostId: draft.outpostId,
-        startedAt: draft.startedAt,
-      })),
+    const view: ChatDrafts = { drafts: found.map(chatDraftView) };
+    res.json(view);
+  });
+
+  router.get('/outposts/:id/suggestions', async (req, res) => {
+    const id = paramId(req);
+    await known(id);
+    const found = await suggestedDrafts(db, workspaceId, id);
+    const view: OutpostSuggestions = {
+      drafts: found.flatMap((draft) =>
+        draft.conversationId
+          ? [{ ...chatDraftView(draft), conversationId: draft.conversationId }]
+          : [],
+      ),
     };
     res.json(view);
+  });
+
+  router.get('/outposts/:id/library', async (req, res) => {
+    const id = paramId(req);
+    await known(id);
+    res.json(await outpostLibrary(db, id));
   });
 
   router.get('/outposts/:id', async (req, res) => {
@@ -273,6 +321,18 @@ export function outpostRoutes(options: OutpostRouteOptions): Router {
     const postId = paramId(req, 'postId');
     await openRequest(outpostId, postId, ONLY_REQUESTS_START);
     if (await releaseHold(db, postId)) await notifyOutpostChanged(db, outpostId);
+    res.json(await detail(outpostId));
+  });
+
+  router.post('/outposts/:id/posts/:postId/pin', async (req, res) => {
+    const outpostId = paramId(req);
+    const postId = paramId(req, 'postId');
+    const { pinned } = parseBody(pinPostRequestSchema, req);
+    await known(outpostId);
+    const found = await getPost(db, postId);
+    if (!found || found.post.outpostId !== outpostId) throw new OutpostError(404, POST_NOT_FOUND);
+    if (found.post.kind !== 'note') throw new OutpostError(409, ONLY_NOTES_PIN);
+    await setPinned(db, postId, pinned);
     res.json(await detail(outpostId));
   });
 

@@ -48,6 +48,18 @@ export function canCancel(post: OutpostPost): boolean {
   return post.state !== null && OPEN_STATES.includes(post.state);
 }
 
+export function canRetry(post: OutpostPost): boolean {
+  return (
+    post.kind === 'request' &&
+    post.fromUser &&
+    !post.fromSpark &&
+    !post.guest &&
+    post.files === 0 &&
+    post.toConversationId !== null &&
+    (post.state === 'failed' || post.state === 'cancelled')
+  );
+}
+
 export function isLong(text: string): boolean {
   return text.length > COLLAPSE_CHARS || text.split('\n').length > COLLAPSE_LINES;
 }

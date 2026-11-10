@@ -89,6 +89,7 @@ export * from './reset.ts';
 export * from './crew-messages.ts';
 export * from './chat-queue.ts';
 export * from './outposts.ts';
+export * from './outpost-library.ts';
 export * from './outpost-handles.ts';
 export * from './outpost-address.ts';
 export * from './outpost-addressees.ts';

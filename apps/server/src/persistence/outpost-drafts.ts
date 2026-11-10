@@ -1,4 +1,5 @@
 import { outpostDraftSchema } from '@spark-outpost/contracts';
+import type { Queryable } from './db.ts';
 import type { DraftStore, StoredDraft } from '../outposts/ports.ts';
 
 interface DraftRow {
@@ -50,6 +51,22 @@ export const draftsOfChat: DraftStore['draftsOfChat'] = async (db, workspaceId, 
   );
   return rows.flatMap((row) => toDraft(row) ?? []);
 };
+
+export async function suggestedDrafts(
+  db: Queryable,
+  workspaceId: string,
+  outpostId: string,
+): Promise<StoredDraft[]> {
+  const { rows } = await db.query<DraftRow>(
+    `SELECT ${DRAFT_COLUMNS} FROM outpost_drafts d
+     WHERE d.workspace_id = $1 AND d.started_at IS NULL
+       AND (d.outpost_id IS NULL OR d.outpost_id = $2)
+       AND d.conversation_id IN (SELECT conversation_id FROM outpost_members WHERE outpost_id = $2)
+     ORDER BY d.created_at, d.id`,
+    [workspaceId, outpostId],
+  );
+  return rows.flatMap((row) => toDraft(row) ?? []);
+}
 
 export const saveDraft: DraftStore['saveDraft'] = async (db, draft) => {
   await db.query(

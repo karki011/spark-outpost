@@ -1,16 +1,10 @@
 import {
   ARTIFACT_KIND_LABELS,
-  type ArtifactPage,
-  type ChatFile,
-  type ConversationDetail,
+  type LibraryArtifact,
+  type LibraryFile,
+  type OutpostLibraryChats,
 } from '@spark-outpost/contracts';
 import { formatBytes } from '../api/attachments.ts';
-
-export interface LibraryChat {
-  conversationId: string;
-  handle: string;
-  detail: Pick<ConversationDetail, 'chatFiles' | 'artifactPages'> | undefined;
-}
 
 export interface LibraryEntry {
   id: string;
@@ -25,35 +19,43 @@ export interface OutpostLibrary {
   files: LibraryEntry[];
 }
 
-function artifactMeta(page: ArtifactPage): string {
-  const versions = page.versions.length;
-  const kind = ARTIFACT_KIND_LABELS[page.kind];
-  return versions > 1 ? `${kind} · version ${versions}` : kind;
+export interface LibraryMember {
+  conversationId: string;
+  handle: string;
 }
 
-function fileOf(file: ChatFile, chat: LibraryChat): LibraryEntry {
+function artifactMeta(artifact: LibraryArtifact): string {
+  const kind = ARTIFACT_KIND_LABELS[artifact.kind];
+  return artifact.versions > 1 ? `${kind} · version ${artifact.versions}` : kind;
+}
+
+function fileEntry(file: LibraryFile, member: LibraryMember): LibraryEntry {
   return {
     id: file.id,
     name: file.name,
     meta: formatBytes(file.size),
-    conversationId: chat.conversationId,
-    handle: chat.handle,
+    conversationId: member.conversationId,
+    handle: member.handle,
   };
 }
 
-export function outpostLibrary(chats: readonly LibraryChat[]): OutpostLibrary {
+export function outpostLibrary(
+  members: readonly LibraryMember[],
+  library: OutpostLibraryChats | undefined,
+): OutpostLibrary {
+  const byChat = new Map((library?.chats ?? []).map((chat) => [chat.conversationId, chat]));
   return {
-    artifacts: chats.flatMap((chat) =>
-      (chat.detail?.artifactPages ?? []).map((page) => ({
-        id: page.id,
-        name: page.title,
-        meta: artifactMeta(page),
-        conversationId: chat.conversationId,
-        handle: chat.handle,
+    artifacts: members.flatMap((member) =>
+      (byChat.get(member.conversationId)?.artifacts ?? []).map((artifact) => ({
+        id: artifact.id,
+        name: artifact.title,
+        meta: artifactMeta(artifact),
+        conversationId: member.conversationId,
+        handle: member.handle,
       })),
     ),
-    files: chats.flatMap((chat) =>
-      (chat.detail?.chatFiles ?? []).map((file) => fileOf(file, chat)),
+    files: members.flatMap((member) =>
+      (byChat.get(member.conversationId)?.files ?? []).map((file) => fileEntry(file, member)),
     ),
   };
 }
