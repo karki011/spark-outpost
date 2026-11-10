@@ -86,7 +86,7 @@ describe('pinning a note', () => {
     const events = await outpostEvents();
     try {
       expect((await pin(id, true)).status).toBe(200);
-      await eventually(() => expect(events.seen).toContain(outpostId));
+      await eventually(async () => expect(events.seen).toContain(outpostId));
     } finally {
       await events.close();
     }
