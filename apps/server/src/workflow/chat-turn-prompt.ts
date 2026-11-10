@@ -9,7 +9,12 @@ import { isGitWorkTree } from '../projects/snapshot.ts';
 import type { Provider } from '../providers/provider.ts';
 import { remotes } from '../ship/git.ts';
 import type { TurnDeps } from './agent-turn.ts';
-import { chatPrompt, type ChatPromptFacts, type ChatPromptProject } from './chat-prompt.ts';
+import {
+  chatPrompt,
+  chatTurnNote,
+  type ChatPromptFacts,
+  type ChatPromptProject,
+} from './chat-prompt.ts';
 import type { RunInput } from './run-input.ts';
 
 async function projectFacts(db: Queryable, input: RunInput): Promise<ChatPromptProject | null> {
@@ -44,22 +49,37 @@ export async function chatPromptFacts(db: Queryable, input: RunInput): Promise<C
     outpostDraftTool: needs.outpost_draft,
     outpostStartTool: needs.outpost_start,
     level: input.level,
-    followUpRound: input.followUpRound === true,
     asksWithTool: input.mode === 'do' && input.plansFirst !== true,
-    assignedWork:
-      storyTask !== null ||
-      (input.outpostRequest != null &&
-        !input.outpostRequest.fromUser &&
-        !input.outpostRequest.wrapUp),
+    assignedWork: storyTask !== null,
     customInstructions: prefs.agentInstructions ?? null,
   };
 }
 
-function sendingChatPrompt(provider: Provider, block: string): Provider {
+export function requestAssignedWork(input: Pick<RunInput, 'outpostRequest'>): boolean {
+  const request = input.outpostRequest;
+  return request != null && !request.fromUser && !request.wrapUp;
+}
+
+export function chatTurnNoteFor(input: RunInput, facts: ChatPromptFacts): string | null {
+  return chatTurnNote({
+    project: facts.project,
+    followUpRound: input.followUpRound === true,
+    requestAssigned: !facts.assignedWork && requestAssignedWork(input),
+  });
+}
+
+function sendingChatPrompt(provider: Provider, block: string, note: string | null): Provider {
   return {
     name: provider.name,
-    run: (turn) =>
-      provider.run(turn.spark ? { ...turn, spark: { ...turn.spark, chatPrompt: block } } : turn),
+    run: (turn) => {
+      const spark = turn.spark ? { ...turn.spark, chatPrompt: block } : turn.spark;
+      const turnPreamble = [note, turn.turnPreamble].filter(Boolean).join('\n\n');
+      return provider.run({
+        ...turn,
+        ...(spark ? { spark } : {}),
+        ...(turnPreamble ? { turnPreamble } : {}),
+      });
+    },
   };
 }
 
@@ -69,8 +89,11 @@ export async function withChatPrompt<Deps extends Pick<TurnDeps, 'db' | 'provide
 ): Promise<Deps> {
   const provider = deps.providers.get(input.provider);
   if (!provider || input.assistant) return deps;
-  const block = chatPrompt(await chatPromptFacts(deps.db, input));
+  const facts = await chatPromptFacts(deps.db, input);
   const providers = new Map(deps.providers);
-  providers.set(input.provider, sendingChatPrompt(provider, block));
+  providers.set(
+    input.provider,
+    sendingChatPrompt(provider, chatPrompt(facts), chatTurnNoteFor(input, facts)),
+  );
   return { ...deps, providers };
 }

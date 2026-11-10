@@ -1,5 +1,5 @@
 import type { InvolvementLevel } from '@spark-outpost/contracts';
-import { delegationPolicy } from '../agents/delegation-policy.ts';
+import { ASSIGNED_WORK_LINE, delegationPolicy } from '../agents/delegation-policy.ts';
 import * as text from './chat-prompt-text.ts';
 
 export interface ChatPromptProject {
@@ -17,7 +17,6 @@ export interface ChatPromptFacts {
   outpostDraftTool: boolean;
   outpostStartTool?: boolean;
   level: InvolvementLevel;
-  followUpRound?: boolean;
   asksWithTool?: boolean;
   assignedWork?: boolean;
   customInstructions: string | null;
@@ -53,12 +52,18 @@ function splitSection(facts: ChatPromptFacts): string {
   ].join('\n');
 }
 
+function ownBranchOf(project: ChatPromptProject): boolean {
+  return project.place === 'worktree' && project.branch !== null;
+}
+
+function canPushTo(project: ChatPromptProject): boolean {
+  return ownBranchOf(project) && project.hasRemote && project.gitRepo !== false;
+}
+
 function publishingLine(facts: ChatPromptFacts): string | null {
   const { project } = facts;
   if (!project) return null;
-  const ownBranch = project.place === 'worktree' && project.branch !== null;
-  const canPush = ownBranch && project.hasRemote && project.gitRepo !== false;
-  if (facts.followUpRound && canPush) return text.PUBLISH_FOLLOW_UP;
+  const ownBranch = ownBranchOf(project);
   if (facts.level === 'hands-off') return text.PUBLISH_NOT_ASKED;
   if (project.gitRepo === false) return text.PUBLISH_NOT_GIT;
   if (project.place === 'checkout') return text.PUBLISH_CHECKOUT;
@@ -81,4 +86,21 @@ export function chatPrompt(facts: ChatPromptFacts): string {
     sections.push(`${text.SETTINGS_HEADING}\n${custom}`);
   }
   return sections.join('\n\n');
+}
+
+export interface ChatTurnFacts {
+  project: ChatPromptProject | null;
+  followUpRound: boolean;
+  requestAssigned: boolean;
+}
+
+export function chatTurnNote(facts: ChatTurnFacts): string | null {
+  const lines: string[] = [];
+  if (facts.requestAssigned) {
+    lines.push(text.TURN_NOTE_ASSIGNED, ASSIGNED_WORK_LINE, text.TURN_NOTE_NO_SUB_CHATS);
+  }
+  if (facts.followUpRound && facts.project && canPushTo(facts.project)) {
+    lines.push(text.TURN_NOTE_PUBLISHING, `- ${text.PUBLISH_FOLLOW_UP}`);
+  }
+  return lines.length === 0 ? null : [text.TURN_NOTE_INTRO, ...lines].join('\n');
 }

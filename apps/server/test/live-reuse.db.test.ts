@@ -54,18 +54,16 @@ describe.each(['hands-off', 'full-auto'] as const)(
     });
 
     it('after a follow-up round', async () => {
-      expect(reused(await sequence(['user', 'relay', 'user'], level))).toEqual([
-        false,
-        false,
-        false,
-      ]);
+      expect(reused(await sequence(['user', 'relay', 'user'], level))).toEqual(
+        level === 'hands-off' ? [false, false, false] : [false, true, true],
+      );
     });
 
     it('after an outpost request', async () => {
       expect(reused(await sequence(['user', 'outpost', 'user'], level))).toEqual([
         false,
-        false,
-        false,
+        true,
+        true,
       ]);
     });
 

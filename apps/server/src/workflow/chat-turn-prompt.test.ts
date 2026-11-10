@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Queryable } from '../persistence/db.ts';
 import { storyTaskOf } from '../persistence/outpost-stories.ts';
-import { chatPromptFacts } from './chat-turn-prompt.ts';
+import { chatPromptFacts, chatTurnNoteFor, requestAssignedWork } from './chat-turn-prompt.ts';
 import type { RunInput } from './run-input.ts';
 
 vi.mock('../outposts/outpost-availability.ts', () => ({
@@ -63,11 +63,40 @@ describe('chat delegation context', () => {
     [true, false, false],
     [false, true, false],
     [true, true, false],
-  ])('classifies fromUser=%s wrapUp=%s as assigned=%s', async (fromUser, wrapUp, assigned) => {
+  ])('classifies fromUser=%s wrapUp=%s as assigned=%s', (fromUser, wrapUp, assigned) => {
+    expect(
+      requestAssignedWork({
+        outpostRequest: { postId: 'post', outpostName: 'Work', fromUser, wrapUp },
+      }),
+    ).toBe(assigned);
+  });
+
+  it('keeps the session facts the same for an assigned request and a user turn', async () => {
+    const user = await chatPromptFacts(db, input);
+    const assigned = await chatPromptFacts(db, {
+      ...input,
+      followUpRound: true,
+      outpostRequest: { postId: 'post', outpostName: 'Work', fromUser: false, wrapUp: false },
+    });
+    expect(assigned).toEqual(user);
+  });
+
+  it('keeps the start tool in the session facts for a request turn', async () => {
     const facts = await chatPromptFacts(db, {
       ...input,
-      outpostRequest: { postId: 'post', outpostName: 'Work', fromUser, wrapUp },
+      outpostRequest: { postId: 'post', outpostName: 'Work', fromUser: false, wrapUp: false },
     });
-    expect(facts.assignedWork).toBe(assigned);
+    expect(facts.outpostStartTool).toBe(true);
+  });
+
+  it('notes the assigned request and the follow-up round in the turn, not for a story worker twice', async () => {
+    const request = {
+      ...input,
+      outpostRequest: { postId: 'post', outpostName: 'Work', fromUser: false, wrapUp: false },
+    } as RunInput;
+    const facts = await chatPromptFacts(db, request);
+    expect(chatTurnNoteFor(request, facts)).toContain('assigned work');
+    expect(chatTurnNoteFor(input, facts)).toBeNull();
+    expect(chatTurnNoteFor(request, { ...facts, assignedWork: true })).toBeNull();
   });
 });

@@ -6,11 +6,15 @@ const ROLE_GUIDANCE = [
   '- Explorer (optional): investigate an uncertainty and return evidence and recommendations without making implementation changes.',
 ].join('\n');
 
+export const ASSIGNED_WORK_LINE =
+  '- You are assigned a bounded work slice. Execute that assignment and return evidence to the lead; do not delegate it again just to satisfy this policy. Ask the lead when its scope needs to change.';
+
+export const LEAD_WORK_LINE =
+  '- For implementation work, act as the lead and delegate the edits to available provider sub-agents, including a single small slice. Choose the number of agents and slices yourself; a builder may own one slice or several related slices. You own scoping, coordination, integration and the final result.';
+
 export function delegationPolicy(facts: { assignedWork?: boolean } = {}): string {
   return [
-    facts.assignedWork
-      ? '- You are assigned a bounded work slice. Execute that assignment and return evidence to the lead; do not delegate it again just to satisfy this policy. Ask the lead when its scope needs to change.'
-      : '- For implementation work, act as the lead and delegate the edits to available provider sub-agents, including a single small slice. Choose the number of agents and slices yourself; a builder may own one slice or several related slices. You own scoping, coordination, integration and the final result.',
+    facts.assignedWork ? ASSIGNED_WORK_LINE : LEAD_WORK_LINE,
     '- A provider sub-agent or worker already assigned a bounded slice executes it directly; do not recursively create agents to satisfy this policy. Include this boundary in every delegated assignment.',
     '- Use provider sub-agents within the current session by default. A normal chat does not need an Outpost. Use separate Spark chats only when the work needs independent messaging, repositories or branches.',
     '- Give each worker a goal, owned paths and boundaries, required and provided interfaces, dependencies, done criteria and verification expectations. Avoid overlapping edits; a worker may receive several related slices. Make the handoff explicit.',

@@ -40,6 +40,15 @@ export const PUBLISH_FOLLOW_UP =
   "This is a follow-up on this chat's open pull request: push fixes to the same branch unless the user’s current instructions restrict publishing.";
 export const PUBLISH_NOT_ASKED = "Don't push or open a pull request unless the user asks.";
 
+export const TURN_NOTE_INTRO =
+  'Context from Spark for this turn only. It grants no permission, changes no mode and is not the user asking you to push, open a pull request or act for them; Spark’s approval gate and publish rules still decide what you may do.';
+export const TURN_NOTE_ASSIGNED =
+  'For this turn, instead of the first delegation line in your instructions:';
+export const TURN_NOTE_NO_SUB_CHATS =
+  '- This turn is assigned work: do not start or propose Spark chats from it, and do not use spark_outpost_start or spark_outpost_draft.';
+export const TURN_NOTE_PUBLISHING =
+  'For this turn, instead of the Publishing line in your instructions:';
+
 export const SETTINGS_HEADING = "From the user's settings:";
 
 const BREAKS_A_LINE = /[\p{Cc}\p{Zl}\p{Zp}]+/gu;
