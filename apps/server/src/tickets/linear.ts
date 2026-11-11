@@ -23,6 +23,12 @@ import {
   type MoveRequest,
   type SourceMoveSettings,
 } from './move-target.ts';
+import {
+  LINEAR_RELATIONS_SELECTION,
+  linearRelationFields,
+  readLinearRelations,
+} from './linear-relations.ts';
+import { projectOfKey } from './ticket-relations.ts';
 import { bucketOf, sameName, type SourceState, type StateKind } from './status.ts';
 
 export const LINEAR_API_URL = 'https://api.linear.app/graphql';
@@ -62,7 +68,7 @@ const detailSchema = issueSchema.extend({
     }),
   ),
   attachments: nodes(z.object({ title: z.string().nullable(), url: z.string() })),
-  children: nodes(z.object({ identifier: z.string(), title: z.string(), state: stateSchema })),
+  ...linearRelationFields,
 });
 const teamStatesSchema = z.object({
   issue: z.object({
@@ -91,7 +97,7 @@ const ISSUE = `query Issue($id: String!) { issue(id: $id) { ${ISSUE_FIELDS}
   description
   comments(first: 50) { nodes { body createdAt user { name } } }
   attachments { nodes { title url } }
-  children { nodes { identifier title state { name type } } } } }`;
+  ${LINEAR_RELATIONS_SELECTION} } }`;
 const TEAM_STATES = `query States($id: String!) { issue(id: $id) { id state { name type }
   team { key states { nodes { id name type } } } } }`;
 const MOVE = `mutation Move($id: String!, $stateId: String!) {
@@ -313,6 +319,9 @@ export function linearSource(
       const { issue } = await graphql(schema, ISSUE, { id: key }, `reading ${key}`);
       if (!issue) throw new TicketApiError(404, `Linear has no ticket ${key}.`);
       const team = issue.team?.key ?? null;
+      const relations = readLinearRelations(issue, (state, related) =>
+        bucket(state, projectOfKey(related, team)),
+      );
       const detail: TicketDetail = {
         ...summary(issue),
         description: issue.description ?? '',
@@ -326,12 +335,10 @@ export function linearSource(
           title: link.title ?? link.url,
           url: link.url,
         })),
-        subtasks: issue.children.nodes.map((child) => ({
-          key: child.identifier,
-          title: child.title,
-          status: bucket(child.state, team),
-          statusName: child.state.name,
-        })),
+        subtasks: relations.subtasks,
+        subtasksMore: relations.subtasksMore,
+        parent: relations.parent,
+        relations: relations.relations,
       };
       return detail;
     },

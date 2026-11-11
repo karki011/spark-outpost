@@ -170,3 +170,33 @@ test('Agent TV is there for a plain answer and shows the agent that answered', a
   await tv.getByRole('button', { name: 'Close Agent TV' }).click();
   await expect(tv).toBeHidden();
 });
+
+test('an edit step shows its diff, opens by keyboard, hides a secret file and survives a reload', async ({
+  page,
+}) => {
+  await openChats(page);
+  await page.getByRole('button', { name: 'New chat' }).first().click();
+  const input = page.getByRole('textbox', { name: 'Message' });
+  await input.fill('Tidy the notes #diffs');
+  await input.press('Enter');
+  const turn = page.locator('.msg.ai').last();
+  await expect(turn).toHaveAttribute('data-state', 'succeeded', { timeout: 30_000 });
+
+  const notes = turn.getByRole('button', { name: /src\/notes\.ts/ });
+  await expect(notes).toHaveAttribute('aria-expanded', 'false');
+  await expect(notes).toContainText('+2');
+  await notes.focus();
+  await page.keyboard.press('Enter');
+  await expect(notes).toHaveAttribute('aria-expanded', 'true');
+  await expect(turn.locator('.sdiff-body')).toContainText('three');
+
+  await expect(turn).toContainText('Contents hidden: secret file');
+  await expect(turn.getByRole('button', { name: /\.env/ })).toHaveCount(0);
+
+  await page.reload();
+  const again = page.locator('.msg.ai').last();
+  const kept = again.getByRole('button', { name: /src\/notes\.ts/ });
+  await kept.click();
+  await expect(again.locator('.sdiff-body')).toContainText('three');
+  await expect(again).toContainText('Contents hidden: secret file');
+});

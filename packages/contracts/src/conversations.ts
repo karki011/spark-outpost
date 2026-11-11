@@ -26,6 +26,7 @@ import {
 } from './runs.ts';
 import { taskOverviewSchema } from './tasks.ts';
 import { railFlagSchema } from './rail-flags.ts';
+import { stepDiffSchema } from './run-events.ts';
 import { conversationUsageSchema } from './usage.ts';
 import { backgroundWaitSchema, subagentRowSchema } from './subagents.ts';
 import {
@@ -175,6 +176,7 @@ export const activityStepSchema = z.object({
   toolKind: z.string().optional(),
   toolName: z.string().optional(),
   target: z.string().optional(),
+  diffs: z.array(stepDiffSchema).optional(),
 });
 export type ActivityStep = z.infer<typeof activityStepSchema>;
 

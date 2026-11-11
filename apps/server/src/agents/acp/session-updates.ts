@@ -6,7 +6,7 @@ import type {
 } from '@agentclientprotocol/sdk/unstable';
 import { awaitsCalloutInput, calloutTarget, isMcpToolName } from '@spark-outpost/contracts';
 import type { ConfigValues, PlanEntry } from '@spark-outpost/contracts';
-import type { ProviderOutput } from '../../providers/provider.ts';
+import type { ProviderDiff, ProviderOutput } from '../../providers/provider.ts';
 import { currentValue } from './session-config.ts';
 import { currentValues } from './capabilities.ts';
 import { findPullRequests } from '../../tasks/pr-links.ts';
@@ -16,6 +16,7 @@ import { exitPlanText, planFileText } from '../../plans/plan-mode.ts';
 import { shortWindowNote } from './long-context.ts';
 import { planOutputs, usageOutputs } from './plan-limits.ts';
 import { createFocusTracker } from './file-focus.ts';
+import { finishedToolDiffs, newToolDiffs, noteToolDiffs, type ToolDiffs } from './tool-diffs.ts';
 import { messagePhase } from './message-phase.ts';
 import { artifactLinks } from './artifact-links.ts';
 import { COMPACTED_LINE, createCompactionLines } from './compaction-lines.ts';
@@ -115,9 +116,14 @@ interface OpenTool {
   opensPr: boolean;
   linked: boolean;
   shown: boolean;
+  changes: ToolDiffs;
 }
 
-function stepOf(kind: 'step_started' | 'step_finished', open: OpenTool): ProviderOutput {
+function stepOf(
+  kind: 'step_started' | 'step_finished',
+  open: OpenTool,
+  diffs: ProviderDiff[] = [],
+): ProviderOutput {
   return {
     kind,
     name: open.name,
@@ -127,6 +133,7 @@ function stepOf(kind: 'step_started' | 'step_finished', open: OpenTool): Provide
     ...(open.target ? { target: open.target } : {}),
     ...(open.path ? { path: open.path } : {}),
     ...(open.callout ? { callout: open.callout } : {}),
+    ...(diffs.length > 0 ? { diffs } : {}),
   };
 }
 
@@ -223,7 +230,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
     focus.done(id);
     const outputs = [
       ...(open.shown ? [] : [stepOf('step_started', open)]),
-      stepOf('step_finished', open),
+      stepOf('step_finished', open, failed ? [] : finishedToolDiffs(open.changes)),
     ];
     if (failed) outputs.push(...noteSteps(FAILED_PREFIX + open.name));
     return outputs;
@@ -363,7 +370,9 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
             opensPr: opensPullRequest(update.title, update.rawInput),
             linked: false,
             shown: !awaitsAddress(update.title, update.kind) && !awaitsInput,
+            changes: newToolDiffs(),
           };
+          noteToolDiffs(opened.changes, update);
           openTools.set(update.toolCallId, opened);
           outputs.push(
             ...focus.see(
@@ -391,6 +400,7 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
           );
           retarget(update);
           const open = openTools.get(update.toolCallId);
+          if (open) noteToolDiffs(open.changes, update);
           const linked = [
             ...reveal(update),
             ...(open
@@ -418,7 +428,10 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
           return tracked ? changeSettings(settingsFrom(update.configOptions, tracked)) : [];
         case 'session_info_update': {
           const reported = sessionFailure(update._meta);
-          if (!reported) return planOutputs(update._meta);
+          const titled: ProviderOutput[] = update.title
+            ? [{ kind: 'session_title', title: update.title }]
+            : [];
+          if (!reported) return [...titled, ...planOutputs(update._meta)];
           if (reported.severity === 'error') {
             failure = { category: reported.category, title: reported.title };
             return [];

@@ -1,4 +1,5 @@
 import type * as acp from '@agentclientprotocol/sdk/unstable';
+import { diffsTurn } from './fake-acp-diffs.ts';
 
 type Update = (value: acp.SessionUpdate) => Promise<void>;
 type Say = (chunk: string) => Promise<void>;
@@ -91,6 +92,7 @@ export async function eventsTurn(
   say: Say,
   signal: AbortSignal,
 ): Promise<acp.StopReason> {
+  if (text.includes('#diffs')) return diffsTurn(update, say);
   await update(thought('Two searches at once.\n'));
   await update(thought(`The key is ${FAKE_SECRETS.apiKey}\n`));
   await update(search('twin-1', 'steps'));

@@ -8,8 +8,9 @@ import {
   type RedactionFilter,
 } from '../audit/redact-stream.ts';
 import { newId } from '../persistence/ids.ts';
-import type { ProviderOutput } from '../providers/provider.ts';
+import type { ProviderDiff, ProviderOutput } from '../providers/provider.ts';
 import { runEvents } from './run-events.ts';
+import { stepDiffs } from './step-diffs.ts';
 import { attributed } from './subagent-events.ts';
 import { createSubagentProgress } from './subagent-progress.ts';
 import { toolArguments, toolResult } from './tool-call-text.ts';
@@ -34,6 +35,7 @@ export interface TurnEvents {
 interface OpenStep {
   calls: number;
   mark: StepMark;
+  diffs: ProviderDiff[];
 }
 
 const FILE_KINDS = new Set(['read', 'edit', 'delete', 'move']);
@@ -139,15 +141,21 @@ export function createTurnEvents({
       ...(waits ? { waits } : {}),
       ...kind,
     };
-    openSteps.set(key, { calls: 1, mark });
+    openSteps.set(key, { calls: 1, mark, diffs: [] });
     const anchor = subagent ? {} : anchorMark(replySoFar?.());
     await append(owned(runEvents.stepStarted(name, { ...mark, ...anchor }, now()), subagent));
   };
 
-  const finishStep = async (name: string, subagent?: string, kind: StepMark = {}) => {
+  const finishStep = async (
+    name: string,
+    subagent?: string,
+    kind: StepMark = {},
+    diffs: readonly ProviderDiff[] = [],
+  ) => {
     if (name === THINKING_STEP && !subagent) await stopThinking();
     const key = stepKey(name, subagent);
     const open = openSteps.get(key);
+    open?.diffs.push(...diffs);
     if (open && open.calls > 1) {
       open.calls -= 1;
       return;
@@ -158,6 +166,7 @@ export function createTurnEvents({
       ...open.mark,
       ...(kind.target && !open.mark.target ? { target: kind.target } : {}),
       ...(kind.toolName && !open.mark.toolName ? { toolName: kind.toolName } : {}),
+      ...(open.diffs.length > 0 ? { diffs: stepDiffs(open.diffs, secretValues) } : {}),
     };
     await append(owned(runEvents.stepFinished(name, finished, now()), subagent));
   };
@@ -183,7 +192,12 @@ export function createTurnEvents({
         await startStep(output.name, output.subagent, output.waits, kindMark(output, secretValues));
       }
       if (output.kind === 'step_finished') {
-        await finishStep(output.name, output.subagent, kindMark(output, secretValues));
+        await finishStep(
+          output.name,
+          output.subagent,
+          kindMark(output, secretValues),
+          output.diffs,
+        );
       }
       if (output.kind === 'file_focus') await append(runEvents.fileFocus(output));
       if (output.kind === 'thought_delta') await think(output.delta);

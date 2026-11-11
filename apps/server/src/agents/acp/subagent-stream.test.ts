@@ -36,6 +36,13 @@ describe('sub-agent session routing', () => {
     expect(route(update)).toBe(update);
   });
 
+  it('drops a title a sub-agent session reports', () => {
+    const route = createSubagentRouter();
+    route(spawned('root', 'sub-1'));
+    const title = notify('sub-1', { sessionUpdate: 'session_info_update', title: 'Child' });
+    expect(route(title)).toBeNull();
+  });
+
   it('turns a spawn into a marked update on the root session', () => {
     const route = createSubagentRouter();
     const result = routed(route(spawned('root', 'a')));

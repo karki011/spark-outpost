@@ -138,6 +138,23 @@ describe('applyRunEvent', () => {
     expect(state.status).toBe('cancelled');
   });
 
+  it('carries the diffs of a finished edit onto its step and its view', () => {
+    const diffs = [{ path: 'a.ts', added: 1, removed: 0, oldText: null, newText: 'x\n' }];
+    const state = replay([
+      [1, { type: EventType.STEP_STARTED, stepName: 'Edit `a.ts`' }],
+      [
+        2,
+        {
+          type: EventType.STEP_FINISHED,
+          stepName: 'Edit `a.ts`',
+          metadata: { spark: { diffs } },
+        },
+      ],
+    ]);
+    expect(state.steps[0]?.diffs).toEqual(diffs);
+    expect(viewSteps(state.steps)[0]?.diffs).toEqual(diffs);
+  });
+
   it('finishes the step of the tool call that ended, not every step with that name', () => {
     const started = (toolCallId: string): RunEvent => ({
       type: EventType.STEP_STARTED,

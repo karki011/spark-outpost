@@ -87,8 +87,15 @@ export const ticketSubtaskSchema = z.object({
   title: z.string(),
   status: ticketStatusSchema,
   statusName: z.string(),
+  url: z.string().optional(),
 });
 export type TicketSubtask = z.infer<typeof ticketSubtaskSchema>;
+
+export const ticketRelatedSchema = ticketSubtaskSchema.extend({ url: z.string() });
+export type TicketRelated = z.infer<typeof ticketRelatedSchema>;
+
+export const ticketRelationSchema = ticketRelatedSchema.extend({ relation: z.string() });
+export type TicketRelation = z.infer<typeof ticketRelationSchema>;
 
 export const ticketDetailSchema = ticketSummarySchema.extend({
   description: z.string(),
@@ -96,6 +103,9 @@ export const ticketDetailSchema = ticketSummarySchema.extend({
   comments: z.array(ticketCommentSchema),
   links: z.array(ticketRefSchema),
   subtasks: z.array(ticketSubtaskSchema),
+  subtasksMore: z.boolean().optional(),
+  parent: ticketRelatedSchema.nullable().optional(),
+  relations: z.array(ticketRelationSchema).optional(),
   attachments: z.array(z.object({ name: z.string(), bytes: z.number().int().min(0) })).optional(),
 });
 export type TicketDetail = z.infer<typeof ticketDetailSchema>;

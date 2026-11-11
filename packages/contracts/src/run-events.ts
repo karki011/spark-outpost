@@ -19,6 +19,19 @@ export function parseRunEvent(value: unknown): RunEvent | null {
 export const SPARK_METADATA = 'spark';
 export const TOOL_NAME_CHARS = 120;
 
+export const STEP_DIFF_PATH_CHARS = 500;
+
+export const stepDiffSchema = z.object({
+  path: z.string().max(STEP_DIFF_PATH_CHARS),
+  added: z.number().int().nonnegative(),
+  removed: z.number().int().nonnegative(),
+  oldText: z.string().nullable().optional(),
+  newText: z.string().optional(),
+  truncated: z.boolean().optional(),
+  withheld: z.boolean().optional(),
+});
+export type StepDiff = z.infer<typeof stepDiffSchema>;
+
 const stepMarkSchema = z.object({
   toolCallId: z.string().optional(),
   interrupted: z.boolean().optional(),
@@ -29,6 +42,7 @@ const stepMarkSchema = z.object({
   toolKind: z.string().max(40).optional(),
   toolName: z.string().max(TOOL_NAME_CHARS).optional(),
   target: z.string().max(200).optional(),
+  diffs: z.array(stepDiffSchema).optional(),
 });
 export type StepMark = z.infer<typeof stepMarkSchema>;
 

@@ -2,7 +2,7 @@ import './map-toolbar.css';
 import type { ReactNode, RefObject } from 'react';
 import type { Project, ProjectMap } from '@spark-outpost/contracts';
 import type { RepoFile } from '../chat/project/use-file-search.ts';
-import { SparkleIcon } from '../ui/icons.tsx';
+import { SparkleIcon, SpinnerIcon } from '../ui/icons.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import type { BuildStages } from './build-stages.ts';
@@ -23,6 +23,7 @@ interface MapHeaderProps {
   onView: (view: MapViewId) => void;
   changes: { on: boolean; count: number | null; chat: string | null };
   dependents: boolean;
+  running: { on: boolean; count: number };
   reviewOpen: boolean;
   toCheck: number;
   onProjects: (ids: string[]) => void;
@@ -30,6 +31,7 @@ interface MapHeaderProps {
   onPick: (file: RepoFile) => void;
   onChanges: (on: boolean) => void;
   onDependents: (on: boolean) => void;
+  onRunning: (on: boolean) => void;
   onReview: () => void;
 }
 
@@ -125,6 +127,20 @@ export function MapHeader(props: MapHeaderProps) {
             <span className="map-lbl">Include dependents</span>
           </ToggleChip>
         )}
+        <ToggleChip
+          on={props.running.on}
+          disabled={props.running.count === 0 && !props.running.on}
+          tip={
+            props.running.count > 0
+              ? 'Mark the files chats are changing right now'
+              : 'No chat is working in this project right now'
+          }
+          icon={<SpinnerIcon />}
+          onToggle={props.onRunning}
+        >
+          <span className="map-lbl">Running chats</span>
+          {props.running.count > 0 && <span className="map-cnt">{props.running.count}</span>}
+        </ToggleChip>
         <button
           type="button"
           className="map-quiet"

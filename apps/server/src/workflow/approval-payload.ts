@@ -3,8 +3,7 @@ import type { ApprovalPayload } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
 import { shortCommand } from '../approvals/policy-blocked.ts';
 import type { Asking } from './approval-options.ts';
-
-const DIFF_BUDGET = 64 * 1024;
+import { createDiffBudget } from './diff-budget.ts';
 
 function relativeLabel(request: ApprovalRequest, target: string): string {
   for (const root of request.roots) {
@@ -41,22 +40,11 @@ export function refusedSubject(request: ApprovalRequest): string {
 }
 
 export function approvalPayload(request: ApprovalRequest, asking: Asking): ApprovalPayload {
-  let budget = DIFF_BUDGET;
-  let truncated = false;
-  const cut = (text: string) => {
-    if (text.length <= budget) {
-      budget -= text.length;
-      return text;
-    }
-    truncated = true;
-    const kept = text.slice(0, Math.max(0, budget));
-    budget = 0;
-    return kept;
-  };
+  const budget = createDiffBudget();
   const diffs = request.diffs.map((diff) => ({
     path: relativeLabel(request, diff.path),
-    oldText: diff.oldText === null ? null : cut(diff.oldText),
-    newText: cut(diff.newText),
+    oldText: diff.oldText === null ? null : budget.cut(diff.oldText),
+    newText: budget.cut(diff.newText),
   }));
   return {
     command: request.command,
@@ -64,7 +52,7 @@ export function approvalPayload(request: ApprovalRequest, asking: Asking): Appro
     paths: request.paths.map((target) => relativeLabel(request, target)),
     fullPaths: request.paths,
     diffs,
-    truncated,
+    truncated: budget.truncated,
     ...(request.plan ? { plan: request.plan } : {}),
     ...(asking.forcePush ? { forcePush: asking.forcePush } : {}),
     ...(asking.instructionFiles ? { instructionFiles: asking.instructionFiles } : {}),

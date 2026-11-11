@@ -11,31 +11,31 @@ About 2 minutes.
 ## See what's happening
 
 1. The working line shows the step and time.
-2. Answered cards and flags stay put; waiting cards sit last.
+2. Answered cards and flags stay; waiting cards sit last.
 3. Summaries separate commands **passed** from tools **done**.
 4. Browser, web, page and Mac steps get rows.
 5. Code Mode labels discovery and reads; failures expand.
-6. A done to-do folds.
-7. Sidebar blobs show the **Agent TV** team.
-8. **View agents** opens **Work**; over four workers become clickable faces.
-9. **Message** opens that chat’s composer.
-10. **Ask lead to redirect** drafts in that chat.
+6. Edits show **+N −M** and open as diffs.
+7. A done to-do folds.
+8. Sidebar blobs show the **Agent TV** team.
+9. **View agents** opens **Work**; over four become clickable faces.
+10. **Message** opens that chat’s composer; **Ask lead to redirect** drafts in that chat.
 
 **Open in terminal** shows failures in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
-1. **Stop** or **Esc** also stops sub-agents and background work.
+1. **Stop** or **Esc** stops sub-agents and background work.
 
 ## Background work
 
 **Stop background tasks** or **Stop waiting** ends **Waiting on 1 background agent** or Claude’s **Sleeping until 10:48**.
 
-Waits last 30 idle minutes; resumed turns show **Continued on its own**.
+Waits last 30 minutes; resumed turns show **Continued on its own**.
 
 ## Queue messages
 
-Files need no text. Queues survive restarts; unsent text stays in this browser.
+Queues survive restarts; unsent text stays in this browser.
 
 1. During a turn, **Enter** queues a message.
 2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.

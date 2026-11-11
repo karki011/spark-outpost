@@ -375,7 +375,7 @@ function ChatShell({ entering }: { entering: boolean }) {
             <Suspense
               fallback={<main className="page" aria-label="Project map" aria-busy="true" />}
             >
-              <MapPage onOpenInChat={chatAboutFile} />
+              <MapPage onOpenInChat={chatAboutFile} onOpenChat={openChat} />
             </Suspense>
           )}
           {view === 'docs' && (

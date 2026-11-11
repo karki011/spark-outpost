@@ -46,6 +46,8 @@ interface TicketDetailProps {
   onAssign: () => void;
   onStart: () => void;
   onOpenChat: (conversationId: string) => void;
+  loaded: ReadonlySet<string>;
+  onOpenLinked: (source: TicketSourceId, key: string) => void;
   onToast: (toast: ToastSpec) => void;
 }
 
@@ -112,6 +114,8 @@ export function TicketDetail({
   onAssign,
   onStart,
   onOpenChat,
+  loaded,
+  onOpenLinked,
   onToast,
 }: TicketDetailProps) {
   const source = ticketSourceNames[ticket.source];
@@ -308,7 +312,14 @@ export function TicketDetail({
         </dl>
         <LinkedWork ticket={inbox} trackerLinks={trackerLinks} onOpenChat={onOpenChat} />
         {!pullsFirst && pulls}
-        <TicketBody view={view.data} loading={view.isPending} error={view.error} source={source} />
+        <TicketBody
+          view={view.data}
+          loading={view.isPending}
+          error={view.error}
+          source={source}
+          loaded={loaded}
+          onOpenLinked={onOpenLinked}
+        />
       </div>
     </aside>
   );

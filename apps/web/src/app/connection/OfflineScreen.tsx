@@ -2,26 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { BlobScout } from '../../brand/BlobScout.tsx';
 import { usePageHidden } from '../../ui/use-page-hidden.ts';
 import { prefersReducedMotion, useReducedMotion } from '../../ui/motion.ts';
-import { describeFailure, type FailureKind } from './connection-failure.ts';
+import { backOnlineBody, isMacUnreachable, offlineCopy, wakeHelp } from './connection-copy.ts';
+import { describeFailure } from './connection-failure.ts';
 import { markConnectionLost } from './connection-store.ts';
 import { FailureDetails } from './FailureDetails.tsx';
 import { OfflineCrew } from './OfflineCrew.tsx';
+import { rememberedRemoteClient } from './remote-hint.ts';
 import { reconnectLabel, useAutoRetry } from './use-auto-retry.ts';
 import './connection.css';
 import './offline-crew.css';
-
-const COPY: Record<FailureKind, { title: string; body: string; mood: 'sleep' | 'sad' }> = {
-  unreachable: {
-    title: 'Taking a quick nap',
-    body: "The Spark Outpost server isn't answering. It may be restarting.",
-    mood: 'sleep',
-  },
-  server: {
-    title: 'Feeling a little dizzy',
-    body: 'Something went wrong on the server.',
-    mood: 'sad',
-  },
-};
 
 const CELEBRATE_MS = 1400;
 const STILL_CELEBRATE_MS = 600;
@@ -67,7 +56,9 @@ export function OfflineScreen<T>({ error, failedAt, onRetry, onBack }: OfflineSc
     setTimeout(() => onBack(result), prefersReducedMotion() ? STILL_CELEBRATE_MS : CELEBRATE_MS);
   });
   const failure = describeFailure(retry.lastFailure?.error ?? error);
-  const copy = COPY[failure.kind];
+  const [remote] = useState(rememberedRemoteClient);
+  const copy = offlineCopy(failure.kind, remote);
+  const help = back ? '' : wakeHelp(failure.kind, remote, retry.failedAttempts);
   const mood = back ? 'happy' : startled ? 'alert' : copy.mood;
 
   useEffect(() => markConnectionLost(), []);
@@ -98,7 +89,7 @@ export function OfflineScreen<T>({ error, failedAt, onRetry, onBack }: OfflineSc
           </div>
         </div>
         <h1 id="offline-title">{back ? 'Back online!' : copy.title}</h1>
-        <p className="offline-body">{back ? 'The server is answering again.' : copy.body}</p>
+        <p className="offline-body">{back ? backOnlineBody(remote) : copy.body}</p>
         <div className="offline-retry" hidden={back}>
           <span className="offline-count">
             {retry.retrying && <span className="spin" aria-hidden="true" />}
@@ -116,7 +107,18 @@ export function OfflineScreen<T>({ error, failedAt, onRetry, onBack }: OfflineSc
         <p className="offline-tries" role="status">
           {back ? 'Back online!' : attemptsLabel(retry.failedAttempts)}
         </p>
-        {!back && <FailureDetails failure={failure} failedAt={retry.lastFailure?.at ?? failedAt} />}
+        {help && (
+          <p className="offline-help" role="status">
+            {help}
+          </p>
+        )}
+        {!back && (
+          <FailureDetails
+            failure={failure}
+            failedAt={retry.lastFailure?.at ?? failedAt}
+            showRestartHint={!isMacUnreachable(failure.kind, remote)}
+          />
+        )}
       </div>
     </main>
   );

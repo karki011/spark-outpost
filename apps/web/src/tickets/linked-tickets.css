@@ -1,0 +1,23 @@
+.tk .tk-linked-group h5 {
+  margin: 10px 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.tk .tk-linked-row {
+  width: 100%;
+  min-height: 28px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tk .tk-linked-row:hover {
+  background: var(--raise);
+}

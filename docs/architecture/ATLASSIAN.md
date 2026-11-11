@@ -41,6 +41,10 @@ Confluence calls use REST v2 (`/wiki/api/v2/pages`, `/footer-comments`, `/spaces
 - Agent Markdown becomes Confluence storage XHTML in `atlassian/confluence-format.ts`: headings, paragraphs, lists, quotes, code blocks, bold, italic, inline code and `http(s)` links. Everything else is escaped text, so an agent cannot write macros or raw markup. Pages are read back from storage to text.
 - Errors: 401 asks to reconnect, 403 and 404 say the account can't see the item, 429 says when to try again from `Retry-After`; nothing is changed on any of them.
 
+### Ticket detail relations
+
+The inbox's ticket detail (`jira.ts` `getTicket`) adds `parent`, `issuelinks` and `subtasks` to its one issue request and returns `parent`, `relations` and up to 50 `subtasks` (`subtasksMore` past that), read leniently in `jira-relations.ts`: a missing or odd field is an empty list, never a failed ticket. Read only, no extra request per link, and not part of any agent tool.
+
 ## Tests
 
 `apps/server/test/fake-confluence.ts` and the Jira fake (`fake-jira.ts`, `fake-jira-edits.ts`) serve both products from one origin, with faults for 409, 429 and an unreachable Confluence. DB tests cover connect and products, the migration, both tools' approval paths and conflicts; `tests/browser/atlassian-connector.spec.ts` covers the card, the disconnect dialog and the two cards, with axe in every theme.
