@@ -211,6 +211,11 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
     const blocks = turn.live?.continuation
       ? null
       : await firstBlocks(turn, continued, promptOptions, folder, mapper, push, definition);
+    if (signal.aborted) {
+      stopRequests?.();
+      signal.removeEventListener('abort', cancel);
+      return 'cancelled';
+    }
     const stopReason = await runPrompts({
       session: {
         prompt: (sent) => session.prompt(sent),

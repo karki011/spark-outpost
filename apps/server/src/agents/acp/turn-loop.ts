@@ -121,7 +121,9 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
     const sent = loop.folder
       .prepare(attachments, loop.followUp.support ?? TEXT_ONLY)
       .then((paths) =>
-        session.prompt(followUpBlocks(text, { ...loop.followUp, attachments, paths })),
+        signal.aborted
+          ? undefined
+          : session.prompt(followUpBlocks(text, { ...loop.followUp, attachments, paths })),
       );
     failure = untilFailure(sent);
   };

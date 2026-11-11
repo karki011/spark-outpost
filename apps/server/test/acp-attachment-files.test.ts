@@ -76,7 +76,7 @@ const attachmentFolders = () =>
 async function run(
   provider: typeof claude,
   prompt: string,
-  options: { roots?: string[]; abortOnReply?: boolean } = {},
+  options: { roots?: string[]; abortOnReply?: boolean; abortAtOnce?: boolean } = {},
 ) {
   const controller = new AbortController();
   const outputs: ProviderOutput[] = [];
@@ -91,6 +91,7 @@ async function run(
       signal: controller.signal,
     })) {
       outputs.push(output);
+      if (options.abortAtOnce) controller.abort();
       if (options.abortOnReply && replyText(outputs).includes('"files"')) controller.abort();
     }
   } catch (caught) {
@@ -98,7 +99,7 @@ async function run(
   }
   const text = replyText(outputs);
   const seen = text.startsWith('{') ? (JSON.parse(text) as Seen) : null;
-  return { seen, error };
+  return { seen, error, text };
 }
 
 describe('file attachments reaching an ACP agent', { timeout: 30_000 }, () => {
@@ -139,6 +140,13 @@ describe('file attachments reaching an ACP agent', { timeout: 30_000 }, () => {
     expect(seen!.texts.join('\n')).toContain(
       '[File not shown: report.pdf. This turn cannot open files.]',
     );
+    expect(attachmentFolders()).toEqual([]);
+  });
+
+  it('sends no prompt when the run is stopped while the files are being prepared', async () => {
+    const { seen, text } = await run(codex, '#blocks #files', { abortAtOnce: true });
+    expect(seen).toBeNull();
+    expect(text).toBe('');
     expect(attachmentFolders()).toEqual([]);
   });
 
