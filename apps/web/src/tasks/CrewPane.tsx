@@ -3,7 +3,7 @@ import { CrewMemberRow } from '../crew/CrewMemberRow.tsx';
 import { modelLabel, roleLabel, type CrewAgent } from '../crew/crew-model.ts';
 
 function jobLine(agent: CrewAgent, piece: string | undefined): string {
-  return [piece ?? roleLabel(agent), modelLabel(agent)].join(' · ');
+  return [piece ?? roleLabel(agent), modelLabel(agent)].filter(Boolean).join(' · ');
 }
 
 interface CrewPaneProps {

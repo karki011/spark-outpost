@@ -2,7 +2,12 @@ import './subagents-line.css';
 import { createContext, use, useId, useState } from 'react';
 import type { SubagentRow } from '@spark-outpost/contracts';
 import { ChatFace } from '../../brand/ChatFace.tsx';
-import { workerIdentity, workerPresentation, workerRole } from '../../crew/worker-identity.ts';
+import {
+  workerIdentity,
+  workerModelLabel,
+  workerPresentation,
+  workerRole,
+} from '../../crew/worker-identity.ts';
 import { AgentCards } from './AgentCards.tsx';
 import type { AgentFocus } from './agent-board.ts';
 import { agentCounts, agentsLine, allDoneLine } from './agent-cards.ts';
@@ -26,13 +31,15 @@ function Workers({ rows, live, compact, onPick }: WorkersProps) {
         const role = workerRole(row.name);
         const presentation = workerPresentation(row.state, live);
         const faceOnly = compact && row.state === 'done';
+        const model = workerModelLabel(row.usage);
+        const described = [row.name, model, presentation.label].filter(Boolean).join(', ');
         return (
           <li key={row.id} className="sl-worker" data-worker-id={row.id} data-state={row.state}>
             <button
               type="button"
               className="sl-face"
-              aria-label={`${row.name}, ${presentation.label}`}
-              title={[row.name, row.task].filter(Boolean).join(' · ')}
+              aria-label={described}
+              title={[row.name, model, row.task].filter(Boolean).join(' · ')}
               onClick={() => onPick(row.id)}
             >
               <ChatFace chatId={workerIdentity(row.id)} size="row" state={presentation.face} />

@@ -1,5 +1,5 @@
 import { friendlyStep, subagentUsageParts, type SubagentRow } from '@spark-outpost/contracts';
-import { workerRole } from '../../crew/worker-identity.ts';
+import { workerModelLabel, workerRole } from '../../crew/worker-identity.ts';
 import { subagentDurationMs } from './subagent-view.ts';
 
 export interface AgentCounts {
@@ -98,13 +98,15 @@ function shortSeconds(ms: number): string {
 }
 
 export function agentMeta(row: SubagentRow): string {
+  const model = workerModelLabel(row.usage);
   if (row.state === 'working') {
-    return subagentUsageParts({ steps: row.steps }, null).join(' · ');
+    return [model, ...subagentUsageParts({ steps: row.steps }, null)].filter(Boolean).join(' · ');
   }
   const ms = row.usage?.durationMs ?? subagentDurationMs(row);
   const parts = [
     ms !== null && ms !== undefined ? shortSeconds(ms) : null,
     row.usage?.tokens !== undefined ? compactTokens(row.usage.tokens) : null,
   ].filter((part): part is string => part !== null);
-  return parts.length > 0 ? parts.join(' · ') : subagentUsageParts(row, null).join(' · ');
+  const rest = parts.length > 0 ? parts : subagentUsageParts(row, null);
+  return [model, ...rest].filter(Boolean).join(' · ');
 }

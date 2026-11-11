@@ -1,6 +1,7 @@
 import * as acp from '@agentclientprotocol/sdk/unstable';
 import { z } from 'zod';
 import { objectFields } from './object-fields.ts';
+import { subagentConfiguration } from './subagent-config.ts';
 import { reportedByAdapter, reportedSchema } from './subagent-report.ts';
 
 export const SUBAGENT_SESSIONS_CAPABILITY = 'nativeSubagentSessions';
@@ -31,6 +32,12 @@ const markSchema = z.discriminatedUnion('event', [
     reported: reportedSchema.optional(),
   }),
   z.object({ event: z.literal('update'), id: z.string().min(1) }),
+  z.object({
+    event: z.literal('config'),
+    id: z.string().min(1),
+    model: z.string().optional(),
+    effort: z.string().optional(),
+  }),
   z.object({
     event: z.literal('task'),
     id: z.string().min(1),
@@ -126,6 +133,10 @@ function unmarked(update: UpdateMessage['params']['update']): UpdateMessage['par
   return { ...update, _meta: meta };
 }
 
+function namesParentToolUse(update: UpdateMessage['params']['update']): boolean {
+  return typeof objectFields(objectFields(update._meta).claudeCode).parentToolUseId === 'string';
+}
+
 export function createSubagentRouter(): (message: unknown) => unknown {
   const parents = new Map<string, string>();
   const turns = new Set<string>();
@@ -170,6 +181,16 @@ export function createSubagentRouter(): (message: unknown) => unknown {
       const mark: SubagentMark = { event: 'ended', id, state, ...(reported ? { reported } : {}) };
       return control(parsed.data, rootOf(sessionId), mark);
     }
+    if (update.sessionUpdate === 'config_option_update' && parents.has(sessionId)) {
+      const configuration = subagentConfiguration(update.configOptions);
+      if (Object.keys(configuration).length === 0) return null;
+      return control(parsed.data, rootOf(sessionId), {
+        event: 'config',
+        id: sessionId,
+        ...configuration,
+      });
+    }
+    if (update.sessionUpdate === 'config_option_update' && namesParentToolUse(update)) return null;
     if (!parents.has(sessionId)) {
       return MARK_KEY in objectFields(update._meta)
         ? { ...parsed.data, params: { ...parsed.data.params, update: unmarked(update) } }

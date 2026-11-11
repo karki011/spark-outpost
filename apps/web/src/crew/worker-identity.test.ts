@@ -5,10 +5,13 @@ import {
   teamAgents,
   stageWorker,
   workerIdentity,
+  workerModel,
+  workerModelLabel,
   workerPresentation,
   workerRole,
 } from './worker-identity.ts';
 import { chatAgent } from './chat-agent.ts';
+import { headerMeta, modelLabel } from './crew-model.ts';
 import { run } from './test-run.ts';
 
 it('recognizes only explicit role names, never vague task descriptions', () => {
@@ -103,4 +106,47 @@ it('shows each worker once alongside the lead, preserving its identity', () => {
   expect(team[1]?.blobId).toBe(workerIdentity(worker.id));
   expect(teamAgents(team, [worker])).toEqual(team);
   expect(teamAgents([], [worker])).toEqual([]);
+});
+
+const unnamed: SubagentRow = {
+  ...emptySubagentRecord,
+  id: 'worker-m',
+  name: 'Builder',
+  task: '',
+  parentId: null,
+  state: 'working',
+  step: null,
+  startedAt: 1,
+  endedAt: null,
+};
+
+it('names a worker model the way the lead model is named, with its effort', () => {
+  expect(workerModel({ model: 'claude-opus-5-5', effort: 'high' })).toEqual({
+    model: 'Opus 5.5',
+    effort: 'high',
+  });
+  expect(workerModelLabel({ model: 'claude-opus-5-5', effort: 'high' })).toBe('Opus 5.5 · high');
+  expect(workerModelLabel({ model: 'gpt-5.5' })).toBe('gpt-5.5');
+  expect(workerModelLabel({ model: 'Opus 4.7' })).toBe('Opus 4.7');
+  expect(workerModelLabel({ model: 'opus' })).toBe('Opus');
+});
+
+it('shows nothing for a worker whose model is unknown, effort included', () => {
+  expect(workerModelLabel(undefined)).toBeNull();
+  expect(workerModelLabel({ effort: 'high' })).toBeNull();
+  expect(workerModelLabel({ model: 'default' })).toBeNull();
+  const lead = chatAgent(run({ status: 'running' }), [], false);
+  expect(modelLabel(stageWorker(unnamed, lead))).toBe('');
+  expect(modelLabel({ ...lead, model: null, effort: null })).toBe('default model');
+  expect(headerMeta(stageWorker(unnamed, lead))).not.toContain('default model');
+});
+
+it('puts the worker model and effort on the stage worker', () => {
+  const lead = chatAgent(run({ status: 'running' }), [], false);
+  const worker = stageWorker(
+    { ...unnamed, usage: { model: 'claude-opus-5-5', effort: 'low' } },
+    lead,
+  );
+  expect(worker).toMatchObject({ model: 'Opus 5.5', effort: 'low' });
+  expect(modelLabel(worker)).toBe('Opus 5.5 · low');
 });

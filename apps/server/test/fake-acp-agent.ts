@@ -20,6 +20,7 @@ import {
   heldTitleTurn,
   orphanedCommandTurn,
   subagentAsksTurn,
+  subagentModelTurn,
   subagentsTurn,
   wideSubagentTurn,
 } from './fake-acp-subagents.ts';
@@ -267,6 +268,7 @@ async function turn(
   if (text.includes(LATER_TRIGGER)) return laterTurn(client, sessionId, text, say, sessionCwd);
   if (text.includes('#heldtitle')) return heldTitleTurn(say);
   if (text.includes('#subagentswide')) return wideSubagentTurn(client, sessionId, say, signal);
+  if (text.includes('#subagentsmodel')) return subagentModelTurn(client, sessionId, say);
   if (text.includes('#subagentsask')) return subagentAsksTurn(client, sessionId, say);
   if (text.includes('#subagents')) {
     return subagentsTurn(client, sessionId, say, text.includes('#subagentshold') ? signal : null);

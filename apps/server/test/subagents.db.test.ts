@@ -207,6 +207,28 @@ describe("an agent's own sub-agents in a chat turn", { timeout: 40_000 }, () => 
     );
   });
 
+  it('stores the model a sub-agent reports before it ends and keeps the lead model out of it', async () => {
+    const { conversationId, runId } = await send('#subagentsmodel');
+    const run = await settled(runId);
+    expect(run.status).toBe('succeeded');
+    expect(run.usedModel ?? null).not.toBe('child-model-b');
+    expect(run.usedModel ?? null).not.toBe('child-model-c');
+    expect(run.model ?? null).toBeNull();
+    const events = await storedEvents(t.db, runId);
+    const reported = events.findIndex(
+      (event) =>
+        event.type === EventType.CUSTOM && JSON.stringify(event.value).includes('child-model-b'),
+    );
+    const finished = events.findIndex((event) => event.type === EventType.SUBAGENT_FINISHED);
+    expect(reported).toBeGreaterThan(0);
+    expect(reported).toBeLessThan(finished);
+    const detail = await getConversationDetail(t.db, conversationId);
+    expect(detail?.subagents?.[runId]?.[0]?.usage).toEqual({
+      model: 'child-model-b',
+      effort: 'low',
+    });
+  });
+
   it('leaves a chat without sub-agents as it was', async () => {
     const { conversationId, runId } = await send('Hi');
     expect((await settled(runId)).status).toBe('succeeded');

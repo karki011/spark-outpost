@@ -109,4 +109,20 @@ describe('an agent card', () => {
     ).toBe('48s · 61K tok');
     expect(agentMeta(row({ state: 'done', startedAt: 1_000, endedAt: 76_000 }))).toBe('1m 15s');
   });
+
+  it('leads the meta with the model and effort once they are known', () => {
+    const steps = [{ name: 'Read', done: false }];
+    const usage = { model: 'claude-opus-5-5', effort: 'high' };
+    expect(agentMeta(row({ steps, usage }))).toBe('Opus 5.5 · high · 1 step');
+    expect(
+      agentMeta(
+        row({
+          state: 'done',
+          usage: { ...usage, durationMs: 41_000, tokens: 3_000 },
+          endedAt: 9,
+        }),
+      ),
+    ).toBe('Opus 5.5 · high · 41s · 3K tok');
+    expect(agentMeta(row({ steps, usage: { effort: 'high' } }))).toBe('1 step');
+  });
 });

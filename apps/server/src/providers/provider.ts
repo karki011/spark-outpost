@@ -236,6 +236,7 @@ export interface SubagentReportedUsage {
   durationMs?: number | undefined;
   turns?: number | undefined;
   model?: string | undefined;
+  effort?: string | undefined;
   input?: number | undefined;
   cachedRead?: number | undefined;
   output?: number | undefined;

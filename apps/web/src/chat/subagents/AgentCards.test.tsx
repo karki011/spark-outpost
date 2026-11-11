@@ -139,4 +139,45 @@ describe('AgentsSection', () => {
     expect(name.getAttribute('aria-expanded')).toBe('true');
     expect(scrolled).toHaveBeenCalledTimes(2);
   });
+
+  it('shows the model in the meta of a working and a done card, and nothing when unknown', () => {
+    const known: SubagentRow[] = [
+      { ...rows[0]!, usage: { ...rows[0]!.usage, model: 'claude-opus-5-5', effort: 'high' } },
+      { ...rows[1]!, usage: { model: 'gpt-5.5' } },
+      { ...rows[1]!, id: 'c', name: 'Unknown model', usage: { effort: 'high' } },
+    ];
+    render(<AgentCards rows={known} live />);
+    const card = (id: string) =>
+      document.querySelector<HTMLElement>(`[data-worker-id="${id}"] .ac-meta`)!.textContent;
+    expect(card('a')).toBe('Opus 5.5 · high · 48s · 61K tok');
+    expect(card('b')).toBe('gpt-5.5 · 2 steps');
+    expect(card('c')).toBe('2 steps');
+  });
+
+  it('keeps an expanded card open and focused when another worker finishes and the order changes', () => {
+    const working = (id: string, name: string): SubagentRow => ({
+      ...rows[1]!,
+      id,
+      name,
+      task: `Task for ${name}`,
+    });
+    const first = working('x', 'First worker');
+    const second = working('y', 'Second worker');
+    const { rerender } = render(<AgentCards rows={[first, second]} live />);
+    const name = screen.getByRole('button', { name: 'Second worker' });
+    fireEvent.click(name);
+    name.focus();
+    const order = () =>
+      within(screen.getByRole('list', { name: 'Sub-agents' }))
+        .getAllByRole('listitem')
+        .flatMap((item) => (item.dataset.workerId ? [item.dataset.workerId] : []));
+    expect(order()).toEqual(['x', 'y']);
+
+    rerender(<AgentCards rows={[{ ...first, state: 'done', endedAt: 9 }, second]} live />);
+    expect(order()).toEqual(['y', 'x']);
+    const same = screen.getByRole('button', { name: 'Second worker' });
+    expect(same).toBe(name);
+    expect(same.getAttribute('aria-expanded')).toBe('true');
+    expect(document.activeElement).toBe(same);
+  });
 });

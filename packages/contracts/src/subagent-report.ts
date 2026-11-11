@@ -8,6 +8,7 @@ export const subagentUsageSchema = z.object({
   durationMs: z.number().nonnegative().optional(),
   turns: z.number().int().nonnegative().optional(),
   model: z.string().optional(),
+  effort: z.string().optional(),
   costUsd: z.number().nonnegative().optional(),
 });
 export type SubagentUsage = z.infer<typeof subagentUsageSchema>;
@@ -100,6 +101,5 @@ export function subagentUsageParts(
     usage?.tokens !== undefined ? `${compact(usage.tokens)} tokens` : null,
     usage?.costUsd !== undefined ? cost(usage.costUsd) : null,
     shownMs !== null && shownMs !== undefined ? seconds(shownMs) : null,
-    usage?.model ?? null,
   ].filter((part): part is string => part !== null);
 }

@@ -162,12 +162,11 @@ describe('sub-agent roster', () => {
             tokens: 34_000,
             costUsd: 0.04,
             durationMs: 95_000,
-            model: 'gpt-6-luna',
           },
         },
         null,
       ),
-    ).toEqual(['2 turns', '34k tokens', '$0.04', '1m 35s', 'gpt-6-luna']);
+    ).toEqual(['2 turns', '34k tokens', '$0.04', '1m 35s']);
   });
 
   it('follows the waiting count and clears it when the run ends', () => {

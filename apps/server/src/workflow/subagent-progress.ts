@@ -74,8 +74,8 @@ export function createSubagentProgress({
   const reported = (output: ProviderOutput): RunEvent[] => {
     if (output.kind !== 'subagent_report') return [];
     const { usage, files, commands, message, summary } = output.report;
-    const { tokens, toolUses, durationMs, turns, model, costUsd } = usage ?? {};
-    const shown = { tokens, toolUses, durationMs, turns, model, costUsd };
+    const { tokens, toolUses, durationMs, turns, model, effort, costUsd } = usage ?? {};
+    const shown = { tokens, toolUses, durationMs, turns, model, effort, costUsd };
     const known = Object.fromEntries(
       Object.entries(shown).filter(([, value]) => value !== undefined),
     );

@@ -43,6 +43,27 @@ export async function subagentsTurn(
   await say('Launching. ');
   await spawn(rootId, 'sub-1', 'Explore', 'Find the routes');
   await spawn(rootId, 'sub-2', 'Tests', 'Run the tests');
+  await send('sub-1', {
+    sessionUpdate: 'config_option_update',
+    configOptions: [
+      {
+        id: 'model',
+        name: 'Model',
+        category: 'model',
+        type: 'select',
+        currentValue: 'claude-opus-5-5',
+        options: [{ value: 'claude-opus-5-5', name: 'Opus 5.5' }],
+      },
+      {
+        id: 'effort',
+        name: 'Effort',
+        category: 'thought_level',
+        type: 'select',
+        currentValue: 'high',
+        options: [{ value: 'high', name: 'High' }],
+      },
+    ],
+  });
   await tool('sub-1', 'c1', 'Read routes.ts');
   await send('sub-1', {
     sessionUpdate: 'agent_message_chunk',
@@ -99,6 +120,56 @@ export async function subagentsTurn(
   await send(rootId, completed);
   await end(rootId, 'sub-2', 'failed');
   await say('All done');
+  return 'end_turn';
+}
+
+export async function subagentModelTurn(
+  client: acp.AgentContext,
+  rootId: string,
+  say: Say,
+): Promise<acp.StopReason> {
+  const send = (sessionId: string, update: unknown) =>
+    client.notify(acp.methods.client.session.update, { sessionId, update } as never);
+  const option = (id: string, category: string, value: string) => ({
+    id,
+    name: id,
+    category,
+    type: 'select',
+    currentValue: value,
+    options: [{ value, name: value }],
+  });
+  await send(rootId, {
+    sessionUpdate: 'subagent_spawned',
+    subagentSessionId: 'sub-1',
+    name: 'Explore',
+    task: 'Find the routes',
+    capabilities: {},
+  });
+  await send('sub-1', {
+    sessionUpdate: 'config_option_update',
+    configOptions: [
+      option('model', 'model', 'child-model-b'),
+      option('effort', 'thought_level', 'low'),
+    ],
+  });
+  await send(rootId, {
+    sessionUpdate: 'config_option_update',
+    configOptions: [option('model', 'model', 'child-model-c')],
+    _meta: { claudeCode: { parentToolUseId: 'toolu_1' } },
+  });
+  await send('sub-1', {
+    sessionUpdate: 'tool_call',
+    toolCallId: 'c1',
+    title: 'Read routes.ts',
+    kind: 'read',
+    status: 'in_progress',
+  });
+  await send(rootId, {
+    sessionUpdate: 'subagent_state_update',
+    subagentSessionId: 'sub-1',
+    state: 'completed',
+  });
+  await say('Done');
   return 'end_turn';
 }
 
