@@ -46,6 +46,8 @@ Plain folders offer **Make it a git repository**.
 
 Markdown styles as you type; select text or open **+ → Formatting** ([keys](keyboard-shortcuts.md#chats)). Agent setup is in **…** under the box.
 
+A folder with hooks or MCP servers asks **Trust this folder?**: **Trust**, **Not now** or **Review**.
+
 Web links show as cards; nothing is fetched.
 
 ## Share a chat with another chat
