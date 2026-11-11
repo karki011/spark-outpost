@@ -18,6 +18,7 @@ export function newTurnWatch(db: Db): TurnWatch {
   let runId: string | null = null;
   let firstTextAt: number | null = null;
   let doneAt: number | null = null;
+  let status: string | null = null;
   let checking = false;
   let again = false;
   let finish: (() => void) | null = null;
@@ -32,8 +33,13 @@ export function newTurnWatch(db: Db): TurnWatch {
       if (rows.length > 0) firstTextAt = at;
     }
     if (doneAt === null) {
-      const { rows } = await db.query('SELECT finished_at FROM runs WHERE id = $1', [runId]);
-      if (rows[0]?.finished_at) doneAt = performance.now();
+      const { rows } = await db.query('SELECT finished_at, status FROM runs WHERE id = $1', [
+        runId,
+      ]);
+      if (rows[0]?.finished_at) {
+        doneAt = performance.now();
+        status = rows[0].status;
+      }
     }
     if (doneAt !== null) finish?.();
   };
@@ -79,7 +85,9 @@ export function newTurnWatch(db: Db): TurnWatch {
         clearInterval(timer);
         clearTimeout(deadline);
       }
-      return { firstTextMs: (firstTextAt ?? doneAt!) - began, doneMs: doneAt! - began };
+      if (status !== 'succeeded') throw new Error(`The turn ended as ${status}, not succeeded.`);
+      if (firstTextAt === null) throw new Error('The turn finished without any reply text.');
+      return { firstTextMs: firstTextAt - began, doneMs: doneAt! - began };
     },
   };
 }

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { EDGES, PROJECT, SERVER, WEB, sampleDetail, sampleMap } from './map-samples.ts';
-import { activeChatsIn, NO_MARKS, runningMarks, type RunningChat } from './running-model.ts';
+import {
+  activeChatsIn,
+  NO_MARKS,
+  runningMarks,
+  wantedPaths,
+  type RunningChat,
+} from './running-model.ts';
 import { areaKey, buildScene } from './scene.ts';
 
 const input = [{ projectId: PROJECT, name: 'app', map: sampleMap(PROJECT, [WEB, SERVER]) }];
@@ -96,5 +102,32 @@ describe('runningMarks', () => {
     expect(stray.changed.size).toBe(0);
     expect(stray.areas.size).toBe(0);
     expect(NO_MARKS.perChat).toEqual([]);
+  });
+});
+
+describe('the files to locate for the overlay', () => {
+  const working = (id: string, projectId: string, paths: string[]): RunningChat => ({
+    id,
+    title: id,
+    status: 'running',
+    projectId,
+    paths,
+  });
+  const chats = [
+    working('a', 'p1', ['one.ts']),
+    working('b', 'p2', ['two.ts']),
+    working('c', 'p1', ['three.ts']),
+  ];
+
+  it('takes every chat of the first project when none is selected', () => {
+    expect(wantedPaths(chats, null)).toEqual({ projectId: 'p1', paths: ['one.ts', 'three.ts'] });
+  });
+
+  it('follows the selected chat into its own project', () => {
+    expect(wantedPaths(chats, 'b')).toEqual({ projectId: 'p2', paths: ['two.ts'] });
+  });
+
+  it('wants nothing when no chat is working', () => {
+    expect(wantedPaths([], null)).toBeNull();
   });
 });

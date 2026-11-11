@@ -52,3 +52,17 @@ export function runningMarks(
   }
   return { changed, areas, perChat };
 }
+
+export function wantedPaths(
+  chats: readonly RunningChat[],
+  focused: string | null,
+): { projectId: string; paths: string[] } | null {
+  const lead = chats.find((chat) => chat.id === focused) ?? chats[0];
+  if (!lead) return null;
+  const paths = chats
+    .filter(
+      (chat) => chat.projectId === lead.projectId && (focused === null || chat.id === focused),
+    )
+    .flatMap((chat) => chat.paths);
+  return { projectId: lead.projectId, paths };
+}

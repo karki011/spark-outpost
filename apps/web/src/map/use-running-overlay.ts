@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react';
 import type { Highlights } from './map-model.ts';
-import { NO_MARKS, runningMarks, type RunningChat, type RunningMarks } from './running-model.ts';
+import {
+  NO_MARKS,
+  runningMarks,
+  wantedPaths,
+  type RunningChat,
+  type RunningMarks,
+} from './running-model.ts';
 import type { Scene } from './scene.ts';
 import { useLocate } from './use-locate.ts';
 import { useRunningChats } from './use-running-chats.ts';
@@ -30,16 +36,10 @@ export function useRunningOverlay(
     () => (on ? runningMarks(scene, running.chats, focused) : NO_MARKS),
     [on, scene, running.chats, focused],
   );
-  const wanted = useMemo(() => {
-    const first = running.chats[0];
-    if (!on || !first) return null;
-    const paths = running.chats
-      .filter(
-        (chat) => chat.projectId === first.projectId && (focused === null || chat.id === focused),
-      )
-      .flatMap((chat) => chat.paths);
-    return { projectId: first.projectId, paths };
-  }, [on, running.chats, focused]);
+  const wanted = useMemo(
+    () => (on ? wantedPaths(running.chats, focused) : null),
+    [on, running.chats, focused],
+  );
   useLocate(scene, wanted, require);
   const lit = useMemo(
     () =>
