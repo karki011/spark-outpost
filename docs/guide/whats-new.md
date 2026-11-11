@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                           | What to do                                                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Remote control: devices list, groups   | [Use your phone](use-your-phone.md).                                                        |
 | Left bar shortcuts ⌥⌘1–⌥⌘9             | [Keyboard shortcuts](keyboard-shortcuts.md).                                                |
 | Trust a folder from its chip           | [Start a chat](start-a-chat.md).                                                            |
 | Full Disk Access notice (Mac)          | [Mac privacy](mac-privacy.md#full-disk-access).                                             |
@@ -36,4 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Codex asks while it works              | Answer its [question card](cards.md) before the turn ends.                                  |
 | Adapter version per run                | The audit's **By run** table.                                                               |
 | Codex mode names                       | Approve for me is now **Auto review**: [Workspace access](modes-and-levels.md#agent-modes). |
-| Blaze, Acid and Violet tints           | **Settings → Appearance**.                                                                  |

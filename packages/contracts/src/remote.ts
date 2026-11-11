@@ -102,7 +102,8 @@ export const REMOTE_SWITCH_GROUPS: readonly RemoteSwitchGroup[] = [
   {
     id: 'high-risk',
     title: 'High risk',
-    description: 'Off unless you need it. A lost phone could do real damage with these.',
+    description:
+      'Turn these off unless you need them. A lost phone could do real damage with these.',
     switches: ['highRiskCards', 'terminalApprove', 'signIns', 'reset', 'devices'],
   },
 ];
