@@ -9,15 +9,18 @@ export function AreaCrumb({
   scene,
   area,
   onBack,
+  onStartChat,
 }: {
   scene: Scene;
   area: number;
   onBack: () => void;
+  onStartChat: (projectId: string, path: string) => void;
 }) {
   const entry = scene.areas[area]!;
   const shares = kindShares(scene, area);
   const project =
     scene.projects.length > 1 ? scene.projects.find((p) => p.projectId === entry.projectId) : null;
+  const root = entry.area.root.replace(/^\.\/?/, '').replace(/\/$/, '');
   return (
     <div className="map-crumb map-glass" data-map-overlay>
       <button
@@ -44,6 +47,15 @@ export function AreaCrumb({
         ))}
       </div>
       <JevLabel area={entry.area} />
+      {root !== '' && (
+        <button
+          type="button"
+          className="map-btn"
+          onClick={() => onStartChat(entry.projectId, root)}
+        >
+          Open in chat
+        </button>
+      )}
     </div>
   );
 }

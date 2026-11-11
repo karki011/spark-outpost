@@ -19,15 +19,17 @@ import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { MapEmpty, MapUnreachable, projectListView } from './MapEmpty.tsx';
 import { MapFilters } from './MapFilters.tsx';
 import { MapHeader } from './MapHeader.tsx';
-import { OutlineView, type OutlineReveal } from './outline/OutlineView.tsx';
+import { OutlineView } from './outline/OutlineView.tsx';
 import { ReviewAreas } from './ReviewAreas.tsx';
+import { RunningChatsPanel } from './RunningChatsPanel.tsx';
 import { fileKey } from './scene.ts';
 import { SkyView, type SkyTargets } from './SkyView.tsx';
-import type { TreeReveal } from './tree/TreeView.tsx';
 import { useAreaReview } from './use-area-review.ts';
 import { useChatChanges } from './use-chat-changes.ts';
 import { useLocate, type Wanted } from './use-locate.ts';
 import { useMapData } from './use-map-data.ts';
+import { useReveals } from './use-reveals.ts';
+import { useRunningOverlay } from './use-running-overlay.ts';
 import { usePhone } from '../ui/breakpoints.ts';
 import { useMapSelection } from './use-map-selection.ts';
 import { useGroups, useViewSource } from './use-view-source.ts';
@@ -44,6 +46,7 @@ const TreeView = lazy(() => import('./tree/TreeView.tsx'));
 
 interface MapPageProps {
   onOpenInChat: (projectId: string, path: string) => void;
+  onOpenChat: (id: string) => void;
 }
 
 const ALL_FILTERS: Filters = {
@@ -57,7 +60,7 @@ const UNMATCHED_W = 344;
 const WIDE = 900;
 const RETRY_MS = 5_000;
 
-export function MapPage({ onOpenInChat }: MapPageProps) {
+export function MapPage({ onOpenInChat, onOpenChat }: MapPageProps) {
   const projectList = useQuery({
     queryKey: projectKeys.all,
     queryFn: projectsApi.list,
@@ -116,6 +119,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
     [changesOn, chatChanges.projectId, chatChanges.paths],
   );
   useLocate(scene, changedWanted, require);
+  const running = useRunningOverlay(scene, selected, lit, require);
   const [find, setFind] = useState<{ wanted: Wanted; nonce: number } | null>(null);
   const findState = useLocate(scene, find?.wanted ?? null, require);
   useEffect(() => {
@@ -210,27 +214,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
     () => ({ fly: flyTarget, area: areaTarget }),
     [flyTarget, areaTarget],
   );
-  const treeReveal = useMemo<TreeReveal | null>(() => {
-    if (flyTarget && (!areaTarget || flyTarget.nonce > areaTarget.nonce)) {
-      const file = scene.files[flyTarget.file]!;
-      return {
-        area: scene.areas[file.areaIndex]!.key,
-        file: flyTarget.file,
-        nonce: flyTarget.nonce,
-      };
-    }
-    return areaTarget ? { area: areaTarget.key, nonce: areaTarget.nonce } : null;
-  }, [flyTarget, areaTarget, scene]);
-  const outlineReveal = useMemo<OutlineReveal | null>(() => {
-    if (!treeReveal) return null;
-    if (treeReveal.file === undefined) return { area: treeReveal.area, nonce: treeReveal.nonce };
-    const file = scene.files[treeReveal.file]!;
-    return {
-      area: treeReveal.area,
-      file: { projectId: file.projectId, path: file.path },
-      nonce: treeReveal.nonce,
-    };
-  }, [treeReveal, scene]);
+  const { treeReveal, outlineReveal } = useReveals(scene, skyTargets);
 
   const openFile = useCallback(
     (index: number) => {
@@ -272,7 +256,8 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
     data,
     groups,
     filters,
-    changed: lit.changed,
+    changed: running.lit.changed,
+    running: running.marks.areas,
     changes: changesOn ? chatChanges : null,
     combined,
   });
@@ -307,7 +292,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
           bridges={data.bridges}
           combined={combined}
           filters={filters}
-          lit={lit}
+          lit={running.lit}
           sheetIndex={sheetIndex}
           flagged={flagged}
           flagHover={flagHover}
@@ -321,6 +306,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
           require={require}
           want={data.want}
           onFile={openFile}
+          onStartChat={onOpenInChat}
           onCloseSheet={() => setSheetKey(null)}
           onPath={setPathOpen}
           onLegendHide={() => setLegend(false)}
@@ -391,6 +377,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
           chat: chatChanges.chat?.title ?? null,
         }}
         dependents={dependentsOn}
+        running={{ on: running.on, count: running.count }}
         reviewOpen={reviewOpen}
         toCheck={scene.areas.filter((entry) => needsCheck(entry.area)).length}
         onProjects={(ids) => {
@@ -409,6 +396,10 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
           else setAnnouncement('Files changed in this chat are lit up.');
         }}
         onDependents={setDependentsOn}
+        onRunning={(on) => {
+          running.setOn(on);
+          if (on) setAnnouncement('Files that working chats changed are marked.');
+        }}
         onReview={() => {
           setReviewOpen((open) => !open);
           setSheetKey(null);
@@ -440,6 +431,14 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
             phase={phase}
             build={build}
             revealed={view === 'sky' ? revealed : null}
+          />
+        )}
+        {running.on && (
+          <RunningChatsPanel
+            overlay={running}
+            inset={inset}
+            onGoTo={goToFile}
+            onOpenChat={onOpenChat}
           />
         )}
         {showUnmatched && data.unmatched && (

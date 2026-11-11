@@ -31,6 +31,8 @@ It builds in the background ([Map status](statuses-and-limits.md#map-status)).
 2. Select the file for **Open in chat**, **Focus** and **Copy path**.
 3. Select a chip to hide or show a kind of area, file or link; **Shift**-click shows only that kind.
 4. Select **This chat's changes** to light up changed files; add **Include dependents**.
+5. Select **Running chats** to mark files chats are changing now; select a chat to show only its files.
+6. In an area, select **Open in chat** to draft a message. Nothing sends until you do.
 
 ## See what breaks if a file changes
 

@@ -250,4 +250,8 @@ It has:
 - an area review with the per-area category override (`ReviewAreas.tsx`, `use-area-review.ts`);
 - a file detail sheet that can open the file in a chat, and highlights for files changed in the
   latest chat and their dependents (`FileDetailSheet.tsx`, `use-chat-changes.ts`,
-  `CoreImpactNote.tsx`).
+  `CoreImpactNote.tsx`);
+- a **Running chats** overlay (`use-running-chats.ts`, `running-model.ts`, `RunningChatsPanel.tsx`):
+  active chats of the selected projects come from the conversation list and each one's files from
+  `GET /api/runs/:id/changes`, refetched on run and step events; marks reuse the changed-file ring
+  and the tree and outline counts, falling back to the area by folder.

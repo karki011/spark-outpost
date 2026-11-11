@@ -34,6 +34,7 @@ interface SkyViewProps {
   require: (keys: readonly string[]) => void;
   want: (candidates: readonly LoadCandidate[]) => void;
   onFile: (file: number) => void;
+  onStartChat: (projectId: string, path: string) => void;
   onCloseSheet: () => void;
   onPath: (open: boolean) => void;
   onLegendHide: () => void;
@@ -173,7 +174,14 @@ export function SkyView(props: SkyViewProps) {
         }}
       />
       <MapTooltip target={hover} scene={scene} changed={props.lit.changed} bounds={props.bounds} />
-      {openIndex !== null && <AreaCrumb scene={scene} area={openIndex} onBack={closeArea} />}
+      {openIndex !== null && (
+        <AreaCrumb
+          scene={scene}
+          area={openIndex}
+          onBack={closeArea}
+          onStartChat={props.onStartChat}
+        />
+      )}
       {props.legend && (
         <MapLegend
           area={openIndex !== null}

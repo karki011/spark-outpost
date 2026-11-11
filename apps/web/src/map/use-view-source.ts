@@ -13,6 +13,7 @@ interface ViewSourceInput {
   groups: readonly MapGroup[];
   filters: MapFilters;
   changed: ReadonlySet<number>;
+  running: ReadonlyMap<string, number>;
   changes: ChatChanges | null;
   combined: boolean;
 }
@@ -53,6 +54,7 @@ export function useViewSource({
   groups,
   filters,
   changed,
+  running,
   changes,
   combined,
 }: ViewSourceInput): TreeSource {
@@ -61,13 +63,14 @@ export function useViewSource({
   const changedPaths = changes?.paths;
   const changedAreas = useMemo(() => {
     const counts = new Map<string, number>();
+    for (const [key, count] of running) counts.set(key, count);
     if (!changedProject || !changedPaths) return counts;
     for (const path of changedPaths) {
       const key = areaForPath(scene, changedProject, path);
       if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
     }
     return counts;
-  }, [scene, changedProject, changedPaths]);
+  }, [scene, changedProject, changedPaths, running]);
   const areaLinks = useMemo(
     () =>
       maps.flatMap((map) =>

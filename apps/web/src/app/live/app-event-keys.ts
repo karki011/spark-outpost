@@ -1,5 +1,6 @@
 import type { QueryKey } from '@tanstack/react-query';
 import type { AppEvent } from '@spark-outpost/contracts';
+import { approvalKeys } from '../../api/approvals.ts';
 import { analyticsKeys } from '../../analytics/analytics-api.ts';
 import { agentTerminalKeys } from '../../api/agent-terminals.ts';
 import { chatPortsKey } from '../../api/chat-ports.ts';
@@ -108,20 +109,30 @@ function chatPreview(event: AppEvent): Invalidation[] {
   return id ? [{ queryKey: previewKeys.chat(id), exact: true }] : [];
 }
 
+function runChangesOf(event: AppEvent): Invalidation[] {
+  return event.runId ? [{ queryKey: approvalKeys.changes(event.runId), exact: true }] : [];
+}
+
 function outcome(event: AppEvent): Invalidation[] {
   return event.runId ? [{ queryKey: outcomeKeys.run(event.runId), exact: true }] : [];
 }
 
 function stepInvalidations(event: AppEvent, streamed: RunStreamed): Invalidation[] {
   if (!event.phase) {
-    return [list, ...conversationScoped(event, true), changeSummaries, ...terminalRemote(event)];
+    return [
+      list,
+      ...conversationScoped(event, true),
+      changeSummaries,
+      ...runChangesOf(event),
+      ...terminalRemote(event),
+    ];
   }
   const id = event.conversationId;
   const detail = event.runId && streamed(event.runId) ? [] : conversationScoped(event, false);
   return [
     ...detail,
     ...(id ? [{ queryKey: auditKeys.summary(id), exact: true }] : []),
-    ...(event.phase === 'finished' ? [changeSummaries] : []),
+    ...(event.phase === 'finished' ? [changeSummaries, ...runChangesOf(event)] : []),
     ...terminalRemote(event),
   ];
 }
@@ -154,6 +165,7 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
         analytics,
         outposts,
         ...outcome(event),
+        ...runChangesOf(event),
         ...terminalRemote(event),
       ];
     case 'step':
