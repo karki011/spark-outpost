@@ -1,5 +1,4 @@
 import { useId, useRef } from 'react';
-import { ATTACHMENT_ACCEPT } from '../../api/attachments.ts';
 import { AttachmentChips } from '../../chat/attachments/AttachmentChips.tsx';
 import type { AttachmentsState } from '../../chat/attachments/use-attachments.ts';
 import { PlusIcon } from '../../ui/icons.tsx';
@@ -83,7 +82,6 @@ export function FirstMessage({
             type="file"
             multiple
             hidden
-            accept={ATTACHMENT_ACCEPT}
             aria-label="Attach files"
             onChange={(event) => {
               attachments.add(Array.from(event.target.files ?? []));

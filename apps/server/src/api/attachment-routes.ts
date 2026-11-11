@@ -1,6 +1,10 @@
 import express, { Router, type NextFunction, type Request, type Response } from 'express';
-import { ATTACHMENT_IMAGE_MAX_BYTES } from '@spark-outpost/contracts';
-import { getAttachmentContent, saveAttachment } from '../persistence/attachments.ts';
+import { ATTACHMENT_FILE_MAX_BYTES } from '@spark-outpost/contracts';
+import {
+  getAttachmentContent,
+  saveAttachment,
+  type AttachmentFile,
+} from '../persistence/attachments.ts';
 import type { Db } from '../persistence/db.ts';
 import { UploadTooLargeError, isTooLarge, paramId } from './validation.ts';
 import { UPLOAD_NAME_HEADER } from './security.ts';
@@ -11,11 +15,11 @@ export interface AttachmentRouteDeps {
   workspaceId: string;
 }
 
-const rawBody = express.raw({ type: () => true, limit: ATTACHMENT_IMAGE_MAX_BYTES });
+const rawBody = express.raw({ type: () => true, limit: ATTACHMENT_FILE_MAX_BYTES });
 
 function readUpload(req: Request, res: Response, next: NextFunction) {
   rawBody(req, res, (error?: unknown) => {
-    next(isTooLarge(error) ? new UploadTooLargeError(ATTACHMENT_IMAGE_MAX_BYTES) : error);
+    next(isTooLarge(error) ? new UploadTooLargeError(ATTACHMENT_FILE_MAX_BYTES) : error);
   });
 }
 
@@ -27,6 +31,14 @@ function uploadName(req: Request): string {
   } catch {
     return raw;
   }
+}
+
+function servedAs(file: AttachmentFile) {
+  if (file.kind === 'file') {
+    return { type: 'application/octet-stream', disposition: 'attachment' } as const;
+  }
+  const type = file.kind === 'image' ? file.mediaType : 'text/plain; charset=utf-8';
+  return { type, disposition: 'inline' } as const;
 }
 
 export function attachmentRoutes({ db, workspaceId }: AttachmentRouteDeps): Router {
@@ -48,12 +60,13 @@ export function attachmentRoutes({ db, workspaceId }: AttachmentRouteDeps): Rout
       res.status(404).json({ error: 'Attachment not found.' });
       return;
     }
+    const shown = servedAs(file);
     res.set({
-      'Content-Type': file.kind === 'image' ? file.mediaType : 'text/plain; charset=utf-8',
+      'Content-Type': shown.type,
       'Content-Length': String(file.data.length),
       'X-Content-Type-Options': 'nosniff',
       'Content-Security-Policy': "default-src 'none'; sandbox",
-      'Content-Disposition': contentDisposition('inline', file.name),
+      'Content-Disposition': contentDisposition(shown.disposition, file.name),
       'Cache-Control': 'private, max-age=31536000, immutable',
     });
     res.end(file.data);

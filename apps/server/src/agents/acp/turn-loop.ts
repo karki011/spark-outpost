@@ -11,14 +11,15 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { endsAgentCycle, type BackgroundCount, type BackgroundWork } from './background-work.ts';
 import { startsAgentCycle } from './agent-cycle.ts';
 import { subagentMark } from './subagent-stream.ts';
-import { followUpBlocks } from './conversation-prompt.ts';
+import type { AttachmentFolder } from './attachment-files.ts';
+import { followUpBlocks, TEXT_ONLY } from './conversation-prompt.ts';
 import { createIdleInbox, deliveringWhenIdle, type IdleInbox } from './idle-inbox.ts';
 import { nextMessage, untilFailure } from './steering.ts';
 import type { TurnMapper } from './subagent-updates.ts';
 import type { TurnTokens } from './turn-tokens.ts';
 
 type SessionMessage = Awaited<ReturnType<acp.ActiveSession['nextUpdate']>>;
-type FollowUpOptions = Parameters<typeof followUpBlocks>[1];
+type FollowUpOptions = NonNullable<Parameters<typeof followUpBlocks>[1]>;
 
 export interface RequestLog {
   see(request: RequestUsage): void;
@@ -43,6 +44,7 @@ export interface PromptLoop {
   session: Pick<acp.ActiveSession, 'prompt' | 'nextUpdate'>;
   blocks: acp.ContentBlock[] | null;
   followUp: FollowUpOptions;
+  folder: AttachmentFolder;
   turn: ProviderTurn;
   signal: AbortSignal;
   mapper: TurnMapper;
@@ -116,7 +118,12 @@ async function converse(loop: PromptLoop, inbox: IdleInbox): Promise<acp.StopRea
   const sendPrompt = (message: ProviderMessage) => {
     const text = typeof message === 'string' ? message : message.text;
     const attachments = typeof message === 'string' ? [] : message.attachments;
-    failure = untilFailure(session.prompt(followUpBlocks(text, { ...loop.followUp, attachments })));
+    const sent = loop.folder
+      .prepare(attachments, loop.followUp.support ?? TEXT_ONLY)
+      .then((paths) =>
+        session.prompt(followUpBlocks(text, { ...loop.followUp, attachments, paths })),
+      );
+    failure = untilFailure(sent);
   };
   const startWaiting = () => {
     waiting = true;

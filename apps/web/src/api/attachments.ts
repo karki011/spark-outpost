@@ -1,4 +1,5 @@
 import {
+  ATTACHMENT_FILE_MAX_BYTES,
   ATTACHMENT_IMAGE_MAX_BYTES,
   ATTACHMENT_IMAGE_TYPES,
   ATTACHMENT_NAME_MAX_LENGTH,
@@ -24,7 +25,7 @@ const TEXT_MEDIA_TYPES = new Set([
   'application/sql',
 ]);
 
-export const TEXT_EXTENSIONS = [
+const TEXT_EXTENSIONS = [
   '.txt',
   '.md',
   '.markdown',
@@ -69,10 +70,6 @@ export const TEXT_EXTENSIONS = [
   '.patch',
 ];
 
-export const ATTACHMENT_ACCEPT = [...ATTACHMENT_IMAGE_TYPES, 'text/*', ...TEXT_EXTENSIONS].join(
-  ',',
-);
-
 type Classified = { kind: AttachmentKind; mediaType: string } | { error: string };
 
 function isImageType(type: string): type is (typeof ATTACHMENT_IMAGE_TYPES)[number] {
@@ -105,16 +102,14 @@ export function classifyFile(file: File): Classified {
     }
     return { kind: 'image', mediaType: file.type };
   }
-  if (file.type.startsWith('image/')) {
-    return { error: 'Use a PNG, JPEG, GIF or WebP image.' };
+  const textual = isTextType(file.type) || hasTextExtension(file.name);
+  if (textual && file.size <= ATTACHMENT_TEXT_MAX_BYTES) {
+    return { kind: 'text', mediaType: file.type.startsWith('text/') ? file.type : 'text/plain' };
   }
-  if (!isTextType(file.type) && !hasTextExtension(file.name)) {
-    return { error: 'Only images and text files can be attached.' };
+  if (file.size > ATTACHMENT_FILE_MAX_BYTES) {
+    return { error: `Files must be ${ATTACHMENT_FILE_MAX_BYTES / (1024 * 1024)} MB or smaller.` };
   }
-  if (file.size > ATTACHMENT_TEXT_MAX_BYTES) {
-    return { error: `Text files can be up to ${formatBytes(ATTACHMENT_TEXT_MAX_BYTES)}.` };
-  }
-  return { kind: 'text', mediaType: file.type.startsWith('text/') ? file.type : 'text/plain' };
+  return { kind: 'file', mediaType: file.type || 'application/octet-stream' };
 }
 
 export function attachmentUrl(id: string): string {

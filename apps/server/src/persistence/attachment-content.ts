@@ -1,4 +1,5 @@
 import {
+  ATTACHMENT_FILE_MAX_BYTES,
   ATTACHMENT_IMAGE_MAX_BYTES,
   ATTACHMENT_IMAGE_TYPES,
   ATTACHMENT_NAME_MAX_LENGTH,
@@ -10,8 +11,9 @@ import {
 
 export class AttachmentError extends Error {}
 
-export const UNSUPPORTED_ATTACHMENT =
-  'Only images (PNG, JPEG, GIF, WebP) and text files are supported.';
+const PDF_TYPE = 'application/pdf';
+const MEDIA_TYPE = /^[a-z0-9][a-z0-9!#$&^_.+-]{0,126}\/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}$/;
+const OCTET_STREAM = 'application/octet-stream';
 
 const FALLBACK_NAME = 'attachment';
 const TEXT_APPLICATION_TYPES = new Set([
@@ -78,7 +80,7 @@ function textMediaType(declared: string): string {
   return textual && /^[\w.+-]+\/[\w.+-]+$/.test(declared) ? declared : 'text/plain';
 }
 
-function isUtf8Text(data: Uint8Array): boolean {
+export function isUtf8Text(data: Uint8Array): boolean {
   if (data.includes(0)) return false;
   try {
     new TextDecoder('utf-8', { fatal: true }).decode(data);
@@ -105,13 +107,23 @@ export function classifyAttachment(
     }
     return { name, mediaType: declared, kind: 'image' };
   }
-  if (!isUtf8Text(data)) throw new AttachmentError(UNSUPPORTED_ATTACHMENT);
-  if (data.length > ATTACHMENT_TEXT_MAX_BYTES) {
-    throw new AttachmentError(
-      `Text files must be ${ATTACHMENT_TEXT_MAX_BYTES / 1024} KB or smaller.`,
-    );
+  if (!isPdf(declared, data) && data.length <= ATTACHMENT_TEXT_MAX_BYTES && isUtf8Text(data)) {
+    return { name, mediaType: textMediaType(declared), kind: 'text' };
   }
-  return { name, mediaType: textMediaType(declared), kind: 'text' };
+  if (data.length > ATTACHMENT_FILE_MAX_BYTES) {
+    throw new AttachmentError(`Files must be ${megabytes(ATTACHMENT_FILE_MAX_BYTES)} or smaller.`);
+  }
+  return { name, mediaType: fileMediaType(declared, data), kind: 'file' };
+}
+
+function isPdf(declared: string, data: Uint8Array): boolean {
+  return declared === PDF_TYPE && startsWith(data, ascii('%PDF-'));
+}
+
+function fileMediaType(declared: string, data: Uint8Array): string {
+  if (declared === PDF_TYPE) return isPdf(declared, data) ? PDF_TYPE : OCTET_STREAM;
+  if (declared.startsWith('image/') || !MEDIA_TYPE.test(declared)) return OCTET_STREAM;
+  return declared;
 }
 
 function megabytes(bytes: number): string {

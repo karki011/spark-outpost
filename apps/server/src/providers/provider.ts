@@ -2,6 +2,7 @@ import type {
   AgentCommand,
   AgentContent,
   AgentForm,
+  AttachmentKind,
   AgentModeOption,
   ConfigOptionInfo,
   ConfigValues,
@@ -27,7 +28,7 @@ import type { ObservedRail } from '../agents/acp/rail-watch.ts';
 export interface TurnAttachment {
   name: string;
   mediaType: string;
-  kind: 'image' | 'text';
+  kind: AttachmentKind;
   data: Buffer;
 }
 

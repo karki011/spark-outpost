@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { ProviderMessage } from '../../providers/provider.ts';
+import { createAttachmentFolder } from './attachment-files.ts';
 import { attachSteering, STEER_METHOD, steeringSupported } from './steering.ts';
 
 function init(meta: unknown): acp.InitializeResponse {
   return { protocolVersion: 1, _meta: meta } as acp.InitializeResponse;
 }
+
+const prompt = (embeddedContext = false) => ({
+  support: { image: true, embeddedContext },
+  folder: createAttachmentFolder(false),
+});
 
 describe('ACP steering', () => {
   it('only steers adapters that advertise it', () => {
@@ -29,7 +35,7 @@ describe('ACP steering', () => {
         return () => undefined;
       },
     };
-    attachSteering(ctx, init({ steering: { supported: true } }), 's1', steering);
+    attachSteering(ctx, init({ steering: { supported: true } }), 's1', steering, prompt());
     expect(await send!('Use UTC')).toBe(true);
     expect(calls).toEqual([
       [
@@ -42,7 +48,7 @@ describe('ACP steering', () => {
       ],
     ]);
     send = null;
-    attachSteering(ctx, init(undefined), 's1', steering);
+    attachSteering(ctx, init(undefined), 's1', steering, prompt());
     expect(send).toBeNull();
   });
   it('includes screenshot bytes and file context when steering', async () => {
@@ -56,12 +62,18 @@ describe('ACP steering', () => {
     let send: ((message: ProviderMessage) => Promise<boolean | 'later'>) | null = null;
     const capabilities = init({ steering: { supported: true } });
     capabilities.agentCapabilities = { promptCapabilities: { image: true, embeddedContext: true } };
-    attachSteering(ctx, capabilities, 's1', {
-      attach(sender) {
-        send = sender;
-        return () => undefined;
+    attachSteering(
+      ctx,
+      capabilities,
+      's1',
+      {
+        attach(sender) {
+          send = sender;
+          return () => undefined;
+        },
       },
-    });
+      prompt(true),
+    );
     expect(
       await send!({
         text: 'Check this screenshot',

@@ -12,7 +12,8 @@ import { floorTurn } from './fake-acp-floor.ts';
 import { terminalCommands } from './fake-acp-terminal.ts';
 import { publishTurn } from './fake-acp-publish.ts';
 import { sparkTurn } from './fake-acp-spark.ts';
-import { describeBlock, rememberConfig, restoreConfig } from './fake-acp-support.ts';
+import { blocksTurn } from './fake-acp-attachments.ts';
+import { rememberConfig, restoreConfig } from './fake-acp-support.ts';
 import { FAKE_AGENT_INFO, fakeMcpCapabilities } from './fake-acp-init.ts';
 import { compactionTurn, eventsTurn, leakSecrets } from './fake-acp-events.ts';
 import {
@@ -293,10 +294,7 @@ async function turn(
   if (text.includes('#signedout')) return signedOut(update, !text.includes('#signedoutquiet'));
   const built = await buildTurn(fakeTurn);
   if (built) return built;
-  if (text.includes('#blocks')) {
-    await say(JSON.stringify(params.prompt.map(describeBlock)));
-    return 'end_turn';
-  }
+  if (text.includes('#blocks')) return blocksTurn(params.prompt, say, signal);
   if (text.includes('#cwd')) {
     await say(`cwd=${sessionCwd} process=${process.cwd()}`);
     return 'end_turn';

@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { isAbsolute, join } from 'node:path';
+import { extname, isAbsolute, join } from 'node:path';
 import { promisify } from 'node:util';
 import { isRecord } from '../agent-config/records.ts';
 import type { TurnAttachment } from '../providers/provider.ts';
@@ -226,13 +226,20 @@ export async function prepareNativeLaunch(input: NativeLaunchInput): Promise<Nat
   }
 }
 
+const SAFE_EXTENSION = /^\.([a-z0-9]{1,10})$/;
+
+function attachmentExtension(attachment: TurnAttachment): string {
+  if (attachment.kind === 'text') return 'txt';
+  if (attachment.kind === 'image') return attachment.mediaType === 'image/jpeg' ? 'jpg' : 'png';
+  return SAFE_EXTENSION.exec(extname(attachment.name).toLowerCase())?.[1] ?? 'bin';
+}
+
 async function nativeAttachments(attachments: readonly TurnAttachment[], directory: string) {
   const images: string[] = [];
   const lines: string[] = [];
   if (attachments.length) await mkdir(join(directory, 'attachments'), { mode: 0o700 });
   for (const [index, attachment] of attachments.entries()) {
-    const extension =
-      attachment.kind === 'text' ? 'txt' : attachment.mediaType === 'image/jpeg' ? 'jpg' : 'png';
+    const extension = attachmentExtension(attachment);
     const path = join(directory, 'attachments', `${index + 1}.${extension}`);
     await writeFile(path, attachment.data, { mode: 0o600, flag: 'wx' });
     if (attachment.kind === 'image') images.push(path);

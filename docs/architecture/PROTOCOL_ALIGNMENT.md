@@ -192,6 +192,21 @@ Design and security model: [ARTIFACTS.md](ARTIFACTS.md).
 | ACP `resource_link` to `ui://spark/…` becomes the artifact card  | Implemented (fake agent); not checked against a live Claude or Codex adapter | `artifact-links.test.ts`, `artifacts.spec.ts`                                |
 | Page served on its own origin under the sandbox and CSP          | Implemented                                                                  | `artifact-origin.db.test.ts`, `artifacts.spec.ts`, `artifact-frames.test.ts` |
 
+## File attachments (November 11, 2026)
+
+An attachment of kind `file` (a PDF, office file, archive, or text above 512 KB, up to 20 MB) reaches an agent one of two ways, decided in `attachment-parts.ts` and written by `attachment-files.ts`:
+
+- A PDF up to 10 MB sent to a Claude or Z.ai chat whose adapter advertises `promptCapabilities.embeddedContext` goes as an ACP `resource` block with a base64 `blob` and `mimeType: application/pdf`, after a `[Attached PDF: <name>]` text part. `@agentclientprotocol/claude-agent-acp` 0.101.0 turns that into a Claude `document` block (`blobResourceToClaude` in `dist/blob-resources.js`, called from `acp-agent.js`). `claude-blob-resources.test.ts` fails if a bump drops that, and Spark's `PromptSupport.pdf` is on only for `definition.cli === 'claude'`.
+- Everything else, including every file for Codex, is written to a private `spark-attach-*` folder under the system temp folder (mode 0700, files 0600) and the prompt names its path. `@agentclientprotocol/codex-acp` 2.6.0 (`buildPromptItems` in `dist/index.js`) turns a non-image `blob` resource into base64 text inside a `<context>` tag, so it is never sent a PDF blob. The folder is removed when the turn ends, cancelled turns and failed turns included; the temp folders are already readable by Claude (`additionalDirectories`) and Codex (`:slash_tmp`).
+
+A past turn's file is named, never resent. A turn that cannot read files (no project or chat folder) is told `[File not shown: <name>. This turn cannot open files.]` and nothing is written. A command-first prompt (`commandFirstBlocks`) turns `pdf` and `embeddedContext` off like it does for text, so its PDFs go by path.
+
+| Claim                                                              | Status                                                     | Evidence                                                   |
+| ------------------------------------------------------------------ | ---------------------------------------------------------- | ---------------------------------------------------------- |
+| The pinned Claude adapter turns a PDF blob into a `document` block | Verified in the adapter source and its function at 0.101.0 | `claude-blob-resources.test.ts`                            |
+| A turn's prompt carries the blob or the path as described          | Implemented (fake agent)                                   | `acp-attachment-files.test.ts`, `attachment-parts.test.ts` |
+| A live Claude or Codex reads the PDF or the saved file             | Not checked against a live adapter or CLI                  |                                                            |
+
 ## Deviations from the AG-UI client model
 
 - The browser uses `EventSource` and our own reducer, not `@ag-ui/client`. Runs start with `POST /api/conversations/:id/messages`, not with an AG-UI `RunAgentInput` request, because the worker owns execution. Evaluating an `AbstractAgent` with `connect()` is task F-17.

@@ -2,7 +2,6 @@ import './start-context.css';
 import { useId, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { TICKET_START_NOTE_MAX_LENGTH } from '@spark-outpost/contracts';
-import { ATTACHMENT_ACCEPT } from '../api/attachments.ts';
 import { AttachmentChips } from '../chat/attachments/AttachmentChips.tsx';
 import { FileIcon } from '../chat/attachments/attachment-icons.tsx';
 import { LinkIcon } from '../tasks/TaskIcons.tsx';
@@ -186,7 +185,6 @@ export function StartContext({
                 type="file"
                 multiple
                 hidden
-                accept={ATTACHMENT_ACCEPT}
                 aria-label="Add files"
                 onChange={(event) => {
                   files.add(Array.from(event.target.files ?? []));
