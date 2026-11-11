@@ -39,13 +39,13 @@ describe('crew agents', () => {
     const builder = member({ name: 'Builder 2', agentLabel: 'Builder 2 · Sonnet 5 · medium' });
     const agent = runAgent(builder, orchestration());
     expect(agent.name).toBe('Builder 2');
-    expect(headerMeta(agent)).toBe('Sonnet 5 · medium · 12.4K tokens · $0.03 · 38s');
+    expect(headerMeta(agent)).toBe('Sonnet 5 · Medium · 12.4K tokens · $0.03 · 38s');
     const raised = runAgent(
       member({ routeNote: "raised to Sonnet 5: Builders don't run on the fast tier" }),
       orchestration(),
     );
     expect(headerMeta(raised)).toBe(
-      "Sonnet 5 · medium · raised to Sonnet 5: Builders don't run on the fast tier · 12.4K tokens · $0.03 · 38s",
+      "Sonnet 5 · Medium · raised to Sonnet 5: Builders don't run on the fast tier · 12.4K tokens · $0.03 · 38s",
     );
   });
 

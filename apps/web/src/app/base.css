@@ -209,10 +209,58 @@ svg {
   }
 }
 
+@property --ink-r {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --ink-d {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+  mask-image:
+    radial-gradient(
+      circle at var(--ink-x) var(--ink-y),
+      #000 calc(var(--ink-r) * var(--ink-solid)),
+      transparent var(--ink-r)
+    ),
+    radial-gradient(
+      circle at calc(var(--ink-x) + var(--ink-r) * var(--ink-dx1))
+        calc(var(--ink-y) + var(--ink-r) * var(--ink-dy1)),
+      #000
+        calc(
+          var(--ink-r) * (var(--ink-size1) + var(--ink-drift1) * var(--ink-d)) * var(--ink-solid)
+        ),
+      transparent calc(var(--ink-r) * (var(--ink-size1) + var(--ink-drift1) * var(--ink-d)))
+    ),
+    radial-gradient(
+      circle at calc(var(--ink-x) + var(--ink-r) * var(--ink-dx2))
+        calc(var(--ink-y) + var(--ink-r) * var(--ink-dy2)),
+      #000
+        calc(
+          var(--ink-r) * (var(--ink-size2) + var(--ink-drift2) * var(--ink-d)) * var(--ink-solid)
+        ),
+      transparent calc(var(--ink-r) * (var(--ink-size2) + var(--ink-drift2) * var(--ink-d)))
+    ),
+    radial-gradient(
+      circle at calc(var(--ink-x) + var(--ink-r) * var(--ink-dx3))
+        calc(var(--ink-y) + var(--ink-r) * var(--ink-dy3)),
+      #000
+        calc(
+          var(--ink-r) * (var(--ink-size3) + var(--ink-drift3) * var(--ink-d)) * var(--ink-solid)
+        ),
+      transparent calc(var(--ink-r) * (var(--ink-size3) + var(--ink-drift3) * var(--ink-d)))
+    );
 }
 
 @supports not selector(::-webkit-scrollbar) {

@@ -86,13 +86,19 @@ export function roleLabel(member: Pick<CrewAgent, 'role' | 'sameProvider' | 'spa
   return member.sameProvider ? `${label} (${SAME_PROVIDER_REVIEW})` : label;
 }
 
+const EFFORT_NAMES: Record<string, string> = { xhigh: 'Extra high' };
+
+function effortLabel(effort: string): string {
+  return EFFORT_NAMES[effort] ?? effort.charAt(0).toUpperCase() + effort.slice(1);
+}
+
 export function modelLabel(
   member: Pick<CrewAgent, 'role' | 'model' | 'effort' | 'worker'>,
 ): string {
   if (member.role === 'jev') return 'router';
   if (member.worker && !member.model) return '';
   const model = member.model ? shortLabel(member.model) : 'default model';
-  return [model, member.effort].filter(Boolean).join(' · ');
+  return [model, member.effort && effortLabel(member.effort)].filter(Boolean).join(' · ');
 }
 
 export function usageParts(member: CrewAgent): string[] {

@@ -113,7 +113,7 @@ describe('an agent card', () => {
   it('leads the meta with the model and effort once they are known', () => {
     const steps = [{ name: 'Read', done: false }];
     const usage = { model: 'claude-opus-5-5', effort: 'high' };
-    expect(agentMeta(row({ steps, usage }))).toBe('Opus 5.5 · high · 1 step');
+    expect(agentMeta(row({ steps, usage }))).toBe('Opus 5.5 · High · 1 step');
     expect(
       agentMeta(
         row({
@@ -122,7 +122,7 @@ describe('an agent card', () => {
           endedAt: 9,
         }),
       ),
-    ).toBe('Opus 5.5 · high · 41s · 3K tok');
+    ).toBe('Opus 5.5 · High · 41s · 3K tok');
     expect(agentMeta(row({ steps, usage: { effort: 'high' } }))).toBe('1 step');
   });
 });

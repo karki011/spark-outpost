@@ -178,8 +178,8 @@ describe('the crew of a finished turn', () => {
       ['Hawk', 'failed'],
     ]);
     expect(crewHeading(crew, 'Auto')).toBe('Crew · 3 agents');
-    expect(crewJob(crew[1]!)).toBe('Builder · Sonnet 5 · medium · 2 turns');
-    expect(crewJob(crew[2]!)).toBe('Critic · Sonnet 5 · medium');
+    expect(crewJob(crew[1]!)).toBe('Builder · Sonnet 5 · Medium · 2 turns');
+    expect(crewJob(crew[2]!)).toBe('Critic · Sonnet 5 · Medium');
     expect(crewJob(crew[0]!)).toBe('Dispatcher · router');
     expect(crew[1]).toMatchObject({ tokens: 24_800, costUsd: 0.062 });
   });
@@ -217,7 +217,7 @@ describe('the crew the rail shows', () => {
     expect(crewHeading(view.list, 'Auto')).toBe('Claude · Auto');
     expect(crewHeading(view.list, '')).toBe('Claude');
     expect(crewSectionLabel(view.list)).toBe('Agent');
-    expect(crewJob(view.list[0]!)).toBe('Agent · Sonnet 5 · medium');
+    expect(crewJob(view.list[0]!)).toBe('Agent · Sonnet 5 · Medium');
     expect(names(view.list)).toEqual(names(tvCrew(chat('succeeded'))));
   });
 

@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                           | What to do                                                  |
 | -------------------------------------- | ----------------------------------------------------------- |
+| Softer theme edge; effort shows High   | Nothing.                                                    |
 | Sub-agents show their model, effort    | Select an agent in a turn.                                  |
 | Theme change spreads like ink          | Nothing.                                                    |
 | Agent tabs stay open after a turn      | [Use the browser](use-the-browser.md).                      |
@@ -36,4 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Links open in Spark                    | [Settings](settings.md#mac).                                |
 | Join at start, **Join opens**, Dismiss | [See your day](calendar.md#use-it).                         |
 | Wait for page elements                 | Nothing.                                                    |
-| Fewer false send flags                 | Nothing.                                                    |

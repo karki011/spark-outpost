@@ -149,7 +149,7 @@ describe('AgentsSection', () => {
     render(<AgentCards rows={known} live />);
     const card = (id: string) =>
       document.querySelector<HTMLElement>(`[data-worker-id="${id}"] .ac-meta`)!.textContent;
-    expect(card('a')).toBe('Opus 5.5 · high · 48s · 61K tok');
+    expect(card('a')).toBe('Opus 5.5 · High · 48s · 61K tok');
     expect(card('b')).toBe('gpt-5.5 · 2 steps');
     expect(card('c')).toBe('2 steps');
   });

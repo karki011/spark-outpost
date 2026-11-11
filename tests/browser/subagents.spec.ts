@@ -278,7 +278,7 @@ test('a finished turn keeps its sub-agents, nested ones under their parent, afte
   await expect(cards.nth(1)).toHaveAttribute('data-nested', 'true');
   await expect(cards.nth(2)).toContainText('Tests');
   await expect(cards.nth(2)).toContainText('Failed');
-  await expect(cards.nth(0)).toContainText('Opus 5.5 · high · 41s · 3K tok');
+  await expect(cards.nth(0)).toContainText('Opus 5.5 · High · 41s · 3K tok');
   await expect(cards.nth(2)).not.toContainText('Opus');
   const explore = panel.getByRole('button', { name: 'Explore' });
   await explore.focus();
