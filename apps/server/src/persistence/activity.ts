@@ -48,6 +48,8 @@ export function activityFromEvents(rows: readonly StepEventRow[]): Record<string
     const finished = finishOldest(open.get(name));
     if (finished && at !== null) finished.finishedAt = at;
     const { target, toolName } = kindOf(row.mark);
+    const { diffs } = stepMark({ metadata: { [SPARK_METADATA]: row.mark } });
+    if (finished && diffs && !finished.diffs) finished.diffs = diffs;
     if (finished && target && !finished.target) finished.target = target;
     if (finished && toolName && !finished.toolName) finished.toolName = toolName;
   }

@@ -5,6 +5,7 @@ import {
   isSparkNote,
   toolLabel,
   type BrowserShot,
+  type StepDiff,
 } from '@spark-outpost/contracts';
 import { anchorIndex, outsideFence, type TextAnchor } from '../../browser/shot-order.ts';
 import type { AgentTerminalView } from '../commands/agent-terminal-model.ts';
@@ -30,6 +31,7 @@ export interface ToolItem {
   label: string;
   detail?: string;
   callout?: Callout;
+  diffs?: StepDiff[];
   startedAt: number | undefined;
   finishedAt: number | undefined;
 }
@@ -198,6 +200,7 @@ function toolItem(step: StepView, key: string, ranCommands: boolean): ToolItem |
     label: plainName(step.name),
     startedAt: step.startedAt,
     finishedAt: step.finishedAt,
+    ...(step.diffs ? { diffs: step.diffs } : {}),
   };
   const callout = stepCallout(step, base.label);
   if (callout) {

@@ -261,6 +261,9 @@ export interface RequestUsage {
   buckets: { short: number; long: number } | null;
 }
 
+export type ProviderDiff =
+  { path: string; oldText: string | null; newText: string } | { path: string; withheld: true };
+
 export type ProviderOutput =
   | {
       kind: 'step_started';
@@ -283,6 +286,7 @@ export type ProviderOutput =
       target?: string;
       path?: string;
       callout?: string;
+      diffs?: ProviderDiff[];
       subagent?: string;
       waits?: boolean;
     }

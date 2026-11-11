@@ -21,6 +21,7 @@ import {
 } from './group-summary.ts';
 import { RowIcon, type RowIconName } from './RowIcon.tsx';
 import { CalloutRow } from './CalloutRow.tsx';
+import { hasOpenedDiff, StepDiffs } from './StepDiffs.tsx';
 import { FailedWord, Spinner } from './RowStatus.tsx';
 import {
   spanSeconds,
@@ -120,6 +121,16 @@ function EditRow({ item, context }: { item: ToolItem; context: RowContext }) {
 }
 
 function ToolRow({ item, context }: { item: ToolItem; context: RowContext }) {
+  if (!item.diffs) return <ToolRowLine item={item} context={context} />;
+  return (
+    <>
+      <ToolRowLine item={item} context={context} />
+      <StepDiffs itemKey={item.key} diffs={item.diffs} />
+    </>
+  );
+}
+
+function ToolRowLine({ item, context }: { item: ToolItem; context: RowContext }) {
   if (item.tone === 'edit') return <EditRow item={item} context={context} />;
   const code = item.tone === 'read' || item.tone === 'run';
   return (
@@ -293,7 +304,9 @@ function GroupRow({ group, context }: { group: RowGroup; context: RowContext }) 
   const remembered = use(CommandUiContext);
   const attention = group.items.some(
     (item) =>
-      needsLook(item) || (item.kind === 'command' && shownBefore(remembered, item.command.id)),
+      needsLook(item) ||
+      (item.kind === 'command' && shownBefore(remembered, item.command.id)) ||
+      (item.kind === 'tool' && hasOpenedDiff(remembered, item.key, item.diffs ?? [])),
   );
   const [choice, setChoice] = useState<boolean | null>(null);
   const open = choice ?? attention;

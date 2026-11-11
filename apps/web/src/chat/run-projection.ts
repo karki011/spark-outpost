@@ -15,6 +15,7 @@ import {
   type PlanEntry,
   type AgentTerminalStarted,
   type RunEvent,
+  type StepDiff,
   type SubagentRoster,
 } from '@spark-outpost/contracts';
 import { applyApprovalEvent, requestedApprovalId } from './approvals/approval-events.ts';
@@ -44,6 +45,7 @@ export interface StepTool {
   toolKind?: string | undefined;
   toolName?: string | undefined;
   target?: string | undefined;
+  diffs?: StepDiff[] | undefined;
 }
 
 export interface RunStep extends StepAnchor, StepTimes, StepTool {
@@ -96,6 +98,7 @@ function toolOf(step: StepTool): StepTool {
     ...(step.toolKind ? { toolKind: step.toolKind } : {}),
     ...(step.toolName ? { toolName: step.toolName } : {}),
     ...(step.target ? { target: step.target } : {}),
+    ...(step.diffs ? { diffs: step.diffs } : {}),
   };
 }
 
@@ -124,7 +127,7 @@ function finishStep(
   const index =
     called >= 0 ? called : steps.findIndex((step) => !step.done && step.name === event.stepName);
   const finishedAt = event.timestamp === undefined ? {} : { finishedAt: event.timestamp };
-  const { target, toolName } = stepMark(event);
+  const { target, toolName, diffs } = stepMark(event);
   return steps.map((step, position) =>
     position === index
       ? {
@@ -133,6 +136,7 @@ function finishStep(
           ...finishedAt,
           ...(target && !step.target ? { target } : {}),
           ...(toolName && !step.toolName ? { toolName } : {}),
+          ...(diffs && !step.diffs ? { diffs } : {}),
         }
       : step,
   );

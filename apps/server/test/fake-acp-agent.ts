@@ -325,7 +325,7 @@ async function turn(
   if (text.includes('#refuse')) return 'refusal';
   if (text.includes('#secret')) return leakSecrets(update, say);
   if (text.includes('#compacting')) return compactionTurn(update, say);
-  if (text.includes('#twins') || text.includes('#hang'))
+  if (text.includes('#twins') || text.includes('#hang') || text.includes('#diffs'))
     return eventsTurn(text, update, say, signal);
   if (text.includes('#failure')) {
     const failure = (severity: string, title: string) =>
