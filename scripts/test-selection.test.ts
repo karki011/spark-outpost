@@ -76,7 +76,7 @@ describe('selectBrowserSpecs', () => {
       {
         path: 'apps/web/src/phone/PhonePage.tsx',
         rule: 'apps/web/src/phone/',
-        selects: 'phone (5)',
+        selects: 'phone (6)',
       },
     ]);
   });
