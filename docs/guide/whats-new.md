@@ -10,6 +10,9 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                           | What to do                                                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Trust a folder from its chip           | [Start a chat](start-a-chat.md).                                                            |
+| Full Disk Access notice (Mac)          | [Mac privacy](mac-privacy.md#full-disk-access).                                             |
+| Many agents and PRs fold to one line   | [Follow a turn](follow-a-turn.md).                                                          |
 | Allow and Deny on Home rows            | [Home](home.md).                                                                            |
 | Home: mode labels, Tomorrow, away      | [Home](home.md).                                                                            |
 | Outposts: Retry, pin a note            | [Outposts](outposts.md).                                                                    |
@@ -34,6 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Codex mode names                       | Approve for me is now **Auto review**: [Workspace access](modes-and-levels.md#agent-modes). |
 | Blaze, Acid and Violet tints           | **Settings → Appearance**.                                                                  |
 | Smarter brief and Ask Spark            | Nothing.                                                                                    |
-| Undo after quick edits                 | Nothing.                                                                                    |
-| Meetings shown once on Home            | Nothing.                                                                                    |
-| Working chats pulse                    | Nothing.                                                                                    |
