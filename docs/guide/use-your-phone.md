@@ -6,7 +6,7 @@ order: 417
 summary: Pair a device over Tailscale and choose what it may do.
 ---
 
-Use Spark from another device; work stays on the Mac. About 5 minutes.
+Use Spark from another device; work stays on the Mac. About 5 minutes. Needs Tailscale on both.
 
 1. Open **Remote control**, above **Settings**. Steps: Tailscale, HTTPS, turn on.
 2. Select **Pair a device**, then scan the code, or open the address and type it.
@@ -14,7 +14,7 @@ Use Spark from another device; work stays on the Mac. About 5 minutes.
 
 **Passkey.** On the device, select **Save a passkey for this device**, then **Sign in with a passkey** in another browser. It never pairs a new device. **Devices** has **Allow passkey sign-in** and **Remove passkeys**.
 
-**Devices** has a row per device. Its **Actions** menu has **Rename**, **Remove passkeys** and **Revoke**; **Remove old entry** clears a duplicate.
+Each device's **Actions** menu has **Rename**, **Remove passkeys** and **Revoke**; **Remove old entry** clears a duplicate.
 
 **What paired devices can do** groups switches as **Everyday**, **Set up work** and **High risk**. On a phone, **More** holds Remote control and Settings.
 
@@ -26,11 +26,11 @@ Devices answer browser cards. **Open artifacts** (off) shows artifacts.
 
 **Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both off.
 
-**Send now** stops the turn first.
+**Send now** stops the turn first. Messages shown aren't stored.
 
 **Awake.** With Remote control on, work or a connected device keeps the Mac awake, except a closed lid on battery.
 
-**Notifications.** On the Mac, turn on **Notify when a chat needs you**, then **Notify this device**. A tap opens the chat at its card.
+**Notifications.** On the Mac, turn on **Notify when a chat needs you**, then **Notify this device**. A tap opens its card.
 
 **Notify when a turn finishes or fails** (off) adds "Finished" or "Failed". Pushes name the chat, never a command; [meeting alerts](calendar.md) say "Meeting in 10 min". Seen chats and your current device get none.
 
