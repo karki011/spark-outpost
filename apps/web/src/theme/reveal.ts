@@ -1,8 +1,22 @@
 import { flushSync } from 'react-dom';
 import { saveAppearance } from './appearance.ts';
+import { inkFrames, type Point } from './ink-blob.ts';
 import type { Appearance } from './theme.ts';
 
-const REVEAL_MS = 650;
+const REVEAL_MS = 900;
+const REVEAL_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
+
+function revealOrigin(): Point {
+  const focused = document.activeElement;
+  const box =
+    focused instanceof HTMLElement && focused !== document.body
+      ? focused.getBoundingClientRect()
+      : null;
+  if (box && box.width > 0 && box.height > 0) {
+    return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+  }
+  return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+}
 
 export function revealAppearance(next: Appearance, updateView: () => void = () => undefined): void {
   const commit = () => {
@@ -14,18 +28,13 @@ export function revealAppearance(next: Appearance, updateView: () => void = () =
     commit();
     return;
   }
-  const x = window.innerWidth / 2;
-  const y = window.innerHeight / 2;
-  const radius = Math.hypot(x, y);
+  const origin = revealOrigin();
+  const frames = inkFrames(origin, window.innerWidth, window.innerHeight, Math.random() * 100);
   const transition = document.startViewTransition(commit);
   void transition.ready.then(() => {
     document.documentElement.animate(
-      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
-      {
-        duration: REVEAL_MS,
-        easing: 'cubic-bezier(0.65, 0, 0.35, 1)',
-        pseudoElement: '::view-transition-new(root)',
-      },
+      { clipPath: frames },
+      { duration: REVEAL_MS, easing: REVEAL_EASING, pseudoElement: '::view-transition-new(root)' },
     );
   });
 }
