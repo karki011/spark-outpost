@@ -1,3 +1,4 @@
+import { diffSteps } from './fake-diffs.ts';
 import path from 'node:path';
 import { fakeRecapText } from './fake-recap.ts';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -140,6 +141,7 @@ export function fakeProviderPlan(
     ...attachmentSteps(attachments),
     ...thinkingSteps(prompt),
     ...planSteps(prompt),
+    ...diffSteps(prompt),
     ...fakeCommentary(prompt),
     { kind: 'step_started', name: 'Writing a reply' },
     { kind: 'step_finished', name: 'Writing a reply' },
