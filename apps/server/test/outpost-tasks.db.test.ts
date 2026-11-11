@@ -46,8 +46,8 @@ function fromWire(text = 'What is the shape?', contextId: string | null = null) 
   return { messageId: randomUUID(), contextId, text };
 }
 
-async function storedRequest(toConversationId = api, extra: { guest?: boolean } = {}) {
-  return insertRequestRow(t.db, { outpostId, toConversationId, toHandle: 'api', ...extra });
+async function storedRequest(toConversationId = api) {
+  return insertRequestRow(t.db, { outpostId, toConversationId, toHandle: 'api' });
 }
 
 function accepted(outcome: AcceptOutcome) {
@@ -198,16 +198,27 @@ describe('accepting a task', () => {
     expect(await queueRows(t.db, api)).toEqual([]);
   });
 
-  it('rejects a request to a chat that is no longer a member, unless it was sent to a guest', async () => {
+  it('rejects a request to a chat that is no longer a member', async () => {
     const postId = await storedRequest();
-    const guestChat = await chatRow(t);
-    const guestPost = await storedRequest(guestChat, { guest: true });
     await t.db.query('DELETE FROM outpost_members WHERE conversation_id = $1', [api]);
     expect(await acceptTask(t.db, api, fromWireFor(postId))).toMatchObject({
       kind: 'rejected',
       reason: 'not_member',
     });
-    expect(accepted(await acceptTask(t.db, guestChat, fromWireFor(guestPost))).queued).toBe(true);
+  });
+
+  it('rejects an old guest request to a chat outside the outpost without throwing', async () => {
+    const outsider = await chatRow(t);
+    const postId = randomUUID();
+    await t.db.query(
+      `INSERT INTO outpost_posts (id, outpost_id, kind, body, from_user, to_handle, to_conversation_id, guest)
+       VALUES ($1, $2, 'request', 'old guest ask', true, 'api', $3, true)`,
+      [postId, outpostId, outsider],
+    );
+    expect(await acceptTask(t.db, outsider, fromWireFor(postId))).toMatchObject({
+      kind: 'rejected',
+      reason: 'not_member',
+    });
   });
 
   it('refuses a request that was closed before it was delivered', async () => {

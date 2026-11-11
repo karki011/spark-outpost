@@ -2,8 +2,6 @@ import { addressees, type OutpostMember, type PostAddress } from '@spark-outpost
 import type { NewPost, RequestAuthor } from './ports.ts';
 
 export const NO_CHATS_TO_ASK = 'There is no chat in this outpost to ask yet.';
-export const GUESTS_NOT_AVAILABLE =
-  'Asking a chat outside the outpost is not available yet. Add the chat to the outpost first.';
 
 export const CHATS_CANNOT_ASK_ALL = 'A chat cannot ask @all. Address one chat, for example @api.';
 export const AUTHOR_NOT_MEMBER = 'This chat is not in that outpost.';
@@ -87,9 +85,7 @@ function userPost(
   address: PlanAddress,
   members: readonly OutpostMember[],
   outpost: PlanOutpost,
-  guestConversationId: string | null,
 ): PostPlan | Refusal {
-  if (guestConversationId !== null) return refusal(GUESTS_NOT_AVAILABLE);
   switch (address.kind) {
     case 'all':
       return userRequests(
@@ -153,9 +149,7 @@ function chatPost(
   address: PlanAddress,
   members: readonly OutpostMember[],
   outpost: PlanOutpost,
-  guestConversationId: string | null,
 ): PostPlan | Refusal {
-  if (guestConversationId !== null) return refusal(GUESTS_NOT_AVAILABLE);
   const sender = members.find((member) => member.conversationId === author.conversationId);
   if (!sender) return refusal(AUTHOR_NOT_MEMBER);
   switch (address.kind) {
@@ -230,16 +224,13 @@ export function planPost(
   address: PlanAddress,
   members: readonly OutpostMember[],
   outpost: PlanOutpost,
-  guestConversationId: string | null = null,
 ): PostPlan | Refusal {
   switch (author.kind) {
     case 'user':
-      return userPost(address, members, outpost, guestConversationId);
+      return userPost(address, members, outpost);
     case 'chat':
-      return chatPost(author, address, members, outpost, guestConversationId);
+      return chatPost(author, address, members, outpost);
     case 'assistant':
-      return guestConversationId === null
-        ? assistantPost(author, address, members, outpost)
-        : refusal(GUESTS_NOT_AVAILABLE);
+      return assistantPost(author, address, members, outpost);
   }
 }

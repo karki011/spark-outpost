@@ -8,7 +8,7 @@ summary: Install an update from the blob above Settings, pick Stable or Beta, an
 
 You'll install an update when it suits you. About 1 minute.
 
-The Mac app checks at start and every 4 hours, never installing while agents work.
+The Mac app checks at start and every hour, never installing while agents work.
 
 ## Install an update
 

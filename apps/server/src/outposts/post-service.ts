@@ -48,7 +48,6 @@ export interface PostInput {
   text: string;
   id?: string;
   to?: readonly string[];
-  guestConversationId?: string;
   toConversationId?: string;
   attachmentIds?: readonly string[];
   opening?: boolean;
@@ -183,13 +182,10 @@ export async function postToOutpost(
     const repeated = await repeatedPost(client, input);
     if (repeated) return [repeated];
     const address = addressOf(input, outpost.members);
-    const plan = planPost(
-      input.author,
-      address,
-      outpost.members,
-      { id: outpost.id, paused: outpost.pausedAt !== null },
-      input.guestConversationId ?? null,
-    );
+    const plan = planPost(input.author, address, outpost.members, {
+      id: outpost.id,
+      paused: outpost.pausedAt !== null,
+    });
     if (plan.kind === 'refusal') throw new OutpostError(400, plan.message);
     await lockAttachmentChats(client, plan.posts, input.attachmentIds ?? []);
     const attachmentIds = await freeAttachments(client, workspaceId, input.attachmentIds ?? []);

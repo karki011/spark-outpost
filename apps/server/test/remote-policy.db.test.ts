@@ -168,6 +168,7 @@ describe('switches', () => {
       terminal: false,
       terminalApprove: false,
       notifications: false,
+      notifyUpdates: false,
       artifacts: false,
     });
   });

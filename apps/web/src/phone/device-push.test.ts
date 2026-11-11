@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bytesOf } from './passkey-browser.ts';
 import { isPushOn } from './use-device-push.ts';
-import { chatOfMessage } from './use-notification-chats.ts';
+import { targetOfMessage } from './use-notification-chats.ts';
 
 const CHAT = '0190a3b5-0000-7000-8000-000000000001';
 const KEY =
@@ -29,12 +29,30 @@ describe('isPushOn', () => {
   });
 });
 
-describe('chatOfMessage', () => {
+describe('targetOfMessage', () => {
+  const CARD = '3f2b8c1e-9d4a-4b6e-8a17-5c0d2e7f9a31';
+
   it('opens a chat only for a well-formed message from the service worker', () => {
-    expect(chatOfMessage({ type: 'spark-open-chat', chatId: CHAT })).toBe(CHAT);
-    expect(chatOfMessage({ type: 'spark-open-chat', chatId: '../settings' })).toBeNull();
-    expect(chatOfMessage({ type: 'other', chatId: CHAT })).toBeNull();
-    expect(chatOfMessage('spark-open-chat')).toBeNull();
-    expect(chatOfMessage(null)).toBeNull();
+    expect(targetOfMessage({ type: 'spark-open-chat', chatId: CHAT })).toEqual({
+      chatId: CHAT,
+      cardId: null,
+    });
+    expect(targetOfMessage({ type: 'spark-open-chat', chatId: '../settings' })).toBeNull();
+    expect(targetOfMessage({ type: 'other', chatId: CHAT })).toBeNull();
+    expect(targetOfMessage('spark-open-chat')).toBeNull();
+    expect(targetOfMessage(null)).toBeNull();
+  });
+
+  it('keeps a card id that is a UUID and ignores any other', () => {
+    expect(targetOfMessage({ type: 'spark-open-chat', chatId: CHAT, cardId: CARD })).toEqual({
+      chatId: CHAT,
+      cardId: CARD,
+    });
+    for (const cardId of ['../x', '', 5, null, `${CARD}"><script>`]) {
+      expect(targetOfMessage({ type: 'spark-open-chat', chatId: CHAT, cardId })).toEqual({
+        chatId: CHAT,
+        cardId: null,
+      });
+    }
   });
 });

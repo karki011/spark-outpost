@@ -32,7 +32,6 @@ interface PostRow {
   from_handle: string | null;
   to_handle: string | null;
   to_conversation_id: string | null;
-  guest: boolean;
   batch_id: string | null;
   task_id: string | null;
   run_id: string | null;
@@ -136,7 +135,6 @@ function toPost(row: PostRow): StoredPost {
     fromHandle: row.from_handle,
     toHandle: row.to_handle,
     toConversationId: row.to_conversation_id,
-    guest: row.guest,
     batchId: row.batch_id,
     taskId: row.task_id,
     runId: row.run_id,
@@ -199,10 +197,10 @@ async function existingPost(db: Queryable, post: NewPost): Promise<StoredPost | 
 async function insertPost(db: Queryable, post: NewPost): Promise<StoredPost> {
   const { rows } = await db.query<PostRow>(
     `INSERT INTO outpost_posts (id, outpost_id, kind, body, from_user, from_conversation_id,
-       from_run_id, request_hash, waits, from_handle, to_handle, to_conversation_id, guest,
+       from_run_id, request_hash, waits, from_handle, to_handle, to_conversation_id,
        batch_id, observed, attachment_ids, opening, after_post_id, user_started, agent_started)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb,
-       $16::uuid[], $17, $18, $19, $20)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb,
+       $15::uuid[], $16, $17, $18, $19)
      ON CONFLICT DO NOTHING
      RETURNING *`,
     [
@@ -218,7 +216,6 @@ async function insertPost(db: Queryable, post: NewPost): Promise<StoredPost> {
       post.fromHandle ?? null,
       post.toHandle ?? null,
       post.toConversationId ?? null,
-      post.guest ?? false,
       post.batchId ?? null,
       JSON.stringify(post.observed ?? []),
       post.attachmentIds ?? [],

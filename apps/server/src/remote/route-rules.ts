@@ -374,6 +374,7 @@ POST /api/conversations/:id/terminal/approval
   notifications: `
 PUT /api/remote/push/subscription
 `,
+  notifyUpdates: '',
   artifacts: `
 GET /api/artifacts/:id/versions/:version/view
 GET /api/artifacts/:id/versions/:version/page

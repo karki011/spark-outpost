@@ -1,4 +1,5 @@
 const CHAT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const CARD_ID = CHAT_ID;
 const FALLBACK = { title: 'Spark Outpost', body: 'A chat needs you', chatId: null, tag: 'spark' };
 
 function messageOf(event) {
@@ -7,8 +8,10 @@ function messageOf(event) {
     if (!data || typeof data.title !== 'string' || typeof data.body !== 'string') return FALLBACK;
     const chatId =
       typeof data.chatId === 'string' && CHAT_ID.test(data.chatId) ? data.chatId : null;
+    const cardId =
+      chatId && typeof data.cardId === 'string' && CARD_ID.test(data.cardId) ? data.cardId : null;
     const tag = typeof data.tag === 'string' ? data.tag : FALLBACK.tag;
-    return { title: data.title, body: data.body, chatId, tag };
+    return { title: data.title, body: data.body, chatId, cardId, tag };
   } catch {
     return FALLBACK;
   }
@@ -58,24 +61,28 @@ self.addEventListener('push', (event) => {
       tag: message.tag,
       icon: '/icon-192.png',
       badge: '/icon-192.png',
-      data: { chatId: message.chatId },
+      data: { chatId: message.chatId, cardId: message.cardId },
     }),
   );
 });
 
-async function openChat(chatId) {
+async function openChat(chatId, cardId) {
   const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
   const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
   if (open) {
     await open.focus();
-    if (chatId) open.postMessage({ type: 'spark-open-chat', chatId });
+    if (chatId)
+      open.postMessage({ type: 'spark-open-chat', chatId, ...(cardId ? { cardId } : {}) });
     return;
   }
-  await self.clients.openWindow(chatId ? `/?chat=${chatId}` : '/');
+  const card = chatId && cardId ? `&card=${cardId}` : '';
+  await self.clients.openWindow(chatId ? `/?chat=${chatId}${card}` : '/');
 }
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const chatId = event.notification.data?.chatId;
-  event.waitUntil(openChat(typeof chatId === 'string' && CHAT_ID.test(chatId) ? chatId : null));
+  const { chatId, cardId } = event.notification.data ?? {};
+  const chat = typeof chatId === 'string' && CHAT_ID.test(chatId) ? chatId : null;
+  const card = chat && typeof cardId === 'string' && CARD_ID.test(cardId) ? cardId : null;
+  event.waitUntil(openChat(chat, card));
 });

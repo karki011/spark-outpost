@@ -162,11 +162,6 @@ describe('RequestCard', () => {
     expect(buttons()).toEqual(['Open', 'Cancel…']);
   });
 
-  it('marks a request to a chat outside the outpost as guest', () => {
-    renderCard(post(1, { guest: true }));
-    expect(within(screen.getByRole('article')).getByText('guest')).toBeTruthy();
-  });
-
   it('offers no way into a chat that was deleted', () => {
     renderCard(post(1, { state: 'failed', reason: 'Chat deleted', toConversationId: null }));
     expect(screen.queryAllByRole('button')).toEqual([]);

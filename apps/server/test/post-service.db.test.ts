@@ -13,7 +13,6 @@ import {
 import { startOutpost } from '../src/outposts/start-outpost.ts';
 import {
   AUTHOR_NOT_MEMBER,
-  GUESTS_NOT_AVAILABLE,
   OUTPOST_PAUSED,
   REQUEST_STARTED_TURN,
 } from '../src/outposts/post-rules.ts';
@@ -175,7 +174,6 @@ describe('posting to an outpost', () => {
       fromConversationId: null,
       toHandle: 'api',
       toConversationId: api,
-      guest: false,
       taskId: null,
     });
     await notified(2);
@@ -225,21 +223,6 @@ describe('posting to an outpost', () => {
       expect(row.body).not.toContain(secret);
       expect(row.body).toContain('[redacted');
     }
-  });
-
-  it('refuses a guest for now, and stores nothing', async () => {
-    expect(
-      await refusal(
-        postToOutpost(deps, {
-          outpostId,
-          author: { kind: 'user' },
-          id: randomUUID(),
-          text: '@docs look at this',
-          guestConversationId: await newChat(t),
-        }),
-      ),
-    ).toEqual({ status: 400, message: GUESTS_NOT_AVAILABLE });
-    expect(await bodies()).toHaveLength(2);
   });
 
   it('stores one request per chat the message addresses, as typed and under one batch', async () => {

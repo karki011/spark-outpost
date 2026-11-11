@@ -16,7 +16,6 @@ const stored: StoredPost = {
   fromHandle: null,
   toHandle: 'api',
   toConversationId: '33333333-3333-4333-8333-333333333333',
-  guest: false,
   batchId: null,
   taskId: null,
   runId: null,

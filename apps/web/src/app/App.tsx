@@ -80,6 +80,7 @@ import { useAlertingChats } from '../attention/use-attention.ts';
 import { useAttentionReport } from '../desktop/use-attention-report.ts';
 import { useChatRequests } from './chat-request.ts';
 import { useSlackPresence } from '../slack/use-slack-presence.ts';
+import { focusCardFromNotification } from '../chat/status/focus-pending.ts';
 import { useNotificationChats } from '../phone/use-notification-chats.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { useChatRetention } from './chat-retention.ts';
@@ -229,7 +230,12 @@ function ChatShell({ entering }: { entering: boolean }) {
   }, [setSettings, setView]);
   useBrowserViewOpener(showBrowserView);
   useSlackPresence(remote);
-  useNotificationChats(remote, openChat);
+  const openFromNotification = useStableCallback((chatId: string, cardId: string | null) => {
+    setSettings(null);
+    openChat(chatId);
+    if (cardId) focusCardFromNotification(cardId);
+  });
+  useNotificationChats(remote, openFromNotification);
   useDesktopSettingsOpener(setSettings);
 
   const openAtCard = (chat: ConversationSummary) => {

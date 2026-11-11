@@ -48,7 +48,6 @@ export function toOutpostPost(
     agentStarted: post.agentStarted,
     toConversationId: post.toConversationId,
     toHandle: post.toHandle,
-    guest: post.guest,
     waits: post.waits,
     held: facts !== null && heldForRequest(facts),
     batchId: post.batchId,

@@ -137,7 +137,6 @@ export const outpostPostSchema = z.object({
   agentStarted: z.boolean().default(false),
   toConversationId: z.uuid().nullable(),
   toHandle: z.string().nullable(),
-  guest: z.boolean(),
   waits: z.boolean(),
   held: z.boolean().default(false),
   batchId: z.uuid().nullable(),
@@ -304,14 +303,11 @@ export const createPostRequestSchema = z
     text: postTextSchema,
     to: z.array(z.string().min(1).max(64)).max(OUTPOST_MEMBERS_MAX).optional(),
     toConversationId: z.uuid().optional(),
-    guestConversationId: z.uuid().optional(),
   })
-  .refine(
-    (request) =>
-      request.toConversationId === undefined ||
-      (request.to === undefined && request.guestConversationId === undefined),
-    { message: 'Choose one way to address the message.', path: ['toConversationId'] },
-  );
+  .refine((request) => request.toConversationId === undefined || request.to === undefined, {
+    message: 'Choose one way to address the message.',
+    path: ['toConversationId'],
+  });
 export type CreatePostRequest = z.infer<typeof createPostRequestSchema>;
 
 export const pinPostRequestSchema = z.object({ pinned: z.boolean() });

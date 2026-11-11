@@ -74,7 +74,6 @@ export function post(number: number, overrides: Partial<OutpostPost> = {}): Outp
     held: false,
     toConversationId: API_CHAT,
     toHandle: 'api',
-    guest: false,
     waits: false,
     batchId: null,
     taskId: null,

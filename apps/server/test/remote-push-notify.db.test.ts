@@ -158,7 +158,7 @@ describe('a chat the user has looked at', () => {
 
 describe('a card waiting', () => {
   it('sends the chat title and what is waiting, and never the command', async () => {
-    await ask('execute', 'curl https://example.test/upload?token=abc');
+    const card = await ask('execute', 'curl https://example.test/upload?token=abc');
     await changed();
     expect(payloads()).toEqual([
       {
@@ -166,7 +166,8 @@ describe('a card waiting', () => {
         body: 'Needs your approval',
         chatId: chat.conversationId,
         tag: `spark-chat-${chat.conversationId}`,
-        keys: [expect.stringMatching(/^approval:/)],
+        keys: [`approval:${card.id}`],
+        cardId: card.id,
       },
     ]);
     expect(sent[0]).toMatchObject({

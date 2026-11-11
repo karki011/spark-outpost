@@ -250,12 +250,13 @@ test('keeps what the phone can do across reloads', async ({ page }) => {
   const main = await openPhone(page);
   await turnOn(page);
   const switches = main.getByRole('region', { name: 'What paired devices can do' });
-  await expect(switches.getByRole('switch')).toHaveCount(11);
+  await expect(switches.getByRole('switch')).toHaveCount(12);
   await expect(switches.getByText('stay on the Mac')).toBeVisible();
   for (const name of [
     'Follow, type in and stop Terminal sessions',
     'Approve in Terminal sessions',
     'Notify when a chat needs you',
+    'Notify when a turn finishes or fails',
     'Open artifacts',
   ])
     await expect(switches.getByRole('switch', { name })).toHaveAttribute('aria-checked', 'false');

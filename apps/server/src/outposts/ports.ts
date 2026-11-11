@@ -36,7 +36,6 @@ export interface StoredPost {
   fromHandle: string | null;
   toHandle: string | null;
   toConversationId: string | null;
-  guest: boolean;
   batchId: string | null;
   taskId: string | null;
   runId: string | null;
@@ -65,7 +64,6 @@ export type NewPost = Pick<StoredPost, 'id' | 'outpostId' | 'kind' | 'body' | 'f
       | 'fromHandle'
       | 'toHandle'
       | 'toConversationId'
-      | 'guest'
       | 'batchId'
       | 'observed'
       | 'attachmentIds'

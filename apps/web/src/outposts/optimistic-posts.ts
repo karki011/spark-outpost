@@ -23,7 +23,6 @@ function drawn(detail: OutpostDetail, id: string, body: string, now: string): Ou
     held: false,
     toConversationId: null,
     toHandle: null,
-    guest: false,
     waits: false,
     batchId: null,
     taskId: null,

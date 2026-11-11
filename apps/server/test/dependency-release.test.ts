@@ -19,7 +19,6 @@ function held(over: Partial<StoredPost> = {}): StoredPost {
     fromHandle: 'lead',
     toHandle: 'web',
     toConversationId: '55555555-5555-4555-8555-555555555555',
-    guest: false,
     batchId: null,
     taskId: null,
     runId: null,

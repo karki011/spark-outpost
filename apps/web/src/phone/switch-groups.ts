@@ -11,6 +11,9 @@ import {
 export const MAC_ONLY_LINE =
   'The Browser pane, preview, shell tabs and starting a Terminal session stay on the Mac.';
 
+export const NOTIFY_UPDATES_NOTE =
+  'Sends only the chat title and "Finished" or "Failed". Works only while "Notify when a chat needs you" is on.';
+
 export const SHOWN_SWITCHES = (Object.keys(REMOTE_SWITCH_LABELS) as RemoteSwitch[]).filter(
   (id) => !REMOTE_MAC_ONLY_SWITCHES.includes(id) && !REMOTE_SIGN_IN_SWITCHES.includes(id),
 );
