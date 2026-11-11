@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spark Outpost · Meetings (design mock)</title>
+<script>(function(){var q=new URLSearchParams(location.search).get("theme");if(q==="light"||q==="dark")document.documentElement.dataset.theme=q})()</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a design board. Five numbered frames, each one screen of the feature in the order a meeting happens. */
+:root{
+  --bg:#f4f5f7; --rail:#eaecf0; --panel:#ffffff; --raise:#eef0f3; --line:#e2e5ea; --line-strong:#85888d;
+  --text:#16191e; --muted:#495160; --faint:#575f6a;
+  --accent:#078470; --accent-ink:#ffffff; --accent-text:#00715d; --accent-soft:rgba(7,132,112,.11);
+  --user:#e8f3f0; --danger:#bb3430; --danger-soft:rgba(187,52,48,.09);
+  --warn:#8a4a00; --warn-soft:rgba(138,74,0,.1); --switch-on:#1a7a3c; --switch-on-ink:#ffffff;
+  --island:#111418; --island-text:#eef1f4; --island-muted:#a6b0bc; --island-line:#2a3038; --island-raise:#1c2127;
+  --r:14px; --r-sm:8px;
+  --font-sans:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'Geist Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0c0f12; --rail:#07090b; --panel:#12161a; --raise:#1a1f25; --line:#232a31; --line-strong:#646c74;
+    --text:#e7eaee; --muted:#a3aebc; --faint:#909aa7;
+    --accent:#34c3a3; --accent-ink:#05231c; --accent-text:#34c3a3; --accent-soft:rgba(52,195,163,.13);
+    --user:#172a2a; --danger:#f06b63; --danger-soft:rgba(240,107,99,.11);
+    --warn:#e8b04b; --warn-soft:rgba(232,176,75,.12); --switch-on:#52c77f; --switch-on-ink:#0b1f14;
+    --island:#000000; --island-text:#eef1f4; --island-muted:#a6b0bc; --island-line:#2a3038; --island-raise:#171b20;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0c0f12; --rail:#07090b; --panel:#12161a; --raise:#1a1f25; --line:#232a31; --line-strong:#646c74;
+  --text:#e7eaee; --muted:#a3aebc; --faint:#909aa7;
+  --accent:#34c3a3; --accent-ink:#05231c; --accent-text:#34c3a3; --accent-soft:rgba(52,195,163,.13);
+  --user:#172a2a; --danger:#f06b63; --danger-soft:rgba(240,107,99,.11);
+  --warn:#e8b04b; --warn-soft:rgba(232,176,75,.12); --switch-on:#52c77f; --switch-on-ink:#0b1f14;
+  --island:#000000; --island-text:#eef1f4; --island-muted:#a6b0bc; --island-line:#2a3038; --island-raise:#171b20;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--rail);color:var(--text);font:14px/1.55 var(--font-sans);-webkit-font-smoothing:antialiased;
+  padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.board{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:36px}
+header h1{font-size:26px;line-height:1.2;font-weight:600;margin:0 0 6px;text-wrap:balance}
+header p{margin:0;color:var(--muted);max-width:66ch}
+.note{font-size:12px;color:var(--faint);margin-top:10px}
+.frame{display:flex;flex-direction:column;gap:12px}
+.frame-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.step{font:500 12px/1 var(--font-mono);color:var(--accent-text);background:var(--accent-soft);border-radius:999px;padding:5px 9px}
+.frame-head h2{font-size:17px;font-weight:600;margin:0}
+.frame-head p{margin:0;color:var(--muted);flex:1 1 320px;min-width:0}
+.stage{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+.stage>*{min-width:0}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{min-height:30px;border-radius:var(--r-sm);border:1px solid var(--line-strong);background:var(--panel);padding:4px 12px;font-weight:500}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.quiet{border-color:transparent;background:none;color:var(--muted)}
+.btn.stop{border-color:var(--danger);color:var(--danger);background:var(--danger-soft)}
+kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:4px;padding:2px 4px;color:var(--muted)}
+
+/* 1 · start */
+.alert{flex:1 1 300px;max-width:400px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+.alert .when{font-size:12px;color:var(--muted)}
+.alert h3{margin:0;font-size:16px;font-weight:600}
+.alert .host{font-size:12px;color:var(--faint)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.today{flex:1 1 320px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.today h4{margin:0;padding:10px 14px;font-size:12px;font-weight:500;color:var(--muted);border-bottom:1px solid var(--line)}
+.ev{display:flex;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.ev:last-child{border-bottom:0}
+.ev time{font:12px var(--font-mono);color:var(--muted);flex:none;width:44px}
+.ev .t{flex:1;min-width:0}
+.ev .t b{display:block;font-weight:500}
+.ev .t span{font-size:12px;color:var(--faint)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;border-radius:999px;padding:2px 9px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.rec{border-color:var(--danger);color:var(--danger);background:var(--danger-soft)}
+.chip.ok{border-color:transparent;background:var(--accent-soft);color:var(--accent-text)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--danger);flex:none}
+@media (prefers-reduced-motion:no-preference){.dot.live{animation:pulse 1.6s ease-in-out infinite}}
+@keyframes pulse{50%{opacity:.35}}
+
+/* 2 · island */
+.island{flex:1 1 380px;max-width:520px;background:var(--island);color:var(--island-text);border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.island .bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.island .bar b{font-weight:600}
+.island .bar .el{font:12px var(--font-mono);color:var(--island-muted)}
+.island .bar .sp{flex:1}
+.island .ibtn{min-height:28px;border-radius:8px;border:1px solid var(--island-line);background:var(--island-raise);color:var(--island-text);padding:3px 10px;font-weight:500}
+.island .ibtn.stop{border-color:#f06b63;color:#ffb3ae}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--island-line);overflow-x:auto}
+.tabs span{padding:6px 10px;font-size:13px;color:var(--island-muted);white-space:nowrap;border-bottom:2px solid transparent}
+.tabs span[aria-current]{color:var(--island-text);border-color:#34c3a3}
+.lines{display:flex;flex-direction:column;gap:8px;max-height:210px;overflow:auto}
+.ln{display:grid;grid-template-columns:54px 1fr;gap:8px;font-size:13px}
+.ln .who{font:500 11px/1.9 var(--font-mono);color:var(--island-muted)}
+.ln.you .who{color:#34c3a3}
+.ln.draft p{color:var(--island-muted)}
+.ln p{margin:0}
+.ask{display:flex;gap:6px;flex-wrap:wrap}
+.field{flex:1 1 180px;min-width:0;min-height:30px;border-radius:8px;border:1px solid var(--island-line);background:var(--island-raise);color:var(--island-muted);padding:5px 10px;font-size:13px}
+.ans{background:var(--island-raise);border:1px solid var(--island-line);border-radius:10px;padding:10px 12px;font-size:13px}
+.ans small{display:block;color:var(--island-muted);margin-bottom:4px}
+.ans p{margin:0}
+.side{flex:1 1 240px;display:flex;flex-direction:column;gap:10px}
+.callout{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px}
+.callout b{display:block;font-weight:600;margin-bottom:2px}
+.callout span{color:var(--muted);font-size:13px}
+.strip{background:var(--island);color:var(--island-text);border-radius:999px;padding:6px 12px;display:inline-flex;align-items:center;gap:8px;font-size:13px;align-self:flex-start;flex-wrap:wrap}
+.strip .el{font:12px var(--font-mono);color:var(--island-muted)}
+
+/* 3 · library */
+.lib{flex:1 1 100%;display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.list{border-right:1px solid var(--line);display:flex;flex-direction:column}
+.search{margin:10px;min-height:30px;border:1px solid var(--line);border-radius:var(--r-sm);padding:5px 10px;color:var(--faint);font-size:13px}
+.item{padding:10px 12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.item[aria-current]{background:var(--accent-soft)}
+.item b{font-weight:500}
+.item span{font-size:12px;color:var(--faint)}
+.doc{padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.doc h3{margin:0;font-size:18px;font-weight:600}
+.meta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.seg span{padding:6px 10px;font-size:13px;color:var(--muted);border-bottom:2px solid transparent}
+.seg span[aria-current]{color:var(--text);border-color:var(--accent)}
+.md h5{margin:10px 0 4px;font-size:13px;font-weight:600}
+.md p,.md ul{margin:0;color:var(--text);max-width:68ch}
+.md ul{padding-left:18px}
+.md li{margin:2px 0}
+.files{display:flex;gap:8px;flex-wrap:wrap}
+.file{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 8px;font-size:12px;color:var(--muted)}
+.file i{font:500 10px var(--font-mono);font-style:normal;background:var(--raise);border-radius:4px;padding:1px 4px}
+@media (max-width:640px){.lib{grid-template-columns:1fr}.list{border-right:0;border-bottom:1px solid var(--line)}}
+
+/* 4 · still in the call */
+.states{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.state{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;display:flex;flex-direction:column;gap:8px}
+.state p{margin:0;color:var(--muted);font-size:13px}
+
+/* 0 · calendar redesign */
+.cal{flex:1 1 100%;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+.cal-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:16px 20px 12px}
+.cal-head h3{margin:0;font-size:20px;font-weight:600}
+.cal-head .date{color:var(--muted)}
+.cal-head .sp{flex:1}
+.days{display:flex;gap:4px;padding:0 20px 12px;overflow-x:auto}
+.day{flex:1 0 64px;text-align:center;border-radius:var(--r-sm);padding:6px 4px;color:var(--muted);font-size:12px}
+.day b{display:block;font-size:15px;font-weight:500;color:var(--text)}
+.day i{display:block;height:4px;font-style:normal;letter-spacing:2px;line-height:4px;color:var(--accent-text)}
+.day[aria-current]{background:var(--accent-soft)}
+.day[aria-current] b{color:var(--accent-text);font-weight:600}
+.cal-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,300px);border-top:1px solid var(--line)}
+.agenda{padding:8px 20px 16px;min-width:0}
+.next{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--accent-soft);border-radius:var(--r-sm);padding:10px 12px;margin:8px 0 6px}
+.next .t{flex:1 1 200px;min-width:0}
+.next .t small{display:block;color:var(--accent-text);font-weight:500}
+.next .t b{font-weight:600}
+.ag{display:grid;grid-template-columns:76px 10px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.ag:last-child{border-bottom:0}
+.ag time{font:12px var(--font-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.ag .c{width:8px;height:8px;border-radius:3px;background:var(--accent)}
+.ag .c.fam{background:#b0477c}
+.ag .t b{font-weight:500}
+.ag .t span{display:block;font-size:12px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ag.past{opacity:.72}
+.ag.sel{background:var(--raise);margin:0 -12px;padding:9px 12px;border-radius:var(--r-sm);border-bottom-color:transparent}
+.gap{font-size:12px;color:var(--faint);padding:5px 0 5px 96px}
+.detail{border-left:1px solid var(--line);padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.detail h4{margin:0;font-size:16px;font-weight:600}
+.detail p{margin:0;color:var(--muted);font-size:13px}
+.before{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.before div{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;font-size:13px;color:var(--muted)}
+.before b{display:block;color:var(--text);font-weight:600;margin-bottom:2px}
+@media (max-width:700px){.cal-body{grid-template-columns:1fr}.detail{border-left:0;border-top:1px solid var(--line)}}
+
+/* 5 · settings */
+.set{flex:1 1 100%;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.opt{display:flex;gap:14px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
+.opt:first-child{border-top:0}
+.opt .l{flex:1 1 260px;min-width:0}
+.opt .l b{display:block;font-weight:500}
+.opt .l span{font-size:13px;color:var(--muted)}
+.pick{display:inline-flex;border:1px solid var(--line-strong);border-radius:var(--r-sm);overflow:hidden;flex-wrap:wrap}
+.pick span{padding:5px 10px;font-size:13px;border-left:1px solid var(--line)}
+.pick span:first-child{border-left:0}
+.pick span[aria-current]{background:var(--accent-soft);color:var(--accent-text);font-weight:500}
+.sw{width:38px;height:22px;border-radius:999px;background:var(--line-strong);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--panel)}
+.sw.on{background:var(--switch-on)}
+.sw.on::after{left:19px;background:var(--switch-on-ink)}
+.swl{display:inline-flex;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="board">
+  <header>
+    <h1>Meetings in Spark: design mock</h1>
+    <p>A calmer calendar screen, then five screens in the order a meeting happens. Static mock with example content; nothing here records or sends anything. Names, times and notes are invented.</p>
+  </header>
+
+  <section class="frame">
+    <div class="frame-head"><span class="step">0 Calendar</span><h2>A calmer calendar screen</h2>
+      <p>The day as one clean list instead of a boxed hour grid. One accent, one line per meeting, details only for the meeting you pick. <b>Meetings</b> becomes a third tab here, so the left bar gains nothing.</p></div>
+    <div class="stage">
+      <div class="cal" role="group" aria-label="Calendar, Day">
+        <div class="cal-head"><h3>Calendar</h3><span class="date">Wednesday 11 November</span><span class="sp"></span>
+          <div class="pick" role="radiogroup" aria-label="View"><span aria-current="true">Day</span><span>Month</span><span>Meetings</span></div>
+          <button class="btn quiet" id="cal-more" aria-label="More">⋯</button></div>
+        <div class="days" role="group" aria-label="This week">
+          <div class="day">Mon<b>9</b><i>··</i></div><div class="day">Tue<b>10</b><i>···</i></div><div class="day" aria-current="date">Wed<b>11</b><i>·····</i></div><div class="day">Thu<b>12</b><i>&nbsp;</i></div><div class="day">Fri<b>13</b><i>·</i></div><div class="day">Sat<b>14</b><i>&nbsp;</i></div><div class="day">Sun<b>15</b><i>&nbsp;</i></div>
+        </div>
+        <div class="cal-body">
+          <div class="agenda">
+            <div class="next"><div class="t"><small>Now · until 10:25</small><b>Live review</b></div><button class="btn primary" id="cal-join">Join</button><button class="btn" id="cal-notes">Take notes</button></div>
+            <div class="ag past"><time>8:30</time><span class="c"></span><div class="t"><b>Morning sync</b><span>30 min · Zoom · decided to ship Friday</span></div><span class="chip ok">Notes</span></div>
+            <div class="ag sel"><time>9:55</time><span class="c"></span><div class="t"><b>Live review</b><span>30 min · Google Meet</span></div><span class="chip rec"><span class="dot live" aria-hidden="true"></span>Recording</span></div>
+            <div class="gap">35 min free</div>
+            <div class="ag"><time>11:00</time><span class="c"></span><div class="t"><b>Team Cirrus Standup</b><span>30 min · Zoom · overlaps Bus pickup</span></div><span></span></div>
+            <div class="ag"><time>11:05</time><span class="c fam"></span><div class="t"><b>Bus pickup</b><span>30 min · Family</span></div><span></span></div>
+            <div class="gap">55 min free</div>
+            <div class="ag"><time>12:30</time><span class="c"></span><div class="t"><b>Quick check-in</b><span>15 min</span></div><span></span></div>
+            <div class="ag"><time>1:00</time><span class="c"></span><div class="t"><b>Design review</b><span>1 h</span></div><span></span></div>
+          </div>
+          <div class="detail">
+            <h4>Live review</h4>
+            <p>9:55–10:25 · Spark Work · Google Meet · 3 people</p>
+            <div class="row"><button class="btn primary" id="d-join">Join</button><button class="btn stop" id="d-stop">Stop notes</button></div>
+            <p><b>Context</b> · pricing-2026.pdf</p>
+            <p>Goal: agree the January price.</p>
+            <div class="row"><button class="btn" id="d-context">Add context…</button><button class="btn quiet" id="d-open">Open in Calendar</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="before">
+        <div><b>Gone: the hour grid</b>Boxed blocks, hatched free areas and the red clock label become a plain list with quiet “35 min free” lines.</div>
+        <div><b>Gone: seven day cards</b>The week is a slim row with dots for how busy each day is.</div>
+        <div><b>Gone: empty side cards</b>“Select an event” and “Your chats today” no longer sit there empty; the side panel shows the meeting you picked.</div>
+        <div><b>Moved: Refresh now, the day-shape bar, calendar chips</b>Into the ⋯ menu. One accent colour; a second only to tell calendars apart.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="frame">
+    <div class="frame-head"><span class="step">1 Start</span><h2>Take notes from a meeting, or start one yourself</h2>
+      <p>The meeting alert and Today gain <b>Take notes</b>. Nothing records until you press it, unless you turn on a setting (screen 5).</p></div>
+    <div class="stage">
+      <div class="alert" role="group" aria-label="Meeting alert">
+        <span class="when">Starts in 1 min · 14:00–14:30</span>
+        <h3>Pricing review</h3>
+        <span class="host">zoom.us</span>
+        <div class="row">
+          <button class="btn primary" id="join-notes">Join and take notes</button>
+          <button class="btn" id="join">Join <kbd>⌘J</kbd></button>
+          <button class="btn quiet" id="dismiss">Dismiss</button>
+        </div>
+      </div>
+      <div class="today" role="group" aria-label="Today">
+        <h4>Today · Wed 11 Nov</h4>
+        <div class="ev"><time>10:00</time><div class="t"><b>Standup</b><span>Notes written · 12 min</span></div><span class="chip ok">Notes</span></div>
+        <div class="ev"><time>14:00</time><div class="t"><b>Pricing review</b><span>zoom.us · starts in 1 min</span></div><button class="btn" id="take-notes">Take notes</button></div>
+        <div class="ev"><time>16:30</time><div class="t"><b>1:1 with Dana</b><span>meet.google.com</span></div><span class="chip">Later</span></div>
+        <div class="ev"><time>—</time><div class="t"><b>No calendar event?</b><span>Start a meeting from the island</span></div><button class="btn" id="new-meeting">New meeting</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="frame">
+    <div class="frame-head"><span class="step">2 Record</span><h2>The island while a meeting records</h2>
+      <p>A <b>Meeting</b> tab joins Home, Ask Spark and New chat. The transcript has two labels, <b>You</b> and <b>Others</b>. Help is on demand.</p></div>
+    <div class="stage">
+      <div class="island" role="group" aria-label="Island, Meeting tab">
+        <div class="bar"><span class="dot live" aria-hidden="true"></span><b>Recording</b><span>Pricing review</span><span class="el">12:48</span><span class="sp"></span><span class="chip ok">In call</span><button class="ibtn stop" id="stop">Stop</button></div>
+        <div class="tabs"><span>Home</span><span aria-current="page">Meeting</span><span>Ask Spark</span><span>New chat</span></div>
+        <div class="lines">
+          <div class="ln"><span class="who">Others</span><p>If we move the team plan to twenty-four a seat, what happens to the people on the old annual price?</p></div>
+          <div class="ln you"><span class="who">You</span><p>They keep it until renewal. We said that in the March note.</p></div>
+          <div class="ln"><span class="who">Others</span><p>Okay. And do we have the churn number for the last quarter handy?</p></div>
+          <div class="ln draft"><span class="who">Others</span><p>because finance will ask before they sign…</p></div>
+        </div>
+        <div class="ask">
+          <button class="ibtn" id="catch-up">Catch me up</button>
+          <button class="ibtn" id="suggest">Suggest a reply</button>
+          <div class="field" role="textbox" aria-label="Ask about this meeting">Ask about this meeting…</div>
+        </div>
+        <div class="ans"><small>Suggest a reply · from the transcript and pricing-2026.pdf</small><p>“Churn was 3.1% last quarter, down from 3.8%. It’s on page 4 of the pricing deck; I can share it after the call.”</p></div>
+        <div class="field" role="textbox" aria-label="Your notes">Your notes: grandfather annual until renewal · finance needs churn…</div>
+      </div>
+      <div class="side">
+        <span class="strip"><span class="dot live" aria-hidden="true"></span>Recording · Pricing review <span class="el">12:48</span></span>
+        <div class="callout"><b>Always visible to you</b><span>The resting island shows the red dot, the title, the time and Stop for as long as a meeting records.</span></div>
+        <div class="callout"><b>Not in your screen share</b><span>The Meeting tab is left out of screen sharing and screenshots, so your notes aren’t broadcast. The recording dot is not hidden.</span></div>
+        <div class="callout"><b>Nothing sent while recording</b><span>Audio is transcribed on the Mac and dropped. Text goes to your provider only when you ask for help or notes.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="frame">
+    <div class="frame-head"><span class="step">3 After</span><h2>The Meetings tab: every transcript in one place</h2>
+      <p>The third tab of the calendar screen. Each row says which calendar it came from, or that you started it. Notes are an editable page; the transcript and your files sit beside them.</p></div>
+    <div class="stage">
+      <div class="lib" role="group" aria-label="Meetings view">
+        <div class="list">
+          <div class="search" role="searchbox" aria-label="Search meetings">Search meetings…</div>
+          <div class="item" aria-current="true"><b>Pricing review</b><span>Today 14:00 · 31 min · Spark Work</span></div>
+          <div class="item"><b>Standup</b><span>Today 10:00 · 12 min · Spark Work</span></div>
+          <div class="item"><b>Call with Dana about onboarding</b><span>Yesterday 17:20 · 18 min · Started by you</span></div>
+          <div class="item"><b>Vendor demo</b><span>Mon 9 Nov · 44 min · Google · Personal</span></div>
+        </div>
+        <div class="doc">
+          <h3>Pricing review</h3>
+          <div class="meta"><span>Wed 11 Nov · 14:00–14:31</span><span class="chip">Parakeet · on this Mac</span><span class="chip">Notes by Claude · $0.04</span></div>
+          <div class="row"><button class="btn primary" id="start-chat">Start a chat</button><button class="btn" id="write-again">Write again</button><button class="btn" id="copy">Copy</button><button class="btn quiet" id="delete">Delete…</button></div>
+          <div class="seg"><span aria-current="page">Notes</span><span>Transcript</span><span>Context · 2</span></div>
+          <div class="md">
+            <h5>Summary</h5>
+            <p>The team plan moves to $24 a seat from January. Existing annual customers keep their price until renewal. Finance needs last quarter’s churn before signing off.</p>
+            <h5>Decisions</h5>
+            <ul><li>Team plan: $24 per seat, from 1 January.</li><li>Annual customers keep the old price until they renew.</li></ul>
+            <h5>Action items</h5>
+            <ul><li><b>You</b>: send the churn figure (3.1%) and page 4 of the deck to finance.</li><li>Draft the customer email. No owner was named.</li></ul>
+            <h5>Open questions</h5>
+            <ul><li>Does the education discount change?</li></ul>
+          </div>
+          <div class="files"><span class="file"><i>PDF</i>pricing-2026.pdf</span><span class="file"><i>IMG</i>whiteboard.png</span><button class="btn" id="add-context">Add context…</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="frame">
+    <div class="frame-head"><span class="step">4 In the call?</span><h2>Spark knows when the call is still on</h2>
+      <p>For a meeting with a Zoom, Meet, Teams or Webex link, Spark checks whether a meeting app or browser has the microphone open during that meeting’s time. It doesn’t read the call.</p></div>
+    <div class="stage">
+      <div class="states">
+        <div class="state"><span class="chip ok">In call</span><p>Recording continues, even past the calendar end time, while the call is on.</p></div>
+        <div class="state"><span class="chip">Call ended</span><p>After 60 seconds off the call:</p><div class="row"><button class="btn primary" id="stop-write">Stop and write notes</button><button class="btn quiet" id="keep">Keep recording</button></div></div>
+        <div class="state"><span class="chip">You joined · not recording</span><p>With “Ask at the start” on, joining the call brings up <b>Take notes</b> for that meeting.</p></div>
+        <div class="state"><span class="chip">Two meetings overlap</span><p>Spark can’t tell which call it is, so it asks which meeting the notes belong to.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="frame">
+    <div class="frame-head"><span class="step">5 Settings</span><h2>Settings → Meetings</h2>
+      <p>Recording by default is your choice, and it starts off.</p></div>
+    <div class="stage">
+      <div class="set" role="group" aria-label="Meetings settings">
+        <div class="opt"><div class="l"><b>Record meetings automatically</b><span>Off: only when you press Take notes. Ask: highlight Take notes when a meeting starts. Start when I join: begin when you join the call.</span></div>
+          <div class="pick" role="radiogroup" aria-label="Record meetings automatically"><span aria-current="true">Off</span><span>Ask at the start</span><span>Start when I join</span></div></div>
+        <div class="opt"><div class="l"><b>Write notes when a meeting ends</b><span>Sends the transcript and your notes to your default provider.</span></div><span class="swl"><span class="sw on" role="switch" aria-checked="true" aria-label="Write notes when a meeting ends"></span>On</span></div>
+        <div class="opt"><div class="l"><b>Let Ask Spark read my meetings</b><span>So you can ask about past meetings. Chats get a meeting only when you attach it.</span></div><span class="swl"><span class="sw on" role="switch" aria-checked="true" aria-label="Let Ask Spark read my meetings"></span>On</span></div>
+        <div class="opt"><div class="l"><b>Include my microphone</b><span>Off records only what the others say.</span></div><span class="swl"><span class="sw on" role="switch" aria-checked="true" aria-label="Include my microphone"></span>On</span></div>
+        <div class="opt"><div class="l"><b>Stored meetings</b><span>4 meetings · transcripts and notes are kept on this Mac until you delete them. Audio is never saved.</span></div><button class="btn stop" id="delete-all">Delete all…</button></div>
+        <div class="opt"><div class="l"><span>Tell people you’re taking notes. Recording others without consent is illegal in many places.</span></div></div>
+      </div>
+    </div>
+    <p class="note">Open questions on this mock: whether the Meeting tab is hidden from screen shares, whether “Start when I join” ships in the first version, and whether live help should ever answer on its own.</p>
+  </section>
+</div>
+</body>
+</html>
