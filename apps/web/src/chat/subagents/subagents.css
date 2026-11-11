@@ -1,11 +1,3 @@
-.sa-task.open {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-size: 12px;
-  color: var(--faint);
-}
-
 .sa-detail {
   display: flex;
   flex-direction: column;
@@ -47,12 +39,53 @@
 }
 
 .sa-list b,
-.sa-said b {
+.sa-heading {
   font-weight: 500;
   color: var(--text);
 }
 
-.sa-said p {
-  white-space: pre-wrap;
+.sa-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sa-section .md {
+  min-width: 0;
+  font-size: 13px;
   overflow-wrap: anywhere;
+}
+
+.sa-brief {
+  color: var(--muted);
+}
+
+.sa-brief.clamped {
+  max-height: 8.5em;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 60%, transparent);
+}
+
+.sa-more {
+  align-self: flex-start;
+  min-height: 28px;
+  color: var(--accent-text);
+  font-weight: 500;
+  border-radius: var(--r-sm);
+}
+
+.sa-more:hover {
+  text-decoration: underline;
+}
+
+.sa-more:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@media (pointer: coarse) {
+  .sa-more {
+    min-height: 44px;
+  }
 }

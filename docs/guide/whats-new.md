@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                           | What to do                                                  |
 | -------------------------------------- | ----------------------------------------------------------- |
+| Agent briefs and reports formatted     | Select an agent in a turn.                                  |
 | Attach PDFs and other files            | [Attach files](attach-files.md).                            |
 | Remote control: devices list, groups   | [Use your phone](use-your-phone.md).                        |
 | Left bar shortcuts ⌥⌘1–⌥⌘9             | [Keyboard shortcuts](keyboard-shortcuts.md).                |
@@ -36,4 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Arrows in zoomed images                | [Keys](keyboard-shortcuts.md#chats).                        |
 | Open pages agents ask for              | [See the card](cards.md#approval-cards).                    |
 | Codex asks while it works              | Answer its [question card](cards.md) before the turn ends.  |
-| Adapter version per run                | The audit's **By run** table.                               |
