@@ -1,8 +1,15 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { emptySubagentRecord, type SubagentRow } from '@spark-outpost/contracts';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OpenAgentsContext, SubagentsLine } from './SubagentsLine.tsx';
+
+const scrolled = vi.fn();
+
+beforeEach(() => {
+  scrolled.mockClear();
+  Element.prototype.scrollIntoView = scrolled;
+});
 
 afterEach(cleanup);
 
@@ -38,7 +45,6 @@ describe('SubagentsLine', () => {
       row('f', 'working'),
     ];
     const { container } = render(<SubagentsLine runId="run-all" rows={workers} live />);
-    fireEvent.click(screen.getByRole('button', { name: 'Show all 6 agents' }));
     const list = screen.getByRole('list', { name: 'Agent progress' });
     const items = within(list).getAllByRole('listitem');
     expect(items).toHaveLength(6);
@@ -50,14 +56,17 @@ describe('SubagentsLine', () => {
       'e',
       'f',
     ]);
-    expect(items[0]?.getAttribute('title')).toBe('Builder: composer · Look around.');
+    expect(within(items[0]!).getByRole('button').getAttribute('title')).toBe(
+      'Builder: composer · Look around.',
+    );
     expect(within(items[2]!).getByText('Agent c')).toBeTruthy();
     expect(within(items[0]!).getByText('Builder')).toBeTruthy();
-    expect(within(items[1]!).getAllByText('Verifier')).toHaveLength(1);
+    expect(within(items[1]!).queryByText('Verifier')).toBeNull();
+    expect(within(items[1]!).getByRole('button', { name: 'Verifier, Done' })).toBeTruthy();
     expect(container.querySelectorAll('.sl-worker .chat-face')).toHaveLength(6);
     expect(
       [...container.querySelectorAll('.sl-state')].map((element) => element.textContent),
-    ).toEqual(['Working', 'Done', 'Failed', 'Stopped', 'Done', 'Working']);
+    ).toEqual(['Working', 'Failed', 'Stopped', 'Working']);
     expect(screen.getByRole('status').classList.contains('sr-only')).toBe(true);
   });
 
@@ -99,6 +108,17 @@ describe('SubagentsLine', () => {
     expect(open).toHaveBeenCalledExactlyOnceWith('run-1');
   });
 
+  it('opens the side panel on the clicked worker', () => {
+    const open = vi.fn();
+    render(
+      <OpenAgentsContext value={open}>
+        <SubagentsLine runId="run-1" rows={rows} live />
+      </OpenAgentsContext>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Agent b, Working' }));
+    expect(open).toHaveBeenCalledExactlyOnceWith('run-1', 'b');
+  });
+
   it('shows the cards in place where there is no side panel', () => {
     render(<SubagentsLine runId="run-1" rows={rows} live />);
     const view = screen.getByRole('button', { name: 'View agents' });
@@ -110,6 +130,25 @@ describe('SubagentsLine', () => {
     ).toHaveLength(3);
   });
 
+  it('opens the cards in place with the clicked worker expanded', () => {
+    const detailed = rows.map((entry) => ({
+      ...entry,
+      steps: [{ name: 'Read `a.ts`', done: true }],
+    }));
+    render(<SubagentsLine runId="run-1" rows={detailed} live />);
+    fireEvent.click(screen.getByRole('button', { name: 'Agent c, Working' }));
+    const names = [
+      ...screen.getByRole('list', { name: 'Sub-agents' }).querySelectorAll('.ac-name'),
+    ];
+    expect(names.map((name) => name.getAttribute('aria-expanded'))).toEqual([
+      'false',
+      'false',
+      'true',
+    ]);
+    expect(document.activeElement).toBe(names[2]);
+    expect(scrolled).toHaveBeenCalled();
+  });
+
   describe('with more than four workers', () => {
     const six = [
       ...['a', 'b', 'c', 'd'].map((id) => ({ ...row(id, 'done'), name: 'Builder' })),
@@ -117,34 +156,44 @@ describe('SubagentsLine', () => {
       { ...row('f', 'failed'), name: 'Reviewer' },
     ];
 
-    it('rolls up into one summary line with the open ones still visible', () => {
+    it('rolls up into a summary and one face button per worker', () => {
       const { container } = render(<SubagentsLine runId="run-six" rows={six} live />);
       expect(container.querySelector('.sl-summary')?.textContent).toBe(
         '5 Builders, 1 Reviewer · 4 done · 1 working · 1 failed',
       );
-      const items = within(screen.getByRole('list', { name: 'Agent progress' })).getAllByRole(
-        'listitem',
-      );
-      expect(items.map((item) => item.getAttribute('data-worker-id'))).toEqual(['e', 'f']);
-      expect(within(items[1]!).getByText('Failed')).toBeTruthy();
-      const toggle = screen.getByRole('button', { name: 'Show all 6 agents' });
-      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
+      const list = screen.getByRole('list', { name: 'Agent progress' });
+      const items = within(list).getAllByRole('listitem');
+      expect(items.map((item) => item.getAttribute('data-worker-id'))).toEqual([
+        'a',
+        'b',
+        'c',
+        'd',
+        'e',
+        'f',
+      ]);
+      expect(within(list).getAllByRole('button')).toHaveLength(6);
+      expect(within(items[0]!).getByRole('button').textContent).toBe('');
+      expect(within(items[0]!).getByRole('button', { name: 'Builder, Done' })).toBeTruthy();
+      expect(within(items[4]!).getByText('Working')).toBeTruthy();
+      expect(within(items[5]!).getByText('Failed')).toBeTruthy();
+      expect(within(items[5]!).getByText('Reviewer')).toBeTruthy();
       expect(screen.getByRole('button', { name: 'View agents' })).toBeTruthy();
     });
 
-    it('reveals every worker on demand and keeps the choice across re-renders', () => {
-      const { container, rerender } = render(<SubagentsLine runId="run-keep" rows={six} live />);
-      const toggle = screen.getByRole('button', { name: 'Show all 6 agents' });
-      fireEvent.click(toggle);
-      expect(toggle.getAttribute('aria-expanded')).toBe('true');
-      expect(toggle.textContent).toBe('Hide');
-      expect(document.getElementById(toggle.getAttribute('aria-controls')!)).toBeTruthy();
-      expect(container.querySelectorAll('.sl-worker')).toHaveLength(6);
-
-      rerender(<SubagentsLine runId="run-keep" rows={[...six, row('g', 'working')]} live />);
-      expect(container.querySelectorAll('.sl-worker')).toHaveLength(7);
-      fireEvent.click(screen.getByRole('button', { name: 'Hide the agent list' }));
-      expect(container.querySelectorAll('.sl-worker')).toHaveLength(3);
+    it('opens the clicked worker from its face', () => {
+      const open = vi.fn();
+      render(
+        <OpenAgentsContext value={open}>
+          <SubagentsLine runId="run-six" rows={six} live />
+        </OpenAgentsContext>,
+      );
+      fireEvent.click(screen.getAllByRole('button', { name: 'Builder, Done' })[0]!);
+      fireEvent.click(screen.getByRole('button', { name: 'Reviewer, Failed' }));
+      expect(open.mock.calls).toEqual([
+        ['run-six', 'a'],
+        ['run-six', 'f'],
+      ]);
     });
 
     it('keeps three workers as they were', () => {
@@ -152,6 +201,9 @@ describe('SubagentsLine', () => {
       expect(container.querySelector('.sl-summary')).toBeNull();
       expect(container.querySelectorAll('.sl-worker')).toHaveLength(3);
       expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
+      expect(
+        within(screen.getByRole('list', { name: 'Agent progress' })).getAllByRole('button'),
+      ).toHaveLength(3);
     });
   });
 });

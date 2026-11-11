@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { DocLink } from '../ui/DocLink.tsx';
 import { fullDiskAccessQuery } from './full-disk-access-status.ts';
-import { isPromptSilenced, silencePrompt } from './full-disk-access-prompt-storage.ts';
+import {
+  readPromptHold,
+  silencePrompt,
+  snoozePrompt,
+  type PromptHold,
+} from './full-disk-access-prompt-storage.ts';
 import { useOpenFullDiskAccess } from './use-open-full-disk-access.ts';
 import './full-disk-access-prompt.css';
 
@@ -12,11 +17,16 @@ export function FullDiskAccessPrompt() {
   const { remote } = useRemoteClient();
   const eligible = Boolean(sparkDesktop()?.privacy) && !remote;
   const status = useQuery({ ...fullDiskAccessQuery, enabled: eligible }).data?.status;
-  const [hiddenForSession, setHiddenForSession] = useState(false);
-  const [silenced, setSilenced] = useState(isPromptSilenced);
+  const [hold, setHold] = useState<PromptHold>(readPromptHold);
   const openSystemSettings = useOpenFullDiskAccess();
 
-  if (!eligible || status !== 'not_granted' || hiddenForSession || silenced) return null;
+  useEffect(() => {
+    if (typeof hold !== 'number') return;
+    const timer = setTimeout(() => setHold(readPromptHold()), Math.max(0, hold - Date.now()));
+    return () => clearTimeout(timer);
+  }, [hold]);
+
+  if (!eligible || status !== 'not_granted' || hold !== null) return null;
 
   return (
     <section className="fda-prompt" role="status" aria-label="Full Disk Access">
@@ -35,15 +45,15 @@ export function FullDiskAccessPrompt() {
         <button type="button" className="btn primary sm" onClick={() => void openSystemSettings()}>
           Open System Settings
         </button>
-        <button type="button" className="btn ghost sm" onClick={() => setHiddenForSession(true)}>
-          Not now
+        <button type="button" className="btn ghost sm" onClick={() => setHold(snoozePrompt())}>
+          Remind me later
         </button>
         <button
           type="button"
           className="btn ghost sm"
           onClick={() => {
             silencePrompt();
-            setSilenced(true);
+            setHold('forever');
           }}
         >
           Don't ask again

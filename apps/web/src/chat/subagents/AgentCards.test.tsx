@@ -1,10 +1,17 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { emptySubagentRecord, type SubagentRow } from '@spark-outpost/contracts';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentCards } from './AgentCards.tsx';
 import { AgentsSection } from './AgentsSection.tsx';
 import { AgentBoardContext, createAgentBoard } from './agent-board.ts';
+
+const scrolled = vi.fn();
+
+beforeEach(() => {
+  scrolled.mockClear();
+  Element.prototype.scrollIntoView = scrolled;
+});
 
 afterEach(cleanup);
 
@@ -107,5 +114,29 @@ describe('AgentsSection', () => {
       board.forget('new');
     });
     expect(screen.getByRole('heading', { name: 'Agents · 1' })).toBeTruthy();
+  });
+
+  it('expands, scrolls to and focuses the worker a click asked for, every time', () => {
+    const board = createAgentBoard();
+    render(
+      <AgentBoardContext value={board}>
+        <AgentsSection />
+      </AgentBoardContext>,
+    );
+    act(() => board.show({ runId: 'run', order: '2026-10-20T02:00:00Z', rows, live: true }));
+    act(() => board.open('run', 'b'));
+    const name = screen.getByRole('button', { name: 'Web state' });
+    expect(name.getAttribute('aria-expanded')).toBe('true');
+    expect(document.activeElement).toBe(name);
+    expect(scrolled).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole('button', { name: 'Server architecture' }).getAttribute('aria-expanded'),
+    ).toBe('false');
+
+    fireEvent.click(name);
+    expect(name.getAttribute('aria-expanded')).toBe('false');
+    act(() => board.open('run', 'b'));
+    expect(name.getAttribute('aria-expanded')).toBe('true');
+    expect(scrolled).toHaveBeenCalledTimes(2);
   });
 });

@@ -8,7 +8,6 @@ const STATE_ORDER = ['done', 'working', 'inactive', 'failed', 'stopped'] as cons
 
 export interface Rollup {
   text: string;
-  visible: SubagentRow[];
 }
 
 const roleLabel = (row: Pick<SubagentRow, 'name'>) => workerRole(row.name) ?? 'Agent';
@@ -34,6 +33,5 @@ export function rollupRows(rows: readonly SubagentRow[], live: boolean): Rollup 
   if (rows.length <= ROLLUP_THRESHOLD) return null;
   return {
     text: `${rollupRoles(rows)} · ${rollupStates(rows, live)}`,
-    visible: rows.filter((row) => row.state !== 'done'),
   };
 }

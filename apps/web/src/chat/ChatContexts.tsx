@@ -11,7 +11,7 @@ interface ChatContextsProps {
   openPlan: (() => void) | null;
   status: StatusStore;
   board: AgentBoard;
-  openAgents: ((runId: string) => void) | null;
+  openAgents: ((runId: string, workerId?: string) => void) | null;
   children: ReactNode;
 }
 

@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FullDiskAccessPrompt } from './FullDiskAccessPrompt.tsx';
 
+const HOUR = 60 * 60 * 1000;
 const SETTLE = { timeout: 3000 };
 const TITLE = 'Let agents read protected folders?';
 const remoteState = { remote: false };
@@ -19,6 +20,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   delete (window as { sparkDesktop?: unknown }).sparkDesktop;
 });
@@ -107,16 +109,41 @@ describe('Full Disk Access prompt', () => {
     await waitFor(() => expect(screen.queryByText(TITLE)).toBeNull(), SETTLE);
   });
 
-  it('Not now hides it for this session only', async () => {
+  it('Remind me later hides it for two hours, across a remount', async () => {
     server(['not_granted']);
     installDesktop();
     mount();
-    fireEvent.click(await screen.findByRole('button', { name: 'Not now' }, SETTLE));
+    const later = await screen.findByRole('button', { name: 'Remind me later' }, SETTLE);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(10 * HOUR);
+    fireEvent.click(later);
     expect(screen.queryByText(TITLE)).toBeNull();
-    expect(localStorage.length).toBe(0);
     cleanup();
+
+    vi.setSystemTime(11 * HOUR);
+    const client = mount();
+    await settled(client);
+    expect(screen.queryByText(TITLE)).toBeNull();
+    cleanup();
+
+    vi.setSystemTime(12 * HOUR + 1);
     mount();
     expect(await screen.findByText(TITLE, undefined, SETTLE)).toBeTruthy();
+  });
+
+  it('brings the notice back by itself when the snooze ends', async () => {
+    server(['not_granted']);
+    installDesktop();
+    mount();
+    const later = await screen.findByRole('button', { name: 'Remind me later' }, SETTLE);
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+    fireEvent.click(later);
+    expect(screen.queryByText(TITLE)).toBeNull();
+
+    await act(() => vi.advanceTimersByTimeAsync(2 * HOUR - 1000));
+    expect(screen.queryByText(TITLE)).toBeNull();
+    await act(() => vi.advanceTimersByTimeAsync(2000));
+    expect(screen.getByText(TITLE)).toBeTruthy();
   });
 
   it("Don't ask again hides it and keeps it hidden on remount", async () => {
@@ -128,6 +155,17 @@ describe('Full Disk Access prompt', () => {
     cleanup();
     const client = mount();
     await settled(client);
+    expect(screen.queryByText(TITLE)).toBeNull();
+  });
+
+  it("Don't ask again stays hidden after the snooze time has passed", async () => {
+    server(['not_granted']);
+    installDesktop();
+    mount();
+    const never = await screen.findByRole('button', { name: "Don't ask again" }, SETTLE);
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+    fireEvent.click(never);
+    await act(() => vi.advanceTimersByTimeAsync(3 * HOUR));
     expect(screen.queryByText(TITLE)).toBeNull();
   });
 });

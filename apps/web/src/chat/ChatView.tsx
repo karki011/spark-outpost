@@ -213,7 +213,9 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   });
   const openPlan = useStableCallback(() => openPanelTab('plan'));
   const openLinks = useStableCallback(() => openPanelTab('links'));
-  const openAgents = useStableCallback((runId: string) => agents.open(panel, runId));
+  const openAgents = useStableCallback((runId: string, workerId?: string) =>
+    agents.open(panel, runId, workerId),
+  );
   usePullRequestRefresh(conversationId, running !== null);
   const openAutonomyPanel = useStableCallback(openAutonomy);
   const reviewChanges = useStableCallback(toggleDiff);

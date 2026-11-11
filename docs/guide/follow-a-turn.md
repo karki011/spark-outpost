@@ -17,7 +17,7 @@ About 2 minutes.
 5. Code Mode labels discovery and reads; failures expand.
 6. A done to-do folds.
 7. Sidebar blobs show the **Agent TV** team.
-8. **View agents** opens **Work**; over four workers fold (**Show all**).
+8. **View agents** opens **Work**; over four workers become clickable faces.
 9. **Message** opens that chat’s composer.
 10. **Ask lead to redirect** drafts in that chat.
 

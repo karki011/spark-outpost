@@ -77,8 +77,36 @@
   overflow-wrap: anywhere;
 }
 
-.sl-all {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--muted);
+.sl-faces {
+  gap: 0 2px;
+}
+
+.sl-face {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 6px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0 4px;
+  color: inherit;
+  font: inherit;
+  border-radius: var(--r-sm);
+}
+
+.sl-face:hover .sl-name {
+  text-decoration: underline;
+}
+
+.sl-face:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@media (pointer: coarse) {
+  .sl-face {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }

@@ -251,7 +251,7 @@ test('the Full Disk Access prompt opens System Settings and goes away once grant
   expect(await read<string[]>(page, 'helpCalls')).toContain('openFullDiskAccess');
 });
 
-test("the Full Disk Access prompt's Not now lasts one launch and Don't ask again lasts for good", async ({
+test("the Full Disk Access prompt's Remind me later lasts two hours and Don't ask again lasts for good", async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -260,9 +260,16 @@ test("the Full Disk Access prompt's Not now lasts one launch and Don't ask again
   await page.goto('/');
 
   const prompt = page.getByRole('status').filter({ hasText: 'Let agents read protected folders?' });
-  await prompt.getByRole('button', { name: 'Not now' }).click();
+  await prompt.getByRole('button', { name: 'Remind me later' }).click();
   await expect(prompt).toHaveCount(0);
 
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(prompt).toHaveCount(0);
+
+  await page.evaluate(() =>
+    localStorage.setItem('spark-outpost.full-disk-access-prompt', `snoozed:${Date.now() - 1000}`),
+  );
   await page.reload();
   await expect(prompt).toBeVisible();
   await prompt.getByRole('button', { name: "Don't ask again" }).click();
