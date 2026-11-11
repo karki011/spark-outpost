@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ticketsFlowFrom } from '@spark-outpost/contracts';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
@@ -10,11 +11,18 @@ export function useTicketInbox() {
     queryFn: ticketsApi.connections,
   });
   const connected = (connections.data?.connections ?? []).some(ticketsFlowFrom);
+  const forced = useRef(false);
   const inbox = useQuery({
     queryKey: ticketKeys.inbox,
-    queryFn: ticketsApi.inbox,
+    queryFn: () => (forced.current ? ticketsApi.refreshedInbox() : ticketsApi.inbox()),
     enabled: connected,
     staleTime: INBOX_STALE_MS,
   });
-  return { connections, connected, inbox };
+  const refresh = () => {
+    forced.current = true;
+    return inbox.refetch().finally(() => {
+      forced.current = false;
+    });
+  };
+  return { connections, connected, inbox, refresh };
 }

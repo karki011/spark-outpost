@@ -1,38 +1,45 @@
 import {
-  ticketChatState,
   ticketItemId,
+  ticketSourceNames,
   type AttentionSettings,
   type InboxTicket,
-  type PullRequestStatus,
   type TicketInbox,
-  type TicketListItem,
   type TicketSourceId,
   type TicketSourceProblem,
-  type TicketSummary,
 } from '@spark-outpost/contracts';
 import { getAttentionSettings, saveAttentionSnapshot } from '../persistence/attention-settings.ts';
 import type { FlaggedItem } from '../persistence/attention-settings.ts';
-import { listConversations } from '../persistence/conversations.ts';
-import { prFeedbackWaiting } from '../persistence/pr-watches.ts';
-import { lastTicketSyncs, mergeMoveTried } from '../persistence/ticket-events.ts';
-import {
-  cacheTickets,
-  setDismissedFlags,
-  ticketRef,
-  ticketTimes,
-  ticketWork,
-} from '../persistence/tickets.ts';
+import { cacheTickets, setDismissedFlags, ticketRef, ticketTimes } from '../persistence/tickets.ts';
 import { settledDismissals, type Thresholds, type TicketFacts } from './attention.ts';
 import { connectedSources, type OpenSource } from './connections.ts';
-import { recallInbox, rememberInbox, type InboxSnapshot } from './inbox-snapshot.ts';
-import { inboxDevelopment, type DevelopmentDeps } from './development.ts';
+import { factsFor, refreshLocalFacts } from './inbox-facts.ts';
+import {
+  forgetInbox,
+  FRESH_WINDOW_MS,
+  recallInbox,
+  rememberInbox,
+  shareSync,
+  type InboxSnapshot,
+} from './inbox-snapshot.ts';
+import type { DevelopmentDeps } from './development.ts';
+import { forgetPullStatuses } from './pull-status-cache.ts';
 import { placeTicket, sortInbox } from './sections.ts';
 import { isTruncated, TicketApiError } from './source.ts';
-import { moveTicket } from './sync.ts';
+import {
+  backoffUntil,
+  lastGoodRead,
+  recordGoodRead,
+  startBackoff,
+  type Backoff,
+} from './source-backoff.ts';
 
 export const DONE_RECENTLY_DAYS = 7;
 
 export type InboxDeps = DevelopmentDeps;
+
+export interface LoadOptions {
+  refresh?: boolean;
+}
 
 export function problemOf(source: OpenSource, error: unknown): TicketSourceProblem {
   const status = error instanceof TicketApiError ? error.status : -1;
@@ -43,37 +50,51 @@ export function problemOf(source: OpenSource, error: unknown): TicketSourceProbl
   };
 }
 
-async function fetchMine(open: OpenSource) {
-  try {
-    const [active, done] = await Promise.all([
-      open.source.listAssigned({}),
-      open.source.listAssigned({ status: 'done', doneWithinDays: DONE_RECENTLY_DAYS }),
-    ]);
-    const truncated = isTruncated(active) || isTruncated(done);
-    return { tickets: [...active, ...done], problem: null, truncated };
-  } catch (error) {
-    return { tickets: [], problem: problemOf(open, error), truncated: false };
-  }
+function waitingProblem(source: TicketSourceId, { until, status }: Backoff): TicketSourceProblem {
+  const time = new Date(until).toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return {
+    source,
+    kind: 'other',
+    message: `${ticketSourceNames[source]} ${status === 429 ? 'is limiting requests' : 'is unavailable'} (${status}). Spark is waiting until ${time} and shows what it last saw.`,
+  };
 }
 
-const latestPull = (ticket: TicketListItem) =>
-  ticket.work.flatMap((work) => work.pullRequests).at(-1)?.url ?? null;
+async function readAssigned(open: OpenSource) {
+  const [active, done] = await Promise.all([
+    open.source.listAssigned({}),
+    open.source.listAssigned({ status: 'done', doneWithinDays: DONE_RECENTLY_DAYS }),
+  ]);
+  return { tickets: [...active, ...done], truncated: isTruncated(active) || isTruncated(done) };
+}
 
-async function closeMerged(
-  deps: InboxDeps,
-  sources: readonly OpenSource[],
-  ticket: TicketSummary,
-  pull: PullRequestStatus,
-  taskId: string | null,
-): Promise<TicketSummary> {
-  const open = sources.find((entry) => entry.connection.source === ticket.source);
-  if (!open?.connection.moveOnMerge || ticket.status === 'done') return ticket;
-  if (await mergeMoveTried(deps.db, deps.workspaceId, ticket, pull.url)) return ticket;
-  const sync = await moveTicket(deps, open, ticket.key, { group: 'done' }, taskId, {
-    mergedPullRequest: pull.url,
-  });
-  if (sync.outcome !== 'succeeded') return ticket;
-  return open.source.getSummary(ticket.key).catch(() => ({ ...ticket, status: 'done' as const }));
+async function fetchMine(deps: InboxDeps, open: OpenSource, now: Date) {
+  const source = open.connection.source;
+  const rest = (backoff: Backoff) => {
+    const good = lastGoodRead(deps.db, deps.workspaceId, source);
+    return {
+      tickets: [...(good?.tickets ?? [])],
+      problem: waitingProblem(source, backoff),
+      truncated: good?.truncated ?? false,
+      waiting: true,
+    };
+  };
+  const waiting = backoffUntil(deps.db, deps.workspaceId, source, now);
+  if (waiting) return rest(waiting);
+  try {
+    const read = await readAssigned(open);
+    recordGoodRead(deps.db, deps.workspaceId, source, read);
+    return { ...read, problem: null, waiting: false };
+  } catch (error) {
+    if (error instanceof TicketApiError && error.retryAfterMs !== null) {
+      const backoff = { until: now.getTime() + error.retryAfterMs, status: error.status };
+      startBackoff(deps.db, deps.workspaceId, source, backoff);
+      return rest(backoff);
+    }
+    return { tickets: [], problem: problemOf(open, error), truncated: false, waiting: false };
+  }
 }
 
 const DAY_MS = 24 * 3_600_000;
@@ -96,67 +117,6 @@ function flaggedItem(ticket: InboxTicket, now: Date): FlaggedItem {
       days: flag.since ? Math.floor((now.getTime() - Date.parse(flag.since)) / DAY_MS) : null,
     })),
   };
-}
-
-async function factsFor(
-  deps: InboxDeps,
-  sources: readonly OpenSource[],
-  summaries: readonly TicketSummary[],
-): Promise<TicketFacts[]> {
-  const refs = summaries.map((ticket) => ticketRef(ticket.source, ticket.key));
-  const [work, times, syncs, chats] = await Promise.all([
-    ticketWork(deps.db, deps.workspaceId, summaries),
-    ticketTimes(deps.db, deps.workspaceId, summaries),
-    lastTicketSyncs(deps.db, deps.workspaceId, refs),
-    listConversations(deps.db, deps.workspaceId),
-  ]);
-  const chatById = new Map(chats.map((chat) => [chat.id, chat] as const));
-  const listed = summaries.map((ticket): TicketListItem => ({
-    ...ticket,
-    work: work.get(ticketRef(ticket.source, ticket.key)) ?? [],
-  }));
-  const pullUrls = listed.flatMap((t) => latestPull(t) ?? []);
-  const developmentOf = await inboxDevelopment(deps, sources, listed);
-  const feedback = await prFeedbackWaiting(deps.db, deps.workspaceId, pullUrls);
-  return Promise.all(
-    listed.map(async (item): Promise<TicketFacts> => {
-      const ref = ticketRef(item.source, item.key);
-      const pullUrl = latestPull(item);
-      const { pull, mine, development } = developmentOf(item);
-      const lastWork = item.work.at(-1) ?? null;
-      const ticket =
-        pull?.state === 'merged'
-          ? {
-              ...(await closeMerged(deps, sources, item, pull, lastWork?.taskId ?? null)),
-              work: item.work,
-            }
-          : item;
-      const chat = lastWork ? chatById.get(lastWork.conversationId) : undefined;
-      return {
-        ticket,
-        chat: chat
-          ? {
-              conversationId: chat.id,
-              title: chat.title,
-              state: ticketChatState(chat),
-              at: chat.updatedAt,
-              progress: chat.latestRun?.progress ?? null,
-              agent: chat.teammate?.name ?? null,
-            }
-          : null,
-        pullRequest: pull,
-        pullRequestMine: mine,
-        development,
-        lastSync: syncs.get(ref) ?? null,
-        statusSince: times.get(ref)?.statusSince?.toISOString() ?? null,
-        assignedSince: times.get(ref)?.firstSeenAssignedAt?.toISOString() ?? null,
-        snooze: times.get(ref)?.snooze ?? null,
-        prFeedback: pullUrl ? (feedback.get(pullUrl) ?? null) : null,
-        dismissed: times.get(ref)?.dismissed ?? [],
-        noticeSeen: times.get(ref)?.noticeSeen ?? null,
-      };
-    }),
-  );
 }
 
 async function forgetSettledDismissals(
@@ -198,15 +158,16 @@ async function assembleInbox(
   };
 }
 
-export async function loadInbox(deps: InboxDeps): Promise<TicketInbox> {
-  const now = deps.now?.() ?? new Date();
-  const settings = await getAttentionSettings(deps.db, deps.workspaceId);
+async function syncInbox(deps: InboxDeps, now: Date, generation: number): Promise<InboxSnapshot> {
   const sources = await connectedSources(deps);
-  const fetched = await Promise.all(sources.map(fetchMine));
+  const fetched = await Promise.all(sources.map((open) => fetchMine(deps, open, now)));
   const summaries = fetched.flatMap((result) => result.tickets);
   await cacheTickets(deps.db, deps.workspaceId, summaries, { assignedToMe: true });
-  const snapshot = {
-    facts: await factsFor(deps, sources, summaries),
+  const readable = sources.filter((_, index) => !fetched[index]?.waiting);
+  const snapshot: InboxSnapshot = {
+    at: now.getTime(),
+    generation,
+    facts: await factsFor(deps, readable, summaries),
     errors: fetched.flatMap((result) => (result.problem ? [result.problem] : [])),
     sources: sources.map((open) => open.connection.source),
     truncated: sources.flatMap((open, index) =>
@@ -214,8 +175,32 @@ export async function loadInbox(deps: InboxDeps): Promise<TicketInbox> {
     ),
     syncedAt: now.toISOString(),
   };
-  rememberInbox(deps.db, deps.workspaceId, { ...snapshot, at: now.getTime() });
-  return assembleInbox(deps, snapshot, settings, now);
+  rememberInbox(deps.db, deps.workspaceId, snapshot);
+  return snapshot;
+}
+
+export async function loadInbox(
+  deps: InboxDeps,
+  { refresh = false }: LoadOptions = {},
+): Promise<TicketInbox> {
+  const now = deps.now?.() ?? new Date();
+  const settings = await getAttentionSettings(deps.db, deps.workspaceId);
+  if (refresh) forgetPullStatuses(deps.db);
+  const fresh = refresh ? null : recallInbox(deps.db, deps.workspaceId, now, FRESH_WINDOW_MS);
+  if (fresh) {
+    const local = await refreshLocalFacts(deps, fresh.facts);
+    if (!local.pullsChanged) {
+      return assembleInbox(deps, { ...fresh, facts: local.facts }, settings, now);
+    }
+    forgetInbox(deps.db, deps.workspaceId);
+  }
+  let ranOwnSync = false;
+  const synced = await shareSync(deps.db, deps.workspaceId, (generation) => {
+    ranOwnSync = true;
+    return syncInbox(deps, now, generation);
+  });
+  const facts = ranOwnSync ? synced.facts : (await refreshLocalFacts(deps, synced.facts)).facts;
+  return assembleInbox(deps, { ...synced, facts }, settings, now);
 }
 
 export async function reloadInboxMarks(

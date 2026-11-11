@@ -1,12 +1,13 @@
 import '../chat/thread.css';
-import { Fragment, useLayoutEffect, useState, type ReactNode } from 'react';
-import type { BatchLine, ThreadItem } from '@spark-outpost/contracts';
+import { Fragment, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
+import { pinnedNotes, type BatchLine, type ThreadItem } from '@spark-outpost/contracts';
 import { useStickToBottom } from '../chat/use-stick-to-bottom.ts';
 import { scrollToAnchor } from '../crew/scroll-to-anchor.ts';
 import { ArrowDownIcon } from '../ui/icons.tsx';
 import { ConfirmButton } from './ConfirmButton.tsx';
 import { MessageRow } from './MessageRow.tsx';
 import { NoticeLine } from './NoticeLine.tsx';
+import { PinnedBar } from './PinnedBar.tsx';
 import { RequestCard, type CardHandlers } from './RequestCard.tsx';
 import { dayKey, dayLabel } from './day-label.ts';
 import { announcements } from './post-announce.ts';
@@ -24,6 +25,7 @@ interface PostListProps extends CardHandlers {
   storyTags?: ReadonlyMap<string, string> | undefined;
   empty: ReactNode;
   after?: ReactNode;
+  onPin?: ((postId: string, pinned: boolean) => void) | undefined;
 }
 
 function answerableIn(
@@ -88,6 +90,7 @@ export function PostList({
   storyTags,
   empty,
   after,
+  onPin,
   ...handlers
 }: PostListProps) {
   const { scrollerRef, away, unfollow, jumpToLatest } = useStickToBottom();
@@ -97,6 +100,15 @@ export function PostList({
     unfollow();
     scrollToAnchor(postAnchor(jumpTo));
   }, [jumpTo, unfollow]);
+
+  const pinned = useMemo(
+    () => pinnedNotes(items.flatMap((item) => (item.kind === 'note' ? [item.post] : []))),
+    [items],
+  );
+  const jumpToNote = (postId: string) => {
+    unfollow();
+    scrollToAnchor(postAnchor(postId));
+  };
 
   const cardFor = (postId: string) => {
     const card = cards.get(postId);
@@ -123,6 +135,7 @@ export function PostList({
           anchor={postAnchor(item.post.id)}
           body={item.post.body}
           createdAt={item.post.createdAt}
+          onPin={onPin}
         />
       );
     }
@@ -157,6 +170,7 @@ export function PostList({
     <div className="thread-wrap">
       <div className="thread op-thread" ref={scrollerRef}>
         <div className="col">
+          <PinnedBar notes={pinned} onJump={jumpToNote} />
           {items.length === 0 && empty}
           <ol className="op-posts" aria-label="Outpost thread">
             {items.map((item, index) => {

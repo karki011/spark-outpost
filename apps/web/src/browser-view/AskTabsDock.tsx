@@ -3,7 +3,6 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Approval, AssistantExchange } from '@spark-outpost/contracts';
 import { assistantApi, assistantKeys } from '../api/assistant.ts';
-import { queryKeys } from '../api/client.ts';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
 import { assistantQuery, useAssistant } from '../island/ask-assistant.ts';
@@ -13,6 +12,7 @@ import { askAboutTabs } from './ask-tabs.ts';
 import { MentionComposer } from './MentionComposer.tsx';
 import type { PageRef } from './page-chat.ts';
 import { acceptViewState, useProfileTabs } from './view-store.ts';
+import { invalidateChatDetail } from '../api/chat-detail.ts';
 
 interface AskTabsDockProps {
   first: PageRef | null;
@@ -159,7 +159,7 @@ export function AskTabsDock({ first, onOpenAssistant, onClose }: AskTabsDockProp
     const timer = setInterval(() => {
       void queryClient.invalidateQueries({ queryKey: DOCK_HISTORY });
       if (assistant.id) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(assistant.id) });
+        void invalidateChatDetail(queryClient, assistant.id);
       }
     }, WAIT_POLL_MS);
     return () => clearInterval(timer);

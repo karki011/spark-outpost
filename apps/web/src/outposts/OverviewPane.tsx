@@ -15,6 +15,7 @@ export type OverviewTab = 'threads' | 'library' | 'pulls';
 const TAB_IDS: readonly OverviewTab[] = ['threads', 'library', 'pulls'];
 
 interface OverviewPaneProps {
+  outpostId: string;
   tab: OverviewTab;
   cards: readonly ThreadCard[];
   pulls: readonly OutpostPull[];
@@ -51,6 +52,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 }
 
 export function OverviewPane({
+  outpostId,
   tab,
   cards,
   pulls,
@@ -69,7 +71,7 @@ export function OverviewPane({
       <ThreadsTab cards={cards} selectedId={selectedId} onOpenThread={onOpenThread} />
     </>
   );
-  const library = <LibraryTab members={members} onOpenChat={onOpenChat} />;
+  const library = <LibraryTab outpostId={outpostId} members={members} onOpenChat={onOpenChat} />;
   const pullRequests = <PullsTab pulls={pulls} />;
 
   if (sections) {

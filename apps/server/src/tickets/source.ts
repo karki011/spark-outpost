@@ -104,10 +104,12 @@ export const isTruncated = (list: readonly TicketSummary[]) => truncatedLists.ha
 
 export class TicketApiError extends Error {
   readonly status: number;
+  readonly retryAfterMs: number | null;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, retryAfterMs: number | null = null) {
     super(message);
     this.status = status;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 

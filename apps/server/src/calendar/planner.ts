@@ -207,6 +207,18 @@ export function upcomingMeetings(events: readonly CalendarEvent[], now: number):
     .slice(0, CALENDAR_UPCOMING_COUNT);
 }
 
+export function tomorrowMeetings(events: readonly CalendarEvent[], now: number): CalendarEvent[] {
+  const tomorrow = addLocalDays(localDayStart(now), 1);
+  const after = addLocalDays(tomorrow, 1);
+  return events
+    .filter((event) => {
+      const { start } = spanOf(event);
+      return isMeeting(event) && start >= tomorrow && start < after;
+    })
+    .toSorted((a, b) => spanOf(a).start - spanOf(b).start)
+    .slice(0, CALENDAR_UPCOMING_COUNT);
+}
+
 export function planNudges(
   events: readonly CalendarEvent[],
   chats: readonly PlannerChat[],

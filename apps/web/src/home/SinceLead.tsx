@@ -1,11 +1,5 @@
-import {
-  HomeLead,
-  HomeRow,
-  HomeRows,
-  RowAction,
-  StatusLabel,
-  type StatusTone,
-} from './HomeCards.tsx';
+import { HomeLead, HomeRow, HomeRows, StatusLabel, type StatusTone } from './HomeCards.tsx';
+import { RowButtons, RowError } from './RowButtons.tsx';
 import { capRows, type SinceKind, type SinceRow } from './since-model.ts';
 
 const WORD: Record<SinceKind, string> = {
@@ -51,14 +45,16 @@ export function SinceLead({ rows, onOpen }: SinceLeadProps) {
             title={row.chat.title}
             line={row.line}
             trailing={
-              <RowAction
+              <RowButtons
+                chat={row.chat}
                 label={ACTION[row.kind]}
-                name={`${ACTION[row.kind]}: ${row.chat.title}`}
                 primary={row.kind === 'failed' || row.kind === 'waiting'}
-                onClick={() => onOpen(row)}
+                onOpen={() => onOpen(row)}
               />
             }
-          />
+          >
+            <RowError chatId={row.chat.id} />
+          </HomeRow>
         ))}
       </HomeRows>
       {next && (

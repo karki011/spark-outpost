@@ -209,7 +209,7 @@ describe('who may start sub-chats', () => {
     );
   });
 
-  it('is never a turn another chat’s request started', async () => {
+  it('is offered in a turn another chat’s request started but refused there before anything is saved', async () => {
     const outpostId = await createOutpostRow(t);
     const web = await memberWithTurn(t, outpostId, 'web');
     const api = { conversationId: await addMemberChat(t, outpostId, 'api'), handle: 'api' };
@@ -218,7 +218,9 @@ describe('who may start sub-chats', () => {
     await expect(outpostStartTool.run(startArgs(), harness.context)).rejects.toThrow(
       DRAFT_FROM_REQUEST,
     );
-    expect((await outpostNeeds(t.db, asked)).outpost_start).toBe(false);
+    expect((await outpostNeeds(t.db, asked)).outpost_start).toBe(true);
+    expect(await count('outpost_drafts')).toBe(0);
+    expect(await count('outposts')).toBe(1);
   });
 
   it('is never a sub-chat of a story, which keeps the draft tool but not the start tool', async () => {

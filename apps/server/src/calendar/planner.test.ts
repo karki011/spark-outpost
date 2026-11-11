@@ -4,7 +4,13 @@ import {
   type CalendarEvent,
   type CalendarSettings,
 } from '@spark-outpost/contracts';
-import { activeHold, meetingPushDue, planNudges, type PlannerChat } from './planner.ts';
+import {
+  activeHold,
+  meetingPushDue,
+  planNudges,
+  tomorrowMeetings,
+  type PlannerChat,
+} from './planner.ts';
 
 const MINUTE = 60_000;
 const NOW = new Date(2026, 9, 16, 9, 20).getTime();
@@ -240,5 +246,50 @@ describe('meeting pushes', () => {
   it('are due inside the before window only', () => {
     const events = [event('Soon', 8, 20), event('Later', 30, 40), event('Started', -1, 20)];
     expect(meetingPushDue(events, settings(), NOW).map((item) => item.title)).toEqual(['Soon']);
+  });
+});
+
+describe('tomorrowMeetings', () => {
+  const TOMORROW = new Date(2026, 9, 17, 0, 0).getTime();
+  const atTomorrow = (hours: number, minutes = 0) =>
+    (TOMORROW + hours * 60 * MINUTE + minutes * MINUTE - NOW) / MINUTE;
+  const titles = (events: CalendarEvent[]) => events.map((entry) => entry.title);
+
+  it('lists meetings that start tomorrow in the local day, in order', () => {
+    const later = event('Review', atTomorrow(15), atTomorrow(16));
+    const first = event('Standup', atTomorrow(9), atTomorrow(9, 15));
+    expect(titles(tomorrowMeetings([later, first], NOW))).toEqual(['Standup', 'Review']);
+  });
+
+  it('starts at local midnight and ends before the midnight after', () => {
+    const midnight = event('Midnight', atTomorrow(0), atTomorrow(1));
+    const lastMinute = event('Late', atTomorrow(23, 59), atTomorrow(24, 30));
+    const before = event('Tonight', atTomorrow(-0.016), atTomorrow(1));
+    const after = event('Next day', atTomorrow(24), atTomorrow(25));
+    expect(titles(tomorrowMeetings([before, midnight, lastMinute, after], NOW))).toEqual([
+      'Midnight',
+      'Late',
+    ]);
+  });
+
+  it('leaves out today, all-day events, focus blocks and declined meetings', () => {
+    const today = event('Today', 30, 60);
+    const allDay = event('Offsite', atTomorrow(0), atTomorrow(24), { allDay: true });
+    const focus = event('Focus', atTomorrow(10), atTomorrow(11), { focus: true });
+    const declined = event('Declined', atTomorrow(12), atTomorrow(13), { myStatus: 'declined' });
+    const kept = event('Kept', atTomorrow(14), atTomorrow(15));
+    expect(titles(tomorrowMeetings([today, allDay, focus, declined, kept], NOW))).toEqual(['Kept']);
+  });
+
+  it('keeps a meeting that began today and runs into tomorrow out of tomorrow', () => {
+    const overnight = event('Overnight', 600, atTomorrow(2));
+    expect(tomorrowMeetings([overnight], NOW)).toEqual([]);
+  });
+
+  it('shows at most three', () => {
+    const many = [9, 10, 11, 12].map((hour) =>
+      event(`M${hour}`, atTomorrow(hour), atTomorrow(hour, 30)),
+    );
+    expect(titles(tomorrowMeetings(many, NOW))).toEqual(['M9', 'M10', 'M11']);
   });
 });

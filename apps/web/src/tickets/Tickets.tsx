@@ -84,7 +84,7 @@ function moveSelection(event: KeyboardEvent<HTMLElement>, follow: boolean) {
 }
 
 export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
-  const { connections, connected, inbox } = useTicketInbox();
+  const { connections, connected, inbox, refresh } = useTicketInbox();
   const [view, setView] = useTicketView();
   const [filters, setFilters] = useState<TicketFilters>(ALL_FILTERS);
   const [collapsed, setCollapsed] = useState<ReadonlySet<TicketSection>>(new Set(['done']));
@@ -187,7 +187,7 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
         syncedAt={data?.syncedAt ?? null}
         failed={(data?.errors ?? []).map((problem) => problem.source)}
         refreshing={inbox.isFetching}
-        onRefresh={() => void inbox.refetch()}
+        onRefresh={() => void refresh()}
       />
       {connections.isSuccess && !connected ? (
         <ConnectTickets />

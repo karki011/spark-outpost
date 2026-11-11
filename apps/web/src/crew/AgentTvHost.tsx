@@ -13,6 +13,7 @@ import { tvListRows } from './tv-list.ts';
 import { pendingAsks } from './tv-scene.ts';
 import { outpostKeys, outpostsApi } from '../outposts/outposts-api.ts';
 import { queueDraftAfterTyped, requestComposerFocus } from '../chat/composer/pending-draft.ts';
+import { invalidateChatDetail } from '../api/chat-detail.ts';
 
 interface AgentTvHostProps {
   activeId: string | null;
@@ -43,7 +44,7 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
     mutationFn: (runId: string) => api.cancelRun(runId),
     onSettled: () =>
       Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.conversation(sourceId ?? '') }),
+        invalidateChatDetail(queryClient, sourceId ?? ''),
         queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true }),
       ]),
   });

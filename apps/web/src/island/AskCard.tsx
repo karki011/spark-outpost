@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { holdsToConfirm, SPARK_ACTION_OPTION, type Approval } from '@spark-outpost/contracts';
 import { approvalsApi } from '../api/approvals.ts';
-import { queryKeys } from '../api/client.ts';
+import { invalidateChatDetail } from '../api/chat-detail.ts';
 
 function outcome(approval: Approval): string {
   if (approval.status !== 'allowed' || approval.decisionOptionId === SPARK_ACTION_OPTION.decline) {
@@ -44,8 +44,7 @@ export function AskCard({ approval, conversationId, onOpen }: AskCardProps) {
         scope: 'once',
         payloadHash: approval.payloadHash,
       }),
-    onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) }),
+    onSettled: () => invalidateChatDetail(queryClient, conversationId),
   });
   const pending = approval.status === 'pending';
   const confirm = approval.options.find((option) => option.kind === 'allow_once');

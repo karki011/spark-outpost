@@ -325,6 +325,15 @@ export async function markAnswersSeen(
   return [...new Set(postIds)].filter((id) => claimed.has(id));
 }
 
+export const setPinned: PostStore['setPinned'] = async (db, postId, pinned) => {
+  const { rowCount } = await db.query(
+    `UPDATE outpost_posts SET pinned_at = CASE WHEN $2 THEN COALESCE(pinned_at, now()) END
+     WHERE id = $1 AND kind = 'note'`,
+    [postId, pinned],
+  );
+  return rowCount === 1;
+};
+
 export async function cancelUnsent(db: Queryable, postId: string): Promise<boolean> {
   const { rowCount } = await db.query(
     `UPDATE outpost_posts SET closed_state = 'cancelled', closed_at = now()

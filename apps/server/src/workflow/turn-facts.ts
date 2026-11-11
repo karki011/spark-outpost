@@ -1,5 +1,6 @@
 import { briefWithFile } from '../projects/instructions-file.ts';
 import type { Db } from '../persistence/db.ts';
+import { sparkPreferences, type SparkPreferences } from '../persistence/setup.ts';
 import { subagentBrief } from '../persistence/spark-mentions.ts';
 import { teammateBrief } from '../persistence/teammate-chats.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
@@ -22,13 +23,18 @@ export function promptWithBrowserCheck(prompt: string, input: RunInput, browserP
   });
 }
 
-export async function sessionBrief(db: Db, input: RunInput) {
+async function sessionBrief(db: Db, input: RunInput) {
   if (input.assistant) return null;
   if (input.parentRunId && input.role !== 'spark') return null;
   const brief = input.parentRunId
     ? await subagentBrief(db, input.identity.runId)
     : await teammateBrief(db, input.identity.threadId);
   return brief ? briefWithFile(brief) : null;
+}
+
+export async function sparkSession(db: Db, input: RunInput, known?: SparkPreferences) {
+  const prefs = known ?? (await sparkPreferences(db, input.workspaceId));
+  return { ...prefs, teammate: await sessionBrief(db, input) };
 }
 
 export function liveTurn(input: RunInput, session: TurnSession | null): { live?: LiveTurn } {

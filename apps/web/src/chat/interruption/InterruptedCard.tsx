@@ -14,6 +14,7 @@ import {
   filesText,
   stoppedText,
 } from './interruption-model.ts';
+import { invalidateChatDetail } from '../../api/chat-detail.ts';
 
 interface InterruptedCardProps {
   interruption: Interruption;
@@ -33,7 +34,7 @@ export function InterruptedCard({ interruption, conversationId }: InterruptedCar
     document.getElementById(turnAnchor(runId))?.focus({ preventScroll: true });
   const refresh = () =>
     Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) }),
+      invalidateChatDetail(queryClient, conversationId),
       queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true }),
       queryClient.invalidateQueries({ queryKey: queryKeys.agentCommands(conversationId) }),
     ]);

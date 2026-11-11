@@ -195,6 +195,7 @@ export function linearSource(
       throw failure(NAME, action, {
         status: isOk(answer) ? 502 : answer.status,
         data: answer.data,
+        retryAfter: answer.retryAfter ?? null,
       });
     }
     const parsed = schema.safeParse((answer.data as { data?: unknown } | null)?.data);

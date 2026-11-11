@@ -1,4 +1,5 @@
 import {
+  CALENDAR_UPCOMING_COUNT,
   freshUpdate,
   type CalendarEvent,
   type AttentionItem,
@@ -63,4 +64,33 @@ export function dayEvents(
   hideKey: string | null,
 ): CalendarEvent[] {
   return events.filter((event) => event.key !== hideKey);
+}
+
+export interface DayChoice {
+  title: string;
+  tomorrow: boolean;
+  events: CalendarEvent[];
+  empty: string;
+}
+
+export function dayChoice(
+  lead: LeadState,
+  hideKey: string | null,
+  today: readonly CalendarEvent[],
+  tomorrow: readonly CalendarEvent[],
+): DayChoice {
+  if (lead === 'before-you-go' && tomorrow.length > 0) {
+    return {
+      title: 'Tomorrow',
+      tomorrow: true,
+      events: tomorrow.slice(0, CALENDAR_UPCOMING_COUNT),
+      empty: '',
+    };
+  }
+  return {
+    title: dayTitle(lead),
+    tomorrow: false,
+    events: dayEvents(today, hideKey),
+    empty: 'No more meetings today.',
+  };
 }

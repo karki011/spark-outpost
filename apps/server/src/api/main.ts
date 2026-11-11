@@ -51,6 +51,7 @@ import { takeLaunchToken } from './launch-token.ts';
 import { gitHubDepsOf, shipDepsOf } from './ship-routes.ts';
 import { gitHubAppConfig } from '../ship/github/app-config.ts';
 import { loadInbox } from '../tickets/inbox.ts';
+import { pullRequestChanged } from '../tickets/inbox-snapshot.ts';
 import { RunEventHub } from './run-event-hub.ts';
 import { systemPortProbe } from '../terminal/chat-port-probe.ts';
 import { chatPortWatcher, type ChatPortWatcher } from '../terminal/chat-port-watcher.ts';
@@ -180,6 +181,7 @@ const appEvents = new AppEventFeed(undefined, (event) => {
   slackNotifier.changed(event);
   pushNotifier.changed(event);
   outposts.changed(event);
+  if (event.kind === 'pull_request') pullRequestChanged(db, workspaceId);
   if (event.kind === 'preview') void previews.sync();
   if (event.kind === 'agent_terminal') {
     void agentTerminals.sync();

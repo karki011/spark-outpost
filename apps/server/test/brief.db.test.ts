@@ -79,7 +79,11 @@ function dueTomorrow(key: string) {
 
 async function flag(key: string) {
   dueTomorrow(key);
-  await request(app).get('/api/tickets/inbox').set(LOCAL_HEADERS).expect(200);
+  await request(app)
+    .get('/api/tickets/inbox')
+    .set(LOCAL_HEADERS)
+    .set('Cache-Control', 'no-cache')
+    .expect(200);
 }
 
 describe('ticket brief', () => {

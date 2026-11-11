@@ -25,8 +25,11 @@ import { chatActivity } from './chat-activity.ts';
 import { chatsOnApproval, chatsOnQuestion, memberViews } from './member-view.ts';
 import { outpostPulls } from './outpost-pulls.ts';
 import { formOf, hasChanges, sheetChanges, type SheetForm } from './sheet-draft.ts';
-import { threadCards, waitsOnYou } from './thread-cards.ts';
-import { useOutpostChats } from './use-outpost-chats.ts';
+import { canRetry } from './post-text.ts';
+import { reuseCards, threadCards, waitsOnYou } from './thread-cards.ts';
+import { useOutpostChats, useMemberChats } from './use-outpost-chats.ts';
+import { useReconciled } from './use-reconciled.ts';
+import { useStableCallback } from './use-stable-callback.ts';
 import { useOutpostLayout, type PhoneView } from './use-outpost-layout.ts';
 import {
   useAnswer,
@@ -34,6 +37,7 @@ import {
   useDeleteOutpost,
   useOutpost,
   usePause,
+  usePin,
   usePost,
   useSaveInstructions,
   useSaveOutpost,
@@ -99,7 +103,8 @@ type Sheet = 'settings' | 'instructions' | null;
 
 function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedProps) {
   const { outpost, posts, stories } = detail;
-  const { chats, projectNames } = useOutpostChats();
+  const { chats: allChats, projectNames } = useOutpostChats();
+  const chats = useMemberChats(allChats, outpost.members);
   const { remote } = useRemoteClient();
   const layout = useOutpostLayout();
   const [openedThread, setOpenedThread] = useState<string | null>(null);
@@ -113,6 +118,7 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
   const post = usePost(id);
   const answer = useAnswer(id);
   const cancel = useCancel(id);
+  const pin = usePin(id);
   const startNow = useStartNow(id);
   const pause = usePause(id);
   const save = useSaveOutpost(id);
@@ -128,10 +134,11 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
   const [questionFor, setQuestionFor] = useState<string | null>(null);
   const activity = useMemo(() => chatActivity(chats), [chats]);
   const pulls = useMemo(() => outpostPulls(posts, stories, chats), [posts, stories, chats]);
-  const cards = useMemo(
+  const freshCards = useMemo(
     () => threadCards(items, pulls, (chatId) => activity.get(chatId ?? '')),
     [items, pulls, activity],
   );
+  const cards = useReconciled(freshCards, reuseCards);
   const cardsById = useMemo(() => new Map(cards.map((card) => [card.post.id, card])), [cards]);
   const storyTags = useMemo(() => storyTagsOf(detail), [detail]);
   const answering = answeringOf(posts, answeringId, approvalChats);
@@ -157,6 +164,21 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
     setAnsweringId(postId);
     layout.showConversation();
   };
+  const onAnswer = useStableCallback(startAnswer);
+  const onCancel = useStableCallback((postId: string) => cancel.mutate(postId));
+  const onRetry = useStableCallback((postId: string) => {
+    const failed = posts.find((each) => each.id === postId);
+    if (!failed?.toConversationId || !canRetry(failed)) return;
+    post.mutate({
+      id: crypto.randomUUID(),
+      text: failed.body,
+      toConversationId: failed.toConversationId,
+    });
+  });
+  const onPin = useStableCallback((postId: string, pinned: boolean) =>
+    pin.mutate({ postId, pinned }),
+  );
+  const onStartNow = useStableCallback((postId: string) => startNow.mutate(postId));
 
   const send = async (target: ComposerTarget, text: string, messageId: string) => {
     if (target.action === 'answer' && answering) {
@@ -222,9 +244,11 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
         empty={empty}
         after={<SuggestedThreads outpostId={id} members={members} />}
         onOpenThread={layout.openThread}
-        onAnswer={startAnswer}
-        onCancel={(postId) => cancel.mutate(postId)}
-        onStartNow={(postId) => startNow.mutate(postId)}
+        onAnswer={onAnswer}
+        onCancel={onCancel}
+        onStartNow={onStartNow}
+        onRetry={onRetry}
+        onPin={onPin}
       />
       <OutpostComposer
         members={members}
@@ -251,12 +275,13 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
         layout.backToOverview();
       }}
       onOpenChat={onOpenChat}
-      onCancel={(postId) => cancel.mutate(postId)}
+      onCancel={onCancel}
     />
   );
 
   const overview = (
     <OverviewPane
+      outpostId={id}
       tab={layout.tab}
       cards={cards}
       pulls={pulls}
@@ -347,7 +372,7 @@ function Loaded({ id, detail, jumpTo, openThread, onOpenChat, onGone }: LoadedPr
           <OutpostSheet
             initial={formOf(outpost)}
             joined={outpost.members}
-            chats={chats}
+            chats={allChats}
             projectNames={projectNames}
             outpostId={id}
             canManage={!remote}

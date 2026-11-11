@@ -116,3 +116,4 @@ A ring above **Pause** shows Claude plan use and resets once a window reaches 70
 | Diff shown before **Load full file** | 2,000 lines; files over 1 MB stay folded |
 | Hold-to-confirm                      | 1.5 seconds; undo window 10 seconds      |
 | App logs kept                        | About 8 MB                               |
+| Ticket reads reused                  | 20 seconds; **Refresh** skips it         |

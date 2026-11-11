@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ConversationDetail } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { activeRuns } from './turns.ts';
+import { invalidateChatDetail } from '../api/chat-detail.ts';
 
 const STOP_TIMEOUT_MS = 10_000;
 const STOP_POLL_MS = 1_000;
@@ -62,7 +63,7 @@ export function useStop(
   useEffect(() => {
     if (!stopping) return;
     const timer = setInterval(() => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) });
+      void invalidateChatDetail(queryClient, conversationId);
     }, STOP_POLL_MS);
     return () => clearInterval(timer);
   }, [stopping, queryClient, conversationId]);

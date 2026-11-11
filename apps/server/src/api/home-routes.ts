@@ -8,6 +8,7 @@ import { digestState, requestDigest } from '../digest/service.ts';
 import { todaySummary } from '../digest/today.ts';
 import type { Db } from '../persistence/db.ts';
 import { appConnection } from '../persistence/github-app.ts';
+import { homeSeen, markHomeSeen } from '../persistence/home-seen.ts';
 import { providerIssues } from '../persistence/provider-health.ts';
 import { spendSummary } from '../persistence/spend.ts';
 import { recapState, refineRecap, requestRecap } from '../recap/service.ts';
@@ -40,6 +41,14 @@ export function homeRoutes({ db, workspaceId, secrets }: HomeRouteDeps): Router 
 
   router.get('/home/digest', async (_req, res) => {
     res.json(await digestState(db, workspaceId));
+  });
+
+  router.get('/home/seen', async (_req, res) => {
+    res.json(await homeSeen(db, workspaceId));
+  });
+
+  router.post('/home/seen', async (_req, res) => {
+    res.json(await markHomeSeen(db, workspaceId));
   });
 
   router.get('/home/today', async (req, res) => {

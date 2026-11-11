@@ -1,4 +1,10 @@
-import type { ApprovalKind, AttentionKind, ConversationAttention } from '@spark-outpost/contracts';
+import {
+  quickAnswerOf,
+  type ApprovalKind,
+  type AttentionKind,
+  type ConversationAttention,
+  type QuickAnswer,
+} from '@spark-outpost/contracts';
 
 export interface PendingApprovalRow {
   pending_id: string | null;
@@ -14,6 +20,14 @@ export interface PendingApprovalRow {
   pending_plan?: boolean | null;
   pending_provider: string | null;
   pending_pr_feedback?: boolean | null;
+  pending_keys?: string[] | null;
+  pending_payload_command?: unknown;
+  pending_payload_paths?: unknown;
+  pending_payload_full_paths?: unknown;
+  pending_payload_truncated?: unknown;
+  pending_diffs?: number | null;
+  pending_options?: unknown;
+  pending_hash?: string | null;
   flag_title?: string | null;
 }
 
@@ -79,10 +93,26 @@ function flagAttention(row: PendingApprovalRow): ConversationAttention | null {
   return { kind: 'flag', title: row.flag_title, agentName: null, provider: null, approvalId: null };
 }
 
+function quickFor(row: PendingApprovalRow, kind: ApprovalKind): QuickAnswer | null {
+  if (!row.pending_keys || row.pending_pr_feedback) return null;
+  return quickAnswerOf({
+    kind,
+    payloadKeys: row.pending_keys,
+    command: row.pending_payload_command,
+    paths: row.pending_payload_paths,
+    fullPaths: row.pending_payload_full_paths,
+    truncated: row.pending_payload_truncated,
+    diffCount: row.pending_diffs ?? 0,
+    options: row.pending_options,
+    payloadHash: row.pending_hash ?? null,
+  });
+}
+
 export function toAttention(row: PendingApprovalRow): ConversationAttention | null {
   const kind = row.pending_kind;
   if (!row.pending_id || !kind) return flagAttention(row);
   const attention = row.pending_plan ? 'plan' : ATTENTION_BY_APPROVAL_KIND[kind];
+  const quick = attention === 'permission' ? quickFor(row, kind) : null;
   return {
     kind: attention,
     title: attention === 'permission' ? permissionTitle(row, kind) : (row.pending_title ?? ''),
@@ -93,5 +123,6 @@ export function toAttention(row: PendingApprovalRow): ConversationAttention | nu
     ...(attention === 'permission' && row.pending_subagent
       ? { subagent: row.pending_subagent }
       : {}),
+    ...(quick ? { quick } : {}),
   };
 }

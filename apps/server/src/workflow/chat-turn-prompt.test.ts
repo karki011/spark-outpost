@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Queryable } from '../persistence/db.ts';
 import { storyTaskOf } from '../persistence/outpost-stories.ts';
-import { chatPromptFacts } from './chat-turn-prompt.ts';
+import { chatPromptFacts, chatTurnNoteFor, requestAssignedWork } from './chat-turn-prompt.ts';
 import type { RunInput } from './run-input.ts';
 
 vi.mock('../outposts/outpost-availability.ts', () => ({
   outpostNeeds: async () => ({ outpost: true, outpost_draft: true, outpost_start: true }),
 }));
-vi.mock('../persistence/setup.ts', () => ({ sparkPreferences: async () => ({}) }));
+const readPreferences = vi.hoisted(() => vi.fn(async () => ({})));
+vi.mock('../persistence/setup.ts', () => ({ sparkPreferences: readPreferences }));
 vi.mock('../persistence/outpost-stories.ts', () => ({ storyTaskOf: vi.fn() }));
 
 const db = {} as Queryable;
@@ -21,7 +22,17 @@ const input = {
 
 describe('chat delegation context', () => {
   beforeEach(() => {
+    readPreferences.mockClear();
     vi.mocked(storyTaskOf).mockResolvedValue(null);
+  });
+
+  it('reads the preferences itself only when it was not given them', async () => {
+    await chatPromptFacts(db, input);
+    expect(readPreferences).toHaveBeenCalledTimes(1);
+    const given = { agentInstructions: 'Prefer pnpm.' } as never;
+    const facts = await chatPromptFacts(db, input, given);
+    expect(readPreferences).toHaveBeenCalledTimes(1);
+    expect(facts.customInstructions).toBe('Prefer pnpm.');
   });
 
   it('treats an ordinary chat as a lead without requiring an Outpost', async () => {
@@ -63,11 +74,40 @@ describe('chat delegation context', () => {
     [true, false, false],
     [false, true, false],
     [true, true, false],
-  ])('classifies fromUser=%s wrapUp=%s as assigned=%s', async (fromUser, wrapUp, assigned) => {
+  ])('classifies fromUser=%s wrapUp=%s as assigned=%s', (fromUser, wrapUp, assigned) => {
+    expect(
+      requestAssignedWork({
+        outpostRequest: { postId: 'post', outpostName: 'Work', fromUser, wrapUp },
+      }),
+    ).toBe(assigned);
+  });
+
+  it('keeps the session facts the same for an assigned request and a user turn', async () => {
+    const user = await chatPromptFacts(db, input);
+    const assigned = await chatPromptFacts(db, {
+      ...input,
+      followUpRound: true,
+      outpostRequest: { postId: 'post', outpostName: 'Work', fromUser: false, wrapUp: false },
+    });
+    expect(assigned).toEqual(user);
+  });
+
+  it('keeps the start tool in the session facts for a request turn', async () => {
     const facts = await chatPromptFacts(db, {
       ...input,
-      outpostRequest: { postId: 'post', outpostName: 'Work', fromUser, wrapUp },
+      outpostRequest: { postId: 'post', outpostName: 'Work', fromUser: false, wrapUp: false },
     });
-    expect(facts.assignedWork).toBe(assigned);
+    expect(facts.outpostStartTool).toBe(true);
+  });
+
+  it('notes the assigned request and the follow-up round in the turn, not for a story worker twice', async () => {
+    const request = {
+      ...input,
+      outpostRequest: { postId: 'post', outpostName: 'Work', fromUser: false, wrapUp: false },
+    } as RunInput;
+    const facts = await chatPromptFacts(db, request);
+    expect(chatTurnNoteFor(request, facts)).toContain('assigned work');
+    expect(chatTurnNoteFor(input, facts)).toBeNull();
+    expect(chatTurnNoteFor(request, { ...facts, assignedWork: true })).toBeNull();
   });
 });

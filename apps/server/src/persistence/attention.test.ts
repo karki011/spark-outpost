@@ -142,4 +142,34 @@ describe('toAttention', () => {
       approvalId: ID,
     });
   });
+
+  describe('quick answer', () => {
+    const quick = {
+      pending_keys: ['command', 'cwd', 'paths', 'truncated'],
+      pending_payload_command: 'pnpm test',
+      pending_payload_paths: [],
+      pending_payload_truncated: false,
+      pending_diffs: 0,
+      pending_hash: 'sha256:abc',
+      pending_options: [
+        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+    };
+
+    it('lets Home answer an ordinary command card', () => {
+      expect(toAttention(pending(quick))?.quick).toEqual({
+        allow: 'allow',
+        deny: 'deny',
+        payloadHash: 'sha256:abc',
+      });
+    });
+
+    it('leaves a force push, a question and a pull request follow-up in the chat', () => {
+      const forced = pending({ ...quick, pending_keys: ['command', 'forcePush'] });
+      expect(toAttention(forced)?.quick).toBeUndefined();
+      expect(toAttention(pending({ ...quick, pending_kind: 'clarify' }))?.quick).toBeUndefined();
+      expect(toAttention(pending({ ...quick, pending_pr_feedback: true }))?.quick).toBeUndefined();
+    });
+  });
 });

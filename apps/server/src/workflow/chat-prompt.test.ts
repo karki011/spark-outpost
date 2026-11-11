@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { delegationPolicy } from '../agents/delegation-policy.ts';
-import { chatPrompt, type ChatPromptFacts, type ChatPromptProject } from './chat-prompt.ts';
+import { ASSIGNED_WORK_LINE } from '../agents/delegation-policy.ts';
+import {
+  chatPrompt,
+  chatTurnNote,
+  type ChatPromptFacts,
+  type ChatPromptProject,
+} from './chat-prompt.ts';
 import * as text from './chat-prompt-text.ts';
 
 const worktree: ChatPromptProject = {
@@ -136,15 +142,41 @@ describe('chatPrompt', () => {
     expect(publishing(prompt)).toBe(`- ${text.PUBLISH_NOT_GIT}`);
   });
 
-  it('tells a follow-up round to push fixes to the same branch at any level', () => {
-    for (const level of ['hands-off', 'full-auto'] as const) {
-      expect(publishing(build({ level, followUpRound: true }))).toBe(`- ${text.PUBLISH_FOLLOW_UP}`);
-    }
+  it('does not change the session prompt for a follow-up round or an assigned request', () => {
+    const before = build({});
+    expect(chatPrompt({ ...base, project: worktree, followUpRound: true } as never)).toBe(before);
+    expect(build({ level: 'hands-off' })).not.toContain(text.PUBLISH_FOLLOW_UP);
+  });
+
+  it('puts the follow-up push line in the turn note at any level where there is a remote', () => {
+    const note = chatTurnNote({ project: worktree, followUpRound: true, requestAssigned: false });
+    expect(note).toContain(text.TURN_NOTE_INTRO);
+    expect(note).toContain(text.TURN_NOTE_PUBLISHING);
+    expect(note).toContain(`- ${text.PUBLISH_FOLLOW_UP}`);
+    expect(note).toContain('grants no permission');
+    expect(note).toContain('not the user asking you to push');
   });
 
   it('gives a follow-up round no push line where there is nothing to push to', () => {
-    const noRemote = build({ level: 'hands-off', followUpRound: true }, { hasRemote: false });
-    expect(publishing(noRemote)).toBe(`- ${text.PUBLISH_NOT_ASKED}`);
+    const noRemote = { ...worktree, hasRemote: false };
+    expect(
+      chatTurnNote({ project: noRemote, followUpRound: true, requestAssigned: false }),
+    ).toBeNull();
+    expect(chatTurnNote({ project: null, followUpRound: true, requestAssigned: false })).toBeNull();
+  });
+
+  it('puts the assigned-work lines in the turn note for a request another chat wrote', () => {
+    const note = chatTurnNote({ project: worktree, followUpRound: false, requestAssigned: true });
+    expect(note).toContain(text.TURN_NOTE_INTRO);
+    expect(note).toContain(ASSIGNED_WORK_LINE);
+    expect(note).toContain(text.TURN_NOTE_NO_SUB_CHATS);
+    expect(note).not.toContain(text.PUBLISH_FOLLOW_UP);
+  });
+
+  it('has no turn note for an ordinary turn', () => {
+    expect(
+      chatTurnNote({ project: worktree, followUpRound: false, requestAssigned: false }),
+    ).toBeNull();
   });
 
   it('says nothing about publishing for a worktree with no branch', () => {

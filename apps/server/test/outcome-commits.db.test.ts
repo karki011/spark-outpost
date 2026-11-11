@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { captureKept, refreshOutcome } from '../src/outcomes/record.ts';
+import { runChanges } from '../src/projects/run-changes.ts';
 import { takeGitSnapshot } from '../src/projects/snapshot.ts';
 import { seedAccept, seedConversation, seedTurn } from './outcome-seed.ts';
 import { createTestDb, type TestDb } from './support.ts';
@@ -106,5 +107,37 @@ describe('commit detection', () => {
     git('add', '-A');
     git('commit', '-qm', 'as kept');
     expect(await committed(runId, 11)).toBeUndefined();
+  });
+});
+
+describe('kept content from changes the turn already read', () => {
+  async function turnWithChange(): Promise<string> {
+    const conversationId = await seedConversation(t.db, t.workspaceId);
+    const runId = randomUUID();
+    const ref = await takeGitSnapshot(root, runId);
+    const seeded = await seedTurn(t.db, conversationId, { snapshot: { ref, root } });
+    await writeFile(join(root, 'notes.txt'), 'start\nkept line\n');
+    return seeded;
+  }
+
+  const keptRows = async (runId: string) =>
+    (
+      await t.db.query('SELECT 1 FROM task_outcomes WHERE run_id = $1 AND kept IS NOT NULL', [
+        runId,
+      ])
+    ).rowCount;
+
+  it('records the same kept content as when it reads the changes itself', async () => {
+    const runId = await turnWithChange();
+    const known = await runChanges(t.db, t.workspaceId, runId);
+    await captureKept(t.db, t.workspaceId, runId, known);
+    expect(await keptRows(runId)).toBe(1);
+  });
+
+  it('uses the changes it was given rather than reading them again', async () => {
+    const runId = await turnWithChange();
+    const known = await runChanges(t.db, t.workspaceId, runId);
+    await captureKept(t.db, t.workspaceId, runId, { ...known, files: [] });
+    expect(await keptRows(runId)).toBe(0);
   });
 });

@@ -5,6 +5,7 @@ import { ClashTag } from '../calendar/ClashTag.tsx';
 import { JoinButton } from '../calendar/JoinButton.tsx';
 import { HomeLead, LeadGroup, Quiet } from './HomeCards.tsx';
 import type { NeedItem, RunItem } from './home-model.ts';
+import type { CapabilitiesByProvider } from './run-mode.ts';
 import { RunRows, WaitingRows } from './LeadRows.tsx';
 import type { MeetingLead as MeetingActions } from './use-meeting-lead.ts';
 
@@ -15,6 +16,7 @@ interface MeetingLeadProps {
   now: number;
   waiting: readonly NeedItem[];
   running: readonly RunItem[];
+  capabilities: CapabilitiesByProvider;
   onOpen: (chat: ConversationSummary) => void;
 }
 
@@ -61,7 +63,12 @@ export function MeetingLead(props: MeetingLeadProps) {
       )}
       {running.length > 0 && (
         <LeadGroup id="lead-working" title="Still working">
-          <RunRows label="Still working" items={running} onOpen={props.onOpen} />
+          <RunRows
+            label="Still working"
+            items={running}
+            capabilities={props.capabilities}
+            onOpen={props.onOpen}
+          />
         </LeadGroup>
       )}
       {waiting.length === 0 && running.length === 0 && (

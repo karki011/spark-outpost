@@ -31,6 +31,7 @@ import {
   type MirroredCommand,
 } from './command-tabs.ts';
 import { syncCommandTab, type ShellTab } from './shell-store.ts';
+import { invalidateChatDetail } from '../../api/chat-detail.ts';
 
 const untouched = () => undefined;
 const NO_PROJECTS: readonly string[] = [];
@@ -77,9 +78,7 @@ function Mirror({
     enabled: needsSavedOutput(command),
   });
   const text = command ? (command.output ?? loaded.data?.output ?? null) : null;
-  const stop = useStop(chatId, detail.data, () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.conversation(chatId) }),
-  );
+  const stop = useStop(chatId, detail.data, () => invalidateChatDetail(queryClient, chatId));
 
   const provider = detail.data?.runs.find((run) => run.id === mirror.runId)?.provider ?? null;
   const label = command

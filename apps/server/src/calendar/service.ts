@@ -27,7 +27,7 @@ import { withTransaction, type Db } from '../persistence/db.ts';
 import type { CalendarHost } from './host-client.ts';
 import { googleSourceId } from './google/map.ts';
 import type { GoogleSource } from './google/source.ts';
-import { planNudges, type PlannerChat } from './planner.ts';
+import { planNudges, tomorrowMeetings, type PlannerChat } from './planner.ts';
 import { htmlNotesText } from './notes-html.ts';
 import { splitNotes } from './notes-text.ts';
 import { locationOf, peopleOf } from './people.ts';
@@ -355,6 +355,7 @@ export function calendarNow(
   return {
     active,
     ...plan,
+    tomorrow: tomorrowMeetings(state.events, now),
     calendars: state.choices.filter((choice) => choice.include),
   };
 }

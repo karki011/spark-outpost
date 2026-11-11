@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { OutpostPost } from '@spark-outpost/contracts';
 import { requestNote } from '../chat/outpost/RequestHeader.tsx';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
@@ -6,6 +7,7 @@ import { MemberFace } from './MemberFace.tsx';
 import { StatusPill } from './StatusPill.tsx';
 import {
   canCancel,
+  canRetry,
   postAnchor,
   receiverName,
   requestFaceState,
@@ -19,6 +21,7 @@ export interface CardHandlers {
   onAnswer: (postId: string) => void;
   onCancel: (postId: string) => void;
   onStartNow?: ((postId: string) => void) | undefined;
+  onRetry?: ((postId: string) => void) | undefined;
 }
 
 interface RequestCardProps extends CardHandlers {
@@ -61,7 +64,7 @@ function CardMeta({ card }: { card: ThreadCard }) {
   );
 }
 
-export function RequestCard({
+export const RequestCard = memo(function RequestCard({
   card,
   selected,
   answering = false,
@@ -71,6 +74,7 @@ export function RequestCard({
   onAnswer,
   onCancel,
   onStartNow,
+  onRetry,
 }: RequestCardProps) {
   const { post, status } = card;
   const to = receiverName(post);
@@ -134,6 +138,16 @@ export function RequestCard({
             Start anyway
           </button>
         )}
+        {onRetry && canRetry(post) && (
+          <button
+            type="button"
+            className="btn sm line"
+            aria-label={`Retry the request to ${to}`}
+            onClick={() => onRetry(post.id)}
+          >
+            Retry
+          </button>
+        )}
         {canCancel(post) && (
           <ConfirmButton
             label={post.state === 'working' ? 'Stop' : 'Cancel'}
@@ -150,4 +164,4 @@ export function RequestCard({
       </div>
     </article>
   );
-}
+});

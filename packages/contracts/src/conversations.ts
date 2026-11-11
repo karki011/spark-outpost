@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { promptCacheSchema } from './prompt-cache.ts';
+import { quickAnswerSchema } from './quick-answer.ts';
 import { browserShotSchema } from './browser.ts';
 import { chatFileSchema } from './chat-files.ts';
 import { artifactPageSchema } from './artifact-pages.ts';
@@ -71,6 +72,7 @@ export const conversationAttentionSchema = z.object({
   approvalId: z.uuid().nullable(),
   prFeedback: z.boolean().optional(),
   subagent: z.string().optional(),
+  quick: quickAnswerSchema.optional(),
 });
 export type ConversationAttention = z.infer<typeof conversationAttentionSchema>;
 
@@ -105,6 +107,7 @@ export const conversationSummarySchema = z.object({
       error: z.string().nullable(),
       step: z.string().nullable(),
       provider: z.string().nullable().default(null),
+      agentMode: z.string().nullable().optional(),
       progress: planProgressSchema.nullable().default(null),
       interruptionChoice: interruptionChoiceSchema.nullable().optional(),
       needsYou: z.string().nullable().optional(),

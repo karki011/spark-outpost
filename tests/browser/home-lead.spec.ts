@@ -53,7 +53,13 @@ test('Since you left puts failed first, then the waiting card, then finished tur
     'Finished · open to review',
   ]);
   await expect(since.locator('.hstat')).toHaveText(['Failed', 'Waiting', 'Finished']);
-  await expect(since.getByRole('button')).toHaveText(['See error', 'Open chat', 'Review']);
+  await expect(since.getByRole('button')).toHaveText([
+    'See error',
+    'Allow',
+    'Deny',
+    'Open chat',
+    'Review',
+  ]);
   await expect(home(page).locator('.home-compose')).toHaveClass(/compact/);
   await expect(lead(page, /^Needs you/)).toHaveCount(0);
   await expect(lead(page, 'Pick up next')).toBeVisible();
@@ -153,4 +159,33 @@ test('the composer keeps its text and focus when a lead appears', async ({ page 
   await expect(before.getByRole('button', { name: 'Open chat: Overnight refactor' })).toBeVisible();
   await expect(input).toHaveValue('half a thought');
   await expect(input).toBeFocused();
+});
+
+test('Before you go groups running chats by agent mode without fetching chat details', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true, catalog: true });
+  await page.clock.setFixedTime(new Date(2026, 10, 10, 18, 0, 0));
+  await seedChats([
+    {
+      title: 'Manual refactor',
+      run: { status: 'running', provider: 'claude', agentMode: 'default' },
+    },
+    { title: 'Auto migration', run: { status: 'running', provider: 'claude', agentMode: 'auto' } },
+  ]);
+  const details: string[] = [];
+  page.on('request', (request) => {
+    const path = new URL(request.url()).pathname;
+    if (/^\/api\/conversations\/[0-9a-f-]{36}(\/|$)/.test(path)) details.push(path);
+  });
+  await page.goto('/');
+
+  const before = lead(page, 'Before you go');
+  const asks = before.getByRole('group', { name: 'Will stop and ask' });
+  const free = before.getByRole('group', { name: 'Runs without asking' });
+  await expect(asks).toContainText('Manual refactor');
+  await expect(asks).toContainText('Manual · will stop and ask');
+  await expect(free).toContainText('Auto migration');
+  await expect(free).toContainText('Auto · runs without asking');
+  expect(details).toEqual([]);
 });

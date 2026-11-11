@@ -2,6 +2,7 @@ import './timed-out.css';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../../api/client.ts';
 import { retryMessage, timedOutText } from './timed-out.ts';
+import { invalidateChatDetail } from '../../api/chat-detail.ts';
 
 interface TimedOutNoteProps {
   asked: string | null;
@@ -14,7 +15,7 @@ export function TimedOutNote({ asked, conversationId }: TimedOutNoteProps) {
     mutationFn: (id: string) => api.sendMessage(id, crypto.randomUUID(), retryMessage(asked)),
     onSuccess: (_sent, id) =>
       Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.conversation(id) }),
+        invalidateChatDetail(queryClient, id),
         queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true }),
       ]),
   });

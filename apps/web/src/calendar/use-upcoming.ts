@@ -8,6 +8,7 @@ export interface Upcoming {
   pending: boolean;
   available: boolean;
   events: readonly CalendarEvent[];
+  tomorrow: readonly CalendarEvent[];
   calendars: ReadonlyMap<string, string>;
   clashes: ReadonlyMap<string, readonly string[]>;
 }
@@ -37,6 +38,7 @@ export function useUpcoming(now: number): Upcoming {
     pending: !remote && ((state === null && !failed) || (ready && !query.data && !query.isError)),
     available: ready && query.data !== undefined,
     events,
+    tomorrow: query.data?.tomorrow ?? NONE,
     calendars,
     clashes,
   };

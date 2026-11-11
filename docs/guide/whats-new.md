@@ -10,6 +10,10 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                           | What to do                                                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Allow and Deny on Home rows            | [Home](home.md).                                                                            |
+| Home: mode labels, Tomorrow, away      | [Home](home.md).                                                                            |
+| Outposts: Retry, pin a note            | [Outposts](outposts.md).                                                                    |
+| Tickets reuse a recent read            | **Refresh** reads again.                                                                    |
 | Home changes through the day           | [Home](home.md).                                                                            |
 | Tickets count updates at once          | Nothing.                                                                                    |
 | **Try again**; unsent text is kept     | [A turn failed](trouble-runs.md#a-turn-failed).                                             |
@@ -33,7 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Undo after quick edits                 | Nothing.                                                                                    |
 | Meetings shown once on Home            | Nothing.                                                                                    |
 | Working chats pulse                    | Nothing.                                                                                    |
-| Small fixes                            | Nothing.                                                                                    |
-| Week recap on Home                     | Its day: **Settings → Notifications**.                                                      |
-| Clone or read GitHub repos             | [See how](link-a-repo.md#clone-or-read-a-repo-from-github).                                 |
-| Link a repo by name                    | [Repos folders](link-a-repo.md#set-your-repos-folders).                                     |

@@ -81,6 +81,7 @@ import { SessionTypeChip } from '../terminal/SessionTypeChip.tsx';
 import type { SessionChoice } from '../terminal/SessionTypePicker.tsx';
 import { ChatTeammate } from '../teammates/ChatTeammate.tsx';
 import { AssistantReadOnly } from '../settings/assistant/AssistantReadOnly.tsx';
+import { invalidateChatDetail } from '../api/chat-detail.ts';
 
 const NO_REPOS: string[] = [];
 const NO_TASKS: TaskOverview[] = [];
@@ -110,7 +111,8 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
 
   const refresh = () =>
     Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) }),
+      invalidateChatDetail(queryClient, conversationId),
+      queryClient.invalidateQueries({ queryKey: queryKeys.annotations(conversationId) }),
       queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true }),
     ]);
 

@@ -1,13 +1,14 @@
-import { useQueries } from '@tanstack/react-query';
-import { api, queryKeys } from '../api/client.ts';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { FileIcon } from '../chat/attachments/attachment-icons.tsx';
 import { ArtifactIcon } from '../ui/icons.tsx';
 import { MemberFace } from './MemberFace.tsx';
 import type { MemberView } from './member-view.ts';
 import type { ReactNode } from 'react';
 import { outpostLibrary, type LibraryEntry } from './outpost-library.ts';
+import { outpostKeys, outpostsApi } from './outposts-api.ts';
 
 interface LibraryTabProps {
+  outpostId: string;
   members: readonly MemberView[];
   onOpenChat: (conversationId: string) => void;
 }
@@ -60,21 +61,15 @@ function Section({
   );
 }
 
-export function LibraryTab({ members, onOpenChat }: LibraryTabProps) {
-  const details = useQueries({
-    queries: members.map((member) => ({
-      queryKey: queryKeys.conversation(member.conversationId),
-      queryFn: () => api.getConversation(member.conversationId),
-    })),
+export function LibraryTab({ outpostId, members, onOpenChat }: LibraryTabProps) {
+  const signal = members.map((member) => `${member.conversationId}:${member.state}`).join(',');
+  const query = useQuery({
+    queryKey: outpostKeys.library(outpostId, signal),
+    queryFn: () => outpostsApi.library(outpostId),
+    placeholderData: keepPreviousData,
   });
-  const library = outpostLibrary(
-    members.map((member, index) => ({
-      conversationId: member.conversationId,
-      handle: member.handle,
-      detail: details[index]?.data,
-    })),
-  );
-  const loading = details.some((detail) => detail.isPending);
+  const library = outpostLibrary(members, query.data);
+  const loading = query.isPending;
   if (library.artifacts.length === 0 && library.files.length === 0) {
     return (
       <p className="op-pane-empty" aria-busy={loading}>
