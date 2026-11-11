@@ -14,6 +14,7 @@ summary: One-line definitions of the words you see in Spark Outpost - agent, mod
 | **Artifact**              | An agent's page beside the chat; links ask first.                                      |
 | **Approval card**         | A [card asking](answer-approvals.md) before a command or edit.                         |
 | **Area**                  | Related files on the Map: **Core**, **Shared** or **Feature**.                         |
+| **Chat title**            | From your first message, then the agent's title. A name you set is never replaced.     |
 | **Compaction**            | [Replacing](compaction.md) a long chat's context with a summary.                       |
 | **Effort**                | How hard the agent thinks: Low to Max.                                                 |
 | **Jev**                   | An [optional advisor](jev.md) from TypeSafe, used outside chats.                       |

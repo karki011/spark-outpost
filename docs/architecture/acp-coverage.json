@@ -180,7 +180,7 @@
   "session-update:session_info_update": {
     "status": "partial",
     "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/errors.ts",
-    "note": "Only the jetbrains.air.sessionFailure extension in _meta is read; an error fails the run, anything else is a warning step. title and updatedAt are ignored."
+    "note": "The jetbrains.air.sessionFailure extension in _meta is read; an error fails the run, anything else is a warning step. The lead session's title becomes the turn's suggested chat title (titles/session-title.ts: whitespace and control characters flattened, secret values redacted, capped at the rename limit, the last one wins, ignored when it echoes the name Spark gave the session; the Title line the agent was asked for wins over it; a user-named chat is never renamed). A sub-agent's title is dropped by subagent-stream.ts. updatedAt is ignored."
   },
   "session-update:usage_update": {
     "status": "partial",

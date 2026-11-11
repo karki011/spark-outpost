@@ -17,7 +17,6 @@ import { rememberConfig, restoreConfig } from './fake-acp-support.ts';
 import { FAKE_AGENT_INFO, fakeMcpCapabilities } from './fake-acp-init.ts';
 import { compactionTurn, eventsTurn, leakSecrets } from './fake-acp-events.ts';
 import {
-  heldTitleTurn,
   orphanedCommandTurn,
   subagentAsksTurn,
   subagentModelTurn,
@@ -25,6 +24,7 @@ import {
   wideSubagentTurn,
 } from './fake-acp-subagents.ts';
 import { commandTurn, reportContext } from './fake-acp-context.ts';
+import { isTitleTrigger, titleTurn } from './fake-acp-titles.ts';
 import {
   BACKGROUND_TRIGGER,
   CYCLE_TRIGGER,
@@ -266,7 +266,7 @@ async function turn(
   if (text.includes(CYCLE_TRIGGER)) return ownFollowUpTurn(client, sessionId, say);
   if (text.includes(HANDBACK_TRIGGER)) return handbackTurn(client, sessionId, text, say);
   if (text.includes(LATER_TRIGGER)) return laterTurn(client, sessionId, text, say, sessionCwd);
-  if (text.includes('#heldtitle')) return heldTitleTurn(say);
+  if (isTitleTrigger(text)) return titleTurn(text, client, sessionId, say);
   if (text.includes('#subagentswide')) return wideSubagentTurn(client, sessionId, say, signal);
   if (text.includes('#subagentsmodel')) return subagentModelTurn(client, sessionId, say);
   if (text.includes('#subagentsask')) return subagentAsksTurn(client, sessionId, say);

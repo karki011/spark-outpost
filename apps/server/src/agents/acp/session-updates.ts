@@ -418,7 +418,10 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
           return tracked ? changeSettings(settingsFrom(update.configOptions, tracked)) : [];
         case 'session_info_update': {
           const reported = sessionFailure(update._meta);
-          if (!reported) return planOutputs(update._meta);
+          const titled: ProviderOutput[] = update.title
+            ? [{ kind: 'session_title', title: update.title }]
+            : [];
+          if (!reported) return [...titled, ...planOutputs(update._meta)];
           if (reported.severity === 'error') {
             failure = { category: reported.category, title: reported.title };
             return [];

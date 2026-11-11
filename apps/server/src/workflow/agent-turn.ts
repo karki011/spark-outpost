@@ -20,6 +20,7 @@ import {
   type ProviderOutput,
   type RequestUsage,
 } from '../providers/provider.ts';
+import { createSessionTitleWatch } from '../titles/session-title.ts';
 import { createTitleFilter, hidesTitleLine } from '../titles/title-line.ts';
 import { createRedactionFilter } from '../audit/redact-stream.ts';
 import { withoutSecretValues } from '../audit/secret-values.ts';
@@ -240,6 +241,7 @@ export async function runAgentTurn(
         replySoFar: () => replySoFar(),
       });
   const redaction = createRedactionFilter(secretValues);
+  const sessionTitle = createSessionTitleWatch(secretValues, input.chatTitle);
   const parking = backgroundParking(deps.parked, () => control.stop('quit'));
   const watch = { ...input, db: deps.db, runId: lease.runId, observations };
   const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
@@ -409,6 +411,7 @@ export async function runAgentTurn(
       if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
       if (output.kind === 'request_usage') await recordRequest(output.request);
       live.observe(output);
+      sessionTitle.see(output);
       await tasks.observe(output);
       await observeSession({ audit, input, session }, output);
       if (output.kind === 'plan_proposed') {
@@ -451,9 +454,8 @@ export async function runAgentTurn(
     if (titles) {
       const ending = titles.finish();
       await say(ending.text);
-      if (ending.title && input.askTitle) {
-        await recordSuggestedTitle(deps.db, lease.runId, ending.title);
-      }
+      const proposed = input.askTitle ? (ending.title ?? sessionTitle.latest()) : null;
+      if (proposed) await recordSuggestedTitle(deps.db, lease.runId, proposed);
     }
 
     if (control.reason() === 'approval_timeout') throw new ProviderError(APPROVAL_TIMEOUT_MESSAGE);

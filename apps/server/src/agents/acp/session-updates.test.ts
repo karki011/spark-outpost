@@ -109,7 +109,10 @@ describe('ACP session update mapping', () => {
     expect(mapper.failure()).toBeNull();
     expect(mapper.map(notice('error'))).toEqual([]);
     expect(mapper.failure()).toEqual({ category: 'transport_lost', title: 'Stream lost' });
-    expect(mapper.map({ sessionUpdate: 'session_info_update', title: 'Chat' })).toEqual([]);
+    expect(mapper.map({ sessionUpdate: 'session_info_update', title: 'Chat' })).toEqual([
+      { kind: 'session_title', title: 'Chat' },
+    ]);
+    expect(mapper.map({ sessionUpdate: 'session_info_update', title: null })).toEqual([]);
   });
 
   it('takes an error failure from the prompt response meta', () => {

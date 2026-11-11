@@ -324,6 +324,7 @@ export type ProviderOutput =
       options?: ConfigValues;
     }
   | { kind: 'plan'; entries: PlanEntry[] }
+  | { kind: 'session_title'; title: string }
   | { kind: 'plan_proposed'; plan: string; toolCallId: string; source: PlanDocumentSource }
   | {
       kind: 'session';
