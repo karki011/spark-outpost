@@ -6,7 +6,7 @@ import {
   type UpdatesOffReason,
 } from '@spark-outpost/contracts';
 
-export const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
+export const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 export const FIRST_CHECK_DELAY_MS = 15_000;
 export const RUNS_RECHECK_MS = 15_000;
 export const INSTALL_STALL_TIMEOUT_MS = 90_000;

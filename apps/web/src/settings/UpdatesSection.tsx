@@ -51,7 +51,7 @@ function phaseText(status: UpdateStatus): string {
     case 'idle':
       return status.lastCheckedAt
         ? "You're up to date."
-        : 'Spark checks when it starts and every 4 hours.';
+        : 'Spark checks when it starts and every hour.';
   }
 }
 

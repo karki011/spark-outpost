@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
+| Update check every hour              | [Updates](updates.md).                          |
 | Phone push for finished turns        | [Use your phone](use-your-phone.md).            |
 | Edits show +N −M and open to a diff  | [Follow a turn](follow-a-turn.md).              |
 | Map: **Running chats** overlay       | [Map](map.md).                                  |
@@ -36,4 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Tickets reuse a recent read          | **Refresh** reads again.                        |
 | Home changes through the day         | [Home](home.md).                                |
 | Tickets count updates at once        | Nothing.                                        |
-| **Try again**; unsent text is kept   | [A turn failed](trouble-runs.md#a-turn-failed). |
