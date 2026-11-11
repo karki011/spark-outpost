@@ -4,6 +4,24 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.5
+
+- Attach PDFs, spreadsheets, CSVs and other files up to 20 MB to a message, not only images and text. Claude reads a PDF up to 10 MB directly; other files are handed to the agent in a private folder that is removed when the turn ends.
+- The **Trust this folder?** chip has **Trust**, **Not now** and **Review**, so you answer without opening Agent setup. A folder whose setup changed still asks you to review it.
+- The Mac app shows a notice when Spark has no Full Disk Access, with **Open System Settings**, **Remind me later** (two hours) and **Don't ask again**.
+- ⌥⌘1 to ⌥⌘9 jump to the left bar items in the order shown.
+- The Remote control page is redesigned: setup steps with **Download Tailscale**, paired devices as a compact list, and switches grouped by risk. No switch or default changed.
+- Sub-agents show their model and effort wherever they appear. Select an agent in a turn to open its card, with its brief and report formatted like chat; cards are more compact and working agents come first. Many agents or pull requests in one turn fold into one line.
+- A tab an agent opened in the Browser pane stays open after its turn, until you close it.
+- Changing the theme spreads from the control you used, like ink. Reduce Motion still switches at once.
+- **Relay**, a built-in Spark, does pull request follow-up: it acts on failing checks, comments from people with write access and the review bots you list in **Settings → Pull requests**, re-requests review from existing reviewers, and updates a branch that is behind or conflicts by merging its base. There is no round cap. A pull request that turns clean shows "PR is clean · ready to merge".
+- When a chat opens a pull request, Spark moves its Jira or Linear ticket to the review status. You can comment on and move tickets from the inbox.
+- Home changes through the day, shows tomorrow's meetings in the evening, and has **Allow** and **Deny** on its rows. A failed turn offers **Try again** and keeps your unsent text.
+- Calendar: a meeting's reminders stop 5 minutes after its start, **Join at start** opens the link at the start time, **Join opens** sets how early Join works, and every island meeting line has **Dismiss**.
+- Links you click in Spark open in a Browser view tab, or in your default browser with **Open links in** (Settings → Browser pane).
+- Agents get your login-shell variables for pushes, and can wait for a page element in the Browser pane. Fewer false "sent data" flags for sends to this computer.
+- Codex runs on codex-acp 2.6.0 (Codex 0.166). A question Codex asks while it keeps working shows as a question card, and a new Codex session is named after its chat, so Codex makes no extra model call to title it.
+
 ## 0.1.0-beta.4
 
 - Three new tints in **Settings → Appearance**: **Blaze**, **Acid** and **Violet**, each with a Cloud Grey light side and a Jet Black dark side. Graphite stays the default.
