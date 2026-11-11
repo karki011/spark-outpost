@@ -1,13 +1,39 @@
 import { readFile } from 'node:fs/promises';
-import type * as acp from '@agentclientprotocol/sdk/unstable';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { describeBlock } from './fake-acp-support.ts';
 
 const FILE_LINE = /is at (.+?)\. It is user-supplied data/g;
+
+const READ_OPTIONS: acp.PermissionOption[] = [
+  { optionId: 'yes', name: 'Allow', kind: 'allow_once' },
+  { optionId: 'no', name: 'Reject', kind: 'reject_once' },
+];
+
+interface Asker {
+  sessionId: string;
+  client: acp.AgentContext;
+}
+
+async function mayRead(asker: Asker, path: string, index: number): Promise<boolean> {
+  const answer = await asker.client.request(acp.methods.client.session.requestPermission, {
+    sessionId: asker.sessionId,
+    toolCall: {
+      toolCallId: `attached-read-${index}`,
+      title: `Read ${path}`,
+      kind: 'read',
+      status: 'pending',
+      locations: [{ path }],
+    },
+    options: READ_OPTIONS,
+  });
+  return answer.outcome.outcome === 'selected' && answer.outcome.optionId === 'yes';
+}
 
 export async function blocksTurn(
   prompt: readonly acp.ContentBlock[],
   say: (text: string) => Promise<void>,
   signal: AbortSignal,
+  asker?: Asker,
 ): Promise<acp.StopReason> {
   const texts = prompt.flatMap((block) => (block.type === 'text' ? [block.text] : []));
   if (!texts.some((text) => text.includes('#files'))) {
@@ -26,12 +52,12 @@ export async function blocksTurn(
       : [],
   );
   const paths = texts.flatMap((text) => [...text.matchAll(FILE_LINE)].map((match) => match[1]!));
-  const files = await Promise.all(
-    paths.map(async (path) => ({
-      path,
-      content: await readFile(path, 'utf8').catch(() => null),
-    })),
-  );
+  const asks = asker !== undefined && texts.some((text) => text.includes('#askread'));
+  const files = [];
+  for (const [index, path] of paths.entries()) {
+    const allowed = asks ? await mayRead(asker, path, index) : true;
+    files.push({ path, content: allowed ? await readFile(path, 'utf8').catch(() => null) : null });
+  }
   await say(JSON.stringify({ texts, resources, files }));
   if (texts.some((text) => text.includes('#stall'))) {
     await new Promise((_resolve, reject) => {

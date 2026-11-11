@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { ALLOWED_REASONS } from '@spark-outpost/contracts';
 import type {
   ApprovalKind,
@@ -77,6 +78,7 @@ export interface ApprovalRequest {
   mcpServer?: string | null;
   agentReason?: string | null;
   subagent?: string | null;
+  attachedFiles?: readonly string[];
 }
 
 export type RunRule =
@@ -201,6 +203,11 @@ function refusal(
   return refused(fixedRefusal(request, options, forced, view)) ?? ownAgent;
 }
 
+function readsOutside(request: ApprovalRequest, target: string): boolean {
+  if (!outsideRoots(request, target)) return false;
+  return !(request.attachedFiles ?? []).includes(path.resolve(target));
+}
+
 function fixedRefusal(
   request: ApprovalRequest,
   options: DecideOptions,
@@ -215,7 +222,7 @@ function fixedRefusal(
   const asking = options.askRun ? askRunChange(request, view) : null;
   if (asking) return asking;
   if (forced?.kind === 'refuse') return forced.reason;
-  if (request.toolKind === 'read' && request.paths.some((p) => outsideRoots(request, p))) {
+  if (request.toolKind === 'read' && request.paths.some((p) => readsOutside(request, p))) {
     return 'Reads outside the project are refused';
   }
   if (request.kind !== 'edit') return null;

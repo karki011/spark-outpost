@@ -146,6 +146,7 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
       requests,
       push,
       audit: workspace.replay.observer,
+      attachedFiles: () => folder.files(),
     }),
   );
   try {

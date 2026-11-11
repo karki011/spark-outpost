@@ -1,4 +1,4 @@
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, rm, stat, symlink } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { TurnAttachment } from '../../providers/provider.ts';
@@ -30,6 +30,24 @@ describe('attachment folder', () => {
     expect(dirname(more.get(later)!)).toBe(dirname(one));
     await folder.remove();
     await expect(stat(dirname(one))).rejects.toThrow();
+  });
+
+  it('lists the files it wrote for the gate, and drops one swapped for a link', async () => {
+    const folder = createAttachmentFolder(true);
+    expect(await folder.files()).toEqual([]);
+    const kept = file('kept.zip', 'one');
+    const swapped = file('swapped.zip', 'two');
+    const paths = await folder.prepare([kept, swapped], support);
+    expect(await folder.files()).toContain(paths.get(kept));
+    expect(await folder.files()).toContain(paths.get(swapped));
+    await rm(paths.get(swapped)!);
+    await symlink('/etc/hosts', paths.get(swapped)!);
+    const listed = await folder.files();
+    expect(listed).toContain(paths.get(kept));
+    expect(listed).not.toContain(paths.get(swapped));
+    expect(listed).not.toContain('/etc/hosts');
+    await folder.remove();
+    expect(await folder.files()).toEqual([]);
   });
 
   it('does not write inline PDFs, text, or anything when the turn cannot read files', async () => {

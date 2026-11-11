@@ -159,6 +159,24 @@ describe('everything but a plain read of a secret file still asks', () => {
     expect(decide(posture, read, NO_RUN_RULES, [])).toMatchObject(SECRET_ASK);
   });
 
+  it('lets a read of a file Spark attached for the turn follow the mode, and nothing beside it', () => {
+    const attached = '/tmp/spark-attach-abc/report.xlsx';
+    const withFile = (target: string) => ({ ...tool('read', target), attachedFiles: [attached] });
+    expect(decide('full_access', withFile(attached), NO_RUN_RULES, []).verdict).toBe('allow');
+    expect(decide('asks', withFile(attached), NO_RUN_RULES, [])).toMatchObject(MODE_ASK);
+    const refusedRead = { verdict: 'reject', reason: 'Reads outside the project are refused' };
+    expect(
+      decide('full_access', withFile('/tmp/spark-attach-abc/other.txt'), NO_RUN_RULES, []),
+    ).toEqual(refusedRead);
+    expect(
+      decide('full_access', withFile('/tmp/spark-attach-abc/../x/report.xlsx'), NO_RUN_RULES, []),
+    ).toEqual(refusedRead);
+    const edit = tool('edit', attached);
+    expect(decide('asks', { ...edit, attachedFiles: [attached] }, NO_RUN_RULES, [])).toEqual(
+      decide('asks', edit, NO_RUN_RULES, []),
+    );
+  });
+
   it('refuses a read tool outside the project as before', () => {
     const read = tool('read', `${HOME}/.ssh/id_rsa`);
     expect(decide('full_access', read, NO_RUN_RULES, [])).toEqual({

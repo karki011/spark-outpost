@@ -76,6 +76,7 @@ export interface HandlerFacts {
   requests: RequestLog;
   push: (outputs: ProviderOutput[]) => void;
   audit: ProtocolObserver | undefined;
+  attachedFiles?: () => Promise<readonly string[]>;
 }
 
 function urlAsks() {
@@ -104,6 +105,7 @@ export function turnHandlers(facts: HandlerFacts): TurnHandlers {
   const report = (name: string) => push(mapper.clientAction(name));
   const secretRead = (label: string) => push([{ kind: 'secret_read', paths: [label] }]);
   const addresses = urlAsks();
+  const attached = async () => (await facts.attachedFiles?.()) ?? [];
   const context = (
     requestId: QuestionContext['requestId'],
     agentCancel: AbortSignal,
@@ -121,10 +123,10 @@ export function turnHandlers(facts: HandlerFacts): TurnHandlers {
     async permission(params, requestId) {
       rails?.asked(params.toolCall.toolCallId);
       if (signal.aborted) return { outcome: { outcome: 'cancelled' } };
-      if (doing) return reviewPermission(params, requestId, doing);
+      if (doing) return reviewPermission(params, requestId, doing, await attached());
       const plan = policy ? nativePlan(params, definition.id, mapper.shownPlan()) : [];
       if (gated && plan.length === 0 && readingTurnReviews(params)) {
-        return reviewPermission(params, requestId, gated);
+        return reviewPermission(params, requestId, gated, await attached());
       }
       const decision = declineInConversation(params, policy !== null);
       push(plan.length > 0 ? plan : mapper.clientAction(decision.note));

@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { TurnAttachment } from '../../providers/provider.ts';
@@ -11,7 +11,15 @@ import {
 
 export interface AttachmentFolder {
   prepare(attachments: readonly TurnAttachment[], support: PromptSupport): Promise<AttachmentPaths>;
+  files(): Promise<string[]>;
   remove(): Promise<void>;
+}
+
+async function plainFile(path: string): Promise<string[]> {
+  const info = await lstat(path).catch(() => null);
+  if (!info?.isFile()) return [];
+  const real = await realpath(path).catch(() => null);
+  return real === null ? [] : [...new Set([path, real])];
 }
 
 export function createAttachmentFolder(canRead: boolean): AttachmentFolder {
@@ -42,6 +50,11 @@ export function createAttachmentFolder(canRead: boolean): AttachmentFolder {
       const result = queue.then(() => write(attachments, support));
       queue = result.catch(() => undefined);
       return result;
+    },
+    async files() {
+      await queue;
+      const paths = folder === null ? [] : [...written].map((name) => join(folder!, name));
+      return (await Promise.all(paths.map(plainFile))).flat();
     },
     async remove() {
       closed = true;

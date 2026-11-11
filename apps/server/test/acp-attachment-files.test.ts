@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
-import type { ProviderOutput, TurnAttachment } from '../src/providers/provider.ts';
+import { NO_RUN_RULES, decide } from '../src/approvals/decide.ts';
+import type { PermissionGate, ProviderOutput, TurnAttachment } from '../src/providers/provider.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
@@ -76,7 +77,12 @@ const attachmentFolders = () =>
 async function run(
   provider: typeof claude,
   prompt: string,
-  options: { roots?: string[]; abortOnReply?: boolean; abortAtOnce?: boolean } = {},
+  options: {
+    roots?: string[];
+    abortOnReply?: boolean;
+    abortAtOnce?: boolean;
+    approvals?: PermissionGate;
+  } = {},
 ) {
   const controller = new AbortController();
   const outputs: ProviderOutput[] = [];
@@ -88,6 +94,7 @@ async function run(
       history: [],
       settings: { method: 'cli', model: null, modelLabel: null, effort: null },
       projectRoots: options.roots ?? [project],
+      ...(options.approvals ? { approvals: options.approvals, mode: 'do' as const } : {}),
       signal: controller.signal,
     })) {
       outputs.push(output);
@@ -147,6 +154,31 @@ describe('file attachments reaching an ACP agent', { timeout: 30_000 }, () => {
     const { seen, text } = await run(codex, '#blocks #files', { abortAtOnce: true });
     expect(seen).toBeNull();
     expect(text).toBe('');
+    expect(attachmentFolders()).toEqual([]);
+  });
+
+  it('lets the gate allow a read of an attached file and still refuses the file beside it', async () => {
+    const verdicts: string[] = [];
+    const approvals: PermissionGate = {
+      review: async (request) => {
+        const beside = { ...request, paths: request.paths.map((path) => `${path}.other`) };
+        verdicts.push(
+          decide('full_access', request, NO_RUN_RULES, []).verdict,
+          decide('full_access', beside, NO_RUN_RULES, []).verdict,
+        );
+        const allowed = verdicts.at(-2) === 'allow';
+        return {
+          outcome: 'selected',
+          optionId: allowed ? 'yes' : 'no',
+          allowed,
+          note: allowed ? 'Allowed' : 'Refused',
+        };
+      },
+    };
+    const { seen, error } = await run(codex, '#blocks #files #askread', { approvals });
+    expect(error).toBeNull();
+    expect(verdicts).toEqual(['allow', 'reject', 'allow', 'reject']);
+    expect(seen!.files.map((file) => file.content)).toEqual(['%PDF-1.7 fake', 'PK-sheet-bytes']);
     expect(attachmentFolders()).toEqual([]);
   });
 

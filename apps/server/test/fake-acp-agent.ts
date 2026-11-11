@@ -294,7 +294,7 @@ async function turn(
   if (text.includes('#signedout')) return signedOut(update, !text.includes('#signedoutquiet'));
   const built = await buildTurn(fakeTurn);
   if (built) return built;
-  if (text.includes('#blocks')) return blocksTurn(params.prompt, say, signal);
+  if (text.includes('#blocks')) return blocksTurn(params.prompt, say, signal, fakeTurn);
   if (text.includes('#cwd')) {
     await say(`cwd=${sessionCwd} process=${process.cwd()}`);
     return 'end_turn';
