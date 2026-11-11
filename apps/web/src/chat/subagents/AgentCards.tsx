@@ -10,6 +10,10 @@ import { agentActivity, agentMeta, agentPurpose } from './agent-cards.ts';
 import type { AgentFocus } from './agent-board.ts';
 import { hasDetail, subagentLines } from './subagent-view.ts';
 
+function namesRole(name: string, role: string): boolean {
+  return name.trim().toLowerCase().startsWith(`${role.toLowerCase()}:`);
+}
+
 function AgentCard({
   row,
   nested,
@@ -74,9 +78,9 @@ function AgentCard({
           <b className="ac-name">{row.name}</b>
         )}
         <span className="sr-only">{presentation.label}</span>
+        {role && !namesRole(row.name, role) && <span className="ac-role">{role}</span>}
         {meta && <span className="ac-meta">{meta}</span>}
       </div>
-      {role && <span className="ac-role">{role}</span>}
       {purpose && !open && (
         <p className="ac-purpose" title={row.task.trim()}>
           {purpose}

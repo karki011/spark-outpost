@@ -4,22 +4,17 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .ac-card {
   border: 1px solid var(--line);
   border-radius: var(--r);
   background: var(--panel);
-  padding: 10px 12px;
+  padding: 8px 10px;
   font-size: 13px;
   color: var(--muted);
   min-width: 0;
-}
-
-.ac-card[data-state='working'] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
 }
 
 .ac-card[data-nested] {
@@ -62,8 +57,10 @@ button.ac-name:hover {
   color: var(--accent-text);
 }
 .ac-role {
-  display: inline-block;
-  margin-top: 4px;
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--raise);
   color: var(--muted);
   font-size: 12px;
 }
@@ -72,7 +69,7 @@ button.ac-name:hover {
 }
 
 .ac-card p {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   overflow-wrap: anywhere;
 }
 
@@ -80,12 +77,14 @@ button.ac-name:hover {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  color: var(--text);
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  color: var(--muted);
+  font-size: 12.5px;
 }
 
 .ac-now {
+  font-size: 12.5px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
