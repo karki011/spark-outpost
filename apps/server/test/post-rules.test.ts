@@ -5,7 +5,6 @@ import {
   AUTHOR_NOT_MEMBER,
   CANNOT_ASK_SELF,
   CHATS_CANNOT_ASK_ALL,
-  GUESTS_NOT_AVAILABLE,
   keptProblem,
   NO_CHATS_TO_ASK,
   OUTPOST_PAUSED,
@@ -15,7 +14,6 @@ import {
 
 const FE = '11111111-1111-4111-8111-111111111111';
 const API = '22222222-2222-4222-8222-222222222222';
-const GUEST = '33333333-3333-4333-8333-333333333333';
 const RUN = '55555555-5555-4555-8555-555555555555';
 const OUTPOST = '44444444-4444-4444-8444-444444444444';
 
@@ -26,6 +24,8 @@ const members: OutpostMember[] = [
 const user: RequestAuthor = { kind: 'user' };
 const open = { id: OUTPOST, paused: false };
 const paused = { id: OUTPOST, paused: true };
+
+const OUTSIDER = '33333333-3333-4333-8333-333333333333';
 
 function chatAuthor(startedByRequest: boolean, conversationId = FE): RequestAuthor {
   return { kind: 'chat', conversationId, handle: 'fe', runId: RUN, startedByRequest };
@@ -110,15 +110,6 @@ describe('what the user may post', () => {
       kind: 'refusal',
       message: '@docs is not in this outpost.',
     });
-  });
-
-  it('refuses a guest for now, whatever the text is', () => {
-    for (const address of [toApi, note]) {
-      expect(planPost(user, address, members, open, GUEST)).toEqual({
-        kind: 'refusal',
-        message: GUESTS_NOT_AVAILABLE,
-      });
-    }
   });
 });
 
@@ -206,7 +197,6 @@ describe('what a chat may post', () => {
     expect(refused(asking, { kind: 'request', to: 'docs', body: 'Hi' }, members, open)).toBe(
       '@docs is not in this outpost.',
     );
-    expect(refused(asking, toApi, members, open, GUEST)).toBe(GUESTS_NOT_AVAILABLE);
   });
 
   it('refuses a request while the outpost is paused, and takes a note', () => {
@@ -215,7 +205,7 @@ describe('what a chat may post', () => {
   });
 
   it('refuses every post from a chat that is not a member, using the stored handle otherwise', () => {
-    const outsider = chatAuthor(false, GUEST);
+    const outsider = chatAuthor(false, OUTSIDER);
     for (const address of [toApi, note]) {
       expect(refused(outsider, address, members, open)).toBe(AUTHOR_NOT_MEMBER);
     }

@@ -53,7 +53,6 @@ export function canRetry(post: OutpostPost): boolean {
     post.kind === 'request' &&
     post.fromUser &&
     !post.fromSpark &&
-    !post.guest &&
     post.files === 0 &&
     post.toConversationId !== null &&
     (post.state === 'failed' || post.state === 'cancelled')

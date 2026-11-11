@@ -25,7 +25,6 @@ function post(number: number, extra: Partial<OutpostPost> = {}): OutpostPost {
     held: false,
     toConversationId: null,
     toHandle: null,
-    guest: false,
     waits: false,
     batchId: null,
     taskId: null,

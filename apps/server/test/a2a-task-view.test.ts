@@ -32,7 +32,6 @@ const post: StoredPost = {
   fromHandle: null,
   toHandle: 'api',
   toConversationId: CHAT_ID,
-  guest: false,
   batchId: null,
   taskId: TASK_ID,
   runId: null,

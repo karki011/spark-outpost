@@ -63,7 +63,6 @@ interface PostRow {
   kind: string;
   body: string;
   to_conversation_id: string | null;
-  guest: boolean;
   task_id: string | null;
   run_id: string | null;
   closed_state: string | null;
@@ -77,7 +76,7 @@ interface DeliveryFacts {
 }
 
 const POST_COLUMNS =
-  'id, outpost_id, kind, body, to_conversation_id, guest, task_id, run_id, closed_state, after_post_id';
+  'id, outpost_id, kind, body, to_conversation_id, task_id, run_id, closed_state, after_post_id';
 
 export function deliveryProblem(facts: DeliveryFacts): RejectReason | null {
   if (!facts.mayReceive) return 'not_member';
@@ -179,7 +178,6 @@ function storedPostProblem(
 }
 
 async function mayReceive(db: Queryable, post: PostRow, chatId: string): Promise<boolean> {
-  if (post.guest) return true;
   const { rowCount } = await db.query(
     'SELECT 1 FROM outpost_members WHERE outpost_id = $1 AND conversation_id = $2',
     [post.outpost_id, chatId],

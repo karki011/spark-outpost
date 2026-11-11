@@ -22,7 +22,6 @@ function post(id: string, toConversationId: string | null): StoredPost {
     fromHandle: null,
     toHandle: toConversationId,
     toConversationId,
-    guest: false,
     batchId: null,
     taskId: null,
     runId: null,

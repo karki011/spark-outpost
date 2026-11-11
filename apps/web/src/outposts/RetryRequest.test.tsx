@@ -15,7 +15,6 @@ describe('canRetry', () => {
     expect(canRetry(post(1, { state: 'answered' }))).toBe(false);
     expect(canRetry(post(1, { state: 'failed', fromUser: false, fromHandle: 'fe' }))).toBe(false);
     expect(canRetry(post(1, { state: 'failed', fromSpark: true }))).toBe(false);
-    expect(canRetry(post(1, { state: 'failed', guest: true }))).toBe(false);
     expect(canRetry(post(1, { state: 'failed', files: 1 }))).toBe(false);
     expect(canRetry(post(1, { state: 'failed', toConversationId: null }))).toBe(false);
   });

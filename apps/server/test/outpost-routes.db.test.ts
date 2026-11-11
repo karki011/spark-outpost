@@ -21,7 +21,6 @@ import {
 import { statusForError } from '../src/api/routes.ts';
 import { closePost } from '../src/persistence/outpost-posts.ts';
 import { OUTPOST_NOT_FOUND } from '../src/persistence/outposts.ts';
-import { GUESTS_NOT_AVAILABLE } from '../src/outposts/post-rules.ts';
 import type { TaskRef, TaskView } from '../src/outposts/ports.ts';
 import { fakePeerAgent, type FakePeerAgent } from './fake-peer-agent.ts';
 import {
@@ -340,14 +339,18 @@ describe('posts', () => {
     expect(posts[0]).toMatchObject({ id, fromUser: true, toHandle: 'api', answer: null });
   });
 
-  it('refuses a guest for now with a sentence', async () => {
-    const guest = await send('post', `/api/outposts/${outpostId}/posts`, {
-      id: randomUUID(),
-      text: '@docs look',
-      guestConversationId: await newChat(t),
-    });
+  it('still reads a post stored before guests were removed', async () => {
+    const id = randomUUID();
+    await t.db.query(
+      `INSERT INTO outpost_posts (id, outpost_id, kind, body, from_user, to_handle, to_conversation_id, guest)
+       VALUES ($1, $2, 'request', 'old guest ask', true, 'api', $3, true)`,
+      [id, outpostId, await newChat(t)],
+    );
 
-    expect(guest).toMatchObject({ status: 400, body: { error: GUESTS_NOT_AVAILABLE } });
+    const stored = (await detail()).posts.find((post) => post.id === id);
+
+    expect(stored).toMatchObject({ id, kind: 'request', body: 'old guest ask', fromUser: true });
+    expect(stored).not.toHaveProperty('guest');
   });
 
   it('threads the answer under an answered request and counts a Needs you', async () => {

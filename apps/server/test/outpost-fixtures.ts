@@ -32,15 +32,14 @@ export interface RequestRow {
   toHandle: string;
   body?: string;
   fromUser?: boolean;
-  guest?: boolean;
 }
 
 export async function insertRequestRow(db: Db, request: RequestRow): Promise<string> {
   const id = randomUUID();
   await db.query(
     `INSERT INTO outpost_posts
-       (id, outpost_id, kind, body, from_user, to_handle, to_conversation_id, guest)
-     VALUES ($1, $2, 'request', $3, $4, $5, $6, $7)`,
+       (id, outpost_id, kind, body, from_user, to_handle, to_conversation_id)
+     VALUES ($1, $2, 'request', $3, $4, $5, $6)`,
     [
       id,
       request.outpostId,
@@ -48,7 +47,6 @@ export async function insertRequestRow(db: Db, request: RequestRow): Promise<str
       request.fromUser ?? true,
       request.toHandle,
       request.toConversationId,
-      request.guest ?? false,
     ],
   );
   return id;

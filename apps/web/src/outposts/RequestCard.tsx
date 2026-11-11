@@ -155,10 +155,9 @@ export const RequestCard = memo(function RequestCard({
             onConfirm={() => onCancel(post.id)}
           />
         )}
-        {(post.guest || story) && (
+        {story && (
           <span className="op-card-tags">
-            {post.guest && <span className="op-kind">guest</span>}
-            {story && <span className="op-kind">{story}</span>}
+            <span className="op-kind">{story}</span>
           </span>
         )}
       </div>

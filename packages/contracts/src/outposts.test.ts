@@ -66,7 +66,6 @@ const detail: OutpostDetail = {
       held: false,
       toConversationId: BACKEND,
       toHandle: 'api',
-      guest: false,
       waits: true,
       batchId: null,
       taskId: RUN,
@@ -195,7 +194,7 @@ describe('outpost schemas', () => {
   it('accepts one direct member target without changing text and refuses mixed addressing', () => {
     const request = { id: POST, text: 'where are we', toConversationId: BACKEND };
     expect(createPostRequestSchema.parse(request)).toEqual(request);
-    for (const extra of [{ to: [] }, { to: ['api'] }, { guestConversationId: BACKEND }]) {
+    for (const extra of [{ to: [] }, { to: ['api'] }]) {
       expect(createPostRequestSchema.safeParse({ ...request, ...extra }).success).toBe(false);
     }
     expect(

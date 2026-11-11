@@ -41,7 +41,6 @@ function post(change: Partial<StoredPost>): StoredPost {
     fromHandle: null,
     toHandle: null,
     toConversationId: null,
-    guest: false,
     batchId: null,
     taskId: null,
     runId: null,
@@ -381,12 +380,12 @@ describe('what a member chat is told at the start of a turn', () => {
     expect(w.recorded).toEqual([{ runId: RUN, observation: secret }]);
   });
 
-  it('carries the labels to a guest that is not a member', async () => {
+  it('carries the labels to a chat that is no longer a member', async () => {
     const secret: Observation = { source: 'secret_file', label: '.env' };
     const w = world({ posts: [asked('q1', { observed: [secret] })] });
     const request = { postId: 'q1', outpostName: 'Orders launch', fromUser: false };
-    const guest = turn('chat-guest', { outpostRequest: request });
-    expect(await outpostPreamble(depsFor(w), guest)).toBeNull();
+    const outsider = turn('chat-outsider', { outpostRequest: request });
+    expect(await outpostPreamble(depsFor(w), outsider)).toBeNull();
     expect(w.recorded).toEqual([{ runId: RUN, observation: secret }]);
   });
 
