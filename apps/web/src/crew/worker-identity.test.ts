@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { emptySubagentRecord, type SubagentRow } from '@spark-outpost/contracts';
 import { chatBlob } from '../brand/ChatFace.tsx';
 import {
+  runsOtherModel,
   teamAgents,
   stageWorker,
   workerIdentity,
@@ -156,4 +157,13 @@ it('capitalises an effort and spells out xhigh', () => {
     'Opus 5.5 · Extra high',
   );
   expect(workerModelLabel({ model: 'claude-opus-5-5', effort: 'max' })).toBe('Opus 5.5 · Max');
+});
+
+it('says when a worker runs a model other than the lead, and never guesses', () => {
+  expect(runsOtherModel({ model: 'claude-haiku-5-5' }, 'Opus 5.5')).toBe(true);
+  expect(runsOtherModel({ model: 'claude-opus-5-5[1m]' }, 'Opus 5.5')).toBe(false);
+  expect(runsOtherModel({ model: 'GPT-6 Luna' }, 'gpt-6-luna')).toBe(false);
+  expect(runsOtherModel({ model: 'claude-haiku-5-5' }, null)).toBe(false);
+  expect(runsOtherModel({ effort: 'high' }, 'Opus 5.5')).toBe(false);
+  expect(runsOtherModel(undefined, 'Opus 5.5')).toBe(false);
 });

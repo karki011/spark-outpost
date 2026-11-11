@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                           | What to do                                                  |
 | -------------------------------------- | ----------------------------------------------------------- |
+| Tag for a sub-agent on another model   | [Pick the model](agent-mode.md).                            |
 | Softer theme edge; effort shows High   | Nothing.                                                    |
 | Sub-agents show their model, effort    | Select an agent in a turn.                                  |
 | Theme change spreads like ink          | Nothing.                                                    |
@@ -36,4 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Shell variables for agents             | [Details](privacy-and-secrets.md#what-agents-cant-reach).   |
 | Links open in Spark                    | [Settings](settings.md#mac).                                |
 | Join at start, **Join opens**, Dismiss | [See your day](calendar.md#use-it).                         |
-| Wait for page elements                 | Nothing.                                                    |

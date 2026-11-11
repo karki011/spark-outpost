@@ -98,15 +98,30 @@ describe('AgentsSection', () => {
         order: '2026-10-20T01:00:00Z',
         rows: rows.slice(0, 1),
         live: false,
+        leadModel: null,
       });
-      board.show({ runId: 'new', order: '2026-10-20T02:00:00Z', rows, live: true });
+      board.show({
+        runId: 'new',
+        order: '2026-10-20T02:00:00Z',
+        rows,
+        live: true,
+        leadModel: null,
+      });
     });
     expect(screen.getByRole('heading', { name: 'Agents · 2' })).toBeTruthy();
 
     act(() => board.open('old'));
     expect(screen.getByRole('heading', { name: 'Agents · 1' })).toBeTruthy();
 
-    act(() => board.show({ runId: 'next', order: '2026-10-20T03:00:00Z', rows, live: true }));
+    act(() =>
+      board.show({
+        runId: 'next',
+        order: '2026-10-20T03:00:00Z',
+        rows,
+        live: true,
+        leadModel: null,
+      }),
+    );
     expect(screen.getByRole('heading', { name: 'Agents · 2' })).toBeTruthy();
 
     act(() => {
@@ -123,7 +138,15 @@ describe('AgentsSection', () => {
         <AgentsSection />
       </AgentBoardContext>,
     );
-    act(() => board.show({ runId: 'run', order: '2026-10-20T02:00:00Z', rows, live: true }));
+    act(() =>
+      board.show({
+        runId: 'run',
+        order: '2026-10-20T02:00:00Z',
+        rows,
+        live: true,
+        leadModel: null,
+      }),
+    );
     act(() => board.open('run', 'b'));
     const name = screen.getByRole('button', { name: 'Web state' });
     expect(name.getAttribute('aria-expanded')).toBe('true');
@@ -152,6 +175,19 @@ describe('AgentsSection', () => {
     expect(card('a')).toBe('Opus 5.5 · High · 48s · 61K tok');
     expect(card('b')).toBe('gpt-5.5 · 2 steps');
     expect(card('c')).toBe('2 steps');
+  });
+
+  it('tags only a card whose model is not the chat model', () => {
+    const mixed: SubagentRow[] = [
+      { ...rows[0]!, usage: { model: 'claude-opus-5-5' } },
+      { ...rows[1]!, usage: { model: 'claude-haiku-5-5' } },
+      { ...rows[1]!, id: 'c', name: 'Unknown model', usage: {} },
+    ];
+    render(<AgentCards rows={mixed} live leadModel="Opus 5.5" />);
+    const tagged = [...document.querySelectorAll<HTMLElement>('[data-worker-id]')]
+      .filter((card) => card.textContent.includes('Different model'))
+      .map((card) => card.dataset.workerId);
+    expect(tagged).toEqual(['b']);
   });
 
   it('keeps an expanded card open and focused when another worker finishes and the order changes', () => {

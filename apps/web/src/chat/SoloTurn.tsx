@@ -142,7 +142,7 @@ export function SoloTurn({
       <ApprovalCard key={approval.id} approval={approval} provider={provider} repo={repo} />
     );
   const subagents = shownSubagents(stream.subagents.rows, detail.subagents?.[run.id], leads);
-  useShowAgents(run.id, run.createdAt, subagents, working);
+  useShowAgents(run.id, run.createdAt, subagents, working, modelOf(run));
   const waitingOn = working && !waiting ? stream.subagents.waitingOn : 0;
   const waitingText =
     waitingOn > 0 ? waitLabel(waitingOn, stream.subagents.background).toLowerCase() : null;

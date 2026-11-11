@@ -4,7 +4,12 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { SubagentRow } from '@spark-outpost/contracts';
 import { StepName } from '../WorkLog.tsx';
 import { ChatFace } from '../../brand/ChatFace.tsx';
-import { workerIdentity, workerPresentation, workerRole } from '../../crew/worker-identity.ts';
+import {
+  runsOtherModel,
+  workerIdentity,
+  workerPresentation,
+  workerRole,
+} from '../../crew/worker-identity.ts';
 import { SubagentDetail } from './SubagentDetail.tsx';
 import { agentActivity, agentMeta, agentPurpose } from './agent-cards.ts';
 import type { AgentFocus } from './agent-board.ts';
@@ -19,12 +24,14 @@ function AgentCard({
   nested,
   live,
   focus,
+  leadModel,
   onRedirect,
 }: {
   row: SubagentRow;
   nested: boolean;
   live: boolean;
   focus: AgentFocus | null;
+  leadModel: string | null;
   onRedirect?: ((row: SubagentRow) => void) | undefined;
 }) {
   const focused = focus?.workerId === row.id;
@@ -79,6 +86,11 @@ function AgentCard({
         )}
         <span className="sr-only">{presentation.label}</span>
         {role && !namesRole(row.name, role) && <span className="ac-role">{role}</span>}
+        {runsOtherModel(row.usage, leadModel) && (
+          <span className="ac-role" title={`The chat's agent runs ${leadModel}`}>
+            Different model
+          </span>
+        )}
         {meta && <span className="ac-meta">{meta}</span>}
       </div>
       {purpose && !open && (
@@ -111,6 +123,7 @@ interface AgentCardsProps {
   live: boolean;
   label?: string;
   focus?: AgentFocus | null;
+  leadModel?: string | null;
   onRedirect?: ((row: SubagentRow) => void) | undefined;
 }
 
@@ -119,6 +132,7 @@ export function AgentCards({
   live,
   label = 'Sub-agents',
   focus = null,
+  leadModel = null,
   onRedirect,
 }: AgentCardsProps) {
   if (rows.length === 0) return null;
@@ -131,6 +145,7 @@ export function AgentCards({
           nested={depth > 0}
           live={live}
           focus={focus}
+          leadModel={leadModel}
           onRedirect={onRedirect}
         />
       ))}

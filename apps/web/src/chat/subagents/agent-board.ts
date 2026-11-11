@@ -6,6 +6,7 @@ export interface BoardEntry {
   order: string;
   rows: readonly SubagentRow[];
   live: boolean;
+  leadModel: string | null;
 }
 
 export interface AgentFocus {
@@ -100,12 +101,13 @@ export function useShowAgents(
   order: string,
   rows: readonly SubagentRow[],
   live: boolean,
+  leadModel: string | null,
 ): void {
   const board = use(AgentBoardContext);
   const has = rows.length > 0;
   useEffect(() => {
     if (!board || !has) return;
-    board.show({ runId, order, rows, live });
-  }, [board, has, runId, order, rows, live]);
+    board.show({ runId, order, rows, live, leadModel });
+  }, [board, has, runId, order, rows, live, leadModel]);
   useEffect(() => () => board?.forget(runId), [board, runId]);
 }
