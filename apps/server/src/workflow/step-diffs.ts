@@ -6,6 +6,7 @@ import type { ProviderDiff } from '../providers/provider.ts';
 import { createDiffBudget } from './diff-budget.ts';
 
 export const STEP_DIFFS_MAX = 20;
+export const STEP_DIFF_BUDGET = 16 * 1024;
 const COUNT_TIMEOUT_MS = 50;
 
 function lineCount(text: string | null): number {
@@ -31,7 +32,7 @@ export function stepDiffs(
   diffs: readonly ProviderDiff[],
   secretValues: readonly string[],
 ): StepDiff[] {
-  const budget = createDiffBudget();
+  const budget = createDiffBudget(STEP_DIFF_BUDGET);
   const text = (value: string) => storableText(redactSecrets(value, secretValues));
   return diffs.slice(0, STEP_DIFFS_MAX).map((diff): StepDiff => {
     const path = text(diff.path).slice(-STEP_DIFF_PATH_CHARS);

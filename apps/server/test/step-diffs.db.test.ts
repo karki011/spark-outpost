@@ -9,7 +9,7 @@ import {
   sendUserMessage,
 } from '../src/persistence/conversations.ts';
 import { getRun } from '../src/persistence/runs.ts';
-import { DIFF_BUDGET } from '../src/workflow/diff-budget.ts';
+import { STEP_DIFF_BUDGET } from '../src/workflow/step-diffs.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { storedEvents } from './agui-conformance.ts';
 import { createTestApp } from './app-support.ts';
@@ -98,7 +98,7 @@ describe('diffs on work log steps', () => {
     const [diff] = stepFor(detail?.activity[runId], 'big.ts')?.diffs ?? [];
 
     expect(diff).toMatchObject({ truncated: true, oldText: null, added: BIG_LINES, removed: 0 });
-    expect(diff?.newText?.length).toBe(DIFF_BUDGET);
+    expect(diff?.newText?.length).toBe(STEP_DIFF_BUDGET);
   });
 
   it('puts the diff on the finished step event of the live stream', async () => {
