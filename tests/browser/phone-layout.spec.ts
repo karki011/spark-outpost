@@ -79,7 +79,7 @@ test('groups the switches by risk and keeps each count current', async ({ page }
   const everyday = region.getByRole('group', { name: 'Everyday' });
   const setup = region.getByRole('group', { name: 'Set up work' });
   const risky = region.getByRole('group', { name: 'High risk' });
-  await expect(everyday.getByRole('switch')).toHaveCount(3);
+  await expect(everyday.getByRole('switch')).toHaveCount(4);
   await expect(setup.getByRole('switch')).toHaveCount(4);
   await expect(risky.getByRole('switch')).toHaveCount(4);
   await expect(everyday).toContainText('All off');
@@ -89,7 +89,7 @@ test('groups the switches by risk and keeps each count current', async ({ page }
   const notify = everyday.getByRole('switch', { name: 'Notify when a chat needs you' });
   await notify.click();
   await expect(notify).toHaveAttribute('aria-checked', 'true');
-  await expect(everyday).toContainText('1 of 3 on');
+  await expect(everyday).toContainText('1 of 4 on');
   await expect(region.getByText('Sender contact')).toBeVisible();
 
   const reset = risky.getByRole('switch', { name: 'Reset or delete data' });

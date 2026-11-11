@@ -5,8 +5,9 @@ import { notifyLine } from '../slack/notify-plan.ts';
 export interface PushCandidate {
   key: string;
   source: string;
-  kind: 'approval' | 'terminal';
+  kind: 'approval' | 'terminal' | 'run-done' | 'run-failed';
   detail: string | null;
+  cardId?: string;
 }
 
 export interface QueuedPush extends PushCandidate {
@@ -19,6 +20,7 @@ export interface PushMessage {
   chatId: string;
   tag: string;
   keys: string[];
+  cardId?: string;
 }
 
 export interface ClosePush {
@@ -60,6 +62,8 @@ const TERMINAL_WAITING = new Set<NativeTerminalSession['state']>([
 ]);
 
 function candidateLine(candidate: PushCandidate): string {
+  if (candidate.kind === 'run-done') return 'Finished';
+  if (candidate.kind === 'run-failed') return 'Failed';
   if (candidate.kind === 'terminal') {
     const state = candidate.detail as NativeTerminalSession['state'];
     return TERMINAL_WAITING.has(state)
@@ -87,12 +91,15 @@ export function pushMessage(
   candidates: readonly PushCandidate[],
 ): PushMessage {
   const title = redactText(chat.title).trim().slice(0, TITLE_MAX) || 'Untitled chat';
+  const only = candidates.length === 1 ? candidates[0] : undefined;
+  const cardId = only?.kind === 'approval' ? only.cardId : undefined;
   return {
     title,
     body: counted(candidates.map(candidateLine)).join(' · '),
     chatId: chat.conversationId,
     tag: chatTag(chat.conversationId),
     keys: candidates.map((candidate) => candidate.source),
+    ...(cardId ? { cardId } : {}),
   };
 }
 

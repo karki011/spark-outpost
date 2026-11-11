@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
-import { scrollToAnchor } from '../../crew/scroll-to-anchor.ts';
+import { JUMP_TRIES, scrollToAnchor } from '../../crew/scroll-to-anchor.ts';
 import type { PendingEntry } from './status-store.ts';
 
 const FOCUSABLE =
@@ -16,6 +16,15 @@ function focusCard(anchor: string, tries: number) {
   }
   const target = card.querySelector<HTMLElement>(FOCUSABLE);
   target?.focus({ preventScroll: true });
+}
+
+export function focusCardFromNotification(id: string, tries = JUMP_TRIES): void {
+  const card = document.getElementById(approvalAnchor(id));
+  if (!card) {
+    if (tries > 0) requestAnimationFrame(() => focusCardFromNotification(id, tries - 1));
+    return;
+  }
+  if (!card.classList.contains('resolved')) focusPending(id);
 }
 
 export function focusPending(id: string): void {

@@ -6,15 +6,15 @@ order: 417
 summary: Pair a device over Tailscale and choose what it may do.
 ---
 
-Use Spark from another device; work stays on the Mac. About 5 minutes. Needs Tailscale on both.
+Use Spark from another device; work stays on the Mac. About 5 minutes.
 
-1. Open **Remote control**, above **Settings**. Three steps guide you: Tailscale, HTTPS, turn on.
+1. Open **Remote control**, above **Settings**. Steps: Tailscale, HTTPS, turn on.
 2. Select **Pair a device**, then scan the code, or open the address and type it.
 3. Check the codes match, then **Confirm**.
 
 **Passkey.** On the device, select **Save a passkey for this device**, then **Sign in with a passkey** in another browser. It never pairs a new device. **Devices** has **Allow passkey sign-in** and **Remove passkeys**.
 
-**Devices** has a row per device. Its **Actions** menu has **Rename**, **Remove passkeys** and **Revoke**; **Remove old entry** clears a duplicate. Rows warn near the 30-day cutoff.
+**Devices** has a row per device. Its **Actions** menu has **Rename**, **Remove passkeys** and **Revoke**; **Remove old entry** clears a duplicate.
 
 **What paired devices can do** groups switches as **Everyday**, **Set up work** and **High risk**. On a phone, **More** holds Remote control and Settings.
 
@@ -26,13 +26,15 @@ Devices answer browser cards. **Open artifacts** (off) shows artifacts.
 
 **Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both off.
 
-**Send now** stops the turn first. Messages shown aren't stored.
+**Send now** stops the turn first.
 
 **Awake.** With Remote control on, work or a connected device keeps the Mac awake, except a closed lid on battery.
 
-**Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device**. Pushes name the chat, never a command; [meeting alerts](calendar.md) say "Meeting in 10 min". Seen chats and the device you're using get none.
+**Notifications.** On the Mac, turn on **Notify when a chat needs you**, then **Notify this device**. A tap opens the chat at its card.
 
-A device's menu on the Mac has **Send a test notification**.
+**Notify when a turn finishes or fails** (off) adds "Finished" or "Failed". Pushes name the chat, never a command; [meeting alerts](calendar.md) say "Meeting in 10 min". Seen chats and your current device get none.
+
+**Send a test notification** is in a device's menu.
 
 iPhone needs iOS 16.4 or later and Spark on the Home Screen, signed in with a passkey.
 

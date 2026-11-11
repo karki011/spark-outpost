@@ -20,7 +20,7 @@ describe('switch groups', () => {
     expect([...shown].sort()).toEqual([...SHOWN_SWITCHES].sort());
     expect(shown).not.toContain('devices');
     expect(shown).not.toContain('passkeys');
-    expect(shown).toHaveLength(11);
+    expect(shown).toHaveLength(12);
   });
 
   it('keeps the groups in risk order', () => {

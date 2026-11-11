@@ -9,17 +9,32 @@ import {
 } from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
-import { groupCount, labelsByState, MAC_ONLY_LINE, shownGroups } from './switch-groups.ts';
+import {
+  groupCount,
+  labelsByState,
+  MAC_ONLY_LINE,
+  NOTIFY_UPDATES_NOTE,
+  shownGroups,
+} from './switch-groups.ts';
 
 interface SwitchRowProps {
   id: RemoteSwitch;
   checked: boolean;
   label?: string;
+  disabled?: boolean;
+  note?: string;
 }
 
-export function SwitchRow({ id, checked, label = REMOTE_SWITCH_LABELS[id] }: SwitchRowProps) {
+export function SwitchRow({
+  id,
+  checked,
+  label = REMOTE_SWITCH_LABELS[id],
+  disabled = false,
+  note,
+}: SwitchRowProps) {
   const queryClient = useQueryClient();
   const switchId = useId();
+  const noteId = useId();
   const change = useMutation({
     mutationFn: (next: boolean) => phoneApi.setSwitches({ [id]: next }),
     onSuccess: (switches) => {
@@ -37,9 +52,15 @@ export function SwitchRow({ id, checked, label = REMOTE_SWITCH_LABELS[id] }: Swi
         size="sm"
         label={label}
         checked={change.isPending ? change.variables : checked}
-        disabled={change.isPending}
+        disabled={disabled || change.isPending}
+        {...(note ? { describedBy: noteId } : {})}
         onChange={(next) => change.mutate(next)}
       />
+      {note && (
+        <p id={noteId} className="ph-note">
+          {note}
+        </p>
+      )}
       {change.error && (
         <p className="ph-error" role="alert">
           {change.error.message}
@@ -83,7 +104,16 @@ function SwitchGroup({
       <ul className="ph-switches ph-switch-grid">
         {group.switches.map((id) => (
           <Fragment key={id}>
-            <SwitchRow id={id} checked={switches[id]} />
+            {id === 'notifyUpdates' ? (
+              <SwitchRow
+                id={id}
+                checked={switches[id]}
+                disabled={!switches.notifications && !switches[id]}
+                note={NOTIFY_UPDATES_NOTE}
+              />
+            ) : (
+              <SwitchRow id={id} checked={switches[id]} />
+            )}
             {id === 'notifications' && notificationsExtra && (
               <li className="ph-switch-extra">{notificationsExtra}</li>
             )}

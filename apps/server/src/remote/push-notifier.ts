@@ -1,5 +1,5 @@
 import { terminalAttentionKey, type AppEvent, type PushTestResult } from '@spark-outpost/contracts';
-import { readAttentionKeys } from '../persistence/attention-items.ts';
+import { listAttentionItems, readAttentionKeys } from '../persistence/attention-items.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ClientFocus } from '../slack/client-focus.ts';
 import { chatOf } from '../slack/notifier.ts';
@@ -104,11 +104,22 @@ export function startPushNotifier(
       const { detail, seen } = row;
       if (row.kind === 'approval') {
         const source = `approval:${row.id}`;
-        return [{ key: source, source, kind: 'approval', detail, seen }];
+        return [{ key: source, source, kind: 'approval', detail, seen, cardId: row.id }];
       }
       const key = terminals.key(row.id, row.generation, row.detail);
       const source = terminalAttentionKey(row.id, row.generation, row.since);
       return key ? [{ key, source, kind: 'terminal', detail, seen }] : [];
+    });
+  }
+
+  async function finishedTurns(conversationId: string): Promise<QueuedPush[]> {
+    const items = await listAttentionItems(db, workspaceId, conversationId);
+    return items.flatMap((item): QueuedPush[] => {
+      const { kind } = item;
+      if (kind !== 'run-done' && kind !== 'run-failed') return [];
+      const open = !item.readAt && !item.setAsideAt && !item.dismissedAt;
+      if (!open || new Date(item.at) < since) return [];
+      return [{ key: item.key, source: item.key, kind, detail: null, seen: false }];
     });
   }
 
@@ -184,7 +195,8 @@ export function startPushNotifier(
       heldChats.set(conversationId, [...(heldChats.get(conversationId) ?? []), ...items]);
       return;
     }
-    const alerting = await alertingSources(conversationId);
+    const access = await remoteAccess(db, workspaceId);
+    const alerting = await alertingSources(conversationId, access.switches.notifyUpdates);
     const live = items.filter((item) => alerting.has(item.source));
     if (live.length === 0) return;
     const ready = await sender();
@@ -199,9 +211,10 @@ export function startPushNotifier(
     shown.set(conversationId, record);
   }
 
-  async function alertingSources(conversationId: string): Promise<Set<string>> {
+  async function alertingSources(conversationId: string, withTurns: boolean): Promise<Set<string>> {
     const unseen = (await waiting(conversationId)).filter((item) => !item.seen);
-    const sources = unseen.map((item) => item.source);
+    const turns = withTurns ? await finishedTurns(conversationId) : [];
+    const sources = [...unseen, ...turns].map((item) => item.source);
     const read = await readAttentionKeys(db, workspaceId, sources);
     return new Set(sources.filter((source) => !read.has(source)));
   }
@@ -209,7 +222,7 @@ export function startPushNotifier(
   async function settle(conversationId: string): Promise<void> {
     const record = shown.get(conversationId);
     if (!record) return;
-    const alerting = await alertingSources(conversationId);
+    const alerting = await alertingSources(conversationId, true);
     if ([...record.keys].some((key) => alerting.has(key))) return;
     shown.delete(conversationId);
     const ready = await sender((target) => record.targets.has(target.id));
@@ -226,9 +239,12 @@ export function startPushNotifier(
   async function scan(conversationId: string): Promise<void> {
     scanning.delete(conversationId);
     const access = await remoteAccess(db, workspaceId);
-    for (const candidate of await waiting(conversationId)) {
+    const turns = await finishedTurns(conversationId);
+    const reaches = access.hostname !== null && access.switches.notifications;
+    for (const candidate of [...(await waiting(conversationId)), ...turns]) {
       if (!sent.claim(candidate.key)) continue;
-      if (access.hostname && access.switches.notifications) batcher.add(conversationId, candidate);
+      const wanted = candidate.kind.startsWith('run-') ? access.switches.notifyUpdates : true;
+      if (reaches && wanted) batcher.add(conversationId, candidate);
     }
   }
 

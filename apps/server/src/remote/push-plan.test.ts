@@ -117,3 +117,49 @@ describe('TerminalWaits', () => {
     expect(waits.key('s', 2, 'waiting_for_input')).not.toBe(second);
   });
 });
+
+describe('pushMessage for finished turns and card ids', () => {
+  const CARD = '3f2b8c1e-9d4a-4b6e-8a17-5c0d2e7f9a31';
+  const finished = {
+    key: 'run-done:r1',
+    source: 'run-done:r1',
+    kind: 'run-done' as const,
+    detail: null,
+  };
+  const card = { key: `approval:${CARD}`, source: `approval:${CARD}`, kind: 'approval' as const };
+  const chat = { conversationId: CHAT, title: 'Build' };
+
+  it('says only Finished or Failed, whatever the detail holds', () => {
+    const failed = {
+      key: 'run-failed:r2',
+      source: 'run-failed:r2',
+      kind: 'run-failed' as const,
+      detail: 'ENOENT /Users/me/secret',
+    };
+    expect(pushMessage(chat, [finished]).body).toBe('Finished');
+    const message = pushMessage(chat, [failed]);
+    expect(message.body).toBe('Failed');
+    expect(JSON.stringify(message)).not.toContain('secret');
+  });
+
+  it('limits the title the same way for every kind', () => {
+    const long = 'x'.repeat(200);
+    expect(pushMessage({ conversationId: CHAT, title: long }, [finished]).title).toHaveLength(80);
+    expect(pushMessage({ conversationId: CHAT, title: '  ' }, [finished]).title).toBe(
+      'Untitled chat',
+    );
+  });
+
+  it('carries the card id only for a push about exactly one card', () => {
+    const one = pushMessage(chat, [{ ...card, detail: 'execute', cardId: CARD }]);
+    expect(one.cardId).toBe(CARD);
+    const two = pushMessage(chat, [
+      { ...card, detail: 'execute', cardId: CARD },
+      { ...card, key: 'approval:b', source: 'approval:b', detail: 'execute', cardId: 'b' },
+    ]);
+    expect(two).not.toHaveProperty('cardId');
+    const mixed = pushMessage(chat, [{ ...card, detail: 'execute', cardId: CARD }, finished]);
+    expect(mixed).not.toHaveProperty('cardId');
+    expect(pushMessage(chat, [finished])).not.toHaveProperty('cardId');
+  });
+});
