@@ -7,9 +7,10 @@ const RESTART_COMMAND = 'pnpm dev';
 interface FailureDetailsProps {
   failure: ConnectionFailure;
   failedAt: number;
+  showRestartHint: boolean;
 }
 
-export function FailureDetails({ failure, failedAt }: FailureDetailsProps) {
+export function FailureDetails({ failure, failedAt, showRestartHint }: FailureDetailsProps) {
   const { state, copy } = useCopyFeedback();
 
   return (
@@ -26,14 +27,16 @@ export function FailureDetails({ failure, failedAt }: FailureDetailsProps) {
         <dt>Time</dt>
         <dd>{new Date(failedAt).toLocaleTimeString()}</dd>
       </dl>
-      <div className="offline-hint">
-        <span>
-          If this keeps happening, restart it with <code>{RESTART_COMMAND}</code>
-        </span>
-        <button type="button" className="btn line sm" onClick={() => copy(RESTART_COMMAND)}>
-          {copyButtonText(state)}
-        </button>
-      </div>
+      {showRestartHint && (
+        <div className="offline-hint">
+          <span>
+            If this keeps happening, restart it with <code>{RESTART_COMMAND}</code>
+          </span>
+          <button type="button" className="btn line sm" onClick={() => copy(RESTART_COMMAND)}>
+            {copyButtonText(state)}
+          </button>
+        </div>
+      )}
     </details>
   );
 }

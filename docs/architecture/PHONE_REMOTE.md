@@ -454,7 +454,16 @@ Every remote request is audited with the device id. The Mac shows a "phone conne
 
 While phone access is on and a run is active or a phone is connected, Spark holds a power assertion. A closed lid on battery still sleeps the Mac; the phone then shows "Your Mac is asleep or offline" with the last-seen time.
 
-Built: the Mac app checks every 30 seconds (`apps/desktop/src/keep-awake.ts`). Remote control is on when a Serve hostname is saved (`GET /api/remote/access`); a run is active when `GET /api/runs/active` counts one, which includes a turn sleeping until a wakeup and a working Terminal session turn; a phone is connected when `GET /api/remote/devices` shows a device with an open stream. While all that holds, Electron's `prevent-app-suspension` blocker is held; it is released when it no longer holds, when the API can't be read and on quit. The "Your Mac is asleep or offline" state is not built yet.
+Built: the Mac app checks every 30 seconds (`apps/desktop/src/keep-awake.ts`). Remote control is on when a Serve hostname is saved (`GET /api/remote/access`); a run is active when `GET /api/runs/active` counts one, which includes a turn sleeping until a wakeup and a working Terminal session turn; a phone is connected when `GET /api/remote/devices` shows a device with an open stream. While all that holds, Electron's `prevent-app-suspension` blocker is held; it is released when it no longer holds, when the API can't be read and on quit. The last-seen "Your Mac is asleep or offline" page is not built; see "Can't reach the Mac (built)" below for what a connection that drops shows.
+
+### Can't reach the Mac (built)
+
+Code: `apps/web/src/app/connection/` (`connection-copy.ts`, `remote-hint.ts`, `OfflineScreen.tsx`, `ReconnectBanner.tsx`). A paired device cannot ask the Mac whether it is a paired device while the Mac is unreachable, so `useRemoteClient` records the answer of `GET /api/remote/session` in memory and in the browser's local storage (`spark-outpost.remote-client`, per origin, one flag), and the connection screens read that record. Nothing is fetched while offline.
+
+- Unreachable (network failure or 502, 503, 504) on a paired device: **Can't reach your Mac**, "It may be asleep, shut down or off Tailscale. Spark keeps trying and reconnects on its own." The auto-retry, its "Tried N times" line and **Try now** are unchanged. From the fourth failed attempt a live-region line adds "Wake the Mac, or check that Tailscale is connected on this device." The `pnpm dev` restart hint is not shown.
+- On the Mac, and for the `server` failure kind on both, the copy is unchanged.
+- An open page keeps the app visible under the Reconnect banner, which says "Can't reach your Mac" on a paired device. The full screen replaces the app only when the first setup request never succeeded, so a reload while the Mac is asleep uses the remembered flag. Chats and runs shown from cached data are not marked stale.
+- No service-worker fetch handler and no offline shell: `sw.js` stays push-only.
 
 ## Phases for the relay version
 
