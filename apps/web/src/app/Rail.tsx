@@ -10,6 +10,7 @@ import { CALENDAR_PATH } from '../ui/icons.tsx';
 import { browserViewAvailable } from '../browser-view/view-store.ts';
 import { useSparkPause } from './pause/use-spark-pause.ts';
 import { RailClock } from './RailClock.tsx';
+import { railAriaKeys, railTitle, useRailShortcuts } from './rail-shortcut.ts';
 import { RailMore } from './RailMore.tsx';
 import { UpdateBlob } from './UpdateBlob.tsx';
 import { PlanRing } from './PlanRing.tsx';
@@ -207,6 +208,9 @@ export function Rail({
       : browserViewAvailable()
         ? VIEWS
         : NO_BROWSER_VIEWS;
+  const shownViews: AppView[] = primary.map((item) => item.id);
+  if (!phone) shownViews.push('phone');
+  useRailShortcuts(shownViews, onView);
   const pause = useSparkPause();
   const pauseLabel = pause.paused ? 'Resume Spark' : 'Pause Spark';
   const pauseIcon = pause.paused ? RESUME_ICON : PAUSE_ICON;
@@ -258,7 +262,7 @@ export function Rail({
         aria-hidden="true"
         style={box ? { transform: `translateY(${box.top}px)`, height: box.height } : { opacity: 0 }}
       />
-      {primary.map((item) => (
+      {primary.map((item, index) => (
         <button
           key={item.id}
           type="button"
@@ -266,8 +270,11 @@ export function Rail({
           data-view={item.id}
           aria-current={view === item.id ? 'page' : undefined}
           title={
-            item.id === 'chats' && reopens ? `Show chats sidebar (${SIDEBAR_HINT})` : undefined
+            item.id === 'chats' && reopens
+              ? `Show chats sidebar (${SIDEBAR_HINT})`
+              : railTitle(item.label, index + 1)
           }
+          aria-keyshortcuts={railAriaKeys(index + 1)}
           onPointerEnter={() => onIntent(item.id)}
           onFocus={() => onIntent(item.id)}
           onClick={() => onView(item.id)}
@@ -321,7 +328,8 @@ export function Rail({
             className="rail-btn"
             data-view="phone"
             aria-label="Remote control"
-            title="Remote control"
+            title={railTitle('Remote control', primary.length + 1)}
+            aria-keyshortcuts={railAriaKeys(primary.length + 1)}
             aria-current={view === 'phone' ? 'page' : undefined}
             onPointerEnter={() => onIntent('phone')}
             onFocus={() => onIntent('phone')}

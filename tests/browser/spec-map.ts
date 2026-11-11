@@ -157,6 +157,7 @@ export const SPEC_GROUPS = {
     'projects',
     'plan-ring',
     'rail-clock',
+    'rail-shortcuts',
     'rail-badges-live',
     'search-jump',
     'session-palette',
