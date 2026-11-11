@@ -1,0 +1,84 @@
+.ph-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.ph-step-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+.ph-step-card[data-state='needs_you'] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.ph-step-card h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.ph-step-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.ph-step-card[data-state='done'] .ph-step-state {
+  color: var(--success);
+}
+.ph-step-card[data-state='needs_you'] .ph-step-state {
+  color: var(--accent-text);
+}
+.ph-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+.ph-step-aside {
+  flex-basis: 100%;
+}
+.ph-what {
+  gap: 10px;
+}
+.ph-what h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.ph-what dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+.ph-what dt {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.ph-what dd {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+@container ph (min-width: 760px) {
+  .ph-steps,
+  .ph-what dl {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+.ph a.btn {
+  text-decoration: none;
+}

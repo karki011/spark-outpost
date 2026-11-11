@@ -7,7 +7,13 @@ import {
   savePasskeyByScript,
   signInOptionsStatus,
 } from './phone-passkey-support.ts';
-import { PHONE_ADDRESS, denyWaitingPhones, resetPhone, setFakeTailscale } from './phone-support.ts';
+import {
+  PHONE_ADDRESS,
+  chooseDeviceAction,
+  denyWaitingPhones,
+  resetPhone,
+  setFakeTailscale,
+} from './phone-support.ts';
 import {
   newPhone,
   openPhonePage,
@@ -102,7 +108,7 @@ test('a paired phone signs in with its passkey in a browser that has no cookie',
 
   await main.getByRole('switch', { name: 'Allow passkey sign-in' }).click();
   await expect(main.getByRole('switch', { name: 'Allow passkey sign-in' })).toBeChecked();
-  await devices.getByRole('button', { name: 'Revoke Kitchen phone' }).click();
+  await chooseDeviceAction(page, 'Kitchen phone', 'Revoke');
   await expect(devices.getByText('No device is paired yet.')).toBeVisible();
   await openPairingPage(third);
   await third.getByRole('button', { name: SIGN_IN }).click();
@@ -165,9 +171,11 @@ test('the phone app offers a passkey once and the Mac can remove it @packaged', 
   await expect(phone.getByRole('navigation').first()).toBeVisible();
   await expect(phone.getByRole('button', { name: SAVE })).toHaveCount(0);
 
-  await devices.getByRole('button', { name: 'Remove passkeys for Kitchen phone' }).click();
+  await chooseDeviceAction(page, 'Kitchen phone', 'Remove passkeys');
   await expect(devices.getByText(/1 passkey/)).toHaveCount(0);
-  await expect(devices.getByRole('button', { name: 'Revoke Kitchen phone' })).toBeVisible();
+  await expect(
+    devices.getByRole('button', { name: 'Actions for Kitchen phone', exact: true }),
+  ).toBeVisible();
   expect(await signedInAs(phone)).toBe('Kitchen phone');
   await browser.close();
 });
