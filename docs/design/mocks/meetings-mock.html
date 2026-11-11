@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spark Outpost · Meetings (design mock)</title>
 <script>(function(){var q=new URLSearchParams(location.search).get("theme");if(q==="light"||q==="dark")document.documentElement.dataset.theme=q})()</script>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: a design board. Five numbered frames, each one screen of the feature in the order a meeting happens. */
 :root{
@@ -14,6 +14,7 @@
   --accent:#078470; --accent-ink:#ffffff; --accent-text:#00715d; --accent-soft:rgba(7,132,112,.11);
   --user:#e8f3f0; --danger:#bb3430; --danger-soft:rgba(187,52,48,.09);
   --warn:#8a4a00; --warn-soft:rgba(138,74,0,.1); --switch-on:#1a7a3c; --switch-on-ink:#ffffff;
+  --tint-a:#dff3ee; --ink-a:#075c4e; --tint-b:#f8e1ec; --ink-b:#8a2457; --tint-c:#e2e9fb; --ink-c:#2a3f8f;
   --island:#111418; --island-text:#eef1f4; --island-muted:#a6b0bc; --island-line:#2a3038; --island-raise:#1c2127;
   --r:14px; --r-sm:8px;
   --font-sans:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -27,6 +28,7 @@
     --accent:#34c3a3; --accent-ink:#05231c; --accent-text:#34c3a3; --accent-soft:rgba(52,195,163,.13);
     --user:#172a2a; --danger:#f06b63; --danger-soft:rgba(240,107,99,.11);
     --warn:#e8b04b; --warn-soft:rgba(232,176,75,.12); --switch-on:#52c77f; --switch-on-ink:#0b1f14;
+    --tint-a:#12352f; --ink-a:#8fe0cd; --tint-b:#3a1a2a; --ink-b:#f2a9c8; --tint-c:#1b2547; --ink-c:#aebdf5;
     --island:#000000; --island-text:#eef1f4; --island-muted:#a6b0bc; --island-line:#2a3038; --island-raise:#171b20;
   }
 }
@@ -37,23 +39,25 @@
   --accent:#34c3a3; --accent-ink:#05231c; --accent-text:#34c3a3; --accent-soft:rgba(52,195,163,.13);
   --user:#172a2a; --danger:#f06b63; --danger-soft:rgba(240,107,99,.11);
   --warn:#e8b04b; --warn-soft:rgba(232,176,75,.12); --switch-on:#52c77f; --switch-on-ink:#0b1f14;
+  --tint-a:#12352f; --ink-a:#8fe0cd; --tint-b:#3a1a2a; --ink-b:#f2a9c8; --tint-c:#1b2547; --ink-c:#aebdf5;
   --island:#000000; --island-text:#eef1f4; --island-muted:#a6b0bc; --island-line:#2a3038; --island-raise:#171b20;
 }
 *,*::before,*::after{box-sizing:border-box}
 body{background:var(--rail);color:var(--text);font:14px/1.55 var(--font-sans);-webkit-font-smoothing:antialiased;
   padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .board{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:36px}
-header h1{font-size:26px;line-height:1.2;font-weight:600;margin:0 0 6px;text-wrap:balance}
+header h1{font-size:26px;line-height:1.2;font-weight:500;margin:0 0 6px;text-wrap:balance}
 header p{margin:0;color:var(--muted);max-width:66ch}
 .note{font-size:12px;color:var(--faint);margin-top:10px}
 .frame{display:flex;flex-direction:column;gap:12px}
 .frame-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
 .step{font:500 12px/1 var(--font-mono);color:var(--accent-text);background:var(--accent-soft);border-radius:999px;padding:5px 9px}
-.frame-head h2{font-size:17px;font-weight:600;margin:0}
+.frame-head h2{font-size:17px;font-weight:500;margin:0}
 .frame-head p{margin:0;color:var(--muted);flex:1 1 320px;min-width:0}
 .stage{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
 .stage>*{min-width:0}
 button{font:inherit;color:inherit;cursor:pointer}
+b{font-weight:500}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .btn{min-height:30px;border-radius:var(--r-sm);border:1px solid var(--line-strong);background:var(--panel);padding:4px 12px;font-weight:500}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
@@ -64,7 +68,7 @@ kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:
 /* 1 · start */
 .alert{flex:1 1 300px;max-width:400px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
 .alert .when{font-size:12px;color:var(--muted)}
-.alert h3{margin:0;font-size:16px;font-weight:600}
+.alert h3{margin:0;font-size:16px;font-weight:500}
 .alert .host{font-size:12px;color:var(--faint)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .today{flex:1 1 320px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
@@ -85,7 +89,7 @@ kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:
 /* 2 · island */
 .island{flex:1 1 380px;max-width:520px;background:var(--island);color:var(--island-text);border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:12px}
 .island .bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.island .bar b{font-weight:600}
+.island .bar b{font-weight:500}
 .island .bar .el{font:12px var(--font-mono);color:var(--island-muted)}
 .island .bar .sp{flex:1}
 .island .ibtn{min-height:28px;border-radius:8px;border:1px solid var(--island-line);background:var(--island-raise);color:var(--island-text);padding:3px 10px;font-weight:500}
@@ -106,7 +110,7 @@ kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:
 .ans p{margin:0}
 .side{flex:1 1 240px;display:flex;flex-direction:column;gap:10px}
 .callout{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px}
-.callout b{display:block;font-weight:600;margin-bottom:2px}
+.callout b{display:block;font-weight:500;margin-bottom:2px}
 .callout span{color:var(--muted);font-size:13px}
 .strip{background:var(--island);color:var(--island-text);border-radius:999px;padding:6px 12px;display:inline-flex;align-items:center;gap:8px;font-size:13px;align-self:flex-start;flex-wrap:wrap}
 .strip .el{font:12px var(--font-mono);color:var(--island-muted)}
@@ -120,12 +124,12 @@ kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:
 .item b{font-weight:500}
 .item span{font-size:12px;color:var(--faint)}
 .doc{padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
-.doc h3{margin:0;font-size:18px;font-weight:600}
+.doc h3{margin:0;font-size:18px;font-weight:500}
 .meta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .seg{display:flex;gap:4px;border-bottom:1px solid var(--line)}
 .seg span{padding:6px 10px;font-size:13px;color:var(--muted);border-bottom:2px solid transparent}
 .seg span[aria-current]{color:var(--text);border-color:var(--accent)}
-.md h5{margin:10px 0 4px;font-size:13px;font-weight:600}
+.md h5{margin:10px 0 4px;font-size:13px;font-weight:500}
 .md p,.md ul{margin:0;color:var(--text);max-width:68ch}
 .md ul{padding-left:18px}
 .md li{margin:2px 0}
@@ -141,39 +145,52 @@ kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:
 
 /* 0 · calendar redesign */
 .cal{flex:1 1 100%;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
-.cal-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:16px 20px 12px}
-.cal-head h3{margin:0;font-size:20px;font-weight:600}
-.cal-head .date{color:var(--muted)}
+.cal-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:16px 18px}
+.tile{width:44px;border:1px solid var(--line);border-radius:var(--r-sm);text-align:center;overflow:hidden;flex:none}
+.tile span{display:block;font-size:10px;letter-spacing:.06em;color:var(--muted);background:var(--raise);padding:2px 0}
+.tile b{display:block;font-size:16px;font-weight:500;padding:1px 0 3px}
+.ttl{min-width:0}
+.ttl h3{margin:0;font-size:17px;font-weight:500}
+.ttl .date{color:var(--muted);font-size:13px}
 .cal-head .sp{flex:1}
-.days{display:flex;gap:4px;padding:0 20px 12px;overflow-x:auto}
-.day{flex:1 0 64px;text-align:center;border-radius:var(--r-sm);padding:6px 4px;color:var(--muted);font-size:12px}
-.day b{display:block;font-size:15px;font-weight:500;color:var(--text)}
-.day i{display:block;height:4px;font-style:normal;letter-spacing:2px;line-height:4px;color:var(--accent-text)}
-.day[aria-current]{background:var(--accent-soft)}
-.day[aria-current] b{color:var(--accent-text);font-weight:600}
-.cal-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,300px);border-top:1px solid var(--line)}
-.agenda{padding:8px 20px 16px;min-width:0}
-.next{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--accent-soft);border-radius:var(--r-sm);padding:10px 12px;margin:8px 0 6px}
-.next .t{flex:1 1 200px;min-width:0}
-.next .t small{display:block;color:var(--accent-text);font-weight:500}
-.next .t b{font-weight:600}
-.ag{display:grid;grid-template-columns:76px 10px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
-.ag:last-child{border-bottom:0}
-.ag time{font:12px var(--font-mono);color:var(--muted);font-variant-numeric:tabular-nums}
-.ag .c{width:8px;height:8px;border-radius:3px;background:var(--accent)}
-.ag .c.fam{background:#b0477c}
-.ag .t b{font-weight:500}
-.ag .t span{display:block;font-size:12px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ag.past{opacity:.72}
-.ag.sel{background:var(--raise);margin:0 -12px;padding:9px 12px;border-radius:var(--r-sm);border-bottom-color:transparent}
-.gap{font-size:12px;color:var(--faint);padding:5px 0 5px 96px}
+.cal-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,280px);border-top:1px solid var(--line)}
+.mgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-width:0}
+.mgrid .dow{font-size:12px;color:var(--muted);text-align:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.cell{min-height:92px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.cell:nth-child(7n){border-right:0}
+.cell.out{background:var(--bg)}
+.cell .n{font-size:12px;color:var(--muted);align-self:flex-start;min-width:20px;height:20px;line-height:20px;text-align:center;border-radius:10px}
+.cell.is-today .n{background:var(--text);color:var(--panel)}
+.ch{display:flex;gap:4px;justify-content:space-between;font-size:11.5px;line-height:1.5;border-radius:5px;padding:1px 5px;border:1px solid transparent;min-width:0;color:var(--chip-ink);background:var(--chip-bg)}
+.ch span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ch time{flex:none;opacity:.8;font-variant-numeric:tabular-nums}
+.ch.pend{background:none;border:1px dashed var(--chip-ink)}
+.ch.tent{background:repeating-linear-gradient(135deg,var(--chip-bg) 0 5px,transparent 5px 9px);border-color:var(--chip-bg)}
+.ch.decl{background:none;color:var(--faint);text-decoration:line-through}
+.ch.rec::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--chip-ink);flex:none;align-self:center}
+.ch.sel{outline:2px solid var(--accent);outline-offset:1px}
+.more{font-size:11px;color:var(--faint);padding-left:5px}
+.work{--chip-bg:var(--tint-a);--chip-ink:var(--ink-a)}
+.fam{--chip-bg:var(--tint-b);--chip-ink:var(--ink-b)}
+.goog{--chip-bg:var(--tint-c);--chip-ink:var(--ink-c)}
 .detail{border-left:1px solid var(--line);padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
-.detail h4{margin:0;font-size:16px;font-weight:600}
+.detail h4{margin:0;font-size:16px;font-weight:500}
 .detail p{margin:0;color:var(--muted);font-size:13px}
+.lbl{color:var(--faint);margin-right:6px}
+.link{border:0;background:none;padding:0;color:var(--accent-text);text-decoration:underline;min-height:0}
+.rsvp{display:flex;gap:6px;flex-wrap:wrap;align-items:center;border:1px dashed var(--line-strong);border-radius:var(--r-sm);padding:8px}
+.rsvp .q{color:var(--text);margin-right:4px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.chip-s{width:18px;height:10px;border-radius:3px;display:inline-block;--chip-bg:var(--tint-a);--chip-ink:var(--ink-a);background:var(--chip-bg);border:1px solid transparent}
+.chip-s.pend{background:none;border:1px dashed var(--chip-ink)}
+.chip-s.tent{background:repeating-linear-gradient(135deg,var(--chip-bg) 0 4px,transparent 4px 7px);border-color:var(--chip-bg)}
+.chip-s.decl{background:none;border-bottom:1px solid var(--faint);border-radius:0;height:1px;margin:4px 0 5px}
+.chip-s.rec{width:6px;height:6px;border-radius:50%;background:var(--ink-a)}
 .before{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
 .before div{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;font-size:13px;color:var(--muted)}
-.before b{display:block;color:var(--text);font-weight:600;margin-bottom:2px}
-@media (max-width:700px){.cal-body{grid-template-columns:1fr}.detail{border-left:0;border-top:1px solid var(--line)}}
+.before b{display:block;color:var(--text);font-weight:500;margin-bottom:2px}
+@media (max-width:760px){.cal-body{grid-template-columns:1fr}.detail{border-left:0;border-top:1px solid var(--line)}.cell{min-height:58px;padding:4px}.ch{height:6px;padding:0;border-radius:3px}.ch span,.ch time,.ch.rec::before{display:none}.ch.decl{border:1px solid var(--line)}.more{display:none}}
 
 /* 5 · settings */
 .set{flex:1 1 100%;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
@@ -202,43 +219,43 @@ kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:
   </header>
 
   <section class="frame">
-    <div class="frame-head"><span class="step">0 Calendar</span><h2>A calmer calendar screen</h2>
-      <p>The day as one clean list instead of a boxed hour grid. One accent, one line per meeting, details only for the meeting you pick. <b>Meetings</b> becomes a third tab here, so the left bar gains nothing.</p></div>
+    <div class="frame-head"><span class="step">0 Calendar</span><h2>The calendar screen, redone</h2>
+      <p>After the references you sent: one white card, a date tile and quiet controls on top, soft tinted chips, one text weight. Meetings you haven’t answered look different from ones you accepted, and you can answer from the side panel.</p></div>
     <div class="stage">
-      <div class="cal" role="group" aria-label="Calendar, Day">
-        <div class="cal-head"><h3>Calendar</h3><span class="date">Wednesday 11 November</span><span class="sp"></span>
-          <div class="pick" role="radiogroup" aria-label="View"><span aria-current="true">Day</span><span>Month</span><span>Meetings</span></div>
-          <button class="btn quiet" id="cal-more" aria-label="More">⋯</button></div>
-        <div class="days" role="group" aria-label="This week">
-          <div class="day">Mon<b>9</b><i>··</i></div><div class="day">Tue<b>10</b><i>···</i></div><div class="day" aria-current="date">Wed<b>11</b><i>·····</i></div><div class="day">Thu<b>12</b><i>&nbsp;</i></div><div class="day">Fri<b>13</b><i>·</i></div><div class="day">Sat<b>14</b><i>&nbsp;</i></div><div class="day">Sun<b>15</b><i>&nbsp;</i></div>
+      <div class="cal" role="group" aria-label="Calendar, Month">
+        <div class="cal-head">
+          <div class="tile" aria-hidden="true"><span>NOV</span><b>11</b></div>
+          <div class="ttl"><h3>November 2026</h3><span class="date">Wednesday 11 November · 6 meetings today</span></div>
+          <span class="sp"></span>
+          <div class="pick" role="radiogroup" aria-label="View"><span>Day</span><span aria-current="true">Month</span><span>Meetings</span></div>
+          <div class="pick" role="group" aria-label="Move"><span>‹</span><span>Today</span><span>›</span></div>
+          <button class="btn primary" id="cal-new">New meeting</button>
         </div>
         <div class="cal-body">
-          <div class="agenda">
-            <div class="next"><div class="t"><small>Now · until 10:25</small><b>Live review</b></div><button class="btn primary" id="cal-join">Join</button><button class="btn" id="cal-notes">Take notes</button></div>
-            <div class="ag past"><time>8:30</time><span class="c"></span><div class="t"><b>Morning sync</b><span>30 min · Zoom · decided to ship Friday</span></div><span class="chip ok">Notes</span></div>
-            <div class="ag sel"><time>9:55</time><span class="c"></span><div class="t"><b>Live review</b><span>30 min · Google Meet</span></div><span class="chip rec"><span class="dot live" aria-hidden="true"></span>Recording</span></div>
-            <div class="gap">35 min free</div>
-            <div class="ag"><time>11:00</time><span class="c"></span><div class="t"><b>Team Cirrus Standup</b><span>30 min · Zoom · overlaps Bus pickup</span></div><span></span></div>
-            <div class="ag"><time>11:05</time><span class="c fam"></span><div class="t"><b>Bus pickup</b><span>30 min · Family</span></div><span></span></div>
-            <div class="gap">55 min free</div>
-            <div class="ag"><time>12:30</time><span class="c"></span><div class="t"><b>Quick check-in</b><span>15 min</span></div><span></span></div>
-            <div class="ag"><time>1:00</time><span class="c"></span><div class="t"><b>Design review</b><span>1 h</span></div><span></span></div>
-          </div>
+          <div class="mgrid" id="mgrid" role="grid" aria-label="November 2026"></div>
           <div class="detail">
-            <h4>Live review</h4>
-            <p>9:55–10:25 · Spark Work · Google Meet · 3 people</p>
-            <div class="row"><button class="btn primary" id="d-join">Join</button><button class="btn stop" id="d-stop">Stop notes</button></div>
-            <p><b>Context</b> · pricing-2026.pdf</p>
-            <p>Goal: agree the January price.</p>
-            <div class="row"><button class="btn" id="d-context">Add context…</button><button class="btn quiet" id="d-open">Open in Calendar</button></div>
+            <h4>Design review</h4>
+            <p>Wed 11 Nov · 1:00–2:00 PM · Spark Work · Zoom</p>
+            <p>From Dana Reyes · 4 people · 3 yes · 1 waiting</p>
+            <div class="rsvp" role="group" aria-label="Your reply"><span class="q">Going?</span><button class="btn primary" id="r-yes">Accept</button><button class="btn" id="r-maybe">Maybe</button><button class="btn" id="r-no">Decline</button></div>
+            <div class="row"><button class="btn" id="d-join">Join</button><button class="btn" id="d-notes">Take notes</button></div>
+            <p><span class="lbl">Context</span> pricing-2026.pdf · <button class="link" id="d-context">Add…</button></p>
+            <p><span class="lbl">Earlier</span> Design review, 4 Nov · <button class="link" id="d-prev">Notes</button></p>
           </div>
+        </div>
+        <div class="legend">
+          <span><i class="chip-s acc"></i>Accepted</span>
+          <span><i class="chip-s pend"></i>Not answered</span>
+          <span><i class="chip-s tent"></i>Maybe</span>
+          <span><i class="chip-s decl"></i>Declined</span>
+          <span><i class="chip-s rec"></i>Has notes</span>
         </div>
       </div>
       <div class="before">
-        <div><b>Gone: the hour grid</b>Boxed blocks, hatched free areas and the red clock label become a plain list with quiet “35 min free” lines.</div>
-        <div><b>Gone: seven day cards</b>The week is a slim row with dots for how busy each day is.</div>
-        <div><b>Gone: empty side cards</b>“Select an event” and “Your chats today” no longer sit there empty; the side panel shows the meeting you picked.</div>
-        <div><b>Moved: Refresh now, the day-shape bar, calendar chips</b>Into the ⋯ menu. One accent colour; a second only to tell calendars apart.</div>
+        <div><b>One weight, good contrast</b>Text is regular weight everywhere; a title is one step heavier, never bold. Chip text is dark on a light tint, checked for contrast in light and dark.</div>
+        <div><b>Accepted or not, at a glance</b>Accepted is a filled tint. Not answered has a dashed outline. Maybe is striped. Declined is struck through and faint. Each also has a word in the side panel, so colour is never the only signal.</div>
+        <div><b>Answer here</b>Accept, Maybe and Decline work for Google calendars. For a calendar that only comes through macOS Calendar, the button is “Reply in Calendar”, because macOS doesn’t let apps answer invitations.</div>
+        <div><b>Less on screen</b>No hatched free blocks, no seven day cards, no empty side cards. Refresh and calendar filters sit in a ⋯ menu.</div>
       </div>
     </div>
   </section>
@@ -360,5 +377,24 @@ kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:
     <p class="note">Open questions on this mock: whether the Meeting tab is hidden from screen shares, whether “Start when I join” ships in the first version, and whether live help should ever answer on its own.</p>
   </section>
 </div>
+
+<script>
+(function(){
+  var g=document.getElementById('mgrid'); if(!g) return;
+  var ev={2:[['Standup','9:00','work acc rec']],3:[['1:1 Dana','10:00','work acc']],4:[['Design review','1:00','work acc rec'],['Dentist','4:30','fam acc']],5:[['Standup','9:00','work acc']],6:[['Planning','11:00','work tent']],9:[['Standup','9:00','work acc rec'],['Vendor demo','2:00','goog acc rec']],10:[['Roadmap','10:30','work decl']],
+    11:[['Morning sync','8:30','work acc rec'],['Live review','9:55','work acc'],['Standup','11:00','work acc'],['Design review','1:00','work pend sel']],
+    12:[['Budget','3:00','goog pend']],13:[['Retro','2:00','work acc']],16:[['Standup','9:00','work acc']],17:[['Offsite prep','1:00','work tent']],18:[['School play','6:00','fam acc']],19:[['All hands','4:00','goog acc']],23:[['Standup','9:00','work acc']],25:[['Quarterly review','11:30','goog pend']],30:[['Standup','9:00','work acc']]};
+  var more={11:2,4:1};
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(function(d){var e=document.createElement('div');e.className='dow';e.textContent=d;g.appendChild(e);});
+  for(var i=0;i<35;i++){
+    var day=i+1, out=day>30, c=document.createElement('div');
+    c.className='cell'+(out?' out':'')+(day===11?' is-today':'');
+    var n=document.createElement('span');n.className='n';n.textContent=out?day-30:day;c.appendChild(n);
+    (out?[]:(ev[day]||[])).forEach(function(x){var ch=document.createElement('div');ch.className='ch '+x[2];var t=document.createElement('span');t.textContent=x[0];var tm=document.createElement('time');tm.textContent=x[1];ch.appendChild(t);ch.appendChild(tm);c.appendChild(ch);});
+    if(!out&&more[day]){var m=document.createElement('span');m.className='more';m.textContent=more[day]+' more';c.appendChild(m);}
+    g.appendChild(c);
+  }
+})();
+</script>
 </body>
 </html>

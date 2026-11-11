@@ -127,9 +127,32 @@ Each is a question to Ask Spark with this meeting attached: the transcript so fa
 
 ## Where meetings live in the app
 
-There is no new left-bar item. The calendar screen (the **Today** item; **Open**: renaming it **Calendar**) gets a third tab beside **Month** and **Day**: **Meetings**, the full history, newest first, with search over titles, notes and transcripts. Each row carries the calendar it came from, with that calendar's colour and name, or **Started by you** for an ad hoc meeting, its date and length, and whether notes were written. In Month and Day, a recorded meeting shows a **Notes** chip that opens its notes and transcript in the event panel, and an ad hoc meeting appears on the day it happened.
+There is no new left-bar item. The calendar screen (the **Today** item; **Open**: renaming it **Calendar**) gets a third tab beside **Month** and **Day**: **Meetings**, the full history, newest first, with search over titles, notes and transcripts. Each row carries the calendar it came from, with that calendar's colour and name, or **Started by you** for an ad hoc meeting, its date and length, and whether notes were written. In Month and Day, a recorded meeting carries a dot that opens its notes and transcript in the side panel, and an ad hoc meeting appears on the day it happened.
 
-The mock (`docs/design/mocks/meetings-mock.html`) also proposes a calmer Day view: a list of the day's meetings with one line each in place of the boxed hour grid, a slim week row, a Now and next line with **Join** and **Take notes**, and the side panel only for the meeting the user picked. That redesign is a separate change from meetings and is not yet accepted.
+## The calendar screen and replies
+
+The mock (`docs/design/mocks/meetings-mock.html`) redraws the calendar screen after references the owner chose (2026-11-11): one card with a date tile, the view tabs, **Today** stepping and **New meeting** in its header; a month of soft tinted chips; and a side panel for the picked meeting. Text has one weight, with titles one step heavier and nothing bold, and chip text is dark on a light tint in both themes (the contrast audit covers it). The redesign is its own change and can ship before any recording.
+
+**Accepted or not.** `CalendarEvent.myStatus` already carries the user's reply (`accepted`, `tentative`, `pending`, `declined`, `none`) from both sources. The screen draws it: accepted is a filled tint, not answered a dashed outline, maybe striped, declined struck through and faint, and the side panel says it in a word, so colour is never the only signal.
+
+**Replying.** The side panel offers **Accept**, **Maybe** and **Decline**:
+
+- On a Google calendar it patches the user's own attendee entry (`responseStatus`). It needs the `calendar.events` scope the **Agents can edit** switch already asks for; a user who only wants to reply is asked for the same scope with a card that says why. Unlike agent writes, a reply is sent with `sendUpdates=all`: telling the organiser is the point.
+- On a calendar that reaches Spark only through macOS Calendar the button is **Reply in Calendar** and opens the event there, since EventKit cannot change a participant's status.
+
+This reverses "Inviting and RSVP are not offered" in [Calendar](CALENDAR.md) for RSVP only; inviting and adding attendees stay out.
+
+## Tools
+
+What agents and Ask Spark can do, on top of today's `spark_calendar` (read) and `spark_calendar_edit` (write):
+
+| Tool                  | Adds                                                                               | Who                              | Asks                                                                                  |
+| --------------------- | ---------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------- |
+| `spark_calendar`      | Each event's `myStatus`, and whether it has a recorded meeting                     | As today                         | As today                                                                              |
+| `spark_calendar_edit` | `respond` (accept, maybe, decline) on Google calendars with **Agents can edit** on | As today                         | In every mode: it tells other people, like a change to an event with other attendees  |
+| `spark_meetings`      | `list`, `search`, `read` (notes, transcript, context names), `notes_edit`          | Ask Spark; chat agents: **Open** | Reads follow the mode or **When Ask Spark acts**; `notes_edit` shows before and after |
+
+No tool starts or stops a recording, and Ask Spark's meeting actions (snooze, dismiss, join) gain none: recording is the user's own press, or their own setting. Everything a tool returns is untrusted data, a read counts as a work-data read for the send flag, the audit holds meeting ids and never titles or text, and paired devices and spoken questions get none of it.
 
 ## Storage
 
@@ -197,6 +220,7 @@ A phase that touches the helper is not done until its real test has run on a Mac
 3. Chat agents: attach only (proposed), or a meeting tool.
 4. Retention: keep until deleted (proposed), or an auto-delete period.
 5. **Record meetings automatically**: ship **Ask at the start** in v1 and **Start when I join** after call detection is proven (proposed), or neither, or both.
-6. Rename the left-bar item **Today** to **Calendar** (proposed), and whether the calmer Day view in the mock goes ahead.
+6. Rename the left-bar item **Today** to **Calendar** (proposed), and whether the calendar redesign in the mock goes ahead.
+7. Replies: **Accept**, **Maybe** and **Decline** from Spark on Google calendars, telling the organiser (proposed).
 
 Decided by the owner (2026-11-11): two labels, **You** and **Others**, with no speaker names; the history is a tab on the calendar screen, not a left-bar item.
