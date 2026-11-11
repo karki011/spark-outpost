@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { offerNote, offersFollowUp, ticketLines } from './post-open-model.ts';
+import { offerNote, offersFollowUp, openedSummary, ticketLines } from './post-open-model.ts';
 import { watch } from './watch-fixture.ts';
 
 describe('offersFollowUp', () => {
@@ -46,5 +46,25 @@ describe('ticketLines', () => {
       'WEB-2 was not moved to review: Left at Done; it is further along than In review.',
       'ENG-3 was not moved to review: the ticket system did not take the move.',
     ]);
+  });
+});
+
+describe('openedSummary', () => {
+  it('keeps the single pull request line', () => {
+    expect(openedSummary([{ repo: 'acme/app' }])).toEqual({
+      title: 'Opened pull request',
+      sharedRepo: 'acme/app',
+    });
+  });
+
+  it('counts several pull requests and names a repository only when they share it', () => {
+    expect(openedSummary([{ repo: 'acme/app' }, { repo: 'acme/app' }])).toEqual({
+      title: 'Opened 2 pull requests',
+      sharedRepo: 'acme/app',
+    });
+    expect(openedSummary([{ repo: 'acme/app' }, { repo: 'acme/web' }])).toEqual({
+      title: 'Opened 2 pull requests',
+      sharedRepo: null,
+    });
   });
 });

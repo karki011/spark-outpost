@@ -28,3 +28,16 @@ export function ticketLines(watch: Pick<PrWatch, 'ticketSync'>): string[] {
         `${entry.key} was not moved to review: ${entry.message ?? 'the ticket system did not take the move.'}`,
     );
 }
+
+export interface OpenedSummary {
+  title: string;
+  sharedRepo: string | null;
+}
+
+export function openedSummary(watches: readonly Pick<PrWatch, 'repo'>[]): OpenedSummary {
+  const repos = new Set(watches.map((watch) => watch.repo));
+  return {
+    title: watches.length === 1 ? 'Opened pull request' : `Opened ${watches.length} pull requests`,
+    sharedRepo: repos.size === 1 ? [...repos][0]! : null,
+  };
+}

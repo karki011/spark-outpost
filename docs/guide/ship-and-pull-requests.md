@@ -25,7 +25,7 @@ In an outpost: [requests](outpost-permissions.md), [stacks](stacked-pull-request
 
 | First under the reply                                       | Meaning                                    |
 | ----------------------------------------------------------- | ------------------------------------------ |
-| **Opened pull request #12**                                 | Spark tracks it.                           |
+| **Opened pull request #12**                                 | Spark tracks it. Several: one line.        |
 | "The branch was pushed, but no pull request was opened."    | Create it from the link.                   |
 | "Pushed …"                                                  | You asked only to push.                    |
 | **Push stopped by the pre-push check**, with its last lines | Nothing was pushed.                        |
