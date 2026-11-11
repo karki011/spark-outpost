@@ -96,7 +96,7 @@ async function open(args: OpenArgs, context: SparkToolContext) {
     place: opened.place,
     reusedTab: opened.reused,
     ...allowedNote(decision),
-    note: 'Agent tabs close when this turn ends unless the user pins them.',
+    note: 'Your tab stays open after this turn until the user closes it; you may reuse it unless the user pins it.',
   };
 }
 

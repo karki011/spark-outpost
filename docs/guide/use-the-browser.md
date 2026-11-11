@@ -32,7 +32,9 @@ Drag the pane's edge, or pick a **Page width**.
 | Click, type, press keys, scroll, go back | Navigate your tab; download files |
 | Run scripts, inspect, wait, check speed  | Click a covered element           |
 
-One profile serves every chat: agents are signed in where you are; **Settings** → **Browser pane** signs out. Agent tabs close with the turn unless pinned or used. **Open developer tools** (**⌥⌘I**) is yours.
+Agents are signed in wherever you are. **Settings** → **Browser pane** signs out. **Open developer tools** (**⌥⌘I**) is yours.
+
+An agent's tab stays until you close it; **Pin so it isn’t reused** stops that.
 
 Websites follow the [agent mode](agent-mode.md); your own tab always asks. Page text is untrusted.
 

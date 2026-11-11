@@ -131,7 +131,7 @@ class FakeBrowserHost implements BrowserHost {
         dropped: 0,
       };
     }
-    return { closed: 2 };
+    return {};
   }
 }
 

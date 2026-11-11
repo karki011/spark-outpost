@@ -98,14 +98,16 @@ function AgentTabNote({ chatId, tab }: { chatId: string; tab: BrowserPaneTab }) 
   }
   return (
     <span className="bp-agent-life" role="group" aria-label="Agent tab">
-      <span>Closes when this turn ends</span>
+      <span>Stays open until you close it</span>
+      <span aria-hidden="true">·</span>
+      <span>the agent may reuse it</span>
       <span aria-hidden="true">·</span>
       <button
         type="button"
         className="bp-link"
         onClick={() => sendBrowserCommand(chatId, { command: 'pin', tabId: tab.id, pinned: true })}
       >
-        Pin to keep
+        Pin so it isn’t reused
       </button>
     </span>
   );

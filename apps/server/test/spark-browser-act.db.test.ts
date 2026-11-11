@@ -112,6 +112,23 @@ describe('acting on a page', () => {
     expect((await second).facts).toMatchObject({ outcome: 'declined', tab: 'tab1' });
   });
 
+  it('decides acting on an agent tab left by an earlier run by the new run’s mode', async () => {
+    await h.start({ mode: 'bypassPermissions' });
+    h.fake.url = PAGE;
+    await h.call('spark_browser_act', { action: 'click', ref: 'ref_1' });
+    expect(h.audited('spark/browser').at(-1)).toMatchObject({ decision: 'mode' });
+    expect(await h.cards()).toBe(0);
+
+    await h.nextRun({ mode: 'default' });
+    h.fake.url = PAGE;
+    const scrolling = h.call('spark_browser_act', { action: 'scroll' });
+    const card = await h.pending();
+    expect(card.payload.sparkAction).toMatchObject({ action: 'act_page', userTab: false });
+    expect(await h.cards()).toBe(1);
+    await h.answer('confirm');
+    expect((await scrolling).facts.outcome).toBe('done');
+  });
+
   it('acts on a local page with no card in an asking mode', async () => {
     await h.start({ mode: 'default' });
     h.fake.url = 'http://localhost:5173/form';

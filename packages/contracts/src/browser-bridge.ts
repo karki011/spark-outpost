@@ -214,7 +214,7 @@ export const browserLogsResultSchema = z.object({
 });
 export type BrowserLogsResult = z.infer<typeof browserLogsResultSchema>;
 
-export const browserEndRunResultSchema = z.object({ closed: z.number().int().nonnegative() });
+export const browserEndRunResultSchema = z.object({});
 
 export const browserKeepResultSchema = z.object({ kept: z.boolean() });
 

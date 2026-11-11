@@ -257,10 +257,11 @@ async function releaseHandoff(tab: PaneTab): Promise<number> {
 }
 
 async function endRun(panes: BrowserPanes, request: Request<'end_run'>) {
-  if (!request.runId) return { closed: 0 };
+  if (!request.runId) return {};
   const held = panes.tabsOf(request.chatId).filter((tab) => tab.handoffRun === request.runId);
   for (const tab of held) await releaseHandoff(tab).catch(() => 0);
-  return { closed: panes.closeRunTabs(request.chatId, request.runId) };
+  panes.stopDriving(request.chatId, request.runId);
+  return {};
 }
 
 export async function runBrowserOp(

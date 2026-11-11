@@ -50,11 +50,70 @@ function endTurn() {
 }
 
 describe('agent tabs at the end of a turn', () => {
-  it('closes an agent tab nobody touched, and says so on the tab', async () => {
+  it('leaves an agent tab nobody touched open, no longer driven, until the user closes it', async () => {
     const tabId = await agentOpens('https://docs.example.com/a');
-    expect(panes.tab(CHAT, tabId)!.paneTab()).toMatchObject({ owner: 'agent', kept: false });
-    expect(await endTurn()).toEqual({ closed: 1 });
+    expect(panes.tab(CHAT, tabId)!.paneTab()).toMatchObject({
+      owner: 'agent',
+      kept: false,
+      driving: true,
+    });
+    expect(await endTurn()).toEqual({});
+    expect(panes.tab(CHAT, tabId)!.paneTab()).toMatchObject({
+      owner: 'agent',
+      kept: false,
+      pinned: false,
+      driving: false,
+    });
+    panes.closeByUser(CHAT, tabId);
     expect(panes.tab(CHAT, tabId)).toBeNull();
+  });
+
+  it('stops driving only the tabs the ending run drove last', async () => {
+    const mine = await agentOpens('https://docs.example.com/a');
+    const next = '88888888-2222-4333-8444-555555555555';
+    const other = (
+      (await runBrowserOp(
+        panes,
+        { op: 'open', chatId: CHAT, runId: next, url: 'https://b.example.com/', ...home },
+        signal,
+      )) as { tabId: string }
+    ).tabId;
+    await endTurn();
+    expect(panes.tab(CHAT, mine)!.paneTab().driving).toBe(false);
+    expect(panes.tab(CHAT, other)!.paneTab().driving).toBe(true);
+  });
+
+  it('lets a later turn navigate the oldest unpinned tab left by an earlier one when five are open', async () => {
+    const tabs: string[] = [];
+    for (const site of ['a', 'b', 'c', 'd', 'e'])
+      tabs.push(await agentOpens(`https://${site}.example.org/`));
+    await endTurn();
+    expect(panes.tabsOf(CHAT)).toHaveLength(5);
+    const next = '88888888-2222-4333-8444-555555555555';
+    const reused = (await runBrowserOp(
+      panes,
+      { op: 'open', chatId: CHAT, runId: next, url: 'https://f.example.net/', ...home },
+      signal,
+    )) as { tabId: string };
+    expect(reused.tabId).toBe(tabs[0]);
+    expect(panes.tabsOf(CHAT)).toHaveLength(5);
+    expect(panes.tab(CHAT, tabs[0]!)!.currentUrl()).toBe('https://f.example.net/');
+  });
+
+  it('refuses a sixth tab only when all five are pinned or kept', async () => {
+    const tabs: string[] = [];
+    for (const site of ['a', 'b', 'c', 'd', 'e'])
+      tabs.push(await agentOpens(`https://${site}.example.org/`));
+    await endTurn();
+    panes.tab(CHAT, tabs[0]!)!.pinned = true;
+    panes.tab(CHAT, tabs[1]!)!.kept = true;
+    panes.tab(CHAT, tabs[2]!)!.pinned = true;
+    panes.tab(CHAT, tabs[3]!)!.kept = true;
+    const open = (url: string) =>
+      runBrowserOp(panes, { op: 'open', chatId: CHAT, runId: RUN, url, ...home }, signal);
+    await expect(open('https://f.example.net/')).resolves.toMatchObject({ tabId: tabs[4] });
+    panes.tab(CHAT, tabs[4]!)!.pinned = true;
+    await expect(open('https://g.example.net/')).rejects.toMatchObject({ code: 'tab_limit' });
   });
 
   it('keeps a tab the user clicked into or typed in during the turn', async () => {
@@ -69,7 +128,7 @@ describe('agent tabs at the end of a turn', () => {
         key: 'a',
       },
     );
-    expect(await endTurn()).toEqual({ closed: 0 });
+    expect(await endTurn()).toEqual({});
     expect(panes.tab(CHAT, clicked)!.paneTab().kept).toBe(true);
     expect(panes.tab(CHAT, typed)!.paneTab().kept).toBe(true);
   });
@@ -82,7 +141,8 @@ describe('agent tabs at the end of a turn', () => {
     });
     contentsOf(tabId).emit('before-mouse-event', {}, { type: 'mouseMove' });
     expect(tab.kept).toBe(false);
-    expect(await endTurn()).toEqual({ closed: 1 });
+    expect(await endTurn()).toEqual({});
+    expect(panes.tab(CHAT, tabId)).not.toBeNull();
   });
 
   it('keeps a tab Spark was asked to keep, and never recycles it for a new page', async () => {
@@ -158,7 +218,7 @@ describe('a tab handed to the user to sign in', () => {
     expect(await handOver(null)).toMatchObject({ masked: 2 });
     expect(tab.paneTab().handoff).toBeNull();
     expect([...tab.filled].sort()).toEqual([7, 9]);
-    expect(await endTurn()).toEqual({ closed: 0 });
+    expect(await endTurn()).toEqual({});
   });
 
   it('forgets what the page logged while the user was signing in', async () => {

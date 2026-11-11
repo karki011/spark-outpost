@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -14,6 +15,7 @@ import type { BrowserHost } from '../src/browser/host-client.ts';
 import { BrowserHostError } from '../src/browser/host-client.ts';
 import { createRunObservations } from '../src/observations/run-observations.ts';
 import { decideApproval } from '../src/persistence/approvals.ts';
+import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { listRailFlags } from '../src/persistence/rail-flags.ts';
 import { startSparkMcpHost, type SparkMcpHost } from '../src/spark-mcp/host.ts';
 import { doRun } from './approval-support.ts';
@@ -90,7 +92,7 @@ export class FakeBrowserHost implements BrowserHost {
         ...this.readAnswer,
       };
     }
-    return { closed: 0 };
+    return {};
   }
 
   ops(): string[] {
@@ -142,9 +144,29 @@ export class BrowseHarness {
   }
 
   async start(session: BrowseSession = {}): Promise<void> {
-    const { t, recorded } = this;
     const message = session.message ?? 'Fix the layout bug';
-    this.chat = session.root ? await doRun(t, session.root, message) : await startChat(t, message);
+    this.chat = session.root
+      ? await doRun(this.t, session.root, message)
+      : await startChat(this.t, message);
+    await this.connect(session);
+  }
+
+  async nextRun(session: BrowseSession = {}): Promise<void> {
+    await this.client?.close();
+    await this.host?.close();
+    const sent = await sendUserMessage(
+      this.t.db,
+      this.chat.conversationId,
+      { id: randomUUID(), content: session.message ?? 'Keep going' },
+      { provider: 'fake' },
+      this.t.workspaceId,
+    );
+    this.chat = { conversationId: this.chat.conversationId, runId: sent.run.id };
+    await this.connect(session);
+  }
+
+  private async connect(session: BrowseSession): Promise<void> {
+    const { t, recorded } = this;
     const { conversationId, runId } = this.chat;
     await t.db.query(`UPDATE runs SET provider = $2, used_mode = $3 WHERE id = $1`, [
       runId,
