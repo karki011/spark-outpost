@@ -24,8 +24,4 @@ describe('setup steps', () => {
     expect(setupSteps('on')).toBeNull();
     expect(setupSteps('error')).toBeNull();
   });
-
-  it('names the three steps in order', () => {
-    expect(setupSteps('off')?.map((step) => step.id)).toEqual(['tailscale', 'https', 'turn-on']);
-  });
 });

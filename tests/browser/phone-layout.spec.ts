@@ -133,6 +133,16 @@ test('a device row menu renames and removes by keyboard', async ({ page, browser
 
   await page.keyboard.press('Enter');
   await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitem', { name: 'Send a test notification' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(devices.getByRole('status')).toHaveText(
+    'Turn on Notify when a chat needs you, then try again.',
+  );
+  await expect(renamed).toBeFocused();
+
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('menuitem', { name: 'Revoke' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(devices.getByText('No device is paired yet.')).toBeVisible();

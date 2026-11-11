@@ -1,4 +1,5 @@
 import type { BackgroundWait, Run, SubagentRow } from '@spark-outpost/contracts';
+import { modelOf } from '../../crew/chat-agent.ts';
 import { BackgroundWork } from '../BackgroundWork.tsx';
 import { SubagentsLine } from '../subagents/SubagentsLine.tsx';
 import { WorkingLine } from './TurnParts.tsx';
@@ -22,7 +23,9 @@ export function TurnActivity({
   lead,
 }: TurnActivityProps) {
   const running = working && !waiting;
-  const agents = <SubagentsLine runId={run.id} rows={subagents} live={working} />;
+  const agents = (
+    <SubagentsLine runId={run.id} rows={subagents} live={working} leadModel={modelOf(run)} />
+  );
   if (!running) return agents;
   return (
     <>

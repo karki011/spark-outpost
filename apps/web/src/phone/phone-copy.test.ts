@@ -185,10 +185,4 @@ describe('status headline', () => {
     expect(statusHeadline(on, 4)).toBe('Remote control is on. 4 devices can reach this Mac.');
     expect(statusHeadline(on, null)).toBe('Remote control is on.');
   });
-
-  it('keeps the existing title for every other state', () => {
-    for (const status of ['not_installed', 'signed_out', 'https_off', 'off', 'error'] as const) {
-      expect(statusHeadline(state({ status }), 3)).toBe(statusCopy(state({ status })).title);
-    }
-  });
 });

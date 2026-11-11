@@ -1,9 +1,11 @@
 import { flushSync } from 'react-dom';
 import { saveAppearance } from './appearance.ts';
-import { inkFrames, type Point } from './ink-blob.ts';
+import { inkReach, inkVariables, type Point } from './ink-mask.ts';
 import type { Appearance } from './theme.ts';
 
 const REVEAL_MS = 900;
+let activeReveal: ViewTransition | null = null;
+
 const REVEAL_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
 function revealOrigin(): Point {
@@ -29,12 +31,26 @@ export function revealAppearance(next: Appearance, updateView: () => void = () =
     return;
   }
   const origin = revealOrigin();
-  const frames = inkFrames(origin, window.innerWidth, window.innerHeight, Math.random() * 100);
+  const root = document.documentElement;
+  const variables = inkVariables(origin, Math.random() * 100);
+  for (const [name, value] of Object.entries(variables)) root.style.setProperty(name, value);
+  const reach = `${inkReach(origin, window.innerWidth, window.innerHeight).toFixed(1)}px`;
   const transition = document.startViewTransition(commit);
+  activeReveal = transition;
   void transition.ready.then(() => {
-    document.documentElement.animate(
-      { clipPath: frames },
-      { duration: REVEAL_MS, easing: REVEAL_EASING, pseudoElement: '::view-transition-new(root)' },
+    root.animate(
+      { '--ink-r': ['0px', reach], '--ink-d': [0, 1] },
+      {
+        duration: REVEAL_MS,
+        easing: REVEAL_EASING,
+        fill: 'forwards',
+        pseudoElement: '::view-transition-new(root)',
+      },
     );
+  });
+  void transition.finished.finally(() => {
+    if (activeReveal !== transition) return;
+    activeReveal = null;
+    for (const name of Object.keys(variables)) root.style.removeProperty(name);
   });
 }

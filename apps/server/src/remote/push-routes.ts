@@ -5,6 +5,7 @@ import {
   updatePushContactRequestSchema,
   type PushContactState,
   type PushState,
+  type PushTestResult,
 } from '@spark-outpost/contracts';
 import { parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
@@ -20,12 +21,13 @@ import {
   savePushSubscription,
 } from './push-store.ts';
 import { remoteDeviceOf, type RemoteDevicePrincipal } from './principal.ts';
-import { recordRemoteAudit, remoteAccess } from './store.ts';
+import { listDevices, recordRemoteAudit, remoteAccess } from './store.ts';
 
 export interface PushRouteDeps {
   db: Db;
   workspaceId: string;
   keys: PushKeys;
+  test?: ((deviceId: string) => Promise<PushTestResult>) | undefined;
 }
 
 const NOT_FOUND = 'Not found.';
@@ -33,7 +35,7 @@ const NOT_A_PUSH_SERVICE = 'That address is not a browser push service.';
 const NOT_SAVED = 'Notifications could not be turned on. Try again.';
 
 export function pushRoutes(deps: PushRouteDeps): Router {
-  const { db, workspaceId, keys } = deps;
+  const { db, workspaceId, keys, test } = deps;
   const router = Router();
 
   const pairedDevice = (res: Response): RemoteDevicePrincipal | null => {
@@ -90,6 +92,16 @@ export function pushRoutes(deps: PushRouteDeps): Router {
       detail: { set: contact !== null },
     });
     res.json(await contactState());
+  });
+
+  router.post('/remote/devices/:id/push/test', async (req, res) => {
+    if (!onTheMac(res)) return;
+    const device = (await listDevices(db, workspaceId)).find((row) => row.id === req.params.id);
+    if (!test || !device || device.revoked_at !== null) {
+      res.status(404).json({ error: NOT_FOUND });
+      return;
+    }
+    res.json(await test(device.id));
   });
 
   router.get('/remote/push', async (_req, res) => {

@@ -31,7 +31,7 @@ describe("the chat's own agent on Agent TV and in the rail", () => {
       costUsd: 0.04,
       durationMs: 38_000,
     });
-    expect(crewJob(agent)).toBe('Agent · Sonnet 5 · medium');
+    expect(crewJob(agent)).toBe('Agent · Sonnet 5 · Medium');
   });
 
   it("names the lead's live step over a stale stored step, cut to fit", () => {
@@ -59,13 +59,13 @@ describe("the chat's own agent on Agent TV and in the rail", () => {
 
   it('names the model the session reported running, not the id the chat was pinned to', () => {
     expect(crewJob(chatAgent(run({ model: 'sonnet', usedModel: 'claude-sonnet-5-5' })))).toBe(
-      'Agent · Sonnet 5.5 · medium',
+      'Agent · Sonnet 5.5 · Medium',
     );
     expect(crewJob(chatAgent(run({ model: 'sonnet', usedModel: null })))).toBe(
-      'Agent · Sonnet · medium',
+      'Agent · Sonnet · Medium',
     );
     expect(crewJob(chatAgent(run({ model: 'default', usedModel: 'claude-opus-5-5[1m]' })))).toBe(
-      'Agent · Opus 5.5 · medium',
+      'Agent · Opus 5.5 · Medium',
     );
   });
 

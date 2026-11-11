@@ -49,6 +49,28 @@ export function workerModel(
   return { model: known, effort: known ? (usage?.effort ?? null) : null };
 }
 
+function comparable(model: string): string {
+  return model
+    .replace(/\[[^\]]*\]$/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function aliasOf(alias: string, model: string): boolean {
+  return !/\d/.test(alias) && model.startsWith(alias);
+}
+
+export function runsOtherModel(
+  usage: Pick<SubagentUsage, 'model' | 'effort'> | undefined,
+  leadModel: string | null,
+): boolean {
+  const model = workerModel(usage).model;
+  if (model === null || leadModel === null) return false;
+  const worker = comparable(model);
+  const lead = comparable(leadModel);
+  return worker !== lead && !aliasOf(worker, lead) && !aliasOf(lead, worker);
+}
+
 export function workerModelLabel(
   usage: Pick<SubagentUsage, 'model' | 'effort'> | undefined,
 ): string | null {

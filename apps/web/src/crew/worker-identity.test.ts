@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { emptySubagentRecord, type SubagentRow } from '@spark-outpost/contracts';
 import { chatBlob } from '../brand/ChatFace.tsx';
 import {
+  runsOtherModel,
   teamAgents,
   stageWorker,
   workerIdentity,
@@ -125,7 +126,7 @@ it('names a worker model the way the lead model is named, with its effort', () =
     model: 'Opus 5.5',
     effort: 'high',
   });
-  expect(workerModelLabel({ model: 'claude-opus-5-5', effort: 'high' })).toBe('Opus 5.5 · high');
+  expect(workerModelLabel({ model: 'claude-opus-5-5', effort: 'high' })).toBe('Opus 5.5 · High');
   expect(workerModelLabel({ model: 'gpt-5.5' })).toBe('gpt-5.5');
   expect(workerModelLabel({ model: 'Opus 4.7' })).toBe('Opus 4.7');
   expect(workerModelLabel({ model: 'opus' })).toBe('Opus');
@@ -148,5 +149,25 @@ it('puts the worker model and effort on the stage worker', () => {
     lead,
   );
   expect(worker).toMatchObject({ model: 'Opus 5.5', effort: 'low' });
-  expect(modelLabel(worker)).toBe('Opus 5.5 · low');
+  expect(modelLabel(worker)).toBe('Opus 5.5 · Low');
+});
+
+it('capitalises an effort and spells out xhigh', () => {
+  expect(workerModelLabel({ model: 'claude-opus-5-5', effort: 'xhigh' })).toBe(
+    'Opus 5.5 · Extra high',
+  );
+  expect(workerModelLabel({ model: 'claude-opus-5-5', effort: 'max' })).toBe('Opus 5.5 · Max');
+});
+
+it('says when a worker runs a model other than the lead, and never guesses', () => {
+  expect(runsOtherModel({ model: 'claude-haiku-5-5' }, 'Opus 5.5')).toBe(true);
+  expect(runsOtherModel({ model: 'claude-opus-5-5[1m]' }, 'Opus 5.5')).toBe(false);
+  expect(runsOtherModel({ model: 'GPT-6 Luna' }, 'gpt-6-luna')).toBe(false);
+  expect(runsOtherModel({ model: 'claude-sonnet-5-5' }, 'Sonnet')).toBe(false);
+  expect(runsOtherModel({ model: 'sonnet' }, 'Sonnet 5.5')).toBe(false);
+  expect(runsOtherModel({ model: 'claude-sonnet-5' }, 'Sonnet 5.5')).toBe(true);
+  expect(runsOtherModel({ model: 'GPT-6 Luna[1m]' }, 'GPT-6 Luna')).toBe(false);
+  expect(runsOtherModel({ model: 'claude-haiku-5-5' }, null)).toBe(false);
+  expect(runsOtherModel({ effort: 'high' }, 'Opus 5.5')).toBe(false);
+  expect(runsOtherModel(undefined, 'Opus 5.5')).toBe(false);
 });

@@ -25,7 +25,12 @@ export function AgentsSection() {
       <h2 id={headingId} ref={heading} tabIndex={-1} className="ac-head">
         Agents · {shown.rows.length}
       </h2>
-      <AgentCards rows={shown.rows} live={shown.live} focus={focusedAgent} />
+      <AgentCards
+        rows={shown.rows}
+        live={shown.live}
+        focus={focusedAgent}
+        leadModel={shown.leadModel}
+      />
     </section>
   );
 }

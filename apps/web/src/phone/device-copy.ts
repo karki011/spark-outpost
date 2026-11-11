@@ -1,4 +1,8 @@
-import { REMOTE_DEVICE_IDLE_DAYS, type RemoteDevice } from '@spark-outpost/contracts';
+import {
+  REMOTE_DEVICE_IDLE_DAYS,
+  type PushTestResult,
+  type RemoteDevice,
+} from '@spark-outpost/contracts';
 import { countLabel } from '../ui/count-label.ts';
 import { relativeTime } from '../ui/relative-time.ts';
 import { passkeySummary, shortDate } from './phone-copy.ts';
@@ -31,4 +35,21 @@ export function deviceSummary(device: RemoteDevice): string {
     `Added ${shortDate(device.createdAt)}`,
     passkeySummary(device.passkeys) ?? 'No passkey',
   ].join(' · ');
+}
+
+export function pushTestLine(result: PushTestResult, deviceName: string): string {
+  switch (result.outcome) {
+    case 'sent':
+      return `Test notification sent to ${deviceName}. It should appear there in a few seconds.`;
+    case 'off':
+      return 'Turn on Notify when a chat needs you, then try again.';
+    case 'none':
+      return `${deviceName} hasn't turned on notifications. On that device, open Remote control and turn on Notify this device.`;
+    case 'gone':
+      return `${deviceName} is no longer registered for notifications. Turn on Notify this device there again.`;
+    case 'failed':
+      return result.reason === 'BadJwtToken'
+        ? 'The push service did not accept the sender contact (BadJwtToken). Change Sender contact and try again.'
+        : `The push service did not accept it${result.reason ? ` (${result.reason})` : ''}. Try again.`;
+  }
 }

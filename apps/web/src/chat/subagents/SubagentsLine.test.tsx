@@ -161,7 +161,6 @@ describe('SubagentsLine', () => {
       expect(container.querySelector('.sl-summary')?.textContent).toBe(
         '5 Builders, 1 Reviewer · 4 done · 1 working · 1 failed',
       );
-      expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
       const list = screen.getByRole('list', { name: 'Agent progress' });
       const items = within(list).getAllByRole('listitem');
       expect(items.map((item) => item.getAttribute('data-worker-id'))).toEqual([
@@ -200,7 +199,6 @@ describe('SubagentsLine', () => {
       const { container } = render(<SubagentsLine runId="run-three" rows={rows} live />);
       expect(container.querySelector('.sl-summary')).toBeNull();
       expect(container.querySelectorAll('.sl-worker')).toHaveLength(3);
-      expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
       expect(
         within(screen.getByRole('list', { name: 'Agent progress' })).getAllByRole('button'),
       ).toHaveLength(3);

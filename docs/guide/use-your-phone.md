@@ -24,7 +24,7 @@ See what [outposts](outposts.md) allow here.
 
 Devices answer browser cards. **Open artifacts** (off) shows artifacts.
 
-**Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both start off.
+**Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both off.
 
 **Send now** stops the turn first. Messages shown aren't stored.
 
@@ -32,6 +32,8 @@ Devices answer browser cards. **Open artifacts** (off) shows artifacts.
 
 **Notifications.** Turn on **Notify when a chat needs you** on the Mac, then **Notify this device**. Pushes name the chat, never a command; [meeting alerts](calendar.md) say "Meeting in 10 min". Seen chats and the device you're using get none.
 
-iPhone needs iOS 16.4 or later and Spark on the Home Screen: save a passkey, then sign in with it there.
+A device's menu on the Mac has **Send a test notification**.
+
+iPhone needs iOS 16.4 or later and Spark on the Home Screen, signed in with a passkey.
 
 **Next:** [Answer an approval card](answer-approvals.md)

@@ -4,6 +4,7 @@ import {
   pendingPairingListSchema,
   pushContactStateSchema,
   pushStateSchema,
+  pushTestResultSchema,
   remoteAuditListSchema,
   remoteDeviceListSchema,
   remoteDeviceSchema,
@@ -18,6 +19,7 @@ import {
   type PushContactState,
   type PushState,
   type PushSubscribeRequest,
+  type PushTestResult,
   type RemoteAuditEntry,
   type RemoteDevice,
   type RemotePasskey,
@@ -56,6 +58,8 @@ export const phoneApi = {
     }),
   revoke: async (id: string): Promise<RemoteDevice[]> =>
     (await request(remoteDeviceListSchema, `/remote/devices/${id}`, { method: 'DELETE' })).devices,
+  testPush: (id: string): Promise<PushTestResult> =>
+    request(pushTestResultSchema, `/remote/devices/${id}/push/test`, post),
   disconnectAll: async (): Promise<RemoteDevice[]> =>
     (await request(remoteDeviceListSchema, '/remote/devices/disconnect-all', post)).devices,
   startPairing: (): Promise<PairingStart> => request(pairingStartSchema, '/remote/pairings', post),

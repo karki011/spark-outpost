@@ -364,6 +364,7 @@ const { app, reconcileRemote } = createAppParts({
   slackNotifier,
   slackSocket,
   pushKeys: remotePushKeys,
+  pushTest: (deviceId) => pushNotifier.test(deviceId),
   calendarHost: desktopCalendar,
   googleCalendar,
   ...(config.AGENT_RUNTIME === 'fake' && config.PAIRING_TEST_ATTEMPTS_PER_MINUTE

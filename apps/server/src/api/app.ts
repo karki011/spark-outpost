@@ -1,4 +1,8 @@
-import { appContentSecurityPolicy, artifactOrigin } from '@spark-outpost/contracts';
+import {
+  appContentSecurityPolicy,
+  artifactOrigin,
+  type PushTestResult,
+} from '@spark-outpost/contracts';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { agentConfigRoutes } from './agent-config-routes.ts';
 import { analyticsRoutes } from './analytics-routes.ts';
@@ -94,6 +98,7 @@ export interface AppOptions
   apiToken: string;
   webRoot?: string;
   pushKeys?: PushKeys;
+  pushTest?: (deviceId: string) => Promise<PushTestResult>;
   calendarHost?: CalendarHost | null;
   googleCalendar?: GoogleSource | null;
   pairingAttemptsPerMinute?: number;

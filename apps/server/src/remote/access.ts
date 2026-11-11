@@ -1,3 +1,4 @@
+import type { PushTestResult } from '@spark-outpost/contracts';
 import type { RequestHandler, Router } from 'express';
 import type { Db } from '../persistence/db.ts';
 import { remoteGateway } from './gateway.ts';
@@ -21,6 +22,7 @@ export interface RemoteAccessDeps {
   loginShell: string | null;
   secrets: SecretStore;
   pushKeys?: PushKeys;
+  pushTest?: ((deviceId: string) => Promise<PushTestResult>) | undefined;
   pairingAttemptsPerMinute?: number;
 }
 
@@ -52,6 +54,7 @@ export function remoteAccessParts(deps: RemoteAccessDeps): RemoteAccessParts {
       streams,
       tailscale,
       pushKeys: deps.pushKeys ?? pushKeys(deps.secrets, generateVapidKeys),
+      pushTest: deps.pushTest,
       attemptsPerMinute: deps.pairingAttemptsPerMinute,
     }),
     reconcile: tailscale.reconcile,

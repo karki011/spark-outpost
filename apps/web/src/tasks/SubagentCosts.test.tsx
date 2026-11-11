@@ -50,7 +50,7 @@ describe('the sub-agent breakdown on the Cost tab', () => {
       'listitem',
     );
     expect(items.map((item) => item.textContent)).toEqual([
-      'Exploregpt-6-luna · high · 1 step · 2 turns · 34k tokens · $0.04 · 41s',
+      'Exploregpt-6-luna · High · 1 step · 2 turns · 34k tokens · $0.04 · 41s',
       'Tests1.2k tokens · 41s',
     ]);
   });

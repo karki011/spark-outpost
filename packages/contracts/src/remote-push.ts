@@ -41,6 +41,12 @@ export const pushFailureSchema = z.object({
 });
 export type PushFailure = z.infer<typeof pushFailureSchema>;
 
+export const pushTestResultSchema = z.object({
+  outcome: z.enum(['sent', 'off', 'none', 'gone', 'failed']),
+  reason: z.string().nullable(),
+});
+export type PushTestResult = z.infer<typeof pushTestResultSchema>;
+
 export const pushContactStateSchema = z.object({
   contact: z.string().nullable(),
   inUse: z.string(),

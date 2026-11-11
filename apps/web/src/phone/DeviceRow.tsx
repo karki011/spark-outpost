@@ -4,7 +4,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { REMOTE_DEVICE_NAME_MAX, type RemoteDevice } from '@spark-outpost/contracts';
 import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
 import { CheckIcon, DotsIcon, LaptopIcon, WarnIcon } from '../ui/icons.tsx';
-import { daysUntilUnused, deviceSummary, lastSeenLine, stopsWorkingLine } from './device-copy.ts';
+import {
+  daysUntilUnused,
+  deviceSummary,
+  lastSeenLine,
+  pushTestLine,
+  stopsWorkingLine,
+} from './device-copy.ts';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 
 function RenameForm({ device, onDone }: { device: RemoteDevice; onDone: () => void }) {
@@ -96,6 +102,10 @@ export function DeviceRow({ device, fresh, now }: DeviceRowProps) {
     mutationFn: () => phoneApi.revoke(device.id),
     onSuccess: afterChange,
   });
+  const testPush = useMutation({
+    mutationFn: () => phoneApi.testPush(device.id),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: phoneKeys.audit }),
+  });
   const removePasskeys = useMutation({
     mutationFn: () => phoneApi.removePasskeys(device.id),
     onSuccess: afterChange,
@@ -124,7 +134,9 @@ export function DeviceRow({ device, fresh, now }: DeviceRowProps) {
     setRenaming(false);
     button.current?.focus();
   };
-  const errors = [revoke.error, removePasskeys.error].flatMap((error) => error ?? []);
+  const errors = [revoke.error, removePasskeys.error, testPush.error].flatMap(
+    (error) => error ?? [],
+  );
 
   return (
     <li className={fresh ? 'ph-device fresh' : 'ph-device'}>
@@ -159,6 +171,10 @@ export function DeviceRow({ device, fresh, now }: DeviceRowProps) {
       {anchor && (
         <MenuShell anchor={anchor} label={`Actions for ${device.name}`} page="main" onClose={close}>
           <MenuItem label="Rename" onSelect={choose(() => setRenaming(true), false)} />
+          <MenuItem
+            label="Send a test notification"
+            onSelect={choose(() => testPush.mutate(), true)}
+          />
           {device.passkeys.length > 0 && (
             <MenuItem
               label="Remove passkeys"
@@ -171,6 +187,11 @@ export function DeviceRow({ device, fresh, now }: DeviceRowProps) {
             onSelect={choose(() => revoke.mutate(), false)}
           />
         </MenuShell>
+      )}
+      {testPush.data && (
+        <p className="ph-note ph-device-note" role="status">
+          {pushTestLine(testPush.data, device.name)}
+        </p>
       )}
       {errors.map((error) => (
         <p key={error.message} className="ph-error" role="alert">

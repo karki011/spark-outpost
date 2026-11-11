@@ -74,9 +74,10 @@ interface SubagentsLineProps {
   runId: string;
   rows: readonly SubagentRow[];
   live: boolean;
+  leadModel?: string | null;
 }
 
-export function SubagentsLine({ runId, rows, live }: SubagentsLineProps) {
+export function SubagentsLine({ runId, rows, live, leadModel = null }: SubagentsLineProps) {
   const openAgents = use(OpenAgentsContext);
   const [open, setOpen] = useState(false);
   const [focus, setFocus] = useState<AgentFocus | null>(null);
@@ -133,7 +134,7 @@ export function SubagentsLine({ runId, rows, live }: SubagentsLineProps) {
       </div>
       {!openAgents && open && (
         <div id={listId} className="sl-cards">
-          <AgentCards rows={rows} live={live} focus={focus} />
+          <AgentCards rows={rows} live={live} focus={focus} leadModel={leadModel} />
         </div>
       )}
     </div>
