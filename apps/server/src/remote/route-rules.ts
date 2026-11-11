@@ -220,6 +220,7 @@ GET /api/remote/push/contact
 PUT /api/remote/push/contact
 GET /api/remote/devices
 PATCH /api/remote/devices/:id
+POST /api/remote/devices/:id/push/test
 DELETE /api/remote/devices/:id
 DELETE /api/remote/devices/:id/passkeys
 POST /api/remote/devices/disconnect-all

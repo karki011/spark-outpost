@@ -1,3 +1,4 @@
+import type { PushTestResult } from '@spark-outpost/contracts';
 import { Router, type Request, type Response } from 'express';
 import {
   pairingClaimRequestSchema,
@@ -57,6 +58,7 @@ export interface RemoteRouteDeps {
   streams: DeviceStreams;
   tailscale: TailscaleServe;
   pushKeys: PushKeys;
+  pushTest?: ((deviceId: string) => Promise<PushTestResult>) | undefined;
   attemptsPerMinute?: number | undefined;
 }
 
@@ -200,7 +202,7 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
   router.use(
     passkeyRoutes({ db, workspaceId, challenges, attemptsPerMinute: deps.attemptsPerMinute }),
   );
-  router.use(pushRoutes({ db, workspaceId, keys: deps.pushKeys }));
+  router.use(pushRoutes({ db, workspaceId, keys: deps.pushKeys, test: deps.pushTest }));
 
   router.get('/remote/switches', async (_req, res) => {
     res.json((await remoteAccess(db, workspaceId)).switches);

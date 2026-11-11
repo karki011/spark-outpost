@@ -1,4 +1,4 @@
-import { terminalAttentionKey, type AppEvent } from '@spark-outpost/contracts';
+import { terminalAttentionKey, type AppEvent, type PushTestResult } from '@spark-outpost/contracts';
 import { readAttentionKeys } from '../persistence/attention-items.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ClientFocus } from '../slack/client-focus.ts';
@@ -13,10 +13,11 @@ import {
   quietDevice,
   SentKeys,
   TerminalWaits,
+  testPush,
   type QueuedPush,
 } from './push-plan.ts';
 import { pushSubject } from './push-contact.ts';
-import type { PushSend } from './push-send.ts';
+import type { PushResult, PushSend } from './push-send.ts';
 import { forgetPushSubscription, pushContact, pushTargets, type PushTarget } from './push-store.ts';
 import { recordRemoteAudit, remoteAccess } from './store.ts';
 
@@ -41,6 +42,7 @@ export interface PushNotifierOptions {
 export interface PushNotifier {
   changed(event: AppEvent): void;
   meeting(minutes: 5 | 10 | 15): void;
+  test(deviceId: string): Promise<PushTestResult>;
   release(): void;
   settled(): Promise<void>;
   stop(): Promise<void>;
@@ -110,8 +112,12 @@ export function startPushNotifier(
     });
   }
 
-  async function sendTo(target: PushTarget, payload: string, sender: Sender): Promise<void> {
-    if (!isPushEndpoint(target.endpoint)) return;
+  async function sendTo(
+    target: PushTarget,
+    payload: string,
+    sender: Sender,
+  ): Promise<PushResult | null> {
+    if (!isPushEndpoint(target.endpoint)) return null;
     const result = await deps.send({
       endpoint: target.endpoint,
       p256dh: target.p256dh,
@@ -130,6 +136,7 @@ export function startPushNotifier(
         ...(result.reason === null ? {} : { reason: result.reason }),
       },
     });
+    return result;
   }
 
   async function sender(
@@ -153,6 +160,23 @@ export function startPushNotifier(
     if (!ready) return;
     const payload = JSON.stringify(meetingPush(minutes));
     await Promise.all(ready.targets.map((target) => sendTo(target, payload, ready.sender)));
+  }
+
+  async function sendTest(deviceId: string): Promise<PushTestResult> {
+    const access = await remoteAccess(db, workspaceId);
+    if (!access.hostname || !access.switches.notifications) return { outcome: 'off', reason: null };
+    const ready = await sender((target) => target.deviceId === deviceId);
+    if (!ready || ready.targets.length === 0) return { outcome: 'none', reason: null };
+    const payload = JSON.stringify(testPush());
+    const results = await Promise.all(
+      ready.targets.map((target) => sendTo(target, payload, ready.sender)),
+    );
+    if (results.some((result) => result?.outcome === 'sent'))
+      return { outcome: 'sent', reason: null };
+    if (results.every((result) => result?.outcome === 'gone'))
+      return { outcome: 'gone', reason: null };
+    const refused = results.find((result) => result?.outcome === 'failed');
+    return { outcome: 'failed', reason: refused?.reason ?? null };
   }
 
   async function deliver(conversationId: string, items: QueuedPush[]): Promise<void> {
@@ -223,6 +247,9 @@ export function startPushNotifier(
     meeting(minutes) {
       if (stopped || deps.held?.()) return;
       enqueue(() => sendMeeting(minutes));
+    },
+    test(deviceId) {
+      return sendTest(deviceId);
     },
     release() {
       if (stopped) return;

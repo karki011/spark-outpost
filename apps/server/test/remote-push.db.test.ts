@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createTestApp, localClient } from './app-support.ts';
+import { createApp } from '../src/api/app.ts';
+import { createTestApp, localClient, testAppOptions } from './app-support.ts';
 import {
   pairDevice,
   remoteClient,
@@ -195,5 +196,40 @@ describe('focus from a paired device', () => {
     await phone.send('post', '/api/slack/presence/', { focused: true }).expect(204);
     const { rows } = await t.db.query("SELECT 1 FROM remote_audit WHERE action = 'request'");
     expect(rows).toEqual([]);
+  });
+});
+
+describe('a test notification', () => {
+  const tested: string[] = [];
+  const withSender = () => {
+    tested.length = 0;
+    return createApp({
+      ...testAppOptions(t),
+      pushTest: (deviceId) => {
+        tested.push(deviceId);
+        return Promise.resolve({ outcome: 'sent', reason: null });
+      },
+    });
+  };
+
+  it('is sent from the Mac to a paired device', async () => {
+    const mac = localClient(withSender());
+    const sent = await mac.send('post', `/api/remote/devices/${device.id}/push/test`).expect(200);
+    expect(sent.body).toEqual({ outcome: 'sent', reason: null });
+    expect(tested).toEqual([device.id]);
+  });
+
+  it('is refused for a paired device, an unknown device and a revoked one', async () => {
+    const withTest = withSender();
+    await remoteClient(withTest, device.cookie)
+      .send('post', `/api/remote/devices/${device.id}/push/test`)
+      .expect(403);
+    const mac = localClient(withTest);
+    await mac
+      .send('post', '/api/remote/devices/00000000-0000-4000-8000-000000000000/push/test')
+      .expect(404);
+    await mac.send('delete', `/api/remote/devices/${device.id}`).expect(200);
+    await mac.send('post', `/api/remote/devices/${device.id}/push/test`).expect(404);
+    expect(tested).toEqual([]);
   });
 });

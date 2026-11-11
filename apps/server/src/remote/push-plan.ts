@@ -107,6 +107,22 @@ export function meetingPush(minutes: 5 | 10 | 15): MeetingPush {
   return { title: `Meeting in ${minutes} min`, body: '', chatId: null, tag: 'spark-meeting' };
 }
 
+export interface TestPush {
+  title: string;
+  body: string;
+  chatId: null;
+  tag: 'spark-test';
+}
+
+export function testPush(): TestPush {
+  return {
+    title: 'Spark Outpost',
+    body: 'Test notification. This device gets alerts from your Mac.',
+    chatId: null,
+    tag: 'spark-test',
+  };
+}
+
 export function quietDevice(deviceId: string, focusedClients: readonly string[]): boolean {
   return focusedClients.includes(`device:${deviceId}`);
 }

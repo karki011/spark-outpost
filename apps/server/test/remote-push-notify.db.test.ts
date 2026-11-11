@@ -446,3 +446,40 @@ describe('calendar', () => {
     expect(sent).toEqual([]);
   });
 });
+
+describe('a test notification', () => {
+  it('goes to the chosen device with fixed text, even while it is focused or alerts are held', async () => {
+    const other = await addDevice('iPad');
+    await subscribe(other, 'https://fcm.googleapis.com/fcm/send/ipad');
+    focused = [`device:${phone}`];
+    holding = true;
+    expect(await notifier.test(phone)).toEqual({ outcome: 'sent', reason: null });
+    expect(sent.map((delivery) => delivery.endpoint)).toEqual([
+      'https://fcm.googleapis.com/fcm/send/pixel',
+    ]);
+    expect(payloads()).toEqual([
+      {
+        title: 'Spark Outpost',
+        body: 'Test notification. This device gets alerts from your Mac.',
+        chatId: null,
+        tag: 'spark-test',
+      },
+    ]);
+  });
+
+  it('sends nothing while the switch is off or the device has no subscription', async () => {
+    const bare = await addDevice('Laptop');
+    expect(await notifier.test(bare)).toEqual({ outcome: 'none', reason: null });
+    await saveRemoteSwitches(t.db, t.workspaceId, { notifications: false });
+    expect(await notifier.test(phone)).toEqual({ outcome: 'off', reason: null });
+    expect(sent).toEqual([]);
+  });
+
+  it('reports a refusal with its reason and an ended registration', async () => {
+    result = { outcome: 'failed', status: 403, reason: 'BadJwtToken' };
+    expect(await notifier.test(phone)).toEqual({ outcome: 'failed', reason: 'BadJwtToken' });
+    result = { outcome: 'gone', status: 410, reason: null };
+    expect(await notifier.test(phone)).toEqual({ outcome: 'gone', reason: null });
+    expect(await notifier.test(phone)).toEqual({ outcome: 'none', reason: null });
+  });
+});

@@ -334,6 +334,8 @@ Code: `apps/server/src/remote/push-*.ts`, `apps/web/public/sw.js`, `apps/web/src
 
 What reaches Apple, Google or Mozilla: an encrypted payload (RFC 8291), its size and time, the VAPID public key and the sender contact (the project page unless the user set their own). They cannot read the title or the line.
 
+- **Test notification.** A device's menu on the Mac has **Send a test notification** (`POST /api/remote/devices/:id/push/test`, Mac-only in `route-rules.ts`; `404` for an unknown or revoked device). It goes through the notifier's own send path, so the endpoint check, the audit row and the delete on `404`/`410` are the same, to that device's subscriptions only, with fixed text (`testPush`, tag `spark-test`). It needs the switch on and skips the focus and hold quieting, since the user asked for it. The answer is `sent` (accepted by the push service, not shown on the device), `off`, `none` (no subscription under the current hostname and key), `gone` or `failed` with the push service's reason code, and the row says which in words.
+
 Not verified: any real iPhone or Android delivery. Tests use a fake sender and a stubbed `PushManager`; the endpoint list, Apple's acceptance of the default subject and iOS behaviour come from documentation and other projects' reports, not a run. A refusal now shows on the Mac instead of passing silently.
 
 ### What is left for the phone app
