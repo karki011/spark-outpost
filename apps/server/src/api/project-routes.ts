@@ -18,7 +18,7 @@ import {
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { saveAttachment } from '../persistence/attachments.ts';
-import { AttachmentError, UNSUPPORTED_ATTACHMENT } from '../persistence/attachment-content.ts';
+import { isUtf8Text } from '../persistence/attachment-content.ts';
 import { createFolder, listFolders } from '../projects/folders.ts';
 import { readInstructionsFile } from '../projects/instructions-file.ts';
 import { currentBranch, initRepository, repositoryState } from '../projects/git.ts';
@@ -233,20 +233,16 @@ export function projectRoutes({
     const policy = await openProject(db, workspaceId, paramId(req));
     const file = await readForAttachment(policy, path);
     if (file.data.length > ATTACHMENT_TEXT_MAX_BYTES) throw new BadRequestError(TOO_LARGE);
-    try {
-      const attachment = await saveAttachment(db, workspaceId, {
-        name: file.relative,
-        mediaType: 'text/plain',
-        data: file.data,
-        sourcePath: file.relative,
-      });
-      res.status(201).json(attachment);
-    } catch (error) {
-      if (error instanceof AttachmentError && error.message === UNSUPPORTED_ATTACHMENT) {
-        throw new BadRequestError('Only text files can be attached from a project folder.');
-      }
-      throw error;
+    if (!isUtf8Text(file.data)) {
+      throw new BadRequestError('Only text files can be attached from a project folder.');
     }
+    const attachment = await saveAttachment(db, workspaceId, {
+      name: file.relative,
+      mediaType: 'text/plain',
+      data: file.data,
+      sourcePath: file.relative,
+    });
+    res.status(201).json(attachment);
   });
 
   return router;

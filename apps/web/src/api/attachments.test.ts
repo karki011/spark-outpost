@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { ATTACHMENT_IMAGE_MAX_BYTES, ATTACHMENT_TEXT_MAX_BYTES } from '@spark-outpost/contracts';
+import {
+  ATTACHMENT_FILE_MAX_BYTES,
+  ATTACHMENT_IMAGE_MAX_BYTES,
+  ATTACHMENT_TEXT_MAX_BYTES,
+} from '@spark-outpost/contracts';
 import { classifyFile, formatBytes } from './attachments.ts';
 
 function file(name: string, type: string, size = 10): File {
@@ -29,19 +33,37 @@ describe('classifyFile', () => {
     });
   });
 
-  it('rejects unsupported types and oversized files with friendly messages', () => {
+  it('keeps everything else as a file, including text over the text limit', () => {
     expect(classifyFile(file('photo.heic', 'image/heic'))).toEqual({
-      error: 'Use a PNG, JPEG, GIF or WebP image.',
+      kind: 'file',
+      mediaType: 'image/heic',
     });
-    expect(classifyFile(file('archive.zip', 'application/zip'))).toEqual({
-      error: 'Only images and text files can be attached.',
+    expect(classifyFile(file('report.pdf', 'application/pdf'))).toEqual({
+      kind: 'file',
+      mediaType: 'application/pdf',
     });
+    expect(classifyFile(file('book.xlsx', ''))).toEqual({
+      kind: 'file',
+      mediaType: 'application/octet-stream',
+    });
+    expect(classifyFile(file('big.csv', 'text/csv', 3 * 1024 * 1024))).toEqual({
+      kind: 'file',
+      mediaType: 'text/csv',
+    });
+    expect(classifyFile(file('big.txt', 'text/plain', ATTACHMENT_TEXT_MAX_BYTES + 1))).toEqual({
+      kind: 'file',
+      mediaType: 'text/plain',
+    });
+  });
+
+  it('rejects secret names and oversized files with friendly messages', () => {
+    expect(classifyFile(file('.env', 'text/plain'))).toHaveProperty('error');
     expect(classifyFile(file('big.png', 'image/png', ATTACHMENT_IMAGE_MAX_BYTES + 1))).toEqual({
       error: 'Images can be up to 5.0 MB.',
     });
-    expect(classifyFile(file('big.txt', 'text/plain', ATTACHMENT_TEXT_MAX_BYTES + 1))).toEqual({
-      error: 'Text files can be up to 512 KB.',
-    });
+    expect(classifyFile(file('big.zip', 'application/zip', ATTACHMENT_FILE_MAX_BYTES + 1))).toEqual(
+      { error: 'Files must be 20 MB or smaller.' },
+    );
   });
 });
 

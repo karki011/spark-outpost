@@ -12,7 +12,7 @@ Chats, settings and code stay on your computer; keys stay in your keychain. Only
 
 | Goes to                                    | What                                                                                                          | Stop it                                                          |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| **Your AI provider**                       | Your messages; files, output, Slack messages and events the agent reads.                                      | [`.sparkignore`](sparkignore.md) for files                       |
+| **Your AI provider**                       | Your messages and attachments; files, output, Slack messages and events the agent reads.                      | [`.sparkignore`](sparkignore.md) for files                       |
 | **Claude**                                 | Each installed plugin, once per version, for its [review](use-claude-plugins.md#what-the-agent-review-sends). | Uninstall it                                                     |
 | **Jev**, if connected                      | Redacted PR comments, short turn facts, Map file contents.                                                    | [What Jev reads](jev.md#what-jev-reads)                          |
 | **GitHub, Atlassian, Linear, MCP servers** | What you or an agent sends; a clone talks to its host.                                                        | Disconnect them                                                  |

@@ -61,6 +61,7 @@ export function MessageAttachments({ attachments }: { attachments: Attachment[] 
             key={attachment.id}
             className="chip att-chip msg-att-file"
             href={attachmentUrl(attachment.id)}
+            {...(attachment.kind === 'file' ? { download: attachment.name } : {})}
             target="_blank"
             rel="noopener noreferrer"
           >

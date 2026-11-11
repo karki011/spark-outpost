@@ -90,7 +90,7 @@ test('uploads from the file chooser, sends with the message, and survives a relo
   await expect(reply).toHaveCount(1);
 });
 
-test('dropping files shows the overlay and attaches supported files', async ({ page }) => {
+test('dropping files shows the overlay and attaches images and other files', async ({ page }) => {
   await newChat(page);
   const overlay = page.getByText('Drop files to attach');
 
@@ -103,11 +103,9 @@ test('dropping files shows the overlay and attaches supported files', async ({ p
   await dispatchFileDrag(page, 'drop');
   await expect(overlay).toBeHidden();
   await expect(chips(page).getByRole('img', { name: 'dropped.png' })).toBeVisible();
-  await expect(chips(page)).toContainText('Only images and text files can be attached.');
-  await expect(page.getByRole('button', { name: 'Send' })).toBeDisabled();
-
-  await page.getByRole('button', { name: 'Remove archive.zip' }).click();
-  await expect(chips(page)).not.toContainText('archive.zip');
+  await expect(chips(page)).toContainText('archive.zip');
+  await expect(chips(page)).not.toContainText('can be attached');
+  await expect(page.getByRole('progressbar')).toHaveCount(0);
   await page.getByRole('textbox', { name: 'Message' }).fill('Dropped');
   await expect(page.getByRole('button', { name: 'Send' })).toBeEnabled();
 });
@@ -156,4 +154,59 @@ test('sends files without a message and titles the chat from their names', async
     timeout: 15_000,
   });
   await expect(page.getByRole('navigation', { name: 'Chats' })).toContainText('solo.txt');
+});
+
+test('attaches a PDF and a spreadsheet and downloads them from the sent message', async ({
+  page,
+}) => {
+  const input = await newChat(page);
+  const pdf = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(2048 - 9, 0xff)]);
+  const sheet = Buffer.concat([Buffer.from('PK\u0003\u0004'), Buffer.alloc(4096, 0)]);
+  await page.getByRole('button', { name: 'Add files and context' }).click();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('menuitem', { name: 'Upload a file' }).click();
+  await (
+    await chooser
+  ).setFiles([
+    { name: 'report.pdf', mimeType: 'application/pdf', buffer: pdf },
+    {
+      name: 'q3.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      buffer: sheet,
+    },
+  ]);
+  await expect(page.getByRole('progressbar')).toHaveCount(0);
+  await expect(chips(page)).toContainText('report.pdf');
+  await expect(chips(page)).toContainText('2 KB');
+  await expect(chips(page)).toContainText('q3.xlsx');
+  await expect(chips(page)).toContainText('4 KB');
+
+  await input.fill('Summarise these');
+  await input.press('Enter');
+
+  const bubble = page.locator('.msg.me').last();
+  const link = bubble.getByRole('link', { name: /report\.pdf/ });
+  await expect(link).toBeVisible();
+  await expect(bubble.getByRole('link', { name: /q3\.xlsx/ })).toBeVisible();
+  await expect(link).toContainText('2 KB');
+  await expect(page.locator('.md', { hasText: 'Attachments: report.pdf, q3.xlsx.' })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  const href = (await link.getAttribute('href'))!;
+  const served = await page.evaluate(async (address) => {
+    const response = await fetch(address);
+    return {
+      type: response.headers.get('content-type'),
+      disposition: response.headers.get('content-disposition'),
+      sniff: response.headers.get('x-content-type-options'),
+      size: (await response.arrayBuffer()).byteLength,
+    };
+  }, href);
+  expect(served).toEqual({
+    type: 'application/octet-stream',
+    disposition: expect.stringMatching(/^attachment; filename="report\.pdf"/),
+    sniff: 'nosniff',
+    size: pdf.length,
+  });
 });

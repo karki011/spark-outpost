@@ -175,7 +175,9 @@ function completed(
   { attachment, slack, chat }: Transferred,
 ): Partial<PendingAttachment> {
   const changes = { status: 'done', progress: 1, attachment } as const;
-  if (item.source.type === 'upload') return changes;
+  if (item.source.type === 'upload') {
+    return { ...changes, kind: attachment.kind, mediaType: attachment.mediaType };
+  }
   if (slack) return { ...changes, slack, name: attachment.name, size: attachment.size };
   if (chat) return { ...changes, chat, name: chat.title, size: attachment.size };
   return {
