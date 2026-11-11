@@ -7,7 +7,13 @@ import { usePopover } from '../../ui/use-popover.ts';
 import { EverydayCards, HooksCard, IgnoredCard, McpCard } from './AgentSetupCards.tsx';
 import { needsAttention, trustPrompt } from './agent-setup.ts';
 import { AllowRulesCard, RedirectsCard, TrustCard } from './TrustCards.tsx';
-import { useAgentConfig, useAgentConfigChange } from './use-agent-config.ts';
+import { TrustChip } from './TrustChip.tsx';
+import {
+  useAgentConfig,
+  useAgentConfigChange,
+  type AgentConfigChange,
+} from './use-agent-config.ts';
+import { useRemoteClient } from '../../phone/use-remote-client.ts';
 import { useOpenFile } from './file-sheet/FileSheet.tsx';
 import { LoadingBlob } from '../../ui/loading/LoadingBlob.tsx';
 
@@ -93,6 +99,8 @@ export function AgentSetup({ repos, labelled = false }: { repos: Project[]; labe
   const attention = config.data ? needsAttention(config.data) : false;
   const prompt = config.data ? trustPrompt(config.data) : null;
   const shownConfig = useAgentConfig(shown.id);
+  const trustChange = useAgentConfigChange(primary.id);
+  const { allows } = useRemoteClient();
   const openFile = useOpenFile();
   useFocusTrap(panelRef, open, shownConfig.data !== undefined);
   const openForPrimary = () => {
@@ -100,12 +108,25 @@ export function AgentSetup({ repos, labelled = false }: { repos: Project[]; labe
     setOpen(true);
   };
 
+  const decideFromChip = (request: AgentConfigChange) =>
+    trustChange.mutate(request, {
+      onSuccess: () => anchorRef.current?.focus(),
+      onError: openForPrimary,
+    });
+
   return (
     <>
-      {prompt && !open && (
-        <button type="button" className="ctx-trust" onClick={openForPrimary}>
-          {prompt === 'changed' ? 'Folder setup changed' : 'Trust this folder?'}
-        </button>
+      {prompt && config.data && !open && (
+        <TrustChip
+          config={config.data}
+          prompt={prompt}
+          name={primary.name}
+          busy={trustChange.isPending}
+          canDecide={allows('settings')}
+          error={trustChange.isError ? trustChange.error.message : null}
+          onChange={decideFromChip}
+          onReview={openForPrimary}
+        />
       )}
       <button
         ref={anchorRef}

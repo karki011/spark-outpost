@@ -220,7 +220,8 @@ test('the chat context names the instruction files the agent followed', async ({
   );
 });
 
-const trustChip = (page: Page) => page.getByRole('button', { name: 'Trust this folder?' });
+const trustGroup = (page: Page) => page.getByRole('group', { name: 'Trust app?' });
+const trustChip = (page: Page) => trustGroup(page).getByRole('button', { name: 'Review' });
 
 test('asks to trust the folder, then loads its executable parts as configured', async ({
   page,
@@ -271,6 +272,32 @@ test('Not now keeps the folder untrusted without asking again', async ({ page })
   ).toBeVisible();
 });
 
+test('Trust on the chip is saved without opening the setup', async ({ page }) => {
+  await chatWithRepo(page);
+  await expect(trustGroup(page)).toContainText('4 hooks, 6 allow rules, 3 MCP servers');
+  await trustGroup(page).getByRole('button', { name: 'Trust', exact: true }).click();
+  await expect(trustGroup(page)).toHaveCount(0);
+  await expect(setup(page)).toBeHidden();
+  await expect(setupButton(page)).toBeFocused();
+  await page.reload();
+  await chatWithRepo(page);
+  await expect(trustGroup(page)).toHaveCount(0);
+  await openSetup(page);
+  await expect(card(page, 'Trusted folder')).toBeVisible();
+});
+
+test('Not now on the chip is saved and stays gone after a reload', async ({ page }) => {
+  await chatWithRepo(page);
+  await trustGroup(page).getByRole('button', { name: 'Not now' }).click();
+  await expect(trustGroup(page)).toHaveCount(0);
+  await expect(setupButton(page)).toBeFocused();
+  await page.reload();
+  await chatWithRepo(page);
+  await expect(trustGroup(page)).toHaveCount(0);
+  await openSetup(page);
+  await expect(card(page, 'Trust this folder?')).toBeVisible();
+});
+
 test('asks again with the list of changes after the folder’s setup changes', async ({ page }) => {
   await chatWithRepo(page);
   await trustChip(page).click();
@@ -285,8 +312,9 @@ test('asks again with the list of changes after the folder’s setup changes', a
   try {
     await page.reload();
     await chatWithRepo(page);
-    const chip = page.getByRole('button', { name: 'Folder setup changed' });
-    await chip.click();
+    await expect(trustGroup(page)).toContainText('Folder setup changed');
+    await expect(trustGroup(page).getByRole('button')).toHaveCount(1);
+    await trustChip(page).click();
     const changed = card(page, 'Folder setup changed');
     await expect(changed).toContainText('changed since you trusted it');
     await expect(changed).toContainText('Bash(make:*)');

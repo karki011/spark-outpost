@@ -257,17 +257,51 @@ button.as-row:focus-visible .as-open {
   }
 }
 .ctx-trust {
-  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
   margin-left: auto;
-  padding: 2px 8px;
+  padding: 2px 4px 2px 10px;
+  gap: 4px 6px;
   border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--line));
-  border-radius: 999px;
-  color: var(--warn);
+  border-radius: var(--r);
   font-size: 12px;
+}
+.ctx-trust-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  min-width: 0;
+}
+.ctx-trust-title {
+  color: var(--warn);
+  font-weight: 500;
   white-space: nowrap;
 }
-.ctx-trust:hover {
-  background: color-mix(in srgb, var(--warn) 12%, transparent);
+.ctx-trust-summary {
+  color: var(--muted);
+}
+.ctx-trust-btn {
+  min-height: 28px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+.ctx-trust-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.ctx-trust-error {
+  flex-basis: 100%;
+  color: var(--danger);
+}
+@media (pointer: coarse) {
+  .ctx-trust-btn {
+    min-height: 44px;
+    padding: 2px 14px;
+  }
 }
 .ctx-trust + .ctx-setup {
   margin-left: 4px;
