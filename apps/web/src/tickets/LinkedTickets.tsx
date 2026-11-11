@@ -1,3 +1,4 @@
+import './linked-tickets.css';
 import {
   ticketSourceNames,
   type TicketDetail,
