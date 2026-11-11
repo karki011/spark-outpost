@@ -118,6 +118,7 @@ export function PhoneSwitchesReadOnly({ switches }: { switches: RemoteSwitches }
   return (
     <section className="ph-card ph-readonly" aria-labelledby="ph-switches-title">
       <h2 id="ph-switches-title">What this device can do</h2>
+      <p className="ph-note">Change these on your Mac.</p>
       <div className="ph-can">
         <h3>Allowed</h3>
         <ul>
