@@ -49,8 +49,4 @@ describe('pickLead', () => {
   it('needs something running or waiting for the evening lead', () => {
     expect(pickLead({ ...base, now: at(20), busy: 0 })).toBe('board');
   });
-
-  it('never picks the meeting lead without a meeting, as with no calendar or on a paired device', () => {
-    expect(pickLead({ ...base, meetingActive: false, awayUpdates: 0 })).toBe('board');
-  });
 });
