@@ -118,7 +118,7 @@ describe('diffs on edit steps', () => {
   it('notes a diff that was cut short', () => {
     render(<Turn steps={[edit('src/notes.ts', [{ ...notes, truncated: true }])]} />);
     fireEvent.click(header());
-    expect(screen.getByText(/Only the start of this change/)).toBeTruthy();
+    expect(screen.getByText(/Only part of this change/)).toBeTruthy();
   });
 
   it('shows only the path for a secret file, with nothing to open', () => {

@@ -58,7 +58,7 @@ function StepDiffItem({ itemKey, diff }: { itemKey: string; diff: StepDiff }) {
           <DiffView
             diff={{ path: diff.path, oldText: diff.oldText ?? null, newText: diff.newText ?? '' }}
           />
-          {diff.truncated && <p className="sdiff-note">Only the start of this change is shown.</p>}
+          {diff.truncated && <p className="sdiff-note">Only part of this change is shown.</p>}
         </div>
       )}
     </div>

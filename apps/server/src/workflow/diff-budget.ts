@@ -1,7 +1,8 @@
 export const DIFF_BUDGET = 64 * 1024;
 
 export interface DiffBudget {
-  cut(text: string): string;
+  cut(text: string, most?: number): string;
+  readonly left: number;
   readonly truncated: boolean;
 }
 
@@ -15,15 +16,19 @@ export function createDiffBudget(limit = DIFF_BUDGET): DiffBudget {
   let budget = limit;
   let truncated = false;
   return {
-    cut(text) {
-      if (text.length <= budget) {
+    cut(text, most = budget) {
+      const room = Math.min(budget, most);
+      if (text.length <= room) {
         budget -= text.length;
         return text;
       }
       truncated = true;
-      const kept = wholeCharacters(text.slice(0, Math.max(0, budget)));
-      budget = 0;
+      const kept = wholeCharacters(text.slice(0, Math.max(0, room)));
+      budget -= room;
       return kept;
+    },
+    get left() {
+      return budget;
     },
     get truncated() {
       return truncated;

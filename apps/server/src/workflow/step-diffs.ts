@@ -28,6 +28,47 @@ function changedLines(oldText: string | null, newText: string): { added: number;
   return { added, removed };
 }
 
+interface Texts {
+  oldText: string | null;
+  newText: string;
+}
+
+const CONTEXT_LINES = 3;
+
+function fits({ oldText, newText }: Texts): boolean {
+  return (oldText?.length ?? 0) + newText.length <= STEP_DIFF_BUDGET;
+}
+
+function changedPart({ oldText, newText }: Texts): Texts {
+  if (oldText === null) return { oldText, newText };
+  const before = oldText.split('\n');
+  const after = newText.split('\n');
+  const limit = Math.min(before.length, after.length);
+  let same = 0;
+  while (same < limit && before[same] === after[same]) same += 1;
+  let tail = 0;
+  while (
+    tail < limit - same &&
+    before[before.length - 1 - tail] === after[after.length - 1 - tail]
+  ) {
+    tail += 1;
+  }
+  const from = Math.max(0, same - CONTEXT_LINES);
+  const drop = Math.max(0, tail - CONTEXT_LINES);
+  return {
+    oldText: before.slice(from, before.length - drop).join('\n'),
+    newText: after.slice(from, after.length - drop).join('\n'),
+  };
+}
+
+function shares({ oldText, newText }: Texts, left: number): [number, number] {
+  const oldLength = oldText?.length ?? 0;
+  if (oldLength + newText.length <= left) return [oldLength, newText.length];
+  const half = Math.floor(left / 2);
+  const oldShare = Math.min(oldLength, Math.max(half, left - newText.length));
+  return [oldShare, left - oldShare];
+}
+
 export function stepDiffs(
   diffs: readonly ProviderDiff[],
   secretValues: readonly string[],
@@ -38,18 +79,22 @@ export function stepDiffs(
     const path = text(diff.path).slice(-STEP_DIFF_PATH_CHARS);
     if ('withheld' in diff) return { path, added: 0, removed: 0, withheld: true };
     const counts = changedLines(diff.oldText, diff.newText);
-    const shownOld = diff.oldText === null ? null : text(diff.oldText);
-    const shownNew = text(diff.newText);
-    const oldText = shownOld === null ? null : budget.cut(shownOld);
-    const newText = budget.cut(shownNew);
-    const whole = (oldText?.length ?? 0) + newText.length;
-    const original = (shownOld?.length ?? 0) + shownNew.length;
+    const whole = {
+      oldText: diff.oldText === null ? null : text(diff.oldText),
+      newText: text(diff.newText),
+    };
+    const shown = fits(whole) ? whole : changedPart(whole);
+    const [oldShare, newShare] = shares(shown, budget.left);
+    const oldText = shown.oldText === null ? null : budget.cut(shown.oldText, oldShare);
+    const newText = budget.cut(shown.newText, newShare);
+    const kept = (oldText?.length ?? 0) + newText.length;
+    const original = (whole.oldText?.length ?? 0) + whole.newText.length;
     return {
       path,
       ...counts,
       oldText,
       newText,
-      ...(whole < original ? { truncated: true } : {}),
+      ...(kept < original ? { truncated: true } : {}),
     };
   });
 }
