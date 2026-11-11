@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Attachment, ConversationDetail } from '@spark-outpost/contracts';
-import { pruneUnlinkedAttachments, saveAttachment } from '../src/persistence/attachments.ts';
+import {
+  getAttachmentContent,
+  pruneUnlinkedAttachments,
+  saveAttachment,
+} from '../src/persistence/attachments.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { createFakeProvider } from '../src/providers/fake.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
@@ -87,20 +91,42 @@ describe('attachment uploads', () => {
     expect(json).toMatchObject({ kind: 'text', mediaType: 'application/json', size: 7 });
   });
 
-  it('rejects binary junk, a missing name header, and oversized files', async () => {
-    const junk = await upload(Buffer.from([0xff, 0xfe, 0x00, 0x81]), 'a.bin', 'image/png').expect(
-      400,
-    );
-    expect(junk.body.error).toBe(
-      'Only images (PNG, JPEG, GIF, WebP) and text files are supported.',
-    );
+  it('stores PDFs, spreadsheets and large text as files and reads them back', async () => {
+    const pdf = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.from([0xff, 0x00, 0xfe])]);
+    const stored = await uploaded(pdf, 'Q3 résumé.pdf', 'application/pdf');
+    expect(stored).toEqual({
+      id: expect.any(String),
+      name: 'Q3 résumé.pdf',
+      mediaType: 'application/pdf',
+      size: pdf.length,
+      kind: 'file',
+    });
+    const sheet = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0xff]);
+    const xlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    expect(await uploaded(sheet, 'q3.xlsx', xlsx)).toMatchObject({ kind: 'file', mediaType: xlsx });
+    const csv = Buffer.alloc(3 * 1024 * 1024, 'a,b\n');
+    const big = await uploaded(csv, 'big.csv', 'text/csv');
+    expect(big).toMatchObject({ kind: 'file', mediaType: 'text/csv', size: csv.length });
+    const file = await getAttachmentContent(t.db, t.workspaceId, big.id);
+    expect(file?.data.equals(csv)).toBe(true);
+    const fake = await uploaded(Buffer.from([0xc3, 0x28]), 'fake.pdf', 'application/pdf');
+    expect(fake.mediaType).toBe('application/octet-stream');
+  });
+
+  it('rejects empty files, secret names, a missing name header, and files over 20 MB', async () => {
+    const empty = await upload(Buffer.alloc(0), 'a.bin', 'application/octet-stream').expect(400);
+    expect(empty.body.error).toBe('The file is empty.');
+    await upload(Buffer.from('A=1'), '.env', 'text/plain').expect(400);
     await request(app)
       .post('/api/attachments')
       .set(LOCAL_HEADERS)
       .set('Content-Type', 'text/plain')
       .send('hi')
       .expect(400);
-    await upload(Buffer.alloc(5 * 1024 * 1024 + 1, 'a'), 'big.txt', 'text/plain').expect(413);
+    const limit = 20 * 1024 * 1024;
+    await upload(Buffer.alloc(limit, 1), 'edge.bin', 'application/octet-stream').expect(201);
+    const over = await upload(Buffer.alloc(limit + 1, 1), 'big.bin', 'application/zip').expect(413);
+    expect(over.body.error).toBe('Files must be 20 MB or smaller.');
     await request(app)
       .post('/api/attachments')
       .set(LOCAL_HEADERS)
@@ -108,6 +134,37 @@ describe('attachment uploads', () => {
       .set('X-File-Name', 'a.txt')
       .send('hi')
       .expect(403);
+  });
+
+  it('always serves a file attachment as a download, never inline', async () => {
+    const html = Buffer.from('<script>alert(1)</script>\u0000');
+    const stored = await uploaded(html, 'page "x".html', 'text/html');
+    expect(stored.kind).toBe('file');
+    const response = await get(`/api/attachments/${stored.id}/content`).expect(200);
+    expect(response.headers['content-type']).toBe('application/octet-stream');
+    expect(response.headers['content-disposition']).toBe(
+      `attachment; filename="page _x_.html"; filename*=UTF-8''page%20%22x%22.html`,
+    );
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.headers['content-security-policy']).toBe("default-src 'none'; sandbox");
+    expect(Buffer.from(response.body).equals(html)).toBe(true);
+  });
+
+  it('still reads rows stored before files existed, and keeps other kinds refused', async () => {
+    const image = await uploaded(PNG, 'a.png', 'image/png');
+    const note = await uploaded(Buffer.from('hi'), 'a.txt', 'text/plain');
+    const { rows } = await t.db.query<{ kind: string }>(
+      'SELECT kind FROM attachments WHERE id = ANY($1::uuid[]) ORDER BY kind',
+      [[image.id, note.id]],
+    );
+    expect(rows.map((row) => row.kind)).toEqual(['image', 'text']);
+    await expect(
+      t.db.query(
+        `INSERT INTO attachments (id, workspace_id, name, media_type, kind, size, data)
+         VALUES ($1, $2, 'x', 'x/y', 'archive', 1, $3)`,
+        [randomUUID(), t.workspaceId, Buffer.from('x')],
+      ),
+    ).rejects.toThrow(/attachments_kind_check/);
   });
 
   it('serves content with safe headers only inside the workspace', async () => {

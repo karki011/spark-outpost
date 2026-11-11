@@ -1,6 +1,6 @@
 .mpop.placepicker {
   left: 12px;
-  width: min(380px, calc(100cqw - 24px));
+  width: min(440px, calc(100cqw - 24px));
 }
 .pp-branches {
   display: grid;

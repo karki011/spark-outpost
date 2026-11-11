@@ -30,6 +30,7 @@ export async function reviewPermission(
   params: acp.RequestPermissionRequest,
   requestId: string | number | null | undefined,
   workspace: DoWorkspace,
+  attachedFiles: readonly string[] = [],
 ): Promise<acp.RequestPermissionResponse> {
   const asker = workspace.asker?.(params.sessionId) ?? null;
   const request = approvalRequestFrom(params, {
@@ -40,6 +41,7 @@ export async function reviewPermission(
     mode: workspace.mode(),
     shownPlan: workspace.shownPlan?.() ?? null,
     subagent: asker?.name ?? null,
+    attachedFiles,
   });
   const answer = await workspace.gate.review(request, workspace.signal);
   if (!isQuiet(answer)) workspace.annotate(answer.note, asker?.id);

@@ -86,6 +86,7 @@ describe('ACP provider with an agent that reports its sub-agents', { timeout: 20
       output.kind === 'subagent_report' ? [{ id: output.id, ...output.report }] : [],
     );
     expect(reports).toEqual([
+      { id: 'sub-1', usage: { model: 'claude-opus-5-5', effort: 'high' } },
       { id: 'sub-1', files: ['/work/app/src/routes.ts'] },
       { id: 'sub-1', commands: ['pnpm test'] },
       {

@@ -38,7 +38,7 @@ describe('the sub-agent breakdown on the Cost tab', () => {
         'run-1': [
           row('a', 'Explore', {
             steps: [{ name: 'Read', done: true }],
-            usage: { tokens: 34_000, costUsd: 0.04, turns: 2, model: 'gpt-6-luna' },
+            usage: { tokens: 34_000, costUsd: 0.04, turns: 2, model: 'gpt-6-luna', effort: 'high' },
           }),
           row('b', 'Tests', { usage: { tokens: 1_200 } }),
         ],
@@ -50,7 +50,7 @@ describe('the sub-agent breakdown on the Cost tab', () => {
       'listitem',
     );
     expect(items.map((item) => item.textContent)).toEqual([
-      'Explore1 step · 2 turns · 34k tokens · $0.04 · 41s · gpt-6-luna',
+      'Exploregpt-6-luna · high · 1 step · 2 turns · 34k tokens · $0.04 · 41s',
       'Tests1.2k tokens · 41s',
     ]);
   });

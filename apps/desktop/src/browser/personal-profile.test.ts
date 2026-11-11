@@ -148,7 +148,7 @@ describe('the Personal profile', () => {
     } else if (op === 'keep') {
       expect(outcome.result).toEqual({ kept: false });
     } else if (op === 'end_run') {
-      expect(outcome.result).toEqual({ closed: 0 });
+      expect(outcome.result).toEqual({});
     } else {
       expect(outcome.code).toBe('no_tab');
     }

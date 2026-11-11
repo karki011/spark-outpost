@@ -9,17 +9,18 @@ import type { FollowUpMode } from './watch-indicator-model.ts';
 const turnOn = (): UpdateProfileRequest => ({ prFollowUp: true, prFollowUpAsk: false });
 
 interface FollowUpOfferProps {
-  watch: PrWatch;
+  watches: readonly PrWatch[];
   mode: FollowUpMode;
   onDismiss: () => void;
 }
 
-function FollowUpOffer({ watch, mode, onDismiss }: FollowUpOfferProps) {
+function FollowUpOffer({ watches, mode, onDismiss }: FollowUpOfferProps) {
   const setting = useProfileSetting(false, turnOn);
   const allowed = useRemoteClient().allows('settings');
-  const noteId = usePaneId(`pr-offer-note-${watch.id}`);
+  const numbers = watches.map((watch) => `#${watch.number}`).join(' ');
+  const noteId = usePaneId(`pr-offer-note-${watches[0]!.id}`);
   return (
-    <div className="ai-note pr-offer" role="group" aria-label={`${OFFER_LINE} #${watch.number}`}>
+    <div className="ai-note pr-offer" role="group" aria-label={`${OFFER_LINE} ${numbers}`}>
       <span className="pr-offer-text">{OFFER_LINE}</span>
       <button
         type="button"
@@ -33,7 +34,7 @@ function FollowUpOffer({ watch, mode, onDismiss }: FollowUpOfferProps) {
       <button
         type="button"
         className="pr-offer-x"
-        aria-label={`Dismiss the follow-up offer for #${watch.number}`}
+        aria-label={`Dismiss the follow-up offer for ${numbers}`}
         onClick={onDismiss}
       >
         <XIcon />
@@ -51,23 +52,29 @@ function FollowUpOffer({ watch, mode, onDismiss }: FollowUpOfferProps) {
 }
 
 interface PostOpenLinesProps {
-  watch: PrWatch;
+  watches: readonly PrWatch[];
   mode: FollowUpMode;
   dismissed: ReadonlySet<string>;
   onDismiss: (key: string) => void;
 }
 
-export function PostOpenLines({ watch, mode, dismissed, onDismiss }: PostOpenLinesProps) {
-  const offered = offersFollowUp(watch, mode) && !dismissed.has(offerKey(watch));
+export function PostOpenLines({ watches, mode, dismissed, onDismiss }: PostOpenLinesProps) {
+  const offered = watches.filter(
+    (watch) => offersFollowUp(watch, mode) && !dismissed.has(offerKey(watch)),
+  );
   return (
     <>
-      {ticketLines(watch).map((line) => (
+      {watches.flatMap(ticketLines).map((line) => (
         <p key={line} className="ai-note pr-ticket-line" role="status">
           {line}
         </p>
       ))}
-      {offered && (
-        <FollowUpOffer watch={watch} mode={mode} onDismiss={() => onDismiss(offerKey(watch))} />
+      {offered.length > 0 && (
+        <FollowUpOffer
+          watches={offered}
+          mode={mode}
+          onDismiss={() => offered.forEach((watch) => onDismiss(offerKey(watch)))}
+        />
       )}
     </>
   );

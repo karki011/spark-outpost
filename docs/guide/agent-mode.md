@@ -20,7 +20,7 @@ Models your sign-in can't use are left out; a pinned one shows **Unavailable** a
 
 A pinned name such as `sonnet` runs the agent's current model of that name; the button shows the model that ran.
 
-The agent picks models for its sub-agents.
+The agent picks models for its sub-agents. Their cards show the model and effort each reports.
 
 ## Set the effort
 

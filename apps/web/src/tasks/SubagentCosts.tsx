@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { subagentUsageParts, type SubagentRow } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
+import { workerModelLabel } from '../crew/worker-identity.ts';
 
 interface SubagentCostsProps {
   conversationId: string;
@@ -9,6 +10,12 @@ interface SubagentCostsProps {
 
 function durationOf(row: SubagentRow): number | null {
   return row.startedAt !== null && row.endedAt !== null ? row.endedAt - row.startedAt : null;
+}
+
+function usageLine(row: SubagentRow): string {
+  return [workerModelLabel(row.usage), ...subagentUsageParts(row, durationOf(row))]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 export function SubagentCosts({ conversationId, runIds }: SubagentCostsProps) {
@@ -27,9 +34,7 @@ export function SubagentCosts({ conversationId, runIds }: SubagentCostsProps) {
         {rows.map((row) => (
           <li key={row.id}>
             <b>{row.name}</b>
-            <span>
-              {subagentUsageParts(row, durationOf(row)).join(' · ') || 'No usage reported'}
-            </span>
+            <span>{usageLine(row) || 'No usage reported'}</span>
           </li>
         ))}
       </ul>

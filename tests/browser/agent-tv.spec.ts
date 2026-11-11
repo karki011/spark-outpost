@@ -105,7 +105,7 @@ test('clicking the agent shows its status, Go to scrolls, and Esc steps back', a
   expect(shown.y + shown.height).toBeLessThanOrEqual(stage.y + stage.height);
 
   await scrollThread(page, 'top');
-  await bubble.getByRole('button', { name: 'Go to' }).click();
+  await bubble.getByRole('button', { name: 'Show in chat' }).click();
   await expect(bubble).toBeHidden();
   await expect(turn(page)).toBeInViewport();
 

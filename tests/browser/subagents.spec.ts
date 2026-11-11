@@ -278,7 +278,8 @@ test('a finished turn keeps its sub-agents, nested ones under their parent, afte
   await expect(cards.nth(1)).toHaveAttribute('data-nested', 'true');
   await expect(cards.nth(2)).toContainText('Tests');
   await expect(cards.nth(2)).toContainText('Failed');
-  await expect(cards.nth(0)).toContainText('41s · 3K tok');
+  await expect(cards.nth(0)).toContainText('Opus 5.5 · high · 41s · 3K tok');
+  await expect(cards.nth(2)).not.toContainText('Opus');
   const explore = panel.getByRole('button', { name: 'Explore' });
   await explore.focus();
   await page.keyboard.press('Enter');
@@ -311,8 +312,9 @@ test('a Claude turn that ends with background work running waits on it instead o
   await expect(mood(page)).toHaveText('waiting on 1 background agent', { timeout: 30_000 });
   await expect(turn.locator('.turn-working')).toHaveCount(0);
   await expect(turn.locator('.background-work')).toContainText(
-    'Still running in the background: Schema.',
+    'Still running in the background: 1 agent.',
   );
+  await expect(turn.getByRole('list', { name: 'Background work' })).toHaveText('Schema');
   await expect(turn.locator('.md').last()).toContainText("I'll send the write-up once it reports.");
   const sidebar = page.getByRole('navigation', { name: 'Chats' });
   await expect(sidebar.locator('.row.st-running.active')).toHaveCount(1);

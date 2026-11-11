@@ -261,12 +261,12 @@ test('a secret file is refused with a head shake and a note, a huge file shows a
   await expect(island(page).getByRole('group', { name: 'Attachments' })).toHaveCount(0);
   await expect(island(page)).toContainText('Skipped .env');
 
-  const huge = [{ name: 'dump.log', type: 'text/plain', size: 600 * 1024 }];
+  const huge = [{ name: 'dump.log', type: 'text/plain', size: 21 * 1024 * 1024 }];
   await drag(page, 'dragenter', huge, PANEL);
   await drag(page, 'drop', huge, PANEL);
   await expect(scene(page)).toHaveAttribute('data-phase', 'reject');
   await expect(island(page).getByRole('group', { name: 'Attachments' })).toContainText(
-    'Text files can be up to',
+    'Files must be 20 MB or smaller.',
   );
 });
 

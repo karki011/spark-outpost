@@ -205,11 +205,18 @@ async function routeFullDiskAccess(page: Page, statuses: string[]) {
   );
 }
 
+async function silenceFullDiskAccessPrompt(page: Page) {
+  await page.addInitScript(() =>
+    localStorage.setItem('spark-outpost.full-disk-access-prompt', 'silenced'),
+  );
+}
+
 test('Settings → Help opens System Settings to grant Full Disk Access and re-checks', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
   await fakeDesktop(page);
+  await silenceFullDiskAccessPrompt(page);
   await routeFullDiskAccess(page, ['not_granted', 'granted']);
   const help = await openHelp(page);
 
@@ -227,6 +234,50 @@ test('Settings → Help opens System Settings to grant Full Disk Access and re-c
   await card.getByRole('button', { name: 'Open System Settings' }).click();
   await expect(card).toContainText('Granted');
   expect(await read<string[]>(page, 'helpCalls')).toContain('openFullDiskAccess');
+});
+
+test('the Full Disk Access prompt opens System Settings and goes away once granted', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await fakeDesktop(page);
+  await routeFullDiskAccess(page, ['not_granted', 'granted']);
+  await page.goto('/');
+
+  const prompt = page.getByRole('status').filter({ hasText: 'Let agents read protected folders?' });
+  await expect(prompt).toContainText('Optional; Spark works without it.');
+  await prompt.getByRole('button', { name: 'Open System Settings' }).click();
+  await expect(prompt).toHaveCount(0);
+  expect(await read<string[]>(page, 'helpCalls')).toContain('openFullDiskAccess');
+});
+
+test("the Full Disk Access prompt's Remind me later lasts two hours and Don't ask again lasts for good", async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await fakeDesktop(page);
+  await routeFullDiskAccess(page, ['not_granted']);
+  await page.goto('/');
+
+  const prompt = page.getByRole('status').filter({ hasText: 'Let agents read protected folders?' });
+  await prompt.getByRole('button', { name: 'Remind me later' }).click();
+  await expect(prompt).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(prompt).toHaveCount(0);
+
+  await page.evaluate(() =>
+    localStorage.setItem('spark-outpost.full-disk-access-prompt', `snoozed:${Date.now() - 1000}`),
+  );
+  await page.reload();
+  await expect(prompt).toBeVisible();
+  await prompt.getByRole('button', { name: "Don't ask again" }).click();
+  await expect(prompt).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(prompt).toHaveCount(0);
 });
 
 test('in the browser, Full Disk Access shows the System Settings steps as text', async ({

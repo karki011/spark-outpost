@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { StepName } from '../chat/WorkLog.tsx';
 import { crewStateWord, headerMeta, type CrewAgent } from './crew-model.ts';
 import type { BubbleBox } from './tv-layout.ts';
 import { roleTitle, type TvAsk } from './tv-scene.ts';
@@ -9,6 +10,7 @@ function place(box: BubbleBox): CSSProperties {
     ...vertical,
     left: box.left,
     width: box.width,
+    maxHeight: box.room,
     '--arrow': `${box.arrow}px`,
   } as CSSProperties;
 }
@@ -47,14 +49,23 @@ interface DetailProps {
 }
 
 export function DetailBubble({ id, box, agent, ask, onGo, onAsk }: DetailProps) {
-  const status = `${crewStateWord(agent.state)} · ${agent.line}`;
+  const meta = headerMeta(agent);
   return (
     <Shell box={box} kind="detail" id={id} label={`${agent.name} details`}>
       <p className="tv-bub-t">
-        <b>{agent.name}</b> <small>{roleTitle(agent)}</small>
+        <b>{agent.name}</b>
+        <span className="tv-bub-role">{roleTitle(agent)}</span>
       </p>
-      <p className="tv-bub-s">{status}</p>
-      <p className="tv-bub-m">{headerMeta(agent)}</p>
+      <p className="tv-bub-state" data-state={agent.state}>
+        <i aria-hidden="true" />
+        <span>{crewStateWord(agent.state)}</span>
+        {meta && <span className="tv-bub-m">{meta}</span>}
+      </p>
+      {agent.line && (
+        <p className="tv-bub-now" title={agent.line.replaceAll('`', '')}>
+          <StepName name={agent.line} />
+        </p>
+      )}
       <div className="tv-bub-a">
         {ask && (
           <button type="button" className="tv-bub-go warn" onClick={() => onAsk(ask.approvalId)}>
@@ -62,7 +73,7 @@ export function DetailBubble({ id, box, agent, ask, onGo, onAsk }: DetailProps) 
           </button>
         )}
         <button type="button" className="tv-bub-go" onClick={onGo}>
-          Go to
+          Show in chat
         </button>
       </div>
     </Shell>

@@ -150,7 +150,7 @@ function PrRow(props: PrRowProps) {
       <PrRowItem {...props} />
       {watch.opened.runId === null && (
         <PostOpenLines
-          watch={watch}
+          watches={[watch]}
           mode={context.mode}
           dismissed={dismissed}
           onDismiss={onDismiss}

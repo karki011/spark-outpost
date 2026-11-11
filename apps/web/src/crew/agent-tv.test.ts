@@ -76,7 +76,14 @@ describe('Agent TV stage layout', () => {
     const edge = bubbleBox({ x: 20, y: 40 }, 34, STAGES.s);
     expect(edge).toMatchObject({ left: 8, width: 240, arrow: 12, below: true });
     const centre = bubbleBox({ x: 150, y: 160 }, 50, STAGES.s, true, 120);
-    expect(centre).toMatchObject({ left: 90, width: 120, arrow: 60, below: false, edge: 121 });
+    expect(centre).toMatchObject({
+      left: 90,
+      width: 120,
+      arrow: 60,
+      below: false,
+      edge: 121,
+      room: 121,
+    });
   });
 
   it('keeps a dragged panel inside the chat area', () => {

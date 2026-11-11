@@ -108,9 +108,9 @@ describe('the user closing a Browser pane tab', () => {
     expect(panes.tab(CHAT, tabId)!.paneTab().kept).toBe(true);
     userCloses(tabId);
     expectClosed(tabId, contents);
-    expect(await runBrowserOp(panes, { op: 'end_run', chatId: CHAT, runId: RUN }, signal)).toEqual({
-      closed: 0,
-    });
+    expect(await runBrowserOp(panes, { op: 'end_run', chatId: CHAT, runId: RUN }, signal)).toEqual(
+      {},
+    );
   });
 
   it('closes a tab waiting on a sign-in hand-off, and the release finds it gone', async () => {

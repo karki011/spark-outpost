@@ -72,3 +72,45 @@
     min-height: 44px;
   }
 }
+
+.sl-summary {
+  overflow-wrap: anywhere;
+}
+
+.sl-faces {
+  gap: 0;
+}
+
+.sl-face {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 6px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0 4px;
+  color: inherit;
+  font: inherit;
+  border-radius: var(--r-sm);
+}
+
+.sl-face:not(:has(.sl-name)) {
+  padding: 0;
+}
+
+.sl-face:hover .sl-name {
+  text-decoration: underline;
+}
+
+.sl-face:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@media (pointer: coarse) {
+  .sl-face {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

@@ -87,7 +87,7 @@ function answer(request: BrowserHostRequest): unknown {
       dropped: 0,
     };
   }
-  if (request.op === 'end_run') return { closed: 0 };
+  if (request.op === 'end_run') return {};
   if (request.op === 'keep') return { kept: true };
   if (request.op === 'hand_over') {
     return { ...facts(), masked: request.handoff ? 0 : 2 };

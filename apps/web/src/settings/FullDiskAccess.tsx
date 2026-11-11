@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   FULL_DISK_ACCESS_SYSTEM_SETTINGS_URL,
   type FullDiskAccessStatusValue,
@@ -9,6 +9,7 @@ import { HelpLink } from '../tickets/TicketConnectForm.tsx';
 import { DocLink } from '../ui/DocLink.tsx';
 import { CheckIcon } from '../ui/icons.tsx';
 import { fullDiskAccessQuery } from './full-disk-access-status.ts';
+import { useOpenFullDiskAccess } from './use-open-full-disk-access.ts';
 import '../providers/providers.css';
 import './full-disk-access.css';
 
@@ -28,17 +29,12 @@ function StatusPill({ status }: { status: FullDiskAccessStatusValue }) {
 
 export function FullDiskAccess() {
   const query = useQuery(fullDiskAccessQuery);
-  const queryClient = useQueryClient();
+  const openSystemSettings = useOpenFullDiskAccess();
   const status = query.data?.status;
   const privacy = sparkDesktop()?.privacy;
   const { remote } = useRemoteClient();
 
   if (remote || status === 'unsupported') return null;
-
-  async function openSystemSettings() {
-    if (privacy) await privacy.openFullDiskAccess();
-    await queryClient.invalidateQueries({ queryKey: fullDiskAccessQuery.queryKey });
-  }
 
   const granted = status === 'granted';
 

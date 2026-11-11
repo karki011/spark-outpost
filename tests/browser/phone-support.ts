@@ -133,6 +133,11 @@ export async function turnOn(page: Page) {
   });
 }
 
+export async function chooseDeviceAction(page: Page, device: string, action: string) {
+  await page.getByRole('button', { name: `Actions for ${device}`, exact: true }).click();
+  await page.getByRole('menuitem', { name: action, exact: true }).click();
+}
+
 export async function startPairing(
   page: Page,
   button: string | RegExp = 'Pair a device',

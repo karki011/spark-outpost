@@ -32,13 +32,21 @@ async function push(page: Page, chatId: string, tab: Record<string, unknown>) {
 
 const agentTab = { title: 'Docs', url: 'http://localhost:5173/docs', owner: 'agent', active: true };
 
-test('an agent tab says when it closes, and pinning it keeps it', async ({ page }) => {
+test('an agent tab stays open after its turn, pinning stops reuse and × closes it', async ({
+  page,
+}) => {
   await withDesktopBrowser(page);
   const { pane, chatId } = await openPane(page);
-  await push(page, chatId, agentTab);
+  await push(page, chatId, { ...agentTab, driving: true });
   const life = pane.getByRole('group', { name: 'Agent tab' });
-  await expect(life).toHaveText('Closes when this turn ends·Pin to keep');
-  await life.getByRole('button', { name: 'Pin to keep' }).click();
+  const line = 'Stays open until you close it·the agent may reuse it·Pin so it isn’t reused';
+  await expect(life).toHaveText(line);
+
+  await push(page, chatId, agentTab);
+  await expect(life).toHaveText(line);
+  await expect(pane.getByRole('tab', { name: /Docs/ })).toBeVisible();
+
+  await life.getByRole('button', { name: 'Pin so it isn’t reused' }).click();
   expect((await calls(page, 'command')).at(-1)).toEqual({
     chatId,
     command: { command: 'pin', tabId: 't1', pinned: true },
@@ -56,6 +64,13 @@ test('an agent tab says when it closes, and pinning it keeps it', async ({ page 
 
   await push(page, chatId, { ...agentTab, owner: 'user' });
   await expect(life).toBeHidden();
+
+  await push(page, chatId, agentTab);
+  await pane.getByRole('button', { name: 'Close Docs' }).click();
+  expect((await calls(page, 'command')).at(-1)).toEqual({
+    chatId,
+    command: { command: 'close', tabId: 't1' },
+  });
 });
 
 test('the toolbar and Alt+Cmd+I open developer tools for the shown tab', async ({ page }) => {

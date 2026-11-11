@@ -6,6 +6,7 @@ import {
   passkeySummary,
   pushFailureLine,
   statusCopy,
+  statusHeadline,
 } from './phone-copy.ts';
 
 function state(change: Partial<TailscaleState>): TailscaleState {
@@ -173,5 +174,21 @@ describe('a device passkeys line', () => {
     expect(two).toMatch(
       /^2 passkeys · Google Password Manager · added .*8.* · synced to other devices$/,
     );
+  });
+});
+
+describe('status headline', () => {
+  it('states how many devices can reach the Mac when it is on', () => {
+    const on = state({ status: 'on' });
+    expect(statusHeadline(on, 0)).toBe('Remote control is on. No device is paired yet.');
+    expect(statusHeadline(on, 1)).toBe('Remote control is on. 1 device can reach this Mac.');
+    expect(statusHeadline(on, 4)).toBe('Remote control is on. 4 devices can reach this Mac.');
+    expect(statusHeadline(on, null)).toBe('Remote control is on.');
+  });
+
+  it('keeps the existing title for every other state', () => {
+    for (const status of ['not_installed', 'signed_out', 'https_off', 'off', 'error'] as const) {
+      expect(statusHeadline(state({ status }), 3)).toBe(statusCopy(state({ status })).title);
+    }
   });
 });

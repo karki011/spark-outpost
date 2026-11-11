@@ -27,6 +27,7 @@ export interface CrewAgent {
   durationMs: number | null;
   turns?: number;
   sameProvider?: boolean;
+  worker?: boolean;
   blobId?: string;
   routeNote?: string;
   spark?: { id: string; role: string };
@@ -85,8 +86,11 @@ export function roleLabel(member: Pick<CrewAgent, 'role' | 'sameProvider' | 'spa
   return member.sameProvider ? `${label} (${SAME_PROVIDER_REVIEW})` : label;
 }
 
-export function modelLabel(member: Pick<CrewAgent, 'role' | 'model' | 'effort'>): string {
+export function modelLabel(
+  member: Pick<CrewAgent, 'role' | 'model' | 'effort' | 'worker'>,
+): string {
   if (member.role === 'jev') return 'router';
+  if (member.worker && !member.model) return '';
   const model = member.model ? shortLabel(member.model) : 'default model';
   return [model, member.effort].filter(Boolean).join(' · ');
 }

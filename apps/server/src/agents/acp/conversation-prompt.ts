@@ -2,6 +2,14 @@ import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { ConversationTurn, ProviderTurn, TurnAttachment } from '../../providers/provider.ts';
 import { TITLE_REQUEST } from '../../titles/title-line.ts';
 import type { SlashPrompt } from './slash-commands.ts';
+import {
+  attachmentParts,
+  earlierAttachmentParts,
+  textBytes,
+  type AttachmentPaths,
+  type Part,
+  type PromptSupport,
+} from './attachment-parts.ts';
 
 export const HISTORY_BUDGET_BYTES = 36_000;
 
@@ -49,14 +57,10 @@ export function chatFolderNote(folder: string, changes: boolean): string {
   return `You are working in a Spark Outpost chat with no project. Your working directory ${folder} is this chat's own private folder, not the user's code. ${may} Files you create there are shown to the user as attachments of this turn, so save anything they asked for (a CSV, an image, a document) as a file. It is not a git repository and nothing in it is pushed. Spark Outpost asks the user before each action their settings require. Do not read or change files outside this folder. Reply in plain text and Markdown.`;
 }
 
-export interface PromptSupport {
-  image: boolean;
-  embeddedContext: boolean;
-}
-
 export interface PromptOptions {
   attachments?: readonly TurnAttachment[];
   support?: PromptSupport;
+  paths?: AttachmentPaths;
   budget?: number;
   projectRoots?: readonly string[];
   chatFolder?: boolean;
@@ -65,44 +69,15 @@ export interface PromptOptions {
   toolsAvailable?: boolean;
 }
 
-type Part = string | acp.ContentBlock;
+export const TEXT_ONLY: PromptSupport = { image: false, embeddedContext: false, pdf: false };
 
-const TEXT_ONLY: PromptSupport = { image: false, embeddedContext: false };
+export const commandFirstSupport = (support: PromptSupport): PromptSupport => ({
+  ...support,
+  embeddedContext: false,
+  pdf: false,
+});
 
 const speaker = (turn: ConversationTurn) => (turn.role === 'user' ? 'User' : 'Assistant');
-
-const textBytes = (attachments: readonly TurnAttachment[] = []) =>
-  attachments
-    .filter((attachment) => attachment.kind === 'text')
-    .reduce((total, attachment) => total + attachment.data.length, 0);
-
-function fenced(name: string, text: string): string {
-  const longest = Math.max(2, ...(text.match(/`+/g) ?? []).map((run) => run.length));
-  const fence = '`'.repeat(longest + 1);
-  return `Attached file ${name}:\n${fence}\n${text}\n${fence}`;
-}
-
-function attachmentParts(attachment: TurnAttachment, support: PromptSupport): Part[] {
-  if (attachment.kind === 'image') {
-    if (!support.image) return [`[Image not shown: ${attachment.name}]`];
-    return [
-      `[Attached image: ${attachment.name}]`,
-      { type: 'image', data: attachment.data.toString('base64'), mimeType: attachment.mediaType },
-    ];
-  }
-  const text = attachment.data.toString('utf8');
-  if (!support.embeddedContext) return [fenced(attachment.name, text)];
-  return [
-    {
-      type: 'resource',
-      resource: {
-        uri: `attachment:///${encodeURIComponent(attachment.name)}`,
-        mimeType: attachment.mediaType,
-        text,
-      },
-    },
-  ];
-}
 
 function keptHistory(history: readonly ConversationTurn[], budget: number) {
   const kept: ConversationTurn[] = [];
@@ -151,7 +126,9 @@ export function contextSteps(
   const steps = current.map((attachment) =>
     attachment.kind === 'image'
       ? `Looked at \`${attachment.name}\``
-      : `Read \`${attachment.name}\``,
+      : attachment.kind === 'file'
+        ? `Attached \`${attachment.name}\``
+        : `Read \`${attachment.name}\``,
   );
   const earlier = kept.flatMap((turn) => turn.attachments ?? []).length;
   if (kept.length > 0) {
@@ -176,7 +153,9 @@ function conversationParts(
   const support = options.support ?? TEXT_ONLY;
   const current = options.attachments ?? [];
   const budget = Math.max(0, (options.budget ?? HISTORY_BUDGET_BYTES) - textBytes(current));
-  const currentParts = current.flatMap((attachment) => attachmentParts(attachment, support));
+  const currentParts = current.flatMap((attachment) =>
+    attachmentParts(attachment, support, options.paths),
+  );
   const { kept, omitted } = keptHistory(history, budget);
   const roots = options.projectRoots ?? [];
   const projectIntro = options.chatFolder
@@ -198,7 +177,9 @@ function conversationParts(
       : [];
   const turns = kept.flatMap((turn) => [
     `${speaker(turn)}: ${turn.content}`,
-    ...(turn.attachments ?? []).flatMap((attachment) => attachmentParts(attachment, support)),
+    ...(turn.attachments ?? []).flatMap((attachment) =>
+      earlierAttachmentParts(attachment, support),
+    ),
   ]);
   return [
     intro,
@@ -227,7 +208,7 @@ export function commandFirstBlocks(
   command: string,
   options: PromptOptions = {},
 ): acp.ContentBlock[] {
-  const support = { ...(options.support ?? TEXT_ONLY), embeddedContext: false };
+  const support = commandFirstSupport(options.support ?? TEXT_ONLY);
   const context = toBlocks(conversationParts(history, before.trim(), { ...options, support }));
   return [...context, { type: 'text', text: command }];
 }
@@ -236,7 +217,7 @@ export function followUpBlocks(prompt: string, options: PromptOptions = {}): acp
   const text = prompt.trim() || 'Look at the attached files.';
   const support = options.support ?? TEXT_ONLY;
   const parts = (options.attachments ?? []).flatMap((attachment) =>
-    attachmentParts(attachment, support),
+    attachmentParts(attachment, support, options.paths),
   );
   return toBlocks([text, ...parts]);
 }
@@ -251,11 +232,13 @@ export function conversationPrompt(
     .join('\n\n');
 }
 
-export function promptSupport(init: acp.InitializeResponse): PromptSupport {
+export function promptSupport(init: acp.InitializeResponse, inlinePdf = false): PromptSupport {
   const capabilities = init.agentCapabilities?.promptCapabilities;
+  const embeddedContext = capabilities?.embeddedContext === true;
   return {
     image: capabilities?.image === true,
-    embeddedContext: capabilities?.embeddedContext === true,
+    embeddedContext,
+    pdf: embeddedContext && inlinePdf,
   };
 }
 

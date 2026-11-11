@@ -350,13 +350,15 @@ export class BrowserPanes {
     return this.chats.get(chatId)?.closed.pop() ?? null;
   }
 
-  closeRunTabs(chatId: string, runId: string): number {
-    const closing = this.tabsOf(chatId).filter(
-      (tab) => tab.owner === 'agent' && tab.runId === runId && !tab.pinned && !tab.kept,
-    );
-    for (const tab of closing) this.close(chatId, tab.id);
+  stopDriving(chatId: string, runId: string): void {
+    for (const tab of this.tabsOf(chatId)) {
+      if (tab.owner !== 'agent' || tab.runId !== runId) continue;
+      const held = this.driving.get(tab.id);
+      if (held) clearTimeout(held);
+      this.driving.delete(tab.id);
+      tab.driving = false;
+    }
     this.noteChange(chatId);
-    return closing.length;
   }
 
   noteChange(chatId: string): void {

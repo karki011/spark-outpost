@@ -1,6 +1,7 @@
 import * as acp from '@agentclientprotocol/sdk/unstable';
 import { pluginCommandNames } from '../../agent-config/user-plugins/parse.ts';
 import { ProviderError, type ProviderOutput, type ProviderTurn } from '../../providers/provider.ts';
+import { createAttachmentFolder, type AttachmentFolder } from './attachment-files.ts';
 import { agentInfoOutputs } from './agent-info.ts';
 import type { AgentDefinition } from './agents.ts';
 import { applySessionSettings, modeName, settingsOutputs } from './apply-settings.ts';
@@ -12,8 +13,10 @@ import {
   contextSteps,
   conversationBlocks,
   followUpBlocks,
+  commandFirstSupport,
   promptSupport,
   promptText,
+  TEXT_ONLY,
 } from './conversation-prompt.ts';
 import { assertProtocolVersion } from './errors.ts';
 import type { LiveConnection } from './live-connection.ts';
@@ -132,6 +135,7 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
     definition.cli,
   );
   const requests = createRequestLog();
+  const folder = createAttachmentFolder(policy !== null);
   const unbind = connection.bind(
     turnHandlers({
       definition,
@@ -142,6 +146,7 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
       requests,
       push,
       audit: workspace.replay.observer,
+      attachedFiles: () => folder.files(),
     }),
   );
   try {
@@ -150,7 +155,7 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
       : await startSession(context, gates);
     const { init, opened, request: newSession } = started;
     const { session, continued } = opened;
-    const support = promptSupport(init);
+    const support = promptSupport(init, definition.cli === 'claude');
     if (!support.image && turn.attachments?.some((attachment) => attachment.kind === 'image')) {
       throw new ProviderError(
         `${definition.name} can't read images. Remove the image and try again.`,
@@ -206,7 +211,12 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
     };
     const blocks = turn.live?.continuation
       ? null
-      : firstBlocks(turn, continued, promptOptions, mapper, push, definition);
+      : await firstBlocks(turn, continued, promptOptions, folder, mapper, push, definition);
+    if (signal.aborted) {
+      stopRequests?.();
+      signal.removeEventListener('abort', cancel);
+      return 'cancelled';
+    }
     const stopReason = await runPrompts({
       session: {
         prompt: (sent) => session.prompt(sent),
@@ -214,6 +224,7 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
       },
       blocks,
       followUp: { ...promptOptions, attachments: [] },
+      folder,
       turn,
       signal,
       mapper,
@@ -233,7 +244,8 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
       }),
       background: connection.background,
       steers: steeringSupported(init),
-      steer: (steering) => attachSteering(connection.ctx, init, session.sessionId, steering),
+      steer: (steering) =>
+        attachSteering(connection.ctx, init, session.sessionId, steering, { support, folder }),
       ...(context.writeUpMs ? { writeUpMs: context.writeUpMs } : {}),
     });
     stopRequests?.();
@@ -241,10 +253,11 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
     return stopReason;
   } finally {
     unbind();
+    await folder.remove();
   }
 }
 
-type PromptOptions = Parameters<typeof conversationBlocks>[2];
+type PromptOptions = NonNullable<Parameters<typeof conversationBlocks>[2]>;
 
 function firstTurnCommands(turn: ProviderTurn, definition: AgentDefinition): string[] {
   if (definition.cli !== 'claude') return [];
@@ -257,14 +270,15 @@ function firstTurnCommands(turn: ProviderTurn, definition: AgentDefinition): str
   return [...plugins, ...repo];
 }
 
-function firstBlocks(
+async function firstBlocks(
   turn: ProviderTurn,
   continued: boolean,
   promptOptions: PromptOptions,
+  folder: AttachmentFolder,
   mapper: TurnMapper,
   push: (outputs: ProviderOutput[]) => void,
   definition: AgentDefinition,
-): acp.ContentBlock[] {
+): Promise<acp.ContentBlock[]> {
   const sent = afterOpening(turn, continued);
   for (const step of contextSteps(sent.history, promptOptions)) push(mapper.note(step));
   const request = continued ? (sent.session?.followUp ?? turn.prompt) : turn.prompt;
@@ -275,11 +289,19 @@ function firstBlocks(
     firstTurnCommands(turn, definition),
   );
   if (slash.note) push(mapper.note(slash.note));
+  const attachments = promptOptions.attachments ?? [];
+  const support = promptOptions.support ?? TEXT_ONLY;
   if (!continued && slash.kind === 'command') {
-    return commandFirstBlocks(sent.history, commandPreamble(sent), slash.text, promptOptions);
+    const paths = await folder.prepare(attachments, commandFirstSupport(support));
+    return commandFirstBlocks(sent.history, commandPreamble(sent), slash.text, {
+      ...promptOptions,
+      paths,
+    });
   }
+  const paths = await folder.prepare(attachments, support);
+  const withPaths = { ...promptOptions, paths };
   const text = promptText(sent, request, slash, continued);
   return continued
-    ? followUpBlocks(text, promptOptions)
-    : conversationBlocks(sent.history, text, promptOptions);
+    ? followUpBlocks(text, withPaths)
+    : conversationBlocks(sent.history, text, withPaths);
 }

@@ -1,10 +1,17 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { emptySubagentRecord, type SubagentRow } from '@spark-outpost/contracts';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentCards } from './AgentCards.tsx';
 import { AgentsSection } from './AgentsSection.tsx';
 import { AgentBoardContext, createAgentBoard } from './agent-board.ts';
+
+const scrolled = vi.fn();
+
+beforeEach(() => {
+  scrolled.mockClear();
+  Element.prototype.scrollIntoView = scrolled;
+});
 
 afterEach(cleanup);
 
@@ -42,18 +49,18 @@ const rows: SubagentRow[] = [
 ];
 
 describe('AgentCards', () => {
-  it('lists one card per agent with its purpose, state and progress', () => {
+  it('lists one card per agent with its purpose, state and progress, working ones first', () => {
     render(<AgentCards rows={rows} live />);
     const cards = within(screen.getByRole('list', { name: 'Sub-agents' })).getAllByRole('listitem');
     expect(cards).toHaveLength(2);
-    expect(cards[0]!.textContent).toContain('Map the Express server: routes and workers.');
-    expect(cards[0]!.textContent).toContain('48s · 61K tok');
-    expect(cards[0]!.textContent).toContain('Done');
-    expect(cards[1]!.dataset.state).toBe('working');
-    expect(cards[1]!.textContent).toContain('Now: Read chat-store.ts');
-    expect(cards[1]!.textContent).not.toContain('grep -rn');
-    expect(cards[1]!.querySelectorAll('.ac-now')).toHaveLength(1);
-    expect(cards[1]!.textContent).toContain('2 steps');
+    expect(cards[1]!.textContent).toContain('Map the Express server: routes and workers.');
+    expect(cards[1]!.textContent).toContain('48s · 61K tok');
+    expect(cards[1]!.textContent).toContain('Done');
+    expect(cards[0]!.dataset.state).toBe('working');
+    expect(cards[0]!.textContent).toContain('Now: Read chat-store.ts');
+    expect(cards[0]!.textContent).not.toContain('grep -rn');
+    expect(cards[0]!.querySelectorAll('.ac-now')).toHaveLength(1);
+    expect(cards[0]!.textContent).toContain('2 steps');
   });
 
   it('marks stale working workers inactive and offers no redirect after the turn ends', () => {
@@ -107,5 +114,70 @@ describe('AgentsSection', () => {
       board.forget('new');
     });
     expect(screen.getByRole('heading', { name: 'Agents · 1' })).toBeTruthy();
+  });
+
+  it('expands, scrolls to and focuses the worker a click asked for, every time', () => {
+    const board = createAgentBoard();
+    render(
+      <AgentBoardContext value={board}>
+        <AgentsSection />
+      </AgentBoardContext>,
+    );
+    act(() => board.show({ runId: 'run', order: '2026-10-20T02:00:00Z', rows, live: true }));
+    act(() => board.open('run', 'b'));
+    const name = screen.getByRole('button', { name: 'Web state' });
+    expect(name.getAttribute('aria-expanded')).toBe('true');
+    expect(document.activeElement).toBe(name);
+    expect(scrolled).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole('button', { name: 'Server architecture' }).getAttribute('aria-expanded'),
+    ).toBe('false');
+
+    fireEvent.click(name);
+    expect(name.getAttribute('aria-expanded')).toBe('false');
+    act(() => board.open('run', 'b'));
+    expect(name.getAttribute('aria-expanded')).toBe('true');
+    expect(scrolled).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows the model in the meta of a working and a done card, and nothing when unknown', () => {
+    const known: SubagentRow[] = [
+      { ...rows[0]!, usage: { ...rows[0]!.usage, model: 'claude-opus-5-5', effort: 'high' } },
+      { ...rows[1]!, usage: { model: 'gpt-5.5' } },
+      { ...rows[1]!, id: 'c', name: 'Unknown model', usage: { effort: 'high' } },
+    ];
+    render(<AgentCards rows={known} live />);
+    const card = (id: string) =>
+      document.querySelector<HTMLElement>(`[data-worker-id="${id}"] .ac-meta`)!.textContent;
+    expect(card('a')).toBe('Opus 5.5 · high · 48s · 61K tok');
+    expect(card('b')).toBe('gpt-5.5 · 2 steps');
+    expect(card('c')).toBe('2 steps');
+  });
+
+  it('keeps an expanded card open and focused when another worker finishes and the order changes', () => {
+    const working = (id: string, name: string): SubagentRow => ({
+      ...rows[1]!,
+      id,
+      name,
+      task: `Task for ${name}`,
+    });
+    const first = working('x', 'First worker');
+    const second = working('y', 'Second worker');
+    const { rerender } = render(<AgentCards rows={[first, second]} live />);
+    const name = screen.getByRole('button', { name: 'Second worker' });
+    fireEvent.click(name);
+    name.focus();
+    const order = () =>
+      within(screen.getByRole('list', { name: 'Sub-agents' }))
+        .getAllByRole('listitem')
+        .flatMap((item) => (item.dataset.workerId ? [item.dataset.workerId] : []));
+    expect(order()).toEqual(['x', 'y']);
+
+    rerender(<AgentCards rows={[{ ...first, state: 'done', endedAt: 9 }, second]} live />);
+    expect(order()).toEqual(['y', 'x']);
+    const same = screen.getByRole('button', { name: 'Second worker' });
+    expect(same).toBe(name);
+    expect(same.getAttribute('aria-expanded')).toBe('true');
+    expect(document.activeElement).toBe(same);
   });
 });

@@ -159,6 +159,22 @@ describe('a paired phone on a chat started on the Mac', () => {
     await remoteClient(app).get(`/api/attachments/${attachment.id}/content`).expect(401);
   });
 
+  it('lets a paired device upload a PDF and download it as an attachment', async () => {
+    const device = await pairDevice(app, 'Pocket phone');
+    const phone = remoteClient(app, device.cookie);
+    const pdf = Buffer.from('%PDF-1.7 phone');
+    const uploaded = await phone
+      .send('post', '/api/attachments', pdf)
+      .set('Content-Type', 'application/pdf')
+      .set('X-File-Name', 'phone.pdf')
+      .expect(201);
+    expect(uploaded.body).toMatchObject({ kind: 'file', mediaType: 'application/pdf' });
+    const download = await phone.get(`/api/attachments/${uploaded.body.id}/content`).expect(200);
+    expect(download.headers['content-type']).toBe('application/octet-stream');
+    expect(download.headers['content-disposition']).toMatch(/^attachment;/);
+    expect(Buffer.from(download.body as Buffer).equals(pdf)).toBe(true);
+  });
+
   it('answers a card, and the Mac then finds it answered', async () => {
     const { runId } = await doRun(t, root);
     const approval = await insertCommandApproval(t, runId, root, 'pnpm test');

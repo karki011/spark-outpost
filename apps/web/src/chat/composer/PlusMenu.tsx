@@ -1,5 +1,4 @@
 import { useCallback, useId, useRef, useState, type ReactNode } from 'react';
-import { ATTACHMENT_ACCEPT } from '../../api/attachments.ts';
 import { usePopover } from '../../ui/use-popover.ts';
 import {
   SCREENSHOT_FALLBACK,
@@ -117,7 +116,6 @@ export function PlusMenu({
         type="file"
         multiple
         hidden
-        accept={ATTACHMENT_ACCEPT}
         aria-label="Upload a file"
         onChange={(event) => {
           onAttach(Array.from(event.target.files ?? []));

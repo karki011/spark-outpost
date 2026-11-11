@@ -8,13 +8,19 @@ export interface BoardEntry {
   live: boolean;
 }
 
+export interface AgentFocus {
+  workerId: string;
+  nonce: number;
+}
+
 export interface AgentBoard {
   subscribe(listener: () => void): () => void;
   shown(): BoardEntry | null;
   show(entry: BoardEntry): void;
   forget(runId: string): void;
   focusRequest(): number;
-  open(runId: string): void;
+  focusedWorker(): AgentFocus | null;
+  open(runId: string, workerId?: string): void;
 }
 
 export function createAgentBoard(): AgentBoard {
@@ -23,6 +29,7 @@ export function createAgentBoard(): AgentBoard {
   let latest: BoardEntry | null = null;
   let picked: string | null = null;
   let focusRequest = 0;
+  let focused: AgentFocus | null = null;
   const notify = () => {
     for (const listener of listeners) listener();
   };
@@ -57,9 +64,11 @@ export function createAgentBoard(): AgentBoard {
       if (entries.delete(runId)) changed();
     },
     focusRequest: () => focusRequest,
-    open(runId) {
+    focusedWorker: () => focused,
+    open(runId, workerId) {
       picked = runId;
       focusRequest += 1;
+      focused = workerId === undefined ? null : { workerId, nonce: focusRequest };
       notify();
     },
   };
@@ -74,6 +83,11 @@ const never = () => 0;
 export function useAgentsFocusRequest(): number {
   const board = use(AgentBoardContext);
   return useSyncExternalStore(board?.subscribe ?? noBoard, board?.focusRequest ?? never);
+}
+
+export function useFocusedAgent(): AgentFocus | null {
+  const board = use(AgentBoardContext);
+  return useSyncExternalStore(board?.subscribe ?? noBoard, board?.focusedWorker ?? nothing);
 }
 
 export function useShownAgents(): BoardEntry | null {

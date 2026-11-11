@@ -1,6 +1,8 @@
-import type { SubagentRow, SubagentState } from '@spark-outpost/contracts';
+import type { SubagentRow, SubagentState, SubagentUsage } from '@spark-outpost/contracts';
 import type { ChatFaceState } from '../brand/chat-face.ts';
-import { isBusy, type CrewAgent, type CrewState } from './crew-model.ts';
+import { AGENT_DEFAULT } from '../chat/composer/model-options.ts';
+import { prettyModelId } from '../tasks/model-names.ts';
+import { isBusy, modelLabel, type CrewAgent, type CrewState } from './crew-model.ts';
 
 const ROLES: Record<string, string> = {
   builder: 'Builder',
@@ -38,6 +40,22 @@ export function workerPresentation(
   return { label: state === 'done' ? 'Done' : 'Failed', face: state, state };
 }
 
+export function workerModel(
+  usage: Pick<SubagentUsage, 'model' | 'effort'> | undefined,
+): Pick<CrewAgent, 'model' | 'effort'> {
+  const model = usage?.model;
+  const known =
+    model && model !== AGENT_DEFAULT ? (/\s/.test(model) ? model : prettyModelId(model)) : null;
+  return { model: known, effort: known ? (usage?.effort ?? null) : null };
+}
+
+export function workerModelLabel(
+  usage: Pick<SubagentUsage, 'model' | 'effort'> | undefined,
+): string | null {
+  const label = modelLabel({ role: 'agent', worker: true, ...workerModel(usage) });
+  return label || null;
+}
+
 export function stageWorker(row: SubagentRow, lead: CrewAgent): CrewAgent {
   const presentation = workerPresentation(
     row.state,
@@ -53,8 +71,8 @@ export function stageWorker(row: SubagentRow, lead: CrewAgent): CrewAgent {
     name: row.name,
     role: workerRole(row.name) ?? 'Sub-agent',
     provider: lead.provider,
-    model: row.usage?.model ?? null,
-    effort: null,
+    ...workerModel(row.usage),
+    worker: true,
     state: presentation.state,
     line,
     tokens: row.usage?.tokens ?? null,

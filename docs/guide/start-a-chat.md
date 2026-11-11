@@ -36,15 +36,17 @@ Plain folders offer **Make it a git repository**.
 
 ## Write a message
 
-| Type or select                    | To                                                                       |
-| --------------------------------- | ------------------------------------------------------------------------ |
-| **@**                             | Add a file from the project                                              |
-| **/**                             | Run a command: `/plan`, `/review`, `/model`, `/effort`, `/mcp`, `/fresh` |
-| **+** (**Add files and context**) | **Upload a file**, **Add a screenshot**, **Add from repo**, another chat |
+| Type or select                    | To                                                                                          |
+| --------------------------------- | ------------------------------------------------------------------------------------------- |
+| **@**                             | Add a file from the project                                                                 |
+| **/**                             | Run a command: `/plan`, `/review`, `/model`, `/effort`, `/mcp`, `/fresh`                    |
+| **+** (**Add files and context**) | [**Upload a file**](attach-files.md), **Add a screenshot**, **Add from repo**, another chat |
 
 **Sent** confirms receipt; **Retry** reuses the message ID.
 
 Markdown styles as you type; select text or open **+ → Formatting** ([keys](keyboard-shortcuts.md#chats)). Agent setup is in **…** under the box.
+
+A folder with hooks or MCP servers asks **Trust this folder?**: **Trust**, **Not now** or **Review**.
 
 Web links show as cards; nothing is fetched.
 

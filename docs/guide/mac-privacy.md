@@ -31,6 +31,8 @@ Optional: it stops macOS asking once per protected folder Spark reads, such as `
 2. Select **Open System Settings**.
 3. Under **Privacy & Security → Full Disk Access**, switch on **Spark Outpost**.
 
+After setup, the Mac app also offers this in a small notice. **Remind me later** hides it for two hours; **Don't ask again** stops it for good. It goes away once access is on.
+
 It doesn't replace Spark's [approvals](approvals.md).
 
 ## Keychain prompt

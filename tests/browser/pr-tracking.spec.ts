@@ -166,11 +166,8 @@ test('a chat lists every pull request it opened, by repo, with checks and review
 
   const turn = page.getByRole('region', { name: 'Turn' });
   const opened = turn.locator('.pr-opened');
-  await expect(opened).toHaveText([
-    'Opened pull request#7acme/widgets',
-    'Opened pull request#3acme/gadgets',
-  ]);
-  await expect(opened.first().getByRole('link', { name: '#7' })).toHaveAttribute(
+  await expect(opened).toHaveText('Opened 2 pull requests#7#3');
+  await expect(opened.getByRole('link', { name: '#7 in acme/widgets' })).toHaveAttribute(
     'href',
     pullUrl({ owner: 'acme', repo: 'widgets', number: 7 }),
   );

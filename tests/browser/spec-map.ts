@@ -157,6 +157,7 @@ export const SPEC_GROUPS = {
     'projects',
     'plan-ring',
     'rail-clock',
+    'rail-shortcuts',
     'rail-badges-live',
     'search-jump',
     'session-palette',
@@ -284,7 +285,14 @@ export const SPEC_GROUPS = {
     'voice-focus',
     'voice-models',
   ],
-  phone: ['phone', 'phone-motion', 'phone-notify', 'phone-pair-again', 'phone-passkey'],
+  phone: [
+    'phone',
+    'phone-layout',
+    'phone-motion',
+    'phone-notify',
+    'phone-pair-again',
+    'phone-passkey',
+  ],
   'docs-help': ['docs', 'help'],
 } as const satisfies Record<string, readonly string[]>;
 

@@ -7,6 +7,7 @@ import { createUpdateMapper, type UpdateMapper } from './session-updates.ts';
 import { withToolCalls } from './tool-call-outputs.ts';
 import { createSubagentActivity, type SubagentActivity } from './subagent-activity.ts';
 import type { Reported } from './subagent-report.ts';
+import type { SubagentConfiguration } from './subagent-config.ts';
 import { shownTask, subagentMark } from './subagent-stream.ts';
 
 export const SPAWN_STEP = friendlyStep('Agent');
@@ -76,6 +77,23 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
   const liveTasks = new Set<string>();
   const taskOwners = new Map<string, string>();
   const heldEnds = new Map<string, EndState>();
+  const configured = new Map<string, SubagentConfiguration>();
+
+  const configuring = (id: string, configuration: SubagentConfiguration): ProviderOutput[] => {
+    if (!seen.has(id)) return [];
+    const known = configured.get(id) ?? {};
+    const usage: SubagentConfiguration = {
+      ...(configuration.model && configuration.model !== known.model
+        ? { model: configuration.model }
+        : {}),
+      ...(configuration.effort && configuration.effort !== known.effort
+        ? { effort: configuration.effort }
+        : {}),
+    };
+    if (Object.keys(usage).length === 0) return [];
+    configured.set(id, { ...known, ...usage });
+    return [{ kind: 'subagent_report', id, report: { usage } }];
+  };
 
   const ownsLiveTask = (id: string): boolean => {
     const owner = firstGenerationId(id);
@@ -132,6 +150,13 @@ export function withSubagents(main: UpdateMapper, childMapper: () => UpdateMappe
     map(update) {
       const mark = subagentMark(update);
       if (!mark) return mainOutputs(update);
+      if (mark.event === 'config') {
+        const { model, effort } = mark;
+        return configuring(mark.id, {
+          ...(model ? { model } : {}),
+          ...(effort ? { effort } : {}),
+        });
+      }
       if (mark.event === 'task') {
         if (!mark.ended) {
           liveTasks.add(mark.id);

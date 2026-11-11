@@ -1,14 +1,17 @@
 import { useId } from 'react';
 import type { TailscaleState } from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
-import { CopyIcon, ExternalLinkIcon } from '../ui/icons.tsx';
+import { CheckIcon, CopyIcon } from '../ui/icons.tsx';
 import { copyButtonText, useCopyFeedback } from '../ui/use-copy-feedback.ts';
-import { statusCopy } from './phone-copy.ts';
+import { ON_NOTE, statusCopy, statusHeadline } from './phone-copy.ts';
+import { PhoneSetup, WhatYouGet } from './PhoneSetup.tsx';
+import { setupSteps } from './setup-steps.ts';
 
 interface PhoneStatusProps {
   state: TailscaleState;
   wanted: boolean;
   connected: boolean;
+  deviceCount: number | null;
   checking: boolean;
   turning: boolean;
   failure: string | null;
@@ -16,12 +19,14 @@ interface PhoneStatusProps {
   onTurn: (to: 'on' | 'off') => void;
 }
 
-const CAN_SWITCH = new Set<TailscaleState['status']>(['off', 'on', 'error']);
+const SETUP_NOTE =
+  'Three steps, about five minutes. The work stays on this Mac and nothing is public.';
 
 export function PhoneStatus({
   state,
   wanted,
   connected,
+  deviceCount,
   checking,
   turning,
   failure,
@@ -29,58 +34,64 @@ export function PhoneStatus({
   onTurn,
 }: PhoneStatusProps) {
   const stepId = useId();
+  const titleId = useId();
   const { state: copied, copy } = useCopyFeedback();
   const text = statusCopy(state);
+  const setup = setupSteps(state.status) !== null;
   const on = state.status === 'on' || (state.status === 'error' && wanted);
+  const note = setup ? SETUP_NOTE : state.status === 'on' ? ON_NOTE : text.step;
 
   return (
-    <section className="ph-card" aria-labelledby="ph-status-title">
+    <section className="ph-status-block" aria-labelledby={titleId}>
       <div className="ph-status">
         <div className="ph-status-text">
-          <h2 id="ph-status-title" data-status={state.status}>
+          <h2 id={titleId} className="ph-headline" data-status={state.status}>
             <i className="ph-dot" aria-hidden="true" />
-            {text.title}
+            {statusHeadline(state, deviceCount)}
           </h2>
-          {text.step && (
+          {note && (
             <p id={stepId} className="ph-step">
-              {text.step}
+              {note}
             </p>
           )}
         </div>
-        {CAN_SWITCH.has(state.status) ? (
+        {!setup && (
           <BlobToggle
             label="Remote control"
             checked={on}
             disabled={turning}
-            {...(text.step ? { describedBy: stepId } : {})}
+            {...(note ? { describedBy: stepId } : {})}
             onChange={(next) => onTurn(next ? 'on' : 'off')}
           />
-        ) : (
-          <button type="button" className="btn line sm" disabled={checking} onClick={onCheck}>
-            {checking ? 'Checking…' : 'Check again'}
-          </button>
         )}
       </div>
-      {text.link && (
-        <a className="ph-link" href={text.link.href} target="_blank" rel="noreferrer">
-          {text.link.label}
-          <ExternalLinkIcon />
-        </a>
+      {setup && (
+        <>
+          <PhoneSetup
+            state={state}
+            checking={checking}
+            turning={turning}
+            on={on}
+            onCheck={onCheck}
+            onTurn={onTurn}
+          />
+          <WhatYouGet />
+        </>
       )}
       {state.address && (
-        <div className="ph-address">
+        <div className="ph-card ph-address">
           <span className="ph-address-label">Address</span>
           <code>{state.address}</code>
-          <button type="button" className="btn ghost sm" onClick={() => copy(state.address ?? '')}>
-            <CopyIcon />
-            <span aria-live="polite">{copyButtonText(copied)}</span>
-          </button>
           {connected && (
             <span className="ph-connected">
-              <i className="ph-dot" aria-hidden="true" />
+              <CheckIcon />
               Device connected
             </span>
           )}
+          <button type="button" className="btn line sm" onClick={() => copy(state.address ?? '')}>
+            <CopyIcon />
+            <span aria-live="polite">{copyButtonText(copied)}</span>
+          </button>
         </div>
       )}
       {failure && (

@@ -20,6 +20,17 @@ export function subagentLines(rows: readonly SubagentRow[]): SubagentLine[] {
   return lines;
 }
 
+export function workingFirst(lines: readonly SubagentLine[]): SubagentLine[] {
+  const blocks: SubagentLine[][] = [];
+  for (const line of lines) {
+    if (line.depth === 0 || blocks.length === 0) blocks.push([line]);
+    else blocks.at(-1)!.push(line);
+  }
+  const busy = (block: readonly SubagentLine[]) =>
+    block.some((line) => line.row.state === 'working');
+  return [...blocks.filter(busy), ...blocks.filter((block) => !busy(block))].flat();
+}
+
 export function fileLabel(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 }

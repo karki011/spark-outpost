@@ -2,7 +2,9 @@ import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { z } from 'zod';
 import type { ProviderMessage, ProviderTurn, SteerRequests } from '../../providers/provider.ts';
 
-import { followUpBlocks, promptSupport, type PromptSupport } from './conversation-prompt.ts';
+import type { AttachmentFolder } from './attachment-files.ts';
+import type { PromptSupport } from './attachment-parts.ts';
+import { followUpBlocks } from './conversation-prompt.ts';
 
 type Requester = Pick<acp.ClientContext, 'request'>;
 
@@ -15,19 +17,33 @@ export function steeringSupported(init: acp.InitializeResponse): boolean {
   return advertisedSchema.safeParse(init._meta).success;
 }
 
+export interface PromptFiles {
+  support: PromptSupport;
+  folder: AttachmentFolder;
+}
+
 async function steer(
   ctx: Requester,
   sessionId: string,
   message: ProviderMessage,
-  support: PromptSupport,
+  prompt: PromptFiles,
 ): Promise<boolean> {
+  const paths =
+    typeof message === 'string'
+      ? undefined
+      : await prompt.folder.prepare(message.attachments, prompt.support).catch(() => null);
+  if (paths === null) return false;
   const response = await ctx
     .request<unknown, unknown>(STEER_METHOD, {
       sessionId,
       prompt:
         typeof message === 'string'
           ? [{ type: 'text', text: message }]
-          : followUpBlocks(message.text, { attachments: message.attachments, support }),
+          : followUpBlocks(message.text, {
+              attachments: message.attachments,
+              support: prompt.support,
+              ...(paths ? { paths } : {}),
+            }),
       _meta: { steering: { idleBehavior: 'promptRequired' } },
     })
     .catch(() => null);
@@ -40,9 +56,10 @@ export function attachSteering(
   init: acp.InitializeResponse,
   sessionId: string,
   steering: SteerRequests | undefined,
+  prompt: PromptFiles,
 ): () => void {
   if (!steering || !steeringSupported(init)) return () => undefined;
-  return steering.attach((text) => steer(ctx, sessionId, text, promptSupport(init)));
+  return steering.attach((text) => steer(ctx, sessionId, text, prompt));
 }
 
 export async function nextMessage(
