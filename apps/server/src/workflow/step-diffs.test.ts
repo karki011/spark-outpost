@@ -35,6 +35,22 @@ describe('step diffs', () => {
     );
   });
 
+  it('still shows the edit of a later file once an earlier one has used most of the room', () => {
+    const first = lines(260).join('\n');
+    const before = lines(150);
+    const after = [...before];
+    after[145] = 'const value145 = changed();';
+    const [, second] = stepDiffs(
+      [
+        { path: '/work/first.ts', oldText: null, newText: first },
+        { path: '/work/second.ts', oldText: before.join('\n'), newText: after.join('\n') },
+      ],
+      [],
+    );
+    expect(second?.newText).toContain('changed()');
+    expect(second?.oldText).toContain('compute(145)');
+  });
+
   it('leaves a file that fits whole and unmarked', () => {
     const [diff] = stepDiffs(
       [{ path: '/work/a.ts', oldText: 'one\ntwo\n', newText: 'one\n2\n' }],

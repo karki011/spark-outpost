@@ -35,8 +35,8 @@ interface Texts {
 
 const CONTEXT_LINES = 3;
 
-function fits({ oldText, newText }: Texts): boolean {
-  return (oldText?.length ?? 0) + newText.length <= STEP_DIFF_BUDGET;
+function fits({ oldText, newText }: Texts, left: number): boolean {
+  return (oldText?.length ?? 0) + newText.length <= left;
 }
 
 function changedPart({ oldText, newText }: Texts): Texts {
@@ -83,7 +83,7 @@ export function stepDiffs(
       oldText: diff.oldText === null ? null : text(diff.oldText),
       newText: text(diff.newText),
     };
-    const shown = fits(whole) ? whole : changedPart(whole);
+    const shown = fits(whole, budget.left) ? whole : changedPart(whole);
     const [oldShare, newShare] = shares(shown, budget.left);
     const oldText = shown.oldText === null ? null : budget.cut(shown.oldText, oldShare);
     const newText = budget.cut(shown.newText, newShare);
