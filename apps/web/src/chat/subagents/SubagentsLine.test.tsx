@@ -37,7 +37,8 @@ describe('SubagentsLine', () => {
       row('e', 'done'),
       row('f', 'working'),
     ];
-    const { container } = render(<SubagentsLine runId="run-1" rows={workers} live />);
+    const { container } = render(<SubagentsLine runId="run-all" rows={workers} live />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show all 6 agents' }));
     const list = screen.getByRole('list', { name: 'Agent progress' });
     const items = within(list).getAllByRole('listitem');
     expect(items).toHaveLength(6);
@@ -107,5 +108,50 @@ describe('SubagentsLine', () => {
     expect(
       within(screen.getByRole('list', { name: 'Sub-agents' })).getAllByRole('listitem'),
     ).toHaveLength(3);
+  });
+
+  describe('with more than four workers', () => {
+    const six = [
+      ...['a', 'b', 'c', 'd'].map((id) => ({ ...row(id, 'done'), name: 'Builder' })),
+      { ...row('e', 'working'), name: 'Builder' },
+      { ...row('f', 'failed'), name: 'Reviewer' },
+    ];
+
+    it('rolls up into one summary line with the open ones still visible', () => {
+      const { container } = render(<SubagentsLine runId="run-six" rows={six} live />);
+      expect(container.querySelector('.sl-summary')?.textContent).toBe(
+        '5 Builders, 1 Reviewer · 4 done · 1 working · 1 failed',
+      );
+      const items = within(screen.getByRole('list', { name: 'Agent progress' })).getAllByRole(
+        'listitem',
+      );
+      expect(items.map((item) => item.getAttribute('data-worker-id'))).toEqual(['e', 'f']);
+      expect(within(items[1]!).getByText('Failed')).toBeTruthy();
+      const toggle = screen.getByRole('button', { name: 'Show all 6 agents' });
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(screen.getByRole('button', { name: 'View agents' })).toBeTruthy();
+    });
+
+    it('reveals every worker on demand and keeps the choice across re-renders', () => {
+      const { container, rerender } = render(<SubagentsLine runId="run-keep" rows={six} live />);
+      const toggle = screen.getByRole('button', { name: 'Show all 6 agents' });
+      fireEvent.click(toggle);
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(toggle.textContent).toBe('Hide');
+      expect(document.getElementById(toggle.getAttribute('aria-controls')!)).toBeTruthy();
+      expect(container.querySelectorAll('.sl-worker')).toHaveLength(6);
+
+      rerender(<SubagentsLine runId="run-keep" rows={[...six, row('g', 'working')]} live />);
+      expect(container.querySelectorAll('.sl-worker')).toHaveLength(7);
+      fireEvent.click(screen.getByRole('button', { name: 'Hide the agent list' }));
+      expect(container.querySelectorAll('.sl-worker')).toHaveLength(3);
+    });
+
+    it('keeps three workers as they were', () => {
+      const { container } = render(<SubagentsLine runId="run-three" rows={rows} live />);
+      expect(container.querySelector('.sl-summary')).toBeNull();
+      expect(container.querySelectorAll('.sl-worker')).toHaveLength(3);
+      expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
+    });
   });
 });

@@ -5,6 +5,7 @@ import { ChatFace } from '../../brand/ChatFace.tsx';
 import { workerIdentity, workerPresentation, workerRole } from '../../crew/worker-identity.ts';
 import { AgentCards } from './AgentCards.tsx';
 import { agentCounts, agentsLine, allDoneLine } from './agent-cards.ts';
+import { rollupRows, type Rollup } from './subagents-rollup.ts';
 
 export const OpenAgentsContext = createContext<((runId: string) => void) | null>(null);
 
@@ -45,6 +46,48 @@ function AllDone({ rows, text }: { rows: readonly SubagentRow[]; text: string })
   );
 }
 
+const expandedRuns = new Set<string>();
+
+function useExpandedRun(runId: string) {
+  const [expanded, setExpanded] = useState(() => expandedRuns.has(runId));
+  const toggle = () => {
+    if (expandedRuns.has(runId)) expandedRuns.delete(runId);
+    else expandedRuns.add(runId);
+    setExpanded(expandedRuns.has(runId));
+  };
+  return [expanded, toggle] as const;
+}
+
+interface RolledUpProps {
+  rollup: Rollup;
+  rows: readonly SubagentRow[];
+  live: boolean;
+  expanded: boolean;
+  listId: string;
+  onToggle: () => void;
+}
+
+function RolledUp({ rollup, rows, live, expanded, listId, onToggle }: RolledUpProps) {
+  return (
+    <>
+      <span className="sl-summary" data-rollup="true">
+        {rollup.text}
+      </span>
+      {!expanded && rollup.visible.length > 0 && <Workers rows={rollup.visible} live={live} />}
+      <button
+        type="button"
+        className="sl-view"
+        aria-expanded={expanded}
+        aria-controls={listId}
+        aria-label={expanded ? 'Hide the agent list' : `Show all ${rows.length} agents`}
+        onClick={onToggle}
+      >
+        {expanded ? 'Hide' : 'Show all'}
+      </button>
+    </>
+  );
+}
+
 interface SubagentsLineProps {
   runId: string;
   rows: readonly SubagentRow[];
@@ -55,14 +98,30 @@ export function SubagentsLine({ runId, rows, live }: SubagentsLineProps) {
   const openAgents = use(OpenAgentsContext);
   const [open, setOpen] = useState(false);
   const listId = useId();
+  const allId = useId();
+  const [expanded, toggleExpanded] = useExpandedRun(runId);
   if (rows.length === 0) return null;
+  const rollup = rollupRows(rows, live);
   const counts = agentCounts(rows);
   const text = agentsLine(live ? counts : { ...counts, working: 0 });
   const done = allDoneLine(rows);
   return (
     <div className="sl">
       <div className="sl-line">
-        {done ? <AllDone rows={rows} text={done} /> : <Workers rows={rows} live={live} />}
+        {rollup ? (
+          <RolledUp
+            rollup={rollup}
+            rows={rows}
+            live={live}
+            expanded={expanded}
+            listId={allId}
+            onToggle={toggleExpanded}
+          />
+        ) : done ? (
+          <AllDone rows={rows} text={done} />
+        ) : (
+          <Workers rows={rows} live={live} />
+        )}
         <span className="sl-text sr-only" role="status">
           {text}
         </span>
@@ -87,6 +146,11 @@ export function SubagentsLine({ runId, rows, live }: SubagentsLineProps) {
           </button>
         )}
       </div>
+      {rollup && (
+        <div id={allId} className="sl-all" hidden={!expanded}>
+          {expanded && <Workers rows={rows} live={live} />}
+        </div>
+      )}
       {!openAgents && open && (
         <div id={listId} className="sl-cards">
           <AgentCards rows={rows} live={live} />
