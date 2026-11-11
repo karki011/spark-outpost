@@ -76,6 +76,37 @@ export const REMOTE_SWITCH_LABELS: Record<RemoteSwitch, string> = {
   artifacts: 'Open artifacts',
 };
 
+export const REMOTE_ALWAYS_ALLOWED_LINE =
+  'Read chats, send messages, answer ordinary cards, read outposts';
+
+export interface RemoteSwitchGroup {
+  id: 'everyday' | 'setup' | 'high-risk';
+  title: string;
+  description: string;
+  switches: readonly RemoteSwitch[];
+}
+
+export const REMOTE_SWITCH_GROUPS: readonly RemoteSwitchGroup[] = [
+  {
+    id: 'everyday',
+    title: 'Everyday',
+    description: 'Helpful away from your desk. Low risk.',
+    switches: ['notifications', 'terminal', 'passkeys', 'artifacts'],
+  },
+  {
+    id: 'setup',
+    title: 'Set up work',
+    description: 'Changes what Spark can reach or how freely agents run.',
+    switches: ['projects', 'agentMode', 'settings', 'connections'],
+  },
+  {
+    id: 'high-risk',
+    title: 'High risk',
+    description: 'Off unless you need it. A lost phone could do real damage with these.',
+    switches: ['highRiskCards', 'terminalApprove', 'signIns', 'reset', 'devices'],
+  },
+];
+
 export const updateRemoteSwitchesRequestSchema = remoteSwitchesSchema
   .partial()
   .strict()

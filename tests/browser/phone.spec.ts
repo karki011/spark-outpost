@@ -4,6 +4,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { apiNow } from './api-clock.ts';
 import {
+  chooseDeviceAction,
   denyWaitingPhones,
   NARROW,
   openPairingPage,
@@ -187,11 +188,11 @@ test('turns on, pairs a phone through its pairing page, renames and revokes it',
     main.getByRole('region', { name: 'Recent remote activity' }).getByText('Kitchen phone paired'),
   ).toBeVisible({ timeout: 10_000 });
 
-  await row.getByRole('button', { name: 'Rename Kitchen phone' }).click();
+  await chooseDeviceAction(page, 'Kitchen phone', 'Rename');
   await devices.getByLabel('New name for Kitchen phone').fill('Hall phone');
   await devices.getByLabel('New name for Kitchen phone').press('Enter');
   await expect(devices.getByText('Hall phone')).toBeVisible();
-  await devices.getByRole('button', { name: 'Revoke Hall phone' }).click();
+  await chooseDeviceAction(page, 'Hall phone', 'Revoke');
   await expect(devices.getByText('No device is paired yet.')).toBeVisible();
 
   await main.getByRole('switch', { name: 'Remote control' }).click();

@@ -39,7 +39,7 @@ export function pushFailureLine(failure: PushFailure): string {
   return `The last notification to ${device} could not be delivered${code ? ` (${code})` : ''}.`;
 }
 
-function shortDate(iso: string): string {
+export function shortDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
@@ -98,6 +98,22 @@ export function statusCopy(state: TailscaleState): StatusCopy {
       return { title: 'Remote control needs a look', step: state.message };
   }
 }
+
+export function reachLine(count: number | null): string | null {
+  if (count === null) return null;
+  if (count === 0) return 'No device is paired yet.';
+  return `${countLabel(count, 'device')} can reach this Mac.`;
+}
+
+export function statusHeadline(state: TailscaleState, deviceCount: number | null): string {
+  const title = statusCopy(state).title;
+  if (state.status !== 'on') return title;
+  const reach = reachLine(deviceCount);
+  return reach ? `${title}. ${reach}` : `${title}.`;
+}
+
+export const ON_NOTE =
+  'Only devices on your own tailnet. Nothing is public, and the work stays on this Mac.';
 
 function named(entry: RemoteAuditEntry): string {
   const fromDetail = entry.detail.deviceName;

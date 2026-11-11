@@ -1,6 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator } from '@playwright/test';
-import { PHONE_ADDRESS, denyWaitingPhones, resetPhone, setFakeTailscale } from './phone-support.ts';
+import {
+  PHONE_ADDRESS,
+  chooseDeviceAction,
+  denyWaitingPhones,
+  resetPhone,
+  setFakeTailscale,
+} from './phone-support.ts';
 import {
   arriveFromElsewhere,
   newPhone,
@@ -85,7 +91,7 @@ test('pairing a phone again does not pile up devices', async ({ page }) => {
   await expect(rows).toHaveCount(1, { timeout: 15_000 });
   await expect(devices.getByRole('button', { name: /removed$/ })).toHaveCount(0);
 
-  await devices.getByRole('button', { name: 'Revoke Kitchen phone' }).click();
+  await chooseDeviceAction(page, 'Kitchen phone', 'Revoke');
   await expect(devices.getByText('No device is paired yet.')).toBeVisible();
   await expect(devices.getByRole('button', { name: '1 removed' })).toBeVisible();
 
@@ -114,8 +120,10 @@ test('pairing a phone again does not pile up devices', async ({ page }) => {
   await expect(rows.nth(0)).toContainText('Not seen since');
   await expect(rows.nth(1)).toContainText('Last seen');
   await expect(rows.nth(1)).toHaveClass(/fresh/);
-  await expect(devices.getByRole('button', { name: 'Revoke kitchen phone' })).toBeVisible();
-  await devices.getByRole('button', { name: 'Remove old entry Kitchen phone' }).click();
+  await expect(
+    devices.getByRole('button', { name: 'Actions for kitchen phone', exact: true }),
+  ).toBeVisible();
+  await chooseDeviceAction(page, 'Kitchen phone', 'Remove old entry');
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText('kitchen phone');
   await expect(devices.getByRole('button', { name: '2 removed' })).toBeVisible();
