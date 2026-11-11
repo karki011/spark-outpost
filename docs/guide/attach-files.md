@@ -21,7 +21,7 @@ Give the agent a file to read. About 1 minute.
 
 A message holds up to 10 files.
 
-The temporary folder is private to the turn. Spark deletes it when the turn ends, however it ends.
+The temporary folder is private to the turn; reading an attached file follows the agent's mode. Spark deletes the folder when the turn ends.
 
 A chat with no project folder can't open saved files, so the agent says it couldn't. Link a project, or paste the text.
 
