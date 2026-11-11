@@ -78,7 +78,7 @@
 }
 
 .sl-faces {
-  gap: 0 2px;
+  gap: 0;
 }
 
 .sl-face {
@@ -93,6 +93,10 @@
   color: inherit;
   font: inherit;
   border-radius: var(--r-sm);
+}
+
+.sl-face:not(:has(.sl-name)) {
+  padding: 0;
 }
 
 .sl-face:hover .sl-name {
