@@ -231,6 +231,7 @@ function ChatShell({ entering }: { entering: boolean }) {
   useBrowserViewOpener(showBrowserView);
   useSlackPresence(remote);
   const openFromNotification = useStableCallback((chatId: string, cardId: string | null) => {
+    setSettings(null);
     openChat(chatId);
     if (cardId) focusCardFromNotification(cardId);
   });

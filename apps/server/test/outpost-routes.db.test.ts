@@ -347,7 +347,9 @@ describe('posts', () => {
       [id, outpostId, await newChat(t)],
     );
 
-    const stored = (await detail()).posts.find((post) => post.id === id);
+    const response = await request(app).get(`/api/outposts/${outpostId}`);
+    const posts = response.body.posts as { id: string }[];
+    const stored = posts.find((post) => post.id === id);
 
     expect(stored).toMatchObject({ id, kind: 'request', body: 'old guest ask', fromUser: true });
     expect(stored).not.toHaveProperty('guest');

@@ -10,7 +10,7 @@ Use Spark from another device; work stays on the Mac. About 5 minutes. Needs Tai
 
 1. Open **Remote control**, above **Settings**. Steps: Tailscale, HTTPS, turn on.
 2. Select **Pair a device**, then scan the code, or open the address and type it.
-3. Check the codes match, then **Confirm**.
+3. Check the codes match; **Confirm**.
 
 **Passkey.** On the device, select **Save a passkey for this device**, then **Sign in with a passkey** in another browser. It never pairs a new device. **Devices** has **Allow passkey sign-in** and **Remove passkeys**.
 
@@ -30,12 +30,12 @@ Devices answer browser cards. **Open artifacts** (off) shows artifacts.
 
 **Awake.** With Remote control on, work or a connected device keeps the Mac awake, except a closed lid on battery.
 
-**Notifications.** On the Mac, turn on **Notify when a chat needs you**, then **Notify this device**. A tap opens its card.
+**Notifications.** On the Mac, turn on **Notify when a chat needs you**, then **Notify this device**. A tap opens the chat, or its one waiting card.
 
-**Notify when a turn finishes or fails** (off) adds "Finished" or "Failed". Pushes name the chat, never a command; [meeting alerts](calendar.md) say "Meeting in 10 min". Seen chats and your current device get none.
+**Notify when a turn finishes or fails** (off) adds "Finished" or "Failed". Pushes name the chat, never a command; [meeting alerts](calendar.md) say "Meeting in 10 min". Seen chats and the current device get none.
 
 **Send a test notification** is in a device's menu.
 
-iPhone needs iOS 16.4 or later and Spark on the Home Screen, signed in with a passkey.
+iPhone needs iOS 16.4+, Spark on the Home Screen and a passkey sign-in.
 
 **Next:** [Answer an approval card](answer-approvals.md)
