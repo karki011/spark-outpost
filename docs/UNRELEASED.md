@@ -9,3 +9,4 @@ Changes through 0.1.0-beta.5 are recorded in [the changelog](../apps/desktop/CHA
 - A Jira or Linear ticket's detail has a **Linked** section with its parent, subtasks and linked tickets.
 - A paired device that loses the Mac says **Can't reach your Mac** and what to try.
 - A chat with no title line from the agent takes the title the agent session reports. A name you set is never replaced.
+- **Notify when a turn finishes or fails** on the Remote control page (off by default) adds a "Finished" or "Failed" push for a chat. A push about one waiting card opens the chat at that card.

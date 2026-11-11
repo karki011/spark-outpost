@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
+| Phone push for finished turns        | [Use your phone](use-your-phone.md).            |
 | Edits show +N −M and open to a diff  | [Follow a turn](follow-a-turn.md).              |
 | Map: **Running chats** overlay       | [Map](map.md).                                  |
 | Tickets: parent, subtasks and links  | [Tickets](tickets-inbox.md).                    |
@@ -36,4 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Home changes through the day         | [Home](home.md).                                |
 | Tickets count updates at once        | Nothing.                                        |
 | **Try again**; unsent text is kept   | [A turn failed](trouble-runs.md#a-turn-failed). |
-| Comment on and move tickets          | [Tickets](tickets-inbox.md).                    |
