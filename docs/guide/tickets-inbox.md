@@ -22,7 +22,9 @@ Snooze hides a ticket until later. **Dismiss** clears a **Needs you** ticket unt
 
 Select a ticket for **Development**, including linked pull requests.
 
-Spark lists up to 500 Jira tickets, newest first, and says when there are more.
+**Linked** shows a ticket's parent, subtasks and relations.
+
+Spark lists up to 500 Jira tickets, newest first, and says if more exist.
 
 On a Jira or Linear ticket, pick **Move to…** for a status, or type under the description and select **Comment** (⌘↩).
 
@@ -33,12 +35,12 @@ On a Jira or Linear ticket, pick **Move to…** for a status, or type under the 
 3. Under **How to start**, pick **Plan first** or **Build**.
 4. Pick the **Project folder**.
 5. Leave **Move** _KEY_ **to In progress** on to update your tracker.
-6. Optionally open **Add context** for a **Note**, **Add link**, **Add files** or **Add folder**.
+6. Open **Add context** for a **Note**, **Add link**, **Add files** or **Add folder**.
 7. Select **Start with a plan** or **Start building**.
 
 ![Start work on a ticket, with Plan first selected](images/tickets-start-light.png)
 
-In Terminal, the agent has Spark tools and you answer there.
+In Terminal, the agent has Spark tools; you answer there.
 
 Ticket text is data, never instructions. For a link or a folder, Spark sends only the address or path. Secret files are refused.
 

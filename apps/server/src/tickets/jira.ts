@@ -3,6 +3,7 @@ import type { TicketDetail, TicketPriorityName, TicketSummary } from '@spark-out
 import { callJson, failure, isOk, type JsonCall } from './http.ts';
 import { adfToText, textToAdf } from './jira-adf.ts';
 import { DEV_STATUS_TIMEOUT_MS, readJiraDevelopment } from './jira-development.ts';
+import { jiraRelationFields, readJiraRelations } from './jira-relations.ts';
 import { JIRA_EXTRA_FIELDS, jiraExtraFieldsShape, jiraExtras } from './jira-fields.ts';
 import {
   KEY_QUERY,
@@ -51,6 +52,8 @@ const DETAIL_FIELDS = [
   'assignee',
   'labels',
   'comment',
+  'parent',
+  'issuelinks',
   'subtasks',
 ];
 
@@ -95,14 +98,7 @@ const detailSchema = z.object({
         ),
       })
       .optional(),
-    subtasks: z
-      .array(
-        z.object({
-          key: z.string(),
-          fields: z.object({ summary: z.string(), status: statusSchema }),
-        }),
-      )
-      .optional(),
+    ...jiraRelationFields,
   }),
 });
 const remoteLinksSchema = z.array(
@@ -371,6 +367,10 @@ export function jiraSource(
         `reading the links on ${key}`,
       );
       const base = summary(issue);
+      const relations = readJiraRelations(issue.fields, {
+        siteUrl: access.siteUrl,
+        bucket: (status) => bucket(status, base.project),
+      });
       const detail: TicketDetail = {
         ...base,
         description: adfToText(issue.fields.description),
@@ -385,12 +385,10 @@ export function jiraSource(
           title: link.object.title ?? link.object.url,
           url: link.object.url,
         })),
-        subtasks: (issue.fields.subtasks ?? []).map((sub) => ({
-          key: sub.key,
-          title: sub.fields.summary,
-          status: bucket(sub.fields.status, base.project),
-          statusName: sub.fields.status.name,
-        })),
+        subtasks: relations.subtasks,
+        subtasksMore: relations.subtasksMore,
+        parent: relations.parent,
+        relations: relations.relations,
       };
       return detail;
     },

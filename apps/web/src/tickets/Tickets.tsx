@@ -130,6 +130,7 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
     search.clear();
   };
 
+  const loadedIds = useMemo(() => new Set((data?.tickets ?? []).map(ticketId)), [data]);
   const findInbox = (id: string) => data?.tickets.find((ticket) => ticketId(ticket) === id) ?? null;
   const findResult = (id: string) =>
     search.results?.tickets.find((ticket) => ticketId(ticket) === id) ?? null;
@@ -290,6 +291,8 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
                   onAssign={() => assigner.request(detail, detail.mine, 'detail')}
                   onStart={() => setStarting(detail)}
                   onOpenChat={onOpenChat}
+                  loaded={loadedIds}
+                  onOpenLinked={(source, key) => setSelectedId(ticketId({ source, key }))}
                   onToast={toaster.show}
                 />
               ) : (

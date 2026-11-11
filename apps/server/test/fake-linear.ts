@@ -211,7 +211,12 @@ export function fakeLinear(): FakeLinear {
       children: {
         nodes: item.children.map((key) => {
           const child = find(key)!;
-          return { identifier: child.identifier, title: child.title, state: stateOf(child) };
+          return {
+            identifier: child.identifier,
+            title: child.title,
+            url: `https://linear.app/acme/issue/${child.identifier}`,
+            state: stateOf(child),
+          };
         }),
       },
     };

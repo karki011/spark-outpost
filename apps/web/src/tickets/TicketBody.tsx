@@ -1,10 +1,10 @@
-import { isReadOnlyTable, type TicketView } from '@spark-outpost/contracts';
+import { isReadOnlyTable, type TicketSourceId, type TicketView } from '@spark-outpost/contracts';
 import { useId, useState } from 'react';
 import { UserBlob } from '../brand/UserBlob.tsx';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
 import { ChevronIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
-import { StatusBadge } from './StatusChip.tsx';
+import { LinkedTickets } from './LinkedTickets.tsx';
 import { safeUrl } from './ticket-model.ts';
 import { ServiceNowNotes, VisibilityTag } from './ServiceNowNotes.tsx';
 import { TicketComment } from './TicketComment.tsx';
@@ -15,9 +15,18 @@ interface TicketBodyProps {
   loading: boolean;
   error: Error | null;
   source: string;
+  loaded: ReadonlySet<string>;
+  onOpenLinked: (source: TicketSourceId, key: string) => void;
 }
 
-export function TicketBody({ view, loading, error, source }: TicketBodyProps) {
+export function TicketBody({
+  view,
+  loading,
+  error,
+  source,
+  loaded,
+  onOpenLinked,
+}: TicketBodyProps) {
   const commentsId = useId();
   const [commentsOpenFor, setCommentsOpenFor] = useState<string | null>(null);
   if (loading) {
@@ -63,18 +72,7 @@ export function TicketBody({ view, loading, error, source }: TicketBodyProps) {
           <p className="tk-quiet">No description.</p>
         )}
       </section>
-      {ticket.subtasks.length > 0 && (
-        <section className="tk-sec">
-          <h4>Subtasks</h4>
-          {ticket.subtasks.map((subtask) => (
-            <div key={subtask.key} className="subt">
-              <span className="tk-key">{subtask.key}</span>
-              <span className="t">{subtask.title}</span>
-              <StatusBadge status={subtask.status} name={subtask.statusName} />
-            </div>
-          ))}
-        </section>
-      )}
+      <LinkedTickets ticket={ticket} loaded={loaded} onOpen={onOpenLinked} />
       {ticket.links.length > 0 && (
         <section className="tk-sec">
           <h4>Links</h4>
