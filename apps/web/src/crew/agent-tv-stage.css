@@ -365,6 +365,9 @@
   padding: 8px 10px;
   border-radius: 12px;
 }
+.tv-detail > * {
+  flex-shrink: 0;
+}
 .tv-bub-t {
   display: flex;
   flex-wrap: wrap;
@@ -417,6 +420,8 @@
   color: var(--text);
   line-height: 1.35;
   overflow-wrap: anywhere;
+  flex-shrink: 1;
+  min-height: 0;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }

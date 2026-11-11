@@ -149,6 +149,7 @@ export interface BubbleBox {
   arrow: number;
   below: boolean;
   edge: number;
+  room: number;
 }
 
 const BUBBLE_MARGIN = 8;
@@ -170,7 +171,8 @@ export function bubbleBox(
   const edge = below
     ? Math.round(anchor.y + blobSize / 2 + LABEL_HEIGHT)
     : Math.round(stage.height - (anchor.y - blobSize / 2 - 6));
-  return { left, width, arrow: Math.round(anchor.x - left), below, edge };
+  const room = Math.max(0, stage.height - edge - BUBBLE_MARGIN);
+  return { left, width, arrow: Math.round(anchor.x - left), below, edge, room };
 }
 
 export function textWidth(text: string, fontPx = 12): number {

@@ -10,6 +10,7 @@ function place(box: BubbleBox): CSSProperties {
     ...vertical,
     left: box.left,
     width: box.width,
+    maxHeight: box.room,
     '--arrow': `${box.arrow}px`,
   } as CSSProperties;
 }
