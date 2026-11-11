@@ -24,24 +24,20 @@ export function newTurnWatch(db: Db): TurnWatch {
   let finish: (() => void) | null = null;
 
   const look = async () => {
-    const at = performance.now();
+    const run = await db.query('SELECT finished_at, status FROM runs WHERE id = $1', [runId]);
+    const finishedAt = run.rows[0]?.finished_at ? performance.now() : null;
     if (firstTextAt === null) {
       const { rows } = await db.query(
-        `SELECT 1 FROM run_events WHERE run_id = $1 AND type LIKE 'TEXT_MESSAGE%' LIMIT 1`,
+        `SELECT 1 FROM run_events WHERE run_id = $1 AND type = 'TEXT_MESSAGE_CONTENT' LIMIT 1`,
         [runId],
       );
-      if (rows.length > 0) firstTextAt = at;
+      if (rows.length > 0) firstTextAt = finishedAt ?? performance.now();
     }
-    if (doneAt === null) {
-      const { rows } = await db.query('SELECT finished_at, status FROM runs WHERE id = $1', [
-        runId,
-      ]);
-      if (rows[0]?.finished_at) {
-        doneAt = performance.now();
-        status = rows[0].status;
-      }
+    if (finishedAt !== null) {
+      doneAt = finishedAt;
+      status = run.rows[0].status;
+      finish?.();
     }
-    if (doneAt !== null) finish?.();
   };
 
   const poke = async () => {

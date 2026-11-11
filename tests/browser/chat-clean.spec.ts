@@ -195,6 +195,8 @@ test('an edit step shows its diff, opens by keyboard, hides a secret file and su
 
   await page.reload();
   const again = page.locator('.msg.ai').last();
-  await expect(again.getByRole('button', { name: /src\/notes\.ts/ })).toBeVisible();
+  const kept = again.getByRole('button', { name: /src\/notes\.ts/ });
+  await kept.click();
+  await expect(again.locator('.sdiff-body')).toContainText('three');
   await expect(again).toContainText('Contents hidden: secret file');
 });
