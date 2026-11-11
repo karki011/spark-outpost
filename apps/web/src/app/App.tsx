@@ -47,6 +47,7 @@ import { attentionCount } from '../tickets/ticket-optimistic.ts';
 import { ticketKeys } from '../tickets/tickets-api.ts';
 import { useTicketInbox } from '../tickets/use-ticket-inbox.ts';
 import { useTicketRequests } from '../tickets/ticket-request.ts';
+import { FullDiskAccessPrompt } from '../settings/FullDiskAccessPrompt.tsx';
 import { BackOnlineToast } from './connection/BackOnlineToast.tsx';
 import { markConnectionRestored, useConnection } from './connection/connection-store.ts';
 import { OfflineScreen } from './connection/OfflineScreen.tsx';
@@ -477,6 +478,7 @@ export function App() {
       {setup.data.profile.onboardingCompleted ? (
         <DocsReachable value>
           <ChatShell entering={entering} />
+          <FullDiskAccessPrompt />
         </DocsReachable>
       ) : (
         <Suspense fallback={<div className="app" aria-hidden="true" />}>
