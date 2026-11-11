@@ -55,6 +55,7 @@ export function createAgentBoard(): AgentBoard {
         known !== undefined &&
         known.order === entry.order &&
         known.live === entry.live &&
+        known.leadModel === entry.leadModel &&
         known.rows === entry.rows;
       if (same) return;
       if (!known && latest && entry.order.localeCompare(latest.order) > 0) picked = null;

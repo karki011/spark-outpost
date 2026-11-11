@@ -177,6 +177,14 @@ describe('AgentsSection', () => {
     expect(card('c')).toBe('2 steps');
   });
 
+  it('passes on a chat model that is learned after the agents are shown', () => {
+    const board = createAgentBoard();
+    const entry = { runId: 'run', order: '2026-10-20T02:00:00Z', rows, live: true };
+    board.show({ ...entry, leadModel: null });
+    board.show({ ...entry, leadModel: 'Opus 5.5' });
+    expect(board.shown()?.leadModel).toBe('Opus 5.5');
+  });
+
   it('tags only a card whose model is not the chat model', () => {
     const mixed: SubagentRow[] = [
       { ...rows[0]!, usage: { model: 'claude-opus-5-5' } },

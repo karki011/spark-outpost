@@ -58,7 +58,10 @@ export function runsOtherModel(
   leadModel: string | null,
 ): boolean {
   const model = workerModel(usage).model;
-  return model !== null && leadModel !== null && comparable(model) !== comparable(leadModel);
+  if (model === null || leadModel === null) return false;
+  const worker = comparable(model);
+  const lead = comparable(leadModel);
+  return !worker.startsWith(lead) && !lead.startsWith(worker);
 }
 
 export function workerModelLabel(
