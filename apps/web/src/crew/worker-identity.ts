@@ -50,7 +50,14 @@ export function workerModel(
 }
 
 function comparable(model: string): string {
-  return model.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return model
+    .replace(/\[[^\]]*\]$/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function aliasOf(alias: string, model: string): boolean {
+  return !/\d/.test(alias) && model.startsWith(alias);
 }
 
 export function runsOtherModel(
@@ -61,7 +68,7 @@ export function runsOtherModel(
   if (model === null || leadModel === null) return false;
   const worker = comparable(model);
   const lead = comparable(leadModel);
-  return !worker.startsWith(lead) && !lead.startsWith(worker);
+  return worker !== lead && !aliasOf(worker, lead) && !aliasOf(lead, worker);
 }
 
 export function workerModelLabel(

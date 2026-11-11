@@ -165,6 +165,8 @@ it('says when a worker runs a model other than the lead, and never guesses', () 
   expect(runsOtherModel({ model: 'GPT-6 Luna' }, 'gpt-6-luna')).toBe(false);
   expect(runsOtherModel({ model: 'claude-sonnet-5-5' }, 'Sonnet')).toBe(false);
   expect(runsOtherModel({ model: 'sonnet' }, 'Sonnet 5.5')).toBe(false);
+  expect(runsOtherModel({ model: 'claude-sonnet-5' }, 'Sonnet 5.5')).toBe(true);
+  expect(runsOtherModel({ model: 'GPT-6 Luna[1m]' }, 'GPT-6 Luna')).toBe(false);
   expect(runsOtherModel({ model: 'claude-haiku-5-5' }, null)).toBe(false);
   expect(runsOtherModel({ effort: 'high' }, 'Opus 5.5')).toBe(false);
   expect(runsOtherModel(undefined, 'Opus 5.5')).toBe(false);
