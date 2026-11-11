@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk/unstable';
 import { readFakeSession } from './fake-acp-sessions.ts';
+import { stepsTurn } from './fake-acp-steps.ts';
 
 export const THREAD_REPLY_COMMAND =
   'gh api repos/acme/widgets/pulls/1/comments/55/replies -f body=Fixed';
@@ -98,6 +99,8 @@ async function write(turn: FakeTurn, file: string, line: string): Promise<boolea
 }
 
 export async function buildTurn(turn: FakeTurn): Promise<acp.StopReason | null> {
+  const stepped = await stepsTurn(turn);
+  if (stepped) return stepped;
   if (!turn.text.includes('#build')) return null;
   if (!(await write(turn, 'notes.txt', 'step 1'))) return 'end_turn';
   if (turn.text.includes('#push')) await runCommand(turn, 'push-1', 'git push origin main');

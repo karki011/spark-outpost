@@ -41,6 +41,17 @@ Open http://127.0.0.1:5173. The first run shows onboarding: Meet Spark, Theme, A
 | `pnpm bench:loop`                                                                                | Event-loop bench for the code index and `spark_find`, in a scratch schema of the test database: indexes a repo (`--repo`, default this one), runs finds before, during and after the build, eight at once, and a full rebuild and warm refresh, printing loop lag (p50, p99, max), find latency and peak memory. Exits non-zero when lag p99 passes `--max-lag-p99` (50 ms) or find p95 passes `--max-find-p95` (2500 ms). Run it alone; other load on the machine shows up as lag. |
 | `node --import tsx scripts/turn-tasks/runner/cli.ts --provider claude --task 1,2 --label <name>` | Runs scratch tasks through the single-session turn with the fake agent; `--live` uses the real provider (paid turns). `scripts/turn-tasks/report/cli.ts --label <name>` writes the report to `.local/turn-tasks/results/`. Needs `TEST_DATABASE_URL`                                                                                                                                                                                                                                |
 
+## Turn bench
+
+`TEST_DATABASE_URL=<test db> DATABASE_URL=<test db> ./node_modules/.bin/tsx scripts/turn-bench.ts --runs 10 --out .local/turn-bench/before.json` runs real server turns against the fake ACP agent, which has no random delays and never calls a provider, and prints a table. It works in its own schema of the test database and removes it afterwards. Run two builds with `--out` and compare the JSON; `--ladder 1,10,50` sets the chat sizes for the detail read.
+
+- **first text**: from just before the message is sent to the first assistant text event on the run event stream (the `run_events` notification the API turns into the live stream).
+- **done**: from the same start to the run being finished.
+- **first turn / second turn**: a new chat, then a second message in it. `session reused` counts how many second turns reused the live agent session; fewer than all is a regression.
+- **chat detail**: time and body size of `GET /api/conversations/:id` over loopback through the real app, for a chat with N finished turns of four tool steps each, seeded by running fake turns (`#steps 4`). One read is discarded as warm-up.
+
+Numbers are medians and p90s of `--runs` samples (p90 is the maximum below 10 runs). The first turn includes starting the agent process and is the noisiest; all timings carry a few ms of polling resolution and move with machine load, so compare runs made back to back on a quiet machine. It is a script, not a test, and asserts nothing.
+
 ## Code Mode and Terminal recording
 
 [Code Mode](architecture/CODE_MODE.md) is on by default for chat runs. Settings → Chats & autonomy persists the user’s choice; `SPARK_CODE_MODE=0` disables it for the installation without replacing that choice. Set the override consistently for API and workflow processes. Terminal sessions do not receive Code Mode.
