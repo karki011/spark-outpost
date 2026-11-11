@@ -142,10 +142,10 @@ describe('SubagentsLine', () => {
     ];
     expect(names.map((name) => name.getAttribute('aria-expanded'))).toEqual([
       'false',
-      'false',
       'true',
+      'false',
     ]);
-    expect(document.activeElement).toBe(names[2]);
+    expect(document.activeElement).toBe(names[1]);
     expect(scrolled).toHaveBeenCalled();
   });
 

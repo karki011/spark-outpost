@@ -57,14 +57,14 @@ export function DetailBubble({ id, box, agent, ask, onGo, onAsk }: DetailProps) 
       </p>
       <p className="tv-bub-state" data-state={agent.state}>
         <i aria-hidden="true" />
-        {crewStateWord(agent.state)}
+        <span>{crewStateWord(agent.state)}</span>
+        {meta && <span className="tv-bub-m">{meta}</span>}
       </p>
       {agent.line && (
         <p className="tv-bub-now" title={agent.line.replaceAll('`', '')}>
           <StepName name={agent.line} />
         </p>
       )}
-      {meta && <p className="tv-bub-m">{meta}</p>}
       <div className="tv-bub-a">
         {ask && (
           <button type="button" className="tv-bub-go warn" onClick={() => onAsk(ask.approvalId)}>

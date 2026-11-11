@@ -49,18 +49,18 @@ const rows: SubagentRow[] = [
 ];
 
 describe('AgentCards', () => {
-  it('lists one card per agent with its purpose, state and progress', () => {
+  it('lists one card per agent with its purpose, state and progress, working ones first', () => {
     render(<AgentCards rows={rows} live />);
     const cards = within(screen.getByRole('list', { name: 'Sub-agents' })).getAllByRole('listitem');
     expect(cards).toHaveLength(2);
-    expect(cards[0]!.textContent).toContain('Map the Express server: routes and workers.');
-    expect(cards[0]!.textContent).toContain('48s · 61K tok');
-    expect(cards[0]!.textContent).toContain('Done');
-    expect(cards[1]!.dataset.state).toBe('working');
-    expect(cards[1]!.textContent).toContain('Now: Read chat-store.ts');
-    expect(cards[1]!.textContent).not.toContain('grep -rn');
-    expect(cards[1]!.querySelectorAll('.ac-now')).toHaveLength(1);
-    expect(cards[1]!.textContent).toContain('2 steps');
+    expect(cards[1]!.textContent).toContain('Map the Express server: routes and workers.');
+    expect(cards[1]!.textContent).toContain('48s · 61K tok');
+    expect(cards[1]!.textContent).toContain('Done');
+    expect(cards[0]!.dataset.state).toBe('working');
+    expect(cards[0]!.textContent).toContain('Now: Read chat-store.ts');
+    expect(cards[0]!.textContent).not.toContain('grep -rn');
+    expect(cards[0]!.querySelectorAll('.ac-now')).toHaveLength(1);
+    expect(cards[0]!.textContent).toContain('2 steps');
   });
 
   it('marks stale working workers inactive and offers no redirect after the turn ends', () => {

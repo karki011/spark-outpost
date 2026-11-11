@@ -10,6 +10,8 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                           | What to do                                                  |
 | -------------------------------------- | ----------------------------------------------------------- |
+| Agent tabs stay open after a turn      | [Use the browser](use-the-browser.md).                      |
+| Agent cards compact, working first     | Nothing.                                                    |
 | Agent briefs and reports formatted     | Select an agent in a turn.                                  |
 | Attach PDFs and other files            | [Attach files](attach-files.md).                            |
 | Remote control: devices list, groups   | [Use your phone](use-your-phone.md).                        |
@@ -35,5 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Fewer false send flags                 | Nothing.                                                    |
 | Dev servers run untimed                | Nothing.                                                    |
 | Arrows in zoomed images                | [Keys](keyboard-shortcuts.md#chats).                        |
-| Open pages agents ask for              | [See the card](cards.md#approval-cards).                    |
-| Codex asks while it works              | Answer its [question card](cards.md) before the turn ends.  |

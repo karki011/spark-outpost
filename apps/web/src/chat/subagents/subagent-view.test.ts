@@ -1,6 +1,11 @@
 import { emptySubagentRecord, type SubagentRow } from '@spark-outpost/contracts';
 import { describe, expect, it } from 'vitest';
-import { shownSubagents, subagentDurationMs, subagentLines } from './subagent-view.ts';
+import {
+  shownSubagents,
+  subagentDurationMs,
+  subagentLines,
+  workingFirst,
+} from './subagent-view.ts';
 
 const row = (id: string, parentId: string | null = null): SubagentRow => ({
   ...emptySubagentRecord,
@@ -27,6 +32,15 @@ describe('sub-agent rows', () => {
 
   it('keeps a sub-agent whose parent is unknown at the top', () => {
     expect(subagentLines([row('a', 'gone')]).map((line) => line.depth)).toEqual([0]);
+  });
+
+  it('lists working sub-agents first, keeping each one with its nested ones and the rest in order', () => {
+    const done = (id: string, parentId: string | null = null) => ({
+      ...row(id, parentId),
+      state: 'done' as const,
+    });
+    const lines = subagentLines([done('a'), done('b'), row('c', 'b'), row('d'), done('e')]);
+    expect(workingFirst(lines).map((line) => line.row.id)).toEqual(['b', 'c', 'd', 'a', 'e']);
   });
 
   it('times a sub-agent only once it has ended', () => {

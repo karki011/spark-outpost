@@ -8,7 +8,7 @@ import { workerIdentity, workerPresentation, workerRole } from '../../crew/worke
 import { SubagentDetail } from './SubagentDetail.tsx';
 import { agentActivity, agentMeta, agentPurpose } from './agent-cards.ts';
 import type { AgentFocus } from './agent-board.ts';
-import { hasDetail, subagentLines } from './subagent-view.ts';
+import { hasDetail, subagentLines, workingFirst } from './subagent-view.ts';
 
 function namesRole(name: string, role: string): boolean {
   return name.trim().toLowerCase().startsWith(`${role.toLowerCase()}:`);
@@ -124,7 +124,7 @@ export function AgentCards({
   if (rows.length === 0) return null;
   return (
     <ul className="ac-list" aria-label={label}>
-      {subagentLines(rows).map(({ row, depth }) => (
+      {(live ? workingFirst(subagentLines(rows)) : subagentLines(rows)).map(({ row, depth }) => (
         <AgentCard
           key={row.id}
           row={row}

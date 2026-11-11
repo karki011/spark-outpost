@@ -361,8 +361,8 @@
 .tv-bub.tv-detail {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
+  gap: 4px;
+  padding: 8px 10px;
   border-radius: 12px;
 }
 .tv-bub-t {
@@ -411,21 +411,27 @@
 .tv-bub-now {
   display: -webkit-box;
   overflow: hidden;
-  padding: 6px 8px;
+  padding: 4px 8px;
   border-radius: 8px;
   background: var(--raise);
   color: var(--text);
-  line-height: 1.4;
+  line-height: 1.35;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
 }
 .tv-bub-now code {
   font-size: 0.94em;
 }
 .tv-bub-m {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
   font-size: 0.86em;
+  font-weight: 400;
   color: var(--faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .tv-bub-a {
   display: flex;
