@@ -4,6 +4,7 @@ import { callJson, failure, isOk, type JsonCall } from './http.ts';
 import { adfToText, textToAdf } from './jira-adf.ts';
 import { DEV_STATUS_TIMEOUT_MS, readJiraDevelopment } from './jira-development.ts';
 import { jiraRelationFields, readJiraRelations } from './jira-relations.ts';
+import { projectOfKey } from './ticket-relations.ts';
 import { JIRA_EXTRA_FIELDS, jiraExtraFieldsShape, jiraExtras } from './jira-fields.ts';
 import {
   KEY_QUERY,
@@ -369,7 +370,7 @@ export function jiraSource(
       const base = summary(issue);
       const relations = readJiraRelations(issue.fields, {
         siteUrl: access.siteUrl,
-        bucket: (status) => bucket(status, base.project),
+        bucket: (status, related) => bucket(status, projectOfKey(related, base.project)),
       });
       const detail: TicketDetail = {
         ...base,

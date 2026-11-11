@@ -32,7 +32,7 @@ export interface JiraRelationFields {
 
 interface Context {
   siteUrl: string;
-  bucket: (status: JiraStatus) => TicketStatus;
+  bucket: (status: JiraStatus, key: string) => TicketStatus;
 }
 
 export interface JiraRelations {
@@ -46,7 +46,7 @@ export function readJiraRelations(fields: JiraRelationFields, context: Context):
   const related = (issue: z.infer<typeof issueRef>): TicketRelated => ({
     key: issue.key,
     title: issue.fields.summary,
-    status: context.bucket(issue.fields.status),
+    status: context.bucket(issue.fields.status, issue.key),
     statusName: issue.fields.status.name,
     url: `${context.siteUrl}/browse/${encodeURIComponent(issue.key)}`,
   });

@@ -79,12 +79,12 @@ export interface LinearRelations {
 
 export function readLinearRelations(
   fields: LinearRelationFields,
-  bucket: (state: { name: string; type: string }) => TicketStatus,
+  bucket: (state: { name: string; type: string }, key: string) => TicketStatus,
 ): LinearRelations {
   const related = (issue: LinearRef): TicketRelated => ({
     key: issue.identifier,
     title: issue.title,
-    status: bucket(issue.state),
+    status: bucket(issue.state, issue.identifier),
     statusName: issue.state.name,
     url: issue.url,
   });

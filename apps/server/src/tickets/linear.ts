@@ -28,6 +28,7 @@ import {
   linearRelationFields,
   readLinearRelations,
 } from './linear-relations.ts';
+import { projectOfKey } from './ticket-relations.ts';
 import { bucketOf, sameName, type SourceState, type StateKind } from './status.ts';
 
 export const LINEAR_API_URL = 'https://api.linear.app/graphql';
@@ -318,7 +319,9 @@ export function linearSource(
       const { issue } = await graphql(schema, ISSUE, { id: key }, `reading ${key}`);
       if (!issue) throw new TicketApiError(404, `Linear has no ticket ${key}.`);
       const team = issue.team?.key ?? null;
-      const relations = readLinearRelations(issue, (state) => bucket(state, team));
+      const relations = readLinearRelations(issue, (state, related) =>
+        bucket(state, projectOfKey(related, team)),
+      );
       const detail: TicketDetail = {
         ...summary(issue),
         description: issue.description ?? '',

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { jiraSource } from './jira.ts';
 import { linearSource } from './linear.ts';
+import { readJiraRelations } from './jira-relations.ts';
+import { readLinearRelations } from './linear-relations.ts';
+import { projectOfKey } from './ticket-relations.ts';
 
 const SITE = 'https://acme.atlassian.net';
 const moves = { statusMap: {}, moveStatuses: {} };
@@ -230,5 +233,40 @@ describe('Linear ticket relations', () => {
       inverseRelations: 7,
     }).getTicket('ENG-1');
     expect(odd).toMatchObject({ parent: null, relations: [], subtasks: [], subtasksMore: false });
+  });
+});
+
+describe('the status group of a related ticket', () => {
+  it("is worked out from the related ticket's own project, not the open ticket's", () => {
+    const asked: string[] = [];
+    readJiraRelations(
+      {
+        parent: jiraRef('WEB-2', 'Parent'),
+        issuelinks: [
+          {
+            type: { inward: 'is blocked by', outward: 'blocks' },
+            outwardIssue: jiraRef('API-9', 'Other'),
+          },
+        ],
+      },
+      {
+        siteUrl: SITE,
+        bucket: (_status, key) => {
+          asked.push(key);
+          return 'todo';
+        },
+      },
+    );
+    readLinearRelations({ parent: linearRef('OPS-4', 'Parent') }, (_state, key) => {
+      asked.push(key);
+      return 'todo';
+    });
+    expect(asked).toEqual(['API-9', 'WEB-2', 'OPS-4']);
+    expect(asked.map((key) => projectOfKey(key, 'WEB'))).toEqual(['API', 'WEB', 'OPS']);
+  });
+
+  it("falls back to the open ticket's project for a key with no project part", () => {
+    expect(projectOfKey('ODD', 'WEB')).toBe('WEB');
+    expect(projectOfKey('MY-TEAM-12', null)).toBe('MY-TEAM');
   });
 });
