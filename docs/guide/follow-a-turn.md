@@ -15,11 +15,11 @@ About 2 minutes.
 3. Summaries separate commands **passed** from tools **done**.
 4. Browser, web, page and Mac steps get rows.
 5. Code Mode labels discovery and reads; failures expand.
-6. Edits show **+N −M** and open to a diff.
+6. Edits show **+N −M** and open as diffs.
 7. A done to-do folds.
 8. Sidebar blobs show the **Agent TV** team.
-9. **View agents** opens **Work**; over four workers become clickable faces.
-10. **Message** opens that chat’s composer; **Ask lead to redirect** drafts there.
+9. **View agents** opens **Work**; over four become clickable faces.
+10. **Message** opens that chat’s composer; **Ask lead to redirect** drafts in that chat.
 
 **Open in terminal** shows failures in a [dock tab](terminals.md#watch-an-agents-command).
 
