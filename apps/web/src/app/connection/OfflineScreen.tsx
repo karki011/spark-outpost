@@ -58,6 +58,7 @@ export function OfflineScreen<T>({ error, failedAt, onRetry, onBack }: OfflineSc
   const failure = describeFailure(retry.lastFailure?.error ?? error);
   const [remote] = useState(rememberedRemoteClient);
   const copy = offlineCopy(failure.kind, remote);
+  const help = back ? '' : wakeHelp(failure.kind, remote, retry.failedAttempts);
   const mood = back ? 'happy' : startled ? 'alert' : copy.mood;
 
   useEffect(() => markConnectionLost(), []);
@@ -106,9 +107,11 @@ export function OfflineScreen<T>({ error, failedAt, onRetry, onBack }: OfflineSc
         <p className="offline-tries" role="status">
           {back ? 'Back online!' : attemptsLabel(retry.failedAttempts)}
         </p>
-        <p className="offline-help" role="status">
-          {back ? '' : wakeHelp(failure.kind, remote, retry.failedAttempts)}
-        </p>
+        {help && (
+          <p className="offline-help" role="status">
+            {help}
+          </p>
+        )}
         {!back && (
           <FailureDetails
             failure={failure}
