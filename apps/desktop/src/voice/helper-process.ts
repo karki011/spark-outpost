@@ -10,6 +10,8 @@ export type VoiceHelperRequest =
   | { op: 'stop' | 'cancel'; id: string }
   | { op: 'speak'; text: string; voice?: string }
   | { op: 'hush' }
+  | { op: 'meeting.start'; language: string }
+  | { op: 'meeting.stop' }
   | { op: 'keys'; fn: boolean; hold: boolean };
 
 export type SpawnVoiceHelper = () => ChildProcessWithoutNullStreams;

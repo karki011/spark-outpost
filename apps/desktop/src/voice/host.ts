@@ -27,6 +27,7 @@ import { IPC } from '../ipc-channels.ts';
 import { fakeVoiceHelper } from './fake-helper.ts';
 import { fakeVoiceModels } from './fake-models.ts';
 import { spawnVoiceBinary, startVoiceHelper } from './helper-process.ts';
+import { createMeetingCapture, type MeetingCapture } from './meeting-capture.ts';
 import { pressWindow, type SparkWindow } from './press-window.ts';
 import { createVoice, type SettingsPatch } from './voice.ts';
 import { loadVoiceSettings, saveVoiceSettings, voiceSettingsFile } from './voice-settings.ts';
@@ -44,6 +45,7 @@ export interface VoiceHostOptions {
 }
 
 export interface VoiceHost {
+  meetings: MeetingCapture;
   shortcut(): string | null;
   dispose(): void;
 }
@@ -118,6 +120,7 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
   });
   let saving = Promise.resolve();
   const pressTargets = new Set<number>();
+  let capture: MeetingCapture | null = null;
   const watched = new WeakSet<Electron.WebContents>();
   const voice = createVoice({
     helper,
@@ -164,9 +167,20 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
     voiceOver: () => app.accessibilitySupportEnabled,
     language: language(),
     allowFileInput,
-    changed: broadcast,
+    changed: (status) => {
+      broadcast(status);
+      capture?.changed();
+    },
     log: options.log,
   });
+  const meetings = createMeetingCapture({
+    helper,
+    state: () => voice.meetingState(),
+    prepare: () => voice.prepareMeeting(),
+    language: language(),
+    log: options.log,
+  });
+  capture = meetings;
 
   const guard =
     <T>(run: (event: IpcMainInvokeEvent, ...args: unknown[]) => T, fallback: T) =>
@@ -266,6 +280,7 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
   void voice.start();
 
   return {
+    meetings,
     shortcut: () => voice.shortcut(),
     dispose() {
       for (const channel of INVOKE) ipcMain.removeHandler(channel);

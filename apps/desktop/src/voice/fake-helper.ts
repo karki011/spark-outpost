@@ -6,6 +6,13 @@ type Request = Record<string, unknown> & { id: string; op: string };
 
 const SPOKEN_MS = 200;
 const WORD_MS = 40;
+const MEETING_LINE_MS = 1_500;
+const MEETING_LINES = [
+  { source: 'others', text: 'Thanks for joining. Shall we start with the roadmap?' },
+  { source: 'you', text: 'Yes. I would like to settle the release date first.' },
+  { source: 'others', text: 'We can ship on the fourteenth if testing finishes this week.' },
+  { source: 'you', text: 'Good. I will confirm with the team and write it up.' },
+];
 
 export function fakeVoiceHelper(): ChildProcessWithoutNullStreams {
   const events = new EventEmitter();
@@ -95,6 +102,29 @@ export function fakeVoiceHelper(): ChildProcessWithoutNullStreams {
       case 'hush':
         hush();
         return say({ id, event: 'hushed' });
+      case 'meeting.start': {
+        say({ id, event: 'meeting_started' });
+        say({ id, event: 'meeting_system', on: true });
+        const timers = MEETING_LINES.map((line, index) =>
+          setTimeout(
+            () =>
+              say({
+                id,
+                event: 'meeting_line',
+                ...line,
+                startMs: index * MEETING_LINE_MS,
+                endMs: index * MEETING_LINE_MS + MEETING_LINE_MS - 400,
+              }),
+            MEETING_LINE_MS * (index + 1),
+          ),
+        );
+        listening.set(id, timers);
+        return undefined;
+      }
+      case 'meeting.stop':
+        if (!listening.has(id)) return undefined;
+        end(id);
+        return say({ id, event: 'meeting_ended' });
       default:
         return say({ id, event: 'error', error: 'invalid', detail: 'unknown op' });
     }

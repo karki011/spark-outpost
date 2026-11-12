@@ -46,6 +46,11 @@ export type SettingsPatch = Partial<Pick<VoiceSettings, 'speakAnswers' | 'shortc
 
 const NOT_READY: VoiceListenResult = { ok: false, error: 'model_missing' };
 
+const MEETING_NEEDS_HELPER = 'This build of Spark Outpost cannot record meetings.';
+const MEETING_NEEDS_VOICE = 'Turn on Voice in Settings → Voice to record meetings.';
+const MEETING_NEEDS_MODEL =
+  'Voice is still getting its speech model. Settings → Voice shows its download.';
+
 export function createVoice(effects: VoiceEffects) {
   const { helper } = effects;
   let settings = { ...effects.settings };
@@ -376,6 +381,23 @@ export function createVoice(effects: VoiceEffects) {
 
     hush,
     press,
+
+    meetingState() {
+      if (!effects.helperExists()) return { available: false, reason: MEETING_NEEDS_HELPER };
+      if (!settings.enabled) return { available: false, reason: MEETING_NEEDS_VOICE };
+      if (store.state(settings.model).state !== 'ready') {
+        return { available: false, reason: MEETING_NEEDS_MODEL };
+      }
+      return { available: true, reason: null };
+    },
+
+    async prepareMeeting(): Promise<string | null> {
+      if (!effects.helperExists()) return MEETING_NEEDS_HELPER;
+      if (!settings.enabled) return MEETING_NEEDS_VOICE;
+      if (listens.size > 0) return 'Voice is listening. Start the meeting when it is done.';
+      hush();
+      return (await ensureLoaded()) ? null : MEETING_NEEDS_MODEL;
+    },
 
     pressIsland() {
       if (!settings.enabled || listens.size > 0) return;

@@ -41,6 +41,7 @@ import { watchSparkFocus } from './spark-focus.ts';
 import { startViewingHost } from './viewing-host.ts';
 import { watchHourCycle } from './hour-cycle.ts';
 import { startVoiceHost, type VoiceHost } from './voice/host.ts';
+import { meetingHub } from './voice/meeting-hub.ts';
 
 interface CompanionHostOptions {
   appName: string;
@@ -363,6 +364,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     },
     log: options.log,
   });
+  if (voice) meetingHub.attach(voice.meetings);
 
   ipcMain.on(IPC.islandOpenChat, (event, id: unknown, runId: unknown) => {
     if (!fromIsland(event)) return;
