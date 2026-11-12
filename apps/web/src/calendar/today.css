@@ -158,6 +158,10 @@
   border-radius: 0;
 }
 
+.td-card .td-grid > .td-main {
+  padding: 14px 18px;
+}
+
 .td-none {
   margin: 0;
 }

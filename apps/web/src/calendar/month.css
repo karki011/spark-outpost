@@ -410,6 +410,7 @@
 @container (max-width: 900px) {
   .mo-layout {
     grid-template-columns: minmax(0, 1fr);
+    row-gap: 12px;
   }
 
   .mo-grid {
