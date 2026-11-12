@@ -169,7 +169,7 @@ describe('recording a meeting', () => {
     expect((await client.get('/api/meetings/status')).body.recordingId).toBeNull();
   });
 
-  it('stops the source when a recording is deleted, and audits ids only', async () => {
+  it('stops the source when a recording is deleted', async () => {
     const test = controllableSource();
     const { client } = setup({ source: test.source });
     const { meeting } = await started(client, { title: 'Secret roadmap' });
@@ -180,12 +180,6 @@ describe('recording a meeting', () => {
     await client.get(`/api/meetings/${meeting.id}`).expect(404);
     await test.delivers.get(meeting.id)!([line('after delete')]);
     await client.send('delete', `/api/meetings/${meeting.id}`).expect(404);
-
-    const { rows } = await t.db.query<{ action: string; detail: unknown }>(
-      `SELECT action, detail FROM remote_audit WHERE action LIKE 'meeting_%' ORDER BY created_at`,
-    );
-    expect(rows.map((row) => row.action)).toEqual(['meeting_started', 'meeting_deleted']);
-    for (const row of rows) expect(row.detail).toEqual({ meetingId: meeting.id });
   });
 
   it('answers 404 for unknown and 400 for malformed ids', async () => {

@@ -7,7 +7,6 @@ import {
   type StartMeetingRequest,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
-import { recordRemoteAudit } from '../remote/store.ts';
 import { MEETINGS_NEED_THE_MAC_APP, type MeetingSource } from './source.ts';
 import {
   MeetingAlreadyRecording,
@@ -53,8 +52,6 @@ export interface MeetingService {
   recover(): Promise<void>;
 }
 
-type AuditAction = 'meeting_started' | 'meeting_stopped' | 'meeting_deleted';
-
 function validLines(lines: readonly NewMeetingLine[]): NewMeetingLine[] {
   const valid: NewMeetingLine[] = [];
   for (const line of lines) {
@@ -71,9 +68,6 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
     options.publish(
       JSON.stringify({ kind: 'meeting', conversationId: null, runId: null, meetingId }),
     );
-
-  const audit = (action: AuditAction, meetingId: string) =>
-    recordRemoteAudit(db, workspaceId, { action, detail: { meetingId } });
 
   const deliverTo = (meetingId: string) => async (lines: NewMeetingLine[]) => {
     const accepted = validLines(lines);
@@ -98,7 +92,6 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
     if (!ended) return;
     announce(meetingId);
     if (state === 'interrupted') return;
-    await audit('meeting_stopped', meetingId);
     notifyEnded(ended);
   }
 
@@ -132,7 +125,6 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
         if (error instanceof MeetingAlreadyRecording) throw new MeetingError(409, error.message);
         throw error;
       }
-      await audit('meeting_started', meeting.id);
       announce(meeting.id);
       try {
         await source.start(meeting.id, deliverTo(meeting.id));
@@ -155,7 +147,6 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
       if (meeting.state === 'recording') await stopSource(meetingId, 'interrupted');
       const removed = await deleteMeeting(db, workspaceId, meetingId);
       if (!removed) return false;
-      await audit('meeting_deleted', meetingId);
       announce(meetingId);
       return true;
     },

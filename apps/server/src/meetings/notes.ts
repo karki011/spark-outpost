@@ -27,11 +27,6 @@ const FOREIGN_KEY_VIOLATION = '23503';
 
 class NotesFailure extends Error {}
 
-export async function announceMeeting(db: Db, meetingId: string): Promise<void> {
-  const event: AppEvent = { kind: 'meeting', conversationId: null, runId: null, meetingId };
-  await db.query(`SELECT pg_notify('changes', $1)`, [JSON.stringify(event)]);
-}
-
 async function attachmentContext(db: Db, meetingId: string): Promise<ContextItem[]> {
   const attachments = await meetingAttachments(db, meetingId);
   if (attachments.length === 0) return [];
