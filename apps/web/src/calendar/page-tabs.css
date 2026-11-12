@@ -30,3 +30,16 @@
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+
+.td-wrap .mt-bar:has(~ .td-pagebody:not([hidden]) > :is(.td-card, .mo-page)) {
+  padding: 8px 18px;
+  border-bottom-color: var(--line);
+  border-radius: var(--r) var(--r) 0 0;
+  background: var(--raise);
+}
+
+.td-wrap .mt-bar ~ .td-pagebody:not([hidden]) > :is(.td-card, .mo-page) {
+  border-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
