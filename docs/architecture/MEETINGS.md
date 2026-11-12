@@ -202,11 +202,11 @@ A perf spec, as the Map has, holds the Meetings tab to 50 ms tasks with 1,500 me
 
 The calendar screen, the Meetings tab and a meeting's page share three layouts, chosen by the width of the main area (not the window, since the Work panel and split chat take width):
 
-| Width          | Calendar                                                                               | Meetings tab and a meeting                                                   |
-| -------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 1100 px and up | Month or Day with the side panel beside it                                             | List beside the open meeting; notes and transcript as tabs                   |
-| 760 to 1100    | The side panel becomes a sheet over the right edge, opened by picking a meeting        | List, then the open meeting in its place with **Back**                       |
-| Under 760      | Month chips become thin bars in the reply style (dashed, striped, struck), panel below | One column; header controls wrap; the transcript's label sits above its line |
+| Width          | Calendar                                                                               | Meetings tab and a meeting                                            |
+| -------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 1100 px and up | Month or Day with the side panel beside it                                             | List beside the open meeting; notes and transcript as tabs            |
+| 760 to 1100    | The side panel becomes a sheet over the right edge, opened by picking a meeting        | List and open meeting side by side, the list 200 to 300 px (as built) |
+| Under 760      | Month chips become thin bars in the reply style (dashed, striped, struck), panel below | List, then the open meeting in its place with **Back**; controls wrap |
 
 Rules for all three:
 
@@ -284,7 +284,17 @@ Run on 2026-11-12 at commit `e5dbd37` in the signed **Spark Outpost Dev** shell 
 | Times                | 12-hour on a 12-hour Mac; a 24-hour Mac was not tried                                                                                                                                                                                             |
 | Paired devices       | Every `/api/meetings` route refused by the route rules with every switch on; no live device used                                                                                                                                                  |
 
-Fixed after the run and not yet run again on a Mac: the calendar name is passed when a calendar meeting starts; a second start no longer logs a database error; the prompt tells the model to keep what `<notes_so_far>` holds and to use the goal and context; a save carries the version it was based on and is refused when the notes changed; the Transcripts columns come from one container, so the open meeting takes the wide column at 900 px. Still open: tokens and cost of a notes run are not shown, the open meeting is not kept across a reload, and whether the model now keeps hand edits is untested.
+Fixed after that run, then run again on the same Mac on 2026-11-12 at commit `219d655` (7 notes runs, 256,363 tokens, $0.53), all passing:
+
+| Re-test          | Result                                                                                                                                                                                   |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Calendar meeting | The row reads "… · Spark Test" and the database has `calendar_name='Spark Test'`                                                                                                         |
+| Second recording | Refused with the message; `POST /api/meetings` answers 409; no `meetings_one_recording` or `ERROR` line in the log                                                                       |
+| Write again      | A hand-added line survived one rewrite, and two lines survived a second; a fact from an attached text file appeared in the notes; the goal was in the prompt and not quoted in the notes |
+| Stale editor     | Saving an editor opened before a rewrite was refused with "The notes changed while you were editing…", the editor stayed open, and the stored notes were untouched                       |
+| Layout at 900 px | List and meeting side by side with no **Back**, the meeting 494 px of a 772 px card, notes scrolling in place, no page or sideways scroll                                                |
+
+Still open: tokens and cost of a notes run are not shown, and the open meeting is not kept across a reload.
 
 ## Open decisions
 
