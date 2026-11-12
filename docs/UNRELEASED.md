@@ -10,6 +10,7 @@ Changes through 0.1.0-beta.5 are recorded in [the changelog](../apps/desktop/CHA
 - A paired device that loses the Mac says **Can't reach your Mac** and what to try.
 - A chat with no title line from the agent takes the title the agent session reports. A name you set is never replaced.
 - **Notify when a turn finishes or fails** on the Remote control page (off by default) adds a "Finished" or "Failed" push for a chat. A push about one waiting card opens the chat at that card.
+- The macOS permission text for the microphone now says a meeting you started records too, and Spark has a text for System Audio Recording. Recording a meeting is not in this release.
 - Today has a new look: one card with Month and Day, your reply on each event (Accepted, Maybe, Not answered, Declined), details on hover, and free time marked between meetings in Day.
 - The Voice shortcut dictates into the chat you're looking at when Spark is in front; anywhere else it opens the island as before.
 - Voice uses one speech model, **Parakeet**; Whisper base and Whisper large v3 turbo are gone and there is no model to pick. If you had chosen a Whisper model, Parakeet downloads by itself the next time Spark starts with Voice on.

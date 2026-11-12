@@ -59,6 +59,8 @@ Requests carry an `id`; the host validates every message with zod.
 | `hush`   | none                                                                                    | stops speaking at once                               |
 | `keys`   | `fn`, `hold`                                                                            | `fn_twice`, `key_down`, `key_up` events              |
 
+A meeting adds `meeting.start` and `meeting.stop` with the events `meeting_started`, `meeting_system`, `meeting_line` and `meeting_ended`; see [Meetings](MEETINGS.md#capture). While one records, `listen` and `speak` answer `busy`.
+
 Events: `level` (for the meter), `speech`, `partial` and `final` (`text`, `reason`: `stopped`, `paused`, `silence`); errors `mic_denied`, `no_input_device`, `model_missing`, `busy`.
 
 - **Partials for every purpose.** From Phase 2 the helper sends `partial` (`text`) about every 0.5 s while speech goes on, for `command`, `confirm` and `dictation` alike: the committed text plus the open segment's tentative words, so a later partial may change earlier words. No `partial` follows `final`. The host forwards them unchanged to the window that asked; a command is matched on `final` only.
