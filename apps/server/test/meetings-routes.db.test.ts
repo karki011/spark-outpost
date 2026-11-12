@@ -300,6 +300,35 @@ describe('editing a meeting', () => {
     await client.send('put', `/api/meetings/${meeting.id}/notes`, { markdown: 3 }).expect(400);
   });
 
+  it('refuses an edit based on notes that have since been rewritten', async () => {
+    const test = controllableSource();
+    const { client } = setup({ source: test.source });
+    const { meeting } = await started(client);
+    await client.send('post', `/api/meetings/${meeting.id}/stop`).expect(200);
+    const first = await client
+      .send('put', `/api/meetings/${meeting.id}/notes`, { markdown: 'first' })
+      .expect(200);
+    const base = first.body.editedAt as string;
+    const second = await client
+      .send('put', `/api/meetings/${meeting.id}/notes`, { markdown: 'second', base })
+      .expect(200);
+    const stale = await client
+      .send('put', `/api/meetings/${meeting.id}/notes`, { markdown: 'from an old editor', base })
+      .expect(409);
+    expect(stale.body.error).toContain('changed while you were editing');
+    const detail = await client.get(`/api/meetings/${meeting.id}`).expect(200);
+    expect(detail.body.notes.markdown).toBe('second');
+    expect(second.body.editedAt).not.toBe(base);
+  });
+
+  it('refuses a second recording without a database error', async () => {
+    const test = controllableSource();
+    const { client } = setup({ source: test.source });
+    await started(client);
+    const refused = await client.send('post', '/api/meetings', { title: 'Another' }).expect(409);
+    expect(refused.body.error).toBe('Another meeting is recording. Stop it first.');
+  });
+
   it('refuses an edit while notes are being written, so the writer cannot overwrite it', async () => {
     const test = controllableSource();
     const { client } = setup({ source: test.source });

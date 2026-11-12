@@ -59,35 +59,29 @@ export class MeetingAlreadyRecording extends Error {
   }
 }
 
-function isUniqueViolation(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
-}
-
 export async function createMeeting(
   db: Queryable,
   workspaceId: string,
   request: StartMeetingRequest,
 ): Promise<Meeting> {
-  try {
-    const { rows } = await db.query<MeetingRow>(
-      `INSERT INTO meetings (id, workspace_id, title, source, event_key, calendar_name, goal)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING ${MEETING_COLUMNS}`,
-      [
-        randomUUID(),
-        workspaceId,
-        request.title || MEETING_UNTITLED,
-        request.eventKey ? 'calendar' : 'adhoc',
-        request.eventKey ?? null,
-        request.calendarName || null,
-        request.goal ?? '',
-      ],
-    );
-    return toMeeting(rows[0]!);
-  } catch (error) {
-    if (isUniqueViolation(error)) throw new MeetingAlreadyRecording();
-    throw error;
-  }
+  const { rows } = await db.query<MeetingRow>(
+    `INSERT INTO meetings (id, workspace_id, title, source, event_key, calendar_name, goal)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (workspace_id) WHERE state = 'recording' DO NOTHING
+     RETURNING ${MEETING_COLUMNS}`,
+    [
+      randomUUID(),
+      workspaceId,
+      request.title || MEETING_UNTITLED,
+      request.eventKey ? 'calendar' : 'adhoc',
+      request.eventKey ?? null,
+      request.calendarName || null,
+      request.goal ?? '',
+    ],
+  );
+  const row = rows[0];
+  if (!row) throw new MeetingAlreadyRecording();
+  return toMeeting(row);
 }
 
 export async function getMeeting(

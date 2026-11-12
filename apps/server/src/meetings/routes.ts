@@ -6,6 +6,7 @@ import {
   MEETING_LIST_PAGE,
   meetingAttachRequestSchema,
   meetingNotesEditSchema,
+  meetingNotesVersion,
   meetingPatchSchema,
   startMeetingRequestSchema,
   type MeetingDetail,
@@ -114,11 +115,18 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
 
   router.put('/meetings/:id/notes', async (req, res) => {
     const id = paramId(req);
-    const { markdown } = parseBody(meetingNotesEditSchema, req);
+    const { markdown, base } = parseBody(meetingNotesEditSchema, req);
     const meeting = await getMeeting(db, workspaceId, id);
     if (!meeting) throw new MeetingError(404, 'Meeting not found.');
     if (meeting.notesState === 'writing') {
       throw new MeetingError(409, 'Notes are being written. Save again when they are done.');
+    }
+    const current = await getNotes(db, id);
+    if (base && current && Date.parse(meetingNotesVersion(current)) !== Date.parse(base)) {
+      throw new MeetingError(
+        409,
+        'The notes changed while you were editing. Copy your text, cancel, and edit the new notes.',
+      );
     }
     const notes = await saveEditedNotes(db, id, markdown);
     await setNotesState(db, id, 'ready');

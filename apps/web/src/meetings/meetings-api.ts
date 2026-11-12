@@ -55,8 +55,8 @@ export const meetingsApi = {
   },
   linesTail: (id: string): Promise<MeetingLinesPage> =>
     request(meetingLinesPageSchema, path(id, '/lines?tail=1')),
-  saveNotes: (id: string, markdown: string): Promise<MeetingNotes> =>
-    send(meetingNotesSchema, 'PUT', path(id, '/notes'), { markdown }),
+  saveNotes: (id: string, markdown: string, base: string): Promise<MeetingNotes> =>
+    send(meetingNotesSchema, 'PUT', path(id, '/notes'), { markdown, base }),
   writeNotes: (id: string): Promise<null> => send(empty, 'POST', path(id, '/notes/write')),
   attach: (id: string, attachmentId: string): Promise<MeetingDetail> =>
     send(meetingDetailSchema, 'POST', path(id, '/attachments'), { attachmentId }),

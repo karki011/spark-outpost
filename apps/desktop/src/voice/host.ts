@@ -27,6 +27,7 @@ import { IPC } from '../ipc-channels.ts';
 import { fakeVoiceHelper } from './fake-helper.ts';
 import { fakeVoiceModels } from './fake-models.ts';
 import { spawnVoiceBinary, startVoiceHelper } from './helper-process.ts';
+import { pressWindow, type SparkWindow } from './press-window.ts';
 import { createVoice, type SettingsPatch } from './voice.ts';
 import { loadVoiceSettings, saveVoiceSettings, voiceSettingsFile } from './voice-settings.ts';
 
@@ -36,7 +37,8 @@ export interface VoiceHostOptions {
   userData: string;
   trusted(event: IpcMainInvokeEvent): boolean;
   island(): Electron.WebContents | null;
-  focused(): Electron.WebContents | null;
+  windows(): SparkWindow[];
+  appActive(): boolean;
   takenBy(accelerator: string): string | null;
   log(line: string): void;
 }
@@ -147,8 +149,15 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
     },
     sendIsland: (event) => options.island()?.send(IPC.voiceEvent, event),
     sendFocused: (event) => {
-      const target = options.focused();
-      if (!target || target.isDestroyed() || !pressTargets.has(target.id)) return false;
+      const id = pressWindow(options.windows(), options.appActive(), (each) =>
+        pressTargets.has(each),
+      );
+      const target = id === null ? null : webContents.fromId(id);
+      if (!target || target.isDestroyed()) {
+        options.log('voice press: island');
+        return false;
+      }
+      options.log('voice press: window');
       target.send(IPC.voiceEvent, event);
       return true;
     },

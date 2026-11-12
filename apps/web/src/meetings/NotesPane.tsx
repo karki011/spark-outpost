@@ -1,12 +1,19 @@
 import { useState } from 'react';
-import { MEETING_NOTES_MAX, type MeetingDetail } from '@spark-outpost/contracts';
+import {
+  MEETING_NOTES_MAX,
+  meetingNotesVersion,
+  type MeetingDetail,
+  type MeetingNotes,
+} from '@spark-outpost/contracts';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
 import { PenIcon, SpinnerIcon } from '../ui/icons.tsx';
 import { useSaveNotes, useWriteNotes } from './use-meetings.ts';
 
-function NotesEditor({ id, initial, onDone }: { id: string; initial: string; onDone: () => void }) {
+function NotesEditor(props: { id: string; notes: MeetingNotes; onDone: () => void }) {
+  const { id, onDone } = props;
   const save = useSaveNotes(id);
-  const [draft, setDraft] = useState(initial);
+  const [opened] = useState(props.notes);
+  const [draft, setDraft] = useState(opened.markdown);
   return (
     <div className="mt-edit">
       <textarea
@@ -21,7 +28,12 @@ function NotesEditor({ id, initial, onDone }: { id: string; initial: string; onD
           type="button"
           className="btn primary sm"
           disabled={save.isPending}
-          onClick={() => save.mutate(draft, { onSuccess: onDone })}
+          onClick={() =>
+            save.mutate(
+              { markdown: draft, base: meetingNotesVersion(opened) },
+              { onSuccess: onDone },
+            )
+          }
         >
           Save
         </button>
@@ -43,9 +55,7 @@ export function NotesPane({ detail }: { detail: MeetingDetail }) {
     return <p className="mt-hint">Notes are written when the meeting ends.</p>;
   }
   if (editing && notes) {
-    return (
-      <NotesEditor id={meeting.id} initial={notes.markdown} onDone={() => setEditing(false)} />
-    );
+    return <NotesEditor id={meeting.id} notes={notes} onDone={() => setEditing(false)} />;
   }
   if (meeting.notesState === 'writing') {
     return (

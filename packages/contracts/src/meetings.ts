@@ -112,7 +112,12 @@ export type MeetingPatch = z.infer<typeof meetingPatchSchema>;
 
 export const meetingNotesEditSchema = z.object({
   markdown: z.string().max(MEETING_NOTES_MAX),
+  base: z.iso.datetime().optional(),
 });
+
+export function meetingNotesVersion(notes: Pick<MeetingNotes, 'writtenAt' | 'editedAt'>): string {
+  return notes.editedAt ?? notes.writtenAt;
+}
 export type MeetingNotesEdit = z.infer<typeof meetingNotesEditSchema>;
 
 export const meetingAttachRequestSchema = z.object({ attachmentId: z.uuid() });

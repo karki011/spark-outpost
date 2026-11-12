@@ -82,7 +82,8 @@ export function useDeleteMeeting() {
 export function useSaveNotes(id: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (markdown: string) => meetingsApi.saveNotes(id, markdown),
+    mutationFn: (edit: { markdown: string; base: string }) =>
+      meetingsApi.saveNotes(id, edit.markdown, edit.base),
     onSuccess: () => client.invalidateQueries({ queryKey: meetingKeys.all }),
   });
 }

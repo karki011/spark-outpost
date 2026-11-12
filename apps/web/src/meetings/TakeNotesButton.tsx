@@ -11,7 +11,7 @@ const BUSY = 'Another meeting is recording. Stop it first.';
 interface TakeNotesButtonProps {
   title?: string;
   eventKey?: string;
-  calendarName?: string;
+  calendarName?: string | undefined;
   label?: string;
   onStarted?: (meeting: Meeting) => void;
 }

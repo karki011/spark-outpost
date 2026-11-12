@@ -339,11 +339,19 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     modelsDir: layout.voiceModels,
     userData: path.dirname(options.settingsPath),
     trusted: fromSpark,
-    focused: () => {
-      const window = BrowserWindow.getFocusedWindow();
-      if (!window || window.isDestroyed() || island?.owns(window.webContents.id)) return null;
-      return targetsApi(window.webContents.getURL(), options.origin) ? window.webContents : null;
-    },
+    windows: () =>
+      BrowserWindow.getAllWindows()
+        .filter(
+          (window) =>
+            !window.isDestroyed() && targetsApi(window.webContents.getURL(), options.origin),
+        )
+        .map((window) => ({
+          id: window.webContents.id,
+          island: island?.owns(window.webContents.id) ?? false,
+          focused: window.isFocused(),
+          onScreen: window.isVisible() && !window.isMinimized(),
+        })),
+    appActive: () => (process.platform === 'darwin' ? app.isActive() : false),
     island: () =>
       BrowserWindow.getAllWindows().find(
         (window) => !window.isDestroyed() && island?.owns(window.webContents.id),

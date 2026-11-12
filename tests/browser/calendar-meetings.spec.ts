@@ -71,6 +71,10 @@ test('a meeting is recorded, transcribed, written up, found by search and kept a
   expect(
     await main.locator('.home').evaluate((el) => el.scrollHeight - el.clientHeight),
   ).toBeLessThanOrEqual(1);
+  const side = await main.getByRole('region', { name: 'Meeting history' }).boundingBox();
+  const open = await main.getByRole('region', { name: 'Open meeting' }).boundingBox();
+  expect(open!.x).toBeGreaterThanOrEqual(side!.x + side!.width - 1);
+  expect(open!.width).toBeGreaterThan(side!.width);
   await page.setViewportSize(size);
 
   const status = await (await page.request.get('/api/meetings/status')).json();

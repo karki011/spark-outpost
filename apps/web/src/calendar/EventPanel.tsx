@@ -126,11 +126,12 @@ export function EventMeta({ event, date, calendars }: EventMetaProps) {
 
 interface EventActionsProps {
   event: CalendarEvent;
+  calendarName?: string | undefined;
   now: number;
   onStartChat: (text: string) => void;
 }
 
-export function EventActions({ event, now, onStartChat }: EventActionsProps) {
+export function EventActions({ event, calendarName, now, onStartChat }: EventActionsProps) {
   const mark = useMark(event);
   const occurrence = { eventId: event.id, start: event.start, calendarKey: event.calendarKey };
   const google = isGoogleEventId(event.id);
@@ -158,7 +159,9 @@ export function EventActions({ event, now, onStartChat }: EventActionsProps) {
   return (
     <>
       <JoinRow event={event} now={now} />
-      {!event.allDay && !ended && <TakeNotesButton title={event.title} eventKey={event.key} />}
+      {!event.allDay && !ended && (
+        <TakeNotesButton title={event.title} eventKey={event.key} calendarName={calendarName} />
+      )}
       <Act
         icon={<ExternalLinkIcon />}
         label={google ? 'Open in Google Calendar' : 'Open in Calendar'}
@@ -217,7 +220,12 @@ export function EventPanel({
         </p>
       )}
       <EventInfo event={event} now={now} />
-      <EventActions event={event} now={now} onStartChat={onStartChat} />
+      <EventActions
+        event={event}
+        calendarName={calendars.get(event.calendarKey)?.title}
+        now={now}
+        onStartChat={onStartChat}
+      />
     </section>
   );
 }

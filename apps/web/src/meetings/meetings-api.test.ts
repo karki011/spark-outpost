@@ -29,7 +29,7 @@ describe('meetings api', () => {
     });
     await meetingsApi.linesTail(MEETING_ID);
     await meetingsApi.linesAfter(MEETING_ID, 400, 100);
-    await meetingsApi.saveNotes(MEETING_ID, 'x');
+    await meetingsApi.saveNotes(MEETING_ID, 'x', '2026-11-10T10:45:00.000Z');
     await meetingsApi.writeNotes(MEETING_ID);
     await meetingsApi.attach(MEETING_ID, attachmentId);
     await meetingsApi.detach(MEETING_ID, attachmentId);
@@ -41,6 +41,7 @@ describe('meetings api', () => {
       `POST /meetings/${MEETING_ID}/attachments`,
       `DELETE /meetings/${MEETING_ID}/attachments/${attachmentId}`,
     ]);
+    expect(calls[2]?.body).toEqual({ markdown: 'x', base: '2026-11-10T10:45:00.000Z' });
     expect(calls[4]?.body).toEqual({ attachmentId });
   });
 });

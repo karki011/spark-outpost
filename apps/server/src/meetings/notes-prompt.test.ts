@@ -57,6 +57,8 @@ describe('buildNotesPrompt', () => {
     expect(prompt).toContain('Never invent a name, a decision, an owner or a date.');
     expect(prompt).toContain('choose the section headings that fit what this meeting was');
     expect(prompt).toContain('Keep the headings already in <notes_so_far>');
+    expect(prompt).toContain('the user may have edited it by hand. Keep every statement in it');
+    expect(prompt).toContain('include the facts from <context>');
     expect(prompt).toContain('Meeting: Planning');
     expect(prompt).toContain('Goal: Pick a date');
     expect(prompt).toContain('<user_notes>\nShip on Friday\n</user_notes>');
