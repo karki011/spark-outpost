@@ -116,6 +116,7 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
   });
   let saving = Promise.resolve();
   const pressTargets = new Set<number>();
+  const watched = new WeakSet<Electron.WebContents>();
   const voice = createVoice({
     helper,
     helperExists: () => fake || existsSync(options.helperPath),
@@ -229,10 +230,11 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
         pressTargets.delete(sender.id);
         return;
       }
-      if (pressTargets.has(sender.id)) return;
       pressTargets.add(sender.id);
+      if (watched.has(sender)) return;
+      watched.add(sender);
       const forget = () => pressTargets.delete(sender.id);
-      sender.once('did-navigate', forget);
+      sender.on('did-navigate', forget);
       sender.once('destroyed', forget);
     }, undefined),
   );

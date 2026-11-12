@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -12,26 +11,18 @@ import {
   type StartMeetingRequest,
 } from '@spark-outpost/contracts';
 import { classifyFile, uploadAttachment } from '../api/attachments.ts';
+import { useDebouncedValue } from '../ui/use-debounced-value.ts';
 import { meetingKeys } from './meeting-keys.ts';
 import { meetingsApi } from './meetings-api.ts';
 
 const SEARCH_DEBOUNCE_MS = 250;
-
-function useDebounced(value: string, delay: number): string {
-  const [settled, setSettled] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setSettled(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return settled;
-}
 
 export function useMeetingStatus() {
   return useQuery({ queryKey: meetingKeys.status, queryFn: meetingsApi.status });
 }
 
 export function useMeetingList(query: string) {
-  const search = useDebounced(query.trim(), SEARCH_DEBOUNCE_MS);
+  const search = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
   const list = useInfiniteQuery({
     queryKey: meetingKeys.list(search),
     queryFn: ({ pageParam }) => meetingsApi.list(search, pageParam),

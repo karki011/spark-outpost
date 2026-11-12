@@ -260,18 +260,13 @@ describe('finding meetings', () => {
     await client.get('/api/meetings?before=yesterday').expect(400);
   });
 
-  it('maps calendar event keys to their meetings', async () => {
+  it('a meeting started from a calendar event is a calendar meeting', async () => {
     const test = controllableSource();
     const { client } = setup({ source: test.source });
     const { meeting } = await started(client, { eventKey: 'cal:abc', calendarName: 'Work' });
     expect(meeting.source).toBe('calendar');
-    const found = await client
-      .send('post', '/api/meetings/for-events', { eventKeys: ['cal:abc', 'cal:none'] })
-      .expect(200);
-    expect(found.body.meetings).toEqual([
-      { eventKey: 'cal:abc', meetingId: meeting.id, state: 'recording', notesState: 'none' },
-    ]);
-    await client.send('post', '/api/meetings/for-events', { eventKeys: [''] }).expect(400);
+    expect(meeting.eventKey).toBe('cal:abc');
+    expect(meeting.calendarName).toBe('Work');
   });
 });
 

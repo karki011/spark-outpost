@@ -25,7 +25,6 @@ describe('meetings api', () => {
         };
       }
       if (path.endsWith('/notes/write')) return null;
-      if (path.endsWith('/for-events')) return { meetings: [] };
       return detail();
     });
     await meetingsApi.linesTail(MEETING_ID);
@@ -34,7 +33,6 @@ describe('meetings api', () => {
     await meetingsApi.writeNotes(MEETING_ID);
     await meetingsApi.attach(MEETING_ID, attachmentId);
     await meetingsApi.detach(MEETING_ID, attachmentId);
-    await meetingsApi.forEvents(['a', 'b']);
     expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
       `GET /meetings/${MEETING_ID}/lines?tail=1`,
       `GET /meetings/${MEETING_ID}/lines?after=400&limit=100`,
@@ -42,9 +40,7 @@ describe('meetings api', () => {
       `POST /meetings/${MEETING_ID}/notes/write`,
       `POST /meetings/${MEETING_ID}/attachments`,
       `DELETE /meetings/${MEETING_ID}/attachments/${attachmentId}`,
-      'POST /meetings/for-events',
     ]);
     expect(calls[4]?.body).toEqual({ attachmentId });
-    expect(calls[6]?.body).toEqual({ eventKeys: ['a', 'b'] });
   });
 });

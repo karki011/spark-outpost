@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Meeting, MeetingDetail } from '@spark-outpost/contracts';
 import { CopyIcon, SpinnerIcon, TrashIcon } from '../ui/icons.tsx';
+import { copyButtonText, useCopyFeedback } from '../ui/use-copy-feedback.ts';
 import { useDeleteMeeting, useStopMeeting, useWriteNotes } from './use-meetings.ts';
 
 interface MeetingActionsProps {
@@ -8,8 +9,6 @@ interface MeetingActionsProps {
   onStartChat: (meeting: Meeting, notesMarkdown: string) => void;
   onDeleted: (() => void) | undefined;
 }
-
-const COPIED_MS = 2000;
 
 function DeleteConfirm({
   meeting,
@@ -51,24 +50,9 @@ export function MeetingActions({ detail, onStartChat, onDeleted }: MeetingAction
   const stop = useStopMeeting();
   const write = useWriteNotes(meeting.id);
   const [confirming, setConfirming] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const copy = useCopyFeedback();
   const recording = meeting.state === 'recording';
   const markdown = notes?.markdown ?? '';
-
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), COPIED_MS);
-    return () => clearTimeout(timer);
-  }, [copied]);
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(markdown);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  }
 
   return (
     <div className="mt-actions-block">
@@ -103,9 +87,9 @@ export function MeetingActions({ detail, onStartChat, onDeleted }: MeetingAction
           </button>
         )}
         {markdown && (
-          <button type="button" className="btn ghost sm" onClick={() => void copy()}>
+          <button type="button" className="btn ghost sm" onClick={() => copy.copy(markdown)}>
             <CopyIcon />
-            {copied ? 'Copied' : 'Copy'}
+            {copyButtonText(copy.state)}
           </button>
         )}
         <button

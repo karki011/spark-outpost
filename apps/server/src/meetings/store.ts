@@ -11,7 +11,6 @@ import {
   type MeetingNotes,
   type MeetingNotesState,
   type MeetingPatch,
-  type MeetingsForEvents,
   type NewMeetingLine,
   type StartMeetingRequest,
 } from '@spark-outpost/contracts';
@@ -370,31 +369,6 @@ export async function detachFromMeeting(
     meetingId,
     attachmentId,
   ]);
-}
-
-export async function meetingsForEvents(
-  db: Queryable,
-  workspaceId: string,
-  eventKeys: readonly string[],
-): Promise<MeetingsForEvents['meetings']> {
-  if (eventKeys.length === 0) return [];
-  const { rows } = await db.query<{
-    event_key: string;
-    id: string;
-    state: Meeting['state'];
-    notes_state: MeetingNotesState;
-  }>(
-    `SELECT DISTINCT ON (event_key) event_key, id, state, notes_state FROM meetings
-      WHERE workspace_id = $1 AND event_key = ANY($2::text[])
-      ORDER BY event_key, started_at DESC`,
-    [workspaceId, eventKeys],
-  );
-  return rows.map((row) => ({
-    eventKey: row.event_key,
-    meetingId: row.id,
-    state: row.state,
-    notesState: row.notes_state,
-  }));
 }
 
 export interface MeetingListQuery {

@@ -5,7 +5,6 @@ import {
   meetingListSchema,
   meetingNotesSchema,
   meetingStatusSchema,
-  meetingsForEventsSchema,
   MEETING_LIST_PAGE,
   type MeetingDetail,
   type MeetingLinesPage,
@@ -13,7 +12,6 @@ import {
   type MeetingNotes,
   type MeetingPatch,
   type MeetingStatus,
-  type MeetingsForEvents,
   type StartMeetingRequest,
 } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
@@ -45,8 +43,6 @@ export const meetingsApi = {
   detail: (id: string): Promise<MeetingDetail> => request(meetingDetailSchema, path(id)),
   start: (body: StartMeetingRequest): Promise<MeetingDetail> =>
     send(meetingDetailSchema, 'POST', '/meetings', body),
-  forEvents: (eventKeys: readonly string[]): Promise<MeetingsForEvents> =>
-    send(meetingsForEventsSchema, 'POST', '/meetings/for-events', { eventKeys }),
   patch: (id: string, patch: MeetingPatch): Promise<MeetingDetail> =>
     send(meetingDetailSchema, 'PATCH', path(id), patch),
   remove: (id: string): Promise<null> => send(empty, 'DELETE', path(id)),

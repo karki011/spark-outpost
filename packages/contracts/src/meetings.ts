@@ -10,7 +10,6 @@ export const MEETING_LINES_APPEND_MAX = 100;
 export const MEETING_LIST_PAGE = 50;
 export const MEETING_SNIPPETS = 3;
 export const MEETING_ATTACHMENTS_MAX = 10;
-export const MEETING_EVENT_KEYS_MAX = 400;
 export const MEETING_UNTITLED = 'Untitled meeting';
 
 export const meetingSourceSchema = z.enum(['calendar', 'adhoc']);
@@ -135,22 +134,6 @@ export const meetingListSchema = z.object({
   nextBefore: z.iso.datetime().nullable(),
 });
 export type MeetingList = z.infer<typeof meetingListSchema>;
-
-export const meetingsForEventsRequestSchema = z.object({
-  eventKeys: z.array(z.string().min(1).max(600)).max(MEETING_EVENT_KEYS_MAX),
-});
-
-export const meetingsForEventsSchema = z.object({
-  meetings: z.array(
-    z.object({
-      eventKey: z.string(),
-      meetingId: z.uuid(),
-      state: meetingStateSchema,
-      notesState: meetingNotesStateSchema,
-    }),
-  ),
-});
-export type MeetingsForEvents = z.infer<typeof meetingsForEventsSchema>;
 
 export function meetingDurationMs(meeting: Pick<Meeting, 'startedAt' | 'endedAt'>, now: number) {
   const end = meeting.endedAt ? Date.parse(meeting.endedAt) : now;

@@ -1,3 +1,4 @@
+import { clock } from '../calendar/calendar-format.ts';
 import { meetingDurationMs, type Meeting, type MeetingNotesState } from '@spark-outpost/contracts';
 
 export const NOTES_STATE_WORDS: Record<MeetingNotesState, string> = {
@@ -18,13 +19,12 @@ export function formatLength(ms: number): string {
 export function formatStarted(iso: string, now: number = Date.now()): string {
   const date = new Date(iso);
   const sameYear = date.getFullYear() === new Date(now).getFullYear();
-  return date.toLocaleString(undefined, {
+  const day = date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
     ...(sameYear ? {} : { year: 'numeric' }),
-    hour: 'numeric',
-    minute: '2-digit',
   });
+  return `${day}, ${clock(date.getTime())}`;
 }
 
 export function sourceLabel(meeting: Pick<Meeting, 'source' | 'calendarName'>): string {

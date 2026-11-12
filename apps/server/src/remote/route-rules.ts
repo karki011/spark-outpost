@@ -182,7 +182,6 @@ const NEVER = `
 GET /api/meetings/status
 GET /api/meetings
 POST /api/meetings
-POST /api/meetings/for-events
 GET /api/meetings/:id
 PATCH /api/meetings/:id
 DELETE /api/meetings/:id

@@ -15,7 +15,6 @@ import {
   linesAfter,
   listMeetings,
   meetingAttachments,
-  meetingsForEvents,
   patchMeeting,
   saveEditedNotes,
   saveWrittenNotes,
@@ -127,7 +126,7 @@ describe('a meeting in the store', () => {
     expect(rest.items.map((item) => item.meeting.title)).toEqual(['Vendor demo']);
   });
 
-  it('says which calendar events have a meeting, attaches a file once and deletes with its lines', async () => {
+  it("keeps a calendar meeting's event key, attaches a file once and deletes with its lines", async () => {
     const key = 'uid-9@2026-11-11T14:00:00.000Z';
     const meeting = await createMeeting(t.db, t.workspaceId, {
       eventKey: key,
@@ -137,9 +136,8 @@ describe('a meeting in the store', () => {
       goal: 'Agree the price',
       userNotes: 'ask about churn',
     });
-    expect(await meetingsForEvents(t.db, t.workspaceId, [key, 'other'])).toEqual([
-      { eventKey: key, meetingId: meeting.id, state: 'recording', notesState: 'none' },
-    ]);
+    expect(meeting.eventKey).toBe(key);
+    expect(meeting.source).toBe('calendar');
 
     const attachmentId = randomUUID();
     await t.db.query(

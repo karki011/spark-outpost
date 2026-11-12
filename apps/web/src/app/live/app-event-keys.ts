@@ -23,6 +23,7 @@ import {
 } from '../../terminal/terminal-api.ts';
 import { ticketKeys } from '../../tickets/tickets-api.ts';
 import { calendarKeys } from '../../calendar/calendar-api.ts';
+import { meetingKeys } from '../../meetings/meeting-keys.ts';
 import { islandRequestsKey } from '../../island/island-requests.ts';
 import { attentionKey } from '../../attention/attention-api.ts';
 import { sparkPauseKey } from '../pause/spark-pause-api.ts';
@@ -51,6 +52,7 @@ export const LIVE_ROOTS: readonly string[] = [
   agentTerminalKeys.all[0],
   chatPortsKey[0],
   calendarKeys.all[0],
+  meetingKeys.all[0],
   islandRequestsKey[0],
   attentionKey[0],
 ];
@@ -233,11 +235,11 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
     case 'meeting':
       return event.meetingId
         ? [
-            { queryKey: ['meetings', 'status'], exact: true },
-            { queryKey: ['meetings', 'list'] },
-            { queryKey: ['meetings', 'detail', event.meetingId], exact: true },
+            { queryKey: meetingKeys.status, exact: true },
+            { queryKey: meetingKeys.lists },
+            { queryKey: meetingKeys.detail(event.meetingId), exact: true },
           ]
-        : [{ queryKey: ['meetings'] }];
+        : [{ queryKey: meetingKeys.all }];
   }
 }
 

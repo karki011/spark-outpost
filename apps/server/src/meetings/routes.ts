@@ -7,7 +7,6 @@ import {
   meetingAttachRequestSchema,
   meetingNotesEditSchema,
   meetingPatchSchema,
-  meetingsForEventsRequestSchema,
   startMeetingRequestSchema,
   type MeetingDetail,
   type MeetingLinesPage,
@@ -24,7 +23,6 @@ import {
   linesAfter,
   listMeetings,
   meetingAttachments,
-  meetingsForEvents,
   patchMeeting,
   saveEditedNotes,
   setNotesState,
@@ -77,11 +75,6 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
     const request = parseBody(startMeetingRequestSchema, req);
     const meeting = await meetings.start(request);
     res.status(201).json(await detail(meeting.id));
-  });
-
-  router.post('/meetings/for-events', async (req, res) => {
-    const { eventKeys } = parseBody(meetingsForEventsRequestSchema, req);
-    res.json({ meetings: await meetingsForEvents(db, workspaceId, eventKeys) });
   });
 
   router.get('/meetings/:id', async (req, res) => {

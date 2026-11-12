@@ -25,11 +25,7 @@ const REPLY_GRACE_MS = 10_000;
 const FAILED = 'The model could not write the notes. Write again.';
 
 export async function isMeetingNotesRun(db: Queryable, runId: string): Promise<boolean> {
-  const { rows } = await db.query(
-    `SELECT 1 FROM runs r JOIN conversations c ON c.id = r.conversation_id
-      WHERE r.id = $1 AND r.role = 'digest' AND c.kind = 'digest' AND c.title = $2`,
-    [runId, MEETING_NOTES_TITLE],
-  );
+  const { rows } = await db.query('SELECT 1 FROM meeting_note_runs WHERE run_id = $1', [runId]);
   return rows.length > 0;
 }
 
@@ -97,6 +93,7 @@ export function childRunNotesModel(db: Db, workspaceId: string, pollMs = POLL_MS
           model: model.model,
           effort: model.effort,
         });
+        await client.query('INSERT INTO meeting_note_runs (run_id) VALUES ($1)', [run.runId]);
         await client.query(`SELECT pg_notify('jobs', $1)`, [run.runId]);
         return run.runId;
       });

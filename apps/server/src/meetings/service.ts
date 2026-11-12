@@ -40,7 +40,10 @@ export interface MeetingServiceOptions {
   publish: (event: string) => void;
   onEnded?: (meeting: Meeting) => void;
   writeNotes?: (meetingId: string) => Promise<void>;
+  linesAnnounceMs?: number;
 }
+
+const LINES_ANNOUNCE_MS = 1_000;
 
 export interface MeetingService {
   readonly writeNotes: ((meetingId: string) => Promise<void>) | undefined;
@@ -63,11 +66,31 @@ function validLines(lines: readonly NewMeetingLine[]): NewMeetingLine[] {
 
 export function createMeetingService(options: MeetingServiceOptions): MeetingService {
   const { db, workspaceId, source } = options;
+  const linesAnnounceMs = options.linesAnnounceMs ?? LINES_ANNOUNCE_MS;
 
   const announce = (meetingId: string) =>
     options.publish(
       JSON.stringify({ kind: 'meeting', conversationId: null, runId: null, meetingId }),
     );
+
+  const pendingLines = new Map<string, ReturnType<typeof setTimeout>>();
+
+  const announceLines = (meetingId: string) => {
+    if (pendingLines.has(meetingId)) return;
+    pendingLines.set(
+      meetingId,
+      setTimeout(() => {
+        pendingLines.delete(meetingId);
+        announce(meetingId);
+      }, linesAnnounceMs),
+    );
+  };
+
+  const announceNow = (meetingId: string) => {
+    clearTimeout(pendingLines.get(meetingId));
+    pendingLines.delete(meetingId);
+    announce(meetingId);
+  };
 
   const deliverTo = (meetingId: string) => async (lines: NewMeetingLine[]) => {
     const accepted = validLines(lines);
@@ -75,7 +98,7 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
       const chunk = accepted.slice(from, from + MEETING_LINES_APPEND_MAX);
       const stored = await appendLines(db, workspaceId, meetingId, chunk);
       if (!stored) return;
-      announce(meetingId);
+      announceLines(meetingId);
     }
   };
 
@@ -90,7 +113,7 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
   async function finish(meetingId: string, state: 'ended' | 'interrupted'): Promise<void> {
     const ended = await endMeeting(db, workspaceId, meetingId, state);
     if (!ended) return;
-    announce(meetingId);
+    announceNow(meetingId);
     if (state === 'interrupted') return;
     notifyEnded(ended);
   }
