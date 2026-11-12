@@ -63,6 +63,8 @@ The first **Take notes** opens a setup card: one row per permission with its sta
 
 ## Start, stop and "still in the call"
 
+**Join and Take notes are separate.** **Join** opens the meeting's link in the default browser, as today: it puts the user in the call and records nothing. **Take notes** starts Spark listening on the Mac and joins nothing. Either works without the other: notes for an in-person meeting, or a call with no notes. **Join and take notes** on the alert does both in one press.
+
 **Start is the user's.** Out of the box nothing records on its own. A meeting with an allowed join link shows **Take notes** beside **Join**; **Join** on a meeting can offer "Join and take notes".
 
 **Record meetings automatically** (Settings → Meetings, off) is an opt-in with three values: **Off**, **Ask at the start** (the alert card gets a highlighted **Take notes**; nothing starts without a click), and **Start when I join** (recording starts when the user presses **Join** in Spark, or when the call is detected for that meeting, below). It never starts for a meeting the user declined or dismissed, in a hold, while the Mac is locked or away, or without a join link. Per calendar, the existing **Include** row gets a **Take notes** checkbox so a personal calendar can be left out. **Open**: whether "Start when I join" ships in v1 at all.
@@ -202,6 +204,7 @@ Rules for all three:
 - Sizes are in `rem`, so the app's text size and zoom scale everything together; nothing is under 12 px and controls stay at least 28 px on the Mac.
 - No horizontal page scroll at any width. A long title is cut with an ellipsis in a chip and wraps in the panel and the list.
 - The reply and recording states keep a word beside the colour at every width.
+- Tooltips stay. A chip cut short shows its full title, time, calendar and reply; **Join** says what it opens and when; **Take notes** says it records on this Mac and does not join the call; each reply button names who is told. They use the shared `Tooltip` (`apps/web/src/ui/Tooltip.tsx`), not the `title` attribute the calendar uses in places today, so they appear on keyboard focus as well as hover, close on Esc, and are never the only place a fact is shown (touch has no hover).
 - The island's Meeting tab has a fixed width: it shows the last lines of the transcript and scrolls inside itself; **Open in Spark** shows the whole meeting.
 - Focus, scroll position and the open meeting survive a resize and a live update, as the rule for mounted UI state requires.
 

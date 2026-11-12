@@ -195,6 +195,8 @@ kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:
 .before b{display:block;color:var(--text);font-weight:500;margin-bottom:2px}
 @media (max-width:760px){.cal-body{grid-template-columns:1fr}.detail{border-left:0;border-top:1px solid var(--line)}.cell{min-height:58px;padding:4px}.ch{height:6px;padding:0;border-radius:3px}.ch span,.ch time,.ch.rec::before{display:none}.ch.decl{border:1px solid var(--line)}.more{display:none}}
 
+#tip{position:fixed;z-index:20;max-width:260px;background:var(--text);color:var(--panel);font-size:12px;line-height:1.4;border-radius:6px;padding:5px 8px;pointer-events:none;white-space:pre-line}
+
 /* 5 · settings */
 .set{flex:1 1 100%;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .opt{display:flex;gap:14px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
@@ -240,8 +242,8 @@ kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:
             <h4>Design review</h4>
             <p>Wed 11 Nov · 1:00–2:00 PM · Spark Work · Zoom</p>
             <p>From Dana Reyes · 4 people · 3 yes · 1 waiting</p>
-            <div class="rsvp" role="group" aria-label="Your reply"><span class="q">Going?</span><span class="pick sm"><button id="r-yes">Yes</button><button id="r-maybe">Maybe</button><button id="r-no">No</button></span></div>
-            <div class="row"><button class="btn" id="d-join">Join</button><button class="btn" id="d-notes">Take notes</button></div>
+            <div class="rsvp" role="group" aria-label="Your reply"><span class="q">Going?</span><span class="pick sm"><button id="r-yes" data-tip="Accept. Dana Reyes is told.">Yes</button><button id="r-maybe" data-tip="Reply maybe. Dana Reyes is told.">Maybe</button><button id="r-no" data-tip="Decline. Dana Reyes is told.">No</button></span></div>
+            <div class="row"><button class="btn" id="d-join" data-tip="Opens the Zoom link in your browser. Opens at 12:50 PM.">Join</button><button class="btn" id="d-notes" data-tip="Records and transcribes this meeting on this Mac, then writes notes. Doesn’t join the call.">Take notes</button></div>
             <p><span class="lbl">Context</span> pricing-2026.pdf · <button class="link" id="d-context">Add…</button></p>
             <p><span class="lbl">Earlier</span> Design review, 4 Nov · <button class="link" id="d-prev">Notes</button></p>
           </div>
@@ -257,7 +259,7 @@ kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:
       <div class="before">
         <div><b>One weight, almost no colour</b>Text is regular weight everywhere; a title is one step heavier, never bold. Chips are neutral grey. Colour appears only as a thin edge that tells calendars apart, on the red recording dot, and on keyboard focus.</div>
         <div><b>Accepted or not, at a glance</b>Accepted is a filled chip. Not answered has a dashed outline. Maybe is striped. Declined is struck through and faint. Each also has a word in the side panel, so colour is never the only signal.</div>
-        <div><b>Answer here</b>Accept, Maybe and Decline work for Google calendars. For a calendar that only comes through macOS Calendar, the button is “Reply in Calendar”, because macOS doesn’t let apps answer invitations.</div>
+        <div><b>Answer here</b>Yes, Maybe and No work for Google calendars. For a calendar that only comes through macOS Calendar, the button is “Reply in Calendar”, because macOS doesn’t let apps answer invitations.</div>
         <div><b>Less on screen</b>No hatched free blocks, no seven day cards, no empty side cards. Refresh and calendar filters sit in a ⋯ menu.</div>
       </div>
     </div>
@@ -393,10 +395,14 @@ kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:
     var day=i+1, out=day>30, c=document.createElement('div');
     c.className='cell'+(out?' out':'')+(day===11?' is-today':'');
     var n=document.createElement('span');n.className='n';n.textContent=out?day-30:day;c.appendChild(n);
-    (out?[]:(ev[day]||[])).forEach(function(x){var ch=document.createElement('div');ch.className='ch '+x[2];var t=document.createElement('span');t.textContent=x[0];var tm=document.createElement('time');tm.textContent=x[1];ch.appendChild(t);ch.appendChild(tm);c.appendChild(ch);});
+    (out?[]:(ev[day]||[])).forEach(function(x){var ch=document.createElement('div');ch.className='ch '+x[2];var t=document.createElement('span');t.textContent=x[0];var tm=document.createElement('time');tm.textContent=x[1];var cl=x[2],cal=cl.indexOf('fam')>-1?'Spark Family':cl.indexOf('goog')>-1?'Google · Personal':'Spark Work',rep=cl.indexOf('pend')>-1?'Not answered':cl.indexOf('tent')>-1?'Maybe':cl.indexOf('decl')>-1?'Declined':'Accepted';ch.tabIndex=0;ch.setAttribute('data-tip',x[0]+'\n'+x[1]+' · '+cal+'\n'+rep+(cl.indexOf('rec')>-1?' · Has notes':''));ch.appendChild(t);ch.appendChild(tm);c.appendChild(ch);});
     if(!out&&more[day]){var m=document.createElement('span');m.className='more';m.textContent=more[day]+' more';c.appendChild(m);}
     g.appendChild(c);
   }
+  var tip=document.createElement('div');tip.id='tip';tip.setAttribute('role','tooltip');tip.hidden=true;document.body.appendChild(tip);
+  function show(e){var el=e.target.closest&&e.target.closest('[data-tip]');if(!el){tip.hidden=true;return;}tip.textContent=el.getAttribute('data-tip');tip.hidden=false;var r=el.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight,x=Math.max(8,Math.min(r.left,innerWidth-w-8)),y=r.top-h-6<8?r.bottom+6:r.top-h-6;tip.style.left=x+'px';tip.style.top=y+'px';}
+  function hide(){tip.hidden=true;}
+  document.addEventListener('mouseover',show);document.addEventListener('focusin',show);document.addEventListener('focusout',hide);document.addEventListener('scroll',hide,true);document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
 })();
 </script>
 </body>
