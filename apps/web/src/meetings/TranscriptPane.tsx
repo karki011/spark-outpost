@@ -1,4 +1,4 @@
-import { memo, useLayoutEffect, useRef, type UIEvent } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, type UIEvent } from 'react';
 import { MEETING_SPEAKER_LABELS, type Meeting, type MeetingLine } from '@spark-outpost/contracts';
 import { SpinnerIcon } from '../ui/icons.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
@@ -25,7 +25,8 @@ export function TranscriptPane({ meeting }: { meeting: Meeting }) {
     meeting.lineCount,
   );
   const scroller = useRef<HTMLDivElement>(null);
-  const following = useRef(true);
+  const list = useRef<HTMLOListElement>(null);
+  const following = useRef(meeting.state === 'recording');
   const anchor = useRef<{ firstSeq: number; height: number } | null>(null);
   const firstSeq = lines[0]?.seq;
   const lastSeq = lines.at(-1)?.seq;
@@ -41,6 +42,18 @@ export function TranscriptPane({ meeting }: { meeting: Meeting }) {
     }
     if (following.current) element.scrollTop = element.scrollHeight;
   }, [firstSeq, lastSeq]);
+
+  const shown = lines.length > 0;
+  useEffect(() => {
+    const element = scroller.current;
+    const content = list.current;
+    if (!shown || !element || !content || typeof ResizeObserver !== 'function') return;
+    const observer = new ResizeObserver(() => {
+      if (following.current && !anchor.current) element.scrollTop = element.scrollHeight;
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [shown]);
 
   function requestEarlier() {
     const element = scroller.current;
@@ -86,7 +99,7 @@ export function TranscriptPane({ meeting }: { meeting: Meeting }) {
           Load earlier lines
         </button>
       )}
-      <ol className="mt-lines" aria-label="Transcript">
+      <ol className="mt-lines" aria-label="Transcript" ref={list}>
         {lines.map((line) => (
           <Line key={line.seq} line={line} />
         ))}
