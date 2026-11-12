@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   VOICE_DEFAULT_SETTINGS,
   VOICE_MODELS,
-  VOICE_WHISPER_BASE,
+  VOICE_PARAKEET_V3,
   type VoiceEvent,
   type VoiceMicPermission,
   type VoiceStatus,
@@ -27,9 +27,9 @@ async function setup(
   dirs.push(dir);
   if (options.model !== false) {
     mkdirSync(dir, { recursive: true });
-    const file = path.join(dir, VOICE_WHISPER_BASE.file);
+    const file = path.join(dir, VOICE_PARAKEET_V3.file);
     await writeFile(file, '');
-    await truncate(file, VOICE_WHISPER_BASE.size);
+    await truncate(file, VOICE_PARAKEET_V3.size);
   }
   const sent: { owner: number; event: VoiceEvent }[] = [];
   const island: VoiceEvent[] = [];
@@ -64,7 +64,6 @@ async function setup(
     sendIsland: (event) => island.push(event),
     voiceOver: () => false,
     language: 'en',
-    arch: 'arm64',
     allowFileInput: false,
     changed: (status) => published.push(status),
     log: () => undefined,
@@ -141,7 +140,7 @@ describe('Voice', () => {
     expect(status.model).toBe('downloading');
     expect(status.settings.enabled).toBe(true);
     await settle(50);
-    expect(scene.published.at(-1)?.models['whisper-base']).toEqual({
+    expect(scene.published.at(-1)?.models['parakeet-v3']).toEqual({
       state: 'failed',
       progress: null,
       problem: 'The download failed (500).',

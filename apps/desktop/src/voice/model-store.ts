@@ -4,7 +4,9 @@ import type {
   VoiceModelStatus,
   VoiceModelStatuses,
 } from '@spark-outpost/contracts';
-import { downloadModel, modelPath, modelPresent, removeModel, type FetchModel } from './model.ts';
+import { rm } from 'node:fs/promises';
+import path from 'node:path';
+import { downloadModel, modelPath, modelPresent, type FetchModel } from './model.ts';
 
 export interface ModelStoreEffects {
   dir: string;
@@ -15,6 +17,24 @@ export interface ModelStoreEffects {
 }
 
 export type DownloadOutcome = 'ready' | 'cancelled' | 'failed' | 'busy';
+
+const RETIRED_MODELS = [
+  {
+    file: 'ggml-base-q5_1.bin',
+    sha256: '422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898',
+  },
+  {
+    file: 'ggml-large-v3-turbo-q5_0.bin',
+    sha256: '394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2',
+  },
+];
+
+export async function removeRetiredModels(dir: string): Promise<void> {
+  for (const model of RETIRED_MODELS) {
+    await rm(path.join(dir, model.file), { force: true }).catch(() => undefined);
+    await rm(path.join(dir, `${model.sha256}.partial`), { force: true }).catch(() => undefined);
+  }
+}
 
 const MISSING: VoiceModelStatus = { state: 'missing', progress: null, problem: null };
 
@@ -94,12 +114,6 @@ export function createModelStore(effects: ModelStoreEffects) {
 
     cancel(id: VoiceModelId) {
       if (active?.id === id) active.controller.abort();
-    },
-
-    async remove(id: VoiceModelId) {
-      if (active?.id === id) return;
-      await removeModel(effects.dir, find(id));
-      set(id, MISSING);
     },
 
     dispose() {

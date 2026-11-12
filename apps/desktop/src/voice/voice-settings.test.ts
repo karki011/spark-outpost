@@ -23,7 +23,17 @@ describe('parseVoiceSettings', () => {
     expect(parseVoiceSettings(JSON.stringify({ shortcut: 'V' })).shortcut).toBe('Alt+Shift+V');
   });
 
-  it('a file from before speech models keeps Whisper base, so nothing downloads again', () => {
+  it('a saved choice of a retired model reads back as Parakeet and keeps Voice on', () => {
+    for (const model of ['whisper-base', 'whisper-large-v3-turbo']) {
+      expect(parseVoiceSettings(JSON.stringify({ enabled: true, model }))).toEqual({
+        ...VOICE_DEFAULT_SETTINGS,
+        enabled: true,
+        model: 'parakeet-v3',
+      });
+    }
+  });
+
+  it('a file from before speech models and an unknown model both read as Parakeet', () => {
     const before = JSON.stringify({
       enabled: true,
       speakAnswers: false,
@@ -34,12 +44,8 @@ describe('parseVoiceSettings', () => {
     expect(parseVoiceSettings(before)).toEqual({
       ...VOICE_DEFAULT_SETTINGS,
       enabled: true,
-      model: 'whisper-base',
+      model: 'parakeet-v3',
     });
-  });
-
-  it('keeps a chosen model, and an unknown one falls back without turning Voice off', () => {
-    expect(parseVoiceSettings(JSON.stringify({ model: 'parakeet-v3' })).model).toBe('parakeet-v3');
     expect(parseVoiceSettings(JSON.stringify({ enabled: true, model: 'parakeet-en' }))).toEqual({
       ...VOICE_DEFAULT_SETTINGS,
       enabled: true,

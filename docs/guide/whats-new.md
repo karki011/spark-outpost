@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
+| Voice uses Parakeet alone, no choice | [Talk to Spark](voice.md).                      |
 | Update check every hour              | [Updates](updates.md).                          |
 | Phone push for finished turns        | [Use your phone](use-your-phone.md).            |
 | Edits show +N −M and open to a diff  | [Follow a turn](follow-a-turn.md).              |
@@ -36,4 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Outposts: Retry, pin a note          | [Outposts](outposts.md).                        |
 | Tickets reuse a recent read          | **Refresh** reads again.                        |
 | Home changes through the day         | [Home](home.md).                                |
-| Tickets count updates at once        | Nothing.                                        |

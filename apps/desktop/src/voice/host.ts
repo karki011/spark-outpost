@@ -17,9 +17,7 @@ import {
   VOICE_MICROPHONE_SETTINGS_URL,
   VOICE_MODELS,
   VOICE_SILERO,
-  voiceModelIdSchema,
   voiceShortcutModeSchema,
-  type VoiceArch,
   type VoiceEvent,
   type VoiceListenResult,
   type VoiceMicPermission,
@@ -53,8 +51,6 @@ const INVOKE = [
   IPC.voiceTurnOff,
   IPC.voiceDownload,
   IPC.voiceCancelDownload,
-  IPC.voiceRemoveModel,
-  IPC.voiceSelectModel,
   IPC.voiceUpdate,
   IPC.voiceSetShortcut,
   IPC.voiceListen,
@@ -81,15 +77,6 @@ function micStatus(): VoiceMicPermission {
 function language(): string {
   const preferred = app.getPreferredSystemLanguages()[0] ?? 'en';
   return preferred.split(/[-_]/)[0]?.toLowerCase() || 'en';
-}
-
-function arch(): VoiceArch {
-  return process.arch === 'arm64' || app.runningUnderARM64Translation ? 'arm64' : 'x64';
-}
-
-function modelIdFrom(value: unknown) {
-  const parsed = voiceModelIdSchema.safeParse(value);
-  return parsed.success ? parsed.data : null;
 }
 
 function patchFrom(value: unknown): SettingsPatch | null {
@@ -156,7 +143,6 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
     sendIsland: (event) => options.island()?.send(IPC.voiceEvent, event),
     voiceOver: () => app.accessibilitySupportEnabled,
     language: language(),
-    arch: arch(),
     allowFileInput,
     changed: broadcast,
     log: options.log,
@@ -173,18 +159,16 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
   );
   ipcMain.handle(
     IPC.voiceTurnOn,
-    guard((_event, model) => voice.turnOn(modelIdFrom(model) ?? undefined), null),
+    guard(() => voice.turnOn(), null),
   );
-  const forModel =
-    (run: (id: NonNullable<ReturnType<typeof modelIdFrom>>) => unknown) =>
-    (_event: IpcMainInvokeEvent, model: unknown) => {
-      const id = modelIdFrom(model);
-      return id ? run(id) : voice.status();
-    };
-  ipcMain.handle(IPC.voiceDownload, guard(forModel(voice.download), null));
-  ipcMain.handle(IPC.voiceCancelDownload, guard(forModel(voice.cancelDownload), null));
-  ipcMain.handle(IPC.voiceRemoveModel, guard(forModel(voice.remove), null));
-  ipcMain.handle(IPC.voiceSelectModel, guard(forModel(voice.select), null));
+  ipcMain.handle(
+    IPC.voiceDownload,
+    guard(() => voice.download(), null),
+  );
+  ipcMain.handle(
+    IPC.voiceCancelDownload,
+    guard(() => voice.cancelDownload(), null),
+  );
   ipcMain.handle(
     IPC.voiceTurnOff,
     guard(() => voice.turnOff(), null),

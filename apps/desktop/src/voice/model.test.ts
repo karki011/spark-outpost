@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { VoiceModelFile } from '@spark-outpost/contracts';
-import { downloadModel, modelPresent, removeModel } from './model.ts';
+import { downloadModel, modelPresent } from './model.ts';
 
 const dirs: string[] = [];
 afterEach(async () => {
@@ -88,19 +88,6 @@ describe('downloadModel', () => {
         progress: () => undefined,
       }),
     ).rejects.toThrow();
-    expect(await readdir(dir)).toEqual([]);
-  });
-
-  it('removes a model and any partial download', async () => {
-    const dir = await folder();
-    await downloadModel({
-      dir,
-      model,
-      fetch: async () => new Response(body),
-      progress: () => undefined,
-    });
-    await writeFile(path.join(dir, `${model.sha256}.partial`), 'x');
-    await removeModel(dir, model);
     expect(await readdir(dir)).toEqual([]);
   });
 });

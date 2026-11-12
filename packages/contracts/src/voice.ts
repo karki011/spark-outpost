@@ -9,19 +9,10 @@ export interface VoiceModelFile {
   size: number;
 }
 
-export const VOICE_WHISPER_BASE: VoiceModelFile = {
-  file: 'ggml-base-q5_1.bin',
-  url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base-q5_1.bin',
-  sha256: '422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898',
-  size: 59_707_625,
-};
-
-export const voiceModelIdSchema = z.enum(['whisper-base', 'parakeet-v3', 'whisper-large-v3-turbo']);
+export const voiceModelIdSchema = z.enum(['parakeet-v3']);
 export type VoiceModelId = z.infer<typeof voiceModelIdSchema>;
 
-export const VOICE_DEFAULT_MODEL: VoiceModelId = 'whisper-base';
-
-export const VOICE_WHISPER_LANGUAGE_COUNT = 99;
+export const VOICE_DEFAULT_MODEL: VoiceModelId = 'parakeet-v3';
 
 export const VOICE_PARAKEET_LANGUAGES = [
   'bg',
@@ -54,7 +45,7 @@ export const VOICE_PARAKEET_LANGUAGES = [
 export interface VoiceModel extends VoiceModelFile {
   id: VoiceModelId;
   name: string;
-  languages: readonly string[] | null;
+  languages: readonly string[];
 }
 
 export const VOICE_PARAKEET_V3: VoiceModelFile = {
@@ -64,26 +55,12 @@ export const VOICE_PARAKEET_V3: VoiceModelFile = {
   size: 548_946_272,
 };
 
-export const VOICE_WHISPER_LARGE_TURBO: VoiceModelFile = {
-  file: 'ggml-large-v3-turbo-q5_0.bin',
-  url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo-q5_0.bin',
-  sha256: '394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2',
-  size: 574_041_195,
-};
-
 export const VOICE_MODELS: readonly VoiceModel[] = [
   {
     id: 'parakeet-v3',
     name: 'Parakeet',
     languages: VOICE_PARAKEET_LANGUAGES,
     ...VOICE_PARAKEET_V3,
-  },
-  { id: 'whisper-base', name: 'Whisper base', languages: null, ...VOICE_WHISPER_BASE },
-  {
-    id: 'whisper-large-v3-turbo',
-    name: 'Whisper large v3 turbo',
-    languages: null,
-    ...VOICE_WHISPER_LARGE_TURBO,
   },
 ];
 
@@ -92,14 +69,7 @@ export function voiceModel(id: VoiceModelId): VoiceModel {
 }
 
 export function voiceModelHears(model: VoiceModel, language: string): boolean {
-  return model.languages === null || model.languages.includes(language);
-}
-
-export type VoiceArch = 'arm64' | 'x64';
-
-export function recommendedVoiceModel(arch: VoiceArch, language: string): VoiceModelId {
-  const parakeet = voiceModel('parakeet-v3');
-  return arch === 'arm64' && voiceModelHears(parakeet, language) ? parakeet.id : 'whisper-base';
+  return model.languages.includes(language);
 }
 
 export const VOICE_SILERO: VoiceModelFile = {
@@ -218,7 +188,6 @@ export interface VoiceStatus {
   shortcutFailed: boolean;
   model: VoiceModelState;
   models: VoiceModelStatuses;
-  arch: VoiceArch;
   language: string;
 }
 
