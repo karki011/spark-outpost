@@ -124,6 +124,8 @@ Push to talk, off until you turn it on. Dictate a message or speak a command; sp
 
 Google and Mac calendars beside your chats in a Month and Day view, with your reply on each event and one-click Join. Before a meeting, Scout drops a card to the middle of the screen with Join, Snooze and Dismiss. [See your day](docs/guide/calendar.md)
 
+**Meeting notes (alpha):** record a meeting on your Mac, get a transcript labelled You and Others, and notes when it ends. Audio never leaves your Mac. [Take meeting notes](docs/guide/meetings.md)
+
 </td>
 <td width="50%" valign="top">
 

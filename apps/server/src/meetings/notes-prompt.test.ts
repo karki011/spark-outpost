@@ -55,6 +55,7 @@ describe('buildNotesPrompt', () => {
   it('carries the rules, title, goal, the user notes and the section', () => {
     const prompt = buildNotesPrompt(base);
     expect(prompt).toContain('Never invent a name, a decision, an owner or a date.');
+    expect(prompt).toContain('is the microphone hearing the speakers');
     expect(prompt).toContain('choose the section headings that fit what this meeting was');
     expect(prompt).toContain('Keep the headings already in <notes_so_far>');
     expect(prompt).toContain('the user may have edited it by hand. Keep every statement in it');

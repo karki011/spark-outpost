@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
+| Meeting notes (alpha)                | [Take meeting notes](meetings.md).              |
 | Calendar: new look, your replies     | [See your day](calendar.md).                    |
 | Voice shortcut dictates in the chat  | [Talk to Spark](voice.md).                      |
 | Voice uses Parakeet alone, no choice | [Talk to Spark](voice.md).                      |
@@ -36,4 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Many agents and PRs fold to one line | [Follow a turn](follow-a-turn.md).              |
 | Allow and Deny on Home rows          | [Home](home.md).                                |
 | Home: mode labels, Tomorrow, away    | [Home](home.md).                                |
-| Outposts: Retry, pin a note          | [Outposts](outposts.md).                        |

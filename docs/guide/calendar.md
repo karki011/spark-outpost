@@ -21,6 +21,7 @@ About 2 minutes.
 - **Today**, or the clock below **Settings**, opens on **Month** and **Scheduled**; Enter opens **Day**.
 - Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before** or **Hold alerts during this**.
 - An event shows your reply (**Accepted**, **Maybe**, **Not answered**, **Declined**); hover it for its details. **Day** marks free time between meetings.
+- **Take notes** records a meeting: [Take meeting notes (alpha)](meetings.md).
 - **Refresh now** re-reads them.
 
 At the start, Scout lowers a card: **Join**, **Snooze 1 min** or **Dismiss** (for good). Esc dismisses; **⌘J** joins one meeting.
