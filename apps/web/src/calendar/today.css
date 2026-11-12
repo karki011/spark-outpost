@@ -129,9 +129,16 @@
   background: var(--raise);
 }
 
-.td-wrap:has(.td-grid) {
+.td-wrap:has(.td-grid),
+.td-wrap:has(.td-meetings) {
   max-width: none;
   padding: 18px 24px 32px;
+}
+
+.td-meetings {
+  container-type: inline-size;
+  padding: 14px 2px 18px;
+  border-top: 1px solid var(--line);
 }
 
 .td-grid {

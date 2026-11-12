@@ -16,6 +16,7 @@ import { ClashTag } from './ClashTag.tsx';
 import { dateOf, span } from './calendar-format.ts';
 import { EventInfo } from './EventDetails.tsx';
 import { JoinButton } from './JoinButton.tsx';
+import { TakeNotesButton } from '../meetings/index.ts';
 import { replyState } from './reply-status.ts';
 import { openJoin } from './today-model.ts';
 import { useJoinLeadMs } from './use-calendar.ts';
@@ -157,6 +158,7 @@ export function EventActions({ event, now, onStartChat }: EventActionsProps) {
   return (
     <>
       <JoinRow event={event} now={now} />
+      {!event.allDay && !ended && <TakeNotesButton title={event.title} eventKey={event.key} />}
       <Act
         icon={<ExternalLinkIcon />}
         label={google ? 'Open in Google Calendar' : 'Open in Calendar'}

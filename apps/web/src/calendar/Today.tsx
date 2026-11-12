@@ -14,19 +14,24 @@ import { TodayStatePage } from './TodayStates.tsx';
 import { todayState } from './today-model.ts';
 import { localDate, useCalendarStatus } from './use-calendar.ts';
 import { useTodayEventRequests, type TodayEventRequest } from './today-request.ts';
+import { MeetingsView } from './MeetingsView.tsx';
+import { RecordingBar, useMeetingStatus } from '../meetings/index.ts';
 
-type CalendarView = 'month' | 'day';
+type CalendarView = 'month' | 'day' | 'meetings';
 
 const VIEWS = [
   { id: 'month', label: 'Month' },
   { id: 'day', label: 'Day' },
 ];
 
+const VIEWS_WITH_MEETINGS = [...VIEWS, { id: 'meetings', label: 'Meetings' }];
+
 const VIEW_KEY = 'spark.today.view';
 
 function savedView(): CalendarView {
   try {
-    return sessionStorage.getItem(VIEW_KEY) === 'day' ? 'day' : 'month';
+    const saved = sessionStorage.getItem(VIEW_KEY);
+    return saved === 'day' || saved === 'meetings' ? saved : 'month';
   } catch {
     return 'month';
   }
@@ -53,6 +58,8 @@ function TodayViews(props: TodayProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [flash, setFlash] = useState(0);
   const [requested, setRequested] = useState<TodayEventRequest | null>(null);
+  const [meetingId, setMeetingId] = useState<string | null>(null);
+  const meetings = useMeetingStatus().data?.available ?? false;
   const date = picked ?? today;
   const pickDate = useCallback(
     (next: string) => setPicked(next === localDate(Date.now()) ? null : next),
@@ -83,39 +90,64 @@ function TodayViews(props: TodayProps) {
       <div className="td-views">
         <Segmented
           ariaLabel="Calendar view"
-          options={VIEWS}
+          options={meetings ? VIEWS_WITH_MEETINGS : VIEWS}
           value={view}
           onChange={(id) => setView(id as CalendarView)}
         />
       </div>
     </div>
   );
+  const openMeeting = (id: string) => {
+    setMeetingId(id);
+    setView('meetings');
+  };
+  const recording = <RecordingBar onOpen={openMeeting} />;
+  if (view === 'meetings' && meetings) {
+    return (
+      <>
+        {recording}
+        <MeetingsView
+          key={meetingId ?? 'list'}
+          today={today}
+          initialId={meetingId}
+          switcher={switcher}
+          onStartChat={props.onStartChat}
+        />
+      </>
+    );
+  }
   if (view === 'day') {
     return (
-      <DayView
-        {...props}
-        date={date}
-        today={today}
-        now={now}
-        selected={selected}
-        flash={flash}
-        requested={requested?.date === date ? requested.eventKey : null}
-        switcher={switcher}
-        onDate={pickDate}
-        onSelect={setSelected}
-      />
+      <>
+        {recording}
+        <DayView
+          {...props}
+          date={date}
+          today={today}
+          now={now}
+          selected={selected}
+          flash={flash}
+          requested={requested?.date === date ? requested.eventKey : null}
+          switcher={switcher}
+          onDate={pickDate}
+          onSelect={setSelected}
+        />
+      </>
     );
   }
   return (
-    <MonthView
-      date={date}
-      today={today}
-      now={now}
-      switcher={switcher}
-      onDate={pickDate}
-      onOpenDay={openDay}
-      onStartChat={props.onStartChat}
-    />
+    <>
+      {recording}
+      <MonthView
+        date={date}
+        today={today}
+        now={now}
+        switcher={switcher}
+        onDate={pickDate}
+        onOpenDay={openDay}
+        onStartChat={props.onStartChat}
+      />
+    </>
   );
 }
 

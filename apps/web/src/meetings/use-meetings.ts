@@ -7,7 +7,6 @@ import {
   type QueryClient,
 } from '@tanstack/react-query';
 import {
-  MEETING_EVENT_KEYS_MAX,
   type MeetingDetail,
   type MeetingPatch,
   type StartMeetingRequest,
@@ -45,15 +44,6 @@ export function useMeetingList(query: string) {
 
 export function useMeeting(id: string) {
   return useQuery({ queryKey: meetingKeys.detail(id), queryFn: () => meetingsApi.detail(id) });
-}
-
-export function useMeetingsForEvents(eventKeys: readonly string[]) {
-  const keys = [...new Set(eventKeys)].sort().slice(0, MEETING_EVENT_KEYS_MAX);
-  return useQuery({
-    queryKey: meetingKeys.forEvents(keys),
-    queryFn: () => meetingsApi.forEvents(keys),
-    enabled: keys.length > 0,
-  });
 }
 
 function remember(client: QueryClient, detail: MeetingDetail) {
