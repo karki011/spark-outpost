@@ -43,3 +43,11 @@
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
+
+@media (min-width: 900px) and (min-height: 560px) {
+  .td-wrap:has(.td-pagebody:not([hidden]) .td-meetings) {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+}

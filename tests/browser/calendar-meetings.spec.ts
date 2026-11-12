@@ -61,6 +61,18 @@ test('a meeting is recorded, transcribed, written up, found by search and kept a
   await expect(transcript).toContainText('You');
   await expect(transcript).toContainText('apply it in January', { timeout: 15_000 });
 
+  const size = page.viewportSize()!;
+  await page.setViewportSize({ width: 920, height: 560 });
+  await expect
+    .poll(() =>
+      main.locator('.mt-transcript').evaluate((el) => el.scrollHeight > el.clientHeight + 20),
+    )
+    .toBe(true);
+  expect(
+    await main.locator('.home').evaluate((el) => el.scrollHeight - el.clientHeight),
+  ).toBeLessThanOrEqual(1);
+  await page.setViewportSize(size);
+
   const status = await (await page.request.get('/api/meetings/status')).json();
   const id = (status as { recordingId: string }).recordingId;
   await main.getByRole('button', { name: 'Stop' }).first().click();

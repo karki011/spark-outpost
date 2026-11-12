@@ -393,3 +393,46 @@
     animation-duration: 2s;
   }
 }
+
+@media (min-width: 900px) and (min-height: 560px) {
+  .mt-fill {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .mt-fill .mt-tab {
+    flex: 1;
+    min-height: 0;
+  }
+  @container (min-width: 760px) {
+    .mt-fill .mt-tab {
+      grid-template-rows: minmax(0, 1fr);
+    }
+    .mt-fill .mt-tab[data-open] .mt-side,
+    .mt-fill .mt-tab[data-open] .mt-main {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .mt-fill .mt-list {
+      align-content: start;
+      min-height: 0;
+      overflow-y: auto;
+    }
+    .mt-fill .mt-page {
+      flex: 1;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      min-height: 0;
+    }
+    .mt-fill .mt-pane {
+      min-height: 0;
+      overflow-y: auto;
+    }
+    .mt-fill .mt-transcript {
+      height: 100%;
+      max-height: 100%;
+    }
+  }
+}

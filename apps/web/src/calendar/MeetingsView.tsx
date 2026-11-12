@@ -18,7 +18,7 @@ export const MeetingsView = memo(function MeetingsView({
     [onStartChat],
   );
   return (
-    <div className="td-card td-meetings">
+    <div className="td-card td-meetings mt-fill">
       <h1 className="sr-only">Transcripts</h1>
       <MeetingsTab openId={openId} onOpen={onOpen} onStartChat={startChat} />
     </div>
