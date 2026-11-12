@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   builderConfig,
   CALENDARS_USAGE,
+  AUDIO_CAPTURE_USAGE,
   MICROPHONE_USAGE,
   packagedGitHubApp,
   packagedSlackClientId,
@@ -105,6 +106,7 @@ describe('builderConfig', () => {
     const config = builderConfig({ ...base, archs: ['arm64'], env: {} });
     expect(config.mac?.extendInfo).toEqual({
       NSMicrophoneUsageDescription: MICROPHONE_USAGE,
+      NSAudioCaptureUsageDescription: AUDIO_CAPTURE_USAGE,
       NSCalendarsFullAccessUsageDescription: CALENDARS_USAGE,
       NSCalendarsUsageDescription: CALENDARS_USAGE,
     });

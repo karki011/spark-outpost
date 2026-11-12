@@ -2,10 +2,14 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Meeting, MeetingDetail, NewMeetingLine } from '@spark-outpost/contracts';
 import { createApp } from '../src/api/app.ts';
-import { MEETINGS_NEED_THE_MAC_APP, type DeliverLines } from '../src/meetings/source.ts';
+import {
+  MEETINGS_NEED_THE_MAC_APP,
+  MeetingSourceError,
+  type DeliverLines,
+} from '../src/meetings/source.ts';
 import { createMeetingService, type MeetingServiceOptions } from '../src/meetings/service.ts';
 import { testAppOptions, localClient } from './app-support.ts';
-import { createTestDb, startChat, type TestDb } from './support.ts';
+import { createTestDb, eventually, startChat, type TestDb } from './support.ts';
 
 let t: TestDb;
 
@@ -27,12 +31,16 @@ const line = (text: string, speaker: 'you' | 'others' = 'others', at = 0): NewMe
 function controllableSource() {
   const delivers = new Map<string, DeliverLines>();
   const stopped: string[] = [];
+  const lost = new Map<string, () => void>();
   return {
     delivers,
     stopped,
+    lost,
     source: {
-      start: async (id: string, deliver: DeliverLines) => {
+      state: () => ({ available: true, reason: null }),
+      start: async (id: string, deliver: DeliverLines, onLost: () => void) => {
         delivers.set(id, deliver);
+        lost.set(id, onLost);
       },
       stop: async (id: string) => {
         stopped.push(id);
@@ -153,20 +161,55 @@ describe('recording a meeting', () => {
     await started(client);
   });
 
-  it('ends the meeting as interrupted when the source cannot start', async () => {
+  it('leaves no meeting behind when the source cannot start, and says why', async () => {
     const { client } = setup({
       source: {
+        state: () => ({ available: true, reason: null }),
         start: async () => {
-          throw new Error('Microphone is busy');
+          throw new MeetingSourceError('Allow the microphone in System Settings.');
         },
         stop: async () => undefined,
       },
     });
-    const refused = await client.send('post', '/api/meetings', { title: 'Standup' }).expect(500);
-    expect(refused.body.error).toBeDefined();
+    const refused = await client.send('post', '/api/meetings', { title: 'Standup' }).expect(503);
+    expect(refused.body.error).toBe('Allow the microphone in System Settings.');
     const list = await client.get('/api/meetings').expect(200);
-    expect(list.body.items[0].meeting).toMatchObject({ state: 'interrupted', title: 'Standup' });
+    expect(list.body.items).toEqual([]);
     expect((await client.get('/api/meetings/status')).body.recordingId).toBeNull();
+  });
+
+  it('refuses a start with the reason while the source says it cannot record', async () => {
+    const { client } = setup({
+      source: {
+        state: () => ({ available: false, reason: 'Turn on Voice in Settings first.' }),
+        start: async () => undefined,
+        stop: async () => undefined,
+      },
+    });
+    expect((await client.get('/api/meetings/status')).body).toEqual({
+      available: false,
+      reason: 'Turn on Voice in Settings first.',
+      recordingId: null,
+    });
+    const refused = await client.send('post', '/api/meetings', {}).expect(503);
+    expect(refused.body.error).toBe('Turn on Voice in Settings first.');
+  });
+
+  it('marks the meeting ended by restart when capture is lost, keeping its lines', async () => {
+    const test = controllableSource();
+    const { client } = setup({ source: test.source });
+    const { meeting } = await started(client);
+    await test.delivers.get(meeting.id)!([
+      { speaker: 'you', text: 'kept line', startMs: 0, endMs: 900 },
+    ]);
+    test.lost.get(meeting.id)!();
+    const ended = await eventually(async () => {
+      const detail = await client.get(`/api/meetings/${meeting.id}`).expect(200);
+      return detail.body.meeting.state === 'interrupted' ? detail.body.meeting : null;
+    });
+    expect(ended).toMatchObject({ state: 'interrupted', lineCount: 1 });
+    expect((await client.get('/api/meetings/status')).body.recordingId).toBeNull();
+    await client.send('post', '/api/meetings', { title: 'Next' }).expect(201);
   });
 
   it('stops the source when a recording is deleted', async () => {

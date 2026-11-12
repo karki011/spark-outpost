@@ -7,7 +7,7 @@ import {
   type StartMeetingRequest,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
-import { MEETINGS_NEED_THE_MAC_APP, type MeetingSource } from './source.ts';
+import { MEETINGS_NEED_THE_MAC_APP, MeetingSourceError, type MeetingSource } from './source.ts';
 import {
   MeetingAlreadyRecording,
   appendLines,
@@ -118,6 +118,9 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
     notifyEnded(ended);
   }
 
+  const sourceState = () =>
+    source?.state() ?? { available: false, reason: MEETINGS_NEED_THE_MAC_APP };
+
   async function stopSource(meetingId: string, state: 'ended' | 'interrupted'): Promise<void> {
     try {
       await source?.stop(meetingId);
@@ -133,14 +136,16 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
     async status() {
       const recording = await recordingMeeting(db, workspaceId);
       return {
-        available: source !== null,
-        reason: source ? null : MEETINGS_NEED_THE_MAC_APP,
+        ...sourceState(),
         recordingId: recording?.id ?? null,
       };
     },
 
     async start(request) {
-      if (!source) throw new MeetingError(503, MEETINGS_NEED_THE_MAC_APP);
+      const ready = sourceState();
+      if (!source || !ready.available) {
+        throw new MeetingError(503, ready.reason ?? MEETINGS_NEED_THE_MAC_APP);
+      }
       let meeting: Meeting;
       try {
         meeting = await createMeeting(db, workspaceId, request);
@@ -150,9 +155,13 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
       }
       announce(meeting.id);
       try {
-        await source.start(meeting.id, deliverTo(meeting.id));
+        await source.start(meeting.id, deliverTo(meeting.id), () => {
+          void finish(meeting.id, 'interrupted').catch(() => undefined);
+        });
       } catch (error) {
-        await finish(meeting.id, 'interrupted');
+        await deleteMeeting(db, workspaceId, meeting.id);
+        announce(meeting.id);
+        if (error instanceof MeetingSourceError) throw new MeetingError(503, error.message);
         throw error;
       }
       return (await getMeeting(db, workspaceId, meeting.id)) ?? meeting;

@@ -28,7 +28,10 @@ const SLACK_CLIENT_ID = '';
 export type MacArch = 'x64' | 'arm64';
 
 export const MICROPHONE_USAGE =
-  'Spark Outpost listens only while you press the Voice shortcut or the mic button, and turns your speech into text on this Mac.';
+  'Spark Outpost listens only while you press the Voice shortcut or the mic button, or while a meeting you started is recording, and turns your speech into text on this Mac.';
+
+export const AUDIO_CAPTURE_USAGE =
+  'Spark Outpost hears what your Mac plays only while a meeting you started is recording, and turns it into text on this Mac. The audio is never saved.';
 
 export const CALENDARS_USAGE =
   'Spark Outpost reads your calendars on this Mac for Today, reminders and focus time, and changes an event only when you, or an agent you allowed, do.';
@@ -236,6 +239,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
       minimumSystemVersion: '13.0',
       extendInfo: {
         NSMicrophoneUsageDescription: MICROPHONE_USAGE,
+        NSAudioCaptureUsageDescription: AUDIO_CAPTURE_USAGE,
         NSCalendarsFullAccessUsageDescription: CALENDARS_USAGE,
         NSCalendarsUsageDescription: CALENDARS_USAGE,
       },

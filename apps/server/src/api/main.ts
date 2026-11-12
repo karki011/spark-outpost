@@ -63,6 +63,7 @@ import { pushKeys } from '../remote/push-keys.ts';
 import { startPushNotifier } from '../remote/push-notifier.ts';
 import { connectDesktopCalendar } from '../calendar/host-client.ts';
 import { startCalendarTicker, type CalendarTicker } from '../calendar/ticker.ts';
+import { connectDesktopMeetings } from '../meetings/desktop-source.ts';
 import { fakeMeetingSource } from '../meetings/fake-source.ts';
 import { meetingNotesWriter } from '../meetings/notes.ts';
 import { createMeetingService } from '../meetings/service.ts';
@@ -198,7 +199,7 @@ const writeMeetingNotes = meetingNotesWriter(db, workspaceId, async (event) => {
 const meetings = createMeetingService({
   db,
   workspaceId,
-  source: fakeMeetingSource(process.env),
+  source: fakeMeetingSource(process.env) ?? connectDesktopMeetings(process.env, process),
   publish: (event) => appEvents.publish(event),
   onEnded: (meeting) => void writeMeetingNotes(meeting.id).catch(() => undefined),
   writeNotes: writeMeetingNotes,

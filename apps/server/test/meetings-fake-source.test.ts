@@ -10,6 +10,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const lost = () => undefined;
+
 describe('the fake meeting source', () => {
   it('is absent unless SPARK_FAKE_MEETINGS is 1', () => {
     expect(fakeMeetingSource({})).toBeNull();
@@ -22,9 +24,13 @@ describe('the fake meeting source', () => {
       SPARK_FAKE_MEETINGS_INTERVAL_MS: '100',
     })!;
     const delivered: NewMeetingLine[] = [];
-    await source.start('m1', async (lines) => {
-      delivered.push(...lines);
-    });
+    await source.start(
+      'm1',
+      async (lines) => {
+        delivered.push(...lines);
+      },
+      lost,
+    );
     expect(delivered).toHaveLength(0);
 
     await vi.advanceTimersByTimeAsync(100);
@@ -46,9 +52,13 @@ describe('the fake meeting source', () => {
   it('delivers nothing after stop and clears its timer', async () => {
     const source = fakeMeetingSource({ SPARK_FAKE_MEETINGS: '1' })!;
     const delivered: NewMeetingLine[] = [];
-    await source.start('m1', async (lines) => {
-      delivered.push(...lines);
-    });
+    await source.start(
+      'm1',
+      async (lines) => {
+        delivered.push(...lines);
+      },
+      lost,
+    );
     await vi.advanceTimersByTimeAsync(150);
     expect(delivered).toHaveLength(1);
     await source.stop('m1');

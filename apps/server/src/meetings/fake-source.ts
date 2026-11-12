@@ -39,6 +39,7 @@ export function fakeMeetingSource(env: NodeJS.ProcessEnv): MeetingSource | null 
   };
 
   return {
+    state: () => ({ available: true, reason: null }),
     async start(meetingId, deliver) {
       await stop(meetingId);
       let next = 0;
