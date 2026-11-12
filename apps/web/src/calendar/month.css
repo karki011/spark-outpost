@@ -9,7 +9,7 @@
   width: 168px;
 }
 
-.td-wrap:has(.mo-page) {
+.td-wrap:has(.td-pagebody:not([hidden]) .mo-page) {
   display: flex;
   flex-direction: column;
   max-width: none;
@@ -23,14 +23,23 @@
   flex: 1;
   flex-direction: column;
   min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+}
+
+.mo-page > .home-error,
+.mo-page > .td-hint {
+  margin: 0;
+  padding: 0 18px 10px;
 }
 
 .mo-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 10px;
-  margin-bottom: 12px;
+  gap: 8px 12px;
+  padding: 16px 18px;
 }
 
 .mo-title {
@@ -39,9 +48,8 @@
 
 .mo-title h1 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-size: 17px;
+  font-weight: 500;
 }
 
 .mo-title-btn {
@@ -82,7 +90,7 @@
   align-items: center;
   gap: 6px;
   margin-bottom: 8px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .mo-picker-year > span {
@@ -108,8 +116,8 @@
 }
 
 .mo-month[aria-current='true'] {
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--text);
+  color: var(--panel);
 }
 
 .mo-steps {
@@ -153,17 +161,19 @@
   flex: 1;
   grid-template-columns: minmax(0, 1fr) auto;
   min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--r) var(--r);
 }
 
 .mo-panel {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding-right: 16px;
 }
 
 .mo-grid {
-  --mo-ev-row: 19px;
+  --mo-ev-row: 22px;
   display: grid;
   flex: 1;
   grid-template-rows: auto repeat(6, minmax(92px, 1fr));
@@ -175,12 +185,10 @@
 }
 
 .mo-wd {
-  padding: 0 8px 6px;
+  padding: 6px 8px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-align: center;
 }
 
 .mo-wd abbr {
@@ -190,10 +198,10 @@
 .mo-cell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
   min-height: 0;
-  padding: 5px 6px 4px;
+  padding: 6px;
   overflow: hidden;
   border-top: 1px solid var(--line);
   cursor: pointer;
@@ -204,11 +212,11 @@
 }
 
 .mo-cell:hover {
-  background: var(--raise);
+  background: var(--bg);
 }
 
 .mo-cell[aria-selected='true'] {
-  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
 }
 
 .mo-cell:focus-visible {
@@ -221,23 +229,25 @@
   flex: none;
   place-items: center;
   align-self: flex-start;
-  min-width: 24px;
-  height: 24px;
+  min-width: 22px;
+  height: 22px;
   padding: 0 4px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 500;
+  border-radius: 11px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .mo-cell[data-out] .mo-num {
   color: var(--faint);
-  font-weight: 400;
+}
+
+.mo-cell[aria-selected='true'] .mo-num {
+  color: var(--text);
 }
 
 .mo-cell[data-today] .mo-num {
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-weight: 700;
+  background: var(--text);
+  color: var(--panel);
 }
 
 .mo-evs {
@@ -255,22 +265,17 @@
   align-items: center;
   gap: 5px;
   min-width: 0;
-  height: var(--mo-ev-row);
-  padding: 0 3px;
-  border-radius: 4px;
+  height: calc(var(--mo-ev-row) - 3px);
+  margin-bottom: 3px;
+  padding: 0 5px;
+  border: 1px solid transparent;
+  border-left: 2px solid var(--cal-color, var(--line-strong));
+  border-radius: 5px;
+  background: var(--raise);
   color: var(--text);
   font-size: 12px;
   text-align: left;
   white-space: nowrap;
-}
-
-.mo-ev::before {
-  content: '';
-  flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--cal-color, var(--accent));
 }
 
 .mo-at {
@@ -286,40 +291,53 @@
 }
 
 .mo-ev[data-focus] {
-  background: var(--accent-soft);
+  background: var(--panel);
+  border-color: var(--line);
+  border-left-color: var(--cal-color, var(--line-strong));
+}
+
+.mo-ev[data-reply='dashed'] {
+  border-style: dashed;
+  border-color: var(--line-strong);
+  border-left: 2px solid var(--cal-color, var(--line-strong));
+  background: none;
+}
+
+.mo-ev[data-reply='striped'] {
+  background: repeating-linear-gradient(135deg, var(--raise) 0 5px, transparent 5px 9px);
+}
+
+.mo-ev[data-reply='struck'] {
+  background: none;
+  color: var(--faint);
+  text-decoration: line-through;
+}
+
+.mo-ev[data-reply='struck'] .mo-at {
+  color: var(--faint);
 }
 
 .mo-ev:hover {
-  background: var(--panel);
+  border-color: var(--line-strong);
 }
 
 .mo-cell[data-past] .mo-ev,
 .mo-cell[data-past] .mo-at,
 .mo-cell[data-out] .mo-ev,
-.mo-cell[data-out] .mo-at {
-  color: var(--faint);
-}
-
+.mo-cell[data-out] .mo-at,
 .mo-ev[data-ended],
 .mo-ev[data-ended] .mo-at {
   color: var(--faint);
 }
 
-.mo-ev[data-ended]::before {
-  opacity: 0.45;
-}
-
-.mo-cell[data-past] .mo-ev::before {
-  opacity: 0.45;
+.mo-cell[data-past] .mo-ev,
+.mo-ev[data-ended] {
+  border-left-color: color-mix(in srgb, var(--cal-color, var(--line-strong)) 45%, var(--panel));
 }
 
 .mo-cell .mo-ev[data-selected] {
-  background: var(--accent-soft);
-}
-
-.mo-cell .mo-ev[data-selected],
-.mo-cell .mo-ev[data-selected] .mo-at {
-  color: var(--accent-text);
+  border-color: var(--text);
+  border-left-color: var(--cal-color, var(--line-strong));
 }
 
 .mo-more-wrap {
@@ -329,16 +347,16 @@
 
 .mo-more {
   height: var(--mo-ev-row);
-  padding: 0 3px;
+  padding: 0 5px;
   border-radius: 4px;
-  color: var(--muted);
+  color: var(--faint);
   font-size: 12px;
   line-height: var(--mo-ev-row);
 }
 
 .mo-more:hover,
 .mo-more[aria-expanded='true'] {
-  background: var(--panel);
+  background: var(--raise);
   color: var(--text);
 }
 
@@ -352,7 +370,8 @@
 }
 
 .mo-keys {
-  margin-top: 8px;
+  margin: 0;
+  padding: 8px 18px;
 }
 
 .mo-pop {
@@ -385,16 +404,13 @@
   flex: 1;
   margin: 2px 0 0;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 @container (max-width: 900px) {
   .mo-layout {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .mo-panel {
-    padding-right: 0;
+    row-gap: 12px;
   }
 
   .mo-grid {
@@ -404,7 +420,7 @@
 }
 
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
-  .td-wrap:has(.mo-page) {
+  .td-wrap:has(.td-pagebody:not([hidden]) .mo-page) {
     padding: 16px 16px 24px;
   }
 
@@ -419,6 +435,15 @@
 
   .mo-now {
     display: none;
+  }
+
+  .mo-bar {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .td-tools {
+    flex-wrap: wrap;
   }
 
   .mo-grid {
@@ -441,9 +466,15 @@
   }
 
   .mo-ev {
-    width: auto;
+    width: 14px;
     height: 6px;
+    margin: 0;
     padding: 0;
+    border-radius: 3px;
+  }
+
+  .mo-ev[data-reply='struck'] {
+    border: 1px solid var(--line);
   }
 
   .mo-at,

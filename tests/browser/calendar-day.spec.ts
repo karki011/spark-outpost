@@ -69,7 +69,7 @@ test('short meetings lay out by height and never draw lines over each other', as
   expect(await linesStayInside(review)).toBe(2);
 });
 
-test('a selected meeting shows in the accent text colour, with a ring only for the keyboard', async ({
+test('a selected meeting shows in the text colour, with a ring only for the keyboard', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -78,9 +78,9 @@ test('a selected meeting shows in the accent text colour, with a ring only for t
   await standup.click();
   await expect(standup).toHaveAttribute('aria-expanded', 'true');
   const style = await standup.evaluate((element) => {
-    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent-text');
+    const text = getComputedStyle(document.documentElement).getPropertyValue('--text');
     const probe = document.createElement('span');
-    probe.style.color = accent;
+    probe.style.color = text;
     document.body.append(probe);
     const want = getComputedStyle(probe).color;
     probe.remove();
@@ -177,7 +177,9 @@ test('Join is quiet before its window, primary inside it and Ended after', async
   });
   await expect(early).toHaveAttribute('aria-disabled', 'true');
   await expect(early).toHaveAccessibleDescription(/^Opens at /);
-  await expect(early).toHaveAttribute('title', /^Join opens at /);
+  await expect(early).not.toHaveAttribute('title');
+  await early.hover();
+  await expect(page.getByRole('tooltip')).toHaveText(/^Join opens at /);
   await early.click({ force: true });
   expect(await opened()).toEqual([]);
   if (shots)

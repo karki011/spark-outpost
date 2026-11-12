@@ -1,0 +1,53 @@
+.td-pages {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.td-page {
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.td-page:hover {
+  color: var(--text);
+}
+
+.td-page[aria-selected='true'] {
+  border-bottom-color: var(--text);
+  color: var(--text);
+}
+
+.td-page:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.td-wrap .mt-bar:has(~ .td-pagebody:not([hidden]) > :is(.td-card, .mo-page)) {
+  padding: 8px 18px;
+  border-bottom-color: var(--line);
+  border-radius: var(--r) var(--r) 0 0;
+  background: var(--raise);
+}
+
+.td-wrap .mt-bar ~ .td-pagebody:not([hidden]) > :is(.td-card, .mo-page) {
+  border-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+@media (min-width: 900px) and (min-height: 560px) {
+  .td-wrap:has(.td-pagebody:not([hidden]) .td-meetings) {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+}

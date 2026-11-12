@@ -1,22 +1,15 @@
 import {
-  recommendedVoiceModel,
   VOICE_DEFAULT_MODEL,
-  VOICE_MODELS,
   voiceModel,
   type VoiceModelId,
   type VoiceStatus,
 } from '@spark-outpost/contracts';
 import { DownloadIcon, LockIcon, PlusIcon } from '../ui/icons.tsx';
-import { languageCount, megabytes, MODEL_SUMMARIES } from '../voice/speech-models.ts';
+import { languageCount, megabytes, MODEL_SUMMARY } from '../voice/speech-models.ts';
 import '../providers/providers.css';
 import './voice-step.css';
 
 export type VoiceChoice = VoiceModelId | 'none';
-
-export function recommendedChoice(status: VoiceStatus | null): VoiceModelId {
-  if (!status) return VOICE_DEFAULT_MODEL;
-  return recommendedVoiceModel(status.arch, status.language);
-}
 
 export function voiceContinueLabel(choice: VoiceChoice, status: VoiceStatus | null): string {
   if (choice === 'none' || status?.models[choice].state === 'ready') return 'Continue';
@@ -25,7 +18,6 @@ export function voiceContinueLabel(choice: VoiceChoice, status: VoiceStatus | nu
 
 interface VoiceStepProps {
   choice: VoiceChoice;
-  recommended: VoiceModelId;
   onChoose(choice: VoiceChoice): void;
 }
 
@@ -34,7 +26,6 @@ function Option(props: {
   checked: boolean;
   onChoose(choice: VoiceChoice): void;
   name: string;
-  tag?: string | undefined;
   summary: string;
   size?: string;
   languages?: string;
@@ -51,7 +42,6 @@ function Option(props: {
       <span className="voice-opt-text">
         <span className="voice-opt-name">
           <b>{props.name}</b>
-          {props.tag && <span className="pill-ok">{props.tag}</span>}
         </span>
         <span className="voice-opt-summary">{props.summary}</span>
       </span>
@@ -65,28 +55,25 @@ function Option(props: {
   );
 }
 
-export function VoiceStep({ choice, recommended, onChoose }: VoiceStepProps) {
+export function VoiceStep({ choice, onChoose }: VoiceStepProps) {
+  const model = voiceModel(VOICE_DEFAULT_MODEL);
   return (
     <>
       <h2 id="onbTitle">Talk to Spark</h2>
       <p className="lede">
         Press <kbd>⌥⇧V</kbd> (or your own shortcut, set in Settings → Voice), speak, and Spark turns
-        it into text on this Mac. Pick a speech model, or skip and turn Voice on later.
+        it into text on this Mac. Download the speech model, or skip and turn Voice on later.
       </p>
       <div className="voice-opts" role="radiogroup" aria-labelledby="onbTitle">
-        {VOICE_MODELS.map((model) => (
-          <Option
-            key={model.id}
-            value={model.id}
-            checked={choice === model.id}
-            onChoose={onChoose}
-            name={model.name}
-            tag={model.id === recommended ? 'Recommended for you' : undefined}
-            summary={MODEL_SUMMARIES[model.id]}
-            size={megabytes(model.size)}
-            languages={languageCount(model)}
-          />
-        ))}
+        <Option
+          value={model.id}
+          checked={choice === model.id}
+          onChoose={onChoose}
+          name={model.name}
+          summary={MODEL_SUMMARY}
+          size={megabytes(model.size)}
+          languages={languageCount(model)}
+        />
         <Option
           value="none"
           checked={choice === 'none'}
@@ -106,7 +93,7 @@ export function VoiceStep({ choice, recommended, onChoose }: VoiceStepProps) {
         </li>
         <li>
           <PlusIcon />
-          Change models any time in Settings
+          Turn Voice off any time in Settings
         </li>
       </ul>
     </>

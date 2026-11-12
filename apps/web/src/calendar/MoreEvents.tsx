@@ -5,15 +5,14 @@ import {
   useLayoutEffect,
   useRef,
   useState,
-  type CSSProperties,
   type FocusEvent,
   type KeyboardEvent,
   type MouseEvent,
 } from 'react';
 import type { CalendarChoice, CalendarEvent } from '@spark-outpost/contracts';
 import { keepInViewport } from '../ui/viewport-clamp.ts';
-import { clock, dayTitle } from './calendar-format.ts';
-import { swatch } from './CalendarAccounts.tsx';
+import { dayTitle } from './calendar-format.ts';
+import { MonthChip } from './MonthChip.tsx';
 
 const CLOSE_DELAY_MS = 160;
 const GAP = 4;
@@ -22,6 +21,7 @@ interface MoreEventsProps {
   date: string;
   events: readonly CalendarEvent[];
   calendars: ReadonlyMap<string, CalendarChoice>;
+  now: number;
   focusable: boolean;
   onDate: (date: string) => void;
   onOpenEvent: (event: CalendarEvent, anchor: HTMLElement) => void;
@@ -37,7 +37,14 @@ function placeUnder(list: HTMLElement, anchor: HTMLElement): void {
   keepInViewport(list);
 }
 
-export function MoreEvents({ date, events, calendars, focusable, ...actions }: MoreEventsProps) {
+export function MoreEvents({
+  date,
+  events,
+  calendars,
+  now,
+  focusable,
+  ...actions
+}: MoreEventsProps) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -119,17 +126,13 @@ export function MoreEvents({ date, events, calendars, focusable, ...actions }: M
           <ul>
             {events.map((event) => (
               <li key={event.key}>
-                <button
-                  type="button"
-                  className="mo-ev"
-                  style={swatch(calendars.get(event.calendarKey)?.color ?? '') as CSSProperties}
+                <MonthChip
+                  event={event}
+                  calendar={calendars.get(event.calendarKey)}
+                  now={now}
+                  inGrid={false}
                   onClick={pick(event)}
-                >
-                  <span className="mo-at">
-                    {event.allDay ? 'All day' : clock(Date.parse(event.start))}
-                  </span>
-                  <span className="mo-ev-title">{event.title}</span>
-                </button>
+                />
               </li>
             ))}
           </ul>

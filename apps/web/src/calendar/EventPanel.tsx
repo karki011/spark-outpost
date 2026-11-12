@@ -16,6 +16,8 @@ import { ClashTag } from './ClashTag.tsx';
 import { dateOf, span } from './calendar-format.ts';
 import { EventInfo } from './EventDetails.tsx';
 import { JoinButton } from './JoinButton.tsx';
+import { TakeNotesButton } from '../meetings/index.ts';
+import { replyState } from './reply-status.ts';
 import { openJoin } from './today-model.ts';
 import { useJoinLeadMs } from './use-calendar.ts';
 
@@ -98,27 +100,38 @@ export function EventMeta({ event, date, calendars }: EventMetaProps) {
     .filter((title): title is string => Boolean(title));
   const weekday = dateOf(date).toLocaleDateString(undefined, { weekday: 'long' });
   const people = event.attendeeCount > 1 ? ` · ${event.attendeeCount} people` : '';
+  const reply = replyState(event.myStatus);
   return (
-    <p className="td-panel-meta">
-      {weekday} {event.allDay ? 'all day' : span(start, end)} ·{' '}
-      {names.map((name, index) => (
-        <Fragment key={`${name}-${index}`}>
-          {index > 0 && ' and '}
-          <CalendarName name={name} className="td-panel-cal" />
-        </Fragment>
-      ))}
-      {people}
-    </p>
+    <>
+      <p className="td-panel-meta">
+        {weekday} {event.allDay ? 'all day' : span(start, end)} ·{' '}
+        {names.map((name, index) => (
+          <Fragment key={`${name}-${index}`}>
+            {index > 0 && ' and '}
+            <CalendarName name={name} className="td-panel-cal" />
+          </Fragment>
+        ))}
+        {people}
+      </p>
+      {reply.word && (
+        <p className="td-panel-reply" data-reply={reply.look}>
+          <i aria-hidden="true" />
+          <span className="sr-only">Your reply: </span>
+          {reply.word}
+        </p>
+      )}
+    </>
   );
 }
 
 interface EventActionsProps {
   event: CalendarEvent;
+  calendarName?: string | undefined;
   now: number;
   onStartChat: (text: string) => void;
 }
 
-export function EventActions({ event, now, onStartChat }: EventActionsProps) {
+export function EventActions({ event, calendarName, now, onStartChat }: EventActionsProps) {
   const mark = useMark(event);
   const occurrence = { eventId: event.id, start: event.start, calendarKey: event.calendarKey };
   const google = isGoogleEventId(event.id);
@@ -146,6 +159,9 @@ export function EventActions({ event, now, onStartChat }: EventActionsProps) {
   return (
     <>
       <JoinRow event={event} now={now} />
+      {!event.allDay && !ended && (
+        <TakeNotesButton title={event.title} eventKey={event.key} calendarName={calendarName} />
+      )}
       <Act
         icon={<ExternalLinkIcon />}
         label={google ? 'Open in Google Calendar' : 'Open in Calendar'}
@@ -204,7 +220,12 @@ export function EventPanel({
         </p>
       )}
       <EventInfo event={event} now={now} />
-      <EventActions event={event} now={now} onStartChat={onStartChat} />
+      <EventActions
+        event={event}
+        calendarName={calendars.get(event.calendarKey)?.title}
+        now={now}
+        onStartChat={onStartChat}
+      />
     </section>
   );
 }

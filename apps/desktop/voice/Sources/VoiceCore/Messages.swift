@@ -7,7 +7,20 @@ public struct ListenRequest: Equatable, Sendable {
     public var file: String?
 }
 
+public struct MeetingRequest: Equatable, Sendable {
+    public var language: String
+    public var file: String?
+    public var systemFile: String?
+}
+
+public enum MeetingSource: String, Sendable {
+    case you
+    case others
+}
+
 public enum Request: Equatable, Sendable {
+    case meetingStart(MeetingRequest)
+    case meetingStop
     case status
     case load(path: String, sha256: String, vad: String)
     case listen(ListenRequest)
@@ -40,8 +53,13 @@ public struct HelperStatus: Equatable, Sendable {
     public var model: Bool
     public var fnSetting: String
     public var arch: String
+    public var systemAudio: Bool
 
-    public init(mic: String, inputMonitoring: Bool, model: Bool, fnSetting: String, arch: String) {
+    public init(
+        mic: String, inputMonitoring: Bool, model: Bool, fnSetting: String, arch: String,
+        systemAudio: Bool = false
+    ) {
+        self.systemAudio = systemAudio
         self.mic = mic
         self.inputMonitoring = inputMonitoring
         self.model = model
@@ -63,6 +81,10 @@ public enum Message: Equatable, Sendable {
     case hushed
     case keys
     case key(KeyEvent)
+    case meetingStarted
+    case meetingSystem(Bool)
+    case meetingLine(source: MeetingSource, text: String, startMs: Int, endMs: Int)
+    case meetingEnded
     case error(ErrorCode, String)
 }
 
@@ -92,6 +114,13 @@ private func request(op: String, object: [String: Any]) -> Request? {
     case "stop": return .stop
     case "cancel": return .cancel
     case "hush": return .hush
+    case "meeting.stop": return .meetingStop
+    case "meeting.start":
+        return .meetingStart(MeetingRequest(
+            language: string(object, "language") ?? "en",
+            file: string(object, "file"),
+            systemFile: string(object, "systemFile")
+        ))
     case "load":
         guard let path = string(object, "path"), let sha = string(object, "sha256"),
               let vad = string(object, "vad") else { return nil }
@@ -124,6 +153,7 @@ public func encode(id: String?, _ message: Message) -> String {
         object["model"] = status.model
         object["fnSetting"] = status.fnSetting
         object["arch"] = status.arch
+        object["systemAudio"] = status.systemAudio
     case .loaded: object["event"] = "loaded"
     case .level(let level):
         object["event"] = "level"
@@ -142,6 +172,17 @@ public func encode(id: String?, _ message: Message) -> String {
     case .hushed: object["event"] = "hushed"
     case .keys: object["event"] = "keys"
     case .key(let key): object["event"] = key.rawValue
+    case .meetingStarted: object["event"] = "meeting_started"
+    case .meetingSystem(let on):
+        object["event"] = "meeting_system"
+        object["on"] = on
+    case .meetingLine(let source, let text, let startMs, let endMs):
+        object["event"] = "meeting_line"
+        object["source"] = source.rawValue
+        object["text"] = text
+        object["startMs"] = startMs
+        object["endMs"] = endMs
+    case .meetingEnded: object["event"] = "meeting_ended"
     case .error(let code, let detail):
         object["event"] = "error"
         object["error"] = code.rawValue

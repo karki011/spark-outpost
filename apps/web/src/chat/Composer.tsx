@@ -40,6 +40,8 @@ import { SendButton } from './composer/SendButton.tsx';
 import { ComposerShell, composerRows } from './composer/ComposerShell.tsx';
 import { MicButton } from '../voice/MicButton.tsx';
 import { useDictationDraft } from '../voice/use-dictation-draft.ts';
+import { useVoicePressTarget } from '../voice/press-target.ts';
+import { usePaneFocused } from './split/chat-pane.ts';
 import {
   composerHint,
   composerPlaceholder,
@@ -102,6 +104,11 @@ export function Composer({
   const voice = useDictationDraft(draft, setDraft, conversationId, () => {
     textareaRef.current?.focus({ preventScroll: true });
   });
+  useVoicePressTarget(
+    voice.dictation.toggle,
+    usePaneFocused() && voice.dictation.available,
+    textareaRef,
+  );
   const lastChoice = useRef(busyEnter);
   const secrets = useSecretGuard(draft);
   const inputId = useId();

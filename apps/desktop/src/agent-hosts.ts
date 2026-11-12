@@ -5,6 +5,7 @@ import type { LinkOpening } from './link-opening.ts';
 import { startCalendarHost, type CalendarHostOptions } from './calendar/host.ts';
 import { joinBridges } from './mac-control/bridge.ts';
 import { startMacControlHost, type MacControlHostOptions } from './mac-control/host.ts';
+import { meetingHub } from './voice/meeting-hub.ts';
 
 export interface AgentHosts {
   links: LinkOpening;
@@ -29,6 +30,7 @@ export async function startAgentHosts(
         browser.connectWorker(port),
         mac.connectWorker(port),
         calendar.connectWorker(port),
+        meetingHub.connect(port),
       ]),
     windowClosed: () => browser.windowClosed(),
     menuShortcut: (shortcut) => browser.menuShortcut(shortcut),

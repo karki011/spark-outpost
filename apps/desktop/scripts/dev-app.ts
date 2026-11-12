@@ -8,7 +8,11 @@ export const DEFAULT_DEBUG_PORT = 9333;
 const USAGE_STRINGS: [string, string][] = [
   [
     'NSMicrophoneUsageDescription',
-    'Spark Outpost Dev listens only while you press the Voice shortcut or the mic button, and turns your speech into text on this Mac.',
+    'Spark Outpost Dev listens only while you press the Voice shortcut or the mic button, or while a meeting you started is recording, and turns your speech into text on this Mac.',
+  ],
+  [
+    'NSAudioCaptureUsageDescription',
+    'Spark Outpost Dev hears what your Mac plays only while a meeting you started is recording, and turns it into text on this Mac. The audio is never saved.',
   ],
   [
     'NSSpeechRecognitionUsageDescription',

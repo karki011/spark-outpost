@@ -10,19 +10,6 @@ interface WeekStripProps {
   onPick: (date: string) => void;
 }
 
-function Dots({ meetings, focus }: { meetings: number; focus: number }) {
-  return (
-    <span className="td-dots" aria-hidden="true">
-      {Array.from({ length: Math.min(meetings, 8) }, (_, index) => (
-        <i key={`m${index}`} />
-      ))}
-      {Array.from({ length: Math.min(focus, 4) }, (_, index) => (
-        <i key={`f${index}`} data-focus="" />
-      ))}
-    </span>
-  );
-}
-
 export function WeekStrip({ week, date, onPick }: WeekStripProps) {
   return (
     <div className="td-week" role="group" aria-label="This week">
@@ -36,7 +23,6 @@ export function WeekStrip({ week, date, onPick }: WeekStripProps) {
         >
           <b>{weekdayShort(day.date)}</b>
           <span>{day.meetings > 0 ? countLabel(day.meetings, 'meeting') : 'free'}</span>
-          <Dots meetings={day.meetings} focus={day.focus} />
         </button>
       ))}
     </div>

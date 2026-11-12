@@ -71,8 +71,3 @@ export async function downloadModel(options: {
     throw error;
   }
 }
-
-export async function removeModel(dir: string, model: VoiceModelFile): Promise<void> {
-  await rm(path.join(dir, `${model.sha256}.partial`), { force: true });
-  await rm(modelPath(dir, model), { force: true });
-}

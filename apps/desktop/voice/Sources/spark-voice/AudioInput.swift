@@ -2,16 +2,16 @@ import AVFoundation
 import Foundation
 import VoiceCore
 
-private let target = AVAudioFormat(
+let target = AVAudioFormat(
     commonFormat: .pcmFormatFloat32, sampleRate: Double(ListenRules.sampleRate), channels: 1,
     interleaved: false)!
 
-private func samples(of buffer: AVAudioPCMBuffer) -> [Float] {
+func samples(of buffer: AVAudioPCMBuffer) -> [Float] {
     guard let channel = buffer.floatChannelData?[0] else { return [] }
     return Array(UnsafeBufferPointer(start: channel, count: Int(buffer.frameLength)))
 }
 
-private func convert(_ buffer: AVAudioPCMBuffer, with converter: AVAudioConverter) -> [Float] {
+func convert(_ buffer: AVAudioPCMBuffer, with converter: AVAudioConverter) -> [Float] {
     let ratio = target.sampleRate / buffer.format.sampleRate
     let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 32
     guard let output = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else { return [] }

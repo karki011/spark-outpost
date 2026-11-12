@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import type {
   VoiceEvent,
   VoiceListenResult,
-  VoiceModelId,
   VoicePurpose,
   VoiceSettings,
   VoiceShortcutResult,
@@ -15,12 +14,10 @@ export type PrivacyPage = 'microphone' | 'input-monitoring' | 'keyboard';
 
 export interface DesktopSpeech {
   status(): Promise<VoiceStatus | null>;
-  turnOn(model?: VoiceModelId): Promise<VoiceStatus | null>;
+  turnOn(): Promise<VoiceStatus | null>;
   turnOff(): Promise<VoiceStatus | null>;
-  download(model: VoiceModelId): Promise<VoiceStatus | null>;
-  cancelDownload(model: VoiceModelId): Promise<VoiceStatus | null>;
-  remove(model: VoiceModelId): Promise<VoiceStatus | null>;
-  select(model: VoiceModelId): Promise<VoiceStatus | null>;
+  download(): Promise<VoiceStatus | null>;
+  cancelDownload(): Promise<VoiceStatus | null>;
   update(
     patch: Partial<Pick<VoiceSettings, 'speakAnswers' | 'shortcutMode' | 'hold'>>,
   ): Promise<VoiceStatus | null>;
@@ -30,6 +27,8 @@ export interface DesktopSpeech {
   cancel(id: string): Promise<void>;
   speak(text: string): Promise<string | null>;
   hush(): Promise<void>;
+  setPressTarget?(on: boolean): Promise<void>;
+  pressIsland?(): Promise<void>;
   openSettings(page: PrivacyPage): Promise<void>;
   onEvent(callback: (event: VoiceEvent) => void): Unsubscribe;
   onChange(callback: (status: VoiceStatus) => void): Unsubscribe;

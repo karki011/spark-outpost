@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { shortDay } from './calendar-format.ts';
+import { DateTile } from './DateTile.tsx';
 import { MonthPicker } from './MonthPicker.tsx';
 import { StepButtons } from './StepButtons.tsx';
 import { setMonth, shiftMonth, type MonthGridModel } from './month-model.ts';
@@ -17,6 +18,7 @@ interface MonthBarProps {
 export function MonthBar({ grid, date, today, titleId, switcher, onDate }: MonthBarProps) {
   return (
     <header className="mo-bar">
+      <DateTile date={today} />
       <MonthPicker
         year={grid.year}
         month={grid.month}

@@ -29,9 +29,9 @@
 .td-bar {
   position: relative;
   display: block;
-  height: 10px;
+  height: 6px;
   overflow: hidden;
-  border-radius: 5px;
+  border-radius: 3px;
   background: var(--raise);
 }
 
@@ -43,7 +43,7 @@
 }
 
 .td-bar i[data-kind='focus'] {
-  background: var(--accent);
+  background: repeating-linear-gradient(135deg, var(--line-strong) 0 3px, transparent 3px 6px);
 }
 
 .cal-clash {
@@ -94,7 +94,7 @@
 .cal-choice-text b {
   overflow: hidden;
   min-width: 0;
-  font-weight: 600;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -252,7 +252,7 @@ button.cal-person:hover {
   color: var(--text);
   font-size: 12px;
   font-style: normal;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .cal-person-text {
@@ -303,6 +303,10 @@ button.cal-person:hover {
   gap: 10px;
   min-width: 0;
   margin: 8px 0 12px;
+}
+
+.cal-join-tip {
+  display: inline-flex;
 }
 
 .cal-join-early {

@@ -192,7 +192,7 @@ test('Open from the island lands on that day with the meeting selected and in vi
   await today(page).getByRole('radio', { name: 'Month' }).click();
   await today(page).getByRole('button', { name: 'Today', exact: true }).click();
   await today(page).getByRole('radio', { name: 'Day' }).click();
-  await expect(today(page).getByRole('heading', { name: 'Select an event' })).toBeVisible();
+  await expect(today(page).getByText('Select an event for Join and reminders.')).toBeVisible();
   await expect(today(page).getByText('This event is no longer on your calendar.')).toHaveCount(0);
 
   await openFromIsland(page, `today:gone@${new Date(apiNow()).toISOString()}`);

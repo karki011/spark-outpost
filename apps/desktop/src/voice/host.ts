@@ -17,9 +17,7 @@ import {
   VOICE_MICROPHONE_SETTINGS_URL,
   VOICE_MODELS,
   VOICE_SILERO,
-  voiceModelIdSchema,
   voiceShortcutModeSchema,
-  type VoiceArch,
   type VoiceEvent,
   type VoiceListenResult,
   type VoiceMicPermission,
@@ -29,6 +27,8 @@ import { IPC } from '../ipc-channels.ts';
 import { fakeVoiceHelper } from './fake-helper.ts';
 import { fakeVoiceModels } from './fake-models.ts';
 import { spawnVoiceBinary, startVoiceHelper } from './helper-process.ts';
+import { createMeetingCapture, type MeetingCapture } from './meeting-capture.ts';
+import { pressWindow, type SparkWindow } from './press-window.ts';
 import { createVoice, type SettingsPatch } from './voice.ts';
 import { loadVoiceSettings, saveVoiceSettings, voiceSettingsFile } from './voice-settings.ts';
 
@@ -38,11 +38,14 @@ export interface VoiceHostOptions {
   userData: string;
   trusted(event: IpcMainInvokeEvent): boolean;
   island(): Electron.WebContents | null;
+  windows(): SparkWindow[];
+  appActive(): boolean;
   takenBy(accelerator: string): string | null;
   log(line: string): void;
 }
 
 export interface VoiceHost {
+  meetings: MeetingCapture;
   shortcut(): string | null;
   dispose(): void;
 }
@@ -53,8 +56,6 @@ const INVOKE = [
   IPC.voiceTurnOff,
   IPC.voiceDownload,
   IPC.voiceCancelDownload,
-  IPC.voiceRemoveModel,
-  IPC.voiceSelectModel,
   IPC.voiceUpdate,
   IPC.voiceSetShortcut,
   IPC.voiceListen,
@@ -63,6 +64,8 @@ const INVOKE = [
   IPC.voiceSpeak,
   IPC.voiceHush,
   IPC.voiceTestPress,
+  IPC.voicePressTarget,
+  IPC.voicePressIsland,
   IPC.voiceOpenSettings,
 ];
 
@@ -81,15 +84,6 @@ function micStatus(): VoiceMicPermission {
 function language(): string {
   const preferred = app.getPreferredSystemLanguages()[0] ?? 'en';
   return preferred.split(/[-_]/)[0]?.toLowerCase() || 'en';
-}
-
-function arch(): VoiceArch {
-  return process.arch === 'arm64' || app.runningUnderARM64Translation ? 'arm64' : 'x64';
-}
-
-function modelIdFrom(value: unknown) {
-  const parsed = voiceModelIdSchema.safeParse(value);
-  return parsed.success ? parsed.data : null;
 }
 
 function patchFrom(value: unknown): SettingsPatch | null {
@@ -125,6 +119,9 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
     log: options.log,
   });
   let saving = Promise.resolve();
+  const pressTargets = new Set<number>();
+  let capture: MeetingCapture | null = null;
+  const watched = new WeakSet<Electron.WebContents>();
   const voice = createVoice({
     helper,
     helperExists: () => fake || existsSync(options.helperPath),
@@ -154,13 +151,37 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
       if (target && !target.isDestroyed()) target.send(IPC.voiceEvent, event);
     },
     sendIsland: (event) => options.island()?.send(IPC.voiceEvent, event),
+    sendFocused: (event) => {
+      const id = pressWindow(options.windows(), options.appActive(), (each) =>
+        pressTargets.has(each),
+      );
+      const target = id === null ? null : webContents.fromId(id);
+      if (!target || target.isDestroyed()) {
+        options.log('voice press: island');
+        return false;
+      }
+      options.log('voice press: window');
+      target.send(IPC.voiceEvent, event);
+      return true;
+    },
+    meetingRecording: () => capture?.recording() ?? false,
     voiceOver: () => app.accessibilitySupportEnabled,
     language: language(),
-    arch: arch(),
     allowFileInput,
-    changed: broadcast,
+    changed: (status) => {
+      broadcast(status);
+      capture?.changed();
+    },
     log: options.log,
   });
+  const meetings = createMeetingCapture({
+    helper,
+    state: () => voice.meetingState(),
+    prepare: () => voice.prepareMeeting(),
+    language: language(),
+    log: options.log,
+  });
+  capture = meetings;
 
   const guard =
     <T>(run: (event: IpcMainInvokeEvent, ...args: unknown[]) => T, fallback: T) =>
@@ -173,18 +194,16 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
   );
   ipcMain.handle(
     IPC.voiceTurnOn,
-    guard((_event, model) => voice.turnOn(modelIdFrom(model) ?? undefined), null),
+    guard(() => voice.turnOn(), null),
   );
-  const forModel =
-    (run: (id: NonNullable<ReturnType<typeof modelIdFrom>>) => unknown) =>
-    (_event: IpcMainInvokeEvent, model: unknown) => {
-      const id = modelIdFrom(model);
-      return id ? run(id) : voice.status();
-    };
-  ipcMain.handle(IPC.voiceDownload, guard(forModel(voice.download), null));
-  ipcMain.handle(IPC.voiceCancelDownload, guard(forModel(voice.cancelDownload), null));
-  ipcMain.handle(IPC.voiceRemoveModel, guard(forModel(voice.remove), null));
-  ipcMain.handle(IPC.voiceSelectModel, guard(forModel(voice.select), null));
+  ipcMain.handle(
+    IPC.voiceDownload,
+    guard(() => voice.download(), null),
+  );
+  ipcMain.handle(
+    IPC.voiceCancelDownload,
+    guard(() => voice.cancelDownload(), null),
+  );
   ipcMain.handle(
     IPC.voiceTurnOff,
     guard(() => voice.turnOff(), null),
@@ -228,6 +247,26 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
     guard(() => voice.hush(), undefined),
   );
   ipcMain.handle(
+    IPC.voicePressTarget,
+    guard((event, on) => {
+      const sender = event.sender;
+      if (on !== true) {
+        pressTargets.delete(sender.id);
+        return;
+      }
+      pressTargets.add(sender.id);
+      if (watched.has(sender)) return;
+      watched.add(sender);
+      const forget = () => pressTargets.delete(sender.id);
+      sender.on('did-navigate', forget);
+      sender.once('destroyed', forget);
+    }, undefined),
+  );
+  ipcMain.handle(
+    IPC.voicePressIsland,
+    guard(() => voice.pressIsland(), undefined),
+  );
+  ipcMain.handle(
     IPC.voiceTestPress,
     guard((_event, file) => voice.testPress(file), undefined),
   );
@@ -242,6 +281,7 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
   void voice.start();
 
   return {
+    meetings,
     shortcut: () => voice.shortcut(),
     dispose() {
       for (const channel of INVOKE) ipcMain.removeHandler(channel);

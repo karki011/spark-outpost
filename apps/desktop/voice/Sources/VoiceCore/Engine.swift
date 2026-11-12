@@ -10,6 +10,7 @@ public final class Engine {
     private var listening: Listening?
     private var speaking: String?
     private var generation = 0
+    private lazy var recorder = MeetingRecorder(platform: platform, rules: rules, emit: emit)
 
     private final class Listening {
         let id: String
@@ -44,6 +45,8 @@ public final class Engine {
 
     public var isListening: Bool { listening != nil }
 
+    public var isRecordingMeeting: Bool { recorder.isRecording }
+
     public func handle(line: String) {
         switch parseRequest(line) {
         case .failure(let failure):
@@ -56,6 +59,10 @@ public final class Engine {
     public func handle(_ envelope: Envelope) {
         let id = envelope.id
         switch envelope.request {
+        case .meetingStart(let request):
+            startMeeting(id: id, request: request)
+        case .meetingStop:
+            recorder.stop(id: id)
         case .status:
             var status = platform.status()
             status.model = model != nil
@@ -95,7 +102,24 @@ public final class Engine {
         emit(id, .loaded)
     }
 
+    private func startMeeting(id: String, request: MeetingRequest) {
+        guard listening == nil else {
+            emit(id, .error(.busy, "listening"))
+            return
+        }
+        guard let model else {
+            emit(id, .error(.modelMissing, "load a model first"))
+            return
+        }
+        hush()
+        recorder.start(id: id, request: request, model: model)
+    }
+
     private func listen(id: String, request: ListenRequest) {
+        guard !recorder.isRecording else {
+            emit(id, .error(.busy, "recording a meeting"))
+            return
+        }
         guard listening == nil else {
             emit(id, .error(.busy, "already listening"))
             return
@@ -217,7 +241,7 @@ public final class Engine {
     }
 
     private func speak(id: String, text: String, voice: String?) {
-        guard listening == nil else {
+        guard listening == nil, !recorder.isRecording else {
             emit(id, .error(.busy, "listening"))
             return
         }

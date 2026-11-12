@@ -1,14 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import {
   voicePurposeSchema,
-  type VoiceArch,
   type VoiceEvent,
   type VoiceFnSetting,
   type VoiceHelperMessage,
   type VoiceListenResult,
   type VoiceMicPermission,
   type VoiceModel,
-  type VoiceModelId,
   type VoiceSettings,
   type VoiceShortcutResult,
   type VoiceStatus,
@@ -18,7 +16,7 @@ import { SHORTCUT_INVALID, SHORTCUT_TAKEN } from '../companion.ts';
 import { isAccelerator } from '../companion-settings.ts';
 import type { VoiceHelper } from './helper-process.ts';
 import type { FetchModel } from './model.ts';
-import { createModelStore } from './model-store.ts';
+import { createModelStore, removeRetiredModels } from './model-store.ts';
 
 export interface VoiceEffects {
   helper: VoiceHelper;
@@ -36,9 +34,10 @@ export interface VoiceEffects {
   takenBy(accelerator: string): string | null;
   sendTo(owner: number, event: VoiceEvent): void;
   sendIsland(event: VoiceEvent): void;
+  sendFocused(event: VoiceEvent): boolean;
+  meetingRecording(): boolean;
   voiceOver(): boolean;
   language: string;
-  arch: VoiceArch;
   allowFileInput: boolean;
   changed(status: VoiceStatus): void;
   log(line: string): void;
@@ -48,12 +47,15 @@ export type SettingsPatch = Partial<Pick<VoiceSettings, 'speakAnswers' | 'shortc
 
 const NOT_READY: VoiceListenResult = { ok: false, error: 'model_missing' };
 
+const MEETING_NEEDS_HELPER = 'This build of Spark Outpost cannot record meetings.';
+const MEETING_NEEDS_VOICE = 'Turn on Voice in Settings → Voice to record meetings.';
+const MEETING_NEEDS_MODEL =
+  'Voice is still getting its speech model. Settings → Voice shows its download.';
+
 export function createVoice(effects: VoiceEffects) {
   const { helper } = effects;
   let settings = { ...effects.settings };
   let loaded: Promise<boolean> | null = null;
-  let switchingTo: VoiceModelId | null = null;
-  let fetching: Promise<void> = Promise.resolve();
   let registered: string | null = null;
   let shortcutFailed = false;
   let fnActive = false;
@@ -82,7 +84,6 @@ export function createVoice(effects: VoiceEffects) {
     shortcutFailed,
     model: store.state(settings.model).state,
     models: store.snapshot(),
-    arch: effects.arch,
     language: effects.language,
   });
   const publish = () => effects.changed(snapshot());
@@ -176,28 +177,16 @@ export function createVoice(effects: VoiceEffects) {
     return attempt;
   };
 
-  const use = async (id: VoiceModelId) => {
-    switchingTo = null;
-    if (id !== settings.model) {
-      commit({ ...settings, model: id });
-      loaded = null;
-    }
+  const fetchModel = () => {
+    if (store.downloading() !== null) return;
+    void finishFetch();
+  };
+
+  const finishFetch = async () => {
+    const outcome = await store.download(settings.model);
+    if (outcome !== 'ready') return;
     if (settings.enabled && listens.size === 0) await ensureLoaded();
     publish();
-  };
-
-  const fetchModel = (id: VoiceModelId, switchAfter: boolean) => {
-    if (store.downloading() !== null) return;
-    if (switchAfter) switchingTo = id;
-    fetching = finishFetch(id);
-  };
-
-  const finishFetch = async (id: VoiceModelId) => {
-    const outcome = await store.download(id);
-    const switching = switchingTo === id;
-    if (switching) switchingTo = null;
-    if (outcome !== 'ready') return;
-    if (switching || id === settings.model) await use(id);
   };
 
   const press = () => {
@@ -208,7 +197,7 @@ export function createVoice(effects: VoiceEffects) {
       return;
     }
     hush();
-    effects.sendIsland({ kind: 'press' });
+    if (!effects.sendFocused({ kind: 'press' })) effects.sendIsland({ kind: 'press' });
   };
 
   const release = () => {
@@ -277,54 +266,36 @@ export function createVoice(effects: VoiceEffects) {
     },
 
     async start() {
+      await removeRetiredModels(effects.modelDir);
       await store.refresh();
       if (!settings.enabled) return;
       await applyKeys();
+      if (!(await store.present(settings.model))) fetchModel();
     },
 
-    async turnOn(model?: VoiceModelId): Promise<VoiceStatus> {
-      if (model && model !== settings.model) loaded = null;
-      commit({ ...settings, enabled: true, model: model ?? settings.model });
+    async turnOn(): Promise<VoiceStatus> {
+      commit({ ...settings, enabled: true });
       if (effects.micStatus() !== 'granted') await effects.askMic();
       await store.refresh();
       publish();
       if (await store.present(settings.model)) await ensureLoaded();
-      else fetchModel(settings.model, false);
+      else fetchModel();
       await applyKeys();
       return snapshot();
     },
 
-    download(id: VoiceModelId): VoiceStatus {
-      fetchModel(id, false);
+    download(): VoiceStatus {
+      fetchModel();
       return snapshot();
     },
 
-    cancelDownload(id: VoiceModelId): VoiceStatus {
-      if (switchingTo === id) switchingTo = null;
-      store.cancel(id);
-      return snapshot();
-    },
-
-    async remove(id: VoiceModelId): Promise<VoiceStatus> {
-      if (id !== settings.model) await store.remove(id);
-      return snapshot();
-    },
-
-    async select(id: VoiceModelId): Promise<VoiceStatus> {
-      const other = store.downloading();
-      if (other !== null && other !== id && (other === switchingTo || other === settings.model)) {
-        switchingTo = null;
-        store.cancel(other);
-        await fetching;
-      }
-      if (store.state(id).state !== 'failed' && (await store.present(id))) await use(id);
-      else fetchModel(id, true);
+    cancelDownload(): VoiceStatus {
+      store.cancel(settings.model);
       return snapshot();
     },
 
     async turnOff(): Promise<VoiceStatus> {
       commit({ ...settings, enabled: false });
-      switchingTo = null;
       const downloading = store.downloading();
       if (downloading !== null) store.cancel(downloading);
       for (const id of listens.keys()) helper.send({ op: 'cancel', id });
@@ -369,6 +340,7 @@ export function createVoice(effects: VoiceEffects) {
       if (!settings.enabled || !parsed.success) return { ok: false, error: 'invalid' };
       if (file !== undefined && (!effects.allowFileInput || typeof file !== 'string'))
         return { ok: false, error: 'file_input_off' };
+      if (effects.meetingRecording()) return { ok: false, error: 'meeting' };
       if (listens.size > 0) return { ok: false, error: 'busy' };
       if (file === undefined && effects.micStatus() !== 'granted')
         return { ok: false, error: 'mic_denied' };
@@ -411,6 +383,28 @@ export function createVoice(effects: VoiceEffects) {
 
     hush,
     press,
+
+    meetingState() {
+      if (!effects.helperExists()) return { available: false, reason: MEETING_NEEDS_HELPER };
+      if (!settings.enabled) return { available: false, reason: MEETING_NEEDS_VOICE };
+      if (store.state(settings.model).state !== 'ready') {
+        return { available: false, reason: MEETING_NEEDS_MODEL };
+      }
+      return { available: true, reason: null };
+    },
+
+    async prepareMeeting(): Promise<string | null> {
+      if (!effects.helperExists()) return MEETING_NEEDS_HELPER;
+      if (!settings.enabled) return MEETING_NEEDS_VOICE;
+      if (listens.size > 0) return 'Voice is listening. Start the meeting when it is done.';
+      hush();
+      return (await ensureLoaded()) ? null : MEETING_NEEDS_MODEL;
+    },
+
+    pressIsland() {
+      if (!settings.enabled || listens.size > 0) return;
+      effects.sendIsland({ kind: 'press' });
+    },
 
     testPress(file: unknown) {
       if (!effects.allowFileInput || typeof file !== 'string' || !settings.enabled) return;

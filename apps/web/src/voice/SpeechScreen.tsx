@@ -7,9 +7,10 @@ import type { SpeechScreenModel } from './use-speech-island.ts';
 const NOTICES: Record<Notice, string> = {
   missed: 'Didn’t catch that.',
   mic_denied: 'Spark can’t use the microphone.',
-  model_missing: 'Voice is still getting its speech model.',
+  model_missing: 'Voice doesn’t have its speech model yet. Settings → Voice shows its download.',
   bad_model: 'The speech model didn’t check out.',
   busy: 'Spark is already listening.',
+  meeting: 'Voice is off while a meeting is recording.',
   no_input_device: 'No microphone is connected.',
   file_input_off: 'File input is only for tests.',
   invalid: 'Voice is off.',

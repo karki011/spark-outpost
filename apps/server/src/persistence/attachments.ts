@@ -142,6 +142,9 @@ export async function pruneUnlinkedAttachments(db: Queryable, workspaceId: strin
        )
        AND NOT EXISTS (
          SELECT 1 FROM chat_queue q WHERE attachments.id = ANY(q.attachment_ids)
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM meeting_attachments ma WHERE ma.attachment_id = attachments.id
        )`,
     [workspaceId],
   );

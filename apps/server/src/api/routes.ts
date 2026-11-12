@@ -50,6 +50,7 @@ import {
 } from './validation.ts';
 import { outcomeErrorStatus } from './outcome-routes.ts';
 import { approvalErrorStatus } from './approval-routes.ts';
+import { meetingErrorStatus } from '../meetings/service.ts';
 import { shipErrorStatus } from './ship-routes.ts';
 import { cloneErrorStatus } from './project-clone-routes.ts';
 import { ticketErrorStatus } from './ticket-routes.ts';
@@ -232,7 +233,8 @@ export function statusForError(error: unknown): { status: number; message: strin
     outpostErrorStatus(error) ??
     cloneErrorStatus(error) ??
     interruptionErrorStatus(error) ??
-    sparkRulesErrorStatus(error);
+    sparkRulesErrorStatus(error) ??
+    meetingErrorStatus(error);
   if (known) return known;
   if (
     error instanceof BadRequestError ||

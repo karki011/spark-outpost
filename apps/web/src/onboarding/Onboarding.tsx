@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { AnimatePresence, motion, type Variants } from 'motion/react';
+import { VOICE_DEFAULT_MODEL } from '@spark-outpost/contracts';
 import { slide } from '../ui/transitions.tsx';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
@@ -13,12 +14,7 @@ import { DoneStep } from './DoneStep.tsx';
 import { ThemeStep } from './ThemeStep.tsx';
 import { ToolsStep } from './ToolsStep.tsx';
 import { desktopSpeech, useSpeechStatus } from '../voice/speech-bridge.ts';
-import {
-  recommendedChoice,
-  voiceContinueLabel,
-  VoiceStep,
-  type VoiceChoice,
-} from './VoiceStep.tsx';
+import { voiceContinueLabel, VoiceStep, type VoiceChoice } from './VoiceStep.tsx';
 import { Stepper } from './Stepper.tsx';
 import '../ui/controls.css';
 import './onboarding.css';
@@ -83,7 +79,7 @@ export function Onboarding({ onFinished }: OnboardingProps) {
   const connected = providers.filter((provider) => provider.connection);
   const current = steps[step] ?? 'meet';
   const lastStep = steps.length - 1;
-  const voiceChoice = voicePick ?? recommendedChoice(voiceStatus);
+  const voiceChoice = voicePick ?? VOICE_DEFAULT_MODEL;
 
   function go(next: number) {
     setDirection(next >= step ? 1 : -1);
@@ -141,7 +137,7 @@ export function Onboarding({ onFinished }: OnboardingProps) {
       voiceStarted.current = false;
       return;
     }
-    void (voiceStarted.current ? speech.select(voiceChoice) : speech.turnOn(voiceChoice));
+    if (!voiceStarted.current) void speech.turnOn();
     voiceStarted.current = true;
   }
 
@@ -229,13 +225,7 @@ export function Onboarding({ onFinished }: OnboardingProps) {
                     <FullDiskAccess />
                   </>
                 )}
-                {current === 'voice' && (
-                  <VoiceStep
-                    choice={voiceChoice}
-                    recommended={recommendedChoice(voiceStatus)}
-                    onChoose={setVoicePick}
-                  />
-                )}
+                {current === 'voice' && <VoiceStep choice={voiceChoice} onChoose={setVoicePick} />}
                 {current === 'done' && (
                   <DoneStep
                     displayName={displayName}

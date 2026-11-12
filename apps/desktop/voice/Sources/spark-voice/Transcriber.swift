@@ -4,6 +4,7 @@ import VoiceCore
 
 final class Transcriber: SpeechModel {
     private let path: String
+    private let vad: String
     private var recognizer: Recognizer
     private let detector: VoiceDetector
     private let work = DispatchQueue(label: "spark-voice.transcribe")
@@ -19,9 +20,14 @@ final class Transcriber: SpeechModel {
               let recognizer = Recognizer(path: path, backend: TRANSCRIBE_BACKEND_AUTO, threads: Self.threads)
         else { return nil }
         self.path = path
+        self.vad = vad
         self.recognizer = recognizer
         self.detector = detector
         self.reply = reply
+    }
+
+    func makeDetector() -> SpeechDetector? {
+        VoiceDetector(path: vad)
     }
 
     func resetDetector() {

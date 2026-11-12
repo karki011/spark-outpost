@@ -25,6 +25,7 @@ export const appEventKindSchema = z.enum([
   'island_request',
   'attention',
   'chat_ports',
+  'meeting',
 ]);
 export type AppEventKind = z.infer<typeof appEventKindSchema>;
 
@@ -34,6 +35,7 @@ export const appEventSchema = z.object({
   runId: z.uuid().nullable(),
   mapId: z.uuid().optional(),
   outpostId: z.uuid().optional(),
+  meetingId: z.uuid().optional(),
   phase: z.enum(['started', 'finished']).optional(),
   step: z.string().optional(),
 });

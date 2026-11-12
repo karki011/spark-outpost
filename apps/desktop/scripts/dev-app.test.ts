@@ -69,6 +69,7 @@ describe('infoPlistEdits', () => {
     expect(edits.get('CFBundleDisplayName')).toBe('Spark Outpost Dev');
     for (const key of [
       'NSMicrophoneUsageDescription',
+      'NSAudioCaptureUsageDescription',
       'NSSpeechRecognitionUsageDescription',
       'NSCalendarsFullAccessUsageDescription',
       'NSAppleEventsUsageDescription',

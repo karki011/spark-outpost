@@ -51,6 +51,8 @@ import { sparkPauseRoutes } from './spark-pause-routes.ts';
 import { browserHistoryRoutes } from './browser-history-routes.ts';
 import { calendarRoutes } from '../calendar/routes.ts';
 import type { CalendarHost } from '../calendar/host-client.ts';
+import { meetingRoutes } from '../meetings/routes.ts';
+import { createMeetingService, type MeetingService } from '../meetings/service.ts';
 import type { GoogleSource } from '../calendar/google/source.ts';
 import { teammateRoutes } from './teammate-routes.ts';
 import { slackRoutes, type SlackRouteDeps } from './slack-routes.ts';
@@ -101,6 +103,7 @@ export interface AppOptions
   pushTest?: (deviceId: string) => Promise<PushTestResult>;
   calendarHost?: CalendarHost | null;
   googleCalendar?: GoogleSource | null;
+  meetings?: MeetingService;
   pairingAttemptsPerMinute?: number;
   diagnostics?: DiagnosticsPlaces;
   activeWork?: ActiveWork;
@@ -156,6 +159,21 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', sparkPauseRoutes(options));
   app.use('/api', browserHistoryRoutes(options));
   app.use('/api', calendarRoutes(options));
+  app.use(
+    '/api',
+    meetingRoutes({
+      db: options.db,
+      workspaceId: options.workspaceId,
+      meetings:
+        options.meetings ??
+        createMeetingService({
+          db: options.db,
+          workspaceId: options.workspaceId,
+          source: null,
+          publish: (event) => options.appEvents.publish(event),
+        }),
+    }),
+  );
   const outposts = outpostRouters(options);
   app.use('/api', outposts.api);
   app.use(A2A_MOUNT_PATH, outposts.a2a);

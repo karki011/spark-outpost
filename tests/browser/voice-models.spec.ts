@@ -13,34 +13,44 @@ async function openVoiceSettings(page: Page) {
 const ops = async (page: Page) =>
   (await voiceCalls(page)).map((call) => [call.op, ...call.args].join(' '));
 
-test('Settings: picking a model that isn’t downloaded downloads it, then uses it', async ({
+test('Settings: Voice shows Parakeet alone, with no picker and no remove', async ({
   page,
 }, testInfo) => {
   await resetTestDatabase({ onboarded: true });
-  await installFakeVoice(page, { downloaded: ['whisper-base'] });
+  await installFakeVoice(page, { downloaded: true });
   const card = await openVoiceSettings(page);
-  const base = card.getByRole('radio', { name: 'Whisper base' });
-  const parakeet = card.getByRole('radio', { name: 'Parakeet' });
-  await expect(base).toBeChecked();
-  await expect(card).toContainText('60 MB on disk');
-  await base.focus();
-  await page.keyboard.press('ArrowUp');
-  await expect(parakeet).toBeFocused();
+  await expect(card.getByText('Parakeet', { exact: true })).toBeVisible();
+  await expect(card).toContainText('549 MB');
+  await expect(card).toContainText('Ready');
+  await expect(card.getByRole('radio')).toHaveCount(0);
+  await expect(card.getByRole('button')).toHaveCount(0);
+  await expect(page.getByText(/Whisper/)).toHaveCount(0);
   expect(await ops(page)).toEqual([]);
-  await page.keyboard.press('Space');
-  await expect(card.getByText(/Downloading \d+%/)).toBeVisible();
-  await expect(card.getByRole('progressbar', { name: 'Parakeet download' })).toBeVisible();
-  await expect(base).toBeChecked();
-  await page.screenshot({ path: testInfo.outputPath('speech-model-downloading.png') });
-  await expect(parakeet).toBeChecked();
-  await expect(card).toContainText('609 MB on disk');
-  await expect(card.getByRole('button', { name: 'Remove Parakeet' })).toBeDisabled();
-  await card.getByRole('button', { name: 'Remove Whisper base' }).click();
-  await expect(card).toContainText('549 MB on disk');
-  expect(await ops(page)).toEqual(['select parakeet-v3', 'remove whisper-base']);
-  await page.screenshot({ path: testInfo.outputPath('speech-model-in-use.png') });
+  await page.screenshot({ path: testInfo.outputPath('speech-model-ready.png') });
   await page.emulateMedia({ colorScheme: 'dark' });
   await card.screenshot({ path: testInfo.outputPath('speech-model-dark.png') });
+});
+
+test('Settings: a missing model downloads with progress', async ({ page }, testInfo) => {
+  await resetTestDatabase({ onboarded: true });
+  await installFakeVoice(page, { downloaded: false });
+  const card = await openVoiceSettings(page);
+  await expect(card.getByText('Not downloaded')).toBeVisible();
+  await card.getByRole('button', { name: 'Download Parakeet, 549 MB' }).click();
+  await expect(card.getByText(/Downloading \d+%/)).toBeVisible();
+  await expect(card.getByRole('progressbar', { name: 'Parakeet download' })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('speech-model-downloading.png') });
+  await expect(card).toContainText('Ready');
+  expect(await ops(page)).toEqual(['download']);
+});
+
+test('Settings: a language Parakeet doesn’t cover gets one plain line', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await installFakeVoice(page, { downloaded: true, language: 'ja' });
+  const card = await openVoiceSettings(page);
+  await expect(card).toContainText(
+    'Parakeet doesn’t cover Japanese, your Mac’s language, and may transcribe it poorly.',
+  );
 });
 
 test('Settings: the Voice shortcut is recorded from the keys pressed and can be reset', async ({
@@ -85,16 +95,16 @@ test('Settings: the Voice shortcut is recorded from the keys pressed and can be 
   ]);
 });
 
-test('Settings: a download can be cancelled and the model in use stays', async ({ page }) => {
+test('Settings: a download can be cancelled and started again', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
-  await installFakeVoice(page, { downloaded: ['whisper-base'], downloadStepMs: 2_000 });
+  await installFakeVoice(page, { downloaded: false, downloadStepMs: 2_000 });
   const card = await openVoiceSettings(page);
-  await card.getByRole('button', { name: 'Download Whisper large v3 turbo, 574 MB' }).click();
+  await card.getByRole('button', { name: 'Download Parakeet, 549 MB' }).click();
   await expect(card.getByText('Downloading 0%')).toBeVisible();
-  await expect(card.getByRole('button', { name: 'Download Parakeet, 549 MB' })).toBeDisabled();
-  await card.getByRole('button', { name: 'Cancel Whisper large v3 turbo download' }).click();
-  await expect(card.getByText('Not downloaded')).toHaveCount(2);
-  await expect(card.getByRole('radio', { name: 'Whisper base' })).toBeChecked();
+  await card.getByRole('button', { name: 'Cancel Parakeet download' }).click();
+  await expect(card.getByText('Not downloaded')).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Download Parakeet, 549 MB' })).toBeVisible();
+  expect(await ops(page)).toEqual(['download', 'cancelDownload']);
 });
 
 async function toTools(page: Page) {
@@ -113,30 +123,21 @@ async function toVoiceStep(page: Page) {
   await expect(dialog(page).getByRole('heading', { name: 'Talk to Spark' })).toBeVisible();
 }
 
-test('Onboarding: Voice recommends Parakeet on Apple silicon and names the download', async ({
+test('Onboarding: Voice offers the Parakeet download, and Not now leaves Voice off', async ({
   page,
 }, testInfo) => {
   await resetTestDatabase({ onboarded: false, connected: ['claude'] });
-  await installFakeVoice(page, {
-    enabled: false,
-    mic: 'not_determined',
-    arch: 'arm64',
-    language: 'en',
-  });
+  await installFakeVoice(page, { enabled: false, mic: 'not_determined', language: 'en' });
   await toVoiceStep(page);
   const parakeet = dialog(page).getByRole('radio', { name: /^Parakeet/ });
   await expect(parakeet).toBeChecked();
-  await expect(parakeet.locator('xpath=ancestor::label')).toContainText('Recommended for you');
+  await expect(dialog(page).getByRole('radio')).toHaveCount(2);
+  await expect(dialog(page)).not.toContainText('Whisper');
   const next = dialog(page).getByRole('button', { name: 'Download 549 MB and continue' });
   await expect(next).toBeVisible();
   await expect(dialog(page)).toContainText('macOS asks for the microphone when you continue.');
   await expect(dialog(page).locator('.pane')).toHaveCount(1);
   await page.screenshot({ path: testInfo.outputPath('onboarding-voice.png') });
-  await parakeet.press('ArrowDown');
-  await expect(dialog(page).getByRole('radio', { name: /^Whisper base/ })).toBeChecked();
-  await expect(
-    dialog(page).getByRole('button', { name: 'Download 60 MB and continue' }),
-  ).toBeVisible();
   await dialog(page)
     .getByRole('radio', { name: /^Not now/ })
     .check();
@@ -146,28 +147,20 @@ test('Onboarding: Voice recommends Parakeet on Apple silicon and names the downl
     .check();
   await next.click();
   await expect(dialog(page).getByRole('heading', { name: "You're all set, Test" })).toBeVisible();
-  expect(await ops(page)).toEqual(['turnOn parakeet-v3']);
-  await dialog(page).getByRole('button', { name: 'Back' }).click();
-  await dialog(page)
-    .getByRole('radio', { name: /^Whisper base/ })
-    .check();
-  await dialog(page).getByRole('button', { name: 'Download 60 MB and continue' }).click();
-  await expect(dialog(page).getByRole('heading', { name: "You're all set, Test" })).toBeVisible();
-  expect(await ops(page)).toEqual(['turnOn parakeet-v3', 'select whisper-base']);
+  expect(await ops(page)).toEqual(['turnOn']);
   await dialog(page).getByRole('button', { name: 'Back' }).click();
   await dialog(page)
     .getByRole('radio', { name: /^Not now/ })
     .check();
   await continueButton(page).click();
   await expect(dialog(page).getByRole('heading', { name: "You're all set, Test" })).toBeVisible();
-  expect(await ops(page)).toEqual(['turnOn parakeet-v3', 'select whisper-base', 'turnOff']);
+  expect(await ops(page)).toEqual(['turnOn', 'turnOff']);
 });
 
-test('Onboarding: Intel Macs get Whisper base, and Not now leaves Voice off', async ({ page }) => {
+test('Onboarding: Not now alone leaves Voice off', async ({ page }) => {
   await resetTestDatabase({ onboarded: false, connected: ['claude'] });
-  await installFakeVoice(page, { enabled: false, arch: 'x64', language: 'en' });
+  await installFakeVoice(page, { enabled: false, language: 'en' });
   await toVoiceStep(page);
-  await expect(dialog(page).getByRole('radio', { name: /^Whisper base/ })).toBeChecked();
   await dialog(page)
     .getByRole('radio', { name: /^Not now/ })
     .check();

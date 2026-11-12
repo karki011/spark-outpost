@@ -111,7 +111,7 @@ jobs:
       - name: Run browser specs
         run: |
           if [ "$SHARD" = fake-hosts ]; then
-            export SPARK_FAKE_CALENDAR=1 SPARK_FAKE_BROWSER=1
+            export SPARK_FAKE_CALENDAR=1 SPARK_FAKE_BROWSER=1 SPARK_FAKE_MEETINGS=1
             specs=(tests/browser/calendar*.spec.ts tests/browser/{browser-agent,island-ask-calendar,shot-order,sign-ins,sign-in-sites}.spec.ts)
             pnpm exec playwright test --retries=1 --global-timeout=3000000 --reporter=list,html "${specs[@]}"
           else

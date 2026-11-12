@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   VOICE_DEFAULT_SETTINGS,
   VOICE_MODELS,
-  VOICE_WHISPER_BASE,
+  VOICE_PARAKEET_V3,
   type VoiceEvent,
   type VoiceMicPermission,
   type VoiceStatus,
@@ -27,12 +27,14 @@ async function setup(
   dirs.push(dir);
   if (options.model !== false) {
     mkdirSync(dir, { recursive: true });
-    const file = path.join(dir, VOICE_WHISPER_BASE.file);
+    const file = path.join(dir, VOICE_PARAKEET_V3.file);
     await writeFile(file, '');
-    await truncate(file, VOICE_WHISPER_BASE.size);
+    await truncate(file, VOICE_PARAKEET_V3.size);
   }
   const sent: { owner: number; event: VoiceEvent }[] = [];
   const island: VoiceEvent[] = [];
+  const focused: VoiceEvent[] = [];
+  const view = { target: false, meeting: false };
   const registered = new Map<string, () => void>();
   const elsewhere = new Set<string>();
   const saved: unknown[] = [];
@@ -62,14 +64,31 @@ async function setup(
     takenBy: (accelerator) => (accelerator === 'Alt+Space' ? 'Quick chat' : null),
     sendTo: (owner, event) => sent.push({ owner, event }),
     sendIsland: (event) => island.push(event),
+    meetingRecording: () => view.meeting,
+    sendFocused: (event) => {
+      if (!view.target) return false;
+      focused.push(event);
+      return true;
+    },
     voiceOver: () => false,
     language: 'en',
-    arch: 'arm64',
     allowFileInput: false,
     changed: (status) => published.push(status),
     log: () => undefined,
   });
-  return { voice, sent, island, registered, elsewhere, saved, helper, dir, published };
+  return {
+    voice,
+    sent,
+    island,
+    focused,
+    view,
+    registered,
+    elsewhere,
+    saved,
+    helper,
+    dir,
+    published,
+  };
 }
 
 const settle = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -141,7 +160,7 @@ describe('Voice', () => {
     expect(status.model).toBe('downloading');
     expect(status.settings.enabled).toBe(true);
     await settle(50);
-    expect(scene.published.at(-1)?.models['whisper-base']).toEqual({
+    expect(scene.published.at(-1)?.models['parakeet-v3']).toEqual({
       state: 'failed',
       progress: null,
       problem: 'The download failed (500).',
@@ -172,6 +191,42 @@ describe('Voice', () => {
     ).toMatchObject({ text: 'who needs me' });
     expect(scene.sent.at(-1)?.event).toMatchObject({ text: 'who needs me', reason: 'paused' });
     scene.voice.dispose();
+  });
+
+  it('a press goes to the focused Spark window when it has an input, else to the island', async () => {
+    const scene = await setup({ enabled: true });
+    await scene.voice.start();
+    scene.view.target = true;
+    scene.voice.press();
+    expect(scene.focused).toEqual([{ kind: 'press' }]);
+    expect(scene.island).toEqual([]);
+    scene.view.target = false;
+    scene.voice.press();
+    expect(scene.island).toEqual([{ kind: 'press' }]);
+  });
+
+  it('refuses to listen while a meeting is recording, and says so', async () => {
+    const scene = await setup({ enabled: true });
+    await scene.voice.start();
+    scene.view.meeting = true;
+    expect(await scene.voice.listen(7, 'command', '', undefined)).toEqual({
+      ok: false,
+      error: 'meeting',
+    });
+  });
+
+  it('a window with no input on screen can hand its press to the island', async () => {
+    const scene = await setup({ enabled: true });
+    await scene.voice.start();
+    scene.voice.pressIsland();
+    expect(scene.island).toEqual([{ kind: 'press' }]);
+  });
+
+  it('hands nothing to the island while Voice is off', async () => {
+    const scene = await setup();
+    await scene.voice.start();
+    scene.voice.pressIsland();
+    expect(scene.island).toEqual([]);
   });
 
   it('a press while listening stops the listen instead of starting another', async () => {

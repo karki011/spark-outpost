@@ -89,7 +89,12 @@ export function EventPopover(props: EventPopoverProps) {
         </p>
       )}
       <EventInfo event={event} now={props.now} />
-      <EventActions event={event} now={props.now} onStartChat={props.onStartChat} />
+      <EventActions
+        event={event}
+        calendarName={props.calendars.get(event.calendarKey)?.title}
+        now={props.now}
+        onStartChat={props.onStartChat}
+      />
     </div>
   );
 }

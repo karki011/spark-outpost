@@ -1,6 +1,7 @@
 import './calendar-parts.css';
 import { useId } from 'react';
 import { joinOpen, spanOf, type CalendarEvent } from '@spark-outpost/contracts';
+import { useTooltip } from '../ui/Tooltip.tsx';
 import { clock } from './calendar-format.ts';
 import { openJoin } from './today-model.ts';
 import { useJoinLeadMs } from './use-calendar.ts';
@@ -24,19 +25,50 @@ function EarlyJoin(props: {
   const { event, label } = props;
   const hintId = useId();
   const opensAt = clock(spanOf(event).start - props.leadMs);
+  const tip = useTooltip(`Join opens at ${opensAt}`);
   return (
     <span className={`cal-join-early ${props.className}`.trim()}>
       <button
+        {...tip.triggerProps}
         type="button"
         className="btn line sm"
         aria-disabled="true"
         aria-label={`${label} ${event.title}`}
         aria-describedby={hintId}
-        title={`Join opens at ${opensAt}`}
       >
         {label}
       </button>
+      {tip.tooltip}
       <small id={hintId}>Opens at {opensAt}</small>
+    </span>
+  );
+}
+
+function WaitingJoin(props: { name: string; className: string; plain: boolean; shown: string }) {
+  const tip = useTooltip(props.name);
+  const button = (
+    <button
+      {...(props.plain ? tip.triggerProps : {})}
+      type="button"
+      className={props.plain ? props.className : `btn line sm ${props.className}`.trim()}
+      disabled
+      aria-label={props.name}
+    >
+      {props.shown}
+    </button>
+  );
+  if (props.plain) {
+    return (
+      <>
+        {button}
+        {tip.tooltip}
+      </>
+    );
+  }
+  return (
+    <span className="cal-join-tip" {...tip.triggerProps}>
+      {button}
+      {tip.tooltip}
     </span>
   );
 }
@@ -64,16 +96,13 @@ export function JoinButton({
     : ended
       ? `${event.title} has ended`
       : `${event.title} at ${clock(start)}, Join opens at ${clock(start - leadMs)}`;
+  if (!open) return <WaitingJoin name={name} className={className} plain={plain} shown={shown} />;
   return (
     <button
       type="button"
-      className={
-        plain ? className : `${open ? 'btn primary sm' : 'btn line sm'} ${className}`.trim()
-      }
-      disabled={!open}
-      data-open={open || undefined}
+      className={plain ? className : `btn primary sm ${className}`.trim()}
+      data-open
       aria-label={name}
-      title={open ? undefined : name}
       onClick={() => {
         openJoin(link.url);
         onJoined?.(event);

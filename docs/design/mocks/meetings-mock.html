@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spark Outpost · Meetings (design mock)</title>
+<script>(function(){var q=new URLSearchParams(location.search).get("theme");if(q==="light"||q==="dark")document.documentElement.dataset.theme=q})()</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a design board. Five numbered frames, each one screen of the feature in the order a meeting happens. */
+:root{
+  --bg:#f4f5f7; --rail:#eaecf0; --panel:#ffffff; --raise:#eef0f3; --line:#e2e5ea; --line-strong:#85888d;
+  --text:#16191e; --muted:#495160; --faint:#575f6a;
+  --accent:#078470; --accent-ink:#ffffff; --accent-text:#00715d; --accent-soft:rgba(7,132,112,.11);
+  --user:#e8f3f0; --danger:#bb3430; --danger-soft:rgba(187,52,48,.09);
+  --warn:#8a4a00; --warn-soft:rgba(138,74,0,.1); --switch-on:#1a7a3c; --switch-on-ink:#ffffff;
+  --tint-a:#dff3ee; --ink-a:#075c4e; --tint-b:#f8e1ec; --ink-b:#8a2457; --tint-c:#e2e9fb; --ink-c:#2a3f8f;
+  --island:#111418; --island-text:#eef1f4; --island-muted:#a6b0bc; --island-line:#2a3038; --island-raise:#1c2127;
+  --r:14px; --r-sm:8px;
+  --font-sans:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'Geist Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0c0f12; --rail:#07090b; --panel:#12161a; --raise:#1a1f25; --line:#232a31; --line-strong:#646c74;
+    --text:#e7eaee; --muted:#a3aebc; --faint:#909aa7;
+    --accent:#34c3a3; --accent-ink:#05231c; --accent-text:#34c3a3; --accent-soft:rgba(52,195,163,.13);
+    --user:#172a2a; --danger:#f06b63; --danger-soft:rgba(240,107,99,.11);
+    --warn:#e8b04b; --warn-soft:rgba(232,176,75,.12); --switch-on:#52c77f; --switch-on-ink:#0b1f14;
+    --tint-a:#12352f; --ink-a:#8fe0cd; --tint-b:#3a1a2a; --ink-b:#f2a9c8; --tint-c:#1b2547; --ink-c:#aebdf5;
+    --island:#000000; --island-text:#eef1f4; --island-muted:#a6b0bc; --island-line:#2a3038; --island-raise:#171b20;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0c0f12; --rail:#07090b; --panel:#12161a; --raise:#1a1f25; --line:#232a31; --line-strong:#646c74;
+  --text:#e7eaee; --muted:#a3aebc; --faint:#909aa7;
+  --accent:#34c3a3; --accent-ink:#05231c; --accent-text:#34c3a3; --accent-soft:rgba(52,195,163,.13);
+  --user:#172a2a; --danger:#f06b63; --danger-soft:rgba(240,107,99,.11);
+  --warn:#e8b04b; --warn-soft:rgba(232,176,75,.12); --switch-on:#52c77f; --switch-on-ink:#0b1f14;
+  --tint-a:#12352f; --ink-a:#8fe0cd; --tint-b:#3a1a2a; --ink-b:#f2a9c8; --tint-c:#1b2547; --ink-c:#aebdf5;
+  --island:#000000; --island-text:#eef1f4; --island-muted:#a6b0bc; --island-line:#2a3038; --island-raise:#171b20;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--rail);color:var(--text);font:14px/1.55 var(--font-sans);-webkit-font-smoothing:antialiased;
+  padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.board{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:36px}
+header h1{font-size:26px;line-height:1.2;font-weight:500;margin:0 0 6px;text-wrap:balance}
+header p{margin:0;color:var(--muted);max-width:66ch}
+.note{font-size:12px;color:var(--faint);margin-top:10px}
+.frame{display:flex;flex-direction:column;gap:12px}
+.frame-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.step{font:500 12px/1 var(--font-mono);color:var(--muted);background:var(--raise);border-radius:999px;padding:5px 9px}
+.frame-head h2{font-size:17px;font-weight:500;margin:0}
+.frame-head p{margin:0;color:var(--muted);flex:1 1 320px;min-width:0}
+.stage{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+.stage>*{min-width:0}
+button{font:inherit;color:inherit;cursor:pointer}
+b{font-weight:500}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{min-height:30px;border-radius:var(--r-sm);border:1px solid var(--line-strong);background:var(--panel);padding:4px 12px;font-weight:500}
+.btn.primary{background:var(--text);border-color:var(--text);color:var(--panel)}
+.btn.quiet{border-color:transparent;background:none;color:var(--muted)}
+.btn.stop{border-color:var(--danger);color:var(--danger);background:var(--danger-soft)}
+kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:4px;padding:2px 4px;color:var(--muted)}
+
+/* 1 · start */
+.alert{flex:1 1 300px;max-width:400px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+.alert .when{font-size:12px;color:var(--muted)}
+.alert h3{margin:0;font-size:16px;font-weight:500}
+.alert .host{font-size:12px;color:var(--faint)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.today{flex:1 1 320px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.today h4{margin:0;padding:10px 14px;font-size:12px;font-weight:500;color:var(--muted);border-bottom:1px solid var(--line)}
+.ev{display:flex;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.ev:last-child{border-bottom:0}
+.ev time{font:12px var(--font-mono);color:var(--muted);flex:none;width:44px}
+.ev .t{flex:1;min-width:0}
+.ev .t b{display:block;font-weight:500}
+.ev .t span{font-size:12px;color:var(--faint)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;border-radius:999px;padding:2px 9px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.rec{border-color:var(--danger);color:var(--danger);background:var(--danger-soft)}
+.chip.ok{border-color:var(--line);background:none;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--danger);flex:none}
+@media (prefers-reduced-motion:no-preference){.dot.live{animation:pulse 1.6s ease-in-out infinite}}
+@keyframes pulse{50%{opacity:.35}}
+
+/* 2 · island */
+.island{flex:1 1 380px;max-width:520px;background:var(--island);color:var(--island-text);border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.island .bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.island .bar b{font-weight:500}
+.island .bar .el{font:12px var(--font-mono);color:var(--island-muted)}
+.island .bar .sp{flex:1}
+.island .ibtn{min-height:28px;border-radius:8px;border:1px solid var(--island-line);background:var(--island-raise);color:var(--island-text);padding:3px 10px;font-weight:500}
+.island .ibtn.stop{border-color:#f06b63;color:#ffb3ae}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--island-line);overflow-x:auto}
+.tabs span{padding:6px 10px;font-size:13px;color:var(--island-muted);white-space:nowrap;border-bottom:2px solid transparent}
+.tabs span[aria-current]{color:var(--island-text);border-color:var(--island-text)}
+.lines{display:flex;flex-direction:column;gap:8px;max-height:210px;overflow:auto}
+.ln{display:grid;grid-template-columns:54px 1fr;gap:8px;font-size:13px}
+.ln .who{font:500 11px/1.9 var(--font-mono);color:var(--island-muted)}
+.ln.you .who{color:var(--island-text)}
+.ln.draft p{color:var(--island-muted)}
+.ln p{margin:0}
+.ask{display:flex;gap:6px;flex-wrap:wrap}
+.field{flex:1 1 180px;min-width:0;min-height:30px;border-radius:8px;border:1px solid var(--island-line);background:var(--island-raise);color:var(--island-muted);padding:5px 10px;font-size:13px}
+.ans{background:var(--island-raise);border:1px solid var(--island-line);border-radius:10px;padding:10px 12px;font-size:13px}
+.ans small{display:block;color:var(--island-muted);margin-bottom:4px}
+.ans p{margin:0}
+.side{flex:1 1 240px;display:flex;flex-direction:column;gap:10px}
+.callout{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px}
+.callout b{display:block;font-weight:500;margin-bottom:2px}
+.callout span{color:var(--muted);font-size:13px}
+.strip{background:var(--island);color:var(--island-text);border-radius:999px;padding:6px 12px;display:inline-flex;align-items:center;gap:8px;font-size:13px;align-self:flex-start;flex-wrap:wrap}
+.strip .el{font:12px var(--font-mono);color:var(--island-muted)}
+
+/* 3 · library */
+.lib{flex:1 1 100%;display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.list{border-right:1px solid var(--line);display:flex;flex-direction:column}
+.search{margin:10px;min-height:30px;border:1px solid var(--line);border-radius:var(--r-sm);padding:5px 10px;color:var(--faint);font-size:13px}
+.item{padding:10px 12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.item[aria-current]{background:var(--raise)}
+.item b{font-weight:500}
+.item span{font-size:12px;color:var(--faint)}
+.doc{padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.doc h3{margin:0;font-size:18px;font-weight:500}
+.meta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.seg span{padding:6px 10px;font-size:13px;color:var(--muted);border-bottom:2px solid transparent}
+.seg span[aria-current]{color:var(--text);border-color:var(--text)}
+.md h5{margin:10px 0 4px;font-size:13px;font-weight:500}
+.md p,.md ul{margin:0;color:var(--text);max-width:68ch}
+.md ul{padding-left:18px}
+.md li{margin:2px 0}
+.files{display:flex;gap:8px;flex-wrap:wrap}
+.file{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 8px;font-size:12px;color:var(--muted)}
+.file i{font:500 10px var(--font-mono);font-style:normal;background:var(--raise);border-radius:4px;padding:1px 4px}
+@media (max-width:640px){.lib{grid-template-columns:1fr}.list{border-right:0;border-bottom:1px solid var(--line)}}
+
+/* 4 · still in the call */
+.states{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.state{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;display:flex;flex-direction:column;gap:8px}
+.state p{margin:0;color:var(--muted);font-size:13px}
+
+/* 0 · calendar redesign */
+.cal{flex:1 1 100%;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+.cal-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:16px 18px}
+.tile{width:44px;border:1px solid var(--line);border-radius:var(--r-sm);text-align:center;overflow:hidden;flex:none}
+.tile span{display:block;font-size:10px;letter-spacing:.06em;color:var(--muted);background:var(--raise);padding:2px 0}
+.tile b{display:block;font-size:16px;font-weight:500;padding:1px 0 3px}
+.ttl{min-width:0}
+.ttl h3{margin:0;font-size:17px;font-weight:500}
+.ttl .date{color:var(--muted);font-size:13px}
+.cal-head .sp{flex:1}
+.cal-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,280px);border-top:1px solid var(--line)}
+.mgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-width:0}
+.mgrid .dow{font-size:12px;color:var(--muted);text-align:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.cell{min-height:92px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.cell:nth-child(7n){border-right:0}
+.cell.out{background:var(--bg)}
+.cell .n{font-size:12px;color:var(--muted);align-self:flex-start;min-width:20px;height:20px;line-height:20px;text-align:center;border-radius:10px}
+.cell.is-today .n{background:var(--text);color:var(--panel)}
+.ch{display:flex;gap:4px;justify-content:space-between;font-size:11.5px;line-height:1.5;border-radius:5px;padding:1px 5px;border:1px solid transparent;border-left:2px solid var(--dot,var(--line-strong));min-width:0;color:var(--text);background:var(--raise);--chip-bg:var(--raise);--chip-ink:var(--line-strong)}
+.ch span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ch time{flex:none;opacity:.8;font-variant-numeric:tabular-nums}
+.ch.pend{background:none;border:1px dashed var(--chip-ink);border-left:2px solid var(--dot,var(--line-strong))}
+.ch.tent{background:repeating-linear-gradient(135deg,var(--chip-bg) 0 5px,transparent 5px 9px);border-color:var(--chip-bg)}
+.ch.decl{background:none;color:var(--faint);text-decoration:line-through}
+.ch.rec::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--muted);flex:none;align-self:center}
+.ch.sel{outline:2px solid var(--text);outline-offset:1px}
+.more{font-size:11px;color:var(--faint);padding-left:5px}
+.work{--dot:var(--ink-a)}
+.fam{--dot:var(--ink-b)}
+.goog{--dot:var(--ink-c)}
+.detail{border-left:1px solid var(--line);padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.detail h4{margin:0;font-size:16px;font-weight:500}
+.detail p{margin:0;color:var(--muted);font-size:13px}
+.lbl{color:var(--faint);margin-right:6px}
+.link{border:0;background:none;padding:0;color:var(--text);text-decoration:underline;min-height:0}
+.rsvp{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.pick.sm{flex-wrap:nowrap}
+.pick.sm button{border:0;border-left:1px solid var(--line);background:none;padding:3px 12px;font-size:13px;min-height:28px}
+.pick.sm button:first-child{border-left:0}
+.rsvp .q{color:var(--muted);font-size:13px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.chip-s{width:18px;height:10px;border-radius:3px;display:inline-block;--chip-bg:var(--raise);--chip-ink:var(--line-strong);background:var(--chip-bg);border:1px solid transparent}
+.chip-s.pend{background:none;border:1px dashed var(--chip-ink)}
+.chip-s.tent{background:repeating-linear-gradient(135deg,var(--chip-bg) 0 4px,transparent 4px 7px);border-color:var(--chip-bg)}
+.chip-s.decl{background:none;border-bottom:1px solid var(--faint);border-radius:0;height:1px;margin:4px 0 5px}
+.chip-s.rec{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.before{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.before div{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;font-size:13px;color:var(--muted)}
+.before b{display:block;color:var(--text);font-weight:500;margin-bottom:2px}
+@media (max-width:760px){.cal-body{grid-template-columns:1fr}.detail{border-left:0;border-top:1px solid var(--line)}.cell{min-height:58px;padding:4px}.ch{height:6px;padding:0;border-radius:3px}.ch span,.ch time,.ch.rec::before{display:none}.ch.decl{border:1px solid var(--line)}.more{display:none}}
+
+#tip{position:fixed;z-index:20;max-width:260px;background:var(--text);color:var(--panel);font-size:12px;line-height:1.4;border-radius:6px;padding:5px 8px;pointer-events:none;white-space:pre-line}
+
+/* 5 · settings */
+.set{flex:1 1 100%;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.opt{display:flex;gap:14px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
+.opt:first-child{border-top:0}
+.opt .l{flex:1 1 260px;min-width:0}
+.opt .l b{display:block;font-weight:500}
+.opt .l span{font-size:13px;color:var(--muted)}
+.pick{display:inline-flex;border:1px solid var(--line-strong);border-radius:var(--r-sm);overflow:hidden;flex-wrap:wrap}
+.pick span{padding:5px 10px;font-size:13px;border-left:1px solid var(--line)}
+.pick span:first-child{border-left:0}
+.pick span[aria-current]{background:var(--raise);color:var(--text)}
+.sw{width:38px;height:22px;border-radius:999px;background:var(--line-strong);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--panel)}
+.sw.on{background:var(--switch-on)}
+.sw.on::after{left:19px;background:var(--switch-on-ink)}
+.swl{display:inline-flex;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="board">
+  <header>
+    <h1>Meetings in Spark: design mock</h1>
+    <p>A calmer calendar screen, then five screens in the order a meeting happens. Static mock with example content; nothing here records or sends anything. Names, times and notes are invented.</p>
+  </header>
+
+  <section class="frame">
+    <div class="frame-head"><span class="step">0 Calendar</span><h2>The calendar screen, redone</h2>
+      <p>After the references you sent: one white card, a date tile and quiet controls on top, neutral chips, one text weight. Meetings you haven’t answered look different from ones you accepted, and you can answer from the side panel.</p></div>
+    <div class="stage">
+      <div class="cal" role="group" aria-label="Calendar, Month">
+        <div class="cal-head">
+          <div class="tile" aria-hidden="true"><span>NOV</span><b>11</b></div>
+          <div class="ttl"><h3>November 2026</h3><span class="date">Wednesday 11 November · 6 meetings today</span></div>
+          <span class="sp"></span>
+          <div class="pick" role="radiogroup" aria-label="View"><span>Day</span><span aria-current="true">Month</span><span>Meetings</span></div>
+          <div class="pick" role="group" aria-label="Move"><span>‹</span><span>Today</span><span>›</span></div>
+          <button class="btn primary" id="cal-new">New meeting</button>
+        </div>
+        <div class="cal-body">
+          <div class="mgrid" id="mgrid" role="grid" aria-label="November 2026"></div>
+          <div class="detail">
+            <h4>Design review</h4>
+            <p>Wed 11 Nov · 1:00–2:00 PM · Spark Work · Zoom</p>
+            <p>From Dana Reyes · 4 people · 3 yes · 1 waiting</p>
+            <div class="rsvp" role="group" aria-label="Your reply"><span class="q">Going?</span><span class="pick sm"><button id="r-yes" data-tip="Accept. Dana Reyes is told.">Yes</button><button id="r-maybe" data-tip="Reply maybe. Dana Reyes is told.">Maybe</button><button id="r-no" data-tip="Decline. Dana Reyes is told.">No</button></span></div>
+            <div class="row"><button class="btn" id="d-join" data-tip="Opens the Zoom link in your browser. Opens at 12:50 PM.">Join</button><button class="btn" id="d-notes" data-tip="Records and transcribes this meeting on this Mac, then writes notes. Doesn’t join the call.">Take notes</button></div>
+            <p><span class="lbl">Context</span> pricing-2026.pdf · <button class="link" id="d-context">Add…</button></p>
+            <p><span class="lbl">Earlier</span> Design review, 4 Nov · <button class="link" id="d-prev">Notes</button></p>
+          </div>
+        </div>
+        <div class="legend">
+          <span><i class="chip-s acc"></i>Accepted</span>
+          <span><i class="chip-s pend"></i>Not answered</span>
+          <span><i class="chip-s tent"></i>Maybe</span>
+          <span><i class="chip-s decl"></i>Declined</span>
+          <span><i class="chip-s rec"></i>Has notes</span>
+        </div>
+      </div>
+      <div class="before">
+        <div><b>One weight, almost no colour</b>Text is regular weight everywhere; a title is one step heavier, never bold. Chips are neutral grey. Colour appears only as a thin edge that tells calendars apart, on the red recording dot, and on keyboard focus.</div>
+        <div><b>Accepted or not, at a glance</b>Accepted is a filled chip. Not answered has a dashed outline. Maybe is striped. Declined is struck through and faint. Each also has a word in the side panel, so colour is never the only signal.</div>
+        <div><b>Answer here</b>Yes, Maybe and No work for Google calendars. For a calendar that only comes through macOS Calendar, the button is “Reply in Calendar”, because macOS doesn’t let apps answer invitations.</div>
+        <div><b>Less on screen</b>No hatched free blocks, no seven day cards, no empty side cards. Refresh and calendar filters sit in a ⋯ menu.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="frame">
+    <div class="frame-head"><span class="step">1 Start</span><h2>Take notes from a meeting, or start one yourself</h2>
+      <p>The meeting alert and Today gain <b>Take notes</b>. Nothing records until you press it, unless you turn on a setting (screen 5).</p></div>
+    <div class="stage">
+      <div class="alert" role="group" aria-label="Meeting alert">
+        <span class="when">Starts in 1 min · 14:00–14:30</span>
+        <h3>Pricing review</h3>
+        <span class="host">zoom.us</span>
+        <div class="row">
+          <button class="btn primary" id="join-notes">Join and take notes</button>
+          <button class="btn" id="join">Join <kbd>⌘J</kbd></button>
+          <button class="btn quiet" id="dismiss">Dismiss</button>
+        </div>
+      </div>
+      <div class="today" role="group" aria-label="Today">
+        <h4>Today · Wed 11 Nov</h4>
+        <div class="ev"><time>10:00</time><div class="t"><b>Standup</b><span>Notes written · 12 min</span></div><span class="chip ok">Notes</span></div>
+        <div class="ev"><time>14:00</time><div class="t"><b>Pricing review</b><span>zoom.us · starts in 1 min</span></div><button class="btn" id="take-notes">Take notes</button></div>
+        <div class="ev"><time>16:30</time><div class="t"><b>1:1 with Dana</b><span>meet.google.com</span></div><span class="chip">Later</span></div>
+        <div class="ev"><time>—</time><div class="t"><b>No calendar event?</b><span>Start a meeting from the island</span></div><button class="btn" id="new-meeting">New meeting</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="frame">
+    <div class="frame-head"><span class="step">2 Record</span><h2>The island while a meeting records</h2>
+      <p>A <b>Meeting</b> tab joins Home, Ask Spark and New chat. The transcript has two labels, <b>You</b> and <b>Others</b>. Help is on demand.</p></div>
+    <div class="stage">
+      <div class="island" role="group" aria-label="Island, Meeting tab">
+        <div class="bar"><span class="dot live" aria-hidden="true"></span><b>Recording</b><span>Pricing review</span><span class="el">12:48</span><span class="sp"></span><span class="chip ok">In call</span><button class="ibtn stop" id="stop">Stop</button></div>
+        <div class="tabs"><span>Home</span><span aria-current="page">Meeting</span><span>Ask Spark</span><span>New chat</span></div>
+        <div class="lines">
+          <div class="ln"><span class="who">Others</span><p>If we move the team plan to twenty-four a seat, what happens to the people on the old annual price?</p></div>
+          <div class="ln you"><span class="who">You</span><p>They keep it until renewal. We said that in the March note.</p></div>
+          <div class="ln"><span class="who">Others</span><p>Okay. And do we have the churn number for the last quarter handy?</p></div>
+          <div class="ln draft"><span class="who">Others</span><p>because finance will ask before they sign…</p></div>
+        </div>
+        <div class="ask">
+          <button class="ibtn" id="catch-up">Catch me up</button>
+          <button class="ibtn" id="suggest">Suggest a reply</button>
+          <div class="field" role="textbox" aria-label="Ask about this meeting">Ask about this meeting…</div>
+        </div>
+        <div class="ans"><small>Suggest a reply · from the transcript and pricing-2026.pdf</small><p>“Churn was 3.1% last quarter, down from 3.8%. It’s on page 4 of the pricing deck; I can share it after the call.”</p></div>
+        <div class="field" role="textbox" aria-label="Your notes">Your notes: grandfather annual until renewal · finance needs churn…</div>
+      </div>
+      <div class="side">
+        <span class="strip"><span class="dot live" aria-hidden="true"></span>Recording · Pricing review <span class="el">12:48</span></span>
+        <div class="callout"><b>Always visible to you</b><span>The resting island shows the red dot, the title, the time and Stop for as long as a meeting records.</span></div>
+        <div class="callout"><b>Not in your screen share</b><span>The Meeting tab is left out of screen sharing and screenshots, so your notes aren’t broadcast. The recording dot is not hidden.</span></div>
+        <div class="callout"><b>Nothing sent while recording</b><span>Audio is transcribed on the Mac and dropped. Text goes to your provider only when you ask for help or notes.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="frame">
+    <div class="frame-head"><span class="step">3 After</span><h2>The Meetings tab: every transcript in one place</h2>
+      <p>The third tab of the calendar screen. Each row says which calendar it came from, or that you started it. Notes are an editable page; the transcript and your files sit beside them.</p></div>
+    <div class="stage">
+      <div class="lib" role="group" aria-label="Meetings view">
+        <div class="list">
+          <div class="search" role="searchbox" aria-label="Search meetings">Search meetings…</div>
+          <div class="item" aria-current="true"><b>Pricing review</b><span>Today 14:00 · 31 min · Spark Work</span></div>
+          <div class="item"><b>Standup</b><span>Today 10:00 · 12 min · Spark Work</span></div>
+          <div class="item"><b>Call with Dana about onboarding</b><span>Yesterday 17:20 · 18 min · Started by you</span></div>
+          <div class="item"><b>Vendor demo</b><span>Mon 9 Nov · 44 min · Google · Personal</span></div>
+        </div>
+        <div class="doc">
+          <h3>Pricing review</h3>
+          <div class="meta"><span>Wed 11 Nov · 14:00–14:31</span><span class="chip">Parakeet · on this Mac</span><span class="chip">Notes by Claude · $0.04</span></div>
+          <div class="row"><button class="btn primary" id="start-chat">Start a chat</button><button class="btn" id="write-again">Write again</button><button class="btn" id="copy">Copy</button><button class="btn quiet" id="delete">Delete…</button></div>
+          <div class="seg"><span aria-current="page">Notes</span><span>Transcript</span><span>Context · 2</span></div>
+          <div class="md">
+            <h5>Summary</h5>
+            <p>The team plan moves to $24 a seat from January. Existing annual customers keep their price until renewal. Finance needs last quarter’s churn before signing off.</p>
+            <h5>Decisions</h5>
+            <ul><li>Team plan: $24 per seat, from 1 January.</li><li>Annual customers keep the old price until they renew.</li></ul>
+            <h5>Action items</h5>
+            <ul><li><b>You</b>: send the churn figure (3.1%) and page 4 of the deck to finance.</li><li>Draft the customer email. No owner was named.</li></ul>
+            <h5>Open questions</h5>
+            <ul><li>Does the education discount change?</li></ul>
+          </div>
+          <div class="files"><span class="file"><i>PDF</i>pricing-2026.pdf</span><span class="file"><i>IMG</i>whiteboard.png</span><button class="btn" id="add-context">Add context…</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="frame">
+    <div class="frame-head"><span class="step">4 In the call?</span><h2>Spark knows when the call is still on</h2>
+      <p>For a meeting with a Zoom, Meet, Teams or Webex link, Spark checks whether a meeting app or browser has the microphone open during that meeting’s time. It doesn’t read the call.</p></div>
+    <div class="stage">
+      <div class="states">
+        <div class="state"><span class="chip ok">In call</span><p>Recording continues, even past the calendar end time, while the call is on.</p></div>
+        <div class="state"><span class="chip">Call ended</span><p>After 60 seconds off the call:</p><div class="row"><button class="btn primary" id="stop-write">Stop and write notes</button><button class="btn quiet" id="keep">Keep recording</button></div></div>
+        <div class="state"><span class="chip">You joined · not recording</span><p>With “Ask at the start” on, joining the call brings up <b>Take notes</b> for that meeting.</p></div>
+        <div class="state"><span class="chip">Two meetings overlap</span><p>Spark can’t tell which call it is, so it asks which meeting the notes belong to.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="frame">
+    <div class="frame-head"><span class="step">5 Settings</span><h2>Settings → Meetings</h2>
+      <p>Recording by default is your choice, and it starts off.</p></div>
+    <div class="stage">
+      <div class="set" role="group" aria-label="Meetings settings">
+        <div class="opt"><div class="l"><b>Record meetings automatically</b><span>Off: only when you press Take notes. Ask: highlight Take notes when a meeting starts. Start when I join: begin when you join the call.</span></div>
+          <div class="pick" role="radiogroup" aria-label="Record meetings automatically"><span aria-current="true">Off</span><span>Ask at the start</span><span>Start when I join</span></div></div>
+        <div class="opt"><div class="l"><b>Write notes when a meeting ends</b><span>Sends the transcript and your notes to your default provider.</span></div><span class="swl"><span class="sw on" role="switch" aria-checked="true" aria-label="Write notes when a meeting ends"></span>On</span></div>
+        <div class="opt"><div class="l"><b>Let Ask Spark read my meetings</b><span>So you can ask about past meetings. Chats get a meeting only when you attach it.</span></div><span class="swl"><span class="sw on" role="switch" aria-checked="true" aria-label="Let Ask Spark read my meetings"></span>On</span></div>
+        <div class="opt"><div class="l"><b>Include my microphone</b><span>Off records only what the others say.</span></div><span class="swl"><span class="sw on" role="switch" aria-checked="true" aria-label="Include my microphone"></span>On</span></div>
+        <div class="opt"><div class="l"><b>Stored meetings</b><span>4 meetings · transcripts and notes are kept on this Mac until you delete them. Audio is never saved.</span></div><button class="btn stop" id="delete-all">Delete all…</button></div>
+        <div class="opt"><div class="l"><span>Tell people you’re taking notes. Recording others without consent is illegal in many places.</span></div></div>
+      </div>
+    </div>
+    <p class="note">Open questions on this mock: whether the Meeting tab is hidden from screen shares, whether “Start when I join” ships in the first version, and whether live help should ever answer on its own.</p>
+  </section>
+</div>
+
+<script>
+(function(){
+  var g=document.getElementById('mgrid'); if(!g) return;
+  var ev={2:[['Standup','9:00','work acc rec']],3:[['1:1 Dana','10:00','work acc']],4:[['Design review','1:00','work acc rec'],['Dentist','4:30','fam acc']],5:[['Standup','9:00','work acc']],6:[['Planning','11:00','work tent']],9:[['Standup','9:00','work acc rec'],['Vendor demo','2:00','goog acc rec']],10:[['Roadmap','10:30','work decl']],
+    11:[['Morning sync','8:30','work acc rec'],['Live review','9:55','work acc'],['Standup','11:00','work acc'],['Design review','1:00','work pend sel']],
+    12:[['Budget','3:00','goog pend']],13:[['Retro','2:00','work acc']],16:[['Standup','9:00','work acc']],17:[['Offsite prep','1:00','work tent']],18:[['School play','6:00','fam acc']],19:[['All hands','4:00','goog acc']],23:[['Standup','9:00','work acc']],25:[['Quarterly review','11:30','goog pend']],30:[['Standup','9:00','work acc']]};
+  var more={11:2,4:1};
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(function(d){var e=document.createElement('div');e.className='dow';e.textContent=d;g.appendChild(e);});
+  for(var i=0;i<35;i++){
+    var day=i+1, out=day>30, c=document.createElement('div');
+    c.className='cell'+(out?' out':'')+(day===11?' is-today':'');
+    var n=document.createElement('span');n.className='n';n.textContent=out?day-30:day;c.appendChild(n);
+    (out?[]:(ev[day]||[])).forEach(function(x){var ch=document.createElement('div');ch.className='ch '+x[2];var t=document.createElement('span');t.textContent=x[0];var tm=document.createElement('time');tm.textContent=x[1];var cl=x[2],cal=cl.indexOf('fam')>-1?'Spark Family':cl.indexOf('goog')>-1?'Google · Personal':'Spark Work',rep=cl.indexOf('pend')>-1?'Not answered':cl.indexOf('tent')>-1?'Maybe':cl.indexOf('decl')>-1?'Declined':'Accepted';ch.tabIndex=0;ch.setAttribute('data-tip',x[0]+'\n'+x[1]+' · '+cal+'\n'+rep+(cl.indexOf('rec')>-1?' · Has notes':''));ch.appendChild(t);ch.appendChild(tm);c.appendChild(ch);});
+    if(!out&&more[day]){var m=document.createElement('span');m.className='more';m.textContent=more[day]+' more';c.appendChild(m);}
+    g.appendChild(c);
+  }
+  var tip=document.createElement('div');tip.id='tip';tip.setAttribute('role','tooltip');tip.hidden=true;document.body.appendChild(tip);
+  function show(e){var el=e.target.closest&&e.target.closest('[data-tip]');if(!el){tip.hidden=true;return;}tip.textContent=el.getAttribute('data-tip');tip.hidden=false;var r=el.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight,x=Math.max(8,Math.min(r.left,innerWidth-w-8)),y=r.top-h-6<8?r.bottom+6:r.top-h-6;tip.style.left=x+'px';tip.style.top=y+'px';}
+  function hide(){tip.hidden=true;}
+  document.addEventListener('mouseover',show);document.addEventListener('focusin',show);document.addEventListener('focusout',hide);document.addEventListener('scroll',hide,true);document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+})();
+</script>
+</body>
+</html>

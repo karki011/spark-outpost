@@ -14,13 +14,47 @@ import { TodayStatePage } from './TodayStates.tsx';
 import { todayState } from './today-model.ts';
 import { localDate, useCalendarStatus } from './use-calendar.ts';
 import { useTodayEventRequests, type TodayEventRequest } from './today-request.ts';
+import { MeetingsView } from './MeetingsView.tsx';
+import { PageTabs } from './PageTabs.tsx';
+import { RecordingBar, useMeetingStatus } from '../meetings/index.ts';
 
 type CalendarView = 'month' | 'day';
+type CalendarPage = 'calendar' | 'transcripts';
 
 const VIEWS = [
   { id: 'month', label: 'Month' },
   { id: 'day', label: 'Day' },
 ];
+
+const PAGES = [
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'transcripts', label: 'Transcripts' },
+];
+
+const PAGE_KEY = 'spark.today.page';
+
+function savedPage(): CalendarPage {
+  try {
+    return sessionStorage.getItem(PAGE_KEY) === 'transcripts' ? 'transcripts' : 'calendar';
+  } catch {
+    return 'calendar';
+  }
+}
+
+function useCalendarPage() {
+  const [page, setPage] = useState<CalendarPage>(savedPage);
+  const [opened, setOpened] = useState<readonly CalendarPage[]>(() => [page]);
+  const choose = useCallback((next: CalendarPage) => {
+    setPage(next);
+    setOpened((pages) => (pages.includes(next) ? pages : [...pages, next]));
+    try {
+      sessionStorage.setItem(PAGE_KEY, next);
+    } catch {
+      return;
+    }
+  }, []);
+  return [page, choose, opened] as const;
+}
 
 const VIEW_KEY = 'spark.today.view';
 
@@ -49,10 +83,13 @@ function TodayViews(props: TodayProps) {
   const now = useMinuteClock();
   const today = localDate(now);
   const [view, setView] = useCalendarView();
+  const [page, setPage, opened] = useCalendarPage();
   const [picked, setPicked] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [flash, setFlash] = useState(0);
   const [requested, setRequested] = useState<TodayEventRequest | null>(null);
+  const [meetingId, setMeetingId] = useState<string | null>(null);
+  const meetings = useMeetingStatus().data?.supported ?? false;
   const date = picked ?? today;
   const pickDate = useCallback(
     (next: string) => setPicked(next === localDate(Date.now()) ? null : next),
@@ -73,8 +110,9 @@ function TodayViews(props: TodayProps) {
       setRequested(request);
       if (request.eventKey) setFlash((count) => count + 1);
       setView('day');
+      setPage('calendar');
     },
-    [pickDate, setView],
+    [pickDate, setView, setPage],
   );
   useTodayEventRequests(showEvent);
   const switcher = (
@@ -90,32 +128,59 @@ function TodayViews(props: TodayProps) {
       </div>
     </div>
   );
-  if (view === 'day') {
-    return (
-      <DayView
-        {...props}
-        date={date}
-        today={today}
-        now={now}
-        selected={selected}
-        flash={flash}
-        requested={requested?.date === date ? requested.eventKey : null}
-        switcher={switcher}
-        onDate={pickDate}
-        onSelect={setSelected}
-      />
-    );
-  }
+  const openMeeting = useCallback(
+    (id: string) => {
+      setMeetingId(id);
+      setPage('transcripts');
+    },
+    [setPage],
+  );
+  const transcripts = meetings && page === 'transcripts';
   return (
-    <MonthView
-      date={date}
-      today={today}
-      now={now}
-      switcher={switcher}
-      onDate={pickDate}
-      onOpenDay={openDay}
-      onStartChat={props.onStartChat}
-    />
+    <>
+      {meetings && (
+        <PageTabs
+          ariaLabel="Calendar and transcripts"
+          options={PAGES}
+          value={page}
+          onChange={(id) => setPage(id as CalendarPage)}
+        />
+      )}
+      <RecordingBar onOpen={openMeeting} />
+      {meetings && opened.includes('transcripts') && (
+        <div className="td-pagebody" hidden={!transcripts}>
+          <MeetingsView openId={meetingId} onOpen={setMeetingId} onStartChat={props.onStartChat} />
+        </div>
+      )}
+      {(!meetings || opened.includes('calendar')) && (
+        <div className="td-pagebody" hidden={transcripts}>
+          {view === 'day' ? (
+            <DayView
+              {...props}
+              date={date}
+              today={today}
+              now={now}
+              selected={selected}
+              flash={flash}
+              requested={requested?.date === date ? requested.eventKey : null}
+              switcher={switcher}
+              onDate={pickDate}
+              onSelect={setSelected}
+            />
+          ) : (
+            <MonthView
+              date={date}
+              today={today}
+              now={now}
+              switcher={switcher}
+              onDate={pickDate}
+              onOpenDay={openDay}
+              onStartChat={props.onStartChat}
+            />
+          )}
+        </div>
+      )}
+    </>
   );
 }
 
