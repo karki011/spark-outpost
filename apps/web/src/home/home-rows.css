@@ -263,6 +263,16 @@
   }
 }
 
+@container home (max-width: 480px) {
+  .hlead .hrow:has(.hrow-a > :nth-child(2)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hlead .hrow-a {
+    flex-wrap: wrap;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hprog.wait i,
   .hsk,

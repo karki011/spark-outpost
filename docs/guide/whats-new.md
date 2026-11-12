@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
+| Home rows fit on a phone             | Nothing; buttons wrap under the text.           |
 | Update check every hour              | [Updates](updates.md).                          |
 | Phone push for finished turns        | [Use your phone](use-your-phone.md).            |
 | Edits show +N −M and open to a diff  | [Follow a turn](follow-a-turn.md).              |
