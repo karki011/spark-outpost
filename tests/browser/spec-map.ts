@@ -285,6 +285,7 @@ export const SPEC_GROUPS = {
     'voice',
     'voice-focus',
     'voice-models',
+    'voice-shortcut',
   ],
   phone: [
     'phone',

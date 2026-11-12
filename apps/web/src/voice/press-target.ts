@@ -9,6 +9,13 @@ interface PressTarget {
 const targets: PressTarget[] = [];
 let unsubscribe: (() => void) | null = null;
 
+function onScreen(element: HTMLElement | null): boolean {
+  if (!element || element.getClientRects().length === 0) return false;
+  if (element.closest('[inert]')) return false;
+  const dialogs = [...document.querySelectorAll('[aria-modal="true"]')];
+  return dialogs.every((dialog) => dialog.contains(element));
+}
+
 function route() {
   const target = [...targets].reverse().find((each) => each.visible());
   if (target) target.toggle();
@@ -44,7 +51,7 @@ export function useVoicePressTarget(
     if (!enabled) return;
     const target: PressTarget = {
       toggle: () => latest.current(),
-      visible: () => (element.current?.getClientRects().length ?? 0) > 0,
+      visible: () => onScreen(element.current),
     };
     targets.push(target);
     sync();

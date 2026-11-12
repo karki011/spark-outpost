@@ -104,7 +104,11 @@ export function Composer({
   const voice = useDictationDraft(draft, setDraft, conversationId, () => {
     textareaRef.current?.focus({ preventScroll: true });
   });
-  useVoicePressTarget(voice.dictation.toggle, usePaneFocused(), textareaRef);
+  useVoicePressTarget(
+    voice.dictation.toggle,
+    usePaneFocused() && voice.dictation.available,
+    textareaRef,
+  );
   const lastChoice = useRef(busyEnter);
   const secrets = useSecretGuard(draft);
   const inputId = useId();

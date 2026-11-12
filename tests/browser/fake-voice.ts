@@ -20,6 +20,7 @@ export async function installFakeVoice(page: Page, options: FakeVoiceOptions = {
   await page.addInitScript((settings) => {
     const none = () => () => undefined;
     const calls: { op: string; args: unknown[] }[] = [];
+    const routing: { op: string; args: unknown[] }[] = [];
     const listeners: ((event: unknown) => void)[] = [];
     const changes: ((status: unknown) => void)[] = [];
     const opened: string[] = [];
@@ -77,6 +78,7 @@ export async function installFakeVoice(page: Page, options: FakeVoiceOptions = {
     };
     Object.assign(window, {
       voiceCalls: calls,
+      voiceRouting: routing,
       openedChats: opened,
       voiceEmit: (event: unknown) => listeners.forEach((listener) => listener(event)),
       sparkDesktop: {
@@ -173,6 +175,12 @@ export async function installFakeVoice(page: Page, options: FakeVoiceOptions = {
             return 'spoken-1';
           },
           hush: async () => record('hush'),
+          setPressTarget: async (on: boolean) => {
+            routing.push({ op: 'setPressTarget', args: [on] });
+          },
+          pressIsland: async () => {
+            routing.push({ op: 'pressIsland', args: [] });
+          },
           openSettings: async (pageName: string) => record('openSettings', pageName),
           onEvent: (callback: (event: unknown) => void) => {
             listeners.push(callback);
@@ -191,6 +199,9 @@ export async function installFakeVoice(page: Page, options: FakeVoiceOptions = {
 
 export const voiceCalls = (page: Page) =>
   page.evaluate(() => (window as unknown as { voiceCalls: VoiceCall[] }).voiceCalls);
+
+export const voiceRouting = (page: Page) =>
+  page.evaluate(() => (window as unknown as { voiceRouting: VoiceCall[] }).voiceRouting);
 
 export const emitVoice = (page: Page, event: unknown) =>
   page.evaluate((payload) => {

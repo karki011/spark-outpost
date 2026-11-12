@@ -86,6 +86,20 @@ describe('voice press target', () => {
     expect(toggle).not.toHaveBeenCalled();
   });
 
+  it('hands the press to the island while a dialog covers the input', () => {
+    const { speech, emit } = installSpeech();
+    const toggle = vi.fn();
+    render(
+      <>
+        <Input toggle={toggle} enabled shown />
+        <div role="dialog" aria-modal="true" />
+      </>,
+    );
+    emit({ kind: 'press' });
+    expect(toggle).not.toHaveBeenCalled();
+    expect(speech.pressIsland).toHaveBeenCalledTimes(1);
+  });
+
   it('leaves a test press with a file to the island', () => {
     const { emit } = installSpeech();
     const toggle = vi.fn();
