@@ -20,10 +20,34 @@ function show(onStarted = vi.fn()) {
 }
 
 describe('Take notes button', () => {
-  it('renders nothing when recording is not available', async () => {
+  it('is disabled with the reason while recording is not available, and starts nothing', async () => {
     const calls = mockFetch(({ path }) => {
       if (path === '/meetings/status') {
-        return { available: false, reason: 'Needs the Mac app.', recordingId: null };
+        return {
+          supported: true,
+          available: false,
+          reason: 'Turn on Voice in Settings → Voice to record meetings.',
+          recordingId: null,
+        };
+      }
+    });
+    show();
+    const button = await screen.findByRole('button', { name: 'Take notes' });
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByText('Turn on Voice in Settings → Voice to record meetings.')).toBeTruthy();
+    fireEvent.click(button);
+    expect(calls.some((call) => call.method === 'POST')).toBe(false);
+  });
+
+  it('renders nothing where meetings cannot be recorded at all', async () => {
+    const calls = mockFetch(({ path }) => {
+      if (path === '/meetings/status') {
+        return {
+          supported: false,
+          available: false,
+          reason: 'Needs the Mac app.',
+          recordingId: null,
+        };
       }
     });
     const { container } = render(
@@ -40,7 +64,7 @@ describe('Take notes button', () => {
   it('is disabled with the reason while another meeting records', async () => {
     const calls = mockFetch(({ path }) => {
       if (path === '/meetings/status') {
-        return { available: true, reason: null, recordingId: MEETING_ID };
+        return { supported: true, available: true, reason: null, recordingId: MEETING_ID };
       }
     });
     show();
@@ -56,7 +80,8 @@ describe('Take notes button', () => {
 
   it('starts a meeting for the event and reports it', async () => {
     const calls = mockFetch(({ path, method }) => {
-      if (path === '/meetings/status') return { available: true, reason: null, recordingId: null };
+      if (path === '/meetings/status')
+        return { supported: true, available: true, reason: null, recordingId: null };
       if (path === '/meetings' && method === 'POST') return detail({ state: 'recording' }, null);
     });
     const onStarted = show();

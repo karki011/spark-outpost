@@ -101,6 +101,7 @@ export const voiceErrorCodeSchema = z.enum([
   'model_missing',
   'bad_model',
   'busy',
+  'meeting',
   'file_input_off',
   'failed',
 ]);

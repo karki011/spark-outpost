@@ -15,6 +15,7 @@ export interface MeetingCapture {
   state(): MeetingCaptureState;
   start(meetingId: string, sink: MeetingSink): Promise<void>;
   stop(meetingId: string): void;
+  recording(): boolean;
   onState(listener: () => void): void;
   changed(): void;
 }
@@ -134,6 +135,7 @@ export function createMeetingCapture(effects: MeetingCaptureEffects): MeetingCap
       }
     },
 
+    recording: () => recordings.size > 0,
     onState: (listener) => void listeners.push(listener),
     changed: () => {
       for (const listener of listeners) listener();

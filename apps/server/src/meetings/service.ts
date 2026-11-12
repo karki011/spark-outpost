@@ -121,6 +121,10 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
   const sourceState = () =>
     source?.state() ?? { available: false, reason: MEETINGS_NEED_THE_MAC_APP };
 
+  source?.onState?.(() =>
+    options.publish(JSON.stringify({ kind: 'meeting', conversationId: null, runId: null })),
+  );
+
   async function stopSource(meetingId: string, state: 'ended' | 'interrupted'): Promise<void> {
     try {
       await source?.stop(meetingId);
@@ -136,6 +140,7 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
     async status() {
       const recording = await recordingMeeting(db, workspaceId);
       return {
+        supported: source !== null,
         ...sourceState(),
         recordingId: recording?.id ?? null,
       };

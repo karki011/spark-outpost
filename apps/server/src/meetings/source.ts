@@ -9,6 +9,7 @@ export interface MeetingSourceState {
 
 export interface MeetingSource {
   state(): MeetingSourceState;
+  onState?(listener: () => void): void;
   start(meetingId: string, deliver: DeliverLines, lost: () => void): Promise<void>;
   stop(meetingId: string): Promise<void>;
 }

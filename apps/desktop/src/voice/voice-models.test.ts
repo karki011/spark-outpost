@@ -71,6 +71,7 @@ async function setup(options: {
     sendTo: () => undefined,
     sendIsland: () => undefined,
     sendFocused: () => false,
+    meetingRecording: () => false,
     voiceOver: () => false,
     language: 'en',
     allowFileInput: false,

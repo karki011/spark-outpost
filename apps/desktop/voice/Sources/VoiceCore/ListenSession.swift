@@ -34,6 +34,7 @@ public struct ListenRules: Sendable {
     public var commandNoSpeechLimit: Double = 3
     public var segmentLimit: Double = 30
     public var meetingSegmentLimit: Double = 15
+    public var meetingSoftLimit: Double = 10
     public var preRoll: Double = 0.3
     public var interimEvery: Double = 0.5
     public var interimMinimum: Double = 0.6

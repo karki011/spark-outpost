@@ -164,6 +164,7 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
       target.send(IPC.voiceEvent, event);
       return true;
     },
+    meetingRecording: () => capture?.recording() ?? false,
     voiceOver: () => app.accessibilitySupportEnabled,
     language: language(),
     allowFileInput,

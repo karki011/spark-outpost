@@ -39,7 +39,7 @@ The voice helper gains a second kind of session beside `listen`:
 - `meeting.stop {id}` drains both queues, then sends `meeting.ended`.
 - A meeting and a push-to-talk `listen` cannot run together in v1: Voice says **Recording a meeting** and the meeting keeps going.
 
-**As built (2026-11-12, compiled and unit-tested, not yet run on a Mac).** The helper ops are `meeting.start {id, language}` and `meeting.stop {id}`; its events are `meeting_started`, `meeting_system {on}`, `meeting_line {source, text, startMs, endMs}` and `meeting_ended`. `MeetingRecorder` (VoiceCore) gives each stream its own Silero detector and a `MeetingStream` that closes a sentence after 0.8 s of quiet and cuts a long turn at 15 s; a meeting never ends on silence. Stop sends the open sentence and waits for its text before `meeting_ended`. The tap (`SystemAudio.swift`) is a global stereo tap on a private aggregate device over the default output, converted to 16 kHz mono; it opens and closes on its own queue because those calls block while the permission prompt is up, and CoreAudio is linked weakly so the helper still starts before macOS 14.2. A `listen` or `speak` during a meeting answers `busy`.
+**As built (2026-11-12, compiled and unit-tested, not yet run on a Mac).** The helper ops are `meeting.start {id, language}` and `meeting.stop {id}`; its events are `meeting_started`, `meeting_system {on}`, `meeting_line {source, text, startMs, endMs}` and `meeting_ended`. `MeetingRecorder` (VoiceCore) gives each stream its own Silero detector and a `MeetingStream` that closes a sentence after 0.8 s of quiet and cuts a long turn at 15 s; a meeting never ends on silence. Stop sends the open sentence and waits for its text before `meeting_ended`. The tap (`SystemAudio.swift`) is a global stereo tap on a private aggregate device over the default output, converted to 16 kHz mono; it opens and closes on its own queue because those calls block while the permission prompt is up, and CoreAudio is linked weakly so the helper still starts before macOS 14.2. A `listen` or `speak` during a meeting answers `busy` from the helper; the Mac app refuses the listen first with its own `meeting` error, which the island and the composer show as "Voice is off while a meeting is recording."
 
 On the Mac side `createMeetingCapture` (`apps/desktop/src/voice/meeting-capture.ts`) drives those ops and `meetingHub` joins the API's bridge beside the calendar's. On the server `createDesktopMeetingSource` (`apps/server/src/meetings/desktop-source.ts`) is the `MeetingSource`: it holds the availability the Mac reports (no helper, Voice off, or the speech model not ready, each with its sentence), waits for `meeting:started`, lets a stop resolve only after the last lines are stored, and marks the meeting **Ended by restart** when capture ends by itself. The scripted source still wins when `SPARK_FAKE_MEETINGS=1`.
 
@@ -303,6 +303,26 @@ Fixed after that run, then run again on the same Mac on 2026-11-12 at commit `21
 | Layout at 900 px | List and meeting side by side with no **Back**, the meeting 494 px of a 772 px card, notes scrolling in place, no page or sideways scroll                                                |
 
 Still open: tokens and cost of a notes run are not shown, and the open meeting is not kept across a reload.
+
+### Real capture, first run
+
+Run on 2026-11-12 at commit `308ae79` on the same Mac, signed dev app, no scripted source, a USB webcam microphone and the Mac's speakers, Claude as the provider. Microphone, Calendars and System Audio Recording were already granted, so no prompt was seen. No person spoke: **You** lines came from the microphone hearing the speakers.
+
+| Test                | Result                                                                                                                                                                            |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Availability        | `/api/meetings/status` gave the Voice-off sentence, then the model sentence, then `available: true`                                                                               |
+| Others              | Every sentence played on the speakers arrived as **Others**; audio on a non-default output was captured too                                                                       |
+| Echo                | All 12 single sentences also arrived as **You** through the microphone; echo removal is not built                                                                                 |
+| Timing              | 0.96 to 1.18 s from the end of a sentence to its line; `spark-voice` 5% of a core silent, up to 13% with both streams                                                             |
+| Long turn           | **Others** clean in three lines of 15.0, 15.0 and 14.2 s. **You** (speaker playback into the mic) lost a phrase and had one word split at a 15 s cut                              |
+| Silence             | 3 min 10 s with no lines, then the next sentence transcribed on both streams                                                                                                      |
+| Stop mid-sentence   | The open sentence was stored and notes written in about 18 s; in 1 of 2 runs the **You** copy of that sentence was missing                                                        |
+| Helper killed       | **Ended by restart** with its 4 lines and **Write notes**; a new meeting started and transcribed                                                                                  |
+| Voice off           | **Failed:** the tabs vanished with Voice off, so recorded meetings were unreachable, and did not return without a reload; **Take notes** stayed enabled and failed without a word |
+| Shortcut            | **Failed:** a press during a meeting said "Spark is already listening."                                                                                                           |
+| Network, indicators | No sockets on `spark-voice`; an orange dot beside Control Center during the meeting                                                                                               |
+
+Fixed after it, not yet run on a Mac: the tabs and buttons follow whether meetings are supported at all, not whether recording is available right now, so past meetings stay reachable with Voice off and **Take notes** and **New meeting** are disabled with the reason beside them; the Mac's availability reaches the page as it changes; a listen during a meeting answers "Voice is off while a meeting is recording."; and a turn of 10 s or more is cut at the next quiet frame, with the 15 s cut kept for speech with no break. Not explained: the phrase the **You** stream lost and the **You** sentence missing at Stop, both seen only on speaker playback into the microphone. Not run: a person speaking with headphones, a real call, the permission prompt from a reset grant, and a change of output device.
 
 ## Open decisions
 

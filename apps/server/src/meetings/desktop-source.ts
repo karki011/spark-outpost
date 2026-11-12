@@ -36,6 +36,7 @@ export function createDesktopMeetingSource(options: DesktopMeetingSourceOptions)
   const startTimeoutMs = options.startTimeoutMs ?? MEETING_START_TIMEOUT_MS;
   const stopTimeoutMs = options.stopTimeoutMs ?? MEETING_STOP_TIMEOUT_MS;
   const running = new Map<string, Running>();
+  const stateListeners: (() => void)[] = [];
   let state: MeetingSourceState = { available: false, reason: MEETINGS_NEED_THE_MAC_APP };
 
   const ended = (message: Extract<MeetingBridgeFromHost, { kind: 'meeting:ended' }>) => {
@@ -59,6 +60,7 @@ export function createDesktopMeetingSource(options: DesktopMeetingSourceOptions)
     const message = parsed.data;
     if (message.kind === 'meeting:state') {
       state = { available: message.available, reason: message.reason };
+      for (const listener of stateListeners) listener();
       return;
     }
     if (message.kind === 'meeting:ended') {
@@ -79,6 +81,7 @@ export function createDesktopMeetingSource(options: DesktopMeetingSourceOptions)
 
   return {
     state: () => state,
+    onState: (listener) => void stateListeners.push(listener),
 
     start(meetingId, deliver, lost) {
       return new Promise<void>((resolve, reject) => {

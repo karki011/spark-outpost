@@ -24,7 +24,7 @@ function show() {
   );
 }
 
-const status = { available: true, reason: null, recordingId: null };
+const status = { supported: true, available: true, reason: null, recordingId: null };
 
 describe('Meetings tab', () => {
   it('says what will appear and how to start when there are no meetings', async () => {

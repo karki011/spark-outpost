@@ -35,6 +35,7 @@ export interface VoiceEffects {
   sendTo(owner: number, event: VoiceEvent): void;
   sendIsland(event: VoiceEvent): void;
   sendFocused(event: VoiceEvent): boolean;
+  meetingRecording(): boolean;
   voiceOver(): boolean;
   language: string;
   allowFileInput: boolean;
@@ -339,6 +340,7 @@ export function createVoice(effects: VoiceEffects) {
       if (!settings.enabled || !parsed.success) return { ok: false, error: 'invalid' };
       if (file !== undefined && (!effects.allowFileInput || typeof file !== 'string'))
         return { ok: false, error: 'file_input_off' };
+      if (effects.meetingRecording()) return { ok: false, error: 'meeting' };
       if (listens.size > 0) return { ok: false, error: 'busy' };
       if (file === undefined && effects.micStatus() !== 'granted')
         return { ok: false, error: 'mic_denied' };

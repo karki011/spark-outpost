@@ -435,3 +435,10 @@
     }
   }
 }
+
+.mt-take-why {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}

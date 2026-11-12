@@ -52,6 +52,26 @@ private let stop = #"{"id":"m","op":"meeting.stop"}"#
         #expect(scene.events.count == 3)
     }
 
+    @Test func aLongTurnIsCutAtABreathOnceItIsTenSecondsLong() {
+        let scene = Scene().loaded()
+        scene.send(start)
+        scene.play(frames(seconds: 11, speech: true))
+        #expect(scene.platform.model.transcribed.isEmpty)
+        scene.play(frames(seconds: 0.1, speech: false))
+        #expect(scene.platform.model.transcribed.count == 1)
+        scene.play(frames(seconds: 3, speech: true))
+        scene.play(frames(seconds: 1, speech: false))
+        #expect(scene.platform.model.transcribed.count == 2)
+        guard case .meetingLine(_, _, _, let firstEnd) = scene.events[1],
+              case .meetingLine(_, _, let secondStart, _) = scene.events[2]
+        else {
+            Issue.record("expected two meeting lines")
+            return
+        }
+        #expect(firstEnd == secondStart)
+        #expect(firstEnd > 10_900 && firstEnd < 11_300)
+    }
+
     @Test func stoppingSendsTheOpenSentenceAndWaitsForItsText() {
         let scene = Scene().loaded()
         scene.send(start)

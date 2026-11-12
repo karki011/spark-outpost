@@ -34,7 +34,7 @@ async function setup(
   const sent: { owner: number; event: VoiceEvent }[] = [];
   const island: VoiceEvent[] = [];
   const focused: VoiceEvent[] = [];
-  const view = { target: false };
+  const view = { target: false, meeting: false };
   const registered = new Map<string, () => void>();
   const elsewhere = new Set<string>();
   const saved: unknown[] = [];
@@ -64,6 +64,7 @@ async function setup(
     takenBy: (accelerator) => (accelerator === 'Alt+Space' ? 'Quick chat' : null),
     sendTo: (owner, event) => sent.push({ owner, event }),
     sendIsland: (event) => island.push(event),
+    meetingRecording: () => view.meeting,
     sendFocused: (event) => {
       if (!view.target) return false;
       focused.push(event);
@@ -202,6 +203,16 @@ describe('Voice', () => {
     scene.view.target = false;
     scene.voice.press();
     expect(scene.island).toEqual([{ kind: 'press' }]);
+  });
+
+  it('refuses to listen while a meeting is recording, and says so', async () => {
+    const scene = await setup({ enabled: true });
+    await scene.voice.start();
+    scene.view.meeting = true;
+    expect(await scene.voice.listen(7, 'command', '', undefined)).toEqual({
+      ok: false,
+      error: 'meeting',
+    });
   });
 
   it('a window with no input on screen can hand its press to the island', async () => {

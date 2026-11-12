@@ -89,7 +89,7 @@ function TodayViews(props: TodayProps) {
   const [flash, setFlash] = useState(0);
   const [requested, setRequested] = useState<TodayEventRequest | null>(null);
   const [meetingId, setMeetingId] = useState<string | null>(null);
-  const meetings = useMeetingStatus().data?.available ?? false;
+  const meetings = useMeetingStatus().data?.supported ?? false;
   const date = picked ?? today;
   const pickDate = useCallback(
     (next: string) => setPicked(next === localDate(Date.now()) ? null : next),

@@ -14,6 +14,7 @@ export const DICTATION_PROBLEMS: Partial<Record<VoiceErrorCode | 'missed', strin
     'Spark can’t use the microphone. Allow it in System Settings → Privacy & Security → Microphone.',
   model_missing: 'Voice doesn’t have its speech model yet. Settings → Voice shows its download.',
   busy: 'Spark is already listening.',
+  meeting: 'Voice is off while a meeting is recording.',
   no_input_device: 'No microphone is connected.',
   failed: 'Voice stopped. Try again.',
 };

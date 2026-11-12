@@ -10,6 +10,7 @@ const NOTICES: Record<Notice, string> = {
   model_missing: 'Voice doesn’t have its speech model yet. Settings → Voice shows its download.',
   bad_model: 'The speech model didn’t check out.',
   busy: 'Spark is already listening.',
+  meeting: 'Voice is off while a meeting is recording.',
   no_input_device: 'No microphone is connected.',
   file_input_off: 'File input is only for tests.',
   invalid: 'Voice is off.',

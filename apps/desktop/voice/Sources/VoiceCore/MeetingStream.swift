@@ -52,7 +52,9 @@ public final class MeetingStream {
             inSpeech = false
             return take()
         }
-        return segment.count >= samples(rules.meetingSegmentLimit) ? take() : nil
+        if segment.count >= samples(rules.meetingSegmentLimit) { return take() }
+        let atABreath = quietSeconds > 0 && segment.count >= samples(rules.meetingSoftLimit)
+        return atABreath ? take() : nil
     }
 
     public func flush() -> MeetingSegment? {

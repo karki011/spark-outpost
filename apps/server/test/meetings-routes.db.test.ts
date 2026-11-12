@@ -84,6 +84,7 @@ describe('meetings without a source', () => {
     const { client } = setup();
     const status = await client.get('/api/meetings/status').expect(200);
     expect(status.body).toEqual({
+      supported: false,
       available: false,
       reason: MEETINGS_NEED_THE_MAC_APP,
       recordingId: null,
@@ -187,6 +188,7 @@ describe('recording a meeting', () => {
       },
     });
     expect((await client.get('/api/meetings/status')).body).toEqual({
+      supported: true,
       available: false,
       reason: 'Turn on Voice in Settings first.',
       recordingId: null,

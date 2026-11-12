@@ -7,6 +7,7 @@ import { useMeetingStatus, useStartMeeting } from './use-meetings.ts';
 const EXPLAIN =
   "Records and transcribes this meeting on this Mac, then writes notes. Doesn't join the call.";
 const BUSY = 'Another meeting is recording. Stop it first.';
+const OFF = 'Recording isn’t available right now.';
 
 interface TakeNotesButtonProps {
   title?: string;
@@ -26,13 +27,15 @@ export function TakeNotesButton({
   const status = useMeetingStatus();
   const start = useStartMeeting();
   const reasonId = useId();
-  const busy = Boolean(status.data?.recordingId);
-  const { triggerProps, tooltip } = useTooltip(busy ? BUSY : EXPLAIN, { side: 'bottom' });
+  const recording = Boolean(status.data?.recordingId);
+  const unavailable = status.data && !status.data.available ? (status.data.reason ?? OFF) : null;
+  const blocked = recording ? BUSY : unavailable;
+  const { triggerProps, tooltip } = useTooltip(blocked ?? EXPLAIN, { side: 'bottom' });
 
-  if (!status.data?.available) return null;
+  if (!status.data?.supported) return null;
 
   function begin() {
-    if (busy || start.isPending) return;
+    if (blocked || start.isPending) return;
     const request: StartMeetingRequest = {
       ...(title ? { title } : {}),
       ...(eventKey ? { eventKey } : {}),
@@ -46,8 +49,8 @@ export function TakeNotesButton({
       <button
         type="button"
         className="btn line sm"
-        aria-disabled={busy || start.isPending}
-        aria-describedby={busy ? reasonId : triggerProps['aria-describedby']}
+        aria-disabled={blocked !== null || start.isPending}
+        aria-describedby={blocked ? reasonId : triggerProps['aria-describedby']}
         onPointerEnter={triggerProps.onPointerEnter}
         onPointerLeave={triggerProps.onPointerLeave}
         onPointerDown={triggerProps.onPointerDown}
@@ -57,13 +60,13 @@ export function TakeNotesButton({
       >
         {label}
       </button>
-      {busy && (
-        <span id={reasonId} className="sr-only">
-          {BUSY}
+      {blocked && (
+        <span id={reasonId} className={recording ? 'sr-only' : 'mt-take-why'}>
+          {blocked}
         </span>
       )}
       {tooltip}
-      {start.isError && <span role="alert">Couldn’t start. {start.error.message}</span>}
+      {start.isError && !blocked && <span role="alert">Couldn’t start. {start.error.message}</span>}
     </span>
   );
 }
