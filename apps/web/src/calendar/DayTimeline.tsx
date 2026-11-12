@@ -8,8 +8,11 @@ import {
   type CalendarEvent,
 } from '@spark-outpost/contracts';
 import { WarnIcon } from '../ui/icons.tsx';
+import { useTooltip } from '../ui/Tooltip.tsx';
 import { hasEnded } from './event-clock.ts';
-import { clock, hourMark, span as spanText } from './calendar-format.ts';
+import { eventTip } from './event-tip.ts';
+import { replyState } from './reply-status.ts';
+import { clock, duration, hourMark, span as spanText } from './calendar-format.ts';
 import { swatch } from './CalendarAccounts.tsx';
 import { block, blockRows, HOUR_PX, hourMarks, offset, placeEvents } from './timeline-model.ts';
 import type { NoGap, TimelineSpan } from './today-model.ts';
@@ -82,60 +85,67 @@ function EventBlock(props: {
   const narrow = props.span / props.lanes < NARROW_SHARE;
   const showTags = rows === 3 && !narrow && marks.length > 0;
   const clashIcon = Boolean(clash) && !showTags;
+  const reply = replyState(event.myStatus);
+  const tip = useTooltip(eventTip(event, calendar));
   return (
-    <button
-      type="button"
-      className="tl-ev"
-      data-event-key={event.key}
-      data-ended={props.ended || undefined}
-      data-kind={kind}
-      data-overlap={props.overlap || undefined}
-      data-rows={rows}
-      data-clash={clashIcon || undefined}
-      style={{ ...style, '--tl-title-lines': titleLines } as CSSProperties}
-      aria-expanded={props.selected}
-      aria-controls={props.selected ? props.panelId : undefined}
-      aria-label={`${event.title}, ${spanText(start, end)}, ${calendar?.title ?? 'Calendar'}${marks.length ? `, ${marks.join(', ')}` : ''}`}
-      onClick={() => props.onSelect(event.key)}
-    >
-      {rows === 1 ? (
-        <span className="tl-one">
+    <>
+      <button
+        {...tip.triggerProps}
+        type="button"
+        className="tl-ev"
+        data-event-key={event.key}
+        data-ended={props.ended || undefined}
+        data-kind={kind}
+        data-reply={reply.look}
+        data-overlap={props.overlap || undefined}
+        data-rows={rows}
+        data-clash={clashIcon || undefined}
+        style={{ ...style, '--tl-title-lines': titleLines } as CSSProperties}
+        aria-expanded={props.selected}
+        aria-controls={props.selected ? props.panelId : undefined}
+        aria-label={`${event.title}, ${spanText(start, end)}, ${calendar?.title ?? 'Calendar'}${marks.length ? `, ${marks.join(', ')}` : ''}${reply.word ? `, ${reply.word}` : ''}`}
+        onClick={() => props.onSelect(event.key)}
+      >
+        {rows === 1 ? (
+          <span className="tl-one">
+            <b>{event.title}</b>
+            <span className="tl-at"> · {clock(start)}</span>
+          </span>
+        ) : (
           <b>{event.title}</b>
-          <span className="tl-at"> · {clock(start)}</span>
-        </span>
-      ) : (
-        <b>{event.title}</b>
-      )}
-      {clashIcon && (
-        <span
-          className="tl-clash"
-          title={`Clashes with ${props.clashes.join(', ')}`}
-          aria-hidden="true"
-        >
-          <WarnIcon />
-        </span>
-      )}
-      {showTags && (
-        <span className="tl-tags" aria-hidden="true">
-          {marks.map((mark) => (
-            <span
-              key={mark}
-              className="tl-tag"
-              data-held={mark === 'alerts held' || undefined}
-              data-clash={mark.startsWith('clashes with') || undefined}
-            >
-              {mark}
-            </span>
-          ))}
-        </span>
-      )}
-      {rows > 1 && (
-        <span className="tl-meta">
-          {spanText(start, end)} · <CalendarName name={calendar?.title ?? 'Calendar'} />
-          {service}
-        </span>
-      )}
-    </button>
+        )}
+        {clashIcon && (
+          <span
+            className="tl-clash"
+            title={`Clashes with ${props.clashes.join(', ')}`}
+            aria-hidden="true"
+          >
+            <WarnIcon />
+          </span>
+        )}
+        {showTags && (
+          <span className="tl-tags" aria-hidden="true">
+            {marks.map((mark) => (
+              <span
+                key={mark}
+                className="tl-tag"
+                data-held={mark === 'alerts held' || undefined}
+                data-clash={mark.startsWith('clashes with') || undefined}
+              >
+                {mark}
+              </span>
+            ))}
+          </span>
+        )}
+        {rows > 1 && (
+          <span className="tl-meta">
+            {spanText(start, end)} · <CalendarName name={calendar?.title ?? 'Calendar'} />
+            {service}
+          </span>
+        )}
+      </button>
+      {tip.tooltip}
+    </>
   );
 }
 
@@ -153,6 +163,7 @@ function AllDayEvents(props: DayTimelineProps) {
               type="button"
               className="tl-allday-ev"
               data-event-key={event.key}
+              data-reply={replyState(event.myStatus).look}
               style={swatch(calendar?.color ?? '') as CSSProperties}
               aria-expanded={selected}
               aria-controls={selected ? props.panelId : undefined}
@@ -193,14 +204,14 @@ function TimedEvents(props: DayTimelineProps) {
       <div className="tl-lane">
         {props.free.map((free) => {
           const place = block(free.start, free.end, span);
-          const long = free.end - free.start >= 45 * 60_000;
+          const minutes = Math.round((free.end - free.start) / 60_000);
           return (
             <div
               key={free.start}
               className="tl-free"
               style={{ top: place.top + 2, height: Math.max(place.height - 4, HOUR_PX / 4) }}
             >
-              {long ? `free ${spanText(free.start, free.end)}` : 'free'}
+              {duration(minutes)} free
             </div>
           );
         })}

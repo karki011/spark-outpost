@@ -1,17 +1,8 @@
-import {
-  memo,
-  useEffect,
-  useMemo,
-  useRef,
-  type CSSProperties,
-  type KeyboardEvent,
-  type MouseEvent,
-} from 'react';
+import { memo, useEffect, useMemo, useRef, type KeyboardEvent, type MouseEvent } from 'react';
 import type { CalendarChoice, CalendarEvent } from '@spark-outpost/contracts';
 import { countLabel } from '../ui/count-label.ts';
-import { clock, dayTitle } from './calendar-format.ts';
-import { swatch } from './CalendarAccounts.tsx';
-import { hasEnded } from './event-clock.ts';
+import { dayTitle } from './calendar-format.ts';
+import { MonthChip } from './MonthChip.tsx';
 import { MoreEvents } from './MoreEvents.tsx';
 import { keyMove, preview, type MonthCell, type MonthGridModel } from './month-model.ts';
 import { useTitlesThatFit } from './use-titles-fit.ts';
@@ -43,15 +34,6 @@ function cellLabel(cell: MonthCell, events: readonly CalendarEvent[]): string {
   const rest = more > 0 ? ` and ${more} more` : '';
   const today = cell.today ? ', today' : '';
   return `${dayTitle(cell.date)}${today}, ${count}${titles ? `: ${titles}${rest}` : ''}`;
-}
-
-function startClock(event: CalendarEvent): string | null {
-  return event.allDay ? null : clock(Date.parse(event.start));
-}
-
-function eventLabel(event: CalendarEvent): string {
-  const at = startClock(event);
-  return at ? `${at} ${event.title}` : event.title;
 }
 
 interface CellProps {
@@ -103,28 +85,22 @@ const DayCell = memo(function DayCell({
       </span>
       <span className="mo-evs">
         {shown.map((event) => (
-          <button
+          <MonthChip
             key={event.key}
-            type="button"
-            tabIndex={-1}
-            aria-hidden="true"
-            className="mo-ev"
-            data-focus={event.focus || undefined}
-            data-selected={event.key === openKey || undefined}
-            data-ended={hasEnded(event, now) || undefined}
-            style={swatch(calendars.get(event.calendarKey)?.color ?? '') as CSSProperties}
-            title={eventLabel(event)}
+            event={event}
+            calendar={calendars.get(event.calendarKey)}
+            now={now}
+            selected={event.key === openKey}
+            inGrid
             onClick={openEvent(event)}
-          >
-            {!event.allDay && <span className="mo-at">{startClock(event)}</span>}
-            <span className="mo-ev-title">{event.title}</span>
-          </button>
+          />
         ))}
         {more > 0 && (
           <MoreEvents
             date={cell.date}
             events={events.slice(shown.length)}
             calendars={calendars}
+            now={now}
             focusable={selected}
             onDate={actions.onDate}
             onOpenEvent={actions.onOpenEvent}

@@ -24,6 +24,7 @@
 .mo-more-list .mo-ev {
   width: 100%;
   height: 26px;
+  margin: 0;
   padding: 0 6px;
 }
 
@@ -38,10 +39,6 @@
 
 .mo-more-list .mo-ev-title {
   display: inline;
-}
-
-.mo-more-list .mo-ev:hover {
-  background: var(--raise);
 }
 
 .mo-more-list .mo-ev:focus-visible {

@@ -7,6 +7,7 @@ import {
 } from '@spark-outpost/contracts';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { dateOf, dayTitle, shapeWords } from './calendar-format.ts';
+import { DateTile } from './DateTile.tsx';
 import { DayShapeBar } from './DayShapeBar.tsx';
 import { DayTimeline } from './DayTimeline.tsx';
 import { EventPanel } from './EventPanel.tsx';
@@ -106,8 +107,9 @@ export function DayView({
   const span = timelineSpan(dayStart, addLocalDays(dayStart, 1), shown);
   const event = day.events.find((item) => item.key === selected) ?? null;
   return (
-    <>
+    <div className="td-card">
       <header className="td-head">
+        <DateTile date={day.date} />
         <div>
           <h1 id="today-h">
             {isToday
@@ -153,12 +155,9 @@ export function DayView({
         </section>
         <div className="td-side">
           {!event && selected !== null && selected === requested && settled ? (
-            <section className="hpanel td-none" aria-labelledby="td-gone-h">
-              <h2 id="td-gone-h">Event not found</h2>
-              <p className="td-hint" role="status">
-                This event is no longer on your calendar.
-              </p>
-            </section>
+            <p className="td-hint td-none" role="status">
+              This event is no longer on your calendar.
+            </p>
           ) : event ? (
             <EventPanel
               key={event.key}
@@ -171,14 +170,11 @@ export function DayView({
               onStartChat={onStartChat}
             />
           ) : (
-            <section className="hpanel td-none" aria-labelledby="td-none-h">
-              <h2 id="td-none-h">Select an event</h2>
-              <p className="td-hint">Pick an event for Join, Open in Calendar and reminders.</p>
-            </section>
+            <p className="td-hint td-none">Select an event for Join and reminders.</p>
           )}
           {isToday && <TodayChats chats={chats} overlaps={overlaps} onOpenChat={onOpenChat} />}
         </div>
       </div>
-    </>
+    </div>
   );
 }

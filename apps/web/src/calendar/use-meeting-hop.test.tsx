@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactElement } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, cleanup, render, renderHook, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CALENDAR_DEFAULT_SETTINGS, type JoinLead } from '@spark-outpost/contracts';
 import { calendarKeys } from './calendar-api.ts';
@@ -141,7 +141,12 @@ describe('JoinButton', () => {
     show(<JoinButton event={standup} now={at(9)} label="Join Zoom" early="subtle" />);
     const button = screen.getByRole('button', { name: 'Join Zoom Standup' });
     expect(button.getAttribute('aria-disabled')).toBe('true');
-    expect(button.getAttribute('title')).toBe('Join opens at 9:50 AM');
+    expect(button.hasAttribute('title')).toBe(false);
+    fireEvent.pointerEnter(button, { pointerType: 'mouse' });
+    act(() => vi.advanceTimersByTime(400));
+    expect(screen.getByRole('tooltip').textContent).toBe('Join opens at 9:50 AM');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('tooltip')).toBeNull();
     expect(screen.getByText('Opens at 9:50 AM').id).toBe(button.getAttribute('aria-describedby'));
     button.click();
     expect(open).not.toHaveBeenCalled();

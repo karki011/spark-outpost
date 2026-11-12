@@ -12,6 +12,7 @@ import { ClashTag } from './ClashTag.tsx';
 import { JoinButton } from './JoinButton.tsx';
 import { Attendees, EventLocation } from './EventDetails.tsx';
 import { durationMinutes } from './month-model.ts';
+import { replyState } from './reply-status.ts';
 import { useEventDetail } from './use-calendar.ts';
 
 const PEOPLE_SHOWN = 2;
@@ -53,6 +54,7 @@ interface EventCardProps {
 export function EventCard(props: EventCardProps) {
   const { event, calendar, clashes, now, onOpen } = props;
   const detail = useEventDetail(event);
+  const reply = replyState(event.myStatus);
   const { start, end } = spanOf(event);
   const notes = detail.data?.snippet ?? '';
   const past = end <= now;
@@ -65,6 +67,7 @@ export function EventCard(props: EventCardProps) {
       data-selected={props.selected || undefined}
       data-focus={event.focus || undefined}
       data-free={!event.busy || undefined}
+      data-reply={reply.look}
       style={swatch(calendar?.color ?? '') as CSSProperties}
     >
       <span className="rl-strip" aria-hidden="true" />
@@ -73,7 +76,7 @@ export function EventCard(props: EventCardProps) {
         className="rl-open"
         aria-haspopup="dialog"
         aria-expanded={props.selected}
-        aria-label={`${event.title}, ${when}${calendar ? `, ${calendar.title}` : ''}${past ? ', ended' : ''}`}
+        aria-label={`${event.title}, ${when}${calendar ? `, ${calendar.title}` : ''}${past ? ', ended' : ''}${reply.word ? `, ${reply.word}` : ''}`}
         onClick={(click: MouseEvent<HTMLButtonElement>) => onOpen(event, click.currentTarget)}
       >
         {event.title}
