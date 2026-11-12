@@ -230,6 +230,8 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
       return [list];
     case 'chat_ports':
       return [{ queryKey: chatPortsKey, exact: true }];
+    case 'meeting':
+      return [{ queryKey: ['meetings'] }];
   }
 }
 

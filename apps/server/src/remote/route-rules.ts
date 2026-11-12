@@ -179,6 +179,19 @@ POST /api/tickets/:source/:key/transition
 `;
 
 const NEVER = `
+GET /api/meetings/status
+GET /api/meetings
+POST /api/meetings
+POST /api/meetings/for-events
+GET /api/meetings/:id
+PATCH /api/meetings/:id
+DELETE /api/meetings/:id
+POST /api/meetings/:id/stop
+GET /api/meetings/:id/lines
+PUT /api/meetings/:id/notes
+POST /api/meetings/:id/notes/write
+POST /api/meetings/:id/attachments
+DELETE /api/meetings/:id/attachments/:attachmentId
 GET /api/user-plugins
 PUT /api/user-plugins/:key
 POST /api/user-plugins/:key/review
