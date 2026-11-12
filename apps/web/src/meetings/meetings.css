@@ -1,0 +1,385 @@
+.mt {
+  font-weight: 400;
+  color: var(--text);
+}
+.mt .btn {
+  min-height: 28px;
+  font-weight: 400;
+}
+.mt .btn.primary {
+  background: var(--text);
+  color: var(--bg);
+}
+.mt .btn.primary:hover:not(:disabled) {
+  box-shadow: none;
+  opacity: 0.88;
+}
+.mt .btn.primary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.mt .btn .spin {
+  margin-right: 2px;
+}
+.mt p[role='alert'],
+.mt span[role='alert'] {
+  color: var(--text);
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+.mt-danger {
+  color: var(--danger);
+}
+
+.mt-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.mt-tab {
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  min-height: 0;
+  padding: 0 16px;
+}
+.mt-side,
+.mt-main {
+  min-width: 0;
+}
+.mt-tab[data-open='true'] .mt-side {
+  display: none;
+}
+.mt-tab[data-open='false'] .mt-main {
+  display: none;
+}
+.mt-back {
+  margin-bottom: 8px;
+}
+@container (min-width: 760px) {
+  .mt-tab {
+    grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  }
+  .mt-tab[data-open] .mt-side,
+  .mt-tab[data-open] .mt-main {
+    display: block;
+  }
+  .mt-back {
+    display: none;
+  }
+}
+
+.mt-side-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.mt-search {
+  position: relative;
+  flex: 1 1 160px;
+  display: flex;
+  align-items: center;
+}
+.mt-search svg {
+  position: absolute;
+  left: 10px;
+  color: var(--faint);
+  pointer-events: none;
+}
+.mt-search .inp {
+  padding-left: 32px;
+  min-height: 30px;
+}
+.mt-take {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.mt-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.mt-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+}
+.mt-row:hover {
+  background: var(--raise);
+}
+.mt-row[aria-current='true'] {
+  background: var(--raise);
+  border-color: var(--line);
+}
+.mt-row-title {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-row-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.mt-row-meta {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--muted);
+}
+.mt-snippet {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-more {
+  margin-top: 8px;
+}
+
+.mt-hint,
+.mt-empty {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+.mt-empty-title {
+  color: var(--text);
+  font-weight: 500;
+}
+.mt-hint .btn {
+  margin-top: 8px;
+}
+
+.mt-page {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.mt-title {
+  width: 100%;
+  min-height: 32px;
+  padding: 2px 6px;
+  margin-left: -6px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+}
+.mt-title:hover {
+  border-color: var(--line);
+}
+.mt-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.mt-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.mt-actions-block p {
+  margin: 6px 0 0;
+}
+.mt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.mt-confirm {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  font-size: 13px;
+}
+.mt-confirm p {
+  margin: 0 0 8px;
+}
+
+.mt-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.mt-tab-button {
+  min-height: 32px;
+  padding: 4px 10px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.mt-tab-button[aria-selected='true'] {
+  color: var(--text);
+  border-bottom-color: var(--text);
+}
+.mt-count {
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.mt-pane {
+  min-width: 0;
+}
+.mt-notes {
+  display: grid;
+  gap: 8px;
+}
+.mt-edit {
+  display: grid;
+  gap: 8px;
+}
+.mt-textarea {
+  min-height: 96px;
+  resize: vertical;
+  font-family: inherit;
+}
+.mt-notes-edit {
+  min-height: 320px;
+}
+
+.mt-transcript {
+  max-height: 60vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.mt-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mt-line {
+  display: grid;
+  grid-template-columns: 56px 48px minmax(0, 1fr);
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 28px;
+}
+.mt-who {
+  color: var(--muted);
+  font-size: 13px;
+}
+.mt-time {
+  color: var(--faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.mt-text {
+  overflow-wrap: anywhere;
+}
+.mt-earlier {
+  margin-bottom: 6px;
+}
+@container (max-width: 480px) {
+  .mt-line {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+  .mt-time {
+    display: none;
+  }
+}
+
+.mt-context {
+  display: grid;
+  gap: 14px;
+}
+.mt-subhead {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.mt-files {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.mt-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.mt-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-file-size {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mt-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  font-size: 13px;
+}
+.mt-bar-title {
+  flex: 1 1 120px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  text-align: left;
+}
+.mt-link:hover {
+  text-decoration: underline;
+}
+.mt-bar-time {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mt .spin {
+    animation-duration: 2s;
+  }
+}
