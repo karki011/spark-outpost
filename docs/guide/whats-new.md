@@ -14,6 +14,7 @@ summary: What changed in recent releases and what to do next.
 | Calendar: new look, your replies     | [See your day](calendar.md).                    |
 | Voice shortcut dictates in the chat  | [Talk to Spark](voice.md).                      |
 | Voice uses Parakeet alone, no choice | [Talk to Spark](voice.md).                      |
+| Home rows fit on a phone             | Nothing; buttons wrap under the text.           |
 | Update check every hour              | [Updates](updates.md).                          |
 | Phone push for finished turns        | [Use your phone](use-your-phone.md).            |
 | Edits show +N −M and open to a diff  | [Follow a turn](follow-a-turn.md).              |
