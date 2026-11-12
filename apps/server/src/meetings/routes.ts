@@ -115,7 +115,11 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
   router.put('/meetings/:id/notes', async (req, res) => {
     const id = paramId(req);
     const { markdown } = parseBody(meetingNotesEditSchema, req);
-    if (!(await getMeeting(db, workspaceId, id))) throw new MeetingError(404, 'Meeting not found.');
+    const meeting = await getMeeting(db, workspaceId, id);
+    if (!meeting) throw new MeetingError(404, 'Meeting not found.');
+    if (meeting.notesState === 'writing') {
+      throw new MeetingError(409, 'Notes are being written. Save again when they are done.');
+    }
     const notes = await saveEditedNotes(db, id, markdown);
     await setNotesState(db, id, 'ready');
     meetings.announce(id);

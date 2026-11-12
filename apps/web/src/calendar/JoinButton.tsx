@@ -57,10 +57,18 @@ function WaitingJoin(props: { name: string; className: string; plain: boolean; s
       {props.shown}
     </button>
   );
-  if (props.plain) return button;
+  if (props.plain) {
+    return (
+      <>
+        {button}
+        {tip.tooltip}
+      </>
+    );
+  }
   return (
     <span className="cal-join-tip" {...tip.triggerProps}>
       {button}
+      {tip.tooltip}
     </span>
   );
 }

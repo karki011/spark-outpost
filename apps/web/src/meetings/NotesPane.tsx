@@ -42,6 +42,11 @@ export function NotesPane({ detail }: { detail: MeetingDetail }) {
   if (meeting.state === 'recording') {
     return <p className="mt-hint">Notes are written when the meeting ends.</p>;
   }
+  if (editing && notes) {
+    return (
+      <NotesEditor id={meeting.id} initial={notes.markdown} onDone={() => setEditing(false)} />
+    );
+  }
   if (meeting.notesState === 'writing') {
     return (
       <p className="mt-hint" role="status">
@@ -50,11 +55,6 @@ export function NotesPane({ detail }: { detail: MeetingDetail }) {
     );
   }
   if (meeting.notesState === 'ready' && notes) {
-    if (editing) {
-      return (
-        <NotesEditor id={meeting.id} initial={notes.markdown} onDone={() => setEditing(false)} />
-      );
-    }
     return (
       <div className="mt-notes">
         <div className="mt-actions">

@@ -49,12 +49,15 @@ export function useMeetingLines(id: string, lineCount: number) {
         more = page.more && page.lines.length > 0;
       }
     };
-    void catchUp()
-      .catch(() => undefined)
-      .finally(() => {
+    void catchUp().then(
+      () => {
         busy.current = false;
         setTick((value) => value + 1);
-      });
+      },
+      () => {
+        busy.current = false;
+      },
+    );
   }, [client, id, key, lineCount, loaded, latest, tick]);
 
   const loadEarlier = useCallback(async () => {

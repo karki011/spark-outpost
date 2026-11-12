@@ -1,6 +1,6 @@
 import { digestModelFor } from '../digest/service.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
-import { insertHiddenRun } from '../persistence/hidden-runs.ts';
+import { insertHiddenRun, STALE_RUNNING_MS } from '../persistence/hidden-runs.ts';
 import { newId } from '../persistence/ids.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { getSetupState } from '../persistence/setup.ts';
@@ -14,7 +14,7 @@ export interface NotesCompletion {
 
 export interface NotesModel {
   available(): Promise<boolean>;
-  complete(prompt: string): Promise<NotesCompletion>;
+  complete(prompt: string, meetingId: string): Promise<NotesCompletion>;
 }
 
 export class NotesModelError extends Error {}
@@ -23,6 +23,7 @@ const MEETING_NOTES_TITLE = 'Meeting notes';
 const POLL_MS = 400;
 const REPLY_GRACE_MS = 10_000;
 const FAILED = 'The model could not write the notes. Write again.';
+const STALLED = 'The notes did not finish in 10 minutes. Write again.';
 
 export async function isMeetingNotesRun(db: Queryable, runId: string): Promise<boolean> {
   const { rows } = await db.query('SELECT 1 FROM meeting_note_runs WHERE run_id = $1', [runId]);
@@ -60,6 +61,7 @@ const ENDED_WITHOUT_REPLY = new Set(['failed', 'cancelled', 'outcome_unknown']);
 
 async function waitForReply(db: Queryable, runId: string, pollMs: number): Promise<string> {
   let succeededAt: number | null = null;
+  const startedAt = Date.now();
   for (;;) {
     const current = await progress(db, runId);
     if (!current) throw new NotesModelError(FAILED);
@@ -68,6 +70,8 @@ async function waitForReply(db: Queryable, runId: string, pollMs: number): Promi
     if (current.status === 'succeeded') {
       succeededAt ??= Date.now();
       if (Date.now() - succeededAt > REPLY_GRACE_MS) throw new NotesModelError(FAILED);
+    } else if (Date.now() - startedAt > STALE_RUNNING_MS) {
+      throw new NotesModelError(STALLED);
     }
     await new Promise((resolve) => setTimeout(resolve, pollMs));
   }
@@ -80,7 +84,7 @@ export function childRunNotesModel(db: Db, workspaceId: string, pollMs = POLL_MS
     async available() {
       return (await defaultProvider()) !== null;
     },
-    async complete(prompt) {
+    async complete(prompt, meetingId) {
       const provider = await defaultProvider();
       if (!provider) throw new NotesModelError('Connect a provider to write notes.');
       const model = await digestModelFor(db, workspaceId, provider);
@@ -93,7 +97,10 @@ export function childRunNotesModel(db: Db, workspaceId: string, pollMs = POLL_MS
           model: model.model,
           effort: model.effort,
         });
-        await client.query('INSERT INTO meeting_note_runs (run_id) VALUES ($1)', [run.runId]);
+        await client.query('INSERT INTO meeting_note_runs (run_id, meeting_id) VALUES ($1, $2)', [
+          run.runId,
+          meetingId,
+        ]);
         await client.query(`SELECT pg_notify('jobs', $1)`, [run.runId]);
         return run.runId;
       });

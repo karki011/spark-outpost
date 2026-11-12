@@ -300,6 +300,21 @@ describe('editing a meeting', () => {
     await client.send('put', `/api/meetings/${meeting.id}/notes`, { markdown: 3 }).expect(400);
   });
 
+  it('refuses an edit while notes are being written, so the writer cannot overwrite it', async () => {
+    const test = controllableSource();
+    const { client } = setup({ source: test.source });
+    const { meeting } = await started(client);
+    await client.send('post', `/api/meetings/${meeting.id}/stop`).expect(200);
+    await t.db.query(`UPDATE meetings SET notes_state = 'writing' WHERE id = $1`, [meeting.id]);
+    const refused = await client
+      .send('put', `/api/meetings/${meeting.id}/notes`, { markdown: 'mine' })
+      .expect(409);
+    expect(refused.body.error).toContain('being written');
+    const detail = await client.get(`/api/meetings/${meeting.id}`).expect(200);
+    expect(detail.body.meeting.notesState).toBe('writing');
+    expect(detail.body.notes).toBeNull();
+  });
+
   it('writes notes only through the injected job and never while recording', async () => {
     const test = controllableSource();
     const withoutJob = setup({ source: test.source });

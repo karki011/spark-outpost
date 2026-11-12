@@ -159,6 +159,12 @@ export async function deleteMeeting(
   workspaceId: string,
   id: string,
 ): Promise<boolean> {
+  await db.query(
+    `DELETE FROM conversations c USING runs r, meeting_note_runs n, meetings m
+      WHERE c.id = r.conversation_id AND r.id = n.run_id AND n.meeting_id = m.id
+        AND m.workspace_id = $1 AND m.id = $2 AND c.kind = 'digest'`,
+    [workspaceId, id],
+  );
   const { rowCount } = await db.query('DELETE FROM meetings WHERE workspace_id = $1 AND id = $2', [
     workspaceId,
     id,

@@ -63,7 +63,7 @@ async function runSections(deps: NotesDeps, meetingId: string) {
       total: pieces.length,
       context,
     });
-    const reply = await deps.model.complete(prompt);
+    const reply = await deps.model.complete(prompt, meetingId);
     if (!reply.text.trim()) throw new NotesFailure(EMPTY_REPLY);
     notes = reply.text.trim();
     runId = reply.runId;

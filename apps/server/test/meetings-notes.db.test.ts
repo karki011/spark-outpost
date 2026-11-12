@@ -287,7 +287,7 @@ describe('the child run model', () => {
   it('is unavailable without a default provider', async () => {
     const model = childRunNotesModel(t.db, t.workspaceId, 20);
     expect(await model.available()).toBe(false);
-    await expect(model.complete('hello')).rejects.toThrow('Connect a provider');
+    await expect(model.complete('hello', randomUUID())).rejects.toThrow('Connect a provider');
   });
 
   it('runs the prompt as a hidden run on the default provider and returns its reply', async () => {

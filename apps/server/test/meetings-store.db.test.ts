@@ -19,6 +19,8 @@ import {
   saveEditedNotes,
   saveWrittenNotes,
 } from '../src/meetings/store.ts';
+import { pruneUnlinkedAttachments } from '../src/persistence/attachments.ts';
+import { insertHiddenRun } from '../src/persistence/hidden-runs.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -157,5 +159,57 @@ describe('a meeting in the store', () => {
       meeting.id,
     ]);
     expect(rows).toHaveLength(0);
+  });
+
+  it("keeps a meeting's context file when unlinked attachments are pruned", async () => {
+    const meeting = await createMeeting(t.db, t.workspaceId, { title: 'Design review' });
+    const kept = randomUUID();
+    const loose = randomUUID();
+    for (const id of [kept, loose]) {
+      await t.db.query(
+        `INSERT INTO attachments (id, workspace_id, name, media_type, kind, size, data, created_at)
+         VALUES ($1, $2, 'notes.txt', 'text/plain', 'text', 3, 'abc', now() - interval '2 days')`,
+        [id, t.workspaceId],
+      );
+    }
+    expect(await attachToMeeting(t.db, t.workspaceId, meeting.id, kept)).toBe(true);
+    await pruneUnlinkedAttachments(t.db, t.workspaceId);
+    const { rows } = await t.db.query<{ id: string }>('SELECT id FROM attachments');
+    expect(rows.map((row) => row.id)).toEqual([kept]);
+  });
+
+  it('deleting a meeting removes the hidden chats its notes were written in', async () => {
+    const meeting = await createMeeting(t.db, t.workspaceId, { title: 'Design review' });
+    const other = await insertHiddenRun(t.db, t.workspaceId, {
+      title: 'Daily digest',
+      archived: true,
+      prompt: 'unrelated',
+      provider: 'fake',
+      model: null,
+      effort: null,
+    });
+    const run = await insertHiddenRun(t.db, t.workspaceId, {
+      title: 'Meeting notes',
+      archived: true,
+      prompt: 'Others: the price goes up in January',
+      provider: 'fake',
+      model: null,
+      effort: null,
+    });
+    await t.db.query('INSERT INTO meeting_note_runs (run_id, meeting_id) VALUES ($1, $2)', [
+      run.runId,
+      meeting.id,
+    ]);
+    await endMeeting(t.db, t.workspaceId, meeting.id);
+    expect(await deleteMeeting(t.db, t.workspaceId, meeting.id)).toBe(true);
+    const { rows } = await t.db.query<{ id: string }>(
+      'SELECT id FROM conversations WHERE id = ANY($1::uuid[])',
+      [[run.conversationId, other.conversationId]],
+    );
+    expect(rows.map((row) => row.id)).toEqual([other.conversationId]);
+    const left = await t.db.query('SELECT 1 FROM messages WHERE conversation_id = $1', [
+      run.conversationId,
+    ]);
+    expect(left.rows).toHaveLength(0);
   });
 });

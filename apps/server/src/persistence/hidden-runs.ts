@@ -45,7 +45,7 @@ export async function insertHiddenRun(
   return { conversationId, runId };
 }
 
-const STALE_RUNNING_MS = 10 * 60_000;
+export const STALE_RUNNING_MS = 10 * 60_000;
 const UNFINISHED_AFTER_RUN_MS = 60_000;
 const ENDED = ['failed', 'cancelled', 'outcome_unknown'];
 

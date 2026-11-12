@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
+| Calendar: new look, your replies     | [See your day](calendar.md).                    |
 | Voice shortcut dictates in the chat  | [Talk to Spark](voice.md).                      |
 | Voice uses Parakeet alone, no choice | [Talk to Spark](voice.md).                      |
 | Update check every hour              | [Updates](updates.md).                          |
@@ -36,4 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Allow and Deny on Home rows          | [Home](home.md).                                |
 | Home: mode labels, Tomorrow, away    | [Home](home.md).                                |
 | Outposts: Retry, pin a note          | [Outposts](outposts.md).                        |
-| Tickets reuse a recent read          | **Refresh** reads again.                        |
