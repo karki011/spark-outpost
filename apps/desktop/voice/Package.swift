@@ -10,7 +10,9 @@ let package = Package(
     targets: [
         .target(name: "VoiceCore"),
         .systemLibrary(name: "CTranscribe", path: "Sources/CTranscribe"),
-        .executableTarget(name: "spark-voice", dependencies: ["VoiceCore", "CTranscribe"]),
+        .executableTarget(
+            name: "spark-voice", dependencies: ["VoiceCore", "CTranscribe"],
+            linkerSettings: [.unsafeFlags(["-Xlinker", "-weak_framework", "-Xlinker", "CoreAudio"])]),
         .testTarget(name: "VoiceCoreTests", dependencies: ["VoiceCore"]),
     ]
 )

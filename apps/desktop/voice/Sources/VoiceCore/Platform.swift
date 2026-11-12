@@ -1,7 +1,13 @@
 import CryptoKit
 import Foundation
 
+public protocol SpeechDetector: AnyObject {
+    func reset()
+    func probability(_ frame: [Float]) -> Float
+}
+
 public protocol SpeechModel: AnyObject {
+    func makeDetector() -> SpeechDetector?
     func resetDetector()
     func probability(_ frame: [Float]) -> Float
     func transcribe(
@@ -18,6 +24,9 @@ public protocol Platform: AnyObject {
         file: String?, onFrames: @escaping ([Float]) -> Void, onEnd: @escaping () -> Void
     ) -> ErrorCode?
     func stopInput()
+    func startSystemAudio(
+        file: String?, onFrames: @escaping ([Float]) -> Void, onState: @escaping (Bool) -> Void)
+    func stopSystemAudio()
     func speak(text: String, voice: String?, done: @escaping (Bool) -> Void)
     func hush()
     func watchKeys(fn: Bool, hold: Bool, onKey: @escaping (KeyEvent) -> Void) -> Bool

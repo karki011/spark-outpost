@@ -25,6 +25,8 @@ final class RealPlatform: Platform {
     private let queue: DispatchQueue
     private let microphone = Microphone()
     private let fileInput = FileInput()
+    private let systemAudio = SystemAudio()
+    private let systemFile = FileInput()
     private let keys = KeyMonitor()
     private var speaker: Speaker?
     private var language = "en"
@@ -37,7 +39,7 @@ final class RealPlatform: Platform {
     func status() -> HelperStatus {
         HelperStatus(
             mic: Microphone.permission(), inputMonitoring: KeyMonitor.allowed(), model: false,
-            fnSetting: fnSetting(), arch: currentArch())
+            fnSetting: fnSetting(), arch: currentArch(), systemAudio: SystemAudio.supported)
     }
 
     func loadModel(path: String, vad: String) -> SpeechModel? {
@@ -56,6 +58,22 @@ final class RealPlatform: Platform {
     func stopInput() {
         fileInput.stop()
         microphone.stop()
+    }
+
+    func startSystemAudio(
+        file: String?, onFrames: @escaping ([Float]) -> Void, onState: @escaping (Bool) -> Void
+    ) {
+        guard let file else {
+            systemAudio.start(queue: queue, onFrames: onFrames, onState: onState)
+            return
+        }
+        let failure = systemFile.play(path: file, queue: queue, onFrames: onFrames, onEnd: {})
+        onState(failure == nil)
+    }
+
+    func stopSystemAudio() {
+        systemFile.stop()
+        systemAudio.stop()
     }
 
     func speak(text: String, voice: String?, done: @escaping (Bool) -> Void) {

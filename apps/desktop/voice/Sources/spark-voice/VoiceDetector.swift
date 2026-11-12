@@ -1,7 +1,8 @@
 import CTranscribe
 import Foundation
+import VoiceCore
 
-final class VoiceDetector {
+final class VoiceDetector: SpeechDetector {
     private let model: OpaquePointer
     private let session: OpaquePointer
 

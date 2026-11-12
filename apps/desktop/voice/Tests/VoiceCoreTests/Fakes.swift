@@ -8,7 +8,22 @@ func frames(seconds: Double, speech: Bool) -> [Float] {
     return [Float](repeating: speech ? 0.5 : 0, count: count)
 }
 
+final class FakeDetector: SpeechDetector {
+    func reset() {}
+
+    func probability(_ frame: [Float]) -> Float { (frame.first ?? 0) > 0.25 ? 0.9 : 0.05 }
+}
+
 final class FakeModel: SpeechModel {
+    var detectorsMade = 0
+    var detectorFails = false
+
+    func makeDetector() -> SpeechDetector? {
+        guard !detectorFails else { return nil }
+        detectorsMade += 1
+        return FakeDetector()
+    }
+
     var transcribed: [Int] = []
     var drafted: [Int] = []
     var draftText: String?
@@ -65,6 +80,19 @@ final class FakePlatform: Platform {
 
     func stopInput() { inputStops += 1 }
 
+    var onSystemFrames: (([Float]) -> Void)?
+    var onSystemState: ((Bool) -> Void)?
+    var systemStops = 0
+
+    func startSystemAudio(
+        file: String?, onFrames: @escaping ([Float]) -> Void, onState: @escaping (Bool) -> Void
+    ) {
+        onSystemFrames = onFrames
+        onSystemState = onState
+    }
+
+    func stopSystemAudio() { systemStops += 1 }
+
     func speak(text: String, voice: String?, done: @escaping (Bool) -> Void) { speakDone = done }
 
     func hush() {
@@ -106,6 +134,8 @@ final class Scene {
     }
 
     func play(_ samples: [Float]) { platform.onFrames?(samples) }
+
+    func playOthers(_ samples: [Float]) { platform.onSystemFrames?(samples) }
 
     var events: [Message] { sent.map(\.1).filter { if case .level = $0 { return false } else { return true } } }
 }
