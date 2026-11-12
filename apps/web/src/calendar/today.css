@@ -24,7 +24,7 @@
   padding: 16px 18px 12px;
 }
 
-.cal-tile {
+.td-date-tile {
   display: block;
   flex: none;
   width: 44px;
@@ -34,7 +34,7 @@
   text-align: center;
 }
 
-.cal-tile span {
+.td-date-tile span {
   display: block;
   padding: 2px 0;
   background: var(--raise);
@@ -44,7 +44,7 @@
   text-transform: uppercase;
 }
 
-.cal-tile b {
+.td-date-tile b {
   display: block;
   padding: 1px 0 3px;
   font-size: 16px;
