@@ -131,9 +131,9 @@ There is no new left-bar item. The calendar screen (the **Today** item; **Open**
 
 ## The calendar screen and replies
 
-The mock (`docs/design/mocks/meetings-mock.html`) redraws the calendar screen after references the owner chose (2026-11-11): one card with a date tile, the view tabs, **Today** stepping and **New meeting** in its header; a month of soft tinted chips; and a side panel for the picked meeting. Text has one weight, with titles one step heavier and nothing bold, and chip text is dark on a light tint in both themes (the contrast audit covers it). The redesign is its own change and can ship before any recording.
+The mock (`docs/design/mocks/meetings-mock.html`) redraws the calendar screen after references the owner chose (2026-11-11): one card with a date tile, the view tabs, **Today** stepping and **New meeting** in its header; a month of neutral grey chips; and a side panel for the picked meeting. Text has one weight, with titles one step heavier and nothing bold. Colour is kept to three places: a thin edge on a chip that tells calendars apart, the red recording dot, and keyboard focus. The primary button and the selected state are the text colour, not the accent (the contrast audit covers all of it). The redesign is its own change and can ship before any recording.
 
-**Accepted or not.** `CalendarEvent.myStatus` already carries the user's reply (`accepted`, `tentative`, `pending`, `declined`, `none`) from both sources. The screen draws it: accepted is a filled tint, not answered a dashed outline, maybe striped, declined struck through and faint, and the side panel says it in a word, so colour is never the only signal.
+**Accepted or not.** `CalendarEvent.myStatus` already carries the user's reply (`accepted`, `tentative`, `pending`, `declined`, `none`) from both sources. The screen draws it: accepted is a filled chip, not answered a dashed outline, maybe striped, declined struck through and faint, and the side panel says it in a word, so colour is never the only signal.
 
 **Replying.** The side panel offers **Accept**, **Maybe** and **Decline**:
 
