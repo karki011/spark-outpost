@@ -167,6 +167,46 @@ Lines are inserted as they arrive, so a restart loses nothing stored and the mee
 
 Transcripts are kept until the user deletes them: **Delete** per meeting, **Delete all** in Settings → Meetings. **Open**: an auto-delete period.
 
+## Scale
+
+The sizes to design for: an hour of talk is about 9,000 words, some 600 to 1,500 lines and 60 KB of text; a heavy user records 5 to 8 meetings a day, so a year is on the order of 1,500 meetings, 1.5 million lines and 100 MB. A single meeting can run 4 hours.
+
+| Part             | Rule                                                                                                                                                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Writing lines    | The host batches lines (every second or 20 lines) into one insert. `meeting_lines` is keyed `(meeting_id, seq)`                                                                                                          |
+| Live transcript  | Append only. An app event carries the new lines themselves and the client appends them to its cache; a live meeting is never refetched whole (the chat detail's refetch-per-event cost is the lesson)                    |
+| Reading          | `GET /api/meetings/:id/lines?after=<seq>&limit=200`, newest page first when opening a finished meeting at its end. The view loads pages as the user scrolls and uses `content-visibility: auto`, as the chat thread does |
+| The list         | `GET /api/meetings?before=<cursor>&limit=50` returns rows without lines or notes: title, times, source, calendar, whether notes exist, line count                                                                        |
+| Search           | A stored `tsvector` with a GIN index on titles, notes and lines. A search returns at most 50 meetings, each with up to 3 matching lines as snippets; lines are fetched on open                                           |
+| Month and Day    | One query marks which events in the visible range have a meeting (`event_key = ANY(...)`). A day draws at most 3 chips and "N more"                                                                                      |
+| Notes job        | Sections of about 6,000 words on line boundaries, so a 4-hour meeting is about 6 model calls. Attachments are sent once, with the first section                                                                          |
+| Live help        | A question sends the user's notes, the context and the last 15 minutes of transcript in full, with the running notes for anything earlier, not the whole transcript every time                                           |
+| `spark_meetings` | `read` returns notes by default. The transcript comes in pages of 200 lines with a cursor and a size cap per result, inside the Spark tool budget                                                                        |
+| Helper           | Bounded queues per stream; when transcription falls behind it reports the backlog and never drops audio silently                                                                                                         |
+| Deleting         | A meeting's lines go with it (`ON DELETE CASCADE`); **Delete all** runs in batches                                                                                                                                       |
+
+A perf spec, as the Map has, holds the Meetings tab to 50 ms tasks with 1,500 meetings in the list and a 5,000-line transcript open, and the live append with a line arriving every second.
+
+## Responsive layout
+
+The calendar screen, the Meetings tab and a meeting's page share three layouts, chosen by the width of the main area (not the window, since the Work panel and split chat take width):
+
+| Width          | Calendar                                                                               | Meetings tab and a meeting                                                   |
+| -------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 1100 px and up | Month or Day with the side panel beside it                                             | List beside the open meeting; notes and transcript as tabs                   |
+| 760 to 1100    | The side panel becomes a sheet over the right edge, opened by picking a meeting        | List, then the open meeting in its place with **Back**                       |
+| Under 760      | Month chips become thin bars in the reply style (dashed, striped, struck), panel below | One column; header controls wrap; the transcript's label sits above its line |
+
+Rules for all three:
+
+- Sizes are in `rem`, so the app's text size and zoom scale everything together; nothing is under 12 px and controls stay at least 28 px on the Mac.
+- No horizontal page scroll at any width. A long title is cut with an ellipsis in a chip and wraps in the panel and the list.
+- The reply and recording states keep a word beside the colour at every width.
+- The island's Meeting tab has a fixed width: it shows the last lines of the transcript and scrolls inside itself; **Open in Spark** shows the whole meeting.
+- Focus, scroll position and the open meeting survive a resize and a live update, as the rule for mounted UI state requires.
+
+Browser specs check each screen at 1280, 900 and 400 px, light and dark, with the accessibility and contrast checks the other screens have. Paired devices do not get these screens in v1, so the narrow layout is for a narrow Mac window, split chat and the Work panel.
+
 ## Who can read a meeting
 
 - The user, on the Mac.
