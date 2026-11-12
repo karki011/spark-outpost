@@ -63,6 +63,8 @@ import { pushKeys } from '../remote/push-keys.ts';
 import { startPushNotifier } from '../remote/push-notifier.ts';
 import { connectDesktopCalendar } from '../calendar/host-client.ts';
 import { startCalendarTicker, type CalendarTicker } from '../calendar/ticker.ts';
+import { fakeMeetingSource } from '../meetings/fake-source.ts';
+import { createMeetingService } from '../meetings/service.ts';
 import { googleClientConfig } from '../calendar/google/config.ts';
 import { createGoogleSource } from '../calendar/google/source.ts';
 import { CALENDAR_WRITTEN_CHANNEL, agentCalendarHosts } from '../calendar/agent/access.ts';
@@ -189,6 +191,13 @@ const appEvents = new AppEventFeed(undefined, (event) => {
   }
 });
 const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);
+const meetings = createMeetingService({
+  db,
+  workspaceId,
+  source: fakeMeetingSource(process.env),
+  publish: (event) => appEvents.publish(event),
+});
+await meetings.recover();
 const cloneDeps = {
   db,
   workspaceId,
@@ -367,6 +376,7 @@ const { app, reconcileRemote } = createAppParts({
   pushTest: (deviceId) => pushNotifier.test(deviceId),
   calendarHost: desktopCalendar,
   googleCalendar,
+  meetings,
   ...(config.AGENT_RUNTIME === 'fake' && config.PAIRING_TEST_ATTEMPTS_PER_MINUTE
     ? { pairingAttemptsPerMinute: config.PAIRING_TEST_ATTEMPTS_PER_MINUTE }
     : {}),

@@ -199,6 +199,12 @@ export function activityLine(entry: RemoteAuditEntry): string {
       return 'The notification sender contact was changed';
     case 'folder_created':
       return `${device} made a new folder`;
+    case 'meeting_started':
+      return 'A meeting recording started on this Mac';
+    case 'meeting_stopped':
+      return 'A meeting recording stopped on this Mac';
+    case 'meeting_deleted':
+      return 'A meeting was deleted on this Mac';
     case 'request':
       return `${device} made a change`;
     case 'refused':

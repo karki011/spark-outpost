@@ -257,6 +257,9 @@ export const remoteAuditActionSchema = z.enum([
   'notification_sent',
   'push_contact_changed',
   'folder_created',
+  'meeting_started',
+  'meeting_stopped',
+  'meeting_deleted',
   'request',
   'refused',
 ]);
