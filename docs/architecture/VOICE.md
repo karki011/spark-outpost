@@ -17,7 +17,7 @@
 
 ### A helper, like Mac control
 
-**Recommendation: one signed Swift command-line helper, `spark-voice`, started by Electron main on first use, kept with its model loaded, and spoken to as JSON lines over stdin and stdout**, the [Mac control](MAC_CONTROL.md#a-swift-helper-not-a-node-addon) pattern. It records with `AVAudioEngine` and speaks with `AVSpeechSynthesizer`; transcribe.cpp (pinned to a release, v0.4.1 today; it replaced whisper.cpp in Phase 2) is linked in as a static library, with Metal on arm64 and the CPU path (AVX2, FMA, F16C, tinyBLAS) on x64. A crash or hang never touches main or the window. `pnpm desktop:voice` builds it into `.local/voice/<arch>/` (macOS 12.0 minimum, both arches); packaging stages it, the Silero model and licence notices to `Contents/Resources/voice/`, checked in `afterPack` like [Bundled tmux](RELEASES.md#bundled-tmux).
+**Recommendation: one signed Swift command-line helper, `spark-voice`, started by Electron main with the app (Voice on or off, as the 2026-11-12 run saw), kept with its model loaded once Voice is on, and spoken to as JSON lines over stdin and stdout**, the [Mac control](MAC_CONTROL.md#a-swift-helper-not-a-node-addon) pattern. It records with `AVAudioEngine` and speaks with `AVSpeechSynthesizer`; transcribe.cpp (pinned to a release, v0.4.1 today; it replaced whisper.cpp in Phase 2) is linked in as a static library, with Metal on arm64 and the CPU path (AVX2, FMA, F16C, tinyBLAS) on x64. A crash or hang never touches main or the window. `pnpm desktop:voice` builds it into `.local/voice/<arch>/` (macOS 12.0 minimum, both arches); packaging stages it, the Silero model and licence notices to `Contents/Resources/voice/`, checked in `afterPack` like [Bundled tmux](RELEASES.md#bundled-tmux).
 
 ### Permissions
 
@@ -113,17 +113,15 @@ Parakeet English (`parakeet-tdt-0.6b-v2`) is not offered: its GGUF conversion is
 
 ### Bridge
 
-Electron IPC only, never an HTTP route, so paired devices can't reach it; every handler checks the sender and validates the model id with `voiceModelIdSchema`.
+Electron IPC only, never an HTTP route, so paired devices can't reach it; every handler checks the sender. No call names a model, since there is one.
 
-| Channel                 | Preload (`sparkDesktop.speech`) | Does                                      |
-| ----------------------- | ------------------------------- | ----------------------------------------- |
-| `voice:turn-on`         | `turnOn(model?)`                | Voice on, the model in use set when given |
-| `voice:download`        | `download(model)`               | Starts a download                         |
-| `voice:cancel-download` | `cancelDownload(model)`         | Cancels it                                |
-| `voice:remove-model`    | `remove(model)`                 | Deletes a model that isn't in use         |
-| `voice:select-model`    | `select(model)`                 | Switches, downloading first when needed   |
+| Channel                 | Preload (`sparkDesktop.speech`) | Does                         |
+| ----------------------- | ------------------------------- | ---------------------------- |
+| `voice:turn-on`         | `turnOn()`                      | Voice on                     |
+| `voice:download`        | `download()`                    | Starts the Parakeet download |
+| `voice:cancel-download` | `cancelDownload()`              | Cancels it                   |
 
-Each answers with the new `VoiceStatus`, and `voice:changed` broadcasts every change. With `SPARK_FAKE_VOICE=1` an unpackaged app serves small fake model files (`fake-models.ts`) streamed in steps, with matching hashes, so downloads, cancel, remove and switching run without Hugging Face.
+Each answers with the new `VoiceStatus`, and `voice:changed` broadcasts every change. With `SPARK_FAKE_VOICE=1` an unpackaged app serves small fake model files (`fake-models.ts`) streamed in steps, with matching hashes, so downloads and cancel run without Hugging Face. `cancelDownload()` answers while the cancel is still settling, so its status may still read downloading; the `voice:changed` that follows carries the missing state.
 
 ## Commands and questions
 
@@ -206,6 +204,7 @@ With a ticket, Send uses the existing ticket start route (`projectId`, `note` = 
 No Phase 1 PR is done until each check below has run on this Mac and the PR reports **pass** or **fail** for it, with evidence (a log line, a screenshot, a capture summary).
 
 - **Setup:** the dev app launched with `open -n -a Electron.app --env SPARK_APP_DATA=<throwaway folder>`, granted the microphone and the key monitor (Input Monitoring or Accessibility; credited to Electron in dev). On the signed build, record which entry System Settings shows.
+- **Fresh builds:** `desktop:dev-app` runs whatever is in `apps/web/dist` and `apps/desktop/dist`, so build both from the commit under test first; the 2026-11-12 run found builds from before the change.
 - **Speech with no human:** each phrase played with macOS `say` through the speakers into the built-in mic, and as a recorded WAV through the helper's `file` input, so results don't depend on room noise:
   1. "start a chat in orders web app for C P four nine zero eight four add creator email"
   2. "open the dashboards chat"
@@ -335,6 +334,25 @@ Recorded on 2026-11-02 and 2026-11-03, when the Whisper models were still offere
 | Microphone                       | The owner spoke commands and dictation through the built-in mic with Parakeet: working                                                                                |
 
 Not run: Intel (no Rosetta run of the x64 helper), Metal on macOS 12, and the CPU fallback after a Metal failure.
+
+### Real tests (Parakeet only)
+
+Recorded on 2026-11-12 at commit `6feeb8b`, after Whisper base and Whisper large v3 turbo were removed, in the signed **Spark Outpost Dev** shell on a Mac mini (Mac16,10, Apple M4, 16 GB, macOS 26.5.2), a new throwaway data folder for each scenario, microphone and Input Monitoring already granted to Spark Outpost Dev, `say` WAVs through the helper's file input and `testPress`, with `--debug` to drive the app. `pnpm desktop:voice --test` passed. `apps/web/dist` and `apps/desktop/dist` were rebuilt first: `desktop:dev-app` otherwise ran builds from before the change.
+
+| Test                   | Result                                                                                                                                                                                                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Setup's Voice step     | Only Parakeet (549 MB, 25 languages) and **Not now**; **Download 549 MB and continue** moved on at once; the download finished in about 14 s, 548,946,272 bytes, sha256 matching the manifest                                      |
+| Settings → Voice       | One Parakeet row reading **Ready**, no radios, no Remove                                                                                                                                                                           |
+| Coming from Whisper    | Voice on with `model: "whisper-base"`: both retired files and both retired `.partial` files deleted at start, Silero untouched (same sha256 and mtime), Parakeet downloading by itself within 1 s and done in about 16 s           |
+| Voice off, no model    | Watched 2 min 7 s: no `voice/` folder, no `.gguf` or `.partial`, no Hugging Face connection                                                                                                                                        |
+| No model yet           | Composer at 40% of the download: "Voice doesn't have its speech model yet. Settings → Voice shows its download." The island showed the same once its press registered (see below)                                                  |
+| Commands               | "start a chat in spark outpost for C P four nine zero eight four to fix the login redirect" heard as "…for CP49084…", opened New chat with spark-outpost, CP-49084 and the task, nothing sent; "open the dashboards chat" found it |
+| Dictation              | A WAV with two 2.5 s pauses came through exact; through the mic with `say` on the speakers a few words were misheard                                                                                                               |
+| Live words             | First partial 0.65–1.09 s after speech starts, then about every 0.4–0.6 s; the final at most 0.1 s after the clip ends; a decode at most about 100 ms, inferred from timing                                                        |
+| Nothing leaves the Mac | `lsof` on `spark-voice` during listens: 0 internet sockets in 5 samples; `nettop` showed no `spark-voice` rows                                                                                                                     |
+| Language note          | Launched with `-AppleLanguages "(ja)"`: "Parakeet doesn't cover Japanese, your Mac's language, and may transcribe it poorly."                                                                                                      |
+
+Found by the run and still open: the island ignored a Voice press in its first seconds after launch (one about 10 s in worked; not checked whether this predates the change), and `voice-settings.json` keeps `"whisper-base"` on disk until the next save, read as Parakeet. Not run: the x64 helper, and Fn twice (🌐 is set to Emoji on this Mac).
 
 ## Licences
 
