@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MeetingsTab } from './MeetingsTab.tsx';
 import { detail, item, mockFetch, newClient, MEETING_ID } from './meetings-test-support.tsx';
@@ -10,10 +11,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function Host() {
+  const [openId, setOpenId] = useState<string | null>(null);
+  return <MeetingsTab openId={openId} onOpen={setOpenId} onStartChat={() => undefined} />;
+}
+
 function show() {
   render(
     <QueryClientProvider client={newClient()}>
-      <MeetingsTab onStartChat={() => undefined} />
+      <Host />
     </QueryClientProvider>,
   );
 }

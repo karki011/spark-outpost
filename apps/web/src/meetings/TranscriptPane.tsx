@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef, type UIEvent } from 'react';
-import { MEETING_SPEAKER_LABELS, type Meeting } from '@spark-outpost/contracts';
+import { memo, useLayoutEffect, useRef, type UIEvent } from 'react';
+import { MEETING_SPEAKER_LABELS, type Meeting, type MeetingLine } from '@spark-outpost/contracts';
 import { SpinnerIcon } from '../ui/icons.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
@@ -8,6 +8,16 @@ import { useMeetingLines } from './use-meeting-lines.ts';
 
 const BOTTOM_SLACK_PX = 48;
 const TOP_TRIGGER_PX = 80;
+
+const Line = memo(function Line({ line }: { line: MeetingLine }) {
+  return (
+    <li className="mt-line">
+      <span className="mt-who">{MEETING_SPEAKER_LABELS[line.speaker]}</span>
+      <time className="mt-time">{formatOffset(line.startMs)}</time>
+      <span className="mt-text">{line.text}</span>
+    </li>
+  );
+});
 
 export function TranscriptPane({ meeting }: { meeting: Meeting }) {
   const { lines, query, hasEarlier, loadingEarlier, loadEarlier } = useMeetingLines(
@@ -78,11 +88,7 @@ export function TranscriptPane({ meeting }: { meeting: Meeting }) {
       )}
       <ol className="mt-lines" aria-label="Transcript">
         {lines.map((line) => (
-          <li key={line.seq} className="mt-line">
-            <span className="mt-who">{MEETING_SPEAKER_LABELS[line.speaker]}</span>
-            <time className="mt-time">{formatOffset(line.startMs)}</time>
-            <span className="mt-text">{line.text}</span>
-          </li>
+          <Line key={line.seq} line={line} />
         ))}
       </ol>
     </div>

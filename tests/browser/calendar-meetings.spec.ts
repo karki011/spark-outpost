@@ -75,6 +75,13 @@ test('a meeting is recorded, transcribed, written up, found by search and kept a
   await main.getByRole('searchbox', { name: 'Search meetings' }).fill('zebra');
   await expect(list.getByRole('button')).toHaveCount(0);
 
+  await main.getByRole('tab', { name: 'Calendar' }).click();
+  await expect(main.getByRole('radio', { name: 'Month' })).toBeVisible();
+  await expect(main.getByRole('searchbox', { name: 'Search meetings' })).toHaveCount(0);
+  await main.getByRole('tab', { name: 'Transcripts' }).click();
+  await expect(main.getByRole('searchbox', { name: 'Search meetings' })).toHaveValue('zebra');
+  await expect(main.getByRole('tab', { name: 'Notes' })).toHaveAttribute('aria-selected', 'true');
+
   await page.reload();
   await expect(today(page).getByRole('tab', { name: 'Transcripts' })).toHaveAttribute(
     'aria-selected',

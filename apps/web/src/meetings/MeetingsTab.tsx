@@ -1,5 +1,5 @@
 import './meetings.css';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { Meeting } from '@spark-outpost/contracts';
 import { BackIcon, SearchIcon, SpinnerIcon } from '../ui/icons.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
@@ -10,7 +10,8 @@ import { TakeNotesButton } from './TakeNotesButton.tsx';
 import { useMeetingList, useMeetingStatus } from './use-meetings.ts';
 
 interface MeetingsTabProps {
-  initialId?: string | null;
+  openId: string | null;
+  onOpen: (id: string | null) => void;
   onStartChat: (meeting: Meeting, notesMarkdown: string) => void;
 }
 
@@ -37,9 +38,10 @@ function EmptyState({ searching, query }: { searching: boolean; query: string })
   );
 }
 
-export function MeetingsTab({ initialId = null, onStartChat }: MeetingsTabProps) {
+export function MeetingsTab({ openId, onOpen, onStartChat }: MeetingsTabProps) {
   const [query, setQuery] = useState('');
-  const [openId, setOpenId] = useState<string | null>(initialId);
+  const close = useCallback(() => onOpen(null), [onOpen]);
+  const started = useCallback((meeting: Meeting) => onOpen(meeting.id), [onOpen]);
   const list = useMeetingList(query);
   const searching = list.search !== '';
 
@@ -58,7 +60,7 @@ export function MeetingsTab({ initialId = null, onStartChat }: MeetingsTabProps)
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
-          <TakeNotesButton label="New meeting" onStarted={(meeting) => setOpenId(meeting.id)} />
+          <TakeNotesButton label="New meeting" onStarted={started} />
         </div>
         <QueryWait query={list} what="the meetings">
           <Skeleton label="Loading meetings" shape="list" rows={5} />
@@ -73,7 +75,7 @@ export function MeetingsTab({ initialId = null, onStartChat }: MeetingsTabProps)
                 key={item.meeting.id}
                 item={item}
                 selected={item.meeting.id === openId}
-                onOpen={setOpenId}
+                onOpen={onOpen}
               />
             ))}
           </ul>
@@ -93,11 +95,11 @@ export function MeetingsTab({ initialId = null, onStartChat }: MeetingsTabProps)
       <section className="mt-main" aria-label="Open meeting">
         {openId ? (
           <>
-            <button type="button" className="btn ghost sm mt-back" onClick={() => setOpenId(null)}>
+            <button type="button" className="btn ghost sm mt-back" onClick={close}>
               <BackIcon />
               Back
             </button>
-            <MeetingPage id={openId} onStartChat={onStartChat} onDeleted={() => setOpenId(null)} />
+            <MeetingPage id={openId} onStartChat={onStartChat} onDeleted={close} />
           </>
         ) : (
           <p className="mt-hint mt-pick">Pick a meeting to see its notes and transcript.</p>

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { MeetingListItem } from '@spark-outpost/contracts';
 import { formatStarted, lengthLabel, NOTES_STATE_WORDS, sourceLabel } from './meeting-format.ts';
 
@@ -7,7 +8,7 @@ interface MeetingRowProps {
   onOpen: (id: string) => void;
 }
 
-export function MeetingRow({ item, selected, onOpen }: MeetingRowProps) {
+export const MeetingRow = memo(function MeetingRow({ item, selected, onOpen }: MeetingRowProps) {
   const { meeting, snippets } = item;
   const recording = meeting.state === 'recording';
   return (
@@ -41,4 +42,4 @@ export function MeetingRow({ item, selected, onOpen }: MeetingRowProps) {
       </button>
     </li>
   );
-}
+});

@@ -9,7 +9,7 @@
   width: 168px;
 }
 
-.td-wrap:has(.mo-page) {
+.td-wrap:has(.td-pagebody:not([hidden]) .mo-page) {
   display: flex;
   flex-direction: column;
   max-width: none;
@@ -420,7 +420,7 @@
 }
 
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
-  .td-wrap:has(.mo-page) {
+  .td-wrap:has(.td-pagebody:not([hidden]) .mo-page) {
     padding: 16px 16px 24px;
   }
 

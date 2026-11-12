@@ -129,10 +129,14 @@
   background: var(--raise);
 }
 
-.td-wrap:has(.td-grid),
-.td-wrap:has(.td-meetings) {
+.td-wrap:has(.td-pagebody:not([hidden]) .td-grid),
+.td-wrap:has(.td-pagebody:not([hidden]) .td-meetings) {
   max-width: none;
   padding: 18px 24px 32px;
+}
+
+.td-pagebody:not([hidden]) {
+  display: contents;
 }
 
 .td-meetings {
