@@ -339,6 +339,11 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     modelsDir: layout.voiceModels,
     userData: path.dirname(options.settingsPath),
     trusted: fromSpark,
+    focused: () => {
+      const window = BrowserWindow.getFocusedWindow();
+      if (!window || window.isDestroyed() || island?.owns(window.webContents.id)) return null;
+      return targetsApi(window.webContents.getURL(), options.origin) ? window.webContents : null;
+    },
     island: () =>
       BrowserWindow.getAllWindows().find(
         (window) => !window.isDestroyed() && island?.owns(window.webContents.id),

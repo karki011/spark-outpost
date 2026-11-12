@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
+| Voice shortcut dictates in the chat  | [Talk to Spark](voice.md).                      |
 | Voice uses Parakeet alone, no choice | [Talk to Spark](voice.md).                      |
 | Update check every hour              | [Updates](updates.md).                          |
 | Phone push for finished turns        | [Use your phone](use-your-phone.md).            |
@@ -36,4 +37,3 @@ summary: What changed in recent releases and what to do next.
 | Home: mode labels, Tomorrow, away    | [Home](home.md).                                |
 | Outposts: Retry, pin a note          | [Outposts](outposts.md).                        |
 | Tickets reuse a recent read          | **Refresh** reads again.                        |
-| Home changes through the day         | [Home](home.md).                                |

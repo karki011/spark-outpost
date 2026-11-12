@@ -13,6 +13,8 @@ About 2 minutes.
 1. In **Settings → Voice**, switch on **Voice** and allow the microphone.
 2. Press **⌥⇧V** (yours from **Shortcut**) or **Dictate**, speak, then press again. **Esc** cancels.
 
+With a chat on screen in Spark, the shortcut dictates into its message box; elsewhere it opens the island.
+
 Live words appear; the final text counts. Stop dictation before sending. Esc restores drafts.
 
 Ask Spark [acts](companion-quick-chat.md#let-ask-spark-act) as with typing. Send with **Enter**, or say "send" after pressing again.

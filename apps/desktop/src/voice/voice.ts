@@ -34,6 +34,7 @@ export interface VoiceEffects {
   takenBy(accelerator: string): string | null;
   sendTo(owner: number, event: VoiceEvent): void;
   sendIsland(event: VoiceEvent): void;
+  sendFocused(event: VoiceEvent): boolean;
   voiceOver(): boolean;
   language: string;
   allowFileInput: boolean;
@@ -190,7 +191,7 @@ export function createVoice(effects: VoiceEffects) {
       return;
     }
     hush();
-    effects.sendIsland({ kind: 'press' });
+    if (!effects.sendFocused({ kind: 'press' })) effects.sendIsland({ kind: 'press' });
   };
 
   const release = () => {
@@ -375,6 +376,11 @@ export function createVoice(effects: VoiceEffects) {
 
     hush,
     press,
+
+    pressIsland() {
+      if (!settings.enabled || listens.size > 0) return;
+      effects.sendIsland({ kind: 'press' });
+    },
 
     testPress(file: unknown) {
       if (!effects.allowFileInput || typeof file !== 'string' || !settings.enabled) return;

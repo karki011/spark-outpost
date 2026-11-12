@@ -27,6 +27,8 @@ export interface DesktopSpeech {
   cancel(id: string): Promise<void>;
   speak(text: string): Promise<string | null>;
   hush(): Promise<void>;
+  setPressTarget?(on: boolean): Promise<void>;
+  pressIsland?(): Promise<void>;
   openSettings(page: PrivacyPage): Promise<void>;
   onEvent(callback: (event: VoiceEvent) => void): Unsubscribe;
   onChange(callback: (status: VoiceStatus) => void): Unsubscribe;

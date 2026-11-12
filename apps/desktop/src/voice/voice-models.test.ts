@@ -70,6 +70,7 @@ async function setup(options: {
     takenBy: () => null,
     sendTo: () => undefined,
     sendIsland: () => undefined,
+    sendFocused: () => false,
     voiceOver: () => false,
     language: 'en',
     allowFileInput: false,

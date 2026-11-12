@@ -36,6 +36,7 @@ export interface VoiceHostOptions {
   userData: string;
   trusted(event: IpcMainInvokeEvent): boolean;
   island(): Electron.WebContents | null;
+  focused(): Electron.WebContents | null;
   takenBy(accelerator: string): string | null;
   log(line: string): void;
 }
@@ -59,6 +60,8 @@ const INVOKE = [
   IPC.voiceSpeak,
   IPC.voiceHush,
   IPC.voiceTestPress,
+  IPC.voicePressTarget,
+  IPC.voicePressIsland,
   IPC.voiceOpenSettings,
 ];
 
@@ -112,6 +115,7 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
     log: options.log,
   });
   let saving = Promise.resolve();
+  const pressTargets = new Set<number>();
   const voice = createVoice({
     helper,
     helperExists: () => fake || existsSync(options.helperPath),
@@ -141,6 +145,12 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
       if (target && !target.isDestroyed()) target.send(IPC.voiceEvent, event);
     },
     sendIsland: (event) => options.island()?.send(IPC.voiceEvent, event),
+    sendFocused: (event) => {
+      const target = options.focused();
+      if (!target || target.isDestroyed() || !pressTargets.has(target.id)) return false;
+      target.send(IPC.voiceEvent, event);
+      return true;
+    },
     voiceOver: () => app.accessibilitySupportEnabled,
     language: language(),
     allowFileInput,
@@ -210,6 +220,25 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
   ipcMain.handle(
     IPC.voiceHush,
     guard(() => voice.hush(), undefined),
+  );
+  ipcMain.handle(
+    IPC.voicePressTarget,
+    guard((event, on) => {
+      const sender = event.sender;
+      if (on !== true) {
+        pressTargets.delete(sender.id);
+        return;
+      }
+      if (pressTargets.has(sender.id)) return;
+      pressTargets.add(sender.id);
+      const forget = () => pressTargets.delete(sender.id);
+      sender.once('did-navigate', forget);
+      sender.once('destroyed', forget);
+    }, undefined),
+  );
+  ipcMain.handle(
+    IPC.voicePressIsland,
+    guard(() => voice.pressIsland(), undefined),
   );
   ipcMain.handle(
     IPC.voiceTestPress,

@@ -138,6 +138,8 @@ export const IPC = {
   voiceSpeak: 'voice:speak',
   voiceHush: 'voice:hush',
   voiceTestPress: 'voice:test-press',
+  voicePressTarget: 'voice:press-target',
+  voicePressIsland: 'voice:press-island',
   voiceOpenSettings: 'voice:open-settings',
   voiceEvent: 'voice:event',
   voiceChanged: 'voice:changed',

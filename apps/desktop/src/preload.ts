@@ -140,6 +140,8 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     speak: (text: string) => ipcRenderer.invoke(IPC.voiceSpeak, text),
     hush: () => ipcRenderer.invoke(IPC.voiceHush),
     testPress: (file: string) => ipcRenderer.invoke(IPC.voiceTestPress, file),
+    setPressTarget: (on: boolean) => ipcRenderer.invoke(IPC.voicePressTarget, on),
+    pressIsland: () => ipcRenderer.invoke(IPC.voicePressIsland),
     openSettings: (page: string) => ipcRenderer.invoke(IPC.voiceOpenSettings, page),
     onEvent: (callback: (event: unknown) => void) => listen(IPC.voiceEvent, callback),
     onChange: (callback: (status: unknown) => void) => listen(IPC.voiceChanged, callback),
