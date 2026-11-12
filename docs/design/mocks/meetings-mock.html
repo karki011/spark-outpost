@@ -178,8 +178,11 @@ kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:
 .detail p{margin:0;color:var(--muted);font-size:13px}
 .lbl{color:var(--faint);margin-right:6px}
 .link{border:0;background:none;padding:0;color:var(--text);text-decoration:underline;min-height:0}
-.rsvp{display:flex;gap:6px;flex-wrap:wrap;align-items:center;border:1px dashed var(--line-strong);border-radius:var(--r-sm);padding:8px}
-.rsvp .q{color:var(--text);margin-right:4px}
+.rsvp{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.pick.sm{flex-wrap:nowrap}
+.pick.sm button{border:0;border-left:1px solid var(--line);background:none;padding:3px 12px;font-size:13px;min-height:28px}
+.pick.sm button:first-child{border-left:0}
+.rsvp .q{color:var(--muted);font-size:13px}
 .legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
 .legend span{display:inline-flex;gap:6px;align-items:center}
 .chip-s{width:18px;height:10px;border-radius:3px;display:inline-block;--chip-bg:var(--raise);--chip-ink:var(--line-strong);background:var(--chip-bg);border:1px solid transparent}
@@ -237,7 +240,7 @@ kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-radius:
             <h4>Design review</h4>
             <p>Wed 11 Nov · 1:00–2:00 PM · Spark Work · Zoom</p>
             <p>From Dana Reyes · 4 people · 3 yes · 1 waiting</p>
-            <div class="rsvp" role="group" aria-label="Your reply"><span class="q">Going?</span><button class="btn primary" id="r-yes">Accept</button><button class="btn" id="r-maybe">Maybe</button><button class="btn" id="r-no">Decline</button></div>
+            <div class="rsvp" role="group" aria-label="Your reply"><span class="q">Going?</span><span class="pick sm"><button id="r-yes">Yes</button><button id="r-maybe">Maybe</button><button id="r-no">No</button></span></div>
             <div class="row"><button class="btn" id="d-join">Join</button><button class="btn" id="d-notes">Take notes</button></div>
             <p><span class="lbl">Context</span> pricing-2026.pdf · <button class="link" id="d-context">Add…</button></p>
             <p><span class="lbl">Earlier</span> Design review, 4 Nov · <button class="link" id="d-prev">Notes</button></p>
