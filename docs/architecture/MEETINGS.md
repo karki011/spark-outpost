@@ -88,7 +88,7 @@ A recording is never hidden from the user. While one runs:
 
 - The island shows a red dot, the word **Recording**, the meeting's title, elapsed time and **Stop**, in every island state.
 - The menu bar item shows the same dot.
-- The Meetings tab shows the live meeting first.
+- The Transcripts page shows the live meeting first.
 
 The island's Meeting tab (transcript, notes, answers) is excluded from screen sharing and screenshots (`setContentProtection`), so the user's notes are not broadcast when they share their screen. The recording dot is not excluded. **Open**: the owner may prefer the whole island visible in shares.
 
@@ -129,7 +129,7 @@ Each is a question to Ask Spark with this meeting attached: the transcript so fa
 
 ## Where meetings live in the app
 
-There is no new left-bar item. The calendar screen (the **Today** item; **Open**: renaming it **Calendar**) gets a third tab beside **Month** and **Day**: **Meetings**, the full history, newest first, with search over titles, notes and transcripts. Each row carries the calendar it came from, with that calendar's colour and name, or **Started by you** for an ad hoc meeting, its date and length, and whether notes were written. In Month and Day, a recorded meeting carries a dot that opens its notes and transcript in the side panel, and an ad hoc meeting appears on the day it happened.
+There is no new left-bar item. The calendar screen (the **Today** item; **Open**: renaming it **Calendar**) has two pages under one page-level header, **Calendar** and **Transcripts**, shown only while meetings are available. **Calendar** is the calendar as before, with its own **Month** and **Day** switch and nothing else added to that switch. **Transcripts** is a separate page laid out like the chat list: a side list of every recorded meeting, calendar and ad hoc, newest first, with search over titles, notes and transcripts and **New meeting**, and the open meeting beside it. The recording bar sits under the header on both pages. Each row carries the calendar it came from, with that calendar's colour and name, or **Started by you** for an ad hoc meeting, its date and length, and whether notes were written. In Month and Day, a recorded meeting carries a dot that opens its notes and transcript in the side panel, and an ad hoc meeting appears on the day it happened.
 
 ## The calendar screen and replies
 

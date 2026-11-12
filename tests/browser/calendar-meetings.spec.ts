@@ -32,7 +32,7 @@ async function openMeetings(page: Page) {
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: /^Today/ })
     .click();
-  await today(page).getByRole('radio', { name: 'Meetings' }).click();
+  await today(page).getByRole('tab', { name: 'Transcripts' }).click();
 }
 
 async function notesState(page: Page, id: string): Promise<string> {
@@ -51,7 +51,10 @@ test('a meeting is recorded, transcribed, written up, found by search and kept a
   await expect(main.getByText('Recording').first()).toBeVisible();
   const list = main.getByRole('list', { name: 'Meetings' });
   await list.getByRole('button').first().click();
-  await main.getByRole('tab', { name: /^Transcript/ }).click();
+  await main
+    .getByRole('tablist', { name: 'Meeting sections' })
+    .getByRole('tab', { name: /^Transcript/ })
+    .click();
   const transcript = main.getByRole('list', { name: 'Transcript' });
   await expect(transcript).toContainText('churn');
   await expect(transcript).toContainText('Others');
@@ -73,7 +76,11 @@ test('a meeting is recorded, transcribed, written up, found by search and kept a
   await expect(list.getByRole('button')).toHaveCount(0);
 
   await page.reload();
-  await expect(today(page).getByRole('radio', { name: 'Meetings' })).toBeChecked();
+  await expect(today(page).getByRole('tab', { name: 'Transcripts' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(today(page).getByRole('radio', { name: 'Month' })).toHaveCount(0);
   await expect(today(page).getByRole('list', { name: 'Meetings' }).getByRole('button')).toHaveCount(
     1,
   );

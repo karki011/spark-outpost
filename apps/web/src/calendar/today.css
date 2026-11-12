@@ -138,7 +138,6 @@
 .td-meetings {
   container-type: inline-size;
   padding: 14px 2px 18px;
-  border-top: 1px solid var(--line);
 }
 
 .td-grid {
@@ -282,12 +281,14 @@
 }
 
 .td-wrap .btn.primary {
-  background: var(--text);
-  color: var(--panel);
+  border: 1px solid var(--line-strong);
+  background: var(--raise);
+  color: var(--text);
 }
 
 .td-wrap .btn.primary:hover:not(:disabled) {
-  box-shadow: 0 0 0 4px var(--raise);
+  background: var(--line);
+  box-shadow: none;
 }
 
 .td-wrap .btn.primary:focus-visible {

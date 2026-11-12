@@ -15,23 +15,50 @@ import { todayState } from './today-model.ts';
 import { localDate, useCalendarStatus } from './use-calendar.ts';
 import { useTodayEventRequests, type TodayEventRequest } from './today-request.ts';
 import { MeetingsView } from './MeetingsView.tsx';
+import { PageTabs } from './PageTabs.tsx';
 import { RecordingBar, useMeetingStatus } from '../meetings/index.ts';
 
-type CalendarView = 'month' | 'day' | 'meetings';
+type CalendarView = 'month' | 'day';
+type CalendarPage = 'calendar' | 'transcripts';
 
 const VIEWS = [
   { id: 'month', label: 'Month' },
   { id: 'day', label: 'Day' },
 ];
 
-const VIEWS_WITH_MEETINGS = [...VIEWS, { id: 'meetings', label: 'Meetings' }];
+const PAGES = [
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'transcripts', label: 'Transcripts' },
+];
+
+const PAGE_KEY = 'spark.today.page';
+
+function savedPage(): CalendarPage {
+  try {
+    return sessionStorage.getItem(PAGE_KEY) === 'transcripts' ? 'transcripts' : 'calendar';
+  } catch {
+    return 'calendar';
+  }
+}
+
+function useCalendarPage() {
+  const [page, setPage] = useState<CalendarPage>(savedPage);
+  const choose = useCallback((next: CalendarPage) => {
+    setPage(next);
+    try {
+      sessionStorage.setItem(PAGE_KEY, next);
+    } catch {
+      return;
+    }
+  }, []);
+  return [page, choose] as const;
+}
 
 const VIEW_KEY = 'spark.today.view';
 
 function savedView(): CalendarView {
   try {
-    const saved = sessionStorage.getItem(VIEW_KEY);
-    return saved === 'day' || saved === 'meetings' ? saved : 'month';
+    return sessionStorage.getItem(VIEW_KEY) === 'day' ? 'day' : 'month';
   } catch {
     return 'month';
   }
@@ -54,6 +81,7 @@ function TodayViews(props: TodayProps) {
   const now = useMinuteClock();
   const today = localDate(now);
   const [view, setView] = useCalendarView();
+  const [page, setPage] = useCalendarPage();
   const [picked, setPicked] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [flash, setFlash] = useState(0);
@@ -90,7 +118,7 @@ function TodayViews(props: TodayProps) {
       <div className="td-views">
         <Segmented
           ariaLabel="Calendar view"
-          options={meetings ? VIEWS_WITH_MEETINGS : VIEWS}
+          options={VIEWS}
           value={view}
           onChange={(id) => setView(id as CalendarView)}
         />
@@ -99,18 +127,28 @@ function TodayViews(props: TodayProps) {
   );
   const openMeeting = (id: string) => {
     setMeetingId(id);
-    setView('meetings');
+    setPage('transcripts');
   };
-  const recording = <RecordingBar onOpen={openMeeting} />;
-  if (view === 'meetings' && meetings) {
+  const recording = (
+    <>
+      {meetings && (
+        <PageTabs
+          ariaLabel="Calendar and transcripts"
+          options={PAGES}
+          value={page}
+          onChange={(id) => setPage(id as CalendarPage)}
+        />
+      )}
+      <RecordingBar onOpen={openMeeting} />
+    </>
+  );
+  if (page === 'transcripts' && meetings) {
     return (
       <>
         {recording}
         <MeetingsView
           key={meetingId ?? 'list'}
-          today={today}
           initialId={meetingId}
-          switcher={switcher}
           onStartChat={props.onStartChat}
         />
       </>
