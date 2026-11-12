@@ -19,7 +19,7 @@ Chats, settings and code stay on your computer; keys stay in your keychain. Only
 | **Sites agents open**                      | Addresses, typed text, your cookies there.                                                                    | [Agent tools](modes-and-levels.md#agent-tools)                   |
 | **Apple or Google push**                   | Encrypted notifications; sender contact.                                                                      | **Notify this device**                                           |
 | **Slack**                                  | Notifications, confirmed posts; never direct messages.                                                        | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends) |
-| **Hugging Face**                           | Speech models you pick, once.                                                                                 | [Voice](voice.md)                                                |
+| **Hugging Face**                           | The Parakeet speech model, once.                                                                              | [Voice](voice.md)                                                |
 | **Meeting services, Google**               | The meeting you **Join**; calendar reads and changes.                                                         | [Calendar](calendar.md)                                          |
 | **Spark Outpost team**                     | Anonymous heartbeat.                                                                                          | [Turn it off](mac-privacy.md#anonymous-heartbeat)                |
 

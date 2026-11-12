@@ -113,7 +113,7 @@ Let an agent read another Mac app and press its buttons and menus, after you all
 
 ### Voice
 
-Push to talk, off until you turn it on. Dictate a message or speak a command; speech becomes text on your Mac, and nothing is sent until you confirm it. [Talk to Spark](docs/guide/voice.md)
+Push to talk, off until you turn it on. Dictate a message or speak a command; speech becomes text on your Mac with one local model, and nothing is sent until you confirm it. With a chat on screen, the shortcut dictates straight into its message box. [Talk to Spark](docs/guide/voice.md)
 
 </td>
 </tr>
@@ -122,7 +122,7 @@ Push to talk, off until you turn it on. Dictate a message or speak a command; sp
 
 ### Calendar, with Scout on time
 
-Google and Mac calendars beside your chats, with one-click Join. Before a meeting, Scout drops a card to the middle of the screen with Join, Snooze and Dismiss. [See your day](docs/guide/calendar.md)
+Google and Mac calendars beside your chats in a Month and Day view, with your reply on each event and one-click Join. Before a meeting, Scout drops a card to the middle of the screen with Join, Snooze and Dismiss. [See your day](docs/guide/calendar.md)
 
 </td>
 <td width="50%" valign="top">
