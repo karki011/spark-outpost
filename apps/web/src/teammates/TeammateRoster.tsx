@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { TEAMMATE_STATE_LABELS, type TeammateView } from '@spark-outpost/contracts';
 import { HomeCard } from '../home/HomeCards.tsx';
+import { openSparksPage } from '../sparks-page/sparks-route.ts';
 import { PenIcon, PlusIcon } from '../ui/icons.tsx';
 import { StarterSuggestions } from './StarterSuggestions.tsx';
 import { TeammateFace } from './TeammateFace.tsx';
@@ -84,7 +85,16 @@ export function TeammateRoster({ now, onOpenId }: TeammateRosterProps) {
   });
   if (loading) return <RosterSkeleton />;
   return (
-    <HomeCard id="home-sparks" title="Your Sparks" className="tm-section">
+    <HomeCard
+      id="home-sparks"
+      title="Your Sparks"
+      className="tm-section"
+      action={
+        <button type="button" className="btn ghost sm" onClick={() => openSparksPage()}>
+          Manage
+        </button>
+      }
+    >
       {teammates.length === 0 ? (
         <StarterSuggestions starters={starters} />
       ) : (

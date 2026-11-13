@@ -13,6 +13,9 @@ const loadPhone = () =>
 const loadBrowser = () =>
   import('../browser-view/BrowserView.tsx').then((module) => ({ default: module.BrowserView }));
 
+const loadSparks = () =>
+  import('../sparks-page/SparksPage.tsx').then((module) => ({ default: module.SparksPage }));
+
 const loadOutpost = () =>
   import('../outposts/OutpostView.tsx').then((module) => ({ default: module.OutpostView }));
 
@@ -22,6 +25,13 @@ export const Phone = lazy(loadPhone);
 export const Today = lazy(loadToday);
 export const OutpostView = lazy(loadOutpost);
 export const BrowserView = lazy(loadBrowser);
+export const SparksPage = lazy(loadSparks);
+export const MapPage = lazy(() =>
+  import('../map/MapPage.tsx').then((module) => ({ default: module.MapPage })),
+);
+export const DocsPage = lazy(() =>
+  import('../docs/DocsPage.tsx').then((module) => ({ default: module.DocsPage })),
+);
 
 const VIEW_LOADERS: Partial<Record<AppView, () => Promise<unknown>>> = {
   analytics: loadAnalytics,
@@ -29,6 +39,7 @@ const VIEW_LOADERS: Partial<Record<AppView, () => Promise<unknown>>> = {
   phone: loadPhone,
   today: loadToday,
   browser: loadBrowser,
+  sparks: loadSparks,
 };
 
 export function preloadView(view: AppView): void {

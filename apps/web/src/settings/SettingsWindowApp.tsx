@@ -5,7 +5,6 @@ import { useAppEvents } from '../app/live/use-app-events.ts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { requestFeedback } from '../help/feedback-request.ts';
 import { ResetHost } from '../reset/ResetHost.tsx';
-import { TeammateHost } from '../teammates/TeammateHost.tsx';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { requestSettingFocus } from './setting-focus.ts';
 import { useSettingsRequests } from './settings-request.ts';
@@ -85,7 +84,6 @@ export function SettingsWindowApp() {
           onOpenChat={(id) => sparkDesktop()?.settingsWindow?.openChat(id)}
         />
       </main>
-      <TeammateHost />
       <ResetHost />
     </DocsReachable>
   );

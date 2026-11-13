@@ -1,6 +1,6 @@
 # Crew and workflows: build plan
 
-> **Status: Wave 0 (shared contracts), the Relay removal, stream D (workflow engine) and stream E (workflow editor, not mounted) are merged on `crew-workflows-foundation`; A and B are in progress.** Agreed in a planning session on 2026-11-12. This changes `docs/product/PLAN.md` §17, which defers "a visual workflow builder": the owner has asked for it. That line is updated.
+> **Status: Wave 0 (shared contracts), the Relay removal, streams A (Spark folders), B (Sparks page), D (workflow engine) and E (workflow editor) are merged on `crew-workflows-foundation`. Wave 2 is next.** Agreed in a planning session on 2026-11-12. This changes `docs/product/PLAN.md` §17, which defers "a visual workflow builder": the owner has asked for it. That line is updated.
 
 Mocks for every screen: `docs/design/mocks/crew-workflows-mock.html` (15 screens, ids `g h i d j k a b l m c f e n o` in flow order). They are sketches, not built from app components.
 
@@ -215,6 +215,60 @@ Render `<WorkflowsPanel />` as the body of the Workflows tab, inside the page's 
 - No guide page and no `whats-new.md` row: nothing is reachable by a user until B mounts the tab. Whoever mounts it adds both.
 - The graph is a picture for the list beside it (`role="figure"`, nodes not focusable); every action is in the list. A workflow whose steps wait on each other still draws, with the loop edge drawn badly.
 - **New workflow**'s **Start from** options are each a Tab stop (`RadioRow` has no roving tab index); arrow keys also move between them.
+
+### Stream B: Sparks page and Crew tab (built against faked file routes)
+
+Built in `apps/web/src/sparks-page/` on 2026-11-13, on branch `claude/crew-page-6189a6`.
+
+**What is there**
+
+- **Sparks** is a left-bar item (`AppView` `'sparks'`, after Tickets; under **More** on a phone) and a page, `SparksPage`, whose root is `main.main.sparks`. Two tabs from `ui/PageTabs` (moved from `calendar/`, with an optional `count` per tab): **Crew** with the number of Sparks and **Workflows**.
+- **Crew**: a card per Spark (face, name, role, agent and mode, number of skills), the empty state **Build your crew** with the existing starter suggestions, and **New Spark**, which opens the existing sheet; the new Spark then opens on the page.
+- A Spark opens in place with **All Sparks** to go back and two tabs. **Details** is the sheet's fields (`teammates/TeammateFields.tsx`, extracted and shared with `TeammateSheet`), **Edit instructions**, **Save** and hold to delete with the existing 10-second Undo. **Skills and files** is the folder as a tree (`role="tree"`, arrow keys, Home, End, Enter) beside a plain text editor.
+- Files: `SPARK.md` is always listed and is the instructions, with no length limit beyond the 256 KB file cap. **New skill** writes `skills/<name>/SKILL.md` with the name and description block. **New file** starts beside the open file. **Rename** (a save to the new path, then a delete of the old one) and **Delete** (confirmed inline) are above the editor; `SPARK.md` and a skill's `SKILL.md` keep their names. `crewPathProblem`, a taken name, a full folder, a skill file without its block and a name that differs from its folder show inline and hold **Save**. ⌘S saves.
+- Save sends the hash the file was opened with. A 409 shows "This file changed since you opened it" with **Reload** and **Save mine over it** (reads the newest hash, then saves). Unsaved text is kept per file in memory (`file-drafts.ts`) with the hash it started from, so opening another file or leaving the page loses nothing and a stale draft still conflicts; the tree marks such files **Edited**.
+- Settings has no **Crew** section any more (`SparksSection` deleted, `'sparks'` gone from `SETTINGS_SECTION_IDS`, the Settings window no longer mounts `TeammateHost`). The island target `sparks` opens the page (`sparks-route.ts`, `openSparksPage`). Home's roster stays and has **Manage**, which opens the page.
+- Paired device: the page lists Sparks and opens one as read-only facts with the line "Edit this Spark, its instructions, skills and files on the Mac."; no **New Spark**, no tabs, and no folder request is made.
+- Guide: `sparks.md` rewritten for the page, the **Crew** row removed from `settings.md`, a line in `home.md`, a row in `whats-new.md`.
+
+**Routes the client calls** (`crew-files-api.ts` is the only file that names them)
+
+| Call   | Route                                   | Body           | Reply                                                                          |
+| ------ | --------------------------------------- | -------------- | ------------------------------------------------------------------------------ |
+| Folder | `GET /api/teammates/:id/folder`         |                | `SparkFolder`                                                                  |
+| Read   | `GET /api/teammates/:id/files?path=`    |                | `CrewFile`; 404 when it is gone                                                |
+| Save   | `PUT /api/teammates/:id/files`          | `SaveCrewFile` | `CrewFile`; 409 when the hash is stale, or the path exists and `baseHash` null |
+| Delete | `DELETE /api/teammates/:id/files?path=` |                | 204                                                                            |
+
+What B assumes of A beyond the contract: `SPARK.md` may be missing from `files` (B then saves it with `baseHash: null`); a folder with no files left disappears from `files`; `problems` carries one text per path; the card's skill count is `skills.length` from one folder request per Spark (a count on `GET /api/teammates` would save up to 50 requests).
+
+**Mounting stream E's Workflows tab**
+
+Everything is in `apps/web/src/sparks-page/WorkflowsTab.tsx`:
+
+- lines 5 to 15, `WorkflowsTab`: replace the body with `return <WorkflowsPanel />;` (import from `../crew-flows/WorkflowsPanel.tsx`). `SparksPage` renders it as a direct child of `main.main`, a column flex box with the `main` container, which is what the panel's layout needs.
+- lines 1 to 3, `useWorkflowCount`: return `useWorkflows().data?.length ?? null` (from `../crew-flows/use-workflows.ts`) for the tab count.
+
+Then delete `.spk-soon` from `sparks-page.css`, and do E's own clean-up (its stand-in page, harness, `knip.json` entry, `PANEL_PATH`).
+
+**Tests**
+
+- Unit: `folder-model.test.ts` (tree building and order, rows under closed folders, the new-skill text parsing back, name, path and rename problems, the full folder, skill-file problems, byte size, 409 handling).
+- Browser: `tests/browser/sparks-page.spec.ts` (group `sparks`), with the four file routes faked in the browser (`crew-files-kit.ts`) and real Sparks: the empty state and starters, New Spark through to its card, a skill and a script with every inline problem, save, rename, delete, a save conflict both ways, drafts surviving navigation, one pass with the keyboard alone (including 28px control heights), Settings without the section and Home's **Manage**, a phone at 390px and a paired device. axe runs on each screen. Screenshots in light and dark go to `test-results/sparks-page/` and were looked at.
+- Changed: `sparks.spec.ts` (delete and the failed delete now go through the page; the Settings test is gone), `settings-lists`, `settings-groups`, `responsive-shell` (no **Crew** section; **Sparks** under **More**), `desktop-companion` (the island target opens the page), `rail-shortcuts` (nine items on the web build, so the last digit is tested as well as the one past it).
+
+- Ran on 2026-11-13: `pnpm check` (format, lint, typecheck, source rules, guide rules, knip and the rest pass; the unit run had one failure in `apps/desktop/src/voice/voice-models.test.ts` while browser tests ran beside it, and that file passes alone), `pnpm test:changed` (843 files, 8,246 tests pass; an earlier run under the same load showed 2 failures that were not captured and did not come back), and in the browser `sparks-page`, `sparks`, `spark-sheet`, `settings-lists`, `settings-groups`, `responsive-shell`, `desktop-companion`, `lazy-ui` and `home` (71 passed). `rail-shortcuts` was run on this Mac from a copy with ⌥⌘ in place of Ctrl+Alt (3 of 4 pass; the title test expects the non-Mac "Ctrl Alt" text and fails on any Mac, before this change too). `pnpm test:browser:changed` and `pnpm test:db:changed` were not run: the first selects every spec because `app/` and `spec-map.ts` changed, and this stream changes no server code.
+
+**Unverified or left out**
+
+- Never run against stream A's real routes; the reply shapes, the 404 and the 409 are the contract's and B's reading of it. No test with a real agent: this stream runs none.
+- The sheet still has **Standing instructions** (2,000 characters, **Use a file…**) for **New Spark** and for the edit sheet Home's pencil and the island's `spark-edit` open. Once A makes `SPARK.md` the owner, that field should go from the sheet, or `POST /api/teammates` should write it to `SPARK.md` and lift the limit; this is A's call and is not done here.
+- With the Browser pane the Mac's left bar now has nine items, so **Remote** is the tenth and has no ⌥⌘ digit. In a window under about 760px tall the left bar scrolls, as it already could.
+- Rename is two requests; if the delete fails the file exists under both names and the message says so. Folders and whole skills cannot be renamed or deleted in one step, and there is no import of a skill folder.
+- The editor is a plain text area: no syntax colours, and Tab moves focus.
+- A paired device cannot edit a Spark on this page even with the Settings switch on (the sheet from Home still can); the plan keeps editing on the Mac.
+- "Describe one and let an agent draft it", "Try it", "Used in" and "Add to a workflow" from the mocks belong to streams H, F and E and are not here.
+- Not run on the Mac app itself (Electron); checked in Chromium through Playwright only. VoiceOver was not tried; the tree follows the ARIA tree pattern and passes axe.
 
 ### Wave 2 (four in parallel)
 

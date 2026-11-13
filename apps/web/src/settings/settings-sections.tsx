@@ -14,7 +14,6 @@ import { LEVEL_LABEL } from './setting-labels.ts';
 import { COMPACT_LABEL, WARN_LABEL } from '../spark/CompactionSettings.tsx';
 import { INSTRUCTIONS_LABEL } from '../spark/AgentInstructionsSetting.tsx';
 import { MORNING_BRIEF_LABEL } from '../spark/MorningBriefSetting.tsx';
-import { SparksSection } from '../teammates/SparksSection.tsx';
 import { ResetSection, KEEP_KEYS_LABEL } from '../reset/ResetSection.tsx';
 import { HelpSection, helpRows } from '../help/HelpSection.tsx';
 import { AUTO_CONTINUE_LABEL } from './AutoContinueSetting.tsx';
@@ -156,14 +155,6 @@ export const SETTINGS_SECTIONS = [
     icon: icons.MODELS_ICON,
     remoteSwitch: 'settings',
     render: () => <ModelsSection />,
-  },
-  {
-    id: 'sparks',
-    group: 'agents',
-    label: 'Crew',
-    icon: icons.CREW_ICON,
-    remoteSwitch: 'settings',
-    render: () => <SparksSection />,
   },
   {
     id: 'usage',
