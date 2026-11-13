@@ -97,15 +97,8 @@ export function BuilderDock({ onClose }: { onClose(): void }) {
   const focused = useDockFocus(dock);
   const chat = current.data ?? null;
   const busy = start.isPending || done.isPending;
-  const closer = chat ? (
-    <DockControls
-      chat={chat}
-      busy={busy}
-      onDone={() => done.mutate(chat.conversationId)}
-      onNew={() => start.mutate(crypto.randomUUID())}
-      onClose={onClose}
-    />
-  ) : null;
+  const markDone = done.mutate;
+  const startNew = start.mutate;
   const pane = useMemo<ChatPane>(
     () => ({
       split: true,
@@ -113,9 +106,17 @@ export function BuilderDock({ onClose }: { onClose(): void }) {
       idSuffix: '-builder',
       name: 'Builder chat',
       landmark: 'section',
-      closer,
+      closer: chat ? (
+        <DockControls
+          chat={chat}
+          busy={busy}
+          onDone={() => markDone(chat.conversationId)}
+          onNew={() => startNew(crypto.randomUUID())}
+          onClose={onClose}
+        />
+      ) : null,
     }),
-    [focused, closer],
+    [focused, chat, busy, markDone, startNew, onClose],
   );
   const problem = current.error ?? start.error ?? done.error;
 
