@@ -34,6 +34,7 @@ An agent can propose a change; you answer its card on the Mac ([file formats](cr
 | Open its home chat         | Select its card in the **Sparks** line on **Home**.               |
 | Start another chat with it | Before the first message, select **Talk to…** in the message box. |
 | Hand it one job            | Type `@` and pick it, or select the **Ask Pip?** chip.            |
+| Try it, sending nothing    | Use **Try it** on **Details**: [Do a test run](test-run.md).      |
 
 A job runs read-only with its own context, up to three Sparks in turn. Mode, approvals and protected paths never widen.
 

@@ -1,6 +1,7 @@
 import type { ProviderId } from '@spark-outpost/contracts';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
+import type { SparkToolsAccess } from '../src/agents/acp/spark-tools.ts';
 import type { Provider } from '../src/providers/provider.ts';
 import { startWorker, type Worker, type WorkerOptions } from '../src/workflow/worker.ts';
 import { FAKE_ACP_LAUNCH } from './fake-acp-support.ts';
@@ -63,6 +64,7 @@ export async function connectAgents(t: TestDb): Promise<void> {
 export interface FakeAgentOptions {
   sessions?: string;
   agentEnv?: Record<string, string>;
+  sparkTools?: SparkToolsAccess;
 }
 
 function sessionEnv(store: string | undefined): Record<string, string> {
@@ -79,6 +81,7 @@ function fakeAgent(id: FakeAgentId, options: FakeAgentOptions): Provider {
     definition: { ...agentDefinitions[id], conversationMode, askMode },
     launch: FAKE_ACP_LAUNCH,
     cancelGraceMs: 2_000,
+    ...(options.sparkTools ? { sparkTools: options.sparkTools } : {}),
     env: {
       ...(process.env as Record<string, string>),
       FAKE_ACP_PROVIDER: id,

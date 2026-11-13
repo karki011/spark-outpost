@@ -25,6 +25,7 @@ export interface NewWorkflowRun {
   runId: string;
   message: string;
   continues: boolean;
+  oneSpark?: boolean;
 }
 
 async function announce(db: Queryable, workflowRunId: string): Promise<void> {
@@ -39,8 +40,8 @@ async function announce(db: Queryable, workflowRunId: string): Promise<void> {
 export async function insertWorkflowRun(db: Queryable, run: NewWorkflowRun): Promise<boolean> {
   const inserted = await db.query(
     `INSERT INTO workflow_runs (id, workspace_id, workflow_id, workflow_name, definition, kind,
-       source, conversation_id, run_id, message, continues)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       source, conversation_id, run_id, message, continues, one_spark)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      ON CONFLICT (run_id) DO NOTHING`,
     [
       run.id,
@@ -54,6 +55,7 @@ export async function insertWorkflowRun(db: Queryable, run: NewWorkflowRun): Pro
       run.runId,
       run.message,
       run.continues,
+      run.oneSpark === true,
     ],
   );
   if (inserted.rowCount !== 1) return false;
@@ -206,7 +208,7 @@ export async function listWorkflowRuns(
   workflowId: string,
 ): Promise<WorkflowRun[]> {
   const { rows } = await db.query<RunRow>(
-    `SELECT * FROM workflow_runs WHERE workspace_id = $1 AND workflow_id = $2
+    `SELECT * FROM workflow_runs WHERE workspace_id = $1 AND workflow_id = $2 AND kind = 'run'
      ORDER BY started_at DESC, id LIMIT $3`,
     [workspaceId, workflowId, WORKFLOW_RUNS_PAGE],
   );

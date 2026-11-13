@@ -189,7 +189,7 @@ export const SPEC_GROUPS = {
     'tickets-rows',
   ],
   slack: ['slack-chat', 'slack-settings', 'slack-sign-in'],
-  'crew-flows': ['crew-e2e', 'crew-flows', 'crew-run-view'],
+  'crew-flows': ['crew-e2e', 'crew-flows', 'crew-run-view', 'crew-test-run'],
   sparks: [
     'spark-actions',
     'spark-crew-edit',

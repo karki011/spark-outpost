@@ -1,5 +1,6 @@
 import { pruneChatFolders } from '../chat-files/prune.ts';
 import { pruneSparkFolders } from '../crew/prune.ts';
+import { sweepTestRuns } from '../crew-flows/test-run.ts';
 import { pruneUnlinkedAttachments } from '../persistence/attachments.ts';
 import { pruneProtocolLog } from '../persistence/audit-log.ts';
 import { pruneEmptyConversations } from '../persistence/conversations.ts';
@@ -17,6 +18,13 @@ export interface StartupPrune {
   researchCopies?: string;
   sparkFolders?: string;
   report?: (message: string, error: unknown) => void;
+}
+
+export async function sweepAtStart(options: StartupPrune): Promise<void> {
+  const report = options.report ?? ((message, error) => console.error(message, error));
+  await sweepTestRuns(options).catch((error: unknown) => {
+    report('Could not remove test runs left from the last session', error);
+  });
 }
 
 export async function pruneOldRows(options: StartupPrune): Promise<void> {

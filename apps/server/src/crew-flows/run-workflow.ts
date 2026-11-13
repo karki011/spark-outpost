@@ -85,6 +85,7 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
   if (!spark) return { id: step.id, state: 'failed', note: SPARK_GONE };
   const pick = pickFor(h, spark);
   const ownMode = spark.provider === pick.provider ? spark.agentMode : null;
+  const testRun = turn.run.kind === 'test';
   try {
     const result = await runSparkChild(
       h,
@@ -104,11 +105,18 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
           message: turn.message,
           hasProject: hasProject(h.input),
           earlier: passedOn(run, step, turn.workflow),
+          testRun,
         }),
         route: {
           name: spark.name,
           routedBy: 'fixed',
-          spark: { id: spark.id, role: spark.role, only: !turn.continues, step: step.id },
+          spark: {
+            id: spark.id,
+            role: spark.role,
+            only: !turn.continues,
+            step: step.id,
+            ...(testRun ? { test: true } : {}),
+          },
         },
       },
       (runId) => startStep(h.deps.db, turn.run.id, step.id, runId),

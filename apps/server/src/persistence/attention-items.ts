@@ -30,7 +30,8 @@ const ITEMS = `
     SELECT c.id, c.seen_at,
       EXISTS (SELECT 1 FROM profiles p WHERE p.assistant_conversation_id = c.id) AS assistant
     FROM conversations c
-    WHERE c.workspace_id = $1 AND c.archived_at IS NULL AND ($2::uuid IS NULL OR c.id = $2)
+    WHERE c.workspace_id = $1 AND c.archived_at IS NULL AND c.kind <> 'crew'
+      AND ($2::uuid IS NULL OR c.id = $2)
   ), latest AS (
     SELECT ch.id, ch.seen_at, ch.assistant, r.id AS run_id, r.status, r.finished_at, r.error
     FROM chats ch

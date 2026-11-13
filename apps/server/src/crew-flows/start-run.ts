@@ -1,5 +1,6 @@
 import {
   workflowProblems,
+  type StartSparkTestRun,
   type StartWorkflowRun,
   type WorkflowRun,
   type WorkflowRunSource,
@@ -15,7 +16,8 @@ import {
 import { withTransaction, type Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import { getWorkflowRun, insertWorkflowRun } from './run-records.ts';
-import { workspaceSparkIds } from './step-sparks.ts';
+import { stepSparks, workspaceSparkIds } from './step-sparks.ts';
+import { oneSparkWorkflow, startTestRun } from './test-run.ts';
 import {
   WorkflowNotFoundError,
   WorkflowProblemsError,
@@ -27,6 +29,14 @@ export interface StartRunDeps {
   workspaceId: string;
   store: WorkflowStore;
   runTarget(conversationId: string): Promise<RunTarget>;
+  chatFolders?: string | undefined;
+  deleteSettleMs?: number | undefined;
+}
+
+export class SparkNotFoundError extends Error {
+  constructor() {
+    super('That Spark no longer exists.');
+  }
 }
 
 export interface StartRun extends StartWorkflowRun {
@@ -52,8 +62,24 @@ async function ownChat(deps: StartRunDeps, conversationId: string): Promise<bool
   return rowCount === 1;
 }
 
+export async function startSparkTestRun(
+  deps: StartRunDeps,
+  start: StartSparkTestRun & { sparkId: string; messageId: string },
+): Promise<WorkflowRun> {
+  const repeated = await existingRun(deps, start.messageId);
+  if (repeated) return repeated;
+  const spark = (await stepSparks(deps.db, deps.workspaceId, [start.sparkId])).get(start.sparkId);
+  if (!spark) throw new SparkNotFoundError();
+  return startTestRun(deps, {
+    workflow: oneSparkWorkflow(spark),
+    message: start.message.trim(),
+    projectId: start.projectId,
+    messageId: start.messageId,
+    oneSpark: true,
+  });
+}
+
 export async function startWorkflowRun(deps: StartRunDeps, start: StartRun): Promise<WorkflowRun> {
-  if (start.kind !== 'run') throw new BadRequestError('Test runs are not available yet.');
   const repeated = await existingRun(deps, start.messageId);
   if (repeated) return repeated;
   const file = await deps.store.read(start.workflowId);
@@ -64,6 +90,15 @@ export async function startWorkflowRun(deps: StartRunDeps, start: StartRun): Pro
     await workspaceSparkIds(deps.db, deps.workspaceId),
   );
   if (problems.length > 0) throw new WorkflowProblemsError(problems);
+  if (start.kind === 'test') {
+    return startTestRun(deps, {
+      workflow,
+      message: start.message.trim(),
+      projectId: start.projectId,
+      messageId: start.messageId,
+      oneSpark: false,
+    });
+  }
   const assistantChat = await assistantConversationId(deps.db, deps.workspaceId);
   if (start.conversationId !== null && start.conversationId === assistantChat) {
     throw new BadRequestError('A workflow can’t run in the Ask Spark chat.');

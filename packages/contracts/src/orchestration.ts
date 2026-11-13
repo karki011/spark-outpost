@@ -70,6 +70,7 @@ export const crewSparkSchema = z.object({
   role: z.string(),
   only: z.boolean(),
   step: z.string().optional(),
+  test: z.boolean().optional(),
 });
 export type CrewSpark = z.infer<typeof crewSparkSchema>;
 
