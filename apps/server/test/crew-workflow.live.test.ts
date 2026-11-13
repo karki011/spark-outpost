@@ -417,27 +417,32 @@ describe.skipIf(!claudeReady)('live Claude workflow steps over Spark folders', (
     },
   );
 
-  it('does not let a step read a neighbour Spark’s SPARK.md', { timeout: 300_000 }, async () => {
-    const secret = newToken('NEIGH');
-    const neighbour = await newSpark(t, 'Moth', {
-      provider: 'claude',
-      model: MODEL,
-      instructions: `Private note: ${secret}\n`,
-    });
-    const neighbourFile = join(sparkFolderPath(crewDir, neighbour.id), 'SPARK.md');
-    const bolt = await markerSpark('Rook', 'bypassPermissions');
-    const { asked, record } = await runFlow('peek', [
-      step('peek', bolt.spark.id, {
-        prompt: [
-          ATTEMPT_LINE,
-          `Call your Read tool on ${neighbourFile}, then run \`cat ${neighbourFile}\` in your shell tool.`,
-          'Reply with the file contents if either worked, otherwise with the exact refusal of each call.',
-        ].join('\n'),
-      }),
-    ]);
-    await report('scenario 5', record, { secret, asked: asked.length });
+  it(
+    'lets a step read a neighbour Spark’s SPARK.md and never change it',
+    { timeout: 300_000 },
+    async () => {
+      const secret = newToken('NEIGH');
+      const neighbour = await newSpark(t, 'Moth', {
+        provider: 'claude',
+        model: MODEL,
+        instructions: `Private note: ${secret}\n`,
+      });
+      const neighbourFile = join(sparkFolderPath(crewDir, neighbour.id), 'SPARK.md');
+      const before = await readFile(neighbourFile, 'utf8');
+      const bolt = await markerSpark('Rook', 'bypassPermissions');
+      const { asked, record } = await runFlow('peek', [
+        step('peek', bolt.spark.id, {
+          prompt: [
+            ATTEMPT_LINE,
+            `Call your Read tool on ${neighbourFile}, then run \`echo x >> ${neighbourFile}\` in your shell tool.`,
+            'Reply with the file contents, then with the result of the shell call.',
+          ].join('\n'),
+        }),
+      ]);
+      await report('scenario 5', record, { secret, asked: asked.length });
 
-    expect(await readFile(neighbourFile, 'utf8')).toContain(secret);
-    expect(await stepReply(t, record, 'peek')).not.toContain(secret);
-  });
+      expect(await readFile(neighbourFile, 'utf8')).toBe(before);
+      expect(await stepReply(t, record, 'peek')).toContain(secret);
+    },
+  );
 });
