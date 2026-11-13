@@ -1,4 +1,5 @@
 import { decideDue, workflowProblems, type DueAction } from '@spark-outpost/contracts';
+import { resolveRunTarget } from '../api/run-target.ts';
 import { withTransaction, type Db, type DbClient } from '../persistence/db.ts';
 import { sparkPaused } from '../persistence/spark-pause.ts';
 import {
@@ -22,6 +23,7 @@ import {
 } from './schedule-records.ts';
 import { startWorkflowRun, type StartRunDeps } from './start-run.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
+import { workflowStore } from './workflow-store.ts';
 
 const CHECK_EVERY_MS = 30_000;
 export const STRANDED_CLAIM_MS = 60_000;
@@ -66,7 +68,14 @@ async function claimStart(
 ): Promise<ClaimedSlot | null> {
   const blocker = await startBlocker(deps, client, stored);
   if (blocker === null) {
-    return claimSlot(client, deps.workspaceId, stored.workflowId, action.source, action.slotAt, now);
+    return claimSlot(
+      client,
+      deps.workspaceId,
+      stored.workflowId,
+      action.source,
+      action.slotAt,
+      now,
+    );
   }
   await recordQuietSlot(
     client,
@@ -203,4 +212,14 @@ export function startWorkflowScheduler(
   const timer = setInterval(() => void tick(), everyMs);
   timer.unref();
   return { stop: () => clearInterval(timer) };
+}
+
+export function scheduleWorkflows(db: Db, workspaceId: string): WorkflowScheduler {
+  return startWorkflowScheduler({
+    db,
+    workspaceId,
+    store: workflowStore(),
+    runTarget: (conversationId) => resolveRunTarget({ db, workspaceId }, conversationId),
+    now: () => new Date(),
+  });
 }

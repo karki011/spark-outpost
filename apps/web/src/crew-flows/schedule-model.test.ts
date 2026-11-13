@@ -174,20 +174,21 @@ describe('recent runs', () => {
       monday,
       'h23',
     );
-    expect(rows.map(({ when, how, state, tone, note, took }) => [when, how, state, tone, note, took]))
-      .toEqual([
-        ['Today · 10:30', 'Scheduled', 'Done', 'succeeded', '', '2m 05s'],
-        ['Today · 9:42', 'Run now', 'Failed', 'failed', 'types stopped the workflow', ''],
-        ['Today · 9:30', 'Scheduled', 'Skipped', 'quiet', 'The previous run was still going', ''],
-        ['Yesterday · 17:00 to 17:30', 'Scheduled', 'Held', 'quiet', 'Spark was paused', ''],
-        [
-          expect.stringMatching(/^Sat.* · 9:00$/),
-          'Caught up',
-          'Not started',
-          'failed',
-          'The workflow has a problem: lint uses a Spark that no longer exists.',
-          '',
-        ],
-      ]);
+    expect(
+      rows.map(({ when, how, state, tone, note, took }) => [when, how, state, tone, note, took]),
+    ).toEqual([
+      ['Today · 10:30', 'Scheduled', 'Done', 'succeeded', '', '2m 05s'],
+      ['Today · 9:42', 'Run now', 'Failed', 'failed', 'types stopped the workflow', ''],
+      ['Today · 9:30', 'Scheduled', 'Skipped', 'quiet', 'The previous run was still going', ''],
+      ['Yesterday · 17:00 to 17:30', 'Scheduled', 'Held', 'quiet', 'Spark was paused', ''],
+      [
+        expect.stringMatching(/^Sat.* · 9:00$/),
+        'Caught up',
+        'Not started',
+        'failed',
+        'The workflow has a problem: lint uses a Spark that no longer exists.',
+        '',
+      ],
+    ]);
   });
 });

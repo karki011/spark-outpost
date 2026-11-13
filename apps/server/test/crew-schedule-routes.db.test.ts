@@ -89,13 +89,13 @@ describe('schedule routes', () => {
     await clock.checkAt(at(10, 30));
 
     const { slots } = (await client.get(`${path}/slots`).expect(200)).body as ScheduleSlots;
-    expect(slots.map(({ state, reason, workflowRunId }) => ({ state, reason, workflowRunId }))).toEqual(
-      [
-        { state: 'held', reason: 'paused', workflowRunId: null },
-        { state: 'skipped', reason: 'previous_running', workflowRunId: null },
-        { state: 'started', reason: null, workflowRunId: run!.id },
-      ],
-    );
+    expect(
+      slots.map(({ state, reason, workflowRunId }) => ({ state, reason, workflowRunId })),
+    ).toEqual([
+      { state: 'held', reason: 'paused', workflowRunId: null },
+      { state: 'skipped', reason: 'previous_running', workflowRunId: null },
+      { state: 'started', reason: null, workflowRunId: run!.id },
+    ]);
     const runs = (await client.get(`/api/workflows/${FLOW}/runs`).expect(200)).body.runs;
     expect(runs).toMatchObject([{ id: run!.id, source: 'schedule' }]);
     const view = (await client.get(path).expect(200)).body as WorkflowScheduleView;

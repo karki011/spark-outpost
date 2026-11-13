@@ -142,7 +142,8 @@ export function estimateLine(schedule: WorkflowSchedule, lastRunCostUsd: number 
   if (scheduleProblem(schedule) !== null) return '';
   if (!windowed(schedule.unit)) {
     const [one, many] = UNIT_WORDS[schedule.unit];
-    const pace = schedule.every === 1 ? `One run a ${one}` : `One run every ${schedule.every} ${many}`;
+    const pace =
+      schedule.every === 1 ? `One run a ${one}` : `One run every ${schedule.every} ${many}`;
     const days = schedule.days.length > 0 ? ', on the days picked' : '';
     const cost =
       lastRunCostUsd === null ? '' : ` · about ${usd(lastRunCostUsd)} a run at the last run’s cost`;
@@ -213,8 +214,7 @@ function runRow(run: WorkflowRun, now: Date, cycle: HourCycle): HistoryRow {
 function slotRow(slot: ScheduleSlot, now: Date, cycle: HourCycle): HistoryRow {
   const first = new Date(slot.slotAt);
   const last = new Date(slot.lastSlotAt);
-  const range =
-    last.getTime() > first.getTime() ? ` to ${formatClock(last.getTime(), cycle)}` : '';
+  const range = last.getTime() > first.getTime() ? ` to ${formatClock(last.getTime(), cycle)}` : '';
   return {
     key: `slot:${slot.id}`,
     at: last.getTime(),

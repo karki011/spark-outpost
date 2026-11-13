@@ -13,8 +13,7 @@ import type { TestDb } from './support.ts';
 
 export const FLOW = 'pre-pr-review';
 
-export const at = (hour: number, minute: number, day = 16) =>
-  new Date(2026, 10, day, hour, minute);
+export const at = (hour: number, minute: number, day = 16) => new Date(2026, 10, day, hour, minute);
 
 export function everyHalfHour(extra: Partial<WorkflowSchedule> = {}): WorkflowSchedule {
   return workflowScheduleSchema.parse({
@@ -71,10 +70,10 @@ export async function finishRun(
   run: WorkflowRun,
   status: 'succeeded' | 'failed' = 'succeeded',
 ): Promise<void> {
-  await t.db.query(
-    `UPDATE workflow_runs SET status = $2, finished_at = now() WHERE id = $1`,
-    [run.id, status],
-  );
+  await t.db.query(`UPDATE workflow_runs SET status = $2, finished_at = now() WHERE id = $1`, [
+    run.id,
+    status,
+  ]);
   await t.db.query(
     `UPDATE runs SET status = $2, started_at = now(), finished_at = now(),
        error = CASE WHEN $2 = 'failed' THEN 'A step failed.' END

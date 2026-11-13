@@ -38,7 +38,11 @@ const at = (day: number, hour: number, minute: number) =>
 async function openSchedule(page: Page) {
   const security = await addSpark(page, 'Security', 'Finds risky changes');
   const workflows = await fakeWorkflowApi(page, [security]);
-  workflows.put({ id: 'pre-pr-review', name: 'Pre-PR review', steps: [step('security', security)] });
+  workflows.put({
+    id: 'pre-pr-review',
+    name: 'Pre-PR review',
+    steps: [step('security', security)],
+  });
   const schedules = await fakeScheduleApi(page);
   schedules.lastRunCostUsd = 0.2;
   schedules.runs = [
@@ -84,7 +88,11 @@ async function openSchedule(page: Page) {
   await row.getByRole('button', { name: 'Edit Pre-PR review' }).click();
   const editor = page.getByRole('region', { name: 'Workflow Pre-PR review' });
   await editor.getByRole('tab', { name: 'Schedule' }).click();
-  return { schedules, editor, form: page.getByRole('group', { name: 'Schedule of Pre-PR review' }) };
+  return {
+    schedules,
+    editor,
+    form: page.getByRole('group', { name: 'Schedule of Pre-PR review' }),
+  };
 }
 
 test('a workflow runs every 30 minutes on weekdays, shows what is next and turns off', async ({
@@ -154,7 +162,9 @@ test('a workflow runs every 30 minutes on weekdays, shows what is next and turns
   await expect(editor.locator('.wf-sched-chip')).toHaveCount(0);
 
   await editor.getByRole('button', { name: 'Workflows' }).click();
-  await expect(page.getByRole('list', { name: 'Workflows' }).locator('.wf-sched-chip')).toHaveCount(0);
+  await expect(page.getByRole('list', { name: 'Workflows' }).locator('.wf-sched-chip')).toHaveCount(
+    0,
+  );
 });
 
 test('a schedule that cannot be saved says why, and days and weeks ask for one time', async ({

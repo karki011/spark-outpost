@@ -47,9 +47,13 @@ interface ScheduleTabProps {
   name: string;
 }
 
-function ScheduleForm({ workflowId, name, view }: ScheduleTabProps & { view: WorkflowScheduleView }) {
+function ScheduleForm({
+  workflowId,
+  name,
+  view,
+}: ScheduleTabProps & { view: WorkflowScheduleView }) {
   const ids = useId();
-  const now = new Date(useMinuteClock());
+  const minute = useMinuteClock();
   const cycle = hourCycle();
   const projects = useProjects();
   const save = useSaveSchedule(workflowId);
@@ -63,7 +67,10 @@ function ScheduleForm({ workflowId, name, view }: ScheduleTabProps & { view: Wor
 
   const problem = scheduleProblem(draft);
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
-  const nextLines = useMemo(() => nextRunLines(draft, now, cycle), [draft, now, cycle]);
+  const nextLines = useMemo(
+    () => nextRunLines(draft, new Date(minute), cycle),
+    [draft, minute, cycle],
+  );
   const estimate = estimateLine(draft, view.lastRunCostUsd);
   const store = (schedule: WorkflowSchedule) =>
     save.mutate(schedule, {
@@ -139,7 +146,9 @@ function ScheduleForm({ workflowId, name, view }: ScheduleTabProps & { view: Wor
             ))}
           </div>
           <p className="wf-hint">
-            {draft.days.length === 0 ? 'No day picked: it runs every day.' : 'Runs on the days picked.'}
+            {draft.days.length === 0
+              ? 'No day picked: it runs every day.'
+              : 'Runs on the days picked.'}
           </p>
         </div>
 

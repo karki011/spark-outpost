@@ -68,7 +68,10 @@ export function scheduleRoutes(deps: ScheduleRouteDeps): Router {
   router.put('/workflows/:id/schedule', async (req, res) => {
     const id = await existing(req);
     const schedule = parseBody(workflowScheduleSchema, req);
-    if (schedule.projectId !== null && !(await projectLinked(db, workspaceId, schedule.projectId))) {
+    if (
+      schedule.projectId !== null &&
+      !(await projectLinked(db, workspaceId, schedule.projectId))
+    ) {
       throw new BadRequestError('That project is not in Spark.');
     }
     await saveSchedule(db, workspaceId, id, schedule, now());
@@ -81,7 +84,9 @@ export function scheduleRoutes(deps: ScheduleRouteDeps): Router {
   });
 
   router.get('/workflows/:id/schedule/slots', async (req, res) => {
-    const body: ScheduleSlots = { slots: await listScheduleSlots(db, workspaceId, workflowId(req)) };
+    const body: ScheduleSlots = {
+      slots: await listScheduleSlots(db, workspaceId, workflowId(req)),
+    };
     res.json(body);
   });
 

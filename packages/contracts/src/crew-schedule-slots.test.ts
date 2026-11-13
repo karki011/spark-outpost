@@ -13,7 +13,14 @@ const schedule = workflowScheduleSchema.parse({
   projectId: null,
 });
 const due = (extra: Partial<Parameters<typeof decideDue>[0]>) =>
-  decideDue({ schedule, lastChecked: at(9, 10), now: at(9, 20), paused: false, heldSince: null, ...extra });
+  decideDue({
+    schedule,
+    lastChecked: at(9, 10),
+    now: at(9, 20),
+    paused: false,
+    heldSince: null,
+    ...extra,
+  });
 
 describe('what a schedule check decides', () => {
   it('does nothing between slots', () => {
