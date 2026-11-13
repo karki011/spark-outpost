@@ -15,3 +15,14 @@ export type CurrentBuilderChat = z.infer<typeof currentBuilderChatSchema>;
 
 export const startBuilderChatSchema = z.object({ id: z.uuid() });
 export type StartBuilderChat = z.infer<typeof startBuilderChatSchema>;
+
+export const crewDraftSchema = z.object({
+  approvalId: z.uuid(),
+  conversationId: z.uuid(),
+  target: z.enum(['spark', 'workflow']),
+  name: z.string(),
+  inBuilder: z.boolean(),
+});
+export type CrewDraft = z.infer<typeof crewDraftSchema>;
+
+export const crewDraftsSchema = z.object({ drafts: z.array(crewDraftSchema) });

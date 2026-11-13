@@ -191,6 +191,7 @@ export const SPEC_GROUPS = {
   slack: ['slack-chat', 'slack-settings', 'slack-sign-in'],
   'crew-flows': ['crew-e2e', 'crew-flows', 'crew-run-view', 'crew-schedule', 'crew-test-run'],
   sparks: [
+    'crew-builder',
     'spark-actions',
     'spark-crew-edit',
     'spark-decisions',

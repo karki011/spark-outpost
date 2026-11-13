@@ -19,6 +19,7 @@ import {
   markBuilderDone,
   startBuilderChat,
 } from './builder-chat.ts';
+import { crewDrafts } from './builder-drafts.ts';
 import { getWorkflowRun, listWorkflowRuns } from './run-records.ts';
 import { deleteSchedule } from './schedule-records.ts';
 import { SparkNotFoundError, startSparkTestRun, startWorkflowRun } from './start-run.ts';
@@ -179,6 +180,10 @@ export function workflowRoutes(deps: WorkflowRouteDeps): Router {
   router.post('/crew/builder', async (req, res) => {
     const { id } = parseBody(startBuilderChatSchema, req);
     res.status(201).json(await startBuilderChat(runs, id));
+  });
+
+  router.get('/crew/drafts', async (_req, res) => {
+    res.json({ drafts: await crewDrafts(db, workspaceId) });
   });
 
   router.post('/crew/builder/:id/done', async (req, res) => {

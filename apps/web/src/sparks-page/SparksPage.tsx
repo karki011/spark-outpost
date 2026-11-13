@@ -1,14 +1,18 @@
 import './sparks-page.css';
 import '../teammates/teammates.css';
 import '../teammates/teammate-sheet.css';
-import { useCallback, useState } from 'react';
-import type { Teammate } from '@spark-outpost/contracts';
+import './builder.css';
+import { useCallback, useState, type ReactNode } from 'react';
+import type { CrewDraft, Teammate } from '@spark-outpost/contracts';
+import { requestChat } from '../app/chat-request.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { openTeammateSheet, useTeammateCreated } from '../teammates/teammate-store.ts';
 import { useTeammates } from '../teammates/use-teammates.ts';
 import { DocLink } from '../ui/DocLink.tsx';
-import { PlusIcon } from '../ui/icons.tsx';
+import { PlusIcon, SparkleIcon } from '../ui/icons.tsx';
 import { PageTabs } from '../ui/PageTabs.tsx';
+import { BuilderDock } from './BuilderDock.tsx';
+import { BuilderDrafts } from './BuilderDrafts.tsx';
 import { CrewTab } from './CrewTab.tsx';
 import { SparkDetail, type DetailTab } from './SparkDetail.tsx';
 import {
@@ -18,6 +22,23 @@ import {
 } from './sparks-route.ts';
 import { useWorkflowCount, WorkflowsTab } from './WorkflowsTab.tsx';
 
+function WithBuilder({
+  open,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  onClose(): void;
+  children: ReactNode;
+}) {
+  return (
+    <>
+      {children}
+      {open && <BuilderDock onClose={onClose} />}
+    </>
+  );
+}
+
 export function SparksPage() {
   const { loading, error, teammates, starters } = useTeammates();
   const { remote } = useRemoteClient();
@@ -25,6 +46,12 @@ export function SparksPage() {
   const [tab, setTab] = useState<SparksPageTab>('crew');
   const [openId, setOpenId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>('details');
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const closeBuilder = useCallback(() => setBuilderOpen(false), []);
+  const review = useCallback((draft: CrewDraft) => {
+    if (draft.inBuilder) setBuilderOpen(true);
+    else requestChat(draft.conversationId);
+  }, []);
   const open = useCallback((sparkId: string | null) => {
     setTab('crew');
     setDetailTab('details');
@@ -35,6 +62,7 @@ export function SparksPage() {
       (request: SparksPageRequest) => {
         open(request.sparkId);
         setTab(request.tab);
+        if (request.builder) setBuilderOpen(true);
       },
       [open],
     ),
@@ -42,64 +70,82 @@ export function SparksPage() {
   useTeammateCreated(useCallback((created: Teammate) => open(created.id), [open]));
   const spark = teammates.find((entry) => entry.id === openId) ?? null;
 
+  const builder = builderOpen && !remote;
   if (spark) {
     return (
-      <main className="main sparks" aria-label={`Spark ${spark.name}`}>
-        <SparkDetail
-          spark={spark}
-          tab={detailTab}
-          remote={remote}
-          onTab={setDetailTab}
-          onBack={() => setOpenId(null)}
-        />
-      </main>
+      <WithBuilder open={builder} onClose={closeBuilder}>
+        <main className="main sparks" aria-label={`Spark ${spark.name}`}>
+          <SparkDetail
+            spark={spark}
+            tab={detailTab}
+            remote={remote}
+            onTab={setDetailTab}
+            onBack={() => setOpenId(null)}
+          />
+        </main>
+      </WithBuilder>
     );
   }
   return (
-    <main className="main sparks" aria-labelledby="sparks-title">
-      <header className="spk-top">
-        <div className="spk-head">
-          <div>
-            <h1 id="sparks-title">Sparks</h1>
-            <p>
-              Agents with their own instructions and skills.{' '}
-              <DocLink topic="Sparks" doc={{ page: 'sparks' }} />
-            </p>
+    <WithBuilder open={builder} onClose={closeBuilder}>
+      <main className="main sparks" aria-labelledby="sparks-title">
+        <header className="spk-top">
+          <div className="spk-head">
+            <div>
+              <h1 id="sparks-title">Sparks</h1>
+              <p>
+                Agents with their own instructions and skills.{' '}
+                <DocLink topic="Sparks" doc={{ page: 'sparks' }} />
+              </p>
+            </div>
+            {!remote && (
+              <div className="spk-head-actions">
+                <button
+                  type="button"
+                  className="btn sm spk-new-spark"
+                  aria-pressed={builderOpen}
+                  onClick={() => setBuilderOpen((was) => !was)}
+                >
+                  <SparkleIcon /> Build with an agent
+                </button>
+                {tab === 'crew' && teammates.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn primary sm spk-new-spark"
+                    onClick={() => openTeammateSheet({ kind: 'create' })}
+                  >
+                    <PlusIcon /> New Spark
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-          {tab === 'crew' && !remote && teammates.length > 0 && (
-            <button
-              type="button"
-              className="btn primary sm spk-new-spark"
-              onClick={() => openTeammateSheet({ kind: 'create' })}
-            >
-              <PlusIcon /> New Spark
-            </button>
-          )}
-        </div>
-        <PageTabs
-          ariaLabel="Crew and workflows"
-          options={[
-            { id: 'crew', label: 'Crew', count: loading ? null : teammates.length },
-            { id: 'workflows', label: 'Workflows', count: workflows },
-          ]}
-          value={tab}
-          onChange={(id) => setTab(id as SparksPageTab)}
-        />
-      </header>
-      {tab === 'crew' ? (
-        <div className="spk-body" role="tabpanel" aria-label="Crew">
-          <CrewTab
-            loading={loading}
-            error={error}
-            sparks={teammates}
-            starters={starters}
-            remote={remote}
-            onOpen={open}
+          {!remote && <BuilderDrafts builderOpen={builder} onReview={review} />}
+          <PageTabs
+            ariaLabel="Crew and workflows"
+            options={[
+              { id: 'crew', label: 'Crew', count: loading ? null : teammates.length },
+              { id: 'workflows', label: 'Workflows', count: workflows },
+            ]}
+            value={tab}
+            onChange={(id) => setTab(id as SparksPageTab)}
           />
-        </div>
-      ) : (
-        <WorkflowsTab />
-      )}
-    </main>
+        </header>
+        {tab === 'crew' ? (
+          <div className="spk-body" role="tabpanel" aria-label="Crew">
+            <CrewTab
+              loading={loading}
+              error={error}
+              sparks={teammates}
+              starters={starters}
+              remote={remote}
+              onOpen={open}
+            />
+          </div>
+        ) : (
+          <WorkflowsTab />
+        )}
+      </main>
+    </WithBuilder>
   );
 }

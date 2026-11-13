@@ -26,6 +26,7 @@ interface StatusCompanionProps {
   visible: boolean;
   onOpenChat: (chat: ConversationSummary) => void;
   onHome: () => void;
+  onBuild: (() => void) | null;
 }
 
 const badgeText = (count: number) => (count > 9 ? '9+' : String(count));
@@ -41,7 +42,8 @@ function RunningDots({ count }: { count: number }) {
   );
 }
 
-export function StatusCompanion({ chats, visible, onOpenChat, onHome }: StatusCompanionProps) {
+export function StatusCompanion(props: StatusCompanionProps) {
+  const { chats, visible, onOpenChat, onHome, onBuild } = props;
   const prefs = useCompanionPrefs();
   const feed = companionFeed(chats);
   const celebrating = useCelebration(chats);
@@ -167,6 +169,13 @@ export function StatusCompanion({ chats, visible, onOpenChat, onHome }: StatusCo
                 onHome();
               }}
               onHide={hide}
+              onBuild={
+                onBuild &&
+                (() => {
+                  setOpen(false);
+                  onBuild();
+                })
+              }
             />
           )}
         </div>

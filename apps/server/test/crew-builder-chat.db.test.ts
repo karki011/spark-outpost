@@ -92,16 +92,24 @@ async function quietDaysAgo(id: string, days: number): Promise<void> {
   );
 }
 
-async function pendingCard(runId: string): Promise<string> {
+async function pendingCard(runId: string, sparkAction: unknown = null): Promise<string> {
   const id = randomUUID();
   await t.db.query(
     `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash, options,
        status)
-     VALUES ($1, $2, $3, 'spark_action', 'New Spark', '{}', 'sha256:x', '[]', 'pending')`,
-    [id, runId, `call-${id}`],
+     VALUES ($1, $2, $3, 'spark_action', 'New Spark', $4, 'sha256:x', '[]', 'pending')`,
+    [id, runId, `call-${id}`, JSON.stringify(sparkAction ? { sparkAction } : {})],
   );
   return id;
 }
+
+const workflowEdit = (change: 'new' | 'changed') => ({
+  action: 'crew_edit',
+  target: 'workflow',
+  id: 'pre-pr',
+  name: 'Pre-PR review',
+  files: [{ path: 'pre-pr.json', change, before: null, after: '{}', baseHash: null }],
+});
 
 async function audit(runId: string): Promise<void> {
   await insertFinishedRunEntries(t.db, runId, [
@@ -254,6 +262,39 @@ describe('builder chat', () => {
     expect(await crewEditRefusal(t.db, scope)).toBeNull();
   });
 
+  it('lists new Sparks and workflows waiting for the user as drafts', async () => {
+    const { conversationId } = await start();
+    const runId = await say(conversationId, 'Make a docs Spark and a review workflow');
+    const spark = await pendingCard(runId, { action: 'create_teammate', name: 'Docs' });
+    const flow = await pendingCard(runId, workflowEdit('new'));
+    await pendingCard(runId, workflowEdit('changed'));
+    const other = randomUUID();
+    const elsewhere = await pendingCard(await say(other, 'Make a Spark'), {
+      action: 'create_teammate',
+      name: 'Release',
+    });
+    const { drafts } = (await client.get('/api/crew/drafts').expect(200)).body as {
+      drafts: unknown[];
+    };
+    expect(drafts).toEqual([
+      { approvalId: spark, conversationId, target: 'spark', name: 'Docs', inBuilder: true },
+      {
+        approvalId: flow,
+        conversationId,
+        target: 'workflow',
+        name: 'Pre-PR review',
+        inBuilder: true,
+      },
+      {
+        approvalId: elsewhere,
+        conversationId: other,
+        target: 'spark',
+        name: 'Release',
+        inBuilder: false,
+      },
+    ]);
+  });
+
   it('stays on the Mac', () => {
     const allOn = Object.fromEntries(
       remoteSwitchSchema.options.map((name) => [name, true]),
@@ -262,6 +303,7 @@ describe('builder chat', () => {
       ['GET', '/api/crew/builder'],
       ['POST', '/api/crew/builder'],
       ['POST', `/api/crew/builder/${randomUUID()}/done`],
+      ['GET', '/api/crew/drafts'],
     ] as const) {
       expect(remoteDecision(method, path, allOn).kind).toBe('refuse');
     }

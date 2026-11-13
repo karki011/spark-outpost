@@ -17,6 +17,7 @@ import { ChatPanes } from '../chat/split/ChatPanes.tsx';
 import { useChatSplit } from '../chat/split/use-chat-split.ts';
 import { queueDraft } from '../chat/composer/pending-draft.ts';
 import { StatusCompanion } from '../companion/StatusCompanion.tsx';
+import { openBuilderChat } from '../sparks-page/sparks-route.ts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { AgentTvHost } from '../crew/AgentTvHost.tsx';
 import { JUMP_TRIES, scrollToAnchor, scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
@@ -409,6 +410,7 @@ function ChatShell({ entering }: { entering: boolean }) {
             }
             onOpenChat={openAtCard}
             onHome={() => setView('home')}
+            onBuild={remote ? null : openBuilderChat}
           />
           {live.paused && !connection.lost && <LivePausedHint />}
           <DefaultLevelNotice

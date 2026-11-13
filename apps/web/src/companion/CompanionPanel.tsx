@@ -4,7 +4,7 @@ import type { ConversationSummary } from '@spark-outpost/contracts';
 import { AgentBlob } from '../brand/AgentBlob.tsx';
 import type { BlobExpression } from '../brand/blob-expression.ts';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
-import { CheckIcon } from '../ui/icons.tsx';
+import { CheckIcon, SparkleIcon } from '../ui/icons.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
 import type { RunItem } from '../home/home-model.ts';
 import { noBreakParts, terminalFacts, type LinePart } from '../sessions/session-line.ts';
@@ -172,10 +172,11 @@ interface CompanionPanelProps {
   onCorner: (corner: Corner) => void;
   onHome: () => void;
   onHide: () => void;
+  onBuild: (() => void) | null;
 }
 
 export function CompanionPanel(props: CompanionPanelProps) {
-  const { ref, id, feed, corner, onOpenChat, onCorner, onHome, onHide } = props;
+  const { ref, id, feed, corner, onOpenChat, onCorner, onHome, onHide, onBuild } = props;
   const sections = panelSections(feed);
   return (
     <div
@@ -205,6 +206,12 @@ export function CompanionPanel(props: CompanionPanelProps) {
           onMore={onHome}
         />
       ))}
+      {onBuild && (
+        <button type="button" className="cmp-build" onClick={onBuild}>
+          <SparkleIcon />
+          Build a Spark or workflow
+        </button>
+      )}
       <div className="cmp-foot">
         <button type="button" className="cmp-home" onClick={onHome}>
           Open Home
