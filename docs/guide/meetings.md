@@ -31,7 +31,7 @@ Under a meeting, type a question or choose **Catch me up**, **Suggest a reply** 
 
 ## What stays on your Mac
 
-Audio is never saved and never leaves your Mac. The transcript, goal, notes and text files go to your AI provider when notes are written or you ask a question.
+Audio is never saved and never leaves your Mac. The transcript, goal and notes go to your AI provider when notes are written or you ask a question; text files in **Context** go only for notes.
 
 ## Alpha limits
 

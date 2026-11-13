@@ -60,6 +60,26 @@ describe('Join with Take notes when I join', () => {
     });
   });
 
+  it('cuts a calendar name to what the Mac accepts', async () => {
+    const calls = mockFetch(({ path }) => {
+      if (path === '/calendar/status') return status();
+      if (path === '/meetings/join-notes') return { detail: null };
+    });
+    render(
+      <QueryClientProvider client={newClient()}>
+        <JoinButton event={standup} now={at(10, 1)} notes calendarName={`  ${'c'.repeat(260)}`} />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Join Standup' }));
+    await waitFor(() =>
+      expect(calls.some((call) => call.path === '/meetings/join-notes')).toBe(true),
+    );
+    const sent = calls.find((call) => call.path === '/meetings/join-notes')?.body as {
+      calendarName: string;
+    };
+    expect(sent.calendarName).toBe('c'.repeat(200));
+  });
+
   it('opens the link and nothing else when the setting is off on the Mac', async () => {
     const { calls, seen } = show(true, null);
     fireEvent.click(screen.getByRole('button', { name: 'Join Standup' }));
