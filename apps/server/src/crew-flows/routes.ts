@@ -11,6 +11,7 @@ import type { Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import { requestCancel } from '../persistence/runs.ts';
 import { getWorkflowRun, listWorkflowRuns } from './run-records.ts';
+import { deleteSchedule } from './schedule-records.ts';
 import { startWorkflowRun } from './start-run.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
 import {
@@ -88,7 +89,9 @@ export function workflowRoutes(deps: WorkflowRouteDeps): Router {
   });
 
   router.delete('/workflows/:id', async (req, res) => {
-    await store.remove(workflowId(req));
+    const id = workflowId(req);
+    await store.remove(id);
+    await deleteSchedule(db, workspaceId, id);
     res.status(204).end();
   });
 

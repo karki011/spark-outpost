@@ -165,3 +165,4 @@ export * from './crew-files.ts';
 export * from './crew-workflow.ts';
 export * from './crew-run.ts';
 export * from './crew-schedule.ts';
+export * from './crew-schedule-slots.ts';
