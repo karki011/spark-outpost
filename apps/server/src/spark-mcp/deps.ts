@@ -72,6 +72,7 @@ export interface SparkScope {
   runId: string | null;
   readOnly?: boolean;
   assistant?: boolean;
+  testRun?: boolean;
   actions?: SparkActionHooks;
   observations?: RunObservations | undefined;
   publish?: PublishScope | null | undefined;

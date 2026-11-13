@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   crewSlugSchema,
   saveWorkflowSchema,
+  startSparkTestRunSchema,
   startWorkflowRunSchema,
 } from '@spark-outpost/contracts';
 import { resolveRunTarget } from '../api/run-target.ts';
@@ -11,7 +12,8 @@ import type { Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import { requestCancel } from '../persistence/runs.ts';
 import { getWorkflowRun, listWorkflowRuns } from './run-records.ts';
-import { startWorkflowRun } from './start-run.ts';
+import { SparkNotFoundError, startSparkTestRun, startWorkflowRun } from './start-run.ts';
+import { TestRunNotFoundError, discardTestRun, readTestRun } from './test-run.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
 import {
   WorkflowChangedError,
@@ -29,6 +31,8 @@ export interface WorkflowRouteDeps {
   workspaceId: string;
   fixedRunProvider?: string;
   workflows?: WorkflowStore;
+  chatFolders?: string;
+  deleteSettleMs?: number;
 }
 
 export class WorkflowRunNotFoundError extends Error {
@@ -38,7 +42,12 @@ export class WorkflowRunNotFoundError extends Error {
 }
 
 export function workflowErrorStatus(error: unknown): { status: number; message: string } | null {
-  if (error instanceof WorkflowNotFoundError || error instanceof WorkflowRunNotFoundError) {
+  if (
+    error instanceof WorkflowNotFoundError ||
+    error instanceof WorkflowRunNotFoundError ||
+    error instanceof TestRunNotFoundError ||
+    error instanceof SparkNotFoundError
+  ) {
     return { status: 404, message: error.message };
   }
   if (error instanceof WorkflowChangedError || error instanceof WorkflowExistsError) {
@@ -67,6 +76,15 @@ export function workflowRoutes(deps: WorkflowRouteDeps): Router {
   const store = deps.workflows ?? workflowStore();
   const router = Router();
   const sparkIds = () => workspaceSparkIds(db, workspaceId);
+  const runs = {
+    db,
+    workspaceId,
+    store,
+    runTarget: (conversationId: string) =>
+      resolveRunTarget({ db, workspaceId, fixedRunProvider }, conversationId),
+    chatFolders: deps.chatFolders,
+    deleteSettleMs: deps.deleteSettleMs,
+  };
 
   router.get('/workflows', async (_req, res) => {
     res.json({ workflows: await store.list(await sparkIds()) });
@@ -97,22 +115,31 @@ export function workflowRoutes(deps: WorkflowRouteDeps): Router {
   });
 
   router.post('/workflows/:id/runs', async (req, res) => {
-    const run = await startWorkflowRun(
-      {
-        db,
-        workspaceId,
-        store,
-        runTarget: (conversationId) =>
-          resolveRunTarget({ db, workspaceId, fixedRunProvider }, conversationId),
-      },
-      {
-        ...parseBody(startWorkflowRunSchema, req),
-        workflowId: workflowId(req),
-        messageId: messageId(req),
-        source: 'manual',
-      },
-    );
+    const run = await startWorkflowRun(runs, {
+      ...parseBody(startWorkflowRunSchema, req),
+      workflowId: workflowId(req),
+      messageId: messageId(req),
+      source: 'manual',
+    });
     res.status(201).json(run);
+  });
+
+  router.post('/teammates/:id/test-runs', async (req, res) => {
+    const run = await startSparkTestRun(runs, {
+      ...parseBody(startSparkTestRunSchema, req),
+      sparkId: paramId(req),
+      messageId: messageId(req),
+    });
+    res.status(201).json(run);
+  });
+
+  router.get('/workflow-runs/:id/test', async (req, res) => {
+    res.json(await readTestRun(runs, paramId(req)));
+  });
+
+  router.delete('/workflow-runs/:id', async (req, res) => {
+    await discardTestRun(runs, paramId(req));
+    res.status(204).end();
   });
 
   router.get('/workflow-runs/:id', async (req, res) => {

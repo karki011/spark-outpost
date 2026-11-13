@@ -287,6 +287,9 @@ GET /api/workflows/:id/runs
 POST /api/workflows/:id/runs
 GET /api/workflow-runs/:id
 POST /api/workflow-runs/:id/stop
+GET /api/workflow-runs/:id/test
+DELETE /api/workflow-runs/:id
+POST /api/teammates/:id/test-runs
 GET /api/teammates/:id/folder
 GET /api/teammates/:id/files
 PUT /api/teammates/:id/files

@@ -218,12 +218,11 @@ describe('workflow runs', () => {
     await client.send('post', `/api/workflow-runs/${id}/stop`).expect(200);
   }, 90_000);
 
-  it('answers 404 for a workflow or a run that does not exist, and refuses a test run', async () => {
+  it('answers 404 for a workflow or a run that does not exist', async () => {
     await savedFlow();
     await client.send('post', '/api/workflows/missing/runs', {}).expect(404);
     await client.get(`/api/workflow-runs/${randomUUID()}`).expect(404);
     await client.send('post', `/api/workflow-runs/${randomUUID()}/stop`).expect(404);
-    await client.send('post', '/api/workflows/release-check/runs', { kind: 'test' }).expect(400);
     await client
       .send('post', '/api/workflows/release-check/runs', { conversationId: randomUUID() })
       .expect(404);
@@ -239,6 +238,9 @@ describe('workflow runs', () => {
       'POST /api/workflows/:id/runs',
       'GET /api/workflow-runs/:id',
       'POST /api/workflow-runs/:id/stop',
+      'GET /api/workflow-runs/:id/test',
+      'DELETE /api/workflow-runs/:id',
+      'POST /api/teammates/:id/test-runs',
     ];
     for (const route of routes) expect(ROUTE_RULES.get(route), route).toBe('never');
   });

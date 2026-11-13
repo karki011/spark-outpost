@@ -1,0 +1,151 @@
+.wf-test {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.wf-test-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.wf-test-end {
+  margin-left: auto;
+}
+
+.wf-test-title {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.wf-test-progress {
+  color: var(--text);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wf-test-start {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 520px;
+  padding: 16px;
+}
+
+.wf-try .wf-test-start {
+  padding: 0;
+}
+
+.wf-test-message {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+}
+
+.wf-test-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wf-test-body {
+  flex-wrap: wrap;
+}
+
+.wf-test-side {
+  flex: 1 1 320px;
+}
+
+.wf-test-body > .wf-canvas {
+  flex: 2 1 360px;
+}
+
+.wf-test-steps,
+.wf-test-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wf-test-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wf-test-step > b {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-test-step[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.wf-test-step:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.wf-test-held,
+.wf-test-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  font-size: 12.5px;
+}
+
+.wf-test-card {
+  border-color: var(--accent);
+}
+
+.wf-test-card code,
+.wf-test-summary {
+  overflow-wrap: anywhere;
+}
+
+.wf-test-out {
+  max-height: 320px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  font-size: 12.5px;
+  line-height: 1.5;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.wf-test-out:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

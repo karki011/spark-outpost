@@ -14,6 +14,7 @@ import { requestTeammateDelete } from '../teammates/teammate-store.ts';
 import { teammateKeys, teammatesApi } from '../teammates/teammates-api.ts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { CheckIcon, LaptopIcon } from '../ui/icons.tsx';
+import { TrySpark } from '../crew-flows/TrySpark.tsx';
 import { useAgentLine } from './SparkCard.tsx';
 
 interface SparkDetailsProps {
@@ -43,53 +44,58 @@ export function SparkDetails({ spark, onInstructions, onDeleted }: SparkDetailsP
   };
   const shownProblem = (touched && problem) || save.error?.message;
   return (
-    <form className="spk-details" onSubmit={submit} noValidate>
-      <TeammateFields
-        draft={draft}
-        nameInvalid={touched && !draft.name.trim()}
-        onChange={(next) => {
-          save.reset();
-          setDraft(next);
-        }}
-      />
-      <div className="field">
-        <span>Instructions</span>
-        <p className="spk-hint">
-          Kept in SPARK.md in this Spark’s folder, with no length limit, and added to every chat
-          with it.
-        </p>
-        <button type="button" className="btn line sm spk-start" onClick={onInstructions}>
-          Edit instructions
-        </button>
-      </div>
-      <div className="spk-details-acts">
-        {shownProblem && (
-          <p className="spk-problem" role="alert">
-            {shownProblem}
-          </p>
-        )}
-        {save.isSuccess && unchanged && (
-          <span className="spk-state" role="status">
-            <CheckIcon /> Saved
-          </span>
-        )}
-        <button type="submit" className="btn primary sm" disabled={save.isPending || unchanged}>
-          Save
-        </button>
-      </div>
-      <div className="tm-danger">
-        <HoldToConfirm
-          label={`Hold to delete ${spark.name}`}
-          hint="Its chats stay and lose the link. You get 10 seconds to undo."
-          holdingHint="Keep holding. Let go now to cancel."
-          releasedHint="Released early. Nothing happened."
-          onConfirm={() => {
-            requestTeammateDelete({ id: spark.id, name: spark.name });
-            onDeleted();
+    <>
+      <form className="spk-details" onSubmit={submit} noValidate>
+        <TeammateFields
+          draft={draft}
+          nameInvalid={touched && !draft.name.trim()}
+          onChange={(next) => {
+            save.reset();
+            setDraft(next);
           }}
         />
-      </div>
-    </form>
+        <div className="field">
+          <span>Instructions</span>
+          <p className="spk-hint">
+            Kept in SPARK.md in this Spark’s folder, with no length limit, and added to every chat
+            with it.
+          </p>
+          <button type="button" className="btn line sm spk-start" onClick={onInstructions}>
+            Edit instructions
+          </button>
+        </div>
+        <div className="spk-details-acts">
+          {shownProblem && (
+            <p className="spk-problem" role="alert">
+              {shownProblem}
+            </p>
+          )}
+          {save.isSuccess && unchanged && (
+            <span className="spk-state" role="status">
+              <CheckIcon /> Saved
+            </span>
+          )}
+          <button type="submit" className="btn primary sm" disabled={save.isPending || unchanged}>
+            Save
+          </button>
+        </div>
+        <div className="tm-danger">
+          <HoldToConfirm
+            label={`Hold to delete ${spark.name}`}
+            hint="Its chats stay and lose the link. You get 10 seconds to undo."
+            holdingHint="Keep holding. Let go now to cancel."
+            releasedHint="Released early. Nothing happened."
+            onConfirm={() => {
+              requestTeammateDelete({ id: spark.id, name: spark.name });
+              onDeleted();
+            }}
+          />
+        </div>
+      </form>
+      <section className="spk-details spk-try" aria-label="Try it">
+        <TrySpark key={spark.id} spark={spark} />
+      </section>
+    </>
   );
 }
 

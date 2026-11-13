@@ -57,6 +57,7 @@ export interface RunInput {
   sparkRuleRetry?: boolean;
   assistantSent?: boolean;
   workflowStep?: boolean;
+  testRun?: boolean;
   outpostRequest?: OutpostRequest | null;
   turnTimes?: TurnTimes | null;
   agentCycle?: boolean;
@@ -120,6 +121,7 @@ interface RunRow extends OutpostRow {
   spark_rule_retry: boolean | null;
   assistant_sent: boolean | null;
   workflow_step: boolean | null;
+  test_run: boolean | null;
   started_at: Date;
   previous_started_at: Date | null;
   agent_mode: string | null;
@@ -219,6 +221,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
               IN ('assistant', 'workflow') OR COALESCE((r.route->'spark') ? 'step', false))
               AS assistant_sent,
             COALESCE((r.route->'spark') ? 'step', false) AS workflow_step,
+            COALESCE((r.route->'spark'->>'test')::boolean, false) AS test_run,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'outpost' AS outpost_run,
             op.from_user AS outpost_from_user, o.name AS outpost_name,
@@ -444,6 +447,7 @@ function childInput(runId: string, row: RunRow): RunInput {
     assistantSent: row.assistant_sent === true,
     outpostRequest: outpostRequestOf(row, row.user_message_id),
     workflowStep: row.workflow_step === true,
+    testRun: row.test_run === true,
     role: row.run_role,
     askTitle: false,
     previousMessageId: null,

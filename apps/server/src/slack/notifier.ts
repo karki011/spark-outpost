@@ -82,7 +82,8 @@ export async function chatOf(
        SELECT p.name FROM conversation_projects cp JOIN projects p ON p.id = cp.project_id
        WHERE cp.conversation_id = c.id ORDER BY cp.position LIMIT 1
      ) AS project
-     FROM conversations c WHERE c.id = $1 AND c.workspace_id = $2 AND c.kind <> 'digest'`,
+     FROM conversations c WHERE c.id = $1 AND c.workspace_id = $2
+       AND c.kind NOT IN ('digest', 'crew')`,
     [conversationId, deps.workspaceId],
   );
   if (!rows[0]) return null;

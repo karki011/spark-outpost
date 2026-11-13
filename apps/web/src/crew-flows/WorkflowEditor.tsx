@@ -8,9 +8,11 @@ import {
   type WorkflowStep,
 } from '@spark-outpost/contracts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
-import { BackIcon, CheckIcon, EyeIcon, ResumeIcon, WarnIcon } from '../ui/icons.tsx';
+import { BackIcon, CheckIcon, EyeIcon, ResumeIcon, ShieldIcon, WarnIcon } from '../ui/icons.tsx';
 import type { CrewSpark } from './spark-lookup.ts';
 import { StageList } from './StageList.tsx';
+import { testRunApi } from './test-run-api.ts';
+import { TestRun } from './TestRun.tsx';
 import { useDeleteWorkflow, useSaveWorkflow, useStartWorkflowRun } from './use-workflows.ts';
 import { WorkflowPreview } from './WorkflowPreview.tsx';
 import { stepLabels, updateStep } from './workflow-model.ts';
@@ -52,6 +54,8 @@ export function WorkflowEditor({
   );
   const [previewing, setPreviewing] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [ranForReal, setRanForReal] = useState(false);
   const save = useSaveWorkflow();
   const remove = useDeleteWorkflow();
   const run = useStartWorkflowRun();
@@ -82,6 +86,31 @@ export function WorkflowEditor({
   };
   const error = save.error ?? remove.error ?? run.error;
 
+  if (testing) {
+    return (
+      <section className="wf-editor" aria-label={`Workflow ${name.trim() || 'without a name'}`}>
+        <TestRun
+          name={name.trim()}
+          steps={steps}
+          labels={labels}
+          sparkById={sparkById}
+          form={{
+            title: `Test run of ${name.trim()}`,
+            hint: 'Real agents run every step on a throw-away copy of a project. Nothing is pushed, posted or saved.',
+            placeholder: 'Review the last commit.',
+            submitLabel: 'Start test run',
+          }}
+          start={(start) => testRunApi.startWorkflow(initial.id, start)}
+          runForReal={(start) => testRunApi.runForReal(initial.id, start)}
+          onClose={(real) => {
+            setRanForReal(real);
+            setTesting(false);
+          }}
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="wf-editor" aria-label={`Workflow ${name.trim() || 'without a name'}`}>
       <header className="wf-bar">
@@ -105,13 +134,13 @@ export function WorkflowEditor({
           {count(steps.length, 'step')} · {count(stages, 'stage')}
         </span>
         <span className="wf-bar-status" role="status">
-          {run.isSuccess && !dirty && (
+          {(run.isSuccess || ranForReal) && !dirty && (
             <span className="wf-state" data-state="succeeded">
               <CheckIcon className="wf-state-ic" />
               Started
             </span>
           )}
-          {!dirty && saved !== null && !run.isSuccess && (
+          {!dirty && saved !== null && !run.isSuccess && !ranForReal && (
             <span className="wf-state" data-state="succeeded">
               <CheckIcon className="wf-state-ic" />
               Saved
@@ -138,6 +167,16 @@ export function WorkflowEditor({
             onClick={onSave}
           >
             Save
+          </button>
+          <button
+            type="button"
+            className="btn line sm"
+            disabled={blocked !== null || dirty}
+            title={dirty ? 'Save before a test run' : undefined}
+            onClick={() => setTesting(true)}
+          >
+            <ShieldIcon />
+            Test run
           </button>
           <button
             type="button"

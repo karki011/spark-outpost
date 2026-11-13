@@ -75,7 +75,7 @@ import { generateVapidKeys, webPushSend } from '../remote/push-send.ts';
 import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { startSlackSocket } from '../slack/socket.ts';
 import { armShutdownWatchdog, runShutdownSteps } from './shutdown-steps.ts';
-import { schedulePrune, type PruneSchedule } from './startup-prune.ts';
+import { schedulePrune, sweepAtStart, type PruneSchedule } from './startup-prune.ts';
 import { cloneJobsFor } from './project-clone-routes.ts';
 import { connectDesktopBrowser } from '../browser/host-client.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
@@ -419,14 +419,16 @@ const weekRecap = config.WEEK_RECAP ? startWeekRecap(db, workspaceId) : null;
 let pruneSchedule: PruneSchedule | null = null;
 const server = app.listen(config.API_PORT, config.API_HOST, () => {
   console.log(`API listening on http://${config.API_HOST}:${config.API_PORT}`);
-  pruneSchedule = schedulePrune({
+  const pruning = {
     db,
     workspaceId,
     auditRetentionDays: config.AUDIT_RETENTION_DAYS,
     chatFolders,
     researchCopies,
     sparkFolders: crewSparksDir(),
-  });
+  };
+  void sweepAtStart(pruning);
+  pruneSchedule = schedulePrune(pruning);
   void slackSocket.refresh();
   outposts.start();
   reconcileRemote().catch((error: unknown) => {
