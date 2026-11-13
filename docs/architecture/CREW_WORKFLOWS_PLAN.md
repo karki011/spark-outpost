@@ -1,6 +1,6 @@
 # Crew and workflows: build plan
 
-> **Status: Wave 0 (shared contracts) and stream D (workflow engine) built; nothing else.** Agreed in a planning session on 2026-11-12. This changes `docs/product/PLAN.md` §17, which defers "a visual workflow builder": the owner has asked for it. That line is updated.
+> **Status: Wave 0 (shared contracts), the Relay removal, stream D (workflow engine) and stream E (workflow editor, not mounted) are merged on `crew-workflows-foundation`; A and B are in progress.** Agreed in a planning session on 2026-11-12. This changes `docs/product/PLAN.md` §17, which defers "a visual workflow builder": the owner has asked for it. That line is updated.
 
 Mocks for every screen: `docs/design/mocks/crew-workflows-mock.html` (15 screens, ids `g h i d j k a b l m c f e n o` in flow order). They are sketches, not built from app components.
 
@@ -171,6 +171,50 @@ Unverified:
 - **A message from a paired device** that names a workflow: the refusal line is not covered by a test.
 - **Browser specs:** `approvals.spec.ts` passes. `sparks.spec.ts` and `spark-mention.spec.ts` could not be judged on 2026-11-13: the shared browser test database already had the Relay removal applied (`teammates.kind` is gone), so `GET /api/teammates` fails there on this branch before any workflow code runs. Run them again after the Relay removal is merged in.
 - **`truncate.db.test.ts`** ("retries a statement that loses a deadlock once") fails on this machine with and without migration `0247`; the rest of `pnpm test:db` passes.
+
+### Stream E: workflow editor (built, not mounted)
+
+Built in `apps/web/src/crew-flows/` on 2026-11-13. Nothing in the app shows it yet; stream B mounts it.
+
+**What is there**
+
+- `WorkflowsPanel` (no props): the whole Workflows tab. It shows the list (name, step and stage counts, a stage preview with side-by-side Sparks stacked, a problem count, **Edit**, **Run**), the empty state with up to three suggestions built from the first four Sparks (**Side by side**, **One after another**, **Then <last Spark> wraps up**), **New workflow** (name, Blank or a suggestion), the editor and Preview.
+- Editor: stages on the left, a read-only graph on the right (`FlowGraph`, React Flow, laid out by dagre in a worker, loaded as its own chunk). A step has move to an earlier or later stage, remove, and details: its Spark, **Runs after** (any other steps), **Start when** (all or any, shown with two or more parents), **If it fails** (Stop workflow or Continue) and an extra prompt. `workflowProblems` shows under the step it names; **Save**, **Preview** and **Run** are off while there is one. **Run** is also off until the workflow is saved. A saved workflow has hold to delete.
+- Preview: `previewWorkflow` only, no request. Step back, Play and step forward over the rounds, **Pretend this fails** per step, the result in words (what stopped, what did not start, what still finished) and **Change <step> to Continue**.
+- Stage rules of the list editor (`workflow-model.ts`): a Spark added to a stage runs after everything in the stage before it; moving earlier makes it run beside the stage before; moving later hands its followers its own parents, then runs it after the rest of its stage (or after the next stage when it was alone). Removing a step hands its parents to its followers. None of these can make a loop; ticking **Runs after** by hand can, and the check reports it.
+- The worker hook is shared with the Map: `apps/web/src/map/tree/use-worker-layout.ts`, used by `use-tree-layout.ts` and `crew-flows/use-flow-layout.ts`. The Map's own layout (`tree-layout.ts`) is not reused: it keeps at most two links per node, which drops workflow edges.
+
+**Routes the client calls** (D had no routes section when E started; `workflows-api.ts` is the only file that names them, and the same table is in the shared notes folder for D)
+
+| Call      | Route                          | Body                                      | Reply                                                                     |
+| --------- | ------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------- |
+| List      | `GET /api/workflows`           |                                           | `{ workflows: WorkflowSummary[] }` (the wrapper is defined in the client) |
+| Get       | `GET /api/workflows/:id`       |                                           | `WorkflowFile`                                                            |
+| Save      | `PUT /api/workflows/:id`       | `SaveWorkflow` (`baseHash` null = create) | `WorkflowFile`; 409 with `{ error }` when the hash is stale               |
+| Delete    | `DELETE /api/workflows/:id`    |                                           | `null`                                                                    |
+| Start run | `POST /api/workflows/:id/runs` | `{}` (`StartWorkflowRun` defaults)        | `WorkflowRun`                                                             |
+
+The client picks a new workflow's id (`crewSlug(name)`, made unique against the list). Run only calls start and shows **Started**; the run view is stream E2.
+
+**How B mounts it**
+
+Render `<WorkflowsPanel />` as the body of the Workflows tab, inside the page's `main.main` (its narrow layout uses the `main` container query). `App.tsx` already loads `ui/controls.css`, which it needs. `useWorkflows()` from `use-workflows.ts` gives the count for the tab. Then delete the stand-in page (`apps/web/crew-flows-preview.html`, `apps/web/src/crew-flows/harness/`, its `knip.json` entry), point `PANEL_PATH` in `tests/browser/crew-flows-kit.ts` at the real page, and remove the spec's skip for production builds.
+
+**Tests**
+
+- Unit: `workflow-model.test.ts` (adding, moving between stages, parents, remove, the stage preview, labels, suggestions), `preview-model.test.ts`, `flow-layout.test.ts`.
+- Browser: `tests/browser/crew-flows.spec.ts` (group `crew-flows`): create from the empty state, a suggestion as an unsaved draft, a loop shown inline and Save blocked, save with the opened hash, a deleted Spark, a stale save, delete, Preview with a pretend failure and no request, and one pass with the keyboard alone. It runs against the dev server's stand-in page with the workflow routes faked in the browser (`crew-flows-kit.ts`) and real Sparks from `/api/teammates`. axe runs on the empty state, New workflow, the editor, the list and Preview. Screenshots in light and dark are written to `test-results/crew-flows/`.
+- Ran on 2026-11-13: `pnpm check` (passes), and `crew-flows`, the four `project-map` specs and `lazy-ui` in the browser (35 passed, 1 skipped). `pnpm test:browser:changed` and `pnpm test:db:changed` were not run to the end: both select every test, because the local `main` is behind this branch's base and `tests/browser/spec-map.ts` is a run-everything file. This stream changes no server code.
+
+**Unverified or left out**
+
+- Never run against stream D's real routes: the route paths, the list wrapper, the 409 reply and the delete reply are E's assumptions until D lands.
+- Not run in the Mac app or on a paired device, and not checked with VoiceOver. The spec is skipped for production and packaged builds because the stand-in page exists only on the dev server.
+- The list has no last-run line or run status (mocks `e`); there is no run history to read yet. **Describe it** (mock `k`), the List and Canvas switch and **Test run** belong to later streams.
+- No text says a workflow can be started with `@name` in a chat; add it when D's mention exists.
+- No guide page and no `whats-new.md` row: nothing is reachable by a user until B mounts the tab. Whoever mounts it adds both.
+- The graph is a picture for the list beside it (`role="figure"`, nodes not focusable); every action is in the list. A workflow whose steps wait on each other still draws, with the loop edge drawn badly.
+- **New workflow**'s **Start from** options are each a Tab stop (`RadioRow` has no roving tab index); arrow keys also move between them.
 
 ### Wave 2 (four in parallel)
 
