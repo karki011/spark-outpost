@@ -70,10 +70,11 @@ export interface PlanningFacts {
   provider: string;
   mode: RunMode | null;
   userRequest: string;
+  workflowStep?: boolean;
 }
 
 export function plansThisTurn(facts: PlanningFacts): boolean {
   if (facts.planning !== undefined) return facts.planning;
-  if (facts.mode !== 'ask') return false;
+  if (facts.mode !== 'ask' || facts.workflowStep) return false;
   return modeForLegacy(facts.provider, PERMISSION_ASK, null) === PLAN_MODE_ID;
 }

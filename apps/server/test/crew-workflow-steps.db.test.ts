@@ -22,6 +22,7 @@ import {
 import { createTestDb, startChat, type TestDb } from './support.ts';
 import {
   allowOnce,
+  auditOf,
   driveToEnd,
   gitRepo,
   openChat,
@@ -58,6 +59,27 @@ async function runFlow(text: string, chat: { permission?: 'ask' | 'do'; agentMod
   return { runId, asked, record: await recordOf(t, runId) };
 }
 
+interface SentRequest {
+  params: {
+    value?: string;
+    modeId?: string;
+    _meta?: { claudeCode: { options: { tools: string[]; settings: Record<string, unknown> } } };
+  };
+}
+
+async function stepSession(stepRunId: string) {
+  const audit = await auditOf(t, stepRunId);
+  const sent = audit.filter((entry) => entry.direction === 'to_agent');
+  const opened = sent.find((entry) => entry.method === 'session/new')?.payload as SentRequest;
+  return {
+    options: opened.params._meta!.claudeCode.options,
+    chosen: sent
+      .filter((entry) => entry.method?.includes('set_'))
+      .map((entry) => (entry.payload as SentRequest).params)
+      .map((params) => params.value ?? params.modeId),
+  };
+}
+
 describe('commands in a workflow step', () => {
   it('asks with an ordinary card when the step’s mode asks', async () => {
     const pip = await newSpark(t, 'Pip');
@@ -84,6 +106,23 @@ describe('commands in a workflow step', () => {
       [runId],
     );
     expect(rows).toEqual([{ agent_mode: 'bypassPermissions', mode: 'ask' }]);
+  }, 90_000);
+
+  it('opens the step’s session outside Plan mode, on the Spark’s model, with no way round the gate', async () => {
+    const bolt = await newSpark(t, 'Bolt', { provider: 'claude', model: 'haiku' });
+    await saveFlow(t, 'probe', [step('ping', bolt.id, { prompt: 'Check the site. #command' })]);
+
+    const { record, runId } = await runFlow('@probe go');
+
+    expect((await getRun(t.db, runId))?.model).toBe('sonnet');
+    const stepRunId = record!.steps[0]!.runId!;
+    const { options, chosen } = await stepSession(stepRunId);
+    expect((await getRun(t.db, stepRunId))?.model).toBe('haiku');
+    expect(chosen).toEqual(['read-only']);
+    expect(options.tools).toContain('Bash');
+    expect(options.tools).not.toContain('Write');
+    expect(options.tools).not.toContain('ExitPlanMode');
+    expect(options.settings.permissions).not.toHaveProperty('allow');
   }, 90_000);
 
   it('refuses a file change in every mode, in a chat that may change files', async () => {

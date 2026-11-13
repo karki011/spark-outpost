@@ -114,6 +114,7 @@ B and E build against the Wave 0 shapes with a fake API until A and D land.
 - Every other command (a script, a test runner, `curl`) follows the step's own agent mode: at once in Auto, Bypass permissions, Auto review and Full access, an ordinary approval card otherwise. The card is mirrored into the chat like any child run's card.
 - The step's agent mode is the Spark's own mode when the step runs on the Spark's provider, otherwise the chat's mode translated to the provider in use (`insertChildRun` gets an optional `agentMode`). The chat's mode and autonomy level are not consulted, which differs from a top-level Ask turn (`askTurnAutoWhy`).
 - The provider session is the Ask session: no write tools are offered, so the gate sees every command, including in modes that hide commands from Spark in a Do turn.
+- A step's Claude session stays in Claude's Manual mode (`default`) and is never put in Plan mode, whatever the Spark's mode is (`plansThisTurn` is false for a step). The Spark's mode is applied by Spark's gate, not by Claude. Plan mode would let Claude approve commands itself and would move Haiku to Sonnet; see "Found by the real-agent test" below.
 
 **Why this and not a Do child run:** a Do run offers the agent its edit tools and, in several modes, runs shell commands without sending Spark a request. Keeping project files unchanged there would need new rules. The Ask gate already refuses every change it can read, in every mode, and is covered by `approvals/decide-ask-run.test.ts`.
 
@@ -162,15 +163,26 @@ Not built here: Test run (F), schedules and the `schedule` and `catch_up` source
 
 Unverified:
 
-- **No real agent has run a step.** Every test uses the fake ACP agent. The gate decisions for a step were checked against `decide()`, and the fake agent's permission request shows a card in a mode that asks, runs at once in the Spark's Bypass mode and is refused for a file change, but a real Claude or Codex Ask session inside a step has not been tried. `pnpm test:live` was not run.
+- **A real Claude has run a step** (`apps/server/test/crew-workflow.live.test.ts`, see below). A real Codex step has not been tried.
 - **Codex steps.** The Codex Ask session's own sandbox was not exercised for a step.
-- **Scripts in a Spark folder** (stream A) live outside the project. A step reading or running them has not been tried; the gate refuses reads outside the project today.
 - **A chat with no project** runs steps as `chat` with no tools; the private chat folder is not given to a step.
 - **Worker death mid-run** was tested by expiring leases in the database, not by killing a worker process.
 - **The run view and the editor** have not called these routes.
 - **A message from a paired device** that names a workflow: the refusal line is not covered by a test.
 - **Browser specs:** `approvals.spec.ts` passes. `sparks.spec.ts` and `spark-mention.spec.ts` could not be judged on 2026-11-13: the shared browser test database already had the Relay removal applied (`teammates.kind` is gone), so `GET /api/teammates` fails there on this branch before any workflow code runs. Run them again after the Relay removal is merged in.
 - **`truncate.db.test.ts`** ("retries a statement that loses a deadlock once") fails on this machine with and without migration `0247`; the rest of `pnpm test:db` passes.
+
+### Found by the real-agent test (2026-11-13)
+
+`apps/server/test/crew-workflow.live.test.ts` runs workflow steps on the installed Claude, with a Spark folder outside the temp folders. It found:
+
+1. **A step in a mode that asks ran a skill script with no card.** Spark ran every Claude Ask session, a step's included, in Claude's Plan mode. On an account where Claude's Auto mode is available, Plan mode uses Auto mode's classifier by default (`useAutoModeDuringPlan`), so Claude approved the command itself and sent Spark no permission request. The audit showed the `Bash` call and no `session/request_permission`. Fixed twice over: a step no longer runs in Plan mode, and every Claude session that is not a Do session is sent `useAutoModeDuringPlan: false`. With either change alone the live run shows `session/request_permission` ("This command requires approval") and an ordinary `execute` card on the step's run.
+2. **Top-level Claude Ask turns very likely have the same gap**, since they use the same session settings and Plan mode; this was concluded from the identical configuration, not from a live run. It is not changed here. Sending `useAutoModeDuringPlan: false` to every non-Do Claude session would close it, and would make more cards appear in every chat whose mode asks; that is a change to all chats, so it waits for the owner's decision (the one-line patch is kept in `.local/held-patches/`). A Do session in Plan mode has the same classifier behaviour before plan approval.
+3. **A step ran on Sonnet when Haiku was picked.** `pickFor` passed the right model and Claude accepted it; Claude Code itself runs Haiku sessions on Sonnet while in Plan mode. Out of Plan mode a step runs on the model picked: the Spark's own when its provider is connected and in use, otherwise the chat's. A top-level Claude Ask turn on Haiku still runs on Sonnet, because it is still in Plan mode.
+4. **A step read another Spark's `SPARK.md` with `cat`** in the Spark's Bypass mode: a command that only reads follows the mode, also outside the project. Not changed here; the owner is deciding the rule. The live scenario for it now depends on the model: Haiku declined to make the calls in two runs, so its pass is not evidence that the read is refused.
+5. **The fake-agent tests cannot see folder isolation**: their default `SPARK_CREW_DIR` (`vitest.config.ts`) is under the temp folder, which every session may read and scripts may write. Not changed here: moving it needs a place outside the temp folders that is cleaned after each run.
+
+After the fix, live results: a script runs at once in the Spark's Bypass mode through the gate (`decided_by: level`), shows a card in Manual and succeeds once allowed, and steps run on Haiku. A step changed no file in its Spark folder (refused by Claude's deny rules) or in the project (refused by the gate).
 
 ### Stream E: workflow editor (built, not mounted)
 
@@ -357,4 +369,4 @@ None of this depends on the user's rules file. The rest of Spark's data folder i
 
 ### Verified and not
 
-Verified by tests: the store (path escapes, links, size and count limits, hash conflicts, non-UTF-8, delete), the move (repeat, half-done, unwritable folder, external file), the routes and their remote rules, the brief with and without skills, the gate's read allowance and write refusals, and the Claude and Codex configuration Spark builds. **Not verified:** no real Claude or Codex run was made. That Claude honours `additionalDirectories` for reads of the folder, that its `Edit` deny rules stop writes there in Bypass permissions, and that Codex accepts a `read` entry for an absolute path under `:root = write` are taken from how the rules file and temp folders are configured today, not observed.
+Verified by tests: the store (path escapes, links, size and count limits, hash conflicts, non-UTF-8, delete), the move (repeat, half-done, unwritable folder, external file), the routes and their remote rules, the brief with and without skills, the gate's read allowance and write refusals, and the Claude and Codex configuration Spark builds. **Observed with a real Claude (2026-11-13, see "Found by the real-agent test"):** a step reads `SKILL.md` in its Spark's folder without a card, a script run from the folder is judged like any command, and Claude's `Edit` deny rules stop a write to `SPARK.md` in Bypass permissions, by the edit tool and by a shell redirect. **Not verified:** no real Codex run was made; that Codex accepts a `read` entry for an absolute path under `:root = write` is taken from how the rules file and temp folders are configured today, not observed.

@@ -62,6 +62,11 @@ describe('which turns plan in the native plan mode (B5)', () => {
     expect(plansThisTurn({ ...ask, provider: 'claude', planning: false })).toBe(false);
     expect(plansThisTurn({ ...ask, provider: 'codex', planning: true })).toBe(true);
   });
+
+  it('never plans a workflow step, so Claude keeps the step’s model and asks for commands', () => {
+    expect(plansThisTurn({ ...ask, provider: 'claude', workflowStep: true })).toBe(false);
+    expect(plansThisTurn({ ...ask, provider: 'claude', workflowStep: false })).toBe(true);
+  });
 });
 
 describe('planFileText', () => {
