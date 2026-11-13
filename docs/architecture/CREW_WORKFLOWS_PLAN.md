@@ -1,6 +1,6 @@
 # Crew and workflows: build plan
 
-> **Status: Wave 0 (shared contracts), the Relay removal, streams A (Spark folders), B (Sparks page), D (workflow engine) and E (workflow editor) are merged on `crew-workflows-foundation`. Wave 2 is in progress; stream C (agent tools) is built on `claude/crew-tools-3b7b9a`.** Agreed in a planning session on 2026-11-12. This changes `docs/product/PLAN.md` §17, which defers "a visual workflow builder": the owner has asked for it. That line is updated.
+> **Status: Waves 0 to 3 except stream I (canvas editing) are merged on `crew-workflows-foundation`: Wave 0, the Relay removal, streams A, B, D, E, E2, C, F, G and H. `AGENTS.md` has its integration pass (one Sparks and workflows paragraph, the always-a-card rule for the Spark tools, `spark_crew_edit` in Ask Spark's excluded list, the Spark and workflow card among those Ask Spark never answers, and the folder write refusal among the fixed rules).** Agreed in a planning session on 2026-11-12. This changes `docs/product/PLAN.md` §17, which defers "a visual workflow builder": the owner has asked for it. That line is updated.
 
 Mocks for every screen: `docs/design/mocks/crew-workflows-mock.html` (15 screens, ids `g h i d j k a b l m c f e n o` in flow order). They are sketches, not built from app components.
 
