@@ -27,14 +27,13 @@ import { closeChatMenu, headerPaneItem, openChatMenu } from './header-menu.ts';
 test.describe.configure({ timeout: 120_000 });
 
 const PRIMARY = ['Home', 'Chats', 'Analytics', 'Tickets', 'Docs'];
-const UNDER_MORE = ['Remote control'];
+const UNDER_MORE = ['Sparks', 'Remote control'];
 const SECTIONS = [
   'Profile & personality',
   'Spark assistant',
   'Appearance',
   'AI providers',
   'Models',
-  'Crew',
   'Usage',
   'Projects',
   'Chats & autonomy',
@@ -235,7 +234,7 @@ test('phone landscape with a mouse-sized window keeps the desktop shell', async 
   await expect(navButton(page, 'More')).toHaveCount(0);
 });
 
-test('the desktop rail keeps all ten entries', async ({ page }) => {
+test('the desktop rail keeps all eleven entries', async ({ page }) => {
   await page.setViewportSize(DESKTOP);
   await page.goto('/');
   await expect(mainNav(page).locator('.rail-btn')).toHaveText([
@@ -244,6 +243,7 @@ test('the desktop rail keeps all ten entries', async ({ page }) => {
     /^Today/,
     /^Analytics/,
     /^Tickets/,
+    /^Sparks/,
     /^Map/,
     /^Docs/,
     /^Pause$/,

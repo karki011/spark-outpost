@@ -54,7 +54,6 @@ test('the sections sit under six groups, each tab described by its group', async
     'Appearance',
     /^AI providers/,
     'Models',
-    'Crew',
     'Usage',
     'Projects',
     'Chats & autonomy',

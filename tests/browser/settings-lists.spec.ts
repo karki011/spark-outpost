@@ -90,19 +90,6 @@ async function inEveryTheme(page: Page, screen: string) {
 const row = (dialog: Locator, name: string) =>
   dialog.getByRole('button', { name: new RegExp(`^${name}\\b`) });
 
-test('Settings names the teammates section Crew under Agents', async ({ page }) => {
-  await resetTestDatabase({ onboarded: true });
-  const dialog = await openSection(page, 'Crew');
-  const crew = dialog.getByRole('tablist', { name: 'Settings sections' }).getByRole('tab', {
-    name: 'Crew',
-  });
-  await expect(crew).toHaveAccessibleDescription('Agents');
-  await expect(dialog.getByRole('tab', { name: 'Sparks' })).toHaveCount(0);
-  const teammates = page.getByRole('dialog', { name: 'Crew' });
-  await expect(teammates.getByRole('heading', { name: 'Crew' })).toBeVisible();
-  await expect(teammates.getByRole('button', { name: 'New Spark' })).toBeVisible();
-});
-
 test('fifteen projects fit a compact list that filters and opens one at a time', async ({
   page,
 }) => {
@@ -237,7 +224,6 @@ test('settings cards have no outer border and the last provider row follows the 
   for (const [tab, card] of [
     ['Appearance', '.tcard'],
     ['Reset', '.reset-list'],
-    ['Crew', '.tm-starter'],
   ] as const) {
     await page.getByRole('dialog').getByRole('tab', { name: tab }).click();
     const first = page.getByRole('dialog', { name: tab }).locator(card).first();

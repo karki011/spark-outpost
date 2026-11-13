@@ -189,7 +189,14 @@ export const SPEC_GROUPS = {
     'tickets-rows',
   ],
   slack: ['slack-chat', 'slack-settings', 'slack-sign-in'],
-  sparks: ['spark-actions', 'spark-decisions', 'spark-mention', 'spark-sheet', 'sparks'],
+  sparks: [
+    'spark-actions',
+    'spark-decisions',
+    'spark-mention',
+    'spark-sheet',
+    'sparks',
+    'sparks-page',
+  ],
   'settings-providers': [
     'agent-instructions',
     'keychain-notice',
@@ -399,6 +406,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/ship/', groups: ['ship-pr'] },
   { prefix: 'apps/web/src/slack/', groups: ['slack'] },
   { prefix: 'apps/web/src/spark/', groups: ['sparks'] },
+  { prefix: 'apps/web/src/sparks-page/', groups: ['sparks'] },
   { prefix: 'apps/web/src/tasks/', groups: ['tasks'] },
   { prefix: 'apps/web/src/todo/', groups: ['tasks', 'chat'] },
   { prefix: 'apps/web/src/teammates/', groups: ['sparks', 'settings-providers'] },

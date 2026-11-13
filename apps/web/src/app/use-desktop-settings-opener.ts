@@ -4,6 +4,7 @@ import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import type { SettingsSection } from '../settings/section-ids.ts';
 import { requestSettingFocus } from '../settings/setting-focus.ts';
 import { SHOW_ISLAND_LABEL } from '../settings/setting-labels.ts';
+import { openSparksPage } from '../sparks-page/sparks-route.ts';
 import { openTeammateSheet } from '../teammates/teammate-store.ts';
 
 export function useDesktopSettingsOpener(setSettings: (section: SettingsSection) => void): void {
@@ -11,7 +12,7 @@ export function useDesktopSettingsOpener(setSettings: (section: SettingsSection)
     () =>
       sparkDesktop()?.onOpenSettings?.((target) => {
         if (target === 'sparks') {
-          setSettings('sparks');
+          openSparksPage();
           return;
         }
         if (target === 'connectors') {

@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { openSparksPage } from './crew-files-kit.ts';
 import { openChats } from './navigation.ts';
 import { animationsSettled } from './settle.ts';
 
@@ -210,42 +211,19 @@ test('edit a Spark, then hold to delete with Undo; its chats stay @packaged', as
   expect(chat.status()).toBe(200);
 });
 
-test('Settings lists Sparks and opens the same sheet', async ({ page }) => {
-  await addSpark(page, { name: 'Pip', role: 'Code reviewer' });
-  await openChats(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page
-    .getByRole('dialog', { name: 'Profile & personality' })
-    .getByRole('tab', { name: 'Crew' })
-    .click();
-  const section = page.getByRole('dialog', { name: 'Crew' });
-  await expect(section.getByRole('list', { name: 'Your Sparks' })).toContainText('Pip');
-  await section.getByRole('button', { name: 'Edit Pip' }).click();
-  await expect(sheet(page, 'Edit Pip')).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(sheet(page, 'Edit Pip')).toHaveCount(0);
-  await expect(section).toBeVisible();
-});
-
-test('Settings deletes a Spark with hold to delete and Undo @packaged', async ({ page }) => {
+test('the Sparks page deletes a Spark with hold to delete and Undo @packaged', async ({ page }) => {
   test.setTimeout(60_000);
   const id = await addSpark(page, { name: 'Pip', role: 'Code reviewer' });
   await addSpark(page, { name: 'Bolt', role: 'Bug fixer' });
   const opened = await page.request.post(`/api/teammates/${id}/home`, { data: {} });
   const { conversationId } = (await opened.json()) as { conversationId: string };
-  await openChats(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page
-    .getByRole('dialog', { name: 'Profile & personality' })
-    .getByRole('tab', { name: 'Crew' })
-    .click();
-  const section = page.getByRole('dialog', { name: 'Crew' });
+  await openSparksPage(page);
+  const section = page.locator('main.sparks');
   const list = section.getByRole('list', { name: 'Your Sparks' });
 
-  await list.getByRole('button', { name: 'Delete Pip' }).click();
-  const hold = sheet(page, 'Edit Pip').getByRole('button', { name: 'Hold to delete Pip' });
-  await expect(hold).toBeInViewport();
-  await expect(hold).toBeFocused();
+  await list.getByRole('button', { name: /^Open Pip\./ }).click();
+  const hold = section.getByRole('button', { name: 'Hold to delete Pip' });
+  await hold.focus();
   await page.keyboard.down('Space');
   await page.waitForTimeout(1_700);
   await page.keyboard.up('Space');
@@ -260,7 +238,7 @@ test('Settings deletes a Spark with hold to delete and Undo @packaged', async ({
       response.request().method() === 'DELETE' && response.url().endsWith(`/api/teammates/${id}`),
     { timeout: 20_000 },
   );
-  await list.getByRole('button', { name: 'Delete Pip' }).click();
+  await list.getByRole('button', { name: /^Open Pip\./ }).click();
   await holdToDelete(page, 'Pip');
   await expect(grace).toContainText('Deleting Pip');
   expect((await removed).status()).toBe(204);
@@ -280,16 +258,13 @@ test('a Spark that cannot be deleted comes back with the reason', async ({ page 
       ? route.fulfill({ status: 500, json: { error: 'The database is busy.' } })
       : route.continue(),
   );
-  await page.clock.install();
-  await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
-    .getByRole('tab', { name: 'Crew' })
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Sparks/ })
     .click();
-  const list = page
-    .getByRole('dialog', { name: 'Crew' })
-    .getByRole('list', { name: 'Your Sparks' });
-  await list.getByRole('button', { name: 'Delete Pip' }).click();
+  const list = page.locator('main.sparks').getByRole('list', { name: 'Your Sparks' });
+  await list.getByRole('button', { name: /^Open Pip\./ }).click();
+  await page.clock.install();
   const hold = page.getByRole('button', { name: 'Hold to delete Pip' });
   await hold.hover();
   await page.mouse.down();

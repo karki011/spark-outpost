@@ -17,7 +17,16 @@ import { PlanRing } from './PlanRing.tsx';
 import './rail.css';
 
 export type AppView =
-  'home' | 'chats' | 'browser' | 'today' | 'analytics' | 'tickets' | 'map' | 'docs' | 'phone';
+  | 'home'
+  | 'chats'
+  | 'browser'
+  | 'today'
+  | 'analytics'
+  | 'tickets'
+  | 'sparks'
+  | 'map'
+  | 'docs'
+  | 'phone';
 
 interface RailProps {
   view: AppView;
@@ -43,6 +52,14 @@ const ICON = {
   strokeLinejoin: 'round',
   'aria-hidden': true,
 } as const;
+
+const SPARKS_ICON = (
+  <svg {...ICON}>
+    <circle cx="9" cy="10" r="3.2" />
+    <path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6" />
+    <path d="M16 6.5c.3 1.6 1 2.3 2.6 2.6-1.6.3-2.3 1-2.6 2.6-.3-1.6-1-2.3-2.6-2.6 1.6-.3 2.3-1 2.6-2.6Z" />
+  </svg>
+);
 
 const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
   {
@@ -102,6 +119,11 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
     ),
   },
   {
+    id: 'sparks',
+    label: 'Sparks',
+    icon: SPARKS_ICON,
+  },
+  {
     id: 'map',
     label: 'Map',
     icon: (
@@ -127,7 +149,8 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
 ];
 
 const MAC_ONLY: ReadonlySet<AppView> = new Set(['browser', 'today']);
-const PHONE_VIEWS = VIEWS.filter((item) => item.id !== 'map' && !MAC_ONLY.has(item.id));
+const PHONE_MORE: ReadonlySet<AppView> = new Set(['map', 'sparks']);
+const PHONE_VIEWS = VIEWS.filter((item) => !PHONE_MORE.has(item.id) && !MAC_ONLY.has(item.id));
 const REMOTE_VIEWS = VIEWS.filter((item) => !MAC_ONLY.has(item.id));
 const NO_BROWSER_VIEWS = VIEWS.filter((item) => item.id !== 'browser');
 
@@ -216,6 +239,13 @@ export function Rail({
   const pauseIcon = pause.paused ? RESUME_ICON : PAUSE_ICON;
   const togglePause = () => pause.setPaused(!pause.paused);
   const more = [
+    {
+      id: 'sparks',
+      label: 'Sparks',
+      icon: SPARKS_ICON,
+      current: view === 'sparks',
+      onSelect: () => onView('sparks'),
+    },
     {
       id: 'pause',
       label: pauseLabel,

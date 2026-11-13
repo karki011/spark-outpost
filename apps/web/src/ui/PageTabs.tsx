@@ -3,7 +3,7 @@ import { useRef } from 'react';
 
 interface PageTabsProps {
   ariaLabel: string;
-  options: readonly { id: string; label: string }[];
+  options: readonly { id: string; label: string; count?: number | null }[];
   value: string;
   onChange: (id: string) => void;
 }
@@ -18,7 +18,7 @@ export function PageTabs({ ariaLabel, options, value, onChange }: PageTabsProps)
     tabs.current.get(next.id)?.focus();
   };
   return (
-    <div className="td-pages" role="tablist" aria-label={ariaLabel}>
+    <div className="page-tabs" role="tablist" aria-label={ariaLabel}>
       {options.map((option) => (
         <button
           key={option.id}
@@ -30,7 +30,7 @@ export function PageTabs({ ariaLabel, options, value, onChange }: PageTabsProps)
           role="tab"
           aria-selected={option.id === value}
           tabIndex={option.id === value ? 0 : -1}
-          className="td-page"
+          className="page-tab"
           onClick={() => onChange(option.id)}
           onKeyDown={(event) => {
             if (event.key === 'ArrowRight') move(1);
@@ -38,6 +38,12 @@ export function PageTabs({ ariaLabel, options, value, onChange }: PageTabsProps)
           }}
         >
           {option.label}
+          {option.count != null && (
+            <>
+              {' '}
+              <span className="page-tab-n">{option.count}</span>
+            </>
+          )}
         </button>
       ))}
     </div>

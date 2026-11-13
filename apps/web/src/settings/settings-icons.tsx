@@ -30,14 +30,6 @@ export const MODELS_ICON = (
   </>
 );
 
-export const CREW_ICON = (
-  <>
-    <circle cx="9" cy="10" r="3.2" />
-    <path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6" />
-    <path d="M16 6.5c.3 1.6 1 2.3 2.6 2.6-1.6.3-2.3 1-2.6 2.6-.3-1.6-1-2.3-2.6-2.6 1.6-.3 2.3-1 2.6-2.6Z" />
-  </>
-);
-
 export const USAGE_ICON = <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />;
 
 export const PROJECTS_ICON = (

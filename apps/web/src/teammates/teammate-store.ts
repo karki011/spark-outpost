@@ -1,5 +1,5 @@
-import { useSyncExternalStore } from 'react';
-import type { CreateTeammateRequest } from '@spark-outpost/contracts';
+import { useEffect, useSyncExternalStore } from 'react';
+import type { CreateTeammateRequest, Teammate } from '@spark-outpost/contracts';
 
 export type SheetRequest =
   { kind: 'create'; seed?: CreateTeammateRequest } | { kind: 'edit'; id: string; focus?: 'delete' };
@@ -50,4 +50,19 @@ export function clearTeammateDelete(): void {
 
 export function useTeammateUi(): TeammateUiState {
   return useSyncExternalStore(subscribe, () => state);
+}
+
+const createdListeners = new Set<(teammate: Teammate) => void>();
+
+export function announceTeammateCreated(teammate: Teammate): void {
+  for (const listener of createdListeners) listener(teammate);
+}
+
+export function useTeammateCreated(onCreated: (teammate: Teammate) => void): void {
+  useEffect(() => {
+    createdListeners.add(onCreated);
+    return () => {
+      createdListeners.delete(onCreated);
+    };
+  }, [onCreated]);
 }
