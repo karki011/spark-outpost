@@ -3,6 +3,7 @@ import { useId } from 'react';
 import { joinOpen, spanOf, type CalendarEvent } from '@spark-outpost/contracts';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { clock } from './calendar-format.ts';
+import { joinMeeting } from './join-meeting.ts';
 import { openJoin } from './today-model.ts';
 import { useJoinLeadMs } from './use-calendar.ts';
 
@@ -14,6 +15,8 @@ interface JoinButtonProps {
   plain?: boolean;
   early?: 'time' | 'subtle';
   onJoined?: (event: CalendarEvent) => void;
+  notes?: boolean;
+  calendarName?: string | undefined;
 }
 
 function EarlyJoin(props: {
@@ -81,6 +84,8 @@ export function JoinButton({
   plain = false,
   early = 'time',
   onJoined,
+  notes = false,
+  calendarName,
 }: JoinButtonProps) {
   const leadMs = useJoinLeadMs();
   const link = event.link;
@@ -104,7 +109,8 @@ export function JoinButton({
       data-open
       aria-label={name}
       onClick={() => {
-        openJoin(link.url);
+        if (notes) joinMeeting(event, calendarName);
+        else openJoin(link.url);
         onJoined?.(event);
       }}
     >

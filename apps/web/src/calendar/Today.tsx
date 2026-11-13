@@ -103,8 +103,19 @@ function TodayViews(props: TodayProps) {
     },
     [pickDate, setView],
   );
+  const openMeeting = useCallback(
+    (id: string) => {
+      setMeetingId(id);
+      setPage('transcripts');
+    },
+    [setPage],
+  );
   const showEvent = useCallback(
     (request: TodayEventRequest) => {
+      if (request.meetingId) {
+        openMeeting(request.meetingId);
+        return;
+      }
       pickDate(request.date ?? localDate(Date.now()));
       setSelected(request.eventKey);
       setRequested(request);
@@ -112,7 +123,7 @@ function TodayViews(props: TodayProps) {
       setView('day');
       setPage('calendar');
     },
-    [pickDate, setView, setPage],
+    [pickDate, setView, setPage, openMeeting],
   );
   useTodayEventRequests(showEvent);
   const switcher = (
@@ -128,13 +139,6 @@ function TodayViews(props: TodayProps) {
       </div>
     </div>
   );
-  const openMeeting = useCallback(
-    (id: string) => {
-      setMeetingId(id);
-      setPage('transcripts');
-    },
-    [setPage],
-  );
   const transcripts = meetings && page === 'transcripts';
   return (
     <>
@@ -149,7 +153,12 @@ function TodayViews(props: TodayProps) {
       <RecordingBar onOpen={openMeeting} />
       {meetings && opened.includes('transcripts') && (
         <div className="td-pagebody" hidden={!transcripts}>
-          <MeetingsView openId={meetingId} onOpen={setMeetingId} onStartChat={props.onStartChat} />
+          <MeetingsView
+            openId={meetingId}
+            onOpen={setMeetingId}
+            onStartChat={props.onStartChat}
+            onOpenChat={props.onOpenChat}
+          />
         </div>
       )}
       {(!meetings || opened.includes('calendar')) && (

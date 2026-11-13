@@ -4,6 +4,7 @@ import { localDate } from './use-calendar.ts';
 export interface TodayEventRequest {
   eventKey: string | null;
   date: string | null;
+  meetingId?: string;
 }
 
 let pending: TodayEventRequest | null = null;
@@ -23,6 +24,10 @@ function request(asked: TodayEventRequest): void {
 
 export function openTodayEvent(eventKey: string): void {
   request({ eventKey, date: eventDate(eventKey) });
+}
+
+export function openTodayMeeting(meetingId: string): void {
+  request({ eventKey: null, date: null, meetingId });
 }
 
 export function openTodayDay(): void {

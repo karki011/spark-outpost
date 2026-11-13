@@ -32,6 +32,7 @@ interface ConnectionRow {
   alert_lead: number;
   auto_join: boolean;
   join_lead: number;
+  notes_on_join: boolean;
   notice: string | null;
 }
 
@@ -49,6 +50,7 @@ function settingsOf(row: ConnectionRow): CalendarSettings {
     alertLead: row.alert_lead,
     autoJoin: row.auto_join,
     joinLead: row.join_lead,
+    notesOnJoin: row.notes_on_join,
   });
   return parsed.success ? parsed.data : CALENDAR_DEFAULT_SETTINGS;
 }
@@ -100,6 +102,7 @@ const SETTING_COLUMNS: Record<keyof CalendarSettingsPatch, string> = {
   alertLead: 'alert_lead',
   autoJoin: 'auto_join',
   joinLead: 'join_lead',
+  notesOnJoin: 'notes_on_join',
 };
 
 export async function updateSettings(

@@ -1,12 +1,14 @@
 import { z } from 'zod';
 import {
   meetingDetailSchema,
+  meetingJoinNotesSchema,
   meetingLinesPageSchema,
   meetingListSchema,
   meetingNotesSchema,
   meetingStatusSchema,
   MEETING_LIST_PAGE,
   type MeetingDetail,
+  type MeetingJoinNotes,
   type MeetingLinesPage,
   type MeetingList,
   type MeetingNotes,
@@ -43,6 +45,8 @@ export const meetingsApi = {
   detail: (id: string): Promise<MeetingDetail> => request(meetingDetailSchema, path(id)),
   start: (body: StartMeetingRequest): Promise<MeetingDetail> =>
     send(meetingDetailSchema, 'POST', '/meetings', body),
+  joinNotes: (body: StartMeetingRequest): Promise<MeetingJoinNotes> =>
+    send(meetingJoinNotesSchema, 'POST', '/meetings/join-notes', body),
   patch: (id: string, patch: MeetingPatch): Promise<MeetingDetail> =>
     send(meetingDetailSchema, 'PATCH', path(id), patch),
   remove: (id: string): Promise<null> => send(empty, 'DELETE', path(id)),

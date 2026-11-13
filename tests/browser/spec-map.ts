@@ -228,6 +228,7 @@ export const SPEC_GROUPS = {
     'calendar-day',
     'calendar-google',
     'calendar-meetings',
+    'calendar-meetings-polish',
     'calendar-month',
     'calendar-nudges',
     'companion',

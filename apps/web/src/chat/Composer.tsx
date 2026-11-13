@@ -94,6 +94,7 @@ export function Composer({
   agentName: givenAgentName,
   autoFocus = true,
   sessionChip = null,
+  noProject = false,
   quotes,
 }: ComposerProps) {
   const [draft, setDraft] = useChatDraft(conversationId);
@@ -299,7 +300,7 @@ export function Composer({
       above={above}
       foot={
         <>
-          {ready && (
+          {ready && !noProject && (
             <ContextBar
               conversationId={conversationId}
               repos={repos}
@@ -334,6 +335,7 @@ export function Composer({
         <>
           <PlusMenu
             hasProject={hasRepos}
+            noProject={noProject}
             onAttach={attachments.add}
             onNotice={attachments.notify}
             onAddFromRepo={() => setRepoOpen(true)}

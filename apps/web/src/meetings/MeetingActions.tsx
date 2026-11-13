@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Meeting, MeetingDetail } from '@spark-outpost/contracts';
+import { DisconnectDialog } from '../connectors/DisconnectDialog.tsx';
 import { CopyIcon, SpinnerIcon, TrashIcon } from '../ui/icons.tsx';
 import { copyButtonText, useCopyFeedback } from '../ui/use-copy-feedback.ts';
 import { useDeleteMeeting, useStopMeeting, useWriteNotes } from './use-meetings.ts';
@@ -10,49 +11,39 @@ interface MeetingActionsProps {
   onDeleted: (() => void) | undefined;
 }
 
-function DeleteConfirm({
-  meeting,
-  onDeleted,
-  onKeep,
-}: {
-  meeting: Meeting;
-  onDeleted: (() => void) | undefined;
-  onKeep: () => void;
-}) {
-  const remove = useDeleteMeeting();
-  const keep = useRef<HTMLButtonElement>(null);
-  useEffect(() => keep.current?.focus(), []);
-  return (
-    <div className="mt-confirm" role="group" aria-label="Confirm delete">
-      <p>
-        Delete this meeting? Its transcript, notes and context are removed from this Mac for good.
-      </p>
-      <div className="mt-actions">
-        <button
-          type="button"
-          className="btn line sm mt-danger"
-          disabled={remove.isPending}
-          onClick={() => remove.mutate(meeting.id, { onSuccess: () => onDeleted?.() })}
-        >
-          Delete meeting
-        </button>
-        <button ref={keep} type="button" className="btn ghost sm" onClick={onKeep}>
-          Keep
-        </button>
-      </div>
-      {remove.isError && <p role="alert">Couldn’t delete. {remove.error.message}</p>}
-    </div>
-  );
+function deleteCopy(meeting: Meeting) {
+  return {
+    title: `Delete “${meeting.title}”?`,
+    text:
+      meeting.state === 'recording'
+        ? 'Recording stops, and the transcript, notes and context are removed from this Mac. You can’t undo this.'
+        : 'Its transcript, notes and context are removed from this Mac. You can’t undo this.',
+  };
 }
 
 export function MeetingActions({ detail, onStartChat, onDeleted }: MeetingActionsProps) {
   const { meeting, notes } = detail;
   const stop = useStopMeeting();
   const write = useWriteNotes(meeting.id);
+  const remove = useDeleteMeeting();
   const [confirming, setConfirming] = useState(false);
+  const deleteButton = useRef<HTMLButtonElement>(null);
   const copy = useCopyFeedback();
   const recording = meeting.state === 'recording';
   const markdown = notes?.markdown ?? '';
+
+  function keep() {
+    setConfirming(false);
+    deleteButton.current?.focus();
+  }
+
+  function confirmDelete() {
+    setConfirming(false);
+    remove.mutate(meeting.id, {
+      onSuccess: () => onDeleted?.(),
+      onError: () => deleteButton.current?.focus(),
+    });
+  }
 
   return (
     <div className="mt-actions-block">
@@ -93,9 +84,11 @@ export function MeetingActions({ detail, onStartChat, onDeleted }: MeetingAction
           </button>
         )}
         <button
+          ref={deleteButton}
           type="button"
           className="btn ghost sm"
-          aria-expanded={confirming}
+          aria-haspopup="dialog"
+          disabled={remove.isPending}
           onClick={() => setConfirming(true)}
         >
           <TrashIcon />
@@ -104,11 +97,13 @@ export function MeetingActions({ detail, onStartChat, onDeleted }: MeetingAction
       </div>
       {write.isError && <p role="alert">Couldn’t start writing. {write.error.message}</p>}
       {stop.isError && <p role="alert">Couldn’t stop. {stop.error.message}</p>}
+      {remove.isError && <p role="alert">Couldn’t delete. {remove.error.message}</p>}
       {confirming && (
-        <DeleteConfirm
-          meeting={meeting}
-          onDeleted={onDeleted}
-          onKeep={() => setConfirming(false)}
+        <DisconnectDialog
+          copy={deleteCopy(meeting)}
+          confirmLabel="Delete meeting"
+          onCancel={keep}
+          onConfirm={confirmDelete}
         />
       )}
     </div>

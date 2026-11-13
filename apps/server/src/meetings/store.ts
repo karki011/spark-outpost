@@ -65,8 +65,8 @@ export async function createMeeting(
   request: StartMeetingRequest,
 ): Promise<Meeting> {
   const { rows } = await db.query<MeetingRow>(
-    `INSERT INTO meetings (id, workspace_id, title, source, event_key, calendar_name, goal)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO meetings (id, workspace_id, title, source, event_key, calendar_name, goal, title_origin)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (workspace_id) WHERE state = 'recording' DO NOTHING
      RETURNING ${MEETING_COLUMNS}`,
     [
@@ -77,6 +77,7 @@ export async function createMeeting(
       request.eventKey ?? null,
       request.calendarName || null,
       request.goal ?? '',
+      request.title ? 'given' : 'default',
     ],
   );
   const row = rows[0];
@@ -115,12 +116,30 @@ export async function patchMeeting(
 ): Promise<Meeting | null> {
   const { rows } = await db.query<MeetingRow>(
     `UPDATE meetings
-        SET title = COALESCE($3, title), goal = COALESCE($4, goal), user_notes = COALESCE($5, user_notes)
+        SET title = COALESCE($3, title), goal = COALESCE($4, goal), user_notes = COALESCE($5, user_notes),
+            title_origin = CASE WHEN $3::text IS NULL THEN title_origin ELSE 'given' END
       WHERE workspace_id = $1 AND id = $2
       RETURNING ${MEETING_COLUMNS}`,
     [workspaceId, id, patch.title ?? null, patch.goal ?? null, patch.userNotes ?? null],
   );
   return rows[0] ? toMeeting(rows[0]) : null;
+}
+
+export async function needsAutoTitle(db: Queryable, id: string): Promise<boolean> {
+  const { rows } = await db.query(
+    `SELECT 1 FROM meetings WHERE id = $1 AND title_origin = 'default'`,
+    [id],
+  );
+  return rows.length > 0;
+}
+
+export async function setAutoTitle(db: Queryable, id: string, title: string): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE meetings SET title = $2, title_origin = 'auto'
+      WHERE id = $1 AND title_origin = 'default'`,
+    [id, title],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 export async function endMeeting(

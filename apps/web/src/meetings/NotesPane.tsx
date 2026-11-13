@@ -7,6 +7,8 @@ import {
 } from '@spark-outpost/contracts';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
 import { PenIcon, SpinnerIcon } from '../ui/icons.tsx';
+import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
+import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { useSaveNotes, useWriteNotes } from './use-meetings.ts';
 
 function NotesEditor(props: { id: string; notes: MeetingNotes; onDone: () => void }) {
@@ -59,9 +61,15 @@ export function NotesPane({ detail }: { detail: MeetingDetail }) {
   }
   if (meeting.notesState === 'writing') {
     return (
-      <p className="mt-hint" role="status">
-        <SpinnerIcon /> Writing notes…
-      </p>
+      <div className="mt-writing">
+        <LoadingBlob size="md" line="Writing notes…" />
+        <p className="mt-hint">
+          Spark is reading the transcript. This usually takes under a minute.
+        </p>
+        <div aria-hidden="true">
+          <Skeleton label="Notes are being written" shape="lines" rows={7} />
+        </div>
+      </div>
     );
   }
   if (meeting.notesState === 'ready' && notes) {

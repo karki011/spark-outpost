@@ -1,14 +1,21 @@
 import { MEETING_NOTES_MAX, type AppEvent } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { NotesModelError, childRunNotesModel, type NotesModel } from './notes-model.ts';
-import { buildNotesPrompt, type ContextItem } from './notes-prompt.ts';
+import {
+  buildNotesPrompt,
+  buildTitlePrompt,
+  cleanTitle,
+  type ContextItem,
+} from './notes-prompt.ts';
 import { readSections } from './notes-sections.ts';
 import {
   claimNotesWrite,
   getMeeting,
   getNotes,
   meetingAttachments,
+  needsAutoTitle,
   saveWrittenNotes,
+  setAutoTitle,
   setNotesState,
 } from './store.ts';
 
@@ -89,19 +96,44 @@ async function saveIfPresent(
   }
 }
 
-export async function writeMeetingNotes(deps: NotesDeps, meetingId: string): Promise<void> {
-  if (!(await claimNotesWrite(deps.db, meetingId))) return;
-  await deps.publish({ kind: 'meeting', conversationId: null, runId: null, meetingId });
+async function titleFromNotes(deps: NotesDeps, meetingId: string, notes: string): Promise<void> {
   try {
-    if (!(await deps.model.available())) throw new NotesFailure(NO_PROVIDER);
-    const written = await runSections(deps, meetingId);
-    if (written) await saveIfPresent(deps, meetingId, written);
-  } catch (error) {
-    await setNotesState(deps.db, meetingId, 'failed', reasonFor(error)).catch(() => undefined);
+    if (!(await needsAutoTitle(deps.db, meetingId))) return;
+    const reply = await deps.model.complete(buildTitlePrompt(notes), meetingId);
+    const title = cleanTitle(reply.text);
+    if (title) await setAutoTitle(deps.db, meetingId, title);
+  } catch {
+    return;
   }
+}
+
+async function announce(deps: NotesDeps, meetingId: string): Promise<void> {
   await deps
     .publish({ kind: 'meeting', conversationId: null, runId: null, meetingId })
     .catch(() => undefined);
+}
+
+async function writeNotes(deps: NotesDeps, meetingId: string): Promise<string | null> {
+  try {
+    if (!(await deps.model.available())) throw new NotesFailure(NO_PROVIDER);
+    const written = await runSections(deps, meetingId);
+    if (!written) return null;
+    await saveIfPresent(deps, meetingId, written);
+    return written.markdown;
+  } catch (error) {
+    await setNotesState(deps.db, meetingId, 'failed', reasonFor(error)).catch(() => undefined);
+    return null;
+  }
+}
+
+export async function writeMeetingNotes(deps: NotesDeps, meetingId: string): Promise<void> {
+  if (!(await claimNotesWrite(deps.db, meetingId))) return;
+  await deps.publish({ kind: 'meeting', conversationId: null, runId: null, meetingId });
+  const notes = await writeNotes(deps, meetingId);
+  await announce(deps, meetingId);
+  if (notes === null) return;
+  await titleFromNotes(deps, meetingId, notes);
+  await announce(deps, meetingId);
 }
 
 export function meetingNotesWriter(

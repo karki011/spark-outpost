@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import type { MeetingListItem } from '@spark-outpost/contracts';
+import { BlobScout } from '../brand/BlobScout.tsx';
 import { formatStarted, lengthLabel, NOTES_STATE_WORDS, sourceLabel } from './meeting-format.ts';
 
 interface MeetingRowProps {
@@ -27,7 +28,10 @@ export const MeetingRow = memo(function MeetingRow({ item, selected, onOpen }: M
               Recording
             </>
           ) : (
-            NOTES_STATE_WORDS[meeting.notesState]
+            <>
+              {meeting.notesState === 'writing' && <BlobScout size={14} mood="working" />}
+              {NOTES_STATE_WORDS[meeting.notesState]}
+            </>
           )}
         </span>
         <span className="mt-row-meta">

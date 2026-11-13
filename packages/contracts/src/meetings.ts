@@ -86,6 +86,9 @@ export const meetingDetailSchema = z.object({
 });
 export type MeetingDetail = z.infer<typeof meetingDetailSchema>;
 
+export const meetingJoinNotesSchema = z.object({ detail: meetingDetailSchema.nullable() });
+export type MeetingJoinNotes = z.infer<typeof meetingJoinNotesSchema>;
+
 export const meetingStatusSchema = z.object({
   supported: z.boolean(),
   available: z.boolean(),

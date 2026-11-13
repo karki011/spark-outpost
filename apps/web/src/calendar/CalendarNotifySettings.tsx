@@ -6,6 +6,7 @@ import type {
 } from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
+import { useMeetingStatus } from '../meetings/index.ts';
 import { Segmented } from '../ui/Segmented.tsx';
 import { CalendarNudgeList, NUDGE_CALENDARS_LABEL } from './CalendarNudgeList.tsx';
 import { parseFocusNames } from './focus-names.ts';
@@ -22,12 +23,14 @@ const ALERT_STYLE_LABEL = 'Meeting alerts';
 const ALERT_LEAD_LABEL = 'Alert at';
 const AUTO_JOIN_LABEL = 'Join meetings automatically';
 const JOIN_LEAD_LABEL = 'Join opens';
+const NOTES_ON_JOIN_LABEL = 'Take notes when I join a meeting';
 
 export const CALENDAR_NOTIFY_ROWS = [
   ALERT_STYLE_LABEL,
   ALERT_LEAD_LABEL,
   JOIN_LEAD_LABEL,
   AUTO_JOIN_LABEL,
+  NOTES_ON_JOIN_LABEL,
   BEFORE_LABEL,
   NUDGE_CALENDARS_LABEL,
   WRAP_UP_LABEL,
@@ -184,8 +187,10 @@ function FocusNames({ names, save }: { names: readonly string[]; save: Save }) {
 
 export function CalendarMeetingSettings() {
   const calendar = useCalendarSettings();
+  const meetingStatus = useMeetingStatus();
   if (!calendar) return null;
   const { settings, save } = calendar;
+  const meetings = meetingStatus.data?.supported ?? false;
   return (
     <>
       <section className="spark-group" aria-labelledby="notify-meetings">
@@ -219,6 +224,14 @@ export function CalendarMeetingSettings() {
           checked={settings.autoJoin}
           onChange={(on) => save({ autoJoin: on })}
         />
+        {meetings && (
+          <SwitchRow
+            label={NOTES_ON_JOIN_LABEL}
+            hint="Join or ⌘J in Spark’s window also starts recording that meeting’s notes on this Mac and opens its transcript. Joins from the island, a meeting alert, a countdown or Ask Spark never record."
+            checked={settings.notesOnJoin}
+            onChange={(on) => save({ notesOnJoin: on })}
+          />
+        )}
         <ChoiceRow
           label={BEFORE_LABEL}
           hint="Spark Island hops, plays a short sound unless chimes are held or off, and shows Join."

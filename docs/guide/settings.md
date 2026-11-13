@@ -6,7 +6,7 @@ order: 610
 summary: Every Settings section by group, its rows and defaults, and the page that explains each one.
 ---
 
-**Settings** is on the rail; **⌘,** opens its Mac window. **Search settings** finds a section or row; Enter opens it.
+**Settings** is on the rail; **⌘,** opens its Mac window. **Search settings** opens a section or row.
 
 ## General
 
@@ -90,17 +90,17 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 
 **Notifications**:
 
-| Row                                                                                                                     | Default                                                | More                                                    |
-| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------- |
-| **Morning brief**                                                                                                       | 7:00                                                   | Daily summary on **Home**                               |
-| **Status companion**                                                                                                    | **Show**                                               | [Island](desktop-companion.md#inside-the-app)           |
-| Mac app: **Show Spark Island**, **Spark Island size**, **Show in menu bar**                                             | On, **Full**, off                                      | [Island](desktop-companion.md)                          |
-| **Dock badge and notifications**                                                                                        | On                                                     | [Island](desktop-companion.md#when-spark-island-is-off) |
-| **Open requests by themselves**, **Island chimes**                                                                      | On, off                                                | [Island](desktop-companion.md#answer-a-card)            |
-| **Hide in screen sharing**                                                                                              | On                                                     | [Island](desktop-companion.md#turn-it-on-and-size-it)   |
-| **Quick chat shortcut**, **Inbox shortcut**                                                                             | ⌥Space, ⌥⇧Space                                        | [Shortcuts](companion-quick-chat.md#change-a-shortcut)  |
-| Mac app: **Add today’s calendar to the brief**, **Meetings**, **Meeting alerts**, **Alert at**, **Join opens**          | On, 10 min, **Center of the screen**, at start, 10 min | [Calendar](calendar.md)                                 |
-| **Join meetings automatically**, **Hold chimes during**, **Calendars that nudge**, **Meeting alerts on paired devices** | Off, **Focus blocks**, all, off                        | [Calendar](calendar.md)                                 |
+| Row                                                                                                                                                           | Default                                                | More                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------- |
+| **Morning brief**                                                                                                                                             | 7:00                                                   | Daily summary on **Home**                               |
+| **Status companion**                                                                                                                                          | **Show**                                               | [Island](desktop-companion.md#inside-the-app)           |
+| Mac app: **Show Spark Island**, **Spark Island size**, **Show in menu bar**                                                                                   | On, **Full**, off                                      | [Island](desktop-companion.md)                          |
+| **Dock badge and notifications**                                                                                                                              | On                                                     | [Island](desktop-companion.md#when-spark-island-is-off) |
+| **Open requests by themselves**, **Island chimes**                                                                                                            | On, off                                                | [Island](desktop-companion.md#answer-a-card)            |
+| **Hide in screen sharing**                                                                                                                                    | On                                                     | [Island](desktop-companion.md#turn-it-on-and-size-it)   |
+| **Quick chat shortcut**, **Inbox shortcut**                                                                                                                   | ⌥Space, ⌥⇧Space                                        | [Shortcuts](companion-quick-chat.md#change-a-shortcut)  |
+| Mac app: **Add today’s calendar to the brief**, **Meetings**, **Meeting alerts**, **Alert at**, **Join opens**                                                | On, 10 min, **Center of the screen**, at start, 10 min | [Calendar](calendar.md)                                 |
+| **Join meetings automatically**, **Take notes when I join a meeting**, **Hold chimes during**, **Calendars that nudge**, **Meeting alerts on paired devices** | Off, off, **Focus blocks**, all, off                   | [Calendar](calendar.md)                                 |
 
 ## App
 

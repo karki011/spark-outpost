@@ -54,7 +54,7 @@ function DayRow(props: {
           {overlap && ` · Overlaps “${overlap.title}”, still running`}
         </>
       }
-      trailing={tomorrow ? undefined : <JoinButton event={event} now={now} />}
+      trailing={tomorrow ? undefined : <JoinButton event={event} now={now} notes />}
     />
   );
 }

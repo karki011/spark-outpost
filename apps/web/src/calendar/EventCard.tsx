@@ -29,6 +29,7 @@ function VideoChip({ event, now }: { event: CalendarEvent; now: number }) {
         label={`Join ${service}`}
         className="rl-join"
         early="subtle"
+        notes
       />
     );
   }

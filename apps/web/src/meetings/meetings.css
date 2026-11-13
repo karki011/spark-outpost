@@ -29,10 +29,6 @@
   font-size: 13px;
   margin: 6px 0 0;
 }
-.mt-danger {
-  color: var(--danger);
-}
-
 .mt-dot {
   display: inline-block;
   width: 8px;
@@ -61,15 +57,44 @@
 .mt-back {
   margin-bottom: 8px;
 }
+.mt-resize {
+  display: none;
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  right: -4px;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.mt-resize:focus-visible {
+  outline: none;
+}
 @container (min-width: 760px) {
   .mt-tab {
-    grid-template-columns: clamp(200px, 30%, 300px) minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
     gap: 0;
     min-height: 60vh;
   }
   .mt-side {
+    --mt-side-cap: max(200px, calc(100cqw - 420px));
+    position: relative;
+    width: min(var(--mt-side-w, 280px), var(--mt-side-cap));
     padding-right: 14px;
     border-right: 1px solid var(--line);
+  }
+  .mt-resize {
+    display: block;
+  }
+  .mt-side:has(.mt-resize:hover),
+  .mt-side:has(.mt-resize:focus-visible),
+  .mt-side.dragging {
+    border-right-color: var(--line-strong);
+    box-shadow: inset -1px 0 0 var(--line-strong);
+  }
+  .mt-side.dragging {
+    user-select: none;
   }
   .mt-main {
     padding-left: 20px;
@@ -177,10 +202,6 @@
   line-height: 1.5;
   margin: 8px 0;
 }
-.mt-empty-title {
-  color: var(--text);
-  font-weight: 500;
-}
 .mt-hint .btn {
   margin-top: 8px;
 }
@@ -226,17 +247,6 @@
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-}
-.mt-confirm {
-  margin-top: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--raise);
-  font-size: 13px;
-}
-.mt-confirm p {
-  margin: 0 0 8px;
 }
 
 .mt-tabs {

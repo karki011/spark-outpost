@@ -51,7 +51,7 @@ export function MeetingLead(props: MeetingLeadProps) {
           <button type="button" className="btn sm line" onClick={() => actions.snooze(event)}>
             Snooze 1 min
           </button>
-          <JoinButton event={event} now={props.now} onJoined={actions.joined} />
+          <JoinButton event={event} now={props.now} onJoined={actions.joined} notes />
         </span>
       }
     >

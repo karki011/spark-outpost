@@ -40,6 +40,7 @@ export const calendarSettingsSchema = z.object({
   alertLead: meetingAlertLeadSchema,
   autoJoin: z.boolean(),
   joinLead: joinLeadSchema,
+  notesOnJoin: z.boolean(),
 });
 export type CalendarSettings = z.infer<typeof calendarSettingsSchema>;
 
@@ -59,6 +60,7 @@ export const CALENDAR_DEFAULT_SETTINGS: CalendarSettings = {
   alertLead: 0,
   autoJoin: false,
   joinLead: 10,
+  notesOnJoin: false,
 };
 
 export const calendarAccountSchema = z.object({

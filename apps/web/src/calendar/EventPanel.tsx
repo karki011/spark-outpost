@@ -19,6 +19,7 @@ import { JoinButton } from './JoinButton.tsx';
 import { TakeNotesButton } from '../meetings/index.ts';
 import { replyState } from './reply-status.ts';
 import { openJoin } from './today-model.ts';
+import { openTodayMeeting } from './today-request.ts';
 import { useJoinLeadMs } from './use-calendar.ts';
 
 interface EventPanelProps {
@@ -54,7 +55,15 @@ function Act(props: {
   );
 }
 
-function JoinRow({ event, now }: { event: CalendarEvent; now: number }) {
+function JoinRow({
+  event,
+  now,
+  calendarName,
+}: {
+  event: CalendarEvent;
+  now: number;
+  calendarName: string | undefined;
+}) {
   const leadMs = useJoinLeadMs();
   const link = event.link;
   if (!link) return null;
@@ -69,6 +78,8 @@ function JoinRow({ event, now }: { event: CalendarEvent; now: number }) {
         now={now}
         label={`Join ${CALENDAR_SERVICE_NAMES[link.service]}`}
         early="subtle"
+        notes
+        calendarName={calendarName}
       />
       <small>
         {host}
@@ -158,9 +169,14 @@ export function EventActions({ event, calendarName, now, onStartChat }: EventAct
   const error = mark.error ?? openInCalendar.error ?? startChat.error;
   return (
     <>
-      <JoinRow event={event} now={now} />
+      <JoinRow event={event} now={now} calendarName={calendarName} />
       {!event.allDay && !ended && (
-        <TakeNotesButton title={event.title} eventKey={event.key} calendarName={calendarName} />
+        <TakeNotesButton
+          title={event.title}
+          eventKey={event.key}
+          calendarName={calendarName}
+          onStarted={(meeting) => openTodayMeeting(meeting.id)}
+        />
       )}
       <Act
         icon={<ExternalLinkIcon />}
