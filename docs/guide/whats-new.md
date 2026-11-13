@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
+| Workflows can run on a schedule      | [Schedule a workflow](workflow-schedules.md).   |
 | Sparks page: Crew, skills and files  | [Make a Spark](sparks.md).                      |
 | Agents can't change Sparks' folders  | [Protected paths](protected-paths.md).          |
 | Relay, the follow-up Spark, removed  | Nothing; PR follow-up works as before.          |

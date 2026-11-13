@@ -1,5 +1,6 @@
 import type { WorkflowSummary } from '@spark-outpost/contracts';
 import { CheckIcon, PlusIcon, ResumeIcon, WarnIcon } from '../ui/icons.tsx';
+import { ScheduleChip } from './ScheduleChip.tsx';
 import type { CrewSpark } from './spark-lookup.ts';
 import { StagePreview } from './StagePreview.tsx';
 import { useStartWorkflowRun } from './use-workflows.ts';
@@ -34,6 +35,7 @@ function WorkflowRow({
           {plural(steps, 'step')} · {plural(workflow.stages.length, 'stage')}
         </small>
         <StagePreview stages={workflow.stages} sparks={sparkById} />
+        <ScheduleChip workflowId={workflow.id} />
       </span>
       <span className="wf-row-status" role="status">
         {workflow.problems > 0 && (
