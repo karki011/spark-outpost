@@ -412,6 +412,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/server/src/a2a/', groups: ['outposts'] },
   { prefix: 'apps/server/src/advisor/', groups: ['map', 'ship-pr', 'home'] },
   { prefix: 'apps/server/src/agent-config/', groups: ['approvals'] },
+  { prefix: 'apps/server/src/crew/', groups: ['sparks', 'approvals'] },
   { prefix: 'apps/server/src/analytics/', groups: ['analytics-audit'] },
   {
     prefix: 'apps/server/src/approvals/',

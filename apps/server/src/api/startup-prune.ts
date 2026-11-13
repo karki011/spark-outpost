@@ -1,4 +1,5 @@
 import { pruneChatFolders } from '../chat-files/prune.ts';
+import { pruneSparkFolders } from '../crew/prune.ts';
 import { pruneUnlinkedAttachments } from '../persistence/attachments.ts';
 import { pruneProtocolLog } from '../persistence/audit-log.ts';
 import { pruneEmptyConversations } from '../persistence/conversations.ts';
@@ -14,6 +15,7 @@ export interface StartupPrune {
   auditRetentionDays: number;
   chatFolders?: string;
   researchCopies?: string;
+  sparkFolders?: string;
   report?: (message: string, error: unknown) => void;
 }
 
@@ -32,6 +34,10 @@ export async function pruneOldRows(options: StartupPrune): Promise<void> {
     steps.push(['folders of removed chats', () => pruneChatFolders(db, chatFolders)]);
   if (researchCopies) {
     steps.push(['research copies of removed chats', () => pruneChatFolders(db, researchCopies)]);
+  }
+  const { sparkFolders } = options;
+  if (sparkFolders) {
+    steps.push(['folders of removed Sparks', () => pruneSparkFolders(db, sparkFolders)]);
   }
   for (const [name, prune] of steps) {
     await prune().catch((error: unknown) => report(`Could not prune ${name}`, error));

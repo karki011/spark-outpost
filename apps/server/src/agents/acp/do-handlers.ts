@@ -10,6 +10,7 @@ import type { SubagentAsker } from './subagent-updates.ts';
 export interface DoWorkspace {
   policy: PathPolicy;
   cwd: string;
+  readable?: readonly string[];
   gate: PermissionGate;
   signal: AbortSignal;
   report: (name: string) => void;
@@ -42,6 +43,7 @@ export async function reviewPermission(
     shownPlan: workspace.shownPlan?.() ?? null,
     subagent: asker?.name ?? null,
     attachedFiles,
+    readable: workspace.readable ?? [],
   });
   const answer = await workspace.gate.review(request, workspace.signal);
   if (!isQuiet(answer)) workspace.annotate(answer.note, asker?.id);

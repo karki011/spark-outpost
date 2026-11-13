@@ -1,13 +1,25 @@
 import { Router, type Request } from 'express';
-import type { z } from 'zod';
+import { z } from 'zod';
 import {
   createTeammateRequestSchema,
+  crewPathSchema,
   linkTeammateRequestSchema,
+  saveCrewFileSchema,
   teammateStarterIdSchema,
   updateTeammateRequestSchema,
   type ProviderId,
   type UpdateTeammateRequest,
 } from '@spark-outpost/contracts';
+import { crewSparksDir } from '../crew/folders.ts';
+import {
+  CrewFileConflictError,
+  CrewFileNotFoundError,
+  CrewFileProblemError,
+  deleteCrewFile,
+  readCrewFile,
+  saveCrewFile,
+} from '../crew/spark-folder.ts';
+import { sparkFolder } from '../crew/spark-skills.ts';
 import type { Db } from '../persistence/db.ts';
 import { activeConnection } from '../persistence/setup.ts';
 import { closeTeammateSessions, linkChat, openHomeThread } from '../persistence/teammate-chats.ts';
@@ -17,6 +29,7 @@ import {
   createTeammate,
   deleteTeammate,
   dismissStarter,
+  getTeammate,
   teammateList,
   updateTeammate,
 } from '../persistence/teammates.ts';
@@ -26,6 +39,15 @@ import { BadRequestError, paramId } from './validation.ts';
 export interface TeammateRouteDeps {
   db: Db;
   workspaceId: string;
+  sparksDir?: string;
+}
+
+const filePathQuerySchema = z.object({ path: crewPathSchema });
+
+function filePath(req: Request): string {
+  const parsed = filePathQuerySchema.safeParse(req.query);
+  if (!parsed.success) throw new BadRequestError('Name a file inside the Spark folder.');
+  return parsed.data.path;
 }
 
 function parseTeammateBody<T>(schema: z.ZodType<T>, req: Request): T {
@@ -52,11 +74,24 @@ async function assertInstructionsFile(requested: string | null | undefined): Pro
 export function teammateErrorStatus(error: unknown): { status: number; message: string } | null {
   if (error instanceof TeammateNotFoundError) return { status: 404, message: error.message };
   if (error instanceof TeammateConflictError) return { status: 409, message: error.message };
+  if (error instanceof CrewFileNotFoundError) return { status: 404, message: error.message };
+  if (error instanceof CrewFileConflictError) return { status: 409, message: error.message };
+  if (error instanceof CrewFileProblemError) return { status: 400, message: error.message };
   return null;
 }
 
-export function teammateRoutes({ db, workspaceId }: TeammateRouteDeps): Router {
+export function teammateRoutes({
+  db,
+  workspaceId,
+  sparksDir = crewSparksDir(),
+}: TeammateRouteDeps): Router {
   const router = Router();
+
+  const sparkId = async (req: Request) => {
+    const id = paramId(req);
+    await getTeammate(db, workspaceId, id, sparksDir);
+    return id;
+  };
 
   const assertConnected = async (provider: ProviderId | null | undefined) => {
     if (!provider || (await activeConnection(db, workspaceId, provider))) return;
@@ -71,7 +106,7 @@ export function teammateRoutes({ db, workspaceId }: TeammateRouteDeps): Router {
     const input = parseTeammateBody(createTeammateRequestSchema, req);
     await assertConnected(input.provider);
     await assertInstructionsFile(input.instructionsPath);
-    res.status(201).json(await createTeammate(db, workspaceId, input));
+    res.status(201).json(await createTeammate(db, workspaceId, input, sparksDir));
   });
 
   router.patch('/teammates/:id', async (req, res) => {
@@ -79,7 +114,7 @@ export function teammateRoutes({ db, workspaceId }: TeammateRouteDeps): Router {
     const update = parseTeammateBody(updateTeammateRequestSchema, req);
     await assertConnected(update.provider);
     await assertInstructionsFile(update.instructionsPath);
-    const saved = await updateTeammate(db, workspaceId, id, update);
+    const saved = await updateTeammate(db, workspaceId, id, update, sparksDir);
     if (BRIEF_FIELDS.some((field) => update[field] !== undefined)) {
       await closeTeammateSessions(db, workspaceId, id);
     }
@@ -87,7 +122,30 @@ export function teammateRoutes({ db, workspaceId }: TeammateRouteDeps): Router {
   });
 
   router.delete('/teammates/:id', async (req, res) => {
-    await deleteTeammate(db, workspaceId, paramId(req));
+    await deleteTeammate(db, workspaceId, paramId(req), sparksDir);
+    res.status(204).end();
+  });
+
+  router.get('/teammates/:id/folder', async (req, res) => {
+    res.json(await sparkFolder(sparksDir, await sparkId(req)));
+  });
+
+  router.get('/teammates/:id/files', async (req, res) => {
+    res.json(await readCrewFile(sparksDir, await sparkId(req), filePath(req)));
+  });
+
+  router.put('/teammates/:id/files', async (req, res) => {
+    const id = await sparkId(req);
+    const input = parseTeammateBody(saveCrewFileSchema, req);
+    const saved = await saveCrewFile(sparksDir, id, input);
+    await closeTeammateSessions(db, workspaceId, id);
+    res.json(saved);
+  });
+
+  router.delete('/teammates/:id/files', async (req, res) => {
+    const id = await sparkId(req);
+    await deleteCrewFile(sparksDir, id, filePath(req));
+    await closeTeammateSessions(db, workspaceId, id);
     res.status(204).end();
   });
 

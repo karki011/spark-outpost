@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
+| Agents can't change Sparks' folders  | [Protected paths](protected-paths.md).          |
 | Relay, the follow-up Spark, removed  | Nothing; PR follow-up works as before.          |
 | Transcripts: drag the list's edge    | Nothing; double-click resets it.                |
 | Ask about a meeting, **Catch me up** | [Take meeting notes](meetings.md#ask-about-it). |

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { CREW_FILE_MAX_BYTES } from './crew-files.ts';
 import {
   TEAMMATE_COLORS,
   TEAMMATE_DONE_FRESH_MS,
   TEAMMATE_FAILED_FRESH_MS,
-  TEAMMATE_INSTRUCTIONS_MAX,
   TEAMMATE_SHAPES,
   TEAMMATE_STARTERS,
   createTeammateRequestSchema,
@@ -84,7 +84,7 @@ describe('teammateState', () => {
 
 describe('standing instructions and names', () => {
   it('trims instructions and accepts them up to the limit', () => {
-    const exact = 'a'.repeat(TEAMMATE_INSTRUCTIONS_MAX);
+    const exact = 'a'.repeat(CREW_FILE_MAX_BYTES);
     const parsed = createTeammateRequestSchema.parse({ name: 'Pip', instructions: `  ${exact}  ` });
     expect(parsed.instructions).toBe(exact);
   });
@@ -92,10 +92,10 @@ describe('standing instructions and names', () => {
   it('refuses instructions over the limit with a readable message', () => {
     const result = createTeammateRequestSchema.safeParse({
       name: 'Pip',
-      instructions: 'a'.repeat(TEAMMATE_INSTRUCTIONS_MAX + 1),
+      instructions: 'a'.repeat(CREW_FILE_MAX_BYTES + 1),
     });
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toContain(String(TEAMMATE_INSTRUCTIONS_MAX));
+    expect(result.error?.issues[0]?.message).toContain('256 KB');
   });
 
   it('refuses blank or multi-line names and empty updates', () => {

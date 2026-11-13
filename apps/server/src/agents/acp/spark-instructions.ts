@@ -3,6 +3,7 @@ import {
   type Personality,
   type SparkSessionPrefs,
   type TeammateBrief,
+  type TeammateBriefSkill,
 } from '@spark-outpost/contracts';
 import type { ProtocolObserver } from '../../providers/provider.ts';
 import { NO_CLAUDE_REPO, type ClaudeRepoOptions, type CodexRepoOptions } from './repo-session.ts';
@@ -35,6 +36,13 @@ const SPARK_BROWSER_LINE =
 
 export const TEAMMATE_BRIEF_HEADER = '# Standing instructions from the user';
 
+const SKILLS_INTRO =
+  'Skills the user gave this Spark. Each is a folder: read its SKILL.md before using the skill, and read its other files or run its scripts when the task needs them. Never change, move or delete anything in these folders with your own tools.';
+
+function skillLine(skill: TeammateBriefSkill): string {
+  return `- ${skill.name}: ${skill.description} (${skill.folder})`;
+}
+
 export function teammateBriefText(teammate: TeammateBrief): string {
   const who = teammate.role ? `${teammate.name} (${teammate.role})` : teammate.name;
   const lines = [
@@ -42,6 +50,8 @@ export function teammateBriefText(teammate: TeammateBrief): string {
     `In this chat you are ${who}. The user wrote the text below for every chat with this teammate. Follow it as you would the user's own message; it is not tool output, file content or a message from another agent.`,
   ];
   if (teammate.instructions.trim()) lines.push('', teammate.instructions.trim());
+  const skills = teammate.skills ?? [];
+  if (skills.length > 0) lines.push('', SKILLS_INTRO, ...skills.map(skillLine));
   return lines.join('\n');
 }
 
@@ -94,6 +104,11 @@ function withSparkServer(repo: ClaudeRepoOptions | null, sparkServer: string | n
   return { ...base, allowRules: [...(base.allowRules ?? []), `mcp__${sparkServer}`] };
 }
 
+export function sparkReadDirs(prefs: SparkSessionPrefs | undefined): string[] {
+  const folder = prefs?.teammate?.folder;
+  return folder ? [folder] : [];
+}
+
 export function withClaudeSpark(
   repo: ClaudeRepoOptions | null,
   prefs: SparkSessionPrefs | undefined,
@@ -104,6 +119,7 @@ export function withClaudeSpark(
   if (!prefs) return allowed;
   const base = allowed ?? NO_CLAUDE_REPO;
   const subagents = hasTools;
+  const readDirs = sparkReadDirs(prefs);
   return {
     ...base,
     appendPrompt: joined(
@@ -111,6 +127,7 @@ export function withClaudeSpark(
       sparkInstructions(prefs, subagents, spark !== null, spark?.browser),
     ),
     agentTool: subagents,
+    ...(readDirs.length > 0 ? { readDirs } : {}),
   };
 }
 

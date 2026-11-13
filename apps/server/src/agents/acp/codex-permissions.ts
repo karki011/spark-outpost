@@ -1,4 +1,5 @@
 import { browserDataDir, entryPath, guardedDataEntries } from '../../approvals/browser-data.ts';
+import { guardedCrewFolders } from '../../approvals/crew-folders.ts';
 import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
 
 export const SECRET_GLOBS = SECRET_FILE_PATTERNS.map((pattern) => `**/${pattern}`);
@@ -17,12 +18,17 @@ function browserDataDenies(dataDir: string | null): Record<string, string> {
   );
 }
 
+function crewReadOnly(folders: readonly string[]): Record<string, string> {
+  return Object.fromEntries(folders.map((folder) => [folder, 'read']));
+}
+
 export function codexPermissionProfiles(
   dataDir: string | null = browserDataDir(),
   secrets = true,
+  crew: readonly string[] = guardedCrewFolders(),
 ): Record<string, object> {
   const projectRoots = secrets ? { ':project_roots': secretDenies() } : {};
-  const denied = { ...projectRoots, ...browserDataDenies(dataDir) };
+  const denied = { ...projectRoots, ...crewReadOnly(crew), ...browserDataDenies(dataDir) };
   return {
     [CODEX_READ_ONLY_MODE]: { extends: ':read-only', filesystem: denied },
     [CODEX_DO_MODE]: {

@@ -1,9 +1,5 @@
-import type {
-  Teammate,
-  TeammateBrief,
-  TeammateChat,
-  UpdateChatSettingsRequest,
-} from '@spark-outpost/contracts';
+import type { Teammate, TeammateChat, UpdateChatSettingsRequest } from '@spark-outpost/contracts';
+import type { StoredSparkBrief } from '../crew/spark-brief.ts';
 import { updateChatSettings } from './chat-settings.ts';
 import { setConversationProjects } from './conversation-projects.ts';
 import { createConversation } from './conversations.ts';
@@ -128,16 +124,14 @@ export async function openHomeThread(
   });
 }
 
-export interface StoredBrief extends TeammateBrief {
-  instructionsPath: string | null;
-}
-
 export async function teammateBrief(
   db: Queryable,
   conversationId: string,
-): Promise<StoredBrief | null> {
-  const { rows } = await db.query<StoredBrief>(
-    `SELECT t.name, t.role, t.instructions, t.instructions_path AS "instructionsPath"
+): Promise<StoredSparkBrief | null> {
+  const { rows } = await db.query<StoredSparkBrief>(
+    `SELECT t.id, t.name, t.role, t.instructions,
+       t.instructions_moved_at IS NOT NULL AS "instructionsMoved",
+       t.instructions_path AS "instructionsPath"
      FROM conversations c
      JOIN teammates t ON t.id = c.teammate_id WHERE c.id = $1`,
     [conversationId],

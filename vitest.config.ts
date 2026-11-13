@@ -10,6 +10,8 @@ const TMPDIR_SANDBOX = 'scripts/vitest-tmpdir.ts';
 const env = {
   SPARK_RULES_FILE: path.join(TEST_RULES, 'settings.json'),
   SPARK_MANAGED_RULES_FILE: path.join(TEST_RULES, 'managed-settings.json'),
+  SPARK_CREW_DIR: path.join(TEST_RULES, 'sparks'),
+  SPARK_WORKFLOWS_DIR: path.join(TEST_RULES, 'workflows'),
 };
 
 export default defineConfig({

@@ -279,6 +279,10 @@ PUT /api/outposts/:id/members/:conversationId
 DELETE /api/outposts/:id/members/:conversationId
 GET /api/a2a/chats/:chatId/.well-known/agent-card.json
 POST /api/a2a/chats/:chatId
+GET /api/teammates/:id/folder
+GET /api/teammates/:id/files
+PUT /api/teammates/:id/files
+DELETE /api/teammates/:id/files
 `;
 
 const PAIRING = `

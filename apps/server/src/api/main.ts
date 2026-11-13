@@ -9,6 +9,8 @@ import { startWeekRecap } from '../recap/schedule.ts';
 import { followAssistantChat } from '../companion/assistant.ts';
 import { ensureLocalWorkspace } from '../persistence/conversations.ts';
 import { acceptRulesBaseline } from '../spark-rules/rules-store.ts';
+import { crewSparksDir } from '../crew/folders.ts';
+import { moveInstructionsToFolders } from '../crew/move-instructions.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
@@ -99,6 +101,12 @@ await seedModelStats(db);
 await acceptRulesBaseline().catch((error: unknown) => {
   console.error("Could not record Spark's accepted rules", error);
 });
+await moveInstructionsToFolders(db).then(
+  ({ failed }) => {
+    if (failed.length > 0) console.error(`Could not move instructions for ${failed.length} Sparks`);
+  },
+  (error: unknown) => console.error("Could not move Sparks' instructions to their folders", error),
+);
 const hub = new RunEventHub();
 const activeWork = new ActiveWork();
 const stopLagMonitor = startLagMonitor({ processName: 'API', work: activeWork });
@@ -417,6 +425,7 @@ const server = app.listen(config.API_PORT, config.API_HOST, () => {
     auditRetentionDays: config.AUDIT_RETENTION_DAYS,
     chatFolders,
     researchCopies,
+    sparkFolders: crewSparksDir(),
   });
   void slackSocket.refresh();
   outposts.start();

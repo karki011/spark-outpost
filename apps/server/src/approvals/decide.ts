@@ -46,6 +46,7 @@ import {
   touchesBrowserData,
   touchesSparkRules,
 } from './browser-data.ts';
+import { changesCrewFolders, CREW_FOLDER_REASON, inReadableFolder } from './crew-folders.ts';
 import { commandCwd, outsideRoots, place, placedLabel } from './request-place.ts';
 import { alwaysAsk, type RailFound } from './rails.ts';
 import type { ShellScript } from './shell-parse.ts';
@@ -79,6 +80,7 @@ export interface ApprovalRequest {
   agentReason?: string | null;
   subagent?: string | null;
   attachedFiles?: readonly string[];
+  readable?: readonly string[];
 }
 
 export type RunRule =
@@ -143,6 +145,7 @@ export interface DecideOptions {
   publish?: PublishContext;
   sparkRules?: SparkRuleContext;
   browserData?: string | null;
+  crewFolders?: readonly string[];
 }
 
 function asRule(rule: string | null | undefined): FloorRuleId | null {
@@ -204,7 +207,7 @@ function refusal(
 }
 
 function readsOutside(request: ApprovalRequest, target: string): boolean {
-  if (!outsideRoots(request, target)) return false;
+  if (!outsideRoots(request, target) || inReadableFolder(request, target)) return false;
   return !(request.attachedFiles ?? []).includes(path.resolve(target));
 }
 
@@ -302,6 +305,9 @@ function ruledDecide(
   }
   if (touchesSparkRules(request)) {
     return { verdict: 'reject', reason: SPARK_RULES_REASON };
+  }
+  if (changesCrewFolders(request, options.shell ?? null, options.crewFolders)) {
+    return { verdict: 'reject', reason: CREW_FOLDER_REASON };
   }
   const forced = heldForce(
     adoptedForce(

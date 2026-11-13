@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CREW_FILE_MAX_BYTES, type SkillSummary } from './crew-files.ts';
 import { INVOLVEMENT_LEVEL_IDS } from './involvement-levels.ts';
 import { CONVERSATION_PROJECTS_MAX } from './projects.ts';
 import { providerIdSchema } from './provider-ids.ts';
@@ -87,8 +88,8 @@ export const teammateInstructionsSchema = z
   .string()
   .trim()
   .max(
-    TEAMMATE_INSTRUCTIONS_MAX,
-    `Keep standing instructions to ${TEAMMATE_INSTRUCTIONS_MAX} characters.`,
+    CREW_FILE_MAX_BYTES,
+    `Keep standing instructions under ${Math.round(CREW_FILE_MAX_BYTES / 1024)} KB.`,
   );
 
 export const instructionsPathSchema = z
@@ -201,7 +202,14 @@ export const updateTeammateRequestSchema = z
   });
 export type UpdateTeammateRequest = z.infer<typeof updateTeammateRequestSchema>;
 
-export type TeammateBrief = Pick<Teammate, 'name' | 'role' | 'instructions'>;
+export interface TeammateBriefSkill extends SkillSummary {
+  folder: string;
+}
+
+export type TeammateBrief = Pick<Teammate, 'name' | 'role' | 'instructions'> & {
+  folder?: string | null;
+  skills?: readonly TeammateBriefSkill[];
+};
 
 export const linkTeammateRequestSchema = z.object({ teammateId: z.uuid().nullable() });
 export type LinkTeammateRequest = z.infer<typeof linkTeammateRequestSchema>;

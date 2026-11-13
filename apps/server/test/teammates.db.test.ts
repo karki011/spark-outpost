@@ -152,10 +152,13 @@ describe('teammate CRUD', () => {
 
     const long = await client.send('post', '/api/teammates', {
       name: 'Bolt',
-      instructions: 'x'.repeat(2001),
+      instructions: 'x'.repeat(256 * 1024 + 1),
     });
     expect(long.status).toBe(400);
-    expect(long.body.error).toContain('2000');
+    expect(long.body.error).toContain('256 KB');
+
+    const roomy = await create({ name: 'Roomy', instructions: 'x'.repeat(20_000) });
+    expect(roomy.instructions).toHaveLength(20_000);
 
     const codex = await client.send('post', '/api/teammates', { name: 'Ada', provider: 'codex' });
     expect(codex.status).toBe(400);
