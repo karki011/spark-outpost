@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -160,7 +160,13 @@ describe('planning a change to a Spark folder', () => {
       text: 'x',
     }));
     expect(await problemsOf(many)).toEqual([{ path: '', text: CREW_EDIT_PROBLEMS.tooMany }]);
-    for (let index = 0; index < CREW_FILES_MAX; index += 1) await create(`n${index}.txt`, 'x');
+    const folder = path.join(base, spark);
+    await mkdir(folder, { recursive: true });
+    await Promise.all(
+      Array.from({ length: CREW_FILES_MAX }, (_, index) =>
+        writeFile(path.join(folder, `n${index}.txt`), 'x'),
+      ),
+    );
     expect(await problemsOf([{ path: 'one-more.txt', text: 'x' }])).toEqual([
       { path: '', text: CREW_PROBLEMS.full },
     ]);
