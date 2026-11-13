@@ -3,6 +3,7 @@ import { claimSlot, getSchedule } from '../src/crew-flows/schedule-records.ts';
 import { checkSchedules, STRANDED_CLAIM_MS } from '../src/crew-flows/scheduler.ts';
 import { workflowStore } from '../src/crew-flows/workflow-store.ts';
 import { userText } from '../src/outposts/user-asked.ts';
+import { actionFacts } from '../src/spark-mcp/actions/action-policy.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { inactiveChats } from '../src/persistence/inactive-chats.ts';
 import { setSparkPaused } from '../src/persistence/spark-pause.ts';
@@ -98,7 +99,9 @@ describe('a schedule that comes due', () => {
   });
 
   it('never counts as the message of the user', async () => {
-    await clock.save(everyHalfHour({ message: 'Push the branch and open a pull request.' }));
+    await clock.save(
+      everyHalfHour({ message: 'Push the branch, open a pull request and comment on the ticket.' }),
+    );
     await clock.checkAt(at(9, 30));
 
     const [run] = await runsOf(t);
@@ -109,6 +112,9 @@ describe('a schedule that comes due', () => {
     const input = await loadRunInput(t.db, run!.runId!);
     expect(input.assistantSent).toBe(true);
     expect(userText(input)).toBe('');
+    for (const action of ['open_pr', 'comment_ticket', 'create_ticket'] as const) {
+      expect((await actionFacts(t.db, run!.runId!, action)).requested, action).toBe(false);
+    }
   });
 
   it('does nothing while the schedule is off', async () => {

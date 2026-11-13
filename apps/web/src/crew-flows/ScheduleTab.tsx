@@ -79,6 +79,16 @@ function ScheduleForm({
         setDraft(schedule);
       },
     });
+  const turnOff = () =>
+    save.mutate(
+      { ...saved, enabled: false },
+      {
+        onSuccess: () => {
+          setSaved({ ...saved, enabled: false });
+          setDraft((current) => ({ ...current, enabled: false }));
+        },
+      },
+    );
   const choices = [
     { id: NO_PROJECT, label: 'No project' },
     ...(projects.data ?? []).map((project) => ({ id: project.id, label: project.name })),
@@ -94,9 +104,9 @@ function ScheduleForm({
           <BlobToggle
             label="Run on a schedule"
             checked={draft.enabled}
-            disabled={problem !== null || save.isPending}
+            disabled={(!draft.enabled && problem !== null) || save.isPending}
             describedBy={`${ids}-state`}
-            onChange={(enabled) => store({ ...draft, enabled })}
+            onChange={(enabled) => (enabled ? store({ ...draft, enabled }) : turnOff())}
           />
           <span>
             <b>Run on a schedule</b>

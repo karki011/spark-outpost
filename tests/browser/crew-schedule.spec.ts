@@ -170,7 +170,7 @@ test('a workflow runs every 30 minutes on weekdays, shows what is next and turns
 test('a schedule that cannot be saved says why, and days and weeks ask for one time', async ({
   page,
 }) => {
-  const { form } = await openSchedule(page);
+  const { form, schedules } = await openSchedule(page);
 
   await expect(form.getByLabel('At', { exact: true })).toHaveValue('09:00');
   await form.getByRole('radio', { name: 'Hours' }).click();
@@ -179,6 +179,20 @@ test('a schedule that cannot be saved says why, and days and weeks ask for one t
   await expect(form).toContainText('The end of the hours must be after the start.');
   await expect(form.getByRole('button', { name: 'Save schedule' })).toBeDisabled();
   await expect(form.getByRole('switch', { name: 'Run on a schedule' })).toBeDisabled();
+
+  await form.getByLabel('Until').fill('19:00');
+  await form.getByRole('switch', { name: 'Run on a schedule' }).click();
+  await expect(form.getByRole('switch', { name: 'Run on a schedule' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await form.getByLabel('Until').fill('09:00');
+  const toggle = form.getByRole('switch', { name: 'Run on a schedule' });
+  await expect(toggle).toBeEnabled();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  expect(schedules.saves.at(-1)).toMatchObject({ enabled: false, to: '19:00' });
+  await expect(form).toContainText('Not saved');
 
   await form.getByRole('radio', { name: 'Weeks' }).click();
   await expect(form.getByLabel('Until')).toHaveCount(0);
