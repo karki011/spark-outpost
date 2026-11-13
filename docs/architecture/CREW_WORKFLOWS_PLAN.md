@@ -103,6 +103,26 @@ The owner asked on 2026-11-12 to delete Relay, the built-in pull request follow-
 
 B and E build against the Wave 0 shapes with a fake API until A and D land.
 
+### Stream D: the step kind that may run commands (design, 2026-11-13)
+
+**Chosen:** a workflow step is the hand-off child run that exists today (`mode: 'ask'`, `role: 'spark'`) with one mark, `route.spark.step` (the step id), and that mark gives it the approval gate a top-level Ask turn already has (`prepareAskRun`). No new run mode, no new role and no new gate rule.
+
+**What that gate does**, checked against `decide()` before building:
+
+- Refused in every mode: file edits, moves and deletes; shell redirects and commands that write files (`rm`, `mkdir`, `echo > file`); `git commit`, `git push`, `git remote`; `gh pr create`, `gh pr merge`, `gh pr comment`, `gh workflow run`; package installs.
+- At once in every mode: commands that only read.
+- Every other command (a script, a test runner, `curl`) follows the step's own agent mode: at once in Auto, Bypass permissions, Auto review and Full access, an ordinary approval card otherwise. The card is mirrored into the chat like any child run's card.
+- The step's agent mode is the Spark's own mode when the step runs on the Spark's provider, otherwise the chat's mode translated to the provider in use (`insertChildRun` gets an optional `agentMode`). The chat's mode and autonomy level are not consulted, which differs from a top-level Ask turn (`askTurnAutoWhy`).
+- The provider session is the Ask session: no write tools are offered, so the gate sees every command, including in modes that hide commands from Spark in a Do turn.
+
+**Why this and not a Do child run:** a Do run offers the agent its edit tools and, in several modes, runs shell commands without sending Spark a request. Keeping project files unchanged there would need new rules. The Ask gate already refuses every change it can read, in every mode, and is covered by `approvals/decide-ask-run.test.ts`.
+
+**What it does not stop:** a script the step runs can write files itself; the gate reads the command line, not what the program does. This is the same limit a top-level Ask turn has today, so the safety floor is not weakened, but "a step cannot change project files" is true of the agent's tools and of commands the gate can read, not of an arbitrary script.
+
+**Authority:** a step is never "the user's message". Its Spark action tools never count as asked for (`action-policy.ts` treats a step run like an Ask Spark message), and a run started by the Run route carries the run source `workflow`, which `userText` treats the same way. A step gets no push or pull request tool (`publishScope` is for the chat's own run) and no `spark_terminal_run` (refused in Ask turns).
+
+**Without a project folder** a step runs as `chat` with no tools, as a hand-off does today.
+
 ### Wave 2 (four in parallel)
 
 | Stream                       | Scope                                                                                                                                                                                                                       | Needs               |
