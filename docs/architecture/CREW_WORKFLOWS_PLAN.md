@@ -37,7 +37,6 @@ Mocks for every screen: `docs/design/mocks/crew-workflows-mock.html` (15 screens
 
 ## Assumed, not yet confirmed by the owner
 
-- **A workflow step may run commands** in the Spark's own mode through the normal approval gate (scripts need this), but may not edit project files, push or open a pull request. Today a Spark handed a job is forced read-only.
 - **Tab names** are "Crew" and "Workflows" under a page titled "Sparks".
 - **The builder chat opens from the corner companion** and from a button on the page. The companion is a status panel today; this adds an entry to it.
 
@@ -150,7 +149,7 @@ Routes, all refused to a paired device (`never` in `route-rules.ts`):
 | `GET /api/workflow-runs/:id`       | `WorkflowRun`, or 404                                                                                                                                                                                         |
 | `POST /api/workflow-runs/:id/stop` | Requests a stop of the run's turn and returns the `WorkflowRun`                                                                                                                                               |
 
-Decisions made while building, for the owner to confirm:
+Decisions made while building, confirmed by the owner on 2026-11-13 together with the step design above:
 
 - **Who may start one by `@id`:** only a message the user typed on the Mac (run source `ui`, a queued message, or none). A spoken message, a ticket start, an outpost request, a follow-up round, an Ask Spark message and a message from a paired device leave `@id` as plain text; the paired device gets one line saying workflows start on the Mac.
 - **A Spark name wins.** A message that mentions a Spark runs the Spark hand-off and leaves `@workflow-id` as text. One workflow per message.
