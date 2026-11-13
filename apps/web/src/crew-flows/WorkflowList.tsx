@@ -1,5 +1,6 @@
-import type { WorkflowSummary } from '@spark-outpost/contracts';
-import { CheckIcon, PlusIcon, ResumeIcon, WarnIcon } from '../ui/icons.tsx';
+import type { WorkflowRun, WorkflowSummary } from '@spark-outpost/contracts';
+import { PlusIcon, ResumeIcon, WarnIcon } from '../ui/icons.tsx';
+import { LastRun } from './RunsList.tsx';
 import type { CrewSpark } from './spark-lookup.ts';
 import { StagePreview } from './StagePreview.tsx';
 import { useStartWorkflowRun } from './use-workflows.ts';
@@ -9,6 +10,7 @@ interface WorkflowListProps {
   sparkById: ReadonlyMap<string, CrewSpark>;
   onNew: () => void;
   onEdit: (id: string) => void;
+  onOpenRun: (run: WorkflowRun) => void;
 }
 
 function plural(total: number, word: string): string {
@@ -19,11 +21,8 @@ function WorkflowRow({
   workflow,
   sparkById,
   onEdit,
-}: {
-  workflow: WorkflowSummary;
-  sparkById: ReadonlyMap<string, CrewSpark>;
-  onEdit: (id: string) => void;
-}) {
+  onOpenRun,
+}: Omit<WorkflowListProps, 'workflows' | 'onNew'> & { workflow: WorkflowSummary }) {
   const run = useStartWorkflowRun();
   const steps = workflow.stages.reduce((total, stage) => total + stage.length, 0);
   return (
@@ -42,12 +41,7 @@ function WorkflowRow({
             {plural(workflow.problems, 'problem')}
           </span>
         )}
-        {run.isSuccess && (
-          <span className="wf-state" data-state="succeeded">
-            <CheckIcon className="wf-state-ic" />
-            Started
-          </span>
-        )}
+        <LastRun workflowId={workflow.id} name={workflow.name} onOpen={onOpenRun} />
         {run.error && (
           <span className="wf-state" data-state="failed">
             <WarnIcon />
@@ -69,7 +63,7 @@ function WorkflowRow({
         aria-label={`Run ${workflow.name}`}
         disabled={workflow.problems > 0 || run.isPending}
         title={workflow.problems > 0 ? 'Fix its problems in the editor first' : undefined}
-        onClick={() => run.mutate(workflow.id)}
+        onClick={() => run.mutate(workflow.id, { onSuccess: onOpenRun })}
       >
         <ResumeIcon />
         Run
@@ -78,7 +72,13 @@ function WorkflowRow({
   );
 }
 
-export function WorkflowList({ workflows, sparkById, onNew, onEdit }: WorkflowListProps) {
+export function WorkflowList({
+  workflows,
+  sparkById,
+  onNew,
+  onEdit,
+  onOpenRun,
+}: WorkflowListProps) {
   return (
     <div className="wf-list">
       <div className="wf-list-bar">
@@ -94,6 +94,7 @@ export function WorkflowList({ workflows, sparkById, onNew, onEdit }: WorkflowLi
             workflow={workflow}
             sparkById={sparkById}
             onEdit={onEdit}
+            onOpenRun={onOpenRun}
           />
         ))}
       </ul>

@@ -1,5 +1,5 @@
 import type { WorkflowStepState } from '@spark-outpost/contracts';
-import { CheckIcon, ClockIcon, MinusIcon, XIcon } from '../ui/icons.tsx';
+import { CheckIcon, ClockIcon, MinusIcon, ResumeIcon, XIcon } from '../ui/icons.tsx';
 
 const WORDS: Record<WorkflowStepState, string> = {
   waiting: 'Waiting',
@@ -14,6 +14,7 @@ function StateIcon({ state }: { state: WorkflowStepState }) {
   if (state === 'succeeded') return <CheckIcon className="wf-state-ic" />;
   if (state === 'failed') return <XIcon />;
   if (state === 'skipped' || state === 'cancelled') return <MinusIcon />;
+  if (state === 'running') return <ResumeIcon />;
   return <ClockIcon />;
 }
 

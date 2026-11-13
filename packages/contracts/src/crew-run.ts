@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { totalCostSourceSchema } from './audit.ts';
 import { crewSlugSchema } from './crew-files.ts';
 import type { WorkflowStep } from './crew-workflow.ts';
 
@@ -147,6 +148,7 @@ export const workflowOutcome: WorkflowOutcome = (steps, states) => {
 export const workflowRunStepSchema = z.object({
   stepId: crewSlugSchema,
   sparkId: z.uuid(),
+  dependsOn: z.array(crewSlugSchema),
   state: workflowStepStateSchema,
   runId: z.uuid().nullable(),
   note: z.string().nullable(),
@@ -154,6 +156,13 @@ export const workflowRunStepSchema = z.object({
   finishedAt: z.iso.datetime({ offset: true }).nullable(),
 });
 export type WorkflowRunStep = z.infer<typeof workflowRunStepSchema>;
+
+export const workflowRunSpendSchema = z.object({
+  tokens: z.number().int().nonnegative(),
+  costUsd: z.number().nonnegative().nullable(),
+  costSource: totalCostSourceSchema.nullable(),
+});
+export type WorkflowRunSpend = z.infer<typeof workflowRunSpendSchema>;
 
 export const workflowRunSchema = z.object({
   id: z.uuid(),
@@ -166,6 +175,7 @@ export const workflowRunSchema = z.object({
   runId: z.uuid().nullable(),
   stoppedBy: crewSlugSchema.nullable(),
   steps: z.array(workflowRunStepSchema),
+  spend: workflowRunSpendSchema,
   startedAt: z.iso.datetime({ offset: true }),
   finishedAt: z.iso.datetime({ offset: true }).nullable(),
 });

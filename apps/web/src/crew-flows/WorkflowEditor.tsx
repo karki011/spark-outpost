@@ -5,11 +5,13 @@ import {
   workflowProblems,
   workflowStages,
   type Workflow,
+  type WorkflowRun,
   type WorkflowStep,
 } from '@spark-outpost/contracts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { BackIcon, CheckIcon, EyeIcon, ResumeIcon, WarnIcon } from '../ui/icons.tsx';
 import type { CrewSpark } from './spark-lookup.ts';
+import { RunsList } from './RunsList.tsx';
 import { StageList } from './StageList.tsx';
 import { useDeleteWorkflow, useSaveWorkflow, useStartWorkflowRun } from './use-workflows.ts';
 import { WorkflowPreview } from './WorkflowPreview.tsx';
@@ -23,6 +25,7 @@ interface WorkflowEditorProps {
   sparks: readonly CrewSpark[];
   sparkById: ReadonlyMap<string, CrewSpark>;
   onClose: () => void;
+  onOpenRun: (run: WorkflowRun) => void;
 }
 
 function count(total: number, word: string): string {
@@ -42,6 +45,7 @@ export function WorkflowEditor({
   sparks,
   sparkById,
   onClose,
+  onOpenRun,
 }: WorkflowEditorProps) {
   const nameId = useId();
   const [name, setName] = useState(initial.name);
@@ -105,13 +109,7 @@ export function WorkflowEditor({
           {count(steps.length, 'step')} · {count(stages, 'stage')}
         </span>
         <span className="wf-bar-status" role="status">
-          {run.isSuccess && !dirty && (
-            <span className="wf-state" data-state="succeeded">
-              <CheckIcon className="wf-state-ic" />
-              Started
-            </span>
-          )}
-          {!dirty && saved !== null && !run.isSuccess && (
+          {!dirty && saved !== null && (
             <span className="wf-state" data-state="succeeded">
               <CheckIcon className="wf-state-ic" />
               Saved
@@ -144,7 +142,7 @@ export function WorkflowEditor({
             className="btn primary sm"
             disabled={blocked !== null || dirty || run.isPending}
             title={dirty ? 'Save before running' : undefined}
-            onClick={() => run.mutate(initial.id)}
+            onClick={() => run.mutate(initial.id, { onSuccess: onOpenRun })}
           >
             <ResumeIcon />
             Run
@@ -226,6 +224,7 @@ export function WorkflowEditor({
           </div>
         </div>
       )}
+      {!previewing && hash !== null && <RunsList workflowId={initial.id} onOpen={onOpenRun} />}
     </section>
   );
 }

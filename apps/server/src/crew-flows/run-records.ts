@@ -1,9 +1,12 @@
 import {
+  mergeCostSource,
   workflowSchema,
+  type CostSource,
   type Workflow,
   type WorkflowRun,
   type WorkflowRunKind,
   type WorkflowRunSource,
+  type WorkflowRunSpend,
   type WorkflowRunStatus,
   type WorkflowRunStep,
   type WorkflowStepState,
@@ -22,6 +25,15 @@ export interface NewWorkflowRun {
   runId: string;
   message: string;
   continues: boolean;
+}
+
+async function announce(db: Queryable, workflowRunId: string): Promise<void> {
+  await db.query(
+    `SELECT pg_notify('changes', json_build_object(
+       'kind', 'workflow_run', 'conversationId', conversation_id, 'runId', run_id)::text)
+     FROM workflow_runs WHERE id = $1`,
+    [workflowRunId],
+  );
 }
 
 export async function insertWorkflowRun(db: Queryable, run: NewWorkflowRun): Promise<boolean> {
@@ -51,6 +63,7 @@ export async function insertWorkflowRun(db: Queryable, run: NewWorkflowRun): Pro
      FROM jsonb_array_elements($2::jsonb) WITH ORDINALITY AS listed (step, position)`,
     [run.id, JSON.stringify(run.workflow.steps)],
   );
+  await announce(db, run.id);
   return true;
 }
 
@@ -74,6 +87,7 @@ interface RunRow {
 interface StepRow {
   workflow_run_id: string;
   step_id: string;
+  depends_on: string[] | null;
   spark_id: string;
   state: WorkflowStepState;
   run_id: string | null;
@@ -88,6 +102,7 @@ function toStep(row: StepRow): WorkflowRunStep {
   return {
     stepId: row.step_id,
     sparkId: row.spark_id,
+    dependsOn: row.depends_on ?? [],
     state: row.state,
     runId: row.run_id,
     note: row.note,
@@ -96,7 +111,25 @@ function toStep(row: StepRow): WorkflowRunStep {
   };
 }
 
-function toRun(row: RunRow, steps: readonly StepRow[]): WorkflowRun {
+interface SpendRow {
+  owner: string;
+  tokens: number | null;
+  cost_usd: string | null;
+  cost_source: CostSource | null;
+}
+
+const NO_SPEND: WorkflowRunSpend = { tokens: 0, costUsd: null, costSource: null };
+
+function addSpend(total: WorkflowRunSpend, row: SpendRow): WorkflowRunSpend {
+  if (row.cost_usd === null) return { ...total, tokens: total.tokens + (row.tokens ?? 0) };
+  return {
+    tokens: total.tokens + (row.tokens ?? 0),
+    costUsd: (total.costUsd ?? 0) + Number(row.cost_usd),
+    costSource: mergeCostSource(total.costSource, row.cost_source ?? 'reported'),
+  };
+}
+
+function toRun(row: RunRow, steps: readonly StepRow[], spend: readonly SpendRow[]): WorkflowRun {
   return {
     id: row.id,
     workflowId: row.workflow_id,
@@ -108,6 +141,7 @@ function toRun(row: RunRow, steps: readonly StepRow[]): WorkflowRun {
     runId: row.run_id,
     stoppedBy: row.stopped_by,
     steps: steps.filter((step) => step.workflow_run_id === row.id).map(toStep),
+    spend: spend.filter((entry) => entry.owner === row.run_id).reduce(addSpend, NO_SPEND),
     startedAt: row.started_at.toISOString(),
     finishedAt: iso(row.finished_at),
   };
@@ -116,9 +150,26 @@ function toRun(row: RunRow, steps: readonly StepRow[]): WorkflowRun {
 async function stepsOf(db: Queryable, ids: readonly string[]): Promise<StepRow[]> {
   if (ids.length === 0) return [];
   const { rows } = await db.query<StepRow>(
-    `SELECT * FROM workflow_run_steps WHERE workflow_run_id = ANY($1::uuid[])
-     ORDER BY workflow_run_id, position`,
+    `SELECT s.*, (
+       SELECT ARRAY(SELECT jsonb_array_elements_text(step->'dependsOn'))
+       FROM workflow_runs w, jsonb_array_elements(w.definition->'steps') AS step
+       WHERE w.id = s.workflow_run_id AND step->>'id' = s.step_id LIMIT 1
+     ) AS depends_on
+     FROM workflow_run_steps s WHERE s.workflow_run_id = ANY($1::uuid[])
+     ORDER BY s.workflow_run_id, s.position`,
     [ids],
+  );
+  return rows;
+}
+
+async function spendOf(db: Queryable, runIds: readonly string[]): Promise<SpendRow[]> {
+  if (runIds.length === 0) return [];
+  const { rows } = await db.query<SpendRow>(
+    `SELECT COALESCE(r.parent_run_id, r.id) AS owner,
+       COALESCE(r.total_tokens, r.input_tokens + r.output_tokens) AS tokens,
+       r.cost_usd, r.cost_source
+     FROM runs r WHERE r.id = ANY($1::uuid[]) OR r.parent_run_id = ANY($1::uuid[])`,
+    [runIds],
   );
   return rows;
 }
@@ -128,7 +179,11 @@ async function assemble(db: Queryable, rows: readonly RunRow[]): Promise<Workflo
     db,
     rows.map((row) => row.id),
   );
-  return rows.map((row) => toRun(row, steps));
+  const spend = await spendOf(
+    db,
+    rows.flatMap((row) => (row.run_id ? [row.run_id] : [])),
+  );
+  return rows.map((row) => toRun(row, steps, spend));
 }
 
 export async function getWorkflowRun(
@@ -189,6 +244,7 @@ export async function startStep(
      WHERE workflow_run_id = $1 AND step_id = $2 AND state = 'waiting'`,
     [workflowRunId, stepId, runId],
   );
+  await announce(db, workflowRunId);
 }
 
 export async function settleStep(
@@ -203,6 +259,7 @@ export async function settleStep(
      WHERE workflow_run_id = $1 AND step_id = $2 AND state IN ('waiting', 'running')`,
     [workflowRunId, stepId, state, note],
   );
+  await announce(db, workflowRunId);
 }
 
 export async function finishWorkflowRun(
@@ -216,6 +273,7 @@ export async function finishWorkflowRun(
      WHERE id = $1 AND status = 'running'`,
     [id, status, stoppedBy],
   );
+  await announce(db, id);
 }
 
 export async function settleStrandedRuns(db: Queryable): Promise<number> {

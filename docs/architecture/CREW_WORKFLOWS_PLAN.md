@@ -228,6 +228,47 @@ Render `<WorkflowsPanel />` as the body of the Workflows tab, inside the page's 
 - The graph is a picture for the list beside it (`role="figure"`, nodes not focusable); every action is in the list. A workflow whose steps wait on each other still draws, with the loop edge drawn badly.
 - **New workflow**'s **Start from** options are each a Tab stop (`RadioRow` has no roving tab index); arrow keys also move between them.
 
+### Stream E2: live run view (built, 2026-11-13)
+
+**What is there** (`apps/web/src/crew-flows/`)
+
+- `RunView`: after **Run** (list row or editor) the run view opens with the workflow's graph (`FlowGraph`), each step's state as an icon plus a word (Waiting, Running, Done, Failed, Skipped, Cancelled, and **Needs you** while a step's approval card waits), solid green edges for hand-offs that happened, dashed ones for those that have not, a status line (run state, steps done of total, elapsed time, tokens, cost) and **Stop** while it runs. The outcome line names the step that stopped a failed run, what was cancelled and how many steps never started; `outcome_unknown` says to read the chat before running again; a run whose chat was deleted says the step details are gone.
+- **All steps** (`RunStepList`) is the keyboard and screen reader path: every step is a button that selects it. The graph stays a picture. The selected step's panel (`RunStepPanel`) shows its Spark, agent (provider and model), mode, time, output note (Markdown), **Passed to** (buttons that select those steps), **Open the card** when it waits on an approval (opens the chat at the card; the card is answered there) and **Open this step in the chat** (opens the chat at the step's agent block). On a narrow window the graph and the list stack.
+- **Runs** under the editor (`RunsList`, newest first: when, how it started, state, duration, cost); a row opens the run view and **Back to the workflow** returns. The Workflows list shows each workflow's last run (state and when) as a button that opens it. `RunRow` takes its state as a node so stream G can pass Skipped or Held.
+- A chat turn started by `@workflow-id` shows one line under the user's message: the workflow name, its state and **Open run view** (`WorkflowRunLink`, rendered from `chat/TurnSection.tsx` only when the turn's Spark members carry a workflow step). It opens the Sparks page on Workflows at that run (`run-route.ts`; `openSparksPage` gained a tab argument).
+
+**Live updates: the event stream, not polling.** `run-records.ts` now sends `pg_notify('changes', {kind: 'workflow_run', …})` when a run is recorded, a step starts or settles and the run finishes, like the other tables' change events. `workflow_run` is a new `AppEvent` kind; `app-event-keys.ts` invalidates `crew-workflow-runs` (a new live root), so the run view, the Runs list, the last-run line and the chat line refresh with no timer. The child runs' own events refresh the chat detail, which supplies approval cards and each step's agent. A one-second clock ticks only while a run is running.
+
+**Numbers.** `WorkflowRun` gained `spend` (`tokens`, `costUsd`, `costSource`), summed in SQL from the turn's run and its child runs the same way `orchestrationTotals` sums a chat turn (`COALESCE(total_tokens, input+output)`, `cost_usd`, `mergeCostSource`). Cost is `null` when no run reported or estimated one: the view leaves it out while running and says **cost not reported** after; an estimate shows `~`. Elapsed time is the record's `startedAt` to `finishedAt` (or now), a step's from its own times. Each run step also carries its `dependsOn` from the definition stored with the run, so a later edit to the workflow does not change an old run's graph. Jev cost is not included (no Jev call happens in a workflow turn).
+
+**Shared files changed**
+
+- `packages/contracts/src/crew-run.ts` (`dependsOn` on a run step, `spend` and `workflowRunSpendSchema`), `packages/contracts/src/app-events.ts` (`workflow_run`).
+- `apps/server/src/crew-flows/run-records.ts` (the event, `dependsOn`, `spend`).
+- `apps/web/src/crew-flows/`: `FlowGraph.tsx` (optional `finished` and `selected`), `flow-graph.css`, `StepState.tsx` (Running gets its own icon), `WorkflowList.tsx`, `WorkflowEditor.tsx`, `WorkflowsPanel.tsx` (the `run` view and `onOpenRun`).
+- `apps/web/src/app/live/app-event-keys.ts`, `apps/web/src/sparks-page/sparks-route.ts` and `SparksPage.tsx` (tab request), `apps/web/src/chat/TurnSection.tsx` (one line).
+- `apps/web/src/audit/AuditTimeline.tsx`, `audit-views.css` and `tests/browser/audit.spec.ts`: the audit waterfall's `wf-*` classes are now `wfall-*`. Its global `.wf-bar` (absolute, 16px) was overriding the workflow editor's top bar, which sat under the Sparks page header once the audit CSS was loaded.
+- `tests/browser/crew-flows-kit.ts` and `crew-flows.spec.ts` (the fake start reply has steps, **Run** now opens the run view), `tests/browser/spec-map.ts`.
+- Guide: `docs/guide/workflow-runs.md` (new) and a `whats-new.md` row.
+
+**Tests**
+
+- Unit: `run-model.test.ts` (state words, finished edges, passed to, status line, elapsed time, cost text, stopped-by and outcome texts, waiting approval, last run).
+- DB: `apps/server/test/crew-workflow-view.db.test.ts` (a record carries `dependsOn`, its spend matches the orchestration totals, and it announces `workflow_run` changes).
+- Browser: `tests/browser/crew-run-view.spec.ts` (group `crew-flows`), against the real routes and worker with the fake provider: Waiting → Running → Done with focus kept on a step while it updates, finished edges, the step panel and Passed to, **Open this step in the chat** and back through **Open run view**; a `#fail` step stopping the workflow with the stopped-by line, a narrow window, the last-run line and the Runs list; **Stop** and the rest by keyboard alone; `@id` in a chat; a step waiting on an approval card (**Needs you**, **Open the card**, Allow in the chat, then Done). axe on the running, failed, Runs and Needs you views; screenshots in light and dark in `test-results/crew-run-view/`, checked.
+
+**Ran on 2026-11-13:** `pnpm check` (format, lint, typecheck, source, docs, knip, contrast and ACP coverage pass; the unit run had 14 failures in 11 unrelated files, timeouts while the machine was loaded, and all 11 files passed on rerun along with this stream's tests); `pnpm test:db` for `crew-workflow-*` (23 passed); browser `crew-run-view`, `crew-flows`, `sparks-page` (19 passed) and `spark-mention`, `stored-crew-turn`, `sparks`, `audit` (15 passed). `pnpm test:changed`, `test:db:changed` and `test:browser:changed` select every test here (the local `main` is behind, and `spec-map.ts` and `vitest.config.ts` count as run-everything files), so they were not run to the end.
+
+**Unverified or left out**
+
+- Not run in the Mac app, on a paired device or with VoiceOver. Paired devices are refused the run routes (`never`), so the run view, the Runs list and the chat line show nothing there.
+- No real agent has run a step (fake provider only; `pnpm test:live` not run).
+- A test run (stream F, `kind: 'test'`) is left out of the last-run line and the Runs list; F shows its own.
+- The run view reads the chat detail for cards and agents; a run in an archived chat should still show them, but that was not tested.
+- `audit.spec.ts` (after the `wfall-*` rename; not compared with the base) failed twice while other sessions loaded the machine, each time on a different test whose first message did not send from the composer, before the waterfall; on a quieter rerun all three passed.
+- `outcome_unknown` and a failed run with no stopping step are covered by unit tests only.
+- The chat's line reads the workflow's runs list (last 100) to find the turn's run; an older run falls off it.
+
 ### Stream B: Sparks page and Crew tab (built against faked file routes)
 
 Built in `apps/web/src/sparks-page/` on 2026-11-13, on branch `claude/crew-page-6189a6`.

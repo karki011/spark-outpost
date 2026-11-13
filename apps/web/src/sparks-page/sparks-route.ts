@@ -1,15 +1,18 @@
 import { useEffect } from 'react';
 
+export type SparksPageTab = 'crew' | 'workflows';
+
 export interface SparksPageRequest {
   sparkId: string | null;
+  tab: SparksPageTab;
 }
 
 let pending: SparksPageRequest | null = null;
 const listeners = new Set<() => void>();
 const appOpeners = new Set<() => void>();
 
-export function openSparksPage(sparkId: string | null = null): void {
-  pending = { sparkId };
+export function openSparksPage(sparkId: string | null = null, tab: SparksPageTab = 'crew'): void {
+  pending = { sparkId, tab };
   appOpeners.forEach((open) => open());
   listeners.forEach((listener) => listener());
 }

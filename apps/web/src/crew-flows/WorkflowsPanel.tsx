@@ -1,8 +1,10 @@
 import './crew-flows.css';
-import { useMemo, useState } from 'react';
-import type { WorkflowStep } from '@spark-outpost/contracts';
+import { useCallback, useMemo, useState } from 'react';
+import type { WorkflowRun, WorkflowStep } from '@spark-outpost/contracts';
 import { WarnIcon } from '../ui/icons.tsx';
 import { NewWorkflow } from './NewWorkflow.tsx';
+import { useWorkflowRunRequests } from './run-route.ts';
+import { RunView } from './RunView.tsx';
 import { useCrewSparks } from './spark-lookup.ts';
 import { useWorkflow, useWorkflows } from './use-workflows.ts';
 import { WorkflowEditor } from './WorkflowEditor.tsx';
@@ -15,7 +17,8 @@ type View =
   | { kind: 'list' }
   | { kind: 'new' }
   | { kind: 'draft'; id: string; name: string; steps: WorkflowStep[] }
-  | { kind: 'edit'; id: string };
+  | { kind: 'edit'; id: string }
+  | { kind: 'run'; runId: string; seed?: WorkflowRun; from: string | null };
 
 function Problem({ text }: { text: string }) {
   return (
@@ -35,11 +38,32 @@ export function WorkflowsPanel() {
   const file = useWorkflow(view.kind === 'edit' ? view.id : null);
   const suggestions = useMemo(() => suggestWorkflows(crew.sparks), [crew.sparks]);
   const toList = () => setView({ kind: 'list' });
+  useWorkflowRunRequests(
+    useCallback((runId: string) => setView({ kind: 'run', runId, from: null }), []),
+  );
+  const openRun = (from: string | null) => (run: WorkflowRun) =>
+    setView({ kind: 'run', runId: run.id, seed: run, from });
   const draft = (name: string, steps: WorkflowStep[]) => {
     const taken = (list.data ?? []).map((workflow) => workflow.id);
     setView({ kind: 'draft', id: workflowId(name, taken), name, steps });
   };
 
+  if (view.kind === 'run') {
+    const { from } = view;
+    return (
+      <div className="wf-panel">
+        <RunView
+          key={view.runId}
+          runId={view.runId}
+          {...(view.seed ? { seed: view.seed } : {})}
+          sparks={crew.sparks}
+          sparkById={crew.byId}
+          backLabel={from === null ? 'Workflows' : 'Back to the workflow'}
+          onBack={from === null ? toList : () => setView({ kind: 'edit', id: from })}
+        />
+      </div>
+    );
+  }
   if (view.kind === 'draft') {
     return (
       <div className="wf-panel">
@@ -50,6 +74,7 @@ export function WorkflowsPanel() {
           sparks={crew.sparks}
           sparkById={crew.byId}
           onClose={toList}
+          onOpenRun={openRun(view.id)}
         />
       </div>
     );
@@ -73,6 +98,7 @@ export function WorkflowsPanel() {
             sparks={crew.sparks}
             sparkById={crew.byId}
             onClose={toList}
+            onOpenRun={openRun(view.id)}
           />
         )}
       </div>
@@ -105,6 +131,7 @@ export function WorkflowsPanel() {
           sparkById={crew.byId}
           onNew={() => setView({ kind: 'new' })}
           onEdit={(id) => setView({ kind: 'edit', id })}
+          onOpenRun={openRun(null)}
         />
       )}
     </div>
