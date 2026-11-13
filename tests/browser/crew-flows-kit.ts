@@ -56,13 +56,17 @@ export async function fakeWorkflowApi(
       workflows: [...api.files.values()].map((stored) => summary(stored, sparks)),
     });
   });
+  const started: unknown[] = [];
+  await page.route('**/api/workflow-runs/*', async (route) => {
+    await json(route, 200, started.at(-1));
+  });
   await page.route('**/api/workflows/*/runs', async (route) => {
     const id = new URL(route.request().url()).pathname.split('/').at(-2)!;
+    if (route.request().method() === 'GET') return json(route, 200, { runs: started });
     const stored = api.files.get(id);
     if (!stored) return json(route, 404, { error: 'That workflow no longer exists.' });
     api.runs.push(id);
-    const now = new Date().toISOString();
-    return json(route, 201, {
+    const run = {
       id: '00000000-0000-4000-8000-00000000f001',
       workflowId: id,
       workflowName: stored.workflow.name,
@@ -72,10 +76,22 @@ export async function fakeWorkflowApi(
       conversationId: null,
       runId: null,
       stoppedBy: null,
-      steps: [],
-      startedAt: now,
+      steps: stored.workflow.steps.map((entry) => ({
+        stepId: entry.id,
+        sparkId: entry.sparkId,
+        dependsOn: entry.dependsOn,
+        state: 'waiting',
+        runId: null,
+        note: null,
+        startedAt: null,
+        finishedAt: null,
+      })),
+      spend: { tokens: 0, costUsd: null, costSource: null },
+      startedAt: new Date().toISOString(),
       finishedAt: null,
-    });
+    };
+    started.unshift(run);
+    return json(route, 201, run);
   });
   await page.route('**/api/workflows/*', async (route) => {
     const request = route.request();

@@ -119,8 +119,10 @@ test('an empty Workflows tab suggests workflows from the crew and a new one save
   ]);
 
   await open.getByRole('button', { name: 'Run' }).click();
-  await expect(open.getByRole('status').filter({ hasText: 'Started' })).toBeVisible();
+  const run = page.getByRole('region', { name: 'Run of Pre-PR review' });
+  await expect(run.getByRole('list', { name: 'All steps' }).getByRole('listitem')).toHaveCount(4);
   expect(api.runs).toEqual(['pre-pr-review']);
+  await run.getByRole('button', { name: 'Back to the workflow' }).click();
 
   await open.getByRole('button', { name: 'Workflows' }).click();
   const rows = page.getByRole('list', { name: 'Workflows' });

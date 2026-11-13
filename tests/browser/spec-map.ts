@@ -189,7 +189,7 @@ export const SPEC_GROUPS = {
     'tickets-rows',
   ],
   slack: ['slack-chat', 'slack-settings', 'slack-sign-in'],
-  'crew-flows': ['crew-flows'],
+  'crew-flows': ['crew-flows', 'crew-run-view'],
   sparks: [
     'spark-actions',
     'spark-decisions',
@@ -455,7 +455,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/server/src/observations/', groups: ['analytics-audit'] },
   { prefix: 'apps/server/src/outcomes/', groups: ['chat', 'analytics-audit'] },
   { prefix: 'apps/server/src/outposts/', groups: ['outposts', 'chat'] },
-  { prefix: 'apps/server/src/crew-flows/', groups: ['sparks', 'chat'] },
+  { prefix: 'apps/server/src/crew-flows/', groups: ['sparks', 'chat', 'crew-flows'] },
   { prefix: 'apps/server/src/plans/', groups: ['approvals'] },
   { prefix: 'apps/server/src/pr-follow-up/', groups: ['ship-pr'] },
   { prefix: 'apps/server/src/pr-tracking/', groups: ['ship-pr'] },

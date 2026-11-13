@@ -11,16 +11,18 @@ import { PlusIcon } from '../ui/icons.tsx';
 import { PageTabs } from '../ui/PageTabs.tsx';
 import { CrewTab } from './CrewTab.tsx';
 import { SparkDetail, type DetailTab } from './SparkDetail.tsx';
-import { useSparksPageRequests, type SparksPageRequest } from './sparks-route.ts';
+import {
+  useSparksPageRequests,
+  type SparksPageRequest,
+  type SparksPageTab,
+} from './sparks-route.ts';
 import { useWorkflowCount, WorkflowsTab } from './WorkflowsTab.tsx';
-
-type PageTab = 'crew' | 'workflows';
 
 export function SparksPage() {
   const { loading, error, teammates, starters } = useTeammates();
   const { remote } = useRemoteClient();
   const workflows = useWorkflowCount();
-  const [tab, setTab] = useState<PageTab>('crew');
+  const [tab, setTab] = useState<SparksPageTab>('crew');
   const [openId, setOpenId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>('details');
   const open = useCallback((sparkId: string | null) => {
@@ -28,7 +30,15 @@ export function SparksPage() {
     setDetailTab('details');
     setOpenId(sparkId);
   }, []);
-  useSparksPageRequests(useCallback((request: SparksPageRequest) => open(request.sparkId), [open]));
+  useSparksPageRequests(
+    useCallback(
+      (request: SparksPageRequest) => {
+        open(request.sparkId);
+        setTab(request.tab);
+      },
+      [open],
+    ),
+  );
   useTeammateCreated(useCallback((created: Teammate) => open(created.id), [open]));
   const spark = teammates.find((entry) => entry.id === openId) ?? null;
 
@@ -73,7 +83,7 @@ export function SparksPage() {
             { id: 'workflows', label: 'Workflows', count: workflows },
           ]}
           value={tab}
-          onChange={(id) => setTab(id as PageTab)}
+          onChange={(id) => setTab(id as SparksPageTab)}
         />
       </header>
       {tab === 'crew' ? (

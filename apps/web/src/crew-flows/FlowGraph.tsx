@@ -17,7 +17,7 @@ import type { WorkflowStep, WorkflowStepState } from '@spark-outpost/contracts';
 import { FLOW_NODE_HEIGHT, FLOW_NODE_WIDTH } from './flow-layout.ts';
 import type { CrewSpark } from './spark-lookup.ts';
 import { SparkDot } from './StagePreview.tsx';
-import { StepState } from './StepState.tsx';
+import { RunStepState } from './RunState.tsx';
 import { useFlowLayout } from './use-flow-layout.ts';
 
 interface FlowGraphProps {
@@ -25,6 +25,9 @@ interface FlowGraphProps {
   labels: ReadonlyMap<string, string>;
   sparks: ReadonlyMap<string, CrewSpark>;
   states?: Readonly<Record<string, WorkflowStepState>>;
+  finished?: ReadonlySet<string>;
+  asking?: ReadonlySet<string>;
+  selected?: string | null;
   label: string;
 }
 
@@ -32,17 +35,23 @@ type StepNodeData = {
   label: string;
   spark: CrewSpark | undefined;
   state: WorkflowStepState | null;
+  selected: boolean;
+  asking: boolean;
 };
 type StepNode = Node<StepNodeData, 'step'>;
 
 const StepNodeView = memo(function StepNodeView({ data }: NodeProps<StepNode>) {
   return (
-    <div className="wf-node" data-state={data.state ?? undefined}>
+    <div
+      className="wf-node"
+      data-state={data.state ?? undefined}
+      data-selected={data.selected || undefined}
+    >
       <Handle className="wf-node-handle" type="target" position={Position.Left} />
       <SparkDot spark={data.spark} size={26} />
       <span className="wf-node-text">
         <b>{data.label}</b>
-        {data.state && <StepState state={data.state} />}
+        {data.state && <RunStepState state={data.state} asking={data.asking} />}
       </span>
       <Handle className="wf-node-handle" type="source" position={Position.Right} />
     </div>
@@ -56,7 +65,27 @@ function reducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-function Canvas({ steps, labels, sparks, states, label }: FlowGraphProps) {
+function edgeClass(
+  id: string,
+  target: string,
+  states: FlowGraphProps['states'],
+  finished: FlowGraphProps['finished'],
+): string {
+  if (states && states[target] === 'skipped') return 'wf-edge quiet';
+  if (!finished) return 'wf-edge';
+  return finished.has(id) ? 'wf-edge done' : 'wf-edge pending';
+}
+
+function Canvas({
+  steps,
+  labels,
+  sparks,
+  states,
+  finished,
+  asking,
+  selected,
+  label,
+}: FlowGraphProps) {
   const flow = useReactFlow();
   const input = useMemo(
     () => ({
@@ -85,24 +114,29 @@ function Canvas({ steps, labels, sparks, states, label }: FlowGraphProps) {
             label: labels.get(step.id) ?? step.id,
             spark: sparks.get(step.sparkId),
             state: states?.[step.id] ?? null,
+            selected: selected === step.id,
+            asking: asking?.has(step.id) ?? false,
           },
         },
       ];
     });
-  }, [layout, steps, labels, sparks, states]);
+  }, [layout, steps, labels, sparks, states, selected, asking]);
 
   const edges = useMemo<Edge[]>(() => {
     if (!layout) return [];
     const placed = layout.result.at;
     return input.edges
       .filter((edge) => placed[edge.source] && placed[edge.target])
-      .map((edge) => ({
-        id: `${edge.source}>${edge.target}`,
-        source: edge.source,
-        target: edge.target,
-        className: states && states[edge.target] === 'skipped' ? 'wf-edge quiet' : 'wf-edge',
-      }));
-  }, [layout, input.edges, states]);
+      .map((edge) => {
+        const id = `${edge.source}>${edge.target}`;
+        return {
+          id,
+          source: edge.source,
+          target: edge.target,
+          className: edgeClass(id, edge.target, states, finished),
+        };
+      });
+  }, [layout, input.edges, states, finished]);
 
   const signature = layout?.signature ?? '';
   useEffect(() => {

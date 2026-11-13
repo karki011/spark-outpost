@@ -44,7 +44,7 @@ const TurnWaterfall = memo(function TurnWaterfall({
   const pct = (value: number) => `${value}%`;
   return (
     <figure className="wf" aria-label={`Turn ${index + 1}`}>
-      <figcaption className="wf-h">
+      <figcaption className="wfall-h">
         <b>
           Turn {index + 1} · {clockTime(new Date(chart.startedAt).toISOString()).slice(0, 8)}
         </b>
@@ -53,19 +53,19 @@ const TurnWaterfall = memo(function TurnWaterfall({
           {chart.waitMs > 0 && ` · ${formatDuration(chart.waitMs)} waiting for you`}
         </span>
       </figcaption>
-      <div className="wf-grid">
+      <div className="wfall-grid">
         {chart.bars.map((bar) => (
-          <div className="wf-row" key={bar.run.runId}>
-            <div className="wf-lab">
+          <div className="wfall-row" key={bar.run.runId}>
+            <div className="wfall-lab">
               <ProviderDot provider={bar.run.provider} />
               <span>{runLabel(bar.run)}</span>
               {bar.run.unreviewedCount ? (
                 <span className="unrev">{bar.run.unreviewedCount} ran without review</span>
               ) : null}
             </div>
-            <div className="wf-track">
+            <div className="wfall-track">
               <div
-                className={bar.live ? 'wf-bar live' : 'wf-bar'}
+                className={bar.live ? 'wfall-bar live' : 'wfall-bar'}
                 style={{
                   left: pct(bar.left),
                   width: pct(bar.width),
@@ -79,10 +79,10 @@ const TurnWaterfall = memo(function TurnWaterfall({
           </div>
         ))}
         {chart.waits.length > 0 && (
-          <div className="wf-ov" aria-hidden="true">
+          <div className="wfall-ov" aria-hidden="true">
             {chart.waits.map((wait, waitIndex) => (
               <div
-                className="wf-gap"
+                className="wfall-gap"
                 key={waitIndex}
                 style={{ left: pct(wait.left), width: pct(wait.width) }}
               >
@@ -92,7 +92,7 @@ const TurnWaterfall = memo(function TurnWaterfall({
           </div>
         )}
       </div>
-      <div className="wf-axis" aria-hidden="true">
+      <div className="wfall-axis" aria-hidden="true">
         <span />
         <div>
           {chart.ticks.map((tick) => (
@@ -125,7 +125,7 @@ export function AuditTimeline({ runs }: { runs: readonly AuditRunSummary[] }) {
           now={turnTicks(turn) ? now : FROZEN_NOW}
         />
       ))}
-      <div className="wf-legend">
+      <div className="wfall-legend">
         {providers.map((provider) => (
           <span key={provider}>
             <i className="sw" style={{ background: providerColor(provider) }} aria-hidden="true" />
