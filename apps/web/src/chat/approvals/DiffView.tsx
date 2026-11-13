@@ -159,7 +159,11 @@ export function DiffFigure({
   const [opened, setOpened] = useState<ReadonlySet<number>>(new Set());
   const [limit, setLimit] = useState(allRows ? Number.POSITIVE_INFINITY : CHUNK_ROWS);
   const open = (index: number) => setOpened((current) => new Set(current).add(index));
-  const shown = shownRows(blocks, opened, limit);
+  const unfolded = useMemo(
+    () => (allRows ? new Set(blocks.map((_, index) => index)) : opened),
+    [allRows, blocks, opened],
+  );
+  const shown = shownRows(blocks, unfolded, limit);
 
   return (
     <figure className="appr-diff dv">

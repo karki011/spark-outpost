@@ -47,6 +47,15 @@ afterEach(() => {
 });
 
 describe('DiffView', () => {
+  it('shows every unchanged line of a changed file when asked for all rows', () => {
+    const before = lines(50, 'keep');
+    const diff = { path: 'SPARK.md', oldText: `${before}\nold end`, newText: `${before}\nnew end` };
+    render(<DiffView diff={diff} allRows />);
+    const body = screen.getByRole('region', { name: 'Changes to SPARK.md' });
+    expect(body.querySelectorAll('.dv-row.same')).toHaveLength(50);
+    expect(screen.queryByRole('button', { name: /unchanged/ })).toBeNull();
+  });
+
   it('shows every line of a long new file when asked for all rows', () => {
     const diff = { path: 'run.sh', oldText: null, newText: lines(700, 'step') };
     render(<DiffView diff={diff} badge="New" allRows />);

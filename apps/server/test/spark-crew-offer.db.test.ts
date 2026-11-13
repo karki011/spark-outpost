@@ -99,8 +99,16 @@ describe('who is offered the crew tools', () => {
   });
 });
 
+async function userAsked(text: string): Promise<void> {
+  await t.db.query(
+    'UPDATE messages SET content = $2 WHERE id = (SELECT user_message_id FROM runs WHERE id = $1)',
+    [chat.runId, text],
+  );
+}
+
 describe('creating or changing a Spark itself', () => {
   it('asks in every mode and names a similar Spark', async () => {
+    await userAsked('Create a Spark called Scouts');
     const result = await call('spark_create_spark', { name: 'Scouts', instructions: 'Review.' });
     expect(result.facts.outcome).toBe('waiting_for_user');
     const card = await pendingCard(t);
@@ -108,12 +116,14 @@ describe('creating or changing a Spark itself', () => {
       action: 'create_teammate',
       similar: [{ kind: 'spark', name: 'Scout', reason: 'similar_name' }],
     });
+    expect(card.payload.sparkRequested).toBeUndefined();
     expect(macOnlyCard(card.payload)).toBe(true);
     const chatRow = { id: chat.conversationId, title: 'Chat', terminal: false };
     expect(cardRefusal(card, chatRow, null)).toBe(ASK_SPARK_REFUSALS.crew);
   });
 
   it('shows the instructions a change replaces', async () => {
+    await userAsked('Update the Scout spark');
     const result = await call('spark_update_spark', { spark: 'Scout', instructions: 'Be kind.' });
     expect(result.facts.outcome).toBe('waiting_for_user');
     expect((await pendingCard(t)).payload.sparkAction).toMatchObject({
@@ -121,5 +131,6 @@ describe('creating or changing a Spark itself', () => {
       instructions: 'Be kind.',
       instructionsBefore: 'Be brief.',
     });
+    expect((await pendingCard(t)).payload.sparkRequested).toBeUndefined();
   });
 });
