@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MeetingsTab } from './MeetingsTab.tsx';
 import { detail, item, mockFetch, newClient, MEETING_ID } from './meetings-test-support.tsx';
 
+vi.mock('./MeetingAsk.tsx', () => ({ MeetingAsk: () => null }));
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();

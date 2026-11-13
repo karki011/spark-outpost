@@ -248,7 +248,7 @@ test('Take notes when I join a meeting is off, and once on a Join also records',
   await today(page).getByRole('button', { name: 'Stop' }).first().click();
 });
 
-test('a question about a meeting goes to Ask Spark from under its transcript', async ({ page }) => {
+test('questions about a meeting go to its own chat through the chat composer', async ({ page }) => {
   test.setTimeout(90_000);
   await openToday(page);
   const main = today(page);
@@ -257,24 +257,30 @@ test('a question about a meeting goes to Ask Spark from under its transcript', a
   await expect(main.getByRole('list', { name: 'Transcript' })).toContainText('churn');
   const ask = main.getByRole('region', { name: 'Ask about this meeting' });
   await expect(ask.getByRole('button', { name: 'Suggest a reply' })).toBeVisible();
-  const queued = page.waitForRequest(
+  await expect(ask.getByRole('button', { name: /^Model/ })).toBeVisible();
+  await expect(ask.locator('.ctx-bar, .ctx')).toHaveCount(0);
+  await ask.getByRole('button', { name: 'Add files and context' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Upload a file' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: /repo/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  const sent = page.waitForRequest(
     (request) =>
-      request.method() === 'POST' && /\/api\/conversations\/[^/]+\/queue$/.test(request.url()),
+      request.method() === 'POST' && /\/api\/conversations\/[^/]+\/messages$/.test(request.url()),
   );
   await ask.getByRole('button', { name: 'Catch me up' }).click();
-  const body = (await queued).postDataJSON() as { origin: string; attachmentIds: string[] };
-  expect(body.origin).toBe('pages');
+  const body = (await sent).postDataJSON() as { content: string; attachmentIds: string[] };
+  expect(body.content).toContain('Catch me up');
   expect(body.attachmentIds).toHaveLength(1);
   const thread = ask.getByRole('list', { name: 'Questions about this meeting' });
   await expect(thread).toContainText('Catch me up on the last few minutes');
-  await expect(thread.locator('.mt-ask-answer')).toBeVisible({ timeout: 45_000 });
+  await expect(thread.locator('.mt-ask-answer')).toHaveCount(1, { timeout: 45_000 });
 
-  const box = ask.getByRole('textbox', { name: 'Ask Spark about this meeting' });
+  const box = ask.getByRole('textbox', { name: 'Message' });
   await box.fill('What did we decide about pricing?');
   await box.press('Enter');
-  await expect(box).toHaveValue('');
-  await expect(thread.getByRole('listitem')).toHaveCount(2);
   await expect(thread.locator('.mt-ask-answer')).toHaveCount(2, { timeout: 45_000 });
+  await expect(thread.locator('.mt-ask-question')).toHaveCount(2);
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   );
@@ -284,5 +290,9 @@ test('a question about a meeting goes to Ask Spark from under its transcript', a
   await expect(ask.getByRole('button', { name: 'Action items' })).toBeVisible();
   await expect(ask.getByRole('button', { name: 'Suggest a reply' })).toHaveCount(0);
   await expect(main.getByRole('tab', { name: 'Notes' })).toHaveAttribute('aria-selected', 'true');
-  await expect(thread.getByRole('listitem')).toHaveCount(2);
+  await expect(thread.locator('.mt-ask-answer')).toHaveCount(2);
+
+  await ask.getByRole('button', { name: 'Open chat' }).click();
+  await expect(page.getByRole('main', { name: 'Today' })).toHaveCount(0);
+  await expect(page.getByText('What did we decide about pricing?').first()).toBeVisible();
 });

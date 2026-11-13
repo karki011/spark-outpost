@@ -1,33 +1,16 @@
 // @vitest-environment jsdom
-import { QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MeetingAsk } from './MeetingAsk.tsx';
-import { TRANSCRIPT_CHARS_MAX, askPresets, meetingAskNote, transcriptText } from './meeting-ask.ts';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
-  MEETING_ID,
-  detail,
-  lines,
-  meeting,
-  mockFetch,
-  newClient,
-  type Call,
-} from './meetings-test-support.tsx';
-
-const uploads: string[] = [];
-vi.mock('../api/attachments.ts', () => ({
-  uploadAttachment: vi.fn(async (file: File) => {
-    uploads.push(await file.text());
-    return { id: '77777777-7777-4777-8777-777777777777' };
-  }),
-}));
-
-const ASSISTANT = '99999999-9999-4999-8999-999999999999';
+  TRANSCRIPT_CHARS_MAX,
+  askPresets,
+  meetingAskNote,
+  meetingChatId,
+  transcriptText,
+} from './meeting-ask.ts';
+import { MEETING_ID, detail, lines } from './meetings-test-support.tsx';
 
 afterEach(() => {
-  cleanup();
-  uploads.length = 0;
-  vi.unstubAllGlobals();
+  localStorage.clear();
 });
 
 describe('the note sent with a meeting question', () => {
@@ -80,76 +63,11 @@ describe('the note sent with a meeting question', () => {
   });
 });
 
-function show(state: 'recording' | 'ended', history: () => unknown) {
-  const onOpenChat = vi.fn();
-  const calls = mockFetch((call: Call) => {
-    if (call.path === '/spark-assistant') return { conversationId: ASSISTANT };
-    if (call.path === `/meetings/${MEETING_ID}`) return detail({ state }, null);
-    if (call.path.includes('/lines')) return { lines: lines(1, 2), more: false };
-    if (call.path === `/conversations/${ASSISTANT}/queue`) return { queue: [] };
-    if (call.path.startsWith('/spark-assistant/history')) return history();
-    return undefined;
-  });
-  render(
-    <QueryClientProvider client={newClient()}>
-      <MeetingAsk meeting={meeting({ state })} onOpenChat={onOpenChat} />
-    </QueryClientProvider>,
-  );
-  return { calls, onOpenChat };
-}
-
-describe('asking about a meeting', () => {
-  it('sends Catch me up to Ask Spark with the transcript attached as a page question', async () => {
-    let answered = false;
-    const { calls } = show('recording', () => {
-      const asked = calls.find((call) => call.path.endsWith('/queue'))?.body as { id: string };
-      return {
-        exchanges: [
-          {
-            id: asked.id,
-            question: 'q',
-            askedAt: '2026-11-12T10:00:00.000Z',
-            runId: null,
-            status: answered ? 'answered' : 'waiting',
-            answer: answered ? 'They agreed on **January**.' : null,
-            source: null,
-            links: [],
-          },
-        ],
-        topics: [],
-        older: null,
-      };
-    });
-    answered = true;
-    fireEvent.click(screen.getByRole('button', { name: 'Catch me up' }));
-    await waitFor(() => expect(calls.some((call) => call.path.endsWith('/queue'))).toBe(true));
-    const sent = calls.find((call) => call.path.endsWith('/queue'))!;
-    expect(sent.body).toMatchObject({
-      content: 'Catch me up on the last few minutes of this meeting in three short lines.',
-      origin: 'pages',
-      attachmentIds: ['77777777-7777-4777-8777-777777777777'],
-    });
-    expect(uploads[0]).toContain('[0:01] You: line 1');
-    const thread = await screen.findByRole('list', { name: 'Questions about this meeting' });
-    expect(thread.textContent).toContain('Catch me up on the last few minutes');
-    await waitFor(() => expect(thread.textContent).toContain('They agreed on January.'));
-  });
-
-  it('sends a typed question on Enter, clears the box, and keeps Shift+Enter for a new line', async () => {
-    const { calls } = show('ended', () => ({ exchanges: [], topics: [], older: null }));
-    expect(screen.queryByRole('button', { name: 'Suggest a reply' })).toBeNull();
-    const box = screen.getByRole('textbox', {
-      name: 'Ask Spark about this meeting',
-    }) as HTMLTextAreaElement;
-    expect(screen.getByRole('button', { name: 'Send question' })).toHaveProperty('disabled', true);
-    fireEvent.change(box, { target: { value: 'Who owns the rollout?' } });
-    fireEvent.keyDown(box, { key: 'Enter', shiftKey: true });
-    expect(calls.some((call) => call.path.endsWith('/queue'))).toBe(false);
-    fireEvent.keyDown(box, { key: 'Enter' });
-    await waitFor(() => expect(box.value).toBe(''));
-    expect(calls.find((call) => call.path.endsWith('/queue'))?.body).toMatchObject({
-      content: 'Who owns the rollout?',
-      origin: 'pages',
-    });
+describe('the chat a meeting’s questions go to', () => {
+  it('is one chat per meeting, kept across visits', () => {
+    const first = meetingChatId(MEETING_ID);
+    expect(first).toMatch(/^[0-9a-f-]{36}$/);
+    expect(meetingChatId(MEETING_ID)).toBe(first);
+    expect(meetingChatId('22222222-2222-4222-8222-222222222222')).not.toBe(first);
   });
 });

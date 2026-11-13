@@ -47,4 +47,5 @@ export interface ComposerProps {
   agentName?: string;
   autoFocus?: boolean;
   sessionChip?: ReactNode;
+  noProject?: boolean;
 }

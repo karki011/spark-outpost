@@ -1,11 +1,12 @@
 import {
   MEETING_LINES_PAGE,
   MEETING_SPEAKER_LABELS,
+  type Attachment,
   type MeetingDetail,
   type MeetingLine,
 } from '@spark-outpost/contracts';
 import { uploadAttachment } from '../api/attachments.ts';
-import { queueApi } from '../chat/queue/queue-api.ts';
+import { newDraftId } from '../api/client.ts';
 import { formatOffset } from './meeting-format.ts';
 import { meetingsApi } from './meetings-api.ts';
 
@@ -79,7 +80,7 @@ export function meetingAskNote(detail: MeetingDetail, lines: readonly MeetingLin
   const transcript = transcriptText(lines);
   const recording = meeting.state === 'recording';
   const parts = [
-    'The user asked this question from a meeting’s transcript in Spark.',
+    'The user attached this meeting to their question from its page in Spark.',
     recording
       ? 'The meeting is still being recorded; this is the transcript so far.'
       : 'The meeting has ended; this is its transcript.',
@@ -120,14 +121,26 @@ export async function allLines(meetingId: string): Promise<MeetingLine[]> {
   }
 }
 
-export async function askAboutMeeting(
-  assistantId: string,
-  id: string,
-  question: string,
-  meetingId: string,
-): Promise<void> {
+export async function meetingAttachment(meetingId: string): Promise<Attachment> {
   const [detail, lines] = await Promise.all([meetingsApi.detail(meetingId), allLines(meetingId)]);
   const file = new File([meetingAskNote(detail, lines)], 'meeting.txt', { type: 'text/plain' });
-  const attachment = await uploadAttachment(file, { mediaType: 'text/plain' });
-  await queueApi.add(assistantId, id, question, 'pages', [attachment.id]);
+  return uploadAttachment(file, { mediaType: 'text/plain' });
+}
+
+const CHAT_KEY = 'spark-outpost.meetings.chat.';
+
+export function meetingChatId(meetingId: string): string {
+  try {
+    const saved = localStorage.getItem(CHAT_KEY + meetingId);
+    if (saved) return saved;
+  } catch {
+    return newDraftId();
+  }
+  const id = newDraftId();
+  try {
+    localStorage.setItem(CHAT_KEY + meetingId, id);
+  } catch {
+    return id;
+  }
+  return id;
 }

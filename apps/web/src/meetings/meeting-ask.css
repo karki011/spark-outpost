@@ -5,6 +5,12 @@
   border-top: 1px solid var(--line);
   font-size: 13px;
 }
+.mt-ask-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 .mt-ask-title {
   display: flex;
   align-items: center;
@@ -49,6 +55,7 @@
   margin-top: 0;
 }
 .mt-ask-card {
+  margin: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -62,31 +69,33 @@
   flex-wrap: wrap;
   gap: 6px;
 }
-.mt-ask-form {
-  display: flex;
-  gap: 6px;
-  align-items: end;
-}
-.mt-ask-box {
-  flex: 1;
-  min-height: 32px;
-  max-height: 120px;
-  resize: none;
-  field-sizing: content;
-}
 .mt-ask-note {
-  margin: 0;
+  margin-left: 6px;
   color: var(--muted);
   font-size: 12px;
+  font-weight: 400;
 }
 
 @media (min-width: 900px) and (min-height: 560px) {
   @container (min-width: 760px) {
     .mt-fill .mt-page:has(.mt-ask) {
-      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      grid-template-rows: auto auto minmax(96px, 1fr) auto;
+      overflow-y: auto;
     }
     .mt-fill .mt-ask-thread {
-      max-height: 28vh;
+      max-height: 14vh;
     }
   }
+}
+
+.mt-ask .composer-wrap {
+  padding: 0;
+}
+.mt-ask .composer-frame,
+.mt-ask .composer,
+.mt-ask .composer-error {
+  max-width: none;
+}
+.mt-ask .composer textarea {
+  padding-top: 8px;
 }

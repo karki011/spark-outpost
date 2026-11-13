@@ -13,6 +13,8 @@ import {
   type Call,
 } from './meetings-test-support.tsx';
 
+vi.mock('./MeetingAsk.tsx', () => ({ MeetingAsk: () => null }));
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();

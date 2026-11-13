@@ -9,6 +9,7 @@ import { ChatPicker } from './ChatPicker.tsx';
 
 interface PlusMenuProps {
   hasProject: boolean;
+  noProject?: boolean;
   onAttach: (files: File[]) => void;
   onNotice: (message: string) => void;
   onAddFromRepo: () => void;
@@ -48,6 +49,7 @@ const ITEMS: { label: string; icon: ReactNode; action: MenuAction }[] = [
 
 export function PlusMenu({
   hasProject,
+  noProject = false,
   onAttach,
   onNotice,
   onAddFromRepo,
@@ -132,7 +134,9 @@ export function PlusMenu({
         role="menu"
         aria-label="Add files and context"
       >
-        {ITEMS.map((item) => {
+        {ITEMS.filter(
+          (item) => !noProject || (item.action !== 'repo' && item.action !== 'add-repo'),
+        ).map((item) => {
           const needsFolder = item.action === 'repo' && !hasProject;
           return (
             <button

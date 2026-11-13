@@ -237,12 +237,12 @@ Browser specs check each screen at 1280, 900 and 400 px, light and dark, with th
 
 ## What leaves the computer
 
-| Data                           | Goes to                | When                               |
-| ------------------------------ | ---------------------- | ---------------------------------- |
-| Audio                          | Nowhere                | Never                              |
-| Transcript, goal, notes, title | The default provider   | When notes are written             |
-| Transcript, goal, notes, title | The Ask Spark provider | When the user asks under a meeting |
-| A meeting attached to a chat   | That chat's provider   | When the user sends the message    |
+| Data                           | Goes to              | When                               |
+| ------------------------------ | -------------------- | ---------------------------------- |
+| Audio                          | Nowhere              | Never                              |
+| Transcript, goal, notes, title | The default provider | When notes are written             |
+| Transcript, goal, notes, title | That chat's provider | When the user asks under a meeting |
+| A meeting attached to a chat   | That chat's provider | When the user sends the message    |
 
 Nothing is sent while a meeting only records.
 
@@ -336,7 +336,7 @@ Changes made on 2026-11-12 from the owner's notes on the alpha. Verified by unit
 - **Resizable list.** At 760 px and wider the edge between the meeting list and the open meeting is a `PanelResizer` (200 to 520 px, 280 by default, kept in `localStorage`; arrow keys resize, Enter or a double-click resets), capped so the meeting keeps at least 420 px.
 - **Empty and loading.** With no meetings the Transcripts page is one splash (`EmptyScene`) saying how to start and what stays on the Mac. Notes being written show Scout working over skeleton lines; both follow Reduce Motion.
 
-- **Ask about a meeting.** Every meeting's page ends with an **Ask about this meeting** box (`MeetingAsk`), under whichever tab is open so its answers stay when the meeting ends and the page moves to Notes. A typed question, or **Catch me up**, **Suggest a reply** and **Open questions** while recording (**Summarize**, **Action items**, **Decisions** and **Open questions** after), goes to Ask Spark's chat through the queue with origin `pages`, the path the Browser view's Ask Spark dock uses. So a meeting question runs every Spark action as a card even in Act and never answers another chat's card, as [Live help](#live-help) asks. The meeting goes as one text attachment built when the question is sent: title, goal, the user's notes, the written notes (12,000 characters) and the newest 60,000 characters of the transcript, inside `<meeting_evidence>` with the instruction to ignore instructions in it. Files in Context are not sent. Answers are read from the assistant's history and are kept only in Ask Spark's own history, not with the meeting. This is the main-window half of Live help; the island's Meeting tab is still not built, and the server's refusal text for these runs still says "browser tabs".
+- **Ask about a meeting.** Every meeting's page ends with an **Ask about this meeting** box (`MeetingAsk`), under whichever tab is open so its answers stay when the meeting ends and the page moves to Notes. It is the chat composer itself (`Composer` with `noProject`: the model, effort and mode pickers, attachments, slash commands and dictation, and no folder or repo controls) over one chat per meeting, an ordinary chat with no project whose id is kept in `localStorage` under the meeting's id. A typed message, or **Catch me up**, **Suggest a reply** and **Open questions** while recording (**Summarize**, **Action items**, **Decisions** and **Open questions** after), is sent to that chat with the meeting as one text attachment built at send time: title, goal, the user's notes, the written notes (12,000 characters) and the newest 60,000 characters of the transcript, inside `<meeting_evidence>` with the instruction to ignore instructions in it. This is the rule in [Who can read a meeting](#who-can-read-a-meeting): a chat's agent reads a meeting only when the user attaches it, and the chat's own mode decides what the agent may do. Files in Context are not sent. The box shows the chat's messages and **Open chat** opens it in Chats, where it also appears in the list; deleting the meeting leaves the chat. The first version sent these questions to Ask Spark's chat; the owner asked for the chat composer and a choice of provider instead. The island's Meeting tab is still not built.
 
 ## Open decisions
 

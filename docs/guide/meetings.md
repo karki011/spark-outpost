@@ -27,7 +27,7 @@ Your default AI provider writes **Notes** and names an **Untitled meeting**. **E
 
 ## Ask about it
 
-Under a meeting, type a question or choose **Catch me up**, **Suggest a reply** or **Action items**. Ask Spark answers from the transcript; anything it wants to do is a card.
+Under a meeting, type a question or choose **Catch me up**, **Suggest a reply** or **Action items**. Pick the model and mode as in any chat; **Open chat** shows the whole conversation.
 
 ## What stays on your Mac
 
