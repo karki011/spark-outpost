@@ -1,5 +1,5 @@
 import type { WorkflowRun, WorkflowSummary } from '@spark-outpost/contracts';
-import { CheckIcon, PlusIcon, ResumeIcon, WarnIcon } from '../ui/icons.tsx';
+import { PlusIcon, ResumeIcon, WarnIcon } from '../ui/icons.tsx';
 import { LastRun } from './RunsList.tsx';
 import { ScheduleChip } from './ScheduleChip.tsx';
 import type { CrewSpark } from './spark-lookup.ts';

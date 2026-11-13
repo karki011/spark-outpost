@@ -23,9 +23,9 @@ Make a named teammate, give it skills and hand it jobs. About 3 minutes.
 3. Select **New skill**, type a **Name** and **Description**, then **Create skill**.
 4. Select **New file** for a script or notes; **Rename** and **Delete** are above the file.
 
-The Spark sees each skill's name and description and reads the files when a job needs them. If a file changed since you opened it, choose **Reload** or **Save mine over it**. Files are edited on the Mac only.
+The Spark sees each skill's name and description, and reads its files when needed. If a file changed since you opened it, choose **Reload** or **Save mine over it**. Files are edited on the Mac only.
 
-An agent can propose a change; you answer its card on the Mac ([file formats](crew-files.md)).
+Agents propose changes on a card you answer on the Mac ([file formats](crew-files.md)).
 
 ## Talk to it
 
