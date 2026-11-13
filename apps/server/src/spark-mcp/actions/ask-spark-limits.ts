@@ -33,6 +33,7 @@ export const ASK_SPARK_REFUSALS = {
   macOnly: 'Mac control, calendar and browser sign-in cards stay with you. Answer it yourself.',
   rules: 'A card that changes Spark rules stays with you. Answer it yourself on the Mac.',
   plugins: 'A card that turns a plugin on or off stays with you. Answer it yourself on the Mac.',
+  crew: 'A card that changes a Spark or a workflow stays with you. Answer it yourself on the Mac.',
   linkRepo: 'A card that links a repo to a chat stays with you. Answer it yourself.',
   question: 'An agent’s question needs your own answer. Answer it yourself in the chat.',
   openAddress:
@@ -98,6 +99,10 @@ function routeOf(action: SparkAction): Route | null {
   }
 }
 
+function crewCard(action: SparkAction['action'] | undefined): boolean {
+  return action === 'crew_edit' || action === 'create_teammate' || action === 'update_teammate';
+}
+
 export interface CardChat {
   id: string;
   title: string;
@@ -118,6 +123,7 @@ export function cardRefusal(
   if (approval.payload.openAddress) return ASK_SPARK_REFUSALS.openAddress;
   if (approval.payload.sparkAction?.action === 'rules_edit') return ASK_SPARK_REFUSALS.rules;
   if (approval.payload.sparkAction?.action === 'plugins_edit') return ASK_SPARK_REFUSALS.plugins;
+  if (crewCard(approval.payload.sparkAction?.action)) return ASK_SPARK_REFUSALS.crew;
   const repoAction = approval.payload.sparkAction?.action;
   if (repoAction === 'link_repo' || repoAction === 'clone_repo') return ASK_SPARK_REFUSALS.linkRepo;
   if (macOnlyCard(approval.payload)) return ASK_SPARK_REFUSALS.macOnly;

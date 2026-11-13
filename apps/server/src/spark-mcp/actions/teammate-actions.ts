@@ -11,6 +11,9 @@ import {
   type Teammate,
   type UpdateTeammateRequest,
 } from '@spark-outpost/contracts';
+import { crewSparks, sparkCandidates } from '../../crew/crew-view.ts';
+import { crewSparksDir } from '../../crew/folders.ts';
+import { similarTo } from '../../crew/similar.ts';
 import { activeConnection } from '../../persistence/setup.ts';
 import { closeTeammateSessions } from '../../persistence/teammate-chats.ts';
 import { createTeammate, listTeammates, updateTeammate } from '../../persistence/teammates.ts';
@@ -19,29 +22,18 @@ import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
 import { matchTeammate } from '../tools/teammates-tool.ts';
 import { proposeAction } from './confirm.ts';
 import type { Performed } from './performed.ts';
-import { ACTION_NOTE } from './action-note.ts';
+
+const CARD_NOTE = 'Always a card, answered on the Mac; returns waiting_for_user, never retry.';
 
 const fieldsInput = {
-  role: teammateRoleSchema.optional().describe('Role or title, such as "Release manager".'),
-  face: teammateFaceSchema
-    .nullable()
-    .optional()
-    .describe('Omit to draw the blob from the name; null goes back to that.'),
+  role: teammateRoleSchema.optional(),
+  face: teammateFaceSchema.nullable().optional().describe('null = drawn from the name.'),
   provider: providerIdSchema.nullable().optional().describe('null = default.'),
-  model: z.string().trim().min(1).max(200).nullable().optional(),
-  agentMode: z.string().trim().min(1).max(200).nullable().optional(),
-  autonomy: teammateLevelSchema
-    .nullable()
-    .optional()
-    .describe('hands-off (Automatic) or full-auto (Full auto → PR).'),
-  instructions: teammateInstructionsSchema
-    .optional()
-    .describe('Standing instructions added to every chat with this Spark.'),
-  projects: z
-    .array(z.string().trim().min(1).max(200))
-    .max(8)
-    .optional()
-    .describe('Default project names or ids.'),
+  model: z.string().trim().min(1).nullable().optional(),
+  agentMode: z.string().trim().min(1).nullable().optional(),
+  autonomy: teammateLevelSchema.nullable().optional().describe('Automatic or Full auto → PR.'),
+  instructions: teammateInstructionsSchema.optional().describe('The whole SPARK.md.'),
+  projects: z.array(z.string().trim().min(1)).max(8).optional().describe('Names or ids.'),
 };
 
 type Fields = z.output<z.ZodObject<typeof fieldsInput>>;
@@ -84,8 +76,12 @@ async function create(context: SparkToolContext, args: Fields & { name: string }
     level: args.autonomy ?? null,
     instructions: args.instructions ?? '',
     projects: await resolveProjects(context, args.projects ?? []),
+    similar: similarTo(
+      { name: args.name, description: args.role ?? '' },
+      sparkCandidates(await crewSparks(crewSparksDir(), existing), null),
+    ),
   };
-  return proposeAction(context, action);
+  return proposeAction(context, action, { alwaysAsk: true });
 }
 
 type ActionOf<Name extends SparkAction['action']> = Extract<SparkAction, { action: Name }>;
@@ -166,8 +162,9 @@ async function update(
     projects:
       projects ?? current.projectIds.map((id) => ({ id, name: names.get(id) ?? 'Project' })),
     changed: Object.keys(changes),
+    ...(changes.instructions === undefined ? {} : { instructionsBefore: current.instructions }),
   };
-  return proposeAction(context, action);
+  return proposeAction(context, action, { alwaysAsk: true });
 }
 
 const CHANGEABLE = [
@@ -212,9 +209,7 @@ export const createTeammateTool = sparkTool({
   name: 'spark_create_spark',
   title: 'Add a Spark (named teammate)',
   acts: true,
-  description:
-    'Propose a new Spark: a named teammate with a role, blob face, default provider, model, mode, autonomy and projects, and standing instructions added to every chat with it. ' +
-    ACTION_NOTE,
+  description: 'Propose a new Spark (named teammate). ' + CARD_NOTE,
   input: { name: teammateNameSchema, ...fieldsInput },
   run: (args, context) => create(context, args),
 });
@@ -223,12 +218,10 @@ export const updateTeammateTool = sparkTool({
   name: 'spark_update_spark',
   title: 'Change a Spark',
   acts: true,
-  description:
-    'Propose changes to an existing Spark (pass spark: its name or id): rename it, change its role, face, defaults, projects or standing instructions. Only the fields you pass change. Chats already started keep their own settings. ' +
-    ACTION_NOTE,
+  description: 'Propose changes to a Spark; only the fields you pass change. ' + CARD_NOTE,
   input: {
-    spark: z.string().trim().min(1).max(100).describe('The Spark to change: name or id.'),
-    name: teammateNameSchema.optional().describe('A new name.'),
+    spark: z.string().trim().min(1).max(100),
+    name: teammateNameSchema.optional(),
     ...fieldsInput,
   },
   run: (args, context) => update(context, args),

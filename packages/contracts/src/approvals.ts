@@ -4,12 +4,8 @@ import { checkpointKindSchema, checkpointPayloadSchema } from './checkpoints.ts'
 import type { InvolvementLevel } from './involvement-levels.ts';
 import { workPlaceSchema } from './chat-workspace.ts';
 import { projectNameSchema } from './projects.ts';
-import {
-  SPARK_ACTION_KIND,
-  sparkActionEditsSchema,
-  sparkActionSchema,
-  sparkResultSchema,
-} from './spark-actions.ts';
+import { SPARK_ACTION_KIND, sparkActionEditsSchema, sparkActionSchema } from './spark-actions.ts';
+import { sparkResultSchema } from './spark-result.ts';
 import { sparkRuleAnswerSchema, sparkRuleRefusalSchema } from './spark-rules.ts';
 
 export const runModeSchema = z.enum(['chat', 'ask', 'do']);

@@ -158,13 +158,15 @@ export async function readCrewFile(
 
 const LONE_SURROGATE = /\p{Surrogate}/u;
 
+export function crewTextProblem(text: string): string | null {
+  if (text.includes('\0') || LONE_SURROGATE.test(text)) return CREW_PROBLEMS.binary;
+  if (Buffer.byteLength(text, 'utf8') > CREW_FILE_MAX_BYTES) return CREW_PROBLEMS.large;
+  return null;
+}
+
 function assertStorable(text: string): void {
-  if (text.includes('\0') || LONE_SURROGATE.test(text)) {
-    throw new CrewFileProblemError(CREW_PROBLEMS.binary);
-  }
-  if (Buffer.byteLength(text, 'utf8') > CREW_FILE_MAX_BYTES) {
-    throw new CrewFileProblemError(CREW_PROBLEMS.large);
-  }
+  const problem = crewTextProblem(text);
+  if (problem) throw new CrewFileProblemError(problem);
 }
 
 async function writeAtomically(target: string, text: string): Promise<void> {

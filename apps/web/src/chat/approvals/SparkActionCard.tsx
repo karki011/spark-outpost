@@ -35,6 +35,7 @@ import { TeammateFacts } from '../../teammates/TeammateFacts.tsx';
 import { useRemoteClient } from '../../phone/use-remote-client.ts';
 import { draftOf, editsOf, Fields } from './SparkActionFields.tsx';
 import { RULES_ON_THE_MAC, RulesEditFacts, rulesByline, rulesNote } from './RulesEditFacts.tsx';
+import { CREW_ON_THE_MAC, CrewEditFacts, crewByline, crewNote } from './CrewEditFacts.tsx';
 import {
   PLUGINS_ON_THE_MAC,
   PluginEditFacts,
@@ -158,6 +159,8 @@ function Facts({ action }: { action: SparkAction }) {
       return <RulesEditFacts action={action} />;
     case 'plugins_edit':
       return <PluginEditFacts action={action} />;
+    case 'crew_edit':
+      return <CrewEditFacts action={action} />;
     case 'link_repo':
       return (
         <dl className="sac-facts">
@@ -210,6 +213,7 @@ function byline(action: SparkAction, agent: string, secretFiles?: readonly strin
     serviceNowByline(action, agent) ??
     outpostStartByline(action, agent) ??
     rulesByline(action) ??
+    crewByline(action) ??
     pluginsByline(action);
   if (mac) return mac;
   if (action.action === 'pr_follow_up') {
@@ -228,6 +232,7 @@ function confirmNote(action: SparkAction, secretFiles?: readonly string[]): stri
     serviceNowNote(action) ??
     outpostStartNote(action) ??
     rulesNote(action) ??
+    crewNote(action) ??
     pluginsNote(action);
   if (mac) return mac;
   if (action.action === 'link_repo') {
@@ -265,6 +270,7 @@ function holdLabel(action: SparkAction): string {
 function macOnlyNote(action: SparkAction): string | null {
   if (action.action === 'rules_edit') return RULES_ON_THE_MAC;
   if (action.action === 'plugins_edit') return PLUGINS_ON_THE_MAC;
+  if (crewNote(action)) return CREW_ON_THE_MAC;
   return null;
 }
 

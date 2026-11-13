@@ -16,6 +16,12 @@ import {
 import { SLACK_POST_TEXT_MAX, slackChannelIdSchema } from './slack.ts';
 import { rulesEditActionSchema, rulesEditLabels, rulesEditQuestion } from './spark-rules-edit.ts';
 import {
+  crewEditActionSchema,
+  crewEditLabels,
+  crewEditQuestion,
+  crewSimilarSchema,
+} from './crew-edit.ts';
+import {
   pluginsEditActionSchema,
   pluginsEditLabels,
   pluginsEditQuestion,
@@ -172,6 +178,7 @@ const teammateFieldsShape = {
 export const createTeammateActionSchema = z.object({
   action: z.literal('create_teammate'),
   ...teammateFieldsShape,
+  similar: z.array(crewSimilarSchema).max(8).optional(),
 });
 
 export const updateTeammateActionSchema = z.object({
@@ -179,6 +186,7 @@ export const updateTeammateActionSchema = z.object({
   teammateId: z.uuid(),
   ...teammateFieldsShape,
   changed: z.array(z.string()).max(20),
+  instructionsBefore: z.string().optional(),
 });
 
 const macApp = {
@@ -248,6 +256,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   publishArtifactActionSchema,
   rulesEditActionSchema,
   pluginsEditActionSchema,
+  crewEditActionSchema,
   linkRepoActionSchema,
   githubReadActionSchema,
   cloneRepoActionSchema,
@@ -306,6 +315,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   publish_artifact: [],
   rules_edit: [],
   plugins_edit: [],
+  crew_edit: [],
   link_repo: [],
   github_read: [],
   clone_repo: [],
@@ -434,6 +444,7 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
   ...publishArtifactLabels,
   ...rulesEditLabels,
   ...pluginsEditLabels,
+  ...crewEditLabels,
   ...linkRepoLabels,
   ...githubRepoLabels,
 };
@@ -450,6 +461,7 @@ export function sparkActionQuestion(action: SparkAction): string {
   if (action.action === 'calendar_edit') return calendarEditQuestion(action);
   if (action.action === 'rules_edit') return rulesEditQuestion(action);
   if (action.action === 'plugins_edit') return pluginsEditQuestion(action);
+  if (action.action === 'crew_edit') return crewEditQuestion(action);
   if (action.action === 'link_repo') return linkRepoQuestion(action);
   return (
     atlassianQuestion(action) ??
@@ -457,43 +469,4 @@ export function sparkActionQuestion(action: SparkAction): string {
     githubRepoQuestion(action) ??
     sparkActionLabels[action.action].question
   );
-}
-
-export const sparkResultStateSchema = z.enum(['waiting', 'running', 'done', 'failed', 'unknown']);
-export type SparkResultState = z.infer<typeof sparkResultStateSchema>;
-
-export const sparkResultSchema = z.object({
-  state: sparkResultStateSchema,
-  message: z.string().max(2000).nullable(),
-  url: z.string().max(2000).nullable(),
-  output: z.record(z.string(), z.unknown()).optional(),
-});
-export type SparkResult = z.infer<typeof sparkResultSchema>;
-
-export function sparkResultFinished(result: SparkResult | undefined): boolean {
-  return result?.state === 'done' || result?.state === 'failed' || result?.state === 'unknown';
-}
-
-const REPEATABLE: ReadonlySet<SparkActionName> = new Set([
-  'pr_follow_up_round',
-  'transition_ticket',
-  'assign_ticket',
-  'update_teammate',
-  'update_mcp_server',
-  'switch_mcp_server',
-  'remove_mcp_server',
-  'read_page',
-  'open_page',
-  'act_page',
-  'browser_sign_in',
-  'mac_use_app',
-  'mac_act',
-  'mac_press',
-  'calendar_read',
-  'github_read',
-]);
-
-export function sparkRetryAllowed(action: SparkAction, result: SparkResult | undefined): boolean {
-  if (result?.state === 'failed') return true;
-  return result?.state === 'unknown' && REPEATABLE.has(action.action);
 }

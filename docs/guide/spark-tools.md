@@ -24,7 +24,7 @@ summary: What agents can look up about Spark, the confirm card they show before 
 | Saved sign-ins, without values                           | `spark_browser_signins`                                                                                               |
 | Tickets, one in full, a search of all                    | `spark_tickets`                                                                                                       |
 | A Slack thread by link, or search what you allowed       | `spark_slack`                                                                                                         |
-| Sparks, and `@` mention jobs and replies                 | `spark_sparks`, `spark_chat`                                                                                          |
+| Sparks, [their files](crew-files.md), `@` mention jobs   | `spark_sparks`, `spark_crew`, `spark_chat`                                                                            |
 | The audit, including what ran without review             | `spark_audit`                                                                                                         |
 | How Spark works, this guide                              | `spark_guide`, `spark_docs`                                                                                           |
 | [Calendar](calendar.md#let-agents-use-it)                | `spark_calendar`                                                                                                      |
@@ -44,7 +44,7 @@ summary: What agents can look up about Spark, the confirm card they show before 
 | Post to an allowed Slack channel or thread                                                              | `spark_slack_post`                                                                                      |
 | Start a PR follow-up round                                                                              | `spark_pr_follow_up_round`                                                                              |
 | Push the chat's branch, open its PR                                                                     | `spark_push`, `spark_pull_request` (no card)                                                            |
-| Add or change a Spark                                                                                   | `spark_create_spark`, `spark_update_spark`                                                              |
+| Add or change a Spark, its files or a workflow (always asks)                                            | `spark_create_spark`, `spark_update_spark`, `spark_crew_edit`                                           |
 | Manage MCP servers                                                                                      | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
 | Open a site, act, debug                                                                                 | `spark_browser_open`, `spark_browser_act`, `spark_browser_devtools`                                     |
 | Sign in, or hand you the tab (always asks)                                                              | `spark_browser_sign_in`                                                                                 |

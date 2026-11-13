@@ -192,6 +192,7 @@ export const SPEC_GROUPS = {
   'crew-flows': ['crew-e2e', 'crew-flows'],
   sparks: [
     'spark-actions',
+    'spark-crew-edit',
     'spark-decisions',
     'spark-mention',
     'spark-sheet',

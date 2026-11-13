@@ -26,6 +26,8 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   ticket_create: false,
   rules_edit: true,
   plugins_edit: true,
+  crew_read: true,
+  crew_edit: true,
 };
 
 export const SESSION_CASES = {

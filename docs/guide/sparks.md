@@ -25,6 +25,8 @@ Make a named teammate, give it skills and hand it jobs. About 3 minutes.
 
 The Spark sees each skill's name and description and reads the files when a job needs them. If a file changed since you opened it, choose **Reload** or **Save mine over it**. Files are edited on the Mac only.
 
+An agent can propose a change; you answer its card on the Mac ([file formats](crew-files.md)).
+
 ## Talk to it
 
 | To                         | Do                                                                |
