@@ -12,7 +12,6 @@ import { teammateKeys, teammatesApi } from './teammates-api.ts';
 
 interface StarterSuggestionsProps {
   starters: readonly TeammateStarterId[];
-  offerNew?: boolean;
 }
 
 function StarterCard({ starter }: { starter: TeammateStarter }) {
@@ -68,7 +67,7 @@ function StarterCard({ starter }: { starter: TeammateStarter }) {
   );
 }
 
-export function StarterSuggestions({ starters, offerNew = true }: StarterSuggestionsProps) {
+export function StarterSuggestions({ starters }: StarterSuggestionsProps) {
   const offered = TEAMMATE_STARTERS.filter((starter) => starters.includes(starter.id));
   return (
     <div className="tm-empty">
@@ -84,15 +83,13 @@ export function StarterSuggestions({ starters, offerNew = true }: StarterSuggest
           ))}
         </ul>
       )}
-      {offerNew && (
-        <button
-          type="button"
-          className="btn line sm tm-new-inline"
-          onClick={() => openTeammateSheet({ kind: 'create' })}
-        >
-          <PlusIcon /> New Spark
-        </button>
-      )}
+      <button
+        type="button"
+        className="btn line sm tm-new-inline"
+        onClick={() => openTeammateSheet({ kind: 'create' })}
+      >
+        <PlusIcon /> New Spark
+      </button>
     </div>
   );
 }

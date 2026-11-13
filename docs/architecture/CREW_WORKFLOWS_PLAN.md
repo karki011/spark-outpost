@@ -86,11 +86,11 @@ Rules the functions settle:
 - A step whose parent was skipped or cancelled is skipped, unless it joins on **any** and another parent finished.
 - A day or week schedule runs at `from`; a minute or hour schedule runs from `from` to `to` (to midnight when `to` is empty).
 
-Migration numbers (latest on `main` is `0243`): Relay removal `0244`, A `0245`, D `0246`, G `0247`, H `0248`. Each stream writes its own.
+Migration numbers (latest on `main` is `0244`): Relay removal `0245`, A `0246`, D `0247`, G `0248`, H `0249`. Each stream writes its own.
 
 ### Before A and B: remove Relay
 
-The owner asked on 2026-11-12 to delete Relay, the built-in pull request follow-up Spark, with everything that refers to it. Pull request follow-up stays. Removed: the seeded Spark and `teammates.kind`, its Home card, its instructions in the round preamble (not kept in any form), and its name on round lines. Migration `0244`. It lands on the foundation branch before streams A and B start, because they change the same Spark files; D and E don't and can start earlier.
+The owner asked on 2026-11-12 to delete Relay, the built-in pull request follow-up Spark, with everything that refers to it. Pull request follow-up stays. Removed: the seeded Spark and `teammates.kind`, its Home card, its instructions in the round preamble (not kept in any form), and its name on round lines. Migration `0245`. It lands on the foundation branch before streams A and B start, because they change the same Spark files; D and E don't and can start earlier.
 
 ### Wave 1 (four in parallel)
 

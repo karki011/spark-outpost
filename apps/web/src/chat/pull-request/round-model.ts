@@ -14,8 +14,8 @@ export function outcomesIn(watches: readonly PrWatch[], runIds: readonly string[
   );
 }
 
-export function turnOutcomeLine(name: string, item: TurnOutcome): string {
-  return `${roundOutcomeLine(name, item.outcome)} on #${item.watch.number}.`;
+export function turnOutcomeLine(item: TurnOutcome): string {
+  return `${roundOutcomeLine(item.outcome)} on #${item.watch.number}.`;
 }
 
 export function lastOutcome(watch: PrWatch): RoundOutcome | null {

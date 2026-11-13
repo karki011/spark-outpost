@@ -192,13 +192,8 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
       return [teammates, list];
     case 'pull_request':
       return event.conversationId
-        ? [
-            list,
-            { queryKey: prWatchesKey(event.conversationId), exact: true },
-            ticketInbox,
-            teammates,
-          ]
-        : [teammates];
+        ? [list, { queryKey: prWatchesKey(event.conversationId), exact: true }, ticketInbox]
+        : [];
     case 'ticket':
       return [ticketInbox, ticketConnections];
     case 'preview':

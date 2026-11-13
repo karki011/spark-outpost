@@ -62,15 +62,6 @@ describe('suggestSpark', () => {
     expect(suggested('fix the build please', sparks)).toBeNull();
   });
 
-  it('never offers the built-in pull request follow-up Spark', () => {
-    const relay = {
-      ...spark('Relay', 'Pull request follow-up', 'Act on the review bots the user listed.'),
-      kind: 'pr_follow_up',
-    };
-    expect(suggested('please ask relay to review this', [relay])).toBeNull();
-    expect(suggested('review this change for bugs', [relay, ...roster])).toBe('Pip');
-  });
-
   it('stays quiet on unrelated messages', () => {
     for (const draft of [
       'add a dark mode toggle to settings',

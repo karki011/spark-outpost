@@ -8,7 +8,6 @@ import { startMorningBrief } from '../digest/morning.ts';
 import { startWeekRecap } from '../recap/schedule.ts';
 import { followAssistantChat } from '../companion/assistant.ts';
 import { ensureLocalWorkspace } from '../persistence/conversations.ts';
-import { seedRelay } from '../persistence/relay.ts';
 import { acceptRulesBaseline } from '../spark-rules/rules-store.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
@@ -97,9 +96,6 @@ await migrateOrExit(db, { backup: configuredBackup(config) });
 
 const workspaceId = await ensureLocalWorkspace(db);
 await seedModelStats(db);
-await seedRelay(db, workspaceId).catch((error: unknown) => {
-  console.error('Could not add Relay', error);
-});
 await acceptRulesBaseline().catch((error: unknown) => {
   console.error("Could not record Spark's accepted rules", error);
 });

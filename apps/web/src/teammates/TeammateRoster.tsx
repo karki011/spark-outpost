@@ -3,13 +3,11 @@ import { useMutation } from '@tanstack/react-query';
 import { TEAMMATE_STATE_LABELS, type TeammateView } from '@spark-outpost/contracts';
 import { HomeCard } from '../home/HomeCards.tsx';
 import { PenIcon, PlusIcon } from '../ui/icons.tsx';
-import { RelayCard } from './RelayCard.tsx';
 import { StarterSuggestions } from './StarterSuggestions.tsx';
 import { TeammateFace } from './TeammateFace.tsx';
 import { activityLine } from './teammate-lines.ts';
 import { openTeammateSheet } from './teammate-store.ts';
 import { teammatesApi } from './teammates-api.ts';
-import { userMade } from './use-relay.ts';
 import { useTeammates } from './use-teammates.ts';
 
 interface TeammateRosterProps {
@@ -85,33 +83,22 @@ export function TeammateRoster({ now, onOpenId }: TeammateRosterProps) {
     onSuccess: (chat) => onOpenId(chat.conversationId),
   });
   if (loading) return <RosterSkeleton />;
-  const ownSparks = userMade(teammates);
   return (
     <HomeCard id="home-sparks" title="Your Sparks" className="tm-section">
-      {teammates.length === 0 && <StarterSuggestions starters={starters} />}
-      {teammates.length > 0 && (
+      {teammates.length === 0 ? (
+        <StarterSuggestions starters={starters} />
+      ) : (
         <ul className="tm-roster">
-          {teammates.map((teammate, index) =>
-            teammate.kind ? (
-              <RelayCard
-                key={teammate.id}
-                teammate={teammate}
-                style={stagger(index)}
-                opening={open.isPending && open.variables === teammate.id}
-                onOpen={() => open.mutate(teammate.id)}
-                onOpenChat={onOpenId}
-              />
-            ) : (
-              <TeammateCard
-                key={teammate.id}
-                teammate={teammate}
-                index={index}
-                now={now}
-                opening={open.isPending && open.variables === teammate.id}
-                onOpen={() => open.mutate(teammate.id)}
-              />
-            ),
-          )}
+          {teammates.map((teammate, index) => (
+            <TeammateCard
+              key={teammate.id}
+              teammate={teammate}
+              index={index}
+              now={now}
+              opening={open.isPending && open.variables === teammate.id}
+              onOpen={() => open.mutate(teammate.id)}
+            />
+          ))}
           <li className="tm-card tm-add" style={stagger(teammates.length)}>
             <button
               type="button"
@@ -125,9 +112,6 @@ export function TeammateRoster({ now, onOpenId }: TeammateRosterProps) {
             </button>
           </li>
         </ul>
-      )}
-      {teammates.length > 0 && ownSparks.length === 0 && starters.length > 0 && (
-        <StarterSuggestions starters={starters} offerNew={false} />
       )}
       {open.isError && (
         <p className="tm-error" role="alert">

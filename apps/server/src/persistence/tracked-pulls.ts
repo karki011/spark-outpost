@@ -12,7 +12,7 @@ import {
 import { parseDetails, type StoredDetails } from '../pr-tracking/details.ts';
 import type { Queryable } from './db.ts';
 import { newId } from './ids.ts';
-import { roundOutcomesOf } from './relay.ts';
+import { roundOutcomesOf } from './round-outcomes.ts';
 
 export const WATCHING_LINE = 'Watching checks and reviews.';
 export const TRACKING_LINE = 'Tracking checks and reviews.';

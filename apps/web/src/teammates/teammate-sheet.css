@@ -284,10 +284,3 @@
 .tm-file-cut {
   color: var(--muted);
 }
-
-.tm-builtin {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
-}

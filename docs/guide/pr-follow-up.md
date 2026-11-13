@@ -8,21 +8,17 @@ summary: Have the chat fix failing checks and answer review comments on its pull
 
 You'll let Spark handle checks and reviews on a chat's PRs. About 2 minutes.
 
-1. Read the PR row's eye: **Watching**, **Relay is on it**, **Paused**, **Stopped** or **Follow-up off**.
+1. Read the PR row's eye: **Watching**, **Agent is on it**, **Paused**, **Stopped** or **Follow-up off**.
 2. Click it for checks, reviews and **items gathered**.
 
    ![The opened PR row, with the items Spark gathered](images/pr-follow-up-row-light.png)
 
-3. When checks fail, feedback arrives or the PR falls behind, **Relay** messages the chat once idle.
+3. When checks fail, feedback arrives or the PR falls behind, Spark messages the chat once idle.
 4. The agent fixes or pushes back, merges the base if needed and pushes; Spark replies. Read its summary.
 
 To approve each push, turn on **Ask before pushing and replying** in **Settings → Pull requests**.
 
 ![The Address PR feedback? card with the push and a reply checked](images/pr-follow-up-card-light.png)
-
-## Relay
-
-Relay, the built-in follow-up Spark, adds its **Standing instructions** to rounds as context granting nothing. Edit it in **Settings → Crew**. Its **Home** card lists watched PRs.
 
 ## What Spark acts on
 

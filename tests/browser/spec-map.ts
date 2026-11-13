@@ -99,6 +99,7 @@ export const SPEC_GROUPS = {
     'pr-card',
     'pr-follow-up',
     'pr-post-open',
+    'pr-round-lines',
     'pr-tracking',
     'pr-watching',
     'ship',
@@ -188,7 +189,7 @@ export const SPEC_GROUPS = {
     'tickets-rows',
   ],
   slack: ['slack-chat', 'slack-settings', 'slack-sign-in'],
-  sparks: ['relay', 'spark-actions', 'spark-decisions', 'spark-mention', 'spark-sheet', 'sparks'],
+  sparks: ['spark-actions', 'spark-decisions', 'spark-mention', 'spark-sheet', 'sparks'],
   'settings-providers': [
     'agent-instructions',
     'keychain-notice',

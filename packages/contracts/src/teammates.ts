@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { INVOLVEMENT_LEVEL_IDS } from './involvement-levels.ts';
 import { CONVERSATION_PROJECTS_MAX } from './projects.ts';
 import { providerIdSchema } from './provider-ids.ts';
-import { relayWatchSchema, teammateKindSchema } from './relay.ts';
 import type { RunStatus } from './runs.ts';
 
 export const teammateLevelSchema = z.enum(INVOLVEMENT_LEVEL_IDS);
@@ -135,7 +134,6 @@ export const teammateSchema = teammateTagSchema.extend({
   instructionsPath: z.string().nullable(),
   projectIds: z.array(z.uuid()),
   homeConversationId: z.uuid().nullable(),
-  kind: teammateKindSchema.optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -152,7 +150,6 @@ export const teammateViewSchema = teammateSchema.extend({
   state: teammateStateSchema,
   chatCount: z.number().int().nonnegative(),
   lastActivity: teammateActivitySchema.nullable(),
-  relay: relayWatchSchema.optional(),
 });
 export type TeammateView = z.infer<typeof teammateViewSchema>;
 

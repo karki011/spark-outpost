@@ -22,7 +22,7 @@ import { toolDeps } from './spark-mcp-support.ts';
 import { eventually, type TestDb } from './support.ts';
 import { gitRepo } from './turn-support.ts';
 
-export type TurnKind = 'user' | 'relay' | 'outpost' | 'push';
+export type TurnKind = 'user' | 'round' | 'outpost' | 'push';
 
 export interface TurnMeasure {
   kind: TurnKind;
@@ -39,7 +39,7 @@ const targetAt = (level: Level) =>
 
 const MESSAGES: Record<Exclude<TurnKind, 'outpost'>, string> = {
   user: 'next',
-  relay: 'Fix the failing check',
+  round: 'Fix the failing check',
   push: 'push it',
 };
 
@@ -134,7 +134,7 @@ export async function startReuseHarness(t: TestDb, store: string): Promise<Reuse
       {
         id: randomUUID(),
         content: MESSAGES[kind],
-        ...(kind === 'relay' ? { source: 'pr_follow_up' as const } : {}),
+        ...(kind === 'round' ? { source: 'pr_follow_up' as const } : {}),
       },
       targetAt(level),
     );
