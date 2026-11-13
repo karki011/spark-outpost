@@ -27,7 +27,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.afterEach(async ({ page }) => {
-  await page.request.delete(`/api/workflows/${FLOW}`);
+  const removed = await page.request.delete(`/api/workflows/${FLOW}`, { data: {} });
+  expect([204, 404]).toContain(removed.status());
   repo.remove();
 });
 

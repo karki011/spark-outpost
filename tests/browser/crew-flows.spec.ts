@@ -118,7 +118,7 @@ test('an empty Workflows tab suggests workflows from the crew and a new one save
     ['comment'],
   ]);
 
-  await open.getByRole('button', { name: 'Run' }).click();
+  await open.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(open.getByRole('status').filter({ hasText: 'Started' })).toBeVisible();
   expect(api.runs).toEqual(['pre-pr-review']);
 
@@ -141,7 +141,7 @@ test('a suggestion opens in the editor as a draft that nothing has saved', async
   await expect(stage(page, 1).getByRole('listitem')).toHaveCount(3);
   await expect(stage(page, 2).getByRole('listitem')).toHaveCount(1);
   await expect(open.getByRole('button', { name: 'Save' })).toBeEnabled();
-  await expect(open.getByRole('button', { name: 'Run' })).toBeDisabled();
+  await expect(open.getByRole('button', { name: 'Run', exact: true })).toBeDisabled();
   expect(api.saves).toEqual([]);
 
   await open.getByRole('button', { name: 'Workflows' }).click();

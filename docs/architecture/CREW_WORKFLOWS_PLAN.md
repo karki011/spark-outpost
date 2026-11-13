@@ -355,6 +355,7 @@ Code is in `apps/server/src/crew-flows/test-run.ts` and `held-sends.ts`, `apps/w
 - **Dependency preparation in the copy** (`prepareDependencies`) was not exercised; the test repositories have no `node_modules`. With a large project the start request waits for it.
 - **`pagehide`** (closing the window) was not tested; leaving the view and Discard were.
 - **The Mac app** (Electron) and VoiceOver were not tried; Chromium through Playwright with axe only.
+- **What ran (2026-11-13):** `pnpm check` passed. `pnpm test:changed` passed. `pnpm test:db:changed` had 63 failures in 28 files, almost all 20-second timeouts while other streams loaded the machine; the 28 files passed when rerun alone (270 tests), and `crew-test-run.db.test.ts` passes (12 tests). `pnpm test:browser:changed` selects nearly every spec (the change touches `workflow/` and the gate); the full set was not run. These were run and pass: `crew-test-run`, `crew-flows`, `sparks-page`, `sparks`, `spark-actions`, `spark-mention`, `approvals`, `attention-sync`, `sidebar-attention`, `island-states`, `browser-agent`, `rail-flags`. `crew-flows.spec.ts` now looks up **Run** with `exact: true`, since **Test run** also matched.
 - **Found on the way, not changed:** `publishScope` has no step check, so an ordinary step in Auto or Bypass permissions is offered `spark_push` (the stream D text says it is not); `.wf-bar` in `workflow-editor.css` shares its name with `audit/audit-views.css`, whose `.wf-bar span` rule turns spans white when both are loaded.
 
 ## Rules for every stream
