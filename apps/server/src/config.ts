@@ -139,6 +139,10 @@ const configSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((value) => value === 'true'),
+  WORKFLOW_SCHEDULES: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
 });
 
 export type Config = z.infer<typeof configSchema>;

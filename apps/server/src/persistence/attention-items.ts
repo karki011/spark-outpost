@@ -4,6 +4,7 @@ import {
   type AttentionItem,
   type AttentionMark,
   type ParsedAttentionKey,
+  type ScheduleUpdate,
 } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
 
@@ -23,7 +24,14 @@ interface ItemRow {
   read_at: Date | null;
   set_aside_at: Date | null;
   dismissed_at: Date | null;
+  schedule_workflow_id: string | null;
+  schedule_name: string | null;
+  runs_today: number | null;
+  failed_today: number | null;
 }
+
+const SCHEDULED_TODAY = `w.conversation_id = ws.conversation_id AND w.workflow_id = ws.workflow_id
+  AND w.source IN ('schedule', 'catch_up') AND w.started_at >= $3`;
 
 const ITEMS = `
   WITH chats AS (
@@ -39,6 +47,16 @@ const ITEMS = `
       SELECT id, status, finished_at, error FROM runs
       WHERE conversation_id = ch.id AND parent_run_id IS NULL ORDER BY created_at DESC LIMIT 1
     ) r ON true
+  ), sched AS (
+    SELECT ws.conversation_id, ws.workflow_id,
+      (SELECT w.workflow_name FROM workflow_runs w
+       WHERE w.workspace_id = ws.workspace_id AND w.workflow_id = ws.workflow_id
+       ORDER BY w.started_at DESC LIMIT 1) AS name,
+      (SELECT count(*) FROM workflow_runs w WHERE ${SCHEDULED_TODAY})::int AS runs_today,
+      (SELECT count(*) FROM workflow_runs w
+       WHERE ${SCHEDULED_TODAY} AND w.status = 'failed')::int AS failed_today
+    FROM workflow_schedules ws
+    WHERE ws.workspace_id = $1 AND ws.conversation_id IS NOT NULL
   ), pending AS (
     SELECT l.id AS conversation_id, l.seen_at, a.id, a.created_at
     FROM latest l
@@ -74,11 +92,23 @@ const ITEMS = `
       CASE l.status WHEN 'failed' THEN l.error END, l.finished_at, l.seen_at
     FROM latest l
     WHERE l.status IN ('succeeded', 'failed') AND l.finished_at IS NOT NULL AND NOT l.assistant
+    UNION ALL
+    SELECT 'run-failed:' || r.id, 'run-failed', false, l.id, r.error, r.finished_at, l.seen_at
+    FROM latest l
+    JOIN workflow_schedules ws ON ws.conversation_id = l.id
+    JOIN workflow_runs w ON ${SCHEDULED_TODAY} AND w.status = 'failed'
+    JOIN runs r ON r.id = w.run_id
+    WHERE r.id <> l.run_id AND r.finished_at IS NOT NULL
   ), marked AS (
     SELECT i.key, i.kind, i.blocking, i.conversation_id, i.detail, i.at,
       COALESCE(m.read_at, CASE WHEN i.seen_at >= i.at THEN i.seen_at END) AS read_at,
-      m.set_aside_at, m.dismissed_at
-    FROM items i LEFT JOIN attention_marks m ON m.workspace_id = $1 AND m.key = i.key
+      m.set_aside_at, m.dismissed_at,
+      s.workflow_id AS schedule_workflow_id, s.name AS schedule_name, s.runs_today, s.failed_today
+    FROM items i
+    LEFT JOIN attention_marks m ON m.workspace_id = $1 AND m.key = i.key
+    LEFT JOIN latest ll ON ll.id = i.conversation_id
+    LEFT JOIN sched s ON s.conversation_id = i.conversation_id AND s.name IS NOT NULL
+      AND i.key IN ('run-done:' || ll.run_id, 'run-failed:' || ll.run_id)
   )
   SELECT * FROM marked
   WHERE blocking OR (read_at IS NULL AND dismissed_at IS NULL)
@@ -86,6 +116,20 @@ const ITEMS = `
 
 function iso(value: Date | null): string | null {
   return value ? value.toISOString() : null;
+}
+
+function scheduleOf(row: ItemRow): ScheduleUpdate | null {
+  if (row.schedule_workflow_id === null || row.schedule_name === null) return null;
+  return {
+    workflowId: row.schedule_workflow_id,
+    name: row.schedule_name,
+    runsToday: row.runs_today ?? 0,
+    failedToday: row.failed_today ?? 0,
+  };
+}
+
+function dayStart(now: Date): Date {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
 function toItem(row: ItemRow): AttentionItem {
@@ -99,6 +143,7 @@ function toItem(row: ItemRow): AttentionItem {
     readAt: iso(row.read_at),
     setAsideAt: iso(row.set_aside_at),
     dismissedAt: iso(row.dismissed_at),
+    schedule: scheduleOf(row),
   });
 }
 
@@ -106,8 +151,9 @@ export async function listAttentionItems(
   db: Queryable,
   workspaceId: string,
   conversationId: string | null = null,
+  now: Date = new Date(),
 ): Promise<AttentionItem[]> {
-  const { rows } = await db.query<ItemRow>(ITEMS, [workspaceId, conversationId]);
+  const { rows } = await db.query<ItemRow>(ITEMS, [workspaceId, conversationId, dayStart(now)]);
   return rows.map(toItem);
 }
 

@@ -2,6 +2,7 @@ import {
   AWAY_MS,
   alerting,
   freshUpdate,
+  scheduleUpdateLine,
   type AttentionItem,
   type ConversationSummary,
 } from '@spark-outpost/contracts';
@@ -89,7 +90,7 @@ export function sinceRows(
           key: item.key,
           chat,
           kind,
-          line: lineFor(kind, chat),
+          line: item.schedule ? scheduleUpdateLine(item.schedule) : lineFor(kind, chat),
           unread: kind === 'waiting' ? alerting(item) : true,
           at: item.at,
         },

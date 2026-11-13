@@ -89,6 +89,7 @@ const serverEnv = {
   MORNING_BRIEF: 'false',
   WEEK_RECAP: 'false',
   ARCHIVE_SWEEP: 'false',
+  WORKFLOW_SCHEDULES: 'false',
   MAP_ROOT_PREFIX,
   CLONE_TEST_ROOT,
   PAIRING_TEST_ATTEMPTS_PER_MINUTE: '1000',

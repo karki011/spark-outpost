@@ -10,6 +10,9 @@ import {
 } from '@spark-outpost/contracts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { BackIcon, CheckIcon, EyeIcon, ResumeIcon, ShieldIcon, WarnIcon } from '../ui/icons.tsx';
+import { PageTabs } from '../ui/PageTabs.tsx';
+import { ScheduleChip } from './ScheduleChip.tsx';
+import { ScheduleTab } from './ScheduleTab.tsx';
 import type { CrewSpark } from './spark-lookup.ts';
 import { RunsList } from './RunsList.tsx';
 import { StageList } from './StageList.tsx';
@@ -20,6 +23,11 @@ import { WorkflowPreview } from './WorkflowPreview.tsx';
 import { stepLabels, updateStep } from './workflow-model.ts';
 
 const FlowGraph = lazy(() => import('./FlowGraph.tsx'));
+
+const TABS = [
+  { id: 'steps', label: 'Steps' },
+  { id: 'schedule', label: 'Schedule' },
+];
 
 interface WorkflowEditorProps {
   initial: Workflow | { id: string; name: string; steps: WorkflowStep[] };
@@ -57,6 +65,7 @@ export function WorkflowEditor({
     baseHash === null ? null : JSON.stringify([initial.name, initial.steps]),
   );
   const [previewing, setPreviewing] = useState(false);
+  const [tab, setTab] = useState('steps');
   const [leaving, setLeaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const realRun = useRef<WorkflowRun | null>(null);
@@ -140,6 +149,7 @@ export function WorkflowEditor({
         <span className="wf-tag">
           {count(steps.length, 'step')} · {count(stages, 'stage')}
         </span>
+        {hash !== null && <ScheduleChip workflowId={initial.id} />}
         <span className="wf-bar-status" role="status">
           {!dirty && saved !== null && (
             <span className="wf-state" data-state="succeeded">
@@ -212,7 +222,12 @@ export function WorkflowEditor({
           </span>
         </p>
       )}
-      {previewing ? (
+      {hash !== null && !previewing && (
+        <PageTabs ariaLabel="Workflow sections" options={TABS} value={tab} onChange={setTab} />
+      )}
+      {hash !== null && !previewing && tab === 'schedule' ? (
+        <ScheduleTab workflowId={initial.id} name={name.trim() || 'this workflow'} />
+      ) : previewing ? (
         <WorkflowPreview
           steps={steps}
           labels={labels}

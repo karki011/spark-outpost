@@ -290,6 +290,11 @@ POST /api/workflow-runs/:id/stop
 GET /api/workflow-runs/:id/test
 DELETE /api/workflow-runs/:id
 POST /api/teammates/:id/test-runs
+GET /api/workflow-schedules
+GET /api/workflows/:id/schedule
+PUT /api/workflows/:id/schedule
+DELETE /api/workflows/:id/schedule
+GET /api/workflows/:id/schedule/slots
 GET /api/teammates/:id/folder
 GET /api/teammates/:id/files
 PUT /api/teammates/:id/files

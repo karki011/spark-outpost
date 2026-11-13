@@ -4,6 +4,7 @@ import { LOCAL_DATA_DIR, loadConfig, sparkDataDir } from '../config.ts';
 import { chatFoldersBase } from '../chat-files/folders.ts';
 import { chatResearchBase } from '../chat-files/research-copies.ts';
 import { startArtifactOrigin } from '../artifacts/origin-server.ts';
+import { scheduleWorkflows } from '../crew-flows/scheduler.ts';
 import { startMorningBrief } from '../digest/morning.ts';
 import { startWeekRecap } from '../recap/schedule.ts';
 import { followAssistantChat } from '../companion/assistant.ts';
@@ -415,6 +416,7 @@ const morningBrief = config.MORNING_BRIEF
     )
   : null;
 const weekRecap = config.WEEK_RECAP ? startWeekRecap(db, workspaceId) : null;
+const workflowScheduler = config.WORKFLOW_SCHEDULES ? scheduleWorkflows(db, workspaceId) : null;
 
 let pruneSchedule: PruneSchedule | null = null;
 const server = app.listen(config.API_PORT, config.API_HOST, () => {
@@ -473,6 +475,7 @@ const shutdown = async (keepTerminals = false) => {
     ['prune schedule', () => pruneSchedule?.stop()],
     ['morning brief', () => morningBrief?.stop()],
     ['week recap', () => weekRecap?.stop()],
+    ['workflow schedules', () => workflowScheduler?.stop()],
     ['Slack socket', () => slackSocket.stop()],
     ['Slack notifier', () => slackNotifier.stop()],
     ['calendar ticker', () => calendarTicker?.stop()],

@@ -19,6 +19,7 @@ Spark stays paused after a restart.
 | Requests from other chats, wrap-ups and held requests          | A request you type in an [outpost](outposts.md) to an idle chat, unless its last turn failed or stopped before you typed it |
 | [PR follow-up](pr-follow-up.md) rounds; feedback is still read | Running turns, their cards and their publish step                                                                           |
 | The morning brief and [Map](map.md) builds                     | Terminal sessions                                                                                                           |
+| [Scheduled workflows](workflow-schedules.md)                   |                                                                                                                             |
 
 Work started from inside Slack is skipped while paused; start it again after.
 

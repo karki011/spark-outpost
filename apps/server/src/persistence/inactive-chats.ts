@@ -38,13 +38,18 @@ const OPEN_OUTPOST_REQUEST = `EXISTS (
     AND (op.run_id IS NULL OR carrying.status IN ('queued', 'running', 'awaiting_approval'))
 )`;
 
+const ENABLED_SCHEDULE = `EXISTS (
+  SELECT 1 FROM workflow_schedules ws WHERE ws.conversation_id = c.id AND ws.enabled
+)`;
+
 const INACTIVE = `${LISTED_CHAT} AND c.archived_at IS NULL AND c.pinned_at IS NULL
   AND ${LAST_ACTIVITY} < now() - make_interval(days => $2)
   AND NOT ${BUSY_RUN}
   AND NOT ${QUEUED_MESSAGE}
   AND NOT ${WAITING_CARD}
   AND NOT ${RUNNING_TERMINAL}
-  AND NOT ${OPEN_OUTPOST_REQUEST}`;
+  AND NOT ${OPEN_OUTPOST_REQUEST}
+  AND NOT ${ENABLED_SCHEDULE}`;
 
 export type Days = NonNullable<ArchiveInactiveDays>;
 
