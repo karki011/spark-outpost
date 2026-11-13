@@ -245,13 +245,16 @@ Render `<WorkflowsPanel />` as the body of the Workflows tab, inside the page's 
 - DB: `apps/server/test/crew-workflow-view.db.test.ts` (a record carries `dependsOn`, its spend matches the orchestration totals, and it announces `workflow_run` changes).
 - Browser: `tests/browser/crew-run-view.spec.ts` (group `crew-flows`), against the real routes and worker with the fake provider: Waiting → Running → Done with focus kept on a step while it updates, finished edges, the step panel and Passed to, **Open this step in the chat** and back through **Open run view**; a `#fail` step stopping the workflow with the stopped-by line, a narrow window, the last-run line and the Runs list; **Stop** and the rest by keyboard alone; `@id` in a chat; a step waiting on an approval card (**Needs you**, **Open the card**, Allow in the chat, then Done). axe on the running, failed, Runs and Needs you views; screenshots in light and dark in `test-results/crew-run-view/`, checked.
 
+**Ran on 2026-11-13:** `pnpm check` (format, lint, typecheck, source, docs, knip, contrast and ACP coverage pass; the unit run had 14 failures in 11 unrelated files, timeouts while the machine was loaded, and all 11 files passed on rerun along with this stream's tests); `pnpm test:db` for `crew-workflow-*` (23 passed); browser `crew-run-view`, `crew-flows`, `sparks-page` (19 passed) and `spark-mention`, `stored-crew-turn`, `sparks`, `audit` (15 passed). `pnpm test:changed`, `test:db:changed` and `test:browser:changed` select every test here (the local `main` is behind, and `spec-map.ts` and `vitest.config.ts` count as run-everything files), so they were not run to the end.
+
 **Unverified or left out**
 
 - Not run in the Mac app, on a paired device or with VoiceOver. Paired devices are refused the run routes (`never`), so the run view, the Runs list and the chat line show nothing there.
 - No real agent has run a step (fake provider only; `pnpm test:live` not run).
 - A test run (stream F, `kind: 'test'`) is left out of the last-run line and the Runs list; F shows its own.
 - The run view reads the chat detail for cards and agents; a run in an archived chat should still show them, but that was not tested.
-- `audit.spec.ts` was flaky here before and after the rename: in each run a different test's first message did not send from the composer (the waterfall is never reached). Not investigated further.
+- `audit.spec.ts` (after the `wfall-*` rename; not compared with the base) failed twice while other sessions loaded the machine, each time on a different test whose first message did not send from the composer, before the waterfall; on a quieter rerun all three passed.
+- `outcome_unknown` and a failed run with no stopping step are covered by unit tests only.
 - The chat's line reads the workflow's runs list (last 100) to find the turn's run; an older run falls off it.
 
 ### Stream B: Sparks page and Crew tab (built against faked file routes)
