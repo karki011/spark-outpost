@@ -5,6 +5,7 @@ import {
   type TeammateBrief,
   type TeammateBriefSkill,
 } from '@spark-outpost/contracts';
+import { guardedCrewFolders } from '../../approvals/crew-folders.ts';
 import type { ProtocolObserver } from '../../providers/provider.ts';
 import { NO_CLAUDE_REPO, type ClaudeRepoOptions, type CodexRepoOptions } from './repo-session.ts';
 
@@ -104,9 +105,12 @@ function withSparkServer(repo: ClaudeRepoOptions | null, sparkServer: string | n
   return { ...base, allowRules: [...(base.allowRules ?? []), `mcp__${sparkServer}`] };
 }
 
-export function sparkReadDirs(prefs: SparkSessionPrefs | undefined): string[] {
+export function sparkReadDirs(
+  prefs: SparkSessionPrefs | undefined,
+  crew: readonly string[] = guardedCrewFolders(),
+): string[] {
   const folder = prefs?.teammate?.folder;
-  return folder ? [folder] : [];
+  return [...new Set([...(folder ? [folder] : []), ...crew])];
 }
 
 export function withClaudeSpark(
@@ -127,7 +131,7 @@ export function withClaudeSpark(
       sparkInstructions(prefs, subagents, spark !== null, spark?.browser),
     ),
     agentTool: subagents,
-    ...(readDirs.length > 0 ? { readDirs } : {}),
+    readDirs,
   };
 }
 

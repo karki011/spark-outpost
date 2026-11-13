@@ -71,14 +71,16 @@ describe('the brief lists a Spark’s skills', () => {
   });
 });
 
-describe('Claude may read the Spark’s own folder and never edit crew folders', () => {
-  it('opens only the folder of the Spark the turn is linked to', () => {
-    expect(sparkReadDirs({ ...PREFS, teammate: WREN })).toEqual([FOLDER]);
-    expect(sparkReadDirs({ ...PREFS, teammate: { ...WREN, folder: null } })).toEqual([]);
-    expect(sparkReadDirs(PREFS)).toEqual([]);
-    expect(sparkReadDirs(undefined)).toEqual([]);
-    expect(withClaudeSpark(null, { ...PREFS, teammate: WREN }, true)!.readDirs).toEqual([FOLDER]);
-    expect(withClaudeSpark(null, PREFS, true)).not.toHaveProperty('readDirs');
+describe('Claude may read every crew folder and never edit them', () => {
+  const CREW = ['/data/dev/sparks', '/data/dev/workflows'];
+
+  it('opens the Spark’s own folder and the whole crew, in every turn', () => {
+    expect(sparkReadDirs({ ...PREFS, teammate: WREN }, CREW)).toEqual([FOLDER, ...CREW]);
+    expect(sparkReadDirs({ ...PREFS, teammate: { ...WREN, folder: null } }, CREW)).toEqual(CREW);
+    expect(sparkReadDirs(PREFS, CREW)).toEqual(CREW);
+    expect(sparkReadDirs(undefined, CREW)).toEqual(CREW);
+    expect(withClaudeSpark(null, { ...PREFS, teammate: WREN }, true)!.readDirs).toContain(FOLDER);
+    expect(withClaudeSpark(null, PREFS, true)!.readDirs).toEqual(guardedCrewFolders());
   });
 
   it('adds the folder to the readable directories of the session', () => {
@@ -86,7 +88,10 @@ describe('Claude may read the Spark’s own folder and never edit crew folders',
     const { permissions } = claudeOptions(claudeSessionMeta(CLAUDE_READ_TOOLS, [], repo));
     expect(permissions.additionalDirectories).toEqual([...tempRoots(), FOLDER]);
     const plain = claudeOptions(claudeSessionMeta(CLAUDE_READ_TOOLS, [], NO_CLAUDE_REPO));
-    expect(plain.permissions.additionalDirectories).toEqual(tempRoots());
+    expect(plain.permissions.additionalDirectories).toEqual([
+      ...tempRoots(),
+      ...guardedCrewFolders(),
+    ]);
   });
 
   it.each([

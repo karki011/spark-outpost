@@ -9,7 +9,7 @@ import {
   sparkRulesFlagRules,
 } from '../../approvals/browser-data.ts';
 import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
-import { crewFolderRules } from '../../approvals/crew-folders.ts';
+import { crewFolderRules, guardedCrewFolders } from '../../approvals/crew-folders.ts';
 import { tempRoots } from '../../approvals/temp-dirs.ts';
 import { PLANS_DIR } from '../../plans/plan-mode.ts';
 import { GIT_CONTROL_GLOBS, INSTRUCTION_GLOBS } from '../../projects/path-policy.ts';
@@ -253,7 +253,7 @@ export function claudeSessionMeta(
             deny,
             ...(ask.length > 0 ? { ask } : {}),
             ...(allowRules.length > 0 ? { allow: allowRules } : {}),
-            additionalDirectories: [...tempRoots(), ...(repo?.readDirs ?? [])],
+            additionalDirectories: [...tempRoots(), ...(repo?.readDirs ?? guardedCrewFolders())],
             blockReadsOutsideWorkingDirectories: true,
             ...(allowBypass ? {} : { disableBypassPermissionsMode: 'disable' }),
           },

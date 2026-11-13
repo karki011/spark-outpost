@@ -106,7 +106,7 @@ describe("reading the turn's own Spark folder", () => {
 });
 
 describe('neighbours of the Spark folder stay closed', () => {
-  it("refuses the read tool in another Spark's folder and in the workflows folder", async () => {
+  it("refuses the read tool in another Spark's folder when the crew isn't readable", async () => {
     expect(await readTool(`${OTHER}/SPARK.md`)).toEqual(Array(3).fill(OUTSIDE_READ));
     expect(await readTool(`${WORKFLOWS}/nightly.json`)).toEqual(Array(3).fill(OUTSIDE_READ));
     expect(await readTool(SPARKS)).toEqual(Array(3).fill(OUTSIDE_READ));
@@ -139,6 +139,32 @@ describe('neighbours of the Spark folder stay closed', () => {
 
   it("does not run another Spark's reads at once", async () => {
     expect((await run(`cat ${OTHER}/SPARK.md`))[0]).toBe('ask (the mode asks)');
+  });
+});
+
+describe('reading the whole crew, as every turn may', () => {
+  const crew = { readable: [SPARKS, WORKFLOWS] };
+
+  it("reads another Spark's folder and the workflows, so an agent can spot a duplicate", async () => {
+    for (const target of [`${OTHER}/SPARK.md`, `${WORKFLOWS}/nightly.json`, SPARKS]) {
+      const verdicts = await readTool(target, crew);
+      expect(
+        verdicts.some((verdict) => verdict.startsWith('refuse')),
+        target,
+      ).toBe(false);
+    }
+    expect(await run(`cat ${OTHER}/SPARK.md`, crew)).toEqual(['allow', 'allow', 'allow']);
+    expect(await run(`ls ${SPARKS} && cat ${WORKFLOWS}/nightly.json`, crew)).toEqual([
+      'allow',
+      'allow',
+      'allow',
+    ]);
+  });
+
+  it("still refuses another chat's folder and every change to the crew", async () => {
+    expect(await readTool(`${CHAT}/notes.md`, crew)).toEqual(Array(3).fill(OUTSIDE_READ));
+    expect(await run(`echo hi > ${OTHER}/SPARK.md`, crew)).toEqual(Array(3).fill(REFUSED));
+    expect(await run(`rm ${WORKFLOWS}/nightly.json`, crew)).toEqual(Array(3).fill(REFUSED));
   });
 });
 

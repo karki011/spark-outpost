@@ -31,7 +31,7 @@ Even with no rules:
 - Reading, copying or changing Spark's browser data: Browser profiles, **Personal** included, sign-in storage and the history database.
 - Your ChatGPT or Claude account's own apps and connectors; add MCP servers in Spark.
 - `--no-verify`, and reading or changing Spark's rules files directly.
-- Changing Sparks' folders or workflow files directly; a Spark may read its own folder.
+- Changing Sparks' folders or workflow files directly; agents may read them.
 
 A blocked step reads "Refused …".
 
