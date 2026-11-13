@@ -188,6 +188,7 @@ export const SPEC_GROUPS = {
     'tickets-rows',
   ],
   slack: ['slack-chat', 'slack-settings', 'slack-sign-in'],
+  'crew-flows': ['crew-flows'],
   sparks: ['relay', 'spark-actions', 'spark-decisions', 'spark-mention', 'spark-sheet', 'sparks'],
   'settings-providers': [
     'agent-instructions',
@@ -373,6 +374,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
     groups: ['sidebar-projects', 'chat', 'home', 'outposts'],
   },
   { prefix: 'apps/web/src/crew/', groups: ['agent-tv', 'chat'] },
+  { prefix: 'apps/web/src/crew-flows/', groups: ['crew-flows'] },
   { prefix: 'apps/web/src/desktop/', groups: ['island-desktop', 'terminal-preview-browser'] },
   { prefix: 'apps/web/src/diff/', groups: ['diff', 'approvals'] },
   { prefix: 'apps/web/src/docs/', groups: ['docs-help'] },
