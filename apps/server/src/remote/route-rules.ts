@@ -279,6 +279,14 @@ PUT /api/outposts/:id/members/:conversationId
 DELETE /api/outposts/:id/members/:conversationId
 GET /api/a2a/chats/:chatId/.well-known/agent-card.json
 POST /api/a2a/chats/:chatId
+GET /api/workflows
+GET /api/workflows/:id
+PUT /api/workflows/:id
+DELETE /api/workflows/:id
+GET /api/workflows/:id/runs
+POST /api/workflows/:id/runs
+GET /api/workflow-runs/:id
+POST /api/workflow-runs/:id/stop
 `;
 
 const PAIRING = `
