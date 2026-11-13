@@ -237,12 +237,12 @@ Browser specs check each screen at 1280, 900 and 400 px, light and dark, with th
 
 ## What leaves the computer
 
-| Data                           | Goes to                | When                                  |
-| ------------------------------ | ---------------------- | ------------------------------------- |
-| Audio                          | Nowhere                | Never                                 |
-| Transcript, goal, notes, title | The default provider   | When notes are written                |
-| The same, plus attachments     | The Ask Spark provider | When the user asks in the Meeting tab |
-| A meeting attached to a chat   | That chat's provider   | When the user sends the message       |
+| Data                           | Goes to                | When                               |
+| ------------------------------ | ---------------------- | ---------------------------------- |
+| Audio                          | Nowhere                | Never                              |
+| Transcript, goal, notes, title | The default provider   | When notes are written             |
+| Transcript, goal, notes, title | The Ask Spark provider | When the user asks under a meeting |
+| A meeting attached to a chat   | That chat's provider   | When the user sends the message    |
 
 Nothing is sent while a meeting only records.
 
@@ -335,7 +335,7 @@ Changes made on 2026-11-12 from the owner's notes on the alpha. Verified by unit
 - **Delete** asks in the app's destructive confirm dialog (`DisconnectDialog`: an alert dialog with **Cancel** focused and **Delete meeting**), not an inline banner.
 - **Empty and loading.** With no meetings the Transcripts page is one splash (`EmptyScene`) saying how to start and what stays on the Mac. Notes being written show Scout working over skeleton lines; both follow Reduce Motion.
 
-Suggested replies are still not built: **Suggest a reply** belongs to the island's Meeting tab (Phase 3, [Live help](#live-help)).
+- **Ask about a meeting.** Every meeting's page ends with an **Ask about this meeting** box (`MeetingAsk`), under whichever tab is open so its answers stay when the meeting ends and the page moves to Notes. A typed question, or **Catch me up**, **Suggest a reply** and **Open questions** while recording (**Summarize**, **Action items**, **Decisions** and **Open questions** after), goes to Ask Spark's chat through the queue with origin `pages`, the path the Browser view's Ask Spark dock uses. So a meeting question runs every Spark action as a card even in Act and never answers another chat's card, as [Live help](#live-help) asks. The meeting goes as one text attachment built when the question is sent: title, goal, the user's notes, the written notes (12,000 characters) and the newest 60,000 characters of the transcript, inside `<meeting_evidence>` with the instruction to ignore instructions in it. Files in Context are not sent. Answers are read from the assistant's history and are kept only in Ask Spark's own history, not with the meeting. This is the main-window half of Live help; the island's Meeting tab is still not built, and the server's refusal text for these runs still says "browser tabs".
 
 ## Open decisions
 

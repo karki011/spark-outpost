@@ -4,6 +4,7 @@ import type { Meeting, MeetingDetail } from '@spark-outpost/contracts';
 import { LiveElapsed } from '../ui/LiveElapsed.tsx';
 import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
 import { ContextPane } from './ContextPane.tsx';
+import { MeetingAsk } from './MeetingAsk.tsx';
 import { MeetingActions } from './MeetingActions.tsx';
 import { MeetingTitle } from './MeetingTitle.tsx';
 import { NotesPane } from './NotesPane.tsx';
@@ -17,6 +18,7 @@ interface MeetingPageProps {
   id: string;
   onStartChat: (meeting: Meeting, notesMarkdown: string) => void;
   onDeleted?: (() => void) | undefined;
+  onOpenChat?: ((id: string) => void) | undefined;
 }
 
 function MetaLine({ meeting }: { meeting: Meeting }) {
@@ -97,7 +99,7 @@ function PageTabs({
   );
 }
 
-function MeetingView({ id, onStartChat, onDeleted }: MeetingPageProps) {
+function MeetingView({ id, onStartChat, onDeleted, onOpenChat }: MeetingPageProps) {
   const query = useMeeting(id);
   const [picked, setPane] = useState<PaneId | null>(null);
   const base = useId();
@@ -132,6 +134,7 @@ function MeetingView({ id, onStartChat, onDeleted }: MeetingPageProps) {
         {pane === 'transcript' && <TranscriptPane meeting={detail.meeting} />}
         {pane === 'context' && <ContextPane detail={detail} />}
       </div>
+      <MeetingAsk meeting={detail.meeting} onOpenChat={onOpenChat} />
     </article>
   );
 }

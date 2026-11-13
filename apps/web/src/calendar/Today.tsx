@@ -153,7 +153,12 @@ function TodayViews(props: TodayProps) {
       <RecordingBar onOpen={openMeeting} />
       {meetings && opened.includes('transcripts') && (
         <div className="td-pagebody" hidden={!transcripts}>
-          <MeetingsView openId={meetingId} onOpen={setMeetingId} onStartChat={props.onStartChat} />
+          <MeetingsView
+            openId={meetingId}
+            onOpen={setMeetingId}
+            onStartChat={props.onStartChat}
+            onOpenChat={props.onOpenChat}
+          />
         </div>
       )}
       {(!meetings || opened.includes('calendar')) && (

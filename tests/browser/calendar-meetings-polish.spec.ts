@@ -231,3 +231,42 @@ test('Take notes when I join a meeting is off, and once on a Join also records',
   expect((await meeting(page, id)).title).toBe('Live review');
   await today(page).getByRole('button', { name: 'Stop' }).first().click();
 });
+
+test('a question about a meeting goes to Ask Spark from under its transcript', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openToday(page);
+  const main = today(page);
+  await main.getByRole('tab', { name: 'Transcripts' }).click();
+  await main.getByRole('button', { name: 'New meeting' }).click();
+  await expect(main.getByRole('list', { name: 'Transcript' })).toContainText('churn');
+  const ask = main.getByRole('region', { name: 'Ask about this meeting' });
+  await expect(ask.getByRole('button', { name: 'Suggest a reply' })).toBeVisible();
+  const queued = page.waitForRequest(
+    (request) =>
+      request.method() === 'POST' && /\/api\/conversations\/[^/]+\/queue$/.test(request.url()),
+  );
+  await ask.getByRole('button', { name: 'Catch me up' }).click();
+  const body = (await queued).postDataJSON() as { origin: string; attachmentIds: string[] };
+  expect(body.origin).toBe('pages');
+  expect(body.attachmentIds).toHaveLength(1);
+  const thread = ask.getByRole('list', { name: 'Questions about this meeting' });
+  await expect(thread).toContainText('Catch me up on the last few minutes');
+  await expect(thread.locator('.mt-ask-answer')).toBeVisible({ timeout: 45_000 });
+
+  const box = ask.getByRole('textbox', { name: 'Ask Spark about this meeting' });
+  await box.fill('What did we decide about pricing?');
+  await box.press('Enter');
+  await expect(box).toHaveValue('');
+  await expect(thread.getByRole('listitem')).toHaveCount(2);
+  await expect(thread.locator('.mt-ask-answer')).toHaveCount(2, { timeout: 45_000 });
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(overflow).toBe(false);
+  await shoot(page, 'ask');
+  await main.getByRole('button', { name: 'Stop' }).first().click();
+  await expect(ask.getByRole('button', { name: 'Action items' })).toBeVisible();
+  await expect(ask.getByRole('button', { name: 'Suggest a reply' })).toHaveCount(0);
+  await expect(main.getByRole('tab', { name: 'Notes' })).toHaveAttribute('aria-selected', 'true');
+  await expect(thread.getByRole('listitem')).toHaveCount(2);
+});

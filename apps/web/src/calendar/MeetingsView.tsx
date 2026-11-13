@@ -6,12 +6,14 @@ interface MeetingsViewProps {
   openId: string | null;
   onOpen: (id: string | null) => void;
   onStartChat: (text: string) => void;
+  onOpenChat: (id: string) => void;
 }
 
 export const MeetingsView = memo(function MeetingsView({
   openId,
   onOpen,
   onStartChat,
+  onOpenChat,
 }: MeetingsViewProps) {
   const startChat = useCallback(
     (meeting: Meeting, notes: string) => onStartChat(`Notes from ${meeting.title}\n\n${notes}`),
@@ -20,7 +22,12 @@ export const MeetingsView = memo(function MeetingsView({
   return (
     <div className="td-card td-meetings mt-fill">
       <h1 className="sr-only">Transcripts</h1>
-      <MeetingsTab openId={openId} onOpen={onOpen} onStartChat={startChat} />
+      <MeetingsTab
+        openId={openId}
+        onOpen={onOpen}
+        onStartChat={startChat}
+        onOpenChat={onOpenChat}
+      />
     </div>
   );
 });

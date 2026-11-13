@@ -14,6 +14,7 @@ interface MeetingsTabProps {
   openId: string | null;
   onOpen: (id: string | null) => void;
   onStartChat: (meeting: Meeting, notesMarkdown: string) => void;
+  onOpenChat?: ((id: string) => void) | undefined;
 }
 
 function Splash({ onStarted }: { onStarted: (meeting: Meeting) => void }) {
@@ -42,7 +43,7 @@ function Splash({ onStarted }: { onStarted: (meeting: Meeting) => void }) {
   );
 }
 
-export function MeetingsTab({ openId, onOpen, onStartChat }: MeetingsTabProps) {
+export function MeetingsTab({ openId, onOpen, onStartChat, onOpenChat }: MeetingsTabProps) {
   const [query, setQuery] = useState('');
   const close = useCallback(() => onOpen(null), [onOpen]);
   const started = useCallback((meeting: Meeting) => onOpen(meeting.id), [onOpen]);
@@ -108,7 +109,12 @@ export function MeetingsTab({ openId, onOpen, onStartChat }: MeetingsTabProps) {
               <BackIcon />
               Back
             </button>
-            <MeetingPage id={openId} onStartChat={onStartChat} onDeleted={close} />
+            <MeetingPage
+              id={openId}
+              onStartChat={onStartChat}
+              onDeleted={close}
+              onOpenChat={onOpenChat}
+            />
           </>
         ) : (
           <p className="mt-hint mt-pick">Pick a meeting to see its notes and transcript.</p>
