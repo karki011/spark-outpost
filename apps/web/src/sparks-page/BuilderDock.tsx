@@ -11,18 +11,24 @@ import { builderApi, builderKeys } from './builder-api.ts';
 
 const DONE_POLL_MS = 10_000;
 
-function useBuilderChat() {
+function useBuilderChat(chatId: string | null, onChat: (id: string | null) => void) {
   const client = useQueryClient();
   const current = useQuery({
-    queryKey: builderKeys.current,
-    queryFn: builderApi.current,
+    queryKey: builderKeys.current(chatId),
+    queryFn: () => builderApi.current(chatId),
     refetchInterval: (query) => (query.state.data?.doneAt ? DONE_POLL_MS : false),
   });
-  const keep = (chat: BuilderChat) => client.setQueryData(builderKeys.current, chat);
-  const start = useMutation({ mutationFn: builderApi.start, onSuccess: keep });
+  const keep = (chat: BuilderChat) => client.setQueryData(builderKeys.current(chatId), chat);
+  const start = useMutation({
+    mutationFn: builderApi.start,
+    onSuccess: (chat) => {
+      client.setQueryData(builderKeys.current(null), chat);
+      onChat(null);
+    },
+  });
   const done = useMutation({ mutationFn: builderApi.done, onSuccess: keep });
   const startNew = start.mutate;
-  const missing = current.isSuccess && current.data === null;
+  const missing = chatId === null && current.isSuccess && current.data === null;
   useEffect(() => {
     if (missing) startNew(crypto.randomUUID());
   }, [missing, startNew]);
@@ -91,8 +97,14 @@ function Shell({ children, label }: { children: ReactNode; label: string }) {
   );
 }
 
-export function BuilderDock({ onClose }: { onClose(): void }) {
-  const { current, start, done } = useBuilderChat();
+interface BuilderDockProps {
+  chatId: string | null;
+  onChat(chatId: string | null): void;
+  onClose(): void;
+}
+
+export function BuilderDock({ chatId, onChat, onClose }: BuilderDockProps) {
+  const { current, start, done } = useBuilderChat(chatId, onChat);
   const dock = useRef<HTMLDivElement>(null);
   const focused = useDockFocus(dock);
   const chat = current.data ?? null;

@@ -173,8 +173,10 @@ export function workflowRoutes(deps: WorkflowRouteDeps): Router {
     res.json((await getWorkflowRun(db, workspaceId, id)) ?? run);
   });
 
-  router.get('/crew/builder', async (_req, res) => {
-    res.json({ chat: await currentBuilderChat(runs) });
+  router.get('/crew/builder', async (req, res) => {
+    const id = z.uuid().optional().safeParse(req.query.id);
+    if (!id.success) throw new BuilderChatNotFoundError();
+    res.json({ chat: await currentBuilderChat(runs, id.data) });
   });
 
   router.post('/crew/builder', async (req, res) => {

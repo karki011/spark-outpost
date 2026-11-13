@@ -10,13 +10,13 @@ import { request } from '../api/client.ts';
 const post = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
 
 export const builderKeys = {
-  current: ['crew-builder'] as const,
+  current: (id: string | null) => ['crew-builder', id] as const,
   drafts: ['crew-drafts'] as const,
 };
 
 export const builderApi = {
-  current: async (): Promise<BuilderChat | null> =>
-    (await request(currentBuilderChatSchema, '/crew/builder')).chat,
+  current: async (id: string | null): Promise<BuilderChat | null> =>
+    (await request(currentBuilderChatSchema, id ? `/crew/builder?id=${id}` : '/crew/builder')).chat,
   start: (id: string): Promise<BuilderChat> =>
     request(builderChatSchema, '/crew/builder', post({ id })),
   done: (id: string): Promise<BuilderChat> =>

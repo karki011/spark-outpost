@@ -98,7 +98,15 @@ export async function isBuilderChat(db: Queryable, conversationId: string): Prom
   return rowCount === 1;
 }
 
-export async function currentBuilderChat(deps: BuilderChatDeps): Promise<BuilderChat | null> {
+export async function currentBuilderChat(
+  deps: BuilderChatDeps,
+  id?: string,
+): Promise<BuilderChat | null> {
+  if (id) {
+    const row = await builderRow(deps.db, deps.workspaceId, id);
+    if (!row) throw new BuilderChatNotFoundError();
+    return toBuilderChat(row);
+  }
   const { rows } = await deps.db.query<BuilderRow>(
     `${SELECT_ROW}
      WHERE b.workspace_id = $1 AND b.removed_at IS NULL

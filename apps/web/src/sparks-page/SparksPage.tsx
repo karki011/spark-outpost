@@ -22,19 +22,19 @@ import {
 } from './sparks-route.ts';
 import { useWorkflowCount, WorkflowsTab } from './WorkflowsTab.tsx';
 
-function WithBuilder({
-  open,
-  onClose,
-  children,
-}: {
+interface WithBuilderProps {
   open: boolean;
+  chatId: string | null;
+  onChat(chatId: string | null): void;
   onClose(): void;
   children: ReactNode;
-}) {
+}
+
+function WithBuilder({ open, chatId, onChat, onClose, children }: WithBuilderProps) {
   return (
     <>
       {children}
-      {open && <BuilderDock onClose={onClose} />}
+      {open && <BuilderDock chatId={chatId} onChat={onChat} onClose={onClose} />}
     </>
   );
 }
@@ -47,10 +47,18 @@ export function SparksPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>('details');
   const [builderOpen, setBuilderOpen] = useState(false);
-  const closeBuilder = useCallback(() => setBuilderOpen(false), []);
+  const [builderChatId, setBuilderChatId] = useState<string | null>(null);
+  const closeBuilder = useCallback(() => {
+    setBuilderOpen(false);
+    setBuilderChatId(null);
+  }, []);
   const review = useCallback((draft: CrewDraft) => {
-    if (draft.inBuilder) setBuilderOpen(true);
-    else requestChat(draft.conversationId);
+    if (!draft.inBuilder) {
+      requestChat(draft.conversationId);
+      return;
+    }
+    setBuilderChatId(draft.conversationId);
+    setBuilderOpen(true);
   }, []);
   const open = useCallback((sparkId: string | null) => {
     setTab('crew');
@@ -62,7 +70,10 @@ export function SparksPage() {
       (request: SparksPageRequest) => {
         open(request.sparkId);
         setTab(request.tab);
-        if (request.builder) setBuilderOpen(true);
+        if (request.builder) {
+          setBuilderChatId(null);
+          setBuilderOpen(true);
+        }
       },
       [open],
     ),
@@ -73,7 +84,12 @@ export function SparksPage() {
   const builder = builderOpen && !remote;
   if (spark) {
     return (
-      <WithBuilder open={builder} onClose={closeBuilder}>
+      <WithBuilder
+        open={builder}
+        chatId={builderChatId}
+        onChat={setBuilderChatId}
+        onClose={closeBuilder}
+      >
         <main className="main sparks" aria-label={`Spark ${spark.name}`}>
           <SparkDetail
             spark={spark}
@@ -87,7 +103,12 @@ export function SparksPage() {
     );
   }
   return (
-    <WithBuilder open={builder} onClose={closeBuilder}>
+    <WithBuilder
+      open={builder}
+      chatId={builderChatId}
+      onChat={setBuilderChatId}
+      onClose={closeBuilder}
+    >
       <main className="main sparks" aria-labelledby="sparks-title">
         <header className="spk-top">
           <div className="spk-head">
@@ -104,7 +125,10 @@ export function SparksPage() {
                   type="button"
                   className="btn sm spk-new-spark"
                   aria-pressed={builderOpen}
-                  onClick={() => setBuilderOpen((was) => !was)}
+                  onClick={() => {
+                    if (builderOpen) closeBuilder();
+                    else setBuilderOpen(true);
+                  }}
                 >
                   <SparkleIcon /> Build with an agent
                 </button>

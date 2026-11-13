@@ -149,6 +149,12 @@ describe('builder chat', () => {
       .body as ConversationSummary[];
     expect(listed.map((chat) => chat.id)).not.toContain(id);
     expect((await current())?.conversationId).toBe(id);
+    const newer = await start();
+    expect((await current())?.conversationId).toBe(newer.conversationId);
+    const older = (await client.get(`/api/crew/builder?id=${id}`).expect(200)).body as {
+      chat: BuilderChat;
+    };
+    expect(older.chat.conversationId).toBe(id);
     const { rows } = await t.db.query<{ kind: string }>(
       'SELECT kind FROM conversations WHERE id = $1',
       [id],
@@ -199,6 +205,7 @@ describe('builder chat', () => {
     expect(await sweepBuilderChats(deps())).toEqual([conversationId]);
     expect(await current()).toBeNull();
     expect(existsSync(folder)).toBe(false);
+    await client.get(`/api/crew/builder?id=${conversationId}`).expect(404);
     const { rows } = await t.db.query<{ status: string }>(
       'SELECT status FROM approvals WHERE id = $1',
       [card],

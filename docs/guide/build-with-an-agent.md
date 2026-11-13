@@ -22,7 +22,7 @@ A new Spark or workflow waiting on its card shows at the top of the page as **Dr
 
 ## Finish
 
-1. Select **Done**. There's no dialog.
+1. Answer the drafts first: a card still waiting is dropped when the chat is removed. Then select **Done**. There's no dialog.
 2. Spark removes the chat 24 hours later, or at the next start if it was closed. A new message before then reopens it.
 3. Select **New chat** for a fresh one.
 
