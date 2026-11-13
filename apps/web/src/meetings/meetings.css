@@ -57,15 +57,44 @@
 .mt-back {
   margin-bottom: 8px;
 }
+.mt-resize {
+  display: none;
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  right: -4px;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.mt-resize:focus-visible {
+  outline: none;
+}
 @container (min-width: 760px) {
   .mt-tab {
-    grid-template-columns: clamp(200px, 30%, 300px) minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
     gap: 0;
     min-height: 60vh;
   }
   .mt-side {
+    --mt-side-cap: max(200px, calc(100cqw - 420px));
+    position: relative;
+    width: min(var(--mt-side-w, 280px), var(--mt-side-cap));
     padding-right: 14px;
     border-right: 1px solid var(--line);
+  }
+  .mt-resize {
+    display: block;
+  }
+  .mt-side:has(.mt-resize:hover),
+  .mt-side:has(.mt-resize:focus-visible),
+  .mt-side.dragging {
+    border-right-color: var(--line-strong);
+    box-shadow: inset -1px 0 0 var(--line-strong);
+  }
+  .mt-side.dragging {
+    user-select: none;
   }
   .mt-main {
     padding-left: 20px;
@@ -172,63 +201,6 @@
   font-size: 13px;
   line-height: 1.5;
   margin: 8px 0;
-}
-.mt-tab.mt-splash {
-  display: flex;
-  min-height: 60vh;
-}
-.mt-splash .es-text {
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  max-width: 460px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-.mt-splash-title {
-  margin: 0;
-  color: var(--text);
-  font-size: 17px;
-  font-weight: 500;
-}
-.mt-splash-line,
-.mt-splash-note {
-  margin: 0;
-}
-.mt-splash-note {
-  font-size: 12px;
-}
-.mt-splash-steps {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding-left: 20px;
-  text-align: left;
-}
-.mt-splash .mt-splash-steps b {
-  display: inline;
-  margin: 0;
-  color: var(--text);
-  font-weight: 500;
-}
-.mt-splash .es-text p {
-  margin: 0;
-}
-.mt-writing {
-  display: grid;
-  gap: 4px;
-  justify-items: center;
-}
-.mt-writing .mt-hint {
-  margin: 0 0 12px;
-  text-align: center;
-}
-.mt-writing > div[aria-hidden] {
-  width: 100%;
-}
-.mt-row-state .scout {
-  flex-shrink: 0;
 }
 .mt-hint .btn {
   margin-top: 8px;

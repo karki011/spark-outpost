@@ -95,6 +95,22 @@ test('no meetings shows one splash, and a new meeting opens on its live transcri
   const search = main.getByRole('searchbox', { name: 'Search meetings' });
   await expect(search).toHaveAttribute('placeholder', 'Search');
 
+  const side = main.getByRole('region', { name: 'Meeting history' });
+  const divider = main.getByRole('separator', { name: 'Resize meeting list' });
+  const before = (await side.boundingBox())!.width;
+  await divider.focus();
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect.poll(async () => (await side.boundingBox())!.width).toBe(before + 48);
+  const handle = (await divider.boundingBox())!;
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + 40);
+  await page.mouse.down();
+  await page.mouse.move(handle.x + handle.width / 2 - 30, handle.y + 40, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(async () => (await side.boundingBox())!.width).toBe(before + 18);
+  await divider.focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await side.boundingBox())!.width).toBe(before);
+
   const id = (await recordingId(page))!;
   expect((await meeting(page, id)).title).toBe('Untitled meeting');
   await main.getByRole('button', { name: 'Stop' }).first().click();

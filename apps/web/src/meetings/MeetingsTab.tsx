@@ -1,8 +1,11 @@
 import './meetings.css';
-import { useCallback, useState } from 'react';
+import './meeting-states.css';
+import { useCallback, useState, type CSSProperties } from 'react';
 import type { Meeting } from '@spark-outpost/contracts';
 import { EmptyScene } from '../brand/EmptyScene.tsx';
 import { BackIcon, SearchIcon, SpinnerIcon } from '../ui/icons.tsx';
+import { PanelResizer } from '../ui/PanelResizer.tsx';
+import { useStoredPanelWidth, type PanelWidthLimits } from '../ui/panel-width.ts';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { MeetingPage } from './MeetingPage.tsx';
@@ -16,6 +19,13 @@ interface MeetingsTabProps {
   onStartChat: (meeting: Meeting, notesMarkdown: string) => void;
   onOpenChat?: ((id: string) => void) | undefined;
 }
+
+const LIST_WIDTH: PanelWidthLimits = {
+  key: 'spark-outpost.meetings.list.width',
+  min: 200,
+  max: 520,
+  fallback: 280,
+};
 
 function Splash({ onStarted }: { onStarted: (meeting: Meeting) => void }) {
   return (
@@ -49,13 +59,26 @@ export function MeetingsTab({ openId, onOpen, onStartChat, onOpenChat }: Meeting
   const started = useCallback((meeting: Meeting) => onOpen(meeting.id), [onOpen]);
   const list = useMeetingList(query);
   const searching = list.search !== '';
+  const [listWidth, setListWidth] = useStoredPanelWidth(LIST_WIDTH);
+  const shownWidth = { '--mt-side-w': `${listWidth ?? LIST_WIDTH.fallback}px` } as CSSProperties;
   const none = list.data !== undefined && list.items.length === 0;
 
   if (none && !openId && query.trim() === '' && !searching) return <Splash onStarted={started} />;
 
   return (
     <div className="mt mt-tab" data-open={openId ? 'true' : 'false'}>
-      <section className="mt-side" aria-label="Meeting history">
+      <section className="mt-side" aria-label="Meeting history" style={shownWidth}>
+        <PanelResizer
+          className="mt-resize"
+          label="Resize meeting list"
+          panelSelector=".mt-side"
+          variable="--mt-side-w"
+          cap="--mt-side-cap"
+          side="right"
+          limits={LIST_WIDTH}
+          width={listWidth}
+          onWidth={setListWidth}
+        />
         <div className="mt-side-head">
           <label className="mt-search">
             <SearchIcon />
