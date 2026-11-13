@@ -96,7 +96,7 @@ async function makeCopy(
   projectId: string,
   root: string,
 ) {
-  const branch = `${TEST_BRANCH_PREFIX}${conversationId.slice(0, 8)}`;
+  const branch = `${TEST_BRANCH_PREFIX}${conversationId}`;
   await createCopy(
     { db: deps.db, branchPrefix: 'spark' },
     { conversationId, projectId, root },

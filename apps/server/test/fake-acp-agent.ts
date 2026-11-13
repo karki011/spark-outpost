@@ -7,7 +7,7 @@ import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { questionTurn } from './fake-acp-questions.ts';
 import { modeTurn } from './fake-acp-modes.ts';
-import { railCrossings } from './fake-acp-rails.ts';
+import { fakeCommand, railCrossings } from './fake-acp-rails.ts';
 import { floorTurn } from './fake-acp-floor.ts';
 import { terminalCommands } from './fake-acp-terminal.ts';
 import { publishTurn } from './fake-acp-publish.ts';
@@ -359,7 +359,7 @@ async function turn(
   if (codexed) return codexed;
   if (text.includes('#write') || text.includes('#command')) {
     const tool = text.includes('#command')
-      ? { title: 'curl -sI https://example.com', kind: 'execute' as const }
+      ? { title: fakeCommand(text), kind: 'execute' as const }
       : { title: 'Write notes.txt', kind: 'edit' as const };
     await update({ sessionUpdate: 'tool_call', toolCallId: 't1', ...tool, status: 'pending' });
     const answer = await client.request(acp.methods.client.session.requestPermission, {

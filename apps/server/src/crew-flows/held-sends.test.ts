@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ApprovalRequest } from '../approvals/decide.ts';
 import { noFiles } from '../approvals/spark-command-fixtures.ts';
-import { heldCommand, heldTool } from './held-sends.ts';
+import { heldCommand, heldInTestRun, heldTool } from './held-sends.ts';
 import { TEST_RUN_NOTE, stepJobPrompt } from './step-prompt.ts';
 
 function command(text: string): ApprovalRequest {
@@ -78,6 +78,13 @@ describe('Spark tools held in a test run', () => {
     expect(kinds('spark_browser_act')).toBe('browser');
     expect(kinds('spark_mac_act')).toBe('mac');
     expect(kinds('spark_create_spark')).toBe('spark_action');
+  });
+
+  it('holds every tool that acts, and opening a page, and lets reads through', () => {
+    expect(heldInTestRun({ name: 'spark_create_spark', acts: true })).toBe(true);
+    expect(heldInTestRun({ name: 'spark_browser_open' })).toBe(true);
+    expect(heldInTestRun({ name: 'spark_browser_read' })).toBe(false);
+    expect(heldInTestRun({ name: 'spark_docs' })).toBe(false);
   });
 
   it('describes the call in one line without secret values', () => {

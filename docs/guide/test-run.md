@@ -27,7 +27,7 @@ Spark copies the project's last commit into a worktree and runs the steps there.
 | **Allow once**, **Deny** | A step's command is waiting for your OK, as its agent's mode asks.      |
 | The line in the banner   | Steps done, time, tokens and cost.                                      |
 
-Held back: pushes, pull requests, ticket, Confluence, Slack and calendar changes, every other Spark tool that writes, and commands that send to another computer. Reading still works, including web pages.
+Held back: pushes, pull requests, ticket, Slack and calendar changes, other Spark tools that write, opening a Browser pane page and commands that send. Reads still work, as do the agent's own web tools.
 
 ## Finish
 

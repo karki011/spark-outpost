@@ -79,6 +79,12 @@ function argsLine(args: unknown): string {
   return parts.join(', ');
 }
 
+const SENDS_WITHOUT_ACTING: ReadonlySet<string> = new Set(['spark_browser_open']);
+
+export function heldInTestRun(tool: { name: string; acts?: boolean }): boolean {
+  return tool.acts === true || SENDS_WITHOUT_ACTING.has(tool.name);
+}
+
 export function heldTool(name: string, args: unknown): Held {
   const kind = TOOL_KINDS.find(([pattern]) => pattern.test(name))?.[1] ?? 'spark_action';
   const said = argsLine(args);

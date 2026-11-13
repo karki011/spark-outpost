@@ -95,7 +95,11 @@ describe('a test run of a workflow', () => {
     await savedFlow({
       where: '#cwd',
       probe: 'Check the site. #command',
+      push: 'Publish. #command `git push origin main`',
+      pull: 'Open it. #command `gh pr create --title Fix --body Done`',
+      look: 'Read it. #command `git log --oneline -1`',
       make: 'Add a teammate. #spark spark_create_spark {"name":"Nova"}',
+      docs: 'Look it up. #spark spark_docs {}',
     });
     host = await startSparkMcpHost(toolDeps(t));
     harness = startTurnWorker(t, {
@@ -115,14 +119,17 @@ describe('a test run of a workflow', () => {
     expect(done).toMatchObject({ message: 'for 2.4', projectId, oneSpark: false, waiting: [] });
     const notes = Object.fromEntries(done.run.steps.map((entry) => [entry.stepId, entry.note]));
     expect(notes.where).toContain(`cwd=${copy!.path}`);
-    expect(notes.probe).toContain('permission=no');
+    for (const id of ['probe', 'push', 'pull']) expect(notes[id]).toContain('permission=no');
+    expect(notes.look).toContain('permission=yes');
     expect(notes.make).toContain('Held: this is a test run');
-    expect(done.held.map((held) => [held.stepId, held.kind])).toEqual([
-      ['probe', 'command'],
-      ['make', 'spark_action'],
+    expect(notes.docs).toContain('spark spark_docs=');
+    expect(notes.docs).not.toContain('Held');
+    expect(done.held.map((held) => [held.stepId, held.kind, held.summary])).toEqual([
+      ['probe', 'command', 'curl -sI https://example.com, to example.com'],
+      ['push', 'push', 'git push origin main'],
+      ['pull', 'pull_request', 'gh pr create --title Fix --body Done'],
+      ['make', 'spark_action', 'spark_create_spark: name Nova'],
     ]);
-    expect(done.held[0]!.summary).toContain('curl');
-    expect(done.held[1]!.summary).toContain('spark_create_spark: name Nova');
     const sparks = await t.db.query('SELECT 1 FROM teammates WHERE name = $1', ['Nova']);
     expect(sparks.rowCount).toBe(0);
 
@@ -237,6 +244,23 @@ describe('a test run of a workflow', () => {
     expect(message.rows).toEqual([{ content: '@pre-pr for 2.4' }]);
     expect((await copies()).filter((entry) => !entry.removed)).toEqual([]);
   }, 120_000);
+
+  it('makes a separate copy for each of two test runs on one project', async () => {
+    await savedFlow({ only: 'hello' });
+
+    const first = await startTest();
+    const second = await startTest();
+
+    const made = await copies();
+    expect(made).toHaveLength(2);
+    expect(new Set(made.map((entry) => entry.branch)).size).toBe(2);
+    for (const entry of made) expect(existsSync(entry.path)).toBe(true);
+    await client.send('delete', `/api/workflow-runs/${first.id}`).expect(204);
+    expect(made.filter((entry) => existsSync(entry.path))).toHaveLength(1);
+    await client.send('delete', `/api/workflow-runs/${second.id}`).expect(204);
+    for (const entry of made) expect(existsSync(entry.path)).toBe(false);
+    expect(branches()).toBe('');
+  });
 
   it('starts one test run for a repeated request', async () => {
     await savedFlow({ only: 'hello' });
