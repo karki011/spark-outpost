@@ -167,5 +167,6 @@ export * from './crew-files.ts';
 export * from './crew-workflow.ts';
 export * from './crew-run.ts';
 export * from './crew-test-run.ts';
+export * from './crew-builder.ts';
 export * from './crew-schedule.ts';
 export * from './crew-schedule-slots.ts';

@@ -1,5 +1,6 @@
 import { pruneChatFolders } from '../chat-files/prune.ts';
 import { pruneSparkFolders } from '../crew/prune.ts';
+import { sweepBuilderChats } from '../crew-flows/builder-chat.ts';
 import { sweepTestRuns } from '../crew-flows/test-run.ts';
 import { pruneUnlinkedAttachments } from '../persistence/attachments.ts';
 import { pruneProtocolLog } from '../persistence/audit-log.ts';
@@ -47,6 +48,7 @@ export async function pruneOldRows(options: StartupPrune): Promise<void> {
   if (sparkFolders) {
     steps.push(['folders of removed Sparks', () => pruneSparkFolders(db, sparkFolders)]);
   }
+  steps.push(['builder chats', () => sweepBuilderChats(options)]);
   for (const [name, prune] of steps) {
     await prune().catch((error: unknown) => report(`Could not prune ${name}`, error));
   }

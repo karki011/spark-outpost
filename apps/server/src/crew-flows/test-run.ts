@@ -121,7 +121,10 @@ async function removeCopies(db: Queryable, conversationId: string): Promise<void
   }
 }
 
-async function removeChat(deps: TestRunDeps, conversationId: string): Promise<void> {
+export async function removeChat(
+  deps: Omit<TestRunDeps, 'runTarget'>,
+  conversationId: string,
+): Promise<void> {
   await stopConversationWork(deps.db, conversationId, deps.deleteSettleMs);
   const workdirs = await conversationWorkdirs(deps.db, conversationId);
   await removeCopies(deps.db, conversationId);

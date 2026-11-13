@@ -2,7 +2,7 @@ import { DEFAULT_ARCHIVE_INACTIVE_DAYS, type ArchiveInactiveDays } from '@spark-
 import { LISTED_CHAT } from './conversation-search.ts';
 import type { Queryable } from './db.ts';
 
-const LAST_ACTIVITY = `GREATEST(
+export const LAST_ACTIVITY = `GREATEST(
   c.created_at,
   c.restored_at,
   (SELECT max(m.created_at) FROM messages m WHERE m.conversation_id = c.id),
@@ -13,14 +13,14 @@ const LAST_ACTIVITY = `GREATEST(
   (SELECT max(t.updated_at) FROM native_terminal_sessions t WHERE t.conversation_id = c.id)
 )`;
 
-const BUSY_RUN = `EXISTS (
+export const BUSY_RUN = `EXISTS (
   SELECT 1 FROM runs r
   WHERE r.conversation_id = c.id AND r.status IN ('queued', 'running', 'awaiting_approval')
 )`;
 
-const QUEUED_MESSAGE = 'EXISTS (SELECT 1 FROM chat_queue q WHERE q.conversation_id = c.id)';
+export const QUEUED_MESSAGE = 'EXISTS (SELECT 1 FROM chat_queue q WHERE q.conversation_id = c.id)';
 
-const WAITING_CARD = `EXISTS (
+export const WAITING_CARD = `EXISTS (
   SELECT 1 FROM approvals a JOIN runs ar ON ar.id = a.run_id
   WHERE ar.conversation_id = c.id AND a.status = 'pending'
 )`;

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   crewSlugSchema,
   saveWorkflowSchema,
+  startBuilderChatSchema,
   startSparkTestRunSchema,
   startWorkflowRunSchema,
 } from '@spark-outpost/contracts';
@@ -11,6 +12,13 @@ import { BadRequestError, paramId, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import { requestCancel } from '../persistence/runs.ts';
+import {
+  BuilderChatNotFoundError,
+  BuilderChatTakenError,
+  currentBuilderChat,
+  markBuilderDone,
+  startBuilderChat,
+} from './builder-chat.ts';
 import { getWorkflowRun, listWorkflowRuns } from './run-records.ts';
 import { deleteSchedule } from './schedule-records.ts';
 import { SparkNotFoundError, startSparkTestRun, startWorkflowRun } from './start-run.ts';
@@ -47,11 +55,16 @@ export function workflowErrorStatus(error: unknown): { status: number; message: 
     error instanceof WorkflowNotFoundError ||
     error instanceof WorkflowRunNotFoundError ||
     error instanceof TestRunNotFoundError ||
+    error instanceof BuilderChatNotFoundError ||
     error instanceof SparkNotFoundError
   ) {
     return { status: 404, message: error.message };
   }
-  if (error instanceof WorkflowChangedError || error instanceof WorkflowExistsError) {
+  if (
+    error instanceof WorkflowChangedError ||
+    error instanceof WorkflowExistsError ||
+    error instanceof BuilderChatTakenError
+  ) {
     return { status: 409, message: error.message };
   }
   if (error instanceof WorkflowProblemsError) return { status: 400, message: error.message };
@@ -157,6 +170,19 @@ export function workflowRoutes(deps: WorkflowRouteDeps): Router {
     if (!run) throw new WorkflowRunNotFoundError();
     if (run.status === 'running' && run.runId) await requestCancel(db, run.runId);
     res.json((await getWorkflowRun(db, workspaceId, id)) ?? run);
+  });
+
+  router.get('/crew/builder', async (_req, res) => {
+    res.json({ chat: await currentBuilderChat(runs) });
+  });
+
+  router.post('/crew/builder', async (req, res) => {
+    const { id } = parseBody(startBuilderChatSchema, req);
+    res.status(201).json(await startBuilderChat(runs, id));
+  });
+
+  router.post('/crew/builder/:id/done', async (req, res) => {
+    res.json(await markBuilderDone(runs, paramId(req)));
   });
 
   return router;
