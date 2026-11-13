@@ -78,7 +78,7 @@ test('an empty crew offers starters, counts its tabs and holds a place for workf
   await shots(page, 'crew-empty');
 
   await main.getByRole('tab', { name: /^Workflows/ }).click();
-  await expect(main.getByRole('heading', { name: 'Workflows' })).toBeVisible();
+  await expect(main.getByRole('heading', { name: /workflow/i })).toBeVisible();
   await expect(main.getByRole('button', { name: 'New Spark' })).toHaveCount(0);
   await main.getByRole('tab', { name: /^Crew/ }).click();
 

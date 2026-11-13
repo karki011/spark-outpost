@@ -175,24 +175,6 @@
 }
 
 .spk-empty h2,
-.spk-soon h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.spk-soon {
-  flex: 1;
-  max-width: 640px;
-  padding: 44px 28px;
-}
-
-.spk-soon p {
-  margin: 8px 0 0;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
 .spk-details,
 .spk-summary {
   display: flex;

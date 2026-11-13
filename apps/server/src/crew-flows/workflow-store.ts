@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
-import { isAbsolute, join } from 'node:path';
+import { join } from 'node:path';
 import {
   CREW_SLUG_PATTERN,
   workflowProblems,
@@ -11,10 +11,7 @@ import {
   type WorkflowProblem,
   type WorkflowSummary,
 } from '@spark-outpost/contracts';
-import { sparkDataDir } from '../config.ts';
-import { sparkChannel } from '../spark-rules/rules-store.ts';
-
-export const WORKFLOWS_FOLDER = 'workflows';
+import { crewWorkflowsDir } from '../crew/folders.ts';
 
 export class WorkflowNotFoundError extends Error {
   constructor(id: string) {
@@ -41,16 +38,6 @@ export class WorkflowProblemsError extends Error {
     super(problems[0]?.text ?? 'This workflow has a problem.');
     this.problems = problems;
   }
-}
-
-export function workflowsDir(env: NodeJS.ProcessEnv = process.env): string {
-  const override = env.SPARK_WORKFLOWS_DIR?.trim();
-  if (override && isAbsolute(override)) return override;
-  return join(
-    sparkDataDir({ SPARK_DATA_DIR: env.SPARK_DATA_DIR }),
-    sparkChannel(env),
-    WORKFLOWS_FOLDER,
-  );
 }
 
 function hashOf(text: string): string {
@@ -97,7 +84,7 @@ export interface WorkflowStore {
   remove(id: string): Promise<void>;
 }
 
-export function workflowStore(dir: string = workflowsDir()): WorkflowStore {
+export function workflowStore(dir: string = crewWorkflowsDir()): WorkflowStore {
   const ids = async (): Promise<string[]> => {
     const names = await readdir(dir).catch((error: unknown) => {
       if (isMissing(error)) return [] as string[];

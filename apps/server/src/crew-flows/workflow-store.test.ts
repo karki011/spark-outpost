@@ -10,7 +10,6 @@ import {
   WorkflowNotFoundError,
   WorkflowProblemsError,
   workflowStore,
-  workflowsDir,
 } from './workflow-store.ts';
 
 const SPARK = randomUUID();
@@ -35,19 +34,6 @@ function flow(id: string, name = 'Nightly'): Workflow {
     ],
   });
 }
-
-describe('workflowsDir', () => {
-  it('sits beside the rules file in the channel’s data folder, or where the override says', () => {
-    expect(workflowsDir({ SPARK_DATA_DIR: '/data', BRANCH_PREFIX: 'dev' })).toBe(
-      '/data/dev/workflows',
-    );
-    expect(workflowsDir({ SPARK_DATA_DIR: '/data' })).toBe('/data/spark/workflows');
-    expect(workflowsDir({ SPARK_DATA_DIR: '/data', SPARK_WORKFLOWS_DIR: '/tmp/w' })).toBe('/tmp/w');
-    expect(workflowsDir({ SPARK_DATA_DIR: '/data', SPARK_WORKFLOWS_DIR: 'relative' })).toBe(
-      '/data/spark/workflows',
-    );
-  });
-});
 
 describe('workflowStore', () => {
   it('lists nothing before the folder exists', async () => {
