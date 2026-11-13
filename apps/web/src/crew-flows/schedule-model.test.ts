@@ -31,6 +31,7 @@ function run(extra: Partial<WorkflowRun>): WorkflowRun {
     runId: null,
     stoppedBy: null,
     steps: [],
+    spend: { tokens: 0, costUsd: null, costSource: null },
     startedAt: new Date(2026, 10, 16, 10, 30).toISOString(),
     finishedAt: new Date(2026, 10, 16, 10, 32, 5).toISOString(),
     ...extra,
@@ -139,6 +140,7 @@ describe('recent runs', () => {
             {
               stepId: 'types',
               sparkId: '00000000-0000-4000-8000-000000000009',
+              dependsOn: [],
               state: 'failed',
               runId: null,
               note: null,

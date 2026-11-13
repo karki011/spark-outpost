@@ -19,6 +19,7 @@ function step(stepId: string, extra: Partial<WorkflowRunStep> = {}): WorkflowRun
   return {
     stepId,
     sparkId: '00000000-0000-4000-8000-000000000001',
+    dependsOn: [],
     state: 'waiting',
     runId: null,
     note: null,
@@ -41,6 +42,7 @@ function test(steps: WorkflowRunStep[], extra: Partial<WorkflowTestRun> = {}): W
       runId: null,
       stoppedBy: null,
       steps,
+      spend: { tokens: 0, costUsd: null, costSource: null },
       startedAt: START,
       finishedAt: null,
     },
