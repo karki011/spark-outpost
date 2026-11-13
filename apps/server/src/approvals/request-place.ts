@@ -52,12 +52,20 @@ export function outsideRoots(request: ApprovalRequest, target: string): boolean 
   return place(request.roots, target).relative === null;
 }
 
+function inReadable(folders: readonly string[], target: string): boolean {
+  return folders.some(
+    (folder) => path.resolve(folder) === target || relativeInside(folder, target) !== null,
+  );
+}
+
 export function partPlace(request: ApprovalRequest): PartPlace {
   return {
     cwd: commandCwd(request),
     home: request.home,
     inside: (target) =>
-      request.roots.some((root) => root.path === target) || !outsideRoots(request, target),
+      request.roots.some((root) => root.path === target) ||
+      !outsideRoots(request, target) ||
+      inReadable(request.readable ?? [], target),
     isSecret: (target) => isSecretTarget(request.roots, target),
     readAsks: (target) => secretReadAsks(request.roots, target),
   };

@@ -216,6 +216,11 @@ function shapeTouches(shape: WordShape, place: Place, cwd: string, guarded: Guar
   );
 }
 
+export function touchesPaths(request: ApprovalRequest, targets: readonly string[]): boolean {
+  const entries = targets.map((target) => path.resolve(target));
+  return touchesEntries(request, '/', entries, false);
+}
+
 export function touchesBrowserData(request: ApprovalRequest, dataDir: string | null): boolean {
   return dataDir !== null && touchesEntries(request, dataDir, BROWSER_DATA_ENTRIES, true);
 }

@@ -287,6 +287,10 @@ GET /api/workflows/:id/runs
 POST /api/workflows/:id/runs
 GET /api/workflow-runs/:id
 POST /api/workflow-runs/:id/stop
+GET /api/teammates/:id/folder
+GET /api/teammates/:id/files
+PUT /api/teammates/:id/files
+DELETE /api/teammates/:id/files
 `;
 
 const PAIRING = `

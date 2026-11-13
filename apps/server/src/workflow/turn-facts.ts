@@ -1,4 +1,4 @@
-import { briefWithFile } from '../projects/instructions-file.ts';
+import { sparkBrief } from '../crew/spark-brief.ts';
 import type { Db } from '../persistence/db.ts';
 import { sparkPreferences, type SparkPreferences } from '../persistence/setup.ts';
 import { subagentBrief } from '../persistence/spark-mentions.ts';
@@ -34,7 +34,7 @@ async function sessionBrief(db: Db, input: RunInput) {
   const brief = input.parentRunId
     ? await subagentBrief(db, input.identity.runId)
     : await teammateBrief(db, input.identity.threadId);
-  return brief ? briefWithFile(brief) : null;
+  return brief ? sparkBrief(brief) : null;
 }
 
 export async function sparkSession(db: Db, input: RunInput, known?: SparkPreferences) {

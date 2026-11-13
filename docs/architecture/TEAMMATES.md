@@ -4,11 +4,22 @@ A Spark (code name: teammate) is a named, long-lived preset for chats. It owns n
 
 ## Data (migration 0095)
 
-- `teammates`: workspace, `name` (unique per workspace, case-insensitive, 1–40), `role` (≤60), `face_shape` and `face_color` (one of `TEAMMATE_SHAPES` and `TEAMMATE_COLORS`, or both null for a blob that follows the name; migration 0112), default `provider`, `model`, `agent_mode`, `level`, `instructions` (≤2000), `instructions_path` (optional file read at chat start; migration 0112), `home_conversation_id` (`ON DELETE SET NULL`), timestamps. Up to 50 per workspace.
+- `teammates`: workspace, `name` (unique per workspace, case-insensitive, 1–40), `role` (≤60), `face_shape` and `face_color` (one of `TEAMMATE_SHAPES` and `TEAMMATE_COLORS`, or both null for a blob that follows the name; migration 0112), default `provider`, `model`, `agent_mode`, `level`, `instructions` (emptied once moved to the folder; see [The Spark's folder](#the-sparks-folder-migration-0246)), `instructions_moved_at` (migration 0246), `instructions_path` (optional file read at chat start; migration 0112), `home_conversation_id` (`ON DELETE SET NULL`), timestamps. Up to 50 per workspace.
 - `teammate_projects`: default projects in order; rows go with the teammate or the project.
 - `conversations.teammate_id` (`ON DELETE SET NULL`): deleting a teammate unlinks its chats and keeps them.
 - `profiles.dismissed_teammate_starters`: starter suggestions the user dismissed.
 - A trigger on `teammates` sends a `teammate` app event, so open windows refresh the roster.
+
+## The Spark's folder (migration 0246)
+
+A Spark's instructions, skills and scripts are files in `<data>/<channel>/sparks/<spark id>/` (`apps/server/src/crew/`); the database keeps its identity and defaults. The folder is named by the id, so a rename moves nothing. `SPARK_CREW_DIR` replaces the `sparks` folder in tests.
+
+- `SPARK.md` is the instructions. The `instructions` field of the teammate API reads and writes this file, so it has the file limit (256 KB), not 2,000 characters. An empty text deletes the file.
+- `skills/<skill>/SKILL.md` starts with `name` and `description` between `---` lines (`parseSkillFile`); the name must equal the folder name. Other files sit beside it.
+- Limits: 200 files, 256 KB each, UTF-8 text with no NUL, paths that pass `crewPathProblem`. No link inside the folder is followed, and a file's real path is checked again after it is resolved. Saves are written to a temporary file and renamed; writes in the API process run one at a time.
+- `moveInstructionsToFolders` runs at API start: for each Spark with `instructions_moved_at` null it writes the column's text to `SPARK.md` unless the file exists, then empties the column and sets the mark. Until a row is moved, readers use the file when there is one and the column otherwise.
+- Deleting a Spark deletes its folder; the hourly prune removes folders whose Spark is gone.
+- Agents read the folder of the Spark their turn is linked to and run scripts from it. No agent tool or shell command may change, move or delete anything under `sparks/` or `workflows/`, in any mode. How that is enforced, the decisions and the limits are in `CREW_WORKFLOWS_PLAN.md`, stream A.
 
 ## Faces
 
@@ -26,7 +37,7 @@ A Spark (code name: teammate) is a named, long-lived preset for chats. It owns n
 
 ## Standing instructions
 
-`loadRunInput` is unchanged; `runAgentTurn` looks up the teammate brief for top-level runs only (not child runs, and not the Spark assistant chat) and passes it as `spark.teammate`. `sparkInstructions` appends it after the clipped Spark block under `# Standing instructions from the user for the Spark teammate …`, saying it is the user's own instruction and not tool output, file content or another agent's message. Claude receives it in the appended system prompt, Codex in developer instructions. When `instructions_path` is set, `briefWithFile` (`apps/server/src/projects/instructions-file.ts`) reads that file for the brief instead of the typed text: an absolute path to a `.md`, `.markdown`, `.mdc` or `.txt` file, checked again after resolving links, never a secret file name, at most 256 KB, valid UTF-8 with no NUL bytes, cut at 2,000 characters. A missing, unreadable or empty file falls back to the typed instructions. `GET /api/instructions-file?path=` returns the same reading for the sheet's preview, and `GET /api/folders?files=instructions[&hidden=1]` lists the files the themed picker (`FolderDialog`, purpose `instructions`) can choose. Only the user sets the path; the Spark tools report it and cannot change it. Editing a teammate's name, role, instructions or instructions file closes its chats' provider sessions so the next turn starts with the new brief. Jev routing and Builder picks are unchanged.
+`loadRunInput` is unchanged; `runAgentTurn` looks up the teammate brief for top-level runs only (not child runs, and not the Spark assistant chat) and passes it as `spark.teammate`. `sparkBrief` (`crew/spark-brief.ts`) reads the instructions from `SPARK.md` and adds the Spark's skills: one line each with the name, the description and the absolute path of the skill's folder. `sparkInstructions` appends it after the clipped Spark block under `# Standing instructions from the user for the Spark teammate …`, saying it is the user's own instruction and not tool output, file content or another agent's message. Claude receives it in the appended system prompt, Codex in developer instructions. When `instructions_path` is set, `briefWithFile` (`apps/server/src/projects/instructions-file.ts`) reads that file for the brief instead of `SPARK.md`: an absolute path to a `.md`, `.markdown`, `.mdc` or `.txt` file, checked again after resolving links, never a secret file name, at most 256 KB, valid UTF-8 with no NUL bytes, cut at 2,000 characters. A missing, unreadable or empty file falls back to `SPARK.md`. `GET /api/instructions-file?path=` returns the same reading for the sheet's preview, and `GET /api/folders?files=instructions[&hidden=1]` lists the files the themed picker (`FolderDialog`, purpose `instructions`) can choose. Only the user sets the path; the Spark tools report it and cannot change it. Editing a teammate's name, role, instructions or instructions file, or saving or deleting a file in its folder, closes its chats' provider sessions so the next turn starts with the new brief. Jev routing and Builder picks are unchanged.
 
 ## One job by @mention (migration 0115)
 
@@ -50,12 +61,16 @@ Not built yet: a `spark_ask_spark` tool for the main agent to delegate, parallel
 | `GET /api/teammates`                           | `TeammateList`: teammates with state, chat count, last activity, and starters still offered                 |
 | `POST /api/teammates`                          | `CreateTeammateRequest` → `Teammate` (400 on bad input or an unconnected provider, 409 on a duplicate name) |
 | `PATCH /api/teammates/:id`                     | `UpdateTeammateRequest` → `Teammate`                                                                        |
-| `DELETE /api/teammates/:id`                    | 204; chats keep existing, unlinked                                                                          |
+| `DELETE /api/teammates/:id`                    | 204; chats keep existing, unlinked; the Spark's folder is deleted                                           |
+| `GET /api/teammates/:id/folder`                | `SparkFolder`: files, skills and skill problems (Mac only)                                                  |
+| `GET /api/teammates/:id/files?path=`           | `CrewFile`: path, text, hash (Mac only)                                                                     |
+| `PUT /api/teammates/:id/files`                 | `SaveCrewFile` → `CrewFile`; 409 when it exists (`baseHash` null) or changed since `baseHash` (Mac only)    |
+| `DELETE /api/teammates/:id/files?path=`        | 204 (Mac only)                                                                                              |
 | `POST /api/teammates/:id/home`                 | `TeammateChat` (`conversationId`, `teammate`)                                                               |
 | `PUT /api/conversations/:id/teammate`          | `{ teammateId: uuid \| null }` → `TeammateChat`                                                             |
 | `POST /api/teammate-starters/:starter/dismiss` | 204                                                                                                         |
 
-Contracts live in `packages/contracts/src/teammates.ts`.
+Contracts live in `packages/contracts/src/teammates.ts` and, for the folder, `crew-files.ts`.
 
 ## Seam for the desktop island
 
