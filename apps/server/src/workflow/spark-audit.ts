@@ -6,7 +6,7 @@ export const SPARK_HANDOFF_METHOD = 'spark/handoff';
 
 export function auditSparkHandoff(
   audit: ProtocolObserver,
-  input: Pick<RunInput, 'role' | 'mode' | 'provider' | 'settings'>,
+  input: Pick<RunInput, 'role' | 'mode' | 'provider' | 'settings' | 'workflowStep'>,
   brief: TeammateBrief | null,
 ): void {
   if (input.role !== 'spark') return;
@@ -16,7 +16,9 @@ export function auditSparkHandoff(
       spark: brief?.name ?? null,
       role: brief?.role ?? null,
       standingInstructions: brief ? brief.instructions.length > 0 : false,
-      runsAs: 'read-only subagent with its own session',
+      runsAs: input.workflowStep
+        ? 'workflow step: commands follow its mode, no file changes'
+        : 'read-only subagent with its own session',
       mode: input.mode,
       provider: input.provider,
       model: input.settings.model,

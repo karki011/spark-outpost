@@ -1,58 +1,25 @@
-import {
-  ORCHESTRATION_ACTIVITY,
-  findSparkMentions,
-  mainAgentContinues,
-  sparkWho,
-} from '@spark-outpost/contracts';
+import { findSparkMentions, mainAgentContinues, sparkWho } from '@spark-outpost/contracts';
+import { workflowTurn } from '../crew-flows/workflow-turn.ts';
 import { chatTickets } from '../persistence/chat-tickets.ts';
 import type { Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
-import type { Lease } from '../persistence/jobs.ts';
-import {
-  insertChildRun,
-  insertOrchestration,
-  loadOrchestration,
-  updateOrchestration,
-} from '../persistence/orchestrations.ts';
+import { insertOrchestration, updateOrchestration } from '../persistence/orchestrations.ts';
 import { isCancelRequested } from '../persistence/run-events.ts';
-import { requestCancel } from '../persistence/runs.ts';
 import { mentionableSparks, type MentionableSpark } from '../persistence/spark-mentions.ts';
 import { taskOverviews } from '../persistence/task-views.ts';
-import type { Append, RunControl } from '../workflow/agent-turn.ts';
-import { closeMessage, executeChildRun } from '../workflow/execute-run.ts';
+import { closeMessage } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
-import type { ChatTurnDeps } from '../workflow/chat-turn-hooks.ts';
+import {
+  hasProject,
+  pickFor,
+  publishOrchestration,
+  runSparkChild,
+  type Handoff,
+} from './spark-child.ts';
 import { handoffNote, sparkJobPrompt, type SparkResult } from './spark-job.ts';
 
 export const ALL_SPARKS_FAILED = 'The Spark could not finish this job.';
-
-interface Handoff {
-  deps: ChatTurnDeps;
-  lease: Lease;
-  input: RunInput;
-  append: Append;
-  control: RunControl;
-}
-
-async function publish(h: Handoff): Promise<void> {
-  const view = await loadOrchestration(h.deps.db, h.lease.runId);
-  if (view)
-    await h.append(runEvents.activity(ORCHESTRATION_ACTIVITY, ORCHESTRATION_ACTIVITY, view));
-}
-
-function pickFor(h: Handoff, spark: MentionableSpark) {
-  const { input } = h;
-  const own = spark.provider !== null && spark.connected && h.deps.providers.has(spark.provider);
-  if (!own || spark.provider === input.provider) {
-    return {
-      provider: input.provider,
-      model: (spark.provider === input.provider ? spark.model : null) ?? input.settings.model,
-      effort: input.settings.effort,
-    };
-  }
-  return { provider: spark.provider!, model: spark.model, effort: null };
-}
 
 async function jobContext(db: Db, input: RunInput) {
   const conversationId = input.identity.threadId;
@@ -64,7 +31,7 @@ async function jobContext(db: Db, input: RunInput) {
     task: tasks.findLast((task) => task.closedAt === null) ?? null,
     tickets: tickets.linked,
     lastReply: input.history.findLast((turn) => turn.role === 'assistant')?.content ?? null,
-    hasProject: input.projectRoots.length > 0 && !input.chatFolder,
+    hasProject: hasProject(input),
   };
 }
 
@@ -75,43 +42,21 @@ async function runSpark(
   prompt: string,
   only: boolean,
 ): Promise<SparkResult> {
-  const pick = pickFor(h, spark);
-  const lease = await insertChildRun(
-    h.deps.db,
-    {
-      parentRunId: h.lease.runId,
-      role: 'spark',
-      stepIndex: index,
-      attempt: 1,
-      agentLabel: sparkWho(spark),
-      ...pick,
-      mode: h.input.projectRoots.length > 0 && !h.input.chatFolder ? 'ask' : 'chat',
-      prompt,
-      route: {
-        name: spark.name,
-        routedBy: 'fixed',
-        spark: { id: spark.id, role: spark.role, only },
-      },
+  const result = await runSparkChild(h, {
+    role: 'spark',
+    stepIndex: index,
+    attempt: 1,
+    agentLabel: sparkWho(spark),
+    ...pickFor(h, spark),
+    mode: hasProject(h.input) ? 'ask' : 'chat',
+    prompt,
+    route: {
+      name: spark.name,
+      routedBy: 'fixed',
+      spark: { id: spark.id, role: spark.role, only },
     },
-    h.deps.leaseSeconds,
-  );
-  const stopNow = new AbortController();
-  const cancel = () => {
-    stopNow.abort();
-    void requestCancel(h.deps.db, lease.runId).catch(() => undefined);
-  };
-  h.control.signal.addEventListener('abort', cancel, { once: true });
-  if (h.control.signal.aborted) {
-    stopNow.abort();
-    await requestCancel(h.deps.db, lease.runId);
-  }
-  await publish(h);
-  try {
-    const result = await executeChildRun(h.deps, lease, { stopNow: stopNow.signal }, h.append);
-    return { spark, outcome: result.outcome, text: result.text, error: result.error };
-  } finally {
-    h.control.signal.removeEventListener('abort', cancel);
-  }
+  });
+  return { spark, outcome: result.outcome, text: result.text, error: result.error };
 }
 
 async function noticeCancelSeenBySpark(h: Handoff): Promise<void> {
@@ -122,7 +67,7 @@ async function noticeCancelSeenBySpark(h: Handoff): Promise<void> {
 async function finishWithNote(h: Handoff, results: readonly SparkResult[], note: string) {
   const identity = h.input.identity;
   await updateOrchestration(h.deps.db, h.lease.runId, { phase: 'finished' });
-  await publish(h);
+  await publishOrchestration(h);
   if (h.control.reason() === 'cancelled') {
     await h.append(runEvents.cancelled(identity), { transition: { status: 'cancelled' } });
     return;
@@ -146,6 +91,8 @@ export async function handToSparks(h: Handoff): Promise<RunInput | 'finished'> {
   if (input.parentRunId || input.assistant || !input.userRequest.includes('@')) return input;
   const sparks = await mentionableSparks(deps.db, input.identity.threadId);
   const mentions = findSparkMentions(input.userRequest, sparks);
+  const workflow = await workflowTurn(h, mentions.length > 0);
+  if (workflow !== null) return workflow;
   if (mentions.length === 0) return input;
   const continues = mainAgentContinues(input.userRequest, mentions);
   await insertOrchestration(deps.db, {
@@ -171,7 +118,7 @@ export async function handToSparks(h: Handoff): Promise<RunInput | 'finished'> {
     await finishWithNote(h, results, note);
     return 'finished';
   }
-  await publish(h);
+  await publishOrchestration(h);
   return {
     ...input,
     prompt: `${input.prompt}\n\n${note}`,

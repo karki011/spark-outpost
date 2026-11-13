@@ -12,7 +12,7 @@ import {
   type PlanModeHooks,
 } from './approval-gate.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
-import { askTurnAutoWhy } from './ask-auto.ts';
+import { askTurnAutoWhy, chosenModeWhy } from './ask-auto.ts';
 import { createQuestionGate } from './question-gate.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
 
@@ -31,8 +31,9 @@ export interface AskRunOptions {
   observations?: RunObservations | undefined;
 }
 
-export interface AskTurnOptions extends AskRunOptions {
-  conversationId: string;
+export interface AskTurn {
+  identity: { threadId: string };
+  workflowStep?: boolean | undefined;
 }
 
 export interface DoRunOptions extends AskRunOptions {
@@ -74,18 +75,20 @@ function gateBasics(options: AskRunOptions) {
   };
 }
 
-export function prepareAskRun(options: AskTurnOptions): ApprovalGate {
+export function prepareAskRun(options: AskRunOptions, turn: AskTurn): ApprovalGate {
   return createApprovalGate({
     ...gateBasics(options),
     posture: 'read_only',
     askRun: true,
-    askAuto: () =>
-      askTurnAutoWhy({
-        db: options.db,
-        conversationId: options.conversationId,
-        provider: options.provider,
-        modes: options.modes ?? [],
-      }),
+    askAuto: async () =>
+      turn.workflowStep
+        ? chosenModeWhy(options.provider, options.mode, options.modes ?? [])
+        : askTurnAutoWhy({
+            db: options.db,
+            conversationId: turn.identity.threadId,
+            provider: options.provider,
+            modes: options.modes ?? [],
+          }),
     backup: async () => undefined,
   });
 }

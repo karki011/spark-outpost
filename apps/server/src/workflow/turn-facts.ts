@@ -14,6 +14,11 @@ export function editsFiles(input: RunInput): boolean {
   return input.role === null;
 }
 
+export function asksThroughGate(input: RunInput): boolean {
+  if (input.mode !== 'ask' || input.projectRoots.length === 0) return false;
+  return input.role === null || (input.role === 'spark' && input.workflowStep === true);
+}
+
 export function promptWithBrowserCheck(prompt: string, input: RunInput, browserPane: boolean) {
   return withBrowserCheck({
     prompt,

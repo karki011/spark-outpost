@@ -1,6 +1,6 @@
 # Crew and workflows: build plan
 
-> **Status: Wave 0 (shared contracts) built; nothing else.** Agreed in a planning session on 2026-11-12. This changes `docs/product/PLAN.md` §17, which defers "a visual workflow builder": the owner has asked for it. That line is updated.
+> **Status: Wave 0 (shared contracts) and stream D (workflow engine) built; nothing else.** Agreed in a planning session on 2026-11-12. This changes `docs/product/PLAN.md` §17, which defers "a visual workflow builder": the owner has asked for it. That line is updated.
 
 Mocks for every screen: `docs/design/mocks/crew-workflows-mock.html` (15 screens, ids `g h i d j k a b l m c f e n o` in flow order). They are sketches, not built from app components.
 
@@ -98,10 +98,79 @@ The owner asked on 2026-11-12 to delete Relay, the built-in pull request follow-
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | **A. Crew storage**          | Folder store, move existing instructions into `SPARK.md`, file routes, brief with the skill list, deny rules for direct agent writes (Claude rules, Codex profile, gate), delete with the Spark                                                                                                                                    | `apps/server/src/crew/`, migration `0245`, `TEAMMATES.md`                            |
 | **B. Sparks page, Crew tab** | Left-bar item, tabs (move `PageTabs` to `ui/`), cards, edit panel, skills and files tree and editor, empty state and starters, remove Sparks from Settings                                                                                                                                                                         | `apps/web/src/sparks-page/`, `Rail.tsx`, `App.tsx`, `PageTabs`, the Settings section |
-| **D. Workflow engine**       | Run a workflow as one turn with a child run per step: parallel stages, `dependsOn`, `join`, `onFailure`, notes passed on, cancel, restart recovery, run records, Run route and `@workflow` mention, a step kind that may run commands through the gate (today's hand-off child has no shell) but not edit project files or publish | `apps/server/src/crew-flows/`, migration `0246`, `spark-handoff.ts`                  |
+| **D. Workflow engine**       | Run a workflow as one turn with a child run per step: parallel stages, `dependsOn`, `join`, `onFailure`, notes passed on, cancel, restart recovery, run records, Run route and `@workflow` mention, a step kind that may run commands through the gate (today's hand-off child has no shell) but not edit project files or publish | `apps/server/src/crew-flows/`, migration `0247`, `spark-handoff.ts`                  |
 | **E. Workflow editor**       | Workflows tab, list, empty state, New workflow, list editor with live graph, Preview with pretend failures                                                                                                                                                                                                                         | `apps/web/src/crew-flows/`                                                           |
 
 B and E build against the Wave 0 shapes with a fake API until A and D land.
+
+### Stream D: the step kind that may run commands (design, 2026-11-13)
+
+**Chosen:** a workflow step is the hand-off child run that exists today (`mode: 'ask'`, `role: 'spark'`) with one mark, `route.spark.step` (the step id), and that mark gives it the approval gate a top-level Ask turn already has (`prepareAskRun`). No new run mode, no new role and no new gate rule.
+
+**What that gate does**, checked against `decide()` before building:
+
+- Refused in every mode: file edits, moves and deletes; shell redirects and commands that write files (`rm`, `mkdir`, `echo > file`); `git commit`, `git push`, `git remote`; `gh pr create`, `gh pr merge`, `gh pr comment`, `gh workflow run`; package installs.
+- At once in every mode: commands that only read.
+- Every other command (a script, a test runner, `curl`) follows the step's own agent mode: at once in Auto, Bypass permissions, Auto review and Full access, an ordinary approval card otherwise. The card is mirrored into the chat like any child run's card.
+- The step's agent mode is the Spark's own mode when the step runs on the Spark's provider, otherwise the chat's mode translated to the provider in use (`insertChildRun` gets an optional `agentMode`). The chat's mode and autonomy level are not consulted, which differs from a top-level Ask turn (`askTurnAutoWhy`).
+- The provider session is the Ask session: no write tools are offered, so the gate sees every command, including in modes that hide commands from Spark in a Do turn.
+
+**Why this and not a Do child run:** a Do run offers the agent its edit tools and, in several modes, runs shell commands without sending Spark a request. Keeping project files unchanged there would need new rules. The Ask gate already refuses every change it can read, in every mode, and is covered by `approvals/decide-ask-run.test.ts`.
+
+**What it does not stop:** a script the step runs can write files itself; the gate reads the command line, not what the program does. This is the same limit a top-level Ask turn has today, so the safety floor is not weakened, but "a step cannot change project files" is true of the agent's tools and of commands the gate can read, not of an arbitrary script.
+
+**Authority:** a step is never "the user's message". Its Spark action tools never count as asked for (`action-policy.ts` treats a step run like an Ask Spark message), and a run started by the Run route carries the run source `workflow`, which `userText` treats the same way. A step gets no push or pull request tool (`publishScope` is for the chat's own run) and no `spark_terminal_run` (refused in Ask turns).
+
+**Without a project folder** a step runs as `chat` with no tools, as a hand-off does today.
+
+### Stream D: what was built (2026-11-13)
+
+Code is in `apps/server/src/crew-flows/`; tests are `apps/server/test/crew-workflow-*.db.test.ts` and the `*.test.ts` files beside the code.
+
+| Piece            | Where                                                                                    | Notes                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Workflow files   | `workflow-store.ts`                                                                      | `<data>/<channel>/workflows/<id>.json`, or `SPARK_WORKFLOWS_DIR` (absolute) in tests. Written through a temp file and a rename. The hash is the sha256 of the file text. A save with `baseHash: null` creates and is refused when the file exists; otherwise the hash must match. A workflow with problems is not saved. A file that is not valid JSON for its own name is left alone and not listed.              |
+| Run records      | migration `0247`, `run-records.ts`                                                       | `workflow_runs` (with the workflow as it was when the run started, so an edit or delete mid-run changes nothing) and `workflow_run_steps`. `workflow_runs.run_id` is unique: one top-level turn, one run.                                                                                                                                                                                                          |
+| Executor         | `run-workflow.ts`                                                                        | Calls `planWorkflow` after every step settles, starts what it returns side by side, marks what it skips, stops when nothing runs. Each step is a child run through `runSparkChild` (`orchestration/spark-child.ts`, shared with the @Spark hand-off). A step gets the full replies of its direct parents; the chat's main agent gets one shortened note (`workflowNote`) and reads full replies with `spark_chat`. |
+| In the chat turn | `workflow-turn.ts`, called from `handToSparks`                                           | A turn whose run already has a record runs it. Otherwise `@workflow-id` starts one. The record is closed before the turn's last event.                                                                                                                                                                                                                                                                             |
+| Run route        | `start-run.ts`                                                                           | Sends `@id message` into the chosen chat, or a new chat titled with the workflow's name, with run source `workflow`, and writes the record in the same transaction. The main agent does not run for it.                                                                                                                                                                                                            |
+| Recovery         | `settleStrandedRuns`, called in the worker's recovery sweep after `recoverExpiredLeases` | A record still `running` whose turn has ended is closed: `outcome_unknown` unless the turn failed or was cancelled; a step that was running takes its child run's end, or fails with "Outcome unknown"; waiting steps are skipped. Nothing is started again.                                                                                                                                                       |
+| Brief            | `subagentBrief` (`persistence/spark-mentions.ts`)                                        | A step's Spark brief comes from the `teammates` row through this one function, as for an @Spark hand-off. Stream A swaps the folder in there.                                                                                                                                                                                                                                                                      |
+
+Routes, all refused to a paired device (`never` in `route-rules.ts`):
+
+| Method and path                    | Body and result                                                                                                                                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/workflows`               | `{ workflows: WorkflowSummary[] }`                                                                                                                                                                            |
+| `GET /api/workflows/:id`           | `WorkflowFile`, or 404                                                                                                                                                                                        |
+| `PUT /api/workflows/:id`           | `SaveWorkflow` → `WorkflowFile`; 400 with the first problem, 409 when the file changed or already exists                                                                                                      |
+| `DELETE /api/workflows/:id`        | 204, or 404                                                                                                                                                                                                   |
+| `GET /api/workflows/:id/runs`      | `{ runs: WorkflowRun[] }`, newest first, the last 100                                                                                                                                                         |
+| `POST /api/workflows/:id/runs`     | `StartWorkflowRun` → 201 `WorkflowRun`. An optional `Idempotency-Key` header (a UUID) makes a repeat return the first run. `kind: 'test'` is refused until stream F. `projectId` is used only for a new chat. |
+| `GET /api/workflow-runs/:id`       | `WorkflowRun`, or 404                                                                                                                                                                                         |
+| `POST /api/workflow-runs/:id/stop` | Requests a stop of the run's turn and returns the `WorkflowRun`                                                                                                                                               |
+
+Decisions made while building, for the owner to confirm:
+
+- **Who may start one by `@id`:** only a message the user typed on the Mac (run source `ui`, a queued message, or none). A spoken message, a ticket start, an outpost request, a follow-up round, an Ask Spark message and a message from a paired device leave `@id` as plain text; the paired device gets one line saying workflows start on the Mac.
+- **A Spark name wins.** A message that mentions a Spark runs the Spark hand-off and leaves `@workflow-id` as text. One workflow per message.
+- **Hand-back** follows the @Spark rule (`mainAgentContinues`): `@id` alone ends the turn with the note; "…, then fix what they found" continues with the main agent. The note is appended to the prompt only, never to the text Spark reads as the user's request.
+- **A stop** cancels running steps, skips waiting ones and ends the run `cancelled`. A workflow that stops on a failed step ends its turn `failed`.
+- **A missing Spark:** a workflow with a problem does not start (one line in the chat by `@id`, 400 from the route).
+
+Not built here: Test run (F), schedules and the `schedule` and `catch_up` sources (G; `startWorkflowRun` already takes the source), live run events for the run view (E2 can poll `GET /api/workflow-runs/:id` and listen to the chat's run events), guide pages and the `whats-new` row (nothing here is reachable until the Workflows tab lands), and `AGENTS.md`.
+
+Unverified:
+
+- **No real agent has run a step.** Every test uses the fake ACP agent. The gate decisions for a step were checked against `decide()`, and the fake agent's permission request shows a card in a mode that asks, runs at once in the Spark's Bypass mode and is refused for a file change, but a real Claude or Codex Ask session inside a step has not been tried. `pnpm test:live` was not run.
+- **Codex steps.** The Codex Ask session's own sandbox was not exercised for a step.
+- **Scripts in a Spark folder** (stream A) live outside the project. A step reading or running them has not been tried; the gate refuses reads outside the project today.
+- **A chat with no project** runs steps as `chat` with no tools; the private chat folder is not given to a step.
+- **Worker death mid-run** was tested by expiring leases in the database, not by killing a worker process.
+- **The run view and the editor** have not called these routes.
+- **A message from a paired device** that names a workflow: the refusal line is not covered by a test.
+- **Browser specs:** `approvals.spec.ts` passes. `sparks.spec.ts` and `spark-mention.spec.ts` could not be judged on 2026-11-13: the shared browser test database already had the Relay removal applied (`teammates.kind` is gone), so `GET /api/teammates` fails there on this branch before any workflow code runs. Run them again after the Relay removal is merged in.
+- **`truncate.db.test.ts`** ("retries a statement that loses a deadlock once") fails on this machine with and without migration `0247`; the rest of `pnpm test:db` passes.
 
 ### Wave 2 (four in parallel)
 

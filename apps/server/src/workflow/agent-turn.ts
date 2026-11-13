@@ -4,7 +4,7 @@ import type { RunSnapshot } from '../persistence/run-snapshots.ts';
 import { STOPPED_BY_QUIT, type RunEvent } from '@spark-outpost/contracts';
 import type { SparkPreferences } from '../persistence/setup.ts';
 import { auditSparkHandoff } from './spark-audit.ts';
-import { liveTurn, promptWithBrowserCheck, sparkSession } from './turn-facts.ts';
+import { asksThroughGate, liveTurn, promptWithBrowserCheck, sparkSession } from './turn-facts.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { recordSuggestedTitle } from '../persistence/auto-title.ts';
@@ -283,7 +283,7 @@ export async function runAgentTurn(
       observations,
     };
     const changesProject = input.mode === 'do' && input.parentRunId === null;
-    const asking = input.mode === 'ask' && input.role === null && input.projectRoots.length > 0;
+    const asking = asksThroughGate(input);
     const approvals =
       input.mode === 'do'
         ? await prepareDoRun({
@@ -298,7 +298,7 @@ export async function runAgentTurn(
             snapshot: options.keepSnapshot,
           })
         : asking
-          ? prepareAskRun({ ...gateOptions, conversationId: input.identity.threadId })
+          ? prepareAskRun(gateOptions, input)
           : undefined;
     const asksUser = input.parentRunId === null && !input.assistant;
     const questions = asksUser ? prepareQuestions(gateOptions, approvals) : undefined;
