@@ -106,6 +106,7 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   ),
   rules_edit: null,
   plugins_edit: null,
+  crew_edit: null,
   link_repo: null,
   github_read: asked(
     'read|look|check|see|find|search|show|list|explain|study|research|explore|clone|copy|download',

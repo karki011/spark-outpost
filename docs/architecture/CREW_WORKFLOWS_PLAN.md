@@ -1,6 +1,6 @@
 # Crew and workflows: build plan
 
-> **Status: Wave 0 (shared contracts), the Relay removal, streams A (Spark folders), B (Sparks page), D (workflow engine) and E (workflow editor) are merged on `crew-workflows-foundation`. Wave 2 is next.** Agreed in a planning session on 2026-11-12. This changes `docs/product/PLAN.md` §17, which defers "a visual workflow builder": the owner has asked for it. That line is updated.
+> **Status: Wave 0 (shared contracts), the Relay removal, streams A (Spark folders), B (Sparks page), D (workflow engine) and E (workflow editor) are merged on `crew-workflows-foundation`. Wave 2 is in progress; stream C (agent tools) is built on `claude/crew-tools-3b7b9a`.** Agreed in a planning session on 2026-11-12. This changes `docs/product/PLAN.md` §17, which defers "a visual workflow builder": the owner has asked for it. That line is updated.
 
 Mocks for every screen: `docs/design/mocks/crew-workflows-mock.html` (15 screens, ids `g h i d j k a b l m c f e n o` in flow order). They are sketches, not built from app components.
 
@@ -278,6 +278,61 @@ Then delete `.spk-soon` from `sparks-page.css`, and do E's own clean-up (its sta
 | **F. Test run**              | Temporary worktree, refuse and list sends, cleanup on close and at startup, "Try it" for one Spark                                                                                                                          | D                   |
 | **G. Schedules**             | Scheduler, schedule table, catch-up, skip on overlap, pause, Schedule tab, run history, estimate line, grouped Updates line                                                                                                 | D, migration `0247` |
 | **E2. Run view**             | Live status on the graph, step output panel, time, tokens and cost line, Stop                                                                                                                                               | D, E                |
+
+### Stream C: agent tools and the card (built, 2026-11-13)
+
+Code: `apps/server/src/crew/` (planning, writing, similarity, who is offered the tools), `apps/server/src/spark-mcp/tools/crew-tool.ts` and `crew-edit-tool.ts`, `apps/server/src/spark-mcp/actions/crew-edit-perform.ts`, `packages/contracts/src/crew-edit.ts`, and the card in `apps/web/src/chat/approvals/CrewEditFacts.tsx`.
+
+**The two tools**
+
+| Tool              | Input                                                                                                                                                                                        | Result                                                                                                                                                                                                                                           |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `spark_crew`      | nothing; or `spark` (name or id), with `path` for one file; or `workflow` (id)                                                                                                               | Every Spark (id, name, role, agent, mode, skills with name and description) and every workflow (stages as `step: Spark`); a Spark's file list, skills and problems; one file's text and hash; one workflow with its hash. At once in every mode. |
+| `spark_crew_edit` | `spark` with `files` (`{path, text}`, `text: null` deletes) and/or `remove` (a skill folder); or `workflow` (the file, a step may use `spark` for a name); or `remove` alone (a workflow id) | `waiting_for_user` with the card's id, `unchanged`, or `problems` (a list of `{path, text}`, no card). Never writes by itself.                                                                                                                   |
+
+`spark_crew` reads through `crew/spark-folder.ts`, `crew/spark-skills.ts` and `crew-flows/workflow-store.ts`; no file-system allowance changed. Its results are the user's own crew, so the tool is not marked as returning work data and a read does not set the send flag. Each file or workflow read is an audit entry `spark/crew_read` (Spark or workflow id, path, bytes).
+
+**What is checked before a card** (each problem goes back to the agent with its path): `crewPathProblem`; a path given twice; text over 256 KB, a NUL or a lone surrogate; a delete of a file that is not there; a path that is a folder or has a file in the way; a 201st file; `parseSkillFile` and the skill's name equal to its folder; a skill folder that would be left without `SKILL.md`; more than 20 files or 512 KB of before-and-after text in one call; a skill folder to remove that does not exist; for a workflow, `workflowSchema`, an unknown Spark name, `workflowProblems`, and a file on disk that is not a valid workflow. Files whose text would not change are dropped; a call that changes nothing answers `unchanged`.
+
+**The card** is the Spark action `crew_edit`, titled "Change the <name> Spark?" or "Change the <name> workflow?", with **Allow** and **Deny**. It holds each file's path, whether it is new, changed or deleted, the full text before and after, and the hash the change was planned against. The web card draws each file with the existing diff view (`DiffView`, with two new options: a badge text and all rows shown, so a long new file is not cut at 300 rows); a workflow card also shows its steps in order. Nothing focuses a button and no key answers it. A paired device sees the card and the diffs with "Waiting for you on your Mac. Answered on the Mac only." and no buttons, and the gateway refuses its answer (`macOnlyCard`). Ask Spark cannot answer it (`ASK_SPARK_REFUSALS.crew`). It is an ordinary pending approval, so attention shows it as `approval:<id>`.
+
+**Duplicates.** A new skill is compared with every skill of every Spark, and a Spark's first `SPARK.md` with the other Sparks, by name (same after dropping case and punctuation; one inside the other; one or two letters apart) and, for skills, by description (three or more shared words that cover 60% of the shorter one). Up to eight are named on the card: "You already have the release-notes skill of Scribe (similar name)."
+
+**Writing.** After **Allow**, `crew/crew-edit-apply.ts` reads every file again and compares its hash (a new file must still be missing). Any difference fails the card with "Changed since the card was shown: <paths>. Spark changed nothing." before anything is written; deletes are then done before writes, each through the store's own hash check. A workflow goes through `workflowStore().save` with the hash, or a hash compare and `remove`. The Spark's chats' provider sessions are closed, as the file routes do. The agent learns of a conflict the next time it calls the tool in that chat (`lastAttempt` on the result) and from the card's result line; the tool call that raised the card has already returned.
+
+**Audit.** `spark/crew_edit` entries: waiting (when the card is raised), done, failed or `conflict` (after Allow) and `denied` (written by the approval route), each with the target, id and per file the path, change and sizes before and after, never text.
+
+**Who gets them** (`crew/tool-offer.ts`, through `sparkAvailability`):
+
+| Run                                                                                      | `spark_crew` | `spark_crew_edit` |
+| ---------------------------------------------------------------------------------------- | ------------ | ----------------- |
+| A chat's own turn on the Mac                                                             | yes          | yes               |
+| A read-only (Ask) turn, Ask Spark                                                        | yes          | no                |
+| A turn from a paired device, a spoken turn, a child run (an @Spark job, a workflow step) | no           | no                |
+
+A session without them is told why in the tool instructions, like the rules and plugin tools. Both tools check again when called.
+
+**Decided here: `spark_create_spark` and `spark_update_spark` now always show a card, answered on the Mac only.** Before, they followed the agent's mode, so an agent in Auto or Bypass permissions could write a Spark's instructions (which are `SPARK.md`) and change its default mode and autonomy with no card, which contradicts "every change is a card". Both now pass `alwaysAsk`, their cards are in `macOnlyCard` and refused to Ask Spark's answer, the create card names similar Sparks, and the update card shows the instructions before and after. They are still offered to Ask Spark and to a turn from a paired device (the card then waits on the Mac); only `spark_crew_edit` is withheld there. `AGENTS.md` still lists Sparks among the action tools that follow the mode; the integration pass must change that line.
+
+**Tool budget.** The plain-chat list was at 26,998 of 27,000 characters before this stream. The two tools take 1,237 (441 and 796); the room came from shortening `spark_sparks`, `spark_create_spark` and `spark_update_spark` (4,498 to 3,233). Now 34 tools, 26,970 characters. The test also caps the two crew tools together at 1,300.
+
+**Also changed:** `packages/contracts/src/spark-actions.ts` was at the 500-line limit, so the Spark result shapes moved to `spark-result.ts` (same exports). `crew/spark-folder.ts` exports `crewTextProblem`. Guide: new reference page `crew-files.md`, rows in `spark-tools.md` and `whats-new.md`, a line in `sparks.md`, and the `spark_guide` tools section.
+
+**Tests.** Unit: `crew/similar.test.ts`, `crew/crew-edit-plan.test.ts` (every problem above, multi-file plan, apply, conflicts, workflows), `CrewEditCard.test.tsx`, one case in `DiffView.test.tsx`. Database: `apps/server/test/spark-crew-tools.db.test.ts` (reads and their audit, the card in three modes, Allow, Deny and its audit, a conflict after the card, delete of a file and a skill folder, the duplicate hint, the same card asked twice, workflow create, change with a conflict and delete, each run kind that must not get the tools, the two Spark tools always asking). Browser: `tests/browser/spark-crew-edit.spec.ts` in the `sparks` group (new files shown in full, changed lines, Allow writes; a delete is not confirmed by Enter and Deny keeps the files; a file changed after the card is not overwritten; a paired device has no buttons).
+
+**Unverified or left out**
+
+- **No real agent has called either tool.** Every test drives the MCP server directly or seeds the card; `pnpm test:live` was not run. Whether Claude or Codex fills `workflow` (a free-form object in the schema, described in one line, to save budget) correctly without reading `crew-files` first is unknown.
+- **The paired-device refusal in the browser** is the page with `remote: true` faked; the gateway's refusal is covered by `macOnlyCard` in the database test, not by a request from a paired device.
+- **A conflict is not pushed to the agent.** It sees it on its next call or when the user tells it; no Spark message is queued.
+- **A write that fails half way** (a conflict between the first check and a later file) leaves the earlier files written and says which; there is no rollback.
+- **Retry** on a failed card runs the same stale change and fails the same way.
+- **A top-level turn started by a workflow or schedule** is the chat's own turn, so its main agent is offered both tools; the card still asks. Only step children are refused.
+- **A Spark cannot be deleted by an agent**, and a skill folder with more than 20 files must be deleted in two calls.
+- **The similarity check is words and letters only**; it will miss a duplicate described differently and can name an unrelated skill.
+- **Workflow cards show the JSON file**, with Spark ids in it; the step line above it has the names.
+- Not run in the Mac app, with VoiceOver or in dark mode; the card was looked at in one light screenshot.
+- `AGENTS.md`, `TEAMMATES.md` and `REPO_AGENT_CONFIG.md` are not edited by this stream.
 
 ### Wave 3
 

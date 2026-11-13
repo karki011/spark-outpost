@@ -25,6 +25,8 @@ const NOTHING: SparkAvailability = {
   ticket_create: false,
   rules_edit: false,
   plugins_edit: false,
+  crew_read: false,
+  crew_edit: false,
 };
 
 const GROUPS: [keyof SparkAvailability, string[]][] = [

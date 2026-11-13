@@ -28,6 +28,7 @@ import { performPublishArtifact } from './artifact-actions.ts';
 import { performStartOutpost } from './outpost-actions.ts';
 import { performRulesEdit } from './rules-edit-perform.ts';
 import { performPluginsEdit } from './plugins-edit-perform.ts';
+import { performCrewEdit } from './crew-edit-perform.ts';
 import { performLinkRepo } from './link-repo-perform.ts';
 import { performCloneRepo } from './clone-repo-perform.ts';
 import type { StartedBy } from '../../outposts/start-outpost.ts';
@@ -133,6 +134,8 @@ export function performSparkAction(
       return performRulesEdit(action);
     case 'plugins_edit':
       return performPluginsEdit(context, action);
+    case 'crew_edit':
+      return performCrewEdit(context, action);
     case 'link_repo':
       return performLinkRepo(context, action);
     case 'github_read':

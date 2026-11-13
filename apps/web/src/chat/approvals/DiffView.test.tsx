@@ -47,6 +47,17 @@ afterEach(() => {
 });
 
 describe('DiffView', () => {
+  it('shows every line of a long new file when asked for all rows', () => {
+    const diff = { path: 'run.sh', oldText: null, newText: lines(700, 'step') };
+    render(<DiffView diff={diff} badge="New" allRows />);
+    act(() => FakeWorker.all[0]!.answer());
+    const body = screen.getByRole('region', { name: 'Changes to run.sh' });
+    expect(body.querySelectorAll('.dv-row.add')).toHaveLength(700);
+    expect(screen.queryByRole('button', { name: /more lines/ })).toBeNull();
+    expect(screen.getByText('New')).toBeTruthy();
+    expect(screen.queryByText('New file')).toBeNull();
+  });
+
   it('diffs a small change right away, without a worker', () => {
     render(<DiffView diff={{ path: 'notes.txt', oldText: 'a\nb\n', newText: 'a\nc\n' }} />);
     expect(screen.getByRole('region', { name: 'Changes to notes.txt' }).textContent).toContain('c');

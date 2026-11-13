@@ -48,7 +48,7 @@ export type FolderEntry = z.infer<typeof folderEntrySchema>;
 
 export const FOLDER_NAME_MAX_BYTES = 255;
 
-function utf8Length(text: string): number {
+export function utf8Length(text: string): number {
   let bytes = 0;
   for (const character of text) {
     const code = character.codePointAt(0) ?? 0;

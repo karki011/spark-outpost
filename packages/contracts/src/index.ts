@@ -53,6 +53,8 @@ export * from './custom-endpoint.ts';
 export * from './spark-rules.ts';
 export * from './spark-rules-edit.ts';
 export * from './spark-plugins-edit.ts';
+export * from './spark-result.ts';
+export * from './crew-edit.ts';
 export * from './spark.ts';
 export * from './tasks.ts';
 export * from './terminal.ts';

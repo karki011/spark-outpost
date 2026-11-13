@@ -1,5 +1,6 @@
 import {
   applySparkEdits,
+  crewEditConflicted,
   isAtlassianAction,
   isCalendarAction,
   type SparkAction,
@@ -29,6 +30,11 @@ const DETACHED: ReadonlySet<SparkActionName> = new Set(['clone_repo']);
 
 export const RESTARTED_MESSAGE = 'Spark restarted before this finished, so it may be half done.';
 
+function outcomeOf(action: SparkAction, result: SparkResult): string {
+  const conflicted = action.action === 'crew_edit' && crewEditConflicted(result.message);
+  return conflicted ? 'conflict' : result.state;
+}
+
 async function audit(
   deps: SparkToolDeps,
   runId: string,
@@ -39,11 +45,16 @@ async function audit(
     isCalendarAction(action.action) ||
     isAtlassianAction(action.action) ||
     action.action === 'plugins_edit' ||
+    action.action === 'crew_edit' ||
     action.action === 'link_repo' ||
     action.action === 'github_read' ||
     action.action === 'clone_repo';
   const payload = lean
-    ? redactValue({ action: auditedAction(action), outcome: result.state, url: result.url })
+    ? redactValue({
+        action: auditedAction(action),
+        outcome: outcomeOf(action, result),
+        url: result.url,
+      })
     : redactValue({ action, outcome: result.state, result });
   await insertFinishedRunEntries(deps.db, runId, [
     {

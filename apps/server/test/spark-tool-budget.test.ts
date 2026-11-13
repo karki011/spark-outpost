@@ -9,6 +9,7 @@ const SERVICENOW_GROUP_MAX_CHARS = 3_000;
 const ARTIFACT_TOOL_MAX_CHARS = 1_500;
 const RULES_EDIT_TOOL_MAX_CHARS = 1_000;
 const PLUGINS_EDIT_TOOL_MAX_CHARS = 500;
+const CREW_TOOLS_MAX_CHARS = 1_300;
 
 describe('the size of the Spark tool list a session is sent', () => {
   it('stays within the budget for a plain chat with nothing connected', async () => {
@@ -17,6 +18,8 @@ describe('the size of the Spark tool list a session is sent', () => {
     expect(size.instructionChars).toBeLessThanOrEqual(INSTRUCTIONS_MAX_CHARS);
     expect(Object.keys(size.groups).sort()).toEqual([
       'artifacts',
+      'crew_edit',
+      'crew_read',
       'mcp_servers',
       'other',
       'plugins_edit',
@@ -26,6 +29,9 @@ describe('the size of the Spark tool list a session is sent', () => {
     expect(size.groups.artifacts).toBeLessThanOrEqual(ARTIFACT_TOOL_MAX_CHARS);
     expect(size.groups.rules_edit).toBeLessThanOrEqual(RULES_EDIT_TOOL_MAX_CHARS);
     expect(size.groups.plugins_edit).toBeLessThanOrEqual(PLUGINS_EDIT_TOOL_MAX_CHARS);
+    expect(size.groups.crew_read! + size.groups.crew_edit!).toBeLessThanOrEqual(
+      CREW_TOOLS_MAX_CHARS,
+    );
   });
 
   it('adds the outpost tools only for a chat that can use them', async () => {

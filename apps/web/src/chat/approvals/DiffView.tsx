@@ -136,6 +136,8 @@ export function DiffCount({ model }: { model: DiffModel }) {
 interface DiffViewProps {
   diff: FileDiff;
   fullPath?: string | undefined;
+  badge?: string | undefined;
+  allRows?: boolean | undefined;
 }
 
 export function DiffView(props: DiffViewProps) {
@@ -148,12 +150,14 @@ export function DiffFigure({
   fullPath,
   model,
   counted,
+  badge = diff.oldText === null ? 'New file' : undefined,
+  allRows = false,
 }: DiffViewProps & { model: DiffModel | null; counted: boolean }) {
   const blocks = useMemo(() => (model ? foldRows(model.rows) : []), [model]);
   const highlighted = useHighlighted(diff, highlightable(diff) ? languageForPath(diff.path) : null);
   const [wrap, setWrap] = useState(false);
   const [opened, setOpened] = useState<ReadonlySet<number>>(new Set());
-  const [limit, setLimit] = useState(CHUNK_ROWS);
+  const [limit, setLimit] = useState(allRows ? Number.POSITIVE_INFINITY : CHUNK_ROWS);
   const open = (index: number) => setOpened((current) => new Set(current).add(index));
   const shown = shownRows(blocks, opened, limit);
 
@@ -161,7 +165,7 @@ export function DiffFigure({
     <figure className="appr-diff dv">
       <figcaption>
         <code title={fullPath}>{diff.path}</code>
-        {diff.oldText === null && <span className="dv-badge">New file</span>}
+        {badge && <span className="dv-badge">{badge}</span>}
         {model && !counted && <DiffCount model={model} />}
         <button
           type="button"
