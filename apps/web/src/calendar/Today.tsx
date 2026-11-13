@@ -103,8 +103,19 @@ function TodayViews(props: TodayProps) {
     },
     [pickDate, setView],
   );
+  const openMeeting = useCallback(
+    (id: string) => {
+      setMeetingId(id);
+      setPage('transcripts');
+    },
+    [setPage],
+  );
   const showEvent = useCallback(
     (request: TodayEventRequest) => {
+      if (request.meetingId) {
+        openMeeting(request.meetingId);
+        return;
+      }
       pickDate(request.date ?? localDate(Date.now()));
       setSelected(request.eventKey);
       setRequested(request);
@@ -112,7 +123,7 @@ function TodayViews(props: TodayProps) {
       setView('day');
       setPage('calendar');
     },
-    [pickDate, setView, setPage],
+    [pickDate, setView, setPage, openMeeting],
   );
   useTodayEventRequests(showEvent);
   const switcher = (
@@ -127,13 +138,6 @@ function TodayViews(props: TodayProps) {
         />
       </div>
     </div>
-  );
-  const openMeeting = useCallback(
-    (id: string) => {
-      setMeetingId(id);
-      setPage('transcripts');
-    },
-    [setPage],
   );
   const transcripts = meetings && page === 'transcripts';
   return (

@@ -2,6 +2,7 @@ import './meetings.css';
 import { useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { Meeting, MeetingDetail } from '@spark-outpost/contracts';
 import { LiveElapsed } from '../ui/LiveElapsed.tsx';
+import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
 import { ContextPane } from './ContextPane.tsx';
 import { MeetingActions } from './MeetingActions.tsx';
 import { MeetingTitle } from './MeetingTitle.tsx';
@@ -98,9 +99,10 @@ function PageTabs({
 
 function MeetingView({ id, onStartChat, onDeleted }: MeetingPageProps) {
   const query = useMeeting(id);
-  const [pane, setPane] = useState<PaneId>('notes');
+  const [picked, setPane] = useState<PaneId | null>(null);
   const base = useId();
   const detail = query.data;
+  const pane = picked ?? (detail?.meeting.state === 'recording' ? 'transcript' : 'notes');
 
   if (!detail) {
     return query.isError ? (
@@ -108,7 +110,7 @@ function MeetingView({ id, onStartChat, onDeleted }: MeetingPageProps) {
         Couldn’t open this meeting. {query.error.message}
       </p>
     ) : (
-      <p className="mt-hint">Opening meeting…</p>
+      <LoadingBlob size="md" className="mt-loading" line="Opening meeting…" />
     );
   }
 

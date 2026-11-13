@@ -120,18 +120,64 @@ describe('Meeting page', () => {
     );
   });
 
-  it('asks before deleting and deletes only after the confirm', async () => {
+  it('opens on the transcript while recording and on the notes once it has ended', async () => {
+    let current: MeetingDetail = detail(
+      { state: 'recording', endedAt: null, lineCount: 2, notesState: 'none' },
+      null,
+    );
+    mockFetch(({ path }) => {
+      if (path === `/meetings/${MEETING_ID}`) return current;
+      if (path.includes('/lines')) return { lines: lines(1, 2), more: false };
+    });
+    const { client } = show();
+    const transcript = await screen.findByRole('tab', { name: /Transcript/ });
+    expect(transcript.getAttribute('aria-selected')).toBe('true');
+    expect(await screen.findByText('line 2')).toBeTruthy();
+    current = detail({ lineCount: 2, notesState: 'writing' }, null);
+    await refetch(client);
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: 'Notes' }).getAttribute('aria-selected')).toBe('true'),
+    );
+    expect(screen.getByRole('status').textContent).toContain('Writing notes…');
+  });
+
+  it('keeps the tab the user picked when the recording ends', async () => {
+    let current: MeetingDetail = detail(
+      { state: 'recording', endedAt: null, notesState: 'none' },
+      null,
+    );
+    mockFetch(({ path }) => {
+      if (path === `/meetings/${MEETING_ID}`) return current;
+      if (path.includes('/lines')) return { lines: [], more: false };
+    });
+    const { client } = show();
+    fireEvent.click(await screen.findByRole('tab', { name: /Context/ }));
+    current = detail({ notesState: 'writing' }, null);
+    await refetch(client);
+    await waitFor(() => expect(screen.queryByText('Recording')).toBeNull());
+    expect(screen.getByRole('tab', { name: /Context/ }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('asks in a dialog before deleting, with Cancel focused and Esc keeping the meeting', async () => {
     const calls = mockFetch(({ path, method }) => {
       if (method === 'DELETE') return null;
       if (path === `/meetings/${MEETING_ID}`) return detail({}, 'Notes');
     });
     const { onDeleted } = show();
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete…' }));
-    expect(screen.getByText(/Delete this meeting\?/)).toBeTruthy();
+    const open = await screen.findByRole('button', { name: 'Delete…' });
+    fireEvent.click(open);
+    const dialog = screen.getByRole('alertdialog', { name: 'Delete “Pricing review”?' });
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }));
     expect(calls.some((call) => call.method === 'DELETE')).toBe(false);
-    fireEvent.click(screen.getByRole('button', { name: 'Keep' }));
-    expect(screen.queryByText(/Delete this meeting\?/)).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Delete…' }));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(document.activeElement).toBe(open);
+    expect(calls.some((call) => call.method === 'DELETE')).toBe(false);
+    fireEvent.click(open);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    fireEvent.click(open);
     fireEvent.click(screen.getByRole('button', { name: 'Delete meeting' }));
     await waitFor(() => expect(onDeleted).toHaveBeenCalled());
     expect(calls.some((call) => call.method === 'DELETE')).toBe(true);

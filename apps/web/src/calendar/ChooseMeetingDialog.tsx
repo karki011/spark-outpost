@@ -63,6 +63,7 @@ export function ChooseMeetingDialog(props: ChooseMeetingDialogProps) {
             onJoined={props.onClose}
             buttonClass={{ join: 'btn primary sm', open: 'btn line sm' }}
             focusFirst
+            notes
           />
         </div>
       </div>

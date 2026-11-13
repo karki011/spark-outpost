@@ -5,6 +5,7 @@ import {
   MEETING_LINES_PAGE,
   MEETING_LIST_PAGE,
   meetingAttachRequestSchema,
+  type MeetingJoinNotes,
   meetingNotesEditSchema,
   meetingNotesVersion,
   meetingPatchSchema,
@@ -13,6 +14,7 @@ import {
   type MeetingLinesPage,
 } from '@spark-outpost/contracts';
 import { paramId, parseBody, parseQuery } from '../api/validation.ts';
+import { calendarConnection } from '../calendar/store.ts';
 import type { Db } from '../persistence/db.ts';
 import { MeetingError, type MeetingService } from './service.ts';
 import {
@@ -76,6 +78,20 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
     const request = parseBody(startMeetingRequestSchema, req);
     const meeting = await meetings.start(request);
     res.status(201).json(await detail(meeting.id));
+  });
+
+  router.post('/meetings/join-notes', async (req, res) => {
+    const request = parseBody(startMeetingRequestSchema, req);
+    const { settings } = await calendarConnection(db, workspaceId);
+    const answer: MeetingJoinNotes = { detail: null };
+    if (settings.notesOnJoin && request.eventKey) {
+      try {
+        answer.detail = await detail((await meetings.start(request)).id);
+      } catch (error) {
+        if (!(error instanceof MeetingError)) throw error;
+      }
+    }
+    res.json(answer);
   });
 
   router.get('/meetings/:id', async (req, res) => {

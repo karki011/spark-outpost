@@ -10,6 +10,9 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
+| Meetings: titles written for you     | [Take meeting notes](meetings.md).              |
+| **Take notes when I join a meeting** | [Take meeting notes](meetings.md#record).       |
+| Transcripts: live tab, delete dialog | [Take meeting notes](meetings.md).              |
 | Meeting notes (alpha)                | [Take meeting notes](meetings.md).              |
 | Calendar: new look, your replies     | [See your day](calendar.md).                    |
 | Voice shortcut dictates in the chat  | [Talk to Spark](voice.md).                      |

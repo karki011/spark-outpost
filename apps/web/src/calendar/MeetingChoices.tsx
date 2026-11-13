@@ -2,6 +2,7 @@ import './calendar-parts.css';
 import { useEffect, useRef } from 'react';
 import { joinOpen, spanOf, type CalendarEvent } from '@spark-outpost/contracts';
 import { clock } from './calendar-format.ts';
+import { joinMeeting } from './join-meeting.ts';
 import { openJoin } from './today-model.ts';
 import { useJoinLeadMs } from './use-calendar.ts';
 
@@ -13,6 +14,7 @@ interface MeetingChoicesProps {
   onJoined?: ((event: CalendarEvent) => void) | undefined;
   buttonClass: { join: string; open: string };
   focusFirst?: boolean;
+  notes?: boolean;
 }
 
 function ChoiceAction(props: {
@@ -21,6 +23,7 @@ function ChoiceAction(props: {
   onOpen: (event: CalendarEvent) => void;
   onJoined?: ((event: CalendarEvent) => void) | undefined;
   buttonClass: { join: string; open: string };
+  notes: ((event: CalendarEvent) => string) | null;
 }) {
   const { event } = props;
   const leadMs = useJoinLeadMs();
@@ -32,7 +35,8 @@ function ChoiceAction(props: {
         className={props.buttonClass.join}
         aria-label={`Join ${event.title}`}
         onClick={() => {
-          openJoin(link.url);
+          if (props.notes) joinMeeting(event, props.notes(event));
+          else openJoin(link.url);
           props.onJoined?.(event);
         }}
       >
@@ -73,6 +77,7 @@ export function MeetingChoices(props: MeetingChoicesProps) {
             onOpen={props.onOpen}
             onJoined={props.onJoined}
             buttonClass={props.buttonClass}
+            notes={props.notes ? props.calendarName : null}
           />
         </li>
       ))}

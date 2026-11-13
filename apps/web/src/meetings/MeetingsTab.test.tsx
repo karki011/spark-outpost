@@ -27,15 +27,43 @@ function show() {
 const status = { supported: true, available: true, reason: null, recordingId: null };
 
 describe('Meetings tab', () => {
-  it('says what will appear and how to start when there are no meetings', async () => {
+  it('shows one splash with how to start, and no list or search, when there are no meetings', async () => {
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
     mockFetch(({ path }) => {
       if (path === '/meetings/status') return status;
       if (path.startsWith('/meetings?')) return { items: [], nextBefore: null };
     });
     show();
-    expect(await screen.findByText('No meetings yet')).toBeTruthy();
-    expect(screen.getByText(/Take notes/)).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Scout’s all ears' })).toBeTruthy();
+    expect(screen.getByText('Take notes')).toBeTruthy();
+    expect(screen.getByText(/Audio never leaves this Mac/)).toBeTruthy();
     expect(await screen.findByRole('button', { name: 'New meeting' })).toBeTruthy();
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    expect(screen.queryByText('Pick a meeting to see its notes and transcript.')).toBeNull();
+  });
+
+  it('labels the search box by what it searches and shows only Search in it', async () => {
+    mockFetch(({ path }) => {
+      if (path === '/meetings/status') return status;
+      if (path.startsWith('/meetings?') && path.includes('q=zzz')) {
+        return { items: [], nextBefore: null };
+      }
+      if (path.startsWith('/meetings?')) return { items: [item()], nextBefore: null };
+    });
+    show();
+    const box = (await screen.findByRole('searchbox', {
+      name: 'Search meetings by title, notes and transcript',
+    })) as HTMLInputElement;
+    expect(box.placeholder).toBe('Search');
+    fireEvent.change(box, { target: { value: 'zzz' } });
+    expect(await screen.findByText('No meetings match “zzz”.')).toBeTruthy();
+    expect(screen.getByRole('searchbox')).toBeTruthy();
   });
 
   it('lists a recording row first and says the notes state in words', async () => {

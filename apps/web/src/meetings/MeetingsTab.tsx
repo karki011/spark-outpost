@@ -1,13 +1,14 @@
 import './meetings.css';
 import { useCallback, useState } from 'react';
 import type { Meeting } from '@spark-outpost/contracts';
+import { EmptyScene } from '../brand/EmptyScene.tsx';
 import { BackIcon, SearchIcon, SpinnerIcon } from '../ui/icons.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { MeetingPage } from './MeetingPage.tsx';
 import { MeetingRow } from './MeetingRow.tsx';
 import { TakeNotesButton } from './TakeNotesButton.tsx';
-import { useMeetingList, useMeetingStatus } from './use-meetings.ts';
+import { useMeetingList } from './use-meetings.ts';
 
 interface MeetingsTabProps {
   openId: string | null;
@@ -15,25 +16,28 @@ interface MeetingsTabProps {
   onStartChat: (meeting: Meeting, notesMarkdown: string) => void;
 }
 
-function EmptyState({ searching, query }: { searching: boolean; query: string }) {
-  const status = useMeetingStatus();
-  if (searching) {
-    return (
-      <div className="mt-empty">
-        <p>No meetings match “{query}”.</p>
-      </div>
-    );
-  }
+function Splash({ onStarted }: { onStarted: (meeting: Meeting) => void }) {
   return (
-    <div className="mt-empty">
-      <p className="mt-empty-title">No meetings yet</p>
-      <p>
-        A meeting you record appears here with its notes, transcript and context. Press{' '}
-        <b>Take notes</b> on a calendar meeting, or <b>New meeting</b> above, to start one.
-      </p>
-      {status.data && !status.data.available && status.data.reason && (
-        <p>Recording isn’t available: {status.data.reason}</p>
-      )}
+    <div className="mt mt-tab mt-splash">
+      <EmptyScene fill>
+        <h2 className="mt-splash-title">Scout’s all ears</h2>
+        <p className="mt-splash-line">
+          Record a meeting and it lands here, written up while you get on with your day.
+        </p>
+        <ol className="mt-splash-steps">
+          <li>
+            Press <b>Take notes</b> on a calendar meeting, or <b>New meeting</b> for anything else.
+          </li>
+          <li>
+            Spark listens on this Mac until you press <b>Stop</b>.
+          </li>
+          <li>
+            You get <b>Notes</b>, the full <b>Transcript</b>, and the <b>Context</b> you added.
+          </li>
+        </ol>
+        <TakeNotesButton label="New meeting" onStarted={onStarted} />
+        <p className="mt-splash-note">Audio never leaves this Mac and is never saved.</p>
+      </EmptyScene>
     </div>
   );
 }
@@ -44,6 +48,9 @@ export function MeetingsTab({ openId, onOpen, onStartChat }: MeetingsTabProps) {
   const started = useCallback((meeting: Meeting) => onOpen(meeting.id), [onOpen]);
   const list = useMeetingList(query);
   const searching = list.search !== '';
+  const none = list.data !== undefined && list.items.length === 0;
+
+  if (none && !openId && query.trim() === '' && !searching) return <Splash onStarted={started} />;
 
   return (
     <div className="mt mt-tab" data-open={openId ? 'true' : 'false'}>
@@ -51,11 +58,11 @@ export function MeetingsTab({ openId, onOpen, onStartChat }: MeetingsTabProps) {
         <div className="mt-side-head">
           <label className="mt-search">
             <SearchIcon />
-            <span className="sr-only">Search meetings</span>
+            <span className="sr-only">Search meetings by title, notes and transcript</span>
             <input
               type="search"
               className="inp"
-              placeholder="Search titles, notes and transcripts"
+              placeholder="Search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -65,8 +72,10 @@ export function MeetingsTab({ openId, onOpen, onStartChat }: MeetingsTabProps) {
         <QueryWait query={list} what="the meetings">
           <Skeleton label="Loading meetings" shape="list" rows={5} />
         </QueryWait>
-        {list.data && list.items.length === 0 && !list.searching && (
-          <EmptyState searching={searching} query={list.search} />
+        {none && !list.searching && (
+          <p className="mt-empty">
+            {searching ? `No meetings match “${list.search}”.` : 'No meetings yet.'}
+          </p>
         )}
         {list.items.length > 0 && (
           <ul className="mt-list" aria-label="Meetings">
