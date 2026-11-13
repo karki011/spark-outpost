@@ -137,11 +137,15 @@ test('the panel works from the keyboard and Escape returns focus', async ({ page
   await companion(page).focus();
   await page.keyboard.press('Enter');
   await expect(panel(page)).toContainText('Nothing needs you and no agents are running.');
+  const build = panel(page).getByRole('button', { name: 'Build a Spark or workflow' });
+  await expect(build).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(panel(page).getByRole('button', { name: 'Open Home' })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
   await page.keyboard.press('Shift+Tab');
   await expect(panel(page).getByRole('button', { name: 'Hide companion' })).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(panel(page).getByRole('button', { name: 'Open Home' })).toBeFocused();
+  await expect(build).toBeFocused();
 
   await page.keyboard.press('Escape');
   await expect(panel(page)).toHaveCount(0);

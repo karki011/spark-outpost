@@ -536,6 +536,8 @@ Code is in `apps/server/src/crew-flows/builder-chat.ts` and `builder-drafts.ts`,
 - **The draft row in the browser** comes from a faked `/api/crew/drafts`; the query itself is covered by the database test with seeded cards.
 - **Provider switch in the dock** was not exercised; it is the chat's existing hand-off.
 - **The Mac app** (Electron) and VoiceOver were not tried; Chromium through Playwright with axe on the dock only.
+- **What ran (2026-11-13):** `pnpm check` passed (first run caught a unit test that mocks the prompt's lookups; fixed). `pnpm test:db:changed` and `pnpm test:browser:changed` select every test (the local `main` is 393 files behind; migrations and the fake agent count as run-everything), so they were not run to the end. Run instead: 16 database files (`crew-builder-chat`, `archive-inactive`, `attention-items`, `startup-prune`, `migrate-startup`, every `crew-*` and `spark-crew-*`, `stored-crew-turn`; 143 passed) and the browser specs `crew-builder`, `sparks-page`, `companion`, `crew-test-run`, `spark-crew-edit`, `sparks`, `crew-flows` (42 passed after `companion.spec.ts` was changed: the panel focuses its first button, which is now **Build a Spark or workflow**).
+- **Dev database:** while setting up, `pnpm db:migrate` was run with the main checkout's credentials, which migrated the shared `spark_outpost` development database from `0231` to `0250` (this branch's migrations, including `0245`, which deletes Relay Sparks). No backup was in `.local`.
 
 ## Rules for every stream
 
