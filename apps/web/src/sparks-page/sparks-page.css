@@ -183,6 +183,12 @@
   max-width: 560px;
 }
 
+.spk-try {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
 .spk-details-acts {
   display: flex;
   align-items: center;
