@@ -33,7 +33,7 @@ import { withPermissionRules, withSparkFloor } from './repo-session.ts';
 import { newSessionRequest } from './session-request.ts';
 import { extraRoots, sessionMeta } from './session-start.ts';
 import { slashPrompt } from './slash-commands.ts';
-import { withClaudeSpark } from './spark-instructions.ts';
+import { sparkReadDirs, withClaudeSpark } from './spark-instructions.ts';
 import { sparkAcpServer, type SparkTools } from './spark-tools.ts';
 import { attachSteering, steeringSupported } from './steering.ts';
 import type { TurnMapper } from './subagent-updates.ts';
@@ -204,6 +204,7 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
       chatFolder: turn.chatFolder === true,
       changesAllowed: gates.doing !== null,
       commandsAllowed: gates.gated !== null,
+      readOnlyFolders: sparkReadDirs(turn.spark),
       toolsAvailable:
         newSession.mcpServers.length > 0 ||
         sparkAcpServer(context.tools, definition, init) !== null ||

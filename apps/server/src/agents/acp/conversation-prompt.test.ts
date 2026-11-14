@@ -8,6 +8,7 @@ import {
   contextSteps,
   conversationBlocks,
   conversationPrompt,
+  doProjectNote,
   projectNote,
 } from './conversation-prompt.ts';
 
@@ -83,6 +84,19 @@ describe('conversation prompt', () => {
       commandsAllowed: true,
     });
     expect(first?.type === 'text' && first.text.startsWith(note)).toBe(true);
+  });
+
+  it('lets Ask and Do turns read the crew folders but never change them', () => {
+    const crew = ['/data/sparks', '/data/workflows'];
+    for (const note of [
+      projectNote(['/work/app'], true, crew),
+      doProjectNote(['/work/app'], crew),
+    ]) {
+      expect(note).toContain(
+        'you may read files in /data/sparks, /data/workflows, but never change them',
+      );
+    }
+    expect(projectNote(['/work/app'])).not.toContain('crew folders');
   });
 
   it('lists every linked folder and marks the primary one', () => {
