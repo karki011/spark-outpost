@@ -110,6 +110,7 @@ describe('standing instructions and names', () => {
       role: '',
       provider: null,
       model: null,
+      effort: null,
       agentMode: null,
       level: null,
       instructions: '',
