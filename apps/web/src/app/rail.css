@@ -156,6 +156,17 @@
   }
 }
 
+@media (min-width: 641px) and (max-height: 800px) {
+  .rail {
+    gap: 2px;
+    padding-top: 10px;
+  }
+
+  .rail-btn {
+    padding: 5px 0 3px;
+  }
+}
+
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .rail {
     position: fixed;

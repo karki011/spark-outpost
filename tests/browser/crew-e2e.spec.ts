@@ -96,8 +96,9 @@ test('a Spark with a skill and a two-step workflow are built on the page and run
   );
   expect(saved.workflow.steps.map((step) => step.dependsOn)).toEqual([[], ['security']]);
 
-  await open.getByRole('button', { name: 'Run' }).click();
-  await expect(open.getByRole('status').filter({ hasText: 'Started' })).toBeVisible();
+  await open.getByRole('button', { name: 'Run', exact: true }).click();
+  const runView = page.getByRole('region', { name: `Run of ${WORKFLOW_NAME}` });
+  await expect(runView).toBeVisible();
   const run = await settledRun(page);
   expect(run.source).toBe('manual');
   expect(run.steps.map((step) => [step.stepId, step.state])).toEqual([
@@ -106,6 +107,8 @@ test('a Spark with a skill and a two-step workflow are built on the page and run
   ]);
   expect(run.status).toBe('succeeded');
 
+  await expect(runView.getByRole('status').filter({ hasText: '2 of 2 steps done' })).toBeVisible();
+  await runView.getByRole('button', { name: 'Back to the workflow' }).click();
   await open.getByRole('button', { name: 'Workflows' }).click();
   await expect(page.getByRole('list', { name: 'Workflows' })).toContainText(WORKFLOW_NAME);
 });
