@@ -42,6 +42,7 @@ import {
   pluginsByline,
   pluginsNote,
 } from './PluginEditFacts.tsx';
+import { Button } from '../../ui/Button.tsx';
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -318,19 +319,20 @@ export function SparkActionCard({
   const onTheMac = remote ? macOnlyNote(action) : null;
   const shown = approval.options.filter((option) => option !== holdOption);
   const primary = shown.find(isAllow);
-  const buttonClass = (option: ApprovalOption) =>
-    option === primary ? 'btn primary sm' : isAllow(option) ? 'btn line sm' : 'btn ghost sm deny';
+  const toneOf = (option: ApprovalOption) =>
+    option === primary ? 'soft' : isAllow(option) ? 'line' : 'ghost';
   const answerButtons = shown.map((option) => (
-    <button
+    <Button
       key={option.optionId}
       ref={option === primary ? confirmRef : undefined}
-      type="button"
-      className={buttonClass(option)}
+      tone={toneOf(option)}
+      small
+      className={isAllow(option) ? undefined : 'deny'}
       disabled={decide.isPending || (isAllow(option) && blankTitle)}
       onClick={() => decide.mutate(option.optionId)}
     >
       {option.name}
-    </button>
+    </Button>
   ));
   return (
     <div

@@ -24,6 +24,7 @@ import {
   addressParts,
   openInBrowser,
 } from './open-address.ts';
+import { Button } from '../../ui/Button.tsx';
 
 interface OpenAddressCardProps {
   approval: Approval;
@@ -121,16 +122,10 @@ export function OpenAddressCard({ approval, agent, onDecided }: OpenAddressCardP
             )}
             <div className="appr-acts">
               {!held && (
-                <button
-                  type="button"
-                  className="btn primary sm"
-                  aria-keyshortcuts="Enter"
-                  disabled={busy}
-                  onClick={open}
-                >
+                <Button tone="soft" small aria-keyshortcuts="Enter" disabled={busy} onClick={open}>
                   Open
                   <Keys keys={['⏎']} className="key-hint" />
-                </button>
+                </Button>
               )}
               <button
                 type="button"

@@ -67,7 +67,7 @@ function show(approval: Approval, remote = false) {
 }
 
 describe('the Spark rules card', () => {
-  it('shows who asks, the change and three answers with one primary', async () => {
+  it('shows who asks, the change and three answers with one main answer', async () => {
     const decide = vi.spyOn(approvalsApi, 'decide').mockReturnValue(new Promise(() => undefined));
     show(card());
     const group = screen.getByRole('group', { name: /Change your Spark rules\?/ });
@@ -78,8 +78,8 @@ describe('the Spark rules card', () => {
     expect(group.textContent).toContain('Asks again if you switch the agent or its mode.');
     const session = within(group).getByRole('button', { name: 'Allow for this session' });
     const once = within(group).getByRole('button', { name: 'Allow once' });
-    expect(session.className).toContain('primary');
-    expect(once.className).not.toContain('primary');
+    expect(session.className).toContain('soft');
+    expect(once.className).not.toContain('soft');
     fireEvent.click(session);
     await waitFor(() => expect(decide).toHaveBeenCalled());
     expect(decide.mock.calls[0]![1]).toMatchObject({ optionId: 'session', scope: 'once' });

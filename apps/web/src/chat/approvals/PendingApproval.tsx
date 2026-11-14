@@ -31,6 +31,7 @@ import { DiffCount, DiffFigure, DiffView } from './DiffView.tsx';
 import { ObservedNote } from './ObservedNote.tsx';
 import { useDiffModel } from './use-diff-model.ts';
 import { useWaitingPlace } from './use-waiting-place.ts';
+import { Button } from '../../ui/Button.tsx';
 
 interface PendingApprovalProps {
   approval: Approval;
@@ -237,9 +238,9 @@ export function PendingApproval({ approval, agent, repo, onDecided }: PendingApp
         )}
         <div className="appr-acts">
           {allow && (
-            <button
-              type="button"
-              className="btn primary sm"
+            <Button
+              tone="soft"
+              small
               aria-keyshortcuts="Enter"
               disabled={busy || Boolean(allow.unavailableReason)}
               title={allow.unavailableReason}
@@ -247,7 +248,7 @@ export function PendingApproval({ approval, agent, repo, onDecided }: PendingApp
             >
               {choices.allowLabel}
               <Keys keys={['⏎']} className="key-hint" />
-            </button>
+            </Button>
           )}
           <AlwaysAllow
             choices={choices.always}

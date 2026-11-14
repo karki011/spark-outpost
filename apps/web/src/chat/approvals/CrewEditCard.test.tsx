@@ -134,7 +134,7 @@ describe('the card for a change to a Spark', () => {
     fireEvent.click(within(group).getByRole('button', { name: 'Deny' }));
     await waitFor(() => expect(decide).toHaveBeenCalled());
     expect(decide.mock.calls[0]![1]).toMatchObject({ optionId: 'decline', scope: 'once' });
-    expect(allow.className).toContain('primary');
+    expect(allow.className).toContain('soft');
   });
 
   it('waits for the Mac on a paired device', () => {

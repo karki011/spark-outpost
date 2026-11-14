@@ -14,6 +14,7 @@ import { CheckIcon, XIcon } from '../../ui/icons.tsx';
 import { Breakout } from '../breakout/Breakout.tsx';
 import { commandApproval } from '../status/pending-summary.ts';
 import { Pending } from '../status/Pending.tsx';
+import { Button } from '../../ui/Button.tsx';
 
 const ON_THE_MAC = 'Waiting for you on your Mac. Spark rules change there.';
 
@@ -94,14 +95,14 @@ function Asking({
             <p className="appr-reason">{ON_THE_MAC}</p>
           ) : (
             <div className="appr-acts">
-              <button
-                type="button"
-                className="btn primary sm"
+              <Button
+                tone="soft"
+                small
                 disabled={answer.isPending}
                 onClick={() => answer.mutate('allow_group')}
               >
                 {allowGroupLabel(rule)}
-              </button>
+              </Button>
               <button
                 type="button"
                 className="btn line sm"
