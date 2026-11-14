@@ -8,7 +8,7 @@ export interface ChatPane {
   landmark: 'main' | 'section';
   closer: ReactNode;
   intro?: string;
-  noProject?: boolean;
+  crewChat?: boolean;
 }
 
 export const SINGLE_PANE: ChatPane = {

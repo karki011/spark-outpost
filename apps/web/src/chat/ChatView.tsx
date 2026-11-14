@@ -243,9 +243,14 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
       void api.resetSessionDraft(conversationId).then(refresh, () => null);
   };
   const terminalDraft = newSession && sessionChoice.sessionType === 'terminal' && !remote;
-  const sessionPicker = newSession ? (
-    <SessionTypeChip value={sessionChoice} onChange={chooseSession} disabled={terminalLaunching} />
-  ) : null;
+  const sessionPicker =
+    newSession && !pane.crewChat ? (
+      <SessionTypeChip
+        value={sessionChoice}
+        onChange={chooseSession}
+        disabled={terminalLaunching}
+      />
+    ) : null;
   const { roots: panelRoots, home: browserHome } = useChatBrowserHome(
     conversationId,
     chatBranch,
@@ -390,7 +395,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               <Composer
                 conversationId={conversationId}
                 autoFocus={pane.focused}
-                noProject={pane.noProject === true}
+                noProject={pane.crewChat === true}
                 repos={repos}
                 settings={settings}
                 providers={connected}

@@ -140,7 +140,7 @@ export function BuilderDock({ chatId, spark = null, onChat, onClose }: BuilderDo
       name: label,
       landmark: 'section',
       intro,
-      noProject: true,
+      crewChat: true,
       closer: chat ? (
         <DockControls
           chat={chat}

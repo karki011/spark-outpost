@@ -88,7 +88,7 @@ export const Thread = memo(function Thread({
           <div className="empty">
             <BlobScout size={64} />
             <h2>{greeting(voice, new Date().getHours())}</h2>
-            <p className="empty-ask">What should we work on?</p>
+            {!intro && <p className="empty-ask">What should we work on?</p>}
             {intro ? (
               <p>{intro}</p>
             ) : repos.length > 0 ? (
