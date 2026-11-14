@@ -19,7 +19,7 @@ import { crewTool } from '../src/spark-mcp/tools/crew-tool.ts';
 import { newSpark } from './crew-workflow-support.ts';
 import { NOTES_SKILL, useCrewTools } from './spark-crew-harness.ts';
 import { answerCard, cardResult, pendingCard, type RecordedHooks } from './spark-mcp-support.ts';
-import type { TestDb } from './support.ts';
+import { eventually, type TestDb } from './support.ts';
 
 const crew = useCrewTools();
 const { call } = crew;
@@ -48,6 +48,14 @@ async function cardCount(): Promise<number> {
     `SELECT count(*)::int AS count FROM approvals WHERE kind = 'spark_action'`,
   );
   return rows[0]!.count;
+}
+
+async function auditWith(outcome: string): Promise<Record<string, unknown>> {
+  const found = await eventually(async () => {
+    const last = (await crewAudits()).at(-1);
+    return last?.outcome === outcome ? last : null;
+  });
+  return found!;
 }
 
 async function crewAudits(): Promise<Record<string, unknown>[]> {
@@ -189,8 +197,8 @@ describe('spark_crew_edit always asks the user', () => {
     expect((await sparkFolder(crewSparksDir(), scout.id)).skills.map((s) => s.name)).toEqual([
       'notes',
     ]);
-    const logged = await crewAudits();
-    expect(logged.at(-1)).toMatchObject({
+    const logged = await auditWith('done');
+    expect(logged).toMatchObject({
       outcome: 'done',
       action: {
         target: 'spark',
@@ -266,7 +274,7 @@ describe('spark_crew_edit always asks the user', () => {
     expect(failed.message).toContain(`${CREW_EDIT_CONFLICT}: SPARK.md. Spark changed nothing.`);
     expect(await scoutFile('SPARK.md')).toBe('Edited by hand.');
     expect(await scoutFiles()).toEqual(['SPARK.md']);
-    expect((await crewAudits()).at(-1)).toMatchObject({ outcome: 'conflict' });
+    expect(await auditWith('conflict')).toMatchObject({ outcome: 'conflict' });
     const again = await edit({
       spark: 'Scout',
       files: [{ path: 'SPARK.md', text: 'Be thorough.' }],
