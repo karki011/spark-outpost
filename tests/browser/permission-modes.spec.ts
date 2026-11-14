@@ -239,7 +239,9 @@ test("the approval card offers every option the agent sent, with the agent's wor
       [/^Yes/, /^Always allow/, /^No/, "No, and don't ask again", 'Details'],
       { timeout: 30_000 },
     );
-    await expect(approval.getByRole('button', { name: 'Yes', exact: true })).toHaveClass(/primary/);
+    await expect(approval.getByRole('button', { name: 'Yes', exact: true })).toHaveClass(
+      /\bsoft\b/,
+    );
     await expect(approval.getByRole('button', { name: 'No', exact: true })).toHaveClass(/deny/);
     if (optionId === 'yes-always') {
       await approval.getByRole('button', { name: 'Always allow' }).click();
