@@ -280,14 +280,17 @@ export function alwaysAsk(
   files: FileLister,
   view: ShellView | null,
   wanted: RailsWanted = EVERY_RAIL,
+  writesGranted = false,
 ): RailFound | null {
   const parts = view ? [request, ...partRequests(request, view)] : [request];
   const reading = readsWithoutChanging(request, view);
+  const kept = (asked: RailAsk | null) =>
+    asked && !(writesGranted && asked.rail === 'outside_write') ? asked : null;
   const found = (asked: RailAsk | null) =>
     asked ? { ...asked, rule: railRule(asked.rail, reading) } : null;
   for (const part of parts) {
-    const asked = commandRail(part, files, reading, wanted);
+    const asked = kept(commandRail(part, files, reading, wanted));
     if (asked) return found(asked);
   }
-  return found(redirectRail(view, reading, wanted) ?? editRail(request, wanted));
+  return found(kept(redirectRail(view, reading, wanted)) ?? kept(editRail(request, wanted)));
 }

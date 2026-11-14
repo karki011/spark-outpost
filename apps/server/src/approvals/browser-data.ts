@@ -146,6 +146,10 @@ export function sparkRulesFlagRules(files: SparkRulesFiles = sparkRulesFiles()):
   return patterns.flatMap((pattern) => [`Read(${pattern})`, `Edit(${pattern})`]);
 }
 
+export function otherChatsRules(dataDir: string | null): string[] {
+  return dataDir ? [`Read(/${dataDir}/*/chats/**)`] : [];
+}
+
 export function browserDataRules(dataDir: string | null): string[] {
   if (!dataDir) return [];
   const patterns = BROWSER_DATA_ENTRIES.map((entry) => `/${dataDir}/${entry}`);

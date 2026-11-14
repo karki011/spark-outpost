@@ -85,9 +85,18 @@ describe('observed rail flags follow the resolved Spark rules', () => {
     expect(await railsFound(observed, RECOMMENDED_RULES)).toEqual([rail]);
   });
 
-  it.each(CASES)('does not flag $rail once $rule is removed', async ({ rule, observed }) => {
+  const REMOVABLE = CASES.filter((entry) => entry.rule !== 'WriteOutside');
+
+  it.each(REMOVABLE)('does not flag $rail once $rule is removed', async ({ rule, observed }) => {
     expect(await railsFound(observed, removed(rule))).toEqual([]);
   });
+
+  it.each(CASES.filter((entry) => entry.rule === 'WriteOutside'))(
+    'keeps flagging $rail with WriteOutside removed, since it asks by default',
+    async ({ rail, observed }) => {
+      expect(await railsFound(observed, removed('WriteOutside'))).toEqual([rail]);
+    },
+  );
 
   it.each(CASES)(
     'flags $rail when $rule is ask or deny alone',

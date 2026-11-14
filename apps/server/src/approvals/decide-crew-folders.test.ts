@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
 import { BROWSER_DATA_REASON, SPARK_RULES_REASON } from './browser-data.ts';
 import { CREW_FOLDER_REASON, crewFolderRules } from './crew-folders.ts';
-import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
+import { NO_RUN_RULES, SPARK_DATA_READ_REASON, decide, type ApprovalRequest } from './decide.ts';
 import { parseShell } from './shell-parse.ts';
 
 const ROOT = '/work/app';
@@ -17,7 +17,7 @@ const CHAT = `${DATA}/dev/chats/33333333-3333-4333-8333-333333333333/work`;
 const RULES_FILE = process.env.SPARK_RULES_FILE!;
 const NO_FILES = { glob: () => [], walk: () => [], script: () => null };
 const MODES: ModePosture[] = ['asks', 'auto', 'full_access'];
-const OUTSIDE_READ = 'refuse (Reads outside the project are refused)';
+const OUTSIDE_READ = `refuse (${SPARK_DATA_READ_REASON})`;
 const REFUSED = `refuse (${CREW_FOLDER_REASON})`;
 
 function request(overrides: Partial<ApprovalRequest>): ApprovalRequest {

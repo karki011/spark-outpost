@@ -266,9 +266,10 @@ function validateDecision(approval: Approval, decision: UserDecision): ApprovalO
   if (approval.payload.gitControl && decision.scope !== 'once') {
     throw new ApprovalInputError('A change to git hooks or git config is allowed one at a time.');
   }
-  if (decision.scope === 'chat' && !(approval.payload.instructionFiles && allowing)) {
+  const chatGrant = approval.payload.instructionFiles || approval.payload.outsideWrite;
+  if (decision.scope === 'chat' && !(chatGrant !== undefined && allowing)) {
     throw new ApprovalInputError(
-      'Only changes to agent instruction files can be allowed for a chat.',
+      'Only agent instruction files and writes outside the project can be allowed for longer.',
     );
   }
   if (approval.payload.secretSend && allowing && decision.scope !== 'once') {

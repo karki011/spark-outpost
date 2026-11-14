@@ -6,10 +6,11 @@ import type { ProviderId } from '@spark-outpost/contracts';
 import {
   browserDataDir,
   browserDataRules,
+  otherChatsRules,
   sparkRulesFlagRules,
 } from '../../approvals/browser-data.ts';
 import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
-import { crewFolderRules, guardedCrewFolders } from '../../approvals/crew-folders.ts';
+import { crewFolderRules, guardedCrewFolders, inFolders } from '../../approvals/crew-folders.ts';
 import { tempRoots } from '../../approvals/temp-dirs.ts';
 import { PLANS_DIR } from '../../plans/plan-mode.ts';
 import { GIT_CONTROL_GLOBS, INSTRUCTION_GLOBS } from '../../projects/path-policy.ts';
@@ -206,6 +207,8 @@ export function claudeSessionMeta(
   gitControlGlobs: readonly string[] = [],
 ): Record<string, unknown> {
   const floor = repo?.floor ?? RECOMMENDED_FLOOR;
+  const dataDir = browserDataDir();
+  const inSparkData = dataDir !== null && extraRoots.some((root) => inFolders(root, [dataDir]));
   const ask = unique([
     ...(repo?.askRules ?? []),
     ...gatedAskRules(tools),
@@ -217,7 +220,8 @@ export function claudeSessionMeta(
     ...(repo?.denyRules ?? []),
     ...toolDenyRules(tools),
     ...(floor.secretEdits ? secretRules([...extraRoots, ...tempRoots()]) : []),
-    ...browserDataRules(browserDataDir()),
+    ...browserDataRules(dataDir),
+    ...(inSparkData ? [] : otherChatsRules(dataDir)),
     ...sparkRulesFlagRules(),
     ...crewFolderRules(),
     ...(floor.forcePush ? FORCE_PUSH_DENY_RULES : []),
@@ -254,7 +258,7 @@ export function claudeSessionMeta(
             ...(ask.length > 0 ? { ask } : {}),
             ...(allowRules.length > 0 ? { allow: allowRules } : {}),
             additionalDirectories: [...tempRoots(), ...(repo?.readDirs ?? guardedCrewFolders())],
-            blockReadsOutsideWorkingDirectories: true,
+            blockReadsOutsideWorkingDirectories: inSparkData,
             ...(allowBypass ? {} : { disableBypassPermissionsMode: 'disable' }),
           },
         },

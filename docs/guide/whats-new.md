@@ -16,7 +16,7 @@ summary: What changed in recent releases and what to do next.
 | Test run and Try it: nothing is sent | [Do a test run](test-run.md).                   |
 | Workflows can run on a schedule      | [Schedule a workflow](workflow-schedules.md).   |
 | Sparks page: Crew, skills and files  | [Make a Spark](sparks.md).                      |
-| Agents can't change Sparks' folders  | [Protected paths](protected-paths.md).          |
+| Read anywhere; outside edits ask     | [Protected paths](protected-paths.md).          |
 | Relay, the follow-up Spark, removed  | Nothing; PR follow-up works as before.          |
 | Transcripts: drag the list's edge    | Nothing; double-click resets it.                |
 | Ask about a meeting, **Catch me up** | [Take meeting notes](meetings.md#ask-about-it). |

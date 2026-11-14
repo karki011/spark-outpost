@@ -9,6 +9,8 @@ import {
   type RunEvent,
   ALLOWED_REASONS,
 } from '@spark-outpost/contracts';
+import { outsideWriteGranted } from './outside-write-grant.ts';
+import { rulesSession } from '../spark-mcp/actions/rules-edit-session.ts';
 import { forcePush } from '../approvals/git-commands.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
@@ -388,6 +390,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       own: await ownRepoFor(deps.db, deps.runId, request),
       secretSend: sent,
       instructionGrants,
+      outsideWriteGrant: await outsideWriteGranted(deps.db, deps.runId),
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),
       sparkRules: await sparkRulesForRun(deps.db, deps.runId),
@@ -415,7 +418,11 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     if (weighed.held) await recordHeldSend(deps.db, deps.runId, weighed.held);
     const { decision, rule, secretReads } = weighed;
     if (decision.verdict === 'ask') {
-      return readSecrets(await ask(request, decision.reason, signal, decision), secretReads);
+      const { outsideWrite, ...asked } = decision;
+      const asking = outsideWrite
+        ? { ...asked, outsideWrite: (await rulesSession(deps.db, deps.runId))?.sessionRow ?? '' }
+        : asked;
+      return readSecrets(await ask(request, decision.reason, signal, asking), secretReads);
     }
     if (decision.verdict === 'reject') {
       const ruled = decision.sparkRule ? { sparkRule: decision.sparkRule } : {};

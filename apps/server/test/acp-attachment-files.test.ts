@@ -157,7 +157,7 @@ describe('file attachments reaching an ACP agent', { timeout: 30_000 }, () => {
     expect(attachmentFolders()).toEqual([]);
   });
 
-  it('lets the gate allow a read of an attached file and still refuses the file beside it', async () => {
+  it('lets the gate allow a read of an attached file, like any read outside the project', async () => {
     const verdicts: string[] = [];
     const approvals: PermissionGate = {
       review: async (request) => {
@@ -177,7 +177,7 @@ describe('file attachments reaching an ACP agent', { timeout: 30_000 }, () => {
     };
     const { seen, error } = await run(codex, '#blocks #files #askread', { approvals });
     expect(error).toBeNull();
-    expect(verdicts).toEqual(['allow', 'reject', 'allow', 'reject']);
+    expect(verdicts).toEqual(['allow', 'allow', 'allow', 'allow']);
     expect(seen!.files.map((file) => file.content)).toEqual(['%PDF-1.7 fake', 'PK-sheet-bytes']);
     expect(attachmentFolders()).toEqual([]);
   });

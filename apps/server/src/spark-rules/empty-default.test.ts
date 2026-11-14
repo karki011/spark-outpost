@@ -42,6 +42,7 @@ interface Example {
   rule: string;
   asked: ApprovalRequest;
   manual: Decision['verdict'];
+  unseen?: Decision['verdict'];
   task?: TaskBranch;
   secretSend?: SecretSend;
 }
@@ -66,7 +67,12 @@ const EXAMPLES: Example[] = [
   { rule: 'SecretFile(read)', asked: request('cat private/notes.md'), manual: 'allow' },
   { rule: 'InstructionFile(edit)', asked: request(null, 'AGENTS.md'), manual: 'ask' },
   { rule: 'GitConfig', asked: request('git config core.hooksPath hooks'), manual: 'ask' },
-  { rule: 'WriteOutside', asked: request('echo hi > ../outside.txt'), manual: 'ask' },
+  {
+    rule: 'WriteOutside',
+    asked: request('echo hi > ../outside.txt'),
+    manual: 'ask',
+    unseen: 'ask',
+  },
   {
     rule: 'SecretSend',
     asked: request(`git push origin ${BRANCH}`),
@@ -137,7 +143,9 @@ describe('with no Spark rules, the agent’s mode decides', () => {
         example.manual,
       );
       for (const posture of UNSEEN) {
-        expect(judged(example.asked, posture, rules, extra).verdict, example.rule).toBe('allow');
+        expect(judged(example.asked, posture, rules, extra).verdict, example.rule).toBe(
+          example.unseen ?? 'allow',
+        );
       }
     }
   });

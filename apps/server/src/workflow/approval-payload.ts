@@ -56,6 +56,7 @@ export function approvalPayload(request: ApprovalRequest, asking: Asking): Appro
     ...(request.plan ? { plan: request.plan } : {}),
     ...(asking.forcePush ? { forcePush: asking.forcePush } : {}),
     ...(asking.instructionFiles ? { instructionFiles: asking.instructionFiles } : {}),
+    ...(typeof asking.outsideWrite === 'string' ? { outsideWrite: asking.outsideWrite } : {}),
     ...(asking.gitControl ? { gitControl: asking.gitControl } : {}),
     ...(asking.because ? { asksBecause: asking.because } : {}),
     ...(asking.observed ? { observed: asking.observed } : {}),

@@ -46,7 +46,7 @@ function overlaps(target: string, folders: readonly string[]): boolean {
   });
 }
 
-function inFolders(target: string, folders: readonly string[]): boolean {
+export function inFolders(target: string, folders: readonly string[]): boolean {
   const wanted = comparable(target);
   return folders.some((folder) => within(comparable(folder), wanted));
 }

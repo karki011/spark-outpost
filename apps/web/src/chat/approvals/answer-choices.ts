@@ -37,9 +37,12 @@ function agentAlways(allows: readonly ApprovalOption[], allow: ApprovalOption): 
 }
 
 function chatChoice(approval: Approval): AlwaysChoice[] {
-  if (approval.payload.instructionFiles === undefined) return [];
+  const { instructionFiles, outsideWrite } = approval.payload;
+  if (instructionFiles === undefined && outsideWrite === undefined) return [];
   const once = approval.options.find((option) => option.kind === 'allow_once');
-  return once ? [{ label: 'Allow for this chat', optionId: once.optionId, scope: 'chat' }] : [];
+  if (!once) return [];
+  const label = outsideWrite === undefined ? 'Allow for this chat' : 'Allow for this session';
+  return [{ label, optionId: once.optionId, scope: 'chat' }];
 }
 
 function projectChoice(approval: Approval): AlwaysChoice[] {
@@ -60,7 +63,10 @@ export function answerChoices(approval: Approval): AnswerChoices {
   if (!allow) return { allow, allowLabel: '', always: [], deny, otherRejects };
   return {
     allow,
-    allowLabel: approval.payload.instructionFiles ? 'Allow once' : allow.name,
+    allowLabel:
+      approval.payload.instructionFiles || approval.payload.outsideWrite !== undefined
+        ? 'Allow once'
+        : allow.name,
     always: [...agentAlways(allows, allow), ...chatChoice(approval), ...projectChoice(approval)],
     deny,
     otherRejects,

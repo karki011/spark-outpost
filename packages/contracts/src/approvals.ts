@@ -117,6 +117,7 @@ export const approvalPayloadSchema = z.object({
   plan: z.string().optional(),
   forcePush: z.array(z.string()).optional(),
   instructionFiles: z.array(z.string()).optional(),
+  outsideWrite: z.string().optional(),
   gitControl: z.array(z.string()).optional(),
   asksBecause: z.string().optional(),
   observed: z.array(z.string()).optional(),
