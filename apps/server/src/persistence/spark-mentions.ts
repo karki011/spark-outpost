@@ -7,6 +7,7 @@ export interface MentionableSpark {
   role: string;
   provider: string | null;
   model: string | null;
+  effort: string | null;
   connected: boolean;
 }
 
@@ -15,7 +16,7 @@ export async function mentionableSparks(
   conversationId: string,
 ): Promise<MentionableSpark[]> {
   const { rows } = await db.query<MentionableSpark>(
-    `SELECT t.id, t.name, t.role, t.provider, t.model,
+    `SELECT t.id, t.name, t.role, t.provider, t.model, t.effort,
        EXISTS (
          SELECT 1 FROM provider_connections pc
          WHERE pc.workspace_id = t.workspace_id AND pc.provider = t.provider

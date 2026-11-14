@@ -19,7 +19,7 @@ export async function stepSparks(
   ids: readonly string[],
 ): Promise<Map<string, StepSpark>> {
   const { rows } = await db.query<StepSpark>(
-    `SELECT t.id, t.name, t.role, t.provider, t.model, t.agent_mode AS "agentMode",
+    `SELECT t.id, t.name, t.role, t.provider, t.model, t.effort, t.agent_mode AS "agentMode",
        EXISTS (
          SELECT 1 FROM provider_connections pc
          WHERE pc.workspace_id = t.workspace_id AND pc.provider = t.provider

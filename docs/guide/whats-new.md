@@ -11,7 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
 | Build Sparks by talking to an agent  | [Build with an agent](build-with-an-agent.md).  |
-| Ask an agent beside one Spark        | [Build with an agent](build-with-an-agent.md).  |
+| Ask an agent per Spark; Spark effort | [Build with an agent](build-with-an-agent.md).  |
 | Workflows: live run view and Runs    | [Follow a workflow run](workflow-runs.md).      |
 | Test run and Try it: nothing is sent | [Do a test run](test-run.md).                   |
 | Workflows can run on a schedule      | [Schedule a workflow](workflow-schedules.md).   |

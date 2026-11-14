@@ -96,6 +96,7 @@ export async function performCreateTeammate(
     face: action.faceAuto ? null : action.face,
     provider: action.provider,
     model: action.model,
+    effort: null,
     agentMode: action.agentMode,
     level: action.level,
     instructions: action.instructions,

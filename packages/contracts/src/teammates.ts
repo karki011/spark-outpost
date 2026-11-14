@@ -129,6 +129,7 @@ export const teammateSchema = teammateTagSchema.extend({
   faceAuto: z.boolean(),
   provider: providerIdSchema.nullable(),
   model: z.string().nullable(),
+  effort: z.string().nullable(),
   agentMode: z.string().nullable(),
   level: teammateLevelSchema.nullable(),
   instructions: z.string(),
@@ -167,6 +168,7 @@ export type TeammateList = z.infer<typeof teammateListSchema>;
 const teammateDefaultsShape = {
   provider: providerIdSchema.nullable(),
   model: z.string().trim().min(1).max(200).nullable(),
+  effort: z.string().trim().min(1).max(40).nullable(),
   agentMode: z.string().trim().min(1).max(200).nullable(),
   level: teammateLevelSchema.nullable(),
 };
@@ -177,6 +179,7 @@ export const createTeammateRequestSchema = z.object({
   face: teammateFaceSchema.nullable().optional(),
   provider: teammateDefaultsShape.provider.default(null),
   model: teammateDefaultsShape.model.default(null),
+  effort: teammateDefaultsShape.effort.default(null),
   agentMode: teammateDefaultsShape.agentMode.default(null),
   level: teammateDefaultsShape.level.default(null),
   instructions: teammateInstructionsSchema.default(''),

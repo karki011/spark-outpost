@@ -14,6 +14,7 @@ function defaultsOf(teammate: Teammate): UpdateChatSettingsRequest {
   if (teammate.provider) {
     update.provider = teammate.provider;
     if (teammate.model) update.model = teammate.model;
+    if (teammate.effort) update.effort = teammate.effort;
     if (teammate.agentMode) update.agentMode = teammate.agentMode;
   }
   if (teammate.level) update.level = teammate.level;

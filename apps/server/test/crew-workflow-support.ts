@@ -24,6 +24,7 @@ export function newSpark(t: TestDb, name: string, extra: Record<string, unknown>
     role: 'Code reviewer',
     provider: null,
     model: null,
+    effort: null,
     agentMode: null,
     level: null,
     instructions: 'Name the file and line you mean.',

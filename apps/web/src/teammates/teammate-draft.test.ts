@@ -17,6 +17,7 @@ const teammate: Teammate = {
   faceAuto: false,
   provider: null,
   model: null,
+  effort: null,
   agentMode: null,
   level: null,
   instructions: 'Be brief.',

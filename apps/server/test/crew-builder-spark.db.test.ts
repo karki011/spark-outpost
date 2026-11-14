@@ -39,6 +39,7 @@ function newSpark(name: string): Promise<Teammate> {
       role: 'Release notes writer',
       provider: null,
       model: null,
+      effort: null,
       agentMode: null,
       level: null,
       instructions: '',

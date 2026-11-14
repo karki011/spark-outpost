@@ -22,6 +22,7 @@ const pip = {
   role: 'Code reviewer',
   provider: null,
   model: null,
+  effort: null,
   agentMode: null,
   level: 'full-auto' as const,
   instructions: 'Point to the file and line.',

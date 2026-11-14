@@ -49,6 +49,7 @@ function spark(name: string, extra: Record<string, unknown> = {}) {
     role: 'Code reviewer',
     provider: null,
     model: null,
+    effort: null,
     agentMode: null,
     level: null,
     instructions: INSTRUCTIONS,

@@ -41,6 +41,7 @@ interface TeammateRow {
   face_color: string | null;
   provider: string | null;
   model: string | null;
+  effort: string | null;
   agent_mode: string | null;
   level: string | null;
   instructions: string;
@@ -55,7 +56,7 @@ interface TeammateRow {
 const UNIQUE_VIOLATION = '23505';
 
 const teammateColumns = `t.id, t.name, t.role, t.face_shape, t.face_color, t.provider, t.model,
-  t.agent_mode, t.level, t.instructions, t.instructions_moved_at IS NOT NULL AS instructions_moved,
+  t.effort, t.agent_mode, t.level, t.instructions, t.instructions_moved_at IS NOT NULL AS instructions_moved,
   t.instructions_path, t.home_conversation_id, t.created_at, t.updated_at,
   ARRAY(
     SELECT tp.project_id::text FROM teammate_projects tp
@@ -85,6 +86,7 @@ function toTeammate(row: TeammateRow, instructions: string): Teammate {
     faceAuto: !picked.success,
     provider: providerIdSchema.safeParse(row.provider).data ?? null,
     model: row.model,
+    effort: row.effort,
     agentMode: row.agent_mode,
     level: teammateLevelSchema.safeParse(row.level).data ?? null,
     instructions,
@@ -167,8 +169,8 @@ export async function createTeammate(
   await db
     .query(
       `INSERT INTO teammates (id, workspace_id, name, role, face_shape, face_color, provider, model,
-         agent_mode, level, instructions_path, instructions_moved_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())`,
+         effort, agent_mode, level, instructions_path, instructions_moved_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now())`,
       [
         id,
         workspaceId,
@@ -178,6 +180,7 @@ export async function createTeammate(
         input.face?.color ?? null,
         input.provider,
         input.model,
+        input.effort,
         input.agentMode,
         input.level,
         input.instructionsPath ?? null,
@@ -207,6 +210,7 @@ const COLUMNS: Record<
   role: 'role',
   provider: 'provider',
   model: 'model',
+  effort: 'effort',
   agentMode: 'agent_mode',
   level: 'level',
   instructionsPath: 'instructions_path',

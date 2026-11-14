@@ -6,7 +6,7 @@ import {
   type ProviderSetup,
 } from '@spark-outpost/contracts';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
-import { modeChoices, modelChoices } from '../providers/ProviderDefaults.tsx';
+import { effortOptions, modeChoices, modelChoices } from '../providers/ProviderDefaults.tsx';
 import { ChoicePicker, type PickerChoice } from '../ui/ChoicePicker.tsx';
 import { InfoTip } from '../ui/InfoTip.tsx';
 
@@ -15,6 +15,7 @@ const DEFAULT = '';
 export interface DefaultsDraft {
   provider: ProviderId | null;
   model: string | null;
+  effort: string | null;
   agentMode: string | null;
   level: InvolvementLevel | null;
 }
@@ -54,6 +55,11 @@ function ProviderModels({
   });
   const models = provider.connection ? modelChoices(provider.connection, capabilities.data) : [];
   const modes = modeChoices(capabilities.data, draft.agentMode);
+  const efforts = effortOptions(provider, capabilities.data).map(({ id, label, description }) => ({
+    id,
+    label,
+    ...(description ? { description } : {}),
+  }));
   return (
     <>
       <div className="field">
@@ -65,6 +71,17 @@ function ProviderModels({
           onChange={(id) => onChange({ ...draft, model: id || null })}
         />
       </div>
+      {efforts.length > 0 && (
+        <div className="field">
+          <span>Effort</span>
+          <ChoicePicker
+            label="Effort"
+            choices={withDefault(`${provider.name} default`, efforts)}
+            value={draft.effort ?? DEFAULT}
+            onChange={(id) => onChange({ ...draft, effort: id || null })}
+          />
+        </div>
+      )}
       <div className="field">
         <span>Mode</span>
         <ChoicePicker
@@ -97,6 +114,7 @@ export function TeammateDefaults({ draft, providers, onChange }: TeammateDefault
               ...draft,
               provider: connected.find((entry) => entry.id === id)?.id ?? null,
               model: null,
+              effort: null,
               agentMode: null,
             })
           }

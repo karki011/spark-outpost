@@ -27,13 +27,14 @@ export function pickFor(h: Handoff, spark: MentionableSpark) {
   const { input } = h;
   const own = spark.provider !== null && spark.connected && h.deps.providers.has(spark.provider);
   if (!own || spark.provider === input.provider) {
+    const same = spark.provider === input.provider;
     return {
       provider: input.provider,
-      model: (spark.provider === input.provider ? spark.model : null) ?? input.settings.model,
-      effort: input.settings.effort,
+      model: (same ? spark.model : null) ?? input.settings.model,
+      effort: (same ? spark.effort : null) ?? input.settings.effort,
     };
   }
-  return { provider: spark.provider!, model: spark.model, effort: null };
+  return { provider: spark.provider!, model: spark.model, effort: spark.effort };
 }
 
 export function hasProject(input: RunInput): boolean {

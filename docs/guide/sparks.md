@@ -13,7 +13,7 @@ Make a named teammate, give it skills and hand it jobs. About 3 minutes.
 1. Select **Sparks** in the left bar. On a phone, open **More**, then **Sparks**.
 2. On **Crew**, select **New Spark**, or **Add** on a suggestion such as **Pip · Code reviewer**.
 3. Type a **Name** and **Role**; **Change look** picks the blob.
-4. Pick the **Provider**, **Model**, **Mode**, **Spark autonomy** and **Default project**.
+4. Pick the **Provider**, **Model**, **Effort**, **Mode**, **Spark autonomy** and **Default project**.
 5. Select **Create Spark**. It opens on **Details**.
 
 ## Give it instructions and skills
