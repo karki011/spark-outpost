@@ -262,7 +262,7 @@ describe('builder chat', () => {
       mode: 'do',
     } as unknown as RunInput;
     const facts = await chatPromptFacts(t.db, input);
-    expect(facts.builderChat).toBe(true);
+    expect(facts.builderChat).toEqual({ spark: null });
     expect(chatPrompt(facts)).toContain('Builder chat');
     const scope = { conversationId, runId, readOnly: false };
     expect(await crewReadRefusal(t.db, scope)).toBeNull();

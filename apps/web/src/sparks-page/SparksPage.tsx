@@ -11,7 +11,7 @@ import { useTeammates } from '../teammates/use-teammates.ts';
 import { DocLink } from '../ui/DocLink.tsx';
 import { PlusIcon, SparkleIcon } from '../ui/icons.tsx';
 import { PageTabs } from '../ui/PageTabs.tsx';
-import { BuilderDock } from './BuilderDock.tsx';
+import { BuilderDock, type DockSpark } from './BuilderDock.tsx';
 import { BuilderDrafts } from './BuilderDrafts.tsx';
 import { CrewTab } from './CrewTab.tsx';
 import { SparkDetail, type DetailTab } from './SparkDetail.tsx';
@@ -25,16 +25,25 @@ import { useWorkflowCount, WorkflowsTab } from './WorkflowsTab.tsx';
 interface WithBuilderProps {
   open: boolean;
   chatId: string | null;
+  spark?: DockSpark | null;
   onChat(chatId: string | null): void;
   onClose(): void;
   children: ReactNode;
 }
 
-function WithBuilder({ open, chatId, onChat, onClose, children }: WithBuilderProps) {
+function WithBuilder({ open, chatId, spark = null, onChat, onClose, children }: WithBuilderProps) {
   return (
     <>
       {children}
-      {open && <BuilderDock chatId={chatId} onChat={onChat} onClose={onClose} />}
+      {open && (
+        <BuilderDock
+          key={spark?.id ?? 'crew'}
+          chatId={chatId}
+          spark={spark}
+          onChat={onChat}
+          onClose={onClose}
+        />
+      )}
     </>
   );
 }
@@ -48,10 +57,12 @@ export function SparksPage() {
   const [detailTab, setDetailTab] = useState<DetailTab>('details');
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builderChatId, setBuilderChatId] = useState<string | null>(null);
+  const [sparkChat, setSparkChat] = useState(false);
   const closeBuilder = useCallback(() => {
     setBuilderOpen(false);
     setBuilderChatId(null);
   }, []);
+  const closeSparkChat = useCallback(() => setSparkChat(false), []);
   const review = useCallback((draft: CrewDraft) => {
     if (!draft.inBuilder) {
       requestChat(draft.conversationId);
@@ -63,6 +74,7 @@ export function SparksPage() {
   const open = useCallback((sparkId: string | null) => {
     setTab('crew');
     setDetailTab('details');
+    setSparkChat(false);
     setOpenId(sparkId);
   }, []);
   useSparksPageRequests(
@@ -83,20 +95,27 @@ export function SparksPage() {
 
   const builder = builderOpen && !remote;
   if (spark) {
+    const chatAbout = sparkChat && !remote;
     return (
       <WithBuilder
-        open={builder}
-        chatId={builderChatId}
-        onChat={setBuilderChatId}
-        onClose={closeBuilder}
+        open={builder || chatAbout}
+        chatId={chatAbout ? null : builderChatId}
+        spark={chatAbout ? { id: spark.id, name: spark.name } : null}
+        onChat={chatAbout ? () => {} : setBuilderChatId}
+        onClose={chatAbout ? closeSparkChat : closeBuilder}
       >
         <main className="main sparks" aria-label={`Spark ${spark.name}`}>
           <SparkDetail
             spark={spark}
             tab={detailTab}
             remote={remote}
+            chatOpen={chatAbout}
             onTab={setDetailTab}
-            onBack={() => setOpenId(null)}
+            onChat={() => {
+              if (!sparkChat) closeBuilder();
+              setSparkChat(!sparkChat);
+            }}
+            onBack={() => open(null)}
           />
         </main>
       </WithBuilder>

@@ -1,5 +1,5 @@
 import { basename } from 'node:path';
-import { isBuilderChat } from '../crew-flows/builder-chat.ts';
+import { builderChatScope } from '../crew-flows/builder-chat.ts';
 import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
@@ -48,7 +48,7 @@ export async function chatPromptFacts(
     outpostNeeds(db, { conversationId, runId }),
     known ?? sparkPreferences(db, input.workspaceId),
     storyTaskOf(db, conversationId),
-    isBuilderChat(db, conversationId),
+    builderChatScope(db, conversationId),
   ]);
   return {
     project,

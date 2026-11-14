@@ -1,9 +1,11 @@
+import { useEffect } from 'react';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CrewFile, SaveCrewFile } from '@spark-outpost/contracts';
 import { ApiError } from '../api/client.ts';
 import { crewFileKeys, crewFilesApi } from './crew-files-api.ts';
 
 const FOLDER_FRESH_MS = 30_000;
+const FOLLOW_MS = 4_000;
 
 export function useSparkFolder(sparkId: string, enabled = true) {
   return useQuery({
@@ -12,6 +14,23 @@ export function useSparkFolder(sparkId: string, enabled = true) {
     staleTime: FOLDER_FRESH_MS,
     enabled,
   });
+}
+
+export function useFollowSparkFolder(sparkId: string, following: boolean) {
+  const client = useQueryClient();
+  const folder = useQuery({
+    queryKey: crewFileKeys.folder(sparkId),
+    queryFn: () => crewFilesApi.folder(sparkId),
+    staleTime: FOLDER_FRESH_MS,
+    enabled: following,
+    refetchInterval: following ? FOLLOW_MS : false,
+  });
+  const updated = folder.dataUpdatedAt;
+  useEffect(() => {
+    if (following && updated > 0) {
+      void client.invalidateQueries({ queryKey: crewFileKeys.files(sparkId) });
+    }
+  }, [client, following, sparkId, updated]);
 }
 
 export function useSkillCounts(sparkIds: readonly string[], enabled: boolean) {

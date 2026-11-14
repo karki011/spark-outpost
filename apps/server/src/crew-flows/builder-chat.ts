@@ -20,6 +20,12 @@ export class BuilderChatNotFoundError extends Error {
   }
 }
 
+export class BuilderSparkNotFoundError extends Error {
+  constructor() {
+    super('That Spark no longer exists.');
+  }
+}
+
 export class BuilderChatTakenError extends Error {
   constructor() {
     super('That id belongs to another chat.');
@@ -44,6 +50,8 @@ const DONE_EXPIRED = `${DONE}
   AND b.done_at < now() - make_interval(hours => ${BUILDER_KEEP_HOURS})
   AND NOT ${BUSY_RUN}`;
 
+const SPARK_GONE = `b.for_spark AND b.spark_id IS NULL AND NOT ${BUSY_RUN}`;
+
 const ABANDONED = `NOT (${DONE})
   AND ${LAST_ACTIVITY} < now() - make_interval(days => $2)
   AND NOT ${BUSY_RUN}
@@ -60,9 +68,10 @@ interface BuilderRow {
   created_at: Date;
   done_at: Date | null;
   done: boolean;
+  spark_id: string | null;
 }
 
-const SELECT_ROW = `SELECT b.conversation_id, b.created_at, b.done_at, (${DONE}) AS done
+const SELECT_ROW = `SELECT b.conversation_id, b.created_at, b.done_at, (${DONE}) AS done, b.spark_id
   FROM crew_builder_chats b`;
 
 function toBuilderChat(row: BuilderRow): BuilderChat {
@@ -74,6 +83,7 @@ function toBuilderChat(row: BuilderRow): BuilderChat {
     removeAt: doneAt
       ? new Date(doneAt.getTime() + BUILDER_KEEP_HOURS * 3_600_000).toISOString()
       : null,
+    sparkId: row.spark_id,
   };
 }
 
@@ -90,17 +100,33 @@ async function builderRow(
   return rows[0] ?? null;
 }
 
-export async function isBuilderChat(db: Queryable, conversationId: string): Promise<boolean> {
-  const { rowCount } = await db.query(
-    'SELECT 1 FROM crew_builder_chats WHERE conversation_id = $1 AND removed_at IS NULL',
+export interface BuilderChatScope {
+  spark: { id: string; name: string } | null;
+}
+
+export async function builderChatScope(
+  db: Queryable,
+  conversationId: string,
+): Promise<BuilderChatScope | null> {
+  const { rows } = await db.query<{ spark_id: string | null; name: string | null }>(
+    `SELECT b.spark_id, t.name FROM crew_builder_chats b
+     LEFT JOIN teammates t ON t.id = b.spark_id
+     WHERE b.conversation_id = $1 AND b.removed_at IS NULL`,
     [conversationId],
   );
-  return rowCount === 1;
+  const row = rows[0];
+  if (!row) return null;
+  return { spark: row.spark_id && row.name ? { id: row.spark_id, name: row.name } : null };
+}
+
+export async function isBuilderChat(db: Queryable, conversationId: string): Promise<boolean> {
+  return (await builderChatScope(db, conversationId)) !== null;
 }
 
 export async function currentBuilderChat(
   deps: BuilderChatDeps,
   id?: string,
+  sparkId?: string,
 ): Promise<BuilderChat | null> {
   if (id) {
     const row = await builderRow(deps.db, deps.workspaceId, id);
@@ -110,27 +136,45 @@ export async function currentBuilderChat(
   const { rows } = await deps.db.query<BuilderRow>(
     `${SELECT_ROW}
      WHERE b.workspace_id = $1 AND b.removed_at IS NULL
+       AND ${sparkId ? 'b.spark_id = $2' : 'NOT b.for_spark'}
      ORDER BY b.created_at DESC LIMIT 1`,
-    [deps.workspaceId],
+    sparkId ? [deps.workspaceId, sparkId] : [deps.workspaceId],
   );
   return rows[0] ? toBuilderChat(rows[0]) : null;
 }
 
-export async function startBuilderChat(deps: BuilderChatDeps, id: string): Promise<BuilderChat> {
+async function sparkName(client: Queryable, workspaceId: string, sparkId: string) {
+  const { rows } = await client.query<{ name: string }>(
+    'SELECT name FROM teammates WHERE id = $1 AND workspace_id = $2',
+    [sparkId, workspaceId],
+  );
+  if (!rows[0]) throw new BuilderSparkNotFoundError();
+  return rows[0].name;
+}
+
+export async function startBuilderChat(
+  deps: BuilderChatDeps,
+  id: string,
+  sparkId?: string,
+): Promise<BuilderChat> {
   return withTransaction(deps.db, async (client) => {
     await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`builder:${id}`]);
     const known = await builderRow(client, deps.workspaceId, id);
     if (known) return toBuilderChat(known);
     const taken = await client.query('SELECT 1 FROM conversations WHERE id = $1', [id]);
     if (taken.rowCount) throw new BuilderChatTakenError();
-    await createConversation(client, deps.workspaceId, id, { title: BUILDER_TITLE });
+    const title = sparkId
+      ? `Change ${await sparkName(client, deps.workspaceId, sparkId)}`
+      : BUILDER_TITLE;
+    await createConversation(client, deps.workspaceId, id, { title });
     await client.query('UPDATE conversations SET kind = $2 WHERE id = $1', [
       id,
       TEST_RUN_CHAT_KIND,
     ]);
     await client.query(
-      'INSERT INTO crew_builder_chats (conversation_id, workspace_id) VALUES ($1, $2)',
-      [id, deps.workspaceId],
+      `INSERT INTO crew_builder_chats (conversation_id, workspace_id, for_spark, spark_id)
+       VALUES ($1, $2, $3, $4)`,
+      [id, deps.workspaceId, Boolean(sparkId), sparkId ?? null],
     );
     const row = await builderRow(client, deps.workspaceId, id);
     if (!row) throw new BuilderChatNotFoundError();
@@ -155,7 +199,7 @@ async function dueChats(deps: BuilderChatDeps): Promise<string[]> {
   const { rows } = await deps.db.query<{ id: string }>(
     `SELECT c.id FROM crew_builder_chats b JOIN conversations c ON c.id = b.conversation_id
      WHERE b.workspace_id = $1 AND b.removed_at IS NULL
-       AND ((${DONE_EXPIRED}) OR ($2::int IS NOT NULL AND ${ABANDONED}))`,
+       AND ((${DONE_EXPIRED}) OR (${SPARK_GONE}) OR ($2::int IS NOT NULL AND ${ABANDONED}))`,
     [deps.workspaceId, days],
   );
   return rows.map((row) => row.id);

@@ -13,18 +13,32 @@ const DONE_POLL_MS = 10_000;
 const BUILDER_INTRO =
   'Say what Spark or workflow you want. The agent reads your crew and proposes each change as a card you allow here.';
 
-function useBuilderChat(chatId: string | null, onChat: (id: string | null) => void) {
+export interface DockSpark {
+  id: string;
+  name: string;
+}
+
+function sparkIntro(name: string): string {
+  return `Ask to add a skill, change a script or edit ${name}’s instructions. The agent proposes each change as a card you allow here.`;
+}
+
+function useBuilderChat(
+  chatId: string | null,
+  sparkId: string | null,
+  onChat: (id: string | null) => void,
+) {
   const client = useQueryClient();
   const current = useQuery({
-    queryKey: builderKeys.current(chatId),
-    queryFn: () => builderApi.current(chatId),
+    queryKey: builderKeys.current(chatId, sparkId),
+    queryFn: () => builderApi.current(chatId, sparkId),
     refetchInterval: (query) => (query.state.data?.doneAt ? DONE_POLL_MS : false),
   });
-  const keep = (chat: BuilderChat) => client.setQueryData(builderKeys.current(chatId), chat);
+  const keep = (chat: BuilderChat) =>
+    client.setQueryData(builderKeys.current(chatId, sparkId), chat);
   const start = useMutation({
-    mutationFn: builderApi.start,
+    mutationFn: (id: string) => builderApi.start(id, sparkId),
     onSuccess: (chat) => {
-      client.setQueryData(builderKeys.current(null), chat);
+      client.setQueryData(builderKeys.current(null, sparkId), chat);
       onChat(null);
     },
   });
@@ -60,13 +74,14 @@ function doneLine(chat: BuilderChat): string {
 
 interface DockControlsProps {
   chat: BuilderChat;
+  closeLabel: string;
   busy: boolean;
   onDone(): void;
   onNew(): void;
   onClose(): void;
 }
 
-function DockControls({ chat, busy, onDone, onNew, onClose }: DockControlsProps) {
+function DockControls({ chat, closeLabel, busy, onDone, onNew, onClose }: DockControlsProps) {
   return (
     <span className="bld-controls">
       {chat.doneAt ? (
@@ -81,8 +96,8 @@ function DockControls({ chat, busy, onDone, onNew, onClose }: DockControlsProps)
       <button
         type="button"
         className="icon-btn"
-        aria-label="Close builder chat"
-        title="Close builder chat"
+        aria-label={closeLabel}
+        title={closeLabel}
         onClick={onClose}
       >
         <XIcon />
@@ -101,12 +116,16 @@ function Shell({ children, label }: { children: ReactNode; label: string }) {
 
 interface BuilderDockProps {
   chatId: string | null;
+  spark?: DockSpark | null;
   onChat(chatId: string | null): void;
   onClose(): void;
 }
 
-export function BuilderDock({ chatId, onChat, onClose }: BuilderDockProps) {
-  const { current, start, done } = useBuilderChat(chatId, onChat);
+export function BuilderDock({ chatId, spark = null, onChat, onClose }: BuilderDockProps) {
+  const { current, start, done } = useBuilderChat(chatId, spark?.id ?? null, onChat);
+  const label = spark ? `Chat about ${spark.name}` : 'Builder chat';
+  const closeLabel = spark ? `Close the chat about ${spark.name}` : 'Close builder chat';
+  const intro = spark ? sparkIntro(spark.name) : BUILDER_INTRO;
   const dock = useRef<HTMLDivElement>(null);
   const focused = useDockFocus(dock);
   const chat = current.data ?? null;
@@ -118,12 +137,13 @@ export function BuilderDock({ chatId, onChat, onClose }: BuilderDockProps) {
       split: true,
       focused,
       idSuffix: '-builder',
-      name: 'Builder chat',
+      name: label,
       landmark: 'section',
-      intro: BUILDER_INTRO,
+      intro,
       closer: chat ? (
         <DockControls
           chat={chat}
+          closeLabel={closeLabel}
           busy={busy}
           onDone={() => markDone(chat.conversationId)}
           onNew={() => startNew(crypto.randomUUID())}
@@ -131,18 +151,18 @@ export function BuilderDock({ chatId, onChat, onClose }: BuilderDockProps) {
         />
       ) : null,
     }),
-    [focused, chat, busy, markDone, startNew, onClose],
+    [focused, chat, label, closeLabel, intro, busy, markDone, startNew, onClose],
   );
   const problem = current.error ?? start.error ?? done.error;
 
   if (!chat) {
     return (
-      <Shell label="Builder chat">
+      <Shell label={label}>
         <div className="bld-wait" aria-busy={!problem}>
           {problem ? (
             <p role="alert">{problem.message || 'The builder chat didn’t open.'}</p>
           ) : (
-            <p>Opening the builder chat…</p>
+            <p>Opening the chat…</p>
           )}
           <button type="button" className="btn sm" onClick={onClose}>
             Close
@@ -152,7 +172,7 @@ export function BuilderDock({ chatId, onChat, onClose }: BuilderDockProps) {
     );
   }
   return (
-    <Shell label="Builder chat">
+    <Shell label={label}>
       <div ref={dock} className="bld-pane">
         {chat.doneAt && (
           <p className="bld-done" role="status">

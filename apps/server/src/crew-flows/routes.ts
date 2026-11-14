@@ -15,6 +15,7 @@ import { requestCancel } from '../persistence/runs.ts';
 import {
   BuilderChatNotFoundError,
   BuilderChatTakenError,
+  BuilderSparkNotFoundError,
   currentBuilderChat,
   markBuilderDone,
   startBuilderChat,
@@ -57,6 +58,7 @@ export function workflowErrorStatus(error: unknown): { status: number; message: 
     error instanceof WorkflowRunNotFoundError ||
     error instanceof TestRunNotFoundError ||
     error instanceof BuilderChatNotFoundError ||
+    error instanceof BuilderSparkNotFoundError ||
     error instanceof SparkNotFoundError
   ) {
     return { status: 404, message: error.message };
@@ -175,13 +177,14 @@ export function workflowRoutes(deps: WorkflowRouteDeps): Router {
 
   router.get('/crew/builder', async (req, res) => {
     const id = z.uuid().optional().safeParse(req.query.id);
-    if (!id.success) throw new BuilderChatNotFoundError();
-    res.json({ chat: await currentBuilderChat(runs, id.data) });
+    const spark = z.uuid().optional().safeParse(req.query.spark);
+    if (!id.success || !spark.success) throw new BuilderChatNotFoundError();
+    res.json({ chat: await currentBuilderChat(runs, id.data, spark.data) });
   });
 
   router.post('/crew/builder', async (req, res) => {
-    const { id } = parseBody(startBuilderChatSchema, req);
-    res.status(201).json(await startBuilderChat(runs, id));
+    const { id, sparkId } = parseBody(startBuilderChatSchema, req);
+    res.status(201).json(await startBuilderChat(runs, id, sparkId));
   });
 
   router.get('/crew/drafts', async (_req, res) => {

@@ -19,7 +19,7 @@ export interface ChatPromptFacts {
   level: InvolvementLevel;
   asksWithTool?: boolean;
   assignedWork?: boolean;
-  builderChat?: boolean;
+  builderChat?: { spark: { id: string; name: string } | null };
   customInstructions: string | null;
 }
 
@@ -76,7 +76,7 @@ export function chatPrompt(facts: ChatPromptFacts): string {
   const where = facts.project ? whereLines(facts.project) : [];
   const sections = [
     [text.INTRO, ...where].join('\n'),
-    ...(facts.builderChat ? [text.BUILDER] : []),
+    ...(facts.builderChat ? [text.builderNote(facts.builderChat.spark)] : []),
     splitSection(facts),
     text.ENGINEERING,
     text.REPORTING,

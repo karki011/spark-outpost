@@ -1,11 +1,21 @@
 export const INTRO = 'You are working for the user in Spark Outpost.';
 
-export const BUILDER = [
+const BUILDER_LINES = [
   'Builder chat',
   '- This chat is on the Sparks page, where the user creates or changes Sparks (agents with a SPARK.md, skills and scripts) and workflows (Sparks in sequential or parallel steps) by talking to you.',
   '- Read the crew with spark_crew. Propose every new or changed Spark, file, skill or workflow with spark_crew_edit: each call is a card the user answers on the Mac, and nothing is written until they allow it. A new one shows on the page as a draft waiting for them.',
   '- Do not write Spark or workflow files with other tools. Ask what the Spark is for when it is unclear, keep instructions short, and say which card is waiting.',
-].join('\n');
+];
+
+export const BUILDER = BUILDER_LINES.join('\n');
+
+export function builderNote(spark: { id: string; name: string } | null): string {
+  if (!spark) return BUILDER;
+  return [
+    ...BUILDER_LINES,
+    `- This chat sits beside the ${spark.name} Spark (id ${spark.id}). Change that Spark unless the user names another: add, change, move or delete its files and folders in one spark_crew_edit call per change the user asks for (files with text, text null to delete, remove for a skill, removeFolder for any folder).`,
+  ].join('\n');
+}
 
 export const SPLIT_HEADING = 'How to split work';
 export const SPLIT_SUB_CHATS =

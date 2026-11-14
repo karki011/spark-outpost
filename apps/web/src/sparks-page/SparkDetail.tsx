@@ -1,11 +1,11 @@
 import { useId } from 'react';
 import type { TeammateView } from '@spark-outpost/contracts';
 import { TeammateFace } from '../teammates/TeammateFace.tsx';
-import { BackIcon } from '../ui/icons.tsx';
+import { BackIcon, SparkleIcon } from '../ui/icons.tsx';
 import { PageTabs } from '../ui/PageTabs.tsx';
 import { SparkDetails, SparkSummary } from './SparkDetails.tsx';
 import { SparkFiles } from './SparkFiles.tsx';
-import { useSparkFolder } from './use-crew-files.ts';
+import { useFollowSparkFolder, useSparkFolder } from './use-crew-files.ts';
 
 export type DetailTab = 'details' | 'files';
 
@@ -13,13 +13,24 @@ interface SparkDetailProps {
   spark: TeammateView;
   tab: DetailTab;
   remote: boolean;
+  chatOpen: boolean;
   onTab: (tab: DetailTab) => void;
+  onChat: () => void;
   onBack: () => void;
 }
 
-export function SparkDetail({ spark, tab, remote, onTab, onBack }: SparkDetailProps) {
+export function SparkDetail({
+  spark,
+  tab,
+  remote,
+  chatOpen,
+  onTab,
+  onChat,
+  onBack,
+}: SparkDetailProps) {
   const titleId = useId();
   const folder = useSparkFolder(spark.id, !remote);
+  useFollowSparkFolder(spark.id, chatOpen && !remote);
   return (
     <>
       <header className="spk-top">
@@ -27,6 +38,16 @@ export function SparkDetail({ spark, tab, remote, onTab, onBack }: SparkDetailPr
           <button type="button" className="btn ghost sm spk-back" onClick={onBack}>
             <BackIcon /> All Sparks
           </button>
+          {!remote && (
+            <button
+              type="button"
+              className="btn sm spk-new-spark"
+              aria-pressed={chatOpen}
+              onClick={onChat}
+            >
+              <SparkleIcon /> Ask an agent
+            </button>
+          )}
         </div>
         <div className="spk-who">
           <TeammateFace face={spark.face} state={spark.state} size={44} />

@@ -7,13 +7,14 @@ export const builderChatSchema = z.object({
   createdAt: z.iso.datetime({ offset: true }),
   doneAt: z.iso.datetime({ offset: true }).nullable(),
   removeAt: z.iso.datetime({ offset: true }).nullable(),
+  sparkId: z.uuid().nullable(),
 });
 export type BuilderChat = z.infer<typeof builderChatSchema>;
 
 export const currentBuilderChatSchema = z.object({ chat: builderChatSchema.nullable() });
 export type CurrentBuilderChat = z.infer<typeof currentBuilderChatSchema>;
 
-export const startBuilderChatSchema = z.object({ id: z.uuid() });
+export const startBuilderChatSchema = z.object({ id: z.uuid(), sparkId: z.uuid().optional() });
 export type StartBuilderChat = z.infer<typeof startBuilderChatSchema>;
 
 export const crewDraftSchema = z.object({
