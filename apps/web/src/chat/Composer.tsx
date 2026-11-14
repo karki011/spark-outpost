@@ -41,7 +41,7 @@ import { ComposerShell, composerRows } from './composer/ComposerShell.tsx';
 import { MicButton } from '../voice/MicButton.tsx';
 import { useDictationDraft } from '../voice/use-dictation-draft.ts';
 import { useVoicePressTarget } from '../voice/press-target.ts';
-import { usePaneFocused } from './split/chat-pane.ts';
+import { useChatPane, usePaneFocused } from './split/chat-pane.ts';
 import {
   composerHint,
   composerPlaceholder,
@@ -94,9 +94,11 @@ export function Composer({
   agentName: givenAgentName,
   autoFocus = true,
   sessionChip = null,
-  noProject = false,
+  noProject: noFolder = false,
   quotes,
 }: ComposerProps) {
+  const crewChat = useChatPane().crewChat === true;
+  const noProject = noFolder || crewChat;
   const [draft, setDraft] = useChatDraft(conversationId);
   const [repoOpen, setRepoOpen] = useState(false);
   const [formatting, setFormatting] = useState(false);
@@ -318,7 +320,7 @@ export function Composer({
               }
             />
           )}
-          {sessionChip}
+          {!crewChat && sessionChip}
           <span className="comp-foot-end">
             <ContextRing
               conversationId={conversationId}

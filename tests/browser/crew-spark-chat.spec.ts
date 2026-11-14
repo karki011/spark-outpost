@@ -31,6 +31,8 @@ test('a Spark has its own agent chat in the right sidebar', async ({ page }) => 
   await ask.click();
   await expect(ask).toHaveAttribute('aria-pressed', 'true');
   await expect(dock(page)).toContainText('edit Scribe’s instructions');
+  await expect(dock(page)).not.toContainText('Choose project');
+  await expect(dock(page)).not.toContainText('Talk to');
   const input = dock(page).getByRole('textbox', { name: 'Message' });
   await input.fill('Add a changelog skill');
   await input.press('Enter');
