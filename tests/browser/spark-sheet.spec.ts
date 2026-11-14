@@ -244,7 +244,7 @@ test('points standing instructions at a file with the themed picker @packaged', 
   await expect(picker.locator('.fdlg-path')).toHaveText(roles);
   await files.getByRole('button', { name: /reviewer\.md/ }).dblclick();
   await expect(card.getByLabel('File preview')).toContainText('Name the file and line.');
-  await form.getByRole('textbox', { name: 'Standing instructions' }).fill('Typed fallback.');
+  await form.getByRole('textbox', { name: 'Instructions', exact: true }).fill('Typed fallback.');
   await page.screenshot({ path: `${SHOTS}/spark-sheet-instructions-file.png` });
   const sheetScan = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
@@ -275,7 +275,7 @@ test('points standing instructions at a file with the themed picker @packaged', 
 test('picks any folder as the default project from the sheet', async ({ page }) => {
   const form = await openNewSpark(page);
   await form.getByRole('textbox', { name: 'Name' }).fill('Bolt');
-  await form.getByRole('button', { name: 'Default project' }).click();
+  await form.getByRole('button', { name: 'Default project', exact: true }).click();
   await page
     .getByRole('menu', { name: 'Default project' })
     .getByRole('menuitem', { name: ADD_FOLDER })
@@ -285,8 +285,10 @@ test('picks any folder as the default project from the sheet', async ({ page }) 
   await picker.getByRole('button', { name: 'Use this folder' }).click();
   await expect(picker).toHaveCount(0);
   await keepPlainFolder(page, 'webapp');
-  await expect(form.getByRole('button', { name: 'Default project' })).toContainText('webapp');
-  await expect(form.getByRole('button', { name: 'Default project' })).toBeFocused();
+  await expect(form.getByRole('button', { name: 'Default project', exact: true })).toContainText(
+    'webapp',
+  );
+  await expect(form.getByRole('button', { name: 'Default project', exact: true })).toBeFocused();
 
   await form.getByRole('button', { name: 'Create Spark' }).click();
   await expect(form).toHaveCount(0);

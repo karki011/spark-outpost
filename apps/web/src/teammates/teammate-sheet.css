@@ -136,18 +136,6 @@
   line-height: 1.5;
 }
 
-.tm-count {
-  display: block;
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
-.tm-count.over {
-  color: var(--danger);
-}
-
 .tm-danger {
   margin-top: 8px;
   padding-top: 16px;

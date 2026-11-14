@@ -1,5 +1,4 @@
 import {
-  TEAMMATE_INSTRUCTIONS_MAX,
   createTeammateRequestSchema,
   faceFromName,
   type CreateTeammateRequest,
@@ -59,9 +58,6 @@ export function shownFace(draft: TeammateDraft): TeammateFace {
 }
 
 export function draftProblem(draft: TeammateDraft): string | null {
-  if (draft.instructions.trim().length > TEAMMATE_INSTRUCTIONS_MAX) {
-    return `Keep standing instructions to ${TEAMMATE_INSTRUCTIONS_MAX} characters.`;
-  }
   const parsed = createTeammateRequestSchema.safeParse(createRequest(draft));
   return parsed.success ? null : (parsed.error.issues[0]?.message ?? 'Check the details.');
 }

@@ -83,7 +83,6 @@ export function TeammateInstructions({
   const id = useId();
   const browseRef = useRef<HTMLButtonElement>(null);
   const [browsing, setBrowsing] = useState(false);
-  const used = instructions.length;
   const close = () => {
     setBrowsing(false);
     browseRef.current?.focus();
@@ -92,13 +91,13 @@ export function TeammateInstructions({
     <div className="field">
       <div className="tm-instructions-h">
         <span>
-          <label htmlFor={`${id}-text`}>Standing instructions</label>{' '}
+          <label htmlFor={`${id}-text`}>Instructions</label>{' '}
           <InfoTip
-            topic="Standing instructions"
+            topic="Instructions"
             text={
               path
                 ? 'The file is read at the start of each chat and used instead of this text. This text is the fallback if the file can’t be read.'
-                : 'Added to every chat with this Spark as your own instructions. Type them here or point to a file; a file is used instead of typed text.'
+                : 'Kept in SPARK.md in this Spark’s folder, with no length limit, and added to every chat with it as your own instructions. Or point to a file; a file is used instead of typed text.'
             }
           />
         </span>
@@ -119,15 +118,8 @@ export function TeammateInstructions({
         rows={path ? 3 : 6}
         value={instructions}
         placeholder="Review for bugs and missing tests. Point to the file and line."
-        aria-describedby={`${id}-count`}
         onChange={(event) => onInstructions(event.target.value)}
       />
-      <small
-        id={`${id}-count`}
-        className={used > TEAMMATE_INSTRUCTIONS_MAX ? 'tm-count over' : 'tm-count'}
-      >
-        {used} / {TEAMMATE_INSTRUCTIONS_MAX}
-      </small>
       <AnimatePresence>
         {browsing && (
           <FolderDialog

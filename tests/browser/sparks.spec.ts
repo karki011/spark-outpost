@@ -91,12 +91,11 @@ test('create a Spark, open its home thread and see its face in the chat', async 
   await form.getByRole('radio', { name: 'Plum' }).click();
   await form.getByRole('button', { name: 'Provider' }).click();
   await page.getByRole('menuitemradio', { name: 'Claude' }).click();
-  await form.getByRole('button', { name: 'Spark autonomy' }).click();
+  await form.getByRole('button', { name: 'Spark autonomy', exact: true }).click();
   await page.getByRole('menuitemradio', { name: /Full auto → PR/ }).click();
   await form
-    .getByRole('textbox', { name: 'Standing instructions' })
+    .getByRole('textbox', { name: 'Instructions', exact: true })
     .fill('Check the changelog and version before every release.');
-  await expect(form).toContainText('53 / 2000');
   await page.screenshot({ path: `${SHOTS}/create-sheet.png` });
   await form.getByRole('button', { name: 'Create Spark' }).click();
   await expect(form).toHaveCount(0);
