@@ -8,6 +8,7 @@ import {
   contextSteps,
   conversationBlocks,
   conversationPrompt,
+  chatFolderNote,
   doProjectNote,
   projectNote,
 } from './conversation-prompt.ts';
@@ -86,12 +87,14 @@ describe('conversation prompt', () => {
     expect(first?.type === 'text' && first.text.startsWith(note)).toBe(true);
   });
 
-  it('lets Ask and Do turns read the crew folders but never change them', () => {
+  it('lets every chat turn with tools read the crew folders but never change them', () => {
     const crew = ['/data/sparks', '/data/workflows'];
-    for (const note of [
+    const notes = [
       projectNote(['/work/app'], true, crew),
       doProjectNote(['/work/app'], crew),
-    ]) {
+      chatFolderNote('/data/chats/1/work', true, crew),
+    ];
+    for (const note of notes) {
       expect(note).toContain(
         'you may read files in /data/sparks, /data/workflows, but never change them',
       );

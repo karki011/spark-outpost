@@ -59,11 +59,15 @@ export function doProjectNote(roots: readonly string[], readOnly: readonly strin
   return `You are working in a Spark Outpost chat linked to the project folder ${primary} (your working directory) in Do mode. You may read and change files and run commands inside the linked folders. Spark Outpost asks the user before each action their settings require, so a request may wait or be denied; if an action is denied, do not retry it another way, explain what you could not do. Do not read or change files outside the linked folders.${readOnlyNote(readOnly)}${extra} Reply in plain text and Markdown.`;
 }
 
-export function chatFolderNote(folder: string, changes: boolean): string {
+export function chatFolderNote(
+  folder: string,
+  changes: boolean,
+  readOnly: readonly string[] = [],
+): string {
   const may = changes
     ? 'You may read and change files and run commands inside it.'
     : 'You may read files inside it; you must not create, change, or delete files.';
-  return `You are working in a Spark Outpost chat with no project. Your working directory ${folder} is this chat's own private folder, not the user's code. ${may} Files you create there are shown to the user as attachments of this turn, so save anything they asked for (a CSV, an image, a document) as a file. It is not a git repository and nothing in it is pushed. Spark Outpost asks the user before each action their settings require. Do not read or change files outside this folder. Reply in plain text and Markdown.`;
+  return `You are working in a Spark Outpost chat with no project. Your working directory ${folder} is this chat's own private folder, not the user's code. ${may} Files you create there are shown to the user as attachments of this turn, so save anything they asked for (a CSV, an image, a document) as a file. It is not a git repository and nothing in it is pushed. Spark Outpost asks the user before each action their settings require. Do not read or change files outside this folder.${readOnlyNote(readOnly)} Reply in plain text and Markdown.`;
 }
 
 export interface PromptOptions {
@@ -169,7 +173,7 @@ function conversationParts(
   const { kept, omitted } = keptHistory(history, budget);
   const roots = options.projectRoots ?? [];
   const projectIntro = options.chatFolder
-    ? chatFolderNote(roots[0] ?? '', options.changesAllowed === true)
+    ? chatFolderNote(roots[0] ?? '', options.changesAllowed === true, options.readOnlyFolders)
     : options.changesAllowed
       ? doProjectNote(roots, options.readOnlyFolders)
       : projectNote(roots, options.commandsAllowed === true, options.readOnlyFolders);
