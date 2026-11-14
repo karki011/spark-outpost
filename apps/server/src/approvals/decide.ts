@@ -46,6 +46,12 @@ import {
   touchesBrowserData,
   touchesSparkRules,
 } from './browser-data.ts';
+import {
+  changesCrewFolders,
+  CREW_FOLDER_REASON,
+  inFolders,
+  inReadableFolder,
+} from './crew-folders.ts';
 import { commandCwd, outsideRoots, place, placedLabel } from './request-place.ts';
 import { alwaysAsk, type RailFound } from './rails.ts';
 import type { ShellScript } from './shell-parse.ts';
@@ -79,6 +85,7 @@ export interface ApprovalRequest {
   agentReason?: string | null;
   subagent?: string | null;
   attachedFiles?: readonly string[];
+  readable?: readonly string[];
 }
 
 export type RunRule =
@@ -99,6 +106,7 @@ export type Decision =
       sendsTo?: string;
       secretSend?: string[];
       secretFiles?: string[];
+      outsideWrite?: true;
     };
 
 export const FS_WRITE_TOOL_KIND = 'write_text_file';
@@ -138,11 +146,13 @@ export interface DecideOptions {
   own?: OwnRepo | null;
   secretSend?: SecretSend;
   instructionGrants?: ReadonlySet<string>;
+  outsideWriteGrant?: boolean;
   shell?: ShellScript | null;
   agentAsks?: boolean;
   publish?: PublishContext;
   sparkRules?: SparkRuleContext;
   browserData?: string | null;
+  crewFolders?: readonly string[];
 }
 
 function asRule(rule: string | null | undefined): FloorRuleId | null {
@@ -203,11 +213,6 @@ function refusal(
   return refused(fixedRefusal(request, options, forced, view)) ?? ownAgent;
 }
 
-function readsOutside(request: ApprovalRequest, target: string): boolean {
-  if (!outsideRoots(request, target)) return false;
-  return !(request.attachedFiles ?? []).includes(path.resolve(target));
-}
-
 function fixedRefusal(
   request: ApprovalRequest,
   options: DecideOptions,
@@ -222,9 +227,6 @@ function fixedRefusal(
   const asking = options.askRun ? askRunChange(request, view) : null;
   if (asking) return asking;
   if (forced?.kind === 'refuse') return forced.reason;
-  if (request.toolKind === 'read' && request.paths.some((p) => readsOutside(request, p))) {
-    return 'Reads outside the project are refused';
-  }
   if (request.kind !== 'edit') return null;
   for (const target of request.paths) {
     const { relative, root } = place(request.roots, target);
@@ -253,6 +255,21 @@ function matchesRule(request: ApprovalRequest, rule: RunRule): boolean {
 }
 
 const ASK: Decision = { verdict: 'ask', reason: null };
+
+export const SPARK_DATA_READ_REASON =
+  "Spark's own data folder can't be read, except the Sparks and workflows folders";
+
+function readsSparkData(request: ApprovalRequest, dataDir: string | null): boolean {
+  if (!dataDir || request.toolKind !== 'read') return false;
+  const attached = request.attachedFiles ?? [];
+  return request.paths.some(
+    (target) =>
+      inFolders(target, [dataDir]) &&
+      outsideRoots(request, target) &&
+      !inReadableFolder(request, target) &&
+      !attached.includes(path.resolve(target)),
+  );
+}
 
 export const UNREADABLE_REASON =
   "Spark couldn't check that this command only reads, and this run only reads";
@@ -302,6 +319,12 @@ function ruledDecide(
   }
   if (touchesSparkRules(request)) {
     return { verdict: 'reject', reason: SPARK_RULES_REASON };
+  }
+  if (readsSparkData(request, browserData)) {
+    return { verdict: 'reject', reason: SPARK_DATA_READ_REASON };
+  }
+  if (changesCrewFolders(request, options.shell ?? null, options.crewFolders)) {
+    return { verdict: 'reject', reason: CREW_FOLDER_REASON };
   }
   const forced = heldForce(
     adoptedForce(
@@ -384,7 +407,8 @@ function byMode(
   const rules = rulesOf(options.sparkRules);
   const railDenied = alwaysAsk(request, files, view, railsWith(rules, 'deny'));
   if (railDenied) return { verdict: 'reject', reason: railDenied.reason, rule: railDenied.rule };
-  const always = alwaysAsk(request, files, view, railsWith(rules, 'ask'));
+  const asking = railsWith(rules, 'ask');
+  const always = alwaysAsk(request, files, view, asking, options.outsideWriteGrant === true);
   if (always) return railAsked(request, always);
   if (runRules.allow.some((rule) => matchesRule(asked, rule))) {
     return { verdict: 'allow', by: 'run_rule' };
@@ -429,6 +453,9 @@ function byMode(
 }
 
 function railAsked(request: ApprovalRequest, asked: RailFound): Decision {
+  if (asked.rail === 'outside_write') {
+    return { verdict: 'ask', reason: asked.reason, outsideWrite: true };
+  }
   if (asked.rail !== 'secret') return { verdict: 'ask', reason: asked.reason };
   const secretFiles = asked.paths.map((target) => placedLabel(request.roots, request.home, target));
   return { verdict: 'ask', reason: asked.reason, secretFiles: [...new Set(secretFiles)] };

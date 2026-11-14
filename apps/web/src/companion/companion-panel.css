@@ -185,6 +185,25 @@
   background: var(--raise);
 }
 
+.cmp-build {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  margin-top: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.cmp-build:hover {
+  background: var(--raise);
+}
+
 .cmp-foot {
   display: flex;
   flex-wrap: wrap;

@@ -110,6 +110,8 @@ describe('what a Spark tools session can use', () => {
       ticket_create: false,
       rules_edit: false,
       plugins_edit: false,
+      crew_read: true,
+      crew_edit: false,
       howTo: {},
     });
   });

@@ -2,6 +2,7 @@ import '../home/home.css';
 import '../home/home-panels.css';
 import './calendar-card.css';
 import './today.css';
+import './today-pages.css';
 import { useCallback, useState } from 'react';
 import { Segmented } from '../ui/Segmented.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
@@ -15,7 +16,7 @@ import { todayState } from './today-model.ts';
 import { localDate, useCalendarStatus } from './use-calendar.ts';
 import { useTodayEventRequests, type TodayEventRequest } from './today-request.ts';
 import { MeetingsView } from './MeetingsView.tsx';
-import { PageTabs } from './PageTabs.tsx';
+import { PageTabs } from '../ui/PageTabs.tsx';
 import { RecordingBar, useMeetingStatus } from '../meetings/index.ts';
 
 type CalendarView = 'month' | 'day';

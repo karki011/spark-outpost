@@ -12,6 +12,7 @@ import {
   FORCE_PUSH_DENY_RULES,
   secretRules,
 } from './agents.ts';
+import { guardedCrewFolders } from '../../approvals/crew-folders.ts';
 import { tempRoots } from '../../approvals/temp-dirs.ts';
 import { CLAUDE_DO_TOOLS, CLAUDE_GATED_TOOLS, CLAUDE_READ_TOOLS } from './claude-tools.ts';
 import { CODEX_DO_MODE, codexPermissionProfiles } from './codex-permissions.ts';
@@ -38,13 +39,13 @@ describe('Claude session options', () => {
   const project = optionsOf(agentDefinitions.claude.projectSessionMeta?.(['/work/lib']));
   const chat = optionsOf(agentDefinitions.claude.conversationSessionMeta?.());
 
-  it('ignores repo and user settings, blocks bypass mode and reads outside the roots', () => {
+  it('ignores repo and user settings, blocks bypass mode and lets a project chat read anywhere', () => {
     for (const options of [project, chat]) {
       expect(options.settingSources).toEqual([]);
       expect(options.allowDangerouslySkipPermissions).toBe(false);
       expect(options.strictMcpConfig).toBe(true);
       expect(options.settings.permissions).toMatchObject({
-        blockReadsOutsideWorkingDirectories: true,
+        blockReadsOutsideWorkingDirectories: false,
         disableBypassPermissionsMode: 'disable',
       });
     }
@@ -58,11 +59,14 @@ describe('Claude session options', () => {
     expect(chat.tools).toEqual(['AskUserQuestion']);
   });
 
-  it('lets Claude read the temp folders Spark treats as scratch, and keeps secret edits there denied', () => {
+  it('lets Claude read the temp folders and the crew folders, and keeps secret edits there denied', () => {
     const doing = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
     for (const options of [project, chat, doing]) {
-      expect(options.settings.permissions.additionalDirectories).toEqual(tempRoots());
-      expect(options.settings.permissions.blockReadsOutsideWorkingDirectories).toBe(true);
+      expect(options.settings.permissions.additionalDirectories).toEqual([
+        ...tempRoots(),
+        ...guardedCrewFolders(),
+      ]);
+      expect(options.settings.permissions.blockReadsOutsideWorkingDirectories).toBe(false);
     }
     expect(tempRoots()).toContain('/tmp');
     expect(doing.disallowedTools).toContain('Edit(//tmp/**/.env)');
@@ -153,7 +157,7 @@ describe('Claude session options', () => {
     ]);
     expect(bashAsks(options)).toEqual([GIT_CONFIG_ASK_RULE]);
     expect(options.settings.permissions).toMatchObject({
-      blockReadsOutsideWorkingDirectories: true,
+      blockReadsOutsideWorkingDirectories: false,
       deny: expect.arrayContaining([...FORCE_PUSH_DENY_RULES, 'Edit(**/.env)']),
     });
     expect(options.settings.permissions).not.toHaveProperty('disableBypassPermissionsMode');

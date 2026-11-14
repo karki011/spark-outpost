@@ -193,6 +193,7 @@ describe('the wrap-up turn in the lead chat', { timeout: 120_000 }, () => {
     expect(wrapUp.outpostRequest).toMatchObject({ wrapUp: true, fromUser: false });
     expect(startBasis({ ...typed, agentMode })).not.toBeNull();
     expect(await publishScope(t.db, { ...typed, agentMode })).not.toBeNull();
+    expect(await publishScope(t.db, { ...typed, agentMode, role: 'spark' })).toBeNull();
     expect(startBasis(wrapUp)).toBeNull();
     expect(await publishScope(t.db, wrapUp)).toBeNull();
   });

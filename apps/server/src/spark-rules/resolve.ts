@@ -37,8 +37,10 @@ export function floorRuling(set: SparkRuleSet, id: FloorRuleId): RuleRuling | nu
   return strongest(TIERS.map((tier) => tierRuling(set[tier], tier, id)));
 }
 
+const FLOOR_DEFAULTS: Partial<Record<FloorRuleId, RuleEffect>> = { WriteOutside: 'ask' };
+
 export function floorEffect(set: SparkRuleSet, id: FloorRuleId): RuleEffect | null {
-  return floorRuling(set, id)?.effect ?? null;
+  return floorRuling(set, id)?.effect ?? FLOOR_DEFAULTS[id] ?? null;
 }
 
 export function ghExactRuling(set: SparkRuleSet, prefix: string): RuleRuling | null {

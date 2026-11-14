@@ -2,6 +2,7 @@ import { conversationProjectIds } from '../agent-config/store.ts';
 import { calendarOffer, meetingsOffer } from './tools/calendar/offered.ts';
 import { macRunRefusal, type MacRefusedRun } from '../mac-control/offered.ts';
 import { rulesRunRefusal, type RulesRefusedRun } from './actions/rules-edit-session.ts';
+import { CREW_HOW_TO, crewReadRefusal } from '../crew/tool-offer.ts';
 import { listProjects } from '../projects/projects.ts';
 import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { gitHubReachability } from '../ship/github/access.ts';
@@ -43,6 +44,8 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   ticket_create: true,
   rules_edit: true,
   plugins_edit: true,
+  crew_read: true,
+  crew_edit: true,
 };
 
 async function chatHasProject(deps: SparkToolDeps, scope: SparkScope): Promise<boolean> {
@@ -100,6 +103,7 @@ export async function sparkAvailability(
     confluence,
     meetings,
     rulesRefused,
+    crewRefused,
   ] = await Promise.all([
     connectedSources(tickets),
     openSlack(slackDepsFor(deps, scope)),
@@ -111,12 +115,14 @@ export async function sparkAvailability(
     productLive(tickets, 'confluence'),
     meetingsOffer(deps, scope),
     rulesRunRefusal(deps.db, scope),
+    crewReadRefusal(deps.db, scope),
   ]);
   const gitHub = await gitHubReach(deps, scope);
   const chat = scope.assistant !== true;
   const macHowTo = macRefused ? MAC_HOW_TO[macRefused] : undefined;
   const rulesHowTo = rulesRefused ? RULES_HOW_TO[rulesRefused] : undefined;
   const pluginsHowTo = rulesRefused ? PLUGINS_HOW_TO[rulesRefused] : undefined;
+  const crewHowTo = crewRefused ? CREW_HOW_TO[crewRefused] : undefined;
   return {
     tickets: sources.length > 0,
     ticket_create: sources.some((open) => open.connection.source !== 'servicenow'),
@@ -136,6 +142,8 @@ export async function sparkAvailability(
     confluence,
     rules_edit: rulesRefused === null,
     plugins_edit: rulesRefused === null,
+    crew_read: crewRefused === null,
+    crew_edit: rulesRefused === null,
     ...outposts,
     howTo: {
       ...(calendar.howTo.read ? { calendar_read: calendar.howTo.read } : {}),
@@ -143,6 +151,7 @@ export async function sparkAvailability(
       ...(macHowTo ? { mac: macHowTo } : {}),
       ...(rulesHowTo ? { rules_edit: rulesHowTo } : {}),
       ...(pluginsHowTo ? { plugins_edit: pluginsHowTo } : {}),
+      ...(crewHowTo ? { crew_read: crewHowTo } : {}),
       ...(gitHub.connected ? { pull_requests: NO_PROJECT_PULL_REQUESTS } : {}),
       ...(chat ? {} : ASK_SPARK_HOW_TO),
     },
@@ -168,6 +177,8 @@ const HOW_TO_GET: Record<
     | 'ticket_create'
     | 'rules_edit'
     | 'plugins_edit'
+    | 'crew_read'
+    | 'crew_edit'
   >,
   string
 > = {

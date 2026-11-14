@@ -8,6 +8,7 @@ const VIEWS: readonly AppView[] = [
   'today',
   'analytics',
   'tickets',
+  'sparks',
   'map',
   'docs',
   'phone',

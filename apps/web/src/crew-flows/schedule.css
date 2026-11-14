@@ -1,0 +1,151 @@
+.wf-sched {
+  gap: 16px;
+}
+
+.wf-sched-switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wf-sched-switch > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wf-sched-switch small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.wf-sched-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.wf-sched-field > label,
+.wf-sched-field > span {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.wf-sched-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.wf-sched-num {
+  width: 76px;
+}
+
+.wf-sched-time {
+  width: 128px;
+}
+
+.wf-sched-message {
+  width: 100%;
+  resize: vertical;
+}
+
+.wf-sched-days {
+  display: flex;
+  gap: 6px;
+}
+
+.wf-sched-day {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wf-sched-day[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.wf-sched-day:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.wf-sched-next {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-weight: 500;
+  line-height: 1.7;
+}
+
+.wf-sched-chip {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 5px;
+}
+
+.wf-sched-chip svg {
+  width: 12px;
+  height: 12px;
+}
+
+.wf-sched-runs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.wf-sched-runs ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wf-sched-run {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  font-size: 13px;
+}
+
+.wf-sched-run > b {
+  min-width: 150px;
+  font-weight: 600;
+}
+
+.wf-sched-note {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (pointer: coarse) {
+  .wf-sched-day {
+    width: 44px;
+    height: 44px;
+  }
+}

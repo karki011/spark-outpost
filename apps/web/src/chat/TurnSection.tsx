@@ -11,6 +11,7 @@ import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivi
 import { compactionsByRun } from './compaction/compaction-text.ts';
 import { CrewTurn } from './crew/CrewTurn.tsx';
 import { SparkJobs, mainAgentRan } from './crew/SparkJobs.tsx';
+import { WorkflowRunLink } from '../crew-flows/WorkflowRunLink.tsx';
 import { SparkTag } from '../teammates/SparkCrewFace.tsx';
 import { LinkCards } from './link-cards/LinkCards.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
@@ -21,7 +22,7 @@ import { TurnSteers } from './steer/SteeredMessage.tsx';
 import { sameTurnDetail, turnRunIds } from './turn-props.ts';
 import { OpenedPullRequests } from './pull-request/OpenedPullRequests.tsx';
 import { PushNotices } from './pull-request/PushNotices.tsx';
-import { RelayRoundHeader, RelayRoundLines } from './pull-request/RelayLines.tsx';
+import { RoundHeader, RoundLines } from './pull-request/RoundLines.tsx';
 import { InterruptedCard } from './interruption/InterruptedCard.tsx';
 import { InterruptedNote } from './interruption/InterruptedNote.tsx';
 import { RequestHeader, type RunOutpost } from './outpost/RequestHeader.tsx';
@@ -102,7 +103,7 @@ export const TurnSection = memo(function TurnSection({
       ))}
       {userMessage && (
         <div className="msg me" data-message-id={userMessage.id}>
-          {run.prFollowUp && <RelayRoundHeader />}
+          {run.prFollowUp && <RoundHeader />}
           <MessageAttachments attachments={userMessage.attachments} />
           {userMessage.content && (
             <>
@@ -138,6 +139,9 @@ export const TurnSection = memo(function TurnSection({
         </div>
       )}
       {run.agentCycle && <p className="on-its-own">Continued on its own</p>}
+      {userMessage && handedTo.some((member) => member.spark?.step !== undefined) && (
+        <WorkflowRunLink turnRunId={run.id} message={userMessage.content} />
+      )}
       {sparkLed && <SparkJobs run={run} detail={detail} orchestration={sparkLed} repo={repo} />}
       {sparkLed && !mainAgentRan(sparkLed) ? null : crew ? (
         <CrewTurn run={run} detail={detail} orchestration={crew} repo={repo} />
@@ -158,9 +162,7 @@ export const TurnSection = memo(function TurnSection({
         runIds={turnRunIds(detail, run.id)}
       />
       <PushNotices conversationId={detail.conversation.id} runIds={turnRunIds(detail, run.id)} />
-      {run.prFollowUp && (
-        <RelayRoundLines conversationId={detail.conversation.id} runIds={[run.id]} />
-      )}
+      {run.prFollowUp && <RoundLines conversationId={detail.conversation.id} runIds={[run.id]} />}
       <InterruptedNote run={run} detail={detail} />
       {detail.interruption?.runId === run.id && (
         <InterruptedCard

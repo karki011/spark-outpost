@@ -46,7 +46,19 @@ describe('codexPermissionProfiles', () => {
         [acceptedRecordPath(process.env.SPARK_RULES_FILE!)]: 'deny',
       });
     }
-    const plain = codexPermissionProfiles(null) as Record<string, Profile>;
+    const plain = codexPermissionProfiles(null, true, []) as Record<string, Profile>;
     expect(Object.keys(plain.agent!.filesystem)).toEqual([':project_roots']);
+  });
+
+  it("makes Sparks' folders and workflows read-only in every mode, Full access included", () => {
+    const crew = ['/data/dev/sparks', '/data/dev/workflows'];
+    const profiles = codexPermissionProfiles('/data', true, crew) as Record<string, Profile>;
+    for (const profile of Object.values(profiles)) {
+      expect(profile.filesystem).toMatchObject({
+        '/data/dev/sparks': 'read',
+        '/data/dev/workflows': 'read',
+      });
+    }
+    expect(profiles['agent-full-access']!.filesystem).toMatchObject({ ':root': 'write' });
   });
 });

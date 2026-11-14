@@ -124,7 +124,7 @@ const EXAMPLES: Example[] = [
     asked: request('echo hi > ../outside.txt'),
     grant: UNASKED,
     seeded: { manual: 'ask', auto: 'ask' },
-    removed: { manual: 'ask', auto: 'allow' },
+    removed: { manual: 'ask', auto: 'ask' },
   },
   {
     rule: 'SecretSend',

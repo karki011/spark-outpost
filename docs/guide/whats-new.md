@@ -10,6 +10,14 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
+| Build Sparks by talking to an agent  | [Build with an agent](build-with-an-agent.md).  |
+| Ask an agent per Spark; Spark effort | [Build with an agent](build-with-an-agent.md).  |
+| Workflows: run view, Runs, `@id` fix | [Follow a workflow run](workflow-runs.md).      |
+| Test run and Try it: nothing is sent | [Do a test run](test-run.md).                   |
+| Workflows can run on a schedule      | [Schedule a workflow](workflow-schedules.md).   |
+| Sparks page: Crew, skills and files  | [Make a Spark](sparks.md).                      |
+| Read anywhere; outside edits ask     | [Protected paths](protected-paths.md).          |
+| Relay, the follow-up Spark, removed  | Nothing; PR follow-up works as before.          |
 | Transcripts: drag the list's edge    | Nothing; double-click resets it.                |
 | Ask about a meeting, **Catch me up** | [Take meeting notes](meetings.md#ask-about-it). |
 | Meetings: titles written for you     | [Take meeting notes](meetings.md).              |

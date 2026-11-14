@@ -1,0 +1,22 @@
+.sac-crew-files {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+.sac-crew-similar {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  font-size: 13px;
+}
+.sac-crew-similar .ic {
+  flex: none;
+  color: var(--warn);
+}

@@ -60,6 +60,25 @@ describe('answerChoices', () => {
     ]);
   });
 
+  it('offers Allow for this session on a write outside the project', () => {
+    const outside = withOptions(
+      [
+        { optionId: 'allow', name: 'Allow once', kind: 'allow_once' },
+        { optionId: 'reject', name: 'Deny', kind: 'reject_once' },
+      ],
+      {
+        kind: 'edit',
+        reason: 'This changes ~/notes.md, which is outside this project',
+        payload: { ...approval.payload, command: null, outsideWrite: 'session-1' },
+      },
+    );
+    const choices = answerChoices(outside);
+    expect(choices.allowLabel).toBe('Allow once');
+    expect(choices.always).toEqual([
+      { label: 'Allow for this session', optionId: 'allow', scope: 'chat' },
+    ]);
+  });
+
   it('leaves a hold-to-confirm card with only its deny', () => {
     const held = withOptions(claudeOptions, {
       reason: 'This rewrites history',

@@ -1,0 +1,103 @@
+.wf-graph {
+  position: absolute;
+  inset: 0;
+}
+
+.wf-graph .react-flow {
+  --xy-background-pattern-color: color-mix(in srgb, var(--line-strong) 45%, transparent);
+  --xy-edge-stroke: var(--line-strong);
+  background: var(--bg);
+}
+
+.wf-graph .react-flow__node {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  cursor: default;
+}
+
+.wf-graph .react-flow__edge-path {
+  stroke-width: 1.5;
+}
+
+.wf-edge.quiet .react-flow__edge-path {
+  stroke-dasharray: 5 5;
+  opacity: 0.6;
+}
+
+.wf-edge.pending .react-flow__edge-path {
+  stroke-dasharray: 5 5;
+}
+
+.wf-edge.done .react-flow__edge-path {
+  stroke: var(--success);
+  stroke-width: 2;
+}
+
+.wf-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.wf-node[data-state='succeeded'] {
+  border-color: var(--success);
+}
+
+.wf-node[data-state='failed'] {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.wf-node[data-state='skipped'] {
+  border-style: dashed;
+}
+
+.wf-node-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.wf-node-text b {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-node-handle {
+  width: 1px;
+  min-width: 0;
+  height: 1px;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.wf-graph .react-flow__attribution {
+  background: transparent;
+  font-size: 12px;
+}
+
+.wf-graph .react-flow__attribution a {
+  color: var(--muted);
+}
+
+.wf-node[data-selected] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}

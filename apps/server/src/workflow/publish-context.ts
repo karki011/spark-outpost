@@ -131,9 +131,9 @@ export async function withPublishNote(db: Queryable, input: NoteFacts): Promise<
 
 export async function publishScope(
   db: Queryable,
-  input: StartFacts & Pick<RunInput, 'projectRoots'>,
+  input: StartFacts & Pick<RunInput, 'projectRoots'> & Partial<Pick<RunInput, 'role'>>,
 ): Promise<PublishScope | null> {
-  if (isStoryWrapUp(input)) return null;
+  if (isStoryWrapUp(input) || (input.role ?? null) !== null) return null;
   const root = input.projectRoots[0] ?? null;
   const task = await taskBranch(db, root).catch(() => null);
   if (!root || !task) return null;

@@ -223,7 +223,7 @@
   }
 }
 
-.relay-round-head {
+.pr-round-head {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -233,12 +233,12 @@
   font-size: 12px;
 }
 
-.relay-round-head b {
+.pr-round-head b {
   color: var(--text);
   font-weight: 600;
 }
 
-.relay-round-line {
+.pr-round-line {
   display: flex;
   align-items: center;
   gap: 6px;

@@ -146,6 +146,10 @@ export function sparkRulesFlagRules(files: SparkRulesFiles = sparkRulesFiles()):
   return patterns.flatMap((pattern) => [`Read(${pattern})`, `Edit(${pattern})`]);
 }
 
+export function otherChatsRules(dataDir: string | null): string[] {
+  return dataDir ? [`Read(/${dataDir}/*/chats/**)`] : [];
+}
+
 export function browserDataRules(dataDir: string | null): string[] {
   if (!dataDir) return [];
   const patterns = BROWSER_DATA_ENTRIES.map((entry) => `/${dataDir}/${entry}`);
@@ -214,6 +218,11 @@ function shapeTouches(shape: WordShape, place: Place, cwd: string, guarded: Guar
       globReachesBrowserData(text, dir, place.home, dataDir, entries) ||
       globNamesEntry(text, dir, place.home, dataDir, entries),
   );
+}
+
+export function touchesPaths(request: ApprovalRequest, targets: readonly string[]): boolean {
+  const entries = targets.map((target) => path.resolve(target));
+  return touchesEntries(request, '/', entries, false);
 }
 
 export function touchesBrowserData(request: ApprovalRequest, dataDir: string | null): boolean {

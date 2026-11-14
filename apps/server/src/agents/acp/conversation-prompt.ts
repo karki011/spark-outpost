@@ -24,7 +24,21 @@ const ASK_COMMANDS =
 const ASK_NO_CHANGES =
   'If the request needs file changes, say so and tell the user to ask for the change in a message, such as "make the change", or to switch the agent\'s mode when a read-only mode is what blocks it.';
 
-export function projectNote(roots: readonly string[], commands = false): string {
+function crewNote(folders: readonly string[]): string {
+  if (folders.length === 0) return '';
+  return ` Spark's crew folders (${folders.join(', ')}) are read-only.`;
+}
+
+function readOnlyNote(folders: readonly string[]): string {
+  if (folders.length === 0) return '';
+  return ` Spark's crew folders are the exception: you may read files in ${folders.join(', ')}, but never change them.`;
+}
+
+export function projectNote(
+  roots: readonly string[],
+  commands = false,
+  readOnly: readonly string[] = [],
+): string {
   const [primary, ...others] = roots;
   const single = others.length === 0;
   const where = single ? 'this folder' : 'these folders';
@@ -33,7 +47,7 @@ export function projectNote(roots: readonly string[], commands = false): string 
     : `You may read files inside ${where}.`;
   const through = commands ? ' (including through commands)' : '';
   const outside = single ? 'it' : 'them';
-  const limits = `You must not create, change, or delete files${through}, and you must not read files outside ${outside}. ${ASK_NO_CHANGES}`;
+  const limits = `You must not create, change, or delete files${through}. You may read files outside ${outside} when the task needs it.${crewNote(readOnly)} ${ASK_NO_CHANGES}`;
   if (single) {
     return `You are answering in a Spark Outpost chat linked to the project folder ${primary} in Ask mode. ${reads} ${limits} Reply in plain text and Markdown.`;
   }
@@ -41,20 +55,24 @@ export function projectNote(roots: readonly string[], commands = false): string 
   return `You are answering in a Spark Outpost chat linked to these project folders in Ask mode: ${listed}. ${reads} ${limits} Relative paths are inside the primary folder. Reply in plain text and Markdown.`;
 }
 
-export function doProjectNote(roots: readonly string[]): string {
+export function doProjectNote(roots: readonly string[], readOnly: readonly string[] = []): string {
   const [primary, ...others] = roots;
   const extra =
     others.length > 0
       ? ` These folders are linked too, and relative paths are inside the primary folder: ${others.join(', ')}.`
       : '';
-  return `You are working in a Spark Outpost chat linked to the project folder ${primary} (your working directory) in Do mode. You may read and change files and run commands inside the linked folders. Spark Outpost asks the user before each action their settings require, so a request may wait or be denied; if an action is denied, do not retry it another way, explain what you could not do. Do not read or change files outside the linked folders.${extra} Reply in plain text and Markdown.`;
+  return `You are working in a Spark Outpost chat linked to the project folder ${primary} (your working directory) in Do mode. You may read and change files and run commands inside the linked folders. Spark Outpost asks the user before each action their settings require, so a request may wait or be denied; if an action is denied, do not retry it another way, explain what you could not do. You may read files outside the linked folders when the task needs it; changing files outside them asks the user first.${crewNote(readOnly)}${extra} Reply in plain text and Markdown.`;
 }
 
-export function chatFolderNote(folder: string, changes: boolean): string {
+export function chatFolderNote(
+  folder: string,
+  changes: boolean,
+  readOnly: readonly string[] = [],
+): string {
   const may = changes
     ? 'You may read and change files and run commands inside it.'
     : 'You may read files inside it; you must not create, change, or delete files.';
-  return `You are working in a Spark Outpost chat with no project. Your working directory ${folder} is this chat's own private folder, not the user's code. ${may} Files you create there are shown to the user as attachments of this turn, so save anything they asked for (a CSV, an image, a document) as a file. It is not a git repository and nothing in it is pushed. Spark Outpost asks the user before each action their settings require. Do not read or change files outside this folder. Reply in plain text and Markdown.`;
+  return `You are working in a Spark Outpost chat with no project. Your working directory ${folder} is this chat's own private folder, not the user's code. ${may} Files you create there are shown to the user as attachments of this turn, so save anything they asked for (a CSV, an image, a document) as a file. It is not a git repository and nothing in it is pushed. Spark Outpost asks the user before each action their settings require. Do not read or change files outside this folder.${readOnlyNote(readOnly)} Reply in plain text and Markdown.`;
 }
 
 export interface PromptOptions {
@@ -67,6 +85,7 @@ export interface PromptOptions {
   changesAllowed?: boolean;
   commandsAllowed?: boolean;
   toolsAvailable?: boolean;
+  readOnlyFolders?: readonly string[];
 }
 
 export const TEXT_ONLY: PromptSupport = { image: false, embeddedContext: false, pdf: false };
@@ -159,10 +178,10 @@ function conversationParts(
   const { kept, omitted } = keptHistory(history, budget);
   const roots = options.projectRoots ?? [];
   const projectIntro = options.chatFolder
-    ? chatFolderNote(roots[0] ?? '', options.changesAllowed === true)
+    ? chatFolderNote(roots[0] ?? '', options.changesAllowed === true, options.readOnlyFolders)
     : options.changesAllowed
-      ? doProjectNote(roots)
-      : projectNote(roots, options.commandsAllowed === true);
+      ? doProjectNote(roots, options.readOnlyFolders)
+      : projectNote(roots, options.commandsAllowed === true, options.readOnlyFolders);
   const chatIntro = options.toolsAvailable ? CHAT_TOOLS_NOTE : CHAT_ONLY_NOTE;
   const intro = roots.length > 0 ? projectIntro : chatIntro;
   const asked = prompt ? [prompt] : [];

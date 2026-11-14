@@ -121,23 +121,19 @@
   gap: 12px;
 }
 
+.tm-defaults .field > span,
+.tm-sheet .field > span:has(.info-tip) {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 20px;
+}
+
 .tm-instructions {
   resize: vertical;
   min-height: 110px;
   font: inherit;
   line-height: 1.5;
-}
-
-.tm-count {
-  display: block;
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
-.tm-count.over {
-  color: var(--danger);
 }
 
 .tm-danger {
@@ -283,11 +279,4 @@
 
 .tm-file-cut {
   color: var(--muted);
-}
-
-.tm-builtin {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
 }

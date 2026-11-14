@@ -17,6 +17,7 @@ const teammate: Teammate = {
   faceAuto: false,
   provider: null,
   model: null,
+  effort: null,
   agentMode: null,
   level: null,
   instructions: 'Be brief.',
@@ -61,14 +62,14 @@ describe('teammate draft', () => {
     });
   });
 
-  it('flags a missing name and instructions over the limit', () => {
+  it('flags a missing name, and takes instructions longer than the old limit', () => {
     expect(draftProblem(newDraft())).toBe('Give your Spark a name.');
     const long = {
       ...newDraft(),
       name: 'Pip',
       instructions: 'x'.repeat(TEAMMATE_INSTRUCTIONS_MAX + 1),
     };
-    expect(draftProblem(long)).toContain(String(TEAMMATE_INSTRUCTIONS_MAX));
+    expect(draftProblem(long)).toBeNull();
     expect(draftProblem({ ...newDraft(), name: 'Pip' })).toBeNull();
   });
 

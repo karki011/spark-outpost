@@ -43,6 +43,15 @@ export function findSparkMentions<T extends { name: string }>(
   return found;
 }
 
+export function withoutShadowed<T>(
+  mentions: readonly SparkMention<T>[],
+  longer: readonly Pick<SparkMention<unknown>, 'start' | 'end'>[],
+): SparkMention<T>[] {
+  return mentions.filter(
+    (mention) => !longer.some((other) => other.start === mention.start && other.end > mention.end),
+  );
+}
+
 const BETWEEN_LEADING_MENTIONS = /^[\s,&+]*(?:and\b[\s,]*)?$/i;
 const HANDS_BACK =
   /\b(?:and then|then|after that|afterwards|once (?:it|he|she|they)(?:'s|’s| is| are| has| have)? (?:done|finished)|when (?:it|he|she|they)(?:'s|’s| is| are)? (?:done|finished))\b/i;

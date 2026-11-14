@@ -17,7 +17,7 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-const REFILLED = ['workspaces', 'model_stats', 'schema_migrations', 'profiles', 'teammates'];
+const REFILLED = ['workspaces', 'model_stats', 'schema_migrations'];
 
 function storedSecrets(mcpId: string) {
   return recordingStore(
@@ -67,11 +67,6 @@ describe('POST /api/reset', () => {
     expect(after.model_stats).toBe(await shippedModelStats());
     const { rows } = await t.db.query<{ id: string }>('SELECT id FROM workspaces');
     expect(rows).toEqual([{ id: t.workspaceId }]);
-    const relay = await t.db.query<{ name: string; kind: string }>(
-      'SELECT name, kind FROM teammates',
-    );
-    expect(relay.rows).toEqual([{ name: 'Relay', kind: 'pr_follow_up' }]);
-    expect(after.profiles).toBe(1);
   });
 
   it('lands the app back on first-run onboarding', async () => {

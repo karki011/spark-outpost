@@ -86,6 +86,7 @@ describe('decide() reads redirects with variable paths by their literal part', (
       reason: expect.stringMatching(
         /^(?:This changes .+, which is outside this project|Changing files outside the repo always asks)$/,
       ),
+      outsideWrite: true,
     });
   });
 

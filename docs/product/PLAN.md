@@ -358,7 +358,9 @@ The worker reaches the rest of the system only through PostgreSQL, so it can mov
 
 ## 17. Explicitly deferred
 
-Rust backend migration; Tauri; CopilotKit prebuilt UI components; `@ag-ui/a2a-middleware`; A2UI generated interfaces; a native mobile app (the phone uses the web app over the user's tailnet, see `docs/architecture/PHONE_REMOTE.md`); a terminal emulator; a visual workflow builder; arbitrary plugin registries; a public agent marketplace; multi-tenant hosted deployment; billing; Kubernetes; distributed schedulers; vector/graph infrastructure without a demonstrated retrieval need; fully automatic external publication.
+Rust backend migration; Tauri; CopilotKit prebuilt UI components; `@ag-ui/a2a-middleware`; A2UI generated interfaces; a native mobile app (the phone uses the web app over the user's tailnet, see `docs/architecture/PHONE_REMOTE.md`); a terminal emulator; arbitrary plugin registries; a public agent marketplace; multi-tenant hosted deployment; billing; Kubernetes; distributed schedulers; vector/graph infrastructure without a demonstrated retrieval need; fully automatic external publication.
+
+A workflow builder for Sparks was deferred here until November 12, 2026; it is now planned in `docs/architecture/CREW_WORKFLOWS_PLAN.md`.
 
 Do not defer basic recovery, permission enforcement, provider-independent caching, or evidence-backed completion. They are part of the first working product.
 

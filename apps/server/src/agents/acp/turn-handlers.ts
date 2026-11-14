@@ -21,6 +21,7 @@ import { declineInConversation, nativePlan } from './permissions.ts';
 import type { AgentCli } from './agent-cli.ts';
 import { floorRulesNow } from '../../spark-rules/rules-store.ts';
 import { createRailWatch, type RailWatch } from './rail-watch.ts';
+import { sparkReadDirs } from './spark-instructions.ts';
 import type { RequestLog } from './turn-loop.ts';
 import type { TurnMapper } from './subagent-updates.ts';
 
@@ -46,6 +47,7 @@ export function turnGates(
       ? {
           policy,
           cwd,
+          readable: sparkReadDirs(turn.spark),
           gate: turn.approvals,
           signal,
           report: (name) => push(mapper.clientAction(name)),

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { scheduleUpdateSchema } from './crew-schedule-slots.ts';
 
 export const attentionItemKindSchema = z.enum([
   'approval',
@@ -21,6 +22,7 @@ export const attentionItemSchema = z.object({
   readAt: z.string().nullable(),
   setAsideAt: z.string().nullable(),
   dismissedAt: z.string().nullable(),
+  schedule: scheduleUpdateSchema.nullable().optional(),
 });
 export type AttentionItem = z.infer<typeof attentionItemSchema>;
 

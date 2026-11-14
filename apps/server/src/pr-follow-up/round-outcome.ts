@@ -1,7 +1,7 @@
 import type { RoundOutcome } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import type { Watch } from '../persistence/pr-watches.ts';
-import { recordRoundOutcome } from '../persistence/relay.ts';
+import { recordRoundOutcome } from '../persistence/round-outcomes.ts';
 
 const REVIEW_REQUEST = '(--add-reviewer|/requested_reviewers)';
 

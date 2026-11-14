@@ -4,6 +4,7 @@ import {
   atlassianAuditFacts,
   atlassianCardSubject,
   calendarAuditFacts,
+  crewEditAuditFacts,
   isAtlassianAction,
   isCalendarAction,
   isServiceNowAction,
@@ -81,6 +82,7 @@ function cardTitle(action: SparkAction): string {
   if (
     action.action === 'rules_edit' ||
     action.action === 'plugins_edit' ||
+    action.action === 'crew_edit' ||
     action.action === 'link_repo' ||
     action.action === 'github_read' ||
     action.action === 'clone_repo'
@@ -217,6 +219,7 @@ export function auditedAction(action: SparkAction): unknown {
   }
   if (action.action === 'rules_edit') return rulesEditAuditFacts(action);
   if (action.action === 'plugins_edit') return pluginsEditAuditFacts(action);
+  if (action.action === 'crew_edit') return crewEditAuditFacts(action);
   if (action.action === 'link_repo') return { action: action.action, path: action.path };
   if (action.action === 'github_read') return { action: action.action, repo: action.repo };
   if (action.action === 'clone_repo') {

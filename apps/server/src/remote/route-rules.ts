@@ -279,6 +279,30 @@ PUT /api/outposts/:id/members/:conversationId
 DELETE /api/outposts/:id/members/:conversationId
 GET /api/a2a/chats/:chatId/.well-known/agent-card.json
 POST /api/a2a/chats/:chatId
+GET /api/workflows
+GET /api/workflows/:id
+PUT /api/workflows/:id
+DELETE /api/workflows/:id
+GET /api/workflows/:id/runs
+POST /api/workflows/:id/runs
+GET /api/workflow-runs/:id
+POST /api/workflow-runs/:id/stop
+GET /api/workflow-runs/:id/test
+DELETE /api/workflow-runs/:id
+POST /api/teammates/:id/test-runs
+GET /api/crew/builder
+POST /api/crew/builder
+POST /api/crew/builder/:id/done
+GET /api/crew/drafts
+GET /api/workflow-schedules
+GET /api/workflows/:id/schedule
+PUT /api/workflows/:id/schedule
+DELETE /api/workflows/:id/schedule
+GET /api/workflows/:id/schedule/slots
+GET /api/teammates/:id/folder
+GET /api/teammates/:id/files
+PUT /api/teammates/:id/files
+DELETE /api/teammates/:id/files
 `;
 
 const PAIRING = `

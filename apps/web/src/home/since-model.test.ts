@@ -140,6 +140,18 @@ describe('sinceRows', () => {
       'Finished · open to review',
     ]);
   });
+
+  it('groups the runs of a schedule into one line', () => {
+    const schedule = {
+      workflowId: 'pre-pr-review',
+      name: 'Pre-PR review',
+      runsToday: 12,
+      failedToday: 1,
+    };
+    const grouped = [{ ...items[0]!, schedule }];
+    const rows = sinceRows(grouped, awayKeys(grouped, null, NOW), chats);
+    expect(rows.map((row) => row.line)).toEqual(['Pre-PR review: 12 runs today, 1 failed']);
+  });
 });
 
 describe('capRows', () => {

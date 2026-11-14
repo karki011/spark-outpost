@@ -7,6 +7,8 @@ export interface ChatPane {
   name: string | null;
   landmark: 'main' | 'section';
   closer: ReactNode;
+  intro?: string;
+  crewChat?: boolean;
 }
 
 export const SINGLE_PANE: ChatPane = {

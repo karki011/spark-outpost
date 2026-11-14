@@ -27,6 +27,7 @@ import { meetingKeys } from '../../meetings/meeting-keys.ts';
 import { islandRequestsKey } from '../../island/island-requests.ts';
 import { attentionKey } from '../../attention/attention-api.ts';
 import { sparkPauseKey } from '../pause/spark-pause-api.ts';
+import { workflowRunKeys } from '../../crew-flows/runs-api.ts';
 
 type RunStreamed = (runId: string) => boolean;
 
@@ -55,6 +56,7 @@ export const LIVE_ROOTS: readonly string[] = [
   meetingKeys.all[0],
   islandRequestsKey[0],
   attentionKey[0],
+  workflowRunKeys.all[0],
 ];
 
 export function isLiveQueryKey(key: QueryKey): boolean {
@@ -192,13 +194,8 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
       return [teammates, list];
     case 'pull_request':
       return event.conversationId
-        ? [
-            list,
-            { queryKey: prWatchesKey(event.conversationId), exact: true },
-            ticketInbox,
-            teammates,
-          ]
-        : [teammates];
+        ? [list, { queryKey: prWatchesKey(event.conversationId), exact: true }, ticketInbox]
+        : [];
     case 'ticket':
       return [ticketInbox, ticketConnections];
     case 'preview':
@@ -240,6 +237,8 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
             { queryKey: meetingKeys.detail(event.meetingId), exact: true },
           ]
         : [{ queryKey: meetingKeys.all }];
+    case 'workflow_run':
+      return [{ queryKey: workflowRunKeys.all }];
   }
 }
 

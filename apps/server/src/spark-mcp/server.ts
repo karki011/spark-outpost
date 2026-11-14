@@ -4,6 +4,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { ZodError } from 'zod';
 import { redactText } from '../audit/redact.ts';
+import {
+  HELD_TOOL_MESSAGE,
+  heldInTestRun,
+  heldTool,
+  recordHeldSend,
+} from '../crew-flows/held-sends.ts';
 import { unavailableNote, type SparkAvailability } from './availability.ts';
 import type { SparkScope, SparkToolDeps } from './deps.ts';
 import { renderResult } from './format.ts';
@@ -59,6 +65,8 @@ import { pluginsEditTool } from './tools/plugins-edit-tool.ts';
 import { findRepoTool, linkRepoTool } from './tools/repo-tools.ts';
 import { cloneRepoTool, githubReposTool, researchRepoTool } from './tools/github-repo-tools.ts';
 import { terminalTool } from './tools/terminal-tool.ts';
+import { crewTool } from './tools/crew-tool.ts';
+import { crewEditTool } from './tools/crew-edit-tool.ts';
 import { usageTools } from './tools/usage-tools.ts';
 import { workTools } from './tools/work-tools.ts';
 import { codeModeOffered } from '../codemode/catalog.ts';
@@ -85,6 +93,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   ...usageTools,
   terminalTool,
   teammatesTool,
+  crewTool,
   guideTool,
   docsTool,
   ...githubTools,
@@ -118,6 +127,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   serviceNowEditTool,
   rulesEditTool,
   pluginsEditTool,
+  crewEditTool,
   linkRepoTool,
   cloneRepoTool,
   ...askSparkTools,
@@ -180,6 +190,10 @@ export async function callSparkTool(
   context: SparkToolContext,
 ): Promise<CallToolResult> {
   try {
+    if (context.scope.testRun && heldInTestRun(tool) && context.scope.runId) {
+      await recordHeldSend(context.deps.db, context.scope.runId, heldTool(tool.name, args));
+      throw new SparkToolError(HELD_TOOL_MESSAGE);
+    }
     const result = await tool.run(args, context);
     if (await returnsPrivateData(tool, args, context)) {
       context.scope.observations?.record({
@@ -215,6 +229,7 @@ export const CHAT_TURN_ONLY: ReadonlySet<string> = new Set([
   'spark_artifact',
   'spark_rules_edit',
   'spark_plugins_edit',
+  'spark_crew_edit',
   'spark_link_repo',
   'spark_github_repos',
   'spark_research_repo',

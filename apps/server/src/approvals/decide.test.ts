@@ -12,6 +12,7 @@ import {
   ruleFor,
   type ApprovalRequest,
   type RunRule,
+  SPARK_DATA_READ_REASON,
 } from './decide.ts';
 import { outsideDeleteReason } from './rails.ts';
 import type { FileLister } from './file-lister.ts';
@@ -238,11 +239,6 @@ describe('decide() always asks, in every mode', () => {
       outsideDeleteReason(['/var/log'], home),
     ],
     ['rm at a path Spark cannot resolve', run('rm -rf "$OUT/x"'), OUTSIDE_DELETE_REASON],
-    [
-      'editing outside the repo',
-      edit('/work/other/a.ts'),
-      'This changes /work/other/a.ts, which is outside this project',
-    ],
   ];
 
   it.each(cases)('%s', (_name, input, reason) => {
@@ -250,6 +246,17 @@ describe('decide() always asks, in every mode', () => {
       expect(
         decide(level, input, allowing(ruleFor(input)!), ['git', 'rm', 'cat', 'find', 'echo']),
       ).toEqual({ verdict: 'ask', reason });
+    }
+  });
+
+  it('asks before editing outside the repo, marked as an outside write', () => {
+    const input = edit('/work/other/a.ts');
+    for (const level of EVERY_MODE) {
+      expect(decide(level, input, allowing(ruleFor(input)!), [])).toEqual({
+        verdict: 'ask',
+        reason: 'This changes /work/other/a.ts, which is outside this project',
+        outsideWrite: true,
+      });
     }
   });
 
@@ -307,14 +314,15 @@ describe('decide() refusals', () => {
     );
   });
 
-  it('refuses reads outside the project', () => {
-    const read = request({
-      kind: 'other',
-      toolKind: 'read',
-      command: null,
-      paths: ['/etc/passwd'],
-    });
-    expect(decide('full_access', read, NO_RUN_RULES, []).verdict).toBe('reject');
+  it("lets a read outside the project follow the mode, but not one in Spark's data folder", () => {
+    const read = (target: string) =>
+      request({ kind: 'other', toolKind: 'read', command: null, paths: [target] });
+    expect(decide('full_access', read('/etc/hosts'), NO_RUN_RULES, []).verdict).toBe('allow');
+    expect(
+      decide('full_access', read('/data/dev/chats/x/work/a.md'), NO_RUN_RULES, [], {
+        browserData: '/data',
+      }),
+    ).toEqual({ verdict: 'reject', reason: SPARK_DATA_READ_REASON });
   });
 });
 

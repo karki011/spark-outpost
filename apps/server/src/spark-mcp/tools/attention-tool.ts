@@ -39,6 +39,7 @@ async function pendingCards({ deps, scope }: SparkToolContext): Promise<PendingR
      JOIN runs r ON r.id = a.run_id
      JOIN conversations c ON c.id = r.conversation_id
      WHERE c.workspace_id = $1 AND a.status = 'pending' AND c.archived_at IS NULL
+       AND c.kind <> 'crew'
      ORDER BY a.created_at`,
     [scope.workspaceId],
   );

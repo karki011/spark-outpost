@@ -13,6 +13,7 @@ import { startWorktreeSweeper } from '../projects/chat-worktree-sweep.ts';
 import { runChatTurn } from './chat-turn.ts';
 import type { ChatTurnDeps } from './chat-turn-hooks.ts';
 import { recoverExpiredLeases } from './recovery.ts';
+import { settleStrandedRuns } from '../crew-flows/run-records.ts';
 import { sweepSessions } from './turn-session.ts';
 import { assistantIdleCompaction, type IdleLimits } from '../companion/assistant-idle.ts';
 import type { ParkedTurns } from './parked-turns.ts';
@@ -112,6 +113,7 @@ export function startWorker(given: WorkerOptions): Worker {
           const done = options.activeWork?.begin('recovery sweep');
           try {
             await recoverExpiredLeases(options.db);
+            await settleStrandedRuns(options.db);
             await cleanOrphanedCopies(options.db);
             await live.sweep();
             await sweepSessions(options.db, options.sessionLimits, live.workdirs());

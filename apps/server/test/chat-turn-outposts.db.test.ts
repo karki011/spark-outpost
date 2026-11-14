@@ -76,6 +76,7 @@ function pip() {
     role: 'Code reviewer',
     provider: null,
     model: null,
+    effort: null,
     agentMode: null,
     level: null,
     instructions: 'Always name the file and line you mean.',

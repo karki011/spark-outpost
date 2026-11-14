@@ -51,7 +51,9 @@ export type SparkToolNeed =
   | 'servicenow'
   | 'ticket_create'
   | 'rules_edit'
-  | 'plugins_edit';
+  | 'plugins_edit'
+  | 'crew_read'
+  | 'crew_edit';
 
 export interface SparkTool {
   name: string;

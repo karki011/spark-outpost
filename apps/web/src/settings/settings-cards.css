@@ -6,12 +6,10 @@
     0 1px 2px color-mix(in srgb, var(--text) 7%, transparent),
     0 8px 22px color-mix(in srgb, var(--text) 9%, transparent);
 }
-.set-panel
-  .set-body
-  :is(.ptile, .pconf, .tcard, .tm-starter, .tm-set-row, .usage-row, .reset-list) {
+.set-panel .set-body :is(.ptile, .pconf, .tcard, .usage-row, .reset-list) {
   border-color: transparent;
 }
-.set-panel .set-body :is(.tcard, .tm-starter, .tm-set-row, .usage-row, .reset-list) {
+.set-panel .set-body :is(.tcard, .usage-row, .reset-list) {
   background: var(--panel);
   box-shadow: var(--set-card-shadow);
 }

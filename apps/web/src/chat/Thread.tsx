@@ -19,6 +19,7 @@ import { AssistantTopicDivider, TopicDivider } from './compaction/DividerLine.ts
 import { placeTopics } from './compaction/topic-model.ts';
 import { TodaySoFar } from './today/TodaySoFar.tsx';
 import { useStickToBottom } from './use-stick-to-bottom.ts';
+import { useChatPane } from './split/chat-pane.ts';
 import { useMessageJump } from './message-jump.ts';
 import { QuoteMarks } from './quotes/QuoteMarks.tsx';
 import { QuoteToolbar } from './quotes/QuoteToolbar.tsx';
@@ -70,6 +71,7 @@ export const Thread = memo(function Thread({
   );
 
   usePendingArrival(follow);
+  const intro = useChatPane().intro;
 
   const followRequests = use(FollowContext);
   useEffect(() => followRequests?.subscribe(follow), [followRequests, follow]);
@@ -86,8 +88,10 @@ export const Thread = memo(function Thread({
           <div className="empty">
             <BlobScout size={64} />
             <h2>{greeting(voice, new Date().getHours())}</h2>
-            <p className="empty-ask">What should we work on?</p>
-            {repos.length > 0 ? (
+            {!intro && <p className="empty-ask">What should we work on?</p>}
+            {intro ? (
+              <p>{intro}</p>
+            ) : repos.length > 0 ? (
               <p>
                 New chat in <b>{repoSummary(repos.map((repo) => repo.name))}</b>.{' '}
                 {detail.settings.permission === PERMISSION_DO ? (
@@ -105,8 +109,8 @@ export const Thread = memo(function Thread({
                 read or change files.
               </p>
             )}
-            <TodaySoFar voice={voice} onOpenChat={onOpenChat} />
-            {repos[0] && <RepoKit project={repos[0]} />}
+            {!intro && <TodaySoFar voice={voice} onOpenChat={onOpenChat} />}
+            {!intro && repos[0] && <RepoKit project={repos[0]} />}
           </div>
         </div>
       </div>

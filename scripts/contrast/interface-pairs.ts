@@ -17,6 +17,14 @@ export const ACCENT: Pair[] = [
     kind: 'text',
   },
   {
+    id: 'accent.soft-button-label',
+    group: 'Accent',
+    label: 'soft button label (accent-text on accent-soft on a card)',
+    fg: 'var(--accent-text)',
+    bg: ['color-mix(in srgb, var(--raise) 70%, var(--panel))', 'var(--accent-soft)'],
+    kind: 'text',
+  },
+  {
     id: 'accent.link',
     group: 'Accent',
     label: 'markdown link on panel',

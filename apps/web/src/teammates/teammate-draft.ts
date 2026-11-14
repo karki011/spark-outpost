@@ -1,5 +1,4 @@
 import {
-  TEAMMATE_INSTRUCTIONS_MAX,
   createTeammateRequestSchema,
   faceFromName,
   type CreateTeammateRequest,
@@ -25,6 +24,7 @@ export function newDraft(seed?: CreateTeammateRequest): TeammateDraft {
     face: seed?.face ?? null,
     provider: seed?.provider ?? null,
     model: seed?.model ?? null,
+    effort: seed?.effort ?? null,
     agentMode: seed?.agentMode ?? null,
     level: seed?.level ?? null,
     instructions: seed?.instructions ?? '',
@@ -40,6 +40,7 @@ export function draftOf(teammate: Teammate): TeammateDraft {
     face: pickedFace(teammate),
     provider: teammate.provider,
     model: teammate.model,
+    effort: teammate.effort,
     agentMode: teammate.agentMode,
     level: teammate.level,
     instructions: teammate.instructions,
@@ -57,9 +58,6 @@ export function shownFace(draft: TeammateDraft): TeammateFace {
 }
 
 export function draftProblem(draft: TeammateDraft): string | null {
-  if (draft.instructions.trim().length > TEAMMATE_INSTRUCTIONS_MAX) {
-    return `Keep standing instructions to ${TEAMMATE_INSTRUCTIONS_MAX} characters.`;
-  }
   const parsed = createTeammateRequestSchema.safeParse(createRequest(draft));
   return parsed.success ? null : (parsed.error.issues[0]?.message ?? 'Check the details.');
 }
@@ -71,6 +69,7 @@ export function createRequest(draft: TeammateDraft): CreateTeammateRequest {
     face: draft.face,
     provider: draft.provider,
     model: draft.model,
+    effort: draft.effort,
     agentMode: draft.agentMode,
     level: draft.level,
     instructions: draft.instructions,
@@ -84,6 +83,7 @@ const SCALAR_FIELDS = [
   'role',
   'provider',
   'model',
+  'effort',
   'agentMode',
   'level',
   'instructions',

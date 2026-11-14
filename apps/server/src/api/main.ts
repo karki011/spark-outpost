@@ -4,12 +4,14 @@ import { LOCAL_DATA_DIR, loadConfig, sparkDataDir } from '../config.ts';
 import { chatFoldersBase } from '../chat-files/folders.ts';
 import { chatResearchBase } from '../chat-files/research-copies.ts';
 import { startArtifactOrigin } from '../artifacts/origin-server.ts';
+import { scheduleWorkflows } from '../crew-flows/scheduler.ts';
 import { startMorningBrief } from '../digest/morning.ts';
 import { startWeekRecap } from '../recap/schedule.ts';
 import { followAssistantChat } from '../companion/assistant.ts';
 import { ensureLocalWorkspace } from '../persistence/conversations.ts';
-import { seedRelay } from '../persistence/relay.ts';
 import { acceptRulesBaseline } from '../spark-rules/rules-store.ts';
+import { crewSparksDir } from '../crew/folders.ts';
+import { moveInstructionsToFolders } from '../crew/move-instructions.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
@@ -74,7 +76,7 @@ import { generateVapidKeys, webPushSend } from '../remote/push-send.ts';
 import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { startSlackSocket } from '../slack/socket.ts';
 import { armShutdownWatchdog, runShutdownSteps } from './shutdown-steps.ts';
-import { schedulePrune, type PruneSchedule } from './startup-prune.ts';
+import { schedulePrune, sweepAtStart, type PruneSchedule } from './startup-prune.ts';
 import { cloneJobsFor } from './project-clone-routes.ts';
 import { connectDesktopBrowser } from '../browser/host-client.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
@@ -97,12 +99,15 @@ await migrateOrExit(db, { backup: configuredBackup(config) });
 
 const workspaceId = await ensureLocalWorkspace(db);
 await seedModelStats(db);
-await seedRelay(db, workspaceId).catch((error: unknown) => {
-  console.error('Could not add Relay', error);
-});
 await acceptRulesBaseline().catch((error: unknown) => {
   console.error("Could not record Spark's accepted rules", error);
 });
+await moveInstructionsToFolders(db).then(
+  ({ failed }) => {
+    if (failed.length > 0) console.error(`Could not move instructions for ${failed.length} Sparks`);
+  },
+  (error: unknown) => console.error("Could not move Sparks' instructions to their folders", error),
+);
 const hub = new RunEventHub();
 const activeWork = new ActiveWork();
 const stopLagMonitor = startLagMonitor({ processName: 'API', work: activeWork });
@@ -411,17 +416,21 @@ const morningBrief = config.MORNING_BRIEF
     )
   : null;
 const weekRecap = config.WEEK_RECAP ? startWeekRecap(db, workspaceId) : null;
+const workflowScheduler = config.WORKFLOW_SCHEDULES ? scheduleWorkflows(db, workspaceId) : null;
 
 let pruneSchedule: PruneSchedule | null = null;
 const server = app.listen(config.API_PORT, config.API_HOST, () => {
   console.log(`API listening on http://${config.API_HOST}:${config.API_PORT}`);
-  pruneSchedule = schedulePrune({
+  const pruning = {
     db,
     workspaceId,
     auditRetentionDays: config.AUDIT_RETENTION_DAYS,
     chatFolders,
     researchCopies,
-  });
+    sparkFolders: crewSparksDir(),
+  };
+  void sweepAtStart(pruning);
+  pruneSchedule = schedulePrune(pruning);
   void slackSocket.refresh();
   outposts.start();
   reconcileRemote().catch((error: unknown) => {
@@ -466,6 +475,7 @@ const shutdown = async (keepTerminals = false) => {
     ['prune schedule', () => pruneSchedule?.stop()],
     ['morning brief', () => morningBrief?.stop()],
     ['week recap', () => weekRecap?.stop()],
+    ['workflow schedules', () => workflowScheduler?.stop()],
     ['Slack socket', () => slackSocket.stop()],
     ['Slack notifier', () => slackNotifier.stop()],
     ['calendar ticker', () => calendarTicker?.stop()],

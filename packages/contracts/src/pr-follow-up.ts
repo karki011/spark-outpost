@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ticketSourceIdSchema, ticketSyncSchema } from './tickets.ts';
-import { roundOutcomeSchema } from './relay.ts';
+import { roundOutcomeSchema } from './round-outcomes.ts';
 
 export const PR_FOLLOW_UP_BOTS_MAX = 50;
 const GITHUB_LOGIN = /^[a-z0-9](?:[a-z0-9-]{0,38})(?:\[bot\])?$/;

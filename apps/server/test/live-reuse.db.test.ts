@@ -54,7 +54,7 @@ describe.each(['hands-off', 'full-auto'] as const)(
     });
 
     it('after a follow-up round', async () => {
-      expect(reused(await sequence(['user', 'relay', 'user'], level))).toEqual(
+      expect(reused(await sequence(['user', 'round', 'user'], level))).toEqual(
         level === 'hands-off' ? [false, false, false] : [false, true, true],
       );
     });

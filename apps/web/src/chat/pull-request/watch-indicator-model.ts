@@ -8,7 +8,7 @@ import {
   type Run,
 } from '@spark-outpost/contracts';
 import { needYou } from './pr-card-model.ts';
-import { lastOutcome } from './relay-model.ts';
+import { lastOutcome } from './round-model.ts';
 
 export type FollowUpMode = 'on' | 'ask' | 'off';
 
@@ -46,7 +46,6 @@ export interface IndicatorContext {
   mode: FollowUpMode;
   worker: RoundWorker | null;
   now: number;
-  relay?: string | null;
 }
 
 const ACCESS_PROBLEMS: ReadonlySet<PrPollProblem> = new Set(['not_connected', 'no_access']);
@@ -172,8 +171,8 @@ function shape(state: WatchState, watch: PrWatch, context: IndicatorContext): Sh
         tone: 'live',
         watching: true,
         pulse: true,
-        label: context.relay ? `${context.relay} is on it` : 'Agent is on it',
-        short: context.relay ? `${context.relay} is on it` : 'Agent is on it',
+        label: 'Agent is on it',
+        short: 'Agent is on it',
         lines: [`${workerLine(worker)} is working on ${roundLabel(watch).toLowerCase()}.`],
       };
     case 'needs_you':
@@ -223,7 +222,7 @@ function shape(state: WatchState, watch: PrWatch, context: IndicatorContext): Sh
         tone: 'quiet',
         watching: true,
         pulse: false,
-        label: context.relay ? `${context.relay} stopped: nothing changed` : 'Stopped following up',
+        label: 'Stopped following up',
         short: 'Stopped',
         lines: [STOPPED_LINE, polled],
       };
@@ -270,13 +269,11 @@ export function watchIndicator(watch: PrWatch, context: IndicatorContext): Watch
   const state = watchState(watch, context.mode);
   if (!state) return null;
   const shaped = shape(state, watch, context);
-  const outcome = context.relay && OUTCOME_STATES.has(state) ? lastOutcome(watch) : null;
+  const outcome = OUTCOME_STATES.has(state) ? lastOutcome(watch) : null;
   return {
     state,
     ...shaped,
-    lines: outcome
-      ? [`${roundOutcomeLine(context.relay!, outcome)}.`, ...shaped.lines]
-      : shaped.lines,
+    lines: outcome ? [`${roundOutcomeLine(outcome)}.`, ...shaped.lines] : shaped.lines,
     offer: offerFor(state, watch, context.mode),
   };
 }

@@ -1,4 +1,4 @@
-import type { TeammateBrief } from '@spark-outpost/contracts';
+import type { StoredSparkBrief } from '../crew/spark-brief.ts';
 import type { Queryable } from './db.ts';
 
 export interface MentionableSpark {
@@ -7,6 +7,7 @@ export interface MentionableSpark {
   role: string;
   provider: string | null;
   model: string | null;
+  effort: string | null;
   connected: boolean;
 }
 
@@ -15,7 +16,7 @@ export async function mentionableSparks(
   conversationId: string,
 ): Promise<MentionableSpark[]> {
   const { rows } = await db.query<MentionableSpark>(
-    `SELECT t.id, t.name, t.role, t.provider, t.model,
+    `SELECT t.id, t.name, t.role, t.provider, t.model, t.effort,
        EXISTS (
          SELECT 1 FROM provider_connections pc
          WHERE pc.workspace_id = t.workspace_id AND pc.provider = t.provider
@@ -30,13 +31,14 @@ export async function mentionableSparks(
   return rows;
 }
 
-export interface SubagentBrief extends TeammateBrief {
-  instructionsPath: string | null;
-}
-
-export async function subagentBrief(db: Queryable, runId: string): Promise<SubagentBrief | null> {
-  const { rows } = await db.query<SubagentBrief>(
-    `SELECT t.name, t.role, t.instructions, t.instructions_path AS "instructionsPath"
+export async function subagentBrief(
+  db: Queryable,
+  runId: string,
+): Promise<StoredSparkBrief | null> {
+  const { rows } = await db.query<StoredSparkBrief>(
+    `SELECT t.id, t.name, t.role, t.instructions,
+       t.instructions_moved_at IS NOT NULL AS "instructionsMoved",
+       t.instructions_path AS "instructionsPath"
      FROM runs r
      JOIN teammates t ON t.id = (r.route->'spark'->>'id')::uuid
      WHERE r.id = $1 AND r.role = 'spark'`,

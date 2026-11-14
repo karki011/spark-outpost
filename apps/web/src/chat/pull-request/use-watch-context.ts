@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import type { Profile } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../../api/client.ts';
 import { setupApi, setupKey } from '../../api/setup.ts';
-import { useRelay } from '../../teammates/use-relay.ts';
 import { providerName } from '../provider-name.ts';
 import { useTenSeconds } from './use-ten-seconds.ts';
 import { roundWorker, type FollowUpMode, type IndicatorContext } from './watch-indicator-model.ts';
@@ -30,7 +29,6 @@ export function useWatchContext(conversationId: string): WatchContext {
     enabled: false,
   }).data;
   const now = useTenSeconds();
-  const relay = useRelay()?.name ?? null;
   return useMemo(() => {
     const mode = followUpMode(profile);
     return {
@@ -40,8 +38,7 @@ export function useWatchContext(conversationId: string): WatchContext {
         mode,
         now,
         worker: roundWorker(detail, roundRunId, providerName),
-        relay,
       }),
     };
-  }, [profile, detail, now, relay]);
+  }, [profile, detail, now]);
 }

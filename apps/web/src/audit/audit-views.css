@@ -4,7 +4,7 @@
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
 }
-.wf-h {
+.wfall-h {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -12,26 +12,26 @@
   margin-bottom: 10px;
   font-size: 13px;
 }
-.wf-h b {
+.wfall-h b {
   font-weight: 600;
 }
-.wf-h span {
+.wfall-h span {
   font-size: 12.5px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
-.wf-grid {
+.wfall-grid {
   position: relative;
-  --wf-label: 150px;
+  --wfall-label: 150px;
 }
-.wf-row {
+.wfall-row {
   display: grid;
-  grid-template-columns: var(--wf-label) 1fr;
+  grid-template-columns: var(--wfall-label) 1fr;
   align-items: center;
   gap: 10px;
   height: 32px;
 }
-.wf-lab {
+.wfall-lab {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -40,16 +40,16 @@
   font-size: 12.5px;
   white-space: nowrap;
 }
-.wf-lab span {
+.wfall-lab span {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.wf-track {
+.wfall-track {
   position: relative;
   height: 100%;
   border-bottom: 1px dashed var(--line);
 }
-.wf-bar {
+.wfall-bar {
   position: absolute;
   top: 8px;
   display: flex;
@@ -60,14 +60,14 @@
   border-radius: 4px;
   background: var(--bc);
   transform-origin: left;
-  animation: wf-in 0.25s var(--out) both;
+  animation: wfall-in 0.25s var(--out) both;
 }
-@keyframes wf-in {
+@keyframes wfall-in {
   from {
     transform: scaleX(0);
   }
 }
-.wf-bar span {
+.wfall-bar span {
   padding: 0 6px;
   overflow: hidden;
   font-size: 12px;
@@ -76,22 +76,22 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.wf-bar.live {
+.wfall-bar.live {
   background: repeating-linear-gradient(
     135deg,
     var(--bc) 0 6px,
     color-mix(in srgb, var(--bc) 60%, transparent) 6px 12px
   );
 }
-.wf-ov {
+.wfall-ov {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: calc(var(--wf-label) + 10px);
+  left: calc(var(--wfall-label) + 10px);
   right: 0;
   pointer-events: none;
 }
-.wf-gap {
+.wfall-gap {
   position: absolute;
   top: -4px;
   bottom: 0;
@@ -103,7 +103,7 @@
   border-left: 1.5px dashed var(--warn);
   border-right: 1.5px dashed var(--warn);
 }
-.wf-gap span {
+.wfall-gap span {
   position: absolute;
   top: 2px;
   left: 6px;
@@ -115,17 +115,17 @@
   color: var(--warn);
   white-space: nowrap;
 }
-.wf-axis {
+.wfall-axis {
   display: grid;
   grid-template-columns: 150px 1fr;
   gap: 10px;
   margin-top: 4px;
 }
-.wf-axis div {
+.wfall-axis div {
   position: relative;
   height: 16px;
 }
-.wf-axis i {
+.wfall-axis i {
   position: absolute;
   transform: translateX(-50%);
   font:
@@ -133,7 +133,7 @@
     monospace;
   color: var(--faint);
 }
-.wf-legend {
+.wfall-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 16px;
@@ -141,17 +141,17 @@
   font-size: 12px;
   color: var(--muted);
 }
-.wf-legend span {
+.wfall-legend span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
-.wf-legend .sw {
+.wfall-legend .sw {
   width: 14px;
   height: 8px;
   border-radius: 2px;
 }
-.wf-legend .sw.wait {
+.wfall-legend .sw.wait {
   background: repeating-linear-gradient(
     135deg,
     color-mix(in srgb, var(--warn) 40%, transparent) 0 3px,
@@ -327,11 +327,11 @@
   margin-top: 12px;
 }
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
-  .wf-grid,
-  .wf-axis {
-    --wf-label: 96px;
+  .wfall-grid,
+  .wfall-axis {
+    --wfall-label: 96px;
   }
-  .wf-axis {
+  .wfall-axis {
     grid-template-columns: 96px 1fr;
   }
   .lrow-h {
@@ -345,7 +345,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wf-bar {
+  .wfall-bar {
     animation: none;
   }
 }

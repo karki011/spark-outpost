@@ -2,19 +2,16 @@ import './teammate-sheet.css';
 import { useEffect, useId, useRef, useState, type FormEvent, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { TEAMMATE_NAME_MAX, TEAMMATE_ROLE_MAX, type Teammate } from '@spark-outpost/contracts';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Teammate } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
-import { setupApi, setupKey } from '../api/setup.ts';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { XIcon } from '../ui/icons.tsx';
 import { reveal } from '../ui/transitions.tsx';
-import { TeammateDefaults } from './TeammateDefaults.tsx';
 import { TeammateFace } from './TeammateFace.tsx';
 import { TeammateInstructions } from './TeammateInstructions.tsx';
-import { TeammateLook } from './TeammateLook.tsx';
-import { TeammateProject } from './TeammateProject.tsx';
+import { TeammateFields } from './TeammateFields.tsx';
 import {
   changesFrom,
   createRequest,
@@ -24,7 +21,12 @@ import {
   shownFace,
   type TeammateDraft,
 } from './teammate-draft.ts';
-import { closeTeammateSheet, requestTeammateDelete, type SheetRequest } from './teammate-store.ts';
+import {
+  announceTeammateCreated,
+  closeTeammateSheet,
+  requestTeammateDelete,
+  type SheetRequest,
+} from './teammate-store.ts';
 import { teammateKeys, teammatesApi } from './teammates-api.ts';
 
 const FOCUSABLE = 'button:not(:disabled), input, textarea, [tabindex="0"]';
@@ -41,8 +43,9 @@ function useSave(editing: Teammate | null) {
       editing
         ? teammatesApi.update(editing.id, changesFrom(editing, draft))
         : teammatesApi.create(createRequest(draft)),
-    onSuccess: async () => {
+    onSuccess: async (saved) => {
       closeTeammateSheet();
+      if (!editing) announceTeammateCreated(saved);
       await Promise.all([
         client.invalidateQueries({ queryKey: teammateKeys.all }),
         client.invalidateQueries({ queryKey: queryKeys.conversations, exact: true }),
@@ -80,7 +83,6 @@ export function TeammateSheet({ request, editing }: TeammateSheetProps) {
     editing ? draftOf(editing) : newDraft(request.kind === 'create' ? request.seed : undefined),
   );
   const [touched, setTouched] = useState(false);
-  const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const save = useSave(editing);
   useSheetKeys(panelRef);
 
@@ -140,49 +142,11 @@ export function TeammateSheet({ request, editing }: TeammateSheetProps) {
         </header>
         <form className="tm-form" onSubmit={submit} noValidate>
           <div className="tm-body">
-            {editing?.kind && (
-              <p className="tm-builtin">
-                Spark's built-in pull request follow-up Spark. Its standing instructions go into
-                every follow-up round as context and grant nothing; Follow up on pull requests in
-                Settings decides whether rounds run.
-              </p>
-            )}
-            <label className="field">
-              <span>Name</span>
-              <input
-                ref={nameRef}
-                className="inp"
-                value={draft.name}
-                maxLength={TEAMMATE_NAME_MAX}
-                placeholder="Pip"
-                aria-invalid={touched && !draft.name.trim()}
-                onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-              />
-            </label>
-            <label className="field">
-              <span>Role</span>
-              <input
-                className="inp"
-                value={draft.role}
-                maxLength={TEAMMATE_ROLE_MAX}
-                placeholder="Frontend helper"
-                onChange={(event) => setDraft({ ...draft, role: event.target.value })}
-              />
-            </label>
-            <TeammateLook
-              picked={draft.face}
-              shown={shownFace(draft)}
-              onChange={(face) => setDraft({ ...draft, face })}
-            />
-            <h3 className="tm-sub">Defaults for its chats</h3>
-            <TeammateDefaults
+            <TeammateFields
               draft={draft}
-              providers={setup.data?.providers ?? []}
-              onChange={(defaults) => setDraft({ ...draft, ...defaults })}
-            />
-            <TeammateProject
-              projectIds={draft.projectIds}
-              onChange={(projectIds) => setDraft({ ...draft, projectIds })}
+              nameRef={nameRef}
+              nameInvalid={touched && !draft.name.trim()}
+              onChange={setDraft}
             />
             <TeammateInstructions
               instructions={draft.instructions}

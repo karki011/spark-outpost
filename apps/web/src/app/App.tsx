@@ -1,5 +1,4 @@
 import {
-  lazy,
   Suspense,
   useCallback,
   useEffect,
@@ -18,6 +17,7 @@ import { ChatPanes } from '../chat/split/ChatPanes.tsx';
 import { useChatSplit } from '../chat/split/use-chat-split.ts';
 import { queueDraft } from '../chat/composer/pending-draft.ts';
 import { StatusCompanion } from '../companion/StatusCompanion.tsx';
+import { openBuilderChat } from '../sparks-page/sparks-route.ts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { AgentTvHost } from '../crew/AgentTvHost.tsx';
 import { JUMP_TRIES, scrollToAnchor, scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
@@ -59,12 +59,15 @@ import { useFirstContent } from './first-content.ts';
 import {
   Analytics,
   BrowserView,
+  DocsPage,
+  MapPage,
   Onboarding,
   OutpostView,
   Phone,
   preloadSettings,
   preloadView,
   SettingsDialog,
+  SparksPage,
   Tickets,
   Today,
 } from './lazy-views.tsx';
@@ -73,6 +76,7 @@ import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { readHomeDraftId, saveHomeDraftId } from '../home/home-draft.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
+import { useViewOpeners } from './use-view-openers.ts';
 import { DefaultLevelNotice } from '../spark/DefaultLevelNotice.tsx';
 import { PasskeyOffer } from '../phone/PasskeyOffer.tsx';
 import { useAttentionTitle } from './use-attention-title.ts';
@@ -87,22 +91,10 @@ import { useChatRetention } from './chat-retention.ts';
 import { startIdleMotion } from './idle-motion.ts';
 import { useDesktopSettingsOpener } from './use-desktop-settings-opener.ts';
 import '../ui/controls.css';
-import { openTodayEvent, useTodayOpener } from '../calendar/today-request.ts';
-import {
-  browserViewAvailable,
-  useBrowserViewOpener,
-  useLinksToView,
-} from '../browser-view/view-store.ts';
+import { openTodayEvent } from '../calendar/today-request.ts';
+import { browserViewAvailable, useLinksToView } from '../browser-view/view-store.ts';
 
 const NO_IDS: readonly string[] = [];
-
-const MapPage = lazy(() =>
-  import('../map/MapPage.tsx').then((module) => ({ default: module.MapPage })),
-);
-
-const DocsPage = lazy(() =>
-  import('../docs/DocsPage.tsx').then((module) => ({ default: module.DocsPage })),
-);
 
 function ChatShell({ entering }: { entering: boolean }) {
   const queryClient = useQueryClient();
@@ -219,16 +211,14 @@ function ChatShell({ entering }: { entering: boolean }) {
   );
   useChatRequests(openChat);
   const startCalendarChat = useStableCallback((text: string) => queueDraft(startDraft(), text));
-  const showToday = useCallback(() => {
-    setSettings(null);
-    setView('today');
-  }, [setSettings, setView]);
-  useTodayOpener(showToday);
-  const showBrowserView = useCallback(() => {
-    setSettings(null);
-    setView('browser');
-  }, [setSettings, setView]);
-  useBrowserViewOpener(showBrowserView);
+  const showView = useCallback(
+    (next: AppView) => {
+      setSettings(null);
+      setView(next);
+    },
+    [setSettings, setView],
+  );
+  useViewOpeners(showView);
   useSlackPresence(remote);
   const openFromNotification = useStableCallback((chatId: string, cardId: string | null) => {
     setSettings(null);
@@ -377,6 +367,11 @@ function ChatShell({ entering }: { entering: boolean }) {
               />
             </Suspense>
           )}
+          {view === 'sparks' && (
+            <Suspense fallback={<main className="main" aria-label="Sparks" aria-busy="true" />}>
+              <SparksPage />
+            </Suspense>
+          )}
           {view === 'map' && (
             <Suspense
               fallback={<main className="page" aria-label="Project map" aria-busy="true" />}
@@ -415,6 +410,7 @@ function ChatShell({ entering }: { entering: boolean }) {
             }
             onOpenChat={openAtCard}
             onHome={() => setView('home')}
+            onBuild={remote ? null : openBuilderChat}
           />
           {live.paused && !connection.lost && <LivePausedHint />}
           <DefaultLevelNotice

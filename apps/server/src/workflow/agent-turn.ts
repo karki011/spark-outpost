@@ -4,7 +4,7 @@ import type { RunSnapshot } from '../persistence/run-snapshots.ts';
 import { STOPPED_BY_QUIT, type RunEvent } from '@spark-outpost/contracts';
 import type { SparkPreferences } from '../persistence/setup.ts';
 import { auditSparkHandoff } from './spark-audit.ts';
-import { liveTurn, promptWithBrowserCheck, sparkSession } from './turn-facts.ts';
+import { asksThroughGate, liveTurn, promptWithBrowserCheck, sparkSession } from './turn-facts.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { recordSuggestedTitle } from '../persistence/auto-title.ts';
@@ -67,7 +67,6 @@ import { turnSessionFor, type TurnSession } from './turn-session.ts';
 import { asAgentReads } from '../outposts/agent-prompt.ts';
 import { preambleDeps } from '../outposts/preamble-stores.ts';
 import { answersDelivered, outpostPreamble } from '../outposts/turn-preamble.ts';
-import { withRelayPreamble } from '../pr-follow-up/relay-preamble.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
 import { repoScanner } from '../agent-config/discovery.ts';
 import { loadRepoLaunch } from '../agent-config/launch.ts';
@@ -284,7 +283,7 @@ export async function runAgentTurn(
       observations,
     };
     const changesProject = input.mode === 'do' && input.parentRunId === null;
-    const asking = input.mode === 'ask' && input.role === null && input.projectRoots.length > 0;
+    const asking = asksThroughGate(input);
     const approvals =
       input.mode === 'do'
         ? await prepareDoRun({
@@ -299,7 +298,7 @@ export async function runAgentTurn(
             snapshot: options.keepSnapshot,
           })
         : asking
-          ? prepareAskRun({ ...gateOptions, conversationId: input.identity.threadId })
+          ? prepareAskRun(gateOptions, input)
           : undefined;
     const asksUser = input.parentRunId === null && !input.assistant;
     const questions = asksUser ? prepareQuestions(gateOptions, approvals) : undefined;
@@ -329,9 +328,7 @@ export async function runAgentTurn(
     const outposts = preambleDeps(deps.db, input.workspaceId);
     const outpost =
       input.assistant || options.secondPrompt ? null : await outpostPreamble(outposts, shown);
-    const turnPreamble = assistantTurn
-      ? assistantTurn.note
-      : await withRelayPreamble(deps.db, input, outpost?.text, options.secondPrompt === true);
+    const turnPreamble = assistantTurn ? assistantTurn.note : outpost?.text || undefined;
 
     if (input.modelSwitch) {
       await recordModelSwitch(deps.db, lease.runId, append, input.modelSwitch);
@@ -378,6 +375,7 @@ export async function runAgentTurn(
           conversationId: input.identity.threadId,
           runId: lease.runId,
           ...(input.assistant ? { readOnly: true, assistant: true } : {}),
+          ...(input.testRun ? { testRun: true } : {}),
           observations,
           publish: await publishScope(deps.db, input),
           commands: await sparkCommandScope(deps.db, lease.runId, input, { observations }),

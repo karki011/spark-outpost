@@ -1,5 +1,4 @@
 import {
-  PR_FOLLOW_UP_SPARK,
   TEAMMATES_MAX,
   TEAMMATE_STARTER_IDS,
   faceFromName,
@@ -18,8 +17,13 @@ import {
 } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
 import { newId } from './ids.ts';
-import { relayWatch } from './relay.ts';
 import { ProjectNotFoundError } from '../projects/projects.ts';
+import { crewSparksDir } from '../crew/folders.ts';
+import {
+  readSparkInstructions,
+  removeSparkFolder,
+  writeSparkInstructions,
+} from '../crew/spark-folder.ts';
 
 export class TeammateNotFoundError extends Error {
   constructor() {
@@ -37,12 +41,13 @@ interface TeammateRow {
   face_color: string | null;
   provider: string | null;
   model: string | null;
+  effort: string | null;
   agent_mode: string | null;
   level: string | null;
   instructions: string;
+  instructions_moved: boolean;
   instructions_path: string | null;
   home_conversation_id: string | null;
-  kind: string | null;
   project_ids: string[];
   created_at: Date;
   updated_at: Date;
@@ -51,13 +56,27 @@ interface TeammateRow {
 const UNIQUE_VIOLATION = '23505';
 
 const teammateColumns = `t.id, t.name, t.role, t.face_shape, t.face_color, t.provider, t.model,
-  t.agent_mode, t.level, t.instructions, t.instructions_path, t.home_conversation_id, t.kind, t.created_at, t.updated_at,
+  t.effort, t.agent_mode, t.level, t.instructions, t.instructions_moved_at IS NOT NULL AS instructions_moved,
+  t.instructions_path, t.home_conversation_id, t.created_at, t.updated_at,
   ARRAY(
     SELECT tp.project_id::text FROM teammate_projects tp
     WHERE tp.teammate_id = t.id ORDER BY tp.position
   ) AS project_ids`;
 
-function toTeammate(row: TeammateRow): Teammate {
+export function folderInstructions(
+  stored: { instructions: string; moved: boolean },
+  inFolder: string,
+): string {
+  return stored.moved ? inFolder : inFolder || stored.instructions;
+}
+
+async function withInstructions(row: TeammateRow, sparksDir: string): Promise<Teammate> {
+  const inFolder = await readSparkInstructions(sparksDir, row.id);
+  const stored = { instructions: row.instructions, moved: row.instructions_moved };
+  return toTeammate(row, folderInstructions(stored, inFolder));
+}
+
+function toTeammate(row: TeammateRow, instructions: string): Teammate {
   const picked = teammateFaceSchema.safeParse({ shape: row.face_shape, color: row.face_color });
   return {
     id: row.id,
@@ -67,13 +86,13 @@ function toTeammate(row: TeammateRow): Teammate {
     faceAuto: !picked.success,
     provider: providerIdSchema.safeParse(row.provider).data ?? null,
     model: row.model,
+    effort: row.effort,
     agentMode: row.agent_mode,
     level: teammateLevelSchema.safeParse(row.level).data ?? null,
-    instructions: row.instructions,
+    instructions,
     instructionsPath: row.instructions_path,
     projectIds: row.project_ids,
     homeConversationId: row.home_conversation_id,
-    ...(row.kind === PR_FOLLOW_UP_SPARK ? { kind: PR_FOLLOW_UP_SPARK } : {}),
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -83,22 +102,27 @@ export async function getTeammate(
   db: Queryable,
   workspaceId: string,
   id: string,
+  sparksDir: string = crewSparksDir(),
 ): Promise<Teammate> {
   const { rows } = await db.query<TeammateRow>(
     `SELECT ${teammateColumns} FROM teammates t WHERE t.workspace_id = $1 AND t.id = $2`,
     [workspaceId, id],
   );
   if (!rows[0]) throw new TeammateNotFoundError();
-  return toTeammate(rows[0]);
+  return withInstructions(rows[0], sparksDir);
 }
 
-export async function listTeammates(db: Queryable, workspaceId: string): Promise<Teammate[]> {
+export async function listTeammates(
+  db: Queryable,
+  workspaceId: string,
+  sparksDir: string = crewSparksDir(),
+): Promise<Teammate[]> {
   const { rows } = await db.query<TeammateRow>(
     `SELECT ${teammateColumns} FROM teammates t WHERE t.workspace_id = $1
      ORDER BY t.created_at, t.id`,
     [workspaceId],
   );
-  return rows.map(toTeammate);
+  return Promise.all(rows.map((row) => withInstructions(row, sparksDir)));
 }
 
 async function setTeammateProjects(
@@ -132,6 +156,7 @@ export async function createTeammate(
   db: Queryable,
   workspaceId: string,
   input: NewTeammate,
+  sparksDir: string = crewSparksDir(),
 ): Promise<Teammate> {
   const { rows: counted } = await db.query<{ count: number }>(
     'SELECT count(*)::int AS count FROM teammates WHERE workspace_id = $1',
@@ -144,8 +169,8 @@ export async function createTeammate(
   await db
     .query(
       `INSERT INTO teammates (id, workspace_id, name, role, face_shape, face_color, provider, model,
-         agent_mode, level, instructions, instructions_path)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+         effort, agent_mode, level, instructions_path, instructions_moved_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now())`,
       [
         id,
         workspaceId,
@@ -155,9 +180,9 @@ export async function createTeammate(
         input.face?.color ?? null,
         input.provider,
         input.model,
+        input.effort,
         input.agentMode,
         input.level,
-        input.instructions,
         input.instructionsPath ?? null,
       ],
     )
@@ -165,17 +190,29 @@ export async function createTeammate(
   if (input.projectIds.length > 0) {
     await setTeammateProjects(db, workspaceId, id, input.projectIds);
   }
-  return getTeammate(db, workspaceId, id);
+  if (input.instructions) {
+    await writeSparkInstructions(sparksDir, id, input.instructions).catch(async (error) => {
+      await db.query('DELETE FROM teammates WHERE workspace_id = $1 AND id = $2', [
+        workspaceId,
+        id,
+      ]);
+      throw error;
+    });
+  }
+  return getTeammate(db, workspaceId, id, sparksDir);
 }
 
-const COLUMNS: Record<Exclude<keyof UpdateTeammateRequest, 'face' | 'projectIds'>, string> = {
+const COLUMNS: Record<
+  Exclude<keyof UpdateTeammateRequest, 'face' | 'projectIds' | 'instructions'>,
+  string
+> = {
   name: 'name',
   role: 'role',
   provider: 'provider',
   model: 'model',
+  effort: 'effort',
   agentMode: 'agent_mode',
   level: 'level',
-  instructions: 'instructions',
   instructionsPath: 'instructions_path',
 };
 
@@ -184,8 +221,9 @@ export async function updateTeammate(
   workspaceId: string,
   id: string,
   update: UpdateTeammateRequest,
+  sparksDir: string = crewSparksDir(),
 ): Promise<Teammate> {
-  await getTeammate(db, workspaceId, id);
+  await getTeammate(db, workspaceId, id, sparksDir);
   const sets: string[] = [];
   const values: unknown[] = [];
   for (const [key, column] of Object.entries(COLUMNS)) {
@@ -198,6 +236,12 @@ export async function updateTeammate(
     values.push(update.face?.shape ?? null, update.face?.color ?? null);
     sets.push(`face_shape = $${values.length + 1}`, `face_color = $${values.length + 2}`);
   }
+  if (update.instructions !== undefined) {
+    sets.push(
+      "instructions = ''",
+      'instructions_moved_at = COALESCE(instructions_moved_at, now())',
+    );
+  }
   await db
     .query(
       `UPDATE teammates SET ${[...sets, 'updated_at = now()'].join(', ')}
@@ -206,15 +250,24 @@ export async function updateTeammate(
     )
     .catch((error: unknown) => nameTaken(error, update.name));
   if (update.projectIds) await setTeammateProjects(db, workspaceId, id, update.projectIds);
-  return getTeammate(db, workspaceId, id);
+  if (update.instructions !== undefined) {
+    await writeSparkInstructions(sparksDir, id, update.instructions);
+  }
+  return getTeammate(db, workspaceId, id, sparksDir);
 }
 
-export async function deleteTeammate(db: Queryable, workspaceId: string, id: string) {
+export async function deleteTeammate(
+  db: Queryable,
+  workspaceId: string,
+  id: string,
+  sparksDir: string = crewSparksDir(),
+) {
   const { rowCount } = await db.query('DELETE FROM teammates WHERE workspace_id = $1 AND id = $2', [
     workspaceId,
     id,
   ]);
   if (!rowCount) throw new TeammateNotFoundError();
+  await removeSparkFolder(sparksDir, id);
 }
 
 interface SignalRow {
@@ -297,18 +350,14 @@ export async function teammateList(
     dismissedStarters(db, workspaceId),
   ]);
   const taken = new Set(teammates.map((teammate) => teammate.name.toLowerCase()));
-  const relay = teammates.some((teammate) => teammate.kind)
-    ? await relayWatch(db, workspaceId)
-    : null;
   return {
-    teammates: teammates.map((teammate) => {
-      const view = teammateView(
+    teammates: teammates.map((teammate) =>
+      teammateView(
         teammate,
         signals.filter((row) => row.teammate_id === teammate.id),
         now,
-      );
-      return teammate.kind && relay ? { ...view, relay } : view;
-    }),
+      ),
+    ),
     starters: TEAMMATE_STARTER_IDS.filter(
       (id) => !dismissed.includes(id) && !taken.has(id.toLowerCase()),
     ),

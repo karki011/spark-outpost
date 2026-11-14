@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { findSparkMentions, mainAgentContinues, sparksLeadMessage } from './spark-mention.ts';
+import {
+  findSparkMentions,
+  mainAgentContinues,
+  sparksLeadMessage,
+  withoutShadowed,
+} from './spark-mention.ts';
 
 const sparks = [
   { name: 'Pip' },
@@ -86,5 +91,23 @@ describe('sparksLeadMessage', () => {
     expect(lead('@Pip, @Wren review')).toBe(true);
     expect(lead('Hey @Pip review')).toBe(false);
     expect(lead('@Pip review with @Wren')).toBe(false);
+  });
+});
+
+describe('withoutShadowed', () => {
+  const flows = [{ name: 'pip-review' }, { name: 'wren' }];
+  const kept = (text: string) =>
+    withoutShadowed(findSparkMentions(text, sparks), findSparkMentions(text, flows)).map(
+      (found) => found.spark.name,
+    );
+
+  it('drops a Spark name that is only the start of a longer workflow id', () => {
+    expect(kept('@pip-review go')).toEqual([]);
+    expect(kept('@Pip and @pip-review')).toEqual(['Pip']);
+  });
+
+  it('keeps a Spark whose name equals a workflow id, and one with no workflow id', () => {
+    expect(kept('@Wren look')).toEqual(['Wren']);
+    expect(kept('@Pip-ish idea')).toEqual(['Pip']);
   });
 });

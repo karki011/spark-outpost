@@ -1,0 +1,463 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+:root{--bg:#f6f1ed;--rail:#efe4da;--panel:#fffdfb;--raise:#f5eae1;--line:#ecdfd3;--line-strong:#8f8378;--text:#241a13;--muted:#614a3b;--faint:#6d594a;--accent:#b34f00;--accent-ink:#fff;--accent-text:#a53f00;--accent-soft:rgba(179,79,0,.11);--danger:#ba3129;--danger-soft:rgba(186,49,41,.09);--warn:#7d4e00;--success:#1f7335;--code:#faf2eb;--r:20px;--r-sm:12px}
+*{box-sizing:border-box}
+body{margin:0;background:#d9d2cc;font:14px/1.4 -apple-system,"SF Pro Text","Inter","Helvetica Neue",Arial,sans-serif;color:var(--text)}
+.screen{width:1280px;height:800px;background:var(--bg);margin:24px;display:flex;flex-direction:column;overflow:hidden;border-radius:12px;border:1px solid var(--line-strong)}
+.bar{height:52px;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+.dots{display:flex;gap:7px;margin-right:8px}.dots i{width:12px;height:12px;border-radius:50%;background:#d8cabd}
+.crumb{color:var(--muted)}.title{font-weight:650;font-size:15px}
+.sp{flex:1}
+.btn{height:30px;padding:0 14px;border-radius:999px;border:1px solid var(--line-strong);background:var(--panel);font:inherit;font-size:13px;color:var(--text);display:inline-flex;align-items:center;gap:6px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:999px;overflow:hidden;height:30px}
+.seg span{padding:0 14px;display:flex;align-items:center;font-size:13px;color:var(--muted)}
+.seg .on{background:var(--accent-soft);color:var(--accent-text);font-weight:600}
+.body{flex:1;display:flex;min-height:0}
+.col{background:var(--panel);border-right:1px solid var(--line);padding:18px;overflow:hidden}
+.col.right{border-right:0;border-left:1px solid var(--line)}
+h3{margin:0 0 4px;font-size:12px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
+.hint{color:var(--muted);font-size:13px;margin:0 0 14px}
+.stage{border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;margin-bottom:12px;background:var(--bg)}
+.stagehead{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-weight:600;font-size:13px}
+.tag{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--raise);color:var(--muted);font-weight:500}
+.row{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-top:6px}
+.row .after{margin-left:auto;font-size:12px;color:var(--muted)}
+.grip{color:var(--line-strong);font-size:14px;letter-spacing:-2px}
+.face{width:22px;height:22px;border-radius:7px;flex:none;display:inline-block}
+.add{color:var(--accent-text);font-size:13px;font-weight:600;margin-top:8px;display:inline-block}
+.canvas{flex:1;position:relative;background-image:radial-gradient(var(--line) 1.2px,transparent 1.2px);background-size:20px 20px}
+.canvas svg{position:absolute;inset:0;width:100%;height:100%}
+.node{position:absolute;width:176px;height:60px;background:var(--panel);border:1px solid var(--line-strong);border-radius:14px;padding:9px 12px;display:flex;gap:10px;align-items:center;box-shadow:0 1px 2px rgba(36,26,19,.06)}
+.node.sel{border:2px solid var(--accent);padding:8px 11px}
+.node b{display:block;font-size:13.5px;font-weight:650}
+.node small{display:block;font-size:12px;color:var(--muted)}
+.node.ghost{border-style:dashed;opacity:.75;box-shadow:0 8px 20px rgba(36,26,19,.18)}
+.port{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid var(--line-strong);top:25px}
+.port.in{left:-6px}.port.pout{right:-6px}
+.st{font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px}
+.st.done{color:var(--success)}.st.run{color:var(--accent-text)}.st.wait{color:var(--faint)}.st.fail{color:var(--danger)}
+.lane{position:absolute;top:14px;font-size:12px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
+.field{margin-bottom:14px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600}
+.input{border:1px solid var(--line-strong);border-radius:10px;min-height:34px;padding:7px 10px;background:var(--panel);font-size:13px;display:flex;align-items:center;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;background:var(--raise);border-radius:999px;padding:3px 9px;margin:0 4px 4px 0}
+.pal{display:flex;align-items:center;gap:10px;height:42px;padding:0 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--bg);font-size:13px;font-weight:600}
+.status{height:44px;display:flex;align-items:center;gap:18px;padding:0 20px;background:var(--raise);border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
+.status b{color:var(--text)}
+.out{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:13px;line-height:1.5}
+.out li{margin-bottom:6px}
+.cap{position:absolute;left:20px;bottom:14px;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+</style>
+</head>
+<body>
+
+<div class="screen" id="a">
+  <div class="bar"><span class="crumb">Workflows /</span><span class="title">Pre-PR review</span><span class="tag">6 steps</span><span class="sp"></span><div class="seg"><span class="on">List</span><span>Canvas</span></div><button class="btn">Save</button><button class="btn primary">▶ Run</button></div>
+  <div class="body">
+    <div class="col" style="width:470px">
+      <h3>Steps</h3><p class="hint">Steps in the same stage run at the same time.</p>
+      <div class="stage"><div class="stagehead">Stage 1 <span class="tag">4 in parallel</span></div>
+        <div class="row"><span class="grip">⋮⋮</span><span class="face" style="background:#ba3129"></span>Security<span class="after">starts first</span></div>
+        <div class="row"><span class="grip">⋮⋮</span><span class="face" style="background:#2866d4"></span>Lint<span class="after">starts first</span></div>
+        <div class="row"><span class="grip">⋮⋮</span><span class="face" style="background:#6b4fd8"></span>Types<span class="after">starts first</span></div>
+        <div class="row"><span class="grip">⋮⋮</span><span class="face" style="background:#1f7335"></span>Scope creep<span class="after">starts first</span></div>
+        <span class="add">＋ Add a Spark to this stage</span></div>
+      <div class="stage"><div class="stagehead">Stage 2</div>
+        <div class="row"><span class="grip">⋮⋮</span><span class="face" style="background:#b34f00"></span>Comment<span class="after">after all of Stage 1 ▾</span></div>
+        <span class="add">＋ Add a Spark to this stage</span></div>
+      <div class="stage"><div class="stagehead">Stage 3</div>
+        <div class="row"><span class="grip">⋮⋮</span><span class="face" style="background:#7d4e00"></span>Ticketing<span class="after">after Comment ▾</span></div>
+        <span class="add">＋ Add a Spark to this stage</span></div>
+      <span class="add">＋ Add stage</span>
+    </div>
+    <div class="canvas" data-graph="plain"><div class="cap">Preview · updates as you edit</div></div>
+  </div>
+</div>
+
+<div class="screen" id="b">
+  <div class="bar"><span class="crumb">Workflows /</span><span class="title">Pre-PR review</span><span class="tag">6 steps</span><span class="sp"></span><div class="seg"><span>List</span><span class="on">Canvas</span></div><button class="btn">Save</button><button class="btn primary">▶ Run</button></div>
+  <div class="body">
+    <div class="col" style="width:210px">
+      <h3>Sparks</h3><p class="hint">Drag onto the canvas.</p>
+      <div class="pal"><span class="face" style="background:#ba3129"></span>Security</div>
+      <div class="pal"><span class="face" style="background:#2866d4"></span>Lint</div>
+      <div class="pal"><span class="face" style="background:#6b4fd8"></span>Types</div>
+      <div class="pal"><span class="face" style="background:#1f7335"></span>Scope creep</div>
+      <div class="pal"><span class="face" style="background:#b34f00"></span>Comment</div>
+      <div class="pal"><span class="face" style="background:#7d4e00"></span>Ticketing</div>
+      <div class="pal"><span class="face" style="background:#0f7c86"></span>Docs</div>
+      <span class="add">＋ New Spark…</span>
+    </div>
+    <div class="canvas" data-graph="edit" data-shift="-70"><div class="cap">Drag from a dot to connect · ⌫ removes · Tidy up</div></div>
+    <div class="col right" style="width:290px">
+      <h3>Step</h3><p class="hint">Comment</p>
+      <div class="field"><label>Spark</label><div class="input"><span class="face" style="background:#b34f00"></span>Comment ▾</div></div>
+      <div class="field"><label>Runs after</label><div><span class="chip">Security ✕</span><span class="chip">Lint ✕</span><span class="chip">Types ✕</span><span class="chip">Scope creep ✕</span></div></div>
+      <div class="field"><label>Start when</label><div class="seg"><span class="on">All finish</span><span>Any finishes</span></div></div>
+      <div class="field"><label>Extra instructions for this step</label><div class="input" style="min-height:84px;align-items:flex-start;color:var(--muted)">Write one review comment per finding. Skip anything Lint already fixed.</div></div>
+      <div class="field"><label>If this step fails</label><div class="seg"><span class="on">Stop workflow</span><span>Continue</span></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="c">
+  <div class="bar"><span class="crumb">Chat · Fix login redirect /</span><span class="title">Pre-PR review</span><span class="sp"></span><button class="btn">Open workflow</button><button class="btn">■ Stop</button></div>
+  <div class="status"><span class="st run">◐ Running</span><span><b>3 of 6</b> steps done</span><span><b>1m 42s</b></span><span><b>48k</b> tokens</span><span><b>$0.18</b></span></div>
+  <div class="body">
+    <div class="canvas" data-graph="run" data-shift="-40"></div>
+    <div class="col right" style="width:380px">
+      <h3>Step output</h3><p class="hint">Security · Claude · read-only · 38s</p>
+      <div class="out"><b>2 findings</b><ul style="padding-left:18px;margin:8px 0 0">
+        <li><b>High</b> · <code>auth/redirect.ts:41</code> follows the <code>next</code> parameter without checking the host (open redirect).</li>
+        <li><b>Low</b> · <code>auth/session.ts:12</code> cookie is set without <code>SameSite</code>.</li></ul></div>
+      <p class="hint" style="margin-top:14px">Passed to: <span class="chip">Comment</span></p>
+      <h3 style="margin-top:18px">All steps</h3>
+      <div class="row"><span class="face" style="background:#ba3129"></span>Security<span class="after st done">✓ Done</span></div>
+      <div class="row"><span class="face" style="background:#2866d4"></span>Lint<span class="after st done">✓ Done</span></div>
+      <div class="row"><span class="face" style="background:#6b4fd8"></span>Types<span class="after st run">◐ Running</span></div>
+      <div class="row"><span class="face" style="background:#1f7335"></span>Scope creep<span class="after st done">✓ Done</span></div>
+      <div class="row"><span class="face" style="background:#b34f00"></span>Comment<span class="after st wait">○ Waiting</span></div>
+      <div class="row"><span class="face" style="background:#7d4e00"></span>Ticketing<span class="after st wait">○ Waiting</span></div>
+    </div>
+  </div>
+</div>
+
+<style>
+.tabs{display:flex;gap:4px;height:44px;align-items:flex-end;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.tab{padding:0 14px;height:36px;display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent}
+.tab.on{color:var(--accent-text);font-weight:650;border-bottom-color:var(--accent)}
+.grid{flex:1;padding:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-content:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.card.sel{border:2px solid var(--accent);padding:13px}
+.card .top{display:flex;gap:10px;align-items:center}
+.card b{font-size:14.5px}.card small{font-size:12.5px;color:var(--muted);display:block}
+.meta{font-size:12px;color:var(--faint)}
+.card.new{border-style:dashed;align-items:center;justify-content:center;color:var(--accent-text);font-weight:600;min-height:118px}
+.wlist{flex:1;padding:22px}
+.wrow{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.wrow b{font-size:14.5px;display:block}.wrow small{font-size:12.5px;color:var(--muted)}
+.mini{display:flex;align-items:center;gap:4px;margin-top:8px}
+.mini .face{width:18px;height:18px;border-radius:6px}.mini em{font-style:normal;color:var(--line-strong);margin:0 3px}
+.stack{display:flex;flex-direction:column;gap:3px}
+</style>
+
+<div class="screen" id="d">
+  <div class="bar"><span class="title">Sparks</span><span class="sp"></span><button class="btn primary">＋ New Spark</button></div>
+  <div class="tabs"><span class="tab on">Crew <span class="tag">7</span></span><span class="tab">Workflows <span class="tag">3</span></span></div>
+  <div class="body">
+    <div class="grid">
+      <div class="card sel"><div class="top"><span class="face" style="background:#ba3129;width:32px;height:32px;border-radius:10px"></span><span><b>Security</b><small>Finds vulnerabilities</small></span></div><span class="meta">Claude · Plan · used in 2 workflows</span></div>
+      <div class="card"><div class="top"><span class="face" style="background:#2866d4;width:32px;height:32px;border-radius:10px"></span><span><b>Lint</b><small>Style and lint rules</small></span></div><span class="meta">Codex · Read-only · used in 1 workflow</span></div>
+      <div class="card"><div class="top"><span class="face" style="background:#6b4fd8;width:32px;height:32px;border-radius:10px"></span><span><b>Types</b><small>Type errors</small></span></div><span class="meta">Claude · Plan · used in 1 workflow</span></div>
+      <div class="card"><div class="top"><span class="face" style="background:#1f7335;width:32px;height:32px;border-radius:10px"></span><span><b>Scope creep</b><small>Change vs the ticket</small></span></div><span class="meta">Claude · Plan · used in 2 workflows</span></div>
+      <div class="card"><div class="top"><span class="face" style="background:#b34f00;width:32px;height:32px;border-radius:10px"></span><span><b>Comment</b><small>Writes review notes</small></span></div><span class="meta">Claude · Manual · used in 1 workflow</span></div>
+      <div class="card"><div class="top"><span class="face" style="background:#7d4e00;width:32px;height:32px;border-radius:10px"></span><span><b>Ticketing</b><small>Updates the ticket</small></span></div><span class="meta">Claude · Manual · used in 2 workflows</span></div>
+      <div class="card new">＋ New Spark</div>
+    </div>
+    <div class="col right" style="width:360px">
+      <h3>Edit Spark</h3><p class="hint">Same sheet as today.</p>
+      <div class="field"><label>Name</label><div class="input"><span class="face" style="background:#ba3129"></span>Security</div></div>
+      <div class="field"><label>Role</label><div class="input">Finds vulnerabilities</div></div>
+      <div class="field"><label>Instructions</label><div class="input" style="min-height:120px;align-items:flex-start;color:var(--muted)">Review the diff for injection, auth and secret handling problems. Report each finding with file, line and severity. Don't suggest style changes.</div></div>
+      <div class="field"><label>Agent and mode</label><div class="input">Claude · Sonnet · Plan ▾</div></div>
+      <div class="field"><label>Used in</label><div><span class="chip">Pre-PR review</span><span class="chip">Release check</span></div></div>
+      <span class="add">＋ Add to a workflow…</span>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="e">
+  <div class="bar"><span class="title">Sparks</span><span class="sp"></span><button class="btn primary">＋ New workflow</button></div>
+  <div class="tabs"><span class="tab">Crew <span class="tag">7</span></span><span class="tab on">Workflows <span class="tag">3</span></span></div>
+  <div class="body">
+    <div class="wlist">
+      <div class="wrow"><span style="flex:1"><b>Pre-PR review</b><small>6 steps · 3 stages · last run 12 min ago</small>
+        <div class="mini"><span class="stack"><span class="face" style="background:#ba3129"></span><span class="face" style="background:#2866d4"></span></span><span class="stack"><span class="face" style="background:#6b4fd8"></span><span class="face" style="background:#1f7335"></span></span><em>→</em><span class="face" style="background:#b34f00"></span><em>→</em><span class="face" style="background:#7d4e00"></span></div></span>
+        <span class="st done">✓ Done</span><button class="btn">Edit</button><button class="btn primary">▶ Run</button></div>
+      <div class="wrow"><span style="flex:1"><b>Release check</b><small>3 steps · 2 stages · last run yesterday</small>
+        <div class="mini"><span class="stack"><span class="face" style="background:#ba3129"></span><span class="face" style="background:#1f7335"></span></span><em>→</em><span class="face" style="background:#7d4e00"></span></div></span>
+        <span class="st fail">✕ Failed</span><button class="btn">Edit</button><button class="btn primary">▶ Run</button></div>
+      <div class="wrow"><span style="flex:1"><b>Ticket triage</b><small>2 steps · 2 stages · never run</small>
+        <div class="mini"><span class="face" style="background:#1f7335"></span><em>→</em><span class="face" style="background:#7d4e00"></span></div></span>
+        <span class="st wait">○ Not run</span><button class="btn">Edit</button><button class="btn primary">▶ Run</button></div>
+      <p class="hint" style="margin-top:18px">Run a workflow from here, or type <b>@Pre-PR review</b> in any chat.</p>
+    </div>
+  </div>
+</div>
+
+<style>
+.days{display:flex;gap:6px}.day{width:36px;height:32px;border-radius:10px;border:1px solid var(--line-strong);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)}
+.day.on{background:var(--accent-soft);color:var(--accent-text);font-weight:650;border-color:var(--accent)}
+.sw{width:40px;height:24px;border-radius:999px;background:var(--success);position:relative;flex:none}.sw::after{content:"";position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff}
+.next{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.7}
+.hrow{display:flex;align-items:center;gap:14px;height:46px;padding:0 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;font-size:13px}
+.hrow .when{width:150px;font-weight:600}.hrow .how{width:110px;color:var(--muted)}.hrow .cost{margin-left:auto;color:var(--muted)}
+</style>
+<div class="screen" id="f">
+  <div class="bar"><span class="crumb">Workflows /</span><span class="title">Pre-PR review</span><span class="tag">◷ Every 30 min · weekdays 09:00–18:00</span><span class="sp"></span><button class="btn">Preview</button><button class="btn">Test run</button><button class="btn primary">▶ Run now</button></div>
+  <div class="tabs"><span class="tab">Steps</span><span class="tab on">Schedule</span><span class="tab">Runs <span class="tag">14</span></span></div>
+  <div class="body">
+    <div class="col" style="width:500px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px"><span class="sw"></span><span><b>Run on a schedule</b><br><span style="font-size:13px;color:var(--muted)">On · next run today at 11:00</span></span></div>
+      <div class="field"><label>Every</label><div style="display:flex;gap:8px"><div class="input" style="width:70px">30</div><div class="seg"><span class="on">Minutes</span><span>Hours</span><span>Days</span><span>Weeks</span></div></div></div>
+      <div class="field"><label>Only on</label><div class="days"><span class="day on">M</span><span class="day on">T</span><span class="day on">W</span><span class="day on">T</span><span class="day on">F</span><span class="day">S</span><span class="day">S</span></div></div>
+      <div class="field"><label>Only between</label><div style="display:flex;gap:8px;align-items:center"><div class="input" style="width:100px">09:00 ▾</div>and<div class="input" style="width:100px">18:00 ▾</div></div></div>
+      <div class="field"><label>In project</label><div class="input">spark-outpost · main ▾</div></div>
+      <div class="field"><label>What to tell the workflow</label><div class="input" style="min-height:44px;align-items:flex-start;color:var(--muted)">Review everything merged to main since the last run.</div></div>
+      <div class="field"><label>If the Mac was asleep or Spark was closed</label><div class="seg"><span class="on">Run once when back</span><span>Skip</span></div></div>
+      <div class="field"><label>Next runs</label><div class="next">Today · 11:00<br>Today · 11:30<br>Today · 12:00<br><span style="color:var(--muted)">About 18 runs a day · about $3.60 a day at the last run's cost</span></div></div>
+    </div>
+    <div class="wlist">
+      <h3>Recent runs</h3><p class="hint">Scheduled runs show in Updates when they finish. They never push or open a pull request unless the project's chat level allows it.</p>
+      <div class="hrow"><span class="when">Today · 10:30</span><span class="how">◷ Scheduled</span><span class="st done">✓ Done</span><span>2 findings</span><span class="cost">2m 05s · $0.21</span></div>
+      <div class="hrow"><span class="when">Today · 10:00</span><span class="how">◷ Scheduled</span><span class="st wait">– Nothing new</span><span>Stopped at the first step</span><span class="cost">0m 06s · $0.01</span></div>
+      <div class="hrow"><span class="when">Today · 09:42</span><span class="how">▶ Run now</span><span class="st done">✓ Done</span><span>No findings</span><span class="cost">1m 48s · $0.17</span></div>
+      <div class="hrow"><span class="when">Today · 09:30</span><span class="how">◷ Scheduled</span><span class="st wait">– Skipped</span><span>The 09:00 run was still going</span><span class="cost">—</span></div>
+      <div class="hrow"><span class="when">Today · 09:00</span><span class="how">◷ Scheduled</span><span class="st fail">✕ Failed</span><span>Types stopped the workflow</span><span class="cost">31m 10s · $0.38</span></div>
+      <div class="hrow"><span class="when">Yesterday · 17:30</span><span class="how">◷ Scheduled</span><span class="st wait">○ Held</span><span>Spark was paused</span><span class="cost">—</span></div>
+    </div>
+  </div>
+</div>
+
+<style>
+.screen{width:1348px;flex-direction:row}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.rail{width:68px;background:var(--rail);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding-top:14px;gap:6px}
+.rail span{width:60px;height:46px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:var(--muted);gap:1px}
+.rail span i{font-style:normal;font-size:15px;line-height:1}
+.rail .on{background:var(--accent-soft);color:var(--accent-text);font-weight:650}
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;padding-top:70px;text-align:center}
+.empty .big{width:72px;height:72px;border-radius:22px;background:var(--accent-soft);color:var(--accent-text);font-size:34px;display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+.empty h2{margin:0 0 8px;font-size:22px}.empty p{margin:0 0 20px;color:var(--muted);max-width:520px;font-size:14.5px}
+.starters{display:grid;grid-template-columns:repeat(4,220px);gap:12px;margin-top:14px;text-align:left}
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.opt{border:1px solid var(--line-strong);border-radius:14px;padding:14px;background:var(--panel)}.opt.on{border:2px solid var(--accent);padding:13px;background:var(--accent-soft)}
+.opt b{display:block;margin-bottom:4px}.opt small{color:var(--muted);font-size:12.5px}
+.tree{font-size:13px;line-height:2}.tree div{padding:0 8px;border-radius:8px;white-space:pre}.tree .on{background:var(--accent-soft);color:var(--accent-text);font-weight:650}
+.code{flex:1;padding:22px;font:13px/1.7 ui-monospace,Menlo,monospace;white-space:pre-wrap;background:var(--code)}
+.banner{height:44px;display:flex;align-items:center;gap:14px;padding:0 20px;font-size:13px;border-bottom:1px solid var(--line);background:var(--accent-soft);color:var(--text)}
+.banner b{color:var(--accent-text)}
+.chat{flex:1;padding:26px 0;display:flex;flex-direction:column;gap:14px;align-items:center}
+.chat>div{width:760px}
+.me{align-self:center}.me p{margin:0 0 0 auto;width:fit-content;max-width:520px;background:#fde7d6;border-radius:16px;padding:10px 14px}
+.acard{background:var(--panel);border:1px solid var(--line-strong);border-radius:16px;padding:16px}
+.acard h4{margin:0 0 4px;font-size:15px}
+.diff{font:12.5px/1.8 ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:10px;margin:12px 0;overflow:hidden}
+.diff div{padding:0 12px}.diff .f{background:var(--raise);font-weight:600;font-family:inherit}.diff .a{background:rgba(31,115,53,.1);color:var(--success)}.diff .r{background:var(--danger-soft);color:var(--danger)}
+.dots3{display:flex;gap:8px}.dots3 i{width:24px;height:24px;border-radius:8px}
+</style>
+
+<div class="screen" id="g">
+  <div class="bar"><span class="title">Sparks</span><span class="sp"></span></div>
+  <div class="tabs"><span class="tab on">Crew <span class="tag">0</span></span><span class="tab">Workflows <span class="tag">0</span></span></div>
+  <div class="empty"><div class="big">✦</div><h2>Build your crew</h2>
+    <p>A Spark is an agent with its own instructions and skills. Create a few, then combine them into a workflow that runs them in order or side by side.</p>
+    <div style="display:flex;gap:10px"><button class="btn primary" style="height:36px">＋ New Spark</button><button class="btn" style="height:36px">Describe one and let an agent draft it</button></div>
+    <h3 style="margin-top:44px">Or start from one of these</h3>
+    <div class="starters">
+      <div class="card"><div class="top"><span class="face" style="background:#ba3129;width:32px;height:32px;border-radius:10px"></span><span><b>Security</b><small>Finds vulnerabilities</small></span></div><span class="add" style="margin:0">＋ Add</span></div>
+      <div class="card"><div class="top"><span class="face" style="background:#2866d4;width:32px;height:32px;border-radius:10px"></span><span><b>Lint</b><small>Style and lint rules</small></span></div><span class="add" style="margin:0">＋ Add</span></div>
+      <div class="card"><div class="top"><span class="face" style="background:#1f7335;width:32px;height:32px;border-radius:10px"></span><span><b>Scope creep</b><small>Change vs the ticket</small></span></div><span class="add" style="margin:0">＋ Add</span></div>
+      <div class="card"><div class="top"><span class="face" style="background:#7d4e00;width:32px;height:32px;border-radius:10px"></span><span><b>Ticketing</b><small>Updates the ticket</small></span></div><span class="add" style="margin:0">＋ Add</span></div>
+    </div></div>
+</div>
+
+<div class="screen" id="h">
+  <div class="bar"><span class="crumb">Sparks /</span><span class="title">New Spark</span><span class="sp"></span><button class="btn">Cancel</button><button class="btn primary">Create Spark</button></div>
+  <div class="body">
+    <div class="col" style="width:560px;padding:24px">
+      <div class="field"><label>Name</label><div class="input">Security</div></div>
+      <div class="field"><label>Role</label><div class="input">Finds vulnerabilities</div></div>
+      <div class="field"><label>Look</label><div class="dots3"><i style="background:#ba3129;outline:2px solid var(--accent);outline-offset:2px"></i><i style="background:#2866d4"></i><i style="background:#6b4fd8"></i><i style="background:#1f7335"></i><i style="background:#b34f00"></i><i style="background:#7d4e00"></i><i style="background:#0f7c86"></i></div></div>
+      <div class="field"><label>Agent and mode</label><div style="display:flex;gap:8px"><div class="input" style="flex:1">Claude · Sonnet ▾</div><div class="input" style="flex:1">Plan ▾</div></div></div>
+      <div class="field"><label>Instructions</label><div class="input" style="min-height:170px;align-items:flex-start">Review the diff for injection, auth and secret handling problems. Report each finding with file, line and severity. Don't suggest style changes.</div></div>
+      <p class="hint">Saved as SPARK.md in this Spark's folder. No length limit.</p>
+    </div>
+    <div class="wlist" style="padding:24px">
+      <h3>Skills</h3><p class="hint">Optional. A skill is a folder with instructions and scripts this Spark can use when it needs them.</p>
+      <div class="card new" style="min-height:96px;margin-bottom:22px">＋ Add a skill</div>
+      <h3>Try it</h3><p class="hint">A test run on a throw-away copy of a project. Nothing is saved or sent.</p>
+      <div class="field"><div class="input">spark-outpost · main ▾</div></div>
+      <div class="field"><div class="input" style="min-height:64px;align-items:flex-start;color:var(--muted)">Review the last commit.</div></div>
+      <button class="btn">Test run</button>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="i">
+  <div class="bar"><span class="crumb">Sparks /</span><span class="face" style="background:#ba3129"></span><span class="title">Security</span><span class="sp"></span><button class="btn">Test run</button><button class="btn primary">Save</button></div>
+  <div class="tabs"><span class="tab">Details</span><span class="tab on">Skills and files <span class="tag">2</span></span><span class="tab">Used in <span class="tag">2</span></span></div>
+  <div class="body">
+    <div class="col" style="width:290px">
+      <h3>Folder</h3>
+      <div class="tree" style="margin-top:8px"><div>▾ security</div><div>    SPARK.md</div><div>  ▾ skills</div><div>    ▾ dependency-audit</div><div class="on">        SKILL.md</div><div>      ▾ scripts</div><div>          audit.sh</div><div>    ▾ secret-scan</div><div>        SKILL.md</div><div>        patterns.txt</div></div>
+      <div style="margin-top:14px"><span class="add">＋ New skill</span><br><span class="add">＋ New file</span><br><span class="add">Import a skill folder…</span></div>
+    </div>
+    <div class="main"><div class="status" style="background:var(--panel)"><b>skills/dependency-audit/SKILL.md</b><span class="sp"></span><span>Rename</span><span style="color:var(--danger)">Delete</span></div>
+    <div class="code">---
+name: dependency-audit
+description: Check changed dependencies for known vulnerabilities.
+---
+
+Use this when package.json or a lockfile changed.
+
+1. Run scripts/audit.sh from the project root.
+2. For each result, report the package, the installed version,
+   the fixed version and the severity.
+3. If nothing changed in the lockfile, say so and stop.</div>
+    <div class="status" style="border-top:1px solid var(--line);border-bottom:0">Agents can read these files. They can change them only after you allow it on a card.</div></div>
+  </div>
+</div>
+
+<div class="screen" id="j">
+  <div class="bar"><span class="title">Sparks</span><span class="sp"></span></div>
+  <div class="tabs"><span class="tab">Crew <span class="tag">6</span></span><span class="tab on">Workflows <span class="tag">0</span></span></div>
+  <div class="empty"><div class="big">⇉</div><h2>Combine your crew into a workflow</h2>
+    <p>Pick the Sparks, say which run together and which wait. Run it from here, from any chat with @name, or on a schedule.</p>
+    <div style="display:flex;gap:10px"><button class="btn primary" style="height:36px">＋ New workflow</button><button class="btn" style="height:36px">Describe it and let an agent draft it</button></div>
+    <h3 style="margin-top:44px">Suggested from your crew</h3>
+    <div class="starters" style="grid-template-columns:repeat(3,280px)">
+      <div class="card"><b>Pre-PR review</b><div class="mini"><span class="stack"><span class="face" style="background:#ba3129"></span><span class="face" style="background:#2866d4"></span></span><span class="stack"><span class="face" style="background:#6b4fd8"></span><span class="face" style="background:#1f7335"></span></span><em>→</em><span class="face" style="background:#b34f00"></span><em>→</em><span class="face" style="background:#7d4e00"></span></div><span class="add" style="margin:0">Use this</span></div>
+      <div class="card"><b>Release check</b><div class="mini"><span class="stack"><span class="face" style="background:#ba3129"></span><span class="face" style="background:#1f7335"></span></span><em>→</em><span class="face" style="background:#7d4e00"></span></div><span class="add" style="margin:0">Use this</span></div>
+      <div class="card"><b>Ticket triage</b><div class="mini"><span class="face" style="background:#1f7335"></span><em>→</em><span class="face" style="background:#7d4e00"></span></div><span class="add" style="margin:0">Use this</span></div>
+    </div></div>
+</div>
+
+<div class="screen" id="k">
+  <div class="bar"><span class="crumb">Workflows /</span><span class="title">New workflow</span><span class="sp"></span><button class="btn">Cancel</button><button class="btn primary">Draft workflow</button></div>
+  <div class="body"><div class="wlist" style="padding:28px 120px">
+    <div class="field"><label>Name</label><div class="input">Pre-PR review</div></div>
+    <p class="hint">Run it from any chat by typing <b>@Pre-PR review</b>.</p>
+    <div class="field"><label>Start from</label><div class="opts">
+      <div class="opt"><b>Blank</b><small>Add Sparks and stages yourself.</small></div>
+      <div class="opt"><b>A suggestion</b><small>Built from the Sparks in your crew.</small></div>
+      <div class="opt on"><b>Describe it</b><small>An agent drafts the steps. You review before anything runs.</small></div></div></div>
+    <div class="field"><label>What should it do?</label><div class="input" style="min-height:120px;align-items:flex-start">Run security, lint, types and scope creep at the same time. When they all finish, write review comments. Then update the ticket.</div></div>
+    <div class="field"><label>The draft will use</label><div><span class="chip"><span class="face" style="background:#ba3129;width:14px;height:14px;border-radius:5px"></span>Security</span><span class="chip"><span class="face" style="background:#2866d4;width:14px;height:14px;border-radius:5px"></span>Lint</span><span class="chip"><span class="face" style="background:#6b4fd8;width:14px;height:14px;border-radius:5px"></span>Types</span><span class="chip"><span class="face" style="background:#1f7335;width:14px;height:14px;border-radius:5px"></span>Scope creep</span><span class="chip"><span class="face" style="background:#b34f00;width:14px;height:14px;border-radius:5px"></span>Comment</span><span class="chip"><span class="face" style="background:#7d4e00;width:14px;height:14px;border-radius:5px"></span>Ticketing</span></div></div>
+    <p class="hint">The draft opens in the editor. Nothing runs until you press Run.</p>
+  </div></div>
+</div>
+
+<div class="screen" id="l">
+  <div class="bar"><span class="crumb">Workflows /</span><span class="title">Pre-PR review</span><span class="sp"></span><button class="btn">Back to editing</button><button class="btn">Test run</button><button class="btn primary">▶ Run</button></div>
+  <div class="banner"><b>◇ Preview</b><span>No agents run and nothing is spent. This only shows the order.</span><span class="sp"></span><button class="btn">◀</button><button class="btn">▶ Play</button><button class="btn">▶|</button><span>Step 2 of 3</span></div>
+  <div class="body">
+    <div class="canvas" data-graph="run" data-shift="-40" data-sel="types" data-st="sec:pdone,lint:pdone,types:pfail,scope:pdone,com:skip,tick:skip"></div>
+    <div class="col right" style="width:380px">
+      <h3>What if</h3><p class="hint">Pretend a step fails to see what happens next.</p>
+      <div class="row"><span class="face" style="background:#ba3129"></span>Security<span class="after">succeeds ▾</span></div>
+      <div class="row"><span class="face" style="background:#2866d4"></span>Lint<span class="after">succeeds ▾</span></div>
+      <div class="row" style="border-color:var(--danger)"><span class="face" style="background:#6b4fd8"></span>Types<span class="after st fail">fails ▾</span></div>
+      <div class="row"><span class="face" style="background:#1f7335"></span>Scope creep<span class="after">succeeds ▾</span></div>
+      <h3 style="margin-top:20px">Result</h3>
+      <div class="out"><b>The workflow stops at Stage 1.</b><ul style="padding-left:18px;margin:8px 0 0"><li>Types is set to <b>Stop workflow</b> when it fails.</li><li>Comment and Ticketing don't start.</li><li>Security, Lint and Scope creep still finish and keep their output.</li></ul></div>
+      <span class="add">Change Types to Continue…</span>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="m">
+  <div class="bar"><span class="crumb">Workflows /</span><span class="title">Pre-PR review</span><span class="sp"></span><button class="btn">Discard</button><button class="btn primary">▶ Run for real</button></div>
+  <div class="banner"><b>⚗ Test run</b><span>Real agents on a throw-away copy of spark-outpost. Nothing is pushed, posted or saved.</span><span class="sp"></span><span><b>6 of 6</b> done · 2m 05s · $0.21</span></div>
+  <div class="body">
+    <div class="canvas" data-graph="run" data-shift="-40" data-sel="com" data-st="sec:done,lint:done,types:done,scope:done,com:done,tick:done"></div>
+    <div class="col right" style="width:380px">
+      <h3>Would have been sent</h3><p class="hint">Held back because this is a test run.</p>
+      <div class="out" style="margin-bottom:10px"><b>Comment</b> · 2 review comments on pull request #251<br><span style="color:var(--muted)">Not posted</span></div>
+      <div class="out" style="margin-bottom:10px"><b>Ticketing</b> · move SPARK-412 to In review, add a work note<br><span style="color:var(--muted)">Not sent</span></div>
+      <h3 style="margin-top:18px">Step output</h3><p class="hint">Comment · Claude · 41s</p>
+      <div class="out">Two comments drafted: an open redirect in <code>auth/redirect.ts:41</code> and a missing <code>SameSite</code> on the session cookie.</div>
+      <p class="hint" style="margin-top:14px">Closing this view deletes the copy and this run. The cost is real and is counted.</p>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="n">
+  <div class="bar"><span class="crumb">Chat /</span><span class="title">Tighten the security review</span><span class="sp"></span><span class="tag">Claude · Auto</span></div>
+  <div class="chat">
+    <div class="me"><p>Add a secret-scan skill to the Security Spark, and run it before Comment in Pre-PR review.</p></div>
+    <div>I drafted the skill and the workflow change. Both need your OK before I can save them.</div>
+    <div class="acard"><h4>Change the Security Spark?</h4><span class="meta">Asked by this chat's agent · 2 new files, 1 changed</span>
+      <div class="diff"><div class="f">skills/secret-scan/SKILL.md · new</div><div class="a">+ name: secret-scan</div><div class="a">+ description: Find keys and tokens in the diff.</div><div class="a">+ Run scripts/scan.sh and report file and line, never the value.</div>
+      <div class="f">skills/secret-scan/scripts/scan.sh · new · 24 lines</div><div class="a">+ git diff --cached -U0 | grep -nE -f patterns.txt …</div>
+      <div class="f">SPARK.md</div><div class="r">− Report each finding with file, line and severity.</div><div class="a">+ Report each finding with file, line and severity. Use secret-scan on every run.</div></div>
+      <div style="display:flex;gap:8px;align-items:center"><button class="btn primary">Allow</button><button class="btn">Deny</button><button class="btn">View files</button><span class="sp"></span><span class="meta">Answered on this Mac only</span></div></div>
+    <div class="acard" style="opacity:.75"><h4>Change the Pre-PR review workflow?</h4><span class="meta">Waiting for the card above · no step added or removed, Security gets one extra instruction</span></div>
+  </div>
+</div>
+
+<style>
+.dock{width:440px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column}
+.dock .head{height:48px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line)}
+.dock .msgs{flex:1;padding:14px;display:flex;flex-direction:column;gap:12px;font-size:13.5px;overflow:hidden}
+.dock .me p{max-width:330px}
+.composer{margin:0 14px 14px;border:1px solid var(--line-strong);border-radius:16px;padding:10px 12px;color:var(--faint);display:flex;align-items:center;gap:8px;font-size:13.5px}
+.blob{width:44px;height:44px;border-radius:50% 46% 52% 48%;background:var(--accent);display:flex;align-items:center;justify-content:center;gap:6px;flex:none}
+.blob i{width:6px;height:9px;border-radius:3px;background:#fff}
+.sugg{display:flex;gap:6px;flex-wrap:wrap}
+</style>
+<div class="screen" id="o">
+  <div class="bar"><span class="title">Sparks</span><span class="sp"></span><button class="btn primary">＋ New Spark</button></div>
+  <div class="tabs"><span class="tab on">Crew <span class="tag">6</span></span><span class="tab">Workflows <span class="tag">1</span></span></div>
+  <div class="body">
+    <div class="grid" style="grid-template-columns:repeat(2,1fr)">
+      <div class="card"><div class="top"><span class="face" style="background:#ba3129;width:32px;height:32px;border-radius:10px"></span><span><b>Security</b><small>Finds vulnerabilities</small></span></div><span class="meta">Claude · Plan · 2 skills</span></div>
+      <div class="card"><div class="top"><span class="face" style="background:#2866d4;width:32px;height:32px;border-radius:10px"></span><span><b>Lint</b><small>Style and lint rules</small></span></div><span class="meta">Codex · Read-only</span></div>
+      <div class="card"><div class="top"><span class="face" style="background:#6b4fd8;width:32px;height:32px;border-radius:10px"></span><span><b>Types</b><small>Type errors</small></span></div><span class="meta">Claude · Plan</span></div>
+      <div class="card"><div class="top"><span class="face" style="background:#1f7335;width:32px;height:32px;border-radius:10px"></span><span><b>Scope creep</b><small>Change vs the ticket</small></span></div><span class="meta">Claude · Plan</span></div>
+      <div class="card"><div class="top"><span class="face" style="background:#b34f00;width:32px;height:32px;border-radius:10px"></span><span><b>Comment</b><small>Writes review notes</small></span></div><span class="meta">Claude · Manual</span></div>
+      <div class="card"><div class="top"><span class="face" style="background:#7d4e00;width:32px;height:32px;border-radius:10px"></span><span><b>Ticketing</b><small>Updates the ticket</small></span></div><span class="meta">Claude · Manual</span></div>
+      <div class="card" style="border-style:dashed;border-color:var(--accent)"><div class="top"><span class="face" style="background:#0f7c86;width:32px;height:32px;border-radius:10px"></span><span><b>Docs</b><small>Keeps the guide in step with the code</small></span></div><span class="meta st run">◐ Draft · waiting for you</span></div>
+      <div class="card new">＋ New Spark</div>
+    </div>
+    <div class="dock">
+      <div class="head"><span class="blob" style="width:28px;height:28px;gap:4px"><i style="width:4px;height:6px"></i><i style="width:4px;height:6px"></i></span><b>Build with Spark</b><span class="sp"></span><span class="input" style="min-height:28px;padding:3px 10px;font-size:12.5px">Claude · Sonnet ▾</span><span style="color:var(--muted)">✕</span></div>
+      <div class="msgs">
+        <div class="me"><p>Make a Spark that checks whether a change needs a docs update, with a script that lists changed UI labels.</p></div>
+        <div>Here's a draft. It has one skill with a script, and reads only.</div>
+        <div class="acard" style="padding:12px"><h4 style="font-size:14px">Create the Docs Spark?</h4><span class="meta">3 new files in your crew</span>
+          <div class="diff" style="margin:10px 0"><div class="f">docs/SPARK.md · new</div><div class="a">+ role: Keeps the guide in step with the code</div><div class="a">+ agent: Claude · Sonnet · Plan</div>
+          <div class="f">docs/skills/label-diff/SKILL.md · new</div><div class="a">+ description: List UI labels a change touched.</div>
+          <div class="f">docs/skills/label-diff/scripts/labels.sh · new · 18 lines</div></div>
+          <div style="display:flex;gap:8px"><button class="btn primary">Allow</button><button class="btn">Deny</button><button class="btn">View files</button></div></div>
+        <div style="color:var(--muted)">After you allow it I can add Docs to Pre-PR review, or try it on a test run first.</div>
+        <div class="sugg"><span class="chip">Add it to Pre-PR review</span><span class="chip">Test run it</span><span class="chip">Make it stricter</span></div>
+      </div>
+      <div class="composer">Ask for a Spark, a skill or a workflow…<span class="sp"></span><span class="blob" style="width:28px;height:28px;background:var(--raise);color:var(--accent-text);font-weight:700">↑</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const nodes=[
+ {id:'sec',name:'Security',role:'Finds vulnerabilities',c:'#ba3129',x:90,y:90,st:'done'},
+ {id:'lint',name:'Lint',role:'Style and lint rules',c:'#2866d4',x:90,y:200,st:'done'},
+ {id:'types',name:'Types',role:'Type errors',c:'#6b4fd8',x:90,y:310,st:'run'},
+ {id:'scope',name:'Scope creep',role:'Change vs the ticket',c:'#1f7335',x:90,y:420,st:'done'},
+ {id:'com',name:'Comment',role:'Writes review notes',c:'#b34f00',x:350,y:255,st:'wait'},
+ {id:'tick',name:'Ticketing',role:'Updates the ticket',c:'#7d4e00',x:590,y:255,st:'wait'}];
+const edges=[['sec','com'],['lint','com'],['types','com'],['scope','com'],['com','tick']];
+const label={done:'✓ Done',run:'◐ Running',wait:'○ Waiting',pdone:'✓ Would succeed',pfail:'✕ Pretend fails',skip:'– Would not start'};const cls={pdone:'done',pfail:'fail',skip:'wait'};
+document.querySelectorAll('[data-graph]').forEach(el=>{
+  const mode=el.dataset.graph, dx=Number(el.dataset.shift||0);const ov=Object.fromEntries((el.dataset.st||'').split(',').filter(Boolean).map(x=>x.split(':')));const stOf=id=>ov[id]||nodes.find(n=>n.id===id).st;const selId=el.dataset.sel||(mode==='edit'?'com':'sec');
+  const pos=Object.fromEntries(nodes.map(n=>[n.id,{x:n.x+dx,y:n.y+(mode==='run'?30:40)}]));
+  let svg='<svg>';
+  for(const [a,b] of edges){const p=pos[a],q=pos[b];const x1=p.x+176,y1=p.y+30,x2=q.x,y2=q.y+30,m=(x1+x2)/2;
+    const live=mode==='run'&&['done','pdone'].includes(stOf(a));
+    svg+=`<path d="M${x1},${y1} C${m},${y1} ${m},${y2} ${x2},${y2}" fill="none" stroke="${live?'#1f7335':'#8f8378'}" stroke-width="${live?2:1.5}" ${mode==='run'&&!live?'stroke-dasharray="5 5"':''}/>`;}
+  if(mode==='edit'){svg+=`<path d="M${pos.com.x+176},${pos.com.y+30} C${pos.com.x+260},${pos.com.y+30} ${pos.com.x+230},${pos.com.y+175} ${pos.com.x+300},${pos.com.y+175}" fill="none" stroke="#b34f00" stroke-width="2" stroke-dasharray="6 5"/>`;}
+  el.insertAdjacentHTML('afterbegin',svg+'</svg>');
+  [['Stage 1','sec'],['Stage 2','com'],['Stage 3','tick']].forEach(([t,id])=>el.insertAdjacentHTML('beforeend',`<div class="lane" style="left:${pos[id].x}px">${t}</div>`));
+  for(const n of nodes){const p=pos[n.id];
+    const sub=mode==='run'?`<span class="st ${cls[stOf(n.id)]||stOf(n.id)}">${label[stOf(n.id)]}</span>`:`<small>${n.role}</small>`;
+    const sel=mode!=='plain'&&n.id===selId;
+    el.insertAdjacentHTML('beforeend',`<div class="node ${sel?'sel':''}" style="left:${p.x}px;top:${p.y}px"><span class="face" style="background:${n.c};width:28px;height:28px;border-radius:9px"></span><span><b>${n.name}</b>${sub}</span>${mode==='edit'?'<i class="port in"></i><i class="port pout"></i>':''}</div>`);}
+  if(mode==='edit'){el.insertAdjacentHTML('beforeend',`<div class="node ghost" style="left:${pos.com.x+300}px;top:${pos.com.y+145}px"><span class="face" style="background:#0f7c86;width:28px;height:28px;border-radius:9px"></span><span><b>Docs</b><small>Updates the guide</small></span></div>`);}
+});
+document.querySelectorAll('.screen').forEach(sc=>{const m=document.createElement('div');m.className='main';while(sc.firstChild)m.appendChild(sc.firstChild);sc.appendChild(m);sc.insertAdjacentHTML('afterbegin','<div class="rail">'+[['⌂','Home'],['☰','Chats'],['◎','Browser'],['◷','Today'],['▤','Tickets'],['⌗','Map'],['✦','Sparks'],['?','Docs']].map(([i,t])=>`<span class="${t==='Sparks'?'on':''}"><i>${i}</i>${t}</span>`).join('')+'</div>');});
+</script>
+</body>
+</html>

@@ -41,8 +41,8 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   assign_ticket: asked('assign|unassign|take', `${TICKET_NOUN}|me`),
   pr_follow_up: null,
   pr_follow_up_round: asked('follow[- ]?up|address|fix|handle', 'feedback|comments?|reviews?'),
-  create_teammate: asked('add|create|make|set up', 'sparks?|teammates?'),
-  update_teammate: asked('change|update|rename|edit', 'sparks?|teammates?'),
+  create_teammate: null,
+  update_teammate: null,
   add_mcp_server: asked('add|create|set up|install|connect|configure|register', MCP_NOUN),
   update_mcp_server: asked('change|update|rename|edit|fix|reconfigure|point', MCP_NOUN),
   switch_mcp_server: asked('turn on|turn off|enable|disable|switch', MCP_NOUN),
@@ -106,6 +106,7 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   ),
   rules_edit: null,
   plugins_edit: null,
+  crew_edit: null,
   link_repo: null,
   github_read: asked(
     'read|look|check|see|find|search|show|list|explain|study|research|explore|clone|copy|download',
@@ -154,8 +155,9 @@ async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
               = 'outpost' AS outpost_run,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'spark_rule' AS spark_rule_retry,
-            COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
-              = 'assistant' AS assistant_sent,
+            (COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
+              IN ('assistant', 'workflow') OR COALESCE((r.route->'spark') ? 'step', false))
+              AS assistant_sent,
             (SELECT pf.assistant_acts FROM profiles pf
              WHERE pf.workspace_id = c.workspace_id
                AND pf.assistant_conversation_id = c.id) AS assistant_acts,

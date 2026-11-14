@@ -26,6 +26,13 @@ function before(key: string): Record<string, unknown> {
   return typeof reason === 'number' ? { ...recorded, reason: FIXTURE.reasons[reason] } : recorded;
 }
 
+function withoutMarker(decision: Decision): Decision {
+  if (decision.verdict !== 'ask' || !decision.outsideWrite) return decision;
+  const { verdict, reason, ...rest } = decision;
+  delete rest.outsideWrite;
+  return { verdict, reason, ...rest };
+}
+
 function verdicts(rules: SparkRuleSet): Record<string, Decision> {
   const found: Record<string, Decision> = {};
   for (const item of corpusCases()) {
@@ -62,7 +69,7 @@ describe('the recommended rules', () => {
     const found = verdicts(rules);
     expect(Object.keys(found)).toHaveLength(Object.keys(FIXTURE.verdicts).length);
     for (const [key, decision] of Object.entries(found)) {
-      expect(decision, key).toEqual(before(key));
+      expect(withoutMarker(decision), key).toEqual(before(key));
     }
   });
 

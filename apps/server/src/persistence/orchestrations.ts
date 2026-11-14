@@ -93,6 +93,7 @@ export interface NewChild extends MemberFields {
   parentRunId: string;
   mode: RunMode;
   prompt: string;
+  agentMode?: string | null;
 }
 
 export async function insertChildRun(
@@ -132,7 +133,8 @@ export async function insertChildRun(
         child.agentLabel,
         child.prompt,
         JSON.stringify(child.route),
-        from ? translateMode(from.provider, from.agent_mode, child.provider) : null,
+        child.agentMode ??
+          (from ? translateMode(from.provider, from.agent_mode, child.provider) : null),
         JSON.stringify(sameAgent ? from.config_values : {}),
       ],
     );

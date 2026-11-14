@@ -62,6 +62,8 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_calendar_edit: 'Changing your calendar',
   spark_rules_edit: 'Asking to change Spark rules',
   spark_plugins_edit: 'Asking to turn a plugin on or off',
+  spark_crew: 'Looking at Sparks and workflows',
+  spark_crew_edit: 'Asking to change a Spark or workflow',
   spark_find_repo: 'Looking for a repo',
   spark_link_repo: 'Asking to link a repo',
   spark_github_repos: 'Searching your GitHub repos',

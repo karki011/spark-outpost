@@ -81,6 +81,7 @@ describe('what a chat turn carries besides the message', { timeout: 120_000 }, (
       role: 'Code reviewer',
       provider: null,
       model: null,
+      effort: null,
       agentMode: null,
       level: null,
       instructions: 'Always name the file and line you mean.',

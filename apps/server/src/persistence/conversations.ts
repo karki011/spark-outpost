@@ -315,6 +315,7 @@ export type SendMessageInput = Omit<
     | 'voice'
     | 'assistant'
     | 'pages'
+    | 'workflow'
     | undefined;
   startAs?: StartAs;
   continuesRunId?: string;

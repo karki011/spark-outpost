@@ -44,6 +44,7 @@ const ASKS_WRITE = {
   reason: expect.stringMatching(
     /^(?:This changes .+, which is outside this project|Changing files outside the repo always asks)$/,
   ),
+  outsideWrite: true,
 };
 
 describe('decide() looks inside nested and wrapped commands', () => {

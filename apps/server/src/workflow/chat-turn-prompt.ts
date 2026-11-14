@@ -1,4 +1,5 @@
 import { basename } from 'node:path';
+import { builderChatScope } from '../crew-flows/builder-chat.ts';
 import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
@@ -42,11 +43,12 @@ export async function chatPromptFacts(
   known?: SparkPreferences,
 ): Promise<ChatPromptFacts> {
   const { threadId: conversationId, runId } = input.identity;
-  const [project, needs, prefs, storyTask] = await Promise.all([
+  const [project, needs, prefs, storyTask, builderChat] = await Promise.all([
     projectFacts(db, input),
     outpostNeeds(db, { conversationId, runId }),
     known ?? sparkPreferences(db, input.workspaceId),
     storyTaskOf(db, conversationId),
+    builderChatScope(db, conversationId),
   ]);
   return {
     project,
@@ -55,6 +57,7 @@ export async function chatPromptFacts(
     level: input.level,
     asksWithTool: input.mode === 'do' && input.plansFirst !== true,
     assignedWork: storyTask !== null,
+    ...(builderChat ? { builderChat } : {}),
     customInstructions: prefs.agentInstructions ?? null,
   };
 }

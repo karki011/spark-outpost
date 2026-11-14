@@ -73,6 +73,7 @@ function teammate(name: string, state: TeammateState): TeammateView {
     faceAuto: false,
     provider: null,
     model: null,
+    effort: null,
     agentMode: null,
     level: null,
     instructions: `Never mention ${SECRET_PROJECT}`,

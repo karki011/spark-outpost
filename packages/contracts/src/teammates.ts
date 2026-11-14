@@ -1,8 +1,8 @@
 import { z } from 'zod';
+import { CREW_FILE_MAX_BYTES, type SkillSummary } from './crew-files.ts';
 import { INVOLVEMENT_LEVEL_IDS } from './involvement-levels.ts';
 import { CONVERSATION_PROJECTS_MAX } from './projects.ts';
 import { providerIdSchema } from './provider-ids.ts';
-import { relayWatchSchema, teammateKindSchema } from './relay.ts';
 import type { RunStatus } from './runs.ts';
 
 export const teammateLevelSchema = z.enum(INVOLVEMENT_LEVEL_IDS);
@@ -88,8 +88,8 @@ export const teammateInstructionsSchema = z
   .string()
   .trim()
   .max(
-    TEAMMATE_INSTRUCTIONS_MAX,
-    `Keep standing instructions to ${TEAMMATE_INSTRUCTIONS_MAX} characters.`,
+    CREW_FILE_MAX_BYTES,
+    `Keep standing instructions under ${Math.round(CREW_FILE_MAX_BYTES / 1024)} KB.`,
   );
 
 export const instructionsPathSchema = z
@@ -129,13 +129,13 @@ export const teammateSchema = teammateTagSchema.extend({
   faceAuto: z.boolean(),
   provider: providerIdSchema.nullable(),
   model: z.string().nullable(),
+  effort: z.string().nullable(),
   agentMode: z.string().nullable(),
   level: teammateLevelSchema.nullable(),
   instructions: z.string(),
   instructionsPath: z.string().nullable(),
   projectIds: z.array(z.uuid()),
   homeConversationId: z.uuid().nullable(),
-  kind: teammateKindSchema.optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -152,7 +152,6 @@ export const teammateViewSchema = teammateSchema.extend({
   state: teammateStateSchema,
   chatCount: z.number().int().nonnegative(),
   lastActivity: teammateActivitySchema.nullable(),
-  relay: relayWatchSchema.optional(),
 });
 export type TeammateView = z.infer<typeof teammateViewSchema>;
 
@@ -169,6 +168,7 @@ export type TeammateList = z.infer<typeof teammateListSchema>;
 const teammateDefaultsShape = {
   provider: providerIdSchema.nullable(),
   model: z.string().trim().min(1).max(200).nullable(),
+  effort: z.string().trim().min(1).max(40).nullable(),
   agentMode: z.string().trim().min(1).max(200).nullable(),
   level: teammateLevelSchema.nullable(),
 };
@@ -179,6 +179,7 @@ export const createTeammateRequestSchema = z.object({
   face: teammateFaceSchema.nullable().optional(),
   provider: teammateDefaultsShape.provider.default(null),
   model: teammateDefaultsShape.model.default(null),
+  effort: teammateDefaultsShape.effort.default(null),
   agentMode: teammateDefaultsShape.agentMode.default(null),
   level: teammateDefaultsShape.level.default(null),
   instructions: teammateInstructionsSchema.default(''),
@@ -204,7 +205,14 @@ export const updateTeammateRequestSchema = z
   });
 export type UpdateTeammateRequest = z.infer<typeof updateTeammateRequestSchema>;
 
-export type TeammateBrief = Pick<Teammate, 'name' | 'role' | 'instructions'>;
+export interface TeammateBriefSkill extends SkillSummary {
+  folder: string;
+}
+
+export type TeammateBrief = Pick<Teammate, 'name' | 'role' | 'instructions'> & {
+  folder?: string | null;
+  skills?: readonly TeammateBriefSkill[];
+};
 
 export const linkTeammateRequestSchema = z.object({ teammateId: z.uuid().nullable() });
 export type LinkTeammateRequest = z.infer<typeof linkTeammateRequestSchema>;

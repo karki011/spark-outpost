@@ -6,9 +6,12 @@ import type { ProviderId } from '@spark-outpost/contracts';
 import {
   browserDataDir,
   browserDataRules,
+  otherChatsRules,
   sparkRulesFlagRules,
 } from '../../approvals/browser-data.ts';
 import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
+import { crewFolderRules, guardedCrewFolders, inFolders } from '../../approvals/crew-folders.ts';
+import { sparkDataReadRules } from '../../approvals/spark-data-reads.ts';
 import { tempRoots } from '../../approvals/temp-dirs.ts';
 import { PLANS_DIR } from '../../plans/plan-mode.ts';
 import { GIT_CONTROL_GLOBS, INSTRUCTION_GLOBS } from '../../projects/path-policy.ts';
@@ -205,6 +208,8 @@ export function claudeSessionMeta(
   gitControlGlobs: readonly string[] = [],
 ): Record<string, unknown> {
   const floor = repo?.floor ?? RECOMMENDED_FLOOR;
+  const dataDir = browserDataDir();
+  const inSparkData = dataDir !== null && extraRoots.some((root) => inFolders(root, [dataDir]));
   const ask = unique([
     ...(repo?.askRules ?? []),
     ...gatedAskRules(tools),
@@ -216,8 +221,11 @@ export function claudeSessionMeta(
     ...(repo?.denyRules ?? []),
     ...toolDenyRules(tools),
     ...(floor.secretEdits ? secretRules([...extraRoots, ...tempRoots()]) : []),
-    ...browserDataRules(browserDataDir()),
+    ...browserDataRules(dataDir),
+    ...(inSparkData ? [] : otherChatsRules(dataDir)),
+    ...(inSparkData ? [] : sparkDataReadRules(dataDir, repo?.readDirs ?? guardedCrewFolders())),
     ...sparkRulesFlagRules(),
+    ...crewFolderRules(),
     ...(floor.forcePush ? FORCE_PUSH_DENY_RULES : []),
     ...remoteRules(changesProject, floor, 'deny'),
     ...floorDenyRules(tools, extraRoots, gitControlGlobs, floor),
@@ -251,8 +259,8 @@ export function claudeSessionMeta(
             deny,
             ...(ask.length > 0 ? { ask } : {}),
             ...(allowRules.length > 0 ? { allow: allowRules } : {}),
-            additionalDirectories: tempRoots(),
-            blockReadsOutsideWorkingDirectories: true,
+            additionalDirectories: [...tempRoots(), ...(repo?.readDirs ?? guardedCrewFolders())],
+            blockReadsOutsideWorkingDirectories: inSparkData,
             ...(allowBypass ? {} : { disableBypassPermissionsMode: 'disable' }),
           },
         },

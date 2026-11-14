@@ -144,7 +144,7 @@ describe('round outcomes for attribution', { timeout: 60_000 }, () => {
       pushed: false,
       replied: 1,
     });
-    expect(roundOutcomeLine('Courier', outcome!)).toBe('Courier replied to 1 comment');
+    expect(roundOutcomeLine(outcome!)).toBe('Follow-up replied to 1 comment');
     expect(settled.quietHead).toBeNull();
   });
 

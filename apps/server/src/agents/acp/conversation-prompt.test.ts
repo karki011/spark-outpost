@@ -8,6 +8,8 @@ import {
   contextSteps,
   conversationBlocks,
   conversationPrompt,
+  chatFolderNote,
+  doProjectNote,
   projectNote,
 } from './conversation-prompt.ts';
 
@@ -85,10 +87,31 @@ describe('conversation prompt', () => {
     expect(first?.type === 'text' && first.text.startsWith(note)).toBe(true);
   });
 
+  it('lets project turns read anywhere, keeps the crew read-only and no-project chats inside', () => {
+    const crew = ['/data/sparks', '/data/workflows'];
+    for (const note of [
+      projectNote(['/work/app'], true, crew),
+      doProjectNote(['/work/app'], crew),
+    ]) {
+      expect(note).toContain('outside');
+      expect(note).toContain('when the task needs it');
+      expect(note).toContain("Spark's crew folders (/data/sparks, /data/workflows) are read-only");
+      expect(note).not.toContain('must not read files outside');
+    }
+    expect(doProjectNote(['/work/app'])).toContain(
+      'changing files outside them asks the user first',
+    );
+    const ownFolder = chatFolderNote('/data/chats/1/work', true, crew);
+    expect(ownFolder).toContain('Do not read or change files outside this folder');
+    expect(ownFolder).toContain(
+      'you may read files in /data/sparks, /data/workflows, but never change them',
+    );
+  });
+
   it('lists every linked folder and marks the primary one', () => {
     const note = projectNote(['/work/app', '/work/lib']);
     expect(note).toContain('/work/app (primary, your working directory), /work/lib');
-    expect(note).toMatch(/must not read files outside them/);
+    expect(note).toMatch(/may read files outside them when the task needs it/);
     const [first] = conversationBlocks([], 'Hi', { projectRoots: ['/work/app', '/work/lib'] });
     expect(first?.type === 'text' && first.text.startsWith(note)).toBe(true);
   });

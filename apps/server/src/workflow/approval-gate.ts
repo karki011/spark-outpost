@@ -9,12 +9,14 @@ import {
   type RunEvent,
   ALLOWED_REASONS,
 } from '@spark-outpost/contracts';
+import { outsideWriteGranted, outsideWriteSession } from './outside-write-grant.ts';
 import { forcePush } from '../approvals/git-commands.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
 import { publishContext } from './publish-context.ts';
 import { ownRepoFor } from './send-context.ts';
 import { diskFiles } from '../approvals/file-lister.ts';
+import { HELD_REASON, heldCommand, recordHeldSend, type Held } from '../crew-flows/held-sends.ts';
 import { withPrefetchedFiles } from '../approvals/prefetched-files.ts';
 import { secretReadLabels } from '../approvals/secret-reads.ts';
 import { secretSend, withoutSentSecrets } from '../approvals/secret-send.ts';
@@ -64,6 +66,7 @@ interface Weighed {
   decision: Decision;
   rule: string | null;
   secretReads: string[];
+  held?: Held;
 }
 
 const UNDECIDED: Weighed = {
@@ -110,6 +113,7 @@ export interface GateDeps {
   plans?: PlanModeHooks;
   observations?: RunObservations | undefined;
   publish?: PublishGrant | undefined;
+  holdsSends?: boolean;
 }
 
 export async function forcePushDefault(request: ApprovalRequest): Promise<string | null> {
@@ -385,21 +389,38 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       own: await ownRepoFor(deps.db, deps.runId, request),
       secretSend: sent,
       instructionGrants,
+      outsideWriteGrant: await outsideWriteGranted(deps.db, deps.runId),
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),
       sparkRules: await sparkRulesForRun(deps.db, deps.runId),
       ...(await publishContext(deps.db, deps.publish, request)),
     };
-    const { decision, rule, secretReads } = await withPrefetchedFiles(
+    const weighed = await withPrefetchedFiles(
       diskFiles,
-      (files): Weighed => ({
-        ...decideRuled(postureOf(request), request, runRules, allowlist, { ...options, files }),
-        secretReads: secretReadLabels(request, files, options.shell ?? null),
-      }),
+      (files): Weighed => {
+        const held = deps.holdsSends ? heldCommand(request, files, options.own ?? null) : null;
+        if (held) {
+          return {
+            decision: { verdict: 'reject', reason: HELD_REASON },
+            rule: null,
+            secretReads: [],
+            held,
+          };
+        }
+        return {
+          ...decideRuled(postureOf(request), request, runRules, allowlist, { ...options, files }),
+          secretReads: secretReadLabels(request, files, options.shell ?? null),
+        };
+      },
       UNDECIDED,
     );
+    if (weighed.held) await recordHeldSend(deps.db, deps.runId, weighed.held);
+    const { decision, rule, secretReads } = weighed;
     if (decision.verdict === 'ask') {
-      return readSecrets(await ask(request, decision.reason, signal, decision), secretReads);
+      const { outsideWrite, ...asked } = decision;
+      const session = outsideWrite ? await outsideWriteSession(deps.db, deps.runId) : null;
+      const asking = outsideWrite ? { ...asked, outsideWrite: session ?? (true as const) } : asked;
+      return readSecrets(await ask(request, decision.reason, signal, asking), secretReads);
     }
     if (decision.verdict === 'reject') {
       const ruled = decision.sparkRule ? { sparkRule: decision.sparkRule } : {};

@@ -18,6 +18,7 @@ import {
 import { decideRailFlag } from '../projects/rail-flag-decision.ts';
 import { RailFlagNotFoundError } from '../persistence/rail-flags.ts';
 import { paramId, parseBody } from './validation.ts';
+import { auditCrewDenial } from '../crew/crew-edit-audit.ts';
 import { RulesFileError } from '../spark-rules/rules-file.ts';
 
 export interface ApprovalRouteDeps {
@@ -30,7 +31,9 @@ export function approvalRoutes({ db, workspaceId }: ApprovalRouteDeps): Router {
 
   router.post('/approvals/:id/decision', async (req, res) => {
     const decision = parseBody(approvalDecisionRequestSchema, req);
-    res.json(await decideApproval(db, workspaceId, paramId(req), decision));
+    const decided = await decideApproval(db, workspaceId, paramId(req), decision);
+    await auditCrewDenial(db, decided);
+    res.json(decided);
   });
 
   router.post('/approvals/:id/hold', async (req, res) => {

@@ -22,6 +22,7 @@ export interface RequestContext {
   shownPlan?: string | null;
   subagent?: string | null;
   attachedFiles?: readonly string[];
+  readable?: readonly string[];
 }
 
 const EDIT_KINDS = new Set(['edit', 'delete', 'move']);
@@ -176,6 +177,7 @@ export function approvalRequestFrom(
     ...(agentReason ? { agentReason } : {}),
     ...(context.subagent ? { subagent: context.subagent } : {}),
     ...(context.attachedFiles?.length ? { attachedFiles: context.attachedFiles } : {}),
+    ...(context.readable?.length ? { readable: context.readable } : {}),
     ...(context.mode !== undefined ? { mode: context.mode } : {}),
   };
 }

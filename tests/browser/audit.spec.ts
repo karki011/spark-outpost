@@ -87,8 +87,8 @@ test('the audit view summarises, times, lists, and exports a session @packaged',
   await dialog.getByRole('tab', { name: 'Summary' }).press('ArrowDown');
   await expect(dialog.getByRole('tab', { name: 'Timeline' })).toBeFocused();
   await expect(dialog.getByRole('figure', { name: 'Turn 1' })).toBeVisible();
-  await expect(dialog.locator('.wf-gap')).toHaveCount(1);
-  await expect(dialog.locator('.wf-h')).toContainText('waiting for you');
+  await expect(dialog.locator('.wfall-gap')).toHaveCount(1);
+  await expect(dialog.locator('.wfall-h')).toContainText('waiting for you');
   await shot(page, 'timeline');
 
   await dialog.getByRole('tab', { name: 'Logs' }).click();

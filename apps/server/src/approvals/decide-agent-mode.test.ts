@@ -88,6 +88,7 @@ describe('decide() reads shell commands it parses', () => {
       reason: expect.stringMatching(
         /^(?:This changes .+, which is outside this project|Changing files outside the repo always asks)$/,
       ),
+      outsideWrite: true,
     });
     expect(await decideParsed('full_access', 'git log > /tmp/log.txt')).toEqual({
       verdict: 'allow',
@@ -101,6 +102,7 @@ describe('decide() reads shell commands it parses', () => {
       reason: expect.stringMatching(
         /^(?:This changes .+, which is outside this project|Changing files outside the repo always asks)$/,
       ),
+      outsideWrite: true,
     });
   });
 });

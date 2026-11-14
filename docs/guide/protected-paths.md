@@ -6,7 +6,7 @@ order: 616
 summary: The hard rails - what Spark's rules make ask or refuse in a chat, and what is refused even with no rules.
 ---
 
-With no [rules](#spark-rules), the default, the mode decides all of this. Recommended rules give the table below, outside [Terminal sessions](terminals.md).
+With no [rules](#spark-rules), the default, the mode decides all of this but outside changes. Recommended rules give the table below, outside [Terminal sessions](terminals.md).
 
 ## What always asks
 
@@ -16,7 +16,7 @@ With no [rules](#spark-rules), the default, the mode decides all of this. Recomm
 | **Files in `.sparkignore`**  | Anything you [list](sparkignore.md)                                                                                                      | Reading asks too.                                                                                                       |
 | **Agent instruction files**  | `AGENTS.md`, `CLAUDE.md` at any depth, `.github/copilot-instructions.md`, `.agents/`, `.claude/`, `.codex/`, `.cursor/rules/`, `.spark/` | **Allow once** or **Allow for this chat**.                                                                              |
 | **Git hooks and config**     | `.git/hooks/*`, `.git/config`, `git config` setting a value, `--global` too                                                              | Hold to confirm, in a worktree too. Other `.git` files can't change.                                                    |
-| **Outside the linked repos** | Changes or deletes outside the project                                                                                                   | Asks, naming the path. Temp folders like `/tmp` follow your mode. No reads.                                             |
+| **Outside the linked repos** | Changes or deletes outside the project                                                                                                   | Asks; **Allow for this session** covers later changes, not deletes. Reads, `/tmp`: your mode.                           |
 | **Force pushes**             | `git push --force-with-lease` to a named, non-default branch                                                                             | Hold to confirm; no "always" option. Claude can't, even in **Bypass permissions**.                                      |
 | **Sending a secret value**   | A push, `gh` upload, or site address or text holding a secret file's value                                                               | Hold to confirm, naming the file.                                                                                       |
 
@@ -28,9 +28,10 @@ The recommended rules also refuse other branches than the chat's or its [adopted
 
 Even with no rules:
 
-- Reading, copying or changing Spark's browser data: Browser profiles, **Personal** included, sign-in storage and the history database.
+- Reading, copying or changing Spark's data folder and browser data (**Personal** included) or other chats' folders.
 - Your ChatGPT or Claude account's own apps and connectors; add MCP servers in Spark.
 - `--no-verify`, and reading or changing Spark's rules files directly.
+- Changing Sparks' folders or workflow files directly; agents may read them.
 
 A blocked step reads "Refused …".
 

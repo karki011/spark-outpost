@@ -26,6 +26,7 @@ export const appEventKindSchema = z.enum([
   'attention',
   'chat_ports',
   'meeting',
+  'workflow_run',
 ]);
 export type AppEventKind = z.infer<typeof appEventKindSchema>;
 

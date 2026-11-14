@@ -26,7 +26,6 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | ---------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
 | **AI providers** | Claude, Codex, Z.ai, **Custom endpoint**; Jev under **Advisor**.     | [Providers](providers-and-models.md)                   |
 | **Models**       | Open a model for cost and benchmarks.                                | [Models](providers-and-models.md#read-the-model-cards) |
-| **Crew**         | Named Sparks.                                                        | [Sparks](sparks.md)                                    |
 | **Usage**        | Tokens and cost per reply, by provider; **~** marks Codex estimates. | [Jev](jev.md#what-it-costs)                            |
 
 ## Work

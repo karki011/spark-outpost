@@ -55,12 +55,17 @@ test('works from the composer without typing into it', async ({ page }) => {
   await expect(current(page)).toContainText('Tickets');
 });
 
-test('a digit past the last item does nothing', async ({ page }) => {
+test('the last digit reaches the last item and a digit past it does nothing', async ({ page }) => {
   await page.goto('/');
-  const count = await rail(page).locator('.rail-btn[data-view]').count();
-  expect(count).toBeLessThan(9);
+  await positionOf(page, 'Home');
+  const labels = await rail(page).locator('.rail-btn[data-view]').allInnerTexts();
+  expect(labels.length).toBeLessThanOrEqual(9);
   await page.keyboard.press('Control+Alt+Digit2');
   const before = await current(page).innerText();
-  await page.keyboard.press('Control+Alt+Digit9');
-  await expect(current(page)).toHaveText(before);
+  if (labels.length < 9) {
+    await page.keyboard.press(`Control+Alt+Digit${labels.length + 1}`);
+    await expect(current(page)).toHaveText(before);
+  }
+  await page.keyboard.press(`Control+Alt+Digit${labels.length}`);
+  await expect(current(page)).toHaveText(labels.at(-1)!);
 });
