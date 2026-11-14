@@ -33,6 +33,17 @@ export function clearFileDraft(sparkId: string, path: string): void {
   replace(next);
 }
 
+export function settleFileDraft(
+  sparkId: string,
+  path: string,
+  saved: { text: string; hash: string },
+): void {
+  const current = drafts.get(keyOf(sparkId, path));
+  if (!current) return;
+  if (current.text === saved.text) clearFileDraft(sparkId, path);
+  else setFileDraft(sparkId, path, { text: current.text, baseHash: saved.hash });
+}
+
 export function useFileDraft(sparkId: string, path: string): FileDraft | null {
   return useSyncExternalStore(subscribe, () => drafts.get(keyOf(sparkId, path)) ?? null);
 }

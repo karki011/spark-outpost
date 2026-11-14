@@ -3,10 +3,20 @@ import type { Queryable } from '../persistence/db.ts';
 import { runFromDevice } from '../remote/run-mark.ts';
 import { rulesSession } from '../spark-mcp/actions/rules-edit-session.ts';
 
-export async function outsideWriteGranted(db: Queryable, runId: string): Promise<boolean> {
-  if ((await childRun(db, runId)) || (await runFromDevice(db, runId))) return false;
+async function grantableSession(db: Queryable, runId: string) {
+  if ((await childRun(db, runId)) || (await runFromDevice(db, runId))) return null;
   const current = await rulesSession(db, runId);
-  if (!current?.fromUser || !current.sessionRow) return false;
+  if (!current?.fromUser || !current.sessionRow) return null;
+  return { ...current, sessionRow: current.sessionRow };
+}
+
+export async function outsideWriteSession(db: Queryable, runId: string): Promise<string | null> {
+  return (await grantableSession(db, runId))?.sessionRow ?? null;
+}
+
+export async function outsideWriteGranted(db: Queryable, runId: string): Promise<boolean> {
+  const current = await grantableSession(db, runId);
+  if (!current) return false;
   const { rowCount } = await db.query(
     `SELECT 1 FROM approvals a JOIN runs r ON r.id = a.run_id
      WHERE r.conversation_id = (SELECT conversation_id FROM runs WHERE id = $1)

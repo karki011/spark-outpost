@@ -3,7 +3,7 @@ import { SPARK_INSTRUCTIONS_FILE, type CrewFileEntry } from '@spark-outpost/cont
 import { ApiError } from '../api/client.ts';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { CheckIcon, PenIcon, SpinnerIcon, WarnIcon } from '../ui/icons.tsx';
-import { clearFileDraft, setFileDraft, useFileDraft } from './file-drafts.ts';
+import { clearFileDraft, setFileDraft, settleFileDraft, useFileDraft } from './file-drafts.ts';
 import {
   fixedName,
   isSkillFile,
@@ -111,8 +111,8 @@ export function FileEditor({
     save.mutate(
       { path, text, baseHash: hash },
       {
-        onSuccess: () => {
-          clearFileDraft(sparkId, path);
+        onSuccess: (saved) => {
+          settleFileDraft(sparkId, path, saved);
           setFailure(null);
         },
         onError: (error) => setFailure(saveFailure(error, hash)),

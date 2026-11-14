@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   CREW_SLUG_PATTERN,
@@ -28,6 +28,12 @@ export class WorkflowChangedError extends Error {
 export class WorkflowExistsError extends Error {
   constructor(id: string) {
     super(`A workflow called ${id} already exists.`);
+  }
+}
+
+export class WorkflowBusyError extends Error {
+  constructor() {
+    super('Another change to this workflow is being saved. Try again in a moment.');
   }
 }
 
@@ -60,6 +66,40 @@ function parseWorkflow(id: string, text: string): Workflow | null {
     return parsed.success && parsed.data.id === id ? parsed.data : null;
   } catch {
     return null;
+  }
+}
+
+const LOCK_WAIT_MS = 5_000;
+const LOCK_STALE_MS = 30_000;
+const LOCK_RETRY_MS = 20;
+
+async function takeLock(lock: string): Promise<void> {
+  const deadline = Date.now() + LOCK_WAIT_MS;
+  for (;;) {
+    try {
+      await mkdir(lock);
+      return;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+    }
+    const held = await stat(lock).catch(() => null);
+    if (held && Date.now() - held.mtimeMs > LOCK_STALE_MS) {
+      await rm(lock, { recursive: true, force: true });
+      continue;
+    }
+    if (Date.now() > deadline) throw new WorkflowBusyError();
+    await new Promise((resolve) => setTimeout(resolve, LOCK_RETRY_MS));
+  }
+}
+
+async function withLock<T>(dir: string, id: string, work: () => Promise<T>): Promise<T> {
+  await mkdir(dir, { recursive: true });
+  const lock = join(dir, `.${id}.lock`);
+  await takeLock(lock);
+  try {
+    return await work();
+  } finally {
+    await rm(lock, { recursive: true, force: true });
   }
 }
 
@@ -129,22 +169,25 @@ export function workflowStore(dir: string = crewWorkflowsDir()): WorkflowStore {
       const problems = workflowProblems(workflow.steps, sparkIds);
       if (problems.length > 0) throw new WorkflowProblemsError(problems);
       const file = fileOf(dir, workflow.id);
-      const current = await readText(file);
-      if (baseHash === null && current !== null) throw new WorkflowExistsError(workflow.id);
-      if (baseHash !== null && (current === null || hashOf(current) !== baseHash)) {
-        throw new WorkflowChangedError();
-      }
-      const text = `${JSON.stringify(workflow, null, 2)}\n`;
-      await mkdir(dir, { recursive: true });
-      const draft = join(dir, `.${workflow.id}.${randomUUID()}.tmp`);
-      await writeFile(draft, text, { encoding: 'utf8', mode: 0o600 });
-      await rename(draft, file);
-      return { workflow, hash: hashOf(text) };
+      return withLock(dir, workflow.id, async () => {
+        const current = await readText(file);
+        if (baseHash === null && current !== null) throw new WorkflowExistsError(workflow.id);
+        if (baseHash !== null && (current === null || hashOf(current) !== baseHash)) {
+          throw new WorkflowChangedError();
+        }
+        const text = `${JSON.stringify(workflow, null, 2)}\n`;
+        const draft = join(dir, `.${workflow.id}.${randomUUID()}.tmp`);
+        await writeFile(draft, text, { encoding: 'utf8', mode: 0o600 });
+        await rename(draft, file);
+        return { workflow, hash: hashOf(text) };
+      });
     },
     async remove(id) {
       const file = fileOf(dir, id);
-      if ((await readText(file)) === null) throw new WorkflowNotFoundError(id);
-      await rm(file, { force: true });
+      await withLock(dir, id, async () => {
+        if ((await readText(file)) === null) throw new WorkflowNotFoundError(id);
+        await rm(file, { force: true });
+      });
     },
   };
 }

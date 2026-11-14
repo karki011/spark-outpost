@@ -27,6 +27,7 @@ import { SparkNotFoundError, startSparkTestRun, startWorkflowRun } from './start
 import { TestRunNotFoundError, discardTestRun, readTestRun } from './test-run.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
 import {
+  WorkflowBusyError,
   WorkflowChangedError,
   WorkflowExistsError,
   WorkflowNotFoundError,
@@ -65,6 +66,7 @@ export function workflowErrorStatus(error: unknown): { status: number; message: 
   }
   if (
     error instanceof WorkflowChangedError ||
+    error instanceof WorkflowBusyError ||
     error instanceof WorkflowExistsError ||
     error instanceof BuilderChatTakenError
   ) {

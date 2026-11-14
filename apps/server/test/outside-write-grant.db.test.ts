@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ApprovalOption } from '@spark-outpost/contracts';
 import { decideApproval, insertApproval } from '../src/persistence/approvals.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
-import { outsideWriteGranted } from '../src/workflow/outside-write-grant.ts';
+import { outsideWriteGranted, outsideWriteSession } from '../src/workflow/outside-write-grant.ts';
 import { createTestDb, startChat, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -123,6 +123,15 @@ describe('Allow for this session on a write outside the project', () => {
     const later = await nextTurn();
     await setRun(later, 'claude', 'acceptEdits', 'assistant');
     expect(await outsideWriteGranted(t.db, later)).toBe(false);
+  });
+
+  it('is offered only on a typed turn with an open session', async () => {
+    expect(await outsideWriteSession(t.db, chat.runId)).toBeNull();
+    const session = await openSession();
+    expect(await outsideWriteSession(t.db, chat.runId)).toBe(session);
+    const later = await nextTurn();
+    await setRun(later, 'claude', 'acceptEdits', 'assistant');
+    expect(await outsideWriteSession(t.db, later)).toBeNull();
   });
 
   it('refuses a longer grant on any other card', async () => {

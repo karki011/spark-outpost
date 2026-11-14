@@ -9,8 +9,7 @@ import {
   type RunEvent,
   ALLOWED_REASONS,
 } from '@spark-outpost/contracts';
-import { outsideWriteGranted } from './outside-write-grant.ts';
-import { rulesSession } from '../spark-mcp/actions/rules-edit-session.ts';
+import { outsideWriteGranted, outsideWriteSession } from './outside-write-grant.ts';
 import { forcePush } from '../approvals/git-commands.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
@@ -419,9 +418,8 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     const { decision, rule, secretReads } = weighed;
     if (decision.verdict === 'ask') {
       const { outsideWrite, ...asked } = decision;
-      const asking = outsideWrite
-        ? { ...asked, outsideWrite: (await rulesSession(deps.db, deps.runId))?.sessionRow ?? '' }
-        : asked;
+      const session = outsideWrite ? await outsideWriteSession(deps.db, deps.runId) : null;
+      const asking = outsideWrite ? { ...asked, outsideWrite: session ?? (true as const) } : asked;
       return readSecrets(await ask(request, decision.reason, signal, asking), secretReads);
     }
     if (decision.verdict === 'reject') {

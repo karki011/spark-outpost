@@ -182,10 +182,12 @@ async function checkSchedule(
 export async function checkSchedules(deps: SchedulerDeps): Promise<void> {
   const now = deps.now();
   const { db, workspaceId } = deps;
-  for (const claim of await reclaimStrandedSlots(db, workspaceId, now, STRANDED_CLAIM_MS)) {
-    await launch(deps, claim);
-  }
   const paused = await sparkPaused(db, workspaceId);
+  if (!paused) {
+    for (const claim of await reclaimStrandedSlots(db, workspaceId, now, STRANDED_CLAIM_MS)) {
+      await launch(deps, claim);
+    }
+  }
   for (const stored of await listSchedules(db, workspaceId, 'enabled')) {
     await checkSchedule(deps, stored, paused, now).catch((error: unknown) => {
       console.error(`Could not check the schedule of workflow ${stored.workflowId}`, error);

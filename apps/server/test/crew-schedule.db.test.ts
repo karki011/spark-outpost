@@ -206,6 +206,19 @@ describe('Spark pause', () => {
     expect(held?.releasedAt).toBe(iso(at(10, 12)));
   });
 
+  it('waits to start a slot claimed before a restart until Spark resumes', async () => {
+    await clock.save(everyHalfHour());
+    await claimSlot(t.db, t.workspaceId, FLOW, 'schedule', at(9, 30), at(9, 30));
+    await setSparkPaused(t.db, t.workspaceId, true);
+
+    await clock.checkAt(new Date(at(9, 30).getTime() + STRANDED_CLAIM_MS + 1));
+    expect(await runsOf(t)).toEqual([]);
+
+    await setSparkPaused(t.db, t.workspaceId, false);
+    await clock.checkAt(new Date(at(9, 30).getTime() + 2 * STRANDED_CLAIM_MS + 2));
+    expect(await runsOf(t)).toHaveLength(1);
+  });
+
   it('starts none of the held slots when the schedule is set to skip', async () => {
     await clock.save(everyHalfHour({ missed: 'skip' }));
     await setSparkPaused(t.db, t.workspaceId, true);

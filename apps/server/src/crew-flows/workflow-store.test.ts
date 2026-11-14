@@ -87,6 +87,20 @@ describe('workflowStore', () => {
     );
   });
 
+  it('lets only one of two saves from the same hash win', async () => {
+    const base = await workflowStore(dir).save(flow('nightly'), null, KNOWN);
+
+    const results = await Promise.allSettled([
+      workflowStore(dir).save(flow('nightly', 'Editor'), base.hash, KNOWN),
+      workflowStore(dir).save(flow('nightly', 'Agent'), base.hash, KNOWN),
+    ]);
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    const [refused] = results.filter((result) => result.status === 'rejected');
+    expect((refused as PromiseRejectedResult).reason).toBeInstanceOf(WorkflowChangedError);
+    expect(await readdir(dir)).toEqual(['nightly.json']);
+  });
+
   it('refuses a workflow with problems and writes nothing', async () => {
     const store = workflowStore(dir);
 

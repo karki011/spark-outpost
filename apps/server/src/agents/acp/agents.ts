@@ -11,6 +11,7 @@ import {
 } from '../../approvals/browser-data.ts';
 import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
 import { crewFolderRules, guardedCrewFolders, inFolders } from '../../approvals/crew-folders.ts';
+import { sparkDataReadRules } from '../../approvals/spark-data-reads.ts';
 import { tempRoots } from '../../approvals/temp-dirs.ts';
 import { PLANS_DIR } from '../../plans/plan-mode.ts';
 import { GIT_CONTROL_GLOBS, INSTRUCTION_GLOBS } from '../../projects/path-policy.ts';
@@ -222,6 +223,7 @@ export function claudeSessionMeta(
     ...(floor.secretEdits ? secretRules([...extraRoots, ...tempRoots()]) : []),
     ...browserDataRules(dataDir),
     ...(inSparkData ? [] : otherChatsRules(dataDir)),
+    ...(inSparkData ? [] : sparkDataReadRules(dataDir, repo?.readDirs ?? guardedCrewFolders())),
     ...sparkRulesFlagRules(),
     ...crewFolderRules(),
     ...(floor.forcePush ? FORCE_PUSH_DENY_RULES : []),
