@@ -38,6 +38,8 @@ test('the builder chat docks beside the Sparks page, talks to the agent and is m
   await openSparksPage(page);
   await page.getByRole('button', { name: 'Build with an agent' }).click();
   await expect(dock(page)).toBeVisible();
+  await expect(dock(page)).toContainText('proposes each change as a card you allow here');
+  await expect(dock(page)).not.toContainText('no project folder');
   await expect(page.getByRole('heading', { level: 1, name: 'Sparks', exact: true })).toBeVisible();
   const input = dock(page).getByRole('textbox', { name: 'Message' });
   await input.fill('Make a Spark that reviews release notes');

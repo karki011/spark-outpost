@@ -10,6 +10,8 @@ import { CheckIcon, PlusIcon, XIcon } from '../ui/icons.tsx';
 import { builderApi, builderKeys } from './builder-api.ts';
 
 const DONE_POLL_MS = 10_000;
+const BUILDER_INTRO =
+  'Say what Spark or workflow you want. The agent reads your crew and proposes each change as a card you allow here.';
 
 function useBuilderChat(chatId: string | null, onChat: (id: string | null) => void) {
   const client = useQueryClient();
@@ -118,6 +120,7 @@ export function BuilderDock({ chatId, onChat, onClose }: BuilderDockProps) {
       idSuffix: '-builder',
       name: 'Builder chat',
       landmark: 'section',
+      intro: BUILDER_INTRO,
       closer: chat ? (
         <DockControls
           chat={chat}
