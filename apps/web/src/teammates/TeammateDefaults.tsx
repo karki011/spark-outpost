@@ -8,6 +8,7 @@ import {
 import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
 import { modeChoices, modelChoices } from '../providers/ProviderDefaults.tsx';
 import { ChoicePicker, type PickerChoice } from '../ui/ChoicePicker.tsx';
+import { InfoTip } from '../ui/InfoTip.tsx';
 
 const DEFAULT = '';
 
@@ -103,10 +104,17 @@ export function TeammateDefaults({ draft, providers, onChange }: TeammateDefault
       </div>
       {provider && <ProviderModels draft={draft} provider={provider} onChange={onChange} />}
       <div className="field">
-        <span>Spark autonomy</span>
+        <span>
+          Spark autonomy{' '}
+          <InfoTip
+            topic="Spark autonomy"
+            text="What happens to the result of this Spark's chats. Spark default follows Settings → Chats & autonomy."
+          />
+        </span>
         <ChoicePicker
           label="Spark autonomy"
           choices={LEVEL_CHOICES}
+          showNote={false}
           value={draft.level ?? DEFAULT}
           onChange={(id) =>
             onChange({

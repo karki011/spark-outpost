@@ -7,6 +7,7 @@ import { projectKeys, projectsApi } from '../api/projects.ts';
 import { FileIcon } from '../chat/attachments/attachment-icons.tsx';
 import { FolderDialog } from '../chat/project/FolderDialog.tsx';
 import { XIcon } from '../ui/icons.tsx';
+import { InfoTip } from '../ui/InfoTip.tsx';
 
 interface TeammateInstructionsProps {
   instructions: string;
@@ -90,7 +91,17 @@ export function TeammateInstructions({
   return (
     <div className="field">
       <div className="tm-instructions-h">
-        <label htmlFor={`${id}-text`}>Standing instructions</label>
+        <span>
+          <label htmlFor={`${id}-text`}>Standing instructions</label>{' '}
+          <InfoTip
+            topic="Standing instructions"
+            text={
+              path
+                ? 'The file is read at the start of each chat and used instead of this text. This text is the fallback if the file can’t be read.'
+                : 'Added to every chat with this Spark as your own instructions. Type them here or point to a file; a file is used instead of typed text.'
+            }
+          />
+        </span>
         <button
           ref={browseRef}
           type="button"
@@ -115,9 +126,6 @@ export function TeammateInstructions({
         id={`${id}-count`}
         className={used > TEAMMATE_INSTRUCTIONS_MAX ? 'tm-count over' : 'tm-count'}
       >
-        {path
-          ? 'The file is read at the start of each chat and used instead of this text. This text is the fallback if the file can’t be read.'
-          : 'Added to every chat with this Spark as your own instructions. Type them here or point to a file; a file is used instead of typed text.'}{' '}
         {used} / {TEAMMATE_INSTRUCTIONS_MAX}
       </small>
       <AnimatePresence>

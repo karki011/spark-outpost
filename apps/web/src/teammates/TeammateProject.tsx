@@ -1,6 +1,7 @@
 import { useProjects } from '../chat/project/use-chat-repos.ts';
 import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
+import { InfoTip } from '../ui/InfoTip.tsx';
 
 const NO_PROJECT = '';
 
@@ -22,10 +23,17 @@ export function TeammateProject({ projectIds, onChange }: TeammateProjectProps) 
   ];
   return (
     <div className="field">
-      <span>Default project</span>
+      <span>
+        Default project{' '}
+        <InfoTip
+          topic="Default project"
+          text="Where this Spark's chats start. No project starts them without a linked folder."
+        />
+      </span>
       <ChoicePicker
         label="Default project"
         choices={choices}
+        showNote={false}
         value={projectIds[0] ?? NO_PROJECT}
         actions={adder.actions}
         onChange={(id) => onChange(id ? [id] : [])}
