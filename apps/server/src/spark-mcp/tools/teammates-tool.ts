@@ -46,6 +46,7 @@ function describe(
     defaults: {
       provider: teammate.provider ?? 'default provider',
       model: teammate.model ?? 'provider default',
+      effort: teammate.effort ?? 'provider default',
       agentMode: teammate.agentMode ?? 'provider default',
       autonomy: teammate.level ? autonomyLabel(teammate.level) : 'Spark default',
       projects: teammate.projectIds.map((id) => projectNames.get(id) ?? id),
