@@ -119,10 +119,6 @@ export async function builderChatScope(
   return { spark: row.spark_id && row.name ? { id: row.spark_id, name: row.name } : null };
 }
 
-export async function isBuilderChat(db: Queryable, conversationId: string): Promise<boolean> {
-  return (await builderChatScope(db, conversationId)) !== null;
-}
-
 export async function currentBuilderChat(
   deps: BuilderChatDeps,
   id?: string,

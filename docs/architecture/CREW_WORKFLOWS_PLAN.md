@@ -11,7 +11,7 @@ Mocks for every screen: `docs/design/mocks/crew-workflows-mock.html` (15 screens
 3. **A workflow** combines Sparks into steps that run in order or side by side.
 4. **Three ways to try and run:** Preview (no agents), Test run (real agents, thrown away), Run (by hand, `@name` in a chat, or on a schedule).
 5. **Agents can build and edit** Sparks, skills and workflows, only through a card the user allows.
-6. **A builder chat** docked on the Sparks page for creating them by talking to an agent.
+6. **A builder chat** docked on the Sparks page for creating them by talking to an agent. Each Spark also has its own builder chat from **Ask an agent** on its page (migration `0251`: `for_spark`, `spark_id`), told to change that Spark's files and folders through `spark_crew_edit` (`removeFolder` deletes any folder); its folder refetches every 4 seconds while the chat is open, and the sweep retires the chat once the Spark is deleted.
 
 ## Decisions made
 

@@ -10,7 +10,7 @@ vi.mock('../outposts/outpost-availability.ts', () => ({
 const readPreferences = vi.hoisted(() => vi.fn(async () => ({})));
 vi.mock('../persistence/setup.ts', () => ({ sparkPreferences: readPreferences }));
 vi.mock('../persistence/outpost-stories.ts', () => ({ storyTaskOf: vi.fn() }));
-vi.mock('../crew-flows/builder-chat.ts', () => ({ isBuilderChat: async () => false }));
+vi.mock('../crew-flows/builder-chat.ts', () => ({ builderChatScope: async () => null }));
 
 const db = {} as Queryable;
 const input = {
