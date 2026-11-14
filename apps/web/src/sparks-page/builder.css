@@ -77,9 +77,9 @@
 }
 
 .bld-drafts ul {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 300px));
+  gap: 8px;
   margin: 14px 0 0;
   padding: 0;
   list-style: none;
@@ -90,9 +90,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 12px;
-  border: 1px dashed var(--accent);
-  border-radius: var(--r);
+  min-width: 0;
+  padding: 8px 10px 8px 12px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: var(--r-sm);
   background: var(--accent-soft);
 }
 
@@ -104,7 +105,10 @@
 }
 
 .bld-draft-who b {
+  overflow: hidden;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bld-draft-who small {
