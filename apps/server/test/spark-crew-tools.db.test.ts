@@ -314,6 +314,30 @@ describe('spark_crew_edit always asks the user', () => {
     ]);
   });
 
+  it('deletes any folder with removeFolder after Allow, on one card', async () => {
+    await saveCrewFile(crewSparksDir(), scout.id, {
+      path: 'notes/a.md',
+      text: 'a',
+      baseHash: null,
+    });
+    await saveCrewFile(crewSparksDir(), scout.id, {
+      path: 'notes/deep/b.md',
+      text: 'b',
+      baseHash: null,
+    });
+    await edit({ spark: 'Scout', removeFolder: 'notes' });
+    const card = await pendingCard(t);
+    expect(cardAction(card).files.map((file) => [file.path, file.change])).toEqual([
+      ['notes/a.md', 'deleted'],
+      ['notes/deep/b.md', 'deleted'],
+    ]);
+    await answerCard(t, SPARK_ACTION_OPTION.confirm);
+    expect((await cardResult(t, card.id)).payload.sparkResult?.message).toBe(
+      'Changed the Scout Spark’s files: 2 deleted.',
+    );
+    expect(await scoutFiles()).toEqual(['SPARK.md']);
+  });
+
   it('names similar skills and Sparks on the card', async () => {
     const scribe = await newSpark(t, 'Scribe', { role: 'Code reviewer', instructions: '' });
     await saveCrewFile(crewSparksDir(), scribe.id, {

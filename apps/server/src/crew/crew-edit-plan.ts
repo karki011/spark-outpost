@@ -40,6 +40,7 @@ export const CREW_EDIT_PROBLEMS = {
   twice: 'This path is in the call twice.',
   noFile: 'There is no file here to delete.',
   noSkill: 'There is no skill folder with this name.',
+  noFolder: 'There is no folder with files at this path.',
   skillFile: `A skill folder needs a ${SKILL_FILE} that starts with name and description between --- lines. Add it in the same call.`,
   skillLeft: `Deleting ${SKILL_FILE} leaves the skill’s other files without it. Pass remove with the skill’s name to delete the whole folder.`,
   inTheWay: 'Another file in this change has this path as a folder.',
@@ -82,6 +83,24 @@ function withRemovedSkill(
       text: CREW_EDIT_PROBLEMS.noSkill,
     });
   }
+  return [...inputs, ...inFolder.map((path) => ({ path, text: null }))];
+}
+
+function withRemovedFolder(
+  inputs: readonly CrewFileInput[],
+  folder: string | null,
+  existing: readonly string[],
+  problems: CrewProblem[],
+): CrewFileInput[] {
+  if (folder === null) return [...inputs];
+  const trimmed = folder.replace(/\/+$/, '');
+  const pathProblem = crewPathProblem(trimmed);
+  if (pathProblem) {
+    problems.push({ path: folder, text: pathProblem });
+    return [...inputs];
+  }
+  const inFolder = existing.filter((path) => path.startsWith(`${trimmed}/`));
+  if (inFolder.length === 0) problems.push({ path: trimmed, text: CREW_EDIT_PROBLEMS.noFolder });
   return [...inputs, ...inFolder.map((path) => ({ path, text: null }))];
 }
 
@@ -168,10 +187,16 @@ export async function planSparkEdit(
   sparkId: string,
   inputs: readonly CrewFileInput[],
   removeSkill: string | null,
+  removeFolder: string | null = null,
 ): Promise<SparkEditPlan> {
   const existing = (await crewFileEntries(sparksDir, sparkId)).files.map((file) => file.path);
   const problems: CrewProblem[] = [];
-  const wanted = withRemovedSkill(inputs, removeSkill, existing, problems);
+  const wanted = withRemovedFolder(
+    withRemovedSkill(inputs, removeSkill, existing, problems),
+    removeFolder,
+    existing,
+    problems,
+  );
   const seen = new Set<string>();
   const files: CrewFileChange[] = [];
   for (const input of wanted) {

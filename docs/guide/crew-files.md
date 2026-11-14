@@ -71,7 +71,9 @@ A skill folder without a valid `SKILL.md` is not offered to the Spark.
 | `spark_crew`      | Lists Sparks with skills, and workflows; reads a Spark's file list, one file or one workflow | Never                                   |
 | `spark_crew_edit` | Proposes new, changed or deleted files for one Spark, or a new, changed or deleted workflow  | Always, with each file before and after |
 
-In `spark_crew_edit`, a step may name its Spark with `spark`, `text: null` deletes a file, and `remove` deletes a skill folder or a workflow.
+In `spark_crew_edit`, a step may name its Spark with `spark`, `text: null` deletes a file, `remove` deletes a skill folder or a workflow, and `removeFolder` deletes every file under any folder of the Spark.
+
+A folder appears when a file is written inside it and goes when its last file is deleted. To move or rename a file, delete the old path and write the new one in the same call.
 
 A change with a problem goes back to the agent and is never shown to you.
 
