@@ -14,7 +14,7 @@ Run a workflow and watch its steps finish. About 2 minutes.
 2. Select **Run** on a workflow. The run view opens. The run happens in its own chat.
 3. Read the line under the title: the run's state, steps done, time, tokens and cost.
 
-Typing `@` and the workflow's id in a chat also starts it. That turn shows **Open run view**.
+Typing `@` and the workflow's id in a chat also starts it. That turn shows **Open run view**. `@pip-review` runs that workflow even with a Spark named Pip.
 
 ## Read a step
 

@@ -1,5 +1,11 @@
-import { findSparkMentions, mainAgentContinues, sparkWho } from '@spark-outpost/contracts';
+import {
+  findSparkMentions,
+  mainAgentContinues,
+  sparkWho,
+  withoutShadowed,
+} from '@spark-outpost/contracts';
 import { workflowTurn } from '../crew-flows/workflow-turn.ts';
+import { workflowStore } from '../crew-flows/workflow-store.ts';
 import { chatTickets } from '../persistence/chat-tickets.ts';
 import type { Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
@@ -90,7 +96,11 @@ export async function handToSparks(h: Handoff): Promise<RunInput | 'finished'> {
   const { deps, input, lease } = h;
   if (input.parentRunId || input.assistant || !input.userRequest.includes('@')) return input;
   const sparks = await mentionableSparks(deps.db, input.identity.threadId);
-  const mentions = findSparkMentions(input.userRequest, sparks);
+  const workflowIds = (await workflowStore().ids()).map((name) => ({ name }));
+  const mentions = withoutShadowed(
+    findSparkMentions(input.userRequest, sparks),
+    findSparkMentions(input.userRequest, workflowIds),
+  );
   const workflow = await workflowTurn(h, mentions.length > 0);
   if (workflow !== null) return workflow;
   if (mentions.length === 0) return input;

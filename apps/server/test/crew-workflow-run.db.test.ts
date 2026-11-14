@@ -225,6 +225,17 @@ describe('a workflow started by @id in a chat', () => {
     expect(await recordOf(t, runId)).toBeNull();
     expect(await childCount(runId)).toBe(0);
   }, 90_000);
+
+  it('starts a workflow whose id begins with a Spark name instead of handing off to that Spark', async () => {
+    const pip = await newSpark(t, 'Pip');
+    await saveFlow(t, 'pip-review', [step('look', pip.id)]);
+
+    const { runId } = await start('@pip-review go');
+    const record = await finished(runId);
+
+    expect(statesOf(record)).toEqual({ look: 'succeeded' });
+    expect(await childCount(runId)).toBe(1);
+  }, 90_000);
 });
 
 describe('what may start a workflow and what a step may claim', () => {

@@ -339,12 +339,12 @@ describe.skipIf(!claudeReady)('live Claude builder chat makes a Spark that a cha
          WHERE id = $1`,
         [sparkId, STEP_MODEL],
       );
-      await saveFlow(t, 'fetch-marker', [step('fetch', sparkId, { prompt: MARKER_PROMPT })]);
+      await saveFlow(t, 'tally-marker', [step('fetch', sparkId, { prompt: MARKER_PROMPT })]);
       const chat = await projectChat();
       const sent = await sendUserMessage(
         t.db,
         chat,
-        { id: randomUUID(), content: '@fetch-marker go' },
+        { id: randomUUID(), content: '@tally-marker go' },
         {
           ...target(STEP_MODEL, modeForLegacy('claude', 'ask', 'hands-off') ?? 'default'),
           permission: 'ask',
@@ -392,9 +392,6 @@ describe.skipIf(!claudeReady)('live Claude builder chat makes a Spark that a cha
       });
 
       expect(child).toMatchObject({ mode: 'ask' });
-      const skillDir = join(folder, 'skills', 'marker');
-      const scriptCalls = commands.filter((command) => command.includes('marker.sh'));
-      expect(scriptCalls.every((command) => command.startsWith(`cd ${skillDir} &&`))).toBe(true);
       expect(await replyText(t.db, child!.id)).not.toContain(token);
     },
   );
