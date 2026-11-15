@@ -152,15 +152,24 @@ const jiraUpdate: JiraEditAction = {
     description: 'People want the usage table in a spreadsheet.',
     labels: ['frontend'],
     priority: 'Medium',
+    parent: null,
+    type: null,
+    team: null,
   },
   after: {
     summary: 'Export usage as CSV',
     description: 'People want the usage table in a spreadsheet.',
     labels: ['csv'],
     priority: 'Medium',
+    parent: null,
+    type: null,
+    team: null,
   },
   comment: null,
   subtasks: [],
+  rows: [],
+  targets: [],
+  plan: null,
 };
 
 const pageDelete: ConfluenceEditAction = {

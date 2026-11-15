@@ -211,20 +211,17 @@ describe('the crew the rail shows', () => {
     }) as unknown as ConversationDetail;
 
   it("lists one row for a finished turn: the chat's agent with its model", () => {
-    const view = railCrew(chat('succeeded'), false);
-    expect(view.stage).toEqual([]);
-    expect(names(view.list)).toEqual(['Claude']);
-    expect(crewHeading(view.list, 'Auto')).toBe('Claude · Auto');
-    expect(crewHeading(view.list, '')).toBe('Claude');
-    expect(crewSectionLabel(view.list)).toBe('Agent');
-    expect(crewJob(view.list[0]!)).toBe('Agent · Sonnet 5 · Medium');
-    expect(names(view.list)).toEqual(names(tvCrew(chat('succeeded'))));
+    const view = railCrew(chat('succeeded'));
+    expect(names(view)).toEqual(['Claude']);
+    expect(crewHeading(view, 'Auto')).toBe('Claude · Auto');
+    expect(crewHeading(view, '')).toBe('Claude');
+    expect(crewSectionLabel(view)).toBe('Agent');
+    expect(crewJob(view[0]!)).toBe('Agent · Sonnet 5 · Medium');
+    expect(names(view)).toEqual(names(tvCrew(chat('succeeded'))));
   });
 
-  it('puts the agent on the stage instead of in the list while it works', () => {
-    const view = railCrew(chat('running'), true);
-    expect(names(view.stage)).toEqual(['Claude']);
-    expect(view.list).toEqual([]);
+  it('lists the agent while it works', () => {
+    expect(names(railCrew(chat('running')))).toEqual(['Claude']);
   });
 
   it('shows native workers with the lead while running and retains their outcomes when finished', () => {
@@ -255,16 +252,14 @@ describe('the crew the rail shows', () => {
         },
       ],
     };
-    const live = railCrew(detail, true);
-    expect(live.stage.map((agent) => [agent.name, agent.state])).toEqual([
+    const live = railCrew(detail);
+    expect(live.map((agent) => [agent.name, agent.state])).toEqual([
       ['Claude', 'thinking'],
       ['Builder', 'working'],
       ['Reviewer', 'done'],
     ]);
-    expect(live.list).toEqual([]);
-    const finished = railCrew({ ...detail, runs: [run({ status: 'succeeded' })] }, false);
-    expect(finished.stage).toEqual([]);
-    expect(finished.list.map((agent) => [agent.name, agent.state])).toEqual([
+    const finished = railCrew({ ...detail, runs: [run({ status: 'succeeded' })] });
+    expect(finished.map((agent) => [agent.name, agent.state])).toEqual([
       ['Claude', 'done'],
       ['Builder', 'inactive'],
       ['Reviewer', 'done'],
@@ -276,14 +271,14 @@ describe('the crew the rail shows', () => {
       status: 'succeeded',
       crew: [member({ name: 'Bolt' }), member({ name: 'Hawk', role: 'critic', runId: HAWK })],
     });
-    const view = railCrew(chat('succeeded', { [RUN_ID]: stored }), false);
-    expect(names(view.list)).toEqual(['Jev', 'Bolt', 'Hawk']);
-    expect(crewHeading(view.list, 'Auto')).toBe('Crew · 3 agents');
-    expect(crewSectionLabel(view.list)).toBe('Crew');
+    const view = railCrew(chat('succeeded', { [RUN_ID]: stored }));
+    expect(names(view)).toEqual(['Jev', 'Bolt', 'Hawk']);
+    expect(crewHeading(view, 'Auto')).toBe('Crew · 3 agents');
+    expect(crewSectionLabel(view)).toBe('Crew');
   });
 
   it('shows nothing before the first message', () => {
     const empty = { runs: [], orchestrations: {}, activity: {} } as unknown as ConversationDetail;
-    expect(railCrew(empty, false)).toEqual({ stage: [], list: [] });
+    expect(railCrew(empty)).toEqual([]);
   });
 });

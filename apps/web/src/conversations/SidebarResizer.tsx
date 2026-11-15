@@ -13,7 +13,7 @@ const BIG_STEP = 48;
 
 export function SidebarResizer() {
   const layout = useSidebarLayout();
-  if (!layout || layout.narrow || layout.collapsed) return null;
+  if (!layout || layout.floating || layout.collapsed) return null;
   const { setWidth } = layout;
   const width = layout.width ?? SIDEBAR_DEFAULT_WIDTH;
 

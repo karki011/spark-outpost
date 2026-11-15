@@ -269,3 +269,29 @@ test('a pane keeps its chat mounted and room for the column with its Work panel 
   await expect(right(page)).toHaveCount(0);
   expect(await mounted!.evaluate((element) => element.isConnected)).toBe(true);
 });
+
+test('a split pair too narrow for the sidebar keeps it floating, and it docks again when wide', async ({
+  page,
+}) => {
+  await openChats(page);
+  await rowButton(page, LEFT).click();
+  await rowButton(page, RIGHT).click({ modifiers: ['Alt'] });
+  await expect(right(page).getByRole('heading', { level: 1 })).toHaveText(RIGHT);
+
+  await page.setViewportSize({ width: 1000, height: 900 });
+  const show = page.getByRole('button', { name: 'Show sidebar' }).first();
+  await expect(page.locator('.app.side-float')).toHaveCount(1);
+  await show.click();
+  await expect(sidebar(page)).toBeVisible();
+  await page.waitForTimeout(600);
+  await expect(page.locator('.app.side-float')).toHaveCount(1);
+  await expect(sidebar(page)).toBeVisible();
+  await expect(right(page)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(sidebar(page)).toBeHidden();
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator('.app.side-float')).toHaveCount(0);
+  await expect(sidebar(page)).toBeVisible();
+  await expect(right(page)).toBeVisible();
+});

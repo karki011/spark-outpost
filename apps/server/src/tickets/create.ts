@@ -1,4 +1,4 @@
-import type { TicketPriorityName, TicketSourceId } from '@spark-outpost/contracts';
+import type { JiraTeamChoice, TicketPriorityName, TicketSourceId } from '@spark-outpost/contracts';
 import { recordTicketEvent } from '../persistence/ticket-events.ts';
 import { accountIdOf, requireSource, type TicketDeps } from './connections.ts';
 import type { CreatedTicket } from './source.ts';
@@ -12,6 +12,9 @@ export interface CreateTicketRequest {
   priority: TicketPriorityName | null;
   labels: readonly string[];
   assignToMe: boolean;
+  parent: string | null;
+  team: JiraTeamChoice | null;
+  fields: { id: string; value: unknown }[];
 }
 
 export async function createTicket(
@@ -20,7 +23,13 @@ export async function createTicket(
 ): Promise<CreatedTicket> {
   const open = await requireSource(deps, request.source);
   const assigneeId = request.assignToMe ? await accountIdOf(deps, open) : null;
-  const detail = { project: request.project, title: request.title, assigneeId };
+  const detail = {
+    project: request.project,
+    title: request.title,
+    assigneeId,
+    ...(request.parent ? { parent: request.parent } : {}),
+    ...(request.team ? { teamId: request.team.id } : {}),
+  };
   let created: CreatedTicket;
   try {
     created = await open.source.create({ ...request, assigneeId });

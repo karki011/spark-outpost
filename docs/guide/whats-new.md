@@ -11,6 +11,8 @@ summary: What changed in recent releases and what to do next.
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
 | Answer more cards from a device      | [Answer cards remotely](answer-remotely.md).    |
+| Agents do much more in Jira          | [Jira tools](jira-tools.md).                    |
+| Context rail: tools, ports, floats   | [See a chat's context](context-rail.md).        |
 | Build Sparks by talking to an agent  | [Build with an agent](build-with-an-agent.md).  |
 | Ask an agent per Spark; Spark effort | [Build with an agent](build-with-an-agent.md).  |
 | Workflows: run view, Runs, `@id` fix | [Follow a workflow run](workflow-runs.md).      |
@@ -49,5 +51,3 @@ summary: What changed in recent releases and what to do next.
 | Left bar shortcuts ⌥⌘1–⌥⌘9           | [Keyboard shortcuts](keyboard-shortcuts.md).    |
 | Trust a folder from its chip         | [Start a chat](start-a-chat.md).                |
 | Full Disk Access notice (Mac)        | [Mac privacy](mac-privacy.md#full-disk-access). |
-| Many agents and PRs fold to one line | [Follow a turn](follow-a-turn.md).              |
-| Allow and Deny on Home rows          | [Home](home.md).                                |
