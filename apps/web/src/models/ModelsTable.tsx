@@ -1,8 +1,15 @@
+import { useState } from 'react';
 import type { ProviderCardsView } from '@spark-outpost/contracts';
 import { SortHeader } from '../ui/SortHeader.tsx';
 import { MODEL_COLUMNS, ModelRow, UncardedRow } from './ModelRow.tsx';
 import './models-table.css';
-import { groupModels, nextSort, type ModelSort, type SortKey } from './model-list.ts';
+import {
+  groupModels,
+  nextSort,
+  shownUncarded,
+  type ModelSort,
+  type SortKey,
+} from './model-list.ts';
 
 interface ModelsTableProps {
   view: ProviderCardsView;
@@ -20,7 +27,27 @@ function GroupTitle({ title }: { title: string }) {
   );
 }
 
+function MoreRow({ hidden, onToggle }: { hidden: number; onToggle: () => void }) {
+  return (
+    <tr className="mc-more-row">
+      <td colSpan={MODEL_COLUMNS}>
+        <button
+          type="button"
+          className="mc-show-more"
+          aria-expanded={hidden === 0}
+          onClick={onToggle}
+        >
+          {hidden > 0 ? `Show ${hidden} more` : 'Show fewer'}
+        </button>
+      </td>
+    </tr>
+  );
+}
+
 export function ModelsTable({ view, sort, onSort }: ModelsTableProps) {
+  const [allUncarded, setAllUncarded] = useState(false);
+  const uncarded = shownUncarded(view.uncardedModels, allUncarded);
+  const collapsible = shownUncarded(view.uncardedModels, false).length < view.uncardedModels.length;
   const sortBy = (key: SortKey, label: string, tall = false) => (
     <SortHeader
       label={label}
@@ -94,9 +121,15 @@ export function ModelsTable({ view, sort, onSort }: ModelsTableProps) {
         {view.uncardedModels.length > 0 && (
           <tbody>
             <GroupTitle title="No card yet" />
-            {view.uncardedModels.map((model) => (
+            {uncarded.map((model) => (
               <UncardedRow key={model.id} label={model.label} />
             ))}
+            {collapsible && (
+              <MoreRow
+                hidden={view.uncardedModels.length - uncarded.length}
+                onToggle={() => setAllUncarded((current) => !current)}
+              />
+            )}
           </tbody>
         )}
       </table>

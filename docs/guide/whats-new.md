@@ -6,7 +6,13 @@ order: 720
 summary: What changed in recent releases and what to do next.
 ---
 
-## November 2026
+## Mid-November 2026
+
+| What changed                       | What to do                         |
+| ---------------------------------- | ---------------------------------- |
+| Long provider and model lists fold | [Models](providers-and-models.md). |
+
+## Early November 2026
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |

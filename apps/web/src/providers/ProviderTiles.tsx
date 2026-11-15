@@ -40,11 +40,25 @@ export function ProviderTiles({ providers, advisors, focusId, onOpen }: Provider
     />
   );
 
+  const connected = providers.filter((item) => item.setup.connection);
+  const rest = providers.filter((item) => !item.setup.connection);
+  const split = connected.length > 0 && rest.length > 0;
+
   return (
     <div className="ptiles-view">
       <ul className="ptiles" aria-label="AI providers">
-        {providers.map(renderTile)}
+        {(split ? connected : providers).map(renderTile)}
       </ul>
+      {split && (
+        <section className="ptiles-rest" aria-labelledby="ptiles-rest-title">
+          <h3 className="advisors-title" id="ptiles-rest-title">
+            Not connected
+          </h3>
+          <ul className="ptiles" aria-label="Not connected providers">
+            {rest.map(renderTile)}
+          </ul>
+        </section>
+      )}
       {advisors.length > 0 && (
         <section className="advisors" aria-labelledby="advisors-title">
           <h3 className="advisors-title" id="advisors-title">

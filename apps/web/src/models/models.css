@@ -308,3 +308,14 @@
     transition: none;
   }
 }
+
+.mc-provider-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.mc-fold {
+  position: static;
+  margin-left: auto;
+}

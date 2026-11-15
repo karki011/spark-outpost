@@ -211,6 +211,7 @@ export const SPEC_GROUPS = {
     'model-availability',
     'model-default',
     'models',
+    'models-scale',
     'onboarding',
     'onboarding-providers',
     'provider-effort',

@@ -9,6 +9,7 @@ import {
   ALL_PROVIDERS,
   readSavedProvider,
   shownProvider,
+  uncardedNote,
   writeSavedProvider,
   type ModelSort,
 } from './model-list.ts';
@@ -23,10 +24,14 @@ interface ProviderModelsProps {
   view: ProviderCardsView;
   sort: ModelSort | null;
   onSort: (sort: ModelSort | null) => void;
+  folded: boolean;
 }
 
-function ProviderModels({ view, sort, onSort }: ProviderModelsProps) {
+function ProviderModels({ view, sort, onSort, folded }: ProviderModelsProps) {
   const headingId = useId();
+  const tableId = useId();
+  const [open, setOpen] = useState(!folded);
+  const count = view.models.length + view.uncardedModels.length;
   return (
     <section className="mc-provider" aria-labelledby={headingId}>
       <div className="mc-head">
@@ -37,14 +42,28 @@ function ProviderModels({ view, sort, onSort }: ProviderModelsProps) {
         />
         <h4 id={headingId}>{view.provider.label}</h4>
         {!view.connected && <span className="mc-tag">not connected</span>}
+        {folded && (
+          <button
+            type="button"
+            className="mc-show-more mc-fold"
+            aria-expanded={open}
+            aria-controls={tableId}
+            onClick={() => setOpen((current) => !current)}
+          >
+            {open ? 'Hide models' : `Show ${count} ${count === 1 ? 'model' : 'models'}`}
+          </button>
+        )}
       </div>
-      <ProviderSummary card={view.provider} />
-      <ModelsTable view={view} sort={sort} onSort={onSort} />
-      {view.uncardedModels.length > 0 && (
-        <p className="mc-warn" role="note">
-          No card for {view.uncardedModels.map((model) => model.label).join(', ')}: Jev sees the
-          agent’s own description, and the tier comes from the model’s name.
-        </p>
+      {open && (
+        <div id={tableId} className="mc-provider-body">
+          <ProviderSummary card={view.provider} />
+          <ModelsTable view={view} sort={sort} onSort={onSort} />
+          {view.uncardedModels.length > 0 && (
+            <p className="mc-warn" role="note">
+              {uncardedNote(view.uncardedModels.map((model) => model.label))}
+            </p>
+          )}
+        </div>
       )}
     </section>
   );
@@ -86,7 +105,13 @@ export function ModelsSection() {
       </p>
       <ProviderChips providers={providers} value={selected} onChange={choose} />
       {shown.map((view) => (
-        <ProviderModels key={view.provider.provider} view={view} sort={sort} onSort={setSort} />
+        <ProviderModels
+          key={`${selected}-${view.provider.provider}`}
+          view={view}
+          sort={sort}
+          onSort={setSort}
+          folded={selected === ALL_PROVIDERS && !view.connected}
+        />
       ))}
     </div>
   );
