@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
+| Context rail: tools, ports, floats   | [See a chat's context](context-rail.md).        |
 | Build Sparks by talking to an agent  | [Build with an agent](build-with-an-agent.md).  |
 | Ask an agent per Spark; Spark effort | [Build with an agent](build-with-an-agent.md).  |
 | Workflows: run view, Runs, `@id` fix | [Follow a workflow run](workflow-runs.md).      |
@@ -50,4 +51,3 @@ summary: What changed in recent releases and what to do next.
 | Full Disk Access notice (Mac)        | [Mac privacy](mac-privacy.md#full-disk-access). |
 | Many agents and PRs fold to one line | [Follow a turn](follow-a-turn.md).              |
 | Allow and Deny on Home rows          | [Home](home.md).                                |
-| Home: mode labels, Tomorrow, away    | [Home](home.md).                                |

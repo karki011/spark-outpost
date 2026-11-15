@@ -57,8 +57,8 @@ import { paneLabel, useChatPane } from './split/chat-pane.ts';
 import { ChatRail } from './rail/ChatRail.tsx';
 import { hasTodo } from '../todo/task-todo.ts';
 import { RailContext } from './rail/rail-context.ts';
-import { useRailCollapsed, useRoomy } from './rail/use-rail-layout.ts';
-import { panelOpensByDefault, railState } from './rail/wide-layout.ts';
+import { useChatRail, useRoomy } from './rail/use-rail-layout.ts';
+import { panelOpensByDefault } from './rail/wide-layout.ts';
 import { createFollowRequests, FollowContext } from './follow-requests.ts';
 import { Thread } from './Thread.tsx';
 import { useQuotes } from './quotes/use-quotes.ts';
@@ -174,12 +174,10 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     browserPane,
     artifactPane,
   );
-  const [railCollapsed, setRailCollapsed] = useRailCollapsed();
-  const rail = railState({
+  const rail = useChatRail({
     roomy,
     panelOpen: panel.open,
     layout: wideLayout,
-    collapsed: railCollapsed,
     turns: detail.data?.runs.length ?? 0,
   });
   const crew = conversationCrew(detail.data);
@@ -219,7 +217,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   usePullRequestRefresh(conversationId, running !== null);
   const openAutonomyPanel = useStableCallback(openAutonomy);
   const reviewChanges = useStableCallback(toggleDiff);
-  const collapseRail = useStableCallback(setRailCollapsed);
   const workspace = useChatWorkspace(conversationId, Boolean(detail.data?.conversation.branch));
   const chatBranch = workspace.data?.current ?? null;
   const canAudit = (detail.data?.runs.length ?? 0) > 0;
@@ -266,7 +263,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
         <Landmark
           ref={mainRef}
           aria-label={paneLabel(pane, title)}
-          className={rail === 'hidden' ? 'main' : `main crail-${rail}`}
+          className={rail.className}
           data-chat-links=""
           {...(terminalSession || terminalDraft ? {} : drop.handlers)}
         >
@@ -337,16 +334,16 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             <PanelOpenContext value={panel.open}>
               <RailContext
                 value={
-                  rail === 'hidden' ? null : (
+                  rail.state === 'hidden' ? null : (
                     <ChatRail
                       detail={detail.data}
                       repos={repos}
                       taskId={taskId}
                       task={railTask}
                       autonomy={autonomyLevel}
-                      running={running !== null}
-                      collapsed={rail === 'collapsed'}
-                      onCollapse={collapseRail}
+                      collapsed={rail.collapsed}
+                      overlay={rail.state === 'overlay'}
+                      onCollapse={rail.setCollapsed}
                       onTab={openPanelTab}
                       onAutonomy={openAutonomyPanel}
                       onChanges={reviewChanges}

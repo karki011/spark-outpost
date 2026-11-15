@@ -1,0 +1,80 @@
+import type { AgentConfigSwitch, Project, RepoAgentConfig } from '@spark-outpost/contracts';
+import { useRemoteClient } from '../../phone/use-remote-client.ts';
+import { SetupSwitch } from '../project/SetupCard.tsx';
+import { useAgentConfig, useAgentConfigChange } from '../project/use-agent-config.ts';
+
+const PARTS: readonly { key: AgentConfigSwitch; title: string }[] = [
+  { key: 'skills', title: 'Skills' },
+  { key: 'commands', title: 'Commands' },
+  { key: 'subagents', title: 'Subagents' },
+  { key: 'instructions', title: 'Instructions' },
+];
+
+const NAMES_SHOWN = 3;
+
+function partNames(config: RepoAgentConfig, key: AgentConfigSwitch): string[] {
+  if (key === 'instructions') return config.instructions.map((file) => file.path);
+  return config[key].map((item) => item.name);
+}
+
+function namesLine(names: readonly string[]): string {
+  const shown = names.slice(0, NAMES_SHOWN).join(', ');
+  const more = names.length - NAMES_SHOWN;
+  return more > 0 ? `${shown} +${more}` : shown;
+}
+
+function RepoParts({ project }: { project: Project }) {
+  const config = useAgentConfig(project.id);
+  const change = useAgentConfigChange(project.id);
+  const { allows } = useRemoteClient();
+  if (!config.data) return null;
+  const data = config.data;
+  const parts = PARTS.filter(({ key }) => partNames(data, key).length > 0);
+  if (parts.length === 0) return null;
+  return (
+    <div className="crail-tool-group">
+      <h4 className="crail-sub">
+        {project.name} <span>this project</span>
+      </h4>
+      <ul aria-label={`Agent setup for ${project.name}`}>
+        {parts.map(({ key, title }) => {
+          const names = partNames(data, key);
+          const line = namesLine(names);
+          return (
+            <li key={key}>
+              <span className="mcppop-text">
+                <code>
+                  {title} {names.length}
+                </code>
+                <small title={names.join(', ')}>{line}</small>
+              </span>
+              <SetupSwitch
+                label={`${key === 'instructions' ? 'Follow' : 'Use'} ${key} from ${project.name}`}
+                checked={data.settings[key]}
+                disabled={change.isPending || !allows('settings')}
+                onChange={(checked) =>
+                  change.mutate({ type: 'settings', change: { [key]: checked } })
+                }
+              />
+            </li>
+          );
+        })}
+      </ul>
+      {change.isError && (
+        <p className="mcp-error" role="alert">
+          {change.error.message}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function RailSetup({ repos }: { repos: readonly Project[] }) {
+  return (
+    <>
+      {repos.map((project) => (
+        <RepoParts key={project.id} project={project} />
+      ))}
+    </>
+  );
+}

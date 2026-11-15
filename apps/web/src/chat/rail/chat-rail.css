@@ -27,8 +27,17 @@
   overscroll-behavior-y: contain;
   color: var(--muted);
   font-size: 12.5px;
+  gap: 8px;
   line-height: 1.35;
   animation: crail-in 0.2s var(--out) both;
+}
+
+:is(.crail-context, .crail-tasks, .crail-crew, .crail-tool-group) {
+  flex-shrink: 0;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
 }
 
 @keyframes crail-in {
@@ -160,65 +169,6 @@
   height: 11px;
 }
 
-.crail-tv {
-  position: relative;
-  flex-shrink: 0;
-  margin-top: 12px;
-  border-top: 1px solid var(--line);
-}
-
-.crail-tv-stage .tv-role,
-.crail-tv-stage .tv-line {
-  display: none;
-}
-
-.crail-tv-stage .tv-n b {
-  font-size: max(12px, 0.96em);
-}
-
-.crail-tv-stage .tv-l.on {
-  animation: none;
-}
-
-.crail-tv-cap {
-  margin: 0;
-  padding: 0 6px 2px;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 12.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.crail-tv-cap b {
-  color: var(--text);
-  font-weight: 500;
-}
-
-.crail-tv-open {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-}
-
-.crail-tv-open:hover {
-  background: color-mix(in srgb, var(--text) 4%, transparent);
-}
-
-.crail-tv.paused *,
-.crail-tv.paused *::before,
-.crail-tv.paused *::after {
-  animation-play-state: paused !important;
-}
-
-.crail-tv.still .tv-b,
-.crail-tv.still .tv-sq,
-.crail-tv.still .tv-l.on {
-  animation: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .crail {
     animation: none;
@@ -227,10 +177,8 @@
 
 .crail-tasks {
   display: flex;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   flex-direction: column;
-  min-height: 64px;
-  margin-top: 14px;
 }
 
 .crail-tasks-head {
@@ -260,7 +208,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-height: 0;
+  max-height: 220px;
   margin: 0;
   padding: 0;
   overflow-y: auto;
@@ -330,14 +278,12 @@
 
 .crail-crew {
   display: flex;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   flex-direction: column;
-  min-height: 64px;
-  margin-top: 14px;
 }
 
 .crail-crew ul {
-  min-height: 0;
+  max-height: 220px;
   margin: 0;
   padding: 0;
   overflow-y: auto;
@@ -372,4 +318,40 @@
 
 .main.crail-open .thread-wrap > .jump {
   left: calc(50% - var(--crail-strip) / 2);
+}
+
+.main.crail-overlay {
+  --crail-w: min(300px, calc(100cqi - 32px));
+}
+
+.main.crail-floating .crail-slot {
+  z-index: 30;
+}
+
+.crail.floating {
+  z-index: 30;
+  right: calc(12px - var(--chat-gutter));
+  padding: 6px;
+  background: var(--raise);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+  outline: none;
+  animation: crail-float-in 0.16s var(--out) both;
+}
+
+.crail.floating:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@keyframes crail-float-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.crail-ports {
+  margin-top: 2px;
 }

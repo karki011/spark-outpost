@@ -14,6 +14,7 @@ import { keysText, SIDEBAR_KEYS as SIDEBAR_SHORTCUT } from '../ui/Keys.tsx';
 import { MAC } from '../ui/shortcuts.ts';
 import { useMenuCommand } from '../desktop/use-menu-command.ts';
 import { useTooltip } from '../ui/Tooltip.tsx';
+import { dockedSideWidth, floatsSidebar } from './sidebar-room.ts';
 
 const COLLAPSED_KEY = 'spark-outpost.sidebar.collapsed';
 const WIDTH_KEY = 'spark-outpost.sidebar.width';
@@ -30,6 +31,7 @@ export interface SidebarLayout {
   collapsed: boolean;
   drawer: boolean;
   narrow: boolean;
+  floating: boolean;
   attention: boolean;
   hidden: boolean;
   width: number | null;
@@ -37,6 +39,7 @@ export interface SidebarLayout {
   toggle: () => void;
   reveal: () => void;
   closeDrawer: () => void;
+  reportRoom: (id: string, width: number | null) => void;
 }
 
 const SidebarLayoutContext = createContext<SidebarLayout | null>(null);
@@ -122,20 +125,62 @@ function takeSwapFocus(button: HTMLButtonElement | null): void {
   button.focus({ preventScroll: true });
 }
 
+function useCrampedChat(collapsed: boolean, width: number | null, onChange: () => void) {
+  const [cramped, setCramped] = useState(false);
+  const rooms = useRef(new Map<string, number>());
+  const latest = useRef({ collapsed, width, cramped, onChange });
+  useEffect(() => {
+    latest.current = { collapsed, width, cramped, onChange };
+  });
+  const reportRoom = useCallback((id: string, room: number | null) => {
+    if (room === null) rooms.current.delete(id);
+    else rooms.current.set(id, room);
+    const now = latest.current;
+    const next = floatsSidebar({
+      rooms: [...rooms.current.values()],
+      sideWidth: dockedSideWidth(now.width, SIDEBAR_DEFAULT_WIDTH, window.innerWidth),
+      docked: !now.cramped && !now.collapsed,
+      floating: now.cramped,
+    });
+    if (next === now.cramped) return;
+    now.cramped = next;
+    setCramped(next);
+    now.onChange();
+  }, []);
+  return { cramped, reportRoom };
+}
+
+function useEscapeCloses(open: boolean, close: () => void) {
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      event.preventDefault();
+      close();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, close]);
+}
+
 export function useSidebarLayoutState(attention: boolean): SidebarLayout {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [drawer, setDrawer] = useState(false);
   const [width, setWidthState] = useState(readWidth);
   const narrow = usePhone();
+  const closeDrawer = useCallback(() => setDrawer(false), []);
+  const { cramped, reportRoom } = useCrampedChat(collapsed, width, closeDrawer);
+  const floating = narrow || cramped;
   useEdgeSwipe(narrow, drawer, setDrawer);
+  useEscapeCloses(cramped && !narrow && drawer, closeDrawer);
 
   useEffect(() => saveCollapsed(collapsed), [collapsed]);
 
   const flip = useCallback(() => {
     rememberToggleFocus();
-    if (narrow) setDrawer((open) => !open);
+    if (floating) setDrawer((open) => !open);
     else setCollapsed((hidden) => !hidden);
-  }, [narrow]);
+  }, [floating]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -154,10 +199,11 @@ export function useSidebarLayoutState(attention: boolean): SidebarLayout {
   return useMemo(
     () => ({
       collapsed,
-      drawer: narrow && drawer,
+      drawer: floating && drawer,
       narrow,
+      floating,
       attention,
-      hidden: narrow ? !drawer : collapsed,
+      hidden: floating ? !drawer : collapsed,
       width,
       setWidth: (next) => {
         const clamped = next === null ? null : clampWidth(next);
@@ -166,13 +212,14 @@ export function useSidebarLayoutState(attention: boolean): SidebarLayout {
       },
       toggle: () => {
         rememberToggleFocus();
-        if (narrow) setDrawer((open) => !open);
+        if (floating) setDrawer((open) => !open);
         else setCollapsed(!collapsed);
       },
-      reveal: () => (narrow ? setDrawer(true) : setCollapsed(false)),
-      closeDrawer: () => setDrawer(false),
+      reveal: () => (floating ? setDrawer(true) : setCollapsed(false)),
+      closeDrawer,
+      reportRoom,
     }),
-    [collapsed, drawer, narrow, attention, width],
+    [collapsed, drawer, narrow, floating, attention, width, closeDrawer, reportRoom],
   );
 }
 
@@ -241,7 +288,7 @@ export function SidebarToggle() {
 export function SidebarCollapseButton() {
   const layout = useSidebarLayout();
   const ref = useRef<HTMLButtonElement>(null);
-  const label = layout?.narrow ? 'Close sidebar' : 'Hide sidebar';
+  const label = layout?.floating ? 'Close sidebar' : 'Hide sidebar';
   const tip = useTooltip(label, { keys: SIDEBAR_SHORTCUT });
   const hidden = layout?.hidden ?? true;
   useLayoutEffect(() => {

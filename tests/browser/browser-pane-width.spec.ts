@@ -42,7 +42,9 @@ async function settled(page: Page): Promise<void> {
 async function hideSidebar(page: Page): Promise<void> {
   const handle = page.getByRole('separator', { name: 'Resize browser pane' });
   const before = await handle.getAttribute('aria-valuemax');
-  await page.getByRole('button', { name: 'Hide sidebar' }).click();
+  const hide = page.getByRole('button', { name: 'Hide sidebar' });
+  if (!(await hide.isVisible())) return;
+  await hide.click();
   await expect(handle).not.toHaveAttribute('aria-valuemax', before!);
   await page.waitForTimeout(400);
 }
@@ -86,6 +88,8 @@ test('the browser pane drags from a 320 px page to nearly the whole window', asy
   await expect(page.locator('.bp-width')).toHaveText('320 px');
   await expect(handle).toHaveAttribute('aria-valuenow', '320');
   await expect.poll(() => lastBounds(page).then((bounds) => bounds?.width)).toBe(320);
+  await expect(page.locator('.app')).not.toHaveClass(/side-float/);
+  await expect(page.locator('.bp-width')).toBeHidden({ timeout: 3000 });
 
   await dragBy(page, handle, -1400);
   await expect.poll(() => chatWidth(page)).toBe(300);
@@ -160,7 +164,9 @@ test('page width presets size the page and say when the window is too narrow', a
   await expect.poll(() => chatWidth(page)).toBeGreaterThanOrEqual(300);
 });
 
-test('the pane follows the sidebar and stays on screen', async ({ page }) => {
+test('the sidebar floats over a chat the pane squeezed, and the pane stays on screen', async ({
+  page,
+}) => {
   await openPane(page);
   await hideSidebar(page);
   const handle = page.getByRole('separator', { name: 'Resize browser pane' });
@@ -169,8 +175,11 @@ test('the pane follows the sidebar and stays on screen', async ({ page }) => {
   await expect.poll(() => chatWidth(page)).toBe(300);
   const before = await pageWidth(page);
   await page.getByRole('button', { name: 'Show sidebar' }).click();
-  await expect.poll(() => pageWidth(page)).toBeLessThan(before);
-  await expect.poll(() => chatWidth(page)).toBeGreaterThanOrEqual(300);
+  await expect(page.getByRole('navigation', { name: 'Chats' })).toBeVisible();
+  expect(await pageWidth(page)).toBe(before);
+  await expect.poll(() => chatWidth(page)).toBe(300);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('navigation', { name: 'Chats' })).toBeHidden();
   await expect
     .poll(async () => {
       const last = await lastBounds(page);

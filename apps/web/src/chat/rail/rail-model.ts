@@ -200,25 +200,13 @@ export function finishedCrew(
   );
 }
 
-interface RailCrewView {
-  stage: CrewAgent[];
-  list: CrewAgent[];
-}
-
-export function railCrew(
-  detail: ConversationDetail,
-  running: boolean,
-  live: LeadSteps = new Map(),
-): RailCrewView {
+export function railCrew(detail: ConversationDetail, live: LeadSteps = new Map()): CrewAgent[] {
   const cast = tvCast(detail, live);
-  if (!cast) return { stage: [], list: [] };
+  if (!cast) return [];
   const stored = detail.orchestrations?.[cast.run.id];
-  if (stored && !isSparkLed(stored)) {
-    return { stage: [], list: finishedCrew(stored, crewAgents(stored, detail.activity)) };
-  }
-  const members = teamAgents(castAgents(cast), cast.subagents);
-  if (running && !isTerminalRunStatus(cast.run.status)) return { stage: members, list: [] };
-  return { stage: [], list: members };
+  if (stored && !isSparkLed(stored))
+    return finishedCrew(stored, crewAgents(stored, detail.activity));
+  return teamAgents(castAgents(cast), cast.subagents);
 }
 
 export function crewHeading(agents: readonly CrewAgent[], mode: string): string {

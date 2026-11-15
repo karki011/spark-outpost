@@ -378,3 +378,15 @@
     min-height: 44px;
   }
 }
+
+@container main (max-width: 620px) {
+  .prc-row:has(.prc-fact) .prc-lines {
+    display: none;
+  }
+}
+
+@container main (max-width: 480px) {
+  .prc-lines {
+    display: none;
+  }
+}

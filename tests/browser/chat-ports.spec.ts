@@ -14,9 +14,9 @@ test.beforeEach(async () => {
 
 const dock = (page: Page) => page.getByRole('region', { name: 'Terminal' });
 const row = (page: Page, id: string) => page.locator(`[data-chat="${id}"] .row-open`);
-const chip = (page: Page, id: string, port: number) =>
+const chip = (page: Page, port: number) =>
   page
-    .locator(`[data-chat="${id}"]`)
+    .getByRole('region', { name: 'Chat context' })
     .getByRole('button', { name: `Open localhost:${port} in the Browser pane` });
 
 function freePort(): Promise<number> {
@@ -38,11 +38,11 @@ async function savedChat(page: Page, title: string): Promise<string> {
   return id;
 }
 
-test("a port a shell tab listens on shows on its chat's row and opens in that chat's pane", async ({
+test("a port a shell tab listens on shows in its chat's context rail, not on the row, and opens in that chat's pane", async ({
   page,
 }) => {
   await withDesktopBrowser(page);
-  await page.setViewportSize({ width: 1300, height: 860 });
+  await page.setViewportSize({ width: 2000, height: 1000 });
   await page.goto('/');
   const building = await savedChat(page, 'Build the app');
   const other = await savedChat(page, 'Something else');
@@ -56,17 +56,20 @@ test("a port a shell tab listens on shows on its chat's row and opens in that ch
   await page.keyboard.type(`python3 -m http.server ${port} --bind 127.0.0.1`);
   await page.keyboard.press('Enter');
 
-  await row(page, other).click();
-  await expect(page.locator('.chat-title')).toHaveText('Something else');
-  await expect(chip(page, building, port)).toBeVisible({ timeout: 15_000 });
-  await expect(chip(page, building, port)).toHaveText(`:${port}`);
-  await expect(page.locator(`[data-chat="${other}"] .row-port`)).toHaveCount(0);
-  const box = await chip(page, building, port).boundingBox();
+  await expect(chip(page, port)).toBeVisible({ timeout: 15_000 });
+  await expect(chip(page, port)).toHaveText(`localhost:${port}`);
+  await expect(page.locator(`[data-chat="${building}"]`)).not.toContainText(`:${port}`);
+  const box = await chip(page, port).boundingBox();
   expect(box?.height).toBeGreaterThanOrEqual(28);
 
-  await chip(page, building, port).focus();
-  await page.keyboard.press('Enter');
+  await row(page, other).click();
+  await expect(page.locator('.chat-title')).toHaveText('Something else');
+  await expect(chip(page, port)).toHaveCount(0);
+
+  await row(page, building).click();
   await expect(page.locator('.chat-title')).toHaveText('Build the app');
+  await chip(page, port).focus();
+  await page.keyboard.press('Enter');
   await expect
     .poll(async () => calls(page, 'command'))
     .toContainEqual({
@@ -76,32 +79,5 @@ test("a port a shell tab listens on shows on its chat's row and opens in that ch
 
   await dock(page).locator('.xterm').click();
   await page.keyboard.press('Control+C');
-  await expect(chip(page, building, port)).toHaveCount(0, { timeout: 15_000 });
-});
-
-test('the web app asks for no ports and shows no chips', async ({ page }) => {
-  const asked: string[] = [];
-  page.on('request', (request) => {
-    if (new URL(request.url()).pathname === '/api/chat-ports') asked.push(request.url());
-  });
-  await page.setViewportSize({ width: 1300, height: 860 });
-  await page.goto('/');
-  const building = await savedChat(page, 'Build the app');
-  const port = await freePort();
-  await openChats(page);
-  await row(page, building).click();
-  await toggleHeaderPane(page, 'Terminal');
-  await expect(dock(page).locator('.term-light.open')).toBeVisible();
-  await dock(page).locator('.xterm').click();
-  await page.keyboard.type(`python3 -m http.server ${port} --bind 127.0.0.1`);
-  await page.keyboard.press('Enter');
-  await expect
-    .poll(async () => (await (await page.request.get('/api/chat-ports')).json()) as unknown, {
-      timeout: 15_000,
-    })
-    .toEqual({ ports: { [building]: [port] } });
-  await expect(page.locator('.row-port')).toHaveCount(0);
-  expect(asked).toEqual([]);
-  await dock(page).locator('.xterm').click();
-  await page.keyboard.press('Control+C');
+  await expect(chip(page, port)).toHaveCount(0, { timeout: 15_000 });
 });

@@ -285,6 +285,7 @@ test('a chat whose pull request merged shows a merged icon beside its title', as
   await useSystemTheme(page);
   await page.emulateMedia({ colorScheme: 'light' });
   await seedPrFollowUp();
+  await page.setViewportSize({ width: 1440, height: 900 });
   await openChats(page);
   const chat = row(page, 'Fix the cents parser');
   await expect(chat).toBeVisible();
