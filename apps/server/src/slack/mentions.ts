@@ -43,19 +43,39 @@ function httpsLink(value: string): string | null {
   }
 }
 
+async function searchMentionPages(
+  user: NonNullable<OpenSlack['user']>,
+  memberId: string,
+  since: number | null,
+): Promise<RawMention[]> {
+  const found: RawMention[] = [];
+  for (let page = 1; ; page += 1) {
+    const data = await slackCall(user, 'search.messages', {
+      query: slackMentionQuery(memberId),
+      sort: 'timestamp',
+      sort_dir: 'desc',
+      count: MENTIONS_PAGE,
+      page,
+    });
+    const messages = data.messages as { matches?: unknown; paging?: { pages?: unknown } };
+    const matches = (messages?.matches ?? []) as RawMention[];
+    found.push(...matches);
+    const oldest = Number(slackText(matches.at(-1)?.ts)) * 1000;
+    const pages = typeof messages?.paging?.pages === 'number' ? messages.paging.pages : 1;
+    if (since === null || matches.length === 0 || page >= pages || !(oldest >= since)) {
+      return found;
+    }
+  }
+}
+
 export async function findSlackMentions(
   deps: SlackDeps,
   open: OpenSlack,
+  since: number | null = null,
 ): Promise<FoundMention[] | null> {
   const memberId = open.connection.memberId;
   if (!open.user || !memberId) return null;
-  const data = await slackCall(open.user, 'search.messages', {
-    query: slackMentionQuery(memberId),
-    sort: 'timestamp',
-    sort_dir: 'desc',
-    count: MENTIONS_PAGE,
-  });
-  const matches = ((data.messages as { matches?: unknown })?.matches ?? []) as RawMention[];
+  const matches = await searchMentionPages(open.user, memberId, since);
   const dms = await readableSlackDms(deps, open);
   return matches.flatMap((match) => {
     const channelId = slackText(match.channel?.id);
@@ -129,9 +149,9 @@ export function startSlackMentionWatch(
     if (!open?.connection.settings.watchMentions) return 0;
     const { teamId, memberId, validatedAt } = open.connection;
     if (!memberId) return 0;
-    const found = await findSlackMentions(watchDeps, open);
-    if (!found) return 0;
     const since = Math.max(validatedAt.getTime(), now() - MENTION_CATCH_UP_MS);
+    const found = await findSlackMentions(watchDeps, open, since);
+    if (!found) return 0;
     const fresh = found.filter((mention) => mention.mentionedAt.getTime() >= since);
     const owner = { teamId, memberId, validatedAt };
     const added = await saveSlackMentions(watchDeps.db, watchDeps.workspaceId, owner, fresh);

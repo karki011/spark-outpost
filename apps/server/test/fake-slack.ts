@@ -274,7 +274,17 @@ export function fakeSlack(): FakeSlack {
           permalink: slackLink(channel.id, message.ts),
         })),
     );
-    return send(res, { ok: true, messages: { matches } });
+    if (form.get('sort') === 'timestamp') matches.sort((a, b) => Number(b.ts) - Number(a.ts));
+    const count = Number(form.get('count') ?? 20);
+    const page = Number(form.get('page') ?? 1);
+    const pages = Math.max(1, Math.ceil(matches.length / count));
+    return send(res, {
+      ok: true,
+      messages: {
+        matches: matches.slice((page - 1) * count, page * count),
+        paging: { count, total: matches.length, page, pages },
+      },
+    });
   }
 
   function listDirects(token: string, form: URLSearchParams) {

@@ -68,6 +68,15 @@ describe('watching for @mentions of the user', () => {
     expect(JSON.stringify(stored.rows)).not.toContain('deploy');
   });
 
+  it('reads further pages until it reaches the catch-up window, so a busy day loses none', async () => {
+    for (let i = 0; i < 120; i += 1) say('C0OPS', 'U0SAM', `<@${SLACK_ME}> page ${i}`);
+    const watcher = watch();
+
+    expect(await watcher.check()).toBe(120);
+    await watcher.stop();
+    expect(stub.slack.calls.filter((call) => call === 'search.messages')).toHaveLength(3);
+  });
+
   it('skips the user own messages, messages from before connecting and other people', async () => {
     say('C0ENG', SLACK_ME, `note to self <@${SLACK_ME}>`);
     say('C0ENG', 'U0SAM', `<@U0KIM> please review`);
