@@ -13,6 +13,7 @@ import { BackIcon, CheckIcon, EyeIcon, ResumeIcon, ShieldIcon, WarnIcon } from '
 import { PageTabs } from '../ui/PageTabs.tsx';
 import { ScheduleChip } from './ScheduleChip.tsx';
 import { ScheduleTab } from './ScheduleTab.tsx';
+import { TriggersTab } from './TriggersTab.tsx';
 import type { CrewSpark } from './spark-lookup.ts';
 import { RunsList } from './RunsList.tsx';
 import { StageList } from './StageList.tsx';
@@ -27,6 +28,7 @@ const FlowGraph = lazy(() => import('./FlowGraph.tsx'));
 const TABS = [
   { id: 'steps', label: 'Steps' },
   { id: 'schedule', label: 'Schedule' },
+  { id: 'triggers', label: 'Triggers' },
 ];
 
 interface WorkflowEditorProps {
@@ -227,6 +229,8 @@ export function WorkflowEditor({
       )}
       {hash !== null && !previewing && tab === 'schedule' ? (
         <ScheduleTab workflowId={initial.id} name={name.trim() || 'this workflow'} />
+      ) : hash !== null && !previewing && tab === 'triggers' ? (
+        <TriggersTab workflowId={initial.id} name={name.trim() || 'this workflow'} />
       ) : previewing ? (
         <WorkflowPreview
           steps={steps}

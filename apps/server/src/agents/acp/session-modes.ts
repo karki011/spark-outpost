@@ -18,7 +18,7 @@ export function modeWish(
   changing: boolean,
 ): ModeWish {
   if (!inProject) return { wanted: definition.conversationMode };
-  if (!changing)
+  if (!changing || turn.stepEdits)
     return turn.planning
       ? { wanted: definition.askMode, plan: true }
       : { wanted: definition.askMode };

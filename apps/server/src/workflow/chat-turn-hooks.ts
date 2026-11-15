@@ -22,4 +22,5 @@ export interface ChatTurnHooks {
   planTurn?(db: Db, input: RunInput): Promise<RunInput>;
   publish?(turn: ChatTurnContext, reply: TurnResult): Promise<TurnResult>;
   changesKept?(turn: ChatTurnContext, files: readonly RunChange[]): Promise<void>;
+  turnEnded?(turn: ChatTurnContext, changed: boolean): Promise<void>;
 }

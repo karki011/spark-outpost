@@ -11,7 +11,7 @@ import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { historyRows, type HistoryRow, type HistoryTone } from './schedule-model.ts';
 import { useScheduleHistory } from './use-schedule.ts';
 
-function ToneIcon({ tone }: { tone: HistoryTone }) {
+export function ToneIcon({ tone }: { tone: HistoryTone }) {
   if (tone === 'running') return <SpinnerIcon />;
   if (tone === 'succeeded') return <CheckIcon className="wf-state-ic" />;
   if (tone === 'failed') return <WarnIcon />;

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { SPARK_HANDOFF_NOTE_MAX } from '@spark-outpost/contracts';
+import { FINDINGS_FORMAT, SPARK_HANDOFF_NOTE_MAX } from '@spark-outpost/contracts';
 import {
+  STEP_EDITS_ACCESS,
+  STEP_EDITS_UNSUPPORTED,
   WORKFLOW_NOTE_HEADER,
   WORKFLOW_STEP_HEADER,
   stepJobPrompt,
@@ -18,6 +20,31 @@ const note = (stepId: string, state: StepNote['state'], text: string | null): St
 });
 
 describe('stepJobPrompt', () => {
+  const job = {
+    spark: PIP,
+    workflowName: 'Fixer',
+    stepId: 'fix',
+    stepPrompt: '',
+    message: '',
+    hasProject: true,
+    earlier: [],
+  };
+
+  it('says a step may edit only when the run allows it and its agent can', () => {
+    expect(stepJobPrompt({ ...job, edits: 'yes' })).toContain(STEP_EDITS_ACCESS);
+    const unsupported = stepJobPrompt({ ...job, edits: 'unsupported' });
+    expect(unsupported).toContain(STEP_EDITS_UNSUPPORTED);
+    expect(unsupported).toContain('You cannot change project files');
+    expect(stepJobPrompt({ ...job, edits: 'yes', hasProject: false })).not.toContain(
+      STEP_EDITS_ACCESS,
+    );
+  });
+
+  it('asks for the findings format before publish', () => {
+    expect(stepJobPrompt({ ...job, findings: true })).toContain(FINDINGS_FORMAT);
+    expect(stepJobPrompt(job)).not.toContain(FINDINGS_FORMAT);
+  });
+
   it('names the step, says nothing in it is the user’s message and lists what it may do', () => {
     const prompt = stepJobPrompt({
       spark: PIP,

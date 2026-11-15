@@ -33,6 +33,7 @@ export const SOURCE_WORDS: Record<WorkflowRunSource, string> = {
   mention: 'From a chat',
   schedule: 'Schedule',
   catch_up: 'Catch-up',
+  trigger: 'Trigger',
 };
 
 export const NEEDS_YOU = 'Needs you';

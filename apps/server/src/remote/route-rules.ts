@@ -303,6 +303,10 @@ GET /api/workflows/:id/schedule
 PUT /api/workflows/:id/schedule
 DELETE /api/workflows/:id/schedule
 GET /api/workflows/:id/schedule/slots
+GET /api/workflows/:id/triggers
+PUT /api/workflows/:id/triggers
+DELETE /api/workflows/:id/triggers
+POST /api/workflow-holds/:id/release
 GET /api/teammates/:id/folder
 GET /api/teammates/:id/files
 PUT /api/teammates/:id/files

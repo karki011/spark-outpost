@@ -71,6 +71,7 @@ export const crewSparkSchema = z.object({
   only: z.boolean(),
   step: z.string().optional(),
   test: z.boolean().optional(),
+  edits: z.boolean().optional(),
 });
 export type CrewSpark = z.infer<typeof crewSparkSchema>;
 

@@ -101,6 +101,7 @@ export interface GateDeps {
   posture?: ModePosture;
   changesProject?: boolean;
   askRun?: boolean;
+  askEdits?: boolean;
   askAuto?: () => Promise<string | null>;
   extraAllowlist?: () => readonly string[];
   append: Append;
@@ -114,6 +115,10 @@ export interface GateDeps {
   observations?: RunObservations | undefined;
   publish?: PublishGrant | undefined;
   holdsSends?: boolean;
+}
+
+function autoAsked(deps: GateDeps, request: ApprovalRequest): boolean {
+  return request.kind === 'execute' || (deps.askEdits === true && request.kind === 'edit');
 }
 
 export async function forcePushDefault(request: ApprovalRequest): Promise<string | null> {
@@ -382,7 +387,8 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     const options: DecideOptions = {
       changesProject: deps.changesProject === true,
       askRun: deps.askRun === true,
-      askAutoWhy: request.kind === 'execute' && deps.askAuto ? await deps.askAuto() : null,
+      askEdits: deps.askEdits === true,
+      askAutoWhy: autoAsked(deps, request) && deps.askAuto ? await deps.askAuto() : null,
       planningWhy: planningWhy(request),
       defaultBranch: await forcePushDefault(request),
       observed: (await deps.observations?.labels()) ?? [],

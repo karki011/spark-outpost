@@ -22,6 +22,8 @@ export const CLAUDE_PLAN_TOOLS = ['Write', 'ExitPlanMode'] as const;
 
 export const CLAUDE_QUESTION_TOOLS = ['AskUserQuestion'] as const;
 
+export const CLAUDE_STEP_EDIT_TOOLS = ['Edit', 'Write', 'NotebookEdit'] as const;
+
 export const CLAUDE_DO_TOOLS = [
   ...CLAUDE_READ_TOOLS,
   ...CLAUDE_GATED_TOOLS,

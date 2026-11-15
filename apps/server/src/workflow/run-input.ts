@@ -58,6 +58,7 @@ export interface RunInput {
   assistantSent?: boolean;
   workflowStep?: boolean;
   testRun?: boolean;
+  stepEdits?: boolean;
   outpostRequest?: OutpostRequest | null;
   turnTimes?: TurnTimes | null;
   agentCycle?: boolean;
@@ -122,6 +123,7 @@ interface RunRow extends OutpostRow {
   assistant_sent: boolean | null;
   workflow_step: boolean | null;
   test_run: boolean | null;
+  step_edits: boolean | null;
   started_at: Date;
   previous_started_at: Date | null;
   agent_mode: string | null;
@@ -222,6 +224,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
               AS assistant_sent,
             COALESCE((r.route->'spark') ? 'step', false) AS workflow_step,
             COALESCE((r.route->'spark'->>'test')::boolean, false) AS test_run,
+            COALESCE((r.route->'spark'->>'edits')::boolean, false) AS step_edits,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'outpost' AS outpost_run,
             op.from_user AS outpost_from_user, o.name AS outpost_name,
@@ -448,6 +451,7 @@ function childInput(runId: string, row: RunRow): RunInput {
     outpostRequest: outpostRequestOf(row, row.user_message_id),
     workflowStep: row.workflow_step === true,
     testRun: row.test_run === true,
+    stepEdits: row.workflow_step === true && row.step_edits === true,
     role: row.run_role,
     askTitle: false,
     previousMessageId: null,

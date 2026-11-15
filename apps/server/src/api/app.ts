@@ -58,6 +58,7 @@ import type { GoogleSource } from '../calendar/google/source.ts';
 import { teammateRoutes } from './teammate-routes.ts';
 import { workflowRoutes } from '../crew-flows/routes.ts';
 import { scheduleRoutes } from '../crew-flows/schedule-routes.ts';
+import { triggerRoutes } from '../crew-flows/trigger-routes.ts';
 import { slackRoutes, type SlackRouteDeps } from './slack-routes.ts';
 import { ticketRoutes, type TicketRouteDeps } from './ticket-routes.ts';
 import { webApp } from './web-app.ts';
@@ -195,6 +196,7 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', teammateRoutes(options));
   app.use('/api', workflowRoutes(options));
   app.use('/api', scheduleRoutes(options));
+  app.use('/api', triggerRoutes(options));
   app.use('/api', companionRoutes(options));
   app.use('/api', outcomeRoutes(options));
   app.use('/api', analyticsRoutes(options));

@@ -14,6 +14,7 @@ import {
   runSparkChild,
   type Handoff,
 } from '../orchestration/spark-child.ts';
+import { agentDefinitions } from '../agents/acp/agents.ts';
 import type { TurnResult } from '../workflow/agent-turn.ts';
 import {
   STEP_OUTCOME_UNKNOWN,
@@ -42,9 +43,14 @@ export interface WorkflowEnd {
   steps: StepNote[];
 }
 
+export interface RunOptions {
+  findings?: boolean;
+}
+
 interface Running {
   h: Handoff;
   turn: TurnWorkflowRun;
+  options: RunOptions;
   sparks: ReadonlyMap<string, StepSpark>;
   states: Record<string, WorkflowStepState>;
   notes: Map<string, string | null>;
@@ -79,6 +85,11 @@ function passedOn(run: Running, step: WorkflowStep, workflow: Workflow): StepNot
     .filter((note) => note.state === 'succeeded' || note.state === 'failed');
 }
 
+export function stepEditsOffered(provider: string): boolean {
+  const definitions: Readonly<Record<string, { cli?: string } | undefined>> = agentDefinitions;
+  return definitions[provider]?.cli === 'claude';
+}
+
 async function launch(run: Running, step: WorkflowStep, index: number): Promise<StepEnd> {
   const { h, turn } = run;
   const spark = run.sparks.get(step.sparkId);
@@ -86,6 +97,8 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
   const pick = pickFor(h, spark);
   const ownMode = spark.provider === pick.provider ? spark.agentMode : null;
   const testRun = turn.run.kind === 'test';
+  const edits = turn.edits && hasProject(h.input) && !testRun;
+  const editing = edits && stepEditsOffered(pick.provider);
   try {
     const result = await runSparkChild(
       h,
@@ -106,6 +119,8 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
           hasProject: hasProject(h.input),
           earlier: passedOn(run, step, turn.workflow),
           testRun,
+          edits: editing ? 'yes' : edits ? 'unsupported' : 'no',
+          findings: run.options.findings === true,
         }),
         route: {
           name: spark.name,
@@ -116,6 +131,7 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
             only: !turn.continues,
             step: step.id,
             ...(testRun ? { test: true } : {}),
+            ...(editing ? { edits: true } : {}),
           },
         },
       },
@@ -141,11 +157,13 @@ function startingStates(turn: TurnWorkflowRun): Running['states'] {
 export async function runWorkflow(
   h: Handoff,
   turn: TurnWorkflowRun,
+  options: RunOptions = {},
 ): Promise<WorkflowEnd | 'lease_lost'> {
   const { steps } = turn.workflow;
   const run: Running = {
     h,
     turn,
+    options,
     sparks: await stepSparks(
       h.deps.db,
       h.input.workspaceId,

@@ -22,6 +22,8 @@ import {
   type StoredSchedule,
 } from './schedule-records.ts';
 import { startWorkflowRun, type StartRunDeps } from './start-run.ts';
+import { runEditsAllowed } from './trigger-records.ts';
+import { checkTriggers } from './trigger-runner.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
 import { workflowStore } from './workflow-store.ts';
 
@@ -152,6 +154,7 @@ async function launch(deps: SchedulerDeps, claim: ClaimedSlot): Promise<void> {
       conversationId,
       projectId: stored.schedule.projectId,
       message: stored.schedule.message,
+      edits: await runEditsAllowed(db, workspaceId, claim.workflowId),
     });
     await settleSlot(db, claim.id, { state: 'started', workflowRunId: run.id });
     if (run.conversationId !== stored.conversationId) {
@@ -207,6 +210,11 @@ export function startWorkflowScheduler(
       await checkSchedules(deps);
     } catch (error) {
       console.error('The workflow schedule check failed', error);
+    }
+    try {
+      await checkTriggers(deps);
+    } catch (error) {
+      console.error('The workflow trigger check failed', error);
     } finally {
       running = false;
     }

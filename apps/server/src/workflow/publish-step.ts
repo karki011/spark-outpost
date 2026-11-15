@@ -39,6 +39,10 @@ import { recordPullRequest } from './publish-step-record.ts';
 import { branchWork, notPushed, pushedInFull } from './publish-step-work.ts';
 import type { RunInput } from './run-input.ts';
 
+export const GATE_STOPPED_LINE = 'Not published: the review before publishing was stopped.';
+
+export type GateVerdict = { kind: 'go' } | { kind: 'held'; line: string } | { kind: 'stopped' };
+
 export type ShipAccess = Omit<GitHubDeps, 'db' | 'workspaceId'>;
 
 export interface PublishStepDeps extends TurnDeps {
@@ -169,9 +173,20 @@ async function publishedByAgent(
   return held.ledBy(said, line);
 }
 
+async function gateLine(
+  reason: PublishReason,
+  gate: (() => Promise<GateVerdict>) | undefined,
+): Promise<string | null> {
+  if (reason !== 'full-auto' || !gate) return null;
+  const verdict = await gate();
+  if (verdict.kind === 'go') return null;
+  return verdict.kind === 'held' ? verdict.line : GATE_STOPPED_LINE;
+}
+
 export async function publishStep(
   deps: PublishStepDeps,
   step: PublishStepTurn,
+  gate?: () => Promise<GateVerdict>,
 ): Promise<TurnResult> {
   const { input, reply } = step;
   if (reply.outcome !== 'succeeded' || step.control.signal.aborted) return reply;
@@ -193,5 +208,7 @@ export async function publishStep(
   if (plan.stackBase && !plan.stackBase.onRemote) {
     return withLine(step.append, reply, parentNotPushedLine(plan.stackBase));
   }
+  const held = await gateLine(reason, gate);
+  if (held) return withLine(step.append, reply, held);
   return publishedByAgent(deps, turn, plan);
 }

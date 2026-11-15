@@ -28,6 +28,7 @@ import {
   CLAUDE_PLAN_TOOLS,
   CLAUDE_QUESTION_TOOLS,
   CLAUDE_READ_TOOLS,
+  CLAUDE_STEP_EDIT_TOOLS,
   gatedAskRules,
   toolDenyRules,
 } from './claude-tools.ts';
@@ -102,6 +103,7 @@ export interface AgentDefinition {
     repo?: ClaudeRepoOptions | null,
     planning?: boolean,
     commands?: boolean,
+    edits?: boolean,
   ) => Record<string, unknown>;
   doSessionMeta?: (
     extraRoots: readonly string[],
@@ -339,12 +341,14 @@ const claudeSessions = {
     repo?: ClaudeRepoOptions | null,
     planning = false,
     commands = false,
+    edits = false,
   ) =>
     claudeSessionMeta(
       [
         ...CLAUDE_READ_TOOLS,
         ...(commands ? CLAUDE_GATED_TOOLS : []),
         ...(planning ? CLAUDE_PLAN_TOOLS : []),
+        ...(edits ? CLAUDE_STEP_EDIT_TOOLS : []),
         ...CLAUDE_QUESTION_TOOLS,
       ],
       extraRoots,

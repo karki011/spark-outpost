@@ -349,6 +349,7 @@ export async function runAgentTurn(
         },
         audit: observer,
         ...(input.mode ? { mode: input.mode } : {}),
+        ...(input.stepEdits ? { stepEdits: true } : {}),
         ...(changesProject ? { changesProject: true } : {}),
         ...(changesProject && !input.chatFolder && startBasis(input) ? { publishes: true } : {}),
         ...(input.chatFolder ? { chatFolder: true } : {}),

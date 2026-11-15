@@ -4,6 +4,7 @@ import {
   type StartWorkflowRun,
   type WorkflowRun,
   type WorkflowRunSource,
+  type WorkflowTriggerKind,
 } from '@spark-outpost/contracts';
 import { BadRequestError } from '../api/validation.ts';
 import { assistantConversationId } from '../companion/assistant-settings.ts';
@@ -42,10 +43,15 @@ export class SparkNotFoundError extends Error {
 export interface StartRun extends StartWorkflowRun {
   workflowId: string;
   messageId: string;
-  source: Extract<WorkflowRunSource, 'manual' | 'schedule' | 'catch_up'>;
+  source: Extract<WorkflowRunSource, 'manual' | 'schedule' | 'catch_up' | 'trigger'>;
+  trigger?: { kind: WorkflowTriggerKind; diffHash: string | null };
+  edits?: boolean;
 }
 
-async function existingRun(deps: StartRunDeps, messageId: string): Promise<WorkflowRun | null> {
+export async function existingRun(
+  deps: Pick<StartRunDeps, 'db' | 'workspaceId'>,
+  messageId: string,
+): Promise<WorkflowRun | null> {
   const { rows } = await deps.db.query<{ id: string }>(
     `SELECT w.id FROM workflow_runs w JOIN runs r ON r.id = w.run_id
      WHERE r.user_message_id = $1 AND w.workspace_id = $2`,
@@ -137,6 +143,10 @@ export async function startWorkflowRun(deps: StartRunDeps, start: StartRun): Pro
       runId: sent.run.id,
       message,
       continues: false,
+      ...(start.trigger
+        ? { triggerKind: start.trigger.kind, diffHash: start.trigger.diffHash }
+        : {}),
+      edits: start.edits === true,
     });
   });
   const run =

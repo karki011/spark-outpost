@@ -151,9 +151,10 @@ export async function planLaunch(
   const floor = await turnFloor();
   const notes = roots.length > 0 && !browsing ? [noFolderAccessNote(definition)] : [];
   if (roots.length < linked.length) notes.push(primaryOnlyNote(definition, roots[0]!));
-  const changing = policy !== null && turn.mode === 'do';
-  if (changing) assertCanChange(definition, turn);
-  const cannotPush = turn.changesProject === true && turn.publishes !== true;
+  const stepEdits = policy !== null && turn.stepEdits === true && turn.mode !== 'do';
+  const changing = policy !== null && (turn.mode === 'do' || stepEdits);
+  if (changing && !stepEdits) assertCanChange(definition, turn);
+  const cannotPush = stepEdits || (turn.changesProject === true && turn.publishes !== true);
   const key = connectionKey({
     agent: definition.id,
     launch: options.launch ?? definition.launch(),
@@ -171,7 +172,7 @@ export async function planLaunch(
       : {}),
     instructions: turn.spark ?? null,
     sparkTools: spark,
-    session: [turn.changesProject === true, turn.planning === true],
+    session: [turn.changesProject === true, turn.planning === true, stepEdits],
     codexServers: own,
     rules,
     floor,
