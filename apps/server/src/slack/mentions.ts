@@ -127,11 +127,14 @@ export function startSlackMentionWatch(
     if (stopped) return 0;
     const open = await openSlack(watchDeps);
     if (!open?.connection.settings.watchMentions) return 0;
+    const { teamId, memberId, validatedAt } = open.connection;
+    if (!memberId) return 0;
     const found = await findSlackMentions(watchDeps, open);
     if (!found) return 0;
-    const since = Math.max(open.connection.validatedAt.getTime(), now() - MENTION_CATCH_UP_MS);
+    const since = Math.max(validatedAt.getTime(), now() - MENTION_CATCH_UP_MS);
     const fresh = found.filter((mention) => mention.mentionedAt.getTime() >= since);
-    const added = await saveSlackMentions(watchDeps.db, watchDeps.workspaceId, fresh);
+    const owner = { teamId, memberId, validatedAt };
+    const added = await saveSlackMentions(watchDeps.db, watchDeps.workspaceId, owner, fresh);
     if (added > 0) await notifyAttention(watchDeps.db, null);
     return added;
   }

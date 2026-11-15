@@ -6,7 +6,7 @@ order: 331
 summary: Sign in with Slack, or connect your own Slack app, pick the channels and direct messages Spark may use, and see what Spark reads, stores and sends.
 ---
 
-Connect Slack by signing in or with your own app. About 5 minutes.
+Sign in, or use your own app. About 5 minutes.
 
 ## Connect
 
@@ -46,7 +46,7 @@ Paste tokens only in Settings. Switching methods asks first.
 | ----------------- | ----------------------------------------------------------------------------- |
 | Threads you share | Fetched on demand, capped, secrets redacted, kept as that chat's attachment.  |
 | Other messages    | Never read; other search results dropped.                                     |
-| @mentions of you  | Checked each minute anywhere; keeps who, where, link.                         |
+| @mentions of you  | Checked each minute; keeps who, where, link. Text only where allowed.         |
 | Direct messages   | Off by default. Only ticked ones, read as you, never posted in.               |
 | Thread text       | Someone else's words, never instructions. Reading it makes actions ask.       |
 | Notifications     | Chat title, project, event and link. Never code, diffs or commands.           |

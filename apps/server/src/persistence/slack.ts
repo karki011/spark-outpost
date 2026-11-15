@@ -144,8 +144,8 @@ export async function deleteSlackConnection(db: Queryable, workspaceId: string):
   await db.query('DELETE FROM slack_channels WHERE workspace_id = $1', [workspaceId]);
   await db.query('DELETE FROM slack_direct_conversations WHERE workspace_id = $1', [workspaceId]);
   await db.query('DELETE FROM slack_chat_threads WHERE workspace_id = $1', [workspaceId]);
-  await db.query('DELETE FROM slack_mentions WHERE workspace_id = $1', [workspaceId]);
   await db.query('DELETE FROM slack_connections WHERE workspace_id = $1', [workspaceId]);
+  await db.query('DELETE FROM slack_mentions WHERE workspace_id = $1', [workspaceId]);
 }
 
 export async function saveSlackSettings(

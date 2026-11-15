@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { listAttentionItems, markAttention } from '../src/persistence/attention-items.ts';
+import { saveSlackMentions } from '../src/persistence/slack-mentions.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { changeSlackSettings, removeSlack, requireSlack } from '../src/slack/connection.ts';
 import { findSlackMentions, startSlackMentionWatch } from '../src/slack/mentions.ts';
@@ -121,6 +122,34 @@ describe('watching for @mentions of the user', () => {
     expect(await mentionItems()).toEqual([]);
   });
 
+  it('never brings back mentions a check found before Disconnect or the switch went off', async () => {
+    const { connection } = await requireSlack(deps());
+    const owner = {
+      teamId: connection.teamId,
+      memberId: connection.memberId!,
+      validatedAt: connection.validatedAt,
+    };
+    const late = {
+      channelId: 'C0WEB',
+      ts: freshTs(),
+      authorName: 'Kim Lee',
+      place: '#web-team',
+      permalink: 'https://acme.slack.com/archives/C0WEB/p1',
+      mentionedAt: new Date(),
+    };
+
+    await changeSlackSettings(deps(), { watchMentions: false });
+    expect(await saveSlackMentions(t.db, t.workspaceId, owner, [late])).toBe(0);
+    await changeSlackSettings(deps(), { watchMentions: true });
+    await removeSlack(deps());
+    expect(await saveSlackMentions(t.db, t.workspaceId, owner, [late])).toBe(0);
+    await signInToSlack(deps(), stub);
+    expect(await saveSlackMentions(t.db, t.workspaceId, owner, [late])).toBe(0);
+
+    const { rows } = await t.db.query('SELECT 1 FROM slack_mentions');
+    expect(rows).toEqual([]);
+  });
+
   it('never holds up Quit while Slack asks it to wait', async () => {
     stub.slack.searchRetryAfter = 30;
     const watcher = watch();
@@ -135,7 +164,7 @@ describe('watching for @mentions of the user', () => {
     expect(await checking).toBe(0);
   });
 
-  it('gives agents the text of recent mentions, newest first', async () => {
+  it('finds the text of recent mentions for agents', async () => {
     say('C0WEB', 'U0KIM', `<@${SLACK_ME}> first`);
     say('C0OPS', 'U0SAM', `<@${SLACK_ME}> second`);
 
