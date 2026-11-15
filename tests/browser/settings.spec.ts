@@ -91,8 +91,14 @@ test('personality and the wait save, each in its own section', async ({ page }) 
   await expect(notifications.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
   await notifications.getByRole('tab', { name: 'Chats & autonomy' }).click();
   const chats = page.getByRole('dialog', { name: 'Chats & autonomy' });
-  const wait = chats.getByRole('radiogroup', { name: 'Wait before going on without your answer' });
-  await expect(wait.getByRole('radio')).toHaveText([
+  const wait = chats.getByRole('button', {
+    name: 'Wait before going on without your answer',
+    exact: true,
+  });
+  const waitMenu = page.getByRole('menu', { name: 'Wait before going on without your answer' });
+  await expect(wait).toHaveText('60s');
+  await wait.click();
+  await expect(waitMenu.getByRole('menuitemradio')).toHaveText([
     '30s',
     '60s',
     '2 min',
@@ -100,14 +106,19 @@ test('personality and the wait save, each in its own section', async ({ page }) 
     'Never',
     'Custom',
   ]);
-  await expect(wait.getByRole('radio', { name: '60s' })).toBeChecked();
+  await expect(waitMenu.getByRole('menuitemradio', { name: '60s' })).toBeChecked();
+  await page.keyboard.press('Escape');
   await expect(wait).toHaveAccessibleDescription('After 60s, Spark goes with the safe option.');
   const savedWait = async () =>
     (await (await page.request.get('/api/setup')).json()).profile.autoContinueSeconds;
-  await wait.getByRole('radio', { name: 'Never' }).click();
+  const chooseWait = async (name: string) => {
+    await wait.click();
+    await waitMenu.getByRole('menuitemradio', { name }).click();
+  };
+  await chooseWait('Never');
   await expect(wait).toHaveAccessibleDescription('Spark waits for your answer.');
   await expect.poll(savedWait).toBeNull();
-  await wait.getByRole('radio', { name: 'Custom' }).click();
+  await chooseWait('Custom');
   const custom = chats.getByRole('textbox', { name: 'Custom wait in seconds' });
   await custom.fill('3');
   await custom.press('Enter');
@@ -121,9 +132,9 @@ test('personality and the wait save, each in its own section', async ({ page }) 
   await page.reload();
   await page.getByRole('button', { name: 'Settings' }).click();
   await spark.getByRole('tab', { name: 'Chats & autonomy' }).click();
-  await expect(wait.getByRole('radio', { name: 'Custom' })).toBeChecked();
+  await expect(wait).toHaveText('Custom');
   await expect(custom).toHaveValue('45');
-  await wait.getByRole('radio', { name: '2 min' }).click();
+  await chooseWait('2 min');
   await expect.poll(savedWait).toBe(120);
   await expect(custom).toHaveCount(0);
   const level = chats.getByRole('radiogroup', { name: 'How much Spark does alone' });
@@ -225,7 +236,7 @@ test('the Jev screen has no settings of its own', async ({ page }) => {
   await expect(providers).not.toContainText('Full auto');
   await expect(jev.getByRole('switch', { name: 'Check changes with Jev' })).toHaveCount(0);
   await expect(
-    jev.getByRole('radiogroup', { name: 'Wait before going on without your answer' }),
+    jev.getByRole('button', { name: 'Wait before going on without your answer', exact: true }),
   ).toHaveCount(0);
 });
 

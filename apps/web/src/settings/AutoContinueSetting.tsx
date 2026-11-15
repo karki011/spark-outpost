@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { DEFAULT_AUTO_CONTINUE_SECONDS } from '@spark-outpost/contracts';
-import { Segmented } from '../ui/Segmented.tsx';
+import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { SettingRow } from './SettingRow.tsx';
 import {
   CUSTOM_WAIT_ID,
@@ -57,11 +57,12 @@ export function AutoContinueSetting({ seconds }: { seconds: number | null }) {
       doc={{ page: 'approvals', heading: 'if-you-dont-answer' }}
     >
       <span className="set-wait">
-        <Segmented
-          ariaLabel={AUTO_CONTINUE_LABEL}
+        <ChoicePicker
+          label={AUTO_CONTINUE_LABEL}
           describedBy={hintId}
-          options={WAIT_OPTIONS}
+          choices={WAIT_OPTIONS}
           value={custom ? CUSTOM_WAIT_ID : waitChoiceId(saved)}
+          showNote={false}
           onChange={pick}
         />
         {custom && (

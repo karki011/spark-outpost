@@ -170,8 +170,11 @@ test('the search works from the keyboard', async ({ page }) => {
   await page.keyboard.type('wait before');
   await page.keyboard.press('Enter');
   const chats = page.getByRole('dialog', { name: 'Chats & autonomy' });
-  const wait = chats.getByRole('radiogroup', { name: 'Wait before going on without your answer' });
-  await expect(wait.getByRole('radio', { name: '60s' })).toBeFocused();
+  const wait = chats.getByRole('button', {
+    name: 'Wait before going on without your answer',
+    exact: true,
+  });
+  await expect(wait).toBeFocused();
 
   await search(page).focus();
   await page.keyboard.press('Escape');

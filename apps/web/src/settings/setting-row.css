@@ -77,3 +77,9 @@ label.set-row-label {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+.set-wait .choice-picker {
+  width: 140px;
+}
+.set-wait .field-button {
+  min-height: 28px;
+}
