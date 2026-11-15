@@ -19,7 +19,7 @@ test.beforeEach(async () => {
 async function openSettingsDialog(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Profile & personality' });
+  const dialog = page.getByRole('dialog', { name: 'General' });
   await expect(dialog).toBeVisible();
   return dialog;
 }
@@ -38,35 +38,30 @@ async function noViolations(page: Page, theme: string, screen: string) {
   ).toEqual([]);
 }
 
-test('the sections sit under six groups, each tab described by its group', async ({ page }) => {
+test('the sections sit under five groups, each tab described by its group', async ({ page }) => {
   await openSettingsDialog(page);
   await expect(page.locator('.set-nav-group')).toHaveText([
     'General',
     'Agents',
     'Work',
     'Connections',
-    'Mac',
     'App',
   ]);
   await expect(sections(page).getByRole('tab')).toHaveText([
-    'Profile & personality',
+    'General',
     'Spark assistant',
-    'Appearance',
+    'Notifications',
     /^AI providers/,
-    'Models',
     'Usage',
     'Projects',
     'Chats & autonomy',
     'Pull requests',
     'Spark rules',
     'Connectors',
-    'MCP servers',
-    'Notifications',
-    'Help',
-    'Reset',
+    'About',
   ]);
   const notifications = sections(page).getByRole('tab', { name: 'Notifications' });
-  await expect(notifications).toHaveAccessibleDescription('Mac');
+  await expect(notifications).toHaveAccessibleDescription('General');
   await notifications.click();
   const dialog = page.getByRole('dialog', { name: 'Notifications' });
   await expect(dialog.getByRole('switch', { name: 'Morning brief' })).toBeVisible();
@@ -84,7 +79,7 @@ test('search finds Morning brief and opens Notifications focused on it', async (
   await search(page).fill('Morning brief');
   await expect(sections(page)).toHaveCount(0);
   const option = results(page).getByRole('option', { name: /^Morning brief/ });
-  await expect(option).toContainText('Mac · Notifications');
+  await expect(option).toContainText('General · Notifications');
   await expect(option).toHaveAttribute('aria-selected', 'true');
   await expect(search(page)).toHaveAttribute('aria-activedescendant', /.+/);
   await search(page).press('Enter');

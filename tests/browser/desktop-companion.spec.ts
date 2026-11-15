@@ -121,7 +121,7 @@ async function fakeDesktop(page: Page) {
 async function openNotifications(page: Page) {
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Notifications' })
     .click();
 }

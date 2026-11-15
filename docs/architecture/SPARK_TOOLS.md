@@ -121,7 +121,7 @@ Four action tools (`actions/mcp-actions.ts`, performed by `actions/mcp-perform.t
 
 Hard rails, in `actions/mcp-config.ts` and the tool schemas:
 
-- The tools take only the names of environment variables and headers. Each name is saved as a placeholder with no value; the user fills it in Settings → MCP servers. A server with missing values is never turned on by a tool.
+- The tools take only the names of environment variables and headers. Each name is saved as a placeholder with no value; the user fills it in Settings → Connectors → MCP servers. A server with missing values is never turned on by a tool.
 - The command, each argument and the URL are refused when they look like a secret (`redactText` changes them, a `--token=…`, `--api-key value` or `KEY=value` form with a sensitive name, URL credentials, or a sensitive query parameter).
 - A stdio command must be one program (arguments go in `args`), single-line, with no control characters. The card and the audit carry the exact command and arguments.
 - Imported servers cannot be edited, only switched or removed, as in Settings.

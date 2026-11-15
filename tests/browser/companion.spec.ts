@@ -199,7 +199,7 @@ test('hiding the companion and bringing it back from Settings', async ({ page })
     .getByRole('button', { name: 'Settings' })
     .click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Notifications' })
     .click();
   const settings = page.getByRole('dialog', { name: 'Notifications' });

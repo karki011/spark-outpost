@@ -149,10 +149,10 @@ describe('spark_add_mcp_server', () => {
       turnOn: 'off',
     });
     expect(card.payload.sparkResult).toMatchObject({
-      message: expect.stringContaining('Fill GITHUB_TOKEN in Settings → MCP servers'),
+      message: expect.stringContaining('Fill GITHUB_TOKEN in Settings → Connectors'),
       output: {
         needsValues: ['GITHUB_TOKEN'],
-        fillValuesIn: 'Settings → MCP servers',
+        fillValuesIn: 'Settings → Connectors',
         turnedOn: 'off',
       },
     });

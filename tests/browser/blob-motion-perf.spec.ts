@@ -120,7 +120,8 @@ test('the model card blobs do no work on each frame', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog').last().getByRole('tab', { name: 'Models' }).click();
+  await page.getByRole('dialog').last().getByRole('tab', { name: 'AI providers' }).click();
+  await page.getByRole('radio', { name: 'Models' }).click();
   await expect(page.locator('.mc-blob .mo-root').first()).toBeVisible();
   await page.mouse.move(700, 450);
   await stayLive(page);

@@ -11,7 +11,7 @@ async function openSparkSettings(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Pull requests' })
     .click();
   return page.getByRole('dialog', { name: 'Pull requests' });

@@ -80,8 +80,8 @@ const read = <T>(page: Page, name: string): Promise<T> =>
 async function openHelp(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('tab', { name: 'Help' }).click();
-  return page.getByRole('dialog', { name: 'Help' });
+  await page.getByRole('tab', { name: 'About' }).click();
+  return page.getByRole('dialog', { name: 'About' });
 }
 
 test('the desktop Help section shows the beta version and logs, and exports diagnostics', async ({
@@ -178,7 +178,7 @@ test('Help › Send Feedback in the menu bar opens the Settings window ready to 
   });
   await page.goto('/settings');
   await expect(page.getByLabel('What happened?')).toBeFocused();
-  await expect(page).toHaveTitle('Help');
+  await expect(page).toHaveTitle('About');
 });
 
 test('in the browser, Export diagnostics downloads the zip from the server', async ({ page }) => {
@@ -211,7 +211,7 @@ async function silenceFullDiskAccessPrompt(page: Page) {
   );
 }
 
-test('Settings → Help opens System Settings to grant Full Disk Access and re-checks', async ({
+test('Settings → About → Help opens System Settings to grant Full Disk Access and re-checks', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });

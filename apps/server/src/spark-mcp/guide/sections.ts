@@ -168,7 +168,7 @@ The Map builds in the worker at low priority, pauses while an agent runs, and up
     id: 'mcp-servers',
     title: 'MCP servers: user-level and repo .mcp.json',
     keywords: ['mcp', 'mcp server', 'mcp.json', 'trust'],
-    text: `Agent sessions can use MCP servers from two sources: servers you add in Settings → MCP servers (for all chats, a project or one chat), and a linked repo's .mcp.json. Every MCP tool call still asks for approval unless the agent's mode lets everything through. Agents list them with spark_mcp_servers and propose changes with the spark_*_mcp_server tools, by name only; you fill values in Settings.
+    text: `Agent sessions can use MCP servers from two sources: servers you add in Settings → Connectors → MCP servers (for all chats, a project or one chat), and a linked repo's .mcp.json. Every MCP tool call still asks for approval unless the agent's mode lets everything through. Agents list them with spark_mcp_servers and propose changes with the spark_*_mcp_server tools, by name only; you fill values in Settings.
 
 A repo's .mcp.json, hooks, and allow rules only load after you trust that folder (a one-time "Trust this folder?" decision); trust is fingerprinted, so a changed hooks/MCP/allow-rules set asks again. Env and header secret values live in the OS keychain, never in the database, and are redacted in the audit log.`,
   },
@@ -274,6 +274,6 @@ The chain lets Spark detect tampering: verifying it walks every row and reports 
     id: 'heartbeat',
     title: 'Anonymous heartbeat',
     keywords: ['heartbeat', 'telemetry', 'privacy', 'analytics', 'install', 'country', 'tracking'],
-    text: `The Mac app sends a daily anonymous heartbeat: random install ID, version, OS. Cloudflare adds the country. Turn off: Settings → Help → Send anonymous heartbeat.`,
+    text: `The Mac app sends a daily anonymous heartbeat: random install ID, version, OS. Cloudflare adds the country. Turn off: Settings → About → Send anonymous heartbeat.`,
   },
 ];

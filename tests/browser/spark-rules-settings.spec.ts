@@ -11,7 +11,7 @@ import { SPARK_MANAGED_RULES_FILE, SPARK_RULES_DIR, SPARK_RULES_FILE } from './s
 async function openSparkRules(page: Page) {
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Spark rules' })
     .click();
   return page.getByRole('dialog', { name: 'Spark rules' });

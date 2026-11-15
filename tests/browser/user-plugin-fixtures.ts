@@ -208,7 +208,7 @@ export async function mockPlugins(page: Page, plugins = fixtures()) {
 export async function openPlugins(page: Page) {
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Chats & autonomy' })
     .click();
   const group = page.getByRole('region', { name: 'Plugins' });

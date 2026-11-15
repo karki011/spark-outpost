@@ -17,8 +17,8 @@ test('Settings shows the version, channel, automatic downloads and Check now', a
   await fakeUpdater(page);
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('tab', { name: 'Updates' }).click();
-  const updates = page.getByRole('dialog', { name: 'Updates' });
+  await page.getByRole('tab', { name: 'About' }).click();
+  const updates = page.getByRole('dialog', { name: 'About' });
 
   await expect(updates).toContainText('Spark Outpost 0.2.0');
   await expect(updates).toContainText('Not checked yet.');
@@ -60,8 +60,8 @@ test('beta builds show a Beta label next to the version', async ({ page }) => {
   await fakeUpdater(page, { currentVersion: '0.1.0-beta.1', channel: 'beta' });
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('tab', { name: 'Updates' }).click();
-  const updates = page.getByRole('dialog', { name: 'Updates' });
+  await page.getByRole('tab', { name: 'About' }).click();
+  const updates = page.getByRole('dialog', { name: 'About' });
   await expect(updates.locator('.upd-version')).toHaveText('Spark Outpost 0.1.0-beta.1Beta');
   await expect(updates.getByRole('radio', { name: 'Beta' })).toHaveAttribute(
     'aria-checked',
@@ -158,8 +158,8 @@ test('a stalled install goes back to Restart to update and says why', async ({ p
   });
   await expect(ready).toBeEnabled();
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('tab', { name: 'Updates' }).click();
-  const updates = page.getByRole('dialog', { name: 'Updates' });
+  await page.getByRole('tab', { name: 'About' }).click();
+  const updates = page.getByRole('dialog', { name: 'About' });
   await expect(updates).toContainText(`0.3.0 is ready. ${stalled}`);
   await expect(updates.getByRole('button', { name: 'Restart to update' })).toBeEnabled();
 });
@@ -193,8 +193,8 @@ test('a newer version found at restart replaces the staged one on the blob and i
 
   await pushUpdate(page, { phase: 'ready', installRequested: false });
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('tab', { name: 'Updates' }).click();
-  const updates = page.getByRole('dialog', { name: 'Updates' });
+  await page.getByRole('tab', { name: 'About' }).click();
+  const updates = page.getByRole('dialog', { name: 'About' });
   await expect(updates).toContainText('0.4.0 is ready.');
   await expect(updates).not.toContainText('0.3.0');
 });
@@ -210,8 +210,8 @@ test('the dev copy shows its version, says it never updates and has no blob', as
   });
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('tab', { name: 'Updates' }).click();
-  const updates = page.getByRole('dialog', { name: 'Updates' });
+  await page.getByRole('tab', { name: 'About' }).click();
+  const updates = page.getByRole('dialog', { name: 'About' });
   await expect(updates).toContainText('This dev copy never updates.');
   await expect(updates.getByRole('button', { name: 'Check now' })).toHaveCount(0);
   await expect(updates.getByRole('radiogroup', { name: 'Update channel' })).toHaveCount(0);
@@ -230,8 +230,8 @@ test('the dev app starts the update preview from Settings', async ({ page }) => 
   });
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('tab', { name: 'Updates' }).click();
-  const updates = page.getByRole('dialog', { name: 'Updates' });
+  await page.getByRole('tab', { name: 'About' }).click();
+  const updates = page.getByRole('dialog', { name: 'About' });
   const start = updates.getByRole('button', { name: 'Preview the update flow' });
   await expect(start).toBeVisible();
   await start.click();
@@ -244,8 +244,10 @@ test('the browser build has no Updates section and no update blob', async ({ pag
   await resetTestDatabase({ onboarded: true });
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.getByRole('tab', { name: 'Reset' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Updates' })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'About' }).click();
+  const about = page.getByRole('dialog', { name: 'About' });
+  await expect(about.getByRole('heading', { name: 'Help' })).toBeVisible();
+  await expect(about.getByRole('heading', { name: 'Updates' })).toHaveCount(0);
   await expect(page.locator('.upd-blob')).toHaveCount(0);
   await expect(rail(page).getByRole('button', { name: /^App version/ })).toHaveCount(0);
 });
@@ -337,7 +339,7 @@ test.describe('update preview flow', () => {
     await railShot(page, 'preview-toast');
 
     await blob(page).click();
-    await expect(page.getByRole('dialog', { name: 'Updates' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'About' })).toBeVisible();
     await expect(blob(page)).toHaveCount(0);
     await page.keyboard.press('Escape');
 
@@ -415,8 +417,8 @@ test.describe('update preview flow', () => {
     await railShot(page, 'rail-no-version');
 
     await settings.click();
-    await page.getByRole('tab', { name: 'Updates' }).click();
-    const updates = page.getByRole('dialog', { name: 'Updates' });
+    await page.getByRole('tab', { name: 'About' }).click();
+    const updates = page.getByRole('dialog', { name: 'About' });
     await expect(updates.locator('.upd-version')).toHaveText('Spark Outpost 0.1.0-beta.1Beta');
     await expect(updates).toContainText('This dev copy never updates.');
   });

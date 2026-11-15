@@ -8,10 +8,7 @@ test.beforeEach(async () => {
 async function openSettingsAt(page: Page, section: string) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page
-    .getByRole('dialog', { name: 'Profile & personality' })
-    .getByRole('tab', { name: section })
-    .click();
+  await page.getByRole('dialog', { name: 'General' }).getByRole('tab', { name: section }).click();
   return page.getByRole('dialog', { name: section });
 }
 

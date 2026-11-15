@@ -43,4 +43,4 @@ In replies, audit logs, tool results, errors, Jev and [recorded Terminal session
 
 ## When you reset
 
-**Settings → Reset** removes connector and MCP tokens and saved sign-ins; **Keep my API keys** keeps provider and Jev keys. See [Start over](trouble-setup-and-reset.md#start-over).
+**Settings → About → Reset** removes connector and MCP tokens and saved sign-ins; **Keep my API keys** keeps provider and Jev keys. See [Start over](trouble-setup-and-reset.md#start-over).

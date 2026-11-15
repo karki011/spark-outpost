@@ -338,7 +338,7 @@ test('Settings, Projects lists trust and can stop trusting a folder', async ({ p
 
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Projects' })
     .click();
   const projects = page.getByRole('dialog', { name: 'Projects' });

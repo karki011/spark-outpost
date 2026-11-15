@@ -10,8 +10,9 @@ test.beforeEach(async () => {
 async function openTab(page: Page, tab: string) {
   await openChats(page);
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('tab', { name: tab }).click();
-  const dialog = page.getByRole('dialog', { name: tab });
+  await page.getByRole('tab', { name: tab === 'Models' ? 'AI providers' : tab }).click();
+  if (tab === 'Models') await page.getByRole('radio', { name: 'Models' }).click();
+  const dialog = page.getByRole('dialog', { name: tab === 'Models' ? 'AI providers' : tab });
   await expect(dialog).toBeVisible();
   return dialog;
 }

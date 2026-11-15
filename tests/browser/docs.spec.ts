@@ -164,7 +164,7 @@ test('a Settings info link opens the guide at the page for that setting', async 
   await page.goto('/');
   await rail(page).getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Chats & autonomy' })
     .click();
   const settings = page.getByRole('dialog', { name: 'Chats & autonomy' });

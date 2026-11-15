@@ -17,7 +17,7 @@ test('Spark settings save custom text and a local instruction file @packaged', a
     const openChatsSettings = async () => {
       await page.getByRole('button', { name: 'Settings' }).click();
       await page
-        .getByRole('dialog', { name: 'Profile & personality' })
+        .getByRole('dialog', { name: 'General' })
         .getByRole('tab', { name: 'Chats & autonomy' })
         .click();
     };

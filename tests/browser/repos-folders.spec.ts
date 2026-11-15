@@ -68,7 +68,7 @@ test('Settings → Projects adds and removes a repos folder', async ({ page }) =
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Projects' })
     .click();
   await expect(page.getByText('None yet. Add the folder where you keep your repos.')).toBeVisible();

@@ -66,10 +66,10 @@ test('the app runs under its content security policy with no violations @package
   await expect(dock.locator('.xterm')).toBeVisible();
 
   await page.getByRole('button', { name: 'Settings' }).click();
-  const settings = page.getByRole('dialog', { name: 'Profile & personality' });
+  const settings = page.getByRole('dialog', { name: 'General' });
   await expect(settings).toBeVisible();
-  await settings.getByRole('tab', { name: 'Appearance' }).click();
-  await expect(page.getByRole('dialog', { name: 'Appearance' })).toBeVisible();
+  await settings.getByRole('tab', { name: 'General' }).click();
+  await expect(page.getByRole('dialog', { name: 'General' })).toBeVisible();
   await page.getByRole('button', { name: 'Close settings' }).click();
 
   await openRailItem(page, 'Docs');

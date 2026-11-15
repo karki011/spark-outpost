@@ -30,10 +30,10 @@ async function openMcpSettings(page: Page) {
   await openChats(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
-    .getByRole('tab', { name: 'MCP servers' })
+    .getByRole('dialog', { name: 'General' })
+    .getByRole('tab', { name: 'Connectors' })
     .click();
-  const dialog = page.getByRole('dialog', { name: 'MCP servers' });
+  const dialog = page.getByRole('dialog', { name: 'Connectors' });
   await expect(dialog).toBeVisible();
   return dialog;
 }
@@ -186,5 +186,5 @@ test('/mcp lists the chat’s servers, switches one for this chat and links to S
     .getByRole('dialog', { name: 'MCP servers in this chat' })
     .getByRole('button', { name: 'Manage in Settings' })
     .click();
-  await expect(page.getByRole('dialog', { name: 'MCP servers' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Connectors' })).toBeVisible();
 });

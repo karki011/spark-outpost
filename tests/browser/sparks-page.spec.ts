@@ -348,8 +348,8 @@ test('Settings has no Sparks section; Home’s Manage opens the page', async ({ 
   await addSpark(page, { name: 'Pip', role: 'Code reviewer' });
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  const settings = page.getByRole('dialog', { name: 'Profile & personality' });
-  await expect(settings.getByRole('tab', { name: 'Models' })).toBeVisible();
+  const settings = page.getByRole('dialog', { name: 'General' });
+  await expect(settings.getByRole('tab', { name: 'AI providers' })).toBeVisible();
   await expect(settings.getByRole('tab', { name: 'Crew' })).toHaveCount(0);
   await expect(settings.getByRole('tab', { name: 'Sparks' })).toHaveCount(0);
   await page.keyboard.press('Escape');

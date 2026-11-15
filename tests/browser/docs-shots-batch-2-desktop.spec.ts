@@ -168,7 +168,7 @@ test('Companion settings and updates screenshots', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Notifications' })
     .click();
   const spark = page.getByRole('dialog', { name: 'Notifications' });
@@ -177,8 +177,8 @@ test('Companion settings and updates screenshots', async ({ page }) => {
   await around.scrollIntoViewIfNeeded();
   await shoot(page, IMAGES, 'companion-settings', around);
 
-  await spark.getByRole('tab', { name: 'Updates' }).click();
-  const updates = page.getByRole('dialog', { name: 'Updates' });
+  await spark.getByRole('tab', { name: 'About' }).click();
+  const updates = page.getByRole('dialog', { name: 'About' });
   await expect(updates.getByRole('button', { name: 'Restart to update' })).toBeVisible();
   await shoot(page, IMAGES, 'updates-section', updates);
   await page.keyboard.press('Escape');

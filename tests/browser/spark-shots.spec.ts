@@ -19,7 +19,7 @@ test('Spark screenshots', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1000 });
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  const spark = page.getByRole('dialog', { name: 'Profile & personality' });
+  const spark = page.getByRole('dialog', { name: 'General' });
   await spark.getByLabel('What should Spark call you?', { exact: true }).fill('Sam Rivera');
   await expect(spark.locator('.spark-preview')).toContainText('Hi Sam');
   const panel = page.locator('.set-panel');

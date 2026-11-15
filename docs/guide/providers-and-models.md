@@ -28,10 +28,10 @@ Changes apply to chats that haven't picked their own. **Per chat** effort keeps 
 
 ## Read the model cards
 
-1. Open **Settings → Models** and pick a provider, or **All**. In **All**, a provider that isn't connected is folded: select **Show N models**.
+1. In Settings, open the **Models** tab and pick a provider, or **All**. In **All**, a provider that isn't connected is folded: select **Show N models**.
 2. Select a model's row for its price, effort levels, **Good at**, **Watch out for** and sources.
 
-![Settings → Models with one row per model](images/providers-model-cards-light.png)
+![The Models tab with one row per model](images/providers-model-cards-light.png)
 
 | Group                         | What it holds                                                                       |
 | ----------------------------- | ----------------------------------------------------------------------------------- |

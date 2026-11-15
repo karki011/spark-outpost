@@ -8,7 +8,7 @@ test('Record Terminal sessions like chats starts on and stays as the user leaves
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Chats & autonomy' })
     .click();
   const settings = page.getByRole('dialog', { name: 'Chats & autonomy' });
@@ -30,7 +30,7 @@ test('Record Terminal sessions like chats starts on and stays as the user leaves
   await page.reload();
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Chats & autonomy' })
     .click();
   await expect(toggle).not.toBeChecked();

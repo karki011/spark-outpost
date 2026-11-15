@@ -114,6 +114,6 @@ test('Settings signs out of one site or of everything in the one Browser pane pr
 test('Settings has no Browser pane section without the Mac app', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.getByRole('dialog', { name: 'Profile & personality' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'General' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Browser pane' })).toHaveCount(0);
 });

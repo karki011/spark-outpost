@@ -69,7 +69,7 @@ test('in Manual, Ask Spark shows a confirm card and acts only on Do it', async (
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /Spark assistant/ })
     .click();
   await page
@@ -132,7 +132,7 @@ test('Settings sets when Ask Spark acts', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /Spark assistant/ })
     .click();
   const section = page.getByRole('dialog', { name: 'Spark assistant' });

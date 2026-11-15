@@ -220,7 +220,7 @@ export function Onboarding({ onFinished }: OnboardingProps) {
                   <>
                     <h2 id="onbTitle">Mac access</h2>
                     <p className="lede">
-                      Optional. Skip it now and turn it on later in Settings → Help.
+                      Optional. Skip it now and turn it on later in Settings → About → Help.
                     </p>
                     <FullDiskAccess />
                   </>

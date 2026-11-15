@@ -26,7 +26,8 @@ async function quietChats() {
 async function openScreen(page: Page, name: string) {
   if (name === 'Settings') {
     await page.getByRole('button', { name: 'Settings' }).click();
-    await page.getByRole('dialog').last().getByRole('tab', { name: 'Models' }).click();
+    await page.getByRole('dialog').last().getByRole('tab', { name: 'AI providers' }).click();
+    await page.getByRole('radio', { name: 'Models' }).click();
     return;
   }
   await page

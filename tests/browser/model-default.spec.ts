@@ -54,7 +54,7 @@ async function pickSettingsDefault(page: Page, model: string): Promise<void> {
     .getByRole('button', { name: 'Settings' })
     .click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });

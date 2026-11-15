@@ -10,7 +10,7 @@ You'll set the three privacy choices only the Mac app has. About 2 minutes.
 
 ## Anonymous heartbeat
 
-1. Open **Settings → Help**.
+1. Open **Settings → About → Help**.
 2. Turn **Send anonymous heartbeat** off (on by default).
 
 About 30 seconds after starting, then daily, the app sends this to the Spark Outpost team:
@@ -27,7 +27,7 @@ Cloudflare receives it and adds the country. Spark in a browser sends nothing.
 
 Optional: it stops macOS asking once per protected folder Spark reads, such as `~/Library`, Desktop, Documents or Downloads.
 
-1. Open **Settings → Help** and find **Full Disk Access**.
+1. Open **Settings → About → Help** and find **Full Disk Access**.
 2. Select **Open System Settings**.
 3. Under **Privacy & Security → Full Disk Access**, switch on **Spark Outpost**.
 

@@ -101,7 +101,7 @@ test('a rules file changed outside Spark waits for review in Settings', async ({
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Spark rules' })
     .click();
   const notice = page.getByRole('status').filter({ hasText: 'Rules file changed outside Spark' });

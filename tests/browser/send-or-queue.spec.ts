@@ -60,7 +60,7 @@ async function noAxeViolations(page: Page, selector: string) {
 async function setBusyEnter(page: Page, choice: string) {
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Chats & autonomy' })
     .click();
   const group = page

@@ -46,7 +46,7 @@ test('Voice is not offered without the Mac app', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.getByRole('dialog', { name: 'Profile & personality' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'General' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Voice' })).toHaveCount(0);
 });
 

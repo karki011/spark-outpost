@@ -432,3 +432,23 @@
   align-items: center;
   gap: 8px;
 }
+.set-part + .set-part {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.set-part-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.set-part-tabs {
+  margin-bottom: 16px;
+}
+.set-part-tabs .seg {
+  width: max-content;
+}
+.set-part-tabs .seg button {
+  padding-inline: 14px;
+}

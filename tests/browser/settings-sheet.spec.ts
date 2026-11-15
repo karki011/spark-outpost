@@ -15,7 +15,7 @@ function focusInside(page: Page): Promise<boolean> {
 test('Tab and Shift+Tab stay inside the Settings sheet', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Profile & personality' });
+  const dialog = page.getByRole('dialog', { name: 'General' });
   await expect(dialog).toBeVisible();
   const close = dialog.getByRole('button', { name: 'Close settings' });
   await expect(close).toBeFocused();

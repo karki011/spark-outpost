@@ -98,7 +98,7 @@ test('turning Collapse finished turns off shows every step again', async ({ page
 
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Chats & autonomy' })
     .click();
   const toggle = page

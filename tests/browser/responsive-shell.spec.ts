@@ -29,20 +29,16 @@ test.describe.configure({ timeout: 120_000 });
 const PRIMARY = ['Home', 'Chats', 'Analytics', 'Tickets', 'Docs'];
 const UNDER_MORE = ['Sparks', 'Remote control'];
 const SECTIONS = [
-  'Profile & personality',
+  'General',
   'Spark assistant',
-  'Appearance',
+  'Notifications',
   'AI providers',
-  'Models',
   'Usage',
   'Projects',
   'Chats & autonomy',
   'Pull requests',
   'Connectors',
-  'MCP servers',
-  'Notifications',
-  'Help',
-  'Reset',
+  'About',
 ];
 
 test.beforeEach(async ({ page }) => {
@@ -129,7 +125,7 @@ for (const size of TOUCH_SIZES) {
       const strip = await tabs.boundingBox();
       expect(strip!.height).toBeLessThan(80);
     }
-    await tabs.getByRole('tab', { name: 'Profile & personality' }).click();
+    await tabs.getByRole('tab', { name: 'General' }).click();
     await expect(page.locator('.set-body .seg').first()).toBeVisible();
     expect(await smallTextInputs(page)).toEqual([]);
     const body = page.locator('.set-body');
@@ -205,12 +201,12 @@ test('a paired phone hides what only works on the Mac', async ({ browser }) => {
 
   await openSettings(phone, true);
   const tabs = phone.getByRole('tablist', { name: 'Settings sections' });
-  await expect(tabs.getByRole('tab', { name: 'Updates' })).toHaveCount(0);
-  await tabs.getByRole('tab', { name: 'Help' }).click();
-  await expect(phone.getByRole('heading', { level: 3, name: 'Help' })).toBeVisible();
+  await tabs.getByRole('tab', { name: 'About' }).click();
+  await expect(phone.getByRole('heading', { level: 4, name: 'Help' })).toBeVisible();
+  await expect(phone.getByRole('heading', { name: 'Updates' })).toHaveCount(0);
   await expect(phone.getByRole('region', { name: 'Full Disk Access' })).toHaveCount(0);
   await expect(phone.getByRole('button', { name: 'Export diagnostics' })).toHaveCount(0);
-  await tabs.getByRole('tab', { name: 'Reset' }).click();
+  await phone.getByRole('heading', { level: 4, name: 'Reset' }).scrollIntoViewIfNeeded();
   await expect(phone.getByRole('note')).toHaveText('Turned off for remote control on your Mac');
   await shot(phone, 'remote-settings-reset-off');
   await phone.keyboard.press('Escape');

@@ -168,7 +168,7 @@ test('the full Ask Spark conversation shows the New topic divider', async ({ pag
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /Spark assistant/ })
     .click();
   await page
@@ -191,7 +191,7 @@ test('the full conversation shows a New topic divider before any question', asyn
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /Spark assistant/ })
     .click();
   await page

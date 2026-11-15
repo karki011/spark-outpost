@@ -120,7 +120,7 @@ test('Settings → Projects makes a new folder and, when asked, a git repository
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Projects' })
     .click();
   const add = page.getByRole('group', { name: 'Add a project' }).getByRole('button', {
@@ -259,7 +259,7 @@ test('the folder picker has places, a typed path, keys, marks and says when acce
     await page.goto('/');
     await page.getByRole('button', { name: 'Settings' }).click();
     await page
-      .getByRole('dialog', { name: 'Profile & personality' })
+      .getByRole('dialog', { name: 'General' })
       .getByRole('tab', { name: 'Projects' })
       .click();
     await page

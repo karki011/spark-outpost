@@ -7,7 +7,7 @@ test('Code Mode starts on and keeps the user’s choice after reload', async ({ 
   const openSettings = async () => {
     await page.getByRole('button', { name: 'Settings' }).click();
     await page
-      .getByRole('dialog', { name: 'Profile & personality' })
+      .getByRole('dialog', { name: 'General' })
       .getByRole('tab', { name: 'Chats & autonomy' })
       .click();
   };

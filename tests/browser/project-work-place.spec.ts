@@ -34,7 +34,7 @@ async function savedPlace(): Promise<string | undefined> {
 async function openProjects(page: Page, name: string) {
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Projects' })
     .click();
   const row = page

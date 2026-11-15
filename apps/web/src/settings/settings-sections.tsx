@@ -43,14 +43,13 @@ import { UPDATE_ROWS, UpdatesSection } from './UpdatesSection.tsx';
 import { VOICE_ROWS, VoiceSection } from './VoiceSection.tsx';
 import { WIDE_WINDOW_LABEL } from './WideWindowSetting.tsx';
 import * as icons from './settings-icons.tsx';
-import { sectionAvailable, type SettingsSection } from './section-ids.ts';
+import { sectionAvailable, type SettingsPage, type SettingsSection } from './section-ids.ts';
 
 export const SETTINGS_GROUPS = [
   { id: 'general', title: 'General' },
   { id: 'agents', title: 'Agents' },
   { id: 'work', title: 'Work' },
   { id: 'connections', title: 'Connections' },
-  { id: 'mac', title: 'Mac' },
   { id: 'app', title: 'App' },
 ] as const;
 
@@ -67,14 +66,24 @@ export interface SettingsClient {
   calendar: boolean;
 }
 
-export interface SettingsSectionEntry {
+export interface SettingsPartEntry {
   id: SettingsSection;
+  title: string;
+  remoteSwitch?: RemoteSwitch | undefined;
+  rows?: ((client: SettingsClient) => readonly string[]) | undefined;
+  render: (props: SectionBodyProps) => ReactNode;
+}
+
+export interface SettingsSectionEntry {
+  id: SettingsPage;
   group: SettingsGroup;
   label: string;
   icon: ReactNode;
   remoteSwitch?: RemoteSwitch;
   rows?: (client: SettingsClient) => readonly string[];
-  render: (props: SectionBodyProps) => ReactNode;
+  render?: (props: SectionBodyProps) => ReactNode;
+  parts?: readonly SettingsPartEntry[];
+  tabs?: boolean;
 }
 
 function ProvidersBody({ setup }: { setup: SetupState }) {
@@ -103,11 +112,30 @@ export const SETTINGS_SECTIONS = [
   {
     id: 'spark',
     group: 'general',
-    label: 'Profile & personality',
+    label: 'General',
     icon: icons.PROFILE_ICON,
-    remoteSwitch: 'settings',
-    rows: () => [NAME_LABEL, PERSONALITY_LABEL],
-    render: ({ setup }) => setup && <ProfileSection setup={setup} />,
+    parts: [
+      {
+        id: 'spark',
+        title: 'Profile & personality',
+        remoteSwitch: 'settings',
+        rows: () => [NAME_LABEL, PERSONALITY_LABEL],
+        render: ({ setup }) => setup && <ProfileSection setup={setup} />,
+      },
+      {
+        id: 'look',
+        title: 'Appearance',
+        rows: () => APPEARANCE_ROWS,
+        render: () => (
+          <>
+            <p className="lede">
+              Follows your system by default. Changes apply everywhere right away.
+            </p>
+            <AppearanceSettings />
+          </>
+        ),
+      },
+    ],
   },
   {
     id: 'assistant',
@@ -128,33 +156,40 @@ export const SETTINGS_SECTIONS = [
     render: () => <VoiceSection />,
   },
   {
-    id: 'look',
+    id: 'notifications',
     group: 'general',
-    label: 'Appearance',
-    icon: icons.APPEARANCE_ICON,
-    rows: () => APPEARANCE_ROWS,
-    render: () => (
-      <>
-        <p className="lede">Follows your system by default. Changes apply everywhere right away.</p>
-        <AppearanceSettings />
-      </>
-    ),
+    label: 'Notifications',
+    icon: icons.NOTIFICATIONS_ICON,
+    remoteSwitch: 'settings',
+    rows: ({ calendar }) => [
+      MORNING_BRIEF_LABEL,
+      ...(calendar ? [CALENDAR_BRIEF_LABEL] : []),
+      COMPANION_LABEL,
+      ...(calendar ? CALENDAR_NOTIFY_ROWS : []),
+      ...islandRows(),
+    ],
+    render: ({ setup }) => setup && <NotificationsSection profile={setup.profile} />,
   },
   {
     id: 'ai',
     group: 'agents',
     label: 'AI providers',
     icon: icons.PROVIDERS_ICON,
-    remoteSwitch: 'connections',
-    render: ({ setup }) => setup && <ProvidersBody setup={setup} />,
-  },
-  {
-    id: 'models',
-    group: 'agents',
-    label: 'Models',
-    icon: icons.MODELS_ICON,
-    remoteSwitch: 'settings',
-    render: () => <ModelsSection />,
+    tabs: true,
+    parts: [
+      {
+        id: 'ai',
+        title: 'Providers',
+        remoteSwitch: 'connections',
+        render: ({ setup }) => setup && <ProvidersBody setup={setup} />,
+      },
+      {
+        id: 'models',
+        title: 'Models',
+        remoteSwitch: 'settings',
+        render: () => <ModelsSection />,
+      },
+    ],
   },
   {
     id: 'usage',
@@ -216,33 +251,29 @@ export const SETTINGS_SECTIONS = [
     group: 'connections',
     label: 'Connectors',
     icon: icons.CONNECTORS_ICON,
-    remoteSwitch: 'connections',
-    render: () => (
-      <>
-        <p className="lede">{CONNECTORS_LEDE}</p>
-        <ConnectorGrid />
-      </>
-    ),
-  },
-  {
-    id: 'mcp',
-    group: 'connections',
-    label: 'MCP servers',
-    icon: icons.MCP_ICON,
-    remoteSwitch: 'connections',
-    render: ({ off }) => !off && <McpSection />,
-  },
-  {
-    id: 'mac',
-    group: 'mac',
-    label: 'Mac control',
-    icon: icons.MAC_CONTROL_ICON,
-    rows: () => [MAC_CONTROL_LABEL],
-    render: ({ setup }) => setup && <MacControlSection profile={setup.profile} />,
+    parts: [
+      {
+        id: 'tools',
+        title: 'Connectors',
+        remoteSwitch: 'connections',
+        render: () => (
+          <>
+            <p className="lede">{CONNECTORS_LEDE}</p>
+            <ConnectorGrid />
+          </>
+        ),
+      },
+      {
+        id: 'mcp',
+        title: 'MCP servers',
+        remoteSwitch: 'connections',
+        render: ({ off }) => !off && <McpSection />,
+      },
+    ],
   },
   {
     id: 'browser',
-    group: 'mac',
+    group: 'connections',
     label: 'Browser pane',
     icon: icons.BROWSER_ICON,
     rows: () => [
@@ -256,50 +287,58 @@ export const SETTINGS_SECTIONS = [
     render: () => <BrowserSection />,
   },
   {
-    id: 'notifications',
-    group: 'mac',
-    label: 'Notifications',
-    icon: icons.NOTIFICATIONS_ICON,
-    remoteSwitch: 'settings',
-    rows: ({ calendar }) => [
-      MORNING_BRIEF_LABEL,
-      ...(calendar ? [CALENDAR_BRIEF_LABEL] : []),
-      COMPANION_LABEL,
-      ...(calendar ? CALENDAR_NOTIFY_ROWS : []),
-      ...islandRows(),
-    ],
-    render: ({ setup }) => setup && <NotificationsSection profile={setup.profile} />,
+    id: 'mac',
+    group: 'connections',
+    label: 'Mac control',
+    icon: icons.MAC_CONTROL_ICON,
+    rows: () => [MAC_CONTROL_LABEL],
+    render: ({ setup }) => setup && <MacControlSection profile={setup.profile} />,
   },
   {
-    id: 'updates',
+    id: 'about',
     group: 'app',
-    label: 'Updates',
-    icon: icons.UPDATES_ICON,
-    rows: () => UPDATE_ROWS,
-    render: () => <UpdatesSection />,
-  },
-  {
-    id: 'help',
-    group: 'app',
-    label: 'Help',
+    label: 'About',
     icon: icons.HELP_ICON,
-    rows: helpRows,
-    render: () => <HelpSection />,
-  },
-  {
-    id: 'reset',
-    group: 'app',
-    label: 'Reset',
-    icon: icons.RESET_ICON,
-    remoteSwitch: 'reset',
-    rows: () => [KEEP_KEYS_LABEL],
-    render: () => <ResetSection />,
+    parts: [
+      {
+        id: 'updates',
+        title: 'Updates',
+        rows: () => UPDATE_ROWS,
+        render: () => <UpdatesSection />,
+      },
+      {
+        id: 'help',
+        title: 'Help',
+        rows: helpRows,
+        render: () => <HelpSection />,
+      },
+      {
+        id: 'reset',
+        title: 'Reset',
+        remoteSwitch: 'reset',
+        rows: () => [KEEP_KEYS_LABEL],
+        render: () => <ResetSection />,
+      },
+    ],
   },
 ] as const satisfies readonly SettingsSectionEntry[];
 
 export type { SettingsSection };
 
 const ALL_SECTIONS: readonly SettingsSectionEntry[] = SETTINGS_SECTIONS;
+
+export function partsOf(entry: SettingsSectionEntry): SettingsPartEntry[] {
+  if (entry.parts) return entry.parts.filter((part) => sectionAvailable(part.id));
+  return [
+    {
+      id: entry.id,
+      title: entry.label,
+      remoteSwitch: entry.remoteSwitch,
+      rows: entry.rows,
+      render: entry.render ?? (() => null),
+    },
+  ];
+}
 
 export function availableSections(): SettingsSectionEntry[] {
   return ALL_SECTIONS.filter((entry) => sectionAvailable(entry.id));
