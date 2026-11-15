@@ -8,6 +8,7 @@ import {
   deliverSlackCallback,
   isSlackCallback,
   readBakedSlackClientId,
+  readDevSlackClientId,
   slackClientId,
 } from './slack-sign-in.ts';
 
@@ -43,6 +44,34 @@ describe('the Slack client ID baked into a build', () => {
     expect(slackClientId('0123456789abcdef0123456789abcdef')).toBeNull();
     expect(slackClientId('xoxb-1234567890-abcdefghij')).toBeNull();
     expect(slackClientId(12)).toBeNull();
+  });
+});
+
+describe('the Slack client ID of a run from source', () => {
+  it('reads it from the dev file when the build has none', async () => {
+    const appPath = await manifest({});
+    const file = path.join(appPath, 'slack-client-id');
+    await writeFile(file, '1234567890.9876543210\n');
+    expect(
+      await bakedSignInEnv(appPath, { googleClientFile: null, slackClientIdFile: file }),
+    ).toEqual({
+      SPARK_SLACK_CLIENT_ID: '1234567890.9876543210',
+    });
+  });
+
+  it('prefers the baked client ID and ignores a missing or malformed file', async () => {
+    const appPath = await manifest({ slackApp: { clientId: '1.2' } });
+    const file = path.join(appPath, 'slack-client-id');
+    await writeFile(file, '3.4');
+    expect(
+      await bakedSignInEnv(appPath, { googleClientFile: null, slackClientIdFile: file }),
+    ).toEqual({
+      SPARK_SLACK_CLIENT_ID: '1.2',
+    });
+    await writeFile(file, 'xoxb-1234567890-secret');
+    expect(await readDevSlackClientId(file)).toBeNull();
+    expect(await readDevSlackClientId(path.join(appPath, 'missing'))).toBeNull();
+    expect(await readDevSlackClientId(null)).toBeNull();
   });
 });
 

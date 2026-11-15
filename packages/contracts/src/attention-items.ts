@@ -9,6 +9,7 @@ export const attentionItemKindSchema = z.enum([
   'run-failed',
   'shell-alert',
   'pr-clean',
+  'slack-mention',
 ]);
 export type AttentionItemKind = z.infer<typeof attentionItemKindSchema>;
 
@@ -16,13 +17,17 @@ export const attentionItemSchema = z.object({
   key: z.string().min(1).max(160),
   kind: attentionItemKindSchema,
   blocking: z.boolean(),
-  conversationId: z.uuid(),
+  conversationId: z.uuid().nullable(),
   detail: z.string().nullable(),
   at: z.string(),
   readAt: z.string().nullable(),
   setAsideAt: z.string().nullable(),
   dismissedAt: z.string().nullable(),
   schedule: scheduleUpdateSchema.nullable().optional(),
+  url: z
+    .url({ protocol: /^https$/ })
+    .nullable()
+    .optional(),
 });
 export type AttentionItem = z.infer<typeof attentionItemSchema>;
 
@@ -34,11 +39,11 @@ export type AttentionMark = z.infer<typeof attentionMarkSchema>;
 
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const KEY_PATTERN = new RegExp(
-  `^(?:(approval|flag|run-done|run-failed|shell-alert):(${UUID})|terminal:(${UUID}):(\\d{1,9}):(\\d{1,15})|pr-clean:(${UUID}):([0-9a-f]{7,64}))$`,
+  `^(?:(approval|flag|run-done|run-failed|shell-alert|slack-mention):(${UUID})|terminal:(${UUID}):(\\d{1,9}):(\\d{1,15})|pr-clean:(${UUID}):([0-9a-f]{7,64}))$`,
   'i',
 );
 
-type IdKeyKind = 'approval' | 'flag' | 'run-done' | 'run-failed' | 'shell-alert';
+type IdKeyKind = 'approval' | 'flag' | 'run-done' | 'run-failed' | 'shell-alert' | 'slack-mention';
 
 export type ParsedAttentionKey =
   | { kind: IdKeyKind; id: string }
@@ -91,5 +96,7 @@ export function freshUpdate(item: AttentionItem): boolean {
 }
 
 export function alertingChats(items: readonly AttentionItem[]): Set<string> {
-  return new Set(items.filter(alerting).map((item) => item.conversationId));
+  return new Set(
+    items.filter(alerting).flatMap((item) => (item.conversationId ? [item.conversationId] : [])),
+  );
 }

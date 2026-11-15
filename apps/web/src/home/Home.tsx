@@ -34,6 +34,8 @@ import { needsYou, runningNow } from './home-model.ts';
 import { pickLead } from './lead-state.ts';
 import { briefEntries, feedRows, type BriefEntry } from './needs-model.ts';
 import { capRows, sinceRows, type SinceRow } from './since-model.ts';
+import { SlackMentions } from '../slack/SlackMentions.tsx';
+import { slackMentionRows } from '../slack/slack-mentions-model.ts';
 import { useAttentionSettings, useBrief } from './use-brief.ts';
 import { useAwayKeys } from './use-away-keys.ts';
 import { useMeetingLead } from './use-meeting-lead.ts';
@@ -248,6 +250,12 @@ export function Home(props: HomeProps) {
                 onEntry={openEntry}
                 onConnect={() => props.onTickets(null)}
                 onDismissHint={hint.dismiss}
+              />
+              <SlackMentions
+                rows={slackMentionRows(attention.items)}
+                now={now}
+                onRead={(key) => markAttention([key], 'read')}
+                onDismiss={(key) => markAttention([key], 'dismiss')}
               />
             </div>
             <WorkingColumn

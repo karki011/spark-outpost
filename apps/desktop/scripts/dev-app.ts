@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto';
 import path from 'node:path';
+import { channelConfig } from '../src/channel.ts';
 
 export const DEV_APP_NAME = 'Spark Outpost Dev';
 export const DEV_APP_ID = 'com.sparkoutpost.dev';
 export const DEFAULT_DEBUG_PORT = 9333;
+const DEV_LINK_SCHEME = channelConfig('dev').linkScheme;
 
 const USAGE_STRINGS: [string, string][] = [
   [
@@ -65,6 +67,17 @@ export function infoPlistEdits(): [string, string][] {
     ['CFBundleDisplayName', DEV_APP_NAME],
     ...USAGE_STRINGS,
   ];
+}
+
+export function urlTypesJson(): string {
+  return JSON.stringify([{ CFBundleURLName: DEV_APP_NAME, CFBundleURLSchemes: [DEV_LINK_SCHEME] }]);
+}
+
+export async function setUrlTypes(run: Run, plist: string) {
+  const value = urlTypesJson();
+  await run('plutil', ['-insert', 'CFBundleURLTypes', '-json', value, plist]).catch(() =>
+    run('plutil', ['-replace', 'CFBundleURLTypes', '-json', value, plist]),
+  );
 }
 
 export async function setInfoPlist(run: Run, plist: string, edits: [string, string][]) {
@@ -284,6 +297,7 @@ function stampText(source: DevAppSource, baseEntitlements: string): string {
     electronVersion: source.electronVersion,
     identity: codesignIdentity(source.identity),
     info: infoPlistEdits(),
+    urlTypes: urlTypesJson(),
     entitlements: [baseEntitlements, ...DEV_ENTITLEMENTS],
   });
 }
@@ -304,6 +318,7 @@ async function buildCopy(source: DevAppSource, deps: DevAppDeps, app: string, ba
   await deps.run('xattr', ['-cr', app]);
   const plist = path.join(app, 'Contents/Info.plist');
   await setInfoPlist(deps.run, plist, infoPlistEdits());
+  await setUrlTypes(deps.run, plist);
   await deps.writeText(entitlements, withEntitlements(base, DEV_ENTITLEMENTS));
   await deps.run('plutil', ['-lint', entitlements]);
   deps.log(`Signing with ${identityLabel(source.identity)}.`);

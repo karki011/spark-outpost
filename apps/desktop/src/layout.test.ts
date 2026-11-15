@@ -21,6 +21,7 @@ describe('appLayout', () => {
       voiceModels: '/repo/.local/voice/arm64/models',
       noActivateAddon: '/repo/.local/no-activate/arm64/no-activate.node',
       googleClientFile: '/repo/.local/google-oauth-client.json',
+      slackClientIdFile: '/repo/.local/slack-client-id',
     });
   });
 
@@ -44,6 +45,7 @@ describe('appLayout', () => {
       noActivateAddon:
         '/Applications/Spark Outpost.app/Contents/Resources/no-activate/no-activate.node',
       googleClientFile: null,
+      slackClientIdFile: null,
     });
   });
 });

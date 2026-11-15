@@ -83,7 +83,7 @@ export function sinceRows(
   return items
     .flatMap((item): SinceRow[] => {
       const kind = kindOf(item);
-      const chat = byId.get(item.conversationId);
+      const chat = item.conversationId ? byId.get(item.conversationId) : undefined;
       if (!kind || !chat || !shown(item, away)) return [];
       return [
         {

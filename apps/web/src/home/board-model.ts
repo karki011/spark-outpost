@@ -34,11 +34,15 @@ export function reviewItems(
   const byId = new Map(chats.filter((chat) => !chat.archivedAt).map((chat) => [chat.id, chat]));
   const clean = attention
     .filter(
-      (item) => item.kind === 'pr-clean' && freshUpdate(item) && byId.has(item.conversationId),
+      (item) =>
+        item.kind === 'pr-clean' &&
+        freshUpdate(item) &&
+        item.conversationId !== null &&
+        byId.has(item.conversationId),
     )
     .toSorted((a, b) => b.at.localeCompare(a.at))
     .map((item): ReviewItem => ({
-      chat: byId.get(item.conversationId)!,
+      chat: byId.get(item.conversationId!)!,
       clean: true,
       line: 'PR is clean · ready to merge',
       attentionKey: item.key,

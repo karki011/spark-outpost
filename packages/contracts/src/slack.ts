@@ -245,6 +245,7 @@ export const slackSettingsSchema = z.object({
   allowedUserIds: z.array(slackUserIdSchema).max(SLACK_ALLOWED_USERS_MAX).default([]),
   readDirectMessages: z.boolean().default(false),
   allDirectMessages: z.boolean().default(false),
+  watchMentions: z.boolean().default(true),
 });
 export type SlackSettings = z.infer<typeof slackSettingsSchema>;
 
@@ -260,6 +261,7 @@ export const updateSlackSettingsRequestSchema = z
     memberId: slackUserIdSchema.nullable(),
     readDirectMessages: z.boolean(),
     allDirectMessages: z.boolean(),
+    watchMentions: z.boolean(),
   })
   .partial()
   .strict();
