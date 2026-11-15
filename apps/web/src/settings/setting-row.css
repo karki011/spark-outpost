@@ -77,3 +77,52 @@ label.set-row-label {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+.set-wait .choice-picker {
+  width: 140px;
+}
+.set-wait .field-button {
+  min-height: 28px;
+}
+.set-wait .choice-picker {
+  width: 140px;
+}
+.set-wait .field-button {
+  min-height: 28px;
+}
+.row-help-btn {
+  width: 28px;
+  height: 28px;
+  margin: -6px -2px;
+  cursor: pointer;
+}
+.row-help-btn[aria-expanded='true'] {
+  color: var(--accent-text);
+}
+.row-help {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.row-help[hidden] {
+  display: none;
+}
+.row-help p,
+.row-help ul {
+  margin: 0;
+}
+.row-help ul {
+  padding-left: 18px;
+}
+.row-help-doc {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  margin-top: 4px;
+  font-weight: 500;
+  color: var(--accent-text);
+}

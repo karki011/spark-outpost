@@ -225,3 +225,41 @@
     transition: none !important;
   }
 }
+.btog.btog-worded {
+  display: inline-flex;
+  gap: 2px;
+  width: auto;
+  min-width: 76px;
+  height: 36px;
+  padding: 0 12px 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+}
+.btog.btog-worded[data-on='true'] {
+  border-color: color-mix(in srgb, var(--switch-on) 45%, var(--line));
+  background: color-mix(in srgb, var(--switch-on) 10%, var(--panel));
+}
+.btog-worded .btog-blob {
+  width: 30px;
+  height: 30px;
+  margin-top: -4px;
+}
+.btog-word {
+  min-width: 2.2em;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.btog-worded[data-on='true'] .btog-word {
+  color: var(--text);
+}
+.btog.btog-worded:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+@media (pointer: coarse) {
+  .btog.btog-worded {
+    height: 44px;
+  }
+}

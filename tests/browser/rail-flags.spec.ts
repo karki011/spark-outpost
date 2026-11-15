@@ -9,6 +9,7 @@ import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { FAKE_GH_STATE } from './stub-config.ts';
 import { turnDone } from './project-chat-kit.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.describe.configure({ timeout: 90_000 });
 let base = '';
@@ -82,7 +83,7 @@ test('Settings tests the pull request route without changing anything', async ({
   const repo = await repoWithRemote(base, 'tested');
   await linkProject(page, repo.root);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Connectors' }).click();
   const card = connectorCard(page, 'github');
   await connectorHead(card).click();

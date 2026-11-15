@@ -114,6 +114,10 @@
   animation: sb-popin 0.2s var(--out);
 }
 
+.rdot.warn {
+  background: var(--warn);
+}
+
 .rdot.beside {
   top: 4px;
   right: auto;

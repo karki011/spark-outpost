@@ -195,3 +195,33 @@
     box-sizing: border-box;
   }
 }
+
+.mc-table .dt > * > .mc-more-row > td {
+  padding: 4px 12px 6px;
+}
+
+.mc-show-more {
+  position: sticky;
+  left: 12px;
+  min-height: 28px;
+  padding: 0 4px;
+  border-radius: var(--r-sm);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--accent-text);
+}
+
+.mc-show-more:hover {
+  text-decoration: underline;
+}
+
+.mc-show-more:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (pointer: coarse) {
+  .mc-show-more {
+    min-height: 44px;
+  }
+}

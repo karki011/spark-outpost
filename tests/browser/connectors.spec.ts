@@ -3,12 +3,13 @@ import { JIRA_EMAIL, JIRA_TOKEN } from '../../apps/server/test/fake-jira.ts';
 import { resetTestDatabase } from './database.ts';
 import { connectorCard, connectorHead, connectorStatus } from './connector-cards.ts';
 import { setJiraWorkflow, connectTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const MIN_CHECK_MS = 1200;
 
 async function openConnectors(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Connectors' }).click();
 }
 
@@ -191,4 +192,27 @@ test('The status pickers list real statuses, warn when unclear, and a choice cha
   expect(((await ticket.json()) as { ticket: { statusName: string } }).ticket.statusName).toBe(
     'QA review',
   );
+});
+
+test('Settings lists the connectors and opens one at a time on its own page', async ({ page }) => {
+  await openConnectors(page);
+  const dialog = page.getByRole('dialog', { name: 'Connectors' });
+  await expect(dialog.getByRole('radio', { name: 'Connectors' })).toBeChecked();
+  const cards = dialog.locator('.cgrid > li');
+  await expect(cards.filter({ visible: true })).toHaveCount(await cards.count());
+  const linear = connectorCard(page, 'linear');
+  await connectorHead(linear).click();
+  await expect(cards.filter({ visible: true })).toHaveCount(1);
+  await expect(linear).toBeVisible();
+
+  const back = dialog.getByRole('button', { name: 'All connectors' });
+  await back.click();
+  await expect(back).toHaveCount(0);
+  await expect(connectorHead(linear)).toBeFocused();
+  await expect(connectorHead(linear)).toHaveAttribute('aria-expanded', 'false');
+  await expect(cards.filter({ visible: true })).toHaveCount(await cards.count());
+
+  await dialog.getByRole('radio', { name: 'MCP servers' }).click();
+  await expect(dialog).toContainText('No MCP servers yet');
+  await expect(cards).toHaveCount(0);
 });

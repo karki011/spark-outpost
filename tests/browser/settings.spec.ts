@@ -4,6 +4,7 @@ import { expandSection } from './provider-screen.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { animationsSettled } from './settle.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
@@ -11,8 +12,8 @@ test.beforeEach(async () => {
 
 test('settings opens from the sidebar and lets a CLI provider sign in again', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Profile & personality' });
+  await clickSettings(page);
+  const dialog = page.getByRole('dialog', { name: 'General' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByLabel('What should Spark call you?', { exact: true })).toHaveValue(
     'Test User',
@@ -35,9 +36,9 @@ test('settings opens from the sidebar and lets a CLI provider sign in again', as
   await claude.getByRole('button', { name: 'Cancel' }).click();
   await expect(claude.locator('.xterm')).toHaveCount(0);
 
-  await providers.getByRole('tab', { name: 'Appearance' }).click();
+  await providers.getByRole('tab', { name: 'General' }).click();
   await expect(page).not.toHaveURL(/#\/settings/);
-  const cards = page.getByRole('dialog', { name: 'Appearance' }).locator('.tcard');
+  const cards = page.getByRole('dialog', { name: 'General' }).locator('.tcard');
   await expect(cards).toHaveCount(9);
   const lefts = await cards.evaluateAll((all) =>
     all.map((card) => Math.round(card.getBoundingClientRect().left)),
@@ -45,13 +46,13 @@ test('settings opens from the sidebar and lets a CLI provider sign in again', as
   expect(new Set(lefts).size).toBe(3);
 
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog', { name: 'Appearance' })).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'General' })).toHaveCount(0);
 });
 
 test('the name saves from Spark settings and Spark greets you by first name', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  const spark = page.getByRole('dialog', { name: 'Profile & personality' });
+  await clickSettings(page);
+  const spark = page.getByRole('dialog', { name: 'General' });
   await spark.getByLabel('What should Spark call you?', { exact: true }).fill('Ada Moss');
   await expect(spark.locator('.spark-preview')).toContainText('Hi Ada 👋');
   await expect(page.getByText('Changes save automatically.')).toBeVisible();
@@ -65,9 +66,9 @@ test('the name saves from Spark settings and Spark greets you by first name', as
 
 test('personality and the wait save, each in its own section', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  const spark = page.getByRole('dialog', { name: 'Profile & personality' });
-  await expect(spark.getByRole('tab', { name: 'Profile & personality' })).toHaveAttribute(
+  await clickSettings(page);
+  const spark = page.getByRole('dialog', { name: 'General' });
+  await expect(spark.getByRole('tab', { name: 'General' })).toHaveAttribute(
     'aria-selected',
     'true',
   );
@@ -91,8 +92,14 @@ test('personality and the wait save, each in its own section', async ({ page }) 
   await expect(notifications.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
   await notifications.getByRole('tab', { name: 'Chats & autonomy' }).click();
   const chats = page.getByRole('dialog', { name: 'Chats & autonomy' });
-  const wait = chats.getByRole('radiogroup', { name: 'Wait before going on without your answer' });
-  await expect(wait.getByRole('radio')).toHaveText([
+  const wait = chats.getByRole('button', {
+    name: 'Wait before going on without your answer',
+    exact: true,
+  });
+  const waitMenu = page.getByRole('menu', { name: 'Wait before going on without your answer' });
+  await expect(wait).toHaveText('60s');
+  await wait.click();
+  await expect(waitMenu.getByRole('menuitemradio')).toHaveText([
     '30s',
     '60s',
     '2 min',
@@ -100,14 +107,19 @@ test('personality and the wait save, each in its own section', async ({ page }) 
     'Never',
     'Custom',
   ]);
-  await expect(wait.getByRole('radio', { name: '60s' })).toBeChecked();
+  await expect(waitMenu.getByRole('menuitemradio', { name: '60s' })).toBeChecked();
+  await page.keyboard.press('Escape');
   await expect(wait).toHaveAccessibleDescription('After 60s, Spark goes with the safe option.');
   const savedWait = async () =>
     (await (await page.request.get('/api/setup')).json()).profile.autoContinueSeconds;
-  await wait.getByRole('radio', { name: 'Never' }).click();
+  const chooseWait = async (name: string) => {
+    await wait.click();
+    await waitMenu.getByRole('menuitemradio', { name }).click();
+  };
+  await chooseWait('Never');
   await expect(wait).toHaveAccessibleDescription('Spark waits for your answer.');
   await expect.poll(savedWait).toBeNull();
-  await wait.getByRole('radio', { name: 'Custom' }).click();
+  await chooseWait('Custom');
   const custom = chats.getByRole('textbox', { name: 'Custom wait in seconds' });
   await custom.fill('3');
   await custom.press('Enter');
@@ -119,18 +131,18 @@ test('personality and the wait save, each in its own section', async ({ page }) 
   await expect(wait).toHaveAccessibleDescription('After 45s, Spark goes with the safe option.');
   await expect.poll(savedWait).toBe(45);
   await page.reload();
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await spark.getByRole('tab', { name: 'Chats & autonomy' }).click();
-  await expect(wait.getByRole('radio', { name: 'Custom' })).toBeChecked();
+  await expect(wait).toHaveText('Custom');
   await expect(custom).toHaveValue('45');
-  await wait.getByRole('radio', { name: '2 min' }).click();
+  await chooseWait('2 min');
   await expect.poll(savedWait).toBe(120);
   await expect(custom).toHaveCount(0);
   const level = chats.getByRole('radiogroup', { name: 'How much Spark does alone' });
   await expect(level.getByRole('radio', { name: 'Full auto → PR' })).toBeChecked();
 
-  await chats.getByRole('tab', { name: 'Appearance' }).click();
-  const appearance = page.getByRole('dialog', { name: 'Appearance' });
+  await chats.getByRole('tab', { name: 'General' }).click();
+  const appearance = page.getByRole('dialog', { name: 'General' });
   await expect(appearance.locator('.tcard').first()).toBeVisible();
   await expect(appearance.getByRole('radiogroup', { name: 'Status companion' })).toHaveCount(0);
   await appearance.getByRole('tab', { name: /Connectors/ }).click();
@@ -154,11 +166,8 @@ test('settings shows usage per provider', async ({ page }) => {
   await input.press('Enter');
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 15_000 });
 
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page
-    .getByRole('dialog', { name: 'Profile & personality' })
-    .getByRole('tab', { name: 'Usage' })
-    .click();
+  await clickSettings(page);
+  await page.getByRole('dialog', { name: 'General' }).getByRole('tab', { name: 'Usage' }).click();
   const dialog = page.getByRole('dialog', { name: 'Usage' });
   const claude = dialog.getByRole('listitem', { name: 'Claude' });
   await expect(claude).toContainText('$0.004');
@@ -172,9 +181,9 @@ test('provider setting dropdowns return focus to their trigger after a keyboard 
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
@@ -212,9 +221,9 @@ test('provider setting dropdowns return focus to their trigger after a keyboard 
 
 test('the Jev screen has no settings of its own', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
@@ -225,7 +234,7 @@ test('the Jev screen has no settings of its own', async ({ page }) => {
   await expect(providers).not.toContainText('Full auto');
   await expect(jev.getByRole('switch', { name: 'Check changes with Jev' })).toHaveCount(0);
   await expect(
-    jev.getByRole('radiogroup', { name: 'Wait before going on without your answer' }),
+    jev.getByRole('button', { name: 'Wait before going on without your answer', exact: true }),
   ).toHaveCount(0);
 });
 
@@ -233,9 +242,9 @@ test('a failed test message makes the provider blob wobble and shows the error',
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
@@ -264,9 +273,9 @@ test('context compaction thresholds validate inline and save from Spark settings
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Chats & autonomy' })
     .click();
   const spark = page.getByRole('dialog', { name: 'Chats & autonomy' });
@@ -411,9 +420,9 @@ test('Appearance follows the system, pairs tints and explains Increase contrast'
 }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('tab', { name: 'Appearance' }).click();
-  const appearance = page.getByRole('dialog', { name: 'Appearance' });
+  await clickSettings(page);
+  await page.getByRole('tab', { name: 'General' }).click();
+  const appearance = page.getByRole('dialog', { name: 'General' });
   const modes = appearance.getByRole('radiogroup', { name: 'Appearance' });
   await expect(modes.getByRole('radio', { name: 'Automatic' })).toHaveAttribute(
     'aria-checked',

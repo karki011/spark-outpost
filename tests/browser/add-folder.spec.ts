@@ -15,6 +15,7 @@ import { CLONE_TEST_ROOT } from './stub-config.ts';
 import { openChats } from './navigation.ts';
 import { NAME, newOutpost } from './outposts-kit.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 let base = '';
 
@@ -118,9 +119,9 @@ test('Settings → Projects makes a new folder and, when asked, a git repository
 }) => {
   await resetTestDatabase({ onboarded: true });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Projects' })
     .click();
   const add = page.getByRole('group', { name: 'Add a project' }).getByRole('button', {
@@ -257,9 +258,9 @@ test('the folder picker has places, a typed path, keys, marks and says when acce
     const linked = await page.request.post('/api/projects', { data: { rootPath: repo } });
     expect(linked.ok()).toBe(true);
     await page.goto('/');
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await clickSettings(page);
     await page
-      .getByRole('dialog', { name: 'Profile & personality' })
+      .getByRole('dialog', { name: 'General' })
       .getByRole('tab', { name: 'Projects' })
       .click();
     await page

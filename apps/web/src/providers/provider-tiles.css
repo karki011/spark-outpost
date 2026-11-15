@@ -149,8 +149,12 @@
   background: var(--danger-soft);
   color: var(--danger);
 }
-.ptiles-view .advisors {
+.ptiles-view .advisors,
+.ptiles-view .ptiles-rest {
   margin-top: 24px;
+}
+.ptiles-rest .advisors-title {
+  margin-bottom: 10px;
 }
 
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {

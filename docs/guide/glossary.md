@@ -18,7 +18,7 @@ summary: One-line definitions of the words you see in Spark Outpost - agent, mod
 | **Compaction**         | [Replacing](compaction.md) a long chat's context with a summary.                       |
 | **Effort**             | How hard the agent thinks: Low to Max.                                                 |
 | **Jev**                | An [optional advisor](jev.md) from TypeSafe, used outside chats.                       |
-| **MCP server**         | A tool server for agents, added in **Settings → MCP servers**.                         |
+| **MCP server**         | A tool server for agents, added in **Settings → Connectors → MCP servers**.            |
 | **Outpost**            | A [thread](outposts.md) asking several chats for work.                                 |
 | **Story**              | A job a chat [split into sub-tasks](outpost-stories.md), one chat each.                |
 | **Stacked**            | A sub-task whose branch and PR [build on another's](stacked-pull-requests.md).         |

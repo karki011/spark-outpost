@@ -10,7 +10,7 @@ import {
 import { listProjects } from '../../projects/projects.ts';
 import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
 
-export const MCP_SETTINGS_PLACE = 'Settings → MCP servers';
+export const MCP_SETTINGS_PLACE = 'Settings → Connectors';
 
 export function matchMcpServer(servers: readonly UserMcpRow[], reference: string): UserMcpRow {
   const wanted = reference.trim().toLowerCase();

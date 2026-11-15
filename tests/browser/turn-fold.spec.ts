@@ -10,6 +10,7 @@ import {
   turnDone,
   type ChatRepo,
 } from './project-chat-kit.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 
@@ -96,9 +97,9 @@ test('turning Collapse finished turns off shows every step again', async ({ page
   await turnDone(page);
   await expect(fold(page)).toBeVisible();
 
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Chats & autonomy' })
     .click();
   const toggle = page

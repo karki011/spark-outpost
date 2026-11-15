@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { clickSettings } from './rail-menu.ts';
 
 async function fakeDesktop(page: Page) {
   await page.addInitScript(() => {
@@ -119,9 +120,9 @@ async function fakeDesktop(page: Page) {
 }
 
 async function openNotifications(page: Page) {
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Notifications' })
     .click();
 }
@@ -273,7 +274,7 @@ test('the menu bar item stays off until switched on, with or without the island'
   await resetTestDatabase({ onboarded: true });
   await fakeDesktop(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   const search = page.getByRole('combobox', { name: 'Search settings' });
   await search.fill('menu bar');
   await expect(page.getByRole('option')).toHaveText([/^Show in menu bar/]);
@@ -307,7 +308,7 @@ test('searching an island row while the island is off focuses Show Spark Island'
   await resetTestDatabase({ onboarded: true });
   await fakeDesktop(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   const search = page.getByRole('combobox', { name: 'Search settings' });
   await search.fill('island chimes');
   await expect(page.getByRole('option')).toHaveText([/^Island chimes/]);
@@ -359,7 +360,7 @@ test('the island opens these settings, and its chimes stay off until switched on
   await resetTestDatabase({ onboarded: true });
   await fakeDesktop(page);
   await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^More/ })).toBeVisible();
   const fromIsland = (target: string) =>
     page.evaluate(
       (target) =>

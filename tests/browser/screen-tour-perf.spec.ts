@@ -190,13 +190,10 @@ test('every screen opens and stays smooth with heavy data', async ({ page }) => 
     },
   );
   const settings = page.getByRole('dialog').last();
-  steps.settings = await measure(
-    page,
-    page.getByRole('button', { name: 'Settings' }),
-    settings,
-    () => scrollAll(page, '[role="dialog"] *'),
+  steps.settings = await measure(page, page.getByRole('button', { name: /^More/ }), settings, () =>
+    scrollAll(page, '[role="dialog"] *'),
   );
-  for (const tab of ['AI providers', 'Models', 'Crew', 'Usage', 'Appearance']) {
+  for (const tab of ['AI providers', 'Crew', 'Usage', 'General']) {
     const target = settings.getByRole('tab', { name: tab });
     if ((await target.count()) === 0) continue;
     steps[`settings ${tab}`] = await measure(page, target, target, () =>

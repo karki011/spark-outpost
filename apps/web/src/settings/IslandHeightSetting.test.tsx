@@ -4,7 +4,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CompanionStatus } from '../desktop/desktop-bridge.ts';
 import { IslandHeightSetting } from './IslandHeightSetting.tsx';
 
-vi.mock('../ui/DocLink.tsx', () => ({ DocLink: () => null }));
+vi.mock('../ui/DocLink.tsx', async () => {
+  const { createContext } = await import('react');
+  return { DocLink: () => null, DocsReachable: createContext(false) };
+});
 vi.mock('./setting-focus.ts', () => ({ useSettingFocus: () => undefined }));
 
 const status: CompanionStatus = {

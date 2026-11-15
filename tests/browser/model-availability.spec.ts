@@ -6,6 +6,7 @@ import { openTestDb, resetTestDatabase } from './database.ts';
 import { shoot, useSystemTheme } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
 import { expandSection } from './provider-screen.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 const SOL_61 = { id: 'gpt-6.1-sol', label: 'GPT-6.1 Sol', description: 'Newest' };
@@ -120,7 +121,7 @@ test('a rejected model is retried on the nearest usable one and the chat says so
     .locator('.model-switch-note')
     .getByRole('button', { name: /Models/ })
     .click();
-  await expect(page.getByRole('dialog', { name: 'Models' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'AI providers' })).toBeVisible();
 });
 
 test('a default the sign-in cannot use is flagged on the provider screen with a one-click fix', async ({
@@ -128,9 +129,9 @@ test('a default the sign-in cannot use is flagged on the provider screen with a 
 }) => {
   await seedCodex({ rejected: true });
   await openChats(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });

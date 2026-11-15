@@ -2,6 +2,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { FEEDBACK_SETTINGS_FOCUS } from '../../packages/contracts/src/desktop-help.ts';
 import { resetTestDatabase } from './database.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SAVED = '/Users/tester/Downloads/spark-outpost-diagnostics-2026-10-01-120000.zip';
 const LOGS = '/Users/tester/Library/Application Support/Spark Outpost/logs';
@@ -79,9 +80,9 @@ const read = <T>(page: Page, name: string): Promise<T> =>
 
 async function openHelp(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('tab', { name: 'Help' }).click();
-  return page.getByRole('dialog', { name: 'Help' });
+  await clickSettings(page);
+  await page.getByRole('tab', { name: 'About' }).click();
+  return page.getByRole('dialog', { name: 'About' });
 }
 
 test('the desktop Help section shows the beta version and logs, and exports diagnostics', async ({
@@ -178,7 +179,7 @@ test('Help › Send Feedback in the menu bar opens the Settings window ready to 
   });
   await page.goto('/settings');
   await expect(page.getByLabel('What happened?')).toBeFocused();
-  await expect(page).toHaveTitle('Help');
+  await expect(page).toHaveTitle('About');
 });
 
 test('in the browser, Export diagnostics downloads the zip from the server', async ({ page }) => {
@@ -211,7 +212,7 @@ async function silenceFullDiskAccessPrompt(page: Page) {
   );
 }
 
-test('Settings → Help opens System Settings to grant Full Disk Access and re-checks', async ({
+test('Settings → About → Help opens System Settings to grant Full Disk Access and re-checks', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -264,7 +265,7 @@ test("the Full Disk Access prompt's Remind me later lasts two hours and Don't as
   await expect(prompt).toHaveCount(0);
 
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^More/ })).toBeVisible();
   await expect(prompt).toHaveCount(0);
 
   await page.evaluate(() =>
@@ -276,7 +277,7 @@ test("the Full Disk Access prompt's Remind me later lasts two hours and Don't as
   await expect(prompt).toHaveCount(0);
 
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^More/ })).toBeVisible();
   await expect(prompt).toHaveCount(0);
 });
 

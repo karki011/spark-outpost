@@ -6,7 +6,14 @@ order: 720
 summary: What changed in recent releases and what to do next.
 ---
 
-## November 2026
+## Mid-November 2026
+
+| What changed           | What to do                     |
+| ---------------------- | ------------------------------ |
+| Fewer Settings pages   | [Settings](settings.md).       |
+| Left bar **More** menu | [Pause Spark](pause-spark.md). |
+
+## Early November 2026
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |

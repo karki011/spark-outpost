@@ -27,7 +27,7 @@ Setup reopens at **AI provider** only when you disconnect every provider or rese
 
 ## Send diagnostics with a bug report
 
-1. Select **Export diagnostics** in **Settings → Help**.
+1. Select **Export diagnostics** in **Settings → About → Help**.
 2. Check and attach zip.
 3. Or, in **Send feedback**, turn on **Include diagnostics**, then **Open email draft** or **Open GitHub issue draft**.
 
@@ -48,6 +48,6 @@ Drafts list unsuccessful searches.
 
 Reset deletes chats, projects and settings; repositories stay.
 
-1. In **Settings → Reset**, read **What Spark removes** and **What stays**.
+1. In **Settings → About → Reset**, read **What Spark removes** and **What stays**.
 2. Turn on **Keep my API keys** to keep provider and Jev keys; GitHub, ticket and MCP tokens always go.
 3. Hold **Hold to reset** 1.5 seconds; **Undo** works for 10.

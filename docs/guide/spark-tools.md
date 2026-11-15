@@ -58,7 +58,7 @@ summary: What agents can look up about Spark, the confirm card they show before 
 
 `spark_link_repo` and `spark_clone_repo` always ask ([repos](link-a-repo.md)).
 
-MCP server cards show the command; fill values in **Settings → MCP servers**.
+MCP server cards show the command; fill values in **Settings → Connectors → MCP servers**.
 
 ## Outpost tools
 

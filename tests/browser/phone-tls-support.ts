@@ -17,6 +17,7 @@ import { FAKE_TAILSCALE_HOST } from '../../apps/server/test/fake-tailscale.ts';
 import { matchApiClock } from './api-clock.ts';
 import { PHONE_ADDRESS, startPairing, turnOn } from './phone-support.ts';
 import { API_PORT } from './stub-config.ts';
+import { openRailMenu } from './rail-menu.ts';
 
 export const ELSEWHERE = 'https://elsewhere.example';
 
@@ -130,10 +131,7 @@ export async function signedInAs(page: Page): Promise<string | null> {
 export async function openPhonePage(page: Page): Promise<Locator> {
   await matchApiClock(page);
   await page.goto('/');
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: 'Remote control' })
-    .click();
+  await openRailMenu(page, 'Remote control');
   await turnOn(page);
   return page.getByRole('main');
 }

@@ -10,6 +10,7 @@ import { editedChat } from './edited-chat.ts';
 import { openChats } from './navigation.ts';
 import { slot } from './stub-config.ts';
 import { toggleHeaderPane } from './header-menu.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 const PORT = slot === 0 ? 4877 : 20_000 + slot * 10 + 7;
@@ -81,8 +82,8 @@ test('Settings saves a preview per project, from a suggestion or typed, and chec
 }) => {
   await link(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Profile & personality' });
+  await clickSettings(page);
+  const dialog = page.getByRole('dialog', { name: 'General' });
   await dialog.getByRole('tab', { name: 'Projects' }).click();
   const group = page.getByRole('group', { name: `Preview in ${name}` });
   await expect(group).toHaveCount(0);

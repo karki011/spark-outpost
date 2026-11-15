@@ -3,13 +3,17 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { useCalendarStatus } from '../calendar/use-calendar.ts';
-import { PHONE_SWITCH_OFF, useRemoteClient } from '../phone/use-remote-client.ts';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
+import { SwitchWordsProvider } from '../brand/switch-words.ts';
 import { reveal } from '../ui/transitions.tsx';
 import { clearSettingFocus, requestSettingFocus } from './setting-focus.ts';
+import { pageOf, partOf } from './section-ids.ts';
+import { SettingsPageBody } from './SettingsPageBody.tsx';
 import {
   SETTINGS_GROUPS,
   availableSections,
   groupTitle,
+  partsOf,
   type SettingsSection,
   type SettingsClient,
   type SettingsSectionEntry,
@@ -26,16 +30,20 @@ interface SettingsPanesProps {
 }
 
 function searchable(sections: readonly SettingsSectionEntry[], client: SettingsClient) {
-  return sections.map((entry) => ({
-    id: entry.id,
-    label: entry.label,
-    groupLabel: groupTitle(entry.group),
-    rows: entry.rows?.(client) ?? [],
-  }));
+  return sections.flatMap((entry) => {
+    const parts = partsOf(entry);
+    return parts.map((part) => ({
+      id: part.id,
+      label: parts.length > 1 ? part.title : entry.label,
+      groupLabel: groupTitle(entry.group),
+      rows: part.rows?.(client) ?? [],
+    }));
+  });
 }
 
 export function sectionLabel(section: SettingsSection): string {
-  return availableSections().find((entry) => entry.id === section)?.label ?? 'Settings';
+  const page = pageOf(section);
+  return availableSections().find((entry) => entry.id === page)?.label ?? 'Settings';
 }
 
 export function SettingsPanes({ section, onSection, onOpenChat, closeButton }: SettingsPanesProps) {
@@ -46,9 +54,8 @@ export function SettingsPanes({ section, onSection, onOpenChat, closeButton }: S
     () => searchable(sections, { remote: phone.remote, calendar }),
     [sections, phone.remote, calendar],
   );
-  const current = sections.find((entry) => entry.id === section);
-  const gate = current?.remoteSwitch;
-  const off = gate !== undefined && !phone.allows(gate);
+  const page = pageOf(section);
+  const current = sections.find((entry) => entry.id === page);
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const [query, setQuery] = useState('');
   const connected = setup.data?.providers.filter((provider) => provider.connection).length ?? 0;
@@ -89,11 +96,11 @@ export function SettingsPanes({ section, onSection, onOpenChat, closeButton }: S
                       key={entry.id}
                       type="button"
                       role="tab"
-                      aria-selected={entry.id === section}
+                      aria-selected={entry.id === page}
                       aria-describedby={groupId}
                       onClick={() => openSection(entry.id)}
                     >
-                      {entry.id === section && (
+                      {entry.id === page && (
                         <motion.span
                           layoutId="set-nav-highlight"
                           className="set-nav-highlight"
@@ -131,22 +138,25 @@ export function SettingsPanes({ section, onSection, onOpenChat, closeButton }: S
           {closeButton}
         </div>
         <div className="set-body" role="tabpanel" aria-labelledby="set-title">
-          {off && (
-            <p className="set-off-note" role="note">
-              {PHONE_SWITCH_OFF}
-            </p>
-          )}
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
-              key={section}
-              className={off ? 'set-off' : undefined}
-              inert={off}
+              key={pageOf(section)}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ ...reveal, duration: 0.15 }}
             >
-              {current?.render({ setup: setup.data, off, onOpenChat })}
+              <SwitchWordsProvider value={true}>
+                {current && (
+                  <SettingsPageBody
+                    entry={current}
+                    part={partOf(section)}
+                    setup={setup.data}
+                    onOpenChat={onOpenChat}
+                    onSection={onSection}
+                  />
+                )}
+              </SwitchWordsProvider>
             </motion.div>
           </AnimatePresence>
         </div>

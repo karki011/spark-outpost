@@ -143,7 +143,7 @@ Plugins the user installed with `claude plugin install` (user scope) never load 
 
 ## User-level MCP servers
 
-Servers that belong to the user rather than a repo: added by hand or from a pasted config in Settings → MCP servers, and turned on for all chats, per project or per chat.
+Servers that belong to the user rather than a repo: added by hand or from a pasted config in Settings → Connectors → MCP servers, and turned on for all chats, per project or per chat.
 
 ### Did agents already load the user's global MCP servers?
 
@@ -163,7 +163,7 @@ So Claude was already consistent; Codex was not. Now, for every Codex process (c
 
 ### Adding servers
 
-Users add servers by hand in Settings → MCP servers, or paste a README-style JSON config into the add form, which fills the fields in the browser. Spark does not read other apps' MCP config files (Claude Code, Claude Desktop, Cursor, VS Code, Codex, Windsurf). Servers imported by an earlier version keep their `imported:<tool>` source and "From <app>" label; they can be tested, switched and removed but not edited. Project `.mcp.json` files are not shown here; they stay in each project's Agent setup.
+Users add servers by hand in Settings → Connectors → MCP servers, or paste a README-style JSON config into the add form, which fills the fields in the browser. Spark does not read other apps' MCP config files (Claude Code, Claude Desktop, Cursor, VS Code, Codex, Windsurf). Servers imported by an earlier version keep their `imported:<tool>` source and "From <app>" label; they can be tested, switched and removed but not edited. Project `.mcp.json` files are not shown here; they stay in each project's Agent setup.
 
 The only user-level file Spark reads for MCP is `$CODEX_HOME/config.toml`, for the server names it turns off in Codex sessions (above).
 

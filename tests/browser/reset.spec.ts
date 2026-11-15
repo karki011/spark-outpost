@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
@@ -13,14 +14,12 @@ async function openReset(page: Page) {
   await openChats(page);
   await expect(page.getByRole('button', { name: 'Keep this chat', exact: true })).toBeVisible();
   await page.evaluate(() => localStorage.setItem('spark-outpost.models.provider', 'claude'));
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page
-    .getByRole('dialog', { name: 'Profile & personality' })
-    .getByRole('tab', { name: 'Reset' })
-    .click();
-  const dialog = page.getByRole('dialog', { name: 'Reset' });
+  await clickSettings(page);
+  await page.getByRole('dialog', { name: 'General' }).getByRole('tab', { name: 'About' }).click();
+  const dialog = page.getByRole('dialog', { name: 'About' });
   await expect(dialog.getByText('What stays')).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Hold to reset' })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Hold to reset' }).scrollIntoViewIfNeeded();
+  await expect(dialog.getByRole('button', { name: 'Hold to reset' })).toBeInViewport();
   return dialog.locator('.hold-btn');
 }
 
@@ -155,7 +154,7 @@ test('a full keyboard hold resets Spark to onboarding after the grace period', a
   await expect(graceBar(page).getByRole('button', { name: 'Undo' })).toBeFocused();
 
   await page.getByRole('button', { name: 'Close settings' }).click();
-  await expect(page.getByRole('dialog', { name: 'Reset' })).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'About' })).toHaveCount(0);
   await expect(graceBar(page)).toBeVisible();
 
   const reset = await page.waitForResponse(

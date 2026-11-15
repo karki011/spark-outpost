@@ -8,6 +8,7 @@ import { archiveInactive } from '../../apps/server/src/workflow/archive-inactive
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 let base = '';
 
@@ -71,9 +72,9 @@ async function noAxeViolations(page: Page, selector: string) {
 }
 
 async function openChatsSettings(page: Page) {
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Chats & autonomy' })
     .click();
   const group = page

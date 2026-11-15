@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { expect, type Browser, type Locator, type Page } from '@playwright/test';
 import { APP_ORIGIN } from './stub-config.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 
@@ -52,9 +53,13 @@ export const navButton = (page: Page, name: string) =>
   mainNav(page).getByRole('button', { name: new RegExp(`^${name}`) });
 
 export async function openSettings(page: Page, phone: boolean): Promise<Locator> {
-  if (phone) await navButton(page, 'More').click();
-  await navButton(page, 'Settings').click();
-  const dialog = page.getByRole('dialog', { name: 'Profile & personality' });
+  if (phone) {
+    await navButton(page, 'More').click();
+    await navButton(page, 'Settings').click();
+  } else {
+    await clickSettings(page);
+  }
+  const dialog = page.getByRole('dialog', { name: 'General' });
   await expect(dialog).toBeVisible();
   return dialog;
 }

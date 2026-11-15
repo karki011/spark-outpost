@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { openBrowserView, pushView, viewCommands } from './browser-view-support.ts';
 import { resetTestDatabase } from './database.ts';
 import { animationsSettled } from './settle.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude'] });
@@ -156,7 +157,7 @@ test('the command bar passes an accessibility check', async ({ page }) => {
 
 test('Settings clears history by range and profile', async ({ page }) => {
   await openWithPages(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Browser pane' }).click();
   const history = page
     .getByRole('dialog', { name: 'Browser pane' })
@@ -196,7 +197,7 @@ test('a typed search goes to DuckDuckGo only from its row, and Settings changes 
       command: { command: 'new_tab', url: 'https://duckduckgo.com/?q=rust%20lifetimes' },
     });
 
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Browser pane' }).click();
   const engine = page
     .getByRole('dialog', { name: 'Browser pane' })

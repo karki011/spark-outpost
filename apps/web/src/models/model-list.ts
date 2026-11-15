@@ -8,6 +8,19 @@ import { formatPrice, formatTokenCount, statLines } from './model-card-stats.ts'
 
 export const ALL_PROVIDERS = 'all';
 
+export const UNCARDED_SHOWN = 5;
+const UNCARDED_NAMED = 3;
+
+export function uncardedNote(labels: readonly string[]): string {
+  const subject = labels.length > UNCARDED_NAMED ? `${labels.length} models` : labels.join(', ');
+  return `No card for ${subject}: Jev sees the agent’s own description, and the tier comes from the model’s name.`;
+}
+
+export function shownUncarded<T>(models: readonly T[], expanded: boolean): T[] {
+  if (expanded || models.length <= UNCARDED_SHOWN + 1) return [...models];
+  return models.slice(0, UNCARDED_SHOWN);
+}
+
 const PROVIDER_KEY = 'spark-outpost.models.provider';
 
 export function readSavedProvider(): string {

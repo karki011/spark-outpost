@@ -90,14 +90,14 @@ The rule for every new feature: anything that stores data, opens a port, names a
 
 ## Decide when we package
 
-| Decision                                                     | Recommendation                                                                                                                                                              |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Agent adapters (`claude-agent-acp`, our patched `codex-acp`) | Bundle pinned adapter versions, so the Codex patch always ships, but not the `claude` and `codex` CLIs: users install those, and the adapters run the user's CLI and login. |
-| Platforms                                                    | macOS first, Intel and Apple Silicon builds. Windows and Linux later.                                                                                                       |
-| Signing and updates                                          | Apple Developer ID with notarization; `electron-updater`.                                                                                                                   |
-| Postgres major upgrades                                      | A `pg_upgrade` step before the bundled major version ever changes.                                                                                                          |
-| Crash reports and telemetry                                  | No crash reports. One anonymous daily install heartbeat (install ID, version, OS, country), on by default with a switch in Settings → Help; see `infra/heartbeat-worker`.   |
-| Shell details                                                | One running copy at a time, keeps running in the Dock when the window closes, an optional menu bar item, links that open a chat.                                            |
+| Decision                                                     | Recommendation                                                                                                                                                                    |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Agent adapters (`claude-agent-acp`, our patched `codex-acp`) | Bundle pinned adapter versions, so the Codex patch always ships, but not the `claude` and `codex` CLIs: users install those, and the adapters run the user's CLI and login.       |
+| Platforms                                                    | macOS first, Intel and Apple Silicon builds. Windows and Linux later.                                                                                                             |
+| Signing and updates                                          | Apple Developer ID with notarization; `electron-updater`.                                                                                                                         |
+| Postgres major upgrades                                      | A `pg_upgrade` step before the bundled major version ever changes.                                                                                                                |
+| Crash reports and telemetry                                  | No crash reports. One anonymous daily install heartbeat (install ID, version, OS, country), on by default with a switch in Settings → About → Help; see `infra/heartbeat-worker`. |
+| Shell details                                                | One running copy at a time, keeps running in the Dock when the window closes, an optional menu bar item, links that open a chat.                                                  |
 
 ## Order
 

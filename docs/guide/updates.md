@@ -15,13 +15,13 @@ The Mac app checks at start and every hour, never installing while agents work.
 1. Select the gray **Update** blob above **Settings**; it fills while downloading.
 2. Select **Restart** when the blob shows it.
 
-![The Update blob above Settings in the rail](images/updates-rail-blob-light.png)
+![The Update blob above More in the rail](images/updates-rail-blob-light.png)
 
 A ready update installs when you next quit. While a chat runs or waits, the blob says **Waiting**; a failed restart returns it to **Restart**, saying why.
 
 ## Stable or Beta
 
-1. Open **Settings → Updates**.
+1. Open **Settings → About → Updates**.
 2. Under **Channel**, pick **Stable** (default) or **Beta** (features earlier, rougher).
 
 ![Settings, Updates: Version, Update ready, Channel, Download updates automatically and Check for updates](images/updates-section-light.png)
@@ -30,7 +30,7 @@ Spark never downgrades: moving to Stable keeps your version until Stable catches
 
 ## Download updates automatically
 
-1. In **Settings → Updates**, **Download updates automatically** is on by default.
+1. In **Settings → About → Updates**, **Download updates automatically** is on by default.
 2. Turned off, it downloads only when you select **Update** or **Get the update**.
 3. **Check now** looks for one.
 
@@ -44,7 +44,7 @@ On failure, Spark restores your data, skips that version and shows **Open previo
 
 ## Preview the update flow
 
-1. In the dev app, select **Preview the update flow** in **Settings → Updates**, or run `SPARK_UPDATE_PREVIEW=flow pnpm desktop:dev`.
+1. In the dev app, select **Preview the update flow** in **Settings → About → Updates**, or run `SPARK_UPDATE_PREVIEW=flow pnpm desktop:dev`.
 
 It fakes an update; your version and data stay.
 

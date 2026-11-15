@@ -16,6 +16,7 @@ import { seedChats } from './sidebar-seed.ts';
 import { apiNow, matchApiClock } from './api-clock.ts';
 import { calendarCard, chooseCalendars } from './calendar-card.ts';
 import { FAKE_CALENDAR_STATE } from './stub-config.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.skip(process.env.SPARK_FAKE_CALENDAR !== '1', 'needs SPARK_FAKE_CALENDAR=1');
 test.describe.configure({ mode: 'serial' });
@@ -329,14 +330,14 @@ test('shows the meeting lead, After the meeting and free time with a meeting cou
 test('lists the calendar rows in Notifications and in Settings search', async ({ page }) => {
   await connect(page);
   await page.goto('/');
-  await rail(page).getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   const search = page.getByRole('combobox', { name: 'Search settings' });
   await search.fill('hold chimes');
   await expect(
     page.getByRole('listbox', { name: 'Matching settings' }).getByRole('option', {
       name: /^Hold chimes during/,
     }),
-  ).toContainText('Mac · Notifications');
+  ).toContainText('General · Notifications');
   await search.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Notifications' });
   await expect(dialog.getByRole('radiogroup', { name: 'Hold chimes during' })).toBeVisible();

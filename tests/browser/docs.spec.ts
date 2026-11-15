@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { clickSettings, openRailMenu } from './rail-menu.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
@@ -14,10 +15,8 @@ const typeBadge = (page: Page) => article(page).locator('.docs-crumb .docs-type'
 
 async function openDocs(page: Page) {
   await page.goto('/');
-  const more = rail(page).getByRole('button', { name: /^More/ });
   await expect(rail(page).getByRole('button', { name: 'Home' })).toBeVisible();
-  if (await more.isVisible()) await more.click();
-  await rail(page).getByRole('button', { name: 'Docs' }).click();
+  await openRailMenu(page, 'Docs');
   await expect(pageTitle(page)).toHaveText('What do you want to do?');
 }
 
@@ -27,9 +26,8 @@ test('Docs opens on a short list of tasks, and a task opens its how-to with a de
   await page.addInitScript(() => localStorage.setItem('spark-outpost.theme', 'system'));
   await page.emulateMedia({ colorScheme: 'light' });
   await openDocs(page);
-  await expect(rail(page).getByRole('button', { name: 'Docs' })).toHaveAttribute(
-    'aria-current',
-    'page',
+  await expect(rail(page).getByRole('button', { name: /^More/ })).toHaveAccessibleName(
+    'More, showing Docs',
   );
   await expect(typeBadge(page)).toHaveText('Get started');
   await expect(
@@ -162,15 +160,18 @@ test('Search finds a task, shows the page type and opens the matching section', 
 
 test('a Settings info link opens the guide at the page for that setting', async ({ page }) => {
   await page.goto('/');
-  await rail(page).getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Chats & autonomy' })
     .click();
   const settings = page.getByRole('dialog', { name: 'Chats & autonomy' });
-  await settings
-    .getByRole('link', { name: 'Read about How much Spark does alone in Docs' })
-    .click();
+  const more = settings.getByRole('button', { name: 'More about How much Spark does alone' });
+  const link = settings.getByRole('link', { name: 'Read about How much Spark does alone in Docs' });
+  await expect(link).toBeHidden();
+  await more.click();
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  await link.click();
   await expect(settings).toBeHidden();
   await expect(pageTitle(page)).toHaveText('Choose how much Spark does alone');
   await expect(pageTitle(page)).toBeInViewport();

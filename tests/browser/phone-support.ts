@@ -9,6 +9,7 @@ import {
 import { matchApiClock } from './api-clock.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { API_PORT, FAKE_TAILSCALE_STATE } from './stub-config.ts';
+import { openRailMenu } from './rail-menu.ts';
 
 export const PHONE_ADDRESS = `https://${FAKE_TAILSCALE_HOST}`;
 export const PHONE_PAGE = 'http://phone.test';
@@ -118,10 +119,7 @@ export async function denyWaitingPhones(page: Page): Promise<void> {
 export async function openPhone(page: Page) {
   await matchApiClock(page);
   await page.goto('/');
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: 'Remote control' })
-    .click();
+  await openRailMenu(page, 'Remote control');
   await expect(page.getByRole('heading', { name: 'Remote control', level: 1 })).toBeVisible();
   return page.getByRole('main');
 }

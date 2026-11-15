@@ -4,7 +4,7 @@
 
 Model cards hold vendor facts and our own benchmark numbers per model. See [JEV.md](JEV.md) for Jev's questions and [HARNESS_PLAN.md](HARNESS_PLAN.md) for the routing rules that use tiers.
 
-> **Round 10 (September 27, 2026): routing is rules-only.** A pinned model always runs; on Auto the rules pick the chat's model, the middle tier for a trivial edit and the top tier for destructive or complex work, and the harness never picks the fast tier or a retiring model ([ROUTING_PLAN.md §4](ROUTING_PLAN.md#4-policy-that-stays-in-code)). Jev answers one observed `tier` question (small, mid or top of the chat's provider, with the card lines below as option text) and its pick is recorded as "Jev would have used …" for the Harness tab's rule-vs-Jev comparison, never applied. The provider, per-provider model and effort questions, the routing gates and the frontier gate are gone, and so is the "Allow frontier models" switch (`profiles.allow_frontier`, dropped by `0039_lean_harness.sql`): pinning a frontier model still works. Cards still supply prices, tiers, the effective default model, Settings → Models and the tier question's text. Since September 30 the Builder's route score also reads each card's tier (expected quality), its input, cache-read, cache-write and output prices (the task's cost and the cost of leaving a warm session) and the measured Builder rows ([ROUTING_PLAN.md §12](ROUTING_PLAN.md#12-cache-aware-routing-and-the-route-score-september-30-2026-policy-route-score-1-cache-aware)). The sections below describe the cards as they work today.
+> **Round 10 (September 27, 2026): routing is rules-only.** A pinned model always runs; on Auto the rules pick the chat's model, the middle tier for a trivial edit and the top tier for destructive or complex work, and the harness never picks the fast tier or a retiring model ([ROUTING_PLAN.md §4](ROUTING_PLAN.md#4-policy-that-stays-in-code)). Jev answers one observed `tier` question (small, mid or top of the chat's provider, with the card lines below as option text) and its pick is recorded as "Jev would have used …" for the Harness tab's rule-vs-Jev comparison, never applied. The provider, per-provider model and effort questions, the routing gates and the frontier gate are gone, and so is the "Allow frontier models" switch (`profiles.allow_frontier`, dropped by `0039_lean_harness.sql`): pinning a frontier model still works. Cards still supply prices, tiers, the effective default model, Settings → AI providers → Models and the tier question's text. Since September 30 the Builder's route score also reads each card's tier (expected quality), its input, cache-read, cache-write and output prices (the task's cost and the cost of leaving a warm session) and the measured Builder rows ([ROUTING_PLAN.md §12](ROUTING_PLAN.md#12-cache-aware-routing-and-the-route-score-september-30-2026-policy-route-score-1-cache-aware)). The sections below describe the cards as they work today.
 
 ## Why
 
@@ -31,7 +31,7 @@ Files:
 
 ### Vendor facts (checked September 26, 2026)
 
-Prices are USD per million tokens (input / cached input / output). "Ids we see" are the values the ACP adapters offer (from `provider_capabilities`, captured September 26). The cards name the GPT-6 family "GPT-6 Luna", "GPT-6 Sol" and "GPT-6 Astra" so it reads as a family next to GPT-5.6 in Settings → Models; the Codex agent offers them as "6 Luna", "6 Sol" and "6 Astra", which the cards still match.
+Prices are USD per million tokens (input / cached input / output). "Ids we see" are the values the ACP adapters offer (from `provider_capabilities`, captured September 26). The cards name the GPT-6 family "GPT-6 Luna", "GPT-6 Sol" and "GPT-6 Astra" so it reads as a family next to GPT-5.6 in Settings → AI providers → Models; the Codex agent offers them as "6 Luna", "6 Sol" and "6 Astra", which the cards still match.
 
 | Model         | Ids we see                    | Tier     | Price              | Context / max output | Speed (vendor)             | Reasoning                                       | Knowledge |
 | ------------- | ----------------------------- | -------- | ------------------ | -------------------- | -------------------------- | ----------------------------------------------- | --------- |
@@ -184,7 +184,7 @@ Rules for the measured piece:
 Where the text goes:
 
 - **Intake** (`advisor/intake-questions.ts`, `tierQuestion`): each option of the observed `tier` question (small, mid, top of the chat's provider) carries the model's card line (`modelOptionText`). The adapter's `label: description` is used only when there is no card.
-- **Settings → Models:** the "What Jev reads" disclosure shows the same line (`model-cards/view.ts`).
+- **Settings → AI providers → Models:** the "What Jev reads" disclosure shows the same line (`model-cards/view.ts`).
 
 Pinning and privacy:
 
@@ -223,7 +223,7 @@ The lookup:
 
 - **Lookup.** `modelTier(model)` looks the card up (`match.ids` first, then an exact `match.labels` hit) and returns small 0, mid 1, top 2, frontier 3.
 - **Label mismatch.** An id match whose live label differs from every card label (say `sonnet` becomes "Sonnet 5.5") counts as **no card**.
-- **Fallback.** With no card, the old regex is the fallback, so unknown or renamed models keep today's behaviour. `tierInfo` reports which one decided (`'card' | 'pattern' | 'none'`), and Settings → Models lists models with no card. The regex never returns frontier.
+- **Fallback.** With no card, the old regex is the fallback, so unknown or renamed models keep today's behaviour. `tierInfo` reports which one decided (`'card' | 'pattern' | 'none'`), and Settings → AI providers → Models lists models with no card. The regex never returns frontier.
 - **Frontier stays off the automatic ladder.** `tierLadder`, `topTier`, `middleTier` and `oneTierUp` use small, mid and top only. So neither escalation nor a rule ever moves to a frontier price.
 - **`notPricier`.** It uses card tiers first, then compares card prices when tiers are equal (so `gpt-5.6-sol` is pricier than `gpt-6-sol`).
 - **Several models in one tier.** When a provider offers more than one card in a tier, the ladder takes the first in the card file's order (newest generation first).
@@ -261,7 +261,7 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
   - `bench:harness` calls it at the end unless `--no-ingest` is passed.
   - The seed file is regenerated from all ingested rounds with `pnpm bench:ingest --write-seed`.
 
-### Settings → Models
+### Settings → AI providers → Models
 
 - **Where.** A "Models" section in `SettingsDialog` (a tab next to Usage), read from `GET /api/model-cards`: the cards for connected providers, their stats and staleness.
 - **Per provider:**
@@ -284,8 +284,8 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
   - After 60 days Settings shows "Checked N days ago", and the card stays in use.
   - After 120 days the price and blurb are dropped from Jev's line (label, tier and speed stay), because an old price is worse than none.
   - `pnpm model-cards:check` (`scripts/model-cards-check.ts`, logic in `model-cards/check.ts`) runs inside `pnpm check` against today's date. It prints a WARN for every provider or model card whose oldest source is over 60 days old and still exits 0; over 120 days it FAILs. There is no automatic network refresh, because vendor pages are HTML and change shape.
-- **Retirement.** A card is retiring from 30 days before its `retiresNotBefore` (`cardRetiring`). From then the harness never picks it for any role, provider and chat defaults skip it, Settings → Models tags it "Retiring <date> · not used by the harness", and Jev's line adds "retiring". A user can still pick it for a chat, with a "retiring on <date>" note on the route. Haiku 4.5 (October 15, 2026) and GPT-5.5 (October 14, 2026) are retiring as of September 28, 2026.
-- **Retired.** A card is retired from the day after its `retiresNotBefore`, or whenever it has `"retired": true` (`cardRetired`, `retirementState` in contracts). A retired card is still counted as retiring, so the harness never picks it. The wording changes everywhere: Settings → Models and the chat model picker say "Retired <date>", the details say "Retired <date>", route and floor notes say "retired on <date>", and Jev's line drops the blurb and ends in "retired".
+- **Retirement.** A card is retiring from 30 days before its `retiresNotBefore` (`cardRetiring`). From then the harness never picks it for any role, provider and chat defaults skip it, Settings → AI providers → Models tags it "Retiring <date> · not used by the harness", and Jev's line adds "retiring". A user can still pick it for a chat, with a "retiring on <date>" note on the route. Haiku 4.5 (October 15, 2026) and GPT-5.5 (October 14, 2026) are retiring as of September 28, 2026.
+- **Retired.** A card is retired from the day after its `retiresNotBefore`, or whenever it has `"retired": true` (`cardRetired`, `retirementState` in contracts). A retired card is still counted as retiring, so the harness never picks it. The wording changes everywhere: Settings → AI providers → Models and the chat model picker say "Retired <date>", the details say "Retired <date>", route and floor notes say "retired on <date>", and Jev's line drops the blurb and ends in "retired".
 - **The check reminds, the date decides.** Retirement needs no edit to take effect: from the day after `retiresNotBefore`, `retirementState` returns `retired` everywhere (floor, defaults, picker, Jev), so nothing waits on the card being marked. `pnpm model-cards:check` prints a WARN (not a FAIL, since September 30, 2026) for any card whose `retiresNotBefore` has passed while it has no `"retired": true`: from October 15, 2026 for GPT-5.5 and from October 16, 2026 for Haiku 4.5. When convenient, set `"retired": true`, rewrite its blurb, strengths and weak spots in the past tense, re-check `checkedAt`, and update the browser specs that freeze the clock at September 29 and expect "Retiring Oct 15" (`models.spec.ts`, `permission-modes.spec.ts`), because `"retired": true` wins over their frozen clock.
 - **Label drift.** A capability snapshot label that matches no card label means the card is not applied (tier falls back to the pattern), and Settings shows "No card for Sonnet 5.5" under the provider's table, where the model is a row marked "No details yet" in a "No card yet" group. This covers aliases such as `sonnet` and `opus[1m]` moving to a new model.
 - **Aliases name no generation (October 11, 2026).** No card lists an alias (`sonnet`, `opus`, `haiku`, `default`, with or without `[1m]`) in `match.ids`: an alias reaches a card only through the label the adapter lists it under. A chat pinned to an alias sends the alias to the adapter as typed, and the adapter resolves it; Spark sets no `ANTHROPIC_DEFAULT_*_MODEL` for Claude, so it no longer forces the 1M window on an alias (the "is using a 200K context window" note still says when an account runs short). When the session reports an alias as its model, the id in the usage update is recorded as the model that ran, and a note is added only when that id is outside the alias's family (the cards whose id carries the alias as a word). A pin the adapter no longer lists is sent to Claude as typed; for an agent that resolves no names the turn runs on the default with the model-switch note. Runs carry `usedModel`, and the composer, the rail and Agent TV name that model. Benchmark rows recorded under an alias are skipped on ingest; rows already in `measured-seed.json` keep the card id they were ingested with.
@@ -301,7 +301,7 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
 - `apps/server/src/model-cards/`: `cards.ts` (loading, provider-scoped matching, retirement, `effectiveDefaultModel`), `card-text.ts` (Jev's lines, stat selection, staleness), `ingest.ts` (bench rounds and the seed), `check.ts` (`pnpm model-cards:check`), `view.ts` and `why.ts`.
 - `orchestration/tiers.ts`: `modelTier`, `tierLadder`, `topTier`, `middleTier` and `oneTierUp` take the provider and use the card, with the regex as the fallback; `tierInfo` reports the source.
 - `persistence/model-stats.ts`, `api/model-card-routes.ts`, migration `0030_model_stats.sql`.
-- Web: `apps/web/src/models/` (Settings → Models).
+- Web: `apps/web/src/models/` (Settings → AI providers → Models).
 
 ## Open questions
 

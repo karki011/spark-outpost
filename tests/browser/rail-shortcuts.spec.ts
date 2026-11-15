@@ -55,17 +55,16 @@ test('works from the composer without typing into it', async ({ page }) => {
   await expect(current(page)).toContainText('Tickets');
 });
 
-test('the last digit reaches the last item and a digit past it does nothing', async ({ page }) => {
+test('the digits after the left bar items reach the places in More', async ({ page }) => {
   await page.goto('/');
   await positionOf(page, 'Home');
   const labels = await rail(page).locator('.rail-btn[data-view]').allInnerTexts();
-  expect(labels.length).toBeLessThanOrEqual(9);
-  await page.keyboard.press('Control+Alt+Digit2');
-  const before = await current(page).innerText();
-  if (labels.length < 9) {
-    await page.keyboard.press(`Control+Alt+Digit${labels.length + 1}`);
-    await expect(current(page)).toHaveText(before);
-  }
+  expect(labels.length + 3).toBeLessThanOrEqual(9);
   await page.keyboard.press(`Control+Alt+Digit${labels.length}`);
   await expect(current(page)).toHaveText(labels.at(-1)!);
+  const more = rail(page).getByRole('button', { name: /^More/ });
+  await page.keyboard.press(`Control+Alt+Digit${labels.length + 1}`);
+  await expect(more).toHaveAccessibleName('More, showing Analytics');
+  await page.keyboard.press(`Control+Alt+Digit${labels.length + 2}`);
+  await expect(more).toHaveAccessibleName('More, showing Docs');
 });

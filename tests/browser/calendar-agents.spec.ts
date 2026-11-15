@@ -12,6 +12,7 @@ import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { FAKE_CALENDAR_STATE } from './stub-config.ts';
 import { calendarCard, editCalendars } from './calendar-card.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.skip(process.env.SPARK_FAKE_CALENDAR !== '1', 'needs SPARK_FAKE_CALENDAR=1');
 test.describe.configure({ mode: 'serial' });
@@ -28,7 +29,7 @@ async function status(page: Page) {
 
 async function openCard(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Connectors' }).click();
   const head = card(page).locator('button.pc-head');
   if ((await head.getAttribute('aria-expanded')) !== 'true') await head.click();

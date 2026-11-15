@@ -8,6 +8,7 @@ import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { headerPaneItem, openChatMenu } from './header-menu.ts';
 import { API_PORT, PACKAGED } from './stub-config.ts';
+import { clickSettings, openRailMenu } from './rail-menu.ts';
 
 declare global {
   interface Window {
@@ -19,8 +20,6 @@ test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude'] });
 });
 
-const rail = (page: Page) => page.getByRole('navigation', { name: 'Main' });
-
 async function collectViolations(page: Page) {
   await page.addInitScript(() => {
     window.cspViolations = [];
@@ -31,12 +30,6 @@ async function collectViolations(page: Page) {
 }
 
 const violations = (page: Page) => page.evaluate(() => window.cspViolations ?? []);
-
-async function openRailItem(page: Page, name: string) {
-  const more = rail(page).getByRole('button', { name: /^More/ });
-  if (await more.isVisible()) await more.click();
-  await rail(page).getByRole('button', { name, exact: true }).click();
-}
 
 test('the app runs under its content security policy with no violations @packaged', async ({
   page,
@@ -65,16 +58,16 @@ test('the app runs under its content security policy with no violations @package
   const dock = page.getByRole('region', { name: 'Terminal' });
   await expect(dock.locator('.xterm')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Settings' }).click();
-  const settings = page.getByRole('dialog', { name: 'Profile & personality' });
+  await clickSettings(page);
+  const settings = page.getByRole('dialog', { name: 'General' });
   await expect(settings).toBeVisible();
-  await settings.getByRole('tab', { name: 'Appearance' }).click();
-  await expect(page.getByRole('dialog', { name: 'Appearance' })).toBeVisible();
+  await settings.getByRole('tab', { name: 'General' }).click();
+  await expect(page.getByRole('dialog', { name: 'General' })).toBeVisible();
   await page.getByRole('button', { name: 'Close settings' }).click();
 
-  await openRailItem(page, 'Docs');
+  await openRailMenu(page, 'Docs');
   await expect(page.getByRole('main', { name: 'Docs' })).toBeVisible();
-  await openRailItem(page, 'Analytics');
+  await openRailMenu(page, 'Analytics');
   await expect(page.getByRole('heading', { name: 'Analytics', level: 1 })).toBeVisible();
   expect(await violations(page)).toEqual([]);
 

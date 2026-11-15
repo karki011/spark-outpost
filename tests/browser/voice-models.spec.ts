@@ -2,10 +2,11 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { emitVoice, installFakeVoice, press, voiceCalls } from './fake-voice.ts';
 import { continueButton, dialog, fakeFullDiskAccess } from './onboarding-flow.ts';
+import { clickSettings } from './rail-menu.ts';
 
 async function openVoiceSettings(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Voice' }).click();
   return page.getByRole('dialog', { name: 'Voice' }).getByRole('region', { name: 'Speech model' });
 }
@@ -59,7 +60,7 @@ test('Settings: the Voice shortcut is recorded from the keys pressed and can be 
   await resetTestDatabase({ onboarded: true });
   await installFakeVoice(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Voice' }).click();
   const card = page.getByRole('dialog', { name: 'Voice' }).getByRole('region', {
     name: 'Voice shortcut',

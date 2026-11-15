@@ -19,6 +19,7 @@ import {
   send,
   turnDone,
 } from './project-chat-kit.ts';
+import { clickSettings } from './rail-menu.ts';
 
 let repo: ChatRepo;
 
@@ -286,9 +287,9 @@ test('retiring models stay hidden until you ask for them', async ({ page }) => {
 
 test('Settings sets the default mode and autonomy that new chats start with', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });

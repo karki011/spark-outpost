@@ -9,6 +9,7 @@ import {
   send,
   turnDone,
 } from './project-chat-kit.ts';
+import { clickSettings } from './rail-menu.ts';
 
 let repo: ChatRepo;
 
@@ -22,9 +23,9 @@ test.afterEach(() => repo.remove());
 
 async function chooseClaudeDefault(page: Page): Promise<void> {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });

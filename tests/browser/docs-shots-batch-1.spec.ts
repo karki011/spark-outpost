@@ -13,6 +13,7 @@ import { seedPrFollowUp } from './pr-follow-up-seed.ts';
 import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
 import { seedFlowChats } from './ticket-flow-seed.ts';
 import { connectTickets, openTickets, resetTicketFakes } from './ticket-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const PLAN_APPROVAL = {
   kind: 'other',
@@ -41,8 +42,8 @@ test.afterEach(() => {
 
 async function openSettings(page: Page, tab?: RegExp) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.getByRole('dialog', { name: 'Profile & personality' })).toBeVisible();
+  await clickSettings(page);
+  await expect(page.getByRole('dialog', { name: 'General' })).toBeVisible();
   if (tab) await page.getByRole('tab', { name: tab }).click();
 }
 
@@ -76,8 +77,10 @@ test('Providers, models and Jev screenshots', async ({ page }) => {
   await expect(advisor).toContainText('Sends');
   await shoot(page, IMAGES, 'jev-advisor', advisor);
 
-  await page.getByRole('tab', { name: /^Models/ }).click();
-  const models = page.getByRole('dialog', { name: 'Models' });
+  await page.getByRole('tab', { name: 'AI providers' }).click();
+
+  await page.getByRole('radio', { name: 'Models' }).click();
+  const models = page.getByRole('dialog', { name: 'AI providers' });
   await expect(models.locator('.mc-provider').first()).toBeVisible();
   await shoot(page, IMAGES, 'providers-model-cards');
   await page.keyboard.press('Escape');

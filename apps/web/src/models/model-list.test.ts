@@ -19,6 +19,9 @@ import {
   retirementTag,
   roleLine,
   shownProvider,
+  shownUncarded,
+  uncardedNote,
+  UNCARDED_SHOWN,
   staleNote,
   usedBySpark,
   writeSavedProvider,
@@ -302,5 +305,21 @@ describe('model list', () => {
     });
     expect(readSavedProvider()).toBe(ALL_PROVIDERS);
     expect(() => writeSavedProvider('claude')).not.toThrow();
+  });
+});
+
+describe('models without a card', () => {
+  const labels = (count: number) => Array.from({ length: count }, (_, index) => `M${index + 1}`);
+
+  it('names up to three models and counts the rest', () => {
+    expect(uncardedNote(['GPT-7 Nova'])).toMatch(/^No card for GPT-7 Nova: Jev sees/);
+    expect(uncardedNote(labels(3))).toMatch(/^No card for M1, M2, M3:/);
+    expect(uncardedNote(labels(24))).toMatch(/^No card for 24 models:/);
+  });
+
+  it('shows the first few until expanded, and never hides a single row', () => {
+    expect(shownUncarded(labels(UNCARDED_SHOWN + 1), false)).toHaveLength(UNCARDED_SHOWN + 1);
+    expect(shownUncarded(labels(24), false)).toEqual(labels(UNCARDED_SHOWN));
+    expect(shownUncarded(labels(24), true)).toHaveLength(24);
   });
 });

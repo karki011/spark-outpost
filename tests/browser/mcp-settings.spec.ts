@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const ECHO = path.resolve('apps/server/test/echo-mcp-server.mjs');
 const TOKEN = 'echo-secret-value';
@@ -28,13 +29,14 @@ async function addEcho(page: Page) {
 
 async function openMcpSettings(page: Page) {
   await openChats(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
-    .getByRole('tab', { name: 'MCP servers' })
+    .getByRole('dialog', { name: 'General' })
+    .getByRole('tab', { name: 'Connectors' })
     .click();
-  const dialog = page.getByRole('dialog', { name: 'MCP servers' });
+  const dialog = page.getByRole('dialog', { name: 'Connectors' });
   await expect(dialog).toBeVisible();
+  await dialog.getByRole('radio', { name: 'MCP servers' }).click();
   return dialog;
 }
 
@@ -186,5 +188,5 @@ test('/mcp lists the chat’s servers, switches one for this chat and links to S
     .getByRole('dialog', { name: 'MCP servers in this chat' })
     .getByRole('button', { name: 'Manage in Settings' })
     .click();
-  await expect(page.getByRole('dialog', { name: 'MCP servers' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Connectors' })).toBeVisible();
 });

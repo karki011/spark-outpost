@@ -1,5 +1,5 @@
 import './spark-rules.css';
-import type { SetSparkRuleRequest, SparkRules } from '@spark-outpost/contracts';
+import type { SetSparkRuleRequest, SparkRuleChoice, SparkRules } from '@spark-outpost/contracts';
 import { sparkRulesApi } from '../../api/spark-rules.ts';
 import { useRemoteClient } from '../../phone/use-remote-client.ts';
 import { LockIcon } from '../../ui/icons.tsx';
@@ -50,6 +50,22 @@ function RuleGroups({ rules, editable }: { rules: SparkRules; editable: boolean 
   );
 }
 
+const SUMMARY: readonly [SparkRuleChoice, string][] = [
+  ['deny', 'refused'],
+  ['ask', 'ask first'],
+  ['allow', 'allowed'],
+  ['mode', 'follow the agent’s mode'],
+];
+
+function rulesSummary(rows: SparkRules['rows']): string {
+  return SUMMARY.map(([choice, words]) => {
+    const count = rows.filter((row) => row.choice === choice).length;
+    return count > 0 ? `${count} ${words}` : null;
+  })
+    .filter(Boolean)
+    .join(' · ');
+}
+
 function RulesPage({ rules }: { rules: SparkRules }) {
   const { remote } = useRemoteClient();
   const editable = !remote && !rules.malformed;
@@ -60,6 +76,9 @@ function RulesPage({ rules }: { rules: SparkRules }) {
       ) : (
         <RulesActions malformed={rules.malformed} />
       )}
+      <p className="rules-summary" role="status">
+        {rulesSummary(rules.rows)}
+      </p>
       {rules.outsideChange && <RulesOutsideNotice change={rules.outsideChange} />}
       <RulesFileProblems rules={rules} />
       <RuleGroups rules={rules} editable={editable} />

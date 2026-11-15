@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test('Spark settings save custom text and a local instruction file @packaged', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
@@ -15,9 +16,9 @@ test('Spark settings save custom text and a local instruction file @packaged', a
     await page.goto('/');
     const settings = page.getByRole('dialog', { name: 'Chats & autonomy' });
     const openChatsSettings = async () => {
-      await page.getByRole('button', { name: 'Settings' }).click();
+      await clickSettings(page);
       await page
-        .getByRole('dialog', { name: 'Profile & personality' })
+        .getByRole('dialog', { name: 'General' })
         .getByRole('tab', { name: 'Chats & autonomy' })
         .click();
     };

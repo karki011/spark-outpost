@@ -73,13 +73,13 @@ test('an agent asks to add an MCP server and the card shows the exact command', 
 
   await card.getByRole('button', { name: 'Add server' }).click();
   const resolved = page.getByRole('group', { name: /Add this MCP server\?/ });
-  await expect(resolved).toContainText('Fill GITHUB_TOKEN in Settings → MCP servers', {
+  await expect(resolved).toContainText('Fill GITHUB_TOKEN in Settings → Connectors', {
     timeout: 30_000,
   });
   if (SHOTS) await resolved.screenshot({ path: `${SHOTS}/spark-sheet-mcp-card-done.png` });
 
   await resolved.getByRole('button', { name: 'Open MCP servers' }).click();
-  const settings = page.getByRole('dialog', { name: 'MCP servers' });
+  const settings = page.getByRole('dialog', { name: 'Connectors' });
   const server = settings.getByRole('region', { name: 'github' });
   await expect(server).toBeVisible();
   await expect(server.getByRole('switch', { name: 'Use github in all chats' })).toHaveAttribute(

@@ -3,6 +3,7 @@ import { chatRepo, type ChatRepo } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { allowEdit, askForEdit, editedChat } from './edited-chat.ts';
 import { openChats } from './navigation.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.use({ trace: 'off' });
 
@@ -49,10 +50,7 @@ test('the changes shortcut opens and closes the drawer and hands focus back @pac
   await expect(drawer).toHaveCount(0);
   await expect(composer).toBeFocused();
 
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: /^Settings/ })
-    .click();
+  await clickSettings(page);
   await expect(page.locator('[aria-modal="true"]')).toBeVisible();
   await page.keyboard.press('ControlOrMeta+D');
   await page.keyboard.press('ControlOrMeta+Shift+D');

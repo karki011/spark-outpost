@@ -84,3 +84,36 @@
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
+.cgrid-paged:has(> li.open) > li:not(.open) {
+  display: none;
+}
+.cx-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  margin: 0 0 10px;
+  padding: 4px 10px 4px 6px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.cx-back:hover {
+  background: var(--accent-soft);
+}
+.cx-back:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.cx-back .chev {
+  transform: rotate(180deg);
+}
+@media (pointer: coarse) {
+  .cx-back {
+    min-height: 44px;
+  }
+}

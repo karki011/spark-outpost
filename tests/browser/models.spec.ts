@@ -8,6 +8,7 @@ import {
   openSettings,
   openTouch,
 } from './responsive-kit.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const BEFORE_HAIKU_RETIRES = new Date('2026-09-29T12:00:00Z');
 
@@ -17,12 +18,13 @@ test.beforeEach(async () => {
 
 async function openModels(page: Page) {
   await openChats(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
-    .getByRole('tab', { name: 'Models' })
+    .getByRole('dialog', { name: 'General' })
+    .getByRole('tab', { name: 'AI providers' })
     .click();
-  const dialog = page.getByRole('dialog', { name: 'Models' });
+  await page.getByRole('radio', { name: 'Models' }).click();
+  const dialog = page.getByRole('dialog', { name: 'AI providers' });
   await expect(dialog).toBeVisible();
   return dialog;
 }
@@ -232,8 +234,9 @@ test('a model the agent offers without a card is a row marked No details yet', a
 test('at 375px the table scrolls inside its own box and the page does not', async ({ browser }) => {
   const page = await openTouch(browser, { width: 375, height: 812 }, 'chats');
   const settings = await openSettings(page, true);
-  await settings.getByRole('tab', { name: 'Models' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Models' });
+  await settings.getByRole('tab', { name: 'AI providers' }).click();
+  await page.getByRole('radio', { name: 'Models' }).click();
+  const dialog = page.getByRole('dialog', { name: 'AI providers' });
   const claude = dialog.getByRole('region', { name: 'Claude' });
   const scroller = claude.locator('.dt-scroll');
   await expect(claude.getByRole('table', { name: /^Claude models/ })).toBeVisible();
@@ -299,7 +302,7 @@ test('there is no frontier switch, and the Jev screen has no switch to check cha
   const dialog = await openModels(page);
   await expect(dialog.getByRole('switch', { name: /Allow frontier models/ })).toHaveCount(0);
 
-  await dialog.getByRole('tab', { name: /AI providers/ }).click();
+  await dialog.getByRole('radio', { name: 'Providers' }).click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
   await providers.locator('.ptile[data-prov="jev"]').click();
   await expect(providers.locator('.pconf[data-prov="jev"]')).toBeVisible();

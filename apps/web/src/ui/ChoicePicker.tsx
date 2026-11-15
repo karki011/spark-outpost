@@ -27,6 +27,7 @@ interface ChoicePickerProps {
   value: string;
   placeholder?: string;
   showNote?: boolean;
+  describedBy?: string;
   actions?: readonly PickerAction[];
   onChange: (id: string) => void;
 }
@@ -41,6 +42,7 @@ export function ChoicePicker({
   value,
   placeholder = 'Choose',
   showNote = true,
+  describedBy,
   actions = [],
   onChange,
 }: ChoicePickerProps) {
@@ -83,6 +85,7 @@ export function ChoicePicker({
         type="button"
         className={`field-button${current?.risky ? ' warn' : ''}`}
         aria-label={label}
+        aria-describedby={describedBy}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={listId}

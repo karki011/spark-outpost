@@ -3,6 +3,7 @@ import { openTestDb, resetTestDatabase } from './database.ts';
 import { emitVoice, installFakeVoice, voiceCalls, voiceRouting } from './fake-voice.ts';
 import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 async function userMessages(): Promise<number> {
   const db = openTestDb();
@@ -96,10 +97,7 @@ test('a press on a screen with no message box goes to the island', async ({ page
   await seedChats([{ title: 'Write the release notes' }]);
   await installFakeVoice(page);
   await openChat(page, 'Write the release notes');
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: /^Settings/ })
-    .click();
+  await clickSettings(page);
   await expect(page.locator('[aria-modal="true"]')).toBeVisible();
 
   await emitVoice(page, { kind: 'press' });

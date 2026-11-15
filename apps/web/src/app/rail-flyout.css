@@ -1,0 +1,83 @@
+.rail-flyout {
+  position: fixed;
+  z-index: 40;
+  width: max-content;
+  min-width: 220px;
+  max-width: calc(100vw - 96px);
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  display: grid;
+  gap: 1px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+  animation: sb-menuin 0.15s var(--out);
+}
+
+.rail-flyout button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.rail-flyout button:hover,
+.rail-flyout button:focus-visible {
+  outline: none;
+  background: var(--raise);
+}
+
+.rail-flyout button:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.rail-flyout button:disabled {
+  opacity: 0.5;
+}
+
+.rail-flyout button svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+
+.rail-flyout button[aria-current='page'] {
+  background: var(--accent-soft);
+  font-weight: 500;
+}
+
+.rail-flyout button[aria-current='page'] svg {
+  color: var(--accent-text);
+}
+
+.rail-flyout-label {
+  flex: 1;
+}
+
+.rail-flyout-keys {
+  padding-left: 16px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.rail-flyout-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail-flyout {
+    animation: none;
+  }
+}

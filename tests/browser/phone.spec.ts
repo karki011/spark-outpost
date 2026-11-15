@@ -94,13 +94,11 @@ async function expectEveryTheme(pages: [Page, string][], name: string) {
   }
 }
 
-test('sits above Settings in the left bar and asks to turn phone access on', async ({ page }) => {
+test('sits in More in the left bar and asks to turn phone access on', async ({ page }) => {
   const main = await openPhone(page);
-  const labels = await page
-    .getByRole('navigation', { name: 'Main' })
-    .locator('.rail-btn')
-    .allTextContents();
-  expect(labels.slice(-2)).toEqual(['Remote', 'Settings']);
+  await expect(
+    page.getByRole('navigation', { name: 'Main' }).locator('.rail-btn').last(),
+  ).toHaveAccessibleName('More, showing Remote control');
   await expect(main.getByRole('heading', { name: 'Remote control is off' })).toBeVisible();
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'setup');
   await expect(main.locator('.ph-scene .scout')).toHaveClass(/sleep/);

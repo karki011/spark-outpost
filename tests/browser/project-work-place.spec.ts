@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
+import { clickSettings } from './rail-menu.ts';
 
 let root = '';
 
@@ -32,9 +33,9 @@ async function savedPlace(): Promise<string | undefined> {
 }
 
 async function openProjects(page: Page, name: string) {
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Projects' })
     .click();
   const row = page

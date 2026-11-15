@@ -8,6 +8,7 @@ import { browseTo } from './add-folder-kit.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { CLONE_TEST_ROOT } from './stub-config.ts';
+import { clickSettings } from './rail-menu.ts';
 
 let base = '';
 
@@ -66,9 +67,9 @@ async function linkCardChat(): Promise<void> {
 
 test('Settings → Projects adds and removes a repos folder', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Projects' })
     .click();
   await expect(page.getByText('None yet. Add the folder where you keep your repos.')).toBeVisible();

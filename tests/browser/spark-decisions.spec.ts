@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
@@ -7,11 +8,8 @@ test.beforeEach(async () => {
 
 async function openSettingsAt(page: Page, section: string) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page
-    .getByRole('dialog', { name: 'Profile & personality' })
-    .getByRole('tab', { name: section })
-    .click();
+  await clickSettings(page);
+  await page.getByRole('dialog', { name: 'General' }).getByRole('tab', { name: section }).click();
   return page.getByRole('dialog', { name: section });
 }
 
@@ -82,7 +80,7 @@ const NEW_DEFAULT_NOTICE =
 
 test('a new install never sees the notice about the new default', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^More/ })).toBeVisible();
   await expect(page.getByText(NEW_DEFAULT_NOTICE)).toHaveCount(0);
 });
 
@@ -103,7 +101,7 @@ test('an updated install is told once about the new default and can dismiss it',
   expect((await savedProfile(page)).defaultLevel).toBe('full-auto');
 
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^More/ })).toBeVisible();
   await expect(page.getByText(NEW_DEFAULT_NOTICE)).toHaveCount(0);
 });
 

@@ -18,7 +18,7 @@ export interface McpConfigFields {
 }
 
 const SECRET_HELP =
-  'Never pass secret values. Give the NAME of an environment variable (env) or header (headers); the user fills its value in Settings → MCP servers.';
+  'Never pass secret values. Give the NAME of an environment variable (env) or header (headers); the user fills its value in Settings → Connectors.';
 const CONTROL_CHARACTER = /\p{Cc}/u;
 const FLAG_WITH_VALUE = /^--?([A-Za-z][\w-]*)=(.+)$/;
 const ASSIGNMENT = /^([A-Za-z_][A-Za-z0-9_]*)=(.+)$/;

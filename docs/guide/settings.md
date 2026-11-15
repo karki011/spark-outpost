@@ -6,27 +6,43 @@ order: 610
 summary: Every Settings section by group, its rows and defaults, and the page that explains each one.
 ---
 
-**Settings** is on the rail; **⌘,** opens its Mac window. **Search settings** opens a section or row.
+**Settings…** is in the left bar's **More**; **⌘,** opens its Mac window. **Search settings** opens a section or row.
 
 ## General
 
-| Section                   | Holds                                                                                                                             | More                                                    |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| **Profile & personality** | **What should Spark call you?** and **Personality** (**Friendly**).                                                               | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
-| **Voice**                 | Mac app: push to talk, **Speech model**, **Shortcut**.                                                                            | [Voice](voice.md)                                       |
-| **Appearance**            | **Automatic**, **Tint** (**Graphite**), **Increase contrast**. Terminals: [SF Mono](https://developer.apple.com/fonts/) or Menlo. | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
+| Section                 | Holds                                                                                                                             | More                                                    |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| **General**: profile    | **What should Spark call you?** and **Personality** (**Friendly**).                                                               | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
+| **Voice**               | Mac app: push to talk, **Speech model**, **Shortcut**.                                                                            | [Voice](voice.md)                                       |
+| **General**: appearance | **Automatic**, **Tint** (**Graphite**), **Increase contrast**. Terminals: [SF Mono](https://developer.apple.com/fonts/) or Menlo. | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
+
+### Notifications
+
+**Notifications**:
+
+| Row                                                                                                                                                           | Default                                                | More                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------- |
+| **Morning brief**                                                                                                                                             | 7:00                                                   | Daily summary on **Home**                               |
+| **Status companion**                                                                                                                                          | **Show**                                               | [Island](desktop-companion.md#inside-the-app)           |
+| Mac app: **Show Spark Island**, **Spark Island size**, **Show in menu bar**                                                                                   | On, **Full**, off                                      | [Island](desktop-companion.md)                          |
+| **Dock badge and notifications**                                                                                                                              | On                                                     | [Island](desktop-companion.md#when-spark-island-is-off) |
+| **Open requests by themselves**, **Island chimes**                                                                                                            | On, off                                                | [Island](desktop-companion.md#answer-a-card)            |
+| **Hide in screen sharing**                                                                                                                                    | On                                                     | [Island](desktop-companion.md#turn-it-on-and-size-it)   |
+| **Quick chat shortcut**, **Inbox shortcut**                                                                                                                   | ⌥Space, ⌥⇧Space                                        | [Shortcuts](companion-quick-chat.md#change-a-shortcut)  |
+| Mac app: **Add today’s calendar to the brief**, **Meetings**, **Meeting alerts**, **Alert at**, **Join opens**                                                | On, 10 min, **Center of the screen**, at start, 10 min | [Calendar](calendar.md)                                 |
+| **Join meetings automatically**, **Take notes when I join a meeting**, **Hold chimes during**, **Calendars that nudge**, **Meeting alerts on paired devices** | Off, off, **Focus blocks**, all, off                   | [Calendar](calendar.md)                                 |
 
 ### Spark assistant
 
-**Spark assistant** sets [Ask Spark](companion-quick-chat.md#ask-spark)'s **Provider**, **Model** (**Fast (recommended)**: Sonnet 5.5), **Effort**, **When Ask Spark acts** (**Manual** or **Act**) and **Key facts**. **View conversation** opens its hidden chat, marking where each **New topic** began.
+**Spark assistant** sets [Ask Spark](companion-quick-chat.md#ask-spark)'s **Provider**, **Model** (**Fast (recommended)**: Sonnet 5.5), **Effort**, **When Ask Spark acts** (**Manual** or **Act**) and **Key facts**. **View conversation** opens its hidden chat.
 
 ## Agents
 
-| Section          | Holds                                                                | More                                                   |
-| ---------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
-| **AI providers** | Claude, Codex, Z.ai, **Custom endpoint**; Jev under **Advisor**.     | [Providers](providers-and-models.md)                   |
-| **Models**       | Open a model for cost and benchmarks.                                | [Models](providers-and-models.md#read-the-model-cards) |
-| **Usage**        | Tokens and cost per reply, by provider; **~** marks Codex estimates. | [Jev](jev.md#what-it-costs)                            |
+| Section                          | Holds                                                                | More                                                   |
+| -------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
+| **AI providers**                 | Claude, Codex, Z.ai, **Custom endpoint**; Jev under **Advisor**.     | [Providers](providers-and-models.md)                   |
+| **AI providers**: **Models** tab | Open a model for cost and benchmarks.                                | [Models](providers-and-models.md#read-the-model-cards) |
+| **Usage**                        | Tokens and cost per reply, by provider; **~** marks Codex estimates. | [Jev](jev.md#what-it-costs)                            |
 
 ## Work
 
@@ -76,34 +92,20 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 
 ## Connections
 
-| Section         | Holds                                                                                                 | More                             |
-| --------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------- |
-| **Connectors**  | GitHub, Atlassian, Linear, [Slack](connect-slack.md), Calendar (**Let agents read my calendar**: on). | [Connect](tickets-and-github.md) |
-| **MCP servers** | Off until on for all chats, a project or one chat.                                                    | [Glossary](glossary.md)          |
-
-## Mac
+| Section                         | Holds                                                                                                 | More                             |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **Connectors**                  | GitHub, Atlassian, Linear, [Slack](connect-slack.md), Calendar (**Let agents read my calendar**: on). | [Connect](tickets-and-github.md) |
+| **Connectors**: **MCP servers** | Off until on for all chats, a project or one chat.                                                    | [Glossary](glossary.md)          |
 
 **Mac control** (Mac app): **Let agents control other Mac apps** and Accessibility permission ([Mac control](mac-control.md)).
 
 **Browser pane** (Mac app): **Open links in**, signed-in sites, **Sign out of everything**, **Search engine**, **Archive tabs not shown for**, **Clear browser history**.
 
-**Notifications**:
+## About
 
-| Row                                                                                                                                                           | Default                                                | More                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------- |
-| **Morning brief**                                                                                                                                             | 7:00                                                   | Daily summary on **Home**                               |
-| **Status companion**                                                                                                                                          | **Show**                                               | [Island](desktop-companion.md#inside-the-app)           |
-| Mac app: **Show Spark Island**, **Spark Island size**, **Show in menu bar**                                                                                   | On, **Full**, off                                      | [Island](desktop-companion.md)                          |
-| **Dock badge and notifications**                                                                                                                              | On                                                     | [Island](desktop-companion.md#when-spark-island-is-off) |
-| **Open requests by themselves**, **Island chimes**                                                                                                            | On, off                                                | [Island](desktop-companion.md#answer-a-card)            |
-| **Hide in screen sharing**                                                                                                                                    | On                                                     | [Island](desktop-companion.md#turn-it-on-and-size-it)   |
-| **Quick chat shortcut**, **Inbox shortcut**                                                                                                                   | ⌥Space, ⌥⇧Space                                        | [Shortcuts](companion-quick-chat.md#change-a-shortcut)  |
-| Mac app: **Add today’s calendar to the brief**, **Meetings**, **Meeting alerts**, **Alert at**, **Join opens**                                                | On, 10 min, **Center of the screen**, at start, 10 min | [Calendar](calendar.md)                                 |
-| **Join meetings automatically**, **Take notes when I join a meeting**, **Hold chimes during**, **Calendars that nudge**, **Meeting alerts on paired devices** | Off, off, **Focus blocks**, all, off                   | [Calendar](calendar.md)                                 |
+**About**:
 
-## App
-
-| Section     | Holds                                                                                                 | More                                           |
+| Part        | Holds                                                                                                 | More                                           |
 | ----------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | **Updates** | Mac app: version, **Channel**, **Download updates automatically**, **Check for updates**.             | [Updates](updates.md)                          |
 | **Help**    | **Export diagnostics**, **Send feedback**. Mac app: **Logs folder**, heartbeat, **Full Disk Access**. | [Mac privacy](mac-privacy.md)                  |

@@ -8,6 +8,7 @@ import { repoWithRemote } from '../../apps/server/test/ship-support.ts';
 import { connectorCard, connectorHead, connectorStatus } from './connector-cards.ts';
 import { resetTestDatabase } from './database.ts';
 import { STUB_PORT } from './stub-config.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
 const SHOTS = process.env.SPARK_GITHUB_APP_SHOTS;
@@ -43,7 +44,7 @@ async function linkProject(page: Page, name: string) {
 }
 
 async function openGitHubCard(page: Page) {
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Connectors' }).click();
   const card = connectorCard(page, 'github');
   await connectorHead(card).click();

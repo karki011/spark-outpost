@@ -10,7 +10,7 @@ You'll change a provider's defaults, reconnect it, read the model cards and conn
 
 ## Change defaults or the default provider
 
-1. Open **Settings → AI providers** and select the provider's tile.
+1. Open **Settings → AI providers** and select the provider's tile. Providers you've set up are listed first.
 2. Under **Defaults for new chats**, change **Model**, **Mode** or **Effort**.
 3. Select **Make default** to start new chats with this provider.
 
@@ -28,16 +28,16 @@ Changes apply to chats that haven't picked their own. **Per chat** effort keeps 
 
 ## Read the model cards
 
-1. Open **Settings → Models** and pick a provider, or **All**.
+1. In Settings, open the **Models** tab and pick a provider, or **All**. In **All**, a provider that isn't connected is folded: select **Show N models**.
 2. Select a model's row for its price, effort levels, **Good at**, **Watch out for** and sources.
 
-![Settings → Models with one row per model](images/providers-model-cards-light.png)
+![The Models tab with one row per model](images/providers-model-cards-light.png)
 
-| Group                         | What it holds                         |
-| ----------------------------- | ------------------------------------- |
-| **Everyday and complex work** | Current mid and top models            |
-| **Other models**              | Small, frontier and retiring models   |
-| **No card yet**               | Models whose tier comes from the name |
+| Group                         | What it holds                                                                       |
+| ----------------------------- | ----------------------------------------------------------------------------------- |
+| **Everyday and complex work** | Current mid and top models                                                          |
+| **Other models**              | Small, frontier and retiring models                                                 |
+| **No card yet**               | Models whose tier comes from the name; past six, the first five and **Show N more** |
 
 ## Connect Jev
 

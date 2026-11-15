@@ -10,8 +10,12 @@ import { CALENDAR_PATH } from '../ui/icons.tsx';
 import { browserViewAvailable } from '../browser-view/view-store.ts';
 import { useSparkPause } from './pause/use-spark-pause.ts';
 import { RailClock } from './RailClock.tsx';
-import { railAriaKeys, railTitle, useRailShortcuts } from './rail-shortcut.ts';
+import { railAriaKeys, railHint, railTitle, useRailShortcuts } from './rail-shortcut.ts';
+import { RailFlyout } from './RailFlyout.tsx';
 import { RailMore } from './RailMore.tsx';
+import { guideLink } from '@spark-outpost/contracts';
+import { requestFeedback } from '../help/feedback-request.ts';
+import { MAC } from '../ui/shortcuts.ts';
 import { UpdateBlob } from './UpdateBlob.tsx';
 import { PlanRing } from './PlanRing.tsx';
 import './rail.css';
@@ -151,8 +155,24 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
 const MAC_ONLY: ReadonlySet<AppView> = new Set(['browser', 'today']);
 const PHONE_MORE: ReadonlySet<AppView> = new Set(['map', 'sparks']);
 const PHONE_VIEWS = VIEWS.filter((item) => !PHONE_MORE.has(item.id) && !MAC_ONLY.has(item.id));
-const REMOTE_VIEWS = VIEWS.filter((item) => !MAC_ONLY.has(item.id));
-const NO_BROWSER_VIEWS = VIEWS.filter((item) => item.id !== 'browser');
+const IN_FLYOUT: ReadonlySet<AppView> = new Set(['analytics', 'docs']);
+const RAIL_VIEWS = VIEWS.filter((item) => !IN_FLYOUT.has(item.id));
+const REMOTE_VIEWS = RAIL_VIEWS.filter((item) => !MAC_ONLY.has(item.id));
+const NO_BROWSER_VIEWS = RAIL_VIEWS.filter((item) => item.id !== 'browser');
+const viewIcon = (id: AppView) => VIEWS.find((item) => item.id === id)!.icon;
+
+const NEWS_ICON = (
+  <svg {...ICON}>
+    <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+  </svg>
+);
+
+const FEEDBACK_ICON = (
+  <svg {...ICON}>
+    <path d="M4 5h16v11H9l-5 4z" />
+    <path d="M8 9h8M8 12h5" />
+  </svg>
+);
 
 const REMOTE_ICON = (
   <svg {...ICON}>
@@ -229,10 +249,11 @@ export function Rail({
     : remote
       ? REMOTE_VIEWS
       : browserViewAvailable()
-        ? VIEWS
+        ? RAIL_VIEWS
         : NO_BROWSER_VIEWS;
   const shownViews: AppView[] = primary.map((item) => item.id);
-  if (!phone) shownViews.push('phone');
+  if (!phone) shownViews.push('analytics', 'docs', 'phone');
+  const keysFor = (id: AppView) => railHint(shownViews.indexOf(id) + 1);
   useRailShortcuts(shownViews, onView);
   const pause = useSparkPause();
   const pauseLabel = pause.paused ? 'Resume Spark' : 'Pause Spark';
@@ -342,42 +363,70 @@ export function Rail({
           <span className="rail-sp" />
           {!remote && <UpdateBlob />}
           <PlanRing />
-          <button
-            type="button"
-            className="rail-btn"
-            aria-label={pauseLabel}
-            title={pause.paused ? 'Resume automatic work' : 'Hold automatic work'}
-            disabled={pause.saving}
-            onClick={togglePause}
-          >
-            {pauseIcon}
-            {pause.paused ? 'Resume' : 'Pause'}
-          </button>
-          <button
-            type="button"
-            className="rail-btn"
-            data-view="phone"
-            aria-label="Remote control"
-            title={railTitle('Remote control', primary.length + 1)}
-            aria-keyshortcuts={railAriaKeys(primary.length + 1)}
-            aria-current={view === 'phone' ? 'page' : undefined}
-            onPointerEnter={() => onIntent('phone')}
-            onFocus={() => onIntent('phone')}
-            onClick={() => onView('phone')}
-          >
-            {REMOTE_ICON}
-            Remote
-          </button>
-          <button
-            type="button"
-            className="rail-btn"
-            onPointerEnter={onSettingsIntent}
-            onFocus={onSettingsIntent}
-            onClick={onSettings}
-          >
-            {SETTINGS_ICON}
-            Settings
-          </button>
+          <RailFlyout
+            dot={pause.paused ? 'Spark is paused' : null}
+            onIntent={onSettingsIntent}
+            groups={[
+              [
+                {
+                  id: 'pause',
+                  label: pauseLabel,
+                  icon: pauseIcon,
+                  disabled: pause.saving,
+                  onSelect: togglePause,
+                },
+              ],
+              [
+                {
+                  id: 'analytics',
+                  label: 'Analytics',
+                  icon: viewIcon('analytics'),
+                  current: view === 'analytics',
+                  shortcut: keysFor('analytics'),
+                  onSelect: () => onView('analytics'),
+                },
+                {
+                  id: 'docs',
+                  label: 'Docs',
+                  icon: viewIcon('docs'),
+                  current: view === 'docs',
+                  shortcut: keysFor('docs'),
+                  onSelect: () => onView('docs'),
+                },
+                {
+                  id: 'phone',
+                  label: 'Remote control',
+                  icon: REMOTE_ICON,
+                  current: view === 'phone',
+                  shortcut: keysFor('phone'),
+                  onSelect: () => onView('phone'),
+                },
+              ],
+              [
+                {
+                  id: 'settings',
+                  label: 'Settings…',
+                  icon: SETTINGS_ICON,
+                  shortcut: MAC ? '⌘,' : undefined,
+                  onSelect: onSettings,
+                },
+                {
+                  id: 'whats-new',
+                  label: 'What’s new',
+                  icon: NEWS_ICON,
+                  onSelect: () => {
+                    window.location.hash = guideLink('whats-new');
+                  },
+                },
+                {
+                  id: 'feedback',
+                  label: 'Send feedback',
+                  icon: FEEDBACK_ICON,
+                  onSelect: requestFeedback,
+                },
+              ],
+            ]}
+          />
           <RailClock
             onOpen={remote ? undefined : () => onView('today')}
             onIntent={() => onIntent('today')}

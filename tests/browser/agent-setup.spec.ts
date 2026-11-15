@@ -6,6 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { FIXTURE_RULE, makeConfiguredRepo } from '../../apps/server/test/repo-config-fixture.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { clickSettings } from './rail-menu.ts';
 
 let base = '';
 let appRoot = '';
@@ -336,9 +337,9 @@ test('Settings, Projects lists trust and can stop trusting a folder', async ({ p
   await expect(card(page, 'Trusted folder')).toBeVisible();
   await page.keyboard.press('Escape');
 
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Projects' })
     .click();
   const projects = page.getByRole('dialog', { name: 'Projects' });

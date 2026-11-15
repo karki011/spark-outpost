@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
+import { openRailMenu } from './rail-menu.ts';
 import { mainNav, navButton, openTouch, PHONE } from './responsive-kit.ts';
 
 test.beforeEach(async () => {
@@ -11,26 +12,28 @@ const banner = (page: Page) => page.getByRole('status').filter({ hasText: 'Spark
 
 const SKINS = ['light', 'dark', 'graphite', 'contrast', 'void', 'apricot'];
 
-test('pauses Spark from the rail with the keyboard and resumes it from the banner', async ({
+test('pauses Spark from More with the keyboard and resumes it from the banner', async ({
   page,
 }) => {
   await page.goto('/');
   await mainNav(page).waitFor();
   await expect(banner(page)).toHaveCount(0);
 
-  const pause = page.getByRole('button', { name: 'Pause Spark' });
-  await pause.focus();
+  const more = mainNav(page).getByRole('button', { name: /^More/ });
+  await more.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitem', { name: 'Pause Spark' })).toBeFocused();
   await page.keyboard.press('Enter');
 
   await expect(banner(page)).toContainText('Automatic work is held.');
-  await expect(page.getByRole('button', { name: 'Resume Spark' })).toBeVisible();
+  await expect(more).toHaveAccessibleName('More, Spark is paused');
 
   await page.reload();
   await expect(banner(page)).toBeVisible();
 
   await banner(page).getByRole('button', { name: 'Resume' }).click();
   await expect(banner(page)).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Pause Spark' })).toBeVisible();
+  await expect(more).toHaveAccessibleName('More');
 });
 
 test('the banner takes the place of the new default notice until Spark is resumed', async ({
@@ -46,7 +49,7 @@ test('the banner takes the place of the new default notice until Spark is resume
   await page.goto('/');
   await expect(notice).toBeVisible();
 
-  await page.getByRole('button', { name: 'Pause Spark' }).click();
+  await openRailMenu(page, 'Pause Spark');
   await expect(banner(page)).toBeVisible();
   await expect(notice).toHaveCount(0);
   await banner(page).getByRole('button', { name: 'Resume' }).click();
@@ -76,7 +79,7 @@ test('a phone pauses Spark from More and the Mac shows it at once', async ({ pag
 test('the banner and its button keep their contrast in light and dark skins', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Pause Spark' }).click();
+  await openRailMenu(page, 'Pause Spark');
   await expect(banner(page)).toBeVisible();
   for (const skin of SKINS) {
     await page.evaluate((name) => (document.documentElement.dataset.skin = name), skin);

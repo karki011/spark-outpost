@@ -2,6 +2,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
 const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
@@ -67,9 +68,9 @@ test('in Manual, Ask Spark shows a confirm card and acts only on Do it', async (
   await shot(page, 'done');
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /Spark assistant/ })
     .click();
   await page
@@ -130,9 +131,9 @@ test('Don’t leaves the chat running, and Act does it at once', async ({ page }
 test('Settings sets when Ask Spark acts', async ({ page }) => {
   await resetTestDatabase({ onboarded: true, connected: ['claude'], catalog: true });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /Spark assistant/ })
     .click();
   const section = page.getByRole('dialog', { name: 'Spark assistant' });

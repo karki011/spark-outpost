@@ -5,6 +5,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { animationsSettled } from './settle.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const NAMES = [
   'api',
@@ -59,11 +60,8 @@ async function linkProjects(page: Page, names: readonly string[]) {
 
 async function openSection(page: Page, tab: string | RegExp) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page
-    .getByRole('dialog', { name: 'Profile & personality' })
-    .getByRole('tab', { name: tab })
-    .click();
+  await clickSettings(page);
+  await page.getByRole('dialog', { name: 'General' }).getByRole('tab', { name: tab }).click();
   return page.getByRole('dialog');
 }
 
@@ -215,23 +213,25 @@ test('settings cards have no outer border and the last provider row follows the 
   await page.mouse.move(0, 0);
   await inEveryTheme(page, 'provider');
 
-  await dialog.getByRole('tab', { name: 'Models' }).click();
-  const models = page.getByRole('dialog', { name: 'Models' });
+  await dialog.getByRole('tab', { name: 'AI providers' }).click();
+
+  await page.getByRole('radio', { name: 'Models' }).click();
+  const models = page.getByRole('dialog', { name: 'AI providers' });
   await models.getByRole('button', { name: /^Sonnet 5 / }).click();
   await page.mouse.move(0, 0);
   await inEveryTheme(page, 'models');
 
   for (const [tab, card] of [
-    ['Appearance', '.tcard'],
-    ['Reset', '.reset-list'],
+    ['General', '.tcard'],
+    ['About', '.reset-list'],
   ] as const) {
     await page.getByRole('dialog').getByRole('tab', { name: tab }).click();
     const first = page.getByRole('dialog', { name: tab }).locator(card).first();
     await expect(first).toBeVisible();
     expect(await borderColor(first)).toBe(clear);
   }
-  await page.getByRole('dialog').getByRole('tab', { name: 'Appearance' }).click();
-  const themes = page.getByRole('dialog', { name: 'Appearance' });
+  await page.getByRole('dialog').getByRole('tab', { name: 'General' }).click();
+  const themes = page.getByRole('dialog', { name: 'General' });
   const chosen = themes
     .getByRole('radiogroup', { name: 'Tint' })
     .getByRole('radio', { checked: true });

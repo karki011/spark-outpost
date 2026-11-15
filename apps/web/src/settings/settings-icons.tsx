@@ -12,22 +12,8 @@ export const ASSISTANT_ICON = (
   </>
 );
 
-export const APPEARANCE_ICON = (
-  <>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" />
-  </>
-);
-
 export const PROVIDERS_ICON = (
   <path d="M12 3 13.6 10.4 21 12l-7.4 1.6L12 21l-1.6-7.4L3 12l7.4-1.6Z" />
-);
-
-export const MODELS_ICON = (
-  <>
-    <rect x="4" y="4" width="16" height="16" rx="2" />
-    <path d="M8 9h8M8 13h8M8 17h5" />
-  </>
 );
 
 export const USAGE_ICON = <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />;
@@ -55,14 +41,6 @@ export const SPARK_RULES_ICON = (
 
 export const CONNECTORS_ICON = <path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5" />;
 
-export const MCP_ICON = (
-  <>
-    <rect x="3" y="4" width="18" height="6" rx="1.5" />
-    <rect x="3" y="14" width="18" height="6" rx="1.5" />
-    <path d="M7 7h.01M7 17h.01" />
-  </>
-);
-
 export const MAC_CONTROL_ICON = (
   <>
     <rect x="3" y="4" width="18" height="12" rx="2" />
@@ -78,21 +56,12 @@ export const NOTIFICATIONS_ICON = (
   <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15ZM10 20.5a2.2 2.2 0 0 0 4 0" />
 );
 
-export const UPDATES_ICON = (
-  <>
-    <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
-    <path d="M21 3v5h-5M12 8v5l3 2" />
-  </>
-);
-
 export const HELP_ICON = (
   <>
     <circle cx="12" cy="12" r="9" />
     <path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.4M12 16.8h.01" />
   </>
 );
-
-export const RESET_ICON = <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8M3 3v5h5" />;
 
 export const BROWSER_ICON = (
   <>

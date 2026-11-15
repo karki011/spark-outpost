@@ -1,11 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { clickSettings } from './rail-menu.ts';
 
 async function openSection(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
-    .getByRole('dialog', { name: 'Profile & personality' })
+    .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /Spark assistant/ })
     .click();
   return page.getByRole('dialog', { name: 'Spark assistant' });

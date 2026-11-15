@@ -109,7 +109,7 @@ export function McpActionFacts({ action }: { action: McpServerAction }) {
       {action.needsValues.length > 0 && action.action !== 'remove_mcp_server' && (
         <p className="sac-note">
           Needs a value for {action.needsValues.join(', ')}. Agents never see or set the values;
-          fill them in Settings → MCP servers. <McpSettingsButton />
+          fill them in Settings → Connectors → MCP servers. <McpSettingsButton />
         </p>
       )}
       <p className="sac-note">{MCP_NEW_SESSIONS_NOTE}</p>
