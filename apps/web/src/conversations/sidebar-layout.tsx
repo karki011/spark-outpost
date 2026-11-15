@@ -170,8 +170,8 @@ function useEscapeCloses(open: boolean, close: () => void) {
       event.preventDefault();
       close();
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [open, close]);
 }
 

@@ -56,7 +56,9 @@ test.describe('a running turn', () => {
     repo = null;
   });
 
-  test('Escape closes the floating rail and leaves the turn running', async ({ page }) => {
+  test('Escape closes the floating rail and chat list and leaves the turn running', async ({
+    page,
+  }) => {
     test.setTimeout(180_000);
     await resetWithAgents();
     repo = chatRepo();
@@ -82,6 +84,15 @@ test.describe('a running turn', () => {
       await page.keyboard.press('Escape');
       await expect(rail(page)).toHaveCount(0);
       await expect(show).toBeFocused();
+      await expect(stopButton(page)).toBeVisible();
+
+      await page.setViewportSize({ width: 760, height: 900 });
+      await page.getByRole('button', { name: 'Show sidebar' }).click();
+      const sidebar = page.locator('nav.side');
+      await expect(sidebar).toBeVisible();
+      await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('button', { name: 'Show sidebar' })).toBeVisible();
       await expect(stopButton(page)).toBeVisible();
     } finally {
       writeFileSync(gate, '');
