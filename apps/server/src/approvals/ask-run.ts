@@ -1,3 +1,5 @@
+import type { RequestRoot } from './decide.ts';
+import { place } from './request-place.ts';
 import { commandTree } from './command-tree.ts';
 import { programName } from './commands.ts';
 import { isPackageInstall } from './command-kinds.ts';
@@ -21,6 +23,21 @@ function commandChangesFiles(command: string, cwd: string, home: string): boolea
   if (tree.commands.some((program) => FILE_CHANGERS.has(programName(program)))) return true;
   const targets = writeTargets(command, cwd, home);
   return targets === null ? !tree.opaque : targets.length > 0;
+}
+
+interface StepEditRequest {
+  kind: string;
+  toolKind: string | null;
+  paths: readonly string[];
+  roots: readonly RequestRoot[];
+}
+
+export function stepEditInside(request: StepEditRequest): boolean {
+  if (request.kind !== 'edit' || request.toolKind === 'move' || request.toolKind === 'delete') {
+    return false;
+  }
+  if (request.paths.length === 0) return false;
+  return request.paths.every((target) => place(request.roots, target).relative !== null);
 }
 
 export function askRunRefusal(request: AskRunRequest, cwd: string, home: string): string | null {

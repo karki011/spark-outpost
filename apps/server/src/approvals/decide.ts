@@ -15,7 +15,7 @@ import { guardedTargets, heldGuards } from './guarded-targets.ts';
 export { secretLabels } from './guarded-targets.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
-import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
+import { ASK_RUN_REASON, askRunRefusal, stepEditInside } from './ask-run.ts';
 import type { SparkRuleContext } from './gh-rules.ts';
 import {
   askedForRule,
@@ -139,6 +139,7 @@ export interface DecideOptions {
   changesProject?: boolean;
   files?: FileLister;
   askRun?: boolean;
+  askEdits?: boolean;
   askAutoWhy?: string | null;
   planningWhy?: string | null;
   defaultBranch?: string | null;
@@ -224,7 +225,8 @@ function fixedRefusal(
     : null;
   if (stacked) return stacked;
   if (request.command && skipsPushHooks(request.command)) return PUSH_HOOKS_REASON;
-  const asking = options.askRun ? askRunChange(request, view) : null;
+  const editing = options.askEdits === true && stepEditInside(request);
+  const asking = options.askRun && !editing ? askRunChange(request, view) : null;
   if (asking) return asking;
   if (forced?.kind === 'refuse') return forced.reason;
   if (request.kind !== 'edit') return null;
@@ -425,6 +427,9 @@ function byMode(
   }
   const pushes = request.command !== null && isGitPush(request.command);
   if (modeAllows(posture, request)) return { verdict: 'allow', by: 'level' };
+  if (request.kind === 'edit' && options.askRun && options.askEdits && options.askAutoWhy) {
+    return { verdict: 'allow', by: 'level', why: options.askAutoWhy };
+  }
   if (request.kind === 'edit') return unapproved(posture);
   if (request.kind === 'execute') {
     if (request.command && pushes) {

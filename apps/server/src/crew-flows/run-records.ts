@@ -1,5 +1,6 @@
 import {
   mergeCostSource,
+  type WorkflowTriggerKind,
   workflowSchema,
   type CostSource,
   type Workflow,
@@ -22,10 +23,14 @@ export interface NewWorkflowRun {
   kind: WorkflowRunKind;
   source: WorkflowRunSource;
   conversationId: string;
-  runId: string;
+  runId: string | null;
   message: string;
   continues: boolean;
   oneSpark?: boolean;
+  triggerKind?: WorkflowTriggerKind;
+  diffHash?: string | null;
+  edits?: boolean;
+  gatesRunId?: string;
 }
 
 async function announce(db: Queryable, workflowRunId: string): Promise<void> {
@@ -40,8 +45,9 @@ async function announce(db: Queryable, workflowRunId: string): Promise<void> {
 export async function insertWorkflowRun(db: Queryable, run: NewWorkflowRun): Promise<boolean> {
   const inserted = await db.query(
     `INSERT INTO workflow_runs (id, workspace_id, workflow_id, workflow_name, definition, kind,
-       source, conversation_id, run_id, message, continues, one_spark)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       source, conversation_id, run_id, message, continues, one_spark, trigger_kind, diff_hash,
+       edits, gates_run_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
      ON CONFLICT (run_id) DO NOTHING`,
     [
       run.id,
@@ -56,6 +62,10 @@ export async function insertWorkflowRun(db: Queryable, run: NewWorkflowRun): Pro
       run.message,
       run.continues,
       run.oneSpark === true,
+      run.triggerKind ?? null,
+      run.diffHash ?? null,
+      run.edits === true,
+      run.gatesRunId ?? null,
     ],
   );
   if (inserted.rowCount !== 1) return false;
@@ -79,6 +89,8 @@ interface RunRow {
   status: WorkflowRunStatus;
   conversation_id: string | null;
   run_id: string | null;
+  gates_run_id: string | null;
+  edits: boolean;
   message: string;
   continues: boolean;
   stopped_by: string | null;
@@ -131,7 +143,12 @@ function addSpend(total: WorkflowRunSpend, row: SpendRow): WorkflowRunSpend {
   };
 }
 
+function spendOwner(row: RunRow): string | null {
+  return row.run_id ?? (row.gates_run_id ? row.id : null);
+}
+
 function toRun(row: RunRow, steps: readonly StepRow[], spend: readonly SpendRow[]): WorkflowRun {
+  const owner = spendOwner(row);
   return {
     id: row.id,
     workflowId: row.workflow_id,
@@ -140,10 +157,10 @@ function toRun(row: RunRow, steps: readonly StepRow[], spend: readonly SpendRow[
     source: row.source,
     status: row.status,
     conversationId: row.conversation_id,
-    runId: row.run_id,
+    runId: row.run_id ?? row.gates_run_id,
     stoppedBy: row.stopped_by,
     steps: steps.filter((step) => step.workflow_run_id === row.id).map(toStep),
-    spend: spend.filter((entry) => entry.owner === row.run_id).reduce(addSpend, NO_SPEND),
+    spend: spend.filter((entry) => entry.owner === owner).reduce(addSpend, NO_SPEND),
     startedAt: row.started_at.toISOString(),
     finishedAt: iso(row.finished_at),
   };
@@ -164,14 +181,24 @@ async function stepsOf(db: Queryable, ids: readonly string[]): Promise<StepRow[]
   return rows;
 }
 
-async function spendOf(db: Queryable, runIds: readonly string[]): Promise<SpendRow[]> {
-  if (runIds.length === 0) return [];
+async function spendOf(
+  db: Queryable,
+  runIds: readonly string[],
+  gateIds: readonly string[],
+): Promise<SpendRow[]> {
+  if (runIds.length === 0 && gateIds.length === 0) return [];
   const { rows } = await db.query<SpendRow>(
-    `SELECT COALESCE(r.parent_run_id, r.id) AS owner,
+    `SELECT COALESCE(r.parent_run_id, r.id)::text AS owner,
        COALESCE(r.total_tokens, r.input_tokens + r.output_tokens) AS tokens,
        r.cost_usd, r.cost_source
-     FROM runs r WHERE r.id = ANY($1::uuid[]) OR r.parent_run_id = ANY($1::uuid[])`,
-    [runIds],
+     FROM runs r WHERE r.id = ANY($1::uuid[]) OR r.parent_run_id = ANY($1::uuid[])
+     UNION ALL
+     SELECT s.workflow_run_id::text AS owner,
+       COALESCE(r.total_tokens, r.input_tokens + r.output_tokens) AS tokens,
+       r.cost_usd, r.cost_source
+     FROM workflow_run_steps s JOIN runs r ON r.id = s.run_id
+     WHERE s.workflow_run_id = ANY($2::uuid[])`,
+    [runIds, gateIds],
   );
   return rows;
 }
@@ -184,6 +211,7 @@ async function assemble(db: Queryable, rows: readonly RunRow[]): Promise<Workflo
   const spend = await spendOf(
     db,
     rows.flatMap((row) => (row.run_id ? [row.run_id] : [])),
+    rows.flatMap((row) => (row.run_id === null && row.gates_run_id ? [row.id] : [])),
   );
   return rows.map((row) => toRun(row, steps, spend));
 }
@@ -220,6 +248,21 @@ export interface TurnWorkflowRun {
   workflow: Workflow;
   message: string;
   continues: boolean;
+  edits: boolean;
+}
+
+async function turnRunOf(db: Queryable, row: RunRow | undefined) {
+  if (!row) return null;
+  const [run] = await assemble(db, [row]);
+  const workflow = workflowSchema.safeParse(row.definition);
+  if (!run || !workflow.success) return null;
+  return {
+    run,
+    workflow: workflow.data,
+    message: row.message,
+    continues: row.continues,
+    edits: row.edits,
+  };
 }
 
 export async function workflowRunForTurn(
@@ -227,12 +270,20 @@ export async function workflowRunForTurn(
   runId: string,
 ): Promise<TurnWorkflowRun | null> {
   const { rows } = await db.query<RunRow>('SELECT * FROM workflow_runs WHERE run_id = $1', [runId]);
-  const row = rows[0];
-  if (!row) return null;
-  const [run] = await assemble(db, [row]);
-  const workflow = workflowSchema.safeParse(row.definition);
-  if (!run || !workflow.success) return null;
-  return { run, workflow: workflow.data, message: row.message, continues: row.continues };
+  return turnRunOf(db, rows[0]);
+}
+
+export async function workflowRunById(db: Queryable, id: string): Promise<TurnWorkflowRun | null> {
+  const { rows } = await db.query<RunRow>('SELECT * FROM workflow_runs WHERE id = $1', [id]);
+  return turnRunOf(db, rows[0]);
+}
+
+export async function turnOffEdits(db: Queryable, id: string): Promise<void> {
+  await db.query('UPDATE workflow_runs SET edits = false WHERE id = $1', [id]);
+}
+
+export async function recordBlocking(db: Queryable, id: string, blocking: number): Promise<void> {
+  await db.query('UPDATE workflow_runs SET blocking = $2 WHERE id = $1', [id, blocking]);
 }
 
 export async function startStep(
@@ -280,7 +331,8 @@ export async function finishWorkflowRun(
 
 export async function settleStrandedRuns(db: Queryable): Promise<number> {
   const { rows } = await db.query<{ id: string; status: string | null }>(
-    `SELECT w.id, r.status FROM workflow_runs w LEFT JOIN runs r ON r.id = w.run_id
+    `SELECT w.id, r.status FROM workflow_runs w
+     LEFT JOIN runs r ON r.id = COALESCE(w.run_id, w.gates_run_id)
      WHERE w.status = 'running'
        AND (r.id IS NULL OR r.status IN ('succeeded', 'failed', 'cancelled', 'outcome_unknown'))`,
   );

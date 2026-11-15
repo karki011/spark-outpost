@@ -53,10 +53,14 @@ function definedMeta(
     changesProject,
     planning,
     approvals,
-  }: Pick<ProviderTurn, 'changesProject' | 'planning' | 'approvals'>,
+    stepEdits,
+  }: Pick<ProviderTurn, 'changesProject' | 'planning' | 'approvals' | 'stepEdits'>,
 ) {
   if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
   const roots = extraRoots(policy);
+  if (changing && stepEdits) {
+    return definition.projectSessionMeta?.(roots, repo, false, true, true) ?? null;
+  }
   if (changing) {
     const gitControl = gitControlGlobs(policy.roots);
     return definition.doSessionMeta?.(roots, repo, changesProject, gitControl) ?? null;

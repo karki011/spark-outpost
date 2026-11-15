@@ -1,3 +1,5 @@
+import { gateBeforePublish } from '../crew-flows/before-publish.ts';
+import { noteEndedTurn } from '../crew-flows/trigger-events.ts';
 import { userText } from '../outposts/user-asked.ts';
 import { chatPlanInput } from '../plans/chat-plan-turn.ts';
 import { linkTicketForChanges } from '../tickets/chat-link.ts';
@@ -20,6 +22,20 @@ export const chatTurnSteps: ChatTurnHooks = {
       { files: [...files] },
     );
   },
-  publish: ({ deps, lease, input, append, control }, reply) =>
-    publishStep(deps, { lease, input, append, control, reply }),
+  publish: (turn, reply) => {
+    const { deps, lease, input, append, control } = turn;
+    return publishStep(deps, { lease, input, append, control, reply }, () =>
+      gateBeforePublish(turn),
+    );
+  },
+  async turnEnded({ deps, lease, input }, changed) {
+    const turn = {
+      workspaceId: input.workspaceId,
+      conversationId: input.identity.threadId,
+      runId: lease.runId,
+    };
+    await noteEndedTurn(deps.db, turn, changed).catch((error: unknown) =>
+      console.error('Could not note the workflow triggers of a finished turn', error),
+    );
+  },
 };

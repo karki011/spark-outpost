@@ -56,6 +56,7 @@ async function afterReply(
   const changes = await runChanges(deps.db, input.workspaceId, lease.runId, true);
   seen.changes = changes;
   if (changes.files.length > 0) await hooks.changesKept(turn, changes.files);
+  await hooks.turnEnded?.(turn, changes.files.length > 0);
   return result;
 }
 

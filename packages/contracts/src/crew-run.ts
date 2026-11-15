@@ -25,7 +25,13 @@ export type WorkflowRunStatus = z.infer<typeof workflowRunStatusSchema>;
 export const workflowRunKindSchema = z.enum(['run', 'test']);
 export type WorkflowRunKind = z.infer<typeof workflowRunKindSchema>;
 
-export const workflowRunSourceSchema = z.enum(['manual', 'mention', 'schedule', 'catch_up']);
+export const workflowRunSourceSchema = z.enum([
+  'manual',
+  'mention',
+  'schedule',
+  'catch_up',
+  'trigger',
+]);
 export type WorkflowRunSource = z.infer<typeof workflowRunSourceSchema>;
 
 export type RunStep = Pick<WorkflowStep, 'id' | 'dependsOn' | 'join' | 'onFailure'>;

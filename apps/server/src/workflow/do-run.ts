@@ -35,6 +35,7 @@ export interface AskTurn {
   identity: { threadId: string };
   workflowStep?: boolean | undefined;
   testRun?: boolean | undefined;
+  stepEdits?: boolean | undefined;
 }
 
 export interface DoRunOptions extends AskRunOptions {
@@ -82,6 +83,7 @@ export function prepareAskRun(options: AskRunOptions, turn: AskTurn): ApprovalGa
     posture: 'read_only',
     askRun: true,
     ...(turn.testRun ? { holdsSends: true } : {}),
+    ...(turn.workflowStep && turn.stepEdits ? { askEdits: true } : {}),
     askAuto: async () =>
       turn.workflowStep
         ? chosenModeWhy(options.provider, options.mode, options.modes ?? [])

@@ -21,8 +21,10 @@ import {
   startBuilderChat,
 } from './builder-chat.ts';
 import { crewDrafts } from './builder-drafts.ts';
+import { PublishHoldNotFoundError } from './publish-holds.ts';
 import { getWorkflowRun, listWorkflowRuns } from './run-records.ts';
 import { deleteSchedule } from './schedule-records.ts';
+import { deleteTriggers } from './trigger-records.ts';
 import { SparkNotFoundError, startSparkTestRun, startWorkflowRun } from './start-run.ts';
 import { TestRunNotFoundError, discardTestRun, readTestRun } from './test-run.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
@@ -60,7 +62,8 @@ export function workflowErrorStatus(error: unknown): { status: number; message: 
     error instanceof TestRunNotFoundError ||
     error instanceof BuilderChatNotFoundError ||
     error instanceof BuilderSparkNotFoundError ||
-    error instanceof SparkNotFoundError
+    error instanceof SparkNotFoundError ||
+    error instanceof PublishHoldNotFoundError
   ) {
     return { status: 404, message: error.message };
   }
@@ -128,6 +131,7 @@ export function workflowRoutes(deps: WorkflowRouteDeps): Router {
     const id = workflowId(req);
     await store.remove(id);
     await deleteSchedule(db, workspaceId, id);
+    await deleteTriggers(db, workspaceId, id);
     res.status(204).end();
   });
 

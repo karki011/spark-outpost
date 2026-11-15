@@ -106,6 +106,7 @@ export interface ProviderTurn {
   mode?: RunMode;
   changesProject?: boolean;
   publishes?: boolean;
+  stepEdits?: boolean;
   planning?: boolean;
   plansFirst?: boolean;
   modeRequests?: ModeRequests;

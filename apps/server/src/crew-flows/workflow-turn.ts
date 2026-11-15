@@ -9,6 +9,7 @@ import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { insertWorkflowRun, workflowRunForTurn, type TurnWorkflowRun } from './run-records.ts';
 import { runWorkflow, type WorkflowEnd } from './run-workflow.ts';
+import { keepStepEdits, prepareStepEdits } from './step-edits.ts';
 import { workflowNote } from './step-prompt.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
 import { workflowStore } from './workflow-store.ts';
@@ -98,8 +99,10 @@ export async function workflowTurn(
     risk: 'read-only',
   });
   await updateOrchestration(deps.db, lease.runId, { phase: 'scouting' });
-  const end = await runWorkflow(h, turn);
+  const prepared = await prepareStepEdits(h, turn);
+  const end = await runWorkflow(h, prepared);
   if (end === 'lease_lost') return 'finished';
+  await keepStepEdits(h, prepared);
   const continues = turn.continues && end.status !== 'cancelled';
   const note = workflowNote({ ...end, workflowName: turn.workflow.name, continues });
   if (!continues) {
