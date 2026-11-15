@@ -251,6 +251,7 @@ export const SETTINGS_SECTIONS = [
     group: 'connections',
     label: 'Connectors',
     icon: icons.CONNECTORS_ICON,
+    tabs: true,
     parts: [
       {
         id: 'tools',
@@ -259,7 +260,7 @@ export const SETTINGS_SECTIONS = [
         render: () => (
           <>
             <p className="lede">{CONNECTORS_LEDE}</p>
-            <ConnectorGrid />
+            <ConnectorGrid paged />
           </>
         ),
       },

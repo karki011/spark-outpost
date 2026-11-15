@@ -1,8 +1,8 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { ConnectorId } from '../brand/ConnectorBlob.tsx';
 import { takeCalendarCardRequest, useCalendarCardRequests } from '../calendar/calendar-open.ts';
 import { CalendarCard } from '../calendar/CalendarCard.tsx';
-import { CALENDAR_PATH } from '../ui/icons.tsx';
+import { CALENDAR_PATH, ChevronIcon } from '../ui/icons.tsx';
 import { GitHubCard } from '../ship/GitHubCard.tsx';
 import { SLACK_DESCRIPTION, SlackCard } from '../slack/SlackCard.tsx';
 import { ATLASSIAN_DESCRIPTION, AtlassianCard } from '../tickets/AtlassianCard.tsx';
@@ -102,14 +102,47 @@ const CALENDAR_ICON = (
   </ToolIcon>
 );
 
-export function ConnectorGrid() {
+export function ConnectorGrid({ paged = false }: { paged?: boolean }) {
   const [openId, setOpenId] = useState<string | null>(() =>
     takeCalendarCardRequest() ? 'calendar' : null,
   );
+  const [returnTo, setReturnTo] = useState<{ id: string } | null>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   useCalendarCardRequests(useCallback(() => setOpenId('calendar'), []));
+  useEffect(() => {
+    if (!returnTo) return;
+    listRef.current
+      ?.querySelector<HTMLElement>(`[data-connector="${returnTo.id}"] .pc-head`)
+      ?.focus();
+  }, [returnTo]);
   const toggle = (id: string) => setOpenId((current) => (current === id ? null : id));
+  const backToList = () => {
+    if (openId) setReturnTo({ id: openId });
+    setOpenId(null);
+  };
   return (
-    <ul className="cgrid">
+    <>
+      {paged && openId && (
+        <button type="button" className="cx-back" onClick={backToList}>
+          <ChevronIcon />
+          All connectors
+        </button>
+      )}
+      <ConnectorList listRef={listRef} paged={paged} openId={openId} toggle={toggle} />
+    </>
+  );
+}
+
+interface ConnectorListProps {
+  listRef: RefObject<HTMLUListElement | null>;
+  paged: boolean;
+  openId: string | null;
+  toggle: (id: string) => void;
+}
+
+function ConnectorList({ listRef, paged, openId, toggle }: ConnectorListProps) {
+  return (
+    <ul ref={listRef} className={paged ? 'cgrid cgrid-paged' : 'cgrid'}>
       {connectors.map((connector) => {
         if (connector.id === 'github') {
           return (

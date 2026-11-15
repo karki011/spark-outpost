@@ -36,6 +36,7 @@ async function openMcpSettings(page: Page) {
     .click();
   const dialog = page.getByRole('dialog', { name: 'Connectors' });
   await expect(dialog).toBeVisible();
+  await dialog.getByRole('radio', { name: 'MCP servers' }).click();
   return dialog;
 }
 

@@ -8,11 +8,11 @@ summary: What changed in recent releases and what to do next.
 
 ## Mid-November 2026
 
-| What changed                                  | What to do                         |
-| --------------------------------------------- | ---------------------------------- |
-| Settings: fewer pages, one ⓘ, On/Off          | [Settings](settings.md).           |
-| Left bar: Settings, Docs and more in **More** | [Pause Spark](pause-spark.md).     |
-| Long provider and model lists fold            | [Models](providers-and-models.md). |
+| What changed                                               | What to do                         |
+| ---------------------------------------------------------- | ---------------------------------- |
+| Settings: fewer pages, one ⓘ, On/Off, a page per connector | [Settings](settings.md).           |
+| Left bar: Settings, Docs and more in **More**              | [Pause Spark](pause-spark.md).     |
+| Long provider and model lists fold                         | [Models](providers-and-models.md). |
 
 ## Early November 2026
 
