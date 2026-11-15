@@ -10,6 +10,7 @@ import {
 } from './crew-files-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { animationsSettled } from './settle.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = 'test-results/sparks-page';
 
@@ -347,7 +348,7 @@ test('the page works with the keyboard alone', async ({ page }) => {
 test('Settings has no Sparks section; Home’s Manage opens the page', async ({ page }) => {
   await addSpark(page, { name: 'Pip', role: 'Code reviewer' });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   const settings = page.getByRole('dialog', { name: 'General' });
   await expect(settings.getByRole('tab', { name: 'AI providers' })).toBeVisible();
   await expect(settings.getByRole('tab', { name: 'Crew' })).toHaveCount(0);

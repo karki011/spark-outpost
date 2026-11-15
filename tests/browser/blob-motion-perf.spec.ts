@@ -15,6 +15,7 @@ import { BUSY_MACHINE, frameWork, PRODUCTION, writeReport, type FrameWork } from
 import { openPhone, resetPhone, setFakeTailscale, startPairing, turnOn } from './phone-support.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { toggleHeaderPane } from './header-menu.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.use({ trace: 'off' });
 
@@ -119,7 +120,7 @@ test('the model card blobs do no work on each frame', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('dialog').last().getByRole('tab', { name: 'AI providers' }).click();
   await page.getByRole('radio', { name: 'Models' }).click();
   await expect(page.locator('.mc-blob .mo-root').first()).toBeVisible();

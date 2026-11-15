@@ -6,6 +6,7 @@ import { seedConversation, seedTurn } from '../../apps/server/test/outcome-seed.
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { SPARK_RULES_FILE } from './stub-config.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const allowedPrefixes = async (page: Page): Promise<string[]> => {
   const rules = (await (await page.request.get('/api/spark-rules')).json()) as {
@@ -99,7 +100,7 @@ test('a rules file changed outside Spark waits for review in Settings', async ({
   expect(await allowedPrefixes(page)).toEqual([]);
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Spark rules' })

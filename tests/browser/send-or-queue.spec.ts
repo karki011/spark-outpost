@@ -10,6 +10,7 @@ import {
   resetWithAgents,
   send,
 } from './project-chat-kit.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = process.env.SEND_OR_QUEUE_SHOTS ?? '';
 
@@ -58,7 +59,7 @@ async function noAxeViolations(page: Page, selector: string) {
 }
 
 async function setBusyEnter(page: Page, choice: string) {
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Chats & autonomy' })

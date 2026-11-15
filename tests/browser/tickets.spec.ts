@@ -9,6 +9,7 @@ import {
 } from './ticket-seed.ts';
 import { LINEAR_KEY } from '../../apps/server/test/fake-linear.ts';
 import { withDesktopBrowser } from './desktop-browser.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const main = (page: Page) => page.getByRole('main', { name: 'Tickets' });
 const section = (page: Page, name: string) => main(page).getByRole('region', { name, exact: true });
@@ -229,7 +230,7 @@ for (const failure of [false, true]) {
     try {
       await refresh.click();
       await expect(main(page).getByRole('status').filter({ hasText: 'Syncing…' })).toBeVisible();
-      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      await clickSettings(page);
       await page.getByRole('tab', { name: 'Connectors', exact: true }).click();
       await page.getByRole('button', { name: 'Close settings', exact: true }).click();
       await expect(page.locator('.set')).toHaveCount(0);

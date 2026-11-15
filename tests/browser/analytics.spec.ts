@@ -2,15 +2,13 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { seedAnalytics } from './analytics-seed.ts';
 import { resetTestDatabase } from './database.ts';
+import { openRailMenu } from './rail-menu.ts';
 
 const BLOCKING = new Set(['serious', 'critical']);
 
 async function openAnalytics(page: Page) {
   await page.goto('/');
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: /^Analytics/ })
-    .click();
+  await openRailMenu(page, 'Analytics');
   await expect(page.getByRole('heading', { name: 'Analytics', level: 1 })).toBeVisible();
 }
 

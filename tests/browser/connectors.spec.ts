@@ -3,12 +3,13 @@ import { JIRA_EMAIL, JIRA_TOKEN } from '../../apps/server/test/fake-jira.ts';
 import { resetTestDatabase } from './database.ts';
 import { connectorCard, connectorHead, connectorStatus } from './connector-cards.ts';
 import { setJiraWorkflow, connectTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const MIN_CHECK_MS = 1200;
 
 async function openConnectors(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Connectors' }).click();
 }
 

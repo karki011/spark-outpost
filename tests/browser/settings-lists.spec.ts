@@ -5,6 +5,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { animationsSettled } from './settle.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const NAMES = [
   'api',
@@ -59,7 +60,7 @@ async function linkProjects(page: Page, names: readonly string[]) {
 
 async function openSection(page: Page, tab: string | RegExp) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('dialog', { name: 'General' }).getByRole('tab', { name: tab }).click();
   return page.getByRole('dialog');
 }

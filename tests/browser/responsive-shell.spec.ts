@@ -23,11 +23,14 @@ import {
 } from './responsive-kit.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { closeChatMenu, headerPaneItem, openChatMenu } from './header-menu.ts';
+import { openRailMenu } from './rail-menu.ts';
 
 test.describe.configure({ timeout: 120_000 });
 
 const PRIMARY = ['Home', 'Chats', 'Analytics', 'Tickets', 'Docs'];
 const UNDER_MORE = ['Sparks', 'Remote control'];
+const RAIL = ['Home', 'Chats', 'Tickets', 'Sparks', 'Map'];
+const RAIL_MENU = ['Analytics', 'Docs', 'Remote control'];
 const SECTIONS = [
   'General',
   'Spark assistant',
@@ -85,22 +88,23 @@ for (const size of TOUCH_SIZES) {
 
     expect(await widerThanItsBox(page.locator('.home'))).toEqual([]);
     if (phone) await expect(navButton(page, 'Map')).toHaveCount(0);
-    for (const name of phone ? PRIMARY : [...PRIMARY, 'Map']) {
+    for (const name of phone ? PRIMARY : RAIL) {
       await expectInsideViewport(page, navButton(page, name));
       await navButton(page, name).click();
       await expect(navButton(page, name)).toHaveAttribute('aria-current', 'page');
       await shot(page, name.toLowerCase());
     }
-    for (const name of UNDER_MORE) {
-      if (phone) {
-        await navButton(page, 'More').click();
-        await expectInsideViewport(page, page.getByRole('group', { name: 'More destinations' }));
-      }
-      await expectInsideViewport(page, navButton(page, name));
-      await navButton(page, name).click();
+    for (const name of phone ? UNDER_MORE : RAIL_MENU) {
+      await navButton(page, 'More').click();
+      const more = phone
+        ? page.getByRole('group', { name: 'More destinations' })
+        : page.getByRole('menu', { name: 'More' });
+      await expectInsideViewport(page, more);
+      const item = phone ? navButton(page, name) : more.getByRole('menuitem', { name });
+      await expectInsideViewport(page, item);
+      await item.click();
       await expect(page.getByRole('main', { name })).toBeVisible();
-      if (phone)
-        await expect(navButton(page, 'More')).toHaveAccessibleName(`More, showing ${name}`);
+      await expect(navButton(page, 'More')).toHaveAccessibleName(`More, showing ${name}`);
     }
     await expectNoSidewaysScroll(page);
     await shot(page, 'phone-page');
@@ -144,7 +148,8 @@ for (const size of TOUCH_SIZES) {
     await shot(page, 'home-talk-to-menu');
     await page.keyboard.press('Escape');
 
-    await navButton(page, 'Analytics').click();
+    if (phone) await navButton(page, 'Analytics').click();
+    else await openRailMenu(page, 'Analytics');
     await page.getByText('Custom', { exact: true }).click();
     const calendar = page.getByRole('dialog', { name: 'Choose a custom date range' });
     await expectInsideViewport(page, calendar);
@@ -228,24 +233,20 @@ test('phone landscape with a mouse-sized window keeps the desktop shell', async 
   await page.goto('/');
   const nav = await mainNav(page).boundingBox();
   expect(nav!.width).toBeLessThan(100);
-  await expect(navButton(page, 'More')).toHaveCount(0);
+  await expect(navButton(page, 'More')).toHaveAttribute('aria-haspopup', 'menu');
 });
 
-test('the desktop rail keeps all eleven entries', async ({ page }) => {
+test('the desktop rail keeps the places you work in, then More', async ({ page }) => {
   await page.setViewportSize(DESKTOP);
   await page.goto('/');
   await expect(mainNav(page).locator('.rail-btn')).toHaveText([
     /^Home/,
     /^Chats/,
     /^Today/,
-    /^Analytics/,
     /^Tickets/,
     /^Sparks/,
     /^Map/,
-    /^Docs/,
-    /^Pause$/,
-    /^Remote$/,
-    /^Settings/,
+    /^More/,
   ]);
   await shot(page, 'rail');
 });

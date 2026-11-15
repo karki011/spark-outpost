@@ -17,7 +17,7 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 | **⌘⇧K**                     | Find a session in **Sessions**          |
 | **⌃⌘S**                     | Show or hide the chat list              |
 | **⌘,**                      | **Settings** (Mac app)                  |
-| **⌥⌘1**–**⌥⌘9**             | Left bar item 1 to 9, top to bottom     |
+| **⌥⌘1**–**⌥⌘9**             | Left bar items, then **More**'s places  |
 | **Enter** / **Shift+Enter** | Send / new line                         |
 | **Enter** / **⌘Enter**      | While a turn runs: queue / send now     |
 | **@** / **/**               | Add a file / run a command              |

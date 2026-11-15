@@ -31,9 +31,10 @@ import {
   turns,
   workPanel,
 } from './chat-rail-kit.ts';
+import { clickSettings } from './rail-menu.ts';
 
 async function setWideWindows(page: Page, choice: string) {
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Chats & autonomy' })

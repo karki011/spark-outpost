@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
@@ -14,7 +15,7 @@ test('AI providers asks the user to allow keychain access while macOS is prompti
     route.fulfill({ json: { issues: [], keychainWaiting: waiting } }),
   );
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /AI providers/ })

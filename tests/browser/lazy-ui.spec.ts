@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { chatMenuButton } from './header-menu.ts';
+import { openRailMenu } from './rail-menu.ts';
 
 type LazyPart = 'Analytics' | 'Tickets' | 'xterm-terminal' | 'DayCalendarGrid' | 'SettingsPanes';
 
@@ -33,9 +34,7 @@ test('Analytics and Tickets show their outline until their code arrives @package
   await page.goto('/');
   await expect(rail(page)).toBeVisible();
 
-  await rail(page)
-    .getByRole('button', { name: /^Analytics/ })
-    .click();
+  await openRailMenu(page, 'Analytics');
   const analytics = page.getByRole('main');
   await expect(page.getByRole('heading', { name: 'Analytics', level: 1 })).toBeVisible();
   await expect(analytics).toHaveAttribute('aria-busy', 'true');
@@ -58,9 +57,7 @@ test('Analytics and Tickets show their outline until their code arrives @package
   await expect(page.getByRole('searchbox')).toBeVisible();
 
   await page.keyboard.press('Tab');
-  await rail(page)
-    .getByRole('button', { name: /^Analytics/ })
-    .click();
+  await openRailMenu(page, 'Analytics');
   await expect(page.getByRole('tab', { name: 'Overview' })).toBeVisible();
 });
 
@@ -77,10 +74,11 @@ test('Settings loads only when opened, then takes focus and closes with Escape @
   expect(asked).toEqual([]);
 
   const release = await hold(page, 'SettingsPanes');
-  const settings = rail(page).getByRole('button', { name: 'Settings' });
+  const settings = rail(page).getByRole('button', { name: /^More/ });
   await settings.hover();
   await expect.poll(() => asked.length).toBeGreaterThan(0);
   await settings.click();
+  await page.getByRole('menuitem', { name: 'Settings…' }).click();
   await expect(rail(page)).toBeVisible();
   release();
   const dialog = page.getByRole('dialog').last();
@@ -96,9 +94,7 @@ test('the calendar keeps its size and focus while its code arrives @packaged', a
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const releaseCalendar = await hold(page, 'DayCalendarGrid');
   await page.goto('/');
-  await rail(page)
-    .getByRole('button', { name: /^Analytics/ })
-    .click();
+  await openRailMenu(page, 'Analytics');
   await page.getByRole('radio', { name: /^Custom/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Choose a custom date range' });
   await expect(dialog).toBeVisible();

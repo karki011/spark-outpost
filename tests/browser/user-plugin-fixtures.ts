@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import type { UserPlugin, UserPluginUpdate } from '../../packages/contracts/src/user-plugins.ts';
+import { clickSettings } from './rail-menu.ts';
 
 export function plugin(
   overrides: Partial<UserPlugin> & Pick<UserPlugin, 'key' | 'name'>,
@@ -206,7 +207,7 @@ export async function mockPlugins(page: Page, plugins = fixtures()) {
 }
 
 export async function openPlugins(page: Page) {
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Chats & autonomy' })

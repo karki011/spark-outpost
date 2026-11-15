@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import type { ModelCardsResponse } from '../../packages/contracts/src/model-cards.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'], catalog: true });
@@ -9,7 +10,7 @@ test.beforeEach(async () => {
 
 async function openTab(page: Page, tab: string) {
   await openChats(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: tab === 'Models' ? 'AI providers' : tab }).click();
   if (tab === 'Models') await page.getByRole('radio', { name: 'Models' }).click();
   const dialog = page.getByRole('dialog', { name: tab === 'Models' ? 'AI providers' : tab });

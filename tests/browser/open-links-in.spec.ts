@@ -3,6 +3,7 @@ import { rail } from './browser-view-support.ts';
 import { resetTestDatabase } from './database.ts';
 import { calls, withDesktopBrowser } from './desktop-browser.ts';
 import { openChats } from './navigation.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SITE = 'https://example.com/';
 
@@ -24,7 +25,7 @@ async function handLink(page: Page, url: string) {
 }
 
 async function chooseLinksIn(page: Page, choice: string) {
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Browser pane' }).click();
   const setting = page
     .getByRole('dialog', { name: 'Browser pane' })

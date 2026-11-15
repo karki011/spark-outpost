@@ -3,6 +3,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
 const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
@@ -166,7 +167,7 @@ test('the full Ask Spark conversation shows the New topic divider', async ({ pag
   await seedAsked(id, ['After the topic'], new Date(Date.now() + 1_000));
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /Spark assistant/ })
@@ -189,7 +190,7 @@ test('the full conversation shows a New topic divider before any question', asyn
   await assistantId(page);
   expect((await page.request.post('/api/spark-assistant/topic', { data: {} })).ok()).toBe(true);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /Spark assistant/ })

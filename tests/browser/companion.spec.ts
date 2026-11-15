@@ -5,6 +5,7 @@ import { decorateLatestRun } from './home-seed.ts';
 import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { seedTerminal } from './terminal-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = process.env.PALETTE_SHOTS ?? '';
 const companion = (page: Page) => page.getByRole('button', { name: /^Status: / });
@@ -194,10 +195,7 @@ test('hiding the companion and bringing it back from Settings', async ({ page })
   await goHome(page);
   await expect(companion(page)).toHaveCount(0);
 
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: 'Settings' })
-    .click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Notifications' })

@@ -6,6 +6,7 @@ import { REJECTED_KEY_MARKER, X_API_KEY_MODEL } from './stub-config.ts';
 import { STUB_URL } from './ticket-seed.ts';
 import { openChats } from './navigation.ts';
 import { animationsSettled } from './settle.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const KEY = 'gateway-test-key-0123456789.EndpointTail';
 const BASE_URL = `${STUB_URL}/custom`;
@@ -16,7 +17,7 @@ test.beforeEach(async () => {
 
 async function openProviders(page: Page) {
   await openChats(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /AI providers/ })

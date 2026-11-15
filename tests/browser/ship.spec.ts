@@ -9,6 +9,7 @@ import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
 import { turnDone } from './project-chat-kit.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const GITHUB_DESCRIPTION =
   'Ship commits and pushes with your own Git. Opening a pull request needs GitHub.';
@@ -222,7 +223,7 @@ test('Full auto runs to a PR: the reply and the result line show the PR link', a
 
 test('Settings shows the GitHub connection and saves, then removes, a token', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Connectors' }).click();
   const card = connectorCard(page, 'github');
   const status = connectorStatus(card);

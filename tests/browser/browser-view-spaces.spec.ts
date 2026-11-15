@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openBrowserView, pushView, viewCommands } from './browser-view-support.ts';
 import { calls } from './desktop-browser.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude'] });
@@ -139,7 +140,7 @@ test('Archived reopens from the list and the command bar', async ({ page }) => {
 
 test('Settings changes the archive time and turns it off', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Browser pane' }).click();
   const name = 'Archive tabs not shown for';
   const setting = page.getByRole('dialog', { name: 'Browser pane' }).getByRole('group', { name });

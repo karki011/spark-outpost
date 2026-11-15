@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
@@ -14,7 +15,7 @@ function focusInside(page: Page): Promise<boolean> {
 
 test('Tab and Shift+Tab stay inside the Settings sheet', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   const dialog = page.getByRole('dialog', { name: 'General' });
   await expect(dialog).toBeVisible();
   const close = dialog.getByRole('button', { name: 'Close settings' });

@@ -34,7 +34,7 @@ test('shows the time below Settings without widening the rail', async ({ page })
   await expect(rail(page).locator('[aria-live]')).toHaveCount(0);
   await expect(clock(page).locator('.rail-clock-period')).toHaveText('PM');
 
-  const settings = await rail(page).getByRole('button', { name: 'Settings' }).boundingBox();
+  const settings = await rail(page).getByRole('button', { name: /^More/ }).boundingBox();
   const face = await clock(page).boundingBox();
   const bar = await rail(page).boundingBox();
   expect(face!.y).toBeGreaterThanOrEqual(settings!.y + settings!.height);
@@ -82,7 +82,7 @@ for (const height of [600, 700]) {
 
     await clock(page).focus();
     await page.keyboard.press('Shift+Tab');
-    const settings = rail(page).getByRole('button', { name: 'Settings' });
+    const settings = rail(page).getByRole('button', { name: /^More/ });
     await expect(settings).toBeFocused();
     await expect(settings).toBeInViewport({ ratio: 0.99 });
     const above = await clock(page).boundingBox();
@@ -102,7 +102,7 @@ test('names the full date in its tooltip and opens Today on click', async ({ pag
 
 test('opens Today from the keyboard with a visible focus ring', async ({ page }) => {
   await openAt(page);
-  await rail(page).getByRole('button', { name: 'Settings' }).focus();
+  await rail(page).getByRole('button', { name: /^More/ }).focus();
   await page.keyboard.press('Tab');
   await expect(clock(page)).toBeFocused();
   const outline = await clock(page).evaluate((element) => getComputedStyle(element).outlineStyle);

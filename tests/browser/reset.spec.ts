@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
@@ -13,7 +14,7 @@ async function openReset(page: Page) {
   await openChats(page);
   await expect(page.getByRole('button', { name: 'Keep this chat', exact: true })).toBeVisible();
   await page.evaluate(() => localStorage.setItem('spark-outpost.models.provider', 'claude'));
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('dialog', { name: 'General' }).getByRole('tab', { name: 'About' }).click();
   const dialog = page.getByRole('dialog', { name: 'About' });
   await expect(dialog.getByText('What stays')).toBeVisible();

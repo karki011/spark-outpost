@@ -7,9 +7,10 @@ import {
 } from '../../apps/server/src/spark-rules/accepted.ts';
 import { resetTestDatabase } from './database.ts';
 import { SPARK_MANAGED_RULES_FILE, SPARK_RULES_DIR, SPARK_RULES_FILE } from './stub-config.ts';
+import { clickSettings } from './rail-menu.ts';
 
 async function openSparkRules(page: Page) {
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Spark rules' })

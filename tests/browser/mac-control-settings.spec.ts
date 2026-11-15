@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { clickSettings } from './rail-menu.ts';
 
 async function fakeDesktop(page: Page, indicator: unknown = null) {
   await page.addInitScript((shown) => {
@@ -45,7 +46,7 @@ const calls = (page: Page) =>
 test('Mac control is not offered without the Mac app', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await expect(page.getByRole('dialog', { name: 'General' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Mac control' })).toHaveCount(0);
 });
@@ -56,7 +57,7 @@ test('Mac control starts off, saves the switch and asks macOS for Accessibility'
   await resetTestDatabase({ onboarded: true });
   await fakeDesktop(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Mac control' }).click();
   const settings = page.getByRole('dialog', { name: 'Mac control' });
   const toggle = settings.getByRole('switch', { name: 'Let agents control other Mac apps' });

@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { openTestDb } from './database.ts';
 import { demoRepo, seedDemo, shoot, useSystemTheme, type DemoRepo } from './docs-seed.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const IMAGES = path.resolve('docs/guide/images');
 const ISLAND_CLIP = { x: 340, y: 0, width: 600, height: 380 };
@@ -166,7 +167,7 @@ test('Companion settings and updates screenshots', async ({ page }) => {
   await fakeDesktop(page);
   await seedDemo(page, repo);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Notifications' })

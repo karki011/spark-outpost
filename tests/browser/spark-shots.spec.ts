@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 
@@ -18,7 +19,7 @@ test('Spark screenshots', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await page.setViewportSize({ width: 1280, height: 1000 });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   const spark = page.getByRole('dialog', { name: 'General' });
   await spark.getByLabel('What should Spark call you?', { exact: true }).fill('Sam Rivera');
   await expect(spark.locator('.spark-preview')).toContainText('Hi Sam');

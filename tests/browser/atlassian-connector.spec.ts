@@ -17,6 +17,7 @@ import { openChats } from './navigation.ts';
 import { animationsSettled } from './settle.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { connectTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = process.env.ATLASSIAN_SHOTS ?? '';
 
@@ -26,7 +27,7 @@ const card = (page: Page) => connectorCard(page, 'atlassian');
 
 async function openCard(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Connectors' }).click();
   await connectorHead(card(page)).click();
 }
@@ -78,7 +79,7 @@ test('shows Jira and Confluence with their own switches and saves them', async (
     card(page).getByRole('switch', { name: 'Move tickets to Done when the PR merges' }),
   ).toHaveCount(0);
   await page.reload();
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Connectors' }).click();
   await connectorHead(card(page)).click();
   await expect(card(page).getByRole('switch', { name: 'Jira', exact: true })).toHaveAttribute(

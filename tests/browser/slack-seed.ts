@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import { SLACK_BOT_TOKEN, SLACK_USER_TOKEN } from '../../apps/server/test/fake-slack.ts';
 import type { FakeSlackPost } from '../../apps/server/test/fake-slack.ts';
 import { STUB_PORT } from './stub-config.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
 
@@ -54,7 +55,7 @@ export async function connectSlack(page: Page, channels: string[] = ['C0ENG']): 
 
 export async function openSlackCard(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Connectors' }).click();
   const card = page.locator('.cx-card[data-connector="slack"]');
   await card.locator('button.pc-head').click();

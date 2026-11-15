@@ -9,6 +9,7 @@ import {
   PHONE,
   smallTextInputs,
 } from './responsive-kit.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -18,7 +19,7 @@ test.beforeEach(async () => {
 
 async function openSettingsDialog(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   const dialog = page.getByRole('dialog', { name: 'General' });
   await expect(dialog).toBeVisible();
   return dialog;

@@ -5,6 +5,7 @@ import { resetTestDatabase } from './database.ts';
 import { REJECTED_KEY_MARKER } from './stub-config.ts';
 import { openChats } from './navigation.ts';
 import { animationsSettled } from './settle.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const ZAI_KEY = 'b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6.GlmTestTail';
 const NOTE =
@@ -16,7 +17,7 @@ test.beforeEach(async () => {
 
 async function openProviders(page: Page) {
   await openChats(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /AI providers/ })

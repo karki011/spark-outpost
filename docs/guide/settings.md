@@ -6,7 +6,7 @@ order: 610
 summary: Every Settings section by group, its rows and defaults, and the page that explains each one.
 ---
 
-**Settings** is on the rail; **⌘,** opens its Mac window. **Search settings** opens a section or row.
+**Settings…** is in the left bar's **More**; **⌘,** opens its Mac window. **Search settings** opens a section or row.
 
 ## General
 

@@ -159,6 +159,7 @@ export const SPEC_GROUPS = {
     'projects',
     'plan-ring',
     'rail-clock',
+    'rail-flyout',
     'rail-shortcuts',
     'rail-badges-live',
     'search-jump',

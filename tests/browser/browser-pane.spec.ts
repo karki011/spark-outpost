@@ -11,6 +11,7 @@ import {
   openChatMenu,
   toggleHeaderPane,
 } from './header-menu.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude'] });
@@ -195,10 +196,7 @@ test('a dialog over the pane swaps the page for its snapshot', async ({ page }) 
     );
   }, id);
   await expect(pane.getByRole('tab', { name: 'My app', exact: true })).toBeVisible();
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: /^Settings/ })
-    .click();
+  await clickSettings(page);
   await expect(page.locator('[aria-modal="true"]')).toBeVisible();
   await expect
     .poll(async () => ((await calls(page, 'place')) as { covered: boolean }[]).at(-1)?.covered)

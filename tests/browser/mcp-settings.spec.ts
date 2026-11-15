@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const ECHO = path.resolve('apps/server/test/echo-mcp-server.mjs');
 const TOKEN = 'echo-secret-value';
@@ -28,7 +29,7 @@ async function addEcho(page: Page) {
 
 async function openMcpSettings(page: Page) {
   await openChats(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Connectors' })

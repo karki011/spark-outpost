@@ -14,6 +14,7 @@ import {
   setServiceNowFaults,
   STUB_URL,
 } from './ticket-seed.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = process.env.SERVICENOW_SHOTS ?? '';
 const HOST = new URL(STUB_URL).host;
@@ -24,7 +25,7 @@ const card = (page: Page) => connectorCard(page, 'servicenow');
 
 async function openCard(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Connectors' }).click();
   await connectorHead(card(page)).click();
 }

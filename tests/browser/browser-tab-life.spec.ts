@@ -3,6 +3,7 @@ import { resetTestDatabase } from './database.ts';
 import { calls, withDesktopBrowser } from './desktop-browser.ts';
 import { toggleHeaderPane } from './header-menu.ts';
 import { openChats } from './navigation.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude'] });
@@ -97,7 +98,7 @@ test('Settings signs out of one site or of everything in the one Browser pane pr
 }) => {
   await withDesktopBrowser(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Browser pane' }).click();
   const settings = page.getByRole('dialog', { name: 'Browser pane' });
   const sites = settings.getByRole('group', { name: 'Signed-in sites' });
@@ -113,7 +114,7 @@ test('Settings signs out of one site or of everything in the one Browser pane pr
 
 test('Settings has no Browser pane section without the Mac app', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await expect(page.getByRole('dialog', { name: 'General' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Browser pane' })).toHaveCount(0);
 });

@@ -6,6 +6,7 @@ import { chatRepo, type ChatRepo, linkedChat, resetWithAgents, send } from './pr
 import { openTestDb } from './database.ts';
 import { withDesktopBrowser } from './desktop-browser.ts';
 import { SERVER_LOG_DIR, SIGN_IN_FIXTURE } from './stub-config.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 const FAKE_HOST = process.env.SPARK_FAKE_BROWSER === '1';
@@ -36,7 +37,7 @@ async function link(page: Page): Promise<string> {
 
 async function openSignIns(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'Projects' })

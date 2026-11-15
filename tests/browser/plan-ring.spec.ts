@@ -75,7 +75,7 @@ test('the plan ring shows the most used window and its tooltip names each window
 test('the ring appears once a window reaches 70%', async ({ page }) => {
   await seedPlan(0.69);
   await page.goto('/');
-  await expect(rail(page).getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(rail(page).getByRole('button', { name: /^More/ })).toBeVisible();
   await expect(ring(page)).toHaveCount(0);
 
   await seedPlan(0.7);
@@ -85,12 +85,12 @@ test('the ring appears once a window reaches 70%', async ({ page }) => {
 
 test('there is no plan ring without plan data or for an API-key sign-in', async ({ page }) => {
   await page.goto('/');
-  await expect(rail(page).getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(rail(page).getByRole('button', { name: /^More/ })).toBeVisible();
   await expect(ring(page)).toHaveCount(0);
 
   await seedPlan(0.9, 'api_key');
   await page.reload();
-  await expect(rail(page).getByRole('button', { name: 'Settings' })).toBeVisible();
+  await expect(rail(page).getByRole('button', { name: /^More/ })).toBeVisible();
   await expect(ring(page)).toHaveCount(0);
 });
 

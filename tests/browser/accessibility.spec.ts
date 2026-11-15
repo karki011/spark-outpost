@@ -15,6 +15,7 @@ import { animationsSettled } from './settle.ts';
 import { seedFlowChats } from './ticket-flow-seed.ts';
 import { connectTickets, openTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
 import { JIRA_EMAIL } from '../../apps/server/test/fake-jira.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const THEMES = [
   'light',
@@ -112,7 +113,7 @@ for (const theme of THEMES) {
     await useTheme(page, theme);
     const found = await blockingViolations(page, 'chat with work panel');
 
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await clickSettings(page);
     const settings = page.getByRole('dialog', { name: 'General' });
     await expect(settings).toBeVisible();
     found.push(...(await blockingViolations(page, 'settings general')));
@@ -223,7 +224,7 @@ test('Settings → Connectors has no serious colour-contrast or ARIA issues', as
   await resetTicketFakes();
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Connectors' }).click();
   const jira = connectorCard(page, 'atlassian');
   await connectorHead(jira).click();
@@ -241,7 +242,7 @@ test('Settings → Connectors has no serious colour-contrast or ARIA issues', as
 
   await connectTickets(page, ['jira']);
   await page.reload();
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page.getByRole('tab', { name: 'Connectors' }).click();
   await connectorHead(jira).click();
   await expect(

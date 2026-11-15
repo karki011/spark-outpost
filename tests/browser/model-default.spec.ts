@@ -6,6 +6,7 @@ import { pickerPanel } from './permissions-kit.ts';
 import { resetWithAgents } from './project-chat-kit.ts';
 import { expandSection } from './provider-screen.ts';
 import { animationsSettled } from './settle.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const SHOTS = process.env.SPARK_NO_AUTO_SHOTS ?? '';
 
@@ -49,10 +50,7 @@ async function shoot(page: Page, name: string): Promise<void> {
 }
 
 async function pickSettingsDefault(page: Page, model: string): Promise<void> {
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: 'Settings' })
-    .click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: /AI providers/ })

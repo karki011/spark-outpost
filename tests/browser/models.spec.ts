@@ -8,6 +8,7 @@ import {
   openSettings,
   openTouch,
 } from './responsive-kit.ts';
+import { clickSettings } from './rail-menu.ts';
 
 const BEFORE_HAIKU_RETIRES = new Date('2026-09-29T12:00:00Z');
 
@@ -17,7 +18,7 @@ test.beforeEach(async () => {
 
 async function openModels(page: Page) {
   await openChats(page);
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await page
     .getByRole('dialog', { name: 'General' })
     .getByRole('tab', { name: 'AI providers' })

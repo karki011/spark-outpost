@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { clickSettings } from './rail-menu.ts';
 
 test('Code Mode starts on and keeps the user’s choice after reload', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await page.goto('/');
   const openSettings = async () => {
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await clickSettings(page);
     await page
       .getByRole('dialog', { name: 'General' })
       .getByRole('tab', { name: 'Chats & autonomy' })

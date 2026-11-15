@@ -15,7 +15,7 @@ The Mac app checks at start and every hour, never installing while agents work.
 1. Select the gray **Update** blob above **Settings**; it fills while downloading.
 2. Select **Restart** when the blob shows it.
 
-![The Update blob above Settings in the rail](images/updates-rail-blob-light.png)
+![The Update blob above More in the rail](images/updates-rail-blob-light.png)
 
 A ready update installs when you next quit. While a chat runs or waits, the blob says **Waiting**; a failed restart returns it to **Restart**, saying why.
 

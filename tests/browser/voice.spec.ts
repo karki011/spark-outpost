@@ -7,6 +7,7 @@ import { emitVoice, installFakeVoice, press, say, voiceCalls } from './fake-voic
 import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { connectTickets, resetTicketFakes } from './ticket-seed.ts';
+import { clickSettings, openSettingsTab } from './rail-menu.ts';
 
 let base = '';
 
@@ -45,7 +46,7 @@ async function linkProject(page: Page) {
 test('Voice is not offered without the Mac app', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   await expect(page.getByRole('dialog', { name: 'General' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Voice' })).toHaveCount(0);
 });
@@ -56,8 +57,7 @@ test('Settings: Voice starts off, Speak answers starts off, turning on asks the 
   await resetTestDatabase({ onboarded: true });
   await installFakeVoice(page, { enabled: false });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('tab', { name: 'Voice' }).click();
+  await openSettingsTab(page, 'Voice');
   const settings = page.getByRole('dialog', { name: 'Voice' });
   const voice = settings.getByRole('switch', { name: 'Voice', exact: true });
   await expect(voice).not.toBeChecked();
@@ -83,7 +83,7 @@ test('Settings search finds the Voice rows under General', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await installFakeVoice(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await clickSettings(page);
   const search = page.getByRole('combobox', { name: 'Search settings' });
   await search.fill('Speak answers');
   const option = page
@@ -113,7 +113,7 @@ for (const enabled of [false, true]) {
     await resetTestDatabase({ onboarded: true });
     await installFakeVoice(page, { enabled });
     await page.goto('/');
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await clickSettings(page);
     const voiceSwitch = (dialog: ReturnType<Page['getByRole']>) =>
       dialog.getByRole('switch', { name: 'Voice', exact: true });
 
