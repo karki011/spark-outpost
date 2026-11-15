@@ -43,7 +43,11 @@ async function hideSidebar(page: Page): Promise<void> {
   const handle = page.getByRole('separator', { name: 'Resize browser pane' });
   const before = await handle.getAttribute('aria-valuemax');
   const hide = page.getByRole('button', { name: 'Hide sidebar' });
-  if (!(await hide.isVisible())) return;
+  await expect(hide.or(page.locator('.app.side-float'))).not.toHaveCount(0);
+  if (!(await hide.isVisible())) {
+    await expect(page.locator('.app.side-float')).toHaveCount(1);
+    return;
+  }
   await hide.click();
   await expect(handle).not.toHaveAttribute('aria-valuemax', before!);
   await page.waitForTimeout(400);

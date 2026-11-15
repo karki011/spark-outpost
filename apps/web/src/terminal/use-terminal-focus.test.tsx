@@ -67,6 +67,17 @@ describe('terminal focus', () => {
     expect(work.setOpen).not.toHaveBeenCalled();
   });
 
+  it('leaves a floating sidebar alone on the way in and out', () => {
+    fake.sidebar = { ...sidebar(false), floating: true } as unknown as SidebarLayout;
+    const first = fake.sidebar;
+    const hook = renderHook(() => useTerminalFocus('chat', panel(false), true));
+    act(() => hook.result.current.toggle());
+    hook.rerender();
+    act(() => hook.result.current.toggle());
+    expect(first.toggle).not.toHaveBeenCalled();
+    expect(first.reveal).not.toHaveBeenCalled();
+  });
+
   it('remembers the choice for that chat only, and restores the layout when the chat closes', () => {
     const first = fake.sidebar!;
     const hook = renderHook(() => useTerminalFocus('chat', null, true));

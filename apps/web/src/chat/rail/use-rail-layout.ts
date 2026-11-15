@@ -35,11 +35,9 @@ export function useRoomy(main: RefObject<HTMLElement | null>): boolean {
     observer.observe(element);
     const frame = layoutParent(element);
     if (frame) observer.observe(frame);
-    return () => {
-      observer.disconnect();
-      reportRoom?.(id, null);
-    };
+    return () => observer.disconnect();
   }, [main, id, reportRoom, sideAllowance]);
+  useLayoutEffect(() => () => reportRoom?.(id, null), [id, reportRoom]);
   return roomy;
 }
 

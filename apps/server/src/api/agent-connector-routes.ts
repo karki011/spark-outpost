@@ -68,7 +68,7 @@ export function agentConnectorRoutes(routeDeps: AgentConnectorRouteDeps): Router
         servicenow: source('servicenow'),
         slackConnected: slackRow !== null,
         slack: slack !== null,
-        calendarConnected: calendar.connected || google.length > 0,
+        calendarConnected: calendar.connected || google.some((account) => !account.needsSignIn),
         calendarAgentsRead: calendar.settings.agentsRead,
       }),
     };

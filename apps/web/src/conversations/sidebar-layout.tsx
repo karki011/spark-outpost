@@ -129,13 +129,13 @@ function takeSwapFocus(button: HTMLButtonElement | null): void {
 function useCrampedChat(collapsed: boolean, width: number | null, onChange: () => void) {
   const [cramped, setCramped] = useState(false);
   const rooms = useRef(new Map<string, number>());
+  const pending = useRef(false);
   const latest = useRef({ collapsed, width, cramped, onChange });
-  useEffect(() => {
+  useLayoutEffect(() => {
     latest.current = { collapsed, width, cramped, onChange };
   });
-  const reportRoom = useCallback((id: string, room: number | null) => {
-    if (room === null) rooms.current.delete(id);
-    else rooms.current.set(id, room);
+  const decide = useCallback(() => {
+    pending.current = false;
     const now = latest.current;
     const next = floatsSidebar({
       rooms: [...rooms.current.values()],
@@ -148,6 +148,16 @@ function useCrampedChat(collapsed: boolean, width: number | null, onChange: () =
     setCramped(next);
     now.onChange();
   }, []);
+  const reportRoom = useCallback(
+    (id: string, room: number | null) => {
+      if (room === null) rooms.current.delete(id);
+      else rooms.current.set(id, room);
+      if (pending.current) return;
+      pending.current = true;
+      queueMicrotask(decide);
+    },
+    [decide],
+  );
   return { cramped, reportRoom };
 }
 

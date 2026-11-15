@@ -3,6 +3,8 @@ import { useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import type { AgentConnector, AgentConnectorId } from '@spark-outpost/contracts';
 import { agentConnectorsKey, fetchAgentConnectors } from '../../api/agent-connectors.ts';
 import { requestSettings } from '../../settings/settings-request.ts';
+import { QueryWait } from '../../ui/loading/QueryWait.tsx';
+import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { shipKeys } from '../../ship/ship-api.ts';
 import { slackKeys } from '../../slack/slack-api.ts';
 
@@ -96,14 +98,17 @@ function ConnectorRow({ connector }: { connector: AgentConnector }) {
 export function RailConnectors() {
   useConnectorRefresh();
   const query = useQuery({ queryKey: agentConnectorsKey, queryFn: fetchAgentConnectors });
-  if (!query.data) return null;
-  const shown = query.data.connectors.filter((entry) => entry.state !== 'not_connected');
-  const missing = query.data.connectors.filter((entry) => entry.state === 'not_connected');
+  const connectors = query.data?.connectors ?? [];
+  const shown = connectors.filter((entry) => entry.state !== 'not_connected');
+  const missing = connectors.filter((entry) => entry.state === 'not_connected');
   return (
     <div className="crail-tool-group">
       <h4 className="crail-sub">
         Connectors <span>every chat</span>
       </h4>
+      <QueryWait query={query} what="connectors">
+        <Skeleton label="Finding connectors" shape="list" rows={2} />
+      </QueryWait>
       {shown.length > 0 && (
         <ul aria-label="Connectors">
           {shown.map((connector) => (
@@ -112,12 +117,14 @@ export function RailConnectors() {
         </ul>
       )}
       {missing.length > 0 && (
-        <p className="crail-empty">
-          Not connected: {missing.map((entry) => CONNECTORS[entry.id].name).join(', ')}.{' '}
+        <>
+          <p className="crail-empty">
+            Not connected: {missing.map((entry) => CONNECTORS[entry.id].name).join(', ')}.
+          </p>
           <button type="button" className="crail-manage" onClick={openConnectors}>
             Connect…
           </button>
-        </p>
+        </>
       )}
     </div>
   );

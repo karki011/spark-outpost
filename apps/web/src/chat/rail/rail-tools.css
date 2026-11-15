@@ -77,11 +77,6 @@
   font-size: 12px;
 }
 
-.crail-empty .crail-manage {
-  min-height: 0;
-  margin: 0;
-}
-
 .crail-manage:hover {
   text-decoration: underline;
 }

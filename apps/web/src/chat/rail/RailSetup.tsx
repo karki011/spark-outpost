@@ -2,6 +2,8 @@ import type { AgentConfigSwitch, Project, RepoAgentConfig } from '@spark-outpost
 import { useRemoteClient } from '../../phone/use-remote-client.ts';
 import { SetupSwitch } from '../project/SetupCard.tsx';
 import { useAgentConfig, useAgentConfigChange } from '../project/use-agent-config.ts';
+import { QueryWait } from '../../ui/loading/QueryWait.tsx';
+import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 
 const PARTS: readonly { key: AgentConfigSwitch; title: string }[] = [
   { key: 'skills', title: 'Skills' },
@@ -27,7 +29,13 @@ function RepoParts({ project }: { project: Project }) {
   const config = useAgentConfig(project.id);
   const change = useAgentConfigChange(project.id);
   const { allows } = useRemoteClient();
-  if (!config.data) return null;
+  if (!config.data) {
+    return (
+      <QueryWait query={config} what={`agent setup for ${project.name}`}>
+        <Skeleton label={`Loading agent setup for ${project.name}`} shape="list" rows={2} />
+      </QueryWait>
+    );
+  }
   const data = config.data;
   const parts = PARTS.filter(({ key }) => partNames(data, key).length > 0);
   if (parts.length === 0) return null;
