@@ -178,7 +178,8 @@ test('shared controls are finger-sized and inputs do not zoom on touch', async (
     await expect(page.getByRole('textbox', { name: 'Message' })).toBeVisible();
     expect(await smallTapTargets(page)).toEqual([]);
     expect(await smallTextInputs(page)).toEqual([]);
-    if (isPhone(size)) await page.getByRole('button', { name: /^(Open|Show) sidebar/ }).click();
+    const show = page.getByRole('button', { name: /^(Open|Show) sidebar/ });
+    if (isPhone(size) || (await show.isVisible())) await show.click();
     await expect(page.getByRole('navigation', { name: 'Chats' })).toBeVisible();
     expect(await smallTapTargets(page)).toEqual([]);
     expect(await smallTextInputs(page)).toEqual([]);

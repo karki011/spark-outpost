@@ -6,15 +6,14 @@ export function apiNow(): number {
   return Date.now() + readCalendarClock(FAKE_CALENDAR_STATE);
 }
 
-function apiClockInstalled(): boolean {
-  return readCalendarClock(FAKE_CALENDAR_STATE) !== 0;
-}
+const installed = new WeakSet<Page>();
 
 export async function matchApiClock(page: Page): Promise<void> {
-  if (apiClockInstalled()) await page.clock.install({ time: apiNow() });
+  await page.clock.install({ time: apiNow() });
+  installed.add(page);
 }
 
 export async function setPageClock(page: Page, time: number): Promise<void> {
-  if (apiClockInstalled()) await page.clock.setSystemTime(time);
+  if (installed.has(page)) await page.clock.setSystemTime(time);
   else await page.clock.install({ time });
 }

@@ -88,3 +88,19 @@
     animation: none;
   }
 }
+
+@container main (max-width: 600px) {
+  .dchip {
+    padding: 0 8px;
+  }
+
+  .dchip .dstat {
+    display: none;
+  }
+}
+
+@container main (max-width: 420px) {
+  .dchip .minus {
+    display: none;
+  }
+}

@@ -37,7 +37,7 @@ It starts in the chat's worktree, checkout or home. A busy tab asks **Hold to st
 
 A shell's alert (OSC 9, 777 or 99) shows in the chat row's tooltip until opened, silently.
 
-Listening ports, like **:5173**, show on the chat's row; select one to open it in the Browser pane (Mac).
+Listening ports, like **localhost:5173**, show in the chat's [Context rail](context-rail.md#open-a-port); select one to open it in the Browser pane (Mac).
 
 ![Hold to stop a busy terminal](images/terminals-stop-light.png)
 

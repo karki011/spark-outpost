@@ -1,0 +1,108 @@
+.crail-tools {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.crail-tools .crail-title {
+  margin: 4px 0 -2px;
+  padding-left: 6px;
+}
+
+.crail-tool-group {
+  padding: 8px;
+}
+
+.crail-tool-group .crail-sub {
+  margin-bottom: 2px;
+}
+
+.crail-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.crail-sub span {
+  margin-left: 4px;
+  color: var(--faint);
+  font-weight: 400;
+}
+
+.crail-tools ul {
+  max-height: none;
+  overflow: visible;
+}
+
+.crail-tools li {
+  padding: 4px 0;
+}
+
+.crail-tools .mcppop-text {
+  font-size: 12.5px;
+}
+
+.crail-tools .mcppop-text code {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crail-tools .mcppop-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crail-tools > .crail-empty {
+  padding: 0 6px;
+}
+
+.crail-tools > .crail-empty,
+.crail-tool-group > .crail-empty {
+  margin: 0;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.crail-manage {
+  align-self: flex-start;
+  min-height: 28px;
+  margin-top: 2px;
+  padding: 0;
+  color: var(--accent-text);
+  font-size: 12px;
+}
+
+.crail-manage:hover {
+  text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crail.floating {
+    animation: none;
+  }
+}
+
+.crail-state {
+  flex-shrink: 0;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.crail-state.on {
+  color: var(--success);
+}
+
+.crail-tools li[data-state='switch_off'] code {
+  color: var(--muted);
+}
+
+@media (pointer: coarse) {
+  .crail-manage {
+    min-height: 44px;
+  }
+}

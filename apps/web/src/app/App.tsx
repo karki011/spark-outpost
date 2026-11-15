@@ -260,7 +260,8 @@ function ChatShell({ entering }: { entering: boolean }) {
   const classes = [
     'app',
     entering ? 'entering' : '',
-    layout.collapsed && !layout.narrow ? 'collapsed' : '',
+    layout.collapsed && !layout.floating ? 'collapsed' : '',
+    layout.floating && !layout.narrow ? 'side-float' : '',
     layout.drawer ? 'drawer' : '',
   ].filter(Boolean);
 
@@ -281,7 +282,7 @@ function ChatShell({ entering }: { entering: boolean }) {
             onSettingsIntent={preloadSettings}
             onView={(next) => {
               setView(next);
-              if (next === 'chats' && layout.collapsed && !layout.narrow) layout.reveal();
+              if (next === 'chats' && layout.collapsed && !layout.floating) layout.reveal();
             }}
             onSettings={() => setSettings('spark')}
             onProfile={() => setSettings('spark')}

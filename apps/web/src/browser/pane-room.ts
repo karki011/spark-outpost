@@ -30,6 +30,14 @@ function pageInset(panel: HTMLElement): number {
   return Math.round(inner.getBoundingClientRect().width - page.getBoundingClientRect().width);
 }
 
+function roomLeft(chat: HTMLElement): number {
+  const chatLeft = chat.getBoundingClientRect().left;
+  const side = document.querySelector<HTMLElement>('.app:not(.collapsed):not(.side-float) .side');
+  const bounds = side?.getBoundingClientRect();
+  if (!bounds || bounds.width === 0 || bounds.right > chatLeft + 1) return chatLeft;
+  return chatLeft - bounds.width;
+}
+
 function room(panel: HTMLElement): number {
   const chat = panel.parentElement?.querySelector<HTMLElement>(':scope > .main');
   const row = layoutParent(panel);
@@ -39,7 +47,7 @@ function room(panel: HTMLElement): number {
   const chatGap = parseFloat(getComputedStyle(chat).marginRight) || 0;
   return dockedRoom({
     rowRight: row.getBoundingClientRect().right - PANE_EDGE,
-    chatLeft: chat.getBoundingClientRect().left,
+    chatLeft: roomLeft(chat),
     gaps: chatGap,
   });
 }
