@@ -163,6 +163,12 @@ export function activityLine(entry: RemoteAuditEntry): string {
       return entry.detail.on === true ? 'Remote control turned on' : 'Remote control turned off';
     case 'switches_changed':
       return 'What paired devices can do was changed';
+    case 'card_answering_changed':
+      return 'Where cards can be answered was changed';
+    case 'card_step_up':
+      return `${device} confirmed a card with its passkey`;
+    case 'card_step_up_failed':
+      return `A passkey confirmation from ${device} was refused`;
     case 'pairing_started':
       return 'Pairing started on this Mac';
     case 'pairing_submitted':

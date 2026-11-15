@@ -11,6 +11,7 @@ import { PhoneActivity } from './PhoneActivity.tsx';
 import { PhoneDevices } from './PhoneDevices.tsx';
 import { PhoneStatus } from './PhoneStatus.tsx';
 import { PhoneSwitches } from './PhoneSwitches.tsx';
+import { PhoneCardAnswering } from './PhoneCardAnswering.tsx';
 import { PushContact } from './PushContact.tsx';
 
 const STATE_POLL_MS = 10_000;
@@ -106,6 +107,7 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
             switches={session.switches}
             notificationsExtra={<PushContact poll={hidden ? false : LIST_POLL_MS} />}
           />
+          <PhoneCardAnswering answering={session.cardAnswering} />
         </div>
         <div className="ph-area ph-area-activity">
           <PhoneActivity

@@ -12,6 +12,7 @@ import type { SecretStore } from '../setup/secrets.ts';
 import { DeviceStreams } from './streams.ts';
 import { tailscaleServe } from './tailscale.ts';
 import { tailscaleCli } from './tailscale-cli.ts';
+import { StepUpGrants } from './step-up-grants.ts';
 
 export interface RemoteAccessDeps {
   db: Db;
@@ -35,7 +36,8 @@ export interface RemoteAccessParts {
 
 export function remoteAccessParts(deps: RemoteAccessDeps): RemoteAccessParts {
   const streams = new DeviceStreams();
-  const gateway = remoteGateway({ ...deps, streams });
+  const grants = new StepUpGrants();
+  const gateway = remoteGateway({ ...deps, streams, grants });
   const tailscale = tailscaleServe({
     db: deps.db,
     workspaceId: deps.workspaceId,
@@ -51,6 +53,7 @@ export function remoteAccessParts(deps: RemoteAccessDeps): RemoteAccessParts {
       workspaceId: deps.workspaceId,
       pairings: new Pairings(Date.now, deps.pairingAttemptsPerMinute),
       challenges: new PasskeyChallenges(),
+      grants,
       streams,
       tailscale,
       pushKeys: deps.pushKeys ?? pushKeys(deps.secrets, generateVapidKeys),

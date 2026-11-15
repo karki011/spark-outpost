@@ -32,16 +32,12 @@ import { siteByline, siteNote } from './site-card-text.ts';
 import { PrFollowUpFacts, PrRoundFacts } from './PrFollowUpFacts.tsx';
 import { McpActionFacts } from '../../settings/mcp/McpActionFacts.tsx';
 import { TeammateFacts } from '../../teammates/TeammateFacts.tsx';
-import { useRemoteClient } from '../../phone/use-remote-client.ts';
+import { useCardPlace } from './use-card-place.ts';
+import { AnswerOnMac, StepUpLine } from './AnswerOnMac.tsx';
 import { draftOf, editsOf, Fields } from './SparkActionFields.tsx';
-import { RULES_ON_THE_MAC, RulesEditFacts, rulesByline, rulesNote } from './RulesEditFacts.tsx';
-import { CREW_ON_THE_MAC, CrewEditFacts, crewByline, crewNote } from './CrewEditFacts.tsx';
-import {
-  PLUGINS_ON_THE_MAC,
-  PluginEditFacts,
-  pluginsByline,
-  pluginsNote,
-} from './PluginEditFacts.tsx';
+import { RulesEditFacts, rulesByline, rulesNote } from './RulesEditFacts.tsx';
+import { CrewEditFacts, crewByline, crewNote } from './CrewEditFacts.tsx';
+import { PluginEditFacts, pluginsByline, pluginsNote } from './PluginEditFacts.tsx';
 import { Button } from '../../ui/Button.tsx';
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
@@ -275,13 +271,6 @@ function holdLabel(action: SparkAction): string {
   return action.enabled ? 'Hold to turn on' : 'Hold to turn off';
 }
 
-function macOnlyNote(action: SparkAction): string | null {
-  if (action.action === 'rules_edit') return RULES_ON_THE_MAC;
-  if (action.action === 'plugins_edit') return PLUGINS_ON_THE_MAC;
-  if (crewNote(action)) return CREW_ON_THE_MAC;
-  return null;
-}
-
 export function SparkActionCard({
   approval,
   agent,
@@ -294,12 +283,14 @@ export function SparkActionCard({
   const action = approval.payload.sparkAction!;
   const headingId = useId();
   const [draft, setDraft] = useState(() => draftOf(action));
+  const place = useCardPlace(approval);
   const decide = useMutation({
-    mutationFn: (optionId: string) => {
+    mutationFn: async (optionId: string) => {
       const allowing = approval.options.some(
         (option) => option.optionId === optionId && isAllow(option),
       );
       const edits = allowing ? editsOf(action, draft) : {};
+      await place.confirm();
       return approvalsApi.decide(approval.id, {
         optionId,
         scope: 'once',
@@ -322,8 +313,6 @@ export function SparkActionCard({
   const secretFiles = approval.payload.secretSend;
   const holdOption = holdsToConfirm(approval.payload) ? approval.options.find(isAllow) : undefined;
   const blankTitle = editableFields(action.action).includes('title') && !draft.title.trim();
-  const { remote } = useRemoteClient();
-  const onTheMac = remote ? macOnlyNote(action) : null;
   const shown = approval.options.filter((option) => option !== holdOption);
   const primary = shown.find(isAllow);
   const toneOf = (option: ApprovalOption) =>
@@ -370,8 +359,9 @@ export function SparkActionCard({
       {warning && <p className="appr-reason">{warning}</p>}
       <ObservedNote observed={approval.payload.observed} />
       <p className="sac-note">{confirmNote(action, secretFiles)}</p>
-      {onTheMac ? (
-        <p className="appr-reason">{onTheMac}</p>
+      <StepUpLine place={place} />
+      {place.onMac ? (
+        <AnswerOnMac reason={place.onMac} />
       ) : (
         <div className="appr-acts">
           {holdOption ? (

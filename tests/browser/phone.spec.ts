@@ -284,6 +284,37 @@ test('keeps what the phone can do across reloads', async ({ page }) => {
   ).toBeVisible();
 });
 
+test('chooses where cards can be answered and keeps it across reloads', async ({ page }) => {
+  const main = await openPhone(page);
+  await turnOn(page);
+  const cards = main.getByRole('region', { name: 'Cards can be answered from' });
+  const macOnly = cards.getByRole('radio', { name: 'Mac only' });
+  const devices = cards.getByRole('radio', { name: 'Paired devices' });
+  const rules = cards.getByRole('checkbox', { name: 'Spark rules' });
+  await expect(macOnly).toBeChecked();
+  await expect(rules).toBeChecked();
+  await expect(rules).toBeDisabled();
+  await devices.check();
+  await expect(rules).toBeEnabled();
+  await cards.getByRole('checkbox', { name: 'Calendar' }).check();
+  await expect(cards.getByRole('checkbox', { name: 'Calendar' })).toBeChecked();
+  await rules.focus();
+  await page.keyboard.press('Space');
+  await expect(rules).not.toBeChecked();
+
+  await page.reload();
+  const again = page.getByRole('region', { name: 'Cards can be answered from' });
+  await expect(again.getByRole('radio', { name: 'Paired devices' })).toBeChecked();
+  await expect(again.getByRole('checkbox', { name: 'Calendar' })).toBeChecked();
+  await expect(again.getByRole('checkbox', { name: 'Spark rules' })).not.toBeChecked();
+  await expect(
+    page
+      .getByRole('region', { name: 'Recent remote activity' })
+      .getByText('Where cards can be answered was changed')
+      .first(),
+  ).toBeVisible();
+});
+
 test('every theme passes colour and ARIA checks on the Phone page and the pairing page', async ({
   page,
   browser,

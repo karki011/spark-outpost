@@ -183,9 +183,12 @@ async function cards(db: Queryable, conversationId: string, now: Date): Promise<
     decision_option_id: string | null;
     created_at: Date;
     decided_at: Date | null;
+    answered_device_id: string | null;
+    answered_device_name: string | null;
   }>(
     `SELECT a.run_id, r.user_message_id, a.kind, a.title, a.status, a.reason, a.decided_by,
-       a.decision_option_id, a.created_at, a.decided_at
+       a.decision_option_id, a.created_at, a.decided_at, a.answered_device_id,
+       a.answered_device_name
      FROM approvals a JOIN runs r ON r.id = a.run_id
      WHERE r.conversation_id = $1 ORDER BY a.created_at, a.id`,
     [conversationId],
@@ -203,6 +206,9 @@ async function cards(db: Queryable, conversationId: string, now: Date): Promise<
         option: row.decision_option_id,
         createdAt: row.created_at,
         decidedAt: row.decided_at,
+        device: row.answered_device_id
+          ? { id: row.answered_device_id, name: row.answered_device_name ?? row.answered_device_id }
+          : null,
       },
       now,
     ),

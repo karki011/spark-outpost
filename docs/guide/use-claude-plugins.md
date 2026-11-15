@@ -40,7 +40,7 @@ Skills and subagents it used show as steps and in **Crew**.
 | MCP server tools                  | A card per call, unless the [agent mode](agent-mode.md) runs everything |
 | `allowed-tools`, `permissionMode` | Removed                                                                 |
 
-An agent may ask to turn one on or off with a [card](cards.md#around-the-result) only you answer, on the Mac.
+An agent may ask to turn one on or off with a [card](cards.md#around-the-result) only you answer, on the Mac or a [device you allow](answer-remotely.md).
 
 ## What the agent review sends
 

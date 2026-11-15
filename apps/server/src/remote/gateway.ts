@@ -1,19 +1,14 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { z } from 'zod';
-import { API_TOKEN_HEADER } from '@spark-outpost/contracts';
+import { API_TOKEN_HEADER, STEP_UP_REQUIRED, type RemoteAccess } from '@spark-outpost/contracts';
 import { MUTATING_METHODS, loopbackHosts, refusedForShape } from '../api/security.ts';
 import type { Db } from '../persistence/db.ts';
 import { entryTarget, isEntryReturn, mayHaveLostCookie, sendEntryBounce } from './entry-bounce.ts';
 import { sendPairingPage } from './pairing-page.ts';
 import { servesAddressOrigins } from './address-origins.ts';
-import {
-  MAC_CARD_REFUSAL,
-  blockedFieldIn,
-  cardSwitch,
-  macOnlyCard,
-  remoteDecision,
-  switchRefusal,
-} from './policy.ts';
+import { devicePlaceOf } from './card-place.ts';
+import { blockedFieldIn, remoteDecision, switchRefusal } from './policy.ts';
+import type { StepUpGrants } from './step-up-grants.ts';
 import {
   admitDevice,
   blockedFieldsOf,
@@ -42,6 +37,7 @@ export interface GatewayDeps {
   port: number;
   webRoot?: string | undefined;
   streams: DeviceStreams;
+  grants: StepUpGrants;
 }
 
 const PUBLIC_FILES = new Set([
@@ -58,6 +54,7 @@ const PUBLIC_FILES = new Set([
 const NOT_LOCAL = 'Requests must target the local API host.';
 const BAD_ORIGIN = 'This origin is not allowed.';
 const NOT_PAIRED = 'Pair this device first.';
+const RETRY_ON_MAC = 'Try this again on your Mac.';
 const PAIR_AGAIN = 'This device needs to pair again.';
 const PAIRING_PAGE_AUDIT_EVERY_SECONDS = 60;
 const ASSET_PATH = /\.[a-z0-9]+$/i;
@@ -157,14 +154,25 @@ export function remoteGateway(deps: GatewayDeps) {
     sendPairingPage(res, { passkeys });
   };
 
-  const cardRefusal = async (req: Request, switches: Record<string, boolean>) => {
+  const cardRefusal = async (
+    req: Request,
+    device: RemoteDevicePrincipal,
+    access: RemoteAccess,
+    retry: boolean,
+  ): Promise<{ status: number; reason: string; message: string } | null> => {
     const id = uuid.safeParse(req.path.split('/')[3]);
     if (!id.success) return null;
     const payload = await approvalPayload(db, workspaceId, id.data);
     if (payload === null) return null;
-    if (macOnlyCard(payload)) return 'mac';
-    const needed = cardSwitch(payload);
-    return needed && !switches[needed] ? needed : null;
+    const place = await devicePlaceOf(db, workspaceId, device.id, payload, access);
+    if (place.place === 'here') return null;
+    if (retry) return { status: 403, reason: 'policy', message: RETRY_ON_MAC };
+    if (place.place === 'step_up') {
+      if (deps.grants.consume(device.id, id.data)) return null;
+      return { status: 403, reason: 'step_up', message: STEP_UP_REQUIRED };
+    }
+    const reason = place.switch ? `switch:${place.switch}` : 'policy';
+    return { status: 403, reason, message: place.reason };
   };
 
   const auditRequest = async (req: Request, res: Response, device: RemoteDevicePrincipal) => {
@@ -223,13 +231,10 @@ export function remoteGateway(deps: GatewayDeps) {
       await refuseDevice(req, res, device, 403, 'policy', decision.reason);
       return;
     }
-    const cardNeeds = decision.card ? await cardRefusal(req, access.switches) : null;
-    if (cardNeeds === 'mac') {
-      await refuseDevice(req, res, device, 403, 'policy', MAC_CARD_REFUSAL);
-      return;
-    }
+    const checksCard = decision.card || decision.retry;
+    const cardNeeds = checksCard ? await cardRefusal(req, device, access, decision.retry) : null;
     if (cardNeeds) {
-      await refuseDevice(req, res, device, 403, `switch:${cardNeeds}`, switchRefusal(cardNeeds));
+      await refuseDevice(req, res, device, cardNeeds.status, cardNeeds.reason, cardNeeds.message);
       return;
     }
     admitDevice(res, device, {

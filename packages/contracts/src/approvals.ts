@@ -163,6 +163,7 @@ export const approvalSchema = z.object({
   autoContinueAt: z.string().nullable().optional(),
   edits: sparkActionEditsSchema.nullable().optional(),
   ruleAnswer: sparkRuleAnswerSchema.nullable().optional(),
+  answeredDevice: z.object({ id: z.uuid(), name: z.string() }).optional(),
 });
 export type Approval = z.infer<typeof approvalSchema>;
 

@@ -31,6 +31,8 @@ import { DiffCount, DiffFigure, DiffView } from './DiffView.tsx';
 import { ObservedNote } from './ObservedNote.tsx';
 import { useDiffModel } from './use-diff-model.ts';
 import { useWaitingPlace } from './use-waiting-place.ts';
+import { useCardPlace } from './use-card-place.ts';
+import { AnswerOnMac, StepUpLine } from './AnswerOnMac.tsx';
 import { Button } from '../../ui/Button.tsx';
 
 interface PendingApprovalProps {
@@ -126,9 +128,16 @@ export function PendingApproval({ approval, agent, repo, onDecided }: PendingApp
   const place = useWaitingPlace(approval.id);
   const checkoutBranch = useProjectBranch(repo?.id ?? null);
   const branch = inWorktree(approval.payload.cwd) ? null : checkoutBranch;
+  const where = useCardPlace(approval);
   const decide = useMutation({
-    mutationFn: ({ optionId, scope }: { optionId: string; scope: ApprovalScope }) =>
-      approvalsApi.decide(approval.id, { optionId, scope, payloadHash: approval.payloadHash }),
+    mutationFn: async ({ optionId, scope }: { optionId: string; scope: ApprovalScope }) => {
+      await where.confirm();
+      return approvalsApi.decide(approval.id, {
+        optionId,
+        scope,
+        payloadHash: approval.payloadHash,
+      });
+    },
     onSuccess: (decided, { scope }) => {
       onDecided(decided);
       if (scope === 'project') void queryClient.invalidateQueries({ queryKey: projectKeys.all });
@@ -159,6 +168,7 @@ export function PendingApproval({ approval, agent, repo, onDecided }: PendingApp
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (where.onMac) return;
     const action = cardKeyAction({
       key: event.key,
       modifier: event.metaKey || event.ctrlKey || event.altKey,
@@ -226,7 +236,9 @@ export function PendingApproval({ approval, agent, repo, onDecided }: PendingApp
             approvals. Allow this once only if you have read the change.
           </p>
         )}
-        {holdOption && (
+        <StepUpLine place={where} />
+        {where.onMac && <AnswerOnMac reason={where.onMac} />}
+        {holdOption && !where.onMac && (
           <HoldToConfirm
             label={approval.payload.forcePush ? 'Hold to force push' : 'Hold to allow once'}
             hint="Press and hold for 1.5 seconds, with the mouse or Space."
@@ -237,47 +249,51 @@ export function PendingApproval({ approval, agent, repo, onDecided }: PendingApp
           />
         )}
         <div className="appr-acts">
-          {allow && (
-            <Button
-              tone="soft"
-              small
-              aria-keyshortcuts="Enter"
-              disabled={busy || Boolean(allow.unavailableReason)}
-              title={allow.unavailableReason}
-              onClick={() => answer(allow.optionId)}
-            >
-              {choices.allowLabel}
-              <Keys keys={['⏎']} className="key-hint" />
-            </Button>
+          {!where.onMac && (
+            <>
+              {allow && (
+                <Button
+                  tone="soft"
+                  small
+                  aria-keyshortcuts="Enter"
+                  disabled={busy || Boolean(allow.unavailableReason)}
+                  title={allow.unavailableReason}
+                  onClick={() => answer(allow.optionId)}
+                >
+                  {choices.allowLabel}
+                  <Keys keys={['⏎']} className="key-hint" />
+                </Button>
+              )}
+              <AlwaysAllow
+                choices={choices.always}
+                disabled={busy}
+                onChoose={(choice) => answer(choice.optionId, choice.scope)}
+              />
+              {deny && (
+                <button
+                  type="button"
+                  className="btn line sm deny"
+                  aria-keyshortcuts="Escape"
+                  disabled={busy}
+                  onClick={() => answer(deny.optionId)}
+                >
+                  {deny.name}
+                  <Keys keys={['Esc']} className="key-hint" />
+                </button>
+              )}
+              {choices.otherRejects.map((option) => (
+                <button
+                  key={option.optionId}
+                  type="button"
+                  className="btn ghost sm deny"
+                  disabled={busy}
+                  onClick={() => answer(option.optionId)}
+                >
+                  {option.name}
+                </button>
+              ))}
+            </>
           )}
-          <AlwaysAllow
-            choices={choices.always}
-            disabled={busy}
-            onChoose={(choice) => answer(choice.optionId, choice.scope)}
-          />
-          {deny && (
-            <button
-              type="button"
-              className="btn line sm deny"
-              aria-keyshortcuts="Escape"
-              disabled={busy}
-              onClick={() => answer(deny.optionId)}
-            >
-              {deny.name}
-              <Keys keys={['Esc']} className="key-hint" />
-            </button>
-          )}
-          {choices.otherRejects.map((option) => (
-            <button
-              key={option.optionId}
-              type="button"
-              className="btn ghost sm deny"
-              disabled={busy}
-              onClick={() => answer(option.optionId)}
-            >
-              {option.name}
-            </button>
-          ))}
           {details.toggle}
         </div>
         {details.panel}

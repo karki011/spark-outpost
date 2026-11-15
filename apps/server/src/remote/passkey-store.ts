@@ -130,6 +130,17 @@ export async function recordPasskeySignIn(
   return rowCount === 1;
 }
 
+export async function recordPasskeyUse(
+  db: Queryable,
+  passkeyId: string,
+  counter: number,
+): Promise<void> {
+  await db.query('UPDATE remote_passkeys SET sign_count = $2, last_used_at = now() WHERE id = $1', [
+    passkeyId,
+    counter,
+  ]);
+}
+
 export async function removeDevicePasskeys(
   db: Queryable,
   workspaceId: string,

@@ -12,6 +12,7 @@ import { conversationProjectIds } from '../../agent-config/store.ts';
 import { loadUserPlugins } from '../../agent-config/user-plugins/choice.ts';
 import { pluginConfirmed } from '../../agent-config/user-plugins/view.ts';
 import { runFromDevice } from '../../remote/run-mark.ts';
+import { remoteRunRefused } from '../actions/rules-edit-session.ts';
 import { effectiveFor } from '../../mcp/effective.ts';
 import { enablementsFor, listUserMcp } from '../../mcp/store.ts';
 import { getAttentionSettings } from '../../persistence/attention-settings.ts';
@@ -173,8 +174,19 @@ async function connectors(context: SparkToolContext) {
   };
 }
 
+async function pluginsHiddenFromDevice(
+  db: SparkToolContext['deps']['db'],
+  runId: string,
+  conversationId: string | null,
+): Promise<boolean> {
+  if (!conversationId) return runFromDevice(db, runId);
+  return remoteRunRefused(db, conversationId, runId, 'plugins');
+}
+
 async function claudePlugins({ deps, scope }: SparkToolContext) {
-  if (scope.runId && (await runFromDevice(deps.db, scope.runId))) return 'Shown on the Mac only.';
+  if (scope.runId && (await pluginsHiddenFromDevice(deps.db, scope.runId, scope.conversationId))) {
+    return 'Shown on the Mac only.';
+  }
   const { plugins, choices } = await loadUserPlugins(deps.db, scope.workspaceId, false);
   return plugins.map(({ plugin, agentReview }) => {
     const choice = choices.get(plugin.installed.key);

@@ -59,10 +59,13 @@ export async function markConversationSeen(
   db: Queryable,
   workspaceId: string,
   id: string,
+  before: Date | null = null,
 ): Promise<void> {
   const { rowCount } = await db.query(
-    'UPDATE conversations SET seen_at = now() WHERE id = $1 AND workspace_id = $2',
-    [id, workspaceId],
+    `UPDATE conversations SET seen_at = CASE WHEN $3::timestamptz IS NULL THEN now()
+       ELSE GREATEST(seen_at, LEAST(now(), $3::timestamptz - interval '1 millisecond')) END
+     WHERE id = $1 AND workspace_id = $2`,
+    [id, workspaceId, before],
   );
   if (!rowCount) throw new ConversationNotFoundError(id);
   await db.query(`SELECT pg_notify('changes', $1)`, [

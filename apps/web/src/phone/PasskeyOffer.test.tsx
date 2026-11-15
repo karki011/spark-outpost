@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { REMOTE_SWITCH_DEFAULTS } from '@spark-outpost/contracts';
+import { REMOTE_CARD_ANSWERING_DEFAULT, REMOTE_SWITCH_DEFAULTS } from '@spark-outpost/contracts';
 import { PasskeyOffer } from './PasskeyOffer.tsx';
 
 const SETTLE = { timeout: 3000 };
@@ -49,6 +49,8 @@ function serve(scene: Scene) {
           device: remote ? DEVICE : null,
           address: 'https://mac.tail1234.ts.net',
           switches: { ...REMOTE_SWITCH_DEFAULTS, passkeys: scene.passkeys ?? true },
+          cardAnswering: REMOTE_CARD_ANSWERING_DEFAULT,
+          passkey: saved.length > 0,
         });
       }
       if (path.endsWith('/remote/passkeys')) return json({ passkeys: saved });

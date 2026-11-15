@@ -196,7 +196,7 @@ export const crewEditTool = sparkTool({
   acts: true,
   title: 'Change a Spark’s files or a workflow',
   description:
-    'Propose changes to one Spark’s files (SPARK.md, skills/<name>/SKILL.md, scripts) or one workflow; formats: spark_docs crew-files. Always a card, answered on the Mac. remove: a skill (with spark) or a workflow id.',
+    'Propose changes to one Spark’s files (SPARK.md, skills/<name>/SKILL.md, scripts) or one workflow; formats: spark_docs crew-files. Always a card for the user. remove: a skill (with spark) or a workflow id.',
   input: {
     spark: z.string().optional(),
     files: z

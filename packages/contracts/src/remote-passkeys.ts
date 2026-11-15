@@ -42,6 +42,7 @@ export const passkeyRequestOptionsSchema = z.object({
   challenge: z.string(),
   timeout: z.number().int().positive(),
   userVerification: z.literal('required'),
+  allowCredentials: z.array(credentialDescriptorSchema).optional(),
 });
 export type PasskeyRequestOptions = z.infer<typeof passkeyRequestOptionsSchema>;
 

@@ -8,7 +8,7 @@ import { SPARK_ACTION_OPTION, type BrowserHostRequest } from '@spark-outpost/con
 import { BrowserHostError } from '../src/browser/host-client.ts';
 import { createSignIn, updateSignIn } from '../src/browser/sign-ins.ts';
 import { decideApproval } from '../src/persistence/approvals.ts';
-import { macOnlyCard } from '../src/remote/policy.ts';
+import { macOnlyCard } from '@spark-outpost/contracts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { startSparkMcpHost, type SparkMcpHost } from '../src/spark-mcp/host.ts';
 import { SIGN_IN_HIDDEN } from '../src/spark-mcp/tools/browser/scrub.ts';

@@ -1,6 +1,9 @@
+import { z } from 'zod';
 import {
   pairingStartSchema,
   passkeyCreationOptionsSchema,
+  passkeyRequestOptionsSchema,
+  remoteCardAnsweringSchema,
   pendingPairingListSchema,
   pushContactStateSchema,
   pushStateSchema,
@@ -13,8 +16,11 @@ import {
   remoteSwitchesSchema,
   tailscaleStateSchema,
   type PairingStart,
+  type PasskeyAssertion,
   type PasskeyCreationOptions,
   type PasskeyRegistration,
+  type PasskeyRequestOptions,
+  type RemoteCardAnswering,
   type PendingPairing,
   type PushContactState,
   type PushState,
@@ -72,6 +78,19 @@ export const phoneApi = {
       method: 'PATCH',
       body: JSON.stringify(change),
     }),
+  setCardAnswering: (change: Partial<RemoteCardAnswering>): Promise<RemoteCardAnswering> =>
+    request(remoteCardAnsweringSchema, '/remote/card-answering', {
+      method: 'PATCH',
+      body: JSON.stringify(change),
+    }),
+  stepUpOptions: (approvalId: string): Promise<PasskeyRequestOptions> =>
+    request(passkeyRequestOptionsSchema, `/approvals/${approvalId}/step-up/options`, post),
+  stepUp: async (approvalId: string, assertion: PasskeyAssertion): Promise<void> => {
+    await request(z.unknown(), `/approvals/${approvalId}/step-up`, {
+      method: 'POST',
+      body: JSON.stringify(assertion),
+    });
+  },
   audit: async (): Promise<RemoteAuditEntry[]> =>
     (await request(remoteAuditListSchema, '/remote/audit')).entries,
   removePasskeys: async (deviceId: string): Promise<RemoteDevice[]> =>

@@ -225,6 +225,12 @@ export interface ApprovalRow {
   option: string | null;
   createdAt: Date;
   decidedAt: Date | null;
+  device?: { id: string; name: string } | null;
+}
+
+function answeredOn(row: ApprovalRow): Pick<CardLine, 'answeredOn' | 'device'> {
+  if (row.decidedBy !== 'user') return {};
+  return row.device ? { answeredOn: 'device', device: row.device } : { answeredOn: 'mac' };
 }
 
 const minutes = (ms: number) => Math.round((ms / MS_PER_MINUTE) * 1000) / 1000;
@@ -246,6 +252,7 @@ export function cardLine(row: ApprovalRow, now: Date): CardLine {
     decidedAt: row.decidedAt?.toISOString() ?? null,
     minutesWaited: shown ? minutes(Math.max(0, waited)) : 0,
     shown,
+    ...answeredOn(row),
   };
 }
 
