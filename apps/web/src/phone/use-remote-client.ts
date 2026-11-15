@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { RemoteSwitch } from '@spark-outpost/contracts';
+import type { RemoteSession, RemoteSwitch } from '@spark-outpost/contracts';
 import { rememberRemoteClient } from '../app/connection/remote-hint.ts';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 
@@ -11,6 +11,7 @@ const SESSION_FRESH_MS = 60_000;
 export interface RemoteClient {
   remote: boolean;
   allows: (name: RemoteSwitch) => boolean;
+  session: RemoteSession | undefined;
 }
 
 export function useRemoteClient(): RemoteClient {
@@ -27,5 +28,6 @@ export function useRemoteClient(): RemoteClient {
   return {
     remote,
     allows: (name) => !remote || (switches?.[name] ?? true),
+    session: session.data,
   };
 }

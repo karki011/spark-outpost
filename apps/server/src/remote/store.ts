@@ -9,6 +9,7 @@ import {
 } from '@spark-outpost/contracts';
 import type { Db, Queryable } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
+import { cardAnsweringOf } from './card-answering.ts';
 
 const SWITCH_COLUMNS: Record<RemoteSwitch, string> = {
   settings: 'can_settings',
@@ -29,14 +30,20 @@ const SWITCH_COLUMNS: Record<RemoteSwitch, string> = {
 
 const SWITCH_IDS = Object.keys(SWITCH_COLUMNS) as RemoteSwitch[];
 
-type SettingsRow = { hostname: string | null } & Record<string, boolean | string | null>;
+type SettingsRow = { hostname: string | null } & Record<string, unknown>;
 
 function toAccess(row: SettingsRow | undefined): RemoteAccess {
-  if (!row) return { hostname: null, switches: { ...REMOTE_SWITCH_DEFAULTS } };
+  if (!row) {
+    return {
+      hostname: null,
+      switches: { ...REMOTE_SWITCH_DEFAULTS },
+      cardAnswering: cardAnsweringOf(undefined),
+    };
+  }
   const switches = Object.fromEntries(
     SWITCH_IDS.map((id) => [id, row[SWITCH_COLUMNS[id]] === true]),
   ) as RemoteSwitches;
-  return { hostname: row.hostname, switches };
+  return { hostname: row.hostname, switches, cardAnswering: cardAnsweringOf(row) };
 }
 
 export async function remoteAccess(db: Queryable, workspaceId: string): Promise<RemoteAccess> {

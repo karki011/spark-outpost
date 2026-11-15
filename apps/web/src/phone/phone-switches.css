@@ -113,3 +113,34 @@
     padding: 8px 0;
   }
 }
+.ph-cards-card {
+  display: grid;
+  gap: 10px;
+}
+.ph-cards-from,
+.ph-cards-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.ph-cards-kinds legend {
+  flex-basis: 100%;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.ph-cards-kinds:disabled {
+  opacity: 0.6;
+}
+.ph-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  font-size: 13.5px;
+  cursor: pointer;
+}

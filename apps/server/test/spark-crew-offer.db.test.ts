@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Teammate } from '@spark-outpost/contracts';
 import { CREW_EDIT_REFUSALS, CREW_READ_REFUSALS } from '../src/crew/tool-offer.ts';
-import { macOnlyCard } from '../src/remote/policy.ts';
+import { saveCardAnswering } from '../src/remote/card-answering.ts';
+import { macOnlyCard } from '@spark-outpost/contracts';
 import { ASK_SPARK_REFUSALS, cardRefusal } from '../src/spark-mcp/actions/ask-spark-limits.ts';
 import { EVERYTHING_AVAILABLE, sparkAvailability } from '../src/spark-mcp/availability.ts';
 import { sparkToolsFor } from '../src/spark-mcp/server.ts';
@@ -82,6 +83,21 @@ describe('who is offered the crew tools', () => {
     expect(remote.howTo).toContain('paired device');
     expect((await read()).text).toContain(CREW_READ_REFUSALS.remote);
     expect((await edit(NOTES_SKILL)).text).toContain(CREW_EDIT_REFUSALS.remote);
+  });
+
+  it('offers both to a run from a paired device once its cards can be answered there', async () => {
+    const device = randomUUID();
+    await t.db.query(
+      `INSERT INTO remote_devices (id, workspace_id, name, token_hash) VALUES ($1, $2, 'Phone', $3)`,
+      [device, t.workspaceId, 'b'.repeat(64)],
+    );
+    await t.db.query('UPDATE runs SET remote_device_id = $2 WHERE id = $1', [chat.runId, device]);
+    await saveCardAnswering(t.db, t.workspaceId, { from: 'devices', macOnly: ['rules'] });
+    expect(await offered()).toMatchObject({ read: true, edit: true });
+    const available = await sparkAvailability(toolDeps(t), turn());
+    expect(available.rules_edit).toBe(false);
+    expect(available.plugins_edit).toBe(true);
+    expect(available.mac).toBe(false);
   });
 
   it('offers neither to a child run or a workflow step', async () => {

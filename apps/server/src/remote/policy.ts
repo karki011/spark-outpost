@@ -1,14 +1,4 @@
-import {
-  REMOTE_SWITCH_LABELS,
-  approvalPayloadSchema,
-  atlassianDeletes,
-  serviceNowAsksAlways,
-  isCalendarAction,
-  isMacAction,
-  isSecretFileName,
-  type RemoteSwitch,
-  type RemoteSwitches,
-} from '@spark-outpost/contracts';
+import { remoteSwitchRefusal, type RemoteSwitches } from '@spark-outpost/contracts';
 import {
   AGENT_MODE_FIELDS,
   CARD_ROUTE,
@@ -119,48 +109,7 @@ export function blockedFieldIn(body: unknown, fields: readonly string[]): string
   return fields.find((field) => field in body) ?? null;
 }
 
-function baseName(path: string): string {
-  return path.split('/').at(-1) ?? path;
-}
-
 export const MAC_CARD_REFUSAL =
   'Mac control, calendar, Spark rules, plugin, Spark and workflow, browser sign-in and open-address cards are answered on your Mac.';
 
-export function macOnlyCard(payload: unknown): boolean {
-  const parsed = approvalPayloadSchema.safeParse(payload);
-  if (parsed.success && parsed.data.openAddress) return true;
-  const action = parsed.success ? parsed.data.sparkAction?.action : undefined;
-  if (action === 'browser_handoff' || action === 'rules_edit' || action === 'plugins_edit') {
-    return true;
-  }
-  if (action === 'crew_edit' || action === 'create_teammate' || action === 'update_teammate') {
-    return true;
-  }
-  return action !== undefined && (isMacAction(action) || isCalendarAction(action));
-}
-
-export function cardSwitch(payload: unknown): RemoteSwitch | null {
-  const parsed = approvalPayloadSchema.safeParse(payload);
-  if (!parsed.success) return 'highRiskCards';
-  const card = parsed.data;
-  const action = card.sparkAction;
-  if (action?.action === 'browser_sign_in') return 'signIns';
-  if (action?.action === 'link_repo' || action?.action === 'clone_repo') return 'projects';
-  if (action?.action === 'ask_spark' && action.op === 'answer_card') return 'highRiskCards';
-  const editsAtlassian = action?.action === 'jira_edit' || action?.action === 'confluence_edit';
-  if (editsAtlassian && atlassianDeletes(action)) {
-    return 'highRiskCards';
-  }
-  if (action && serviceNowAsksAlways(action)) return 'highRiskCards';
-  const paths = [...card.paths, ...(card.fullPaths ?? [])];
-  const highRisk =
-    card.gitControl !== undefined ||
-    card.forcePush !== undefined ||
-    card.instructionFiles !== undefined ||
-    paths.some((path) => isSecretFileName(baseName(path)));
-  return highRisk ? 'highRiskCards' : null;
-}
-
-export function switchRefusal(name: RemoteSwitch): string {
-  return `Turned off for remote control on your Mac: ${REMOTE_SWITCH_LABELS[name]}.`;
-}
+export const switchRefusal = remoteSwitchRefusal;

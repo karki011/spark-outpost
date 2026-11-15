@@ -23,7 +23,7 @@ import { matchTeammate } from '../tools/teammates-tool.ts';
 import { proposeAction } from './confirm.ts';
 import type { Performed } from './performed.ts';
 
-const CARD_NOTE = 'Always a card, answered on the Mac; returns waiting_for_user, never retry.';
+const CARD_NOTE = 'Always a card for the user; returns waiting_for_user, never retry.';
 
 const fieldsInput = {
   role: teammateRoleSchema.optional(),

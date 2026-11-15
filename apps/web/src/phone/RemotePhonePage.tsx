@@ -2,6 +2,7 @@ import type { RemoteSession } from '@spark-outpost/contracts';
 import { PhoneNotifications } from './PhoneNotifications.tsx';
 import { PhonePasskey } from './PhonePasskey.tsx';
 import { PhoneSwitchesReadOnly } from './PhoneSwitches.tsx';
+import { PhoneCardAnsweringReadOnly } from './PhoneCardAnswering.tsx';
 
 export function RemotePhonePage({ session }: { session: RemoteSession }) {
   return (
@@ -28,6 +29,7 @@ export function RemotePhonePage({ session }: { session: RemoteSession }) {
       <PhoneNotifications session={session} />
       <PhonePasskey session={session} />
       <PhoneSwitchesReadOnly switches={session.switches} />
+      <PhoneCardAnsweringReadOnly session={session} />
     </>
   );
 }

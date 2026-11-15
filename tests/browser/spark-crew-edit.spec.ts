@@ -143,7 +143,7 @@ test('the card shows new files in full and changed lines, and Allow writes them'
   const instructions = files.getByRole('region', { name: 'Changes to SPARK.md' });
   await expect(instructions.locator('.dv-row.remove')).toContainText('Be brief.');
   await expect(instructions.locator('.dv-row.add')).toContainText('Be thorough.');
-  await expect(card).toContainText('Only you can answer this, on your Mac.');
+  await expect(card).toContainText('Only you can answer this, never Ask Spark.');
   await card.screenshot({ path: 'test-results/spark-crew-edit/card.png' });
 
   await card.getByRole('button', { name: 'Allow' }).click();
@@ -223,11 +223,44 @@ test('a paired device sees the card waiting and cannot answer it', async ({ page
     });
   });
   const card = await openCard(page);
-  await expect(card).toContainText('Waiting for you on your Mac. Answered on the Mac only.');
+  await expect(card).toContainText(
+    'Answer on your Mac. Sparks and workflows cards are answered on your Mac.',
+  );
   await expect(
     card.getByRole('region', { name: 'Changes to skills/notes/SKILL.md' }),
   ).toContainText('List merged pull requests.');
   await expect(card.getByRole('button', { name: 'Allow' })).toHaveCount(0);
   await expect(card.getByRole('button', { name: 'Deny' })).toHaveCount(0);
+  expect(await filePaths(page, sparkId)).toEqual(['SPARK.md']);
+});
+
+test('a paired device answers the card once Sparks and workflows cards can go there', async ({
+  page,
+}) => {
+  await crewCardChat(sparkId, [
+    { path: 'skills/notes/SKILL.md', change: 'new', before: null, after: SKILL, baseHash: null },
+  ]);
+  await page.route('**/api/remote/session', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      json: {
+        ...((await response.json()) as object),
+        remote: true,
+        device: { id: '00000000-0000-4000-8000-000000000001', name: 'Maya’s iPhone' },
+        address: 'https://mac.tail.test',
+        cardAnswering: { from: 'devices', macOnly: [] },
+      },
+    });
+  });
+  const card = await openCard(page);
+  await expect(card).not.toContainText('Answer on your Mac.');
+  await expect(
+    card.getByRole('region', { name: 'Changes to skills/notes/SKILL.md' }),
+  ).toContainText('List merged pull requests.');
+  await card.getByRole('button', { name: 'Deny' }).click();
+  await expect(page.getByRole('group', { name: /Change the Scout Spark\?/ })).not.toContainText(
+    'Only you can answer this',
+  );
   expect(await filePaths(page, sparkId)).toEqual(['SPARK.md']);
 });

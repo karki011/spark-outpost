@@ -407,3 +407,7 @@ Since October 20, 2026 a paired device may also start a draft as proposed and an
 10. **Agents and the remote window.** Recommend: no access, no tool, and saved Spark addresses refused when agents later get external sites.
 11. **A teammate's Mac.** Recommend: not supported and not hidden. Say so in the guide. Per-device permissions are a separate design.
 12. **Addresses accepted.** Only `https://*.ts.net`, no port or path. Recommend: yes, until the relay version exists.
+
+## Cards from a paired device
+
+Since issue #257 a paired device may answer the Sparks and workflows, plugin, calendar, Spark rules and Mac control cards when **Cards can be answered from** on the Remote control page allows it, with a passkey step-up for Spark rules, Mac control and hold-to-confirm cards. The design, defaults and audit are in [PHONE_REMOTE.md](PHONE_REMOTE.md#cards-from-a-paired-device-issue-257-built).

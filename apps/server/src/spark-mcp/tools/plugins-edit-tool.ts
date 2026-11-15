@@ -35,7 +35,7 @@ function pluginsOptions(enabled: boolean): ApprovalOption[] {
 
 export const PLUGINS_RUN_REFUSALS: Record<RulesRefusedRun, string> = {
   remote:
-    'Plugins are never turned on or off from a turn started on a paired device. Ask from the Mac.',
+    'A turn started on a paired device turns plugins on or off only while Plugins cards can be answered from paired devices (Remote control on the Mac).',
   voice: 'Plugins are never turned on or off from a spoken message. Type it on the Mac instead.',
   child: 'Only the chat’s own turn can ask to turn a plugin on or off.',
   assistant: 'Ask Spark does not turn plugins on or off. Ask in a chat on the Mac.',
@@ -137,7 +137,7 @@ interface EditArgs {
 async function edit(args: EditArgs, context: SparkToolContext) {
   const run = actionRun(context.scope);
   const { db } = context.deps;
-  const refusedRun = await rulesRunRefusal(db, context.scope);
+  const refusedRun = await rulesRunRefusal(db, context.scope, 'plugins');
   if (refusedRun) throw new SparkToolError(PLUGINS_RUN_REFUSALS[refusedRun]);
   const session = await rulesSession(db, run.runId);
   if (!session) throw new SparkToolError(PLUGINS_RUN_REFUSALS.no_chat);

@@ -7,8 +7,6 @@ import {
   type SparkAction,
 } from '@spark-outpost/contracts';
 
-export const RULES_ON_THE_MAC = 'Waiting for you on your Mac. Spark rules change there.';
-
 interface DiffProps {
   add: readonly RuleLine[];
   remove: readonly RuleLine[];

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { macOnlyCard } from '../src/remote/policy.ts';
+import { macOnlyCard } from '@spark-outpost/contracts';
 import { MacHarness } from './spark-mac-support.ts';
 
 let h: MacHarness;

@@ -27,6 +27,8 @@ import type { TerminalSessions } from '../terminal/sessions.ts';
 import type { NativeRuntime } from '../terminal/native-runtime.ts';
 import { DEFAULT_SETTLE_MS, stopConversationWork } from '../workflow/stop-conversation.ts';
 import { paramId, parseBody } from './validation.ts';
+import { earliestMacOnlyCard } from '../remote/card-place.ts';
+import { remoteDeviceOf } from '../remote/principal.ts';
 
 export interface ConversationActionDeps {
   db: Db;
@@ -83,7 +85,10 @@ export function conversationActionRoutes({
   });
 
   router.post('/conversations/:id/seen', async (req, res) => {
-    await markConversationSeen(db, workspaceId, paramId(req));
+    const id = paramId(req);
+    const device = remoteDeviceOf(res);
+    const before = device ? await earliestMacOnlyCard(db, workspaceId, device.id, id) : null;
+    await markConversationSeen(db, workspaceId, id, before);
     res.status(204).end();
   });
 

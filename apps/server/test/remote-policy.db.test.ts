@@ -2,7 +2,11 @@ import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { REMOTE_SWITCH_DEFAULTS } from '@spark-outpost/contracts';
+import {
+  REMOTE_CARD_ANSWERING_DEFAULT,
+  REMOTE_SWITCH_DEFAULTS,
+  STEP_UP_NEEDS_PASSKEY,
+} from '@spark-outpost/contracts';
 import { insertApproval } from '../src/persistence/approvals.ts';
 import { ROUTE_RULES } from '../src/remote/route-rules.ts';
 import { createTestApp, localClient } from './app-support.ts';
@@ -249,6 +253,8 @@ describe('switches', () => {
       device: { id: device.id, name: 'Test phone' },
       address: 'https://mac.tail1234.ts.net',
       switches: REMOTE_SWITCH_DEFAULTS,
+      cardAnswering: REMOTE_CARD_ANSWERING_DEFAULT,
+      passkey: false,
     });
     expect((await localClient(app).get('/api/remote/session').expect(200)).body).toMatchObject({
       remote: false,
@@ -332,7 +338,10 @@ describe('switches', () => {
       });
     const allow = { optionId: 'allow', scope: 'once' };
     const first = await card('hooks-1', { gitControl: ['.git/hooks/pre-commit'] });
-    await phone.send('post', `/api/approvals/${first.id}/decision`, allow).expect(200);
+    const needsPasskey = await phone
+      .send('post', `/api/approvals/${first.id}/decision`, allow)
+      .expect(403);
+    expect(needsPasskey.body.error).toBe(STEP_UP_NEEDS_PASSKEY);
 
     await setSwitches(app, { highRiskCards: false });
     const second = await card('hooks-2', { gitControl: ['.git/config'] });

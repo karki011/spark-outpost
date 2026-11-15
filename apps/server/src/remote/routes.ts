@@ -5,6 +5,7 @@ import {
   pairingSubmitRequestSchema,
   renameRemoteDeviceRequestSchema,
   updateRemoteAccessRequestSchema,
+  updateRemoteCardAnsweringRequestSchema,
   updateRemoteSwitchesRequestSchema,
   type PairingClaimResponse,
   type PairingSubmitResponse,
@@ -22,6 +23,9 @@ import type { PasskeyChallenges } from './passkey-challenges.ts';
 import { passkeyRoutes, toPasskey } from './passkey-routes.ts';
 import type { PushKeys } from './push-keys.ts';
 import { pushRoutes } from './push-routes.ts';
+import { saveCardAnswering } from './card-answering.ts';
+import type { StepUpGrants } from './step-up-grants.ts';
+import { stepUpRoutes } from './step-up-routes.ts';
 import {
   devicePasskeys,
   listPasskeys,
@@ -55,6 +59,7 @@ export interface RemoteRouteDeps {
   workspaceId: string;
   pairings: Pairings;
   challenges: PasskeyChallenges;
+  grants: StepUpGrants;
   streams: DeviceStreams;
   tailscale: TailscaleServe;
   pushKeys: PushKeys;
@@ -203,6 +208,15 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
     passkeyRoutes({ db, workspaceId, challenges, attemptsPerMinute: deps.attemptsPerMinute }),
   );
   router.use(pushRoutes({ db, workspaceId, keys: deps.pushKeys, test: deps.pushTest }));
+  router.use(
+    stepUpRoutes({
+      db,
+      workspaceId,
+      challenges,
+      grants: deps.grants,
+      attemptsPerMinute: deps.attemptsPerMinute,
+    }),
+  );
 
   router.get('/remote/switches', async (_req, res) => {
     res.json((await remoteAccess(db, workspaceId)).switches);
@@ -210,11 +224,15 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
 
   router.get('/remote/session', async (_req, res) => {
     const access = await remoteAccess(db, workspaceId);
+    const device = remoteDeviceOf(res);
+    const passkeys = device ? await devicePasskeys(db, workspaceId, device.id) : [];
     const session: RemoteSession = {
       remote: isRemote(res),
-      device: remoteDeviceOf(res),
+      device,
       address: access.hostname ? `https://${access.hostname}` : null,
       switches: access.switches,
+      cardAnswering: access.cardAnswering,
+      passkey: passkeys.length > 0,
     };
     res.json(session);
   });
@@ -259,6 +277,19 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
     const saved = await saveRemoteSwitches(db, workspaceId, change);
     await audit({ action: 'switches_changed', detail: change });
     res.json(saved.switches);
+  });
+
+  router.patch('/remote/card-answering', async (req, res) => {
+    const change = parseBody(updateRemoteCardAnsweringRequestSchema, req);
+    const saved = await saveCardAnswering(db, workspaceId, change);
+    await audit({
+      action: 'card_answering_changed',
+      detail: {
+        ...(change.from ? { from: change.from } : {}),
+        ...(change.macOnly ? { macOnly: change.macOnly.join(',') } : {}),
+      },
+    });
+    res.json(saved);
   });
 
   router.get('/remote/devices', async (_req, res) => {

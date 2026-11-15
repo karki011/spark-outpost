@@ -9,8 +9,6 @@ import {
 import { FOLDED_RULES, findingTitle } from '../../settings/plugin-model.ts';
 import { PluginStatus } from '../../settings/PluginStatus.tsx';
 
-export const PLUGINS_ON_THE_MAC = 'Waiting for you on your Mac. Plugins are turned on there.';
-
 const SHOWN_ITEMS = 3;
 
 const AGENT_REVIEW_NOTE = {

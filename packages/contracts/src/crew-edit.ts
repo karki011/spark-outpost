@@ -91,9 +91,7 @@ export function crewEditByline(action: CrewEditAction): string {
 }
 
 export const CREW_EDIT_NOTE =
-  'Only you can answer this, on your Mac. What a Spark’s files say reaches its agents as your own standing instructions, so read the new text before you allow it.';
-
-export const CREW_ON_THE_MAC = 'Waiting for you on your Mac. Answered on the Mac only.';
+  'Only you can answer this, never Ask Spark. What a Spark’s files say reaches its agents as your own standing instructions, so read the new text before you allow it.';
 
 export const CREW_EDIT_CONFLICT = 'Changed since the card was shown';
 

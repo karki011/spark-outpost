@@ -44,6 +44,8 @@ export interface ApprovalRow {
   auto_continue_at?: Date | null;
   edits?: SparkActionEdits | null;
   rule_answer?: SparkRuleAnswer | null;
+  answered_device_id?: string | null;
+  answered_device_name?: string | null;
 }
 
 export class ApprovalNotFoundError extends Error {
@@ -76,6 +78,14 @@ export function toApproval(row: ApprovalRow): Approval {
     autoContinueAt: row.auto_continue_at?.toISOString() ?? null,
     ...(row.edits ? { edits: row.edits } : {}),
     ...(row.payload.sparkRule ? { ruleAnswer: row.rule_answer ?? null } : {}),
+    ...(row.answered_device_id
+      ? {
+          answeredDevice: {
+            id: row.answered_device_id,
+            name: row.answered_device_name ?? row.answered_device_id,
+          },
+        }
+      : {}),
   };
 }
 
@@ -112,6 +122,12 @@ export interface Settlement {
   note?: string | null;
   edits?: SparkActionEdits | null;
   answerContent?: AgentContent | null;
+  answeredDevice?: AnsweringDevice | null;
+}
+
+export interface AnsweringDevice {
+  id: string;
+  name: string;
 }
 
 export function defaultOption(approval: Pick<NewApproval, 'payload' | 'options'>): string | null {
@@ -186,7 +202,8 @@ export async function settlePending(
 ): Promise<Approval | null> {
   const { rows } = await db.query<ApprovalRow>(
     `UPDATE approvals SET status = $2, decided_by = $3, decision_option_id = $4,
-       scope = COALESCE($5, 'once'), note = $6, edits = $7, answer_content = $8, decided_at = now()
+       scope = COALESCE($5, 'once'), note = $6, edits = $7, answer_content = $8, decided_at = now(),
+       answered_device_id = $9, answered_device_name = $10
      WHERE id = $1 AND status = 'pending' RETURNING *`,
     [
       id,
@@ -197,6 +214,8 @@ export async function settlePending(
       settlement.note ?? null,
       settlement.edits ? JSON.stringify(settlement.edits) : null,
       settlement.answerContent ? JSON.stringify(settlement.answerContent) : null,
+      settlement.answeredDevice?.id ?? null,
+      settlement.answeredDevice?.name ?? null,
     ],
   );
   if (rows[0]) await notifyApprovalChanged(db, id);
@@ -340,6 +359,7 @@ export async function decideApproval(
   workspaceId: string,
   id: string,
   decision: UserDecision,
+  answeredDevice: AnsweringDevice | null = null,
 ): Promise<Approval> {
   return withTransaction(db, async (client) => {
     const { rows } = await client.query<ApprovalRow>(
@@ -362,6 +382,7 @@ export async function decideApproval(
       note: decision.note?.trim() || null,
       edits: decision.edits ?? null,
       answerContent: content,
+      answeredDevice,
     });
     if (!settled) throw new ApprovalConflictError('This approval was already answered.');
     if (decision.scope === 'project') {

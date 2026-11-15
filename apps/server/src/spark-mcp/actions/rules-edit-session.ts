@@ -2,11 +2,13 @@ import {
   providerLabel,
   RULES_SESSION_OPTION,
   SPARK_ACTION_KIND,
+  type RemoteCardKind,
   type RulesEditAction,
   type RulesTarget,
 } from '@spark-outpost/contracts';
 import { childRun, spokenRun } from '../../mac-control/offered.ts';
 import type { Queryable } from '../../persistence/db.ts';
+import { remoteKindAllowed } from '../../remote/card-answering.ts';
 import { runFromDevice } from '../../remote/run-mark.ts';
 
 export type RulesRefusedRun = 'remote' | 'voice' | 'child' | 'assistant' | 'read_only' | 'no_chat';
@@ -18,21 +20,33 @@ export interface RulesRunScope {
   assistant?: boolean;
 }
 
+export async function remoteRunRefused(
+  db: Queryable,
+  conversationId: string,
+  runId: string,
+  kind: RemoteCardKind,
+): Promise<boolean> {
+  if (!(await runFromDevice(db, runId))) return false;
+  return !(await remoteKindAllowed(db, conversationId, kind));
+}
+
 export async function rulesRunRefusal(
   db: Queryable,
   scope: RulesRunScope,
+  kind: Extract<RemoteCardKind, 'rules' | 'plugins' | 'crew'>,
 ): Promise<RulesRefusedRun | null> {
   if (scope.assistant) return 'assistant';
   if (scope.readOnly) return 'read_only';
   if (!scope.conversationId || !scope.runId) return 'no_chat';
-  if (await runFromDevice(db, scope.runId)) return 'remote';
+  if (await remoteRunRefused(db, scope.conversationId, scope.runId, kind)) return 'remote';
   if (await childRun(db, scope.runId)) return 'child';
   if (await spokenRun(db, scope.runId)) return 'voice';
   return null;
 }
 
 export const RULES_RUN_REFUSALS: Record<RulesRefusedRun, string> = {
-  remote: 'Spark rules are never changed from a turn started on a paired device. Ask from the Mac.',
+  remote:
+    'A turn started on a paired device changes Spark rules only while Spark rules cards can be answered from paired devices (Remote control on the Mac).',
   voice: 'Spark rules are never changed from a spoken message. Type it on the Mac instead.',
   child: 'Only the chat’s own turn can ask to change Spark rules.',
   assistant: 'Ask Spark does not change Spark rules. Ask in a chat on the Mac.',
@@ -98,7 +112,7 @@ export async function rulesSession(db: Queryable, runId: string): Promise<RulesS
     modeName: modeNameOf(row.modes, row.agent_mode),
     agent: providerLabel(row.provider),
     sessionRow: row.session_row,
-    fromUser: typedByUser(row),
+    fromUser: typedByUser(row) && !(await runFromDevice(db, runId)),
   };
 }
 

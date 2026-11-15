@@ -139,6 +139,8 @@ export const cardLineSchema = z.object({
   decidedAt: z.string().nullable(),
   minutesWaited: z.number().nonnegative(),
   shown: z.boolean(),
+  answeredOn: z.enum(['mac', 'device']).optional(),
+  device: z.object({ id: z.string(), name: z.string() }).optional(),
 });
 export type CardLine = z.infer<typeof cardLineSchema>;
 

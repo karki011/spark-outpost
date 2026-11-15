@@ -1,5 +1,7 @@
 import {
+  cardSwitch,
   holdsToConfirm,
+  macOnlyCard,
   serviceNowAsksAlways,
   type Approval,
   type AskSparkAnswer,
@@ -8,13 +10,7 @@ import {
 } from '@spark-outpost/contracts';
 import { getApproval } from '../../persistence/approvals.ts';
 import type { Queryable } from '../../persistence/db.ts';
-import {
-  cardSwitch,
-  macOnlyCard,
-  MAC_CARD_REFUSAL,
-  remoteDecision,
-  switchRefusal,
-} from '../../remote/policy.ts';
+import { MAC_CARD_REFUSAL, remoteDecision, switchRefusal } from '../../remote/policy.ts';
 import { CARD_ROUTE } from '../../remote/route-rules.ts';
 import { runFromDevice } from '../../remote/run-mark.ts';
 import { spokenRun } from '../../mac-control/offered.ts';

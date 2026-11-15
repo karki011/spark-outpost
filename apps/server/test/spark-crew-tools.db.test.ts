@@ -13,7 +13,7 @@ import { crewFileHash, readCrewFile, saveCrewFile } from '../src/crew/spark-fold
 import { sparkFolder } from '../src/crew/spark-skills.ts';
 import { workflowStore } from '../src/crew-flows/workflow-store.ts';
 import { decideApproval } from '../src/persistence/approvals.ts';
-import { macOnlyCard } from '../src/remote/policy.ts';
+import { macOnlyCard } from '@spark-outpost/contracts';
 import { ASK_SPARK_REFUSALS, cardRefusal } from '../src/spark-mcp/actions/ask-spark-limits.ts';
 import { crewTool } from '../src/spark-mcp/tools/crew-tool.ts';
 import { newSpark } from './crew-workflow-support.ts';
