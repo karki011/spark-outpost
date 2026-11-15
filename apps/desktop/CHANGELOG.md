@@ -4,6 +4,16 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.8
+
+- **Settings** has fewer pages: **General** holds your profile, appearance and Notifications; **AI providers** has Providers and Models tabs; **Connectors** has Connectors and MCP servers tabs; **About** holds Updates, Help and Reset. Each connector opens its own page, switches show On or Off, each row has one ⓘ, and long provider and model lists fold.
+- The left bar keeps the places you work in. **More** at the bottom holds Pause Spark, Analytics, Docs, Remote control, Settings…, What's new and Send feedback, with a dot when Spark is paused.
+- **Sign in with Slack** connects in one click, and Spark watches Slack for messages that @mention you: each shows on Home with Open in Slack and Dismiss, and never counts, chimes or pushes. **Watch for @mentions of me** in Slack settings turns it off.
+- **Workflow triggers:** a workflow can run when a turn keeps file changes, before a chat publishes at Full auto → PR (optionally holding on serious findings), on a commit to a branch, or when a Spark pull request opens or gets a new head. **Let runs edit files** lets a workflow's steps leave uncommitted edits.
+- **Cards can be answered from** (Remote control page) lets paired devices answer confirmation cards, with **Keep on the Mac** per kind. Spark rules, Mac control and hold-to-confirm cards ask for the device's passkey on each answer.
+- Agents can do most of what a person does in Jira: parent, sub-tasks and Team, transitions with fields, comments, links, worklogs, attachments, sprints and versions. Every change shows before and after.
+- The context rail shows what the agent can use (skills, commands, MCP servers, plugins and connectors) and the chat's listening ports. A narrow chat floats the rail and the chat list over the thread.
+
 ## 0.1.0-beta.7
 
 - **Sparks** has its own page in the left bar, with **Crew** and **Workflows** tabs; Sparks moved out of Settings. A Spark is a folder: its instructions (`SPARK.md`, no length limit), skills and scripts.
