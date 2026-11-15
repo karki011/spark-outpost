@@ -236,38 +236,6 @@ test.describe('plain chats', () => {
     await shoot(page, 'overlay-1280-work-panel');
   });
 
-  test.describe('on a touch screen', () => {
-    test.use({ hasTouch: true });
-
-    test('the floating rail has 44px targets and leaves Escape to a dialog it opened', async ({
-      page,
-    }) => {
-      await longChat(page, PROMPTS.slice(0, 1));
-      await page.setViewportSize({ width: 1280, height: 900 });
-      expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
-      await header(page).getByRole('button', { name: 'Hide work panel' }).click();
-      await page.getByRole('button', { name: 'Show context rail' }).click();
-      await expect(rail(page)).toBeVisible();
-      const manage = rail(page).getByRole('button', { name: 'Manage tools' });
-      const connect = rail(page).getByRole('button', { name: 'Connect…' });
-      for (const target of [manage, connect]) {
-        await target.scrollIntoViewIfNeeded();
-        const box = (await target.boundingBox())!;
-        expect(box.height).toBeGreaterThanOrEqual(44);
-        expect(box.width).toBeGreaterThanOrEqual(44);
-      }
-
-      await manage.click();
-      const settings = page.getByRole('dialog').first();
-      await expect(settings).toBeVisible();
-      await page.keyboard.press('Escape');
-      await expect(settings).toBeHidden();
-      await expect(rail(page)).toBeVisible();
-      await page.keyboard.press('Escape');
-      await expect(rail(page)).toHaveCount(0);
-    });
-  });
-
   test('On wide windows picks the rail, the work panel or an empty margin', async ({ page }) => {
     test.setTimeout(90_000);
     await longChat(page, PROMPTS.slice(0, 1));

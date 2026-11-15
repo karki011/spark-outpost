@@ -43,6 +43,7 @@ export const SPEC_GROUPS = {
     'chat-files',
     'chat-questions',
     'chat-rail',
+    'chat-rail-escape',
     'chat-send',
     'chat-share',
     'chat-split',
