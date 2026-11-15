@@ -68,13 +68,22 @@ describe('watching for @mentions of the user', () => {
     expect(JSON.stringify(stored.rows)).not.toContain('deploy');
   });
 
-  it('reads further pages until it reaches the catch-up window, so a busy day loses none', async () => {
-    for (let i = 0; i < 120; i += 1) say('C0OPS', 'U0SAM', `<@${SLACK_ME}> page ${i}`);
+  it('reads further pages back to the catch-up window once, then only back to the last check', async () => {
+    await t.db.query(`UPDATE slack_connections SET validated_at = now() - interval '3 hours'`);
+    const twoHoursAgo = Math.floor(Date.now() / 1000) - 7200;
+    for (let i = 0; i < 120; i += 1) {
+      say('C0OPS', 'U0SAM', `<@${SLACK_ME}> page ${i}`, `${twoHoursAgo + i}.000100`);
+    }
     const watcher = watch();
 
+    const searches = () => stub.slack.calls.filter((call) => call === 'search.messages').length;
+
     expect(await watcher.check()).toBe(120);
+    expect(searches()).toBe(3);
+    say('C0OPS', 'U0KIM', `<@${SLACK_ME}> one more`);
+    expect(await watcher.check()).toBe(1);
+    expect(searches()).toBe(4);
     await watcher.stop();
-    expect(stub.slack.calls.filter((call) => call === 'search.messages')).toHaveLength(3);
   });
 
   it('skips the user own messages, messages from before connecting and other people', async () => {

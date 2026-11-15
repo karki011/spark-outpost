@@ -11,6 +11,7 @@ import { slackCall, slackText } from './web-api.ts';
 
 export const MENTION_CHECK_MS = 60_000;
 export const MENTION_CATCH_UP_MS = 24 * 60 * 60 * 1000;
+const SEARCH_LAG_MS = 10 * 60 * 1000;
 const MENTIONS_PAGE = 50;
 const SLACK_TS = /^\d{1,12}\.\d{1,9}$/;
 
@@ -137,6 +138,7 @@ export function startSlackMentionWatch(
   let timer: NodeJS.Timeout | null = null;
   let stopped = false;
   let running: Promise<number> = Promise.resolve(0);
+  let lastChecked: number | null = null;
   const stopping = new AbortController();
   const watchDeps: SlackDeps = {
     ...deps,
@@ -149,12 +151,15 @@ export function startSlackMentionWatch(
     if (!open?.connection.settings.watchMentions) return 0;
     const { teamId, memberId, validatedAt } = open.connection;
     if (!memberId) return 0;
-    const since = Math.max(validatedAt.getTime(), now() - MENTION_CATCH_UP_MS);
-    const found = await findSlackMentions(watchDeps, open, since);
+    const startedAt = now();
+    const since = Math.max(validatedAt.getTime(), startedAt - MENTION_CATCH_UP_MS);
+    const pageUntil = lastChecked === null ? since : Math.max(since, lastChecked - SEARCH_LAG_MS);
+    const found = await findSlackMentions(watchDeps, open, pageUntil);
     if (!found) return 0;
     const fresh = found.filter((mention) => mention.mentionedAt.getTime() >= since);
     const owner = { teamId, memberId, validatedAt };
     const added = await saveSlackMentions(watchDeps.db, watchDeps.workspaceId, owner, fresh);
+    lastChecked = startedAt;
     if (added > 0) await notifyAttention(watchDeps.db, null);
     return added;
   }
