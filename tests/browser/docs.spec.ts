@@ -168,9 +168,12 @@ test('a Settings info link opens the guide at the page for that setting', async 
     .getByRole('tab', { name: 'Chats & autonomy' })
     .click();
   const settings = page.getByRole('dialog', { name: 'Chats & autonomy' });
-  await settings
-    .getByRole('link', { name: 'Read about How much Spark does alone in Docs' })
-    .click();
+  const more = settings.getByRole('button', { name: 'More about How much Spark does alone' });
+  const link = settings.getByRole('link', { name: 'Read about How much Spark does alone in Docs' });
+  await expect(link).toBeHidden();
+  await more.click();
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  await link.click();
   await expect(settings).toBeHidden();
   await expect(pageTitle(page)).toHaveText('Choose how much Spark does alone');
   await expect(pageTitle(page)).toBeInViewport();

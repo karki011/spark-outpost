@@ -37,7 +37,7 @@ export function tipText(content: TipContent): string {
   return [content.lead, ...items, content.footer].filter(Boolean).join(' ');
 }
 
-function TipBody({ content }: { content: RichTip }) {
+export function TipBody({ content }: { content: RichTip }) {
   return (
     <>
       {content.lead && <p className="tip-lead">{content.lead}</p>}

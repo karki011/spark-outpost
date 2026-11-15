@@ -1,9 +1,10 @@
 import './setting-row.css';
 import { useRef, type ReactNode } from 'react';
-import { DocLink, type DocTarget } from '../ui/DocLink.tsx';
+import type { DocTarget } from '../ui/DocLink.tsx';
 import { InfoTip } from '../ui/InfoTip.tsx';
 import type { TipContent } from '../ui/Tooltip.tsx';
 import { useSettingFocus } from './setting-focus.ts';
+import { useRowHelp } from './RowHelp.tsx';
 
 interface SettingRowProps {
   label: string;
@@ -31,6 +32,8 @@ export function SettingRow({
   const row = useRef<HTMLDivElement>(null);
   const control = useRef<HTMLDivElement>(null);
   useSettingFocus(label, row, control, standsFor);
+  const help = useRowHelp({ topic: label, text: info, doc: doc ?? { page: '' } });
+  const combined = doc !== undefined;
   return (
     <div ref={row} className="set-row" data-disabled={disabled || undefined}>
       <div className="set-row-head">
@@ -41,11 +44,7 @@ export function SettingRow({
         ) : (
           <span className="set-row-label">{label}</span>
         )}
-        {info ? (
-          <InfoTip topic={label} text={info} doc={doc} />
-        ) : (
-          doc && <DocLink topic={label} doc={doc} />
-        )}
+        {combined ? help.button : info && <InfoTip topic={label} text={info} />}
       </div>
       <div ref={control} className="set-row-control">
         {children}
@@ -53,6 +52,7 @@ export function SettingRow({
       <p id={hintId} className="set-hint set-row-hint" aria-live="polite">
         {hint}
       </p>
+      {combined && help.panel}
     </div>
   );
 }
