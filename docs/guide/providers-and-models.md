@@ -10,7 +10,7 @@ You'll change a provider's defaults, reconnect it, read the model cards and conn
 
 ## Change defaults or the default provider
 
-1. Open **Settings → AI providers** and select the provider's tile. Connected providers come first; the rest are under **Not connected**.
+1. Open **Settings → AI providers** and select the provider's tile. Providers you've set up are listed first.
 2. Under **Defaults for new chats**, change **Model**, **Mode** or **Effort**.
 3. Select **Make default** to start new chats with this provider.
 
