@@ -45,6 +45,8 @@ function card(action: SparkAction, title: string): Approval {
 const create: SparkAction = {
   action: 'create_ticket',
   source: 'linear',
+  parent: null,
+  team: null,
   project: 'ENG',
   title: 'Crash on save',
   description: 'Steps',
@@ -225,5 +227,56 @@ describe('SparkActionCard', () => {
 
     await waitFor(() => expect(decide).toHaveBeenCalled());
     expect(decide.mock.calls[0]![1]).toMatchObject({ edits: { to: 'Rejected' } });
+  });
+
+  it('shows the parent and team a Jira ticket is created under', () => {
+    show(
+      card(
+        {
+          ...create,
+          source: 'jira',
+          project: 'API',
+          parent: 'API-95',
+          team: { field: 'customfield_10001', id: 'team-1', name: 'Platform' },
+        },
+        'Create this ticket? Crash on save',
+      ),
+    );
+    const group = screen.getByRole('group', { name: /Create this ticket\?/ });
+    expect(group.textContent).toContain('ParentAPI-95');
+    expect(group.textContent).toContain('TeamPlatform');
+  });
+
+  it('shows parent, type and team before and after a Jira change', () => {
+    const facts = {
+      summary: 'Upload',
+      description: '',
+      labels: [],
+      priority: null,
+    };
+    show(
+      card(
+        {
+          action: 'jira_edit',
+          op: 'update',
+          ticket: {
+            key: 'API-77',
+            title: 'Upload',
+            url: 'https://example.atlassian.net/browse/API-77',
+          },
+          updated: '2026-10-01T00:00:00.000+0000',
+          changes: { parent: 'API-95', issueType: 'Story' },
+          before: { ...facts, parent: null, type: 'Task', team: null },
+          after: { ...facts, parent: 'API-95', type: 'Story', team: 'Payments' },
+          comment: null,
+          subtasks: [],
+        },
+        'Change this ticket? API-77 Upload',
+      ),
+    );
+    const group = screen.getByRole('group', { name: /Change this ticket\?/ });
+    expect(group.textContent).toContain('TypeTask → Story');
+    expect(group.textContent).toContain('ParentNone → API-95');
+    expect(group.textContent).toContain('TeamNone → Payments');
   });
 });

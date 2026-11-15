@@ -25,8 +25,18 @@ const jiraIssueFactsSchema = z.object({
   description: cardText,
   labels: z.array(z.string().max(255)).max(50),
   priority: z.string().max(100).nullable(),
+  parent: z.string().max(64).nullable().default(null),
+  type: z.string().max(100).nullable().default(null),
+  team: z.string().max(300).nullable().default(null),
 });
 export type JiraIssueFacts = z.infer<typeof jiraIssueFactsSchema>;
+
+export const jiraTeamChoiceSchema = z.object({
+  field: z.string().regex(/^customfield_\d{1,10}$/),
+  id: z.string().min(1).max(100),
+  name: z.string().max(300).nullable(),
+});
+export type JiraTeamChoice = z.infer<typeof jiraTeamChoiceSchema>;
 
 export const jiraChangesSchema = z
   .object({
@@ -34,6 +44,9 @@ export const jiraChangesSchema = z
     description: z.string().max(ATLASSIAN_BODY_MAX),
     labels: z.array(z.string().trim().min(1).max(100)).max(50),
     priority: z.string().trim().min(1).max(100),
+    parent: z.string().trim().min(1).max(64),
+    issueType: z.string().trim().min(1).max(100),
+    team: jiraTeamChoiceSchema,
   })
   .partial();
 export type JiraChanges = z.infer<typeof jiraChangesSchema>;

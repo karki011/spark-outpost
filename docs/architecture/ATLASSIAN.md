@@ -18,19 +18,19 @@ One connector, **Atlassian**, covers Jira and Confluence on one Atlassian Cloud 
 
 Four tools, offered only while the product is connected, reachable and on (`needs: 'jira'` and `needs: 'confluence'`). Creating, commenting, moving and assigning Jira issues stay with the existing ticket tools.
 
-| Tool                    | Does                                                                                                                                                                |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `spark_jira`            | `search` by JQL (`POST /rest/api/3/search/jql`, `nextPageToken`); `read` one issue with its description (paged) and the latest 20 comments with id and whether mine |
-| `spark_jira_edit`       | `update` summary, description, labels, priority; `edit_comment` and `delete_comment` on the user's own comments; `delete` an issue (`withSubtasks` for subtasks)    |
-| `spark_confluence`      | `search` by CQL (`GET /wiki/rest/api/search`, v1: there is no CQL search in v2); `read` a page as Markdown-like text, paged at 12,000 characters, with its version  |
-| `spark_confluence_edit` | `create` (space key, title, Markdown body, optional parent), `update` (needs the version read), `comment` (footer comment), `delete` (moves the page to the trash)  |
+| Tool                    | Does                                                                                                                                                                                                                                                                                     |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spark_jira`            | `search` by JQL (`POST /rest/api/3/search/jql`, `nextPageToken`); `read` one issue with its type, parent, team, description (paged) and the latest 20 comments with id and whether mine; `types` lists a project's issue types with their sub-task flag and the teams seen on its issues |
+| `spark_jira_edit`       | `update` summary, description, labels, priority, parent, issue type and team; `edit_comment` and `delete_comment` on the user's own comments; `delete` an issue (`withSubtasks` for subtasks)                                                                                            |
+| `spark_confluence`      | `search` by CQL (`GET /wiki/rest/api/search`, v1: there is no CQL search in v2); `read` a page as Markdown-like text, paged at 12,000 characters, with its version                                                                                                                       |
+| `spark_confluence_edit` | `create` (space key, title, Markdown body, optional parent), `update` (needs the version read), `comment` (footer comment), `delete` (moves the page to the trash)                                                                                                                       |
 
 Confluence calls use REST v2 (`/wiki/api/v2/pages`, `/footer-comments`, `/spaces`) except search and the current user. A v2 `DELETE /pages/{id}` moves a page to the trash; purging needs a second call on the trashed page, which Spark never makes. Endpoints were checked against Atlassian's published v2 OpenAPI document and the v1 search reference on 2026-10-19; nothing was verified against a live site beyond reads.
 
 ### Approval
 
 - Reads follow the agent mode like a Spark action, once per chat per product: at once in Auto, Bypass permissions, Auto review and Full access (and in Accept edits when the user's message asked), otherwise an `atlassian_read` card that allows the rest of the chat.
-- Writes are `jira_edit` and `confluence_edit` Spark actions through `proposeAction`: they follow the mode the same way, with a card that shows the change before and after (summary, labels, priority, description, comment text, page title and text, capped at 4,000 characters on the card).
+- Writes are `jira_edit` and `confluence_edit` Spark actions through `proposeAction`: they follow the mode the same way, with a card that shows the change before and after (summary, labels, priority, type, parent, team, description, comment text, page title and text, capped at 4,000 characters on the card).
 - Deleting an issue, a comment or a page follows the mode like any other write (owner decision, 2026-10-19); the result line names what was deleted, and a Confluence page is "Moved to trash".
 - When the card is confirmed, Spark reads the item again and changes nothing when it moved on: a Jira issue whose `updated` changed, a comment whose `updated` changed, an issue whose subtasks are not the ones the card listed, or a page whose version is no longer the one on the card (update, comment and delete). `update` also refuses at once when the version the agent passes is not the current one, and a 409 from Confluence is reported the same way, so the agent reads the page again.
 - Every read and write is an audit entry, without page or issue bodies (`atlassianAuditFacts`). Writes are a send to Jira or Confluence for the send flag; reads record private work data, so a later send off the computer carries the note.
@@ -44,6 +44,15 @@ Confluence calls use REST v2 (`/wiki/api/v2/pages`, `/footer-comments`, `/spaces
 ### Ticket detail relations
 
 The inbox's ticket detail (`jira.ts` `getTicket`) adds `parent`, `issuelinks` and `subtasks` to its one issue request and returns `parent`, `relations` and up to 50 `subtasks` (`subtasksMore` past that), read leniently in `jira-relations.ts`: a missing or odd field is an empty list, never a failed ticket. Read only, no extra request per link, and not part of any agent tool.
+
+### Parent, issue type and team
+
+- `spark_create_ticket` (Jira) takes `parent` and `team`; `spark_jira_edit` `update` takes `parent`, `issueType` and `team`. Linear refuses `parent` and `team` before any card. Everything goes in the one create or edit call as `fields.parent: {key}`, `fields.issuetype: {name}` and the Team field set to the team id string, so a sub-task type with a parent makes a real sub-task and an epic child gets its epic. Jira decides whether a type change is allowed; its refusal is passed on.
+- The Team field is found with `GET /rest/api/3/field` by its type (`com.atlassian.teams:rm-teams-custom-field-team`, or `atlassian-team`), never by name, once per tool call; reads leave `team` null when it can't be found. A write refuses when there is none or several.
+- A team is given by id (a UUID, the end of the team's profile address) or by name. A name is matched, ignoring case, against the teams on that project's latest 100 issues with a team (`cf[NNNNN] is not EMPTY`); no single match refuses and lists what was seen. Atlassian documents no team lookup by name for an API token, so there is no Teams API call.
+- `types` reads `GET /rest/api/3/issue/createmeta/{project}/issuetypes`.
+- Jira's field errors (`errors` as a map of field to message) are passed on by field; a 403 or 404 adds what Jira said.
+- The Team value shapes come from Atlassian's Team field REST page (checked 2026-11-14); none of this was run against a live site.
 
 ## Tests
 

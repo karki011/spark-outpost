@@ -127,6 +127,8 @@ describe('approval outcome', () => {
   const ticket: SparkAction = {
     action: 'create_ticket',
     source: 'linear',
+    parent: null,
+    team: null,
     project: 'ENG',
     title: 'Crash on save',
     description: '',

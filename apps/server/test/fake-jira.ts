@@ -6,6 +6,7 @@ import {
   type FakeDevelopment,
 } from './fake-jira-dev.ts';
 import { commentView, jiraEditRoute, type FakeJiraComment } from './fake-jira-edits.ts';
+import { applyPlacement, hierarchyView, metaAnswer, placementErrors } from './fake-jira-meta.ts';
 
 export const JIRA_EMAIL = 'alex@example.test';
 export const JIRA_TOKEN = 'jira_fake_token_0123456789';
@@ -34,6 +35,9 @@ export interface FakeJiraIssue {
   comments: FakeJiraComment[];
   remoteLinks: { globalId: string; url: string; title: string }[];
   subtasks: string[];
+  parent?: string | null;
+  type?: string;
+  team?: string | null;
 }
 
 export interface FakeJira {
@@ -198,6 +202,7 @@ export function fakeJira(): FakeJira {
         const sub = issues.find((entry) => entry.key === key)!;
         return { key, fields: { summary: sub.summary, status: statusField(sub) } };
       }),
+      ...hierarchyView(item, issues),
     };
   }
 
@@ -219,6 +224,7 @@ export function fakeJira(): FakeJira {
     return issues.filter((item) => {
       if (!assigneeMatches(item, query)) return false;
       if (key && item.key !== key) return false;
+      if (query.includes('cf[10001] is not EMPTY') && !item.team) return false;
       if ((categoryOf(item) === 'done') !== wantDone) return false;
       if (project && projectOf(item) !== project) return false;
       return !text || item.summary.toLowerCase().includes(text);
@@ -314,10 +320,13 @@ export function fakeJira(): FakeJira {
       priority?: { name: string };
       labels?: string[];
       assignee?: { accountId: string };
+      issuetype?: { name?: string };
     };
     if (!workflows[fields.project.key]) {
       return send(res, 400, { errors: { project: 'valid project is required' } });
     }
+    const errors = placementErrors(fields, issues, fields.issuetype?.name);
+    if (Object.keys(errors).length > 0) return send(res, 400, { errorMessages: [], errors });
     const number = issues.filter((item) => projectOf(item) === fields.project.key).length + 100;
     const key = `${fields.project.key}-${number}`;
     issues.push({
@@ -337,6 +346,7 @@ export function fakeJira(): FakeJira {
       remoteLinks: [],
       subtasks: [],
     });
+    applyPlacement(issues.at(-1)!, fields, issues);
     return send(res, 201, { id: String(issues.length), key, self: `/rest/api/3/issue/${key}` });
   }
 
@@ -409,6 +419,8 @@ export function fakeJira(): FakeJira {
       if (url.pathname === '/rest/api/3/issue' && req.method === 'POST') {
         return createIssue(res, await readJson(req));
       }
+      const meta = metaAnswer(url.pathname, Object.keys(workflows));
+      if (meta) return send(res, meta[0], meta[1]);
       const project = PROJECT_STATUSES.exec(url.pathname);
       if (project) return projectStatuses(res, decodeURIComponent(project[1]!));
       const dev = DEV_STATUS.exec(url.pathname);

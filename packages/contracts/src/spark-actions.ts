@@ -36,6 +36,7 @@ import {
   atlassianActionLabels,
   atlassianActionSchemas,
   atlassianQuestion,
+  jiraTeamChoiceSchema,
 } from './atlassian-actions.ts';
 import {
   serviceNowActionLabels,
@@ -86,6 +87,8 @@ export const createTicketActionSchema = z.object({
   priority: ticketPriorityNameSchema.nullable(),
   labels,
   assignToMe: z.boolean(),
+  parent: z.string().trim().min(1).max(64).nullable().default(null),
+  team: jiraTeamChoiceSchema.nullable().default(null),
 });
 
 export const commentTicketActionSchema = z.object({

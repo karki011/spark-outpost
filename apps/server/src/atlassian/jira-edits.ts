@@ -1,6 +1,16 @@
 import { z } from 'zod';
 import { adfToText, textToAdf } from '../tickets/jira-adf.ts';
 import { atlassianClient, type AtlassianAccess } from './access.ts';
+import {
+  issueTypeOf,
+  parentOf,
+  placementFields,
+  readTeamField,
+  teamOf,
+  type JiraParent,
+  type JiraTeam,
+  type JiraTeamChoice,
+} from './jira-hierarchy.ts';
 
 export const JIRA = { name: 'Jira', thing: 'ticket' };
 
@@ -12,6 +22,7 @@ const SEARCH_FIELDS = [
   'updated',
   'project',
   'issuetype',
+  'parent',
 ];
 const FACT_FIELDS = [
   'summary',
@@ -21,6 +32,8 @@ const FACT_FIELDS = [
   'updated',
   'status',
   'subtasks',
+  'parent',
+  'issuetype',
 ];
 
 const person = z.object({ accountId: z.string().optional(), displayName: z.string() });
@@ -30,7 +43,7 @@ const searchSchema = z.object({
   issues: z.array(
     z.object({
       key: z.string(),
-      fields: z.object({
+      fields: z.looseObject({
         summary: z.string(),
         status: named,
         assignee: person.nullable().optional(),
@@ -38,6 +51,7 @@ const searchSchema = z.object({
         updated: z.string().optional(),
         project: z.object({ key: z.string() }).nullable().optional(),
         issuetype: named,
+        parent: z.unknown().optional(),
       }),
     }),
   ),
@@ -46,7 +60,7 @@ const searchSchema = z.object({
 
 const factsSchema = z.object({
   key: z.string(),
-  fields: z.object({
+  fields: z.looseObject({
     summary: z.string(),
     description: z.unknown().optional(),
     labels: z.array(z.string()).optional(),
@@ -54,6 +68,8 @@ const factsSchema = z.object({
     updated: z.string(),
     status: named,
     subtasks: z.array(z.object({ key: z.string() })).optional(),
+    parent: z.unknown().optional(),
+    issuetype: z.unknown().optional(),
   }),
 });
 
@@ -75,6 +91,9 @@ export interface JiraFacts {
   status: string | null;
   updated: string;
   subtasks: string[];
+  parent: JiraParent | null;
+  type: string | null;
+  team: JiraTeam | null;
 }
 
 export interface JiraComment {
@@ -91,6 +110,9 @@ export interface JiraFieldChange {
   description?: string | undefined;
   labels?: string[] | undefined;
   priority?: string | undefined;
+  parent?: string | undefined;
+  issueType?: string | undefined;
+  team?: JiraTeamChoice | undefined;
 }
 
 const issuePath = (key: string) => `/rest/api/3/issue/${encodeURIComponent(key)}`;
@@ -111,9 +133,18 @@ function commentOf(comment: z.infer<typeof commentSchema>): JiraComment {
 export function jiraEdits(access: AtlassianAccess, fetchImpl: typeof fetch) {
   const client = atlassianClient(access, fetchImpl, JIRA);
   const browse = (key: string) => `${access.siteUrl}/browse/${key}`;
+  let teamField: Promise<string | null> | null = null;
+  const teamFieldId = () => (teamField ??= readTeamField(client));
+  const withTeam = async (fields: string[]) => {
+    const team = await teamFieldId();
+    return { team, fields: team ? [...fields, team] : fields };
+  };
   return {
     browse,
+    client,
+    teamFieldId,
     async search(jql: string, limit: number, pageToken: string | null) {
+      const asked = await withTeam(SEARCH_FIELDS);
       const found = await client.call(
         searchSchema,
         {
@@ -121,7 +152,7 @@ export function jiraEdits(access: AtlassianAccess, fetchImpl: typeof fetch) {
           path: '/rest/api/3/search/jql',
           body: {
             jql,
-            fields: SEARCH_FIELDS,
+            fields: asked.fields,
             maxResults: limit,
             ...(pageToken ? { nextPageToken: pageToken } : {}),
           },
@@ -134,6 +165,8 @@ export function jiraEdits(access: AtlassianAccess, fetchImpl: typeof fetch) {
           title: issue.fields.summary,
           status: issue.fields.status?.name ?? null,
           type: issue.fields.issuetype?.name ?? null,
+          parent: parentOf(issue.fields.parent)?.key ?? null,
+          team: asked.team ? teamOf(issue.fields[asked.team]) : null,
           priority: issue.fields.priority?.name ?? null,
           assignee: issue.fields.assignee?.displayName ?? null,
           project: issue.fields.project?.key ?? null,
@@ -144,9 +177,10 @@ export function jiraEdits(access: AtlassianAccess, fetchImpl: typeof fetch) {
       };
     },
     async facts(key: string): Promise<JiraFacts> {
+      const asked = await withTeam(FACT_FIELDS);
       const issue = await client.call(
         factsSchema,
-        { method: 'GET', path: `${issuePath(key)}?fields=${FACT_FIELDS.join(',')}` },
+        { method: 'GET', path: `${issuePath(key)}?fields=${asked.fields.join(',')}` },
         `reading ${key}`,
       );
       return {
@@ -158,6 +192,9 @@ export function jiraEdits(access: AtlassianAccess, fetchImpl: typeof fetch) {
         status: issue.fields.status?.name ?? null,
         updated: issue.fields.updated,
         subtasks: (issue.fields.subtasks ?? []).map((sub) => sub.key),
+        parent: parentOf(issue.fields.parent),
+        type: issueTypeOf(issue.fields.issuetype),
+        team: asked.team ? teamOf(issue.fields[asked.team]) : null,
       };
     },
     async comments(key: string, limit: number) {
@@ -189,6 +226,7 @@ export function jiraEdits(access: AtlassianAccess, fetchImpl: typeof fetch) {
         ...(change.description !== undefined ? { description: textToAdf(change.description) } : {}),
         ...(change.labels !== undefined ? { labels: change.labels } : {}),
         ...(change.priority !== undefined ? { priority: { name: change.priority } } : {}),
+        ...placementFields(change),
       };
       await client.call(
         null,

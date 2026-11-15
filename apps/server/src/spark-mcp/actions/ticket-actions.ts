@@ -5,6 +5,7 @@ import {
   SPARK_TITLE_MAX,
   isReadOnlyTable,
   isTicketKey,
+  ticketKeySchemaFor,
   ticketSourceNames,
   ticketKeyHint,
   ticketKeySchema,
@@ -17,6 +18,8 @@ import {
 import { recordTicketEvent } from '../../persistence/ticket-events.ts';
 import { assignTicket } from '../../tickets/assign.ts';
 import { connectedSources, requireSource, type TicketDeps } from '../../tickets/connections.ts';
+import { resolveTeam } from '../../atlassian/jira-hierarchy.ts';
+import { openAtlassian } from '../../atlassian/session.ts';
 import { createTicket } from '../../tickets/create.ts';
 import type { MoveRequest } from '../../tickets/move-target.ts';
 import { moveTicket } from '../../tickets/sync.ts';
@@ -73,7 +76,21 @@ const createInput = {
   priority: ticketPriorityNameSchema.optional(),
   labels: z.array(z.string().trim().min(1).max(100)).max(SPARK_LABELS_MAX).default([]),
   assignToMe: z.boolean().default(false),
+  parent: ticketKeySchemaFor('jira')
+    .optional()
+    .describe('Jira epic, or story for a sub-task type.'),
+  team: z.string().trim().min(1).max(100).optional().describe('Jira team name or id.'),
 };
+
+async function jiraTeam(context: SparkToolContext, project: string, team: string | undefined) {
+  if (!team) return null;
+  const session = await openAtlassian(ticketDepsFor(context.deps, context.scope), 'jira');
+  context.scope.observations?.record({
+    source: 'private_data',
+    label: 'Jira data (spark_create_ticket)',
+  });
+  return resolveTeam(session.jira.client, project, team);
+}
 
 async function create(context: SparkToolContext, args: z.output<z.ZodObject<typeof createInput>>) {
   const deps = ticketDepsFor(context.deps, context.scope);
@@ -81,6 +98,11 @@ async function create(context: SparkToolContext, args: z.output<z.ZodObject<type
   if (source === 'servicenow') {
     throw new SparkToolError(
       'ServiceNow records are opened in ServiceNow; Spark reads and updates them but does not create them.',
+    );
+  }
+  if (source !== 'jira' && (args.parent || args.team)) {
+    throw new SparkToolError(
+      'parent and team work only for Jira tickets. Nothing was created; leave them out for Linear.',
     );
   }
   await requireSource(deps, source);
@@ -94,6 +116,8 @@ async function create(context: SparkToolContext, args: z.output<z.ZodObject<type
     priority: args.priority ?? null,
     labels: args.labels,
     assignToMe: args.assignToMe,
+    parent: args.parent?.toUpperCase() ?? null,
+    team: await jiraTeam(context, args.project, args.team),
   };
   return proposeAction(context, action);
 }

@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { FakeJiraIssue } from './fake-jira.ts';
+import { applyPlacement, isSubtaskType, placementErrors } from './fake-jira-meta.ts';
 
 export interface FakeJiraComment {
   author: string;
@@ -50,6 +51,13 @@ async function editFields(request: JiraEditRequest) {
   const { item, res, send } = request;
   const fields = (await request.body()).fields as Record<string, unknown> | undefined;
   if (!fields) return send(res, 400, { errorMessages: ['fields is required'] });
+  const type = (fields.issuetype as { name?: string } | undefined)?.name;
+  const errors = placementErrors(fields, request.issues, undefined);
+  if (type && isSubtaskType(type) !== isSubtaskType(item.type)) {
+    errors.issuetype = 'Changing between sub-task and standard issue types is not supported.';
+  }
+  if (Object.keys(errors).length > 0) return send(res, 400, { errorMessages: [], errors });
+  applyPlacement(item, fields, request.issues);
   if (typeof fields.summary === 'string') item.summary = fields.summary;
   if (fields.description !== undefined) item.description = fields.description;
   if (Array.isArray(fields.labels)) item.labels = fields.labels as string[];

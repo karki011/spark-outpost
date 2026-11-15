@@ -1,4 +1,5 @@
 import type {
+  JiraTeamChoice,
   ReportedPullState,
   TicketBranch,
   TicketBuilds,
@@ -49,6 +50,8 @@ export interface NewTicket {
   priority: TicketPriorityName | null;
   labels: readonly string[];
   assigneeId: string | null;
+  parent: string | null;
+  team: JiraTeamChoice | null;
 }
 
 export interface CreatedTicket {

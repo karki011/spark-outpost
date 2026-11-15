@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { TicketDetail, TicketPriorityName, TicketSummary } from '@spark-outpost/contracts';
+import { placementFields } from '../atlassian/jira-hierarchy.ts';
 import { callJson, failure, isOk, type JsonCall } from './http.ts';
 import { adfToText, textToAdf } from './jira-adf.ts';
 import { DEV_STATUS_TIMEOUT_MS, readJiraDevelopment } from './jira-development.ts';
@@ -429,6 +430,7 @@ export function jiraSource(
           ? { labels: ticket.labels.map((label) => label.replace(/\s+/g, '-')) }
           : {}),
         ...(ticket.assigneeId ? { assignee: { accountId: ticket.assigneeId } } : {}),
+        ...placementFields(ticket),
       };
       const created = await call(
         createdSchema,

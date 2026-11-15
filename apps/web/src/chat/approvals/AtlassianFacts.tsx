@@ -52,6 +52,9 @@ function JiraFacts({ action }: { action: JiraEditAction }) {
           <Swap label="Summary" before={before.summary} after={after.summary} />
           <Swap label="Priority" before={before.priority ?? ''} after={after.priority ?? ''} />
           <Swap label="Labels" before={before.labels.join(', ')} after={after.labels.join(', ')} />
+          <Swap label="Type" before={before.type ?? ''} after={after.type ?? ''} />
+          <Swap label="Parent" before={before.parent ?? ''} after={after.parent ?? ''} />
+          <Swap label="Team" before={before.team ?? ''} after={after.team ?? ''} />
           {before.description !== after.description && (
             <>
               <Text label="Description now" text={before.description} />
