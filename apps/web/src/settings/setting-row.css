@@ -83,6 +83,12 @@ label.set-row-label {
 .set-wait .field-button {
   min-height: 28px;
 }
+.set-wait .choice-picker {
+  width: 140px;
+}
+.set-wait .field-button {
+  min-height: 28px;
+}
 .row-help-btn {
   width: 28px;
   height: 28px;

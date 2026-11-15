@@ -1,3 +1,4 @@
+import './row-help.css';
 import { use, useId, useState } from 'react';
 import { guideLink } from '@spark-outpost/contracts';
 import { DocsReachable, type DocTarget } from '../ui/DocLink.tsx';
@@ -7,14 +8,15 @@ import { TipBody, type TipContent } from '../ui/Tooltip.tsx';
 interface RowHelpProps {
   topic: string;
   text: TipContent | undefined;
-  doc: DocTarget;
+  doc?: DocTarget | undefined;
 }
 
 export function useRowHelp({ topic, text, doc }: RowHelpProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const docs = use(DocsReachable);
-  const empty = !docs && text === undefined;
+  const link = docs && doc !== undefined;
+  const empty = !link && text === undefined;
   const button = empty ? null : (
     <button
       type="button"
@@ -30,8 +32,8 @@ export function useRowHelp({ topic, text, doc }: RowHelpProps) {
   const panel = (
     <div id={panelId} className="row-help" hidden={!open}>
       {typeof text === 'string' ? <p>{text}</p> : text && <TipBody content={text} />}
-      {docs && (
-        <a className="row-help-doc" href={guideLink(doc.page, doc.heading)}>
+      {link && (
+        <a className="row-help-doc" href={guideLink(doc!.page, doc!.heading)}>
           <span aria-hidden="true">Open in Docs</span>
           <span className="sr-only">Read about {topic} in Docs</span>
         </a>

@@ -8,10 +8,10 @@ summary: What changed in recent releases and what to do next.
 
 ## Mid-November 2026
 
-| What changed                       | What to do                         |
-| ---------------------------------- | ---------------------------------- |
-| Settings: one ⓘ, On or Off, menus  | [Settings](settings.md).           |
-| Long provider and model lists fold | [Models](providers-and-models.md). |
+| What changed                           | What to do                         |
+| -------------------------------------- | ---------------------------------- |
+| Settings: one ⓘ, On/Off, rules summary | [Settings](settings.md).           |
+| Long provider and model lists fold     | [Models](providers-and-models.md). |
 
 ## Early November 2026
 

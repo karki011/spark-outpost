@@ -2,6 +2,7 @@ import { useRef, type ReactNode } from 'react';
 import type { SparkRuleChoice, SparkRuleRowState } from '@spark-outpost/contracts';
 import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
 import { CheckIcon, LockIcon, XIcon } from '../../ui/icons.tsx';
+import { useRowHelp } from '../RowHelp.tsx';
 import { useSettingFocus } from '../setting-focus.ts';
 import { choiceLabel, choicesFor, shownChoice, type RuleRowCopy } from './rule-rows.ts';
 
@@ -34,26 +35,28 @@ function RuleLine({ label, ids, children }: RuleLineProps) {
   const row = useRef<HTMLDivElement>(null);
   const control = useRef<HTMLDivElement>(null);
   useSettingFocus(label, row, control);
+  const help = useRowHelp({
+    topic: label,
+    text: `In your settings file: ${ids.join(', ')}`,
+  });
   return (
     <div ref={row} className="rules-row">
       <div className="rules-what">
-        <span className="rules-label">{label}</span>
-        <span className="rules-ids">
-          {ids.map((id) => (
-            <code key={id}>{id}</code>
-          ))}
+        <span className="rules-label">
+          {label}
+          {help.button}
         </span>
       </div>
       <div ref={control} className="rules-right">
         {children}
       </div>
+      {help.panel}
     </div>
   );
 }
 
 function SourceTag({ source }: { source: SparkRuleRowState['source'] }) {
-  if (source === 'user') return <span className="rules-source">Your file</span>;
-  if (source === null) return null;
+  if (source !== 'managed') return null;
   return (
     <span className="rules-source">
       <LockIcon />

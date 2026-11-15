@@ -32,7 +32,7 @@ export function SettingRow({
   const row = useRef<HTMLDivElement>(null);
   const control = useRef<HTMLDivElement>(null);
   useSettingFocus(label, row, control, standsFor);
-  const help = useRowHelp({ topic: label, text: info, doc: doc ?? { page: '' } });
+  const help = useRowHelp({ topic: label, text: info, doc });
   const combined = doc !== undefined;
   return (
     <div ref={row} className="set-row" data-disabled={disabled || undefined}>

@@ -9,7 +9,7 @@ import { resetTestDatabase } from './database.ts';
 import { SPARK_MANAGED_RULES_FILE, SPARK_RULES_DIR, SPARK_RULES_FILE } from './stub-config.ts';
 
 async function openSparkRules(page: Page) {
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Profile & personality' })
     .getByRole('tab', { name: 'Spark rules' })
@@ -52,15 +52,27 @@ test('every rule shows its choice and changing one writes settings.json', async 
   for (const group of ['Publishing', 'GitHub commands', 'Files', 'Sending']) {
     await expect(settings.getByRole('heading', { name: group })).toBeVisible();
   }
-  await expect(settings.getByRole('button', { name: 'Use recommended rules' })).toBeVisible();
-  await expect(settings.getByRole('button', { name: 'Open settings.json' })).toHaveCount(0);
+  await expect(
+    settings.getByRole('button', { name: 'Use recommended rules', exact: true }),
+  ).toBeVisible();
+  await expect(
+    settings.getByRole('button', { name: 'Open settings.json', exact: true }),
+  ).toHaveCount(0);
 
+  await expect(settings.getByRole('status').filter({ hasText: 'refused' })).toHaveText(
+    /^\d+ refused · \d+ ask first/,
+  );
   const force = settings.getByRole('button', { name: 'Force push', exact: true });
   await expect(force).toHaveText('Ask, hold to confirm');
-  await expect(settings.getByRole('button', { name: 'Push any other branch' })).toHaveText(
-    'Refuse',
-  );
-  await expect(settings.getByRole('button', { name: 'Merge a pull request' })).toHaveText('Refuse');
+  await expect(settings.getByText('In your settings file: Push(force)')).toBeHidden();
+  await settings.getByRole('button', { name: 'More about Force push', exact: true }).click();
+  await expect(settings.getByText('In your settings file: Push(force)')).toBeVisible();
+  await expect(
+    settings.getByRole('button', { name: 'Push any other branch', exact: true }),
+  ).toHaveText('Refuse');
+  await expect(
+    settings.getByRole('button', { name: 'Merge a pull request', exact: true }),
+  ).toHaveText('Refuse');
   await expect(settings.getByText(/Asked means your message asks/)).toBeVisible();
   await expect(
     settings.getByText("Always kept, so an agent can't give itself more", { exact: false }),
@@ -81,7 +93,7 @@ test('every rule shows its choice and changing one writes settings.json', async 
   expect(userFile().permissions.deny).toContain('Push(force)');
   expect(userFile().permissions.ask).not.toContain('Push(force)');
 
-  const workflows = settings.getByRole('button', { name: 'Run a workflow' });
+  const workflows = settings.getByRole('button', { name: 'Run a workflow', exact: true });
   await workflows.click();
   const toMode = savedRule(page);
   await page
@@ -97,10 +109,16 @@ test('an edit made in the file shows when the page gets focus again', async ({ p
   writeRules(SPARK_RULES_FILE, { permissions: { allow: [], ask: [], deny: ['GitRemote'] } });
   await page.goto('/');
   const settings = await openSparkRules(page);
-  const remotes = settings.getByRole('button', { name: 'Change remotes or publish another way' });
+  const remotes = settings.getByRole('button', {
+    name: 'Change remotes or publish another way',
+    exact: true,
+  });
   await expect(remotes).toHaveText('Refuse');
   await expect(
-    settings.getByRole('button', { name: "Push the chat's branch without being asked" }),
+    settings.getByRole('button', {
+      name: "Push the chat's branch without being asked",
+      exact: true,
+    }),
   ).toHaveText("Agent's mode");
   writeRules(SPARK_RULES_FILE, {
     theme: 'dark',
@@ -122,7 +140,9 @@ test('rules past the limit are reported while the page stays editable', async ({
   await expect(settings.getByRole('alert')).toContainText(
     'settings.json: deny holds more than 200 rules; the rest are not applied.',
   );
-  await expect(settings.getByRole('button', { name: 'Use recommended rules' })).toBeEnabled();
+  await expect(
+    settings.getByRole('button', { name: 'Use recommended rules', exact: true }),
+  ).toBeEnabled();
 });
 
 test('a rule the company file sets is locked', async ({ page }) => {
@@ -130,7 +150,9 @@ test('a rule the company file sets is locked', async ({ page }) => {
   await page.goto('/');
   const settings = await openSparkRules(page);
   await expect(settings.getByText('Your company')).toBeVisible();
-  await expect(settings.getByRole('button', { name: 'Write outside the project' })).toHaveCount(0);
+  await expect(
+    settings.getByRole('button', { name: 'Write outside the project', exact: true }),
+  ).toHaveCount(0);
   const blocked = await page.request.put('/api/spark-rules/rule', {
     data: { row: 'WriteOutside', choice: 'allow' },
   });
@@ -143,8 +165,12 @@ test('a broken settings.json is reported and nothing can be changed', async ({ p
   const settings = await openSparkRules(page);
   await expect(settings.getByRole('alert')).toContainText("settings.json can't be used.");
   await expect(settings.getByRole('alert')).toContainText('recommended rules');
-  await expect(settings.getByRole('button', { name: 'Use recommended rules' })).toBeDisabled();
-  await expect(settings.getByRole('button', { name: 'Push any other branch' })).toHaveCount(0);
+  await expect(
+    settings.getByRole('button', { name: 'Use recommended rules', exact: true }),
+  ).toBeDisabled();
+  await expect(
+    settings.getByRole('button', { name: 'Push any other branch', exact: true }),
+  ).toHaveCount(0);
   await expect(settings.getByText('Refuse').first()).toBeVisible();
 });
 
@@ -157,16 +183,16 @@ test('Use recommended rules asks first and keeps the rest of the file @packaged'
   });
   await page.goto('/');
   const settings = await openSparkRules(page);
-  const button = settings.getByRole('button', { name: 'Use recommended rules' });
+  const button = settings.getByRole('button', { name: 'Use recommended rules', exact: true });
   await button.click();
   const dialog = page.getByRole('alertdialog', { name: 'Use recommended rules?' });
-  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  await expect(dialog.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(button).toBeFocused();
 
   await button.click();
-  await dialog.getByRole('button', { name: 'Use recommended rules' }).click();
+  await dialog.getByRole('button', { name: 'Use recommended rules', exact: true }).click();
   await expect(settings.getByText('Recommended rules are in settings.json.')).toBeVisible();
   await expect(settings.getByRole('button', { name: 'Force push', exact: true })).toHaveText(
     'Ask, hold to confirm',
@@ -198,7 +224,7 @@ test('allowed gh commands take gh prefixes, send the ones with their own rule to
   await expect(input).toHaveValue('');
   expect(userFile().permissions.allow).toContain('Gh(release create)');
 
-  await settings.getByRole('button', { name: 'Remove gh release create' }).click();
+  await settings.getByRole('button', { name: 'Remove gh release create', exact: true }).click();
   await expect(list).toHaveCount(0);
   await expect.poll(() => userFile().permissions.allow).not.toContain('Gh(release create)');
 });
@@ -213,12 +239,14 @@ test("with no rules file every rule shows the agent's mode until one is set", as
   await expect(settings.getByText('Your file')).toHaveCount(0);
   expect(existsSync(SPARK_RULES_FILE)).toBe(false);
 
-  await settings.getByRole('button', { name: 'Use recommended rules' }).click();
+  await settings.getByRole('button', { name: 'Use recommended rules', exact: true }).click();
   await page
     .getByRole('alertdialog', { name: 'Use recommended rules?' })
-    .getByRole('button', { name: 'Use recommended rules' })
+    .getByRole('button', { name: 'Use recommended rules', exact: true })
     .click();
-  await expect(settings.getByRole('button', { name: 'Merge a pull request' })).toHaveText('Refuse');
+  await expect(
+    settings.getByRole('button', { name: 'Merge a pull request', exact: true }),
+  ).toHaveText('Refuse');
   expect(userFile().permissions.deny).toEqual(
     expect.arrayContaining([
       'Gh(pr merge)',
