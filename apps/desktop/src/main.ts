@@ -302,7 +302,10 @@ async function launch(): Promise<void> {
     webRoot: layout.webRoot,
     tmuxBin: (!app.isPackaged && process.env.SPARK_TMUX_BIN) || layout.tmuxBin,
     baseEnv: {
-      ...(await bakedSignInEnv(app.getAppPath(), layout.googleClientFile)),
+      ...(await bakedSignInEnv(app.getAppPath(), {
+        googleClient: layout.googleClientFile,
+        slackClientId: layout.slackClientIdFile,
+      })),
       ...process.env,
     },
   };

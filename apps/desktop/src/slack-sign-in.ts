@@ -5,6 +5,7 @@ import { gitHubAppEnv, readBakedGitHubApp } from './github-app.ts';
 import { googleClientEnv, readBakedGoogleClient, readDevGoogleClient } from './google-client.ts';
 
 export const SLACK_CLIENT_ID_ENV = 'SPARK_SLACK_CLIENT_ID';
+export const SLACK_CLIENT_ID_FILE_NAME = 'slack-client-id';
 
 const CLIENT_ID = /^\d{1,20}\.\d{1,20}$/;
 const TIMEOUT_MS = 30_000;
@@ -24,13 +25,28 @@ export async function readBakedSlackClientId(appPath: string): Promise<string | 
   }
 }
 
+export async function readDevSlackClientId(file: string | null): Promise<string | null> {
+  if (!file) return null;
+  try {
+    return slackClientId((await readFile(file, 'utf8')).trim());
+  } catch {
+    return null;
+  }
+}
+
+export interface DevSignInFiles {
+  googleClient: string | null;
+  slackClientId: string | null;
+}
+
 export async function bakedSignInEnv(
   appPath: string,
-  devGoogleClientFile: string | null = null,
+  devFiles: DevSignInFiles = { googleClient: null, slackClientId: null },
 ): Promise<Record<string, string>> {
-  const slack = await readBakedSlackClientId(appPath);
+  const slack =
+    (await readBakedSlackClientId(appPath)) ?? (await readDevSlackClientId(devFiles.slackClientId));
   const google =
-    (await readBakedGoogleClient(appPath)) ?? (await readDevGoogleClient(devGoogleClientFile));
+    (await readBakedGoogleClient(appPath)) ?? (await readDevGoogleClient(devFiles.googleClient));
   return {
     ...gitHubAppEnv(await readBakedGitHubApp(appPath)),
     ...(slack ? { [SLACK_CLIENT_ID_ENV]: slack } : {}),

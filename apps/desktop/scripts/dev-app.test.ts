@@ -16,6 +16,7 @@ import {
   pickIdentity,
   prepareDevApp,
   setInfoPlist,
+  setUrlTypes,
   withEntitlements,
   type DevAppDeps,
   type DevAppSource,
@@ -112,8 +113,15 @@ describe('setInfoPlist', () => {
         promisify(execFile)(command, args).then(({ stdout }) => stdout);
       try {
         await setInfoPlist(run, plist, infoPlistEdits());
+        await setUrlTypes(run, plist);
+        await setUrlTypes(run, plist);
         const json = await run('plutil', ['-convert', 'json', '-o', '-', plist]);
-        expect(JSON.parse(json)).toEqual(Object.fromEntries(infoPlistEdits()));
+        expect(JSON.parse(json)).toEqual({
+          ...Object.fromEntries(infoPlistEdits()),
+          CFBundleURLTypes: [
+            { CFBundleURLName: 'Spark Outpost Dev', CFBundleURLSchemes: ['spark-outpost-dev'] },
+          ],
+        });
         expect(await readFile(plist, 'utf8')).toContain('<key>NSAppleEventsUsageDescription</key>');
       } finally {
         await rm(dir, { recursive: true, force: true });

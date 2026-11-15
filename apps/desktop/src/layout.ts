@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { GOOGLE_CLIENT_FILE_NAME } from './google-client.ts';
+import { SLACK_CLIENT_ID_FILE_NAME } from './slack-sign-in.ts';
 
 export interface AppLayout {
   serverDir: string;
@@ -12,6 +13,7 @@ export interface AppLayout {
   voiceModels: string;
   noActivateAddon: string;
   googleClientFile: string | null;
+  slackClientIdFile: string | null;
 }
 
 export interface LayoutSource {
@@ -35,6 +37,7 @@ export function appLayout(source: LayoutSource): AppLayout {
       voiceModels: path.join(resourcesPath, 'voice/models'),
       noActivateAddon: path.join(resourcesPath, 'no-activate/no-activate.node'),
       googleClientFile: null,
+      slackClientIdFile: null,
     };
   }
   const repoRoot = path.resolve(appPath, '../..');
@@ -49,5 +52,6 @@ export function appLayout(source: LayoutSource): AppLayout {
     voiceModels: path.join(repoRoot, '.local/voice', arch, 'models'),
     noActivateAddon: path.join(repoRoot, '.local/no-activate', arch, 'no-activate.node'),
     googleClientFile: path.join(repoRoot, '.local', GOOGLE_CLIENT_FILE_NAME),
+    slackClientIdFile: path.join(repoRoot, '.local', SLACK_CLIENT_ID_FILE_NAME),
   };
 }

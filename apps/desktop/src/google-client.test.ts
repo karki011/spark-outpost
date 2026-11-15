@@ -50,12 +50,18 @@ describe('the Google OAuth client', () => {
       'package.json': JSON.stringify({}),
       'google-oauth-client.json': DOWNLOAD,
     });
-    expect(await bakedSignInEnv(appPath, path.join(appPath, 'google-oauth-client.json'))).toEqual({
+    expect(await bakedSignInEnv(appPath, {
+        googleClient: path.join(appPath, 'google-oauth-client.json'),
+        slackClientId: null,
+      })).toEqual({
       SPARK_GOOGLE_CLIENT_ID: CLIENT_ID,
       SPARK_GOOGLE_CLIENT_SECRET: 'GOCSPX-desktopSecret_1',
       SPARK_GOOGLE_VERIFIED: 'false',
     });
-    expect(await bakedSignInEnv(appPath, path.join(appPath, 'missing.json'))).toEqual({});
+    expect(await bakedSignInEnv(appPath, {
+        googleClient: path.join(appPath, 'missing.json'),
+        slackClientId: null,
+      })).toEqual({});
 
     await writeFile(
       path.join(appPath, 'package.json'),
@@ -63,7 +69,7 @@ describe('the Google OAuth client', () => {
         googleApp: { client_id: CLIENT_ID, client_secret: 'GOCSPX-baked', verified: true },
       }),
     );
-    expect(await bakedSignInEnv(appPath, null)).toMatchObject({
+    expect(await bakedSignInEnv(appPath, { googleClient: null, slackClientId: null })).toMatchObject({
       SPARK_GOOGLE_CLIENT_SECRET: 'GOCSPX-baked',
       SPARK_GOOGLE_VERIFIED: 'true',
     });

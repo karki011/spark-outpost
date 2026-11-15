@@ -23,7 +23,7 @@ const UPDATE_FEED_URL = '';
 const HEARTBEAT_URL = '';
 const GITHUB_APP_CLIENT_ID = 'Iv23li7XhI8fUF6WSltL';
 const GITHUB_APP_SLUG = 'spark-outpost';
-const SLACK_CLIENT_ID = '';
+const SLACK_CLIENT_ID = '12090759669655.12602512337571';
 
 export type MacArch = 'x64' | 'arm64';
 

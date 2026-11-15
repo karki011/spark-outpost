@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
+| **Sign in with Slack** is on         | [Connect Slack](connect-slack.md).              |
 | Workflow triggers                    | [Workflow triggers](workflow-triggers.md).      |
 | Answer more cards from a device      | [Answer cards remotely](answer-remotely.md).    |
 | Agents do much more in Jira          | [Jira tools](jira-tools.md).                    |
