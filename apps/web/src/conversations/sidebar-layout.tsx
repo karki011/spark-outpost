@@ -164,14 +164,23 @@ function useCrampedChat(collapsed: boolean, width: number | null, onChange: () =
 function useEscapeCloses(open: boolean, close: () => void) {
   useEffect(() => {
     if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
+    const handle = (event: KeyboardEvent, fromSide: boolean) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
-      if (escapeBelongsToSurface(event, document.querySelector('nav.side'))) return;
+      const side = document.querySelector('nav.side');
+      const target = event.target instanceof Node ? event.target : null;
+      if (Boolean(target && side?.contains(target)) !== fromSide) return;
+      if (escapeBelongsToSurface(event, side)) return;
       event.preventDefault();
       close();
     };
-    window.addEventListener('keydown', onKeyDown, true);
-    return () => window.removeEventListener('keydown', onKeyDown, true);
+    const first = (event: KeyboardEvent) => handle(event, false);
+    const last = (event: KeyboardEvent) => handle(event, true);
+    window.addEventListener('keydown', first, true);
+    window.addEventListener('keydown', last);
+    return () => {
+      window.removeEventListener('keydown', first, true);
+      window.removeEventListener('keydown', last);
+    };
   }, [open, close]);
 }
 

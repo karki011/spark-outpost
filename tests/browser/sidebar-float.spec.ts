@@ -45,6 +45,19 @@ test('a chat squeezed by the work panel floats the sidebar over it and docks it 
   await expect(sidebar(page)).toBeHidden();
 
   await show.click();
+  const search = sidebar(page).getByRole('searchbox', { name: 'Search chats' });
+  await search.fill('notes');
+  const app = page.locator('.app');
+  await expect(app).toHaveClass(/\bdrawer\b/);
+  await search.press('Escape');
+  await expect(search).toHaveValue('');
+  await expect(app).toHaveClass(/\bdrawer\b/);
+  await expect(show).toHaveCount(0);
+  await search.press('Escape');
+  await expect(app).not.toHaveClass(/\bdrawer\b/);
+  await expect(sidebar(page)).toBeHidden();
+
+  await show.click();
   await expect(sidebar(page)).toBeVisible();
   await page.locator('.scrim').click({ position: { x: 600, y: 400 } });
   await expect(sidebar(page)).toBeHidden();
