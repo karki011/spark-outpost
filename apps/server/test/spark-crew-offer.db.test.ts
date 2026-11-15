@@ -1,14 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { Teammate } from '@spark-outpost/contracts';
+import { SPARK_ACTION_OPTION, type Teammate } from '@spark-outpost/contracts';
 import { CREW_EDIT_REFUSALS, CREW_READ_REFUSALS } from '../src/crew/tool-offer.ts';
 import { saveCardAnswering } from '../src/remote/card-answering.ts';
+import { crewSparksDir } from '../src/crew/folders.ts';
+import { sparkFolder } from '../src/crew/spark-skills.ts';
+import { decideApproval } from '../src/persistence/approvals.ts';
+import { listTeammates } from '../src/persistence/teammates.ts';
 import { macOnlyCard } from '@spark-outpost/contracts';
 import { ASK_SPARK_REFUSALS, cardRefusal } from '../src/spark-mcp/actions/ask-spark-limits.ts';
 import { EVERYTHING_AVAILABLE, sparkAvailability } from '../src/spark-mcp/availability.ts';
 import { sparkToolsFor } from '../src/spark-mcp/server.ts';
 import { NOTES_SKILL, useCrewTools } from './spark-crew-harness.ts';
-import { pendingCard, toolDeps } from './spark-mcp-support.ts';
+import { cardResult, pendingCard, toolDeps } from './spark-mcp-support.ts';
 import { startChat, type TestDb } from './support.ts';
 
 const crew = useCrewTools();
@@ -148,5 +152,40 @@ describe('creating or changing a Spark itself', () => {
       instructionsBefore: 'Be brief.',
     });
     expect((await pendingCard(t)).payload.sparkRequested).toBeUndefined();
+  });
+});
+
+describe('a run from a paired device once its cards can be answered there', () => {
+  it('writes a Spark’s files and adds a Spark after the device allows each card', async () => {
+    const device = { id: randomUUID(), name: 'Phone' };
+    await t.db.query(
+      `INSERT INTO remote_devices (id, workspace_id, name, token_hash) VALUES ($1, $2, $3, $4)`,
+      [device.id, t.workspaceId, device.name, 'c'.repeat(64)],
+    );
+    await t.db.query('UPDATE runs SET remote_device_id = $2 WHERE id = $1', [
+      chat.runId,
+      device.id,
+    ]);
+    await saveCardAnswering(t.db, t.workspaceId, { from: 'devices', macOnly: [] });
+    const allowFromDevice = async () => {
+      const card = await pendingCard(t);
+      const option = { optionId: SPARK_ACTION_OPTION.confirm, scope: 'once' as const };
+      await decideApproval(t.db, t.workspaceId, card.id, option, device);
+      return cardResult(t, card.id);
+    };
+
+    expect((await edit(NOTES_SKILL)).facts.outcome).toBe('waiting_for_user');
+    const edited = await allowFromDevice();
+    expect(edited.payload.sparkResult).toMatchObject({ state: 'done' });
+    expect(edited.answeredDevice).toEqual(device);
+    expect((await sparkFolder(crewSparksDir(), scout.id)).skills.map((s) => s.name)).toEqual([
+      'notes',
+    ]);
+
+    await userAsked('Create a Spark called Wren');
+    await call('spark_create_spark', { name: 'Wren', instructions: 'Short sentences.' });
+    const created = await allowFromDevice();
+    expect(created.payload.sparkResult).toMatchObject({ state: 'done' });
+    expect((await listTeammates(t.db, t.workspaceId)).map((spark) => spark.name)).toContain('Wren');
   });
 });

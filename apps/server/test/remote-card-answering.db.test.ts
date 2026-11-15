@@ -134,6 +134,7 @@ describe('cards can be answered from', () => {
     const card = await sparkCard('crew-1', crewAction);
     const refused = await decide(phone, card.id).expect(403);
     expect(refused.body.error).toBe(kindOnMacReason('crew'));
+    await phone.send('post', `/api/approvals/${card.id}/retry`).expect(403);
     await decide(localClient(app), card.id).expect(200);
     expect(await answeredBy(card.id)).toEqual({ id: null, name: null });
   });
@@ -185,6 +186,7 @@ describe('passkey step-up', () => {
     const passkey = await savePasskey(app, device);
     const card = await sparkCard('rules-2', rulesAction('user'));
     expect((await decide(phone, card.id).expect(403)).body.error).toBe(STEP_UP_REQUIRED);
+    await phone.send('post', `/api/approvals/${card.id}/retry`).expect(403);
     await stepUp(phone, card.id, passkey).then((response) => expect(response.status).toBe(204));
     await decide(phone, card.id).expect(200);
     expect(await answeredBy(card.id)).toEqual({ id: device.id, name: 'Test phone' });

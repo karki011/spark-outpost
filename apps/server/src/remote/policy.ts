@@ -2,6 +2,7 @@ import { remoteSwitchRefusal, type RemoteSwitches } from '@spark-outpost/contrac
 import {
   AGENT_MODE_FIELDS,
   CARD_ROUTE,
+  RETRY_ROUTE,
   HIGH_RISK_FIELDS,
   ROUTE_RULES,
   type RemoteRule,
@@ -25,6 +26,7 @@ export type RemoteDecision =
       blockedFields: readonly string[];
       highRiskFields: readonly string[];
       card: boolean;
+      retry: boolean;
     };
 
 function segmentsOf(path: string): string[] {
@@ -101,6 +103,7 @@ export function remoteDecision(
     blockedFields,
     highRiskFields,
     card: matched.some(({ route }) => route === CARD_ROUTE),
+    retry: matched.some(({ route }) => route === RETRY_ROUTE),
   };
 }
 

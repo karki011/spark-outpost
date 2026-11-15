@@ -431,6 +431,7 @@ export const HIGH_RISK_FIELDS: Record<string, readonly string[]> = {
 };
 
 export const CARD_ROUTE = 'POST /api/approvals/:id/decision';
+export const RETRY_ROUTE = 'POST /api/approvals/:id/retry';
 
 function routesOf(block: string): string[] {
   return block

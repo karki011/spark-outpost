@@ -54,6 +54,7 @@ const PUBLIC_FILES = new Set([
 const NOT_LOCAL = 'Requests must target the local API host.';
 const BAD_ORIGIN = 'This origin is not allowed.';
 const NOT_PAIRED = 'Pair this device first.';
+const RETRY_ON_MAC = 'Try this again on your Mac.';
 const PAIR_AGAIN = 'This device needs to pair again.';
 const PAIRING_PAGE_AUDIT_EVERY_SECONDS = 60;
 const ASSET_PATH = /\.[a-z0-9]+$/i;
@@ -157,6 +158,7 @@ export function remoteGateway(deps: GatewayDeps) {
     req: Request,
     device: RemoteDevicePrincipal,
     access: RemoteAccess,
+    retry: boolean,
   ): Promise<{ status: number; reason: string; message: string } | null> => {
     const id = uuid.safeParse(req.path.split('/')[3]);
     if (!id.success) return null;
@@ -164,6 +166,7 @@ export function remoteGateway(deps: GatewayDeps) {
     if (payload === null) return null;
     const place = await devicePlaceOf(db, workspaceId, device.id, payload, access);
     if (place.place === 'here') return null;
+    if (retry) return { status: 403, reason: 'policy', message: RETRY_ON_MAC };
     if (place.place === 'step_up') {
       if (deps.grants.consume(device.id, id.data)) return null;
       return { status: 403, reason: 'step_up', message: STEP_UP_REQUIRED };
@@ -228,7 +231,8 @@ export function remoteGateway(deps: GatewayDeps) {
       await refuseDevice(req, res, device, 403, 'policy', decision.reason);
       return;
     }
-    const cardNeeds = decision.card ? await cardRefusal(req, device, access) : null;
+    const checksCard = decision.card || decision.retry;
+    const cardNeeds = checksCard ? await cardRefusal(req, device, access, decision.retry) : null;
     if (cardNeeds) {
       await refuseDevice(req, res, device, cardNeeds.status, cardNeeds.reason, cardNeeds.message);
       return;
