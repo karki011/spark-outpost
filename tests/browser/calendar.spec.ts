@@ -337,7 +337,7 @@ test('lists the calendar rows in Notifications and in Settings search', async ({
     page.getByRole('listbox', { name: 'Matching settings' }).getByRole('option', {
       name: /^Hold chimes during/,
     }),
-  ).toContainText('Mac · Notifications');
+  ).toContainText('General · Notifications');
   await search.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Notifications' });
   await expect(dialog.getByRole('radiogroup', { name: 'Hold chimes during' })).toBeVisible();
