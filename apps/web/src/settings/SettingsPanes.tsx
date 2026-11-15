@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { useCalendarStatus } from '../calendar/use-calendar.ts';
 import { PHONE_SWITCH_OFF, useRemoteClient } from '../phone/use-remote-client.ts';
+import { SwitchWordsProvider } from '../brand/switch-words.ts';
 import { reveal } from '../ui/transitions.tsx';
 import { clearSettingFocus, requestSettingFocus } from './setting-focus.ts';
 import {
@@ -146,7 +147,9 @@ export function SettingsPanes({ section, onSection, onOpenChat, closeButton }: S
               exit={{ opacity: 0, y: -6 }}
               transition={{ ...reveal, duration: 0.15 }}
             >
-              {current?.render({ setup: setup.data, off, onOpenChat })}
+              <SwitchWordsProvider value={true}>
+                {current?.render({ setup: setup.data, off, onOpenChat })}
+              </SwitchWordsProvider>
             </motion.div>
           </AnimatePresence>
         </div>

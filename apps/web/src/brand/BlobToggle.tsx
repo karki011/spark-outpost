@@ -2,6 +2,7 @@ import './blob-toggle.css';
 import { useState } from 'react';
 import { useReducedMotion } from '../ui/motion.ts';
 import { SCOUT_ANTENNA, SCOUT_BODY, SCOUT_SPARK } from './scout-shape.ts';
+import { useSwitchWords } from './switch-words.ts';
 
 export type BlobKind = 'spark' | 'sun' | 'plain';
 
@@ -95,12 +96,13 @@ export function BlobToggle({
   disabled = false,
 }: BlobToggleProps) {
   const live = useLive(checked);
+  const words = useSwitchWords();
   return (
     <button
       id={id}
       type="button"
       role="switch"
-      className={classesFor(size, live)}
+      className={classesFor(size, live, words ? 'btog-worded' : '')}
       data-on={checked}
       aria-checked={checked}
       aria-label={label}
@@ -109,6 +111,11 @@ export function BlobToggle({
       onClick={() => onChange(!checked)}
     >
       <BlobPicture kind={kind} />
+      {words && (
+        <span className="btog-word" aria-hidden="true">
+          {checked ? 'On' : 'Off'}
+        </span>
+      )}
     </button>
   );
 }
