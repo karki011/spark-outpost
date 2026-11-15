@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { adfToText, textToAdf } from '../tickets/jira-adf.ts';
 import { atlassianClient, type AtlassianAccess } from './access.ts';
+import { jiraAgile } from './jira-agile.ts';
+import { jiraProjects } from './jira-projects.ts';
+import { jiraTransfer } from './jira-transfer.ts';
+import { jiraWork, type JiraVisibility } from './jira-work.ts';
 import {
   issueTypeOf,
   parentOf,
@@ -79,6 +83,7 @@ const commentSchema = z.object({
   body: z.unknown(),
   created: z.string(),
   updated: z.string().optional(),
+  visibility: z.object({ type: z.string(), value: z.string() }).optional().catch(undefined),
 });
 const commentsSchema = z.object({ comments: z.array(commentSchema), total: z.number().optional() });
 
@@ -103,6 +108,7 @@ export interface JiraComment {
   body: string;
   createdAt: string;
   updatedAt: string | null;
+  visibility: string | null;
 }
 
 export interface JiraFieldChange {
@@ -127,6 +133,19 @@ function commentOf(comment: z.infer<typeof commentSchema>): JiraComment {
     body: adfToText(comment.body),
     createdAt: comment.created,
     updatedAt: comment.updated ?? null,
+    visibility: comment.visibility
+      ? `${comment.visibility.type} ${comment.visibility.value}`
+      : null,
+  };
+}
+
+export function changeFields(change: JiraFieldChange): Record<string, unknown> {
+  return {
+    ...(change.summary !== undefined ? { summary: change.summary } : {}),
+    ...(change.description !== undefined ? { description: textToAdf(change.description) } : {}),
+    ...(change.labels !== undefined ? { labels: change.labels } : {}),
+    ...(change.priority !== undefined ? { priority: { name: change.priority } } : {}),
+    ...placementFields(change),
   };
 }
 
@@ -143,6 +162,35 @@ export function jiraEdits(access: AtlassianAccess, fetchImpl: typeof fetch) {
     browse,
     client,
     teamFieldId,
+    work: jiraWork(client),
+    agile: jiraAgile(client),
+    projects: jiraProjects(client),
+    transfer: jiraTransfer(access, fetchImpl),
+    async issueFields(key: string, fields: readonly string[]) {
+      const issue = await client.call(
+        z.object({ key: z.string(), fields: z.record(z.string(), z.unknown()) }),
+        {
+          method: 'GET',
+          path: `${issuePath(key)}?fields=${fields.map(encodeURIComponent).join(',')}`,
+        },
+        `reading ${key}`,
+      );
+      return issue.fields;
+    },
+    async edit(
+      key: string,
+      body: { fields?: Record<string, unknown>; update?: Record<string, unknown> },
+    ) {
+      await client.call(null, { method: 'PUT', path: issuePath(key), body }, `changing ${key}`);
+    },
+    async createIssue(fields: Record<string, unknown>) {
+      const created = await client.call(
+        z.object({ key: z.string() }),
+        { method: 'POST', path: '/rest/api/3/issue', body: { fields } },
+        'creating the ticket',
+      );
+      return { key: created.key, url: browse(created.key) };
+    },
     async search(jql: string, limit: number, pageToken: string | null) {
       const asked = await withTeam(SEARCH_FIELDS);
       const found = await client.call(
@@ -220,24 +268,19 @@ export function jiraEdits(access: AtlassianAccess, fetchImpl: typeof fetch) {
         ),
       );
     },
-    async update(key: string, change: JiraFieldChange): Promise<void> {
-      const fields = {
-        ...(change.summary !== undefined ? { summary: change.summary } : {}),
-        ...(change.description !== undefined ? { description: textToAdf(change.description) } : {}),
-        ...(change.labels !== undefined ? { labels: change.labels } : {}),
-        ...(change.priority !== undefined ? { priority: { name: change.priority } } : {}),
-        ...placementFields(change),
-      };
+    async editComment(
+      key: string,
+      id: string,
+      body: string,
+      visibility: JiraVisibility | null = null,
+    ): Promise<void> {
       await client.call(
         null,
-        { method: 'PUT', path: issuePath(key), body: { fields } },
-        `changing ${key}`,
-      );
-    },
-    async editComment(key: string, id: string, body: string): Promise<void> {
-      await client.call(
-        null,
-        { method: 'PUT', path: commentPath(key, id), body: { body: textToAdf(body) } },
+        {
+          method: 'PUT',
+          path: commentPath(key, id),
+          body: { body: textToAdf(body), ...(visibility ? { visibility } : {}) },
+        },
         `editing comment ${id} on ${key}`,
       );
     },

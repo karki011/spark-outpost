@@ -10,7 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                         | What to do                                      |
 | ------------------------------------ | ----------------------------------------------- |
-| Jira: parent, sub-tasks and **Team** | [Spark tools](spark-tools.md).                  |
+| Agents do much more in Jira          | [Jira tools](jira-tools.md).                    |
 | Build Sparks by talking to an agent  | [Build with an agent](build-with-an-agent.md).  |
 | Ask an agent per Spark; Spark effort | [Build with an agent](build-with-an-agent.md).  |
 | Workflows: run view, Runs, `@id` fix | [Follow a workflow run](workflow-runs.md).      |

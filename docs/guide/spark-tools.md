@@ -28,7 +28,7 @@ summary: What agents can look up about Spark, the confirm card they show before 
 | The audit, including what ran without review             | `spark_audit`                                                                                                         |
 | How Spark works, this guide                              | `spark_guide`, `spark_docs`                                                                                           |
 | [Calendar](calendar.md#let-agents-use-it)                | `spark_calendar`                                                                                                      |
-| Jira, Confluence or ServiceNow                           | `spark_jira`, `spark_confluence`, `spark_servicenow`                                                                  |
+| [Jira](jira-tools.md), Confluence or ServiceNow          | `spark_jira`, `spark_confluence`, `spark_servicenow`                                                                  |
 
 ## Combined reads
 
@@ -52,7 +52,7 @@ summary: What agents can look up about Spark, the confirm card they show before 
 | Run a command past the turn                                                                             | `spark_terminal_run`                                                                                    |
 | Show a page beside the chat                                                                             | `spark_artifact`                                                                                        |
 | Change a calendar event                                                                                 | `spark_calendar_edit`                                                                                   |
-| Change Jira (parent, type, team) or delete it; change ServiceNow                                        | `spark_jira_edit`, `spark_servicenow_edit`                                                              |
+| [Change or delete Jira](jira-tools.md); change ServiceNow                                               | `spark_jira_edit`, `spark_servicenow_edit`                                                              |
 | Change Confluence pages                                                                                 | `spark_confluence_edit`                                                                                 |
 | Change [Spark rules](protected-paths.md#spark-rules) or a [plugin](use-claude-plugins.md) (always asks) | `spark_rules_edit`, `spark_plugins_edit`                                                                |
 

@@ -431,6 +431,7 @@ export function jiraSource(
           : {}),
         ...(ticket.assigneeId ? { assignee: { accountId: ticket.assigneeId } } : {}),
         ...placementFields(ticket),
+        ...Object.fromEntries((ticket.fields ?? []).map((field) => [field.id, field.value])),
       };
       const created = await call(
         createdSchema,

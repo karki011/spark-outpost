@@ -14,6 +14,7 @@ export interface CreateTicketRequest {
   assignToMe: boolean;
   parent: string | null;
   team: JiraTeamChoice | null;
+  fields: { id: string; value: unknown }[];
 }
 
 export async function createTicket(

@@ -160,8 +160,8 @@ describe('project issue types', () => {
       ],
     });
     expect(await projectIssueTypes(client, 'WEB')).toEqual([
-      { name: 'Story', subtask: false },
-      { name: 'Subtask', subtask: true },
+      { id: '1', name: 'Story', subtask: false },
+      { id: '2', name: 'Subtask', subtask: true },
     ]);
     expect(asked).toEqual(['GET /rest/api/3/issue/createmeta/WEB/issuetypes?maxResults=100']);
   });

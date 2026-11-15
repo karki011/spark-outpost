@@ -7,6 +7,14 @@ import {
 } from './fake-jira-dev.ts';
 import { commentView, jiraEditRoute, type FakeJiraComment } from './fake-jira-edits.ts';
 import { applyPlacement, hierarchyView, metaAnswer, placementErrors } from './fake-jira-meta.ts';
+import {
+  applyWork,
+  fakeWork,
+  mediaRoute,
+  workRoute,
+  workView,
+  type FakeWork,
+} from './fake-jira-work.ts';
 
 export const JIRA_EMAIL = 'alex@example.test';
 export const JIRA_TOKEN = 'jira_fake_token_0123456789';
@@ -38,9 +46,11 @@ export interface FakeJiraIssue {
   parent?: string | null;
   type?: string;
   team?: string | null;
+  extra?: Record<string, unknown>;
 }
 
 export interface FakeJira {
+  work: FakeWork;
   workflows: Record<string, Record<string, Category>>;
   issues: FakeJiraIssue[];
   development: Record<string, FakeDevelopment>;
@@ -141,6 +151,15 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
   }
 }
 
+const RESOLUTION = {
+  name: 'Resolution',
+  required: false,
+  schema: { type: 'resolution', system: 'resolution' },
+  allowedValues: [
+    { id: '1', name: 'Done' },
+    { id: '2', name: "Won't Do" },
+  ],
+};
 const DEV_STATUS = /^\/rest\/dev-status\/latest\/issue\/(summary|detail)$/;
 const EXPECTED_AUTH = `Basic ${Buffer.from(`${JIRA_EMAIL}:${JIRA_TOKEN}`).toString('base64')}`;
 const PROJECT_STATUSES = /^\/rest\/api\/3\/project\/([^/]+)\/statuses$/;
@@ -165,6 +184,7 @@ export function fakeJira(): FakeJira {
   const denyAssign = new Set<string>();
   const closedTransitions = new Set<string>();
   const faults = new Map<string, number>();
+  const work = fakeWork();
 
   const projectOf = (item: FakeJiraIssue) => item.key.split('-')[0]!;
   const categoryOf = (item: FakeJiraIssue) => workflows[projectOf(item)]![item.status]!;
@@ -203,6 +223,7 @@ export function fakeJira(): FakeJira {
         return { key, fields: { summary: sub.summary, status: statusField(sub) } };
       }),
       ...hierarchyView(item, issues),
+      ...workView(item, work),
     };
   }
 
@@ -239,6 +260,7 @@ export function fakeJira(): FakeJira {
         id: String(index + 11),
         name: `Move to ${name}`,
         to: { name, statusCategory: { key } },
+        fields: key === 'done' ? { resolution: RESOLUTION } : {},
       }));
   }
 
@@ -298,6 +320,8 @@ export function fakeJira(): FakeJira {
       const next = transitions(item).find((transition) => transition.id === id);
       if (!next) return send(res, 400, { errorMessages: ['Transition is not valid.'] });
       item.status = next.to.name;
+      const resolution = (body.fields as { resolution?: unknown } | undefined)?.resolution;
+      if (resolution) (item.extra ??= {}).resolution = resolution;
       return send(res, 204);
     }
     if (sub === 'comment') {
@@ -306,6 +330,9 @@ export function fakeJira(): FakeJira {
         authorId: JIRA_ME,
         body: body.body,
         created: new Date().toISOString(),
+        ...(body.visibility
+          ? { visibility: body.visibility as { type: string; value: string } }
+          : {}),
       });
       return send(res, 201, { id: String(999 + item.comments.length) });
     }
@@ -347,6 +374,7 @@ export function fakeJira(): FakeJira {
       subtasks: [],
     });
     applyPlacement(issues.at(-1)!, fields, issues);
+    applyWork(issues.at(-1)!, fields as Record<string, unknown>, undefined);
     return send(res, 201, { id: String(issues.length), key, self: `/rest/api/3/issue/${key}` });
   }
 
@@ -376,6 +404,7 @@ export function fakeJira(): FakeJira {
   }
 
   return {
+    work,
     workflows,
     issues,
     development,
@@ -385,6 +414,9 @@ export function fakeJira(): FakeJira {
     closedTransitions,
     faults,
     async handle(req, res) {
+      if (req.url?.startsWith('/media/')) {
+        return mediaRoute(req, res, new URL(req.url, 'http://fake'), work);
+      }
       if (req.headers.authorization !== EXPECTED_AUTH) {
         return send(res, 401, {
           errorMessages: ['Client must be authenticated to access this resource.'],
@@ -419,6 +451,7 @@ export function fakeJira(): FakeJira {
       if (url.pathname === '/rest/api/3/issue' && req.method === 'POST') {
         return createIssue(res, await readJson(req));
       }
+      if (await workRoute(req, res, url, issues, work, send)) return;
       const meta = metaAnswer(url.pathname, Object.keys(workflows));
       if (meta) return send(res, meta[0], meta[1]);
       const project = PROJECT_STATUSES.exec(url.pathname);

@@ -47,6 +47,7 @@ const create: SparkAction = {
   source: 'linear',
   parent: null,
   team: null,
+  fields: [],
   project: 'ENG',
   title: 'Crash on save',
   description: 'Steps',
@@ -270,6 +271,9 @@ describe('SparkActionCard', () => {
           after: { ...facts, parent: 'API-95', type: 'Story', team: 'Payments' },
           comment: null,
           subtasks: [],
+          rows: [],
+          targets: [],
+          plan: null,
         },
         'Change this ticket? API-77 Upload',
       ),
@@ -278,5 +282,36 @@ describe('SparkActionCard', () => {
     expect(group.textContent).toContain('TypeTask → Story');
     expect(group.textContent).toContain('ParentNone → API-95');
     expect(group.textContent).toContain('TeamNone → Payments');
+  });
+
+  it('shows each Jira row before and after, and the other issues one card changes', () => {
+    show(
+      card(
+        {
+          action: 'jira_edit',
+          op: 'update',
+          ticket: { key: 'WEB-1', title: 'Login', url: null },
+          updated: '2026-10-01T00:00:00.000+0000',
+          changes: {},
+          before: null,
+          after: null,
+          comment: null,
+          subtasks: [],
+          rows: [
+            { key: 'WEB-1', label: 'Assignee', before: 'Jordan Lee', after: 'Alex Example' },
+            { key: 'WEB-2', label: 'Due date', before: null, after: '2026-12-01' },
+            { key: null, label: 'Attachment', before: 'notes.txt', after: null },
+          ],
+          targets: [{ key: 'WEB-2', title: 'Logout', url: null, updated: null }],
+          plan: { fields: {}, update: {} },
+        },
+        'Change this ticket? WEB-1 Login',
+      ),
+    );
+    const group = screen.getByRole('group', { name: /Change this ticket\?/ });
+    expect(group.textContent).toContain('Also changesWEB-2 · Logout');
+    expect(group.textContent).toContain('WEB-1 · AssigneeJordan Lee → Alex Example');
+    expect(group.textContent).toContain('WEB-2 · Due date2026-12-01');
+    expect(group.textContent).toContain('Attachment (removed)notes.txt');
   });
 });

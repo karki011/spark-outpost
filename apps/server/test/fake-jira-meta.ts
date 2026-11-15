@@ -1,4 +1,5 @@
 import type { FakeJiraIssue } from './fake-jira.ts';
+import { editMeta } from './fake-jira-work.ts';
 
 export const TEAM_FIELD = 'customfield_10001';
 export const TEAM_PLATFORM = '36885b3c-1bf0-4f85-a357-c5b858c31de4';
@@ -33,7 +34,7 @@ const FIELDS = [
   },
 ];
 
-const CREATE_META = /^\/rest\/api\/3\/issue\/createmeta\/([^/]+)\/issuetypes$/;
+const CREATE_META = /^\/rest\/api\/3\/issue\/createmeta\/([^/]+)\/issuetypes(?:\/(\d+))?$/;
 
 export const isSubtaskType = (name: string | undefined) =>
   ISSUE_TYPES.some((type) => type.name === name && type.subtask);
@@ -44,6 +45,14 @@ export function metaAnswer(pathname: string, projects: string[]): [number, unkno
   if (!meta) return null;
   if (!projects.includes(decodeURIComponent(meta[1]!))) {
     return [404, { errorMessages: ['No project could be found.'] }];
+  }
+  if (meta[2]) {
+    const fields = Object.entries(editMeta(meta[1]!).fields).map(([fieldId, field]) => ({
+      fieldId,
+      key: fieldId,
+      ...field,
+    }));
+    return [200, { fields, maxResults: 200, startAt: 0, total: fields.length }];
   }
   return [200, { issueTypes: ISSUE_TYPES, maxResults: 100, startAt: 0, total: ISSUE_TYPES.length }];
 }

@@ -34,6 +34,7 @@ export interface JiraPlacement {
 }
 
 export interface JiraIssueType {
+  id: string | null;
   name: string;
   subtask: boolean;
 }
@@ -77,15 +78,22 @@ export function issueTypeOf(value: unknown): string | null {
   return text(record(value)?.name);
 }
 
-export async function teamFields(client: AtlassianClient): Promise<{ id: string; name: string }[]> {
+export async function fieldsOfType(
+  client: AtlassianClient,
+  types: ReadonlySet<string>,
+): Promise<{ id: string; name: string }[]> {
   const answer = await client.raw({ method: 'GET', path: '/rest/api/3/field' });
   if (!isOk(answer)) return [];
   const parsed = fieldListSchema.safeParse(answer.data);
   if (!parsed.success) return [];
   return parsed.data
-    .filter((field) => TEAM_TYPES.has(field.schema?.custom ?? ''))
+    .filter((field) => types.has(field.schema?.custom ?? ''))
     .map(({ id, name }) => ({ id, name }));
 }
+
+export const SPRINT_TYPES: ReadonlySet<string> = new Set(['com.pyxis.greenhopper.jira:gh-sprint']);
+
+const teamFields = (client: AtlassianClient) => fieldsOfType(client, TEAM_TYPES);
 
 export async function readTeamField(client: AtlassianClient): Promise<string | null> {
   const fields = await teamFields(client).catch(() => []);
@@ -153,9 +161,14 @@ export async function resolveTeam(
   );
 }
 
+const issueTypeSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  subtask: z.boolean().optional(),
+});
 const issueTypesSchema = z.object({
-  issueTypes: z.array(z.object({ name: z.string(), subtask: z.boolean().optional() })).optional(),
-  values: z.array(z.object({ name: z.string(), subtask: z.boolean().optional() })).optional(),
+  issueTypes: z.array(issueTypeSchema).optional(),
+  values: z.array(issueTypeSchema).optional(),
 });
 
 export async function projectIssueTypes(
@@ -171,6 +184,7 @@ export async function projectIssueTypes(
     `reading the issue types of ${project}`,
   );
   return (found.issueTypes ?? found.values ?? []).map((type) => ({
+    id: type.id ?? null,
     name: type.name,
     subtask: type.subtask ?? false,
   }));

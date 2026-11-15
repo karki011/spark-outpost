@@ -124,28 +124,34 @@ describe('spark_jira_edit', () => {
     expect(await sparkCards(h.t)).toEqual([]);
   });
 
-  it('edits and deletes only the user’s own comments', async () => {
-    h = await startAtlassian('Fix my comment on WEB-418', 'auto');
+  it('edits and deletes comments, naming who wrote someone else’s on the card', async () => {
+    h = await startAtlassian('Fix the comments on WEB-418', 'auto');
     const theirs = seedComment('WEB-418', 'acc-2', 'Their note');
     const mine = seedComment('WEB-418', JIRA_ME, 'Typo here');
-    const refused = await h.tools.call('spark_jira_edit', {
+    const other = await h.tools.call('spark_jira_edit', {
       action: 'edit_comment',
       key: 'WEB-418',
-      commentId: theirs,
+      id: theirs,
       body: 'Changed',
     });
-    expect(refused.text).toContain("only the user's own comments");
+    expect(other.json()).toMatchObject({ outcome: 'done' });
+    const { rows } = await h.t.db.query<{ payload: { sparkAction: { rows: unknown[] } } }>(
+      `SELECT payload FROM approvals WHERE kind = 'spark_action' ORDER BY created_at LIMIT 1`,
+    );
+    expect(rows[0]!.payload.sparkAction.rows).toContainEqual(
+      expect.objectContaining({ label: 'Written by', after: 'Jordan Lee' }),
+    );
     const edited = await h.tools.call('spark_jira_edit', {
       action: 'edit_comment',
       key: 'WEB-418',
-      commentId: mine,
+      id: mine,
       body: 'Fixed here',
     });
     expect(edited.json()).toMatchObject({ outcome: 'done' });
     const waiting = await h.tools.call('spark_jira_edit', {
       action: 'delete_comment',
       key: 'WEB-418',
-      commentId: mine,
+      id: mine,
     });
     expect(waiting.json()).toMatchObject({ outcome: 'done' });
     expect(issue('WEB-418')!.comments.filter((entry) => entry.created !== 'deleted')).toHaveLength(
@@ -194,7 +200,7 @@ describe('spark_jira_edit', () => {
     const edited = await h.tools.call('spark_jira_edit', {
       action: 'edit_comment',
       key: 'WEB-418',
-      commentId: mine,
+      id: mine,
       body: 'Fixed here',
     });
     expect(edited.json()).toMatchObject({ outcome: 'done' });

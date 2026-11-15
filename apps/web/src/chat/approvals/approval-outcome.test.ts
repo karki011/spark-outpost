@@ -129,6 +129,7 @@ describe('approval outcome', () => {
     source: 'linear',
     parent: null,
     team: null,
+    fields: [],
     project: 'ENG',
     title: 'Crash on save',
     description: '',

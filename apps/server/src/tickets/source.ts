@@ -52,6 +52,7 @@ export interface NewTicket {
   assigneeId: string | null;
   parent: string | null;
   team: JiraTeamChoice | null;
+  fields?: readonly { id: string; value: unknown }[];
 }
 
 export interface CreatedTicket {

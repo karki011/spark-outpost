@@ -41,7 +41,9 @@ describe('Jira hierarchy and team through spark_* tools', () => {
     const types = evidence(
       (await h.tools.call('spark_jira', { action: 'types', project: 'API' })).text,
     );
-    expect(types.issueTypes).toContainEqual({ name: 'Sub-task', subtask: true });
+    expect(types.issueTypes).toContainEqual(
+      expect.objectContaining({ name: 'Sub-task', subtask: true }),
+    );
     expect(types.teamField).toBe('customfield_10001');
     expect(types.teamsSeen).toEqual([]);
 
