@@ -19,6 +19,7 @@ export function CrewBlob({ name, provider, state, size, blobId }: CrewBlobProps)
   const live = state === 'working' || state === 'thinking' || state === 'waiting';
   return (
     <Blobatar
+      key={live ? 'live' : 'still'}
       {...(blobId ? chatBlob(blobId) : { name: crewSeed(name), hue: crewHue(provider) })}
       size={size}
       animate={live ? 'always' : 'hover'}

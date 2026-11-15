@@ -417,3 +417,21 @@ test('on a phone the indicator is one icon with its full name, and the row keeps
   await expect(followUp).toBeDisabled();
   await expect(detail(page)).toContainText('Turned off for remote control on your Mac');
 });
+
+test('in a narrow chat on a desktop window the indicator drops its word and keeps its name', async ({
+  page,
+  request,
+}) => {
+  await addPull(request, { reviews: APPROVED });
+  await openFollowed(page);
+  await expect(mark(page)).toHaveText('Watching', POLLED);
+  await page.setViewportSize({ width: 920, height: 900 });
+  await expect
+    .poll(async () => (await page.getByRole('main').boundingBox())!.width)
+    .toBeLessThan(620);
+  await expect(mark(page).locator('.prw-short')).toBeHidden();
+  await expect(mark(page)).toHaveAccessibleName(/^Spark is watching\./);
+  await expect(row(page).locator('.prc-state')).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(mark(page).locator('.prw-short')).toBeVisible();
+});

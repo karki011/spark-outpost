@@ -295,9 +295,10 @@ describe('app event invalidation', () => {
     ).toEqual([]);
   });
 
-  it('refetches every calendar query when the calendar changes', () => {
+  it('refetches every calendar query, and the agent connectors, when the calendar changes', () => {
     expect(mergeInvalidations([{ kind: 'calendar', conversationId: null, runId: null }])).toEqual([
       { queryKey: ['calendar'] },
+      { queryKey: ['agent-connectors'], exact: true },
     ]);
     expect(isLiveQueryKey(['calendar', 'day', '2026-10-16'])).toBe(true);
   });

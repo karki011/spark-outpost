@@ -73,7 +73,9 @@ function usePanelDocks(): boolean {
   const phone = useMediaQuery(PHONE_QUERY);
   const sidebar = useSidebarLayout();
   const inSplit = useInSplit();
-  return docks && !phone && !inSplit && (roomy || (sidebar?.collapsed ?? true));
+  return (
+    docks && !phone && !inSplit && (roomy || !sidebar || sidebar.collapsed || sidebar.floating)
+  );
 }
 
 export interface WorkPanelState {

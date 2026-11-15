@@ -1,6 +1,14 @@
+import { escapeBelongsToSurface } from '../../ui/foreground-surface.ts';
 import './chat-rail.css';
-import { memo, useCallback, useRef } from 'react';
-import { AnimatePresence } from 'motion/react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   shownModelName,
@@ -11,6 +19,8 @@ import {
   type TaskOverview,
 } from '@spark-outpost/contracts';
 import { capabilitiesQuery } from '../../api/client.ts';
+import { desktopBrowser } from '../../desktop/desktop-bridge.ts';
+import { useRemoteClient } from '../../phone/use-remote-client.ts';
 import { storedCrew } from '../../crew/conversation-crew.ts';
 import { diffApi, diffKeys } from '../../diff/diff-api.ts';
 import type { WorkTab } from '../../tasks/TaskDetails.tsx';
@@ -25,14 +35,15 @@ import { providerName } from '../provider-name.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { primaryPull } from '../pull-request/pull-request-model.ts';
 import { RailCrew } from './RailCrew.tsx';
+import { RailPorts } from './RailPorts.tsx';
+import { RailTools } from './RailTools.tsx';
 import { RailToggleIcon } from './RailIcons.tsx';
 import { RailSummary } from './RailSummary.tsx';
 import { RailTodo } from './RailTodo.tsx';
-import { RailTv } from './RailTv.tsx';
 import { useLeadSteps } from '../../crew/lead-steps.ts';
 import { latestFollowing, railCrew, railRows, type RailAction } from './rail-model.ts';
 import { useRoomInThread } from './use-rail-layout.ts';
-import { usePaneId } from '../split/chat-pane.ts';
+import { usePaneFocused, usePaneId } from '../split/chat-pane.ts';
 
 interface ChatRailProps {
   detail: ConversationDetail;
@@ -40,8 +51,8 @@ interface ChatRailProps {
   taskId: string | null;
   task: TaskOverview | null;
   autonomy: InvolvementLevel | null;
-  running: boolean;
   collapsed: boolean;
+  overlay: boolean;
   onCollapse(collapsed: boolean): void;
   onTab(tab: WorkTab): void;
   onAutonomy(): void;
@@ -50,13 +61,24 @@ interface ChatRailProps {
 
 const RAIL_ID = 'chat-rail';
 
-function RailToggle({ open, onToggle }: { open: boolean; onToggle(): void }) {
+interface RailToggleProps {
+  open: boolean;
+  focus?: boolean;
+  onToggle(): void;
+}
+
+function RailToggle({ open, focus = false, onToggle }: RailToggleProps) {
   const label = open ? 'Hide context rail' : 'Show context rail';
   const tip = useTooltip(label);
   const railId = usePaneId(RAIL_ID);
+  const ref = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    if (focus) ref.current?.focus({ preventScroll: true });
+  }, [focus]);
   return (
     <>
       <button
+        ref={ref}
         type="button"
         className={open ? 'crail-toggle' : 'crail-toggle crail-show'}
         aria-label={label}
@@ -73,11 +95,53 @@ function RailToggle({ open, onToggle }: { open: boolean; onToggle(): void }) {
 }
 
 export const ChatRail = memo(function ChatRail(props: ChatRailProps) {
+  const [backToToggle, setBackToToggle] = useState(false);
   if (props.collapsed) {
-    return <RailToggle open={false} onToggle={() => props.onCollapse(false)} />;
+    const open = () => {
+      setBackToToggle(false);
+      props.onCollapse(false);
+    };
+    return <RailToggle open={false} focus={backToToggle} onToggle={open} />;
   }
-  return <OpenRail {...props} />;
+  const close = (returnFocus: boolean) => {
+    setBackToToggle(returnFocus);
+    props.onCollapse(true);
+  };
+  return <OpenRail {...props} onClose={close} />;
 });
+
+function useFloatingClose(
+  rail: RefObject<HTMLElement | null>,
+  active: boolean,
+  close: (returnFocus: boolean) => void,
+) {
+  const focused = usePaneFocused();
+  const closeRef = useRef(close);
+  useEffect(() => {
+    closeRef.current = close;
+  }, [close]);
+  useEffect(() => {
+    if (!active || !focused) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      if (escapeBelongsToSurface(event, rail.current)) return;
+      event.preventDefault();
+      closeRef.current(true);
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Element | null;
+      if (rail.current?.contains(target) || target?.closest('.crail-show')) return;
+      if (target?.closest('[role="dialog"], [role="menu"], .tip')) return;
+      closeRef.current(false);
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [active, focused, rail]);
+}
 
 function OpenRail({
   detail,
@@ -85,16 +149,21 @@ function OpenRail({
   taskId,
   task,
   autonomy,
-  running,
-  onCollapse,
+  overlay,
+  onClose,
   onTab,
   onAutonomy,
   onChanges,
-}: ChatRailProps) {
+}: ChatRailProps & { onClose(returnFocus: boolean): void }) {
   const conversationId = detail.conversation.id;
   const railRef = useRef<HTMLElement>(null);
   const railId = usePaneId(RAIL_ID);
+  const { remote } = useRemoteClient();
   useRoomInThread(railRef);
+  useFloatingClose(railRef, overlay, onClose);
+  useLayoutEffect(() => {
+    if (overlay) railRef.current?.focus({ preventScroll: true });
+  }, [overlay]);
   const { settings } = detail;
   const provider = settings.provider ?? '';
   const capabilities = useQuery(capabilitiesQuery((provider || 'claude') as ProviderId));
@@ -131,9 +200,10 @@ function OpenRail({
     following: latestFollowing(detail),
   });
   const openTodo = useCallback(() => onTab('todo'), [onTab]);
-  const crew = railCrew(detail, running, useLeadSteps());
+  const crew = railCrew(detail, useLeadSteps());
 
   const act = (action: RailAction) => {
+    if (overlay && action.kind !== 'link') onClose(false);
     if (action.kind === 'project') requestProjectMenu(conversationId);
     if (action.kind === 'tab') onTab(action.tab);
     if (action.kind === 'autonomy') onAutonomy();
@@ -141,21 +211,28 @@ function OpenRail({
   };
 
   return (
-    <section ref={railRef} className="crail" id={railId} aria-label="Chat context">
-      <div className="crail-head">
-        <h3 className="crail-title">Context</h3>
-        <RailToggle open onToggle={() => onCollapse(true)} />
+    <section
+      ref={railRef}
+      className={overlay ? 'crail floating' : 'crail'}
+      id={railId}
+      aria-label="Chat context"
+      tabIndex={overlay ? -1 : undefined}
+    >
+      <div className="crail-context">
+        <div className="crail-head">
+          <h3 className="crail-title">Context</h3>
+          <RailToggle open onToggle={() => onClose(true)} />
+        </div>
+        <RailSummary rows={rows} provider={provider} onAction={act} />
+        {desktopBrowser() !== null && !remote && <RailPorts chatId={conversationId} />}
       </div>
-      <RailSummary rows={rows} provider={provider} onAction={act} />
       {task && <RailTodo task={task} onOpen={openTodo} />}
-      <AnimatePresence>
-        {crew.stage.length > 0 && (
-          <RailTv key="tv" conversationId={conversationId} agents={crew.stage} />
-        )}
-      </AnimatePresence>
-      {crew.list.length > 0 && (
-        <RailCrew conversationId={conversationId} agents={crew.list} mode={mode} />
-      )}
+      {crew.length > 0 && <RailCrew conversationId={conversationId} agents={crew} mode={mode} />}
+      <RailTools
+        conversationId={conversationId}
+        repos={repos}
+        showPlugins={provider === 'claude' && !remote}
+      />
     </section>
   );
 }

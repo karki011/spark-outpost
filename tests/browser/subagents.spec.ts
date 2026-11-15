@@ -50,34 +50,29 @@ async function rewriteSubagents(route: Route, change: (rows: SubagentRows) => Su
   await route.fulfill(json ? { response, json } : { response }).catch(() => undefined);
 }
 
-test('the context rail shows the same worker blobs as Agent TV and preserves their outcomes', async ({
+test('the context rail lists the same workers as Agent TV and preserves their outcomes', async ({
   page,
 }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.setViewportSize({ width: 2000, height: 1100 });
   const input = await ask(page, 'Split the work #build #subagentshold');
   const rail = page.getByRole('region', { name: 'Chat context' });
-  const dock = rail.locator('.crail-tv');
-  await expect(dock.locator('.tv-n')).toHaveCount(3, { timeout: 30_000 });
-  await expect(dock.locator('.tv-n:not(.lead) > b')).toHaveText(['Explore', 'Tests']);
+  const crew = rail.getByRole('region', { name: 'Crew' });
+  await expect(crew.getByRole('listitem')).toHaveCount(3, { timeout: 30_000 });
+  await expect(crew).toContainText('Explore');
+  await expect(crew).toContainText('Tests');
+  await expect(rail.locator('.tv-n')).toHaveCount(0);
   await input.fill('Keep this draft');
-  const ids = await dock
-    .locator('.tv-n')
-    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-agent')));
-  await dock.getByRole('button', { name: /^Open Agent TV/ }).focus();
+  await crew.getByRole('button', { name: 'Open Agent TV' }).focus();
   await page.keyboard.press('Enter');
   const tv = page.getByRole('dialog', { name: 'Agent TV' });
   await expect(tv).toBeVisible();
-  expect(
-    await tv
-      .locator('.tv-stage .tv-n')
-      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-agent'))),
-  ).toEqual(ids);
+  await expect(tv.locator('.tv-stage .tv-n:not(.lead) > b')).toHaveText(['Explore', 'Tests']);
   await shot(page, 'agent-team-sidebar.png');
   await tv.getByRole('button', { name: 'Close Agent TV' }).click();
   await expect(input).toHaveValue('Keep this draft');
   await page.getByRole('button', { name: 'Stop', exact: true }).click();
-  await expect(dock).toHaveCount(0, { timeout: 30_000 });
+  await expect(rail).toContainText('Stopped', { timeout: 30_000 });
   await expect(rail).toContainText('Explore');
   await expect(rail).toContainText('Tests');
   await expect(rail).toContainText('Stopped');
@@ -86,7 +81,7 @@ test('the context rail shows the same worker blobs as Agent TV and preserves the
   await expect(rail).toContainText('Tests');
 });
 
-test('a larger sidebar team keeps every worker label separate', async ({ page }) => {
+test('a larger team lists every worker in the rail and the rail scrolls', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.setViewportSize({ width: 2000, height: 1100 });
   await page.route(/\/api\/conversations\/[^/]+$/, (route) =>
@@ -101,20 +96,14 @@ test('a larger sidebar team keeps every worker label separate', async ({ page })
     ),
   );
   await ask(page, 'Split the work #build #subagentshold');
-  const dock = page.getByRole('region', { name: 'Chat context' }).locator('.crail-tv');
-  await expect(dock.locator('.tv-n')).toHaveCount(7, { timeout: 30_000 });
-  const boxes = await dock.locator('.tv-n > b').evaluateAll((nodes) =>
-    nodes.map((node) => {
-      const { x, y, right, bottom } = node.getBoundingClientRect();
-      return { x, y, right, bottom };
-    }),
-  );
-  for (let i = 0; i < boxes.length; i++)
-    for (let j = i + 1; j < boxes.length; j++) {
-      const a = boxes[i]!;
-      const b = boxes[j]!;
-      expect(a.right <= b.x || b.right <= a.x || a.bottom <= b.y || b.bottom <= a.y).toBe(true);
-    }
+  const crew = page
+    .getByRole('region', { name: 'Chat context' })
+    .getByRole('region', { name: 'Crew' });
+  await expect(crew.getByRole('listitem')).toHaveCount(7, { timeout: 30_000 });
+  const fits = await crew
+    .getByRole('listitem')
+    .evaluateAll((rows) => rows.every((row) => row.scrollWidth <= row.clientWidth));
+  expect(fits).toBe(true);
   await shot(page, 'agent-team-sidebar-large.png');
   await page.setViewportSize({ width: 1600, height: 600 });
   const rail = page.getByRole('region', { name: 'Chat context' });
@@ -122,7 +111,7 @@ test('a larger sidebar team keeps every worker label separate', async ({ page })
     .poll(() => rail.evaluate((element) => element.scrollHeight > element.clientHeight))
     .toBe(true);
   expect(await rail.evaluate((element) => getComputedStyle(element).overflowY)).toBe('auto');
-  await dock.getByRole('button', { name: /^Open Agent TV/ }).focus();
+  await crew.getByRole('button', { name: 'Open Agent TV' }).focus();
   await page.keyboard.press('End');
   await expect
     .poll(() =>
