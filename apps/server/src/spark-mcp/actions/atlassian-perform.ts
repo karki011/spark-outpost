@@ -10,12 +10,11 @@ import { openAtlassian } from '../../atlassian/session.ts';
 import { ticketDepsFor } from '../deps.ts';
 import type { SparkToolContext } from '../tool.ts';
 import { versionMoved } from '../tools/atlassian/confluence-edit-tool.ts';
+import { AtlassianChangedError, JIRA_CHANGED, performJiraOp } from './jira-perform.ts';
+import { planOf } from '../tools/atlassian/jira-plans.ts';
 import type { Performed } from './performed.ts';
 
-class AtlassianChangedError extends Error {}
-
-export const JIRA_CHANGED =
-  'The issue changed in Jira after the card was shown, so Spark changed nothing. Ask the agent to read it again.';
+export { JIRA_CHANGED };
 
 const session = (context: SparkToolContext, product: 'jira' | 'confluence') =>
   openAtlassian(ticketDepsFor(context.deps, context.scope), product);
@@ -36,7 +35,8 @@ async function jiraComment(context: SparkToolContext, action: JiraEditAction) {
     await jira.deleteComment(ticket.key, comment!.id);
     return { message: `Deleted your comment ${comment!.id} on ${ticket.key}.`, url: ticket.url };
   }
-  await jira.editComment(ticket.key, comment!.id, comment!.after ?? '');
+  const visibility = action.plan ? planOf(action, 'edit_comment').visibility : null;
+  await jira.editComment(ticket.key, comment!.id, comment!.after ?? '', visibility);
   return { message: `Edited your comment on ${ticket.key}.`, url: ticket.url };
 }
 
@@ -48,24 +48,17 @@ export async function performJiraEdit(
     return jiraComment(context, action);
   }
   const { jira } = await session(context, 'jira');
+  if (action.op !== 'delete') return performJiraOp(jira, action);
   const { ticket } = action;
   const now = await jira.facts(ticket.key);
-  if (now.updated !== action.updated) throw new AtlassianChangedError(JIRA_CHANGED);
-  if (action.op === 'delete') {
-    if (now.subtasks.toSorted().join(',') !== action.subtasks.toSorted().join(',')) {
-      throw new AtlassianChangedError(JIRA_CHANGED);
-    }
-    await jira.deleteIssue(ticket.key, action.subtasks.length > 0);
-    return {
-      message: `Deleted ${ticket.key} ${ticket.title}.`,
-      url: null,
-      output: { key: ticket.key },
-    };
+  const subtasksMoved = now.subtasks.toSorted().join(',') !== action.subtasks.toSorted().join(',');
+  if (now.updated !== action.updated || subtasksMoved) {
+    throw new AtlassianChangedError(JIRA_CHANGED);
   }
-  await jira.update(ticket.key, action.changes);
+  await jira.deleteIssue(ticket.key, action.subtasks.length > 0);
   return {
-    message: `Changed ${Object.keys(action.changes).join(', ')} on ${ticket.key}.`,
-    url: ticket.url,
+    message: `Deleted ${ticket.key} ${ticket.title}.`,
+    url: null,
     output: { key: ticket.key },
   };
 }

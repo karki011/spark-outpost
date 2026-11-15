@@ -63,11 +63,19 @@ export async function callJson(
   };
 }
 
+function fieldErrors(errors: unknown): string | undefined {
+  if (!errors || typeof errors !== 'object' || Array.isArray(errors)) return undefined;
+  const pairs = Object.entries(errors).filter(([, message]) => typeof message === 'string');
+  if (pairs.length === 0) return undefined;
+  return pairs.map(([field, message]) => `${field}: ${String(message)}`).join('; ');
+}
+
 function detailOf(data: unknown): string {
   if (!data || typeof data !== 'object') return '';
   const record = data as Record<string, unknown>;
   const messages = Array.isArray(record.errorMessages) ? record.errorMessages : [];
   const errors = Array.isArray(record.errors) ? record.errors : [];
+  const byField = fieldErrors(record.errors);
   const firstError =
     errors[0] && typeof errors[0] === 'object'
       ? (errors[0] as { message?: unknown; title?: unknown; detail?: unknown })
@@ -83,7 +91,8 @@ function detailOf(data: unknown): string {
     firstError?.title ??
     record.message ??
     nested;
-  return typeof first === 'string' ? redactText(first).slice(0, 200) : '';
+  const parts = [typeof first === 'string' ? first : undefined, byField].filter(Boolean);
+  return redactText(parts.join('; ')).slice(0, 300);
 }
 
 export function failure(
@@ -99,9 +108,10 @@ export function failure(
     );
   }
   if (answer.status === 403 || answer.status === 404) {
+    const said = detailOf(answer.data);
     return new TicketApiError(
       answer.status,
-      `${sourceName} denied access while ${action} (${answer.status}). Check that your account can see this ${thing}.`,
+      `${sourceName} denied access while ${action} (${answer.status}). Check that your account can see this ${thing}${said ? ` and has the permission it needs. ${sourceName} said: ${said}` : '.'}`,
     );
   }
   if (answer.status === 429) {

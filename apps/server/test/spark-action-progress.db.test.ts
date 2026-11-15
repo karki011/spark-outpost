@@ -86,6 +86,9 @@ async function heldCard() {
         sparkAction: {
           action: 'create_ticket',
           source: 'linear',
+          parent: null,
+          team: null,
+          fields: [],
           project: 'ENG',
           title: 'Crash on save',
           description: '',

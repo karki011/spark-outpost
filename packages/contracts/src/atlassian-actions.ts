@@ -5,8 +5,13 @@ import {
   atlassianProductNames,
   CONFLUENCE_TITLE_MAX,
 } from './atlassian.ts';
-
-export const ATLASSIAN_CARD_TEXT_MAX = 4_000;
+import {
+  ATLASSIAN_CARD_TEXT_MAX,
+  isJiraDelete,
+  JIRA_QUESTIONS,
+  jiraEditActionSchema,
+  type JiraEditAction,
+} from './jira-actions.ts';
 
 const cardText = z.string().max(ATLASSIAN_CARD_TEXT_MAX);
 
@@ -16,47 +21,6 @@ export const atlassianReadActionSchema = z.object({
   what: z.string().max(300),
 });
 export type AtlassianReadAction = z.infer<typeof atlassianReadActionSchema>;
-
-export const jiraEditOpSchema = z.enum(['update', 'edit_comment', 'delete_comment', 'delete']);
-export type JiraEditOp = z.infer<typeof jiraEditOpSchema>;
-
-const jiraIssueFactsSchema = z.object({
-  summary: z.string().max(1_000),
-  description: cardText,
-  labels: z.array(z.string().max(255)).max(50),
-  priority: z.string().max(100).nullable(),
-});
-export type JiraIssueFacts = z.infer<typeof jiraIssueFactsSchema>;
-
-export const jiraChangesSchema = z
-  .object({
-    summary: z.string().trim().min(1).max(255),
-    description: z.string().max(ATLASSIAN_BODY_MAX),
-    labels: z.array(z.string().trim().min(1).max(100)).max(50),
-    priority: z.string().trim().min(1).max(100),
-  })
-  .partial();
-export type JiraChanges = z.infer<typeof jiraChangesSchema>;
-
-export const jiraEditActionSchema = z.object({
-  action: z.literal('jira_edit'),
-  op: jiraEditOpSchema,
-  ticket: z.object({ key: z.string().max(64), title: z.string().max(1_000), url: z.string() }),
-  updated: z.string().max(60).nullable(),
-  changes: jiraChangesSchema,
-  before: jiraIssueFactsSchema.nullable(),
-  after: jiraIssueFactsSchema.nullable(),
-  comment: z
-    .object({
-      id: z.string().max(40),
-      before: cardText,
-      after: z.string().max(ATLASSIAN_BODY_MAX).nullable(),
-      updatedAt: z.string().max(60).nullable(),
-    })
-    .nullable(),
-  subtasks: z.array(z.string().max(64)).max(200),
-});
-export type JiraEditAction = z.infer<typeof jiraEditActionSchema>;
 
 export const confluenceEditOpSchema = z.enum(['create', 'update', 'comment', 'delete']);
 export type ConfluenceEditOp = z.infer<typeof confluenceEditOpSchema>;
@@ -94,13 +58,6 @@ export function isAtlassianAction(action: string): action is AtlassianAction['ac
   return ATLASSIAN_ACTIONS.has(action);
 }
 
-const JIRA_QUESTIONS: Record<JiraEditOp, { question: string; confirm: string }> = {
-  update: { question: 'Change this ticket?', confirm: 'Save change' },
-  edit_comment: { question: 'Edit this comment?', confirm: 'Save comment' },
-  delete_comment: { question: 'Delete this comment?', confirm: 'Delete comment' },
-  delete: { question: 'Delete this ticket?', confirm: 'Delete ticket' },
-};
-
 const CONFLUENCE_QUESTIONS: Record<ConfluenceEditOp, { question: string; confirm: string }> = {
   create: { question: 'Create this Confluence page?', confirm: 'Create page' },
   update: { question: 'Change this Confluence page?', confirm: 'Save page' },
@@ -137,8 +94,7 @@ export function atlassianCardSubject(action: AtlassianAction): string {
 }
 
 export function atlassianDeletes(action: AtlassianAction): boolean {
-  if (action.action === 'jira_edit')
-    return action.op === 'delete' || action.op === 'delete_comment';
+  if (action.action === 'jira_edit') return isJiraDelete(action.op);
   return action.action === 'confluence_edit' && action.op === 'delete';
 }
 
@@ -168,7 +124,10 @@ export function atlassianAuditFacts(action: AtlassianAction): Record<string, unk
       action: action.action,
       op: action.op,
       key: action.ticket.key,
-      changed: Object.keys(action.changes).toSorted(),
+      changed: [
+        ...new Set([...Object.keys(action.changes), ...action.rows.map((row) => row.label)]),
+      ].toSorted(),
+      ...(action.targets.length > 0 ? { targets: action.targets.length } : {}),
       ...(action.comment ? { commentId: action.comment.id } : {}),
       ...(action.subtasks.length > 0 ? { subtasks: action.subtasks.length } : {}),
     };

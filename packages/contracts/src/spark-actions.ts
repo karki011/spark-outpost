@@ -37,6 +37,7 @@ import {
   atlassianActionSchemas,
   atlassianQuestion,
 } from './atlassian-actions.ts';
+import { jiraTeamChoiceSchema } from './jira-actions.ts';
 import {
   serviceNowActionLabels,
   serviceNowActionSchemas,
@@ -86,6 +87,19 @@ export const createTicketActionSchema = z.object({
   priority: ticketPriorityNameSchema.nullable(),
   labels,
   assignToMe: z.boolean(),
+  parent: z.string().trim().min(1).max(64).nullable().default(null),
+  team: jiraTeamChoiceSchema.nullable().default(null),
+  fields: z
+    .array(
+      z.object({
+        id: z.string().max(100),
+        name: z.string().max(200),
+        value: z.unknown(),
+        shown: z.string().max(300),
+      }),
+    )
+    .max(50)
+    .default([]),
 });
 
 export const commentTicketActionSchema = z.object({

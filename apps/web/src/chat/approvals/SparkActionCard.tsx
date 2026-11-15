@@ -73,6 +73,13 @@ function Facts({ action }: { action: SparkAction }) {
             {ticketSourceNames[action.source]} · {action.project}
           </Fact>
           <Fact label="Assignee">{action.assignToMe ? 'You' : 'Nobody'}</Fact>
+          {action.parent && <Fact label="Parent">{action.parent}</Fact>}
+          {action.team && <Fact label="Team">{action.team.name ?? action.team.id}</Fact>}
+          {action.fields.map((field) => (
+            <Fact key={field.id} label={field.name}>
+              {field.shown}
+            </Fact>
+          ))}
         </dl>
       );
     case 'comment_ticket':

@@ -1,7 +1,7 @@
 import type { Approval, SaveTicketConnectionRequest } from '@spark-outpost/contracts';
 import type { RunObservations, SentOutNote } from '../src/observations/run-observations.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
-import type { SparkScope } from '../src/spark-mcp/deps.ts';
+import type { SparkScope, SparkToolDeps } from '../src/spark-mcp/deps.ts';
 import { saveConnection } from '../src/tickets/connections.ts';
 import { JIRA_EMAIL, JIRA_TOKEN } from './fake-jira.ts';
 import {
@@ -21,6 +21,7 @@ export interface AtlassianHarness {
   tools: SparkToolsHarness;
   sent: SentOutNote[];
   recordedObservations: string[];
+  conversationId: string;
 }
 
 function watchingObservations(
@@ -54,6 +55,7 @@ export async function startAtlassian(
   readBefore: readonly string[] = [],
   connection: ConnectionOf = jiraConnection,
   scope: Partial<SparkScope> = {},
+  deps: Partial<SparkToolDeps> = {},
 ): Promise<AtlassianHarness> {
   const t = await createTestDb();
   const secrets = memorySecretStore();
@@ -78,9 +80,9 @@ export async function startAtlassian(
       observations: watchingObservations(sent, recordedObservations, readBefore),
       ...scope,
     },
-    { secrets },
+    { secrets, ...deps },
   );
-  return { t, stubs, secrets, recorded, tools, sent, recordedObservations };
+  return { t, stubs, secrets, recorded, tools, sent, recordedObservations, conversationId };
 }
 
 export async function stopAtlassian(harness: AtlassianHarness): Promise<void> {
