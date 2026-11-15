@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   REMOTE_CARD_KINDS,
@@ -28,8 +28,10 @@ export function PhoneCardAnswering({ answering }: { answering: RemoteCardAnsweri
   const queryClient = useQueryClient();
   const name = useId();
   const [draft, setDraft] = useState<RemoteCardAnswering | null>(null);
+  const saving = useRef(0);
   const change = useMutation({
     mutationFn: phoneApi.setCardAnswering,
+    scope: { id: 'card-answering' },
     onSuccess: (cardAnswering) => {
       queryClient.setQueryData<RemoteSession>(phoneKeys.session, (session) =>
         session ? { ...session, cardAnswering } : session,
@@ -40,7 +42,13 @@ export function PhoneCardAnswering({ answering }: { answering: RemoteCardAnsweri
   const shown = draft ?? answering;
   const save = (next: Partial<RemoteCardAnswering>) => {
     setDraft({ ...shown, ...next });
-    change.mutate(next, { onSettled: () => setDraft(null) });
+    saving.current += 1;
+    change.mutate(next, {
+      onSettled: () => {
+        saving.current -= 1;
+        if (saving.current === 0) setDraft(null);
+      },
+    });
   };
   const onMac = shown.from === 'mac';
   return (
@@ -58,14 +66,13 @@ export function PhoneCardAnswering({ answering }: { answering: RemoteCardAnsweri
               name={name}
               value={choice.value}
               checked={shown.from === choice.value}
-              disabled={change.isPending}
               onChange={() => save({ from: choice.value })}
             />
             {choice.label}
           </label>
         ))}
       </div>
-      <fieldset className="ph-cards-kinds" disabled={onMac || change.isPending}>
+      <fieldset className="ph-cards-kinds" disabled={onMac}>
         <legend>Keep on the Mac</legend>
         {REMOTE_CARD_KINDS.map((kind) => (
           <label key={kind} className="ph-choice">
