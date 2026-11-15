@@ -140,7 +140,7 @@ export function SettingsPanes({ section, onSection, onOpenChat, closeButton }: S
         <div className="set-body" role="tabpanel" aria-labelledby="set-title">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
-              key={section}
+              key={pageOf(section)}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
@@ -153,6 +153,7 @@ export function SettingsPanes({ section, onSection, onOpenChat, closeButton }: S
                     part={partOf(section)}
                     setup={setup.data}
                     onOpenChat={onOpenChat}
+                    onSection={onSection}
                   />
                 )}
               </SwitchWordsProvider>

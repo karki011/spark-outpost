@@ -219,3 +219,9 @@
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+@media (pointer: coarse) {
+  .mc-show-more {
+    min-height: 44px;
+  }
+}

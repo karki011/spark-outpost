@@ -70,3 +70,12 @@ test('connected providers come first and the rest sit under Not connected', asyn
   await expect(rest.nth(0)).toHaveAttribute('data-prov', 'zai');
   await expect(rest.nth(1)).toHaveAttribute('data-prov', 'custom');
 });
+
+test('a link to a provider leaves the Models tab for Providers', async ({ page }) => {
+  const dialog = await openTab(page, 'Models');
+  await expect(dialog.getByRole('radio', { name: 'Models', exact: true })).toBeChecked();
+  await page.evaluate(() => (window.location.hash = '#/settings/providers/codex'));
+  await expect(dialog.getByRole('radio', { name: 'Providers', exact: true })).toBeChecked();
+  await dialog.getByRole('radio', { name: 'Models', exact: true }).click();
+  await expect(dialog.getByRole('radio', { name: 'Models', exact: true })).toBeChecked();
+});

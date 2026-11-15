@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type { SetupState } from '@spark-outpost/contracts';
 import { PHONE_SWITCH_OFF, useRemoteClient } from '../phone/use-remote-client.ts';
 import { Segmented } from '../ui/Segmented.tsx';
@@ -14,6 +14,7 @@ interface SettingsPageBodyProps {
   part: SettingsSection | null;
   setup: SetupState | undefined;
   onOpenChat: (conversationId: string) => void;
+  onSection: (section: SettingsSection) => void;
 }
 
 interface PartProps {
@@ -55,10 +56,9 @@ function StackedPart({ part, setup, onOpenChat, wanted }: PartProps & { wanted: 
   );
 }
 
-function TabbedParts({ entry, part, setup, onOpenChat }: SettingsPageBodyProps) {
+function TabbedParts({ entry, part, setup, onOpenChat, onSection }: SettingsPageBodyProps) {
   const parts = partsOf(entry);
-  const [shown, setShown] = useState(() => part ?? parts[0]!.id);
-  const current = parts.find((candidate) => candidate.id === shown) ?? parts[0]!;
+  const current = parts.find((candidate) => candidate.id === part) ?? parts[0]!;
   return (
     <>
       <div className="set-part-tabs">
@@ -66,7 +66,7 @@ function TabbedParts({ entry, part, setup, onOpenChat }: SettingsPageBodyProps) 
           ariaLabel={`Show in ${entry.label}`}
           options={parts.map((candidate) => ({ id: candidate.id, label: candidate.title }))}
           value={current.id}
-          onChange={(id) => setShown(id as SettingsSection)}
+          onChange={(id) => onSection(id as SettingsSection)}
         />
       </div>
       <PartBody key={current.id} part={current} setup={setup} onOpenChat={onOpenChat} />
