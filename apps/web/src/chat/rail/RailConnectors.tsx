@@ -1,19 +1,42 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import type { AgentConnector, AgentConnectorId } from '@spark-outpost/contracts';
 import { agentConnectorsKey, fetchAgentConnectors } from '../../api/agent-connectors.ts';
 import { requestSettings } from '../../settings/settings-request.ts';
+import { shipKeys } from '../../ship/ship-api.ts';
+import { slackKeys } from '../../slack/slack-api.ts';
 
-const CONNECTORS: Record<AgentConnectorId, { name: string; gives: string; switchOff?: string }> = {
+interface ConnectorFacts {
+  name: string;
+  gives: string;
+  switchOff?: string;
+  action?: string;
+}
+
+const CONNECTORS: Record<AgentConnectorId, ConnectorFacts> = {
   github: { name: 'GitHub', gives: 'Pull requests and repos' },
-  jira: { name: 'Jira', gives: 'Search, read and edit issues' },
+  jira: {
+    name: 'Jira',
+    gives: 'Search, read and edit issues',
+    switchOff: 'Off on the Atlassian card',
+  },
   confluence: {
     name: 'Confluence',
     gives: 'Search, read and edit pages',
     switchOff: 'Off on the Atlassian card',
   },
   linear: { name: 'Linear', gives: 'Read, comment on and move tickets' },
-  servicenow: { name: 'ServiceNow', gives: 'Incidents, requests and changes' },
-  slack: { name: 'Slack', gives: 'Read and post messages' },
+  servicenow: {
+    name: 'ServiceNow',
+    gives: 'Incidents, requests and changes',
+    switchOff: 'No record types turned on',
+  },
+  slack: {
+    name: 'Slack',
+    gives: 'Read and post messages',
+    switchOff: 'Sign-in expired',
+    action: 'Sign in',
+  },
   calendar: {
     name: 'Calendar',
     gives: 'Read your calendar',
@@ -22,6 +45,25 @@ const CONNECTORS: Record<AgentConnectorId, { name: string; gives: string; switch
 };
 
 const openConnectors = () => requestSettings('tools');
+
+const CONNECTION_KEYS: readonly QueryKey[] = [slackKeys.status, shipKeys.github];
+
+function sameKey(a: QueryKey, b: QueryKey): boolean {
+  return a.length === b.length && a.every((part, index) => part === b[index]);
+}
+
+function useConnectorRefresh(): void {
+  const queryClient = useQueryClient();
+  useEffect(
+    () =>
+      queryClient.getQueryCache().subscribe((event) => {
+        if (event.type !== 'updated' || event.action.type !== 'success') return;
+        if (!CONNECTION_KEYS.some((key) => sameKey(key, event.query.queryKey))) return;
+        void queryClient.invalidateQueries({ queryKey: agentConnectorsKey });
+      }),
+    [queryClient],
+  );
+}
 
 function ConnectorRow({ connector }: { connector: AgentConnector }) {
   const facts = CONNECTORS[connector.id];
@@ -39,10 +81,12 @@ function ConnectorRow({ connector }: { connector: AgentConnector }) {
         <button
           type="button"
           className="crail-manage"
-          aria-label={`Turn on ${facts.name} for agents`}
+          aria-label={
+            facts.action ? `${facts.action} to ${facts.name}` : `Turn on ${facts.name} for agents`
+          }
           onClick={openConnectors}
         >
-          Turn on
+          {facts.action ?? 'Turn on'}
         </button>
       )}
     </li>
@@ -50,6 +94,7 @@ function ConnectorRow({ connector }: { connector: AgentConnector }) {
 }
 
 export function RailConnectors() {
+  useConnectorRefresh();
   const query = useQuery({ queryKey: agentConnectorsKey, queryFn: fetchAgentConnectors });
   if (!query.data) return null;
   const shown = query.data.connectors.filter((entry) => entry.state !== 'not_connected');

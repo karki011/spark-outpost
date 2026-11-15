@@ -31,6 +31,7 @@ function show() {
       <RailConnectors />
     </QueryClientProvider>,
   );
+  return client;
 }
 
 afterEach(() => {
@@ -62,5 +63,22 @@ describe('connectors in the context rail', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Turn on Confluence for agents' }));
     fireEvent.click(screen.getByRole('button', { name: 'Connect…' }));
     expect(opened.sections).toEqual(['tools', 'tools']);
+  });
+
+  it('asks to sign in again when a saved Slack sign-in no longer works', async () => {
+    serve([{ id: 'slack', state: 'switch_off' }]);
+    show();
+    expect(await screen.findByText('Sign-in expired')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in to Slack' }));
+    expect(opened.sections).toEqual(['tools']);
+  });
+
+  it('asks again after Slack or GitHub changes in Settings', async () => {
+    serve([{ id: 'slack', state: 'not_connected' }]);
+    const client = show();
+    await screen.findByText(/Not connected: Slack\./);
+    serve([{ id: 'slack', state: 'on' }]);
+    client.setQueryData(['slack', 'status'], { connected: true });
+    expect(await screen.findByText('Read and post messages')).toBeTruthy();
   });
 });

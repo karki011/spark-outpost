@@ -21,12 +21,12 @@ See what a chat's agent works with in the **Context** rail, and switch its tools
 
 Under **Tools**:
 
-| Group                                                                   | Applies to        | Switch                                                                       |
-| ----------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------- |
-| Your project: **Skills**, **Commands**, **Subagents**, **Instructions** | This project      | On or off, as in **Agent setup**                                             |
-| **MCP servers**                                                         | This chat         | On or off; **Reset** goes back to the default. Repo servers only show        |
-| **Claude plugins**                                                      | Every Claude chat | On or off; **Review** and **Flagged** open [Settings](use-claude-plugins.md) |
-| **Connectors**                                                          | Every chat        | **On**, or **Turn on** / **Connect…** opens Connections → Connectors         |
+| Group                                                                   | Applies to        | Switch                                                                          |
+| ----------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------- |
+| Your project: **Skills**, **Commands**, **Subagents**, **Instructions** | This project      | On or off, as in **Agent setup**                                                |
+| **MCP servers**                                                         | This chat         | On or off; **Reset** goes back to the default. Repo servers only show           |
+| **Claude plugins**                                                      | Every Claude chat | On or off; **Review** and **Flagged** open [Settings](use-claude-plugins.md)    |
+| **Connectors**                                                          | Every chat        | **On**; **Turn on**, **Sign in** or **Connect…** opens Connections → Connectors |
 
 A change applies from the next message. **Manage tools** opens MCP servers in Settings; hooks and trust stay in **Agent setup** under the message box.
 

@@ -1,3 +1,4 @@
+import { escapeBelongsToSurface } from '../../ui/foreground-surface.ts';
 import './chat-rail.css';
 import {
   memo,
@@ -123,6 +124,7 @@ function useFloatingClose(
     if (!active || !focused) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
+      if (escapeBelongsToSurface(event, rail.current)) return;
       event.preventDefault();
       closeRef.current(true);
     };

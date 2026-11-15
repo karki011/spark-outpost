@@ -1,3 +1,4 @@
+import { escapeBelongsToSurface } from '../ui/foreground-surface.ts';
 import {
   createContext,
   useCallback,
@@ -155,6 +156,7 @@ function useEscapeCloses(open: boolean, close: () => void) {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
+      if (escapeBelongsToSurface(event, document.querySelector('nav.side'))) return;
       event.preventDefault();
       close();
     };

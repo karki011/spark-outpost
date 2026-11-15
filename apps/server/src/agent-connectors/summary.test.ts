@@ -3,10 +3,13 @@ import { connectorSummary, type ConnectorFacts } from './summary.ts';
 
 const none: ConnectorFacts = {
   github: false,
+  atlassianConnected: false,
   jira: false,
   confluence: false,
   linear: false,
+  servicenowConnected: false,
   servicenow: false,
+  slackConnected: false,
   slack: false,
   calendarConnected: false,
   calendarAgentsRead: true,
@@ -39,12 +42,21 @@ describe('connectorSummary', () => {
     });
   });
 
-  it('says a switch is off when Atlassian is connected but its Confluence switch is not on', () => {
-    expect(stateOf({ ...none, jira: true })).toMatchObject({
+  it('says a switch is off when Atlassian is connected but a product switch is not on', () => {
+    const atlassian = { ...none, atlassianConnected: true };
+    expect(stateOf({ ...atlassian, jira: true })).toMatchObject({
       jira: 'on',
       confluence: 'switch_off',
     });
-    expect(stateOf({ ...none, confluence: true })).toMatchObject({ confluence: 'on' });
+    expect(stateOf(atlassian)).toMatchObject({ jira: 'switch_off', confluence: 'switch_off' });
+    expect(stateOf({ ...atlassian, confluence: true })).toMatchObject({ confluence: 'on' });
+  });
+
+  it('keeps a saved ServiceNow or Slack connection out of Not connected when it is unusable', () => {
+    expect(stateOf({ ...none, servicenowConnected: true })).toMatchObject({
+      servicenow: 'switch_off',
+    });
+    expect(stateOf({ ...none, slackConnected: true })).toMatchObject({ slack: 'switch_off' });
   });
 
   it('says a switch is off when a calendar is connected but agents may not read it', () => {
