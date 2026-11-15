@@ -2,7 +2,13 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Approval, CrewEditAction, SparkAction } from '@spark-outpost/contracts';
+import {
+  REMOTE_CARD_ANSWERING_DEFAULT,
+  type Approval,
+  type CrewEditAction,
+  type RemoteCardAnswering,
+  type SparkAction,
+} from '@spark-outpost/contracts';
 import { approvalsApi } from '../../api/approvals.ts';
 import { phoneKeys } from '../../phone/phone-api.ts';
 import { ApprovalCard } from './ApprovalCard.tsx';
@@ -86,9 +92,18 @@ function card(action: SparkAction, title: string): Approval {
   };
 }
 
-function show(approval: Approval, remote = false) {
+function show(
+  approval: Approval,
+  remote = false,
+  cardAnswering: RemoteCardAnswering = REMOTE_CARD_ANSWERING_DEFAULT,
+) {
   const client = new QueryClient();
-  client.setQueryData(phoneKeys.session, { remote, switches: {} });
+  client.setQueryData(phoneKeys.session, {
+    remote,
+    switches: {},
+    cardAnswering,
+    passkey: false,
+  });
   render(
     <QueryClientProvider client={client}>
       <ApprovalCard approval={approval} provider="claude" agent="Claude" repo={null} />
@@ -142,8 +157,17 @@ describe('the card for a change to a Spark', () => {
     const group = screen.getByRole('group', { name: /Change the Scout Spark\?/ });
     expect(within(group).queryByRole('button', { name: 'Allow' })).toBeNull();
     expect(within(group).queryByRole('button', { name: 'Deny' })).toBeNull();
-    expect(group.textContent).toContain('Answered on the Mac only.');
+    expect(group.textContent).toContain('Answer on your Mac.');
     expect(within(group).getByRole('region', { name: 'Changes to SPARK.md' })).toBeTruthy();
+  });
+
+  it('is answered on a paired device once its cards can be answered there', async () => {
+    const decide = vi.spyOn(approvalsApi, 'decide').mockReturnValue(new Promise(() => undefined));
+    show(card(sparkEdit, 'Change the Scout Spark?'), true, { from: 'devices', macOnly: [] });
+    const group = screen.getByRole('group', { name: /Change the Scout Spark\?/ });
+    expect(group.textContent).not.toContain('Answer on your Mac.');
+    fireEvent.click(within(group).getByRole('button', { name: 'Deny' }));
+    await waitFor(() => expect(decide).toHaveBeenCalled());
   });
 });
 
@@ -183,7 +207,7 @@ describe('the card for a new or changed Spark', () => {
       'You already have the Scout Spark (similar name).',
     );
     expect(screen.queryByRole('button', { name: /Add/ })).toBeNull();
-    expect(screen.getByRole('group').textContent).toContain('Answered on the Mac only.');
+    expect(screen.getByRole('group').textContent).toContain('Answer on your Mac.');
   });
 
   it('shows the instructions a change replaces', () => {

@@ -45,6 +45,9 @@ function card(action: SparkAction, title: string): Approval {
 const create: SparkAction = {
   action: 'create_ticket',
   source: 'linear',
+  parent: null,
+  team: null,
+  fields: [],
   project: 'ENG',
   title: 'Crash on save',
   description: 'Steps',
@@ -225,5 +228,90 @@ describe('SparkActionCard', () => {
 
     await waitFor(() => expect(decide).toHaveBeenCalled());
     expect(decide.mock.calls[0]![1]).toMatchObject({ edits: { to: 'Rejected' } });
+  });
+
+  it('shows the parent and team a Jira ticket is created under', () => {
+    show(
+      card(
+        {
+          ...create,
+          source: 'jira',
+          project: 'API',
+          parent: 'API-95',
+          team: { field: 'customfield_10001', id: 'team-1', name: 'Platform' },
+        },
+        'Create this ticket? Crash on save',
+      ),
+    );
+    const group = screen.getByRole('group', { name: /Create this ticket\?/ });
+    expect(group.textContent).toContain('ParentAPI-95');
+    expect(group.textContent).toContain('TeamPlatform');
+  });
+
+  it('shows parent, type and team before and after a Jira change', () => {
+    const facts = {
+      summary: 'Upload',
+      description: '',
+      labels: [],
+      priority: null,
+    };
+    show(
+      card(
+        {
+          action: 'jira_edit',
+          op: 'update',
+          ticket: {
+            key: 'API-77',
+            title: 'Upload',
+            url: 'https://example.atlassian.net/browse/API-77',
+          },
+          updated: '2026-10-01T00:00:00.000+0000',
+          changes: { parent: 'API-95', issueType: 'Story' },
+          before: { ...facts, parent: null, type: 'Task', team: null },
+          after: { ...facts, parent: 'API-95', type: 'Story', team: 'Payments' },
+          comment: null,
+          subtasks: [],
+          rows: [],
+          targets: [],
+          plan: null,
+        },
+        'Change this ticket? API-77 Upload',
+      ),
+    );
+    const group = screen.getByRole('group', { name: /Change this ticket\?/ });
+    expect(group.textContent).toContain('TypeTask → Story');
+    expect(group.textContent).toContain('ParentNone → API-95');
+    expect(group.textContent).toContain('TeamNone → Payments');
+  });
+
+  it('shows each Jira row before and after, and the other issues one card changes', () => {
+    show(
+      card(
+        {
+          action: 'jira_edit',
+          op: 'update',
+          ticket: { key: 'WEB-1', title: 'Login', url: null },
+          updated: '2026-10-01T00:00:00.000+0000',
+          changes: {},
+          before: null,
+          after: null,
+          comment: null,
+          subtasks: [],
+          rows: [
+            { key: 'WEB-1', label: 'Assignee', before: 'Jordan Lee', after: 'Alex Example' },
+            { key: 'WEB-2', label: 'Due date', before: null, after: '2026-12-01' },
+            { key: null, label: 'Attachment', before: 'notes.txt', after: null },
+          ],
+          targets: [{ key: 'WEB-2', title: 'Logout', url: null, updated: null }],
+          plan: { fields: {}, update: {} },
+        },
+        'Change this ticket? WEB-1 Login',
+      ),
+    );
+    const group = screen.getByRole('group', { name: /Change this ticket\?/ });
+    expect(group.textContent).toContain('Also changesWEB-2 · Logout');
+    expect(group.textContent).toContain('WEB-1 · AssigneeJordan Lee → Alex Example');
+    expect(group.textContent).toContain('WEB-2 · Due date2026-12-01');
+    expect(group.textContent).toContain('Attachment (removed)notes.txt');
   });
 });

@@ -81,7 +81,7 @@ interface EditArgs {
 async function edit(args: EditArgs, context: SparkToolContext) {
   const run = actionRun(context.scope);
   const { db } = context.deps;
-  const refused = await rulesRunRefusal(db, context.scope);
+  const refused = await rulesRunRefusal(db, context.scope, 'rules');
   if (refused) throw new SparkToolError(RULES_RUN_REFUSALS[refused]);
   checkedRules(args.add, args.remove);
   const session = await rulesSession(db, run.runId);

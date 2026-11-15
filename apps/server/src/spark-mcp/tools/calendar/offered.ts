@@ -1,6 +1,7 @@
 import type { Db } from '../../../persistence/db.ts';
 import { childRun } from '../../../mac-control/offered.ts';
 import { runFromDevice } from '../../../remote/run-mark.ts';
+import { remoteRunRefused } from '../../actions/rules-edit-session.ts';
 import { googleAccounts } from '../../../calendar/google/store.ts';
 import { calendarConnection, savedChoices } from '../../../calendar/store.ts';
 import type { SparkScope, SparkToolDeps } from '../../deps.ts';
@@ -14,7 +15,9 @@ export async function calendarRunRefusal(
   if (!deps.calendar) return 'no_shell';
   if (!scope.conversationId) return 'no_chat';
   if (!scope.runId) return null;
-  if (await runFromDevice(deps.db, scope.runId)) return 'remote';
+  if (await remoteRunRefused(deps.db, scope.conversationId, scope.runId, 'calendar')) {
+    return 'remote';
+  }
   if (await childRun(deps.db, scope.runId)) return 'child';
   return null;
 }
@@ -37,7 +40,7 @@ export const CALENDAR_HOW_TO = {
   read: `spark_calendar (turn on Let agents read my calendar on the Calendar card in ${CALENDAR_CARD})`,
   edit: `spark_calendar_edit (turn on Agents can edit for a calendar on the Calendar card in ${CALENDAR_CARD})`,
   remote:
-    'spark_calendar and spark_calendar_edit (not in a turn started from a paired device; ask from the Mac)',
+    'spark_calendar and spark_calendar_edit (from a paired device only when Calendar cards can be answered there: Remote control on the Mac)',
 } as const;
 
 export interface CalendarOffer {

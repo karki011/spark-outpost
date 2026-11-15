@@ -16,13 +16,13 @@ Use Spark from another device; work stays on the Mac. About 5 minutes. Needs Tai
 
 Each device's **Actions** menu has **Rename**, **Remove passkeys** and **Revoke**; **Remove old entry** clears a duplicate.
 
-**What paired devices can do** groups switches as **Everyday**, **Set up work** and **High risk**. On a phone, **More** holds Remote control and Settings.
+**What paired devices can do** groups switches as **Everyday**, **Set up work** and **High risk**. A phone's **More** holds Remote control and Settings.
 
-See what [outposts](outposts.md) allow here.
+See what [outposts](outposts.md) allow.
 
 **Link a new folder or clone a repo** also allows **New folder**, and agents' repo copies and clones.
 
-Devices answer browser cards. **Open artifacts** (off) shows artifacts.
+Devices answer browser and [other](answer-remotely.md) cards. **Open artifacts** (off) shows artifacts.
 
 **Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both off.
 

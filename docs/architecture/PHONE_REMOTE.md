@@ -165,7 +165,24 @@ What a phone is shown differently (`apps/server/src/remote/redaction.ts`):
 
 Known and left as it is: a phone with the settings or connections switch on sees what the Mac sees in agent setup and MCP server lists, including a credential someone typed into a command argument or URL. Project files outside the secret-name list (`.mcp.json`, `*.tfvars`) are readable as on the Mac.
 
-Switches are `GET /api/remote/switches` (readable by a paired phone) and `PATCH /api/remote/switches` (local only), stored as columns of `remote_access_settings`. `GET /api/remote/session` tells the web app whether it runs on a phone, which device it is, the address and the switches.
+Switches are `GET /api/remote/switches` (readable by a paired phone) and `PATCH /api/remote/switches` (local only), stored as columns of `remote_access_settings`. `GET /api/remote/session` tells the web app whether it runs on a phone, which device it is, the address, the switches, where cards can be answered and whether this device has a passkey.
+
+### Cards from a paired device (issue #257, built)
+
+Where a card may be answered is one pure function, `remoteCardPlace` in `packages/contracts/src/remote-cards.ts`, used by the gateway (the only authority) and by the web cards (to show **Answer on your Mac.** instead of buttons that would be refused). It returns `here`, `step_up` or `mac` with a reason, in this order:
+
+1. Fixed on the Mac whatever the setting: **Open this address?** (it opens in the Mac's browser), a browser sign-in handoff (the user signs in in the Mac's pane) and a `rules_edit` card for the company file (written through the macOS admin prompt).
+2. The card kinds that were Mac-only (`crew` for `crew_edit`, `create_teammate`, `update_teammate`; `plugins`; `calendar`; `rules`; `macControl`) follow **Cards can be answered from** on the Remote control page: `remote_access_settings.card_answer_from` (`mac` or `devices`) and `card_mac_only`, the kinds kept on the Mac (migration `0253`). The default is `mac` with `rules` and `macControl` kept back, so an upgrade answers nothing new from a device. `PATCH /api/remote/card-answering` is `never` from a device and audited as `card_answering_changed`.
+3. The existing switches (`cardSwitch`: high-risk cards, saved sign-ins, projects) still apply.
+4. Spark rules, Mac control and every hold-to-confirm card (`holdsToConfirm`: force push, git hooks or config, a secret-file send, a held plugin card) need a passkey step-up. This tightens what was there before: with **Answer high-risk cards** on, a device used to answer a force push or git config card with no passkey. A device with no passkey is told to save one or answer on the Mac.
+
+Step-up reuses the device's saved passkeys (`remote_passkeys`) and does not need **Sign in with a passkey** on. `POST /api/approvals/:id/step-up/options` issues a challenge bound to the device and the card (`step-up:<device>:<approval>`) with `allowCredentials` limited to that device's passkeys and user verification required; `POST /api/approvals/:id/step-up` checks the challenge, that the credential belongs to this device and is not revoked, verifies the assertion, updates the sign count and grants one answer for two minutes (`StepUpGrants`, in memory). The gateway consumes the grant when the device posts the card's decision, so every answer needs its own step-up. Both routes answer 404 on loopback, are rate-limited and audited (`card_step_up`, `card_step_up_failed`). A restart drops pending grants. `POST /api/approvals/:id/retry`, which performs an allowed action again, goes through the same placement and is refused from a device unless the card is answerable there with no step-up.
+
+Who answered: `approvals.answered_device_id` and `answered_device_name` (a snapshot, since devices are renamed and revoked) are written in the same update that settles the card, from the request's device, and the decision export's card line says `answeredOn: 'mac' | 'device'` with the device. Terminal-session approvals and the Spark rule refusal card (`POST /api/approvals/:id/spark-rule`, still `never`) are other paths and record nothing new.
+
+A device reading a chat (`POST /api/attention/chats/:id/read`, `POST /api/conversations/:id/seen`) moves `seen_at` only to just before the oldest pending card it cannot answer, and `POST /api/attention/approval:<id>/read` from such a device is ignored, so the Mac keeps its badge, chime and notification for that card.
+
+Agent tools for a run started on a device: `spark_rules_edit`, `spark_plugins_edit`, `spark_crew`, `spark_crew_edit` and the calendar tools are offered only while their kind can be answered from devices (`remoteRunRefused`). A run from a device never gets the "Allow for this session" rules grant. Mac control is still never offered to such a run, and Ask Spark still never answers these cards.
 
 ### Audit
 

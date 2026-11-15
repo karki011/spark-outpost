@@ -207,7 +207,7 @@ test.describe('plain chats', () => {
     await expect(workPanel(page)).toBeHidden();
     await page.setViewportSize({ width: 1280, height: 900 });
     await expect(ticks(page).first()).toBeVisible();
-    await page.setViewportSize({ width: 800, height: 900 });
+    await page.setViewportSize({ width: 640, height: 900 });
     await expect(outline(page)).toBeHidden();
 
     await page.setViewportSize({ width: 390, height: 800 });

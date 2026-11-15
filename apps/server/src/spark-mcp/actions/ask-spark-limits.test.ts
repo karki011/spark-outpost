@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Approval } from '@spark-outpost/contracts';
 import { EVERYTHING_AVAILABLE } from '../availability.ts';
 import { CHAT_TURN_ONLY, sparkToolsFor } from '../server.ts';
-import { macOnlyCard } from '../../remote/policy.ts';
+import { macOnlyCard } from '@spark-outpost/contracts';
 import { ASK_SPARK_REFUSALS, askedToAnswer, cardRefusal, namesChat } from './ask-spark-limits.ts';
 
 const TITLE = 'deploy';

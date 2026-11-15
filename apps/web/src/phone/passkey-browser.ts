@@ -1,4 +1,9 @@
-import type { PasskeyCreationOptions, PasskeyRegistration } from '@spark-outpost/contracts';
+import type {
+  PasskeyAssertion,
+  PasskeyCreationOptions,
+  PasskeyRegistration,
+  PasskeyRequestOptions,
+} from '@spark-outpost/contracts';
 
 export type PasskeySaveProblem = 'exists' | 'not_saved';
 
@@ -57,6 +62,43 @@ export async function createPasskey(
       clientDataJSON: base64UrlOf(response.clientDataJSON),
       attestationObject: base64UrlOf(response.attestationObject),
       ...(transports ? { transports } : {}),
+    },
+  };
+}
+
+export async function getAssertion(
+  options: PasskeyRequestOptions,
+): Promise<PasskeyAssertion | null> {
+  const credential = await navigator.credentials.get({
+    publicKey: {
+      rpId: options.rpId,
+      challenge: bytesOf(options.challenge),
+      timeout: options.timeout,
+      userVerification: options.userVerification,
+      ...(options.allowCredentials
+        ? {
+            allowCredentials: options.allowCredentials.map((allowed) => ({
+              id: bytesOf(allowed.id),
+              type: allowed.type,
+              ...(allowed.transports
+                ? { transports: allowed.transports as AuthenticatorTransport[] }
+                : {}),
+            })),
+          }
+        : {}),
+    },
+  });
+  if (!(credential instanceof PublicKeyCredential)) return null;
+  const response = credential.response as AuthenticatorAssertionResponse;
+  return {
+    id: credential.id,
+    rawId: base64UrlOf(credential.rawId),
+    type: 'public-key',
+    response: {
+      clientDataJSON: base64UrlOf(response.clientDataJSON),
+      authenticatorData: base64UrlOf(response.authenticatorData),
+      signature: base64UrlOf(response.signature),
+      ...(response.userHandle ? { userHandle: base64UrlOf(response.userHandle) } : {}),
     },
   };
 }

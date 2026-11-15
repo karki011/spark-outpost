@@ -98,3 +98,9 @@
     height: 44px;
   }
 }
+
+@container main (max-width: 620px) {
+  .prw-mark .prw-short {
+    display: none;
+  }
+}

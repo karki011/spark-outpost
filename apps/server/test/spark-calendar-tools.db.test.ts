@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { macOnlyCard } from '../src/remote/policy.ts';
+import { macOnlyCard } from '@spark-outpost/contracts';
 import { CALENDAR_CHANGED } from '../src/spark-mcp/actions/calendar-actions.ts';
 import { cardResult } from './spark-mcp-support.ts';
 import {

@@ -383,12 +383,16 @@ test('a chat starts with the pane closed and each chat remembers its own', async
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 15_000 });
   await expect(pane).toBeVisible();
 
+  const show = page.getByRole('button', { name: 'Show sidebar' });
+  if (await show.isVisible()) await show.click();
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await expect(page.getByRole('textbox', { name: 'Message' })).toHaveValue('');
   await expect(pane).toBeHidden();
   await expectHeaderPane(page, 'Browser', false);
 
   await page.reload();
+  await expect(page.getByRole('textbox', { name: 'Message' })).toBeVisible();
+  if (await show.isVisible()) await show.click();
   await page.getByRole('navigation', { name: 'Chats' }).getByText('First chat').click();
   await expect(pane).toBeVisible();
 });

@@ -39,11 +39,44 @@ function Swap({ label, before, after }: { label: string; before: string; after: 
   );
 }
 
+const SUBJECTS: Partial<Record<JiraEditAction['op'], string>> = {
+  create_sprint: 'Board',
+  start_sprint: 'Sprint',
+  complete_sprint: 'Sprint',
+  create_version: 'Project',
+  release_version: 'Version',
+};
+
+function JiraRow({ row }: { row: JiraEditAction['rows'][number] }) {
+  const label = row.key ? `${row.key} · ${row.label}` : row.label;
+  if (row.before !== null && row.after !== null) {
+    return <Swap label={label} before={row.before} after={row.after} />;
+  }
+  if (row.before !== null) return <Text label={`${label} (removed)`} text={row.before} />;
+  return <Text label={label} text={row.after ?? ''} />;
+}
+
+function JiraRows({ action }: { action: JiraEditAction }) {
+  return (
+    <>
+      {action.targets.length > 0 && (
+        <>
+          <dt>Also changes</dt>
+          <dd>{action.targets.map((target) => `${target.key} · ${target.title}`).join(', ')}</dd>
+        </>
+      )}
+      {action.rows.map((row, index) => (
+        <JiraRow key={`${row.key ?? ''}-${row.label}-${index}`} row={row} />
+      ))}
+    </>
+  );
+}
+
 function JiraFacts({ action }: { action: JiraEditAction }) {
   const { before, after, comment } = action;
   return (
     <dl className="sac-facts">
-      <dt>Issue</dt>
+      <dt>{SUBJECTS[action.op] ?? 'Issue'}</dt>
       <dd>
         <Link href={action.ticket.url}>{`${action.ticket.key} · ${action.ticket.title}`}</Link>
       </dd>
@@ -52,6 +85,9 @@ function JiraFacts({ action }: { action: JiraEditAction }) {
           <Swap label="Summary" before={before.summary} after={after.summary} />
           <Swap label="Priority" before={before.priority ?? ''} after={after.priority ?? ''} />
           <Swap label="Labels" before={before.labels.join(', ')} after={after.labels.join(', ')} />
+          <Swap label="Type" before={before.type ?? ''} after={after.type ?? ''} />
+          <Swap label="Parent" before={before.parent ?? ''} after={after.parent ?? ''} />
+          <Swap label="Team" before={before.team ?? ''} after={after.team ?? ''} />
           {before.description !== after.description && (
             <>
               <Text label="Description now" text={before.description} />
@@ -60,6 +96,7 @@ function JiraFacts({ action }: { action: JiraEditAction }) {
           )}
         </>
       )}
+      <JiraRows action={action} />
       {comment && <Text label="Comment now" text={comment.before} />}
       {comment?.after && <Text label="Comment after" text={comment.after} />}
       {action.subtasks.length > 0 && (

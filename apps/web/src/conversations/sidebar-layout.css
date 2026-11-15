@@ -102,7 +102,57 @@
   }
 }
 
+@media not ((max-width: 640px) or ((max-height: 500px) and (pointer: coarse))) {
+  .app.side-float .view {
+    position: relative;
+  }
+
+  .app.side-float .side {
+    position: absolute;
+    z-index: 20;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    --side-cap: calc(100% - 48px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+    transform: translateX(calc(-100% - 16px));
+    visibility: hidden;
+    transition:
+      transform var(--panel-dur) var(--panel-ease),
+      visibility 0s linear var(--panel-dur);
+  }
+
+  .app.side-float.drawer .side {
+    transform: none;
+    visibility: visible;
+    transition: transform var(--panel-dur) var(--panel-ease);
+  }
+
+  .app.side-float .side-in {
+    transform: none;
+    opacity: 1;
+  }
+
+  .app.side-float.drawer .scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 15;
+    background: rgba(0, 0, 0, 0.18);
+    animation: sb-fade 0.2s;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .app.side-float .side,
+  .app.side-float.drawer .side {
+    transition: none;
+  }
+
+  .app.side-float.drawer .scrim {
+    animation: none;
+  }
+
   .side,
   .view > .main,
   .view > .cpanes > .cpane > .main {

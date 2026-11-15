@@ -80,6 +80,38 @@ export const REMOTE_SWITCH_LABELS: Record<RemoteSwitch, string> = {
   artifacts: 'Open artifacts',
 };
 
+export const remoteCardKindSchema = z.enum(['crew', 'plugins', 'calendar', 'rules', 'macControl']);
+export type RemoteCardKind = z.infer<typeof remoteCardKindSchema>;
+
+export const REMOTE_CARD_KINDS = remoteCardKindSchema.options;
+
+export const REMOTE_CARD_KIND_LABELS: Record<RemoteCardKind, string> = {
+  crew: 'Sparks and workflows',
+  plugins: 'Plugins',
+  calendar: 'Calendar',
+  rules: 'Spark rules',
+  macControl: 'Mac control',
+};
+
+export const remoteCardAnsweringSchema = z.object({
+  from: z.enum(['mac', 'devices']),
+  macOnly: z.array(remoteCardKindSchema).max(REMOTE_CARD_KINDS.length),
+});
+export type RemoteCardAnswering = z.infer<typeof remoteCardAnsweringSchema>;
+
+export const REMOTE_CARD_ANSWERING_DEFAULT: RemoteCardAnswering = {
+  from: 'mac',
+  macOnly: ['rules', 'macControl'],
+};
+
+export const updateRemoteCardAnsweringRequestSchema = remoteCardAnsweringSchema
+  .partial()
+  .strict()
+  .refine((change) => Object.keys(change).length > 0);
+export type UpdateRemoteCardAnsweringRequest = z.infer<
+  typeof updateRemoteCardAnsweringRequestSchema
+>;
+
 export const REMOTE_ALWAYS_ALLOWED_LINE =
   'Read chats, send messages, answer ordinary cards, read outposts';
 
@@ -130,6 +162,7 @@ export const remoteHostnameSchema = z
 export const remoteAccessSchema = z.object({
   hostname: z.string().nullable(),
   switches: remoteSwitchesSchema,
+  cardAnswering: remoteCardAnsweringSchema,
 });
 export type RemoteAccess = z.infer<typeof remoteAccessSchema>;
 
@@ -211,6 +244,8 @@ export const remoteSessionSchema = z.object({
   device: z.object({ id: z.uuid(), name: z.string() }).nullable(),
   address: z.string().nullable(),
   switches: remoteSwitchesSchema,
+  cardAnswering: remoteCardAnsweringSchema,
+  passkey: z.boolean(),
 });
 export type RemoteSession = z.infer<typeof remoteSessionSchema>;
 
@@ -239,6 +274,9 @@ export function pairingLink(hostname: string, code: string): string {
 export const remoteAuditActionSchema = z.enum([
   'hostname_changed',
   'switches_changed',
+  'card_answering_changed',
+  'card_step_up',
+  'card_step_up_failed',
   'pairing_started',
   'pairing_submitted',
   'pairing_failed',

@@ -3,6 +3,7 @@ import type { AppEvent } from '@spark-outpost/contracts';
 import { approvalKeys } from '../../api/approvals.ts';
 import { analyticsKeys } from '../../analytics/analytics-api.ts';
 import { agentTerminalKeys } from '../../api/agent-terminals.ts';
+import { agentConnectorsKey } from '../../api/agent-connectors.ts';
 import { chatPortsKey } from '../../api/chat-ports.ts';
 import { queryKeys } from '../../api/client.ts';
 import { outcomeKeys } from '../../api/outcomes.ts';
@@ -79,6 +80,7 @@ const analytics: Invalidation = { queryKey: analyticsKeys.all };
 const teammates: Invalidation = { queryKey: teammateKeys.all };
 const ticketInbox: Invalidation = { queryKey: ticketKeys.inbox, exact: true };
 const ticketConnections: Invalidation = { queryKey: ticketKeys.connections, exact: true };
+const agentConnectors: Invalidation = { queryKey: agentConnectorsKey, exact: true };
 const outposts: Invalidation = { queryKey: outpostKeys.all };
 const outpostList: Invalidation = { queryKey: outpostKeys.list, exact: true };
 const outpostDrafts: Invalidation = { queryKey: outpostKeys.drafts };
@@ -197,7 +199,7 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
         ? [list, { queryKey: prWatchesKey(event.conversationId), exact: true }, ticketInbox]
         : [];
     case 'ticket':
-      return [ticketInbox, ticketConnections];
+      return [ticketInbox, ticketConnections, agentConnectors];
     case 'preview':
       return [{ queryKey: previewKeys.all }];
     case 'outpost_changed':
@@ -222,7 +224,7 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
     case 'spark_pause':
       return [{ queryKey: sparkPauseKey, exact: true }];
     case 'calendar':
-      return [{ queryKey: calendarKeys.all }];
+      return [{ queryKey: calendarKeys.all }, agentConnectors];
     case 'island_request':
       return [{ queryKey: islandRequestsKey, exact: true }];
     case 'attention':

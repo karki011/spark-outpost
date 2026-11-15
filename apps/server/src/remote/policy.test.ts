@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   REMOTE_SWITCH_DEFAULTS,
+  cardSwitch,
+  macOnlyCard,
   remoteSwitchSchema,
   type RemoteSwitches,
 } from '@spark-outpost/contracts';
-import { blockedFieldIn, cardSwitch, macOnlyCard, remoteDecision } from './policy.ts';
+import { blockedFieldIn, remoteDecision } from './policy.ts';
 import { ROUTE_RULES } from './route-rules.ts';
 
 const ID = '0198c0de-0000-7000-8000-000000000001';

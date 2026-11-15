@@ -21,6 +21,8 @@ GET /api/runs/:id/changes
 POST /api/approvals/:id/decision
 POST /api/approvals/:id/hold
 POST /api/approvals/:id/retry
+POST /api/approvals/:id/step-up/options
+POST /api/approvals/:id/step-up
 GET /api/spark-rules
 POST /api/runs/:id/revert
 GET /api/tasks/:id/changes/revert-file
@@ -87,6 +89,7 @@ GET /api/projects/:id/map/neighbors
 GET /api/projects/:id/map/locate
 PUT /api/projects/:id/map/areas/:areaId/category
 GET /api/conversations/:id/mcp
+GET /api/agent-connectors
 GET /api/model-cards
 GET /api/runs/:id/outcome
 PUT /api/runs/:id/feedback
@@ -229,6 +232,7 @@ POST /api/island/requests/:id/claim
 GET /api/remote/access
 PUT /api/remote/access
 PATCH /api/remote/switches
+PATCH /api/remote/card-answering
 GET /api/remote/push/contact
 PUT /api/remote/push/contact
 GET /api/remote/devices
@@ -432,6 +436,7 @@ export const HIGH_RISK_FIELDS: Record<string, readonly string[]> = {
 };
 
 export const CARD_ROUTE = 'POST /api/approvals/:id/decision';
+export const RETRY_ROUTE = 'POST /api/approvals/:id/retry';
 
 function routesOf(block: string): string[] {
   return block

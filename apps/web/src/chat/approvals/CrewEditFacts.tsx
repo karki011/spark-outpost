@@ -11,9 +11,7 @@ import {
 import { WarnIcon } from '../../ui/icons.tsx';
 import { DiffView } from './DiffView.tsx';
 
-export { CREW_ON_THE_MAC } from '@spark-outpost/contracts';
-
-const TEAMMATE_NOTE = 'Only you can answer this, on your Mac. Nothing changes until you do.';
+const TEAMMATE_NOTE = 'Only you can answer this. Nothing changes until you do.';
 
 export function SimilarNote({ similar }: { similar: readonly CrewSimilar[] }) {
   if (similar.length === 0) return null;

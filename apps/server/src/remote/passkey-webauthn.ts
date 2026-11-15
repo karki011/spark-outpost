@@ -96,9 +96,15 @@ export async function creationOptions(input: CreationInput): Promise<PasskeyCrea
   };
 }
 
+export interface AllowedCredential {
+  credentialId: string;
+  transports: string[];
+}
+
 export async function requestOptions(
   hostname: string,
   challenge: string,
+  allowed?: readonly AllowedCredential[],
 ): Promise<PasskeyRequestOptions> {
   const options = await generateAuthenticationOptions({
     rpID: hostname,
@@ -111,6 +117,15 @@ export async function requestOptions(
     challenge: options.challenge,
     timeout: PASSKEY_CHALLENGE_TTL_MS,
     userVerification: 'required',
+    ...(allowed
+      ? {
+          allowCredentials: allowed.map((passkey) => ({
+            id: passkey.credentialId,
+            type: 'public-key' as const,
+            transports: passkey.transports,
+          })),
+        }
+      : {}),
   };
 }
 

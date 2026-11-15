@@ -61,7 +61,7 @@ export function useTerminalFocus(chatId: string, panel: FocusPanel | null, avail
   });
   const active = focused && available;
   const paneFocused = usePaneFocused();
-  const sidebarShown = sidebar !== null && !sidebar.narrow && !sidebar.collapsed;
+  const sidebarShown = sidebar !== null && !sidebar.floating && !sidebar.collapsed;
   const panelOpen = panel?.open ?? false;
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export function useTerminalFocus(chatId: string, panel: FocusPanel | null, avail
     if (!active) return;
     return () => {
       const now = latest.current;
-      if (hidden.current.sidebar && now.sidebar && !now.sidebar.narrow) now.sidebar.reveal();
+      if (hidden.current.sidebar && now.sidebar && !now.sidebar.floating) now.sidebar.reveal();
       if (hidden.current.panel) now.panel?.setOpen(true);
       hidden.current = NOTHING_HIDDEN;
       if (chatId in readFocused()) saveFocused(chatId, NOTHING_HIDDEN);

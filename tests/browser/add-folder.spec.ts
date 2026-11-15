@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { REMOTE_CARD_ANSWERING_DEFAULT } from '../../packages/contracts/src/remote.ts';
 import {
   ADD_FOLDER,
   browseTo,
@@ -58,6 +59,8 @@ async function actAsPhone(page: Page, projects: boolean) {
         device: { id: '6f1c2b8e-4d1a-4f8e-9a51-1b2c3d4e5f60', name: 'Test phone' },
         address: 'mac.tail1234.ts.net',
         switches: { ...SWITCHES, projects },
+        cardAnswering: REMOTE_CARD_ANSWERING_DEFAULT,
+        passkey: false,
       },
     }),
   );

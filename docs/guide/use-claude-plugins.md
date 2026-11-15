@@ -16,6 +16,8 @@ Load a Claude Code plugin in Claude chats. About 3 minutes.
 4. **Details** sums up the plugin, then lists findings worst first and what **Runs automatically**.
 5. Turn it on. **Review** and **Flagged** need a hold.
 
+A chat's [Context rail](context-rail.md#switch-tools) also switches plugins under **Tools**; **Review** and **Flagged** open Settings.
+
 ![The Plugins list with a clean, a review and a flagged plugin](images/use-claude-plugins-list-light.png)
 
 An update turns it off until you turn it on again. Codex chats and Ask Spark don't get plugins; Terminal sessions load their own.
@@ -38,7 +40,7 @@ Skills and subagents it used show as steps and in **Crew**.
 | MCP server tools                  | A card per call, unless the [agent mode](agent-mode.md) runs everything |
 | `allowed-tools`, `permissionMode` | Removed                                                                 |
 
-An agent may ask to turn one on or off with a [card](cards.md#around-the-result) only you answer, on the Mac.
+An agent may ask to turn one on or off with a [card](cards.md#around-the-result) only you answer, on the Mac or a [device you allow](answer-remotely.md).
 
 ## What the agent review sends
 

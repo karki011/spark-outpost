@@ -1,3 +1,4 @@
+import { agentConnectorRoutes } from './agent-connector-routes.ts';
 import {
   appContentSecurityPolicy,
   artifactOrigin,
@@ -205,6 +206,7 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', previewRoutes(options));
   app.use('/api', agentTerminalRoutes(options));
   app.use('/api', chatPortRoutes(options));
+  app.use('/api', agentConnectorRoutes(options));
   app.use('/api', signInRoutes(options));
   app.use(
     '/api',

@@ -1,4 +1,4 @@
-import { REMOTE_SWITCH_DEFAULTS } from '@spark-outpost/contracts';
+import { REMOTE_CARD_ANSWERING_DEFAULT, REMOTE_SWITCH_DEFAULTS } from '@spark-outpost/contracts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   needsKeepAwake,
@@ -45,7 +45,11 @@ function api(routes: Record<string, unknown>) {
   return { asked, fetchImpl };
 }
 
-const ACCESS_ON = { hostname: 'mac.tail.ts.net', switches: REMOTE_SWITCH_DEFAULTS };
+const ACCESS_ON = {
+  hostname: 'mac.tail.ts.net',
+  switches: REMOTE_SWITCH_DEFAULTS,
+  cardAnswering: REMOTE_CARD_ANSWERING_DEFAULT,
+};
 
 function fakeBlocker() {
   const held = new Set<number>();
@@ -76,7 +80,11 @@ describe('deciding whether to keep the Mac awake', () => {
 describe('reading what keep-awake needs from the API', () => {
   it('asks nothing more once phone access is off', async () => {
     const { asked, fetchImpl } = api({
-      '/api/remote/access': { hostname: null, switches: REMOTE_SWITCH_DEFAULTS },
+      '/api/remote/access': {
+        hostname: null,
+        switches: REMOTE_SWITCH_DEFAULTS,
+        cardAnswering: REMOTE_CARD_ANSWERING_DEFAULT,
+      },
     });
     expect(await readKeepAwake(ORIGIN, 'token', fetchImpl)).toEqual(
       reading({ phoneAccess: false }),

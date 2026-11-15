@@ -52,10 +52,10 @@ export function macByline(action: SparkAction, agent: string): string | null {
 export function macNote(action: SparkAction): string | null {
   if (!isMac(action)) return null;
   if (action.action === 'mac_use_app') {
-    return 'What the agent reads in this app goes to the model provider, and Spark treats it as untrusted. Allowing covers this app for the rest of this chat. Answer on this Mac.';
+    return 'What the agent reads in this app goes to the model provider, and Spark treats it as untrusted. Allowing covers this app for the rest of this chat.';
   }
   if (action.action === 'mac_act') {
-    return 'Allowing covers pressing in this app for the rest of this chat. Sends and deletes still ask each time. Answer on this Mac.';
+    return 'Allowing covers pressing in this app for the rest of this chat. Sends and deletes still ask each time.';
   }
-  return 'Spark asks for every press like this, in every mode. Allowing covers this one press only. Answer on this Mac.';
+  return 'Spark asks for every press like this, in every mode. Allowing covers this one press only.';
 }

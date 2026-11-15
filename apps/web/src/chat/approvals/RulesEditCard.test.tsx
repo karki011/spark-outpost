@@ -2,7 +2,11 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Approval, RulesEditAction } from '@spark-outpost/contracts';
+import {
+  REMOTE_CARD_ANSWERING_DEFAULT,
+  type Approval,
+  type RulesEditAction,
+} from '@spark-outpost/contracts';
 import { approvalsApi } from '../../api/approvals.ts';
 import { phoneKeys } from '../../phone/phone-api.ts';
 import { ApprovalCard } from './ApprovalCard.tsx';
@@ -58,7 +62,12 @@ function card(target: RulesEditAction['target'] = 'user'): Approval {
 
 function show(approval: Approval, remote = false) {
   const client = new QueryClient();
-  client.setQueryData(phoneKeys.session, { remote, switches: {} });
+  client.setQueryData(phoneKeys.session, {
+    remote,
+    switches: {},
+    cardAnswering: REMOTE_CARD_ANSWERING_DEFAULT,
+    passkey: false,
+  });
   render(
     <QueryClientProvider client={client}>
       <ApprovalCard approval={approval} provider="claude" agent="Claude" repo={null} />
@@ -96,6 +105,6 @@ describe('the Spark rules card', () => {
     show(card(), true);
     const group = screen.getByRole('group', { name: /Change your Spark rules\?/ });
     expect(within(group).queryByRole('button', { name: 'Allow once' })).toBeNull();
-    expect(group.textContent).toContain('Waiting for you on your Mac.');
+    expect(group.textContent).toContain('Answer on your Mac.');
   });
 });

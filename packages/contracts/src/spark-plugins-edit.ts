@@ -56,7 +56,7 @@ export function pluginsEditByline(action: PluginsEditAction): string {
   return `${action.agent} · ${action.modeName}`;
 }
 
-export const PLUGINS_EDIT_NOTE = 'Only you can answer this, on your Mac.';
+export const PLUGINS_EDIT_NOTE = 'Only you can answer this, never Ask Spark.';
 
 export function pluginsEditAuditFacts(action: PluginsEditAction): Record<string, unknown> {
   return {

@@ -194,6 +194,48 @@ test.describe('plain chats', () => {
     await expect(rail(page)).toBeVisible();
   });
 
+  test('a chat too narrow for the rail floats it over the thread and closes it again', async ({
+    page,
+  }) => {
+    await longChat(page, PROMPTS.slice(0, 1));
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(rail(page)).toHaveCount(0);
+    await expect(workPanel(page)).toBeVisible();
+    await header(page).getByRole('button', { name: 'Hide work panel' }).click();
+    await expect(workPanel(page)).toBeHidden();
+    const columnWidth = (await page.locator('.col').boundingBox())!.width;
+    const show = page.getByRole('button', { name: 'Show context rail' });
+    await show.click();
+    await expect(rail(page)).toBeVisible();
+    await expect(rail(page)).toBeFocused();
+    expect((await page.locator('.col').boundingBox())!.width).toBe(columnWidth);
+    const tools = rail(page).getByRole('region', { name: 'Tools' });
+    await expect(tools).toContainText('MCP servers');
+    await expect(tools.getByRole('button', { name: 'Manage tools' })).toBeVisible();
+    const axe = await new AxeBuilder({ page })
+      .include('.crail')
+      .disableRules(['heading-order'])
+      .analyze();
+    expect(axe.violations).toEqual([]);
+
+    await page.keyboard.press('Escape');
+    await expect(rail(page)).toHaveCount(0);
+    await expect(show).toBeFocused();
+    await expect(turns(page)).toHaveCount(1);
+
+    await show.click();
+    await expect(rail(page)).toBeVisible();
+    await page.locator('.col').click({ position: { x: 10, y: 10 } });
+    await expect(rail(page)).toHaveCount(0);
+
+    await header(page).getByRole('button', { name: 'Show work panel' }).click();
+    await expect(workPanel(page)).toBeVisible();
+    await show.click();
+    await expect(rail(page)).toBeVisible();
+    await expect(workPanel(page)).toBeVisible();
+    await shoot(page, 'overlay-1280-work-panel');
+  });
+
   test('On wide windows picks the rail, the work panel or an empty margin', async ({ page }) => {
     test.setTimeout(90_000);
     await longChat(page, PROMPTS.slice(0, 1));
@@ -231,7 +273,7 @@ test.describe('working chats', () => {
     repo = null;
   });
 
-  test('Agent TV docks in the rail while a turn runs, opens the full TV and leaves the agent listed when it ends', async ({
+  test('the rail lists the agent while a turn runs, opens Agent TV from its card and keeps it listed when it ends', async ({
     page,
   }) => {
     test.setTimeout(180_000);
@@ -251,17 +293,12 @@ test.describe('working chats', () => {
     ]);
     await send(page, `${BUILD_REQUEST} #build #sparkscript ${script}`);
 
-    const dock = rail(page).locator('.crail-tv');
     const tv = page.getByRole('dialog', { name: 'Agent TV' });
+    const crew = rail(page).getByRole('region', { name: 'Agent' });
     let before!: { x: number; width: number };
     try {
-      await expect(dock).toBeVisible({ timeout: 30_000 });
-      await expect(dock.locator('.tv-n').first()).toBeVisible();
-      const stage = (await dock.locator('.crail-tv-stage').boundingBox())!;
-      const dockRail = (await rail(page).boundingBox())!;
-      expect(stage.width).toBeGreaterThanOrEqual(280);
-      expect(stage.width).toBeLessThanOrEqual(dockRail.width);
-      expect(stage.height).toBeGreaterThanOrEqual(175);
+      await expect(crew.getByRole('listitem')).toContainText('Claude', { timeout: 30_000 });
+      await expect(rail(page).locator('.tv-stage, .tv-n')).toHaveCount(0);
       await expect(rail(page).getByRole('list', { name: 'This chat' })).toContainText(
         'Full auto → PR',
       );
@@ -269,7 +306,7 @@ test.describe('working chats', () => {
       await shoot(page, 'agent-run-2000');
 
       before = (await page.locator('.col').boundingBox())!;
-      await dock.getByRole('button', { name: /^Open Agent TV/ }).click();
+      await crew.getByRole('button', { name: 'Open Agent TV' }).click();
       await expect(tv).toBeVisible();
       await tv.getByRole('button', { name: 'Close Agent TV' }).click();
       await expect(tv).toBeHidden();
@@ -279,11 +316,9 @@ test.describe('working chats', () => {
         timeout: 120_000,
       });
     }
-    await expect(dock).toHaveCount(0);
     const after = (await page.locator('.col').boundingBox())!;
     expect(after.x).toBe(before.x);
     expect(after.width).toBe(before.width);
-    const crew = rail(page).getByRole('region', { name: 'Agent' });
     await expect(crew.getByRole('heading')).toHaveText(/^Claude · /);
     const members = crew.getByRole('list', { name: 'Agent' }).getByRole('listitem');
     await expect(members).toHaveCount(1);

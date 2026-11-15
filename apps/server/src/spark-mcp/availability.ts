@@ -65,12 +65,14 @@ const MAC_HOW_TO: Partial<Record<MacRefusedRun, string>> = {
 
 const RULES_HOW_TO: Partial<Record<RulesRefusedRun, string>> = {
   voice: 'spark_rules_edit (never for a spoken message; type it on the Mac)',
-  remote: 'spark_rules_edit (not in a turn started from a paired device; ask from the Mac)',
+  remote:
+    'spark_rules_edit (from a paired device only when Spark rules cards can be answered there: Remote control on the Mac)',
 };
 
 const PLUGINS_HOW_TO: Partial<Record<RulesRefusedRun, string>> = {
   voice: 'spark_plugins_edit (never for a spoken message; type it on the Mac)',
-  remote: 'spark_plugins_edit (not in a turn started from a paired device; ask from the Mac)',
+  remote:
+    'spark_plugins_edit (from a paired device only when Plugins cards can be answered there: Remote control on the Mac)',
 };
 
 const NO_PROJECT_PULL_REQUESTS = 'pull request tools (link a project to the chat)';
@@ -103,6 +105,8 @@ export async function sparkAvailability(
     confluence,
     meetings,
     rulesRefused,
+    pluginsRefused,
+    crewEditRefused,
     crewRefused,
   ] = await Promise.all([
     connectedSources(tickets),
@@ -114,14 +118,16 @@ export async function sparkAvailability(
     productLive(tickets, 'jira'),
     productLive(tickets, 'confluence'),
     meetingsOffer(deps, scope),
-    rulesRunRefusal(deps.db, scope),
+    rulesRunRefusal(deps.db, scope, 'rules'),
+    rulesRunRefusal(deps.db, scope, 'plugins'),
+    rulesRunRefusal(deps.db, scope, 'crew'),
     crewReadRefusal(deps.db, scope),
   ]);
   const gitHub = await gitHubReach(deps, scope);
   const chat = scope.assistant !== true;
   const macHowTo = macRefused ? MAC_HOW_TO[macRefused] : undefined;
   const rulesHowTo = rulesRefused ? RULES_HOW_TO[rulesRefused] : undefined;
-  const pluginsHowTo = rulesRefused ? PLUGINS_HOW_TO[rulesRefused] : undefined;
+  const pluginsHowTo = pluginsRefused ? PLUGINS_HOW_TO[pluginsRefused] : undefined;
   const crewHowTo = crewRefused ? CREW_HOW_TO[crewRefused] : undefined;
   return {
     tickets: sources.length > 0,
@@ -141,9 +147,9 @@ export async function sparkAvailability(
     jira,
     confluence,
     rules_edit: rulesRefused === null,
-    plugins_edit: rulesRefused === null,
+    plugins_edit: pluginsRefused === null,
     crew_read: crewRefused === null,
-    crew_edit: rulesRefused === null,
+    crew_edit: crewEditRefused === null,
     ...outposts,
     howTo: {
       ...(calendar.howTo.read ? { calendar_read: calendar.howTo.read } : {}),

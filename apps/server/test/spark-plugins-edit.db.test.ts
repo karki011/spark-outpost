@@ -11,7 +11,7 @@ import {
 import { PLUGIN_REVIEW_RUNNING } from '../src/agent-config/user-plugins/choice.ts';
 import { startPluginReview } from '../src/agent-config/user-plugins/review-store.ts';
 import { scanUserPlugins } from '../src/agent-config/user-plugins/scan.ts';
-import { macOnlyCard } from '../src/remote/policy.ts';
+import { macOnlyCard } from '@spark-outpost/contracts';
 import { ASK_SPARK_REFUSALS, cardRefusal } from '../src/spark-mcp/actions/ask-spark-limits.ts';
 import { PLUGIN_CHANGED_SINCE_CARD } from '../src/spark-mcp/actions/plugins-edit-perform.ts';
 import { EVERYTHING_AVAILABLE } from '../src/spark-mcp/availability.ts';
