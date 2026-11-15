@@ -100,3 +100,9 @@
 .crail-tools li[data-state='switch_off'] code {
   color: var(--muted);
 }
+
+@media (pointer: coarse) {
+  .crail-manage {
+    min-height: 44px;
+  }
+}
