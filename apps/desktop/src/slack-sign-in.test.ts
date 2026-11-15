@@ -52,7 +52,9 @@ describe('the Slack client ID of a run from source', () => {
     const appPath = await manifest({});
     const file = path.join(appPath, 'slack-client-id');
     await writeFile(file, '1234567890.9876543210\n');
-    expect(await bakedSignInEnv(appPath, { googleClient: null, slackClientId: file })).toEqual({
+    expect(
+      await bakedSignInEnv(appPath, { googleClientFile: null, slackClientIdFile: file }),
+    ).toEqual({
       SPARK_SLACK_CLIENT_ID: '1234567890.9876543210',
     });
   });
@@ -61,7 +63,9 @@ describe('the Slack client ID of a run from source', () => {
     const appPath = await manifest({ slackApp: { clientId: '1.2' } });
     const file = path.join(appPath, 'slack-client-id');
     await writeFile(file, '3.4');
-    expect(await bakedSignInEnv(appPath, { googleClient: null, slackClientId: file })).toEqual({
+    expect(
+      await bakedSignInEnv(appPath, { googleClientFile: null, slackClientIdFile: file }),
+    ).toEqual({
       SPARK_SLACK_CLIENT_ID: '1.2',
     });
     await writeFile(file, 'xoxb-1234567890-secret');

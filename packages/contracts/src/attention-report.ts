@@ -26,7 +26,7 @@ export function attentionReport(
 ): AttentionReport {
   const byId = new Map(chats.map((chat) => [chat.id, chat]));
   const requests = items.filter(alerting).flatMap((item): AttentionRequest[] => {
-    const chat = byId.get(item.conversationId);
+    const chat = item.conversationId ? byId.get(item.conversationId) : undefined;
     if (!chat || chat.archivedAt) return [];
     return [
       {

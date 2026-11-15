@@ -52,6 +52,7 @@ export interface FakeSlack {
   posted: FakeSlackPost[];
   calls: string[];
   rateLimitNext: number;
+  searchRetryAfter: number | null;
   failPosts: string | null;
   pageSize: number;
   socketUrl: string | null;
@@ -155,6 +156,7 @@ export function fakeSlack(): FakeSlack {
     posted: [],
     calls: [],
     rateLimitNext: 0,
+    searchRetryAfter: null,
     failPosts: null,
     pageSize: 3,
     socketUrl: null,
@@ -244,6 +246,12 @@ export function fakeSlack(): FakeSlack {
 
   function search(res: ServerResponse, token: string, form: URLSearchParams) {
     if (!asUser(token)) return fail(res, 'not_allowed_token_type');
+    if (slack.searchRetryAfter !== null) {
+      res.writeHead(429, { 'retry-after': String(slack.searchRetryAfter) });
+      slack.searchRetryAfter = null;
+      res.end('');
+      return;
+    }
     const query = (form.get('query') ?? '').replace(/\s+in:#\S+/, '').toLowerCase();
     const places = [
       ...slack.channels.map((channel) => ({ id: channel.id, name: channel.name })),
@@ -259,6 +267,7 @@ export function fakeSlack(): FakeSlack {
         .filter((message) => message.text.toLowerCase().includes(query))
         .map((message) => ({
           channel,
+          user: message.user,
           username: slack.users[message.user] ?? message.user,
           text: message.text,
           ts: message.ts,

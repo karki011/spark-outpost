@@ -18,7 +18,7 @@ interface ItemRow {
   key: string;
   kind: string;
   blocking: boolean;
-  conversation_id: string;
+  conversation_id: string | null;
   detail: string | null;
   at: Date;
   read_at: Date | null;
@@ -28,10 +28,13 @@ interface ItemRow {
   schedule_name: string | null;
   runs_today: number | null;
   failed_today: number | null;
+  url: string | null;
 }
 
 const SCHEDULED_TODAY = `w.conversation_id = ws.conversation_id AND w.workflow_id = ws.workflow_id
   AND w.source IN ('schedule', 'catch_up') AND w.started_at >= $3`;
+
+const MENTION_DAYS = 7;
 
 const ITEMS = `
   WITH chats AS (
@@ -99,16 +102,24 @@ const ITEMS = `
     JOIN workflow_runs w ON ${SCHEDULED_TODAY} AND w.status = 'failed'
     JOIN runs r ON r.id = w.run_id
     WHERE r.id <> l.run_id AND r.finished_at IS NOT NULL
+    UNION ALL
+    SELECT 'slack-mention:' || sm.id, 'slack-mention', false, NULL::uuid,
+      sm.author_name || ' mentioned you in ' || sm.place, sm.mentioned_at, NULL::timestamptz
+    FROM slack_mentions sm
+    WHERE sm.workspace_id = $1 AND $2::uuid IS NULL
+      AND sm.mentioned_at >= now() - interval '${MENTION_DAYS} days'
   ), marked AS (
     SELECT i.key, i.kind, i.blocking, i.conversation_id, i.detail, i.at,
       COALESCE(m.read_at, CASE WHEN i.seen_at >= i.at THEN i.seen_at END) AS read_at,
       m.set_aside_at, m.dismissed_at,
-      s.workflow_id AS schedule_workflow_id, s.name AS schedule_name, s.runs_today, s.failed_today
+      s.workflow_id AS schedule_workflow_id, s.name AS schedule_name, s.runs_today, s.failed_today,
+      sm.permalink AS url
     FROM items i
     LEFT JOIN attention_marks m ON m.workspace_id = $1 AND m.key = i.key
     LEFT JOIN latest ll ON ll.id = i.conversation_id
     LEFT JOIN sched s ON s.conversation_id = i.conversation_id AND s.name IS NOT NULL
       AND i.key IN ('run-done:' || ll.run_id, 'run-failed:' || ll.run_id)
+    LEFT JOIN slack_mentions sm ON i.kind = 'slack-mention' AND i.key = 'slack-mention:' || sm.id
   )
   SELECT * FROM marked
   WHERE blocking OR (read_at IS NULL AND dismissed_at IS NULL)
@@ -144,6 +155,7 @@ function toItem(row: ItemRow): AttentionItem {
     setAsideAt: iso(row.set_aside_at),
     dismissedAt: iso(row.dismissed_at),
     schedule: scheduleOf(row),
+    url: row.url,
   });
 }
 
@@ -172,21 +184,23 @@ const OWNERS: Record<ParsedAttentionKey['kind'], string> = {
     JOIN conversations c ON c.id = t.conversation_id WHERE t.id = $1 AND c.workspace_id = $2`,
   'pr-clean': `SELECT w.conversation_id FROM pr_watches w
     JOIN conversations c ON c.id = w.conversation_id WHERE w.id = $1 AND c.workspace_id = $2`,
+  'slack-mention': `SELECT NULL::uuid AS conversation_id FROM slack_mentions
+    WHERE id = $1 AND workspace_id = $2`,
 };
 
-async function ownerOf(db: Queryable, workspaceId: string, key: string): Promise<string> {
+async function ownerOf(db: Queryable, workspaceId: string, key: string): Promise<string | null> {
   const parsed = parseAttentionKey(key);
   if (!parsed) throw new AttentionItemNotFoundError();
-  const { rows } = await db.query<{ conversation_id: string }>(OWNERS[parsed.kind], [
+  const { rows } = await db.query<{ conversation_id: string | null }>(OWNERS[parsed.kind], [
     parsed.id,
     workspaceId,
   ]);
-  const owner = rows[0]?.conversation_id;
-  if (!owner) throw new AttentionItemNotFoundError();
-  return owner;
+  const row = rows[0];
+  if (!row) throw new AttentionItemNotFoundError();
+  return row.conversation_id;
 }
 
-export async function notifyAttention(db: Queryable, conversationId: string): Promise<void> {
+export async function notifyAttention(db: Queryable, conversationId: string | null): Promise<void> {
   await db.query(`SELECT pg_notify('changes', $1)`, [
     JSON.stringify({ kind: 'attention', conversationId, runId: null }),
   ]);
@@ -197,7 +211,7 @@ export async function markAttention(
   workspaceId: string,
   key: string,
   mark: AttentionMark,
-): Promise<string> {
+): Promise<string | null> {
   const conversationId = await ownerOf(db, workspaceId, key);
   await db.query(
     `INSERT INTO attention_marks (workspace_id, key, conversation_id, set_aside_at, dismissed_at)

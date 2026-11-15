@@ -144,6 +144,7 @@ export async function deleteSlackConnection(db: Queryable, workspaceId: string):
   await db.query('DELETE FROM slack_channels WHERE workspace_id = $1', [workspaceId]);
   await db.query('DELETE FROM slack_direct_conversations WHERE workspace_id = $1', [workspaceId]);
   await db.query('DELETE FROM slack_chat_threads WHERE workspace_id = $1', [workspaceId]);
+  await db.query('DELETE FROM slack_mentions WHERE workspace_id = $1', [workspaceId]);
   await db.query('DELETE FROM slack_connections WHERE workspace_id = $1', [workspaceId]);
 }
 
@@ -464,6 +465,7 @@ export async function pruneSlackLog(db: Queryable, retentionDays: number): Promi
   for (const [table, column] of [
     ['slack_deliveries', 'created_at'],
     ['slack_events', 'at'],
+    ['slack_mentions', 'found_at'],
   ] as const) {
     await db.query(`DELETE FROM ${table} WHERE ${column} < now() - make_interval(days => $1)`, [
       retentionDays,

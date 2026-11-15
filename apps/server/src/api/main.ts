@@ -59,8 +59,6 @@ import { systemPortProbe } from '../terminal/chat-port-probe.ts';
 import { chatPortWatcher, type ChatPortWatcher } from '../terminal/chat-port-watcher.ts';
 import { postgresPort } from '../terminal/chat-ports.ts';
 import { resolveRunTarget } from './run-target.ts';
-import { FOCUS_TTL_MS, startSlackNotifier } from '../slack/notifier.ts';
-import { ClientFocus } from '../slack/client-focus.ts';
 import { pushKeys } from '../remote/push-keys.ts';
 import { startPushNotifier } from '../remote/push-notifier.ts';
 import { connectDesktopCalendar } from '../calendar/host-client.ts';
@@ -73,8 +71,8 @@ import { googleClientConfig } from '../calendar/google/config.ts';
 import { createGoogleSource } from '../calendar/google/source.ts';
 import { CALENDAR_WRITTEN_CHANNEL, agentCalendarHosts } from '../calendar/agent/access.ts';
 import { generateVapidKeys, webPushSend } from '../remote/push-send.ts';
-import { slackSignInConfig } from '../slack/sign-in-config.ts';
 import { startSlackSocket } from '../slack/socket.ts';
+import { startSlackServices } from './slack-services.ts';
 import { armShutdownWatchdog, runShutdownSteps } from './shutdown-steps.ts';
 import { schedulePrune, sweepAtStart, type PruneSchedule } from './startup-prune.ts';
 import { cloneJobsFor } from './project-clone-routes.ts';
@@ -123,19 +121,10 @@ await agentTerminals.recover();
 const listener = await listen(config.DATABASE_URL, 'run_events', (runId) => hub.notify(runId));
 
 const secrets = configuredSecretStore(config);
-const slackSignIn = slackSignInConfig(config);
-const slackDeps = {
+const { slackSignIn, slackDeps, focus, slackNotifier, slackMentions } = startSlackServices(config, {
   db,
   workspaceId,
   secrets,
-  fetch,
-  slackApiUrl: config.SLACK_API_URL,
-  signIn: slackSignIn,
-};
-const focus = new ClientFocus(Date.now, FOCUS_TTL_MS);
-const slackNotifier = startSlackNotifier(slackDeps, {
-  linkScheme: config.SPARK_LINK_SCHEME,
-  focus,
 });
 const remotePushKeys = pushKeys(secrets, generateVapidKeys);
 const desktopCalendar = connectDesktopCalendar(process.env, process);
@@ -478,6 +467,7 @@ const shutdown = async (keepTerminals = false) => {
     ['workflow schedules', () => workflowScheduler?.stop()],
     ['Slack socket', () => slackSocket.stop()],
     ['Slack notifier', () => slackNotifier.stop()],
+    ['Slack mentions', () => slackMentions.stop()],
     ['calendar ticker', () => calendarTicker?.stop()],
     ['Google Calendar', () => googleCalendar?.stop()],
     ['push notifier', () => pushNotifier.stop()],

@@ -10,6 +10,7 @@ import { SlackChannels } from './SlackChannels.tsx';
 import { SlackConnectForm } from './SlackConnectForm.tsx';
 import { SlackConnectMethods } from './SlackConnectMethods.tsx';
 import { SlackDirectMessages } from './SlackDirectMessages.tsx';
+import { SlackMentionSettings } from './SlackMentionSettings.tsx';
 import { SlackNotifySettings } from './SlackNotifySettings.tsx';
 import { SIGN_IN_SUMMARY, SlackSignInPanel } from './SlackSignIn.tsx';
 import { SlackStartSettings } from './SlackStartSettings.tsx';
@@ -176,6 +177,7 @@ function ConnectedBody({
         <>
           <SlackChannels connection={connection} save={save} />
           <SlackDirectMessages connection={connection} save={save} />
+          <SlackMentionSettings connection={connection} save={save} />
           <SlackNotifySettings connection={connection} save={save} />
           <SlackStartSettings
             connection={connection}

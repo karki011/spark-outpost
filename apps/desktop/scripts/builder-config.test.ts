@@ -172,16 +172,16 @@ describe('builderConfig', () => {
     });
   });
 
-  it('bakes the Slack client ID only when one is set, and nothing by default', () => {
+  it('bakes the environment Slack client ID, else Spark own Slack app', () => {
     const env = { SPARK_SLACK_CLIENT_ID: ' 1234567890.9876543210 ' };
     expect(packagedSlackClientId(env)).toBe('1234567890.9876543210');
     expect(builderConfig({ ...base, archs: ['x64'], env }).extraMetadata).toMatchObject({
       slackApp: { clientId: '1234567890.9876543210' },
     });
-    expect(packagedSlackClientId({})).toBeNull();
-    expect(builderConfig({ ...base, archs: ['x64'], env: {} }).extraMetadata).not.toHaveProperty(
-      'slackApp',
-    );
+    expect(packagedSlackClientId({})).toBe('12090759669655.12602512337571');
+    expect(builderConfig({ ...base, archs: ['x64'], env: {} }).extraMetadata).toMatchObject({
+      slackApp: { clientId: '12090759669655.12602512337571' },
+    });
   });
 
   it('refuses a Slack value that is not a client ID, such as a secret or a token', () => {

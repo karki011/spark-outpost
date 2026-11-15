@@ -34,19 +34,21 @@ export async function readDevSlackClientId(file: string | null): Promise<string 
   }
 }
 
-export interface DevSignInFiles {
-  googleClient: string | null;
-  slackClientId: string | null;
+interface DevSignInFiles {
+  googleClientFile: string | null;
+  slackClientIdFile: string | null;
 }
 
 export async function bakedSignInEnv(
   appPath: string,
-  devFiles: DevSignInFiles = { googleClient: null, slackClientId: null },
+  devFiles: DevSignInFiles = { googleClientFile: null, slackClientIdFile: null },
 ): Promise<Record<string, string>> {
   const slack =
-    (await readBakedSlackClientId(appPath)) ?? (await readDevSlackClientId(devFiles.slackClientId));
+    (await readBakedSlackClientId(appPath)) ??
+    (await readDevSlackClientId(devFiles.slackClientIdFile));
   const google =
-    (await readBakedGoogleClient(appPath)) ?? (await readDevGoogleClient(devFiles.googleClient));
+    (await readBakedGoogleClient(appPath)) ??
+    (await readDevGoogleClient(devFiles.googleClientFile));
   return {
     ...gitHubAppEnv(await readBakedGitHubApp(appPath)),
     ...(slack ? { [SLACK_CLIENT_ID_ENV]: slack } : {}),

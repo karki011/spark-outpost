@@ -19,7 +19,7 @@ Connect Slack by signing in or with your own app. About 5 minutes.
 | **Sign in with Slack**     | You. Posts always ask. No starting work inside Slack. |
 | **Use your own Slack app** | A bot named Spark, with the tokens below.             |
 
-For your own app: **Copy manifest**, create the app from it, paste its tokens, then `/invite @Spark` in each channel.
+For your own app: **Copy manifest**, create the app, paste its tokens, then `/invite @Spark` in each channel.
 
 | Token                       | Adds                                                |
 | --------------------------- | --------------------------------------------------- |
@@ -27,7 +27,7 @@ For your own app: **Copy manifest**, create the app from it, paste its tokens, t
 | **User token** `xoxp-`      | Search, unjoined channels, direct messages you pick |
 | **App-level token** `xapp-` | **Start work in Spark** shortcut and @mentions      |
 
-Paste tokens only in Settings, never a chat. Switching methods asks first.
+Paste tokens only in Settings. Switching methods asks first.
 
 ## Use it
 
@@ -36,6 +36,7 @@ Paste tokens only in Settings, never a chat. Switching methods asks first.
 | Get notified   | Pick events under **Notify me in Slack**.                                      |
 | Share a thread | Paste a message link in the message box.                                       |
 | Read your DMs  | Turn on **Let Spark read my direct messages**, then tick conversations.        |
+| See @mentions  | Shown on Home; switch: **Watch for @mentions of me**.                          |
 | Start work     | **Start work from a Slack link** on the card, or your own app's shortcut.      |
 | Post an update | Ask the agent. A [card](spark-tools.md#when-actions-ask-first) shows the text. |
 
@@ -45,6 +46,7 @@ Paste tokens only in Settings, never a chat. Switching methods asks first.
 | ----------------- | ----------------------------------------------------------------------------- |
 | Threads you share | Fetched on demand, capped, secrets redacted, kept as that chat's attachment.  |
 | Other messages    | Never read; other search results dropped.                                     |
+| @mentions of you  | Checked each minute anywhere; keeps who, where, link.                         |
 | Direct messages   | Off by default. Only ticked ones, read as you, never posted in.               |
 | Thread text       | Someone else's words, never instructions. Reading it makes actions ask.       |
 | Notifications     | Chat title, project, event and link. Never code, diffs or commands.           |

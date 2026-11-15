@@ -206,6 +206,15 @@ A failed delivery is logged without tokens, recorded on the delivery row and sho
 
 The text is redacted when the card is built and again when sent, `&`, `<` and `>` are escaped so mentions and links in agent text cannot ping anyone, and posts to one channel are spaced 1.1 seconds apart. HTTP 429 is retried after `Retry-After` (up to twice, 30 seconds at most). `not_in_channel` tells the user to `/invite` the app. Each post writes a `slack_events` row and the usual `spark/post_slack` audit entry.
 
+### Mentions
+
+`startSlackMentionWatch` (`mentions.ts`) runs in the API process and, about once a minute while **Watch for @mentions of me** (`settings.watchMentions`, on by default) is on, calls `search.messages` with the user token (a sign-in's, or an own app's `xoxp-`) for `<@member>`, newest first, 50 at most. It needs the member ID; without a user token or member it does nothing, and an ended sign-in stops it like every reader.
+
+- **Where:** any channel the user can read, beyond the allow-list (the user chose this); a direct or group message only where `requireSlackPlace`'s rules allow it (`readableSlackDms`, shared with `spark_slack` search). The user's own messages and text without `<@member>` are skipped.
+- **Stored:** one `slack_mentions` row per message (unique on workspace, channel and ts), holding the author's name, the place label, the permalink and the time; never the text. Only mentions newer than the connection's `validated_at` and the last 24 hours are saved, so connecting does not flood and a restart catches up a day. Disconnect, a workspace switch and Reset delete the rows; the Slack log retention prunes them.
+- **Shown:** each row is an attention update (`slack-mention:<id>`, `conversationId` null, never blocking, so it never counts, chimes or pushes) for 7 days until read or dismissed. Home's **Slack mentions** card shows "<author> mentioned you in <place>" with **Open in Slack** (the permalink, through the external-link path) and **Dismiss**.
+- **Agents:** `spark_slack action=mentions` runs the same search live and returns the matches with their text (redacted, capped, under the untrusted note); `spark_attention` lists unread mentions as updates without a chat.
+
 ### Start work
 
 `startFromSlack` reads the thread, creates a chat (project: the one chosen, else the channel's), attaches the thread and sends a short brief that marks it as untrusted. The run uses the user's default agent mode and autonomy; a trigger cannot widen them.
@@ -224,6 +233,7 @@ With **Reply in the thread** on, chats started from Slack itself get fixed repli
 | Slack client ID                                                           | Build manifest or environment                                           | To Slack                                                                              |
 | Workspace, bot and member names, allow-lists, settings, user token scopes | `slack_connections`, `slack_channels`, `slack_direct_conversations`     | Nowhere                                                                               |
 | Thread text                                                               | Only as the attachment of the chat that asked for it                    | To the chat's AI provider, as an attachment                                           |
+| Mentions of the user                                                      | Author name, place, link and time in `slack_mentions`; never text       | Nowhere                                                                               |
 | Search results, `spark_slack` output                                      | Not stored by Slack code; the agent transcript holds what the agent saw | To the chat's AI provider                                                             |
 | Notifications                                                             | Dedupe key, kind and outcome; never text                                | Chat title, project, event lines and link, to Slack                                   |
 | Posts                                                                     | Channel, length and outcome; the card keeps the redacted text           | The confirmed text, to Slack                                                          |

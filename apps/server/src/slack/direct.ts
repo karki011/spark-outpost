@@ -1,8 +1,9 @@
-import type {
-  AllowSlackDmsRequest,
-  SlackDm,
-  SlackDmPage,
-  SlackStatus,
+import {
+  slackPlaceLabel,
+  type AllowSlackDmsRequest,
+  type SlackDm,
+  type SlackDmPage,
+  type SlackStatus,
 } from '@spark-outpost/contracts';
 import { allowedSlackDms, recordSlackEvent, replaceAllowedSlackDms } from '../persistence/slack.ts';
 import type { RawConversation } from './channels.ts';
@@ -137,4 +138,45 @@ export async function allowOneSlackDm(deps: SlackDeps, channelId: string): Promi
   return allowSlackDms(deps, {
     conversations: [...current.map((entry) => ({ id: entry.id })), { id: channelId }],
   });
+}
+
+export interface ReadableDms {
+  all: boolean;
+  allowed: SlackDm[];
+}
+
+export const NO_DMS: ReadableDms = { all: false, allowed: [] };
+
+export async function readableSlackDms(deps: SlackDeps, open: OpenSlack): Promise<ReadableDms> {
+  const usable = await requireDirectMessages(deps, open).then(
+    () => true,
+    () => false,
+  );
+  if (!usable) return NO_DMS;
+  return {
+    all: open.connection.settings.allDirectMessages,
+    allowed: await allowedSlackDms(deps.db, deps.workspaceId),
+  };
+}
+
+export interface SlackMatchChannel {
+  id?: unknown;
+  name?: unknown;
+  is_im?: unknown;
+  is_mpim?: unknown;
+}
+
+export function isSlackDirectMatch(channel: SlackMatchChannel | undefined): boolean {
+  return channel?.is_im === true || channel?.is_mpim === true;
+}
+
+export function slackDmPlace(
+  channel: SlackMatchChannel | undefined,
+  dms: ReadableDms,
+): string | null {
+  const id = slackText(channel?.id);
+  const allowed = dms.allowed.find((dm) => dm.id === id);
+  if (allowed) return slackPlaceLabel(allowed);
+  if (isSlackDirectMatch(channel)) return dms.all ? 'a direct message' : null;
+  return null;
 }

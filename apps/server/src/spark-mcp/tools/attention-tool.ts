@@ -62,8 +62,9 @@ function cardLine(row: PendingRow, now: Date) {
 }
 
 function updateLine(item: AttentionItem, titles: ReadonlyMap<string, string>) {
+  const chatId = item.conversationId;
   return {
-    chat: { id: item.conversationId, title: titles.get(item.conversationId) ?? '' },
+    ...(chatId ? { chat: { id: chatId, title: titles.get(chatId) ?? '' } } : {}),
     kind: item.kind,
     ...(item.detail && item.kind !== 'shell-alert' ? { detail: item.detail } : {}),
     at: item.at,
