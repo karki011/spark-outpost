@@ -45,6 +45,15 @@ describe('joinChoice', () => {
     ]);
   });
 
+  it('lists a clashing meeting with no link beside the open ones, with no nudge', () => {
+    const choice = joinChoice(now({ upcoming: [standup, design, room] }), at(9, 55), LEAD);
+    expect(choice && 'choose' in choice ? choice.choose.map((item) => item.title) : []).toEqual([
+      'Standup',
+      'Design sync',
+      'Room booking',
+    ]);
+  });
+
   it('asks at the hand-over between back-to-back calls, when both are open', () => {
     const next = event('Planning', at(10, 15), at(10, 45), { link: link('zoom') });
     const choice = joinChoice(now({ upcoming: [standup, next] }), at(10, 8), LEAD);

@@ -269,6 +269,26 @@ describe('calendarLine', () => {
     ]);
   });
 
+  it('groups meetings that overlap once Join opens into one Choose line', () => {
+    const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });
+    const design = event('Design sync', at(10), at(10, 30), { link: link('meet') });
+    const room = event('Room booking', at(10), at(10, 30));
+    const later = event('Retro', at(10, 15), at(10, 45), { link: link('zoom') });
+    const line = calendarLine(input(now({ upcoming: [standup, design, room, later] })));
+    expect(line?.kind).toBe('join');
+    expect(line?.choose?.map((item) => item.title)).toEqual([
+      'Standup',
+      'Design sync',
+      'Room booking',
+    ]);
+    expect(line?.join).toBeNull();
+    expect(hopKeys(line)).toEqual([
+      `meeting:${standup.key}`,
+      `meeting:${design.key}`,
+      `meeting:${room.key}`,
+    ]);
+  });
+
   describe('clearing itself', () => {
     const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });
     const design = event('Design sync', at(10), at(10, 30), { link: link('meet') });

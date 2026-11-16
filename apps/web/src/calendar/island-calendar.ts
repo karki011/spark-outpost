@@ -1,4 +1,5 @@
 import {
+  meetingsOverlap,
   remindUntil,
   spanOf,
   type CalendarCapture,
@@ -169,9 +170,51 @@ function reminding<T extends CalendarEvent>(events: readonly T[], at: number): T
   return events.filter((event) => at < remindUntil(spanOf(event)));
 }
 
+function joinGroup(now: CalendarNow, target: CalendarEvent, input: CalendarLineInput) {
+  const open = reminding(now.upcoming, input.at).filter(
+    (event) =>
+      event.key !== target.key &&
+      event.nudges &&
+      meetingsOverlap(target, event) &&
+      !nudgeHidden(input.marks, event.key, input.at) &&
+      Date.parse(event.start) - input.joinLeadMs <= input.at,
+  );
+  return [target, ...open];
+}
+
+function joinChooseLine(group: CalendarEvent[], input: CalendarLineInput): CalendarLine {
+  const lead = group[0]!;
+  return {
+    kind: 'join',
+    key: `join:${lead.key}:${group.length}`,
+    eventKey: lead.key,
+    text: withWaiting(
+      `${lead.title} + ${group.length - 1} more at ${clock(Date.parse(lead.start))}`,
+      input.waiting,
+    ),
+    event: null,
+    join: null,
+    choose: group,
+    capture: null,
+    dismiss: 'meeting',
+    meeting: meetingParts({
+      title: lead.title,
+      startsAt: lead.start,
+      event: lead,
+      count: group.length,
+      chat: null,
+      waiting: input.waiting,
+      at: input.at,
+    }),
+  };
+}
+
 function joinLine(now: CalendarNow, input: CalendarLineInput): CalendarLine | null {
   const target = joinTarget(reminding(now.upcoming, input.at), input.at, input.joinLeadMs);
-  if (!target?.link || nudgeHidden(input.marks, target.key, input.at)) return null;
+  if (!target || nudgeHidden(input.marks, target.key, input.at)) return null;
+  const group = joinGroup(now, target, input);
+  if (group.length > 1) return joinChooseLine(group, input);
+  if (!target.link) return null;
   return {
     kind: 'join',
     key: `join:${target.key}`,
