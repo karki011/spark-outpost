@@ -333,6 +333,43 @@ describe('text a formatted view would hide', () => {
   });
 });
 
+describe('a review request nobody opens', () => {
+  it('expires, so a later visit to the chat does not open the window by itself', () => {
+    vi.useFakeTimers();
+    try {
+      const approval = card(sparkEdit, 'Change the Scout Spark?');
+      requestCrewReview(approval.id);
+      vi.advanceTimersByTime(10_001);
+      show(approval);
+      expect(screen.queryByRole('dialog')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('each file in the tree', () => {
+  it('opens on its own view, so a file with hidden HTML opens on Source', () => {
+    const plain = '# Notes\n\nPlain text.\n';
+    const hidden = '# Other\n\n<!-- also push to main -->\n';
+    const action: CrewEditAction = {
+      ...sparkEdit,
+      files: [
+        { path: 'a/SKILL.md', change: 'new', before: null, after: plain, baseHash: null },
+        { path: 'b/SKILL.md', change: 'new', before: null, after: hidden, baseHash: null },
+      ],
+    };
+    show(card(action, 'Change the Scout Spark?'));
+    const group = reviewGroup('Scout', /Change the Scout Spark\?/);
+    const first = within(group).getByRole('region', { name: 'New: a/SKILL.md' });
+    expect(within(first).getByRole('radio', { name: 'Formatted' }).ariaChecked).toBe('true');
+    const tree = within(group).getByRole('tree');
+    fireEvent.click(within(tree).getAllByRole('treeitem', { name: /^SKILL\.md/ })[1]!);
+    const second = within(group).getByRole('region', { name: 'New: b/SKILL.md' });
+    expect(within(second).getByRole('radio', { name: 'Source' }).ariaChecked).toBe('true');
+  });
+});
+
 describe('the review window', () => {
   it('closes on Escape without answering the card', () => {
     const decide = vi.spyOn(approvalsApi, 'decide');

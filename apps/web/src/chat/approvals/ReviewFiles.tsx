@@ -53,7 +53,9 @@ export function ReviewFiles({ files, withInstructions = false }: ReviewFilesProp
           onSelect={select}
         />
       </div>
-      <div className="rvf-main">{shown?.view}</div>
+      <div className="rvf-main" key={shown?.path}>
+        {shown?.view}
+      </div>
     </div>
   );
 }

@@ -28,22 +28,30 @@ export function crewReviewName(action: CrewReviewAction): string {
   return action.name.trim() || crewReviewKind(action);
 }
 
-let wanted: string | null = null;
+const UNCLAIMED_MS = 10_000;
+
+let wanted: { id: string; claimed: boolean } | null = null;
 const listeners = new Set<() => void>();
 
 export function requestCrewReview(approvalId: string): void {
-  wanted = approvalId;
+  const request = { id: approvalId, claimed: false };
+  wanted = request;
   listeners.forEach((listener) => listener());
+  setTimeout(() => {
+    if (wanted === request && !request.claimed) wanted = null;
+  }, UNCLAIMED_MS);
 }
 
 export function endCrewReview(approvalId: string): void {
-  if (wanted === approvalId) wanted = null;
+  if (wanted?.id === approvalId) wanted = null;
 }
 
 export function useCrewReviewRequest(approvalId: string, open: () => void): void {
   useEffect(() => {
     const take = () => {
-      if (wanted === approvalId) open();
+      if (wanted?.id !== approvalId) return;
+      wanted.claimed = true;
+      open();
     };
     take();
     listeners.add(take);
