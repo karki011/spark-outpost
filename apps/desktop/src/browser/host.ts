@@ -42,7 +42,7 @@ import { signOut, signedInSites, type SessionGuards } from './sessions.ts';
 import { startBrowserViewHost, type BrowserViewHost } from './view-host.ts';
 import type { HistorySink } from './view-history.ts';
 import { loadSavedView } from './view-saved.ts';
-import { handToChat, toView } from './view-transfer.ts';
+import { toView } from './view-transfer.ts';
 import type { LinkOpening } from '../link-opening.ts';
 import type { PaneTab } from './tab.ts';
 
@@ -70,7 +70,6 @@ const CHANNELS = [
   IPC.browserStart,
   IPC.browserSites,
   IPC.browserSignOut,
-  IPC.browserViewHand,
   IPC.browserToView,
 ];
 
@@ -215,10 +214,6 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
   });
   view = viewHost;
   downloads = startDownloadsHost({ send, guarded, log: options.log });
-  ipcMain.handle(
-    IPC.browserViewHand,
-    guarded((_event, raw) => handToChat(panes, viewHost, raw)),
-  );
   ipcMain.handle(
     IPC.browserToView,
     guarded((_event, raw) => toView(panes, viewHost, raw)),

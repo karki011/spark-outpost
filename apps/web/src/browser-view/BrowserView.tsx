@@ -4,52 +4,32 @@ import './browser-spaces.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   browserViewShortcutEventSchema,
-  parseBrowserUrl,
   splitHolds,
   type BrowserProfile,
   type BrowserShortcut,
-  type ConversationSummary,
 } from '@spark-outpost/contracts';
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
-import { ChatPlusIcon, ExternalLinkIcon, LockIcon, SparkleIcon } from '../ui/icons.tsx';
-import { ASK_TABS_KEYS, keysText, NEW_CHAT_KEYS } from '../ui/Keys.tsx';
+import { useSidebarLayout } from '../conversations/sidebar-layout.tsx';
 import { MAC } from '../ui/shortcuts.ts';
-import { AddressBar } from '../browser/AddressBar.tsx';
-import {
-  DevtoolsIcon,
-  NavBackIcon,
-  NavForwardIcon,
-  ReloadIcon,
-  StopIcon,
-} from '../browser/BrowserIcons.tsx';
 import { defaultBrowserUrl, openInDefaultBrowser } from '../browser/chat-links.ts';
-import {
-  PANE_KEYS,
-  chromeShortcut,
-  runPaneShortcut,
-  type PaneCommands,
-} from '../browser/pane-shortcuts.ts';
-import { PageTools, ZoomBadge } from '../browser/PageTools.tsx';
+import { chromeShortcut, runPaneShortcut, type PaneCommands } from '../browser/pane-shortcuts.ts';
 import { tabLabel } from '../browser/tab-label.ts';
-import { ToolButton } from '../browser/ToolButton.tsx';
 import {
   recheckNativePlacement,
   useNativePlacement,
   type PlaceView,
 } from '../browser/use-view-placement.ts';
-import { ProfileBadge, ProfileSwitch, profileNote } from './ProfileSwitch.tsx';
-import { setBrowserPaneOpen } from '../browser/pane-open.ts';
+import { ProfileSwitch, profileNote } from './ProfileSwitch.tsx';
 import { AskTabsDock } from './AskTabsDock.tsx';
 import { CommandBar } from './CommandBar.tsx';
 import type { BarAction, BarMode } from './command-bar-model.ts';
-import { HandToChat } from './HandToChat.tsx';
-import { PageChatDock, type DockRequest } from './PageChatDock.tsx';
+import type { DockRequest } from './PageChatDock.tsx';
 import type { PageRef } from './page-chat.ts';
 import { pageRef, usePageIntents, usePagePicks } from './page-intents.ts';
-import { ViewSelect } from './ViewSelect.tsx';
 import { chromeSpaceIndex, tabsInCurrentSpace } from './spaces-model.ts';
+import { TabChatDock } from './TabChatDock.tsx';
 import { ViewArchived } from './ViewArchived.tsx';
-import { SplitButton } from './SplitButton.tsx';
+import { ViewBar } from './ViewBar.tsx';
 import { PeekPanel, SplitStage, StartPage } from './ViewStage.tsx';
 import { ViewFavorites } from './ViewFavorites.tsx';
 import { ViewDownloads } from './ViewDownloads.tsx';
@@ -88,26 +68,11 @@ function useViewShortcuts(profile: BrowserProfile, run: (shortcut: BrowserShortc
   }, [profile]);
 }
 
-function PageHost({ url }: { url: string }) {
-  const parsed = parseBrowserUrl(url);
-  if (!parsed || url === '') return null;
-  return (
-    <span className="bv-host" title={url}>
-      {parsed.protocol === 'https:' && <LockIcon />}
-      {parsed.host || parsed.pathname}
-    </span>
-  );
-}
-
-const NEW_CHAT_ARIA = MAC ? 'Meta+Shift+O' : 'Control+Shift+O';
-const ASK_TABS_ARIA = MAC ? 'Alt+Meta+A' : 'Control+Alt+A';
-
 interface BrowserViewProps {
-  chats: readonly ConversationSummary[];
   onOpenChat(chatId: string): void;
 }
 
-export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
+export function BrowserView({ onOpenChat }: BrowserViewProps) {
   const profile = useChosenProfile();
   const {
     tabs: allTabs,
@@ -128,6 +93,8 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
   const viewRef = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const commands = viewCommands(profile);
+  const sidebar = useSidebarLayout();
+  const sideHidden = sidebar?.browserHidden ?? false;
 
   const place = useCallback<PlaceView>(
     (bounds, covered) => void desktopBrowserView()?.place({ profile, bounds, covered }),
@@ -152,7 +119,6 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
     setAsking(null);
     setDock({
       key: Date.now(),
-      page: shownPage(),
       selection: null,
       link: null,
       picks: [],
@@ -185,12 +151,12 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
       focusAddress,
       openFind: () => undefined,
       copiedUrl: () => undefined,
-      newChat: () => openDock(),
+      newChat: () => (dock ? setDock(null) : openDock()),
       askSpark: openAsk,
     });
   };
   useViewShortcuts(profile, runShortcut);
-  useEffect(recheckNativePlacement, [peek?.id, splitShown, shown?.id]);
+  useEffect(recheckNativePlacement, [peek?.id, splitShown, shown?.id, sideHidden, dock, asking]);
   const askingForPage = useRef(false);
   useEffect(() => {
     if (!askingForPage.current || shown?.url !== '') return;
@@ -198,10 +164,6 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
     setBar('here');
   }, [shown?.id, shown?.url]);
 
-  const act = (command: 'back' | 'forward' | 'reload' | 'stop') => {
-    if (tab) sendViewCommand(profile, { command, tabId: tab.id });
-  };
-  const blank = !tab || tab.url === '' || tab.error !== null;
   const shownBlank = !shown || shown.url === '' || shown.error !== null;
   const outside = defaultBrowserUrl(tab?.url ?? null, window.location.origin);
   const barAction = (action: BarAction) => {
@@ -211,7 +173,6 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
       sendViewCommand(profile, { command: 'copy_url', tabId: tab.id });
     else if (action === 'default_browser' && outside) openInDefaultBrowser(outside);
   };
-  const tabKey = `${profile}:${tab?.id ?? ''}:${tab?.url ?? ''}`;
 
   return (
     <div
@@ -233,42 +194,9 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
         runShortcut(shortcut);
       }}
     >
-      <nav className="bv-side" aria-label="Browser">
-        <div className="bv-nav">
-          <ToolButton
-            label="Back"
-            keys={PANE_KEYS.back}
-            disabled={!tab?.canGoBack}
-            onClick={() => act('back')}
-          >
-            <NavBackIcon />
-          </ToolButton>
-          <ToolButton
-            label="Forward"
-            keys={PANE_KEYS.forward}
-            disabled={!tab?.canGoForward}
-            onClick={() => act('forward')}
-          >
-            <NavForwardIcon />
-          </ToolButton>
-          {tab?.loading ? (
-            <ToolButton label="Stop loading" onClick={() => act('stop')}>
-              <StopIcon />
-            </ToolButton>
-          ) : (
-            <ToolButton
-              label="Reload"
-              keys={PANE_KEYS.reload}
-              disabled={blank}
-              onClick={() => act('reload')}
-            >
-              <ReloadIcon />
-            </ToolButton>
-          )}
-        </div>
+      <nav className="bv-side" aria-label="Browser" hidden={sideHidden}>
         <ProfileSwitch profile={profile} onChange={chooseProfile} />
         <p className="bv-note">{profileNote(profile)}</p>
-        <AddressBar key={tabKey} commands={commands} tab={tab} placeholder="Type a web address" />
         <ViewFavorites profile={profile} favorites={favorites} tab={tab} />
         <ViewSpaces profile={profile} layout={layout} />
         <ViewTabs
@@ -282,75 +210,24 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
         <ViewDownloads />
       </nav>
       <main className="page bv-page" id="bv-page" aria-label={tab ? tabLabel(tab) : 'Browser'}>
-        <div className="bv-bar">
-          <ProfileBadge profile={profile} />
-          <PageHost url={tab?.url ?? ''} />
-          {tab?.picking ? (
-            <span className="bv-title" role="status">
-              Click to select, ⇧ click for more, ↑↓ parent or child, drag a box. Esc finishes.
-            </span>
-          ) : (
-            <span className="bv-title">{tab && tab.url !== '' ? tabLabel(tab) : ''}</span>
-          )}
-          <ZoomBadge tab={tab} commands={commands} />
-          <button
-            type="button"
-            className="btn bv-hand"
-            aria-keyshortcuts={ASK_TABS_ARIA}
-            title={`Ask Spark about your tabs (${keysText(ASK_TABS_KEYS)})`}
-            onClick={openAsk}
-          >
-            <SparkleIcon />
-            Ask Spark
-          </button>
-          <button
-            type="button"
-            className="btn bv-hand"
-            aria-keyshortcuts={NEW_CHAT_ARIA}
-            title={`Start a chat about this page (${keysText(NEW_CHAT_KEYS)})`}
-            onClick={() => openDock()}
-          >
-            <ChatPlusIcon />
-            New chat
-          </button>
-          <HandToChat
-            profile={profile}
-            tab={tab}
-            chats={chats}
-            onHanded={(chatId) => {
-              setProblem(null);
-              setBrowserPaneOpen(chatId, true);
-              onOpenChat(chatId);
-            }}
-            onProblem={setProblem}
-          />
-          <ViewSelect profile={profile} tab={tab} disabled={blank} />
-          <PageTools tab={tab} commands={commands} onNotice={setProblem} />
-          <SplitButton
-            profile={profile}
-            tabs={tabs}
-            shown={shown}
-            inSplit={splitShown}
-            disabled={peek !== null || shown === null}
-            onNewPage={() => {
-              askingForPage.current = true;
-            }}
-          />
-          <ToolButton
-            label="Open developer tools (⌥⌘I)"
-            disabled={blank}
-            onClick={() => tab && sendViewCommand(profile, { command: 'devtools', tabId: tab.id })}
-          >
-            <DevtoolsIcon />
-          </ToolButton>
-          <ToolButton
-            label="Open in default browser"
-            disabled={outside === null}
-            onClick={() => outside && openInDefaultBrowser(outside)}
-          >
-            <ExternalLinkIcon />
-          </ToolButton>
-        </div>
+        <ViewBar
+          profile={profile}
+          commands={commands}
+          tab={tab}
+          tabs={tabs}
+          shown={shown}
+          splitShown={splitShown}
+          peeking={peek !== null}
+          outside={outside}
+          sideHidden={sideHidden}
+          chatOpen={dock !== null}
+          onToggleSide={() => sidebar?.toggleBrowser()}
+          onToggleChat={() => (dock ? setDock(null) : openDock())}
+          onNewSplitPage={() => {
+            askingForPage.current = true;
+          }}
+          onNotice={setProblem}
+        />
         {problem && (
           <p className="bv-problem" role="alert">
             <span>{problem}</span>
@@ -381,16 +258,20 @@ export function BrowserView({ chats, onOpenChat }: BrowserViewProps) {
         </div>
       </main>
       {dock && (
-        <PageChatDock
-          key={dock.key}
+        <TabChatDock
+          profile={profile}
+          tab={shown}
           request={dock}
+          onFresh={() =>
+            setDock((open) => open && { key: open.key, selection: null, link: null, picks: [] })
+          }
+          onRemovePick={(pick) =>
+            setDock((open) => open && { ...open, picks: open.picks.filter((p) => p !== pick) })
+          }
           onOpenChat={(chatId) => {
             setDock(null);
             onOpenChat(chatId);
           }}
-          onRemovePick={(pick) =>
-            setDock((open) => open && { ...open, picks: open.picks.filter((p) => p !== pick) })
-          }
           onClose={() => setDock(null)}
         />
       )}

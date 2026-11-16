@@ -12,7 +12,7 @@ About 1 minute. Mac app only.
 
 1. Select **Browser** in the left bar.
 2. Pick **Personal** or **Work**.
-3. Type an address; press **Enter**.
+3. Type an address at the top; press **Enter**. **⌃⌘S** hides the sidebar.
 
 Clicked links open here, a chat's in its pane; right-click for the other browser.
 
@@ -32,22 +32,21 @@ The last row searches the web; only choosing it sends your text.
 ## Keep and share tabs
 
 - **+** under **Favorites** saves the page; **Pin** keeps a tab above **Today**.
-- **Hand to chat**: a **Work** tab moves to the chat; from **Personal** only the address goes.
 - A chat pane's **Open in Browser view (Work)** moves its tab here.
 
 ## Split view and Peek
 
-**Split view** (page bar) or **Shift-Option-click** on a link shows two tabs of one profile; drag the divider, close a side to leave.
+**Split view** (top strip) or **Shift-Option-click** on a link shows two tabs of one profile; drag the divider, close a side to leave.
 
 **Shift-click** a link to **Peek**; **Esc** closes, **Open as tab** keeps it.
 
-## Start a chat from a page
+## Chat with a tab
 
-**New chat** (**⌘⇧O**), a right-click or **Select** opens an **Automatic** chat beside the tab. The page goes, untrusted, when sent; **Personal** picks go as text only.
+**Chat** (**⌘⇧O**), a right-click or **Select** opens an **Automatic** chat beside the tab; it stays with that tab. The page goes, untrusted, when sent; **Personal** picks go as text only.
 
 ## Ask Spark about your tabs
 
-**Ask Spark** (**⌥⌘A**) opens beside the tab; **@** adds tabs, read once as text when sent; its actions are cards.
+**⌥⌘A** or the command bar opens **Ask Spark** beside the tab; **@** adds tabs, read once as text when sent; its actions are cards.
 
 ## Save a file
 

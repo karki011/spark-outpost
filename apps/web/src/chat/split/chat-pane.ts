@@ -9,6 +9,7 @@ export interface ChatPane {
   closer: ReactNode;
   intro?: string;
   crewChat?: boolean;
+  docked?: boolean;
 }
 
 export const SINGLE_PANE: ChatPane = {

@@ -10,7 +10,6 @@ import type {
   BrowserLinksIn,
   BrowserViewPlacement,
   BrowserViewSlot,
-  BrowserHandToChat,
   BrowserToView,
   BrowserViewCommand,
   BrowserSelectedText,
@@ -94,7 +93,6 @@ export interface DesktopBrowserView {
   archive(): Promise<unknown>;
   setArchive(setting: unknown): Promise<unknown>;
   start(profile: BrowserProfile): Promise<unknown>;
-  handToChat(request: BrowserHandToChat): Promise<unknown>;
   fromChat(request: BrowserToView): Promise<unknown>;
   pageText(profile: BrowserProfile, tabId: string): Promise<unknown>;
   clearZooms(profile: BrowserProfile): Promise<unknown>;

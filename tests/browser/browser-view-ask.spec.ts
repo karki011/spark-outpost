@@ -27,13 +27,21 @@ async function openWithTabs(page: Page) {
 }
 
 const dock = (page: Page) => page.getByRole('complementary', { name: 'Ask Spark' });
+
+const askSpark = (page: Page) =>
+  page.evaluate(() =>
+    (window as unknown as { browserViewShortcut: (e: unknown) => void }).browserViewShortcut({
+      profile: 'personal',
+      shortcut: 'ask_spark',
+    }),
+  );
 const field = (page: Page) => dock(page).getByRole('textbox', { name: 'Ask Spark' });
 
 test('Ask Spark reads only the tabs the question mentions, once, when it is sent', async ({
   page,
 }) => {
   await openWithTabs(page);
-  await page.getByRole('button', { name: 'Ask Spark', exact: true }).click();
+  await askSpark(page);
   await expect(dock(page).getByRole('list', { name: 'Tabs you mentioned' })).toContainText(
     'Deploying your app',
   );
@@ -81,7 +89,7 @@ test('Ask Spark reads only the tabs the question mentions, once, when it is sent
 
 test('a removed tab is not read, and Esc closes the list before the dock', async ({ page }) => {
   await openWithTabs(page);
-  await page.getByRole('button', { name: 'Ask Spark', exact: true }).click();
+  await askSpark(page);
   await dock(page).getByRole('button', { name: 'Remove Deploying your app' }).click();
   await expect(field(page)).toBeFocused();
   await page.keyboard.type('@');

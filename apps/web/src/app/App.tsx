@@ -37,6 +37,7 @@ import { useSettingsState } from '../settings/use-settings-state.ts';
 import { useAppMenu } from '../desktop/use-app-menu.ts';
 import { LEVEL_LABEL } from '../settings/setting-labels.ts';
 import { requestSettingFocus } from '../settings/setting-focus.ts';
+import { usePhone } from '../ui/breakpoints.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { FreezeWhileHidden } from '../ui/FreezeWhileHidden.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
@@ -150,16 +151,17 @@ function ChatShell({ entering }: { entering: boolean }) {
   const { inbox } = useTicketInbox();
   const ticketsWaiting = attentionCount(inbox.data);
   const ticketNotices = unseenNotices(inbox.data?.tickets ?? []);
-  const layout = useSidebarLayoutState(waiting > 0);
   const { remote } = useRemoteClient();
+  const phone = usePhone();
   const hiddenView =
-    (layout.narrow && (storedView === 'map' || storedView === 'browser')) ||
+    (phone && (storedView === 'map' || storedView === 'browser')) ||
     (remote && storedView === 'today') ||
     (storedView === 'browser' && (remote || !browserViewAvailable()));
   const view: AppView = hiddenView ? 'home' : storedView;
+  const layout = useSidebarLayoutState(waiting > 0, view === 'browser');
   useAttentionTitle(waiting);
   useAttentionReport(conversations.data);
-  useAppMenu({ sidebarShown: !layout.hidden });
+  useAppMenu({ sidebarShown: view === 'browser' ? !layout.browserHidden : !layout.hidden });
   const finished = chats.some((chat) => rowState(chat, false).tone === 'done');
   const mood =
     waiting > 0 ? 'alert' : chats.some(isRunning) ? 'working' : finished ? 'happy' : null;
@@ -342,7 +344,7 @@ function ChatShell({ entering }: { entering: boolean }) {
           )}
           {view === 'browser' && (
             <Suspense fallback={<main className="page" aria-label="Browser" aria-busy="true" />}>
-              <BrowserView chats={chats} onOpenChat={openChat} />
+              <BrowserView onOpenChat={openChat} />
             </Suspense>
           )}
           {view === 'today' && (

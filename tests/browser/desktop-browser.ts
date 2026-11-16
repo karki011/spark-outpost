@@ -114,10 +114,6 @@ export async function withDesktopBrowser(page: Page) {
             viewStateListeners.add(listener);
             return () => viewStateListeners.delete(listener);
           },
-          handToChat: async (request: unknown) => {
-            calls.push({ kind: 'view-hand', payload: request });
-            return { ok: true };
-          },
           downloads: async () => downloadList,
           downloadAct: async (request: unknown) => {
             calls.push({ kind: 'download-act', payload: request });

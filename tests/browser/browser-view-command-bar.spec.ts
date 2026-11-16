@@ -110,7 +110,7 @@ test('⌘L starts from this address, switches to an open tab, and goes to a type
 
 test('an action runs from the bar, and Esc gives focus back', async ({ page }) => {
   await openWithPages(page);
-  const address = page.getByRole('navigation', { name: 'Browser' }).getByLabel('Address');
+  const address = page.getByRole('main').getByLabel('Address');
   await address.focus();
   await page.keyboard.press('ControlOrMeta+t');
   await expect(bar(page, 'Open a new tab')).toBeVisible();

@@ -18,12 +18,13 @@ async function openWithPage(page: Page) {
 }
 
 const dock = (page: Page) => page.getByRole('complementary', { name: 'New chat' });
+const tabChat = (page: Page) => page.getByRole('complementary', { name: 'Chat for this tab' });
 
-test('New chat starts a chat about the page at Automatic, with its text as an untrusted attachment', async ({
+test('Chat starts the tab’s chat at Automatic, with the page text as an untrusted attachment', async ({
   page,
 }) => {
   await openWithPage(page);
-  await page.getByRole('button', { name: 'New chat', exact: true }).click();
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
   const panel = dock(page);
   await expect(panel.getByText('Deploying your app')).toBeVisible();
   await expect(panel.getByText('page text')).toBeVisible();
@@ -56,7 +57,40 @@ test('New chat starts a chat about the page at Automatic, with its text as an un
   expect(uploaded).toContain('acme deploy --prod');
   expect(uploaded).toContain('<page_evidence>');
   expect(await calls(page, 'view-page-text')).toEqual([{ profile: 'personal', tabId: 'v1' }]);
-  await expect(panel.getByRole('status')).toContainText('The chat started');
+  await expect(tabChat(page)).toBeVisible();
+  await expect(dock(page)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+});
+
+test('each tab keeps its own chat', async ({ page }) => {
+  await openWithPage(page);
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  await dock(page).getByRole('textbox', { name: 'Message' }).fill('What does this page cover?');
+  await page.keyboard.press('Enter');
+  await expect(tabChat(page)).toBeVisible();
+
+  await pushView(page, [
+    { title: 'Deploying your app', url: DOCS, place: 'external' },
+    {
+      title: 'Rate limits',
+      url: 'https://docs.example.com/rate-limits',
+      active: true,
+      place: 'external',
+    },
+  ]);
+  await expect(tabChat(page)).toHaveCount(0);
+  await expect(dock(page).getByText('Rate limits')).toBeVisible();
+
+  await pushView(page, [
+    { title: 'Deploying your app', url: DOCS, active: true, place: 'external' },
+    { title: 'Rate limits', url: 'https://docs.example.com/rate-limits', place: 'external' },
+  ]);
+  await expect(tabChat(page)).toBeVisible();
+  await tabChat(page).getByRole('button', { name: 'Close chat' }).click();
+  await expect(tabChat(page)).toHaveCount(0);
 });
 
 test('a selection and a link from the page menu open the dock with what was picked', async ({
@@ -97,10 +131,7 @@ test('a selection and a link from the page menu open the dock with what was pick
   expect(uploaded).toContain('The user selected this text in the Browser view.');
   expect(uploaded).toContain('Promote the preview');
   expect(await calls(page, 'view-page-text')).toEqual([]);
-  await expect(dock(page).getByRole('status')).toContainText('The chat started');
-
-  await dock(page).getByRole('button', { name: 'Close' }).click();
-  await expect(dock(page)).toHaveCount(0);
+  await expect(tabChat(page)).toBeVisible();
 
   await intent({
     profile: 'personal',
@@ -113,6 +144,8 @@ test('a selection and a link from the page menu open the dock with what was pick
     'Open https://docs.example.com/rate-limits and ',
   );
   await expect(dock(page).getByText('page text')).toHaveCount(0);
+  await dock(page).getByRole('button', { name: 'Back to this tab’s chat' }).click();
+  await expect(tabChat(page)).toBeVisible();
 });
 
 test('⌘⇧O from the page opens the dock, and the dock passes an accessibility check', async ({
@@ -132,7 +165,7 @@ test('⌘⇧O from the page opens the dock, and the dock passes an accessibility
 
 test('a pasted key holds the chat until the user deals with it', async ({ page }) => {
   await openWithPage(page);
-  await page.getByRole('button', { name: 'New chat', exact: true }).click();
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
   let posted = 0;
   page.on('request', (request) => {
     if (request.url().endsWith('/messages') && request.method() === 'POST') posted += 1;

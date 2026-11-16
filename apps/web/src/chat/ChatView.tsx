@@ -267,7 +267,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
           {...(terminalSession || terminalDraft ? {} : drop.handlers)}
         >
           <header className="head chat-head">
-            <SidebarToggle />
+            {!pane.docked && <SidebarToggle />}
             {repos.length > 0 && (
               <span className="crumb" title={repos.map((repo) => repo.rootPath).join('\n')}>
                 {repoSummary(repos.map((repo) => repo.name))} /

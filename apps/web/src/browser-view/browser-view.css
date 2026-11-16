@@ -8,18 +8,19 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 300px;
+  width: 264px;
   flex-shrink: 0;
   min-height: 0;
-  padding: 10px 10px 10px 4px;
+  margin: 8px 8px 8px 0;
+  padding: 10px 8px;
   overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--r) + 4px);
 }
 
-.bv-nav {
-  display: flex;
-  justify-content: flex-end;
-  gap: 2px;
-  min-height: 28px;
+.bv-side[hidden] {
+  display: none;
 }
 
 .bv-profiles {
@@ -50,8 +51,7 @@
 }
 
 .bv-profile svg,
-.bv-badge svg,
-.bv-host svg {
+.bv-badge svg {
   width: 14px;
   height: 14px;
 }
@@ -60,10 +60,6 @@
   margin: 0 4px;
   font-size: 12px;
   color: var(--muted);
-}
-
-.bv-side .bp-address {
-  flex: none;
 }
 
 .bv-section {
@@ -122,7 +118,7 @@
 }
 
 .bv-tab.on {
-  background: var(--panel);
+  background: var(--raise);
   box-shadow: 0 0 0 1px var(--line);
 }
 
@@ -188,13 +184,78 @@
 .bv-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   min-height: 48px;
   padding: 8px 10px;
 }
 
-.bv-badge,
-.bv-host {
+.bv-bar .bp-address {
+  flex: 1 1 240px;
+  min-width: 200px;
+  margin: 0 6px;
+}
+
+.bv-bar .bp-url {
+  height: 32px;
+  font-size: 13px;
+}
+
+.bv-picking {
+  flex: 1;
+  min-width: 0;
+  margin: 0 6px;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bv-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.bv-chat-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.bv-chat-btn[aria-pressed='true'] {
+  background: var(--raise);
+  color: var(--accent-text);
+}
+
+.bv-chat {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: clamp(360px, 32vw, 480px);
+  min-width: 0;
+}
+
+.bv-chat-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bv-chat-pane > .main {
+  margin-left: 0;
+}
+
+.bv-chat-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.bv-badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -212,23 +273,13 @@
   color: var(--accent-text);
 }
 
-.bv-title {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .bv-view {
   margin-top: 0;
 }
 
 .bv-favs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
   gap: 6px;
   margin: 0;
   padding: 0 2px;
