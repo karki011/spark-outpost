@@ -31,11 +31,12 @@ it('shows individual workers below the running status and opens Work', () => {
         working
         waiting={false}
         background={null}
-        lead={{ label: 'Running 2 agents', since: null }}
+        lead={{ label: 'Running 2 agents', since: null, repeatsRow: true }}
       />
     </OpenAgentsContext>,
   );
-  expect(screen.getByText('Running 2 agents')).toBeTruthy();
+  expect(document.querySelector('.turn-working b')?.textContent).toBe('Working');
+  expect(screen.queryByText('Running 2 agents')).toBeNull();
   expect(screen.getByText('Builder')).toBeTruthy();
   expect(screen.getByText('Verifier')).toBeTruthy();
   expect(container.querySelector('.turn-working .sl')).toBeNull();

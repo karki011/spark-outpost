@@ -18,9 +18,13 @@ describe('leadStep', () => {
     ).toBe('Running 2 agents');
     expect(
       leadStep({ ...none, subagents: [{ state: 'done' }], commands: [command('running')] }),
-    ).toEqual({ label: 'Running python3…', since: Date.parse('2026-10-29T10:00:00.000Z') });
+    ).toEqual({
+      label: 'Running python3…',
+      since: Date.parse('2026-10-29T10:00:00.000Z'),
+      repeatsRow: true,
+    });
     expect(leadStep({ ...none, commands: [command('running', 'Wait for the build')] }).label).toBe(
-      'Running Wait for the build',
+      'Wait for the build',
     );
   });
 

@@ -1,6 +1,6 @@
 import { friendlyStep, type SubagentRow } from '@spark-outpost/contracts';
 import type { CommandView } from '../commands/command-model.ts';
-import { commandTitle } from '../commands/command-title.ts';
+import { commandLine } from '../commands/command-title.ts';
 import type { RunStep } from '../run-projection.ts';
 import { stepKind } from '../status/step-activity.ts';
 
@@ -8,6 +8,7 @@ export interface LeadStep {
   label: string;
   since: number | null;
   thought?: string;
+  repeatsRow?: true;
 }
 
 export interface LeadInput {
@@ -30,11 +31,19 @@ function timeOf(iso: string): number | null {
 export function leadStep({ subagents, commands, steps, publishing }: LeadInput): LeadStep {
   const agents = subagents.filter((row) => row.state === 'working').length;
   if (agents > 0) {
-    return { label: agents === 1 ? 'Running agent' : `Running ${agents} agents`, since: null };
+    return {
+      label: agents === 1 ? 'Running agent' : `Running ${agents} agents`,
+      since: null,
+      repeatsRow: true,
+    };
   }
   const running = commands.findLast((command) => command.status === 'running');
   if (running) {
-    return { label: `Running ${commandTitle(running)}`, since: timeOf(running.startedAt) };
+    return {
+      label: commandLine(running, true),
+      since: timeOf(running.startedAt),
+      repeatsRow: true,
+    };
   }
   const open = steps.findLast((step) => !step.done && !step.subagent && !step.waits);
   if (open) {

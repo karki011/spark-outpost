@@ -148,12 +148,13 @@ describe('a turn that ended with a publish step', () => {
     expect(result.textContent).toMatch(/You allowed it once · /);
   });
 
-  it('names a running push on the working line', () => {
+  it('shows a running push as its own row and keeps the working line neutral', () => {
     show(messages, {
       run: { status: 'running', startedAt: '2026-10-10T10:00:00.000Z' },
       command: { status: 'running', finishedAt: null, exitCode: null },
     });
-    expect(document.querySelector('.turn-working b')?.textContent).toBe('Running git push…');
+    expect(document.querySelector('.turn-working b')?.textContent).toBe('Working');
+    expect(document.body.textContent).toContain('Running git push');
   });
 
   it('shows no publish result for a turn with one reply', () => {
