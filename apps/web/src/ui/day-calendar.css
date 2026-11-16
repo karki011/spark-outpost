@@ -47,6 +47,7 @@
 .day-grid .rdp-button_previous,
 .day-grid .rdp-button_next {
   border-radius: 999px;
+  corner-shape: round;
   color: var(--muted);
 }
 
@@ -112,6 +113,7 @@
 .day-skel-day::before {
   content: '';
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
 }
 

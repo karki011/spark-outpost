@@ -44,6 +44,7 @@
   display: block;
   height: 4px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   overflow: hidden;
 }

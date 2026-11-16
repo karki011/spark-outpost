@@ -6,6 +6,7 @@
   flex-shrink: 0;
   padding: 1px 7px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--accent-soft);
   color: var(--accent-text);
   font-size: 12px;

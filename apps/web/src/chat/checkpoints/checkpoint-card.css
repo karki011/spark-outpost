@@ -77,6 +77,7 @@
   height: 13px;
   border: 1.5px solid var(--faint);
   border-radius: 50%;
+  corner-shape: round;
   background: none;
   transform: none;
 }

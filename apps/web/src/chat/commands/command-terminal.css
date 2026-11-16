@@ -39,6 +39,7 @@
   margin: 0 2px;
   flex-shrink: 0;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--warn);
 }
 

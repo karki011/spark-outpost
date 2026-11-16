@@ -25,6 +25,7 @@
   height: 5px;
   margin-top: -3px;
   border-radius: 50%;
+  corner-shape: round;
   background: color-mix(in srgb, var(--text) 10%, transparent);
 }
 .ph-scene-phone {

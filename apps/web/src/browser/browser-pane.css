@@ -73,6 +73,7 @@
   flex-shrink: 0;
   padding: 0 5px;
   border-radius: 999px;
+  corner-shape: round;
   font-size: 12px;
   font-weight: 600;
   color: var(--accent-text);
@@ -261,6 +262,7 @@
   flex-shrink: 0;
   padding: 1px 8px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   color: var(--muted);
 }

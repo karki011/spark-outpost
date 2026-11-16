@@ -111,6 +111,7 @@
   height: 6px;
   margin: -3px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--warn);
   animation: offline-orbit 2.4s linear infinite;
 }
@@ -245,6 +246,7 @@
   padding: 5px 6px 5px 14px;
   border: 1px solid var(--line);
   border-radius: 999px;
+  corner-shape: round;
   background: var(--panel);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.14);
   font-size: 13px;
@@ -265,6 +267,7 @@
 .reconnect .btn {
   padding: 4px 11px;
   border-radius: 999px;
+  corner-shape: round;
   font-size: 12.5px;
 }
 .live-paused {
@@ -277,6 +280,7 @@
   padding: 3px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
+  corner-shape: round;
   background: var(--panel);
   font-size: 12px;
   color: var(--muted);
@@ -293,6 +297,7 @@
   gap: 8px;
   padding: 8px 16px 8px 12px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--text);
   color: var(--panel);
   font-size: 13px;
@@ -308,6 +313,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
 }

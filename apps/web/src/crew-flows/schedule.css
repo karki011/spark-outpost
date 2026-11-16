@@ -63,6 +63,7 @@
   height: 32px;
   border: 1px solid var(--line-strong);
   border-radius: 50%;
+  corner-shape: round;
   background: var(--panel);
   color: var(--muted);
   font: inherit;

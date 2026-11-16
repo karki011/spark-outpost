@@ -6,11 +6,13 @@
   margin-left: auto;
   border: 1px dashed var(--line-strong);
   border-radius: 999px;
+  corner-shape: round;
 }
 
 .spark-suggest-apply {
   padding: 2px 4px 2px 6px;
   border-radius: 999px 0 0 999px;
+  corner-shape: round;
 }
 
 .spark-suggest-x {
@@ -61,6 +63,7 @@
   gap: 5px;
   padding: 1px 8px 1px 3px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   color: var(--text);
   font-weight: 500;

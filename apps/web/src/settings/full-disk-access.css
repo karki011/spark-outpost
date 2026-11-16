@@ -57,6 +57,7 @@
   align-items: center;
   padding: 3px 9px;
   border-radius: 999px;
+  corner-shape: round;
   font-size: 12px;
   font-weight: 500;
   background: color-mix(in srgb, var(--warn) 14%, transparent);

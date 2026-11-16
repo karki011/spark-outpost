@@ -18,6 +18,7 @@
   padding: 1px 7px;
   border: 1px solid var(--line);
   border-radius: 999px;
+  corner-shape: round;
   font-size: 12px;
   white-space: nowrap;
 }

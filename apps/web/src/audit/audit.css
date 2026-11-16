@@ -45,6 +45,7 @@
   max-width: 100%;
   padding: 3px 10px 3px 8px;
   border-radius: 999px;
+  corner-shape: round;
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
@@ -154,6 +155,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  corner-shape: round;
 }
 .xrow {
   display: flex;
@@ -278,6 +280,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accent);
 }
 .head-menu > .icon-btn .head-menu-dot {

@@ -163,6 +163,7 @@
   gap: 5px;
   padding: 1px 8px 1px 6px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   color: var(--text);
   font-size: 12px;
@@ -184,6 +185,7 @@
 .map-tn-changed {
   padding: 0 7px;
   border-radius: 999px;
+  corner-shape: round;
   background: color-mix(in srgb, var(--map-warm) 14%, var(--panel));
   color: var(--warn);
   font-size: 12px;
@@ -202,12 +204,14 @@
   flex: 0 0 64px;
   height: 5px;
   border-radius: 999px;
+  corner-shape: round;
 }
 
 .map-tn-kinds {
   flex: 1;
   height: 5px;
   border-radius: 999px;
+  corner-shape: round;
 }
 
 .map-tn-folder,
@@ -241,6 +245,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--map-warm);
 }
 

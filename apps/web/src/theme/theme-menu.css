@@ -28,6 +28,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
+  corner-shape: round;
   background: conic-gradient(var(--accent) 0 50%, var(--text) 0);
   box-shadow:
     0 0 0 2px var(--panel),
@@ -87,6 +88,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
+  corner-shape: round;
   background: conic-gradient(var(--a) 0 50%, var(--b) 0);
   box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.35);
 }

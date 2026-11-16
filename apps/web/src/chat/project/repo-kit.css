@@ -54,6 +54,7 @@
   padding: 1px 5px;
   border: 2px solid var(--bg);
   border-radius: 999px;
+  corner-shape: round;
   background: var(--text);
   color: var(--bg);
   font-size: 12px;

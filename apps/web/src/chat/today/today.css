@@ -35,6 +35,7 @@
 .today-stats li {
   padding: 2px 9px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   color: var(--muted);
   font-size: 12.5px;
@@ -129,6 +130,7 @@ button.today-row:hover {
 .today-shim.pill {
   height: 20px;
   border-radius: 999px;
+  corner-shape: round;
 }
 
 .today-shim.dot {
@@ -136,6 +138,7 @@ button.today-row:hover {
   width: 20px;
   height: 20px;
   border-radius: 50%;
+  corner-shape: round;
 }
 
 .today-sk {

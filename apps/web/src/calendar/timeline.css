@@ -258,6 +258,7 @@
   padding: 0 7px;
   border: 1px dotted var(--warn);
   border-radius: 999px;
+  corner-shape: round;
   background: var(--panel);
   color: var(--warn);
   font-size: 12px;
@@ -282,6 +283,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--danger);
 }
 

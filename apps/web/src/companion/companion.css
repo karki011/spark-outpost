@@ -30,6 +30,7 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
+  corner-shape: round;
   background: none;
   cursor: grab;
   touch-action: none;
@@ -58,6 +59,7 @@
   inset: -3px;
   border: 2px solid var(--warn);
   border-radius: 50%;
+  corner-shape: round;
   pointer-events: none;
   animation: cmp-pulse 2.4s var(--out) infinite;
 }
@@ -112,6 +114,7 @@
   height: 12px;
   padding: 0 4px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--panel);
   box-shadow: 0 0 0 1px var(--line-strong);
   color: var(--muted);
@@ -132,6 +135,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accent);
 }
 
@@ -144,6 +148,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--danger);
   color: var(--panel);
   font-size: 12px;
@@ -170,6 +175,7 @@
   height: 20px;
   padding: 0 5px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--warn);
   color: var(--warn-ink);
   font-size: 12px;

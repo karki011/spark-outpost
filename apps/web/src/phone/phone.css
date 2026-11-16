@@ -76,6 +76,7 @@
   height: 8px;
   flex-shrink: 0;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--line-strong);
 }
 h2[data-status='on'] .ph-dot {

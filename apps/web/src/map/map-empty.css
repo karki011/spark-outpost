@@ -62,6 +62,7 @@
   width: 3px;
   height: 3px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--map-star);
   opacity: 0.35;
   animation: mh-twinkle 3.2s ease-in-out infinite;
@@ -79,6 +80,7 @@
   position: absolute;
   inset: 4px;
   border-radius: 50%;
+  corner-shape: round;
   box-shadow: 0 0 18px 4px var(--map-gold-soft);
 }
 

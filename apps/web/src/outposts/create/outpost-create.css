@@ -33,6 +33,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--raise);
   font-size: 12px;
   font-weight: 600;

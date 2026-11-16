@@ -12,6 +12,7 @@
   inset: -4px;
   z-index: -1;
   border-radius: 50%;
+  corner-shape: round;
   pointer-events: none;
   opacity: 0;
 }

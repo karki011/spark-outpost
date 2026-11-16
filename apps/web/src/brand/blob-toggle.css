@@ -234,6 +234,7 @@
   padding: 0 12px 0 4px;
   border: 1px solid var(--line);
   border-radius: 999px;
+  corner-shape: round;
   background: var(--panel);
 }
 .btog.btog-worded[data-on='true'] {

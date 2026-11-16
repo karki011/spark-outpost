@@ -80,6 +80,7 @@
   width: 84px;
   height: 84px;
   border-radius: 50%;
+  corner-shape: round;
 }
 
 .an-skel-rows {

@@ -38,6 +38,7 @@
   height: 5px;
   margin-top: -3px;
   border-radius: 50%;
+  corner-shape: round;
   background: color-mix(in srgb, var(--text) 10%, transparent);
 }
 .es-ball {
@@ -45,6 +46,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--warn);
   box-shadow: 0 0 10px color-mix(in srgb, var(--warn) 55%, transparent);
 }

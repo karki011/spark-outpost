@@ -15,6 +15,7 @@
 .chg-rev {
   padding: 0 6px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   font-size: 12px;
   font-weight: 400;

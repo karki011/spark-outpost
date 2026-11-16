@@ -26,8 +26,8 @@
   --scout-eye: #0c0f12;
   --qr-ink: #0c0f12;
   --qr-paper: #ffffff;
-  --r: 14px;
-  --r-sm: 8px;
+  --r: 16px;
+  --r-sm: 10px;
   --out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --spring: cubic-bezier(0.3, 1.4, 0.5, 1);
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -201,8 +201,8 @@ body {
   --switch-on-ink: #fff;
   --code: #f5f6f8;
   --scout-eye: #0c0f12;
-  --r: 14px;
-  --r-sm: 8px;
+  --r: 16px;
+  --r-sm: 10px;
   --out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --spring: cubic-bezier(0.3, 1.4, 0.5, 1);
   --c-claude: oklch(0.605 0.15 40);

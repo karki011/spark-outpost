@@ -16,6 +16,7 @@
   position: absolute;
   inset: -22px;
   border-radius: 50%;
+  corner-shape: round;
   background: radial-gradient(
     circle,
     color-mix(in srgb, var(--accent) 28%, transparent) 0%,
@@ -119,12 +120,14 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accent);
 }
 .tools-dot {
   width: 22px;
   height: 22px;
   border-radius: 50%;
+  corner-shape: round;
   border: 1.5px dashed var(--faint);
 }
 @media (prefers-reduced-motion: reduce) {

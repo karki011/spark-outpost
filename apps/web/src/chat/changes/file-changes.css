@@ -56,6 +56,7 @@ button.chf-toggle:hover .chf-p {
   flex-shrink: 0;
   padding: 0 6px;
   border-radius: 999px;
+  corner-shape: round;
   font-size: 12px;
   background: var(--accent-soft);
   color: var(--accent-text);

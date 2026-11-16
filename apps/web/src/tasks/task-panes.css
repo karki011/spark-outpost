@@ -5,6 +5,7 @@
     monospace;
   padding: 1px 8px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--accent-soft);
   color: var(--accent-text);
 }
@@ -88,6 +89,7 @@
   font-size: 12px;
   padding: 0 7px;
   border-radius: 999px;
+  corner-shape: round;
   border: 1px dashed var(--faint);
   color: var(--muted);
 }
@@ -230,6 +232,7 @@
   font-weight: 500;
   padding: 1px 8px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   color: var(--muted);
 }

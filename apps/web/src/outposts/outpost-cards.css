@@ -73,6 +73,7 @@
   place-items: center;
   margin-left: -4px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--panel);
 }
 
@@ -91,6 +92,7 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
+  corner-shape: round;
   border: 2px solid var(--panel);
   background: var(--panel);
   box-shadow: inset 0 0 0 1.5px var(--line-strong);
@@ -123,6 +125,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--warn);
   box-shadow: 0 0 0 2px var(--panel);
 }
@@ -151,6 +154,7 @@
   position: relative;
   padding: 2px 12px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--panel);
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--text);
@@ -176,6 +180,7 @@
   display: inline-grid;
   place-items: center;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--user);
   color: var(--accent-text);
   font-size: 13px;

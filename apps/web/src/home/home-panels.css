@@ -48,6 +48,7 @@
   margin: 0;
   padding: 3px 4px 3px 10px;
   border-radius: 999px;
+  corner-shape: round;
   background: color-mix(in srgb, var(--warn) 13%, transparent);
   color: var(--warn);
   font-size: 12.5px;

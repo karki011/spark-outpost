@@ -32,6 +32,7 @@ For every surface:
 - Text is never under 12px.
 - Controls are at least 28px on the Mac and 44px on touch. This is stricter than the 24px WCAG minimum the chat-screen browser test enforces ([ACCESSIBILITY.md](ACCESSIBILITY.md#focus-and-targets)).
 - Status is an icon plus a word, never colour alone, and each colour has one meaning.
+- Corners are squircles: `app/base.css` sets `corner-shape: squircle` on every element, and every circle or pill (`border-radius: 50%` or `999px`) adds `corner-shape: round` beside it. Browsers without `corner-shape` keep plain round corners.
 
 Decided where Apple and the kit differ (the owner's Apple review, October 2026):
 

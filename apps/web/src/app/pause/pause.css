@@ -24,6 +24,7 @@
 .spark-paused .btn {
   padding: 4px 11px;
   border-radius: 999px;
+  corner-shape: round;
   font-size: 12.5px;
 }
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {

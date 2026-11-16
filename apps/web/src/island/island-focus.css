@@ -58,6 +58,7 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--warn);
   color: var(--accent-ink);
   font-size: 15px;
@@ -211,6 +212,7 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--faint);
   cursor: pointer;
 }

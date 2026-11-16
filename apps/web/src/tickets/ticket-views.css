@@ -207,6 +207,7 @@
     padding: 0 11px;
     border: 1px solid var(--line);
     border-radius: 999px;
+    corner-shape: round;
     font-size: 12.5px;
     white-space: nowrap;
   }
@@ -239,6 +240,7 @@
     width: 84px;
     height: 28px;
     border-radius: 999px;
+    corner-shape: round;
   }
 }
 
