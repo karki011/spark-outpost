@@ -163,6 +163,24 @@ describe('autoJoinPlan', () => {
     expect(plan({ presence: { ...here, idleSeconds: 299 } })).toEqual({ join: standup });
   });
 
+  it('joins only a meeting you accepted, or your own with no invitees', () => {
+    expect(plan({ events: [{ ...standup, myStatus: 'accepted' }] })).toEqual({
+      join: { ...standup, myStatus: 'accepted' },
+    });
+    expect(plan({ events: [{ ...standup, myStatus: 'none' }] })).toEqual({
+      join: { ...standup, myStatus: 'none' },
+    });
+    for (const myStatus of ['tentative', 'pending'] as const) {
+      expect(plan({ events: [{ ...standup, myStatus }] })).toEqual({ skip: 'not-accepted' });
+    }
+    expect(plan({ events: [{ ...standup, myStatus: 'declined' }] })).toEqual({ skip: 'declined' });
+  });
+
+  it('still opens a tentative meeting you set to Join at start', () => {
+    const asked = { ...standup, myStatus: 'tentative' as const, joinAtStart: true };
+    expect(plan({ events: [asked], autoJoin: false })).toEqual({ join: asked });
+  });
+
   it('skips an all-day event', () => {
     const allDay = { ...standup, allDay: true };
     expect(plan({ events: [allDay] })).toEqual({ skip: 'all-day' });

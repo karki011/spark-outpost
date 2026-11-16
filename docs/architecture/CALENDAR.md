@@ -225,7 +225,7 @@ The first time a meeting's Remind me or Join line shows (one key per meeting, so
 
 Clicking the overlay, the card hanging from Scout or the island leaves the user's app in front ([Electron plan](ELECTRON_PLAN.md#step-3-packaging-and-updates)); without the `no-activate` addon a click makes Spark the front app.
 
-**Join meetings automatically** (off) adds a countdown at the start: "Joining <title> in 10 s" with **Cancel** and **Join now**, then the usual Join path. It skips, by rule (`autoJoinPlan()`): no allowed link; two or more joinable meetings at once; declined; dismissed; a hold; the screen locked or asleep or the user idle over 5 minutes; all-day; started more than 2 minutes ago; already joined. Each automatic join writes "Joined a meeting automatically." to the app log and leaves an island note "Joined <title> automatically". It never runs on a paired device.
+**Join meetings automatically** (off) adds a countdown at the start: "Joining <title> in 10 s" with **Cancel** and **Join now**, then the usual Join path. It skips, by rule (`autoJoinPlan()`): no allowed link; two or more joinable meetings at once; declined; not accepted (`not-accepted`: tentative or not answered; an event of the user's own with no invitees, `myStatus` `none`, counts as accepted, and Join at start, which the user picked, is not held to this); dismissed; a hold; the screen locked or asleep or the user idle over 5 minutes; all-day; started more than 2 minutes ago; already joined. Each automatic join writes "Joined a meeting automatically." to the app log and leaves an island note "Joined <title> automatically". It never runs on a paired device.
 
 ### Join at start
 

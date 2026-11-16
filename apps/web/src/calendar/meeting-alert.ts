@@ -79,6 +79,7 @@ export type AutoJoinSkip =
   | 'none'
   | 'clash'
   | 'declined'
+  | 'not-accepted'
   | 'dismissed'
   | 'late'
   | 'all-day'
@@ -111,6 +112,16 @@ function skipFor(event: CalendarEvent, input: AutoJoinInput): AutoJoinSkip | nul
   if (input.joined.has(event.key)) return 'joined';
   if (input.at - spanOf(event).start > AUTO_JOIN_LATE_MS) return 'late';
   return null;
+}
+
+function acceptedOrOwn(event: CalendarEvent): boolean {
+  return event.myStatus === 'accepted' || event.myStatus === 'none';
+}
+
+function autoSkipFor(event: CalendarEvent, input: AutoJoinInput): AutoJoinSkip | null {
+  const skip = skipFor(event, input);
+  if (skip) return skip;
+  return acceptedOrOwn(event) ? null : 'not-accepted';
 }
 
 function away(presence: Presence): boolean {
@@ -147,7 +158,7 @@ export function autoJoinPlan(input: AutoJoinInput): AutoJoinPlan {
     (event) => !input.joined.has(event.key) && !input.marks.get(event.key)?.dismissed,
   );
   if (open.length > 1) return { skip: 'clash' };
-  const verdicts = started.map((event) => ({ event, skip: skipFor(event, input) }));
+  const verdicts = started.map((event) => ({ event, skip: autoSkipFor(event, input) }));
   const ready = verdicts.filter((verdict) => verdict.skip === null);
   if (ready.length > 1) return { skip: 'clash' };
   const chosen = ready[0] ?? verdicts.at(-1);

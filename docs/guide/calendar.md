@@ -32,7 +32,7 @@ VoiceOver and keyboard users get focus (**⌃⌥⌘M**); a silent notification m
 
 **Bubble from Scout** hangs the same card from Scout; snoozes survive reloads. Reminders end 5 min in. Clashing meetings share one card. Focus blocks hold chimes.
 
-**Join meetings automatically** (off): cancellable 10-second countdown, never in clashes, holds or absence. **Join at start** opens one 20 s before its start despite holds or clashes; reminders offer **Don't open**.
+**Join meetings automatically** (off): joins accepted meetings after a 10-second countdown, not in clashes, holds or absence. **Join at start** opens one 20 s before its start despite holds or clashes; reminders offer **Don't open**.
 
 ## Let agents use it
 
