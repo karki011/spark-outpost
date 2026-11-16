@@ -318,6 +318,35 @@ test('meetings that start together share one card with a Join for each', async (
   await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeVisible();
 });
 
+test('while auto-join counts down the card offers only Join now and Cancel, on one row', async ({
+  page,
+}) => {
+  const plain = await standupPayload(page);
+  const payload = {
+    ...plain,
+    autoJoin: true,
+    countdown: {
+      eventKey: plain.events[0]!.key,
+      deadline: (await page.evaluate(() => Date.now())) + 8_000,
+    },
+  };
+  await openOverlay(page, payload);
+  const card = page.getByRole('alertdialog', { name: /^Meeting\. Standup starts in \d min$/ });
+  await expect(card.getByRole('status')).toContainText(/^Joining Standup in [1-8] s$/);
+  await expect.poll(() => landing(page)).toBe(0);
+  const row = card.locator('.mc-acts');
+  await expect(row.getByRole('button')).toHaveText(['Join now', 'Cancel', '···']);
+  await expect(card.getByRole('button', { name: /^Join Zoom/ })).toHaveCount(0);
+  await expect(card.getByRole('button', { name: /^Snooze/ })).toHaveCount(0);
+  await row.getByRole('button', { name: 'Join now' }).click({ force: true });
+  await row.getByRole('button', { name: 'Cancel' }).click({ force: true });
+  expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
+    { kind: 'join-now', key: payload.key, eventKey: null },
+    { kind: 'cancel-join', key: payload.key, eventKey: null },
+  ]);
+  await page.screenshot({ path: 'test-results/meeting-card/countdown.png' });
+});
+
 test('with reduced motion the card fades in without the drop', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openOverlay(page, await standupPayload(page));

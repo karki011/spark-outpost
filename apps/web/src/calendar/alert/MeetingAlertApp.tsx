@@ -162,18 +162,18 @@ function PlannedNote({ event, at }: { event: CalendarEvent; at: number }) {
 
 type Act = (kind: MeetingAlertAction['kind'], eventKey?: string | null) => void;
 
-function Countdown({ payload, at, act }: { payload: MeetingAlertPayload; at: number; act: Act }) {
+function countdownTarget(payload: MeetingAlertPayload): CalendarEvent | null {
   const countdown = payload.countdown;
-  const target = payload.events.find((event) => event.key === countdown?.eventKey);
-  if (!countdown || !target) return null;
+  return payload.events.find((event) => event.key === countdown?.eventKey) ?? null;
+}
+
+function Countdown({ payload, at }: { payload: MeetingAlertPayload; at: number }) {
+  const target = countdownTarget(payload);
+  if (!payload.countdown || !target) return null;
   return (
-    <div className="mc-status" role="status">
-      <span>
-        Joining {target.title} in {countdownSeconds(countdown.deadline, at)} s
-      </span>
-      <CardButton label="Cancel" onClick={() => act('cancel-join')} />
-      <CardButton primary label="Join now" onClick={() => act('join-now')} />
-    </div>
+    <p className="mc-status" role="status">
+      Joining {target.title} in {countdownSeconds(payload.countdown.deadline, at)} s
+    </p>
   );
 }
 
@@ -298,6 +298,7 @@ export function MeetingAlertApp() {
   const [first] = payload.events;
   if (!first) return null;
   const many = payload.events.length > 1;
+  const counting = countdownTarget(payload) !== null;
   const onKeyDown = (key: KeyboardEvent) => {
     if (key.key === 'Escape') {
       key.preventDefault();
@@ -362,27 +363,36 @@ export function MeetingAlertApp() {
               status={
                 <>
                   {!many && <PlannedNote event={first} at={at} />}
-                  <Countdown payload={payload} at={at} act={act} />
+                  <Countdown payload={payload} at={at} />
                 </>
               }
               more={[
-                ...(many ? [] : earlyJoin(first, at, payload.joinLeadMs, act)),
+                ...(many || counting ? [] : earlyJoin(first, at, payload.joinLeadMs, act)),
                 { label: 'Open in Today', onAct: () => act('open', first.key) },
               ]}
               closeLabel={`Dismiss ${alertTitle(payload.events, at)}`}
               onClose={() => act('dismiss')}
               hint={<span id="ma-hint">Esc dismisses · ⌘J joins · ⌃⌥⌘M focuses this card</span>}
             >
-              {!many && (
-                <LeadAction
-                  event={first}
-                  at={at}
-                  leadMs={payload.joinLeadMs}
-                  autoJoin={payload.autoJoin}
-                  act={act}
-                />
+              {counting ? (
+                <>
+                  <CardButton primary label="Join now" onClick={() => act('join-now')} />
+                  <CardButton label="Cancel" onClick={() => act('cancel-join')} />
+                </>
+              ) : (
+                <>
+                  {!many && (
+                    <LeadAction
+                      event={first}
+                      at={at}
+                      leadMs={payload.joinLeadMs}
+                      autoJoin={payload.autoJoin}
+                      act={act}
+                    />
+                  )}
+                  <SnoozeButton events={payload.events} at={at} act={act} />
+                </>
               )}
-              <SnoozeButton events={payload.events} at={at} act={act} />
             </MeetingCardBody>
           </div>
         </div>

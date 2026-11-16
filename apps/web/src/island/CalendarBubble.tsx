@@ -51,7 +51,7 @@ function JoinAction({ event, calendar }: { event: CalendarEvent; calendar: Islan
 function AutoJoin({ event, calendar }: { event: CalendarEvent; calendar: IslandCalendar }) {
   const countdown = calendar.countdown;
   const [now, setNow] = useState(Date.now);
-  const active = countdown?.eventKey === event.key;
+  const active = countingDown(event, calendar);
   useEffect(() => {
     if (!active) return;
     const timer = setInterval(() => setNow(Date.now()), 1_000);
@@ -59,12 +59,14 @@ function AutoJoin({ event, calendar }: { event: CalendarEvent; calendar: IslandC
   }, [active]);
   if (!active || !countdown) return null;
   return (
-    <div className="mc-status" role="status">
-      <span>Joining in {countdownSeconds(countdown.deadline, now)} s</span>
-      <CardButton label="Cancel" onClick={calendar.onCancelJoin} />
-      <CardButton primary label="Join now" onClick={calendar.onJoinNow} />
-    </div>
+    <p className="mc-status" role="status">
+      Joining in {countdownSeconds(countdown.deadline, now)} s
+    </p>
   );
+}
+
+function countingDown(event: CalendarEvent, calendar: IslandCalendar): boolean {
+  return calendar.countdown?.eventKey === event.key;
 }
 
 function LeadAction({ event, calendar }: { event: CalendarEvent; calendar: IslandCalendar }) {
@@ -141,6 +143,7 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
         }
         more={[
           ...(lead !== 'join' &&
+          !countingDown(event, calendar) &&
           event.link &&
           joinOpen(spanOf(event), calendar.at, calendar.joinLeadMs)
             ? [
@@ -165,15 +168,24 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
         closeLabel={`Dismiss the nudge for ${event.title}`}
         onClose={dismiss}
       >
-        <LeadAction event={event} calendar={calendar} />
-        <CardButton
-          label={beforeStart ? 'Snooze until start' : 'Snooze 1 min'}
-          onClick={() =>
-            leave(() =>
-              beforeStart ? calendar.onSnooze(event, true) : calendar.onSnoozeAlert(event),
-            )
-          }
-        />
+        {countingDown(event, calendar) ? (
+          <>
+            <CardButton primary label="Join now" onClick={calendar.onJoinNow} />
+            <CardButton label="Cancel" onClick={calendar.onCancelJoin} />
+          </>
+        ) : (
+          <>
+            <LeadAction event={event} calendar={calendar} />
+            <CardButton
+              label={beforeStart ? 'Snooze until start' : 'Snooze 1 min'}
+              onClick={() =>
+                leave(() =>
+                  beforeStart ? calendar.onSnooze(event, true) : calendar.onSnoozeAlert(event),
+                )
+              }
+            />
+          </>
+        )}
       </MeetingCardBody>
     </div>
   );
