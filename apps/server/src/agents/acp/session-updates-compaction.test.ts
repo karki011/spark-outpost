@@ -1,7 +1,7 @@
 import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { describe, expect, it } from 'vitest';
 import type { ProviderOutput } from '../../providers/provider.ts';
-import { COMPACTED_LINE, COMPACTION_FAILED_LINE } from './compaction-lines.ts';
+import { COMPACTED_LINE, COMPACTING_STEP, COMPACTION_FAILED_LINE } from './compaction-lines.ts';
 import { createUpdateMapper } from './session-updates.ts';
 
 const compaction = (compactionId: string, status: string, error?: string): SessionUpdate => ({
@@ -33,7 +33,7 @@ describe('ACP compaction updates', () => {
       summaryChunk('c1', 'The user asked for a parser.'),
       compaction('c1', 'completed'),
     ]);
-    expect(lines(outputs)).toEqual([COMPACTED_LINE]);
+    expect(lines(outputs)).toEqual([COMPACTING_STEP, COMPACTED_LINE]);
     expect(outputs.some((output) => output.kind === 'text_delta')).toBe(false);
     expect(mapper.repliedWithText()).toBe(false);
     expect(mapper.didWork()).toBe(true);
@@ -63,6 +63,22 @@ describe('ACP compaction updates', () => {
       compaction('c3', 'paused'),
     ]);
     expect(lines(outputs)).toEqual([COMPACTION_FAILED_LINE]);
+  });
+
+  it('keeps a Compacting step open from in progress until the compaction ends', () => {
+    const { outputs } = mapAll([
+      { sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'hmm' } },
+      compaction('c1', 'in_progress'),
+      compaction('c1', 'in_progress'),
+      compaction('c1', 'cancelled'),
+      compaction('c1', 'in_progress'),
+    ]);
+    expect(outputs.filter((output) => output.kind.startsWith('step_'))).toEqual([
+      { kind: 'step_started', name: 'Thinking' },
+      { kind: 'step_finished', name: 'Thinking' },
+      { kind: 'step_started', name: COMPACTING_STEP },
+      { kind: 'step_finished', name: COMPACTING_STEP },
+    ]);
   });
 
   it('counts only a completed compaction as work', () => {

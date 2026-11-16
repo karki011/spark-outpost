@@ -10,7 +10,7 @@ About 2 minutes.
 
 ## See what's happening
 
-1. The working line shows the step and time.
+1. The working line shows the step and time; **Thinking** expands.
 2. Answered cards and flags stay; waiting cards sit last.
 3. Summaries separate commands **passed** from tools **done**.
 4. Browser, web, page and Mac steps get rows.
@@ -19,7 +19,7 @@ About 2 minutes.
 7. A done to-do folds.
 8. Sidebar blobs show the **Agent TV** team.
 9. **View agents** opens **Work**; over four become clickable faces.
-10. **Message** opens that chat’s composer; **Ask lead to redirect** drafts in that chat.
+10. **Message** opens that chat’s composer; **Ask lead to redirect** drafts there.
 
 **Open in terminal** shows failures in a [dock tab](terminals.md#watch-an-agents-command).
 

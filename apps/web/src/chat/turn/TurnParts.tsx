@@ -1,12 +1,14 @@
 import './turn.css';
-import type { ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type { Run } from '@spark-outpost/contracts';
 import { AgentBlob } from '../../brand/AgentBlob.tsx';
+import { ChevronIcon } from '../../ui/icons.tsx';
 import { formatTokens } from '../composer/model-options.ts';
 import { providerName } from '../provider-name.ts';
 import { Spinner } from '../rows/RowStatus.tsx';
 import { useLiveHead } from '../status/status-context.ts';
 import { clockText } from '../status/status-text.ts';
+import { thoughtText } from '../thought-text.ts';
 import { useNow } from '../status/use-status-line.ts';
 import type { LeadStep } from './live-label.ts';
 
@@ -34,27 +36,64 @@ function sinceText(now: number, since: number | null): string | null {
   return since !== null && Number.isFinite(since) ? clockText(Math.max(0, now - since)) : null;
 }
 
+function WorkingNow({ step, clock }: { step: LeadStep; clock: string | null }) {
+  return (
+    <>
+      <b>{step.label}</b>
+      {clock && <span className="turn-working-meta"> · {clock}</span>}
+    </>
+  );
+}
+
 export function WorkingLine({ run, step }: { run: Run; step: LeadStep }) {
   const headRef = useLiveHead(run.id);
   const now = useNow(true);
+  const [showThought, setShowThought] = useState(false);
+  const thoughtId = useId();
   const stepClock = sinceText(now, step.since);
   const turnClock = sinceText(now, Date.parse(run.startedAt ?? run.createdAt));
   const tokens = run.usage?.tokens?.total ?? null;
+  const thought = step.thought;
   return (
-    <div className="turn-working" ref={headRef}>
-      <Spinner />
-      <span className="turn-working-now">
-        <b>{step.label}</b>
-        {stepClock && <span className="turn-working-meta"> · {stepClock}</span>}
-      </span>
-      <span className="turn-working-turn">
-        {turnClock && <> · Turn {turnClock}</>}
-        {tokens !== null && tokens > 0 && <> · {formatTokens(tokens)} tokens</>}
-      </span>
-      <span className="turn-working-stop">
-        <kbd>Esc</kbd> to stop
-      </span>
-    </div>
+    <>
+      <div className="turn-working" ref={headRef}>
+        <Spinner />
+        {thought ? (
+          <button
+            type="button"
+            className="turn-working-now turn-working-toggle"
+            aria-expanded={showThought}
+            aria-controls={thoughtId}
+            onClick={() => setShowThought(!showThought)}
+          >
+            <WorkingNow step={step} clock={stepClock} />
+            <ChevronIcon />
+          </button>
+        ) : (
+          <span className="turn-working-now">
+            <WorkingNow step={step} clock={stepClock} />
+          </span>
+        )}
+        <span className="turn-working-turn">
+          {turnClock && <> · Turn {turnClock}</>}
+          {tokens !== null && tokens > 0 && <> · {formatTokens(tokens)} tokens</>}
+        </span>
+        <span className="turn-working-stop">
+          <kbd>Esc</kbd> to stop
+        </span>
+      </div>
+      {thought && showThought && (
+        <div
+          id={thoughtId}
+          className="step-thought turn-working-thought"
+          role="group"
+          aria-label="Thinking"
+          tabIndex={0}
+        >
+          {thoughtText(thought)}
+        </div>
+      )}
+    </>
   );
 }
 
