@@ -15,7 +15,7 @@ summary: What changed in recent releases and what to do next.
 | Browser: address at top, one chat per tab     | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).   |
 | Context rail: full height; **Tools** in **+** | [See a chat's context](context-rail.md).                       |
 | Remote control: side panel, sections fold     | [Use your phone](use-your-phone.md).                           |
-| Wider user guide pages                        | Nothing to do.                                                 |
+| Wider Home, Analytics, Remote control, guide  | Nothing to do.                                                 |
 | Smoother squircle corners on the Mac          | Nothing to do.                                                 |
 | Fewer Settings pages                          | [Settings](settings.md).                                       |
 | Left bar **More** menu                        | [Pause Spark](pause-spark.md).                                 |
