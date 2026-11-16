@@ -106,6 +106,7 @@ async function standupPayload(page: Page): Promise<MeetingAlertPayload> {
     calendars: { [standup.calendarKey]: 'Spark Work' },
     countdown: null,
     joinLeadMs: 10 * 60_000,
+    autoJoin: false,
     notice: { title: 'Standup', body: 'Zoom' },
   };
 }
@@ -205,6 +206,18 @@ test('the hanging card offers Join, Snooze, Join at start and Dismiss, and Esc d
 
   await page.evaluate(() => (window as unknown as AlertWindow).alertFeed.leave());
   await expect(card).toBeHidden();
+});
+
+test('with Join meetings automatically on, Join at start is off and says why', async ({ page }) => {
+  const payload = { ...(await standupPayload(page)), autoJoin: true };
+  await openOverlay(page, payload);
+  const card = page.getByRole('alertdialog', { name: /^Meeting\. Standup starts in \d min$/ });
+  const button = card.getByRole('button', { name: 'Join at start' });
+  await expect(button).toHaveAttribute('aria-disabled', 'true');
+  await expect(button).toHaveAttribute('title', /Join meetings automatically is on/);
+  await expect(button).toHaveAccessibleDescription(/Join meetings automatically is on/);
+  await button.click({ force: true });
+  expect(await alertWindow(page, (window) => window.alertActs)).toEqual([]);
 });
 
 test("a card for a meeting set to join at start says when it opens and offers Don't open", async ({

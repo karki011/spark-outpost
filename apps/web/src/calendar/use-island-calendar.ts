@@ -87,6 +87,7 @@ export interface IslandCalendar {
   calendarName: (event: CalendarEvent) => string;
   hopKeys: string[];
   hopQuiet: boolean;
+  autoJoin: boolean;
   onOpenEvent: (eventKey: string) => void;
   onChoose: (line: CalendarLine) => void;
   onCapture: (line: CalendarLine) => void;
@@ -314,6 +315,7 @@ export function useIslandCalendar(
     calendarName: (event) => names.get(event.calendarKey) ?? 'Calendar',
     hopKeys: hopKeys(line),
     hopQuiet: underAlert,
+    autoJoin: ready ? (status.data?.settings.autoJoin ?? false) : false,
     countdown: autoJoin.countdown,
     joinLeadMs: leadMs,
     onCancelJoin: autoJoin.cancelJoin,

@@ -14,6 +14,7 @@ import { useReducedMotion } from '../../ui/motion.ts';
 import { clock } from '../calendar-format.ts';
 import { joinLabel } from '../meeting-card.ts';
 import { canAskJoinAtStart } from '../join-at-start.ts';
+import { JoinAtStartButton } from '../JoinAtStartButton.tsx';
 import { openJoin } from '../today-model.ts';
 import {
   alertDetail,
@@ -101,7 +102,17 @@ function JoinFor({
   );
 }
 
-function PlannedOpen({ event, at, act }: { event: CalendarEvent; at: number; act: Act }) {
+function PlannedOpen({
+  event,
+  at,
+  autoJoin,
+  act,
+}: {
+  event: CalendarEvent;
+  at: number;
+  autoJoin: boolean;
+  act: Act;
+}) {
   const start = spanOf(event).start;
   if (event.joinAtStart && at < start) {
     return (
@@ -120,9 +131,12 @@ function PlannedOpen({ event, at, act }: { event: CalendarEvent; at: number; act
   }
   if (!canAskJoinAtStart(event, at)) return null;
   return (
-    <button type="button" className="ma-btn" onClick={() => act('join-at-start', event.key)}>
-      Join at start
-    </button>
+    <JoinAtStartButton
+      title={event.title}
+      className="ma-btn"
+      autoJoin={autoJoin}
+      onAsk={() => act('join-at-start', event.key)}
+    />
   );
 }
 
@@ -284,7 +298,7 @@ export function MeetingAlertApp() {
                   <button type="button" className="ma-btn" onClick={() => act('snooze')}>
                     Snooze 1 min
                   </button>
-                  <PlannedOpen event={first} at={at} act={act} />
+                  <PlannedOpen event={first} at={at} autoJoin={payload.autoJoin} act={act} />
                   <button type="button" className="ma-btn" onClick={() => act('dismiss')}>
                     Dismiss
                   </button>

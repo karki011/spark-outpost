@@ -33,6 +33,7 @@ function calendar(overrides: Partial<IslandCalendar> = {}): IslandCalendar {
     calendarName: () => 'Spark Work',
     hopKeys: [],
     hopQuiet: false,
+    autoJoin: false,
     onOpenEvent: vi.fn(),
     onChoose: vi.fn(),
     onCapture: vi.fn(),

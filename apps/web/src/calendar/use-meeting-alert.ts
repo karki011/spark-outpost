@@ -199,6 +199,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
         ),
         countdown,
         joinLeadMs: leadMs,
+        autoJoin,
         notice: alertNotice(alert.events),
       }
     : null;

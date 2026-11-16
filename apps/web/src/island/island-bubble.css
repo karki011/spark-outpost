@@ -305,3 +305,8 @@
 .isl-root[data-rm] .isl-thread {
   animation: none;
 }
+
+.isl-meet .isl-calline-act[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
