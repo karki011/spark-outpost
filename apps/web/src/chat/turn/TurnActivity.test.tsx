@@ -109,3 +109,39 @@ it.each([true, false])(
     expect(screen.getByRole('button', { name: 'View agents' })).toBeTruthy();
   },
 );
+
+it('opens the streaming thought from the working line and follows new text', () => {
+  const props = { run, subagents: [], working: true, waiting: false, background: null };
+  const { rerender } = render(
+    <TurnActivity {...props} lead={{ label: 'Thinking', since: null, thought: 'Check the' }} />,
+  );
+  const toggle = screen.getByRole('button', { name: /^Thinking/ });
+  expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  expect(screen.queryByRole('group', { name: 'Thinking' })).toBeNull();
+  fireEvent.click(toggle);
+  expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  expect(screen.getByRole('group', { name: 'Thinking' }).textContent).toBe('Check the');
+  rerender(
+    <TurnActivity
+      {...props}
+      lead={{ label: 'Thinking', since: null, thought: 'Check the tests' }}
+    />,
+  );
+  expect(screen.getByRole('group', { name: 'Thinking' }).textContent).toBe('Check the tests');
+  rerender(<TurnActivity {...props} lead={{ label: 'Read a.ts', since: null }} />);
+  expect(screen.queryByRole('button', { name: /^Read/ })).toBeNull();
+  expect(screen.queryByRole('group', { name: 'Thinking' })).toBeNull();
+});
+
+it('keeps focus on the working line when the focused thought goes away', () => {
+  const props = { run, subagents: [], working: true, waiting: false, background: null };
+  const { container, rerender } = render(
+    <TurnActivity {...props} lead={{ label: 'Thinking', since: null, thought: 'Check' }} />,
+  );
+  const toggle = screen.getByRole('button', { name: /^Thinking/ });
+  toggle.focus();
+  fireEvent.click(toggle);
+  screen.getByRole('group', { name: 'Thinking' }).focus();
+  rerender(<TurnActivity {...props} lead={{ label: 'Read a.ts', since: null }} />);
+  expect(document.activeElement).toBe(container.querySelector('.turn-working'));
+});

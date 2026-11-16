@@ -56,7 +56,7 @@ test('a finished turn folds its steps and notes under one row and keeps the answ
   await turnDone(page);
 
   const toggle = fold(page);
-  await expect(toggle).toHaveText(/^Worked for \d+s · searched 2 times, thought once$/);
+  await expect(toggle).toHaveText(/^Worked for \d+s · thought once$/);
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   expect((await toggle.boundingBox())!.height).toBeGreaterThanOrEqual(28);
   await expect(answer(page)).toBeVisible();

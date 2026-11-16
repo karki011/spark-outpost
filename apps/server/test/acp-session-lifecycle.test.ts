@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
-import { COMPACTED_LINE } from '../src/agents/acp/compaction-lines.ts';
+import { COMPACTED_LINE, COMPACTING_STEP } from '../src/agents/acp/compaction-lines.ts';
 import type { ProtocolEntry } from '../src/audit/protocol-entry.ts';
 import type { ProviderOutput, SessionTarget } from '../src/providers/provider.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
@@ -176,6 +176,7 @@ describe('ACP compaction updates from the agent', { timeout: 20_000 }, () => {
     const { outputs, text, error } = await run(fake.provider, '#compacting');
     expect(error).toBeNull();
     expect(steps(outputs).filter((name) => name === COMPACTED_LINE)).toHaveLength(1);
+    expect(steps(outputs).filter((name) => name === COMPACTING_STEP)).toHaveLength(1);
     expect(text).toBe('Carried on after compacting.');
   });
 });

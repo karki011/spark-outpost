@@ -19,7 +19,7 @@ import { createFocusTracker } from './file-focus.ts';
 import { finishedToolDiffs, newToolDiffs, noteToolDiffs, type ToolDiffs } from './tool-diffs.ts';
 import { messagePhase } from './message-phase.ts';
 import { artifactLinks } from './artifact-links.ts';
-import { COMPACTED_LINE, createCompactionLines } from './compaction-lines.ts';
+import { COMPACTED_LINE, compactionOutputs, createCompactionLines } from './compaction-lines.ts';
 import {
   awaitsAddress,
   describeTool,
@@ -444,9 +444,10 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
         case 'notice':
           return note(`${noticeLabel(update.severity)}: ${update.title}`);
         case 'compaction_update': {
-          const line = compactionLine(update);
-          if (line === COMPACTED_LINE) worked = true;
-          return line ? note(line) : [];
+          const seen = compactionLine(update);
+          if (seen.line === COMPACTED_LINE) worked = true;
+          const outputs = compactionOutputs(seen);
+          return outputs.length > 0 ? [...stopThinking(), ...outputs] : [];
         }
         case 'available_commands_update':
           return [{ kind: 'commands', commands: agentCommands(update.availableCommands) }];
