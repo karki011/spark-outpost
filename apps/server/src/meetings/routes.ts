@@ -10,7 +10,9 @@ import {
   meetingNotesVersion,
   meetingPatchSchema,
   startMeetingRequestSchema,
+  type Meeting,
   type MeetingDetail,
+  type StartMeetingRequest,
   type MeetingLinesPage,
 } from '@spark-outpost/contracts';
 import { paramId, parseBody, parseQuery } from '../api/validation.ts';
@@ -87,27 +89,39 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
     res.status(201).json(await detail(meeting.id));
   });
 
+  async function joinRecording(recording: Meeting, eventKey: string): Promise<MeetingJoinNotes> {
+    if (recording.eventKey !== eventKey) {
+      return { detail: null, problem: stillRecording(recording.title) };
+    }
+    await meetings.started();
+    const still = await getMeeting(db, workspaceId, recording.id);
+    if (still?.state === 'recording') return { detail: await detail(recording.id), problem: null };
+    return { detail: null, problem: 'Recording didn’t start. Try Take notes.' };
+  }
+
+  async function startForJoin(request: StartMeetingRequest, eventKey: string) {
+    try {
+      return { detail: await detail((await meetings.start(request)).id), problem: null };
+    } catch (error) {
+      if (!(error instanceof MeetingError)) throw error;
+      const winner = error.status === 409 ? await recordingMeeting(db, workspaceId) : null;
+      if (winner) return joinRecording(winner, eventKey);
+      return { detail: null, problem: error.message.slice(0, 500) };
+    }
+  }
+
   router.post('/meetings/join-notes', async (req, res) => {
     const request = parseBody(startMeetingRequestSchema, req);
     const { settings } = await calendarConnection(db, workspaceId);
-    const answer: MeetingJoinNotes = { detail: null, problem: null };
-    const recording = request.eventKey ? await recordingMeeting(db, workspaceId) : null;
-    if (settings.notesOnJoin && recording && recording.eventKey === request.eventKey) {
-      await meetings.started();
-      const still = await getMeeting(db, workspaceId, recording.id);
-      if (still?.state === 'recording') answer.detail = await detail(recording.id);
-      else answer.problem = 'Recording didn’t start. Try Take notes.';
-    } else if (settings.notesOnJoin && recording) {
-      answer.problem = stillRecording(recording.title);
-    } else if (settings.notesOnJoin && request.eventKey) {
-      try {
-        answer.detail = await detail((await meetings.start(request)).id);
-      } catch (error) {
-        if (!(error instanceof MeetingError)) throw error;
-        answer.problem = error.message.slice(0, 500);
-      }
+    const eventKey = request.eventKey;
+    if (!settings.notesOnJoin || !eventKey) {
+      res.json({ detail: null, problem: null } satisfies MeetingJoinNotes);
+      return;
     }
-    res.json(answer);
+    const recording = await recordingMeeting(db, workspaceId);
+    res.json(
+      recording ? await joinRecording(recording, eventKey) : await startForJoin(request, eventKey),
+    );
   });
 
   router.get('/meetings/:id', async (req, res) => {

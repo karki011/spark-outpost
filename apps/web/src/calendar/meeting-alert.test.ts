@@ -276,4 +276,11 @@ describe('autoJoinCovers', () => {
     const soon = event('Design review', at(10, 5), at(10, 30), { link: link('zoom') });
     expect(autoJoinCovers(standup, { ...outlook, upcoming: [standup, soon] })).toBe(false);
   });
+
+  it('leaves a meeting to Join at start when another one opens before its countdown ends', () => {
+    const opensDuringCountdown = event('Retro', at(10, 10, 5), at(10, 40), { link: link('zoom') });
+    expect(autoJoinCovers(standup, { ...outlook, upcoming: [standup, opensDuringCountdown] })).toBe(
+      false,
+    );
+  });
 });

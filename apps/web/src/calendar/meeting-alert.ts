@@ -133,7 +133,9 @@ export function autoJoinCovers(event: CalendarEvent, outlook: AutoJoinOutlook): 
   if (!outlook.autoJoin || !acceptedOrOwn(event)) return false;
   const start = spanOf(event).start;
   if (outlook.holdUntil !== null && outlook.holdUntil > start) return false;
-  return joinableMeetings(outlook.upcoming, start, outlook.joinLeadMs).length <= 1;
+  return [start, start + AUTO_JOIN_COUNTDOWN_MS].every(
+    (at) => joinableMeetings(outlook.upcoming, at, outlook.joinLeadMs).length <= 1,
+  );
 }
 
 function autoSkipFor(event: CalendarEvent, input: AutoJoinInput): AutoJoinSkip | null {

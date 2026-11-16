@@ -195,6 +195,54 @@ describe('taking notes when the user joins', () => {
     expect(two.body.problem).toEqual(expect.any(String));
   });
 
+  it('gives two joins of the same meeting that start together one recording', async () => {
+    await updateSettings(t.db, t.workspaceId, { notesOnJoin: true });
+    let inserts = 0;
+    let secondInserted: () => void = () => undefined;
+    const second = new Promise<void>((resolve) => {
+      secondInserted = resolve;
+    });
+    const db = new Proxy(t.db, {
+      get(target, prop) {
+        const value: unknown = Reflect.get(target, prop, target);
+        if (prop !== 'query' || typeof value !== 'function') {
+          return typeof value === 'function' ? value.bind(target) : value;
+        }
+        return async (text: string, params?: unknown[]) => {
+          if (!text.startsWith('INSERT INTO meetings')) return value.call(target, text, params);
+          inserts += 1;
+          if (inserts === 1) await second;
+          const result: unknown = await value.call(target, text, params);
+          if (inserts === 2) secondInserted();
+          return result;
+        };
+      },
+    });
+    const started: string[] = [];
+    const meetings = createMeetingService({
+      db,
+      workspaceId: t.workspaceId,
+      source: {
+        state: () => ({ available: true, reason: null }),
+        start: async (meetingId) => {
+          started.push(meetingId);
+        },
+        stop: async () => undefined,
+      },
+      publish: () => undefined,
+    });
+    const client = localClient(createApp({ ...testAppOptions(t), meetings }));
+    const [one, two] = await Promise.all([
+      client.send('post', '/api/meetings/join-notes', EVENT).expect(200),
+      client.send('post', '/api/meetings/join-notes', EVENT).expect(200),
+    ]);
+    expect(inserts).toBe(2);
+    expect(one.body.problem).toBeNull();
+    expect(two.body.problem).toBeNull();
+    expect(one.body.detail.meeting.id).toBe(two.body.detail.meeting.id);
+    expect(started).toEqual([one.body.detail.meeting.id]);
+  });
+
   it('starts nothing for a second join while one meeting records', async () => {
     await updateSettings(t.db, t.workspaceId, { notesOnJoin: true });
     const { client, started } = setup();
