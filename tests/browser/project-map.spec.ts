@@ -109,9 +109,12 @@ test('search flies to a file; hovering shows its details and clicking opens a re
   await findFile(page, 'ticket-model.ts', /ticket-model\.ts/);
   await expect(live(page)).toContainText('Found apps/web/src/tickets/ticket-model.ts');
   const { x, y } = await stageCentre(page);
-  await page.mouse.move(x, y);
   const tip = page.getByRole('tooltip');
-  await expect(tip).toContainText('apps/web/src/tickets/ticket-model.ts');
+  await expect(async () => {
+    await page.mouse.move(x - 40, y - 40);
+    await page.mouse.move(x, y);
+    await expect(tip).toContainText('apps/web/src/tickets/ticket-model.ts', { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
   await expect(tip).toContainText(/files? depends? on this/);
   await expect(tip).toContainText('Feature · Tickets · 0.92');
   await expect(tip).toContainText(

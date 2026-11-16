@@ -57,10 +57,12 @@ async function openCard(page: Page) {
 async function addGoogle(page: Page) {
   const popup = page.waitForEvent('popup');
   const empty = card(page).getByRole('button', { name: 'Sign in with Google' });
+  const add = card(page).getByRole('button', { name: 'Add calendar' });
+  await expect(empty.or(add).first()).toBeVisible();
   if (await empty.isVisible()) {
     await empty.click();
   } else {
-    await card(page).getByRole('button', { name: 'Add calendar' }).click();
+    await add.click();
     await page.getByRole('menuitem', { name: 'Google Calendar' }).click();
   }
   const signIn = await popup;
