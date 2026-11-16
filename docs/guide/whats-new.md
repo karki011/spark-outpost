@@ -20,6 +20,7 @@ summary: What changed in recent releases and what to do next.
 | **Let Spark build one for you**; new empty tabs | [Build with an agent](build-with-an-agent.md).                 |
 | Smoother squircle corners on the Mac            | Nothing to do.                                                 |
 | Fewer Settings pages                            | [Settings](settings.md).                                       |
+| Sidebar hide no longer freezes                  | Nothing to do.                                                 |
 | Left bar **More** menu                          | [Pause Spark](pause-spark.md).                                 |
 
 ## Early November 2026

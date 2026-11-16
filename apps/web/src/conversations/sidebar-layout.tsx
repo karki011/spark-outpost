@@ -130,21 +130,29 @@ function takeSwapFocus(button: HTMLButtonElement | null): void {
   button.focus({ preventScroll: true });
 }
 
-function useCrampedChat(collapsed: boolean, width: number | null, onChange: () => void) {
+function sideInLayout(): number {
+  const side = document.querySelector<HTMLElement>('.view > nav.side');
+  if (!side) return 0;
+  const position = getComputedStyle(side).position;
+  if (position === 'absolute' || position === 'fixed') return 0;
+  return side.getBoundingClientRect().width;
+}
+
+function useCrampedChat(width: number | null, onChange: () => void) {
   const [cramped, setCramped] = useState(false);
   const rooms = useRef(new Map<string, number>());
   const pending = useRef(false);
-  const latest = useRef({ collapsed, width, cramped, onChange });
+  const latest = useRef({ width, cramped, onChange });
   useLayoutEffect(() => {
-    latest.current = { collapsed, width, cramped, onChange };
+    latest.current = { width, cramped, onChange };
   });
   const decide = useCallback(() => {
     pending.current = false;
     const now = latest.current;
     const next = floatsSidebar({
       rooms: [...rooms.current.values()],
+      sideInLayout: sideInLayout(),
       sideWidth: dockedSideWidth(now.width, SIDEBAR_DEFAULT_WIDTH, window.innerWidth),
-      docked: !now.cramped && !now.collapsed,
       floating: now.cramped,
     });
     if (next === now.cramped) return;
@@ -195,7 +203,7 @@ export function useSidebarLayoutState(attention: boolean, onBrowser: boolean): S
   const [width, setWidthState] = useState(readWidth);
   const narrow = usePhone();
   const closeDrawer = useCallback(() => setDrawer(false), []);
-  const { cramped, reportRoom } = useCrampedChat(collapsed, width, closeDrawer);
+  const { cramped, reportRoom } = useCrampedChat(width, closeDrawer);
   const floating = narrow || cramped;
   useEdgeSwipe(narrow, drawer, setDrawer);
   useEscapeCloses(cramped && !narrow && drawer, closeDrawer);
