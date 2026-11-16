@@ -4,6 +4,10 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.10
+
+- Hiding or showing the chat list beside a wide Work panel or Browser pane no longer makes the window flicker and stop responding.
+
 ## 0.1.0-beta.9
 
 - **Home** is simpler: a headline with your next meeting, the message box, **Needs you** only when something waits, Slack mentions, a **Working set** of running and finished chats, the **Brief** and the week recap.
