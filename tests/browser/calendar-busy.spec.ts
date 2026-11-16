@@ -215,6 +215,8 @@ test('ended meetings are dimmed everywhere and ongoing ones stay full strength',
   await page.setViewportSize({ width: 1440, height: 1400 });
   await openToday(page);
   const chip = (title: string) => cell(page).locator('.mo-ev', { hasText: title });
+  const more = cell(page).locator('.mo-more');
+  if (await more.count()) await more.hover();
   await expect(chip('Earlier sync')).toHaveAttribute('data-ended', 'true');
   await expect(chip('Ongoing review')).not.toHaveAttribute('data-ended');
   const card = (title: string) =>
