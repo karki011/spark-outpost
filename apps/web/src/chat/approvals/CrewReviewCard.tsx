@@ -6,6 +6,7 @@ import { XIcon } from '../../ui/icons.tsx';
 import {
   crewReviewKind,
   crewReviewName,
+  endCrewReview,
   useCrewReviewRequest,
   type CrewReviewAction,
 } from './crew-review.ts';
@@ -107,7 +108,10 @@ export function CrewReviewCard({ approval, agent, onDecided }: CrewReviewCardPro
           agent={agent}
           name={name}
           onDecided={onDecided}
-          onClose={() => setOpen(false)}
+          onClose={() => {
+            endCrewReview(approval.id);
+            setOpen(false);
+          }}
         />
       )}
     </div>

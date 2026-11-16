@@ -131,6 +131,14 @@ function reviewGroup(name: string, question: RegExp) {
 }
 
 describe('the card for a change to a Spark', () => {
+  it('calls new files for a Spark that exists Spark changes, never a new Spark', () => {
+    const skillOnly: CrewEditAction = { ...sparkEdit, files: [sparkEdit.files[0]!] };
+    show(card(skillOnly, 'Change the Scout Spark?'));
+    expect(screen.getByRole('group', { name: /Scout is ready for review/ }).textContent).toContain(
+      'Spark changes ·',
+    );
+  });
+
   it('waits in the chat as one line until the user opens the review', () => {
     show(card(sparkEdit, 'Change the Scout Spark?'));
     const line = screen.getByRole('group', { name: /Scout is ready for review/ });
@@ -336,11 +344,18 @@ describe('the review window', () => {
     expect(screen.getByRole('group', { name: /Scout is ready for review/ })).toBeTruthy();
   });
 
-  it('opens by itself when the Sparks page asks to review that card', () => {
+  it('opens by itself when the Sparks page asks, even when the chat reloads, until closed', () => {
     const approval = card(sparkEdit, 'Change the Scout Spark?');
     requestCrewReview(approval.id);
     show(approval);
     expect(screen.getByRole('dialog', { name: 'Review Scout' })).toBeTruthy();
+    cleanup();
+    show(approval);
+    const reopened = screen.getByRole('dialog', { name: 'Review Scout' });
+    fireEvent.click(within(reopened).getByRole('button', { name: 'Close review' }));
+    cleanup();
+    show(approval);
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('closes after an answer', async () => {

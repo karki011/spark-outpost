@@ -20,9 +20,8 @@ function allNew(action: CrewReviewAction): boolean {
 
 export function crewReviewKind(action: CrewReviewAction): string {
   if (action.action === 'create_teammate') return 'New Spark';
-  if (action.action === 'update_teammate') return 'Spark changes';
-  const thing = action.target === 'workflow' ? 'workflow' : 'Spark';
-  return allNew(action) ? `New ${thing}` : `${thing === 'workflow' ? 'Workflow' : 'Spark'} changes`;
+  if (action.action === 'update_teammate' || action.target === 'spark') return 'Spark changes';
+  return allNew(action) ? 'New workflow' : 'Workflow changes';
 }
 
 export function crewReviewName(action: CrewReviewAction): string {
@@ -37,12 +36,14 @@ export function requestCrewReview(approvalId: string): void {
   listeners.forEach((listener) => listener());
 }
 
+export function endCrewReview(approvalId: string): void {
+  if (wanted === approvalId) wanted = null;
+}
+
 export function useCrewReviewRequest(approvalId: string, open: () => void): void {
   useEffect(() => {
     const take = () => {
-      if (wanted !== approvalId) return;
-      wanted = null;
-      open();
+      if (wanted === approvalId) open();
     };
     take();
     listeners.add(take);
