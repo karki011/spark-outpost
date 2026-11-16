@@ -72,7 +72,7 @@ interface TabChatDockProps {
   profile: BrowserProfile;
   tab: BrowserPaneTab | null;
   request: DockRequest;
-  onFresh(): void;
+  onFresh(tabId: string | null): void;
   onRemovePick(pick: BrowserPick): void;
   onOpenChat(chatId: string): void;
   onClose(): void;
@@ -92,6 +92,10 @@ export function TabChatDock({
   const [composingFor, setComposingFor] = useState<string | null>(null);
   const composing = composingFor !== null && composingFor === (tabId ?? '');
   const setComposing = (on: boolean) => setComposingFor(on ? (tabId ?? '') : null);
+  const leaveCompose = (startedOn: string | null) => {
+    setComposingFor((current) => (current === (startedOn ?? '') ? null : current));
+    onFresh(startedOn);
+  };
   const pane = useRef<HTMLDivElement>(null);
   const [focused, setFocused] = usePaneFocus(pane);
   const own = request.tabId === tabId;
@@ -128,21 +132,18 @@ export function TabChatDock({
         request={own ? request : { ...request, selection: null, link: null, picks: [] }}
         onSend={() => {
           const claim = tabId === null ? null : claimTabChat(profile, tabId);
+          const startedOn = tabId;
           return (started) => {
             if (claim && !claim(started)) return;
+            if (!claim) {
+              onOpenChat(started);
+              return;
+            }
             setFocused(true);
-            setComposing(false);
-            onFresh();
+            leaveCompose(startedOn);
           };
         }}
-        onBack={
-          chatId
-            ? () => {
-                setComposing(false);
-                onFresh();
-              }
-            : null
-        }
+        onBack={chatId ? () => leaveCompose(tabId) : null}
         onRemovePick={onRemovePick}
         onClose={onClose}
       />

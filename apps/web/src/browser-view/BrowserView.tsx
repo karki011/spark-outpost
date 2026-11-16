@@ -290,16 +290,11 @@ export function BrowserView({ onOpenChat }: BrowserViewProps) {
           profile={profile}
           tab={tab}
           request={dock}
-          onFresh={() =>
-            setDock(
-              (open) =>
-                open && {
-                  key: open.key,
-                  tabId: tab?.id ?? null,
-                  selection: null,
-                  link: null,
-                  picks: [],
-                },
+          onFresh={(tabId) =>
+            setDock((open) =>
+              open && open.tabId === tabId
+                ? { key: open.key, tabId, selection: null, link: null, picks: [] }
+                : open,
             )
           }
           onRemovePick={(pick) =>
