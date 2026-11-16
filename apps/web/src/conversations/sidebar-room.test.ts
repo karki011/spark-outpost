@@ -7,8 +7,9 @@ import {
   floatsSidebar,
 } from './sidebar-room.ts';
 
-const base = { sideWidth: 300, docked: true, floating: false };
-const floating = { ...base, docked: false, floating: true };
+const base = { sideWidth: 300, sideInLayout: 300, floating: false };
+const floating = { ...base, sideInLayout: 0, floating: true };
+const hidden = { ...base, sideInLayout: 0 };
 
 describe('floatsSidebar', () => {
   it('keeps the sidebar docked while the chat has room', () => {
@@ -27,8 +28,27 @@ describe('floatsSidebar', () => {
 
   it('counts the room the sidebar would take back when it is not docked', () => {
     expect(floatsSidebar({ ...floating, rooms: [760] })).toBe(true);
-    expect(floatsSidebar({ ...base, docked: false, rooms: [650] })).toBe(true);
-    expect(floatsSidebar({ ...base, docked: false, rooms: [800] })).toBe(false);
+    expect(floatsSidebar({ ...hidden, rooms: [650] })).toBe(true);
+    expect(floatsSidebar({ ...hidden, rooms: [800] })).toBe(false);
+  });
+
+  it('stays docked while the sidebar slides closed or open', () => {
+    for (let shown = 300; shown >= 0; shown -= 25) {
+      const rooms = [560 + (300 - shown)];
+      expect(floatsSidebar({ ...base, sideInLayout: shown, rooms })).toBe(false);
+    }
+  });
+
+  it('stays floating while the sidebar is out of the layout, however the chat moves', () => {
+    for (let chat = 700; chat <= 760; chat += 10) {
+      expect(floatsSidebar({ ...floating, rooms: [chat] })).toBe(true);
+    }
+  });
+
+  it('shares the sidebar between two chats side by side', () => {
+    expect(floatsSidebar({ ...hidden, rooms: [520, 520] })).toBe(false);
+    expect(floatsSidebar({ ...hidden, rooms: [500, 500] })).toBe(true);
+    expect(floatsSidebar({ ...base, sideInLayout: 150, rooms: [445, 445] })).toBe(false);
   });
 
   it('waits for clear room before docking again, so it never flickers at the edge', () => {

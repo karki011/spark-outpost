@@ -123,6 +123,16 @@ export function releaseProblems(env: Env, archs: MacArch[]): string[] {
       `No update feed. Set ${UPDATE_FEED_ENV} (or UPDATE_FEED_URL in apps/desktop/scripts/builder-config.ts) so the build writes the channel files and can update itself.`,
     );
   }
+  if ((env[GOOGLE_CLIENT_FILE_ENV] ?? '').trim() === '') {
+    problems.push(
+      `Google Calendar sign-in is missing. Put the Desktop OAuth client JSON at .local/google-oauth-client.json, or set ${GOOGLE_CLIENT_FILE_ENV} to its path.`,
+    );
+  }
+  if (!packagedSlackClientId(env)) {
+    problems.push(
+      `Slack sign-in is missing. Set ${SLACK_CLIENT_ID_ENV} (or SLACK_CLIENT_ID in apps/desktop/scripts/builder-config.ts) to the Slack app's client ID.`,
+    );
+  }
   if (!RELEASE_ARCHS.every((arch) => archs.includes(arch))) {
     problems.push(
       'A release builds Apple silicon and Intel together so one channel file lists both. Leave out --arch.',
