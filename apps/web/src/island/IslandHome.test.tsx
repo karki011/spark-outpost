@@ -43,6 +43,8 @@ function calendar(overrides: Partial<IslandCalendar> = {}): IslandCalendar {
     onCancelJoinAtStart: vi.fn(),
     onSnoozeAlert: vi.fn(),
     onDismissNudge: vi.fn(),
+    onCloseNudge: vi.fn(),
+    onClose: vi.fn(),
     countdown: null,
     joinLeadMs: 10 * 60_000,
     onCancelJoin: vi.fn(),

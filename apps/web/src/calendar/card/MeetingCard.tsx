@@ -29,6 +29,7 @@ interface MeetingCardBodyProps {
   more?: readonly MoreAction[];
   closeLabel: string;
   onClose: () => void;
+  onDismiss?: (() => void) | undefined;
   hint?: ReactNode;
 }
 
@@ -53,7 +54,10 @@ export function CardButton(props: {
 export function MeetingCardBody(props: MeetingCardBodyProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const moreId = useId();
-  const more = props.more ?? [];
+  const more = [
+    ...(props.more ?? []),
+    ...(props.onDismiss ? [{ label: 'Dismiss', onAct: props.onDismiss }] : []),
+  ];
   return (
     <>
       <p id={props.kickerId} className="mc-kicker" data-ended={props.ended || undefined}>
@@ -105,7 +109,7 @@ export function MeetingCardBody(props: MeetingCardBodyProps) {
       <button
         type="button"
         className="mc-x"
-        title="Dismiss"
+        title="Close"
         aria-label={props.closeLabel}
         onClick={props.onClose}
       >

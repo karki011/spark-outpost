@@ -111,11 +111,12 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
           : []),
       ];
   const dismiss = () => leave(() => calendar.onDismissNudge(event));
+  const close = () => leave(() => calendar.onCloseNudge([event]));
   const onKeyDown = (key: KeyboardEvent) => {
     if (key.key !== 'Escape') return;
     key.preventDefault();
     key.stopPropagation();
-    dismiss();
+    close();
   };
   return (
     <div
@@ -165,8 +166,9 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
               }),
           },
         ]}
-        closeLabel={`Dismiss the nudge for ${event.title}`}
-        onClose={dismiss}
+        closeLabel={`Close the card for ${event.title}`}
+        onClose={close}
+        onDismiss={dismiss}
       >
         {countingDown(event, calendar) ? (
           <>

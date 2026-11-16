@@ -22,6 +22,7 @@ import {
   type Presence,
 } from './meeting-alert.ts';
 import {
+  closeNudge,
   dismissNudge,
   snoozeNudgeFor,
   snoozeNudgeUntilStart,
@@ -257,6 +258,14 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
           inAlert.reduce(
             (next, event) =>
               snoozeNudgeFor(next, event.key, Date.parse(event.end), Date.now(), ALERT_SNOOZE_MS),
+            current,
+          ),
+        );
+      }
+      if (action.kind === 'close') {
+        setMarks((current) =>
+          inAlert.reduce(
+            (next, event) => closeNudge(next, event.key, spanOf(event), Date.now()),
             current,
           ),
         );

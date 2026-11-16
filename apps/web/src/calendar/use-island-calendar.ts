@@ -31,6 +31,7 @@ import {
   readSnoozes,
   saveSnoozes,
   snoozeEnds,
+  closeNudge,
   snoozeNudgeUntilStart,
   snoozeNudge,
   snoozeNudgeFor,
@@ -105,6 +106,8 @@ export interface IslandCalendar {
   onCancelJoinAtStart: (event: CalendarEvent) => void;
   onSnoozeAlert: (event: CalendarEvent) => void;
   onDismissNudge: (event: CalendarEvent) => void;
+  onCloseNudge: (events: readonly CalendarEvent[]) => void;
+  onClose: (line: CalendarLine) => void;
   countdown: MeetingCountdown | null;
   onCancelJoin: () => void;
   onJoinNow: () => void;
@@ -312,6 +315,18 @@ export function useIslandCalendar(
     const event = live?.upcoming.find((candidate) => candidate.key === shown.eventKey);
     return event ? [event] : [];
   };
+  const closeMeetings = (events: readonly CalendarEvent[]) =>
+    nudges.setMarks((current) =>
+      events.reduce(
+        (next, event) => closeNudge(next, event.key, spanOf(event), Date.now()),
+        current,
+      ),
+    );
+  const onDismissLine = (shown: CalendarLine) => {
+    if (shown.dismiss === 'catch_up') held.clearCatchUp();
+    if (shown.dismiss === 'meeting') dismissMeetings(meetingsOf(shown));
+    if (shown.capture) dismiss(shown.capture.eventKey);
+  };
   const clashes = useMemo(
     () =>
       live ? new Map(live.clashes.map((clash) => [clash.eventKey, clash.titles])) : NO_CLASHES,
@@ -356,11 +371,12 @@ export function useIslandCalendar(
         snoozeNudgeFor(current, event.key, Date.parse(event.end), Date.now(), ALERT_SNOOZE_MS),
       ),
     onDismissNudge: (event) => dismissMeetings([event]),
-    onDismiss: (shown) => {
-      if (shown.dismiss === 'catch_up') held.clearCatchUp();
-      if (shown.dismiss === 'meeting') dismissMeetings(meetingsOf(shown));
-      if (shown.capture) dismiss(shown.capture.eventKey);
+    onCloseNudge: closeMeetings,
+    onClose: (shown) => {
+      if (shown.dismiss === 'meeting') closeMeetings(meetingsOf(shown));
+      else onDismissLine(shown);
     },
+    onDismiss: onDismissLine,
     onCapture: (shown) => {
       const capture = shown.capture;
       if (!capture) return;

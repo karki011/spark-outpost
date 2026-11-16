@@ -124,7 +124,7 @@ test.afterAll(() => {
   rmSync(FAKE_CALENDAR_STATE, { force: true });
 });
 
-test('the centre alert takes over from the island bubble and Dismiss sends it back up', async ({
+test('the centre alert takes over from the island bubble and ✕ sends it back up without the bubble', async ({
   page,
 }) => {
   const settings = await page.request.patch('/api/calendar/settings', {
@@ -143,13 +143,14 @@ test('the centre alert takes over from the island bubble and Dismiss sends it ba
   await expect(island(page).getByRole('group', { name: 'Meeting Standup' })).toHaveCount(0);
 
   await page.evaluate(
-    (key) =>
-      (window as unknown as AlertWindow).alertAction({ kind: 'dismiss', key, eventKey: null }),
+    (key) => (window as unknown as AlertWindow).alertAction({ kind: 'close', key, eventKey: null }),
     shown.key,
   );
   await expect
     .poll(() => page.evaluate(() => (window as unknown as AlertWindow).alertHides))
     .toBeGreaterThan(0);
+  await page.waitForTimeout(500);
+  await expect(island(page).getByRole('group', { name: 'Meeting Standup' })).toHaveCount(0);
 });
 
 test('Bubble from Scout keeps the island bubble and sends no centre alert', async ({ page }) => {
@@ -175,7 +176,7 @@ function landing(page: Page): Promise<number> {
   );
 }
 
-test('the hanging card offers Join at start, Snooze and Join in ··· on one row, and Esc dismisses once clicked', async ({
+test('the hanging card offers Join at start, Snooze and Join in ··· on one row, and Esc closes once clicked', async ({
   page,
 }) => {
   const payload = await standupPayload(page);
@@ -187,9 +188,7 @@ test('the hanging card offers Join at start, Snooze and Join in ··· on one ro
   await expect(card).toContainText('3 people');
   await expect(card.getByRole('button', { name: 'Join at start' })).toBeVisible();
   await expect(card.getByRole('button', { name: /^Join Zoom/ })).toBeHidden();
-  await expect(card).toHaveAccessibleDescription(
-    'Esc dismisses · ⌘J joins · ⌃⌥⌘M focuses this card',
-  );
+  await expect(card).toHaveAccessibleDescription('Esc closes · ⌘J joins · ⌃⌥⌘M focuses this card');
   await expect
     .poll(() => alertWindow(page, (window) => window.alertRegions.at(-1)?.boxes.length ?? 0))
     .toBe(2);
@@ -206,13 +205,13 @@ test('the hanging card offers Join at start, Snooze and Join in ··· on one ro
   await card.getByRole('button', { name: 'Snooze until start' }).click({ force: true });
   await card.getByRole('button', { name: 'Join at start' }).click({ force: true });
   expect(await alertWindow(page, (window) => window.alertFocus)).toBe(0);
-  await card.getByText('Esc dismisses').click({ force: true });
+  await card.getByText('Esc closes').click({ force: true });
   expect(await alertWindow(page, (window) => window.alertFocus)).toBe(1);
   await page.keyboard.press('Escape');
   expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
     { kind: 'snooze-until-start', key: payload.key, eventKey: null },
     { kind: 'join-at-start', key: payload.key, eventKey: payload.events[0]!.key },
-    { kind: 'dismiss', key: payload.key, eventKey: null },
+    { kind: 'close', key: payload.key, eventKey: null },
   ]);
 
   await page.evaluate(() => (window as unknown as AlertWindow).alertFeed.leave());
@@ -249,7 +248,7 @@ test("a card for a meeting set to join at start says when it opens and offers Do
   ]);
 });
 
-test('assistive technology gets focus on the card, Tab reaches each button and Esc dismisses', async ({
+test('assistive technology gets focus on the card, Tab reaches each button and Esc closes', async ({
   page,
 }) => {
   const payload = await standupPayload(page);
@@ -266,11 +265,11 @@ test('assistive technology gets focus on the card, Tab reaches each button and E
   await page.keyboard.press('Tab');
   await expect(card.getByRole('button', { name: 'More actions' })).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(card.getByRole('button', { name: /^Dismiss/ })).toBeFocused();
+  await expect(card.getByRole('button', { name: /^Close Standup/ })).toBeFocused();
   await page.screenshot({ path: 'test-results/meeting-card/keyboard-focus.png' });
   await page.keyboard.press('Escape');
   expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
-    { kind: 'dismiss', key: payload.key, eventKey: null },
+    { kind: 'close', key: payload.key, eventKey: null },
   ]);
 });
 

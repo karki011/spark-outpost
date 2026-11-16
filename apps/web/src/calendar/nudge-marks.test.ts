@@ -1,6 +1,8 @@
+import { remindUntil } from '@spark-outpost/contracts';
 import { describe, expect, it } from 'vitest';
 import { nextBoundary, nextMinuteMark } from './event-clock.ts';
 import {
+  closeNudge,
   dismissNudge,
   NO_NUDGE_MARKS,
   nudgeHidden,
@@ -65,5 +67,16 @@ describe('the next countdown minute', () => {
   it('stays one mark per meeting, however long the meeting runs', () => {
     const year = { start: span.start, end: span.start + 365 * 24 * 60 * MINUTE };
     expect(nextMinuteMark([year, span], 200 * MINUTE)).toBe(200 * MINUTE + 7_000);
+  });
+
+  it('closes a card until the start, or for the rest of its reminders once started', () => {
+    const span = { start: 2_000_000, end: 5_000_000 };
+    const before = closeNudge(NO_NUDGE_MARKS, 'standup', span, 1_000_000);
+    expect(nudgeHidden(before, 'standup', 1_999_999)).toBe(true);
+    expect(nudgeHidden(before, 'standup', 2_000_000)).toBe(false);
+    expect(before.get('standup')?.dismissed).toBe(false);
+    const after = closeNudge(NO_NUDGE_MARKS, 'standup', span, 2_060_000);
+    expect(nudgeHidden(after, 'standup', remindUntil(span) - 1)).toBe(true);
+    expect(after.get('standup')?.dismissed).toBe(false);
   });
 });

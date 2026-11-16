@@ -38,6 +38,7 @@ function CalendarCardLine({ line, top, calendar }: CalendarRestLineProps) {
   const { leaving, leave } = useLeave();
   const meeting = line.meeting!;
   const dismiss = () => leave(() => calendar.onDismiss(line));
+  const close = () => leave(() => calendar.onClose(line));
   const choices = line.choose;
   return (
     <div
@@ -51,7 +52,7 @@ function CalendarCardLine({ line, top, calendar }: CalendarRestLineProps) {
         if (key.key !== 'Escape') return;
         key.preventDefault();
         key.stopPropagation();
-        dismiss();
+        close();
       }}
     >
       <MeetingCardBody
@@ -71,8 +72,11 @@ function CalendarCardLine({ line, top, calendar }: CalendarRestLineProps) {
             />
           ) : null
         }
-        closeLabel={meetingDismissLabel(line)}
-        onClose={dismiss}
+        closeLabel={
+          line.dismiss === 'meeting' ? meetingCloseLabel(line) : meetingDismissLabel(line)
+        }
+        onClose={close}
+        onDismiss={line.dismiss === 'meeting' ? dismiss : undefined}
       >
         {line.join && (
           <JoinButton
@@ -89,6 +93,11 @@ function CalendarCardLine({ line, top, calendar }: CalendarRestLineProps) {
       </MeetingCardBody>
     </div>
   );
+}
+
+function meetingCloseLabel(line: CalendarLine): string {
+  if (line.choose) return `Close the card for ${line.choose.length} meetings`;
+  return `Close the card for ${line.meeting?.title ?? line.text}`;
 }
 
 function meetingDismissLabel(line: CalendarLine): string {

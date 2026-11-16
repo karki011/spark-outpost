@@ -26,7 +26,7 @@ About 2 minutes.
 
 Settings → Notifications lists alerts in order: **Wrap-up reminder**; **Join opens** shows the meeting with **Join** and hops Scout; **Alert at** lowers the card; **Anything to capture?** opens notes Spark took.
 
-Scout lowers a card: **Join at start** until 2 min before, then **Join**; **Snooze until start**; **···** joins now or opens Today. ✕ or Esc dismisses; **⌘J** joins.
+Scout lowers a card: **Join at start** until 2 min before, then **Join**; **Snooze until start**; **···** joins now or opens Today. ✕ or Esc closes it until the start; **Dismiss** under **···** is for good. **⌘J** joins.
 
 VoiceOver and keyboard users get focus (**⌃⌥⌘M**); a silent notification mirrors it.
 

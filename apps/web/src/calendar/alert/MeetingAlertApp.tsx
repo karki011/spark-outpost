@@ -302,7 +302,7 @@ export function MeetingAlertApp() {
   const onKeyDown = (key: KeyboardEvent) => {
     if (key.key === 'Escape') {
       key.preventDefault();
-      act('dismiss');
+      act('close');
     }
     if (key.key.toLowerCase() === 'j' && key.metaKey) {
       key.preventDefault();
@@ -370,9 +370,10 @@ export function MeetingAlertApp() {
                 ...(many || counting ? [] : earlyJoin(first, at, payload.joinLeadMs, act)),
                 { label: 'Open in Today', onAct: () => act('open', first.key) },
               ]}
-              closeLabel={`Dismiss ${alertTitle(payload.events, at)}`}
-              onClose={() => act('dismiss')}
-              hint={<span id="ma-hint">Esc dismisses · ⌘J joins · ⌃⌥⌘M focuses this card</span>}
+              closeLabel={`Close ${alertTitle(payload.events, at)}`}
+              onClose={() => act('close')}
+              onDismiss={() => act('dismiss')}
+              hint={<span id="ma-hint">Esc closes · ⌘J joins · ⌃⌥⌘M focuses this card</span>}
             >
               {counting ? (
                 <>

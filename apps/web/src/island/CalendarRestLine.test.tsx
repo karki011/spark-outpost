@@ -28,9 +28,11 @@ function line(overrides: Partial<CalendarLine>): CalendarLine {
 
 function show(shown: CalendarLine) {
   const onDismiss = vi.fn();
+  const onClose = vi.fn();
   const calendar = {
     at: at(10, 21),
     onDismiss,
+    onClose,
     calendarName: () => 'Work',
     onOpenEvent: vi.fn(),
     onJoined: vi.fn(),
@@ -40,7 +42,7 @@ function show(shown: CalendarLine) {
       <CalendarLineView line={shown} top={0} calendar={calendar} />
     </QueryClientProvider>,
   );
-  return onDismiss;
+  return { onDismiss, onClose };
 }
 
 beforeEach(() => {
@@ -53,10 +55,20 @@ afterEach(() => {
 });
 
 describe('CalendarLineView meeting line', () => {
-  it('dismisses a meeting line, named for the meeting', () => {
+  it('closes a meeting line from ✕, named for the meeting, without dismissing it', () => {
     const shown = line({});
-    const onDismiss = show(shown);
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss the nudge for Standup' }));
+    const { onDismiss, onClose } = show(shown);
+    fireEvent.click(screen.getByRole('button', { name: 'Close the card for Standup' }));
+    act(() => vi.advanceTimersByTime(400));
+    expect(onClose).toHaveBeenCalledWith(shown);
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
+  it('dismisses for good only from ···', () => {
+    const shown = line({});
+    const { onDismiss } = show(shown);
+    fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
     act(() => vi.advanceTimersByTime(400));
     expect(onDismiss).toHaveBeenCalledWith(shown);
   });
@@ -70,9 +82,7 @@ describe('CalendarLineView meeting line', () => {
 
   it('lists every meeting of a grouped line with its own action', () => {
     show(line({ choose: [standup, design] }));
-    expect(
-      screen.getByRole('button', { name: 'Dismiss 2 meetings: Standup, Design sync' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Close the card for 2 meetings' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open Standup' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open Design sync' })).toBeTruthy();
   });
