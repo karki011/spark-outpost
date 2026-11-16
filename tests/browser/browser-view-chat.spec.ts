@@ -163,6 +163,20 @@ test('⌘⇧O from the page opens the dock, and the dock passes an accessibility
   expect(results.violations).toEqual([]);
 });
 
+test('⌘⇧O anywhere in the Browser view toggles the tab’s chat, not a new chat in Chats', async ({
+  page,
+}) => {
+  await openWithPage(page);
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press('ControlOrMeta+Shift+O');
+  await expect(dock(page)).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Browser' })).toBeVisible();
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press('ControlOrMeta+Shift+O');
+  await expect(dock(page)).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Browser' })).toBeVisible();
+});
+
 test('a pasted key holds the chat until the user deals with it', async ({ page }) => {
   await openWithPage(page);
   await page.getByRole('button', { name: 'Chat', exact: true }).click();

@@ -9,6 +9,7 @@ import {
   type BrowserShortcut,
 } from '@spark-outpost/contracts';
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
+import { isNewChatShortcut } from '../conversations/SidebarHeader.tsx';
 import { useSidebarLayout } from '../conversations/sidebar-layout.tsx';
 import { MAC } from '../ui/shortcuts.ts';
 import { defaultBrowserUrl, openInDefaultBrowser } from '../browser/chat-links.ts';
@@ -66,6 +67,23 @@ function useViewShortcuts(profile: BrowserProfile, run: (shortcut: BrowserShortc
       if (event.success && event.data.profile === profile) latest.current(event.data.shortcut);
     });
   }, [profile]);
+}
+
+function useChatKey(toggle: () => void) {
+  const latest = useRef(toggle);
+  useEffect(() => {
+    latest.current = toggle;
+  });
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || !isNewChatShortcut(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      latest.current();
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, []);
 }
 
 interface BrowserViewProps {
@@ -156,6 +174,8 @@ export function BrowserView({ onOpenChat }: BrowserViewProps) {
     });
   };
   useViewShortcuts(profile, runShortcut);
+  const toggleChat = () => (dock ? setDock(null) : openDock());
+  useChatKey(toggleChat);
   useEffect(recheckNativePlacement, [peek?.id, splitShown, shown?.id, sideHidden, dock, asking]);
   const askingForPage = useRef(false);
   useEffect(() => {
@@ -222,7 +242,7 @@ export function BrowserView({ onOpenChat }: BrowserViewProps) {
           sideHidden={sideHidden}
           chatOpen={dock !== null}
           onToggleSide={() => sidebar?.toggleBrowser()}
-          onToggleChat={() => (dock ? setDock(null) : openDock())}
+          onToggleChat={toggleChat}
           onNewSplitPage={() => {
             askingForPage.current = true;
           }}
