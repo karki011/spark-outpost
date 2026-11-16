@@ -71,6 +71,7 @@ test('each tab keeps its own chat', async ({ page }) => {
   await dock(page).getByRole('textbox', { name: 'Message' }).fill('What does this page cover?');
   await page.keyboard.press('Enter');
   await expect(tabChat(page)).toBeVisible();
+  await expect(tabChat(page).getByRole('textbox', { name: 'Message' })).toBeFocused();
 
   await pushView(page, [
     { title: 'Deploying your app', url: DOCS, place: 'external' },
