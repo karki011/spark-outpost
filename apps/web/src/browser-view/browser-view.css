@@ -2,6 +2,11 @@
   flex: 1;
   min-width: 0;
   display: flex;
+  margin: 8px 8px 8px 0;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--r) + 4px);
 }
 
 .bv-side {
@@ -11,12 +16,10 @@
   width: 264px;
   flex-shrink: 0;
   min-height: 0;
-  margin: 8px 8px 8px 0;
   padding: 10px 8px;
   overflow-y: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: calc(var(--r) + 4px);
+  background: color-mix(in srgb, var(--raise) 55%, var(--panel));
+  border-right: 1px solid var(--line);
 }
 
 .bv-side[hidden] {
@@ -177,8 +180,17 @@
   opacity: 1;
 }
 
-.bv-page {
-  margin-left: 0;
+.bv-page.page {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.bv > .pcd {
+  margin: 0;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
 }
 
 .bv-bar {
@@ -231,6 +243,7 @@
 }
 
 .bv-chat {
+  border-left: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   flex: none;
