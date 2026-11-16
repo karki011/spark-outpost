@@ -403,8 +403,13 @@ test('the Map has no serious colour-contrast or ARIA issues in any theme', async
     /Found \S*client\.ts/,
   );
   const { x, y, width, height } = (await page.locator('.map-stage').boundingBox())!;
-  await page.mouse.click(x + width / 2, y + height / 2);
-  await expect(page.getByRole('dialog', { name: 'client.ts' })).toBeVisible();
+  await expect(async () => {
+    await page.mouse.move(x + width / 2 + 1, y + height / 2);
+    await page.mouse.move(x + width / 2, y + height / 2);
+    await expect(page.getByRole('tooltip')).toContainText('client.ts', { timeout: 1_000 });
+    await page.mouse.click(x + width / 2, y + height / 2);
+    await expect(page.getByRole('dialog', { name: 'client.ts' })).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
   for (const theme of ['light', 'graphite', 'contrast']) {
     await useTheme(page, theme);
     found.push(...(await blockingViolations(page, `map file sheet ${theme}`)));
