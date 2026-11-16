@@ -12,7 +12,9 @@ import { BlobScout } from '../../brand/BlobScout.tsx';
 import { sparkDesktop } from '../../desktop/desktop-bridge.ts';
 import { useReducedMotion } from '../../ui/motion.ts';
 import { clock } from '../calendar-format.ts';
-import { joinLabel } from '../meeting-card.ts';
+import { joinLabel, placeRow, startsLabel, timeRow } from '../meeting-card.ts';
+import { CardButton, MeetingCardBody, type MeetingCardRow } from '../card/MeetingCard.tsx';
+import { ClockIcon, PeopleIcon, VideoIcon, WarnIcon } from '../../ui/icons.tsx';
 import { canAskJoinAtStart } from '../join-at-start.ts';
 import { JoinAtStartButton } from '../JoinAtStartButton.tsx';
 import { openJoin } from '../today-model.ts';
@@ -87,18 +89,17 @@ function JoinFor({
   const state = joinState(event, at, leadMs);
   if (state === 'none') return null;
   if (state === 'later')
-    return <span className="ma-later">Join opens at {joinOpensAt(event, leadMs)}</span>;
+    return <span className="mc-later">Join opens at {joinOpensAt(event, leadMs)}</span>;
   return (
-    <button
-      type="button"
-      className="ma-btn primary"
+    <CardButton
+      primary
+      label={joinLabel(event)}
+      ariaLabel={`${joinLabel(event)}: ${event.title}`}
       onClick={() => {
         openJoin(event.link!.url);
         act('joined', event.key);
       }}
-    >
-      {joinLabel(event)}
-    </button>
+    />
   );
 }
 
@@ -117,15 +118,12 @@ function PlannedOpen({
   if (event.joinAtStart && at < start) {
     return (
       <>
-        <span className="ma-later">Opens at {clock(start)}</span>
-        <button
-          type="button"
-          className="ma-btn"
-          aria-label={`Don't open ${event.title} at ${clock(start)}`}
+        <span className="mc-later">Opens at {clock(start)}</span>
+        <CardButton
+          label="Don't open"
+          ariaLabel={`Don't open ${event.title} at ${clock(start)}`}
           onClick={() => act('cancel-join-at-start', event.key)}
-        >
-          Don't open
-        </button>
+        />
       </>
     );
   }
@@ -133,7 +131,7 @@ function PlannedOpen({
   return (
     <JoinAtStartButton
       title={event.title}
-      className="ma-btn"
+      className="mc-btn"
       autoJoin={autoJoin}
       onAsk={() => act('join-at-start', event.key)}
     />
@@ -147,17 +145,57 @@ function Countdown({ payload, at, act }: { payload: MeetingAlertPayload; at: num
   const target = payload.events.find((event) => event.key === countdown?.eventKey);
   if (!countdown || !target) return null;
   return (
-    <div className="ma-countdown" role="status">
+    <div className="mc-status" role="status">
       <span>
         Joining {target.title} in {countdownSeconds(countdown.deadline, at)} s
       </span>
-      <button type="button" className="ma-btn" onClick={() => act('cancel-join')}>
-        Cancel
-      </button>
-      <button type="button" className="ma-btn primary" onClick={() => act('join-now')}>
-        Join now
-      </button>
+      <CardButton label="Cancel" onClick={() => act('cancel-join')} />
+      <CardButton primary label="Join now" onClick={() => act('join-now')} />
     </div>
+  );
+}
+
+function SnoozeButton({
+  events,
+  at,
+  act,
+}: {
+  events: readonly CalendarEvent[];
+  at: number;
+  act: Act;
+}) {
+  const beforeStart = events.every((event) => at < spanOf(event).start);
+  return beforeStart ? (
+    <CardButton label="Snooze until start" onClick={() => act('snooze-until-start')} />
+  ) : (
+    <CardButton label="Snooze 1 min" onClick={() => act('snooze')} />
+  );
+}
+
+function eventRows(event: CalendarEvent, clash: string | null): MeetingCardRow[] {
+  const place = placeRow(event, null, null);
+  const people = event.attendeeCount > 1 ? `${event.attendeeCount} people` : null;
+  return [
+    { key: 'time', icon: <ClockIcon />, text: timeRow(event) },
+    ...(place ? [{ key: 'place', icon: <VideoIcon />, text: place }] : []),
+    ...(people ? [{ key: 'people', icon: <PeopleIcon />, text: people }] : []),
+    ...(clash ? [{ key: 'clash', icon: <WarnIcon />, text: clash, tone: 'warn' as const }] : []),
+  ];
+}
+
+function ClashList({ payload, at, act }: { payload: MeetingAlertPayload; at: number; act: Act }) {
+  return (
+    <ul className="mc-list">
+      {payload.events.map((event) => (
+        <li key={event.key} className="mc-list-row">
+          <span className="mc-list-text">
+            <b>{event.title}</b>
+            <span>{alertDetail(event)}</span>
+          </span>
+          <JoinFor event={event} at={at} leadMs={payload.joinLeadMs} act={act} />
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -233,6 +271,8 @@ export function MeetingAlertApp() {
   if (!payload || !place) return null;
   const rig = rigFor(place);
   const [first] = payload.events;
+  if (!first) return null;
+  const many = payload.events.length > 1;
   const onKeyDown = (key: KeyboardEvent) => {
     if (key.key === 'Escape') {
       key.preventDefault();
@@ -245,7 +285,7 @@ export function MeetingAlertApp() {
         openJoin(joinable.link.url);
         act('joined', joinable.key);
       } else {
-        cardRef.current?.querySelector<HTMLButtonElement>('.ma-btn.primary')?.focus();
+        cardRef.current?.querySelector<HTMLButtonElement>('.mc-btn.primary')?.focus();
       }
     }
   };
@@ -271,9 +311,9 @@ export function MeetingAlertApp() {
           </div>
           <div
             ref={cardRef}
-            className="ma-card"
+            className="ma-card mc"
             role="alertdialog"
-            aria-labelledby="ma-kind ma-title"
+            aria-labelledby="ma-kind ma-name"
             aria-describedby="ma-hint"
             onPointerDown={(down) => {
               if ((down.target as Element).closest('button')) return;
@@ -286,50 +326,24 @@ export function MeetingAlertApp() {
             <span id="ma-kind" className="sr-only">
               Meeting.
             </span>
-            <h1 id="ma-title" className="ma-title">
+            <span id="ma-name" className="sr-only">
               {alertTitle(payload.events, at)}
-            </h1>
-            {payload.events.length === 1 && first ? (
-              <>
-                <p className="ma-detail">{alertDetail(first)}</p>
-                <Countdown payload={payload} at={at} act={act} />
-                <div className="ma-acts">
-                  <JoinFor event={first} at={at} leadMs={payload.joinLeadMs} act={act} />
-                  <button type="button" className="ma-btn" onClick={() => act('snooze')}>
-                    Snooze 1 min
-                  </button>
-                  <PlannedOpen event={first} at={at} autoJoin={payload.autoJoin} act={act} />
-                  <button type="button" className="ma-btn" onClick={() => act('dismiss')}>
-                    Dismiss
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <ul className="ma-list">
-                  {payload.events.map((event) => (
-                    <li key={event.key} className="ma-row">
-                      <span className="ma-row-text">
-                        <b>{event.title}</b>
-                        <span>{alertDetail(event)}</span>
-                      </span>
-                      <JoinFor event={event} at={at} leadMs={payload.joinLeadMs} act={act} />
-                    </li>
-                  ))}
-                </ul>
-                <div className="ma-acts">
-                  <button type="button" className="ma-btn" onClick={() => act('snooze')}>
-                    Snooze 1 min
-                  </button>
-                  <button type="button" className="ma-btn" onClick={() => act('dismiss')}>
-                    Dismiss
-                  </button>
-                </div>
-              </>
-            )}
-            <p id="ma-hint" className="ma-hint">
-              Esc dismisses · ⌘J joins · ⌃⌥⌘M focuses this card
-            </p>
+            </span>
+            <MeetingCardBody
+              kicker={startsLabel(first, at)}
+              title={many ? `${payload.events.length} meetings at once` : first.title}
+              rows={many ? [] : eventRows(first, null)}
+              list={many ? <ClashList payload={payload} at={at} act={act} /> : null}
+              status={<Countdown payload={payload} at={at} act={act} />}
+              more={[{ label: 'Open in Today', onAct: () => act('open', first.key) }]}
+              closeLabel={`Dismiss ${alertTitle(payload.events, at)}`}
+              onClose={() => act('dismiss')}
+              hint={<span id="ma-hint">Esc dismisses · ⌘J joins · ⌃⌥⌘M focuses this card</span>}
+            >
+              {!many && <JoinFor event={first} at={at} leadMs={payload.joinLeadMs} act={act} />}
+              <SnoozeButton events={payload.events} at={at} act={act} />
+              {!many && <PlannedOpen event={first} at={at} autoJoin={payload.autoJoin} act={act} />}
+            </MeetingCardBody>
           </div>
         </div>
       </div>

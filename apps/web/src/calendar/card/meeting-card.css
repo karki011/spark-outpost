@@ -1,0 +1,257 @@
+.mc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 372px;
+  max-width: calc(100vw - 24px);
+  padding: 14px 16px 12px;
+  border: 1px solid var(--island-line);
+  border-radius: 18px;
+  background: var(--island);
+  color: var(--text);
+  white-space: normal;
+}
+
+.mc[data-compact] {
+  gap: 4px;
+  width: 320px;
+  padding: 10px 12px;
+}
+
+.mc-x {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  color: var(--muted);
+}
+
+.mc-x:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.mc-x svg {
+  width: 12px;
+  height: 12px;
+}
+
+.mc-kicker {
+  margin: 0;
+  padding-right: 28px;
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-kicker[data-ended] {
+  color: var(--muted);
+}
+
+.mc-title {
+  display: -webkit-box;
+  margin: 0;
+  padding-right: 20px;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.mc[data-compact] .mc-title {
+  font-size: 13.5px;
+  -webkit-line-clamp: 1;
+}
+
+.mc-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.mc-row[data-tone='warn'] {
+  color: var(--warn);
+}
+
+.mc-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+}
+
+.mc-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.mc-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mc-agenda {
+  display: -webkit-box;
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--island-line);
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.mc-acts,
+.mc-more-acts,
+.mc-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.mc-acts {
+  margin-top: 4px;
+}
+
+.mc-more-acts {
+  flex-basis: 100%;
+}
+
+.mc-more-acts[hidden] {
+  display: none;
+}
+
+.mc-status {
+  color: var(--accent-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-btn {
+  min-height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--island-line);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: default;
+}
+
+.mc-btn.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.mc-btn:hover {
+  border-color: var(--muted);
+}
+
+.mc-btn.primary:hover {
+  border-color: var(--accent);
+}
+
+.mc-btn[aria-disabled='true'] {
+  opacity: 0.5;
+}
+
+.mc-btn[aria-disabled='true']:hover {
+  border-color: var(--island-line);
+}
+
+.mc-more {
+  min-width: 28px;
+  padding: 0 8px;
+}
+
+.mc-x:focus-visible,
+.mc-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.mc-later {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mc-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mc-list-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.mc-list-text span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mc-hint {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (pointer: coarse) {
+  .mc-btn,
+  .mc-x {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

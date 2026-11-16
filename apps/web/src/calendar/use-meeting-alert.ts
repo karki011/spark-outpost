@@ -20,7 +20,13 @@ import {
   type AutoJoinPlan,
   type Presence,
 } from './meeting-alert.ts';
-import { dismissNudge, snoozeNudgeFor, withJoined, type NudgeMarks } from './nudge-marks.ts';
+import {
+  dismissNudge,
+  snoozeNudgeFor,
+  snoozeNudgeUntilStart,
+  withJoined,
+  type NudgeMarks,
+} from './nudge-marks.ts';
 import { openJoin } from './today-model.ts';
 
 export const ALERT_SNOOZE_MS = 60_000;
@@ -38,6 +44,7 @@ interface MeetingAlertOptions {
   onDismissed: (events: readonly CalendarEvent[]) => void;
   onJoinAtStart: (event: CalendarEvent, on: boolean) => void;
   onJoinTakesNotes: (event: CalendarEvent) => void;
+  onOpen: (event: CalendarEvent) => void;
 }
 
 function alertTimes(live: CalendarNow | null, settings: CalendarSettings | null): number[] {
@@ -252,7 +259,15 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
           ),
         );
       }
-      if (action.kind === 'dismiss') {
+      if (action.kind === 'snooze-until-start') {
+        setMarks((current) =>
+          inAlert.reduce(
+            (next, event) => snoozeNudgeUntilStart(next, event.key, spanOf(event), Date.now()),
+            current,
+          ),
+        );
+      }
+      if (action.kind === 'dismiss' || action.kind === 'open') {
         setMarks((current) =>
           inAlert.reduce(
             (next, event) => dismissNudge(next, event.key, Date.parse(event.end)),
@@ -260,6 +275,8 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
           ),
         );
         latest.current.onDismissed(inAlert);
+        const [first] = inAlert;
+        if (action.kind === 'open' && first) latest.current.onOpen(first);
       }
     });
   }, [setMarks]);

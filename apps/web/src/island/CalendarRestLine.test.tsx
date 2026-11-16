@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CalendarLine } from '../calendar/island-calendar.ts';
 import { at, event } from '../calendar/test-fixtures.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
@@ -27,33 +28,52 @@ function line(overrides: Partial<CalendarLine>): CalendarLine {
 
 function show(shown: CalendarLine) {
   const onDismiss = vi.fn();
-  const calendar = { at: at(10, 21), onDismiss } as unknown as IslandCalendar;
-  render(<CalendarLineView line={shown} top={0} calendar={calendar} />);
+  const calendar = {
+    at: at(10, 21),
+    onDismiss,
+    calendarName: () => 'Work',
+    onOpenEvent: vi.fn(),
+    onJoined: vi.fn(),
+  } as unknown as IslandCalendar;
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <CalendarLineView line={shown} top={0} calendar={calendar} />
+    </QueryClientProvider>,
+  );
   return onDismiss;
 }
 
-afterEach(cleanup);
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe('CalendarLineView meeting line', () => {
   it('dismisses a meeting line, named for the meeting', () => {
     const shown = line({});
     const onDismiss = show(shown);
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss the nudge for Standup' }));
+    act(() => vi.advanceTimersByTime(400));
     expect(onDismiss).toHaveBeenCalledWith(shown);
   });
 
-  it('keeps a space on both sides of the dot between the lead and the title', () => {
+  it('shows the line as a meeting card: kicker, title and when', () => {
     show(line({}));
-    const head = document.querySelector('.isl-calline-head');
-    expect(head?.textContent).toBe('Meeting in 9 min · Standup');
-    const sep = document.querySelector('.isl-calline-sep');
-    expect(sep?.textContent).toBe(' · ');
+    expect(document.querySelector('.mc-kicker')?.textContent).toBe('Meeting in 9 min');
+    expect(document.querySelector('.mc-title')?.textContent).toBe('Standup');
+    expect(document.querySelector('.mc-row')?.textContent).toBe('10:30–10:45');
   });
 
-  it('names every meeting of a grouped line', () => {
+  it('lists every meeting of a grouped line with its own action', () => {
     show(line({ choose: [standup, design] }));
     expect(
       screen.getByRole('button', { name: 'Dismiss 2 meetings: Standup, Design sync' }),
     ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open Standup' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open Design sync' })).toBeTruthy();
   });
 });

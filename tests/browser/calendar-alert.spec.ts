@@ -182,7 +182,9 @@ test('the hanging card offers Join, Snooze, Join at start and Dismiss, and Esc d
   await openOverlay(page, payload);
   const card = page.getByRole('alertdialog', { name: /^Meeting\. Standup starts in \d min$/ });
   await expect(card).toBeVisible();
-  await expect(card).toContainText(/\d+:\d{2}( [AP]M)?–\d+:\d{2} [AP]M · Zoom · 3 people/);
+  await expect(card).toContainText(/\d+:\d{2}( [AP]M)?–\d+:\d{2} [AP]M · \d+ min/);
+  await expect(card).toContainText('Zoom');
+  await expect(card).toContainText('3 people');
   await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeVisible();
   await expect(card).toHaveAccessibleDescription(
     'Esc dismisses · ⌘J joins · ⌃⌥⌘M focuses this card',
@@ -192,14 +194,14 @@ test('the hanging card offers Join, Snooze, Join at start and Dismiss, and Esc d
     .toBe(2);
   await expect.poll(() => landing(page)).toBe(0);
 
-  await card.getByRole('button', { name: 'Snooze 1 min' }).click({ force: true });
+  await card.getByRole('button', { name: 'Snooze until start' }).click({ force: true });
   await card.getByRole('button', { name: 'Join at start' }).click({ force: true });
   expect(await alertWindow(page, (window) => window.alertFocus)).toBe(0);
   await card.getByText('Esc dismisses').click({ force: true });
   expect(await alertWindow(page, (window) => window.alertFocus)).toBe(1);
   await page.keyboard.press('Escape');
   expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
-    { kind: 'snooze', key: payload.key, eventKey: null },
+    { kind: 'snooze-until-start', key: payload.key, eventKey: null },
     { kind: 'join-at-start', key: payload.key, eventKey: payload.events[0]!.key },
     { kind: 'dismiss', key: payload.key, eventKey: null },
   ]);
@@ -231,7 +233,7 @@ test("a card for a meeting set to join at start says when it opens and offers Do
   await expect(card).toContainText(/Opens at \d+:\d{2}/);
   await expect(card.getByRole('button', { name: 'Join at start' })).toHaveCount(0);
   await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeVisible();
-  await expect(card.getByRole('button', { name: 'Snooze 1 min' })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Snooze until start' })).toBeVisible();
   await expect.poll(() => landing(page)).toBe(0);
   await card.getByRole('button', { name: /^Don't open/ }).click({ force: true });
   expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
@@ -252,7 +254,7 @@ test('assistive technology gets focus on the card, Tab reaches each button and E
   await page.keyboard.press('Tab');
   await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(card.getByRole('button', { name: 'Snooze 1 min' })).toBeFocused();
+  await expect(card.getByRole('button', { name: 'Snooze until start' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(card.getByRole('button', { name: 'Join at start' })).toBeFocused();
   await page.keyboard.press('Tab');

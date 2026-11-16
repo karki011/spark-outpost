@@ -276,6 +276,7 @@ export function useIslandCalendar(
     onDismissed: dismissForGood,
     onJoinAtStart: (event, on) => (on ? askJoinAtStart(event) : joinAtStart.save(event, false)),
     onJoinTakesNotes: takeNotes,
+    onOpen: (event) => openToday(event.key),
   });
   const line = calendarLine({
     now: live,

@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { clashText, joinOpen, spanOf, type CalendarEvent } from '@spark-outpost/contracts';
 import { clock } from '../calendar/calendar-format.ts';
 import {
@@ -13,7 +13,8 @@ import { openJoin } from '../calendar/today-model.ts';
 import { countdownSeconds } from '../calendar/alert/alert-model.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
 import { useEventDetail } from '../calendar/use-calendar.ts';
-import { ClockIcon, PeopleIcon, VideoIcon, WarnIcon, XIcon } from '../ui/icons.tsx';
+import { ClockIcon, PeopleIcon, VideoIcon, WarnIcon } from '../ui/icons.tsx';
+import { CardButton, MeetingCardBody, type MeetingCardRow } from '../calendar/card/MeetingCard.tsx';
 import { JoinAtStartAction } from './JoinAtStartAction.tsx';
 import { useLeave } from './use-leave.ts';
 
@@ -24,17 +25,6 @@ interface CalendarBubbleProps {
   compact: boolean;
 }
 
-function Row({ icon, tone, children }: { icon: ReactNode; tone?: 'warn'; children: ReactNode }) {
-  return (
-    <li className="isl-meet-row" data-tone={tone}>
-      <span className="isl-meet-icon" aria-hidden="true">
-        {icon}
-      </span>
-      <span className="isl-meet-text">{children}</span>
-    </li>
-  );
-}
-
 function JoinAction({ event, calendar }: { event: CalendarEvent; calendar: IslandCalendar }) {
   const at = calendar.at;
   const link = event.link;
@@ -42,21 +32,19 @@ function JoinAction({ event, calendar }: { event: CalendarEvent; calendar: Islan
   const { start, end } = spanOf(event);
   if (joinOpen({ start, end }, at, calendar.joinLeadMs)) {
     return (
-      <button
-        type="button"
-        className="isl-calline-act primary"
-        aria-label={`${joinLabel(event)}: ${event.title}`}
+      <CardButton
+        primary
+        label={joinLabel(event)}
+        ariaLabel={`${joinLabel(event)}: ${event.title}`}
         onClick={() => {
           openJoin(link.url);
           calendar.onJoined(event.key);
         }}
-      >
-        {joinLabel(event)}
-      </button>
+      />
     );
   }
   if (at >= end) return null;
-  return <span className="isl-meet-later">Join opens at {clock(start - calendar.joinLeadMs)}</span>;
+  return <span className="mc-later">Join opens at {clock(start - calendar.joinLeadMs)}</span>;
 }
 
 function AutoJoin({ event, calendar }: { event: CalendarEvent; calendar: IslandCalendar }) {
@@ -70,16 +58,10 @@ function AutoJoin({ event, calendar }: { event: CalendarEvent; calendar: IslandC
   }, [active]);
   if (!active || !countdown) return null;
   return (
-    <div className="isl-meet-acts" role="status">
-      <span className="isl-meet-countdown">
-        Joining in {countdownSeconds(countdown.deadline, now)} s
-      </span>
-      <button type="button" className="isl-calline-act" onClick={calendar.onCancelJoin}>
-        Cancel
-      </button>
-      <button type="button" className="isl-calline-act primary" onClick={calendar.onJoinNow}>
-        Join now
-      </button>
+    <div className="mc-status" role="status">
+      <span>Joining in {countdownSeconds(countdown.deadline, now)} s</span>
+      <CardButton label="Cancel" onClick={calendar.onCancelJoin} />
+      <CardButton primary label="Join now" onClick={calendar.onJoinNow} />
     </div>
   );
 }
@@ -92,6 +74,16 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
   const clash = clashText(calendar.clashes.get(event.key) ?? []);
   const agenda = detail ? agendaPreview(detail.snippet || detail.agenda) : null;
   const beforeStart = calendar.at < spanOf(event).start;
+  const rows: MeetingCardRow[] = compact
+    ? [{ key: 'time', text: [timeRow(event), place].filter(Boolean).join(' · ') }]
+    : [
+        { key: 'time', icon: <ClockIcon />, text: timeRow(event) },
+        ...(place ? [{ key: 'place', icon: <VideoIcon />, text: place }] : []),
+        ...(people ? [{ key: 'people', icon: <PeopleIcon />, text: people }] : []),
+        ...(clash
+          ? [{ key: 'clash', icon: <WarnIcon />, text: clash, tone: 'warn' as const }]
+          : []),
+      ];
   const dismiss = () => leave(() => calendar.onDismissNudge(event));
   const onKeyDown = (key: KeyboardEvent) => {
     if (key.key !== 'Escape') return;
@@ -101,7 +93,7 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
   };
   return (
     <div
-      className="isl-restline isl-meet"
+      className="isl-restline isl-meet mc"
       data-compact={compact || undefined}
       data-leaving={leaving || undefined}
       role="group"
@@ -109,67 +101,43 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
       style={{ '--line-top': `${top}px` } as CSSProperties}
       onKeyDown={onKeyDown}
     >
-      <button
-        type="button"
-        className="isl-meet-x"
-        title="Dismiss"
-        aria-label={`Dismiss the nudge for ${event.title}`}
-        onClick={dismiss}
+      <MeetingCardBody
+        kicker={startsLabel(event, calendar.at)}
+        title={event.title}
+        compact={compact}
+        rows={rows}
+        agenda={agenda}
+        status={<AutoJoin event={event} calendar={calendar} />}
+        more={[
+          {
+            label: 'Open in Today',
+            onAct: () =>
+              leave(() => {
+                calendar.onDismissNudge(event);
+                calendar.onOpenEvent(event.key);
+              }),
+          },
+        ]}
+        closeLabel={`Dismiss the nudge for ${event.title}`}
+        onClose={dismiss}
       >
-        <XIcon />
-      </button>
-      <p className="isl-meet-when">{startsLabel(event, calendar.at)}</p>
-      <p className="isl-meet-title" title={event.title}>
-        {event.title}
-      </p>
-      {compact ? (
-        <p className="isl-meet-sub">{[timeRow(event), place].filter(Boolean).join(' · ')}</p>
-      ) : (
-        <ul className="isl-meet-rows">
-          <Row icon={<ClockIcon />}>{timeRow(event)}</Row>
-          {place && <Row icon={<VideoIcon />}>{place}</Row>}
-          {people && <Row icon={<PeopleIcon />}>{people}</Row>}
-          {clash && (
-            <Row icon={<WarnIcon />} tone="warn">
-              {clash}
-            </Row>
-          )}
-        </ul>
-      )}
-      {!compact && agenda && <p className="isl-meet-agenda">{agenda}</p>}
-      <AutoJoin event={event} calendar={calendar} />
-      <div className="isl-meet-acts">
         <JoinAction event={event} calendar={calendar} />
-        <button
-          type="button"
-          className="isl-calline-act"
-          onClick={() => leave(() => calendar.onSnooze(event, beforeStart))}
-        >
-          {beforeStart ? 'Snooze until start' : 'Snooze 2 min'}
-        </button>
+        <CardButton
+          label={beforeStart ? 'Snooze until start' : 'Snooze 1 min'}
+          onClick={() =>
+            leave(() =>
+              beforeStart ? calendar.onSnooze(event, true) : calendar.onSnoozeAlert(event),
+            )
+          }
+        />
         <JoinAtStartAction
           event={event}
           calendar={calendar}
-          buttonClass="isl-calline-act"
-          noteClass="isl-meet-later"
+          buttonClass="mc-btn"
+          noteClass="mc-later"
           offer
         />
-        <button type="button" className="isl-calline-act" onClick={dismiss}>
-          Dismiss
-        </button>
-        <button
-          type="button"
-          className="isl-calline-act"
-          onClick={() =>
-            leave(() => {
-              calendar.onDismissNudge(event);
-              calendar.onOpenEvent(event.key);
-            })
-          }
-        >
-          Open
-        </button>
-      </div>
+      </MeetingCardBody>
     </div>
   );
 }

@@ -30,6 +30,8 @@ export const MEETING_ALERT_ACTIONS = [
   'join',
   'join-at-start',
   'cancel-join-at-start',
+  'snooze-until-start',
+  'open',
 ] as const;
 export const meetingAlertActionSchema = z.object({
   kind: z.enum(MEETING_ALERT_ACTIONS),

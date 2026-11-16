@@ -11,7 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                | What to do                                                     |
 | ------------------------------------------- | -------------------------------------------------------------- |
 | Home: message box, Needs you, Working set   | [Read Home](home.md).                                          |
-| Fewer meeting alerts; Join takes notes      | [Take meeting notes](meetings.md).                             |
+| One meeting card; Join takes notes          | [Take meeting notes](meetings.md).                             |
 | Saved sign-ins type with no card            | [Save a test sign-in](use-the-browser.md#save-a-test-sign-in). |
 | Browser: address at top, one chat per tab   | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).   |
 | Context rail: full height; **Tools** inline | [See a chat's context](context-rail.md).                       |

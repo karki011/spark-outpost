@@ -118,7 +118,8 @@ test('the meeting card hangs from Scout with its details, snoozes through a relo
   await page.reload();
   await expect(bubble(page)).toBeVisible();
 
-  await bubble(page).getByRole('button', { name: 'Open' }).click();
+  await bubble(page).getByRole('button', { name: 'More actions' }).click();
+  await bubble(page).getByRole('button', { name: 'Open in Today' }).click();
   const standup = await eventKeyOf(page, 'Standup', apiNow(), apiNow() + DAY);
   await expect.poll(() => opened(page)).toEqual([`settings:today:${standup}`]);
   await expect(bubble(page)).toBeHidden();
@@ -149,7 +150,7 @@ async function dismissedNow(page: Page): Promise<boolean | undefined> {
 test('Dismiss, × and Esc dismiss that meeting for good, even after a reload', async ({ page }) => {
   await openNotchIsland(page, { size: 'large', autoExpand: false });
   await expect(bubble(page)).toBeVisible();
-  await bubble(page).getByRole('button', { name: 'Dismiss', exact: true }).click();
+  await bubble(page).getByRole('button', { name: 'Dismiss the nudge for Standup' }).click();
   await expect(bubble(page)).toBeHidden();
   await expect.poll(() => dismissedNow(page)).toBe(true);
   await page.reload();
@@ -159,7 +160,7 @@ test('Dismiss, × and Esc dismiss that meeting for good, even after a reload', a
 
   await undismiss(page);
   await page.reload();
-  await bubble(page).getByRole('button', { name: 'Dismiss the nudge for Standup' }).click();
+  await bubble(page).locator('.mc-x').click();
   await expect(bubble(page)).toBeHidden();
   await expect.poll(() => dismissedNow(page)).toBe(true);
 

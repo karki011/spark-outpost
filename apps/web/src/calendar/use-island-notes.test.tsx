@@ -169,6 +169,7 @@ describe('notes when you join from the island or the centre card', () => {
         onDismissed: vi.fn(),
         onJoinAtStart: vi.fn(),
         onJoinTakesNotes,
+        onOpen: vi.fn(),
       }),
     );
   }
@@ -207,6 +208,7 @@ describe('notes when you join from the island or the centre card', () => {
         onDismissed: vi.fn(),
         onJoinAtStart: vi.fn(),
         onJoinTakesNotes,
+        onOpen: vi.fn(),
       }),
     );
     act(() => bridge.act({ kind: 'joined', key: standup.key, eventKey: standup.key }));
