@@ -60,18 +60,21 @@ test('an ordinary command card is allowed from its Home row and the run continue
     .toContain('fake-run=allowed');
 });
 
-test('an ordinary card answered from the since-you-left lead leaves and moves focus on', async ({
+test('an ordinary card answered from Needs you leaves and moves focus to the next row', async ({
   page,
 }) => {
   await seedChats([
-    { title: 'Ship the notes', run: { status: 'succeeded' }, unread: true },
     { title: 'Deploy the site', run: { status: 'awaiting_approval' }, approval: command },
+    { title: 'Deploy the docs', run: { status: 'awaiting_approval' }, approval: command },
   ]);
   await page.goto('/');
-  const since = home(page).getByRole('region', { name: 'Since you left' });
-  await since.getByRole('button', { name: 'Allow once: Deploy the site' }).click();
-  await expect(since.getByRole('button', { name: /^Allow once/ })).toHaveCount(0);
-  await expect(since.getByRole('button', { name: 'Review: Ship the notes' })).toBeFocused();
+  const first = needs(page)
+    .getByRole('button', { name: /^Allow once: / })
+    .first();
+  const firstName = await first.getAttribute('aria-label');
+  await first.click();
+  await expect(needs(page).getByRole('button', { name: firstName! })).toHaveCount(0);
+  await expect(needs(page).getByRole('button', { name: /^Allow once: / })).toBeFocused();
 });
 
 test('a held, instruction or question card shows no Allow or Deny, only Open chat', async ({

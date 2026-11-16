@@ -101,8 +101,6 @@ const FACTS: HeadlineFacts = {
   hour: 9,
   waiting: 0,
   working: 0,
-  updates: 0,
-  failed: 0,
   meeting: null,
   minutes: 0,
 };
@@ -122,16 +120,6 @@ describe('headline', () => {
     );
   });
 
-  it('says what landed while the user was away and how many stopped', () => {
-    const since = { ...FACTS, kind: 'since-you-left' as const, updates: 3, failed: 1 };
-    expect(headline(SAM, since)).toBe(
-      'Good morning, Sam. 3 updates landed while you were away, 1 stopped with an error.',
-    );
-    expect(headline({ personality: 'facts', name: 'Sam' }, { ...since, failed: 0 })).toBe(
-      'Good morning, Sam. 3 updates since you left.',
-    );
-  });
-
   it('names the meeting, how far it is and what waits first', () => {
     const meeting = { ...FACTS, kind: 'meeting' as const, meeting: 'Design sync', minutes: 5 };
     expect(headline(SAM, meeting)).toBe('Design sync starts in 5 minutes.');
@@ -141,25 +129,11 @@ describe('headline', () => {
     expect(headline(SAM, { ...meeting, minutes: 0 })).toBe('Design sync starts now.');
     expect(headline(SAM, { ...meeting, minutes: -3 })).toBe('Design sync started 3 minutes ago.');
   });
-
-  it('counts what waits and what keeps running before the user goes', () => {
-    const evening = { ...FACTS, kind: 'before-you-go' as const, hour: 18, waiting: 1, working: 2 };
-    expect(headline(SAM, evening)).toBe(
-      'Before you go, 1 thing needs you and 2 agents are working.',
-    );
-    expect(headline({ personality: 'facts', name: 'Sam' }, { ...evening, waiting: 0 })).toBe(
-      'Before you go: 2 agents are working.',
-    );
-  });
 });
 
 describe('headlineMood', () => {
-  it('reflects the lead and falls back on the board', () => {
+  it('is alert for a meeting and otherwise keeps the mood', () => {
     expect(headlineMood({ ...FACTS, kind: 'meeting' }, null)).toBe('alert');
-    expect(headlineMood({ ...FACTS, kind: 'since-you-left', failed: 1 }, null)).toBe('sad');
-    expect(headlineMood({ ...FACTS, kind: 'since-you-left' }, null)).toBe('happy');
-    expect(headlineMood({ ...FACTS, kind: 'before-you-go', waiting: 1 }, null)).toBe('alert');
-    expect(headlineMood({ ...FACTS, kind: 'before-you-go' }, null)).toBe('working');
     expect(headlineMood(FACTS, 'sleep')).toBe('sleep');
   });
 });

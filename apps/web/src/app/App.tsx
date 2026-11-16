@@ -337,7 +337,6 @@ function ChatShell({ entering }: { entering: boolean }) {
                 setTicketFocus(itemId);
                 setView('tickets');
               }}
-              onUsage={() => setSettings('usage')}
               onProviders={() => setSettings('ai')}
             />
           )}

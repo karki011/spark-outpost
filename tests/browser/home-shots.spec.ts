@@ -57,7 +57,7 @@ test('Home screenshots', async ({ page }) => {
   test.skip(!SHOTS, 'Set SPARK_SHOTS to a folder to write the screenshots.');
   test.setTimeout(240_000);
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.setViewportSize({ width: 1280, height: 1500 });
+  await page.setViewportSize({ width: 1280, height: 900 });
 
   await resetTestDatabase({ onboarded: true });
   await resetTicketFakes();
@@ -68,16 +68,9 @@ test('Home screenshots', async ({ page }) => {
   await openTickets(page);
   await expect(page.locator('li[data-ticket$=":WEB-433"]')).toBeVisible({ timeout: 15_000 });
   await goHome(page);
-  const today = page.getByRole('region', { name: /^(Needs you|Pick up next)/ });
-  await expect(
-    today.getByRole('list', { name: /^(Do these first|Pick up where you left off)$/ }),
-  ).toBeVisible({
-    timeout: 15_000,
-  });
-  await shoot(page, 'today');
-  await today.getByRole('button', { name: /^Show what happened/ }).click();
-  await page.getByRole('region', { name: 'Since you left' }).getByRole('button').first().focus();
-  await shoot(page, 'row-action-away');
+  await expect(page.getByRole('region', { name: /^Needs you/ })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Working set' })).toBeVisible();
+  await shoot(page, 'busy');
 
   await page
     .getByRole('navigation', { name: 'Main' })
@@ -88,43 +81,28 @@ test('Home screenshots', async ({ page }) => {
     await useTheme(page, theme);
     await page.screenshot({ path: path.join(SHOTS, `tickets-brief-strip-${theme}.png`) });
   }
-
-  await resetTestDatabase({ onboarded: true });
-  await seedChats([
-    { title: 'Migrate billing tables', run: { status: 'failed', error: 'Migration 0042 failed.' } },
-    { title: 'Refactor webhook signer', run: { status: 'succeeded' } },
-  ]);
-  await page.addInitScript(() => localStorage.setItem('spark-outpost.view', 'home'));
-  await page.goto('/');
-  await expect(page.locator('.dg-headline')).toBeVisible({ timeout: 15_000 });
-  await shoot(page, 'no-tickets');
-
-  await page.request.patch('/api/tickets/attention-settings', { data: { briefEnabled: false } });
-  await page.reload();
-  await expect(page.locator('.dg-off')).toBeVisible();
-  await shoot(page, 'brief-off');
+  await goHome(page);
 
   await page.route('**/api/conversations', () => new Promise(() => {}));
   await page.reload();
-  await expect(page.getByTestId('home-lead-skeleton')).toBeVisible();
+  await goHome(page);
+  await expect(page.locator('.home-sections')).toHaveAttribute('aria-busy', 'true');
   await shoot(page, 'loading');
   await page.unroute('**/api/conversations');
 
   await resetTestDatabase({ onboarded: true });
   await seedChats([{ title: 'Explain the checklist', run: { status: 'succeeded' } }]);
   await page.reload();
+  await goHome(page);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('All quiet.');
   await shoot(page, 'quiet');
 
   await resetTestDatabase({ onboarded: true });
   await seedBusyChats();
+  await page.setViewportSize({ width: 390, height: 1100 });
   await page.reload();
-  await expect(page.getByRole('region', { name: 'Since you left' })).toBeVisible();
-  await shoot(page, 'since');
-
-  await page.setViewportSize({ width: 390, height: 1400 });
-  await page.reload();
-  await expect(page.getByRole('region', { name: 'Since you left' })).toBeVisible();
+  await goHome(page);
+  await expect(page.getByRole('region', { name: /^Needs you/ })).toBeVisible();
   await shoot(page, 'narrow');
 });
 

@@ -7,59 +7,55 @@
 .home-wrap {
   container: home / inline-size;
   width: 100%;
-  max-width: 1120px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 40px 28px 48px;
+  padding: clamp(32px, 12vh, 120px) 28px 48px;
 }
 
 .home-hero {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 8px 14px;
 }
 
 .home-hero .scout {
   flex-shrink: 0;
 }
 
-.hh-t {
-  min-width: 0;
-}
-
-.hh-time {
-  margin: 0 0 2px;
-  color: var(--muted);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-
 .home-hero h1 {
+  flex: 1 1 280px;
+  min-width: 0;
   margin: 0;
-  max-width: 44ch;
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.25;
 }
 
-.home-lead {
-  margin-top: 20px;
+.home-meet {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
-.home-lead:empty {
-  margin: 0;
+.home-meet.live {
+  padding: 4px 4px 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+}
+
+.home-meet-t b {
+  color: var(--text);
+  font-weight: 500;
 }
 
 .home-compose {
   margin: 20px 0 8px;
-}
-
-.home-compose.compact .composer textarea {
-  padding-top: 8px;
-}
-
-.home-compose.compact .composer-wrap {
-  padding: 0;
 }
 
 .home-compose .composer-wrap {
@@ -98,30 +94,29 @@
   font-size: 13px;
 }
 
-.home-board {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
-}
-
-.hcol {
+.home-sections {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  min-width: 0;
+  gap: 24px;
+  margin-top: 12px;
+}
+
+.home-sections .ps-warn {
+  margin: 0;
 }
 
 .hcard2 {
   min-width: 0;
-  padding: 14px 16px 10px;
+}
+
+.home-needs {
+  padding: 12px 16px 6px;
   border: 1px solid var(--line);
   border-radius: var(--r);
   background: var(--panel);
 }
 
-.hcard2-h,
-.hlead-h {
+.hcard2-h {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -129,138 +124,21 @@
   margin-bottom: 6px;
 }
 
-.hcard2-h h2,
-.hlead-t h2 {
+.hcard2-h h2 {
   margin: 0;
-  font-size: 15px;
-  font-weight: 600;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.home-needs .hcard2-h h2 {
+  color: var(--warn);
 }
 
 .hcard2-h h2 .n {
   color: var(--muted);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-}
-
-.hlead {
-  padding: 18px 20px 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r);
-  background: var(--panel);
-}
-
-.hlead-h {
-  align-items: flex-start;
-  margin-bottom: 8px;
-}
-
-.hlead-t h2 {
-  font-size: 17px;
-}
-
-.hlead-meta,
-.hlead-kick {
-  margin: 2px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.hlead-kick {
-  margin: 4px 0 0;
-  font-weight: 500;
-}
-
-.hlead-acts {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.hlead-g h3 {
-  margin: 14px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.hlead-more {
-  margin: 4px 0 0;
-}
-
-.hlead-more .hlink {
-  margin-left: 0;
-}
-
-.hfoot {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 0 4px;
-}
-
-.hspend {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.hspend b {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.hspend .hlink {
-  display: inline;
-  margin: 0;
-  padding: 2px 4px;
-  color: var(--accent-text);
-}
-
-.hday-a {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.hday-hint {
-  color: var(--faint);
-  font-size: 12px;
-}
-
-.hsparks {
-  padding: 0 4px;
-}
-
-.hsparks summary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 28px;
-  color: var(--muted);
-  font-size: 13px;
-  cursor: pointer;
-  list-style: none;
-}
-
-.hsparks summary::-webkit-details-marker {
-  display: none;
-}
-
-.hsparks summary:hover {
-  color: var(--text);
-}
-
-.hsparks summary .chev {
-  transition: transform 0.15s var(--out);
-}
-
-.hsparks[open] summary .chev {
-  transform: rotate(90deg);
-}
-
-.hsparks .hcard2 {
-  margin-top: 8px;
 }
 
 .home-foot {
@@ -282,20 +160,6 @@
   display: none;
 }
 
-@container home (max-width: 860px) {
-  .home-board {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .hlead-h {
-    flex-direction: column;
-  }
-
-  .hlead-acts {
-    justify-content: flex-start;
-  }
-}
-
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   .home {
     overflow-x: hidden;
@@ -308,11 +172,4 @@
   .home-hero h1 {
     font-size: 22px;
   }
-}
-
-.hcol > .hfoot:only-child {
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  background: var(--panel);
 }

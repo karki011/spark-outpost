@@ -1,5 +1,4 @@
 const DETAILS_KEY = 'spark-outpost.digest.details-open';
-export const SPARKS_KEY = 'spark-outpost.home.sparks-open';
 
 export function readDetailsOpen(key = DETAILS_KEY): boolean {
   try {
