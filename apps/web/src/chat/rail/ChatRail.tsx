@@ -31,14 +31,13 @@ import { currentModel } from '../composer/model-options.ts';
 import { unlistedPinName } from '../composer/shown-model.ts';
 import { permissionState } from '../composer/mode-summary.ts';
 import { requestProjectMenu } from '../project/project-menu-request.ts';
-import { requestTools } from '../tools/tools-request.ts';
 import { useChatWorkspace } from '../project/use-chat-workspace.ts';
 import { providerName } from '../provider-name.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { primaryPull } from '../pull-request/pull-request-model.ts';
 import { RailCrew } from './RailCrew.tsx';
 import { RailPorts } from './RailPorts.tsx';
-import { RailToolsLine } from './RailToolsLine.tsx';
+import { RailTools } from './RailTools.tsx';
 import { RailToggleIcon } from './RailIcons.tsx';
 import { RailSummary } from './RailSummary.tsx';
 import { RailTodo } from './RailTodo.tsx';
@@ -227,7 +226,6 @@ function OpenRail({
     if (action.kind === 'tab') onTab(action.tab);
     if (action.kind === 'autonomy') onAutonomy();
     if (action.kind === 'changes') onChanges();
-    if (action.kind === 'tools') requestTools(conversationId);
   };
 
   return (
@@ -248,7 +246,7 @@ function OpenRail({
       </div>
       {task && <RailTodo task={task} onOpen={openTodo} />}
       {crew.length > 0 && <RailCrew conversationId={conversationId} agents={crew} mode={mode} />}
-      <RailToolsLine conversationId={conversationId} onOpen={() => act({ kind: 'tools' })} />
+      <RailTools conversationId={conversationId} repos={repos} provider={settings.provider} />
     </section>
   );
 }

@@ -1,6 +1,12 @@
-.tools-panel .tools-scroll {
+.tools-groups {
   display: flex;
   flex-direction: column;
+}
+
+.tools-groups li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .tools-group {
@@ -31,18 +37,21 @@
   border-radius: 6px;
 }
 
-.tools-panel ul {
+.tools-groups ul {
   max-height: none;
+  margin: 0;
+  padding: 0;
   overflow: visible;
+  list-style: none;
 }
 
-.tools-panel li {
+.tools-groups li {
   min-height: 36px;
   padding: 4px 0;
   border-top: 0;
 }
 
-.tools-panel .mcppop-text code {
+.tools-groups .mcppop-text code {
   overflow: hidden;
   color: var(--text);
   font-family: inherit;
@@ -51,7 +60,7 @@
   white-space: nowrap;
 }
 
-.tools-panel .mcppop-text small {
+.tools-groups .mcppop-text small {
   overflow: hidden;
   color: var(--faint);
   text-overflow: ellipsis;
@@ -86,13 +95,13 @@
   color: var(--success);
 }
 
-.tools-panel li[data-state='switch_off'] code {
+.tools-groups li[data-state='switch_off'] code {
   color: var(--muted);
 }
 
 @media (pointer: coarse) {
   .tools-link,
-  .tools-panel li {
+  .tools-groups li {
     min-height: 44px;
   }
 }
