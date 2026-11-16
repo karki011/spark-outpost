@@ -8,18 +8,17 @@ summary: What changed in recent releases and what to do next.
 
 ## Mid-November 2026
 
-| What changed                                | What to do                                                     |
-| ------------------------------------------- | -------------------------------------------------------------- |
-| Home: message box, Needs you, Working set   | [Read Home](home.md).                                          |
-| One meeting card; Join takes notes          | [Take meeting notes](meetings.md).                             |
-| Saved sign-ins type with no card            | [Save a test sign-in](use-the-browser.md#save-a-test-sign-in). |
-| Browser: address at top, one chat per tab   | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).   |
-| Context rail: full height; **Tools** inline | [See a chat's context](context-rail.md).                       |
-| Remote control: side panel, sections fold   | [Use your phone](use-your-phone.md).                           |
-| Wider user guide pages                      | Nothing to do.                                                 |
-| Smoother squircle corners on the Mac        | Nothing to do.                                                 |
-| Fewer Settings pages                        | [Settings](settings.md).                                       |
-| Left bar **More** menu                      | [Pause Spark](pause-spark.md).                                 |
+| What changed                                          | What to do                                                     |
+| ----------------------------------------------------- | -------------------------------------------------------------- |
+| Home: message box, Needs you, Working set             | [Read Home](home.md).                                          |
+| One meeting card; Join takes notes                    | [Take meeting notes](meetings.md).                             |
+| Saved sign-ins type with no card                      | [Save a test sign-in](use-the-browser.md#save-a-test-sign-in). |
+| Browser: address at top, one chat per tab             | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).   |
+| Context rail: full height; **Tools** inline           | [See a chat's context](context-rail.md).                       |
+| Remote control: side panel, sections fold             | [Use your phone](use-your-phone.md).                           |
+| Wider guide pages, squircle corners, sidebar hide fix | Nothing to do.                                                 |
+| Fewer Settings pages                                  | [Settings](settings.md).                                       |
+| Left bar **More** menu                                | [Pause Spark](pause-spark.md).                                 |
 
 ## Early November 2026
 

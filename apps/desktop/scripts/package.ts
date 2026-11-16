@@ -1,9 +1,13 @@
+import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import {
+  GOOGLE_CLIENT_FILE_ENV,
   packagedHeartbeatUrl,
+  packagedSlackClientId,
   releaseProblems,
   RELEASE_ARCHS,
   type MacArch,
@@ -25,6 +29,22 @@ function archs(value: string): MacArch[] {
   throw new Error(`Unknown --arch ${value}; use all, current, x64 or arm64.`);
 }
 
+function localGoogleClientFile(): string | undefined {
+  const gitDir = execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], {
+    cwd: desktopDir,
+    encoding: 'utf8',
+  }).trim();
+  const roots = [path.resolve(desktopDir, '../..'), path.dirname(gitDir)];
+  return roots
+    .map((root) => path.join(root, '.local', 'google-oauth-client.json'))
+    .find((file) => existsSync(file));
+}
+
+if ((process.env[GOOGLE_CLIENT_FILE_ENV] ?? '').trim() === '') {
+  const found = localGoogleClientFile();
+  if (found) process.env[GOOGLE_CLIENT_FILE_ENV] = found;
+}
+
 const manifest = JSON.parse(await readFile(path.join(desktopDir, 'package.json'), 'utf8')) as {
   version: string;
 };
@@ -39,6 +59,10 @@ if (values.release) {
     process.exit(1);
   }
 }
+console.log(
+  `Google Calendar: ${process.env[GOOGLE_CLIENT_FILE_ENV] ? 'on' : `off (set ${GOOGLE_CLIENT_FILE_ENV})`}`,
+);
+console.log(`Slack: ${packagedSlackClientId(process.env) ? 'on' : 'off'}`);
 const heartbeat = packagedHeartbeatUrl(process.env);
 console.log(
   heartbeat ? `Heartbeat: ${heartbeat}` : 'Heartbeat: off (set SPARK_HEARTBEAT_URL to turn it on).',
