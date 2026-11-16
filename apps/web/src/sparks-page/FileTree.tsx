@@ -130,8 +130,9 @@ export function FileTree({
               </span>
             )}
             {seen?.has(node.path) && (
-              <span className="spk-mark seen">
-                <CheckIcon /> Read
+              <span className="spk-mark seen" title="Read">
+                <CheckIcon />
+                <span className="sr-only">Read</span>
               </span>
             )}
             {edited.has(node.path) && (

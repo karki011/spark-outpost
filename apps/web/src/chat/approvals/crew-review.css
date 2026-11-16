@@ -19,7 +19,7 @@
 }
 
 .crw-modal {
-  width: min(92vw, 820px);
+  width: min(94vw, 1080px);
   max-height: 88vh;
   padding: 0;
   border: 1px solid var(--line);
@@ -123,7 +123,7 @@
 
 .rvf {
   display: grid;
-  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
   gap: 16px;
   margin: 12px 0 0;
 }
