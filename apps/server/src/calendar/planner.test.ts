@@ -146,14 +146,29 @@ describe('planNudges', () => {
     expect(plan.nudge).toBeNull();
   });
 
-  it('offers a capture line for 15 min after a meeting with notes ends', () => {
+  it('offers a capture line only for a meeting Spark took notes in, for 15 min after', () => {
+    const MEETING = '00000000-0000-4000-8000-0000000000bb';
     const ended = event('Design review', -40, -5, { hasNotes: true });
-    expect(planNudges([ended], NO_CHATS, settings(), NOW).capture).toMatchObject({
+    const recorded = new Map([[ended.key, { meetingId: MEETING, endedAt: NOW - 6 * MINUTE }]]);
+    expect(planNudges([ended], NO_CHATS, settings(), NOW, recorded).capture).toEqual({
+      eventKey: ended.key,
+      meetingId: MEETING,
       title: 'Design review',
     });
-    expect(planNudges([ended], NO_CHATS, settings({ capture: false }), NOW).capture).toBeNull();
-    const long = event('Old', -60, -16, { hasNotes: true });
-    expect(planNudges([long], NO_CHATS, settings(), NOW).capture).toBeNull();
+    expect(planNudges([ended], NO_CHATS, settings(), NOW).capture).toBeNull();
+    expect(
+      planNudges([ended], NO_CHATS, settings({ capture: false }), NOW, recorded).capture,
+    ).toBeNull();
+    const long = event('Old', -60, -16);
+    const old = new Map([[long.key, { meetingId: MEETING, endedAt: NOW - 16 * MINUTE }]]);
+    expect(planNudges([long], NO_CHATS, settings(), NOW, old).capture).toBeNull();
+  });
+
+  it('counts the capture window from when the notes stopped, if that was after the end', () => {
+    const MEETING = '00000000-0000-4000-8000-0000000000bb';
+    const overran = event('Retro', -60, -20);
+    const late = new Map([[overran.key, { meetingId: MEETING, endedAt: NOW - 2 * MINUTE }]]);
+    expect(planNudges([overran], NO_CHATS, settings(), NOW, late).capture?.title).toBe('Retro');
   });
 });
 

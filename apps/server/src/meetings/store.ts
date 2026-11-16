@@ -429,3 +429,25 @@ export async function listMeetings(
     nextBefore: rows.length > limit ? page[page.length - 1]!.started_at.toISOString() : null,
   };
 }
+
+export interface RecordedMeeting {
+  meetingId: string;
+  endedAt: number;
+}
+
+export async function recordedMeetings(
+  db: Queryable,
+  workspaceId: string,
+  since: Date,
+): Promise<Map<string, RecordedMeeting>> {
+  const { rows } = await db.query<{ event_key: string; id: string; ended_at: Date }>(
+    `SELECT DISTINCT ON (event_key) event_key, id, ended_at FROM meetings
+     WHERE workspace_id = $1 AND event_key IS NOT NULL AND state <> 'recording'
+       AND line_count > 0 AND ended_at IS NOT NULL AND ended_at >= $2
+     ORDER BY event_key, ended_at DESC`,
+    [workspaceId, since],
+  );
+  return new Map(
+    rows.map((row) => [row.event_key, { meetingId: row.id, endedAt: row.ended_at.getTime() }]),
+  );
+}

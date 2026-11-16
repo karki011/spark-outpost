@@ -48,7 +48,7 @@ describe('taking notes when the user joins', () => {
     expect((await calendarConnection(t.db, t.workspaceId)).settings.notesOnJoin).toBe(false);
     const { client, started } = setup();
     const answer = await client.send('post', '/api/meetings/join-notes', EVENT).expect(200);
-    expect(answer.body).toEqual({ detail: null });
+    expect(answer.body).toEqual({ detail: null, problem: null });
     expect(started).toEqual([]);
     expect((await client.get('/api/meetings')).body.items).toEqual([]);
   });
@@ -80,23 +80,22 @@ describe('taking notes when the user joins', () => {
         eventKey: 'work|other@2026-11-12T10:00:00Z',
       })
       .expect(200);
-    expect(again.body).toEqual({ detail: null });
+    expect(again.body.detail).toBeNull();
+    expect(again.body.problem).toEqual(expect.any(String));
     expect(started).toHaveLength(1);
   });
 
-  it('starts nothing when recording is unavailable or the join names no calendar event', async () => {
+  it('says why when recording is unavailable, and starts nothing for a join with no event', async () => {
     await updateSettings(t.db, t.workspaceId, { notesOnJoin: true });
     const off = setup(false);
     expect(
       (await off.client.send('post', '/api/meetings/join-notes', EVENT).expect(200)).body,
-    ).toEqual({
-      detail: null,
-    });
+    ).toEqual({ detail: null, problem: 'Voice is off.' });
     const on = setup();
     const answer = await on.client
       .send('post', '/api/meetings/join-notes', { title: 'No event' })
       .expect(200);
-    expect(answer.body).toEqual({ detail: null });
+    expect(answer.body).toEqual({ detail: null, problem: null });
     expect(on.started).toEqual([]);
   });
 

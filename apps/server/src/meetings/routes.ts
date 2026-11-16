@@ -83,12 +83,13 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
   router.post('/meetings/join-notes', async (req, res) => {
     const request = parseBody(startMeetingRequestSchema, req);
     const { settings } = await calendarConnection(db, workspaceId);
-    const answer: MeetingJoinNotes = { detail: null };
+    const answer: MeetingJoinNotes = { detail: null, problem: null };
     if (settings.notesOnJoin && request.eventKey) {
       try {
         answer.detail = await detail((await meetings.start(request)).id);
       } catch (error) {
         if (!(error instanceof MeetingError)) throw error;
+        answer.problem = error.message.slice(0, 500);
       }
     }
     res.json(answer);

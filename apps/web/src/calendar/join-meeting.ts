@@ -1,23 +1,47 @@
-import { MEETING_TITLE_MAX, type CalendarEvent } from '@spark-outpost/contracts';
+import {
+  MEETING_TITLE_MAX,
+  type CalendarEvent,
+  type MeetingJoinNotes,
+} from '@spark-outpost/contracts';
 import { meetingsApi } from '../meetings/index.ts';
 import { openJoin } from './today-model.ts';
 import { openTodayMeeting } from './today-request.ts';
 
 const CALENDAR_NAME_MAX = 200;
+const NO_NOTES: MeetingJoinNotes = { detail: null, problem: null };
 
-export function joinMeeting(event: CalendarEvent, calendarName?: string): void {
-  if (!event.link) return;
-  openJoin(event.link.url);
+type ProblemListener = (problem: string) => void;
+const problemListeners = new Set<ProblemListener>();
+
+export function onNotesProblem(listener: ProblemListener): () => void {
+  problemListeners.add(listener);
+  return () => problemListeners.delete(listener);
+}
+
+export function notesProblemText(problem: string): string {
+  return `Notes didn’t start: ${problem}`;
+}
+
+export function startJoinNotes(
+  event: CalendarEvent,
+  calendarName?: string,
+): Promise<MeetingJoinNotes> {
   const title = event.title.trim().slice(0, MEETING_TITLE_MAX);
   const calendar = calendarName?.trim().slice(0, CALENDAR_NAME_MAX);
-  void meetingsApi
+  return meetingsApi
     .joinNotes({
       eventKey: event.key,
       ...(title ? { title } : {}),
       ...(calendar ? { calendarName: calendar } : {}),
     })
-    .then(({ detail }) => {
-      if (detail) openTodayMeeting(detail.meeting.id);
-    })
-    .catch(() => undefined);
+    .catch(() => NO_NOTES);
+}
+
+export function joinMeeting(event: CalendarEvent, calendarName?: string): void {
+  if (!event.link) return;
+  openJoin(event.link.url);
+  void startJoinNotes(event, calendarName).then(({ detail, problem }) => {
+    if (detail) openTodayMeeting(detail.meeting.id);
+    if (problem) problemListeners.forEach((listener) => listener(problem));
+  });
 }

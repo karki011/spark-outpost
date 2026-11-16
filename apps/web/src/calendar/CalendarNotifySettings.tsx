@@ -233,14 +233,14 @@ export function CalendarMeetingSettings() {
         {meetings && (
           <SwitchRow
             label={NOTES_ON_JOIN_LABEL}
-            hint="Join or ⌘J in Spark’s window also starts recording that meeting’s notes on this Mac and opens its transcript. Joins from the island, a meeting alert, a countdown or Ask Spark never record."
+            hint="A Join you press (in Spark, on the island or on the meeting alert) also starts recording that meeting’s notes on this Mac and opens its transcript, where the recording bar shows. Automatic joins, Join at start and Ask Spark never record."
             checked={settings.notesOnJoin}
             onChange={(on) => save({ notesOnJoin: on })}
           />
         )}
         <SwitchRow
           label={CAPTURE_LABEL}
-          hint="After a meeting with notes ends, one Spark Island line offers a chat about it for 15 minutes."
+          hint="For 15 minutes after a meeting Spark took notes in, one Spark Island line opens those notes."
           checked={settings.capture}
           onChange={(on) => save({ capture: on })}
         />

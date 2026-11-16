@@ -43,12 +43,19 @@ import { todayState } from './today-model.ts';
 import { clock } from './calendar-format.ts';
 import { lineUnderAlert } from './meeting-alert.ts';
 import { ALERT_SNOOZE_MS, useMeetingAlert } from './use-meeting-alert.ts';
-import { openTodayEvent } from './today-request.ts';
+import { openTodayEvent, openTodayMeeting } from './today-request.ts';
+import { notesProblemText, startJoinNotes } from './join-meeting.ts';
 import { useCalendarNow, useCalendarStatus } from './use-calendar.ts';
 import { useIslandRequests } from '../island/island-requests.ts';
 
 const NO_MEETINGS: readonly CalendarEvent[] = [];
 const NO_CLASHES: ReadonlyMap<string, readonly string[]> = new Map();
+
+function openMeetingNotes(meetingId: string): void {
+  const desktop = sparkDesktop();
+  if (desktop?.island.openSettings) desktop.island.openSettings(`today:meeting:${meetingId}`);
+  else openTodayMeeting(meetingId);
+}
 
 function openToday(eventKey: string): void {
   const desktop = sparkDesktop();
@@ -191,6 +198,7 @@ const MEETING_REQUESTS = ['snooze_meeting', 'join_meeting'] as const;
 
 export const DISMISS_RETRY_MS = 30_000;
 export const JOIN_AT_START_NOTE_MS = 4_000;
+const NOTES_PROBLEM_MS = 8_000;
 
 function useDismissForGood() {
   const queryClient = useQueryClient();
@@ -216,7 +224,6 @@ export function useIslandCalendar(
   minute: number,
   waiting: number,
   chats: readonly ConversationSummary[],
-  onQuickChat: (text: string) => void,
   home: IslandHomePanel,
 ): IslandCalendar {
   const status = useCalendarStatus();
@@ -250,6 +257,13 @@ export function useIslandCalendar(
     () => new Map((live?.calendars ?? []).map((choice) => [choice.key, choice.title])),
     [live],
   );
+  const takeNotes = (event: CalendarEvent) => {
+    if (!(ready && status.data?.settings.notesOnJoin)) return;
+    void startJoinNotes(event, names.get(event.calendarKey)).then(({ detail, problem }) => {
+      if (detail) openMeetingNotes(detail.meeting.id);
+      if (problem) home.note(notesProblemText(problem), event.title, NOTES_PROBLEM_MS);
+    });
+  };
   const autoJoin = useMeetingAlert({
     live,
     settings: ready ? (status.data?.settings ?? null) : null,
@@ -261,6 +275,7 @@ export function useIslandCalendar(
     note: home.note,
     onDismissed: dismissForGood,
     onJoinAtStart: (event, on) => (on ? askJoinAtStart(event) : joinAtStart.save(event, false)),
+    onUserJoined: takeNotes,
   });
   const line = calendarLine({
     now: live,
@@ -320,7 +335,11 @@ export function useIslandCalendar(
     joinLeadMs: leadMs,
     onCancelJoin: autoJoin.cancelJoin,
     onJoinNow: autoJoin.joinNow,
-    onJoined: autoJoin.markJoined,
+    onJoined: (eventKey) => {
+      autoJoin.markJoined(eventKey);
+      const event = live?.upcoming.find((candidate) => candidate.key === eventKey);
+      if (event) takeNotes(event);
+    },
     onOpenEvent: (eventKey) => openToday(eventKey),
     onChoose: choose,
     onSnooze: (event, untilStart = false) =>
@@ -345,13 +364,7 @@ export function useIslandCalendar(
       const capture = shown.capture;
       if (!capture) return;
       dismiss(capture.eventKey);
-      void calendarApi
-        .detail({ eventId: capture.eventId, start: capture.start })
-        .then((detail) => detail.notes.trim())
-        .catch(() => '')
-        .then((notes) =>
-          onQuickChat(`Follow up on ${capture.title}${notes ? `\n\n${notes}` : ''}`),
-        );
+      openMeetingNotes(capture.meetingId);
     },
   };
 }

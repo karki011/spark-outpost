@@ -164,8 +164,7 @@ describe('calendarLine', () => {
   };
   const capture = {
     eventKey: 'review@x',
-    eventId: 'review',
-    start: iso(at(9)),
+    meetingId: '00000000-0000-4000-8000-0000000000cc',
     title: 'Design review',
   };
   const catchUp = { label: 'Focus', tally: tallyHeld(NO_HELD, 'needs') };
@@ -184,9 +183,13 @@ describe('calendarLine', () => {
       'Focus · alerts held until 11:30 AM',
     );
     expect(calendarLine(input({ ...quiet, hold: null }, { catchUp }))?.dismiss).toBe('catch_up');
-    expect(calendarLine(input({ ...quiet, hold: null }))?.text).toBe(
-      'Design review ended · anything to capture?',
-    );
+    const captured = calendarLine(input({ ...quiet, hold: null }));
+    expect(captured?.text).toBe('Design review ended · anything to capture?');
+    expect(captured?.meeting).toEqual({
+      lead: 'Ended',
+      title: 'Design review',
+      sub: 'Anything to capture?',
+    });
     expect(
       calendarLine(input({ ...quiet, hold: null }, { dismissed: new Set(['review@x']) })),
     ).toBeNull();

@@ -81,7 +81,7 @@ function CalendarRestLine({ line, top, calendar }: CalendarRestLineProps) {
           className="isl-calline-act primary"
           onClick={() => calendar.onCapture(line)}
         >
-          Start a chat
+          Open notes
         </button>
       )}
       {line.dismiss === 'meeting' && (

@@ -24,7 +24,7 @@ About 2 minutes.
 - **Take notes** records a meeting: [Take meeting notes (alpha)](meetings.md).
 - **Refresh now** re-reads them.
 
-Settings → Notifications lists alerts in order: **Wrap-up reminder**; **Join opens** shows the meeting with **Join** and hops Scout; **Alert at** lowers the card; **Anything to capture?** follows a meeting with notes.
+Settings → Notifications lists alerts in order: **Wrap-up reminder**; **Join opens** shows the meeting with **Join** and hops Scout; **Alert at** lowers the card; **Anything to capture?** opens notes Spark took.
 
 At the start, Scout lowers a card: **Join**, **Snooze 1 min** or **Dismiss** (for good). Esc dismisses; **⌘J** joins one meeting.
 

@@ -142,22 +142,12 @@ export function IslandApp() {
   });
   const size = useIslandSize();
   const waiting = fresh.length;
-  const calendar = useIslandCalendar(
-    now,
-    waiting,
-    data.chats,
-    (text) => {
-      setFollowUp(null);
-      setDraft((current) => ({ ...current, text }));
-      openPanel('quick');
-    },
-    {
-      open: panel === 'home',
-      show: () => openPanel('home'),
-      note: (title, sub = '', closeMs) =>
-        setNote(closeMs === undefined ? { title, sub } : { title, sub, closeMs }),
-    },
-  );
+  const calendar = useIslandCalendar(now, waiting, data.chats, {
+    open: panel === 'home',
+    show: () => openPanel('home'),
+    note: (title, sub = '', closeMs) =>
+      setNote(closeMs === undefined ? { title, sub } : { title, sub, closeMs }),
+  });
   const strip: StripData = {
     meeting: calendar.connected ? soonMeeting(calendar.upcoming, calendar.at) : null,
     top: fresh[0] ?? cards[0] ?? null,

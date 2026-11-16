@@ -155,8 +155,7 @@ export type CalendarHold = z.infer<typeof calendarHoldSchema>;
 
 export const calendarCaptureSchema = z.object({
   eventKey: z.string().max(600),
-  eventId: z.string().max(500),
-  start: z.iso.datetime({ offset: true }),
+  meetingId: z.uuid(),
   title: z.string().max(1_000),
 });
 export type CalendarCapture = z.infer<typeof calendarCaptureSchema>;

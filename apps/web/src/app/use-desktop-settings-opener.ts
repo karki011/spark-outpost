@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { openTodayEvent } from '../calendar/today-request.ts';
+import { openTodayEvent, openTodayMeeting } from '../calendar/today-request.ts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import type { SettingsSection } from '../settings/section-ids.ts';
 import { requestSettingFocus } from '../settings/setting-focus.ts';
@@ -21,6 +21,10 @@ export function useDesktopSettingsOpener(setSettings: (section: SettingsSection)
         }
         if (target === 'spark-new') {
           openTeammateSheet({ kind: 'create' });
+          return;
+        }
+        if (target.startsWith('today:meeting:')) {
+          openTodayMeeting(target.slice('today:meeting:'.length));
           return;
         }
         if (target.startsWith('today:')) {

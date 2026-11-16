@@ -26,6 +26,8 @@ export interface PlannerChat {
   needsYou: boolean;
 }
 
+export type RecordedMeetings = ReadonlyMap<string, { meetingId: string; endedAt: number }>;
+
 export interface Plan {
   upcoming: CalendarEvent[];
   clashes: CalendarClash[];
@@ -151,20 +153,20 @@ export function activeHold(
 function captureOffer(
   events: readonly CalendarEvent[],
   settings: CalendarSettings,
+  recorded: RecordedMeetings,
   now: number,
 ): CalendarCapture | null {
   if (!settings.capture) return null;
-  const ended = events
-    .filter((event) => {
-      const { end } = spanOf(event);
-      return (
-        isMeeting(event) && event.hasNotes && end <= now && now < end + CALENDAR_CAPTURE_WINDOW_MS
-      );
-    })
-    .toSorted((a, b) => spanOf(b).end - spanOf(a).end);
-  const event = ended[0];
-  if (!event) return null;
-  return { eventKey: event.key, eventId: event.id, start: event.start, title: event.title };
+  const offers = events.flatMap((event) => {
+    const meeting = recorded.get(event.key);
+    if (!meeting || !isMeeting(event)) return [];
+    const from = Math.max(spanOf(event).end, meeting.endedAt);
+    if (now < from || now >= from + CALENDAR_CAPTURE_WINDOW_MS) return [];
+    return [{ event, meetingId: meeting.meetingId, from }];
+  });
+  const latest = offers.toSorted((a, b) => b.from - a.from)[0];
+  if (!latest) return null;
+  return { eventKey: latest.event.key, meetingId: latest.meetingId, title: latest.event.title };
 }
 
 export function upcomingMeetings(events: readonly CalendarEvent[], now: number): CalendarEvent[] {
@@ -190,6 +192,7 @@ export function planNudges(
   chats: readonly PlannerChat[],
   settings: CalendarSettings,
   now: number,
+  recorded: RecordedMeetings = new Map(),
 ): Plan {
   const sorted = events.toSorted((a, b) => spanOf(a).start - spanOf(b).start);
   const upcoming = upcomingMeetings(sorted, now);
@@ -201,7 +204,7 @@ export function planNudges(
     ),
     nudge: remindNudge(sorted, now) ?? wrapUpNudge(sorted, chats, settings, now),
     hold: activeHold(sorted, settings, now),
-    capture: captureOffer(sorted, settings, now),
+    capture: captureOffer(sorted, settings, recorded, now),
   };
 }
 

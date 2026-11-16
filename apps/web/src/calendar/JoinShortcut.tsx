@@ -4,6 +4,7 @@ import { hasModifier } from '../ui/shortcuts.ts';
 import { ChooseMeetingDialog } from './ChooseMeetingDialog.tsx';
 import { joinChoice } from './join-choice.ts';
 import { joinMeeting } from './join-meeting.ts';
+import { JoinNotesToasts } from './JoinNotesToasts.tsx';
 import { todayState } from './today-model.ts';
 import { useCalendarNow, useCalendarStatus, useJoinLeadMs } from './use-calendar.ts';
 
@@ -61,14 +62,18 @@ export function JoinShortcut({ remote, onOpenEvent }: JoinShortcutProps) {
   );
   const name = useCallback((event: CalendarEvent) => names.get(event.calendarKey), [names]);
   useJoinShortcut(ready ? now : null, setChoosing, name);
-  if (!choosing) return null;
   return (
-    <ChooseMeetingDialog
-      meetings={choosing.meetings}
-      now={choosing.at}
-      calendarName={(event) => names.get(event.calendarKey) ?? 'Calendar'}
-      onOpen={(event) => onOpenEvent(event.key)}
-      onClose={() => setChoosing(null)}
-    />
+    <>
+      {!remote && <JoinNotesToasts />}
+      {choosing && (
+        <ChooseMeetingDialog
+          meetings={choosing.meetings}
+          now={choosing.at}
+          calendarName={(event) => names.get(event.calendarKey) ?? 'Calendar'}
+          onOpen={(event) => onOpenEvent(event.key)}
+          onClose={() => setChoosing(null)}
+        />
+      )}
+    </>
   );
 }

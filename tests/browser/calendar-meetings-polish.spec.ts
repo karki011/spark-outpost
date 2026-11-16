@@ -245,6 +245,11 @@ test('Take notes when I join a meeting is off, and once on a Join also records',
   ).toHaveAttribute('aria-selected', 'true');
   const id = (await recordingId(page))!;
   expect((await meeting(page, id)).title).toBe('Live review');
+  await page.keyboard.press('ControlOrMeta+j');
+  await expect(
+    page.getByText('Notes didn’t start: Another meeting is recording. Stop it first.'),
+  ).toBeVisible();
+  expect(await recordingId(page)).toBe(id);
   await today(page).getByRole('button', { name: 'Stop' }).first().click();
 });
 

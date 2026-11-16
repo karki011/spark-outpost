@@ -37,6 +37,7 @@ interface MeetingAlertOptions {
   note: (text: string) => void;
   onDismissed: (events: readonly CalendarEvent[]) => void;
   onJoinAtStart: (event: CalendarEvent, on: boolean) => void;
+  onUserJoined: (event: CalendarEvent) => void;
 }
 
 function alertTimes(live: CalendarNow | null, settings: CalendarSettings | null): number[] {
@@ -179,7 +180,9 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
 
   const joinFromNotice = (eventKey: string) => {
     const target = alertRef.current?.events.find((event) => event.key === eventKey);
-    if (target && joinState(target, Date.now(), leadMs) === 'open') join(target, false);
+    if (!target || joinState(target, Date.now(), leadMs) !== 'open') return;
+    join(target, false);
+    latest.current.onUserJoined(target);
   };
 
   const handlers = useRef({ cancelJoin, joinNow, joinFromNotice, markJoined });
@@ -232,6 +235,8 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
       }
       if (action.kind === 'joined' && action.eventKey) {
         handlers.current.markJoined(action.eventKey);
+        const pressed = inAlert.find((event) => event.key === action.eventKey);
+        if (pressed) latest.current.onUserJoined(pressed);
       }
       const planned = inAlert.find((event) => event.key === action.eventKey);
       if (action.kind === 'join-at-start' && planned) latest.current.onJoinAtStart(planned, true);
