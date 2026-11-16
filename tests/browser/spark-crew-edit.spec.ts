@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { seedConversation, seedTurn } from '../../apps/server/test/outcome-seed.ts';
-import { addSpark } from './crew-files-kit.ts';
+import { addSpark, openSparksPage } from './crew-files-kit.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
+import { animationsSettled } from './settle.ts';
 
 const SKILL =
   '---\nname: notes\ndescription: Write release notes from merged pull requests\n---\nList merged pull requests.\n';
@@ -44,12 +46,21 @@ async function filePaths(page: Page, sparkId: string): Promise<string[]> {
   return folder.files.map((file) => file.path);
 }
 
-async function crewCardChat(sparkId: string, files: FileChange[], similar: object[] = []) {
+interface CrewTarget {
+  target: 'spark' | 'workflow';
+  id: string;
+  name: string;
+}
+
+async function crewCardChat(
+  sparkId: string,
+  files: FileChange[],
+  similar: object[] = [],
+  about: CrewTarget = { target: 'spark', id: sparkId, name: 'Scout' },
+) {
   const action = {
     action: 'crew_edit',
-    target: 'spark',
-    id: sparkId,
-    name: 'Scout',
+    ...about,
     files,
     similar,
     agent: 'Claude',
@@ -79,8 +90,15 @@ async function crewCardChat(sparkId: string, files: FileChange[], similar: objec
     await db.query(
       `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash, options,
          status)
-       VALUES ($1, $2, $3, 'spark_action', 'Change the Scout Spark?', $4, 'hash', $5, 'pending')`,
-      [randomUUID(), runId, `spark:crew_edit:${randomUUID()}`, payload, JSON.stringify(options)],
+       VALUES ($1, $2, $3, 'spark_action', $6, $4, 'hash', $5, 'pending')`,
+      [
+        randomUUID(),
+        runId,
+        `spark:crew_edit:${randomUUID()}`,
+        payload,
+        JSON.stringify(options),
+        `Change the ${about.name} ${about.target === 'spark' ? 'Spark' : 'workflow'}?`,
+      ],
     );
   } finally {
     await db.end();
@@ -93,7 +111,10 @@ async function openCard(page: Page) {
     .getByRole('navigation', { name: 'Chats' })
     .getByRole('button', { name: 'Outcomes', exact: true })
     .click();
-  const card = page.getByRole('group', { name: /Change the Scout Spark\?/ });
+  await page.getByRole('button', { name: 'Review Scout' }).click();
+  const card = page
+    .getByRole('dialog', { name: 'Review Scout' })
+    .getByRole('group', { name: /Change the Scout Spark\?/ });
   await expect(card).toBeVisible();
   return card;
 }
@@ -134,17 +155,24 @@ test('the card shows new files in full and changed lines, and Allow writes them'
   await expect(card.getByRole('note')).toHaveText(
     'You already have the release-notes skill of Scribe (similar name).',
   );
-  const files = card.getByRole('list', { name: 'File changes' });
-  await expect(files.locator('.dv-badge')).toHaveText(['New', 'New', 'Changed']);
-  const script = files.getByRole('region', { name: 'Changes to skills/notes/run.sh' });
+  const tree = card.getByRole('tree', { name: 'Files in this change' });
+  await expect(tree.locator('[data-badge]')).toHaveText(['Changed', 'New', 'New']);
+  await expect(card.getByText('1 of 3 files read')).toBeVisible();
+  const instructions = card.getByRole('region', { name: 'Changes to SPARK.md' });
+  await expect(instructions.locator('.dv-row.remove')).toContainText('Be brief.');
+  await expect(instructions.locator('.dv-row.add')).toContainText('Be thorough.');
+  await page.screenshot({ path: 'test-results/spark-crew-edit/review-window.png' });
+  await tree.getByRole('treeitem', { name: /^SKILL\.md/ }).click();
+  const skill = card.getByRole('region', { name: 'New: skills/notes/SKILL.md' });
+  await expect(skill.getByRole('radio', { name: 'Formatted' })).toBeChecked();
+  await page.screenshot({ path: 'test-results/spark-crew-edit/review-window-skill.png' });
+  await tree.getByRole('treeitem', { name: /^run\.sh/ }).press('Enter');
+  const script = card.getByRole('region', { name: 'Changes to skills/notes/run.sh' });
   await expect(script.locator('.dv-row.add')).toHaveCount(340);
   await expect(script).toContainText('echo step 340');
   await expect(script.getByRole('button', { name: /more lines/ })).toHaveCount(0);
-  const instructions = files.getByRole('region', { name: 'Changes to SPARK.md' });
-  await expect(instructions.locator('.dv-row.remove')).toContainText('Be brief.');
-  await expect(instructions.locator('.dv-row.add')).toContainText('Be thorough.');
+  await expect(card.getByText('3 of 3 files read')).toBeVisible();
   await expect(card).toContainText('Only you can answer this, never Ask Spark.');
-  await card.screenshot({ path: 'test-results/spark-crew-edit/card.png' });
 
   await card.getByRole('button', { name: 'Allow' }).click();
   await expect
@@ -166,7 +194,7 @@ test('a delete is confirmed only by its button, and Deny leaves the files', asyn
     },
   ]);
   const card = await openCard(page);
-  await expect(card.locator('.dv-badge')).toHaveText(['Deleted']);
+  await expect(card.getByRole('tree').locator('[data-badge]')).toHaveText(['Deleted']);
   const removed = card.getByRole('region', { name: 'Changes to skills/notes/SKILL.md' });
   await expect(removed.locator('.dv-row.remove').first()).toBeVisible();
   await expect(removed.locator('.dv-row.add')).toHaveCount(0);
@@ -226,9 +254,9 @@ test('a paired device sees the card waiting and cannot answer it', async ({ page
   await expect(card).toContainText(
     'Answer on your Mac. Sparks and workflows cards are answered on your Mac.',
   );
-  await expect(
-    card.getByRole('region', { name: 'Changes to skills/notes/SKILL.md' }),
-  ).toContainText('List merged pull requests.');
+  await expect(card.getByRole('region', { name: 'New: skills/notes/SKILL.md' })).toContainText(
+    'List merged pull requests.',
+  );
   await expect(card.getByRole('button', { name: 'Allow' })).toHaveCount(0);
   await expect(card.getByRole('button', { name: 'Deny' })).toHaveCount(0);
   expect(await filePaths(page, sparkId)).toEqual(['SPARK.md']);
@@ -255,12 +283,55 @@ test('a paired device answers the card once Sparks and workflows cards can go th
   });
   const card = await openCard(page);
   await expect(card).not.toContainText('Answer on your Mac.');
-  await expect(
-    card.getByRole('region', { name: 'Changes to skills/notes/SKILL.md' }),
-  ).toContainText('List merged pull requests.');
+  await expect(card.getByRole('region', { name: 'New: skills/notes/SKILL.md' })).toContainText(
+    'List merged pull requests.',
+  );
   await card.getByRole('button', { name: 'Deny' }).click();
   await expect(page.getByRole('group', { name: /Change the Scout Spark\?/ })).not.toContainText(
     'Only you can answer this',
   );
   expect(await filePaths(page, sparkId)).toEqual(['SPARK.md']);
+});
+
+test('Esc closes the review window without answering, and focus goes back to Review', async ({
+  page,
+}) => {
+  await crewCardChat(sparkId, [
+    { path: 'skills/notes/SKILL.md', change: 'new', before: null, after: SKILL, baseHash: null },
+  ]);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const card = await openCard(page);
+  await expect(card.getByRole('button', { name: 'Allow' })).not.toBeFocused();
+  await animationsSettled(page);
+  const scan = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .include('.crw-modal')
+    .analyze();
+  expect(scan.violations).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Review Scout' })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: /Scout is ready for review/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Review Scout' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Stop' })).toBeVisible();
+  expect(await filePaths(page, sparkId)).toEqual(['SPARK.md']);
+});
+
+test('Review on a waiting workflow draft opens its chat with the review window', async ({
+  page,
+}) => {
+  const workflow = '{\n  "id": "nightly",\n  "steps": []\n}\n';
+  await crewCardChat(
+    sparkId,
+    [{ path: 'nightly.json', change: 'new', before: null, after: workflow, baseHash: null }],
+    [],
+    { target: 'workflow', id: 'nightly', name: 'Nightly' },
+  );
+  await openSparksPage(page);
+  const draft = page
+    .getByRole('listitem')
+    .filter({ hasText: 'Workflow · Draft · waiting for you' });
+  await draft.getByRole('button', { name: 'Review Nightly' }).click();
+  const window = page.getByRole('dialog', { name: 'Review Nightly' });
+  await expect(window.getByRole('group', { name: /Change the Nightly workflow\?/ })).toBeVisible();
+  await expect(window.getByRole('region', { name: 'Changes to nightly.json' })).toBeVisible();
 });

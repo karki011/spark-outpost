@@ -1,6 +1,8 @@
 import { SPARK_INSTRUCTIONS_FILE, autonomyLabel, type SparkAction } from '@spark-outpost/contracts';
 import { DiffView } from '../chat/approvals/DiffView.tsx';
 import { SimilarNote } from '../chat/approvals/CrewEditFacts.tsx';
+import { MarkdownReview } from '../chat/approvals/MarkdownReview.tsx';
+import { ReviewFiles } from '../chat/approvals/ReviewFiles.tsx';
 import { TeammateFace } from './TeammateFace.tsx';
 
 type TeammateAction = Extract<SparkAction, { action: 'create_teammate' | 'update_teammate' }>;
@@ -52,18 +54,45 @@ export function TeammateFacts({ action }: { action: TeammateAction }) {
             <dd>{action.projects.map((project) => project.name).join(', ')}</dd>
           </>
         )}
-        {before === undefined && (
+        {before === undefined && !action.instructions && (
           <>
             <dt>Instructions</dt>
-            <dd className="tm-fact-text">{action.instructions || 'None'}</dd>
+            <dd>None</dd>
           </>
         )}
       </dl>
+      {before === undefined && action.instructions && (
+        <ReviewFiles
+          files={[
+            {
+              path: SPARK_INSTRUCTIONS_FILE,
+              badge: 'New',
+              bytes: action.instructions.length,
+              view: <MarkdownReview label="Instructions" text={action.instructions} />,
+            },
+          ]}
+        />
+      )}
       {before !== undefined && (
-        <DiffView
-          diff={{ path: SPARK_INSTRUCTIONS_FILE, oldText: before, newText: action.instructions }}
-          badge="Instructions"
-          allRows
+        <ReviewFiles
+          files={[
+            {
+              path: SPARK_INSTRUCTIONS_FILE,
+              badge: 'Changed',
+              bytes: action.instructions.length,
+              view: (
+                <DiffView
+                  diff={{
+                    path: SPARK_INSTRUCTIONS_FILE,
+                    oldText: before,
+                    newText: action.instructions,
+                  }}
+                  badge="Instructions"
+                  allRows
+                />
+              ),
+            },
+          ]}
         />
       )}
       <SimilarNote similar={similar} />

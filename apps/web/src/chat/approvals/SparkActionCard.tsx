@@ -274,10 +274,12 @@ function holdLabel(action: SparkAction): string {
 export function SparkActionCard({
   approval,
   agent,
+  anchored = true,
   onDecided,
 }: {
   approval: Approval;
   agent: string;
+  anchored?: boolean;
   onDecided: (decided: ApprovalDecidedValue) => void;
 }) {
   const action = approval.payload.sparkAction!;
@@ -335,7 +337,7 @@ export function SparkActionCard({
       className={callerSees ? 'appr sac sac-caller' : 'appr sac'}
       role="group"
       aria-labelledby={headingId}
-      id={approvalAnchor(approval.id)}
+      id={anchored ? approvalAnchor(approval.id) : undefined}
     >
       <div className="appr-h">
         <span className="ic" aria-hidden="true">

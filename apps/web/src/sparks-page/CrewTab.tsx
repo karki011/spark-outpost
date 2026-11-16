@@ -1,7 +1,10 @@
 import type { TeammateStarterId, TeammateView } from '@spark-outpost/contracts';
 import { StarterSuggestions } from '../teammates/StarterSuggestions.tsx';
+import { openTeammateSheet } from '../teammates/teammate-store.ts';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
-import { WarnIcon } from '../ui/icons.tsx';
+import { PlusIcon, WarnIcon } from '../ui/icons.tsx';
+import { BuilderButton } from './builder-button.tsx';
+import { CrewEmpty } from './CrewEmpty.tsx';
 import { SparkCard } from './SparkCard.tsx';
 import { useSkillCounts } from './use-crew-files.ts';
 
@@ -12,6 +15,53 @@ interface CrewTabProps {
   starters: readonly TeammateStarterId[];
   remote: boolean;
   onOpen: (sparkId: string) => void;
+}
+
+const CREW_POINTS = [
+  {
+    title: 'Its own instructions',
+    detail: 'Standing rules it follows on every job, in a SPARK.md you can edit.',
+  },
+  {
+    title: 'Skills and scripts',
+    detail: 'Files it reads only when a job needs them.',
+  },
+  {
+    title: 'Your defaults',
+    detail: 'Provider, model and mode, set once for every run.',
+  },
+];
+
+function NoSparks({
+  starters,
+  remote,
+}: {
+  starters: readonly TeammateStarterId[];
+  remote: boolean;
+}) {
+  return (
+    <CrewEmpty
+      title="Build your crew"
+      lede="A Spark is an agent with a name, a face, its own instructions and skills. Hand it a job from any chat, or chain several into a workflow."
+      points={CREW_POINTS}
+      after={!remote && <StarterSuggestions starters={starters} />}
+    >
+      {remote ? (
+        <p className="spk-hint">No Sparks yet. Make one on the Mac.</p>
+      ) : (
+        <>
+          <button
+            type="button"
+            className="btn primary sm spk-new-spark"
+            onClick={() => openTeammateSheet({ kind: 'create' })}
+          >
+            <PlusIcon /> New Spark
+          </button>
+          <BuilderButton />
+        </>
+      )}
+    </CrewEmpty>
+  );
 }
 
 export function CrewTab({ loading, error, sparks, starters, remote, onOpen }: CrewTabProps) {
@@ -29,18 +79,7 @@ export function CrewTab({ loading, error, sparks, starters, remote, onOpen }: Cr
       </p>
     );
   }
-  if (sparks.length === 0) {
-    return (
-      <div className="spk-empty">
-        <h2>Build your crew</h2>
-        {remote ? (
-          <p className="spk-hint">No Sparks yet. Make one on the Mac.</p>
-        ) : (
-          <StarterSuggestions starters={starters} />
-        )}
-      </div>
-    );
-  }
+  if (sparks.length === 0) return <NoSparks starters={starters} remote={remote} />;
   return (
     <ul className="spk-grid" aria-label="Your Sparks">
       {sparks.map((spark) => (

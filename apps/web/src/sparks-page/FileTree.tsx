@@ -1,22 +1,40 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { CrewFileEntry } from '@spark-outpost/contracts';
-import { ChevronIcon, FileIcon, FolderIcon, PenIcon, WarnIcon } from '../ui/icons.tsx';
+import { CheckIcon, ChevronIcon, FileIcon, FolderIcon, PenIcon, WarnIcon } from '../ui/icons.tsx';
 import { buildTree, treeRows, type TreeRow } from './folder-model.ts';
 
 interface FileTreeProps {
   label: string;
   files: readonly CrewFileEntry[];
   selected: string | null;
-  edited: ReadonlySet<string>;
-  problems: ReadonlySet<string>;
+  edited?: ReadonlySet<string>;
+  problems?: ReadonlySet<string>;
+  badges?: ReadonlyMap<string, string>;
+  seen?: ReadonlySet<string>;
+  withInstructions?: boolean;
   onSelect: (path: string) => void;
 }
 
-export function FileTree({ label, files, selected, edited, problems, onSelect }: FileTreeProps) {
+const NONE: ReadonlySet<string> = new Set();
+
+export function FileTree({
+  label,
+  files,
+  selected,
+  edited = NONE,
+  problems = NONE,
+  badges,
+  seen,
+  withInstructions = true,
+  onSelect,
+}: FileTreeProps) {
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
   const [focused, setFocused] = useState<string | null>(null);
   const items = useRef(new Map<string, HTMLLIElement>());
-  const rows = useMemo(() => treeRows(buildTree(files), closed), [files, closed]);
+  const rows = useMemo(
+    () => treeRows(buildTree(files, withInstructions), closed),
+    [files, withInstructions, closed],
+  );
   const current =
     rows.find((row) => row.node.path === focused) ??
     rows.find((row) => row.node.path === selected) ??
@@ -104,6 +122,17 @@ export function FileTree({ label, files, selected, edited, problems, onSelect }:
             {problems.has(node.path) && (
               <span className="spk-mark problem">
                 <WarnIcon /> Problem
+              </span>
+            )}
+            {badges?.has(node.path) && (
+              <span className="spk-mark" data-badge={badges.get(node.path)}>
+                {badges.get(node.path)}
+              </span>
+            )}
+            {seen?.has(node.path) && (
+              <span className="spk-mark seen" title="Read">
+                <CheckIcon />
+                <span className="sr-only">Read</span>
               </span>
             )}
             {edited.has(node.path) && (

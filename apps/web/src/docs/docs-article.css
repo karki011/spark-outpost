@@ -1,5 +1,5 @@
 .docs-article {
-  max-width: 880px;
+  max-width: 1040px;
   margin: 0 auto;
   padding: 36px 40px 64px;
 }
@@ -123,7 +123,7 @@
 }
 
 .docs-body > :is(p, ul, blockquote) {
-  max-width: 76ch;
+  max-width: 88ch;
 }
 
 .docs-body th:first-child,
@@ -204,6 +204,7 @@
 }
 
 .docs-article[data-page='welcome'] .docs-body ul {
+  max-width: none;
   margin: 10px 0 0;
   padding: 0;
   list-style: none;
@@ -294,7 +295,7 @@
 
 @media (min-width: 1280px) {
   .docs-article[data-outlined] {
-    max-width: 1180px;
+    max-width: 1320px;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 200px;
     grid-template-rows: auto auto 1fr;
@@ -334,7 +335,7 @@
 
 @media (min-width: 1680px) {
   .docs-article[data-outlined] {
-    max-width: 1400px;
+    max-width: 1560px;
     grid-template-columns: minmax(0, 1fr) 220px;
     column-gap: 48px;
   }
