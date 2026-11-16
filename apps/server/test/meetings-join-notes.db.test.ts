@@ -91,7 +91,7 @@ describe('taking notes when the user joins', () => {
       })
       .expect(200);
     expect(again.body.detail).toBeNull();
-    expect(again.body.problem).toEqual(expect.any(String));
+    expect(again.body.problem).toMatch(/^Still recording .+\. Stop it to take notes here\.$/);
     expect(started).toHaveLength(1);
   });
 

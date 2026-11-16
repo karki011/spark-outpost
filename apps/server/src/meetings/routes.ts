@@ -50,6 +50,12 @@ const linesQuerySchema = z.object({
   tail: z.enum(['1']).optional(),
 });
 
+const RECORDING_TITLE_SHOWN = 80;
+
+function stillRecording(title: string): string {
+  return `Still recording ${title.slice(0, RECORDING_TITLE_SHOWN)}. Stop it to take notes here.`;
+}
+
 export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
   const router = Router();
 
@@ -88,6 +94,8 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
     const recording = request.eventKey ? await recordingMeeting(db, workspaceId) : null;
     if (settings.notesOnJoin && recording && recording.eventKey === request.eventKey) {
       answer.detail = await detail(recording.id);
+    } else if (settings.notesOnJoin && recording) {
+      answer.problem = stillRecording(recording.title);
     } else if (settings.notesOnJoin && request.eventKey) {
       try {
         answer.detail = await detail((await meetings.start(request)).id);

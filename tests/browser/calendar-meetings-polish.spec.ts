@@ -247,7 +247,7 @@ test('Take notes when I join a meeting is off, and once on a Join also records',
   expect((await meeting(page, id)).title).toBe('Live review');
   await page.keyboard.press('ControlOrMeta+j');
   await expect(
-    page.getByText('Notes didn’t start: Another meeting is recording. Stop it first.'),
+    page.getByText(/^Notes didn’t start: Still recording .+\. Stop it to take notes here\.$/),
   ).toBeVisible();
   expect(await recordingId(page)).toBe(id);
   await today(page).getByRole('button', { name: 'Stop' }).first().click();
