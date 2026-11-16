@@ -32,12 +32,16 @@ async function shots(page: Page, name: string) {
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
 }
 
+const buildButton = (page: Page) =>
+  page.getByRole('button', { name: 'Let Spark build one for you' }).first();
+
 test('the builder chat docks beside the Sparks page, talks to the agent and is marked Done', async ({
   page,
 }) => {
   await openSparksPage(page);
-  await page.getByRole('button', { name: 'Build with an agent' }).click();
+  await buildButton(page).click();
   await expect(dock(page)).toBeVisible();
+  await expect(buildButton(page)).toBeDisabled();
   await expect(dock(page)).toContainText('proposes each change as a card you allow here');
   await expect(dock(page)).not.toContainText('no project folder');
   await expect(page.getByRole('heading', { level: 1, name: 'Sparks', exact: true })).toBeVisible();
@@ -69,8 +73,46 @@ test('the builder chat docks beside the Sparks page, talks to the agent and is m
 
   await dock(page).getByRole('button', { name: 'Close builder chat' }).click();
   await expect(dock(page)).toHaveCount(0);
-  await page.getByRole('button', { name: 'Build with an agent' }).click();
+  await buildButton(page).click();
   await expect(doneLine(page)).toContainText('Done · removed tomorrow at');
+});
+
+test('the builder chat reopens by itself while one is going, and resizes by drag and keys', async ({
+  page,
+}) => {
+  await openSparksPage(page);
+  await buildButton(page).click();
+  await expect(dock(page).getByRole('textbox', { name: 'Message' })).toBeVisible();
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Sparks/ })
+    .click();
+  await expect(dock(page)).toBeVisible();
+  const handle = page.getByRole('separator', { name: 'Resize: Builder chat' });
+  const before = (await dock(page).boundingBox())!.width;
+  const grip = (await handle.boundingBox())!;
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(grip.x - 120, grip.y + 200, { steps: 6 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await dock(page).boundingBox())!.width)
+    .toBeGreaterThan(before + 100);
+  await handle.press('Enter');
+  await expect
+    .poll(async () => Math.round((await dock(page).boundingBox())!.width))
+    .toBe(Math.round(before));
+  await dock(page).getByRole('button', { name: 'Close builder chat' }).click();
+  await expect(dock(page)).toHaveCount(0);
+  await expect(buildButton(page)).toBeEnabled();
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Sparks/ })
+    .click();
+  await expect(buildButton(page)).toBeEnabled();
+  await expect(dock(page)).toHaveCount(0);
 });
 
 test('a draft waiting for you shows on the page and opens the builder chat', async ({ page }) => {
@@ -110,4 +152,29 @@ test('the corner companion opens the builder chat', async ({ page }) => {
     .click();
   await expect(page.getByRole('heading', { level: 1, name: 'Sparks', exact: true })).toBeVisible();
   await expect(dock(page)).toBeVisible();
+});
+
+test('the empty Crew and Workflows tabs explain Sparks and offer both ways to start', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openSparksPage(page);
+  const main = page.getByRole('main', { name: 'Sparks' });
+  const crew = main.getByRole('region', { name: 'Build your crew' });
+  await expect(crew).toContainText('A Spark is an agent with a name, a face');
+  await expect(crew.getByRole('button', { name: 'New Spark' })).toBeVisible();
+  await expect(crew.getByRole('button', { name: 'Let Spark build one for you' })).toBeEnabled();
+  await shots(page, 'crew-empty');
+  await main.getByRole('tab', { name: /^Workflows/ }).click();
+  const flows = main.getByRole('region', { name: 'Combine your crew into a workflow' });
+  await expect(flows).toContainText('Add a Spark on the Crew tab first.');
+  await flows.getByRole('button', { name: 'Let Spark build one for you' }).click();
+  await expect(dock(page)).toBeVisible();
+  await expect(flows.getByRole('button', { name: 'Let Spark build one for you' })).toBeDisabled();
+  const scan = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .include('.crew-empty')
+    .analyze();
+  expect(scan.violations).toEqual([]);
+  await shots(page, 'workflows-empty');
 });

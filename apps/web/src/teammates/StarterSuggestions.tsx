@@ -5,9 +5,8 @@ import {
   type TeammateStarter,
   type TeammateStarterId,
 } from '@spark-outpost/contracts';
-import { PlusIcon, XIcon } from '../ui/icons.tsx';
+import { XIcon } from '../ui/icons.tsx';
 import { TeammateFace } from './TeammateFace.tsx';
-import { openTeammateSheet } from './teammate-store.ts';
 import { teammateKeys, teammatesApi } from './teammates-api.ts';
 
 interface StarterSuggestionsProps {
@@ -69,27 +68,15 @@ function StarterCard({ starter }: { starter: TeammateStarter }) {
 
 export function StarterSuggestions({ starters }: StarterSuggestionsProps) {
   const offered = TEAMMATE_STARTERS.filter((starter) => starters.includes(starter.id));
+  if (offered.length === 0) return null;
   return (
     <div className="tm-empty">
-      <p className="tm-lede">
-        Sparks are teammates with a name, a face and a chat of their own. Each one keeps your
-        defaults and standing instructions.
-        {offered.length > 0 && ' Add one to start, or make your own.'}
-      </p>
-      {offered.length > 0 && (
-        <ul className="tm-starters" aria-label="Suggested Sparks">
-          {offered.map((starter) => (
-            <StarterCard key={starter.id} starter={starter} />
-          ))}
-        </ul>
-      )}
-      <button
-        type="button"
-        className="btn line sm tm-new-inline"
-        onClick={() => openTeammateSheet({ kind: 'create' })}
-      >
-        <PlusIcon /> New Spark
-      </button>
+      <h3 className="tm-starters-title">Or start from one of these</h3>
+      <ul className="tm-starters" aria-label="Suggested Sparks">
+        {offered.map((starter) => (
+          <StarterCard key={starter.id} starter={starter} />
+        ))}
+      </ul>
     </div>
   );
 }

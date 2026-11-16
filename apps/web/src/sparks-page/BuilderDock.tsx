@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { BuilderChat } from '@spark-outpost/contracts';
 import { requestChat } from '../app/chat-request.ts';
@@ -7,9 +7,17 @@ import { ChatView } from '../chat/ChatView.tsx';
 import { ChatPaneContext, type ChatPane } from '../chat/split/chat-pane.ts';
 import { hourCycle } from '../desktop/hour-cycle.ts';
 import { CheckIcon, PlusIcon, XIcon } from '../ui/icons.tsx';
+import { PanelResizer } from '../ui/PanelResizer.tsx';
+import { useStoredPanelWidth, type PanelWidthLimits } from '../ui/panel-width.ts';
 import { builderApi, builderKeys } from './builder-api.ts';
 
 const DONE_POLL_MS = 10_000;
+const DOCK_WIDTH: PanelWidthLimits = {
+  key: 'spark.builderDock.width',
+  min: 340,
+  max: 900,
+  fallback: 440,
+};
 const BUILDER_INTRO =
   'Say what Spark or workflow you want. The agent reads your crew and proposes each change as a card you allow here.';
 
@@ -107,8 +115,21 @@ function DockControls({ chat, closeLabel, busy, onDone, onNew, onClose }: DockCo
 }
 
 function Shell({ children, label }: { children: ReactNode; label: string }) {
+  const [width, setWidth] = useStoredPanelWidth(DOCK_WIDTH);
+  const shown = { '--bld-w': `${width ?? DOCK_WIDTH.fallback}px` } as CSSProperties;
   return (
-    <aside className="bld-dock" aria-label={label}>
+    <aside className="bld-dock" aria-label={label} style={shown}>
+      <PanelResizer
+        className="bld-resize"
+        label={`Resize: ${label}`}
+        panelSelector=".bld-dock"
+        variable="--bld-w"
+        cap="--bld-cap"
+        side="left"
+        limits={DOCK_WIDTH}
+        width={width}
+        onWidth={setWidth}
+      />
       {children}
     </aside>
   );
