@@ -94,29 +94,58 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: ./.github/actions/setup
-      - uses: ./.github/actions/postgres
+      - name: Pick browser specs
+        id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then
+            pnpm exec tsx scripts/test-changed.ts browser --base="origin/$BASE_REF" --out=selected-specs.txt
+          else
+            echo all > selected-specs.txt
+          fi
+          if grep -qx all selected-specs.txt; then
+            printf '%s\n' tests/browser/*.spec.ts > picked.txt
+          else
+            cp selected-specs.txt picked.txt
+          fi
+          if [ "$SHARD" = fake-hosts ]; then
+            printf '%s\n' tests/browser/calendar*.spec.ts tests/browser/{browser-agent,island-ask-calendar,shot-order,sign-ins,sign-in-sites}.spec.ts | grep -Fxf picked.txt > shard-specs.txt || true
+          else
+            grep -v -- '-perf\.spec\.ts$' picked.txt > shard-specs.txt || true
+          fi
+          echo "Specs for this job: $(wc -l < shard-specs.txt)"
+          if [ -s shard-specs.txt ]; then echo "any=true" >> "$GITHUB_OUTPUT"; else echo "any=false" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.pick.outputs.any == 'true'
+        uses: ./.github/actions/postgres
       - id: playwright
+        if: steps.pick.outputs.any == 'true'
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - if: steps.pick.outputs.any == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      - run: pnpm exec playwright install --with-deps chromium
+      - if: steps.pick.outputs.any == 'true'
+        run: pnpm exec playwright install --with-deps chromium
       - name: Build the web app
+        if: steps.pick.outputs.any == 'true'
         working-directory: apps/web
         env:
           VITE_SPARK_FEEDBACK_EMAIL: beta-feedback@example.test
         run: node node_modules/vite/bin/vite.js build
       - name: Run browser specs
+        if: steps.pick.outputs.any == 'true'
         run: |
+          mapfile -t specs < shard-specs.txt
           if [ "$SHARD" = fake-hosts ]; then
             export SPARK_FAKE_CALENDAR=1 SPARK_FAKE_BROWSER=1 SPARK_FAKE_MEETINGS=1
-            specs=(tests/browser/calendar*.spec.ts tests/browser/{browser-agent,island-ask-calendar,shot-order,sign-ins,sign-in-sites}.spec.ts)
             pnpm exec playwright test --retries=1 --global-timeout=3000000 --reporter=list,html "${specs[@]}"
           else
-            mapfile -t specs < <(printf '%s\n' tests/browser/*.spec.ts | grep -v -- '-perf\.spec\.ts$')
-            pnpm exec playwright test --shard="$SHARD" --retries=1 --global-timeout=3000000 --reporter=list,html "${specs[@]}"
+            pnpm exec playwright test --shard="$SHARD" --pass-with-no-tests --retries=1 --global-timeout=3000000 --reporter=list,html "${specs[@]}"
           fi
       - if: failure() || cancelled()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

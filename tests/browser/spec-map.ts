@@ -345,6 +345,9 @@ export const RUN_ALL_PREFIXES = [
   'tests/browser/stub-config.ts',
   'tests/browser/spec-map.ts',
   'playwright.config.ts',
+  '.github/workflows/ci.yml',
+  'scripts/test-selection.ts',
+  'scripts/test-changed.ts',
   'pnpm-lock.yaml',
   'pnpm-workspace.yaml',
 ] as const;
