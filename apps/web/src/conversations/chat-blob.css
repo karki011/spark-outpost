@@ -10,6 +10,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  corner-shape: round;
   animation: sb-popin 0.2s var(--out);
 }
 

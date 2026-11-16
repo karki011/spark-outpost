@@ -60,6 +60,7 @@
   flex-shrink: 0;
   padding: 0 7px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   color: var(--muted);
   font-size: 12px;

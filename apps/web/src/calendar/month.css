@@ -138,6 +138,7 @@
   height: 28px;
   border: 1px solid var(--line);
   border-radius: 50%;
+  corner-shape: round;
   color: var(--muted);
 }
 
@@ -148,6 +149,7 @@
 
 .mo-step:focus-visible {
   border-radius: 50%;
+  corner-shape: round;
   outline-offset: 1px;
 }
 

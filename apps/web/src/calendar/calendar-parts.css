@@ -22,6 +22,7 @@
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
+  corner-shape: round;
   color: var(--muted);
   font-size: 12px;
 }
@@ -53,6 +54,7 @@
   padding: 0 7px;
   border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
   border-radius: 999px;
+  corner-shape: round;
   color: var(--warn);
   font-size: 12px;
   line-height: 18px;
@@ -248,6 +250,7 @@ button.cal-person:hover {
   height: 22px;
   border: 1px solid var(--line);
   border-radius: 50%;
+  corner-shape: round;
   background: var(--panel);
   color: var(--text);
   font-size: 12px;

@@ -115,6 +115,7 @@
 .map-ol-changed {
   padding: 0 7px;
   border-radius: 999px;
+  corner-shape: round;
   background: color-mix(in srgb, var(--map-warm) 14%, var(--panel));
   color: var(--warn);
   font-size: 12px;

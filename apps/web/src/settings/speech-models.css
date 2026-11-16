@@ -34,6 +34,7 @@
   gap: 5px;
   padding: 3px 9px;
   border-radius: 999px;
+  corner-shape: round;
   font-size: 12px;
   font-weight: 500;
   background: var(--raise);
@@ -59,6 +60,7 @@
   appearance: none;
   border: 0;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   overflow: hidden;
 }
@@ -68,6 +70,7 @@
 .sm-progress::-webkit-progress-value {
   background: var(--accent);
   border-radius: 999px;
+  corner-shape: round;
 }
 .sm-note {
   margin: 0;

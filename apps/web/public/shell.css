@@ -49,6 +49,7 @@ html[data-settings-window] .shell-sk {
   width: 28px;
   height: 32px;
   border-radius: 50%;
+  corner-shape: round;
   margin-bottom: 4px;
 }
 
@@ -86,6 +87,7 @@ html[data-settings-window] .shell-sk {
   width: 46px;
   height: 46px;
   border-radius: 50%;
+  corner-shape: round;
 }
 
 .shell-sk-col .shell-sk-title {

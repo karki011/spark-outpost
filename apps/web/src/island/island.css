@@ -240,6 +240,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accent);
   animation: isl-rd 1.2s ease-in-out infinite;
 }
@@ -293,6 +294,7 @@
   inset: -4px;
   border: 0;
   border-radius: 50%;
+  corner-shape: round;
   background: transparent;
   cursor: pointer;
 }
@@ -314,6 +316,7 @@
   height: 180%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
+  corner-shape: round;
   background: radial-gradient(circle, var(--gc, transparent) 0%, transparent 62%);
   opacity: 0;
   filter: blur(4px);

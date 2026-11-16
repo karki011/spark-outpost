@@ -38,6 +38,7 @@
   flex-shrink: 0;
   padding: 3px 9px;
   border-radius: 999px;
+  corner-shape: round;
   color: var(--warn);
   font-weight: 600;
   text-decoration: underline;

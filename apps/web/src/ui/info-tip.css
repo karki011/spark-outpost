@@ -6,6 +6,7 @@
   height: 24px;
   margin: -4px 0;
   border-radius: 50%;
+  corner-shape: round;
   color: var(--faint);
   cursor: help;
   transition: color 0.15s;

@@ -70,6 +70,7 @@
   flex-shrink: 0;
   padding: 1px 8px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   color: var(--muted);
   font-size: 12px;
@@ -90,6 +91,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--faint);
 }
 .mcp-status.ok::before {
@@ -260,6 +262,7 @@
   height: 6px;
   margin-right: 6px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--warn);
   vertical-align: 1px;
 }
@@ -354,6 +357,7 @@
   overflow: hidden;
   height: 10px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
 }
 .mcp-skel i:nth-child(1) {

@@ -63,6 +63,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accent-soft);
   color: var(--accent-text);
   font-size: 12px;

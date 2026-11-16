@@ -267,6 +267,7 @@
   height: 8px;
   border: 1.5px solid currentColor;
   border-radius: 50%;
+  corner-shape: round;
 }
 
 .crail-tasks li[data-state='waiting'] .crail-task-dot {

@@ -183,6 +183,7 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
+  corner-shape: round;
   border: 1.5px solid var(--line);
   border-top-color: var(--accent);
   animation: rot 0.7s linear infinite;
@@ -197,6 +198,7 @@
   position: fixed;
   z-index: 300;
   border-radius: 50%;
+  corner-shape: round;
   pointer-events: none;
   background: var(--accent);
 }
@@ -288,6 +290,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
+  corner-shape: round;
   border: 1.5px solid var(--faint);
   margin-top: 2px;
   flex-shrink: 0;
@@ -300,6 +303,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accent);
   transform: scale(0);
   transition: transform 0.2s var(--out);

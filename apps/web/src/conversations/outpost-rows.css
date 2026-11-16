@@ -45,6 +45,7 @@
   min-width: 18px;
   padding: 1px 6px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--warn);
   color: var(--warn-ink);
   font-size: 12px;

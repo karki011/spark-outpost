@@ -213,6 +213,7 @@
 
 .isl-ask-chips .isl-chip {
   border-radius: 999px;
+  corner-shape: round;
   padding: 0 10px;
 }
 

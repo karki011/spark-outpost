@@ -286,6 +286,7 @@
 .tk .tk-cmt-count {
   padding: 0 7px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   font-size: 12px;
   font-weight: 500;

@@ -28,6 +28,7 @@
   padding: 0 7px;
   border: 1px solid var(--line);
   border-radius: 999px;
+  corner-shape: round;
   font-family: inherit;
   font-size: 12px;
   font-weight: 400;

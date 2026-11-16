@@ -45,6 +45,7 @@
   height: 6px;
   margin: 14px 0 0;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   overflow: hidden;
 }
@@ -186,6 +187,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--faint);
   opacity: 0.7;
 }

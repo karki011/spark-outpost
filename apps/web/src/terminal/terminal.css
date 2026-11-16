@@ -66,6 +66,7 @@
   display: grid;
   place-items: center;
   border-radius: 50%;
+  corner-shape: round;
   border: 1.5px solid var(--line);
   background: var(--panel);
   transition:
@@ -83,6 +84,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accent);
   animation: tg-pulse 1.6s ease-in-out infinite;
 }
@@ -147,6 +149,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--faint);
 }
 

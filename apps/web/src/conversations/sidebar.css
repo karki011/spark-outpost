@@ -118,6 +118,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
+  corner-shape: round;
   color: var(--muted);
 }
 
@@ -171,6 +172,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--warn);
   animation: sb-popin 0.2s var(--out);
 }

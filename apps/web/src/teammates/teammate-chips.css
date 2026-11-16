@@ -24,6 +24,7 @@
   height: 22px;
   border: 1px dashed var(--line-strong);
   border-radius: 50%;
+  corner-shape: round;
 }
 
 .tm-menu-blank.sm {
@@ -40,6 +41,7 @@
   margin-right: 2px;
   padding: 2px 8px 2px 4px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   font-size: 13px;
   font-weight: 500;
@@ -78,6 +80,7 @@
   padding: 2px 9px 2px 4px;
   border: 1px solid var(--line);
   border-radius: 999px;
+  corner-shape: round;
   color: var(--muted);
   font-size: 12px;
 }

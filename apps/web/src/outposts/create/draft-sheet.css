@@ -127,6 +127,7 @@
   gap: 4px;
   padding: 1px 8px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--accent-soft);
   color: var(--accent-text);
   font-weight: 500;

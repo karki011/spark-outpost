@@ -19,6 +19,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--warn);
   box-shadow: 0 0 0 2px var(--panel);
   animation: sb-popin 0.2s var(--out);

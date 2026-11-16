@@ -44,6 +44,7 @@
   gap: 6px;
   padding: 2px 10px 2px 8px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   font-size: 12.5px;
   white-space: nowrap;
@@ -173,6 +174,7 @@
   flex-shrink: 0;
   padding: 0 6px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   color: var(--muted);
   font-size: 12px;

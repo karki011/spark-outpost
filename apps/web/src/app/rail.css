@@ -105,6 +105,7 @@
   display: grid;
   place-items: center;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--warn);
   color: var(--warn-ink);
   font-size: 12px;
@@ -131,6 +132,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accent);
   box-shadow: 0 0 0 2px var(--rail);
   animation: sb-popin 0.2s var(--out);

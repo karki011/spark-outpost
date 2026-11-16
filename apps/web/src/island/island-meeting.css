@@ -73,6 +73,7 @@
   height: 5px;
   overflow: hidden;
   border-radius: 999px;
+  corner-shape: round;
   background: color-mix(in srgb, var(--text) 10%, transparent);
 }
 
@@ -170,6 +171,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--warn);
 }
 

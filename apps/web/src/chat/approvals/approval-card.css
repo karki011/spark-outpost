@@ -38,6 +38,7 @@
   border: 2px solid var(--line);
   border-top-color: var(--accent);
   border-radius: 50%;
+  corner-shape: round;
   box-sizing: border-box;
   animation:
     fade 0.2s var(--out) 0.4s backwards,

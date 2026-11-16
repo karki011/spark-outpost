@@ -200,6 +200,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--panel);
   box-shadow:
     0 0 0 1px var(--line),

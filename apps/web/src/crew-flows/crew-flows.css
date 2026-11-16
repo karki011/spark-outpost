@@ -29,6 +29,7 @@
   flex: none;
   padding: 2px 8px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   color: var(--muted);
   font-size: 12px;

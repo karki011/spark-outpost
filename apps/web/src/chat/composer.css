@@ -234,6 +234,7 @@
 .send.busy {
   position: relative;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accent-soft);
   color: var(--accent-text);
 }

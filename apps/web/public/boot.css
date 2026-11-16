@@ -41,6 +41,7 @@ body {
   position: absolute;
   inset: -34px;
   border-radius: 50%;
+  corner-shape: round;
   background: radial-gradient(closest-side, var(--accent-soft), transparent);
   animation: boot-glow 2.8s ease-in-out infinite alternate;
 }

@@ -9,6 +9,7 @@
   height: 30px;
   padding: 0 10px;
   border-radius: 999px;
+  corner-shape: round;
   border: 1px solid var(--line);
   background: var(--panel);
   font:

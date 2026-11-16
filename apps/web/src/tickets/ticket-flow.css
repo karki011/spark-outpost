@@ -10,6 +10,7 @@
   padding: 0 8px 0 5px;
   border: 1px solid transparent;
   border-radius: 999px;
+  corner-shape: round;
   font-size: 12px;
   font-weight: 500;
   line-height: 1;
@@ -60,6 +61,7 @@
   height: 6px;
   margin-left: 1px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--tone);
 }
 
@@ -70,6 +72,7 @@
   place-items: center;
   overflow: hidden;
   border-radius: 50%;
+  corner-shape: round;
 }
 
 .tk .ir-who.none {
@@ -84,12 +87,14 @@
   width: 96px;
   height: 18px;
   border-radius: 999px;
+  corner-shape: round;
 }
 
 .tk .sk.sk-who {
   width: 18px;
   height: 18px;
   border-radius: 50%;
+  corner-shape: round;
 }
 
 .tk .dlg-head .fchip {

@@ -36,6 +36,7 @@
   width: 4px;
   height: 6px;
   border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  corner-shape: round;
   background: color-mix(in srgb, var(--accent) 45%, #7cc4ff);
   opacity: 0;
   animation: ps-sweat var(--ps-cycle) ease-in infinite;
@@ -79,6 +80,7 @@
   width: 3px;
   height: 3px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--warn);
   opacity: 0;
   animation: ps-spark var(--ps-cycle) ease-out infinite;

@@ -125,6 +125,7 @@
   gap: 6px;
   padding: 4px 10px;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--raise);
   color: var(--muted);
   font-size: 12px;
@@ -134,6 +135,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--accent);
   animation: an-updating-pulse 1s var(--out) infinite;
 }
@@ -207,6 +209,7 @@
   gap: 5px;
   padding: 2px 8px;
   border-radius: 999px;
+  corner-shape: round;
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
