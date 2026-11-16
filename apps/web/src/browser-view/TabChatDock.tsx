@@ -17,7 +17,7 @@ function usePaneFocus(pane: RefObject<HTMLElement | null>): [boolean, (focused: 
   const [focused, setFocused] = useState(true);
   useEffect(() => {
     const moved = (event: Event) => {
-      setFocused(pane.current?.contains(event.target as Node) ?? false);
+      if (pane.current) setFocused(pane.current.contains(event.target as Node));
     };
     document.addEventListener('pointerdown', moved, true);
     document.addEventListener('focusin', moved, true);

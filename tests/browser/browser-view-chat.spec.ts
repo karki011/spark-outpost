@@ -267,3 +267,17 @@ test('a pick made on another tab stays with that tab', async ({ page }) => {
   await show('rates');
   await expect(attached.getByText('Selected: Deploy button')).toBeVisible();
 });
+
+test('Escape stops the tab chat’s first reply with no click', async ({ page }) => {
+  await openWithPage(page);
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  await dock(page).getByRole('textbox', { name: 'Message' }).fill('Walk me through it #slow');
+  await page.keyboard.press('Enter');
+  const stop = tabChat(page).getByRole('button', { name: 'Stop', exact: true });
+  await expect(stop).toBeVisible({ timeout: 15_000 });
+  await expect(tabChat(page).getByRole('textbox', { name: 'Message' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(stop).toHaveCount(0, { timeout: 3_000 });
+  await expect(tabChat(page).getByText('Stopped').first()).toBeVisible();
+  await expect(tabChat(page)).toBeVisible();
+});
