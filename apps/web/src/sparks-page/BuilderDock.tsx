@@ -121,7 +121,7 @@ function Shell({ children, label }: { children: ReactNode; label: string }) {
     <aside className="bld-dock" aria-label={label} style={shown}>
       <PanelResizer
         className="bld-resize"
-        label={`Resize ${label.toLowerCase()}`}
+        label={`Resize: ${label}`}
         panelSelector=".bld-dock"
         variable="--bld-w"
         cap="--bld-cap"

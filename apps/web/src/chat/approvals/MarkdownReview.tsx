@@ -3,14 +3,14 @@ import { Markdown } from '../markdown/Markdown.tsx';
 import { Segmented } from '../../ui/Segmented.tsx';
 import { WarnIcon } from '../../ui/icons.tsx';
 
-const HIDDEN_MARKUP = /<!--|<\/?[a-z][\w-]*[\s/>]/i;
+const HIDDEN_MARKUP = [/<!--|<\/?[a-z][\w-]*[\s/>]/i, /^ {0,3}\[[^\]\n]+\]:/m, /!\[[^\]\n]*\]/];
 
 type View = 'formatted' | 'source';
 
 const FRONT_MATTER = /^---\n([\s\S]*?)\n---\n?/;
 
 function hasHiddenMarkup(text: string): boolean {
-  return HIDDEN_MARKUP.test(text);
+  return HIDDEN_MARKUP.some((pattern) => pattern.test(text));
 }
 
 function formattedText(text: string): string {
@@ -33,7 +33,7 @@ export function MarkdownReview({ label, text }: MarkdownReviewProps) {
       <div className="mdr-bar">
         <b>{label}</b>
         <Segmented
-          ariaLabel={`Show ${label.toLowerCase()} as`}
+          ariaLabel={`Show ${label} as`}
           {...(hidden ? { describedBy: noteId } : {})}
           options={[
             { id: 'formatted', label: 'Formatted' },
@@ -45,8 +45,8 @@ export function MarkdownReview({ label, text }: MarkdownReviewProps) {
       </div>
       {hidden && (
         <p className="mdr-note" id={noteId} role="note">
-          <WarnIcon /> Has HTML or comments that only Source shows. Read the source before you allow
-          it.
+          <WarnIcon /> Has HTML, comments, link definitions or images that only Source shows in
+          full. Read the source before you allow it.
         </p>
       )}
       {view === 'formatted' ? (

@@ -2,8 +2,7 @@ import './sparks-page.css';
 import '../teammates/teammates.css';
 import '../teammates/teammate-sheet.css';
 import './builder.css';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import type { CrewDraft, Teammate } from '@spark-outpost/contracts';
 import { requestChat } from '../app/chat-request.ts';
 import { requestCrewReview } from '../chat/approvals/crew-review.ts';
@@ -15,7 +14,7 @@ import { PlusIcon } from '../ui/icons.tsx';
 import { PageTabs } from '../ui/PageTabs.tsx';
 import { BuilderDock, type DockSpark } from './BuilderDock.tsx';
 import { BuilderDrafts } from './BuilderDrafts.tsx';
-import { builderApi, builderKeys } from './builder-api.ts';
+import { useOngoingBuilder } from './ongoing-builder.ts';
 import { BuilderButton, BuilderButtonContext } from './builder-button.tsx';
 import { CrewTab } from './CrewTab.tsx';
 import { SparkDetail, type DetailTab } from './SparkDetail.tsx';
@@ -52,21 +51,6 @@ function WithBuilder({ open, chatId, spark = null, onChat, onClose, children }: 
   );
 }
 
-function useOngoingBuilder(remote: boolean, onOngoing: () => void) {
-  const current = useQuery({
-    queryKey: builderKeys.current(null, null),
-    queryFn: () => builderApi.current(null, null),
-    enabled: !remote,
-  });
-  const ongoing = current.data != null && !current.data.doneAt;
-  const offered = useRef(false);
-  useEffect(() => {
-    if (!ongoing || offered.current) return;
-    offered.current = true;
-    onOngoing();
-  }, [ongoing, onOngoing]);
-}
-
 export function SparksPage() {
   const { loading, error, teammates, starters } = useTeammates();
   const { remote } = useRemoteClient();
@@ -77,14 +61,15 @@ export function SparksPage() {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builderChatId, setBuilderChatId] = useState<string | null>(null);
   const [sparkChat, setSparkChat] = useState(false);
-  const closeBuilder = useCallback(() => {
-    setBuilderOpen(false);
-    setBuilderChatId(null);
-  }, []);
-  useOngoingBuilder(
+  const markClosed = useOngoingBuilder(
     remote,
     useCallback(() => setBuilderOpen(true), []),
   );
+  const closeBuilder = useCallback(() => {
+    markClosed();
+    setBuilderOpen(false);
+    setBuilderChatId(null);
+  }, [markClosed]);
   const startBuilder = useCallback(() => {
     setBuilderChatId(null);
     setBuilderOpen(true);

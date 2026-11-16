@@ -19,7 +19,8 @@
     .mh-star,
     .isl-sstatus .shim,
     .hdot.running,
-    .tm-dot.working
+    .tm-dot.working,
+    .crew-empty-blob
   ),
 :root:is([data-motion='rest'], [data-motion='paused']) .bst.asleep .bst-blob::after,
 :root[data-motion='paused'] .hprog.wait i {

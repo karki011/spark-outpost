@@ -89,7 +89,7 @@ test('the builder chat reopens by itself while one is going, and resizes by drag
     .getByRole('button', { name: /^Sparks/ })
     .click();
   await expect(dock(page)).toBeVisible();
-  const handle = page.getByRole('separator', { name: 'Resize builder chat' });
+  const handle = page.getByRole('separator', { name: 'Resize: Builder chat' });
   const before = (await dock(page).boundingBox())!.width;
   const grip = (await handle.boundingBox())!;
   await page.mouse.move(grip.x + grip.width / 2, grip.y + 200);
@@ -106,6 +106,13 @@ test('the builder chat reopens by itself while one is going, and resizes by drag
   await dock(page).getByRole('button', { name: 'Close builder chat' }).click();
   await expect(dock(page)).toHaveCount(0);
   await expect(buildButton(page)).toBeEnabled();
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Sparks/ })
+    .click();
+  await expect(buildButton(page)).toBeEnabled();
+  await expect(dock(page)).toHaveCount(0);
 });
 
 test('a draft waiting for you shows on the page and opens the builder chat', async ({ page }) => {

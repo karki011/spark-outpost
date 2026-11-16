@@ -77,6 +77,8 @@ A folder appears when a file is written inside it and goes when its last file is
 
 A change with a problem goes back to the agent and is never shown to you.
 
+In the chat it waits as one line, _name_ **is ready for review**; **Review** opens the card in a window.
+
 The card is titled **Change the** _name_ **Spark?** or **workflow?**. Only you answer it, with **Allow** or **Deny**, on the Mac or a [device you allow](answer-remotely.md). If a file changed after the card appeared, nothing is written.
 
 Agents get these tools in a chat turn you typed on the Mac; Ask Spark only reads. See [protected paths](protected-paths.md).
