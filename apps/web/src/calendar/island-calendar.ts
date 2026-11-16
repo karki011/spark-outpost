@@ -352,6 +352,11 @@ function joiningLine(now: CalendarNow, input: CalendarLineInput): CalendarLine |
   };
 }
 
+function joinsFirst(join: CalendarLine, wrapUpStartsAt: string): boolean {
+  const first = join.join ?? join.choose?.[0] ?? null;
+  return first !== null && Date.parse(first.start) < Date.parse(wrapUpStartsAt);
+}
+
 export function calendarLine(input: CalendarLineInput): CalendarLine | null {
   const { now } = input;
   const caughtUp = input.catchUp ? catchUpText(input.catchUp) : null;
@@ -359,6 +364,10 @@ export function calendarLine(input: CalendarLineInput): CalendarLine | null {
   const joining = input.joining ? joiningLine(now, input) : null;
   if (joining) return joining;
   const nudged = now.nudge ? nudgeLine(now, now.nudge, input) : null;
+  if (nudged && now.nudge?.kind === 'wrap_up') {
+    const join = joinLine(now, input);
+    if (join && joinsFirst(join, now.nudge.startsAt)) return join;
+  }
   if (nudged) return nudged;
   const held = holdLine(now, shownJoin(now, input));
   if (held) return held;

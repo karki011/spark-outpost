@@ -207,6 +207,8 @@ A pure planner, `planNudges(events, chats, marks, settings, now)`, runs every mi
 | Anything to capture | For 15 min after a meeting Spark took notes in ends (calendar end or the recording's end, whichever is later; words recorded; a switch, on) | "Ended · Design review" over "Anything to capture?" **Open notes** (its transcript and chat) |
 | Catch-up            | When a held block ends                                                                                                                      | "While you were in Focus: 2 chats need you, 1 finished"                                      |
 
+An earlier meeting's Join line comes before a wrap-up about a later meeting (`calendarLine()`), so a running chat never hides the meeting that is about to start.
+
 **Holding is new** (Spark has no do-not-disturb): during focus blocks by default (**Never**, **Focus blocks**, **All meetings**, plus **Hold alerts during this**) the island plays no `needs`, `done` or `failed` chime and phone pushes wait; cards still appear, and one catch-up line follows. A focus block is an event titled with a focus name ("Focus", "Deep work", "Heads down").
 
 ### The nudge

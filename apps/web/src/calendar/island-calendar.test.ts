@@ -119,6 +119,24 @@ describe('a wrap-up about a chat', () => {
     );
   });
 
+  it('gives way to the Join line of an earlier meeting, and keeps it for its own meeting', () => {
+    const standup = event('Standup', at(10), at(10, 10), { link: link('zoom') });
+    const review = event('Design review', at(10, 10), at(10, 30), { link: link('zoom') });
+    const running = chatStates([chat(CHAT, { latestRun: { status: 'running' } as never })]);
+    const calendar = now({
+      upcoming: [standup, review],
+      nudge: { ...wrapUp(), eventKey: review.key, title: review.title, startsAt: review.start },
+    });
+    const line = calendarLine(input(calendar, { at: at(9, 59), chats: running }));
+    expect(line?.kind).toBe('join');
+    expect(line?.event?.key).toBe(standup.key);
+    const own = now({
+      upcoming: [review],
+      nudge: { ...wrapUp(), eventKey: review.key, title: review.title, startsAt: review.start },
+    });
+    expect(calendarLine(input(own, { at: at(10, 5), chats: running }))?.kind).toBe('nudge');
+  });
+
   it('stays a line about the chat when the meeting is on the calendar, not a meeting card', () => {
     const review = event('Design review', at(10, 5), at(10, 30), { link: link('zoom') });
     const running = chatStates([chat(CHAT, { latestRun: { status: 'running' } as never })]);
