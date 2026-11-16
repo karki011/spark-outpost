@@ -4,6 +4,16 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.9
+
+- **Home** is simpler: a headline with your next meeting, the message box, **Needs you** only when something waits, Slack mentions, a **Working set** of running and finished chats, the **Brief** and the week recap.
+- The chat's context rail is one full-height panel beside the thread and the message box. **Tools in this chat** opens from **Tools** in the rail, **+** → **Tools…** or `/mcp`.
+- **Remote control** has a side panel with the status switch, the address (**Copy**, **Show QR code**), a glance at paired and online devices, and **Hold to disconnect all**. Devices, permissions and activity fold; each permission group opens on its own, and **Cards can be answered from** sits with them.
+- User guide pages use more of a wide window, and link columns no longer wrap.
+- Corners across the app are smoother squircles on the Mac; circles and pills stay round.
+- **Browser view:** the address bar sits at the top with the page tools, the sidebar can hide (⌃⌘S), and **Chat** (⌘⇧O) opens a chat that belongs to the tab, kept per tab while Spark runs. **Hand to chat** is gone.
+- Saved sign-ins fill in and sign in on their own sites as soon as the agent asks, with no card.
+
 ## 0.1.0-beta.8
 
 - **Settings** has fewer pages: **General** holds your profile, appearance and Notifications; **AI providers** has Providers and Models tabs; **Connectors** has Connectors and MCP servers tabs; **About** holds Updates, Help and Reset. Each connector opens its own page, switches show On or Off, each row has one ⓘ, and long provider and model lists fold.
