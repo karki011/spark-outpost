@@ -411,6 +411,14 @@ describe('calendar', () => {
     ]);
   });
 
+  it('says Meeting now when Join opens at the start', async () => {
+    notifier.meeting(0);
+    await notifier.settled();
+    expect(payloads()).toEqual([
+      { title: 'Meeting now', body: '', chatId: null, tag: 'spark-meeting' },
+    ]);
+  });
+
   it('sends no meeting alert while the notify switch is off or alerts are held', async () => {
     holding = true;
     notifier.meeting(10);

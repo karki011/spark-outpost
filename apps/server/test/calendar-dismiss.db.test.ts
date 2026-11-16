@@ -49,6 +49,15 @@ async function now() {
   return calendarNowSchema.parse((await client.get('/api/calendar/now')).body);
 }
 
+function remind(event: CalendarEvent) {
+  return client.send('put', '/api/calendar/marks', {
+    eventKey: event.key,
+    end: event.end,
+    kind: 'remind_5',
+    on: true,
+  });
+}
+
 function dismiss(event: CalendarEvent, on = true) {
   return client.send('put', '/api/calendar/marks', {
     eventKey: event.key,
@@ -62,7 +71,9 @@ describe('dismissing a meeting alert', () => {
   it('keeps one occurrence quiet and lets the next occurrence of the same meeting alert', async () => {
     const [first, second] = await events();
     expect(first?.key).toMatch(/^daily@google\.com@/);
-    expect((await now()).nudge).toMatchObject({ kind: 'before', eventKey: first!.key });
+    await remind(first!);
+    await remind(second!);
+    expect((await now()).nudge).toMatchObject({ kind: 'remind', eventKey: first!.key });
     expect((await dismiss(first!)).status).toBe(200);
     expect((await dismiss(first!)).status).toBe(200);
     const after = await events();
@@ -73,7 +84,7 @@ describe('dismissing a meeting alert', () => {
       1,
     );
     vi.setSystemTime(Date.parse(second!.start) - 2 * MINUTE);
-    expect((await now()).nudge).toMatchObject({ kind: 'before', eventKey: second!.key });
+    expect((await now()).nudge).toMatchObject({ kind: 'remind', eventKey: second!.key });
   });
 
   it('is not a Remind me mark, and Disconnect forgets it', async () => {
@@ -119,9 +130,10 @@ describe('Join at start', () => {
       dismissed: false,
     });
     expect(after.find((event) => event.key === second!.key)?.joinAtStart).toBe(false);
-    expect((await now()).nudge).toMatchObject({ kind: 'before', eventKey: first!.key });
+    await remind(first!);
+    expect((await now()).nudge).toMatchObject({ kind: 'remind', eventKey: first!.key });
     vi.setSystemTime(Date.parse(first!.start));
-    expect((await now()).nudge).toMatchObject({ kind: 'before', eventKey: first!.key });
+    expect((await now()).upcoming.map((event) => event.key)).toContain(first!.key);
     expect((await joinAtStart(first!, false)).status).toBe(200);
     expect((await events()).find((event) => event.key === first!.key)?.joinAtStart).toBe(false);
   });

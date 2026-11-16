@@ -19,7 +19,7 @@ describe('calendar rows in Settings search', () => {
     expect(found('focus blocks')).toEqual(['Focus blocks are events named']);
     expect(found('paired')).toEqual(['Meeting alerts on paired devices']);
     expect(found('calendar brief')).toEqual(['Add today’s calendar to the brief']);
-    expect(found('before a meeting')).toEqual(['Before a meeting']);
+    expect(found('join opens')).toEqual(['Join opens']);
   });
 });
 

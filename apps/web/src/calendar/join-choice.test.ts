@@ -30,7 +30,7 @@ describe('joinChoice', () => {
 
   it('offers a choice when two or more meetings are open, with the group’s other meetings', () => {
     const nudge = {
-      kind: 'before' as const,
+      kind: 'remind' as const,
       eventKey: standup.key,
       title: standup.title,
       startsAt: standup.start,

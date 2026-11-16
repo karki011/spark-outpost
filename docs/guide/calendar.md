@@ -24,13 +24,15 @@ About 2 minutes.
 - **Take notes** records a meeting: [Take meeting notes (alpha)](meetings.md).
 - **Refresh now** re-reads them.
 
+Settings → Notifications lists alerts in order: **Wrap-up reminder**; **Join opens** shows the meeting with **Join** and hops Scout; **Alert at** lowers the card; **Anything to capture?** follows a meeting with notes.
+
 At the start, Scout lowers a card: **Join**, **Snooze 1 min** or **Dismiss** (for good). Esc dismisses; **⌘J** joins one meeting.
 
 VoiceOver and keyboard users get focus (**⌃⌥⌘M**); a silent notification mirrors it.
 
 **Bubble from Scout**: **Snooze until start**, then **Snooze 2 min**; snoozes survive reloads. Reminders end 5 min in. **Open** shows Today; **Choose** handles clashes. Lines have **Dismiss**; focus blocks hold chimes.
 
-**Join meetings automatically** (off): cancellable 10-second countdown, never in clashes, holds or absence. **Join at start** opens one at its start despite holds or clashes; reminders offer **Don't open**. Times follow your Mac.
+**Join meetings automatically** (off): cancellable 10-second countdown, never in clashes, holds or absence. **Join at start** opens one at its start despite holds or clashes; reminders offer **Don't open**.
 
 ## Let agents use it
 

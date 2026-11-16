@@ -62,61 +62,10 @@ const RUNNING: PlannerChat[] = [
 ];
 
 describe('planNudges', () => {
-  it('says a nudge-calendar meeting is coming up from 10 min before until 5 min in', () => {
-    const standup = event('Standup', 10, 25);
-    expect(planNudges([standup], NO_CHATS, settings(), NOW).nudge).toMatchObject({
-      kind: 'before',
-      title: 'Standup',
-      minutes: 10,
-    });
-    expect(planNudges([event('Standup', 11, 25)], NO_CHATS, settings(), NOW).nudge).toBeNull();
-    expect(planNudges([event('Standup', -4, 25)], NO_CHATS, settings(), NOW).nudge).toMatchObject({
-      minutes: 0,
-    });
-    expect(planNudges([event('Standup', -5, 25)], NO_CHATS, settings(), NOW).nudge).toBeNull();
-  });
-
-  it('stops nudging a meeting shorter than 5 min when it ends', () => {
-    expect(planNudges([event('Quick', -2, 3)], NO_CHATS, settings(), NOW).nudge).toMatchObject({
-      title: 'Quick',
-    });
-    expect(planNudges([event('Quick', -3, 0)], NO_CHATS, settings(), NOW).nudge).toBeNull();
-  });
-
-  it('still nudges a meeting set to join at start before it starts', () => {
-    const asked = { joinAtStart: true };
-    expect(
-      planNudges([event('Standup', 3, 25, asked)], NO_CHATS, settings(), NOW).nudge,
-    ).toMatchObject({ kind: 'before', title: 'Standup' });
-  });
-
-  it('follows the before-a-meeting setting', () => {
-    const later = event('Review', 14, 40);
-    expect(planNudges([later], NO_CHATS, settings({ beforeMinutes: 15 }), NOW).nudge).toMatchObject(
-      {
-        kind: 'before',
-        minutes: 14,
-      },
-    );
-    expect(planNudges([later], NO_CHATS, settings({ beforeMinutes: 5 }), NOW).nudge).toBeNull();
-  });
-
-  it('gives no nudge for calendars without nudges, focus, declined, all-day or other days', () => {
-    const events = [
-      event('Pickup', 5, 20, { nudges: false }),
-      event('Focus', 5, 20, { focus: true }),
-      event('Skipped', 5, 20, { myStatus: 'declined' }),
-      event('Holiday', 5, 20, { allDay: true }),
-      event('Tomorrow', 24 * 60 + 5, 24 * 60 + 20),
-    ];
-    expect(planNudges(events, NO_CHATS, settings(), NOW).nudge).toBeNull();
-  });
-
-  it('nudges unanswered invitations but not tentative ones', () => {
-    const pending = event('Invite', 5, 20, { myStatus: 'pending' });
-    const maybe = event('Maybe', 5, 20, { myStatus: 'tentative' });
-    expect(planNudges([pending], NO_CHATS, settings(), NOW).nudge?.title).toBe('Invite');
-    expect(planNudges([maybe], NO_CHATS, settings(), NOW).nudge).toBeNull();
+  it('gives a meeting no nudge of its own: Join opens and the alert cover it', () => {
+    const standup = event('Standup', 5, 25);
+    expect(planNudges([standup], NO_CHATS, settings(), NOW).nudge).toBeNull();
+    expect(planNudges([event('Now', -2, 25)], NO_CHATS, settings(), NOW).nudge).toBeNull();
   });
 
   it('reminds 5 min before a marked event, on any calendar, before other lines', () => {
@@ -126,31 +75,18 @@ describe('planNudges', () => {
     expect(plan.nudge).toMatchObject({ kind: 'remind', title: 'Design review', minutes: 4 });
   });
 
-  it('groups meetings due together that overlap the first one, once per nudge', () => {
-    const standup = event('Standup', 5, 21);
-    const design = event('Design sync', 6, 36);
-    const hours = event('Office hours', 9, 30);
-    const after = event('Retro', 21, 40);
-    const quiet = event('Pickup', 6, 20, { nudges: false });
-    const plan = planNudges([after, hours, design, quiet, standup], NO_CHATS, settings(), NOW);
-    expect(plan.nudge).toMatchObject({ kind: 'before', title: 'Standup' });
-    const group = plan.nudge?.kind === 'before' ? plan.nudge.group : [];
-    expect(group.map((item) => item.title)).toEqual(['Standup', 'Design sync', 'Office hours']);
-  });
-
-  it('keeps a back-to-back meeting out of the group and a lone meeting alone', () => {
-    const plan = planNudges([event('A', 2, 8), event('B', 8, 30)], NO_CHATS, settings(), NOW);
-    const group = plan.nudge?.kind === 'before' ? plan.nudge.group : [];
-    expect(group.map((item) => item.title)).toEqual(['A']);
-  });
-
-  it('groups a Remind me mark with the meetings due at the same time', () => {
+  it('groups Remind me marks that overlap the first one, and keeps others apart', () => {
     const marked = event('Design review', 4, 30, { remind: true });
-    const standup = event('Standup', 3, 18);
-    const plan = planNudges([standup, marked], NO_CHATS, settings(), NOW);
-    expect(plan.nudge?.kind).toBe('remind');
+    const overlapping = event('Office hours', 3, 20, { remind: true });
+    const after = event('Retro', 30, 40, { remind: true });
+    const plan = planNudges([after, overlapping, marked], NO_CHATS, settings(), NOW);
     const group = plan.nudge?.kind === 'remind' ? plan.nudge.group : [];
-    expect(group.map((item) => item.title)).toEqual(['Design review', 'Standup']);
+    expect(group.map((item) => item.title)).toEqual(['Office hours', 'Design review']);
+  });
+
+  it('stops reminding at the start', () => {
+    const started = event('Started', -1, 30, { remind: true });
+    expect(planNudges([started], NO_CHATS, settings(), NOW).nudge).toBeNull();
   });
 
   it('names the meetings each upcoming meeting clashes with, among all of today', () => {
@@ -177,6 +113,15 @@ describe('planNudges', () => {
       chats: [{ title: 'Dashboards', reason: 'running' }],
     });
     expect(planNudges([meeting], RUNNING, settings({ wrapUpMinutes: 0 }), NOW).nudge).toBeNull();
+  });
+
+  it('ends the wrap-up when Join opens', () => {
+    const soon = event('Planning', 8, 60);
+    expect(planNudges([soon], RUNNING, settings(), NOW).nudge).toBeNull();
+    expect(planNudges([soon], RUNNING, settings({ joinLead: 5 }), NOW).nudge).toMatchObject({
+      kind: 'wrap_up',
+      minutes: 8,
+    });
   });
 
   it('lists the next three meetings that have not ended', () => {
@@ -243,9 +188,37 @@ describe('meeting pushes', () => {
     ]);
   });
 
-  it('are due inside the before window only', () => {
-    const events = [event('Soon', 8, 20), event('Later', 30, 40), event('Started', -1, 20)];
-    expect(meetingPushDue(events, settings(), NOW).map((item) => item.title)).toEqual(['Soon']);
+  it('are due from Join opens until 5 min after the start', () => {
+    const events = [
+      event('Soon', 8, 20),
+      event('Later', 30, 40),
+      event('Started', -4, 20),
+      event('Gone', -5, 20),
+    ];
+    expect(meetingPushDue(events, settings(), NOW).map((item) => item.title)).toEqual([
+      'Started',
+      'Soon',
+    ]);
+  });
+
+  it('wait for the start when Join opens at the start', () => {
+    const events = [event('Soon', 1, 20), event('Now', 0, 20)];
+    expect(
+      meetingPushDue(events, settings({ joinLead: 0 }), NOW).map((item) => item.title),
+    ).toEqual(['Now']);
+  });
+
+  it('skip calendars without nudges, focus, declined, tentative, all-day and other days', () => {
+    const events = [
+      event('Pickup', 5, 20, { nudges: false }),
+      event('Focus', 5, 20, { focus: true }),
+      event('Skipped', 5, 20, { myStatus: 'declined' }),
+      event('Maybe', 5, 20, { myStatus: 'tentative' }),
+      event('Holiday', 5, 20, { allDay: true }),
+      event('Tomorrow', 24 * 60 + 5, 24 * 60 + 20),
+      event('Invite', 5, 20, { myStatus: 'pending' }),
+    ];
+    expect(meetingPushDue(events, settings(), NOW).map((item) => item.title)).toEqual(['Invite']);
   });
 });
 

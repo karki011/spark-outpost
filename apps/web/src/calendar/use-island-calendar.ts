@@ -86,6 +86,7 @@ export interface IslandCalendar {
   choosing: readonly CalendarEvent[] | null;
   calendarName: (event: CalendarEvent) => string;
   hopKeys: string[];
+  hopQuiet: boolean;
   onOpenEvent: (eventKey: string) => void;
   onChoose: (line: CalendarLine) => void;
   onCapture: (line: CalendarLine) => void;
@@ -299,9 +300,10 @@ export function useIslandCalendar(
       live ? new Map(live.clashes.map((clash) => [clash.eventKey, clash.titles])) : NO_CLASHES,
     [live],
   );
+  const underAlert = line !== null && lineUnderAlert(line, autoJoin.alert);
   return {
     connected: ready,
-    line: line && lineUnderAlert(line, autoJoin.alert) ? null : line,
+    line: underAlert ? null : line,
     hold: held.hold,
     at,
     upcoming: live
@@ -310,7 +312,8 @@ export function useIslandCalendar(
     clashes,
     choosing: stillChoosing(choosing, nudges.marks, at),
     calendarName: (event) => names.get(event.calendarKey) ?? 'Calendar',
-    hopKeys: hopKeys(live),
+    hopKeys: hopKeys(line),
+    hopQuiet: underAlert,
     countdown: autoJoin.countdown,
     joinLeadMs: leadMs,
     onCancelJoin: autoJoin.cancelJoin,

@@ -4,7 +4,6 @@ import { calendarHelperStateSchema } from './calendar-bridge.ts';
 import { calendarAuthorizationSchema, calendarSourceKindSchema } from './calendar-helper.ts';
 import { calendarGoogleStatusSchema } from './calendar-google.ts';
 
-export const CALENDAR_BEFORE_MINUTES = [5, 10, 15] as const;
 export const CALENDAR_WRAP_UP_MINUTES = [0, 15, 30] as const;
 export const CALENDAR_REMIND_MINUTES = 5;
 export const CALENDAR_CAPTURE_WINDOW_MS = 15 * 60_000;
@@ -28,7 +27,6 @@ export const joinLeadSchema = z.union([z.literal(10), z.literal(5), z.literal(2)
 export type JoinLead = z.infer<typeof joinLeadSchema>;
 
 export const calendarSettingsSchema = z.object({
-  beforeMinutes: z.union([z.literal(5), z.literal(10), z.literal(15)]),
   wrapUpMinutes: z.union([z.literal(0), z.literal(15), z.literal(30)]),
   capture: z.boolean(),
   holdRule: calendarHoldRuleSchema,
@@ -48,7 +46,6 @@ export const calendarSettingsPatchSchema = calendarSettingsSchema.partial().stri
 export type CalendarSettingsPatch = z.infer<typeof calendarSettingsPatchSchema>;
 
 export const CALENDAR_DEFAULT_SETTINGS: CalendarSettings = {
-  beforeMinutes: 10,
   wrapUpMinutes: 15,
   capture: true,
   holdRule: 'focus',
@@ -127,12 +124,6 @@ const nudgeBase = {
 };
 
 export const calendarNudgeSchema = z.discriminatedUnion('kind', [
-  z.object({
-    kind: z.literal('before'),
-    ...nudgeBase,
-    minutes: z.number().int(),
-    group: z.array(calendarEventSchema).max(CALENDAR_GROUP_MAX),
-  }),
   z.object({
     kind: z.literal('remind'),
     ...nudgeBase,

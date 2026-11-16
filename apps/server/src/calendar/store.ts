@@ -20,7 +20,6 @@ export interface CalendarConnection {
 
 interface ConnectionRow {
   connected: boolean;
-  before_minutes: number;
   wrap_up_minutes: number;
   capture: boolean;
   hold_rule: string;
@@ -38,7 +37,6 @@ interface ConnectionRow {
 
 function settingsOf(row: ConnectionRow): CalendarSettings {
   const parsed = calendarSettingsSchema.safeParse({
-    beforeMinutes: row.before_minutes,
     wrapUpMinutes: row.wrap_up_minutes,
     capture: row.capture,
     holdRule: row.hold_rule,
@@ -90,7 +88,6 @@ export async function setNotice(db: Queryable, workspaceId: string, notice: stri
 }
 
 const SETTING_COLUMNS: Record<keyof CalendarSettingsPatch, string> = {
-  beforeMinutes: 'before_minutes',
   wrapUpMinutes: 'wrap_up_minutes',
   capture: 'capture',
   holdRule: 'hold_rule',

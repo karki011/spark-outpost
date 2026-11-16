@@ -234,7 +234,12 @@ export function IslandApp() {
   };
 
   const sound = useIslandSound();
-  const hopping = useMeetingHop(calendar.hopKeys, sound?.on ?? false, calendar.hold.held);
+  const hopping = useMeetingHop(
+    calendar.hopKeys,
+    sound?.on ?? false,
+    calendar.hold.held,
+    calendar.hopQuiet,
+  );
   const mood =
     wave || hopping
       ? 'happy'

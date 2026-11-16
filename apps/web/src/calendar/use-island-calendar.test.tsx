@@ -45,7 +45,7 @@ function nowWith(meeting: CalendarEvent = standup): CalendarNow {
     active: true,
     upcoming: [meeting],
     nudge: {
-      kind: 'before',
+      kind: 'remind',
       eventKey: meeting.key,
       title: meeting.title,
       startsAt: meeting.start,

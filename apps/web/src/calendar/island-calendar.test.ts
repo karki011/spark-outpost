@@ -24,7 +24,7 @@ function nudge(kind: CalendarNudge['kind'], title: string, startsAt: number): Ca
 
 function beforeNudge(lead: CalendarEvent, group: CalendarEvent[]): CalendarNudge {
   return {
-    kind: 'before',
+    kind: 'remind',
     eventKey: lead.key,
     title: lead.title,
     startsAt: lead.start,
@@ -61,17 +61,11 @@ const input = (calendar: CalendarNow | null, extra = {}) => ({
 
 describe('nudgeText', () => {
   it('counts down to the meeting from its start and names the chats that need you', () => {
-    const before = nudge('before', 'Standup', at(10));
+    const before = nudge('remind', 'Standup', at(10));
     expect(nudgeText(before, at(9, 50), 2)).toBe('Standup in 10 min · 2 chats need you');
     expect(nudgeText(before, at(9, 50, 30), 1)).toBe('Standup in 10 min · 1 chat needs you');
     expect(nudgeText(before, at(9, 52), 0)).toBe('Standup in 8 min');
     expect(nudgeText(before, at(10), 0)).toBe('Standup now');
-  });
-
-  it('reminds without the chat count', () => {
-    expect(nudgeText(nudge('remind', 'Design review', at(10)), at(9, 55), 3)).toBe(
-      'Design review in 5 min',
-    );
   });
 
   it('names the chat a wrap-up is about', () => {
@@ -183,7 +177,7 @@ describe('calendarLine', () => {
   });
 
   it('puts the meeting nudge first, even in a hold, then the hold, catch-up and capture', () => {
-    const all = now({ hold, capture, nudge: nudge('before', 'Standup', at(10)) });
+    const all = now({ hold, capture, nudge: nudge('remind', 'Standup', at(10)) });
     expect(calendarLine(input(all, { catchUp }))?.text).toBe('Standup in 10 min');
     const quiet = { ...all, nudge: null };
     expect(calendarLine(input(quiet, { catchUp }))?.text).toBe(
@@ -224,7 +218,7 @@ describe('calendarLine', () => {
     const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });
     const calendar = now({
       upcoming: [standup],
-      nudge: { ...nudge('before', 'Standup', at(10)), eventKey: standup.key },
+      nudge: { ...nudge('remind', 'Standup', at(10)), eventKey: standup.key },
     });
     expect(calendarLine(input(calendar))?.join?.key).toBe(standup.key);
     expect(calendarLine(input({ ...calendar, nudge: null }, { at: at(9, 45) }))).toBeNull();
@@ -233,15 +227,20 @@ describe('calendarLine', () => {
     expect(late?.join?.link?.host).toBe('acme.zoom.us');
   });
 
-  it('hops once per meeting nudge, not for a wrap-up', () => {
-    expect(hopKeys(now({ nudge: nudge('before', 'Standup', at(10)) }))).toEqual([
-      'before:Standup@x',
-    ]);
-    expect(hopKeys(now({ nudge: nudge('remind', 'Standup', at(10)) }))).toEqual([
-      'remind:Standup@x',
-    ]);
-    expect(hopKeys(now({ nudge: nudge('wrap_up', 'Standup', at(10)) }))).toEqual([]);
-    expect(hopKeys(now({ active: false, nudge: nudge('before', 'Standup', at(10)) }))).toEqual([]);
+  it('hops once per meeting line: Remind me and Join opens, not a wrap-up or capture', () => {
+    const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });
+    const remind = now({
+      upcoming: [standup],
+      nudge: { ...nudge('remind', 'Standup', at(10)), eventKey: standup.key },
+    });
+    expect(hopKeys(calendarLine(input(remind)))).toEqual([`meeting:${standup.key}`]);
+    const joinOpen = calendarLine(input({ ...remind, nudge: null }));
+    expect(joinOpen?.kind).toBe('join');
+    expect(hopKeys(joinOpen)).toEqual([`meeting:${standup.key}`]);
+    const wrapUp = now({ nudge: nudge('wrap_up', 'Standup', at(10)) });
+    expect(hopKeys(calendarLine(input(wrapUp)))).toEqual([]);
+    expect(hopKeys(calendarLine(input(now({ capture }))))).toEqual([]);
+    expect(hopKeys(null)).toEqual([]);
   });
 
   it('turns meetings that start together into one Choose line and one hop', () => {
@@ -249,7 +248,7 @@ describe('calendarLine', () => {
     const design = event('Design sync', at(10), at(10, 30), { link: link('meet') });
     const room = event('Room booking', at(10), at(10, 30));
     const grouped = {
-      ...nudge('before', 'Standup', at(10)),
+      ...nudge('remind', 'Standup', at(10)),
       eventKey: standup.key,
       group: [standup, design, room],
     };
@@ -262,11 +261,11 @@ describe('calendarLine', () => {
       'Design sync',
       'Room booking',
     ]);
-    expect(line?.key).toBe(`before:${standup.key}:3`);
-    expect(hopKeys(calendar)).toEqual([
-      `before:${standup.key}`,
-      `before:${design.key}`,
-      `before:${room.key}`,
+    expect(line?.key).toBe(`remind:${standup.key}:3`);
+    expect(hopKeys(line)).toEqual([
+      `meeting:${standup.key}`,
+      `meeting:${design.key}`,
+      `meeting:${room.key}`,
     ]);
   });
 

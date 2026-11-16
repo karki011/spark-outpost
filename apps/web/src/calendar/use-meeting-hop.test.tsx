@@ -36,12 +36,16 @@ interface Props {
   hopKey: string[];
   on: boolean;
   held: boolean;
+  quiet?: boolean;
 }
 
 function hop(first: Props) {
-  return renderHook((props: Props) => useMeetingHop(props.hopKey, props.on, props.held), {
-    initialProps: first,
-  });
+  return renderHook(
+    (props: Props) => useMeetingHop(props.hopKey, props.on, props.held, props.quiet),
+    {
+      initialProps: first,
+    },
+  );
 }
 
 beforeEach(() => {
@@ -57,6 +61,15 @@ afterEach(() => {
 });
 
 describe('useMeetingHop', () => {
+  it('stays still while the centre card shows the meeting, and never hops for it later', () => {
+    const { result, rerender } = hop({ hopKey: ['meeting:a'], on: true, held: false, quiet: true });
+    expect(result.current).toBe(false);
+    expect(tones).toEqual([]);
+    rerender({ hopKey: ['meeting:a'], on: true, held: false, quiet: false });
+    expect(result.current).toBe(false);
+    expect(tones).toEqual([]);
+  });
+
   it('hops once with a short tune for a new nudge, then rests', () => {
     const hook = hop({ hopKey: [], on: true, held: false });
     expect(hook.result.current).toBe(false);

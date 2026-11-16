@@ -13,7 +13,6 @@ import { parseFocusNames } from './focus-names.ts';
 import { useCalendarActions, useCalendarStatus } from './use-calendar.ts';
 
 export const CALENDAR_BRIEF_LABEL = 'Add today’s calendar to the brief';
-const BEFORE_LABEL = 'Before a meeting';
 const WRAP_UP_LABEL = 'Wrap-up reminder';
 const CAPTURE_LABEL = 'Anything to capture?';
 const HOLD_LABEL = 'Hold chimes during';
@@ -26,25 +25,19 @@ const JOIN_LEAD_LABEL = 'Join opens';
 const NOTES_ON_JOIN_LABEL = 'Take notes when I join a meeting';
 
 export const CALENDAR_NOTIFY_ROWS = [
+  WRAP_UP_LABEL,
+  JOIN_LEAD_LABEL,
   ALERT_STYLE_LABEL,
   ALERT_LEAD_LABEL,
-  JOIN_LEAD_LABEL,
   AUTO_JOIN_LABEL,
   NOTES_ON_JOIN_LABEL,
-  BEFORE_LABEL,
-  NUDGE_CALENDARS_LABEL,
-  WRAP_UP_LABEL,
   CAPTURE_LABEL,
+  NUDGE_CALENDARS_LABEL,
   HOLD_LABEL,
   FOCUS_NAMES_LABEL,
   PHONE_LABEL,
 ] as const;
 
-const BEFORE = [
-  { id: '5', label: '5 min' },
-  { id: '10', label: '10 min' },
-  { id: '15', label: '15 min' },
-];
 const WRAP_UP = [
   { id: '0', label: 'Off' },
   { id: '15', label: '15 min' },
@@ -72,6 +65,10 @@ const HOLD = [
 ];
 
 type Save = (patch: CalendarSettingsPatch) => void;
+
+function phonePushText(joinLead: number): string {
+  return joinLead > 0 ? `Meeting in ${joinLead} min` : 'Meeting now';
+}
 
 function useCalendarSettings(): {
   status: CalendarStatus;
@@ -196,6 +193,22 @@ export function CalendarMeetingSettings() {
       <section className="spark-group" aria-labelledby="notify-meetings">
         <h4 id="notify-meetings">Meetings</h4>
         <ChoiceRow
+          label={WRAP_UP_LABEL}
+          hint="Before a meeting, one Spark Island line names a chat that is still running or needs you."
+          options={WRAP_UP}
+          value={String(settings.wrapUpMinutes)}
+          onChange={(id) =>
+            save({ wrapUpMinutes: Number(id) as CalendarSettings['wrapUpMinutes'] })
+          }
+        />
+        <ChoiceRow
+          label={JOIN_LEAD_LABEL}
+          hint="Spark Island shows the meeting with Join, hops once and plays a short sound unless chimes are held or off. Join, ⌘J and Ask Spark work from then until it ends."
+          options={JOIN_LEAD}
+          value={String(settings.joinLead)}
+          onChange={(id) => save({ joinLead: Number(id) as CalendarSettings['joinLead'] })}
+        />
+        <ChoiceRow
           label={ALERT_STYLE_LABEL}
           hint="Center of the screen brings Scout down with the meeting over any app; the bubble stays at the island. Holds always use the bubble."
           options={ALERT_STYLE}
@@ -205,19 +218,12 @@ export function CalendarMeetingSettings() {
         {settings.alertStyle === 'center' && (
           <ChoiceRow
             label={ALERT_LEAD_LABEL}
-            hint="When the meeting comes down to the middle of the screen."
+            hint="When the meeting comes down to the middle of the screen. The island stays quiet while it shows."
             options={ALERT_LEAD}
             value={String(settings.alertLead)}
             onChange={(id) => save({ alertLead: Number(id) as CalendarSettings['alertLead'] })}
           />
         )}
-        <ChoiceRow
-          label={JOIN_LEAD_LABEL}
-          hint="When Join, ⌘J and Ask Spark can open a meeting’s link. It stays open until the meeting ends."
-          options={JOIN_LEAD}
-          value={String(settings.joinLead)}
-          onChange={(id) => save({ joinLead: Number(id) as CalendarSettings['joinLead'] })}
-        />
         <SwitchRow
           label={AUTO_JOIN_LABEL}
           hint="At the start, Spark counts down 10 s and opens the meeting link, unless you cancel, are away, declined it, dismissed it or another meeting clashes."
@@ -232,31 +238,13 @@ export function CalendarMeetingSettings() {
             onChange={(on) => save({ notesOnJoin: on })}
           />
         )}
-        <ChoiceRow
-          label={BEFORE_LABEL}
-          hint="Spark Island hops, plays a short sound unless chimes are held or off, and shows Join."
-          options={BEFORE}
-          value={String(settings.beforeMinutes)}
-          onChange={(id) =>
-            save({ beforeMinutes: Number(id) as CalendarSettings['beforeMinutes'] })
-          }
-        />
-        <CalendarNudgeList status={calendar.status} />
-        <ChoiceRow
-          label={WRAP_UP_LABEL}
-          hint="Names a chat that is still running or needs you before a meeting."
-          options={WRAP_UP}
-          value={String(settings.wrapUpMinutes)}
-          onChange={(id) =>
-            save({ wrapUpMinutes: Number(id) as CalendarSettings['wrapUpMinutes'] })
-          }
-        />
         <SwitchRow
           label={CAPTURE_LABEL}
-          hint="One Spark Island line when a meeting with notes ends."
+          hint="After a meeting with notes ends, one Spark Island line offers a chat about it for 15 minutes."
           checked={settings.capture}
           onChange={(on) => save({ capture: on })}
         />
+        <CalendarNudgeList status={calendar.status} />
       </section>
       <section className="spark-group" aria-labelledby="notify-holds">
         <h4 id="notify-holds">Island chimes and phone</h4>
@@ -270,7 +258,7 @@ export function CalendarMeetingSettings() {
         <FocusNames key={settings.focusNames.join('|')} names={settings.focusNames} save={save} />
         <SwitchRow
           label={PHONE_LABEL}
-          hint={`Only “Meeting in ${settings.beforeMinutes} min”: no title or Join, and held during focus like chimes. Needs Notify when a chat needs you on Remote control.`}
+          hint={`Only “${phonePushText(settings.joinLead)}” when Join opens: no title or Join, and held during focus like chimes. Needs Notify when a chat needs you on Remote control.`}
           checked={settings.phoneAlerts}
           onChange={(on) => save({ phoneAlerts: on })}
         />
