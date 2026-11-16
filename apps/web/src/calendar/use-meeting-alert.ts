@@ -15,6 +15,7 @@ import { alertNotice, joinState } from './alert/alert-model.ts';
 import { useEventClock } from './event-clock.ts';
 import {
   AUTO_JOIN_COUNTDOWN_MS,
+  JOIN_AT_START_COUNTDOWN_FROM,
   autoJoinPlan,
   meetingAlert,
   type AutoJoinPlan,
@@ -52,7 +53,8 @@ function alertTimes(live: CalendarNow | null, settings: CalendarSettings | null)
   const lead = settings.alertLead * 60_000;
   return live.upcoming.flatMap((event) => {
     const span = spanOf(event);
-    return [span.start - lead, span.start, remindUntil(span), span.end];
+    const opens = event.joinAtStart ? [span.start - JOIN_AT_START_COUNTDOWN_FROM] : [];
+    return [span.start - lead, ...opens, span.start, remindUntil(span), span.end];
   });
 }
 

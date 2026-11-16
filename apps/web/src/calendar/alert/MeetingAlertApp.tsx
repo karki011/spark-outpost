@@ -13,9 +13,14 @@ import { sparkDesktop } from '../../desktop/desktop-bridge.ts';
 import { useReducedMotion } from '../../ui/motion.ts';
 import { clock } from '../calendar-format.ts';
 import { joinLabel, placeRow, startsLabel, timeRow } from '../meeting-card.ts';
-import { CardButton, MeetingCardBody, type MeetingCardRow } from '../card/MeetingCard.tsx';
+import { cardLead } from '../card/card-lead.ts';
+import {
+  CardButton,
+  MeetingCardBody,
+  type MeetingCardRow,
+  type MoreAction,
+} from '../card/MeetingCard.tsx';
 import { ClockIcon, PeopleIcon, VideoIcon, WarnIcon } from '../../ui/icons.tsx';
-import { canAskJoinAtStart } from '../join-at-start.ts';
 import { JoinAtStartButton } from '../JoinAtStartButton.tsx';
 import { openJoin } from '../today-model.ts';
 import {
@@ -103,39 +108,56 @@ function JoinFor({
   );
 }
 
-function PlannedOpen({
+function LeadAction({
   event,
   at,
+  leadMs,
   autoJoin,
   act,
 }: {
   event: CalendarEvent;
   at: number;
+  leadMs: number;
   autoJoin: boolean;
   act: Act;
 }) {
-  const start = spanOf(event).start;
-  if (event.joinAtStart && at < start) {
+  const lead = cardLead(event, at);
+  if (lead === 'join') return <JoinFor event={event} at={at} leadMs={leadMs} act={act} />;
+  if (lead === 'planned') {
     return (
-      <>
-        <span className="mc-later">Opens at {clock(start)}</span>
-        <CardButton
-          label="Don't open"
-          ariaLabel={`Don't open ${event.title} at ${clock(start)}`}
-          onClick={() => act('cancel-join-at-start', event.key)}
-        />
-      </>
+      <CardButton
+        label="Don't open"
+        ariaLabel={`Don't open ${event.title} at the start`}
+        onClick={() => act('cancel-join-at-start', event.key)}
+      />
     );
   }
-  if (!canAskJoinAtStart(event, at)) return null;
   return (
     <JoinAtStartButton
       title={event.title}
-      className="mc-btn"
+      className="mc-btn primary"
       autoJoin={autoJoin}
       onAsk={() => act('join-at-start', event.key)}
     />
   );
+}
+
+function earlyJoin(event: CalendarEvent, at: number, leadMs: number, act: Act): MoreAction[] {
+  if (cardLead(event, at) === 'join' || joinState(event, at, leadMs) !== 'open') return [];
+  return [
+    {
+      label: `${joinLabel(event)} now`,
+      onAct: () => {
+        openJoin(event.link!.url);
+        act('joined', event.key);
+      },
+    },
+  ];
+}
+
+function PlannedNote({ event, at }: { event: CalendarEvent; at: number }) {
+  if (cardLead(event, at) !== 'planned') return null;
+  return <p className="mc-status">Opens 20 s before {clock(spanOf(event).start)}</p>;
 }
 
 type Act = (kind: MeetingAlertAction['kind'], eventKey?: string | null) => void;
@@ -260,7 +282,10 @@ export function MeetingAlertApp() {
     window.addEventListener('resize', measure);
     document.addEventListener('mousemove', onMove);
     const settle = setTimeout(measure, 1_700);
+    const resized = new ResizeObserver(measure);
+    if (cardRef.current) resized.observe(cardRef.current);
     return () => {
+      resized.disconnect();
       clearTimeout(settle);
       document.removeEventListener('animationend', measure, true);
       window.removeEventListener('resize', measure);
@@ -334,15 +359,30 @@ export function MeetingAlertApp() {
               title={many ? `${payload.events.length} meetings at once` : first.title}
               rows={many ? [] : eventRows(first, null)}
               list={many ? <ClashList payload={payload} at={at} act={act} /> : null}
-              status={<Countdown payload={payload} at={at} act={act} />}
-              more={[{ label: 'Open in Today', onAct: () => act('open', first.key) }]}
+              status={
+                <>
+                  {!many && <PlannedNote event={first} at={at} />}
+                  <Countdown payload={payload} at={at} act={act} />
+                </>
+              }
+              more={[
+                ...(many ? [] : earlyJoin(first, at, payload.joinLeadMs, act)),
+                { label: 'Open in Today', onAct: () => act('open', first.key) },
+              ]}
               closeLabel={`Dismiss ${alertTitle(payload.events, at)}`}
               onClose={() => act('dismiss')}
               hint={<span id="ma-hint">Esc dismisses · ⌘J joins · ⌃⌥⌘M focuses this card</span>}
             >
-              {!many && <JoinFor event={first} at={at} leadMs={payload.joinLeadMs} act={act} />}
+              {!many && (
+                <LeadAction
+                  event={first}
+                  at={at}
+                  leadMs={payload.joinLeadMs}
+                  autoJoin={payload.autoJoin}
+                  act={act}
+                />
+              )}
               <SnoozeButton events={payload.events} at={at} act={act} />
-              {!many && <PlannedOpen event={first} at={at} autoJoin={payload.autoJoin} act={act} />}
             </MeetingCardBody>
           </div>
         </div>

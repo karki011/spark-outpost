@@ -1,4 +1,4 @@
-export const SNOOZE_MS = 2 * 60_000;
+export const SNOOZE_MS = 60_000;
 
 export interface NudgeMark {
   end: number;

@@ -15,7 +15,8 @@ import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
 import { useEventDetail } from '../calendar/use-calendar.ts';
 import { ClockIcon, PeopleIcon, VideoIcon, WarnIcon } from '../ui/icons.tsx';
 import { CardButton, MeetingCardBody, type MeetingCardRow } from '../calendar/card/MeetingCard.tsx';
-import { JoinAtStartAction } from './JoinAtStartAction.tsx';
+import { cardLead } from '../calendar/card/card-lead.ts';
+import { JoinAtStartButton } from '../calendar/JoinAtStartButton.tsx';
 import { useLeave } from './use-leave.ts';
 
 interface CalendarBubbleProps {
@@ -66,6 +67,28 @@ function AutoJoin({ event, calendar }: { event: CalendarEvent; calendar: IslandC
   );
 }
 
+function LeadAction({ event, calendar }: { event: CalendarEvent; calendar: IslandCalendar }) {
+  const lead = cardLead(event, calendar.at);
+  if (lead === 'join') return <JoinAction event={event} calendar={calendar} />;
+  if (lead === 'planned') {
+    return (
+      <CardButton
+        label="Don't open"
+        ariaLabel={`Don't open ${event.title} at the start`}
+        onClick={() => calendar.onCancelJoinAtStart(event)}
+      />
+    );
+  }
+  return (
+    <JoinAtStartButton
+      title={event.title}
+      className="mc-btn primary"
+      autoJoin={calendar.autoJoin}
+      onAsk={() => calendar.onJoinAtStart(event)}
+    />
+  );
+}
+
 export function CalendarBubble({ event, top, calendar, compact }: CalendarBubbleProps) {
   const { leaving, leave } = useLeave();
   const detail = useEventDetail(event, true).data;
@@ -74,6 +97,7 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
   const clash = clashText(calendar.clashes.get(event.key) ?? []);
   const agenda = detail ? agendaPreview(detail.snippet || detail.agenda) : null;
   const beforeStart = calendar.at < spanOf(event).start;
+  const lead = cardLead(event, calendar.at);
   const rows: MeetingCardRow[] = compact
     ? [{ key: 'time', text: [timeRow(event), place].filter(Boolean).join(' · ') }]
     : [
@@ -107,8 +131,28 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
         compact={compact}
         rows={rows}
         agenda={agenda}
-        status={<AutoJoin event={event} calendar={calendar} />}
+        status={
+          <>
+            {lead === 'planned' && (
+              <p className="mc-status">Opens 20 s before {clock(spanOf(event).start)}</p>
+            )}
+            <AutoJoin event={event} calendar={calendar} />
+          </>
+        }
         more={[
+          ...(lead !== 'join' &&
+          event.link &&
+          joinOpen(spanOf(event), calendar.at, calendar.joinLeadMs)
+            ? [
+                {
+                  label: `${joinLabel(event)} now`,
+                  onAct: () => {
+                    openJoin(event.link!.url);
+                    calendar.onJoined(event.key);
+                  },
+                },
+              ]
+            : []),
           {
             label: 'Open in Today',
             onAct: () =>
@@ -121,7 +165,7 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
         closeLabel={`Dismiss the nudge for ${event.title}`}
         onClose={dismiss}
       >
-        <JoinAction event={event} calendar={calendar} />
+        <LeadAction event={event} calendar={calendar} />
         <CardButton
           label={beforeStart ? 'Snooze until start' : 'Snooze 1 min'}
           onClick={() =>
@@ -129,13 +173,6 @@ export function CalendarBubble({ event, top, calendar, compact }: CalendarBubble
               beforeStart ? calendar.onSnooze(event, true) : calendar.onSnoozeAlert(event),
             )
           }
-        />
-        <JoinAtStartAction
-          event={event}
-          calendar={calendar}
-          buttonClass="mc-btn"
-          noteClass="mc-later"
-          offer
         />
       </MeetingCardBody>
     </div>

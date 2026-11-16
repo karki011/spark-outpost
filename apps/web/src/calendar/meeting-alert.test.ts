@@ -179,8 +179,10 @@ describe('autoJoinPlan for Join at start', () => {
     expect(plan({ events: [asked, design] })).toEqual({ join: asked });
   });
 
-  it('waits for the start', () => {
-    expect(plan({ events: [asked], autoJoin: false, at: at(9, 59) })).toEqual({ skip: 'off' });
+  it('starts its countdown 30 s before the start, so the meeting opens 20 s early', () => {
+    expect(plan({ events: [asked], autoJoin: false, at: at(9, 59, 29) })).toEqual({ skip: 'off' });
+    expect(plan({ events: [asked], autoJoin: false, at: at(9, 59, 30) })).toEqual({ join: asked });
+    expect(plan({ events: [asked], autoJoin: false, at: at(9, 59, 40) })).toEqual({ join: asked });
   });
 
   it('skips when the Mac is away, locked or asleep', () => {

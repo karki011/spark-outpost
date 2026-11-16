@@ -26,13 +26,13 @@ About 2 minutes.
 
 Settings → Notifications lists alerts in order: **Wrap-up reminder**; **Join opens** shows the meeting with **Join** and hops Scout; **Alert at** lowers the card; **Anything to capture?** opens notes Spark took.
 
-At the start, Scout lowers a card: **Join**, **Snooze until start** (then **Snooze 1 min**) or **Dismiss** (for good); **···** opens it in Today. Esc dismisses; **⌘J** joins one meeting.
+Scout lowers a card: **Join at start** until 2 min before, then **Join**; **Snooze until start**; **···** joins now or opens Today. ✕ or Esc dismisses; **⌘J** joins.
 
 VoiceOver and keyboard users get focus (**⌃⌥⌘M**); a silent notification mirrors it.
 
-**Bubble from Scout** hangs the same card from Scout; snoozes survive reloads. Reminders end 5 min in. Clashing meetings share one card, each with its own **Join**. Lines have **Dismiss**; focus blocks hold chimes.
+**Bubble from Scout** hangs the same card from Scout; snoozes survive reloads. Reminders end 5 min in. Clashing meetings share one card. Focus blocks hold chimes.
 
-**Join meetings automatically** (off): cancellable 10-second countdown, never in clashes, holds or absence. **Join at start** opens one at its start despite holds or clashes; reminders offer **Don't open**.
+**Join meetings automatically** (off): cancellable 10-second countdown, never in clashes, holds or absence. **Join at start** opens one 20 s before its start despite holds or clashes; reminders offer **Don't open**.
 
 ## Let agents use it
 

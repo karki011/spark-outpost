@@ -95,7 +95,14 @@ test('the meeting card hangs from Scout with its details, snoozes through a relo
   await expect(bubble(page)).toContainText('Zoom · Spark Work');
   await expect(bubble(page)).toContainText('Alex Wong, Ivan Marsh');
   await expect(bubble(page)).toContainText('Daily sync: what changed since yesterday.');
-  await expect(bubble(page).getByRole('button', { name: 'Join Zoom: Standup' })).toBeEnabled();
+  await expect(bubble(page).getByRole('button', { name: 'Join at start: Standup' })).toBeEnabled();
+  const actions = bubble(page).locator('.mc-acts');
+  const row = await actions.boundingBox();
+  const buttons = await actions
+    .getByRole('button')
+    .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().top));
+  expect(Math.max(...buttons) - Math.min(...buttons)).toBeLessThan(4);
+  expect(row!.height).toBeLessThan(48);
 
   const response = await page.request.get('/api/calendar/now');
   const meeting = calendarNowSchema

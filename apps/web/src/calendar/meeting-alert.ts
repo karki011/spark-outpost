@@ -11,6 +11,8 @@ import type { NudgeMarks } from './nudge-marks.ts';
 const MINUTE_MS = 60_000;
 export const AUTO_JOIN_COUNTDOWN_MS = 10_000;
 export const AUTO_JOIN_LATE_MS = 2 * MINUTE_MS;
+export const JOIN_AT_START_EARLY_MS = 20_000;
+export const JOIN_AT_START_COUNTDOWN_FROM = JOIN_AT_START_EARLY_MS + AUTO_JOIN_COUNTDOWN_MS;
 export const AWAY_SECONDS = 5 * 60;
 
 export interface MeetingAlert {
@@ -115,9 +117,14 @@ function away(presence: Presence): boolean {
   return presence.locked || presence.asleep || presence.idleSeconds > AWAY_SECONDS;
 }
 
+function dueToOpen(event: CalendarEvent, at: number): boolean {
+  const { start, end } = spanOf(event);
+  return at >= start - JOIN_AT_START_COUNTDOWN_FROM && at < end;
+}
+
 function requestedJoin(input: AutoJoinInput): AutoJoinPlan | null {
   const asked = input.events.filter(
-    (event) => event.joinAtStart && startedNow(event, input.at) && !input.joined.has(event.key),
+    (event) => event.joinAtStart && dueToOpen(event, input.at) && !input.joined.has(event.key),
   );
   if (asked.length === 0) return null;
   if (away(input.presence)) return { skip: 'away' };

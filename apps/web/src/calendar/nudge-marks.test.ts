@@ -11,11 +11,11 @@ import {
 } from './nudge-marks.ts';
 
 describe('nudge marks', () => {
-  it('snoozes for two minutes and dismisses until the meeting ends', () => {
+  it('snoozes for a minute and dismisses until the meeting ends', () => {
     const snoozed = snoozeNudge(NO_NUDGE_MARKS, 'standup', 9_000_000, 1_000_000);
-    expect(nudgeHidden(snoozed, 'standup', 1_119_999)).toBe(true);
-    expect(nudgeHidden(snoozed, 'standup', 1_120_000)).toBe(false);
-    expect(snoozeEnds(snoozed)).toEqual([1_120_000]);
+    expect(nudgeHidden(snoozed, 'standup', 1_059_999)).toBe(true);
+    expect(nudgeHidden(snoozed, 'standup', 1_060_000)).toBe(false);
+    expect(snoozeEnds(snoozed)).toEqual([1_060_000]);
     const dismissed = dismissNudge(snoozed, 'standup', 9_000_000);
     expect(nudgeHidden(dismissed, 'standup', 5_000_000)).toBe(true);
     expect(nudgeHidden(dismissed, 'other', 5_000_000)).toBe(false);

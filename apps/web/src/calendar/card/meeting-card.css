@@ -135,7 +135,7 @@
 .mc-more-acts,
 .mc-status {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
 }
@@ -145,7 +145,7 @@
 }
 
 .mc-more-acts {
-  flex-basis: 100%;
+  flex-wrap: wrap;
 }
 
 .mc-more-acts[hidden] {
@@ -169,6 +169,7 @@
   font: inherit;
   font-size: 12.5px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: default;
 }
 
@@ -207,6 +208,7 @@
 
 .mc-later {
   color: var(--muted);
+  white-space: nowrap;
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
 }

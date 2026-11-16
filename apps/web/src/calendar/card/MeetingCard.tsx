@@ -50,31 +50,10 @@ export function CardButton(props: {
   );
 }
 
-function More({ actions }: { actions: readonly MoreAction[] }) {
-  const [open, setOpen] = useState(false);
-  const listId = useId();
-  return (
-    <>
-      <button
-        type="button"
-        className="mc-btn mc-more"
-        aria-label="More actions"
-        aria-expanded={open}
-        aria-controls={listId}
-        onClick={() => setOpen(!open)}
-      >
-        ···
-      </button>
-      <div id={listId} className="mc-more-acts" hidden={!open}>
-        {actions.map((action) => (
-          <CardButton key={action.label} label={action.label} onClick={action.onAct} />
-        ))}
-      </div>
-    </>
-  );
-}
-
 export function MeetingCardBody(props: MeetingCardBodyProps) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreId = useId();
+  const more = props.more ?? [];
   return (
     <>
       <p id={props.kickerId} className="mc-kicker" data-ended={props.ended || undefined}>
@@ -102,16 +81,32 @@ export function MeetingCardBody(props: MeetingCardBodyProps) {
       {props.status}
       <div className="mc-acts">
         {props.children}
-        <CardButton label="Dismiss" ariaLabel={props.closeLabel} onClick={props.onClose} />
-        {props.more && props.more.length > 0 && <More actions={props.more} />}
+        {more.length > 0 && (
+          <button
+            type="button"
+            className="mc-btn mc-more"
+            aria-label="More actions"
+            aria-expanded={moreOpen}
+            aria-controls={moreId}
+            onClick={() => setMoreOpen(!moreOpen)}
+          >
+            ···
+          </button>
+        )}
       </div>
+      {more.length > 0 && (
+        <div id={moreId} className="mc-more-acts" hidden={!moreOpen}>
+          {more.map((action) => (
+            <CardButton key={action.label} label={action.label} onClick={action.onAct} />
+          ))}
+        </div>
+      )}
       {props.hint && <p className="mc-hint">{props.hint}</p>}
       <button
         type="button"
         className="mc-x"
         title="Dismiss"
-        aria-hidden="true"
-        tabIndex={-1}
+        aria-label={props.closeLabel}
         onClick={props.onClose}
       >
         <XIcon />

@@ -7,6 +7,7 @@ import type { CalendarEvent, CalendarNow } from '@spark-outpost/contracts';
 import { meetingsApi } from '../meetings/index.ts';
 import { calendarApi } from './calendar-api.ts';
 import type { IslandHomePanel } from './use-island-calendar.ts';
+import { nudgeHidden, type NudgeMarks } from './nudge-marks.ts';
 import { useMeetingAlert } from './use-meeting-alert.ts';
 import { at, event, link, status } from './test-fixtures.ts';
 
@@ -213,5 +214,55 @@ describe('notes when you join from the island or the centre card', () => {
     );
     act(() => bridge.act({ kind: 'joined', key: standup.key, eventKey: standup.key }));
     expect(onJoinTakesNotes).toHaveBeenCalledWith(standup);
+  });
+});
+
+describe('the centre card’s snooze and open', () => {
+  function alertWith(
+    onOpen: (event: CalendarEvent) => void,
+    onDismissed = vi.fn(),
+    alertLead: 0 | 1 = 0,
+  ) {
+    let marks: NudgeMarks = new Map();
+    const setMarks = (update: (current: NudgeMarks) => NudgeMarks) => {
+      marks = update(marks);
+    };
+    renderHook(() =>
+      useMeetingAlert({
+        live: nowWith(),
+        settings: { ...status().settings, alertLead },
+        at: Date.now(),
+        held: false,
+        marks: new Map(),
+        setMarks,
+        names: new Map(),
+        note: () => undefined,
+        onDismissed,
+        onJoinAtStart: vi.fn(),
+        onJoinTakesNotes: vi.fn(),
+        onOpen,
+      }),
+    );
+    return () => marks;
+  }
+
+  it('Snooze until start hides the meeting until it starts', () => {
+    vi.setSystemTime(at(10, 29, 30));
+    const bridge = fakeBridge();
+    const marks = alertWith(vi.fn(), vi.fn(), 1);
+    act(() => bridge.act({ kind: 'snooze-until-start', key: standup.key, eventKey: null }));
+    expect(nudgeHidden(marks(), standup.key, at(10, 29, 59))).toBe(true);
+    expect(nudgeHidden(marks(), standup.key, at(10, 30))).toBe(false);
+  });
+
+  it('Open in Today dismisses the meeting and opens it', () => {
+    const bridge = fakeBridge();
+    const onOpen = vi.fn();
+    const onDismissed = vi.fn();
+    const marks = alertWith(onOpen, onDismissed);
+    act(() => bridge.act({ kind: 'open', key: standup.key, eventKey: standup.key }));
+    expect(onOpen).toHaveBeenCalledWith(standup);
+    expect(onDismissed).toHaveBeenCalledWith([standup]);
+    expect(nudgeHidden(marks(), standup.key, at(10, 40))).toBe(true);
   });
 });

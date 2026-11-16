@@ -15,7 +15,7 @@ interface AlertWindow {
   alertShows: MeetingAlertPayload[];
   alertHides: number;
   alertActs: unknown[];
-  alertRegions: { boxes: unknown[] }[];
+  alertRegions: { boxes: { height: number }[] }[];
   alertFocus: number;
   alertAction: (action: unknown) => void;
   alertFeed: { payload: (value: unknown) => void; leave: () => void; takeFocus: () => void };
@@ -175,7 +175,7 @@ function landing(page: Page): Promise<number> {
   );
 }
 
-test('the hanging card offers Join, Snooze, Join at start and Dismiss, and Esc dismisses once clicked', async ({
+test('the hanging card offers Join at start, Snooze and Join in ··· on one row, and Esc dismisses once clicked', async ({
   page,
 }) => {
   const payload = await standupPayload(page);
@@ -185,7 +185,8 @@ test('the hanging card offers Join, Snooze, Join at start and Dismiss, and Esc d
   await expect(card).toContainText(/\d+:\d{2}( [AP]M)?–\d+:\d{2} [AP]M · \d+ min/);
   await expect(card).toContainText('Zoom');
   await expect(card).toContainText('3 people');
-  await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Join at start' })).toBeVisible();
+  await expect(card.getByRole('button', { name: /^Join Zoom/ })).toBeHidden();
   await expect(card).toHaveAccessibleDescription(
     'Esc dismisses · ⌘J joins · ⌃⌥⌘M focuses this card',
   );
@@ -193,6 +194,14 @@ test('the hanging card offers Join, Snooze, Join at start and Dismiss, and Esc d
     .poll(() => alertWindow(page, (window) => window.alertRegions.at(-1)?.boxes.length ?? 0))
     .toBe(2);
   await expect.poll(() => landing(page)).toBe(0);
+  const closed = await alertWindow(page, (window) => window.alertRegions.at(-1)!.boxes[0]!.height);
+  await card.getByRole('button', { name: 'More actions' }).click({ force: true });
+  await expect(card.getByRole('button', { name: 'Open in Today' })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Join Zoom now' })).toBeVisible();
+  await expect
+    .poll(() => alertWindow(page, (window) => window.alertRegions.at(-1)!.boxes[0]!.height))
+    .toBeGreaterThan(closed);
+  await card.getByRole('button', { name: 'More actions' }).click({ force: true });
 
   await card.getByRole('button', { name: 'Snooze until start' }).click({ force: true });
   await card.getByRole('button', { name: 'Join at start' }).click({ force: true });
@@ -230,9 +239,8 @@ test("a card for a meeting set to join at start says when it opens and offers Do
   const payload = { ...plain, events: [marked] };
   await openOverlay(page, payload);
   const card = page.getByRole('alertdialog', { name: /^Meeting\. Standup starts in \d min$/ });
-  await expect(card).toContainText(/Opens at \d+:\d{2}/);
+  await expect(card).toContainText(/Opens 20 s before \d+:\d{2}/);
   await expect(card.getByRole('button', { name: 'Join at start' })).toHaveCount(0);
-  await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeVisible();
   await expect(card.getByRole('button', { name: 'Snooze until start' })).toBeVisible();
   await expect.poll(() => landing(page)).toBe(0);
   await card.getByRole('button', { name: /^Don't open/ }).click({ force: true });
@@ -252,13 +260,13 @@ test('assistive technology gets focus on the card, Tab reaches each button and E
   await page.evaluate(() => (window as unknown as AlertWindow).alertFeed.takeFocus());
   await expect(card).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeFocused();
+  await expect(card.getByRole('button', { name: 'Join at start' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(card.getByRole('button', { name: 'Snooze until start' })).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(card.getByRole('button', { name: 'Join at start' })).toBeFocused();
+  await expect(card.getByRole('button', { name: 'More actions' })).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(card.getByRole('button', { name: 'Dismiss' })).toBeFocused();
+  await expect(card.getByRole('button', { name: /^Dismiss/ })).toBeFocused();
   await page.screenshot({ path: 'test-results/meeting-card/keyboard-focus.png' });
   await page.keyboard.press('Escape');
   expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
