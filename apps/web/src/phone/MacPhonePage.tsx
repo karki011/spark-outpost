@@ -3,16 +3,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RemoteSession } from '@spark-outpost/contracts';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
+import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { usePageHidden } from '../ui/use-page-hidden.ts';
 import { activationOf, turnFailure } from './pair-flow.ts';
 import { PairPhone } from './PairPhone.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 import { PhoneActivity } from './PhoneActivity.tsx';
 import { PhoneDevices } from './PhoneDevices.tsx';
+import { PhoneRail } from './PhoneRail.tsx';
 import { PhoneStatus } from './PhoneStatus.tsx';
 import { PhoneSwitches } from './PhoneSwitches.tsx';
 import { PhoneCardAnswering } from './PhoneCardAnswering.tsx';
 import { PushContact } from './PushContact.tsx';
+import { setupSteps } from './setup-steps.ts';
 
 const STATE_POLL_MS = 10_000;
 const LIST_POLL_MS = 5000;
@@ -21,6 +24,7 @@ const FRESH_MS = 9000;
 export function MacPhonePage({ session }: { session: RemoteSession }) {
   const queryClient = useQueryClient();
   const hidden = usePageHidden();
+  const now = useMinuteClock();
   const [freshAfter, setFreshAfter] = useState<number | null>(null);
   const tailscale = useQuery({
     queryKey: phoneKeys.tailscale,
@@ -60,66 +64,78 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
       </QueryWait>
     );
   }
-  const list = devices.data ?? [];
-  const active = list.filter((device) => !device.revokedAt);
+  const state = tailscale.data;
+  const setup = setupSteps(state.status) !== null;
+  const wanted = session.address !== null;
+  const pair = (
+    <PairPhone
+      tailscale={state}
+      activation={activationOf(
+        {
+          pending: turn.isPending ? (turn.variables ?? null) : null,
+          failed: failure === null ? null : (turn.variables ?? null),
+        },
+        state,
+      )}
+      onPaired={() => {
+        setFreshAfter(Date.now());
+        void queryClient.invalidateQueries({ queryKey: phoneKeys.devices });
+      }}
+    />
+  );
   return (
-    <>
-      <PhoneStatus
-        state={tailscale.data}
-        wanted={session.address !== null}
-        connected={active.some((device) => device.connected)}
-        deviceCount={devices.data ? active.length : null}
-        checking={tailscale.isFetching}
-        turning={turn.isPending}
-        failure={failure}
-        onCheck={() => void tailscale.refetch()}
-        onTurn={(to) => turn.mutate(to)}
-      />
-      <div className="ph-cols">
-        <div className="ph-area ph-area-pair">
-          <PairPhone
-            tailscale={tailscale.data}
-            activation={activationOf(
-              {
-                pending: turn.isPending ? (turn.variables ?? null) : null,
-                failed: failure === null ? null : (turn.variables ?? null),
-              },
-              tailscale.data,
-            )}
-            onPaired={() => {
-              setFreshAfter(Date.now());
-              void queryClient.invalidateQueries({ queryKey: phoneKeys.devices });
-            }}
+    <div className="ph-cols" data-setup={setup || undefined}>
+      {setup ? (
+        <div className="ph-area ph-area-setup">
+          <PhoneStatus
+            state={state}
+            checking={tailscale.isFetching}
+            turning={turn.isPending}
+            on={state.status === 'on' || (state.status === 'error' && wanted)}
+            failure={failure}
+            onCheck={() => void tailscale.refetch()}
+            onTurn={(to) => turn.mutate(to)}
           />
         </div>
-        <div className="ph-area ph-area-main">
-          <PhoneDevices
-            devices={devices.data}
-            freshAfter={freshAfter}
-            passkeysAllowed={session.switches.passkeys}
-            wait={
-              <QueryWait query={devices} what="devices">
-                <Skeleton label="Loading devices" shape="list" rows={2} />
-              </QueryWait>
-            }
-          />
-          <PhoneSwitches
-            switches={session.switches}
-            notificationsExtra={<PushContact poll={hidden ? false : LIST_POLL_MS} />}
-          />
-          <PhoneCardAnswering answering={session.cardAnswering} />
-        </div>
-        <div className="ph-area ph-area-activity">
-          <PhoneActivity
-            entries={audit.data}
-            wait={
-              <QueryWait query={audit} what="remote activity">
-                <Skeleton label="Loading remote activity" shape="list" rows={3} />
-              </QueryWait>
-            }
-          />
-        </div>
+      ) : (
+        <PhoneRail
+          state={state}
+          wanted={wanted}
+          devices={devices.data}
+          switches={session.switches}
+          lastRequest={audit.data?.[0]?.at ?? null}
+          turning={turn.isPending}
+          failure={failure}
+          onTurn={(to) => turn.mutate(to)}
+        />
+      )}
+      <div className="ph-area ph-area-main">
+        <PhoneDevices
+          devices={devices.data}
+          freshAfter={freshAfter}
+          passkeysAllowed={session.switches.passkeys}
+          pair={pair}
+          wait={
+            <QueryWait query={devices} what="devices">
+              <Skeleton label="Loading devices" shape="list" rows={2} />
+            </QueryWait>
+          }
+        />
+        <PhoneSwitches
+          switches={session.switches}
+          notificationsExtra={<PushContact poll={hidden ? false : LIST_POLL_MS} />}
+          cards={<PhoneCardAnswering answering={session.cardAnswering} />}
+        />
+        <PhoneActivity
+          entries={audit.data}
+          now={now}
+          wait={
+            <QueryWait query={audit} what="remote activity">
+              <Skeleton label="Loading remote activity" shape="list" rows={3} />
+            </QueryWait>
+          }
+        />
       </div>
-    </>
+    </div>
   );
 }

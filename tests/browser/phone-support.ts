@@ -1,7 +1,7 @@
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { expect, type Browser, type Page } from '@playwright/test';
+import { expect, type Browser, type Locator, type Page } from '@playwright/test';
 import {
   FAKE_TAILSCALE_HOST,
   type FakeTailscaleState,
@@ -159,4 +159,10 @@ export async function openPairingPage(
   await servePhonePage(phone);
   await phone.goto(`${PHONE_PAGE}/${hash}`);
   return { context, phone };
+}
+
+export async function expand(scope: Page | Locator, name: string): Promise<void> {
+  const button = scope.getByRole('button', { name, exact: true, expanded: false });
+  if ((await button.count()) > 0) await button.click();
+  await expect(scope.getByRole('button', { name, exact: true, expanded: true })).toBeVisible();
 }

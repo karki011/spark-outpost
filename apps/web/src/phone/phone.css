@@ -178,22 +178,18 @@ h2[data-status='https_off'] .ph-dot {
   min-width: 0;
 }
 @container ph (min-width: 900px) {
-  .ph-cols {
-    grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
-    grid-template-areas:
-      'main pair'
-      'main activity';
-    grid-template-rows: auto 1fr;
+  .ph-cols:not([data-setup]) {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    grid-template-areas: 'main rail';
     gap: 16px 20px;
   }
-  .ph-area-pair {
-    grid-area: pair;
+  .ph-cols:not([data-setup]) .ph-rail {
+    grid-area: rail;
+    position: sticky;
+    top: 16px;
   }
-  .ph-area-main {
+  .ph-cols:not([data-setup]) .ph-area-main {
     grid-area: main;
-  }
-  .ph-area-activity {
-    grid-area: activity;
   }
 }
 

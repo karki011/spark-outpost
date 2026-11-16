@@ -2,6 +2,7 @@ import './phone.css';
 import './phone-setup.css';
 import './phone-devices.css';
 import './phone-switches.css';
+import './phone-sections.css';
 import { useQuery } from '@tanstack/react-query';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';

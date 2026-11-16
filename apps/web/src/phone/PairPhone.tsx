@@ -97,8 +97,7 @@ export function PairPhone({ tailscale, activation, onPaired }: PairPhoneProps) {
   }, [paired]);
 
   return (
-    <section className="ph-card" aria-labelledby="ph-pair-title">
-      <h2 id="ph-pair-title">Pair a device</h2>
+    <div className="ph-pair">
       <PairScene
         stage={stage}
         activation={activation}
@@ -109,6 +108,6 @@ export function PairPhone({ tailscale, activation, onPaired }: PairPhoneProps) {
         onStart={() => start.mutate()}
         onAnswer={(request, to) => answer.mutate({ request, to })}
       />
-    </section>
+    </div>
   );
 }

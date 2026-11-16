@@ -12,6 +12,8 @@ summary: What changed in recent releases and what to do next.
 | --------------------------------------------- | ---------------------------------------- |
 | Home: message box, Needs you, Working set     | [Read Home](home.md).                    |
 | Context rail: full height; **Tools** in **+** | [See a chat's context](context-rail.md). |
+| Remote control: side panel, sections fold     | [Use your phone](use-your-phone.md).     |
+| Wider user guide pages                        | Nothing to do.                           |
 | Fewer Settings pages                          | [Settings](settings.md).                 |
 | Left bar **More** menu                        | [Pause Spark](pause-spark.md).           |
 

@@ -3,12 +3,12 @@
 }
 
 .docs-side {
-  width: 272px;
+  width: 248px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 18px 14px;
+  padding: 18px 12px;
   overflow-y: auto;
   border-right: 1px solid var(--line);
 }
@@ -291,7 +291,7 @@
 
 @media (max-width: 900px) {
   .docs-side {
-    width: 232px;
+    width: 220px;
   }
 
   .docs-article {

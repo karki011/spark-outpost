@@ -9,6 +9,7 @@ import {
   type RemoteSession,
 } from '@spark-outpost/contracts';
 import { phoneApi, phoneKeys } from './phone-api.ts';
+import { PhoneGroup } from './PhoneSection.tsx';
 
 export const CARD_STEP_UP_NOTE =
   'Spark rules, Mac control and press-and-hold cards also ask for that device’s passkey. A device without a passkey shows Answer on your Mac.';
@@ -52,13 +53,14 @@ export function PhoneCardAnswering({ answering }: { answering: RemoteCardAnsweri
   };
   const onMac = shown.from === 'mac';
   return (
-    <section className="ph-card ph-cards-card" aria-labelledby="ph-cards-title">
-      <h2 id="ph-cards-title">Cards can be answered from</h2>
-      <p className="ph-note">
-        Sparks and workflows, plugins, calendar, Spark rules and Mac control cards. Other cards
-        follow the switches below.
-      </p>
-      <div className="ph-cards-from" role="radiogroup" aria-labelledby="ph-cards-title">
+    <PhoneGroup
+      id="group-cards"
+      as="region"
+      title="Cards can be answered from"
+      description="Sparks and workflows, plugins, calendar, Spark rules and Mac control cards. Other cards follow the switches above."
+      count={onMac ? 'Mac only' : 'Paired devices'}
+    >
+      <div className="ph-cards-from" role="radiogroup" aria-label="Cards can be answered from">
         {FROM_CHOICES.map((choice) => (
           <label key={choice.value} className="ph-choice">
             <input
@@ -97,7 +99,7 @@ export function PhoneCardAnswering({ answering }: { answering: RemoteCardAnsweri
           {change.error.message}
         </p>
       )}
-    </section>
+    </PhoneGroup>
   );
 }
 

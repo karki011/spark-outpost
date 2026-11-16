@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 import type { RemoteSession, RemoteSwitches } from '../../packages/contracts/src/remote.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { openTestDb } from './database.ts';
-import { openPhone, resetPhone, turnOn, WIDE } from './phone-support.ts';
+import { openPhone, resetPhone, turnOn, WIDE, expand } from './phone-support.ts';
 import { animationsSettled } from './settle.ts';
 
 const PHONE = { width: 390, height: 844 };
@@ -211,6 +211,7 @@ test('the Mac sets the sender contact and shows why Apple refused a notification
   await turnOn(page);
   const switches = main.getByRole('region', { name: 'What paired devices can do' });
   const field = switches.getByRole('textbox', { name: 'Sender contact' });
+  await expand(switches, 'Everyday');
   await expect(field).toHaveCount(0);
 
   await switches.getByRole('switch', { name: 'Notify when a chat needs you' }).click();
@@ -225,7 +226,7 @@ test('the Mac sets the sender contact and shows why Apple refused a notification
   });
   await animationsSettled(page);
   const axe = await new AxeBuilder({ page })
-    .include('section[aria-labelledby="ph-switches-title"]')
+    .include('.ph-switches-card')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
     .analyze();
   expect(axe.violations).toEqual([]);
