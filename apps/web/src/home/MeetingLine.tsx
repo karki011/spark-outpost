@@ -1,4 +1,4 @@
-import { spanOf, type CalendarEvent } from '@spark-outpost/contracts';
+import { isMeeting, spanOf, type CalendarEvent } from '@spark-outpost/contracts';
 import { clock } from '../calendar/calendar-format.ts';
 import { ClashTag } from '../calendar/ClashTag.tsx';
 import { JoinButton } from '../calendar/JoinButton.tsx';
@@ -12,8 +12,17 @@ interface MeetingLineProps {
   now: number;
 }
 
-function nextToday(events: readonly CalendarEvent[], now: number): CalendarEvent | null {
-  return events.find((event) => spanOf(event).end > now) ?? null;
+function nextToday(
+  events: readonly CalendarEvent[],
+  now: number,
+  hidden: (key: string) => boolean,
+): CalendarEvent | null {
+  return (
+    events.find(
+      (event) =>
+        isMeeting(event) && !event.dismissed && !hidden(event.key) && spanOf(event).start > now,
+    ) ?? null
+  );
 }
 
 export function MeetingLine({ day, meeting, now }: MeetingLineProps) {
@@ -36,7 +45,7 @@ export function MeetingLine({ day, meeting, now }: MeetingLineProps) {
       </div>
     );
   }
-  const next = nextToday(day.events, now);
+  const next = nextToday(day.events, now, meeting.hidden);
   if (!next) return null;
   return (
     <button

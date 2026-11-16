@@ -63,16 +63,20 @@ test('Dismiss ends the meeting line for good', async ({ page }) => {
   await expect(lead(page)).toBeVisible();
   await lead(page).getByRole('button', { name: 'Dismiss' }).click();
   await expect(lead(page)).toHaveCount(0);
+  const next = home(page).getByRole('button', { name: /^Next meeting: Standup/ });
+  await expect(next).toHaveCount(0);
   await expect(home(page).getByRole('heading', { level: 1 })).not.toContainText('Standup');
   await page.reload();
   await expect(home(page)).toBeVisible();
   await expect(lead(page)).toHaveCount(0);
+  await expect(next).toHaveCount(0);
 });
 
 test('Snooze 1 min hides the line until the minute is up', async ({ page }) => {
   await openHomeInMeeting(page, 4);
   await lead(page).getByRole('button', { name: 'Snooze 1 min' }).click();
   await expect(lead(page)).toHaveCount(0);
+  await expect(home(page).getByRole('button', { name: /^Next meeting: Standup/ })).toHaveCount(0);
   await page.clock.fastForward('01:10');
   await expect(lead(page)).toBeVisible();
 });

@@ -9,7 +9,11 @@ import { useVoice } from '../spark/use-voice.ts';
 import { headline, headlineMood, type HeadlineFacts } from '../spark/voice.ts';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { useUpcoming } from '../calendar/use-upcoming.ts';
-import { useAttentionItems, useMarkAttention } from '../attention/use-attention.ts';
+import {
+  useAlertingChats,
+  useAttentionItems,
+  useMarkAttention,
+} from '../attention/use-attention.ts';
 import { SlackMentions } from '../slack/SlackMentions.tsx';
 import { slackMentionRows } from '../slack/slack-mentions-model.ts';
 import { BriefSection } from './BriefSection.tsx';
@@ -68,6 +72,7 @@ export function Home(props: HomeProps) {
   const now = useMinuteClock();
   const voice = useVoice();
   const attention = useAttentionItems();
+  const alerting = useAlertingChats();
   const markAttention = useMarkAttention();
   const day = useUpcoming(now);
   const meeting = useMeetingLead(day, now);
@@ -91,7 +96,7 @@ export function Home(props: HomeProps) {
   const facts: HeadlineFacts = {
     kind: meeting.event ? 'meeting' : 'board',
     hour: new Date(now).getHours(),
-    waiting: blocked.length,
+    waiting: blocked.filter((item) => alerting.has(item.chat.id)).length,
     working: running.length,
     meeting: meeting.event?.title ?? null,
     minutes: minutesToStart(meetingStart, now),

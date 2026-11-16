@@ -210,7 +210,7 @@ test('Needs you lists cards and errors, and jumps to the card', async ({ page })
   ]);
   await openHome(page);
 
-  await expect(headline(page)).toHaveText('Good morning, Test. 2 things need you.');
+  await expect(headline(page)).toHaveText('Good morning, Test. 1 thing needs you.');
   await expect(section(page, /^Needs you/).getByRole('heading', { level: 2 })).toHaveText(
     'Needs you 2',
   );

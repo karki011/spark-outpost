@@ -37,7 +37,7 @@ test('Home is the message box, then what needs you, then the working set', async
   await page.goto('/');
 
   await expect(home(page).getByRole('heading', { level: 1 })).toHaveText(
-    'Good morning, Test. 2 things need you and 1 agent is working.',
+    'Good morning, Test. 1 thing needs you and 1 agent is working.',
   );
   const needs = section(page, /^Needs you/);
   await expect(needs.locator('.hrow-m b')).toHaveText(['Deploy the site', 'Mock fetch']);

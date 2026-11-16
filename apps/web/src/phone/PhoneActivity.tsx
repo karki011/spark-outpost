@@ -14,11 +14,17 @@ interface PhoneActivityProps {
 }
 
 function Summary({ entries, now }: { entries: RemoteAuditEntry[]; now: number }) {
-  const { refused, today } = activitySummary(entries, now);
+  const { refused, today, more } = activitySummary(entries, now);
+  const plus = more ? '+' : '';
   return (
     <>
-      {refused > 0 && <span className="ph-pill warn">{refused} refused today</span>}
-      <span className="ph-count">{today === 0 ? 'Nothing today' : `${today} today`}</span>
+      {refused > 0 && (
+        <span className="ph-pill warn">
+          {refused}
+          {plus} refused today
+        </span>
+      )}
+      <span className="ph-count">{today === 0 ? 'Nothing today' : `${today}${plus} today`}</span>
     </>
   );
 }

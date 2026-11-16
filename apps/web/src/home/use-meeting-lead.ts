@@ -15,6 +15,7 @@ export interface MeetingLead {
   snooze: (event: CalendarEvent) => void;
   dismiss: (event: CalendarEvent) => void;
   joined: (event: CalendarEvent) => void;
+  hidden: (key: string) => boolean;
 }
 
 export function useMeetingLead(day: Upcoming, now: number): MeetingLead {
@@ -30,16 +31,11 @@ export function useMeetingLead(day: Upcoming, now: number): MeetingLead {
     if (Number.isFinite(until)) setTimeout(() => setClockNow(Date.now()), until - Date.now() + 50);
     setClockNow(Date.now());
   }, []);
-  const event = day.available
-    ? leadMeeting(
-        day.events,
-        now,
-        leadMs,
-        (key) => Math.max(now, clockNow) < (hiddenUntil.get(key) ?? 0),
-      )
-    : null;
+  const hidden = (key: string) => Math.max(now, clockNow) < (hiddenUntil.get(key) ?? 0);
+  const event = day.available ? leadMeeting(day.events, now, leadMs, hidden) : null;
   return {
     event,
+    hidden,
     snooze: (target) => hide(target.key, Date.now() + SNOOZE_MS),
     joined: (target) => hide(target.key, Infinity),
     dismiss: (target) => {
