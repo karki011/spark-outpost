@@ -17,7 +17,7 @@ Needs the Mac app with [Voice](voice.md) on, and [Calendar](calendar.md) connect
 3. **Transcript** shows each sentence, labelled **You** (your microphone) or **Others** (what your Mac plays).
 4. Choose **Stop** in the recording bar.
 
-**Join** records nothing. To do both, turn on **Take notes when I join a meeting** (Settings → Notifications). Any **Join** you press then records too, or says why not. Automatic joins never record.
+**Join** records nothing. To do both, turn on **Take notes when I join a meeting** (Settings → Notifications). Every join then records too, automatic ones included, or says why not.
 
 ## After it ends
 

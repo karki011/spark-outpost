@@ -27,6 +27,7 @@ import {
   listMeetings,
   meetingAttachments,
   patchMeeting,
+  recordingMeeting,
   saveEditedNotes,
   setNotesState,
 } from './store.ts';
@@ -84,7 +85,10 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
     const request = parseBody(startMeetingRequestSchema, req);
     const { settings } = await calendarConnection(db, workspaceId);
     const answer: MeetingJoinNotes = { detail: null, problem: null };
-    if (settings.notesOnJoin && request.eventKey) {
+    const recording = request.eventKey ? await recordingMeeting(db, workspaceId) : null;
+    if (settings.notesOnJoin && recording && recording.eventKey === request.eventKey) {
+      answer.detail = await detail(recording.id);
+    } else if (settings.notesOnJoin && request.eventKey) {
       try {
         answer.detail = await detail((await meetings.start(request)).id);
       } catch (error) {

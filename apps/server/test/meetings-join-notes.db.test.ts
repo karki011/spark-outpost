@@ -70,6 +70,16 @@ describe('taking notes when the user joins', () => {
     );
   });
 
+  it('answers a second join of the meeting already recording with that recording', async () => {
+    await updateSettings(t.db, t.workspaceId, { notesOnJoin: true });
+    const { client, started } = setup();
+    const first = await client.send('post', '/api/meetings/join-notes', EVENT).expect(200);
+    const again = await client.send('post', '/api/meetings/join-notes', EVENT).expect(200);
+    expect(again.body.problem).toBeNull();
+    expect(again.body.detail.meeting.id).toBe(first.body.detail.meeting.id);
+    expect(started).toHaveLength(1);
+  });
+
   it('starts nothing for a second join while one meeting records', async () => {
     await updateSettings(t.db, t.workspaceId, { notesOnJoin: true });
     const { client, started } = setup();

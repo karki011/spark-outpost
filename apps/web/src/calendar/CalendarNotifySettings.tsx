@@ -233,7 +233,7 @@ export function CalendarMeetingSettings() {
         {meetings && (
           <SwitchRow
             label={NOTES_ON_JOIN_LABEL}
-            hint="A Join you press (in Spark, on the island or on the meeting alert) also starts recording that meeting’s notes on this Mac and opens its transcript, where the recording bar shows. Automatic joins, Join at start and Ask Spark never record."
+            hint="Every join (a Join you press, Join at start or an automatic join) also starts recording that meeting’s notes on this Mac and opens its transcript, where the recording bar shows. Ask Spark’s joins never record."
             checked={settings.notesOnJoin}
             onChange={(on) => save({ notesOnJoin: on })}
           />

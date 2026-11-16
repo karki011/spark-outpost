@@ -275,7 +275,7 @@ export function useIslandCalendar(
     note: home.note,
     onDismissed: dismissForGood,
     onJoinAtStart: (event, on) => (on ? askJoinAtStart(event) : joinAtStart.save(event, false)),
-    onUserJoined: takeNotes,
+    onJoinTakesNotes: takeNotes,
   });
   const line = calendarLine({
     now: live,

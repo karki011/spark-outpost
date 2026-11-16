@@ -102,7 +102,7 @@ describe('useIslandCalendar meeting alert', () => {
       note: () => undefined,
       onDismissed: vi.fn(),
       onJoinAtStart: vi.fn(),
-      onUserJoined: vi.fn(),
+      onJoinTakesNotes: vi.fn(),
     };
     renderHook(() => useMeetingAlert(options));
     expect(bridge.shown.at(-1)?.key).toBe(standup.key);
@@ -441,7 +441,7 @@ describe('useIslandCalendar Join at start', () => {
       note: () => undefined,
       onDismissed: vi.fn(),
       onJoinAtStart: vi.fn(),
-      onUserJoined: vi.fn(),
+      onJoinTakesNotes: vi.fn(),
     };
     renderHook(() => useMeetingAlert(options));
     expect(bridge.shown.at(-1)?.key).toBe(standup.key);
