@@ -70,3 +70,53 @@ test('a chat squeezed by the work panel floats the sidebar over it and docks it 
   await expect(page.locator('.chat-title')).toHaveText(second);
   await expect(sidebar(page)).toBeVisible();
 });
+
+test('hiding and showing the sidebar beside the work panel never flips it to floating', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await longChat(page, PROMPTS.slice(0, 1));
+  await page.setViewportSize({ width: 1400, height: 800 });
+  const show = header(page).getByRole('button', { name: 'Show work panel' });
+  await expect(async () => {
+    if (await show.isVisible()) await show.click();
+    await expect(workPanel(page)).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await expect(sidebar(page)).toBeVisible();
+  const main = page.getByRole('main');
+  const chatWidth = async () => (await main.boundingBox())!.width;
+  for (let viewport = 1400; (await chatWidth()) > 620; viewport -= 20) {
+    await page.setViewportSize({ width: viewport, height: 800 });
+    await page.waitForTimeout(150);
+  }
+  expect(await chatWidth()).toBeGreaterThan(500);
+  await expect(page.locator('.app')).not.toHaveClass(/\bside-float\b/);
+
+  await page.evaluate(() => {
+    const app = document.querySelector('.app')!;
+    const flips: string[] = [];
+    Object.assign(window, { sideFlips: flips });
+    new MutationObserver(() => flips.push(app.className)).observe(app, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+  });
+  const flips = () =>
+    page.evaluate(() =>
+      (window as unknown as { sideFlips: string[] }).sideFlips.filter((name) =>
+        /\bside-float\b/.test(name),
+      ),
+    );
+
+  await sidebar(page).getByRole('button', { name: 'Hide sidebar' }).click();
+  await expect(page.locator('.app')).toHaveClass(/\bcollapsed\b/);
+  await page.waitForTimeout(800);
+  expect(await flips()).toEqual([]);
+
+  await header(page).getByRole('button', { name: 'Show sidebar' }).click();
+  await expect(page.locator('.app')).not.toHaveClass(/\bcollapsed\b/);
+  await page.waitForTimeout(800);
+  expect(await flips()).toEqual([]);
+  await expect(sidebar(page)).toBeVisible();
+  expect(await page.evaluate(() => document.scrollingElement!.scrollLeft)).toBe(0);
+});

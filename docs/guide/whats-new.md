@@ -18,6 +18,7 @@ summary: What changed in recent releases and what to do next.
 | Wider user guide pages                        | Nothing to do.                                                 |
 | Smoother squircle corners on the Mac          | Nothing to do.                                                 |
 | Fewer Settings pages                          | [Settings](settings.md).                                       |
+| Sidebar hide no longer freezes                | Nothing to do.                                                 |
 | Left bar **More** menu                        | [Pause Spark](pause-spark.md).                                 |
 
 ## Early November 2026
