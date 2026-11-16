@@ -166,7 +166,7 @@ test('/mcp lists the chat’s servers, switches one for this chat and links to S
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('/mcp');
   await input.press('Enter');
-  const panel = page.getByRole('dialog', { name: 'MCP servers in this chat' });
+  const panel = page.getByRole('dialog', { name: 'Tools in this chat' });
   await expect(panel).toBeVisible();
   await expect(panel).toContainText('echo-mcp');
   await expect(panel).toContainText('off by default');
@@ -185,8 +185,13 @@ test('/mcp lists the chat’s servers, switches one for this chat and links to S
   await input.fill('/mcp');
   await input.press('Enter');
   await page
-    .getByRole('dialog', { name: 'MCP servers in this chat' })
+    .getByRole('dialog', { name: 'Tools in this chat' })
     .getByRole('button', { name: 'Manage in Settings' })
     .click();
   await expect(page.getByRole('dialog', { name: 'Connectors' })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: 'Add files and context' }).click();
+  await page.getByRole('menuitem', { name: /^Tools…/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Tools in this chat' })).toContainText('echo-mcp');
 });

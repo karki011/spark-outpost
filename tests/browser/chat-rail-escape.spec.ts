@@ -18,9 +18,7 @@ const stopButton = (page: Page) => page.getByRole('button', { name: 'Stop', exac
 test.describe('on a touch screen', () => {
   test.use({ hasTouch: true });
 
-  test('the floating rail has 44px targets and leaves Escape to a dialog it opened', async ({
-    page,
-  }) => {
+  test('the floating rail and the Tools panel it opens have 44px targets', async ({ page }) => {
     await resetTestDatabase({ onboarded: true, catalog: true });
     await longChat(page, PROMPTS.slice(0, 1));
     await page.setViewportSize(NARROW);
@@ -28,22 +26,20 @@ test.describe('on a touch screen', () => {
     await header(page).getByRole('button', { name: 'Hide work panel' }).click();
     await page.getByRole('button', { name: 'Show context rail' }).click();
     await expect(rail(page)).toBeVisible();
-    const manage = rail(page).getByRole('button', { name: 'Manage tools' });
-    const connect = rail(page).getByRole('button', { name: 'Connect…' });
-    for (const target of [manage, connect]) {
-      await target.scrollIntoViewIfNeeded();
-      const box = (await target.boundingBox())!;
-      expect(box.height).toBeGreaterThanOrEqual(44);
-      expect(box.width).toBeGreaterThanOrEqual(44);
-    }
+    const tools = rail(page).getByRole('button', { name: /^Tools/ });
+    await tools.scrollIntoViewIfNeeded();
+    const box = (await tools.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.width).toBeGreaterThanOrEqual(44);
 
-    await manage.click();
-    const settings = page.getByRole('dialog').first();
-    await expect(settings).toBeVisible();
+    await tools.click();
+    const panel = page.getByRole('dialog', { name: 'Tools in this chat' });
+    await expect(panel).toBeVisible();
+    const connect = panel.getByRole('button', { name: 'Connect…' });
+    const connectBox = (await connect.boundingBox())!;
+    expect(connectBox.height).toBeGreaterThanOrEqual(44);
     await page.keyboard.press('Escape');
-    await expect(settings).toBeHidden();
-    await expect(rail(page)).toBeVisible();
-    await page.keyboard.press('Escape');
+    await expect(panel).toBeHidden();
     await expect(rail(page)).toHaveCount(0);
   });
 });

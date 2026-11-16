@@ -28,16 +28,10 @@ import type { ChatSends } from './send/use-chat-send.ts';
 import type { QuotesState } from './quotes/use-quotes.ts';
 import { FollowContext } from './follow-requests.ts';
 import { OutlineTicks } from './outline/OutlineTicks.tsx';
-import { RailContext } from './rail/rail-context.ts';
 import { CommandDockContext } from './commands/command-dock.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { usePendingArrival } from './status/status-context.ts';
 import { useRestoredAgentTabs } from '../terminal/dock/use-agent-tabs.ts';
-
-function RailSlot() {
-  const rail = use(RailContext);
-  return rail ? <div className="crail-slot">{rail}</div> : null;
-}
 
 interface ThreadProps {
   detail: ConversationDetail;
@@ -120,7 +114,6 @@ export const Thread = memo(function Thread({
   return (
     <div className="thread-wrap">
       <div className="thread" ref={scrollerRef}>
-        <RailSlot />
         <div className="col">
           <OutlineTicks detail={detail} taskId={taskId} scroller={scroller} />
           <CommandDockContext value={remote ? null : detail.conversation.id}>

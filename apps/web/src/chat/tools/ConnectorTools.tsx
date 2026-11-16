@@ -78,11 +78,11 @@ function ConnectorRow({ connector }: { connector: AgentConnector }) {
         <small title={note}>{note}</small>
       </span>
       {on ? (
-        <span className="crail-state on">On</span>
+        <span className="tools-state on">On</span>
       ) : (
         <button
           type="button"
-          className="crail-manage"
+          className="tools-link"
           aria-label={
             facts.action ? `${facts.action} to ${facts.name}` : `Turn on ${facts.name} for agents`
           }
@@ -95,15 +95,15 @@ function ConnectorRow({ connector }: { connector: AgentConnector }) {
   );
 }
 
-export function RailConnectors() {
+export function ConnectorTools() {
   useConnectorRefresh();
   const query = useQuery({ queryKey: agentConnectorsKey, queryFn: fetchAgentConnectors });
   const connectors = query.data?.connectors ?? [];
   const shown = connectors.filter((entry) => entry.state !== 'not_connected');
   const missing = connectors.filter((entry) => entry.state === 'not_connected');
   return (
-    <div className="crail-tool-group">
-      <h4 className="crail-sub">
+    <div className="tools-group">
+      <h4 className="tools-sub">
         Connectors <span>every chat</span>
       </h4>
       <QueryWait query={query} what="connectors">
@@ -118,10 +118,10 @@ export function RailConnectors() {
       )}
       {missing.length > 0 && (
         <>
-          <p className="crail-empty">
+          <p className="tools-note">
             Not connected: {missing.map((entry) => CONNECTORS[entry.id].name).join(', ')}.
           </p>
-          <button type="button" className="crail-manage" onClick={openConnectors}>
+          <button type="button" className="tools-link" onClick={openConnectors}>
             Connect…
           </button>
         </>

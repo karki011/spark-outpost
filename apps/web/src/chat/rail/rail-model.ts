@@ -30,6 +30,7 @@ export type RailAction =
   | { kind: 'tab'; tab: WorkTab }
   | { kind: 'autonomy' }
   | { kind: 'changes' }
+  | { kind: 'tools' }
   | { kind: 'link'; href: string };
 
 export type RailTone = 'ok' | 'warn' | 'bad';
