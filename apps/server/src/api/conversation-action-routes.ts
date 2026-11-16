@@ -19,10 +19,11 @@ import {
 import { removeWorkdirs } from '../workflow/turn-session.ts';
 import { removeChatFolder } from '../chat-files/folders.ts';
 import { finishArchive } from '../workflow/archive-chat.ts';
+import { resumesNextTurn } from '../workflow/conversation-session.ts';
 import { releaseConversation } from '../projects/chat-worktree-cleanup.ts';
 import { allowedCommands } from '../agents/acp/slash-commands.ts';
 import { resolveChatSettings } from '../persistence/chat-settings.ts';
-import { openChatCommands } from '../persistence/session-commands.ts';
+import { latestChatCommands } from '../persistence/session-commands.ts';
 import type { TerminalSessions } from '../terminal/sessions.ts';
 import type { NativeRuntime } from '../terminal/native-runtime.ts';
 import { DEFAULT_SETTLE_MS, stopConversationWork } from '../workflow/stop-conversation.ts';
@@ -79,7 +80,8 @@ export function conversationActionRoutes({
   router.get('/conversations/:id/agent-commands', async (req, res) => {
     const id = paramId(req);
     const { provider } = await resolveChatSettings(db, id);
-    const commands = provider ? await openChatCommands(db, workspaceId, id, provider) : [];
+    const latest = provider ? await latestChatCommands(db, workspaceId, id, provider) : null;
+    const commands = latest && resumesNextTurn(latest.closeReason) ? latest.commands : [];
     const response: AgentCommandsResponse = { provider, commands: allowedCommands(commands) };
     res.json(response);
   });

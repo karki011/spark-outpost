@@ -1,4 +1,5 @@
 import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
+import type { ProviderOutput } from '../../providers/provider.ts';
 
 type CompactionUpdate = Extract<SessionUpdate, { sessionUpdate: 'compaction_update' }>;
 
@@ -9,7 +10,7 @@ export const COMPACTION_FAILED_LINE = 'Warning: Context compaction failed';
 const ENDED = new Set(['completed', 'failed', 'cancelled']);
 const ERROR_MAX = 300;
 
-export interface CompactionSeen {
+interface CompactionSeen {
   started: boolean;
   finished: boolean;
   line: string | null;
@@ -43,4 +44,17 @@ export function createCompactionLines(): (update: CompactionUpdate) => Compactio
     ended.add(id);
     return { started: false, finished: open.delete(id), line: endLine(update) };
   };
+}
+
+export function compactionOutputs(seen: CompactionSeen): ProviderOutput[] {
+  return [
+    ...(seen.started ? [{ kind: 'step_started', name: COMPACTING_STEP } as const] : []),
+    ...(seen.finished ? [{ kind: 'step_finished', name: COMPACTING_STEP } as const] : []),
+    ...(seen.line
+      ? [
+          { kind: 'step_started', name: seen.line } as const,
+          { kind: 'step_finished', name: seen.line } as const,
+        ]
+      : []),
+  ];
 }

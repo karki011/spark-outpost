@@ -31,20 +31,23 @@ export async function sessionCommands(
   return parseCommands(rows[0]?.available_commands);
 }
 
-export async function openChatCommands(
+export async function latestChatCommands(
   db: Queryable,
   workspaceId: string,
   conversationId: string,
   provider: string,
-): Promise<AgentCommand[]> {
-  const { rows } = await db.query<{ available_commands: unknown }>(
-    `SELECT s.available_commands FROM provider_sessions s
+): Promise<{ commands: AgentCommand[]; closeReason: string | null } | null> {
+  const { rows } = await db.query<{ available_commands: unknown; close_reason: string | null }>(
+    `SELECT s.available_commands, s.close_reason FROM provider_sessions s
      JOIN conversations c ON c.id = s.conversation_id
      WHERE s.conversation_id = $1 AND c.workspace_id = $2 AND s.provider = $3
-       AND starts_with(s.agent_key, 'chat:') AND s.closed_at IS NULL
-     ORDER BY s.last_used_at DESC, s.created_at DESC
+       AND starts_with(s.agent_key, 'chat:')
+     ORDER BY s.created_at DESC, s.id DESC
      LIMIT 1`,
     [conversationId, workspaceId, provider],
   );
-  return parseCommands(rows[0]?.available_commands);
+  const row = rows[0];
+  return row
+    ? { commands: parseCommands(row.available_commands), closeReason: row.close_reason }
+    : null;
 }
