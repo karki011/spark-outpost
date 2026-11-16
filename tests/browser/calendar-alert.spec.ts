@@ -106,8 +106,7 @@ async function standupPayload(page: Page): Promise<MeetingAlertPayload> {
     calendars: { [standup.calendarKey]: 'Spark Work' },
     countdown: null,
     joinLeadMs: 10 * 60_000,
-    autoJoin: false,
-    holdUntil: null,
+    autoJoins: [],
     notice: { title: 'Standup', body: 'Zoom' },
   };
 }
@@ -220,7 +219,8 @@ test('the hanging card offers Join at start, Snooze and Join in ··· on one ro
 });
 
 test('with Join meetings automatically on, Join at start is off and says why', async ({ page }) => {
-  const payload = { ...(await standupPayload(page)), autoJoin: true };
+  const plain = await standupPayload(page);
+  const payload = { ...plain, autoJoins: [plain.events[0]!.key] };
   await openOverlay(page, payload);
   const card = page.getByRole('alertdialog', { name: /^Meeting\. Standup starts in \d min$/ });
   const button = card.getByRole('button', { name: 'Join at start' });
@@ -231,15 +231,16 @@ test('with Join meetings automatically on, Join at start is off and says why', a
   expect(await alertWindow(page, (window) => window.alertActs)).toEqual([]);
 });
 
-test('in a hold that lasts past the start, Join at start stays on even with Join meetings automatically', async ({
+test('Join at start stays on for a meeting auto-join will not open, as in a clash or hold at its start', async ({
   page,
 }) => {
   const plain = await standupPayload(page);
-  const holdUntil = Date.parse(plain.events[0]!.start) + 30 * 60_000;
-  await openOverlay(page, { ...plain, autoJoin: true, holdUntil });
+  await openOverlay(page, { ...plain, autoJoins: [] });
   const card = page.getByRole('alertdialog', { name: /^Meeting\. Standup starts in \d min$/ });
   await expect.poll(() => landing(page)).toBe(0);
-  await card.getByRole('button', { name: 'Join at start: Standup' }).click({ force: true });
+  const button = card.getByRole('button', { name: 'Join at start: Standup' });
+  await expect(button).not.toHaveAttribute('aria-disabled', 'true');
+  await button.click({ force: true });
   expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
     { kind: 'join-at-start', key: plain.key, eventKey: plain.events[0]!.key },
   ]);
@@ -338,7 +339,7 @@ test('while auto-join counts down the card offers only Join now and Cancel, on o
   const plain = await standupPayload(page);
   const payload = {
     ...plain,
-    autoJoin: true,
+    autoJoins: [plain.events[0]!.key],
     countdown: {
       eventKey: plain.events[0]!.key,
       deadline: (await page.evaluate(() => Date.now())) + 8_000,

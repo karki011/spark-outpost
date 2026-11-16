@@ -118,13 +118,22 @@ function acceptedOrOwn(event: CalendarEvent): boolean {
   return event.myStatus === 'accepted' || event.myStatus === 'none';
 }
 
-export function autoJoinCovers(
-  event: CalendarEvent,
-  autoJoin: boolean,
-  holdUntil: number | null,
-): boolean {
-  const heldAtStart = holdUntil !== null && holdUntil > spanOf(event).start;
-  return autoJoin && acceptedOrOwn(event) && !heldAtStart;
+export function holdEnd(now: CalendarNow | null | undefined): number | null {
+  return now?.hold ? Date.parse(now.hold.until) : null;
+}
+
+export interface AutoJoinOutlook {
+  autoJoin: boolean;
+  holdUntil: number | null;
+  upcoming: readonly CalendarEvent[];
+  joinLeadMs: number;
+}
+
+export function autoJoinCovers(event: CalendarEvent, outlook: AutoJoinOutlook): boolean {
+  if (!outlook.autoJoin || !acceptedOrOwn(event)) return false;
+  const start = spanOf(event).start;
+  if (outlook.holdUntil !== null && outlook.holdUntil > start) return false;
+  return joinableMeetings(outlook.upcoming, start, outlook.joinLeadMs).length <= 1;
 }
 
 function autoSkipFor(event: CalendarEvent, input: AutoJoinInput): AutoJoinSkip | null {

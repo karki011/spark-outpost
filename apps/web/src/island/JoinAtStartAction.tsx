@@ -1,7 +1,6 @@
 import { spanOf, type CalendarEvent } from '@spark-outpost/contracts';
 import { clock } from '../calendar/calendar-format.ts';
 import { canAskJoinAtStart } from '../calendar/join-at-start.ts';
-import { autoJoinCovers } from '../calendar/meeting-alert.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
 import { JoinAtStartButton } from '../calendar/JoinAtStartButton.tsx';
 
@@ -36,7 +35,7 @@ export function JoinAtStartAction(props: JoinAtStartActionProps) {
     <JoinAtStartButton
       title={event.title}
       className={props.buttonClass}
-      autoJoin={autoJoinCovers(event, calendar.autoJoin, calendar.holdUntil)}
+      autoJoin={calendar.autoJoins(event)}
       onAsk={() => calendar.onJoinAtStart(event)}
     />
   );

@@ -16,8 +16,7 @@ export const meetingAlertPayloadSchema = z.object({
   calendars: z.record(z.string().max(KEY_MAX), z.string().max(300)),
   countdown: meetingCountdownSchema.nullable(),
   joinLeadMs: z.number().finite().min(0),
-  autoJoin: z.boolean(),
-  holdUntil: z.number().finite().nullable(),
+  autoJoins: z.array(z.string().max(KEY_MAX)).max(CALENDAR_GROUP_MAX),
   notice: z.object({ title: z.string().max(400), body: z.string().max(400) }),
 });
 export type MeetingAlertPayload = z.infer<typeof meetingAlertPayloadSchema>;

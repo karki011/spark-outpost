@@ -250,19 +250,30 @@ describe('lineUnderAlert', () => {
 
 describe('autoJoinCovers', () => {
   const start = Date.parse(standup.start);
+  const outlook = {
+    autoJoin: true,
+    holdUntil: null,
+    upcoming: [standup, later],
+    joinLeadMs: 10 * 60_000,
+  };
 
   it('covers an accepted meeting only while Join meetings automatically is on', () => {
-    expect(autoJoinCovers(standup, true, null)).toBe(true);
-    expect(autoJoinCovers(standup, false, null)).toBe(false);
+    expect(autoJoinCovers(standup, outlook)).toBe(true);
+    expect(autoJoinCovers(standup, { ...outlook, autoJoin: false })).toBe(false);
   });
 
   it('leaves tentative and unanswered meetings to Join at start', () => {
-    expect(autoJoinCovers({ ...standup, myStatus: 'tentative' }, true, null)).toBe(false);
-    expect(autoJoinCovers({ ...standup, myStatus: 'pending' }, true, null)).toBe(false);
+    expect(autoJoinCovers({ ...standup, myStatus: 'tentative' }, outlook)).toBe(false);
+    expect(autoJoinCovers({ ...standup, myStatus: 'pending' }, outlook)).toBe(false);
   });
 
   it('leaves a meeting to Join at start when a hold lasts past its start', () => {
-    expect(autoJoinCovers(standup, true, start + 60_000)).toBe(false);
-    expect(autoJoinCovers(standup, true, start)).toBe(true);
+    expect(autoJoinCovers(standup, { ...outlook, holdUntil: start + 60_000 })).toBe(false);
+    expect(autoJoinCovers(standup, { ...outlook, holdUntil: start })).toBe(true);
+  });
+
+  it('leaves a meeting to Join at start when another one opens to join by its start', () => {
+    const soon = event('Design review', at(10, 5), at(10, 30), { link: link('zoom') });
+    expect(autoJoinCovers(standup, { ...outlook, upcoming: [standup, soon] })).toBe(false);
   });
 });

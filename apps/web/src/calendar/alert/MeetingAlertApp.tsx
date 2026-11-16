@@ -14,7 +14,6 @@ import { useReducedMotion } from '../../ui/motion.ts';
 import { clock } from '../calendar-format.ts';
 import { joinLabel, placeRow, startsLabel, timeRow } from '../meeting-card.ts';
 import { cardLead } from '../card/card-lead.ts';
-import { autoJoinCovers } from '../meeting-alert.ts';
 import {
   CardButton,
   MeetingCardBody,
@@ -114,14 +113,12 @@ function LeadAction({
   at,
   leadMs,
   autoJoin,
-  holdUntil,
   act,
 }: {
   event: CalendarEvent;
   at: number;
   leadMs: number;
   autoJoin: boolean;
-  holdUntil: number | null;
   act: Act;
 }) {
   const lead = cardLead(event, at);
@@ -139,7 +136,7 @@ function LeadAction({
     <JoinAtStartButton
       title={event.title}
       className="mc-btn primary"
-      autoJoin={autoJoinCovers(event, autoJoin, holdUntil)}
+      autoJoin={autoJoin}
       onAsk={() => act('join-at-start', event.key)}
     />
   );
@@ -390,8 +387,7 @@ export function MeetingAlertApp() {
                       event={first}
                       at={at}
                       leadMs={payload.joinLeadMs}
-                      autoJoin={payload.autoJoin}
-                      holdUntil={payload.holdUntil}
+                      autoJoin={payload.autoJoins.includes(first.key)}
                       act={act}
                     />
                   )}

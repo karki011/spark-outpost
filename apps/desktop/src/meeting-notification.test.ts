@@ -45,8 +45,7 @@ const alert = (events: CalendarEvent[], key = 'standup'): MeetingAlertPayload =>
   calendars: {},
   countdown: null,
   joinLeadMs: 600_000,
-  autoJoin: false,
-  holdUntil: null,
+  autoJoins: [],
   notice: { title: 'Standup', body: '10:00–10:15 · Zoom' },
 });
 

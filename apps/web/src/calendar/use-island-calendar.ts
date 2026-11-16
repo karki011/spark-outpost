@@ -42,7 +42,7 @@ import {
 import { useJoinAtStart, withAsked } from './join-at-start.ts';
 import { todayState } from './today-model.ts';
 import { clock } from './calendar-format.ts';
-import { lineUnderAlert } from './meeting-alert.ts';
+import { autoJoinCovers, holdEnd, lineUnderAlert } from './meeting-alert.ts';
 import { ALERT_SNOOZE_MS, useMeetingAlert } from './use-meeting-alert.ts';
 import { openTodayEvent, openTodayMeeting } from './today-request.ts';
 import { notesProblemText, startJoinNotes } from './join-meeting.ts';
@@ -95,8 +95,7 @@ export interface IslandCalendar {
   calendarName: (event: CalendarEvent) => string;
   hopKeys: string[];
   hopQuiet: boolean;
-  autoJoin: boolean;
-  holdUntil: number | null;
+  autoJoins: (event: CalendarEvent) => boolean;
   onOpenEvent: (eventKey: string) => void;
   onChoose: (line: CalendarLine) => void;
   onCapture: (line: CalendarLine) => void;
@@ -347,8 +346,13 @@ export function useIslandCalendar(
     calendarName: (event) => names.get(event.calendarKey) ?? 'Calendar',
     hopKeys: hopKeys(line),
     hopQuiet: underAlert,
-    autoJoin: ready ? (status.data?.settings.autoJoin ?? false) : false,
-    holdUntil: live?.hold ? Date.parse(live.hold.until) : null,
+    autoJoins: (event) =>
+      autoJoinCovers(event, {
+        autoJoin: ready ? (status.data?.settings.autoJoin ?? false) : false,
+        holdUntil: holdEnd(live),
+        upcoming: live?.upcoming ?? [],
+        joinLeadMs: leadMs,
+      }),
     countdown: autoJoin.countdown,
     joinLeadMs: leadMs,
     onCancelJoin: autoJoin.cancelJoin,

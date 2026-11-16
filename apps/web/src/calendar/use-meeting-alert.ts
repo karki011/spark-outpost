@@ -16,7 +16,9 @@ import { useEventClock } from './event-clock.ts';
 import {
   AUTO_JOIN_COUNTDOWN_MS,
   JOIN_AT_START_COUNTDOWN_FROM,
+  autoJoinCovers,
   autoJoinPlan,
+  holdEnd,
   meetingAlert,
   type AutoJoinPlan,
   type Presence,
@@ -212,8 +214,16 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
         ),
         countdown,
         joinLeadMs: leadMs,
-        autoJoin,
-        holdUntil: live?.hold ? Date.parse(live.hold.until) : null,
+        autoJoins: alert.events
+          .filter((event) =>
+            autoJoinCovers(event, {
+              autoJoin,
+              holdUntil: holdEnd(live),
+              upcoming: events ?? [],
+              joinLeadMs: leadMs,
+            }),
+          )
+          .map((event) => event.key),
         notice: alertNotice(alert.events),
       }
     : null;

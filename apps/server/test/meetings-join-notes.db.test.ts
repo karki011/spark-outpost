@@ -130,6 +130,71 @@ describe('taking notes when the user joins', () => {
     expect(one.body).toEqual({ detail: null, problem: 'The microphone is busy.' });
   });
 
+  it('makes a second join wait for a start whose recording row is visible but not yet starting', async () => {
+    await updateSettings(t.db, t.workspaceId, { notesOnJoin: true });
+    let rowVisible: () => void = () => undefined;
+    const visible = new Promise<void>((resolve) => {
+      rowVisible = resolve;
+    });
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const db = new Proxy(t.db, {
+      get(target, prop) {
+        const value: unknown = Reflect.get(target, prop, target);
+        if (prop !== 'query' || typeof value !== 'function') {
+          return typeof value === 'function' ? value.bind(target) : value;
+        }
+        return async (text: string, params?: unknown[]) => {
+          const result: unknown = await value.call(target, text, params);
+          if (text.startsWith('INSERT INTO meetings')) {
+            rowVisible();
+            await held;
+          }
+          return result;
+        };
+      },
+    });
+    const service = createMeetingService({
+      db,
+      workspaceId: t.workspaceId,
+      source: {
+        state: () => ({ available: true, reason: null }),
+        start: () => Promise.reject(new MeetingSourceError('The microphone is busy.')),
+        stop: async () => undefined,
+      },
+      publish: () => undefined,
+    });
+    let waiting: () => void = () => undefined;
+    const secondWaits = new Promise<void>((resolve) => {
+      waiting = resolve;
+    });
+    const meetings = {
+      ...service,
+      started: () => {
+        waiting();
+        return service.started();
+      },
+    };
+    const client = localClient(createApp({ ...testAppOptions(t), meetings }));
+    const first = client
+      .send('post', '/api/meetings/join-notes', EVENT)
+      .expect(200)
+      .then((r) => r);
+    await visible;
+    const second = client
+      .send('post', '/api/meetings/join-notes', EVENT)
+      .expect(200)
+      .then((r) => r);
+    await secondWaits;
+    release();
+    const [one, two] = await Promise.all([first, second]);
+    expect(one.body).toEqual({ detail: null, problem: 'The microphone is busy.' });
+    expect(two.body.detail).toBeNull();
+    expect(two.body.problem).toEqual(expect.any(String));
+  });
+
   it('starts nothing for a second join while one meeting records', async () => {
     await updateSettings(t.db, t.workspaceId, { notesOnJoin: true });
     const { client, started } = setup();
