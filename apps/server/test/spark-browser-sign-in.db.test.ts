@@ -17,7 +17,6 @@ import { PLANTED, everyStoredValue, plantedIn } from './sign-in-support.ts';
 import { ECHO, FILE_SECRET, FakeBrowserHost, ORIGIN } from './spark-browser-sign-in-fake.ts';
 import {
   connectClient,
-  fullAutoChat,
   pendingCard,
   recordedHooks,
   toolDeps,
@@ -112,16 +111,8 @@ async function anotherChat(): Promise<Chat> {
 const save = (label = 'Staging admin', origin = ORIGIN) =>
   createSignIn({ db: t.db, secrets }, projectId, { label, origin, ...PLANTED });
 
-async function decide(optionId: string) {
-  const card = await pendingCard(t);
-  await decideApproval(t.db, t.workspaceId, card.id, { optionId, scope: 'once' });
-  return card;
-}
-
-async function signInAllowing(chat: Chat, signIn = 'Staging admin') {
-  const calling = chat.call('spark_browser_sign_in', { signIn });
-  const card = await decide(SPARK_ACTION_OPTION.confirm);
-  return { result: await calling, card };
+async function signInNow(chat: Chat, signIn = 'Staging admin') {
+  return { result: await chat.call('spark_browser_sign_in', { signIn }) };
 }
 
 async function cardCount(): Promise<number> {
@@ -158,18 +149,10 @@ describe('spark_browser_signins', () => {
 });
 
 describe('spark_browser_sign_in', () => {
-  it('asks the user on a card the first time, then has the browser fill the page', async () => {
+  it('fills the page at once with no card, in the default mode', async () => {
     const chat = await projectChat();
     await save();
-    const { result, card } = await signInAllowing(chat);
-    expect(card.title).toBe(`Sign in to ${ORIGIN} as Staging admin?`);
-    expect(card.payload.sparkAction).toMatchObject({
-      action: 'browser_sign_in',
-      label: 'Staging admin',
-      origin: ORIGIN,
-      site: ORIGIN,
-      sites: [ORIGIN],
-    });
+    const { result } = await signInNow(chat);
     expect(result).toMatchObject({
       outcome: 'form_submitted',
       signIn: 'Staging admin',
@@ -177,52 +160,27 @@ describe('spark_browser_sign_in', () => {
       page: `${ORIGIN}/home`,
       steps: 1,
     });
+    expect(result.allowed).toBeUndefined();
+    expect(await cardCount()).toBe(0);
     expect(fake.ops('sign_in')).toEqual([
       expect.objectContaining({ tab: 'tab1', sites: [ORIGIN], ...PLANTED }),
     ]);
   });
 
-  it('asks once per chat and per sign-in', async () => {
+  it('never posts a card, for any sign-in or chat', async () => {
     const chat = await projectChat();
     await save();
     await save('Staging viewer');
-    await signInAllowing(chat);
-    expect(await chat.call('spark_browser_sign_in', { signIn: 'staging ADMIN' })).toMatchObject({
-      outcome: 'form_submitted',
-    });
-    expect(await cardCount()).toBe(1);
-
-    await signInAllowing(chat, 'Staging viewer');
-    expect(await cardCount()).toBe(2);
-
-    await signInAllowing(await anotherChat());
-    expect(await cardCount()).toBe(3);
+    await signInNow(chat);
+    await signInNow(chat, 'staging ADMIN');
+    await signInNow(chat, 'Staging viewer');
+    await signInNow(await anotherChat());
+    expect(await cardCount()).toBe(0);
     expect(signInAudits().map((entry) => entry.decision)).toEqual([
-      'user_allowed',
-      'allowed_earlier',
-      'user_allowed',
-      'user_allowed',
-    ]);
-  });
-
-  it('asks in Bypass permissions and Full auto too', async () => {
-    const chat = await projectChat('bypassPermissions');
-    await fullAutoChat(t, chat.conversationId);
-    await save();
-    const { result, card } = await signInAllowing(chat);
-    expect(card.decidedBy ?? 'user').toBe('user');
-    expect(result.outcome).toBe('form_submitted');
-  });
-
-  it('fills nothing when the user says no', async () => {
-    const chat = await projectChat();
-    await save();
-    const calling = chat.call('spark_browser_sign_in', { signIn: 'Staging admin' });
-    await decide(SPARK_ACTION_OPTION.decline);
-    expect(await calling).toMatchObject({ outcome: 'declined', site: ORIGIN });
-    expect(fake.ops('sign_in')).toEqual([]);
-    expect(signInAudits()).toEqual([
-      expect.objectContaining({ decision: 'user_declined', by: 'user', signIn: 'Staging admin' }),
+      'saved_sign_in',
+      'saved_sign_in',
+      'saved_sign_in',
+      'saved_sign_in',
     ]);
   });
 
@@ -269,7 +227,7 @@ describe('spark_browser_sign_in', () => {
     expect(rows).toEqual([{ refused_site: 'https://auth.example.com' }]);
   });
 
-  it('types on any of the sign-in’s sites, and asks again when the list changes', async () => {
+  it('types on any of the sign-in’s sites, including ones added later', async () => {
     const chat = await projectChat('bypassPermissions');
     const saved = await createSignIn({ db: t.db, secrets }, projectId, {
       label: 'Staging admin',
@@ -278,14 +236,10 @@ describe('spark_browser_sign_in', () => {
       ...PLANTED,
     });
     fake.url = 'https://auth.example.com/u/login';
-    const { card } = await signInAllowing(chat);
-    expect(card.title).toBe('Sign in to https://auth.example.com as Staging admin?');
+    await signInNow(chat);
     expect(fake.ops('sign_in')).toEqual([
       expect.objectContaining({ sites: [ORIGIN, 'https://auth.example.com'] }),
     ]);
-    fake.url = 'https://auth.example.com/u/login';
-    await chat.call('spark_browser_sign_in', { signIn: saved.id });
-    expect(await cardCount()).toBe(1);
 
     await updateSignIn({ db: t.db, secrets }, projectId, saved.id, {
       label: 'Staging admin',
@@ -293,8 +247,8 @@ describe('spark_browser_sign_in', () => {
       sites: ['https://auth.example.com', 'https://example.okta.com'],
     });
     fake.url = 'https://example.okta.com/signin';
-    await signInAllowing(chat);
-    expect(await cardCount()).toBe(2);
+    await signInNow(chat);
+    expect(await cardCount()).toBe(0);
     expect(fake.ops('sign_in').at(-1)).toMatchObject({
       sites: [ORIGIN, 'https://auth.example.com', 'https://example.okta.com'],
     });
@@ -307,7 +261,7 @@ describe('spark_browser_sign_in', () => {
       'no_form',
       'Spark could not find a sign-in form on this page. Nothing was filled.',
     );
-    const { result } = await signInAllowing(chat);
+    const { result } = await signInNow(chat);
     expect(result).toEqual({
       outcome: 'not_signed_in',
       reason: 'Spark could not find a sign-in form on this page. Nothing was filled.',
@@ -320,7 +274,7 @@ describe('spark_browser_sign_in', () => {
     const chat = await projectChat();
     const saved = await save();
     await secrets.delete(`signin:${saved.id}`);
-    const { result } = await signInAllowing(chat);
+    const { result } = await signInNow(chat);
     expect(result.outcome).toBe('not_signed_in');
     expect(result.reason).toContain('missing from the keychain');
     expect(fake.ops('sign_in')).toEqual([]);
@@ -334,10 +288,10 @@ describe('spark_browser_sign_in', () => {
     expect(fake.requests).toEqual([]);
   });
 
-  it('records who decided, the label and the site for every use', async () => {
+  it('records the label and the site for every use', async () => {
     const chat = await projectChat();
     await save();
-    const { card } = await signInAllowing(chat);
+    await signInNow(chat);
     expect(signInAudits()).toEqual([
       {
         tool: 'spark_browser_sign_in',
@@ -345,12 +299,11 @@ describe('spark_browser_sign_in', () => {
         action: 'sign_in',
         page: `${ORIGIN}/login`,
         place: 'external',
-        decision: 'user_allowed',
+        decision: 'saved_sign_in',
         signIn: 'Staging admin',
         signInOrigin: ORIGIN,
         signInSites: [ORIGIN],
-        by: 'user',
-        approvalId: card.id,
+        by: 'spark',
         result: 'form_submitted',
         steps: 1,
       },
@@ -363,7 +316,7 @@ describe('a planted sign-in never reaches the agent or the record', () => {
     const chat = await projectChat('bypassPermissions');
     await save();
     await chat.call('spark_browser_signins');
-    await signInAllowing(chat);
+    await signInNow(chat);
     const read = await chat.call('spark_browser_read');
     await chat.call('spark_browser_read', { mode: 'text' });
     await chat.call('spark_browser_tabs');

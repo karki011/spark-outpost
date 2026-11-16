@@ -17,7 +17,10 @@ test.beforeEach(async () => {
 });
 
 const home = (page: Page) => page.locator('main.page', { has: page.locator('#home-greet') });
-const sparks = (page: Page) => home(page).getByRole('region', { name: 'Your Sparks' });
+const sparksMain = (page: Page) => page.locator('main.sparks');
+const roster = (page: Page) => sparksMain(page).getByRole('list', { name: 'Your Sparks' });
+const sparkCard = (page: Page, name: string) =>
+  roster(page).getByRole('button', { name: new RegExp(`^Open ${name}\\.`) });
 const sheet = (page: Page, name: string | RegExp) => page.getByRole('dialog', { name });
 const sidebar = (page: Page) => page.getByRole('navigation', { name: 'Chats' });
 
@@ -28,8 +31,11 @@ async function openHome(page: Page) {
     .getByRole('button', { name: /^Home/ })
     .click();
   await expect(home(page)).toBeVisible();
-  const roster = home(page).locator('.hsparks');
-  if ((await roster.getAttribute('open')) === null) await roster.locator('summary').click();
+}
+
+async function backToRoster(page: Page) {
+  await sparksMain(page).getByRole('button', { name: 'All Sparks' }).click();
+  await expect(roster(page)).toBeVisible();
 }
 
 async function addSpark(page: Page, data: Record<string, unknown>): Promise<string> {
@@ -50,8 +56,8 @@ async function holdToDelete(page: Page, name: string) {
 test('an empty roster offers starter Sparks and creates nothing until a click', async ({
   page,
 }) => {
-  await openHome(page);
-  const starters = sparks(page).getByRole('list', { name: 'Suggested Sparks' });
+  await openSparksPage(page);
+  const starters = sparksMain(page).getByRole('list', { name: 'Suggested Sparks' });
   await expect(starters.getByRole('listitem')).toHaveCount(3);
   await expect(starters).toContainText('Pip · Code reviewer');
   await expect(starters).toContainText('Wren · Docs writer');
@@ -65,21 +71,22 @@ test('an empty roster offers starter Sparks and creates nothing until a click', 
   await expect(starters.getByRole('listitem')).toHaveCount(2);
   await starters.getByRole('button', { name: 'Add Pip, Code reviewer' }).click();
 
-  const card = sparks(page).getByRole('button', { name: /^Open Pip's chat/ });
+  const card = sparkCard(page, 'Pip');
   await expect(card).toBeVisible();
   await expect(card).toContainText('Code reviewer');
-  await expect(card).toContainText('No chats yet');
-  await expect(sparks(page).getByRole('list', { name: 'Suggested Sparks' })).toHaveCount(0);
+  await expect(sparksMain(page).getByRole('list', { name: 'Suggested Sparks' })).toHaveCount(0);
 });
 
-test('create a Spark, open its home thread and see its face in the chat', async ({ page }) => {
+test('create a Spark on the Sparks page, talk to it and see its face in the chat', async ({
+  page,
+}) => {
   await addSpark(page, {
     name: 'Pip',
     role: 'Code reviewer',
     face: { shape: 'round', color: 'sky' },
   });
-  await openHome(page);
-  await sparks(page).getByRole('button', { name: 'New Spark' }).click();
+  await openSparksPage(page);
+  await sparksMain(page).getByRole('button', { name: 'New Spark' }).click();
 
   const form = sheet(page, 'New Spark');
   await expect(form).toBeVisible();
@@ -100,14 +107,26 @@ test('create a Spark, open its home thread and see its face in the chat', async 
   await form.getByRole('button', { name: 'Create Spark' }).click();
   await expect(form).toHaveCount(0);
 
-  const card = sparks(page).getByRole('button', { name: /^Open Ada's chat/ });
-  await expect(card).toContainText('Release manager');
-  await page.screenshot({ path: `${SHOTS}/home-roster.png` });
+  await expect(page.getByRole('heading', { level: 1, name: 'Ada' })).toBeVisible();
+  await expect(sparksMain(page)).toContainText('Release manager');
+  await backToRoster(page);
+  await expect(sparkCard(page, 'Ada')).toContainText('Release manager');
+  await page.screenshot({ path: `${SHOTS}/sparks-roster.png` });
 
-  await card.click();
-  const header = page.locator('.head');
-  await expect(header.locator('.tm-head')).toContainText('Release manager');
-  await expect(header.getByRole('heading', { name: 'Ada' })).toBeVisible();
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Chats/ })
+    .click();
+  await sidebar(page).getByRole('button', { name: 'New chat' }).click();
+  await page.getByRole('button', { name: 'Talk to…' }).click();
+  await page
+    .getByRole('menu', { name: 'Talk to' })
+    .getByRole('menuitemradio', { name: /Ada/ })
+    .click();
+  const face = page.locator('.head .tm-head');
+  await expect(face).toHaveAttribute('title', 'Ada · Release manager');
+  await expect(face).toContainText('Ada');
+  await expect(face.locator('.tm-face')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Talking to Ada' })).toBeVisible();
 
   const input = page.getByRole('textbox', { name: 'Message' });
@@ -116,7 +135,7 @@ test('create a Spark, open its home thread and see its face in the chat', async 
   await expect(page.getByRole('region', { name: 'Turn' }).first()).toContainText('What is left');
   await page.screenshot({ path: `${SHOTS}/chat-header.png` });
 
-  const row = sidebar(page).getByRole('button', { name: 'Ada with Ada' });
+  const row = sidebar(page).getByRole('button', { name: / with Ada$/ });
   await expect(row).toBeVisible();
   await expect(sidebar(page).locator('.rface')).toHaveCount(1);
   await expect(sidebar(page).locator('.row:has(.rface) .st > *')).toHaveCount(1);
@@ -127,12 +146,13 @@ test('create a Spark, open its home thread and see its face in the chat', async 
     .click();
   await expect(page.getByRole('searchbox', { name: 'Search chats' })).toHaveValue('with:ada');
 
+  await openHome(page);
   await page
     .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: /^Home/ })
+    .getByRole('button', { name: /^Chats/ })
     .click();
-  await sparks(page)
-    .getByRole('button', { name: /^Open Ada's chat/ })
+  await sidebar(page)
+    .getByRole('button', { name: / with Ada$/ })
     .click();
   await expect(page.getByRole('region', { name: 'Turn' }).first()).toContainText('What is left');
 });
@@ -180,23 +200,25 @@ test('edit a Spark, then hold to delete with Undo; its chats stay @packaged', as
   const id = await addSpark(page, { name: 'Wren', role: 'Docs writer' });
   const home = await page.request.post(`/api/teammates/${id}/home`, { data: {} });
   const { conversationId } = (await home.json()) as { conversationId: string };
-  await openHome(page);
+  await openSparksPage(page);
 
-  await sparks(page).getByRole('button', { name: 'Edit Wren' }).click();
-  const form = sheet(page, 'Edit Wren');
-  await form.getByRole('textbox', { name: 'Role' }).fill('Docs and guides');
-  await form.getByRole('button', { name: 'Save' }).click();
-  await expect(sparks(page)).toContainText('Docs and guides');
+  await sparkCard(page, 'Wren').click();
+  const details = sparksMain(page).getByRole('tabpanel', { name: 'Details' });
+  await details.getByRole('textbox', { name: 'Role' }).fill('Docs and guides');
+  await details.getByRole('button', { name: 'Save' }).click();
+  await expect(details.getByRole('status')).toContainText('Saved');
+  await backToRoster(page);
+  await expect(sparkCard(page, 'Wren')).toContainText('Docs and guides');
 
-  await sparks(page).getByRole('button', { name: 'Edit Wren' }).click();
+  await sparkCard(page, 'Wren').click();
   await holdToDelete(page, 'Wren');
   const grace = page.locator('.grace');
   await expect(grace).toContainText('Deleting Wren');
-  await expect(sparks(page).getByRole('button', { name: /^Open Wren's chat/ })).toHaveCount(0);
+  await expect(sparkCard(page, 'Wren')).toHaveCount(0);
   await grace.getByRole('button', { name: 'Undo' }).click();
-  await expect(sparks(page).getByRole('button', { name: /^Open Wren's chat/ })).toBeVisible();
+  await expect(sparkCard(page, 'Wren')).toBeVisible();
 
-  await sparks(page).getByRole('button', { name: 'Edit Wren' }).click();
+  await sparkCard(page, 'Wren').click();
   await holdToDelete(page, 'Wren');
   await expect(grace).toHaveCount(0, { timeout: 15_000 });
   await expect
@@ -279,14 +301,14 @@ test('the roster and the sheet pass axe and fit a phone', async ({ page }) => {
   await addSpark(page, { name: 'Pip', role: 'Code reviewer' });
   await addSpark(page, { name: 'Bolt', role: 'Bug fixer' });
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await openHome(page);
-  await expect(sparks(page).getByRole('button', { name: /^Open Pip's chat/ })).toBeVisible();
+  await openSparksPage(page);
+  await expect(sparkCard(page, 'Pip')).toBeVisible();
   await animationsSettled(page);
   const axe = () =>
-    new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).include('.tm-section');
+    new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).include('main.sparks');
   expect((await axe().analyze()).violations).toEqual([]);
 
-  await sparks(page).getByRole('button', { name: 'New Spark' }).click();
+  await sparksMain(page).getByRole('button', { name: 'New Spark' }).click();
   await expect(sheet(page, 'New Spark')).toBeVisible();
   await animationsSettled(page);
   const sheetScan = await new AxeBuilder({ page })
@@ -297,16 +319,17 @@ test('the roster and the sheet pass axe and fit a phone', async ({ page }) => {
   await page.keyboard.press('Escape');
 
   await page.setViewportSize({ width: 375, height: 812 });
-  await expect(sparks(page).getByRole('button', { name: /^Open Bolt's chat/ })).toBeVisible();
+  await expect(sparkCard(page, 'Bolt')).toBeVisible();
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
-  const cards = await sparks(page)
-    .locator('.tm-card')
-    .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().top)));
-  expect(cards[0]).toBe(cards[1]);
-  await sparks(page).getByRole('button', { name: 'New Spark' }).click();
+  const rights = await roster(page)
+    .locator('.spk-card')
+    .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().right)));
+  expect(rights).toHaveLength(2);
+  for (const right of rights) expect(right).toBeLessThanOrEqual(375);
+  await sparksMain(page).getByRole('button', { name: 'New Spark' }).click();
   const box = await sheet(page, 'New Spark').boundingBox();
   expect(box?.width).toBe(375);
   await page.screenshot({ path: `${SHOTS}/phone-sheet.png` });

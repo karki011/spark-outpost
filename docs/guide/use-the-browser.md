@@ -55,7 +55,7 @@ Right-click highlighted text: **Add to chat** or **Ask about this** (**⌘⇧A**
 ## Save a test sign-in
 
 1. In **Settings** → **Projects**, select **Add** beside **Saved sign-ins**: label, site, **Other sign-in sites**, test account.
-2. Ask the agent to sign in; allow the card once per chat.
+2. When a page asks the agent to sign in, Spark types it; no card.
 
 Spark fills only approved sites. For another HTTPS site, choose **Add this site** in **Settings → Projects → Saved sign-ins**, then retry. External HTTP sites cannot be approved. SSO or MFA needs you.
 

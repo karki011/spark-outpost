@@ -18,12 +18,13 @@ async function openWithPage(page: Page) {
 }
 
 const dock = (page: Page) => page.getByRole('complementary', { name: 'New chat' });
+const tabChat = (page: Page) => page.getByRole('complementary', { name: 'Chat for this tab' });
 
-test('New chat starts a chat about the page at Automatic, with its text as an untrusted attachment', async ({
+test('Chat starts the tab’s chat at Automatic, with the page text as an untrusted attachment', async ({
   page,
 }) => {
   await openWithPage(page);
-  await page.getByRole('button', { name: 'New chat', exact: true }).click();
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
   const panel = dock(page);
   await expect(panel.getByText('Deploying your app')).toBeVisible();
   await expect(panel.getByText('page text')).toBeVisible();
@@ -56,7 +57,41 @@ test('New chat starts a chat about the page at Automatic, with its text as an un
   expect(uploaded).toContain('acme deploy --prod');
   expect(uploaded).toContain('<page_evidence>');
   expect(await calls(page, 'view-page-text')).toEqual([{ profile: 'personal', tabId: 'v1' }]);
-  await expect(panel.getByRole('status')).toContainText('The chat started');
+  await expect(tabChat(page)).toBeVisible();
+  await expect(dock(page)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+});
+
+test('each tab keeps its own chat', async ({ page }) => {
+  await openWithPage(page);
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  await dock(page).getByRole('textbox', { name: 'Message' }).fill('What does this page cover?');
+  await page.keyboard.press('Enter');
+  await expect(tabChat(page)).toBeVisible();
+  await expect(tabChat(page).getByRole('textbox', { name: 'Message' })).toBeFocused();
+
+  await pushView(page, [
+    { title: 'Deploying your app', url: DOCS, place: 'external' },
+    {
+      title: 'Rate limits',
+      url: 'https://docs.example.com/rate-limits',
+      active: true,
+      place: 'external',
+    },
+  ]);
+  await expect(tabChat(page)).toHaveCount(0);
+  await expect(dock(page).getByText('Rate limits')).toBeVisible();
+
+  await pushView(page, [
+    { title: 'Deploying your app', url: DOCS, active: true, place: 'external' },
+    { title: 'Rate limits', url: 'https://docs.example.com/rate-limits', place: 'external' },
+  ]);
+  await expect(tabChat(page)).toBeVisible();
+  await tabChat(page).getByRole('button', { name: 'Close chat' }).click();
+  await expect(tabChat(page)).toHaveCount(0);
 });
 
 test('a selection and a link from the page menu open the dock with what was picked', async ({
@@ -97,10 +132,7 @@ test('a selection and a link from the page menu open the dock with what was pick
   expect(uploaded).toContain('The user selected this text in the Browser view.');
   expect(uploaded).toContain('Promote the preview');
   expect(await calls(page, 'view-page-text')).toEqual([]);
-  await expect(dock(page).getByRole('status')).toContainText('The chat started');
-
-  await dock(page).getByRole('button', { name: 'Close' }).click();
-  await expect(dock(page)).toHaveCount(0);
+  await expect(tabChat(page)).toBeVisible();
 
   await intent({
     profile: 'personal',
@@ -113,6 +145,8 @@ test('a selection and a link from the page menu open the dock with what was pick
     'Open https://docs.example.com/rate-limits and ',
   );
   await expect(dock(page).getByText('page text')).toHaveCount(0);
+  await dock(page).getByRole('button', { name: 'Back to this tab’s chat' }).click();
+  await expect(tabChat(page)).toBeVisible();
 });
 
 test('⌘⇧O from the page opens the dock, and the dock passes an accessibility check', async ({
@@ -130,9 +164,23 @@ test('⌘⇧O from the page opens the dock, and the dock passes an accessibility
   expect(results.violations).toEqual([]);
 });
 
+test('⌘⇧O anywhere in the Browser view toggles the tab’s chat, not a new chat in Chats', async ({
+  page,
+}) => {
+  await openWithPage(page);
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press('ControlOrMeta+Shift+O');
+  await expect(dock(page)).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Browser' })).toBeVisible();
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press('ControlOrMeta+Shift+O');
+  await expect(dock(page)).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Browser' })).toBeVisible();
+});
+
 test('a pasted key holds the chat until the user deals with it', async ({ page }) => {
   await openWithPage(page);
-  await page.getByRole('button', { name: 'New chat', exact: true }).click();
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
   let posted = 0;
   page.on('request', (request) => {
     if (request.url().endsWith('/messages') && request.method() === 'POST') posted += 1;
@@ -197,4 +245,39 @@ test('a pick from the other profile does not land in this dock', async ({ page }
   await openWithPage(page);
   await pushPick(page, 'work', null);
   await expect(dock(page)).toHaveCount(0);
+});
+
+test('a pick made on another tab stays with that tab', async ({ page }) => {
+  const rates = 'https://docs.example.com/rate-limits';
+  const show = (active: 'docs' | 'rates') =>
+    pushView(page, [
+      { title: 'Deploying your app', url: DOCS, active: active === 'docs', place: 'external' },
+      { title: 'Rate limits', url: rates, active: active === 'rates', place: 'external' },
+    ]);
+  await openBrowserView(page);
+  await show('docs');
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  await show('rates');
+  await pushPick(page, 'personal', null);
+  const attached = dock(page).getByRole('list', { name: 'Attached' });
+  await expect(attached.getByText('Selected: Deploy button')).toBeVisible();
+  await show('docs');
+  await expect(attached.getByText('Deploying your app')).toBeVisible();
+  await expect(attached.getByText('Selected: Deploy button')).toHaveCount(0);
+  await show('rates');
+  await expect(attached.getByText('Selected: Deploy button')).toBeVisible();
+});
+
+test('Escape stops the tab chat’s first reply with no click', async ({ page }) => {
+  await openWithPage(page);
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  await dock(page).getByRole('textbox', { name: 'Message' }).fill('Walk me through it #slow');
+  await page.keyboard.press('Enter');
+  const stop = tabChat(page).getByRole('button', { name: 'Stop', exact: true });
+  await expect(stop).toBeVisible({ timeout: 15_000 });
+  await expect(tabChat(page).getByRole('textbox', { name: 'Message' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(stop).toHaveCount(0, { timeout: 3_000 });
+  await expect(tabChat(page).getByText('Stopped').first()).toBeVisible();
+  await expect(tabChat(page)).toBeVisible();
 });

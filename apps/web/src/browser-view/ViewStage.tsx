@@ -37,11 +37,11 @@ export function StartPage({
   return (
     <div className="bp-start">
       <b>{profile === 'personal' ? 'Personal browser' : 'Work browser'}</b>
-      <p>Type a web address on the left to open a page.</p>
+      <p>Type a web address above to open a page.</p>
       <p>
         {profile === 'personal'
           ? 'No agent, Ask Spark or paired device can open or act in these tabs, and your sign-ins here stay out of every chat. Ask Spark reads a tab’s text only when you @-mention it in a question.'
-          : 'Work shares its sign-ins with every chat’s agent, so you can sign in for them or check what they see. Agents still can’t see these tabs until you hand one to a chat.'}
+          : 'Work shares its sign-ins with every chat’s agent, so you can sign in for them or check what they see. Agents can’t see these tabs. Chat sends the page’s text with your message, never the tab itself.'}
       </p>
     </div>
   );

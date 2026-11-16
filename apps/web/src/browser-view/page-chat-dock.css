@@ -24,11 +24,8 @@
   font-weight: 600;
 }
 
-.pcd-head .icon-btn {
-  margin-left: auto;
-}
-
 .pcd-badge {
+  margin-right: auto;
   padding: 2px 8px;
   border-radius: 999px;
   corner-shape: round;
@@ -141,16 +138,4 @@
   margin: 0;
   font-size: 13px;
   color: var(--danger);
-}
-
-.pcd-started {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 14px;
-}
-
-.pcd-started p {
-  margin: 0;
 }

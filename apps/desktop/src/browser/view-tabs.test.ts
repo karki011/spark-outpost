@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { net, type FakeContents } from './electron.fixture.ts';
-import { BROWSER_PARTITION, PERSONAL_PARTITION } from './request-guard.ts';
 import { invoke, memorySaved, startTestBrowser } from './view-host.fixture.ts';
 import { keptTabs, parseSavedView } from './view-saved.ts';
-import { handToChat, toView } from './view-transfer.ts';
+import { toView } from './view-transfer.ts';
 
 vi.mock('electron', async () => (await import('./electron-ipc.fixture.ts')).fakeElectronWithIpc);
 vi.mock('./cdp.ts', () => ({
@@ -223,70 +222,7 @@ describe('favorites', () => {
   });
 });
 
-describe('handing tabs between the Browser view and a chat', () => {
-  it('moves a Work tab into the chat as the user’s tab', async () => {
-    const { chats, view, tab } = await openIn('work', DOCS);
-    const result = await handToChat(chats, view, { profile: 'work', tabId: tab.id, chatId: CHAT });
-    expect(result).toEqual({ ok: true });
-    const [moved] = chats.tabsOf(CHAT);
-    expect(moved!.owner).toBe('user');
-    expect(moved!.currentUrl()).toBe(DOCS);
-    expect(view.panes.tabsOf('work')).toEqual([]);
-    const contents = moved!.view()!.webContents as unknown as FakeContents;
-    expect(contents.session.partition).toBe(BROWSER_PARTITION);
-  });
-
-  it('gives a chat only a Personal tab’s address, in a new Work tab', async () => {
-    const { chats, view, tab } = await openIn('personal', DOCS);
-    (tab.view()!.webContents as unknown as FakeContents).session.cookies.set(
-      'docs.example.com',
-      'personal-session',
-    );
-    await handToChat(chats, view, { profile: 'personal', tabId: tab.id, chatId: CHAT });
-    expect(view.panes.tabsOf('personal')).toEqual([tab]);
-    const [opened] = chats.tabsOf(CHAT);
-    const contents = opened!.view()!.webContents as unknown as FakeContents;
-    expect(contents.session.partition).toBe(BROWSER_PARTITION);
-    expect(contents.session.partition).not.toBe(PERSONAL_PARTITION);
-    expect(net.requests.at(-1)).toEqual({ partition: BROWSER_PARTITION, url: DOCS, cookie: null });
-  });
-
-  it('keeps a Work tab that is in use, and moves it only once the chat has it', async () => {
-    const { chats, view, tab } = await openIn('work', DOCS);
-    tab.picking = true;
-    expect(await handToChat(chats, view, { profile: 'work', tabId: tab.id, chatId: CHAT })).toEqual(
-      { ok: false, reason: 'This tab is in use. Try again when it is free.' },
-    );
-    expect(chats.tabsOf(CHAT)).toEqual([]);
-    tab.picking = false;
-    const close = vi.spyOn(view.panes, 'close');
-    const load = vi
-      .spyOn(Object.getPrototypeOf(tab), 'load')
-      .mockRejectedValueOnce(new Error('gone'));
-    expect(
-      await handToChat(chats, view, { profile: 'work', tabId: tab.id, chatId: CHAT }),
-    ).toMatchObject({
-      ok: false,
-    });
-    expect(close).not.toHaveBeenCalledWith('work', tab.id);
-    expect(view.panes.tabsOf('work')).toEqual([tab]);
-    expect(chats.tabsOf(CHAT)).toEqual([]);
-    load.mockRestore();
-  });
-
-  it('refuses a blank tab', async () => {
-    const browser = startTestBrowser();
-    await invoke('browser-view:start', 'personal');
-    const [tab] = browser.view.panes.tabsOf('personal');
-    expect(
-      await handToChat(browser.chats, browser.view, {
-        profile: 'personal',
-        tabId: tab!.id,
-        chatId: CHAT,
-      }),
-    ).toEqual({ ok: false, reason: 'Open a page first.' });
-  });
-
+describe('moving a chat tab to the Browser view', () => {
   it('opens a chat tab in the Browser view’s Work profile and takes it from the chat', async () => {
     const { chats, view } = startTestBrowser();
     const tab = chats.createTab(CHAT, { owner: 'agent', runId: null, url: 'about:blank' })!;

@@ -248,7 +248,7 @@ async function projectId(page: Page): Promise<string> {
   return project!.id;
 }
 
-test('an agent signs in through Spark after the user allows it, and never sees the values', async ({
+test('an agent signs in through Spark with no card, and never sees the values', async ({
   page,
 }) => {
   test.skip(!FAKE_HOST, 'Run with SPARK_FAKE_BROWSER=1 to give the worker a fake browser host.');
@@ -268,30 +268,11 @@ test('an agent signs in through Spark after the user allows it, and never sees t
   await expect(page.getByText(/"outcome":"opened"/)).toBeVisible({ timeout: 45_000 });
 
   await send(page, '#build #spark spark_browser_sign_in {"signIn":"Staging admin"}');
-  const card = page.getByRole('group', {
-    name: /Sign in to http:\/\/vault\.test as Staging admin\?/,
-  });
-  await expect(card).toBeVisible({ timeout: 45_000 });
-  await expect(card).toContainText('v•••@example.test');
-  await expect(card).toContainText('The agent never sees them.');
-  const axe = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
-    .include('.sac')
-    .analyze();
-  expect(axe.violations).toEqual([]);
-  const composer = await page.getByRole('textbox', { name: 'Message' }).boundingBox();
-  const placed = await card.boundingBox();
-  expect(placed!.y + placed!.height).toBeLessThanOrEqual(composer!.y + 1);
-  await shoot(page, '.sac', 'sign-in-card');
-  await card.getByRole('button', { name: 'Allow for this chat' }).click();
   await expect(page.getByText(/"outcome":"form_submitted"/)).toBeVisible({ timeout: 45_000 });
   await expect(page.getByText(/"page":"http:\/\/vault\.test\/home"/)).toBeVisible();
-
-  await send(page, '#build #spark spark_browser_sign_in {"signIn":"Staging admin"}');
-  await expect(page.getByText(/"outcome":"form_submitted"/)).toHaveCount(2, { timeout: 45_000 });
   await expect(
     page.getByRole('group', { name: /Sign in to http:\/\/vault\.test as Staging admin\?/ }),
-  ).toHaveCount(1);
+  ).toHaveCount(0);
 
   await send(page, '#build #spark spark_browser_read');
   await expect(
@@ -309,6 +290,5 @@ test('an agent signs in through Spark after the user allows it, and never sees t
   expectNoSecret(serverLogs());
   const stored = await everythingStored();
   expect(stored).toContain('"tool": "spark_browser_sign_in"');
-  expect(stored).toMatch(/"decision": "user_allowed"/);
-  expect(stored).toMatch(/"decision": "allowed_earlier"/);
+  expect(stored).toMatch(/"decision": "saved_sign_in"/);
 });

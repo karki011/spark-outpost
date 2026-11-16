@@ -58,7 +58,7 @@ test('Spaces switch by control, arrow and ⌃N, showing only their own tabs', as
   await pushView(page, TABS, [], 'personal', { layout: { ...LAYOUT, currentSpaceId: 's2' } });
   await expect(side.getByRole('button', { name: 'Other Space tab', exact: true })).toBeVisible();
   await expect(side.getByRole('button', { name: 'Today tab', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('main').getByText('Type a web address on the left')).toBeVisible();
+  await expect(page.getByRole('main').getByText('Type a web address above')).toBeVisible();
 
   if (process.platform === 'darwin') {
     await spaces.getByRole('radio', { name: 'Reading' }).focus();

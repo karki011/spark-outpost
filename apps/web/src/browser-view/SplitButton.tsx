@@ -38,13 +38,14 @@ export function SplitButton({
     return (
       <button
         type="button"
-        className="btn bv-hand"
+        className="icon-btn bp-tool"
+        aria-label="Leave split view"
+        title="Leave split view"
         aria-pressed="true"
         disabled={disabled}
         onClick={() => sendViewCommand(profile, { command: 'split_leave' })}
       >
         <SplitViewIcon />
-        Leave split view
       </button>
     );
   }
@@ -52,14 +53,15 @@ export function SplitButton({
     <>
       <button
         type="button"
-        className="btn bv-hand"
+        className="icon-btn bp-tool"
+        aria-label="Split view"
+        title="Split view"
         aria-haspopup="menu"
         aria-expanded={anchor !== null}
         disabled={disabled}
         onClick={(event) => (anchor ? setAnchor(null) : open(event))}
       >
         <SplitViewIcon />
-        Split view
       </button>
       {anchor && (
         <MenuShell

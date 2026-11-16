@@ -18,12 +18,14 @@ import { useTooltip } from '../ui/Tooltip.tsx';
 import { dockedSideWidth, floatsSidebar } from './sidebar-room.ts';
 
 const COLLAPSED_KEY = 'spark-outpost.sidebar.collapsed';
+const BROWSER_COLLAPSED_KEY = 'spark-outpost.browser-view.sidebar.collapsed';
 const WIDTH_KEY = 'spark-outpost.sidebar.width';
 export const SIDEBAR_MIN_WIDTH = 240;
 export const SIDEBAR_MAX_WIDTH = 420;
 export const SIDEBAR_DEFAULT_WIDTH = 300;
 export const SIDEBAR_HINT = keysText(SIDEBAR_SHORTCUT);
 const SIDEBAR_ARIA_KEYS = MAC ? 'Control+Meta+S' : 'Control+Alt+S';
+export const SIDEBAR_TOOL_KEYS = { shown: SIDEBAR_SHORTCUT, aria: SIDEBAR_ARIA_KEYS };
 const TOGGLE_SIDEBAR_COMMAND = 'toggle-sidebar';
 const EDGE_SWIPE_START = 28;
 const SWIPE_DISTANCE = 60;
@@ -35,9 +37,11 @@ export interface SidebarLayout {
   floating: boolean;
   attention: boolean;
   hidden: boolean;
+  browserHidden: boolean;
   width: number | null;
   setWidth: (width: number | null) => void;
   toggle: () => void;
+  toggleBrowser: () => void;
   reveal: () => void;
   closeDrawer: () => void;
   reportRoom: (id: string, width: number | null) => void;
@@ -45,17 +49,17 @@ export interface SidebarLayout {
 
 const SidebarLayoutContext = createContext<SidebarLayout | null>(null);
 
-function readCollapsed(): boolean {
+function readCollapsed(key: string): boolean {
   try {
-    return localStorage.getItem(COLLAPSED_KEY) === '1';
+    return localStorage.getItem(key) === '1';
   } catch {
     return false;
   }
 }
 
-function saveCollapsed(collapsed: boolean): void {
+function saveCollapsed(key: string, collapsed: boolean): void {
   try {
-    localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0');
+    localStorage.setItem(key, collapsed ? '1' : '0');
   } catch {
     return;
   }
@@ -184,8 +188,9 @@ function useEscapeCloses(open: boolean, close: () => void) {
   }, [open, close]);
 }
 
-export function useSidebarLayoutState(attention: boolean): SidebarLayout {
-  const [collapsed, setCollapsed] = useState(readCollapsed);
+export function useSidebarLayoutState(attention: boolean, onBrowser: boolean): SidebarLayout {
+  const [collapsed, setCollapsed] = useState(() => readCollapsed(COLLAPSED_KEY));
+  const [browserHidden, setBrowserHidden] = useState(() => readCollapsed(BROWSER_COLLAPSED_KEY));
   const [drawer, setDrawer] = useState(false);
   const [width, setWidthState] = useState(readWidth);
   const narrow = usePhone();
@@ -195,13 +200,16 @@ export function useSidebarLayoutState(attention: boolean): SidebarLayout {
   useEdgeSwipe(narrow, drawer, setDrawer);
   useEscapeCloses(cramped && !narrow && drawer, closeDrawer);
 
-  useEffect(() => saveCollapsed(collapsed), [collapsed]);
+  useEffect(() => saveCollapsed(COLLAPSED_KEY, collapsed), [collapsed]);
+  useEffect(() => saveCollapsed(BROWSER_COLLAPSED_KEY, browserHidden), [browserHidden]);
+  const toggleBrowser = useCallback(() => setBrowserHidden((hidden) => !hidden), []);
 
   const flip = useCallback(() => {
+    if (onBrowser) return toggleBrowser();
     rememberToggleFocus();
     if (floating) setDrawer((open) => !open);
     else setCollapsed((hidden) => !hidden);
-  }, [floating]);
+  }, [floating, onBrowser, toggleBrowser]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -225,6 +233,7 @@ export function useSidebarLayoutState(attention: boolean): SidebarLayout {
       floating,
       attention,
       hidden: floating ? !drawer : collapsed,
+      browserHidden,
       width,
       setWidth: (next) => {
         const clamped = next === null ? null : clampWidth(next);
@@ -236,11 +245,23 @@ export function useSidebarLayoutState(attention: boolean): SidebarLayout {
         if (floating) setDrawer((open) => !open);
         else setCollapsed(!collapsed);
       },
+      toggleBrowser,
       reveal: () => (floating ? setDrawer(true) : setCollapsed(false)),
       closeDrawer,
       reportRoom,
     }),
-    [collapsed, drawer, narrow, floating, attention, width, closeDrawer, reportRoom],
+    [
+      collapsed,
+      browserHidden,
+      drawer,
+      narrow,
+      floating,
+      attention,
+      width,
+      toggleBrowser,
+      closeDrawer,
+      reportRoom,
+    ],
   );
 }
 
@@ -258,7 +279,7 @@ export function useSidebarLayout(): SidebarLayout | null {
   return useContext(SidebarLayoutContext);
 }
 
-function PanelLeftIcon() {
+export function PanelLeftIcon() {
   return (
     <svg
       width="17"

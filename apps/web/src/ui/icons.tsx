@@ -141,10 +141,6 @@ export function PlusIcon() {
   return <StrokeIcon path="M12 5v14M5 12h14" />;
 }
 
-export function HandOffIcon() {
-  return <StrokeIcon path="M4 12h11M11 8l4 4-4 4M20 5v14" />;
-}
-
 export function MinusIcon() {
   return <StrokeIcon path="M5 12h14" />;
 }

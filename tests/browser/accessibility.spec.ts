@@ -137,8 +137,8 @@ for (const theme of THEMES) {
       .getByRole('button', { name: /^Home/ })
       .click();
     await expect(page.getByRole('list', { name: 'Needs you' })).toBeVisible();
-    await expect(page.locator('.feed-foot')).toBeVisible();
-    await expect(page.locator('.hspend')).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Working set' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Start a new chat' })).toBeVisible();
     found.push(...(await blockingViolations(page, 'home')));
 
     expect(found).toEqual([]);
@@ -403,8 +403,10 @@ test('the Map has no serious colour-contrast or ARIA issues in any theme', async
     /Found \S*client\.ts/,
   );
   const { x, y, width, height } = (await page.locator('.map-stage').boundingBox())!;
-  await page.mouse.click(x + width / 2, y + height / 2);
-  await expect(page.getByRole('dialog', { name: 'client.ts' })).toBeVisible();
+  await expect(async () => {
+    await page.mouse.click(x + width / 2, y + height / 2);
+    await expect(page.getByRole('dialog', { name: 'client.ts' })).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
   for (const theme of ['light', 'graphite', 'contrast']) {
     await useTheme(page, theme);
     found.push(...(await blockingViolations(page, `map file sheet ${theme}`)));

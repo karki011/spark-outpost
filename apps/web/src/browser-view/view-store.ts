@@ -135,16 +135,6 @@ function transferResult(raw: unknown): TransferResult {
   return { ok: false, reason };
 }
 
-export async function handTabToChat(
-  profile: BrowserProfile,
-  tabId: string,
-  chatId: string,
-): Promise<TransferResult> {
-  const view = desktopBrowserView();
-  if (!view) return { ok: false, reason: 'The Browser view needs the Mac app.' };
-  return transferResult(await view.handToChat({ profile, tabId, chatId }).catch(() => null));
-}
-
 export async function openChatTabInView(chatId: string, tabId: string): Promise<TransferResult> {
   const view = desktopBrowserView();
   if (!view) return { ok: false, reason: 'The Browser view needs the Mac app.' };

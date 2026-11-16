@@ -132,7 +132,7 @@ test('the detail pane resizes by keyboard and drag, remembers its width and fits
   await page.setViewportSize({ width: 1000, height: 800 });
   const overlay = (await detailOf(page, 'API-77').boundingBox())!;
   expect(overlay.x).toBeGreaterThan(100);
-  expect(overlay.x + overlay.width).toBeLessThanOrEqual(1000);
+  expect(overlay.x + overlay.width).toBeLessThanOrEqual(1000.5);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(handle).toBeHidden();

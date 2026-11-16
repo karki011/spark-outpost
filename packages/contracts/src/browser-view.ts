@@ -79,13 +79,6 @@ export const browserViewCommandSchema = z.discriminatedUnion('command', [
 ]);
 export type BrowserViewCommand = z.infer<typeof browserViewCommandSchema>;
 
-export const browserHandToChatSchema = z.object({
-  profile: browserProfileSchema,
-  tabId: z.string().min(1).max(40),
-  chatId: z.uuid(),
-});
-export type BrowserHandToChat = z.infer<typeof browserHandToChatSchema>;
-
 export const browserToViewSchema = z.object({
   chatId: z.uuid(),
   tabId: z.string().min(1).max(40),

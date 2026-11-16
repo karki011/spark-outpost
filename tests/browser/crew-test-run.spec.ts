@@ -149,7 +149,9 @@ test('a test run of a workflow lists what it held, then runs for real', async ({
   await run.getByRole('button', { name: 'Run for real' }).click();
   await expect(page.getByRole('region', { name: 'Run of Pre-PR review' })).toBeVisible();
   await expect.poll(() => copies()).toEqual([]);
-  expect((await page.request.get(`/api/workflow-runs/${runId}/test`)).status()).toBe(404);
+  await expect
+    .poll(async () => (await page.request.get(`/api/workflow-runs/${runId}/test`)).status())
+    .toBe(404);
   await expect.poll(async () => (await listedChats(page)).length).toBe(1);
 });
 

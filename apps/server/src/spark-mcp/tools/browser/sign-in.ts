@@ -1,12 +1,10 @@
 import { z } from 'zod';
 import {
-  SPARK_ACTION_KIND,
   browserOrigin,
   originAndPath,
   signInOriginOf,
   signInOriginProblem,
   signInSites,
-  type BrowserSignInAction,
 } from '@spark-outpost/contracts';
 import { BrowserHostError } from '../../../browser/host-client.ts';
 import { SIGN_IN_MISSING_SECRET, readSignInSecret } from '../../../browser/sign-ins.ts';
@@ -15,8 +13,7 @@ import {
   noteRefusedSite,
   type SignInRow,
 } from '../../../persistence/browser-sign-ins.ts';
-import type { Queryable } from '../../../persistence/db.ts';
-import { actionRun, postCard, RESULT_WAIT_MS } from '../../actions/confirm.ts';
+import { actionRun } from '../../actions/confirm.ts';
 import { SparkToolError, sparkTool, type SparkToolContext } from '../../tool.ts';
 import {
   asToolError,
@@ -26,18 +23,12 @@ import {
   tabInput,
   type BrowserDecision,
 } from './context.ts';
-import { cardDecision } from './gate.ts';
 import { handOver } from './handoff.ts';
 import type { PageFacts } from './read-flow.ts';
 import { scrubberFor } from './scrub.ts';
-import { allowedNote } from '../allowed-note.ts';
 
 const TOOL = 'spark_browser_sign_in';
 
-export const WAITING_FOR_SIGN_IN =
-  'Spark showed the user a card asking whether you may use this saved sign-in. Tell them it is waiting; call the tool again after they allow it.';
-export const SIGN_IN_DECLINED =
-  'The user did not allow this sign-in. Do not try again unless they ask.';
 export const SIGN_IN_NOTE =
   'Spark typed the saved username and password into the page and submitted the form. Read the page to check that it signed in. The values are never shown to you; do not ask the user for them.';
 const NO_PROJECT = 'Saved sign-ins belong to a project, and this chat has none linked.';
@@ -61,66 +52,6 @@ function chosen(rows: readonly SignInRow[], wanted: string): SignInRow {
   return row;
 }
 
-function sitesKey(row: SignInRow): string {
-  return JSON.stringify(signInSites(row));
-}
-
-async function allowedEarlier(db: Queryable, conversationId: string, row: SignInRow) {
-  const { rows } = await db.query(
-    `SELECT 1 FROM approvals a JOIN runs r ON r.id = a.run_id
-     WHERE r.conversation_id = $1 AND a.kind = $2 AND a.status = 'allowed'
-       AND a.decided_by = 'user'
-       AND a.payload->'sparkAction'->>'action' = 'browser_sign_in'
-       AND a.payload->'sparkAction'->>'signInId' = $3
-       AND a.payload->'sparkAction'->'sites' = $4::jsonb
-     LIMIT 1`,
-    [conversationId, SPARK_ACTION_KIND, row.id, sitesKey(row)],
-  );
-  return rows.length > 0;
-}
-
-interface Clearance {
-  decision: Extract<
-    BrowserDecision,
-    'allowed_earlier' | 'user_allowed' | 'user_declined' | 'waiting_for_user'
-  >;
-  approvalId?: string;
-}
-
-async function clearSignIn(
-  context: SparkToolContext,
-  row: SignInRow,
-  site: string,
-): Promise<Clearance> {
-  const run = actionRun(context.scope);
-  const conversationId = context.scope.conversationId!;
-  if (await allowedEarlier(context.deps.db, conversationId, row)) {
-    return { decision: 'allowed_earlier' };
-  }
-  const action: BrowserSignInAction = {
-    action: 'browser_sign_in',
-    signInId: row.id,
-    projectId: row.project_id,
-    label: row.label,
-    origin: row.origin,
-    site,
-    sites: signInSites(row),
-  };
-  const card = await postCard(context.deps.db, run, action, {
-    path: 'confirm',
-    requested: false,
-    observed: [],
-  });
-  const outcome = await cardDecision(context, card.id, RESULT_WAIT_MS);
-  const decision =
-    outcome === 'allowed'
-      ? 'user_allowed'
-      : outcome === 'denied'
-        ? 'user_declined'
-        : 'waiting_for_user';
-  return { decision, approvalId: card.id };
-}
-
 interface Attempt {
   row: SignInRow;
   page: PageFacts;
@@ -132,8 +63,6 @@ function record(
   decision: BrowserDecision,
   detail: Record<string, unknown> = {},
 ): void {
-  const decidedByUser =
-    decision === 'user_allowed' || decision === 'allowed_earlier' || decision === 'user_declined';
   auditBrowser(context, {
     tool: TOOL,
     action: 'sign_in',
@@ -144,7 +73,7 @@ function record(
       signIn: row.label,
       signInOrigin: row.origin,
       signInSites: signInSites(row),
-      by: decidedByUser ? 'user' : decision === 'waiting_for_user' ? null : 'spark',
+      by: 'spark',
       ...detail,
     },
   });
@@ -159,13 +88,12 @@ async function keepTab(context: SparkToolContext, tab: string): Promise<void> {
     .catch(() => undefined);
 }
 
-async function fill(context: SparkToolContext, attempt: Attempt, clearance: Clearance) {
+async function fill(context: SparkToolContext, attempt: Attempt) {
   const session = browserSession(context);
   const { row, page } = attempt;
-  const approval = clearance.approvalId ? { approvalId: clearance.approvalId } : {};
   const secret = await readSignInSecret({ get: context.deps.secrets.fresh }, row.keychain_ref);
   if (!secret) {
-    record(context, attempt, 'failed', { ...approval, result: 'missing_from_keychain' });
+    record(context, attempt, 'failed', { result: 'missing_from_keychain' });
     await keepTab(context, page.tabId);
     return notSignedIn(SIGN_IN_MISSING_SECRET);
   }
@@ -184,8 +112,7 @@ async function fill(context: SparkToolContext, attempt: Attempt, clearance: Clea
       context.signal,
     );
     const landed = hidden(originAndPath(done.url));
-    record(context, attempt, clearance.decision, {
-      ...approval,
+    record(context, attempt, 'saved_sign_in', {
       result: 'form_submitted',
       steps: done.steps,
     });
@@ -195,12 +122,11 @@ async function fill(context: SparkToolContext, attempt: Attempt, clearance: Clea
       tab: done.tabId,
       page: landed,
       steps: done.steps,
-      ...allowedNote(clearance.decision),
       note: SIGN_IN_NOTE,
     };
   } catch (error) {
     if (!(error instanceof BrowserHostError)) throw error;
-    record(context, attempt, 'failed', { ...approval, result: error.code });
+    record(context, attempt, 'failed', { result: error.code });
     await keepTab(context, page.tabId);
     return notSignedIn(hidden(asToolError(error).message));
   }
@@ -260,19 +186,7 @@ async function signIn(args: SignInArgs, context: SparkToolContext) {
           : 'This destination cannot be added as a saved sign-in site. Return to the intended HTTPS sign-in page; do not broaden the saved sites or fill this page.',
     };
   }
-  const clearance = await clearSignIn(context, row, browserOrigin(page.url) ?? row.origin);
-  if (clearance.decision === 'waiting_for_user' || clearance.decision === 'user_declined') {
-    record(context, attempt, clearance.decision, { approvalId: clearance.approvalId });
-    const waiting = clearance.decision === 'waiting_for_user';
-    if (waiting) await keepTab(context, page.tabId);
-    return {
-      outcome: waiting ? 'waiting_for_user' : 'declined',
-      signIn: row.label,
-      site: browserOrigin(page.url) ?? row.origin,
-      message: waiting ? WAITING_FOR_SIGN_IN : SIGN_IN_DECLINED,
-    };
-  }
-  return fill(context, attempt, clearance);
+  return fill(context, attempt);
 }
 
 async function signIns(context: SparkToolContext) {
@@ -311,7 +225,7 @@ const browserSignInTool = sparkTool({
   acts: true,
   title: 'Sign in with a saved sign-in',
   description:
-    "Spark types a saved sign-in into the tab's form (one page, or username then password) and submits it, only on that sign-in's sites. First use in a chat asks, in every mode. handOver: the user signs in themselves in your tab (SSO, MFA, passkey); the call waits for them. Never returns the values.",
+    "Spark types a saved sign-in into the tab's form (one page, or username then password) and submits it, only on that sign-in's sites, without a card. When a page asks you to sign in and a saved sign-in covers it, use it. handOver: the user signs in themselves in your tab (SSO, MFA, passkey); the call waits for them. Never returns the values.",
   input: {
     signIn: z
       .string()

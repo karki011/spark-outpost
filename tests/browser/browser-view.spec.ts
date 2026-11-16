@@ -29,7 +29,12 @@ test('the Browser view opens in Personal, which agents cannot reach', async ({ p
     .toMatchObject({ profile: 'personal', covered: false });
   await expect(page.locator('.cmp')).toHaveCount(0);
   const page_ = page.getByRole('main', { name: 'New tab' });
+  await expect(page_.getByText('Personal', { exact: true })).toHaveCount(0);
+  await page_.getByRole('button', { name: 'Hide sidebar' }).click();
+  await expect(side).toBeHidden();
   await expect(page_.getByText('Personal', { exact: true })).toBeVisible();
+  await page_.getByRole('button', { name: 'Show sidebar' }).click();
+  await expect(side).toBeVisible();
 
   await profiles.getByRole('radio', { name: 'Personal' }).focus();
   await page.keyboard.press('ArrowRight');
@@ -46,7 +51,7 @@ test('the Browser view opens in Personal, which agents cannot reach', async ({ p
 
 test('the address bar and tab list drive the chosen profile’s tabs', async ({ page }) => {
   const side = await openBrowserView(page);
-  const address = side.getByRole('textbox', { name: 'Address' });
+  const address = page.getByRole('main').getByRole('textbox', { name: 'Address' });
   await expect(address).toBeFocused();
   await address.fill('example.com');
   await address.press('Enter');
@@ -71,7 +76,9 @@ test('the address bar and tab list drive the chosen profile’s tabs', async ({ 
   await expect(tabs.getByRole('listitem')).toHaveCount(2);
   await expect(tab('Example Domain')).toHaveAttribute('aria-current', 'page');
   await expect(tab('Docs')).not.toHaveAttribute('aria-current');
-  await expect(page.getByRole('main', { name: 'Example Domain' })).toContainText('example.com');
+  await expect(
+    page.getByRole('main', { name: 'Example Domain' }).getByRole('textbox', { name: 'Address' }),
+  ).toHaveValue('https://example.com/');
 
   await tab('Example Domain').focus();
   await page.keyboard.press('ArrowDown');
@@ -155,26 +162,6 @@ test('favorites and pinned tabs sit above Today', async ({ page }) => {
   await expect
     .poll(async () => (await viewCommands(page)).at(-1))
     .toEqual({ profile: 'personal', command: { command: 'remove_favorite', id: 'f2' } });
-});
-
-test('Hand to chat gives a chat the page and opens that chat', async ({ page }) => {
-  const [chatId] = await seedChats([{ title: 'Fix deploy docs' }]);
-  await openBrowserView(page);
-  await pushView(page, [{ title: 'Docs', url: DOCS, active: true, place: 'external' }]);
-  const hand = page.getByRole('button', { name: 'Hand to chat' });
-  await hand.click();
-  const menu = page.getByRole('menu', { name: 'Hand this tab to a chat' });
-  await expect(menu.getByRole('menuitem', { name: 'Fix deploy docs' })).toBeFocused();
-  await page.keyboard.press('Escape');
-  await expect(menu).toHaveCount(0);
-  await expect(hand).toBeFocused();
-
-  await hand.click();
-  await menu.getByRole('menuitem', { name: 'Fix deploy docs' }).click();
-  await expect
-    .poll(() => calls(page, 'view-hand'))
-    .toEqual([{ profile: 'personal', tabId: 'v1', chatId }]);
-  await expect(page.getByRole('region', { name: 'Browser' })).toBeVisible();
 });
 
 test('a chat’s page tab opens in the Browser view’s Work profile', async ({ page }) => {

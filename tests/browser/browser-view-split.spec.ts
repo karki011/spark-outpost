@@ -101,9 +101,7 @@ test('Peek floats over the page, closes on Esc and opens as a tab', async ({ pag
   });
   const dialog = page.getByRole('dialog', { name: 'Peek: Linked' });
   await expect(dialog).toBeVisible();
-  await expect(
-    page.getByRole('navigation', { name: 'Browser' }).locator('input.bp-url'),
-  ).toHaveValue(peek.url);
+  await expect(page.getByRole('main').locator('input.bp-url')).toHaveValue(peek.url);
   await expect
     .poll(async () => ((await calls(page, 'view-place')) as { covered: boolean }[]).at(-1)?.covered)
     .toBe(true);
