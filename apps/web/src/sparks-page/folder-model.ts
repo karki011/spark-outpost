@@ -37,11 +37,11 @@ function sortNodes(nodes: TreeNode[]): TreeNode[] {
   return nodes.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
 }
 
-export function buildTree(files: readonly CrewFileEntry[]): TreeNode[] {
+export function buildTree(files: readonly CrewFileEntry[], withInstructions = true): TreeNode[] {
   const roots: TreeNode[] = [];
   const folders = new Map<string, TreeNode>();
   const paths = new Set(files.map((file) => file.path));
-  paths.add(SPARK_INSTRUCTIONS_FILE);
+  if (withInstructions) paths.add(SPARK_INSTRUCTIONS_FILE);
   for (const path of paths) {
     const segments = path.split('/');
     let siblings = roots;

@@ -155,20 +155,24 @@ test('the card shows new files in full and changed lines, and Allow writes them'
   await expect(card.getByRole('note')).toHaveText(
     'You already have the release-notes skill of Scribe (similar name).',
   );
-  const files = card.getByRole('list', { name: 'File changes' });
-  await expect(files.locator('.dv-badge')).toHaveText(['New', 'Changed']);
-  const skill = files.getByRole('region', { name: 'New: skills/notes/SKILL.md' });
+  const tree = card.getByRole('tree', { name: 'Files in this change' });
+  await expect(tree.locator('[data-badge]')).toHaveText(['Changed', 'New', 'New']);
+  await expect(card.getByText('1 of 3 files read')).toBeVisible();
+  const instructions = card.getByRole('region', { name: 'Changes to SPARK.md' });
+  await expect(instructions.locator('.dv-row.remove')).toContainText('Be brief.');
+  await expect(instructions.locator('.dv-row.add')).toContainText('Be thorough.');
+  await page.screenshot({ path: 'test-results/spark-crew-edit/review-window.png' });
+  await tree.getByRole('treeitem', { name: /^SKILL\.md/ }).click();
+  const skill = card.getByRole('region', { name: 'New: skills/notes/SKILL.md' });
   await expect(skill.getByRole('radio', { name: 'Formatted' })).toBeChecked();
-  const script = files.getByRole('region', { name: 'Changes to skills/notes/run.sh' });
+  await page.screenshot({ path: 'test-results/spark-crew-edit/review-window-skill.png' });
+  await tree.getByRole('treeitem', { name: /^run\.sh/ }).press('Enter');
+  const script = card.getByRole('region', { name: 'Changes to skills/notes/run.sh' });
   await expect(script.locator('.dv-row.add')).toHaveCount(340);
   await expect(script).toContainText('echo step 340');
   await expect(script.getByRole('button', { name: /more lines/ })).toHaveCount(0);
-  const instructions = files.getByRole('region', { name: 'Changes to SPARK.md' });
-  await expect(instructions.locator('.dv-row.remove')).toContainText('Be brief.');
-  await expect(instructions.locator('.dv-row.add')).toContainText('Be thorough.');
+  await expect(card.getByText('3 of 3 files read')).toBeVisible();
   await expect(card).toContainText('Only you can answer this, never Ask Spark.');
-  await card.screenshot({ path: 'test-results/spark-crew-edit/card.png' });
-  await page.screenshot({ path: 'test-results/spark-crew-edit/review-window.png' });
 
   await card.getByRole('button', { name: 'Allow' }).click();
   await expect
@@ -190,7 +194,7 @@ test('a delete is confirmed only by its button, and Deny leaves the files', asyn
     },
   ]);
   const card = await openCard(page);
-  await expect(card.locator('.dv-badge')).toHaveText(['Deleted']);
+  await expect(card.getByRole('tree').locator('[data-badge]')).toHaveText(['Deleted']);
   const removed = card.getByRole('region', { name: 'Changes to skills/notes/SKILL.md' });
   await expect(removed.locator('.dv-row.remove').first()).toBeVisible();
   await expect(removed.locator('.dv-row.add')).toHaveCount(0);

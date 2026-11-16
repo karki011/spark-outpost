@@ -12,6 +12,7 @@ import {
 import { WarnIcon } from '../../ui/icons.tsx';
 import { DiffView } from './DiffView.tsx';
 import { MarkdownReview } from './MarkdownReview.tsx';
+import { ReviewFiles, type ReviewFile } from './ReviewFiles.tsx';
 
 const TEAMMATE_NOTE = 'Only you can answer this. Nothing changes until you do.';
 
@@ -31,6 +32,25 @@ function newMarkdown(file: CrewFileChange): boolean {
   return file.change === 'new' && Boolean(file.after) && /\.md$/i.test(file.path);
 }
 
+function reviewFile(file: CrewFileChange): ReviewFile {
+  const badge = CREW_CHANGE_LABELS[file.change];
+  const text = file.after ?? file.before ?? '';
+  return {
+    path: file.path,
+    badge,
+    bytes: text.length,
+    view: newMarkdown(file) ? (
+      <MarkdownReview label={`${badge}: ${file.path}`} text={file.after ?? ''} />
+    ) : (
+      <DiffView
+        diff={{ path: file.path, oldText: file.before, newText: file.after ?? '' }}
+        badge={badge}
+        allRows
+      />
+    ),
+  };
+}
+
 function stagesText(stages: readonly (readonly string[])[]): string {
   return stages.map((stage) => stage.join(' + ')).join(' → ');
 }
@@ -45,24 +65,7 @@ export function CrewEditFacts({ action }: { action: CrewEditAction }) {
         </dl>
       )}
       <SimilarNote similar={action.similar} />
-      <ul className="sac-crew-files" aria-label="File changes">
-        {action.files.map((file) => (
-          <li key={file.path}>
-            {newMarkdown(file) ? (
-              <MarkdownReview
-                label={`${CREW_CHANGE_LABELS[file.change]}: ${file.path}`}
-                text={file.after ?? ''}
-              />
-            ) : (
-              <DiffView
-                diff={{ path: file.path, oldText: file.before, newText: file.after ?? '' }}
-                badge={CREW_CHANGE_LABELS[file.change]}
-                allRows
-              />
-            )}
-          </li>
-        ))}
-      </ul>
+      <ReviewFiles files={action.files.map(reviewFile)} />
     </div>
   );
 }

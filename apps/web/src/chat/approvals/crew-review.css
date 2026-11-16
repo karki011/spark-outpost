@@ -120,3 +120,69 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.rvf {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  gap: 16px;
+  margin: 12px 0 0;
+}
+
+.rvf-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding-right: 12px;
+  border-right: 1px solid var(--line);
+}
+
+.rvf-count {
+  margin: 0 0 2px 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.rvf-main {
+  min-width: 0;
+}
+
+.rvf-main > .mdr {
+  margin: 0;
+}
+
+.rvf .spk-mark {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.rvf .spk-mark[data-badge='New'] {
+  color: var(--accent-text);
+}
+
+.rvf .spk-mark[data-badge='Deleted'] {
+  color: var(--danger);
+}
+
+.rvf .spk-mark.seen svg {
+  width: 12px;
+  height: 12px;
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .rvf {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rvf-side {
+    padding: 0 0 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+}

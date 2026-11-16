@@ -139,22 +139,32 @@ describe('the card for a change to a Spark', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('lists each file as new, changed or deleted with its lines before and after', () => {
+  it('lists the files in a tree and shows the one picked, new, changed or deleted', () => {
     show(card(sparkEdit, 'Change the Scout Spark?'));
     const group = reviewGroup('Scout', /Change the Scout Spark\?/);
     expect(group.textContent).toContain('Claude · Bypass permissions wants to change 3 files');
-    const files = within(group).getByRole('list', { name: 'File changes' });
-    const added = within(files).getByRole('region', { name: 'New: skills/notes/SKILL.md' });
-    expect(added.textContent).toContain('description: Write release notes');
-    expect(added.querySelector('.md p')!.textContent).toBe('List merged pull requests.');
-    const changed = within(files).getByRole('region', { name: 'Changes to SPARK.md' });
+    const tree = within(group).getByRole('tree', { name: 'Files in this change' });
+    const names = within(tree)
+      .getAllByRole('treeitem')
+      .map((item) => item.querySelector('.spk-tree-name')!.textContent);
+    expect(names).toEqual(['SPARK.md', 'skills', 'notes', 'SKILL.md', 'old.sh']);
+    expect(group.querySelector('.rvf-count')!.textContent).toBe('1 of 3 files read');
+    const changed = within(group).getByRole('region', { name: 'Changes to SPARK.md' });
     expect(changed.querySelector('.dv-row.remove')!.textContent).toContain('Be brief.');
     expect(changed.querySelector('.dv-row.add')!.textContent).toContain('Be thorough.');
-    const removed = within(files).getByRole('region', { name: 'Changes to old.sh' });
+
+    fireEvent.click(within(tree).getByRole('treeitem', { name: /^SKILL\.md/ }));
+    const added = within(group).getByRole('region', { name: 'New: skills/notes/SKILL.md' });
+    expect(added.textContent).toContain('description: Write release notes');
+    expect(added.querySelector('.md p')!.textContent).toBe('List merged pull requests.');
+
+    fireEvent.click(within(tree).getByRole('treeitem', { name: /^old\.sh/ }));
+    const removed = within(group).getByRole('region', { name: 'Changes to old.sh' });
     expect(removed.querySelector('.dv-row.remove')!.textContent).toContain('echo old');
     expect(removed.querySelector('.dv-row.add')).toBeNull();
-    const badges = [...files.querySelectorAll('.dv-badge')].map((badge) => badge.textContent);
-    expect(badges).toEqual(['Changed', 'Deleted']);
+    expect(group.querySelector('.rvf-count')!.textContent).toBe('3 of 3 files read');
+    const marks = [...tree.querySelectorAll('[data-badge]')].map((mark) => mark.textContent);
+    expect(marks).toEqual(['Changed', 'New', 'Deleted']);
   });
 
   it('names what the user already has that is similar', () => {
@@ -185,6 +195,7 @@ describe('the card for a change to a Spark', () => {
     expect(within(group).queryByRole('button', { name: 'Allow' })).toBeNull();
     expect(within(group).queryByRole('button', { name: 'Deny' })).toBeNull();
     expect(group.textContent).toContain('Answer on your Mac.');
+    expect(within(group).getByRole('tree', { name: 'Files in this change' })).toBeTruthy();
     expect(within(group).getByRole('region', { name: 'Changes to SPARK.md' })).toBeTruthy();
   });
 

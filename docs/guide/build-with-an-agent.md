@@ -23,9 +23,9 @@ A builder chat that isn't **Done** opens again when you come back.
 
 ## Answer the drafts
 
-Each proposal shows in the chat as one line, such as **Gavel is ready for review**. **Review** opens it in a window, formatted; **Source** shows the exact text, and text with HTML or comments opens there.
+Each proposal waits in the chat as **Gavel is ready for review**. **Review** opens a window with its files in a tree; select one to read it. Markdown shows formatted; **Source** shows the exact text.
 
-Nothing is written until you select **Allow**. Esc closes the window without answering.
+Hidden HTML or comments open on **Source**. Nothing is written until **Allow**; Esc closes without answering.
 
 A new Spark or workflow waiting for you also shows at the top of the page as **Draft · waiting for you**; its **Review** opens the same window.
 
@@ -36,6 +36,6 @@ A new Spark or workflow waiting for you also shows at the top of the page as **D
 
 Without **Done**, the chat goes after your **Archive inactive chats** period unless a draft waits. Sparks and their files stay.
 
-The builder chat never shows in your chats, History, Updates or the island, and a paired device can't open it.
+The builder chat stays out of your chats, History, Updates and the island, and off paired devices.
 
 **Next:** [Do a test run](test-run.md)
