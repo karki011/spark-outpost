@@ -137,6 +137,7 @@ export function BrowserView({ onOpenChat }: BrowserViewProps) {
     setAsking(null);
     setDock({
       key: Date.now(),
+      tabId: tab?.id ?? null,
       selection: null,
       link: null,
       picks: [],
@@ -152,11 +153,18 @@ export function BrowserView({ onOpenChat }: BrowserViewProps) {
     setDock((open) =>
       open
         ? { ...open, picks: [...open.picks, pick] }
-        : { key: Date.now(), page: null, selection: null, link: null, picks: [pick] },
+        : {
+            key: Date.now(),
+            tabId: tab?.id ?? null,
+            page: null,
+            selection: null,
+            link: null,
+            picks: [pick],
+          },
     );
   });
   usePageIntents(profile, allTabs, (page, intent) =>
-    openDock({ page, selection: intent.selection, link: intent.link }),
+    openDock({ tabId: intent.tabId, page, selection: intent.selection, link: intent.link }),
   );
   const [bar, setBar] = useState<BarMode | null>(null);
   const runShortcut = (shortcut: BrowserShortcut) => {
@@ -280,10 +288,19 @@ export function BrowserView({ onOpenChat }: BrowserViewProps) {
       {dock && (
         <TabChatDock
           profile={profile}
-          tab={shown}
+          tab={tab}
           request={dock}
           onFresh={() =>
-            setDock((open) => open && { key: open.key, selection: null, link: null, picks: [] })
+            setDock(
+              (open) =>
+                open && {
+                  key: open.key,
+                  tabId: tab?.id ?? null,
+                  selection: null,
+                  link: null,
+                  picks: [],
+                },
+            )
           }
           onRemovePick={(pick) =>
             setDock((open) => open && { ...open, picks: open.picks.filter((p) => p !== pick) })

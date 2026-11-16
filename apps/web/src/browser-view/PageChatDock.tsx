@@ -13,6 +13,7 @@ import { startPageChat, type PageRef } from './page-chat.ts';
 
 export interface DockRequest {
   key: number;
+  tabId: string | null;
   page?: PageRef | null;
   selection: string | null;
   link: string | null;
@@ -22,7 +23,7 @@ export interface DockRequest {
 interface PageChatDockProps {
   page: PageRef | null;
   request: DockRequest;
-  onStarted(chatId: string): void;
+  onSend(): (chatId: string) => void;
   onBack: (() => void) | null;
   onRemovePick(pick: BrowserPick): void;
   onClose(): void;
@@ -36,7 +37,7 @@ const LEVELS: { id: InvolvementLevel; label: string; description: string }[] = [
 export function PageChatDock({
   page,
   request,
-  onStarted,
+  onSend,
   onBack,
   onRemovePick,
   onClose,
@@ -61,6 +62,7 @@ export function PageChatDock({
     if (text.trim() === '' || sending || secrets.blocks(text)) return;
     setSending(true);
     setProblem(null);
+    const started = onSend();
     try {
       const chatId = await startPageChat({
         page,
@@ -71,7 +73,7 @@ export function PageChatDock({
         projectId: projectId || null,
         level,
       });
-      onStarted(chatId);
+      started(chatId);
     } catch (error) {
       setProblem((error as Error).message || 'The chat didn’t start.');
     } finally {

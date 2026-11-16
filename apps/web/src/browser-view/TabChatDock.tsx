@@ -8,12 +8,12 @@ import { ChatPaneContext, type ChatPane } from '../chat/split/chat-pane.ts';
 import { ExternalLinkIcon, PlusIcon, XIcon } from '../ui/icons.tsx';
 import { PageChatDock, type DockRequest } from './PageChatDock.tsx';
 import { pageRef } from './page-intents.ts';
-import { setTabChat, tabChatOf, useTabChats, type TabChat } from './tab-chats.ts';
+import { claimTabChat, tabChatOf, useTabChats, type TabChat } from './tab-chats.ts';
 
 const TAB_CHAT_INTRO =
   'This chat belongs to the tab beside it. Ask about the page or what to do next.';
 
-function usePaneFocus(pane: RefObject<HTMLElement | null>): boolean {
+function usePaneFocus(pane: RefObject<HTMLElement | null>): [boolean, (focused: boolean) => void] {
   const [focused, setFocused] = useState(true);
   useEffect(() => {
     const moved = (event: Event) => {
@@ -26,15 +26,24 @@ function usePaneFocus(pane: RefObject<HTMLElement | null>): boolean {
       document.removeEventListener('focusin', moved, true);
     };
   }, [pane]);
-  return focused;
+  return [focused, setFocused];
 }
 
 function useLiveChat(chat: TabChat | null): string | null {
   const list = useQuery({ queryKey: queryKeys.conversations, queryFn: api.listConversations });
+  const listed = chat ? list.data?.find((candidate) => candidate.id === chat.chatId) : undefined;
+  const lookUp = chat !== null && list.data !== undefined && listed === undefined;
+  const detail = useQuery({
+    queryKey: queryKeys.conversation(chat?.chatId ?? ''),
+    queryFn: () => api.getConversation(chat?.chatId ?? ''),
+    enabled: lookUp,
+    retry: false,
+  });
   if (!chat) return null;
-  const listed = list.data?.find((candidate) => candidate.id === chat.chatId);
-  if (listed) return listed.archivedAt === null ? chat.chatId : null;
-  return list.dataUpdatedAt > chat.startedAt + 5_000 ? null : chat.chatId;
+  const found = listed ?? (lookUp ? detail.data?.conversation : undefined);
+  if (found) return found.archivedAt === null ? chat.chatId : null;
+  if (lookUp && detail.isError) return null;
+  return chat.chatId;
 }
 
 interface DockControlsProps {
@@ -84,8 +93,11 @@ export function TabChatDock({
   const composing = composingFor !== null && composingFor === (tabId ?? '');
   const setComposing = (on: boolean) => setComposingFor(on ? (tabId ?? '') : null);
   const pane = useRef<HTMLDivElement>(null);
-  const focused = usePaneFocus(pane);
-  const extras = request.selection !== null || request.link !== null || request.picks.length > 0;
+  const [focused, setFocused] = usePaneFocus(pane);
+  const own = request.tabId === tabId;
+  const extras =
+    own && (request.selection !== null || request.link !== null || request.picks.length > 0);
+  if (extras && chatId && !composing) setComposing(true);
   const shownPage = tab && tab.url !== '' && tab.error === null ? pageRef(profile, tab) : null;
 
   const chatPane = useMemo<ChatPane>(
@@ -112,12 +124,16 @@ export function TabChatDock({
     return (
       <PageChatDock
         key={`${tabId ?? ''}:${request.key}`}
-        page={request.page === undefined ? shownPage : request.page}
-        request={request}
-        onStarted={(started) => {
-          if (tabId !== null) setTabChat(profile, tabId, started);
-          setComposing(false);
-          onFresh();
+        page={own && request.page !== undefined ? request.page : shownPage}
+        request={own ? request : { ...request, selection: null, link: null, picks: [] }}
+        onSend={() => {
+          const claim = tabId === null ? null : claimTabChat(profile, tabId);
+          return (started) => {
+            if (claim && !claim(started)) return;
+            setFocused(true);
+            setComposing(false);
+            onFresh();
+          };
         }}
         onBack={
           chatId

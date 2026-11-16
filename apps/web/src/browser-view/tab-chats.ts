@@ -7,6 +7,7 @@ export interface TabChat {
 }
 
 let chats: ReadonlyMap<string, TabChat> = new Map();
+const claims = new Map<string, number>();
 const listeners = new Set<() => void>();
 
 function tabKey(profile: BrowserProfile, tabId: string): string {
@@ -24,6 +25,17 @@ export function setTabChat(profile: BrowserProfile, tabId: string, chatId: strin
   else next.set(tabKey(profile, tabId), { chatId, startedAt: Date.now() });
   chats = next;
   listeners.forEach((listener) => listener());
+}
+
+export function claimTabChat(profile: BrowserProfile, tabId: string): (chatId: string) => boolean {
+  const key = tabKey(profile, tabId);
+  const claim = (claims.get(key) ?? 0) + 1;
+  claims.set(key, claim);
+  return (chatId) => {
+    if (claims.get(key) !== claim) return false;
+    setTabChat(profile, tabId, chatId);
+    return true;
+  };
 }
 
 export function useTabChats(): ReadonlyMap<string, TabChat> {
