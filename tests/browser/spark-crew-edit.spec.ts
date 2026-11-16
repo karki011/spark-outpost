@@ -93,7 +93,10 @@ async function openCard(page: Page) {
     .getByRole('navigation', { name: 'Chats' })
     .getByRole('button', { name: 'Outcomes', exact: true })
     .click();
-  const card = page.getByRole('group', { name: /Change the Scout Spark\?/ });
+  await page.getByRole('button', { name: 'Review Scout' }).click();
+  const card = page
+    .getByRole('dialog', { name: 'Review Scout' })
+    .getByRole('group', { name: /Change the Scout Spark\?/ });
   await expect(card).toBeVisible();
   return card;
 }
@@ -135,7 +138,9 @@ test('the card shows new files in full and changed lines, and Allow writes them'
     'You already have the release-notes skill of Scribe (similar name).',
   );
   const files = card.getByRole('list', { name: 'File changes' });
-  await expect(files.locator('.dv-badge')).toHaveText(['New', 'New', 'Changed']);
+  await expect(files.locator('.dv-badge')).toHaveText(['New', 'Changed']);
+  const skill = files.getByRole('region', { name: 'New: skills/notes/SKILL.md' });
+  await expect(skill.getByRole('radio', { name: 'Formatted' })).toBeChecked();
   const script = files.getByRole('region', { name: 'Changes to skills/notes/run.sh' });
   await expect(script.locator('.dv-row.add')).toHaveCount(340);
   await expect(script).toContainText('echo step 340');
@@ -145,6 +150,7 @@ test('the card shows new files in full and changed lines, and Allow writes them'
   await expect(instructions.locator('.dv-row.add')).toContainText('Be thorough.');
   await expect(card).toContainText('Only you can answer this, never Ask Spark.');
   await card.screenshot({ path: 'test-results/spark-crew-edit/card.png' });
+  await page.screenshot({ path: 'test-results/spark-crew-edit/review-window.png' });
 
   await card.getByRole('button', { name: 'Allow' }).click();
   await expect
@@ -226,9 +232,9 @@ test('a paired device sees the card waiting and cannot answer it', async ({ page
   await expect(card).toContainText(
     'Answer on your Mac. Sparks and workflows cards are answered on your Mac.',
   );
-  await expect(
-    card.getByRole('region', { name: 'Changes to skills/notes/SKILL.md' }),
-  ).toContainText('List merged pull requests.');
+  await expect(card.getByRole('region', { name: 'New: skills/notes/SKILL.md' })).toContainText(
+    'List merged pull requests.',
+  );
   await expect(card.getByRole('button', { name: 'Allow' })).toHaveCount(0);
   await expect(card.getByRole('button', { name: 'Deny' })).toHaveCount(0);
   expect(await filePaths(page, sparkId)).toEqual(['SPARK.md']);
@@ -255,9 +261,9 @@ test('a paired device answers the card once Sparks and workflows cards can go th
   });
   const card = await openCard(page);
   await expect(card).not.toContainText('Answer on your Mac.');
-  await expect(
-    card.getByRole('region', { name: 'Changes to skills/notes/SKILL.md' }),
-  ).toContainText('List merged pull requests.');
+  await expect(card.getByRole('region', { name: 'New: skills/notes/SKILL.md' })).toContainText(
+    'List merged pull requests.',
+  );
   await card.getByRole('button', { name: 'Deny' }).click();
   await expect(page.getByRole('group', { name: /Change the Scout Spark\?/ })).not.toContainText(
     'Only you can answer this',

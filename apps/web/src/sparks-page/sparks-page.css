@@ -166,15 +166,6 @@
   line-height: 1.5;
 }
 
-.spk-empty {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 640px;
-  margin: 24px auto 0;
-}
-
-.spk-empty h2,
 .spk-details,
 .spk-summary {
   display: flex;

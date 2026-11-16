@@ -1,0 +1,122 @@
+.crw-ready {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.crw-ready-what {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.crw-ready-what small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.crw-modal {
+  width: min(92vw, 820px);
+  max-height: 88vh;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--r) + 4px);
+  background: var(--panel);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.crw-modal[open] {
+  display: flex;
+  flex-direction: column;
+  animation: rise 0.2s var(--out);
+}
+
+.crw-modal::backdrop {
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.crw-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 12px 12px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.crw-modal-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.crw-modal-body {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 20px 20px;
+  overflow-y: auto;
+}
+
+.crw-modal-body > .appr {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crw-modal[open] {
+    animation: none;
+  }
+}
+
+.mdr {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+.mdr-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mdr-bar b {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mdr-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--warn);
+  font-size: 12.5px;
+}
+
+.mdr-body {
+  max-height: 52vh;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  overflow: auto;
+}
+
+.mdr-source {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

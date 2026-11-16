@@ -5,11 +5,13 @@ import {
   crewEditByline,
   crewSimilarText,
   type CrewEditAction,
+  type CrewFileChange,
   type CrewSimilar,
   type SparkAction,
 } from '@spark-outpost/contracts';
 import { WarnIcon } from '../../ui/icons.tsx';
 import { DiffView } from './DiffView.tsx';
+import { MarkdownReview } from './MarkdownReview.tsx';
 
 const TEAMMATE_NOTE = 'Only you can answer this. Nothing changes until you do.';
 
@@ -23,6 +25,10 @@ export function SimilarNote({ similar }: { similar: readonly CrewSimilar[] }) {
       <span>You already have {similar.map(crewSimilarText).join('; ')}.</span>
     </p>
   );
+}
+
+function newMarkdown(file: CrewFileChange): boolean {
+  return file.change === 'new' && Boolean(file.after) && /\.md$/i.test(file.path);
 }
 
 function stagesText(stages: readonly (readonly string[])[]): string {
@@ -42,11 +48,18 @@ export function CrewEditFacts({ action }: { action: CrewEditAction }) {
       <ul className="sac-crew-files" aria-label="File changes">
         {action.files.map((file) => (
           <li key={file.path}>
-            <DiffView
-              diff={{ path: file.path, oldText: file.before, newText: file.after ?? '' }}
-              badge={CREW_CHANGE_LABELS[file.change]}
-              allRows
-            />
+            {newMarkdown(file) ? (
+              <MarkdownReview
+                label={`${CREW_CHANGE_LABELS[file.change]}: ${file.path}`}
+                text={file.after ?? ''}
+              />
+            ) : (
+              <DiffView
+                diff={{ path: file.path, oldText: file.before, newText: file.after ?? '' }}
+                badge={CREW_CHANGE_LABELS[file.change]}
+                allRows
+              />
+            )}
           </li>
         ))}
       </ul>

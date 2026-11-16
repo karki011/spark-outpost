@@ -20,6 +20,8 @@ import { cardTitle, titleText } from './approval-title.ts';
 import { OpenAddressCard } from './OpenAddressCard.tsx';
 import { PendingApproval } from './PendingApproval.tsx';
 import { RetryAction } from './RetryAction.tsx';
+import { CrewReviewCard } from './CrewReviewCard.tsx';
+import { isCrewReview } from './crew-review.ts';
 import { SparkActionCard } from './SparkActionCard.tsx';
 import { SparkRuleCard } from './SparkRuleCard.tsx';
 import { useLinkedRepoRefresh } from './use-linked-repo-refresh.ts';
@@ -126,7 +128,9 @@ export function ApprovalCard({ approval: incoming, ...rest }: ApprovalCardProps)
       summary={approvalSummary(approval, titleText(cardTitle(approval)))}
       pending
     >
-      {approval.payload.sparkAction ? (
+      {approval.payload.sparkAction && isCrewReview(approval.payload.sparkAction) ? (
+        <CrewReviewCard approval={approval} agent={agent} onDecided={setLocal} />
+      ) : approval.payload.sparkAction ? (
         <SparkActionCard approval={approval} agent={agent} onDecided={setLocal} />
       ) : approval.payload.openAddress ? (
         <OpenAddressCard approval={approval} agent={agent} onDecided={setLocal} />
