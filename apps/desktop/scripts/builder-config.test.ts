@@ -222,6 +222,7 @@ describe('releaseProblems', () => {
     CSC_NAME: 'Developer ID Application: Me (TEAM123)',
     ...NOTARY,
     SPARK_UPDATE_FEED_URL: 'https://updates.example.com',
+    SPARK_GOOGLE_CLIENT_FILE: '/keys/google-oauth-client.json',
   };
 
   it('accepts a signed, notarized two-arch build with a feed', () => {
@@ -239,7 +240,19 @@ describe('releaseProblems', () => {
     expect(problems.map((problem) => problem.split('.')[0])).toEqual([
       'Notarization credentials are missing',
       'No update feed',
+      'Google Calendar sign-in is missing',
       'A release builds Apple silicon and Intel together so one channel file lists both',
+    ]);
+  });
+
+  it('refuses a release without Google Calendar or Slack sign-in', () => {
+    const problems = releaseProblems(
+      { ...ready, SPARK_GOOGLE_CLIENT_FILE: ' ', SPARK_SLACK_CLIENT_ID: '' },
+      ['x64', 'arm64'],
+    );
+    expect(problems.map((problem) => problem.split('.')[0])).toEqual([
+      'Google Calendar sign-in is missing',
+      'Slack sign-in is missing',
     ]);
   });
 });
