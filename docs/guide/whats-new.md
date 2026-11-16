@@ -64,4 +64,3 @@ summary: What changed in recent releases and what to do next.
 | Chats take the agent session title   | Nothing.                             |
 | Send a test notification to a device | [Use your phone](use-your-phone.md). |
 | Tag for a sub-agent on another model | [Pick the model](agent-mode.md).     |
-| Softer theme edge; effort shows High | Nothing.                             |
