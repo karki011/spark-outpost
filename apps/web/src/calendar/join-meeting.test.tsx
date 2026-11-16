@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { detail, mockFetch, newClient, MEETING_ID } from '../meetings/meetings-test-support.tsx';
 import { JoinButton } from './JoinButton.tsx';
+import { onNotesProblem } from './join-meeting.ts';
 import { at, event, link, status } from './test-fixtures.ts';
 import { useTodayEventRequests, type TodayEventRequest } from './today-request.ts';
 
@@ -26,11 +27,11 @@ function Requests({ seen }: { seen: (request: TodayEventRequest) => void }) {
   return null;
 }
 
-function show(notes: boolean, started: unknown) {
+function show(notes: boolean, started: unknown, problem: string | null = null) {
   const seen = vi.fn();
   const calls = mockFetch(({ path }) => {
     if (path === '/calendar/status') return status();
-    if (path === '/meetings/join-notes') return { detail: started };
+    if (path === '/meetings/join-notes') return { detail: started, problem };
   });
   render(
     <QueryClientProvider client={newClient()}>
@@ -42,6 +43,15 @@ function show(notes: boolean, started: unknown) {
 }
 
 describe('Join with Take notes when I join', () => {
+  it('says why notes did not start', async () => {
+    const problems = vi.fn();
+    const stop = onNotesProblem(problems);
+    show(true, null, 'Turn on Voice to take notes.');
+    fireEvent.click(screen.getByRole('button', { name: 'Join Standup' }));
+    await waitFor(() => expect(problems).toHaveBeenCalledWith('Turn on Voice to take notes.'));
+    stop();
+  });
+
   it('opens the link and asks the Mac to record, then opens the transcript when it started', async () => {
     const { calls, seen } = show(true, detail({ state: 'recording', endedAt: null }, null));
     fireEvent.click(screen.getByRole('button', { name: 'Join Standup' }));

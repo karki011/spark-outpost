@@ -7,6 +7,7 @@ import {
   clashList,
   meetingsOverlap,
   isMeeting,
+  joinLeadMs,
   localDayStart,
   remindUntil,
   spanOf,
@@ -24,6 +25,8 @@ export interface PlannerChat {
   running: boolean;
   needsYou: boolean;
 }
+
+export type RecordedMeetings = ReadonlyMap<string, { meetingId: string; endedAt: number }>;
 
 export interface Plan {
   upcoming: CalendarEvent[];
@@ -70,59 +73,24 @@ function dueRemind(event: CalendarEvent, now: number): boolean {
   );
 }
 
-function dueBefore(event: CalendarEvent, settings: CalendarSettings, now: number): boolean {
-  const span = spanOf(event);
-  return (
-    nudgeable(event, now) &&
-    now >= span.start - settings.beforeMinutes * MINUTE &&
-    now < remindUntil(span)
-  );
-}
-
 function nudgeGroup(
   lead: CalendarEvent,
   events: readonly CalendarEvent[],
-  settings: CalendarSettings,
   now: number,
 ): CalendarEvent[] {
-  const others = events.filter(
-    (event) =>
-      meetingsOverlap(lead, event) && (dueRemind(event, now) || dueBefore(event, settings, now)),
-  );
+  const others = events.filter((event) => meetingsOverlap(lead, event) && dueRemind(event, now));
   return [lead, ...others].slice(0, CALENDAR_GROUP_MAX);
 }
 
-function groupNudge(
-  kind: 'before' | 'remind',
-  lead: CalendarEvent,
-  events: readonly CalendarEvent[],
-  settings: CalendarSettings,
-  now: number,
-): CalendarNudge {
-  return {
-    kind,
-    ...base(lead),
-    minutes: minutesUntil(spanOf(lead).start, now),
-    group: nudgeGroup(lead, events, settings, now),
-  };
-}
-
-function remindNudge(
-  events: readonly CalendarEvent[],
-  settings: CalendarSettings,
-  now: number,
-): CalendarNudge | null {
+function remindNudge(events: readonly CalendarEvent[], now: number): CalendarNudge | null {
   const event = events.find((candidate) => dueRemind(candidate, now));
-  return event ? groupNudge('remind', event, events, settings, now) : null;
-}
-
-function beforeNudge(
-  events: readonly CalendarEvent[],
-  settings: CalendarSettings,
-  now: number,
-): CalendarNudge | null {
-  const event = events.find((candidate) => dueBefore(candidate, settings, now));
-  return event ? groupNudge('before', event, events, settings, now) : null;
+  if (!event) return null;
+  return {
+    kind: 'remind',
+    ...base(event),
+    minutes: minutesUntil(spanOf(event).start, now),
+    group: nudgeGroup(event, events, now),
+  };
 }
 
 function wrapUpNudge(
@@ -146,7 +114,7 @@ function wrapUpNudge(
     return (
       nudgeable(candidate, now) &&
       now >= start - settings.wrapUpMinutes * MINUTE &&
-      now < start - settings.beforeMinutes * MINUTE
+      now < start - joinLeadMs(settings)
     );
   });
   if (!event) return null;
@@ -185,20 +153,20 @@ export function activeHold(
 function captureOffer(
   events: readonly CalendarEvent[],
   settings: CalendarSettings,
+  recorded: RecordedMeetings,
   now: number,
 ): CalendarCapture | null {
   if (!settings.capture) return null;
-  const ended = events
-    .filter((event) => {
-      const { end } = spanOf(event);
-      return (
-        isMeeting(event) && event.hasNotes && end <= now && now < end + CALENDAR_CAPTURE_WINDOW_MS
-      );
-    })
-    .toSorted((a, b) => spanOf(b).end - spanOf(a).end);
-  const event = ended[0];
-  if (!event) return null;
-  return { eventKey: event.key, eventId: event.id, start: event.start, title: event.title };
+  const offers = events.flatMap((event) => {
+    const meeting = recorded.get(event.key);
+    if (!meeting || !isMeeting(event)) return [];
+    const from = Math.max(spanOf(event).end, meeting.endedAt);
+    if (now < from || now >= from + CALENDAR_CAPTURE_WINDOW_MS) return [];
+    return [{ event, meetingId: meeting.meetingId, from }];
+  });
+  const latest = offers.toSorted((a, b) => b.from - a.from)[0];
+  if (!latest) return null;
+  return { eventKey: latest.event.key, meetingId: latest.meetingId, title: latest.event.title };
 }
 
 export function upcomingMeetings(events: readonly CalendarEvent[], now: number): CalendarEvent[] {
@@ -224,6 +192,7 @@ export function planNudges(
   chats: readonly PlannerChat[],
   settings: CalendarSettings,
   now: number,
+  recorded: RecordedMeetings = new Map(),
 ): Plan {
   const sorted = events.toSorted((a, b) => spanOf(a).start - spanOf(b).start);
   const upcoming = upcomingMeetings(sorted, now);
@@ -233,12 +202,9 @@ export function planNudges(
       upcoming,
       sorted.filter((event) => isToday(event, now)),
     ),
-    nudge:
-      remindNudge(sorted, settings, now) ??
-      beforeNudge(sorted, settings, now) ??
-      wrapUpNudge(sorted, chats, settings, now),
+    nudge: remindNudge(sorted, now) ?? wrapUpNudge(sorted, chats, settings, now),
     hold: activeHold(sorted, settings, now),
-    capture: captureOffer(sorted, settings, now),
+    capture: captureOffer(sorted, settings, recorded, now),
   };
 }
 
@@ -249,8 +215,10 @@ export function meetingPushDue(
 ): CalendarEvent[] {
   return events
     .filter((event) => {
-      const { start } = spanOf(event);
-      return nudgeable(event, now) && now >= start - settings.beforeMinutes * MINUTE && now < start;
+      const span = spanOf(event);
+      return (
+        nudgeable(event, now) && now >= span.start - joinLeadMs(settings) && now < remindUntil(span)
+      );
     })
     .toSorted((a, b) => spanOf(a).start - spanOf(b).start);
 }

@@ -11,6 +11,8 @@ import type { NudgeMarks } from './nudge-marks.ts';
 const MINUTE_MS = 60_000;
 export const AUTO_JOIN_COUNTDOWN_MS = 10_000;
 export const AUTO_JOIN_LATE_MS = 2 * MINUTE_MS;
+export const JOIN_AT_START_EARLY_MS = 20_000;
+export const JOIN_AT_START_COUNTDOWN_FROM = JOIN_AT_START_EARLY_MS + AUTO_JOIN_COUNTDOWN_MS;
 export const AWAY_SECONDS = 5 * 60;
 
 export interface MeetingAlert {
@@ -77,6 +79,7 @@ export type AutoJoinSkip =
   | 'none'
   | 'clash'
   | 'declined'
+  | 'not-accepted'
   | 'dismissed'
   | 'late'
   | 'all-day'
@@ -111,13 +114,48 @@ function skipFor(event: CalendarEvent, input: AutoJoinInput): AutoJoinSkip | nul
   return null;
 }
 
+function acceptedOrOwn(event: CalendarEvent): boolean {
+  return event.myStatus === 'accepted' || event.myStatus === 'none';
+}
+
+export function holdEnd(now: CalendarNow | null | undefined): number | null {
+  return now?.hold ? Date.parse(now.hold.until) : null;
+}
+
+export interface AutoJoinOutlook {
+  autoJoin: boolean;
+  holdUntil: number | null;
+  upcoming: readonly CalendarEvent[];
+  joinLeadMs: number;
+}
+
+export function autoJoinCovers(event: CalendarEvent, outlook: AutoJoinOutlook): boolean {
+  if (!outlook.autoJoin || !acceptedOrOwn(event)) return false;
+  const start = spanOf(event).start;
+  if (outlook.holdUntil !== null && outlook.holdUntil > start) return false;
+  return [start, start + AUTO_JOIN_COUNTDOWN_MS].every(
+    (at) => joinableMeetings(outlook.upcoming, at, outlook.joinLeadMs).length <= 1,
+  );
+}
+
+function autoSkipFor(event: CalendarEvent, input: AutoJoinInput): AutoJoinSkip | null {
+  const skip = skipFor(event, input);
+  if (skip) return skip;
+  return acceptedOrOwn(event) ? null : 'not-accepted';
+}
+
 function away(presence: Presence): boolean {
   return presence.locked || presence.asleep || presence.idleSeconds > AWAY_SECONDS;
 }
 
+function dueToOpen(event: CalendarEvent, at: number): boolean {
+  const { start, end } = spanOf(event);
+  return at >= start - JOIN_AT_START_COUNTDOWN_FROM && at < end;
+}
+
 function requestedJoin(input: AutoJoinInput): AutoJoinPlan | null {
   const asked = input.events.filter(
-    (event) => event.joinAtStart && startedNow(event, input.at) && !input.joined.has(event.key),
+    (event) => event.joinAtStart && dueToOpen(event, input.at) && !input.joined.has(event.key),
   );
   if (asked.length === 0) return null;
   if (away(input.presence)) return { skip: 'away' };
@@ -140,7 +178,7 @@ export function autoJoinPlan(input: AutoJoinInput): AutoJoinPlan {
     (event) => !input.joined.has(event.key) && !input.marks.get(event.key)?.dismissed,
   );
   if (open.length > 1) return { skip: 'clash' };
-  const verdicts = started.map((event) => ({ event, skip: skipFor(event, input) }));
+  const verdicts = started.map((event) => ({ event, skip: autoSkipFor(event, input) }));
   const ready = verdicts.filter((verdict) => verdict.skip === null);
   if (ready.length > 1) return { skip: 'clash' };
   const chosen = ready[0] ?? verdicts.at(-1);

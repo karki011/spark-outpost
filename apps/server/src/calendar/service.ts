@@ -27,7 +27,12 @@ import { withTransaction, type Db } from '../persistence/db.ts';
 import type { CalendarHost } from './host-client.ts';
 import { googleSourceId } from './google/map.ts';
 import type { GoogleSource } from './google/source.ts';
-import { planNudges, tomorrowMeetings, type PlannerChat } from './planner.ts';
+import {
+  planNudges,
+  tomorrowMeetings,
+  type PlannerChat,
+  type RecordedMeetings,
+} from './planner.ts';
 import { htmlNotesText } from './notes-html.ts';
 import { splitNotes } from './notes-text.ts';
 import { locationOf, peopleOf } from './people.ts';
@@ -349,9 +354,10 @@ export function calendarNow(
   state: CalendarState,
   chats: readonly PlannerChat[],
   now: number,
+  recorded?: RecordedMeetings,
 ): CalendarNow {
   const active = state.active;
-  const plan = planNudges(state.events, chats, state.settings, now);
+  const plan = planNudges(state.events, chats, state.settings, now, recorded);
   return {
     active,
     ...plan,

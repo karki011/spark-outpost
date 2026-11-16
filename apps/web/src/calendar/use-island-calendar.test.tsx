@@ -45,7 +45,7 @@ function nowWith(meeting: CalendarEvent = standup): CalendarNow {
     active: true,
     upcoming: [meeting],
     nudge: {
-      kind: 'before',
+      kind: 'remind',
       eventKey: meeting.key,
       title: meeting.title,
       startsAt: meeting.start,
@@ -64,7 +64,7 @@ function mount(minute?: number, open = false, note: IslandHomePanel['note'] = ()
   const client = new QueryClient();
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client }, children);
-  return renderHook(() => useIslandCalendar(minute ?? Date.now(), 0, [], () => undefined, home), {
+  return renderHook(() => useIslandCalendar(minute ?? Date.now(), 0, [], home), {
     wrapper,
   });
 }
@@ -102,6 +102,8 @@ describe('useIslandCalendar meeting alert', () => {
       note: () => undefined,
       onDismissed: vi.fn(),
       onJoinAtStart: vi.fn(),
+      onJoinTakesNotes: vi.fn(),
+      onOpen: vi.fn(),
     };
     renderHook(() => useMeetingAlert(options));
     expect(bridge.shown.at(-1)?.key).toBe(standup.key);
@@ -440,6 +442,8 @@ describe('useIslandCalendar Join at start', () => {
       note: () => undefined,
       onDismissed: vi.fn(),
       onJoinAtStart: vi.fn(),
+      onJoinTakesNotes: vi.fn(),
+      onOpen: vi.fn(),
     };
     renderHook(() => useMeetingAlert(options));
     expect(bridge.shown.at(-1)?.key).toBe(standup.key);

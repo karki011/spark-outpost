@@ -28,7 +28,7 @@ const TEXT = [
   '.isl-who',
   '.isl-now-title',
   '.isl-needs-text',
-  '.isl-meet-row span',
+  '.mc-row .mc-text',
   '.isl-hover-text',
   '.isl-focus-title',
 ];

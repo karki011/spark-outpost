@@ -168,10 +168,10 @@ describe('the day, the planner and marks', () => {
     expect((await client.get('/api/calendar/day?date=16-10-2026')).status).toBe(400);
   });
 
-  it('plans the before nudge and the upcoming list', async () => {
+  it('plans the upcoming list, with no nudge for an unmarked meeting', async () => {
     const now = calendarNowSchema.parse((await client.get('/api/calendar/now')).body);
     expect(now.active).toBe(true);
-    expect(now.nudge).toMatchObject({ kind: 'before', title: 'Standup' });
+    expect(now.nudge).toBeNull();
     expect(now.upcoming.map((event) => event.title)).toEqual(expect.arrayContaining(['Standup']));
   });
 
@@ -209,19 +209,18 @@ describe('the day, the planner and marks', () => {
 
   it('saves the Notifications settings', async () => {
     const response = await client.send('patch', '/api/calendar/settings', {
-      beforeMinutes: 15,
+      joinLead: 5,
       holdRule: 'meetings',
       focusNames: ['Heads down'],
       phoneAlerts: true,
     });
     expect(response.status).toBe(200);
     expect((await status()).settings).toMatchObject({
-      beforeMinutes: 15,
+      joinLead: 5,
       holdRule: 'meetings',
       focusNames: ['Heads down'],
       phoneAlerts: true,
       agentsRead: true,
-      joinLead: 10,
     });
   });
 

@@ -31,7 +31,6 @@ async function recordOpens(page: Page) {
 
 const opened = (page: Page) =>
   page.evaluate(() => (window as unknown as { opened: string[] }).opened);
-const choose = (page: Page) => island(page).getByRole('region', { name: 'Choose a meeting' });
 const rail = (page: Page) => page.getByRole('navigation', { name: 'Main' });
 
 test.beforeEach(async ({ page }) => {
@@ -56,33 +55,25 @@ test('meetings that start together get one line, one hop and one tune', async ({
   expect((await fakeState(page)).chimes).toBe(MEETING_TUNE_NOTES);
 });
 
-test('Choose lists each meeting with its own Join or Open, and Esc closes it', async ({ page }) => {
+test('the island card lists each clashing meeting with its own Join or Open', async ({ page }) => {
   await recordOpens(page);
   await fakeHomeDesktop(page, 'graphite', false);
   await openIsland(page);
-  const line = island(page).locator('.isl-calline');
-  await expect(line).toContainText(
-    /^Meetings in \d+ min · Standup \+ 2 more\d+:\d+( [AP]M)?–\d+:\d+ [AP]M · Choose one/,
+  const card = island(page).getByRole('group', {
+    name: /^Meetings in \d+ min: Standup \+ 2 more$/,
+  });
+  await expect(card.locator('.mc-row')).toContainText(
+    /^\d+:\d+( [AP]M)?–\d+:\d+ [AP]M · Choose one$/,
   );
   await animationsSettled(page);
-  const lead = await line.locator('.isl-calline-lead').boundingBox();
-  const title = await line.locator('.isl-calline-title').boundingBox();
-  expect(title!.x - (lead!.x + lead!.width)).toBeGreaterThan(8);
-  await expect(line.getByRole('button', { name: /^Join/ })).toHaveCount(0);
-  await line.getByRole('button', { name: 'Choose one of 3 meetings' }).click();
-  const list = choose(page);
+  const list = card.getByRole('list').last();
   await expect(list.getByRole('listitem')).toHaveCount(3);
-  await expect(list.getByRole('button', { name: 'Join Standup' })).toBeFocused();
-  await expect(list.getByRole('button', { name: 'Join Design sync' })).toBeVisible();
+  await expect(list.getByRole('button', { name: 'Join Standup' })).toBeVisible();
   await expect(list.getByRole('button', { name: 'Open Room booking' })).toBeVisible();
   await expect(list).toContainText('Spark Family');
   expect(await opened(page)).toEqual([]);
-  await page.keyboard.press('Tab');
-  await expect(list.getByRole('button', { name: 'Join Design sync' })).toBeFocused();
-  await page.keyboard.press('Enter');
+  await list.getByRole('button', { name: 'Join Design sync' }).click();
   await expect.poll(() => opened(page)).toEqual(['https://meet.google.com/abc-defg-hij']);
-  await page.evaluate(() => (window as unknown as { islandEscape: () => void }).islandEscape());
-  await expect(choose(page)).toHaveCount(0);
 });
 
 test('Home tags a next meeting that clashes', async ({ page }) => {

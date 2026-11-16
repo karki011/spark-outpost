@@ -15,12 +15,22 @@ import { alertNotice, joinState } from './alert/alert-model.ts';
 import { useEventClock } from './event-clock.ts';
 import {
   AUTO_JOIN_COUNTDOWN_MS,
+  JOIN_AT_START_COUNTDOWN_FROM,
+  autoJoinCovers,
   autoJoinPlan,
+  holdEnd,
   meetingAlert,
   type AutoJoinPlan,
   type Presence,
 } from './meeting-alert.ts';
-import { dismissNudge, snoozeNudgeFor, withJoined, type NudgeMarks } from './nudge-marks.ts';
+import {
+  closeNudge,
+  dismissNudge,
+  snoozeNudgeFor,
+  snoozeNudgeUntilStart,
+  withJoined,
+  type NudgeMarks,
+} from './nudge-marks.ts';
 import { openJoin } from './today-model.ts';
 
 export const ALERT_SNOOZE_MS = 60_000;
@@ -37,6 +47,8 @@ interface MeetingAlertOptions {
   note: (text: string) => void;
   onDismissed: (events: readonly CalendarEvent[]) => void;
   onJoinAtStart: (event: CalendarEvent, on: boolean) => void;
+  onJoinTakesNotes: (event: CalendarEvent) => void;
+  onOpen: (event: CalendarEvent) => void;
 }
 
 function alertTimes(live: CalendarNow | null, settings: CalendarSettings | null): number[] {
@@ -44,7 +56,8 @@ function alertTimes(live: CalendarNow | null, settings: CalendarSettings | null)
   const lead = settings.alertLead * 60_000;
   return live.upcoming.flatMap((event) => {
     const span = spanOf(event);
-    return [span.start - lead, span.start, remindUntil(span), span.end];
+    const opens = event.joinAtStart ? [span.start - JOIN_AT_START_COUNTDOWN_FROM] : [];
+    return [span.start - lead, ...opens, span.start, remindUntil(span), span.end];
   });
 }
 
@@ -76,9 +89,10 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
       ? meetingAlert({ now: live, settings, at, held, marks: withJoined(marks, joined) })
       : null;
 
-  const join = (event: CalendarEvent, automatic: boolean) => {
+  const join = (event: CalendarEvent, automatic: boolean, takesNotes: boolean) => {
     if (!event.link) return;
     openJoin(event.link.url);
+    if (takesNotes) latest.current.onJoinTakesNotes(event);
     setJoined((current) => new Set(current).add(event.key));
     setCountdown(null);
     if (event.joinAtStart) latest.current.onJoinAtStart(event, false);
@@ -138,7 +152,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
         void planNowRef.current(Date.now()).then((next) => {
           if (!active) return;
           if ('join' in next && next.join.key === countdown.eventKey) {
-            joinRef.current(next.join, true);
+            joinRef.current(next.join, true, true);
           } else {
             setCountdown(null);
           }
@@ -169,7 +183,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
   };
   const joinNow = () => {
     const target = events?.find((event) => event.key === countdown?.eventKey);
-    if (target) join(target, true);
+    if (target) join(target, true, true);
   };
 
   const alertRef = useRef(alert);
@@ -179,7 +193,8 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
 
   const joinFromNotice = (eventKey: string) => {
     const target = alertRef.current?.events.find((event) => event.key === eventKey);
-    if (target && joinState(target, Date.now(), leadMs) === 'open') join(target, false);
+    if (!target || joinState(target, Date.now(), leadMs) !== 'open') return;
+    join(target, false, true);
   };
 
   const handlers = useRef({ cancelJoin, joinNow, joinFromNotice, markJoined });
@@ -199,6 +214,16 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
         ),
         countdown,
         joinLeadMs: leadMs,
+        autoJoins: alert.events
+          .filter((event) =>
+            autoJoinCovers(event, {
+              autoJoin,
+              holdUntil: holdEnd(live),
+              upcoming: events ?? [],
+              joinLeadMs: leadMs,
+            }),
+          )
+          .map((event) => event.key),
         notice: alertNotice(alert.events),
       }
     : null;
@@ -231,6 +256,8 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
       }
       if (action.kind === 'joined' && action.eventKey) {
         handlers.current.markJoined(action.eventKey);
+        const pressed = inAlert.find((event) => event.key === action.eventKey);
+        if (pressed) latest.current.onJoinTakesNotes(pressed);
       }
       const planned = inAlert.find((event) => event.key === action.eventKey);
       if (action.kind === 'join-at-start' && planned) latest.current.onJoinAtStart(planned, true);
@@ -246,7 +273,23 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
           ),
         );
       }
-      if (action.kind === 'dismiss') {
+      if (action.kind === 'close') {
+        setMarks((current) =>
+          inAlert.reduce(
+            (next, event) => closeNudge(next, event.key, spanOf(event), Date.now()),
+            current,
+          ),
+        );
+      }
+      if (action.kind === 'snooze-until-start') {
+        setMarks((current) =>
+          inAlert.reduce(
+            (next, event) => snoozeNudgeUntilStart(next, event.key, spanOf(event), Date.now()),
+            current,
+          ),
+        );
+      }
+      if (action.kind === 'dismiss' || action.kind === 'open') {
         setMarks((current) =>
           inAlert.reduce(
             (next, event) => dismissNudge(next, event.key, Date.parse(event.end)),
@@ -254,10 +297,12 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
           ),
         );
         latest.current.onDismissed(inAlert);
+        const [first] = inAlert;
+        if (action.kind === 'open' && first) latest.current.onOpen(first);
       }
     });
   }, [setMarks]);
 
-  const joinEvent = (event: CalendarEvent) => join(event, false);
+  const joinEvent = (event: CalendarEvent) => join(event, false, false);
   return { alert, countdown, joined, cancelJoin, joinNow, markJoined, joinEvent };
 }

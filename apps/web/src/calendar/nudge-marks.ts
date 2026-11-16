@@ -1,4 +1,6 @@
-export const SNOOZE_MS = 2 * 60_000;
+import { remindUntil } from '@spark-outpost/contracts';
+
+export const SNOOZE_MS = 60_000;
 
 export interface NudgeMark {
   end: number;
@@ -109,4 +111,16 @@ export function saveSnoozes(marks: NudgeMarks): void {
   } catch {
     return;
   }
+}
+
+export function closeNudge(
+  marks: NudgeMarks,
+  eventKey: string,
+  span: { start: number; end: number },
+  at: number,
+): NudgeMarks {
+  if (marks.get(eventKey)?.dismissed) return marks;
+  if (at < span.start) return snoozeNudgeUntilStart(marks, eventKey, span, at);
+  const quietFor = remindUntil(span) - at;
+  return quietFor > 0 ? snoozeNudgeFor(marks, eventKey, span.end, at, quietFor) : marks;
 }

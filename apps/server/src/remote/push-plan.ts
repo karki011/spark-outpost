@@ -110,8 +110,9 @@ export interface MeetingPush {
   tag: 'spark-meeting';
 }
 
-export function meetingPush(minutes: 5 | 10 | 15): MeetingPush {
-  return { title: `Meeting in ${minutes} min`, body: '', chatId: null, tag: 'spark-meeting' };
+export function meetingPush(minutes: number): MeetingPush {
+  const title = minutes > 0 ? `Meeting in ${minutes} min` : 'Meeting now';
+  return { title, body: '', chatId: null, tag: 'spark-meeting' };
 }
 
 export interface TestPush {

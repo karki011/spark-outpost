@@ -86,7 +86,10 @@ export const meetingDetailSchema = z.object({
 });
 export type MeetingDetail = z.infer<typeof meetingDetailSchema>;
 
-export const meetingJoinNotesSchema = z.object({ detail: meetingDetailSchema.nullable() });
+export const meetingJoinNotesSchema = z.object({
+  detail: meetingDetailSchema.nullable(),
+  problem: z.string().max(500).nullable(),
+});
 export type MeetingJoinNotes = z.infer<typeof meetingJoinNotesSchema>;
 
 export const meetingStatusSchema = z.object({

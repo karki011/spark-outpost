@@ -370,9 +370,78 @@
   margin-top: 2px;
 }
 
+.crail-fold {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 28px;
+  padding: 0 6px;
+  margin-left: -6px;
+  border-radius: var(--r-sm);
+  text-align: left;
+}
+
+.crail-fold:hover {
+  background: var(--raise);
+}
+
+.crail-fold .crail-detail {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crail-chevron {
+  margin-left: auto;
+  color: var(--faint);
+  font-size: 14px;
+  transition: transform 0.15s var(--out);
+}
+
+.crail-chevron[data-open] {
+  transform: rotate(90deg);
+}
+
+.crail-manage {
+  flex-shrink: 0;
+  margin-left: 6px;
+  padding: 0 6px;
+}
+
+.crail-tools-note {
+  padding: 0 6px 4px;
+}
+
+.crail-tools-body {
+  padding: 0 6px;
+}
+
+.crail-tools-body .tools-group {
+  padding: 8px 0 4px;
+}
+
+.crail-tools-body li {
+  min-height: 32px;
+  padding: 2px 0;
+}
+
+.crail-tools-body .mcppop-text code {
+  font-size: 12.5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crail-chevron {
+    transition: none;
+  }
+}
+
 @media (pointer: coarse) {
-  .crail .crail-tools-line .crail-row {
+  .crail-fold,
+  .crail-tools-body li {
     min-height: 44px;
-    align-items: center;
   }
 }

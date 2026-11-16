@@ -1,5 +1,6 @@
 import {
   joinableMeetings,
+  meetingsOverlap,
   spanOf,
   type CalendarEvent,
   type CalendarNow,
@@ -24,7 +25,14 @@ export function joinChoice(now: CalendarNow | null, at: number, leadMs: number):
   const [only] = joinable;
   if (!only) return null;
   if (joinable.length === 1) return { join: only };
-  const choose = unique([...joinable, ...group]).toSorted(
+  const clashing = now.upcoming.filter(
+    (event) =>
+      event.nudges &&
+      spanOf(event).start - leadMs <= at &&
+      at < spanOf(event).end &&
+      joinable.some((open) => meetingsOverlap(open, event)),
+  );
+  const choose = unique([...joinable, ...clashing, ...group]).toSorted(
     (a, b) => spanOf(a).start - spanOf(b).start,
   );
   return { choose };

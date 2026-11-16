@@ -31,8 +31,9 @@ import {
   readSnoozes,
   saveSnoozes,
   snoozeEnds,
-  snoozeNudge,
+  closeNudge,
   snoozeNudgeUntilStart,
+  snoozeNudge,
   snoozeNudgeFor,
   withJoined,
   withServerDismissed,
@@ -41,14 +42,21 @@ import {
 import { useJoinAtStart, withAsked } from './join-at-start.ts';
 import { todayState } from './today-model.ts';
 import { clock } from './calendar-format.ts';
-import { lineUnderAlert } from './meeting-alert.ts';
+import { autoJoinCovers, holdEnd, lineUnderAlert } from './meeting-alert.ts';
 import { ALERT_SNOOZE_MS, useMeetingAlert } from './use-meeting-alert.ts';
-import { openTodayEvent } from './today-request.ts';
+import { openTodayEvent, openTodayMeeting } from './today-request.ts';
+import { notesProblemText, startJoinNotes } from './join-meeting.ts';
 import { useCalendarNow, useCalendarStatus } from './use-calendar.ts';
 import { useIslandRequests } from '../island/island-requests.ts';
 
 const NO_MEETINGS: readonly CalendarEvent[] = [];
 const NO_CLASHES: ReadonlyMap<string, readonly string[]> = new Map();
+
+function openMeetingNotes(meetingId: string): void {
+  const desktop = sparkDesktop();
+  if (desktop?.island.openSettings) desktop.island.openSettings(`today:meeting:${meetingId}`);
+  else openTodayMeeting(meetingId);
+}
 
 function openToday(eventKey: string): void {
   const desktop = sparkDesktop();
@@ -86,6 +94,8 @@ export interface IslandCalendar {
   choosing: readonly CalendarEvent[] | null;
   calendarName: (event: CalendarEvent) => string;
   hopKeys: string[];
+  hopQuiet: boolean;
+  autoJoins: (event: CalendarEvent) => boolean;
   onOpenEvent: (eventKey: string) => void;
   onChoose: (line: CalendarLine) => void;
   onCapture: (line: CalendarLine) => void;
@@ -96,6 +106,8 @@ export interface IslandCalendar {
   onCancelJoinAtStart: (event: CalendarEvent) => void;
   onSnoozeAlert: (event: CalendarEvent) => void;
   onDismissNudge: (event: CalendarEvent) => void;
+  onCloseNudge: (events: readonly CalendarEvent[]) => void;
+  onClose: (line: CalendarLine) => void;
   countdown: MeetingCountdown | null;
   onCancelJoin: () => void;
   onJoinNow: () => void;
@@ -189,6 +201,7 @@ const MEETING_REQUESTS = ['snooze_meeting', 'join_meeting'] as const;
 
 export const DISMISS_RETRY_MS = 30_000;
 export const JOIN_AT_START_NOTE_MS = 4_000;
+const NOTES_PROBLEM_MS = 8_000;
 
 function useDismissForGood() {
   const queryClient = useQueryClient();
@@ -214,7 +227,6 @@ export function useIslandCalendar(
   minute: number,
   waiting: number,
   chats: readonly ConversationSummary[],
-  onQuickChat: (text: string) => void,
   home: IslandHomePanel,
 ): IslandCalendar {
   const status = useCalendarStatus();
@@ -248,6 +260,13 @@ export function useIslandCalendar(
     () => new Map((live?.calendars ?? []).map((choice) => [choice.key, choice.title])),
     [live],
   );
+  const takeNotes = (event: CalendarEvent) => {
+    if (!(ready && status.data?.settings.notesOnJoin)) return;
+    void startJoinNotes(event, names.get(event.calendarKey)).then(({ detail, problem }) => {
+      if (detail) openMeetingNotes(detail.meeting.id);
+      if (problem) home.note(notesProblemText(problem), event.title, NOTES_PROBLEM_MS);
+    });
+  };
   const autoJoin = useMeetingAlert({
     live,
     settings: ready ? (status.data?.settings ?? null) : null,
@@ -259,6 +278,8 @@ export function useIslandCalendar(
     note: home.note,
     onDismissed: dismissForGood,
     onJoinAtStart: (event, on) => (on ? askJoinAtStart(event) : joinAtStart.save(event, false)),
+    onJoinTakesNotes: takeNotes,
+    onOpen: (event) => openToday(event.key),
   });
   const line = calendarLine({
     now: live,
@@ -294,14 +315,27 @@ export function useIslandCalendar(
     const event = live?.upcoming.find((candidate) => candidate.key === shown.eventKey);
     return event ? [event] : [];
   };
+  const closeMeetings = (events: readonly CalendarEvent[]) =>
+    nudges.setMarks((current) =>
+      events.reduce(
+        (next, event) => closeNudge(next, event.key, spanOf(event), Date.now()),
+        current,
+      ),
+    );
+  const onDismissLine = (shown: CalendarLine) => {
+    if (shown.dismiss === 'catch_up') held.clearCatchUp();
+    if (shown.dismiss === 'meeting') dismissMeetings(meetingsOf(shown));
+    if (shown.capture) dismiss(shown.capture.eventKey);
+  };
   const clashes = useMemo(
     () =>
       live ? new Map(live.clashes.map((clash) => [clash.eventKey, clash.titles])) : NO_CLASHES,
     [live],
   );
+  const underAlert = line !== null && lineUnderAlert(line, autoJoin.alert);
   return {
     connected: ready,
-    line: line && lineUnderAlert(line, autoJoin.alert) ? null : line,
+    line: underAlert ? null : line,
     hold: held.hold,
     at,
     upcoming: live
@@ -310,12 +344,24 @@ export function useIslandCalendar(
     clashes,
     choosing: stillChoosing(choosing, nudges.marks, at),
     calendarName: (event) => names.get(event.calendarKey) ?? 'Calendar',
-    hopKeys: hopKeys(live),
+    hopKeys: hopKeys(line),
+    hopQuiet: underAlert,
+    autoJoins: (event) =>
+      autoJoinCovers(event, {
+        autoJoin: ready ? (status.data?.settings.autoJoin ?? false) : false,
+        holdUntil: holdEnd(live),
+        upcoming: live?.upcoming ?? [],
+        joinLeadMs: leadMs,
+      }),
     countdown: autoJoin.countdown,
     joinLeadMs: leadMs,
     onCancelJoin: autoJoin.cancelJoin,
     onJoinNow: autoJoin.joinNow,
-    onJoined: autoJoin.markJoined,
+    onJoined: (eventKey) => {
+      autoJoin.markJoined(eventKey);
+      const event = live?.upcoming.find((candidate) => candidate.key === eventKey);
+      if (event) takeNotes(event);
+    },
     onOpenEvent: (eventKey) => openToday(eventKey),
     onChoose: choose,
     onSnooze: (event, untilStart = false) =>
@@ -331,22 +377,17 @@ export function useIslandCalendar(
         snoozeNudgeFor(current, event.key, Date.parse(event.end), Date.now(), ALERT_SNOOZE_MS),
       ),
     onDismissNudge: (event) => dismissMeetings([event]),
-    onDismiss: (shown) => {
-      if (shown.dismiss === 'catch_up') held.clearCatchUp();
-      if (shown.dismiss === 'meeting') dismissMeetings(meetingsOf(shown));
-      if (shown.capture) dismiss(shown.capture.eventKey);
+    onCloseNudge: closeMeetings,
+    onClose: (shown) => {
+      if (shown.dismiss === 'meeting') closeMeetings(meetingsOf(shown));
+      else onDismissLine(shown);
     },
+    onDismiss: onDismissLine,
     onCapture: (shown) => {
       const capture = shown.capture;
       if (!capture) return;
       dismiss(capture.eventKey);
-      void calendarApi
-        .detail({ eventId: capture.eventId, start: capture.start })
-        .then((detail) => detail.notes.trim())
-        .catch(() => '')
-        .then((notes) =>
-          onQuickChat(`Follow up on ${capture.title}${notes ? `\n\n${notes}` : ''}`),
-        );
+      openMeetingNotes(capture.meetingId);
     },
   };
 }

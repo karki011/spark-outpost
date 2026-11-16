@@ -2,6 +2,7 @@ import { spanOf, type CalendarEvent } from '@spark-outpost/contracts';
 import { clock } from '../calendar/calendar-format.ts';
 import { canAskJoinAtStart } from '../calendar/join-at-start.ts';
 import type { IslandCalendar } from '../calendar/use-island-calendar.ts';
+import { JoinAtStartButton } from '../calendar/JoinAtStartButton.tsx';
 
 interface JoinAtStartActionProps {
   event: CalendarEvent;
@@ -31,13 +32,11 @@ export function JoinAtStartAction(props: JoinAtStartActionProps) {
   }
   if (!props.offer || !canAskJoinAtStart(event, calendar.at)) return null;
   return (
-    <button
-      type="button"
+    <JoinAtStartButton
+      title={event.title}
       className={props.buttonClass}
-      aria-label={`Join at start: ${event.title}`}
-      onClick={() => calendar.onJoinAtStart(event)}
-    >
-      Join at start
-    </button>
+      autoJoin={calendar.autoJoins(event)}
+      onAsk={() => calendar.onJoinAtStart(event)}
+    />
   );
 }

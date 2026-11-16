@@ -30,7 +30,6 @@ import {
 import { runClientCommand } from './composer/client-commands.ts';
 import { SlashMenu } from './composer/SlashMenu.tsx';
 import { ToolsPanel } from './tools/ToolsPanel.tsx';
-import { useToolsPanel } from './tools/tools-request.ts';
 import { usePickerCommand } from './composer/use-picker-command.ts';
 import { useSlash } from './composer/use-slash.ts';
 import { usePluginCommands } from './composer/use-plugin-commands.ts';
@@ -132,7 +131,7 @@ export function Composer({
     textareaRef,
     onPick: addFromRepo,
   });
-  const [toolsOpen, setToolsOpen] = useToolsPanel(conversationId);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const provider = settings?.provider ?? null;
   const providerLabel = providers.find((entry) => entry.id === provider)?.name;
   const agentName = givenAgentName ?? providerLabel ?? 'Agent';

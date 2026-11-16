@@ -3,7 +3,7 @@ title: See a chat's context and tools
 section: Chats
 type: how-to
 order: 217
-summary: The Context rail shows a chat's project, agent, cost and ports; Tools by the message box switches its tools and connectors.
+summary: The Context rail shows a chat's project, agent, cost, ports, tools and connectors, and switches them.
 ---
 
 See what a chat's agent works with in the **Context** rail, and switch its tools. About 1 minute.
@@ -19,7 +19,7 @@ See what a chat's agent works with in the **Context** rail, and switch its tools
 
 ## Switch tools
 
-Open **Tools in this chat** in one of three ways: **Tools** at the bottom of the rail, **+** → **Tools…** in the message box, or `/mcp`.
+**Tools** in the rail lists them; select **Tools** to fold it. **+** → **Tools…** in the message box, or `/mcp`, opens the same list as **Tools in this chat**.
 
 | Group                                                                   | Applies to        | Switch                                                                          |
 | ----------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------- |
@@ -28,7 +28,7 @@ Open **Tools in this chat** in one of three ways: **Tools** at the bottom of the
 | **Claude plugins**                                                      | Every Claude chat | On or off; **Review** and **Flagged** open [Settings](use-claude-plugins.md)    |
 | **Connectors**                                                          | Every chat        | **On**; **Turn on**, **Sign in** or **Connect…** opens Connections → Connectors |
 
-A change applies from the next message. **Manage in Settings** opens MCP servers in Settings; hooks and trust stay in **Agent setup** under the message box.
+A change applies from the next message. **Manage** (or **Manage in Settings**) opens MCP servers in Settings; hooks and trust stay in **Agent setup** under the message box.
 
 ## Open a port
 

@@ -1,6 +1,8 @@
+import { remindUntil } from '@spark-outpost/contracts';
 import { describe, expect, it } from 'vitest';
 import { nextBoundary, nextMinuteMark } from './event-clock.ts';
 import {
+  closeNudge,
   dismissNudge,
   NO_NUDGE_MARKS,
   nudgeHidden,
@@ -11,11 +13,11 @@ import {
 } from './nudge-marks.ts';
 
 describe('nudge marks', () => {
-  it('snoozes for two minutes and dismisses until the meeting ends', () => {
+  it('snoozes for a minute and dismisses until the meeting ends', () => {
     const snoozed = snoozeNudge(NO_NUDGE_MARKS, 'standup', 9_000_000, 1_000_000);
-    expect(nudgeHidden(snoozed, 'standup', 1_119_999)).toBe(true);
-    expect(nudgeHidden(snoozed, 'standup', 1_120_000)).toBe(false);
-    expect(snoozeEnds(snoozed)).toEqual([1_120_000]);
+    expect(nudgeHidden(snoozed, 'standup', 1_059_999)).toBe(true);
+    expect(nudgeHidden(snoozed, 'standup', 1_060_000)).toBe(false);
+    expect(snoozeEnds(snoozed)).toEqual([1_060_000]);
     const dismissed = dismissNudge(snoozed, 'standup', 9_000_000);
     expect(nudgeHidden(dismissed, 'standup', 5_000_000)).toBe(true);
     expect(nudgeHidden(dismissed, 'other', 5_000_000)).toBe(false);
@@ -65,5 +67,22 @@ describe('the next countdown minute', () => {
   it('stays one mark per meeting, however long the meeting runs', () => {
     const year = { start: span.start, end: span.start + 365 * 24 * 60 * MINUTE };
     expect(nextMinuteMark([year, span], 200 * MINUTE)).toBe(200 * MINUTE + 7_000);
+  });
+
+  it('closes a card until the start, or for the rest of its reminders once started', () => {
+    const span = { start: 2_000_000, end: 5_000_000 };
+    const before = closeNudge(NO_NUDGE_MARKS, 'standup', span, 1_000_000);
+    expect(nudgeHidden(before, 'standup', 1_999_999)).toBe(true);
+    expect(nudgeHidden(before, 'standup', 2_000_000)).toBe(false);
+    expect(before.get('standup')?.dismissed).toBe(false);
+    const after = closeNudge(NO_NUDGE_MARKS, 'standup', span, 2_060_000);
+    expect(nudgeHidden(after, 'standup', remindUntil(span) - 1)).toBe(true);
+    expect(after.get('standup')?.dismissed).toBe(false);
+  });
+
+  it('keeps a dismissed meeting dismissed when its card is closed', () => {
+    const span = { start: 2_000_000, end: 5_000_000 };
+    const dismissed = dismissNudge(NO_NUDGE_MARKS, 'standup', span.end);
+    expect(closeNudge(dismissed, 'standup', span, 1_000_000)).toBe(dismissed);
   });
 });

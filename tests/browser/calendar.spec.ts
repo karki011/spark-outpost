@@ -254,7 +254,15 @@ test('the resting island names the next meeting and joins it', async ({ page }) 
   await openNotchIsland(page, { size: 'large', autoExpand: false });
   const bubble = island(page).getByRole('group', { name: 'Meeting Standup' });
   await expect(bubble).toContainText(/^In [1-5] min\s*Standup/);
-  await bubble.getByRole('button', { name: 'Join Zoom: Standup' }).click();
+  const join = bubble.getByRole('button', { name: 'Join Zoom: Standup' });
+  const more = bubble.getByRole('button', { name: 'More actions' });
+  await expect(join.or(bubble.getByRole('button', { name: /^Join at start/ }))).toBeVisible();
+  if (await join.isVisible()) {
+    await join.click();
+  } else {
+    await more.click();
+    await bubble.getByRole('button', { name: 'Join Zoom now' }).click();
+  }
   await expect.poll(() => opened(page)).toEqual(['https://acme.zoom.us/j/123456789']);
 });
 
@@ -335,7 +343,7 @@ test('lists the calendar rows in Notifications and in Settings search', async ({
   await search.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Notifications' });
   await expect(dialog.getByRole('radiogroup', { name: 'Hold chimes during' })).toBeVisible();
-  for (const name of ['Before a meeting', 'Wrap-up reminder']) {
+  for (const name of ['Join opens', 'Wrap-up reminder']) {
     await expect(dialog.getByRole('radiogroup', { name })).toBeVisible();
   }
   for (const name of [
@@ -351,10 +359,10 @@ test('lists the calendar rows in Notifications and in Settings search', async ({
   const names = dialog.getByRole('textbox', { name: 'Focus blocks are events named' });
   await expect(names).toHaveValue('Focus, Deep work, Heads down');
   await dialog
-    .getByRole('radiogroup', { name: 'Before a meeting' })
-    .getByRole('radio', { name: '15 min' })
+    .getByRole('radiogroup', { name: 'Join opens' })
+    .getByRole('radio', { name: '5 min before' })
     .click();
-  await expect.poll(async () => (await status(page)).settings.beforeMinutes).toBe(15);
+  await expect.poll(async () => (await status(page)).settings.joinLead).toBe(5);
   const nudges = dialog.getByRole('group', { name: 'Calendars that nudge' });
   await expect(nudges.getByRole('switch', { name: 'Nudge, Spark Work' })).toBeVisible();
   await expect(nudges.getByRole('checkbox', { name: 'Include Spark Family' })).toBeVisible();

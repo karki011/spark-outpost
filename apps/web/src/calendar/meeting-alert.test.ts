@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CALENDAR_DEFAULT_SETTINGS, type CalendarNow } from '@spark-outpost/contracts';
 import { at, event, link } from './test-fixtures.ts';
 import {
+  autoJoinCovers,
   autoJoinPlan,
   lineUnderAlert,
   meetingAlert,
@@ -163,6 +164,24 @@ describe('autoJoinPlan', () => {
     expect(plan({ presence: { ...here, idleSeconds: 299 } })).toEqual({ join: standup });
   });
 
+  it('joins only a meeting you accepted, or your own with no invitees', () => {
+    expect(plan({ events: [{ ...standup, myStatus: 'accepted' }] })).toEqual({
+      join: { ...standup, myStatus: 'accepted' },
+    });
+    expect(plan({ events: [{ ...standup, myStatus: 'none' }] })).toEqual({
+      join: { ...standup, myStatus: 'none' },
+    });
+    for (const myStatus of ['tentative', 'pending'] as const) {
+      expect(plan({ events: [{ ...standup, myStatus }] })).toEqual({ skip: 'not-accepted' });
+    }
+    expect(plan({ events: [{ ...standup, myStatus: 'declined' }] })).toEqual({ skip: 'declined' });
+  });
+
+  it('still opens a tentative meeting you set to Join at start', () => {
+    const asked = { ...standup, myStatus: 'tentative' as const, joinAtStart: true };
+    expect(plan({ events: [asked], autoJoin: false })).toEqual({ join: asked });
+  });
+
   it('skips an all-day event', () => {
     const allDay = { ...standup, allDay: true };
     expect(plan({ events: [allDay] })).toEqual({ skip: 'all-day' });
@@ -179,8 +198,10 @@ describe('autoJoinPlan for Join at start', () => {
     expect(plan({ events: [asked, design] })).toEqual({ join: asked });
   });
 
-  it('waits for the start', () => {
-    expect(plan({ events: [asked], autoJoin: false, at: at(9, 59) })).toEqual({ skip: 'off' });
+  it('starts its countdown 30 s before the start, so the meeting opens 20 s early', () => {
+    expect(plan({ events: [asked], autoJoin: false, at: at(9, 59, 29) })).toEqual({ skip: 'off' });
+    expect(plan({ events: [asked], autoJoin: false, at: at(9, 59, 30) })).toEqual({ join: asked });
+    expect(plan({ events: [asked], autoJoin: false, at: at(9, 59, 40) })).toEqual({ join: asked });
   });
 
   it('skips when the Mac is away, locked or asleep', () => {
@@ -224,5 +245,42 @@ describe('lineUnderAlert', () => {
   it('keeps lines about other meetings and every line when no card is down', () => {
     expect(lineUnderAlert({ eventKey: later.key, choose: null }, alert)).toBe(false);
     expect(lineUnderAlert({ eventKey: standup.key, choose: null }, null)).toBe(false);
+  });
+});
+
+describe('autoJoinCovers', () => {
+  const start = Date.parse(standup.start);
+  const outlook = {
+    autoJoin: true,
+    holdUntil: null,
+    upcoming: [standup, later],
+    joinLeadMs: 10 * 60_000,
+  };
+
+  it('covers an accepted meeting only while Join meetings automatically is on', () => {
+    expect(autoJoinCovers(standup, outlook)).toBe(true);
+    expect(autoJoinCovers(standup, { ...outlook, autoJoin: false })).toBe(false);
+  });
+
+  it('leaves tentative and unanswered meetings to Join at start', () => {
+    expect(autoJoinCovers({ ...standup, myStatus: 'tentative' }, outlook)).toBe(false);
+    expect(autoJoinCovers({ ...standup, myStatus: 'pending' }, outlook)).toBe(false);
+  });
+
+  it('leaves a meeting to Join at start when a hold lasts past its start', () => {
+    expect(autoJoinCovers(standup, { ...outlook, holdUntil: start + 60_000 })).toBe(false);
+    expect(autoJoinCovers(standup, { ...outlook, holdUntil: start })).toBe(true);
+  });
+
+  it('leaves a meeting to Join at start when another one opens to join by its start', () => {
+    const soon = event('Design review', at(10, 5), at(10, 30), { link: link('zoom') });
+    expect(autoJoinCovers(standup, { ...outlook, upcoming: [standup, soon] })).toBe(false);
+  });
+
+  it('leaves a meeting to Join at start when another one opens before its countdown ends', () => {
+    const opensDuringCountdown = event('Retro', at(10, 10, 5), at(10, 40), { link: link('zoom') });
+    expect(autoJoinCovers(standup, { ...outlook, upcoming: [standup, opensDuringCountdown] })).toBe(
+      false,
+    );
   });
 });

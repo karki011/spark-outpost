@@ -30,7 +30,7 @@ describe('joinChoice', () => {
 
   it('offers a choice when two or more meetings are open, with the group’s other meetings', () => {
     const nudge = {
-      kind: 'before' as const,
+      kind: 'remind' as const,
       eventKey: standup.key,
       title: standup.title,
       startsAt: standup.start,
@@ -38,6 +38,15 @@ describe('joinChoice', () => {
       group: [standup, design, room],
     };
     const choice = joinChoice(now({ upcoming: [standup, design], nudge }), at(9, 55), LEAD);
+    expect(choice && 'choose' in choice ? choice.choose.map((item) => item.title) : []).toEqual([
+      'Standup',
+      'Design sync',
+      'Room booking',
+    ]);
+  });
+
+  it('lists a clashing meeting with no link beside the open ones, with no nudge', () => {
+    const choice = joinChoice(now({ upcoming: [standup, design, room] }), at(9, 55), LEAD);
     expect(choice && 'choose' in choice ? choice.choose.map((item) => item.title) : []).toEqual([
       'Standup',
       'Design sync',

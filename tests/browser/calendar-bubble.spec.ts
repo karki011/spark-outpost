@@ -95,7 +95,14 @@ test('the meeting card hangs from Scout with its details, snoozes through a relo
   await expect(bubble(page)).toContainText('Zoom · Spark Work');
   await expect(bubble(page)).toContainText('Alex Wong, Ivan Marsh');
   await expect(bubble(page)).toContainText('Daily sync: what changed since yesterday.');
-  await expect(bubble(page).getByRole('button', { name: 'Join Zoom: Standup' })).toBeEnabled();
+  await expect(bubble(page).getByRole('button', { name: 'Join at start: Standup' })).toBeEnabled();
+  const actions = bubble(page).locator('.mc-acts');
+  const row = await actions.boundingBox();
+  const buttons = await actions
+    .getByRole('button')
+    .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().top));
+  expect(Math.max(...buttons) - Math.min(...buttons)).toBeLessThan(4);
+  expect(row!.height).toBeLessThan(48);
 
   const response = await page.request.get('/api/calendar/now');
   const meeting = calendarNowSchema
@@ -118,7 +125,8 @@ test('the meeting card hangs from Scout with its details, snoozes through a relo
   await page.reload();
   await expect(bubble(page)).toBeVisible();
 
-  await bubble(page).getByRole('button', { name: 'Open' }).click();
+  await bubble(page).getByRole('button', { name: 'More actions' }).click();
+  await bubble(page).getByRole('button', { name: 'Open in Today' }).click();
   const standup = await eventKeyOf(page, 'Standup', apiNow(), apiNow() + DAY);
   await expect.poll(() => opened(page)).toEqual([`settings:today:${standup}`]);
   await expect(bubble(page)).toBeHidden();
@@ -146,9 +154,28 @@ async function dismissedNow(page: Page): Promise<boolean | undefined> {
     .upcoming.find((event) => event.title === 'Standup')?.dismissed;
 }
 
-test('Dismiss, × and Esc dismiss that meeting for good, even after a reload', async ({ page }) => {
+test('× and Esc close the card until the start; Dismiss in ··· is for good, even after a reload', async ({
+  page,
+}) => {
+  const snoozes = () =>
+    page.evaluate(() => localStorage.getItem('spark-outpost.calendar-snoozes') ?? '[]');
   await openNotchIsland(page, { size: 'large', autoExpand: false });
   await expect(bubble(page)).toBeVisible();
+  await bubble(page).getByRole('button', { name: 'Close the card for Standup' }).click();
+  await expect(bubble(page)).toBeHidden();
+  expect(await dismissedNow(page)).toBe(false);
+  await expect.poll(snoozes).not.toBe('[]');
+
+  await page.evaluate(() => localStorage.removeItem('spark-outpost.calendar-snoozes'));
+  await page.reload();
+  await bubble(page).getByRole('button', { name: 'Close the card for Standup' }).focus();
+  await page.keyboard.press('Escape');
+  await expect(bubble(page)).toBeHidden();
+  expect(await dismissedNow(page)).toBe(false);
+
+  await page.evaluate(() => localStorage.removeItem('spark-outpost.calendar-snoozes'));
+  await page.reload();
+  await bubble(page).getByRole('button', { name: 'More actions' }).click();
   await bubble(page).getByRole('button', { name: 'Dismiss', exact: true }).click();
   await expect(bubble(page)).toBeHidden();
   await expect.poll(() => dismissedNow(page)).toBe(true);
@@ -156,19 +183,7 @@ test('Dismiss, × and Esc dismiss that meeting for good, even after a reload', a
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await page.waitForTimeout(1_000);
   await expect(bubble(page)).toBeHidden();
-
   await undismiss(page);
-  await page.reload();
-  await bubble(page).getByRole('button', { name: 'Dismiss the nudge for Standup' }).click();
-  await expect(bubble(page)).toBeHidden();
-  await expect.poll(() => dismissedNow(page)).toBe(true);
-
-  await undismiss(page);
-  await page.reload();
-  await bubble(page).getByRole('button', { name: 'Dismiss the nudge for Standup' }).focus();
-  await page.keyboard.press('Escape');
-  await expect(bubble(page)).toBeHidden();
-  await expect.poll(() => dismissedNow(page)).toBe(true);
 });
 
 test('Open from the island lands on that day with the meeting selected and in view', async ({

@@ -13,6 +13,7 @@ import {
 } from '@spark-outpost/contracts';
 import { BadRequestError, paramId, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
+import { recordedMeetings } from '../meetings/store.ts';
 import { googleCalendarRoutes } from './google/routes.ts';
 import { GoogleApiError } from './google/api.ts';
 import { GoogleAuthError } from './google/oauth.ts';
@@ -48,6 +49,8 @@ export interface CalendarRouteDeps {
   googleCalendar?: GoogleSource | null;
   now?: () => number;
 }
+
+const CAPTURE_LOOKBACK_MS = 24 * 60 * 60_000;
 
 const HOST_STATUS: Record<CalendarHostError['code'], number> = {
   invalid: 400,
@@ -182,7 +185,13 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
   router.get('/calendar/now', (_req, res) =>
     guarded(res, async () => {
       const state = await calendarState(service);
-      return calendarNow(state, await plannerChats(deps.db, deps.workspaceId), now());
+      const at = now();
+      const recorded = await recordedMeetings(
+        deps.db,
+        deps.workspaceId,
+        new Date(at - CAPTURE_LOOKBACK_MS),
+      );
+      return calendarNow(state, await plannerChats(deps.db, deps.workspaceId), at, recorded);
     }),
   );
 

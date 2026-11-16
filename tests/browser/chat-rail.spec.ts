@@ -222,7 +222,12 @@ test.describe('plain chats', () => {
     await expect(rail(page)).toBeFocused();
     expect((await page.locator('.col').boundingBox())!.width).toBe(columnWidth);
     const tools = rail(page).getByRole('region', { name: 'Tools' });
-    await expect(tools.getByRole('button', { name: /^Tools/ })).toContainText('MCP server');
+    await expect(tools.getByRole('button', { name: 'Tools' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    await expect(tools.getByRole('heading', { name: /^MCP servers/ })).toBeVisible();
+    await expect(tools.getByRole('heading', { name: /^Connectors/ })).toBeVisible();
     const axe = await new AxeBuilder({ page })
       .include('.crail')
       .disableRules(['heading-order'])
@@ -246,11 +251,16 @@ test.describe('plain chats', () => {
     await expect(workPanel(page)).toBeVisible();
     await shoot(page, 'overlay-1280-work-panel');
 
-    await rail(page)
-      .getByRole('button', { name: /^Tools/ })
-      .click();
-    await expect(rail(page)).toHaveCount(0);
-    await expect(page.getByRole('dialog', { name: 'Tools in this chat' })).toBeVisible();
+    const fold = rail(page)
+      .getByRole('region', { name: 'Tools' })
+      .getByRole('button', {
+        name: /^Tools/,
+      });
+    await fold.click();
+    await expect(rail(page)).toBeVisible();
+    await expect(fold).toHaveAttribute('aria-expanded', 'false');
+    await expect(fold).toContainText('MCP server');
+    await expect(page.getByRole('dialog', { name: 'Tools in this chat' })).toHaveCount(0);
   });
 
   test('On wide windows picks the rail, the work panel or an empty margin', async ({ page }) => {

@@ -41,7 +41,7 @@ export interface PushNotifierOptions {
 
 export interface PushNotifier {
   changed(event: AppEvent): void;
-  meeting(minutes: 5 | 10 | 15): void;
+  meeting(minutes: number): void;
   test(deviceId: string): Promise<PushTestResult>;
   release(): void;
   settled(): Promise<void>;
@@ -166,7 +166,7 @@ export function startPushNotifier(
     };
   }
 
-  async function sendMeeting(minutes: 5 | 10 | 15): Promise<void> {
+  async function sendMeeting(minutes: number): Promise<void> {
     const ready = await sender();
     if (!ready) return;
     const payload = JSON.stringify(meetingPush(minutes));

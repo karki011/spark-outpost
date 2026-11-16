@@ -29,7 +29,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | **Open requests by themselves**, **Island chimes**                                                                                                            | On, off                                                | [Island](desktop-companion.md#answer-a-card)            |
 | **Hide in screen sharing**                                                                                                                                    | On                                                     | [Island](desktop-companion.md#turn-it-on-and-size-it)   |
 | **Quick chat shortcut**, **Inbox shortcut**                                                                                                                   | ⌥Space, ⌥⇧Space                                        | [Shortcuts](companion-quick-chat.md#change-a-shortcut)  |
-| Mac app: **Add today’s calendar to the brief**, **Meetings**, **Meeting alerts**, **Alert at**, **Join opens**                                                | On, 10 min, **Center of the screen**, at start, 10 min | [Calendar](calendar.md)                                 |
+| Mac app: **Add today’s calendar to the brief**, **Wrap-up reminder**, **Join opens**, **Meeting alerts**, **Alert at**                                        | On, 15 min, 10 min, **Center of the screen**, at start | [Calendar](calendar.md)                                 |
 | **Join meetings automatically**, **Take notes when I join a meeting**, **Hold chimes during**, **Calendars that nudge**, **Meeting alerts on paired devices** | Off, off, **Focus blocks**, all, off                   | [Calendar](calendar.md)                                 |
 
 ### Spark assistant

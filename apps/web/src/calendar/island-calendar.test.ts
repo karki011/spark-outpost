@@ -24,7 +24,7 @@ function nudge(kind: CalendarNudge['kind'], title: string, startsAt: number): Ca
 
 function beforeNudge(lead: CalendarEvent, group: CalendarEvent[]): CalendarNudge {
   return {
-    kind: 'before',
+    kind: 'remind',
     eventKey: lead.key,
     title: lead.title,
     startsAt: lead.start,
@@ -61,17 +61,11 @@ const input = (calendar: CalendarNow | null, extra = {}) => ({
 
 describe('nudgeText', () => {
   it('counts down to the meeting from its start and names the chats that need you', () => {
-    const before = nudge('before', 'Standup', at(10));
+    const before = nudge('remind', 'Standup', at(10));
     expect(nudgeText(before, at(9, 50), 2)).toBe('Standup in 10 min · 2 chats need you');
     expect(nudgeText(before, at(9, 50, 30), 1)).toBe('Standup in 10 min · 1 chat needs you');
     expect(nudgeText(before, at(9, 52), 0)).toBe('Standup in 8 min');
     expect(nudgeText(before, at(10), 0)).toBe('Standup now');
-  });
-
-  it('reminds without the chat count', () => {
-    expect(nudgeText(nudge('remind', 'Design review', at(10)), at(9, 55), 3)).toBe(
-      'Design review in 5 min',
-    );
   });
 
   it('names the chat a wrap-up is about', () => {
@@ -125,6 +119,24 @@ describe('a wrap-up about a chat', () => {
     );
   });
 
+  it('gives way to the Join line of an earlier meeting, and keeps it for its own meeting', () => {
+    const standup = event('Standup', at(10), at(10, 10), { link: link('zoom') });
+    const review = event('Design review', at(10, 10), at(10, 30), { link: link('zoom') });
+    const running = chatStates([chat(CHAT, { latestRun: { status: 'running' } as never })]);
+    const calendar = now({
+      upcoming: [standup, review],
+      nudge: { ...wrapUp(), eventKey: review.key, title: review.title, startsAt: review.start },
+    });
+    const line = calendarLine(input(calendar, { at: at(9, 59), chats: running }));
+    expect(line?.kind).toBe('join');
+    expect(line?.event?.key).toBe(standup.key);
+    const own = now({
+      upcoming: [review],
+      nudge: { ...wrapUp(), eventKey: review.key, title: review.title, startsAt: review.start },
+    });
+    expect(calendarLine(input(own, { at: at(10, 5), chats: running }))?.kind).toBe('nudge');
+  });
+
   it('stays a line about the chat when the meeting is on the calendar, not a meeting card', () => {
     const review = event('Design review', at(10, 5), at(10, 30), { link: link('zoom') });
     const running = chatStates([chat(CHAT, { latestRun: { status: 'running' } as never })]);
@@ -170,8 +182,7 @@ describe('calendarLine', () => {
   };
   const capture = {
     eventKey: 'review@x',
-    eventId: 'review',
-    start: iso(at(9)),
+    meetingId: '00000000-0000-4000-8000-0000000000cc',
     title: 'Design review',
   };
   const catchUp = { label: 'Focus', tally: tallyHeld(NO_HELD, 'needs') };
@@ -183,16 +194,20 @@ describe('calendarLine', () => {
   });
 
   it('puts the meeting nudge first, even in a hold, then the hold, catch-up and capture', () => {
-    const all = now({ hold, capture, nudge: nudge('before', 'Standup', at(10)) });
+    const all = now({ hold, capture, nudge: nudge('remind', 'Standup', at(10)) });
     expect(calendarLine(input(all, { catchUp }))?.text).toBe('Standup in 10 min');
     const quiet = { ...all, nudge: null };
     expect(calendarLine(input(quiet, { catchUp }))?.text).toBe(
       'Focus · alerts held until 11:30 AM',
     );
     expect(calendarLine(input({ ...quiet, hold: null }, { catchUp }))?.dismiss).toBe('catch_up');
-    expect(calendarLine(input({ ...quiet, hold: null }))?.text).toBe(
-      'Design review ended · anything to capture?',
-    );
+    const captured = calendarLine(input({ ...quiet, hold: null }));
+    expect(captured?.text).toBe('Design review ended · anything to capture?');
+    expect(captured?.meeting).toEqual({
+      lead: 'Ended',
+      title: 'Design review',
+      sub: 'Anything to capture?',
+    });
     expect(
       calendarLine(input({ ...quiet, hold: null }, { dismissed: new Set(['review@x']) })),
     ).toBeNull();
@@ -224,7 +239,7 @@ describe('calendarLine', () => {
     const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });
     const calendar = now({
       upcoming: [standup],
-      nudge: { ...nudge('before', 'Standup', at(10)), eventKey: standup.key },
+      nudge: { ...nudge('remind', 'Standup', at(10)), eventKey: standup.key },
     });
     expect(calendarLine(input(calendar))?.join?.key).toBe(standup.key);
     expect(calendarLine(input({ ...calendar, nudge: null }, { at: at(9, 45) }))).toBeNull();
@@ -233,15 +248,20 @@ describe('calendarLine', () => {
     expect(late?.join?.link?.host).toBe('acme.zoom.us');
   });
 
-  it('hops once per meeting nudge, not for a wrap-up', () => {
-    expect(hopKeys(now({ nudge: nudge('before', 'Standup', at(10)) }))).toEqual([
-      'before:Standup@x',
-    ]);
-    expect(hopKeys(now({ nudge: nudge('remind', 'Standup', at(10)) }))).toEqual([
-      'remind:Standup@x',
-    ]);
-    expect(hopKeys(now({ nudge: nudge('wrap_up', 'Standup', at(10)) }))).toEqual([]);
-    expect(hopKeys(now({ active: false, nudge: nudge('before', 'Standup', at(10)) }))).toEqual([]);
+  it('hops once per meeting line: Remind me and Join opens, not a wrap-up or capture', () => {
+    const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });
+    const remind = now({
+      upcoming: [standup],
+      nudge: { ...nudge('remind', 'Standup', at(10)), eventKey: standup.key },
+    });
+    expect(hopKeys(calendarLine(input(remind)))).toEqual([`meeting:${standup.key}`]);
+    const joinOpen = calendarLine(input({ ...remind, nudge: null }));
+    expect(joinOpen?.kind).toBe('join');
+    expect(hopKeys(joinOpen)).toEqual([`meeting:${standup.key}`]);
+    const wrapUp = now({ nudge: nudge('wrap_up', 'Standup', at(10)) });
+    expect(hopKeys(calendarLine(input(wrapUp)))).toEqual([]);
+    expect(hopKeys(calendarLine(input(now({ capture }))))).toEqual([]);
+    expect(hopKeys(null)).toEqual([]);
   });
 
   it('turns meetings that start together into one Choose line and one hop', () => {
@@ -249,7 +269,7 @@ describe('calendarLine', () => {
     const design = event('Design sync', at(10), at(10, 30), { link: link('meet') });
     const room = event('Room booking', at(10), at(10, 30));
     const grouped = {
-      ...nudge('before', 'Standup', at(10)),
+      ...nudge('remind', 'Standup', at(10)),
       eventKey: standup.key,
       group: [standup, design, room],
     };
@@ -262,11 +282,31 @@ describe('calendarLine', () => {
       'Design sync',
       'Room booking',
     ]);
-    expect(line?.key).toBe(`before:${standup.key}:3`);
-    expect(hopKeys(calendar)).toEqual([
-      `before:${standup.key}`,
-      `before:${design.key}`,
-      `before:${room.key}`,
+    expect(line?.key).toBe(`remind:${standup.key}:3`);
+    expect(hopKeys(line)).toEqual([
+      `meeting:${standup.key}`,
+      `meeting:${design.key}`,
+      `meeting:${room.key}`,
+    ]);
+  });
+
+  it('groups meetings that overlap once Join opens into one Choose line', () => {
+    const standup = event('Standup', at(10), at(10, 15), { link: link('zoom') });
+    const design = event('Design sync', at(10), at(10, 30), { link: link('meet') });
+    const room = event('Room booking', at(10), at(10, 30));
+    const later = event('Retro', at(10, 15), at(10, 45), { link: link('zoom') });
+    const line = calendarLine(input(now({ upcoming: [standup, design, room, later] })));
+    expect(line?.kind).toBe('join');
+    expect(line?.choose?.map((item) => item.title)).toEqual([
+      'Standup',
+      'Design sync',
+      'Room booking',
+    ]);
+    expect(line?.join).toBeNull();
+    expect(hopKeys(line)).toEqual([
+      `meeting:${standup.key}`,
+      `meeting:${design.key}`,
+      `meeting:${room.key}`,
     ]);
   });
 
@@ -306,14 +346,14 @@ describe('calendarLine', () => {
       expect(calendarLine(input(grouped, { at: at(10, 5) }))).toBeNull();
     });
 
-    it('hides a dismissed meeting for good and a snoozed one for two minutes', () => {
+    it('hides a dismissed meeting for good and a snoozed one for a minute', () => {
       const end = Date.parse(standup.end);
       const dismissed = dismissNudge(NO_NUDGE_MARKS, standup.key, end);
       expect(calendarLine(input(single, { at: at(9, 51), marks: dismissed }))).toBeNull();
       expect(calendarLine(input(single, { at: at(10, 5), marks: dismissed }))).toBeNull();
       const snoozed = snoozeNudge(NO_NUDGE_MARKS, standup.key, end, at(9, 50));
-      expect(calendarLine(input(single, { at: at(9, 51), marks: snoozed }))).toBeNull();
-      expect(calendarLine(input(single, { at: at(9, 52), marks: snoozed }))).not.toBeNull();
+      expect(calendarLine(input(single, { at: at(9, 50, 59), marks: snoozed }))).toBeNull();
+      expect(calendarLine(input(single, { at: at(9, 51), marks: snoozed }))).not.toBeNull();
     });
 
     it('leaves a snoozed or dismissed meeting out of the Choose line', () => {
@@ -323,11 +363,11 @@ describe('calendarLine', () => {
       });
       const end = Date.parse(standup.end);
       const snoozed = snoozeNudge(NO_NUDGE_MARKS, standup.key, end, at(9, 50));
-      const line = calendarLine(input(grouped, { at: at(9, 51), marks: snoozed }));
+      const line = calendarLine(input(grouped, { at: at(9, 50, 30), marks: snoozed }));
       expect(line?.choose).toBeNull();
       expect(line?.event?.key).toBe(design.key);
       const both = dismissNudge(snoozed, design.key, Date.parse(design.end));
-      expect(calendarLine(input(grouped, { at: at(9, 51), marks: both }))).toBeNull();
+      expect(calendarLine(input(grouped, { at: at(9, 50, 30), marks: both }))).toBeNull();
     });
 
     it('never brings a snoozed meeting back after it ended', () => {
