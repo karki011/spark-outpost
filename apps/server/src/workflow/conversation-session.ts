@@ -38,12 +38,14 @@ export interface ConversationDecisionInput {
 
 const fresh = (freshReason: string | null): ResumeDecision => ({ resume: null, freshReason });
 
+export function resumesNextTurn(closeReason: string | null): boolean {
+  return closeReason === null || !CLOSED_BY_THE_USER.has(closeReason);
+}
+
 export function decideConversationResume(input: ConversationDecisionInput): ResumeDecision {
   const { stored } = input;
   if (!stored) return fresh(null);
-  if (stored.closeReason !== null && CLOSED_BY_THE_USER.has(stored.closeReason)) {
-    return fresh(stored.closeReason);
-  }
+  if (!resumesNextTurn(stored.closeReason)) return fresh(stored.closeReason);
   const resume: StoredSession = {
     sessionId: stored.sessionId,
     cwd: stored.cwd,

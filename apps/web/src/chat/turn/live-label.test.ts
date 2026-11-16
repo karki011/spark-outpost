@@ -32,6 +32,22 @@ describe('leadStep', () => {
     expect(leadStep({ ...none, steps })).toEqual({ label: 'Changing Jira', since: 5 });
   });
 
+  it('carries the streaming thought of an open Thinking step, and nothing for other steps', () => {
+    const thinking = { name: 'Thinking', done: false, startedAt: 3, thought: '  Check the tests ' };
+    expect(leadStep({ ...none, steps: [thinking] })).toEqual({
+      label: 'Thinking',
+      since: 3,
+      thought: 'Check the tests',
+    });
+    expect(leadStep({ ...none, steps: [{ ...thinking, thought: ' ' }] })).toEqual({
+      label: 'Thinking',
+      since: 3,
+    });
+    expect(leadStep({ ...none, steps: [{ ...thinking, name: 'Read `a.ts`' }] }).thought).toBe(
+      undefined,
+    );
+  });
+
   it('says Publishing after the reply and Thinking when nothing is open', () => {
     const steps = [{ name: 'Read `a.ts`', done: true }];
     expect(leadStep({ ...none, steps, publishing: { since: 9 } })).toEqual({

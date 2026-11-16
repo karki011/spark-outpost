@@ -197,6 +197,45 @@
   white-space: nowrap;
 }
 
+.turn-working-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0 4px;
+  margin-left: -4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.turn-working-toggle:hover {
+  background: var(--raise);
+}
+
+.turn-working-toggle .chev {
+  flex-shrink: 0;
+  color: var(--faint);
+  transition: transform 0.15s var(--out);
+}
+
+.turn-working-toggle[aria-expanded='true'] .chev {
+  transform: rotate(90deg);
+}
+
+.turn-working-thought {
+  margin-left: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .turn-working-toggle .chev {
+    transition: none;
+  }
+}
+
 .turn-working-turn {
   flex-shrink: 0;
   font-size: 12px;

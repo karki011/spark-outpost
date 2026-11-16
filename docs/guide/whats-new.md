@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                          | What to do                                                     |
 | ----------------------------------------------------- | -------------------------------------------------------------- |
 | Home: message box, Needs you, Working set             | [Read Home](home.md).                                          |
+| **Thinking** expands; `/compact` listed               | [Follow a turn](follow-a-turn.md#see-whats-happening).         |
 | One meeting card; Join takes notes                    | [Take meeting notes](meetings.md).                             |
 | Saved sign-ins type with no card                      | [Save a test sign-in](use-the-browser.md#save-a-test-sign-in). |
 | Browser: address at top, one chat per tab             | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).   |
@@ -62,4 +63,3 @@ summary: What changed in recent releases and what to do next.
 | Chats take the agent session title   | Nothing.                             |
 | Send a test notification to a device | [Use your phone](use-your-phone.md). |
 | Tag for a sub-agent on another model | [Pick the model](agent-mode.md).     |
-| Softer theme edge; effort shows High | Nothing.                             |

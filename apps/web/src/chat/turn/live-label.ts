@@ -2,17 +2,24 @@ import { friendlyStep, type SubagentRow } from '@spark-outpost/contracts';
 import type { CommandView } from '../commands/command-model.ts';
 import { commandTitle } from '../commands/command-title.ts';
 import type { RunStep } from '../run-projection.ts';
+import { stepKind } from '../status/step-activity.ts';
 
 export interface LeadStep {
   label: string;
   since: number | null;
+  thought?: string;
 }
 
 export interface LeadInput {
   subagents: readonly Pick<SubagentRow, 'state'>[];
   commands: readonly Pick<CommandView, 'status' | 'description' | 'command' | 'startedAt'>[];
-  steps: readonly Pick<RunStep, 'name' | 'done' | 'subagent' | 'waits' | 'startedAt'>[];
+  steps: readonly Pick<RunStep, 'name' | 'done' | 'subagent' | 'waits' | 'startedAt' | 'thought'>[];
   publishing: { since: number | null } | null;
+}
+
+function liveThought(step: Pick<RunStep, 'name' | 'thought'>): { thought?: string } {
+  const thought = step.thought?.trim();
+  return thought && stepKind(step.name) === 'think' ? { thought } : {};
 }
 
 function timeOf(iso: string): number | null {
@@ -32,7 +39,7 @@ export function leadStep({ subagents, commands, steps, publishing }: LeadInput):
   const open = steps.findLast((step) => !step.done && !step.subagent && !step.waits);
   if (open) {
     const label = friendlyStep(open.name).replaceAll('`', '').trim();
-    return { label: label || 'Working', since: open.startedAt ?? null };
+    return { label: label || 'Working', since: open.startedAt ?? null, ...liveThought(open) };
   }
   if (publishing) return { label: 'Publishing', since: publishing.since };
   return { label: 'Thinking', since: null };

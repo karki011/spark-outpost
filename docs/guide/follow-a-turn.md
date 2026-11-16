@@ -10,12 +10,12 @@ About 2 minutes.
 
 ## See what's happening
 
-1. The working line shows the step and time.
+1. The working line shows step and time; **Thinking** expands.
 2. Answered cards and flags stay; waiting cards sit last.
 3. Summaries separate commands **passed** from tools **done**.
 4. Browser, web, page and Mac steps get rows.
 5. Code Mode labels discovery and reads; failures expand.
-6. Edits show **+N −M** and open as diffs.
+6. Edits show **+N −M**; open as diffs.
 7. A done to-do folds.
 8. Sidebar blobs show the **Agent TV** team.
 9. **View agents** opens **Work**; over four become clickable faces.

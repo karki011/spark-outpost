@@ -61,8 +61,13 @@ function isCalloutKind(kind: Counted['kind']): kind is CalloutKind {
   return Object.hasOwn(CALLOUT_PHRASES, kind);
 }
 
+function isNote(item: GroupedItem): boolean {
+  return item.kind === 'tool' && item.tone === 'other' && !item.callout;
+}
+
 function counts(group: RowGroup): Counted[] {
-  const byKind = (kind: Counted['kind']) => group.items.filter((item) => stepKind(item) === kind);
+  const counted = group.items.filter((item) => !isNote(item));
+  const byKind = (kind: Counted['kind']) => counted.filter((item) => stepKind(item) === kind);
   const tools = (kind: Counted['kind']) =>
     byKind(kind).filter((item): item is ToolItem => item.kind === 'tool');
   return ORDER.map((kind) => {
