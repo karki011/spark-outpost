@@ -10,7 +10,7 @@ import { commandOutputKey, fetchCommandOutput } from './command-api.ts';
 import { CommandDockContext } from './command-dock.ts';
 import type { CommandAnswer } from './command-answers.ts';
 import { commandOutcome, type CommandView } from './command-model.ts';
-import { commandTitle } from './command-title.ts';
+import { commandLine, commandTitle, commandVerb } from './command-title.ts';
 import { CommandScreen } from './CommandScreen.tsx';
 import { CommandWord } from './CommandStatus.tsx';
 import { useCommandUi } from './command-ui.ts';
@@ -47,11 +47,12 @@ function useTerminalUi(command: CommandView) {
 }
 
 function CommandTitle({ command }: { command: CommandView }) {
+  const verb = commandVerb(command, command.status === 'running');
   return (
     <span className="trow-text">
-      {!isMcpToolName(command.command) && (
+      {verb && (
         <>
-          <span className="trow-verb">{command.status === 'running' ? 'Running' : 'Ran'}</span>{' '}
+          <span className="trow-verb">{verb}</span>{' '}
         </>
       )}
       <span className="trow-name">{commandTitle(command)}</span>
@@ -140,9 +141,7 @@ export const CommandTerminal = memo(function CommandTerminal({
         </button>
       </div>
       <span className="sr-only" role="status">
-        {running
-          ? `${tool ? '' : 'Running '}${commandTitle(command).slice(0, 120)}`
-          : commandOutcome(command)}
+        {running ? commandLine(command, true).slice(0, 120) : commandOutcome(command)}
       </span>
       <div className="run-cmd-body" id={bodyId} hidden={!open}>
         {open && (

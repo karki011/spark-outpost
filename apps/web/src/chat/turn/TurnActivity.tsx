@@ -32,7 +32,7 @@ export function TurnActivity({
       {background ? (
         <BackgroundWork runId={run.id} background={background} />
       ) : (
-        <WorkingLine run={run} step={lead} />
+        <WorkingLine run={run} step={lead.repeatsRow ? { label: 'Working', since: null } : lead} />
       )}
       {agents}
     </>

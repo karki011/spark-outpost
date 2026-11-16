@@ -132,12 +132,11 @@ test('Agent TV redirects through the lead composer without replacing a draft or 
     ),
   );
   const input = await ask(page, 'Split the work #build #subagentshold');
-  await expect(page.locator('.msg.ai').last().locator('.turn-working')).toContainText(
-    'Running 2 agents',
-    {
-      timeout: 30_000,
-    },
-  );
+  const working = page.locator('.msg.ai').last();
+  await expect(working.locator('.sl-worker .sl-state')).toHaveText(['Working', 'Working'], {
+    timeout: 30_000,
+  });
+  await expect(working.locator('.turn-working b')).toHaveText('Working');
   await input.fill('Keep my draft');
   const before = await page.locator('.msg.user').count();
   await toggleHeaderPane(page, 'Agent TV');
@@ -180,12 +179,13 @@ test('a turn shows its sub-agents as one line and as cards in the work panel, an
 }) => {
   const input = await ask(page, 'Split the work #build #subagentshold');
   const turn = page.locator('.msg.ai').last();
-  await expect(turn.locator('.turn-working')).toContainText('Running 2 agents', {
+  await expect(turn.locator('.sl-worker .sl-state')).toHaveText(['Working', 'Working'], {
     timeout: 30_000,
   });
+  await expect(turn.locator('.turn-working b')).toHaveText('Working');
+  await expect(turn.locator('.turn-working')).not.toContainText('Running');
   await expect(turn.getByRole('list', { name: 'Agent progress' })).toBeVisible();
   await expect(turn.locator('.sl-worker .sl-name')).toHaveText(['Explorer', 'Tests']);
-  await expect(turn.locator('.sl-worker .sl-state')).toHaveText(['Working', 'Working']);
   await expect(turn.locator('.sl-worker .chat-face')).toHaveCount(2);
   await expect(turn.locator('.sl-scout[data-working]')).toHaveCount(0);
   await expect(mood(page)).toHaveText('waiting on 2 sub-agents');
