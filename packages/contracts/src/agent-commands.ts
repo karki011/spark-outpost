@@ -20,6 +20,9 @@ const HARNESS_OWNS_MODE = 'Spark Outpost sets the mode, model and permissions';
 const HARNESS_OWNS_SESSION = 'Spark Outpost manages the agent session';
 const HARNESS_OWNS_SETUP = 'it changes the agent setup outside Spark Outpost';
 const HARNESS_OWNS_SIGN_IN = 'sign-in is managed in Settings';
+const NOT_IN_AGENT_SDK = "Claude's Agent SDK has no fast mode";
+const NEEDS_HOOKS = "it needs Claude's hooks, which Spark Outpost turns off";
+const WIZARD_REMOVED = 'Claude removed it; ask the agent to create a subagent instead';
 
 const BLOCKED_AGENT_COMMANDS: Readonly<Record<string, string>> = {
   'add-dir': HARNESS_OWNS_MODE,
@@ -27,7 +30,7 @@ const BLOCKED_AGENT_COMMANDS: Readonly<Record<string, string>> = {
   approvals: HARNESS_OWNS_MODE,
   config: HARNESS_OWNS_MODE,
   effort: HARNESS_OWNS_MODE,
-  fast: HARNESS_OWNS_MODE,
+  fast: NOT_IN_AGENT_SDK,
   mode: HARNESS_OWNS_MODE,
   model: HARNESS_OWNS_MODE,
   permissions: HARNESS_OWNS_MODE,
@@ -37,13 +40,13 @@ const BLOCKED_AGENT_COMMANDS: Readonly<Record<string, string>> = {
   clear: HARNESS_OWNS_SESSION,
   exit: HARNESS_OWNS_SESSION,
   fork: HARNESS_OWNS_SESSION,
-  goal: HARNESS_OWNS_SESSION,
+  goal: NEEDS_HOOKS,
   new: HARNESS_OWNS_SESSION,
   quit: HARNESS_OWNS_SESSION,
   reset: HARNESS_OWNS_SESSION,
   resume: HARNESS_OWNS_SESSION,
   rewind: HARNESS_OWNS_SESSION,
-  agents: HARNESS_OWNS_SETUP,
+  agents: WIZARD_REMOVED,
   hooks: HARNESS_OWNS_SETUP,
   ide: HARNESS_OWNS_SETUP,
   'install-github-app': HARNESS_OWNS_SETUP,

@@ -39,6 +39,7 @@ import { useAttachments } from './attachments/use-attachments.ts';
 import { useFileDrop } from './attachments/use-file-drop.ts';
 import { ChatHeadTools } from './ChatHeadTools.tsx';
 import { Composer } from './Composer.tsx';
+import { useAgentCommands } from './composer/use-agent-commands.ts';
 import { ComposerStatus } from './status/ComposerStatus.tsx';
 import { ChatContexts } from './ChatContexts.tsx';
 import { useChatAgents } from './subagents/use-chat-agents.ts';
@@ -133,13 +134,12 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: queryKeys.agentCommands(conversationId) }),
   });
-  const commands = useQuery({
-    queryKey: queryKeys.agentCommands(conversationId),
-    queryFn: () => api.getAgentCommands(conversationId),
-    enabled: (detail.data?.runs.length ?? 0) > 0,
-  });
-
   const running = activeRun(detail.data);
+  const commands = useAgentCommands(
+    conversationId,
+    (detail.data?.runs.length ?? 0) > 0,
+    running?.id ?? null,
+  );
   const pane = useChatPane();
   useEscapeStop(running !== null && pane.focused, stop.stop);
   const waitingOn = running ? (detail.data?.conversation.latestRun?.waitingOn ?? 0) : 0;

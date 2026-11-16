@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                    | What to do                                                     |
 | ----------------------------------------------- | -------------------------------------------------------------- |
 | Home: message box, Needs you, Working set       | [Read Home](home.md).                                          |
+| **Thinking** expands; `/compact` listed         | [Follow a turn](follow-a-turn.md#see-whats-happening).         |
 | Saved sign-ins type with no card                | [Save a test sign-in](use-the-browser.md#save-a-test-sign-in). |
 | Browser: address at top, one chat per tab       | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).   |
 | Context rail: full height; **Tools** in **+**   | [See a chat's context](context-rail.md).                       |
@@ -62,4 +63,3 @@ summary: What changed in recent releases and what to do next.
 | Map: **Running chats** overlay      | [Map](map.md).                       |
 | Tickets: parent, subtasks and links | [Tickets](tickets-inbox.md).         |
 | Phone says **Can't reach your Mac** | Nothing.                             |
-| Chats take the agent session title  | Nothing.                             |

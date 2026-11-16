@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createConversation } from '../src/persistence/conversations.ts';
+import { SESSION_CLOSE_REASONS } from '../src/persistence/provider-sessions.ts';
 import { prepareTurnSession } from '../src/workflow/turn-session.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import {
@@ -64,6 +65,20 @@ describe('agent commands per session', () => {
       provider: 'claude',
       commands: [commands[0], commands[2]],
     });
+
+    const listAfterClose = async (reason: string) => {
+      await t.db.query(
+        'UPDATE provider_sessions SET closed_at = now(), close_reason = $2 WHERE conversation_id = $1',
+        [id, reason],
+      );
+      const response = await request(app)
+        .get(`/api/conversations/${id}/agent-commands`)
+        .set(LOCAL_HEADERS)
+        .set('Origin', ORIGIN);
+      return response.body.commands;
+    };
+    expect(await listAfterClose('idle')).toEqual([commands[0], commands[2]]);
+    expect(await listAfterClose(SESSION_CLOSE_REASONS.fresh)).toEqual([]);
   });
 
   it('answers 404 for an unknown chat', async () => {

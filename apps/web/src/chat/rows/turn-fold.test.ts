@@ -51,6 +51,16 @@ describe('turn fold', () => {
     expect(foldSummary(parts)).toBe('edited 1 file, read 2 files');
   });
 
+  it('counts no search for notes such as a sent command or a compaction', () => {
+    const notes = rows('n1', [
+      done('Sent /compact to Claude'),
+      done('Compacting the chat'),
+      done('Context compacted'),
+      done('Search for `x` in `src`'),
+    ]);
+    expect(foldSummary([notes])).toBe('searched once');
+  });
+
   it('has nothing to fold when the turn is only its answer', () => {
     expect(canFold([text('t1', 'Done.')])).toBe(false);
     expect(canFold(parts)).toBe(true);
