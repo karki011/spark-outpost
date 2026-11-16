@@ -118,8 +118,13 @@ function acceptedOrOwn(event: CalendarEvent): boolean {
   return event.myStatus === 'accepted' || event.myStatus === 'none';
 }
 
-export function autoJoinCovers(event: CalendarEvent, autoJoin: boolean): boolean {
-  return autoJoin && acceptedOrOwn(event);
+export function autoJoinCovers(
+  event: CalendarEvent,
+  autoJoin: boolean,
+  holdUntil: number | null,
+): boolean {
+  const heldAtStart = holdUntil !== null && holdUntil > spanOf(event).start;
+  return autoJoin && acceptedOrOwn(event) && !heldAtStart;
 }
 
 function autoSkipFor(event: CalendarEvent, input: AutoJoinInput): AutoJoinSkip | null {

@@ -50,7 +50,7 @@ export interface MeetingService {
   announce(meetingId: string): void;
   status(): Promise<MeetingStatus>;
   start(request: StartMeetingRequest): Promise<Meeting>;
-  started(meetingId: string): Promise<void>;
+  started(): Promise<void>;
   stop(meetingId: string): Promise<Meeting | null>;
   remove(meetingId: string): Promise<boolean>;
   recover(): Promise<void>;
@@ -134,7 +134,16 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
     }
   }
 
-  const starting = new Map<string, Promise<void>>();
+  const starting = new Set<Promise<void>>();
+
+  async function createRecording(request: StartMeetingRequest): Promise<Meeting> {
+    try {
+      return await createMeeting(db, workspaceId, request);
+    } catch (error) {
+      if (error instanceof MeetingAlreadyRecording) throw new MeetingError(409, error.message);
+      throw error;
+    }
+  }
 
   async function startSource(active: MeetingSource, meetingId: string): Promise<void> {
     try {
@@ -167,32 +176,24 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
       if (!source || !ready.available) {
         throw new MeetingError(503, ready.reason ?? MEETINGS_NEED_THE_MAC_APP);
       }
-      let meeting: Meeting;
+      let settle: () => void = () => undefined;
+      const startup = new Promise<void>((resolve) => {
+        settle = resolve;
+      });
+      starting.add(startup);
       try {
-        meeting = await createMeeting(db, workspaceId, request);
-      } catch (error) {
-        if (error instanceof MeetingAlreadyRecording) throw new MeetingError(409, error.message);
-        throw error;
-      }
-      announce(meeting.id);
-      const startup = startSource(source, meeting.id);
-      starting.set(
-        meeting.id,
-        startup.then(
-          () => undefined,
-          () => undefined,
-        ),
-      );
-      try {
-        await startup;
+        const meeting = await createRecording(request);
+        announce(meeting.id);
+        await startSource(source, meeting.id);
+        return (await getMeeting(db, workspaceId, meeting.id)) ?? meeting;
       } finally {
-        starting.delete(meeting.id);
+        settle();
+        starting.delete(startup);
       }
-      return (await getMeeting(db, workspaceId, meeting.id)) ?? meeting;
     },
 
-    async started(meetingId) {
-      await starting.get(meetingId);
+    async started() {
+      await Promise.all(starting);
     },
 
     async stop(meetingId) {

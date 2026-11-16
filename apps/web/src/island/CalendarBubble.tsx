@@ -86,7 +86,7 @@ function LeadAction({ event, calendar }: { event: CalendarEvent; calendar: Islan
     <JoinAtStartButton
       title={event.title}
       className="mc-btn primary"
-      autoJoin={autoJoinCovers(event, calendar.autoJoin)}
+      autoJoin={autoJoinCovers(event, calendar.autoJoin, calendar.holdUntil)}
       onAsk={() => calendar.onJoinAtStart(event)}
     />
   );

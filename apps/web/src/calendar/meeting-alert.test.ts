@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CALENDAR_DEFAULT_SETTINGS, type CalendarNow } from '@spark-outpost/contracts';
 import { at, event, link } from './test-fixtures.ts';
 import {
+  autoJoinCovers,
   autoJoinPlan,
   lineUnderAlert,
   meetingAlert,
@@ -244,5 +245,24 @@ describe('lineUnderAlert', () => {
   it('keeps lines about other meetings and every line when no card is down', () => {
     expect(lineUnderAlert({ eventKey: later.key, choose: null }, alert)).toBe(false);
     expect(lineUnderAlert({ eventKey: standup.key, choose: null }, null)).toBe(false);
+  });
+});
+
+describe('autoJoinCovers', () => {
+  const start = Date.parse(standup.start);
+
+  it('covers an accepted meeting only while Join meetings automatically is on', () => {
+    expect(autoJoinCovers(standup, true, null)).toBe(true);
+    expect(autoJoinCovers(standup, false, null)).toBe(false);
+  });
+
+  it('leaves tentative and unanswered meetings to Join at start', () => {
+    expect(autoJoinCovers({ ...standup, myStatus: 'tentative' }, true, null)).toBe(false);
+    expect(autoJoinCovers({ ...standup, myStatus: 'pending' }, true, null)).toBe(false);
+  });
+
+  it('leaves a meeting to Join at start when a hold lasts past its start', () => {
+    expect(autoJoinCovers(standup, true, start + 60_000)).toBe(false);
+    expect(autoJoinCovers(standup, true, start)).toBe(true);
   });
 });

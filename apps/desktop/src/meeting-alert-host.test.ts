@@ -69,6 +69,7 @@ const payload = {
   countdown: null,
   joinLeadMs: 600_000,
   autoJoin: false,
+  holdUntil: null,
   notice: { title: 'Standup', body: '10:00–10:15 · Zoom' },
 };
 

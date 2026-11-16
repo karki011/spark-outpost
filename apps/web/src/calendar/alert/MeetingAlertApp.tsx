@@ -114,12 +114,14 @@ function LeadAction({
   at,
   leadMs,
   autoJoin,
+  holdUntil,
   act,
 }: {
   event: CalendarEvent;
   at: number;
   leadMs: number;
   autoJoin: boolean;
+  holdUntil: number | null;
   act: Act;
 }) {
   const lead = cardLead(event, at);
@@ -137,7 +139,7 @@ function LeadAction({
     <JoinAtStartButton
       title={event.title}
       className="mc-btn primary"
-      autoJoin={autoJoinCovers(event, autoJoin)}
+      autoJoin={autoJoinCovers(event, autoJoin, holdUntil)}
       onAsk={() => act('join-at-start', event.key)}
     />
   );
@@ -389,6 +391,7 @@ export function MeetingAlertApp() {
                       at={at}
                       leadMs={payload.joinLeadMs}
                       autoJoin={payload.autoJoin}
+                      holdUntil={payload.holdUntil}
                       act={act}
                     />
                   )}

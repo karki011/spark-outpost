@@ -245,10 +245,21 @@ test('Take notes when I join a meeting is off, and once on a Join also records',
   ).toHaveAttribute('aria-selected', 'true');
   const id = (await recordingId(page))!;
   expect((await meeting(page, id)).title).toBe('Live review');
-  await page.keyboard.press('ControlOrMeta+j');
-  await expect(
-    page.getByText(/^Notes didn’t start: Still recording .+\. Stop it to take notes here\.$/),
-  ).toBeVisible();
+  await openToday(page);
+  await today(page).getByRole('tab', { name: 'Calendar' }).click();
+  await today(page).getByRole('radio', { name: 'Day' }).click();
+  await today(page)
+    .getByRole('button', { name: /^Live review, / })
+    .click();
+  const notes = page.waitForResponse((r) => r.url().endsWith('/api/meetings/join-notes'));
+  await today(page)
+    .getByRole('region', { name: 'Live review' })
+    .getByRole('button', { name: 'Join Google Meet Live review' })
+    .click();
+  const again = await notes;
+  expect((await again.json()).problem).toBeNull();
+  await expect.poll(opened).toHaveLength(1);
+  await expect(page.getByText(/^Notes didn’t start/)).toHaveCount(0);
   expect(await recordingId(page)).toBe(id);
   await today(page).getByRole('button', { name: 'Stop' }).first().click();
 });

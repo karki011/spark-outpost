@@ -107,6 +107,7 @@ async function standupPayload(page: Page): Promise<MeetingAlertPayload> {
     countdown: null,
     joinLeadMs: 10 * 60_000,
     autoJoin: false,
+    holdUntil: null,
     notice: { title: 'Standup', body: 'Zoom' },
   };
 }
@@ -228,6 +229,20 @@ test('with Join meetings automatically on, Join at start is off and says why', a
   await expect(button).toHaveAccessibleDescription(/Join meetings automatically is on/);
   await button.click({ force: true });
   expect(await alertWindow(page, (window) => window.alertActs)).toEqual([]);
+});
+
+test('in a hold that lasts past the start, Join at start stays on even with Join meetings automatically', async ({
+  page,
+}) => {
+  const plain = await standupPayload(page);
+  const holdUntil = Date.parse(plain.events[0]!.start) + 30 * 60_000;
+  await openOverlay(page, { ...plain, autoJoin: true, holdUntil });
+  const card = page.getByRole('alertdialog', { name: /^Meeting\. Standup starts in \d min$/ });
+  await expect.poll(() => landing(page)).toBe(0);
+  await card.getByRole('button', { name: 'Join at start: Standup' }).click({ force: true });
+  expect(await alertWindow(page, (window) => window.alertActs)).toEqual([
+    { kind: 'join-at-start', key: plain.key, eventKey: plain.events[0]!.key },
+  ]);
 });
 
 test("a card for a meeting set to join at start says when it opens and offers Don't open", async ({

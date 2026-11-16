@@ -93,7 +93,7 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
     const answer: MeetingJoinNotes = { detail: null, problem: null };
     const recording = request.eventKey ? await recordingMeeting(db, workspaceId) : null;
     if (settings.notesOnJoin && recording && recording.eventKey === request.eventKey) {
-      await meetings.started(recording.id);
+      await meetings.started();
       const still = await getMeeting(db, workspaceId, recording.id);
       if (still?.state === 'recording') answer.detail = await detail(recording.id);
       else answer.problem = 'Recording didn’t start. Try Take notes.';

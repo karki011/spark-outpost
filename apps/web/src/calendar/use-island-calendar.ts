@@ -96,6 +96,7 @@ export interface IslandCalendar {
   hopKeys: string[];
   hopQuiet: boolean;
   autoJoin: boolean;
+  holdUntil: number | null;
   onOpenEvent: (eventKey: string) => void;
   onChoose: (line: CalendarLine) => void;
   onCapture: (line: CalendarLine) => void;
@@ -347,6 +348,7 @@ export function useIslandCalendar(
     hopKeys: hopKeys(line),
     hopQuiet: underAlert,
     autoJoin: ready ? (status.data?.settings.autoJoin ?? false) : false,
+    holdUntil: live?.hold ? Date.parse(live.hold.until) : null,
     countdown: autoJoin.countdown,
     joinLeadMs: leadMs,
     onCancelJoin: autoJoin.cancelJoin,

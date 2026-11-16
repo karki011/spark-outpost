@@ -34,6 +34,7 @@ function calendar(overrides: Partial<IslandCalendar> = {}): IslandCalendar {
     hopKeys: [],
     hopQuiet: false,
     autoJoin: false,
+    holdUntil: null,
     onOpenEvent: vi.fn(),
     onChoose: vi.fn(),
     onCapture: vi.fn(),

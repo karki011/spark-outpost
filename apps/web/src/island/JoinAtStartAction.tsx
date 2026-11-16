@@ -36,7 +36,7 @@ export function JoinAtStartAction(props: JoinAtStartActionProps) {
     <JoinAtStartButton
       title={event.title}
       className={props.buttonClass}
-      autoJoin={autoJoinCovers(event, calendar.autoJoin)}
+      autoJoin={autoJoinCovers(event, calendar.autoJoin, calendar.holdUntil)}
       onAsk={() => calendar.onJoinAtStart(event)}
     />
   );

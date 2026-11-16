@@ -213,6 +213,7 @@ export function useMeetingAlert(options: MeetingAlertOptions) {
         countdown,
         joinLeadMs: leadMs,
         autoJoin,
+        holdUntil: live?.hold ? Date.parse(live.hold.until) : null,
         notice: alertNotice(alert.events),
       }
     : null;

@@ -91,12 +91,23 @@ describe('taking notes when the user joins', () => {
         }),
       stop: async () => undefined,
     };
-    const meetings = createMeetingService({
+    const service = createMeetingService({
       db: t.db,
       workspaceId: t.workspaceId,
       source,
       publish: () => undefined,
     });
+    let waiting: () => void = () => undefined;
+    const secondWaits = new Promise<void>((resolve) => {
+      waiting = resolve;
+    });
+    const meetings = {
+      ...service,
+      started: () => {
+        waiting();
+        return service.started();
+      },
+    };
     const client = localClient(createApp({ ...testAppOptions(t), meetings }));
     const first = client
       .send('post', '/api/meetings/join-notes', EVENT)
@@ -111,6 +122,7 @@ describe('taking notes when the user joins', () => {
       .send('post', '/api/meetings/join-notes', EVENT)
       .expect(200)
       .then((r) => r);
+    await secondWaits;
     fail(new MeetingSourceError('The microphone is busy.'));
     const [one, two] = await Promise.all([first, second]);
     expect(two.body.detail).toBeNull();
