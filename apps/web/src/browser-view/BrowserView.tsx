@@ -151,7 +151,7 @@ export function BrowserView({ onOpenChat }: BrowserViewProps) {
   usePagePicks(profile, (pick) => {
     setAsking(null);
     setDock((open) =>
-      open
+      open && open.tabId === (tab?.id ?? null)
         ? { ...open, picks: [...open.picks, pick] }
         : {
             key: Date.now(),

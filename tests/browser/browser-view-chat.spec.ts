@@ -245,3 +245,24 @@ test('a pick from the other profile does not land in this dock', async ({ page }
   await pushPick(page, 'work', null);
   await expect(dock(page)).toHaveCount(0);
 });
+
+test('a pick made on another tab stays with that tab', async ({ page }) => {
+  const rates = 'https://docs.example.com/rate-limits';
+  const show = (active: 'docs' | 'rates') =>
+    pushView(page, [
+      { title: 'Deploying your app', url: DOCS, active: active === 'docs', place: 'external' },
+      { title: 'Rate limits', url: rates, active: active === 'rates', place: 'external' },
+    ]);
+  await openBrowserView(page);
+  await show('docs');
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  await show('rates');
+  await pushPick(page, 'personal', null);
+  const attached = dock(page).getByRole('list', { name: 'Attached' });
+  await expect(attached.getByText('Selected: Deploy button')).toBeVisible();
+  await show('docs');
+  await expect(attached.getByText('Deploying your app')).toBeVisible();
+  await expect(attached.getByText('Selected: Deploy button')).toHaveCount(0);
+  await show('rates');
+  await expect(attached.getByText('Selected: Deploy button')).toBeVisible();
+});
