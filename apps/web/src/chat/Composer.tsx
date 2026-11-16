@@ -29,7 +29,8 @@ import {
 } from './composer/slash.ts';
 import { runClientCommand } from './composer/client-commands.ts';
 import { SlashMenu } from './composer/SlashMenu.tsx';
-import { ChatMcpPanel } from './composer/ChatMcpPanel.tsx';
+import { ToolsPanel } from './tools/ToolsPanel.tsx';
+import { useToolsPanel } from './tools/tools-request.ts';
 import { usePickerCommand } from './composer/use-picker-command.ts';
 import { useSlash } from './composer/use-slash.ts';
 import { usePluginCommands } from './composer/use-plugin-commands.ts';
@@ -131,7 +132,7 @@ export function Composer({
     textareaRef,
     onPick: addFromRepo,
   });
-  const [mcpOpen, setMcpOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useToolsPanel(conversationId);
   const provider = settings?.provider ?? null;
   const providerLabel = providers.find((entry) => entry.id === provider)?.name;
   const agentName = givenAgentName ?? providerLabel ?? 'Agent';
@@ -168,7 +169,7 @@ export function Composer({
   const runCommand = (command: ClientCommandName, args = '') =>
     runClientCommand(
       {
-        openMcp: () => setMcpOpen(true),
+        openMcp: () => setToolsOpen(true),
         onStartFresh,
         notify: attachments.notify,
         pick: picker.run,
@@ -344,6 +345,7 @@ export function Composer({
             onAddRepo={openRepoMenu}
             chatId={conversationId}
             onAddChat={attachments.addChat}
+            onTools={() => setToolsOpen(true)}
             formatting={formatting}
             onFormatting={() => {
               setFormatting((open) => !open);
@@ -423,11 +425,13 @@ export function Composer({
           }}
         />
       )}
-      {mcpOpen && (
-        <ChatMcpPanel
+      {toolsOpen && (
+        <ToolsPanel
           conversationId={conversationId}
+          repos={repos}
+          provider={provider}
           onClose={() => {
-            setMcpOpen(false);
+            setToolsOpen(false);
             textareaRef.current?.focus();
           }}
         />

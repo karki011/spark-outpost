@@ -13,6 +13,7 @@ import {
   denyWaitingPhones,
   resetPhone,
   setFakeTailscale,
+  expand,
 } from './phone-support.ts';
 import {
   newPhone,
@@ -91,6 +92,7 @@ test('a paired phone signs in with its passkey in a browser that has no cookie',
   expect(await signedInAs(second)).toBe('Kitchen phone');
   await expect(rows).toHaveCount(1);
   const activity = main.getByRole('region', { name: 'Recent remote activity' });
+  await expand(activity, 'Recent remote activity');
   await expect(activity.getByText('Kitchen phone signed in with a passkey')).toBeVisible({
     timeout: 15_000,
   });

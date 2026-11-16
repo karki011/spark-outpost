@@ -153,11 +153,21 @@ describe('selectBrowserSpecs', () => {
       'apps/server/test/remote-policy.db.test.ts',
       'apps/server/test/remote-support.ts',
       'docs/architecture/PHONE_REMOTE.md',
-      'scripts/test-changed.ts',
+      'scripts/check-guide.ts',
       'AGENTS.md',
     ]);
     expect(selection).toMatchObject({ all: false, specs: [] });
     expect(selection.reasons).toHaveLength(6);
+  });
+
+  it('runs every spec when CI or the selection itself changes', () => {
+    for (const file of [
+      '.github/workflows/ci.yml',
+      'scripts/test-selection.ts',
+      'scripts/test-changed.ts',
+    ]) {
+      expect(selectBrowserSpecs([file]).all).toBe(true);
+    }
   });
 
   it('maps the user guide to the docs specs', () => {

@@ -118,6 +118,7 @@ export function PairScene({
   const motion = stageMotion(stage, activation);
   const line = stageLine(stage, activation);
   const meetsPhone = stage.kind === 'found' || stage.kind === 'paired';
+  const compact = stage.kind === 'ready' || stage.kind === 'setup';
 
   const startButton = (label: string): ReactNode => (
     <button ref={primary} type="button" className="btn primary" disabled={busy} onClick={onStart}>
@@ -138,7 +139,7 @@ export function PairScene({
       </p>
       <div className="ph-scene-stage" aria-hidden="true">
         <span className="ph-scene-blob">
-          <BlobScout size={72} mood={motionMood(motion)} />
+          <BlobScout size={compact ? 40 : 72} mood={motionMood(motion)} />
           <i className="ph-scene-shadow" />
         </span>
         {meetsPhone && <PhoneGlyph />}

@@ -185,7 +185,7 @@ Settings → Test connection starts the server through the MCP SDK client with a
 
 ### /mcp
 
-`/mcp` in the composer opens "MCP servers in this chat": each user-level server with its source, which switch decides it and its last test, a switch for this chat and Reset (back to the project or all-chats setting); the linked repos' servers read only, with their state; and "Manage in Settings".
+`/mcp`, **+** → **Tools…** in the composer and **Tools** in the context rail open "Tools in this chat" (project setup, MCP servers, Claude plugins and connectors); its MCP servers section shows each user-level server with its source, which switch decides it and its last test, a switch for this chat and Reset (back to the project or all-chats setting); the linked repos' servers read only, with their state; and "Manage in Settings".
 
 ## Spark's own tools (`spark` MCP server)
 

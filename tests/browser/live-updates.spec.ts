@@ -55,7 +55,7 @@ async function openHomeWithRunningChat(page: Page, title: string): Promise<strin
   return chatId!;
 }
 
-test('Home moves a chat to Needs you when it finishes, without polling', async ({ page }) => {
+test('Home moves a chat to the Working set when it finishes, without polling', async ({ page }) => {
   const listRequests = countListRequests(page);
   const chatId = await openHomeWithRunningChat(page, 'Filter chips overflow');
 
@@ -65,7 +65,7 @@ test('Home moves a chat to Needs you when it finishes, without polling', async (
 
   await finishRun(chatId);
   await expect(
-    section(page, 'Ready for you to review').getByRole('button', {
+    section(page, 'Working set').getByRole('button', {
       name: 'Review: Filter chips overflow',
     }),
   ).toBeVisible({ timeout: 5_000 });
@@ -96,7 +96,7 @@ test('live updates reconnect after the server drops them and catch up on missed 
 
   blocked = false;
   await expect(
-    section(page, 'Ready for you to review').getByRole('button', {
+    section(page, 'Working set').getByRole('button', {
       name: 'Review: Worktree cleanup',
     }),
   ).toBeVisible({ timeout: 20_000 });

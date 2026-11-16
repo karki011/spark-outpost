@@ -8,10 +8,14 @@ summary: What changed in recent releases and what to do next.
 
 ## Mid-November 2026
 
-| What changed           | What to do                     |
-| ---------------------- | ------------------------------ |
-| Fewer Settings pages   | [Settings](settings.md).       |
-| Left bar **More** menu | [Pause Spark](pause-spark.md). |
+| What changed                                  | What to do                               |
+| --------------------------------------------- | ---------------------------------------- |
+| Home: message box, Needs you, Working set     | [Read Home](home.md).                    |
+| Context rail: full height; **Tools** in **+** | [See a chat's context](context-rail.md). |
+| Remote control: side panel, sections fold     | [Use your phone](use-your-phone.md).     |
+| Wider user guide pages                        | Nothing to do.                           |
+| Fewer Settings pages                          | [Settings](settings.md).                 |
+| Left bar **More** menu                        | [Pause Spark](pause-spark.md).           |
 
 ## Early November 2026
 
@@ -45,23 +49,17 @@ summary: What changed in recent releases and what to do next.
 
 ## Earlier in November 2026
 
-| What changed                         | What to do                                   |
-| ------------------------------------ | -------------------------------------------- |
-| Phone push for finished turns        | [Use your phone](use-your-phone.md).         |
-| Edits show +N −M and open to a diff  | [Follow a turn](follow-a-turn.md).           |
-| Map: **Running chats** overlay       | [Map](map.md).                               |
-| Tickets: parent, subtasks and links  | [Tickets](tickets-inbox.md).                 |
-| Phone says **Can't reach your Mac**  | Nothing.                                     |
-| Chats take the agent session title   | Nothing.                                     |
-| Send a test notification to a device | [Use your phone](use-your-phone.md).         |
-| Tag for a sub-agent on another model | [Pick the model](agent-mode.md).             |
-| Softer theme edge; effort shows High | Nothing.                                     |
-| Sub-agents show their model, effort  | Select an agent in a turn.                   |
-| Theme change spreads like ink        | Nothing.                                     |
-| Agent tabs stay open after a turn    | [Use the browser](use-the-browser.md).       |
-| Agent cards compact, working first   | Nothing.                                     |
-| Agent briefs and reports formatted   | Select an agent in a turn.                   |
-| Attach PDFs and other files          | [Attach files](attach-files.md).             |
-| Remote control: devices list, groups | [Use your phone](use-your-phone.md).         |
-| Left bar shortcuts ⌥⌘1–⌥⌘9           | [Keyboard shortcuts](keyboard-shortcuts.md). |
-| Trust a folder from its chip         | [Start a chat](start-a-chat.md).             |
+| What changed                         | What to do                             |
+| ------------------------------------ | -------------------------------------- |
+| Phone push for finished turns        | [Use your phone](use-your-phone.md).   |
+| Edits show +N −M and open to a diff  | [Follow a turn](follow-a-turn.md).     |
+| Map: **Running chats** overlay       | [Map](map.md).                         |
+| Tickets: parent, subtasks and links  | [Tickets](tickets-inbox.md).           |
+| Phone says **Can't reach your Mac**  | Nothing.                               |
+| Chats take the agent session title   | Nothing.                               |
+| Send a test notification to a device | [Use your phone](use-your-phone.md).   |
+| Tag for a sub-agent on another model | [Pick the model](agent-mode.md).       |
+| Softer theme edge; effort shows High | Nothing.                               |
+| Sub-agents show their model, effort  | Select an agent in a turn.             |
+| Theme change spreads like ink        | Nothing.                               |
+| Agent tabs stay open after a turn    | [Use the browser](use-the-browser.md). |

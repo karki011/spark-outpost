@@ -16,7 +16,7 @@ vi.mock('../../phone/use-remote-client.ts', () => ({
   useRemoteClient: () => ({ allows: () => state.allowed }),
 }));
 
-const { RailSetup } = await import('./RailSetup.tsx');
+const { ProjectTools } = await import('./ProjectTools.tsx');
 
 const PROJECT = { id: '22222222-2222-4222-8222-222222222222', name: 'shop' } as Project;
 
@@ -39,13 +39,13 @@ afterEach(() => {
   state.allowed = true;
 });
 
-describe("the project's agent setup in the context rail", () => {
+describe("the project's agent setup in the Tools panel", () => {
   it('lists only the parts the project has, with their names, and switches one', () => {
     state.config = config({
       skills: ['deploy', 'review', 'triage', 'release'].map(skill),
       commands: [skill('ship')],
     });
-    render(<RailSetup repos={[PROJECT]} />);
+    render(<ProjectTools repos={[PROJECT]} />);
 
     expect(screen.getByText('Skills 4')).toBeTruthy();
     expect(screen.getByText('deploy, review, triage +1')).toBeTruthy();
@@ -60,14 +60,14 @@ describe("the project's agent setup in the context rail", () => {
 
   it('shows nothing for a project with no skills, commands, subagents or instructions', () => {
     state.config = config({});
-    const { container } = render(<RailSetup repos={[PROJECT]} />);
+    const { container } = render(<ProjectTools repos={[PROJECT]} />);
     expect(container.textContent).toBe('');
   });
 
   it('keeps the switches read only on a device without the settings switch', () => {
     state.config = config({ instructions: [{ path: 'AGENTS.md', bytes: 10, nested: false }] });
     state.allowed = false;
-    render(<RailSetup repos={[PROJECT]} />);
+    render(<ProjectTools repos={[PROJECT]} />);
     const instructions = screen.getByRole('switch', { name: 'Follow instructions from shop' });
     expect((instructions as HTMLButtonElement).disabled).toBe(true);
   });

@@ -6,6 +6,7 @@ import {
   denyWaitingPhones,
   resetPhone,
   setFakeTailscale,
+  expand,
 } from './phone-support.ts';
 import {
   arriveFromElsewhere,
@@ -67,6 +68,7 @@ test('a paired phone that arrives from another site or reopens the QR link lands
   expect(await signedInAs(unpaired.page)).toBeNull();
 
   const activity = main.getByRole('region', { name: 'Recent remote activity' });
+  await expand(activity, 'Recent remote activity');
   await expect(activity.getByText('A device with no sign-in opened the pairing page')).toBeVisible({
     timeout: 15_000,
   });
@@ -76,6 +78,7 @@ test('a paired phone that arrives from another site or reopens the QR link lands
 
 async function expectActivityLine(main: Locator, text: string) {
   const activity = main.getByRole('region', { name: 'Recent remote activity' });
+  await expand(activity, 'Recent remote activity');
   const line = activity.getByText(text);
   const more = activity.getByRole('button', { name: 'Show more' });
   while (!(await line.isVisible()) && (await more.isVisible())) await more.click();
@@ -89,16 +92,16 @@ test('pairing a phone again does not pile up devices', async ({ page }) => {
   const phone = await newPhone(network);
   await pairPhone(main, phone, 'Kitchen phone');
   await expect(rows).toHaveCount(1, { timeout: 15_000 });
-  await expect(devices.getByRole('button', { name: /removed$/ })).toHaveCount(0);
+  await expect(devices.getByRole('button', { name: /removed devices?$/ })).toHaveCount(0);
 
   await chooseDeviceAction(page, 'Kitchen phone', 'Revoke');
   await expect(devices.getByText('No device is paired yet.')).toBeVisible();
-  await expect(devices.getByRole('button', { name: '1 removed' })).toBeVisible();
+  await expect(devices.getByRole('button', { name: '1 removed device' })).toBeVisible();
 
   await pairPhone(main, phone, 'Kitchen phone');
   await expect(rows).toHaveCount(1, { timeout: 15_000 });
   await expect(rows.first()).toHaveClass(/fresh/);
-  const removed = devices.getByRole('button', { name: '1 removed' });
+  const removed = devices.getByRole('button', { name: '1 removed device' });
   await expect(removed).toHaveAttribute('aria-expanded', 'false');
   await removed.focus();
   await page.keyboard.press('Enter');
@@ -126,7 +129,7 @@ test('pairing a phone again does not pile up devices', async ({ page }) => {
   await chooseDeviceAction(page, 'Kitchen phone', 'Remove old entry');
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText('kitchen phone');
-  await expect(devices.getByRole('button', { name: '2 removed' })).toBeVisible();
+  await expect(devices.getByRole('button', { name: '2 removed devices' })).toBeVisible();
   await expectActivityLine(main, 'Kitchen phone asked to pair again (it was removed on this Mac)');
   await second.close();
 });

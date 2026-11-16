@@ -40,8 +40,8 @@ function RepoParts({ project }: { project: Project }) {
   const parts = PARTS.filter(({ key }) => partNames(data, key).length > 0);
   if (parts.length === 0) return null;
   return (
-    <div className="crail-tool-group">
-      <h4 className="crail-sub">
+    <div className="tools-group">
+      <h4 className="tools-sub">
         {project.name} <span>this project</span>
       </h4>
       <ul aria-label={`Agent setup for ${project.name}`}>
@@ -77,7 +77,7 @@ function RepoParts({ project }: { project: Project }) {
   );
 }
 
-export function RailSetup({ repos }: { repos: readonly Project[] }) {
+export function ProjectTools({ repos }: { repos: readonly Project[] }) {
   return (
     <>
       {repos.map((project) => (

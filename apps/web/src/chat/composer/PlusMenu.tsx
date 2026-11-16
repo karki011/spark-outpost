@@ -16,11 +16,12 @@ interface PlusMenuProps {
   onAddRepo: () => void;
   chatId: string;
   onAddChat: (chatId: string) => void;
+  onTools: () => void;
   formatting: boolean;
   onFormatting: () => void;
 }
 
-type MenuAction = 'upload' | 'screenshot' | 'repo' | 'add-repo' | 'chat';
+type MenuAction = 'upload' | 'screenshot' | 'repo' | 'add-repo' | 'chat' | 'tools';
 
 const ITEMS: { label: string; icon: ReactNode; action: MenuAction }[] = [
   { label: 'Upload a file', icon: <path d="M12 16V4M7 9l5-5 5 5M5 20h14" />, action: 'upload' },
@@ -45,6 +46,13 @@ const ITEMS: { label: string; icon: ReactNode; action: MenuAction }[] = [
     icon: <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />,
     action: 'chat',
   },
+  {
+    label: 'Tools…',
+    icon: (
+      <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z" />
+    ),
+    action: 'tools',
+  },
 ];
 
 export function PlusMenu({
@@ -56,6 +64,7 @@ export function PlusMenu({
   onAddRepo,
   chatId,
   onAddChat,
+  onTools,
   formatting,
   onFormatting,
 }: PlusMenuProps) {
@@ -87,6 +96,7 @@ export function PlusMenu({
     if (action === 'upload') fileInput.current?.click();
     else if (action === 'screenshot') addScreenshot();
     else if (action === 'chat') setPickingChat(true);
+    else if (action === 'tools') onTools();
     else if (action === 'repo' && hasProject) onAddFromRepo();
     else onAddRepo();
   };
@@ -164,6 +174,7 @@ export function PlusMenu({
               <span>
                 <b>{item.label}</b>
                 {needsFolder && <small>Add a repo first</small>}
+                {item.action === 'tools' && <small>MCP servers, plugins and skills</small>}
               </span>
             </button>
           );

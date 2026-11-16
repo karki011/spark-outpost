@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { dbFullRunReasons, selectBrowserSpecs, type SelectionReason } from './test-selection.ts';
 
@@ -57,7 +57,12 @@ function specsImportingChanges(mergeBase: string): string[] {
   return (report.suites ?? []).map((suite) => `tests/browser/${path.basename(suite.file)}`);
 }
 
-function runBrowser(changed: string[], base: string, dryRun: boolean): number {
+function runBrowser(
+  changed: string[],
+  base: string,
+  dryRun: boolean,
+  out: string | undefined,
+): number {
   const mergeBase = git(['merge-base', base, 'HEAD'])[0]!;
   if (dryRun) {
     console.log(
@@ -67,6 +72,11 @@ function runBrowser(changed: string[], base: string, dryRun: boolean): number {
   const selection = selectBrowserSpecs(changed, dryRun ? [] : specsImportingChanges(mergeBase));
   printReasons(selection.reasons);
   const specs = selection.specs.filter((spec) => existsSync(spec));
+  if (out) {
+    writeFileSync(out, selection.all ? 'all\n' : specs.map((spec) => `${spec}\n`).join(''));
+    console.log(`\nWrote ${selection.all ? 'all specs' : `${specs.length} specs`} to ${out}.`);
+    return 0;
+  }
   if (specs.length === 0) {
     console.log('\nNo browser specs are affected.');
     return 0;
@@ -81,17 +91,21 @@ function main(): number {
   const dryRun = flags.includes('--dry-run');
   const base =
     flags.find((flag) => flag.startsWith('--base='))?.slice('--base='.length) ?? DEFAULT_BASE;
+  const out = flags.find((flag) => flag.startsWith('--out='))?.slice('--out='.length);
   if (mode !== 'db' && mode !== 'browser') {
-    console.error('Usage: tsx scripts/test-changed.ts <db|browser> [--base=main] [--dry-run]');
+    console.error(
+      'Usage: tsx scripts/test-changed.ts <db|browser> [--base=main] [--dry-run] [--out=file]',
+    );
     return 2;
   }
   const changed = changedFiles(base);
   if (changed.length === 0) {
     console.log(`Nothing changed since ${base}.`);
+    if (out) writeFileSync(out, '');
     return 0;
   }
   console.log(`${changed.length} file(s) changed since ${base}.\n`);
-  return mode === 'db' ? runDb(changed, base, dryRun) : runBrowser(changed, base, dryRun);
+  return mode === 'db' ? runDb(changed, base, dryRun) : runBrowser(changed, base, dryRun, out);
 }
 
 process.exit(main());

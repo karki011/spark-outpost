@@ -9,6 +9,7 @@ import {
   startPairing,
   turnOn,
   WIDE,
+  expand,
 } from './phone-support.ts';
 
 test.describe.configure({ timeout: 120_000 });
@@ -79,6 +80,9 @@ test('groups the switches by risk and keeps each count current', async ({ page }
   const everyday = region.getByRole('group', { name: 'Everyday' });
   const setup = region.getByRole('group', { name: 'Set up work' });
   const risky = region.getByRole('group', { name: 'High risk' });
+  await expect(everyday).toContainText('All off');
+  await expect(everyday.getByRole('switch')).toHaveCount(0);
+  for (const name of ['Everyday', 'Set up work', 'High risk']) await expand(region, name);
   await expect(everyday.getByRole('switch')).toHaveCount(4);
   await expect(setup.getByRole('switch')).toHaveCount(4);
   await expect(risky.getByRole('switch')).toHaveCount(4);
@@ -135,7 +139,7 @@ test('a device row menu renames and removes by keyboard', async ({ page, browser
   await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('menuitem', { name: 'Send a test notification' })).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(devices.getByRole('status')).toHaveText(
+  await expect(devices.locator('.ph-device-note')).toHaveText(
     'Turn on Notify when a chat needs you, then try again.',
   );
   await expect(renamed).toBeFocused();

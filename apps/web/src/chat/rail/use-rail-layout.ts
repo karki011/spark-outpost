@@ -41,20 +41,37 @@ export function useRoomy(main: RefObject<HTMLElement | null>): boolean {
   return roomy;
 }
 
-const RAIL_GUTTER = 52;
+const RAIL_BOTTOM_GAP = 16;
 
-export function useRoomInThread(rail: RefObject<HTMLElement | null>): void {
+function railBounds(slot: HTMLElement, main: HTMLElement) {
+  const frame = main.getBoundingClientRect();
+  const thread = main.querySelector(':scope > .thread-wrap')?.getBoundingClientRect();
+  const composer = main.querySelector(':scope > .composer-wrap')?.getBoundingClientRect();
+  const top = (thread?.top ?? frame.top) - frame.top;
+  const end = composer?.bottom ?? thread?.bottom ?? frame.bottom;
+  slot.style.top = `${Math.max(0, top)}px`;
+  slot.style.bottom = `${Math.max(0, frame.bottom - end + RAIL_BOTTOM_GAP)}px`;
+}
+
+export function useRailBounds(slotRef: RefObject<HTMLElement | null>): void {
   useLayoutEffect(() => {
-    const element = rail.current;
-    const thread = element?.closest('.thread');
-    if (!element || !thread || typeof ResizeObserver !== 'function') return;
-    const fit = () =>
-      element.style.setProperty('max-height', `${thread.clientHeight - RAIL_GUTTER}px`);
+    const slot = slotRef.current;
+    const main = slot?.closest<HTMLElement>('.main');
+    if (!slot || !main || typeof ResizeObserver !== 'function') return;
+    const fit = () => railBounds(slot, main);
     fit();
     const observer = new ResizeObserver(fit);
-    observer.observe(thread);
-    return () => observer.disconnect();
-  }, [rail]);
+    observer.observe(main);
+    for (const part of main.querySelectorAll(':scope > .thread-wrap, :scope > .composer-wrap')) {
+      observer.observe(part);
+    }
+    const children = new MutationObserver(fit);
+    children.observe(main, { childList: true });
+    return () => {
+      observer.disconnect();
+      children.disconnect();
+    };
+  }, [slotRef]);
 }
 
 function readCollapsed(): boolean {

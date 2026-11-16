@@ -291,7 +291,7 @@ test('starts a prefilled New chat for an event and sends nothing', async ({ page
   expect(await chats.json()).toEqual([]);
 });
 
-test('shows the meeting lead, After the meeting and free time with a meeting count in the brief on Home', async ({
+test('shows the meeting beside the headline and free time with a meeting count in the brief on Home', async ({
   page,
 }) => {
   await connect(page);
@@ -311,14 +311,8 @@ test('shows the meeting lead, After the meeting and free time with a meeting cou
     await expect(block).not.toContainText(title);
   }
   await expect(block).toContainText(/\d+ meetings? today\./);
-  const lead = page.getByRole('region', { name: 'Standup' });
-  const card = page.getByRole('region', { name: 'After the meeting' });
-  const joinKey = process.platform === 'darwin' ? '⌘J' : 'Ctrl+J';
-  await expect(card).toContainText(`${joinKey} joins the next`);
+  const lead = page.getByRole('group', { name: 'Meeting: Standup' });
   await expect(lead.getByRole('button', { name: 'Join Standup' })).toBeEnabled();
-  await expect(
-    card.getByRole('button', { name: /^Customer call at \d+:\d+ [AP]M, Join opens at / }),
-  ).toBeDisabled();
   await block.getByRole('button', { name: 'See all in Today' }).click();
   await expect(today(page)).toBeVisible();
   await expect(today(page).getByRole('button', { name: /^Standup, / })).not.toHaveAttribute(

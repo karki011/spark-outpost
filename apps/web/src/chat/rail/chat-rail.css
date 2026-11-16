@@ -8,36 +8,50 @@
 }
 
 .crail-slot {
-  position: sticky;
+  position: absolute;
   top: 0;
+  right: 0;
+  bottom: 0;
   z-index: 2;
-  height: 0;
+  width: 0;
 }
 
 .crail {
   position: absolute;
   top: 6px;
-  right: calc(16px - var(--chat-gutter) - var(--crail-strip));
+  right: 16px;
   display: flex;
   flex-direction: column;
   width: var(--crail-w);
-  max-height: 60dvh;
+  max-height: calc(100% - 6px);
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   color: var(--muted);
   font-size: 12.5px;
-  gap: 8px;
   line-height: 1.35;
-  animation: crail-in 0.2s var(--out) both;
-}
-
-:is(.crail-context, .crail-tasks, .crail-crew, .crail-tool-group) {
-  flex-shrink: 0;
-  padding: 6px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--r);
+  scrollbar-width: thin;
+  animation: crail-in 0.2s var(--out) both;
+}
+
+:is(.crail-context, .crail-tasks, .crail-crew, .crail-section) {
+  flex-shrink: 0;
+  padding: 8px 6px;
+  border-top: 1px solid var(--line);
+}
+
+.crail > :first-child {
+  border-top: 0;
+}
+
+.crail-go {
+  margin-left: auto;
+  align-self: center;
+  color: var(--faint);
+  font-size: 14px;
 }
 
 @keyframes crail-in {
@@ -82,7 +96,7 @@
 .crail-show {
   position: absolute;
   top: 6px;
-  right: calc(12px - var(--chat-gutter));
+  right: 12px;
 }
 
 .crail-rows {
@@ -330,8 +344,7 @@
 
 .crail.floating {
   z-index: 30;
-  right: calc(12px - var(--chat-gutter));
-  padding: 6px;
+  right: 12px;
   background: var(--raise);
   border: 1px solid var(--line);
   border-radius: var(--r);
@@ -354,4 +367,11 @@
 
 .crail-ports {
   margin-top: 2px;
+}
+
+@media (pointer: coarse) {
+  .crail .crail-tools-line .crail-row {
+    min-height: 44px;
+    align-items: center;
+  }
 }

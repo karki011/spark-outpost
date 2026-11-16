@@ -96,6 +96,17 @@ test.describe('plain chats', () => {
     const rightGutter = railBox.x - 16 - (column.x + column.width);
     expect(Math.abs(leftGutter - rightGutter)).toBeLessThan(24);
     expect(await pageScroll(page)).toBe(0);
+    const reach = await page.evaluate(() => {
+      const slot = document.querySelector('.crail-slot')!.getBoundingClientRect();
+      const composer = document.querySelector('.composer-wrap')!.getBoundingClientRect();
+      return {
+        slotBottom: slot.bottom,
+        composerTop: composer.top,
+        composerBottom: composer.bottom,
+      };
+    });
+    expect(reach.slotBottom).toBeGreaterThan(reach.composerTop);
+    expect(reach.slotBottom).toBeLessThanOrEqual(reach.composerBottom);
 
     await rows.getByRole('button', { name: 'Not linked. Choose project' }).click();
     await expect(page.getByRole('dialog', { name: 'Project folders' })).toBeVisible();
@@ -211,8 +222,7 @@ test.describe('plain chats', () => {
     await expect(rail(page)).toBeFocused();
     expect((await page.locator('.col').boundingBox())!.width).toBe(columnWidth);
     const tools = rail(page).getByRole('region', { name: 'Tools' });
-    await expect(tools).toContainText('MCP servers');
-    await expect(tools.getByRole('button', { name: 'Manage tools' })).toBeVisible();
+    await expect(tools.getByRole('button', { name: /^Tools/ })).toContainText('MCP server');
     const axe = await new AxeBuilder({ page })
       .include('.crail')
       .disableRules(['heading-order'])
@@ -235,6 +245,12 @@ test.describe('plain chats', () => {
     await expect(rail(page)).toBeVisible();
     await expect(workPanel(page)).toBeVisible();
     await shoot(page, 'overlay-1280-work-panel');
+
+    await rail(page)
+      .getByRole('button', { name: /^Tools/ })
+      .click();
+    await expect(rail(page)).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: 'Tools in this chat' })).toBeVisible();
   });
 
   test('On wide windows picks the rail, the work panel or an empty margin', async ({ page }) => {
@@ -431,6 +447,14 @@ test.describe('working chats', () => {
       }
     }
     await shoot(page, 'tasks-list-2000');
+    await page.evaluate(() =>
+      Promise.allSettled(
+        document
+          .getAnimations()
+          .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+          .map((animation) => animation.finished),
+      ),
+    );
     const axe = await new AxeBuilder({ page }).include('.crail-tasks').analyze();
     expect(axe.violations).toEqual([]);
   });

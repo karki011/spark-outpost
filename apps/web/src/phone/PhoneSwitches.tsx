@@ -9,11 +9,13 @@ import {
 } from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
+import { PhoneGroup, PhoneSection } from './PhoneSection.tsx';
 import {
   groupCount,
   labelsByState,
   MAC_ONLY_LINE,
   NOTIFY_UPDATES_NOTE,
+  SHOWN_SWITCHES,
   shownGroups,
 } from './switch-groups.ts';
 
@@ -73,6 +75,7 @@ export function SwitchRow({
 interface PhoneSwitchesProps {
   switches: RemoteSwitches;
   notificationsExtra?: ReactNode;
+  cards: ReactNode;
 }
 
 function FixedRow({ label, children }: { label: string; children: ReactNode }) {
@@ -93,14 +96,13 @@ function SwitchGroup({
   switches: RemoteSwitches;
   notificationsExtra: ReactNode;
 }) {
-  const headingId = useId();
   return (
-    <div className="ph-group" role="group" aria-labelledby={headingId}>
-      <div className="ph-group-head">
-        <h3 id={headingId}>{group.title}</h3>
-        <span className="ph-group-count">{groupCount(group.switches, switches)}</span>
-        <p>{group.description}</p>
-      </div>
+    <PhoneGroup
+      id={`group-${group.id}`}
+      title={group.title}
+      description={group.description}
+      count={groupCount(group.switches, switches)}
+    >
       <ul className="ph-switches ph-switch-grid">
         {group.switches.map((id) => (
           <Fragment key={id}>
@@ -120,14 +122,18 @@ function SwitchGroup({
           </Fragment>
         ))}
       </ul>
-    </div>
+    </PhoneGroup>
   );
 }
 
-export function PhoneSwitches({ switches, notificationsExtra }: PhoneSwitchesProps) {
+export function PhoneSwitches({ switches, notificationsExtra, cards }: PhoneSwitchesProps) {
   return (
-    <section className="ph-card ph-switches-card" aria-labelledby="ph-switches-title">
-      <h2 id="ph-switches-title">What paired devices can do</h2>
+    <PhoneSection
+      id="switches"
+      title="What paired devices can do"
+      className="ph-switches-card"
+      summary={<span className="ph-pill">{groupCount(SHOWN_SWITCHES, switches)}</span>}
+    >
       <p className="ph-note">Pairing, devices and these switches can only be changed here.</p>
       <FixedRow label="Always">{REMOTE_ALWAYS_ALLOWED_LINE}</FixedRow>
       {shownGroups().map((group) => (
@@ -138,8 +144,9 @@ export function PhoneSwitches({ switches, notificationsExtra }: PhoneSwitchesPro
           notificationsExtra={switches.notifications ? notificationsExtra : null}
         />
       ))}
+      {cards}
       <FixedRow label="Never">{MAC_ONLY_LINE}</FixedRow>
-    </section>
+    </PhoneSection>
   );
 }
 

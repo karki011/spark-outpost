@@ -79,17 +79,17 @@
   font-weight: 500;
 }
 
-.hlead .hrow {
-  grid-template-columns: 9rem minmax(0, 1fr) auto;
+.home-sections .hrow {
+  grid-template-columns: 7rem minmax(0, 1fr) auto;
   gap: 16px;
   padding: 12px 0;
 }
 
-.hlead .hrow-l {
+.home-sections .hrow-l {
   grid-column: auto;
 }
 
-.hlead .hrow-m small {
+.home-sections .hrow-m small {
   white-space: normal;
 }
 
@@ -227,8 +227,7 @@
   color: var(--text);
 }
 
-.home-live .hcard2,
-.home-live .hlead {
+.home-live .hcard2 {
   animation: rise 0.22s var(--out) both;
 }
 
@@ -252,23 +251,23 @@
   }
 }
 
-@container home (max-width: 860px) {
-  .hlead .hrow {
+@container home (max-width: 560px) {
+  .home-sections .hrow {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 4px 12px;
   }
 
-  .hlead .hrow-l {
+  .home-sections .hrow-l {
     grid-column: 1 / -1;
   }
 }
 
-@container home (max-width: 480px) {
-  .hlead .hrow:has(.hrow-a > :nth-child(2)) {
+@container home (max-width: 420px) {
+  .home-sections .hrow:has(.hrow-a > :nth-child(2)) {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .hlead .hrow-a {
+  .home-sections .hrow-a {
     flex-wrap: wrap;
   }
 }
@@ -277,7 +276,6 @@
   .hprog.wait i,
   .hsk,
   .home-live .hcard2,
-  .home-live .hlead,
   .home-live.enter .hrow {
     animation: none;
   }

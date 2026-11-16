@@ -7,6 +7,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ReactNode,
   type RefObject,
 } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -30,19 +31,20 @@ import { currentModel } from '../composer/model-options.ts';
 import { unlistedPinName } from '../composer/shown-model.ts';
 import { permissionState } from '../composer/mode-summary.ts';
 import { requestProjectMenu } from '../project/project-menu-request.ts';
+import { requestTools } from '../tools/tools-request.ts';
 import { useChatWorkspace } from '../project/use-chat-workspace.ts';
 import { providerName } from '../provider-name.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { primaryPull } from '../pull-request/pull-request-model.ts';
 import { RailCrew } from './RailCrew.tsx';
 import { RailPorts } from './RailPorts.tsx';
-import { RailTools } from './RailTools.tsx';
+import { RailToolsLine } from './RailToolsLine.tsx';
 import { RailToggleIcon } from './RailIcons.tsx';
 import { RailSummary } from './RailSummary.tsx';
 import { RailTodo } from './RailTodo.tsx';
 import { useLeadSteps } from '../../crew/lead-steps.ts';
 import { latestFollowing, railCrew, railRows, type RailAction } from './rail-model.ts';
-import { useRoomInThread } from './use-rail-layout.ts';
+import { useRailBounds } from './use-rail-layout.ts';
 import { usePaneFocused, usePaneId } from '../split/chat-pane.ts';
 
 interface ChatRailProps {
@@ -94,6 +96,16 @@ function RailToggle({ open, focus = false, onToggle }: RailToggleProps) {
   );
 }
 
+function RailSlot({ children }: { children: ReactNode }) {
+  const slotRef = useRef<HTMLDivElement>(null);
+  useRailBounds(slotRef);
+  return (
+    <div ref={slotRef} className="crail-slot">
+      {children}
+    </div>
+  );
+}
+
 export const ChatRail = memo(function ChatRail(props: ChatRailProps) {
   const [backToToggle, setBackToToggle] = useState(false);
   if (props.collapsed) {
@@ -101,13 +113,21 @@ export const ChatRail = memo(function ChatRail(props: ChatRailProps) {
       setBackToToggle(false);
       props.onCollapse(false);
     };
-    return <RailToggle open={false} focus={backToToggle} onToggle={open} />;
+    return (
+      <RailSlot>
+        <RailToggle open={false} focus={backToToggle} onToggle={open} />
+      </RailSlot>
+    );
   }
   const close = (returnFocus: boolean) => {
     setBackToToggle(returnFocus);
     props.onCollapse(true);
   };
-  return <OpenRail {...props} onClose={close} />;
+  return (
+    <RailSlot>
+      <OpenRail {...props} onClose={close} />
+    </RailSlot>
+  );
 });
 
 function useFloatingClose(
@@ -159,7 +179,6 @@ function OpenRail({
   const railRef = useRef<HTMLElement>(null);
   const railId = usePaneId(RAIL_ID);
   const { remote } = useRemoteClient();
-  useRoomInThread(railRef);
   useFloatingClose(railRef, overlay, onClose);
   useLayoutEffect(() => {
     if (overlay) railRef.current?.focus({ preventScroll: true });
@@ -208,6 +227,7 @@ function OpenRail({
     if (action.kind === 'tab') onTab(action.tab);
     if (action.kind === 'autonomy') onAutonomy();
     if (action.kind === 'changes') onChanges();
+    if (action.kind === 'tools') requestTools(conversationId);
   };
 
   return (
@@ -228,11 +248,7 @@ function OpenRail({
       </div>
       {task && <RailTodo task={task} onOpen={openTodo} />}
       {crew.length > 0 && <RailCrew conversationId={conversationId} agents={crew} mode={mode} />}
-      <RailTools
-        conversationId={conversationId}
-        repos={repos}
-        showPlugins={provider === 'claude' && !remote}
-      />
+      <RailToolsLine conversationId={conversationId} onOpen={() => act({ kind: 'tools' })} />
     </section>
   );
 }

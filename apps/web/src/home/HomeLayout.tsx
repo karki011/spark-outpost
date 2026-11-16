@@ -4,9 +4,8 @@ interface HomeLayoutProps {
   entering: boolean;
   loading: boolean;
   header: ReactNode;
-  lead: ReactNode;
   composer: ReactNode;
-  board: ReactNode;
+  children: ReactNode;
   foot: ReactNode;
 }
 
@@ -16,12 +15,9 @@ export function HomeLayout(props: HomeLayoutProps) {
       <div className="home">
         <div className={props.entering ? 'home-wrap home-live enter' : 'home-wrap home-live'}>
           {props.header}
-          <div className="home-lead" aria-busy={props.loading}>
-            {props.lead}
-          </div>
           {props.composer}
-          <div className="home-board" aria-busy={props.loading}>
-            {props.board}
+          <div className="home-sections" aria-busy={props.loading}>
+            {props.children}
           </div>
           {props.foot}
         </div>

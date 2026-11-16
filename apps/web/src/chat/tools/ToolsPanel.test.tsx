@@ -12,7 +12,7 @@ vi.mock('../../settings/setting-focus.ts', () => ({
   requestSettingFocus: (label: string) => opened.focus.push(label),
 }));
 
-const { RailTools } = await import('./RailTools.tsx');
+const { ToolsPanel } = await import('./ToolsPanel.tsx');
 
 const CHAT = '7a1f0c1e-6f0e-4d57-9a3e-0d8a53a7b301';
 const SERVER_ID = '11111111-1111-4111-8111-111111111111';
@@ -101,7 +101,12 @@ function show(showPlugins = true) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <RailTools conversationId={CHAT} repos={[]} showPlugins={showPlugins} />
+      <ToolsPanel
+        conversationId={CHAT}
+        repos={[]}
+        provider={showPlugins ? 'claude' : 'codex'}
+        onClose={() => undefined}
+      />
     </QueryClientProvider>,
   );
 }
@@ -113,7 +118,7 @@ afterEach(() => {
   opened.focus.length = 0;
 });
 
-describe('tools in the context rail', () => {
+describe('the Tools panel by the message box', () => {
   it('turns an MCP server on for this chat only and leaves repo servers read only', async () => {
     const calls = serve([]);
     show();

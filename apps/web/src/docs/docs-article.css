@@ -1,5 +1,5 @@
 .docs-article {
-  max-width: 760px;
+  max-width: 880px;
   margin: 0 auto;
   padding: 36px 40px 64px;
 }
@@ -113,7 +113,16 @@
 }
 
 .docs-body table {
+  width: 100%;
   overflow-wrap: normal;
+}
+
+.docs-body td:last-child a {
+  white-space: nowrap;
+}
+
+.docs-body > :is(p, ul, blockquote) {
+  max-width: 76ch;
 }
 
 .docs-body th:first-child,
@@ -283,7 +292,7 @@
 
 @media (min-width: 1280px) {
   .docs-article[data-outlined] {
-    max-width: 1000px;
+    max-width: 1180px;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 200px;
     grid-template-rows: auto auto 1fr;
@@ -318,5 +327,13 @@
 
   .docs-article[data-outlined] > .docs-outline a:hover {
     color: var(--accent-text);
+  }
+}
+
+@media (min-width: 1680px) {
+  .docs-article[data-outlined] {
+    max-width: 1400px;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    column-gap: 48px;
   }
 }

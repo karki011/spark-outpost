@@ -9,7 +9,7 @@ vi.mock('../../settings/settings-request.ts', () => ({
   requestSettings: (section: string) => opened.sections.push(section),
 }));
 
-const { RailConnectors } = await import('./RailConnectors.tsx');
+const { ConnectorTools } = await import('./ConnectorTools.tsx');
 
 function serve(connectors: AgentConnector[]) {
   vi.stubGlobal(
@@ -28,7 +28,7 @@ function show() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <RailConnectors />
+      <ConnectorTools />
     </QueryClientProvider>,
   );
   return client;
@@ -40,7 +40,7 @@ afterEach(() => {
   opened.sections.length = 0;
 });
 
-describe('connectors in the context rail', () => {
+describe('connectors in the Tools panel', () => {
   it('lists what the agent gets, a switch that is off, and folds the rest into one line', async () => {
     serve([
       { id: 'github', state: 'on' },

@@ -1,0 +1,98 @@
+.tools-panel .tools-scroll {
+  display: flex;
+  flex-direction: column;
+}
+
+.tools-group {
+  padding: 10px 0 6px;
+  border-top: 1px solid var(--line);
+}
+
+.tools-group:first-child {
+  border-top: 0;
+  padding-top: 2px;
+}
+
+.tools-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tools-sub span {
+  padding: 0 6px;
+  color: var(--faint);
+  font-weight: 400;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.tools-panel ul {
+  max-height: none;
+  overflow: visible;
+}
+
+.tools-panel li {
+  min-height: 36px;
+  padding: 4px 0;
+  border-top: 0;
+}
+
+.tools-panel .mcppop-text code {
+  overflow: hidden;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tools-panel .mcppop-text small {
+  overflow: hidden;
+  color: var(--faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tools-note {
+  margin: 0;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.tools-link {
+  align-self: flex-start;
+  min-height: 28px;
+  padding: 0;
+  color: var(--accent-text);
+  font-size: 12px;
+}
+
+.tools-link:hover {
+  text-decoration: underline;
+}
+
+.tools-state {
+  flex-shrink: 0;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.tools-state.on {
+  color: var(--success);
+}
+
+.tools-panel li[data-state='switch_off'] code {
+  color: var(--muted);
+}
+
+@media (pointer: coarse) {
+  .tools-link,
+  .tools-panel li {
+    min-height: 44px;
+  }
+}

@@ -225,6 +225,7 @@ test('adds another chat from the plus menu with the keyboard', async ({ page }) 
     /Add from repo/,
     'Add a repo…',
     'Add another chat…',
+    /^Tools…/,
   ]);
   await page.getByRole('menuitem', { name: 'Add another chat…' }).click();
 

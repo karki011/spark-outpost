@@ -41,47 +41,6 @@ export function HomeCard({
   );
 }
 
-interface HomeLeadProps {
-  id: string;
-  title: string;
-  meta?: ReactNode;
-  action?: ReactNode;
-  className?: string;
-  children: ReactNode;
-}
-
-export function HomeLead({ id, title, meta, action, className = '', children }: HomeLeadProps) {
-  return (
-    <section className={`hlead ${className}`.trim()} aria-labelledby={id}>
-      <div className="hlead-h">
-        <div className="hlead-t">
-          <h2 id={id}>{title}</h2>
-          {meta && <p className="hlead-meta">{meta}</p>}
-        </div>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-export function LeadGroup({
-  id,
-  title,
-  children,
-}: {
-  id: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="hlead-g" role="group" aria-labelledby={id}>
-      <h3 id={id}>{title}</h3>
-      {children}
-    </div>
-  );
-}
-
 export type StatusTone = 'bad' | 'warn' | 'ok' | 'run' | 'info';
 
 const ICONS: Record<StatusTone, ReactNode> = {
@@ -223,16 +182,5 @@ export function RowsSkeleton() {
         </li>
       ))}
     </ul>
-  );
-}
-
-export function LeadSkeleton() {
-  return (
-    <section className="hlead" aria-hidden="true" data-testid="home-lead-skeleton">
-      <div className="hlead-h">
-        <span className="hsk" style={{ width: 160, height: 16 }} />
-      </div>
-      <RowsSkeleton />
-    </section>
   );
 }

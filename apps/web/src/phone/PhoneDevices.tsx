@@ -1,11 +1,9 @@
 import { useState, type ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { RemoteDevice } from '@spark-outpost/contracts';
-import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { DeviceRow } from './DeviceRow.tsx';
-import { phoneApi, phoneKeys } from './phone-api.ts';
 import { shortDate } from './phone-copy.ts';
+import { PhoneSection } from './PhoneSection.tsx';
 import { SwitchRow } from './PhoneSwitches.tsx';
 
 const FRESH_SLACK_MS = 5000;
@@ -22,7 +20,7 @@ function RemovedDevices({ removed }: { removed: RemoteDevice[] }) {
         aria-controls="ph-removed-list"
         onClick={() => setOpen(!open)}
       >
-        {removed.length} removed
+        {removed.length} removed {removed.length === 1 ? 'device' : 'devices'}
       </button>
       {open && (
         <ul id="ph-removed-list" className="ph-devices" aria-label="Removed devices">
@@ -47,6 +45,7 @@ interface PhoneDevicesProps {
   devices: RemoteDevice[] | undefined;
   freshAfter: number | null;
   passkeysAllowed: boolean;
+  pair: ReactNode;
   wait: ReactNode;
 }
 
@@ -67,55 +66,40 @@ function PasskeySwitch({ allowed }: { allowed: boolean }) {
   );
 }
 
-export function PhoneDevices({ devices, freshAfter, passkeysAllowed, wait }: PhoneDevicesProps) {
-  const queryClient = useQueryClient();
+export function PhoneDevices({
+  devices,
+  freshAfter,
+  passkeysAllowed,
+  pair,
+  wait,
+}: PhoneDevicesProps) {
   const active = (devices ?? []).filter((device) => !device.revokedAt);
   const removed = (devices ?? []).filter((device) => device.revokedAt).reverse();
-  const disconnect = useMutation({
-    mutationFn: phoneApi.disconnectAll,
-    onSuccess: (next) => {
-      queryClient.setQueryData(phoneKeys.devices, next);
-      void queryClient.invalidateQueries({ queryKey: phoneKeys.audit });
-    },
-  });
   const now = useMinuteClock();
   const isFresh = (device: RemoteDevice) =>
     freshAfter !== null && new Date(device.createdAt).getTime() >= freshAfter - FRESH_SLACK_MS;
 
   return (
-    <section className="ph-card ph-devices-card" aria-labelledby="ph-devices-title">
-      <div className="ph-card-head">
-        <h2 id="ph-devices-title">Devices</h2>
-        {active.length > 0 && <span className="ph-count">{active.length}</span>}
-      </div>
+    <PhoneSection
+      id="devices"
+      title="Devices"
+      count={active.length}
+      className="ph-devices-card"
+      lead={pair}
+    >
       {devices === undefined && wait}
       {devices !== undefined && active.length === 0 && (
         <p className="ph-empty">No device is paired yet.</p>
       )}
       {active.length > 0 && (
-        <>
-          <ul className="ph-devices">
-            {active.map((device) => (
-              <DeviceRow key={device.id} device={device} fresh={isFresh(device)} now={now} />
-            ))}
-          </ul>
-          <HoldToConfirm
-            label="Hold to disconnect all"
-            hint="Every device will need to pair again. Their passkeys are removed too."
-            holdingHint="Keep holding. Let go now to cancel."
-            releasedHint="Released early. Nothing happened."
-            disabled={disconnect.isPending}
-            onConfirm={() => disconnect.mutate()}
-          />
-          {disconnect.error && (
-            <p className="ph-error" role="alert">
-              {disconnect.error.message}
-            </p>
-          )}
-        </>
+        <ul className="ph-devices">
+          {active.map((device) => (
+            <DeviceRow key={device.id} device={device} fresh={isFresh(device)} now={now} />
+          ))}
+        </ul>
       )}
       <RemovedDevices removed={removed} />
       <PasskeySwitch allowed={passkeysAllowed} />
-    </section>
+    </PhoneSection>
   );
 }

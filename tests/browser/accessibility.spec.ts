@@ -195,7 +195,7 @@ test('Home and the Tickets brief strip have no serious issues with a brief and a
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: /^Home/ })
     .click();
-  const today = page.getByRole('region', { name: /^(Needs you|Pick up next)/ });
+  const today = page.getByRole('region', { name: 'Brief', exact: true });
   await expect(today.getByRole('list', { name: 'Do these first' })).toBeVisible({
     timeout: 15_000,
   });

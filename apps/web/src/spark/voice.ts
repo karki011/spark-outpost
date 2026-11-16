@@ -79,15 +79,13 @@ export function sparkMood(personality: Personality): ScoutMood {
   return null;
 }
 
-export type HeadlineKind = 'board' | 'since-you-left' | 'meeting' | 'before-you-go';
+export type HeadlineKind = 'board' | 'meeting';
 
 export interface HeadlineFacts {
   kind: HeadlineKind;
   hour: number;
   waiting: number;
   working: number;
-  updates: number;
-  failed: number;
   meeting: string | null;
   minutes: number;
 }
@@ -114,15 +112,6 @@ function boardSituation(voice: Voice, facts: HeadlineFacts): string {
   return `${bits.join(' and ')}.`;
 }
 
-function sinceSituation({ personality }: Voice, facts: HeadlineFacts): string {
-  const updates = countLabel(facts.updates, 'update', 'updates');
-  const failed = facts.failed > 0 ? `, ${facts.failed} stopped with an error` : '';
-  if (personality === 'playful')
-    return `Welcome back! ${updates} landed while you were away${failed}.`;
-  if (personality === 'facts') return `${updates} since you left${failed}.`;
-  return `${updates} landed while you were away${failed}.`;
-}
-
 function meetingSituation(facts: HeadlineFacts): string {
   const title = facts.meeting ?? 'Your meeting';
   const minutes = Math.abs(facts.minutes);
@@ -136,26 +125,11 @@ function meetingSituation(facts: HeadlineFacts): string {
   return `${title} ${when}.${waiting}`;
 }
 
-function eveningSituation({ personality }: Voice, facts: HeadlineFacts): string {
-  const lead = personality === 'facts' ? 'Before you go:' : 'Before you go,';
-  const bits = [
-    ...(facts.waiting > 0 ? [waitingClause(facts.waiting)] : []),
-    ...(facts.working > 0 ? [workingClause(facts.working)] : []),
-  ];
-  return `${lead} ${bits.join(' and ')}.`;
-}
-
 export function headline(voice: Voice, facts: HeadlineFacts): string {
   if (facts.kind === 'meeting') return meetingSituation(facts);
-  if (facts.kind === 'before-you-go') return eveningSituation(voice, facts);
-  const situation =
-    facts.kind === 'since-you-left' ? sinceSituation(voice, facts) : boardSituation(voice, facts);
-  return `${opener(voice, facts.hour)} ${situation}`;
+  return `${opener(voice, facts.hour)} ${boardSituation(voice, facts)}`;
 }
 
 export function headlineMood(facts: HeadlineFacts, fallback: ScoutMood): ScoutMood {
-  if (facts.kind === 'meeting') return 'alert';
-  if (facts.kind === 'since-you-left') return facts.failed > 0 ? 'sad' : 'happy';
-  if (facts.kind === 'before-you-go') return facts.waiting > 0 ? 'alert' : 'working';
-  return fallback;
+  return facts.kind === 'meeting' ? 'alert' : fallback;
 }
