@@ -105,7 +105,7 @@ test('a larger team lists every worker in the rail and the rail scrolls', async 
     .evaluateAll((rows) => rows.every((row) => row.scrollWidth <= row.clientWidth));
   expect(fits).toBe(true);
   await shot(page, 'agent-team-sidebar-large.png');
-  await page.setViewportSize({ width: 1600, height: 600 });
+  await page.setViewportSize({ width: 1600, height: 440 });
   const rail = page.getByRole('region', { name: 'Chat context' });
   await expect
     .poll(() => rail.evaluate((element) => element.scrollHeight > element.clientHeight))

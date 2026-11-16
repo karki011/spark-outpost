@@ -200,17 +200,3 @@ test('Open from the island lands on that day with the meeting selected and in vi
     'This event is no longer on your calendar.',
   );
 });
-
-test('a row in Home Your day opens Today on that meeting', async ({ page }) => {
-  const response = await page.request.get('/api/calendar/now');
-  const upcoming = calendarNowSchema.parse(await response.json()).upcoming;
-  expect(upcoming.map((event) => event.title)).toContain('Customer call');
-  await page.goto('/');
-  await page
-    .getByRole('region', { name: /^(Your day|After the meeting)$/ })
-    .getByRole('button', { name: 'Open Customer call in Today' })
-    .click();
-  const block = today(page).getByRole('button', { name: /^Customer call, / });
-  await expect(block).toHaveAttribute('aria-expanded', 'true');
-  await expect(today(page).getByRole('region', { name: 'Customer call' })).toBeVisible();
-});

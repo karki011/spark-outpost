@@ -90,4 +90,9 @@ test('a meeting outside its Join time shows as the next meeting and opens Today'
   await expect(next).toBeVisible();
   await next.click();
   await expect(page.locator('.td-tools')).toBeVisible();
+  const today = page.getByRole('main', { name: 'Today' });
+  await expect(today.getByRole('button', { name: /^Standup, / })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
 });

@@ -166,7 +166,7 @@ test('the Tickets strip shows the Home brief, and each side links to the other',
 
   const rail = page.getByRole('navigation', { name: 'Main' });
   await rail.getByRole('button', { name: /^Home/ }).click();
-  const pickup = page.getByRole('region', { name: /^(Needs you|Pick up next)/ });
+  const pickup = page.getByRole('region', { name: 'Brief', exact: true });
   const items = pickup.getByRole('list', { name: 'Pick up where you left off' });
   await expect(items.getByRole('listitem')).toHaveCount(3, { timeout: 15_000 });
   await expect(items).toContainText('WEB-433');
