@@ -109,7 +109,7 @@ describe('the calendar ticker', () => {
     await ticker.tick();
     await ticker.tick();
     expect(push.meeting).toHaveBeenCalledTimes(1);
-    expect(push.meeting).toHaveBeenCalledWith(10);
+    expect(push.meeting).toHaveBeenCalledWith(7);
   });
 
   it('sends one meeting alert for meetings that start together', async () => {
@@ -137,11 +137,27 @@ describe('the calendar ticker', () => {
     expect(push.meeting).toHaveBeenCalledTimes(1);
   });
 
-  it('sends nothing for a meeting that has started', async () => {
+  it('says Meeting now just after the start, and nothing once its reminders are over', async () => {
     await updateSettings(t.db, t.workspaceId, { phoneAlerts: true });
     events = [helperEvent('Late', -1, 20)];
     await ticker.tick();
+    expect(push.meeting).toHaveBeenCalledWith(0);
+    push.meeting.mockReset();
+    events = [helperEvent('Later', -6, 20)];
+    await ticker.tick();
     expect(push.meeting).not.toHaveBeenCalled();
+  });
+
+  it('never lets a meeting hold its own alert at the start', async () => {
+    await updateSettings(t.db, t.workspaceId, {
+      phoneAlerts: true,
+      joinLead: 0,
+      holdRule: 'meetings',
+    });
+    events = [helperEvent('Standup', 0, 30)];
+    await ticker.tick();
+    expect(ticker.held()).toBe(true);
+    expect(push.meeting).toHaveBeenCalledWith(0);
   });
 
   it('keeps choices when two syncs run at once', async () => {

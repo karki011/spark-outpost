@@ -79,4 +79,10 @@ describe('the next countdown minute', () => {
     expect(nudgeHidden(after, 'standup', remindUntil(span) - 1)).toBe(true);
     expect(after.get('standup')?.dismissed).toBe(false);
   });
+
+  it('keeps a dismissed meeting dismissed when its card is closed', () => {
+    const span = { start: 2_000_000, end: 5_000_000 };
+    const dismissed = dismissNudge(NO_NUDGE_MARKS, 'standup', span.end);
+    expect(closeNudge(dismissed, 'standup', span, 1_000_000)).toBe(dismissed);
+  });
 });

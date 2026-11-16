@@ -8,7 +8,6 @@ import { openJoin } from './today-model.ts';
 import { openTodayMeeting } from './today-request.ts';
 
 const CALENDAR_NAME_MAX = 200;
-const NO_NOTES: MeetingJoinNotes = { detail: null, problem: null };
 
 type ProblemListener = (problem: string) => void;
 const problemListeners = new Set<ProblemListener>();
@@ -17,6 +16,11 @@ export function onNotesProblem(listener: ProblemListener): () => void {
   problemListeners.add(listener);
   return () => problemListeners.delete(listener);
 }
+
+const NOTES_UNREACHABLE: MeetingJoinNotes = {
+  detail: null,
+  problem: 'Spark could not be reached. Try Take notes.',
+};
 
 export function notesProblemText(problem: string): string {
   return `Notes didn’t start: ${problem}`;
@@ -34,7 +38,7 @@ export function startJoinNotes(
       ...(title ? { title } : {}),
       ...(calendar ? { calendarName: calendar } : {}),
     })
-    .catch(() => NO_NOTES);
+    .catch(() => NOTES_UNREACHABLE);
 }
 
 export function joinMeeting(event: CalendarEvent, calendarName?: string): void {

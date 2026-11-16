@@ -52,9 +52,13 @@ export function startCalendarTicker(deps: CalendarTickerDeps): CalendarTicker {
     const state = await calendarState({ ...deps, now });
     const at = now();
     setHolding(activeHold(state.events, state.settings, at) !== null);
-    if (!state.settings.phoneAlerts || holding) return;
+    if (!state.settings.phoneAlerts) return;
+    const due = meetingPushDue(state.events, state.settings, at);
+    const dueKeys = new Set(due.map((event) => event.key));
+    const others = state.events.filter((event) => !dueKeys.has(event.key));
+    if (activeHold(others, state.settings, at)) return;
     pushed = pushed.filter((lead) => at < spanOf(lead).start + MEETING_REMIND_GRACE_MS);
-    for (const event of meetingPushDue(state.events, state.settings, at)) {
+    for (const event of due) {
       if (!sent.claim(event.key)) continue;
       if (pushed.some((lead) => meetingsOverlap(lead, event))) continue;
       pushed.push(event);

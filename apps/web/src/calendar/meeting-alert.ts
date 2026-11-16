@@ -118,6 +118,10 @@ function acceptedOrOwn(event: CalendarEvent): boolean {
   return event.myStatus === 'accepted' || event.myStatus === 'none';
 }
 
+export function autoJoinCovers(event: CalendarEvent, autoJoin: boolean): boolean {
+  return autoJoin && acceptedOrOwn(event);
+}
+
 function autoSkipFor(event: CalendarEvent, input: AutoJoinInput): AutoJoinSkip | null {
   const skip = skipFor(event, input);
   if (skip) return skip;

@@ -16,6 +16,7 @@ import { useEventDetail } from '../calendar/use-calendar.ts';
 import { ClockIcon, PeopleIcon, VideoIcon, WarnIcon } from '../ui/icons.tsx';
 import { CardButton, MeetingCardBody, type MeetingCardRow } from '../calendar/card/MeetingCard.tsx';
 import { cardLead } from '../calendar/card/card-lead.ts';
+import { autoJoinCovers } from '../calendar/meeting-alert.ts';
 import { JoinAtStartButton } from '../calendar/JoinAtStartButton.tsx';
 import { useLeave } from './use-leave.ts';
 
@@ -85,7 +86,7 @@ function LeadAction({ event, calendar }: { event: CalendarEvent; calendar: Islan
     <JoinAtStartButton
       title={event.title}
       className="mc-btn primary"
-      autoJoin={calendar.autoJoin}
+      autoJoin={autoJoinCovers(event, calendar.autoJoin)}
       onAsk={() => calendar.onJoinAtStart(event)}
     />
   );

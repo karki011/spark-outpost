@@ -119,6 +119,7 @@ export function closeNudge(
   span: { start: number; end: number },
   at: number,
 ): NudgeMarks {
+  if (marks.get(eventKey)?.dismissed) return marks;
   if (at < span.start) return snoozeNudgeUntilStart(marks, eventKey, span, at);
   const quietFor = remindUntil(span) - at;
   return quietFor > 0 ? snoozeNudgeFor(marks, eventKey, span.end, at, quietFor) : marks;

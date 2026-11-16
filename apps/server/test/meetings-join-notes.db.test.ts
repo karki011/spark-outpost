@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CALENDAR_DEFAULT_SETTINGS } from '@spark-outpost/contracts';
 import { createApp } from '../src/api/app.ts';
 import { calendarConnection, updateSettings } from '../src/calendar/store.ts';
 import { createMeetingService } from '../src/meetings/service.ts';
-import type { MeetingSource } from '../src/meetings/source.ts';
+import { MeetingSourceError, type MeetingSource } from '../src/meetings/source.ts';
 import { ROUTE_RULES } from '../src/remote/route-rules.ts';
 import { testAppOptions, localClient } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
@@ -78,6 +78,44 @@ describe('taking notes when the user joins', () => {
     expect(again.body.problem).toBeNull();
     expect(again.body.detail.meeting.id).toBe(first.body.detail.meeting.id);
     expect(started).toHaveLength(1);
+  });
+
+  it('answers a second join during a startup that then fails with the reason, not a gone recording', async () => {
+    await updateSettings(t.db, t.workspaceId, { notesOnJoin: true });
+    let fail: (error: Error) => void = () => undefined;
+    const source: MeetingSource = {
+      state: () => ({ available: true, reason: null }),
+      start: () =>
+        new Promise<void>((_resolve, reject) => {
+          fail = reject;
+        }),
+      stop: async () => undefined,
+    };
+    const meetings = createMeetingService({
+      db: t.db,
+      workspaceId: t.workspaceId,
+      source,
+      publish: () => undefined,
+    });
+    const client = localClient(createApp({ ...testAppOptions(t), meetings }));
+    const first = client
+      .send('post', '/api/meetings/join-notes', EVENT)
+      .expect(200)
+      .then((r) => r);
+    await vi.waitFor(async () =>
+      expect((await client.get('/api/meetings/status')).body.recordingId).toEqual(
+        expect.any(String),
+      ),
+    );
+    const second = client
+      .send('post', '/api/meetings/join-notes', EVENT)
+      .expect(200)
+      .then((r) => r);
+    fail(new MeetingSourceError('The microphone is busy.'));
+    const [one, two] = await Promise.all([first, second]);
+    expect(two.body.detail).toBeNull();
+    expect(two.body.problem).toEqual(expect.any(String));
+    expect(one.body).toEqual({ detail: null, problem: 'The microphone is busy.' });
   });
 
   it('starts nothing for a second join while one meeting records', async () => {

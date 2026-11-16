@@ -50,6 +50,7 @@ export interface MeetingService {
   announce(meetingId: string): void;
   status(): Promise<MeetingStatus>;
   start(request: StartMeetingRequest): Promise<Meeting>;
+  started(meetingId: string): Promise<void>;
   stop(meetingId: string): Promise<Meeting | null>;
   remove(meetingId: string): Promise<boolean>;
   recover(): Promise<void>;
@@ -133,6 +134,21 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
     }
   }
 
+  const starting = new Map<string, Promise<void>>();
+
+  async function startSource(active: MeetingSource, meetingId: string): Promise<void> {
+    try {
+      await active.start(meetingId, deliverTo(meetingId), () => {
+        void finish(meetingId, 'interrupted').catch(() => undefined);
+      });
+    } catch (error) {
+      await deleteMeeting(db, workspaceId, meetingId);
+      announce(meetingId);
+      if (error instanceof MeetingSourceError) throw new MeetingError(503, error.message);
+      throw error;
+    }
+  }
+
   return {
     writeNotes: options.writeNotes,
     announce,
@@ -159,17 +175,24 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
         throw error;
       }
       announce(meeting.id);
+      const startup = startSource(source, meeting.id);
+      starting.set(
+        meeting.id,
+        startup.then(
+          () => undefined,
+          () => undefined,
+        ),
+      );
       try {
-        await source.start(meeting.id, deliverTo(meeting.id), () => {
-          void finish(meeting.id, 'interrupted').catch(() => undefined);
-        });
-      } catch (error) {
-        await deleteMeeting(db, workspaceId, meeting.id);
-        announce(meeting.id);
-        if (error instanceof MeetingSourceError) throw new MeetingError(503, error.message);
-        throw error;
+        await startup;
+      } finally {
+        starting.delete(meeting.id);
       }
       return (await getMeeting(db, workspaceId, meeting.id)) ?? meeting;
+    },
+
+    async started(meetingId) {
+      await starting.get(meetingId);
     },
 
     async stop(meetingId) {

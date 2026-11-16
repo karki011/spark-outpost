@@ -14,6 +14,7 @@ import { useReducedMotion } from '../../ui/motion.ts';
 import { clock } from '../calendar-format.ts';
 import { joinLabel, placeRow, startsLabel, timeRow } from '../meeting-card.ts';
 import { cardLead } from '../card/card-lead.ts';
+import { autoJoinCovers } from '../meeting-alert.ts';
 import {
   CardButton,
   MeetingCardBody,
@@ -136,7 +137,7 @@ function LeadAction({
     <JoinAtStartButton
       title={event.title}
       className="mc-btn primary"
-      autoJoin={autoJoin}
+      autoJoin={autoJoinCovers(event, autoJoin)}
       onAsk={() => act('join-at-start', event.key)}
     />
   );
