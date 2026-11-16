@@ -345,7 +345,7 @@ test('the page works with the keyboard alone', async ({ page }) => {
   }
 });
 
-test('Settings has no Sparks section; Home’s Manage opens the page', async ({ page }) => {
+test('Settings has no Sparks section; the left bar opens the page', async ({ page }) => {
   await addSpark(page, { name: 'Pip', role: 'Code reviewer' });
   await page.goto('/');
   await clickSettings(page);
@@ -355,13 +355,10 @@ test('Settings has no Sparks section; Home’s Manage opens the page', async ({ 
   await expect(settings.getByRole('tab', { name: 'Sparks' })).toHaveCount(0);
   await page.keyboard.press('Escape');
 
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: /^Home/ })
-    .click();
-  const roster = page.locator('.hsparks');
-  if ((await roster.getAttribute('open')) === null) await roster.locator('summary').click();
-  await roster.getByRole('button', { name: 'Manage' }).click();
+  const main = page.getByRole('navigation', { name: 'Main' });
+  await main.getByRole('button', { name: /^Home/ }).click();
+  await expect(page.locator('#home-greet')).toBeVisible();
+  await main.getByRole('button', { name: /^Sparks/ }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Sparks' })).toBeVisible();
   await expect(pageMain(page).getByRole('button', { name: /^Open Pip\./ })).toBeVisible();
 });

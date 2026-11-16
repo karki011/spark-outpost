@@ -137,8 +137,8 @@ for (const theme of THEMES) {
       .getByRole('button', { name: /^Home/ })
       .click();
     await expect(page.getByRole('list', { name: 'Needs you' })).toBeVisible();
-    await expect(page.locator('.feed-foot')).toBeVisible();
-    await expect(page.locator('.hspend')).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Working set' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Start a new chat' })).toBeVisible();
     found.push(...(await blockingViolations(page, 'home')));
 
     expect(found).toEqual([]);

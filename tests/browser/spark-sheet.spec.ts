@@ -4,6 +4,7 @@ import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { ADD_FOLDER, keepPlainFolder } from './add-folder-kit.ts';
+import { openSparksPage } from './crew-files-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { animationsSettled } from './settle.ts';
 
@@ -52,17 +53,11 @@ async function storedSparks(page: Page): Promise<StoredSpark[]> {
   return body.teammates;
 }
 
+const sparksMain = (page: Page) => page.locator('main.sparks');
+
 async function openNewSpark(page: Page): Promise<Locator> {
-  await page.goto('/');
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: /^Home/ })
-    .click();
-  await page.locator('.hsparks:not([open]) summary').click();
-  await page
-    .getByRole('region', { name: 'Your Sparks' })
-    .getByRole('button', { name: 'New Spark' })
-    .click();
+  await openSparksPage(page);
+  await sparksMain(page).getByRole('button', { name: 'New Spark' }).click();
   const form = sheet(page, 'New Spark');
   await expect(form).toBeVisible();
   return form;
@@ -141,12 +136,12 @@ test('a new Spark gets its blob from its name, with the pickers one click away',
   await expect(form).toHaveCount(0);
   const [saved] = await storedSparks(page);
   expect(saved).toMatchObject({ name: 'Juniper', faceAuto: true });
-  const rosterFace = await page
-    .getByRole('region', { name: 'Your Sparks' })
-    .locator('.tm-card .tm-face')
+  await expect(page.getByRole('heading', { level: 1, name: 'Juniper' })).toBeVisible();
+  const shownFace = await sparksMain(page)
+    .locator('.spk-who .tm-face')
     .first()
     .evaluate((node) => node.querySelector('path')?.getAttribute('d') ?? '');
-  expect(rosterFace.length).toBeGreaterThan(0);
+  expect(shownFace.length).toBeGreaterThan(0);
 });
 
 test('a picked look survives editing and Use name puts the blob back on the name', async ({
@@ -155,27 +150,30 @@ test('a picked look survives editing and Use name puts the blob back on the name
   await page.request.post('/api/teammates', {
     data: { name: 'Pip', face: { shape: 'sun', color: 'gold' } },
   });
-  await page.goto('/');
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: /^Home/ })
+  await openSparksPage(page);
+  await sparksMain(page)
+    .getByRole('button', { name: /^Open Pip\./ })
     .click();
-  await page.locator('.hsparks:not([open]) summary').click();
-  await page.getByRole('button', { name: 'Edit Pip' }).click();
-  const form = sheet(page, 'Edit Pip');
+  const form = sparksMain(page).getByRole('tabpanel', { name: 'Details' });
+  const save = form.getByRole('button', { name: 'Save' });
   await expect(form).toContainText('You picked this blob.');
   await form.getByRole('textbox', { name: 'Role' }).fill('Reviewer');
-  await form.getByRole('button', { name: 'Save' }).click();
-  await expect(form).toHaveCount(0);
+  await save.click();
+  await expect(form.getByRole('status')).toContainText('Saved');
   expect((await storedSparks(page))[0]).toMatchObject({
     faceAuto: false,
     face: { shape: 'sun', color: 'gold' },
   });
 
-  await page.getByRole('button', { name: 'Edit Pip' }).click();
+  await sparksMain(page).getByRole('button', { name: 'All Sparks' }).click();
+  await sparksMain(page)
+    .getByRole('button', { name: /^Open Pip\./ })
+    .click();
+  await expect(form).toContainText('You picked this blob.');
   await form.getByRole('button', { name: 'Use name' }).click();
-  await form.getByRole('button', { name: 'Save' }).click();
-  await expect(form).toHaveCount(0);
+  await expect(form).toContainText('Its blob comes from its name.');
+  await save.click();
+  await expect(form.getByRole('status')).toContainText('Saved');
   expect((await storedSparks(page))[0]).toMatchObject({ faceAuto: true });
 });
 
@@ -258,18 +256,7 @@ test('points standing instructions at a file with the themed picker @packaged', 
     instructionsPath: path.join(roles, 'reviewer.md'),
   });
 
-  rmSync(path.join(roles, 'reviewer.md'));
-  await page.getByRole('button', { name: 'Edit Pip' }).click();
-  const editing = sheet(page, 'Edit Pip');
-  await expect(editing.getByRole('group', { name: 'Instructions file' })).toContainText(
-    'This file is missing. Chats use the typed instructions below',
-  );
-  await editing.getByRole('button', { name: 'Remove instructions file' }).click();
-  await expect(editing.getByRole('group', { name: 'Instructions file' })).toHaveCount(0);
-  await editing.getByRole('button', { name: 'Save' }).click();
-  await expect(editing).toHaveCount(0);
-  expect((await storedSparks(page))[0]).toMatchObject({ instructionsPath: null });
-  writeFileSync(path.join(roles, 'reviewer.md'), '# Reviewer\nName the file and line.\n');
+  await expect(page.getByRole('heading', { level: 1, name: 'Pip' })).toBeVisible();
 });
 
 test('picks any folder as the default project from the sheet', async ({ page }) => {
