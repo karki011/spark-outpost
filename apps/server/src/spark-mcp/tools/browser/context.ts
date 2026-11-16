@@ -65,6 +65,7 @@ export type BrowserDecision =
   | 'local'
   | 'mode'
   | 'allowed_earlier'
+  | 'saved_sign_in'
   | 'user_allowed'
   | 'waiting_for_user'
   | 'user_declined'
