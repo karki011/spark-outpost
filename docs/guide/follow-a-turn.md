@@ -58,12 +58,12 @@ Queues survive restarts; unsent text stays in this browser.
 
 Steps fold under **Worked for …**; steered replies don't.
 
-| Under a reply                    | Use it to                                                   |
-| -------------------------------- | ----------------------------------------------------------- |
-| **Good result** / **Bad result** | Rate the PR turn.                                           |
-| Selected text                    | **Add to chat**, **Ask about this**, **Comment**, **Copy**. |
-| Choices                          | Only fill the message box, or **Show as list**.             |
-| `/fresh` or **… → Start fresh**  | Drop old context.                                           |
-| Ticks left of the thread         | Jump to messages.                                           |
+| Under a reply                    | Use it to                                       |
+| -------------------------------- | ----------------------------------------------- |
+| **Good result** / **Bad result** | Rate the PR turn.                               |
+| Selected text                    | **Add to chat**, **Comment**, **Copy**.         |
+| Choices                          | Only fill the message box, or **Show as list**. |
+| `/fresh` or **… → Start fresh**  | Drop old context.                               |
+| Ticks left of the thread         | Jump to messages.                               |
 
 **Next:** [Answer an approval card](answer-approvals.md)

@@ -85,7 +85,6 @@ test('a terminal Spark runs shows in the reply, opens read-only in the dock and 
   await expect(pane(page)).toContainText('Run by the agent · read-only');
   await expect(live(page)).toContainText('Harbor Light is up');
   await expect(live(page)).toContainText('tick 3');
-  await expect(dock(page).locator('.term-where')).toHaveText(work.folder);
   await expect(status(page)).toHaveText(/Closing the tab does not stop it\.$/);
 
   await pane(page).locator('.agent-tab-screen').click();

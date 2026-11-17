@@ -8,23 +8,24 @@ summary: What changed in recent releases and what to do next.
 
 ## Mid-November 2026
 
-| What changed                                     | What to do                                                     |
-| ------------------------------------------------ | -------------------------------------------------------------- |
-| Home: message box, Needs you, Working set        | [Read Home](home.md).                                          |
-| Claude and Codex adapters updated                | Nothing to do.                                                 |
-| Codex commits in its worktree again              | Nothing to do.                                                 |
-| **Thinking** expands; `/compact`; less “Running” | [Follow a turn](follow-a-turn.md#see-whats-happening).         |
-| One meeting card; Join takes notes               | [Take meeting notes](meetings.md).                             |
-| Saved sign-ins type with no card                 | [Save a test sign-in](use-the-browser.md#save-a-test-sign-in). |
-| Browser: address at top, one chat per tab        | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).   |
-| Context rail: full height; **Tools** inline      | [See a chat's context](context-rail.md).                       |
-| Remote control: side panel, sections fold        | [Use your phone](use-your-phone.md).                           |
-| Wider Home, Analytics, Remote control, guide     | Nothing to do.                                                 |
-| Spark drafts open in a review window             | [Answer the drafts](build-with-an-agent.md#answer-the-drafts). |
-| **Let Spark build one for you**; new empty tabs  | [Build with an agent](build-with-an-agent.md).                 |
-| Squircle corners, sidebar hide fix               | Nothing to do.                                                 |
-| Fewer Settings pages                             | [Settings](settings.md).                                       |
-| Left bar **More** menu                           | [Pause Spark](pause-spark.md).                                 |
+| What changed                                       | What to do                                                     |
+| -------------------------------------------------- | -------------------------------------------------------------- |
+| No **Ask about this**; hidden sidebar stays hidden | Use **Add to chat**.                                           |
+| Home: message box, Needs you, Working set          | [Read Home](home.md).                                          |
+| Claude and Codex adapters updated                  | Nothing to do.                                                 |
+| Codex commits in its worktree again                | Nothing to do.                                                 |
+| **Thinking** expands; `/compact`; less “Running”   | [Follow a turn](follow-a-turn.md#see-whats-happening).         |
+| One meeting card; Join takes notes                 | [Take meeting notes](meetings.md).                             |
+| Saved sign-ins type with no card                   | [Save a test sign-in](use-the-browser.md#save-a-test-sign-in). |
+| Browser: address at top, one chat per tab          | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).   |
+| Context rail: full height; **Tools** inline        | [See a chat's context](context-rail.md).                       |
+| Remote control: side panel, sections fold          | [Use your phone](use-your-phone.md).                           |
+| Wider Home, Analytics, Remote control, guide       | Nothing to do.                                                 |
+| Spark drafts open in a review window               | [Answer the drafts](build-with-an-agent.md#answer-the-drafts). |
+| **Let Spark build one for you**; new empty tabs    | [Build with an agent](build-with-an-agent.md).                 |
+| Squircle corners, sidebar hide fix                 | Nothing to do.                                                 |
+| Fewer Settings pages                               | [Settings](settings.md).                                       |
+| Left bar **More** menu                             | [Pause Spark](pause-spark.md).                                 |
 
 ## Early November 2026
 
@@ -61,5 +62,3 @@ summary: What changed in recent releases and what to do next.
 | ----------------------------------- | ------------------------------------ |
 | Phone push for finished turns       | [Use your phone](use-your-phone.md). |
 | Edits show +N −M and open to a diff | [Follow a turn](follow-a-turn.md).   |
-| Map: **Running chats** overlay      | [Map](map.md).                       |
-| Tickets: parent, subtasks and links | [Tickets](tickets-inbox.md).         |

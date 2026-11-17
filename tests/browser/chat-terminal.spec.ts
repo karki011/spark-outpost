@@ -132,7 +132,10 @@ test('a project chat opens in its folder, keeps tabs while hidden and per chat',
   await expect(
     dock(page).getByRole('button', { name: 'my files · widgets', exact: true }),
   ).toBeVisible();
-  await expect(dock(page).locator('.term-where')).toHaveText(root);
+  await expect(dock(page).locator('.term-tab-pick[aria-pressed="true"]')).toHaveAttribute(
+    'title',
+    root,
+  );
   await runPwd(page, 'project');
   await expect(screenText(page)).toContainText(`project:${root}`);
 
@@ -192,7 +195,10 @@ test('a Do chat with a worktree opens its terminal in the worktree', async ({ pa
   const workspace = await page.request.get(`/api/conversations/${chat!.id}/workspace`);
   const { current } = (await workspace.json()) as { current: { path: string } };
   expect(current.path).not.toBe(repo.root);
-  await expect(dock(page).locator('.term-where')).toHaveText(current.path);
+  await expect(dock(page).locator('.term-tab-pick[aria-pressed="true"]')).toHaveAttribute(
+    'title',
+    current.path,
+  );
   await runPwd(page, 'worktree');
   await expect(screenText(page)).toContainText(`worktree:${realpathSync(current.path)}`);
   await shot(page, 'worktree');

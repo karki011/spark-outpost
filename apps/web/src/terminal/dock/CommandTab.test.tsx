@@ -228,13 +228,12 @@ describe('mirror tab', () => {
     expect(store.chatOf(CHAT).tabs[0]!.cwd).toBe('/Users/me/widgets');
   });
 
-  it('shows the project folder in the dock header for a command run in the project', async () => {
+  it('records the project folder for a command run in the project', async () => {
     renderDock(detailWith([savedCommand({ cwd: './' })], 'succeeded'), {
       project: '/Users/me/widgets',
     });
     openTab();
     await waitFor(() => expect(store.chatOf(CHAT).tabs[0]!.cwd).toBe('/Users/me/widgets'));
-    expect(document.querySelector('.term-where')?.textContent).toBe('/Users/me/widgets');
   });
 
   it('shows the chat’s worktree folder when the chat works in one', async () => {

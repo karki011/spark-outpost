@@ -321,7 +321,7 @@ export function Rail({
           data-view={item.id}
           aria-current={view === item.id ? 'page' : undefined}
           title={
-            item.id === 'chats' && reopens
+            item.id === 'chats' && view === 'chats' && reopens
               ? `Show chats sidebar (${SIDEBAR_HINT})`
               : railTitle(item.label, index + 1)
           }

@@ -204,11 +204,6 @@ function OpenDock({ chatId, shells }: { chatId: string; shells: ChatShells }) {
           </button>
           {addTip.tooltip}
         </div>
-        {active?.cwd && (
-          <span className="term-where" title={active.cwd}>
-            <bdi>{active.cwd}</bdi>
-          </span>
-        )}
         <button
           type="button"
           className="icon-btn term-hide"

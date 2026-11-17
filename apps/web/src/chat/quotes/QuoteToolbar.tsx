@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { AskIcon, CommentIcon, CopyIcon, QuoteIcon } from '../../ui/icons.tsx';
+import { CommentIcon, CopyIcon, QuoteIcon } from '../../ui/icons.tsx';
 import type { AnnotationKind } from '@spark-outpost/contracts';
 import { createAnchor } from './anchor.ts';
 import { paintHighlight } from './highlight.ts';
@@ -69,7 +69,7 @@ export function QuoteToolbar({ scrollerRef, quotes }: QuoteToolbarProps) {
     range: captured?.range ?? null,
     scrollerRef,
     toolbarRef,
-    revision: captured ? `open:${commenting}:${copied}` : '',
+    revision: captured ? `open:${commenting}:${copied}:${commenting ? note : ''}` : '',
   });
 
   const finish = () => {
@@ -128,11 +128,6 @@ export function QuoteToolbar({ scrollerRef, quotes }: QuoteToolbarProps) {
     add(quoteFrom(captured, 'quote'));
     finish();
   };
-  const ask = () => {
-    add(quoteFrom(captured, 'ask'));
-    quotes.requestFocus();
-    finish();
-  };
   const copy = () => {
     navigator.clipboard.writeText(captured.text).then(
       () => setCopiedFor(captured),
@@ -163,12 +158,6 @@ export function QuoteToolbar({ scrollerRef, quotes }: QuoteToolbarProps) {
             title={`Add to chat (${SHORTCUT_LABEL})`}
             keyshortcuts="Meta+Shift+A Control+Shift+A"
             onClick={addToChat}
-          />
-          <ToolbarButton
-            icon={<AskIcon />}
-            label="Ask about this"
-            title="Ask about this"
-            onClick={ask}
           />
           <ToolbarButton
             icon={<CommentIcon />}
