@@ -83,7 +83,7 @@ export function TerminalSelectionToolbar({ state }: { state: TerminalSelectionSt
 
   useLayoutEffect(() => {
     if (toolbarRef.current && selection) place(toolbarRef.current, selection);
-  }, [selection, commenting, copied]);
+  }, [selection, commenting, copied, note]);
 
   const canAdd = selection?.canInsert === true && !commenting;
   useEffect(() => {

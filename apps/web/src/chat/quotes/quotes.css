@@ -66,31 +66,61 @@
   white-space: nowrap;
 }
 
-.qt-note {
+.quote-toolbar.commenting {
+  display: block;
+  width: min(380px, calc(100% - 16px));
+  padding: 0;
+  border-color: var(--composer-line);
+  border-radius: var(--r);
+}
+.quote-toolbar.commenting:focus-within {
+  border-color: var(--composer-focus-line);
+  box-shadow:
+    var(--composer-focus),
+    0 10px 32px rgba(0, 0, 0, 0.2);
+}
+.qt-note textarea {
+  display: block;
+  width: 100%;
+  padding: 10px 12px 2px;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  field-sizing: content;
+  min-height: calc(2lh + 12px);
+  max-height: calc(6lh + 12px);
+}
+.qt-note textarea::placeholder {
+  color: var(--faint);
+}
+.qt-note-bar {
   display: flex;
   align-items: center;
-  gap: 4px;
-  width: min(320px, 100%);
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px 6px 12px;
 }
-.qt-note input {
-  flex: 1;
+.qt-note-hint {
   min-width: 0;
-  height: 30px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 6px;
-  background: var(--raise);
-  color: var(--text);
-  font-size: 13px;
-  outline: 0;
-}
-.qt-note input:focus-visible {
-  box-shadow: var(--focus-ring);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--faint);
 }
 .qt-save {
+  height: 28px;
+  padding: 0 12px;
   background: var(--accent);
   color: var(--accent-ink);
   font-weight: 500;
+}
+.qt-save-key {
+  opacity: 0.75;
 }
 .qt-save:hover {
   background: color-mix(in srgb, var(--accent) 88%, var(--text));

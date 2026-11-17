@@ -12,7 +12,7 @@ const NOTE_MAX_LENGTH = 2000;
 const ROVING_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'Home', 'End']);
 
 function keepSelection(event: MouseEvent) {
-  if (!(event.target instanceof HTMLInputElement)) event.preventDefault();
+  if (!(event.target instanceof HTMLTextAreaElement)) event.preventDefault();
 }
 
 function rovingTarget(key: string, index: number, count: number): number {
@@ -23,7 +23,7 @@ function rovingTarget(key: string, index: number, count: number): number {
 }
 
 function moveFocus(event: ReactKeyboardEvent<HTMLDivElement>) {
-  if (!ROVING_KEYS.has(event.key) || event.target instanceof HTMLInputElement) return;
+  if (!ROVING_KEYS.has(event.key) || event.target instanceof HTMLTextAreaElement) return;
   const buttons = Array.from(event.currentTarget.querySelectorAll('button'));
   const index = buttons.indexOf(event.target as HTMLButtonElement);
   const next = rovingTarget(event.key, index, buttons.length);
@@ -105,7 +105,14 @@ export function ToolbarNote({
   onCancel?: () => void;
 }) {
   const noteId = useId();
+  const hintId = useId();
   const submit = (event: FormEvent) => {
+    event.preventDefault();
+    onSubmit();
+  };
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Escape') return onCancel?.();
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
     onSubmit();
   };
@@ -114,21 +121,29 @@ export function ToolbarNote({
       <label className="sr-only" htmlFor={noteId}>
         {label}
       </label>
-      <input
+      <textarea
         id={noteId}
         autoFocus
+        rows={1}
         value={value}
         maxLength={NOTE_MAX_LENGTH}
-        placeholder="Add a note…"
+        placeholder="Add a comment…"
         autoComplete="off"
+        aria-describedby={hintId}
         onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') onCancel?.();
-        }}
+        onKeyDown={onKeyDown}
       />
-      <button type="submit" className="qt-btn qt-save">
-        {submitLabel}
-      </button>
+      <div className="qt-note-bar">
+        <span id={hintId} className="qt-note-hint">
+          Shift+Return for a new line
+        </span>
+        <button type="submit" className="qt-btn qt-save">
+          {submitLabel}
+          <span className="qt-save-key" aria-hidden="true">
+            ↵
+          </span>
+        </button>
+      </div>
     </form>
   );
 }

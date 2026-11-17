@@ -284,7 +284,7 @@ function ChatShell({ entering }: { entering: boolean }) {
             onSettingsIntent={preloadSettings}
             onView={(next) => {
               setView(next);
-              if (next === 'chats' && layout.collapsed && !layout.floating) layout.reveal();
+              if (next === view && view === 'chats' && !layout.floating) layout.reveal();
             }}
             onSettings={() => setSettings('spark')}
             onProfile={() => setSettings('spark')}

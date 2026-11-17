@@ -127,11 +127,8 @@ test('adds quotes and a comment from a reply, then sends them as quotes', async 
   await expect(page.locator('.msg.me .bubble', { hasText: 'Why before' })).toBeInViewport();
 });
 
-test('Esc closes the toolbar, Ask focuses the composer, and unsent chips survive a reload', async ({
-  page,
-}) => {
+test('Esc closes the toolbar and unsent chips survive a reload', async ({ page }) => {
   const reply = await chatWithReply(page);
-  const input = page.getByRole('textbox', { name: 'Message' });
 
   await selectText(reply, 'roll out');
   await expect(toolbar(page)).toBeVisible();
@@ -139,8 +136,8 @@ test('Esc closes the toolbar, Ask focuses the composer, and unsent chips survive
   await expect(toolbar(page)).toBeHidden();
 
   await selectText(reply, 'build the image');
-  await toolbar(page).getByRole('button', { name: 'Ask about this' }).click();
-  await expect(input).toBeFocused();
+  await expect(toolbar(page).getByRole('button', { name: 'Ask about this' })).toHaveCount(0);
+  await toolbar(page).getByRole('button', { name: 'Add to chat' }).click();
   await expect(quoteChips(page).getByRole('button', { name: /^build the image/ })).toBeVisible();
 
   await selectText(reply, 'then roll out');

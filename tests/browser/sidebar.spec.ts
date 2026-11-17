@@ -255,6 +255,15 @@ test('collapses the sidebar, remembers it, and opens a drawer on small screens',
   await openChats(page);
   await sidebar(page).getByRole('button', { name: 'Hide sidebar' }).click();
   await expect(sidebar(page)).toHaveJSProperty('inert', true);
+  const main = page.getByRole('navigation', { name: 'Main' });
+  await main.getByRole('button', { name: 'Tickets' }).click();
+  await expect(page.getByRole('heading', { name: 'See your tickets here' })).toBeVisible();
+  await main.getByRole('button', { name: /^Chats/ }).click();
+  await expect(sidebar(page)).toHaveJSProperty('inert', true);
+  await main.getByRole('button', { name: /^Chats/ }).click();
+  await expect(sidebar(page)).toHaveJSProperty('inert', false);
+  await sidebar(page).getByRole('button', { name: 'Hide sidebar' }).click();
+  await expect(sidebar(page)).toHaveJSProperty('inert', true);
   await page.reload();
   await expect(page.getByRole('button', { name: 'Show sidebar' })).toBeVisible();
   await page.getByRole('button', { name: 'Show sidebar' }).click();
