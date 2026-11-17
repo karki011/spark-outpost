@@ -3,7 +3,7 @@ import { initials } from '../calendar/month-model.ts';
 import { webLink } from '../outposts/post-text.ts';
 import { Glyph } from '../tickets/ticket-icons.tsx';
 import { ageLabel, botsState, isFresh, prState } from './github-model.ts';
-import { NewCommitsPill, StatePill, TicketChip } from './StatePill.tsx';
+import { NewCommitsPill, ReviewPill, StatePill, TicketChip } from './StatePill.tsx';
 
 interface GithubRowProps {
   item: GithubInboxItem;
@@ -78,6 +78,7 @@ export function GithubRow({
             {item.ticket && <TicketChip ticketKey={item.ticket.key} />}
             {item.updatedSinceSeen && <NewCommitsPill />}
             {state && <StatePill state={state} />}
+            <ReviewPill review={item.review} />
             <time className="gh-age" dateTime={item.updatedAt}>
               {ageLabel(item.updatedAt, now)}
             </time>

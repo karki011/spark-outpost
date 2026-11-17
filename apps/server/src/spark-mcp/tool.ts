@@ -53,7 +53,8 @@ export type SparkToolNeed =
   | 'rules_edit'
   | 'plugins_edit'
   | 'crew_read'
-  | 'crew_edit';
+  | 'crew_edit'
+  | 'github_review_post';
 
 export interface SparkTool {
   name: string;

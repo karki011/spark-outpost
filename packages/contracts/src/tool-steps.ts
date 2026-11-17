@@ -46,6 +46,7 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_push: 'Pushing the branch',
   spark_pull_request: 'Opening the pull request',
   spark_pr_follow_up_round: 'Requesting a PR follow-up round',
+  spark_github_review_post: 'Posting on the reviewed pull request',
   spark_create_spark: 'Adding a Spark',
   spark_update_spark: 'Changing a Spark',
   spark_mcp_servers: 'Looking at MCP servers',

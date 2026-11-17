@@ -46,7 +46,7 @@ function accessLine(job: StepJob): string {
   return STEP_READ_ACCESS;
 }
 
-function earlierBlock(note: StepNote): string {
+export function earlierBlock(note: StepNote): string {
   const said = note.note?.trim();
   if (note.state === 'failed') {
     return `Step ${note.stepId} (${note.who}) could not finish${said ? `:\n${said}` : '.'}`;

@@ -35,7 +35,7 @@ import { MAC_CONTROL_LABEL, MacControlSection } from './MacControlSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
 import { NotificationsSection } from './NotificationsSection.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
-import { PULL_REQUEST_ROWS, PullRequestsSection } from './PullRequestSettings.tsx';
+import { GithubSection, githubRows } from './GithubSection.tsx';
 import { SPARK_RULES_ROWS } from './spark-rules/rule-rows.ts';
 import { SparkRulesSection } from './spark-rules/SparkRulesSection.tsx';
 import { TERMINAL_RECORD_LABEL } from './TerminalRecordSetting.tsx';
@@ -232,11 +232,11 @@ export const SETTINGS_SECTIONS = [
   {
     id: 'pulls',
     group: 'work',
-    label: 'Pull requests',
+    label: 'GitHub',
     icon: icons.PULL_REQUESTS_ICON,
     remoteSwitch: 'settings',
-    rows: () => PULL_REQUEST_ROWS,
-    render: ({ setup }) => setup && <PullRequestsSection profile={setup.profile} />,
+    rows: githubRows,
+    render: ({ setup }) => setup && <GithubSection profile={setup.profile} />,
   },
   {
     id: 'rules',

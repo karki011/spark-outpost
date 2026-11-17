@@ -1,0 +1,132 @@
+.gh-review {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.gh-review-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.gh-review-head h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.gh-review-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  corner-shape: round;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.gh-review-state.failed {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.gh-review-by,
+.gh-review-note {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.gh-review-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gh-review-note svg {
+  flex-shrink: 0;
+}
+
+.gh-review-error {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  border-radius: var(--r-sm);
+  background: var(--danger-soft);
+  font-size: 13px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.gh-review-body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.gh-review-body .md-review {
+  font-size: 13.5px;
+}
+
+.gh-review-body :is(pre, table) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.gh-review-body img {
+  max-width: 100%;
+  height: auto;
+}
+
+.gh-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gh-review-actions:empty {
+  display: none;
+}
+
+.gh-review-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  text-decoration: none;
+}
+
+.gh-review-btn[aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+@media (hover: none) {
+  .gh-review-btn {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .gh-review,
+  .gh-review-state {
+    border-color: var(--line-strong);
+  }
+
+  .gh-review-by,
+  .gh-review-note {
+    color: var(--text);
+  }
+}

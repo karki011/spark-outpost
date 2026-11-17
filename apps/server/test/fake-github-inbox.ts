@@ -117,3 +117,65 @@ export function inboxSearchAnswer(
     },
   };
 }
+
+interface FakeAnswer {
+  status: number;
+  body: unknown;
+}
+
+function findPull(pulls: readonly FakePull[], owner: string, repo: string, number: number) {
+  return pulls.find((pull) => pull.owner === owner && pull.repo === repo && pull.number === number);
+}
+
+const REVIEW_STATES: Record<string, string> = { COMMENT: 'COMMENTED', APPROVE: 'APPROVED' };
+
+export function reviewPostAnswer(
+  pulls: readonly FakePull[],
+  owner: string,
+  repo: string,
+  number: number,
+  login: string,
+  body: Record<string, unknown>,
+): FakeAnswer {
+  const pull = findPull(pulls, owner, repo, number);
+  if (!pull) return { status: 404, body: { message: 'Not Found' } };
+  const state = REVIEW_STATES[String(body.event)];
+  if (!state) return { status: 422, body: { message: 'Unsupported event' } };
+  const reviews = (pull.reviews ??= []);
+  const id = 9000 + reviews.length;
+  const html_url = `${pull.html_url}#pullrequestreview-${id}`;
+  reviews.push({
+    id,
+    user: { login },
+    state,
+    body: String(body.body ?? ''),
+    commit_id: String(body.commit_id ?? ''),
+    html_url,
+  });
+  return { status: 200, body: { id, html_url } };
+}
+
+export function threadReplyAnswer(
+  pulls: readonly FakePull[],
+  owner: string,
+  repo: string,
+  number: number,
+  commentId: number,
+  reply: { login: string; body: Record<string, unknown> },
+): FakeAnswer {
+  const pull = findPull(pulls, owner, repo, number);
+  const root = pull?.reviewComments?.find((comment) => comment.id === commentId);
+  if (!pull || !root) return { status: 404, body: { message: 'Not Found' } };
+  const id = 7000 + (pull.reviewComments ?? []).length;
+  const html_url = `${pull.html_url}#discussion_r${id}`;
+  pull.reviewComments!.push({
+    id,
+    path: root.path,
+    line: root.line,
+    user: { login: reply.login },
+    body: String(reply.body.body ?? ''),
+    in_reply_to_id: commentId,
+    html_url,
+  });
+  return { status: 201, body: { id, html_url } };
+}

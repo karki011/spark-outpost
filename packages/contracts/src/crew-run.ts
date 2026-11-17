@@ -22,7 +22,7 @@ export const workflowRunStatusSchema = z.enum([
 ]);
 export type WorkflowRunStatus = z.infer<typeof workflowRunStatusSchema>;
 
-export const workflowRunKindSchema = z.enum(['run', 'test']);
+export const workflowRunKindSchema = z.enum(['run', 'test', 'review']);
 export type WorkflowRunKind = z.infer<typeof workflowRunKindSchema>;
 
 export const workflowRunSourceSchema = z.enum([
@@ -188,7 +188,7 @@ export const workflowRunSchema = z.object({
 export type WorkflowRun = z.infer<typeof workflowRunSchema>;
 
 export const startWorkflowRunSchema = z.object({
-  kind: workflowRunKindSchema.default('run'),
+  kind: z.enum(['run', 'test']).default('run'),
   projectId: z.uuid().nullable().default(null),
   conversationId: z.uuid().nullable().default(null),
   message: z.string().max(4000).default(''),

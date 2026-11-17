@@ -5,6 +5,8 @@ import type {
   GithubInboxProblem,
   GithubInboxWindowDays,
 } from '@spark-outpost/contracts';
+import { pullKeyOf, reviewSummary } from './review/decide.ts';
+import { latestReviews } from './review/views.ts';
 import type { Db } from '../persistence/db.ts';
 import {
   chatsWatchingPulls,
@@ -171,14 +173,12 @@ async function decorate(
     repos.map((entry) => [repoKey(entry.repo.host, slugOf(entry)), entry.projectId]),
   );
   const keysOf = new Map(snapshot.pulls.map((pull) => [pull.id, keysIn(pull.headRef, pull.title)]));
-  const [marks, chats, tickets] = await Promise.all([
-    inboxSeenMarks(
-      deps.db,
-      deps.workspaceId,
-      snapshot.pulls.map((pull) => pull.id),
-    ),
+  const ids = snapshot.pulls.map((pull) => pull.id);
+  const [marks, chats, tickets, reviews] = await Promise.all([
+    inboxSeenMarks(deps.db, deps.workspaceId, ids),
     chatsWatchingPulls(deps.db, deps.workspaceId, snapshot.pulls.map(pullAddress)),
     knownTicketsNamed(deps.db, deps.workspaceId, [...keysOf.values()].flat()),
+    latestReviews(deps.db, deps.workspaceId, ids),
   ]);
   return snapshot.pulls
     .map(({ host, headRef: _headRef, ...pull }) => {
@@ -189,6 +189,7 @@ async function decorate(
         conversationId: chats.get(watchKey(pullAddress({ ...pull, host }))) ?? null,
         ticket: ticketKey ? (tickets.get(ticketKey.toUpperCase()) ?? null) : null,
         ...seenFlags(pull.group, pull.headSha, marks.get(pull.id)),
+        review: reviewSummary(reviews.get(pullKeyOf(pull.id)), pull.headSha),
       };
     })
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));

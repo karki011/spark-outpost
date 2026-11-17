@@ -5,6 +5,7 @@ import { Glyph } from '../tickets/ticket-icons.tsx';
 import { requestTicket } from '../tickets/ticket-request.ts';
 import { XIcon } from '../ui/icons.tsx';
 import { ageLabel, checksLine, prState, sizeLine } from './github-model.ts';
+import { ReviewBlock } from './review/ReviewBlock.tsx';
 import { NewCommitsPill, StatePill } from './StatePill.tsx';
 
 interface GithubDetailProps {
@@ -121,6 +122,7 @@ export function GithubDetail({ item, now, onClose, onOpenChat }: GithubDetailPro
           </a>
         )}
       </div>
+      <ReviewBlock key={item.id} item={item} />
     </aside>
   );
 }

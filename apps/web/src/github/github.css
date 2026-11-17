@@ -1,5 +1,5 @@
 .gh {
-  --sel-bg: color-mix(in srgb, var(--accent) 11%, var(--panel));
+  --sel-bg: color-mix(in srgb, var(--accent) 6%, var(--panel));
   container: gh / inline-size;
   position: relative;
 }
@@ -118,8 +118,7 @@
 }
 
 .gh-tile[aria-checked='true'] {
-  border-color: var(--accent-text);
-  box-shadow: inset 0 0 0 1px var(--accent-text);
+  border-color: color-mix(in srgb, var(--accent-text) 35%, var(--line));
   background: var(--sel-bg);
 }
 
@@ -227,7 +226,7 @@
 }
 
 .gh-row[data-selected] {
-  background: var(--sel-bg);
+  background: var(--raise);
 }
 
 .gh-row[data-selected]::before {
@@ -236,9 +235,9 @@
   top: 8px;
   bottom: 8px;
   left: 0;
-  width: 3px;
+  width: 2px;
   border-radius: 2px;
-  background: var(--accent-text);
+  background: color-mix(in srgb, var(--accent-text) 60%, transparent);
 }
 
 .gh-main {
@@ -351,7 +350,10 @@
 }
 
 .gh-pill.passing {
-  border-color: color-mix(in srgb, var(--success) 45%, transparent);
+  color: var(--muted);
+}
+
+.gh-pill.passing svg {
   color: var(--success);
 }
 

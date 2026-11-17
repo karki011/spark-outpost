@@ -175,7 +175,7 @@ export const SPEC_GROUPS = {
     'sidebar-tidy',
   ],
   tasks: ['todo'],
-  github: ['github-page'],
+  github: ['github-page', 'github-review-pane', 'github-auto-review'],
   tickets: [
     'atlassian-connector',
     'connectors',

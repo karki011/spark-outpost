@@ -3,14 +3,21 @@ import type { GithubInbox, GithubInboxWindowDays } from '@spark-outpost/contract
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { githubApi, githubKeys } from './github-api.ts';
 import { hasUpdates, markSeen } from './github-model.ts';
+import { isWorking } from './review/review-model.ts';
 
 const STALE_MS = 60_000;
+const REVIEWING_POLL_MS = 15_000;
+
+function reviewing(inbox: GithubInbox | undefined): boolean {
+  return (inbox?.items ?? []).some((item) => item.review && isWorking(item.review.state));
+}
 
 export function useGithubInboxQuery(enabled = true) {
   return useQuery({
     queryKey: githubKeys.inbox,
     queryFn: () => githubApi.inbox(),
     staleTime: STALE_MS,
+    refetchInterval: (query) => (reviewing(query.state.data) ? REVIEWING_POLL_MS : false),
     enabled,
   });
 }

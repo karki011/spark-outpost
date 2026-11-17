@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { githubInboxReviewSummarySchema } from './github-review.ts';
 import { pullRequestChecksSchema } from './ticket-development.ts';
 
 export const githubInboxWindowDaysSchema = z.union([z.literal(14), z.literal(30)]);
@@ -50,6 +51,7 @@ export const githubInboxItemSchema = z.object({
   ticket: githubInboxTicketSchema.nullable(),
   unseen: z.boolean(),
   updatedSinceSeen: z.boolean(),
+  review: githubInboxReviewSummarySchema.nullable().optional(),
 });
 export type GithubInboxItem = z.infer<typeof githubInboxItemSchema>;
 

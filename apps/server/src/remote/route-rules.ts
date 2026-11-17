@@ -185,6 +185,11 @@ const NEVER = `
 GET /api/github/inbox
 POST /api/github/inbox/seen
 PUT /api/github/inbox/window
+GET /api/github/review-settings
+PUT /api/github/review-settings
+GET /api/github/reviews
+POST /api/github/reviews
+POST /api/github/reviews/:id/stop
 GET /api/meetings/status
 GET /api/meetings
 POST /api/meetings

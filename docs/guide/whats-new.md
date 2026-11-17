@@ -10,7 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                       | What to do                                                     |
 | -------------------------------------------------- | -------------------------------------------------------------- |
-| New **GitHub** page                                | [Read it](github-page.md).                                     |
+| **GitHub** page, reviews, auto-review              | [Guide](github-page.md).                                       |
 | Agent terminal row is a card                       | Nothing to do.                                                 |
 | No **Ask about this**; hidden sidebar stays hidden | Use **Add to chat**.                                           |
 | Home: message box, Needs you, Working set          | [Read Home](home.md).                                          |

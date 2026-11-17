@@ -1,0 +1,71 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+:root{--bg:#14170f;--rail:#0f120b;--line:#262b1e;--text:#e9ecdf;--muted:#a3a895;--faint:#757b69;--accent:#c7d96b;--accent-ink:#1a1f0e}
+*{box-sizing:border-box}body{margin:0;padding:28px;background:#0b0d08;font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif;color:var(--text);width:1100px}
+.win{display:grid;grid-template-columns:210px 1fr;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.nav{background:var(--rail);border-right:1px solid var(--line);padding:18px 10px}
+.nav p{margin:0;padding:7px 12px;border-radius:8px;color:var(--muted)}
+.nav p.on{background:#222818;color:var(--text);font-weight:600}
+.main{padding:28px 36px 36px}
+h2{font-size:22px;margin:0 0 24px;font-weight:650}
+h3{font-size:12px;font-weight:600;color:var(--muted);margin:0 0 4px}
+.grp{margin:0 0 30px}
+.set{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;padding:13px 0;border-top:1px solid var(--line)}
+.grp .set:first-of-type{border-top:0}
+.set b{display:block;font-weight:600;font-size:13.5px}
+.set small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px;max-width:520px}
+.sw{width:38px;height:22px;border-radius:11px;background:#333a29;position:relative}
+.sw:after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#aab09c}
+.sw.on{background:var(--accent)}.sw.on:after{left:18px;background:var(--accent-ink)}
+.pick{height:28px;padding:0 10px;border:1px solid var(--line);border-radius:9px;display:inline-flex;align-items:center;gap:8px;min-width:210px;justify-content:space-between}
+.pick i{color:var(--faint);font-style:normal}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg span{height:28px;padding:0 12px;display:inline-flex;align-items:center;color:var(--muted);border-left:1px solid var(--line)}
+.seg span:first-child{border-left:0}
+.seg span.on{background:#2a311f;color:var(--text);font-weight:600}
+.menu{margin:6px 0 0 auto;width:260px;border:1px solid var(--line);border-radius:11px;background:#1b1f15;padding:6px;box-shadow:0 14px 30px rgba(0,0,0,.4)}
+.menu h6{margin:6px 8px 3px;font-size:11px;color:var(--faint);font-weight:600}
+.menu p{margin:0;padding:6px 8px;border-radius:7px}
+.menu p.on{background:#2a311f}
+.menu p small{display:inline;color:var(--muted);margin:0 0 0 6px}
+.menu hr{border:0;border-top:1px solid var(--line);margin:6px 0}
+.sub{padding-left:22px}
+.radio{display:flex;gap:10px;align-items:flex-start;padding:7px 0}
+.radio i{flex:none;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--faint);margin-top:2px;position:relative}
+.radio.on i{border-color:var(--accent)}.radio.on i:after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--accent)}
+.radio b{font-weight:500;display:block}.radio small{color:var(--muted);font-size:12.5px;display:block}
+.btn{height:28px;padding:0 12px;border-radius:9px;border:1px solid var(--line);display:inline-flex;align-items:center;font-size:12.5px}
+.foot{color:var(--faint);font-size:12px;margin:8px 0 0}
+</style></head><body>
+<div class="win">
+ <div class="nav">
+  <p>General</p><p>Chats &amp; autonomy</p><p>Connections</p><p class="on">GitHub</p><p>Spark rules</p><p>Notifications</p><p>Browser pane</p><p>Voice</p><p>Spark assistant</p>
+ </div>
+ <div class="main">
+  <h2>GitHub</h2>
+
+  <div class="grp"><h3>GitHub page</h3>
+   <div class="set"><div><b>Show pull requests from</b><small>Counted from the last update on each pull request.</small></div>
+    <div class="seg"><span class="on">Last 14 days</span><span>Last 30 days</span></div></div>
+   <div class="set"><div><b>Background notes</b><small>One line per pull request on what failed or changed. Sends the diff and check output to your default provider.</small></div>
+    <div class="sw"></div></div>
+  </div>
+
+  <div class="grp"><h3>Reviews you are asked for</h3>
+   <div class="set"><div><b>Review automatically</b><small>When someone requests your review, Spark runs one Spark or workflow on the pull request and attaches the result on the GitHub page.</small></div>
+    <div class="sw on"></div></div>
+   <div class="set"><div><b>Review with</b><small>One Spark or one workflow. It uses its own instructions; there is nothing to write here.</small></div>
+    <div><div class="pick">PR Reviewer <i>▾</i></div>
+     <p style="margin:8px 0 0;text-align:right"><span class="btn">Try it on a recent pull request</span></p></div></div>
+   <div class="set"><div><b>Reviewer may post to GitHub</b><small>The Spark or workflow decides, from its own instructions, whether to post and what to say. Off: reviews stay in Spark and you post them yourself.</small></div><div class="sw on"></div></div>
+   <div class="set"><div><b>Reviewer may approve</b><small>Lets it approve a pull request, or withdraw its own approval, under your name. Off: it can only comment.</small></div><div class="sw"></div></div>
+   <p class="foot">It can post only on the pull request it was asked to review, and only reviews and replies. It never merges, pushes or requests changes. Drafts are skipped.</p>
+  </div>
+
+  <div class="grp"><h3>Your pull requests</h3>
+   <div class="set"><div><b>Follow up on pull requests</b><small>Existing settings from Pull requests move here unchanged.</small></div><div class="sw on"></div></div>
+   <div class="set"><div><b>Review bots</b><small>Comments from these bots are acted on.</small></div><div class="pick">2 bots <i>▾</i></div></div>
+  </div>
+ </div>
+</div>
+</body></html>

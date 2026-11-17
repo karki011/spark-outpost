@@ -5,6 +5,7 @@ import { chatFoldersBase } from '../chat-files/folders.ts';
 import { chatResearchBase } from '../chat-files/research-copies.ts';
 import { startArtifactOrigin } from '../artifacts/origin-server.ts';
 import { scheduleWorkflows } from '../crew-flows/scheduler.ts';
+import { reviewRunnerDeps, startReviewRunner } from '../github-inbox/review/runner.ts';
 import { startMorningBrief } from '../digest/morning.ts';
 import { startWeekRecap } from '../recap/schedule.ts';
 import { followAssistantChat } from '../companion/assistant.ts';
@@ -328,6 +329,7 @@ desktopBrowser?.blockPorts([
 const clones = cloneJobsFor(cloneDeps);
 await clones.recover();
 const { app, reconcileRemote } = createAppParts({
+  nudgeReviews: () => reviewRunner?.nudge(),
   clones,
   chatPorts,
   cloneTest: cloneDeps.cloneTest,
@@ -406,6 +408,11 @@ const morningBrief = config.MORNING_BRIEF
   : null;
 const weekRecap = config.WEEK_RECAP ? startWeekRecap(db, workspaceId) : null;
 const workflowScheduler = config.WORKFLOW_SCHEDULES ? scheduleWorkflows(db, workspaceId) : null;
+const reviewRunner = config.WORKFLOW_SCHEDULES
+  ? startReviewRunner(
+      reviewRunnerDeps(gitHubDepsOf({ ...githubDeps, githubApiUrl: config.GITHUB_API_URL })),
+    )
+  : null;
 
 let pruneSchedule: PruneSchedule | null = null;
 const server = app.listen(config.API_PORT, config.API_HOST, () => {
@@ -465,6 +472,7 @@ const shutdown = async (keepTerminals = false) => {
     ['morning brief', () => morningBrief?.stop()],
     ['week recap', () => weekRecap?.stop()],
     ['workflow schedules', () => workflowScheduler?.stop()],
+    ['pull request reviews', () => reviewRunner?.stop()],
     ['Slack socket', () => slackSocket.stop()],
     ['Slack notifier', () => slackNotifier.stop()],
     ['Slack mentions', () => slackMentions.stop()],

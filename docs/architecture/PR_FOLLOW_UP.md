@@ -4,7 +4,7 @@ After Spark opens a pull request from a chat, the worker watches it through the 
 
 ## Ready for review by default
 
-Settings → Work → Pull requests → **Open pull requests as**: Ready for review (default) or Draft (`profiles.pr_ready_for_review`). Ship passes the choice to GitHub (`NewPullRequest.draft`). The one exception: a Full auto PR whose checks still fail, when **When checks still fail in Full auto** says to open it anyway, always opens as a draft marked "Checks failing" (`ShipOptions.draft`). The ship mode id stays `draft_pr`; user-facing copy says "PR" and only says "draft PR" when GitHub got `draft: true`. The setting is global: Ship has no per-project settings today.
+Settings → Work → GitHub → **Open pull requests as**: Ready for review (default) or Draft (`profiles.pr_ready_for_review`). Ship passes the choice to GitHub (`NewPullRequest.draft`). The one exception: a Full auto PR whose checks still fail, when **When checks still fail in Full auto** says to open it anyway, always opens as a draft marked "Checks failing" (`ShipOptions.draft`). The ship mode id stays `draft_pr`; user-facing copy says "PR" and only says "draft PR" when GitHub got `draft: true`. The setting is global: Ship has no per-project settings today.
 
 ## Watching
 
@@ -98,4 +98,4 @@ Spark never force-pushes, merges, approves, resolves threads or dismisses review
 
 ## Settings
 
-Settings → Work → Pull requests: Follow up on pull requests (on), with Ask before pushing and replying (off), Fix failing checks, Handle review comments and Reply on GitHub threads (all on), and **Review bots to act on** (empty; up to 50 GitHub logins; disabled while follow-up or Handle review comments is off). These are workspace settings; there is no per-chat or per-pull-request switch yet, so the offer's **Turn on** changes the workspace setting. The bot list is Mac only: `PATCH /api/profile` refuses `prFollowUpBots` from a paired device (403, "Choose review bots on your Mac."), which sees the list read-only, and no Spark tool writes it, so a bot comment can't add itself.
+Settings → Work → GitHub: Follow up on pull requests (on), with Ask before pushing and replying (off), Fix failing checks, Handle review comments and Reply on GitHub threads (all on), and **Review bots to act on** (empty; up to 50 GitHub logins; disabled while follow-up or Handle review comments is off). These are workspace settings; there is no per-chat or per-pull-request switch yet, so the offer's **Turn on** changes the workspace setting. The bot list is Mac only: `PATCH /api/profile` refuses `prFollowUpBots` from a paired device (403, "Choose review bots on your Mac."), which sees the list read-only, and no Spark tool writes it, so a bot comment can't add itself.

@@ -5,7 +5,7 @@ import type { FoundPull } from './search.ts';
 
 export type InboxPull = Omit<
   GithubInboxItem,
-  'projectId' | 'conversationId' | 'ticket' | 'unseen' | 'updatedSinceSeen'
+  'projectId' | 'conversationId' | 'ticket' | 'unseen' | 'updatedSinceSeen' | 'review'
 > & { headRef: string };
 
 interface PullState {

@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { APP_LOGIN, fakeGitHubApp, type FakeGitHubApp } from './fake-github-app.ts';
-import { inboxSearchAnswer } from './fake-github-inbox.ts';
+import { inboxSearchAnswer, reviewPostAnswer, threadReplyAnswer } from './fake-github-inbox.ts';
 import {
   listPullsAnswer,
   pullJson,
@@ -26,8 +26,11 @@ export interface FakePull {
   merged?: boolean;
   created_at?: string;
   reviews?: {
+    id?: number;
     user: { login: string };
     state: string;
+    body?: string;
+    commit_id?: string;
     submitted_at?: string;
     html_url?: string;
   }[];
@@ -41,7 +44,13 @@ export interface FakePull {
   mergeable_state?: string;
   additions?: number;
   deletions?: number;
-  files?: { filename: string; status: string; additions: number; deletions: number }[];
+  files?: {
+    filename: string;
+    status: string;
+    additions: number;
+    deletions: number;
+    patch?: string;
+  }[];
   reviewComments?: {
     id?: number;
     path: string;
@@ -115,6 +124,7 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
 }
 
 const REPO = /^\/repos\/([^/]+)\/([^/]+)(\/pulls(?:\/(\d+))?)?(\/reviews)?$/;
+const REPLY = /^\/repos\/([^/]+)\/([^/]+)\/pulls\/(\d+)\/comments\/(\d+)\/replies$/;
 
 export function fakeGitHub(): FakeGitHub {
   const pulls: FakePull[] = [];
@@ -159,6 +169,10 @@ export function fakeGitHub(): FakeGitHub {
       return send(res, answer.status, answer.body);
     }
     const body = await readJson(req);
+    if (req.method === 'POST' && number && reviews) {
+      const answer = reviewPostAnswer(pulls, owner, repo, Number(number), who.login, body);
+      return send(res, answer.status, answer.body);
+    }
     if (req.method === 'PATCH' && number) {
       const pull = pulls.find((entry) => entry.number === Number(number) && entry.repo === repo);
       if (!pull) return send(res, 404, { message: 'Not Found' });
@@ -229,6 +243,15 @@ export function fakeGitHub(): FakeGitHub {
           return send(res, fake.searchFailure.status, { message: fake.searchFailure.message });
         }
         return send(res, 200, search ?? resolvedThreadsAnswer(pulls, body));
+      }
+      const reply = REPLY.exec(url.pathname);
+      if (req.method === 'POST' && reply) {
+        const [, owner, repo, number, commentId] = reply as unknown as string[];
+        const answer = threadReplyAnswer(pulls, owner!, repo!, Number(number), Number(commentId), {
+          login: who.login,
+          body: await readJson(req),
+        });
+        return send(res, answer.status, answer.body);
       }
       const match = REPO.exec(url.pathname);
       if (!match) return send(res, 404, { message: 'Not Found' });

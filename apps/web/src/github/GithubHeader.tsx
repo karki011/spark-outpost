@@ -2,6 +2,7 @@ import type { GithubInboxWindowDays } from '@spark-outpost/contracts';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { RefreshIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
+import { AutoReviewChip } from './AutoReviewChip.tsx';
 
 interface GithubHeaderProps {
   connected: boolean;
@@ -35,6 +36,7 @@ export function GithubHeader(props: GithubHeaderProps) {
                 ? `Updated ${relativeTime(props.fetchedAt, props.now)}`
                 : ''}
           </span>
+          <AutoReviewChip />
           <div className="gh-pick">
             <ChoicePicker
               label="Time window"

@@ -3,6 +3,7 @@ import { publishOrchestration, type Handoff } from '../orchestration/spark-child
 import { userText } from '../outposts/user-asked.ts';
 import { newId } from '../persistence/ids.ts';
 import { insertOrchestration, updateOrchestration } from '../persistence/orchestrations.ts';
+import { reviewOptions, settleReviewOfWorkflowRun } from '../github-inbox/review/settle.ts';
 import { closeMessage } from '../workflow/execute-run.ts';
 import { planNote } from '../workflow/plan-recorder.ts';
 import { runEvents } from '../workflow/run-events.ts';
@@ -100,8 +101,13 @@ export async function workflowTurn(
   });
   await updateOrchestration(deps.db, lease.runId, { phase: 'scouting' });
   const prepared = await prepareStepEdits(h, turn);
-  const end = await runWorkflow(h, prepared);
+  const review =
+    turn.run.kind === 'review'
+      ? await reviewOptions(deps.db, input.workspaceId, turn.run.id)
+      : undefined;
+  const end = await runWorkflow(h, prepared, review === undefined ? {} : { review });
   if (end === 'lease_lost') return 'finished';
+  if (review !== undefined) await settleReviewOfWorkflowRun(deps.db, turn.run.id);
   await keepStepEdits(h, prepared);
   const continues = turn.continues && end.status !== 'cancelled';
   const note = workflowNote({ ...end, workflowName: turn.workflow.name, continues });

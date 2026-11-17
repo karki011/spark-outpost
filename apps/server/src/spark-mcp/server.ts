@@ -67,6 +67,7 @@ import { cloneRepoTool, githubReposTool, researchRepoTool } from './tools/github
 import { terminalTool } from './tools/terminal-tool.ts';
 import { crewTool } from './tools/crew-tool.ts';
 import { crewEditTool } from './tools/crew-edit-tool.ts';
+import { githubReviewPostTool } from './tools/github-review-post-tool.ts';
 import { usageTools } from './tools/usage-tools.ts';
 import { workTools } from './tools/work-tools.ts';
 import { codeModeOffered } from '../codemode/catalog.ts';
@@ -128,6 +129,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   rulesEditTool,
   pluginsEditTool,
   crewEditTool,
+  githubReviewPostTool,
   linkRepoTool,
   cloneRepoTool,
   ...askSparkTools,
@@ -230,6 +232,7 @@ export const CHAT_TURN_ONLY: ReadonlySet<string> = new Set([
   'spark_rules_edit',
   'spark_plugins_edit',
   'spark_crew_edit',
+  'spark_github_review_post',
   'spark_link_repo',
   'spark_github_repos',
   'spark_research_repo',
@@ -240,6 +243,9 @@ function offeredTo(tool: SparkTool, scope: Partial<SparkScope>): boolean {
   if (tool.name === 'spark_execute') return codeModeOffered(scope);
   if (tool.assistantOnly) return scope.assistant === true;
   if (scope.assistant) return !CHAT_TURN_ONLY.has(tool.name);
+  if (scope.reviewRun && tool.name !== githubReviewPostTool.name && heldInTestRun(tool)) {
+    return false;
+  }
   if (!tool.acts) return true;
   return !scope.readOnly;
 }

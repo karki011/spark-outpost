@@ -33,11 +33,12 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-const pluginsFor = async (provider: string, assistant = false) =>
+const pluginsFor = async (provider: string, assistant = false, reviewRun = false) =>
   (
     await loadTurnExtensions(t.db, {
       provider,
       assistant,
+      reviewRun,
       workspaceId: t.workspaceId,
       identity: { threadId: '00000000-0000-0000-0000-000000000000' },
     })
@@ -52,5 +53,6 @@ describe('turn extensions', () => {
     expect(await pluginsFor('zai')).toEqual(['egm@google']);
     expect(await pluginsFor('codex')).toEqual([]);
     expect(await pluginsFor('claude', true)).toEqual([]);
+    expect(await pluginsFor('claude', false, true)).toEqual([]);
   });
 });

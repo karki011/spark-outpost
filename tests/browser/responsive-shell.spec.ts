@@ -39,7 +39,7 @@ const SECTIONS = [
   'Usage',
   'Projects',
   'Chats & autonomy',
-  'Pull requests',
+  'GitHub',
   'Connectors',
   'About',
 ];

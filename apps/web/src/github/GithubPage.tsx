@@ -87,7 +87,7 @@ export function GithubPage({ onOpenChat }: GithubPageProps) {
     focusRow(id);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== 'Escape' || !openItem) return;
+    if (event.key !== 'Escape' || event.defaultPrevented || !openItem) return;
     if (document.querySelector('[aria-modal="true"], .choice-menu.open')) return;
     event.preventDefault();
     close();
