@@ -51,6 +51,7 @@ describe('passcode shares', () => {
     expect(html).toMatch(/<label class="hint" for="code">/);
     expect(html).toContain('name="code"');
     expect(html).toContain('autocomplete="off"');
+    expect(html).toContain('data-pose="asleep" aria-hidden="true"');
   });
 
   it('answers a correct code with the verified page, the cookie and a refresh to the page', async () => {
@@ -69,6 +70,8 @@ describe('passcode shares', () => {
     expect(html).toContain(`<a href="/a/${id}">Open the page</a>`);
     expect(html).toContain('role="status"');
     expect(html).toContain('Verified.');
+    expect(html).toContain('data-pose="happy" aria-hidden="true"');
+    expect(response.headers.get('content-security-policy')).toBe(PAGE_POLICY);
     expect(html).not.toContain(SECRET_TITLE);
     expect(html).not.toContain('<script');
     const tiles = [...html.matchAll(/<span class="tile"[^>]*>([^<]*)<\/span>/g)].map((m) => m[1]);
@@ -121,6 +124,8 @@ describe('passcode shares', () => {
     expect(response.headers.get('set-cookie')).toBeNull();
     expect(html).toContain('role="alert"');
     expect(html).toContain('That code didn’t work');
+    expect(html).toContain('data-pose="no" aria-hidden="true"');
+    expect(response.headers.get('content-security-policy')).toBe(PAGE_POLICY);
     expect(html).not.toContain(WRONG);
     expect(html).not.toContain(SECRET_TITLE);
   });
@@ -133,6 +138,8 @@ describe('passcode shares', () => {
 
     expect(locked.status).toBe(429);
     expect(lockedHtml).toContain('Try again in about 15 minutes');
+    expect(lockedHtml).toContain('data-pose="sulk" aria-hidden="true"');
+    expect(locked.headers.get('content-security-policy')).toBe(PAGE_POLICY);
     expect(lockedHtml).not.toContain(WRONG);
     expect((await unlock(fake, id, CODE, START + 60_000)).status).toBe(429);
     expect((await call(fake, `/a/${id}`, {}, START + 60_000)).status).toBe(429);
