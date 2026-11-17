@@ -1,0 +1,119 @@
+.lock-blob {
+  display: block;
+  margin-bottom: 14px;
+}
+.lock-blob-turn {
+  position: relative;
+  display: block;
+}
+.lock-blob-hop {
+  display: block;
+}
+.lock-blob .scout {
+  display: block;
+  cursor: default;
+}
+.lock-blob-tag {
+  position: absolute;
+  right: -4px;
+  bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow:
+    0 0 0 1px var(--line-strong),
+    0 0 0 4px var(--bg);
+}
+.lock-blob-tag svg {
+  width: 20px;
+  height: 20px;
+}
+.lock-blob[data-pose='happy'] .lock-blob-tag {
+  color: var(--accent-text);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 0 4px var(--bg);
+}
+.lock-blob[data-pose='awake'] .sc-look {
+  transform: translate(var(--lock-look), 1.6px);
+}
+.lock-blob[data-pose='expectant'] .sc-look {
+  transform: translateY(-1.4px);
+}
+.lock-blob[data-pose='sulk'] .lock-blob-turn {
+  transform: rotate(-4deg) translateY(2px);
+}
+.lock-blob[data-pose='asleep'] .sc-body {
+  animation-duration: 5.2s;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lock-blob[data-pose='awake'][data-beat='odd'] .lock-blob-hop {
+    animation: lock-blob-hop-odd 0.26s var(--out);
+  }
+  .lock-blob[data-pose='awake'][data-beat='even'] .lock-blob-hop {
+    animation: lock-blob-hop-even 0.26s var(--out);
+  }
+  .lock-blob[data-pose='no'][data-miss='odd'] .lock-blob-turn {
+    animation: lock-blob-no-odd 0.6s ease-in-out;
+  }
+  .lock-blob[data-pose='no'][data-miss='even'] .lock-blob-turn {
+    animation: lock-blob-no-even 0.6s ease-in-out;
+  }
+  .lock-blob[data-pose='sulk'] .lock-blob-turn {
+    transition: transform 0.3s var(--out);
+  }
+  .lock-blob[data-pose='happy'] .lock-blob-tag {
+    animation: lock-blob-pop 0.4s var(--spring);
+  }
+  .lock-blob[data-pose='happy'] .sc-hop {
+    animation-iteration-count: 1;
+    animation-duration: 0.45s;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lock-blob .scout *,
+  .lock-blob .sc-look {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@keyframes lock-blob-hop-odd {
+  45% {
+    transform: translateY(-7px);
+  }
+}
+@keyframes lock-blob-hop-even {
+  45% {
+    transform: translateY(-7px);
+  }
+}
+@keyframes lock-blob-no-odd {
+  15%,
+  55% {
+    transform: translateX(-7px) rotate(-7deg);
+  }
+  35%,
+  75% {
+    transform: translateX(7px) rotate(7deg);
+  }
+}
+@keyframes lock-blob-no-even {
+  15%,
+  55% {
+    transform: translateX(-7px) rotate(-7deg);
+  }
+  35%,
+  75% {
+    transform: translateX(7px) rotate(7deg);
+  }
+}
+@keyframes lock-blob-pop {
+  40% {
+    transform: translateY(-5px) rotate(14deg) scale(1.18);
+  }
+}

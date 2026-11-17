@@ -20,6 +20,7 @@ import {
   type BrowserShortcut,
   type BrowserShortcutEvent,
 } from '@spark-outpost/contracts';
+import { appLockGate } from '../app-lock-gate.ts';
 import { IPC } from '../ipc-channels.ts';
 import { runBrowserOp } from './agent-ops.ts';
 import { connectWorkerBridge, type BridgePort, type WorkerBridge } from './bridge.ts';
@@ -213,6 +214,11 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     history: options.history,
   });
   view = viewHost;
+  const stopLockWatch = appLockGate.onLockedChange((locked) => {
+    panes.layout();
+    viewHost.panes.layout();
+    if (locked) options.window()?.webContents.focus();
+  });
   downloads = startDownloadsHost({ send, guarded, log: options.log });
   ipcMain.handle(
     IPC.browserToView,
@@ -274,7 +280,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
       openInSpark(url) {
         const window = options.window();
         if (!window || window.isDestroyed()) return false;
-        send(IPC.browserViewOpenLink, url);
+        if (!appLockGate.locked()) send(IPC.browserViewOpenLink, url);
         return true;
       },
     },
@@ -303,6 +309,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
       return true;
     },
     dispose() {
+      stopLockWatch();
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);
       ipcMain.removeAllListeners(IPC.browserPageCopyAllowed);
       downloads?.dispose();

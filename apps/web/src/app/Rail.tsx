@@ -10,6 +10,7 @@ import { CALENDAR_PATH } from '../ui/icons.tsx';
 import { browserViewAvailable } from '../browser-view/view-store.ts';
 import { useSparkPause } from './pause/use-spark-pause.ts';
 import { RailClock } from './RailClock.tsx';
+import { RailLock } from './RailLock.tsx';
 import { railAriaKeys, railHint, railTitle, useRailShortcuts } from './rail-shortcut.ts';
 import { RailFlyout } from './RailFlyout.tsx';
 import { RailMore } from './RailMore.tsx';
@@ -427,6 +428,7 @@ export function Rail({
               ],
             ]}
           />
+          {!remote && <RailLock />}
           <RailClock
             onOpen={remote ? undefined : () => onView('today')}
             onIntent={() => onIntent('today')}

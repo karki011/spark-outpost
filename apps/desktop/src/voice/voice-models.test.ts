@@ -65,6 +65,7 @@ async function setup(options: {
     models,
     vadPath: '/vad.bin',
     fetch: fetchSpy,
+    locked: () => false,
     register: () => true,
     unregister: () => undefined,
     takenBy: () => null,

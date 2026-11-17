@@ -357,6 +357,7 @@ async function launch(): Promise<void> {
   origin = apiUrl;
   if (spark) spark.loadApp(apiUrl);
   else showSpark();
+  privacy = startPrivacy({ trusted, userData: paths.userData, log: log('lock') });
   help = startHelp({
     version: app.getVersion(),
     logsFolder: paths.logs,
@@ -372,7 +373,6 @@ async function launch(): Promise<void> {
     paneShortcut: (shortcut) => browserHost.menuShortcut(shortcut),
     log: log('help'),
   });
-  privacy = startPrivacy({ trusted });
   updater = await startUpdater({
     enabled: config.autoUpdate,
     version: app.getVersion(),

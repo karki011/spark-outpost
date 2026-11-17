@@ -6,6 +6,7 @@ import {
   type IpcMainInvokeEvent,
   type Size,
 } from 'electron';
+import { appLockGate } from './app-lock-gate.ts';
 import { attachContextMenu } from './context-menu.ts';
 import { hourCycleArgs } from './hour-cycle-arg.ts';
 import { systemHourCycle } from './hour-cycle.ts';
@@ -135,6 +136,7 @@ export function startSettingsWindow(options: SettingsWindowOptions): SettingsWin
   };
 
   const open = (target: SettingsTarget) => {
+    if (appLockGate.locked()) return;
     pending = target;
     if (focusOpen()) window?.webContents.send(IPC.settingsWindowChanged);
     else create(target.route);

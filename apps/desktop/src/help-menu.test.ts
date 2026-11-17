@@ -7,6 +7,9 @@ function actions(change: Partial<HelpActions> = {}): HelpActions {
     dev: false,
     sidebarShown: true,
     openSettings: () => undefined,
+    lockAvailable: false,
+    locked: false,
+    lockNow: () => undefined,
     toggleSidebar: () => undefined,
     sendFeedback: () => undefined,
     exportDiagnostics: () => undefined,
@@ -52,6 +55,78 @@ describe('appMenuTemplate', () => {
     ]);
     for (const item of help) item.click?.();
     expect(calls).toEqual(['feedback', 'diagnostics', 'logs']);
+  });
+});
+
+describe('Lock Spark Outpost', () => {
+  const lockItem = (change: Partial<HelpActions>) =>
+    submenu(appMenuTemplate(actions(change)), 'appMenu').find(
+      (item) => item.label === 'Lock Spark Outpost',
+    )!;
+
+  it('sits right after Settings… with ⇧⌘L', () => {
+    const app = submenu(appMenuTemplate(actions()), 'appMenu');
+    const settings = app.findIndex((item) => item.label === 'Settings…');
+    expect(app[settings + 1]).toMatchObject({
+      label: 'Lock Spark Outpost',
+      accelerator: 'Shift+CommandOrControl+L',
+    });
+  });
+
+  it('is dimmed until the privacy screen is on with a code', () => {
+    expect(lockItem({ lockAvailable: false }).enabled).toBe(false);
+    expect(lockItem({ lockAvailable: true }).enabled).toBe(true);
+  });
+
+  it('locks when chosen', () => {
+    let locked = 0;
+    const item = lockItem({ lockAvailable: true, lockNow: () => (locked += 1) });
+    (item.click as () => void)();
+    expect(locked).toBe(1);
+  });
+});
+
+describe('the menus while Spark Outpost is locked', () => {
+  const flat = (change: Partial<HelpActions>) =>
+    appMenuTemplate(actions(change)).flatMap(
+      (menu) => (Array.isArray(menu.submenu) ? menu.submenu : []) as MenuItemConstructorOptions[],
+    );
+  const disabled = (change: Partial<HelpActions>) =>
+    flat(change)
+      .filter((item) => item.enabled === false)
+      .map((item) => item.label);
+
+  it('dims everything that acts on the app, and keeps Lock, Hide, Quit, Edit and Window', () => {
+    expect(disabled({ locked: true, lockAvailable: true })).toEqual([
+      'Settings…',
+      'Print…',
+      'Bold',
+      'Italic',
+      'Strikethrough',
+      'Code',
+      'Add Link…',
+      'Hide Sidebar',
+      'Send Feedback…',
+      'Export Diagnostics…',
+      'Show Logs in Finder',
+    ]);
+    const roles = appMenuTemplate(actions({ locked: true })).map((menu) => menu.role);
+    expect(roles).toEqual(expect.arrayContaining(['appMenu', 'editMenu', 'windowMenu']));
+  });
+
+  it('dims none of them while unlocked', () => {
+    expect(disabled({ locked: false, lockAvailable: true })).toEqual([]);
+  });
+
+  it('sends no key to a browser pane tab while locked', () => {
+    const sent: string[] = [];
+    const paneShortcut = (shortcut: string) => sent.push(shortcut) > 0;
+    const items = flat({ locked: true, paneShortcut });
+    for (const label of ['Reload', 'Zoom In', 'Print…']) {
+      const item = items.find((each) => each.label === label)!;
+      (item.click as (item: unknown, window: unknown) => void)({}, undefined);
+    }
+    expect(sent).toEqual([]);
   });
 });
 
@@ -128,6 +203,7 @@ describe('Close Window, Reload and Force Reload', () => {
     const registered = all.filter((item) => item.accelerator && item.registerAccelerator !== false);
     expect(registered.map((item) => item.accelerator)).toEqual([
       'CommandOrControl+,',
+      'Shift+CommandOrControl+L',
       'CommandOrControl+W',
       'CommandOrControl+P',
       'CommandOrControl+R',
@@ -148,6 +224,7 @@ describe('the app menu', () => {
       'about',
       'separator',
       'Settings…',
+      'Lock Spark Outpost',
       'separator',
       'services',
       'separator',

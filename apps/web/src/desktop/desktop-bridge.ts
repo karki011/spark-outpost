@@ -64,6 +64,35 @@ export interface IslandGeometry {
 
 type Unsubscribe = () => void;
 
+export type AppLockIdleMinutes = 1 | 5 | 15 | 30;
+
+export interface AppLockStatus {
+  enabled: boolean;
+  locked: boolean;
+  hasCode: boolean;
+  idleMinutes: AppLockIdleMinutes;
+  onSleep: boolean;
+  touchId: boolean;
+  touchIdAvailable: boolean;
+  hideNotifications: boolean;
+  retryAt: number | null;
+}
+
+export type AppLockPatch = Partial<
+  Pick<AppLockStatus, 'enabled' | 'idleMinutes' | 'onSleep' | 'touchId' | 'hideNotifications'>
+>;
+
+export interface DesktopAppLock {
+  initiallyLocked?: boolean;
+  status(): Promise<AppLockStatus>;
+  onChange(listener: (status: AppLockStatus) => void): Unsubscribe;
+  lockNow(): Promise<void>;
+  unlockWithTouchId(): Promise<boolean>;
+  unlockWithCode(code: string): Promise<{ ok: boolean; retryAt: number | null }>;
+  setCode(input: { current?: string; next: string; enable?: boolean }): Promise<{ ok: boolean }>;
+  set(patch: AppLockPatch): Promise<AppLockStatus>;
+}
+
 export interface BrowserSnapshot {
   chatId: string;
   image: string | null;
@@ -234,6 +263,7 @@ export interface SparkDesktop {
     reportSidebar(shown: boolean): void;
   };
   settingsWindow?: DesktopSettingsWindow;
+  lock?: DesktopAppLock;
   onOpenChat(callback: (id: string, runId: string | null) => void): Unsubscribe;
   onOpenSettings?(callback: (target: IslandSettingsTarget) => void): Unsubscribe;
 }

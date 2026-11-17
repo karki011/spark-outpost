@@ -10,11 +10,12 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 
 ## General
 
-| Section                 | Holds                                                                                                                             | More                                                    |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| **General**: profile    | **What should Spark call you?** and **Personality** (**Friendly**).                                                               | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
-| **Voice**               | Mac app: push to talk, **Speech model**, **Shortcut**.                                                                            | [Voice](voice.md)                                       |
-| **General**: appearance | **Automatic**, **Tint** (**Graphite**), **Increase contrast**. Terminals: [SF Mono](https://developer.apple.com/fonts/) or Menlo. | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
+| Section                     | Holds                                                                                                                             | More                                                    |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| **General**: profile        | **What should Spark call you?** and **Personality** (**Friendly**).                                                               | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
+| **Voice**                   | Mac app: push to talk, **Speech model**, **Shortcut**.                                                                            | [Voice](voice.md)                                       |
+| **General**: appearance     | **Automatic**, **Tint** (**Graphite**), **Increase contrast**. Terminals: [SF Mono](https://developer.apple.com/fonts/) or Menlo. | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
+| **General**: privacy screen | Mac app: **Lock Spark when I’m away** (off), **Code**.                                                                            | [Privacy](mac-privacy.md#privacy-screen)                |
 
 ### Notifications
 
@@ -22,7 +23,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 
 | Row                                                                                                                                                           | Default                                                | More                                                    |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------- |
-| **Morning brief**                                                                                                                                             | 7:00                                                   | Daily summary on **Home**                               |
+| **Morning brief**                                                                                                                                             | 7:00                                                   | Summary on **Home**                                     |
 | **Status companion**                                                                                                                                          | **Show**                                               | [Island](desktop-companion.md#inside-the-app)           |
 | Mac app: **Show Spark Island**, **Spark Island size**, **Show in menu bar**                                                                                   | On, **Full**, off                                      | [Island](desktop-companion.md)                          |
 | **Dock badge and notifications**                                                                                                                              | On                                                     | [Island](desktop-companion.md#when-spark-island-is-off) |
@@ -38,15 +39,15 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 
 ## Agents
 
-| Section                          | Holds                                                                | More                                                   |
-| -------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
-| **AI providers**                 | Claude, Codex, Z.ai, **Custom endpoint**; Jev under **Advisor**.     | [Providers](providers-and-models.md)                   |
-| **AI providers**: **Models** tab | Open a model for cost and benchmarks.                                | [Models](providers-and-models.md#read-the-model-cards) |
-| **Usage**                        | Tokens and cost per reply, by provider; **~** marks Codex estimates. | [Jev](jev.md#what-it-costs)                            |
+| Section                      | Holds                                                                | More                                                   |
+| ---------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
+| **AI providers**             | Claude, Codex, Z.ai, **Custom endpoint**; Jev under **Advisor**.     | [Providers](providers-and-models.md)                   |
+| **AI providers**: **Models** | Cost and benchmarks per model.                                       | [Models](providers-and-models.md#read-the-model-cards) |
+| **Usage**                    | Tokens and cost per reply, by provider; **~** marks Codex estimates. | [Jev](jev.md#what-it-costs)                            |
 
 ## Work
 
-**Projects**: linked folders, **Add folder…** and **Repos folders** ([find repos by name](link-a-repo.md)). Open one for trust, **Where Spark works**, **Saved sign-ins** and **Preview** ([Where it works](where-spark-works.md)).
+**Projects**: linked folders, **Add folder…** and **Repos folders** ([find repos](link-a-repo.md)). Open one for trust, **Where Spark works**, **Saved sign-ins** and **Preview** ([Where it works](where-spark-works.md)).
 
 **Chats & autonomy**:
 
@@ -57,14 +58,14 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | **Warn when context is**                     | 60%                    | [Compaction](compaction.md#change-when-spark-compacts) |
 | **Compact automatically at**                 | 80%, on                | [Compaction](compaction.md#change-when-spark-compacts) |
 | **While the agent is working, Enter**        | **Queues the message** | [Queue](follow-a-turn.md#queue-messages)               |
-| **On wide windows**                          | **Context rail**       | Rail, panel or nothing                                 |
+| **On wide windows**                          | **Context rail**       | Rail, panel, nothing                                   |
 | **Collapse finished turns**                  | On                     | [Turns](follow-a-turn.md#after-a-turn)                 |
 | **Archive inactive chats**                   | **After 2 days**       | [Chat list](statuses-and-limits.md#chat-list)          |
 | **Code Mode**                                | On                     | [Below](#code-mode)                                    |
 | **Record Terminal sessions like chats**      | On                     | [Below](#record-terminal-sessions)                     |
 | **Plugins**                                  | Off                    | [Plugins](use-claude-plugins.md)                       |
 
-**Custom instructions**: text or a UTF-8 file, up to 16 KB; then **Save instructions**.
+**Custom instructions**: text or a UTF-8 file, up to 16 KB; **Save instructions**.
 
 ### Code Mode
 
@@ -78,10 +79,10 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 
 **Pull requests**:
 
-| Row                                              | Default              | More                                                        |
-| ------------------------------------------------ | -------------------- | ----------------------------------------------------------- |
-| **Open pull requests as**                        | **Ready for review** | [Ship](ship-and-pull-requests.md#ready-for-review-or-draft) |
-| **Follow up on pull requests**, and its switches | On                   | [Follow-up](pr-follow-up.md#turn-it-off)                    |
+| Row                                         | Default              | More                                                        |
+| ------------------------------------------- | -------------------- | ----------------------------------------------------------- |
+| **Open pull requests as**                   | **Ready for review** | [Ship](ship-and-pull-requests.md#ready-for-review-or-draft) |
+| **Follow up on pull requests** and switches | On                   | [Follow-up](pr-follow-up.md#turn-it-off)                    |
 
 **Spark rules**:
 
@@ -97,7 +98,7 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 | **Connectors**                  | GitHub, Atlassian, Linear, [Slack](connect-slack.md), Calendar (**Let agents read my calendar**: on). | [Connect](tickets-and-github.md) |
 | **Connectors**: **MCP servers** | Off until on for all chats, a project or one chat.                                                    | [Glossary](glossary.md)          |
 
-**Mac control** (Mac app): **Let agents control other Mac apps** and Accessibility permission ([Mac control](mac-control.md)).
+**Mac control** (Mac app): **Let agents control other Mac apps** and Accessibility ([more](mac-control.md)).
 
 **Browser pane** (Mac app): **Open links in**, signed-in sites, **Sign out of everything**, **Search engine**, **Archive tabs not shown for**, **Clear browser history**.
 
@@ -108,5 +109,5 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 | Part        | Holds                                                                                                 | More                                           |
 | ----------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | **Updates** | Mac app: version, **Channel**, **Download updates automatically**, **Check for updates**.             | [Updates](updates.md)                          |
-| **Help**    | **Export diagnostics**, **Send feedback**. Mac app: **Logs folder**, heartbeat, **Full Disk Access**. | [Mac privacy](mac-privacy.md)                  |
+| **Help**    | **Export diagnostics**, **Send feedback**. Mac app: **Logs folder**, heartbeat, **Full Disk Access**. | [Privacy](mac-privacy.md)                      |
 | **Reset**   | Start over; **Keep my API keys**: off.                                                                | [Reset](trouble-setup-and-reset.md#start-over) |

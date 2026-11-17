@@ -1,0 +1,26 @@
+.fdlg.lock-sheet {
+  max-width: 380px;
+}
+.lock-sheet-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 22px;
+}
+.lock-sheet-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.lock-sheet-field label {
+  font-size: 13px;
+  font-weight: 500;
+}
+.lock-sheet-problem {
+  min-height: 30px;
+  padding-bottom: 10px;
+}
+.lock-sheet-foot {
+  justify-content: flex-end;
+}

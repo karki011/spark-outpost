@@ -26,6 +26,8 @@ import {
   type ShortcutAction,
 } from './companion-settings.ts';
 import { targetsApi } from './api-token.ts';
+import { appLockGate } from './app-lock-gate.ts';
+import { heldNavigation } from './held-navigation.ts';
 import { startAttentionHost, type AttentionHost } from './attention-host.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { isSize } from './island-geometry.ts';
@@ -101,8 +103,13 @@ function openTray(iconFile: string, toolTip: string): MenuBarTray {
 export async function startCompanionHost(options: CompanionHostOptions): Promise<CompanionHost> {
   const initial = await loadSettings(options.settingsPath);
   let island: IslandWindow | null = null;
-  let pendingChat: { id: string; runId: string | null } | null = null;
-  let pendingSettings: string | null = null;
+  const navigation = heldNavigation({
+    locked: appLockGate.locked,
+    announce: (kind) => broadcast(kind === 'chat' ? IPC.openChat : IPC.openSettings, null),
+  });
+  const stopLockWatch = appLockGate.onLockedChange((locked) => {
+    if (!locked) navigation.unlocked();
+  });
   let attention: AttentionHost | null = null;
   const menuBar = menuBarItem(() => openTray(options.trayIcon, options.appName));
 
@@ -250,16 +257,10 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   );
   ipcMain.handle(IPC.islandGeometry, (event) => (fromIsland(event) ? island!.geometry() : null));
   ipcMain.handle(IPC.pendingChat, (event) => {
-    if (!fromSpark(event) || fromIsland(event)) return null;
-    const pending = pendingChat;
-    pendingChat = null;
-    return pending;
+    return fromSpark(event) && !fromIsland(event) ? navigation.takeChat() : null;
   });
   ipcMain.handle(IPC.pendingSettings, (event) => {
-    if (!fromSpark(event) || fromIsland(event)) return null;
-    const pending = pendingSettings;
-    pendingSettings = null;
-    return pending;
+    return fromSpark(event) && !fromIsland(event) ? navigation.takeSettings() : null;
   });
   ipcMain.on(IPC.islandInteractive, (event, on: unknown) => {
     if (fromIsland(event) && typeof on === 'boolean') island!.setInteractive(on);
@@ -293,9 +294,8 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   });
 
   const openChat = (id: string, runId: string | null = null) => {
-    pendingChat = { id, runId };
     options.showSpark();
-    broadcast(IPC.openChat, null);
+    navigation.openChat({ id, runId });
   };
 
   attention = startAttentionHost({
@@ -375,9 +375,8 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
 
   ipcMain.on(IPC.islandOpenSettings, (event, target: unknown) => {
     if (!fromIsland(event) || !isSettingsTarget(target)) return;
-    pendingSettings = target;
     options.showSpark();
-    broadcast(IPC.openSettings, null);
+    navigation.openSettings(target);
   });
 
   return {
@@ -424,6 +423,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         ipcMain.removeAllListeners(channel);
       }
       stopFocusWatch();
+      stopLockWatch();
       menuBar.dispose();
     },
   };

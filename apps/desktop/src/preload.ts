@@ -22,6 +22,14 @@ function restoreSettings(): void {
   }
 }
 
+function initiallyLocked(): boolean {
+  try {
+    return ipcRenderer.sendSync(IPC.lockInitiallyLocked) === true;
+  } catch {
+    return false;
+  }
+}
+
 restoreSettings();
 
 contextBridge.exposeInMainWorld('sparkDesktop', {
@@ -110,6 +118,16 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
   },
   privacy: {
     openFullDiskAccess: () => ipcRenderer.invoke(IPC.privacyOpenFullDiskAccess),
+  },
+  lock: {
+    initiallyLocked: initiallyLocked(),
+    status: () => ipcRenderer.invoke(IPC.lockStatus),
+    onChange: (callback: (status: unknown) => void) => listen(IPC.lockChanged, callback),
+    lockNow: () => ipcRenderer.invoke(IPC.lockNow),
+    unlockWithTouchId: () => ipcRenderer.invoke(IPC.lockUnlockTouchId),
+    unlockWithCode: (code: string) => ipcRenderer.invoke(IPC.lockUnlockCode, code),
+    setCode: (input: unknown) => ipcRenderer.invoke(IPC.lockSetCode, input),
+    set: (patch: unknown) => ipcRenderer.invoke(IPC.lockSet, patch),
   },
   sparkRules: {
     openFile: () => ipcRenderer.invoke(IPC.sparkRulesOpenFile),
