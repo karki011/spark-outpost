@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                       | What to do                                                     |
 | -------------------------------------------------- | -------------------------------------------------------------- |
+| Agent terminal row is a card                       | Nothing to do.                                                 |
 | No **Ask about this**; hidden sidebar stays hidden | Use **Add to chat**.                                           |
 | Home: message box, Needs you, Working set          | [Read Home](home.md).                                          |
 | Claude and Codex adapters updated                  | Nothing to do.                                                 |
@@ -58,7 +59,6 @@ summary: What changed in recent releases and what to do next.
 
 ## Earlier in November 2026
 
-| What changed                        | What to do                           |
-| ----------------------------------- | ------------------------------------ |
-| Phone push for finished turns       | [Use your phone](use-your-phone.md). |
-| Edits show +N −M and open to a diff | [Follow a turn](follow-a-turn.md).   |
+| What changed                  | What to do                           |
+| ----------------------------- | ------------------------------------ |
+| Phone push for finished turns | [Use your phone](use-your-phone.md). |

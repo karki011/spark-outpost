@@ -1,5 +1,20 @@
+.agent-term {
+  margin: 4px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--code);
+}
+
 .agent-term-head {
   flex-wrap: wrap;
+  padding-right: 6px;
+}
+
+.agent-term .run-cmd-line {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .agent-term-line {
