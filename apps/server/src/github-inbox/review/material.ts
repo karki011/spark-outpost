@@ -12,6 +12,10 @@ import { keysIn } from '../../tickets/pull-ticket-keys.ts';
 const DIFF_LIMIT = 200_000;
 const DISCUSSION_LIMIT = 60_000;
 const MAX_PAGES = 30;
+const HEAD_ATTEMPTS = 3;
+
+export const PULL_MOVING =
+  'The pull request kept changing while Spark read it. Try again in a moment.';
 
 export class ReviewSetupError extends Error {}
 
@@ -131,16 +135,30 @@ export async function readPullBasics(
   );
 }
 
+async function pullAtOneHead(
+  connection: GitHubConnection,
+  linked: LinkedPull,
+): Promise<{ detail: Pull; files: File[] }> {
+  const path = `${repoPath(linked.repo)}/pulls/${linked.number}/files`;
+  let detail = await readPullBasics(connection, linked);
+  for (let attempt = 0; attempt < HEAD_ATTEMPTS; attempt += 1) {
+    const files = await pages(connection, path, fileSchema, 'reading the changed files');
+    const after = await readPullBasics(connection, linked);
+    if (after.head.sha === detail.head.sha) return { detail: after, files };
+    detail = after;
+  }
+  throw new ReviewSetupError(PULL_MOVING);
+}
+
 export async function gatherMaterial(
   deps: GitHubDeps,
   pull: string,
   earlier: MaterialFacts['earlier'],
 ): Promise<MaterialFacts> {
   const { connection, linked } = await connectionForPull(deps, pull);
+  const { detail, files } = await pullAtOneHead(connection, linked);
   const path = `${repoPath(linked.repo)}/pulls/${linked.number}`;
-  const detail = await readPullBasics(connection, linked);
-  const [files, reviewComments, reviews, issueComments] = await Promise.all([
-    pages(connection, `${path}/files`, fileSchema, 'reading the changed files'),
+  const [reviewComments, reviews, issueComments] = await Promise.all([
     pages(connection, `${path}/comments`, reviewCommentSchema, 'reading review comments'),
     pages(connection, `${path}/reviews`, reviewSchema, 'reading reviews'),
     pages(

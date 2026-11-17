@@ -6,7 +6,7 @@ import { loadGithubInbox } from '../load.ts';
 import { sparkPaused } from '../../persistence/spark-pause.ts';
 import type { GitHubDeps } from '../../ship/github/access.ts';
 import { stopRun } from '../../workflow/stop-run.ts';
-import { autoReviewWanted, debouncedDue, pullKeyOf } from './decide.ts';
+import { autoReviewWanted, debouncedDue, pullKeyOf, retryFailedBefore } from './decide.ts';
 import { connectionForPull, readPullBasics, ReviewSetupError } from './material.ts';
 import {
   claimDueReviews,
@@ -24,9 +24,7 @@ import { getReview } from './views.ts';
 export const STRANDED_REVIEW_MS = 60_000;
 const CHECK_EVERY_MS = 30_000;
 
-export interface ReviewRunnerDeps extends ReviewStartDeps {
-  now(): Date;
-}
+export type ReviewRunnerDeps = ReviewStartDeps;
 
 export function reviewRunnerDeps(
   github: GitHubDeps,
@@ -68,6 +66,7 @@ export async function queueAutoReviews(deps: ReviewRunnerDeps): Promise<number> 
     deps.db,
     deps.workspaceId,
     inbox.items.map((item) => item.id),
+    retryFailedBefore(deps.now()),
   );
   const wanted = inbox.items.filter((item) =>
     autoReviewWanted(item, settings, heads.get(pullKeyOf(item.id)) ?? new Set()),

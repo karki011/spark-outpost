@@ -35,7 +35,7 @@ Press Esc to close the details.
 
 1. Select **Auto-review** at the top, or open **Settings → GitHub**.
 2. Under **Review with**, pick a Spark or workflow; its own instructions apply. None yet? **Open Sparks**.
-3. Turn on **Review automatically**: requested reviews run, again on new commits. Drafts wait.
+3. Turn on **Review automatically**: requested reviews run, again on new commits. Drafts wait. A review that could not start is tried again after 10 minutes; one you stopped is not.
 4. **Reviewer may post to GitHub** lets it post on that pull request and nowhere else. **Reviewer may approve** needs posting; it never merges.
 
 **Next:** [Read a pull request review](review-pull-requests.md)

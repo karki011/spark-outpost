@@ -11,8 +11,20 @@ import {
 import { withTransaction, type Db } from '../../persistence/db.ts';
 import { newId } from '../../persistence/ids.ts';
 import type { GitHubDeps } from '../../ship/github/access.ts';
-import { gatherMaterial, renderMaterial, ReviewSetupError } from './material.ts';
-import { failReview, settleReview, type ClaimedReview } from './queue.ts';
+import {
+  gatherMaterial,
+  renderMaterial,
+  ReviewSetupError,
+  type MaterialFacts,
+} from './material.ts';
+import { retryFailedBefore } from './decide.ts';
+import {
+  dropUnstartedReview,
+  failReview,
+  headCoveredByAnother,
+  settleReview,
+  type ClaimedReview,
+} from './queue.ts';
 import { earlierReview } from './views.ts';
 
 export interface ReviewStartDeps {
@@ -21,12 +33,25 @@ export interface ReviewStartDeps {
   github: GitHubDeps;
   store: WorkflowStore;
   runTarget(conversationId: string): Promise<RunTarget>;
+  now(): Date;
 }
 
 export const REVIEWER_GONE = 'The reviewer no longer exists. Pick another one.';
 export const PULL_CLOSED = 'The pull request is closed, so it was not reviewed.';
 
 class ReviewStoppedError extends Error {}
+class ReviewNotNeededError extends Error {}
+
+async function autoReviewStillNeeded(
+  deps: ReviewStartDeps,
+  claim: ClaimedReview,
+  detail: MaterialFacts['detail'],
+): Promise<boolean> {
+  if (claim.source !== 'auto') return true;
+  if (detail.draft) return false;
+  const before = retryFailedBefore(deps.now());
+  return !(await headCoveredByAnother(deps.db, claim, detail.head.sha, before));
+}
 
 async function reviewerWorkflow(deps: ReviewStartDeps, claim: ClaimedReview): Promise<Workflow> {
   if (claim.reviewer.kind === 'spark') {
@@ -65,6 +90,7 @@ async function launch(deps: ReviewStartDeps, claim: ClaimedReview): Promise<void
   );
   const facts = await gatherMaterial(deps.github, claim.pull, earlier);
   if (facts.detail.state !== 'open') throw new ReviewSetupError(PULL_CLOSED);
+  if (!(await autoReviewStillNeeded(deps, claim, facts.detail))) throw new ReviewNotNeededError();
   const material = renderMaterial(facts);
   const conversationId = newId();
   const target = await deps.runTarget(conversationId);
@@ -112,6 +138,10 @@ export async function startReview(deps: ReviewStartDeps, claim: ClaimedReview): 
     if (error instanceof ReviewStoppedError) {
       const stopped = { state: 'stopped', body: null, error: null } as const;
       await settleReview(deps.db, claim.id, stopped, { costUsd: null, tokens: null });
+      return;
+    }
+    if (error instanceof ReviewNotNeededError) {
+      await dropUnstartedReview(deps.db, claim.id);
       return;
     }
     const known = error instanceof ReviewSetupError;

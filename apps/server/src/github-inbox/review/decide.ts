@@ -11,6 +11,12 @@ import type { StoredReviewSettings } from './settings.ts';
 
 export const REVIEW_DEBOUNCE_MS = 2 * 60_000;
 
+export const REVIEW_RETRY_MS = 10 * 60_000;
+
+export function retryFailedBefore(now: Date): Date {
+  return new Date(now.getTime() - REVIEW_RETRY_MS);
+}
+
 export const pullKeyOf = (pull: string) => pull.toLowerCase();
 
 type Candidate = Pick<GithubInboxItem, 'id' | 'group' | 'draft' | 'authorIsBot' | 'headSha'>;

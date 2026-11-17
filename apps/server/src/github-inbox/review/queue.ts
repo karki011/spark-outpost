@@ -49,17 +49,20 @@ export async function enqueueReview(db: Queryable, review: NewReview): Promise<s
   return rows[0]!.id;
 }
 
+const COVERS_HEAD = `(state <> 'failed' OR workflow_run_id IS NOT NULL OR finished_at > $3)`;
+
 export async function reviewedHeads(
   db: Queryable,
   workspaceId: string,
   pulls: readonly string[],
+  retryFailedBefore: Date,
 ): Promise<Map<string, Set<string>>> {
   const heads = new Map<string, Set<string>>();
   if (pulls.length === 0) return heads;
   const { rows } = await db.query<{ pull_key: string; head_sha: string }>(
     `SELECT DISTINCT pull_key, head_sha FROM github_reviews
-     WHERE workspace_id = $1 AND pull_key = ANY($2::text[])`,
-    [workspaceId, pulls.map(pullKeyOf)],
+     WHERE workspace_id = $1 AND pull_key = ANY($2::text[]) AND ${COVERS_HEAD}`,
+    [workspaceId, pulls.map(pullKeyOf), retryFailedBefore],
   );
   for (const row of rows) {
     const known = heads.get(row.pull_key) ?? new Set<string>();
@@ -67,6 +70,28 @@ export async function reviewedHeads(
     heads.set(row.pull_key, known);
   }
   return heads;
+}
+
+export async function headCoveredByAnother(
+  db: Queryable,
+  claim: Pick<ClaimedReview, 'id' | 'workspaceId' | 'pull'>,
+  headSha: string,
+  retryFailedBefore: Date,
+): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `SELECT 1 FROM github_reviews
+     WHERE workspace_id = $1 AND pull_key = $2 AND ${COVERS_HEAD} AND head_sha = $4 AND id <> $5
+     LIMIT 1`,
+    [claim.workspaceId, pullKeyOf(claim.pull), retryFailedBefore, headSha, claim.id],
+  );
+  return rowCount === 1;
+}
+
+export async function dropUnstartedReview(db: Queryable, id: string): Promise<void> {
+  await db.query(
+    `DELETE FROM github_reviews WHERE id = $1 AND state = 'running' AND workflow_run_id IS NULL`,
+    [id],
+  );
 }
 
 export interface ClaimedReview {
