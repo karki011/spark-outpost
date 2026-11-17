@@ -97,10 +97,10 @@ export async function startDueReviews(deps: ReviewRunnerDeps): Promise<void> {
 export async function checkReviews(deps: ReviewRunnerDeps): Promise<void> {
   await settleRunningReviews(deps.db, deps.workspaceId, deps.now(), STRANDED_REVIEW_MS);
   if (await sparkPaused(deps.db, deps.workspaceId)) return;
+  await startDueReviews(deps);
   await queueAutoReviews(deps).catch((error: unknown) => {
     console.error('Could not look for pull requests to review', error);
   });
-  await startDueReviews(deps);
 }
 
 export async function requestReviewNow(

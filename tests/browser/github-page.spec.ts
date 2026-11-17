@@ -206,3 +206,44 @@ test('GitHub page lists problems and still shows the last pull requests', async 
   );
   await expect(main.locator('.gh-main').first()).toBeVisible();
 });
+
+test('GitHub page stays usable while a refresh waits on GitHub', async ({ page }) => {
+  await stubInbox(page, inbox());
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const fresh = inbox({ items: [pull('9', { title: 'Arrived while waiting' }), ...ITEMS] });
+  await page.route(/\/api\/github\/inbox\?refresh=1$/, async (route) => {
+    await held;
+    await route.fulfill({ json: fresh });
+  });
+  await page.addInitScript(() => localStorage.setItem('spark-outpost.view', 'github'));
+  await page.goto('/');
+  const main = page.getByRole('main', { name: 'GitHub' });
+  const rows = main.locator('.gh-main');
+  await expect(rows.first()).toBeVisible();
+
+  await main.getByRole('button', { name: 'Refresh pull requests' }).click();
+  await expect(main.getByText('Refreshing…')).toBeVisible();
+  await expect(main.getByRole('status', { name: /Loading/ })).toHaveCount(0);
+  await rows.first().click();
+  await expect(
+    main.getByRole('complementary', { name: 'Fix timezone in export filenames' }),
+  ).toBeVisible();
+  await main
+    .getByRole('radiogroup', { name: 'Pull request groups' })
+    .getByRole('radio', { name: /^Needs fixes/ })
+    .click();
+  await expect(main.getByRole('list', { name: 'Needs fixes' })).toContainText('Retry webhooks');
+
+  release();
+  await expect(main.getByText('Refreshing…')).toHaveCount(0);
+  await main
+    .getByRole('radiogroup', { name: 'Pull request groups' })
+    .getByRole('radio', { name: /^Review requested/ })
+    .click();
+  await expect(main.getByRole('list', { name: 'Review requested' })).toContainText(
+    'Arrived while waiting',
+  );
+});
