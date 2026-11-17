@@ -290,6 +290,39 @@ test('collapses the sidebar, remembers it, and opens a drawer on small screens',
   await expect(page.locator('.chat-title')).toHaveText('Second chat');
 });
 
+test('Command and a number open the chat at that place in the list, from any page', async ({
+  page,
+}) => {
+  await seedChats([{ title: 'First chat' }, { title: 'Second chat' }, { title: 'Third chat' }]);
+  await openChats(page);
+  const titles = await rowTitles(sidebar(page)).allTextContents();
+  expect(titles).toHaveLength(3);
+  const title = page.locator('.chat-title');
+  const badges = sidebar(page).locator('.row-number');
+
+  await page.keyboard.down('ControlOrMeta');
+  await expect(badges).toHaveText([/1$/, /2$/, /3$/]);
+  await page.keyboard.up('ControlOrMeta');
+  await expect(badges).toHaveCount(0);
+
+  await page.keyboard.press('ControlOrMeta+Digit2');
+  await expect(title).toHaveText(titles[1]!);
+  await page.keyboard.press('ControlOrMeta+Digit9');
+  await expect(title).toHaveText(titles[2]!);
+  await page.keyboard.press('ControlOrMeta+Digit5');
+  await expect(title).toHaveText(titles[2]!);
+
+  await sidebar(page).getByRole('button', { name: 'Hide sidebar' }).click();
+  await expect(sidebar(page)).toHaveJSProperty('inert', true);
+  const main = page.getByRole('navigation', { name: 'Main' });
+  await main.getByRole('button', { name: 'Tickets' }).click();
+  await expect(page.getByRole('heading', { name: 'See your tickets here' })).toBeVisible();
+  await page.keyboard.press('ControlOrMeta+Digit1');
+  await expect(title).toHaveText(titles[0]!);
+  await expect(title).toBeVisible();
+  await expect(sidebar(page)).toHaveJSProperty('inert', true);
+});
+
 test('a chat whose pull request merged shows a merged icon beside its title', async ({ page }) => {
   await useSystemTheme(page);
   await page.emulateMedia({ colorScheme: 'light' });
