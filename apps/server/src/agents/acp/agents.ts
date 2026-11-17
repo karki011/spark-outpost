@@ -97,6 +97,7 @@ export interface AgentDefinition {
     repo?: CodexRepoOptions | null,
     profiles?: boolean,
     floor?: SparkFloor,
+    gitWrites?: Record<string, string>,
   ) => Record<string, string>;
   projectSessionMeta?: (
     extraRoots: readonly string[],
@@ -277,6 +278,7 @@ export function codexConfig(
   repo: CodexRepoOptions | null,
   profiles = true,
   floor: SparkFloor = RECOMMENDED_FLOOR,
+  gitWrites: Record<string, string> = {},
 ): object {
   return {
     features: {
@@ -288,7 +290,12 @@ export function codexConfig(
     ...(profiles
       ? {
           default_permissions: CODEX_READ_ONLY_MODE,
-          permissions: codexPermissionProfiles(browserDataDir(), floor.secretEdits),
+          permissions: codexPermissionProfiles(
+            browserDataDir(),
+            floor.secretEdits,
+            undefined,
+            gitWrites,
+          ),
         }
       : {}),
     ...(repo && !repo.agentsMd ? { project_doc_max_bytes: 0 } : {}),
@@ -303,12 +310,13 @@ function codexEnv(
   repo: CodexRepoOptions | null = null,
   profiles = true,
   floor: SparkFloor = RECOMMENDED_FLOOR,
+  gitWrites: Record<string, string> = {},
 ): Record<string, string> {
   return {
     INITIAL_AGENT_MODE: CODEX_READ_ONLY_MODE,
     CODEX_ACP_PROMPT_SUGGESTIONS: 'false',
     TMPDIR: workdir,
-    CODEX_CONFIG: JSON.stringify(codexConfig(browsing, repo, profiles, floor)),
+    CODEX_CONFIG: JSON.stringify(codexConfig(browsing, repo, profiles, floor, gitWrites)),
   };
 }
 

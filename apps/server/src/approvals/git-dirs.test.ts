@@ -35,6 +35,7 @@ describe('readGitDirs()', () => {
     expect(await readGitDirs(worktree)).toEqual({
       common: join(repo, '.git'),
       own: join(repo, '.git', 'worktrees', 'chat-1'),
+      branch: 'refs/heads/spark/chat-1',
     });
   });
 

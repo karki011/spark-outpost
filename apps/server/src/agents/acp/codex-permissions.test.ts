@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
 import { acceptedRecordPath } from '../../spark-rules/accepted.ts';
-import { codexPermissionProfiles } from './codex-permissions.ts';
+import { codexGitWrites, codexPermissionProfiles } from './codex-permissions.ts';
 
 type Profile = {
   extends?: string;
@@ -60,5 +60,32 @@ describe('codexPermissionProfiles', () => {
       });
     }
     expect(profiles['agent-full-access']!.filesystem).toMatchObject({ ':root': 'write' });
+  });
+
+  it("lets the working modes write a worktree's git data, never its hooks or config", () => {
+    const writes = codexGitWrites([
+      { common: '/repo/.git', own: '/repo/.git/worktrees/w', branch: 'refs/heads/spark/w' },
+      { common: '/other/.git', own: '/other/.git' },
+      null,
+    ]);
+    expect(writes).toEqual({
+      '/repo/.git/worktrees/w': 'write',
+      '/repo/.git/worktrees/w/HEAD': 'read',
+      '/repo/.git/worktrees/w/commondir': 'read',
+      '/repo/.git/worktrees/w/gitdir': 'read',
+      '/repo/.git/worktrees/w/config.worktree': 'read',
+      '/repo/.git/objects': 'write',
+      '/repo/.git/refs/heads/spark/w': 'write',
+      '/repo/.git/refs/heads/spark/w.lock': 'write',
+      '/repo/.git/logs/refs/heads/spark/w': 'write',
+      '/repo/.git/hooks': 'read',
+      '/repo/.git/config': 'read',
+    });
+    const profiles = codexPermissionProfiles(null, true, [], writes) as Record<string, Profile>;
+    for (const mode of ['ask-every-action', 'workspace-write', 'agent']) {
+      expect(profiles[mode]!.filesystem).toMatchObject(writes);
+    }
+    expect(profiles['read-only']!.filesystem).not.toHaveProperty('/repo/.git/objects');
+    expect(profiles['agent-full-access']!.filesystem).not.toHaveProperty('/repo/.git/hooks');
   });
 });

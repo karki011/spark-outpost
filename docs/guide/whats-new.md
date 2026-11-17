@@ -11,6 +11,8 @@ summary: What changed in recent releases and what to do next.
 | What changed                                     | What to do                                                     |
 | ------------------------------------------------ | -------------------------------------------------------------- |
 | Home: message box, Needs you, Working set        | [Read Home](home.md).                                          |
+| Claude and Codex adapters updated                | Nothing to do.                                                 |
+| Codex commits in its worktree again              | Nothing to do.                                                 |
 | **Thinking** expands; `/compact`; less “Running” | [Follow a turn](follow-a-turn.md#see-whats-happening).         |
 | One meeting card; Join takes notes               | [Take meeting notes](meetings.md).                             |
 | Saved sign-ins type with no card                 | [Save a test sign-in](use-the-browser.md#save-a-test-sign-in). |
@@ -51,7 +53,6 @@ summary: What changed in recent releases and what to do next.
 | Calendar: new look, your replies     | [See your day](calendar.md).                    |
 | Voice shortcut dictates in the chat  | [Talk to Spark](voice.md).                      |
 | Voice uses Parakeet alone, no choice | [Talk to Spark](voice.md).                      |
-| Home rows fit on a phone             | Nothing; buttons wrap under the text.           |
 | Update check every hour              | [Updates](updates.md).                          |
 
 ## Earlier in November 2026
@@ -62,4 +63,3 @@ summary: What changed in recent releases and what to do next.
 | Edits show +N −M and open to a diff | [Follow a turn](follow-a-turn.md).   |
 | Map: **Running chats** overlay      | [Map](map.md).                       |
 | Tickets: parent, subtasks and links | [Tickets](tickets-inbox.md).         |
-| Phone says **Can't reach your Mac** | Nothing.                             |

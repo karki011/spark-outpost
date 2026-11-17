@@ -16,6 +16,7 @@ import { agentEnvironment, processEnvironment } from './agent-env.ts';
 import { cliEnvironment } from './agent-cli.ts';
 import { supportsDo, type AgentDefinition } from './agents.ts';
 import { CODEX_PLAIN_SANDBOX_NOTE, prepareCodexLaunch } from './codex-launch.ts';
+import { codexGitWrites } from './codex-permissions.ts';
 import { codexUserMcpNames } from './codex-mcp.ts';
 import { connectionKey, type ConnectionKey } from './connection-key.ts';
 import { noFolderAccessNote, primaryOnlyNote } from './folder-notes.ts';
@@ -227,7 +228,12 @@ export async function spawnConnection(
         ? await prepareCodexLaunch(located, launchDir, legacyPermissions)
         : { cli: located, profiles: !legacyPermissions };
     const launchEnv = await agentEnvironment(
-      { ...options, codexProfiles: prepared.profiles, floor: workspace.floor },
+      {
+        ...options,
+        codexProfiles: prepared.profiles,
+        floor: workspace.floor,
+        codexGitWrites: codexGitWrites(workspace.policy?.roots.map((root) => root.gitDirs) ?? []),
+      },
       workspace.home,
       plan.browsing,
       codex,

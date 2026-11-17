@@ -11,6 +11,7 @@ export interface PublishPromptFacts {
   pullBase?: string | null;
   adopted?: AdoptedPrompt | null;
   localOnly?: boolean;
+  sandboxedGit?: boolean;
 }
 
 export interface AdoptedPrompt {
@@ -26,6 +27,9 @@ const USER_RESTRICTIONS =
 
 const HOOKS =
   "Never skip hooks (no `--no-verify`). If the push's pre-push check fails, fix what your change caused and push again; when you cannot fix it, stop and tell the user once exactly what is needed.";
+
+const SANDBOXED_GIT =
+  "If a git command fails because your sandbox can't write the repository's git data (a chat worktree keeps it in the main checkout's `.git` folder), run the same command again with your own request for escalated permissions, so it follows your permission mode like any other command. Never write git's files any other way.";
 
 const UNSEEN =
   'The user does not see this message: write your reply as a plain statement of what you did, not as an answer to it.';
@@ -89,7 +93,7 @@ function promptLines(branch: string, facts: PublishPromptFacts): string[] {
     return [
       `There is no remote. Local branch: \`${branch}\`. If committing is permitted by the user’s current instructions, commit the completed work on this chat’s own branch; otherwise leave it uncommitted. Do not push, create a remote or open a pull request.`,
       LIMITS,
-      'Never skip hooks (no `--no-verify`). If the commit fails, report it without attempting a host-side fallback.',
+      'Never skip hooks (no `--no-verify`). If the commit still fails, report it.',
       UNSEEN,
     ];
   if (facts.reason === 'follow-up') return followUpLines(branch, facts.adopted?.remote);
@@ -102,5 +106,10 @@ export function publishPrompt(facts: PublishPromptFacts): string | null {
   if (!facts.unpublishedWork || facts.reason === null) return null;
   const branch = oneLine(facts.branch).replaceAll('`', '');
   if (!branch) return null;
-  return [PUBLISH_PROMPT_HEADING, USER_RESTRICTIONS, ...promptLines(branch, facts)].join('\n');
+  return [
+    PUBLISH_PROMPT_HEADING,
+    USER_RESTRICTIONS,
+    ...promptLines(branch, facts),
+    ...(facts.sandboxedGit ? [SANDBOXED_GIT] : []),
+  ].join('\n');
 }

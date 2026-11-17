@@ -1,5 +1,7 @@
 import { browserDataDir, entryPath, guardedDataEntries } from '../../approvals/browser-data.ts';
 import { guardedCrewFolders } from '../../approvals/crew-folders.ts';
+import { join } from 'node:path';
+import type { GitDirs } from '../../projects/path-policy.ts';
 import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
 
 export const SECRET_GLOBS = SECRET_FILE_PATTERNS.map((pattern) => `**/${pattern}`);
@@ -22,21 +24,48 @@ function crewReadOnly(folders: readonly string[]): Record<string, string> {
   return Object.fromEntries(folders.map((folder) => [folder, 'read']));
 }
 
+const WORKTREE_LINKS = ['HEAD', 'commondir', 'gitdir', 'config.worktree'];
+
+function branchRefAccess(common: string, branch: string | undefined): Record<string, string> {
+  if (!branch) return {};
+  const ref = join(common, branch);
+  const log = join(common, 'logs', branch);
+  return { [ref]: 'write', [`${ref}.lock`]: 'write', [log]: 'write' };
+}
+
+function worktreeGitAccess(dirs: GitDirs): Record<string, string> {
+  if (dirs.own === dirs.common) return {};
+  return {
+    [dirs.own]: 'write',
+    ...Object.fromEntries(WORKTREE_LINKS.map((name) => [join(dirs.own, name), 'read'])),
+    [join(dirs.common, 'objects')]: 'write',
+    ...branchRefAccess(dirs.common, dirs.branch),
+    [join(dirs.common, 'hooks')]: 'read',
+    [join(dirs.common, 'config')]: 'read',
+  };
+}
+
+export function codexGitWrites(gitDirs: readonly (GitDirs | null | undefined)[]) {
+  return Object.assign({}, ...gitDirs.flatMap((dirs) => (dirs ? [worktreeGitAccess(dirs)] : [])));
+}
+
 export function codexPermissionProfiles(
   dataDir: string | null = browserDataDir(),
   secrets = true,
   crew: readonly string[] = guardedCrewFolders(),
+  gitWrites: Record<string, string> = {},
 ): Record<string, object> {
   const projectRoots = secrets ? { ':project_roots': secretDenies() } : {};
   const denied = { ...projectRoots, ...crewReadOnly(crew), ...browserDataDenies(dataDir) };
+  const working = { ...gitWrites, ...denied };
   return {
     [CODEX_READ_ONLY_MODE]: { extends: ':read-only', filesystem: denied },
     [CODEX_DO_MODE]: {
       extends: ':workspace',
-      filesystem: { ':slash_tmp': 'read', ...denied },
+      filesystem: { ':slash_tmp': 'read', ...working },
     },
-    'workspace-write': { extends: ':workspace', filesystem: denied },
-    agent: { extends: ':workspace', filesystem: denied },
+    'workspace-write': { extends: ':workspace', filesystem: working },
+    agent: { extends: ':workspace', filesystem: working },
     'agent-full-access': {
       filesystem: { ':root': 'write', ...denied },
       network: { enabled: true },

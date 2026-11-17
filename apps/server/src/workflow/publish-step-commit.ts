@@ -26,6 +26,7 @@ export async function commitWithoutRemote(
     unpublishedWork: status.code === 0 && status.stdout.trim().length > 0,
     draftAsked: false,
     localOnly: true,
+    sandboxedGit: turn.input.provider === 'codex',
   });
   if (!prompt) return turn.reply;
   const before = await head(root);

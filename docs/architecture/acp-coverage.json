@@ -284,6 +284,10 @@
     "where": "apps/server/src/agents/acp/session-open.ts",
     "note": "Read from initialize; session/close is only sent when it is advertised."
   },
+  "agent-capability:sessionCapabilities.systemPrompt.mode.override": {
+    "status": "not_applicable",
+    "note": "Stable v1 since SDK 2.7.0 (schema 1.32.0). Spark only adds to the agent's instructions and never replaces them, so override mode is not used. The append text still goes through claude-agent-acp's own session/new _meta.systemPrompt, not the new spec systemPrompt field."
+  },
   "agent-capability:auth.logout": {
     "status": "not_applicable",
     "note": "We never call logout."

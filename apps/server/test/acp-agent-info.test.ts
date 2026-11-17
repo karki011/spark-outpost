@@ -6,16 +6,16 @@ describe('the adapter an agent reports in initialize', () => {
     const agentInfo = {
       name: '@agentclientprotocol/claude-agent-acp',
       title: 'Claude Agent',
-      version: '0.101.0',
+      version: '0.107.3',
     };
     expect(agentInfoOutputs({ agentInfo })).toEqual([
-      { kind: 'agent_info', name: '@agentclientprotocol/claude-agent-acp', version: '0.101.0' },
+      { kind: 'agent_info', name: '@agentclientprotocol/claude-agent-acp', version: '0.107.3' },
     ]);
   });
 
   it('trims surrounding spaces', () => {
-    expect(agentInfoOutputs({ agentInfo: { name: ' codex-acp ', version: ' 2.6.0\n' } })).toEqual([
-      { kind: 'agent_info', name: 'codex-acp', version: '2.6.0' },
+    expect(agentInfoOutputs({ agentInfo: { name: ' codex-acp ', version: ' 2.7.0\n' } })).toEqual([
+      { kind: 'agent_info', name: 'codex-acp', version: '2.7.0' },
     ]);
   });
 

@@ -66,7 +66,7 @@ const codexRequest: acp.CreateElicitationRequest = {
   _meta: { codex: { autoResolutionMs: null } },
 };
 
-describe('a Claude AskUserQuestion elicitation (claude-agent-acp 0.101.0, to an AIR client)', () => {
+describe('a Claude AskUserQuestion elicitation (claude-agent-acp 0.107.3, to an AIR client)', () => {
   it('becomes one card question per question, with the Other box folded in', () => {
     const form = agentForm(claudeRequest([storeQuestion, checksQuestion]));
     expect(form.message).toBe('Please answer the following questions.');

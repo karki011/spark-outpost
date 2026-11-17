@@ -16,10 +16,14 @@ export async function readGitDirs(root: string): Promise<GitDirs | null> {
     '--path-format=absolute',
     '--git-common-dir',
     '--git-dir',
+    '--symbolic-full-name',
+    'HEAD',
   ]).catch(() => null);
   if (!found || found.code !== 0) return null;
-  const [common, own] = found.stdout.trim().split('\n');
-  return common && own ? { common, own } : null;
+  const [common, own, head] = found.stdout.trim().split('\n');
+  if (!common || !own) return null;
+  const branch = own !== common && head?.startsWith('refs/heads/') ? head : null;
+  return branch ? { common, own, branch } : { common, own };
 }
 
 function hookName(dirs: GitDirs, target: string): string | null {

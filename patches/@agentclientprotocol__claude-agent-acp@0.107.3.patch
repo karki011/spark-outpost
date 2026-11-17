@@ -1,45 +1,8 @@
-diff --git a/dist/acp-agent.js b/dist/acp-agent.js
-index 970eb82647656c49676685178d62245387b1cb31..ec864516825c887a0b91dae6af3b15b3b534142d 100644
---- a/dist/acp-agent.js
-+++ b/dist/acp-agent.js
-@@ -4661,6 +4661,7 @@ export class ClaudeAcpAgent {
-                                     this.logger.log(`Ignoring task_progress for task ${message.task_id} from earlier run ${message.run_id}`);
-                                     break;
-                                 }
-+                                subagents.noteProgress(message.task_id, message.usage);
-                                 await asyncTasks.taskProgress({
-                                     task_id: message.task_id,
-                                     description: message.description,
-@@ -4728,7 +4729,7 @@ export class ClaudeAcpAgent {
-                                     break;
-                                 // The task settled — no further tool calls can originate
-                                 // from it, so its registry entry can be dropped.
--                                await subagents.finishTask(message.task_id, message.status, sendUpdate, message.tool_use_id, { reason: message.reason });
-+                                await subagents.finishTask(message.task_id, message.status, sendUpdate, message.tool_use_id, { reason: message.reason, usage: message.usage, summary: message.summary });
-                                 await asyncTasks.taskNotification({
-                                     task_id: message.task_id,
-                                     status: message.status,
-@@ -6274,6 +6275,15 @@ export class ClaudeAcpAgent {
-                                 }),
-                             });
-                         }
-+                        else {
-+                            await sendUpdate({
-+                                sessionId: params.sessionId,
-+                                update: {
-+                                    sessionUpdate: "session_info_update",
-+                                    _meta: { "_claude/rateLimit": message.rate_limit_info },
-+                                },
-+                            });
-+                        }
-                         break;
-                     }
-                     case "conversation_reset": {
 diff --git a/dist/native-subagents.js b/dist/native-subagents.js
-index 0c0cb9a3190096f1019ef8cf1273294172e131f7..9195f88d09aa4dbc0e57472c6dd0315d7e24de16 100644
+index aa90e373c82ef76c9805441cf1111c294b382581..f0c2f6604b766f8f4548bd61f56d82c37612a274 100644
 --- a/dist/native-subagents.js
 +++ b/dist/native-subagents.js
-@@ -580,6 +580,11 @@ export class NativeSubagentRuntime {
+@@ -560,6 +560,11 @@ export class NativeSubagentRuntime {
       * Reports that the SDK ended the task's work. `end` has what the SDK says
       * about it: its text for a failure, and its reason for an unusual end.
       */
@@ -51,7 +14,7 @@ index 0c0cb9a3190096f1019ef8cf1273294172e131f7..9195f88d09aa4dbc0e57472c6dd0315d
      async finishTask(taskId, status, deliver, toolUseId, end) {
          if (!this.enabled)
              return;
-@@ -587,6 +592,22 @@ export class NativeSubagentRuntime {
+@@ -567,6 +572,22 @@ export class NativeSubagentRuntime {
          const child = toolUseId ? this.childByParentToolUse.get(toolUseId) : this.children.get(taskId);
          if (child && toolUseId && this.taskByToolUse.get(toolUseId) !== taskId)
              return;
@@ -74,7 +37,7 @@ index 0c0cb9a3190096f1019ef8cf1273294172e131f7..9195f88d09aa4dbc0e57472c6dd0315d
          if (!state || !child)
              return;
          if (this.form === "rfd") {
-@@ -1447,6 +1468,18 @@ export async function announceNativeSubagent(child, publish, form, cwd) {
+@@ -1491,6 +1512,18 @@ export async function announceNativeSubagent(child, publish, form, cwd) {
              child.announcePromise = undefined;
      }
  }
@@ -93,7 +56,7 @@ index 0c0cb9a3190096f1019ef8cf1273294172e131f7..9195f88d09aa4dbc0e57472c6dd0315d
  export async function finishNativeSubagent(session, taskId, state, publish) {
      const child = session.nativeSubagentsByTaskId?.get(taskId);
      if (!child || child.terminalState !== undefined)
-@@ -1461,6 +1494,7 @@ export async function finishNativeSubagent(session, taskId, state, publish) {
+@@ -1505,6 +1538,7 @@ export async function finishNativeSubagent(session, taskId, state, publish) {
                  sessionUpdate: "subagent_state_update",
                  subagentSessionId: child.sessionId,
                  state,
@@ -124,3 +87,53 @@ index f4649e0bdb3b6418ec9adc13f7d67579ba1c9c86..72a68c8f7fb5782596767ac3d49e5b73
          default:
              throw new Error(`Unknown permission option: ${selection.optionId}`);
      }
+diff --git a/dist/v1/acp-agent.js b/dist/v1/acp-agent.js
+index 0f37041cb4eda8e20e114dba227376c4cb3b8058..f7b87b73f87a503e6a64a64da92c35b26d7fff40 100644
+--- a/dist/v1/acp-agent.js
++++ b/dist/v1/acp-agent.js
+@@ -3520,6 +3520,7 @@ export class ClaudeAcpAgent {
+                                     this.logger.log(`Ignoring task_progress for task ${message.task_id} from earlier run ${message.run_id}`);
+                                     break;
+                                 }
++                                subagents.noteProgress(message.task_id, message.usage);
+                                 await asyncTasks.taskProgress({
+                                     task_id: message.task_id,
+                                     description: message.description,
+@@ -3587,7 +3588,7 @@ export class ClaudeAcpAgent {
+                                     break;
+                                 // The task settled — no further tool calls can originate
+                                 // from it, so its registry entry can be dropped.
+-                                await subagents.finishTask(message.task_id, message.status, sendUpdate, message.tool_use_id, { reason: message.reason });
++                                await subagents.finishTask(message.task_id, message.status, sendUpdate, message.tool_use_id, { reason: message.reason, usage: message.usage, summary: message.summary });
+                                 await asyncTasks.taskNotification({
+                                     task_id: message.task_id,
+                                     status: message.status,
+@@ -5021,7 +5022,13 @@ export class ClaudeAcpAgent {
+                         // With partial messages on, the SDK sends this before the turn's
+                         // first assistant frame, while there is no usage yet to send it with.
+                         if (lastAssistantTotalUsage === null) {
+-                            pendingRateLimit = message.rate_limit_info;
++                            await sendUpdate({
++                                sessionId: params.sessionId,
++                                update: {
++                                    sessionUpdate: "session_info_update",
++                                    _meta: { "_claude/rateLimit": message.rate_limit_info },
++                                },
++                            });
+                         }
+                         else {
+                             await sendUpdate({
+diff --git a/package.json b/package.json
+index ca9fdb9d56ecbaee3c25dd2adc7ad291ceaa3889..f364ae84b963cda9f26c8137a985b3a3e381e985 100644
+--- a/package.json
++++ b/package.json
+@@ -16,7 +16,8 @@
+       "types": "./dist/lib.d.ts",
+       "import": "./dist/lib.js"
+     },
+-    "./package.json": "./package.json"
++    "./package.json": "./package.json",
++    "./dist/*": "./dist/*"
+   },
+   "files": [
+     "dist/",

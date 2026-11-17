@@ -7,7 +7,7 @@ import {
 import packageJson from '@agentclientprotocol/claude-agent-acp/package.json' with { type: 'json' };
 import { subagentConfiguration } from './subagent-config.ts';
 
-const PINNED_VERSION = '0.101.0';
+const PINNED_VERSION = '0.107.3';
 const CHILD_SESSION = 'child-session';
 const TOOL_USE = 'toolu_1';
 
