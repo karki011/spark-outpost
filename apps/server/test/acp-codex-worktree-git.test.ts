@@ -89,6 +89,8 @@ describe.skipIf(process.platform !== 'darwin')(
             `touch '${main}/outside' && echo MAIN-WRITTEN`,
             `git update-ref refs/heads/main HEAD && echo MAIN-REF-MOVED`,
             `git branch other && echo BRANCH-CREATED`,
+            `git symbolic-ref HEAD refs/heads/main && echo HEAD-MOVED`,
+            `echo x > '${git}/worktrees/w/commondir' && echo COMMONDIR-WRITTEN`,
           ].join('; '),
         );
         expect(text).toContain(`sandbox=${mode}`);
@@ -98,6 +100,8 @@ describe.skipIf(process.platform !== 'darwin')(
         expect(text).not.toContain('MAIN-WRITTEN');
         expect(text).not.toContain('MAIN-REF-MOVED');
         expect(text).not.toContain('BRANCH-CREATED');
+        expect(text).not.toContain('HEAD-MOVED');
+        expect(text).not.toContain('COMMONDIR-WRITTEN');
       },
     );
 

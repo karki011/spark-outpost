@@ -70,6 +70,9 @@ describe('codexPermissionProfiles', () => {
     ]);
     expect(writes).toEqual({
       '/repo/.git/worktrees/w': 'write',
+      '/repo/.git/worktrees/w/HEAD': 'read',
+      '/repo/.git/worktrees/w/commondir': 'read',
+      '/repo/.git/worktrees/w/gitdir': 'read',
       '/repo/.git/worktrees/w/config.worktree': 'read',
       '/repo/.git/objects': 'write',
       '/repo/.git/refs/heads/spark/w': 'write',

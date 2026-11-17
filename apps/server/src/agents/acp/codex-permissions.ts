@@ -24,6 +24,8 @@ function crewReadOnly(folders: readonly string[]): Record<string, string> {
   return Object.fromEntries(folders.map((folder) => [folder, 'read']));
 }
 
+const WORKTREE_LINKS = ['HEAD', 'commondir', 'gitdir', 'config.worktree'];
+
 function branchRefAccess(common: string, branch: string | undefined): Record<string, string> {
   if (!branch) return {};
   const ref = join(common, branch);
@@ -35,7 +37,7 @@ function worktreeGitAccess(dirs: GitDirs): Record<string, string> {
   if (dirs.own === dirs.common) return {};
   return {
     [dirs.own]: 'write',
-    [join(dirs.own, 'config.worktree')]: 'read',
+    ...Object.fromEntries(WORKTREE_LINKS.map((name) => [join(dirs.own, name), 'read'])),
     [join(dirs.common, 'objects')]: 'write',
     ...branchRefAccess(dirs.common, dirs.branch),
     [join(dirs.common, 'hooks')]: 'read',
