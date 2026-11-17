@@ -4,6 +4,17 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.11
+
+- **One meeting card** for every alert: it leads with **Join at start** until 2 minutes before, then **Join**; **Snooze until start**, then **Snooze 1 min**; **Join now**, **Open in Today** and **Dismiss** sit under **···**. There is no separate "Before a meeting" alert, and **Join meetings automatically** joins only meetings you accepted.
+- With **Take notes when I join a meeting** on, every Join takes notes: buttons, ⌘J, the island, the centre card, auto-join and Join at start.
+- **Thinking** expands to show the thought, `/compact` shows a **Compacting the chat** step, and the `/` menu lists Claude's commands again after a chat sat idle.
+- A live turn shows one running signal per thing: a described command reads as its description, and the working line says **Working** while a command or sub-agent has its own row.
+- Sparks proposed in a chat open in a **review window** with the files in a tree, read marks and formatted Markdown. Empty Crew and Workflows tabs explain Sparks, **Let Spark build one for you** starts the builder chat, and the builder chat resizes.
+- Home, Analytics, Remote control and the user guide use more of a wide window. **Tools** is listed inline in the chat's context rail.
+- Claude and Codex run on the latest adapters (claude-agent-acp 0.107.3, codex-acp 2.7.0, ACP SDK 2.7).
+- Codex chats commit again in their worktree: the sandbox may write the chat branch and the worktree's git data, never other branches, hooks or git config.
+
 ## 0.1.0-beta.10
 
 - Hiding or showing the chat list beside a wide Work panel or Browser pane no longer makes the window flicker and stop responding.
