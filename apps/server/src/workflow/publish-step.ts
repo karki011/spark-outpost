@@ -148,6 +148,7 @@ async function publishedByAgent(
     draftAsked: await opensDraftPullRequests(db, workspaceId),
     pullBase: plan.pullBase,
     adopted: await adoptedPrompt(db, plan.root, plan.branch),
+    sandboxedGit: turn.input.provider === 'codex',
   });
   if (!prompt) return turn.reply;
   await closeMessage(turn.append, await withWorkMessage(turn.append, turn.reply), true);

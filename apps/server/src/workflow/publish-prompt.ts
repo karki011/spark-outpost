@@ -11,6 +11,7 @@ export interface PublishPromptFacts {
   pullBase?: string | null;
   adopted?: AdoptedPrompt | null;
   localOnly?: boolean;
+  sandboxedGit?: boolean;
 }
 
 export interface AdoptedPrompt {
@@ -109,6 +110,6 @@ export function publishPrompt(facts: PublishPromptFacts): string | null {
     PUBLISH_PROMPT_HEADING,
     USER_RESTRICTIONS,
     ...promptLines(branch, facts),
-    SANDBOXED_GIT,
+    ...(facts.sandboxedGit ? [SANDBOXED_GIT] : []),
   ].join('\n');
 }

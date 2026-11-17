@@ -14,6 +14,7 @@ function turn(signal = new AbortController().signal) {
   return {
     reply,
     append: vi.fn(async () => null),
+    input: { provider: 'claude' },
     control: { signal },
   } as unknown as SecondPrompt & { reply: TurnResult };
 }

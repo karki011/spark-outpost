@@ -102,17 +102,19 @@ describe('publishPrompt', () => {
     expect(prompt).not.toContain('`git push');
   });
 
-  it('has the agent ask for escalation when its sandbox refuses a git write, in every form', () => {
+  it('has a sandboxed agent ask for escalation when a git write is refused, in every form', () => {
     const forms = [
-      publishPrompt({ ...base, localOnly: true })!,
-      publishPrompt(base)!,
-      publishPrompt({ ...base, reason: 'asked-push' })!,
-      publishPrompt({ ...base, reason: 'follow-up' })!,
+      { ...base, localOnly: true },
+      base,
+      { ...base, reason: 'asked-push' as const },
+      { ...base, reason: 'follow-up' as const },
     ];
-    for (const prompt of forms) {
-      expect(prompt).toContain('run the same command again with your own request for escalated');
-      expect(prompt).toContain('follows your permission mode');
-      expect(prompt).not.toContain('host-side fallback');
+    for (const facts of forms) {
+      const sandboxed = publishPrompt({ ...facts, sandboxedGit: true })!;
+      expect(sandboxed).toContain('run the same command again with your own request for escalated');
+      expect(sandboxed).toContain('follows your permission mode');
+      expect(sandboxed).not.toContain('host-side fallback');
+      expect(publishPrompt(facts)).not.toContain('escalated');
     }
   });
 
