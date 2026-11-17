@@ -35,6 +35,10 @@ let main: string;
 let worktree: string;
 let git: string;
 
+function gitOut(cwd: string, ...args: string[]): string {
+  return String(spawnSync('git', args, { cwd }).stdout).trim();
+}
+
 function run(cwd: string, ...args: string[]): void {
   const result = spawnSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...args], { cwd });
   if (result.status !== 0) throw new Error(`git ${args.join(' ')}: ${String(result.stderr)}`);
@@ -104,6 +108,28 @@ describe.skipIf(process.platform !== 'darwin')(
         expect(text).not.toContain('COMMONDIR-WRITTEN');
       },
     );
+
+    it('gives the next connection after a refused HEAD change only the chat branch', async () => {
+      const mainBefore = gitOut(main, 'rev-parse', 'refs/heads/main');
+      const first = await sandboxed(
+        'agent',
+        'git symbolic-ref HEAD refs/heads/main && echo HEAD-MOVED',
+      );
+      expect(first).not.toContain('HEAD-MOVED');
+      expect(gitOut(worktree, 'symbolic-ref', 'HEAD')).toBe('refs/heads/spark/w');
+      await writeFile(join(worktree, 'a.txt'), 'next connection\n');
+      const next = await sandboxed(
+        'agent',
+        [
+          'git -c user.email=t@t -c user.name=t commit -qam next && echo COMMITTED',
+          'git update-ref refs/heads/main HEAD && echo MAIN-REF-MOVED',
+        ].join('; '),
+      );
+      expect(next).toContain('COMMITTED');
+      expect(next).not.toContain('MAIN-REF-MOVED');
+      expect(gitOut(main, 'rev-parse', 'refs/heads/main')).toBe(mainBefore);
+      expect(gitOut(worktree, 'log', '-1', '--format=%s', 'refs/heads/spark/w')).toBe('next');
+    });
 
     it('still cannot commit in a read-only Ask turn', async () => {
       await writeFile(join(worktree, 'a.txt'), 'read-only\n');
