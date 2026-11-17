@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { blobResourceToClaude } from '@agentclientprotocol/claude-agent-acp/dist/blob-resources.js';
 import packageJson from '@agentclientprotocol/claude-agent-acp/package.json' with { type: 'json' };
 
-const PINNED_VERSION = '0.101.0';
+const PINNED_VERSION = '0.107.3';
 
 describe('the pinned claude-agent-acp adapter and PDF blobs', () => {
   it('is the version the PDF attachment claim was verified against', () => {

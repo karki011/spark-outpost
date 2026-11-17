@@ -25,6 +25,7 @@ export interface AgentEnvironmentOptions {
   secrets?: Pick<SecretStore, 'get'> | undefined;
   codexProfiles?: boolean | undefined;
   floor?: SparkFloor | undefined;
+  codexGitWrites?: Record<string, string> | undefined;
 }
 
 export const NO_PUSH_URL = 'spark-outpost-no-push:///';
@@ -95,7 +96,14 @@ async function baseEnvironment(
   delete kept.APP_SERVER_LOGS;
   const env = {
     ...kept,
-    ...definition.conversationEnv?.(home, browsing, repo, options.codexProfiles, options.floor),
+    ...definition.conversationEnv?.(
+      home,
+      browsing,
+      repo,
+      options.codexProfiles,
+      options.floor,
+      options.codexGitWrites,
+    ),
   };
   return withHiddenServers(env, await codexUserMcpNames(base));
 }

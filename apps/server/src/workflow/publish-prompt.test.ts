@@ -102,6 +102,20 @@ describe('publishPrompt', () => {
     expect(prompt).not.toContain('`git push');
   });
 
+  it('has the agent ask for escalation when its sandbox refuses a git write, in every form', () => {
+    const forms = [
+      publishPrompt({ ...base, localOnly: true })!,
+      publishPrompt(base)!,
+      publishPrompt({ ...base, reason: 'asked-push' })!,
+      publishPrompt({ ...base, reason: 'follow-up' })!,
+    ];
+    for (const prompt of forms) {
+      expect(prompt).toContain('run the same command again with your own request for escalated');
+      expect(prompt).toContain('follows your permission mode');
+      expect(prompt).not.toContain('host-side fallback');
+    }
+  });
+
   it('names no role', () => {
     for (const reason of ['full-auto', 'follow-up'] as const) {
       expect(publishPrompt({ ...base, reason })).not.toMatch(

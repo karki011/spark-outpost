@@ -1,8 +1,5 @@
 import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
-import {
-  toolInfoFromToolUse,
-  toolUpdateFromToolResult,
-} from '@agentclientprotocol/claude-agent-acp/dist/tools.js';
+import { AcpToolCallRenderer } from '@agentclientprotocol/claude-agent-acp/dist/tool-calls/renderer.js';
 
 export interface RecordedTool {
   id: string;
@@ -10,7 +7,10 @@ export interface RecordedTool {
   input: unknown;
 }
 
-type ToolUse = Parameters<typeof toolInfoFromToolUse>[0];
+const renderer = new AcpToolCallRenderer();
+
+type ToolUse = Parameters<AcpToolCallRenderer['toolInfo']>[0];
+type ToolResult = Parameters<AcpToolCallRenderer['resultFields']>[1];
 
 function toolUse(tool: RecordedTool): ToolUse {
   return { id: tool.id, name: tool.name, input: tool.input ?? {} } as ToolUse;
@@ -25,18 +25,14 @@ export function toolCallStarted(tool: RecordedTool, cwd: string): SessionUpdate 
     sessionUpdate: 'tool_call',
     rawInput: tool.input ?? {},
     status: 'pending',
-    ...toolInfoFromToolUse(toolUse(tool), false, cwd),
+    ...renderer.toolInfo(toolUse(tool), cwd),
   } as SessionUpdate;
 }
 
 export function toolCallEnded(tool: RecordedTool, output: string, failed: boolean): SessionUpdate {
   const result = { type: 'tool_result', tool_use_id: tool.id, content: output, is_error: failed };
   const shown = {
-    ...(toolUpdateFromToolResult(
-      result as Parameters<typeof toolUpdateFromToolResult>[0],
-      toolUse(tool),
-      false,
-    ) as Record<string, unknown>),
+    ...(renderer.resultFields(toolUse(tool), result as ToolResult) as Record<string, unknown>),
   };
   delete shown._meta;
   return {

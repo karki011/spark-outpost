@@ -1,7 +1,8 @@
 diff --git a/dist/index.js b/dist/index.js
+index 31aee0baeed9fd7703253bbc8b9bdf18266bbce3..a7fa4a307b08f5c1c714de73a1417903230cbeb3 100755
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -36435,7 +36435,7 @@
+@@ -36560,7 +36560,7 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
    session;
    onChildSessionEnded;
    rootModels;
@@ -10,7 +11,7 @@ diff --git a/dist/index.js b/dist/index.js
    children = /* @__PURE__ */ new Map();
    pendingSpawns = /* @__PURE__ */ new Map();
    terminalPendingSpawns = /* @__PURE__ */ new Map();
-@@ -36456,6 +36456,14 @@
+@@ -36581,6 +36581,14 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
     */
    appliedSettings = /* @__PURE__ */ new WeakSet();
    async handle(notification) {
@@ -25,7 +26,7 @@ diff --git a/dist/index.js b/dist/index.js
      if (notification.method === "thread/started") {
        const thread = notification.params.thread;
        const ofThisRoot = thread.parentThreadId === this.rootSessionId || thread.parentThreadId !== null && this.children.has(thread.parentThreadId) || this.spawnsInFlight.size > 0;
-@@ -36657,11 +36665,11 @@
+@@ -36782,11 +36790,11 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
          return "timed_out";
        }
        const changed = await new Promise((resolve) => {
@@ -39,7 +40,7 @@ diff --git a/dist/index.js b/dist/index.js
          const onAbort = () => {
            clearTimeout(timeout);
            this.waiters.delete(onChange);
-@@ -36754,7 +36762,8 @@
+@@ -36879,7 +36887,8 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
        await this.session.update({
          sessionUpdate: "subagent_state_update",
          subagentSessionId: child.sessionId,
@@ -49,11 +50,10 @@ diff --git a/dist/index.js b/dist/index.js
        }, child.parentSessionId);
      } catch (error62) {
        if (child.terminalState === state) delete child.terminalState;
-@@ -36835,6 +36844,15 @@
-     if (child.model === previous || child.terminalState !== void 0) return;
+@@ -36961,6 +36970,15 @@ var CodexSubagentEventRouter = class _CodexSubagentEventRouter {
      if (previous && this.modelValue(previous.model) === this.modelValue(model.model)) return;
      await this.reportModel(threadId, child.sessionId);
-+  }
+   }
 +  modelOf(child) {
 +    let current = child;
 +    while (current) {
@@ -62,10 +62,11 @@ diff --git a/dist/index.js b/dist/index.js
 +    }
 +    const rootModel = this.rootModels?.()?.currentModel;
 +    return typeof rootModel === "string" ? rootModel.replace(/\[.*?]$/, "") : void 0;
-   }
++  }
    takeEarlyModel(threadId) {
      const model = this.earlyThreadModels.get(threadId);
-@@ -39611,6 +39629,10 @@
+     this.earlyThreadModels.delete(threadId);
+@@ -39945,6 +39963,10 @@ function sameNetworkAmendment(left, right) {
  function commandDecisionOptions(params) {
    const decisions = parseAvailableCommandDecisions(params);
    if (!decisions) return void 0;
@@ -76,20 +77,20 @@ diff --git a/dist/index.js b/dist/index.js
    const options = [];
    let networkIndex = 0;
    for (const decision of decisions) {
-@@ -39683,6 +39705,12 @@
-       "Yes, and don't ask again for these files",
+@@ -40018,6 +40040,12 @@ function fileChangeDecisionOptions() {
        "allow_always",
        "acceptForSession"
-+    ),
+     ),
 +    decisionOption(
 +      ApprovalOptionId.Decline,
 +      "No, continue without it",
 +      "reject_once",
 +      "decline"
-     ),
++    ),
      decisionOption(
        ApprovalOptionId.Cancel,
-@@ -41851,6 +41879,22 @@
+       "No, and tell Codex what to do differently",
+@@ -42148,6 +42176,22 @@ var AgentMode = class _AgentMode {
      { "type": "dangerFullAccess" },
      "danger-full-access"
    );
@@ -112,7 +113,7 @@ diff --git a/dist/index.js b/dist/index.js
    static DEFAULT_AGENT_MODE = _AgentMode.Agent;
    /** Only AIR gets the mode kind, in `_meta.jetbrains.air.kind`. */
    toSessionMode(airClient) {
-@@ -41915,10 +41959,10 @@
+@@ -42212,10 +42256,10 @@ var AgentMode = class _AgentMode {
      ));
      return [
        _AgentMode.ReadOnly,
@@ -125,7 +126,7 @@ diff --git a/dist/index.js b/dist/index.js
      ];
    }
    static find(modeId, availableModes = _AgentMode.all()) {
-@@ -43405,7 +43449,7 @@
+@@ -43702,7 +43746,7 @@ var CodexAcpClient = class _CodexAcpClient {
      const mergedConfig = {
        ...disableUnsupportedSkills(forceGitRootTurnDiffPaths(mergeGatewayConfig(this.config, this.gatewayConfig))),
        projects: Object.fromEntries(sessionRoots.map((root) => [root, {
@@ -134,7 +135,7 @@ diff --git a/dist/index.js b/dist/index.js
        }]))
      };
      const configWithWorkspaceRoots = mergeSandboxWorkspaceWriteRoots(mergedConfig, additionalDirectories);
-@@ -43440,7 +43484,10 @@
+@@ -43737,7 +43781,10 @@ var CodexAcpClient = class _CodexAcpClient {
      return {
        config: {
          ...configWithWorkspaceRoots,
@@ -146,7 +147,7 @@ diff --git a/dist/index.js b/dist/index.js
        },
        skippedMcpServers,
        ...permissionProfileMetadata
-@@ -43593,13 +43640,20 @@
+@@ -43890,7 +43937,7 @@ var CodexAcpClient = class _CodexAcpClient {
        ...permissionProfileId ? {
          permissions: permissionProfileId,
          runtimeWorkspaceRoots: [cwd, ...additionalDirectories]
@@ -155,16 +156,17 @@ diff --git a/dist/index.js b/dist/index.js
        summary: disableSummary ? "none" : "auto",
        effort,
        model: modelId.model,
-       serviceTier,
+@@ -43898,6 +43945,13 @@ var CodexAcpClient = class _CodexAcpClient {
        ...clientUserMessageId !== void 0 ? { clientUserMessageId } : {}
      }, onTurnStarted);
-+  }
+   }
 +  turnSandbox(agentMode, cwd, additionalDirectories) {
 +    const profiles = isJsonObject(this.config["permissions"]) ? this.config["permissions"] : {};
 +    if (!isJsonObject(profiles[agentMode.id])) {
 +      return { sandboxPolicy: addAdditionalDirectoriesToSandboxPolicy(agentMode.sandboxPolicy, additionalDirectories) };
 +    }
 +    return { permissions: agentMode.id, runtimeWorkspaceRoots: uniqueStrings([cwd, ...additionalDirectories]) };
-   }
++  }
    async setCollaborationMode(sessionId, mode, currentModelId) {
      await this.codexClient.threadSettingsUpdate({
+       threadId: sessionId,
