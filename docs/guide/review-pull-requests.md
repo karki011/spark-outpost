@@ -24,4 +24,6 @@ With no reviewer picked, a line points to **Auto-review** instead of a button.
 
 **Failed** shows the error; select **Review again** to retry. In the list, each row shows the latest review, such as **Reviewing** or **Reviewed**.
 
+With **Review automatically** on, a review that could not start is tried again after 10 minutes; one you stopped is not.
+
 **Next:** [Let Spark handle PR feedback](pr-follow-up.md)
