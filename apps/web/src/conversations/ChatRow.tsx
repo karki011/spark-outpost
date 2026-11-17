@@ -1,4 +1,12 @@
-import { memo, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
+import {
+  memo,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type PointerEvent,
+} from 'react';
 import { motion } from 'motion/react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -9,7 +17,10 @@ import {
   type ConversationSummary,
 } from '@spark-outpost/contracts';
 import { DotsIcon, GripIcon, MergedIcon, PinIcon, RestoreIcon, TrashIcon } from '../ui/icons.tsx';
+import { Keys } from '../ui/Keys.tsx';
+import { MAC } from '../ui/shortcuts.ts';
 import { useTooltip } from '../ui/Tooltip.tsx';
+import { ChatNumbers } from './chat-number-keys.ts';
 import { reveal } from '../ui/transitions.tsx';
 import { MatchSnippet } from './MatchSnippet.tsx';
 import { recencyLabel } from './recency.ts';
@@ -151,6 +162,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     ...slide,
   });
   const marquee = useMarquee(chat.title);
+  const number = useContext(ChatNumbers)?.get(chat.id);
   const state = rowState(chat, selected);
   const onScreen = useChatOnScreen(chat.id);
   const blob = chatBlob(chat, onScreen);
@@ -283,6 +295,9 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
             </span>
           )}
           <ChatBlob kind={blob} />
+          {number !== undefined && (
+            <Keys keys={[MAC ? '⌘' : 'Ctrl', String(number)]} className="key-hint row-number" />
+          )}
         </button>
       )}
       {history ? (
