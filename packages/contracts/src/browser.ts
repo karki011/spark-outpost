@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { browserZoomSchema, browserZoomStepSchema } from './browser-tab-basics.ts';
 import { attachmentSchema } from './attachments.ts';
+import { parseUrl, type ParsedUrl } from './url.ts';
 
 export const BROWSER_AGENT_TABS_MAX = 5;
 export const BROWSER_TABS_MAX = 12;
@@ -19,27 +20,11 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 const LOCAL_SUFFIXES = ['.localhost', '.test'];
 const WEB_SCHEMES = new Set(['http:', 'https:']);
 
-export interface ParsedUrl {
-  href: string;
-  protocol: string;
-  hostname: string;
-  host: string;
-  port: string;
-  pathname: string;
-  origin: string;
-  username: string;
-  password: string;
-}
-
-const UrlParser = (globalThis as unknown as { URL: new (value: string) => ParsedUrl }).URL;
+export type { ParsedUrl };
 
 export function parseBrowserUrl(value: string): ParsedUrl | null {
   if (value.length > BROWSER_URL_MAX) return null;
-  try {
-    return new UrlParser(value);
-  } catch {
-    return null;
-  }
+  return parseUrl(value);
 }
 
 export function isLocalHost(hostname: string): boolean {

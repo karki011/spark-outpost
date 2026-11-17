@@ -1,8 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import path from 'node:path';
 import { API_TOKEN_HEADER, parseSlackCallbackLink } from '@spark-outpost/contracts';
-import { gitHubAppEnv, readBakedGitHubApp } from './github-app.ts';
-import { googleClientEnv, readBakedGoogleClient, readDevGoogleClient } from './google-client.ts';
+import { readBakedManifest, type BakedManifest } from './baked-manifest.ts';
 
 export const SLACK_CLIENT_ID_ENV = 'SPARK_SLACK_CLIENT_ID';
 export const SLACK_CLIENT_ID_FILE_NAME = 'slack-client-id';
@@ -14,15 +12,13 @@ export function slackClientId(value: unknown): string | null {
   return typeof value === 'string' && CLIENT_ID.test(value) ? value : null;
 }
 
+export function slackClientIdFromManifest(manifest: BakedManifest | null): string | null {
+  const slackApp = manifest?.slackApp as { clientId?: unknown } | null | undefined;
+  return slackClientId(slackApp?.clientId);
+}
+
 export async function readBakedSlackClientId(appPath: string): Promise<string | null> {
-  try {
-    const manifest = JSON.parse(await readFile(path.join(appPath, 'package.json'), 'utf8')) as {
-      slackApp?: { clientId?: unknown };
-    };
-    return slackClientId(manifest.slackApp?.clientId);
-  } catch {
-    return null;
-  }
+  return slackClientIdFromManifest(await readBakedManifest(appPath));
 }
 
 export async function readDevSlackClientId(file: string | null): Promise<string | null> {
@@ -32,28 +28,6 @@ export async function readDevSlackClientId(file: string | null): Promise<string 
   } catch {
     return null;
   }
-}
-
-interface DevSignInFiles {
-  googleClientFile: string | null;
-  slackClientIdFile: string | null;
-}
-
-export async function bakedSignInEnv(
-  appPath: string,
-  devFiles: DevSignInFiles = { googleClientFile: null, slackClientIdFile: null },
-): Promise<Record<string, string>> {
-  const slack =
-    (await readBakedSlackClientId(appPath)) ??
-    (await readDevSlackClientId(devFiles.slackClientIdFile));
-  const google =
-    (await readBakedGoogleClient(appPath)) ??
-    (await readDevGoogleClient(devFiles.googleClientFile));
-  return {
-    ...gitHubAppEnv(await readBakedGitHubApp(appPath)),
-    ...(slack ? { [SLACK_CLIENT_ID_ENV]: slack } : {}),
-    ...googleClientEnv(google),
-  };
 }
 
 export const isSlackCallback = (url: string, scheme: string): boolean =>

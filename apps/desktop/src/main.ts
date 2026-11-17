@@ -47,7 +47,8 @@ import type { ServiceOptions } from './service.ts';
 import { RuntimeServices } from './runtime-services.ts';
 import { createQuitPolicy } from './quit-policy.ts';
 import { createShutdown } from './shutdown.ts';
-import { bakedSignInEnv, deliverSlackCallback, isSlackCallback } from './slack-sign-in.ts';
+import { bakedServerEnv } from './baked-env.ts';
+import { deliverSlackCallback, isSlackCallback } from './slack-sign-in.ts';
 import { adoptLoginShellPath } from './shell-path.ts';
 import { startupMigrationEffects } from './startup-migration.ts';
 import {
@@ -301,10 +302,7 @@ async function launch(): Promise<void> {
     version: app.getVersion(),
     webRoot: layout.webRoot,
     tmuxBin: (!app.isPackaged && process.env.SPARK_TMUX_BIN) || layout.tmuxBin,
-    baseEnv: {
-      ...(await bakedSignInEnv(app.getAppPath(), layout)),
-      ...process.env,
-    },
+    baseEnv: { ...(await bakedServerEnv(app.getAppPath(), layout)), ...process.env },
   };
   if (!existingRuntime.api && !(await migrateBeforeStart(launchInfo, databaseOptions))) return;
   await runtime.configure({ port: apiPort, token, version: app.getVersion() });

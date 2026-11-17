@@ -1,33 +1,14 @@
 import { z } from 'zod';
+import { parseUrl } from './url.ts';
 
 export const CUSTOM_ENDPOINT_URL_MAX = 2048;
 export const CUSTOM_MODEL_NAME_MAX = 200;
 export const CUSTOM_ENDPOINT_KEY_MAX = 512;
 
-interface EndpointUrl {
-  protocol: string;
-  hostname: string;
-  host: string;
-  pathname: string;
-  search: string;
-  hash: string;
-  username: string;
-  password: string;
-}
-
-const UrlParser = (globalThis as unknown as { URL: new (value: string) => EndpointUrl }).URL;
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 const MESSAGES_SUFFIX = /\/v1(?:\/messages)?$/i;
 
 export type CustomEndpointUrl = { ok: true; baseUrl: string } | { ok: false; problem: string };
-
-function parse(value: string): EndpointUrl | null {
-  try {
-    return new UrlParser(value);
-  } catch {
-    return null;
-  }
-}
 
 export function isLoopbackHost(hostname: string): boolean {
   return LOOPBACK_HOSTS.has(hostname.toLowerCase());
@@ -39,7 +20,7 @@ export function customEndpointUrl(raw: string): CustomEndpointUrl {
     return { ok: false, problem: 'Type the server address, such as http://localhost:11434.' };
   if (value.length > CUSTOM_ENDPOINT_URL_MAX)
     return { ok: false, problem: 'This address is too long.' };
-  const url = parse(value);
+  const url = parseUrl(value);
   if (!url || (url.protocol !== 'https:' && url.protocol !== 'http:')) {
     return { ok: false, problem: 'Use an address that starts with https:// or http://.' };
   }

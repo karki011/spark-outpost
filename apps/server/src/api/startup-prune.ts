@@ -18,6 +18,7 @@ export interface StartupPrune {
   chatFolders?: string;
   researchCopies?: string;
   sparkFolders?: string;
+  sweepShares?: () => Promise<void>;
   report?: (message: string, error: unknown) => void;
 }
 
@@ -49,6 +50,8 @@ export async function pruneOldRows(options: StartupPrune): Promise<void> {
     steps.push(['folders of removed Sparks', () => pruneSparkFolders(db, sparkFolders)]);
   }
   steps.push(['builder chats', () => sweepBuilderChats(options)]);
+  const { sweepShares } = options;
+  if (sweepShares) steps.push(['shared pages', sweepShares]);
   for (const [name, prune] of steps) {
     await prune().catch((error: unknown) => report(`Could not prune ${name}`, error));
   }

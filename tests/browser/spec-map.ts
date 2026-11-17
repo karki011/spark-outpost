@@ -35,6 +35,7 @@ export const SPEC_GROUPS = {
   chat: [
     'agent-continues',
     'agent-sleep',
+    'artifact-share',
     'artifacts',
     'attachments',
     'chat',

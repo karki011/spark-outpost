@@ -206,6 +206,9 @@ PUT /api/spark-rules/gh-allowed
 POST /api/spark-rules/recommended
 POST /api/spark-rules/outside-change
 GET /api/artifacts/:id/versions/:version/file
+GET /api/artifacts/:id/versions/:version/share
+POST /api/artifacts/:id/versions/:version/share
+DELETE /api/artifacts/:id/versions/:version/share
 GET /api/chat-files/:id/content
 GET /api/projects/:id/pull-requests/open
 POST /api/conversations/:id/workspace/adopt

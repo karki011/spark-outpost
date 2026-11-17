@@ -17,6 +17,7 @@ import { ExportButton } from '../../ui/ExportButton.tsx';
 import { CopyIcon } from '../../ui/icons.tsx';
 import { Markdown } from '../markdown/Markdown.tsx';
 import type { ArtifactPaneChoice } from './artifact-pane-store.ts';
+import { ArtifactShare } from './ArtifactShare.tsx';
 
 interface ArtifactPaneProps {
   page: ArtifactPage;
@@ -100,6 +101,7 @@ export function ArtifactPane({ page, choice, lead, trail }: ArtifactPaneProps) {
             label="Save as…"
           />
         )}
+        <ArtifactShare key={version} page={page} version={version} />
         {trail}
       </div>
       {page.kind === 'html' && (

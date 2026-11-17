@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { API_TOKEN_HEADER } from '@spark-outpost/contracts';
+import { bakedServerEnv } from './baked-env.ts';
 import {
-  bakedSignInEnv,
   deliverSlackCallback,
   isSlackCallback,
   readBakedSlackClientId,
@@ -31,7 +31,7 @@ describe('the Slack client ID baked into a build', () => {
       githubApp: { clientId: 'Iv23liExample', slug: 'spark' },
     });
 
-    expect(await bakedSignInEnv(appPath)).toEqual({
+    expect(await bakedServerEnv(appPath)).toEqual({
       SPARK_GITHUB_APP_CLIENT_ID: 'Iv23liExample',
       SPARK_GITHUB_APP_SLUG: 'spark',
       SPARK_SLACK_CLIENT_ID: '1234567890.9876543210',
@@ -40,7 +40,7 @@ describe('the Slack client ID baked into a build', () => {
 
   it('gives nothing when the build has none or the value is not a client ID', async () => {
     expect(await readBakedSlackClientId(await manifest({}))).toBeNull();
-    expect(await bakedSignInEnv(dir)).toEqual({});
+    expect(await bakedServerEnv(dir)).toEqual({});
     expect(slackClientId('0123456789abcdef0123456789abcdef')).toBeNull();
     expect(slackClientId('xoxb-1234567890-abcdefghij')).toBeNull();
     expect(slackClientId(12)).toBeNull();
@@ -53,7 +53,7 @@ describe('the Slack client ID of a run from source', () => {
     const file = path.join(appPath, 'slack-client-id');
     await writeFile(file, '1234567890.9876543210\n');
     expect(
-      await bakedSignInEnv(appPath, { googleClientFile: null, slackClientIdFile: file }),
+      await bakedServerEnv(appPath, { googleClientFile: null, slackClientIdFile: file }),
     ).toEqual({
       SPARK_SLACK_CLIENT_ID: '1234567890.9876543210',
     });
@@ -64,7 +64,7 @@ describe('the Slack client ID of a run from source', () => {
     const file = path.join(appPath, 'slack-client-id');
     await writeFile(file, '3.4');
     expect(
-      await bakedSignInEnv(appPath, { googleClientFile: null, slackClientIdFile: file }),
+      await bakedServerEnv(appPath, { googleClientFile: null, slackClientIdFile: file }),
     ).toEqual({
       SPARK_SLACK_CLIENT_ID: '1.2',
     });

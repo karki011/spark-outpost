@@ -75,6 +75,8 @@ import { A2A_MOUNT_PATH } from '../a2a/agent-card.ts';
 import { outpostRouters, type OutpostDelivery } from '../outposts/mount.ts';
 import type { StackGit } from '../outposts/ports.ts';
 import type { PushKeys } from '../remote/push-keys.ts';
+import { artifactShareRoutes } from '../artifacts/share-routes.ts';
+import type { ShareService } from '../artifacts/share-service.ts';
 
 export interface AppOptions
   extends
@@ -87,7 +89,10 @@ export interface AppOptions
     Pick<ChatWorkspaceDeps, 'openFolder'>,
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
     Pick<McpRouteDeps, 'probeMcp'>,
-    Pick<ConversationActionDeps, 'deleteSettleMs' | 'chatFolders' | 'researchCopies'>,
+    Pick<
+      ConversationActionDeps,
+      'deleteSettleMs' | 'chatFolders' | 'researchCopies' | 'sweepShares'
+    >,
     Pick<CloneRouteDeps, 'clones' | 'cloneTest' | 'reservedFolders'>,
     Pick<ChatShareRouteDeps, 'linkScheme'>,
     ChatPortRouteDeps {
@@ -99,6 +104,7 @@ export interface AppOptions
   outposts: OutpostDelivery;
   stackGit?: StackGit;
   artifactOriginDown?: boolean;
+  shareService?: ShareService | null;
   port: number;
   allowedOrigins: readonly string[];
   apiToken: string;
@@ -149,6 +155,7 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', chatSettingsRoutes(options));
   app.use('/api', chatWorkspaceRoutes(options));
   app.use('/api', conversationActionRoutes(options));
+  app.use('/api', artifactShareRoutes(options));
   app.use('/api', interruptionRoutes(options));
   app.use('/api', chatShareRoutes(options));
   app.use('/api', projectRoutes(options));

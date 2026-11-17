@@ -72,6 +72,14 @@ describe('artifacts on a paired device', { timeout: 30_000 }, () => {
     expect(served.text).toContain('<p>hi</p>');
   });
 
+  it('never share or stop sharing, whatever the switch says', async () => {
+    const path = `/api/artifacts/${id}/versions/1/share`;
+    await setSwitches(app, { artifacts: true });
+    await phone.get(path).expect(403);
+    await phone.send('post', path, { expiresInDays: 1, passcode: false }).expect(403);
+    await phone.send('delete', path).expect(403);
+  });
+
   it('cannot turn the switch on from the device', async () => {
     await phone.send('patch', '/api/remote/switches', { artifacts: true }).expect(403);
   });

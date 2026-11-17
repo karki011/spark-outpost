@@ -10,6 +10,8 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                       | What to do                                                     |
 | -------------------------------------------------- | -------------------------------------------------------------- |
+| **Share…** artifacts                               | [Share one](share-an-artifact.md).                             |
+| Context rail lists a chat's **Artifacts**          | [Open one](context-rail.md#open-artifacts).                    |
 | Agent terminal row is a card                       | Nothing to do.                                                 |
 | No **Ask about this**; hidden sidebar stays hidden | Use **Add to chat**.                                           |
 | Home: message box, Needs you, Working set          | [Read Home](home.md).                                          |
@@ -56,9 +58,3 @@ summary: What changed in recent releases and what to do next.
 | Voice shortcut dictates in the chat  | [Talk to Spark](voice.md).                      |
 | Voice uses Parakeet alone, no choice | [Talk to Spark](voice.md).                      |
 | Update check every hour              | [Updates](updates.md).                          |
-
-## Earlier in November 2026
-
-| What changed                  | What to do                           |
-| ----------------------------- | ------------------------------------ |
-| Phone push for finished turns | [Use your phone](use-your-phone.md). |
