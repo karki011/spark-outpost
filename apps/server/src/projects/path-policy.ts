@@ -35,6 +35,7 @@ export interface ResolvedPath {
 export interface GitDirs {
   common: string;
   own: string;
+  branch?: string;
 }
 
 export interface ProjectRoot {

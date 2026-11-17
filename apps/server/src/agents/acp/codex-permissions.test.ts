@@ -64,7 +64,7 @@ describe('codexPermissionProfiles', () => {
 
   it("lets the working modes write a worktree's git data, never its hooks or config", () => {
     const writes = codexGitWrites([
-      { common: '/repo/.git', own: '/repo/.git/worktrees/w' },
+      { common: '/repo/.git', own: '/repo/.git/worktrees/w', branch: 'refs/heads/spark/w' },
       { common: '/other/.git', own: '/other/.git' },
       null,
     ]);
@@ -72,8 +72,9 @@ describe('codexPermissionProfiles', () => {
       '/repo/.git/worktrees/w': 'write',
       '/repo/.git/worktrees/w/config.worktree': 'read',
       '/repo/.git/objects': 'write',
-      '/repo/.git/refs': 'write',
-      '/repo/.git/logs': 'write',
+      '/repo/.git/refs/heads/spark/w': 'write',
+      '/repo/.git/refs/heads/spark/w.lock': 'write',
+      '/repo/.git/logs/refs/heads/spark/w': 'write',
       '/repo/.git/hooks': 'read',
       '/repo/.git/config': 'read',
     });

@@ -24,14 +24,20 @@ function crewReadOnly(folders: readonly string[]): Record<string, string> {
   return Object.fromEntries(folders.map((folder) => [folder, 'read']));
 }
 
+function branchRefAccess(common: string, branch: string | undefined): Record<string, string> {
+  if (!branch) return {};
+  const ref = join(common, branch);
+  const log = join(common, 'logs', branch);
+  return { [ref]: 'write', [`${ref}.lock`]: 'write', [log]: 'write' };
+}
+
 function worktreeGitAccess(dirs: GitDirs): Record<string, string> {
   if (dirs.own === dirs.common) return {};
   return {
     [dirs.own]: 'write',
     [join(dirs.own, 'config.worktree')]: 'read',
     [join(dirs.common, 'objects')]: 'write',
-    [join(dirs.common, 'refs')]: 'write',
-    [join(dirs.common, 'logs')]: 'write',
+    ...branchRefAccess(dirs.common, dirs.branch),
     [join(dirs.common, 'hooks')]: 'read',
     [join(dirs.common, 'config')]: 'read',
   };

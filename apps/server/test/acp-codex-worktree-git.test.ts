@@ -87,6 +87,8 @@ describe.skipIf(process.platform !== 'darwin')(
             `echo x >> '${git}/config' && echo CONFIG-WRITTEN`,
             `echo x >> '${git}/worktrees/w/config.worktree' && echo WORKTREE-CONFIG-WRITTEN`,
             `touch '${main}/outside' && echo MAIN-WRITTEN`,
+            `git update-ref refs/heads/main HEAD && echo MAIN-REF-MOVED`,
+            `git branch other && echo BRANCH-CREATED`,
           ].join('; '),
         );
         expect(text).toContain(`sandbox=${mode}`);
@@ -94,6 +96,8 @@ describe.skipIf(process.platform !== 'darwin')(
         expect(text).not.toContain('HOOK-WRITTEN');
         expect(text).not.toContain('CONFIG-WRITTEN');
         expect(text).not.toContain('MAIN-WRITTEN');
+        expect(text).not.toContain('MAIN-REF-MOVED');
+        expect(text).not.toContain('BRANCH-CREATED');
       },
     );
 
