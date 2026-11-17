@@ -15,7 +15,7 @@ First [connect GitHub](tickets-and-github.md#connect-github). Until then the pag
 1. Select **GitHub** in the left bar. A dot on it means something new.
 2. Pick a group: **Review requested**, **Needs fixes**, **Ready to merge** or **Waiting on others**. Arrow keys move between them.
 3. Narrow with **Last 14 days** or **Last 30 days**, and with **All projects** or one project.
-4. Select **Refresh pull requests** to check GitHub now.
+4. Spark checks every 2 minutes; **Refresh pull requests** checks now.
 
 Each row shows a dot while new, the author, the ticket key, the checks (**Passing**, **Failing**, **Running**, **Conflict** or **Draft**), **New commits** when it changed since you looked, and the latest review.
 

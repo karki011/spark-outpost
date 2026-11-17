@@ -247,3 +247,26 @@ test('GitHub page stays usable while a refresh waits on GitHub', async ({ page }
     'Arrived while waiting',
   );
 });
+
+test('GitHub page picks up new pull requests by itself every two minutes', async ({ page }) => {
+  let body = inbox();
+  let reads = 0;
+  await page.route(/\/api\/github\/inbox$/, (route) => {
+    reads += 1;
+    return route.fulfill({ json: body });
+  });
+  await page.clock.install();
+  await page.addInitScript(() => localStorage.setItem('spark-outpost.view', 'github'));
+  await page.goto('/');
+  const list = page
+    .getByRole('main', { name: 'GitHub' })
+    .getByRole('list', { name: 'Review requested' });
+  await expect(list.locator('.gh-main').first()).toBeVisible();
+  const before = reads;
+
+  body = inbox({ items: [pull('9', { title: 'Opened a minute ago' }), ...ITEMS] });
+  await page.clock.fastForward(60_000);
+  expect(reads).toBe(before);
+  await page.clock.fastForward(61_000);
+  await expect(list).toContainText('Opened a minute ago');
+});

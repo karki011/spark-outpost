@@ -7,6 +7,7 @@ import { isWorking } from './review/review-model.ts';
 
 const STALE_MS = 60_000;
 const REVIEWING_POLL_MS = 15_000;
+const IDLE_POLL_MS = 2 * 60_000;
 
 function reviewing(inbox: GithubInbox | undefined): boolean {
   return (inbox?.items ?? []).some((item) => item.review && isWorking(item.review.state));
@@ -17,7 +18,7 @@ export function useGithubInboxQuery(enabled = true) {
     queryKey: githubKeys.inbox,
     queryFn: () => githubApi.inbox(),
     staleTime: STALE_MS,
-    refetchInterval: (query) => (reviewing(query.state.data) ? REVIEWING_POLL_MS : false),
+    refetchInterval: (query) => (reviewing(query.state.data) ? REVIEWING_POLL_MS : IDLE_POLL_MS),
     enabled,
   });
 }
