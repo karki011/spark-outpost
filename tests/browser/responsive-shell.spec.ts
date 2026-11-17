@@ -244,6 +244,7 @@ test('the desktop rail keeps the places you work in, then More', async ({ page }
     /^Chats/,
     /^Today/,
     /^Tickets/,
+    /^GitHub/,
     /^Sparks/,
     /^Map/,
     /^More/,

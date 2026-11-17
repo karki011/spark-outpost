@@ -27,6 +27,7 @@ export type AppView =
   | 'today'
   | 'analytics'
   | 'tickets'
+  | 'github'
   | 'sparks'
   | 'map'
   | 'docs'
@@ -37,6 +38,7 @@ interface RailProps {
   waiting: number;
   ticketsWaiting: number;
   ticketNotices: number;
+  githubUpdates: boolean;
   mood: ScoutMood;
   onView: (view: AppView) => void;
   onIntent: (view: AppView) => void;
@@ -123,6 +125,19 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
     ),
   },
   {
+    id: 'github',
+    label: 'GitHub',
+    icon: (
+      <svg {...ICON}>
+        <circle cx="6" cy="5.5" r="2.2" />
+        <circle cx="6" cy="18.5" r="2.2" />
+        <circle cx="18" cy="18.5" r="2.2" />
+        <path d="M6 7.7v8.6M18 16.3V10a3 3 0 0 0-3-3h-4" />
+        <path d="m13 4.5-2.5 2.5L13 9.5" />
+      </svg>
+    ),
+  },
+  {
     id: 'sparks',
     label: 'Sparks',
     icon: SPARKS_ICON,
@@ -152,7 +167,7 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
   },
 ];
 
-const MAC_ONLY: ReadonlySet<AppView> = new Set(['browser', 'today']);
+const MAC_ONLY: ReadonlySet<AppView> = new Set(['browser', 'today', 'github']);
 const PHONE_MORE: ReadonlySet<AppView> = new Set(['map', 'sparks']);
 const PHONE_VIEWS = VIEWS.filter((item) => !PHONE_MORE.has(item.id) && !MAC_ONLY.has(item.id));
 const IN_FLYOUT: ReadonlySet<AppView> = new Set(['analytics', 'docs']);
@@ -230,6 +245,7 @@ export function Rail({
   waiting,
   ticketsWaiting,
   ticketNotices,
+  githubUpdates,
   mood,
   onView,
   onIntent,
@@ -353,6 +369,9 @@ export function Rail({
               className={ticketsWaiting > 0 ? 'rdot beside' : 'rdot'}
               aria-label={`${ticketNotices} ticket ${ticketNotices === 1 ? 'update' : 'updates'} to look at`}
             />
+          )}
+          {item.id === 'github' && githubUpdates && (
+            <i className="rdot" aria-label="New pull request activity" />
           )}
         </button>
       ))}
