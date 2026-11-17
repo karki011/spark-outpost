@@ -298,3 +298,14 @@
 .row-state[data-state='failed'] {
   color: var(--danger);
 }
+
+.row .row-number {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  z-index: 1;
+  padding-left: 4px;
+  background: var(--row-bg);
+  transform: translateY(-50%);
+  pointer-events: none;
+}

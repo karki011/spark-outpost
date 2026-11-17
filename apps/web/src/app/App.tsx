@@ -295,6 +295,7 @@ function ChatShell({ entering }: { entering: boolean }) {
                 <ConversationList
                   selectedIds={listedIds}
                   onSelect={selectChat}
+                  onOpenByNumber={openChat}
                   onOpenBeside={split.canSplit ? openBeside : null}
                   onLeave={split.leave}
                   onNew={startDraft}
