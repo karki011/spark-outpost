@@ -86,6 +86,19 @@
   flex: 0 1 auto;
 }
 
+.row-line {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-line[data-line='waiting'] {
+  color: var(--warn);
+}
+
 .row-merged {
   display: grid;
   flex: none;

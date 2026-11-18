@@ -9,6 +9,7 @@ import {
 } from '@spark-outpost/contracts';
 import { withTransaction, type Db, type DbClient, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
+import { retitleFromPlan } from './plan-title.ts';
 import { outlinePlan } from '../plans/agreed-block.ts';
 import { isExitPlanAllow } from '../plans/plan-mode.ts';
 
@@ -115,7 +116,10 @@ export async function insertPlanDocument(db: Db, plan: NewPlanDocument): Promise
       ],
     );
     const row = rows[0]!;
-    if (approval) await supersedeApproved(client, plan.conversationId, row.id);
+    if (approval) {
+      await supersedeApproved(client, plan.conversationId, row.id);
+      await retitleFromPlan(client, plan.conversationId, row.body, approval.runId);
+    }
     return toPlanDocument(row);
   });
 }
@@ -143,6 +147,7 @@ export async function approvePlanDocument(
     const row = rows[0];
     if (!row) throw new PlanDocumentError(NOT_AWAITING_APPROVAL);
     await supersedeApproved(client, row.conversation_id, row.id);
+    await retitleFromPlan(client, row.conversation_id, row.body, approval.runId);
     return toPlanDocument(row);
   });
 }

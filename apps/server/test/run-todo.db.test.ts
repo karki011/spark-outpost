@@ -4,6 +4,7 @@ import type { PlanEntry, PlanStatus } from '@spark-outpost/contracts';
 import {
   createConversation,
   getConversationDetail,
+  listConversations,
   sendUserMessage,
 } from '../src/persistence/conversations.ts';
 import { getRun } from '../src/persistence/runs.ts';
@@ -48,10 +49,17 @@ const scripts: Record<string, ProviderOutput[]> = {
   question: [{ kind: 'text_delta', delta: 'It is Tuesday.' }],
 };
 
+let release: () => void = () => {};
+
 function start() {
   const provider: Provider = {
     name: 'scripted',
     async *run(turn) {
+      if (turn.prompt === 'held') {
+        yield plan('completed', 'in_progress', 'in_progress');
+        await new Promise<void>((resolve) => (release = resolve));
+        return;
+      }
       yield* scripts[turn.prompt] ?? [];
     },
   };
@@ -122,5 +130,29 @@ describe("each turn's own to-do", () => {
     expect(await todoEvents(run.id)).toBe(0);
     const detail = await getConversationDetail(t.db, conversationId);
     expect(detail!.tasks).toEqual([]);
+  });
+
+  it('names the first entry in progress on the chat list while the turn runs', async () => {
+    start();
+    const conversationId = (await createConversation(t.db, t.workspaceId, randomUUID())).id;
+    const sent = await sendUserMessage(
+      t.db,
+      conversationId,
+      { id: randomUUID(), content: 'held' },
+      { provider: 'scripted' },
+    );
+    const running = await eventually(async () => {
+      const row = (await listConversations(t.db, t.workspaceId)).find(
+        (chat) => chat.id === conversationId,
+      );
+      return row?.latestRun?.doing ? row.latestRun : null;
+    });
+    expect(running).toMatchObject({ doing: 'Step 2', progress: { done: 1, active: 2, total: 3 } });
+    release();
+    await eventually(async () => (await getRun(t.db, sent.run.id))?.finishedAt ?? null);
+    const done = (await listConversations(t.db, t.workspaceId)).find(
+      (chat) => chat.id === conversationId,
+    );
+    expect(done?.latestRun?.doing).toBeNull();
   });
 });

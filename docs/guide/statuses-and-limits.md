@@ -27,9 +27,11 @@ A dot marks changes since your last visit; point at it.
 | **Done**: green             | A turn finished.                                     |
 | **Couldn't finish**: red    | A turn failed or was interrupted.                    |
 
+Below titles: what it's doing, **Waiting 3m** or **Finished 2:41 PM**.
+
 **History** holds archived chats; **Unarchive** brings one back.
 
-**Archive inactive chats** (2 days by default; 7, 30 or **Never** in [Settings](settings.md)) archives a chat that long without a message, turn or answered card. Pinned, working and waiting chats, running Terminal sessions and outposts with an open request stay.
+**Archive inactive chats** ([Settings](settings.md), 2 days by default) archives a chat idle that long. Pinned, working and waiting chats, running Terminal sessions and outposts with an open request stay.
 
 **Projects** lists a project only while it has an active chat; pick a hidden one under **Choose project**.
 
@@ -92,7 +94,7 @@ With **Reduce motion** on, only faces change.
 
 ## Prompt cache
 
-Idle Claude chats show a badge on the context ring; Terminal sessions say **Cache warm · …** in their bar. Never during a turn, sub-agent or card.
+Idle Claude chats badge the context ring; Terminal sessions say **Cache warm · …**. Never during a turn, sub-agent or card.
 
 | Shows                                                                                 | Means                                   |
 | ------------------------------------------------------------------------------------- | --------------------------------------- |
@@ -102,6 +104,7 @@ Idle Claude chats show a badge on the context ring; Terminal sessions say **Cach
 | Clock badge, **Prompt cache last used 12 min ago**                                    | Lifetime unknown.                       |
 | **This turn re-wrote …**                                                              | At least half the last context.         |
 | **Cache hit** in **Cost**                                                             | Cache reads ÷ all input tokens.         |
+| **Next message re-sends ~182K tokens uncached**                                       | Another model picked.                   |
 
 ## Limits
 

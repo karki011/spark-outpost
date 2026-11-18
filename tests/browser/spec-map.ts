@@ -123,6 +123,7 @@ export const SPEC_GROUPS = {
     'add-folder',
     'repos-folders',
     'archive-current',
+    'chat-row-insight',
     'compact-chrome',
     'project-clone',
     'project-work-place',
