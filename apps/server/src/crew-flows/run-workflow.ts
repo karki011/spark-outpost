@@ -1,4 +1,5 @@
 import {
+  TRY_IT_WORKFLOW_ID,
   planWorkflow,
   sparkWho,
   workflowOutcome,
@@ -16,6 +17,7 @@ import {
 } from '../orchestration/spark-child.ts';
 import { agentDefinitions } from '../agents/acp/agents.ts';
 import type { TurnResult } from '../workflow/agent-turn.ts';
+import { reviewStepPrompt, type ReviewPermission } from '../github-inbox/review/prompt.ts';
 import {
   STEP_OUTCOME_UNKNOWN,
   finishWorkflowRun,
@@ -28,6 +30,7 @@ import { stepSparks, type StepSpark } from './step-sparks.ts';
 
 export const SPARK_GONE = 'This step’s Spark no longer exists.';
 export const STEP_CRASHED = 'The step stopped with an unexpected error.';
+export const REVIEW_GONE = 'This review no longer exists, so the step did not run.';
 
 type Settled = Exclude<WorkflowStepState, 'waiting' | 'running'>;
 
@@ -43,8 +46,14 @@ export interface WorkflowEnd {
   steps: StepNote[];
 }
 
+export interface ReviewOptions {
+  material: string;
+  permission: ReviewPermission;
+}
+
 export interface RunOptions {
   findings?: boolean;
+  review?: ReviewOptions | null;
 }
 
 interface Running {
@@ -90,12 +99,46 @@ export function stepEditsOffered(provider: string): boolean {
   return definitions[provider]?.cli === 'claude';
 }
 
+function promptFor(run: Running, step: WorkflowStep, spark: StepSpark, editing: boolean): string {
+  const { h, turn } = run;
+  const review = run.options.review;
+  if (turn.run.kind === 'review' && review) {
+    return reviewStepPrompt({
+      spark,
+      workflow:
+        turn.workflow.id === TRY_IT_WORKFLOW_ID
+          ? null
+          : { name: turn.workflow.name, stepId: step.id, stepPrompt: step.prompt },
+      material: review.material,
+      permission: review.permission,
+      earlier: passedOn(run, step, turn.workflow),
+    });
+  }
+  const edits = turn.edits && hasProject(h.input) && turn.run.kind !== 'test';
+  return stepJobPrompt({
+    spark,
+    workflowName: turn.workflow.name,
+    stepId: step.id,
+    stepPrompt: step.prompt,
+    message: turn.message,
+    hasProject: hasProject(h.input),
+    earlier: passedOn(run, step, turn.workflow),
+    testRun: turn.run.kind === 'test',
+    edits: editing ? 'yes' : edits ? 'unsupported' : 'no',
+    findings: run.options.findings === true,
+  });
+}
+
 async function launch(run: Running, step: WorkflowStep, index: number): Promise<StepEnd> {
   const { h, turn } = run;
   const spark = run.sparks.get(step.sparkId);
   if (!spark) return { id: step.id, state: 'failed', note: SPARK_GONE };
+  if (turn.run.kind === 'review' && !run.options.review) {
+    return { id: step.id, state: 'failed', note: REVIEW_GONE };
+  }
   const pick = pickFor(h, spark);
-  const ownMode = spark.provider === pick.provider ? spark.agentMode : null;
+  const reviewRun = turn.run.kind === 'review';
+  const ownMode = spark.provider === pick.provider && !reviewRun ? spark.agentMode : null;
   const testRun = turn.run.kind === 'test';
   const edits = turn.edits && hasProject(h.input) && !testRun;
   const editing = edits && stepEditsOffered(pick.provider);
@@ -110,18 +153,7 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
         ...pick,
         mode: hasProject(h.input) ? 'ask' : 'chat',
         ...(ownMode ? { agentMode: ownMode } : {}),
-        prompt: stepJobPrompt({
-          spark,
-          workflowName: turn.workflow.name,
-          stepId: step.id,
-          stepPrompt: step.prompt,
-          message: turn.message,
-          hasProject: hasProject(h.input),
-          earlier: passedOn(run, step, turn.workflow),
-          testRun,
-          edits: editing ? 'yes' : edits ? 'unsupported' : 'no',
-          findings: run.options.findings === true,
-        }),
+        prompt: promptFor(run, step, spark, editing),
         route: {
           name: spark.name,
           routedBy: 'fixed',
@@ -132,6 +164,7 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
             step: step.id,
             ...(testRun ? { test: true } : {}),
             ...(editing ? { edits: true } : {}),
+            ...(reviewRun ? { review: true } : {}),
           },
         },
       },

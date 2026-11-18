@@ -56,7 +56,7 @@ test('the sections sit under five groups, each tab described by its group', asyn
     'Usage',
     'Projects',
     'Chats & autonomy',
-    'Pull requests',
+    'GitHub',
     'Spark rules',
     'Connectors',
     'About',
@@ -67,10 +67,10 @@ test('the sections sit under five groups, each tab described by its group', asyn
   const dialog = page.getByRole('dialog', { name: 'Notifications' });
   await expect(dialog.getByRole('switch', { name: 'Morning brief' })).toBeVisible();
   await expect(dialog.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
-  await sections(page).getByRole('tab', { name: 'Pull requests' }).click();
+  await sections(page).getByRole('tab', { name: 'GitHub' }).click();
   await expect(
     page
-      .getByRole('dialog', { name: 'Pull requests' })
+      .getByRole('dialog', { name: 'GitHub' })
       .getByRole('switch', { name: 'Follow up on pull requests' }),
   ).toBeVisible();
 });
@@ -112,7 +112,7 @@ test('a row whose control is off still takes focus, and Help rows are found', as
   await openSettingsDialog(page);
   await search(page).fill('follow up on');
   await search(page).press('Enter');
-  const pulls = page.getByRole('dialog', { name: 'Pull requests' });
+  const pulls = page.getByRole('dialog', { name: 'GitHub' });
   const followUp = pulls.getByRole('switch', { name: 'Follow up on pull requests' });
   await expect(followUp).toBeFocused();
   await followUp.click();
@@ -139,8 +139,8 @@ test('the search works from the keyboard', async ({ page }) => {
   await page.keyboard.type('compact');
   const options = results(page).getByRole('option');
   await expect(options).toHaveText([/^Compact automatically at/]);
-  await search(page).fill('pull');
-  await expect(options.first()).toHaveText(/^Pull requests\s*Work$/);
+  await search(page).fill('github');
+  await expect(options.first()).toHaveText(/^GitHub\s*Work$/);
   await expect(options.first()).toHaveAttribute('aria-selected', 'true');
   const count = await options.count();
   expect(count).toBeGreaterThan(1);
@@ -152,7 +152,7 @@ test('the search works from the keyboard', async ({ page }) => {
   await expect(options.last()).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('dialog', { name: 'Pull requests' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'GitHub' })).toBeVisible();
   await expect(search(page)).toBeFocused();
   await expect(search(page)).toHaveValue('');
 
@@ -161,7 +161,7 @@ test('the search works from the keyboard', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(search(page)).toHaveValue('');
   await expect(sections(page)).toBeVisible();
-  await expect(page.getByRole('dialog', { name: 'Pull requests' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'GitHub' })).toBeVisible();
 
   await page.keyboard.type('wait before');
   await page.keyboard.press('Enter');

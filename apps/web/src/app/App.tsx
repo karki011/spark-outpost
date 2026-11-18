@@ -37,7 +37,6 @@ import { useSettingsState } from '../settings/use-settings-state.ts';
 import { useAppMenu } from '../desktop/use-app-menu.ts';
 import { LEVEL_LABEL } from '../settings/setting-labels.ts';
 import { requestSettingFocus } from '../settings/setting-focus.ts';
-import { usePhone } from '../ui/breakpoints.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { FreezeWhileHidden } from '../ui/FreezeWhileHidden.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
@@ -61,9 +60,11 @@ import {
   Analytics,
   BrowserView,
   DocsPage,
+  GithubPage,
   MapPage,
   Onboarding,
   OutpostView,
+  PageWait,
   Phone,
   preloadSettings,
   preloadView,
@@ -73,8 +74,9 @@ import {
   Today,
 } from './lazy-views.tsx';
 import { JoinShortcut } from '../calendar/JoinShortcut.tsx';
+import { useGithubUpdates } from '../github/use-github-inbox.ts';
 import { Rail, type AppView } from './Rail.tsx';
-import { readSavedView, saveView } from './saved-view.ts';
+import { readSavedView, saveView, useShownView } from './saved-view.ts';
 import { readHomeDraftId, saveHomeDraftId } from '../home/home-draft.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
 import { useViewOpeners } from './use-view-openers.ts';
@@ -93,7 +95,7 @@ import { startIdleMotion } from './idle-motion.ts';
 import { useDesktopSettingsOpener } from './use-desktop-settings-opener.ts';
 import '../ui/controls.css';
 import { openTodayEvent } from '../calendar/today-request.ts';
-import { browserViewAvailable, useLinksToView } from '../browser-view/view-store.ts';
+import { useLinksToView } from '../browser-view/view-store.ts';
 
 const NO_IDS: readonly string[] = [];
 
@@ -152,12 +154,8 @@ function ChatShell({ entering }: { entering: boolean }) {
   const ticketsWaiting = attentionCount(inbox.data);
   const ticketNotices = unseenNotices(inbox.data?.tickets ?? []);
   const { remote } = useRemoteClient();
-  const phone = usePhone();
-  const hiddenView =
-    (phone && (storedView === 'map' || storedView === 'browser')) ||
-    (remote && storedView === 'today') ||
-    (storedView === 'browser' && (remote || !browserViewAvailable()));
-  const view: AppView = hiddenView ? 'home' : storedView;
+  const githubUpdates = useGithubUpdates();
+  const view = useShownView(storedView, remote);
   const layout = useSidebarLayoutState(waiting > 0, view === 'browser');
   useAttentionTitle(waiting);
   useAttentionReport(conversations.data);
@@ -279,6 +277,7 @@ function ChatShell({ entering }: { entering: boolean }) {
             waiting={waiting}
             ticketsWaiting={ticketsWaiting}
             ticketNotices={ticketNotices}
+            githubUpdates={githubUpdates}
             mood={mood}
             onIntent={preloadView}
             onSettingsIntent={preloadSettings}
@@ -295,6 +294,7 @@ function ChatShell({ entering }: { entering: boolean }) {
                 <ConversationList
                   selectedIds={listedIds}
                   onSelect={selectChat}
+                  onOpenByNumber={openChat}
                   onOpenBeside={split.canSplit ? openBeside : null}
                   onLeave={split.leave}
                   onNew={startDraft}
@@ -343,12 +343,12 @@ function ChatShell({ entering }: { entering: boolean }) {
             />
           )}
           {view === 'browser' && (
-            <Suspense fallback={<main className="page" aria-label="Browser" aria-busy="true" />}>
+            <Suspense fallback={<PageWait label="Browser" />}>
               <BrowserView onOpenChat={openChat} />
             </Suspense>
           )}
           {view === 'today' && (
-            <Suspense fallback={<main className="page" aria-label="Today" aria-busy="true" />}>
+            <Suspense fallback={<PageWait label="Today" />}>
               <Today chats={chats} onStartChat={startCalendarChat} onOpenChat={openChat} />
             </Suspense>
           )}
@@ -369,15 +369,18 @@ function ChatShell({ entering }: { entering: boolean }) {
               />
             </Suspense>
           )}
+          {view === 'github' && (
+            <Suspense fallback={<PageWait label="GitHub" />}>
+              <GithubPage onOpenChat={openChat} />
+            </Suspense>
+          )}
           {view === 'sparks' && (
             <Suspense fallback={<main className="main" aria-label="Sparks" aria-busy="true" />}>
               <SparksPage />
             </Suspense>
           )}
           {view === 'map' && (
-            <Suspense
-              fallback={<main className="page" aria-label="Project map" aria-busy="true" />}
-            >
+            <Suspense fallback={<PageWait label="Project map" />}>
               <MapPage onOpenInChat={chatAboutFile} onOpenChat={openChat} />
             </Suspense>
           )}
@@ -387,9 +390,7 @@ function ChatShell({ entering }: { entering: boolean }) {
             </Suspense>
           )}
           {view === 'phone' && (
-            <Suspense
-              fallback={<main className="page" aria-label="Remote control" aria-busy="true" />}
-            >
+            <Suspense fallback={<PageWait label="Remote control" />}>
               <Phone />
             </Suspense>
           )}

@@ -1,0 +1,108 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+:root{--bg:#14170f;--rail:#0f120b;--card:#1a1e14;--line:#262b1e;--text:#e9ecdf;--muted:#a3a895;--faint:#757b69;--accent:#c7d96b;--accent-ink:#1a1f0e;--warn:#e6b450;--bad:#ef8a7a;--ok:#8fd19e}
+*{box-sizing:border-box}body{margin:0;padding:28px;background:#0b0d08;font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif;color:var(--text);width:1360px}
+.cap{font-size:13px;font-weight:650;margin:0 0 3px}.capsub{color:var(--muted);margin:0 0 12px;font-size:12.5px}
+.win{display:grid;grid-template-columns:64px 1fr;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0 0 36px}
+.rail{background:var(--rail);border-right:1px solid var(--line);padding:14px 0;display:flex;flex-direction:column;align-items:center;gap:6px}
+.rail .it{width:44px;height:40px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9.5px;color:var(--faint);gap:2px}
+.rail .it i{width:16px;height:16px;border:1.5px solid currentColor;border-radius:5px;display:block}
+.rail .it.on{background:#222818;color:var(--accent)}
+.main{padding:26px 34px 34px;min-width:0}
+.head{display:flex;align-items:baseline;gap:12px;margin-bottom:22px}
+.head h2{font-size:22px;margin:0;font-weight:650}.head .sp{flex:1}.head .link{color:var(--muted);font-size:12.5px}
+.av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#10130c;flex:none}
+.a1{background:#e8b48a}.a2{background:#9cc7e8}.a3{background:#c9a8e8}.a4{background:#a8ddb5}.a5{background:#8a8f7c}
+.tk{border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:11.5px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;border-radius:20px;padding:1px 9px;border:1px solid var(--line);color:var(--muted)}
+.pill.ok{color:var(--ok)}.pill.bad{color:var(--bad)}.pill.warn{color:var(--warn)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block}
+.btn{height:28px;padding:0 12px;border-radius:9px;border:1px solid var(--line);color:var(--text);font-size:12.5px;display:inline-flex;align-items:center;white-space:nowrap}
+.age{color:var(--faint);font-size:12px;width:34px;text-align:right}
+
+/* A */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px}
+.tile{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:var(--card)}
+.tile.on{border-color:var(--accent);background:#20251a}
+.tile b{display:block;font-size:30px;font-weight:650;line-height:1.1}
+.tile span{color:var(--muted);font-size:12.5px}
+.tile small{display:block;margin-top:8px;font-size:12px;color:var(--faint)}
+.tile small.new{color:var(--accent)}
+.lst .r{display:grid;grid-template-columns:14px 26px 1fr auto auto 34px 84px;gap:12px;align-items:center;padding:11px 10px;border-top:1px solid var(--line)}
+.lst .r:first-child{border-top:0}
+.lst .r.sel{background:#1e2316;border-radius:10px;border-top-color:transparent}
+.lst .r.sel + .r{border-top-color:transparent}
+.lst .t{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lst .t.seen{font-weight:500;color:#cfd3c4}
+.lst .sub{grid-column:3/8;color:var(--muted);font-size:12.5px;margin-top:-4px}
+.lst .sub:before{content:"✦ ";color:var(--accent)}
+
+/* B */
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.col h3{font-size:12px;font-weight:600;color:var(--muted);margin:0 0 10px;display:flex;gap:6px;align-items:center}
+.col h3 span{color:var(--faint);font-weight:500}.col h3 em{font-style:normal;color:var(--accent);margin-left:auto}
+.cd{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:12px 13px;margin:0 0 10px}
+.cd.sel{border-color:var(--accent)}
+.cd .t{font-size:13.5px;font-weight:600;margin:0 0 9px;line-height:1.3}
+.cd .f{display:flex;align-items:center;gap:7px}
+.cd .f .sp{flex:1}
+.cd .av{width:20px;height:20px;font-size:9.5px}
+.cd .n{color:var(--muted);font-size:12px;margin:9px 0 0}.cd .n:before{content:"✦ ";color:var(--accent)}
+.more{color:var(--faint);font-size:12.5px;padding:2px 4px}
+</style></head><body>
+
+<p class="cap">Option A · Counts on top, one list below</p>
+<p class="capsub">Four tiles are the summary and the filter. The list shows one group at a time. People are avatars, state is a pill, the detail pane opens only when you select a row.</p>
+<div class="win">
+ <div class="rail"><div class="it"><i></i>Home</div><div class="it"><i></i>Chats</div><div class="it"><i></i>Today</div><div class="it"><i></i>Tickets</div><div class="it on"><i></i>GitHub</div><div class="it"><i></i>Sparks</div><div class="it"><i></i>Map</div></div>
+ <div class="main">
+  <div class="head"><h2>GitHub</h2><span class="sp"></span><span class="link">Last 14 days ▾ &nbsp;&nbsp; All projects ▾</span></div>
+  <div class="tiles">
+   <div class="tile on"><b>15</b><span>Review requested</span><small class="new">● 3 new</small></div>
+   <div class="tile"><b>3</b><span>Needs fixes</span><small>2 failing · 1 conflict</small></div>
+   <div class="tile"><b>1</b><span>Ready to merge</span><small>approved, checks pass</small></div>
+   <div class="tile"><b>2</b><span>Waiting on others</span><small>oldest 2 days</small></div>
+  </div>
+  <div class="lst">
+   <div class="r sel"><span></span><span class="av a1">PN</span><span class="t seen">Retry webhook deliveries with backoff</span><span class="tk">API-231</span><span class="pill ok">✓ Passing</span><span class="age">3 h</span><span class="btn">Review</span>
+    <span class="sub">Reviewed by PR Reviewer · 3 notes, 1 SHOULD</span></div>
+   <div class="r"><span class="dot"></span><span class="av a2">SK</span><span class="t">Fix timezone in export filenames</span><span class="tk">API-240</span><span class="pill ok">✓ Passing</span><span class="age">5 h</span><span></span></div>
+   <div class="r"><span class="dot"></span><span class="av a3">LW</span><span class="t">Add audit log table</span><span class="tk">API-198</span><span class="pill bad">✕ Failing</span><span class="age">1 d</span><span></span></div>
+   <div class="r"><span></span><span class="av a1">PN</span><span class="t seen">Settings: split notifications page</span><span class="pill warn">↻ 2 new commits</span><span class="pill ok">✓ Passing</span><span class="age">1 d</span><span></span></div>
+   <div class="r"><span></span><span class="av a3">LW</span><span class="t seen">Move billing to worker</span><span></span><span class="pill">Draft</span><span class="age">3 d</span><span></span></div>
+   <div class="r"><span></span><span class="av a5">5</span><span class="t seen">Dependency updates</span><span></span><span class="pill ok">✓ All passing</span><span class="age">2 d</span><span></span></div>
+   <div class="r"><span class="dot"></span><span class="av a2">SK</span><span class="t">Cache project list for 2 minutes</span><span class="tk">API-244</span><span class="pill ok">✓ Passing</span><span class="age">2 d</span><span></span></div>
+  </div>
+ </div>
+</div>
+
+<p class="cap">Option B · Board</p>
+<p class="capsub">Four columns, one card per pull request. You see everything at once and read left to right: yours to review, yours to fix, done, waiting.</p>
+<div class="win">
+ <div class="rail"><div class="it"><i></i>Home</div><div class="it"><i></i>Chats</div><div class="it"><i></i>Today</div><div class="it"><i></i>Tickets</div><div class="it on"><i></i>GitHub</div><div class="it"><i></i>Sparks</div><div class="it"><i></i>Map</div></div>
+ <div class="main">
+  <div class="head"><h2>GitHub</h2><span class="sp"></span><span class="link">Last 14 days ▾ &nbsp;&nbsp; All projects ▾</span></div>
+  <div class="board">
+   <div class="col"><h3>Review requested <span>15</span><em>● 3 new</em></h3>
+    <div class="cd sel"><p class="t">Retry webhook deliveries with backoff</p><div class="f"><span class="av a1">PN</span><span class="tk">API-231</span><span class="sp"></span><span class="pill ok">✓</span><span class="age">3 h</span></div><p class="n">3 notes, 1 SHOULD</p></div>
+    <div class="cd"><p class="t"><span class="dot"></span>&nbsp; Fix timezone in export filenames</p><div class="f"><span class="av a2">SK</span><span class="tk">API-240</span><span class="sp"></span><span class="pill ok">✓</span><span class="age">5 h</span></div></div>
+    <div class="cd"><p class="t"><span class="dot"></span>&nbsp; Add audit log table</p><div class="f"><span class="av a3">LW</span><span class="tk">API-198</span><span class="sp"></span><span class="pill bad">✕</span><span class="age">1 d</span></div></div>
+    <div class="cd"><p class="t">Settings: split notifications page</p><div class="f"><span class="av a1">PN</span><span class="pill warn">↻ 2 new</span><span class="sp"></span><span class="pill ok">✓</span><span class="age">1 d</span></div></div>
+    <p class="more">11 more ↓</p>
+   </div>
+   <div class="col"><h3>Needs fixes <span>3</span></h3>
+    <div class="cd"><p class="t">Calendar: join at start mark</p><div class="f"><span class="tk">APP-512</span><span class="sp"></span><span class="pill bad">✕ 2 failing</span></div><p class="n">Test expects the old button label</p><div class="f" style="margin-top:10px"><span class="btn">Fix</span></div></div>
+    <div class="cd"><p class="t">Sparks review window</p><div class="f"><span class="sp"></span><span class="pill bad">✕ 1 failing</span></div><p class="n">Looks flaky</p><div class="f" style="margin-top:10px"><span class="btn">Fix</span></div></div>
+    <div class="cd"><p class="t">Wider pages</p><div class="f"><span class="tk">APP-498</span><span class="sp"></span><span class="pill warn">⚠ Conflict</span></div><div class="f" style="margin-top:10px"><span class="btn">Update branch</span></div></div>
+   </div>
+   <div class="col"><h3>Ready to merge <span>1</span></h3>
+    <div class="cd"><p class="t">Chat: one running signal per thing</p><div class="f"><span class="av a2">SK</span><span class="sp"></span><span class="pill ok">✓ Approved</span></div></div>
+   </div>
+   <div class="col"><h3>Waiting on others <span>2</span></h3>
+    <div class="cd"><p class="t">Release builds require sign-in ids</p><div class="f"><span class="av a2">SK</span><span class="sp"></span><span class="pill">◷ Review</span><span class="age">2 d</span></div></div>
+    <div class="cd"><p class="t">Docs: Browser pane sign-ins</p><div class="f"><span class="sp"></span><span class="pill">◷ Checks running</span></div></div>
+   </div>
+  </div>
+ </div>
+</div>
+</body></html>

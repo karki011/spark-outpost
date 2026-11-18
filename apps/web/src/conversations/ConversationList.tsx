@@ -62,6 +62,7 @@ import { useRowFocus } from './use-row-focus.ts';
 import { useSidebarDnd, type Point } from './use-sidebar-dnd.ts';
 import { useSidebarFolds } from './use-sidebar-folds.ts';
 import { useSidebarShortcuts } from './use-sidebar-shortcuts.ts';
+import { ChatNumbers, useChatNumberKeys, useHeldChatNumbers } from './chat-number-keys.ts';
 import { useToast } from './use-toast.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { requestMessageJump } from '../chat/message-jump.ts';
@@ -72,6 +73,7 @@ const NO_OUTPOSTS: readonly Outpost[] = [];
 interface ConversationListProps {
   selectedIds: readonly string[];
   onSelect: (id: string) => void;
+  onOpenByNumber: (id: string) => void;
   onOpenBeside: ((id: string) => void) | null;
   onLeave: (id: string) => boolean;
   onNew: () => string;
@@ -81,6 +83,7 @@ interface ConversationListProps {
 export const ConversationList = memo(function ConversationList({
   selectedIds,
   onSelect,
+  onOpenByNumber,
   onOpenBeside,
   onLeave,
   onNew,
@@ -218,6 +221,8 @@ export const ConversationList = memo(function ConversationList({
     closeDrawer?.();
   }, [onNew, closeDrawer]);
   useSidebarShortcuts({ reveal, startNew, searchRef });
+  useChatNumberKeys(listRef, onOpenByNumber);
+  const heldNumbers = useHeldChatNumbers(listRef);
 
   const focusBack = menu?.anchor.focusBack ?? null;
   const closeMenu = useCallback(() => {
@@ -360,57 +365,63 @@ export const ConversationList = memo(function ConversationList({
           </p>
         )}
         <SidebarDndContext dnd={dnd} chat={activeChat} project={activeProject}>
-          <div
-            ref={listRef}
-            id={LIST_PANEL_ID}
-            role="tabpanel"
-            aria-label={tab === 'active' ? 'Active chats' : 'Archived chats'}
-            className={`list${dnd.active ? ' dragging' : ''}`}
-            data-projection={dnd.shift ?? undefined}
-            aria-busy={searching && results.isFetching}
-          >
-            <div key={tab} className="list-in">
-              {tab === 'active' ? (
-                <ActiveChats
-                  search={search}
-                  searching={searching}
-                  canDrag={canDrag}
-                  hasChats={chats.length > 0}
-                  projectById={projectById}
-                  dnd={dnd}
-                  folds={folds}
-                  renamingProjectId={renamingProjectId}
-                  rowsIn={rowsIn}
-                  renderRows={renderRows}
-                  renderRow={renderRow}
-                  members={membersByOutpost(visible, membership)}
-                  canAddProject={adder.allowed}
-                  onAddProject={() => {
-                    moveTarget.current = null;
-                    adder.openDialog();
-                  }}
-                  onNewInProject={onNewInProject}
-                  onProjectMenu={(projectId, element) =>
-                    setProjectMenu({ projectId, anchor: anchorFor(element, null) })
-                  }
-                  onProjectRename={(project, name) => {
-                    setRenamingProjectId(null);
-                    if (name) projectActions.rename(project, name);
-                  }}
-                />
-              ) : (
-                <HistoryChats
-                  chats={visible}
-                  search={searching ? search.trim() : null}
-                  folds={folds}
-                  renderRow={renderRow}
-                />
-              )}
-              {older.hasMore && !searching && (
-                <OlderChatsMore loading={older.loading} failed={older.failed} onMore={older.more} />
-              )}
+          <ChatNumbers.Provider value={heldNumbers}>
+            <div
+              ref={listRef}
+              id={LIST_PANEL_ID}
+              role="tabpanel"
+              aria-label={tab === 'active' ? 'Active chats' : 'Archived chats'}
+              className={`list${dnd.active ? ' dragging' : ''}`}
+              data-projection={dnd.shift ?? undefined}
+              aria-busy={searching && results.isFetching}
+            >
+              <div key={tab} className="list-in">
+                {tab === 'active' ? (
+                  <ActiveChats
+                    search={search}
+                    searching={searching}
+                    canDrag={canDrag}
+                    hasChats={chats.length > 0}
+                    projectById={projectById}
+                    dnd={dnd}
+                    folds={folds}
+                    renamingProjectId={renamingProjectId}
+                    rowsIn={rowsIn}
+                    renderRows={renderRows}
+                    renderRow={renderRow}
+                    members={membersByOutpost(visible, membership)}
+                    canAddProject={adder.allowed}
+                    onAddProject={() => {
+                      moveTarget.current = null;
+                      adder.openDialog();
+                    }}
+                    onNewInProject={onNewInProject}
+                    onProjectMenu={(projectId, element) =>
+                      setProjectMenu({ projectId, anchor: anchorFor(element, null) })
+                    }
+                    onProjectRename={(project, name) => {
+                      setRenamingProjectId(null);
+                      if (name) projectActions.rename(project, name);
+                    }}
+                  />
+                ) : (
+                  <HistoryChats
+                    chats={visible}
+                    search={searching ? search.trim() : null}
+                    folds={folds}
+                    renderRow={renderRow}
+                  />
+                )}
+                {older.hasMore && !searching && (
+                  <OlderChatsMore
+                    loading={older.loading}
+                    failed={older.failed}
+                    onMore={older.more}
+                  />
+                )}
+              </div>
             </div>
-          </div>
+          </ChatNumbers.Provider>
         </SidebarDndContext>
         <ToastHost toaster={toaster} />
       </div>

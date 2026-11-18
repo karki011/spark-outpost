@@ -20,12 +20,13 @@ export async function loadTurnExtensions(
   db: Queryable,
   input: {
     assistant?: boolean;
+    reviewRun?: boolean;
     provider: string;
     workspaceId: string;
     identity: { threadId: string };
   },
 ): Promise<TurnExtensions> {
-  if (input.assistant) return { userMcp: [], userPlugins: [] };
+  if (input.assistant || input.reviewRun) return { userMcp: [], userPlugins: [] };
   const conversationId = input.identity.threadId;
   const [userMcp, userPlugins] = await Promise.all([
     conversationProjectIds(db, conversationId)

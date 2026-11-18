@@ -42,6 +42,7 @@ import { remoteAccessParts } from '../remote/access.ts';
 import { setupRoutes, type SetupDeps } from './setup-routes.ts';
 import { prFollowUpRoutes } from './pr-follow-up-routes.ts';
 import { shipRoutes, type ShipRouteDeps } from './ship-routes.ts';
+import { githubReviewRoutes, type GithubReviewRouteDeps } from './github-review-routes.ts';
 import { previewRoutes } from './preview-routes.ts';
 import { signInRoutes } from './sign-in-routes.ts';
 import { taskChangeRoutes } from './task-change-routes.ts';
@@ -95,7 +96,8 @@ export interface AppOptions
     >,
     Pick<CloneRouteDeps, 'clones' | 'cloneTest' | 'reservedFolders'>,
     Pick<ChatShareRouteDeps, 'linkScheme'>,
-    ChatPortRouteDeps {
+    ChatPortRouteDeps,
+    Pick<GithubReviewRouteDeps, 'nudgeReviews'> {
   terminals: TerminalSessions;
   nativeTerminals?: NativeRuntime;
   previews: PreviewServers;
@@ -190,6 +192,7 @@ export function createAppParts(options: AppOptions) {
   app.use(A2A_MOUNT_PATH, outposts.a2a);
   app.use('/api', taskChangeRoutes(options));
   app.use('/api', shipRoutes(options));
+  app.use('/api', githubReviewRoutes(options));
   app.use('/api', prFollowUpRoutes(options));
   app.use('/api', ticketRoutes(options));
   app.use('/api', chatTicketRoutes(options));

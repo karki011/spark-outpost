@@ -31,14 +31,24 @@ interface CachedPulls {
 
 const pullCache = new WeakMap<Db, CachedPulls>();
 
-async function reposOf(roots: readonly string[]): Promise<RemoteRepo[]> {
-  const repos = new Map<string, RemoteRepo>();
-  for (const root of roots) {
-    const remote = await pickRemote(root, null).catch(() => null);
+export interface ProjectRepo {
+  repo: RemoteRepo;
+  projectId: string;
+}
+
+export const repoKey = (host: string, slug: string) => `${host}/${slug}`.toLowerCase();
+
+export async function projectRepos(
+  projects: readonly { id: string; rootPath: string }[],
+): Promise<ProjectRepo[]> {
+  const repos = new Map<string, ProjectRepo>();
+  for (const project of projects) {
+    const remote = await pickRemote(project.rootPath, null).catch(() => null);
     const repo = remote ? parseRemoteUrl(remote.url) : null;
-    if (repo) repos.set(`${repo.host}/${repoSlug(repo)}`.toLowerCase(), repo);
+    const key = repo ? repoKey(repo.host, repoSlug(repo)) : null;
+    if (repo && key && !repos.has(key)) repos.set(key, { repo, projectId: project.id });
   }
-  return [...repos.values()].slice(0, MAX_REPOS);
+  return [...repos.values()];
 }
 
 async function openPullsIn(deps: GitHubDeps, repo: RemoteRepo): Promise<SourcePull[]> {
@@ -69,7 +79,7 @@ export async function projectOpenPulls(deps: GitHubDeps): Promise<SourcePull[]> 
   const now = deps.now?.() ?? Date.now();
   const hit = pullCache.get(deps.db);
   if (hit && hit.projects === fingerprint && now - hit.at < CACHE_MS) return hit.pulls;
-  const repos = await reposOf(projects.map((project) => project.rootPath));
+  const repos = (await projectRepos(projects)).slice(0, MAX_REPOS).map((entry) => entry.repo);
   const pulls = (await Promise.all(repos.map((repo) => openPullsIn(deps, repo)))).flat();
   pullCache.set(deps.db, { at: now, projects: fingerprint, pulls });
   return pulls;

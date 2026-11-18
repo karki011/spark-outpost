@@ -12,6 +12,8 @@ summary: What changed in recent releases and what to do next.
 | -------------------------------------------------- | -------------------------------------------------------------- |
 | **Share…** artifacts                               | [Share one](share-an-artifact.md).                             |
 | Context rail lists a chat's **Artifacts**          | [Open one](context-rail.md#open-artifacts).                    |
+| **GitHub** page, reviews, auto-review              | [Guide](github-page.md).                                       |
+| **⌘1**–**⌘9** open chats                           | [Keyboard shortcuts](keyboard-shortcuts.md#chats).             |
 | Agent terminal row is a card                       | Nothing to do.                                                 |
 | No **Ask about this**; hidden sidebar stays hidden | Use **Add to chat**.                                           |
 | Home: message box, Needs you, Working set          | [Read Home](home.md).                                          |

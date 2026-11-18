@@ -176,6 +176,7 @@ export const SPEC_GROUPS = {
     'sidebar-tidy',
   ],
   tasks: ['todo'],
+  github: ['github-page', 'github-review-pane', 'github-auto-review'],
   tickets: [
     'atlassian-connector',
     'connectors',
@@ -396,6 +397,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/desktop/', groups: ['island-desktop', 'terminal-preview-browser'] },
   { prefix: 'apps/web/src/diff/', groups: ['diff', 'approvals'] },
   { prefix: 'apps/web/src/docs/', groups: ['docs-help'] },
+  { prefix: 'apps/web/src/github/', groups: ['github'] },
   { prefix: 'apps/web/src/help/', groups: ['docs-help'] },
   { prefix: 'apps/web/src/home/', groups: ['home'] },
   { prefix: 'apps/web/src/island/', groups: ['island-desktop'] },
@@ -433,6 +435,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/server/src/advisor/', groups: ['map', 'ship-pr', 'home'] },
   { prefix: 'apps/server/src/agent-config/', groups: ['approvals'] },
   { prefix: 'apps/server/src/crew/', groups: ['sparks', 'approvals'] },
+  { prefix: 'apps/server/src/github-inbox/', groups: ['github'] },
   { prefix: 'apps/server/src/analytics/', groups: ['analytics-audit'] },
   {
     prefix: 'apps/server/src/approvals/',
