@@ -143,6 +143,22 @@ Connect GitHub, Jira and Confluence, ServiceNow, Linear, Slack and your calendar
 <tr>
 <td width="50%" valign="top">
 
+### Share what an agent made
+
+An agent can show a page it built in the Work panel. **Share…** turns one version into a link anyone can open in a browser, with no account, for 1 or 7 days, optionally behind a passcode, and **Stop sharing** removes it. Only your own click shares. [Share an artifact](docs/guide/share-an-artifact.md)
+
+</td>
+<td width="50%" valign="top">
+
+### A privacy screen
+
+Cover Spark's windows when you step away, after idle time, on sleep or with **⇧⌘L**, and unlock with Touch ID or a 6-digit code. It never locks the Mac, and chats keep running behind it. [Privacy screen](docs/guide/privacy-screen.md)
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
 ### From your phone
 
 Pair a phone or another computer over Tailscale (never Funnel) to follow chats, answer approvals you allow and get a push when a chat needs you. [Use your phone](docs/guide/use-your-phone.md)
@@ -152,7 +168,7 @@ Pair a phone or another computer over Tailscale (never Funnel) to follow chats, 
 
 ### Local-first, stated honestly
 
-Chats, settings and code stay on your Mac, keys live in the keychain, and voice audio never leaves it. What a chat needs goes to the AI provider and the tools you connect, and the one anonymous daily heartbeat can be turned off. [Privacy and secrets](docs/guide/privacy-and-secrets.md)
+Chats, settings and code stay on your Mac, keys live in the keychain, and voice audio never leaves it. What a chat needs goes to the AI provider and the tools you connect, a page you share is uploaded to Spark's share service until it ends or you stop it, and the one anonymous daily heartbeat can be turned off. [Privacy and secrets](docs/guide/privacy-and-secrets.md)
 
 </td>
 </tr>
