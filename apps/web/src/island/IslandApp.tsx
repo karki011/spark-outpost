@@ -26,6 +26,7 @@ import {
   type IslandSettingsTarget,
 } from '../desktop/desktop-bridge.ts';
 import { useChatListAttentionReport } from '../desktop/use-attention-report.ts';
+import { useConcealed } from '../app-lock/use-app-lock.ts';
 import { useIslandCalendar } from '../calendar/use-island-calendar.ts';
 import { useMeetingHop } from '../calendar/use-meeting-hop.ts';
 import { useVoice } from '../spark/use-voice.ts';
@@ -79,6 +80,7 @@ function isRunningChat(chat: ConversationSummary): boolean {
 
 export function IslandApp() {
   useAppEvents();
+  const concealed = useConcealed();
   const reduced = useReducedMotion();
   const voice = useVoice();
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
@@ -133,7 +135,7 @@ export function IslandApp() {
   const attention = useIslandAttention(data.chats, data.approvalsByChat);
   const { cards, fresh, allCards } = attention;
   const askInbox = useAssistantInbox();
-  const islandChatId = islandViewedChat({ review, selfOpened, focusSignal });
+  const islandChatId = concealed ? null : islandViewedChat({ review, selfOpened, focusSignal });
   useIslandViewing({
     openChatId: islandChatId,
     chats: data.chats,
@@ -359,11 +361,13 @@ export function IslandApp() {
 
   useAutoExpand({
     enabled: useAutoExpandSetting(),
-    idle: opensByItself(view, {
-      sparkFocused,
-      dragging: grab.phase !== 'idle',
-      menuBarBusy,
-    }),
+    idle:
+      !concealed &&
+      opensByItself(view, {
+        sparkFocused,
+        dragging: grab.phase !== 'idle',
+        menuBarBusy,
+      }),
     cards: fresh,
     pending: allCards,
     onExpand: (card) => {

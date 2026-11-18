@@ -30,7 +30,7 @@ Unlock with Touch ID or your code. Five wrong codes wait a minute.
 
 ## What it covers
 
-Spark's windows are covered and Spark Island hides. Work keeps running. Your Mac, paired devices and phone pushes are unchanged. The code is kept as a salted hash on this Mac, not in the keychain.
+Spark's windows are covered and Spark Island hides. Work keeps running and notifications still arrive. Your Mac, paired devices and phone pushes are unchanged. The code is kept as a salted hash on this Mac, not in the keychain.
 
 ## Reset a forgotten code
 

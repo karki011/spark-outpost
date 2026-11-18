@@ -31,7 +31,7 @@ export function ArtifactCards({ chatId, runId, pages = [] }: ArtifactCardsProps)
           <button
             type="button"
             className="btn ghost sm"
-            onClick={() => openArtifact(chatId, page.id, version.version)}
+            onClick={() => openArtifact(chatId, page.id, { version: version.version })}
           >
             Open
           </button>

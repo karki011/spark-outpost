@@ -30,7 +30,7 @@ const PAGES = {
 };
 
 const INPUT =
-  '<input id="code" name="code" type="text" maxlength="9" pattern="[\\s\\-]*([A-Za-z0-9][\\s\\-]*){8}" title="8 letters and numbers" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" placeholder=" " required';
+  '<input id="code" name="code" type="text" maxlength="12" pattern="[\\s\\-]*([A-Za-z0-9][\\s\\-]*){8}" title="8 letters and numbers" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" placeholder=" " required';
 
 function count(html: string, part: string): number {
   return html.split(part).length - 1;

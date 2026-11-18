@@ -46,6 +46,11 @@ export function useAppLock(): AppLockStatus | null {
   return useSyncExternalStore(subscribe, snapshot);
 }
 
+export function useConcealed(): boolean {
+  const status = useAppLock();
+  return appLock() !== null && status?.locked !== false;
+}
+
 export async function updateAppLock(patch: AppLockPatch): Promise<void> {
   const lock = appLock();
   if (lock) publish(await lock.set(patch));

@@ -4,6 +4,7 @@ import {
   ARTIFACT_SHARE_ID_PATTERN,
 } from '@spark-outpost/contracts';
 import { sha256Of } from '../src/artifacts/files.ts';
+import { shareIdForToken } from '../src/artifacts/share-id.ts';
 import { shareSecret } from '../src/setup/secrets.ts';
 import { HTML, PASSCODE, ShareHarness, sharePath } from './artifact-share-support.ts';
 
@@ -45,6 +46,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
     expect(sent!.keys).toEqual(['deleteToken', 'expiresInDays', 'html', 'id', 'title']);
     expect(sent!.id).toMatch(ARTIFACT_SHARE_ID_PATTERN);
     expect(sent!.deleteToken).toMatch(ARTIFACT_SHARE_DELETE_TOKEN_PATTERN);
+    expect(sent!.id).toBe(shareIdForToken(sent!.deleteToken));
     expect(sent!.headers.authorization).toBeUndefined();
     expect(sent!.headers.cookie).toBeUndefined();
     const share = created.body.share;
@@ -187,14 +189,17 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
   it('answers a different create that arrives during the upload with the new link', async () => {
     const id = await s.publish('html', HTML);
     const client = s.client();
-    const [first, second] = await Promise.all([
+    const answers = await Promise.all([
       client.send('post', sharePath(id), { expiresInDays: 7, passcode: true }),
-      client.send('post', sharePath(id), { expiresInDays: 1, passcode: false }),
+      client.send('post', sharePath(id), { expiresInDays: 1, passcode: true }),
     ]);
-    expect(first.status).toBe(201);
-    expect(second.status).toBe(409);
-    expect(second.body.share).toEqual(first.body.share);
-    expect(JSON.stringify(second.body)).not.toContain(first.body.passcode);
+    expect(answers.map((answer) => answer.status).sort()).toEqual([201, 409]);
+    const made = answers.find((answer) => answer.status === 201)!;
+    const refused = answers.find((answer) => answer.status === 409)!;
+    expect(made.body.passcode).toMatch(PASSCODE);
+    expect(refused.body.share).toEqual(made.body.share);
+    expect(refused.body).not.toHaveProperty('passcode');
+    expect(JSON.stringify(refused.body)).not.toContain(made.body.passcode);
     expect(s.fake.posts).toHaveLength(1);
   });
 

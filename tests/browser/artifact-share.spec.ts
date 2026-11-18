@@ -11,6 +11,7 @@ test.beforeEach(async () => {
 });
 
 const SHARE_ORIGIN = `http://127.0.0.1:${STUB_PORT}`;
+const SHARE_STATUS = /\/api\/artifacts\/([0-9a-f-]{36})\/versions\/\d+\/share$/;
 
 async function publish(page: Page, title: string, kind = 'html', content = '<h1>Failures</h1>') {
   await openChats(page);
@@ -173,4 +174,141 @@ test('Share… is hidden when the build has no share service, and off for Markdo
   await expect(notes).toHaveAccessibleDescription(/Markdown artifacts can’t be shared yet/);
   await notes.click({ force: true });
   await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('a link made earlier can still be stopped when the build has no share service', async ({
+  page,
+}) => {
+  await publish(page, 'Old link');
+  const old = pane(page, 'Old link');
+  await old.getByRole('button', { name: 'Share…' }).click();
+  const confirm = page.getByRole('dialog', { name: 'Share “Old link”?' });
+  await confirm.getByRole('switch', { name: 'Require a passcode' }).click();
+  await confirm.getByRole('button', { name: 'Create link' }).click();
+  const shared = page.getByRole('dialog', { name: 'Shared · version 1' });
+  const link = await shared.getByRole('textbox', { name: 'Link' }).inputValue();
+  await shared.getByRole('button', { name: 'Done' }).click();
+
+  await page.route('**/api/artifacts/*/versions/*/share', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    const response = await route.fetch();
+    const status = (await response.json()) as { share: unknown };
+    await route.fulfill({ response, json: { ...status, available: false } });
+  });
+  await page.reload();
+  await openPane(page, 'Old link');
+  await expect(old.getByRole('button', { name: 'Share…' })).toHaveCount(0);
+  await old.getByRole('button', { name: 'Shared' }).click();
+  await expect(shared.getByRole('textbox', { name: 'Link' })).toHaveValue(link);
+  await expect(shared).toContainText('Ends ');
+  await expect(shared).toContainText('The passcode was shown when the link was made.');
+  await expect(shared).not.toContainText('share again.');
+  await expect(shared).toContainText('This build can’t make new links.');
+
+  const stopped = page.waitForResponse(
+    (response) => response.request().method() === 'DELETE' && SHARE_STATUS.test(response.url()),
+  );
+  await shared.getByRole('button', { name: 'Stop sharing' }).click();
+  expect((await stopped).status()).toBe(204);
+  await expect(shared).toHaveCount(0);
+  await expect(old.getByRole('button', { name: /^Share/ })).toHaveCount(0);
+  await expect(old.getByRole('button', { name: 'Copy' })).toBeVisible();
+
+  await page.unroute('**/api/artifacts/*/versions/*/share');
+  await page.reload();
+  await openPane(page, 'Old link');
+  await expect(old.getByRole('button', { name: 'Share…' })).toBeVisible();
+});
+
+test('a sheet stays on its version, and keeps its passcode, when a newer version arrives', async ({
+  page,
+}) => {
+  const status = page.waitForRequest(SHARE_STATUS);
+  await publish(page, 'Live board');
+  const id = SHARE_STATUS.exec((await status).url())![1]!;
+  const board = pane(page, 'Live board');
+  await page.getByRole('button', { name: 'Show context rail' }).click();
+  await page.getByRole('button', { name: 'Open artifact Live board' }).click();
+  await expect(board.getByRole('button', { name: 'Version' })).toHaveText('v1');
+
+  await board.getByRole('button', { name: 'Share…' }).click();
+  const confirm = page.getByRole('dialog', { name: 'Share “Live board”?' });
+  await confirm.getByRole('switch', { name: 'Require a passcode' }).click();
+  await confirm.getByRole('button', { name: 'Create link' }).click();
+  const shared = page.getByRole('dialog', { name: 'Shared · version 1' });
+  const code = await shared.getByRole('textbox', { name: 'Passcode' }).inputValue();
+  expect(code).toMatch(/^[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/);
+
+  const update = { action: 'update', id, content: '<h1>Newer</h1>' };
+  const input = page.getByRole('textbox', { name: 'Message' });
+  await input.fill(
+    `#build #sparkscript ${JSON.stringify([{ tool: 'spark_artifact', args: update }])}`,
+  );
+  await input.press('Enter');
+  await expect(page.getByRole('group', { name: 'Artifact Live board' }).last()).toContainText(
+    'version 2',
+    { timeout: 30_000 },
+  );
+  await expect(board.getByRole('button', { name: 'Version' })).toHaveText('v2');
+  await expect(shared.getByRole('textbox', { name: 'Passcode' })).toHaveValue(code);
+
+  await shared.getByRole('button', { name: 'Done' }).click();
+  await expect(shared).toHaveCount(0);
+  await expect(board.getByRole('button', { name: 'Share…' })).toBeFocused();
+});
+
+test('a status check that answers late does not hide the new link or its passcode', async ({
+  page,
+}) => {
+  await publish(page, 'Slow check');
+  await pane(page, 'Slow check').getByRole('button', { name: 'Share…' }).click();
+  const confirm = page.getByRole('dialog', { name: 'Share “Slow check”?' });
+  await confirm.getByRole('switch', { name: 'Require a passcode' }).click();
+
+  let answerLate = () => {};
+  const held = new Promise<void>((resolve) => {
+    answerLate = resolve;
+  });
+  await page.route('**/api/artifacts/*/versions/*/share', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await held;
+    await route.fulfill({ json: { available: true, share: null } });
+  });
+  const recheck = page.waitForRequest(
+    (request) => request.method() === 'GET' && SHARE_STATUS.test(request.url()),
+  );
+  await page.evaluate(() => {
+    const now = Date.now.bind(Date);
+    Date.now = () => now() + 10 * 60_000;
+    window.dispatchEvent(new Event('visibilitychange'));
+  });
+  await recheck;
+
+  await confirm.getByRole('button', { name: 'Create link' }).click();
+  const shared = page.getByRole('dialog', { name: 'Shared · version 1' });
+  const code = await shared.getByRole('textbox', { name: 'Passcode' }).inputValue();
+  const answered = page.waitForEvent(
+    'requestfinished',
+    (request) => request.method() === 'GET' && SHARE_STATUS.test(request.url()),
+  );
+  answerLate();
+  await answered;
+  await expect(shared.getByRole('textbox', { name: 'Passcode' })).toHaveValue(code);
+  await expect(shared.getByRole('textbox', { name: 'Link' })).toHaveValue(/\/a\//);
+});
+
+test('a sheet taller than a short window scrolls so its buttons stay reachable', async ({
+  page,
+}) => {
+  await publish(page, 'Short window');
+  await pane(page, 'Short window').getByRole('button', { name: 'Share…' }).click();
+  const confirm = page.getByRole('dialog', { name: 'Share “Short window”?' });
+  await expect(confirm).toBeVisible();
+  await page.setViewportSize({ width: 900, height: 240 });
+  const box = (await confirm.boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(240);
+  expect(await confirm.evaluate((panel) => panel.scrollHeight > panel.clientHeight)).toBe(true);
+  await confirm.getByRole('button', { name: 'Cancel' }).click();
+  await expect(confirm).toHaveCount(0);
 });

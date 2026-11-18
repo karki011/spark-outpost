@@ -28,6 +28,17 @@ export function randomToken(byteLength: number): string {
   return base64url(crypto.getRandomValues(new Uint8Array(byteLength)));
 }
 
+const SHARE_ID_BYTES = 16;
+const SHARE_ID_DOMAIN = 'spark-share-id:';
+
+export async function shareIdFor(deleteToken: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    encoder.encode(`${SHARE_ID_DOMAIN}${deleteToken}`),
+  );
+  return base64url(new Uint8Array(digest).subarray(0, SHARE_ID_BYTES));
+}
+
 export async function sha256(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', encoder.encode(text));
   return base64url(new Uint8Array(digest));

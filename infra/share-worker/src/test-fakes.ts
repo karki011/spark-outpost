@@ -1,5 +1,5 @@
 import { ShareCounters, type CounterStorage } from './counters.ts';
-import { randomToken } from './crypto.ts';
+import { randomToken, shareIdFor } from './crypto.ts';
 import type {
   ListOptions,
   PutOptions,
@@ -21,6 +21,7 @@ interface FakeObject {
 
 class FakeBucket implements ShareBucket {
   readonly objects = new Map<string, FakeObject>();
+  readonly reads: string[] = [];
 
   constructor(private readonly pageSize: number) {}
 
@@ -33,12 +34,15 @@ class FakeBucket implements ShareBucket {
   }
 
   async head(key: string) {
+    this.reads.push(`head ${key}`);
     const object = this.objects.get(key);
     return object ? this.view(key, object) : null;
   }
 
   async get(key: string) {
-    return this.head(key);
+    this.reads.push(`get ${key}`);
+    const object = this.objects.get(key);
+    return object ? this.view(key, object) : null;
   }
 
   async put(key: string, value: string | Uint8Array, options: PutOptions = {}) {
@@ -139,7 +143,7 @@ export interface CreateBody {
 }
 
 export const VALID_CREATE: CreateBody = {
-  id: 'Ab3_-Ab3_-Ab3_-Ab3_-Ab',
+  id: 'D65s4UWzkH75nfvCxUTMnw',
   deleteToken: 'Tk4_-Tk4_-Tk4_-Tk4_-Tk4_-Tk4_-Tk4_-Tk4_-Tk4',
   title: 'Quarterly plan',
   html: '<!doctype html><h1>Plan</h1><script>document.title = "x"</script>',
@@ -175,6 +179,12 @@ export function postJson(
   );
 }
 
+export function remove(fake: FakeEnv, id: string, token: string | null, now = START) {
+  const headers: Record<string, string> =
+    token === null ? {} : { authorization: `Bearer ${token}` };
+  return call(fake, `/v1/shares/${id}`, { method: 'DELETE', headers }, now);
+}
+
 export interface Created {
   id: string;
   url: string;
@@ -182,12 +192,13 @@ export interface Created {
   expiresAt: string;
 }
 
-export function freshIds() {
-  return { id: randomToken(16), deleteToken: randomToken(32) };
+export async function freshIds() {
+  const deleteToken = randomToken(32);
+  return { id: await shareIdFor(deleteToken), deleteToken };
 }
 
 export async function create(fake: FakeEnv, body: CreateBody = VALID_CREATE): Promise<Created> {
-  const ids = freshIds();
+  const ids = await freshIds();
   const response = await postJson(fake, { ...body, ...ids });
   if (response.status !== 201) throw new Error(`create failed with ${response.status}`);
   const answer = (await response.json()) as Omit<Created, 'deleteToken'>;

@@ -5,17 +5,49 @@ import {
 } from '../../../packages/contracts/src/artifact-pages.ts';
 import {
   ARTIFACT_SHARE_DAYS,
+  ARTIFACT_SHARE_DELETE_TOKEN_PATTERN,
+  ARTIFACT_SHARE_FINAL_HEADER,
+  ARTIFACT_SHARE_ID_PATTERN,
   ARTIFACT_SHARE_PASSCODE_ALPHABET,
   ARTIFACT_SHARE_PASSCODE_LENGTH,
   ARTIFACT_SHARE_THEME_COLORS,
   ARTIFACT_SHARE_THEME_COLOR_PATTERN,
   artifactShareThemeSchema,
 } from '../../../packages/contracts/src/artifact-shares.ts';
-import { EXPIRY_DAYS, MAX_HTML_BYTES, MAX_TITLE_CHARS } from './api.ts';
-import { PASSCODE_ALPHABET, PASSCODE_LENGTH } from './crypto.ts';
+import { shareIdForToken } from '../../../apps/server/src/artifacts/share-id.ts';
+import {
+  DELETE_TOKEN,
+  EXPIRY_DAYS,
+  FINAL_HEADER,
+  MAX_HTML_BYTES,
+  MAX_TITLE_CHARS,
+  SHARE_ID,
+} from './api.ts';
+import { PASSCODE_ALPHABET, PASSCODE_LENGTH, randomToken, shareIdFor } from './crypto.ts';
 import { THEME_COLOR, THEME_COLORS, THEME_SCHEMES } from './theme.ts';
 
 describe('the worker and the app agree on the share contract', () => {
+  it('uses the same id and delete token shapes', () => {
+    expect(SHARE_ID.source).toBe(ARTIFACT_SHARE_ID_PATTERN.source);
+    expect(DELETE_TOKEN.source).toBe(ARTIFACT_SHARE_DELETE_TOKEN_PATTERN.source);
+  });
+
+  it('gives the same id for the same delete token', async () => {
+    const token = 'Tk4_-Tk4_-Tk4_-Tk4_-Tk4_-Tk4_-Tk4_-Tk4_-Tk4';
+    expect(await shareIdFor(token)).toBe('D65s4UWzkH75nfvCxUTMnw');
+    expect(shareIdForToken(token)).toBe('D65s4UWzkH75nfvCxUTMnw');
+    for (let index = 0; index < 20; index++) {
+      const random = randomToken(32);
+      const id = await shareIdFor(random);
+      expect(shareIdForToken(random)).toBe(id);
+      expect(id).toMatch(SHARE_ID);
+    }
+  });
+
+  it('names the same header for a 404 that is final', () => {
+    expect(FINAL_HEADER).toBe(ARTIFACT_SHARE_FINAL_HEADER);
+  });
+
   it('uses the same passcode alphabet and length', () => {
     expect(PASSCODE_ALPHABET).toBe(ARTIFACT_SHARE_PASSCODE_ALPHABET);
     expect(PASSCODE_LENGTH).toBe(ARTIFACT_SHARE_PASSCODE_LENGTH);

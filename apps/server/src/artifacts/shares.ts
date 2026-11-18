@@ -1,7 +1,5 @@
-import { randomBytes, randomInt } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import {
-  ARTIFACT_SHARE_DELETE_TOKEN_BYTES,
-  ARTIFACT_SHARE_ID_BYTES,
   ARTIFACT_SHARE_PASSCODE_ALPHABET,
   ARTIFACT_SHARE_PASSCODE_LENGTH,
   type ArtifactShare,
@@ -14,12 +12,14 @@ import { withTransaction, type Db, type DbClient, type Queryable } from '../pers
 import { shareSecret, type SecretStore } from '../setup/secrets.ts';
 import { readVersionFile } from './files.ts';
 import { shareDocument } from './share-document.ts';
+import { newShareKey } from './share-id.ts';
 import {
   removeShare,
   sharePageUrl,
   ShareServiceError,
   ShareUnansweredError,
   uploadShare,
+  type SharedPage,
   type ShareService,
 } from './share-service.ts';
 import {
@@ -27,16 +27,21 @@ import {
   heldShare,
   insertPendingShare,
   liveShare,
+  lockPendingShare,
   markShareLive,
   removeExpiredShare,
   type PendingShare,
 } from './share-store.ts';
 import type { StoredVersion } from './store.ts';
 
-export interface ShareDeps {
+export interface StopDeps {
   db: Db;
   secrets: SecretStore;
   service: ShareService;
+}
+
+export interface ShareDeps extends StopDeps {
+  origin: string;
   chatFolders: string;
 }
 
@@ -118,28 +123,43 @@ interface TakedownDeps {
 
 async function removeRemote(
   deps: TakedownDeps,
-  shareId: string,
-  trustMissing: boolean,
+  page: SharedPage,
+  uploadMayArrive: boolean,
 ): Promise<void> {
-  const token = await deps.secrets.get(shareSecret(shareId));
-  if (!token) throw new ShareKeyMissingError(`No delete key for shared page ${shareId}`);
-  const answer = await removeShare(deps.service, shareId, token);
-  if (answer === 404 && !trustMissing) {
+  const token = await deps.secrets.get(shareSecret(page.shareId));
+  if (!token) throw new ShareKeyMissingError(`No delete key for shared page ${page.shareId}`);
+  const answer = await removeShare(deps.service, page, token);
+  if (answer === 'not_found' && uploadMayArrive) {
     throw new ShareServiceError('The share service could not confirm the page is gone.');
   }
 }
 
 export async function takeDown(
   deps: TakedownDeps,
-  shareId: string,
-  trustMissing = true,
+  page: SharedPage,
+  uploadMayArrive = false,
 ): Promise<void> {
-  await removeRemote(deps, shareId, trustMissing);
-  await deleteShare(deps.db, shareId);
-  await deps.secrets.delete(shareSecret(shareId));
+  await removeRemote(deps, page, uploadMayArrive);
+  await deleteShare(deps.db, page.shareId);
+  await deps.secrets.delete(shareSecret(page.shareId));
 }
 
-async function dropExpired(deps: ShareDeps, stored: StoredVersion): Promise<void> {
+export async function takeDownPending(
+  deps: TakedownDeps & { db: Db },
+  shareId: string,
+): Promise<boolean> {
+  const claimed = await withTransaction(deps.db, async (client) => {
+    const url = await lockPendingShare(client, shareId);
+    if (url === null) return false;
+    await removeRemote(deps, { shareId, url }, true);
+    await deleteShare(client, shareId);
+    return true;
+  });
+  if (claimed) await deps.secrets.delete(shareSecret(shareId));
+  return claimed;
+}
+
+async function dropExpired(deps: StopDeps, stored: StoredVersion): Promise<void> {
   const expired = await removeExpiredShare(deps.db, stored.artifactId, stored.version);
   if (expired) await deps.secrets.delete(shareSecret(expired));
 }
@@ -153,9 +173,10 @@ async function clearHeld(deps: ShareDeps, stored: StoredVersion): Promise<void> 
     return;
   }
   if (!held.stale) throw new ShareRefusedError(STILL_REMOVING);
-  await takeDown(deps, held.shareId).catch(() => {
+  const cleared = await takeDownPending(deps, held.shareId).catch(() => {
     throw new ShareRefusedError(STILL_REMOVING);
   });
+  if (!cleared) await clearHeld(deps, stored);
 }
 
 async function claim(deps: ShareDeps, stored: StoredVersion, pending: PendingShare) {
@@ -175,8 +196,8 @@ async function upload(
   if (text === null) throw new ShareRefusedError('This version could not be read.');
   const html = shareDocument(stored.kind, stored.title, text);
   const passcode = choice.passcode ? newPasscode() : null;
-  const id = randomBytes(ARTIFACT_SHARE_ID_BYTES).toString('base64url');
-  const deleteToken = randomBytes(ARTIFACT_SHARE_DELETE_TOKEN_BYTES).toString('base64url');
+  const { id, deleteToken } = newShareKey();
+  const page = { shareId: id, url: sharePageUrl(deps.origin, id) };
   try {
     await deps.secrets.set(shareSecret(id), deleteToken);
   } catch {
@@ -186,7 +207,7 @@ async function upload(
     shareId: id,
     artifactId: stored.artifactId,
     version: stored.version,
-    url: sharePageUrl(deps.service, id),
+    url: page.url,
     expiresAt: new Date(Date.now() + choice.expiresInDays * DAY_MS + PENDING_MARGIN_MS),
     hasPasscode: passcode !== null,
   }).catch(async (error: unknown) => {
@@ -194,7 +215,7 @@ async function upload(
     throw error;
   });
   try {
-    const expiresAt = await uploadShare(deps.service, {
+    const expiresAt = await uploadShare(deps.service, deps.origin, {
       id,
       deleteToken,
       title: stored.title,
@@ -211,8 +232,8 @@ async function upload(
     });
     return { share, passcode };
   } catch (error) {
-    const trustMissing = !(error instanceof ShareUnansweredError);
-    await takeDown(deps, id, trustMissing).catch(() => undefined);
+    const uploadMayArrive = error instanceof ShareUnansweredError;
+    await takeDown(deps, page, uploadMayArrive).catch(() => undefined);
     throw error;
   }
 }
@@ -256,14 +277,14 @@ function endDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'long' });
 }
 
-export async function stopShare(deps: ShareDeps, stored: StoredVersion): Promise<boolean> {
+export async function stopShare(deps: StopDeps, stored: StoredVersion): Promise<boolean> {
   const share = await liveShare(deps.db, stored.artifactId, stored.version);
   if (!share) {
     await dropExpired(deps, stored);
     return false;
   }
   try {
-    await removeRemote(deps, share.shareId, true);
+    await removeRemote(deps, share, false);
   } catch (error) {
     if (!(error instanceof ShareKeyMissingError)) throw error;
     throw new ShareRefusedError(

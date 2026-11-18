@@ -101,6 +101,12 @@ test('an agent publishes an artifact that opens beside the chat, sandboxed, with
   await listed.click();
   await expect(pane).toBeVisible();
   await expect(versions).toHaveText('v2');
+
+  await page.getByRole('button', { name: 'Show context rail' }).click();
+  await expect(rail).toHaveClass(/floating/);
+  await listed.press('Enter');
+  await expect(rail).toHaveCount(0);
+  await expect(pane.locator('.art-title')).toBeFocused();
 });
 
 test('a Markdown artifact renders as text and an SVG one as an image', async ({ page }) => {

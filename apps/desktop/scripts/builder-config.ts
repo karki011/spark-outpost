@@ -135,9 +135,14 @@ export function releaseProblems(env: Env, archs: MacArch[]): string[] {
       `Slack sign-in is missing. Set ${SLACK_CLIENT_ID_ENV} (or SLACK_CLIENT_ID in apps/desktop/scripts/builder-config.ts) to the Slack app's client ID.`,
     );
   }
-  if (!packagedShareUrl(env)) {
+  const shareUrl = packagedShareUrl(env);
+  if (!shareUrl) {
     problems.push(
       `Artifact sharing is missing. Set ${SHARE_URL_ENV} (or SHARE_URL in apps/desktop/scripts/builder-config.ts) to the share worker's https origin, or Share… stays hidden.`,
+    );
+  } else if (!shareUrl.startsWith('https://')) {
+    problems.push(
+      `Artifact sharing points at this computer (${shareUrl}). A release needs the share worker's https origin in ${SHARE_URL_ENV}; an http loopback address is for local builds only.`,
     );
   }
   if (!RELEASE_ARCHS.every((arch) => archs.includes(arch))) {

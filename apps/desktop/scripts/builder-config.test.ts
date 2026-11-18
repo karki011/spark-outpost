@@ -276,6 +276,15 @@ describe('releaseProblems', () => {
     ]);
   });
 
+  it('refuses a release whose share service is on this computer', () => {
+    for (const origin of ['http://127.0.0.1:8787', 'http://localhost:8787']) {
+      const problems = releaseProblems({ ...ready, SPARK_SHARE_URL: origin }, ['x64', 'arm64']);
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toMatch(/^Artifact sharing points at this computer .*https origin/);
+      expect(packagedShareUrl({ SPARK_SHARE_URL: origin })).toBe(origin);
+    }
+  });
+
   it('refuses a release without Google Calendar or Slack sign-in', () => {
     const problems = releaseProblems(
       { ...ready, SPARK_GOOGLE_CLIENT_FILE: ' ', SPARK_SLACK_CLIENT_ID: '' },

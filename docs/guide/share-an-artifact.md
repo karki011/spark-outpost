@@ -34,6 +34,8 @@ Deleting the chat or artifact takes its pages down too, as does a failed share. 
 
 The page was already scrubbed of secret values when the agent made it. An SVG is sent inside a page that shows it as an image, so its scripts don't run. Markdown artifacts can't be shared yet.
 
-Each version gets one link. To change its passcode or end date, stop sharing and share again. Only your click shares: agents, Ask Spark and [paired devices](use-your-phone.md) can't, and the button is hidden in a build without a share service.
+Each version gets one link. To change its passcode or end date, stop sharing and share again. Only your click shares: agents, Ask Spark and [paired devices](use-your-phone.md) can't.
+
+Without a share service, only **Shared** shows, to stop a live link.
 
 **Next:** [Review, keep or revert changes](review-changes.md)

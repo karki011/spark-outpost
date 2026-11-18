@@ -1,8 +1,6 @@
 .ashare {
   gap: 12px;
   max-width: 460px;
-  max-height: 100%;
-  overflow: auto;
 }
 
 .ashare h2 {

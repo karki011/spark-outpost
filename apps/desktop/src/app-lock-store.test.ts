@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -57,5 +57,26 @@ describe('the privacy screen file', () => {
     expect(readAppLockRecord(file)).toEqual(record);
     expect((await stat(file)).mode & 0o777).toBe(0o600);
     expect(await readFile(file, 'utf8')).not.toContain('042917');
+  });
+
+  it('saves at the same moment each land whole and leave only the file', async () => {
+    const file = await tempFile();
+    const records = await Promise.all(
+      ['042917', '135790', '246810', '864209'].map(async (code, index) => ({
+        settings: { ...DEFAULT_APP_LOCK_SETTINGS, enabled: index % 2 === 0 },
+        code: await hashCode(code),
+      })),
+    );
+    await Promise.all(records.map((record) => saveAppLockRecord(file, record)));
+    expect(records).toContainEqual(readAppLockRecord(file));
+    expect(await readdir(path.dirname(file))).toEqual([path.basename(file)]);
+  });
+
+  it('a save that fails leaves no temporary file behind', async () => {
+    const file = await tempFile();
+    await mkdir(file, { recursive: true });
+    const record = { settings: DEFAULT_APP_LOCK_SETTINGS, code: null };
+    await expect(saveAppLockRecord(file, record)).rejects.toThrow();
+    expect(await readdir(path.dirname(file))).toEqual([path.basename(file)]);
   });
 });

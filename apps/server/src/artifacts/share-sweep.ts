@@ -1,16 +1,11 @@
-import type { Queryable } from '../persistence/db.ts';
+import type { Db } from '../persistence/db.ts';
 import { shareSecret, type SecretStore } from '../setup/secrets.ts';
 import { SHARE_TIMEOUT_MS, type ShareService } from './share-service.ts';
-import {
-  deleteShare,
-  expiredShareIds,
-  orphanShareIds,
-  stalePendingShareIds,
-} from './share-store.ts';
-import { takeDown } from './shares.ts';
+import { deleteShare, expiredShareIds, orphanShares, stalePendingShareIds } from './share-store.ts';
+import { takeDown, takeDownPending } from './shares.ts';
 
 export interface ShareSweepDeps {
-  db: Queryable;
+  db: Db;
   secrets: SecretStore;
   service: ShareService | null;
 }
@@ -30,9 +25,13 @@ export async function sweepShares(deps: ShareSweepDeps): Promise<void> {
     });
   }
   if (!service) return;
-  const unwanted = [...(await orphanShareIds(db)), ...(await stalePendingShareIds(db))];
-  for (const id of unwanted) {
-    await settle(id, () => takeDown({ db, secrets, service }, id));
+  for (const page of await orphanShares(db)) {
+    await settle(page.shareId, () => takeDown({ db, secrets, service }, page));
+  }
+  for (const id of await stalePendingShareIds(db)) {
+    await settle(id, async () => {
+      await takeDownPending({ db, secrets, service }, id);
+    });
   }
 }
 
@@ -59,7 +58,7 @@ export function shareSweeper(deps: ShareSweepDeps): () => Promise<void> {
 }
 
 export interface ShareWiring {
-  shareService: ShareService | null;
+  shareService: ShareService;
   sweepShares: () => Promise<void>;
 }
 
@@ -67,6 +66,6 @@ export function shareWiring(
   deps: Omit<ShareSweepDeps, 'service'> & { origin: string | null },
 ): ShareWiring {
   const { origin, ...rest } = deps;
-  const shareService = origin ? { origin, fetch, timeoutMs: SHARE_TIMEOUT_MS } : null;
+  const shareService = { origin, fetch, timeoutMs: SHARE_TIMEOUT_MS };
   return { shareService, sweepShares: shareSweeper({ ...rest, service: shareService }) };
 }

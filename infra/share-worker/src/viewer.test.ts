@@ -110,6 +110,21 @@ describe('content', () => {
     expectCommonHeaders(response);
   });
 
+  it('serves the content to a frame and not to a tab opened on its address', async () => {
+    const fake = fakeEnv();
+    const { id } = await create(fake);
+    const src = frameSrc((await shell(fake, id)).html);
+    const as = (destination: string) =>
+      call(fake, src, { headers: { 'sec-fetch-dest': destination } }, START + 1000);
+
+    expect((await as('iframe')).status).toBe(200);
+    for (const destination of ['document', 'empty', 'frame', 'embed', 'object']) {
+      const response = await as(destination);
+      expect(response.status).toBe(404);
+      expect(await response.text()).not.toContain('Plan');
+    }
+  });
+
   it('refuses a missing, expired, tampered or other-share token', async () => {
     const fake = fakeEnv();
     const first = await create(fake);
@@ -133,6 +148,21 @@ describe('content', () => {
     const src = frameSrc((await shell(other, id)).html);
 
     expect((await call(fake, src)).status).toBe(404);
+  });
+
+  it('reads the bucket once for the shell and once for the content', async () => {
+    const fake = fakeEnv();
+    const { id } = await create(fake);
+    fake.bucket.reads.length = 0;
+
+    const { response, html } = await shell(fake, id);
+    expect(response.status).toBe(200);
+    expect(fake.bucket.reads).toEqual([`head shares/${id}`]);
+
+    fake.bucket.reads.length = 0;
+    const content = await call(fake, frameSrc(html), {}, START + 1000);
+    expect(await content.text()).toBe(VALID_CREATE.html);
+    expect(fake.bucket.reads).toEqual([`get shares/${id}`]);
   });
 });
 

@@ -1,7 +1,9 @@
 import {
   ARTIFACT_SHARE_DELETE_TOKEN_PATTERN,
+  ARTIFACT_SHARE_FINAL_HEADER,
   ARTIFACT_SHARE_ID_PATTERN,
 } from '@spark-outpost/contracts';
+import { createHash } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 export interface ReceivedShare {
@@ -23,7 +25,10 @@ export interface StoredShare {
 
 export interface FakeShareService {
   shares: Map<string, StoredShare>;
+  retired: Set<string>;
+  retires: boolean;
   posts: ReceivedShare[];
+  answered: { method: string; id: string; status: number }[];
   deletes: { id: string; authorization: string | undefined }[];
   answer:
     | ((
@@ -54,6 +59,11 @@ async function readBody(req: IncomingMessage): Promise<string> {
   return text;
 }
 
+function idGivenBy(deleteToken: string): string {
+  const digest = createHash('sha256').update(`spark-share-id:${deleteToken}`).digest();
+  return digest.subarray(0, 16).toString('base64url');
+}
+
 const SHARE_PATH = /^\/v1\/shares\/([A-Za-z0-9_-]+)$/;
 
 export const BUSY_TITLE = 'Busy';
@@ -61,7 +71,10 @@ export const BUSY_TITLE = 'Busy';
 export function fakeShareService(): FakeShareService {
   const service: FakeShareService = {
     shares: new Map(),
+    retired: new Set(),
+    retires: true,
     posts: [],
+    answered: [],
     deletes: [],
     answer: null,
     async handle(req, res) {
@@ -72,41 +85,50 @@ export function fakeShareService(): FakeShareService {
         const received = { ...body, keys: Object.keys(body).sort(), headers: req.headers };
         service.posts.push(received);
         const share = { id: body.id, deleteToken: body.deleteToken, received };
-        const custom = service.answer?.(share, origin);
-        if (custom) {
-          send(res, custom.status, custom.body, custom.headers);
+        const reply = (status: number, answer: unknown, headers?: Record<string, string>) => {
+          service.answered.push({ method: 'POST', id: String(body.id), status });
+          send(res, status, answer, headers);
           return true;
-        }
+        };
+        const custom = service.answer?.(share, origin);
+        if (custom) return reply(custom.status, custom.body, custom.headers);
         if (
           !ARTIFACT_SHARE_ID_PATTERN.test(String(body.id)) ||
-          !ARTIFACT_SHARE_DELETE_TOKEN_PATTERN.test(String(body.deleteToken))
+          !ARTIFACT_SHARE_DELETE_TOKEN_PATTERN.test(String(body.deleteToken)) ||
+          idGivenBy(body.deleteToken) !== body.id
         ) {
-          send(res, 400, { error: 'bad_request' });
-          return true;
+          return reply(400, { error: 'bad_request' });
         }
         const known = service.shares.get(share.id);
-        if (known && known.deleteToken !== share.deleteToken) {
-          send(res, 409, { error: 'conflict' });
-          return true;
+        if (service.retired.has(share.id) || (known && known.deleteToken !== share.deleteToken)) {
+          return reply(409, { error: 'conflict' });
         }
         if (!known) service.shares.set(share.id, share);
         const expiresAt = new Date(Date.now() + body.expiresInDays * 86_400_000).toISOString();
-        send(res, 201, { id: share.id, url: `${origin}/a/${share.id}`, expiresAt });
-        return true;
+        return reply(201, { id: share.id, url: `${origin}/a/${share.id}`, expiresAt });
       }
       const match = SHARE_PATH.exec(path);
       if (req.method === 'DELETE' && match) {
         const id = match[1]!;
         const authorization = req.headers.authorization;
         service.deletes.push({ id, authorization });
-        const share = service.shares.get(id);
-        if (!share || authorization !== `Bearer ${share.deleteToken}`) {
-          send(res, 404, { error: 'not_found' });
+        const reply = (status: number, headers?: Record<string, string>) => {
+          service.answered.push({ method: 'DELETE', id, status });
+          send(res, status, status === 204 ? null : { error: 'not_found' }, headers);
           return true;
+        };
+        const share = service.shares.get(id);
+        const token = /^Bearer (.+)$/.exec(authorization ?? '')?.[1];
+        if (token === undefined) return reply(404);
+        if (!share && !service.retires) return reply(404);
+        if (!share) {
+          if (idGivenBy(token) === id) service.retired.add(id);
+          return reply(404, { [ARTIFACT_SHARE_FINAL_HEADER]: '1' });
         }
+        if (token !== share.deleteToken) return reply(404);
         service.shares.delete(id);
-        send(res, 204, null);
-        return true;
+        if (service.retires) service.retired.add(id);
+        return reply(204);
       }
       return false;
     },

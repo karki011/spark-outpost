@@ -7,16 +7,28 @@ import {
   randomToken,
   sameText,
   sha256,
+  shareIdFor,
 } from './crypto.ts';
 import type { ShareEnv } from './env.ts';
 import { emptyResponse, jsonError, jsonResponse } from './responses.ts';
-import { existingShare, findShare, putNewShare, removeShare, type ShareRecord } from './storage.ts';
+import {
+  discardShare,
+  existingShare,
+  findShare,
+  isRetired,
+  putNewShare,
+  removeShare,
+  retireId,
+  type ShareRecord,
+} from './storage.ts';
 import { parseTheme, type ShareTheme } from './theme.ts';
 
 export const MAX_TITLE_CHARS = 120;
 export const MAX_HTML_BYTES = 2_097_152;
 export const MAX_CREATE_BODY_BYTES = MAX_HTML_BYTES * 2 + 16_384;
 export const CREATE_LIMIT_PER_HOUR = 20;
+export const RETIRE_LIMIT_PER_HOUR = 60;
+export const FINAL_HEADER = 'x-share-final';
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
@@ -83,6 +95,10 @@ function parseCreate(text: string): Parsed {
   };
 }
 
+async function ownsId(deleteToken: string, id: string): Promise<boolean> {
+  return sameText(await shareIdFor(deleteToken), id);
+}
+
 async function storedPasscode(code: string | null) {
   if (code === null) return null;
   const salt = randomToken(16);
@@ -96,16 +112,18 @@ async function storeShare(
   html: Uint8Array,
   now: number,
 ): Promise<ShareRecord | 'conflict'> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    if (await putNewShare(env, record, html)) return record;
-    const existing = await existingShare(env, record.id, now);
-    if (existing.state === 'unreadable') return 'conflict';
-    if (existing.state === 'live') {
-      const sameToken = sameText(existing.record.deleteTokenHash, record.deleteTokenHash);
-      return sameToken ? existing.record : 'conflict';
-    }
-    if (existing.state === 'expired') await removeShare(env, existing.record);
+  if (await isRetired(env, record.id)) return 'conflict';
+  if (await putNewShare(env, record, html)) {
+    if (!(await isRetired(env, record.id))) return record;
+    await discardShare(env, record.id);
+    return 'conflict';
   }
+  const existing = await existingShare(env, record.id, now);
+  if (existing.state === 'expired') await removeShare(env, existing.record);
+  if (existing.state !== 'live') return 'conflict';
+  if (!sameText(existing.record.deleteTokenHash, record.deleteTokenHash)) return 'conflict';
+  if (!(await isRetired(env, record.id))) return existing.record;
+  await discardShare(env, record.id);
   return 'conflict';
 }
 
@@ -128,6 +146,7 @@ export async function createShare(request: Request, env: ShareEnv, now: number) 
   const parsed = parseCreate(body.text);
   if (parsed === 'too_large') return jsonError(413, 'too_large');
   if (parsed === 'invalid_request') return jsonError(400, 'invalid_request');
+  if (!(await ownsId(parsed.deleteToken, parsed.id))) return jsonError(400, 'invalid_request');
   const stored = await storeShare(
     env,
     {
@@ -148,13 +167,30 @@ export async function createShare(request: Request, env: ShareEnv, now: number) 
   return jsonResponse(201, { id, url, expiresAt });
 }
 
+async function retireUnstored(request: Request, env: ShareEnv, id: string, now: number) {
+  if (await isRetired(env, id)) return true;
+  const allowed = await allowHit(
+    env.COUNTERS,
+    `retire:${clientAddress(request)}`,
+    now,
+    RETIRE_LIMIT_PER_HOUR,
+    HOUR_MS,
+  );
+  if (allowed) await retireId(env, id);
+  return allowed;
+}
+
 export async function deleteShare(request: Request, env: ShareEnv, id: string, now: number) {
   const token = BEARER.exec(request.headers.get('authorization') ?? '')?.[1] ?? null;
-  const presented = await sha256(token ?? '');
-  const record = await findShare(env, id, now);
-  if (!record || token === null || !sameText(presented, record.deleteTokenHash)) {
-    return jsonError(404, 'not_found');
+  if (token === null) return jsonError(404, 'not_found');
+  let record = await findShare(env, id, now);
+  if (!record && (await ownsId(token, id))) {
+    if (!(await retireUnstored(request, env, id, now))) return jsonError(429, 'rate_limited');
+    record = await findShare(env, id, now);
   }
+  if (!record) return jsonError(404, 'not_found', { [FINAL_HEADER]: '1' });
+  if (!sameText(await sha256(token), record.deleteTokenHash)) return jsonError(404, 'not_found');
+  await retireId(env, id);
   await removeShare(env, record);
   return emptyResponse(204);
 }

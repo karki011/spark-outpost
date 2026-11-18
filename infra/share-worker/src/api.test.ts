@@ -5,9 +5,11 @@ import {
   call,
   create,
   fakeEnv,
+  freshIds,
   ORIGIN,
   postForm,
   postJson,
+  remove,
   START,
   VALID_CREATE,
   type FakeEnv,
@@ -20,14 +22,8 @@ function metadataOf(fake: FakeEnv, id: string) {
   return fake.bucket.objects.get(`shares/${id}`)?.options.customMetadata;
 }
 
-function remove(fake: FakeEnv, id: string, token: string | null, now = START) {
-  const headers: Record<string, string> =
-    token === null ? {} : { authorization: `Bearer ${token}` };
-  return call(fake, `/v1/shares/${id}`, { method: 'DELETE', headers }, now);
-}
-
 describe('POST /v1/shares', () => {
-  it('stores the page at the id the client chose and answers with its link', async () => {
+  it('stores the page at the id its delete token gives and answers with its link', async () => {
     const fake = fakeEnv();
     const response = await postJson(fake, VALID_CREATE);
     const body = await response.json();
@@ -70,7 +66,23 @@ describe('POST /v1/shares', () => {
     expect(fake.bucket.objects.get(`shares/${first.id}`)?.value).toBe(VALID_CREATE.html);
   });
 
-  it('answers 409 for a taken id with another token and changes nothing', async () => {
+  it('refuses an id that its delete token does not give and writes nothing', async () => {
+    const fake = fakeEnv();
+    const other = await freshIds();
+    const pairs = [
+      { id: other.id, deleteToken: VALID_CREATE.deleteToken },
+      { id: VALID_CREATE.id, deleteToken: other.deleteToken },
+      { id: 'Ab3_-Ab3_-Ab3_-Ab3_-Ab', deleteToken: VALID_CREATE.deleteToken },
+    ];
+    for (const pair of pairs) {
+      const response = await postJson(fake, { ...VALID_CREATE, ...pair });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'invalid_request' });
+    }
+    expect(fake.bucket.objects.size).toBe(0);
+  });
+
+  it('refuses a taken id with another token and changes nothing', async () => {
     const fake = fakeEnv();
     await postJson(fake, VALID_CREATE);
     const before = structuredClone(fake.bucket.objects.get(`shares/${VALID_CREATE.id}`));
@@ -80,9 +92,9 @@ describe('POST /v1/shares', () => {
       html: '<p>takeover</p>',
     });
 
-    expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({ error: 'conflict' });
+    expect(response.status).toBe(400);
     expect(fake.bucket.objects.get(`shares/${VALID_CREATE.id}`)).toEqual(before);
+    expect(fake.bucket.objects.size).toBe(1);
   });
 
   it('answers 409 for a taken id whose stored record cannot be read', async () => {
@@ -92,22 +104,108 @@ describe('POST /v1/shares', () => {
     expect(fake.bucket.objects.get(`shares/${VALID_CREATE.id}`)?.value).toBe('<p>odd</p>');
   });
 
-  it('replaces an expired share at the same id', async () => {
+  it('never gives an expired id to another uploader and leaves no marker for it', async () => {
     const fake = fakeEnv();
     await postJson(fake, { ...VALID_CREATE, expiresInDays: 1 });
     const later = START + 2 * DAY;
-    const response = await postJson(
-      fake,
-      { ...VALID_CREATE, deleteToken: 'Z'.repeat(43), html: '<p>new</p>' },
-      { now: later },
-    );
+    const takeover = { ...VALID_CREATE, deleteToken: 'Z'.repeat(43), html: '<p>new</p>' };
 
-    expect(response.status).toBe(201);
-    expect((await response.json()).expiresAt).toBe(new Date(later + 7 * DAY).toISOString());
-    expect(fake.bucket.objects.get(`shares/${VALID_CREATE.id}`)?.value).toBe('<p>new</p>');
-    expect(metadataOf(fake, VALID_CREATE.id as string)?.deleteTokenHash).toBe(
-      createHash('sha256').update('Z'.repeat(43)).digest('base64url'),
+    expect((await postJson(fake, takeover, { now: later })).status).toBe(400);
+    expect((await call(fake, `/a/${VALID_CREATE.id}`, {}, later)).status).toBe(404);
+    expect((await postJson(fake, takeover, { now: later })).status).toBe(400);
+    expect(fake.bucket.objects.size).toBe(0);
+  });
+
+  it('lets only the key holder use an expired id again', async () => {
+    const fake = fakeEnv();
+    await postJson(fake, { ...VALID_CREATE, expiresInDays: 1 });
+    const later = START + 2 * DAY;
+
+    expect((await postJson(fake, VALID_CREATE, { now: later })).status).toBe(409);
+    const again = await postJson(fake, { ...VALID_CREATE, html: '<p>mine</p>' }, { now: later });
+    expect(again.status).toBe(201);
+    expect(fake.bucket.objects.get(`shares/${VALID_CREATE.id}`)?.value).toBe('<p>mine</p>');
+  });
+
+  it('never gives a deleted id to another uploader, or back to the first one', async () => {
+    const fake = fakeEnv();
+    await postJson(fake, VALID_CREATE);
+    await remove(fake, VALID_CREATE.id as string, VALID_CREATE.deleteToken as string);
+    const takeover = { ...VALID_CREATE, deleteToken: 'Z'.repeat(43), html: '<p>new</p>' };
+
+    const response = await postJson(fake, takeover);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'invalid_request' });
+    const original = await postJson(fake, VALID_CREATE);
+    expect(original.status).toBe(409);
+    expect(await original.json()).toEqual({ error: 'conflict' });
+    expect((await call(fake, `/a/${VALID_CREATE.id}`)).status).toBe(404);
+    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${VALID_CREATE.id}`]);
+  });
+
+  it('refuses a create that lands after a delete of the same id', async () => {
+    const fake = fakeEnv();
+    const missing = await remove(
+      fake,
+      VALID_CREATE.id as string,
+      VALID_CREATE.deleteToken as string,
     );
+    expect(missing.status).toBe(404);
+
+    expect((await postJson(fake, VALID_CREATE)).status).toBe(409);
+    expect((await call(fake, `/a/${VALID_CREATE.id}`)).status).toBe(404);
+    expect(fake.bucket.objects.has(`shares/${VALID_CREATE.id}`)).toBe(false);
+  });
+
+  it('takes back a page stored while its id was being retired', async () => {
+    const fake = fakeEnv();
+    const head = fake.bucket.head.bind(fake.bucket);
+    let checks = 0;
+    fake.bucket.head = async (key) => {
+      if (key === `gone/${VALID_CREATE.id}`) {
+        checks += 1;
+        if (checks === 2) await fake.bucket.put(key, '');
+      }
+      return head(key);
+    };
+
+    expect((await postJson(fake, VALID_CREATE)).status).toBe(409);
+    expect(checks).toBe(2);
+    expect(fake.bucket.objects.has(`shares/${VALID_CREATE.id}`)).toBe(false);
+  });
+
+  it('refuses a repeat that finds a page written after its id was retired', async () => {
+    const fake = fakeEnv();
+    const put = fake.bucket.put.bind(fake.bucket);
+    let crossed = false;
+    fake.bucket.put = async (key, value, options) => {
+      if (key === `shares/${VALID_CREATE.id}` && !crossed) {
+        crossed = true;
+        await put(`gone/${VALID_CREATE.id}`, '');
+        await put(key, value, options);
+      }
+      return put(key, value, options);
+    };
+
+    const response = await postJson(fake, VALID_CREATE);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'conflict' });
+    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${VALID_CREATE.id}`]);
+    expect((await call(fake, `/a/${VALID_CREATE.id}`)).status).toBe(404);
+  });
+
+  it('refuses a retired id before writing anything under it', async () => {
+    const fake = fakeEnv();
+    await fake.bucket.put(`gone/${VALID_CREATE.id}`, '');
+    const put = fake.bucket.put.bind(fake.bucket);
+    const written: string[] = [];
+    fake.bucket.put = async (key, value, options) => {
+      written.push(key);
+      return put(key, value, options);
+    };
+
+    expect((await postJson(fake, VALID_CREATE)).status).toBe(409);
+    expect(written).toEqual([]);
   });
 
   it.each([
@@ -219,39 +317,6 @@ describe('POST /v1/shares', () => {
   });
 });
 
-describe('DELETE /v1/shares/:id', () => {
-  it('deletes with the right token and then answers 404', async () => {
-    const fake = fakeEnv();
-    const created = await create(fake);
-
-    expect((await remove(fake, created.id, created.deleteToken)).status).toBe(204);
-    expect(fake.bucket.objects.size).toBe(0);
-    expect((await remove(fake, created.id, created.deleteToken)).status).toBe(404);
-    expect((await call(fake, `/a/${created.id}`)).status).toBe(404);
-  });
-
-  it('answers 404 for a wrong or missing token and keeps the share', async () => {
-    const fake = fakeEnv();
-    const created = await create(fake);
-    const other = await create(fake);
-
-    const wrong = await remove(fake, created.id, other.deleteToken);
-    expect(wrong.status).toBe(404);
-    expect(await wrong.json()).toEqual({ error: 'not_found' });
-    expect((await remove(fake, created.id, null)).status).toBe(404);
-    expect((await remove(fake, 'A'.repeat(22), created.deleteToken)).status).toBe(404);
-    expect(fake.bucket.objects.has(`shares/${created.id}`)).toBe(true);
-  });
-
-  it('only accepts DELETE', async () => {
-    const fake = fakeEnv();
-    const created = await create(fake);
-    const response = await call(fake, `/v1/shares/${created.id}`, { method: 'GET' });
-    expect(response.status).toBe(405);
-    expect(response.headers.get('allow')).toBe('DELETE');
-  });
-});
-
 describe('expiry', () => {
   it('serves nothing after expiry and deletes the object on read', async () => {
     const fake = fakeEnv();
@@ -260,7 +325,7 @@ describe('expiry', () => {
 
     expect((await call(fake, `/a/${id}`, {}, START + DAY - 1)).status).toBe(200);
     expect((await call(fake, `/a/${id}`, {}, START + DAY)).status).toBe(404);
-    expect(fake.bucket.objects.has(`shares/${id}`)).toBe(false);
+    expect(fake.bucket.objects.size).toBe(0);
   });
 
   it('deletes expired shares across every page in the daily run', async () => {
@@ -282,9 +347,8 @@ describe('expiry', () => {
     vi.restoreAllMocks();
 
     const keys = [...fake.bucket.objects.keys()].sort();
+    expect(short).toHaveLength(3);
     expect(keys).toEqual([`shares/${long.id}`, 'reports/x/1-a'].sort());
-    expect(short.every(({ id }) => !keys.includes(`shares/${id}`))).toBe(true);
-    expect(keys).not.toContain(`shares/${locked.id}`);
     expect(fake.storages.get(`attempts:${locked.id}`)?.values.size).toBe(0);
   });
 });

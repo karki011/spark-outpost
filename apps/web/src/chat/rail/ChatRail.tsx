@@ -13,6 +13,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import {
   shownModelName,
+  type ArtifactPage,
   type ConversationDetail,
   type InvolvementLevel,
   type Project,
@@ -35,6 +36,7 @@ import { useChatWorkspace } from '../project/use-chat-workspace.ts';
 import { providerName } from '../provider-name.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { primaryPull } from '../pull-request/pull-request-model.ts';
+import { openArtifact } from '../artifacts/artifact-pane-store.ts';
 import { RailArtifacts } from './RailArtifacts.tsx';
 import { RailCrew } from './RailCrew.tsx';
 import { RailPorts } from './RailPorts.tsx';
@@ -230,6 +232,11 @@ function OpenRail({
     if (action.kind === 'changes') onChanges();
   };
 
+  const showArtifact = (page: ArtifactPage) => {
+    if (overlay) onClose(false);
+    openArtifact(conversationId, page.id, { focus: overlay });
+  };
+
   return (
     <section
       ref={railRef}
@@ -248,13 +255,7 @@ function OpenRail({
       </div>
       {task && <RailTodo task={task} onOpen={openTodo} />}
       {crew.length > 0 && <RailCrew conversationId={conversationId} agents={crew} mode={mode} />}
-      {artifacts.length > 0 && (
-        <RailArtifacts
-          chatId={conversationId}
-          pages={artifacts}
-          onOpen={() => overlay && onClose(false)}
-        />
-      )}
+      {artifacts.length > 0 && <RailArtifacts pages={artifacts} onOpen={showArtifact} />}
       <RailTools conversationId={conversationId} repos={repos} provider={settings.provider} />
     </section>
   );

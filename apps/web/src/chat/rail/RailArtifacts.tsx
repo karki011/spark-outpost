@@ -1,25 +1,19 @@
 import { useId, useState } from 'react';
 import { ARTIFACT_KIND_LABELS, type ArtifactPage } from '@spark-outpost/contracts';
 import { ArtifactIcon } from '../../ui/icons.tsx';
-import { openArtifact } from '../artifacts/artifact-pane-store.ts';
 
 interface RailArtifactsProps {
-  chatId: string;
   pages: readonly ArtifactPage[];
-  onOpen(): void;
+  onOpen(page: ArtifactPage): void;
 }
 
 function countLine(count: number): string {
   return count === 1 ? '1 artifact' : `${count} artifacts`;
 }
 
-export function RailArtifacts({ chatId, pages, onOpen }: RailArtifactsProps) {
+export function RailArtifacts({ pages, onOpen }: RailArtifactsProps) {
   const [open, setOpen] = useState(true);
   const bodyId = useId();
-  const show = (page: ArtifactPage) => {
-    onOpen();
-    openArtifact(chatId, page.id);
-  };
   return (
     <section className="crail-section" aria-label="Artifacts">
       <div className="crail-head">
@@ -44,7 +38,7 @@ export function RailArtifacts({ chatId, pages, onOpen }: RailArtifactsProps) {
               type="button"
               className="crail-row"
               aria-label={`Open artifact ${page.title}`}
-              onClick={() => show(page)}
+              onClick={() => onOpen(page)}
             >
               <span className="crail-ico" aria-hidden="true">
                 <ArtifactIcon />

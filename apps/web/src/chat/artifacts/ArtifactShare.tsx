@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import {
@@ -32,11 +32,14 @@ function failureText(error: unknown): string {
   return error instanceof Error ? error.message : 'That didn’t work. Try again.';
 }
 
-export function ArtifactShare({ page, version }: ArtifactShareProps) {
+export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
   const { remote } = useRemoteClient();
   const client = useQueryClient();
   const reasonId = useId();
   const tip = useTooltip(MARKDOWN_REASON);
+  const [sheet, setSheet] = useState<Sheet>(null);
+  const [pinned, setPinned] = useState(shown);
+  const version = sheet === null ? shown : pinned;
   const path = artifactSharePath(page.id, version);
   const queryKey = ['artifact-share', page.id, version];
   const status = useQuery({
@@ -46,26 +49,41 @@ export function ArtifactShare({ page, version }: ArtifactShareProps) {
     staleTime: STATUS_STALE_MS,
   });
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const [sheet, setSheet] = useState<Sheet>(null);
   const [passcode, setPasscode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const focusOwed = useRef(false);
+  const answered = remote ? undefined : status.data;
+  const current = answered && (answered.available || answered.share) ? answered : null;
+  const visible = current !== null;
+  useEffect(() => {
+    if (sheet !== null || !visible || !focusOwed.current) return;
+    focusOwed.current = false;
+    buttonRef.current?.focus();
+  }, [sheet, visible]);
 
-  if (remote || !status.data?.available) return null;
-  const share = status.data.share;
+  if (!current) return null;
+  const { available, share } = current;
   const entry = page.versions.find((item) => item.version === version);
   const markdown = page.kind === 'markdown';
 
-  const settle = (next: ArtifactShareStatus['share']) =>
-    client.setQueryData<ArtifactShareStatus>(queryKey, { available: true, share: next });
+  const settle = async (next: ArtifactShareStatus['share']) => {
+    await client.cancelQueries({ queryKey });
+    client.setQueryData<ArtifactShareStatus>(queryKey, { available, share: next });
+  };
+
+  const open = () => {
+    setPinned(shown);
+    setSheet(share ? 'shared' : 'confirm');
+  };
 
   const close = () => {
     setSheet(null);
     setPasscode(null);
     setFailure(null);
     setNotice(null);
-    buttonRef.current?.focus();
+    focusOwed.current = true;
   };
 
   const run = async (work: () => Promise<void>) => {
@@ -87,14 +105,14 @@ export function ArtifactShare({ page, version }: ArtifactShareProps) {
           method: 'POST',
           body: JSON.stringify({ ...choice, theme: currentShareTheme() ?? undefined }),
         });
-        settle(created.share);
+        await settle(created.share);
         setPasscode(created.passcode);
       } catch (error) {
         const already = alreadySharedSchema.safeParse(
           error instanceof ApiError ? error.body : null,
         );
         if (!already.success) throw error;
-        settle(already.data.share);
+        await settle(already.data.share);
         setPasscode(null);
         setNotice(already.data.error);
       }
@@ -104,7 +122,7 @@ export function ArtifactShare({ page, version }: ArtifactShareProps) {
   const stop = () =>
     run(async () => {
       await request(z.null(), path, { method: 'DELETE' });
-      settle(null);
+      await settle(null);
       close();
     });
 
@@ -118,7 +136,7 @@ export function ArtifactShare({ page, version }: ArtifactShareProps) {
         aria-haspopup="dialog"
         aria-disabled={markdown}
         aria-describedby={markdown ? reasonId : undefined}
-        onClick={() => !markdown && setSheet(share ? 'shared' : 'confirm')}
+        onClick={() => !markdown && open()}
       >
         {share ? <CheckIcon /> : <ExternalLinkIcon />}
         {share ? 'Shared' : 'Share…'}
@@ -129,7 +147,7 @@ export function ArtifactShare({ page, version }: ArtifactShareProps) {
         </span>
       )}
       {markdown && tip.tooltip}
-      {sheet === 'confirm' && (
+      {sheet === 'confirm' && available && (
         <ShareConfirmSheet
           title={entry?.title ?? page.title}
           version={version}
@@ -145,6 +163,7 @@ export function ArtifactShare({ page, version }: ArtifactShareProps) {
           share={share}
           passcode={passcode}
           notice={notice}
+          canShareAgain={available}
           busy={busy}
           failure={failure}
           onStop={() => void stop()}
