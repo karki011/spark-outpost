@@ -126,4 +126,38 @@ describe('spark_workflow', () => {
     });
     expect(bad.text).toContain('Check schedule');
   });
+
+  it('keeps triggers it was not asked to change', async () => {
+    await crew.setRun('bypassPermissions');
+    await call('spark_workflow', {
+      action: 'triggers',
+      workflow: 'nightly',
+      triggers: { pullRequest: true },
+    });
+    await call('spark_workflow', {
+      action: 'triggers',
+      workflow: 'nightly',
+      triggers: { commit: true },
+    });
+    expect((await getTriggers(t.db, t.workspaceId, 'nightly'))?.triggers).toMatchObject({
+      pullRequest: true,
+      commit: true,
+    });
+  });
+
+  it('stops only a running run of that workflow', async () => {
+    await crew.setRun('bypassPermissions');
+    const none = await call('spark_workflow', { action: 'stop', workflow: 'nightly' });
+    expect(none.text).toContain('no such run that is running');
+    const bad = await call('spark_workflow', { action: 'stop', workflow: 'nightly', run: 'x' });
+    expect(bad.text).toContain('workflow run id');
+  });
+
+  it('shows the schedule, triggers and recent runs in spark_crew', async () => {
+    await crew.setRun('bypassPermissions');
+    await call('spark_workflow', { action: 'run', workflow: 'nightly' });
+    const read = await call('spark_crew', { workflow: 'nightly' });
+    expect(read.facts).toMatchObject({ schedule: null, triggers: null });
+    expect(read.facts.recentRuns).toEqual([expect.objectContaining({ source: 'agent' })]);
+  });
 });

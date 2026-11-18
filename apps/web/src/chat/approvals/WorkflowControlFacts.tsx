@@ -14,6 +14,10 @@ function triggersText(triggers: WorkflowTriggers): string {
   return on.length > 0 ? `On ${on.join(', ')}` : 'No triggers';
 }
 
+function change(before: string | null, after: string): string {
+  return before === null || before === after ? after : `${before} → ${after}`;
+}
+
 export function WorkflowControlFacts({ action }: { action: WorkflowControlAction }) {
   return (
     <dl className="sac-facts">
@@ -34,13 +38,23 @@ export function WorkflowControlFacts({ action }: { action: WorkflowControlAction
       {action.schedule && (
         <>
           <dt>Schedule</dt>
-          <dd>{scheduleSummary(action.schedule, hourCycle())}</dd>
+          <dd>
+            {change(
+              action.scheduleBefore ? scheduleSummary(action.scheduleBefore, hourCycle()) : 'None',
+              scheduleSummary(action.schedule, hourCycle()),
+            )}
+          </dd>
         </>
       )}
       {action.triggers && (
         <>
           <dt>Triggers</dt>
-          <dd>{triggersText(action.triggers)}</dd>
+          <dd>
+            {change(
+              action.triggersBefore ? triggersText(action.triggersBefore) : null,
+              triggersText(action.triggers),
+            )}
+          </dd>
         </>
       )}
     </dl>

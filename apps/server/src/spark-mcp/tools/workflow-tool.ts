@@ -7,6 +7,9 @@ import {
 } from '@spark-outpost/contracts';
 import { crewDecision } from '../../crew/crew-path.ts';
 import { CREW_EDIT_REFUSALS, crewEditRefusal } from '../../crew/tool-offer.ts';
+import { listWorkflowRuns } from '../../crew-flows/run-records.ts';
+import { getSchedule } from '../../crew-flows/schedule-records.ts';
+import { getTriggers } from '../../crew-flows/trigger-records.ts';
 import { controlWorkflow } from '../../crew-flows/workflow-control.ts';
 import { workflowStore } from '../../crew-flows/workflow-store.ts';
 import type { Queryable } from '../../persistence/db.ts';
@@ -20,7 +23,6 @@ import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
 export const WORKFLOW_TOOL = 'spark_workflow';
 
 const NEEDS = {
-  stop: 'stop needs run (a workflow run id).',
   schedule: 'schedule needs schedule.',
   triggers: 'triggers needs triggers.',
 };
@@ -74,7 +76,26 @@ interface WorkflowArgs {
   triggers?: Record<string, unknown> | undefined;
 }
 
+function projectOf(project: { id: string } | null) {
+  return project ? { projectId: project.id } : {};
+}
+
+async function runToStop(context: SparkToolContext, workflowId: string, reference?: string) {
+  const runs = await listWorkflowRuns(context.deps.db, context.scope.workspaceId, workflowId);
+  if (reference !== undefined && !z.uuid().safeParse(reference).success) {
+    throw new SparkToolError('run must be a workflow run id from spark_crew.');
+  }
+  const found = reference
+    ? runs.find((item) => item.id === reference)
+    : runs.find((item) => item.status === 'running');
+  if (!found) throw new SparkToolError('That workflow has no such run that is running.');
+  if (found.status !== 'running') throw new SparkToolError('That run is not running.');
+  return found.id;
+}
+
 async function buildAction(context: SparkToolContext, args: WorkflowArgs) {
+  const { db } = context.deps;
+  const { workspaceId } = context.scope;
   const flow = await findWorkflow(context, args.workflow);
   const project = await findProject(context, args.project);
   const base = {
@@ -89,28 +110,21 @@ async function buildAction(context: SparkToolContext, args: WorkflowArgs) {
     case 'run':
       return { ...base, messageId: newId() };
     case 'stop':
-      if (!args.run) throw new SparkToolError(NEEDS.stop);
-      return { ...base, workflowRunId: args.run };
-    case 'schedule':
+      return { ...base, workflowRunId: await runToStop(context, flow.id, args.run) };
+    case 'schedule': {
       if (!args.schedule) throw new SparkToolError(NEEDS.schedule);
-      return {
-        ...base,
-        schedule: parsed(
-          workflowScheduleSchema,
-          { projectId: project?.id ?? null, ...args.schedule },
-          'schedule',
-        ),
-      };
-    case 'triggers':
+      const before = (await getSchedule(db, workspaceId, flow.id))?.schedule ?? null;
+      const merged = { projectId: null, ...before, ...projectOf(project), ...args.schedule };
+      const schedule = parsed(workflowScheduleSchema, merged, 'schedule');
+      return { ...base, schedule, scheduleBefore: before };
+    }
+    case 'triggers': {
       if (!args.triggers) throw new SparkToolError(NEEDS.triggers);
-      return {
-        ...base,
-        triggers: parsed(
-          workflowTriggersSchema,
-          { projectId: project?.id ?? null, ...args.triggers },
-          'triggers',
-        ),
-      };
+      const before = (await getTriggers(db, workspaceId, flow.id))?.triggers ?? null;
+      const merged = { ...before, ...projectOf(project), ...args.triggers };
+      const triggers = parsed(workflowTriggersSchema, merged, 'triggers');
+      return { ...base, triggers, triggersBefore: before };
+    }
     case 'unschedule':
       return base;
   }
@@ -154,7 +168,7 @@ export const workflowTool = sparkTool({
   acts: true,
   title: 'Run, stop, schedule or trigger a workflow',
   description:
-    'workflow: id or name. run (new chat; message, project), stop (run: workflow run id), schedule (schedule: {enabled, every, unit, days, from, to, anchor, message, missed}), unschedule, triggers ({turnChanged, beforePublish, commit, pullRequest, …}). Follows your mode.',
+    'workflow: id or name. run (new chat; message, project), stop (run id or its running run), schedule (schedule: {enabled, every, unit, days, from, to, anchor, message, missed}), unschedule, triggers ({turnChanged, beforePublish, commit, pullRequest, …}); fields you pass change, see spark_crew. Follows your mode.',
   input: {
     action: z.enum(['run', 'stop', 'schedule', 'unschedule', 'triggers']),
     workflow: z.string().trim().min(1).max(100),
