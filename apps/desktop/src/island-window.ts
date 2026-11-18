@@ -2,6 +2,7 @@ import { app, BrowserWindow, globalShortcut, screen, type Display } from 'electr
 import type { IslandRegions } from '@spark-outpost/contracts';
 import type { IslandPosition, IslandSize, ShortcutAction } from './companion-settings.ts';
 import type { IslandHandle } from './companion.ts';
+import { appLockGate } from './app-lock-gate.ts';
 import {
   clampToDisplay,
   dockedPosition,
@@ -191,7 +192,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   screen.on('display-metrics-changed', onDisplays);
   measure();
   const showNow = (reason: string) => {
-    if (window.isDestroyed()) return;
+    if (window.isDestroyed() || appLockGate.locked()) return;
     if (placed) moveTo(placed.position);
     window.showInactive();
     report(reason);
@@ -201,24 +202,30 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const reveal = revealGate(() => {
     if (!visibility.hidden()) showNow('shown');
   }, READY_FALLBACK_MS);
+  const hideNow = (reason: string) => {
+    if (window.isDestroyed()) return;
+    setIslandFocus(window, false);
+    escape.arm(false);
+    window.hide();
+    stopPointerPoll();
+    report(reason);
+  };
   const visibility = islandVisibility({
     show: () => {
       if (reveal.revealed()) showNow('shown again');
     },
-    hide: () => {
-      if (window.isDestroyed()) return;
-      setIslandFocus(window, false);
-      escape.arm(false);
-      window.hide();
-      stopPointerPoll();
-      report('hidden');
-    },
+    hide: () => hideNow('hidden'),
+  });
+  const stopLockWatch = appLockGate.onLockedChange((locked) => {
+    if (locked) hideNow('hidden while locked');
+    else if (reveal.revealed() && !visibility.hidden()) showNow('shown after unlock');
   });
   window.on('move', () => {
     if (dragging || window.isDestroyed() || geometry().windowTop === sentTop) return;
     settle();
   });
   window.on('closed', () => {
+    stopLockWatch();
     stopPointerPoll();
     reveal.cancel();
     visibility.cancel();
@@ -251,7 +258,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       if (!window.isDestroyed()) window.destroy();
     },
     command: (action: ShortcutAction) => {
-      if (window.isDestroyed()) return;
+      if (window.isDestroyed() || appLockGate.locked()) return;
       visibility.summon();
       reveal.ready();
       if (!window.isVisible()) window.showInactive();
@@ -267,7 +274,8 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       return { x: bounds.x + bounds.width / 2, y: bounds.y };
     },
     post: send,
-    setFocusable: (on) => {
+    setFocusable: (wanted) => {
+      const on = wanted && !appLockGate.locked();
       setIslandFocus(window, on);
       escape.arm(on && !window.isDestroyed());
     },

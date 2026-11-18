@@ -34,7 +34,7 @@ async function setup(
   const sent: { owner: number; event: VoiceEvent }[] = [];
   const island: VoiceEvent[] = [];
   const focused: VoiceEvent[] = [];
-  const view = { target: false, meeting: false };
+  const view = { target: false, meeting: false, locked: false };
   const registered = new Map<string, () => void>();
   const elsewhere = new Set<string>();
   const saved: unknown[] = [];
@@ -55,6 +55,7 @@ async function setup(
     models: VOICE_MODELS,
     vadPath: '/vad.bin',
     fetch: vi.fn(async () => new Response('nope', { status: 500 })),
+    locked: () => view.locked,
     register: (accelerator, run) => {
       if (elsewhere.has(accelerator)) return false;
       registered.set(accelerator, run);
@@ -203,6 +204,40 @@ describe('Voice', () => {
     scene.view.target = false;
     scene.voice.press();
     expect(scene.island).toEqual([{ kind: 'press' }]);
+  });
+
+  it('a press does nothing while Spark Outpost is locked', async () => {
+    const scene = await setup({ enabled: true });
+    await scene.voice.start();
+    scene.view.locked = true;
+    scene.view.target = true;
+    scene.voice.press();
+    [...scene.registered.values()].forEach((run) => run());
+    expect(scene.focused).toEqual([]);
+    expect(scene.island).toEqual([]);
+    scene.view.locked = false;
+    scene.voice.press();
+    expect(scene.focused).toEqual([{ kind: 'press' }]);
+  });
+
+  it('a lock cancels a listen without delivering text and stops a spoken answer', async () => {
+    const scene = await setup({ enabled: true });
+    await scene.voice.start();
+    await scene.voice.update({ speakAnswers: true });
+    const spoken = scene.voice.speak(3, 'All quiet.');
+    scene.voice.silence();
+    expect(scene.sent.at(-1)).toEqual({
+      owner: 3,
+      event: { kind: 'spoken', id: spoken, interrupted: true },
+    });
+    const listen = await scene.voice.listen(1, 'dictation', '', undefined);
+    if (!listen.ok) throw new Error('not listening');
+    scene.voice.silence();
+    await settle(50);
+    expect(scene.sent.at(-1)).toEqual({ owner: 1, event: { kind: 'cancelled', id: listen.id } });
+    expect(scene.sent.some((entry) => entry.event.kind === 'final')).toBe(false);
+    expect((await scene.voice.listen(1, 'dictation', '', undefined)).ok).toBe(true);
+    scene.voice.dispose();
   });
 
   it('refuses to listen while a meeting is recording, and says so', async () => {

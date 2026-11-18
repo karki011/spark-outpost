@@ -29,6 +29,7 @@ export interface VoiceEffects {
   models: readonly VoiceModel[];
   vadPath: string;
   fetch: FetchModel;
+  locked(): boolean;
   register(accelerator: string, run: () => void): boolean;
   unregister(accelerator: string): void;
   takenBy(accelerator: string): string | null;
@@ -190,7 +191,7 @@ export function createVoice(effects: VoiceEffects) {
   };
 
   const press = () => {
-    if (!settings.enabled) return;
+    if (!settings.enabled || effects.locked()) return;
     const active = [...listens.keys()].at(-1);
     if (active) {
       helper.send({ op: 'stop', id: active });
@@ -383,6 +384,15 @@ export function createVoice(effects: VoiceEffects) {
 
     hush,
     press,
+
+    silence() {
+      for (const [id, owner] of [...listens]) {
+        listens.delete(id);
+        helper.send({ op: 'cancel', id });
+        effects.sendTo(owner, { kind: 'cancelled', id });
+      }
+      hush();
+    },
 
     meetingState() {
       if (!effects.helperExists()) return { available: false, reason: MEETING_NEEDS_HELPER };

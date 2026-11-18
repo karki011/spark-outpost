@@ -1,35 +1,4 @@
-export const SHELL_SPECS = [
-  'accessibility',
-  'connection',
-  'content-security-policy',
-  'first-paint',
-  'launch-token',
-  'lazy-ui',
-  'packaged-parity',
-  'responsive-shell',
-  'spark-pause',
-] as const;
-
-export const PERF_SPECS = [
-  'blob-motion-perf',
-  'chat-perf',
-  'chat-stream-perf',
-  'idle-motion-perf',
-  'island-perf',
-  'live-diff-perf',
-  'project-map-perf',
-  'rest-cost-perf',
-  'screen-tour-perf',
-] as const;
-
-export const SHOTS_SPECS = [
-  'docs-shots',
-  'docs-shots-batch-1',
-  'docs-shots-batch-2',
-  'docs-shots-batch-2-desktop',
-  'home-shots',
-  'spark-shots',
-] as const;
+export { PERF_SPECS, SHELL_SPECS, SHOTS_SPECS } from './spec-lists.ts';
 
 export const SPEC_GROUPS = {
   chat: [
@@ -276,6 +245,7 @@ export const SPEC_GROUPS = {
     'outposts-story',
   ],
   'island-desktop': [
+    'app-lock',
     'attention-sync',
     'boot-screen',
     'desktop-companion',
@@ -360,6 +330,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/audit/', groups: ['analytics-audit', 'chat'] },
   { prefix: 'apps/web/src/browser/', groups: ['terminal-preview-browser'] },
   { prefix: 'apps/web/src/browser-view/', groups: ['terminal-preview-browser'] },
+  { prefix: 'apps/web/src/app-lock/', groups: ['island-desktop'] },
   { prefix: 'apps/web/src/attention/', groups: ['island-desktop', 'chat', 'home'] },
   { prefix: 'apps/web/src/calendar/', groups: ['home', 'island-desktop'] },
   { prefix: 'apps/web/src/meetings/', groups: ['home'] },

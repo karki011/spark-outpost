@@ -1,0 +1,85 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+:root{--bg:#f6f1ed;--rail:#efe4da;--panel:#fffdfb;--raise:#f5eae1;--line:#ecdfd3;--line-strong:#8f8378;--text:#241a13;--muted:#614a3b;--accent:#b34f00;--accent-ink:#fff;--accent-text:#a53f00;--accent-soft:rgba(179,79,0,.11);--success:#1f7335;--code:#faf2eb}
+*{box-sizing:border-box}
+body{margin:0;padding:32px;background:var(--bg);font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif;color:var(--text);width:1320px}
+h1{font-size:20px;margin:0 0 4px;font-weight:650}
+.lead{color:var(--muted);margin:0 0 24px;font-size:13.5px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.step h2{font-size:14px;margin:0 0 3px;font-weight:650;display:flex;align-items:center;gap:9px}
+.step h2 i{font-style:normal;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.step>p{margin:0 0 12px 31px;color:var(--muted);font-size:12.5px}
+.frame{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;height:392px;position:relative}
+.chrome{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--rail);border-bottom:1px solid var(--line)}
+.dots{display:flex;gap:6px}.dots s{width:10px;height:10px;border-radius:50%;background:var(--line-strong);opacity:.5}
+.chrome b{margin:0 auto;font-weight:600;color:var(--muted);font-size:12.5px}
+.app{display:grid;grid-template-columns:150px 1fr;height:calc(100% - 39px);filter:blur(7px);opacity:.6}
+.app aside{background:var(--rail);padding:12px;display:grid;gap:8px;align-content:start}
+.app aside u,.app main u{display:block;height:12px;border-radius:6px;background:var(--line-strong);opacity:.35;text-decoration:none}
+.app main{padding:16px;display:grid;gap:10px;align-content:start}
+.cover{position:absolute;inset:39px 0 0 0;background:rgba(246,241,237,.72);display:flex;align-items:center;justify-content:center}
+.lock{width:280px;text-align:center}
+.badge{width:52px;height:52px;border-radius:16px;background:var(--accent-soft);color:var(--accent-text);display:inline-flex;align-items:center;justify-content:center;font-size:24px}
+.lock h3{margin:12px 0 3px;font-size:16px}
+.lock p{margin:0 0 14px;color:var(--muted);font-size:12.5px}
+.btn{height:30px;padding:0 13px;border-radius:9px;border:1px solid var(--line-strong);display:inline-flex;align-items:center;gap:7px;font-size:12.5px;background:var(--panel);white-space:nowrap}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.alt{display:block;margin-top:10px;color:var(--accent-text);text-decoration:underline;font-size:12.5px}
+.boxes{display:flex;gap:6px;justify-content:center;margin-bottom:12px}
+.boxes span{width:32px;height:40px;border:1px solid var(--line-strong);border-radius:8px;display:flex;align-items:center;justify-content:center;font:600 18px ui-monospace,monospace;background:var(--panel)}
+.boxes span.e{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.set{padding:16px 20px}
+.set h3{margin:0 0 2px;font-size:15px}
+.set .note{color:var(--muted);font-size:12.5px;margin:0 0 10px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:9px 0;border-top:1px solid var(--line)}
+.row b{font-weight:600;display:block}
+.row small{color:var(--muted);font-size:12px;display:block}
+.sw{flex:none;width:38px;height:22px;border-radius:11px;background:var(--success);position:relative}
+.sw:after{content:"";position:absolute;top:2px;left:18px;width:18px;height:18px;border-radius:50%;background:#fff}
+.pick{height:28px;padding:0 10px;border:1px solid var(--line-strong);border-radius:9px;display:inline-flex;align-items:center;gap:10px;white-space:nowrap}
+.menu{padding:10px 0;width:270px;margin:26px auto 0;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 14px 34px rgba(36,26,19,.2)}
+.menu div{display:flex;justify-content:space-between;padding:5px 16px}
+.menu div.on{background:var(--accent);color:var(--accent-ink)}
+.menu hr{border:0;border-top:1px solid var(--line);margin:6px 0}
+.menu kbd{font:12.5px -apple-system,system-ui;opacity:.8}
+.side{display:grid;grid-template-columns:1fr 1fr;height:100%}
+.side>div+div{border-left:1px solid var(--line);padding:22px 18px}
+.toast{background:var(--raise);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.toast b{display:block}
+.toast small{color:var(--muted)}
+.tag{font-size:12px;color:var(--muted);font-weight:600;margin:0 0 8px}
+</style></head><body>
+<h1>Privacy screen</h1>
+<p class="lead">Covers Spark Outpost's own windows after you step away. It never locks the Mac: minimize or switch apps as usual.</p>
+<div class="grid">
+
+<section class="step"><h2><i>1</i>Locked: unlock with Touch ID</h2><p>Every Spark window is covered. The island, meeting cards and Browser tabs are hidden.</p>
+<div class="frame"><div class="chrome"><span class="dots"><s></s><s></s><s></s></span><b>Spark Outpost</b></div>
+<div class="app"><aside><u></u><u style="width:70%"></u><u style="width:85%"></u><u style="width:60%"></u></aside><main><u style="width:60%"></u><u></u><u style="width:88%"></u><u style="width:45%"></u><u style="width:76%"></u></main></div>
+<div class="cover"><div class="lock"><span class="badge">🔒</span><h3>Spark Outpost is locked</h3><p>Your chats keep running.</p><span class="btn pri">Unlock with Touch ID</span><a class="alt">Enter code instead</a></div></div>
+</div></section>
+
+<section class="step"><h2><i>2</i>Or type your code</h2><p>A 6-digit code you choose. Five wrong tries wait 1 minute.</p>
+<div class="frame"><div class="chrome"><span class="dots"><s></s><s></s><s></s></span><b>Spark Outpost</b></div>
+<div class="app"><aside><u></u><u style="width:70%"></u><u style="width:85%"></u><u style="width:60%"></u></aside><main><u style="width:60%"></u><u></u><u style="width:88%"></u><u style="width:45%"></u><u style="width:76%"></u></main></div>
+<div class="cover"><div class="lock"><span class="badge">🔒</span><h3>Enter your code</h3><p>&nbsp;</p><div class="boxes"><span>•</span><span>•</span><span>•</span><span class="e"></span><span></span><span></span></div><span class="btn pri">Unlock</span><a class="alt">Use Touch ID</a></div></div>
+</div></section>
+
+<section class="step"><h2><i>3</i>Settings → Privacy screen</h2><p>Off until you turn it on. Mac only; paired devices are not affected.</p>
+<div class="frame"><div class="set"><h3>Privacy screen</h3><p class="note">Covers Spark's windows until you unlock. Work in progress keeps running.</p>
+<div class="row"><div><b>Lock Spark when I'm away</b></div><span class="sw"></span></div>
+<div class="row"><div><b>Lock after</b><small>No mouse or keys on this Mac</small></div><span class="pick">5 minutes ▾</span></div>
+<div class="row"><div><b>Lock when the Mac sleeps or its screen locks</b></div><span class="sw"></span></div>
+<div class="row"><div><b>Unlock with Touch ID</b><small>Your code always works too</small></div><span class="sw"></span></div>
+<div class="row"><div><b>Hide notification text while locked</b><small>Shows “Spark Outpost needs you” with no chat name</small></div><span class="sw"></span></div>
+<div class="row"><div><b>Code</b></div><span class="btn">Change code…</span></div>
+</div></div></section>
+
+<section class="step"><h2><i>4</i>Lock now, and what shows while locked</h2><p>Lock from the app menu or ⇧⌘L. Notifications name no chat.</p>
+<div class="frame"><div class="side">
+<div><div class="menu"><div>About Spark Outpost</div><hr><div>Settings…<kbd>⌘,</kbd></div><div class="on">Lock Spark Outpost<kbd>⇧⌘L</kbd></div><hr><div>Hide Spark Outpost<kbd>⌘H</kbd></div><div>Quit Spark Outpost<kbd>⌘Q</kbd></div></div></div>
+<div><p class="tag">Notification while locked</p><div class="toast"><b>Spark Outpost</b><small>A chat needs you. Unlock to see it.</small></div><p class="tag">Unlocked</p><div class="toast"><b>Fix deploy script</b><small>Wants to run a command</small></div></div>
+</div></div></section>
+
+</div>
+</body></html>

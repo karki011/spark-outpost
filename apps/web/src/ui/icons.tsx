@@ -386,8 +386,10 @@ export function FileIcon() {
   return <StrokeIcon path="M14 3H6v18h12V7zM14 3v4h4" />;
 }
 
+export const LOCK_PATH = 'M6 11h12v9H6zM8.5 11V7.5a3.5 3.5 0 0 1 7 0V11';
+
 export function LockIcon() {
-  return <StrokeIcon path="M6 11h12v9H6zM8.5 11V7.5a3.5 3.5 0 0 1 7 0V11" />;
+  return <StrokeIcon path={LOCK_PATH} />;
 }
 
 export function LaptopIcon() {

@@ -7,6 +7,7 @@ import {
   type DisplayInfo,
   type IslandGeometry,
 } from './island-geometry.ts';
+import { appLockGate } from './app-lock-gate.ts';
 import { IPC } from './ipc-channels.ts';
 import { ISLAND_LEVEL } from './island-options.ts';
 import { openIslandWindow } from './island-window.ts';
@@ -127,9 +128,53 @@ beforeEach(() => {
   native.cursor = { x: 0, y: 0 };
   native.displays = [internal, external];
 });
-afterEach(() => vi.useRealTimers());
+const setLocked = (locked: boolean) =>
+  appLockGate.publish({ locked, available: true, hideNotifications: true });
+
+afterEach(() => {
+  setLocked(false);
+  vi.useRealTimers();
+});
 
 describe('native island window', () => {
+  it('hides while Spark Outpost is locked and comes back on unlock', () => {
+    const { handle } = open();
+    handle.ready();
+    expect(native.window.showInactive).toHaveBeenCalledTimes(1);
+    setLocked(true);
+    expect(native.window.hide).toHaveBeenCalledTimes(1);
+    expect(native.window.setFocusable).toHaveBeenLastCalledWith(false);
+    setLocked(false);
+    expect(native.window.showInactive).toHaveBeenCalledTimes(2);
+    handle.destroy();
+  });
+
+  it('ignores its shortcuts and focus requests while locked', () => {
+    const { handle } = open();
+    handle.ready();
+    setLocked(true);
+    vi.clearAllMocks();
+    handle.command('quick');
+    handle.setFocusable(true);
+    expect(native.window.showInactive).not.toHaveBeenCalled();
+    expect(native.window.focus).not.toHaveBeenCalled();
+    expect(native.window.webContents.send).not.toHaveBeenCalledWith(IPC.islandCommand, 'quick');
+    setLocked(false);
+    handle.command('quick');
+    expect(native.window.webContents.send).toHaveBeenCalledWith(IPC.islandCommand, 'quick');
+    handle.destroy();
+  });
+
+  it('waits for the unlock when the page becomes ready while locked', () => {
+    setLocked(true);
+    const { handle } = open();
+    handle.ready();
+    expect(native.window.showInactive).not.toHaveBeenCalled();
+    setLocked(false);
+    expect(native.window.showInactive).toHaveBeenCalledTimes(1);
+    handle.destroy();
+  });
+
   it('appears on all Spaces and full-screen workspaces without taking focus or activating Spark', () => {
     const { handle } = open();
     expect(native.window.setAlwaysOnTop).toHaveBeenCalledWith(true, ISLAND_LEVEL);
