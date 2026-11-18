@@ -190,3 +190,50 @@ describe('deleting a Spark', () => {
     expect((await getApproval(t.db, id!))!.title).toBe('Delete the Scout Spark?');
   });
 });
+
+describe('separate changes stay separate drafts', () => {
+  it('keeps two skills proposed in two calls both waiting', async () => {
+    const skill = (name: string) => ({
+      spark: 'Scout',
+      files: [
+        {
+          path: `skills/${name}/SKILL.md`,
+          text: `---\nname: ${name}\ndescription: Does ${name}\n---\nSteps.\n`,
+        },
+      ],
+    });
+    await call('spark_crew_edit', skill('notes'));
+    const second = await call('spark_crew_edit', skill('triage'));
+    expect(second.facts.replacedDrafts).toBeUndefined();
+    expect(await pendingIds()).toHaveLength(2);
+  });
+
+  it('keeps a rename and an instructions change both waiting', async () => {
+    await call('spark_update_spark', { spark: 'Scout', name: 'Scouter' });
+    await call('spark_update_spark', { spark: 'Scout', instructions: 'Be kind.' });
+    expect(await pendingIds()).toHaveLength(2);
+  });
+});
+
+describe('Ask Spark', () => {
+  it('always gets a card, even set to Act', async () => {
+    await crew.setRun('auto');
+    await t.db.query(
+      `UPDATE profiles SET assistant_acts = 'act', assistant_conversation_id = $2
+       WHERE workspace_id = $1`,
+      [t.workspaceId, chat.conversationId],
+    );
+    const tools = await startSparkTools(t, {
+      conversationId: chat.conversationId,
+      runId: chat.runId,
+      actions: recordedHooks().hooks,
+      assistant: true,
+    });
+    try {
+      const result = await tools.call('spark_create_spark', { name: 'Wren' });
+      expect(result.json<{ outcome: string }>().outcome).toBe('waiting_for_user');
+    } finally {
+      await tools.close();
+    }
+  });
+});

@@ -156,12 +156,12 @@ describe('the card for a change to a Spark', () => {
     expect(decide.mock.calls[0]![1]).toMatchObject({ optionId: 'confirm', scope: 'once' });
   });
 
-  it('says when it asks only because the turn read untrusted data', () => {
+  it('names the untrusted data the turn read', () => {
     const approval = card(sparkEdit, 'Change the Scout Spark?');
     approval.payload.observed = ['web page (example.com)'];
     show(approval);
     expect(screen.getByRole('group', { name: /Change the Scout Spark\?/ }).textContent).toContain(
-      'Asked because this turn read web page (example.com).',
+      'This turn read web page (example.com).',
     );
   });
 

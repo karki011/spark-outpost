@@ -20,16 +20,25 @@ export function nameKey(name: string): string {
   return name.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-export function draftKey(action: CrewAction): string {
-  switch (action.action) {
-    case 'create_teammate':
-      return `create_teammate:${nameKey(action.name)}`;
-    case 'update_teammate':
-    case 'delete_teammate':
-      return `${action.action}:${action.teammateId}`;
-    case 'crew_edit':
-      return `crew_edit:${action.target}:${action.id}`;
+function overlaps(a: readonly string[], b: readonly string[]): boolean {
+  return a.some((item) => b.includes(item));
+}
+
+export function replacesDraft(draft: CrewAction, next: CrewAction): boolean {
+  if (draft.action === 'create_teammate' && next.action === 'create_teammate') {
+    return nameKey(draft.name) === nameKey(next.name);
   }
+  if (draft.action === 'update_teammate' && next.action === 'update_teammate') {
+    return draft.teammateId === next.teammateId && overlaps(draft.changed, next.changed);
+  }
+  if (draft.action === 'delete_teammate' && next.action === 'delete_teammate') {
+    return draft.teammateId === next.teammateId;
+  }
+  if (draft.action !== 'crew_edit' || next.action !== 'crew_edit') return false;
+  if (draft.target !== next.target || draft.id !== next.id) return false;
+  if (draft.target === 'workflow') return true;
+  const paths = (action: typeof draft) => action.files.map((file) => file.path);
+  return overlaps(paths(draft), paths(next));
 }
 
 export async function pendingCrewCards(

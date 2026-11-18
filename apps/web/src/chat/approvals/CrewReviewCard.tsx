@@ -130,7 +130,7 @@ export function CrewReviewCard({ approval, agent, onDecided }: CrewReviewCardPro
             <span className="ic" aria-hidden="true">
               <WarnIcon />
             </span>
-            <span>Asked because this turn read {observed.join(', ')}.</span>
+            <span>This turn read {observed.join(', ')}.</span>
           </small>
         )}
         <StepUpLine place={place} />

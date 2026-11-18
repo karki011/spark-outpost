@@ -26,7 +26,7 @@ const MCP_NOUN = 'mcp|mcp servers?';
 const TICKET_NOUN = 'tickets?|issues?|[A-Z][A-Z0-9]+-\\d+|[A-Z]{2,8}\\d{4,12}';
 const RECORD_NOUN =
   'servicenow|records?|incidents?|requests?|tasks?|problems?|changes?|tickets?|[A-Z]{2,8}\\d{4,12}';
-const CREW_NOUN = 'sparks?|teammates?|agents?|skills?|workflows?|crew|instructions|spark\\.md';
+const CREW_NOUN = 'sparks?|teammates?|skills?|workflows?|crew|spark\\.md';
 const CREW_CREATE_VERB = 'create|add|make|build|set up|draft|write';
 const CREW_CHANGE_VERB =
   'change|update|edit|rename|fix|rewrite|improve|tweak|adjust|delete|remove|revise';
@@ -47,7 +47,7 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   pr_follow_up_round: asked('follow[- ]?up|address|fix|handle', 'feedback|comments?|reviews?'),
   create_teammate: asked(CREW_CREATE_VERB, CREW_NOUN),
   update_teammate: asked(CREW_CHANGE_VERB, CREW_NOUN),
-  delete_teammate: asked('delete|remove|drop|get rid of', CREW_NOUN),
+  delete_teammate: asked('delete|remove|drop|get rid of', 'sparks?|teammates?'),
   add_mcp_server: asked('add|create|set up|install|connect|configure|register', MCP_NOUN),
   update_mcp_server: asked('change|update|rename|edit|fix|reconfigure|point', MCP_NOUN),
   switch_mcp_server: asked('turn on|turn off|enable|disable|switch', MCP_NOUN),
