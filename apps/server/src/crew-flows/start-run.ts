@@ -43,7 +43,7 @@ export class SparkNotFoundError extends Error {
 export interface StartRun extends StartWorkflowRun {
   workflowId: string;
   messageId: string;
-  source: Extract<WorkflowRunSource, 'manual' | 'schedule' | 'catch_up' | 'trigger'>;
+  source: Extract<WorkflowRunSource, 'manual' | 'schedule' | 'catch_up' | 'trigger' | 'agent'>;
   trigger?: { kind: WorkflowTriggerKind; diffHash: string | null };
   edits?: boolean;
 }

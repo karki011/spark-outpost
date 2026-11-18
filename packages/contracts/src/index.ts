@@ -14,6 +14,7 @@ export * from './slack.ts';
 export * from './chat-share.ts';
 export * from './chat-files.ts';
 export * from './spark-actions.ts';
+export * from './workflow-control-action.ts';
 export * from './involvement-levels.ts';
 export * from './artifacts.ts';
 export * from './artifact-pages.ts';

@@ -27,6 +27,7 @@ const NOTHING: SparkAvailability = {
   plugins_edit: false,
   crew_read: false,
   crew_edit: false,
+  crew_flows: false,
   github_review_post: false,
 };
 

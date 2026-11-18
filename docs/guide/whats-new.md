@@ -10,7 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                       | What to do                                                     |
 | -------------------------------------------------- | -------------------------------------------------------------- |
-| Agents add, change, delete Sparks per their mode   | [When it asks](build-with-an-agent.md#when-it-asks).           |
+| Agents manage and run Sparks and workflows         | [When it asks](build-with-an-agent.md#when-it-asks).           |
 | **GitHub** page, reviews, auto-review              | [Guide](github-page.md).                                       |
 | **⌘1**–**⌘9** open chats                           | [Keyboard shortcuts](keyboard-shortcuts.md#chats).             |
 | Agent terminal row is a card                       | Nothing to do.                                                 |

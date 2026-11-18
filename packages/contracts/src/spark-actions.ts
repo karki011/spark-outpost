@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import {
+  workflowControlActionSchema,
+  workflowControlLabels,
+  workflowControlQuestion,
+} from './workflow-control-action.ts';
+import {
   createTeammateActionSchema,
   deleteTeammateActionSchema,
   teammateActionLabels,
@@ -220,6 +225,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   createTeammateActionSchema,
   updateTeammateActionSchema,
   deleteTeammateActionSchema,
+  workflowControlActionSchema,
   addMcpServerActionSchema,
   updateMcpServerActionSchema,
   switchMcpServerActionSchema,
@@ -299,6 +305,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   rules_edit: [],
   plugins_edit: [],
   crew_edit: [],
+  workflow_control: [],
   link_repo: [],
   github_read: [],
   clone_repo: [],
@@ -419,6 +426,7 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
   ...rulesEditLabels,
   ...pluginsEditLabels,
   ...crewEditLabels,
+  ...workflowControlLabels,
   ...linkRepoLabels,
   ...githubRepoLabels,
 };
@@ -436,6 +444,7 @@ export function sparkActionQuestion(action: SparkAction): string {
   if (action.action === 'rules_edit') return rulesEditQuestion(action);
   if (action.action === 'plugins_edit') return pluginsEditQuestion(action);
   if (action.action === 'crew_edit') return crewEditQuestion(action);
+  if (action.action === 'workflow_control') return workflowControlQuestion(action);
   const teammate = teammateActionQuestion(action);
   if (teammate) return teammate;
   if (action.action === 'link_repo') return linkRepoQuestion(action);

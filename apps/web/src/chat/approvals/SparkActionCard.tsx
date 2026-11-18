@@ -37,6 +37,7 @@ import { AnswerOnMac, StepUpLine } from './AnswerOnMac.tsx';
 import { draftOf, editsOf, Fields } from './SparkActionFields.tsx';
 import { RulesEditFacts, rulesByline, rulesNote } from './RulesEditFacts.tsx';
 import { CrewEditFacts, crewByline, crewNote } from './CrewEditFacts.tsx';
+import { WorkflowControlFacts } from './WorkflowControlFacts.tsx';
 import { PluginEditFacts, pluginsByline, pluginsNote } from './PluginEditFacts.tsx';
 import { Button } from '../../ui/Button.tsx';
 
@@ -166,6 +167,8 @@ function Facts({ action }: { action: SparkAction }) {
       return <PluginEditFacts action={action} />;
     case 'crew_edit':
       return <CrewEditFacts action={action} />;
+    case 'workflow_control':
+      return <WorkflowControlFacts action={action} />;
     case 'link_repo':
       return (
         <dl className="sac-facts">
