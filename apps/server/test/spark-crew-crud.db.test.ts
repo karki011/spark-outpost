@@ -68,6 +68,13 @@ describe('the card follows the agent’s mode unless the turn read untrusted dat
     expect((await getApproval(t.db, id!))!.payload.observed).toEqual(['web page (example.com)']);
   });
 
+  it('counts a read the moment its tool records it, before its row is saved', async () => {
+    await crew.setRun('auto');
+    crew.state().observations.record({ source: 'web_page', label: 'web page (example.com)' });
+    const result = await call('spark_create_spark', { name: 'Wren' });
+    expect(result.facts.outcome).toBe('waiting_for_user');
+  });
+
   it('adds a Spark at once in Bypass permissions even after a web read', async () => {
     await crew.setRun('bypassPermissions');
     await readWeb();
