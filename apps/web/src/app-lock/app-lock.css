@@ -1,0 +1,93 @@
+body[data-app-lock='pending'] > * {
+  opacity: 0;
+}
+body[data-app-lock='locked'] > :not(.lock-host),
+body[data-app-lock='locked'] > :not(.lock-host) * {
+  visibility: hidden !important;
+}
+.lock-host {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg);
+  overflow-y: auto;
+}
+.lock-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+}
+.lock-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+}
+.lock-line {
+  margin: 6px 0 22px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.lock-entry-slot {
+  width: 100%;
+}
+.lock-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.lock-entry .btn {
+  min-height: 36px;
+}
+.lock-label {
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.lock-problem,
+.lock-note {
+  min-height: 20px;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.lock-problem {
+  color: var(--danger);
+}
+.lock-problem span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lock-problem svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.lock-note {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.lock-link {
+  min-height: 28px;
+  margin-top: 12px;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lock-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

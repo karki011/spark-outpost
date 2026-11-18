@@ -49,6 +49,8 @@ export function compileArgs(source: string, headers: string, arch: MacArch, out:
     headers,
     '-framework',
     'AppKit',
+    '-framework',
+    'LocalAuthentication',
     source,
     '-o',
     out,

@@ -1,0 +1,75 @@
+.code-boxes {
+  position: relative;
+  display: inline-block;
+}
+.code-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: text;
+}
+.code-input:disabled {
+  cursor: not-allowed;
+}
+.code-cells {
+  display: flex;
+  gap: 8px;
+}
+.code-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 48px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.code-cell[data-filled]::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text);
+}
+.code-input:focus-visible + .code-cells .code-cell[data-active] {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+.code-boxes[data-invalid] .code-cell {
+  border-color: var(--danger);
+}
+.code-boxes[data-invalid] .code-input:focus-visible + .code-cells .code-cell[data-active] {
+  border-color: var(--danger);
+  box-shadow: var(--focus-ring-bad);
+}
+.code-input:disabled + .code-cells {
+  opacity: 0.5;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .code-cells[data-shake] {
+    animation: code-shake 0.36s var(--out);
+  }
+}
+@keyframes code-shake {
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(7px);
+  }
+  60% {
+    transform: translateX(-5px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+}

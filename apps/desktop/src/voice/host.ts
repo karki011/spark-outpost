@@ -28,6 +28,7 @@ import { fakeVoiceHelper } from './fake-helper.ts';
 import { fakeVoiceModels } from './fake-models.ts';
 import { spawnVoiceBinary, startVoiceHelper } from './helper-process.ts';
 import { createMeetingCapture, type MeetingCapture } from './meeting-capture.ts';
+import { appLockGate } from '../app-lock-gate.ts';
 import { pressWindow, type SparkWindow } from './press-window.ts';
 import { createVoice, type SettingsPatch } from './voice.ts';
 import { loadVoiceSettings, saveVoiceSettings, voiceSettingsFile } from './voice-settings.ts';
@@ -137,6 +138,7 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
     models: downloads.models,
     vadPath: path.join(options.modelsDir, VOICE_SILERO.file),
     fetch: downloads.fetch,
+    locked: appLockGate.locked,
     register: (accelerator, run) => {
       try {
         return globalShortcut.register(accelerator, run);
@@ -280,10 +282,14 @@ export async function startVoiceHost(options: VoiceHostOptions): Promise<VoiceHo
 
   void voice.start();
 
+  const stopLockWatch = appLockGate.onLockedChange((locked) => {
+    if (locked) voice.silence();
+  });
   return {
     meetings,
     shortcut: () => voice.shortcut(),
     dispose() {
+      stopLockWatch();
       for (const channel of INVOKE) ipcMain.removeHandler(channel);
       voice.dispose();
     },

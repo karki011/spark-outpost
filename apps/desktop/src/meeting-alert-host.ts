@@ -12,6 +12,7 @@ import {
   parseIslandRegions,
   type MeetingAlertPayload,
 } from '@spark-outpost/contracts';
+import { appLockGate } from './app-lock-gate.ts';
 import { hourCycleArgs } from './hour-cycle-arg.ts';
 import { systemHourCycle } from './hour-cycle.ts';
 import type { Point } from './island-geometry.ts';
@@ -203,7 +204,7 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
     if (fresh) place(shown);
     send(IPC.meetingAlertPayload, payload);
     options.notifier.post(payload, choose(payload.key));
-    if (fresh) {
+    if (fresh && !appLockGate.locked()) {
       shown.showInactive();
       pointer?.start();
       holdShortcut();
@@ -230,6 +231,16 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
     window.setFocusable(false);
     window.hide();
   };
+
+  const stopLockWatch = appLockGate.onLockedChange((appLocked) => {
+    const payload = latestPayload;
+    if (!payload) return;
+    if (!appLocked) return show(payload);
+    releaseFocus();
+    releaseShortcut();
+    gone();
+    options.notifier.post(payload, choose(payload.key));
+  });
 
   ipcMain.on(IPC.meetingAlertShow, (event, value: unknown) => {
     if (!options.fromIsland(event)) return;
@@ -300,6 +311,7 @@ export function startMeetingAlertHost(options: MeetingAlertHostOptions): Meeting
         ipcMain.removeAllListeners(channel);
       }
       ipcMain.removeHandler(IPC.presenceGet);
+      stopLockWatch();
       powerMonitor.off('lock-screen', onLock);
       powerMonitor.off('unlock-screen', onUnlock);
       powerMonitor.off('suspend', onSuspend);

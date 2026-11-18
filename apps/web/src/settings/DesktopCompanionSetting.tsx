@@ -1,5 +1,4 @@
 import { useId } from 'react';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
 import {
   companionAvailable,
   sparkDesktop,
@@ -7,12 +6,12 @@ import {
   type IslandAction,
 } from '../desktop/desktop-bridge.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
-import type { DocTarget } from '../ui/DocLink.tsx';
 import { ISLAND_HEIGHT_LABEL, IslandHeightSetting } from './IslandHeightSetting.tsx';
 import { ISLAND_SIZE_LABEL, IslandSizeSetting } from './IslandSizeSetting.tsx';
 import { SettingRow } from './SettingRow.tsx';
 import { RECORDING_HINT, ShortcutPicker, useShortcutPicker } from './ShortcutPicker.tsx';
 import { SHOW_ISLAND_LABEL } from './setting-labels.ts';
+import { SwitchRow } from './SwitchRow.tsx';
 
 const CHIMES = 'Island chimes';
 const AUTO_EXPAND = 'Open requests by themselves';
@@ -97,45 +96,6 @@ function ShortcutSetting({
         isDefault={accelerator === DEFAULTS[action]}
         describedBy={hintId}
         picker={picker}
-      />
-    </SettingRow>
-  );
-}
-
-function SwitchRow({
-  id,
-  label,
-  doc,
-  hint,
-  checked,
-  onChange,
-  standsFor,
-}: {
-  id: string;
-  label: string;
-  doc: DocTarget;
-  hint: string;
-  checked: boolean;
-  onChange: (on: boolean) => void;
-  standsFor?: readonly string[] | undefined;
-}) {
-  const hintId = useId();
-  return (
-    <SettingRow
-      label={label}
-      controlId={id}
-      doc={doc}
-      hint={hint}
-      hintId={hintId}
-      standsFor={standsFor}
-    >
-      <BlobToggle
-        id={id}
-        label={label}
-        kind="spark"
-        checked={checked}
-        describedBy={hintId}
-        onChange={onChange}
       />
     </SettingRow>
   );

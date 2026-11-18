@@ -105,6 +105,17 @@ export function noticesFor(fresh: readonly AttentionRequest[]): AttentionNotice[
   ];
 }
 
+export function concealed(notice: AttentionNotice): AttentionNotice {
+  const several = notice.chats.length > 1;
+  return {
+    ...notice,
+    title: 'Spark Outpost',
+    body: several
+      ? `${notice.chats.length} chats need you. Unlock to see them.`
+      : 'A chat needs you. Unlock to see it.',
+  };
+}
+
 export function withdrawn(notice: AttentionNotice, waiting: ReadonlySet<string>): boolean {
   return !notice.requests.some((key) => waiting.has(key));
 }

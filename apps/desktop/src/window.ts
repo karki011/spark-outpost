@@ -2,6 +2,7 @@ import { appendFileSync } from 'node:fs';
 import { app, BrowserWindow, dialog, session, shell } from 'electron';
 import { BROWSER_OUTSIDE_TARGET } from '@spark-outpost/contracts';
 import { targetsApi, withApiToken } from './api-token.ts';
+import { hideWhileLocked } from './app-lock-windows.ts';
 import type { ChannelConfig } from './channel.ts';
 import { attachContextMenu } from './context-menu.ts';
 import type { LinkIntent } from './link-target.ts';
@@ -27,6 +28,7 @@ function openViewer(url: string, origin: string): void {
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   guardNavigation(viewer, origin);
+  hideWhileLocked(viewer);
   void viewer.loadURL(url);
 }
 

@@ -18,6 +18,7 @@ import {
   type BrowserShortcut,
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
+import { appLockGate } from '../app-lock-gate.ts';
 import { CLIPBOARD_WRITE, pagePermissionAllowed, type InputMarks } from './clipboard-permission.ts';
 import type { PageZooms } from './page-zoom.ts';
 import { BROWSER_PARTITION, requestAllowed, type GuardFacts } from './request-guard.ts';
@@ -419,7 +420,7 @@ export class BrowserPanes {
 
   async capture(tab: PaneTab): Promise<string | null> {
     const view = tab.view();
-    if (!view || view.webContents.isDestroyed()) return null;
+    if (!view || view.webContents.isDestroyed() || appLockGate.locked()) return null;
     const image = await view.webContents.capturePage();
     if (image.isEmpty()) return null;
     return `data:image/jpeg;base64,${image.toJPEG(SNAPSHOT_QUALITY).toString('base64')}`;
@@ -449,6 +450,7 @@ export class BrowserPanes {
 
   layout(): void {
     const placement = this.placement;
+    const locked = appLockGate.locked();
     for (const pane of this.chats.values()) {
       for (const tab of pane.tabs) {
         const view = tab.view();
@@ -458,7 +460,11 @@ export class BrowserPanes {
           placement?.chatId === pane.chatId && !placement.covered && tab.active && !tab.peek;
         const bounds = slot !== undefined ? slot : showsActive ? placement.bounds : null;
         const visible =
-          bounds !== null && bounds.width > 0 && bounds.height > 0 && tab.currentUrl() !== BLANK;
+          !locked &&
+          bounds !== null &&
+          bounds.width > 0 &&
+          bounds.height > 0 &&
+          tab.currentUrl() !== BLANK;
         if (visible) view.setBounds(this.zoomed(bounds));
         if (visible && !tab.shown) tab.media.syncZoom();
         view.setVisible(visible);

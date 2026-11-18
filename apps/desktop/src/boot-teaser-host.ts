@@ -1,5 +1,7 @@
 import { ipcMain } from 'electron';
 import changelog from '../CHANGELOG.md';
+import { canLock } from './app-lock-state.ts';
+import { appLockFile, readAppLockRecord } from './app-lock-store.ts';
 import { teaserLines } from './boot-teasers.ts';
 import { DEFAULT_SHORTCUTS, loadSettings, settingsFile } from './companion-settings.ts';
 import { IPC } from './ipc-channels.ts';
@@ -18,8 +20,9 @@ export interface BootTeasersOptions {
 
 export function startBootTeasers(options: BootTeasersOptions) {
   const file = teaserFile(options.userData);
+  const startsLocked = canLock(readAppLockRecord(appLockFile(options.userData)));
   const teasers = Promise.all([
-    readTeaserSnapshot(file),
+    startsLocked ? null : readTeaserSnapshot(file),
     loadSettings(settingsFile(options.userData)),
   ]).then(([snapshot, settings]) =>
     teaserLines({

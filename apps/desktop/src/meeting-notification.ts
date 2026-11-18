@@ -1,5 +1,6 @@
 import { Notification, type NotificationConstructorOptions } from 'electron';
 import type { MeetingAlertPayload } from '@spark-outpost/contracts';
+import { appLockGate } from './app-lock-gate.ts';
 
 export type NoticeChoice =
   { kind: 'join'; eventKey: string } | { kind: 'snooze' } | { kind: 'show' };
@@ -15,15 +16,16 @@ export interface NoticePlan {
   actions: NoticeAction[];
 }
 
-export function noticePlan(payload: MeetingAlertPayload): NoticePlan {
+const HIDDEN_NOTICE = { title: 'Meeting', body: 'Unlock Spark Outpost to see it.' } as const;
+
+export function noticePlan(payload: MeetingAlertPayload, hideDetails = false): NoticePlan {
   const [first] = payload.events;
   const joinable = payload.events.length === 1 && first?.link ? first : null;
   const lead: NoticeAction = joinable
     ? { label: 'Join', choice: { kind: 'join', eventKey: joinable.key } }
     : { label: 'Show', choice: { kind: 'show' } };
   return {
-    title: payload.notice.title,
-    body: payload.notice.body,
+    ...(hideDetails ? HIDDEN_NOTICE : payload.notice),
     actions: [lead, { label: 'Snooze 1 min', choice: { kind: 'snooze' } }],
   };
 }
@@ -38,6 +40,7 @@ export interface NoticeHandle {
 
 export interface NoticeDeps {
   supported(): boolean;
+  hideDetails(): boolean;
   create(options: NotificationConstructorOptions): NoticeHandle;
   log(line: string): void;
 }
@@ -49,6 +52,7 @@ export interface MeetingNotifier {
 
 export const electronNotices = (log: (line: string) => void): NoticeDeps => ({
   supported: () => Notification.isSupported(),
+  hideDetails: appLockGate.hidesNotices,
   create: (options) => new Notification(options),
   log,
 });
@@ -64,7 +68,7 @@ export function meetingNotifier(deps: NoticeDeps): MeetingNotifier {
   };
 
   const post = (payload: MeetingAlertPayload, onChoice: (choice: NoticeChoice) => void) => {
-    const plan = noticePlan(payload);
+    const plan = noticePlan(payload, deps.hideDetails());
     const key = JSON.stringify([payload.key, plan]);
     if (key === shownKey) return;
     close();

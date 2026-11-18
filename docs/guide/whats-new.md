@@ -10,8 +10,8 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                       | What to do                                                     |
 | -------------------------------------------------- | -------------------------------------------------------------- |
-| **Share…** artifacts                               | [Share one](share-an-artifact.md).                             |
-| Context rail lists a chat's **Artifacts**          | [Open one](context-rail.md#open-artifacts).                    |
+| **Share…** artifacts; the rail lists them          | [Share one](share-an-artifact.md).                             |
+| Mac app: privacy screen, left-bar lock             | [Turn it on](privacy-screen.md); **⇧⌘L** locks now.            |
 | **GitHub** page, reviews, auto-review              | [Guide](github-page.md).                                       |
 | **⌘1**–**⌘9** open chats                           | [Keyboard shortcuts](keyboard-shortcuts.md#chats).             |
 | Agent terminal row is a card                       | Nothing to do.                                                 |
@@ -58,5 +58,3 @@ summary: What changed in recent releases and what to do next.
 | Meeting notes (alpha)                | [Take meeting notes](meetings.md).              |
 | Calendar: new look, your replies     | [See your day](calendar.md).                    |
 | Voice shortcut dictates in the chat  | [Talk to Spark](voice.md).                      |
-| Voice uses Parakeet alone, no choice | [Talk to Spark](voice.md).                      |
-| Update check every hour              | [Updates](updates.md).                          |

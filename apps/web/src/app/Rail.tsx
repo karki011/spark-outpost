@@ -10,6 +10,8 @@ import { CALENDAR_PATH } from '../ui/icons.tsx';
 import { browserViewAvailable } from '../browser-view/view-store.ts';
 import { useSparkPause } from './pause/use-spark-pause.ts';
 import { RailClock } from './RailClock.tsx';
+import { RAIL_LOCK_ICON, RailLock } from './RailLock.tsx';
+import { LOCK_LABEL, useLockAction } from '../app-lock/use-lock-action.ts';
 import { railAriaKeys, railHint, railTitle, useRailShortcuts } from './rail-shortcut.ts';
 import { RailFlyout } from './RailFlyout.tsx';
 import { RailMore } from './RailMore.tsx';
@@ -275,6 +277,7 @@ export function Rail({
   const pauseLabel = pause.paused ? 'Resume Spark' : 'Pause Spark';
   const pauseIcon = pause.paused ? RESUME_ICON : PAUSE_ICON;
   const togglePause = () => pause.setPaused(!pause.paused);
+  const lockAction = useLockAction();
   const more = [
     {
       id: 'sparks',
@@ -305,6 +308,15 @@ export function Rail({
       onSelect: onSettings,
     },
   ];
+  if (lockAction && !remote) {
+    more.push({
+      id: 'lock',
+      label: LOCK_LABEL,
+      icon: RAIL_LOCK_ICON,
+      current: false,
+      onSelect: lockAction.run,
+    });
+  }
 
   return (
     <nav ref={railRef} className="rail" aria-label="Main" data-bottom-bar={phone ? '' : undefined}>
@@ -446,6 +458,7 @@ export function Rail({
               ],
             ]}
           />
+          {!remote && <RailLock />}
           <RailClock
             onOpen={remote ? undefined : () => onView('today')}
             onIntent={() => onIntent('today')}
