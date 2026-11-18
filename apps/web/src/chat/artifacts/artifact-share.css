@@ -1,0 +1,103 @@
+.ashare {
+  gap: 12px;
+  max-width: 460px;
+  max-height: 100%;
+  overflow: auto;
+}
+
+.ashare h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+
+.ashare-shared {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--success);
+}
+
+.ashare-lede,
+.ashare-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ashare-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.ashare-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.ashare-label small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ashare-field {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.ashare-field label {
+  color: var(--muted);
+}
+
+.ashare-value {
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.ashare-code {
+  font-size: 15px;
+  letter-spacing: 0.12em;
+}
+
+.ashare-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn.ashare-stop {
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+}
+
+.btn.ashare-stop:hover:not([aria-disabled='true']) {
+  background: var(--danger-soft);
+}
+
+.btn.ashare-stop:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .ashare-field {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ashare-field label {
+    grid-column: 1 / -1;
+  }
+}

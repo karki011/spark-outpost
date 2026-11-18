@@ -39,6 +39,7 @@ export interface ConversationActionDeps {
   nativeTerminals?: NativeRuntime;
   chatFolders?: string;
   researchCopies?: string;
+  sweepShares?: () => Promise<void>;
 }
 
 export function conversationActionRoutes({
@@ -49,6 +50,7 @@ export function conversationActionRoutes({
   deleteSettleMs = DEFAULT_SETTLE_MS,
   chatFolders,
   researchCopies,
+  sweepShares,
 }: ConversationActionDeps): Router {
   const router = Router();
 
@@ -102,6 +104,7 @@ export function conversationActionRoutes({
     terminals.endChat(id);
     await releaseConversation(db, id, 'deleted');
     await deleteConversation(db, workspaceId, id);
+    void sweepShares?.();
     await removeWorkdirs(workdirs);
     if (chatFolders) await removeChatFolder(chatFolders, id);
     if (researchCopies) await removeChatFolder(researchCopies, id);

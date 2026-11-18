@@ -9,6 +9,7 @@ import {
   gitHubAppIds,
   type GitHubAppIds,
 } from '../src/github-app.ts';
+import { SHARE_URL_ENV, shareServiceOrigin } from '@spark-outpost/contracts';
 import { HEARTBEAT_URL_ENV, heartbeatUrl } from '../src/heartbeat.ts';
 import { SLACK_CLIENT_ID_ENV, slackClientId } from '../src/slack-sign-in.ts';
 import { googleClientFromDownload, type GoogleClient } from '../src/google-client.ts';
@@ -21,6 +22,7 @@ import { NO_ACTIVATE_ADDON, noActivateCheck } from './no-activate-bundle.ts';
 export const UPDATE_FEED_ENV = 'SPARK_UPDATE_FEED_URL';
 const UPDATE_FEED_URL = '';
 const HEARTBEAT_URL = '';
+const SHARE_URL = '';
 const GITHUB_APP_CLIENT_ID = 'Iv23li7XhI8fUF6WSltL';
 const GITHUB_APP_SLUG = 'spark-outpost';
 const SLACK_CLIENT_ID = '12090759669655.12602512337571';
@@ -133,6 +135,11 @@ export function releaseProblems(env: Env, archs: MacArch[]): string[] {
       `Slack sign-in is missing. Set ${SLACK_CLIENT_ID_ENV} (or SLACK_CLIENT_ID in apps/desktop/scripts/builder-config.ts) to the Slack app's client ID.`,
     );
   }
+  if (!packagedShareUrl(env)) {
+    problems.push(
+      `Artifact sharing is missing. Set ${SHARE_URL_ENV} (or SHARE_URL in apps/desktop/scripts/builder-config.ts) to the share worker's https origin, or Share… stays hidden.`,
+    );
+  }
   if (!RELEASE_ARCHS.every((arch) => archs.includes(arch))) {
     problems.push(
       'A release builds Apple silicon and Intel together so one channel file lists both. Leave out --arch.',
@@ -156,6 +163,18 @@ export function packagedHeartbeatUrl(env: Env): string | null {
     );
   }
   return url;
+}
+
+export function packagedShareUrl(env: Env): string | null {
+  const value = (env[SHARE_URL_ENV] ?? SHARE_URL).trim();
+  if (value === '') return null;
+  const origin = shareServiceOrigin(value);
+  if (!origin) {
+    throw new Error(
+      `${SHARE_URL_ENV} must be the share service's https origin with no path, such as https://spark-outpost-share.<subdomain>.workers.dev.`,
+    );
+  }
+  return origin;
 }
 
 function resourcesDir(context: AfterPackContext): string {
@@ -200,6 +219,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
   const signing = signingPlan(options.env);
   const feed = updateFeedUrl(options.env);
   const heartbeat = packagedHeartbeatUrl(options.env);
+  const share = packagedShareUrl(options.env);
   const githubApp = packagedGitHubApp(options.env);
   const slackApp = packagedSlackClientId(options.env);
   const google = packagedGoogleClient(options.env);
@@ -211,6 +231,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
       version: options.version,
       name: options.packageName ?? 'spark-outpost',
       ...(heartbeat ? { heartbeatUrl: heartbeat } : {}),
+      ...(share ? { shareUrl: share } : {}),
       ...(githubApp ? { githubApp } : {}),
       ...(slackApp ? { slackApp: { clientId: slackApp } } : {}),
       ...(google

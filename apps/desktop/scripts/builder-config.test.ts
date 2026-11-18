@@ -8,6 +8,7 @@ import {
   packagedGitHubApp,
   packagedSlackClientId,
   packagedHeartbeatUrl,
+  packagedShareUrl,
   releaseProblems,
   signingPlan,
   updateFeedUrl,
@@ -69,6 +70,25 @@ describe('packagedHeartbeatUrl', () => {
     expect(() => packagedHeartbeatUrl({ SPARK_HEARTBEAT_URL: 'http://example.com/hb' })).toThrow(
       /must be an https address/,
     );
+  });
+});
+
+describe('packagedShareUrl', () => {
+  const origin = 'https://spark-outpost-share.example.workers.dev';
+
+  it('bakes in the share service origin from the environment', () => {
+    expect(packagedShareUrl({ SPARK_SHARE_URL: ` ${origin}/ ` })).toBe(origin);
+  });
+
+  it('builds without sharing when none is set', () => {
+    expect(packagedShareUrl({})).toBeNull();
+    expect(packagedShareUrl({ SPARK_SHARE_URL: '' })).toBeNull();
+  });
+
+  it('refuses an address that is not an https origin', () => {
+    for (const value of ['http://example.com', `${origin}/v1/shares`, `${origin}?a=1`]) {
+      expect(() => packagedShareUrl({ SPARK_SHARE_URL: value })).toThrow(/https origin/);
+    }
   });
 });
 
@@ -158,6 +178,15 @@ describe('builderConfig', () => {
     expect(without.extraMetadata).not.toHaveProperty('heartbeatUrl');
   });
 
+  it('writes the share origin into the packaged manifest only when set', () => {
+    const origin = 'https://spark-outpost-share.example.workers.dev';
+    const shared = builderConfig({ ...base, archs: ['x64'], env: { SPARK_SHARE_URL: origin } });
+    const without = builderConfig({ ...base, archs: ['x64'], env: {} });
+
+    expect(shared.extraMetadata).toMatchObject({ shareUrl: origin });
+    expect(without.extraMetadata).not.toHaveProperty('shareUrl');
+  });
+
   it('writes the GitHub App client ID and slug into the packaged manifest only when set', () => {
     const env = { SPARK_GITHUB_APP_CLIENT_ID: 'Iv23liExample', SPARK_GITHUB_APP_SLUG: 'spark' };
     expect(builderConfig({ ...base, archs: ['x64'], env }).extraMetadata).toMatchObject({
@@ -223,6 +252,7 @@ describe('releaseProblems', () => {
     ...NOTARY,
     SPARK_UPDATE_FEED_URL: 'https://updates.example.com',
     SPARK_GOOGLE_CLIENT_FILE: '/keys/google-oauth-client.json',
+    SPARK_SHARE_URL: 'https://share.example.com',
   };
 
   it('accepts a signed, notarized two-arch build with a feed', () => {
@@ -241,6 +271,7 @@ describe('releaseProblems', () => {
       'Notarization credentials are missing',
       'No update feed',
       'Google Calendar sign-in is missing',
+      'Artifact sharing is missing',
       'A release builds Apple silicon and Intel together so one channel file lists both',
     ]);
   });

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseUrl, type ParsedUrl } from './url.ts';
 
 export const calendarServiceSchema = z.enum(['zoom', 'meet', 'teams', 'webex']);
 export type CalendarService = z.infer<typeof calendarServiceSchema>;
@@ -66,29 +67,12 @@ const RULES: readonly ServiceRule[] = [
   },
 ];
 
-interface JoinUrl {
-  protocol: string;
-  hostname: string;
-  port: string;
-  pathname: string;
-  username: string;
-  password: string;
-  searchParams: { get(name: string): string | null };
-  toString(): string;
-}
-
-const UrlParser = (globalThis as unknown as { URL: new (value: string) => JoinUrl }).URL;
-
 const SAFELINKS_SUFFIX = '.safelinks.protection.outlook.com';
 const URL_IN_TEXT = /https:\/\/[^\s<>"')\]]+/g;
 
-function strictHttps(raw: string): JoinUrl | null {
-  let url: JoinUrl;
-  try {
-    url = new UrlParser(raw.trim());
-  } catch {
-    return null;
-  }
+function strictHttps(raw: string): ParsedUrl | null {
+  const url = parseUrl(raw.trim());
+  if (!url) return null;
   if (url.protocol !== 'https:') return null;
   if (url.username || url.password) return null;
   if (url.port !== '') return null;
@@ -101,13 +85,13 @@ function hostMatches(hostname: string, rule: ServiceRule): boolean {
   return rule.suffixes.some((suffix) => host.endsWith(suffix) && host.length > suffix.length);
 }
 
-function serviceOf(url: JoinUrl): CalendarService | null {
+function serviceOf(url: ParsedUrl): CalendarService | null {
   const rule = RULES.find((candidate) => hostMatches(url.hostname, candidate));
   if (!rule || !rule.path(url.pathname)) return null;
   return rule.service;
 }
 
-function isSafeLinks(url: JoinUrl): boolean {
+function isSafeLinks(url: ParsedUrl): boolean {
   const host = url.hostname.toLowerCase();
   return host.endsWith(SAFELINKS_SUFFIX) && host.length > SAFELINKS_SUFFIX.length;
 }

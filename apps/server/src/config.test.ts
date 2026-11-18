@@ -49,3 +49,28 @@ describe('data folder', () => {
     expect(() => sparkDataDir(config, true)).toThrow(/absolute/);
   });
 });
+
+describe('share service', () => {
+  it('is off unless SPARK_SHARE_URL names an origin', () => {
+    expect(loadConfig({ DATABASE_URL }).SPARK_SHARE_URL).toBeNull();
+    expect(loadConfig({ DATABASE_URL, SPARK_SHARE_URL: ' ' }).SPARK_SHARE_URL).toBeNull();
+    expect(
+      loadConfig({ DATABASE_URL, SPARK_SHARE_URL: 'https://share.example/' }).SPARK_SHARE_URL,
+    ).toBe('https://share.example');
+    expect(
+      loadConfig({ DATABASE_URL, SPARK_SHARE_URL: 'http://127.0.0.1:4100' }).SPARK_SHARE_URL,
+    ).toBe('http://127.0.0.1:4100');
+  });
+
+  it('refuses http off this computer, a path, a query and a login', () => {
+    for (const value of [
+      'http://share.example',
+      'https://share.example/v1',
+      'https://share.example/?a=1',
+      'https://me:pw@share.example',
+      'ftp://share.example',
+    ]) {
+      expect(() => loadConfig({ DATABASE_URL, SPARK_SHARE_URL: value })).toThrow(/SPARK_SHARE_URL/);
+    }
+  });
+});

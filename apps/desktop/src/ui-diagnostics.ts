@@ -6,7 +6,7 @@ const SELECTORS = [
   '.fdlg-scrim',
   '.op-scrim',
   '.tm-scrim',
-  '.cx-confirm-scrim',
+  '.modal-scrim',
   '.cal-choose-scrim',
   '.wp-scrim',
   '.scrim',

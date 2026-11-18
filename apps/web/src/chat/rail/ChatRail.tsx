@@ -35,6 +35,7 @@ import { useChatWorkspace } from '../project/use-chat-workspace.ts';
 import { providerName } from '../provider-name.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { primaryPull } from '../pull-request/pull-request-model.ts';
+import { RailArtifacts } from './RailArtifacts.tsx';
 import { RailCrew } from './RailCrew.tsx';
 import { RailPorts } from './RailPorts.tsx';
 import { RailTools } from './RailTools.tsx';
@@ -219,6 +220,7 @@ function OpenRail({
   });
   const openTodo = useCallback(() => onTab('todo'), [onTab]);
   const crew = railCrew(detail, useLeadSteps());
+  const artifacts = detail.artifactPages ?? [];
 
   const act = (action: RailAction) => {
     if (overlay && action.kind !== 'link') onClose(false);
@@ -246,6 +248,13 @@ function OpenRail({
       </div>
       {task && <RailTodo task={task} onOpen={openTodo} />}
       {crew.length > 0 && <RailCrew conversationId={conversationId} agents={crew} mode={mode} />}
+      {artifacts.length > 0 && (
+        <RailArtifacts
+          chatId={conversationId}
+          pages={artifacts}
+          onOpen={() => overlay && onClose(false)}
+        />
+      )}
       <RailTools conversationId={conversationId} repos={repos} provider={settings.provider} />
     </section>
   );

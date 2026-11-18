@@ -16,7 +16,8 @@
         "tests/browser/terminal-usage-cli.ts",
         "tests/browser/bin/tailscale-fake.ts",
         "tests/fixtures/browser-pane/serve.ts",
-        "infra/heartbeat-worker/src/worker.ts"
+        "infra/heartbeat-worker/src/worker.ts",
+        "infra/share-worker/src/worker.ts"
       ],
       "project": ["scripts/**/*.ts", "tests/**/*.ts", "infra/**/*.ts"],
       "ignore": ["scripts/bench/fixture/**"]
