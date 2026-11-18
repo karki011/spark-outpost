@@ -26,6 +26,10 @@ const MCP_NOUN = 'mcp|mcp servers?';
 const TICKET_NOUN = 'tickets?|issues?|[A-Z][A-Z0-9]+-\\d+|[A-Z]{2,8}\\d{4,12}';
 const RECORD_NOUN =
   'servicenow|records?|incidents?|requests?|tasks?|problems?|changes?|tickets?|[A-Z]{2,8}\\d{4,12}';
+const CREW_NOUN = 'sparks?|teammates?|skills?|workflows?|crew|spark\\.md';
+const CREW_CREATE_VERB = 'create|add|make|build|set up|draft|write';
+const CREW_CHANGE_VERB =
+  'change|update|edit|rename|fix|rewrite|improve|tweak|adjust|delete|remove|revise';
 
 const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   open_pr: asked('open|create|make|raise|submit|send|ship|put up', 'pr|prs|pull requests?'),
@@ -41,8 +45,9 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   assign_ticket: asked('assign|unassign|take', `${TICKET_NOUN}|me`),
   pr_follow_up: null,
   pr_follow_up_round: asked('follow[- ]?up|address|fix|handle', 'feedback|comments?|reviews?'),
-  create_teammate: null,
-  update_teammate: null,
+  create_teammate: asked(CREW_CREATE_VERB, CREW_NOUN),
+  update_teammate: asked(CREW_CHANGE_VERB, CREW_NOUN),
+  delete_teammate: asked('delete|remove|drop|get rid of', 'sparks?|teammates?'),
   add_mcp_server: asked('add|create|set up|install|connect|configure|register', MCP_NOUN),
   update_mcp_server: asked('change|update|rename|edit|fix|reconfigure|point', MCP_NOUN),
   switch_mcp_server: asked('turn on|turn off|enable|disable|switch', MCP_NOUN),
@@ -106,7 +111,7 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   ),
   rules_edit: null,
   plugins_edit: null,
-  crew_edit: null,
+  crew_edit: asked(`${CREW_CREATE_VERB}|${CREW_CHANGE_VERB}`, CREW_NOUN),
   link_repo: null,
   github_read: asked(
     'read|look|check|see|find|search|show|list|explain|study|research|explore|clone|copy|download',
@@ -171,6 +176,24 @@ async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
   return (
     rows[0] ?? { provider: null, mode: null, request: null, outpost_run: null, from_user: null }
   );
+}
+
+export async function userWroteTurn(db: Queryable, runId: string): Promise<boolean> {
+  const run = await runFacts(db, runId);
+  if (run.provider === null && run.mode === null) return false;
+  if (run.assistant_sent === true || run.spark_rule_retry === true) return false;
+  if (await followUpRun(db, runId)) return false;
+  return run.outpost_run !== true || run.from_user === true;
+}
+
+async function followUpRun(db: Queryable, runId: string): Promise<boolean> {
+  const { rows } = await db.query<{ follow_up: boolean }>(
+    `SELECT COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
+              = 'pr_follow_up' AS follow_up
+     FROM runs r WHERE r.id = $1`,
+    [runId],
+  );
+  return rows[0]?.follow_up === true;
 }
 
 function runText(run: RunFacts): UserTextInput {

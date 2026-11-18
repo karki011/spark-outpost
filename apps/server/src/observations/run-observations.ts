@@ -27,6 +27,7 @@ export interface SentOutNote {
 export interface RunObservations {
   record(observation: Observation): void;
   labels(): Promise<string[]>;
+  completeLabels(): Promise<string[] | null>;
   egressAsked(ask: EgressAsk): void;
   sentOut(note: SentOutNote): void;
   crossed(flag: NewRailFlag): Promise<void>;
@@ -48,6 +49,11 @@ const CHAT_CONTEXT_TOOLS = [
 const RETIRED_LABELS = new Set(CHAT_CONTEXT_TOOLS.map((tool) => `private work data (${tool})`));
 
 const keyOf = (observation: Observation) => `${observation.source}\u0000${observation.label}`;
+
+function labelsOf(observations: readonly Observation[]): string[] {
+  const counted = observations.filter((observation) => !RETIRED_LABELS.has(observation.label));
+  return [...new Set(counted.map((observation) => observation.label))];
+}
 
 export function createRunObservations(options: RunObservationsOptions): RunObservations {
   const seen = new Map<string, Observation>();
@@ -100,10 +106,14 @@ export function createRunObservations(options: RunObservationsOptions): RunObser
         console.error('Could not read observations', error);
         return [];
       });
-      const counted = [...stored, ...seen.values()].filter(
-        (observation) => !RETIRED_LABELS.has(observation.label),
-      );
-      return [...new Set(counted.map((observation) => observation.label))];
+      return labelsOf([...stored, ...seen.values()]);
+    },
+    async completeLabels() {
+      const stored = await turnObservations(options.db, options.runId).catch((error: unknown) => {
+        console.error('Could not read observations', error);
+        return null;
+      });
+      return stored === null ? null : labelsOf([...stored, ...seen.values()]);
     },
     egressAsked(ask) {
       audit('spark/egress', {

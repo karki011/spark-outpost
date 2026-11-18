@@ -5,7 +5,22 @@ import { MarkdownReview } from '../chat/approvals/MarkdownReview.tsx';
 import { ReviewFiles } from '../chat/approvals/ReviewFiles.tsx';
 import { TeammateFace } from './TeammateFace.tsx';
 
-type TeammateAction = Extract<SparkAction, { action: 'create_teammate' | 'update_teammate' }>;
+type TeammateAction = Extract<
+  SparkAction,
+  { action: 'create_teammate' | 'update_teammate' | 'delete_teammate' }
+>;
+
+function SparkName({ action }: { action: TeammateAction }) {
+  return (
+    <dd className="tm-fact-name">
+      <TeammateFace face={action.face} size={22} />
+      <span>
+        {action.name}
+        {action.role && ` · ${action.role}`}
+      </span>
+    </dd>
+  );
+}
 
 const LABELS: Record<string, string> = {
   name: 'Name',
@@ -20,6 +35,14 @@ const LABELS: Record<string, string> = {
 };
 
 export function TeammateFacts({ action }: { action: TeammateAction }) {
+  if (action.action === 'delete_teammate') {
+    return (
+      <dl className="sac-facts">
+        <dt>Spark</dt>
+        <SparkName action={action} />
+      </dl>
+    );
+  }
   const changed = action.action === 'update_teammate' ? action.changed : null;
   const defaults = [
     action.provider ?? 'Default provider',
@@ -33,13 +56,7 @@ export function TeammateFacts({ action }: { action: TeammateAction }) {
     <>
       <dl className="sac-facts">
         <dt>Spark</dt>
-        <dd className="tm-fact-name">
-          <TeammateFace face={action.face} size={22} />
-          <span>
-            {action.name}
-            {action.role && ` · ${action.role}`}
-          </span>
-        </dd>
+        <SparkName action={action} />
         {changed && (
           <>
             <dt>Changes</dt>

@@ -7,7 +7,11 @@ import {
   performSwitchMcpServer,
   performUpdateMcpServer,
 } from './mcp-perform.ts';
-import { performCreateTeammate, performUpdateTeammate } from './teammate-actions.ts';
+import {
+  performCreateTeammate,
+  performDeleteTeammate,
+  performUpdateTeammate,
+} from './teammate-actions.ts';
 import {
   performAssignTicket,
   performCommentTicket,
@@ -58,6 +62,8 @@ export function performSparkAction(
       return performCreateTeammate(context, action);
     case 'update_teammate':
       return performUpdateTeammate(context, action);
+    case 'delete_teammate':
+      return performDeleteTeammate(context, action);
     case 'add_mcp_server':
       return performAddMcpServer(context, action);
     case 'update_mcp_server':

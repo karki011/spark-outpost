@@ -66,18 +66,20 @@ A skill folder without a valid `SKILL.md` is not offered to the Spark.
 
 ## What an agent can do
 
-| Tool              | Does                                                                                         | Asks                                    |
-| ----------------- | -------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `spark_crew`      | Lists Sparks with skills, and workflows; reads a Spark's file list, one file or one workflow | Never                                   |
-| `spark_crew_edit` | Proposes new, changed or deleted files for one Spark, or a new, changed or deleted workflow  | Always, with each file before and after |
+| Tool              | Does                                                                                                        | Asks                                                                                             |
+| ----------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `spark_crew`      | Lists Sparks with skills, workflows and waiting drafts; reads a Spark's file list, one file or one workflow | Never                                                                                            |
+| `spark_crew_edit` | New, changed or deleted files for one Spark, or a new, changed or deleted workflow; withdraws its drafts    | [Follows the agent's mode](build-with-an-agent.md#when-it-asks), with each file before and after |
 
 In `spark_crew_edit`, a step may name its Spark with `spark`, `text: null` deletes a file, `remove` deletes a skill folder or a workflow, and `removeFolder` deletes every file under any folder of the Spark.
+
+`withdraw` (draft ids, or `["all"]`) closes the chat's own waiting drafts. Workflow names are unique.
 
 A folder appears when a file is written inside it and goes when its last file is deleted. To move or rename a file, delete the old path and write the new one in the same call.
 
 A change with a problem goes back to the agent and is never shown to you.
 
-In the chat it waits as one line, _name_ **is ready for review**; **Review** opens the card in a window.
+In the chat a card waits as one line with **Details**, **Deny** and **Allow**; **Details** opens it in a window.
 
 The card is titled **Change the** _name_ **Spark?** or **workflow?**. Only you answer it, with **Allow** or **Deny**, on the Mac or a [device you allow](answer-remotely.md). If a file changed after the card appeared, nothing is written.
 

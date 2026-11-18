@@ -1,5 +1,9 @@
 import { afterEach, beforeEach } from 'vitest';
 import type { Teammate } from '@spark-outpost/contracts';
+import {
+  createRunObservations,
+  type RunObservations,
+} from '../src/observations/run-observations.ts';
 import { newSpark, useWorkflowsDir } from './crew-workflow-support.ts';
 import {
   recordedHooks,
@@ -14,6 +18,7 @@ export interface CrewToolsState {
   recorded: RecordedHooks;
   chat: { conversationId: string; runId: string };
   scout: Teammate;
+  observations: RunObservations;
 }
 
 export interface CrewToolsHarness {
@@ -55,12 +60,14 @@ export function useCrewTools(): CrewToolsHarness {
     const recorded = recordedHooks();
     const chat = await startChat(t, 'Give Scout a release notes skill');
     const scout = await newSpark(t, 'Scout', { instructions: 'Be brief.' });
-    current = { t, recorded, chat, scout };
-    await setRun('bypassPermissions');
+    const observations = createRunObservations({ db: t.db, runId: chat.runId });
+    current = { t, recorded, chat, scout, observations };
+    await setRun('default');
     tools = await startSparkTools(t, {
       conversationId: chat.conversationId,
       runId: chat.runId,
       actions: recorded.hooks,
+      observations,
     });
   });
 

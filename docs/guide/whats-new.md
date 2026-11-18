@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                       | What to do                                                     |
 | -------------------------------------------------- | -------------------------------------------------------------- |
+| Agents add, change, delete Sparks per their mode   | [When it asks](build-with-an-agent.md#when-it-asks).           |
 | **Share…** artifacts; the rail lists them          | [Share one](share-an-artifact.md).                             |
 | Mac app: privacy screen, left-bar lock             | [Turn it on](privacy-screen.md); **⇧⌘L** locks now.            |
 | **GitHub** page, reviews, auto-review              | [Guide](github-page.md).                                       |
@@ -26,7 +27,6 @@ summary: What changed in recent releases and what to do next.
 | Context rail: full height; **Tools** inline        | [See a chat's context](context-rail.md).                       |
 | Remote control: side panel, sections fold          | [Use your phone](use-your-phone.md).                           |
 | Wider Home, Analytics, Remote control, guide       | Nothing to do.                                                 |
-| Spark drafts open in a review window               | [Answer the drafts](build-with-an-agent.md#answer-the-drafts). |
 | **Let Spark build one for you**; new empty tabs    | [Build with an agent](build-with-an-agent.md).                 |
 | Squircle corners, sidebar hide fix                 | Nothing to do.                                                 |
 | Fewer Settings pages                               | [Settings](settings.md).                                       |
