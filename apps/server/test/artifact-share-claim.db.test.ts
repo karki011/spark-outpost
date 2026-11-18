@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { DbClient } from '../src/persistence/db.ts';
 import { shareSecret } from '../src/setup/secrets.ts';
 import { deleteConversation } from '../src/persistence/conversation-actions.ts';
 import { HTML, ShareHarness, sharePath, untilAborted } from './artifact-share-support.ts';
@@ -42,6 +43,43 @@ function held(method: string, when: 'before' | 'after') {
   return { fetch: fetchHeld, reached: reached.opened, release: release.open };
 }
 
+const LOCK_WAIT_MS = 10_000;
+
+async function backendPid(client: DbClient): Promise<number> {
+  const { rows } = await client.query<{ pid: number }>('SELECT pg_backend_pid() AS pid');
+  return rows[0]!.pid;
+}
+
+async function untilLockWait(sql: string, pid: number): Promise<void> {
+  const deadline = Date.now() + LOCK_WAIT_MS;
+  for (;;) {
+    const { rows } = await s.t.db.query<{ waiting: boolean }>(sql, [pid]);
+    if (rows[0]!.waiting) return;
+    if (Date.now() > deadline) throw new Error(`No lock wait seen for session ${pid}`);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
+
+const untilBlocking = (pid: number) =>
+  untilLockWait(
+    `SELECT EXISTS (SELECT 1 FROM pg_stat_activity
+                    WHERE wait_event_type = 'Lock' AND $1::int = ANY(pg_blocking_pids(pid))) AS waiting`,
+    pid,
+  );
+
+const untilBlocked = (pid: number) =>
+  untilLockWait('SELECT cardinality(pg_blocking_pids($1::int)) > 0 AS waiting', pid);
+
+async function endTransaction(client: DbClient, open: boolean): Promise<void> {
+  const failed = open
+    ? await client.query('ROLLBACK').then(
+        () => undefined,
+        (error: unknown) => (error instanceof Error ? error : new Error(String(error))),
+      )
+    : undefined;
+  client.release(failed);
+}
+
 async function pendingAfterLostAnswer(): Promise<{ id: string; shareId: string }> {
   const id = await s.publish('html', HTML);
   await s
@@ -56,18 +94,22 @@ describe('a pending share the sweep and its own create both reach', { timeout: 3
     const { shareId } = await pendingAfterLostAnswer();
     await s.makePendingStale();
     const finishing = await s.t.db.connect();
+    let open = false;
+    let sweeping: Promise<void> = Promise.resolve();
     try {
       await finishing.query('BEGIN');
+      open = true;
       await finishing.query("UPDATE artifact_page_shares SET state = 'live' WHERE share_id = $1", [
         shareId,
       ]);
-      const sweeping = s.sweep();
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      sweeping = s.sweep();
+      await untilBlocking(await backendPid(finishing));
       expect(s.fake.deletes).toEqual([]);
       await finishing.query('COMMIT');
-      await sweeping;
+      open = false;
     } finally {
-      finishing.release();
+      await endTransaction(finishing, open);
+      await sweeping;
     }
 
     expect(s.fake.deletes).toEqual([]);
@@ -111,18 +153,23 @@ describe('a pending share the sweep and its own create both reach', { timeout: 3
     await s.makePendingStale();
     const slow = held('DELETE', 'before');
     const sweeping = s.sweep(s.service({ fetch: slow.fetch }));
+    const creating = await s.t.db.connect();
     try {
       await slow.reached;
 
-      const finishing = s.t.db.query(
-        "UPDATE artifact_page_shares SET state = 'live' WHERE share_id = $1 AND state = 'pending'",
-        [shareId],
-      );
-      const early = await Promise.race([
-        finishing.then(() => 'finished'),
-        new Promise((resolve) => setTimeout(() => resolve('waiting'), 300)),
-      ]);
-      expect(early).toBe('waiting');
+      const pid = await backendPid(creating);
+      let finished = false;
+      const finishing = creating
+        .query(
+          "UPDATE artifact_page_shares SET state = 'live' WHERE share_id = $1 AND state = 'pending'",
+          [shareId],
+        )
+        .finally(() => {
+          finished = true;
+        });
+      await untilBlocked(pid);
+      expect(finished).toBe(false);
+      expect(s.fake.deletes).toEqual([]);
       slow.release();
       await sweeping;
 
@@ -132,6 +179,8 @@ describe('a pending share the sweep and its own create both reach', { timeout: 3
       expect(await s.secrets.get(shareSecret(shareId))).toBeNull();
     } finally {
       slow.release();
+      await sweeping;
+      creating.release();
     }
   });
 
@@ -139,7 +188,7 @@ describe('a pending share the sweep and its own create both reach', { timeout: 3
     const id = await s.publish('html', HTML);
     const slow = held('POST', 'before');
     const answered = s
-      .client(s.service({ fetch: slow.fetch }))
+      .client(s.service({ fetch: slow.fetch, timeoutMs: 20_000 }))
       .send('post', sharePath(id), BODY)
       .then((response) => response);
     try {
@@ -147,9 +196,16 @@ describe('a pending share the sweep and its own create both reach', { timeout: 3
       await s.makePendingStale();
       await s.sweep();
       expect(s.fake.deletes).toHaveLength(1);
+      expect(s.fake.posts).toEqual([]);
       slow.release();
 
       expect((await answered).status).toBe(502);
+      expect(s.fake.posts).toHaveLength(1);
+      const shareId = s.fake.posts[0]!.id;
+      expect(s.fake.deletes[0]!.id).toBe(shareId);
+      expect(s.fake.answered.filter((answer) => answer.method === 'POST')).toEqual([
+        { method: 'POST', id: shareId, status: 409 },
+      ]);
       expect(s.fake.shares.size).toBe(0);
       expect(await s.states()).toEqual([]);
     } finally {

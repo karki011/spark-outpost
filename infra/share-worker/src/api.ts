@@ -27,6 +27,8 @@ export const MAX_TITLE_CHARS = 120;
 export const MAX_HTML_BYTES = 2_097_152;
 export const MAX_CREATE_BODY_BYTES = MAX_HTML_BYTES * 2 + 16_384;
 export const CREATE_LIMIT_PER_HOUR = 20;
+export const RETIRE_LIMIT_PER_HOUR = 60;
+export const FINAL_HEADER = 'x-share-final';
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
@@ -119,8 +121,10 @@ async function storeShare(
   const existing = await existingShare(env, record.id, now);
   if (existing.state === 'expired') await removeShare(env, existing.record);
   if (existing.state !== 'live') return 'conflict';
-  const sameToken = sameText(existing.record.deleteTokenHash, record.deleteTokenHash);
-  return sameToken ? existing.record : 'conflict';
+  if (!sameText(existing.record.deleteTokenHash, record.deleteTokenHash)) return 'conflict';
+  if (!(await isRetired(env, record.id))) return existing.record;
+  await discardShare(env, record.id);
+  return 'conflict';
 }
 
 export async function createShare(request: Request, env: ShareEnv, now: number) {
@@ -163,18 +167,29 @@ export async function createShare(request: Request, env: ShareEnv, now: number) 
   return jsonResponse(201, { id, url, expiresAt });
 }
 
+async function retireUnstored(request: Request, env: ShareEnv, id: string, now: number) {
+  if (await isRetired(env, id)) return true;
+  const allowed = await allowHit(
+    env.COUNTERS,
+    `retire:${clientAddress(request)}`,
+    now,
+    RETIRE_LIMIT_PER_HOUR,
+    HOUR_MS,
+  );
+  if (allowed) await retireId(env, id);
+  return allowed;
+}
+
 export async function deleteShare(request: Request, env: ShareEnv, id: string, now: number) {
   const token = BEARER.exec(request.headers.get('authorization') ?? '')?.[1] ?? null;
   if (token === null) return jsonError(404, 'not_found');
-  const owner = await ownsId(token, id);
   let record = await findShare(env, id, now);
-  if (!record && owner) {
-    await retireId(env, id);
+  if (!record && (await ownsId(token, id))) {
+    if (!(await retireUnstored(request, env, id, now))) return jsonError(429, 'rate_limited');
     record = await findShare(env, id, now);
   }
-  if (!record || !sameText(await sha256(token), record.deleteTokenHash)) {
-    return jsonError(404, 'not_found');
-  }
+  if (!record) return jsonError(404, 'not_found', { [FINAL_HEADER]: '1' });
+  if (!sameText(await sha256(token), record.deleteTokenHash)) return jsonError(404, 'not_found');
   await retireId(env, id);
   await removeShare(env, record);
   return emptyResponse(204);

@@ -143,6 +143,7 @@ interface SharedSheetProps {
   share: ArtifactShare;
   passcode: string | null;
   notice: string | null;
+  canShareAgain: boolean;
   busy: boolean;
   failure: string | null;
   onStop: () => void;
@@ -157,6 +158,7 @@ export function SharedSheet({
   share,
   passcode,
   notice,
+  canShareAgain,
   busy,
   failure,
   onStop,
@@ -198,10 +200,16 @@ export function SharedSheet({
       ) : (
         share.hasPasscode && (
           <p className="ashare-note">
-            The passcode was shown when the link was made. To get a new one, stop sharing and share
-            again.
+            The passcode was shown when the link was made.
+            {canShareAgain && ' To get a new one, stop sharing and share again.'}
           </p>
         )
+      )}
+      {!canShareAgain && (
+        <p className="ashare-note">
+          This build can’t make new links. After you stop sharing, this version can’t be shared
+          again from here.
+        </p>
       )}
       <p className="ashare-note">
         Ends {endDate(share.expiresAt)}

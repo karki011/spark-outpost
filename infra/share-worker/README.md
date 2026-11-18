@@ -28,7 +28,7 @@ For example, the token `Tk4_-Tk4_-Tk4_-Tk4_-Tk4_-Tk4_-Tk4_-Tk4_-Tk4` gives the i
 Because the app has the key before it uploads, a create whose answer is lost can be sent again and the page can always be deleted:
 
 - Nothing stored at that id: the page is stored and the answer is `201`.
-- A live share at that id (it has the same delete token): nothing is written and the answer is `201` with that share's `id`, `url` and `expiresAt`.
+- A live share at that id (it has the same delete token): nothing is written and the answer is `201` with that share's `id`, `url` and `expiresAt`, unless the id was retired meanwhile: then the page is removed and the answer is `409 conflict`.
 - A stored object at that id whose details can't be read, or an expired share not yet removed (the create removes it): `409 conflict`.
 - An id its owner deleted or asked to delete: `409 conflict`, for good.
 
@@ -38,7 +38,11 @@ The page is written with an R2 conditional put (`onlyIf: { etagDoesNotMatch: '*'
 
 A `DELETE` removes a stored share when the SHA-256 of its bearer token equals the stored `deleteTokenHash`. That is the only check for a stored share, so shares stored before ids came from tokens (their ids are random) are still deleted with their own token.
 
-A `DELETE` for an id with nothing stored answers `404`. When its token gives that id, the caller is the owner, and the worker first writes an empty object at `gone/<id>`, then looks once more for a page stored meanwhile and deletes it. The Mac app relies on this: after a create whose answer was lost it sends a `DELETE`, and a `404` then means the page is not there and its own late upload can never arrive. Any other `DELETE` for an unstored id (a wrong token, an old random id) writes nothing, so there is no rate limit on deletes: only a key holder can write a marker, one per key.
+A `DELETE` for an id with nothing stored answers `404`. When its token gives that id, the caller is the owner, and the worker first writes an empty object at `gone/<id>`, then looks once more for a page stored meanwhile and deletes it. Any other `DELETE` for an unstored id (a wrong token, an old random id) writes nothing.
+
+A `404` carries the header `x-share-final: 1` when no page is stored at the id and none can arrive from the key in the request: either the id is retired (its marker is written), or the key does not give the id, so a create with that pair is always `400`. A `404` for a missing or malformed `authorization` header, or for a stored share whose key is another one, has no such header. The Mac app relies on the header: after a create whose answer was lost it sends a `DELETE` and forgets the share only on a `204` or a `404` with `x-share-final: 1`; a bare `404` (from a worker older than the header, which may not retire ids) leaves its row and key in place until the share's own end date. `src/contract.test.ts` checks the header's name against the app's (`ARTIFACT_SHARE_FINAL_HEADER`).
+
+Writing a marker for an id with nothing stored is limited to 60 per hour per client address, since anyone can make a key and ask to retire its id. Over the limit the answer is `429 rate_limited` and nothing is written, never a `404`; the app keeps the row and tries again on its next hourly sweep. A repeat for an id already retired is not counted and writes nothing, and deleting a stored share with its key is never limited.
 
 ### What `gone/<id>` markers are for
 
@@ -48,7 +52,7 @@ Page views do not read markers: `/a/:id` is one R2 `head` and `/a/:id/content` i
 
 Expiry writes no marker. A share expires at least a day after its create, long after any retry of that create has ended, and the app deletes the key when its link expires and never uploads an old pair again. If the key holder did upload again to their own expired id, the page would be their own.
 
-Markers are never deleted. Each is a zero-byte object with no metadata: one R2 write (Class A) per share its owner removed, no stored bytes to bill, and the daily run never lists them because it lists `shares/` only. Markers written by earlier versions of the worker (for expired shares, and for unstored ids named by anyone) do nothing now and can be left or deleted.
+Markers are never deleted. Each is a zero-byte object with no metadata: one R2 write (Class A) per share its owner removed or asked to remove, no stored bytes to bill, and the daily run never lists them because it lists `shares/` only. Markers written by earlier versions of the worker (for expired shares, and for unstored ids named by anyone) do nothing now and can be left or deleted.
 
 ## How a page is shown
 
@@ -76,14 +80,14 @@ In the R2 bucket `spark-outpost-shares`:
 | `gone/<id>`                  | Empty. Marks an id whose owner deleted it or asked to, so the owner's own late upload is refused                                      |
 | `reports/<id>/<ms>-<random>` | `{ id, reason, reportedAt }`                                                                                                          |
 
-The `ShareCounters` Durable Object keeps wrong-code counts per share and create and report counts per client address for one hour. Its storage holds only counts and times; the address is used only as the object's name, which Cloudflare hashes. The worker never logs request bodies, passcodes, tokens or addresses, and Workers logs are off in `wrangler.toml`.
+The `ShareCounters` Durable Object keeps wrong-code counts per share and create, report and unstored-id retirement counts per client address for one hour. Its storage holds only counts and times; the address is used only as the object's name, which Cloudflare hashes. The worker never logs request bodies, passcodes, tokens or addresses, and Workers logs are off in `wrangler.toml`.
 
 An expired share is deleted the next time someone opens it, and every day at 03:17 UTC by the cron trigger, which also clears its attempt counts; neither writes a marker. The daily run works through expired shares 20 at a time (the pages, then the counts), so a run that hits a plan's subrequest limit keeps what it finished and the next run goes on; an expired page is never served in between. Reports and markers are kept until you delete them.
 
 ## Limits
 
 - Pages up to 2 MiB of HTML, titles up to 120 characters, expiry 1 or 7 days.
-- 20 creates and 10 reports per hour per client address.
+- 20 creates, 10 reports and 60 retirements of ids with nothing stored per hour per client address.
 - Free plan: the passcode hash runs once when a passcode share is created and once per unlock attempt. Whether 100,000 PBKDF2 iterations fit the free plan's CPU limit has not been measured. If those requests fail with a CPU limit error, move to Workers Paid or lower `PASSCODE_ITERATIONS` in `src/crypto.ts`. A lower value only applies to shares created after the deploy: each share stores the count it was hashed with, so an existing passcode share still costs the old count on every unlock and keeps failing until the worker has enough CPU (Workers Paid) or the share is made again.
 
 ## Set up and deploy

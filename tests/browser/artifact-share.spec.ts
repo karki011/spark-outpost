@@ -176,6 +176,50 @@ test('Share… is hidden when the build has no share service, and off for Markdo
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
+test('a link made earlier can still be stopped when the build has no share service', async ({
+  page,
+}) => {
+  await publish(page, 'Old link');
+  const old = pane(page, 'Old link');
+  await old.getByRole('button', { name: 'Share…' }).click();
+  const confirm = page.getByRole('dialog', { name: 'Share “Old link”?' });
+  await confirm.getByRole('switch', { name: 'Require a passcode' }).click();
+  await confirm.getByRole('button', { name: 'Create link' }).click();
+  const shared = page.getByRole('dialog', { name: 'Shared · version 1' });
+  const link = await shared.getByRole('textbox', { name: 'Link' }).inputValue();
+  await shared.getByRole('button', { name: 'Done' }).click();
+
+  await page.route('**/api/artifacts/*/versions/*/share', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    const response = await route.fetch();
+    const status = (await response.json()) as { share: unknown };
+    await route.fulfill({ response, json: { ...status, available: false } });
+  });
+  await page.reload();
+  await openPane(page, 'Old link');
+  await expect(old.getByRole('button', { name: 'Share…' })).toHaveCount(0);
+  await old.getByRole('button', { name: 'Shared' }).click();
+  await expect(shared.getByRole('textbox', { name: 'Link' })).toHaveValue(link);
+  await expect(shared).toContainText('Ends ');
+  await expect(shared).toContainText('The passcode was shown when the link was made.');
+  await expect(shared).not.toContainText('share again.');
+  await expect(shared).toContainText('This build can’t make new links.');
+
+  const stopped = page.waitForResponse(
+    (response) => response.request().method() === 'DELETE' && SHARE_STATUS.test(response.url()),
+  );
+  await shared.getByRole('button', { name: 'Stop sharing' }).click();
+  expect((await stopped).status()).toBe(204);
+  await expect(shared).toHaveCount(0);
+  await expect(old.getByRole('button', { name: /^Share/ })).toHaveCount(0);
+  await expect(old.getByRole('button', { name: 'Copy' })).toBeVisible();
+
+  await page.unroute('**/api/artifacts/*/versions/*/share');
+  await page.reload();
+  await openPane(page, 'Old link');
+  await expect(old.getByRole('button', { name: 'Share…' })).toBeVisible();
+});
+
 test('a sheet stays on its version, and keeps its passcode, when a newer version arrives', async ({
   page,
 }) => {

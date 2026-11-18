@@ -23,6 +23,11 @@ const storedThenTimedOut: typeof fetch = async (url, init) => {
 const lostOnTheWay: typeof fetch = async (url, init) =>
   init?.method === 'POST' ? untilAborted(init) : fetch(url, init);
 
+const limitedDeletes: typeof fetch = async (url, init) =>
+  init?.method === 'DELETE'
+    ? Response.json({ error: 'rate_limited' }, { status: 429 })
+    : fetch(url, init);
+
 const unreachable: typeof fetch = async () => {
   throw new TypeError('fetch failed');
 };
@@ -73,23 +78,63 @@ describe('a share whose upload has no clear answer', { timeout: 30_000 }, () => 
     expect(await s.states()).toEqual(['live']);
   });
 
-  it('does not trust a 404 right after a lost upload, and the sweep clears it a minute later', async () => {
+  it('clears the row at once when the service says no page is there and none can arrive', async () => {
     const id = await s.publish('html', HTML);
     await s
       .client(s.service({ fetch: lostOnTheWay, timeoutMs: 300 }))
       .send('post', sharePath(id), BODY)
       .expect(502);
     expect(s.fake.posts).toHaveLength(0);
-    expect(s.fake.deletes).toHaveLength(1);
-    expect(await s.states()).toEqual(['pending']);
+    expect(s.fake.answered).toHaveLength(1);
+    expect(s.fake.answered[0]).toMatchObject({ method: 'DELETE', status: 404 });
+    expect(s.fake.retired.size).toBe(1);
+    expect(await s.states()).toEqual([]);
+    expect(await s.secrets.get(shareSecret(s.fake.deletes[0]!.id))).toBeNull();
+  });
 
-    await s.sweep();
+  it('never trusts a bare 404 for a lost upload, and keeps the row and key until its end date', async () => {
+    s.fake.retires = false;
+    const id = await s.publish('html', HTML);
+    await s
+      .client(s.service({ fetch: lostOnTheWay, timeoutMs: 300 }))
+      .send('post', sharePath(id), BODY)
+      .expect(502);
+    const shareId = s.fake.deletes[0]!.id;
     expect(await s.states()).toEqual(['pending']);
 
     await s.makePendingStale();
     await s.sweep();
-    expect(s.fake.deletes).toHaveLength(2);
+    await s.sweep();
+    expect(s.fake.answered.map((answer) => answer.status)).toEqual([404, 404, 404]);
+    expect(await s.states()).toEqual(['pending']);
+    expect(await s.secrets.get(shareSecret(shareId))).not.toBeNull();
+    const again = await s.client().send('post', sharePath(id), BODY).expect(409);
+    expect(again.body.error).toMatch(/still removing an earlier try/);
+
+    await s.t.db.query("UPDATE artifact_page_shares SET expires_at = now() - interval '1 minute'");
+    await s.sweep();
     expect(await s.states()).toEqual([]);
+    expect(await s.secrets.get(shareSecret(shareId))).toBeNull();
+  });
+
+  it('keeps the row and key when the service limits the takedown, and finishes on a later sweep', async () => {
+    const id = await s.publish('html', HTML);
+    await s
+      .client(s.service({ fetch: storedThenTimedOut, timeoutMs: 300 }))
+      .send('post', sharePath(id), BODY)
+      .expect(502);
+    const shareId = s.fake.posts[0]!.id;
+    await s.makePendingStale();
+
+    await s.sweep(s.service({ fetch: limitedDeletes }));
+    expect(await s.states()).toEqual(['pending']);
+    expect(await s.secrets.get(shareSecret(shareId))).not.toBeNull();
+    expect(s.fake.shares.has(shareId)).toBe(true);
+
+    await s.sweep();
+    expect(await s.states()).toEqual([]);
+    expect(s.fake.shares.size).toBe(0);
+    expect(await s.secrets.get(shareSecret(shareId))).toBeNull();
   });
 
   it('keeps an unconfirmed pending row through a failing sweep until its end date', async () => {

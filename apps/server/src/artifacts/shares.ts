@@ -124,12 +124,12 @@ interface TakedownDeps {
 async function removeRemote(
   deps: TakedownDeps,
   page: SharedPage,
-  trustMissing: boolean,
+  uploadMayArrive: boolean,
 ): Promise<void> {
   const token = await deps.secrets.get(shareSecret(page.shareId));
   if (!token) throw new ShareKeyMissingError(`No delete key for shared page ${page.shareId}`);
   const answer = await removeShare(deps.service, page, token);
-  if (answer === 404 && !trustMissing) {
+  if (answer === 'not_found' && uploadMayArrive) {
     throw new ShareServiceError('The share service could not confirm the page is gone.');
   }
 }
@@ -137,9 +137,9 @@ async function removeRemote(
 export async function takeDown(
   deps: TakedownDeps,
   page: SharedPage,
-  trustMissing = true,
+  uploadMayArrive = false,
 ): Promise<void> {
-  await removeRemote(deps, page, trustMissing);
+  await removeRemote(deps, page, uploadMayArrive);
   await deleteShare(deps.db, page.shareId);
   await deps.secrets.delete(shareSecret(page.shareId));
 }
@@ -232,8 +232,8 @@ async function upload(
     });
     return { share, passcode };
   } catch (error) {
-    const trustMissing = !(error instanceof ShareUnansweredError);
-    await takeDown(deps, page, trustMissing).catch(() => undefined);
+    const uploadMayArrive = error instanceof ShareUnansweredError;
+    await takeDown(deps, page, uploadMayArrive).catch(() => undefined);
     throw error;
   }
 }
@@ -284,7 +284,7 @@ export async function stopShare(deps: StopDeps, stored: StoredVersion): Promise<
     return false;
   }
   try {
-    await removeRemote(deps, share, true);
+    await removeRemote(deps, share, false);
   } catch (error) {
     if (!(error instanceof ShareKeyMissingError)) throw error;
     throw new ShareRefusedError(

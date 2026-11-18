@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  ARTIFACT_SHARE_FINAL_HEADER,
   shareServiceOrigin,
   type ArtifactShareDays,
   type ArtifactShareTheme,
@@ -104,11 +105,13 @@ export interface SharedPage {
   url: string;
 }
 
+type Removal = 'removed' | 'none_can_arrive' | 'not_found';
+
 export async function removeShare(
   service: ShareService,
   page: SharedPage,
   deleteToken: string,
-): Promise<204 | 404> {
+): Promise<Removal> {
   const address = `${storedOrigin(page.url)}/v1/shares/${encodeURIComponent(page.shareId)}`;
   const response = await call(service, address, {
     method: 'DELETE',
@@ -120,5 +123,8 @@ export async function removeShare(
       `The share service answered ${response.status}. The link is still open; try again.`,
     );
   }
-  return response.status === 204 ? 204 : 404;
+  if (response.status === 204) return 'removed';
+  return response.headers.get(ARTIFACT_SHARE_FINAL_HEADER) === '1'
+    ? 'none_can_arrive'
+    : 'not_found';
 }

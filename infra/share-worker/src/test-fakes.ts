@@ -179,6 +179,12 @@ export function postJson(
   );
 }
 
+export function remove(fake: FakeEnv, id: string, token: string | null, now = START) {
+  const headers: Record<string, string> =
+    token === null ? {} : { authorization: `Bearer ${token}` };
+  return call(fake, `/v1/shares/${id}`, { method: 'DELETE', headers }, now);
+}
+
 export interface Created {
   id: string;
   url: string;

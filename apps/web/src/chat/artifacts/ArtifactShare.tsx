@@ -54,22 +54,23 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
   const [failure, setFailure] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const focusOwed = useRef(false);
-  const current = !remote && status.data?.available ? status.data : null;
-  const available = current !== null;
+  const answered = remote ? undefined : status.data;
+  const current = answered && (answered.available || answered.share) ? answered : null;
+  const visible = current !== null;
   useEffect(() => {
-    if (sheet !== null || !available || !focusOwed.current) return;
+    if (sheet !== null || !visible || !focusOwed.current) return;
     focusOwed.current = false;
     buttonRef.current?.focus();
-  }, [sheet, available]);
+  }, [sheet, visible]);
 
   if (!current) return null;
-  const share = current.share;
+  const { available, share } = current;
   const entry = page.versions.find((item) => item.version === version);
   const markdown = page.kind === 'markdown';
 
   const settle = async (next: ArtifactShareStatus['share']) => {
     await client.cancelQueries({ queryKey });
-    client.setQueryData<ArtifactShareStatus>(queryKey, { available: true, share: next });
+    client.setQueryData<ArtifactShareStatus>(queryKey, { available, share: next });
   };
 
   const open = () => {
@@ -146,7 +147,7 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
         </span>
       )}
       {markdown && tip.tooltip}
-      {sheet === 'confirm' && (
+      {sheet === 'confirm' && available && (
         <ShareConfirmSheet
           title={entry?.title ?? page.title}
           version={version}
@@ -162,6 +163,7 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
           share={share}
           passcode={passcode}
           notice={notice}
+          canShareAgain={available}
           busy={busy}
           failure={failure}
           onStop={() => void stop()}

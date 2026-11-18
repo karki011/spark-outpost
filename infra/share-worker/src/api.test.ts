@@ -9,6 +9,7 @@ import {
   ORIGIN,
   postForm,
   postJson,
+  remove,
   START,
   VALID_CREATE,
   type FakeEnv,
@@ -19,12 +20,6 @@ const DAY = 86_400_000;
 
 function metadataOf(fake: FakeEnv, id: string) {
   return fake.bucket.objects.get(`shares/${id}`)?.options.customMetadata;
-}
-
-function remove(fake: FakeEnv, id: string, token: string | null, now = START) {
-  const headers: Record<string, string> =
-    token === null ? {} : { authorization: `Bearer ${token}` };
-  return call(fake, `/v1/shares/${id}`, { method: 'DELETE', headers }, now);
 }
 
 describe('POST /v1/shares', () => {
@@ -179,6 +174,26 @@ describe('POST /v1/shares', () => {
     expect(fake.bucket.objects.has(`shares/${VALID_CREATE.id}`)).toBe(false);
   });
 
+  it('refuses a repeat that finds a page written after its id was retired', async () => {
+    const fake = fakeEnv();
+    const put = fake.bucket.put.bind(fake.bucket);
+    let crossed = false;
+    fake.bucket.put = async (key, value, options) => {
+      if (key === `shares/${VALID_CREATE.id}` && !crossed) {
+        crossed = true;
+        await put(`gone/${VALID_CREATE.id}`, '');
+        await put(key, value, options);
+      }
+      return put(key, value, options);
+    };
+
+    const response = await postJson(fake, VALID_CREATE);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'conflict' });
+    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${VALID_CREATE.id}`]);
+    expect((await call(fake, `/a/${VALID_CREATE.id}`)).status).toBe(404);
+  });
+
   it('refuses a retired id before writing anything under it', async () => {
     const fake = fakeEnv();
     await fake.bucket.put(`gone/${VALID_CREATE.id}`, '');
@@ -299,111 +314,6 @@ describe('POST /v1/shares', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(response.headers.get('permissions-policy')).toContain('camera=()');
     expect(response.headers.get('set-cookie')).toBeNull();
-  });
-});
-
-describe('DELETE /v1/shares/:id', () => {
-  it('deletes with the right token and then answers 404', async () => {
-    const fake = fakeEnv();
-    const created = await create(fake);
-
-    expect((await remove(fake, created.id, created.deleteToken)).status).toBe(204);
-    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${created.id}`]);
-    expect(fake.bucket.objects.get(`gone/${created.id}`)?.value).toBe('');
-    expect((await remove(fake, created.id, created.deleteToken)).status).toBe(404);
-    expect((await call(fake, `/a/${created.id}`)).status).toBe(404);
-  });
-
-  it('answers 404 for a wrong or missing token and keeps the share', async () => {
-    const fake = fakeEnv();
-    const created = await create(fake);
-    const other = await create(fake);
-
-    const wrong = await remove(fake, created.id, other.deleteToken);
-    expect(wrong.status).toBe(404);
-    expect(await wrong.json()).toEqual({ error: 'not_found' });
-    expect((await remove(fake, created.id, null)).status).toBe(404);
-    expect((await remove(fake, 'A'.repeat(22), created.deleteToken)).status).toBe(404);
-    expect(fake.bucket.objects.has(`shares/${created.id}`)).toBe(true);
-    expect(fake.bucket.objects.has(`gone/${created.id}`)).toBe(false);
-    expect((await call(fake, `/a/${created.id}`)).status).toBe(200);
-  });
-
-  it('deletes a page that was stored between its lookup and the retiring of its id', async () => {
-    const fake = fakeEnv();
-    const put = fake.bucket.put.bind(fake.bucket);
-    fake.bucket.put = async (key, value, options) => {
-      if (key === `gone/${VALID_CREATE.id}`) await postJson(fake, VALID_CREATE);
-      return put(key, value, options);
-    };
-
-    const response = await remove(
-      fake,
-      VALID_CREATE.id as string,
-      VALID_CREATE.deleteToken as string,
-    );
-    expect(response.status).toBe(204);
-    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${VALID_CREATE.id}`]);
-  });
-
-  it('retires an id with nothing stored only for the token that gives it', async () => {
-    const fake = fakeEnv();
-    const { id, deleteToken } = await freshIds();
-    const other = await freshIds();
-
-    expect((await remove(fake, id, null)).status).toBe(404);
-    expect((await remove(fake, id, other.deleteToken)).status).toBe(404);
-    expect((await remove(fake, 'A'.repeat(30), deleteToken)).status).toBe(404);
-    expect(fake.bucket.objects.size).toBe(0);
-
-    expect((await remove(fake, id, deleteToken)).status).toBe(404);
-    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${id}`]);
-  });
-
-  it('does not limit how many of their own unstored ids an owner retires', async () => {
-    const fake = fakeEnv();
-    for (let index = 0; index < 80; index++) {
-      const { id, deleteToken } = await freshIds();
-      expect((await remove(fake, id, deleteToken)).status).toBe(404);
-    }
-    expect(fake.bucket.objects.size).toBe(80);
-  });
-
-  it('deletes a share stored before ids came from tokens by its stored token hash', async () => {
-    const fake = fakeEnv();
-    const id = 'Ab3_-Ab3_-Ab3_-Ab3_-Ab';
-    const deleteToken = 'L'.repeat(43);
-    await fake.bucket.put(`shares/${id}`, '<h1>Old</h1>', {
-      customMetadata: {
-        title: 'Old',
-        createdAt: new Date(START - DAY).toISOString(),
-        expiresAt: new Date(START + DAY).toISOString(),
-        deleteTokenHash: createHash('sha256').update(deleteToken).digest('base64url'),
-      },
-    });
-
-    expect((await call(fake, `/a/${id}`)).status).toBe(200);
-    expect((await postJson(fake, { ...VALID_CREATE, id, deleteToken })).status).toBe(400);
-    expect((await remove(fake, id, VALID_CREATE.deleteToken as string)).status).toBe(404);
-    expect(fake.bucket.objects.has(`shares/${id}`)).toBe(true);
-    expect((await remove(fake, id, deleteToken)).status).toBe(204);
-    expect(fake.bucket.objects.has(`shares/${id}`)).toBe(false);
-    expect((await call(fake, `/a/${id}`)).status).toBe(404);
-    expect((await postJson(fake, { ...VALID_CREATE, id, deleteToken })).status).toBe(400);
-  });
-
-  it('answers 404 for a legacy id with nothing stored and writes nothing', async () => {
-    const fake = fakeEnv();
-    expect((await remove(fake, 'Ab3_-Ab3_-Ab3_-Ab3_-Ab', 'L'.repeat(43))).status).toBe(404);
-    expect(fake.bucket.objects.size).toBe(0);
-  });
-
-  it('only accepts DELETE', async () => {
-    const fake = fakeEnv();
-    const created = await create(fake);
-    const response = await call(fake, `/v1/shares/${created.id}`, { method: 'GET' });
-    expect(response.status).toBe(405);
-    expect(response.headers.get('allow')).toBe('DELETE');
   });
 });
 

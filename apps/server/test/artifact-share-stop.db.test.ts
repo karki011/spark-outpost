@@ -46,10 +46,10 @@ describe('stop sharing when the page cannot be removed', { timeout: 30_000 }, ()
     await stillShared(id, shareId);
   });
 
-  it('keeps the link when the service answers with an error', async () => {
+  it.each([500, 429])('keeps the link when the service answers %i', async (status) => {
     const { id, shareId } = await sharedPage();
     const failing: typeof fetch = async (url, init) =>
-      init?.method === 'DELETE' ? new Response(null, { status: 500 }) : fetch(url, init);
+      init?.method === 'DELETE' ? new Response(null, { status }) : fetch(url, init);
     const stop = await s
       .client(s.service({ fetch: failing }))
       .send('delete', sharePath(id))

@@ -93,6 +93,8 @@ const shownMeetings = (page: Page) =>
     ),
   );
 
+const pageNow = (page: Page) => page.evaluate(() => Date.now());
+
 async function expectConcealed(page: Page) {
   await expect(island(page)).toHaveCount(0);
   await expect(page.locator('#root')).toHaveAttribute('inert', '');
@@ -153,8 +155,10 @@ test('a meeting that reaches its reminder while locked still goes to the Mac', a
   await expectConcealed(page);
   expect(await shownMeetings(page)).toEqual([]);
 
-  await page.clock.fastForward(4 * MINUTE);
+  const standupStart = anchor + 4 * MINUTE;
+  await page.clock.fastForward(standupStart - 30_000 - (await pageNow(page)));
   await expect.poll(() => shownMeetings(page), { timeout: 10_000 }).toContainEqual(['Standup']);
+  expect(await pageNow(page)).toBeLessThan(standupStart);
   await expectConcealed(page);
 
   await setLocked(page, false);

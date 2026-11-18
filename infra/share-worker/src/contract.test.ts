@@ -6,6 +6,7 @@ import {
 import {
   ARTIFACT_SHARE_DAYS,
   ARTIFACT_SHARE_DELETE_TOKEN_PATTERN,
+  ARTIFACT_SHARE_FINAL_HEADER,
   ARTIFACT_SHARE_ID_PATTERN,
   ARTIFACT_SHARE_PASSCODE_ALPHABET,
   ARTIFACT_SHARE_PASSCODE_LENGTH,
@@ -14,7 +15,14 @@ import {
   artifactShareThemeSchema,
 } from '../../../packages/contracts/src/artifact-shares.ts';
 import { shareIdForToken } from '../../../apps/server/src/artifacts/share-id.ts';
-import { DELETE_TOKEN, EXPIRY_DAYS, MAX_HTML_BYTES, MAX_TITLE_CHARS, SHARE_ID } from './api.ts';
+import {
+  DELETE_TOKEN,
+  EXPIRY_DAYS,
+  FINAL_HEADER,
+  MAX_HTML_BYTES,
+  MAX_TITLE_CHARS,
+  SHARE_ID,
+} from './api.ts';
 import { PASSCODE_ALPHABET, PASSCODE_LENGTH, randomToken, shareIdFor } from './crypto.ts';
 import { THEME_COLOR, THEME_COLORS, THEME_SCHEMES } from './theme.ts';
 
@@ -34,6 +42,10 @@ describe('the worker and the app agree on the share contract', () => {
       expect(shareIdForToken(random)).toBe(id);
       expect(id).toMatch(SHARE_ID);
     }
+  });
+
+  it('names the same header for a 404 that is final', () => {
+    expect(FINAL_HEADER).toBe(ARTIFACT_SHARE_FINAL_HEADER);
   });
 
   it('uses the same passcode alphabet and length', () => {
