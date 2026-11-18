@@ -37,6 +37,7 @@ function watching(labels: string[] = []) {
   const observations: RunObservations = {
     record: (observation) => void recorded.push(observation),
     labels: async () => labels,
+    completeLabels: async () => labels,
     egressAsked: (ask) => void asked.push(ask),
     sentOut: (note) => void sent.push(note),
     crossed: async () => undefined,
