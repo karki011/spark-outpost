@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { acpMcpServer, supportsTransport, type NamedMcpServer } from './repo-session.ts';
+import { withMcpOverStdin, withStableSystemPrompt } from './session-request-meta.ts';
 import { withSparkServer } from './spark-tools.ts';
 
 export interface SessionRequestInput {
@@ -11,6 +12,7 @@ export interface SessionRequestInput {
   init: acp.InitializeResponse;
   mcpServers?: readonly NamedMcpServer[];
   spark?: NamedMcpServer | null;
+  mcpOverStdin?: boolean;
 }
 
 export interface SessionRequestPlan {
@@ -42,9 +44,15 @@ function mcpPlan(input: SessionRequestInput) {
 
 export function newSessionRequest(input: SessionRequestInput): SessionRequestPlan {
   const mcp = mcpPlan(input);
-  const request = withSparkServer(
-    { cwd: input.cwd, mcpServers: mcp.servers, _meta: input.meta },
-    input.spark ?? null,
+  const request = withMcpOverStdin(
+    withStableSystemPrompt(
+      withSparkServer(
+        { cwd: input.cwd, mcpServers: mcp.servers, _meta: input.meta },
+        input.spark ?? null,
+      ),
+      input.init,
+    ),
+    input.mcpOverStdin === true,
   );
   if (input.extraRoots.length === 0) return { request, notes: mcp.notes };
   if (!supportsAdditionalDirectories(input.init)) {

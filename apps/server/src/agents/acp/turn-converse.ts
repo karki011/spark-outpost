@@ -95,6 +95,7 @@ async function startSession(context: TurnContext, gates: TurnGates): Promise<Ses
     init,
     mcpServers: workspace.mcpServers,
     spark,
+    mcpOverStdin: connection.mcpOverStdin,
   });
   const opened = await openSession(
     ctx,

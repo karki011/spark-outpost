@@ -31,6 +31,7 @@ export interface ConnectionSpec {
   env: Record<string, string>;
   readsFiles: boolean;
   tracksBackground: boolean;
+  mcpOverStdin?: boolean;
   key: ConnectionKey | null;
   cleanup: () => Promise<void>;
 }
@@ -48,6 +49,7 @@ export interface LiveConnection {
   readonly background: BackgroundWork | null;
   readonly updates: MessageQueue<SessionMessage>;
   readonly home: string;
+  readonly mcpOverStdin: boolean;
   tools: LiveTools | null;
   opened(): OpenedSession | null;
   whenBound(): Promise<void>;
@@ -188,6 +190,7 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
     background,
     updates,
     home: spec.home,
+    mcpOverStdin: spec.mcpOverStdin === true,
     tools: null,
     opened: () => opened,
     whenBound: () => slot.handlers().then(() => undefined),
