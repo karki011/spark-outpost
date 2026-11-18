@@ -31,7 +31,12 @@ export function remoteCardKind(card: ApprovalPayload): RemoteCardKind | null {
   if (action === undefined) return null;
   if (action === 'rules_edit') return 'rules';
   if (action === 'plugins_edit') return 'plugins';
-  if (action === 'crew_edit' || action === 'create_teammate' || action === 'update_teammate') {
+  if (
+    action === 'crew_edit' ||
+    action === 'create_teammate' ||
+    action === 'update_teammate' ||
+    action === 'delete_teammate'
+  ) {
     return 'crew';
   }
   if (isMacAction(action)) return 'macControl';

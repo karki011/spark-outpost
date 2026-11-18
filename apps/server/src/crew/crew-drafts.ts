@@ -1,0 +1,201 @@
+import { SPARK_ACTION_KIND, type SparkAction } from '@spark-outpost/contracts';
+import { settlePending } from '../persistence/approvals.ts';
+import type { Queryable } from '../persistence/db.ts';
+
+export type CrewAction = Extract<
+  SparkAction,
+  { action: 'create_teammate' | 'update_teammate' | 'delete_teammate' | 'crew_edit' }
+>;
+
+export interface PendingCrewCard {
+  id: string;
+  conversationId: string;
+  action: CrewAction;
+}
+
+export const DRAFT_REPLACED = 'Replaced by a newer proposal.';
+export const DRAFT_WITHDRAWN = 'Withdrawn by the agent.';
+
+export function nameKey(name: string): string {
+  return name.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+export function draftKey(action: CrewAction): string {
+  switch (action.action) {
+    case 'create_teammate':
+      return `create_teammate:${nameKey(action.name)}`;
+    case 'update_teammate':
+    case 'delete_teammate':
+      return `${action.action}:${action.teammateId}`;
+    case 'crew_edit':
+      return `crew_edit:${action.target}:${action.id}`;
+  }
+}
+
+export async function pendingCrewCards(
+  db: Queryable,
+  workspaceId: string,
+  conversationId?: string,
+): Promise<PendingCrewCard[]> {
+  const { rows } = await db.query<{ id: string; conversation_id: string; action: CrewAction }>(
+    `SELECT a.id, r.conversation_id, a.payload->'sparkAction' AS action
+     FROM approvals a
+     JOIN runs r ON r.id = a.run_id
+     JOIN conversations c ON c.id = r.conversation_id
+     WHERE c.workspace_id = $1 AND c.archived_at IS NULL AND a.status = 'pending'
+       AND a.kind = $2
+       AND a.payload->'sparkAction'->>'action'
+         IN ('create_teammate', 'update_teammate', 'delete_teammate', 'crew_edit')
+       AND ($3::uuid IS NULL OR r.conversation_id = $3)
+     ORDER BY a.created_at`,
+    [workspaceId, SPARK_ACTION_KIND, conversationId ?? null],
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    conversationId: row.conversation_id,
+    action: row.action,
+  }));
+}
+
+async function closeCards(db: Queryable, ids: readonly string[], note: string): Promise<number> {
+  let closed = 0;
+  for (const id of ids) {
+    const settled = await settlePending(db, id, {
+      status: 'cancelled',
+      decidedBy: 'policy',
+      optionId: null,
+      note,
+    });
+    if (settled) closed += 1;
+  }
+  return closed;
+}
+
+export function replaceDrafts(db: Queryable, ids: readonly string[]): Promise<number> {
+  return closeCards(db, ids, DRAFT_REPLACED);
+}
+
+export async function withdrawOwnDrafts(
+  db: Queryable,
+  workspaceId: string,
+  conversationId: string,
+  ids: readonly string[] | 'all',
+): Promise<{ withdrawn: number; notFound: string[] }> {
+  const own = await pendingCrewCards(db, workspaceId, conversationId);
+  const ownIds = new Set(own.map((card) => card.id));
+  const wanted = ids === 'all' ? [...ownIds] : ids;
+  const notFound = wanted.filter((id) => !ownIds.has(id));
+  const withdrawn = await closeCards(
+    db,
+    wanted.filter((id) => ownIds.has(id)),
+    DRAFT_WITHDRAWN,
+  );
+  return { withdrawn, notFound };
+}
+
+function draftSparkName(action: CrewAction): string | null {
+  if (action.action === 'create_teammate') return action.name;
+  if (action.action === 'update_teammate' && action.changed.includes('name')) return action.name;
+  return null;
+}
+
+export interface NameCheck {
+  workspaceId: string;
+  conversationId: string;
+  name: string;
+  teammateId?: string | undefined;
+}
+
+export async function sparkNameClash(db: Queryable, check: NameCheck): Promise<string | null> {
+  const wanted = nameKey(check.name);
+  const { rows } = await db.query<{ id: string; name: string }>(
+    'SELECT id, name FROM teammates WHERE workspace_id = $1',
+    [check.workspaceId],
+  );
+  const saved = rows.find((row) => row.id !== check.teammateId && nameKey(row.name) === wanted);
+  if (saved) return `There is already a Spark named ${saved.name}. Pick another name.`;
+  const drafts = await pendingCrewCards(db, check.workspaceId);
+  const draft = drafts.find((card) => {
+    if (card.conversationId === check.conversationId) return false;
+    const name = draftSparkName(card.action);
+    const same =
+      card.action.action === 'update_teammate' && card.action.teammateId === check.teammateId;
+    return name !== null && !same && nameKey(name) === wanted;
+  });
+  if (draft) {
+    return `A draft Spark named ${check.name} is waiting for the user in another chat. Pick another name.`;
+  }
+  return null;
+}
+
+export interface WorkflowNameCheck {
+  workspaceId: string;
+  conversationId: string;
+  id: string;
+  name: string;
+  saved: readonly { id: string; name: string }[];
+}
+
+export async function workflowNameClash(
+  db: Queryable,
+  check: WorkflowNameCheck,
+): Promise<string | null> {
+  const wanted = nameKey(check.name);
+  const saved = check.saved.find((flow) => flow.id !== check.id && nameKey(flow.name) === wanted);
+  if (saved) return `The workflow ${saved.id} is already named ${saved.name}. Pick another name.`;
+  const drafts = await pendingCrewCards(db, check.workspaceId);
+  const draft = drafts.find(
+    (card) =>
+      card.conversationId !== check.conversationId &&
+      card.action.action === 'crew_edit' &&
+      card.action.target === 'workflow' &&
+      card.action.id !== check.id &&
+      nameKey(card.action.name) === wanted,
+  );
+  if (draft) {
+    return `A draft workflow named ${check.name} is waiting for the user in another chat. Pick another name.`;
+  }
+  return null;
+}
+
+const DRAFT_KINDS: Record<CrewAction['action'], string> = {
+  create_teammate: 'new Spark',
+  update_teammate: 'Spark change',
+  delete_teammate: 'Spark delete',
+  crew_edit: 'files',
+};
+
+function draftKind(action: CrewAction): string {
+  if (action.action !== 'crew_edit') return DRAFT_KINDS[action.action];
+  const what = action.target === 'spark' ? 'Spark files' : 'workflow';
+  const verb = action.files.every((file) => file.change === 'new')
+    ? 'new'
+    : action.files.every((file) => file.change === 'deleted')
+      ? 'delete'
+      : 'change';
+  return `${what} ${verb}`;
+}
+
+function draftContent(action: CrewAction): Record<string, unknown> {
+  if (action.action === 'crew_edit') {
+    return { files: action.files.map((file) => ({ path: file.path, text: file.after })) };
+  }
+  if (action.action === 'delete_teammate') return {};
+  return { role: action.role, instructions: action.instructions };
+}
+
+export function draftsView(cards: readonly PendingCrewCard[], conversationId: string | null) {
+  return cards.map((card) => {
+    const own = card.conversationId === conversationId;
+    return {
+      draftId: card.id,
+      kind: draftKind(card.action),
+      name: card.action.name,
+      chat: own ? 'this chat' : 'another chat',
+      ...(own ? draftContent(card.action) : {}),
+    };
+  });
+}
+
+export const DRAFTS_NOTE =
+  'Drafts wait for the user. Change one from this chat by proposing it again; withdraw with spark_crew_edit withdraw. Another chat’s drafts are the user’s to deny.';

@@ -83,6 +83,9 @@ function cardTitle(action: SparkAction): string {
     action.action === 'rules_edit' ||
     action.action === 'plugins_edit' ||
     action.action === 'crew_edit' ||
+    action.action === 'create_teammate' ||
+    action.action === 'update_teammate' ||
+    action.action === 'delete_teammate' ||
     action.action === 'link_repo' ||
     action.action === 'github_read' ||
     action.action === 'clone_repo'
@@ -278,6 +281,7 @@ export interface ProposeOptions {
   sendSubject?: string;
   confirmName?: string;
   declineName?: string;
+  observed?: readonly string[];
 }
 
 export async function proposeAction(
@@ -299,7 +303,9 @@ export async function proposeAction(
       throw new SparkToolError(refusal);
     }
   }
-  const observed = (await run.scope.observations?.labels()) ?? [];
+  const observed = options.observed
+    ? [...options.observed]
+    : ((await run.scope.observations?.labels()) ?? []);
   const facts = await actionFacts(context.deps.db, run.runId, action.action);
   const path = options.path
     ? options.path

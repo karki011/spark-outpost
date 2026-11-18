@@ -1,12 +1,11 @@
 import { z } from 'zod';
-import { involvementLevelSchema } from './involvement-levels.ts';
-import { providerIdSchema } from './provider-ids.ts';
 import {
-  teammateFaceSchema,
-  teammateInstructionsSchema,
-  teammateNameSchema,
-  teammateRoleSchema,
-} from './teammates.ts';
+  createTeammateActionSchema,
+  deleteTeammateActionSchema,
+  teammateActionLabels,
+  teammateActionQuestion,
+  updateTeammateActionSchema,
+} from './teammate-actions.ts';
 import {
   addMcpServerActionSchema,
   removeMcpServerActionSchema,
@@ -15,12 +14,7 @@ import {
 } from './spark-mcp-actions.ts';
 import { SLACK_POST_TEXT_MAX, slackChannelIdSchema } from './slack.ts';
 import { rulesEditActionSchema, rulesEditLabels, rulesEditQuestion } from './spark-rules-edit.ts';
-import {
-  crewEditActionSchema,
-  crewEditLabels,
-  crewEditQuestion,
-  crewSimilarSchema,
-} from './crew-edit.ts';
+import { crewEditActionSchema, crewEditLabels, crewEditQuestion } from './crew-edit.ts';
 import {
   pluginsEditActionSchema,
   pluginsEditLabels,
@@ -176,33 +170,6 @@ export const prFollowUpRoundActionSchema = z.object({
     .max(100),
 });
 
-const teammateFieldsShape = {
-  name: teammateNameSchema,
-  role: teammateRoleSchema,
-  face: teammateFaceSchema,
-  faceAuto: z.boolean().default(false),
-  provider: providerIdSchema.nullable(),
-  model: z.string().nullable(),
-  agentMode: z.string().nullable(),
-  level: involvementLevelSchema.nullable(),
-  instructions: teammateInstructionsSchema,
-  projects: z.array(z.object({ id: z.uuid(), name: z.string() })).max(8),
-};
-
-export const createTeammateActionSchema = z.object({
-  action: z.literal('create_teammate'),
-  ...teammateFieldsShape,
-  similar: z.array(crewSimilarSchema).max(8).optional(),
-});
-
-export const updateTeammateActionSchema = z.object({
-  action: z.literal('update_teammate'),
-  teammateId: z.uuid(),
-  ...teammateFieldsShape,
-  changed: z.array(z.string()).max(20),
-  instructionsBefore: z.string().optional(),
-});
-
 const macApp = {
   app: z.string().max(200),
   bundleId: z.string().max(200),
@@ -252,6 +219,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   prFollowUpRoundActionSchema,
   createTeammateActionSchema,
   updateTeammateActionSchema,
+  deleteTeammateActionSchema,
   addMcpServerActionSchema,
   updateMcpServerActionSchema,
   switchMcpServerActionSchema,
@@ -304,6 +272,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   pr_follow_up_round: [],
   create_teammate: [],
   update_teammate: [],
+  delete_teammate: [],
   add_mcp_server: [],
   update_mcp_server: [],
   switch_mcp_server: [],
@@ -390,16 +359,7 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
     confirm: 'Start round',
     doing: 'Starting the follow-up round…',
   },
-  create_teammate: {
-    question: 'Add this Spark?',
-    confirm: 'Add Spark',
-    doing: 'Adding the Spark…',
-  },
-  update_teammate: {
-    question: 'Change this Spark?',
-    confirm: 'Save changes',
-    doing: 'Saving the Spark…',
-  },
+  ...teammateActionLabels,
   add_mcp_server: {
     question: 'Add this MCP server?',
     confirm: 'Add server',
@@ -476,6 +436,8 @@ export function sparkActionQuestion(action: SparkAction): string {
   if (action.action === 'rules_edit') return rulesEditQuestion(action);
   if (action.action === 'plugins_edit') return pluginsEditQuestion(action);
   if (action.action === 'crew_edit') return crewEditQuestion(action);
+  const teammate = teammateActionQuestion(action);
+  if (teammate) return teammate;
   if (action.action === 'link_repo') return linkRepoQuestion(action);
   return (
     atlassianQuestion(action) ??

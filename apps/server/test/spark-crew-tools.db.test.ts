@@ -143,8 +143,18 @@ describe('spark_crew reads the crew at once', () => {
   });
 });
 
-describe('spark_crew_edit always asks the user', () => {
-  it.each(['bypassPermissions', 'auto', 'default'])(
+describe('spark_crew_edit follows the agent’s mode', () => {
+  it.each(['bypassPermissions', 'auto'])('writes a new skill at once in %s', async (mode) => {
+    await crew.setRun(mode);
+    expect((await edit(NOTES_SKILL)).facts.outcome).toBe('done');
+    expect(await scoutFiles()).toEqual([
+      'SPARK.md',
+      'skills/notes/SKILL.md',
+      'skills/notes/run.sh',
+    ]);
+  });
+
+  it.each(['default', 'acceptEdits'])(
     'shows a card for a new skill with its script in %s and writes nothing yet',
     async (mode) => {
       await crew.setRun(mode);
@@ -369,21 +379,20 @@ describe('spark_crew_edit always asks the user', () => {
     ]);
   });
 
-  it('returns the waiting card for the same change asked twice', async () => {
+  it('replaces its own waiting draft when asked again', async () => {
     const first = await edit(NOTES_SKILL);
     const second = await edit(NOTES_SKILL);
-    expect(second.facts).toMatchObject({
-      outcome: 'waiting_for_user',
-      approvalId: first.facts.approvalId,
-    });
-    expect(await cardCount()).toBe(1);
+    expect(second.facts).toMatchObject({ outcome: 'waiting_for_user', replacedDrafts: 1 });
+    expect(second.facts.approvalId).not.toBe(first.facts.approvalId);
+    expect(await cardCount()).toBe(2);
+    expect((await pendingCard(t)).id).toBe(second.facts.approvalId);
   });
 
   it('creates, changes and deletes a workflow, each on a card', async () => {
     const nightly = { id: 'nightly', name: 'Nightly', steps: [{ id: 'look', spark: 'Scout' }] };
     await edit({ workflow: nightly });
     const created = await pendingCard(t);
-    expect(created.title).toBe('Change the Nightly workflow?');
+    expect(created.title).toBe('Add the Nightly workflow?');
     expect(cardAction(created)).toMatchObject({
       target: 'workflow',
       id: 'nightly',

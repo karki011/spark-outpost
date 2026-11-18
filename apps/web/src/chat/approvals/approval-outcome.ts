@@ -46,6 +46,9 @@ function planOutcome(approval: Approval, chose: string): Outcome {
 }
 
 function stoppedOutcome(approval: Approval): Outcome | null {
+  if (approval.status === 'cancelled' && approval.decidedBy === 'policy' && approval.note) {
+    return { icon: 'no', label: approval.note, detail: 'Nothing changed.' };
+  }
   if (approval.status === 'cancelled') {
     return { icon: 'no', label: 'Cancelled.', detail: 'The run stopped before you answered.' };
   }

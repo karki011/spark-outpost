@@ -159,7 +159,7 @@ describe('spark_create_spark', () => {
     });
     const card = await confirmCard(t);
 
-    expect(card).toMatchObject({ kind: 'spark_action', title: 'Add this Spark? Wren' });
+    expect(card).toMatchObject({ kind: 'spark_action', title: 'Add the Wren Spark?' });
     expect(card.payload.sparkAction).toMatchObject({
       action: 'create_teammate',
       name: 'Wren',
@@ -210,7 +210,7 @@ describe('spark_update_spark', () => {
     });
     const card = await confirmCard(t);
 
-    expect(card.title).toBe('Change this Spark? Pip');
+    expect(card.title).toBe('Change the Pip Spark?');
     expect(card.payload.sparkAction).toMatchObject({
       action: 'update_teammate',
       changed: ['instructions'],

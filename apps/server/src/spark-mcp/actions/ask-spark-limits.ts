@@ -96,7 +96,12 @@ function routeOf(action: SparkAction): Route | null {
 }
 
 function crewCard(action: SparkAction['action'] | undefined): boolean {
-  return action === 'crew_edit' || action === 'create_teammate' || action === 'update_teammate';
+  return (
+    action === 'crew_edit' ||
+    action === 'create_teammate' ||
+    action === 'update_teammate' ||
+    action === 'delete_teammate'
+  );
 }
 
 export interface CardChat {
