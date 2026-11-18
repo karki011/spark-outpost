@@ -1,15 +1,28 @@
 import type { AdoptPullRequest, OpenPull, OpenPulls } from '@spark-outpost/contracts';
 import { createCopy, type Planned } from '../orchestration/chat-place.ts';
-import { liveChatWorktree, saveAdoption } from '../persistence/chat-worktrees.ts';
+import {
+  liveChatWorktree,
+  repointChatWorktree,
+  saveAdoption,
+  type ChatWorktree,
+} from '../persistence/chat-worktrees.ts';
 import type { Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import { insertTask } from '../persistence/tasks.ts';
 import { trackPull } from '../persistence/tracked-pulls.ts';
 import { shipBranchName } from '../ship/branch.ts';
+import { parsePullUrl } from '../tickets/pull-status.ts';
 import { pickRemote, remotes } from '../ship/git.ts';
 import { parseRemoteUrl, type RemoteRepo } from '../ship/remote.ts';
 import { adoptedNote, adoptPlan, forkRemoteName, type AdoptPlan } from './adopt-plan.ts';
-import { branchCheckedOut, defaultBranch, isAncestor, listBranches } from './chat-worktrees.ts';
+import { inPlaceRefusal, switchInPlace } from './adopt-in-place.ts';
+import {
+  branchCheckedOut,
+  currentBranch,
+  defaultBranch,
+  isAncestor,
+  listBranches,
+} from './chat-worktrees.ts';
 import {
   listOpenPulls,
   protectedOnHost,
@@ -19,6 +32,7 @@ import {
   type HeadRepo,
 } from './open-pulls.ts';
 import { getProject } from './projects.ts';
+import type { WorktreeSource } from './chat-worktrees.ts';
 import { git, isGitWorkTree } from './snapshot.ts';
 import { prepareDependencies } from './worktree-deps.ts';
 
@@ -40,6 +54,19 @@ export interface AdoptDeps {
 
 const NO_GH = 'Install the GitHub CLI (gh) and sign in with gh auth login to list pull requests.';
 const NO_REMOTE = "This project's repository has no GitHub remote.";
+export const OTHER_REPO =
+  "That pull request is in another repository than this chat's project, so this chat can't work on it.";
+
+function sameRepoUrl(url: string, repo: RemoteRepo, number: number): boolean {
+  const parsed = parsePullUrl(url);
+  return (
+    parsed !== null &&
+    parsed.number === number &&
+    parsed.host.toLowerCase() === repo.host.toLowerCase() &&
+    parsed.owner.toLowerCase() === repo.owner.toLowerCase() &&
+    parsed.name.toLowerCase() === repo.name.toLowerCase()
+  );
+}
 
 interface Hosted {
   root: string;
@@ -139,7 +166,7 @@ async function basedSource(deps: AdoptDeps, found: Hosted, pull: OpenPull, conve
   };
 }
 
-async function planFor(found: Hosted, pull: FoundPull): Promise<AdoptPlan> {
+async function planFor(found: Hosted, pull: FoundPull, here: boolean): Promise<AdoptPlan> {
   const branches = await listBranches(found.root);
   const fallback = await defaultBranch(found.root).catch(() => null);
   const guarded = ['main', 'master', pull.pull.base, ...(fallback ? [fallback] : [])];
@@ -147,7 +174,7 @@ async function planFor(found: Hosted, pull: FoundPull): Promise<AdoptPlan> {
     guarded,
     protectedOnHost: await protectedOnHost(found.runner, found.repo, pull.headRepo, pull.pull.head),
     localBranch: branches.local.includes(pull.pull.head),
-    checkedOut: await branchCheckedOut(found.root, pull.pull.head),
+    checkedOut: !here && (await branchCheckedOut(found.root, pull.pull.head)),
   });
 }
 
@@ -163,30 +190,31 @@ async function openTask(db: Db, conversationId: string, pull: OpenPull): Promise
   return taskId;
 }
 
-export async function adoptPull(
+async function switchedHere(
   deps: AdoptDeps,
-  conversationId: string,
-  request: AdoptPullRequest,
-): Promise<string> {
-  const root = await linkedProject(deps, conversationId, request.projectId);
-  const current = await liveChatWorktree(deps.db, conversationId, request.projectId);
-  if (current) {
-    throw new AdoptError(
-      409,
-      `This chat already works on ${current.branch}. Start a new chat for the pull request.`,
-    );
+  current: ChatWorktree,
+  source: WorktreeSource,
+  base: string,
+  here: boolean,
+): Promise<ChatWorktree> {
+  if (here) {
+    await repointChatWorktree(deps.db, current.id, {
+      name: source.branch,
+      base,
+      commit: (await git(current.path, ['rev-parse', 'HEAD'])).trim(),
+    });
+  } else {
+    await switchInPlace(deps.db, current, source, base);
   }
-  const found = await hosted(deps, root);
-  if (typeof found === 'string') throw new AdoptError(409, found);
-  const pull = await viewPull(found.runner, found.repo, request.number);
-  if (!pull) throw new AdoptError(404, `Pull request #${request.number} wasn't found.`);
-  if (!pull.open) throw new AdoptError(409, `Pull request #${request.number} isn't open.`);
-  const plan = await planFor(found, pull);
-  if (plan.kind === 'busy') throw new AdoptError(409, plan.why);
-  const source =
-    plan.kind === 'head'
-      ? await headSource(found, pull, plan)
-      : await basedSource(deps, found, pull.pull, conversationId);
+  return current;
+}
+
+async function newCopy(
+  deps: AdoptDeps,
+  target: { conversationId: string; projectId: string; root: string },
+  source: WorktreeSource,
+  pull: FoundPull,
+): Promise<ChatWorktree> {
   const planned: Planned = { source, owned: true, baseBranch: pull.pull.base, baseRef: null };
   const placeDeps = {
     db: deps.db,
@@ -194,8 +222,38 @@ export async function adoptPull(
     prepareLater: (job: { main: string; copy: string }) =>
       void prepareDependencies(job.main, job.copy, { root: job.main }).catch(() => null),
   };
-  const target = { conversationId, projectId: request.projectId, root };
-  const { record } = await createCopy(placeDeps, target, planned);
+  return (await createCopy(placeDeps, target, planned)).record;
+}
+
+export async function adoptPull(
+  deps: AdoptDeps,
+  conversationId: string,
+  request: AdoptPullRequest,
+): Promise<string> {
+  const root = await linkedProject(deps, conversationId, request.projectId);
+  const current = await liveChatWorktree(deps.db, conversationId, request.projectId);
+  const refusal = current ? await inPlaceRefusal(deps.db, current) : null;
+  if (refusal) throw new AdoptError(409, refusal);
+  const found = await hosted(deps, root);
+  if (typeof found === 'string') throw new AdoptError(409, found);
+  if (request.url && !sameRepoUrl(request.url, found.repo, request.number)) {
+    throw new AdoptError(409, OTHER_REPO);
+  }
+  const pull = await viewPull(found.runner, found.repo, request.number);
+  if (!pull) throw new AdoptError(404, `Pull request #${request.number} wasn't found.`);
+  if (!pull.open) throw new AdoptError(409, `Pull request #${request.number} isn't open.`);
+  const here = current !== null && (await currentBranch(current.path)) === pull.pull.head;
+  const plan = await planFor(found, pull, here);
+  if (plan.kind === 'busy') throw new AdoptError(409, plan.why);
+  const stay = here && plan.kind === 'head';
+  const source = stay
+    ? { kind: 'existing' as const, branch: pull.pull.head }
+    : plan.kind === 'head'
+      ? await headSource(found, pull, plan)
+      : await basedSource(deps, found, pull.pull, conversationId);
+  const record = current
+    ? await switchedHere(deps, current, source, pull.pull.base, stay)
+    : await newCopy(deps, { conversationId, projectId: request.projectId, root }, source, pull);
   const pushes = plan.kind === 'head';
   const { number, author, url, head } = pull.pull;
   await saveAdoption(deps.db, record.id, { number, author, url, head, pushes });
@@ -218,5 +276,6 @@ export async function adoptPull(
     title: pull.pull.title,
     base: pull.pull.base,
   });
-  return plan.kind === 'head' ? adoptedNote(pull.pull, plan, pull.headRepo.owner) : plan.why;
+  const note = plan.kind === 'head' ? adoptedNote(pull.pull, plan, pull.headRepo.owner) : plan.why;
+  return current && !stay ? `${note} Earlier work in this chat stays on ${current.branch}.` : note;
 }

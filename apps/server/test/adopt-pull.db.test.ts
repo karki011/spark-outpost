@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { OpenPull } from '@spark-outpost/contracts';
 import { insertChatWorktree, liveChatWorktree } from '../src/persistence/chat-worktrees.ts';
 import { ROUTE_RULES } from '../src/remote/route-rules.ts';
-import { AdoptError, adoptPull, openPullsFor, type AdoptDeps } from '../src/projects/adopt-pull.ts';
+import { adoptPull, openPullsFor, type AdoptDeps } from '../src/projects/adopt-pull.ts';
 import type { CommandResult } from '../src/setup/command.ts';
 import { createApprovalGate } from '../src/workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
@@ -255,14 +255,79 @@ describe('adopting a pull request from the same repository', () => {
     expect(git(record.path, 'rev-parse', 'HEAD')).toBe(sha);
   });
 
-  it('refuses a chat that already has a branch of its own', async () => {
+  async function chatOnItsOwnBranch() {
     bareWithBranch(originBare, HEAD, 'dates.txt');
-    const chat = await doRun(t, root);
-    const request = { projectId: chat.projectId, number: 12 };
-    await adoptPull(deps(ghPull()), chat.conversationId, request);
-    await expect(adoptPull(deps(ghPull()), chat.conversationId, request)).rejects.toBeInstanceOf(
-      AdoptError,
+    const chat = await linkedConversation(t, root);
+    const runId = await sendDo(t, chat.conversationId, 'Tidy the notes');
+    const copy = path.join(root, '.spark', 'worktrees', 'chat-copy');
+    git(root, 'worktree', 'add', '-q', '-b', 'spark/tidy-the-notes-1a2b', copy, 'main');
+    await insertChatWorktree(t.db, {
+      id: randomUUID(),
+      conversationId: chat.conversationId,
+      projectId: chat.projectId,
+      repoRoot: root,
+      path: copy,
+      branch: 'spark/tidy-the-notes-1a2b',
+      baseBranch: 'main',
+      baseCommit: git(copy, 'rev-parse', 'HEAD'),
+      landedCommit: null,
+      inPlace: false,
+      ownsBranch: true,
+    });
+    const before = (await liveChatWorktree(t.db, chat.conversationId, chat.projectId))!;
+    return { chat, runId, before, request: { projectId: chat.projectId, number: 12 } };
+  }
+
+  const finish = (runId: string) =>
+    t.db.query("UPDATE runs SET status = 'succeeded' WHERE id = $1", [runId]);
+
+  it('switches a chat that has its own branch to the pull request in the same folder', async () => {
+    const { chat, runId, before, request } = await chatOnItsOwnBranch();
+    await finish(runId);
+    const note = await adoptPull(deps(ghPull()), chat.conversationId, request);
+    expect(note).toContain(`Earlier work in this chat stays on ${before.branch}.`);
+
+    const record = (await liveChatWorktree(t.db, chat.conversationId, chat.projectId))!;
+    expect(record).toMatchObject({
+      id: before.id,
+      path: before.path,
+      branch: HEAD,
+      ownsBranch: true,
+      adopted: { number: 12, head: HEAD, pushes: true },
+    });
+    expect(git(record.path, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe(HEAD);
+    expect(git(root, 'branch', '--list', before.branch)).toContain(before.branch);
+    expect(await taskBranch(t.db, record.path)).toMatchObject({ branch: HEAD, pull: 12 });
+  });
+
+  it('stays on the branch when the pull request is already checked out in the chat', async () => {
+    const { chat, runId, before, request } = await chatOnItsOwnBranch();
+    await finish(runId);
+    git(before.path, 'fetch', '-q', 'origin');
+    git(before.path, 'checkout', '-q', '--track', '-b', HEAD, `origin/${HEAD}`);
+    const note = await adoptPull(deps(ghPull()), chat.conversationId, request);
+    expect(note).not.toContain('Earlier work');
+    const record = (await liveChatWorktree(t.db, chat.conversationId, chat.projectId))!;
+    expect(record).toMatchObject({ id: before.id, branch: HEAD, adopted: { pushes: true } });
+  });
+
+  it('waits while the chat has a turn open', async () => {
+    const { chat, request } = await chatOnItsOwnBranch();
+    await expect(adoptPull(deps(ghPull()), chat.conversationId, request)).rejects.toThrow(
+      /turn to finish/,
     );
+  });
+
+  it('refuses uncommitted changes and leaves the chat on its branch', async () => {
+    const { chat, runId, before, request } = await chatOnItsOwnBranch();
+    await finish(runId);
+    await write(before.path, 'notes.txt', 'unsaved\n');
+    await expect(adoptPull(deps(ghPull()), chat.conversationId, request)).rejects.toThrow(
+      /uncommitted changes/,
+    );
+    const record = (await liveChatWorktree(t.db, chat.conversationId, chat.projectId))!;
+    expect(record.branch).toBe(before.branch);
+    expect(git(record.path, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe(before.branch);
   });
 });
 

@@ -132,6 +132,57 @@ async function fetchBranch(root: string, ref: string): Promise<void> {
   }).catch(() => undefined);
 }
 
+export interface StartPoint {
+  from: string;
+  baseRef: string;
+}
+
+async function commitOf(root: string, ref: string): Promise<string | null> {
+  const commit = await git(root, ['rev-parse', '--verify', '-q', `${ref}^{commit}`]).catch(
+    () => '',
+  );
+  return commit.trim() || null;
+}
+
+const FRESH_FOR_MS = 120_000;
+const fetchedAt = new Map<string, number>();
+
+export function noteFetched(root: string, now: number = Date.now()): void {
+  fetchedAt.set(root, now);
+}
+
+function fetchedRecently(root: string, now: number = Date.now()): boolean {
+  const at = fetchedAt.get(root);
+  return at !== undefined && now - at < FRESH_FOR_MS;
+}
+
+export async function latestOf(
+  root: string,
+  branch: string,
+  onFetch?: () => void,
+): Promise<StartPoint | null> {
+  const ref = `origin/${branch}`;
+  if (!fetchedRecently(root) && (await succeeds(root, ['remote', 'get-url', 'origin']))) {
+    onFetch?.();
+    await fetchBranch(root, ref);
+  }
+  const local = await branchTipOf(root, branch);
+  const remote = (await remoteRef(root, ref)) ? await commitOf(root, ref) : null;
+  if (remote && (!local || (await ancestorOf(root, local, ref)))) {
+    return { from: remote, baseRef: ref };
+  }
+  return local ? { from: local, baseRef: branch } : null;
+}
+
+export async function fastForward(root: string, branch: string): Promise<void> {
+  const local = await branchTipOf(root, branch);
+  const latest = local ? await latestOf(root, branch) : null;
+  if (!local || !latest || latest.from === local || latest.baseRef === branch) return;
+  await git(root, ['update-ref', `refs/heads/${branch}`, latest.from, local]).catch(
+    () => undefined,
+  );
+}
+
 export async function addChatWorktree(
   root: string,
   target: string,

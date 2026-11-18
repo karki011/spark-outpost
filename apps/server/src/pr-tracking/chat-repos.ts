@@ -30,7 +30,7 @@ async function remoteRepo(root: string, branch: string | null): Promise<RemoteRe
   return remote ? parseRemoteUrl(remote.url) : null;
 }
 
-async function checkedOut(root: string): Promise<string | null> {
+export async function checkedOut(root: string): Promise<string | null> {
   const result = await runGit(root, ['symbolic-ref', '--quiet', '--short', 'HEAD']).catch(
     () => null,
   );

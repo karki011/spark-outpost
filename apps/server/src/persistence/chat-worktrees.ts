@@ -223,6 +223,19 @@ export async function markChatWorktreeRemoved(db: Queryable, id: string): Promis
   await db.query('UPDATE chat_worktrees SET removed_at = now() WHERE id = $1', [id]);
 }
 
+export async function repointChatWorktree(
+  db: Queryable,
+  id: string,
+  branch: { name: string; base: string; commit: string },
+): Promise<void> {
+  await db.query(
+    `UPDATE chat_worktrees SET branch = $2, base_branch = $3, base_commit = $4, base_ref = NULL,
+       owns_branch = true, landed_commit = NULL
+     WHERE id = $1`,
+    [id, branch.name, branch.base, branch.commit],
+  );
+}
+
 export async function markChatWorktreeKeptDirty(db: Queryable, id: string): Promise<void> {
   await db.query('UPDATE chat_worktrees SET kept_dirty_at = now() WHERE id = $1', [id]);
 }

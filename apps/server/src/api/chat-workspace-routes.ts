@@ -20,7 +20,9 @@ import {
   bringChanges,
   bringReady,
   currentBranch,
+  defaultBranch,
   listBranches,
+  noteFetched,
 } from '../projects/chat-worktrees.ts';
 import { getProject } from '../projects/projects.ts';
 import { isGitWorkTree } from '../projects/snapshot.ts';
@@ -187,6 +189,7 @@ export function chatWorkspaceRoutes({ db, workspaceId, openFolder }: ChatWorkspa
     const project = await getProject(db, workspaceId, paramId(req));
     const empty: ProjectBranches = {
       current: null,
+      defaultBranch: null,
       local: [],
       remote: [],
       hasRemote: false,
@@ -197,13 +200,16 @@ export function chatWorkspaceRoutes({ db, workspaceId, openFolder }: ChatWorkspa
       return;
     }
     const remoteSet = await hasRemote(project.rootPath);
-    const fetchFailed =
-      remoteSet && req.query.fetch === '1' ? !(await fetchRemotes(project.rootPath)) : false;
+    const fetched =
+      remoteSet && req.query.fetch === '1' ? await fetchRemotes(project.rootPath) : null;
+    if (fetched) noteFetched(project.rootPath);
+    const fetchFailed = fetched === false;
     const branches = await listBranches(project.rootPath);
     const local = new Set(branches.local);
     const remote = [...branches.remote.keys()].filter((branch) => !local.has(branch));
     const body: ProjectBranches = {
       current: branches.current,
+      defaultBranch: await defaultBranch(project.rootPath),
       local: branches.local,
       remote,
       hasRemote: remoteSet,

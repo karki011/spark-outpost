@@ -189,7 +189,7 @@ test('Review now asks for a review, Stop ends it and focus stays on the button',
   const stop = block.getByRole('button', { name: 'Stop' });
   await expect(stop).toBeFocused();
   await expect(block.getByRole('status')).toHaveText('Queued');
-  await expect(block).toContainText('By PR Reviewer');
+  await expect(block).toContainText('By Spark PR Reviewer');
 
   await page.keyboard.press('Enter');
   await expect.poll(() => server.stops).toEqual(['00000000-0000-4000-8000-000000000002']);
@@ -389,4 +389,43 @@ test.describe('screenshots', () => {
       await page.screenshot({ path: `docs/design/mocks/built/github-review-pane-${name}.png` });
     }
   });
+});
+
+test('a workflow review that posted nothing says so and names the workflow', async ({ page }) => {
+  await stubReviews(page, {
+    reviews: [review({ reviewer: { kind: 'workflow', id: 'gauntlet', name: 'The Gauntlet' } })],
+    summary: { state: 'done', headSha: HEAD, stale: false, posted: null },
+  });
+  const { block } = await openPane(page);
+  await expect(block).toContainText('By workflow The Gauntlet');
+  await expect(block).toContainText(
+    'Nothing posted to GitHub. The Gauntlet posts or approves only when its instructions say to',
+  );
+  await expect(block.getByRole('link', { name: 'View on GitHub' })).toHaveCount(0);
+});
+
+test('the details pane resizes by drag and keys and keeps its width', async ({ page }) => {
+  await stubReviews(page);
+  await page.setViewportSize({ width: 1600, height: 900 });
+  const { main, pane } = await openPane(page);
+  const handle = main.getByRole('separator', { name: 'Resize pull request details' });
+  const before = (await pane.boundingBox())!.width;
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(box.x - 140, box.y + 100, { steps: 6 });
+  await page.mouse.up();
+  await expect.poll(async () => (await pane.boundingBox())!.width).toBeGreaterThan(before + 100);
+
+  await handle.focus();
+  await page.keyboard.press('Home');
+  await expect(handle).toHaveAttribute('aria-valuenow', '320');
+  await page.keyboard.press('Shift+ArrowLeft');
+  await expect(handle).toHaveAttribute('aria-valuenow', '368');
+
+  await page.reload();
+  await main.locator('.gh-main').first().click();
+  await expect(handle).toHaveAttribute('aria-valuenow', '368');
+  await page.keyboard.press('Escape');
+  await expectAxeClean(page);
 });

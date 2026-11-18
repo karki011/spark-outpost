@@ -3,9 +3,9 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promi
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { primaryChatWorktree } from '../src/persistence/chat-worktrees.ts';
+import { primaryChatWorktree, savePlaceChoice } from '../src/persistence/chat-worktrees.ts';
 import { placeChat } from '../src/orchestration/chat-place.ts';
-import { bringChanges } from '../src/projects/chat-worktrees.ts';
+import { bringChanges, noteFetched } from '../src/projects/chat-worktrees.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
 import { doRun } from './approval-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
@@ -44,9 +44,10 @@ afterEach(async () => {
   await rm(scratch, { recursive: true, force: true });
 });
 
-async function place() {
+async function place(branch: string | null = null) {
   const { runId } = await doRun(t, checkout);
   const input = await loadRunInput(t.db, runId);
+  if (branch) await savePlaceChoice(t.db, input.identity.threadId, null, { branch });
   const placed = await placeChat({ db: t.db, branchPrefix: 'spark' }, input, true);
   const record = await primaryChatWorktree(t.db, input.identity.threadId);
   return { placed, record: record! };
@@ -70,6 +71,48 @@ describe('a new chat worktree', { timeout: 60_000 }, () => {
     const { record } = await place();
     expect(record.baseCommit).toBe(local);
     expect(record.baseRef).toBe('main');
+  });
+
+  it('starts from the latest origin default branch while your checkout is on another branch', async () => {
+    git(checkout, 'checkout', '-qb', 'CP-1-feature');
+    await commitFile(checkout, 'mine.ts', 'mine\n');
+    const newer = await commitFile(upstream, 'vitest.config.ts', 'export default {};\n');
+    const { record } = await place();
+    expect(record.baseCommit).toBe(newer);
+    expect(record.baseBranch).toBe('main');
+    expect(record.ownsBranch).toBe(true);
+  });
+
+  it('starts a new branch from the latest main when you pick main', async () => {
+    git(checkout, 'checkout', '-qb', 'CP-1-feature');
+    const newer = await commitFile(upstream, 'vitest.config.ts', 'export default {};\n');
+    const { record } = await place('main');
+    expect(record.branch).toMatch(/^spark\//);
+    expect(record.baseCommit).toBe(newer);
+    expect(record.baseRef).toBe('origin/main');
+    expect(git(checkout, 'rev-parse', 'main')).not.toBe(newer);
+  });
+
+  it('brings a picked branch up to its remote before continuing it', async () => {
+    git(upstream, 'checkout', '-qb', 'topic');
+    await commitFile(upstream, 'topic.ts', 'a\n');
+    git(checkout, 'fetch', '-q', 'origin');
+    git(checkout, 'branch', '-q', 'topic', 'origin/topic');
+    const newer = await commitFile(upstream, 'topic.ts', 'b\n');
+    git(upstream, 'checkout', '-q', 'main');
+    const { record } = await place('topic');
+    expect(record.branch).toBe('topic');
+    expect(git(record.path, 'rev-parse', 'HEAD')).toBe(newer);
+  });
+
+  it('reuses a fetch from the last two minutes instead of fetching again', async () => {
+    git(checkout, 'fetch', '-q', 'origin');
+    noteFetched(checkout);
+    const known = git(checkout, 'rev-parse', 'origin/main');
+    await commitFile(upstream, 'vitest.config.ts', 'export default {};\n');
+    const { record } = await place();
+    expect(record.baseCommit).toBe(known);
+    noteFetched(checkout, 0);
   });
 
   it('falls back to your checkout quietly when there is no remote to fetch', async () => {

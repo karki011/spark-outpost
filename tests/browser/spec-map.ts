@@ -71,6 +71,7 @@ export const SPEC_GROUPS = {
     'pr-follow-up',
     'pr-post-open',
     'pr-round-lines',
+    'adopt-in-chat',
     'pr-tracking',
     'pr-watching',
     'ship',

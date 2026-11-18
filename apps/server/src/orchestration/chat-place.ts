@@ -19,10 +19,12 @@ import {
   branchTipOf,
   changedFiles,
   defaultBranch,
+  fastForward,
   freshRemoteDefault,
-  isAncestor,
+  latestOf,
   listBranches,
   type BranchList,
+  type StartPoint,
   type WorktreeSource,
 } from '../projects/chat-worktrees.ts';
 import { git, headCommit, isGitWorkTree } from '../projects/snapshot.ts';
@@ -95,18 +97,9 @@ async function branchTitle(db: Queryable, conversationId: string, request: strin
   return ticketBranchTitle(db, conversationId, title);
 }
 
-interface StartPoint {
-  from: string;
-  baseRef: string;
-}
-
-async function upToDateBase(
-  root: string,
-  head: string | null,
-  onFetch?: () => void,
-): Promise<StartPoint | null> {
+async function remoteDefault(root: string, onFetch?: () => void): Promise<StartPoint | null> {
   const remote = await freshRemoteDefault(root, onFetch);
-  if (!remote || (head && !(await isAncestor(root, head, remote)))) return null;
+  if (!remote) return null;
   const commit = (await git(root, ['rev-parse', '--verify', '-q', `${remote}^{commit}`])).trim();
   return commit ? { from: commit, baseRef: remote } : null;
 }
@@ -117,13 +110,14 @@ async function startPoint(
   from: string | null,
   onFetch?: () => void,
 ): Promise<StartPoint | null> {
+  const named = from ?? (await defaultBranch(root));
+  const latest = named ? await latestOf(root, named, onFetch) : null;
+  if (latest) return latest;
   if (from) return { from, baseRef: from };
+  const remote = await remoteDefault(root, onFetch);
+  if (remote) return remote;
   const head = await headCommit(root);
-  const fresh = await upToDateBase(root, head, onFetch);
-  if (fresh) return fresh;
-  if (branches.current && head) return { from: head, baseRef: branches.current };
-  const fallback = (await defaultBranch(root)) ?? head;
-  return fallback ? { from: fallback, baseRef: fallback } : null;
+  return head ? { from: head, baseRef: branches.current ?? head } : null;
 }
 
 export interface Planned {
@@ -141,6 +135,7 @@ async function plannedSource(
   decision: Exclude<PlaceDecision, { kind: 'checkout' } | { kind: 'in_place' }>,
 ): Promise<Planned | null> {
   if (decision.kind === 'existing') {
+    await fastForward(target.root, decision.branch);
     return { source: decision, owned: false, baseBranch: decision.branch, baseRef: null };
   }
   if (decision.kind === 'remote') {
@@ -148,7 +143,7 @@ async function plannedSource(
   }
   const title = await branchTitle(deps.db, target.conversationId, request);
   const branch = shipBranchName(deps.branchPrefix, title, target.conversationId);
-  const baseBranch = decision.from ?? branches.current ?? (await defaultBranch(target.root));
+  const baseBranch = decision.from ?? (await defaultBranch(target.root)) ?? branches.current;
   if (branches.local.includes(branch)) {
     return { source: { kind: 'existing', branch }, owned: true, baseBranch, baseRef: null };
   }
@@ -241,6 +236,11 @@ function notStackedNote(parent: StackParent | null, decision: PlaceDecision): st
   return `${parent.owner} has no branch to build on, so this chat's branch does not start from ${parent.owner}'s work.`;
 }
 
+async function protectedNames(root: string): Promise<string[]> {
+  const fallback = await defaultBranch(root).catch(() => null);
+  return [...new Set(['main', 'master', ...(fallback ? [fallback] : [])])];
+}
+
 async function decide(deps: ChatPlaceDeps, target: Target, request: string) {
   const parent = await stackParentOf(deps.db, target.conversationId);
   const choice = await placeChoice(deps.db, target.conversationId, target.projectId);
@@ -257,6 +257,7 @@ async function decide(deps: ChatPlaceDeps, target: Target, request: string) {
     remote: branches.remote,
     checkedOutElsewhere: requested ? await branchCheckedOut(target.root, requested) : false,
     stackOn: stackOnOf(parent),
+    protectedBranches: await protectedNames(target.root),
   });
   return { decision, branches, clean, notStacked: notStackedNote(parent, decision) };
 }

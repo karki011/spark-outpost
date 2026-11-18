@@ -24,6 +24,17 @@ describe('where a Do chat works', () => {
     });
   });
 
+  it('starts a new branch from a picked protected branch instead of working on it', () => {
+    const picked = facts({ requested: 'main', protectedBranches: ['main', 'master'] });
+    expect(decidePlace(picked)).toEqual({ kind: 'new', from: 'main', note: null });
+    const inFiles = facts({
+      requested: 'main',
+      protectedBranches: ['main'],
+      preference: 'checkout',
+    });
+    expect(decidePlace(inFiles)).toEqual({ kind: 'in_place', branch: 'main' });
+  });
+
   it('works in place on the checked-out branch when the tree is clean', () => {
     expect(decidePlace(facts({ requested: 'main' }))).toEqual({ kind: 'in_place', branch: 'main' });
   });

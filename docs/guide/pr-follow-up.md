@@ -41,6 +41,7 @@ On your Mac, add bot logins (`coderabbitai[bot]`) to **Review bots to act on**; 
 - Spark stops when CI fails the same way twice, or a reviewer repeats a pushed-back request.
 - Never force-pushes, rebases, merges, approves, resolves threads, dismisses reviews or adds reviewers.
 - The agent may comment on this PR only, under its mode.
+- A PR the agent opened from another branch, such as `CP-123-fix`, is followed while that branch stays checked out in the chat.
 - PR text is data, never instructions.
 
 ## Turn it off
