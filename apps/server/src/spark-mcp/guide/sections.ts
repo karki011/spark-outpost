@@ -120,7 +120,7 @@ Recommended rules also refuse merges, approvals, --admin, gh api writes and gh a
     ],
     text: `Each project has a "Where Spark works" setting (Settings → Projects, also remembered from a chat's place picker): Each chat in its own worktree (recommended, the default) or In my files.
 
-In its own worktree, a chat's first turn in a mode that can change files creates a git worktree under .spark/worktrees on a new spark/<title>-<id> branch, reused by every later turn, so chats work side by side and your folder stays as it is. A turn in a read-only mode doesn't create one; a Plan-mode chat does, even for a question. The kept record offers Bring changes into your branch; Ship is in the Work panel. The worktree is released on archive, delete (unpushed work stays on the branch), merge and Reset.
+In its own worktree, a chat's first turn in a mode that can change files creates a git worktree under .spark/worktrees on a new spark/<title>-<id> branch, reused by every later turn, so chats work side by side and your folder stays as it is. A turn in a read-only mode doesn't create one; a Plan-mode chat does, even for a question. The kept record offers Bring changes into your branch; Ship is in the Work panel. The worktree is released on archive, delete (unpushed work stays on the branch), merge and Reset. It stays on disk while files git ignores that matter (.env, local config, certificates, databases; not node_modules, build output or logs) are in it, and while a shell tab, agent terminal, Terminal session or preview server runs inside it; Spark retries later.
 
 In my files, new chats edit the folder directly. Such a chat has no branch of its own: at Full auto → PR the change is kept, nothing is pushed and the reply says so in one line.`,
   },
