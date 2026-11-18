@@ -160,6 +160,32 @@ describe('content', () => {
     expect((await call(fake, src, {}, START + 1000)).status).toBe(404);
     expect(fake.bucket.objects.has(`shares/${id}`)).toBe(true);
   });
+
+  it('serves nothing when the id is retired and replaced while its page is being read', async () => {
+    const fake = fakeEnv();
+    const { id } = await create(fake);
+    const src = frameSrc((await shell(fake, id)).html);
+    const stored = fake.bucket.objects.get(`shares/${id}`)!;
+    const replace = async () => {
+      await fake.bucket.put(`gone/${id}`, '');
+      fake.bucket.objects.set(`shares/${id}`, { ...stored, value: '<h1>replaced</h1>' });
+    };
+    const head = fake.bucket.head.bind(fake.bucket);
+    const get = fake.bucket.get.bind(fake.bucket);
+    fake.bucket.head = async (key) => {
+      if (key === `shares/${id}`) await replace();
+      return head(key);
+    };
+    fake.bucket.get = async (key) => {
+      if (key === `shares/${id}`) await replace();
+      return get(key);
+    };
+
+    expect((await call(fake, `/a/${id}`)).status).toBe(404);
+    const content = await call(fake, src, {}, START + 1000);
+    expect(content.status).toBe(404);
+    expect(await content.text()).not.toContain('replaced');
+  });
 });
 
 describe('report', () => {
