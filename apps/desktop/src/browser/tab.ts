@@ -14,6 +14,8 @@ import {
   type BrowserPaneTab,
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
+import { appLockGate } from '../app-lock-gate.ts';
+import { hideWhileLocked } from '../app-lock-windows.ts';
 import { paneShortcutOf } from './tab-keys.ts';
 import { attachCdp, type Cdp } from './cdp.ts';
 import type { InputMarks } from './clipboard-permission.ts';
@@ -153,6 +155,7 @@ export class PaneTab {
       },
     });
     this.devtools = window;
+    hideWhileLocked(window);
     contents.setDevToolsWebContents(window.webContents);
     contents.openDevTools({ mode: 'detach' });
     contents.once('devtools-closed', () => {
@@ -413,7 +416,7 @@ export class PaneTab {
 
   find(text: string, forward: boolean, next: boolean): void {
     const contents = this.live?.view.webContents;
-    if (!contents || contents.isDestroyed()) return;
+    if (!contents || contents.isDestroyed() || appLockGate.locked()) return;
     contents.findInPage(text, { forward, findNext: !next, matchCase: false });
   }
 

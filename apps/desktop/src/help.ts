@@ -19,6 +19,7 @@ import {
   type DesktopHelpInfo,
   type DiagnosticsExport,
 } from '@spark-outpost/contracts';
+import { appLockGate } from './app-lock-gate.ts';
 import { appMenuTemplate, type HelpActions } from './help-menu.ts';
 import { IPC } from './ipc-channels.ts';
 import { startSettingsWindow } from './settings-window.ts';
@@ -127,6 +128,7 @@ export function startHelp(options: HelpOptions): Help {
   };
   const toMainWindow = (channel: string, payload: string) => {
     const window = options.mainWindow();
+    if (appLockGate.locked()) return;
     if (window && !window.isDestroyed()) window.webContents.send(channel, payload);
   };
   const handle = (channel: string, handler: () => Promise<unknown> | unknown) => {
@@ -154,6 +156,9 @@ export function startHelp(options: HelpOptions): Help {
           dev: !app.isPackaged,
           sidebarShown,
           openSettings: settingsWindow.show,
+          lockAvailable: appLockGate.available(),
+          locked: appLockGate.locked(),
+          lockNow: appLockGate.lockNow,
           toggleSidebar: () => toMainWindow(IPC.menuCommand, TOGGLE_SIDEBAR_COMMAND),
           sendFeedback: () =>
             settingsWindow.open({ route: HELP_ROUTE, focus: FEEDBACK_SETTINGS_FOCUS }),
@@ -169,11 +174,19 @@ export function startHelp(options: HelpOptions): Help {
     buildMenu();
   };
   ipcMain.on(IPC.menuSidebarShown, onSidebarShown);
+  const lockShown = () => `${appLockGate.available()} ${appLockGate.locked()}`;
+  let shownLock = lockShown();
+  const stopLockWatch = appLockGate.onChange(() => {
+    if (shownLock === lockShown()) return;
+    shownLock = lockShown();
+    buildMenu();
+  });
   buildMenu();
   return {
     dispose() {
       for (const channel of CHANNELS) ipcMain.removeHandler(channel);
       ipcMain.off(IPC.menuSidebarShown, onSidebarShown);
+      stopLockWatch();
       settingsWindow.dispose();
     },
   };

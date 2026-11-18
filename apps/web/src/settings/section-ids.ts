@@ -22,6 +22,7 @@ export type SettingsPage = (typeof SETTINGS_PAGE_IDS)[number];
 
 export const SETTINGS_PART_PAGES = {
   look: 'spark',
+  lock: 'spark',
   models: 'ai',
   mcp: 'tools',
   updates: 'about',
@@ -55,6 +56,7 @@ const AVAILABLE: Partial<Record<SettingsSection, () => boolean>> = {
   mac: () => desktopMacControl() !== null,
   browser: () => desktopBrowser() !== null,
   updates: () => Boolean(sparkDesktop()?.updates),
+  lock: () => Boolean(sparkDesktop()?.lock),
 };
 
 export function sectionAvailable(section: SettingsSection): boolean {

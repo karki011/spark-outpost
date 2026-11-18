@@ -1,6 +1,8 @@
 import { app, ipcMain, Notification, type IpcMainEvent, type WebContents } from 'electron';
 import type { AttentionReport } from '@spark-outpost/contracts';
+import { appLockGate } from './app-lock-gate.ts';
 import {
+  concealed,
   decideAttention,
   dockBadge,
   NO_ATTENTION,
@@ -60,11 +62,8 @@ export function startAttentionHost(options: AttentionHostOptions): AttentionHost
 
   const notify = (notice: AttentionNotice) => {
     if (!Notification.isSupported()) return;
-    const notification = new Notification({
-      id: notice.key,
-      title: notice.title,
-      body: notice.body,
-    });
+    const { title, body } = appLockGate.hidesNotices() ? concealed(notice) : notice;
+    const notification = new Notification({ id: notice.key, title, body });
     notification.on('click', () => {
       forget(notice.key);
       if (notice.chatId) options.openChat(notice.chatId);

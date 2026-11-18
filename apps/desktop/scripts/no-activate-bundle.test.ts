@@ -7,6 +7,7 @@ describe('no-activate addon build', () => {
     expect(args.slice(0, 3)).toEqual(['-bundle', '-undefined', 'dynamic_lookup']);
     expect(args).toContain('x86_64');
     expect(args).toContain('-mmacosx-version-min=12.0');
+    expect(args.join(' ')).toContain('-framework LocalAuthentication');
     expect(args.slice(-3)).toEqual(['/r/no_activate.mm', '-o', '/out.node']);
   });
 

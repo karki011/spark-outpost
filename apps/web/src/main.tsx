@@ -6,6 +6,9 @@ import { reportCspViolationsInDev } from './app/csp-violations.ts';
 import { markConnectionRestored, reportRequestError } from './app/connection/connection-store.ts';
 import { configureLiveQueries } from './app/live/use-app-events.ts';
 import { configureChatRetention } from './app/chat-retention.ts';
+import { AppLockCover } from './app-lock/AppLockCover.tsx';
+import { installLockGuard } from './app-lock/lock-guard.ts';
+import { appLock, useAppLock } from './app-lock/use-app-lock.ts';
 import { markScrollbarStyle } from './app/scrollbars.ts';
 import { startTouchViewport } from './app/touch-viewport.ts';
 import { warmTerminalFont } from './terminal/terminal-font.ts';
@@ -28,6 +31,7 @@ const queryClient = new QueryClient({
   },
 });
 configureLiveQueries(queryClient);
+if (appLock()) installLockGuard();
 
 reportCspViolationsInDev();
 markScrollbarStyle();
@@ -65,7 +69,11 @@ if (mainWindow) configureChatRetention(queryClient);
 const App = lazy(() => appLoading ?? loadApp());
 
 function Root() {
+  const lockable = appLock() !== null;
+  const lock = useAppLock();
+  const concealed = lockable && lock?.locked !== false;
   if (island) {
+    if (concealed) return null;
     return (
       <Suspense fallback={null}>
         <IslandApp />
@@ -73,6 +81,7 @@ function Root() {
     );
   }
   if (meetingAlert) {
+    if (concealed) return null;
     return (
       <Suspense fallback={null}>
         <MeetingAlertApp />
@@ -81,9 +90,12 @@ function Root() {
   }
   if (settingsWindow) {
     return (
-      <Suspense fallback={null}>
-        <SettingsWindowApp />
-      </Suspense>
+      <>
+        <Suspense fallback={null}>
+          <SettingsWindowApp />
+        </Suspense>
+        {lockable && <AppLockCover status={lock} />}
+      </>
     );
   }
   if (macIndicator) {
@@ -94,9 +106,12 @@ function Root() {
     );
   }
   return (
-    <Suspense fallback={<div className="app" aria-hidden="true" />}>
-      <App />
-    </Suspense>
+    <>
+      <Suspense fallback={<div className="app" aria-hidden="true" />}>
+        <App />
+      </Suspense>
+      {lockable && <AppLockCover status={lock} />}
+    </>
   );
 }
 

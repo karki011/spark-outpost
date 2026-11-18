@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AttentionRequest } from '@spark-outpost/contracts';
 import {
+  concealed,
   decideAttention,
   dockBadge,
   NO_ATTENTION,
@@ -85,6 +86,34 @@ describe('decideAttention', () => {
   it('notifies once when a report repeats a request', () => {
     const report = { count: 1, requests: [request('a'), request('a')] };
     expect(decideAttention(context({ report })).notify).toHaveLength(1);
+  });
+});
+
+describe('a notification while Spark Outpost is locked', () => {
+  it('says a chat needs you without its name, request or command', () => {
+    const [notice] = noticesFor([request('a')]);
+    const hidden = concealed(notice!);
+    expect(hidden).toMatchObject({
+      key: 'a',
+      chatId: CHAT,
+      title: 'Spark Outpost',
+      body: 'A chat needs you. Unlock to see it.',
+    });
+    expect(JSON.stringify([hidden.title, hidden.body])).not.toMatch(/Fix login|Claude|command/);
+  });
+
+  it('counts the chats in a summary without naming them', () => {
+    const [summary] = noticesFor([request('a'), request('b', OTHER, 'Add tests')]);
+    const hidden = concealed(summary!);
+    expect(hidden.title).toBe('Spark Outpost');
+    expect(hidden.body).toBe('2 chats need you. Unlock to see them.');
+  });
+
+  it('still opens the same chat and is withdrawn with the same requests', () => {
+    const [notice] = noticesFor([request('a')]);
+    const hidden = concealed(notice!);
+    expect(hidden.requests).toEqual(notice!.requests);
+    expect(hidden.chats).toEqual(notice!.chats);
   });
 });
 
