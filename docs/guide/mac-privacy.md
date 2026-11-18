@@ -43,4 +43,4 @@ The first time Spark reads a key, macOS may ask whether Spark Outpost may use it
 
 Spark keeps working meanwhile; after 10 seconds it stops waiting, and a test message says it's waiting for the keychain.
 
-**Next:** [Manage providers, models and Jev](providers-and-models.md)
+**Next:** [Lock Spark with the privacy screen](privacy-screen.md)

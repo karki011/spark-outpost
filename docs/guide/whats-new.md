@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                       | What to do                                                     |
 | -------------------------------------------------- | -------------------------------------------------------------- |
+| Mac app: privacy screen, left-bar lock             | [Turn it on](privacy-screen.md); **⇧⌘L** locks now.            |
 | **GitHub** page, reviews, auto-review              | [Guide](github-page.md).                                       |
 | **⌘1**–**⌘9** open chats                           | [Keyboard shortcuts](keyboard-shortcuts.md#chats).             |
 | Agent terminal row is a card                       | Nothing to do.                                                 |

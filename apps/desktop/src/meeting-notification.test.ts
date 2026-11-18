@@ -11,10 +11,11 @@ vi.mock('electron', () => ({ Notification: class {} }));
 
 type Listener = (...args: unknown[]) => void;
 
-function fakeNotices(supported = true) {
+function fakeNotices(supported = true, lock = { hidden: false }) {
   const created: { options: unknown; listeners: Map<string, Listener>; closed: boolean }[] = [];
   const deps = {
     supported: () => supported,
+    hideDetails: () => lock.hidden,
     log: vi.fn(),
     create: (options: unknown) => {
       const entry = { options, listeners: new Map<string, Listener>(), closed: false };
@@ -106,6 +107,36 @@ describe('the meeting notification', () => {
     expect(created[0]!.closed).toBe(true);
     expect(created[1]!.closed).toBe(true);
     expect(created[2]!.options).toMatchObject({ title: 'Standup moved' });
+  });
+
+  it('names no meeting while Spark Outpost is locked, and keeps its buttons', () => {
+    const lock = { hidden: true };
+    const { deps, created } = fakeNotices(true, lock);
+    meetingNotifier(deps).post(alert([event('standup', true)]), vi.fn());
+    expect(created[0]!.options).toMatchObject({
+      title: 'Meeting',
+      body: 'Unlock Spark Outpost to see it.',
+      actions: [
+        { type: 'button', text: 'Join' },
+        { type: 'button', text: 'Snooze 1 min' },
+      ],
+    });
+    expect(JSON.stringify(created[0]!.options)).not.toContain('Standup');
+  });
+
+  it('swaps the notification for the other wording when the lock changes', () => {
+    const lock = { hidden: false };
+    const { deps, created } = fakeNotices(true, lock);
+    const notifier = meetingNotifier(deps);
+    const standup = alert([event('standup', true)]);
+    notifier.post(standup, vi.fn());
+    lock.hidden = true;
+    notifier.post(standup, vi.fn());
+    expect(created[0]!.closed).toBe(true);
+    expect(created[1]!.options).toMatchObject({ title: 'Meeting' });
+    lock.hidden = false;
+    notifier.post(standup, vi.fn());
+    expect(created[2]!.options).toMatchObject({ title: 'Standup' });
   });
 
   it('does nothing where notifications are not supported', () => {

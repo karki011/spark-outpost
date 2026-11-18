@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type * as Contracts from '@spark-outpost/contracts';
+import { appLockGate } from './app-lock-gate.ts';
 import { IPC } from './ipc-channels.ts';
 import { FOCUS_CARD_SHORTCUT, startMeetingAlertHost } from './meeting-alert-host.ts';
 
@@ -19,6 +20,9 @@ const native = vi.hoisted(() => {
     loadURL = vi.fn(async () => undefined);
     showInactive = vi.fn(() => {
       this.visible = true;
+    });
+    hide = vi.fn(() => {
+      this.visible = false;
     });
     isVisible = () => this.visible;
     isDestroyed = () => false;
@@ -72,7 +76,11 @@ const payload = {
   notice: { title: 'Standup', body: '10:00–10:15 · Zoom' },
 };
 
+const setLocked = (locked: boolean) =>
+  appLockGate.publish({ locked, available: true, hideNotifications: true });
+
 afterEach(() => {
+  setLocked(false);
   native.listeners.clear();
   native.windows.length = 0;
 });
@@ -115,6 +123,47 @@ function sentTakeFocus(window: (typeof native.windows)[number]): boolean {
 }
 
 describe('meeting alert overlay', () => {
+  it('hides the card and frees ⌃⌥⌘M while Spark Outpost is locked, and brings both back', async () => {
+    const { host, show, registered, notifier } = startHost();
+    show();
+    await settle();
+    const [window] = native.windows;
+    setLocked(true);
+    expect(window!.isVisible()).toBe(false);
+    expect(registered.has(FOCUS_CARD_SHORTCUT)).toBe(false);
+    expect(notifier.post).toHaveBeenCalledTimes(2);
+    setLocked(false);
+    expect(window!.isVisible()).toBe(true);
+    expect(registered.has(FOCUS_CARD_SHORTCUT)).toBe(true);
+    host.dispose();
+  });
+
+  it('posts the notification but shows no card for an alert that arrives while locked', async () => {
+    const { host, show, notifier, registered } = startHost(true);
+    setLocked(true);
+    show();
+    await settle();
+    const [window] = native.windows;
+    expect(notifier.post).toHaveBeenCalledTimes(1);
+    expect(window!.showInactive).not.toHaveBeenCalled();
+    expect(window!.focus).not.toHaveBeenCalled();
+    expect(registered.size).toBe(0);
+    setLocked(false);
+    expect(window!.showInactive).toHaveBeenCalledTimes(1);
+    host.dispose();
+  });
+
+  it('stays gone after unlock when the alert ended while locked', async () => {
+    const { host, show, hide } = startHost();
+    show();
+    await settle();
+    setLocked(true);
+    hide();
+    setLocked(false);
+    expect(native.windows[0]!.isVisible()).toBe(false);
+    host.dispose();
+  });
+
   it('keeps the overlay from bringing Spark forward when it is clicked', () => {
     const { host, preventActivation, show } = startHost();
     show();
