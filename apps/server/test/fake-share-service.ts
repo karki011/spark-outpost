@@ -23,6 +23,7 @@ export interface StoredShare {
 
 export interface FakeShareService {
   shares: Map<string, StoredShare>;
+  retired: Set<string>;
   posts: ReceivedShare[];
   deletes: { id: string; authorization: string | undefined }[];
   answer:
@@ -61,6 +62,7 @@ export const BUSY_TITLE = 'Busy';
 export function fakeShareService(): FakeShareService {
   const service: FakeShareService = {
     shares: new Map(),
+    retired: new Set(),
     posts: [],
     deletes: [],
     answer: null,
@@ -85,7 +87,7 @@ export function fakeShareService(): FakeShareService {
           return true;
         }
         const known = service.shares.get(share.id);
-        if (known && known.deleteToken !== share.deleteToken) {
+        if (service.retired.has(share.id) || (known && known.deleteToken !== share.deleteToken)) {
           send(res, 409, { error: 'conflict' });
           return true;
         }
@@ -100,11 +102,13 @@ export function fakeShareService(): FakeShareService {
         const authorization = req.headers.authorization;
         service.deletes.push({ id, authorization });
         const share = service.shares.get(id);
+        if (!share) service.retired.add(id);
         if (!share || authorization !== `Bearer ${share.deleteToken}`) {
           send(res, 404, { error: 'not_found' });
           return true;
         }
         service.shares.delete(id);
+        service.retired.add(id);
         send(res, 204, null);
         return true;
       }

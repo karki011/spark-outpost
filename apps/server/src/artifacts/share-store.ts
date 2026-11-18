@@ -106,6 +106,15 @@ export async function markShareLive(
   return rows[0] ? toShare(rows[0]) : null;
 }
 
+export async function lockPendingShare(client: Queryable, shareId: string): Promise<string | null> {
+  const { rows } = await client.query<{ url: string }>(
+    `SELECT url FROM artifact_page_shares
+     WHERE share_id = $1 AND state = 'pending' FOR UPDATE`,
+    [shareId],
+  );
+  return rows[0]?.url ?? null;
+}
+
 export async function deleteShare(db: Queryable, shareId: string): Promise<void> {
   await db.query('DELETE FROM artifact_page_shares WHERE share_id = $1', [shareId]);
 }
@@ -117,16 +126,16 @@ export async function expiredShareIds(db: Queryable): Promise<string[]> {
   return rows.map((row) => row.share_id);
 }
 
-export async function orphanShareIds(db: Queryable): Promise<string[]> {
-  const { rows } = await db.query<{ share_id: string }>(
-    `SELECT s.share_id FROM artifact_page_shares s
+export async function orphanShares(db: Queryable): Promise<{ shareId: string; url: string }[]> {
+  const { rows } = await db.query<{ share_id: string; url: string }>(
+    `SELECT s.share_id, s.url FROM artifact_page_shares s
      WHERE s.state = 'live' AND NOT EXISTS (
        SELECT 1 FROM artifact_page_versions v
        WHERE v.artifact_id = s.artifact_id AND v.version = s.version
      ) AND s.expires_at > now()
      ORDER BY s.created_at`,
   );
-  return rows.map((row) => row.share_id);
+  return rows.map((row) => ({ shareId: row.share_id, url: row.url }));
 }
 
 export async function stalePendingShareIds(db: Queryable): Promise<string[]> {

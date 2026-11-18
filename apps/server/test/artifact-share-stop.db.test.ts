@@ -61,8 +61,11 @@ describe('stop sharing when the page cannot be removed', { timeout: 30_000 }, ()
 
   it('keeps the link when the service cannot be reached', async () => {
     const { id, shareId } = await sharedPage();
+    const unreachable: typeof fetch = async () => {
+      throw new TypeError('fetch failed');
+    };
     const stop = await s
-      .client(s.service({ origin: 'http://127.0.0.1:1' }))
+      .client(s.service({ fetch: unreachable }))
       .send('delete', sharePath(id))
       .expect(502);
     expect(stop.body.error).toMatch(/couldn't reach/);

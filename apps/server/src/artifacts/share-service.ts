@@ -1,10 +1,14 @@
 import { z } from 'zod';
-import type { ArtifactShareDays, ArtifactShareTheme } from '@spark-outpost/contracts';
+import {
+  shareServiceOrigin,
+  type ArtifactShareDays,
+  type ArtifactShareTheme,
+} from '@spark-outpost/contracts';
 
 export const SHARE_TIMEOUT_MS = 20_000;
 
 export interface ShareService {
-  origin: string;
+  origin: string | null;
   fetch: typeof fetch;
   timeoutMs: number;
 }
@@ -35,13 +39,21 @@ const FAILURES: Record<number, string> = {
   429: 'The share service is busy. Try again in a few minutes.',
 };
 
-export function sharePageUrl(service: ShareService, id: string): string {
-  return `${service.origin}/a/${id}`;
+export function sharePageUrl(origin: string, id: string): string {
+  return `${origin}/a/${id}`;
 }
 
-async function call(service: ShareService, path: string, init: RequestInit): Promise<Response> {
+function storedOrigin(pageUrl: string): string {
+  const origin = URL.canParse(pageUrl) ? shareServiceOrigin(new URL(pageUrl).origin) : null;
+  if (!origin) {
+    throw new ShareServiceError('Spark can’t tell which share service holds this page.');
+  }
+  return origin;
+}
+
+async function call(service: ShareService, url: string, init: RequestInit): Promise<Response> {
   try {
-    return await service.fetch(`${service.origin}${path}`, {
+    return await service.fetch(url, {
       ...init,
       redirect: 'error',
       signal: AbortSignal.timeout(service.timeoutMs),
@@ -51,8 +63,12 @@ async function call(service: ShareService, path: string, init: RequestInit): Pro
   }
 }
 
-export async function uploadShare(service: ShareService, upload: ShareUpload): Promise<Date> {
-  const response = await call(service, '/v1/shares', {
+export async function uploadShare(
+  service: ShareService,
+  origin: string,
+  upload: ShareUpload,
+): Promise<Date> {
+  const response = await call(service, `${origin}/v1/shares`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -76,19 +92,25 @@ export async function uploadShare(service: ShareService, upload: ShareUpload): P
   if (
     !parsed.success ||
     parsed.data.id !== upload.id ||
-    parsed.data.url !== sharePageUrl(service, upload.id)
+    parsed.data.url !== sharePageUrl(origin, upload.id)
   ) {
     throw new ShareServiceError('The share service sent an answer Spark could not use.');
   }
   return new Date(parsed.data.expiresAt);
 }
 
+export interface SharedPage {
+  shareId: string;
+  url: string;
+}
+
 export async function removeShare(
   service: ShareService,
-  id: string,
+  page: SharedPage,
   deleteToken: string,
 ): Promise<204 | 404> {
-  const response = await call(service, `/v1/shares/${encodeURIComponent(id)}`, {
+  const address = `${storedOrigin(page.url)}/v1/shares/${encodeURIComponent(page.shareId)}`;
+  const response = await call(service, address, {
     method: 'DELETE',
     headers: { authorization: `Bearer ${deleteToken}` },
   });

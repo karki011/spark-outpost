@@ -83,6 +83,8 @@ export async function unlock(request: Request, env: ShareEnv, id: string, now: n
 export async function showContent(request: Request, env: ShareEnv, id: string, now: number) {
   const key = signingKey(env);
   if (!key) return unavailable();
+  const destination = request.headers.get('sec-fetch-dest');
+  if (destination !== null && destination !== 'iframe') return notFound();
   const token = new URL(request.url).searchParams.get('t') ?? '';
   if (!(await validFrameToken(key, id, token, now))) return notFound();
   const html = await readShare(env, id, now);

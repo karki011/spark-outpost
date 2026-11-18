@@ -113,7 +113,7 @@ jobs:
             cp selected-specs.txt picked.txt
           fi
           if [ "$SHARD" = fake-hosts ]; then
-            printf '%s\n' tests/browser/calendar*.spec.ts tests/browser/{browser-agent,island-ask-calendar,shot-order,sign-ins,sign-in-sites}.spec.ts | grep -Fxf picked.txt > shard-specs.txt || true
+            printf '%s\n' tests/browser/calendar*.spec.ts tests/browser/{browser-agent,island-ask-calendar,island-locked,shot-order,sign-ins,sign-in-sites}.spec.ts | grep -Fxf picked.txt > shard-specs.txt || true
           else
             grep -v -- '-perf\.spec\.ts$' picked.txt > shard-specs.txt || true
           fi

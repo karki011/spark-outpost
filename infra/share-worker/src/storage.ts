@@ -20,8 +20,11 @@ export interface ShareRecord {
 }
 
 const SHARE_PREFIX = 'shares/';
+const GONE_PREFIX = 'gone/';
+const REMOVE_BATCH = 20;
 
 const shareKey = (id: string) => `${SHARE_PREFIX}${id}`;
+const goneKey = (id: string) => `${GONE_PREFIX}${id}`;
 
 function toMetadata(record: ShareRecord): Record<string, string> {
   const metadata: Record<string, string> = {
@@ -96,13 +99,36 @@ export async function existingShare(
   return isExpired(record, now) ? { state: 'expired', record } : { state: 'live', record };
 }
 
-async function removeKeys(env: ShareEnv, keys: string[], passcodeIds: string[]): Promise<void> {
-  if (keys.length > 0) await env.SHARES.delete(keys);
-  await Promise.all(passcodeIds.map((id) => clearAttempts(env.COUNTERS, id)));
+export async function retireId(env: ShareEnv, id: string): Promise<void> {
+  await env.SHARES.put(goneKey(id), '', { onlyIf: { etagDoesNotMatch: '*' } });
+}
+
+export async function isRetired(env: ShareEnv, id: string): Promise<boolean> {
+  return (await env.SHARES.head(goneKey(id))) !== null;
+}
+
+interface Removal {
+  id: string;
+  hasPasscode: boolean;
+}
+
+async function removeAll(env: ShareEnv, removals: Removal[]): Promise<void> {
+  for (let start = 0; start < removals.length; start += REMOVE_BATCH) {
+    const batch = removals.slice(start, start + REMOVE_BATCH);
+    await Promise.all(batch.map(({ id }) => retireId(env, id)));
+    await env.SHARES.delete(batch.map(({ id }) => shareKey(id)));
+    await Promise.all(
+      batch.filter((entry) => entry.hasPasscode).map(({ id }) => clearAttempts(env.COUNTERS, id)),
+    );
+  }
 }
 
 export async function removeShare(env: ShareEnv, record: ShareRecord): Promise<void> {
-  await removeKeys(env, [shareKey(record.id)], record.passcode ? [record.id] : []);
+  await removeAll(env, [{ id: record.id, hasPasscode: record.passcode !== null }]);
+}
+
+export async function discardShare(env: ShareEnv, id: string): Promise<void> {
+  await env.SHARES.delete(shareKey(id));
 }
 
 async function liveRecord(env: ShareEnv, id: string, object: StoredObject | null, now: number) {
@@ -133,16 +159,14 @@ export async function removeExpired(env: ShareEnv, now: number): Promise<void> {
       include: ['customMetadata'],
       ...(cursor === undefined ? {} : { cursor }),
     });
-    const keys: string[] = [];
-    const passcodeIds: string[] = [];
+    const removals: Removal[] = [];
     for (const object of page.objects) {
       const id = object.key.slice(SHARE_PREFIX.length);
       const record = fromMetadata(id, object.customMetadata);
       if (record && !isExpired(record, now)) continue;
-      keys.push(object.key);
-      if (record?.passcode) passcodeIds.push(id);
+      removals.push({ id, hasPasscode: Boolean(record?.passcode) });
     }
-    await removeKeys(env, keys, passcodeIds);
+    await removeAll(env, removals);
     cursor = page.truncated ? page.cursor : undefined;
   } while (cursor !== undefined);
 }

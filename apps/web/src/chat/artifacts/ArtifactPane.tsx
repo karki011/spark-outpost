@@ -1,5 +1,5 @@
 import './artifacts.css';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ARTIFACT_FILE_EXTENSIONS,
@@ -63,6 +63,10 @@ export function ArtifactPane({ page, choice, lead, trail }: ArtifactPaneProps) {
   const copied = useCopyFeedback();
   const { remote, allows } = useRemoteClient();
   const switchedOff = remote && !allows('artifacts');
+  const titleRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (choice.takeFocus()) titleRef.current?.focus({ preventScroll: true });
+  }, [choice]);
   const view = useQuery({
     queryKey: ['artifact', page.id, version],
     queryFn: () => request(artifactViewSchema, artifactPath(page.id, version, 'view')),
@@ -73,7 +77,9 @@ export function ArtifactPane({ page, choice, lead, trail }: ArtifactPaneProps) {
     <section className="art" aria-label={`Artifact ${page.title}`}>
       <div className="art-head">
         {lead}
-        <b className="art-title">{view.data?.title ?? page.title}</b>
+        <b ref={titleRef} className="art-title" tabIndex={-1}>
+          {view.data?.title ?? page.title}
+        </b>
         <div className="art-version">
           <ChoicePicker
             label="Version"
@@ -101,7 +107,7 @@ export function ArtifactPane({ page, choice, lead, trail }: ArtifactPaneProps) {
             label="Save as…"
           />
         )}
-        <ArtifactShare key={version} page={page} version={version} />
+        <ArtifactShare page={page} version={version} />
         {trail}
       </div>
       {page.kind === 'html' && (

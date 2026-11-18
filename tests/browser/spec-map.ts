@@ -262,6 +262,7 @@ export const SPEC_GROUPS = {
     'island-home',
     'island-hover',
     'island-layout',
+    'island-locked',
     'island-notch',
     'island-peek',
     'island-projects',

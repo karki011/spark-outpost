@@ -18,6 +18,18 @@ export const PASSCODE = new RegExp(
   `^[${ARTIFACT_SHARE_PASSCODE_ALPHABET}]{${ARTIFACT_SHARE_PASSCODE_LENGTH}}$`,
 );
 
+export function untilAborted(init: RequestInit | undefined): Promise<Response> {
+  return new Promise((_resolve, reject) => {
+    const signal = init?.signal;
+    if (!signal) return;
+    if (signal.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+  });
+}
+
 export class ShareHarness {
   readonly secrets: SecretStore = memorySecretStore();
 
@@ -70,6 +82,19 @@ export class ShareHarness {
   async rows(table: string): Promise<string> {
     const { rows } = await this.t.db.query(`SELECT * FROM ${table}`);
     return JSON.stringify(rows);
+  }
+
+  async states(): Promise<string[]> {
+    const { rows } = await this.t.db.query<{ state: string }>(
+      'SELECT state FROM artifact_page_shares ORDER BY created_at',
+    );
+    return rows.map((row) => row.state);
+  }
+
+  async makePendingStale(): Promise<void> {
+    await this.t.db.query(
+      "UPDATE artifact_page_shares SET created_at = now() - interval '2 minutes' WHERE state = 'pending'",
+    );
   }
 
   async close(): Promise<void> {

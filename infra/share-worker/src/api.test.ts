@@ -1,10 +1,16 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
-import { CREATE_LIMIT_PER_HOUR, MAX_CREATE_BODY_BYTES, MAX_HTML_BYTES } from './api.ts';
+import {
+  CREATE_LIMIT_PER_HOUR,
+  MAX_CREATE_BODY_BYTES,
+  MAX_HTML_BYTES,
+  UNKNOWN_DELETE_LIMIT_PER_HOUR,
+} from './api.ts';
 import {
   call,
   create,
   fakeEnv,
+  freshIds,
   ORIGIN,
   postForm,
   postJson,
@@ -92,22 +98,61 @@ describe('POST /v1/shares', () => {
     expect(fake.bucket.objects.get(`shares/${VALID_CREATE.id}`)?.value).toBe('<p>odd</p>');
   });
 
-  it('replaces an expired share at the same id', async () => {
+  it('never gives an expired id to another uploader', async () => {
     const fake = fakeEnv();
     await postJson(fake, { ...VALID_CREATE, expiresInDays: 1 });
     const later = START + 2 * DAY;
-    const response = await postJson(
-      fake,
-      { ...VALID_CREATE, deleteToken: 'Z'.repeat(43), html: '<p>new</p>' },
-      { now: later },
-    );
+    const takeover = { ...VALID_CREATE, deleteToken: 'Z'.repeat(43), html: '<p>new</p>' };
 
-    expect(response.status).toBe(201);
-    expect((await response.json()).expiresAt).toBe(new Date(later + 7 * DAY).toISOString());
-    expect(fake.bucket.objects.get(`shares/${VALID_CREATE.id}`)?.value).toBe('<p>new</p>');
-    expect(metadataOf(fake, VALID_CREATE.id as string)?.deleteTokenHash).toBe(
-      createHash('sha256').update('Z'.repeat(43)).digest('base64url'),
+    expect((await postJson(fake, takeover, { now: later })).status).toBe(409);
+    expect((await postJson(fake, takeover, { now: later })).status).toBe(409);
+    expect((await postJson(fake, VALID_CREATE, { now: later })).status).toBe(409);
+    expect((await call(fake, `/a/${VALID_CREATE.id}`, {}, later)).status).toBe(404);
+    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${VALID_CREATE.id}`]);
+  });
+
+  it('never gives a deleted id to another uploader, or back to the first one', async () => {
+    const fake = fakeEnv();
+    await postJson(fake, VALID_CREATE);
+    await remove(fake, VALID_CREATE.id as string, VALID_CREATE.deleteToken as string);
+    const takeover = { ...VALID_CREATE, deleteToken: 'Z'.repeat(43), html: '<p>new</p>' };
+
+    const response = await postJson(fake, takeover);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'conflict' });
+    expect((await postJson(fake, VALID_CREATE)).status).toBe(409);
+    expect((await call(fake, `/a/${VALID_CREATE.id}`)).status).toBe(404);
+    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${VALID_CREATE.id}`]);
+  });
+
+  it('refuses a create that lands after a delete of the same id', async () => {
+    const fake = fakeEnv();
+    const missing = await remove(
+      fake,
+      VALID_CREATE.id as string,
+      VALID_CREATE.deleteToken as string,
     );
+    expect(missing.status).toBe(404);
+
+    expect((await postJson(fake, VALID_CREATE)).status).toBe(409);
+    expect((await call(fake, `/a/${VALID_CREATE.id}`)).status).toBe(404);
+    expect(fake.bucket.objects.has(`shares/${VALID_CREATE.id}`)).toBe(false);
+  });
+
+  it('takes back a page stored while its id was being retired', async () => {
+    const fake = fakeEnv();
+    const head = fake.bucket.head.bind(fake.bucket);
+    let retired = false;
+    fake.bucket.head = async (key) => {
+      if (key === `gone/${VALID_CREATE.id}` && !retired) {
+        retired = true;
+        await fake.bucket.put(key, '');
+      }
+      return head(key);
+    };
+
+    expect((await postJson(fake, VALID_CREATE)).status).toBe(409);
+    expect(fake.bucket.objects.has(`shares/${VALID_CREATE.id}`)).toBe(false);
   });
 
   it.each([
@@ -225,7 +270,8 @@ describe('DELETE /v1/shares/:id', () => {
     const created = await create(fake);
 
     expect((await remove(fake, created.id, created.deleteToken)).status).toBe(204);
-    expect(fake.bucket.objects.size).toBe(0);
+    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${created.id}`]);
+    expect(fake.bucket.objects.get(`gone/${created.id}`)?.value).toBe('');
     expect((await remove(fake, created.id, created.deleteToken)).status).toBe(404);
     expect((await call(fake, `/a/${created.id}`)).status).toBe(404);
   });
@@ -241,6 +287,49 @@ describe('DELETE /v1/shares/:id', () => {
     expect((await remove(fake, created.id, null)).status).toBe(404);
     expect((await remove(fake, 'A'.repeat(22), created.deleteToken)).status).toBe(404);
     expect(fake.bucket.objects.has(`shares/${created.id}`)).toBe(true);
+    expect(fake.bucket.objects.has(`gone/${created.id}`)).toBe(false);
+    expect((await call(fake, `/a/${created.id}`)).status).toBe(200);
+  });
+
+  it('deletes a page that was stored between its lookup and the retiring of its id', async () => {
+    const fake = fakeEnv();
+    const put = fake.bucket.put.bind(fake.bucket);
+    fake.bucket.put = async (key, value, options) => {
+      if (key === `gone/${VALID_CREATE.id}`) await postJson(fake, VALID_CREATE);
+      return put(key, value, options);
+    };
+
+    const response = await remove(
+      fake,
+      VALID_CREATE.id as string,
+      VALID_CREATE.deleteToken as string,
+    );
+    expect(response.status).toBe(204);
+    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${VALID_CREATE.id}`]);
+  });
+
+  it('retires nothing without a token or for an id no share can have', async () => {
+    const fake = fakeEnv();
+    expect((await remove(fake, 'A'.repeat(22), null)).status).toBe(404);
+    expect((await remove(fake, 'A'.repeat(30), 'T'.repeat(43))).status).toBe(404);
+    expect(fake.bucket.objects.size).toBe(0);
+  });
+
+  it('retires 60 unknown ids per hour per address, then answers 429 and writes nothing', async () => {
+    const fake = fakeEnv();
+    const token = 'T'.repeat(43);
+    for (let index = 0; index < UNKNOWN_DELETE_LIMIT_PER_HOUR; index++) {
+      expect((await remove(fake, freshIds().id, token)).status).toBe(404);
+    }
+    const created = await create(fake);
+    const limited = await remove(fake, freshIds().id, token);
+
+    expect(limited.status).toBe(429);
+    expect(await limited.json()).toEqual({ error: 'rate_limited' });
+    expect(fake.bucket.objects.size).toBe(UNKNOWN_DELETE_LIMIT_PER_HOUR + 1);
+    expect((await remove(fake, created.id, created.deleteToken)).status).toBe(204);
+    expect((await remove(fake, created.id, created.deleteToken)).status).toBe(404);
+    expect((await remove(fake, freshIds().id, token, START + 3_600_000)).status).toBe(404);
   });
 
   it('only accepts DELETE', async () => {
@@ -260,10 +349,10 @@ describe('expiry', () => {
 
     expect((await call(fake, `/a/${id}`, {}, START + DAY - 1)).status).toBe(200);
     expect((await call(fake, `/a/${id}`, {}, START + DAY)).status).toBe(404);
-    expect(fake.bucket.objects.has(`shares/${id}`)).toBe(false);
+    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${id}`]);
   });
 
-  it('deletes expired shares across every page in the daily run', async () => {
+  it('deletes expired shares across every page in the daily run and retires their ids', async () => {
     const fake = fakeEnv({ pageSize: 2 });
     const short = [];
     for (let index = 0; index < 3; index++) {
@@ -282,9 +371,8 @@ describe('expiry', () => {
     vi.restoreAllMocks();
 
     const keys = [...fake.bucket.objects.keys()].sort();
-    expect(keys).toEqual([`shares/${long.id}`, 'reports/x/1-a'].sort());
-    expect(short.every(({ id }) => !keys.includes(`shares/${id}`))).toBe(true);
-    expect(keys).not.toContain(`shares/${locked.id}`);
+    const retired = [...short, locked].map(({ id }) => `gone/${id}`);
+    expect(keys).toEqual([`shares/${long.id}`, 'reports/x/1-a', ...retired].sort());
     expect(fake.storages.get(`attempts:${locked.id}`)?.values.size).toBe(0);
   });
 });

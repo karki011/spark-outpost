@@ -4,6 +4,7 @@ import { scout, SCOUT_CSS, type ScoutPose } from './scout.ts';
 import type { ShareTheme } from './theme.ts';
 
 const LOCK_TITLE = 'Locked page';
+const CODE_INPUT_MAX = PASSCODE_LENGTH + 4;
 
 const LOCK_CSS = `
 .lock {
@@ -120,7 +121,7 @@ ${scout(problem?.pose ?? 'asleep')}
 <label class="hint" for="code">Passcode, ${PASSCODE_LENGTH} letters and numbers</label>
 <div class="${field}">
 <div class="boxes" aria-hidden="true">${boxes()}</div>
-<input id="code" name="code" type="text" maxlength="${PASSCODE_LENGTH + 1}" pattern="[\\s\\-]*([A-Za-z0-9][\\s\\-]*){${PASSCODE_LENGTH}}" title="${PASSCODE_LENGTH} letters and numbers" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" placeholder=" " required${problem ? ' aria-invalid="true" aria-describedby="code-error"' : ''}>
+<input id="code" name="code" type="text" maxlength="${CODE_INPUT_MAX}" pattern="[\\s\\-]*([A-Za-z0-9][\\s\\-]*){${PASSCODE_LENGTH}}" title="${PASSCODE_LENGTH} letters and numbers" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" placeholder=" " required${problem ? ' aria-invalid="true" aria-describedby="code-error"' : ''}>
 </div>
 ${alert}
 <button type="submit">Unlock</button>

@@ -16,6 +16,7 @@ import {
   ShareRefusedError,
   stopShare,
   type ShareDeps,
+  type StopDeps,
 } from './shares.ts';
 import type { StoredVersion } from './store.ts';
 
@@ -49,8 +50,11 @@ export function artifactShareRoutes({
   shareService,
 }: ArtifactShareRouteDeps): Router {
   const router = Router();
+  const stopDeps: StopDeps | null = shareService ? { db, secrets, service: shareService } : null;
   const deps: ShareDeps | null =
-    shareService && chatFolders ? { db, secrets, service: shareService, chatFolders } : null;
+    stopDeps && shareService?.origin && chatFolders
+      ? { ...stopDeps, origin: shareService.origin, chatFolders }
+      : null;
 
   const shown = async (req: Request, res: Response): Promise<StoredVersion | null> => {
     const stored = await shownVersion(db, workspaceId, req);
@@ -58,10 +62,11 @@ export function artifactShareRoutes({
     return stored;
   };
 
-  const sharing = async (
+  const sharing = async <Deps>(
+    deps: Deps | null,
     req: Request,
     res: Response,
-  ): Promise<{ deps: ShareDeps; stored: StoredVersion } | null> => {
+  ): Promise<{ deps: Deps; stored: StoredVersion } | null> => {
     if (!deps) {
       res.status(503).json({ error: UNAVAILABLE });
       return null;
@@ -82,7 +87,7 @@ export function artifactShareRoutes({
 
   router.post('/artifacts/:id/versions/:version/share', async (req, res) => {
     const choice = parseBody(createArtifactShareRequestSchema, req);
-    const target = await sharing(req, res);
+    const target = await sharing(deps, req, res);
     if (!target) return;
     try {
       const created = await createShare(target.deps, target.stored, choice);
@@ -93,7 +98,7 @@ export function artifactShareRoutes({
   });
 
   router.delete('/artifacts/:id/versions/:version/share', async (req, res) => {
-    const target = await sharing(req, res);
+    const target = await sharing(stopDeps, req, res);
     if (!target) return;
     try {
       await stopShare(target.deps, target.stored);

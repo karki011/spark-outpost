@@ -54,6 +54,19 @@ describe('passcode shares', () => {
     expect(html).toContain('data-pose="asleep" aria-hidden="true"');
   });
 
+  it('lets the field hold a pasted code with a dash and spaces around it', async () => {
+    const { fake, id } = await lockedShare();
+    const html = await (await call(fake, `/a/${id}`)).text();
+    const pasted = ' ABCD-2345 ';
+    const input = /<input id="code"[^>]*>/.exec(html)![0];
+    const limit = Number(/ maxlength="(\d+)"/.exec(input)![1]);
+    const pattern = / pattern="([^"]+)"/.exec(input)![1]!;
+
+    expect(pasted.length).toBeLessThanOrEqual(limit);
+    expect(new RegExp(`^(?:${pattern})$`, 'v').test(pasted)).toBe(true);
+    expect((await unlock(fake, id, pasted)).status).toBe(200);
+  });
+
   it('answers a correct code with the verified page, the cookie and a refresh to the page', async () => {
     const { fake, id } = await lockedShare();
     const response = await unlock(fake, id, ' abcd-2345 ');

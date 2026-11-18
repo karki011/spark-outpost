@@ -1,4 +1,4 @@
-import { lazy, StrictMode, Suspense } from 'react';
+import { lazy, StrictMode, Suspense, useLayoutEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ignoreAnimationIterationListeners } from './app/animation-events.ts';
@@ -7,8 +7,8 @@ import { markConnectionRestored, reportRequestError } from './app/connection/con
 import { configureLiveQueries } from './app/live/use-app-events.ts';
 import { configureChatRetention } from './app/chat-retention.ts';
 import { AppLockCover } from './app-lock/AppLockCover.tsx';
-import { installLockGuard } from './app-lock/lock-guard.ts';
-import { appLock, useAppLock } from './app-lock/use-app-lock.ts';
+import { coverPage, installLockGuard } from './app-lock/lock-guard.ts';
+import { appLock, useAppLock, useConcealed } from './app-lock/use-app-lock.ts';
 import { markScrollbarStyle } from './app/scrollbars.ts';
 import { startTouchViewport } from './app/touch-viewport.ts';
 import { warmTerminalFont } from './terminal/terminal-font.ts';
@@ -68,18 +68,23 @@ const appLoading = mainWindow ? loadApp() : null;
 if (mainWindow) configureChatRetention(queryClient);
 const App = lazy(() => appLoading ?? loadApp());
 
+function IslandRoot() {
+  const concealed = useConcealed();
+  useLayoutEffect(() => {
+    if (concealed) return coverPage();
+  }, [concealed]);
+  return (
+    <Suspense fallback={null}>
+      <IslandApp />
+    </Suspense>
+  );
+}
+
 function Root() {
   const lockable = appLock() !== null;
   const lock = useAppLock();
-  const concealed = lockable && lock?.locked !== false;
-  if (island) {
-    if (concealed) return null;
-    return (
-      <Suspense fallback={null}>
-        <IslandApp />
-      </Suspense>
-    );
-  }
+  const concealed = useConcealed();
+  if (island) return <IslandRoot />;
   if (meetingAlert) {
     if (concealed) return null;
     return (

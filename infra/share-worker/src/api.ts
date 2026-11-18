@@ -10,13 +10,23 @@ import {
 } from './crypto.ts';
 import type { ShareEnv } from './env.ts';
 import { emptyResponse, jsonError, jsonResponse } from './responses.ts';
-import { existingShare, findShare, putNewShare, removeShare, type ShareRecord } from './storage.ts';
+import {
+  discardShare,
+  existingShare,
+  findShare,
+  isRetired,
+  putNewShare,
+  removeShare,
+  retireId,
+  type ShareRecord,
+} from './storage.ts';
 import { parseTheme, type ShareTheme } from './theme.ts';
 
 export const MAX_TITLE_CHARS = 120;
 export const MAX_HTML_BYTES = 2_097_152;
 export const MAX_CREATE_BODY_BYTES = MAX_HTML_BYTES * 2 + 16_384;
 export const CREATE_LIMIT_PER_HOUR = 20;
+export const UNKNOWN_DELETE_LIMIT_PER_HOUR = 60;
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
@@ -96,17 +106,16 @@ async function storeShare(
   html: Uint8Array,
   now: number,
 ): Promise<ShareRecord | 'conflict'> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    if (await putNewShare(env, record, html)) return record;
-    const existing = await existingShare(env, record.id, now);
-    if (existing.state === 'unreadable') return 'conflict';
-    if (existing.state === 'live') {
-      const sameToken = sameText(existing.record.deleteTokenHash, record.deleteTokenHash);
-      return sameToken ? existing.record : 'conflict';
-    }
-    if (existing.state === 'expired') await removeShare(env, existing.record);
+  if (await putNewShare(env, record, html)) {
+    if (!(await isRetired(env, record.id))) return record;
+    await discardShare(env, record.id);
+    return 'conflict';
   }
-  return 'conflict';
+  const existing = await existingShare(env, record.id, now);
+  if (existing.state === 'expired') await removeShare(env, existing.record);
+  if (existing.state !== 'live') return 'conflict';
+  const sameToken = sameText(existing.record.deleteTokenHash, record.deleteTokenHash);
+  return sameToken ? existing.record : 'conflict';
 }
 
 export async function createShare(request: Request, env: ShareEnv, now: number) {
@@ -148,11 +157,30 @@ export async function createShare(request: Request, env: ShareEnv, now: number) 
   return jsonResponse(201, { id, url, expiresAt });
 }
 
+async function retireUnknown(request: Request, env: ShareEnv, id: string, now: number) {
+  if (!SHARE_ID.test(id)) return true;
+  if (await isRetired(env, id)) return true;
+  const allowed = await allowHit(
+    env.COUNTERS,
+    `unknown-delete:${clientAddress(request)}`,
+    now,
+    UNKNOWN_DELETE_LIMIT_PER_HOUR,
+    HOUR_MS,
+  );
+  if (allowed) await retireId(env, id);
+  return allowed;
+}
+
 export async function deleteShare(request: Request, env: ShareEnv, id: string, now: number) {
   const token = BEARER.exec(request.headers.get('authorization') ?? '')?.[1] ?? null;
-  const presented = await sha256(token ?? '');
-  const record = await findShare(env, id, now);
-  if (!record || token === null || !sameText(presented, record.deleteTokenHash)) {
+  if (token === null) return jsonError(404, 'not_found');
+  const presented = await sha256(token);
+  let record = await findShare(env, id, now);
+  if (!record) {
+    if (!(await retireUnknown(request, env, id, now))) return jsonError(429, 'rate_limited');
+    record = await findShare(env, id, now);
+  }
+  if (!record || !sameText(presented, record.deleteTokenHash)) {
     return jsonError(404, 'not_found');
   }
   await removeShare(env, record);

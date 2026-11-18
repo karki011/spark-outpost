@@ -110,6 +110,21 @@ describe('content', () => {
     expectCommonHeaders(response);
   });
 
+  it('serves the content to a frame and not to a tab opened on its address', async () => {
+    const fake = fakeEnv();
+    const { id } = await create(fake);
+    const src = frameSrc((await shell(fake, id)).html);
+    const as = (destination: string) =>
+      call(fake, src, { headers: { 'sec-fetch-dest': destination } }, START + 1000);
+
+    expect((await as('iframe')).status).toBe(200);
+    for (const destination of ['document', 'empty', 'frame', 'embed', 'object']) {
+      const response = await as(destination);
+      expect(response.status).toBe(404);
+      expect(await response.text()).not.toContain('Plan');
+    }
+  });
+
   it('refuses a missing, expired, tampered or other-share token', async () => {
     const fake = fakeEnv();
     const first = await create(fake);

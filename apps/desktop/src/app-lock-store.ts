@@ -1,6 +1,6 @@
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { mkdirSync, readFileSync } from 'node:fs';
-import { rename, writeFile } from 'node:fs/promises';
+import { rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   parseAppLockRecord,
@@ -26,9 +26,14 @@ export function readAppLockRecord(file: string): AppLockRecord {
 
 export async function saveAppLockRecord(file: string, record: AppLockRecord): Promise<void> {
   mkdirSync(path.dirname(file), { recursive: true });
-  const temporary = `${file}.tmp`;
-  await writeFile(temporary, serializeAppLockRecord(record), { mode: 0o600 });
-  await rename(temporary, file);
+  const temporary = `${file}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`;
+  try {
+    await writeFile(temporary, serializeAppLockRecord(record), { mode: 0o600 });
+    await rename(temporary, file);
+  } catch (error) {
+    await rm(temporary, { force: true });
+    throw error;
+  }
 }
 
 function derive(code: string, salt: Buffer): Promise<Buffer> {
