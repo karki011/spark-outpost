@@ -60,15 +60,23 @@ async function untilLockWait(sql: string, pid: number): Promise<void> {
   }
 }
 
-const untilBlocking = (pid: number) =>
+const CLAIMING = `a.pid <> pg_backend_pid()
+  AND a.query LIKE '%artifact_page_shares%' AND a.query LIKE '%FOR UPDATE%'`;
+
+const untilClaimWaitsOn = (pid: number) =>
   untilLockWait(
-    `SELECT EXISTS (SELECT 1 FROM pg_stat_activity
-                    WHERE wait_event_type = 'Lock' AND $1::int = ANY(pg_blocking_pids(pid))) AS waiting`,
+    `SELECT EXISTS (SELECT 1 FROM pg_stat_activity a
+                    WHERE ${CLAIMING} AND a.wait_event_type = 'Lock'
+                      AND $1::int = ANY(pg_blocking_pids(a.pid))) AS waiting`,
     pid,
   );
 
-const untilBlocked = (pid: number) =>
-  untilLockWait('SELECT cardinality(pg_blocking_pids($1::int)) > 0 AS waiting', pid);
+const untilClaimBlocks = (pid: number) =>
+  untilLockWait(
+    `SELECT EXISTS (SELECT 1 FROM pg_stat_activity a
+                    WHERE ${CLAIMING} AND a.pid = ANY(pg_blocking_pids($1::int))) AS waiting`,
+    pid,
+  );
 
 async function endTransaction(client: DbClient, open: boolean): Promise<void> {
   const failed = open
@@ -103,7 +111,7 @@ describe('a pending share the sweep and its own create both reach', { timeout: 3
         shareId,
       ]);
       sweeping = s.sweep();
-      await untilBlocking(await backendPid(finishing));
+      await untilClaimWaitsOn(await backendPid(finishing));
       expect(s.fake.deletes).toEqual([]);
       await finishing.query('COMMIT');
       open = false;
@@ -167,7 +175,7 @@ describe('a pending share the sweep and its own create both reach', { timeout: 3
         .finally(() => {
           finished = true;
         });
-      await untilBlocked(pid);
+      await untilClaimBlocks(pid);
       expect(finished).toBe(false);
       expect(s.fake.deletes).toEqual([]);
       slow.release();
