@@ -32,6 +32,7 @@ function watchingObservations(
   return {
     record: (observation) => void seen.push(observation.label),
     labels: async () => [...readBefore],
+    completeLabels: async () => [...readBefore],
     egressAsked: () => undefined,
     sentOut: (note) => void sent.push(note),
     crossed: async () => undefined,

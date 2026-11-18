@@ -45,6 +45,7 @@ const sentNotes: SentOutNote[] = [];
 const secretRead: RunObservations = {
   record: () => undefined,
   labels: async () => ['a secret file'],
+  completeLabels: async () => ['a secret file'],
   egressAsked: () => undefined,
   sentOut: (note) => void sentNotes.push(note),
   crossed: async () => undefined,

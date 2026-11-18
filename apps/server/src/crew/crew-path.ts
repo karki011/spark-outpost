@@ -44,7 +44,7 @@ export async function crewDecision(
     actionFacts(db, runId, action),
     userWroteTurn(db, runId),
   ]);
-  const labels = observations ? await observations.labels() : null;
+  const labels = observations ? await observations.completeLabels() : null;
   const untrusted = labels === null ? null : untrustedReads(labels);
   return {
     path: crewPath({
