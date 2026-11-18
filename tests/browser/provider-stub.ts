@@ -8,6 +8,7 @@ import { SLACK_LEGACY_USER_SCOPES, fakeSlack } from '../../apps/server/test/fake
 import { ticketFakes } from './ticket-stub.ts';
 import { handleGoogle, handlesGoogle } from './google-stub.ts';
 import { removeTestTmpdirWhenStopped } from './test-tmpdir.ts';
+import { BUSY_TITLE, fakeShareService } from '../../apps/server/test/fake-share-service.ts';
 
 const anthropicModels = {
   data: [
@@ -57,6 +58,12 @@ async function customMessage(req: IncomingMessage, res: ServerResponse) {
 }
 
 let github = fakeGitHub();
+
+const shares = fakeShareService();
+shares.answer = (share) =>
+  share.received.title.includes(BUSY_TITLE)
+    ? { status: 429, body: { error: 'rate_limited' } }
+    : null;
 
 async function updatePull(req: IncomingMessage, res: ServerResponse, number: number) {
   let text = '';
@@ -202,6 +209,7 @@ const server = createServer((req, res) => {
     return send(res, 200, { ok: true });
   }
   if (path && tickets.handles(path)) return void tickets.handle(req, res, path);
+  if (path?.startsWith('/v1/shares')) return void shares.handle(req, res);
   if (credential(req).includes(REJECTED_KEY_MARKER))
     return send(res, 401, { error: 'invalid key' });
   if (path === '/anthropic/v1/models') return send(res, 200, anthropicModels);

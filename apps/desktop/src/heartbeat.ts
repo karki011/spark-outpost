@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { API_TOKEN_HEADER, defaultUpdateChannel } from '@spark-outpost/contracts';
+import { readBakedManifest } from './baked-manifest.ts';
 
 export const HEARTBEAT_URL_ENV = 'SPARK_HEARTBEAT_URL';
 export const FIRST_HEARTBEAT_MS = 30_000;
@@ -29,14 +30,8 @@ export function heartbeatUrl(value: string | undefined | null): string | null {
 }
 
 export async function readBakedHeartbeatUrl(appPath: string): Promise<string | null> {
-  try {
-    const manifest = JSON.parse(await readFile(path.join(appPath, 'package.json'), 'utf8')) as {
-      heartbeatUrl?: unknown;
-    };
-    return typeof manifest.heartbeatUrl === 'string' ? heartbeatUrl(manifest.heartbeatUrl) : null;
-  } catch {
-    return null;
-  }
+  const bakedUrl = (await readBakedManifest(appPath))?.heartbeatUrl;
+  return typeof bakedUrl === 'string' ? heartbeatUrl(bakedUrl) : null;
 }
 
 export function installIdFile(userData: string): string {

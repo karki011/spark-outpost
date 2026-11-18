@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import path from 'node:path';
+import type { BakedManifest } from './baked-manifest.ts';
 
 export const GOOGLE_CLIENT_ID_ENV = 'SPARK_GOOGLE_CLIENT_ID';
 export const GOOGLE_CLIENT_SECRET_ENV = 'SPARK_GOOGLE_CLIENT_SECRET';
@@ -41,15 +41,10 @@ export function googleClientEnv(client: GoogleClient | null): Record<string, str
   };
 }
 
-export async function readBakedGoogleClient(appPath: string): Promise<GoogleClient | null> {
-  try {
-    const manifest = JSON.parse(await readFile(path.join(appPath, 'package.json'), 'utf8')) as {
-      googleApp?: { client_id?: unknown; client_secret?: unknown; verified?: unknown };
-    };
-    return googleClient(manifest.googleApp ?? null, manifest.googleApp?.verified === true);
-  } catch {
-    return null;
-  }
+export function googleClientFromManifest(manifest: BakedManifest | null): GoogleClient | null {
+  const googleApp = manifest?.googleApp as
+    { client_id?: unknown; client_secret?: unknown; verified?: unknown } | null | undefined;
+  return googleClient(googleApp ?? null, googleApp?.verified === true);
 }
 
 export async function readDevGoogleClient(file: string | null): Promise<GoogleClient | null> {

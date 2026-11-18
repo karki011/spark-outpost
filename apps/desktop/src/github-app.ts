@@ -1,5 +1,4 @@
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
+import { readBakedManifest, type BakedManifest } from './baked-manifest.ts';
 
 export const GITHUB_APP_CLIENT_ID_ENV = 'SPARK_GITHUB_APP_CLIENT_ID';
 export const GITHUB_APP_SLUG_ENV = 'SPARK_GITHUB_APP_SLUG';
@@ -17,15 +16,14 @@ export function gitHubAppIds(clientId: unknown, slug: unknown): GitHubAppIds | n
   return { clientId, slug: typeof slug === 'string' && SLUG.test(slug) ? slug : '' };
 }
 
+export function gitHubAppFromManifest(manifest: BakedManifest | null): GitHubAppIds | null {
+  const githubApp = manifest?.githubApp as
+    { clientId?: unknown; slug?: unknown } | null | undefined;
+  return gitHubAppIds(githubApp?.clientId, githubApp?.slug);
+}
+
 export async function readBakedGitHubApp(appPath: string): Promise<GitHubAppIds | null> {
-  try {
-    const manifest = JSON.parse(await readFile(path.join(appPath, 'package.json'), 'utf8')) as {
-      githubApp?: { clientId?: unknown; slug?: unknown };
-    };
-    return gitHubAppIds(manifest.githubApp?.clientId, manifest.githubApp?.slug);
-  } catch {
-    return null;
-  }
+  return gitHubAppFromManifest(await readBakedManifest(appPath));
 }
 
 export function gitHubAppEnv(ids: GitHubAppIds | null): Record<string, string> {

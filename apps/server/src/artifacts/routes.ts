@@ -24,6 +24,19 @@ function versionParam(req: Request): number | null {
   return Number.isInteger(version) && version > 0 ? version : null;
 }
 
+export async function shownVersion(
+  db: Db,
+  workspaceId: string,
+  req: Request,
+): Promise<StoredVersion | null> {
+  const id = paramId(req);
+  const version = versionParam(req);
+  if (version === null) return null;
+  if ((await artifactWorkspace(db, id)) !== workspaceId) return null;
+  const stored = await findVersion(db, id, version);
+  return stored?.published ? stored : null;
+}
+
 const FILE_TYPES = {
   html: 'text/html',
   markdown: 'text/markdown',
@@ -45,12 +58,8 @@ export function artifactRoutes({
   const router = Router();
 
   const load = async (req: Request) => {
-    const id = paramId(req);
-    const version = versionParam(req);
-    if (!chatFolders || version === null) return null;
-    if ((await artifactWorkspace(db, id)) !== workspaceId) return null;
-    const stored = await findVersion(db, id, version);
-    if (!stored?.published) return null;
+    const stored = await shownVersion(db, workspaceId, req);
+    if (!chatFolders || !stored) return null;
     const text = await readVersionFile(chatFolders, stored);
     return text === null ? null : { stored, text };
   };

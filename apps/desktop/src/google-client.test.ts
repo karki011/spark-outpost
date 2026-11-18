@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { packagedGoogleClient } from '../scripts/builder-config.ts';
 import { googleClientFromDownload } from './google-client.ts';
-import { bakedSignInEnv } from './slack-sign-in.ts';
+import { bakedServerEnv } from './baked-env.ts';
 
 const CLIENT_ID = '123456789012-abc123def456.apps.googleusercontent.com';
 const DOWNLOAD = JSON.stringify({
@@ -51,7 +51,7 @@ describe('the Google OAuth client', () => {
       'google-oauth-client.json': DOWNLOAD,
     });
     expect(
-      await bakedSignInEnv(appPath, {
+      await bakedServerEnv(appPath, {
         googleClientFile: path.join(appPath, 'google-oauth-client.json'),
         slackClientIdFile: null,
       }),
@@ -61,7 +61,7 @@ describe('the Google OAuth client', () => {
       SPARK_GOOGLE_VERIFIED: 'false',
     });
     expect(
-      await bakedSignInEnv(appPath, {
+      await bakedServerEnv(appPath, {
         googleClientFile: path.join(appPath, 'missing.json'),
         slackClientIdFile: null,
       }),
@@ -74,7 +74,7 @@ describe('the Google OAuth client', () => {
       }),
     );
     expect(
-      await bakedSignInEnv(appPath, { googleClientFile: null, slackClientIdFile: null }),
+      await bakedServerEnv(appPath, { googleClientFile: null, slackClientIdFile: null }),
     ).toMatchObject({
       SPARK_GOOGLE_CLIENT_SECRET: 'GOCSPX-baked',
       SPARK_GOOGLE_VERIFIED: 'true',

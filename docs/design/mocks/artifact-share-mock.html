@@ -1,0 +1,119 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+:root{--bg:#f6f1ed;--rail:#efe4da;--panel:#fffdfb;--raise:#f5eae1;--line:#ecdfd3;--line-strong:#8f8378;--text:#241a13;--muted:#614a3b;--faint:#6d594a;--accent:#b34f00;--accent-ink:#fff;--accent-text:#a53f00;--accent-soft:rgba(179,79,0,.11);--danger:#ba3129;--success:#1f7335;--code:#faf2eb}
+*{box-sizing:border-box}
+body{margin:0;padding:32px;background:var(--bg);font:13px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif;color:var(--text);width:1320px}
+h1{font-size:20px;margin:0 0 4px;font-weight:650}
+.lead{color:var(--muted);margin:0 0 24px;font-size:13.5px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.step h2{font-size:14px;margin:0 0 3px;font-weight:650;display:flex;align-items:center;gap:9px}
+.step h2 i{font-style:normal;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.step>p{margin:0 0 12px 31px;color:var(--muted);font-size:12.5px}
+.frame{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;height:372px;position:relative}
+.tabs{display:flex;gap:4px;padding:8px 10px 0;background:var(--rail);border-bottom:1px solid var(--line)}
+.tabs span{padding:6px 12px;border-radius:9px 9px 0 0;color:var(--muted)}
+.tabs span.on{background:var(--panel);color:var(--text);font-weight:600;border:1px solid var(--line);border-bottom:0}
+.bar{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line)}
+.bar b{font-weight:600;margin-right:auto}
+.btn{height:28px;padding:0 11px;border-radius:9px;border:1px solid var(--line-strong);display:inline-flex;align-items:center;gap:6px;font-size:12.5px;background:var(--panel);white-space:nowrap}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.ring{box-shadow:0 0 0 3px var(--accent-soft);border-color:var(--accent);color:var(--accent-text);font-weight:600}
+.btn.danger{color:var(--danger);border-color:var(--danger)}
+.page{padding:16px 18px}
+.page h3{margin:0 0 10px;font-size:15px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.cards div{background:var(--raise);border-radius:10px;padding:10px 12px}
+.cards small{color:var(--muted);display:block;font-size:12px}
+.cards b{font-size:19px}
+.chart{display:flex;align-items:flex-end;gap:9px;height:118px;padding:10px 12px;background:var(--code);border-radius:10px}
+.chart u{flex:1;background:var(--accent);border-radius:4px 4px 0 0;opacity:.85}
+.dim{position:absolute;inset:0;background:rgba(36,26,19,.28)}
+.sheet{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:430px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:0 18px 44px rgba(36,26,19,.25)}
+.sheet h3{margin:0 0 4px;font-size:15px}
+.sheet .note{color:var(--muted);font-size:12.5px;margin:0 0 12px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:9px 0;border-top:1px solid var(--line)}
+.row b{font-weight:600;display:block}
+.row small{color:var(--muted);font-size:12px;display:block}
+.sw{flex:none;width:38px;height:22px;border-radius:11px;background:var(--success);position:relative}
+.sw:after{content:"";position:absolute;top:2px;left:18px;width:18px;height:18px;border-radius:50%;background:#fff}
+.pick{height:28px;padding:0 10px;border:1px solid var(--line-strong);border-radius:9px;display:inline-flex;align-items:center;gap:10px;white-space:nowrap}
+.acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.field{display:flex;align-items:center;gap:8px;margin:0 0 10px}
+.field label{width:70px;color:var(--muted);font-size:12.5px;flex:none}
+.field code{flex:1;height:30px;display:flex;align-items:center;padding:0 10px;background:var(--code);border:1px solid var(--line);border-radius:9px;font:12.5px ui-monospace,"SF Mono",monospace;overflow:hidden;white-space:nowrap}
+.field code.big{font-size:15px;letter-spacing:.18em;font-weight:600}
+.status{display:flex;align-items:center;gap:7px;color:var(--success);font-weight:600;margin:0 0 12px}
+.meta{color:var(--muted);font-size:12.5px;margin:2px 0 0}
+.chrome{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--rail);border-bottom:1px solid var(--line)}
+.dots{display:flex;gap:6px}.dots s{width:10px;height:10px;border-radius:50%;background:var(--line-strong);opacity:.5}
+.url{flex:1;height:26px;border-radius:8px;background:var(--panel);border:1px solid var(--line);display:flex;align-items:center;padding:0 10px;font-size:12px;color:var(--muted)}
+.split{display:grid;grid-template-columns:1fr 1fr;height:calc(100% - 45px)}
+.split>div{position:relative}
+.split>div+div{border-left:1px solid var(--line)}
+.tag{position:absolute;top:8px;left:10px;font-size:12px;color:var(--faint);font-weight:600}
+.unlock{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:230px;text-align:center}
+.unlock h3{margin:8px 0 3px;font-size:15px}
+.unlock p{margin:0 0 12px;color:var(--muted);font-size:12.5px}
+.boxes{display:flex;gap:6px;justify-content:center;margin-bottom:12px}
+.boxes span{width:30px;height:38px;border:1px solid var(--line-strong);border-radius:8px;display:flex;align-items:center;justify-content:center;font:600 16px ui-monospace,monospace}
+.boxes span.e{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.strip{display:flex;align-items:center;gap:8px;padding:6px 10px;margin-top:26px;background:var(--raise);border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+.strip a{margin-left:auto;color:var(--accent-text);text-decoration:underline}
+.mini{padding:10px 12px}
+.mini h3{font-size:13px;margin:0 0 8px}
+.mini .cards{grid-template-columns:1fr 1fr;gap:6px}
+.mini .cards b{font-size:15px}
+.mini .chart{height:74px;gap:5px}
+</style></head><body>
+<h1>Share an artifact</h1>
+<p class="lead">You click Share in Spark, send the link and the passcode, and the other person opens it in any browser. Nobody but you needs an account.</p>
+<div class="grid">
+
+<section class="step"><h2><i>1</i>Click Share… on the artifact</h2><p>A new button beside Copy and Save as…. Only your click shares; agents get no share tool.</p>
+<div class="frame">
+<div class="tabs"><span>Work</span><span>Browser</span><span class="on">Deploy failures</span></div>
+<div class="bar"><b>Deploy failures</b><span class="pick">v3 ▾</span><span class="btn">Copy</span><span class="btn">Save as…</span><span class="btn ring">↗ Share…</span></div>
+<div class="page"><h3>Deploy failures, last 7 days</h3>
+<div class="cards"><div><small>Failed</small><b>14</b></div><div><small>Services</small><b>5</b></div><div><small>Median fix</small><b>22 min</b></div></div>
+<div class="chart"><u style="height:35%"></u><u style="height:60%"></u><u style="height:42%"></u><u style="height:88%"></u><u style="height:55%"></u><u style="height:30%"></u><u style="height:70%"></u></div></div>
+</div></section>
+
+<section class="step"><h2><i>2</i>Confirm what leaves your Mac</h2><p>The sheet names the version, the passcode choice and when the link ends.</p>
+<div class="frame">
+<div class="tabs"><span>Work</span><span>Browser</span><span class="on">Deploy failures</span></div>
+<div class="bar"><b>Deploy failures</b><span class="pick">v3 ▾</span><span class="btn">Copy</span><span class="btn">Save as…</span><span class="btn">↗ Share…</span></div>
+<div class="dim"></div>
+<div class="sheet"><h3>Share “Deploy failures”?</h3>
+<p class="note">This uploads version 3 (184 KB) to Spark’s share service. Anyone with the link can open it.</p>
+<div class="row"><div><b>Require a passcode</b><small>Spark makes the code. Send it separately from the link.</small></div><span class="sw"></span></div>
+<div class="row"><div><b>Link ends after</b></div><span class="pick">7 days ▾</span></div>
+<div class="acts"><span class="btn">Cancel</span><span class="btn pri">Create link</span></div></div>
+</div></section>
+
+<section class="step"><h2><i>3</i>Copy the link and the passcode</h2><p>Share… now shows the live link. Stop sharing removes the page for everyone.</p>
+<div class="frame">
+<div class="tabs"><span>Work</span><span>Browser</span><span class="on">Deploy failures</span></div>
+<div class="bar"><b>Deploy failures</b><span class="pick">v3 ▾</span><span class="btn">Copy</span><span class="btn">Save as…</span><span class="btn">✓ Shared</span></div>
+<div class="dim"></div>
+<div class="sheet"><div class="status">✓ Shared · version 3</div>
+<div class="field"><label>Link</label><code>https://share.example/a/9fK2xQ7mTb4LwZ8c</code><span class="btn">Copy link</span></div>
+<div class="field"><label>Passcode</label><code class="big">7KQ4-M2XP</code><span class="btn">Copy code</span></div>
+<p class="meta">Ends November 24, 2026 · 5 wrong codes lock the link for 15 minutes</p>
+<div class="acts"><span class="btn danger">Stop sharing</span><span class="btn pri">Done</span></div></div>
+</div></section>
+
+<section class="step"><h2><i>4</i>The other person opens it</h2><p>Any browser, no account, no Spark. The page runs sandboxed with no network.</p>
+<div class="frame">
+<div class="chrome"><span class="dots"><s></s><s></s><s></s></span><span class="url">🔒 share.example/a/9fK2xQ7mTb4LwZ8c</span></div>
+<div class="split">
+<div><span class="tag">First visit</span><div class="unlock"><div style="font-size:24px">🔒</div><h3>This page is locked</h3><p>Enter the passcode you were sent.</p>
+<div class="boxes"><span>7</span><span>K</span><span>Q</span><span>4</span><span class="e"></span><span></span><span></span><span></span></div><span class="btn pri">Unlock</span></div></div>
+<div><span class="tag">After unlocking</span>
+<div class="strip">Shared from Spark Outpost · made by a user, not checked<a>Report</a></div>
+<div class="mini"><h3>Deploy failures, last 7 days</h3>
+<div class="cards"><div><small>Failed</small><b>14</b></div><div><small>Median fix</small><b>22 min</b></div></div>
+<div class="chart"><u style="height:35%"></u><u style="height:60%"></u><u style="height:42%"></u><u style="height:88%"></u><u style="height:55%"></u><u style="height:30%"></u><u style="height:70%"></u></div></div></div>
+</div></div></section>
+
+</div>
+</body></html>

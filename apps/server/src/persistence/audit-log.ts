@@ -71,10 +71,16 @@ export async function insertFinishedRunEntries(
   entries: readonly ProtocolEntry[],
 ): Promise<void> {
   if (entries.length === 0) return;
-  await withTransaction(db, async (client) => {
-    await client.query('SELECT id FROM runs WHERE id = $1 FOR UPDATE', [runId]);
-    await writeEntries(client, runId, entries);
-  });
+  await withTransaction(db, (client) => insertFinishedRunEntriesIn(client, runId, entries));
+}
+
+export async function insertFinishedRunEntriesIn(
+  client: DbClient,
+  runId: string,
+  entries: readonly ProtocolEntry[],
+): Promise<void> {
+  await client.query('SELECT id FROM runs WHERE id = $1 FOR UPDATE', [runId]);
+  await writeEntries(client, runId, entries);
 }
 
 async function writeEntries(
