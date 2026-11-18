@@ -384,6 +384,40 @@ describe('adopting a pull request from a fork', () => {
     });
   });
 
+  it('keeps pushing to the fork when you adopt the same pull request again', async () => {
+    bareWithBranch(forkBare, 'fix-dates', 'dates.txt');
+    const chat = await doRun(t, root);
+    const request = { projectId: chat.projectId, number: 12 };
+    const editable = deps(ghPull({ ...fork, maintainerCanModify: true }));
+    await adoptPull(editable, chat.conversationId, request);
+    const first = (await liveChatWorktree(t.db, chat.conversationId, chat.projectId))!;
+    await t.db.query("UPDATE runs SET status = 'succeeded' WHERE conversation_id = $1", [
+      chat.conversationId,
+    ]);
+    git(first.path, 'switch', '-q', '-c', 'scratch');
+    await adoptPull(editable, chat.conversationId, request);
+    const record = (await liveChatWorktree(t.db, chat.conversationId, chat.projectId))!;
+    expect(record).toMatchObject({ branch: 'fix-dates', adopted: { pushes: true } });
+  });
+
+  it('does not take a local branch tracking another repository under the fork remote name', async () => {
+    const sha = bareWithBranch(forkBare, 'fix-dates', 'dates.txt');
+    execFileSync('git', ['-C', originBare, 'fetch', '-q', forkBare, `fix-dates:refs/pull/12/head`]);
+    git(root, 'remote', 'add', 'pr-alice', 'https://github.com/mallory/widgets.git');
+    git(root, 'branch', '-q', 'fix-dates', 'main');
+    git(root, 'config', 'branch.fix-dates.remote', 'pr-alice');
+    git(root, 'config', 'branch.fix-dates.merge', 'refs/heads/fix-dates');
+    const chat = await doRun(t, root);
+    await adoptPull(deps(ghPull({ ...fork, maintainerCanModify: true })), chat.conversationId, {
+      projectId: chat.projectId,
+      number: 12,
+    });
+    const record = (await liveChatWorktree(t.db, chat.conversationId, chat.projectId))!;
+    expect(record.branch).toMatch(/^spark\//);
+    expect(record.adopted).toMatchObject({ pushes: false });
+    expect(git(record.path, 'rev-parse', 'HEAD')).toBe(sha);
+  });
+
   it('works on a new spark branch based on it without maintainerCanModify', async () => {
     const sha = bareWithBranch(forkBare, 'fix-dates', 'dates.txt');
     execFileSync('git', ['-C', originBare, 'fetch', '-q', forkBare, `fix-dates:refs/pull/12/head`]);

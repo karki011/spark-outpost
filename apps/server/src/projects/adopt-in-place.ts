@@ -49,5 +49,5 @@ export async function switchInPlace(
     await git(current.path, ['checkout', '--quiet', previous]).catch(() => undefined);
     throw error;
   }
-  void refreshDependencies(current.path, { root: current.repoRoot, before }).catch(() => null);
+  await refreshDependencies(current.path, { root: current.repoRoot, before }).catch(() => null);
 }

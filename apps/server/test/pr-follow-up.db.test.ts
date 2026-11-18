@@ -6,6 +6,9 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { SPARK_ACTION_OPTION, type PrFollowUpAction } from '@spark-outpost/contracts';
 import { decideApproval, getApproval } from '../src/persistence/approvals.ts';
 import { feedbackFor, prFeedbackWaiting, saveWatch } from '../src/persistence/pr-watches.ts';
+import { insertChatWorktree } from '../src/persistence/chat-worktrees.ts';
+import { setConversationProjects } from '../src/persistence/conversation-projects.ts';
+import { createProject } from '../src/projects/projects.ts';
 import { duePulls } from '../src/persistence/tracked-pulls.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
@@ -266,6 +269,33 @@ describe('PR follow-up', { timeout: 60_000 }, () => {
     expect(fake.posted).toHaveLength(1);
     expect(fake.posted[0]!.body).not.toContain(leaked);
     expect(JSON.stringify(await replyAudits(rounds[0]!.runId))).not.toContain(leaked);
+  });
+
+  it('asks for the branch back when the chat worktree moved off it', async () => {
+    const { project } = await createProject(t.db, t.workspaceId, pull.repo.root);
+    await setConversationProjects(t.db, t.workspaceId, pull.conversationId, [project.id]);
+    git(pull.repo.root, 'switch', '-q', 'main');
+    const copy = path.join(base, `copy-${randomUUID()}`);
+    git(pull.repo.root, 'worktree', 'add', '-q', copy, PR_BRANCH);
+    await insertChatWorktree(t.db, {
+      id: randomUUID(),
+      conversationId: pull.conversationId,
+      projectId: project.id,
+      repoRoot: pull.repo.root,
+      path: copy,
+      branch: PR_BRANCH,
+      baseBranch: 'main',
+      baseCommit: pull.sha,
+      landedCommit: null,
+      inPlace: false,
+      ownsBranch: true,
+    });
+    git(copy, 'switch', '-q', '-c', 'spark/other-work');
+    fake.pull.reviewComments = [emptyListComment];
+    const stopped = await poll();
+    expect(stopped).toMatchObject({ phase: 'needs_you', rounds: 0 });
+    expect(stopped.doing).toContain(`Check out ${PR_BRANCH}`);
+    expect(rounds).toEqual([]);
   });
 
   it('waits for a busy chat, then starts one round for everything that arrived meanwhile', async () => {

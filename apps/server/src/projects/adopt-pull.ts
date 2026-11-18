@@ -166,11 +166,20 @@ async function basedSource(deps: AdoptDeps, found: Hosted, pull: OpenPull, conve
   return { kind: 'new' as const, branch, from };
 }
 
-async function tracksFork(root: string, pull: FoundPull): Promise<boolean> {
-  const remote = await git(root, ['config', '--get', `branch.${pull.pull.head}.remote`]).catch(
-    () => '',
-  );
-  return remote.trim() === forkRemoteName(pull.headRepo.owner);
+async function branchConfig(root: string, key: string): Promise<string> {
+  return (await git(root, ['config', '--get', key]).catch(() => '')).trim();
+}
+
+async function tracksFork(found: Hosted, pull: FoundPull): Promise<boolean> {
+  const name = forkRemoteName(pull.headRepo.owner);
+  const head = pull.pull.head;
+  if ((await branchConfig(found.root, `branch.${head}.remote`)) !== name) return false;
+  if ((await branchConfig(found.root, `branch.${head}.merge`)) !== `refs/heads/${head}`) {
+    return false;
+  }
+  const url = forkUrl(found.origin.url, found.repo, pull.headRepo);
+  const remote = (await remotes(found.root)).find((entry) => entry.name === name);
+  return url !== null && remote?.url === url;
 }
 
 async function planFor(found: Hosted, pull: FoundPull, here: boolean): Promise<AdoptPlan> {
@@ -182,7 +191,7 @@ async function planFor(found: Hosted, pull: FoundPull, here: boolean): Promise<A
     guarded,
     protectedOnHost: await protectedOnHost(found.runner, found.repo, pull.headRepo, pull.pull.head),
     localBranch,
-    sameFork: localBranch && pull.pull.fork && (await tracksFork(found.root, pull)),
+    sameFork: localBranch && pull.pull.fork && (await tracksFork(found, pull)),
     checkedOut: !here && (await branchCheckedOut(found.root, pull.pull.head)),
   });
 }
