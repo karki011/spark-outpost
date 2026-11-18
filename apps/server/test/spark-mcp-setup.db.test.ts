@@ -337,6 +337,7 @@ describe('the Spark tools server', () => {
       'spark_transition_ticket',
       'spark_update_mcp_server',
       'spark_update_spark',
+      'spark_workflow',
     ]);
     const acting = listed.tools.filter((tool) => tool.annotations?.readOnlyHint === false);
     expect(acting.map((tool) => tool.name).sort()).toEqual([
@@ -369,6 +370,7 @@ describe('the Spark tools server', () => {
       'spark_transition_ticket',
       'spark_update_mcp_server',
       'spark_update_spark',
+      'spark_workflow',
     ]);
     for (const tool of listed.tools) {
       expect(tool.annotations).toMatchObject({ destructiveHint: false });

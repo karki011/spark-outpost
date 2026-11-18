@@ -5,12 +5,11 @@ import {
   type WorkflowTriggersView,
 } from '@spark-outpost/contracts';
 import { z } from 'zod';
-import { BadRequestError, parseBody } from '../api/validation.ts';
+import { parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import { listHolds, PublishHoldNotFoundError, releaseHold } from './publish-holds.ts';
-import { projectLinked } from './schedule-records.ts';
-import { seedPullMarks } from './trigger-events.ts';
-import { deleteTriggers, getTriggers, listTriggerEvents, saveTriggers } from './trigger-records.ts';
+import { deleteTriggers, getTriggers, listTriggerEvents } from './trigger-records.ts';
+import { setWorkflowTriggers } from './workflow-settings.ts';
 import { WorkflowNotFoundError, workflowStore, type WorkflowStore } from './workflow-store.ts';
 
 export interface TriggerRouteDeps {
@@ -48,19 +47,7 @@ export function triggerRoutes(deps: TriggerRouteDeps): Router {
 
   router.put('/workflows/:id/triggers', async (req, res) => {
     const id = await existing(req);
-    const triggers = parseBody(workflowTriggersSchema, req);
-    if (
-      triggers.projectId !== null &&
-      !(await projectLinked(db, workspaceId, triggers.projectId))
-    ) {
-      throw new BadRequestError('That project is not in Spark.');
-    }
-    const before = await getTriggers(db, workspaceId, id);
-    await saveTriggers(db, workspaceId, id, triggers);
-    const watching = before?.triggers.pullRequest === true;
-    if (triggers.pullRequest && !watching) {
-      await seedPullMarks(db, workspaceId, id, triggers.projectId);
-    }
+    await setWorkflowTriggers(db, workspaceId, id, parseBody(workflowTriggersSchema, req));
     res.json(await view(id));
   });
 

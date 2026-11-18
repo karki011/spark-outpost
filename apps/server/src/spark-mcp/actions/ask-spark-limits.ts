@@ -100,7 +100,8 @@ function crewCard(action: SparkAction['action'] | undefined): boolean {
     action === 'crew_edit' ||
     action === 'create_teammate' ||
     action === 'update_teammate' ||
-    action === 'delete_teammate'
+    action === 'delete_teammate' ||
+    action === 'workflow_control'
   );
 }
 

@@ -7,6 +7,7 @@ import {
   performSwitchMcpServer,
   performUpdateMcpServer,
 } from './mcp-perform.ts';
+import { performWorkflowControl } from '../tools/workflow-tool.ts';
 import {
   performCreateTeammate,
   performDeleteTeammate,
@@ -142,6 +143,8 @@ export function performSparkAction(
       return performPluginsEdit(context, action);
     case 'crew_edit':
       return performCrewEdit(context, action);
+    case 'workflow_control':
+      return performWorkflowControl(context, action);
     case 'link_repo':
       return performLinkRepo(context, action);
     case 'github_read':

@@ -54,6 +54,7 @@ export type SparkToolNeed =
   | 'plugins_edit'
   | 'crew_read'
   | 'crew_edit'
+  | 'crew_flows'
   | 'github_review_post';
 
 export interface SparkTool {

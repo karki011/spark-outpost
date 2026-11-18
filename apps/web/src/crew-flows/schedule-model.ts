@@ -176,6 +176,7 @@ const HOW: Record<WorkflowRunSource, string> = {
   manual: 'Run now',
   mention: 'In a chat',
   trigger: 'Triggered',
+  agent: 'By an agent',
 };
 
 const RUN_STATE: Record<WorkflowRun['status'], [string, HistoryTone]> = {

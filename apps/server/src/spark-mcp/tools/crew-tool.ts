@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { listWorkflowRuns } from '../../crew-flows/run-records.ts';
+import { getSchedule } from '../../crew-flows/schedule-records.ts';
+import { getTriggers } from '../../crew-flows/trigger-records.ts';
 import { DRAFTS_NOTE, draftsView, pendingCrewCards } from '../../crew/crew-drafts.ts';
 import { SPARK_INSTRUCTIONS_FILE, type Teammate } from '@spark-outpost/contracts';
 import { workflowStore } from '../../crew-flows/workflow-store.ts';
@@ -63,6 +66,8 @@ async function readFolder(teammate: Teammate) {
   };
 }
 
+const RECENT_RUNS = 5;
+
 async function readWorkflow(context: SparkToolContext, id: string, teammates: readonly Teammate[]) {
   const file = await workflowStore()
     .read(id)
@@ -75,7 +80,23 @@ async function readWorkflow(context: SparkToolContext, id: string, teammates: re
     bytes: Buffer.byteLength(JSON.stringify(file.workflow), 'utf8'),
   });
   const names = new Map(teammates.map((teammate) => [teammate.id, teammate.name]));
+  const { db } = context.deps;
+  const { workspaceId } = context.scope;
+  const [schedule, triggers, runs] = await Promise.all([
+    getSchedule(db, workspaceId, id),
+    getTriggers(db, workspaceId, id),
+    listWorkflowRuns(db, workspaceId, id),
+  ]);
   return {
+    schedule: schedule?.schedule ?? null,
+    triggers: triggers?.triggers ?? null,
+    recentRuns: runs.slice(0, RECENT_RUNS).map((run) => ({
+      id: run.id,
+      status: run.status,
+      source: run.source,
+      chatId: run.conversationId,
+      startedAt: run.startedAt,
+    })),
     workflow: {
       ...file.workflow,
       steps: file.workflow.steps.map((step) => ({

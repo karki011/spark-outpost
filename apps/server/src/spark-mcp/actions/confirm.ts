@@ -86,6 +86,7 @@ function cardTitle(action: SparkAction): string {
     action.action === 'create_teammate' ||
     action.action === 'update_teammate' ||
     action.action === 'delete_teammate' ||
+    action.action === 'workflow_control' ||
     action.action === 'link_repo' ||
     action.action === 'github_read' ||
     action.action === 'clone_repo'

@@ -28,6 +28,7 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   plugins_edit: true,
   crew_read: true,
   crew_edit: true,
+  crew_flows: false,
   github_review_post: false,
 };
 
@@ -41,6 +42,7 @@ export const SESSION_CASES = {
     github: true,
     outpost_draft: true,
   },
+  'plain chat with workflows': { ...NOTHING_AVAILABLE, crew_flows: true },
   'chat in an outpost, nothing connected': {
     ...NOTHING_AVAILABLE,
     outpost: true,

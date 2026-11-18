@@ -184,9 +184,9 @@ Hooks and a repo's permissions.allow rules are off until you trust the folder (o
     id: 'spark-own-tools',
     title: "Spark's own tools (the spark MCP server)",
     keywords: ['spark_', 'tools', 'mcp server', 'spark tools', 'self-service', 'action card'],
-    text: `Each session gets the "spark" MCP server: ticket, Slack, PR tools need their connector; PR tools, spark_map and spark_find need a linked project. Ask Spark gets the same tools behind the same switches (any project counts), except spark_push, spark_pull_request, spark_pr_follow_up, spark_pr_follow_up_round, spark_terminal_run, spark_outpost_ask, spark_outpost_start, spark_browser_sign_in, spark_rules_edit, spark_plugins_edit, spark_crew_edit, spark_link_repo and GitHub repo tools; its tools that ask follow When Ask Spark acts. A missing tool's note names its setting. Read tools need no card.
+    text: `Each session gets the "spark" MCP server: ticket, Slack, PR tools need their connector; PR tools, spark_map and spark_find need a linked project. Ask Spark gets the same tools behind the same switches (any project counts), except spark_push, spark_pull_request, spark_pr_follow_up, spark_pr_follow_up_round, spark_terminal_run, spark_outpost_ask, spark_outpost_start, spark_browser_sign_in, spark_rules_edit, spark_plugins_edit, spark_crew_edit, spark_workflow, spark_link_repo, GitHub repo tools; its tools that ask follow When Ask Spark acts. A missing tool's note names its setting.
 
-Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, spark_*_mcp_server, spark_calendar_edit, spark_jira_edit, spark_confluence_edit, spark_servicenow_edit, spark_*_spark, spark_crew_edit. In Auto, Bypass or Full access they run at once, else a card; spark_rules_edit, spark_plugins_edit, spark_link_repo, spark_clone_repo: always. Audited; agents open PRs themselves.`,
+Action tools: ticket create, comment, move, assign; spark_pr_follow_up_round, spark_*_mcp_server, spark_calendar_edit, spark_jira_edit, spark_confluence_edit, spark_servicenow_edit, spark_*_spark, spark_crew_edit, spark_workflow: at once in Auto, Bypass or Full access, else a card; spark_rules_edit, spark_plugins_edit, spark_link_repo, spark_clone_repo: always. Audited; agents open PRs themselves.`,
   },
   {
     id: 'spark-tools',

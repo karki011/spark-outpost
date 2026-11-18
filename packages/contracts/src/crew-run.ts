@@ -31,6 +31,7 @@ export const workflowRunSourceSchema = z.enum([
   'schedule',
   'catch_up',
   'trigger',
+  'agent',
 ]);
 export type WorkflowRunSource = z.infer<typeof workflowRunSourceSchema>;
 

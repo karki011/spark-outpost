@@ -69,6 +69,7 @@ A skill folder without a valid `SKILL.md` is not offered to the Spark.
 | Tool              | Does                                                                                                        | Asks                                                                                             |
 | ----------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `spark_crew`      | Lists Sparks with skills, workflows and waiting drafts; reads a Spark's file list, one file or one workflow | Never                                                                                            |
+| `spark_workflow`  | Runs a workflow in a new chat, stops a run, sets or turns off its schedule, sets its triggers               | [Follows the agent's mode](build-with-an-agent.md#when-it-asks)                                  |
 | `spark_crew_edit` | New, changed or deleted files for one Spark, or a new, changed or deleted workflow; withdraws its drafts    | [Follows the agent's mode](build-with-an-agent.md#when-it-asks), with each file before and after |
 
 In `spark_crew_edit`, a step may name its Spark with `spark`, `text: null` deletes a file, `remove` deletes a skill folder or a workflow, and `removeFolder` deletes every file under any folder of the Spark.

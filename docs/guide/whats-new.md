@@ -10,7 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                       | What to do                                                     |
 | -------------------------------------------------- | -------------------------------------------------------------- |
-| Agents add, change, delete Sparks per their mode   | [When it asks](build-with-an-agent.md#when-it-asks).           |
+| Agents manage and run Sparks and workflows         | [When it asks](build-with-an-agent.md#when-it-asks).           |
 | **Share…** artifacts; the rail lists them          | [Share one](share-an-artifact.md).                             |
 | Mac app: privacy screen, left-bar lock             | [Turn it on](privacy-screen.md); **⇧⌘L** locks now.            |
 | **GitHub** page, reviews, auto-review              | [Guide](github-page.md).                                       |
