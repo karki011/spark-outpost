@@ -1,6 +1,6 @@
 import type { Queryable } from '../persistence/db.ts';
 import { shareSecret, type SecretStore } from '../setup/secrets.ts';
-import type { ShareService } from './share-service.ts';
+import { SHARE_TIMEOUT_MS, type ShareService } from './share-service.ts';
 import {
   deleteShare,
   expiredShareIds,
@@ -56,4 +56,17 @@ export function shareSweeper(deps: ShareSweepDeps): () => Promise<void> {
     running = loop();
     return running;
   };
+}
+
+export interface ShareWiring {
+  shareService: ShareService | null;
+  sweepShares: () => Promise<void>;
+}
+
+export function shareWiring(
+  deps: Omit<ShareSweepDeps, 'service'> & { origin: string | null },
+): ShareWiring {
+  const { origin, ...rest } = deps;
+  const shareService = origin ? { origin, fetch, timeoutMs: SHARE_TIMEOUT_MS } : null;
+  return { shareService, sweepShares: shareSweeper({ ...rest, service: shareService }) };
 }

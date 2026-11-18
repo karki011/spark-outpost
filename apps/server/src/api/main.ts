@@ -4,8 +4,7 @@ import { LOCAL_DATA_DIR, loadConfig, sparkDataDir } from '../config.ts';
 import { chatFoldersBase } from '../chat-files/folders.ts';
 import { chatResearchBase } from '../chat-files/research-copies.ts';
 import { startArtifactOrigin } from '../artifacts/origin-server.ts';
-import { SHARE_TIMEOUT_MS } from '../artifacts/share-service.ts';
-import { shareSweeper } from '../artifacts/share-sweep.ts';
+import { shareWiring } from '../artifacts/share-sweep.ts';
 import { scheduleWorkflows } from '../crew-flows/scheduler.ts';
 import { reviewRunnerDeps, startReviewRunner } from '../github-inbox/review/runner.ts';
 import { startMorningBrief } from '../digest/morning.ts';
@@ -330,10 +329,7 @@ desktopBrowser?.blockPorts([
 ]);
 const clones = cloneJobsFor(cloneDeps);
 await clones.recover();
-const shareService = config.SPARK_SHARE_URL
-  ? { origin: config.SPARK_SHARE_URL, fetch, timeoutMs: SHARE_TIMEOUT_MS }
-  : null;
-const sweepShares = shareSweeper({ db, secrets, service: shareService });
+const shares = shareWiring({ db, secrets, origin: config.SPARK_SHARE_URL });
 const { app, reconcileRemote } = createAppParts({
   nudgeReviews: () => reviewRunner?.nudge(),
   clones,
@@ -360,8 +356,7 @@ const { app, reconcileRemote } = createAppParts({
   chatFolders,
   researchCopies,
   artifactOriginDown: artifactPages === null,
-  shareService,
-  sweepShares,
+  ...shares,
   terminals,
   nativeTerminals,
   previews,
@@ -432,7 +427,7 @@ const server = app.listen(config.API_PORT, config.API_HOST, () => {
     chatFolders,
     researchCopies,
     sparkFolders: crewSparksDir(),
-    sweepShares,
+    sweepShares: shares.sweepShares,
   };
   void sweepAtStart(pruning);
   pruneSchedule = schedulePrune(pruning);
