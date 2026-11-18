@@ -7,6 +7,8 @@ import { recordObservation } from '../src/persistence/observations.ts';
 import { listTeammates } from '../src/persistence/teammates.ts';
 import { useCrewTools } from './spark-crew-harness.ts';
 import {
+  answerCard,
+  cardResult,
   recordedHooks,
   startSparkTools,
   type RecordedHooks,
@@ -84,6 +86,12 @@ describe('the card follows the agent’s mode unless the turn read untrusted dat
     expect(result.isError).toBe(true);
     expect(result.text).toContain('Only the chat’s own turn');
     expect(await listTeammates(t.db, t.workspaceId)).toHaveLength(1);
+  });
+
+  it('shows a card in Auto for a pull request follow-up turn', async () => {
+    await crew.setRun('auto', 'pr_follow_up');
+    const result = await call('spark_create_spark', { name: 'Wren' });
+    expect(result.facts.outcome).toBe('waiting_for_user');
   });
 
   it.each(['assistant', 'workflow'])(
@@ -178,6 +186,22 @@ describe('drafts', () => {
       workflow: { id: 'week', name: 'Weekly', steps },
     });
     expect(draft.text).toContain('waiting for the user in another chat');
+    await call('spark_crew_edit', { workflow: { id: 'daily', name: 'Daily', steps } });
+    const own = await call('spark_crew_edit', { workflow: { id: 'day', name: 'daily', steps } });
+    expect(own.text).toContain('waiting for the user in this chat');
+  });
+
+  it('refuses a rename to a name its own new-Spark draft has', async () => {
+    await call('spark_create_spark', { name: 'Wren' });
+    const rename = await call('spark_update_spark', { spark: 'Scout', name: 'Wren' });
+    expect(rename.text).toContain('waiting for the user in this chat');
+  });
+
+  it('treats "all" as every draft only when it is the only id', async () => {
+    await call('spark_create_spark', { name: 'Wren' });
+    const mixed = await call('spark_crew_edit', { withdraw: ['all', 'nope'] });
+    expect(mixed.facts).toMatchObject({ withdrawn: 0, notFound: ['all', 'nope'] });
+    expect(await pendingIds()).toHaveLength(1);
   });
 });
 
@@ -190,6 +214,20 @@ describe('deleting a Spark', () => {
       message: 'Deleted the Scout Spark and its files.',
     });
     expect(await listTeammates(t.db, t.workspaceId)).toEqual([]);
+  });
+
+  it('refuses on Allow when a workflow started using it after the card', async () => {
+    await call('spark_update_spark', { spark: 'Scout', delete: true });
+    await workflowStore().save(
+      { id: 'nightly', name: 'Nightly', steps: [lookStep()] },
+      null,
+      new Set([scout.id]),
+    );
+    const card = await answerCard(t, SPARK_ACTION_OPTION.confirm);
+    const failed = (await cardResult(t, card.id)).payload.sparkResult!;
+    expect(failed.state).toBe('failed');
+    expect(failed.message).toContain('Scout is a step in Nightly');
+    expect(await listTeammates(t.db, t.workspaceId)).toHaveLength(1);
   });
 
   it('refuses while a workflow uses it', async () => {

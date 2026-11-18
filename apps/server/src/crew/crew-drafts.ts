@@ -125,16 +125,25 @@ export async function sparkNameClash(db: Queryable, check: NameCheck): Promise<s
   if (saved) return `There is already a Spark named ${saved.name}. Pick another name.`;
   const drafts = await pendingCrewCards(db, check.workspaceId);
   const draft = drafts.find((card) => {
-    if (card.conversationId === check.conversationId) return false;
     const name = draftSparkName(card.action);
-    const same =
-      card.action.action === 'update_teammate' && card.action.teammateId === check.teammateId;
-    return name !== null && !same && nameKey(name) === wanted;
+    if (name === null || nameKey(name) !== wanted) return false;
+    if (card.action.action === 'update_teammate')
+      return card.action.teammateId !== check.teammateId;
+    const replaced = card.conversationId === check.conversationId && !check.teammateId;
+    return !replaced;
   });
-  if (draft) {
-    return `A draft Spark named ${check.name} is waiting for the user in another chat. Pick another name.`;
-  }
+  if (draft) return draftClash('Spark', check.name, draft, check.conversationId);
   return null;
+}
+
+function draftClash(
+  what: string,
+  name: string,
+  draft: PendingCrewCard,
+  conversationId: string,
+): string {
+  const where = draft.conversationId === conversationId ? 'this chat' : 'another chat';
+  return `A draft ${what} named ${name} is waiting for the user in ${where}. Pick another name.`;
 }
 
 export interface WorkflowNameCheck {
@@ -155,15 +164,12 @@ export async function workflowNameClash(
   const drafts = await pendingCrewCards(db, check.workspaceId);
   const draft = drafts.find(
     (card) =>
-      card.conversationId !== check.conversationId &&
       card.action.action === 'crew_edit' &&
       card.action.target === 'workflow' &&
       card.action.id !== check.id &&
       nameKey(card.action.name) === wanted,
   );
-  if (draft) {
-    return `A draft workflow named ${check.name} is waiting for the user in another chat. Pick another name.`;
-  }
+  if (draft) return draftClash('workflow', check.name, draft, check.conversationId);
   return null;
 }
 
