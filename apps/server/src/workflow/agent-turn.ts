@@ -60,6 +60,7 @@ import { createTaskRecorder } from './task-recorder.ts';
 import { createCommandRecorder } from './command-recorder.ts';
 import { sparkCommandScope } from './command-scope.ts';
 import { createTurnEvents } from './turn-events.ts';
+import { failureMessage, keptAfterCancel } from './turn-failure.ts';
 import { createLiveCost } from '../usage/live-cost.ts';
 import { recordPlan, withResetTime } from '../usage/plan-limits.ts';
 import { recordRequestUsage } from '../persistence/prompt-cache.ts';
@@ -85,7 +86,7 @@ import { createObservedEdits } from './observed-edits.ts';
 import { observeSession } from './session-audit.ts';
 import { watchedSends } from '../observations/send-watch.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
-import type { RunControl, StopReason } from './run-control.ts';
+import type { RunControl } from './run-control.ts';
 
 export { startControl, type RunControl, type StopReason } from './run-control.ts';
 
@@ -126,16 +127,6 @@ export interface TurnResult {
   text: string;
   messageId: string | null;
   finalReply?: string | null;
-}
-
-const GENERIC_PROVIDER_FAILURE =
-  'The provider stopped with an unexpected error. Nothing after the last completed step was changed.';
-
-function failureMessage(error: unknown, reason: StopReason | null): string {
-  if (reason === 'approval_timeout') return APPROVAL_TIMEOUT_MESSAGE;
-  if (error instanceof ProviderError) return error.message;
-  console.error('Run failed unexpectedly', error);
-  return GENERIC_PROVIDER_FAILURE;
 }
 
 export async function runAgentTurn(
@@ -400,7 +391,8 @@ export async function runAgentTurn(
         if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
         if (output.kind === 'request_usage') await recordRequest(output.request);
         if (output.kind === 'usage') await recordSpend(output);
-        if (output.kind === 'subagent_finished') await events.observe(output);
+        if (keptAfterCancel(output)) await events.observe(output);
+        if (keptAfterCancel(output)) await commands.observe(output);
         continue;
       }
       options.onOutput?.(output);

@@ -320,6 +320,7 @@ export function SoloTurn({
         context={{
           runId: stepsRunId,
           working,
+          stopped: finished && run.status === 'cancelled',
           waiting,
           changes,
           todo: <TurnTodo entries={todoEntries} live={working} />,

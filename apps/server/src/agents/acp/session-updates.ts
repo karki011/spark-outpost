@@ -487,11 +487,13 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
       return [...stopThinking(), ...noteSteps(name, true)];
     },
     finish(cancelled = false) {
-      const outputs = stopThinking();
-      for (const id of [...openTools.keys()]) {
-        if (cancelled) openTools.delete(id);
-        else outputs.push(...finishTool(id));
+      if (cancelled) {
+        thinking = false;
+        openTools.clear();
+        return [];
       }
+      const outputs = stopThinking();
+      for (const id of [...openTools.keys()]) outputs.push(...finishTool(id));
       return outputs;
     },
   };

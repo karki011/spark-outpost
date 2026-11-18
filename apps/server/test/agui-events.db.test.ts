@@ -192,4 +192,18 @@ describe('AG-UI events from an ACP agent', { timeout: 40_000 }, () => {
       false,
     ]);
   });
+  it('finishes a step the agent completes after Stop and keeps its late text out', async () => {
+    const { conversationId, runId } = await send('#hang #settle');
+    await seen(runId, EventType.REASONING_START, 2);
+    await stopRun(t.db, runId);
+    expect((await settled(runId)).status).toBe('cancelled');
+    await expectConformantRun(t.db, runId);
+
+    const events = await storedEvents(t.db, runId);
+    const finished = ofType(events, EventType.STEP_FINISHED).map(stepMark);
+    expect(finished.some((mark) => mark.interrupted)).toBe(false);
+    expect(JSON.stringify(events)).not.toContain('Written after Stop.');
+    const detail = await getConversationDetail(t.db, conversationId);
+    expect(detail?.activity[runId]?.map((step) => step.done)).not.toContain(false);
+  });
 });

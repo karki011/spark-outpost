@@ -24,7 +24,7 @@ function followed(capabilities: unknown) {
       logger: { log: vi.fn(), error: vi.fn() },
     },
   );
-  const polling = work.foreground.size > 0;
+  const polling = (work as unknown as { foreground: Map<string, unknown> }).foreground.size > 0;
   work.queryClosed();
   return { polling, send };
 }
