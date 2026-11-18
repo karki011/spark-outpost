@@ -10,6 +10,7 @@ import {
   sparkRulesFlagRules,
 } from '../../approvals/browser-data.ts';
 import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
+import { NO_IDLE_COMPACTION } from './claude-env.ts';
 import { crewFolderRules, guardedCrewFolders, inFolders } from '../../approvals/crew-folders.ts';
 import { sparkDataReadRules } from '../../approvals/spark-data-reads.ts';
 import { tempRoots } from '../../approvals/temp-dirs.ts';
@@ -197,10 +198,6 @@ function repoTools(repo: ClaudeRepoOptions | null): string[] {
   if (!repo) return [];
   return [...(repo.skillTool ? ['Skill'] : []), ...(repo.agentTool ? ['Agent'] : [])];
 }
-
-const NO_IDLE_COMPACTION = {
-  CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS: String(Number.MAX_SAFE_INTEGER),
-};
 
 export function claudeSessionMeta(
   tools: readonly string[],

@@ -5,6 +5,7 @@ import { extname, isAbsolute, join } from 'node:path';
 import { promisify } from 'node:util';
 import { isRecord } from '../agent-config/records.ts';
 import type { TurnAttachment } from '../providers/provider.ts';
+import { NO_IDLE_COMPACTION } from '../agents/acp/claude-env.ts';
 import { NativeRuntimeError } from './native-control.ts';
 import { nativeHookScript } from './native-hook-script.ts';
 import { supportsMods, writeSparkMod } from './native-mod-script.ts';
@@ -47,6 +48,11 @@ const exec = promisify(execFile);
 const SESSION_ID = /^[a-zA-Z0-9_-]{1,100}$/;
 const CHANNEL = /^[a-zA-Z0-9_-]{1,40}$/;
 const CLAUDE_THEME_FOLLOWS_TERMINAL = 'auto';
+const SPARK_RESUME_HINT = 'Resume session in Spark Outpost';
+const CLAUDE_TERMINAL_ENV = {
+  ...NO_IDLE_COMPACTION,
+  CLAUDE_CODE_RESUME_HINT_COMMAND: SPARK_RESUME_HINT,
+};
 
 function loopbackUrl(value: string): void {
   const url = new URL(value);
@@ -287,7 +293,10 @@ async function providerConfiguration(
         },
       },
     });
-    return { args: ['--settings', settingsPath, '--mcp-config', mcpPath], env: {} };
+    return {
+      args: ['--settings', settingsPath, '--mcp-config', mcpPath],
+      env: { ...CLAUDE_TERMINAL_ENV },
+    };
   }
   const name = `spark_${input.sessionId.replaceAll('-', '_')}`;
   const envName = `SPARK_NATIVE_MCP_TOKEN_${input.sessionId.replaceAll('-', '_')}`;
