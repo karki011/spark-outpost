@@ -38,7 +38,13 @@ export async function switchInPlace(
   source: WorktreeSource,
   base: string,
 ): Promise<void> {
+  const previous = (await git(current.path, ['rev-parse', '--abbrev-ref', 'HEAD'])).trim();
   await git(current.path, checkoutArgs(source));
-  const commit = (await git(current.path, ['rev-parse', 'HEAD'])).trim();
-  await repointChatWorktree(db, current.id, { name: source.branch, base, commit });
+  try {
+    const commit = (await git(current.path, ['rev-parse', 'HEAD'])).trim();
+    await repointChatWorktree(db, current.id, { name: source.branch, base, commit });
+  } catch (error) {
+    await git(current.path, ['checkout', '--quiet', previous]).catch(() => undefined);
+    throw error;
+  }
 }

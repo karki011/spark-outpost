@@ -135,7 +135,7 @@ async function plannedSource(
   decision: Exclude<PlaceDecision, { kind: 'checkout' } | { kind: 'in_place' }>,
 ): Promise<Planned | null> {
   if (decision.kind === 'existing') {
-    await fastForward(target.root, decision.branch);
+    await fastForward(target.root, decision.branch, () => deps.onPhase?.('fetch'));
     return { source: decision, owned: false, baseBranch: decision.branch, baseRef: null };
   }
   if (decision.kind === 'remote') {

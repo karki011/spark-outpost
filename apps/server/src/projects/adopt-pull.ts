@@ -159,11 +159,11 @@ async function basedSource(deps: AdoptDeps, found: Hosted, pull: OpenPull, conve
   await fetchRef(found.root, found.origin.name, `pull/${pull.number}/head`);
   const from = (await git(found.root, ['rev-parse', '--verify', 'FETCH_HEAD^{commit}'])).trim();
   const title = `pr ${pull.number} ${pull.title}`;
-  return {
-    kind: 'new' as const,
-    branch: shipBranchName(deps.branchPrefix, title, conversationId),
-    from,
-  };
+  const branch = shipBranchName(deps.branchPrefix, title, conversationId);
+  if ((await listBranches(found.root)).local.includes(branch)) {
+    return { kind: 'existing' as const, branch };
+  }
+  return { kind: 'new' as const, branch, from };
 }
 
 async function planFor(found: Hosted, pull: FoundPull, here: boolean): Promise<AdoptPlan> {

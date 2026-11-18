@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { primaryChatWorktree, savePlaceChoice } from '../src/persistence/chat-worktrees.ts';
 import { placeChat } from '../src/orchestration/chat-place.ts';
-import { bringChanges, noteFetched } from '../src/projects/chat-worktrees.ts';
+import { bringChanges, fastForward, noteFetched } from '../src/projects/chat-worktrees.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
 import { doRun } from './approval-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
@@ -103,6 +103,20 @@ describe('a new chat worktree', { timeout: 60_000 }, () => {
     const { record } = await place('topic');
     expect(record.branch).toBe('topic');
     expect(git(record.path, 'rev-parse', 'HEAD')).toBe(newer);
+  });
+
+  it('leaves a branch checked out in another worktree where it is', async () => {
+    git(upstream, 'checkout', '-qb', 'topic');
+    await commitFile(upstream, 'topic.ts', 'a\n');
+    git(checkout, 'fetch', '-q', 'origin');
+    const other = join(scratch, 'other');
+    git(checkout, 'worktree', 'add', '-q', '--track', '-b', 'topic', other, 'origin/topic');
+    const old = git(other, 'rev-parse', 'HEAD');
+    await commitFile(upstream, 'topic.ts', 'b\n');
+    git(upstream, 'checkout', '-q', 'main');
+    await fastForward(checkout, 'topic');
+    expect(git(checkout, 'rev-parse', 'topic')).toBe(old);
+    expect(git(other, 'status', '--porcelain')).toBe('');
   });
 
   it('reuses a fetch from the last two minutes instead of fetching again', async () => {

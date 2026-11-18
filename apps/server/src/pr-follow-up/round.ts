@@ -22,6 +22,7 @@ import {
   type Watch,
 } from '../persistence/pr-watches.ts';
 import { getTaskShip } from '../persistence/task-ships.ts';
+import { checkedOut } from '../pr-tracking/chat-repos.ts';
 import { pushedHead } from '../ship/published.ts';
 import { syncWithPull } from './branch-sync.ts';
 import { connectTo, shipDepsOf, startRoundRun, type FollowUpDeps } from './deps.ts';
@@ -389,7 +390,9 @@ async function roundRoot(deps: FollowUpDeps, watch: Watch): Promise<string | nul
   const worktree = await primaryChatWorktree(deps.db, watch.conversationId);
   if (worktree?.branch === watch.branch) return worktree.path;
   const ship = watch.taskId ? await getTaskShip(deps.db, watch.taskId) : null;
-  return ship?.rootPath ?? worktree?.path ?? null;
+  const root = ship?.rootPath ?? worktree?.path ?? null;
+  if (!root || root !== worktree?.path) return root;
+  return (await checkedOut(root)) === watch.branch ? root : null;
 }
 
 async function settleRound(

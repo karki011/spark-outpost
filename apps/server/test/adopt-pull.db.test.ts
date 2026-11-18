@@ -5,7 +5,11 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { OpenPull } from '@spark-outpost/contracts';
-import { insertChatWorktree, liveChatWorktree } from '../src/persistence/chat-worktrees.ts';
+import {
+  insertChatWorktree,
+  liveChatWorktree,
+  saveLanded,
+} from '../src/persistence/chat-worktrees.ts';
 import { ROUTE_RULES } from '../src/remote/route-rules.ts';
 import { adoptPull, openPullsFor, type AdoptDeps } from '../src/projects/adopt-pull.ts';
 import type { CommandResult } from '../src/setup/command.ts';
@@ -309,6 +313,33 @@ describe('adopting a pull request from the same repository', () => {
     expect(note).not.toContain('Earlier work');
     const record = (await liveChatWorktree(t.db, chat.conversationId, chat.projectId))!;
     expect(record).toMatchObject({ id: before.id, branch: HEAD, adopted: { pushes: true } });
+  });
+
+  it('keeps the landed marker when the chat stays on its branch', async () => {
+    const { chat, runId, before, request } = await chatOnItsOwnBranch();
+    await finish(runId);
+    git(before.path, 'fetch', '-q', 'origin');
+    git(before.path, 'checkout', '-q', '--track', '-b', HEAD, `origin/${HEAD}`);
+    await adoptPull(deps(ghPull()), chat.conversationId, request);
+    await saveLanded(t.db, before.id, 'landed-sha');
+    const first = (await liveChatWorktree(t.db, chat.conversationId, chat.projectId))!;
+    await adoptPull(deps(ghPull()), chat.conversationId, request);
+    const record = (await liveChatWorktree(t.db, chat.conversationId, chat.projectId))!;
+    expect(record).toMatchObject({ landedCommit: 'landed-sha', baseCommit: first.baseCommit });
+  });
+
+  it('goes back to its own spark branch when you adopt a protected pull request again', async () => {
+    const { chat, runId, before, request } = await chatOnItsOwnBranch();
+    const sha = git(originBare, 'rev-parse', HEAD);
+    execFileSync('git', ['-C', originBare, 'update-ref', 'refs/pull/12/head', sha]);
+    await finish(runId);
+    await adoptPull(deps(ghPull(), true), chat.conversationId, request);
+    const fallback = (await liveChatWorktree(t.db, chat.conversationId, chat.projectId))!.branch;
+    git(before.path, 'checkout', '-q', before.branch);
+    await adoptPull(deps(ghPull(), true), chat.conversationId, request);
+    const record = (await liveChatWorktree(t.db, chat.conversationId, chat.projectId))!;
+    expect(record.branch).toBe(fallback);
+    expect(git(record.path, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe(fallback);
   });
 
   it('waits while the chat has a turn open', async () => {

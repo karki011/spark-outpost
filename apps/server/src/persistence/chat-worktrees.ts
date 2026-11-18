@@ -229,8 +229,11 @@ export async function repointChatWorktree(
   branch: { name: string; base: string; commit: string },
 ): Promise<void> {
   await db.query(
-    `UPDATE chat_worktrees SET branch = $2, base_branch = $3, base_commit = $4, base_ref = NULL,
-       owns_branch = true, landed_commit = NULL
+    `UPDATE chat_worktrees SET
+       base_commit = CASE WHEN branch = $2 THEN base_commit ELSE $4 END,
+       base_ref = CASE WHEN branch = $2 THEN base_ref ELSE NULL END,
+       landed_commit = CASE WHEN branch = $2 THEN landed_commit ELSE NULL END,
+       branch = $2, base_branch = $3, owns_branch = true
      WHERE id = $1`,
     [id, branch.name, branch.base, branch.commit],
   );

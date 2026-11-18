@@ -174,9 +174,14 @@ export async function latestOf(
   return local ? { from: local, baseRef: branch } : null;
 }
 
-export async function fastForward(root: string, branch: string): Promise<void> {
+export async function fastForward(
+  root: string,
+  branch: string,
+  onFetch?: () => void,
+): Promise<void> {
+  if (await branchCheckedOut(root, branch)) return;
   const local = await branchTipOf(root, branch);
-  const latest = local ? await latestOf(root, branch) : null;
+  const latest = local ? await latestOf(root, branch, onFetch) : null;
   if (!local || !latest || latest.from === local || latest.baseRef === branch) return;
   await git(root, ['update-ref', `refs/heads/${branch}`, latest.from, local]).catch(
     () => undefined,
