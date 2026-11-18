@@ -7,6 +7,7 @@ import { parseArgs } from 'node:util';
 import {
   GOOGLE_CLIENT_FILE_ENV,
   packagedHeartbeatUrl,
+  packagedShareUrl,
   packagedSlackClientId,
   releaseProblems,
   RELEASE_ARCHS,
@@ -67,6 +68,8 @@ const heartbeat = packagedHeartbeatUrl(process.env);
 console.log(
   heartbeat ? `Heartbeat: ${heartbeat}` : 'Heartbeat: off (set SPARK_HEARTBEAT_URL to turn it on).',
 );
+const share = packagedShareUrl(process.env);
+console.log(share ? `Share: ${share}` : 'Share: off (set SPARK_SHARE_URL to turn it on).');
 const outputDir = path.join(releaseDir, version);
 const artifacts = await packageDesktop({
   version,

@@ -34,6 +34,10 @@ A change applies from the next message. **Manage** (or **Manage in Settings**) o
 
 Ports a shell tab listens on, like **localhost:5173**, show under the rows. Select one to open it in the [Browser pane](use-the-browser.md) (Mac).
 
+## Open artifacts
+
+**Artifacts** lists the agent's pages. Select one to open it.
+
 ## Float the chat list
 
 When a chat gets too narrow, say beside the Work panel, the chat list floats too. **Show sidebar** opens it over the chat; a pick, **Esc** or a click outside closes it. It docks again when there's room.

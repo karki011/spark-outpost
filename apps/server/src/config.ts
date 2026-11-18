@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
 import { z } from 'zod';
-import { connectableIdSchema } from '@spark-outpost/contracts';
+import { connectableIdSchema, shareServiceOrigin } from '@spark-outpost/contracts';
 import { DEFAULT_BRANCH_PREFIX } from './projects/worktrees.ts';
 import { DEFAULT_KEYCHAIN_SERVICE } from './setup/secrets.ts';
 
@@ -107,6 +107,14 @@ const configSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  SPARK_SHARE_URL: z
+    .string()
+    .default('')
+    .refine(
+      (value) => value.trim() === '' || shareServiceOrigin(value) !== null,
+      'SPARK_SHARE_URL must be an https origin with no path, or http on a loopback host for tests.',
+    )
+    .transform((value) => shareServiceOrigin(value)),
   GOOGLE_ACCOUNTS_URL: providerUrl.optional(),
   GOOGLE_OAUTH_URL: providerUrl.optional(),
   GOOGLE_CALENDAR_API_URL: providerUrl.optional(),

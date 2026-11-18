@@ -9,6 +9,7 @@
     "scripts",
     "tests",
     "infra/heartbeat-worker/src",
+    "infra/share-worker/src",
     "vitest.config.ts",
     "playwright.config.ts"
   ],

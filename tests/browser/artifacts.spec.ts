@@ -91,6 +91,16 @@ test('an agent publishes an artifact that opens beside the chat, sandboxed, with
 
   await pane.getByRole('button', { name: 'Close artifact' }).click();
   await expect(pane).toHaveCount(0);
+
+  const rail = page.getByRole('region', { name: 'Chat context' });
+  if (!(await rail.isVisible())) {
+    await page.getByRole('button', { name: 'Show context rail' }).click();
+  }
+  const listed = rail.getByRole('button', { name: 'Open artifact CPI dashboard' });
+  await expect(listed).toContainText('HTML · version 2');
+  await listed.click();
+  await expect(pane).toBeVisible();
+  await expect(versions).toHaveText('v2');
 });
 
 test('a Markdown artifact renders as text and an SVG one as an image', async ({ page }) => {
