@@ -109,6 +109,7 @@ function Facts({ action }: { action: SparkAction }) {
       return <PrRoundFacts action={action} />;
     case 'create_teammate':
     case 'update_teammate':
+    case 'delete_teammate':
       return <TeammateFacts action={action} />;
     case 'add_mcp_server':
     case 'update_mcp_server':

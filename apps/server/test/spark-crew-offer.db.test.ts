@@ -127,7 +127,7 @@ async function userAsked(text: string): Promise<void> {
 }
 
 describe('creating or changing a Spark itself', () => {
-  it('asks in every mode and names a similar Spark', async () => {
+  it('asks in Manual and names a similar Spark', async () => {
     await userAsked('Create a Spark called Scouts');
     const result = await call('spark_create_spark', { name: 'Scouts', instructions: 'Review.' });
     expect(result.facts.outcome).toBe('waiting_for_user');
@@ -136,7 +136,7 @@ describe('creating or changing a Spark itself', () => {
       action: 'create_teammate',
       similar: [{ kind: 'spark', name: 'Scout', reason: 'similar_name' }],
     });
-    expect(card.payload.sparkRequested).toBeUndefined();
+    expect(card.payload.sparkRequested).toBe(true);
     expect(macOnlyCard(card.payload)).toBe(true);
     const chatRow = { id: chat.conversationId, title: 'Chat', terminal: false };
     expect(cardRefusal(card, chatRow, null)).toBe(ASK_SPARK_REFUSALS.crew);
@@ -151,7 +151,7 @@ describe('creating or changing a Spark itself', () => {
       instructions: 'Be kind.',
       instructionsBefore: 'Be brief.',
     });
-    expect((await pendingCard(t)).payload.sparkRequested).toBeUndefined();
+    expect((await pendingCard(t)).payload.sparkRequested).toBe(true);
   });
 });
 

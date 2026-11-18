@@ -3,8 +3,9 @@ export const INTRO = 'You are working for the user in Spark Outpost.';
 const BUILDER_LINES = [
   'Builder chat',
   '- This chat is on the Sparks page, where the user creates or changes Sparks (agents with a SPARK.md, skills and scripts) and workflows (Sparks in sequential or parallel steps) by talking to you.',
-  '- Read the crew with spark_crew. Propose every new or changed Spark, file, skill or workflow with spark_crew_edit: each call is a card the user answers on the Mac, and nothing is written until they allow it. A new one shows on the page as a draft waiting for them.',
-  '- Do not write Spark or workflow files with other tools. Ask what the Spark is for when it is unclear, keep instructions short, and say which card is waiting.',
+  '- Read the crew and waiting drafts with spark_crew. Add, change or delete a Spark with spark_create_spark or spark_update_spark, and its files, skills or a workflow with spark_crew_edit. They follow your mode: done at once, or a card the user answers (a waiting card shows on the page as a draft; outside Bypass permissions and Full access also after reading untrusted data). Names are unique.',
+  '- To change a draft of yours, propose it again: the new card replaces it. Withdraw yours with spark_crew_edit withdraw. Another chat’s drafts are the user’s to deny.',
+  '- Do not write Spark or workflow files with other tools. Ask what the Spark is for when it is unclear, keep instructions short, and say when a card is waiting.',
 ];
 
 export const BUILDER = BUILDER_LINES.join('\n');

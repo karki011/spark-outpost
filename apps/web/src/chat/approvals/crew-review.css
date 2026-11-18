@@ -186,3 +186,31 @@
     border-bottom: 1px solid var(--line);
   }
 }
+
+.crw-ready {
+  flex-wrap: wrap;
+}
+
+.crw-ready-what b {
+  font-size: 13px;
+}
+
+.crw-observed {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--warn);
+}
+
+.crw-observed .ic {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+}
+
+.crw-acts {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  margin-left: auto;
+}

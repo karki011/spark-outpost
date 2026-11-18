@@ -3,7 +3,6 @@ import {
   CREW_EDIT_ALLOW_LABEL,
   CREW_EDIT_DENY_LABEL,
   CREW_SIMILAR_MAX,
-  SPARK_ACTION_KIND,
   SPARK_ACTION_OPTION,
   SPARK_INSTRUCTIONS_FILE,
   type ApprovalOption,
@@ -22,9 +21,10 @@ import {
   planWorkflowSave,
   type WorkflowEditPlan,
 } from '../../crew/workflow-edit-plan.ts';
-import type { Queryable } from '../../persistence/db.ts';
+import { withdrawOwnDrafts, workflowNameClash } from '../../crew/crew-drafts.ts';
 import { listTeammates } from '../../persistence/teammates.ts';
-import { actionRun, proposeAction, WAITING_MESSAGE } from '../actions/confirm.ts';
+import { actionRun } from '../actions/confirm.ts';
+import { proposeCrewAction } from '../actions/crew-propose.ts';
 import { rulesSession, type RulesSession } from '../actions/rules-edit-session.ts';
 import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
 import { matchTeammate } from './teammates-tool.ts';
@@ -37,7 +37,7 @@ export const CREW_EDIT_OPTIONS: readonly ApprovalOption[] = [
 ];
 
 export const CREW_EDIT_USAGE =
-  'Pass spark with files, remove (a skill) or removeFolder, or workflow, or remove alone (a workflow id).';
+  'Pass spark with files, remove (a skill) or removeFolder, or workflow, or remove alone (a workflow id), or withdraw alone.';
 
 const PROBLEMS_MESSAGE =
   'Nothing was shown to the user. Fix these and call again (formats: spark_docs page crew-files).';
@@ -46,31 +46,8 @@ function problemsResult(problems: readonly CrewProblem[]) {
   return { outcome: 'problems', problems, message: PROBLEMS_MESSAGE };
 }
 
-async function waitingCard(
-  db: Queryable,
-  conversationId: string,
-  action: CrewEditAction,
-): Promise<string | null> {
-  const { rows } = await db.query<{ id: string }>(
-    `SELECT a.id FROM approvals a JOIN runs r ON r.id = a.run_id
-     WHERE r.conversation_id = $1 AND a.kind = $2 AND a.status = 'pending'
-       AND a.payload->'sparkAction'->>'action' = 'crew_edit'
-       AND a.payload->'sparkAction'->>'target' = $3
-       AND a.payload->'sparkAction'->>'id' = $4
-       AND a.payload->'sparkAction'->'files' = $5::jsonb
-     ORDER BY a.created_at DESC LIMIT 1`,
-    [conversationId, SPARK_ACTION_KIND, action.target, action.id, JSON.stringify(action.files)],
-  );
-  return rows[0]?.id ?? null;
-}
-
-async function propose(context: SparkToolContext, action: CrewEditAction) {
-  const waiting = await waitingCard(context.deps.db, context.scope.conversationId!, action);
-  if (waiting) {
-    return { outcome: 'waiting_for_user', approvalId: waiting, message: WAITING_MESSAGE };
-  }
-  return proposeAction(context, action, {
-    path: 'confirm',
+function propose(context: SparkToolContext, action: CrewEditAction) {
+  return proposeCrewAction(context, action, {
     options: CREW_EDIT_OPTIONS,
     audit: { floor: 'spark_crew' },
   });
@@ -133,9 +110,20 @@ async function editWorkflow(
   context: SparkToolContext,
   plan: WorkflowEditPlan,
   session: RulesSession,
+  saved: readonly { id: string; name: string }[],
 ) {
   if (plan.problems.length > 0) return problemsResult(plan.problems);
   if (!plan.file) return { outcome: 'unchanged', message: `${plan.name} already says that.` };
+  if (plan.file.change !== 'deleted') {
+    const clash = await workflowNameClash(context.deps.db, {
+      workspaceId: context.scope.workspaceId,
+      conversationId: context.scope.conversationId ?? '',
+      id: plan.id,
+      name: plan.name,
+      saved,
+    });
+    if (clash) throw new SparkToolError(clash);
+  }
   return propose(context, {
     action: 'crew_edit',
     target: 'workflow',
@@ -155,6 +143,23 @@ interface EditArgs {
   remove?: string | undefined;
   removeFolder?: string | undefined;
   workflow?: Record<string, unknown> | undefined;
+  withdraw?: string[] | undefined;
+}
+
+async function withdraw(context: SparkToolContext, ids: string[]) {
+  const { workspaceId, conversationId } = context.scope;
+  const wanted = ids.length === 1 && ids[0] === 'all' ? 'all' : ids;
+  const result = await withdrawOwnDrafts(context.deps.db, workspaceId, conversationId!, wanted);
+  return {
+    outcome: 'withdrawn',
+    withdrawn: result.withdrawn,
+    ...(result.notFound.length > 0
+      ? {
+          notFound: result.notFound,
+          note: 'Only this chat’s own waiting drafts can be withdrawn. The user denies the others on the Sparks page.',
+        }
+      : {}),
+  };
 }
 
 async function edit(args: EditArgs, context: SparkToolContext) {
@@ -164,6 +169,11 @@ async function edit(args: EditArgs, context: SparkToolContext) {
   if (refused) throw new SparkToolError(CREW_EDIT_REFUSALS[refused]);
   const session = await rulesSession(db, run.runId);
   if (!session) throw new SparkToolError(CREW_EDIT_REFUSALS.no_chat);
+  if (args.withdraw !== undefined) {
+    const others = args.spark ?? args.workflow ?? args.remove ?? args.removeFolder ?? args.files;
+    if (others !== undefined) throw new SparkToolError(CREW_EDIT_USAGE);
+    return withdraw(context, args.withdraw);
+  }
   const teammates = await listTeammates(db, context.scope.workspaceId);
   const { spark, workflow } = args;
   const files = args.files ?? [];
@@ -187,7 +197,8 @@ async function edit(args: EditArgs, context: SparkToolContext) {
   const plan = workflow
     ? await planWorkflowSave(store, workflow, teammates)
     : await planWorkflowRemoval(store, remove!, teammates);
-  return editWorkflow(context, plan, session);
+  const saved = await store.list(new Set(teammates.map((teammate) => teammate.id)));
+  return editWorkflow(context, plan, session, saved);
 }
 
 export const crewEditTool = sparkTool({
@@ -196,7 +207,7 @@ export const crewEditTool = sparkTool({
   acts: true,
   title: 'Change a Spark’s files or a workflow',
   description:
-    'Propose changes to one Spark’s files (SPARK.md, skills/<name>/SKILL.md, scripts) or one workflow; formats: spark_docs crew-files. Always a card for the user. remove: a skill (with spark) or a workflow id.',
+    'One Spark’s files (SPARK.md, skills, scripts) or one workflow; formats: spark_docs crew-files. remove: a skill (with spark) or workflow id; withdraw: draft ids or ["all"]. Follows your mode.',
   input: {
     spark: z.string().optional(),
     files: z
@@ -209,6 +220,7 @@ export const crewEditTool = sparkTool({
       .record(z.string(), z.unknown())
       .optional()
       .describe('{id, name, steps: [{id, spark, prompt, dependsOn, join, onFailure}]}'),
+    withdraw: z.array(z.string()).optional(),
   },
   run: (args, context) => edit(args, context),
 });

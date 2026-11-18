@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DRAFTS_NOTE, draftsView, pendingCrewCards } from '../../crew/crew-drafts.ts';
 import { SPARK_INSTRUCTIONS_FILE, type Teammate } from '@spark-outpost/contracts';
 import { workflowStore } from '../../crew-flows/workflow-store.ts';
 import { crewSparks, sparkLine, workflowLines } from '../../crew/crew-view.ts';
@@ -103,9 +104,12 @@ async function crew(args: CrewArgs, context: SparkToolContext) {
     return args.path ? readFile(context, teammate, args.path) : readFolder(teammate);
   }
   const sparks = await crewSparks(crewSparksDir(), teammates);
+  const { workspaceId, conversationId } = context.scope;
+  const drafts = draftsView(await pendingCrewCards(context.deps.db, workspaceId), conversationId);
   return {
     sparks: sparks.map(sparkLine),
     workflows: await workflowLines(workflowStore(), teammates),
+    ...(drafts.length > 0 ? { drafts, draftsNote: DRAFTS_NOTE } : {}),
   };
 }
 
@@ -114,7 +118,7 @@ export const crewTool = sparkTool({
   needs: 'crew_read',
   title: 'Sparks, skills and workflows',
   description:
-    'The user’s crew. No arguments: every Spark (role, agent, mode, skills) and workflow (stages). spark (name or id): its files; with path: one file’s text. workflow (id): that workflow. Check before proposing a Spark or skill.',
+    'The user’s crew. No arguments: every Spark (role, agent, mode, skills), workflow (stages). spark (name or id): its files; with path: one file’s text. workflow (id): that workflow. Check before proposing a Spark or skill.',
   input: {
     spark: z.string().optional(),
     path: z.string().optional(),

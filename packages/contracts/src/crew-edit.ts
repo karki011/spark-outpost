@@ -79,8 +79,30 @@ export const crewEditLabels = {
   },
 };
 
+function everyFile(action: CrewEditAction, change: CrewFileChangeKind): boolean {
+  return action.files.every((file) => file.change === change);
+}
+
 export function crewEditQuestion(action: CrewEditAction): string {
-  return `Change the ${action.name} ${action.target === 'spark' ? 'Spark' : 'workflow'}?`;
+  const what = action.target === 'spark' ? 'Spark' : 'workflow';
+  if (action.target === 'workflow' && everyFile(action, 'new')) {
+    return `Add the ${action.name} workflow?`;
+  }
+  if (action.target === 'workflow' && everyFile(action, 'deleted')) {
+    return `Delete the ${action.name} workflow?`;
+  }
+  return `Change the ${action.name} ${what}?`;
+}
+
+export function crewEditSummary(action: CrewEditAction): string {
+  if (action.target === 'workflow') {
+    const steps = action.stages?.map((stage) => stage.join(' + ')).join(' → ');
+    return steps ? `Steps: ${steps}` : 'The workflow file';
+  }
+  const parts = action.files.map(
+    (file) => `${file.path} (${CREW_CHANGE_LABELS[file.change].toLowerCase()})`,
+  );
+  return parts.join(', ');
 }
 
 export function crewEditByline(action: CrewEditAction): string {
@@ -91,7 +113,7 @@ export function crewEditByline(action: CrewEditAction): string {
 }
 
 export const CREW_EDIT_NOTE =
-  'Only you can answer this, never Ask Spark. What a Spark’s files say reaches its agents as your own standing instructions, so read the new text before you allow it.';
+  'What a Spark’s files say reaches its agents as your standing instructions. Read the new text before you allow it.';
 
 export const CREW_EDIT_CONFLICT = 'Changed since the card was shown';
 

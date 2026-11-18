@@ -14,7 +14,8 @@ import { DiffView } from './DiffView.tsx';
 import { MarkdownReview } from './MarkdownReview.tsx';
 import { ReviewFiles, type ReviewFile } from './ReviewFiles.tsx';
 
-const TEAMMATE_NOTE = 'Only you can answer this. Nothing changes until you do.';
+const TEAMMATE_NOTE = 'Nothing changes until you answer.';
+const DELETE_NOTE = 'This deletes the Spark, its files and folder. It can’t be undone.';
 
 export function SimilarNote({ similar }: { similar: readonly CrewSimilar[] }) {
   if (similar.length === 0) return null;
@@ -76,6 +77,7 @@ export function crewByline(action: SparkAction): string | null {
 
 export function crewNote(action: SparkAction): string | null {
   if (action.action === 'crew_edit') return CREW_EDIT_NOTE;
+  if (action.action === 'delete_teammate') return DELETE_NOTE;
   const teammate = action.action === 'create_teammate' || action.action === 'update_teammate';
   return teammate ? TEAMMATE_NOTE : null;
 }

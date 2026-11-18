@@ -15,15 +15,23 @@ import { crewSparks, sparkCandidates } from '../../crew/crew-view.ts';
 import { crewSparksDir } from '../../crew/folders.ts';
 import { similarTo } from '../../crew/similar.ts';
 import { activeConnection } from '../../persistence/setup.ts';
+import { sparkNameClash } from '../../crew/crew-drafts.ts';
+import { CREW_EDIT_REFUSALS, crewEditRefusal } from '../../crew/tool-offer.ts';
+import { workflowStore } from '../../crew-flows/workflow-store.ts';
 import { closeTeammateSessions } from '../../persistence/teammate-chats.ts';
-import { createTeammate, listTeammates, updateTeammate } from '../../persistence/teammates.ts';
+import {
+  createTeammate,
+  deleteTeammate,
+  listTeammates,
+  updateTeammate,
+} from '../../persistence/teammates.ts';
 import { listProjects } from '../../projects/projects.ts';
 import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
 import { matchTeammate } from '../tools/teammates-tool.ts';
-import { proposeAction } from './confirm.ts';
+import { proposeCrewAction } from './crew-propose.ts';
 import type { Performed } from './performed.ts';
 
-const CARD_NOTE = 'Always a card for the user; returns waiting_for_user, never retry.';
+const CARD_NOTE = 'Follows your mode; resend replaces your draft.';
 
 const fieldsInput = {
   role: teammateRoleSchema.optional(),
@@ -58,12 +66,27 @@ async function assertConnected(context: SparkToolContext, provider: string | nul
   throw new SparkToolError(`Connect ${parsed.data} before giving it to a Spark.`);
 }
 
+async function assertMayChange(context: SparkToolContext) {
+  if (context.scope.assistant) return;
+  const refused = await crewEditRefusal(context.deps.db, context.scope);
+  if (refused) throw new SparkToolError(CREW_EDIT_REFUSALS[refused]);
+}
+
+async function assertNameFree(context: SparkToolContext, name: string, teammateId?: string) {
+  const clash = await sparkNameClash(context.deps.db, {
+    workspaceId: context.scope.workspaceId,
+    conversationId: context.scope.conversationId ?? '',
+    name,
+    teammateId,
+  });
+  if (clash) throw new SparkToolError(clash);
+}
+
 async function create(context: SparkToolContext, args: Fields & { name: string }) {
+  await assertMayChange(context);
   await assertConnected(context, args.provider ?? null);
   const existing = await listTeammates(context.deps.db, context.scope.workspaceId);
-  if (existing.some((teammate) => teammate.name.toLowerCase() === args.name.toLowerCase())) {
-    throw new SparkToolError(`There is already a Spark named ${args.name}.`);
-  }
+  await assertNameFree(context, args.name);
   const action: SparkAction = {
     action: 'create_teammate',
     name: args.name,
@@ -81,7 +104,7 @@ async function create(context: SparkToolContext, args: Fields & { name: string }
       sparkCandidates(await crewSparks(crewSparksDir(), existing), null),
     ),
   };
-  return proposeAction(context, action, { alwaysAsk: true });
+  return proposeCrewAction(context, action);
 }
 
 type ActionOf<Name extends SparkAction['action']> = Extract<SparkAction, { action: Name }>;
@@ -137,6 +160,7 @@ async function update(
   context: SparkToolContext,
   args: Fields & { spark: string; name?: string | undefined },
 ) {
+  await assertMayChange(context);
   const { db } = context.deps;
   const { workspaceId } = context.scope;
   const current = matchTeammate(await listTeammates(db, workspaceId), args.spark);
@@ -147,6 +171,7 @@ async function update(
     changes.projectIds = projectIds;
   }
   if (Object.keys(changes).length === 0) throw new SparkToolError('Nothing would change.');
+  if (changes.name !== undefined) await assertNameFree(context, changes.name, current.id);
   await assertConnected(context, changes.provider ?? null);
   const names = new Map((await listProjects(db, workspaceId)).map((p) => [p.id, p.name]));
   const action: SparkAction = {
@@ -165,7 +190,7 @@ async function update(
     changed: Object.keys(changes),
     ...(changes.instructions === undefined ? {} : { instructionsBefore: current.instructions }),
   };
-  return proposeAction(context, action, { alwaysAsk: true });
+  return proposeCrewAction(context, action);
 }
 
 const CHANGEABLE = [
@@ -206,24 +231,70 @@ export async function performUpdateTeammate(
   };
 }
 
+async function assertNotInWorkflow(teammates: readonly Teammate[], id: string, name: string) {
+  const flows = await workflowStore().list(new Set(teammates.map((teammate) => teammate.id)));
+  const using = flows.filter((flow) =>
+    flow.stages.some((stage) => stage.some((step) => step.sparkId === id)),
+  );
+  if (using.length === 0) return;
+  const names = using.map((flow) => flow.name).join(', ');
+  throw new SparkToolError(
+    `${name} is a step in ${names}. Change or delete those workflows first.`,
+  );
+}
+
+async function remove(context: SparkToolContext, spark: string) {
+  await assertMayChange(context);
+  const { db } = context.deps;
+  const teammates = await listTeammates(db, context.scope.workspaceId);
+  const current = matchTeammate(teammates, spark);
+  await assertNotInWorkflow(teammates, current.id, current.name);
+  const action: SparkAction = {
+    action: 'delete_teammate',
+    teammateId: current.id,
+    name: current.name,
+    role: current.role,
+    face: current.face,
+  };
+  return proposeCrewAction(context, action);
+}
+
+export async function performDeleteTeammate(
+  context: SparkToolContext,
+  action: ActionOf<'delete_teammate'>,
+): Promise<Performed> {
+  const { db } = context.deps;
+  const { workspaceId } = context.scope;
+  await assertNotInWorkflow(await listTeammates(db, workspaceId), action.teammateId, action.name);
+  await closeTeammateSessions(db, workspaceId, action.teammateId);
+  await deleteTeammate(db, workspaceId, action.teammateId);
+  return {
+    message: `Deleted the ${action.name} Spark and its files.`,
+    url: null,
+    output: { id: action.teammateId },
+  };
+}
+
 export const createTeammateTool = sparkTool({
   name: 'spark_create_spark',
   title: 'Add a Spark (named teammate)',
   acts: true,
-  description: 'Propose a new Spark (named teammate). ' + CARD_NOTE,
+  description: 'Add a Spark (unique name). ' + CARD_NOTE,
   input: { name: teammateNameSchema, ...fieldsInput },
   run: (args, context) => create(context, args),
 });
 
 export const updateTeammateTool = sparkTool({
   name: 'spark_update_spark',
-  title: 'Change a Spark',
+  title: 'Change or delete a Spark',
   acts: true,
-  description: 'Propose changes to a Spark; only the fields you pass change. ' + CARD_NOTE,
+  description: 'Change a Spark (fields passed) or delete: true. ' + CARD_NOTE,
   input: {
     spark: z.string().trim().min(1).max(100),
     name: teammateNameSchema.optional(),
     ...fieldsInput,
+    delete: z.boolean().optional(),
   },
-  run: (args, context) => update(context, args),
+  run: ({ delete: deleting, ...args }, context) =>
+    deleting ? remove(context, args.spark) : update(context, args),
 });

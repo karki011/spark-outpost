@@ -83,6 +83,9 @@ function cardTitle(action: SparkAction): string {
     action.action === 'rules_edit' ||
     action.action === 'plugins_edit' ||
     action.action === 'crew_edit' ||
+    action.action === 'create_teammate' ||
+    action.action === 'update_teammate' ||
+    action.action === 'delete_teammate' ||
     action.action === 'link_repo' ||
     action.action === 'github_read' ||
     action.action === 'clone_repo'
@@ -278,6 +281,8 @@ export interface ProposeOptions {
   sendSubject?: string;
   confirmName?: string;
   declineName?: string;
+  observed?: readonly string[];
+  decide?: () => Promise<{ path: ActionPath; observed: readonly string[] }>;
 }
 
 export async function proposeAction(
@@ -299,9 +304,11 @@ export async function proposeAction(
       throw new SparkToolError(refusal);
     }
   }
-  const observed = (await run.scope.observations?.labels()) ?? [];
+  let observed = options.observed
+    ? [...options.observed]
+    : ((await run.scope.observations?.labels()) ?? []);
   const facts = await actionFacts(context.deps.db, run.runId, action.action);
-  const path = options.path
+  let path = options.path
     ? options.path
     : options.alwaysAsk
       ? 'confirm'
@@ -313,6 +320,13 @@ export async function proposeAction(
     run.scope.conversationId,
     action.action,
   );
+  let audit = options.audit;
+  if (options.decide) {
+    const decided = await options.decide();
+    path = decided.path;
+    observed = [...decided.observed];
+    if (observed.length > 0) audit = { ...audit, readBefore: observed };
+  }
   const card = await postCard(context.deps.db, run, action, {
     path,
     requested: facts.requested,
@@ -325,7 +339,7 @@ export async function proposeAction(
     auditAction(run, action, {
       outcome: 'waiting_for_user',
       approvalId: card.id,
-      ...options.audit,
+      ...audit,
     });
     return {
       outcome: 'waiting_for_user',
@@ -337,7 +351,7 @@ export async function proposeAction(
   auditAction(run, action, {
     outcome: 'performing',
     approvalId: card.id,
-    ...options.audit,
+    ...audit,
     ...(isCalendarAction(action.action) ||
     isAtlassianAction(action.action) ||
     isServiceNowAction(action.action)
