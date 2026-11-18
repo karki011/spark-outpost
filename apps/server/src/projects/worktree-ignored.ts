@@ -19,10 +19,19 @@ const REGENERABLE_DIRS: ReadonlySet<string> = new Set([
   'DerivedData',
   '.parcel-cache',
   '.svelte-kit',
+  '.vite',
+  '.mypy_cache',
+  '.ruff_cache',
+  '.wrangler',
+  '.build',
+  '.swiftpm',
+  'test-results',
+  'playwright-report',
   '.spark',
 ]);
 
-const REGENERABLE_FILES: ReadonlySet<string> = new Set(['.DS_Store']);
+const REGENERABLE_FILES: ReadonlySet<string> = new Set(['.DS_Store', '.eslintcache']);
+const REGENERABLE_SUFFIXES = ['.log', '.tsbuildinfo'];
 
 export function ignoredEntryMatters(entry: string): boolean {
   const isDir = entry.endsWith('/');
@@ -32,7 +41,8 @@ export function ignoredEntryMatters(entry: string): boolean {
   if (dirs.some((segment) => REGENERABLE_DIRS.has(segment))) return false;
   if (isDir) return true;
   const name = segments.at(-1)!;
-  return !REGENERABLE_FILES.has(name) && !name.endsWith('.log');
+  if (REGENERABLE_FILES.has(name)) return false;
+  return !REGENERABLE_SUFFIXES.some((suffix) => name.endsWith(suffix));
 }
 
 export async function ignoredFilesThatMatter(worktree: string): Promise<string[]> {

@@ -40,6 +40,6 @@ A new worktree starts from the latest `origin` default branch, unless your check
 
 If its lockfile differs from your checkout's, Spark installs dependencies there, saying so if that fails.
 
-Archiving, deleting or merging a chat removes its worktree, unless it holds an ignored file like `.env`, or a tab or server runs there.
+Archiving, deleting or merging a chat removes its worktree. It stays in `.spark/worktrees` while it holds an ignored file like `.env`, or a tab or server runs there.
 
 **Next:** [Keep files and keys away from agents](sparkignore.md)

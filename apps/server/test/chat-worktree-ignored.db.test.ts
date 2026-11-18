@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { appendFile, mkdir, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { insertChatWorktree, sweepableChatWorktrees } from '../src/persistence/chat-worktrees.ts';
@@ -168,6 +169,24 @@ describe('chat worktrees that something still runs in', () => {
     await t.db.query('DELETE FROM terminal_shells WHERE id = $1', [shell]);
     await sweep();
     expect(existsSync(chat.path)).toBe(false);
+  });
+
+  it('matches a shell recorded under the worktree path reached through a symlink', async () => {
+    const link = await mkdtemp(join(tmpdir(), 'spark-link-'));
+    const linked = join(link, 'repo');
+    await symlink(root, linked);
+    const chat = await chatWithWorktree();
+    await t.db.query('UPDATE chat_worktrees SET path = $2 WHERE id = $1', [
+      chat.id,
+      chat.path.replace(root, linked),
+    ]);
+    await openShellIn(chat.path);
+    await archive(chat.conversationId);
+
+    await sweep();
+
+    expect(existsSync(chat.path)).toBe(true);
+    await rm(link, { recursive: true, force: true });
   });
 
   it('leaves the worktree while an agent terminal runs inside it', async () => {

@@ -66,6 +66,9 @@ describe('which ignored files matter', () => {
     expect(ignoredEntryMatters('.spark/')).toBe(false);
     expect(ignoredEntryMatters('server.log')).toBe(false);
     expect(ignoredEntryMatters('docs/.DS_Store')).toBe(false);
+    expect(ignoredEntryMatters('tsconfig.tsbuildinfo')).toBe(false);
+    expect(ignoredEntryMatters('test-results/')).toBe(false);
+    expect(ignoredEntryMatters('.eslintcache')).toBe(false);
   });
 
   it('keeps secrets, local config, certificates and databases', () => {
