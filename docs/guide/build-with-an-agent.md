@@ -18,7 +18,9 @@ To change one Spark, open it and select **Ask an agent**.
 
 ## When it asks
 
-Changes follow the agent's mode: at once in Auto, Bypass permissions, Auto review and Full access; a card in Manual. It asks after the turn read a web page, ticket or other untrusted data, or when the message wasn't yours.
+Changes follow the agent's mode: at once in Auto, Bypass permissions, Auto review and Full access; a card in Manual.
+
+Auto and Auto review also ask after the turn read a web page, ticket or other untrusted data, or when the message wasn't yours.
 
 Spark and workflow names are unique, drafts included.
 

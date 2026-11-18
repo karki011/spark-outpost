@@ -66,6 +66,26 @@ describe('the card follows the agent’s mode unless the turn read untrusted dat
     expect((await getApproval(t.db, id!))!.payload.observed).toEqual(['web page (example.com)']);
   });
 
+  it('adds a Spark at once in Bypass permissions even after a web read', async () => {
+    await crew.setRun('bypassPermissions');
+    await readWeb();
+    const result = await call('spark_create_spark', { name: 'Wren' });
+    expect(result.facts.outcome).toBe('done');
+  });
+
+  it('refuses a Spark change from a child run, even in Bypass permissions', async () => {
+    await crew.setRun('bypassPermissions');
+    const parent = await startChat(t, 'Parent turn');
+    await t.db.query("UPDATE runs SET parent_run_id = $2, role = 'spark' WHERE id = $1", [
+      chat.runId,
+      parent.runId,
+    ]);
+    const result = await call('spark_update_spark', { spark: 'Scout', delete: true });
+    expect(result.isError).toBe(true);
+    expect(result.text).toContain('Only the chat’s own turn');
+    expect(await listTeammates(t.db, t.workspaceId)).toHaveLength(1);
+  });
+
   it.each(['assistant', 'workflow'])(
     'shows a card in Auto for a turn %s started',
     async (source) => {

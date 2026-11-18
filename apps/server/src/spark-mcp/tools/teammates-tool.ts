@@ -79,7 +79,7 @@ async function sparks(context: SparkToolContext, args: { spark?: string | undefi
           ).map((starter) => `${starter.name} · ${starter.role}`),
           ...(drafts.length > 0 ? { drafts, draftsNote: DRAFTS_NOTE } : {}),
         }),
-    note: 'Sparks are named teammates. Each has a home chat and supplies defaults and standing instructions to chats started with it (Talk to…). In any other chat, @Name in a message hands that one job to the Spark as a read-only subagent with its own context; mentionJobs counts those and spark_chat shows each reply (sparkReplies). Add, change or delete a Spark with spark_create_spark or spark_update_spark, and its files, skills and workflows with spark_crew_edit. Each follows your mode: done at once, or a card for the user (always a card after this turn read web pages, tickets or other untrusted data). Names are unique.',
+    note: 'Sparks are named teammates. Each has a home chat and supplies defaults and standing instructions to chats started with it (Talk to…). In any other chat, @Name in a message hands that one job to the Spark as a read-only subagent with its own context; mentionJobs counts those and spark_chat shows each reply (sparkReplies). Add, change or delete a Spark with spark_create_spark or spark_update_spark, and its files, skills and workflows with spark_crew_edit. Each follows your mode: done at once, or a card for the user (also a card after this turn read web pages, tickets or other untrusted data, except in Bypass permissions or Full access). Names are unique.',
   };
 }
 

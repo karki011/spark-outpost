@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { crewPath, untrustedReads } from './crew-path.ts';
 
 describe('crewPath', () => {
-  const clean = { modePath: 'perform' as const, userWrote: true, untrusted: [] };
+  const clean = { modePath: 'perform' as const, fullAccess: false, userWrote: true, untrusted: [] };
 
   it('follows the mode for a turn the user wrote with nothing untrusted read', () => {
     expect(crewPath(clean)).toBe('perform');
@@ -13,6 +13,11 @@ describe('crewPath', () => {
     expect(crewPath({ ...clean, untrusted: ['web page (example.com)'] })).toBe('confirm');
     expect(crewPath({ ...clean, userWrote: false })).toBe('confirm');
     expect(crewPath({ ...clean, untrusted: null })).toBe('confirm');
+  });
+
+  it('never asks in Bypass permissions or Full access', () => {
+    const risky = { ...clean, fullAccess: true, userWrote: false, untrusted: ['web page (a.com)'] };
+    expect(crewPath(risky)).toBe('perform');
   });
 
   it('does not count reading the crew or the docs', () => {

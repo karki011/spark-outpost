@@ -16,6 +16,7 @@ import { crewSparksDir } from '../../crew/folders.ts';
 import { similarTo } from '../../crew/similar.ts';
 import { activeConnection } from '../../persistence/setup.ts';
 import { sparkNameClash } from '../../crew/crew-drafts.ts';
+import { CREW_EDIT_REFUSALS, crewEditRefusal } from '../../crew/tool-offer.ts';
 import { workflowStore } from '../../crew-flows/workflow-store.ts';
 import { closeTeammateSessions } from '../../persistence/teammate-chats.ts';
 import {
@@ -65,6 +66,12 @@ async function assertConnected(context: SparkToolContext, provider: string | nul
   throw new SparkToolError(`Connect ${parsed.data} before giving it to a Spark.`);
 }
 
+async function assertMayChange(context: SparkToolContext) {
+  if (context.scope.assistant) return;
+  const refused = await crewEditRefusal(context.deps.db, context.scope);
+  if (refused) throw new SparkToolError(CREW_EDIT_REFUSALS[refused]);
+}
+
 async function assertNameFree(context: SparkToolContext, name: string, teammateId?: string) {
   const clash = await sparkNameClash(context.deps.db, {
     workspaceId: context.scope.workspaceId,
@@ -76,6 +83,7 @@ async function assertNameFree(context: SparkToolContext, name: string, teammateI
 }
 
 async function create(context: SparkToolContext, args: Fields & { name: string }) {
+  await assertMayChange(context);
   await assertConnected(context, args.provider ?? null);
   const existing = await listTeammates(context.deps.db, context.scope.workspaceId);
   await assertNameFree(context, args.name);
@@ -152,6 +160,7 @@ async function update(
   context: SparkToolContext,
   args: Fields & { spark: string; name?: string | undefined },
 ) {
+  await assertMayChange(context);
   const { db } = context.deps;
   const { workspaceId } = context.scope;
   const current = matchTeammate(await listTeammates(db, workspaceId), args.spark);
@@ -223,6 +232,7 @@ export async function performUpdateTeammate(
 }
 
 async function remove(context: SparkToolContext, spark: string) {
+  await assertMayChange(context);
   const { db } = context.deps;
   const teammates = await listTeammates(db, context.scope.workspaceId);
   const current = matchTeammate(teammates, spark);

@@ -17,11 +17,13 @@ export function untrustedReads(labels: readonly string[]): string[] {
 
 export interface CrewPathFacts {
   modePath: ActionPath;
+  fullAccess: boolean;
   userWrote: boolean;
   untrusted: readonly string[] | null;
 }
 
 export function crewPath(facts: CrewPathFacts): ActionPath {
+  if (facts.fullAccess) return 'perform';
   if (facts.untrusted === null || facts.untrusted.length > 0) return 'confirm';
   if (!facts.userWrote) return 'confirm';
   return facts.modePath;
@@ -45,7 +47,12 @@ export async function crewDecision(
   ]);
   const untrusted = labels === null ? null : untrustedReads(labels);
   return {
-    path: crewPath({ modePath: actionPath(facts), userWrote, untrusted }),
+    path: crewPath({
+      modePath: actionPath(facts),
+      fullAccess: facts.posture === 'full_access',
+      userWrote,
+      untrusted,
+    }),
     observed: untrusted ?? [],
   };
 }
