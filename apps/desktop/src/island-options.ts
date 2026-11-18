@@ -48,11 +48,13 @@ export interface TrayState {
   appName: string;
   companionOn: boolean;
   supported: boolean;
+  lockAvailable: boolean;
 }
 
 export interface TrayActions {
   openSpark: () => void;
   toggleCompanion: (on: boolean) => void;
+  lock: () => void;
   quit: () => void;
 }
 
@@ -71,10 +73,22 @@ export function islandToggle(
   ];
 }
 
+export function lockItem(state: TrayState, lock: () => void): MenuItemConstructorOptions[] {
+  return state.lockAvailable ? [{ label: 'Lock Spark Outpost', click: () => lock() }] : [];
+}
+
+export function dockTemplate(
+  state: TrayState,
+  actions: Pick<TrayActions, 'toggleCompanion' | 'lock'>,
+): MenuItemConstructorOptions[] {
+  return [...islandToggle(state, actions.toggleCompanion), ...lockItem(state, actions.lock)];
+}
+
 export function trayTemplate(state: TrayState, actions: TrayActions): MenuItemConstructorOptions[] {
   return [
     { label: `Open ${state.appName}`, click: actions.openSpark },
     ...islandToggle(state, actions.toggleCompanion),
+    ...lockItem(state, actions.lock),
     { type: 'separator' },
     { label: `Quit ${state.appName}`, click: actions.quit },
   ];

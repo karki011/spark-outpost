@@ -16,7 +16,13 @@ export interface AppLockStatus extends AppLockSettings {
   locked: boolean;
   hasCode: boolean;
   touchIdAvailable: boolean;
+  recoveryAvailable: boolean;
   retryAt: number | null;
+}
+
+export interface AppLockMeans {
+  touchId: boolean;
+  recovery: boolean;
 }
 
 export interface StoredCode {
@@ -132,6 +138,14 @@ export function unlockedState(state: AppLockState): AppLockState {
   return { ...state, locked: false, wrongCodes: 0, retryAt: null };
 }
 
+export function recoveredState(state: AppLockState): AppLockState {
+  return unlockedState({
+    ...state,
+    code: null,
+    settings: { ...state.settings, enabled: false },
+  });
+}
+
 export function codeRefused(state: AppLockState, now: number): boolean {
   return state.retryAt !== null && now < state.retryAt;
 }
@@ -160,16 +174,13 @@ export function watchesIdle(status: AppLockStatus): boolean {
   return status.enabled && status.hasCode && !status.locked;
 }
 
-export function statusOf(
-  state: AppLockState,
-  touchIdAvailable: boolean,
-  now: number,
-): AppLockStatus {
+export function statusOf(state: AppLockState, means: AppLockMeans, now: number): AppLockStatus {
   return {
     ...state.settings,
     locked: state.locked,
     hasCode: state.code !== null,
-    touchIdAvailable,
+    touchIdAvailable: means.touchId,
+    recoveryAvailable: means.recovery,
     retryAt: codeRefused(state, now) ? state.retryAt : null,
   };
 }

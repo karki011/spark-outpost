@@ -128,6 +128,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     unlockWithCode: (code: string) => ipcRenderer.invoke(IPC.lockUnlockCode, code),
     setCode: (input: unknown) => ipcRenderer.invoke(IPC.lockSetCode, input),
     set: (patch: unknown) => ipcRenderer.invoke(IPC.lockSet, patch),
+    recover: () => ipcRenderer.invoke(IPC.lockRecover),
   },
   sparkRules: {
     openFile: () => ipcRenderer.invoke(IPC.sparkRulesOpenFile),

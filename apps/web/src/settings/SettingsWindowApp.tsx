@@ -2,7 +2,9 @@ import { useCallback, useEffect, useLayoutEffect, useSyncExternalStore } from 'r
 import { FEEDBACK_SETTINGS_FOCUS } from '@spark-outpost/contracts';
 import { useFirstContent } from '../app/first-content.ts';
 import { useAppEvents } from '../app/live/use-app-events.ts';
+import { LockButton } from '../app-lock/LockButton.tsx';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
+import { LockIcon } from '../ui/icons.tsx';
 import { requestFeedback } from '../help/feedback-request.ts';
 import { ResetHost } from '../reset/ResetHost.tsx';
 import { DocsReachable } from '../ui/DocLink.tsx';
@@ -82,6 +84,11 @@ export function SettingsWindowApp() {
           section={section}
           onSection={open}
           onOpenChat={(id) => sparkDesktop()?.settingsWindow?.openChat(id)}
+          closeButton={
+            <LockButton className="icon-btn">
+              <LockIcon />
+            </LockButton>
+          }
         />
       </main>
       <ResetHost />

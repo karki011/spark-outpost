@@ -3,10 +3,10 @@ title: Mac privacy settings
 section: Mac app and providers
 type: how-to
 order: 416
-summary: Turn the anonymous heartbeat off, decide on Full Disk Access, answer the macOS keychain prompt, and lock Spark's windows when you step away.
+summary: Turn the anonymous heartbeat off, decide on Full Disk Access, and answer the macOS keychain prompt.
 ---
 
-You'll set the four privacy choices only the Mac app has. About 2 minutes.
+You'll set the three privacy choices only the Mac app has. About 2 minutes.
 
 ## Anonymous heartbeat
 
@@ -43,13 +43,4 @@ The first time Spark reads a key, macOS may ask whether Spark Outpost may use it
 
 Spark keeps working meanwhile; after 10 seconds it stops waiting, and a test message says it's waiting for the keychain.
 
-## Privacy screen
-
-1. Open **Settings → General → Privacy screen**.
-2. Turn on **Lock Spark when I’m away** and set a 6-digit code.
-
-Spark's windows stay covered until Touch ID or your code. **⇧⌘L** or the lock above the left bar's clock locks now.
-
-Work keeps running. Your Mac, paired devices and phone pushes are unchanged. The code is kept as a salted hash on this Mac, not in the keychain.
-
-**Next:** [Manage providers, models and Jev](providers-and-models.md)
+**Next:** [Lock Spark with the privacy screen](privacy-screen.md)

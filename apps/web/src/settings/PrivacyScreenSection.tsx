@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import type { AppLockIdleMinutes } from '../desktop/desktop-bridge.ts';
+import { CODE_RESET_NOTE, useCodeResetNote } from '../app-lock/lock-recovery.ts';
 import { updateAppLock, useAppLock } from '../app-lock/use-app-lock.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import type { DocTarget } from '../ui/DocLink.tsx';
@@ -19,7 +20,7 @@ const SHOWN_WHEN_ON = [LOCK_AFTER, LOCK_ON_SLEEP, TOUCH_ID, HIDE_NOTIFICATIONS];
 
 export const PRIVACY_SCREEN_ROWS = [LOCK_AWAY, ...SHOWN_WHEN_ON, CODE];
 
-const DOC: DocTarget = { page: 'mac-privacy', heading: 'privacy-screen' };
+const DOC: DocTarget = { page: 'privacy-screen' };
 
 const IDLE_CHOICES: { id: string; label: string; value: AppLockIdleMinutes }[] = [
   { id: '1', label: '1 min', value: 1 },
@@ -34,6 +35,7 @@ export function PrivacyScreenSection() {
   const status = useAppLock();
   const phone = useRemoteClient();
   const [sheet, setSheet] = useState<Sheet>(null);
+  const resetNote = useCodeResetNote();
   const awayId = useId();
   const sleepId = useId();
   const touchId = useId();
@@ -53,6 +55,11 @@ export function PrivacyScreenSection() {
         Covers Spark’s windows until you unlock. Work in progress keeps running. It doesn’t lock
         your Mac.
       </p>
+      {resetNote.shown && !status.hasCode && (
+        <p className="set-off-note" role="note">
+          {CODE_RESET_NOTE}
+        </p>
+      )}
       <SwitchRow
         id={awayId}
         label={LOCK_AWAY}
@@ -138,7 +145,10 @@ export function PrivacyScreenSection() {
       {sheet && (
         <LockCodeSheet
           change={sheet === 'change'}
-          onSaved={() => setSheet(null)}
+          onSaved={() => {
+            resetNote.dismiss();
+            setSheet(null);
+          }}
           onClose={() => setSheet(null)}
         />
       )}

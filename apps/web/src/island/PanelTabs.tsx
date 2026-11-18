@@ -1,9 +1,11 @@
+import { LockButton } from '../app-lock/LockButton.tsx';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import {
   AskIcon,
   ExternalLinkIcon,
   GearIcon,
   HomeIcon,
+  LockIcon,
   PlusIcon,
   SoundIcon,
 } from '../ui/icons.tsx';
@@ -76,6 +78,9 @@ export function IslandBar({ panel, counts, actions, onTab }: IslandBarProps) {
         </button>
       </div>
       <span className="isl-sp" />
+      <LockButton className="isl-ibtn" onlyWhenReady>
+        <LockIcon />
+      </LockButton>
       {actions.onSettings && (
         <button
           type="button"

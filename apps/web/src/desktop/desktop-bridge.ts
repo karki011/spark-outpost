@@ -76,6 +76,12 @@ export interface AppLockStatus {
   touchIdAvailable: boolean;
   hideNotifications: boolean;
   retryAt: number | null;
+  recoveryAvailable?: boolean;
+}
+
+export interface AppLockRecovery {
+  ok: boolean;
+  reason?: 'cancelled' | 'unavailable' | 'failed';
 }
 
 export type AppLockPatch = Partial<
@@ -91,6 +97,7 @@ export interface DesktopAppLock {
   unlockWithCode(code: string): Promise<{ ok: boolean; retryAt: number | null }>;
   setCode(input: { current?: string; next: string; enable?: boolean }): Promise<{ ok: boolean }>;
   set(patch: AppLockPatch): Promise<AppLockStatus>;
+  recover?(): Promise<AppLockRecovery>;
 }
 
 export interface BrowserSnapshot {

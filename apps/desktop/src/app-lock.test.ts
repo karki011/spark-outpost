@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createAppLock } from './app-lock.ts';
+import type { OwnerAuthOutcome } from './owner-auth.ts';
 import {
   DEFAULT_APP_LOCK_SETTINGS,
   RETRY_WAIT_MS,
@@ -30,6 +31,8 @@ function setup(
     saved: [] as AppLockRecord[],
     changes: [] as AppLockStatus[],
     prompts: 0,
+    owner: 'ok' as OwnerAuthOutcome | null,
+    ownerPrompts: 0,
     timers: [] as { run: () => void; ms: number; cancelled: boolean }[],
   };
   const lock = createAppLock(record, {
@@ -43,6 +46,11 @@ function setup(
     promptTouchId: async () => {
       scene.prompts += 1;
       if (scene.finger === 'cancel') throw new Error('cancelled');
+    },
+    ownerAuthAvailable: () => scene.owner !== null,
+    authenticateOwner: async () => {
+      scene.ownerPrompts += 1;
+      return scene.owner ?? 'unavailable';
     },
     now: () => scene.now,
     later: (run, ms) => {
@@ -273,6 +281,73 @@ describe('setting the code', () => {
     expect(await lock.setCode({ current: '111111', next: '424242' })).toEqual({ ok: false });
     lock.lockNow();
     expect((await lock.unlockWithCode('111111')).ok).toBe(true);
+  });
+});
+
+describe('forgot code', () => {
+  it('removes the code, turns the lock off and unlocks after macOS confirms the owner', async () => {
+    const { lock, scene } = setup();
+    expect(lock.status().recoveryAvailable).toBe(true);
+    expect(await lock.recover()).toEqual({ ok: true });
+    expect(scene.saved).toEqual([
+      { settings: { ...DEFAULT_APP_LOCK_SETTINGS, enabled: false }, code: null },
+    ]);
+    expect(scene.changes).toHaveLength(1);
+    expect(scene.changes[0]).toMatchObject({ locked: false, enabled: false, hasCode: false });
+    lock.lockNow();
+    expect(lock.status().locked).toBe(false);
+  });
+
+  it('stays locked with the code kept when the owner cancels or macOS fails', async () => {
+    const { lock, scene } = setup();
+    scene.owner = 'cancelled';
+    expect(await lock.recover()).toEqual({ ok: false, reason: 'cancelled' });
+    scene.owner = 'failed';
+    expect(await lock.recover()).toEqual({ ok: false, reason: 'failed' });
+    expect(scene.saved).toEqual([]);
+    expect(scene.changes).toEqual([]);
+    expect(lock.status()).toMatchObject({ locked: true, hasCode: true, enabled: true });
+    expect((await lock.unlockWithCode('111111')).ok).toBe(true);
+  });
+
+  it('is unavailable, with no prompt, when macOS owner authentication is missing', async () => {
+    const { lock, scene } = setup();
+    scene.owner = null;
+    expect(lock.status().recoveryAvailable).toBe(false);
+    expect(await lock.recover()).toEqual({ ok: false, reason: 'unavailable' });
+    expect(scene.ownerPrompts).toBe(0);
+    expect(lock.status().locked).toBe(true);
+  });
+
+  it('works during the wrong-code wait and ends it', async () => {
+    const { lock, scene } = setup();
+    for (let miss = 0; miss < 5; miss += 1) await lock.unlockWithCode('222222');
+    expect(lock.status().retryAt).not.toBeNull();
+    expect(await lock.recover()).toEqual({ ok: true });
+    expect(lock.status()).toMatchObject({ locked: false, retryAt: null });
+    expect(scene.timers[0]!.cancelled).toBe(true);
+  });
+
+  it('works while unlocked, so a new code needs no current one', async () => {
+    const { lock } = await opened();
+    expect(await lock.recover()).toEqual({ ok: true });
+    expect(lock.status()).toMatchObject({ locked: false, hasCode: false, enabled: false });
+    expect(await lock.setCode({ next: '424242', enable: true })).toEqual({ ok: true });
+  });
+
+  it('keeps the code and stays locked when the file cannot be written', async () => {
+    const { lock, scene } = setup();
+    scene.saveFails = true;
+    expect(await lock.recover()).toEqual({ ok: false, reason: 'failed' });
+    expect(lock.status()).toMatchObject({ locked: true, hasCode: true });
+  });
+
+  it('shows one macOS prompt for requests made at the same time', async () => {
+    const { lock, scene } = setup();
+    const results = await Promise.all([lock.recover(), lock.recover()]);
+    expect(results).toEqual([{ ok: true }, { ok: true }]);
+    expect(scene.ownerPrompts).toBe(1);
+    expect(scene.changes).toHaveLength(1);
   });
 });
 

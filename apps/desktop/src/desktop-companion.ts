@@ -31,7 +31,7 @@ import { heldNavigation } from './held-navigation.ts';
 import { startAttentionHost, type AttentionHost } from './attention-host.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { isSize } from './island-geometry.ts';
-import { islandToggle, trayTemplate } from './island-options.ts';
+import { dockTemplate, trayTemplate } from './island-options.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
 import { appLayout } from './layout.ts';
 import { menuBarItem, type MenuBarTray } from './menu-bar.ts';
@@ -123,13 +123,16 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       appName: options.appName,
       companionOn: status.enabled,
       supported: status.supported,
+      lockAvailable: appLockGate.available(),
     };
-    const toggleCompanion = (on: boolean) => companion.setEnabled(on);
-    menuBar.update(
-      status.menuBar,
-      trayTemplate(state, { openSpark: options.showSpark, toggleCompanion, quit: options.quit }),
-    );
-    app.dock?.setMenu(Menu.buildFromTemplate(islandToggle(state, toggleCompanion)));
+    const actions = {
+      openSpark: options.showSpark,
+      toggleCompanion: (on: boolean) => void companion.setEnabled(on),
+      lock: appLockGate.lockNow,
+      quit: options.quit,
+    };
+    menuBar.update(status.menuBar, trayTemplate(state, actions));
+    app.dock?.setMenu(Menu.buildFromTemplate(dockTemplate(state, actions)));
   };
 
   const save = async (settings: CompanionSettings) => {
@@ -190,6 +193,12 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     },
   });
   refreshMenus(companion.status());
+  let lockOffered = appLockGate.available();
+  const stopLockMenuWatch = appLockGate.onChange(() => {
+    if (lockOffered === appLockGate.available()) return;
+    lockOffered = appLockGate.available();
+    refreshMenus(companion.status());
+  });
 
   const sparkFocused = () =>
     BrowserWindow.getAllWindows().some(
@@ -424,6 +433,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       }
       stopFocusWatch();
       stopLockWatch();
+      stopLockMenuWatch();
       menuBar.dispose();
     },
   };

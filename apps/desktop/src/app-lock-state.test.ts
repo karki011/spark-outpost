@@ -10,6 +10,7 @@ import {
   parseAppLockPatch,
   parseAppLockRecord,
   patchedSettings,
+  recoveredState,
   RETRY_WAIT_MS,
   serializeAppLockRecord,
   startingState,
@@ -20,6 +21,7 @@ import {
   type AppLockState,
 } from './app-lock-state.ts';
 
+const NO_MEANS = { touchId: false, recovery: false };
 const code = { salt: 'ab'.repeat(16), hash: 'cd'.repeat(64) };
 
 function record(change: Partial<AppLockRecord['settings']> = {}, saved = true): AppLockRecord {
@@ -164,9 +166,9 @@ describe('locking', () => {
   });
 
   it('watches idle time only while it is on and open', () => {
-    expect(watchesIdle(statusOf(unlocked(), false, 0))).toBe(true);
-    expect(watchesIdle(statusOf(startingState(record()), false, 0))).toBe(false);
-    expect(watchesIdle(statusOf(unlocked({ enabled: false }), false, 0))).toBe(false);
+    expect(watchesIdle(statusOf(unlocked(), NO_MEANS, 0))).toBe(true);
+    expect(watchesIdle(statusOf(startingState(record()), NO_MEANS, 0))).toBe(false);
+    expect(watchesIdle(statusOf(unlocked({ enabled: false }), NO_MEANS, 0))).toBe(false);
   });
 });
 
@@ -200,15 +202,35 @@ describe('wrong codes', () => {
   });
 });
 
+describe('forgetting the code after macOS confirmed the owner', () => {
+  it('removes the code, turns the privacy screen off and unlocks', () => {
+    const paused = { ...startingState(record()), wrongCodes: 3, retryAt: 9_000 };
+    expect(recoveredState(paused)).toEqual({
+      settings: { ...DEFAULT_APP_LOCK_SETTINGS, enabled: false },
+      code: null,
+      locked: false,
+      wrongCodes: 0,
+      retryAt: null,
+    });
+  });
+
+  it('leaves nothing that could lock again', () => {
+    const recovered = recoveredState(unlocked());
+    expect(lockedState(recovered)).toBe(recovered);
+    expect(startingState(recovered).locked).toBe(false);
+  });
+});
+
 describe('the status sent to windows', () => {
   it('carries the settings and state, never the saved code', () => {
-    const status = statusOf(startingState(record()), true, 0);
+    const status = statusOf(startingState(record()), { touchId: true, recovery: true }, 0);
     expect(status).toEqual({
       ...DEFAULT_APP_LOCK_SETTINGS,
       enabled: true,
       locked: true,
       hasCode: true,
       touchIdAvailable: true,
+      recoveryAvailable: true,
       retryAt: null,
     });
     expect(JSON.stringify(status)).not.toContain(code.hash);
@@ -216,7 +238,7 @@ describe('the status sent to windows', () => {
 
   it('shows the retry time only while the wait lasts', () => {
     const paused = { ...startingState(record()), retryAt: 5_000 };
-    expect(statusOf(paused, false, 4_999).retryAt).toBe(5_000);
-    expect(statusOf(paused, false, 5_000).retryAt).toBeNull();
+    expect(statusOf(paused, NO_MEANS, 4_999).retryAt).toBe(5_000);
+    expect(statusOf(paused, NO_MEANS, 5_000).retryAt).toBeNull();
   });
 });

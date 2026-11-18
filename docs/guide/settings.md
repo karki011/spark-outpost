@@ -15,7 +15,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | **General**: profile        | **What should Spark call you?** and **Personality** (**Friendly**).                                                               | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
 | **Voice**                   | Mac app: push to talk, **Speech model**, **Shortcut**.                                                                            | [Voice](voice.md)                                       |
 | **General**: appearance     | **Automatic**, **Tint** (**Graphite**), **Increase contrast**. Terminals: [SF Mono](https://developer.apple.com/fonts/) or Menlo. | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
-| **General**: privacy screen | Mac app: **Lock Spark when I’m away** (off), **Code**.                                                                            | [Privacy](mac-privacy.md#privacy-screen)                |
+| **General**: privacy screen | Mac app: **Lock Spark when I’m away** (off), **Code**.                                                                            | [Privacy](privacy-screen.md)                            |
 
 ### Notifications
 

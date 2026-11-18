@@ -4,8 +4,9 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import type { AppLockStatus, DesktopAppLock } from '../desktop/desktop-bridge.ts';
 import { WarnIcon } from '../ui/icons.tsx';
 import { CodeBoxes } from './CodeBoxes.tsx';
-import { isFullCode } from './lock-code.ts';
 import { LockBlob } from './LockBlob.tsx';
+import { canRecover, useCodeRecovery } from './lock-recovery.ts';
+import { RECOVER_LINE, RECOVER_TITLE, RecoverStep } from './RecoverStep.tsx';
 import {
   useCodeUnlock,
   useTouchUnlock,
@@ -19,6 +20,13 @@ interface LockOverlayProps {
   lock: DesktopAppLock;
   status: AppLockStatus;
   opened: boolean;
+  onRecovered: () => void;
+}
+
+interface CodeEntryProps {
+  entry: CodeUnlock;
+  onUseTouch: (() => void) | null;
+  onForgot: (() => void) | null;
 }
 
 function TouchEntry({ touch, onUseCode }: { touch: TouchUnlock; onUseCode: () => void }) {
@@ -47,10 +55,10 @@ function TouchEntry({ touch, onUseCode }: { touch: TouchUnlock; onUseCode: () =>
   );
 }
 
-function CodeEntry({ entry, onUseTouch }: { entry: CodeUnlock; onUseTouch: (() => void) | null }) {
+function CodeEntry({ entry, onUseTouch, onForgot }: CodeEntryProps) {
   const ids = useId();
   const input = useRef<HTMLInputElement>(null);
-  const { code, busy, problem, misses, wait, waiting } = entry;
+  const { code, problem, misses, wait, waiting } = entry;
 
   useEffect(() => {
     if (!waiting) input.current?.focus();
@@ -87,25 +95,32 @@ function CodeEntry({ entry, onUseTouch }: { entry: CodeUnlock; onUseTouch: (() =
       <p id={`${ids}wait`} className="lock-note">
         {waiting ? `Try again in ${wait} s` : ''}
       </p>
-      <button type="submit" className="btn primary" disabled={!isFullCode(code) || busy || waiting}>
-        Unlock
-      </button>
       {onUseTouch && (
         <button type="button" className="lock-link" onClick={onUseTouch}>
           Use Touch ID
+        </button>
+      )}
+      {onForgot && (
+        <button type="button" className="lock-link" onClick={onForgot}>
+          Forgot code?
         </button>
       )}
     </form>
   );
 }
 
-export function LockOverlay({ lock, status, opened }: LockOverlayProps) {
+export function LockOverlay({ lock, status, opened, onRecovered }: LockOverlayProps) {
   const ids = useId();
   const canTouch = status.touchId && status.touchIdAvailable;
   const [wantsCode, setWantsCode] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const showCode = wantsCode || !canTouch;
   const touch = useTouchUnlock(lock, !showCode && !opened);
   const entry = useCodeUnlock(lock, status);
+  const recovery = useCodeRecovery(lock, {
+    onRecovered,
+    onCancelled: () => setResetting(false),
+  });
   return (
     <div
       className="lock-screen"
@@ -118,22 +133,28 @@ export function LockOverlay({ lock, status, opened }: LockOverlayProps) {
         misses={entry.misses}
         moment={{
           opened,
-          refusing: showCode && entry.refusing,
-          waiting: showCode && entry.waiting,
-          asking: !showCode && touch.busy,
-          digits: showCode ? entry.code.length : 0,
+          refusing: showCode && !resetting && entry.refusing,
+          waiting: showCode && !resetting && entry.waiting,
+          asking: resetting ? recovery.busy : !showCode && touch.busy,
+          digits: showCode && !resetting ? entry.code.length : 0,
         }}
       />
       <h1 id={`${ids}title`} className="lock-title">
-        Spark Outpost is locked
+        {resetting ? RECOVER_TITLE : 'Spark Outpost is locked'}
       </h1>
       <p id={`${ids}line`} className="lock-line">
-        Your chats keep running.
+        {resetting ? RECOVER_LINE : 'Your chats keep running.'}
       </p>
       <div className="lock-entry-slot" inert={opened}>
-        {showCode ? (
-          <CodeEntry entry={entry} onUseTouch={canTouch ? () => setWantsCode(false) : null} />
-        ) : (
+        {resetting && <RecoverStep recovery={recovery} onCancel={() => setResetting(false)} />}
+        {!resetting && showCode && (
+          <CodeEntry
+            entry={entry}
+            onUseTouch={canTouch ? () => setWantsCode(false) : null}
+            onForgot={canRecover(lock, status) ? () => setResetting(true) : null}
+          />
+        )}
+        {!resetting && !showCode && (
           <TouchEntry touch={touch} onUseCode={() => setWantsCode(true)} />
         )}
       </div>

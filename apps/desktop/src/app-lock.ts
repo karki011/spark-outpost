@@ -6,6 +6,7 @@ import {
   locksOnSleep,
   locksWhenIdle,
   parseAppLockPatch,
+  recoveredState,
   patchedSettings,
   startingState,
   statusOf,
@@ -16,12 +17,16 @@ import {
   type StoredCode,
 } from './app-lock-state.ts';
 
+import type { OwnerAuthOutcome } from './owner-auth.ts';
+
 export interface AppLockEffects {
   save(record: AppLockRecord): Promise<void>;
   hash(code: string): Promise<StoredCode>;
   matches(code: string, stored: StoredCode): Promise<boolean>;
   touchIdAvailable(): boolean;
   promptTouchId(): Promise<void>;
+  ownerAuthAvailable(): boolean;
+  authenticateOwner(): Promise<OwnerAuthOutcome>;
   now(): number;
   later(run: () => void, ms: number): () => void;
   changed(status: AppLockStatus): void;
@@ -33,6 +38,11 @@ export interface CodeUnlock {
   retryAt: number | null;
 }
 
+export interface Recovery {
+  ok: boolean;
+  reason?: Exclude<OwnerAuthOutcome, 'ok'>;
+}
+
 export interface AppLock {
   status(): AppLockStatus;
   lockNow(): void;
@@ -42,6 +52,7 @@ export interface AppLock {
   unlockWithCode(code: unknown): Promise<CodeUnlock>;
   setCode(input: unknown): Promise<{ ok: boolean }>;
   set(patch: unknown): Promise<AppLockStatus>;
+  recover(): Promise<Recovery>;
   dispose(): void;
 }
 
@@ -59,7 +70,14 @@ export function createAppLock(record: AppLockRecord, effects: AppLockEffects): A
   let turn: Promise<unknown> = Promise.resolve();
   let stopRetryNotice: (() => void) | null = null;
 
-  const status = () => statusOf(state, effects.touchIdAvailable(), effects.now());
+  let recovering: Promise<Recovery> | null = null;
+
+  const status = () =>
+    statusOf(
+      state,
+      { touchId: effects.touchIdAvailable(), recovery: effects.ownerAuthAvailable() },
+      effects.now(),
+    );
 
   const move = (next: AppLockState, reason: string | null = null) => {
     if (next === state) return;
@@ -86,6 +104,25 @@ export function createAppLock(record: AppLockRecord, effects: AppLockEffects): A
     const run = turn.then(work);
     turn = run.catch(() => undefined);
     return run;
+  };
+
+  const forget = async (): Promise<Recovery> => {
+    const next = recoveredState(state);
+    try {
+      await effects.save({ settings: next.settings, code: next.code });
+    } catch (error) {
+      effects.log(`Could not save the privacy screen settings: ${(error as Error).message}`);
+      return { ok: false, reason: 'failed' };
+    }
+    move(recoveredState(state), 'Privacy code removed after macOS confirmed the Mac owner.');
+    return { ok: true };
+  };
+
+  const recover = async (): Promise<Recovery> => {
+    if (!effects.ownerAuthAvailable()) return { ok: false, reason: 'unavailable' };
+    const outcome = await effects.authenticateOwner();
+    if (outcome !== 'ok') return { ok: false, reason: outcome };
+    return inTurn(forget);
   };
 
   const keep = async (change: Partial<AppLockRecord>): Promise<boolean> => {
@@ -153,6 +190,12 @@ export function createAppLock(record: AppLockRecord, effects: AppLockEffects): A
         if (patch && !state.locked) await keep({ settings: patchedSettings(state, patch) });
         return status();
       }),
+    recover: () => {
+      recovering ??= recover().finally(() => {
+        recovering = null;
+      });
+      return recovering;
+    },
     dispose: () => stopRetryNotice?.(),
   };
 }

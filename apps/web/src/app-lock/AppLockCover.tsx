@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { AppLockStatus } from '../desktop/desktop-bridge.ts';
 import { LOCK_HOST_CLASS, coverPage } from './lock-guard.ts';
 import { LockOverlay } from './LockOverlay.tsx';
+import { requestSettings } from '../settings/settings-request.ts';
 import { appLock } from './use-app-lock.ts';
 
 const OPENED_MS = 500;
@@ -44,10 +45,24 @@ export function AppLockCover({ status }: { status: AppLockStatus | null }) {
     };
   }, [locked, pending]);
 
+  const recovered = useRef(false);
+  useEffect(() => {
+    if (locked || !recovered.current) return;
+    recovered.current = false;
+    requestSettings('lock');
+  }, [locked]);
+
   if (!lock || !shown) return null;
   return createPortal(
     <div className={LOCK_HOST_CLASS}>
-      <LockOverlay lock={lock} status={shown} opened={opened} />
+      <LockOverlay
+        lock={lock}
+        status={shown}
+        opened={opened}
+        onRecovered={() => {
+          recovered.current = true;
+        }}
+      />
     </div>,
     document.body,
   );

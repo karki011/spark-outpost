@@ -4,7 +4,8 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { CodeBoxes } from '../app-lock/CodeBoxes.tsx';
 import { codeChangeProblem, isFullCode } from '../app-lock/lock-code.ts';
-import { appLock, refreshAppLock } from '../app-lock/use-app-lock.ts';
+import { canRecover, useCodeRecovery } from '../app-lock/lock-recovery.ts';
+import { appLock, refreshAppLock, useAppLock } from '../app-lock/use-app-lock.ts';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
 
 const FOCUSABLE = 'button:not(:disabled), input:not(:disabled)';
@@ -31,7 +32,19 @@ export function LockCodeSheet({ change, onSaved, onClose }: LockCodeSheetProps) 
   const [codes, setCodes] = useState<Record<Field, string>>({ current: '', next: '', again: '' });
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const fields = change ? FIELDS : FIELDS.slice(1);
+  const [recovered, setRecovered] = useState(false);
+  const asksCurrent = change && !recovered;
+  const fields = asksCurrent ? FIELDS : FIELDS.slice(1);
+  const lock = appLock();
+  const status = useAppLock();
+  const recovery = useCodeRecovery(lock, {
+    onRecovered: () => {
+      setRecovered(true);
+      setProblem(null);
+      inputs.current.next?.focus();
+    },
+  });
+  const offersRecovery = lock !== null && status !== null && canRecover(lock, status);
 
   useEffect(() => {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -61,7 +74,6 @@ export function LockCodeSheet({ change, onSaved, onClose }: LockCodeSheetProps) 
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const lock = appLock();
     if (busy || !lock) return;
     const mismatch = codeChangeProblem(codes.next, codes.again);
     if (mismatch) {
@@ -70,12 +82,14 @@ export function LockCodeSheet({ change, onSaved, onClose }: LockCodeSheetProps) 
     }
     setBusy(true);
     try {
-      const input = change
+      const input = asksCurrent
         ? { current: codes.current, next: codes.next }
         : { next: codes.next, enable: true };
       const result = await lock.setCode(input);
       if (!result.ok) {
-        setProblem(change ? 'That isn’t your current code.' : 'The code didn’t save. Try again.');
+        setProblem(
+          asksCurrent ? 'That isn’t your current code.' : 'The code didn’t save. Try again.',
+        );
         return;
       }
       await refreshAppLock();
@@ -104,7 +118,7 @@ export function LockCodeSheet({ change, onSaved, onClose }: LockCodeSheetProps) 
         onSubmit={(event) => void submit(event)}
       >
         <div className="fdlg-head">
-          <h3 id={`${ids}title`}>{change ? 'Change code' : 'Set a code'}</h3>
+          <h3 id={`${ids}title`}>{asksCurrent ? 'Change code' : 'Set a code'}</h3>
         </div>
         <p className="fdlg-lede" id={`${ids}lede`}>
           Six digits. You type it to unlock Spark Outpost, and it always works when Touch ID
@@ -113,7 +127,19 @@ export function LockCodeSheet({ change, onSaved, onClose }: LockCodeSheetProps) 
         <div className="lock-sheet-fields">
           {fields.map((field) => (
             <div key={field} className="lock-sheet-field">
-              <label htmlFor={`${ids}${field}`}>{LABELS[field]}</label>
+              <div className="lock-sheet-label">
+                <label htmlFor={`${ids}${field}`}>{LABELS[field]}</label>
+                {field === 'current' && offersRecovery && (
+                  <button
+                    type="button"
+                    className="lock-sheet-forgot"
+                    disabled={recovery.busy}
+                    onClick={recovery.run}
+                  >
+                    Forgot code?
+                  </button>
+                )}
+              </div>
               <CodeBoxes
                 id={`${ids}${field}`}
                 inputRef={(node) => {
@@ -128,14 +154,14 @@ export function LockCodeSheet({ change, onSaved, onClose }: LockCodeSheetProps) 
           ))}
         </div>
         <p id={`${ids}problem`} className="fdlg-error lock-sheet-problem" role="alert">
-          {problem}
+          {problem ?? recovery.problem}
         </p>
         <div className="fdlg-foot lock-sheet-foot">
           <button type="button" className="btn sm ghost" disabled={busy} onClick={onClose}>
             Cancel
           </button>
           <button type="submit" className="btn sm primary" disabled={busy || !ready}>
-            {change ? 'Change code' : 'Set code'}
+            {asksCurrent ? 'Change code' : 'Set code'}
           </button>
         </div>
       </form>

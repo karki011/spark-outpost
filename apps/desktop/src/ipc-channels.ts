@@ -86,6 +86,7 @@ export const IPC = {
   lockUnlockCode: 'lock:unlock-code',
   lockSetCode: 'lock:set-code',
   lockSet: 'lock:set',
+  lockRecover: 'lock:recover',
   sparkRulesOpenFile: 'spark-rules:open-file',
   browserState: 'browser:state',
   browserPlace: 'browser:place',
