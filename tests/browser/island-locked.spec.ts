@@ -18,7 +18,6 @@ interface LockedWindow {
 async function openLockableIsland(page: Page, locked: boolean) {
   await fakeHomeDesktop(page, 'light', false);
   await page.addInitScript((locked) => {
-    const desktop = (window as unknown as { sparkDesktop: Record<string, unknown> }).sparkDesktop;
     const listeners = new Set<(status: unknown) => void>();
     const reports: unknown[] = [];
     const shows: unknown[] = [];
@@ -42,22 +41,40 @@ async function openLockableIsland(page: Page, locked: boolean) {
         listeners.forEach((listener) => listener({ ...status }));
       },
     });
-    desktop.lock = {
-      status: async () => ({ ...status }),
-      onChange: (listener: (status: unknown) => void) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
+    const install = (desktop: Record<string, unknown>) => {
+      desktop.lock = {
+        status: async () => ({ ...status }),
+        onChange: (listener: (status: unknown) => void) => {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+        lockNow: async () => undefined,
+      };
+      desktop.attention = { report: (report: unknown) => reports.push(report) };
+      desktop.meetingAlert = {
+        show: (payload: unknown) => shows.push(payload),
+        hide: () => undefined,
+        onAction: () => () => undefined,
+        presence: async () => ({ idleSeconds: 0, locked: false, asleep: false }),
+        autoJoined: () => undefined,
+      };
+    };
+    const bridge = window as unknown as { sparkDesktop?: Record<string, unknown> };
+    if (bridge.sparkDesktop) {
+      install(bridge.sparkDesktop);
+      return;
+    }
+    Object.defineProperty(window, 'sparkDesktop', {
+      configurable: true,
+      set(desktop: Record<string, unknown>) {
+        Object.defineProperty(window, 'sparkDesktop', {
+          configurable: true,
+          writable: true,
+          value: desktop,
+        });
+        install(desktop);
       },
-      lockNow: async () => undefined,
-    };
-    desktop.attention = { report: (report: unknown) => reports.push(report) };
-    desktop.meetingAlert = {
-      show: (payload: unknown) => shows.push(payload),
-      hide: () => undefined,
-      onAction: () => () => undefined,
-      presence: async () => ({ idleSeconds: 0, locked: false, asleep: false }),
-      autoJoined: () => undefined,
-    };
+    });
   }, locked);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/island');

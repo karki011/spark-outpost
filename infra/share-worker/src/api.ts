@@ -106,6 +106,7 @@ async function storeShare(
   html: Uint8Array,
   now: number,
 ): Promise<ShareRecord | 'conflict'> {
+  if (await isRetired(env, record.id)) return 'conflict';
   if (await putNewShare(env, record, html)) {
     if (!(await isRetired(env, record.id))) return record;
     await discardShare(env, record.id);

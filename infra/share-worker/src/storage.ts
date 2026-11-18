@@ -144,8 +144,14 @@ export async function findShare(env: ShareEnv, id: string, now: number) {
   return liveRecord(env, id, await env.SHARES.head(shareKey(id)), now);
 }
 
+export async function findViewable(env: ShareEnv, id: string, now: number) {
+  const [retired, object] = await Promise.all([isRetired(env, id), env.SHARES.head(shareKey(id))]);
+  return retired ? null : liveRecord(env, id, object, now);
+}
+
 export async function readShare(env: ShareEnv, id: string, now: number): Promise<string | null> {
-  const object = await env.SHARES.get(shareKey(id));
+  const [retired, object] = await Promise.all([isRetired(env, id), env.SHARES.get(shareKey(id))]);
+  if (retired) return null;
   const record = await liveRecord(env, id, object, now);
   if (!object || !record) return null;
   return object.text();

@@ -196,6 +196,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
     const refused = answers.find((answer) => answer.status === 409)!;
     expect(made.body.passcode).toMatch(PASSCODE);
     expect(refused.body.share).toEqual(made.body.share);
+    expect(refused.body).not.toHaveProperty('passcode');
     expect(JSON.stringify(refused.body)).not.toContain(made.body.passcode);
     expect(s.fake.posts).toHaveLength(1);
   });

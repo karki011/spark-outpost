@@ -149,6 +149,17 @@ describe('content', () => {
 
     expect((await call(fake, src)).status).toBe(404);
   });
+
+  it('serves nothing from an id that has been retired, even if a page sits under it', async () => {
+    const fake = fakeEnv();
+    const { id } = await create(fake);
+    const src = frameSrc((await shell(fake, id)).html);
+    await fake.bucket.put(`gone/${id}`, '');
+
+    expect((await call(fake, `/a/${id}`)).status).toBe(404);
+    expect((await call(fake, src, {}, START + 1000)).status).toBe(404);
+    expect(fake.bucket.objects.has(`shares/${id}`)).toBe(true);
+  });
 });
 
 describe('report', () => {

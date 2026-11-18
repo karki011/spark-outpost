@@ -81,25 +81,29 @@ describe('a pending share the sweep and its own create both reach', { timeout: 3
     const slow = held('POST', 'after');
     const creating = s.client(s.service({ fetch: slow.fetch })).send('post', sharePath(id), BODY);
     const answered = creating.then((response) => response);
-    await slow.reached;
-    const shareId = s.fake.posts[0]!.id;
-    expect(s.fake.shares.has(shareId)).toBe(true);
+    try {
+      await slow.reached;
+      const shareId = s.fake.posts[0]!.id;
+      expect(s.fake.shares.has(shareId)).toBe(true);
 
-    await s.makePendingStale();
-    await s.sweep();
-    expect(await s.states()).toEqual([]);
-    expect(s.fake.shares.size).toBe(0);
-    slow.release();
+      await s.makePendingStale();
+      await s.sweep();
+      expect(await s.states()).toEqual([]);
+      expect(s.fake.shares.size).toBe(0);
+      slow.release();
 
-    const response = await answered;
-    expect(response.status).toBe(409);
-    expect(response.body.error).toMatch(/could not be saved/);
-    expect(response.body.share).toBeUndefined();
-    expect(await s.states()).toEqual([]);
-    expect(s.fake.shares.size).toBe(0);
-    expect(await s.secrets.get(shareSecret(shareId))).toBeNull();
-    const status = await s.client().get(sharePath(id)).expect(200);
-    expect(status.body.share).toBeNull();
+      const response = await answered;
+      expect(response.status).toBe(409);
+      expect(response.body.error).toMatch(/could not be saved/);
+      expect(response.body.share).toBeUndefined();
+      expect(await s.states()).toEqual([]);
+      expect(s.fake.shares.size).toBe(0);
+      expect(await s.secrets.get(shareSecret(shareId))).toBeNull();
+      const status = await s.client().get(sharePath(id)).expect(200);
+      expect(status.body.share).toBeNull();
+    } finally {
+      slow.release();
+    }
   });
 
   it('holds a finishing create back until the sweep has removed the page', async () => {
@@ -107,24 +111,28 @@ describe('a pending share the sweep and its own create both reach', { timeout: 3
     await s.makePendingStale();
     const slow = held('DELETE', 'before');
     const sweeping = s.sweep(s.service({ fetch: slow.fetch }));
-    await slow.reached;
+    try {
+      await slow.reached;
 
-    const finishing = s.t.db.query(
-      "UPDATE artifact_page_shares SET state = 'live' WHERE share_id = $1 AND state = 'pending'",
-      [shareId],
-    );
-    const early = await Promise.race([
-      finishing.then(() => 'finished'),
-      new Promise((resolve) => setTimeout(() => resolve('waiting'), 300)),
-    ]);
-    expect(early).toBe('waiting');
-    slow.release();
-    await sweeping;
+      const finishing = s.t.db.query(
+        "UPDATE artifact_page_shares SET state = 'live' WHERE share_id = $1 AND state = 'pending'",
+        [shareId],
+      );
+      const early = await Promise.race([
+        finishing.then(() => 'finished'),
+        new Promise((resolve) => setTimeout(() => resolve('waiting'), 300)),
+      ]);
+      expect(early).toBe('waiting');
+      slow.release();
+      await sweeping;
 
-    expect((await finishing).rowCount).toBe(0);
-    expect(await s.states()).toEqual([]);
-    expect(s.fake.shares.size).toBe(0);
-    expect(await s.secrets.get(shareSecret(shareId))).toBeNull();
+      expect((await finishing).rowCount).toBe(0);
+      expect(await s.states()).toEqual([]);
+      expect(s.fake.shares.size).toBe(0);
+      expect(await s.secrets.get(shareSecret(shareId))).toBeNull();
+    } finally {
+      slow.release();
+    }
   });
 
   it('refuses an upload that reaches the service after the sweep removed its id', async () => {
@@ -134,15 +142,19 @@ describe('a pending share the sweep and its own create both reach', { timeout: 3
       .client(s.service({ fetch: slow.fetch }))
       .send('post', sharePath(id), BODY)
       .then((response) => response);
-    await slow.reached;
-    await s.makePendingStale();
-    await s.sweep();
-    expect(s.fake.deletes).toHaveLength(1);
-    slow.release();
+    try {
+      await slow.reached;
+      await s.makePendingStale();
+      await s.sweep();
+      expect(s.fake.deletes).toHaveLength(1);
+      slow.release();
 
-    expect((await answered).status).toBe(502);
-    expect(s.fake.shares.size).toBe(0);
-    expect(await s.states()).toEqual([]);
+      expect((await answered).status).toBe(502);
+      expect(s.fake.shares.size).toBe(0);
+      expect(await s.states()).toEqual([]);
+    } finally {
+      slow.release();
+    }
   });
 });
 

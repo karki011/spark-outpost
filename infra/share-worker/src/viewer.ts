@@ -12,7 +12,7 @@ import {
   unavailablePage,
 } from './pages.ts';
 import { contentResponse, pageResponse } from './responses.ts';
-import { findShare, putReport, readShare, type ShareRecord } from './storage.ts';
+import { findViewable, putReport, readShare, type ShareRecord } from './storage.ts';
 import { frameToken, hasUnlockCookie, unlockCookie, validFrameToken } from './tokens.ts';
 
 const MIN_SIGNING_KEY_LENGTH = 32;
@@ -49,7 +49,7 @@ async function codeMatches(record: ShareRecord, code: string): Promise<boolean> 
 export async function showShell(request: Request, env: ShareEnv, id: string, now: number) {
   const key = signingKey(env);
   if (!key) return unavailable();
-  const record = await findShare(env, id, now);
+  const record = await findViewable(env, id, now);
   if (!record) return notFound();
   if (record.passcode && !(await hasUnlockCookie(key, id, request.headers.get('cookie'), now))) {
     const { lockedUntil } = await checkAttempts(env.COUNTERS, id, now);
@@ -63,7 +63,7 @@ export async function showShell(request: Request, env: ShareEnv, id: string, now
 export async function unlock(request: Request, env: ShareEnv, id: string, now: number) {
   const key = signingKey(env);
   if (!key) return unavailable();
-  const record = await findShare(env, id, now);
+  const record = await findViewable(env, id, now);
   if (!record?.passcode) return notFound();
   const form = await readForm(request, FORM_MAX_BYTES);
   if (!form) return pageResponse(400, badRequestPage());
@@ -103,7 +103,7 @@ export async function report(request: Request, env: ShareEnv, id: string, now: n
     HOUR_MS,
   );
   if (!allowed) return pageResponse(429, tooManyReportsPage());
-  const record = await findShare(env, id, now);
+  const record = await findViewable(env, id, now);
   if (!record) return notFound();
   await putReport(env, id, reason, now);
   return pageResponse(200, thanksPage(id, record.theme));

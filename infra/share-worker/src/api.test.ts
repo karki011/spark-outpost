@@ -142,17 +142,32 @@ describe('POST /v1/shares', () => {
   it('takes back a page stored while its id was being retired', async () => {
     const fake = fakeEnv();
     const head = fake.bucket.head.bind(fake.bucket);
-    let retired = false;
+    let checks = 0;
     fake.bucket.head = async (key) => {
-      if (key === `gone/${VALID_CREATE.id}` && !retired) {
-        retired = true;
-        await fake.bucket.put(key, '');
+      if (key === `gone/${VALID_CREATE.id}`) {
+        checks += 1;
+        if (checks === 2) await fake.bucket.put(key, '');
       }
       return head(key);
     };
 
     expect((await postJson(fake, VALID_CREATE)).status).toBe(409);
+    expect(checks).toBe(2);
     expect(fake.bucket.objects.has(`shares/${VALID_CREATE.id}`)).toBe(false);
+  });
+
+  it('refuses a retired id before writing anything under it', async () => {
+    const fake = fakeEnv();
+    await fake.bucket.put(`gone/${VALID_CREATE.id}`, '');
+    const put = fake.bucket.put.bind(fake.bucket);
+    const written: string[] = [];
+    fake.bucket.put = async (key, value, options) => {
+      written.push(key);
+      return put(key, value, options);
+    };
+
+    expect((await postJson(fake, VALID_CREATE)).status).toBe(409);
+    expect(written).toEqual([]);
   });
 
   it.each([
