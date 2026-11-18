@@ -3,6 +3,7 @@ import { calendarOffer, meetingsOffer } from './tools/calendar/offered.ts';
 import { macRunRefusal, type MacRefusedRun } from '../mac-control/offered.ts';
 import { rulesRunRefusal, type RulesRefusedRun } from './actions/rules-edit-session.ts';
 import { CREW_HOW_TO, crewReadRefusal } from '../crew/tool-offer.ts';
+import { postGrant } from '../github-inbox/review/post.ts';
 import { listProjects } from '../projects/projects.ts';
 import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { gitHubReachability } from '../ship/github/access.ts';
@@ -46,6 +47,7 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   plugins_edit: true,
   crew_read: true,
   crew_edit: true,
+  github_review_post: true,
 };
 
 async function chatHasProject(deps: SparkToolDeps, scope: SparkScope): Promise<boolean> {
@@ -123,6 +125,7 @@ export async function sparkAvailability(
     rulesRunRefusal(deps.db, scope, 'crew'),
     crewReadRefusal(deps.db, scope),
   ]);
+  const reviewPost = scope.assistant ? null : await postGrant(deps.db, scope.runId);
   const gitHub = await gitHubReach(deps, scope);
   const chat = scope.assistant !== true;
   const macHowTo = macRefused ? MAC_HOW_TO[macRefused] : undefined;
@@ -150,6 +153,7 @@ export async function sparkAvailability(
     plugins_edit: pluginsRefused === null,
     crew_read: crewRefused === null,
     crew_edit: crewEditRefused === null,
+    github_review_post: reviewPost?.grant.mayPost === true,
     ...outposts,
     howTo: {
       ...(calendar.howTo.read ? { calendar_read: calendar.howTo.read } : {}),
@@ -185,6 +189,7 @@ const HOW_TO_GET: Record<
     | 'plugins_edit'
     | 'crew_read'
     | 'crew_edit'
+    | 'github_review_post'
   >,
   string
 > = {

@@ -15,7 +15,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | **General**: profile        | **What should Spark call you?** and **Personality** (**Friendly**).                                                               | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
 | **Voice**                   | Mac app: push to talk, **Speech model**, **Shortcut**.                                                                            | [Voice](voice.md)                                       |
 | **General**: appearance     | **Automatic**, **Tint** (**Graphite**), **Increase contrast**. Terminals: [SF Mono](https://developer.apple.com/fonts/) or Menlo. | [Set up](getting-started.md#meet-spark-and-pick-a-look) |
-| **General**: privacy screen | Mac app: **Lock Spark when I’m away** (off), **Code**.                                                                            | [Privacy](privacy-screen.md)                            |
+| **General**: privacy screen | Mac: **Lock Spark when I’m away** (off), **Code**.                                                                                | [Privacy](privacy-screen.md)                            |
 
 ### Notifications
 
@@ -77,7 +77,7 @@ On for new profiles; existing choices stay. With Spark’s mod, Claude [Terminal
 
 Pushes to other branches, force pushes, protected files and writes outside the project are flagged, not stopped. Not for Codex.
 
-**Pull requests**:
+**GitHub**, with [auto-review](github-page.md#review-with-a-spark-or-workflow):
 
 | Row                                         | Default              | More                                                        |
 | ------------------------------------------- | -------------------- | ----------------------------------------------------------- |

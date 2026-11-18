@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { APP_LOGIN, fakeGitHubApp, type FakeGitHubApp } from './fake-github-app.ts';
+import { inboxSearchAnswer, reviewPostAnswer, threadReplyAnswer } from './fake-github-inbox.ts';
 import {
   listPullsAnswer,
   pullJson,
@@ -25,8 +26,11 @@ export interface FakePull {
   merged?: boolean;
   created_at?: string;
   reviews?: {
+    id?: number;
     user: { login: string };
     state: string;
+    body?: string;
+    commit_id?: string;
     submitted_at?: string;
     html_url?: string;
   }[];
@@ -40,7 +44,13 @@ export interface FakePull {
   mergeable_state?: string;
   additions?: number;
   deletions?: number;
-  files?: { filename: string; status: string; additions: number; deletions: number }[];
+  files?: {
+    filename: string;
+    status: string;
+    additions: number;
+    deletions: number;
+    patch?: string;
+  }[];
   reviewComments?: {
     id?: number;
     path: string;
@@ -52,6 +62,8 @@ export interface FakePull {
     html_url?: string;
   }[];
   resolvedComments?: number[];
+  requestedReviewers?: string[];
+  reviewDecision?: string;
   issueComments?: {
     id?: number;
     user: { login: string };
@@ -74,6 +86,7 @@ export interface FakeGitHub {
   userRepos: string[];
   app: FakeGitHubApp;
   requests: { method: string; path: string; via: FakePull['via'] | null }[];
+  searchFailure: { status: number; message: string } | null;
   handle(req: IncomingMessage, res: ServerResponse, path: string): Promise<void>;
 }
 
@@ -111,6 +124,7 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
 }
 
 const REPO = /^\/repos\/([^/]+)\/([^/]+)(\/pulls(?:\/(\d+))?)?(\/reviews)?$/;
+const REPLY = /^\/repos\/([^/]+)\/([^/]+)\/pulls\/(\d+)\/comments\/(\d+)\/replies$/;
 
 export function fakeGitHub(): FakeGitHub {
   const pulls: FakePull[] = [];
@@ -155,6 +169,10 @@ export function fakeGitHub(): FakeGitHub {
       return send(res, answer.status, answer.body);
     }
     const body = await readJson(req);
+    if (req.method === 'POST' && number && reviews) {
+      const answer = reviewPostAnswer(pulls, owner, repo, Number(number), who.login, body);
+      return send(res, answer.status, answer.body);
+    }
     if (req.method === 'PATCH' && number) {
       const pull = pulls.find((entry) => entry.number === Number(number) && entry.repo === repo);
       if (!pull) return send(res, 404, { message: 'Not Found' });
@@ -184,11 +202,12 @@ export function fakeGitHub(): FakeGitHub {
     send(res, 201, created);
   }
 
-  return {
+  const fake: FakeGitHub = {
     pulls,
     userRepos,
     app,
     requests,
+    searchFailure: null,
     async handle(req, res, path) {
       const url = new URL(path, 'http://fake');
       const signIn = await app.login(req, url.pathname);
@@ -218,7 +237,21 @@ export function fakeGitHub(): FakeGitHub {
         req.method === 'GET' ? pullReadAnswer(pulls, url.pathname, url.searchParams) : null;
       if (read) return send(res, read.status, read.body);
       if (req.method === 'POST' && url.pathname === '/graphql') {
-        return send(res, 200, resolvedThreadsAnswer(pulls, await readJson(req)));
+        const body = await readJson(req);
+        const search = inboxSearchAnswer(pulls, body, who.login);
+        if (search && fake.searchFailure) {
+          return send(res, fake.searchFailure.status, { message: fake.searchFailure.message });
+        }
+        return send(res, 200, search ?? resolvedThreadsAnswer(pulls, body));
+      }
+      const reply = REPLY.exec(url.pathname);
+      if (req.method === 'POST' && reply) {
+        const [, owner, repo, number, commentId] = reply as unknown as string[];
+        const answer = threadReplyAnswer(pulls, owner!, repo!, Number(number), Number(commentId), {
+          login: who.login,
+          body: await readJson(req),
+        });
+        return send(res, answer.status, answer.body);
       }
       const match = REPO.exec(url.pathname);
       if (!match) return send(res, 404, { message: 'Not Found' });
@@ -226,4 +259,5 @@ export function fakeGitHub(): FakeGitHub {
       return pullsAnswer(req, res, who, match, url.searchParams);
     },
   };
+  return fake;
 }

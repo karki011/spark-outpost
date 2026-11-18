@@ -28,6 +28,7 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   plugins_edit: true,
   crew_read: true,
   crew_edit: true,
+  github_review_post: false,
 };
 
 export const SESSION_CASES = {

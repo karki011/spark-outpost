@@ -16,7 +16,7 @@ You'll let Spark handle checks and reviews on a chat's PRs. About 2 minutes.
 3. When checks fail, feedback arrives or the PR falls behind, Spark messages the chat once idle.
 4. The agent fixes or pushes back, merges the base if needed and pushes; Spark replies. Read its summary.
 
-To approve each push, turn on **Ask before pushing and replying** in **Settings → Pull requests**.
+To approve each push, turn on **Ask before pushing and replying** in **Settings → GitHub**.
 
 ![The Address PR feedback? card with the push and a reply checked](images/pr-follow-up-card-light.png)
 
@@ -45,7 +45,7 @@ On your Mac, add bot logins (`coderabbitai[bot]`) to **Review bots to act on**; 
 
 ## Turn it off
 
-In **Settings → Pull requests**, turn off **Follow up on pull requests**, or only **Fix failing checks**, **Handle review comments** or **Reply on GitHub threads**.
+In **Settings → GitHub**, turn off **Follow up on pull requests**, or only **Fix failing checks**, **Handle review comments** or **Reply on GitHub threads**.
 
 While it's off or asks first, a new PR offers **Turn on**.
 

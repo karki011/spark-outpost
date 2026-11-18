@@ -1,0 +1,98 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+:root{--bg:#14170f;--rail:#0f120b;--line:#262b1e;--text:#e9ecdf;--muted:#a3a895;--faint:#757b69;--accent:#c7d96b;--accent-ink:#1a1f0e;--bad:#ef8a7a;--ok:#8fd19e}
+*{box-sizing:border-box}body{margin:0;padding:28px;background:#0b0d08;font:13px/1.5 -apple-system,"SF Pro Text",system-ui,sans-serif;color:var(--text);width:1280px}
+.cap{color:var(--muted);font-size:12px;font-weight:600;margin:0 0 8px}
+.win{display:grid;grid-template-columns:250px 1fr;background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0 0 30px}
+.top{grid-column:1/3;padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.top h2{font-size:15px;margin:0;font-weight:650}.top p{margin:0;color:var(--muted);font-size:12.5px}
+.top .sp{flex:1}.top .x{color:var(--faint);font-size:15px;margin-left:8px}
+.files{border-right:1px solid var(--line);background:var(--rail);padding:12px 8px}
+.files p{margin:0;padding:6px 10px;border-radius:7px;color:var(--muted);display:flex;gap:8px;font-size:12.5px}
+.files p.on{background:#222818;color:var(--text)}
+.files p span{margin-left:auto;font-size:11.5px}.files .a{color:var(--ok)}.files .d{color:var(--bad)}
+.pane{min-width:0}
+.bar{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--line)}
+.bar code{font:12px ui-monospace,Menlo,monospace;color:var(--muted)}
+.bar .sp{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg span{height:26px;padding:0 12px;display:inline-flex;align-items:center;color:var(--muted);border-left:1px solid var(--line);font-size:12.5px}
+.seg span:first-child{border-left:0}.seg span.on{background:#2a311f;color:var(--text);font-weight:600}
+.btn{height:28px;padding:0 12px;border-radius:9px;border:1px solid var(--line);color:var(--text);font-size:12.5px;display:inline-flex;align-items:center}
+.sw{width:34px;height:20px;border-radius:10px;background:#333a29;position:relative;display:inline-block}
+.sw:after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#aab09c}
+.lbl{color:var(--muted);font-size:12.5px;display:inline-flex;gap:8px;align-items:center}
+pre{margin:0;padding:12px 0;font:12px/1.65 ui-monospace,Menlo,monospace;color:#c9cdbd}
+pre div{padding:0 18px;white-space:pre}
+pre .n{display:inline-block;width:34px;color:var(--faint)}
+pre .add{background:rgba(143,209,158,.10)}pre .del{background:rgba(239,138,122,.10)}
+pre .add .s{color:var(--ok)}pre .del .s{color:var(--bad)}
+pre .hunk{color:var(--faint);background:#10130c}
+.md{padding:20px 28px 24px;max-width:760px}
+.md h1{font-size:20px;margin:0 0 8px}.md h2{font-size:15px;margin:18px 0 6px}
+.md p{margin:0 0 10px;color:#d5d9ca}.md ul{margin:0 0 10px;padding-left:18px;color:#d5d9ca}
+.md code{font:12px ui-monospace,Menlo,monospace;background:#0f120b;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+.md table{border-collapse:collapse;margin:0 0 10px}.md td,.md th{border:1px solid var(--line);padding:5px 10px;text-align:left}
+.md .chg{border-left:3px solid var(--ok);padding-left:12px;margin-left:-15px}
+.html{margin:18px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#1b1b1b;padding:22px 26px;font-family:Georgia,serif}
+.html h1{margin:0 0 6px;font-size:22px}.html p{margin:0 0 10px;color:#444}
+.html .k{display:inline-block;background:#eef3ff;border-radius:8px;padding:10px 16px;margin-right:10px;font-family:-apple-system,sans-serif}
+.html .k b{display:block;font-size:20px}
+pre .thread{white-space:normal;font:13px/1.5 -apple-system,"SF Pro Text",system-ui,sans-serif;margin:6px 18px 8px 52px;padding:0;border:1px solid var(--line);border-radius:10px;background:#1a1e14;max-width:640px}
+pre .thread .c{padding:9px 13px;border-top:1px solid var(--line);white-space:normal}
+pre .thread .c:first-child{border-top:0}
+pre .thread small{display:block;color:var(--muted);font-size:12px}
+pre .thread .me{color:var(--accent)}
+pre .thread .act{padding:8px 13px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px}
+pre .res{white-space:normal;font:12px -apple-system,system-ui,sans-serif;color:var(--faint);margin:4px 18px 6px 52px;padding:0}
+.files .cm{color:var(--muted);margin-left:6px}
+.note{color:var(--faint);font-size:12px;padding:0 18px 14px}
+</style></head><body>
+
+<p class="cap">Diff · code file, with comments on the line</p>
+<div class="win">
+ <div class="top"><div><h2>Retry webhook deliveries with backoff</h2><p>acme/api #412 · 9 files · commit 4e1a9c2</p></div><span class="sp"></span><span class="btn">Show review</span><span class="btn">Open on GitHub</span><span class="x">✕</span></div>
+ <div class="files">
+  <p class="on">src/worker.ts<i class="cm" style="font-style:normal">💬 2</i><span><i class="a">+41</i> <i class="d">−9</i></span></p><p>src/retry.ts<span><i class="a">+88</i></span></p><p>src/config.ts<span><i class="a">+6</i> <i class="d">−1</i></span></p><p>src/worker.test.ts<span><i class="a">+120</i></span></p><p>docs/retries.md<span><i class="a">+34</i> <i class="d">−4</i></span></p><p>docs/report.html<span><i class="a">+52</i></span></p>
+ </div>
+ <div class="pane">
+  <div class="bar"><code>src/worker.ts</code><span class="sp"></span><span class="lbl">Comments <span class="sw" style="background:var(--accent)"></span></span><div class="seg"><span class="on">Unified</span><span>Side by side</span></div></div>
+<pre><div class="hunk"><span class="n"></span>@@ -84,7 +84,12 @@ async function deliver(job)</div><div><span class="n">84</span>   while (job.attempts &lt; max) {</div><div class="del"><span class="n">85</span><span class="s">-    if (queue.paused) { requeue(job); continue }</span></div><div class="add"><span class="n">85</span><span class="s">+    if (queue.paused) {</span></div><div class="add"><span class="n">86</span><span class="s">+      await wait(backoff(job.attempts))</span></div><div class="add"><span class="n">87</span><span class="s">+      requeue(job)</span></div><div class="add"><span class="n">88</span><span class="s">+      continue</span></div><div class="thread"><div class="c"><small><span class="me">You · from PR Reviewer's review</span> · 2:10 PM</small>Retries never stop while the queue is paused. Count the attempt before the pause check.</div><div class="c"><small>priya-n · 20 min ago</small>The pause path now waits before requeueing, see the new commit. Does that cover it?</div><div class="act"><span class="btn">Draft a reply</span><span>Open thread · 2 comments</span></div></div><div class="add"><span class="n">89</span><span class="s">+    }</span></div><div><span class="n">90</span>     const res = await send(job)</div><div><span class="n">91</span>     job.attempts++</div><div class="res">▸ 1 resolved thread on line 91 · sam-k</div></pre>
+ </div>
+</div>
+
+<p class="cap">Diff · Markdown file in Preview</p>
+<div class="win">
+ <div class="top"><div><h2>Retry webhook deliveries with backoff</h2><p>acme/api #412 · 9 files · commit 4e1a9c2</p></div><span class="sp"></span><span class="btn">Show review</span><span class="btn">Open on GitHub</span><span class="x">✕</span></div>
+ <div class="files">
+  <p>src/worker.ts<span><i class="a">+41</i> <i class="d">−9</i></span></p><p>src/retry.ts<span><i class="a">+88</i></span></p><p>src/config.ts<span><i class="a">+6</i> <i class="d">−1</i></span></p><p>src/worker.test.ts<span><i class="a">+120</i></span></p><p class="on">docs/retries.md<span><i class="a">+34</i> <i class="d">−4</i></span></p><p>docs/report.html<span><i class="a">+52</i></span></p>
+ </div>
+ <div class="pane">
+  <div class="bar"><code>docs/retries.md</code><span class="sp"></span><div class="seg"><span>Diff</span><span class="on">Preview</span></div></div>
+  <div class="md">
+   <h1>Webhook retries</h1>
+   <p>Deliveries that fail are retried with exponential backoff.</p>
+   <div class="chg"><h2>Schedule</h2>
+   <table><tr><th>Attempt</th><th>Wait</th></tr><tr><td>1</td><td>2 s</td></tr><tr><td>2</td><td>8 s</td></tr><tr><td>3</td><td>30 s</td></tr></table>
+   <p>Set the longest wait with <code>RETRY_MAX_DELAY</code>, in seconds.</p></div>
+   <h2>When retries stop</h2>
+   <ul><li>After 5 attempts.</li><li>When the endpoint answers with a 4xx.</li></ul>
+  </div>
+  <p class="note">Preview shows the new version. A green bar marks sections this pull request changed.</p>
+ </div>
+</div>
+
+<p class="cap">Diff · HTML file in Preview</p>
+<div class="win">
+ <div class="top"><div><h2>Retry webhook deliveries with backoff</h2><p>acme/api #412 · 9 files · commit 4e1a9c2</p></div><span class="sp"></span><span class="btn">Show review</span><span class="btn">Open on GitHub</span><span class="x">✕</span></div>
+ <div class="files">
+  <p>src/worker.ts<span><i class="a">+41</i> <i class="d">−9</i></span></p><p>src/retry.ts<span><i class="a">+88</i></span></p><p>src/config.ts<span><i class="a">+6</i> <i class="d">−1</i></span></p><p>src/worker.test.ts<span><i class="a">+120</i></span></p><p>docs/retries.md<span><i class="a">+34</i> <i class="d">−4</i></span></p><p class="on">docs/report.html<span><i class="a">+52</i></span></p>
+ </div>
+ <div class="pane">
+  <div class="bar"><code>docs/report.html</code><span class="sp"></span><span class="lbl">Run scripts <span class="sw"></span></span><div class="seg"><span>Diff</span><span class="on">Preview</span></div></div>
+  <div class="html"><h1>Delivery report</h1><p>Webhook deliveries for the last 7 days.</p>
+   <span class="k"><b>98.2%</b>delivered first try</span><span class="k"><b>1.6%</b>delivered after retry</span><span class="k"><b>0.2%</b>failed</span></div>
+  <p class="note">Runs in a sandbox with no network and no access to Spark. Works for pages that render by themselves.</p>
+ </div>
+</div>
+</body></html>

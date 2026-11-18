@@ -39,7 +39,7 @@ const SECTIONS = [
   'Usage',
   'Projects',
   'Chats & autonomy',
-  'Pull requests',
+  'GitHub',
   'Connectors',
   'About',
 ];
@@ -244,6 +244,7 @@ test('the desktop rail keeps the places you work in, then More', async ({ page }
     /^Chats/,
     /^Today/,
     /^Tickets/,
+    /^GitHub/,
     /^Sparks/,
     /^Map/,
     /^More/,
