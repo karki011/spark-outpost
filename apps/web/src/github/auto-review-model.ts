@@ -1,4 +1,5 @@
 import type {
+  TeammateFace,
   GithubReviewSettings,
   GithubReviewSettingsUpdate,
   GithubReviewerKind,
@@ -8,6 +9,8 @@ export interface ReviewerOption {
   kind: GithubReviewerKind;
   id: string;
   name: string;
+  detail?: string;
+  faces?: readonly TeammateFace[];
 }
 
 export interface ReviewerGroups {

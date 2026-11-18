@@ -60,6 +60,14 @@ describe('adoptPlan()', () => {
     expect(adoptPlan(fork, { ...FACTS, localBranch: true })).toMatchObject({ kind: 'based' });
   });
 
+  it('keeps the branch it already took from the same fork', () => {
+    const fork = { ...PULL, fork: true, maintainerCanModify: true };
+    expect(adoptPlan(fork, { ...FACTS, localBranch: true, sameFork: true })).toMatchObject({
+      kind: 'head',
+      local: true,
+    });
+  });
+
   it('asks to switch away when the head is checked out elsewhere', () => {
     expect(adoptPlan(PULL, { ...FACTS, checkedOut: true })).toMatchObject({ kind: 'busy' });
   });

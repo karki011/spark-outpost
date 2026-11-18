@@ -65,16 +65,27 @@ export function useReviewSettings() {
 export function useReviewerGroups(): { groups: ReviewerGroups; loading: boolean } {
   const { teammates, loading } = useTeammates();
   const workflows = useWorkflows();
-  const groups = useMemo<ReviewerGroups>(
-    () => ({
-      sparks: teammates.map((spark) => ({ kind: 'spark', id: spark.id, name: spark.name })),
-      workflows: (workflows.data ?? []).map((workflow) => ({
-        kind: 'workflow',
-        id: workflow.id,
-        name: workflow.name,
+  const groups = useMemo<ReviewerGroups>(() => {
+    const faceOf = new Map(teammates.map((spark) => [spark.id, spark.face]));
+    return {
+      sparks: teammates.map((spark) => ({
+        kind: 'spark',
+        id: spark.id,
+        name: spark.name,
+        detail: spark.role,
+        faces: [spark.face],
       })),
-    }),
-    [teammates, workflows.data],
-  );
+      workflows: (workflows.data ?? []).map((workflow) => {
+        const steps = workflow.stages.flat();
+        return {
+          kind: 'workflow',
+          id: workflow.id,
+          name: workflow.name,
+          detail: `${steps.length} ${steps.length === 1 ? 'step' : 'steps'}`,
+          faces: steps.flatMap((step) => faceOf.get(step.sparkId) ?? []).slice(0, 3),
+        };
+      }),
+    };
+  }, [teammates, workflows.data]);
   return { groups, loading: loading || workflows.isPending };
 }

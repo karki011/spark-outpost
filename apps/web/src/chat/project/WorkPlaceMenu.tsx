@@ -38,6 +38,7 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
   const workspace = useChatWorkspace(conversationId);
   const branches = useProjectBranches(projectId, open);
   const refresh = useFetchBranches(projectId);
+  const sync = useFetchBranches(projectId);
   const update = useUpdateWorkspace(conversationId);
   const data = workspace.data;
   if (!showsPlaceMenu(data, checkoutBranch)) return null;
@@ -51,6 +52,8 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
   const rows = list ? branchRows(list, query, checkoutBranch) : [];
   const total = list ? list.local.length + list.remote.length : 0;
   const busy = update.isPending;
+  const startsFrom = list ? (list.defaultBranch ?? checkoutBranch) : null;
+  const label = placeLabel(data, checkoutBranch, list?.defaultBranch ?? null);
   const placeKey =
     data.requestedBranch ?? (inCheckout ? (checkoutBranch ?? 'my files') : 'new branch');
 
@@ -74,15 +77,16 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={panelId}
-        aria-label={`Where this chat works: ${placeLabel(data, checkoutBranch)}`}
+        aria-label={`Where this chat works: ${label}`}
         onClick={() => {
           update.reset();
           setQuery('');
+          if (!open && !sync.isPending && !refresh.isPending) sync.mutate();
           toggle();
         }}
       >
         {inCheckout ? <FolderIcon /> : <BranchIcon />}
-        <span className="ctx-branch-name">{placeLabel(data, checkoutBranch)}</span>
+        <span className="ctx-branch-name">{label}</span>
         <ChevronIcon />
       </button>
       <div
@@ -122,10 +126,10 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
             <PlusIcon />
           </span>
           <span className="pp-new-text">
-            <b>New branch{checkoutBranch ? ` from ${checkoutBranch}` : ''}</b>
+            <b>New branch{startsFrom ? ` from ${startsFrom}` : ''}</b>
             <small>
-              New worktree. Spark names the branch from your first message, like
-              spark/fix-login-3f9a
+              New worktree from the latest remote code. Spark names the branch from your first
+              message, like spark/fix-login-3f9a
             </small>
           </span>
           <TickIcon />
@@ -137,10 +141,10 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
               <button
                 type="button"
                 className="pp-fetch"
-                disabled={refresh.isPending}
+                disabled={refresh.isPending || sync.isPending}
                 onClick={() => refresh.mutate()}
               >
-                Fetch
+                {sync.isPending ? 'Fetching…' : 'Fetch'}
               </button>
             )}
           </div>

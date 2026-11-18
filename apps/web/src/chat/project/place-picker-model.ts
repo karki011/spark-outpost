@@ -24,8 +24,20 @@ export function showsPlaceMenu(
   );
 }
 
-export function placeLabel(workspace: ChatWorkspace, checkoutBranch: string | null): string {
-  if (workspace.requestedBranch) return workspace.requestedBranch;
+export function startsNewBranch(name: string, defaultBranch: string | null): boolean {
+  return name === 'main' || name === 'master' || name === defaultBranch;
+}
+
+export function placeLabel(
+  workspace: ChatWorkspace,
+  checkoutBranch: string | null,
+  defaultBranch: string | null = null,
+): string {
+  const requested = workspace.requestedBranch;
+  if (requested && workspace.place === 'worktree' && startsNewBranch(requested, defaultBranch)) {
+    return `New branch from ${requested}`;
+  }
+  if (requested) return requested;
   if (workspace.place === 'checkout') return `${checkoutBranch ?? 'Your branch'} · my files`;
   return 'New branch';
 }
@@ -40,7 +52,10 @@ export function branchRows(
     ...branches.local.map((name) => ({
       name,
       remote: false,
-      tags: name === checkoutBranch ? ['in my files'] : [],
+      tags: [
+        ...(name === checkoutBranch ? ['in my files'] : []),
+        ...(startsNewBranch(name, branches.defaultBranch) ? ['new branch'] : []),
+      ],
     })),
     ...branches.remote.map((name) => ({ name, remote: true, tags: ['remote'] })),
   ];

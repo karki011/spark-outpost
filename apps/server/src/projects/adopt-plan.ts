@@ -4,6 +4,7 @@ export interface AdoptFacts {
   guarded: readonly string[];
   protectedOnHost: boolean;
   localBranch: boolean;
+  sameFork?: boolean;
   checkedOut: boolean;
 }
 
@@ -38,7 +39,7 @@ export function adoptPlan(pull: OpenPull, facts: AdoptFacts): AdoptPlan {
   if (facts.guarded.includes(pull.head) || facts.protectedOnHost) {
     return { kind: 'based', why: basedWhy(pull, `${pull.head} is a protected branch`) };
   }
-  if (pull.fork && facts.localBranch) {
+  if (pull.fork && facts.localBranch && !facts.sameFork) {
     return {
       kind: 'based',
       why: basedWhy(pull, `A different local branch is already named ${pull.head}`),

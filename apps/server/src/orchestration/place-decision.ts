@@ -9,6 +9,7 @@ export interface PlaceFacts {
   remote: ReadonlyMap<string, string>;
   checkedOutElsewhere: boolean;
   stackOn?: StackOn | null;
+  protectedBranches?: readonly string[];
 }
 
 export interface StackOn {
@@ -58,6 +59,13 @@ export function decidePlace(facts: PlaceFacts): PlaceDecision {
   const stackOn = stackedOn(facts);
   if (stackOn) return onStack(stackOn);
   const requested = facts.requested;
+  const guarded = requested && facts.protectedBranches?.includes(requested);
+  if (guarded && facts.preference === 'worktree') {
+    const ref = facts.remote.get(requested);
+    const local = facts.local.includes(requested) || ref === `origin/${requested}`;
+    if (local) return { kind: 'new', from: requested, note: null };
+    if (ref) return { kind: 'new', from: ref, note: null };
+  }
   if (requested) {
     if (requested === facts.current) {
       if (facts.clean) return { kind: 'in_place', branch: requested };
