@@ -40,11 +40,11 @@ export async function crewDecision(
   observations: RunObservations | undefined,
   action: SparkActionName,
 ): Promise<CrewDecision> {
-  const [facts, userWrote, labels] = await Promise.all([
+  const [facts, userWrote] = await Promise.all([
     actionFacts(db, runId, action),
     userWroteTurn(db, runId),
-    observations ? observations.labels() : Promise.resolve(null),
   ]);
+  const labels = observations ? await observations.labels() : null;
   const untrusted = labels === null ? null : untrustedReads(labels);
   return {
     path: crewPath({
