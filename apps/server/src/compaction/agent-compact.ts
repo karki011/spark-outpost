@@ -111,6 +111,7 @@ export async function compactInSession(
       workspaceId: input.workspaceId,
       conversationId: input.identity.threadId,
       runId: log.runId,
+      ...(input.reviewRun ? { reviewRun: true } : {}),
       actions: {
         append,
         waiters: deps.approvalWaiters ?? new ApprovalWaiters(),

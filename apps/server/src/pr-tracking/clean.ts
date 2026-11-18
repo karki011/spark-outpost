@@ -4,19 +4,40 @@ const REVIEW_THREAD = 'review_comment:';
 
 export const OPEN_FOLLOW_UP_STATES = ['queued', 'needs_user', 'in_round', 'planned'] as const;
 
+interface ReviewFacts {
+  draft: boolean;
+  headSha: string | null;
+  checks: string | null;
+  changesRequested: boolean;
+  unresolvedThreads: boolean;
+}
+
+export function cleanReview(facts: ReviewFacts): boolean {
+  return (
+    !facts.draft &&
+    facts.headSha !== null &&
+    facts.checks === 'passing' &&
+    !facts.changesRequested &&
+    !facts.unresolvedThreads
+  );
+}
+
 export function isClean(pull: TrackedPull, openItems: number): boolean {
   const { threads, threadCount } = pull.details;
   return (
     pull.prState === 'open' &&
     pull.followUp &&
-    !pull.draft &&
-    pull.headSha !== null &&
-    pull.checks === 'passing' &&
-    pull.review !== 'changes_requested' &&
+    cleanReview({
+      draft: pull.draft,
+      headSha: pull.headSha,
+      checks: pull.checks,
+      changesRequested: pull.review === 'changes_requested',
+      unresolvedThreads:
+        threadCount > threads.length ||
+        threads.some((thread) => thread.key.startsWith(REVIEW_THREAD)),
+    }) &&
     pull.phase !== 'fixing' &&
     pull.phase !== 'confirming' &&
-    threadCount <= threads.length &&
-    !threads.some((thread) => thread.key.startsWith(REVIEW_THREAD)) &&
     openItems === 0
   );
 }

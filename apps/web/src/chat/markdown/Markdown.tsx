@@ -55,7 +55,7 @@ export const codeComponents: Components = {
   ),
 };
 
-const components: Components = {
+export const components: Components = {
   ...codeComponents,
   a: ({ href, children }) =>
     href && SAFE_LINK.test(href) ? (

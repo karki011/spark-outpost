@@ -16,6 +16,7 @@ import { conversationPrRoute, forgetPrRoutes, testGitHub } from '../ship/route-c
 import { shipPreview, shipTask } from '../ship/service.ts';
 import { loginShellEnv, loginShellPath } from '../setup/login-path.ts';
 import { gitHubAppRoutes } from './github-app-routes.ts';
+import { githubInboxRoutes } from './github-inbox-routes.ts';
 import { paramId, parseBody } from './validation.ts';
 
 export interface ShipRouteDeps {
@@ -91,6 +92,7 @@ export function shipRoutes(routeDeps: ShipRouteDeps): Router {
   });
 
   router.use(gitHubAppRoutes(deps, routeDeps.githubSignInSleep));
+  router.use(githubInboxRoutes(deps));
 
   router.post('/github/test', async (_req, res) => {
     res.json(await testGitHub(deps));

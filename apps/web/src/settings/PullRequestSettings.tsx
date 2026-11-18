@@ -112,13 +112,9 @@ function PrFollowUpSettings({ profile }: { profile: Profile }) {
   );
 }
 
-export function PullRequestsSection({ profile }: { profile: Profile }) {
+export function PullRequestSettings({ profile }: { profile: Profile }) {
   return (
     <>
-      <p className="lede">
-        How the pull requests your chats open start out, and what Spark does when checks and reviews
-        come in.
-      </p>
       <OpenPullRequestsAsSetting ready={profile.prReadyForReview} />
       <PrFollowUpSettings profile={profile} />
     </>

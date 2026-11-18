@@ -40,6 +40,6 @@ Chat and terminal pull requests appear above the composer and under **Links**, w
 
 ## Ready for review or draft
 
-In **Settings → Pull requests**, set **Open pull requests as** to **Ready for review** (default) or **Draft**. Or ask for a draft in your message.
+In **Settings → GitHub**, set **Open pull requests as** to **Ready for review** (default) or **Draft**. Or ask for a draft in your message.
 
 **Next:** [Let Spark handle PR feedback](pr-follow-up.md)

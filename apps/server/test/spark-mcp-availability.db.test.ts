@@ -112,6 +112,7 @@ describe('what a Spark tools session can use', () => {
       plugins_edit: false,
       crew_read: true,
       crew_edit: false,
+      github_review_post: false,
       howTo: {},
     });
   });

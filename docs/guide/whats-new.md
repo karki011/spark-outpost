@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                       | What to do                                                     |
 | -------------------------------------------------- | -------------------------------------------------------------- |
+| **GitHub** page, reviews, auto-review              | [Guide](github-page.md).                                       |
 | **⌘1**–**⌘9** open chats                           | [Keyboard shortcuts](keyboard-shortcuts.md#chats).             |
 | Agent terminal row is a card                       | Nothing to do.                                                 |
 | No **Ask about this**; hidden sidebar stays hidden | Use **Add to chat**.                                           |
@@ -57,9 +58,3 @@ summary: What changed in recent releases and what to do next.
 | Voice shortcut dictates in the chat  | [Talk to Spark](voice.md).                      |
 | Voice uses Parakeet alone, no choice | [Talk to Spark](voice.md).                      |
 | Update check every hour              | [Updates](updates.md).                          |
-
-## Earlier in November 2026
-
-| What changed                  | What to do                           |
-| ----------------------------- | ------------------------------------ |
-| Phone push for finished turns | [Use your phone](use-your-phone.md). |

@@ -57,6 +57,7 @@ import { ticketErrorStatus } from './ticket-routes.ts';
 import { slackErrorStatus } from './slack-routes.ts';
 import { teammateErrorStatus } from './teammate-routes.ts';
 import { workflowErrorStatus } from '../crew-flows/routes.ts';
+import { githubReviewErrorStatus } from './github-review-routes.ts';
 import { queueErrorStatus } from './queue-routes.ts';
 import { adoptErrorStatus } from './adopt-pull-routes.ts';
 import { outpostErrorStatus } from './outpost-routes.ts';
@@ -226,6 +227,7 @@ export function statusForError(error: unknown): { status: number; message: strin
     approvalErrorStatus(error) ??
     outcomeErrorStatus(error) ??
     shipErrorStatus(error) ??
+    githubReviewErrorStatus(error) ??
     ticketErrorStatus(error) ??
     slackErrorStatus(error) ??
     teammateErrorStatus(error) ??

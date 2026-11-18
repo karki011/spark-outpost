@@ -14,6 +14,11 @@ function parseJson(text: string): unknown {
   }
 }
 
+export function endpointFor(apiBase: string, path: string): string {
+  const base = path === '/graphql' ? apiBase.replace(/\/api\/v3$/, '/api') : apiBase;
+  return `${base}${path}`;
+}
+
 export function tokenRequest(
   apiBase: string,
   token: string,
@@ -22,7 +27,7 @@ export function tokenRequest(
   return async (method, path, body) => {
     let response: Response;
     try {
-      response = await fetchImpl(`${apiBase}${path}`, {
+      response = await fetchImpl(endpointFor(apiBase, path), {
         method,
         headers: {
           accept: 'application/vnd.github+json',

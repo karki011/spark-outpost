@@ -76,7 +76,7 @@ On for new profiles; existing choices stay. With Spark’s mod, Claude [Terminal
 
 Pushes to other branches, force pushes, protected files and writes outside the project are flagged, not stopped. Not for Codex.
 
-**Pull requests**:
+**GitHub**, with [auto-review](github-page.md#review-with-a-spark-or-workflow):
 
 | Row                                              | Default              | More                                                        |
 | ------------------------------------------------ | -------------------- | ----------------------------------------------------------- |

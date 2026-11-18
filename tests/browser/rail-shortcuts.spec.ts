@@ -59,7 +59,7 @@ test('the digits after the left bar items reach the places in More', async ({ pa
   await page.goto('/');
   await positionOf(page, 'Home');
   const labels = await rail(page).locator('.rail-btn[data-view]').allInnerTexts();
-  expect(labels.length + 3).toBeLessThanOrEqual(9);
+  expect(labels.length + 2).toBeLessThanOrEqual(9);
   await page.keyboard.press(`Control+Alt+Digit${labels.length}`);
   await expect(current(page)).toHaveText(labels.at(-1)!);
   const more = rail(page).getByRole('button', { name: /^More/ });
