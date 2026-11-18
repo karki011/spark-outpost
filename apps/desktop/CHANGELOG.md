@@ -4,6 +4,18 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.12
+
+- **Share…** on an artifact makes a link anyone can open in a browser, with no account: one HTML or SVG version, for 1 or 7 days, optionally behind a passcode Spark makes and never keeps. **Stop sharing** removes the page. Only your own click on the Mac shares; agents, Ask Spark and paired devices can't. The passcode page uses your Spark theme.
+- A link's address is derived from its delete key, so nobody else can ever put a page at it, live, stopped or expired.
+- The chat's context rail lists its **Artifacts**.
+- **Privacy screen** (Settings → General, Mac app): covers Spark's own windows after 1, 5, 15 or 30 idle minutes, when the Mac sleeps or its screen locks, or with **Lock Spark Outpost** (⇧⌘L, the lock above the left bar's clock, the island, the Settings window, and the menu-bar and Dock menus). Touch ID or a 6-digit code unlocks. It never locks the Mac and work keeps running; meeting alerts and notifications still arrive, and with **Hide notification text while locked** they name no chat or meeting.
+- **Forgot code?** resets the privacy screen's code after macOS confirms it's you with Touch ID, Apple Watch or your Mac password.
+- **GitHub** page in the left bar: the open pull requests that need you, from your linked projects, in four groups (Review requested, Needs fixes, Ready to merge, Waiting on others). **Auto-review** hands a pull request to one Spark or workflow you pick; it posts to GitHub or approves only with the two switches you turn on.
+- Chat agents can add, change and delete Sparks and workflows, following their mode like other Spark actions, and run, stop, schedule and set triggers for workflows with `spark_workflow`.
+- **⌘1**–**⌘9** open the chats in the list; hold **⌘** to see the numbers.
+- The agent's terminal row in a chat is a card. The comment box takes several lines, **Ask about this** is gone (use **Add to chat**), the terminal bar drops the path, and a hidden sidebar stays hidden.
+
 ## 0.1.0-beta.11
 
 - **One meeting card** for every alert: it leads with **Join at start** until 2 minutes before, then **Join**; **Snooze until start**, then **Snooze 1 min**; **Join now**, **Open in Today** and **Dismiss** sit under **···**. There is no separate "Before a meeting" alert, and **Join meetings automatically** joins only meetings you accepted.
