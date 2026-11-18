@@ -34,6 +34,7 @@ export const SOURCE_WORDS: Record<WorkflowRunSource, string> = {
   schedule: 'Schedule',
   catch_up: 'Catch-up',
   trigger: 'Trigger',
+  agent: 'An agent',
 };
 
 export const NEEDS_YOU = 'Needs you';

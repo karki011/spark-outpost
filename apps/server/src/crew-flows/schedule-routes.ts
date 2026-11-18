@@ -6,7 +6,7 @@ import {
   type WorkflowScheduleView,
   type WorkflowSchedules,
 } from '@spark-outpost/contracts';
-import { BadRequestError, parseBody } from '../api/validation.ts';
+import { parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import {
   deleteSchedule,
@@ -14,9 +14,8 @@ import {
   lastRunCostUsd,
   listScheduleSlots,
   listSchedules,
-  projectLinked,
-  saveSchedule,
 } from './schedule-records.ts';
+import { setWorkflowSchedule } from './workflow-settings.ts';
 import { WorkflowNotFoundError, workflowStore, type WorkflowStore } from './workflow-store.ts';
 
 export interface ScheduleRouteDeps {
@@ -67,14 +66,7 @@ export function scheduleRoutes(deps: ScheduleRouteDeps): Router {
 
   router.put('/workflows/:id/schedule', async (req, res) => {
     const id = await existing(req);
-    const schedule = parseBody(workflowScheduleSchema, req);
-    if (
-      schedule.projectId !== null &&
-      !(await projectLinked(db, workspaceId, schedule.projectId))
-    ) {
-      throw new BadRequestError('That project is not in Spark.');
-    }
-    await saveSchedule(db, workspaceId, id, schedule, now());
+    await setWorkflowSchedule(db, workspaceId, id, parseBody(workflowScheduleSchema, req), now());
     res.json(await view(id));
   });
 

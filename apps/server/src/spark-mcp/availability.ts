@@ -1,4 +1,5 @@
 import { conversationProjectIds } from '../agent-config/store.ts';
+import { workflowStore } from '../crew-flows/workflow-store.ts';
 import { calendarOffer, meetingsOffer } from './tools/calendar/offered.ts';
 import { macRunRefusal, type MacRefusedRun } from '../mac-control/offered.ts';
 import { rulesRunRefusal, type RulesRefusedRun } from './actions/rules-edit-session.ts';
@@ -47,8 +48,13 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   plugins_edit: true,
   crew_read: true,
   crew_edit: true,
+  crew_flows: true,
   github_review_post: true,
 };
+
+async function hasWorkflow(): Promise<boolean> {
+  return (await workflowStore().ids()).length > 0;
+}
 
 async function chatHasProject(deps: SparkToolDeps, scope: SparkScope): Promise<boolean> {
   if (!scope.conversationId) return false;
@@ -110,6 +116,7 @@ export async function sparkAvailability(
     pluginsRefused,
     crewEditRefused,
     crewRefused,
+    anyWorkflow,
   ] = await Promise.all([
     connectedSources(tickets),
     openSlack(slackDepsFor(deps, scope)),
@@ -124,6 +131,7 @@ export async function sparkAvailability(
     rulesRunRefusal(deps.db, scope, 'plugins'),
     rulesRunRefusal(deps.db, scope, 'crew'),
     crewReadRefusal(deps.db, scope),
+    hasWorkflow(),
   ]);
   const reviewPost = scope.assistant ? null : await postGrant(deps.db, scope.runId);
   const gitHub = await gitHubReach(deps, scope);
@@ -153,6 +161,7 @@ export async function sparkAvailability(
     plugins_edit: pluginsRefused === null,
     crew_read: crewRefused === null,
     crew_edit: crewEditRefused === null,
+    crew_flows: crewEditRefused === null && anyWorkflow,
     github_review_post: reviewPost?.grant.mayPost === true,
     ...outposts,
     howTo: {
@@ -189,6 +198,7 @@ const HOW_TO_GET: Record<
     | 'plugins_edit'
     | 'crew_read'
     | 'crew_edit'
+    | 'crew_flows'
     | 'github_review_post'
   >,
   string

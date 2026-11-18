@@ -34,6 +34,7 @@ import { serviceNowReadTool } from './tools/servicenow/read-tool.ts';
 import { prFollowUpRoundTool } from './actions/pr-follow-up-action.ts';
 import { ticketActionTools } from './actions/ticket-actions.ts';
 import { createTeammateTool, updateTeammateTool } from './actions/teammate-actions.ts';
+import { workflowTool } from './tools/workflow-tool.ts';
 import { mcpActionTools } from './actions/mcp-actions.ts';
 import { slackPostTool } from './actions/slack-actions.ts';
 import { slackTool } from './tools/slack-tool.ts';
@@ -110,6 +111,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   artifactTool,
   createTeammateTool,
   updateTeammateTool,
+  workflowTool,
   ...mcpActionTools,
   slackPostTool,
   outpostAskTool,
@@ -232,6 +234,7 @@ export const CHAT_TURN_ONLY: ReadonlySet<string> = new Set([
   'spark_rules_edit',
   'spark_plugins_edit',
   'spark_crew_edit',
+  'spark_workflow',
   'spark_github_review_post',
   'spark_link_repo',
   'spark_github_repos',

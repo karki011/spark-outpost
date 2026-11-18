@@ -111,6 +111,10 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   ),
   rules_edit: null,
   plugins_edit: null,
+  workflow_control: asked(
+    'run|start|launch|kick off|stop|cancel|schedule|unschedule|trigger|turn on|turn off|set up',
+    'workflows?|schedules?|triggers?',
+  ),
   crew_edit: asked(`${CREW_CREATE_VERB}|${CREW_CHANGE_VERB}`, CREW_NOUN),
   link_repo: null,
   github_read: asked(
