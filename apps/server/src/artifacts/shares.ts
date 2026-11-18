@@ -1,7 +1,5 @@
-import { randomBytes, randomInt } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import {
-  ARTIFACT_SHARE_DELETE_TOKEN_BYTES,
-  ARTIFACT_SHARE_ID_BYTES,
   ARTIFACT_SHARE_PASSCODE_ALPHABET,
   ARTIFACT_SHARE_PASSCODE_LENGTH,
   type ArtifactShare,
@@ -14,6 +12,7 @@ import { withTransaction, type Db, type DbClient, type Queryable } from '../pers
 import { shareSecret, type SecretStore } from '../setup/secrets.ts';
 import { readVersionFile } from './files.ts';
 import { shareDocument } from './share-document.ts';
+import { newShareKey } from './share-id.ts';
 import {
   removeShare,
   sharePageUrl,
@@ -197,8 +196,7 @@ async function upload(
   if (text === null) throw new ShareRefusedError('This version could not be read.');
   const html = shareDocument(stored.kind, stored.title, text);
   const passcode = choice.passcode ? newPasscode() : null;
-  const id = randomBytes(ARTIFACT_SHARE_ID_BYTES).toString('base64url');
-  const deleteToken = randomBytes(ARTIFACT_SHARE_DELETE_TOKEN_BYTES).toString('base64url');
+  const { id, deleteToken } = newShareKey();
   const page = { shareId: id, url: sharePageUrl(deps.origin, id) };
   try {
     await deps.secrets.set(shareSecret(id), deleteToken);

@@ -4,6 +4,7 @@ import {
   ARTIFACT_SHARE_ID_PATTERN,
 } from '@spark-outpost/contracts';
 import { sha256Of } from '../src/artifacts/files.ts';
+import { shareIdForToken } from '../src/artifacts/share-id.ts';
 import { shareSecret } from '../src/setup/secrets.ts';
 import { HTML, PASSCODE, ShareHarness, sharePath } from './artifact-share-support.ts';
 
@@ -45,6 +46,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
     expect(sent!.keys).toEqual(['deleteToken', 'expiresInDays', 'html', 'id', 'title']);
     expect(sent!.id).toMatch(ARTIFACT_SHARE_ID_PATTERN);
     expect(sent!.deleteToken).toMatch(ARTIFACT_SHARE_DELETE_TOKEN_PATTERN);
+    expect(sent!.id).toBe(shareIdForToken(sent!.deleteToken));
     expect(sent!.headers.authorization).toBeUndefined();
     expect(sent!.headers.cookie).toBeUndefined();
     const share = created.body.share;

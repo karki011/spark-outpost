@@ -115,7 +115,6 @@ interface Removal {
 async function removeAll(env: ShareEnv, removals: Removal[]): Promise<void> {
   for (let start = 0; start < removals.length; start += REMOVE_BATCH) {
     const batch = removals.slice(start, start + REMOVE_BATCH);
-    await Promise.all(batch.map(({ id }) => retireId(env, id)));
     await env.SHARES.delete(batch.map(({ id }) => shareKey(id)));
     await Promise.all(
       batch.filter((entry) => entry.hasPasscode).map(({ id }) => clearAttempts(env.COUNTERS, id)),
@@ -144,20 +143,10 @@ export async function findShare(env: ShareEnv, id: string, now: number) {
   return liveRecord(env, id, await env.SHARES.head(shareKey(id)), now);
 }
 
-async function unlessRetired<T>(env: ShareEnv, id: string, found: T | null): Promise<T | null> {
-  if (found === null) return null;
-  return (await isRetired(env, id)) ? null : found;
-}
-
-export async function findViewable(env: ShareEnv, id: string, now: number) {
-  return unlessRetired(env, id, await findShare(env, id, now));
-}
-
 export async function readShare(env: ShareEnv, id: string, now: number): Promise<string | null> {
   const object = await env.SHARES.get(shareKey(id));
   const record = await liveRecord(env, id, object, now);
-  if (!object || !record) return null;
-  return unlessRetired(env, id, await object.text());
+  return object && record ? object.text() : null;
 }
 
 export async function removeExpired(env: ShareEnv, now: number): Promise<void> {

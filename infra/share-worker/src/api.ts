@@ -7,6 +7,7 @@ import {
   randomToken,
   sameText,
   sha256,
+  shareIdFor,
 } from './crypto.ts';
 import type { ShareEnv } from './env.ts';
 import { emptyResponse, jsonError, jsonResponse } from './responses.ts';
@@ -26,7 +27,6 @@ export const MAX_TITLE_CHARS = 120;
 export const MAX_HTML_BYTES = 2_097_152;
 export const MAX_CREATE_BODY_BYTES = MAX_HTML_BYTES * 2 + 16_384;
 export const CREATE_LIMIT_PER_HOUR = 20;
-export const UNKNOWN_DELETE_LIMIT_PER_HOUR = 60;
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
@@ -93,6 +93,10 @@ function parseCreate(text: string): Parsed {
   };
 }
 
+async function ownsId(deleteToken: string, id: string): Promise<boolean> {
+  return sameText(await shareIdFor(deleteToken), id);
+}
+
 async function storedPasscode(code: string | null) {
   if (code === null) return null;
   const salt = randomToken(16);
@@ -138,6 +142,7 @@ export async function createShare(request: Request, env: ShareEnv, now: number) 
   const parsed = parseCreate(body.text);
   if (parsed === 'too_large') return jsonError(413, 'too_large');
   if (parsed === 'invalid_request') return jsonError(400, 'invalid_request');
+  if (!(await ownsId(parsed.deleteToken, parsed.id))) return jsonError(400, 'invalid_request');
   const stored = await storeShare(
     env,
     {
@@ -158,32 +163,19 @@ export async function createShare(request: Request, env: ShareEnv, now: number) 
   return jsonResponse(201, { id, url, expiresAt });
 }
 
-async function retireUnknown(request: Request, env: ShareEnv, id: string, now: number) {
-  if (!SHARE_ID.test(id)) return true;
-  if (await isRetired(env, id)) return true;
-  const allowed = await allowHit(
-    env.COUNTERS,
-    `unknown-delete:${clientAddress(request)}`,
-    now,
-    UNKNOWN_DELETE_LIMIT_PER_HOUR,
-    HOUR_MS,
-  );
-  if (allowed) await retireId(env, id);
-  return allowed;
-}
-
 export async function deleteShare(request: Request, env: ShareEnv, id: string, now: number) {
   const token = BEARER.exec(request.headers.get('authorization') ?? '')?.[1] ?? null;
   if (token === null) return jsonError(404, 'not_found');
-  const presented = await sha256(token);
+  const owner = await ownsId(token, id);
   let record = await findShare(env, id, now);
-  if (!record) {
-    if (!(await retireUnknown(request, env, id, now))) return jsonError(429, 'rate_limited');
+  if (!record && owner) {
+    await retireId(env, id);
     record = await findShare(env, id, now);
   }
-  if (!record || !sameText(presented, record.deleteTokenHash)) {
+  if (!record || !sameText(await sha256(token), record.deleteTokenHash)) {
     return jsonError(404, 'not_found');
   }
+  await retireId(env, id);
   await removeShare(env, record);
   return emptyResponse(204);
 }

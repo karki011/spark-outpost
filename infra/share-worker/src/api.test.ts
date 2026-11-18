@@ -1,11 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
-import {
-  CREATE_LIMIT_PER_HOUR,
-  MAX_CREATE_BODY_BYTES,
-  MAX_HTML_BYTES,
-  UNKNOWN_DELETE_LIMIT_PER_HOUR,
-} from './api.ts';
+import { CREATE_LIMIT_PER_HOUR, MAX_CREATE_BODY_BYTES, MAX_HTML_BYTES } from './api.ts';
 import {
   call,
   create,
@@ -33,7 +28,7 @@ function remove(fake: FakeEnv, id: string, token: string | null, now = START) {
 }
 
 describe('POST /v1/shares', () => {
-  it('stores the page at the id the client chose and answers with its link', async () => {
+  it('stores the page at the id its delete token gives and answers with its link', async () => {
     const fake = fakeEnv();
     const response = await postJson(fake, VALID_CREATE);
     const body = await response.json();
@@ -76,7 +71,23 @@ describe('POST /v1/shares', () => {
     expect(fake.bucket.objects.get(`shares/${first.id}`)?.value).toBe(VALID_CREATE.html);
   });
 
-  it('answers 409 for a taken id with another token and changes nothing', async () => {
+  it('refuses an id that its delete token does not give and writes nothing', async () => {
+    const fake = fakeEnv();
+    const other = await freshIds();
+    const pairs = [
+      { id: other.id, deleteToken: VALID_CREATE.deleteToken },
+      { id: VALID_CREATE.id, deleteToken: other.deleteToken },
+      { id: 'Ab3_-Ab3_-Ab3_-Ab3_-Ab', deleteToken: VALID_CREATE.deleteToken },
+    ];
+    for (const pair of pairs) {
+      const response = await postJson(fake, { ...VALID_CREATE, ...pair });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'invalid_request' });
+    }
+    expect(fake.bucket.objects.size).toBe(0);
+  });
+
+  it('refuses a taken id with another token and changes nothing', async () => {
     const fake = fakeEnv();
     await postJson(fake, VALID_CREATE);
     const before = structuredClone(fake.bucket.objects.get(`shares/${VALID_CREATE.id}`));
@@ -86,9 +97,9 @@ describe('POST /v1/shares', () => {
       html: '<p>takeover</p>',
     });
 
-    expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({ error: 'conflict' });
+    expect(response.status).toBe(400);
     expect(fake.bucket.objects.get(`shares/${VALID_CREATE.id}`)).toEqual(before);
+    expect(fake.bucket.objects.size).toBe(1);
   });
 
   it('answers 409 for a taken id whose stored record cannot be read', async () => {
@@ -98,17 +109,27 @@ describe('POST /v1/shares', () => {
     expect(fake.bucket.objects.get(`shares/${VALID_CREATE.id}`)?.value).toBe('<p>odd</p>');
   });
 
-  it('never gives an expired id to another uploader', async () => {
+  it('never gives an expired id to another uploader and leaves no marker for it', async () => {
     const fake = fakeEnv();
     await postJson(fake, { ...VALID_CREATE, expiresInDays: 1 });
     const later = START + 2 * DAY;
     const takeover = { ...VALID_CREATE, deleteToken: 'Z'.repeat(43), html: '<p>new</p>' };
 
-    expect((await postJson(fake, takeover, { now: later })).status).toBe(409);
-    expect((await postJson(fake, takeover, { now: later })).status).toBe(409);
-    expect((await postJson(fake, VALID_CREATE, { now: later })).status).toBe(409);
+    expect((await postJson(fake, takeover, { now: later })).status).toBe(400);
     expect((await call(fake, `/a/${VALID_CREATE.id}`, {}, later)).status).toBe(404);
-    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${VALID_CREATE.id}`]);
+    expect((await postJson(fake, takeover, { now: later })).status).toBe(400);
+    expect(fake.bucket.objects.size).toBe(0);
+  });
+
+  it('lets only the key holder use an expired id again', async () => {
+    const fake = fakeEnv();
+    await postJson(fake, { ...VALID_CREATE, expiresInDays: 1 });
+    const later = START + 2 * DAY;
+
+    expect((await postJson(fake, VALID_CREATE, { now: later })).status).toBe(409);
+    const again = await postJson(fake, { ...VALID_CREATE, html: '<p>mine</p>' }, { now: later });
+    expect(again.status).toBe(201);
+    expect(fake.bucket.objects.get(`shares/${VALID_CREATE.id}`)?.value).toBe('<p>mine</p>');
   });
 
   it('never gives a deleted id to another uploader, or back to the first one', async () => {
@@ -118,9 +139,11 @@ describe('POST /v1/shares', () => {
     const takeover = { ...VALID_CREATE, deleteToken: 'Z'.repeat(43), html: '<p>new</p>' };
 
     const response = await postJson(fake, takeover);
-    expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({ error: 'conflict' });
-    expect((await postJson(fake, VALID_CREATE)).status).toBe(409);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'invalid_request' });
+    const original = await postJson(fake, VALID_CREATE);
+    expect(original.status).toBe(409);
+    expect(await original.json()).toEqual({ error: 'conflict' });
     expect((await call(fake, `/a/${VALID_CREATE.id}`)).status).toBe(404);
     expect([...fake.bucket.objects.keys()]).toEqual([`gone/${VALID_CREATE.id}`]);
   });
@@ -323,28 +346,56 @@ describe('DELETE /v1/shares/:id', () => {
     expect([...fake.bucket.objects.keys()]).toEqual([`gone/${VALID_CREATE.id}`]);
   });
 
-  it('retires nothing without a token or for an id no share can have', async () => {
+  it('retires an id with nothing stored only for the token that gives it', async () => {
     const fake = fakeEnv();
-    expect((await remove(fake, 'A'.repeat(22), null)).status).toBe(404);
-    expect((await remove(fake, 'A'.repeat(30), 'T'.repeat(43))).status).toBe(404);
+    const { id, deleteToken } = await freshIds();
+    const other = await freshIds();
+
+    expect((await remove(fake, id, null)).status).toBe(404);
+    expect((await remove(fake, id, other.deleteToken)).status).toBe(404);
+    expect((await remove(fake, 'A'.repeat(30), deleteToken)).status).toBe(404);
     expect(fake.bucket.objects.size).toBe(0);
+
+    expect((await remove(fake, id, deleteToken)).status).toBe(404);
+    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${id}`]);
   });
 
-  it('retires 60 unknown ids per hour per address, then answers 429 and writes nothing', async () => {
+  it('does not limit how many of their own unstored ids an owner retires', async () => {
     const fake = fakeEnv();
-    const token = 'T'.repeat(43);
-    for (let index = 0; index < UNKNOWN_DELETE_LIMIT_PER_HOUR; index++) {
-      expect((await remove(fake, freshIds().id, token)).status).toBe(404);
+    for (let index = 0; index < 80; index++) {
+      const { id, deleteToken } = await freshIds();
+      expect((await remove(fake, id, deleteToken)).status).toBe(404);
     }
-    const created = await create(fake);
-    const limited = await remove(fake, freshIds().id, token);
+    expect(fake.bucket.objects.size).toBe(80);
+  });
 
-    expect(limited.status).toBe(429);
-    expect(await limited.json()).toEqual({ error: 'rate_limited' });
-    expect(fake.bucket.objects.size).toBe(UNKNOWN_DELETE_LIMIT_PER_HOUR + 1);
-    expect((await remove(fake, created.id, created.deleteToken)).status).toBe(204);
-    expect((await remove(fake, created.id, created.deleteToken)).status).toBe(404);
-    expect((await remove(fake, freshIds().id, token, START + 3_600_000)).status).toBe(404);
+  it('deletes a share stored before ids came from tokens by its stored token hash', async () => {
+    const fake = fakeEnv();
+    const id = 'Ab3_-Ab3_-Ab3_-Ab3_-Ab';
+    const deleteToken = 'L'.repeat(43);
+    await fake.bucket.put(`shares/${id}`, '<h1>Old</h1>', {
+      customMetadata: {
+        title: 'Old',
+        createdAt: new Date(START - DAY).toISOString(),
+        expiresAt: new Date(START + DAY).toISOString(),
+        deleteTokenHash: createHash('sha256').update(deleteToken).digest('base64url'),
+      },
+    });
+
+    expect((await call(fake, `/a/${id}`)).status).toBe(200);
+    expect((await postJson(fake, { ...VALID_CREATE, id, deleteToken })).status).toBe(400);
+    expect((await remove(fake, id, VALID_CREATE.deleteToken as string)).status).toBe(404);
+    expect(fake.bucket.objects.has(`shares/${id}`)).toBe(true);
+    expect((await remove(fake, id, deleteToken)).status).toBe(204);
+    expect(fake.bucket.objects.has(`shares/${id}`)).toBe(false);
+    expect((await call(fake, `/a/${id}`)).status).toBe(404);
+    expect((await postJson(fake, { ...VALID_CREATE, id, deleteToken })).status).toBe(400);
+  });
+
+  it('answers 404 for a legacy id with nothing stored and writes nothing', async () => {
+    const fake = fakeEnv();
+    expect((await remove(fake, 'Ab3_-Ab3_-Ab3_-Ab3_-Ab', 'L'.repeat(43))).status).toBe(404);
+    expect(fake.bucket.objects.size).toBe(0);
   });
 
   it('only accepts DELETE', async () => {
@@ -364,10 +415,10 @@ describe('expiry', () => {
 
     expect((await call(fake, `/a/${id}`, {}, START + DAY - 1)).status).toBe(200);
     expect((await call(fake, `/a/${id}`, {}, START + DAY)).status).toBe(404);
-    expect([...fake.bucket.objects.keys()]).toEqual([`gone/${id}`]);
+    expect(fake.bucket.objects.size).toBe(0);
   });
 
-  it('deletes expired shares across every page in the daily run and retires their ids', async () => {
+  it('deletes expired shares across every page in the daily run', async () => {
     const fake = fakeEnv({ pageSize: 2 });
     const short = [];
     for (let index = 0; index < 3; index++) {
@@ -386,8 +437,8 @@ describe('expiry', () => {
     vi.restoreAllMocks();
 
     const keys = [...fake.bucket.objects.keys()].sort();
-    const retired = [...short, locked].map(({ id }) => `gone/${id}`);
-    expect(keys).toEqual([`shares/${long.id}`, 'reports/x/1-a', ...retired].sort());
+    expect(short).toHaveLength(3);
+    expect(keys).toEqual([`shares/${long.id}`, 'reports/x/1-a'].sort());
     expect(fake.storages.get(`attempts:${locked.id}`)?.values.size).toBe(0);
   });
 });

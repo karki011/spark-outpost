@@ -2,6 +2,7 @@ import {
   ARTIFACT_SHARE_DELETE_TOKEN_PATTERN,
   ARTIFACT_SHARE_ID_PATTERN,
 } from '@spark-outpost/contracts';
+import { createHash } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 export interface ReceivedShare {
@@ -55,6 +56,11 @@ async function readBody(req: IncomingMessage): Promise<string> {
   return text;
 }
 
+function idGivenBy(deleteToken: string): string {
+  const digest = createHash('sha256').update(`spark-share-id:${deleteToken}`).digest();
+  return digest.subarray(0, 16).toString('base64url');
+}
+
 const SHARE_PATH = /^\/v1\/shares\/([A-Za-z0-9_-]+)$/;
 
 export const BUSY_TITLE = 'Busy';
@@ -81,7 +87,8 @@ export function fakeShareService(): FakeShareService {
         }
         if (
           !ARTIFACT_SHARE_ID_PATTERN.test(String(body.id)) ||
-          !ARTIFACT_SHARE_DELETE_TOKEN_PATTERN.test(String(body.deleteToken))
+          !ARTIFACT_SHARE_DELETE_TOKEN_PATTERN.test(String(body.deleteToken)) ||
+          idGivenBy(body.deleteToken) !== body.id
         ) {
           send(res, 400, { error: 'bad_request' });
           return true;
@@ -102,8 +109,10 @@ export function fakeShareService(): FakeShareService {
         const authorization = req.headers.authorization;
         service.deletes.push({ id, authorization });
         const share = service.shares.get(id);
-        if (!share) service.retired.add(id);
-        if (!share || authorization !== `Bearer ${share.deleteToken}`) {
+        const owner = authorization === `Bearer ${share?.deleteToken ?? ''}`;
+        const token = /^Bearer (.+)$/.exec(authorization ?? '')?.[1];
+        if (!share && token !== undefined && idGivenBy(token) === id) service.retired.add(id);
+        if (!share || !owner) {
           send(res, 404, { error: 'not_found' });
           return true;
         }

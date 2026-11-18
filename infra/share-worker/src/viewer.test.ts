@@ -150,41 +150,19 @@ describe('content', () => {
     expect((await call(fake, src)).status).toBe(404);
   });
 
-  it('serves nothing from an id that has been retired, even if a page sits under it', async () => {
+  it('reads the bucket once for the shell and once for the content', async () => {
     const fake = fakeEnv();
     const { id } = await create(fake);
-    const src = frameSrc((await shell(fake, id)).html);
-    await fake.bucket.put(`gone/${id}`, '');
+    fake.bucket.reads.length = 0;
 
-    expect((await call(fake, `/a/${id}`)).status).toBe(404);
-    expect((await call(fake, src, {}, START + 1000)).status).toBe(404);
-    expect(fake.bucket.objects.has(`shares/${id}`)).toBe(true);
-  });
+    const { response, html } = await shell(fake, id);
+    expect(response.status).toBe(200);
+    expect(fake.bucket.reads).toEqual([`head shares/${id}`]);
 
-  it('serves nothing when the id is retired and replaced while its page is being read', async () => {
-    const fake = fakeEnv();
-    const { id } = await create(fake);
-    const src = frameSrc((await shell(fake, id)).html);
-    const stored = fake.bucket.objects.get(`shares/${id}`)!;
-    const replace = async () => {
-      await fake.bucket.put(`gone/${id}`, '');
-      fake.bucket.objects.set(`shares/${id}`, { ...stored, value: '<h1>replaced</h1>' });
-    };
-    const head = fake.bucket.head.bind(fake.bucket);
-    const get = fake.bucket.get.bind(fake.bucket);
-    fake.bucket.head = async (key) => {
-      if (key === `shares/${id}`) await replace();
-      return head(key);
-    };
-    fake.bucket.get = async (key) => {
-      if (key === `shares/${id}`) await replace();
-      return get(key);
-    };
-
-    expect((await call(fake, `/a/${id}`)).status).toBe(404);
-    const content = await call(fake, src, {}, START + 1000);
-    expect(content.status).toBe(404);
-    expect(await content.text()).not.toContain('replaced');
+    fake.bucket.reads.length = 0;
+    const content = await call(fake, frameSrc(html), {}, START + 1000);
+    expect(await content.text()).toBe(VALID_CREATE.html);
+    expect(fake.bucket.reads).toEqual([`get shares/${id}`]);
   });
 });
 
