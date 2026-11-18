@@ -148,7 +148,7 @@ interface EditArgs {
 
 async function withdraw(context: SparkToolContext, ids: string[]) {
   const { workspaceId, conversationId } = context.scope;
-  const wanted = ids.includes('all') ? 'all' : ids;
+  const wanted = ids.length === 1 && ids[0] === 'all' ? 'all' : ids;
   const result = await withdrawOwnDrafts(context.deps.db, workspaceId, conversationId!, wanted);
   return {
     outcome: 'withdrawn',

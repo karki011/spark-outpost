@@ -21,8 +21,14 @@ export interface WorkflowControlDone {
   output: Record<string, unknown>;
 }
 
+function required<T>(value: T | undefined, what: string): T {
+  if (value === undefined) throw new Error(`This card has no ${what}. Ask the agent again.`);
+  return value;
+}
+
 async function run(deps: WorkflowControlDeps, action: WorkflowControlAction) {
   const { db, workspaceId } = deps;
+  const messageId = required(action.messageId, 'message id');
   const started = await startWorkflowRun(
     {
       db,
@@ -34,7 +40,7 @@ async function run(deps: WorkflowControlDeps, action: WorkflowControlAction) {
     {
       kind: 'run',
       workflowId: action.workflowId,
-      messageId: action.messageId!,
+      messageId,
       source: 'agent',
       conversationId: null,
       projectId: action.project?.id ?? null,
@@ -48,13 +54,17 @@ async function run(deps: WorkflowControlDeps, action: WorkflowControlAction) {
 }
 
 async function stop(deps: WorkflowControlDeps, action: WorkflowControlAction) {
-  const found = await getWorkflowRun(deps.db, deps.workspaceId, action.workflowRunId!);
-  if (!found) throw new Error('That workflow run no longer exists.');
-  if (found.status === 'running' && found.runId) await requestCancel(deps.db, found.runId);
-  return {
-    message: `Stopped the ${action.name} workflow run.`,
-    output: { workflowRunId: found.id },
-  };
+  const id = required(action.workflowRunId, 'workflow run');
+  const found = await getWorkflowRun(deps.db, deps.workspaceId, id);
+  if (!found || found.workflowId !== action.workflowId) {
+    throw new Error(`That run of the ${action.name} workflow no longer exists.`);
+  }
+  const output = { workflowRunId: found.id };
+  if (found.status !== 'running' || !found.runId) {
+    return { message: `That ${action.name} workflow run had already ended.`, output };
+  }
+  await requestCancel(deps.db, found.runId);
+  return { message: `Stopped the ${action.name} workflow run.`, output };
 }
 
 export async function controlWorkflow(
@@ -72,7 +82,7 @@ export async function controlWorkflow(
         db,
         workspaceId,
         action.workflowId,
-        action.schedule!,
+        required(action.schedule, 'schedule'),
         (deps.now ?? (() => new Date()))(),
       );
       return { message: `Scheduled the ${action.name} workflow.`, output: {} };
@@ -80,7 +90,12 @@ export async function controlWorkflow(
       await deleteSchedule(db, workspaceId, action.workflowId);
       return { message: `Turned off the ${action.name} workflow’s schedule.`, output: {} };
     case 'triggers':
-      await setWorkflowTriggers(db, workspaceId, action.workflowId, action.triggers!);
+      await setWorkflowTriggers(
+        db,
+        workspaceId,
+        action.workflowId,
+        required(action.triggers, 'triggers'),
+      );
       return { message: `Saved the ${action.name} workflow’s triggers.`, output: {} };
   }
 }

@@ -11,7 +11,7 @@ import { actionRun, proposeAction, type ProposeOptions } from './confirm.ts';
 export async function proposeCrewAction(
   context: SparkToolContext,
   action: CrewAction,
-  options: Omit<ProposeOptions, 'path' | 'observed' | 'alwaysAsk'> = {},
+  options: Omit<ProposeOptions, 'path' | 'observed' | 'alwaysAsk' | 'decide'> = {},
 ) {
   const run = actionRun(context.scope);
   const { db } = context.deps;
@@ -21,15 +21,13 @@ export async function proposeCrewAction(
         .filter((card) => replacesDraft(card.action, action))
         .map((card) => card.id)
     : [];
-  const decision = run.scope.assistant
-    ? { path: 'confirm' as const, observed: undefined }
-    : await crewDecision(db, run.runId, run.scope.observations, action.action);
-  const readBefore = decision.observed?.length ? { readBefore: decision.observed } : {};
   const result = await proposeAction(context, action, {
     ...options,
-    audit: { ...options.audit, ...readBefore },
-    path: decision.path,
-    ...(decision.observed ? { observed: decision.observed } : {}),
+    ...(run.scope.assistant
+      ? { path: 'confirm' as const }
+      : {
+          decide: () => crewDecision(db, run.runId, run.scope.observations, action.action),
+        }),
   });
   const replaced = await replaceDrafts(db, before);
   return replaced > 0 ? { ...result, replacedDrafts: replaced } : result;

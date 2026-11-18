@@ -76,6 +76,37 @@ describe('spark_workflow', () => {
     expect(await agentRuns()).toHaveLength(1);
   });
 
+  it('says an ended run had ended, refuses another workflow’s run and a card with no run', async () => {
+    const deps = { db: t.db, workspaceId: t.workspaceId };
+    const started = await controlWorkflow(deps, {
+      action: 'workflow_control',
+      op: 'run',
+      workflowId: 'nightly',
+      name: 'Nightly',
+      message: '',
+      project: null,
+      messageId: newId(),
+    });
+    const workflowRunId = started.output.workflowRunId as string;
+    await t.db.query(`UPDATE workflow_runs SET status = 'succeeded' WHERE id = $1`, [
+      workflowRunId,
+    ]);
+    const stop = {
+      action: 'workflow_control' as const,
+      op: 'stop' as const,
+      workflowId: 'nightly',
+      name: 'Nightly',
+      message: '',
+      project: null,
+    };
+    const ended = await controlWorkflow(deps, { ...stop, workflowRunId });
+    expect(ended.message).toBe('That Nightly workflow run had already ended.');
+    await expect(
+      controlWorkflow(deps, { ...stop, workflowId: 'weekly', name: 'Weekly', workflowRunId }),
+    ).rejects.toThrow('That run of the Weekly workflow no longer exists.');
+    await expect(controlWorkflow(deps, stop)).rejects.toThrow('This card has no workflow run.');
+  });
+
   it('asks in Manual and saves the schedule after Allow', async () => {
     const result = await call('spark_workflow', {
       action: 'schedule',

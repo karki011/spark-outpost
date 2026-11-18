@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import {
+  workflowControlActionSchema,
   workflowScheduleSchema,
   workflowTriggersSchema,
-  type SparkAction,
   type WorkflowControlAction,
 } from '@spark-outpost/contracts';
 import { crewDecision } from '../../crew/crew-path.ts';
@@ -138,12 +138,13 @@ async function control(args: WorkflowArgs, context: SparkToolContext) {
   if (args.action === 'run' && (await workflowTurn(db, run.runId))) {
     throw new SparkToolError(WORKFLOW_TURN);
   }
-  const action: SparkAction = await buildAction(context, args);
-  const decision = await crewDecision(db, run.runId, run.scope.observations, action.action);
+  const action = parsed(
+    workflowControlActionSchema,
+    await buildAction(context, args),
+    'the request',
+  );
   return proposeAction(context, action, {
-    path: decision.path,
-    observed: decision.observed,
-    audit: decision.observed.length > 0 ? { readBefore: decision.observed } : {},
+    decide: () => crewDecision(db, run.runId, run.scope.observations, action.action),
   });
 }
 

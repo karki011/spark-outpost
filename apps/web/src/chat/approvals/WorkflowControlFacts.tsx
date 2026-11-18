@@ -14,6 +14,11 @@ function triggersText(triggers: WorkflowTriggers): string {
   return on.length > 0 ? `On ${on.join(', ')}` : 'No triggers';
 }
 
+function triggerRights(triggers: WorkflowTriggers): string {
+  const edits = triggers.edits ? 'Runs may change files' : 'Runs only read';
+  return triggers.holdOnFindings ? `${edits}; findings hold the publish` : edits;
+}
+
 function change(before: string | null, after: string): string {
   return before === null || before === after ? after : `${before} → ${after}`;
 }
@@ -53,6 +58,13 @@ export function WorkflowControlFacts({ action }: { action: WorkflowControlAction
             {change(
               action.triggersBefore ? triggersText(action.triggersBefore) : null,
               triggersText(action.triggers),
+            )}
+          </dd>
+          <dt>Runs</dt>
+          <dd>
+            {change(
+              action.triggersBefore ? triggerRights(action.triggersBefore) : null,
+              triggerRights(action.triggers),
             )}
           </dd>
         </>

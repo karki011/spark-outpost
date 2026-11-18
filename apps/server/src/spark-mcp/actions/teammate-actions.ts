@@ -231,21 +231,24 @@ export async function performUpdateTeammate(
   };
 }
 
+async function assertNotInWorkflow(teammates: readonly Teammate[], id: string, name: string) {
+  const flows = await workflowStore().list(new Set(teammates.map((teammate) => teammate.id)));
+  const using = flows.filter((flow) =>
+    flow.stages.some((stage) => stage.some((step) => step.sparkId === id)),
+  );
+  if (using.length === 0) return;
+  const names = using.map((flow) => flow.name).join(', ');
+  throw new SparkToolError(
+    `${name} is a step in ${names}. Change or delete those workflows first.`,
+  );
+}
+
 async function remove(context: SparkToolContext, spark: string) {
   await assertMayChange(context);
   const { db } = context.deps;
   const teammates = await listTeammates(db, context.scope.workspaceId);
   const current = matchTeammate(teammates, spark);
-  const flows = await workflowStore().list(new Set(teammates.map((teammate) => teammate.id)));
-  const using = flows.filter((flow) =>
-    flow.stages.some((stage) => stage.some((step) => step.sparkId === current.id)),
-  );
-  if (using.length > 0) {
-    const names = using.map((flow) => flow.name).join(', ');
-    throw new SparkToolError(
-      `${current.name} is a step in ${names}. Change or delete those workflows first.`,
-    );
-  }
+  await assertNotInWorkflow(teammates, current.id, current.name);
   const action: SparkAction = {
     action: 'delete_teammate',
     teammateId: current.id,
@@ -262,6 +265,7 @@ export async function performDeleteTeammate(
 ): Promise<Performed> {
   const { db } = context.deps;
   const { workspaceId } = context.scope;
+  await assertNotInWorkflow(await listTeammates(db, workspaceId), action.teammateId, action.name);
   await closeTeammateSessions(db, workspaceId, action.teammateId);
   await deleteTeammate(db, workspaceId, action.teammateId);
   return {

@@ -186,7 +186,18 @@ export async function userWroteTurn(db: Queryable, runId: string): Promise<boole
   const run = await runFacts(db, runId);
   if (run.provider === null && run.mode === null) return false;
   if (run.assistant_sent === true || run.spark_rule_retry === true) return false;
+  if (await followUpRun(db, runId)) return false;
   return run.outpost_run !== true || run.from_user === true;
+}
+
+async function followUpRun(db: Queryable, runId: string): Promise<boolean> {
+  const { rows } = await db.query<{ follow_up: boolean }>(
+    `SELECT COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
+              = 'pr_follow_up' AS follow_up
+     FROM runs r WHERE r.id = $1`,
+    [runId],
+  );
+  return rows[0]?.follow_up === true;
 }
 
 function runText(run: RunFacts): UserTextInput {
