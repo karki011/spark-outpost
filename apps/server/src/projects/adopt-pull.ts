@@ -166,14 +166,23 @@ async function basedSource(deps: AdoptDeps, found: Hosted, pull: OpenPull, conve
   return { kind: 'new' as const, branch, from };
 }
 
+async function tracksFork(root: string, pull: FoundPull): Promise<boolean> {
+  const remote = await git(root, ['config', '--get', `branch.${pull.pull.head}.remote`]).catch(
+    () => '',
+  );
+  return remote.trim() === forkRemoteName(pull.headRepo.owner);
+}
+
 async function planFor(found: Hosted, pull: FoundPull, here: boolean): Promise<AdoptPlan> {
   const branches = await listBranches(found.root);
   const fallback = await defaultBranch(found.root).catch(() => null);
   const guarded = ['main', 'master', pull.pull.base, ...(fallback ? [fallback] : [])];
+  const localBranch = branches.local.includes(pull.pull.head);
   return adoptPlan(pull.pull, {
     guarded,
     protectedOnHost: await protectedOnHost(found.runner, found.repo, pull.headRepo, pull.pull.head),
-    localBranch: branches.local.includes(pull.pull.head),
+    localBranch,
+    sameFork: localBranch && pull.pull.fork && (await tracksFork(found.root, pull)),
     checkedOut: !here && (await branchCheckedOut(found.root, pull.pull.head)),
   });
 }
@@ -197,6 +206,8 @@ async function switchedHere(
   base: string,
   here: boolean,
 ): Promise<ChatWorktree> {
+  const refusal = await inPlaceRefusal(deps.db, current);
+  if (refusal) throw new AdoptError(409, refusal);
   if (here) {
     await repointChatWorktree(deps.db, current.id, {
       name: source.branch,

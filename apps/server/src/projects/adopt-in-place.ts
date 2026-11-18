@@ -6,6 +6,7 @@ import {
   type ChatWorktree,
 } from '../persistence/chat-worktrees.ts';
 import type { Db } from '../persistence/db.ts';
+import { refreshDependencies } from './deps-refresh.ts';
 import { git } from './snapshot.ts';
 
 export const IN_CHECKOUT =
@@ -39,6 +40,7 @@ export async function switchInPlace(
   base: string,
 ): Promise<void> {
   const previous = (await git(current.path, ['rev-parse', '--abbrev-ref', 'HEAD'])).trim();
+  const before = (await git(current.path, ['rev-parse', 'HEAD'])).trim();
   await git(current.path, checkoutArgs(source));
   try {
     const commit = (await git(current.path, ['rev-parse', 'HEAD'])).trim();
@@ -47,4 +49,5 @@ export async function switchInPlace(
     await git(current.path, ['checkout', '--quiet', previous]).catch(() => undefined);
     throw error;
   }
+  void refreshDependencies(current.path, { root: current.repoRoot, before }).catch(() => null);
 }

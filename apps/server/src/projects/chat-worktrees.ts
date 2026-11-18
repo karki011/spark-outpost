@@ -74,15 +74,14 @@ export async function changedFiles(root: string): Promise<string[]> {
   return files;
 }
 
-export async function defaultBranch(root: string): Promise<string | null> {
-  const remoteHead = await git(root, [
-    'symbolic-ref',
-    '--quiet',
-    '--short',
-    'refs/remotes/origin/HEAD',
-  ])
+export async function remoteHeadName(root: string): Promise<string> {
+  return git(root, ['symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD'])
     .then((ref) => ref.trim().replace(/^origin\//, ''))
     .catch(() => '');
+}
+
+export async function defaultBranch(root: string): Promise<string | null> {
+  const remoteHead = await remoteHeadName(root);
   const candidates = [remoteHead, 'main', 'master'].filter(Boolean);
   for (const branch of candidates) {
     if (await succeeds(root, ['rev-parse', '--verify', '-q', `refs/heads/${branch}`]))
@@ -168,7 +167,7 @@ export async function latestOf(
   }
   const local = await branchTipOf(root, branch);
   const remote = (await remoteRef(root, ref)) ? await commitOf(root, ref) : null;
-  if (remote && (!local || (await ancestorOf(root, local, ref)))) {
+  if (remote && (!local || (await ancestorOf(root, local, remote)))) {
     return { from: remote, baseRef: ref };
   }
   return local ? { from: local, baseRef: branch } : null;

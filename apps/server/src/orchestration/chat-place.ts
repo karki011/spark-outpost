@@ -20,6 +20,7 @@ import {
   changedFiles,
   defaultBranch,
   fastForward,
+  remoteHeadName,
   freshRemoteDefault,
   latestOf,
   listBranches,
@@ -238,7 +239,10 @@ function notStackedNote(parent: StackParent | null, decision: PlaceDecision): st
 
 async function protectedNames(root: string): Promise<string[]> {
   const fallback = await defaultBranch(root).catch(() => null);
-  return [...new Set(['main', 'master', ...(fallback ? [fallback] : [])])];
+  const remoteHead = await remoteHeadName(root);
+  return [
+    ...new Set(['main', 'master', fallback, remoteHead].filter((name): name is string => !!name)),
+  ];
 }
 
 async function decide(deps: ChatPlaceDeps, target: Target, request: string) {

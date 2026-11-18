@@ -73,30 +73,45 @@ function pullNumber(url: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
-function WorkOnPull({ conversationId, link }: { conversationId: string; link: ChipLink }) {
+type Adopt = ReturnType<typeof useAdoptPull>;
+
+function useCanAdopt(conversationId: string): boolean {
   const workspace = useChatWorkspace(conversationId).data;
   const { remote } = useRemoteClient();
-  const projectId = workspace?.projectId ?? '';
-  const adopt = useAdoptPull(conversationId, projectId);
-  const number = pullNumber(link.url);
   const current = workspace?.current ?? null;
-  if (remote || !number || !workspace?.projectId || workspace.place !== 'worktree') return null;
-  if (current && !current.worktree) return null;
-  const done = current?.adopted?.number === number;
-  if (done && !adopt.data) return null;
+  if (remote || !workspace?.projectId || workspace.place !== 'worktree') return false;
+  return !current || current.worktree;
+}
+
+function WorkOnPull({
+  link,
+  adopt,
+  adopted,
+}: {
+  link: ChipLink;
+  adopt: Adopt;
+  adopted: number | null;
+}) {
+  const number = pullNumber(link.url);
+  if (!number || adopted === number) return null;
   return (
     <div className="lwork">
-      {!done && (
-        <button
-          type="button"
-          className="btn line sm"
-          aria-label={`Work on pull request #${number} in this chat`}
-          disabled={adopt.isPending}
-          onClick={() => adopt.mutate({ number, url: link.url })}
-        >
-          Work on it here
-        </button>
-      )}
+      <button
+        type="button"
+        className="btn line sm"
+        aria-label={`Work on pull request #${number} in this chat`}
+        disabled={adopt.isPending}
+        onClick={() => adopt.mutate({ number, url: link.url })}
+      >
+        Work on it here
+      </button>
+    </div>
+  );
+}
+
+function AdoptResult({ adopt }: { adopt: Adopt }) {
+  return (
+    <>
       {adopt.data && (
         <p className="wnote" role="status">
           {adopt.data.note}
@@ -107,7 +122,7 @@ function WorkOnPull({ conversationId, link }: { conversationId: string; link: Ch
           {adopt.error.message}
         </p>
       )}
-    </div>
+    </>
   );
 }
 
@@ -122,6 +137,10 @@ export function LinksPane({ taskId, conversationId, links }: LinksPaneProps) {
   const watches = useQuery(prWatchesQuery(conversationId)).data?.watches ?? [];
   const tracked = new Set(watches.map((watch) => watch.url));
   const others = links.filter((link) => !(link.kind === 'pr' && tracked.has(link.url)));
+  const workspace = useChatWorkspace(conversationId).data;
+  const adopt = useAdoptPull(conversationId, workspace?.projectId ?? '');
+  const canAdopt = useCanAdopt(conversationId);
+  const adopted = workspace?.current?.adopted?.number ?? null;
   const [adding, setAdding] = useState(false);
   const [url, setUrl] = useState('');
   const add = useMutation({
@@ -153,9 +172,12 @@ export function LinksPane({ taskId, conversationId, links }: LinksPaneProps) {
       {others.map((link) => (
         <Fragment key={link.id}>
           <LinkChip link={link} />
-          {link.kind === 'pr' && <WorkOnPull conversationId={conversationId} link={link} />}
+          {canAdopt && link.kind === 'pr' && (
+            <WorkOnPull link={link} adopt={adopt} adopted={adopted} />
+          )}
         </Fragment>
       ))}
+      <AdoptResult adopt={adopt} />
       {adding ? (
         <form className="linkform" onSubmit={submit}>
           <input

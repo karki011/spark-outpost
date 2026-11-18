@@ -35,6 +35,15 @@ describe('where a Do chat works', () => {
     expect(decidePlace(inFiles)).toEqual({ kind: 'in_place', branch: 'main' });
   });
 
+  it('starts a protected pick from its remote ref, or explains when it is missing', () => {
+    const guard = { requested: 'develop', protectedBranches: ['main', 'develop'] };
+    const remoteOnly = facts({ ...guard, remote: new Map([['develop', 'origin/develop']]) });
+    expect(decidePlace(remoteOnly)).toEqual({ kind: 'new', from: 'develop', note: null });
+    const upstream = facts({ ...guard, remote: new Map([['develop', 'upstream/develop']]) });
+    expect(decidePlace(upstream)).toEqual({ kind: 'new', from: 'upstream/develop', note: null });
+    expect(decidePlace(facts(guard))).toMatchObject({ kind: 'new', from: null });
+  });
+
   it('works in place on the checked-out branch when the tree is clean', () => {
     expect(decidePlace(facts({ requested: 'main' }))).toEqual({ kind: 'in_place', branch: 'main' });
   });
