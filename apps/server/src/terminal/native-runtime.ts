@@ -27,9 +27,9 @@ import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import { stopRun as cancelRun } from '../workflow/stop-run.ts';
 import { nativeControl, nativeLaunchError, NativeRuntimeError } from './native-control.ts';
 import { nativeObserver, hookTokenDigest as digest } from './native-observe.ts';
+import { nativeModHost } from './native-mod-host.ts';
 import { attachNativeSession } from './native-attach.ts';
 import { isCancelRequested } from '../persistence/run-events.ts';
-import { nativeHookHost } from './native-hook-host.ts';
 import { nativeTurnContext } from './native-context.ts';
 import { watchTranscript } from './native-tail.ts';
 import { nativeUsage } from './native-usage.ts';
@@ -51,11 +51,7 @@ import { launchUntracked } from './untracked-launch.ts';
 import { terminalAgents } from './terminal-agents.ts';
 import { writeAdoptRecord } from './tmux/adopt-record.ts';
 import { readoptTmuxSessions } from './tmux/readopt.ts';
-import { terminalApprovals } from './remote/approvals.ts';
-import { modInbox } from './remote/mod-inbox.ts';
 import { recordsTerminalLikeChat } from '../persistence/native-terminal-settings.ts';
-import { answerWaits, withMod } from './remote/mod-routing.ts';
-import { nativeRemote, remoteHookHandlers } from './remote/native-remote.ts';
 
 export type { NativeRuntime, NativeRuntimeDeps } from './native-runtime-types.ts';
 import type { NativeRuntime, NativeRuntimeDeps, LiveSession } from './native-runtime-types.ts';
@@ -95,32 +91,16 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     control,
     usage,
   });
-  const approvals = terminalApprovals();
-  const waitsForAnswer = answerWaits(approvals, deps.db);
-  const mod = modInbox({ db: deps.db, workspaceId: deps.workspaceId, waitsForAnswer });
-  const remote = withMod(
-    nativeRemote({
-      db: deps.db,
-      workspaceId: deps.workspaceId,
-      live,
-      terminals: deps.terminals,
-      approvals,
-      owned,
-    }),
-    mod,
-    waitsForAnswer,
-  );
-  const handlers = remoteHookHandlers(remote, (token) => tokens.get(digest(token)), hook);
-  const host = await nativeHookHost(
-    (token) => tokens.has(digest(token)),
-    handlers.observe,
-    handlers.permission,
-    async (token) => {
-      const session = tokens.get(digest(token));
-      return session ? mod.poll(session) : null;
-    },
+  const { remote, host, launched } = await nativeModHost({
+    db: deps.db,
+    workspaceId: deps.workspaceId,
+    live,
+    tokens,
+    terminals: deps.terminals,
+    owned,
+    hook,
     telemetry,
-  );
+  });
   const exited = (running: LiveSession) => (exit: { exitCode: number }) => {
     const state = exit.exitCode === 0 ? 'exited' : 'error';
     remote.ended(running.row.conversation_id);
@@ -313,6 +293,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
         observer: timer.observer,
         onExit: exited(running),
       });
+      void launched(running);
       return {
         session: nativeTerminalView((await nativeTerminalRow(deps.db, conversationId))!),
         connection: { ...connection, ...prepared.folder },

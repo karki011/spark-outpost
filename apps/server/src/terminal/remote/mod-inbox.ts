@@ -1,4 +1,5 @@
 import type { PrChecks, TerminalApprovalDecision } from '@spark-outpost/contracts';
+import { isRecord } from '../../agent-config/records.ts';
 import type { Db } from '../../persistence/db.ts';
 import { recordsTerminalLikeChat } from '../../persistence/native-terminal-settings.ts';
 import { trackedPullsOf } from '../../persistence/tracked-pulls.ts';
@@ -10,11 +11,15 @@ export const FOLLOWED_MS = 30_000;
 export const TAKE_WAIT_MS = 3_000;
 const FACTS_FRESH_MS = 15_000;
 
+export const ASK_NOTICE = 'Also answerable from Spark on your phone';
+
 export interface ModReply {
   messages: string[];
   notices: string[];
   status: string | null;
   record: boolean;
+  abort: string | null;
+  askNotice: string | null;
 }
 
 export interface StatusFacts {
@@ -30,9 +35,16 @@ interface Queued {
   settle: (outcome: Exclude<SendOutcome, 'not taken'>) => void;
 }
 
+interface Stop {
+  prompt: string;
+  settle: () => void;
+}
+
 interface ModSession {
   checkedIn: number;
   followed: number;
+  aborts: boolean;
+  stop: Stop | null;
   queue: Queued[];
   notices: string[];
   facts: { at: number; approvals: boolean; record: boolean; pull: StatusFacts['pull'] } | null;
@@ -64,6 +76,7 @@ export interface ModInboxDeps {
   db: Db;
   workspaceId: string;
   waitsForAnswer: (conversationId: string) => Promise<boolean>;
+  checkedIn?: (session: LiveSession) => void;
   now?: () => number;
   delay?: (ms: number) => Promise<void>;
 }
@@ -75,7 +88,15 @@ export function modInbox(deps: ModInboxDeps) {
   const entry = (conversationId: string): ModSession => {
     let found = sessions.get(conversationId);
     if (!found) {
-      found = { checkedIn: 0, followed: 0, queue: [], notices: [], facts: null };
+      found = {
+        checkedIn: 0,
+        followed: 0,
+        aborts: false,
+        stop: null,
+        queue: [],
+        notices: [],
+        facts: null,
+      };
       sessions.set(conversationId, found);
     }
     return found;
@@ -104,15 +125,23 @@ export function modInbox(deps: ModInboxDeps) {
   return {
     active,
 
-    async poll(session: LiveSession): Promise<ModReply | null> {
+    aborts: (conversationId: string) =>
+      active(conversationId) && sessions.get(conversationId)?.aborts === true,
+
+    async poll(session: LiveSession, body: unknown = {}): Promise<ModReply | null> {
       if (session.row.provider !== 'claude') return null;
       const conversationId = session.row.conversation_id;
       const found = entry(conversationId);
       found.checkedIn = now();
+      found.aborts = isRecord(body) && body.abort === true;
+      deps.checkedIn?.(session);
       const known = await facts(conversationId, found);
       const asked = found.queue.length > 0 && (await deps.waitsForAnswer(conversationId));
       const handed = found.queue.splice(0);
       for (const message of handed) message.settle(asked ? 'refused' : 'taken');
+      const stop = found.aborts ? found.stop : null;
+      found.stop = null;
+      stop?.settle();
       return {
         messages: asked ? [] : handed.map((message) => message.text),
         notices: found.notices.splice(0),
@@ -122,7 +151,28 @@ export function modInbox(deps: ModInboxDeps) {
           pull: known.pull,
         }),
         record: known.record,
+        abort: stop?.prompt ?? null,
+        askNotice: known.approvals ? ASK_NOTICE : null,
       };
+    },
+
+    async stop(conversationId: string, prompt: string): Promise<boolean> {
+      if (!active(conversationId)) return false;
+      const found = entry(conversationId);
+      let taken = false;
+      let wake = () => undefined as void;
+      const handed = new Promise<void>((done) => (wake = done));
+      const stop: Stop = {
+        prompt,
+        settle: () => {
+          taken = true;
+          wake();
+        },
+      };
+      found.stop = stop;
+      await Promise.race([handed, delay(TAKE_WAIT_MS)]);
+      if (found.stop === stop) found.stop = null;
+      return taken;
     },
 
     async send(conversationId: string, text: string): Promise<SendOutcome> {
