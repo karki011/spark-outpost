@@ -8,6 +8,7 @@ import type { ChatTurnDeps } from '../workflow/chat-turn-hooks.ts';
 import { executeChildRun } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
+import { sparkRunSettings, type SparkRunSettings } from './spark-settings.ts';
 
 export interface Handoff {
   deps: ChatTurnDeps;
@@ -23,18 +24,44 @@ export async function publishOrchestration(h: Handoff): Promise<void> {
     await h.append(runEvents.activity(ORCHESTRATION_ACTIVITY, ORCHESTRATION_ACTIVITY, view));
 }
 
-export function pickFor(h: Handoff, spark: MentionableSpark) {
+function chatMode(input: RunInput): string | null {
+  return input.agentMode;
+}
+
+export function settingsFor(
+  h: Handoff,
+  spark: MentionableSpark,
+  where: { inChat: boolean; appliesOwnMode: boolean },
+): SparkRunSettings {
   const { input } = h;
-  const own = spark.provider !== null && spark.connected && h.deps.providers.has(spark.provider);
-  if (!own || spark.provider === input.provider) {
-    const same = spark.provider === input.provider;
-    return {
+  return sparkRunSettings(
+    {
       provider: input.provider,
-      model: (same ? spark.model : null) ?? input.settings.model,
-      effort: (same ? spark.effort : null) ?? input.settings.effort,
-    };
-  }
-  return { provider: spark.provider!, model: spark.model, effort: spark.effort };
+      model: input.settings.model,
+      effort: input.settings.effort,
+      agentMode: chatMode(input),
+      usable: (provider) => h.deps.providers.has(provider),
+      ...where,
+    },
+    spark,
+  );
+}
+
+export function childFields(settings: SparkRunSettings) {
+  return {
+    provider: settings.provider,
+    model: settings.model,
+    effort: settings.effort,
+    agentMode: settings.agentMode,
+  };
+}
+
+export function settingsRoute(settings: SparkRunSettings) {
+  return {
+    agentMode: settings.agentMode,
+    agentFrom: settings.agentFrom,
+    modeFrom: settings.modeFrom,
+  };
 }
 
 export function hasProject(input: RunInput): boolean {

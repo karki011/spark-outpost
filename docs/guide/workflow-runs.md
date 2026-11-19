@@ -32,6 +32,18 @@ Typing `@` and the workflow's id in a chat also starts it. That turn shows **Ope
 | **Skipped**   | It never started, because a step before it failed or the run was stopped. |
 | **Cancelled** | It was working when the run was stopped.                                  |
 
+## Which agent and mode a step uses
+
+A step uses its Spark's **Provider**, **Model**, **Effort** and **Mode**. Where the Spark says **Default**:
+
+| The run                                                               | Takes                                        |
+| --------------------------------------------------------------------- | -------------------------------------------- |
+| Trigger, **Before publish**, `@` in a chat, a run in an existing chat | The chat's; the step says **(from chat)**    |
+| Started by an agent                                                   | The agent's chat's, copied to the run's chat |
+| **Run** into a new chat, a schedule's first run, a review, a test run | Yours; the step says **(your default)**      |
+
+A step in a Bypass permissions chat runs reads and other commands without asking. Edits, commits, pushes, pull requests and installs stay refused in every mode, and [Spark rules](protected-paths.md) still apply.
+
 ## Stop it, or look back
 
 - **Stop** cancels the steps that are working and skips the rest.

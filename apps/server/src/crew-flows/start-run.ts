@@ -14,6 +14,7 @@ import {
   sendInTransaction,
   type RunTarget,
 } from '../persistence/conversations.ts';
+import { copyChatAgent } from '../persistence/chat-settings.ts';
 import { withTransaction, type Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import { getWorkflowRun, insertWorkflowRun } from './run-records.ts';
@@ -46,6 +47,7 @@ export interface StartRun extends StartWorkflowRun {
   source: Extract<WorkflowRunSource, 'manual' | 'schedule' | 'catch_up' | 'trigger' | 'agent'>;
   trigger?: { kind: WorkflowTriggerKind; diffHash: string | null };
   edits?: boolean;
+  settingsFrom?: string | null;
 }
 
 export async function existingRun(
@@ -66,6 +68,11 @@ async function ownChat(deps: StartRunDeps, conversationId: string): Promise<bool
     [conversationId, deps.workspaceId],
   );
   return rowCount === 1;
+}
+
+async function callerChat(deps: StartRunDeps, start: StartRun): Promise<string | null> {
+  const from = start.settingsFrom ?? null;
+  return from !== null && (await ownChat(deps, from)) ? from : null;
 }
 
 export async function startSparkTestRun(
@@ -113,7 +120,8 @@ export async function startWorkflowRun(deps: StartRunDeps, start: StartRun): Pro
     throw new ConversationNotFoundError(start.conversationId);
   }
   const conversationId = start.conversationId ?? newId();
-  const target = await deps.runTarget(conversationId);
+  const settingsFrom = start.conversationId === null ? await callerChat(deps, start) : null;
+  const target = await deps.runTarget(settingsFrom ?? conversationId);
   const message = start.message.trim();
   const id = newId();
   await withTransaction(deps.db, async (client) => {
@@ -122,6 +130,7 @@ export async function startWorkflowRun(deps: StartRunDeps, start: StartRun): Pro
         title: workflow.name,
         ...(start.projectId ? { projectIds: [start.projectId] } : {}),
       });
+      if (settingsFrom) await copyChatAgent(client, settingsFrom, conversationId);
     }
     const sent = await sendInTransaction(
       client,

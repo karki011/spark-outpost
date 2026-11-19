@@ -157,6 +157,7 @@ export async function performWorkflowControl(
       db: context.deps.db,
       workspaceId: context.scope.workspaceId,
       chatFolders: context.deps.chatFolders,
+      fromChat: context.scope.conversationId,
     },
     action,
   );

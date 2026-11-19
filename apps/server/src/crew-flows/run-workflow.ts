@@ -9,10 +9,12 @@ import {
   type WorkflowStepState,
 } from '@spark-outpost/contracts';
 import {
+  childFields,
   hasProject,
-  pickFor,
   publishOrchestration,
   runSparkChild,
+  settingsFor,
+  settingsRoute,
   type Handoff,
 } from '../orchestration/spark-child.ts';
 import { agentDefinitions } from '../agents/acp/agents.ts';
@@ -26,7 +28,7 @@ import {
   type TurnWorkflowRun,
 } from './run-records.ts';
 import { stepJobPrompt, type StepNote } from './step-prompt.ts';
-import { stepSparks, type StepSpark } from './step-sparks.ts';
+import { runsInChat, stepSparks, type StepSpark } from './step-sparks.ts';
 
 export const SPARK_GONE = 'This step’s Spark no longer exists.';
 export const STEP_CRASHED = 'The step stopped with an unexpected error.';
@@ -61,6 +63,7 @@ interface Running {
   turn: TurnWorkflowRun;
   options: RunOptions;
   sparks: ReadonlyMap<string, StepSpark>;
+  inChat: boolean;
   states: Record<string, WorkflowStepState>;
   notes: Map<string, string | null>;
 }
@@ -136,12 +139,11 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
   if (turn.run.kind === 'review' && !run.options.review) {
     return { id: step.id, state: 'failed', note: REVIEW_GONE };
   }
-  const pick = pickFor(h, spark);
   const reviewRun = turn.run.kind === 'review';
-  const ownMode = spark.provider === pick.provider && !reviewRun ? spark.agentMode : null;
+  const settings = settingsFor(h, spark, { inChat: run.inChat, appliesOwnMode: !reviewRun });
   const testRun = turn.run.kind === 'test';
   const edits = turn.edits && hasProject(h.input) && !testRun;
-  const editing = edits && stepEditsOffered(pick.provider);
+  const editing = edits && stepEditsOffered(settings.provider);
   try {
     const result = await runSparkChild(
       h,
@@ -150,9 +152,8 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
         stepIndex: index,
         attempt: 1,
         agentLabel: sparkWho(spark),
-        ...pick,
+        ...childFields(settings),
         mode: hasProject(h.input) ? 'ask' : 'chat',
-        ...(ownMode ? { agentMode: ownMode } : {}),
         prompt: promptFor(run, step, spark, editing),
         route: {
           name: spark.name,
@@ -165,6 +166,7 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
             ...(testRun ? { test: true } : {}),
             ...(editing ? { edits: true } : {}),
             ...(reviewRun ? { review: true } : {}),
+            ...settingsRoute(settings),
           },
         },
       },
@@ -202,6 +204,7 @@ export async function runWorkflow(
       h.input.workspaceId,
       steps.map((step) => step.sparkId),
     ),
+    inChat: await runsInChat(h.deps.db, turn),
     states: startingStates(turn),
     notes: new Map(turn.run.steps.map((step) => [step.stepId, step.note])),
   };

@@ -6,6 +6,7 @@ import {
 } from '@spark-outpost/contracts';
 import { shortLabel } from '../chat/composer/model-options.ts';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
+import { agentSourceWords, useSparkModeText } from '../crew/spark-settings-text.ts';
 import { BellIcon, ForwardIcon } from '../ui/icons.tsx';
 import { stepElapsed } from './run-model.ts';
 import { RunStepState } from './RunState.tsx';
@@ -40,10 +41,12 @@ interface RunStepPanelProps {
   onOpenCard: (approvalId: string) => void;
 }
 
-function agentText(member: CrewMember | undefined): string {
+function agentText(member: CrewMember | undefined, mode: string | null): string {
   if (!member) return 'Not started';
   const model = member.modelLabel ?? (member.model ? shortLabel(member.model) : null);
-  return [providerName(member.provider), model].filter(Boolean).join(' · ');
+  const agent = [providerName(member.provider), model].filter(Boolean).join(' · ');
+  const source = agentSourceWords(member.spark);
+  return [source ? `${agent} ${source}` : agent, mode].filter(Boolean).join(' · ');
 }
 
 export function RunStepPanel({
@@ -60,6 +63,7 @@ export function RunStepPanel({
   onOpenCard,
 }: RunStepPanelProps) {
   const elapsed = stepElapsed(step, now);
+  const mode = useSparkModeText(member?.provider ?? '', member?.spark);
   return (
     <section className="wf-run-panel" aria-label={`Step ${label}`}>
       <header className="wf-run-panel-head">
@@ -82,7 +86,7 @@ export function RunStepPanel({
         <dt>Spark</dt>
         <dd>{spark ? [spark.name, spark.role].filter(Boolean).join(' · ') : 'Missing Spark'}</dd>
         <dt>Agent</dt>
-        <dd>{agentText(member)}</dd>
+        <dd>{agentText(member, mode)}</dd>
         <dt>Mode</dt>
         <dd>{member?.mode ? MODE_WORDS[member.mode] : 'Not started'}</dd>
         <dt>Time</dt>
