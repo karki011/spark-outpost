@@ -106,12 +106,18 @@
   list-style: none;
 }
 
-.crail-row {
+.crail-row,
+.crail-line {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+
+.crail-row {
   width: 100%;
-  padding: 4px 6px;
+  min-height: 28px;
+  padding: 0 6px;
   border-radius: var(--r-sm);
   color: var(--muted);
   text-align: left;
@@ -119,6 +125,10 @@
   transition:
     background 0.15s,
     color 0.15s;
+}
+
+.crail-line {
+  flex: 1;
 }
 
 :is(button, a).crail-row:hover {
@@ -152,35 +162,29 @@
   color: var(--danger);
 }
 
-.crail-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
 .crail-main,
 .crail-detail {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.crail-main .chf-n {
-  margin-left: 6px;
-  font-size: 12px;
+.crail-main {
+  flex: 0 1 auto;
+  color: var(--text);
 }
 
 .crail-detail {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  flex: 1 1 0;
+  padding-left: 4px;
   color: var(--faint);
   font-size: 12px;
+  text-align: right;
 }
 
-.crail-detail svg {
-  width: 11px;
-  height: 11px;
+.crail-detail .chf-n {
+  font-size: 12px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -406,33 +410,6 @@
   transform: rotate(90deg);
 }
 
-.crail-manage {
-  flex-shrink: 0;
-  margin-left: 6px;
-  padding: 0 6px;
-}
-
-.crail-tools-note {
-  padding: 0 6px 4px;
-}
-
-.crail-tools-body {
-  padding: 0 6px;
-}
-
-.crail-tools-body .tools-group {
-  padding: 8px 0 4px;
-}
-
-.crail-tools-body li {
-  min-height: 32px;
-  padding: 2px 0;
-}
-
-.crail-tools-body .mcppop-text code {
-  font-size: 12.5px;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .crail-chevron {
     transition: none;
@@ -441,7 +418,7 @@
 
 @media (pointer: coarse) {
   .crail-fold,
-  .crail-tools-body li {
+  .crail-row {
     min-height: 44px;
   }
 }

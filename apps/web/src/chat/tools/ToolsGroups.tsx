@@ -9,22 +9,32 @@ import { useChatMcp } from '../composer/use-chat-mcp.ts';
 import { ConnectorTools } from './ConnectorTools.tsx';
 import { PluginTools } from './PluginTools.tsx';
 import { ProjectTools } from './ProjectTools.tsx';
+import { RailGroupsProvider, ToolsGroupFrame, type RailGroups } from './ToolsGroupFrame.tsx';
 
 interface ToolsGroupsProps {
   conversationId: string;
   repos: readonly Project[];
   provider: string | null;
   className?: string;
+  rail?: RailGroups;
+}
+
+function mcpSummary(servers: readonly { enabled: boolean }[]): string {
+  if (servers.length === 0) return 'None';
+  return `${servers.filter((server) => server.enabled).length} of ${servers.length} on`;
 }
 
 function McpTools({ conversationId }: { conversationId: string }) {
   const { servers, toggle, setForChat } = useChatMcp(conversationId);
   const list = servers.data?.servers ?? [];
   return (
-    <div className="tools-group">
-      <h4 className="tools-sub">
-        MCP servers <span>this chat</span>
-      </h4>
+    <ToolsGroupFrame
+      groupKey="mcp"
+      kind="mcp"
+      title="MCP servers"
+      scope="this chat"
+      summary={servers.data ? mcpSummary(list) : null}
+    >
       <QueryWait query={servers} what="MCP servers">
         <Skeleton label="Finding MCP servers" shape="list" rows={2} />
       </QueryWait>
@@ -37,19 +47,27 @@ function McpTools({ conversationId }: { conversationId: string }) {
           {toggle.error.message}
         </p>
       )}
-    </div>
+    </ToolsGroupFrame>
   );
 }
 
-export function ToolsGroups({ conversationId, repos, provider, className }: ToolsGroupsProps) {
+export function ToolsGroups({
+  conversationId,
+  repos,
+  provider,
+  className,
+  rail,
+}: ToolsGroupsProps) {
   const { remote } = useRemoteClient();
   const showPlugins = provider === 'claude' && !remote;
   return (
-    <div className={className ? `tools-groups ${className}` : 'tools-groups'}>
-      <ProjectTools repos={repos} />
-      <McpTools conversationId={conversationId} />
-      {showPlugins && <PluginTools />}
-      <ConnectorTools />
-    </div>
+    <RailGroupsProvider value={rail ?? null}>
+      <div className={className ? `tools-groups ${className}` : 'tools-groups'}>
+        <ProjectTools repos={repos} />
+        <McpTools conversationId={conversationId} />
+        {showPlugins && <PluginTools />}
+        <ConnectorTools />
+      </div>
+    </RailGroupsProvider>
   );
 }

@@ -22,8 +22,7 @@ import { repoSummary } from '../project/repo-list.ts';
 import type { WorkTab } from '../../tasks/TaskDetails.tsx';
 import { formatCost } from '../../usage/format.ts';
 
-export type RailRowId =
-  'project' | 'agent' | 'following' | 'autonomy' | 'changes' | 'checks' | 'pr' | 'usage';
+export type RailRowId = 'project' | 'agent' | 'following' | 'autonomy' | 'changes' | 'pr' | 'usage';
 
 export type RailAction =
   | { kind: 'project' }
@@ -42,7 +41,6 @@ export interface RailRow {
   action: RailAction | null;
   tone?: RailTone;
   counts?: { added: number; removed: number };
-  onBranch?: boolean;
 }
 
 export interface RailFacts {
@@ -74,23 +72,29 @@ function prState(watch: NonNullable<RailFacts['watch']>): string {
   return watch.draft ? 'Draft' : 'Open';
 }
 
+const SHORT_MODES: Readonly<Record<string, string>> = { 'Bypass permissions': 'Bypass' };
+
 function pullRow(watch: NonNullable<RailFacts['watch']>, count: number, hasTask: boolean): RailRow {
   const name = `${watch.repo}#${watch.number}`;
+  const checks = CHECKS[watch.checks];
+  const tone = checks.tone ? { tone: checks.tone } : {};
   if (count > 1) {
     return {
       id: 'pr',
       text: `${count} pull requests`,
       detail: `#${watch.number} ${prState(watch)}`,
-      label: `${count} pull requests. ${name} is ${prState(watch).toLowerCase()}`,
+      label: `${count} pull requests. ${name} is ${prState(watch).toLowerCase()}, ${checks.text.toLowerCase()}`,
       action: hasTask ? { kind: 'tab', tab: 'links' } : { kind: 'link', href: watch.url },
+      ...tone,
     };
   }
   return {
     id: 'pr',
     text: `PR #${watch.number}`,
-    detail: prState(watch),
-    label: `Pull request ${name}, ${prState(watch)}. Opens on GitHub`,
+    detail: checks.text,
+    label: `Pull request ${name}, ${prState(watch)}, ${checks.text.toLowerCase()}. Opens on GitHub`,
     action: { kind: 'link', href: watch.url },
+    ...tone,
   };
 }
 
@@ -105,34 +109,43 @@ function projectRow(facts: RailFacts): RailRow {
     };
   }
   const name = repoSummary(facts.repoNames);
-  const place = facts.branch
-    ? `${facts.branch.name} · ${facts.branch.worktree ? 'worktree' : 'my files'}`
-    : null;
+  const { branch } = facts;
+  const place = branch ? `${branch.name} · ${branch.worktree ? 'worktree' : 'my files'}` : null;
   return {
     id: 'project',
     text: name,
-    detail: place,
+    detail: branch?.name ?? null,
     label: place ? `Project ${name}, ${place}` : `Project ${name}`,
     action: { kind: 'project' },
-    ...(place ? { onBranch: true } : {}),
   };
 }
 
 function usageRow(facts: RailFacts): RailRow | null {
   const { usage, contextPercent } = facts;
-  const parts: string[] = [];
-  if (usage.totalTokens > 0) parts.push(`${formatTokens(usage.totalTokens)} tokens`);
-  if (usage.costUsd !== null) parts.push(formatCost(usage.costUsd, usage.costSource ?? null));
-  if (parts.length === 0 && contextPercent === null) return null;
+  const tokens = usage.totalTokens > 0 ? `${formatTokens(usage.totalTokens)} tokens` : null;
+  const cost = usage.costUsd === null ? null : formatCost(usage.costUsd, usage.costSource ?? null);
   const context = contextPercent === null ? null : `${contextPercent}% context`;
-  const text = parts.join(' · ') || context!;
-  const detail = parts.length > 0 ? context : null;
+  const text = cost ?? tokens ?? context;
+  if (text === null) return null;
+  const detail = text === context ? null : context;
   return {
     id: 'usage',
     text,
     detail,
-    label: [text, detail].filter(Boolean).join(', '),
+    label: [[tokens, cost].filter(Boolean).join(' · '), detail].filter(Boolean).join(', ') || text,
     action: facts.hasTask ? { kind: 'tab', tab: 'cost' } : null,
+  };
+}
+
+function followingRow(files: readonly string[]): RailRow | null {
+  const line = followingLine(files);
+  if (!line) return null;
+  return {
+    id: 'following',
+    text: `Following ${files.length}`,
+    detail: files[0] ?? null,
+    label: line,
+    action: null,
   };
 }
 
@@ -142,15 +155,13 @@ export function railRows(facts: RailFacts): RailRow[] {
   const mode = facts.repoNames.length > 0 ? `mode ${facts.mode}` : facts.mode;
   rows.push({
     id: 'agent',
-    text: agent,
-    detail: facts.mode,
+    text: facts.model || facts.provider,
+    detail: SHORT_MODES[facts.mode] ?? facts.mode,
     label: `Agent ${agent}, ${mode}`,
     action: facts.hasTask && facts.hasStoredCrew ? { kind: 'tab', tab: 'crew' } : null,
   });
-  const following = followingLine(facts.following ?? []);
-  if (following) {
-    rows.push({ id: 'following', text: following, detail: null, label: following, action: null });
-  }
+  const following = followingRow(facts.following ?? []);
+  if (following) rows.push(following);
   if (facts.autonomy) {
     const level = autonomyLabel(facts.autonomy);
     rows.push({
@@ -165,25 +176,14 @@ export function railRows(facts: RailFacts): RailRow[] {
     const { files, added, removed } = facts.changes;
     rows.push({
       id: 'changes',
-      text: `${filesLabel(files)} changed`,
+      text: filesLabel(files),
       detail: null,
       label: `${filesLabel(files)} changed, ${formatTotal(added)} added, ${formatTotal(removed)} removed. Review changes`,
       action: { kind: 'changes' },
       counts: { added, removed },
     });
   }
-  if (facts.watch) {
-    const checks = CHECKS[facts.watch.checks];
-    rows.push({
-      id: 'checks',
-      text: checks.text,
-      detail: null,
-      label: checks.text,
-      action: facts.hasTask ? { kind: 'tab', tab: 'links' } : null,
-      ...(checks.tone ? { tone: checks.tone } : {}),
-    });
-    rows.push(pullRow(facts.watch, facts.pulls ?? 1, facts.hasTask));
-  }
+  if (facts.watch) rows.push(pullRow(facts.watch, facts.pulls ?? 1, facts.hasTask));
   const usage = usageRow(facts);
   if (usage) rows.push(usage);
   return rows;

@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                               | What to do                                                                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Context rail: one line per row; tools fold                 | [Read the rows](context-rail.md#read-the-rows).                                          |
 | Compaction at natural breaks; summaries read as a handoff  | [Manage a long chat](compaction.md#change-when-spark-compacts).                          |
 | Pushes wait while you use the Mac                          | [Use your phone](use-your-phone.md).                                                     |
 | **A chat starts** trigger                                  | [Guide](workflow-triggers.md#the-events).                                                |
@@ -43,7 +44,6 @@ summary: What changed in recent releases and what to do next.
 | One meeting card; Join takes notes                         | [Take meeting notes](meetings.md).                                                       |
 | Saved sign-ins type with no card                           | [Save a test sign-in](use-the-browser.md#save-a-test-sign-in).                           |
 | Browser: address at top, one chat per tab                  | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).                             |
-| Context rail: full height; **Tools** inline                | [See a chat's context](context-rail.md).                                                 |
 | Remote control: side panel, sections fold                  | [Use your phone](use-your-phone.md).                                                     |
 | **Let Spark build one for you**; new empty tabs            | [Build with an agent](build-with-an-agent.md).                                           |
 | Fewer Settings pages                                       | [Settings](settings.md).                                                                 |
