@@ -15,6 +15,7 @@ export const SETTINGS_PAGE_IDS = [
   'tools',
   'browser',
   'mac',
+  'health',
   'about',
 ] as const;
 

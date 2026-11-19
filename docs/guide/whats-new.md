@@ -10,6 +10,8 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                               | What to do                                                                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **Health** in Settings                                     | [Check Health](trouble-setup-and-reset.md#check-health).                                 |
+| Build Sparks with an agent; Spark effort                   | [Build with an agent](build-with-an-agent.md).                                           |
 | **Usage limits**; **Compact idle conversations**           | [Limits](statuses-and-limits.md#limits), [Compaction](compaction.md#compact-idle-chats). |
 | Meeting notes (alpha): live tab, delete dialog             | [Take meeting notes](meetings.md).                                                       |
 | Meeting alerts while locked; deleted share links stay dead | Nothing to do.                                                                           |
@@ -44,8 +46,6 @@ summary: What changed in recent releases and what to do next.
 | Answer more cards from a device      | [Answer cards remotely](answer-remotely.md).    |
 | Agents do much more in Jira          | [Jira tools](jira-tools.md).                    |
 | Context rail: tools, ports, floats   | [See a chat's context](context-rail.md).        |
-| Build Sparks by talking to an agent  | [Build with an agent](build-with-an-agent.md).  |
-| Ask an agent per Spark; Spark effort | [Build with an agent](build-with-an-agent.md).  |
 | Workflows: run view, Runs, `@id` fix | [Follow a workflow run](workflow-runs.md).      |
 | Test run and Try it: nothing is sent | [Do a test run](test-run.md).                   |
 | Workflows can run on a schedule      | [Schedule a workflow](workflow-schedules.md).   |
