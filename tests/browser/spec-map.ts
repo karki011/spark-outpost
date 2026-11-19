@@ -9,6 +9,7 @@ export const SPEC_GROUPS = {
     'attachments',
     'chat',
     'chat-clean',
+    'chat-html',
     'chat-column',
     'chat-files',
     'chat-questions',

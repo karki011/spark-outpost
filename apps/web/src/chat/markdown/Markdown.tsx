@@ -1,9 +1,11 @@
 import { createContext, memo, use, type ReactNode } from 'react';
-import ReactMarkdown, { type Components } from 'react-markdown';
+import ReactMarkdown, { type Components, type Options } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remend from 'remend';
 import { Breakout } from '../breakout/Breakout.tsx';
 import { CodeBlock } from './CodeBlock.tsx';
+import { Preformatted } from './Preformatted.tsx';
+import { safeHtmlPlugins } from './safe-html.ts';
 import { splitBlocks, withoutClarifyBlock } from './markdown-blocks.ts';
 import './code-tokens.css';
 import './markdown.css';
@@ -12,6 +14,7 @@ interface MarkdownProps {
   text: string;
   streaming?: boolean;
   typed?: boolean;
+  html?: boolean;
 }
 
 const LANGUAGE_CLASS = /language-([\w+-]+)/;
@@ -57,6 +60,7 @@ export const codeComponents: Components = {
 
 export const components: Components = {
   ...codeComponents,
+  pre: Preformatted,
   a: ({ href, children }) =>
     href && SAFE_LINK.test(href) ? (
       <a href={href} target="_blank" rel="noopener noreferrer">
@@ -74,13 +78,20 @@ export const components: Components = {
 
 export const remarkPlugins = [remarkGfm];
 
+const LITERAL_HTML: Options['rehypePlugins'] = [];
+
 const MarkdownBlock = memo(function MarkdownBlock({
   text,
   streaming,
+  html,
 }: Required<Omit<MarkdownProps, 'typed'>>) {
   return (
     <StreamingContext value={streaming}>
-      <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
+      <ReactMarkdown
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={html ? safeHtmlPlugins : LITERAL_HTML}
+        components={components}
+      >
         {streaming ? remend(text) : text}
       </ReactMarkdown>
     </StreamingContext>
@@ -91,6 +102,7 @@ export const Markdown = memo(function Markdown({
   text,
   streaming = false,
   typed = false,
+  html = !typed,
 }: MarkdownProps) {
   const blocks = splitBlocks(typed ? text : withoutClarifyBlock(text));
   return (
@@ -100,6 +112,7 @@ export const Markdown = memo(function Markdown({
           key={index}
           text={block}
           streaming={streaming && index === blocks.length - 1}
+          html={html}
         />
       ))}
     </div>
