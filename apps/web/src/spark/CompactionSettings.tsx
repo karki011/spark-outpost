@@ -8,6 +8,7 @@ import { SwitchValueSetting } from './SwitchValueSetting.tsx';
 export const WARN_LABEL = 'Warn when context is';
 export const COMPACT_LABEL = 'Compact automatically at';
 export const IDLE_COMPACT_LABEL = 'Compact idle conversations';
+export const BREAK_LABEL = 'Compact at a natural break';
 
 const WARN_INFO = {
   lead: 'The context ring in the composer turns amber at this point.',
@@ -43,6 +44,19 @@ const IDLE_INFO = {
     },
   ],
   footer: 'Off, Spark keeps Claude from compacting idle conversations. Codex is unchanged.',
+};
+
+const BREAK_INFO = {
+  lead: 'Past the warning point, Spark compacts before your next message when the last turn ended at a natural break.',
+  items: [
+    {
+      label: 'Natural break',
+      text: 'The agent finished its plan, or opened or updated a pull request.',
+    },
+    { label: 'Automatic off', text: 'The card asks at the break instead.' },
+    { label: 'Fallback', text: 'The compaction point still applies.' },
+  ],
+  footer: 'Never mid-reply or while a card waits.',
 };
 
 type Check = (percent: number) => string | null;
@@ -162,6 +176,25 @@ function CompactAtSetting({ profile }: { profile: Profile }) {
   );
 }
 
+function breakHint(on: boolean, profile: Profile): string {
+  if (!on) return `Spark waits for ${profile.compactAtPercent}%.`;
+  const action = profile.autoCompact ? 'compacts' : 'asks with the card';
+  return `From ${profile.compactWarnPercent}%, Spark ${action} when the last turn finished its plan or opened or updated a pull request.`;
+}
+
+function BreakSetting({ profile }: { profile: Profile }) {
+  return (
+    <ProfileSwitchSetting
+      enabled={profile.compactAtBreak}
+      label={BREAK_LABEL}
+      info={BREAK_INFO}
+      doc={{ page: 'compaction', heading: 'change-when-spark-compacts' }}
+      hint={(on) => breakHint(on, profile)}
+      toUpdate={(value) => ({ compactAtBreak: value })}
+    />
+  );
+}
+
 export function CompactionSettings({ profile }: { profile: Profile }) {
   return (
     <section className="spark-group" aria-labelledby="spark-compaction">
@@ -180,6 +213,7 @@ export function CompactionSettings({ profile }: { profile: Profile }) {
         }
         toUpdate={(value) => ({ compactIdleConversations: value })}
       />
+      <BreakSetting profile={profile} />
     </section>
   );
 }

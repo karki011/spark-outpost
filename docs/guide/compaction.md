@@ -19,12 +19,16 @@ When a chat's context is nearly full, Spark compacts it: the agent carries on fr
 
 Past the red point, Spark compacts before your next message, never mid-reply or while a card waits.
 
-While the agent compacts, the working line says **Compacting the chat**; then the work log shows **Context compacted**.
+Past amber, it compacts at a natural break too: a finished plan, or a pull request opened or updated.
+
+The working line says **Compacting the chat**; the work log then says why it compacted.
 
 ## Read the summary
 
 1. Find the **Compacted** divider.
 2. Select **View summary** to read what the agent now carries.
+
+It reads as a handoff: goal, state, next steps, **Your decisions** with dates, open questions, gotchas and loose ends. Spark adds the branch, pull request and changes it checked.
 
 It ends with **Exact identifiers**: PR numbers, commits, branches, files, tickets, errors and links, never secrets. Agents read earlier turns with `spark_chat_history`.
 
@@ -33,6 +37,7 @@ It ends with **Exact identifiers**: PR numbers, commits, branches, files, ticket
 1. Open **Settings → Chats & autonomy** and find **Context compaction**.
 2. Set **Warn when context is** (30% to 90%). It only colours the ring.
 3. Set **Compact automatically at** (40% to 95%), or switch it off.
+4. Switch **Compact at a natural break** off to wait for that point.
 
 ## Compact idle chats
 
@@ -45,7 +50,7 @@ A summary can drop detail, a chat doesn't count its cost, and a sleeping turn ca
 
 ## Answer the card
 
-With auto-compaction off, **This chat is almost full** asks first.
+With auto-compaction off, **This chat is almost full** asks first, also at a natural break.
 
 ![The This chat is almost full card with its three choices](images/compaction-card-light.png)
 

@@ -6,7 +6,7 @@ import {
   type AgentModeOption,
   type ArchiveInactiveDays,
   type BusyEnterAction,
-  type CompactionThresholds,
+  type CompactionSettings,
   type InvolvementLevel,
   type Personality,
   type Profile,
@@ -57,6 +57,7 @@ interface ProfileRow {
   compact_warn_percent: number;
   compact_at_percent: number;
   auto_compact: boolean;
+  compact_at_break: boolean;
   heartbeat: boolean;
   wide_window: WideWindowLayout;
   busy_enter: BusyEnterAction;
@@ -110,6 +111,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
        pr_follow_up_reviews, pr_follow_up_replies, pr_follow_up_ask, pr_follow_up_bots, personality, agent_instructions, agent_instructions_file, default_level,
        default_level_notice,
        morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
+       compact_at_break,
        heartbeat, wide_window, busy_enter, archive_inactive_days, terminal_record_like_chat,
        mac_control, code_mode, collapse_finished_turns, compact_idle_conversations,
        week_recap, week_recap_day, to_char(week_recap_time, 'HH24:MI') AS week_recap_time,
@@ -209,6 +211,7 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     compactWarnPercent: profile.compact_warn_percent,
     compactAtPercent: profile.compact_at_percent,
     autoCompact: profile.auto_compact,
+    compactAtBreak: profile.compact_at_break,
     heartbeat: profile.heartbeat,
     wideWindow: profile.wide_window,
     busyEnter: profile.busy_enter,
@@ -284,6 +287,7 @@ export async function updateProfile(
        week_recap_day = COALESCE($33, week_recap_day),
        week_recap_time = COALESCE($34::time, week_recap_time),
        pr_follow_up_bots = COALESCE($35::text[], pr_follow_up_bots),
+       compact_at_break = COALESCE($36, compact_at_break),
        compact_idle_conversations = COALESCE($36, compact_idle_conversations),
        updated_at = now()
      WHERE workspace_id = $1`,
@@ -323,6 +327,7 @@ export async function updateProfile(
       update.weekRecapDay ?? null,
       update.weekRecapTime ?? null,
       update.prFollowUpBots ?? null,
+      update.compactAtBreak ?? null,
       update.compactIdleConversations ?? null,
     ],
   );
@@ -389,12 +394,13 @@ export async function autoContinueSeconds(
 export async function compactionThresholds(
   db: Queryable,
   workspaceId: string,
-): Promise<CompactionThresholds> {
+): Promise<CompactionSettings> {
   const profile = await ensureProfile(db, workspaceId);
   return {
     warnPercent: profile.compact_warn_percent,
     compactPercent: profile.compact_at_percent,
     autoCompact: profile.auto_compact,
+    compactAtBreak: profile.compact_at_break,
   };
 }
 

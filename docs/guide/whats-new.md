@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                               | What to do                                                                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Compaction at natural breaks; summaries read as a handoff  | [Manage a long chat](compaction.md#change-when-spark-compacts).                          |
 | Pushes wait while you use the Mac                          | [Use your phone](use-your-phone.md).                                                     |
 | **A chat starts** trigger                                  | [Guide](workflow-triggers.md#the-events).                                                |
 | Agent terminal row is a card; compact workflows            | Nothing to do.                                                                           |

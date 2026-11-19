@@ -17,7 +17,7 @@ export const HISTORY_TOOL_NOTE =
 export const CHAT_SUMMARY_HEADING = '# Compacted chat summary';
 
 export const CHAT_SUMMARY_ROLE =
-  'Earlier turns of this chat were compacted into this summary to free context. Requests, the agreed plan, open issues, the current diff and the most recent turns are kept as they were; stale tool output is dropped. Continue the conversation from here.';
+  'Earlier turns of this chat were compacted into this handoff to free context. The goal, the live state Spark checked, the user’s requests with their dates, the agreed plan, open issues, the current diff and the most recent turns are kept as they were; stale tool output is dropped. Treat any branch, pull request or file claim not in the live state as unverified. Continue the conversation from here.';
 
 export const CHAT_SUMMARY_TURNS = { count: 12, limit: 4_000 };
 
@@ -41,8 +41,15 @@ export function recentTurnsText(
     .join('\n\n');
 }
 
+export interface DatedRequest {
+  content: string;
+  sentOn: string;
+}
+
 export interface ChatSummaryContext {
   history: readonly HistoryTurn[];
+  requests: readonly DatedRequest[];
+  liveState: string;
   agreedPlan: string | null;
   changes: readonly ChangedFile[];
   patch: string;
@@ -50,10 +57,11 @@ export interface ChatSummaryContext {
   identifiers: string;
 }
 
-function requestsText(history: readonly HistoryTurn[]): string {
-  const asked = history.filter((turn) => turn.role === 'user');
-  const shown = asked.slice(-CHAT_REQUESTS).map((turn) => cap(turn.content, CHAT_REQUEST_LIMIT));
-  const dropped = asked.length - shown.length;
+function requestsText(requests: readonly DatedRequest[]): string {
+  const shown = requests
+    .slice(-CHAT_REQUESTS)
+    .map((request) => `${request.sentOn}: ${cap(request.content, CHAT_REQUEST_LIMIT)}`);
+  const dropped = requests.length - shown.length;
   const lines = shown.map((request, index) => `${index + 1 + dropped}. ${request}`);
   return dropped > 0
     ? [`(${dropped} earlier requests not listed)`, ...lines].join('\n')
@@ -69,14 +77,22 @@ export function chatSummaryPrompt(context: ChatSummaryContext): string {
     CHAT_SUMMARY_HEADING,
     CHAT_SUMMARY_ROLE,
     HISTORY_TOOL_NOTE,
-    section('What the chat started with', first.trim() ? cap(first, REQUEST_LIMIT) : 'No request.'),
-    section('Requests so far', requestsText(context.history) || 'None.'),
+    section('Goal and scope', first.trim() ? cap(first, REQUEST_LIMIT) : 'No request.'),
   ];
+  if (context.liveState) parts.push(context.liveState);
+  parts.push(
+    section(
+      'Your decisions and requests',
+      context.requests.length > 0
+        ? `The user's own words, with the date each was sent.\n${requestsText(context.requests)}`
+        : 'None.',
+    ),
+  );
   if (context.agreedPlan) parts.push(context.agreedPlan);
   parts.push(
     section('Recent turns, verbatim', recentTurnsText(context.history, CHAT_SUMMARY_TURNS)),
   );
-  if (files.length > 0) parts.push(section('Files changed', bullets(files)));
+  if (files.length > 0) parts.push(section('Loose ends: uncommitted changes', bullets(files)));
   if (context.patch.trim()) {
     parts.push(section('Current diff', `\`\`\`diff\n${cap(context.patch, PATCH_LIMIT)}\n\`\`\``));
   }

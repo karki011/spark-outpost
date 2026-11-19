@@ -51,32 +51,31 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 
 **Chats & autonomy**:
 
-| Row                                          | Default                | More                                                   |
-| -------------------------------------------- | ---------------------- | ------------------------------------------------------ |
-| **How much Spark does alone**                | **Full auto → PR**     | [Autonomy](spark-autonomy.md)                          |
-| **Wait before going on without your answer** | **60s**                | [Approvals](approvals.md#if-you-dont-answer)           |
-| **Warn when context is**                     | 60%                    | [Compaction](compaction.md#change-when-spark-compacts) |
-| **Compact automatically at**                 | 80%, on                | [Compaction](compaction.md#change-when-spark-compacts) |
-| **Compact idle conversations**               | Off                    | [Compaction](compaction.md#compact-idle-chats)         |
-| **While the agent is working, Enter**        | **Queues the message** | [Queue](follow-a-turn.md#queue-messages)               |
-| **On wide windows**                          | **Context rail**       | Rail, panel, nothing                                   |
-| **Collapse finished turns**                  | On                     | [Turns](follow-a-turn.md#after-a-turn)                 |
-| **Archive inactive chats**                   | **After 2 days**       | [Chat list](statuses-and-limits.md#chat-list)          |
-| **Code Mode**                                | On                     | [Below](#code-mode)                                    |
-| **Record Terminal sessions like chats**      | On                     | [Below](#record-terminal-sessions)                     |
-| **Plugins**                                  | Off                    | [Plugins](use-claude-plugins.md)                       |
+| Row                                                                                    | Default                | More                                                   |
+| -------------------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------ |
+| **How much Spark does alone**                                                          | **Full auto → PR**     | [Autonomy](spark-autonomy.md)                          |
+| **Wait before going on without your answer**                                           | **60s**                | [Approvals](approvals.md#if-you-dont-answer)           |
+| **Warn when context is**, **Compact automatically at**, **Compact at a natural break** | 60%; 80%, on; on       | [Compaction](compaction.md#change-when-spark-compacts) |
+| **Compact idle conversations**                                                         | Off                    | [Compaction](compaction.md#compact-idle-chats)         |
+| **While the agent is working, Enter**                                                  | **Queues the message** | [Queue](follow-a-turn.md#queue-messages)               |
+| **On wide windows**                                                                    | **Context rail**       | Rail, panel, nothing                                   |
+| **Collapse finished turns**                                                            | On                     | [Turns](follow-a-turn.md#after-a-turn)                 |
+| **Archive inactive chats**                                                             | **After 2 days**       | [Chat list](statuses-and-limits.md#chat-list)          |
+| **Code Mode**                                                                          | On                     | [Below](#code-mode)                                    |
+| **Record Terminal sessions like chats**                                                | On                     | [Below](#record-terminal-sessions)                     |
+| **Plugins**                                                                            | Off                    | [Plugins](use-claude-plugins.md)                       |
 
 **Custom instructions**: text or a UTF-8 file, up to 16 KB.
 
 ### Code Mode
 
-Agents combine supported reads locally beside direct tools. Off: direct tools only from the next turn; pending combined reads stop. Terminal sessions don't change. An installation override can disable it.
+Agents combine supported reads locally beside direct tools. Off: direct tools only from the next turn; pending combined reads stop. Terminal sessions don't change. An installation can disable it.
 
 ### Record Terminal sessions
 
 On for new profiles. With Spark’s mod, Claude [Terminal](terminals.md) turns keep tool inputs/outputs, replies, changed files and an audit. Secret-file values are hidden.
 
-Pushes to other branches, force pushes, protected files and writes outside the project are flagged, not stopped. Not for Codex.
+Pushes to other branches, force pushes, protected files and outside writes are flagged, not stopped. Not for Codex.
 
 **GitHub**, with [auto-review](github-page.md#review-with-a-spark-or-workflow):
 
