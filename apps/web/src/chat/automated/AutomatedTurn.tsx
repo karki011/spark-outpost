@@ -61,7 +61,8 @@ export function AutomatedTurn({ run, detail, message, children }: AutomatedTurnP
   const [chosen, setChosen] = useState<boolean | null>(null);
   const workflowRun = useTurnWorkflowRun(run.id, run.workflowStarted === true);
   const waiting = waitsOnYou(detail.approvals, turnRunIds(detail, run.id));
-  const open = chosen ?? opensOnItsOwn(run.status, waiting);
+  const statuses = workflowRun ? [run.status, workflowRun.status] : [run.status];
+  const open = chosen ?? opensOnItsOwn(statuses, waiting);
   const bodyId = usePaneId(`auto-turn-${run.id}`);
   return (
     <div className="auto-turn" data-open={open}>

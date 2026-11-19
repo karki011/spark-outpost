@@ -4,6 +4,7 @@ import {
   type Run,
   type RunStatus,
   type WorkflowRun,
+  type WorkflowRunStatus,
 } from '@spark-outpost/contracts';
 import { SOURCE_WORDS } from '../../crew-flows/run-model.ts';
 import { roundSummary, type TurnOutcome } from '../pull-request/round-model.ts';
@@ -61,6 +62,8 @@ export function workflowLabel(run: WorkflowRun | null, message: string): string 
   return run?.workflowName ?? MENTION.exec(message.trim())?.[1] ?? '';
 }
 
-export function opensOnItsOwn(status: RunStatus, waiting: boolean): boolean {
-  return waiting || status === 'failed' || status === 'outcome_unknown';
+type AnyRunStatus = RunStatus | WorkflowRunStatus;
+
+export function opensOnItsOwn(statuses: readonly AnyRunStatus[], waiting: boolean): boolean {
+  return waiting || statuses.some((status) => status === 'failed' || status === 'outcome_unknown');
 }
