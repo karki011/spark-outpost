@@ -10,6 +10,8 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                               | What to do                                                                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Mid-turn mode switches                                     | [Modes](modes-and-levels.md#what-spark-does-in-each-mode).                               |
+| Wider pages, squircle corners, sidebar fix                 | Nothing to do.                                                                           |
 | Chat rows say what's happening; plans name chats           | [Chat list](statuses-and-limits.md#chat-list).                                           |
 | **Cost** by tool; model switch cache note                  | [Prompt cache](statuses-and-limits.md#prompt-cache).                                     |
 | Build Sparks by talking to an agent; Spark effort          | [Build with an agent](build-with-an-agent.md).                                           |
@@ -38,7 +40,6 @@ summary: What changed in recent releases and what to do next.
 | Browser: address at top, one chat per tab                  | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).                             |
 | Context rail: full height; **Tools** inline                | [See a chat's context](context-rail.md).                                                 |
 | Remote control: side panel, sections fold                  | [Use your phone](use-your-phone.md).                                                     |
-| Wider pages, squircle corners, sidebar hide fix            | Nothing to do.                                                                           |
 | **Let Spark build one for you**; new empty tabs            | [Build with an agent](build-with-an-agent.md).                                           |
 | Fewer Settings pages                                       | [Settings](settings.md).                                                                 |
 | Left bar **More** menu                                     | [Pause Spark](pause-spark.md).                                                           |

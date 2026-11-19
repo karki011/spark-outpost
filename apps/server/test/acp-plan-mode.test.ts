@@ -50,7 +50,7 @@ async function planTurn(pick: (request: ApprovalRequest) => GateAnswer) {
     error = caught;
   }
   const text = replyText(outputs);
-  return { requests, text, error };
+  return { requests, text, error, outputs };
 }
 
 describe("Claude's plan mode over ACP", { timeout: 20_000 }, () => {
@@ -74,6 +74,20 @@ describe("Claude's plan mode over ACP", { timeout: 20_000 }, () => {
       ],
     });
     expect(text).toContain('Plan approved with exit-plan-default');
+  });
+
+  it('reports each mode the session moves to, so the gate follows the live mode', async () => {
+    const { outputs } = await planTurn((request) => ({
+      outcome: 'selected',
+      optionId: request.options.find((option) => option.optionId === 'exit-plan-auto')!.optionId,
+      allowed: true,
+      note: 'Approved the plan',
+    }));
+    const modes = outputs.flatMap((output) =>
+      output.kind === 'session_settings' ? [output.mode] : [],
+    );
+    expect(modes).toContain('plan');
+    expect(modes.at(-1)).not.toBe('plan');
   });
 
   it('keeps planning when the plan is not approved', async () => {

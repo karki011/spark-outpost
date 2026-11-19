@@ -1,5 +1,6 @@
 import {
   SPARK_ACTION_KIND,
+  SPARK_ACTION_OPTION,
   sparkRetryAllowed,
   type Approval,
   type SparkResult,
@@ -122,6 +123,22 @@ export async function retrySparkAction(
     [id, JSON.stringify(WAITING_RESULT), sparkResult!.state],
   );
   if (!rows[0]) throw new ApprovalConflictError('Spark is already doing this, or it is done.');
+  await notifyApprovalChanged(db, id);
+  return toApproval(rows[0]);
+}
+
+export async function settleSparkActionByMode(
+  db: Queryable,
+  id: string,
+  result: SparkResult,
+): Promise<Approval | null> {
+  const { rows } = await db.query<ApprovalRow>(
+    `UPDATE approvals SET status = 'allowed', decided_by = 'level', decision_option_id = $2,
+       scope = 'once', decided_at = now(), payload = jsonb_set(payload, '{sparkResult}', $3::jsonb)
+     WHERE id = $1 AND kind = $4 AND status = 'pending' RETURNING *`,
+    [id, SPARK_ACTION_OPTION.confirm, JSON.stringify(result), SPARK_ACTION_KIND],
+  );
+  if (!rows[0]) return null;
   await notifyApprovalChanged(db, id);
   return toApproval(rows[0]);
 }
