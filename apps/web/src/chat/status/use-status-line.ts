@@ -7,10 +7,17 @@ import { latestWork, type PendingEntry, type StatusStore, type Worker } from './
 
 export const DONE_SHOWN_MS = 8_000;
 export const SLOW_STEP_MS = 10_000;
+export const QUIET_MS = 60_000;
 
 export type StatusLine =
   | { kind: 'waiting'; entries: readonly PendingEntry[] }
-  | { kind: 'running'; worker: Worker; activity: StepActivity | null; since: number | null }
+  | {
+      kind: 'running';
+      worker: Worker;
+      activity: StepActivity | null;
+      since: number | null;
+      quietSince: number | null;
+    }
   | { kind: 'ended'; word: string; elapsed: number | null };
 
 const ENDED_WORDS: Record<TerminalRunStatus, string> = {
@@ -65,6 +72,7 @@ export function useStatusLine({
       },
       activity: step ? stepActivity(step) : null,
       since: step ? work!.since : null,
+      quietSince: work && !work.doing && !step ? work.outputAt : null,
     };
   }
   if (!ended || !isTerminalRunStatus(ended.status)) return null;

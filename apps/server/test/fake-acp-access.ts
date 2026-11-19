@@ -47,6 +47,10 @@ export async function rejectedTurn(
   return { stopReason: 'end_turn', _meta: requestFailure(rejectionBody(model)) };
 }
 
+export function fakeAuthStatus(): acp.AuthStatusResponse {
+  return { state: process.env.FAKE_ACP_AUTH_STATE ?? 'unknown' };
+}
+
 export function pushAuthStatus(client: acp.AgentContext): void {
   const status = process.env.FAKE_ACP_AUTH_STATUS;
   if (status) void client.notify(AUTH_STATUS_METHOD, JSON.parse(status) as Record<string, unknown>);

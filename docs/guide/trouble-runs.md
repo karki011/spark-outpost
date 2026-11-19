@@ -10,7 +10,7 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 
 - **You see:** a chat not moving.
 - **Why:** it usually waits for you or runs a long command.
-- **Fix:** read the end of the turn: a card waits there, or **Working** runs on.
+- **Fix:** read the end of the turn: a card waits there, or **Working** runs on. **No output for 5m** means the agent has sent nothing for that long; Spark never stops it for that.
 - **Still stuck:** **Stop**, then send a new message.
 
 ## A run stopped with the app

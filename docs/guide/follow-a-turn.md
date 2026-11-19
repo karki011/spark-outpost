@@ -10,22 +10,22 @@ About 2 minutes.
 
 ## See what's happening
 
-1. The working line shows step and time; **Thinking** expands.
+1. The working line shows step, time or **No output for 2m**; **Thinking** expands.
 2. Answered cards and flags stay; waiting cards sit last.
 3. Summaries separate commands **passed** from tools **done**.
 4. Browser, web, page and Mac steps get rows.
 5. Code Mode labels discovery and reads; failures expand.
 6. Edits show **+N −M**; open as diffs.
 7. A done to-do folds.
-8. Sidebar blobs show the **Agent TV** team.
+8. Sidebar blobs show **Agent TV**’s team.
 9. **View agents** opens **Work**; over four become clickable faces.
-10. **Message** opens that chat’s composer; **Ask lead to redirect** drafts there.
+10. **Message** opens its composer; **Ask lead to redirect** drafts there.
 
 **Open in terminal** shows failures in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
-1. **Stop** or **Esc** stops sub-agents and background work.
+**Stop** or **Esc** stops sub-agents and background work; unfinished steps show **Stopped**.
 
 ## Background work
 
@@ -35,7 +35,7 @@ Waits last 30 minutes; resumed turns show **Continued on its own**.
 
 ## Queue messages
 
-Queues survive restarts; unsent text stays in this browser.
+Queues survive restarts; drafts stay in this browser.
 
 1. During a turn, **Enter** queues a message.
 2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.
@@ -51,8 +51,7 @@ Queues survive restarts; unsent text stays in this browser.
 
 ## Delete a running chat
 
-1. Select **… → Delete → Confirm delete**.
-2. **Undo** restores it.
+Select **… → Delete → Confirm delete**; **Undo** restores it.
 
 ## After a turn
 

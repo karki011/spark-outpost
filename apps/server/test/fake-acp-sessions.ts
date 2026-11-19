@@ -74,10 +74,20 @@ export async function deleteFakeSession(sessionId: string): Promise<acp.DeleteSe
   return {};
 }
 
-export function recordClose(sessionId: string): void {
-  if (!store) return;
+export function closeFakeSession(sessionId: string): acp.CloseSessionResponse {
+  recordMethod('session/close');
+  if (!store) return {};
   const session = readFakeSession(sessionId);
   write(sessionId, { ...session, closes: session.closes + 1 });
+  return {};
+}
+
+export function titleFakeSession(title: string): acp.SetSessionTitleResponse {
+  recordMethod(`session/set_title ${title}`);
+  const stored = process.env.FAKE_ACP_TITLE_LIMIT
+    ? title.slice(0, Number(process.env.FAKE_ACP_TITLE_LIMIT))
+    : title;
+  return { title: stored };
 }
 
 export async function replayHistory(

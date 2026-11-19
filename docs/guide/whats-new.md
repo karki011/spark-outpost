@@ -10,6 +10,8 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                               | What to do                                                                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **Stopped** steps; **No output for 2m**                    | [Follow a turn](follow-a-turn.md#stop-a-turn).                                           |
+| Meeting notes (alpha), live tab                            | [Take meeting notes](meetings.md).                                                       |
 | Meeting alerts while locked; deleted links die; HTML folds | Nothing to do.                                                                           |
 | **Health** in Settings                                     | [Check Health](trouble-setup-and-reset.md#check-health).                                 |
 | Build Sparks with an agent; Spark effort                   | [Build with an agent](build-with-an-agent.md).                                           |

@@ -22,7 +22,7 @@ import {
 import { RowIcon, type RowIconName } from './RowIcon.tsx';
 import { CalloutRow } from './CalloutRow.tsx';
 import { hasOpenedDiff, StepDiffs } from './StepDiffs.tsx';
-import { FailedWord, Spinner } from './RowStatus.tsx';
+import { FailedWord, Spinner, StoppedWord } from './RowStatus.tsx';
 import {
   spanSeconds,
   type CommandItem,
@@ -38,6 +38,7 @@ import type { TurnChanges } from './use-turn-changes.ts';
 export interface RowContext {
   runId: string | null;
   working: boolean;
+  stopped?: boolean;
   waiting: boolean;
   changes: TurnChanges | null;
   todo: ReactNode;
@@ -62,10 +63,11 @@ const KIND_ICONS: Record<GroupKind, RowIconName> = {
   search: 'search',
 };
 
-function ToolEnd({ item, live }: { item: ToolItem; live: boolean }) {
+function ToolEnd({ item, context }: { item: ToolItem; context: RowContext }) {
   if (item.status === 'failed') return <FailedWord />;
-  if (item.status === 'open') return live ? <Spinner /> : null;
-  return null;
+  if (item.status !== 'open') return null;
+  if (context.working) return <Spinner />;
+  return context.stopped ? <StoppedWord /> : null;
 }
 
 interface RowTextProps {
@@ -95,7 +97,7 @@ function EditRow({ item, context }: { item: ToolItem; context: RowContext }) {
       <RowText verb={item.verb} target={item.target} code />
       <span className="trow-end">
         {entry && <Counts added={entry.added} removed={entry.removed} />}
-        <ToolEnd item={item} live={context.working} />
+        <ToolEnd item={item} context={context} />
         {open && <ChevronIcon />}
       </span>
     </>
@@ -138,7 +140,7 @@ function ToolRowLine({ item, context }: { item: ToolItem; context: RowContext })
       <RowIcon name={TONE_ICONS[item.tone]} />
       <RowText verb={item.verb} target={item.target} code={code} detail={item.detail} />
       <span className="trow-end">
-        <ToolEnd item={item} live={context.working} />
+        <ToolEnd item={item} context={context} />
       </span>
     </div>
   );
