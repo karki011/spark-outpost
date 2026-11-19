@@ -156,6 +156,21 @@ export async function draftChatSettings(db: Queryable, workspaceId: string): Pro
   );
 }
 
+export async function copyChatAgent(db: Queryable, fromId: string, toId: string): Promise<void> {
+  const from = await resolveChatSettings(db, fromId);
+  if (!from.provider) return;
+  const choices: ProviderChoices = {
+    ...(from.model ? { model: from.model } : {}),
+    ...(from.effort ? { effort: from.effort } : {}),
+    ...(from.agentMode ? { agentMode: from.agentMode } : {}),
+  };
+  await db.query(`UPDATE conversations SET provider = $2, overrides = $3 WHERE id = $1`, [
+    toId,
+    from.provider,
+    JSON.stringify({ [from.provider]: choices }),
+  ]);
+}
+
 export async function updateChatSettings(
   db: Queryable,
   conversationId: string,

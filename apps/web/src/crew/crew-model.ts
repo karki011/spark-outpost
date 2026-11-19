@@ -8,6 +8,7 @@ import type { BlobExpression } from '../brand/blob-expression.ts';
 import { formatDuration } from '../audit/audit-model.ts';
 import { formatTokens, shortLabel } from '../chat/composer/model-options.ts';
 import { formatCost } from '../usage/format.ts';
+import type { SparkSettings } from './spark-settings-text.ts';
 
 export type CrewState =
   'thinking' | 'working' | 'waiting' | 'done' | 'failed' | 'stopped' | 'queued' | 'inactive';
@@ -30,7 +31,7 @@ export interface CrewAgent {
   worker?: boolean;
   blobId?: string;
   routeNote?: string;
-  spark?: { id: string; role: string };
+  spark?: { id: string; role: string } & SparkSettings;
 }
 
 export const CHAT_AGENT_ROLE = 'agent';

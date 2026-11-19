@@ -2,6 +2,7 @@ import {
   isTerminalRunStatus,
   type ActivityStep,
   type CrewMember,
+  type CrewSpark,
   type Orchestration,
 } from '@spark-outpost/contracts';
 import { timedOut, WAITED_LABEL } from '../chat/approvals/timed-out.ts';
@@ -93,7 +94,17 @@ export function runAgent(
     durationMs: member.durationMs,
     ...(member.sameProvider ? { sameProvider: true } : {}),
     ...(member.routeNote ? { routeNote: member.routeNote } : {}),
-    ...(member.spark ? { spark: { id: member.spark.id, role: member.spark.role } } : {}),
+    ...(member.spark ? { spark: sparkOf(member.spark) } : {}),
+  };
+}
+
+function sparkOf(spark: CrewSpark): NonNullable<CrewAgent['spark']> {
+  return {
+    id: spark.id,
+    role: spark.role,
+    ...(spark.agentMode !== undefined ? { agentMode: spark.agentMode } : {}),
+    ...(spark.agentFrom ? { agentFrom: spark.agentFrom } : {}),
+    ...(spark.modeFrom ? { modeFrom: spark.modeFrom } : {}),
   };
 }
 

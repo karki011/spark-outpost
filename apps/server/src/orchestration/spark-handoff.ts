@@ -18,9 +18,11 @@ import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import {
   hasProject,
-  pickFor,
+  childFields,
   publishOrchestration,
   runSparkChild,
+  settingsFor,
+  settingsRoute,
   type Handoff,
 } from './spark-child.ts';
 import { handoffNote, sparkJobPrompt, type SparkResult } from './spark-job.ts';
@@ -48,18 +50,19 @@ async function runSpark(
   prompt: string,
   only: boolean,
 ): Promise<SparkResult> {
+  const settings = settingsFor(h, spark, { inChat: true, appliesOwnMode: true });
   const result = await runSparkChild(h, {
     role: 'spark',
     stepIndex: index,
     attempt: 1,
     agentLabel: sparkWho(spark),
-    ...pickFor(h, spark),
+    ...childFields(settings),
     mode: hasProject(h.input) ? 'ask' : 'chat',
     prompt,
     route: {
       name: spark.name,
       routedBy: 'fixed',
-      spark: { id: spark.id, role: spark.role, only },
+      spark: { id: spark.id, role: spark.role, only, ...settingsRoute(settings) },
     },
   });
   return { spark, outcome: result.outcome, text: result.text, error: result.error };

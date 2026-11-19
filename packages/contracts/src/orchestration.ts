@@ -65,6 +65,9 @@ export const orchestrationDecisionSchema = z.object({
 });
 export type OrchestrationDecision = z.infer<typeof orchestrationDecisionSchema>;
 
+export const sparkSettingFromSchema = z.enum(['spark', 'chat', 'default']);
+export type SparkSettingFrom = z.infer<typeof sparkSettingFromSchema>;
+
 export const crewSparkSchema = z.object({
   id: z.uuid(),
   role: z.string(),
@@ -73,6 +76,9 @@ export const crewSparkSchema = z.object({
   test: z.boolean().optional(),
   edits: z.boolean().optional(),
   review: z.boolean().optional(),
+  agentMode: z.string().nullable().optional(),
+  agentFrom: sparkSettingFromSchema.optional(),
+  modeFrom: sparkSettingFromSchema.optional(),
 });
 export type CrewSpark = z.infer<typeof crewSparkSchema>;
 
