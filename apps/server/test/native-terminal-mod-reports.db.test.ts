@@ -99,6 +99,16 @@ describe('whether the Spark mod loaded', () => {
     });
   });
 
+  it('records a missing mod on a launch that never checked in', async () => {
+    await f.launch();
+    const row = (await nativeTerminalRow(f.t.db, f.conversationId))!;
+    expect(await setModHealth(f.t.db, row, 'missing', 'blocked')).toBe(true);
+    expect((await f.runtime.get(f.conversationId))?.mod).toEqual({
+      state: 'missing',
+      reason: 'blocked',
+    });
+  });
+
   it('keeps a check-in for the launch when a late missing report lands after it', async () => {
     await f.launch();
     const row = (await nativeTerminalRow(f.t.db, f.conversationId))!;

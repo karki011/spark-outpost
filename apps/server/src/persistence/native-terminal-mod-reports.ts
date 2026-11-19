@@ -45,7 +45,7 @@ export async function setModHealth(
     `UPDATE native_terminal_sessions SET mod_state = $3, mod_reason = $4, mod_generation = $2
      WHERE id = $1 AND generation = $2 AND (mod_generation IS DISTINCT FROM $2
        OR mod_state IS DISTINCT FROM $3 OR mod_reason IS DISTINCT FROM $4)
-       AND NOT ($3 = 'missing' AND mod_generation = $2 AND mod_state = 'loaded')
+       AND ($3 <> 'missing' OR mod_generation IS DISTINCT FROM $2 OR mod_state IS DISTINCT FROM 'loaded')
      RETURNING conversation_id`,
     [session.id, session.generation, state, reason],
   );

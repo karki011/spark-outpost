@@ -74,6 +74,7 @@ export function control() {
     turnStarted(e) {
       if (e.agentId || !text(e.turnId)) return;
       main = { turnId: e.turnId, prompt };
+      prompt = null;
       wakes = null;
     },
     turnEnded(e) {
