@@ -6,6 +6,12 @@ order: 720
 summary: What changed in recent releases and what to do next.
 ---
 
+## Late November 2026
+
+| What changed                                            | What to do                |
+| ------------------------------------------------------- | ------------------------- |
+| Follow-up rounds, triggered workflows fold into one row | Open the row for details. |
+
 ## Mid-November 2026
 
 | What changed                                               | What to do                                                                               |
@@ -54,6 +60,3 @@ summary: What changed in recent releases and what to do next.
 | Relay, the follow-up Spark, removed  | Nothing; PR follow-up works as before.          |
 | Transcripts: drag the list's edge    | Nothing; double-click resets it.                |
 | Ask about a meeting, **Catch me up** | [Take meeting notes](meetings.md#ask-about-it). |
-| Meetings: titles written for you     | [Take meeting notes](meetings.md).              |
-| **Take notes when I join a meeting** | [Take meeting notes](meetings.md#record).       |
-| Calendar: new look, your replies     | [See your day](calendar.md).                    |
