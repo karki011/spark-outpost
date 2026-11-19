@@ -16,6 +16,7 @@ import { MAC } from '../ui/shortcuts.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
 import type { BrowserHome } from '../browser/use-view-placement.ts';
 import { DependenciesNotice } from './DependenciesNotice.tsx';
+import { ModNotice } from './ModNotice.tsx';
 import { TERMINAL_NOT_RUNNING, TERMINAL_WAITING } from './draft-target.ts';
 import { RestartNotice } from './RestartNotice.tsx';
 import { useTerminalLinks } from './use-terminal-links.tsx';
@@ -195,6 +196,7 @@ export function NativeTerminalWorkspace({
       )}
       {native && !ended && <RestartNotice session={native} />}
       {native && <DependenciesNotice session={native} />}
+      {native && !ended && <ModNotice session={native} />}
       {ended && showsScreen && (
         <p className="native-note" role="status">
           This terminal session has stopped. Its last output is shown below.

@@ -150,6 +150,25 @@ describe('native terminal persistence', () => {
     ).toBe(1);
   });
 
+  it('forgets the previous launch’s end and measurement when the session starts again', async () => {
+    const { reservation } = await seed();
+    const row = await reserveNativeTerminalLaunch(t.db, reservation);
+    await t.db.query(
+      `UPDATE native_terminal_sessions SET state = 'exited', ended_reason = 'logout',
+         ended_resume_id = 'old', ended_at = now(), measure = '{}'::jsonb, measured_at = now()
+       WHERE id = $1`,
+      [row.id],
+    );
+    const again = await reserveNativeTerminalLaunch(t.db, reservation);
+    expect(again).toMatchObject({
+      ended_reason: null,
+      ended_resume_id: null,
+      ended_at: null,
+      measure: null,
+      measured_at: null,
+    });
+  });
+
   it('does not resurrect ended sessions from a late callback or replay an ended launch', async () => {
     const { reservation } = await seed();
     const row = await reserveNativeTerminalLaunch(t.db, reservation);
