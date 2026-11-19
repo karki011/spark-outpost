@@ -68,6 +68,19 @@
   cursor: pointer;
 }
 
+.auto-turn-sent > summary::-webkit-details-marker {
+  display: none;
+}
+
+.auto-turn-sent > summary::before {
+  content: '▸';
+  margin-right: 4px;
+}
+
+.auto-turn-sent[open] > summary::before {
+  content: '▾';
+}
+
 .auto-turn-sent > summary:hover {
   color: var(--text);
 }
