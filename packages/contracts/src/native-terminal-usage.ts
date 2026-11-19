@@ -53,12 +53,46 @@ export const nativeTerminalReportedSchema = z.object({
 });
 export type NativeTerminalReported = z.infer<typeof nativeTerminalReportedSchema>;
 
+export const terminalRateLimitSchema = z.object({
+  kind: z.string(),
+  percentUsed: z.number().nonnegative(),
+  resetsAt: z.string().nullable(),
+});
+export type TerminalRateLimit = z.infer<typeof terminalRateLimitSchema>;
+
+export const terminalMeasureSchema = z.object({
+  at: z.string(),
+  context: z
+    .object({
+      tokens: z.number().int().nonnegative().nullable(),
+      window: z.number().int().positive(),
+      percent: z.number().nonnegative().nullable(),
+    })
+    .nullable(),
+  rateLimits: z.array(terminalRateLimitSchema),
+  costUsd: z.number().nonnegative().nullable(),
+});
+export type TerminalMeasure = z.infer<typeof terminalMeasureSchema>;
+
+const RATE_LIMIT_NAMES: Record<string, string> = {
+  five_hour: '5-hour limit',
+  seven_day: '7-day limit',
+  spend_limit: 'Spend limit',
+};
+
+export function rateLimitName(kind: string): string {
+  return Object.hasOwn(RATE_LIMIT_NAMES, kind)
+    ? RATE_LIMIT_NAMES[kind]!
+    : kind.replaceAll('_', ' ');
+}
+
 export const nativeTerminalUsageSchema = z.object({
   provider: nativeTerminalProviderSchema.nullable(),
   turns: z.array(nativeTerminalTurnSchema),
   reported: z.array(nativeTerminalReportedSchema),
   stopped: z.boolean().default(false),
   promptCache: promptCacheSchema.optional(),
+  measure: terminalMeasureSchema.nullable().optional(),
 });
 export type NativeTerminalUsage = z.infer<typeof nativeTerminalUsageSchema>;
 

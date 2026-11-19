@@ -35,6 +35,11 @@ describe('createRedactionFilter', () => {
     ['a token', 'The key is sk-proj-abcdefghijklmnopqrstuvwx for now'],
     ['a bearer header', 'Send Authorization: Bearer abcdef0123456789xyz please'],
     ['a url password', 'Use postgres://spark:hunter2secret@localhost/db here'],
+    ['a url password with @', 'Use https://spark:p@ss@w0rd@localhost/db here'],
+    ['a basic header', 'Send Authorization: Basic dXNlcjpodW50ZXIy please'],
+    ['a digitless bearer', 'Send Authorization: Bearer abcDEFghiJKLmnoPQRstuVWX please'],
+    ['an encoded token', 'Open https://h/x?t=ghp%5Fabcdefghijklmnopqrstuvwxyz0123 now'],
+    ['an env line behind an invisible character', '\uFEFFOPENAI_API_KEY = Zx81kQ0pLm2nB7 vC4t\nok'],
     ['a json field', 'Config: {"apiKey": "live value 0123456789"} ok'],
     ['a private key', `Key:\n${KEY_BLOCK}\nend`],
   ])('hides %s split at any character', (_name, reply) => {
