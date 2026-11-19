@@ -72,7 +72,7 @@ export function useStatusLine({
       },
       activity: step ? stepActivity(step) : null,
       since: step ? work!.since : null,
-      quietSince: work && !work.doing ? work.outputAt : null,
+      quietSince: work && !work.doing && !step ? work.outputAt : null,
     };
   }
   if (!ended || !isTerminalRunStatus(ended.status)) return null;

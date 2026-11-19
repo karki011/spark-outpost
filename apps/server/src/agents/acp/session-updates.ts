@@ -1,4 +1,8 @@
-import type { SessionConfigOption, SessionUpdate } from '@agentclientprotocol/sdk/unstable';
+import type {
+  SessionConfigOption,
+  SessionUpdate,
+  ToolCallContent,
+} from '@agentclientprotocol/sdk/unstable';
 import { awaitsCalloutInput, calloutTarget, isMcpToolName } from '@spark-outpost/contracts';
 import type { ConfigValues, PlanEntry } from '@spark-outpost/contracts';
 import type { ProviderDiff, ProviderOutput } from '../../providers/provider.ts';
@@ -13,7 +17,7 @@ import { planOutputs, usageOutputs } from './plan-limits.ts';
 import { createFocusTracker } from './file-focus.ts';
 import { finishedToolDiffs, newToolDiffs, noteToolDiffs, type ToolDiffs } from './tool-diffs.ts';
 import { messagePhase } from './message-phase.ts';
-import { messageText, noticeLabel, toolTexts } from './session-update-text.ts';
+import { messageText, noticeLabel, toolTexts, type LinkSource } from './session-update-text.ts';
 import { artifactLinks } from './artifact-links.ts';
 import { COMPACTED_LINE, compactionOutputs, createCompactionLines } from './compaction-lines.ts';
 import {

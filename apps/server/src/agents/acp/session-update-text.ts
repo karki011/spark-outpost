@@ -1,7 +1,7 @@
 import type { ContentBlock, ToolCallContent } from '@agentclientprotocol/sdk/unstable';
 import type { ProviderOutput } from '../../providers/provider.ts';
 
-type LinkSource = Extract<ProviderOutput, { kind: 'link' }>['source'];
+export type LinkSource = Extract<ProviderOutput, { kind: 'link' }>['source'];
 
 const NOTICE_LABELS: Record<string, string> = { error: 'Error', warning: 'Warning' };
 
