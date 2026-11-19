@@ -15,11 +15,13 @@ export async function recordModMeasure(
   sessionId: string,
   { at, ...measure }: ModMeasure,
 ): Promise<void> {
-  await db.query(
+  const { rows } = await db.query<{ conversation_id: string }>(
     `UPDATE native_terminal_sessions SET measure = $2::jsonb, measured_at = $3
-     WHERE id = $1 AND (measured_at IS NULL OR measured_at < $3)`,
+     WHERE id = $1 AND (measured_at IS NULL OR measured_at < $3)
+     RETURNING conversation_id`,
     [sessionId, JSON.stringify(measure), new Date(at)],
   );
+  if (rows[0]) await notifyNativeTerminal(db, rows[0].conversation_id);
 }
 
 export async function recordSessionEnd(db: Db, sessionId: string, end: SessionEnd): Promise<void> {
@@ -43,6 +45,7 @@ export async function setModHealth(
     `UPDATE native_terminal_sessions SET mod_state = $3, mod_reason = $4, mod_generation = $2
      WHERE id = $1 AND generation = $2 AND (mod_generation IS DISTINCT FROM $2
        OR mod_state IS DISTINCT FROM $3 OR mod_reason IS DISTINCT FROM $4)
+       AND NOT ($3 = 'missing' AND mod_generation = $2 AND mod_state = 'loaded')
      RETURNING conversation_id`,
     [session.id, session.generation, state, reason],
   );

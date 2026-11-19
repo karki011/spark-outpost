@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { limitRows } from './limits-text.ts';
+import { limitRows, resetWhen } from './limits-text.ts';
 
 const clock = (at: number) => new Date(at).toISOString().slice(11, 16);
 
@@ -26,7 +26,33 @@ describe('Claude Code’s usage limits in the Terminal cost pane', () => {
     ]);
   });
 
+  it('names a window whose kind matches a built-in object key as plain text', () => {
+    const rows = limitRows(
+      {
+        at: 'x',
+        context: null,
+        rateLimits: [{ kind: 'constructor', percentUsed: 1, resetsAt: null }],
+        costUsd: null,
+      },
+      clock,
+    );
+    expect(rows[0]?.name).toBe('constructor');
+  });
+
   it('shows nothing off a subscription before any context reading', () => {
     expect(limitRows({ at: 'x', context: null, rateLimits: [], costUsd: null }, clock)).toEqual([]);
+  });
+
+  it('adds the day to a reset after today and keeps today’s reset to the time', () => {
+    const now = new Date(2026, 10, 18, 9, 0).getTime();
+    const tonight = new Date(2026, 10, 18, 20, 0).getTime();
+    const nextWeek = new Date(2026, 10, 25, 20, 0).getTime();
+    const day = new Date(nextWeek).toLocaleDateString(undefined, {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+    expect(resetWhen(tonight, now, () => '20:00')).toBe('20:00');
+    expect(resetWhen(nextWeek, now, () => '20:00')).toBe(`${day} 20:00`);
   });
 });

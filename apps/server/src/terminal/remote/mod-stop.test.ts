@@ -8,7 +8,9 @@ import { nativeRemote } from './native-remote.ts';
 
 const ESC = '\u001b';
 
-function setup(options: { aborts?: boolean; takes?: boolean; settles?: boolean } = {}) {
+function setup(
+  options: { aborts?: boolean; takes?: boolean; settles?: boolean; newer?: boolean } = {},
+) {
   const row = {
     id: 's1',
     conversation_id: 'c1',
@@ -37,6 +39,7 @@ function setup(options: { aborts?: boolean; takes?: boolean; settles?: boolean }
     workspaceId: 'w',
     waitsForAnswer,
     delay: async () => {
+      if (options.newer) row.native_turn_id = 'prompt-2';
       if (options.takes === false) return;
       const reply = await mod.poll(session, body);
       handed.push(reply!.abort);
@@ -95,6 +98,13 @@ describe('Stop from a paired device', () => {
     await remote.interrupt('c1');
     expect(sent).toEqual([ESC]);
     expect((await mod.poll(session, body))!.abort).toBeNull();
+  });
+
+  it('sends no Esc when a newer turn started before the untaken Stop timed out', async () => {
+    const { remote, mod, session, body, sent } = setup({ takes: false, newer: true });
+    await mod.poll(session, body);
+    await remote.interrupt('c1');
+    expect(sent).toEqual([]);
   });
 
   it('presses Esc once when the turn is still working after the mod took the Stop', async () => {

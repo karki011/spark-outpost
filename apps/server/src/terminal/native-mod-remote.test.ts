@@ -68,6 +68,16 @@ describe('Stop through the Spark mod', () => {
     expect(mod.aborted).toEqual([]);
   });
 
+  it('leaves a turn alone when its prompt came with no id and Spark names the earlier prompt', async () => {
+    await startTurn('prompt-1', 'turn-1');
+    await completeTurn('turn-1');
+    await mod.hook('classic.UserPromptSubmit')(mod.engine, {}, fromEngine());
+    await mod.hook('turn.start')(mod.engine, { turnId: 'turn-2' }, fromEngine());
+    mod.running('turn-2');
+    await poll({ abort: 'prompt-1' });
+    expect(mod.aborted).toEqual([]);
+  });
+
   it('keeps polling when Claude refuses the abort', async () => {
     await startTurn();
     mod.running('another-turn');

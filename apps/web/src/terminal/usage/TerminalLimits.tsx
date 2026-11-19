@@ -1,9 +1,10 @@
 import type { TerminalMeasure } from '@spark-outpost/contracts';
 import { clock } from '../../calendar/calendar-format.ts';
-import { limitRows } from './limits-text.ts';
+import { limitRows, resetWhen } from './limits-text.ts';
 
 export function TerminalLimits({ measure }: { measure: TerminalMeasure | null | undefined }) {
-  const rows = measure ? limitRows(measure, clock) : [];
+  const measuredAt = measure ? Date.parse(measure.at) : Number.NaN;
+  const rows = measure ? limitRows(measure, (at) => resetWhen(at, measuredAt, clock)) : [];
   if (rows.length === 0) return null;
   return (
     <section className="tu-reported" aria-label="Usage limits">
