@@ -1,11 +1,13 @@
 import { useId, useState } from 'react';
 import { compactionThresholdError, reaskPercent, type Profile } from '@spark-outpost/contracts';
+import { ProfileSwitchSetting } from '../settings/ProfileSwitchSetting.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
 import { useProfileSetting } from '../settings/use-profile-setting.ts';
 import { SwitchValueSetting } from './SwitchValueSetting.tsx';
 
 export const WARN_LABEL = 'Warn when context is';
 export const COMPACT_LABEL = 'Compact automatically at';
+export const BREAK_LABEL = 'Compact at a natural break';
 
 const WARN_INFO = {
   lead: 'The context ring in the composer turns amber at this point.',
@@ -24,6 +26,19 @@ const COMPACT_INFO = {
     { label: 'Off', text: 'Spark only warns and offers the card; it never compacts by itself.' },
   ],
   footer: 'The full transcript always stays in the chat.',
+};
+
+const BREAK_INFO = {
+  lead: 'Past the warning point, Spark compacts before your next message when the last turn ended at a natural break.',
+  items: [
+    {
+      label: 'Natural break',
+      text: 'The agent finished its plan, or opened or updated a pull request.',
+    },
+    { label: 'Automatic off', text: 'The card asks at the break instead.' },
+    { label: 'Fallback', text: 'The compaction point still applies.' },
+  ],
+  footer: 'Never mid-reply or while a card waits.',
 };
 
 type Check = (percent: number) => string | null;
@@ -143,12 +158,32 @@ function CompactAtSetting({ profile }: { profile: Profile }) {
   );
 }
 
+function breakHint(on: boolean, profile: Profile): string {
+  if (!on) return `Spark waits for ${profile.compactAtPercent}%.`;
+  const action = profile.autoCompact ? 'compacts' : 'asks with the card';
+  return `From ${profile.compactWarnPercent}%, Spark ${action} when the last turn finished its plan or opened or updated a pull request.`;
+}
+
+function BreakSetting({ profile }: { profile: Profile }) {
+  return (
+    <ProfileSwitchSetting
+      enabled={profile.compactAtBreak}
+      label={BREAK_LABEL}
+      info={BREAK_INFO}
+      doc={{ page: 'compaction', heading: 'change-when-spark-compacts' }}
+      hint={(on) => breakHint(on, profile)}
+      toUpdate={(value) => ({ compactAtBreak: value })}
+    />
+  );
+}
+
 export function CompactionSettings({ profile }: { profile: Profile }) {
   return (
     <section className="spark-group" aria-labelledby="spark-compaction">
       <h4 id="spark-compaction">Context compaction</h4>
       <WarnSetting profile={profile} />
       <CompactAtSetting profile={profile} />
+      <BreakSetting profile={profile} />
     </section>
   );
 }

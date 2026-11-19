@@ -1,8 +1,16 @@
 import type { Db } from '../persistence/db.ts';
 import { agreedPlanFor } from '../plans/plan-staleness.ts';
-import { chatSummaryPrompt, openIssues, taskDiff } from '../workflow/session-brief.ts';
+import {
+  chatSummaryPrompt,
+  openIssues,
+  taskDiff,
+  type DatedRequest,
+} from '../workflow/session-brief.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { chatIdentifiers } from './identifiers.ts';
+import { loadLiveState } from './live-state.ts';
+
+const REQUEST_CHARS = 300;
 
 async function latestTaskId(db: Db, conversationId: string): Promise<string | null> {
   const { rows } = await db.query<{ id: string }>(
@@ -12,20 +20,39 @@ async function latestTaskId(db: Db, conversationId: string): Promise<string | nu
   return rows[0]?.id ?? null;
 }
 
+async function datedRequests(db: Db, conversationId: string, runId: string) {
+  const { rows } = await db.query<DatedRequest>(
+    `SELECT left(m.content, $3) AS content, to_char(m.created_at, 'YYYY-MM-DD') AS "sentOn"
+     FROM messages m
+     WHERE m.conversation_id = $1 AND m.role = 'user' AND btrim(m.content) <> ''
+       AND m.id <> (SELECT user_message_id FROM runs WHERE id = $2)
+       AND m.created_at < (SELECT created_at FROM runs WHERE id = $2)
+       AND m.created_at > COALESCE((SELECT pf.assistant_history_from FROM profiles pf
+         WHERE pf.assistant_conversation_id = $1), '-infinity'::timestamptz)
+     ORDER BY m.created_at, m.id`,
+    [conversationId, runId, REQUEST_CHARS],
+  );
+  return rows;
+}
+
 export async function buildChatSummary(
   db: Db,
   input: Pick<RunInput, 'identity' | 'projectRoots' | 'history'>,
 ): Promise<string> {
   const conversationId = input.identity.threadId;
   const root = input.projectRoots[0] ?? null;
-  const [agreedPlan, diff, issues, identifiers] = await Promise.all([
+  const [agreedPlan, diff, issues, identifiers, requests, liveState] = await Promise.all([
     agreedPlanFor(db, conversationId, root).catch(() => null),
     taskDiff(root ?? undefined),
     latestTaskId(db, conversationId).then((taskId) => openIssues(db, taskId)),
     chatIdentifiers(db, input),
+    datedRequests(db, conversationId, input.identity.runId).catch(() => []),
+    loadLiveState(db, conversationId, root, []),
   ]);
   return chatSummaryPrompt({
     history: input.history,
+    requests,
+    liveState,
     agreedPlan,
     changes: diff.files,
     patch: diff.patch,

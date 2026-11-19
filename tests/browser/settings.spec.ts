@@ -322,10 +322,21 @@ test('context compaction thresholds validate inline and save from Spark settings
   await expect(toggle).toHaveAccessibleDescription(
     'Spark only warns and offers the card at 90%; it never compacts by itself.',
   );
+  const atBreak = spark.getByRole('switch', { name: 'Compact at a natural break' });
+  await expect(atBreak).toBeChecked();
+  await expect(atBreak).toHaveAccessibleDescription(
+    'From 65%, Spark asks with the card when the last turn finished its plan or opened or updated a pull request.',
+  );
+  save = saved();
+  await atBreak.click();
+  await save;
+  await expect(atBreak).not.toBeChecked();
+  await expect(atBreak).toHaveAccessibleDescription('Spark waits for 90%.');
   expect(await profile()).toMatchObject({
     compactWarnPercent: 65,
     compactAtPercent: 90,
     autoCompact: false,
+    compactAtBreak: false,
   });
 });
 

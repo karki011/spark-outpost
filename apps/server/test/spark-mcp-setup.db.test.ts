@@ -170,17 +170,20 @@ describe('spark_settings', () => {
       warnAtPercent: 60,
       compactAtPercent: 80,
       compactAutomatically: true,
+      compactAtNaturalBreak: true,
       askAgainAfterKeepGoingAtPercent: 90,
     });
     await updateProfile(t.db, t.workspaceId, {
       compactWarnPercent: 70,
       compactAtPercent: 90,
       autoCompact: false,
+      compactAtBreak: false,
     });
     expect(await read()).toEqual({
       warnAtPercent: 70,
       compactAtPercent: 90,
       compactAutomatically: false,
+      compactAtNaturalBreak: false,
       askAgainAfterKeepGoingAtPercent: 95,
     });
   });

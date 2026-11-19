@@ -11,7 +11,7 @@ import { ProfileSection } from '../spark/ProfileSection.tsx';
 import { ASSISTANT_ROWS, SparkAssistantSection } from './assistant/SparkAssistantSection.tsx';
 import { NAME_LABEL, PERSONALITY_LABEL } from '../spark/SparkSettings.tsx';
 import { LEVEL_LABEL } from './setting-labels.ts';
-import { COMPACT_LABEL, WARN_LABEL } from '../spark/CompactionSettings.tsx';
+import { BREAK_LABEL, COMPACT_LABEL, WARN_LABEL } from '../spark/CompactionSettings.tsx';
 import { INSTRUCTIONS_LABEL } from '../spark/AgentInstructionsSetting.tsx';
 import { MORNING_BRIEF_LABEL } from '../spark/MorningBriefSetting.tsx';
 import { ResetSection, KEEP_KEYS_LABEL } from '../reset/ResetSection.tsx';
@@ -225,6 +225,7 @@ export const SETTINGS_SECTIONS = [
       AUTO_CONTINUE_LABEL,
       WARN_LABEL,
       COMPACT_LABEL,
+      BREAK_LABEL,
       BUSY_ENTER_LABEL,
       WIDE_WINDOW_LABEL,
       COLLAPSE_TURNS_LABEL,

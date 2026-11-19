@@ -3,6 +3,7 @@ import { recordContext, sessionContext } from './fake-acp-sessions.ts';
 
 const advertisedCommands = JSON.parse(process.env.FAKE_ACP_COMMANDS ?? '[]') as string[];
 const contextSize = Number(process.env.FAKE_ACP_CONTEXT_SIZE ?? 0);
+const compactHint = process.env.FAKE_ACP_COMPACT_HINT ?? null;
 
 const CONTEXT_TRIGGER = /#ctx(\d{1,3})\b/;
 export const SELF_COMPACT_TRIGGER = '#selfcompact';
@@ -19,6 +20,11 @@ function slashCommand(prompt: acp.ContentBlock[]): { name: string; rest: string 
   if (!trimmed.startsWith('/')) return null;
   const [name = '', ...rest] = trimmed.slice(1).split(/\s+/);
   return { name: name.toLowerCase(), rest: rest.join(' ') };
+}
+
+function commandInput(name: string): { hint: string } | null {
+  if (name === 'review') return { hint: 'what to review' };
+  return name === 'compact' && compactHint ? { hint: compactHint } : null;
 }
 
 function percentOf(used: number): number {
@@ -63,7 +69,7 @@ export async function commandTurn(
       availableCommands: advertisedCommands.map((name) => ({
         name,
         description: `Run ${name}`,
-        input: name === 'review' ? { hint: 'what to review' } : null,
+        input: commandInput(name),
       })),
     });
   }
