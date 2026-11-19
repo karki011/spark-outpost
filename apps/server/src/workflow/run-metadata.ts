@@ -2,7 +2,9 @@ import {
   providerIdSchema,
   type AgentModeOption,
   type CapabilityOption,
+  type RunEvent,
 } from '@spark-outpost/contracts';
+import { clearReadCardsTheModeRuns } from '../spark-mcp/actions/mode-cleared-cards.ts';
 import { getCapabilities, saveCapabilities } from '../persistence/chat-settings.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ProviderCapabilityReport, ProviderOutput } from '../providers/provider.ts';
@@ -124,6 +126,7 @@ export async function recordSessionSettings(
   db: Db,
   runId: string,
   settings: Extract<ProviderOutput, { kind: 'session_settings' }>,
+  append: (event: RunEvent) => Promise<unknown> = async () => undefined,
 ): Promise<void> {
   const { rows } = await db.query<LabelledRun>(
     `UPDATE runs SET used_model = $2, used_effort = $3, used_mode = $4 WHERE id = $1
@@ -132,6 +135,7 @@ export async function recordSessionSettings(
   );
   const label = rows[0] ? labelForRanModel(rows[0], settings.model) : null;
   if (label) await db.query('UPDATE runs SET agent_label = $2 WHERE id = $1', [runId, label]);
+  if (settings.mode) await clearReadCardsTheModeRuns(db, runId, append);
 }
 
 export async function recordAgentInfo(

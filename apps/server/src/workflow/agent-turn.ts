@@ -418,7 +418,7 @@ export async function runAgentTurn(
         await plans.propose(output.plan, output.source, output.toolCallId);
       }
       if (output.kind === 'session_settings') {
-        await recordSessionSettings(deps.db, lease.runId, output);
+        await recordSessionSettings(deps.db, lease.runId, output, append);
       }
       if (output.kind === 'instructions') {
         await recordFollowedInstructions(deps.db, lease.runId, output.files);

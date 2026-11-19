@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                               | What to do                                                     |
 | ---------------------------------------------------------- | -------------------------------------------------------------- |
+| Read cards close when you switch to a mode that reads      | [When actions ask](spark-tools.md#when-actions-ask-first).     |
 | Meeting alerts while locked; deleted share links stay dead | Nothing to do.                                                 |
 | Agents manage and run Sparks and workflows                 | [When it asks](build-with-an-agent.md#when-it-asks).           |
 | **Share…** artifacts; the rail lists them                  | [Share one](share-an-artifact.md).                             |

@@ -7,6 +7,7 @@ import {
 import type { Queryable } from '../../persistence/db.ts';
 import { actionFacts, actionPath } from '../actions/action-policy.ts';
 import { actionRun, auditAction, postCard, RESULT_WAIT_MS } from '../actions/confirm.ts';
+import { clearedByMode } from '../actions/mode-cleared-cards.ts';
 import { SparkToolError, type SparkToolContext } from '../tool.ts';
 import { cardDecision } from './browser/gate.ts';
 
@@ -74,7 +75,11 @@ export async function clearRead(
   });
   auditAction(run, action, { outcome: 'waiting_for_user', approvalId: card.id });
   const outcome = await cardDecision(context, card.id, RESULT_WAIT_MS);
-  if (outcome === 'allowed') return { cleared: true, decision: 'user_allowed' };
+  if (outcome === 'allowed') {
+    const byMode = await clearedByMode(deps.db, card.id);
+    if (byMode) auditAction(run, action, { outcome: 'performing', ranWithoutReview: true });
+    return { cleared: true, decision: byMode ? 'mode' : 'user_allowed' };
+  }
   return outcome === 'denied'
     ? {
         cleared: false,
