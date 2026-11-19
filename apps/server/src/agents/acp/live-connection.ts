@@ -3,10 +3,16 @@ import * as acp from '@agentclientprotocol/sdk/unstable';
 import type { AgentLaunch } from './agents.ts';
 import { startAgentProcess, type AgentProcess } from './agent-process.ts';
 import type { SettingsSession } from './apply-settings.ts';
-import { AUTH_STATUS_METHOD, parseAuthStatus } from './auth-status.ts';
+import {
+  AUTH_STATUS_METHOD,
+  parseAuthStatus,
+  parseStandardAuthStatus,
+  STANDARD_AUTH_STATUS_METHOD,
+} from './auth-status.ts';
 import { createBackgroundWork, type BackgroundWork } from './background-work.ts';
 import { CLIENT_INFO } from './client-info.ts';
 import type { ConnectionKey } from './connection-key.ts';
+import type { SessionName } from './session-name.ts';
 import {
   createBindingSlot,
   createMessageQueue,
@@ -40,6 +46,7 @@ export interface OpenedSession {
   init: acp.InitializeResponse;
   session: acp.ActiveSession;
   request: acp.NewSessionRequest;
+  name?: SessionName | null;
 }
 
 export interface LiveConnection {
@@ -104,6 +111,9 @@ export async function startLiveConnection(spec: ConnectionSpec): Promise<LiveCon
       handle((handlers) => handlers.write(ctx.params)),
     )
     .onNotification(AUTH_STATUS_METHOD, parseAuthStatus, ({ params }) => {
+      if (params) slot.current()?.account(params);
+    })
+    .onNotification(STANDARD_AUTH_STATUS_METHOD, parseStandardAuthStatus, ({ params }) => {
       if (params) slot.current()?.account(params);
     })
     .onNotification(SDK_MESSAGE_METHOD, parseRequestUsage, ({ params }) => {

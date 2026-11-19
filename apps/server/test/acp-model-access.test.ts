@@ -100,4 +100,21 @@ describe('model access reported over ACP by a fake agent', { timeout: 20_000 }, 
     expect(error).toBeInstanceOf(ModelRejectedError);
     expect((error as ModelRejectedError).model).toBe('gpt-6.1-sol');
   });
+
+  it('asks an agent that advertises auth status and stops before a session when signed out', async () => {
+    const { outputs, error } = await run('Hi', 'gpt-6-sol', {
+      FAKE_ACP_AUTH_STATE: 'unauthenticated',
+    });
+    expect(String(error)).toContain("isn't signed in. Open Settings");
+    expect(
+      outputs.some((output) => output.kind === 'session' || output.kind === 'text_delta'),
+    ).toBe(false);
+  });
+
+  it('runs normally when the agent reports it is signed in or does not know', async () => {
+    for (const state of ['authenticated', 'unknown']) {
+      const { error } = await run('Hi', 'gpt-6-sol', { FAKE_ACP_AUTH_STATE: state });
+      expect(error).toBeNull();
+    }
+  });
 });

@@ -70,6 +70,7 @@ export interface StoredSession {
   additionalDirectories: readonly string[];
   commands?: readonly string[];
   anyFolder?: boolean;
+  title?: string;
 }
 
 export interface MissedMessage {
@@ -339,6 +340,7 @@ export type ProviderOutput =
       continued: boolean;
       freshReason: string | null;
       live?: boolean;
+      title?: string;
     }
   | { kind: 'link'; url: string; title: string; source: Exclude<TaskLinkSource, 'user'> }
   | { kind: 'artifact_link'; conversationId: string; artifactId: string }
