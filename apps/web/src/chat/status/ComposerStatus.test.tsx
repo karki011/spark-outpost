@@ -306,6 +306,27 @@ describe('while the agent works', () => {
     expect(status().querySelector('.cs-time')?.textContent).toBe('12s');
   });
 
+  it('says how long the agent has been quiet, and drops it when output arrives', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    act(() => view.store.report({ ...CLAUDE, working: true, step: null, outputSeq: 4 }));
+    await act(() => vi.advanceTimersByTimeAsync(59_000));
+    expect(status().querySelector('.cs-time')).toBeNull();
+    await act(() => vi.advanceTimersByTimeAsync(2 * 60_000));
+    expect(shown()).toBe('Claude is thinking… · No output for 2m');
+    act(() => view.store.report({ ...CLAUDE, working: true, step: null, outputSeq: 5 }));
+    expect(status().querySelector('.cs-time')).toBeNull();
+  });
+
+  it('never calls a waiting or sleeping agent quiet', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    const sleeping = { ...CLAUDE, doing: 'sleeping until 14:05', outputSeq: 4 };
+    act(() => view.store.report({ ...sleeping, working: true, step: null }));
+    await act(() => vi.advanceTimersByTimeAsync(10 * 60_000));
+    expect(status().querySelector('.cs-time')).toBeNull();
+  });
+
   it('announces Done with the run time without showing a line', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'Date'] });
     const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });

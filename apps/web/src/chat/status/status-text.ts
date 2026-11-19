@@ -106,6 +106,10 @@ export function clockText(ms: number): string {
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
+export function quietText(ms: number): string {
+  return `No output for ${Math.max(1, Math.floor(ms / 60_000))}m`;
+}
+
 export function capitalized(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }

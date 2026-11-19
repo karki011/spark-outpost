@@ -149,6 +149,7 @@ function LineBody({
         worker={line.worker}
         activity={line.activity}
         since={line.since}
+        quietSince={line.quietSince}
         queued={queued}
       />
     );

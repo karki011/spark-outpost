@@ -204,6 +204,7 @@ export function SoloTurn({
     working,
     waitingText ? [] : steps,
     lead.since,
+    stream.lastSeq,
   );
   const interrupted = run.status === 'outcome_unknown';
   const shown = child?.modelSwitch || child?.errorDetails ? child : run;
