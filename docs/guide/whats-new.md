@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                               | What to do                                                     |
 | ---------------------------------------------------------- | -------------------------------------------------------------- |
+| Context rail: one line per row; tools fold                 | [Read the rows](context-rail.md#read-the-rows).                |
 | Meeting alerts while locked; deleted share links stay dead | Nothing to do.                                                 |
 | Agents manage and run Sparks and workflows                 | [When it asks](build-with-an-agent.md#when-it-asks).           |
 | **Share…** artifacts; the rail lists them                  | [Share one](share-an-artifact.md).                             |
@@ -25,7 +26,6 @@ summary: What changed in recent releases and what to do next.
 | One meeting card; Join takes notes                         | [Take meeting notes](meetings.md).                             |
 | Saved sign-ins type with no card                           | [Save a test sign-in](use-the-browser.md#save-a-test-sign-in). |
 | Browser: address at top, one chat per tab                  | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).   |
-| Context rail: full height; **Tools** inline                | [See a chat's context](context-rail.md).                       |
 | Remote control: side panel, sections fold                  | [Use your phone](use-your-phone.md).                           |
 | Wider pages, squircle corners, sidebar hide fix            | Nothing to do.                                                 |
 | **Let Spark build one for you**; new empty tabs            | [Build with an agent](build-with-an-agent.md).                 |

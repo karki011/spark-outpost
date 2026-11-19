@@ -14,6 +14,7 @@ export const SPEC_GROUPS = {
     'chat-questions',
     'chat-rail',
     'chat-rail-escape',
+    'chat-rail-lines',
     'chat-send',
     'chat-share',
     'chat-split',
