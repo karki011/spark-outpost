@@ -249,10 +249,13 @@ function sessionItem(item: ModItem): item is SessionItem {
 }
 
 async function recordSessionItem(db: Db, sessionId: string, item: SessionItem): Promise<void> {
-  if (item.kind === 'measure') {
-    const { kind: _kind, ...measure } = item;
-    return recordModMeasure(db, sessionId, measure);
-  }
+  if (item.kind === 'measure')
+    return recordModMeasure(db, sessionId, {
+      at: item.at,
+      context: item.context,
+      rateLimits: item.rateLimits,
+      costUsd: item.costUsd,
+    });
   if (item.kind === 'session_end')
     return recordSessionEnd(db, sessionId, {
       reason: item.reason,

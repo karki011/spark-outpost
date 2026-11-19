@@ -119,6 +119,14 @@ describe('Stop from a paired device', () => {
     expect((await mod.poll(session, body))!.abort).toBeNull();
   });
 
+  it('stops once and sends no Esc when Stop is pressed twice at once', async () => {
+    const { remote, mod, session, body, sent, handed } = setup();
+    await mod.poll(session, body);
+    await Promise.all([remote.interrupt('c1'), remote.interrupt('c1')]);
+    expect(handed.filter(Boolean)).toEqual(['prompt-1']);
+    expect(sent).toEqual([]);
+  });
+
   it('adds the permission line only while a paired device may answer approvals', async () => {
     const { mod, session, body } = setup();
     expect((await mod.poll(session, body))!.askNotice).toBeNull();

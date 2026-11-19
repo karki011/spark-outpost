@@ -169,7 +169,9 @@ export function modInbox(deps: ModInboxDeps) {
           wake();
         },
       };
+      const earlier = found.stop;
       found.stop = stop;
+      earlier?.settle();
       await Promise.race([handed, delay(TAKE_WAIT_MS)]);
       if (found.stop === stop) found.stop = null;
       return taken;

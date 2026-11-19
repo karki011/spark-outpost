@@ -132,4 +132,3 @@ export function modHealth(deps: ModHealthDeps) {
   };
 }
 
-export type ModHealth = ReturnType<typeof modHealth>;
