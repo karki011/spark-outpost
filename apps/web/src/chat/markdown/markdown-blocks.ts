@@ -13,6 +13,27 @@ const HTML_BLOCK_START = new RegExp(`^ {0,3}<(?:${HTML_CONTAINERS})(?=[\\s>/]|$)
 const HTML_OPEN = new RegExp(`<(?:${HTML_CONTAINERS})(?=[\\s>/]|$)`, 'gi');
 const HTML_CLOSE = new RegExp(`</(?:${HTML_CONTAINERS})\\s*>`, 'gi');
 
+function withoutHtmlComments(line: string, inComment: boolean): [string, boolean] {
+  let rest = line;
+  let kept = '';
+  let open = inComment;
+  while (rest !== '') {
+    if (open) {
+      const end = rest.indexOf('-->');
+      if (end < 0) return [kept, true];
+      rest = rest.slice(end + 3);
+      open = false;
+    } else {
+      const start = rest.indexOf('<!--');
+      if (start < 0) return [kept + rest, false];
+      kept += rest.slice(0, start);
+      rest = rest.slice(start + 4);
+      open = true;
+    }
+  }
+  return [kept, open];
+}
+
 function htmlDepthChange(line: string, depth: number): number {
   const prose = line.replace(INLINE_CODE, '');
   const opens =
@@ -47,6 +68,7 @@ export function splitBlocks(text: string): string[] {
   let fence: string | null = null;
   let afterBlank = false;
   let htmlDepth = 0;
+  let inComment = false;
   for (const line of text.split('\n')) {
     if (fence === null && htmlDepth === 0 && afterBlank && startsNewBlock(line, current)) {
       blocks.push(current.join('\n'));
@@ -54,7 +76,9 @@ export function splitBlocks(text: string): string[] {
     }
     current.push(line);
     if (fence === null) {
-      htmlDepth = Math.max(0, htmlDepth + htmlDepthChange(line, htmlDepth));
+      const [html, stillInComment] = withoutHtmlComments(line, inComment);
+      inComment = stillInComment;
+      htmlDepth = Math.max(0, htmlDepth + htmlDepthChange(html, htmlDepth));
       fence = FENCE.exec(line)?.[1] ?? null;
     } else if (closesFence(line, fence)) fence = null;
     afterBlank = fence === null && isBlank(line);

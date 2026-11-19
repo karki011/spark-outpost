@@ -107,7 +107,24 @@ const safeHtmlSchema: SanitizeSchema = {
   clobberPrefix: 'user-content-',
 };
 
+const URL_SCHEME = /^\s*([a-z][a-z\d+.-]*):/i;
+
+type HastTree = { type: string; properties?: Record<string, unknown>; children?: HastTree[] };
+
+function lowerSchemes(node: HastTree): void {
+  const href = node.properties?.href;
+  if (typeof href === 'string') {
+    node.properties!.href = href.replace(URL_SCHEME, (scheme) => scheme.toLowerCase());
+  }
+  node.children?.forEach(lowerSchemes);
+}
+
+function rehypeLowerSchemes() {
+  return lowerSchemes;
+}
+
 export const safeHtmlPlugins: Options['rehypePlugins'] = [
   rehypeRaw,
+  rehypeLowerSchemes,
   [rehypeSanitize, safeHtmlSchema],
 ];

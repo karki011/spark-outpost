@@ -82,6 +82,13 @@ describe('splitBlocks', () => {
     expect(splitBlocks(`${table}\n\nAfter`)).toEqual([`${table}\n`, 'After']);
   });
 
+  it('ignores closing tags inside HTML comments', () => {
+    const fold = '<details><summary>Fold</summary>\n\n<!-- </details> -->\n\nHidden\n\n</details>';
+    expect(splitBlocks(`${fold}\n\nAfter`)).toEqual([`${fold}\n`, 'After']);
+    const spanning = '<details>\n\n<!--\n</details>\n-->\n\nHidden\n\n</details>';
+    expect(splitBlocks(`${spanning}\n\nAfter`)).toEqual([`${spanning}\n`, 'After']);
+  });
+
   it('keeps an unclosed fold as the growing tail', () => {
     expect(splitBlocks('Intro\n\n<details><summary>x</summary>\n\nmore\n\nyet more')).toEqual([
       'Intro\n',

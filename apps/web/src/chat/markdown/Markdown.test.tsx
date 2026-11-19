@@ -126,6 +126,25 @@ describe('Markdown inline HTML', () => {
     ]);
   });
 
+  it('keeps links whose scheme is in capitals and still drops unsafe ones', () => {
+    const root = rendered(
+      '[a](HTTPS://example.com/Path) <a href="MailTo:a@example.com">m</a> [x](JAVASCRIPT:alert(1))',
+    );
+    expect([...root.querySelectorAll('a')].map((link) => link.getAttribute('href'))).toEqual([
+      'https://example.com/Path',
+      'mailto:a@example.com',
+    ]);
+    expect(root.querySelector('.md-link-off')?.textContent).toBe('x');
+  });
+
+  it('shows HTML preformatted code as a block, keeping nested text', () => {
+    const root = rendered(
+      '<pre><code>a    b</code></pre>\n\n<pre><code>const <b>token</b> = 1;</code></pre>',
+    );
+    const blocks = [...root.querySelectorAll('.md-code .md-pre')].map((block) => block.textContent);
+    expect(blocks).toEqual(['a    b', 'const token = 1;']);
+  });
+
   it('never loads an image from markdown or HTML', () => {
     const root = rendered(
       '![chart](https://track.example/c.png)\n\n<img src="https://track.example/p.gif" alt="pixel">',

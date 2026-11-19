@@ -1,10 +1,10 @@
-import { createContext, memo, use, type ReactNode } from 'react';
+import { createContext, isValidElement, memo, use, type ReactNode } from 'react';
 import ReactMarkdown, { type Components, type Options } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remend from 'remend';
 import { Breakout } from '../breakout/Breakout.tsx';
 import { CodeBlock } from './CodeBlock.tsx';
-import { Preformatted } from './Preformatted.tsx';
+import { InsidePre, Preformatted } from './Preformatted.tsx';
 import { safeHtmlPlugins } from './safe-html.ts';
 import { splitBlocks, withoutClarifyBlock } from './markdown-blocks.ts';
 import './code-tokens.css';
@@ -22,7 +22,9 @@ const SAFE_LINK = /^(https?:|mailto:)/i;
 
 function plainText(children: ReactNode): string {
   if (typeof children === 'string') return children;
+  if (typeof children === 'number') return String(children);
   if (Array.isArray(children)) return children.map(plainText).join('');
+  if (isValidElement<{ children?: ReactNode }>(children)) return plainText(children.props.children);
   return '';
 }
 
@@ -36,9 +38,10 @@ function CodeElement({
   children?: ReactNode;
 }) {
   const streaming = use(StreamingContext);
+  const insidePre = use(InsidePre);
   const text = plainText(children);
   const language = LANGUAGE_CLASS.exec(className ?? '')?.[1];
-  if (!language && !text.includes('\n')) return <code>{children}</code>;
+  if (!language && !insidePre && !text.includes('\n')) return <code>{children}</code>;
   return (
     <Breakout>
       <CodeBlock code={text.replace(/\n$/, '')} language={language} streaming={streaming} />
