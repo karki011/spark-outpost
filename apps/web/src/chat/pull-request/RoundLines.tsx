@@ -1,13 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { prWatchesQuery } from './pr-follow-up-api.ts';
-import { outcomesIn, turnOutcomeLine } from './round-model.ts';
+import { QuotedText } from '../quotes/QuotedText.tsx';
+import { outcomesIn, roundSummary, turnOutcomeLine } from './round-model.ts';
 
-export function RoundHeader() {
+export function RoundMessage({ text }: { text: string }) {
   return (
-    <p className="pr-round-head">
-      <b>Follow-up</b>
-      <span>sent this round; you did not type it</span>
-    </p>
+    <div className="pr-round-msg">
+      <p className="pr-round-head">
+        <b>Follow-up</b>
+        <span>{roundSummary(text)}</span>
+      </p>
+      <p className="pr-round-by">Sent by Spark; you did not type it</p>
+      <details className="pr-round-sent">
+        <summary>Show what Spark sent</summary>
+        <div className="bubble">
+          <QuotedText text={text} />
+        </div>
+      </details>
+    </div>
   );
 }
 

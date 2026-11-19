@@ -37,14 +37,21 @@ async function seedSettledRound() {
   }
 }
 
-test('a follow-up round is marked as not typed by the user and ends with what it did', async ({
+test('a follow-up round shows one line, hides what Spark sent and ends with what it did', async ({
   page,
 }) => {
   await seedSettledRound();
   await openChats(page);
   await expect(page.locator('.chat-title')).toHaveText('Fix the cents parser');
   const turn = page.locator('[data-turn]').first();
-  await expect(turn).toContainText('sent this round; you did not type it');
+  await expect(turn).toContainText('Sent by Spark; you did not type it');
+  await expect(turn.locator('.pr-round-head')).toContainText(
+    'PR follow-up, round 1: acme/widgets#7',
+  );
+  const sent = turn.locator('.pr-round-sent');
+  await expect(sent.locator('.bubble')).toBeHidden();
+  await sent.getByText('Show what Spark sent').click();
+  await expect(sent.locator('.bubble')).toBeVisible();
   await expect(turn).toContainText(
     'Follow-up replied to 3 comments, pushed a fix, re-requested review on #7.',
   );

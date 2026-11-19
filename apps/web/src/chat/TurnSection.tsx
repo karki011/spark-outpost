@@ -22,7 +22,7 @@ import { TurnSteers } from './steer/SteeredMessage.tsx';
 import { sameTurnDetail, turnRunIds } from './turn-props.ts';
 import { OpenedPullRequests } from './pull-request/OpenedPullRequests.tsx';
 import { PushNotices } from './pull-request/PushNotices.tsx';
-import { RoundHeader, RoundLines } from './pull-request/RoundLines.tsx';
+import { RoundLines, RoundMessage } from './pull-request/RoundLines.tsx';
 import { InterruptedCard } from './interruption/InterruptedCard.tsx';
 import { InterruptedNote } from './interruption/InterruptedNote.tsx';
 import { RequestHeader, type RunOutpost } from './outpost/RequestHeader.tsx';
@@ -103,18 +103,19 @@ export const TurnSection = memo(function TurnSection({
       ))}
       {userMessage && (
         <div className="msg me" data-message-id={userMessage.id}>
-          {run.prFollowUp && <RoundHeader />}
           <MessageAttachments attachments={userMessage.attachments} />
           {userMessage.content && (
             <>
-              {run.outpost ? (
+              {run.prFollowUp ? (
+                <RoundMessage text={userMessage.content} />
+              ) : run.outpost ? (
                 <OutpostRequest outpost={run.outpost} text={userMessage.content} />
               ) : (
                 <div className="bubble">
                   <QuotedText text={userMessage.content} />
                 </div>
               )}
-              <LinkCards text={userMessage.content} />
+              {!run.prFollowUp && <LinkCards text={userMessage.content} />}
               <MessageActions
                 text={userMessage.content}
                 createdAt={userMessage.createdAt}

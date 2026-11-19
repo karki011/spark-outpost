@@ -21,3 +21,12 @@ export function turnOutcomeLine(item: TurnOutcome): string {
 export function lastOutcome(watch: PrWatch): RoundOutcome | null {
   return watch.roundOutcomes?.at(-1) ?? null;
 }
+
+const WHY_LINE = /^Spark: (.+?), so I asked this chat to look\./;
+
+export function roundSummary(message: string): string {
+  const first = message.trimStart().split('\n', 1)[0] ?? '';
+  const why = WHY_LINE.exec(first)?.[1];
+  if (why) return why.charAt(0).toUpperCase() + why.slice(1);
+  return first.replace(/\.$/, '');
+}

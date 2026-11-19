@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { roundOutcomeLine, type RoundOutcome } from '@spark-outpost/contracts';
-import { outcomesIn, turnOutcomeLine } from './round-model.ts';
+import { outcomesIn, roundSummary, turnOutcomeLine } from './round-model.ts';
 import { RUN, watch } from './watch-fixture.ts';
 import { watchIndicator } from './watch-indicator-model.ts';
 
@@ -74,5 +74,23 @@ describe('the PR row and the last round', () => {
     expect(led?.lines[0]).toBe('Follow-up replied to 2 comments, pushed a fix.');
     const plain = watchIndicator(watch({ review: 'approved' }), base);
     expect(plain?.lines[0]).toBe('Spark is watching checks and reviews.');
+  });
+});
+
+describe('roundSummary', () => {
+  it("names why Spark started the round, without the agent's instructions", () => {
+    const message = [
+      'Spark: 2 review items arrived on PR #2838, so I asked this chat to look. This message was sent by Spark, not typed by you; stop the turn like any other.',
+      '',
+      'PR follow-up, round 10: acme/web#2838 on spark/x.',
+      '<pr_feedback>',
+    ].join('\n');
+    expect(roundSummary(message)).toBe('2 review items arrived on PR #2838');
+  });
+
+  it('falls back to the first line of an older round message', () => {
+    expect(roundSummary('PR follow-up, round 1: acme/widgets#7.\n\nHandle it')).toBe(
+      'PR follow-up, round 1: acme/widgets#7',
+    );
   });
 });
