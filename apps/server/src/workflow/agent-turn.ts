@@ -12,6 +12,7 @@ import type { Lease } from '../persistence/jobs.ts';
 import {
   LeaseLostError,
   isCancelRequested,
+  type AgentMessageRef,
   type AppendOptions,
 } from '../persistence/run-events.ts';
 import {
@@ -127,6 +128,7 @@ export interface TurnResult {
   text: string;
   messageId: string | null;
   finalReply?: string | null;
+  agentMessages?: AgentMessageRef[];
 }
 
 export async function runAgentTurn(
@@ -431,6 +433,7 @@ export async function runAgentTurn(
       }
       if (output.kind === 'plan_limits') await recordPlan(deps.db, input, output);
       if (output.kind === 'text_delta') {
+        reply.noteAgent(output);
         const finalStarts = reply.mark(output.phase, replySoFar().held);
         if (output.newMessage) titles?.endMessage(redaction.pending());
         if (finalStarts) titles?.startMessage(redaction.pending());

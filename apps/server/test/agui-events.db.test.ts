@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { EventType, stepMark, type RunEvent } from '@spark-outpost/contracts';
@@ -205,5 +205,23 @@ describe('AG-UI events from an ACP agent', { timeout: 40_000 }, () => {
     expect(JSON.stringify(events)).not.toContain('Written after Stop.');
     const detail = await getConversationDetail(t.db, conversationId);
     expect(detail?.activity[runId]?.map((step) => step.done)).not.toContain(false);
+  });
+
+  it("keeps each agent message's id and the fingerprint of its text on the stored reply", async () => {
+    const { conversationId, runId } = await send('Plain question');
+    expect((await settled(runId)).status).toBe('succeeded');
+    const { rows } = await t.db.query<{ content: string; agent_messages: unknown }>(
+      `SELECT content, agent_messages FROM messages
+       WHERE conversation_id = $1 AND role = 'assistant'`,
+      [conversationId],
+    );
+    expect(rows).toHaveLength(1);
+    const fingerprint = (text: string) =>
+      `sha256:${createHash('sha256').update(text).digest('hex')}`;
+    const second = rows[0]!.content.slice(rows[0]!.content.indexOf('mode='));
+    expect(rows[0]!.agent_messages).toEqual([
+      { id: 'm1', fingerprint: fingerprint('Hello there') },
+      { id: 'm2', fingerprint: fingerprint(second) },
+    ]);
   });
 });

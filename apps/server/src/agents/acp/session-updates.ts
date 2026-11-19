@@ -1,9 +1,4 @@
-import type {
-  ContentBlock,
-  SessionConfigOption,
-  SessionUpdate,
-  ToolCallContent,
-} from '@agentclientprotocol/sdk/unstable';
+import type { SessionConfigOption, SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { awaitsCalloutInput, calloutTarget, isMcpToolName } from '@spark-outpost/contracts';
 import type { ConfigValues, PlanEntry } from '@spark-outpost/contracts';
 import type { ProviderDiff, ProviderOutput } from '../../providers/provider.ts';
@@ -18,6 +13,7 @@ import { planOutputs, usageOutputs } from './plan-limits.ts';
 import { createFocusTracker } from './file-focus.ts';
 import { finishedToolDiffs, newToolDiffs, noteToolDiffs, type ToolDiffs } from './tool-diffs.ts';
 import { messagePhase } from './message-phase.ts';
+import { messageText, noticeLabel, toolTexts } from './session-update-text.ts';
 import { artifactLinks } from './artifact-links.ts';
 import { COMPACTED_LINE, compactionOutputs, createCompactionLines } from './compaction-lines.ts';
 import {
@@ -139,32 +135,10 @@ function stepOf(
 
 type ToolCallUpdate = Extract<SessionUpdate, { sessionUpdate: 'tool_call_update' }>;
 
-const NOTICE_LABELS: Record<string, string> = { error: 'Error', warning: 'Warning' };
-
-const noticeLabel = (severity: string) => NOTICE_LABELS[severity] ?? 'Note';
-
-const WEB_LINK = /^https?:$/;
-
-function messageText(content: ContentBlock): string {
-  if (content.type === 'text') return content.text;
-  if (content.type !== 'resource_link') return '';
-  let url: URL;
-  try {
-    url = new URL(content.uri);
-  } catch {
-    return '';
-  }
-  if (!WEB_LINK.test(url.protocol)) return '';
-  const label = content.name.replace(/[[\]]/g, '').trim() || url.hostname;
-  return `[${label}](${url.href.replace(/[()]/g, (paren) => (paren === '(' ? '%28' : '%29'))})`;
-}
-
 const noteSteps = (name: string, tool = false): ProviderOutput[] => [
   tool ? { kind: 'step_started', name, tool } : { kind: 'step_started', name },
   { kind: 'step_finished', name },
 ];
-
-type LinkSource = Extract<ProviderOutput, { kind: 'link' }>['source'];
 
 const PLAN_ENTRY_MAX = 2000;
 const PLAN_ENTRIES_MAX = 200;
@@ -174,25 +148,6 @@ export function planEntries(entries: readonly PlanEntry[]): PlanEntry[] {
     const content = entry.content.trim().slice(0, PLAN_ENTRY_MAX);
     return content ? [{ content, priority: entry.priority, status: entry.status }] : [];
   });
-}
-
-function toolTexts(
-  content: readonly ToolCallContent[] | null | undefined,
-  rawOutput: unknown,
-): [string, LinkSource][] {
-  const texts: [string, LinkSource][] = [];
-  for (const item of content ?? []) {
-    if (item.type !== 'content') continue;
-    if (item.content.type === 'text') texts.push([item.content.text, 'tool_output']);
-    if (item.content.type === 'resource_link') texts.push([item.content.uri, 'resource_link']);
-  }
-  if (rawOutput !== undefined && rawOutput !== null) {
-    texts.push([
-      typeof rawOutput === 'string' ? rawOutput : JSON.stringify(rawOutput),
-      'tool_output',
-    ]);
-  }
-  return texts;
 }
 
 export function createUpdateMapper(agentName = 'The agent', checksWindow = false): UpdateMapper {
@@ -349,7 +304,12 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
           lastMessageId = messageId ?? lastMessageId;
           wroteText = true;
           const next = separator ? { newMessage: true } : {};
-          const said = { kind: 'text_delta', delta: separator + chunk, ...next } as const;
+          const said = {
+            kind: 'text_delta',
+            delta: separator + chunk,
+            ...next,
+            ...(messageId ? { messageId } : {}),
+          } as const;
           return [...stopThinking(), ...linked, { ...said, ...messagePhase(update._meta) }];
         }
         case 'tool_call': {

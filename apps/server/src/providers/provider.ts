@@ -293,7 +293,13 @@ export type ProviderOutput =
       waits?: boolean;
     }
   | ({ kind: 'file_focus' } & FileFocus)
-  | { kind: 'text_delta'; delta: string; phase?: MessagePhase; newMessage?: boolean }
+  | {
+      kind: 'text_delta';
+      delta: string;
+      phase?: MessagePhase;
+      newMessage?: boolean;
+      messageId?: string;
+    }
   | { kind: 'thought_delta'; delta: string }
   | { kind: 'tool_started'; id: string; name: string; subagent?: string }
   | { kind: 'subagent_started'; id: string; parentId: string | null; name: string; task: string }
