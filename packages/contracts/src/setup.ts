@@ -177,6 +177,7 @@ export const profileSchema = z.object({
   macControl: z.boolean().default(false),
   codeMode: z.boolean().default(true),
   collapseFinishedTurns: z.boolean().default(true),
+  compactIdleConversations: z.boolean().default(false),
   codeModeUnavailable: z.boolean().optional(),
 });
 export type Profile = z.infer<typeof profileSchema>;
@@ -186,6 +187,7 @@ export type SparkSessionPrefs = Pick<
 > & {
   teammate?: TeammateBrief | null;
   chatPrompt?: string | null;
+  compactIdleConversations?: boolean;
 };
 
 export const setupStateSchema = z.object({
@@ -229,6 +231,7 @@ export const updateProfileRequestSchema = z
     macControl: z.boolean(),
     codeMode: z.boolean(),
     collapseFinishedTurns: z.boolean(),
+    compactIdleConversations: z.boolean(),
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

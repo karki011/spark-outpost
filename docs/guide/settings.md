@@ -57,6 +57,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | **Wait before going on without your answer** | **60s**                | [Approvals](approvals.md#if-you-dont-answer)           |
 | **Warn when context is**                     | 60%                    | [Compaction](compaction.md#change-when-spark-compacts) |
 | **Compact automatically at**                 | 80%, on                | [Compaction](compaction.md#change-when-spark-compacts) |
+| **Compact idle conversations**               | Off                    | [Compaction](compaction.md#compact-idle-chats)         |
 | **While the agent is working, Enter**        | **Queues the message** | [Queue](follow-a-turn.md#queue-messages)               |
 | **On wide windows**                          | **Context rail**       | Rail, panel, nothing                                   |
 | **Collapse finished turns**                  | On                     | [Turns](follow-a-turn.md#after-a-turn)                 |
@@ -65,7 +66,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | **Record Terminal sessions like chats**      | On                     | [Below](#record-terminal-sessions)                     |
 | **Plugins**                                  | Off                    | [Plugins](use-claude-plugins.md)                       |
 
-**Custom instructions**: text or a UTF-8 file, up to 16 KB; **Save instructions**.
+**Custom instructions**: text or a UTF-8 file, up to 16 KB.
 
 ### Code Mode
 
@@ -73,7 +74,7 @@ Agents combine supported reads locally beside direct tools. Off: direct tools on
 
 ### Record Terminal sessions
 
-On for new profiles; existing choices stay. With Spark’s mod, Claude [Terminal](terminals.md) turns keep tool inputs/outputs, replies, changed files and an audit. Secret-file values are hidden.
+On for new profiles. With Spark’s mod, Claude [Terminal](terminals.md) turns keep tool inputs/outputs, replies, changed files and an audit. Secret-file values are hidden.
 
 Pushes to other branches, force pushes, protected files and writes outside the project are flagged, not stopped. Not for Codex.
 

@@ -2,6 +2,7 @@ import { redacted, redactText, sensitiveFieldKind } from '@spark-outpost/contrac
 import { isSecretPath } from '../projects/path-policy.ts';
 
 export {
+  ENV_KEY,
   isSensitiveEnvKey,
   redacted,
   REDACTED_MARKER,

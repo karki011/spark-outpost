@@ -9,7 +9,7 @@ import type { NativeRuntime } from '../src/terminal/native-runtime.ts';
 import type { LiveSession } from '../src/terminal/native-runtime-types.ts';
 import { reserveNativeTerminalLaunch } from '../src/persistence/native-terminal-turns.ts';
 import { terminalApprovals } from '../src/terminal/remote/approvals.ts';
-import { modInbox } from '../src/terminal/remote/mod-inbox.ts';
+import { ASK_NOTICE, modInbox } from '../src/terminal/remote/mod-inbox.ts';
 import { answerWaits } from '../src/terminal/remote/mod-routing.ts';
 import { localClient, testAppOptions } from './app-support.ts';
 import { pairDevice, remoteClient, setSwitches, turnRemoteOn } from './remote-support.ts';
@@ -67,6 +67,8 @@ describe('the Claude mod inbox', () => {
       notices: [],
       status: 'Spark · phone connected · approvals on · PR #42 · checks running',
       record: false,
+      abort: null,
+      askNotice: ASK_NOTICE,
     });
   });
 

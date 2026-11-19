@@ -113,7 +113,8 @@ describe('The speech model', () => {
     await until(() => scene.fetchSpy.mock.calls.length === 1);
     expect(scene.fetchSpy.mock.calls[0]?.[0]).toBe(scene.models[0]!.url);
     await until(() => scene.published.at(-1)?.models['parakeet-v3'].state === 'ready');
-    expect(scene.loads.at(-1)).toBe('parakeet-tdt-0.6b-v3-Q5_K_M.gguf');
+    await until(() => scene.loads.length > 0);
+    expect(scene.loads).toEqual(['parakeet-tdt-0.6b-v3-Q5_K_M.gguf']);
     await close(scene);
   });
 
@@ -159,7 +160,8 @@ describe('The speech model', () => {
     expect(status.settings.enabled).toBe(true);
     expect(status.model).toBe('downloading');
     await until(() => scene.published.at(-1)?.model === 'ready');
-    expect(scene.loads.at(-1)).toBe('parakeet-tdt-0.6b-v3-Q5_K_M.gguf');
+    await until(() => scene.loads.length > 0);
+    expect(scene.loads).toEqual(['parakeet-tdt-0.6b-v3-Q5_K_M.gguf']);
     await close(scene);
   });
 

@@ -8,6 +8,7 @@ import {
 import { sendUserMessage } from '../persistence/conversations.ts';
 import type { Db } from '../persistence/db.ts';
 import { nativeTerminalTarget } from '../persistence/native-terminal-settings.ts';
+import { recordSessionEnd } from '../persistence/native-terminal-mod-reports.ts';
 import { recordNativeStep } from '../persistence/native-terminal-steps.ts';
 import {
   acceptNativeEvent,
@@ -197,6 +198,12 @@ export function nativeObserver({
             : 'The native session ended.',
         );
       session.nativeSessionEnded = true;
+      if (event.reason)
+        await recordSessionEnd(db, session.row.id, {
+          reason: event.reason,
+          resumeId: event.nativeSessionId ?? session.row.native_session_id,
+          at: new Date(),
+        });
     }
     if (event.kind === 'session_start') session.nativeSessionEnded = false;
     const state = nativeActivity(event, session.context !== null);

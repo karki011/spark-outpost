@@ -34,6 +34,15 @@ It ends with **Exact identifiers**: PR numbers, commits, branches, files, ticket
 2. Set **Warn when context is** (30% to 90%). It only colours the ring.
 3. Set **Compact automatically at** (40% to 95%), or switch it off.
 
+## Compact idle chats
+
+Claude can compact a long chat idle about an hour, so your next message isn't sent uncached. Off by default.
+
+1. In **Context compaction**, switch on **Compact idle conversations**.
+2. Chats use it from their next message; new Claude [Terminal](terminals.md) sessions also follow your `idleCompaction` setting.
+
+A summary can drop detail, a chat doesn't count its cost, and a sleeping turn can be compacted.
+
 ## Answer the card
 
 With auto-compaction off, **This chat is almost full** asks first.

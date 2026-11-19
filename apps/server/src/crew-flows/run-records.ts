@@ -228,6 +228,18 @@ export async function getWorkflowRun(
   return (await assemble(db, rows))[0] ?? null;
 }
 
+export async function getWorkflowRunOfTurn(
+  db: Queryable,
+  workspaceId: string,
+  turnRunId: string,
+): Promise<WorkflowRun | null> {
+  const { rows } = await db.query<RunRow>(
+    'SELECT * FROM workflow_runs WHERE run_id = $1 AND workspace_id = $2',
+    [turnRunId, workspaceId],
+  );
+  return (await assemble(db, rows))[0] ?? null;
+}
+
 export const WORKFLOW_RUNS_PAGE = 100;
 
 export async function listWorkflowRuns(
