@@ -67,6 +67,12 @@ describe('hiding secrets', () => {
     );
   });
 
+  it('masks an inline assignment whose name hides an invisible character', () => {
+    expect(hideSecrets('cd x && API\u200B_KEY=abc123 node run.js')).toBe(
+      'cd x && API\u200B_KEY=••• node run.js',
+    );
+  });
+
   it('keeps the full text otherwise, for the tooltip', () => {
     expect(commandFull('  pnpm lint && pnpm test  ')).toBe('pnpm lint && pnpm test');
   });
