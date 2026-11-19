@@ -11,7 +11,12 @@ import { ProfileSection } from '../spark/ProfileSection.tsx';
 import { ASSISTANT_ROWS, SparkAssistantSection } from './assistant/SparkAssistantSection.tsx';
 import { NAME_LABEL, PERSONALITY_LABEL } from '../spark/SparkSettings.tsx';
 import { LEVEL_LABEL } from './setting-labels.ts';
-import { BREAK_LABEL, COMPACT_LABEL, IDLE_COMPACT_LABEL, WARN_LABEL } from '../spark/CompactionSettings.tsx';
+import {
+  BREAK_LABEL,
+  COMPACT_LABEL,
+  IDLE_COMPACT_LABEL,
+  WARN_LABEL,
+} from '../spark/CompactionSettings.tsx';
 import { INSTRUCTIONS_LABEL } from '../spark/AgentInstructionsSetting.tsx';
 import { MORNING_BRIEF_LABEL } from '../spark/MorningBriefSetting.tsx';
 import { ResetSection, KEEP_KEYS_LABEL } from '../reset/ResetSection.tsx';

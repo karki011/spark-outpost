@@ -288,7 +288,7 @@ export async function updateProfile(
        week_recap_time = COALESCE($34::time, week_recap_time),
        pr_follow_up_bots = COALESCE($35::text[], pr_follow_up_bots),
        compact_at_break = COALESCE($36, compact_at_break),
-       compact_idle_conversations = COALESCE($36, compact_idle_conversations),
+       compact_idle_conversations = COALESCE($37, compact_idle_conversations),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
