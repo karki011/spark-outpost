@@ -104,6 +104,29 @@ describe('percent-encoded tokens', () => {
     expectStable(text);
   });
 
+  it.each([
+    [`prefix-${ENCODED_GITHUB}-suffix`, 'prefix-[redacted:github_token]-suffix', ['abcdefghij']],
+    [`${ENCODED_GITHUB}%20trailing`, '[redacted:github_token]%20trailing', ['abcdefghij']],
+    [
+      'ghp_abcdefghij%30123456789klmnopqrst',
+      '[redacted:github_token]',
+      ['abcdefghij', 'klmnopqrst'],
+    ],
+    ['ghp_abcdefghijklmnopqrstuvwx%30yz', '[redacted:github_token]', ['abcdefghij', '%30yz']],
+    [
+      `${ENCODED_GITHUB}%2Cghp%5Fzyxwvutsrqponmlkjihgfedcba9876`,
+      '[redacted:github_token]',
+      ['abcdefghij', 'zyxwvutsrq'],
+    ],
+  ])('masks only the token span in %s', (text, expected, hidden) => {
+    expect(redactText(text)).toBe(expected);
+    for (const part of hidden) {
+      expect(redactText(text)).not.toContain(part);
+      expect(removePastedSecrets(text)).not.toContain(part);
+    }
+    expectStable(text);
+  });
+
   it('names the decoded kind when pasted', () => {
     expect(pastedSecretKinds(`My link has ${ENCODED_GITHUB} in it`)).toEqual(['github_token']);
   });

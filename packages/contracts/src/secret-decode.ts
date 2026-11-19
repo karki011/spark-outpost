@@ -1,6 +1,5 @@
 const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 const PRINTABLE_ASCII = /^[\x20-\x7E]+$/;
-const PERCENT_BYTE = /%([0-9A-Fa-f]{2})/g;
 
 function decodeBase64(value: string): string | null {
   if (value.length % 4 !== 0) return null;
@@ -26,9 +25,31 @@ export function decodesToCredential(value: string): boolean {
   return decoded !== null && PRINTABLE_ASCII.test(decoded) && decoded.includes(':');
 }
 
-export function percentDecodedAscii(text: string): string {
-  return text.replace(PERCENT_BYTE, (match, hex: string) => {
-    const code = Number.parseInt(hex, 16);
-    return code < 0x80 ? String.fromCharCode(code) : match;
-  });
+export interface PercentDecoded {
+  decoded: string;
+  rawStart: number[];
+}
+
+const HEX_PAIR = /^[0-9A-Fa-f]{2}$/;
+
+function asciiByteAt(text: string, index: number): string | null {
+  if (text[index] !== '%') return null;
+  const hex = text.slice(index + 1, index + 3);
+  if (!HEX_PAIR.test(hex)) return null;
+  const code = Number.parseInt(hex, 16);
+  return code < 0x80 ? String.fromCharCode(code) : null;
+}
+
+export function percentDecodedAscii(text: string): PercentDecoded {
+  let decoded = '';
+  const rawStart: number[] = [];
+  let index = 0;
+  while (index < text.length) {
+    rawStart.push(index);
+    const byte = asciiByteAt(text, index);
+    decoded += byte ?? text[index];
+    index += byte === null ? 1 : 3;
+  }
+  rawStart.push(text.length);
+  return { decoded, rawStart };
 }

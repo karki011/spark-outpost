@@ -97,20 +97,43 @@ const PREFIXED_TOKEN_RULES: TextRule[] = [
 
 const ENCODED_TOKEN_RULES = [JWT_RULE, ...PREFIXED_TOKEN_RULES];
 
+function encodedTokenSpans(decoded: string) {
+  return ENCODED_TOKEN_RULES.flatMap((rule) =>
+    [...decoded.matchAll(rule.pattern)].map((found) => ({
+      kind: rule.kind,
+      start: found.index,
+      end: found.index + found[0].length,
+    })),
+  );
+}
+
 function encodedToken(match: string): SecretParts | null {
   if (!match.includes('%')) return null;
-  const decoded = percentDecodedAscii(match);
-  for (const rule of ENCODED_TOKEN_RULES) {
-    const [token] = decoded.match(rule.pattern) ?? [];
-    if (token) return { kind: rule.kind, before: '', value: token, after: '' };
-  }
-  return null;
+  const { decoded, rawStart } = percentDecodedAscii(match);
+  const spans = encodedTokenSpans(decoded);
+  if (spans.length === 0) return null;
+  const first = spans.reduce((earliest, span) => (span.start < earliest.start ? span : earliest));
+  const end = Math.max(...spans.map((span) => span.end));
+  const rawFrom = rawStart[first.start]!;
+  const rawTo = rawStart[end]!;
+  return {
+    kind: first.kind,
+    before: match.slice(0, rawFrom),
+    value: decoded.slice(first.start, end),
+    after: match.slice(rawTo),
+  };
 }
 
 const TEXT_RULES: TextRule[] = [
   {
     kind: 'private_key',
     pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g,
+  },
+  {
+    kind: 'encoded_token',
+    requires: '%',
+    pattern: /(?<![\w%.~+-])[\w%.~+-]{20,}/g,
+    split: encodedToken,
   },
   JWT_RULE,
   {
@@ -129,12 +152,6 @@ const TEXT_RULES: TextRule[] = [
     split: keepPrefix('github_token'),
   },
   ...PREFIXED_TOKEN_RULES,
-  {
-    kind: 'encoded_token',
-    requires: '%',
-    pattern: /(?<![\w%.~+-])[\w%.~+-]{20,}/g,
-    split: encodedToken,
-  },
   {
     kind: 'url_password',
     requires: '://',
