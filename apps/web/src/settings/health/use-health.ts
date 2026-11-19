@@ -9,10 +9,10 @@ import { useMacControlStatus } from '../mac-control-status.ts';
 import { useSparkRules } from '../spark-rules/use-spark-rules.ts';
 import { useUserPlugins } from '../use-user-plugins.ts';
 import {
-  agentConfigHealth,
   failedChatsHealth,
   helpersHealth,
   pluginsHealth,
+  projectsHealth,
   providersHealth,
   rulesHealth,
   terminalsHealth,
@@ -52,11 +52,15 @@ function useProjectsSource(): HealthSource {
   const configs = useQueries({
     queries: list.map((project) => agentConfigQuery(project.id)),
   });
-  const items = list.flatMap((project, index) => {
-    const config = configs[index]?.data;
-    return config ? agentConfigHealth(project, config) : [];
-  });
-  return { id: 'projects', label: 'Projects', state: stateOf([projects, ...configs]), items };
+  const items = projectsHealth(
+    list.map((project, index) => ({
+      project,
+      config: configs[index]?.data,
+      error: configs[index]?.error ?? null,
+    })),
+  );
+  const pending = configs.filter((config) => config.isPending);
+  return { id: 'projects', label: 'Projects', state: stateOf([projects, ...pending]), items };
 }
 
 function useHelpersSource(): HealthSource {

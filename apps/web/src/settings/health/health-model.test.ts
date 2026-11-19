@@ -15,6 +15,7 @@ import {
   failedChatsHealth,
   helpersHealth,
   pluginsHealth,
+  projectsHealth,
   providersHealth,
   rulesHealth,
   terminalsHealth,
@@ -114,6 +115,24 @@ describe('agentConfigHealth', () => {
     expect(items[2]!.title).toBe('web: 2 repo settings never applied');
     expect(items[2]!.detail).toBe('Environment variables (.claude/settings.json)');
     expect(items[0]!.fix.kind).toBe('note');
+  });
+});
+
+describe('projectsHealth', () => {
+  it('names a project whose setup could not be read instead of failing the whole check', () => {
+    const items = projectsHealth([
+      { project: PROJECT, config: undefined, error: new Error('Folder not found') },
+      { project: { id: 'p2', name: 'api' } as Project, config: config({}), error: null },
+    ]);
+    expect(items).toEqual([
+      {
+        key: 'config:p1:error',
+        status: 'broken',
+        title: 'web: couldn’t read its setup',
+        detail: 'Folder not found',
+        fix: { kind: 'section', section: 'projects', label: 'Open Projects' },
+      },
+    ]);
   });
 });
 

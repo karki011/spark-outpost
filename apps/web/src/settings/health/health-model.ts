@@ -37,6 +37,7 @@ export interface HealthItem {
 }
 
 const OPEN_RULES: HealthFix = { kind: 'section', section: 'rules', label: 'Open Spark rules' };
+const OPEN_PROJECTS: HealthFix = { kind: 'section', section: 'projects', label: 'Open Projects' };
 const OPEN_PROVIDERS: HealthFix = { kind: 'section', section: 'ai', label: 'Open AI providers' };
 const OPEN_PLUGINS: HealthFix = {
   kind: 'section',
@@ -140,6 +141,29 @@ export function agentConfigHealth(project: Project, config: RepoAgentConfig): He
     });
   }
   return items;
+}
+
+export interface ProjectCheck {
+  project: Project;
+  config: RepoAgentConfig | undefined;
+  error: Error | null;
+}
+
+export function projectsHealth(checks: readonly ProjectCheck[]): HealthItem[] {
+  return checks.flatMap(({ project, config, error }) => {
+    if (error) {
+      return [
+        {
+          key: `config:${project.id}:error`,
+          status: 'broken' as const,
+          title: `${project.name}: couldn’t read its setup`,
+          detail: error.message,
+          fix: OPEN_PROJECTS,
+        },
+      ];
+    }
+    return config ? agentConfigHealth(project, config) : [];
+  });
 }
 
 export function pluginsHealth(plugins: readonly UserPlugin[]): HealthItem[] {
