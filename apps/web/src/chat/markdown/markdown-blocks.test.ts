@@ -41,6 +41,36 @@ describe('splitBlocks', () => {
       sealed = blocks.slice(0, -1);
     }
   });
+
+  it('keeps a details fold with blank lines inside in one block', () => {
+    const fold = '<details><summary>Finding</summary>\n\n**Where:** here\n\n- fix\n\n</details>';
+    expect(splitBlocks(`Intro\n\n${fold}\n\nAfter.`)).toEqual(['Intro\n', `${fold}\n`, 'After.']);
+  });
+
+  it('keeps nested folds together until the outer one closes', () => {
+    const text =
+      '<details><summary>A</summary>\n\n<details><summary>B</summary>\n\nb\n\n</details>\n\na\n\n</details>\n\nEnd';
+    expect(splitBlocks(text)).toHaveLength(2);
+    expect(splitBlocks(text)[1]).toBe('End');
+  });
+
+  it('ignores details tags in code fences and inline code', () => {
+    expect(splitBlocks('```html\n<details>\n```\n\nNext')).toEqual([
+      '```html\n<details>\n```\n',
+      'Next',
+    ]);
+    expect(splitBlocks('Use `<details>` here.\n\nNext')).toEqual([
+      'Use `<details>` here.\n',
+      'Next',
+    ]);
+  });
+
+  it('keeps an unclosed fold as the growing tail', () => {
+    expect(splitBlocks('Intro\n\n<details><summary>x</summary>\n\nmore\n\nyet more')).toEqual([
+      'Intro\n',
+      '<details><summary>x</summary>\n\nmore\n\nyet more',
+    ]);
+  });
 });
 
 describe('the clarify block', () => {

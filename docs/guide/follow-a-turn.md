@@ -19,7 +19,7 @@ About 2 minutes.
 7. A done to-do folds.
 8. Sidebar blobs show the **Agent TV** team.
 9. **View agents** opens **Work**; over four become clickable faces.
-10. **Message** opens that chat’s composer; **Ask lead to redirect** drafts in that chat.
+10. **Message** opens that chat’s composer; **Ask lead to redirect** drafts there.
 
 **Open in terminal** shows failures in a [dock tab](terminals.md#watch-an-agents-command).
 
@@ -63,6 +63,7 @@ Steps fold under **Worked for …**; steered replies don't.
 | **Good result** / **Bad result** | Rate the PR turn.                               |
 | Selected text                    | **Add to chat**, **Comment**, **Copy**.         |
 | Choices                          | Only fill the message box, or **Show as list**. |
+| HTML folds                       | **Enter** toggles.                              |
 | `/fresh` or **… → Start fresh**  | Drop old context.                               |
 | Ticks left of the thread         | Jump to messages.                               |
 
