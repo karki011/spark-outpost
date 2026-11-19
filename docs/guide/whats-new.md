@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                               | What to do                                                     |
 | ---------------------------------------------------------- | -------------------------------------------------------------- |
+| **Stopped** steps; **No output for 2m**                    | [Follow a turn](follow-a-turn.md#stop-a-turn).                 |
 | Meeting alerts while locked; deleted share links stay dead | Nothing to do.                                                 |
 | Agents manage and run Sparks and workflows                 | [When it asks](build-with-an-agent.md#when-it-asks).           |
 | **Share…** artifacts; the rail lists them                  | [Share one](share-an-artifact.md).                             |
@@ -55,6 +56,5 @@ summary: What changed in recent releases and what to do next.
 | Ask about a meeting, **Catch me up** | [Take meeting notes](meetings.md#ask-about-it). |
 | Meetings: titles written for you     | [Take meeting notes](meetings.md).              |
 | **Take notes when I join a meeting** | [Take meeting notes](meetings.md#record).       |
-| Transcripts: live tab, delete dialog | [Take meeting notes](meetings.md).              |
-| Meeting notes (alpha)                | [Take meeting notes](meetings.md).              |
+| Meeting notes (alpha), live tab      | [Take meeting notes](meetings.md).              |
 | Calendar: new look, your replies     | [See your day](calendar.md).                    |
