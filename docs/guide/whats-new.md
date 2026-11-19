@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                               | What to do                                                                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Pushes wait while you use the Mac                          | [Use your phone](use-your-phone.md).                                                     |
 | **A chat starts** trigger                                  | [Guide](workflow-triggers.md#the-events).                                                |
 | Agent terminal row is a card; compact workflows            | Nothing to do.                                                                           |
 | Default Sparks use the chat's agent and mode               | [Read how](workflow-runs.md#which-agent-and-mode-a-step-uses)                            |
@@ -66,4 +67,3 @@ summary: What changed in recent releases and what to do next.
 | Transcripts: drag the list's edge    | Nothing; double-click resets it.                |
 | Ask about a meeting, **Catch me up** | [Take meeting notes](meetings.md#ask-about-it). |
 | **Take notes when I join a meeting** | [Take meeting notes](meetings.md#record).       |
-| Calendar: new look, your replies     | [See your day](calendar.md).                    |
