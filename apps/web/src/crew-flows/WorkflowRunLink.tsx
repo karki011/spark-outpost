@@ -19,9 +19,13 @@ export function useTurnWorkflowRun(turnRunId: string, message: string): Workflow
   return runs.data?.find((entry) => entry.runId === turnRunId) ?? null;
 }
 
-export function OpenRunViewButton({ run }: { run: WorkflowRun }) {
+export function OpenRunViewButton({ run, quiet = false }: { run: WorkflowRun; quiet?: boolean }) {
   return (
-    <button type="button" className="btn line sm" onClick={() => openWorkflowRun(run.id)}>
+    <button
+      type="button"
+      className={quiet ? 'btn ghost sm' : 'btn line sm'}
+      onClick={() => openWorkflowRun(run.id)}
+    >
       Open run view
       <ForwardIcon />
     </button>

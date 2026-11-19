@@ -76,7 +76,7 @@ export function AutomatedTurn({ run, detail, message, children }: AutomatedTurnP
           )}
         </button>
         {workflowRun && <RunState status={workflowRun.status} />}
-        {workflowRun && <OpenRunViewButton run={workflowRun} />}
+        {workflowRun && <OpenRunViewButton run={workflowRun} quiet />}
       </div>
       {open && (
         <div id={bodyId} className="auto-turn-body">
