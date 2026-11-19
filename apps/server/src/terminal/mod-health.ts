@@ -119,7 +119,7 @@ export function modHealth(deps: ModHealthDeps) {
       const key = keyOf(session);
       if (loaded.has(key)) return;
       loaded.add(key);
-      void setModHealth(deps.db, session.row, 'loaded', null).catch(() => false);
+      void setModHealth(deps.db, session.row, 'loaded', null).catch(() => loaded.delete(key));
     },
 
     ended(conversationId: string): void {

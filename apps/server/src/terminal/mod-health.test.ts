@@ -21,13 +21,15 @@ function session(provider = 'claude', args = ['--plugin-dir', '/data/mod']): Liv
   } as unknown as LiveSession;
 }
 
-function setup(options: { managed?: unknown[]; checkFails?: boolean } = {}) {
+function setup(options: { managed?: unknown[]; checkFails?: boolean; failWrites?: number } = {}) {
   const writes: [string, string | null][] = [];
+  let failures = options.failWrites ?? 0;
   const timers = new Map<number, () => void>();
   let next = 0;
   const db = {
     query: async (sql: string, values: unknown[]) => {
       if (sql.includes('mod_state')) writes.push([values[2] as string, values[3] as string | null]);
+      if (failures-- > 0) throw new Error('database unavailable');
       return { rows: [{ conversation_id: 'c1' }] };
     },
   } as unknown as Db;
@@ -63,6 +65,19 @@ describe('noticing when Spark’s mod did not load', () => {
     await new Promise((done) => setTimeout(done, 0));
     expect(writes).toEqual([['loaded', null]]);
     expect(timers.size).toBe(0);
+  });
+
+  it('tries the loaded write again on the next check-in when the database refused it', async () => {
+    const { health, writes } = setup({ failWrites: 1 });
+    health.checkedIn(session());
+    await new Promise((done) => setTimeout(done, 0));
+    health.checkedIn(session());
+    health.checkedIn(session());
+    await new Promise((done) => setTimeout(done, 0));
+    expect(writes).toEqual([
+      ['loaded', null],
+      ['loaded', null],
+    ]);
   });
 
   it('records a missing mod when nothing checks in within the window after the session starts', async () => {

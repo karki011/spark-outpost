@@ -81,7 +81,9 @@ const RATE_LIMIT_NAMES: Record<string, string> = {
 };
 
 export function rateLimitName(kind: string): string {
-  return RATE_LIMIT_NAMES[kind] ?? kind.replaceAll('_', ' ');
+  return Object.hasOwn(RATE_LIMIT_NAMES, kind)
+    ? RATE_LIMIT_NAMES[kind]!
+    : kind.replaceAll('_', ' ');
 }
 
 export const nativeTerminalUsageSchema = z.object({

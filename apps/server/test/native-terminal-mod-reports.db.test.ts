@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { setModHealth } from '../src/persistence/native-terminal-mod-reports.ts';
+import { nativeTerminalRow } from '../src/persistence/native-terminals.ts';
 import { nativeRuntimeFixture, type NativeRuntimeFixture } from './native-terminal-fixture.ts';
 
 let f: NativeRuntimeFixture;
@@ -95,5 +97,23 @@ describe('whether the Spark mod loaded', () => {
       state: 'loaded',
       reason: null,
     });
+  });
+
+  it('records a missing mod on a launch that never checked in', async () => {
+    await f.launch();
+    const row = (await nativeTerminalRow(f.t.db, f.conversationId))!;
+    expect(await setModHealth(f.t.db, row, 'missing', 'blocked')).toBe(true);
+    expect((await f.runtime.get(f.conversationId))?.mod).toEqual({
+      state: 'missing',
+      reason: 'blocked',
+    });
+  });
+
+  it('keeps a check-in for the launch when a late missing report lands after it', async () => {
+    await f.launch();
+    const row = (await nativeTerminalRow(f.t.db, f.conversationId))!;
+    expect(await setModHealth(f.t.db, row, 'loaded', null)).toBe(true);
+    expect(await setModHealth(f.t.db, row, 'missing', 'late')).toBe(false);
+    expect((await f.runtime.get(f.conversationId))?.mod).toEqual({ state: 'loaded', reason: null });
   });
 });

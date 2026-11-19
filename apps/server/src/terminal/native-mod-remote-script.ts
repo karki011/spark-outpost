@@ -69,11 +69,12 @@ export function control() {
   const calls = new Map();
   return {
     prompted(id) {
-      prompt = text(id) ?? prompt;
+      prompt = text(id);
     },
     turnStarted(e) {
       if (e.agentId || !text(e.turnId)) return;
       main = { turnId: e.turnId, prompt };
+      prompt = null;
       wakes = null;
     },
     turnEnded(e) {

@@ -33,6 +33,8 @@ export function withMod(remote: NativeRemote, mod: ModInbox, routing: ModRouting
     const row = await nativeTerminalRow(db, conversationId);
     return row?.state === 'working' ? row.native_turn_id : null;
   };
+  const currentTurn = async (conversationId: string): Promise<string | null> =>
+    (await nativeTerminalRow(db, conversationId))?.native_turn_id ?? null;
   const settled = async (conversationId: string, prompt: string): Promise<boolean> => {
     for (let waited = 0; waited < ABORT_SETTLE_MS; waited += ABORT_CHECK_MS) {
       if ((await workingTurn(conversationId)) !== prompt) return true;
@@ -63,12 +65,11 @@ export function withMod(remote: NativeRemote, mod: ModInbox, routing: ModRouting
 
     async interrupt(conversationId: string): Promise<void> {
       const prompt = mod.aborts(conversationId) ? await workingTurn(conversationId) : null;
-      if (
-        prompt &&
-        (await mod.stop(conversationId, prompt)) &&
-        (await settled(conversationId, prompt))
-      )
-        return;
+      if (prompt) {
+        const taken = await mod.stop(conversationId, prompt);
+        if (taken && (await settled(conversationId, prompt))) return;
+        if ((await currentTurn(conversationId)) !== prompt) return;
+      }
       await remote.interrupt(conversationId);
     },
 
