@@ -47,3 +47,10 @@ export function workflowHeadline(run: WorkflowRun): string {
   const done = run.steps.filter((step) => step.state === 'succeeded').length;
   return `${SOURCE_WORDS[run.source]} · ${done} of ${run.steps.length} steps done`;
 }
+
+const DATA_TAG_LINE = /^[ \t]*<\/?pr_feedback>[ \t]*$/gm;
+const DATA_TAG = /<(\/?)pr_feedback>/g;
+
+export function sentForDisplay(text: string): string {
+  return text.replace(DATA_TAG_LINE, '').replace(DATA_TAG, '`<$1pr_feedback>`');
+}

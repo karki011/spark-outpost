@@ -5,12 +5,12 @@ import type { ConversationDetail, Run } from '@spark-outpost/contracts';
 import { OpenRunViewButton, useTurnWorkflowRun } from '../../crew-flows/WorkflowRunLink.tsx';
 import { RunState } from '../../crew-flows/RunState.tsx';
 import { ChevronIcon } from '../../ui/icons.tsx';
-import { QuotedText } from '../quotes/QuotedText.tsx';
+import { ReviewMarkdown } from '../markdown/ReviewMarkdown.tsx';
 import { usePaneId } from '../split/chat-pane.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { outcomesIn } from '../pull-request/round-model.ts';
 import { turnRunIds } from '../turn-props.ts';
-import { roundHeadline, waitsOnYou, workflowHeadline } from './automated-model.ts';
+import { roundHeadline, sentForDisplay, waitsOnYou, workflowHeadline } from './automated-model.ts';
 
 interface AutomatedTurnProps {
   run: Run;
@@ -44,7 +44,7 @@ export function SentBySpark({ text }: { text: string }) {
     <details className="auto-turn-sent">
       <summary>Show what Spark sent</summary>
       <div className="bubble">
-        <QuotedText text={text} />
+        <ReviewMarkdown text={sentForDisplay(text)} />
       </div>
     </details>
   );
