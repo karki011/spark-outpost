@@ -10,6 +10,8 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                               | What to do                                                                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **A chat starts** trigger                                  | [Guide](workflow-triggers.md#the-events).                                                |
+| Agent terminal row is a card; compact workflows            | Nothing to do.                                                                           |
 | Default Sparks use the chat's agent and mode               | [Read how](workflow-runs.md#which-agent-and-mode-a-step-uses)                            |
 | Mid-turn mode switches                                     | [Modes](modes-and-levels.md#what-spark-does-in-each-mode).                               |
 | Wider pages, squircle corners, sidebar fix                 | Nothing to do.                                                                           |

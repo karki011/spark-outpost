@@ -170,7 +170,7 @@ export const workflowTool = sparkTool({
   acts: true,
   title: 'Run, stop, schedule or trigger a workflow',
   description:
-    'workflow: id or name. run (new chat; message, project), stop (run id or its running run), schedule (schedule: {enabled, every, unit, days, from, to, anchor, message, missed}), unschedule, triggers ({turnChanged, beforePublish, commit, pullRequest, …}); fields you pass change, see spark_crew. Follows your mode.',
+    'workflow: id or name. run (new chat; message, project), stop (run id or its running run), schedule (schedule: {enabled, every, unit, days, from, to, anchor, message, missed}), unschedule, triggers ({chatStarted, turnChanged, beforePublish, commit, pullRequest, …}); fields you pass change, see spark_crew. Follows your mode.',
   input: {
     action: z.enum(['run', 'stop', 'schedule', 'unschedule', 'triggers']),
     workflow: z.string().trim().min(1).max(100),
