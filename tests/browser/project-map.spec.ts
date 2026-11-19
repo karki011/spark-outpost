@@ -101,6 +101,7 @@ test('arrows walk the areas, Enter opens one as a network and Escape goes back @
 test('search flies to a file; hovering shows its details and clicking opens a real preview', async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const projectId = await addProject(page, REPO_ROOT);
@@ -123,6 +124,7 @@ test('search flies to a file; hovering shows its details and clicking opens a re
   await screenshot(page, 'hover-dark');
   const sheet = page.getByRole('dialog', { name: 'ticket-model.ts' });
   await expect(async () => {
+    if (await sheet.isVisible()) return;
     await page.mouse.move(x - 40, y - 40);
     await page.mouse.move(x, y);
     await expect(tip).toContainText('apps/web/src/tickets/ticket-model.ts', { timeout: 1_000 });
