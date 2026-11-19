@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                               | What to do                                                                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Worktrees with `.env` or a running tab stay on disk        | [What to expect](where-spark-works.md#what-to-expect).                                   |
 | **Stopped** steps; **No output for 2m**                    | [Follow a turn](follow-a-turn.md#stop-a-turn).                                           |
 | Meeting notes (alpha), live tab                            | [Take meeting notes](meetings.md).                                                       |
 | Meeting alerts while locked; deleted links die; HTML folds | Nothing to do.                                                                           |
@@ -56,6 +57,5 @@ summary: What changed in recent releases and what to do next.
 | Relay, the follow-up Spark, removed  | Nothing; PR follow-up works as before.          |
 | Transcripts: drag the list's edge    | Nothing; double-click resets it.                |
 | Ask about a meeting, **Catch me up** | [Take meeting notes](meetings.md#ask-about-it). |
-| Meetings: titles written for you     | [Take meeting notes](meetings.md).              |
 | **Take notes when I join a meeting** | [Take meeting notes](meetings.md#record).       |
 | Calendar: new look, your replies     | [See your day](calendar.md).                    |
