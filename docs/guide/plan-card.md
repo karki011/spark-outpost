@@ -24,6 +24,8 @@ Spark has no plan card and saves no plan of its own. Without `/plan` or **Plan**
 
 The plan you approve becomes the chat's agreed plan. The thread shows **Plan saved**; select it to open the plan in **Work**. A revised plan you approve is saved as a new version.
 
+Approving names the chat after the plan's title, unless you renamed it.
+
 Codex's plan setting stops no edit, so `/plan` runs a Codex turn in **Read-only**: it replies with a plan and shows no line; **Work** lists it as **Proposed plan**. Your next message builds.
 
 Older chats keep lines such as **Plan saved · 4 pieces**.

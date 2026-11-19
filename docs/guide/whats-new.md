@@ -10,6 +10,10 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                               | What to do                                                                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Chat rows say what's happening; plans name chats           | [Chat list](statuses-and-limits.md#chat-list).                                           |
+| **Cost** by tool; model switch cache note                  | [Prompt cache](statuses-and-limits.md#prompt-cache).                                     |
+| Build Sparks by talking to an agent; Spark effort          | [Build with an agent](build-with-an-agent.md).                                           |
+| Meeting notes (alpha): titles, live tab, delete dialog     | [Take meeting notes](meetings.md).                                                       |
 | Worktrees with `.env` or a running tab stay on disk        | [What to expect](where-spark-works.md#what-to-expect).                                   |
 | **Stopped** steps; **No output for 2m**                    | [Follow a turn](follow-a-turn.md#stop-a-turn).                                           |
 | Meeting notes (alpha), live tab                            | [Take meeting notes](meetings.md).                                                       |

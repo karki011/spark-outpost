@@ -1,0 +1,30 @@
+.switch-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 2px 4px 2px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.switch-note > svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--accent-text);
+}
+
+.switch-note p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.switch-note .icon-btn {
+  flex: none;
+}

@@ -16,6 +16,7 @@ import { AttachmentChips } from './attachments/AttachmentChips.tsx';
 import { pasteContext } from './attachments/paste-context.ts';
 import { ContextRing } from './composer/ContextRing.tsx';
 import { ModelPicker } from './composer/ModelPicker.tsx';
+import { ModelSwitchNote } from './composer/ModelSwitchNote.tsx';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import {
@@ -299,7 +300,12 @@ export function Composer({
           onSendAnyway={() => void submit(lastChoice.current)}
         />
       }
-      above={above}
+      above={
+        <>
+          {above}
+          <ModelSwitchNote conversationId={conversationId} settings={settings} runs={runs} />
+        </>
+      }
       foot={
         <>
           {ready && !noProject && (
