@@ -84,7 +84,10 @@ function useHelpersSource(): HealthSource {
 export function useHealth(): HealthSource[] {
   const rules = useSparkRules();
   const plugins = useUserPlugins();
-  const chats = useQuery({ queryKey: queryKeys.conversations, queryFn: api.listConversations });
+  const chats = useQuery({
+    queryKey: queryKeys.healthConversations,
+    queryFn: api.listHealthConversations,
+  });
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const projects = useProjectsSource();
   const helpers = useHelpersSource();

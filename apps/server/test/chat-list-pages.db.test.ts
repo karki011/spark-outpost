@@ -63,6 +63,45 @@ it('refuses an after that is not a chat id, and answers nothing for one that is 
   expect(await list(`?after=${randomUUID()}`)).toEqual([]);
 });
 
+async function lastRun(conversationId: string, status: string, error: string | null) {
+  await t.db.query(
+    `INSERT INTO runs (id, conversation_id, provider, status, error, created_at)
+     VALUES ($1, $2, 'fake', $3, $4, now() + make_interval(secs => (SELECT count(*) FROM runs)))`,
+    [randomUUID(), conversationId, status, error],
+  );
+}
+
+async function terminal(conversationId: string, state: string) {
+  await t.db.query(
+    `INSERT INTO native_terminal_sessions (id, conversation_id, provider, state, cwd, label)
+     VALUES ($1, $2, 'claude', $3, '/work', 'Claude')`,
+    [randomUUID(), conversationId, state],
+  );
+}
+
+it('gives Health every failed chat and open Terminal session, past the first page', async () => {
+  const ids = await seedChats(CHAT_LIST_PAGE + 5);
+  const [failed, recovered, archived, live, ended] = ids.slice(CHAT_LIST_PAGE) as [
+    string,
+    string,
+    string,
+    string,
+    string,
+  ];
+  await lastRun(failed, 'failed', 'Provider quit');
+  await lastRun(recovered, 'failed', 'Provider quit');
+  await lastRun(recovered, 'succeeded', null);
+  await lastRun(archived, 'failed', 'Provider quit');
+  await t.db.query('UPDATE conversations SET archived_at = now() WHERE id = $1', [archived]);
+  await terminal(live, 'working');
+  await terminal(ended, 'exited');
+  const firstPage = (await list()).map((chat) => chat.id);
+  expect(firstPage).not.toContain(failed);
+  const health = (await list('?health=1')).map((chat) => chat.id);
+  expect(health.sort()).toEqual([failed, live].sort());
+  await request(app).get('/api/conversations?health=yes').set(LOCAL_HEADERS).expect(400);
+});
+
 it('lets a paired device page too', async () => {
   const ids = await seedChats(2);
   await turnRemoteOn(app);

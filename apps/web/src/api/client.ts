@@ -102,6 +102,8 @@ export const api = {
       z.array(conversationSummarySchema),
       `/conversations?${new URLSearchParams({ after: id }).toString()}`,
     ),
+  listHealthConversations: (): Promise<ConversationSummary[]> =>
+    request(z.array(conversationSummarySchema), '/conversations?health=1'),
   searchConversations: (query: string, signal?: AbortSignal): Promise<ConversationSummary[]> =>
     request(
       z.array(conversationSummarySchema),
@@ -236,6 +238,7 @@ function draftConversation(id: string, settings: ChatSettings): ConversationDeta
 export const queryKeys = {
   conversations: ['conversations'] as const,
   olderConversations: ['older-conversations'] as const,
+  healthConversations: ['conversations', 'health'] as const,
   conversation: (id: string) => ['conversations', id] as const,
   agentCommands: (id: string) => ['conversations', id, 'agent-commands'] as const,
   annotations: (id: string) => ['conversations', id, 'annotations'] as const,
