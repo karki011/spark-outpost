@@ -10,7 +10,14 @@ import { usePaneId } from '../split/chat-pane.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { outcomesIn } from '../pull-request/round-model.ts';
 import { turnRunIds } from '../turn-props.ts';
-import { roundHeadline, sentForDisplay, waitsOnYou, workflowHeadline } from './automated-model.ts';
+import {
+  opensOnItsOwn,
+  roundHeadline,
+  sentForDisplay,
+  waitsOnYou,
+  workflowHeadline,
+  workflowLabel,
+} from './automated-model.ts';
 
 interface AutomatedTurnProps {
   run: Run;
@@ -52,8 +59,9 @@ export function SentBySpark({ text }: { text: string }) {
 
 export function AutomatedTurn({ run, detail, message, children }: AutomatedTurnProps) {
   const [chosen, setChosen] = useState<boolean | null>(null);
-  const workflowRun = useTurnWorkflowRun(run.id, run.workflowStarted ? message : '');
-  const open = chosen ?? waitsOnYou(detail.approvals, turnRunIds(detail, run.id));
+  const workflowRun = useTurnWorkflowRun(run.id, run.workflowStarted === true);
+  const waiting = waitsOnYou(detail.approvals, turnRunIds(detail, run.id));
+  const open = chosen ?? opensOnItsOwn(run.status, waiting);
   const bodyId = usePaneId(`auto-turn-${run.id}`);
   return (
     <div className="auto-turn" data-open={open}>
@@ -62,7 +70,7 @@ export function AutomatedTurn({ run, detail, message, children }: AutomatedTurnP
           type="button"
           className="auto-turn-toggle"
           aria-expanded={open}
-          aria-controls={open ? bodyId : undefined}
+          aria-controls={bodyId}
           onClick={() => setChosen(!open)}
         >
           <ChevronIcon />
@@ -70,7 +78,7 @@ export function AutomatedTurn({ run, detail, message, children }: AutomatedTurnP
             <RoundHeadline run={run} conversationId={detail.conversation.id} message={message} />
           ) : (
             <>
-              <b>Workflow {workflowRun?.workflowName ?? ''}</b>
+              <b>Workflow {workflowLabel(workflowRun, message)}</b>
               {workflowRun && <span>{workflowHeadline(workflowRun)}</span>}
             </>
           )}
@@ -78,11 +86,9 @@ export function AutomatedTurn({ run, detail, message, children }: AutomatedTurnP
         {workflowRun && <RunState status={workflowRun.status} />}
         {workflowRun && <OpenRunViewButton run={workflowRun} quiet />}
       </div>
-      {open && (
-        <div id={bodyId} className="auto-turn-body">
-          {children}
-        </div>
-      )}
+      <div id={bodyId} className="auto-turn-body" hidden={!open}>
+        {children}
+      </div>
     </div>
   );
 }

@@ -71,7 +71,7 @@ test('a workflow started in an ongoing chat is one folded row, not a message fro
   const toggle = row.getByRole('button', { name: /Workflow Review flow/ });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false', { timeout: SLOW });
   await expect(row.locator('.msg.me')).toHaveCount(0);
-  await expect(row.locator('.agent-block')).toHaveCount(0);
+  await expect(row.locator('.agent-block')).toBeHidden();
   await expect(toggle).toContainText('1 of 1 steps done', { timeout: SLOW });
   await expect(row.getByRole('button', { name: 'Open run view' })).toBeVisible();
 

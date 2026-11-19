@@ -48,7 +48,7 @@ test('a follow-up round is one folded row that opens to what it did', async ({ p
   await expect(toggle).toContainText(
     'PR #7 · round 1 · Replied to 3 comments, pushed a fix, re-requested review',
   );
-  await expect(turn.getByText('Show what Spark sent')).toHaveCount(0);
+  await expect(turn.getByText('Show what Spark sent')).toBeHidden();
 
   await toggle.focus();
   await page.keyboard.press('Enter');
@@ -60,7 +60,7 @@ test('a follow-up round is one folded row that opens to what it did', async ({ p
 
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await expect(turn.locator('.auto-turn-body')).toHaveCount(0);
+  await expect(turn.locator('.auto-turn-body')).toBeHidden();
 });
 
 const GITHUB_SENT = [

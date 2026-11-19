@@ -54,3 +54,13 @@ const DATA_TAG = /<(\/?)pr_feedback>/g;
 export function sentForDisplay(text: string): string {
   return text.replace(DATA_TAG_LINE, '').replace(DATA_TAG, '`<$1pr_feedback>`');
 }
+
+const MENTION = /^@([\w.-]+)/;
+
+export function workflowLabel(run: WorkflowRun | null, message: string): string {
+  return run?.workflowName ?? MENTION.exec(message.trim())?.[1] ?? '';
+}
+
+export function opensOnItsOwn(status: RunStatus, waiting: boolean): boolean {
+  return waiting || status === 'failed' || status === 'outcome_unknown';
+}

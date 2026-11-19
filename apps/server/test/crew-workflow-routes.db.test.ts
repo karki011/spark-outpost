@@ -156,6 +156,8 @@ describe('workflow runs', () => {
     ]);
     const listed = await client.get('/api/workflows/release-check/runs').expect(200);
     expect(listed.body.runs.map((run: WorkflowRun) => run.id)).toEqual([first.id]);
+    const ofTurn = await client.get(`/api/workflow-runs/of-turn/${done.runId}`).expect(200);
+    expect(ofTurn.body).toMatchObject({ id: first.id, workflowName: 'Release check' });
   }, 90_000);
 
   it('starts one run for a repeated request with the same Idempotency-Key', async () => {
@@ -222,6 +224,7 @@ describe('workflow runs', () => {
     await savedFlow();
     await client.send('post', '/api/workflows/missing/runs', {}).expect(404);
     await client.get(`/api/workflow-runs/${randomUUID()}`).expect(404);
+    await client.get(`/api/workflow-runs/of-turn/${randomUUID()}`).expect(404);
     await client.send('post', `/api/workflow-runs/${randomUUID()}/stop`).expect(404);
     await client
       .send('post', '/api/workflows/release-check/runs', { conversationId: randomUUID() })
@@ -236,6 +239,7 @@ describe('workflow runs', () => {
       'DELETE /api/workflows/:id',
       'GET /api/workflows/:id/runs',
       'POST /api/workflows/:id/runs',
+      'GET /api/workflow-runs/of-turn/:id',
       'GET /api/workflow-runs/:id',
       'POST /api/workflow-runs/:id/stop',
       'GET /api/workflow-runs/:id/test',

@@ -59,6 +59,10 @@
   padding: 4px 0 12px 20px;
 }
 
+.auto-turn-body[hidden] {
+  display: none;
+}
+
 .auto-turn-sent > summary {
   min-height: 28px;
   display: flex;

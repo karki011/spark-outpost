@@ -96,7 +96,7 @@ export const TurnSection = memo(function TurnSection({
     <>
       {run.agentCycle && <p className="on-its-own">Continued on its own</p>}
       {!automated && userMessage && handedTo.some((member) => member.spark?.step !== undefined) && (
-        <WorkflowRunLink turnRunId={run.id} message={userMessage.content} />
+        <WorkflowRunLink turnRunId={run.id} />
       )}
       {sparkLed && <SparkJobs run={run} detail={detail} orchestration={sparkLed} repo={repo} />}
       {sparkLed && !mainAgentRan(sparkLed) ? null : crew ? (

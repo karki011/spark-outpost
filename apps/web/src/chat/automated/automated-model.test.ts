@@ -3,10 +3,12 @@ import type { Approval, Run, RoundOutcome, WorkflowRun } from '@spark-outpost/co
 import { RUN, watch } from '../pull-request/watch-fixture.ts';
 import {
   isAutomatedTurn,
+  opensOnItsOwn,
   roundHeadline,
   sentForDisplay,
   waitsOnYou,
   workflowHeadline,
+  workflowLabel,
 } from './automated-model.ts';
 
 const run = (fields: Partial<Run>) => ({ id: RUN, ...fields }) as Run;
@@ -89,5 +91,25 @@ describe('what Spark sent, as shown', () => {
         '',
       ].join('\n'),
     );
+  });
+});
+
+describe('a row that opens by itself', () => {
+  it('opens when a card waits, or the turn failed or its outcome is unknown', () => {
+    expect(opensOnItsOwn('running', true)).toBe(true);
+    expect(opensOnItsOwn('failed', false)).toBe(true);
+    expect(opensOnItsOwn('outcome_unknown', false)).toBe(true);
+    expect(opensOnItsOwn('succeeded', false)).toBe(false);
+    expect(opensOnItsOwn('cancelled', false)).toBe(false);
+  });
+});
+
+describe('the workflow name on the row', () => {
+  it('uses the run, or the @id Spark sent while the run is not known', () => {
+    expect(workflowLabel({ workflowName: 'Review flow' } as WorkflowRun, '@review-flow')).toBe(
+      'Review flow',
+    );
+    expect(workflowLabel(null, '@review-flow Started by a trigger.')).toBe('review-flow');
+    expect(workflowLabel(null, 'no mention')).toBe('');
   });
 });
