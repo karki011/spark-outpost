@@ -26,7 +26,9 @@ See what [outposts](outposts.md) allow.
 
 Devices answer [cards](answer-remotely.md). **Open artifacts** (off) shows artifacts.
 
-**Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both off. **Send now** stops the turn first. Messages shown aren't stored.
+**Terminal sessions.** **Follow, type in and stop Terminal sessions** shows messages, steps, a message box and **Stop**. **Send now** stops the turn first. Messages shown aren't stored.
+
+**Approve in Terminal sessions** adds **Deny** and **Allow**; Claude's dialog says so. Both off.
 
 **Awake.** With Remote control on, work or a connected device keeps the Mac awake, except a closed lid on battery.
 
