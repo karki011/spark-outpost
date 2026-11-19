@@ -131,4 +131,3 @@ export function modHealth(deps: ModHealthDeps) {
     },
   };
 }
-

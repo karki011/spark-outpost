@@ -70,6 +70,13 @@ describe('native terminal launch', () => {
     });
   });
 
+  it('leaves idle compaction to Claude when the user turned Compact idle conversations on', async () => {
+    const launch = await prepareNativeLaunch({ ...(await input()), compactIdle: true });
+    expect(launch.env).toEqual({
+      CLAUDE_CODE_RESUME_HINT_COMMAND: 'Resume session in Spark Outpost',
+    });
+  });
+
   it('loads the Spark mod for Claude versions with mods, keeping its config beside it', async () => {
     const request = { ...(await input()), version: '2.1.294 (Claude Code)' };
     const launch = await prepareNativeLaunch(request);

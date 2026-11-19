@@ -51,7 +51,7 @@ import { launchUntracked } from './untracked-launch.ts';
 import { terminalAgents } from './terminal-agents.ts';
 import { writeAdoptRecord } from './tmux/adopt-record.ts';
 import { readoptTmuxSessions } from './tmux/readopt.ts';
-import { recordsTerminalLikeChat } from '../persistence/native-terminal-settings.ts';
+import { terminalLaunchSettings } from '../persistence/native-terminal-settings.ts';
 
 export type { NativeRuntime, NativeRuntimeDeps } from './native-runtime-types.ts';
 import type { NativeRuntime, NativeRuntimeDeps, LiveSession } from './native-runtime-types.ts';
@@ -204,8 +204,8 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       const granted = await timer.time('grant', () => deps.mcp.grant(scope));
       grant = granted;
       const prepareLaunch = deps.prepareLaunch ?? prepareNativeLaunch;
-      const record =
-        provider === 'claude' && (await recordsTerminalLikeChat(deps.db, conversationId));
+      const settings = await terminalLaunchSettings(deps.db, conversationId);
+      const record = provider === 'claude' && settings.recordLikeChat;
       launch = await timer.time('prepare_launch', () =>
         prepareLaunch({
           provider,
@@ -218,6 +218,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
             ? { resumeSessionId: row.native_session_id }
             : {}),
           attachments: prepared.input.attachments,
+          compactIdle: settings.compactIdle,
           dataDir: deps.dataDir,
           channel: deps.channel,
           command,

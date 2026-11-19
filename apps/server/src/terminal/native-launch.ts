@@ -30,6 +30,7 @@ export interface NativeLaunchInput {
   signal?: AbortSignal;
   env?: NodeJS.ProcessEnv;
   attachments?: readonly TurnAttachment[];
+  compactIdle?: boolean;
   mcp: { url: string; token: string };
   hooks: { url: string; token: string; permissionUrl?: string; record?: boolean };
 }
@@ -49,10 +50,13 @@ const SESSION_ID = /^[a-zA-Z0-9_-]{1,100}$/;
 const CHANNEL = /^[a-zA-Z0-9_-]{1,40}$/;
 const CLAUDE_THEME_FOLLOWS_TERMINAL = 'auto';
 const SPARK_RESUME_HINT = 'Resume session in Spark Outpost';
-const CLAUDE_TERMINAL_ENV = {
-  ...NO_IDLE_COMPACTION,
-  CLAUDE_CODE_RESUME_HINT_COMMAND: SPARK_RESUME_HINT,
-};
+
+function claudeTerminalEnv(compactIdle: boolean): Record<string, string> {
+  return {
+    ...(compactIdle ? {} : NO_IDLE_COMPACTION),
+    CLAUDE_CODE_RESUME_HINT_COMMAND: SPARK_RESUME_HINT,
+  };
+}
 
 function loopbackUrl(value: string): void {
   const url = new URL(value);
@@ -295,7 +299,7 @@ async function providerConfiguration(
     });
     return {
       args: ['--settings', settingsPath, '--mcp-config', mcpPath],
-      env: { ...CLAUDE_TERMINAL_ENV },
+      env: claudeTerminalEnv(input.compactIdle === true),
     };
   }
   const name = `spark_${input.sessionId.replaceAll('-', '_')}`;

@@ -241,7 +241,7 @@ export function claudeSessionMeta(
         disallowedTools: deny,
         settingSources: [],
         promptSuggestions: false,
-        env: NO_IDLE_COMPACTION,
+        ...(repo?.compactIdle ? {} : { env: NO_IDLE_COMPACTION }),
         ...(plugins.length > 0
           ? { plugins: plugins.map((path) => ({ type: 'local', path, skipMcpDiscovery: true })) }
           : {}),
