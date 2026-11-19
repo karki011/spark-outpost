@@ -6,7 +6,7 @@ order: 610
 summary: Every Settings section by group, its rows and defaults, and the page that explains each one.
 ---
 
-**Settings…** is in the left bar's **More**; **⌘,** opens its Mac window. **Search settings** opens a section or row.
+**Settings…**: left bar → **More**, or **⌘,** on the Mac. **Search settings** finds rows.
 
 ## General
 
@@ -104,7 +104,7 @@ Pushes to other branches, force pushes, protected files and writes outside the p
 
 ## About
 
-**About**:
+**Health**: what's broken ([more](trouble-setup-and-reset.md#check-health)). **About**:
 
 | Part        | Holds                                                                                                 | More                                           |
 | ----------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------- |

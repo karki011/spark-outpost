@@ -21,6 +21,10 @@ Providers: [Providers and keys](trouble-providers.md). Runs: [Runs and pull requ
 
 > **Important:** Don't delete `~/Library/Application Support/Spark Outpost` to fix start-up: it holds chats and backups.
 
+## Check Health
+
+**Settings → Health** lists what's broken or quietly ignored, marked **Broken** or **Ignored**, each with its fix: rules file problems, skipped repo settings, plugins that can't load, Terminal mods that didn't load, failed turns, provider checks and missing helpers.
+
 ## Run setup again
 
 Setup reopens at **AI provider** only when you disconnect every provider or reset Spark.

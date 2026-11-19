@@ -59,6 +59,7 @@ test('the sections sit under five groups, each tab described by its group', asyn
     'GitHub',
     'Spark rules',
     'Connectors',
+    'Health',
     'About',
   ]);
   const notifications = sections(page).getByRole('tab', { name: 'Notifications' });
