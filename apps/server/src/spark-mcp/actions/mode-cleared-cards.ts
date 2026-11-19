@@ -18,7 +18,7 @@ const GATED_READS: readonly SparkActionName[] = [
   'calendar_read',
 ];
 
-export const CLEARED_BY_MODE: SparkResult = {
+const CLEARED_BY_MODE: SparkResult = {
   state: 'done',
   message: 'Not needed any more: the agent’s mode now reads without asking.',
   url: null,

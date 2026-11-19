@@ -92,8 +92,6 @@ Sub-chats and Sparks' jobs get no `spark_outpost_start`. Another chat's text is 
 | **Accept edits**                                                     | Does it if your message asked; otherwise a card. |
 | **Manual**, **Plan** and read-only modes                             | Always a card.                                   |
 
-Spark checks the mode the agent is in at each call, so a mode you switch to mid-turn, or that a plan approval starts, counts at once. A read card that is waiting closes itself when the agent moves to a mode that reads without asking.
-
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 
 Edit, then confirm or select **Don't**; the card shows the result or **Try again**.

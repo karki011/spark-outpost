@@ -2,7 +2,7 @@ import { SPARK_ACTION_KIND, type CalendarReadAction } from '@spark-outpost/contr
 import type { Queryable } from '../../../persistence/db.ts';
 import { actionFacts, actionPath } from '../../actions/action-policy.ts';
 import { actionRun, postCard, RESULT_WAIT_MS } from '../../actions/confirm.ts';
-import { clearedByMode } from '../../actions/mode-cleared-cards.ts';
+import { clearedByMode, clearReadCardsTheModeRuns } from '../../actions/mode-cleared-cards.ts';
 import type { SparkToolContext } from '../../tool.ts';
 import { cardDecision } from '../browser/gate.ts';
 import { CalendarToolError, type CalendarDecision } from './context.ts';
@@ -48,11 +48,13 @@ export async function clearCalendarRead(
   const facts = await actionFacts(deps.db, scope.runId, 'calendar_read');
   if (actionPath(facts) === 'perform') return { cleared: true, decision: 'mode' };
   const action: CalendarReadAction = { action: 'calendar_read', what: what.slice(0, 300) };
-  const card = await postCard(deps.db, actionRun(scope), action, {
+  const run = actionRun(scope);
+  const card = await postCard(deps.db, run, action, {
     path: 'confirm',
     requested: facts.requested,
     observed: [],
   });
+  await clearReadCardsTheModeRuns(deps.db, scope.runId, (event) => run.hooks.append(event));
   const outcome = await cardDecision(context, card.id, RESULT_WAIT_MS);
   if (outcome === 'allowed') {
     const byMode = await clearedByMode(deps.db, card.id);
