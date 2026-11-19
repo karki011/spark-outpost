@@ -65,6 +65,23 @@ describe('splitBlocks', () => {
     ]);
   });
 
+  it('does not hold blocks together for a details tag mentioned in prose', () => {
+    expect(splitBlocks('Use <details> tags to fold.\n\nNext\n\nLast')).toEqual([
+      'Use <details> tags to fold.\n',
+      'Next\n',
+      'Last',
+    ]);
+  });
+
+  it('keeps other HTML blocks with blank lines inside in one block', () => {
+    expect(splitBlocks('<pre>first\n\nsecond</pre>\n\nAfter')).toEqual([
+      '<pre>first\n\nsecond</pre>\n',
+      'After',
+    ]);
+    const table = '<table>\n<tr><td>a</td></tr>\n\n<tr><td>b</td></tr>\n</table>';
+    expect(splitBlocks(`${table}\n\nAfter`)).toEqual([`${table}\n`, 'After']);
+  });
+
   it('keeps an unclosed fold as the growing tail', () => {
     expect(splitBlocks('Intro\n\n<details><summary>x</summary>\n\nmore\n\nyet more')).toEqual([
       'Intro\n',

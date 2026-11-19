@@ -8,12 +8,16 @@ export const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 export const LIST_ITEM = /^ {0,3}([-*+]|\d{1,9}[.)])(\s|$)/;
 const REFERENCE_DEFINITION = /^ {0,3}\[[^\]]+\]:/m;
 const INLINE_CODE = /(`+)[\s\S]*?\1/g;
-const FOLD_OPEN = /<details(?=[\s>/])/gi;
-const FOLD_CLOSE = /<\/details\s*>/gi;
+const HTML_CONTAINERS = 'details|pre|table|div|blockquote|dl|ul|ol';
+const HTML_BLOCK_START = new RegExp(`^ {0,3}<(?:${HTML_CONTAINERS})(?=[\\s>/]|$)`, 'i');
+const HTML_OPEN = new RegExp(`<(?:${HTML_CONTAINERS})(?=[\\s>/]|$)`, 'gi');
+const HTML_CLOSE = new RegExp(`</(?:${HTML_CONTAINERS})\\s*>`, 'gi');
 
-function foldChange(line: string): number {
+function htmlDepthChange(line: string, depth: number): number {
   const prose = line.replace(INLINE_CODE, '');
-  return (prose.match(FOLD_OPEN)?.length ?? 0) - (prose.match(FOLD_CLOSE)?.length ?? 0);
+  const opens =
+    depth > 0 || HTML_BLOCK_START.test(prose) ? (prose.match(HTML_OPEN)?.length ?? 0) : 0;
+  return opens - (prose.match(HTML_CLOSE)?.length ?? 0);
 }
 
 function isBlank(line: string): boolean {
@@ -42,15 +46,15 @@ export function splitBlocks(text: string): string[] {
   let current: string[] = [];
   let fence: string | null = null;
   let afterBlank = false;
-  let folds = 0;
+  let htmlDepth = 0;
   for (const line of text.split('\n')) {
-    if (fence === null && folds === 0 && afterBlank && startsNewBlock(line, current)) {
+    if (fence === null && htmlDepth === 0 && afterBlank && startsNewBlock(line, current)) {
       blocks.push(current.join('\n'));
       current = [];
     }
     current.push(line);
     if (fence === null) {
-      folds = Math.max(0, folds + foldChange(line));
+      htmlDepth = Math.max(0, htmlDepth + htmlDepthChange(line, htmlDepth));
       fence = FENCE.exec(line)?.[1] ?? null;
     } else if (closesFence(line, fence)) fence = null;
     afterBlank = fence === null && isBlank(line);
