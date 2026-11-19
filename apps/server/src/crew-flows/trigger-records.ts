@@ -22,6 +22,7 @@ interface TriggersRow {
   on_commit: boolean;
   branch_glob: string;
   pull_request: boolean;
+  chat_started: boolean;
   project_id: string | null;
   debounce_minutes: number;
   edits: boolean;
@@ -37,6 +38,7 @@ function toStored(row: TriggersRow): StoredTriggers {
       commit: row.on_commit,
       branchGlob: row.branch_glob,
       pullRequest: row.pull_request,
+      chatStarted: row.chat_started,
       projectId: row.project_id,
       debounceMinutes: row.debounce_minutes,
       edits: row.edits,
@@ -56,7 +58,8 @@ export async function getTriggers(
   return rows[0] ? toStored(rows[0]) : null;
 }
 
-export type TriggerFlag = 'turn_changed' | 'before_publish' | 'on_commit' | 'pull_request';
+export type TriggerFlag =
+  'turn_changed' | 'before_publish' | 'on_commit' | 'pull_request' | 'chat_started';
 
 export async function triggersWith(
   db: Queryable,
@@ -84,13 +87,14 @@ export async function saveTriggers(
 ): Promise<StoredTriggers> {
   const { rows } = await db.query<TriggersRow>(
     `INSERT INTO workflow_triggers (workspace_id, workflow_id, turn_changed, before_publish,
-       hold_on_findings, on_commit, branch_glob, pull_request, project_id, debounce_minutes, edits)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       hold_on_findings, on_commit, branch_glob, pull_request, chat_started, project_id,
+       debounce_minutes, edits)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      ON CONFLICT (workspace_id, workflow_id) DO UPDATE SET
        turn_changed = EXCLUDED.turn_changed, before_publish = EXCLUDED.before_publish,
        hold_on_findings = EXCLUDED.hold_on_findings, on_commit = EXCLUDED.on_commit,
        branch_glob = EXCLUDED.branch_glob, pull_request = EXCLUDED.pull_request,
-       project_id = EXCLUDED.project_id, debounce_minutes = EXCLUDED.debounce_minutes,
+       chat_started = EXCLUDED.chat_started, project_id = EXCLUDED.project_id, debounce_minutes = EXCLUDED.debounce_minutes,
        edits = EXCLUDED.edits, updated_at = now()
      RETURNING *`,
     [
@@ -102,6 +106,7 @@ export async function saveTriggers(
       triggers.commit,
       triggers.branchGlob,
       triggers.pullRequest,
+      triggers.chatStarted,
       triggers.projectId,
       triggers.debounceMinutes,
       triggers.edits,
@@ -111,8 +116,15 @@ export async function saveTriggers(
     `DELETE FROM workflow_trigger_events WHERE workspace_id = $1 AND workflow_id = $2
        AND state = 'pending' AND (
          (kind = 'turn_changed' AND NOT $3) OR (kind = 'commit' AND NOT $4)
-         OR (kind = 'pull_request' AND NOT $5))`,
-    [workspaceId, workflowId, triggers.turnChanged, triggers.commit, triggers.pullRequest],
+         OR (kind = 'pull_request' AND NOT $5) OR (kind = 'chat_started' AND NOT $6))`,
+    [
+      workspaceId,
+      workflowId,
+      triggers.turnChanged,
+      triggers.commit,
+      triggers.pullRequest,
+      triggers.chatStarted,
+    ],
   );
   return toStored(rows[0]!);
 }

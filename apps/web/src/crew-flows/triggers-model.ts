@@ -26,6 +26,7 @@ export function triggerProblem(triggers: WorkflowTriggers): string | null {
 export function triggersSummary(triggers: WorkflowTriggers | null): string {
   if (!triggers || !anyTriggerOn(triggers)) return 'Off · no event starts this workflow';
   const parts = [
+    triggers.chatStarted && 'a chat starts',
     triggers.turnChanged && 'a turn changes files',
     triggers.beforePublish && 'before publish',
     triggers.commit && 'a new commit',
@@ -38,6 +39,7 @@ const KIND_WORDS: Record<QueuedTriggerKind, string> = {
   turn_changed: 'Turn changed files',
   commit: 'New commit',
   pull_request: 'Pull request',
+  chat_started: 'Chat started',
 };
 
 const STATE_WORDS: Record<TriggerEvent['state'], [string, HistoryTone]> = {

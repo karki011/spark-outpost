@@ -10,6 +10,7 @@ export const workflowTriggerKindSchema = z.enum([
   'before_publish',
   'commit',
   'pull_request',
+  'chat_started',
 ]);
 export type WorkflowTriggerKind = z.infer<typeof workflowTriggerKindSchema>;
 
@@ -20,6 +21,7 @@ export const workflowTriggersSchema = z.object({
   commit: z.boolean().default(false),
   branchGlob: z.string().trim().max(BRANCH_GLOB_MAX).default(''),
   pullRequest: z.boolean().default(false),
+  chatStarted: z.boolean().default(false),
   projectId: z.uuid().nullable().default(null),
   debounceMinutes: z.number().int().min(0).max(TRIGGER_DEBOUNCE_MAX).default(0),
   edits: z.boolean().default(false),
@@ -78,7 +80,13 @@ export const workflowTriggersViewSchema = z.object({
 export type WorkflowTriggersView = z.infer<typeof workflowTriggersViewSchema>;
 
 export function anyTriggerOn(triggers: WorkflowTriggers): boolean {
-  return triggers.turnChanged || triggers.beforePublish || triggers.commit || triggers.pullRequest;
+  return (
+    triggers.turnChanged ||
+    triggers.beforePublish ||
+    triggers.commit ||
+    triggers.pullRequest ||
+    triggers.chatStarted
+  );
 }
 
 function escapeRegex(text: string): string {

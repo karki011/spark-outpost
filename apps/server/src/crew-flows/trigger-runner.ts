@@ -1,6 +1,7 @@
 import { workflowProblems, type QueuedTriggerKind } from '@spark-outpost/contracts';
 import { sparkPaused } from '../persistence/spark-pause.ts';
 import { chatCode, diffHash } from './chat-code.ts';
+import { chatTurnActive } from './chat-started.ts';
 import { openScheduleChat } from './schedule-records.ts';
 import { existingRun, startWorkflowRun, type StartRunDeps } from './start-run.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
@@ -26,6 +27,8 @@ export const TRIGGER_MESSAGES: Record<QueuedTriggerKind, string> = {
     'Started by this workflow’s trigger: this chat’s branch has a new commit. Work on the branch as it is now.',
   pull_request:
     'Started by this workflow’s trigger: this chat’s pull request was opened or has a new head. Work on its branch as it is now.',
+  chat_started:
+    'Started by this workflow’s trigger: this chat has just started. Work from the chat as it is now.',
 };
 
 export interface TriggerDeps extends StartRunDeps {
@@ -47,6 +50,9 @@ async function decide(deps: TriggerDeps, claim: ClaimedTrigger): Promise<Trigger
     return { state: 'not_started', reason: 'chat_gone', detail: null };
   }
   if (await workflowRunningInChat(db, claim.workflowId, claim.conversationId)) return 'wait';
+  if (claim.kind === 'chat_started' && (await chatTurnActive(db, claim.conversationId))) {
+    return 'wait';
+  }
   const code = await chatCode(db, claim.conversationId);
   const hash = code ? await diffHash(code) : null;
   const last = await lastTriggeredHash(db, workspaceId, claim.workflowId, claim.conversationId);
