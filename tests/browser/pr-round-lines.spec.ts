@@ -37,22 +37,28 @@ async function seedSettledRound() {
   }
 }
 
-test('a follow-up round shows one line, hides what Spark sent and ends with what it did', async ({
-  page,
-}) => {
+test('a follow-up round is one folded row that opens to what it did', async ({ page }) => {
   await seedSettledRound();
   await openChats(page);
   await expect(page.locator('.chat-title')).toHaveText('Fix the cents parser');
   const turn = page.locator('[data-turn]').first();
-  await expect(turn).toContainText('Sent by Spark; you did not type it');
-  await expect(turn.locator('.pr-round-head')).toContainText(
-    'PR follow-up, round 1: acme/widgets#7',
+  await expect(turn.locator('.msg.me')).toHaveCount(0);
+  const toggle = turn.getByRole('button', { name: /PR follow-up/ });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(toggle).toContainText(
+    'PR #7 · round 1 · Replied to 3 comments, pushed a fix, re-requested review',
   );
-  const sent = turn.locator('.pr-round-sent');
+  await expect(turn.getByText('Show what Spark sent')).toHaveCount(0);
+
+  await toggle.focus();
+  await page.keyboard.press('Enter');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  const sent = turn.locator('.auto-turn-sent');
   await expect(sent.locator('.bubble')).toBeHidden();
   await sent.getByText('Show what Spark sent').click();
-  await expect(sent.locator('.bubble')).toBeVisible();
-  await expect(turn).toContainText(
-    'Follow-up replied to 3 comments, pushed a fix, re-requested review on #7.',
-  );
+  await expect(sent.locator('.bubble')).toContainText('PR follow-up, round 1: acme/widgets#7');
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(turn.locator('.auto-turn-body')).toHaveCount(0);
 });

@@ -22,7 +22,8 @@ import { TurnSteers } from './steer/SteeredMessage.tsx';
 import { sameTurnDetail, turnRunIds } from './turn-props.ts';
 import { OpenedPullRequests } from './pull-request/OpenedPullRequests.tsx';
 import { PushNotices } from './pull-request/PushNotices.tsx';
-import { RoundLines, RoundMessage } from './pull-request/RoundLines.tsx';
+import { AutomatedTurn, SentBySpark } from './automated/AutomatedTurn.tsx';
+import { isAutomatedTurn } from './automated/automated-model.ts';
 import { InterruptedCard } from './interruption/InterruptedCard.tsx';
 import { InterruptedNote } from './interruption/InterruptedNote.tsx';
 import { RequestHeader, type RunOutpost } from './outpost/RequestHeader.tsx';
@@ -90,57 +91,11 @@ export const TurnSection = memo(function TurnSection({
   const crew = !sparkLed && isCrewTurn(orchestration) ? orchestration : null;
   const handedTo = sparkMembers(orchestration);
   const compactions = compactionsByRun(detail.compactions).get(run.id) ?? [];
-  return (
-    <section
-      id={turnAnchor(run.id)}
-      data-turn={run.id}
-      tabIndex={-1}
-      aria-label="Turn"
-      data-assistant-message-id={assistantMessage?.id}
-    >
-      {compactions.map((compaction) => (
-        <CompactionDivider key={compaction.id} compaction={compaction} onOpenChat={onOpenChat} />
-      ))}
-      {userMessage && (
-        <div className="msg me" data-message-id={userMessage.id}>
-          <MessageAttachments attachments={userMessage.attachments} />
-          {userMessage.content && (
-            <>
-              {run.prFollowUp ? (
-                <RoundMessage text={userMessage.content} />
-              ) : run.outpost ? (
-                <OutpostRequest outpost={run.outpost} text={userMessage.content} />
-              ) : (
-                <div className="bubble">
-                  <QuotedText text={userMessage.content} />
-                </div>
-              )}
-              {!run.prFollowUp && <LinkCards text={userMessage.content} />}
-              <MessageActions
-                text={userMessage.content}
-                createdAt={userMessage.createdAt}
-                copyLabel="Copy message"
-                side="user"
-              />
-            </>
-          )}
-          {handedTo.length > 0 && (
-            <p className="msg-sparks">
-              Handed to
-              {handedTo.map((member) => (
-                <SparkTag
-                  key={member.runId}
-                  sparkId={member.spark?.id ?? ''}
-                  name={member.name}
-                  role={member.spark?.role ?? ''}
-                />
-              ))}
-            </p>
-          )}
-        </div>
-      )}
+  const automated = isAutomatedTurn(run, previous);
+  const work = (
+    <>
       {run.agentCycle && <p className="on-its-own">Continued on its own</p>}
-      {userMessage && handedTo.some((member) => member.spark?.step !== undefined) && (
+      {!automated && userMessage && handedTo.some((member) => member.spark?.step !== undefined) && (
         <WorkflowRunLink turnRunId={run.id} message={userMessage.content} />
       )}
       {sparkLed && <SparkJobs run={run} detail={detail} orchestration={sparkLed} repo={repo} />}
@@ -163,7 +118,65 @@ export const TurnSection = memo(function TurnSection({
         runIds={turnRunIds(detail, run.id)}
       />
       <PushNotices conversationId={detail.conversation.id} runIds={turnRunIds(detail, run.id)} />
-      {run.prFollowUp && <RoundLines conversationId={detail.conversation.id} runIds={[run.id]} />}
+    </>
+  );
+  return (
+    <section
+      id={turnAnchor(run.id)}
+      data-turn={run.id}
+      tabIndex={-1}
+      aria-label="Turn"
+      data-assistant-message-id={assistantMessage?.id}
+    >
+      {compactions.map((compaction) => (
+        <CompactionDivider key={compaction.id} compaction={compaction} onOpenChat={onOpenChat} />
+      ))}
+      {automated ? (
+        <AutomatedTurn run={run} detail={detail} message={userMessage?.content ?? ''}>
+          {userMessage?.content && <SentBySpark text={userMessage.content} />}
+          {work}
+        </AutomatedTurn>
+      ) : (
+        <>
+          {userMessage && (
+            <div className="msg me" data-message-id={userMessage.id}>
+              <MessageAttachments attachments={userMessage.attachments} />
+              {userMessage.content && (
+                <>
+                  {run.outpost ? (
+                    <OutpostRequest outpost={run.outpost} text={userMessage.content} />
+                  ) : (
+                    <div className="bubble">
+                      <QuotedText text={userMessage.content} />
+                    </div>
+                  )}
+                  <LinkCards text={userMessage.content} />
+                  <MessageActions
+                    text={userMessage.content}
+                    createdAt={userMessage.createdAt}
+                    copyLabel="Copy message"
+                    side="user"
+                  />
+                </>
+              )}
+              {handedTo.length > 0 && (
+                <p className="msg-sparks">
+                  Handed to
+                  {handedTo.map((member) => (
+                    <SparkTag
+                      key={member.runId}
+                      sparkId={member.spark?.id ?? ''}
+                      name={member.name}
+                      role={member.spark?.role ?? ''}
+                    />
+                  ))}
+                </p>
+              )}
+            </div>
+          )}
+          {work}
+        </>
+      )}
       <InterruptedNote run={run} detail={detail} />
       {detail.interruption?.runId === run.id && (
         <InterruptedCard

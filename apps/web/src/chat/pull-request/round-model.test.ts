@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { roundOutcomeLine, type RoundOutcome } from '@spark-outpost/contracts';
-import { outcomesIn, roundSummary, turnOutcomeLine } from './round-model.ts';
+import { outcomesIn, roundSummary } from './round-model.ts';
 import { RUN, watch } from './watch-fixture.ts';
 import { watchIndicator } from './watch-indicator-model.ts';
 
@@ -49,7 +49,7 @@ describe('what a follow-up round did', () => {
     });
     const found = outcomesIn([watched], [RUN]);
     expect(found).toHaveLength(1);
-    expect(turnOutcomeLine(found[0]!)).toBe('Follow-up replied to 1 comment on #7.');
+    expect(found[0]!.outcome.replied).toBe(1);
     expect(outcomesIn([watch()], [RUN])).toEqual([]);
   });
 });

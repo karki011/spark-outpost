@@ -1,4 +1,4 @@
-import { roundOutcomeLine, type PrWatch, type RoundOutcome } from '@spark-outpost/contracts';
+import type { PrWatch, RoundOutcome } from '@spark-outpost/contracts';
 
 export interface TurnOutcome {
   key: string;
@@ -12,10 +12,6 @@ export function outcomesIn(watches: readonly PrWatch[], runIds: readonly string[
       .filter((outcome) => runIds.includes(outcome.runId))
       .map((outcome) => ({ key: `${watch.id}:${outcome.runId}`, watch, outcome })),
   );
-}
-
-export function turnOutcomeLine(item: TurnOutcome): string {
-  return `${roundOutcomeLine(item.outcome)} on #${item.watch.number}.`;
 }
 
 export function lastOutcome(watch: PrWatch): RoundOutcome | null {
