@@ -16,7 +16,7 @@ summary: What changed in recent releases and what to do next.
 | Mac app: privacy screen, left-bar lock                     | [Turn it on](privacy-screen.md); **⇧⌘L** locks now.            |
 | **GitHub** page, reviews, auto-review, resizing            | [Guide](github-page.md).                                       |
 | **⌘1**–**⌘9** open chats                                   | [Keyboard shortcuts](keyboard-shortcuts.md#chats).             |
-| Agent terminal row is a card; compact workflow list        | Nothing to do.                                                 |
+| Agent terminal card; compact workflows; more redaction     | Nothing to do.                                                 |
 | No **Ask about this**; hidden sidebar stays hidden         | Use **Add to chat**.                                           |
 | Home: message box, Needs you, Working set                  | [Read Home](home.md).                                          |
 | Worktrees start from latest remote; Codex commits          | [Where it starts](where-spark-works.md#what-to-expect).        |
