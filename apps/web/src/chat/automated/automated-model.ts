@@ -47,6 +47,11 @@ export function sentForDisplay(text: string): string {
   return text.replace(DATA_TAG_LINE, '').replace(DATA_TAG, '`<$1pr_feedback>`');
 }
 
-export function opensOnItsOwn(status: RunStatus, waiting: boolean): boolean {
-  return waiting || status === 'failed' || status === 'outcome_unknown';
+interface OpenFacts {
+  waiting: boolean;
+  steered: boolean;
+}
+
+export function opensOnItsOwn(status: RunStatus, { waiting, steered }: OpenFacts): boolean {
+  return waiting || steered || status === 'failed' || status === 'outcome_unknown';
 }

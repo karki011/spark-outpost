@@ -82,11 +82,14 @@ describe('what Spark sent, as shown', () => {
 });
 
 describe('a row that opens by itself', () => {
-  it('opens when a card waits, or the turn failed or ended unknown', () => {
-    expect(opensOnItsOwn('running', true)).toBe(true);
-    expect(opensOnItsOwn('failed', false)).toBe(true);
-    expect(opensOnItsOwn('outcome_unknown', false)).toBe(true);
-    expect(opensOnItsOwn('succeeded', false)).toBe(false);
-    expect(opensOnItsOwn('cancelled', false)).toBe(false);
+  it('opens when a card waits, you sent a message into it, or the turn failed or ended unknown', () => {
+    const quiet = { waiting: false, steered: false };
+    expect(opensOnItsOwn('running', { waiting: true, steered: false })).toBe(true);
+    expect(opensOnItsOwn('running', { waiting: false, steered: true })).toBe(true);
+    expect(opensOnItsOwn('succeeded', { waiting: false, steered: true })).toBe(true);
+    expect(opensOnItsOwn('failed', quiet)).toBe(true);
+    expect(opensOnItsOwn('outcome_unknown', quiet)).toBe(true);
+    expect(opensOnItsOwn('succeeded', quiet)).toBe(false);
+    expect(opensOnItsOwn('cancelled', quiet)).toBe(false);
   });
 });

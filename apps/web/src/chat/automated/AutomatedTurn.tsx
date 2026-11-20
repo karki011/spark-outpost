@@ -8,6 +8,7 @@ import { usePaneId } from '../split/chat-pane.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { outcomesIn } from '../pull-request/round-model.ts';
 import { turnRunIds } from '../turn-props.ts';
+import { turnSteers } from '../steer/steer-model.ts';
 import { opensOnItsOwn, roundHeadline, sentForDisplay, waitsOnYou } from './automated-model.ts';
 
 interface AutomatedTurnProps {
@@ -51,7 +52,8 @@ export function SentBySpark({ text }: { text: string }) {
 export function AutomatedTurn({ run, detail, message, children }: AutomatedTurnProps) {
   const [chosen, setChosen] = useState<boolean | null>(null);
   const waiting = waitsOnYou(detail.approvals, turnRunIds(detail, run.id));
-  const open = chosen ?? opensOnItsOwn(run.status, waiting);
+  const steered = turnSteers(detail, run.id).length > 0;
+  const open = chosen ?? opensOnItsOwn(run.status, { waiting, steered });
   const bodyId = usePaneId(`auto-turn-${run.id}`);
   return (
     <div className="auto-turn" data-open={open}>
