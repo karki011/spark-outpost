@@ -4,6 +4,24 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.13
+
+- **Settings → Health** lists what's broken or quietly ignored.
+- **Chat rows** show what the agent is doing, how long a chat has waited for you, or when an unread turn finished. The **Cost** tab adds calls and time by tool, MCP server and skill, and switching models while the prompt cache is warm shows what the next message re-sends. Approving a plan names the chat after it.
+- PR follow-up rounds and workflows started in an ongoing chat fold into one row; open it for what Spark sent, the steps and the reply.
+- Replies render the inline HTML agents write: `<details>` folds, bold and keys.
+- **Compact at a natural break** (on by default) compacts once a plan finishes or a pull request opens, and Claude's `/compact` gets a handoff summary.
+- **A chat starts** is a new workflow trigger, and a workflow step's Spark on **Default** takes the chat's agent, model, effort and mode.
+- A chat that switches to Auto or Bypass permissions mid-turn closes the read cards the new mode would run.
+- **Only notify my devices when I'm away from the Mac** (Remote control, on by default) holds phone pushes until the Mac is idle or locked.
+- The chat's context rail shows one line per row, and tool groups open in place. **@** lists workflows beside Sparks.
+- The meeting card shows every action on one row, and Spark Island is wider for requests.
+- Chat worktrees keep files git ignores, such as `.env`, and are never removed while a tab runs in them. New worktrees start from the latest remote, and you can adopt a pull request in a chat's existing worktree.
+- Terminal sessions: Stop from a phone goes through Spark's mod, Claude's idle compaction is off, and usage limits show in **Cost**.
+- Steps the agent stopped read **Stopped**, and a turn quiet for over a minute says so. Claude and Codex run on ACP 2.8 with claude-agent-acp 0.108.1.
+- Redaction catches passwords in addresses, Basic and Bearer headers, encoded tokens and invisible characters in keys.
+- Electron 44.9.1 and other dependency updates with security fixes.
+
 ## 0.1.0-beta.12
 
 - **Share…** on an artifact makes a link anyone can open in a browser, with no account: one HTML or SVG version, for 1 or 7 days, optionally behind a passcode Spark makes and never keeps. **Stop sharing** removes the page. Only your own click on the Mac shares; agents, Ask Spark and paired devices can't. The passcode page uses your Spark theme.
