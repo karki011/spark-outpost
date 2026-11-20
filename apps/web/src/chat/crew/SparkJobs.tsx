@@ -71,7 +71,7 @@ export function SparkJobs({
           agent={runAgent(member, current, detail.activity[member.runId] ?? [])}
           anchor={agentAnchor(current.runId, member.runId)}
           live={!isTerminalRunStatus(member.status)}
-          collapsed={collapsed}
+          collapsed={collapsed && steersIn(member.runId).length === 0}
           conversationId={detail.conversation.id}
           steps={detail.activity[member.runId] ?? []}
           text={NO_TEXT}

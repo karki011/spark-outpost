@@ -45,6 +45,7 @@ import {
   lastAgentIndex,
   memberTexts,
   mergeCheckpoints,
+  steersInBlocks,
   turnApprovals,
   type CrewItem,
 } from './crew-items.ts';
@@ -52,7 +53,7 @@ import { ParallelGroup } from './ParallelGroup.tsx';
 import { pieceLabels } from '../../crew/piece-labels.ts';
 import { SteerAnswer, steerAnswers } from '../steer/SteerAnswer.tsx';
 import { SteeredMessage } from '../steer/SteeredMessage.tsx';
-import { steerSlots, steersReadBy, steersReadByNone, turnSteers } from '../steer/steer-model.ts';
+import { steerSlots, steersReadBy, turnSteers } from '../steer/steer-model.ts';
 import { blockSteers } from './block-steers.tsx';
 import { turnRunIds } from '../turn-props.ts';
 
@@ -94,8 +95,15 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
   const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals, run.id));
   const last = lastAgentIndex(items);
   const allSteers = turnSteers(detail, run.id);
-  const ownBlocks = items.flatMap((item) => (item.kind === 'agent' ? [item.member.runId] : []));
-  const steers = steerSlots(items.map(itemStartedAt), steersReadByNone(allSteers, ownBlocks));
+  const inBlocks = steersInBlocks(allSteers, {
+    blockRunIds: items.flatMap((item) => (item.kind === 'agent' ? [item.member.runId] : [])),
+    rootRunId: run.id,
+    handedOffAt,
+  });
+  const steers = steerSlots(
+    items.map(itemStartedAt),
+    allSteers.filter((message) => !inBlocks.includes(message)),
+  );
   const flags = steerSlots(
     items.map(itemStartedAt),
     (detail.railFlags ?? []).filter((flag) => flag.turnRunId === run.id),
@@ -143,7 +151,7 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
   const agentBlock = (item: Extract<CrewItem, { kind: 'agent' }>, collapsible: boolean) => {
     const member = item.member;
     const agent = runAgent(member, orchestration, detail.activity[member.runId] ?? []);
-    const read = ownBlocks.includes(member.runId) ? steersReadBy(allSteers, member.runId) : [];
+    const read = steersReadBy(inBlocks, member.runId);
     return (
       <AgentBlock
         key={member.runId}

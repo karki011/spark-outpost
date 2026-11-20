@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Approval, CrewMember, Message } from '@spark-outpost/contracts';
+import type { Approval, CrewMember, MemberMessage, Message } from '@spark-outpost/contracts';
 import {
+  steersInBlocks,
   crewItems,
   groupParallel,
   closingReply,
@@ -234,5 +235,31 @@ describe('itemStartedAt', () => {
   it('uses when a card was raised', () => {
     const raised = approval('p1', 'turn-1');
     expect(itemStartedAt({ kind: 'approval', approval: raised })).toBe(raised.createdAt);
+  });
+});
+
+describe('steersInBlocks', () => {
+  const ROOT = 'root';
+  const HELPER = 'helper';
+  const HANDED_OFF = '2026-09-26T10:03:00.000Z';
+  const read = (id: string, by: string, at: string | null) =>
+    ({ id, runId: ROOT, deliveredRunId: by, deliveredAt: at }) as MemberMessage;
+  const owners = { blockRunIds: [ROOT, HELPER], rootRunId: ROOT, handedOffAt: HANDED_OFF };
+
+  it("keeps the lead's messages read before hand-off and every helper's in their blocks", () => {
+    const early = read('early', ROOT, '2026-09-26T10:02:00.000Z');
+    const helper = read('helper', HELPER, '2026-09-26T10:05:00.000Z');
+    expect(steersInBlocks([early, helper], owners)).toEqual([early, helper]);
+  });
+
+  it('leaves a message the lead read after hand-off, or not yet, to the turn', () => {
+    const late = read('late', ROOT, '2026-09-26T10:06:00.000Z');
+    const unread = read('unread', ROOT, null);
+    expect(steersInBlocks([late, unread], owners)).toEqual([]);
+    expect(steersInBlocks([late], { ...owners, handedOffAt: null })).toEqual([late]);
+  });
+
+  it('leaves a message read by a run with no block of its own to the turn', () => {
+    expect(steersInBlocks([read('grouped', 'other', null)], owners)).toEqual([]);
   });
 });
