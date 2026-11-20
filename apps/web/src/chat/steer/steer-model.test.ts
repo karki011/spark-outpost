@@ -7,6 +7,7 @@ import type {
   Run,
 } from '@spark-outpost/contracts';
 import {
+  readAt,
   steerSlots,
   steerStatus,
   steersReadBy,
@@ -112,6 +113,18 @@ describe('steerSlots', () => {
   it('leaves blocks that start later below the message', () => {
     const later = [...started.slice(0, 2), '2026-10-05T10:01:00.000Z'];
     expect([...steerSlots(later, [steer('a')]).keys()]).toEqual([1]);
+  });
+
+  it('places a message by when it was read when asked, so one read after a later block follows it', () => {
+    const handOff = [
+      '2026-10-05T10:00:00.000Z',
+      '2026-10-05T10:00:10.000Z',
+      '2026-10-05T10:01:00.000Z',
+    ];
+    const readLate = steer('late', { deliveredAt: '2026-10-05T10:02:00.000Z' });
+    expect([...steerSlots(handOff, [readLate]).keys()]).toEqual([1]);
+    expect([...steerSlots(handOff, [readLate], readAt).keys()]).toEqual([2]);
+    expect([...steerSlots(handOff, [steer('unread')], readAt).keys()]).toEqual([1]);
   });
 
   it('keeps messages sent to the same place in the order they were sent', () => {

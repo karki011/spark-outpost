@@ -106,13 +106,20 @@ export function steersReadByNone(
   return messages.filter((message) => !runIds.includes(readBy(message)));
 }
 
+const sentAt = (item: { createdAt: string }) => item.createdAt;
+
+export function readAt(message: MemberMessage): string {
+  return message.deliveredAt ?? message.createdAt;
+}
+
 export function steerSlots<Item extends { createdAt: string }>(
   blockTimes: readonly (string | null)[],
   messages: readonly Item[],
+  placedAt: (item: Item) => string = sentAt,
 ): Map<number, Item[]> {
   const slots = new Map<number, Item[]>();
   for (const message of messages) {
-    const at = Date.parse(message.createdAt);
+    const at = Date.parse(placedAt(message));
     const slot = blockTimes.findLastIndex((time) => time !== null && Date.parse(time) <= at);
     slots.set(slot, [...(slots.get(slot) ?? []), message]);
   }

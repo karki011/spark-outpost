@@ -53,7 +53,7 @@ import { ParallelGroup } from './ParallelGroup.tsx';
 import { pieceLabels } from '../../crew/piece-labels.ts';
 import { SteerAnswer, steerAnswers } from '../steer/SteerAnswer.tsx';
 import { SteeredMessage } from '../steer/SteeredMessage.tsx';
-import { steerSlots, steersReadBy, turnSteers } from '../steer/steer-model.ts';
+import { readAt, steerSlots, steersReadBy, turnSteers } from '../steer/steer-model.ts';
 import { blockSteers } from './block-steers.tsx';
 import { turnRunIds } from '../turn-props.ts';
 
@@ -103,6 +103,7 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
   const steers = steerSlots(
     items.map(itemStartedAt),
     allSteers.filter((message) => !inBlocks.includes(message)),
+    readAt,
   );
   const flags = steerSlots(
     items.map(itemStartedAt),
