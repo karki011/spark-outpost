@@ -22,7 +22,7 @@ import {
 } from './builder-chat.ts';
 import { crewDrafts } from './builder-drafts.ts';
 import { PublishHoldNotFoundError } from './publish-holds.ts';
-import { getWorkflowRun, listWorkflowRuns } from './run-records.ts';
+import { getWorkflowRun, getWorkflowRunOfTurn, listWorkflowRuns } from './run-records.ts';
 import { deleteSchedule } from './schedule-records.ts';
 import { deleteTriggers } from './trigger-records.ts';
 import { SparkNotFoundError, startSparkTestRun, startWorkflowRun } from './start-run.ts';
@@ -165,6 +165,12 @@ export function workflowRoutes(deps: WorkflowRouteDeps): Router {
   router.delete('/workflow-runs/:id', async (req, res) => {
     await discardTestRun(runs, paramId(req));
     res.status(204).end();
+  });
+
+  router.get('/workflow-runs/of-turn/:id', async (req, res) => {
+    const run = await getWorkflowRunOfTurn(db, workspaceId, paramId(req));
+    if (!run) throw new WorkflowRunNotFoundError();
+    res.json(run);
   });
 
   router.get('/workflow-runs/:id', async (req, res) => {

@@ -24,13 +24,13 @@ async function isFolder(target: string): Promise<boolean> {
   );
 }
 
-async function remoteRepo(root: string, branch: string | null): Promise<RemoteRepo | null> {
+export async function remoteRepo(root: string, branch: string | null): Promise<RemoteRepo | null> {
   if (!(await isFolder(root))) return null;
   const remote = await pickRemote(root, branch).catch(() => null);
   return remote ? parseRemoteUrl(remote.url) : null;
 }
 
-async function checkedOut(root: string): Promise<string | null> {
+export async function checkedOut(root: string): Promise<string | null> {
   const result = await runGit(root, ['symbolic-ref', '--quiet', '--short', 'HEAD']).catch(
     () => null,
   );

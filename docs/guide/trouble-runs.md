@@ -50,3 +50,9 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 - **You see:** "Not published: …" ending a reply, or no PR at **Full auto → PR**.
 - **Why:** the publish step failed or was stopped; a later turn changing no files doesn't retry.
 - **Fix:** ask the agent to push and open the PR, or [ship](ship-and-pull-requests.md) it yourself.
+
+## Spark’s mod didn’t load
+
+- **You see:** "Spark’s mod didn’t load: …" in a Claude Terminal session.
+- **Why:** an organization setting or Claude Code kept it out.
+- **Fix:** nothing; phone messages and **Stop** use keys instead.

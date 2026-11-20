@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { sparkModRemoteScript } from './native-mod-remote-script.ts';
 import { sparkModTelemetryScript } from './native-mod-telemetry-script.ts';
 
 export const MOD_POLL_MS = 1_000;
@@ -20,26 +21,34 @@ export function supportsMods(version: string): boolean {
 export function sparkModScript(): string {
   return String.raw`
 import { fromEngine, telemetry } from './telemetry.js';
+import { control, readInbox } from './remote.js';
 
 const POLL_MS = ${MOD_POLL_MS};
 const STOP_WAIT_MS = ${MOD_STOP_WAIT_MS};
+const END_WAIT_MS = 1_000;
+const END_MARGIN_MS = 250;
 const SEND_ROUNDS = 10;
 const NOT_SENT = 'Spark: a message from your phone was not sent. Type it here instead.';
 
-function strings(value) {
-  return Array.isArray(value) ? value.filter((item) => typeof item === 'string') : [];
+async function abortTurn($, turnId) {
+  try {
+    await $.turn.abort({ turnId });
+  } catch {}
 }
 
-export function readInbox(text) {
-  const inbox = JSON.parse(text);
-  if (!inbox || typeof inbox !== 'object')
-    return { messages: [], notices: [], status: null, record: null };
-  return {
-    messages: strings(inbox.messages),
-    notices: strings(inbox.notices),
-    status: typeof inbox.status === 'string' ? inbox.status : null,
-    record: typeof inbox.record === 'boolean' ? inbox.record : null,
-  };
+function showNotice($, id, text) {
+  if (!id || !text) return;
+  try {
+    $.ui.notice(id, text);
+  } catch {}
+}
+
+function showStatus($, ctl) {
+  const change = ctl.statusChange();
+  if (!change) return;
+  try {
+    $.ui.status(change.text);
+  } catch {}
 }
 
 function sent(response) {
@@ -114,8 +123,10 @@ export function register(on) {
     single: false,
   };
   const facts = link.facts;
+  const ctl = control();
   on('classic.UserPromptSubmit', async ($, e, next) => {
     facts.prompted(e.prompt_id);
+    ctl.prompted(e.prompt_id);
     return next(e);
   }).catch(($, e, next) => next(e));
   on('classic.SessionStart', async ($, e, next) => {
@@ -124,9 +135,12 @@ export function register(on) {
   }).catch(($, e, next) => next(e));
   on('classic.PermissionRequest', async ($, e, next) => {
     facts.asked(e.tool_name, e.tool_input);
+    showNotice($, ctl.asking(e.tool_name, e.tool_input), ctl.askNotice());
     return next(e);
   }).catch(($, e, next) => next(e));
   on('classic.Stop', async ($, e, next) => {
+    ctl.stopped(e, await $.clock.now());
+    showStatus($, ctl);
     if (facts.recording())
       await Promise.race([deliver($, link).catch(() => undefined), $.clock.sleep(STOP_WAIT_MS)]);
     return next(e);
@@ -135,6 +149,8 @@ export function register(on) {
     if (!fromEngine(next.origin)) return next(e);
     if (!e.agentId && facts.idle()) facts.between(await costed($, link));
     facts.turnStarted(e, Math.round(await $.clock.now()));
+    ctl.turnStarted(e);
+    showStatus($, ctl);
     if (facts.recording() && !e.agentId)
       await Promise.race([deliver($, link).catch(() => undefined), $.clock.sleep(STOP_WAIT_MS)]);
     return next(e);
@@ -149,15 +165,37 @@ export function register(on) {
     return result;
   });
   on('turn.complete', async ($, e, next) => {
-    if (fromEngine(next.origin)) facts.turnEnded(e, Math.round(await $.clock.now()));
+    if (!fromEngine(next.origin)) return next(e);
+    facts.turnEnded(e, Math.round(await $.clock.now()));
+    ctl.turnEnded(e);
     return next(e);
   });
   on('tool.call', async ($, e, next) => {
     const watched = fromEngine(next.origin);
-    if (watched) facts.toolStarted(e, Math.round(await $.clock.now()));
-    const result = await next(e);
-    if (watched) facts.toolEnded(e, result, Math.round(await $.clock.now()));
-    return result;
+    if (watched) {
+      ctl.opened(e);
+      facts.toolStarted(e, Math.round(await $.clock.now()));
+    }
+    try {
+      const result = await next(e);
+      if (watched) facts.toolEnded(e, result, Math.round(await $.clock.now()));
+      return result;
+    } finally {
+      if (watched) ctl.closed(e);
+    }
+  }).catch(($, e, next) => next(e));
+  on('session.measure', async ($, e, next) => {
+    facts.measured(e, Math.round(await $.clock.now()));
+    return next(e);
+  }).catch(($, e, next) => next(e));
+  on('session.end', async ($, e, next) => {
+    facts.sessionEnded(e, Math.round(await $.clock.now()));
+    const left = next.budget && Number.isFinite(next.budget.remainingMs) ? next.budget.remainingMs : END_WAIT_MS;
+    await Promise.race([
+      deliver($, link).catch(() => undefined),
+      $.clock.sleep(Math.max(0, left - END_MARGIN_MS)),
+    ]);
+    return next(e);
   }).catch(($, e, next) => next(e));
   on('ui.render', { component: 'AbovePrompt' }, ($, e, next) => {
     if (line === null || e.props.hasSurvey) return next(e);
@@ -173,12 +211,21 @@ export function register(on) {
       line = text;
       $.ui.invalidate('ui.render');
     };
+    const settled = () => {
+      ctl.queuing(-1);
+      showStatus($, ctl);
+    };
     const submit = (text) => {
+      ctl.queuing(1);
       $.prompt.submit({ text, asUser: true }).then(
         (result) => {
+          settled();
           if (result && 'drop' in result) $.ui.log(NOT_SENT);
         },
-        () => $.ui.log(NOT_SENT),
+        () => {
+          settled();
+          $.ui.log(NOT_SENT);
+        },
       );
     };
     const poll = async () => {
@@ -187,10 +234,13 @@ export function register(on) {
       const response = await $.http.fetch(new URL('/mod/inbox', config.url).href, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + config.token },
-        body: '{}',
+        body: JSON.stringify({ abort: true }),
       });
       if (!response.ok) throw new Error('Spark refused the inbox request.');
       const inbox = readInbox(response.text);
+      ctl.told(inbox);
+      const abortable = inbox.abort ? ctl.abortable(inbox.abort) : null;
+      if (abortable) await abortTurn($, abortable);
       if (inbox.record !== null) {
         link.told = true;
         facts.record(inbox.record);
@@ -198,6 +248,7 @@ export function register(on) {
       show(inbox.status);
       for (const notice of inbox.notices) $.ui.log(notice);
       for (const text of inbox.messages) submit(text);
+      showStatus($, ctl);
       await deliver($, link);
     };
     $.clock.every(POLL_MS, async () => {
@@ -229,13 +280,14 @@ export async function writeSparkMod(directory: string): Promise<string> {
         name: MOD_NAME,
         version: '1.0.0',
         description:
-          'Spark Outpost: messages from your paired phone, its status line, and turn usage for Spark.',
+          'Spark Outpost: messages and Stop from your paired phone, its status lines, and turn usage for Spark.',
         author: { name: 'Spark Outpost' },
       }),
     ],
     ['hooks/hooks.json', JSON.stringify({ modules: ['./register.js'] })],
     ['hooks/register.js', sparkModScript()],
     ['hooks/telemetry.js', sparkModTelemetryScript()],
+    ['hooks/remote.js', sparkModRemoteScript()],
   ];
   for (const [path, text] of files)
     await writeFile(join(root, path), text, { mode: 0o600, flag: 'wx' });

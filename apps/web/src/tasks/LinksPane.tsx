@@ -1,11 +1,14 @@
 import './task-panes.css';
-import { useState, type FormEvent } from 'react';
+import { Fragment, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TaskLink } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
 import { FileIcon } from '../chat/attachments/attachment-icons.tsx';
 import { prWatchesQuery } from '../chat/pull-request/pr-follow-up-api.ts';
 import { PullRequestList } from '../chat/pull-request/PullRequestList.tsx';
+import { useAdoptPull } from '../chat/project/adopt-api.ts';
+import { useChatWorkspace } from '../chat/project/use-chat-workspace.ts';
+import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { FolderIcon, PlusIcon } from '../ui/icons.tsx';
 import { taskApi, taskKeys } from './task-api.ts';
 import { GitHubIcon, LinkIcon } from './TaskIcons.tsx';
@@ -63,6 +66,66 @@ function LinkChip({ link }: { link: ChipLink }) {
   );
 }
 
+const PULL_NUMBER = /\/pull\/(\d+)(?:[/?#]|$)/;
+
+function pullNumber(url: string): number | null {
+  const match = PULL_NUMBER.exec(url);
+  return match ? Number(match[1]) : null;
+}
+
+type Adopt = ReturnType<typeof useAdoptPull>;
+
+function useCanAdopt(conversationId: string): boolean {
+  const workspace = useChatWorkspace(conversationId).data;
+  const { remote } = useRemoteClient();
+  const current = workspace?.current ?? null;
+  if (remote || !workspace?.projectId || workspace.place !== 'worktree') return false;
+  return !current || current.worktree;
+}
+
+function WorkOnPull({
+  link,
+  adopt,
+  adopted,
+}: {
+  link: ChipLink;
+  adopt: Adopt;
+  adopted: number | null;
+}) {
+  const number = pullNumber(link.url);
+  if (!number || adopted === number) return null;
+  return (
+    <div className="lwork">
+      <button
+        type="button"
+        className="btn line sm"
+        aria-label={`Work on pull request #${number} in this chat`}
+        disabled={adopt.isPending}
+        onClick={() => adopt.mutate({ number, url: link.url })}
+      >
+        Work on it here
+      </button>
+    </div>
+  );
+}
+
+function AdoptResult({ adopt }: { adopt: Adopt }) {
+  return (
+    <>
+      {adopt.data && (
+        <p className="wnote" role="status">
+          {adopt.data.note}
+        </p>
+      )}
+      {adopt.error && (
+        <p className="wnote bad" role="alert">
+          {adopt.error.message}
+        </p>
+      )}
+    </>
+  );
+}
+
 interface LinksPaneProps {
   taskId: string;
   conversationId: string;
@@ -74,6 +137,10 @@ export function LinksPane({ taskId, conversationId, links }: LinksPaneProps) {
   const watches = useQuery(prWatchesQuery(conversationId)).data?.watches ?? [];
   const tracked = new Set(watches.map((watch) => watch.url));
   const others = links.filter((link) => !(link.kind === 'pr' && tracked.has(link.url)));
+  const workspace = useChatWorkspace(conversationId).data;
+  const adopt = useAdoptPull(conversationId, workspace?.projectId ?? '');
+  const canAdopt = useCanAdopt(conversationId);
+  const adopted = workspace?.current?.adopted?.number ?? null;
   const [adding, setAdding] = useState(false);
   const [url, setUrl] = useState('');
   const add = useMutation({
@@ -103,8 +170,14 @@ export function LinksPane({ taskId, conversationId, links }: LinksPaneProps) {
       )}
       <PullRequestList conversationId={conversationId} watches={watches} />
       {others.map((link) => (
-        <LinkChip key={link.id} link={link} />
+        <Fragment key={link.id}>
+          <LinkChip link={link} />
+          {canAdopt && link.kind === 'pr' && (
+            <WorkOnPull link={link} adopt={adopt} adopted={adopted} />
+          )}
+        </Fragment>
       ))}
+      <AdoptResult adopt={adopt} />
       {adding ? (
         <form className="linkform" onSubmit={submit}>
           <input

@@ -10,6 +10,7 @@ import { formatTokens } from '../../chat/composer/model-options.ts';
 import { CacheRebuildNote } from '../../usage/CacheRebuildNote.tsx';
 import { cacheHitText } from '../../usage/cache-view.ts';
 import { formatCost } from '../../usage/format.ts';
+import { TerminalLimits } from './TerminalLimits.tsx';
 import { terminalUsageQuery } from './terminal-usage-api.ts';
 import { durationText } from './step-rows.ts';
 import { estimateTotal, turnsCacheHit, turnUsageText } from './turn-usage-text.ts';
@@ -111,6 +112,7 @@ export function TerminalCost({ conversationId }: { conversationId: string }) {
         </ol>
       )}
       <ReportedTotal usage={usage.data} />
+      <TerminalLimits measure={usage.data.measure} />
       <p className="wnote">
         While Spark&apos;s mod is loaded in a Claude Code session, turn figures come from Claude
         Code as each request finishes. Otherwise they are a lower bound: they count only the replies

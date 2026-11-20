@@ -437,3 +437,34 @@ test('a workflow is created, rearranged, previewed and saved with the keyboard a
     { id: 'lint', dependsOn: ['security'], onFailure: 'continue' },
   ]);
 });
+
+test('a wide parallel stage stays on one line in the list with a count of the rest', async ({
+  page,
+}) => {
+  const sparks = await crew(page);
+  const api = await fakeWorkflowApi(page, Object.values(sparks));
+  const ids = Object.values(sparks);
+  const middle = Array.from({ length: 7 }, (_, index) =>
+    step(`check${index}`, ids[index % ids.length]!, ['start']),
+  );
+  api.put({
+    id: 'gauntlet',
+    name: 'The Gauntlet',
+    steps: [
+      step('start', sparks.security),
+      ...middle,
+      step(
+        'end',
+        sparks.ticketing,
+        middle.map((item) => item.id),
+      ),
+    ],
+  });
+  await page.goto(PANEL_PATH);
+  const row = page.getByRole('list', { name: 'Workflows' }).getByRole('listitem');
+  await expect(row).toContainText('9 steps · 3 stages');
+  await expect(row.locator('.wf-mini-more')).toHaveText('+3');
+  const box = await row.boundingBox();
+  expect(box!.height).toBeLessThan(120);
+  await shots(page, 'list-wide-stage');
+});

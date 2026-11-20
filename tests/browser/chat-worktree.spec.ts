@@ -67,7 +67,13 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
     'true',
   );
   await expect(menu.getByRole('button', { name: /Edit my files directly/ })).toBeVisible();
-  await expect(menu.getByRole('radio', { name: /^main/ })).toBeVisible();
+  await expect(menu.getByRole('button', { name: /^New branch from main/ })).toBeVisible();
+  await expect(menu.getByText('Pulling branches from the remote…')).toHaveCount(0);
+  const main = menu.getByRole('radio', { name: /^main/ });
+  await expect(main).toContainText('new branch');
+  await main.click();
+  await expect(main).toHaveAttribute('aria-checked', 'true');
+  await expect(place).toHaveText(/New branch from main/);
   await page.keyboard.press('Escape');
   await expect(place).toBeFocused();
 

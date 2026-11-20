@@ -225,6 +225,22 @@ export async function markChatWorktreeRemoved(db: Queryable, id: string): Promis
   await db.query('UPDATE chat_worktrees SET removed_at = now() WHERE id = $1', [id]);
 }
 
+export async function repointChatWorktree(
+  db: Queryable,
+  id: string,
+  branch: { name: string; base: string; commit: string },
+): Promise<void> {
+  await db.query(
+    `UPDATE chat_worktrees SET
+       base_commit = CASE WHEN branch = $2 THEN base_commit ELSE $4 END,
+       base_ref = CASE WHEN branch = $2 THEN base_ref ELSE NULL END,
+       landed_commit = CASE WHEN branch = $2 THEN landed_commit ELSE NULL END,
+       branch = $2, base_branch = $3, owns_branch = true
+     WHERE id = $1`,
+    [id, branch.name, branch.base, branch.commit],
+  );
+}
+
 export async function markChatWorktreeKeptDirty(db: Queryable, id: string): Promise<void> {
   await db.query('UPDATE chat_worktrees SET kept_dirty_at = now() WHERE id = $1', [id]);
 }

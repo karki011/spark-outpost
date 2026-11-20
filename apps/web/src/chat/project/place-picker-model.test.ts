@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { branchRows, branchTip, showsPlaceMenu } from './place-picker-model.ts';
+import { branchRows, branchTip, placeLabel, showsPlaceMenu } from './place-picker-model.ts';
 
 const branches = {
   current: 'main',
+  defaultBranch: 'main',
   local: ['feature/login', 'main', 'fix/typo'],
   remote: ['release/2.0'],
   hasRemote: true,
@@ -18,12 +19,27 @@ describe('branchRows', () => {
       'fix/typo',
       'release/2.0',
     ]);
-    expect(rows[0]?.tags).toEqual(['in my files']);
+    expect(rows[0]?.tags).toEqual(['in my files', 'new branch']);
     expect(rows.at(-1)).toEqual({ name: 'release/2.0', remote: true, tags: ['remote'] });
   });
 
   it('filters by a case-insensitive search', () => {
     expect(branchRows(branches, ' LOG ', 'main').map((row) => row.name)).toEqual(['feature/login']);
+  });
+});
+
+describe('placeLabel', () => {
+  const workspace = { place: 'worktree' as const, current: null, projectId: 'p' };
+
+  it('says a picked default branch starts a new branch from it', () => {
+    expect(placeLabel({ ...workspace, requestedBranch: 'develop' }, 'x', 'develop')).toBe(
+      'New branch from develop',
+    );
+    expect(placeLabel({ ...workspace, requestedBranch: 'main' }, 'x')).toBe('New branch from main');
+  });
+
+  it('names any other picked branch as the one the chat continues', () => {
+    expect(placeLabel({ ...workspace, requestedBranch: 'fix/typo' }, 'x', 'main')).toBe('fix/typo');
   });
 });
 

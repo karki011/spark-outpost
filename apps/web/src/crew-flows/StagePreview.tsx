@@ -4,6 +4,8 @@ import { ForwardIcon } from '../ui/icons.tsx';
 import type { CrewSpark } from './spark-lookup.ts';
 import { listed } from './workflow-model.ts';
 
+const STAGE_FACES = 4;
+
 interface StagePreviewProps {
   stages: readonly (readonly { stepId: string; sparkId: string }[])[];
   sparks: ReadonlyMap<string, CrewSpark>;
@@ -36,10 +38,13 @@ export function StagePreview({ stages, sparks }: StagePreviewProps) {
               <ForwardIcon />
             </span>
           )}
-          <span className="wf-mini-stage">
-            {stage.map((step) => (
-              <SparkDot key={step.stepId} spark={sparks.get(step.sparkId)} size={22} />
+          <span className="wf-mini-stage" data-parallel={stage.length > 1 || undefined}>
+            {stage.slice(0, STAGE_FACES).map((step) => (
+              <SparkDot key={step.stepId} spark={sparks.get(step.sparkId)} size={20} />
             ))}
+            {stage.length > STAGE_FACES && (
+              <span className="wf-mini-more">+{stage.length - STAGE_FACES}</span>
+            )}
           </span>
         </Fragment>
       ))}

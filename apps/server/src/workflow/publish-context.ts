@@ -13,7 +13,8 @@ import {
   type TaskBranch,
 } from '../approvals/publish-policy.ts';
 import type { Queryable } from '../persistence/db.ts';
-import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
+import { chatWorktreeAt, type ChatWorktree } from '../persistence/chat-worktrees.ts';
+import { checkedOut, remoteRepo } from '../pr-tracking/chat-repos.ts';
 import { watchesForConversation } from '../persistence/pr-watches.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { mainAgentPublishNote } from '../orchestration/context.ts';
@@ -33,6 +34,12 @@ export async function taskBranch(db: Queryable, root: string | null): Promise<Ta
   const named = [...ALWAYS_PROTECTED, record.baseBranch, fallback].filter(
     (branch): branch is string => Boolean(branch),
   );
+  const protectedBranches = [...new Set(named)];
+  const opened = await openedPullBranch(db, record).catch(() => null);
+  if (opened && !protectedBranches.includes(opened.branch)) {
+    const stack = await publishStackOf(db, stackGit, record);
+    return { branch: opened.branch, protectedBranches, pull: opened.number, ...stack };
+  }
   const pull = await openPullNumber(db, record.conversationId, record.branch).catch(() => null);
   const stack = await publishStackOf(db, stackGit, record);
   const adopted = record.adopted?.pushes
@@ -40,11 +47,31 @@ export async function taskBranch(db: Queryable, root: string | null): Promise<Ta
     : null;
   return {
     branch: record.branch,
-    protectedBranches: [...new Set(named)],
+    protectedBranches,
     pull: pull ?? adopted?.pull ?? null,
     ...(adopted ? { adopted } : {}),
     ...stack,
   };
+}
+
+async function openedPullBranch(
+  db: Queryable,
+  record: ChatWorktree,
+): Promise<{ branch: string; number: number } | null> {
+  if (!record.conversationId) return null;
+  const current = await checkedOut(record.path);
+  if (!current || current === record.branch) return null;
+  const repo = await remoteRepo(record.path, current);
+  if (!repo) return null;
+  const { rows } = await db.query<{ number: number }>(
+    `SELECT number FROM pr_watches
+     WHERE conversation_id = $1 AND branch = $2 AND pr_state = 'open' AND follow_up
+       AND opened_via IN ('ship', 'agent')
+       AND lower(host) = lower($3) AND lower(owner) = lower($4) AND lower(repo) = lower($5)
+     ORDER BY created_at DESC LIMIT 1`,
+    [record.conversationId, current, repo.host, repo.owner, repo.name],
+  );
+  return rows[0] ? { branch: current, number: rows[0].number } : null;
 }
 
 async function openPullNumber(
