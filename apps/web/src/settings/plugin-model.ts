@@ -12,6 +12,10 @@ export function pluginAdds(plugin: UserPlugin): string {
   return parts.length > 0 ? parts.join(' · ') : 'Adds nothing Spark can list';
 }
 
+export function unloadableText(plugin: UserPlugin): string {
+  return plugin.unloadableReason ?? 'This plugin can’t load in chats.';
+}
+
 export function needsConfirm(plugin: UserPlugin): boolean {
   return plugin.scan.status === 'review' || plugin.scan.status === 'flagged';
 }
