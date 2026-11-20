@@ -15,6 +15,7 @@ summary: What changed in recent releases and what to do next.
 | **Cost** by tool; model switch cache note      | [Prompt cache](statuses-and-limits.md#prompt-cache). |
 | Worktrees holding `.env` or a running tab stay | [Where](where-spark-works.md#what-to-expect).        |
 | **@** lists workflows                          | Pick one and send.                                   |
+| Spark Island is wider for requests             | Nothing to do.                                       |
 
 ## Mid-November 2026
 
@@ -60,4 +61,3 @@ summary: What changed in recent releases and what to do next.
 | Read anywhere; outside edits ask          | [Protected paths](protected-paths.md).                                |
 | The Relay Spark is removed                | Nothing; PR follow-up works as before.                                |
 | Transcripts: drag the list's edge         | Nothing; double-click resets it.                                      |
-| Ask about a meeting, **Catch me up**      | [Take meeting notes](meetings.md#ask-about-it).                       |
