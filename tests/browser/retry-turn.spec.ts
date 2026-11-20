@@ -44,7 +44,7 @@ async function addTurn(chatId: string, status: string, content: string): Promise
 async function openSeeded(page: Page): Promise<void> {
   await openChats(page);
   await page.getByRole('navigation', { name: 'Chats' }).getByText(TITLE).click();
-  await expect(page.locator('.bubble', { hasText: ASKED })).toBeVisible();
+  await expect(page.locator('section[data-turn]').first()).toBeVisible();
 }
 
 const tryAgain = (page: Page) => page.getByRole('button', { name: 'Try again' });
@@ -124,6 +124,10 @@ test('Try again is not offered when the message had an attachment', async ({ pag
 test('Try again is not offered for a turn the user did not type', async ({ page }) => {
   await failedChat('pr_follow_up');
   await openSeeded(page);
+  await expect(page.getByRole('button', { name: /PR follow-up/ })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
   await expect(page.locator('.error-line')).toContainText(FAILURE);
   await expect(tryAgain(page)).toHaveCount(0);
 });

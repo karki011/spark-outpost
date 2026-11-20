@@ -14,7 +14,7 @@ Run a workflow and watch its steps finish. About 2 minutes.
 2. Select **Run** on a workflow. The run view opens. The run happens in its own chat.
 3. Read the line under the title: the run's state, steps done, time, tokens and cost.
 
-Typing `@` and the workflow's id in a chat also starts it. That turn shows **Open run view**. `@pip-review` runs that workflow even with a Spark named Pip.
+Typing `@` in a chat lists workflows; pick one and send to start it. That turn shows **Open run view**. `@pip-review` runs that workflow even with a Spark named Pip.
 
 ## Read a step
 
@@ -32,17 +32,7 @@ Typing `@` and the workflow's id in a chat also starts it. That turn shows **Ope
 | **Skipped**   | It never started, because a step before it failed or the run was stopped. |
 | **Cancelled** | It was working when the run was stopped.                                  |
 
-## Which agent and mode a step uses
-
-A step uses its Spark's **Provider**, **Model**, **Effort** and **Mode**. Where the Spark says **Default**:
-
-| The run                                                               | Takes                                        |
-| --------------------------------------------------------------------- | -------------------------------------------- |
-| Trigger, **Before publish**, `@` in a chat, a run in an existing chat | The chat's; the step says **(from chat)**    |
-| Started by an agent                                                   | The agent's chat's, copied to the run's chat |
-| **Run** into a new chat, a schedule's first run, a review, a test run | Yours; the step says **(your default)**      |
-
-A step in a Bypass permissions chat runs reads and other commands without asking. Edits, commits, pushes, pull requests and installs stay refused in every mode, and [Spark rules](protected-paths.md) still apply.
+See also [Workflow steps](modes-and-levels.md#workflow-steps).
 
 ## Stop it, or look back
 

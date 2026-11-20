@@ -5,7 +5,7 @@ import { storedSecretIds } from './secrets.ts';
 import { stopActiveWork } from './stop-work.ts';
 import { wipeAppData } from './wipe.ts';
 import { allLiveChatWorktrees, type ChatWorktree } from '../persistence/chat-worktrees.ts';
-import { releaseOnDisk } from '../projects/chat-worktree-cleanup.ts';
+import { keptIgnoredNote, releaseOnDisk } from '../projects/chat-worktree-cleanup.ts';
 import { ownedWorktrees, removeOwnedWorktree, type OwnedWorktree } from './worktrees.ts';
 
 export const RUN_SETTLE_MS = 5000;
@@ -56,6 +56,8 @@ async function removeChatCopies(copies: readonly ChatWorktree[], problems: strin
       const released = await releaseOnDisk(copy, 'reset');
       if (released.removed) removed += 1;
       if (released.saved) problems.push(`Saved uncommitted chat work on ${copy.branch}.`);
+      const kept = keptIgnoredNote(copy, released);
+      if (kept) problems.push(kept);
     } catch {
       problems.push(`Couldn't fully remove the ${copy.branch} worktree in ${copy.repoRoot}.`);
     }

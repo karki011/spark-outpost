@@ -138,7 +138,7 @@ test('the search works from the keyboard', async ({ page }) => {
   await search(page).focus();
   await page.keyboard.type('compact');
   const options = results(page).getByRole('option');
-  await expect(options).toHaveText([/^Compact automatically at/]);
+  await expect(options).toHaveText([/^Compact automatically at/, /^Compact idle conversations/]);
   await search(page).fill('github');
   await expect(options.first()).toHaveText(/^GitHub\s*Work$/);
   await expect(options.first()).toHaveAttribute('aria-selected', 'true');

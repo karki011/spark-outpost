@@ -14,6 +14,15 @@ export function useWorkflowRuns(workflowId: string | null) {
   });
 }
 
+export function useWorkflowRunOfTurn(turnRunId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: workflowRunKeys.ofTurn(turnRunId),
+    queryFn: () => workflowRunsApi.ofTurn(turnRunId),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useWorkflowRun(runId: string, seed?: WorkflowRun) {
   return useQuery({
     queryKey: workflowRunKeys.one(runId),
