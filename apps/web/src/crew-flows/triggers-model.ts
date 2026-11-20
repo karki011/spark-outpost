@@ -55,6 +55,7 @@ const REASON_WORDS: Record<NonNullable<TriggerEvent['reason']>, string> = {
   problem: 'The workflow has a problem',
   chat_gone: 'The chat was archived or deleted',
   error: 'Something went wrong',
+  first_turn: 'The chat’s first turn failed or was stopped',
 };
 
 export interface EventRow {

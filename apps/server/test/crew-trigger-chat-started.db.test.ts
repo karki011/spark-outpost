@@ -66,9 +66,10 @@ async function send(
   return sent.run.id;
 }
 
-async function finishTurn(runId: string): Promise<void> {
-  await t.db.query(`UPDATE runs SET status = 'succeeded', finished_at = now() WHERE id = $1`, [
+async function finishTurn(runId: string, status = 'succeeded'): Promise<void> {
+  await t.db.query(`UPDATE runs SET status = $2, finished_at = now() WHERE id = $1`, [
     runId,
+    status,
   ]);
 }
 
@@ -148,6 +149,42 @@ describe('a chat starts', () => {
     ]);
     expect(rows[0]!.source).toBe('workflow');
     expect((await events())[0]).toMatchObject({ state: 'started', workflowRunId: run!.id });
+  });
+
+  it.each(['failed', 'cancelled', 'outcome_unknown'])(
+    'skips when the first turn ends %s, even after a later turn succeeds',
+    async (status) => {
+      await saveTriggers(t.db, t.workspaceId, FLOW, triggers());
+      const chat = await startedChat();
+      await finishTurn(chat.runId, status);
+      const retry = await send(chat.conversationId, 'Try again.');
+      await checkAt(minutesFromNow(1));
+      expect((await events())[0]).toMatchObject({ state: 'pending' });
+
+      await finishTurn(retry);
+      await checkAt(minutesFromNow(2));
+      expect((await events())[0]).toMatchObject({ state: 'skipped', reason: 'first_turn' });
+      expect(await runsOf(t)).toEqual([]);
+    },
+  );
+
+  it('fires for an archived chat brought back by its first message, once', async () => {
+    await saveTriggers(t.db, t.workspaceId, FLOW, triggers());
+    const conversationId = await openChat(t, { root });
+    await t.db.query('UPDATE conversations SET archived_at = now() WHERE id = $1', [
+      conversationId,
+    ]);
+    const first = await send(conversationId, 'Fix the date divider.');
+    expect((await events()).map((item) => item.conversationId)).toEqual([conversationId]);
+
+    await finishTurn(first);
+    await checkAt(minutesFromNow(1));
+    await t.db.query('UPDATE conversations SET archived_at = now() WHERE id = $1', [
+      conversationId,
+    ]);
+    await send(conversationId, 'Back to this.');
+    expect(await events()).toHaveLength(1);
+    expect(await runsOf(t)).toHaveLength(1);
   });
 
   it('fires for a chat the user starts with a request typed in an outpost', async () => {
@@ -297,16 +334,5 @@ describe('chats that never fire', () => {
     );
     await send(fresh, 'Carry on with the divider.');
     expect((await events()).map((item) => item.conversationId)).toEqual([original.conversationId]);
-  });
-
-  it('a chat restored from the archive', async () => {
-    const chat = await startedChat();
-    await finishTurn(chat.runId);
-    await checkAt(minutesFromNow(1));
-    await t.db.query('UPDATE conversations SET archived_at = now() WHERE id = $1', [
-      chat.conversationId,
-    ]);
-    await send(chat.conversationId, 'Back to this.');
-    expect(await events()).toHaveLength(1);
   });
 });

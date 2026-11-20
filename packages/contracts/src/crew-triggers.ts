@@ -37,7 +37,13 @@ export const triggerEventStateSchema = z.enum([
 ]);
 export type TriggerEventState = z.infer<typeof triggerEventStateSchema>;
 
-export const triggerEventReasonSchema = z.enum(['unchanged', 'problem', 'chat_gone', 'error']);
+export const triggerEventReasonSchema = z.enum([
+  'unchanged',
+  'problem',
+  'chat_gone',
+  'error',
+  'first_turn',
+]);
 export type TriggerEventReason = z.infer<typeof triggerEventReasonSchema>;
 
 export const queuedTriggerKindSchema = workflowTriggerKindSchema.exclude(['before_publish']);

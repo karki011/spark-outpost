@@ -1,7 +1,7 @@
 import { workflowProblems, type QueuedTriggerKind } from '@spark-outpost/contracts';
 import { sparkPaused } from '../persistence/spark-pause.ts';
 import { chatCode, diffHash } from './chat-code.ts';
-import { chatTurnActive } from './chat-started.ts';
+import { chatTurnActive, firstTurnSucceeded } from './chat-started.ts';
 import { openScheduleChat } from './schedule-records.ts';
 import { existingRun, startWorkflowRun, type StartRunDeps } from './start-run.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
@@ -50,8 +50,11 @@ async function decide(deps: TriggerDeps, claim: ClaimedTrigger): Promise<Trigger
     return { state: 'not_started', reason: 'chat_gone', detail: null };
   }
   if (await workflowRunningInChat(db, claim.workflowId, claim.conversationId)) return 'wait';
-  if (claim.kind === 'chat_started' && (await chatTurnActive(db, claim.conversationId))) {
-    return 'wait';
+  if (claim.kind === 'chat_started') {
+    if (await chatTurnActive(db, claim.conversationId)) return 'wait';
+    if (!(await firstTurnSucceeded(db, claim.conversationId))) {
+      return { state: 'skipped', reason: 'first_turn', detail: null };
+    }
   }
   const code = await chatCode(db, claim.conversationId);
   const hash = code ? await diffHash(code) : null;

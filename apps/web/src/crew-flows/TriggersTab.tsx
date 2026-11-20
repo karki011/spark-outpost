@@ -91,7 +91,7 @@ function TriggersForm({
 
         <TriggerSwitch
           label="A chat starts"
-          hint="Once per chat, after the first message you send in a new chat, when that first turn ends."
+          hint="Once per chat, after the first message you send in a new chat, when that first turn succeeds."
           checked={draft.chatStarted}
           onChange={(chatStarted) => edit({ chatStarted })}
         />

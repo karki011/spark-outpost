@@ -79,3 +79,14 @@ export async function chatTurnActive(db: Queryable, conversationId: string): Pro
   );
   return (rowCount ?? 0) > 0;
 }
+
+export async function firstTurnSucceeded(db: Queryable, conversationId: string): Promise<boolean> {
+  const { rows } = await db.query<{ status: string }>(
+    `SELECT r.status FROM messages m
+     JOIN runs r ON r.user_message_id = m.id AND r.parent_run_id IS NULL
+     WHERE m.conversation_id = $1 AND m.role = 'user'
+     ORDER BY m.created_at, m.id LIMIT 1`,
+    [conversationId],
+  );
+  return rows[0]?.status === 'succeeded';
+}

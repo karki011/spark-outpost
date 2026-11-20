@@ -94,8 +94,8 @@ export async function saveTriggers(
        turn_changed = EXCLUDED.turn_changed, before_publish = EXCLUDED.before_publish,
        hold_on_findings = EXCLUDED.hold_on_findings, on_commit = EXCLUDED.on_commit,
        branch_glob = EXCLUDED.branch_glob, pull_request = EXCLUDED.pull_request,
-       chat_started = EXCLUDED.chat_started, project_id = EXCLUDED.project_id, debounce_minutes = EXCLUDED.debounce_minutes,
-       edits = EXCLUDED.edits, updated_at = now()
+       chat_started = EXCLUDED.chat_started, project_id = EXCLUDED.project_id,
+       debounce_minutes = EXCLUDED.debounce_minutes, edits = EXCLUDED.edits, updated_at = now()
      RETURNING *`,
     [
       workspaceId,

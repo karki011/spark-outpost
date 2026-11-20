@@ -18,7 +18,7 @@ A triggered workflow runs in the chat that set it off, on that chat's worktree a
 
 | Event                               | When it runs                                                 |
 | ----------------------------------- | ------------------------------------------------------------ |
-| **A chat starts**                   | After the first turn of a new chat.                          |
+| **A chat starts**                   | After the first turn of a new chat succeeds.                 |
 | **A turn changes files**            | After a Do turn keeps changes.                               |
 | **Before publish**                  | At Full auto → PR, inside the turn, before Spark pushes.     |
 | **A new commit on the branch**      | After a turn adds a commit. **Only on branches** filters.    |

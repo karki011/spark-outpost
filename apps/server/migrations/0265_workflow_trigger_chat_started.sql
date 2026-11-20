@@ -9,3 +9,8 @@ ALTER TABLE workflow_trigger_events DROP CONSTRAINT workflow_trigger_events_kind
 ALTER TABLE workflow_trigger_events
   ADD CONSTRAINT workflow_trigger_events_kind_check
   CHECK (kind IN ('turn_changed', 'commit', 'pull_request', 'chat_started'));
+
+ALTER TABLE workflow_trigger_events DROP CONSTRAINT workflow_trigger_events_reason_check;
+ALTER TABLE workflow_trigger_events
+  ADD CONSTRAINT workflow_trigger_events_reason_check
+  CHECK (reason IN ('unchanged', 'problem', 'chat_gone', 'error', 'first_turn'));
