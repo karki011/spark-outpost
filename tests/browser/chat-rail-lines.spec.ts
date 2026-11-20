@@ -52,7 +52,10 @@ function plugin(name: string, extra: Record<string, unknown>) {
 }
 
 const PLUGINS = [
-  plugin('atlassian', { skills: 12, mcpServers: ['atlassian'] }),
+  plugin('atlassian', {
+    skills: 12,
+    mcpServers: [{ name: 'atlassian', command: 'npx', args: [], url: null }],
+  }),
   plugin('egm', { skills: 7, agents: 9 }),
   plugin('gorkhali', { commands: 8, agents: 5, enabled: false }),
   plugin('typesafe', {}),
@@ -185,16 +188,22 @@ test('every row in the context rail is one line, and tool groups open in place',
   await expect(note).toBeVisible();
   const jira = tools.getByRole('switch', { name: 'Use jira in this chat' });
   await expect(jira).toHaveAttribute('aria-checked', 'false');
-  const jiraRow = tools.getByRole('listitem').filter({ has: jira });
-  expect(await jiraRow.evaluate((item) => getComputedStyle(item, '::after').content)).toBe('"Off"');
+  const jiraRow = tools
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('switch', { name: 'Use jira in this chat' }) });
+  await expect(jiraRow.getByText('Off', { exact: true })).toBeVisible();
   const amplitudeRow = tools
     .getByRole('listitem')
-    .filter({ has: tools.getByRole('switch', { name: 'Use Amplitude in this chat' }) });
+    .filter({ has: page.getByRole('switch', { name: 'Use Amplitude in this chat' }) });
   const tip = amplitudeRow.locator('small');
   await expect(tip).toBeHidden();
+  const closedHeight = (await amplitudeRow.boundingBox())!.height;
   await amplitudeRow.hover();
   await expect(tip).toBeVisible();
-  expect((await amplitudeRow.boundingBox())!.height).toBeLessThanOrEqual(30);
+  const tipBox = (await tip.boundingBox())!;
+  const rowBox = (await amplitudeRow.boundingBox())!;
+  expect(rowBox.height).toBeGreaterThan(closedHeight);
+  expect(tipBox.y + tipBox.height).toBeLessThanOrEqual(rowBox.y + rowBox.height + 1);
   await page.mouse.move(0, 0);
 
   await tools.getByRole('button', { name: /^Claude plugins/ }).click();

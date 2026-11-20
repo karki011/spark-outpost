@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import type { ChatMcpServer } from '@spark-outpost/contracts';
 import { SetupSwitch } from '../project/SetupCard.tsx';
-import { ToolText } from '../tools/ToolsGroupFrame.tsx';
+import { RailOffWord, ToolText } from '../tools/ToolsGroupFrame.tsx';
 import {
   projectServerDetail,
   userServerDetail,
@@ -42,6 +42,7 @@ function UserServerRow({ server, busy, onSet }: UserRowProps) {
           Reset
         </button>
       )}
+      <RailOffWord checked={server.enabled} />
       <SetupSwitch
         label={`Use ${server.name} in this chat`}
         checked={server.enabled}

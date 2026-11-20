@@ -8,7 +8,7 @@ import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { useId } from 'react';
 import { SetupSwitch } from '../project/SetupCard.tsx';
-import { ToolsGroupFrame, ToolText } from './ToolsGroupFrame.tsx';
+import { RailOffWord, ToolsGroupFrame, ToolText } from './ToolsGroupFrame.tsx';
 
 function reviewInSettings(): void {
   requestSettings('chats');
@@ -36,6 +36,7 @@ function PluginRow({ plugin }: { plugin: UserPlugin }) {
         noteId={noteId}
         status={status !== null}
       />
+      <RailOffWord checked={checked} />
       <SetupSwitch
         label={`Use ${plugin.name} in all Claude chats`}
         checked={checked}

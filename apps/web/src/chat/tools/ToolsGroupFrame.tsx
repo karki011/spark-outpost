@@ -1,4 +1,5 @@
 import { createContext, useContext, useId, type ReactNode } from 'react';
+import { useSwitchWords } from '../../brand/switch-words.ts';
 import { SparkleIcon, StrokeIcon } from '../../ui/icons.tsx';
 
 export interface RailGroups {
@@ -98,6 +99,17 @@ export function ToolText({ name, note, noteId, full, status = false }: ToolTextP
       <small id={noteId} title={full ?? note} className={status ? 'tools-status' : undefined}>
         {note}
       </small>
+    </span>
+  );
+}
+
+export function RailOffWord({ checked }: { checked: boolean }) {
+  const rail = useRailGroups();
+  const words = useSwitchWords();
+  if (!rail || words || checked) return null;
+  return (
+    <span className="tools-state" aria-hidden="true">
+      Off
     </span>
   );
 }

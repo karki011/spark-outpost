@@ -417,8 +417,7 @@
 }
 
 @media (pointer: coarse) {
-  .crail-fold,
-  .crail-row {
+  :root .crail :is(.crail-fold, .crail-row) {
     min-height: 44px;
   }
 }

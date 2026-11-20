@@ -32,7 +32,6 @@
 }
 
 .crail-tools-body .crail-group-body li {
-  position: relative;
   min-height: 28px;
   padding: 0 6px 0 30px;
 }
@@ -42,20 +41,11 @@
 }
 
 .crail-group-body .mcppop-text small:not(.tools-status) {
-  position: absolute;
-  top: calc(100% - 2px);
-  right: 6px;
-  left: 30px;
-  z-index: 3;
   display: none;
-  padding: 6px 8px;
+  padding-bottom: 4px;
   overflow: visible;
   color: var(--muted);
   white-space: normal;
-  background: var(--raise);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  pointer-events: none;
 }
 
 .crail-group-body li:is(:hover, :focus-within) .mcppop-text small:not(.tools-status) {
@@ -66,17 +56,6 @@
   color: var(--muted);
 }
 
-.crail-group-body li:has(> [role='switch'][aria-checked='false']:not(.btog-worded))::after {
-  order: 1;
-  color: var(--faint);
-  font-size: 12px;
-  content: 'Off';
-}
-
-.crail-group-body li > [role='switch'] {
-  order: 2;
-}
-
 .crail-tools-note {
   padding: 6px 6px 0;
 }
@@ -85,8 +64,21 @@
   display: none;
 }
 
+@media (hover: none) {
+  .crail-group-body .mcppop-text small:not(.tools-status) {
+    display: block;
+  }
+}
+
 @media (pointer: coarse) {
-  .crail-tools-body .crail-group-body li {
+  .crail-tools-body .crail-group-body li,
+  .crail-manage,
+  .crail-group-body :is(.tools-link, .btn.sm) {
     min-height: 44px;
+  }
+
+  .crail-group-body .btog.sm {
+    width: 44px;
+    height: 44px;
   }
 }

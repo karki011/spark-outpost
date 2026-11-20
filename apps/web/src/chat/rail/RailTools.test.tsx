@@ -94,6 +94,16 @@ describe('the Tools section of the context rail', () => {
     expect(localStorage.getItem('spark-outpost.chat-rail.tools-open')).toBe('[]');
   });
 
+  it('writes Off beside a switch that is off', async () => {
+    show();
+    fireEvent.click(await group());
+    const row = (name: string) =>
+      screen.getByRole('switch', { name: `Use ${name} in this chat` }).closest('li')!;
+    expect(await screen.findByRole('switch', { name: 'Use postgres in this chat' })).toBeTruthy();
+    expect(row('postgres').textContent).toContain('Off');
+    expect(row('github').textContent).not.toContain('Off');
+  });
+
   it('starts closed when the remembered value is unreadable', async () => {
     localStorage.setItem('spark-outpost.chat-rail.tools-open', '{not json');
     show();
