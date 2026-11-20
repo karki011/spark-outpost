@@ -59,4 +59,6 @@ A step uses its Spark's **Provider**, **Model**, **Effort** and **Mode**. Where 
 | Started by an agent                                                   | The agent's chat's, copied to the run's chat |
 | **Run** into a new chat, a schedule's first run, a review, a test run | Yours; the step says **(your default)**      |
 
-A step in a Bypass permissions chat runs reads and other commands without asking. Edits, commits, pushes, pull requests and installs stay refused in every mode, and [Spark rules](protected-paths.md) still apply.
+A step in a Bypass permissions chat runs reads and other commands without asking. Spark tools that act or send, like posting to Slack or changing a ticket, don't take the chat's mode.
+
+Edits, commits, pushes, pull requests and installs stay refused in every mode, and [Spark rules](protected-paths.md) still apply.

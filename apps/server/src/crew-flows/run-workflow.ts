@@ -16,8 +16,10 @@ import {
   settingsFor,
   settingsRoute,
   type Handoff,
+  type SettingsPlace,
 } from '../orchestration/spark-child.ts';
 import { agentDefinitions } from '../agents/acp/agents.ts';
+import { draftChatSettings } from '../persistence/chat-settings.ts';
 import type { TurnResult } from '../workflow/agent-turn.ts';
 import { reviewStepPrompt, type ReviewPermission } from '../github-inbox/review/prompt.ts';
 import {
@@ -64,6 +66,7 @@ interface Running {
   options: RunOptions;
   sparks: ReadonlyMap<string, StepSpark>;
   inChat: boolean;
+  defaults: SettingsPlace | null;
   states: Record<string, WorkflowStepState>;
   notes: Map<string, string | null>;
 }
@@ -140,7 +143,11 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
     return { id: step.id, state: 'failed', note: REVIEW_GONE };
   }
   const reviewRun = turn.run.kind === 'review';
-  const settings = settingsFor(h, spark, { inChat: run.inChat, appliesOwnMode: !reviewRun });
+  const settings = settingsFor(h, spark, {
+    inChat: run.inChat,
+    appliesOwnMode: !reviewRun,
+    place: run.defaults,
+  });
   const testRun = turn.run.kind === 'test';
   const edits = turn.edits && hasProject(h.input) && !testRun;
   const editing = edits && stepEditsOffered(settings.provider);
@@ -189,12 +196,24 @@ function startingStates(turn: TurnWorkflowRun): Running['states'] {
   return Object.fromEntries(turn.run.steps.map((step) => [step.stepId, step.state]));
 }
 
+async function yourDefaults(h: Handoff): Promise<SettingsPlace | null> {
+  const defaults = await draftChatSettings(h.deps.db, h.input.workspaceId);
+  if (!defaults.provider || !h.deps.providers.has(defaults.provider)) return null;
+  return {
+    provider: defaults.provider,
+    model: defaults.model,
+    effort: defaults.effort,
+    agentMode: defaults.agentMode,
+  };
+}
+
 export async function runWorkflow(
   h: Handoff,
   turn: TurnWorkflowRun,
   options: RunOptions = {},
 ): Promise<WorkflowEnd | 'lease_lost'> {
   const { steps } = turn.workflow;
+  const inChat = await runsInChat(h.deps.db, turn);
   const run: Running = {
     h,
     turn,
@@ -204,7 +223,8 @@ export async function runWorkflow(
       h.input.workspaceId,
       steps.map((step) => step.sparkId),
     ),
-    inChat: await runsInChat(h.deps.db, turn),
+    inChat,
+    defaults: inChat ? null : await yourDefaults(h),
     states: startingStates(turn),
     notes: new Map(turn.run.steps.map((step) => [step.stepId, step.note])),
   };

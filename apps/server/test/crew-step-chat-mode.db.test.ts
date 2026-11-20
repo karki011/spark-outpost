@@ -7,7 +7,7 @@ import { runsInChat } from '../src/crew-flows/step-sparks.ts';
 import { workflowStore } from '../src/crew-flows/workflow-store.ts';
 import { resolveChatSettings, updateChatSettings } from '../src/persistence/chat-settings.ts';
 import { insertChildRun } from '../src/persistence/orchestrations.ts';
-import { actionFacts } from '../src/spark-mcp/actions/action-policy.ts';
+import { actionFacts, actionPath } from '../src/spark-mcp/actions/action-policy.ts';
 import type { Worker } from '../src/workflow/worker.ts';
 import {
   newSpark,
@@ -128,9 +128,9 @@ describe('a Spark on Default agent and Default mode in a chat', () => {
 });
 
 describe('where a step’s inherited settings come from', () => {
-  it('follows the step’s own mode for Spark action tools, not its read-only session', async () => {
-    const conversationId = await chatIn('bypassPermissions');
-    const parent = await sendMessage(t, conversationId, 'go', { agentMode: 'bypassPermissions' });
+  async function readOnlyStepIn(agentMode: string): Promise<string> {
+    const conversationId = await chatIn(agentMode);
+    const parent = await sendMessage(t, conversationId, 'go', { agentMode });
     const lease = await insertChildRun(
       t.db,
       {
@@ -144,14 +144,29 @@ describe('where a step’s inherited settings come from', () => {
         effort: null,
         mode: 'ask',
         prompt: 'Read the ticket.',
-        agentMode: 'bypassPermissions',
+        agentMode,
         route: { name: 'Pip', routedBy: 'fixed' },
       },
       30,
     );
     await t.db.query(`UPDATE runs SET used_mode = 'read-only' WHERE id = $1`, [lease.runId]);
+    return lease.runId;
+  }
 
-    expect((await actionFacts(t.db, lease.runId, 'atlassian_read')).posture).toBe('full_access');
+  it('follows the step’s own mode for Spark read tools, not its read-only session', async () => {
+    const runId = await readOnlyStepIn('bypassPermissions');
+
+    expect((await actionFacts(t.db, runId, 'atlassian_read')).posture).toBe('full_access');
+    expect(actionPath(await actionFacts(t.db, runId, 'atlassian_read'))).toBe('perform');
+    expect(actionPath(await actionFacts(t.db, runId, 'calendar_read'))).toBe('perform');
+  });
+
+  it('still asks before a step in a Bypass chat uses a Spark tool that acts or sends', async () => {
+    const runId = await readOnlyStepIn('bypassPermissions');
+
+    for (const action of ['jira_edit', 'post_slack', 'servicenow_edit', 'act_page'] as const) {
+      expect(actionPath(await actionFacts(t.db, runId, action))).toBe('confirm');
+    }
   });
 
   it('gives a workflow an agent starts the calling chat’s agent and mode', async () => {
@@ -169,6 +184,25 @@ describe('where a step’s inherited settings come from', () => {
     expect(rows[0]?.agent_mode).toBe('bypassPermissions');
     expect(await runsInChat(t.db, { run })).toBe(true);
   });
+
+  it('gives a step in a new chat your default as it is when the step starts', async () => {
+    const pip = await newSpark(t, 'Pip');
+    await saveFlow(t, 'probe', [step('look', pip.id, { prompt: 'Say hello.' })]);
+    const run = await startWorkflowRun(deps(), start({ source: 'manual' }));
+    await t.db.query(
+      `UPDATE provider_connections SET agent_mode = 'acceptEdits'
+       WHERE workspace_id = $1 AND provider = 'claude'`,
+      [t.workspaceId],
+    );
+
+    harness = startTurnWorker(t);
+    await driveToEnd(t, run.conversationId!, run.runId!, allowOnce, 120_000);
+
+    const record = await recordOf(t, run.runId!);
+    const look = await stepSpark(record!.steps[0]!.runId!);
+    expect(look.agent_mode).toBe('acceptEdits');
+    expect(look.spark).toMatchObject({ modeFrom: 'default', agentFrom: 'default' });
+  }, 240_000);
 
   it('uses your default for a run in a new chat, and the chat’s for a run in an existing one', async () => {
     await saveProbe();

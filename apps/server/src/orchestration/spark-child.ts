@@ -24,24 +24,33 @@ export async function publishOrchestration(h: Handoff): Promise<void> {
     await h.append(runEvents.activity(ORCHESTRATION_ACTIVITY, ORCHESTRATION_ACTIVITY, view));
 }
 
-function chatMode(input: RunInput): string | null {
-  return input.agentMode;
+export interface SettingsPlace {
+  provider: string;
+  model: string | null;
+  effort: string | null;
+  agentMode: string | null;
+}
+
+function runPlace(input: RunInput): SettingsPlace {
+  return {
+    provider: input.provider,
+    model: input.settings.model,
+    effort: input.settings.effort,
+    agentMode: input.agentMode,
+  };
 }
 
 export function settingsFor(
   h: Handoff,
   spark: MentionableSpark,
-  where: { inChat: boolean; appliesOwnMode: boolean },
+  where: { inChat: boolean; appliesOwnMode: boolean; place?: SettingsPlace | null },
 ): SparkRunSettings {
-  const { input } = h;
+  const { place, ...rest } = where;
   return sparkRunSettings(
     {
-      provider: input.provider,
-      model: input.settings.model,
-      effort: input.settings.effort,
-      agentMode: chatMode(input),
+      ...(place ?? runPlace(h.input)),
       usable: (provider) => h.deps.providers.has(provider),
-      ...where,
+      ...rest,
     },
     spark,
   );

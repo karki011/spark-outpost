@@ -16,6 +16,13 @@ export type ActionPath = 'perform' | 'confirm';
 
 const PERFORMING_POSTURES: ReadonlySet<ModePosture> = new Set(['auto', 'full_access']);
 
+const CHILD_READS: ReadonlySet<SparkActionName> = new Set([
+  'atlassian_read',
+  'servicenow_read',
+  'calendar_read',
+  'read_page',
+]);
+
 const CLAUSE = '[^.?!\\n]{0,40}';
 
 function asked(verbs: string, nouns: string): RegExp {
@@ -146,6 +153,8 @@ interface RunFacts {
   provider: string | null;
   mode: string | null;
   request: string | null;
+  child?: boolean | null;
+  chosen_mode?: string | null;
   outpost_run: boolean | null;
   from_user: boolean | null;
   spark_rule_retry?: boolean | null;
@@ -156,8 +165,8 @@ interface RunFacts {
 async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
   const { rows } = await db.query<RunFacts>(
     `SELECT r.provider, m.content AS request,
-            CASE WHEN r.role = 'spark' THEN r.agent_mode
-                 WHEN r.mode = 'chat' AND c.session_type IS DISTINCT FROM 'terminal'
+            r.role = 'spark' AS child, r.agent_mode AS chosen_mode,
+            CASE WHEN r.mode = 'chat' AND c.session_type IS DISTINCT FROM 'terminal'
                    AND r.agent_mode IS NOT NULL THEN r.agent_mode
               ELSE COALESCE(r.used_mode, CASE WHEN c.session_type = 'terminal' THEN NULL
                 ELSE r.agent_mode END) END AS mode,
@@ -216,10 +225,11 @@ export async function actionFacts(
   action: SparkActionName,
 ): Promise<ActionFacts> {
   const run = await runFacts(db, runId);
+  const mode = run.child === true && CHILD_READS.has(action) ? (run.chosen_mode ?? null) : run.mode;
   return {
     posture: run.assistant_acts
       ? assistantPosture(run.assistant_acts)
-      : modePosture(run.provider, run.mode),
+      : modePosture(run.provider, mode),
     requested: explicitlyAsked(action, userText(runText(run))),
   };
 }
