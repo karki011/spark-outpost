@@ -176,7 +176,7 @@ function landing(page: Page): Promise<number> {
   );
 }
 
-test('the hanging card offers Join at start, Snooze and Join in ··· on one row, and Esc closes once clicked', async ({
+test('the hanging card shows every action on one row, and Esc closes once clicked', async ({
   page,
 }) => {
   const payload = await standupPayload(page);
@@ -187,20 +187,22 @@ test('the hanging card offers Join at start, Snooze and Join in ··· on one ro
   await expect(card).toContainText('Zoom');
   await expect(card).toContainText('3 people');
   await expect(card.getByRole('button', { name: 'Join at start' })).toBeVisible();
-  await expect(card.getByRole('button', { name: /^Join Zoom/ })).toBeHidden();
+  await expect(card.getByRole('button', { name: /^Join Zoom(?! now)/ })).toBeHidden();
   await expect(card).toHaveAccessibleDescription('Esc closes · ⌘J joins · ⌃⌥⌘M focuses this card');
   await expect
     .poll(() => alertWindow(page, (window) => window.alertRegions.at(-1)?.boxes.length ?? 0))
     .toBe(2);
   await expect.poll(() => landing(page)).toBe(0);
-  const closed = await alertWindow(page, (window) => window.alertRegions.at(-1)!.boxes[0]!.height);
-  await card.getByRole('button', { name: 'More actions' }).click({ force: true });
-  await expect(card.getByRole('button', { name: 'Open in Today' })).toBeVisible();
-  await expect(card.getByRole('button', { name: 'Join Zoom now' })).toBeVisible();
-  await expect
-    .poll(() => alertWindow(page, (window) => window.alertRegions.at(-1)!.boxes[0]!.height))
-    .toBeGreaterThan(closed);
-  await card.getByRole('button', { name: 'More actions' }).click({ force: true });
+  await expect(card.getByRole('button', { name: 'More actions' })).toHaveCount(0);
+  const row = card.locator('.mc-acts');
+  for (const name of [/^Join at start/, 'Snooze until start', 'Join Zoom now', 'Open in Today']) {
+    await expect(row.getByRole('button', { name, exact: true })).toBeVisible();
+  }
+  await expect(row.getByRole('button', { name: 'Dismiss', exact: true })).toBeVisible();
+  const tops = await row
+    .getByRole('button')
+    .evaluateAll((buttons) => new Set(buttons.map((b) => b.getBoundingClientRect().top)).size);
+  expect(tops).toBe(1);
 
   await card.getByRole('button', { name: 'Snooze until start' }).click({ force: true });
   await card.getByRole('button', { name: 'Join at start' }).click({ force: true });
@@ -279,7 +281,11 @@ test('assistive technology gets focus on the card, Tab reaches each button and E
   await page.keyboard.press('Tab');
   await expect(card.getByRole('button', { name: 'Snooze until start' })).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(card.getByRole('button', { name: 'More actions' })).toBeFocused();
+  await expect(card.getByRole('button', { name: 'Join Zoom now' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(card.getByRole('button', { name: 'Open in Today' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(card.getByRole('button', { name: 'Dismiss', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(card.getByRole('button', { name: /^Close Standup/ })).toBeFocused();
   await page.screenshot({ path: 'test-results/meeting-card/keyboard-focus.png' });
@@ -333,7 +339,7 @@ test('meetings that start together share one card with a Join for each', async (
   await expect(card.getByRole('button', { name: 'Join Zoom' })).toBeVisible();
 });
 
-test('while auto-join counts down the card offers only Join now and Cancel, on one row', async ({
+test('while auto-join counts down the card leads with Join now and Cancel, on one row', async ({
   page,
 }) => {
   const plain = await standupPayload(page);
@@ -350,7 +356,12 @@ test('while auto-join counts down the card offers only Join now and Cancel, on o
   await expect(card.getByRole('status')).toContainText(/^Joining Standup in [1-8] s$/);
   await expect.poll(() => landing(page)).toBe(0);
   const row = card.locator('.mc-acts');
-  await expect(row.getByRole('button')).toHaveText(['Join now', 'Cancel', '···']);
+  await expect(row.getByRole('button')).toHaveText([
+    'Join now',
+    'Cancel',
+    'Open in Today',
+    'Dismiss',
+  ]);
   await expect(card.getByRole('button', { name: /^Join Zoom/ })).toHaveCount(0);
   await expect(card.getByRole('button', { name: /^Snooze/ })).toHaveCount(0);
   await row.getByRole('button', { name: 'Join now' }).click({ force: true });

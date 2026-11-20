@@ -31,7 +31,7 @@
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
-  width: 372px;
+  width: 580px;
   max-width: calc(100vw - 24px);
   height: auto;
   padding: 14px 16px;
@@ -42,7 +42,7 @@
 
 .isl-meet[data-compact] {
   gap: 4px;
-  width: 320px;
+  width: 560px;
   padding: 10px 12px;
 }
 
