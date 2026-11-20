@@ -9,6 +9,7 @@ import type {
   SessionTarget,
   StoredSession,
 } from '../../providers/provider.ts';
+import type { SessionName } from './session-name.ts';
 
 export type ResumeMethod = 'resume' | 'load';
 
@@ -206,6 +207,7 @@ export function sessionOutput(
   request: acp.NewSessionRequest,
   opened: OpenedSession,
   planned: string | null,
+  name: SessionName | null = null,
 ): ProviderOutput {
   return {
     kind: 'session',
@@ -215,6 +217,7 @@ export function sessionOutput(
     continued: opened.continued,
     freshReason: opened.continued ? null : (opened.freshReason ?? planned),
     ...(opened.live ? { live: true } : {}),
+    ...(name ? { title: name.stored } : {}),
   };
 }
 

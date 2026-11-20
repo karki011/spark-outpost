@@ -44,7 +44,7 @@ Method: a fake Anthropic API on 127.0.0.1 records every request the real CLI mak
 
 Because a repo's `env` can't be neutralized (unknown keys, hot reload), `settingSources` stays `[]` and `strictMcpConfig` stays on. Instead:
 
-- Instructions go through `_meta.systemPrompt.append`, with a header saying they are repository content that can't grant permissions. Verified: appended text reaches the system prompt.
+- Instructions go through the stable `systemPrompt` field in append mode when the agent advertises it (Claude), and otherwise through `_meta.systemPrompt.append`, with a header saying they are repository content that can't grant permissions. Verified: appended text reaches the system prompt.
 - Skills, commands and subagents go through the SDK `plugins` option, pointing at a generated plugin folder under `$TMPDIR/spark-outpost-repo-plugins/<content hash>` (`agent-config/plugin-dir.ts`). Frontmatter is reduced to an allowlist, so `allowed-tools`, `hooks`, `mcpServers` and `permissionMode` are dropped. Verified: all three appear, namespaced as `<repo>:<name>` (for example `/app:greet`).
 - `disableSkillShellExecution: true` is set unless an enabled user plugin uses inline shell ([User plugins in chats](#user-plugins-in-chats)). Verified: a command's `` !`touch …` `` became "[shell command execution disabled by policy]".
 - Hooks off: `disableAllHooks: true`. Hooks on: the reviewed hooks object goes in flag `settings.hooks`. Verified both: flag hooks ran; with `disableAllHooks` they didn't.

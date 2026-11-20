@@ -17,10 +17,16 @@ export interface RunTransition {
   error?: string;
 }
 
+export interface AgentMessageRef {
+  id: string;
+  fingerprint: string;
+}
+
 export interface AssistantMessageRecord {
   id: string;
   content: string;
   finalReply?: string | null;
+  agentMessages?: readonly AgentMessageRef[];
 }
 
 export interface AppendOptions {
@@ -125,9 +131,15 @@ async function insertAssistantMessage(
   message: AssistantMessageRecord,
 ) {
   await client.query(
-    `INSERT INTO messages (id, conversation_id, role, content, run_id, final_reply)
-     SELECT $1, conversation_id, 'assistant', $2, id, $4 FROM runs WHERE id = $3`,
-    [message.id, message.content, runId, finalReplyToStore(message)],
+    `INSERT INTO messages (id, conversation_id, role, content, run_id, final_reply, agent_messages)
+     SELECT $1, conversation_id, 'assistant', $2, id, $4, $5::jsonb FROM runs WHERE id = $3`,
+    [
+      message.id,
+      message.content,
+      runId,
+      finalReplyToStore(message),
+      message.agentMessages?.length ? JSON.stringify(message.agentMessages) : null,
+    ],
   );
 }
 

@@ -161,7 +161,12 @@ export async function* fakeApprovalTurn(turn: ProviderTurn): AsyncGenerator<Prov
   for (const request of await fakeRequests(turn.prompt, root, turn.mode === 'do')) {
     yield { kind: 'step_started', name: request.title, tool: true };
     const answer = await turn.approvals.review(request, turn.signal);
-    yield { kind: 'step_finished', name: request.title };
+    yield {
+      kind: 'step_finished',
+      name: request.title,
+      tool: true,
+      ...(answer.outcome === 'selected' && answer.allowed ? {} : { failed: true }),
+    };
     if (!isQuiet(answer)) yield* note(answer.note);
     if (answer.outcome === 'cancelled') return;
     outcomes.push(`${request.toolCallId}=${answer.allowed ? 'allowed' : 'denied'}`);

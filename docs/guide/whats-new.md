@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                   | What to do                                               |
 | ---------------------------------------------- | -------------------------------------------------------- |
 | Default Sparks follow the chat's mode          | [Workflow steps](modes-and-levels.md#workflow-steps).    |
+| **Stopped** steps; **No output for 2m**        | [Follow a turn](follow-a-turn.md).                       |
 | Meeting card shows every button on one row     | Nothing to do.                                           |
 | **Health** in Settings                         | [Check Health](trouble-setup-and-reset.md#check-health). |
 | Follow-up rounds, triggered workflows fold     | Open the row for details.                                |
@@ -60,4 +61,3 @@ summary: What changed in recent releases and what to do next.
 | Build Sparks with an agent; Spark effort  | [Build with an agent](build-with-an-agent.md).                        |
 | Workflows: run view, Runs, `@id` fix      | [Follow a workflow run](workflow-runs.md).                            |
 | Test run and Try it: nothing is sent      | [Do a test run](test-run.md).                                         |
-| Sparks page: Crew, skills and files       | [Make a Spark](sparks.md).                                            |

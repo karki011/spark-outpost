@@ -306,6 +306,55 @@ describe('while the agent works', () => {
     expect(status().querySelector('.cs-time')?.textContent).toBe('12s');
   });
 
+  it('says how long the agent has been quiet, and drops it when output arrives', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    act(() => view.store.report({ ...CLAUDE, working: true, step: null, outputSeq: 4 }));
+    await act(() => vi.advanceTimersByTimeAsync(59_000));
+    expect(status().querySelector('.cs-time')).toBeNull();
+    await act(() => vi.advanceTimersByTimeAsync(2 * 60_000));
+    expect(shown()).toBe('Claude is thinking… · No output for 2m');
+    act(() => view.store.report({ ...CLAUDE, working: true, step: null, outputSeq: 5 }));
+    expect(status().querySelector('.cs-time')).toBeNull();
+  });
+
+  it('calls a stalled Thinking step quiet', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    act(() => view.store.report({ ...CLAUDE, working: true, step: 'Thinking', outputSeq: 4 }));
+    await act(() => vi.advanceTimersByTimeAsync(3 * 60_000));
+    expect(status().querySelector('.cs-time')?.textContent).toBe('No output for 3m');
+  });
+
+  it('announces once that the agent has gone quiet', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    act(() => view.store.report({ ...CLAUDE, working: true, step: null, outputSeq: 4 }));
+    const region = () => document.querySelector('.cstatus [role="status"]')?.textContent;
+    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    expect(region()).not.toContain('No output');
+    await act(() => vi.advanceTimersByTimeAsync(40_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(region()).toContain('No output for over a minute.');
+  });
+
+  it('keeps the step clock while a long command runs without output', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    act(() => view.store.report({ ...CLAUDE, working: true, step: '`pnpm test`', outputSeq: 4 }));
+    await act(() => vi.advanceTimersByTimeAsync(3 * 60_000));
+    expect(status().querySelector('.cs-time')?.textContent).toBe('3m 0s');
+  });
+
+  it('never calls a waiting or sleeping agent quiet', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    const sleeping = { ...CLAUDE, doing: 'sleeping until 14:05', outputSeq: 4 };
+    act(() => view.store.report({ ...sleeping, working: true, step: null }));
+    await act(() => vi.advanceTimersByTimeAsync(10 * 60_000));
+    expect(status().querySelector('.cs-time')).toBeNull();
+  });
+
   it('announces Done with the run time without showing a line', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'Date'] });
     const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });

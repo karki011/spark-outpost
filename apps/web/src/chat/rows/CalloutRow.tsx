@@ -1,11 +1,11 @@
 import type { CalloutKind } from '@spark-outpost/contracts';
 import { useId, useState } from 'react';
-import { CheckIcon, ChevronIcon, PauseIcon } from '../../ui/icons.tsx';
+import { CheckIcon, ChevronIcon } from '../../ui/icons.tsx';
 import { clockText } from '../status/status-text.ts';
 import { useNow } from '../status/use-status-line.ts';
 import type { Callout } from './callouts.ts';
 import { RowIcon, type RowIconName } from './RowIcon.tsx';
-import { FailedWord, Spinner } from './RowStatus.tsx';
+import { FailedWord, Spinner, StoppedWord } from './RowStatus.tsx';
 import { spanSeconds, type ToolItem } from './turn-rows.ts';
 
 const CALLOUT_ICONS: Record<CalloutKind, RowIconName> = {
@@ -45,14 +45,7 @@ function statusWord(item: ToolItem, live: boolean) {
       </span>
     );
   }
-  if (item.status === 'open') {
-    return (
-      <span className="trow-word">
-        <PauseIcon />
-        Stopped
-      </span>
-    );
-  }
+  if (item.status === 'open') return <StoppedWord />;
   return (
     <span className="trow-word ok">
       <CheckIcon className="ok" />
