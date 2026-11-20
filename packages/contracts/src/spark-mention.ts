@@ -87,3 +87,5 @@ export function sparkWho(spark: { name: string; role: string }): string {
 
 export const SPARK_MENTION_HINT =
   '@Spark hands this one job to that Spark as a read-only subagent with its own context. Talk to… makes the whole chat a chat with a Spark.';
+
+export const WORKFLOW_MENTION_HINT = '@workflow runs that workflow in this chat, one per message.';
