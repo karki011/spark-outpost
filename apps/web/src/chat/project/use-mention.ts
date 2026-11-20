@@ -53,7 +53,7 @@ export function useMention({
   const listId = useId();
   const query = mention?.query ?? '';
   const matches = mention ? sparksMatching(sparks, query) : [];
-  const flows = mention ? workflowsMatching(workflows, query) : [];
+  const flows = mention ? workflowsMatching(workflows, query, sparks) : [];
   const named = matches.length + flows.length;
   const hasRepos = repos.length > 0;
   const open = mention !== null && (hasRepos || named > 0);

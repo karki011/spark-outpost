@@ -7,16 +7,26 @@ const FLOWS = [flow('review-flow', 'Review flow'), flow('release-check', 'Ship g
 
 describe('workflowsMatching', () => {
   it('lists every workflow for a bare @', () => {
-    expect(workflowsMatching(FLOWS, '').map((entry) => entry.id)).toEqual([
+    expect(workflowsMatching(FLOWS, '', []).map((entry) => entry.id)).toEqual([
       'review-flow',
       'release-check',
     ]);
   });
 
   it('matches the start of the id or of a word in the name, ignoring case', () => {
-    expect(workflowsMatching(FLOWS, 'rel').map((entry) => entry.id)).toEqual(['release-check']);
-    expect(workflowsMatching(FLOWS, 'Gate').map((entry) => entry.id)).toEqual(['release-check']);
-    expect(workflowsMatching(FLOWS, 'flow').map((entry) => entry.id)).toEqual(['review-flow']);
-    expect(workflowsMatching(FLOWS, 'xyz')).toEqual([]);
+    expect(workflowsMatching(FLOWS, 'rel', []).map((entry) => entry.id)).toEqual(['release-check']);
+    expect(workflowsMatching(FLOWS, 'Gate', []).map((entry) => entry.id)).toEqual([
+      'release-check',
+    ]);
+    expect(workflowsMatching(FLOWS, 'flow', []).map((entry) => entry.id)).toEqual(['review-flow']);
+    expect(workflowsMatching(FLOWS, 'xyz', [])).toEqual([]);
+  });
+
+  it('leaves out a workflow whose id is a Spark name, since @ that name goes to the Spark', () => {
+    const flows = [...FLOWS, flow('pip', 'Pip checks')];
+    const shown = workflowsMatching(flows, 'pi', [{ name: 'Pip' }]);
+    expect(shown).toEqual([]);
+    const longer = workflowsMatching([flow('pip-review', 'Pip review')], 'pi', [{ name: 'Pip' }]);
+    expect(longer.map((entry) => entry.id)).toEqual(['pip-review']);
   });
 });
