@@ -1,27 +1,44 @@
-import { reaskPercent, type CompactionThresholds } from '@spark-outpost/contracts';
+import { reaskPercent, type CompactionSettings } from '@spark-outpost/contracts';
 import { COMPACT_AGENT_WORKED, COMPACT_SELF_DROP } from '../advisor/policy.ts';
 import type { ContextReading } from '../persistence/provider-sessions.ts';
 
-export type CompactStep = 'none' | 'ask' | 'compact';
+export type NaturalBreak = 'plan-done' | 'pull-request';
+
+export type CompactTrigger = { kind: 'threshold' } | { kind: 'break'; why: NaturalBreak };
+
+export type CompactDecision =
+  { step: 'none' } | { step: 'ask' | 'compact'; trigger: CompactTrigger };
 
 export interface CompactFacts {
   reading: ContextReading | null;
   snoozed: boolean;
   cardPending: boolean;
-  thresholds: CompactionThresholds;
+  thresholds: CompactionSettings;
+  naturalBreak: NaturalBreak | null;
 }
+
+const NOTHING: CompactDecision = { step: 'none' };
 
 export function usedPercent(reading: ContextReading): number {
   if (reading.size <= 0) return 0;
   return Math.min(100, Math.round((reading.used / reading.size) * 100));
 }
 
-export function compactStep(facts: CompactFacts): CompactStep {
-  if (!facts.reading || facts.cardPending) return 'none';
+function breakTrigger(facts: CompactFacts, used: number): CompactTrigger | null {
+  const { compactAtBreak, warnPercent } = facts.thresholds;
+  if (!compactAtBreak || facts.snoozed || !facts.naturalBreak || used < warnPercent) return null;
+  return { kind: 'break', why: facts.naturalBreak };
+}
+
+export function compactStep(facts: CompactFacts): CompactDecision {
+  if (!facts.reading || facts.cardPending) return NOTHING;
   const { compactPercent, autoCompact } = facts.thresholds;
+  const used = usedPercent(facts.reading);
   const threshold = facts.snoozed ? reaskPercent(compactPercent) : compactPercent;
-  if (usedPercent(facts.reading) < threshold) return 'none';
-  return autoCompact ? 'compact' : 'ask';
+  const trigger: CompactTrigger | null =
+    used >= threshold ? { kind: 'threshold' } : breakTrigger(facts, used);
+  if (!trigger) return NOTHING;
+  return { step: autoCompact ? 'compact' : 'ask', trigger };
 }
 
 export function selfCompacted(

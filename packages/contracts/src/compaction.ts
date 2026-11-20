@@ -23,6 +23,10 @@ export interface CompactionThresholds {
   autoCompact: boolean;
 }
 
+export interface CompactionSettings extends CompactionThresholds {
+  compactAtBreak: boolean;
+}
+
 export const DEFAULT_COMPACTION_THRESHOLDS: CompactionThresholds = {
   warnPercent: COMPACT_WARN_DEFAULT,
   compactPercent: COMPACT_AT_DEFAULT,

@@ -22,6 +22,7 @@ export const NEW_PROFILE = {
   compactWarnPercent: 60,
   compactAtPercent: 80,
   autoCompact: true,
+  compactAtBreak: true,
   heartbeat: true,
   wideWindow: 'rail',
   busyEnter: 'queue',

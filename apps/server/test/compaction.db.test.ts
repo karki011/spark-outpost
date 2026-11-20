@@ -41,7 +41,8 @@ describe('compaction at Automatic', { timeout: 60_000 }, () => {
     const sessions = await sessionsOf(h, id);
     expect(sessions).toHaveLength(1);
     const prompts = promptsOf(h, sessions[0]!.session_id);
-    expect(prompts.at(-2)).toBe('/compact');
+    expect(prompts.at(-2)).toMatch(/^\/compact Write the summary as a handoff/);
+    expect(prompts.at(-2)).toContain('Your decisions');
     expect(prompts.at(-1)?.startsWith(`${AGENT_COMPACTED_NOTE}\n\nWhat was the word?`)).toBe(true);
     expect(await compactionsOf(h, id)).toEqual([
       expect.objectContaining({
