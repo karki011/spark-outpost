@@ -16,7 +16,7 @@ import {
   setScheduleChat,
   settleSlot,
   getSchedule,
-  workflowRunning,
+  scheduledRunGoing,
   type ClaimedSlot,
   type QuietSlot,
   type StoredSchedule,
@@ -55,7 +55,7 @@ async function startBlocker(
   if (projectId !== null && !(await projectLinked(client, deps.workspaceId, projectId))) {
     return { state: 'not_started', reason: 'project_gone', detail: null };
   }
-  if (await workflowRunning(client, deps.workspaceId, stored.workflowId)) {
+  if (await scheduledRunGoing(client, deps.workspaceId, stored.workflowId)) {
     return { state: 'skipped', reason: 'previous_running', detail: null };
   }
   return null;
