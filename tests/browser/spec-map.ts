@@ -202,6 +202,7 @@ export const SPEC_GROUPS = {
     'codemode-setting',
     'user-plugins',
     'settings-groups',
+    'settings-health',
     'settings-sheet',
     'settings-lists',
     'spark-assistant-settings',
