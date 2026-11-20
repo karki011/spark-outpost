@@ -239,7 +239,7 @@ export async function runAgentTurn(
   const observer = watchedSends(scannedObserver(audit, secretValues, observations.record), watch);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
   const replySoFar = () => ({
-    shown: reply.result().text,
+    shown: reply.text(),
     held: redaction.pending() + (titles?.pending() ?? 0),
   });
   const outputQuiet = createOutputQuiet();

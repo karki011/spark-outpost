@@ -31,13 +31,13 @@ About 2 minutes.
 
 **Stop background tasks** or **Stop waiting** ends **Waiting on 1 background agent** or Claude’s **Sleeping until 10:48**.
 
-Waits last 30 minutes, then **Continued on its own**.
+Agent waits stop at 30 minutes (**Continued on its own**).
 
 ## Queue messages
 
 Queues survive restarts; drafts stay in this browser.
 
-1. During a turn, **Enter** queues a message.
+1. **Enter** mid-turn queues a message.
 2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.
 3. While the agent waits, **Enter** sends now; the queue follows.
 4. Queued: **Edit**, **Move up**, **Move down**, **Remove**, **Send now**; **Retry** ones are read-only.

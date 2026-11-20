@@ -93,6 +93,17 @@ export function useHeadInView(store: StatusStore, id: string | null): boolean {
   );
 }
 
+export function useQuietPassed(quietSince: number | null): boolean {
+  const [passedFor, setPassedFor] = useState<number | null>(null);
+  useEffect(() => {
+    if (quietSince === null) return;
+    const wait = Math.max(0, quietSince + QUIET_MS - Date.now());
+    const timer = setTimeout(() => setPassedFor(quietSince), wait);
+    return () => clearTimeout(timer);
+  }, [quietSince]);
+  return quietSince !== null && passedFor === quietSince;
+}
+
 export function useNow(ticking: boolean): number {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {

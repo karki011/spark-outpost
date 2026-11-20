@@ -16,6 +16,7 @@ interface ReplyText {
   say(delta: string): Promise<void>;
   mark(phase: MessagePhase | undefined, held: number): boolean;
   noteAgent(output: Extract<ProviderOutput, { kind: 'text_delta' }>): void;
+  text(): string;
   result(): ReplyResult;
 }
 
@@ -54,6 +55,7 @@ export function createReplyText(append: (event: RunEvent) => Promise<unknown>): 
       const raw = output.newMessage ? output.delta.slice(MESSAGE_SEPARATOR.length) : output.delta;
       agentTexts.set(output.messageId, (agentTexts.get(output.messageId) ?? '') + raw);
     },
+    text: () => text,
     result: () => ({
       text,
       messageId,

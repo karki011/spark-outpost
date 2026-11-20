@@ -326,6 +326,18 @@ describe('while the agent works', () => {
     expect(status().querySelector('.cs-time')?.textContent).toBe('No output for 3m');
   });
 
+  it('announces once that the agent has gone quiet', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    act(() => view.store.report({ ...CLAUDE, working: true, step: null, outputSeq: 4 }));
+    const region = () => document.querySelector('.cstatus [role="status"]')?.textContent;
+    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    expect(region()).not.toContain('No output');
+    await act(() => vi.advanceTimersByTimeAsync(40_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(region()).toContain('No output for over a minute.');
+  });
+
   it('keeps the step clock while a long command runs without output', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
     const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });

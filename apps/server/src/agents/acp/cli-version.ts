@@ -1,3 +1,4 @@
+import { stat } from 'node:fs/promises';
 import { runCommand, type RunCommand } from '../../setup/command.ts';
 
 export const CLAUDE_MCP_STDIN_FROM = '2.1.326';
@@ -19,14 +20,25 @@ export function atLeast(version: string, minimum: string): boolean {
   return true;
 }
 
-export function cliVersion(path: string, run: RunCommand = runCommand): Promise<string | null> {
-  const known = versions.get(path);
+async function installedAt(path: string): Promise<string> {
+  return stat(path).then(
+    (found) => String(found.mtimeMs),
+    () => 'missing',
+  );
+}
+
+export async function cliVersion(
+  path: string,
+  run: RunCommand = runCommand,
+): Promise<string | null> {
+  const key = `${path}\0${await installedAt(path)}`;
+  const known = versions.get(key);
   if (known) return known;
   const found = run(path, ['--version'], VERSION_TIMEOUT_MS).then(
     (result) => (result.code === 0 ? (result.stdout.match(/\d+\.\d+\.\d+/)?.[0] ?? null) : null),
     () => null,
   );
-  versions.set(path, found);
+  versions.set(key, found);
   return found;
 }
 

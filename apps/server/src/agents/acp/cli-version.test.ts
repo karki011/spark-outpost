@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -43,6 +44,15 @@ describe('cliVersion', () => {
     expect(await cliVersion('/bin/codex-cached', run)).toBe('0.157.0');
     expect(await cliVersion('/bin/codex-cached', run)).toBe('0.157.0');
     expect(calls).toBe(1);
+  });
+
+  it('reads it again when the executable at that path is replaced', async () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'cli-version-')), 'claude');
+    writeFileSync(path, '');
+    utimesSync(path, 1_000, 1_000);
+    expect(await cliVersion(path, reporting('2.1.301 (Claude Code)\n'))).toBe('2.1.301');
+    utimesSync(path, 2_000, 2_000);
+    expect(await cliVersion(path, reporting('2.1.326 (Claude Code)\n'))).toBe('2.1.326');
   });
 
   it('is unknown when the command fails or prints nothing useful', async () => {
