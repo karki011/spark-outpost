@@ -49,6 +49,7 @@ const SWITCHES = {
   terminalApprove: false,
   notifications: false,
   notifyUpdates: false,
+  notifyAwayOnly: true,
   artifacts: false,
 };
 
