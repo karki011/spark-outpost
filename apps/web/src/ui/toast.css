@@ -12,6 +12,51 @@
   font-size: 13px;
 }
 
+.toast-stack {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  width: min(380px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.toast-stack .toasts {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.toast-stack .toasts:empty {
+  display: none;
+}
+
+.toasts .toast {
+  max-width: 100%;
+  margin: 0;
+  padding: 10px 16px 12px;
+  pointer-events: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.toasts .toast:active {
+  cursor: grabbing;
+}
+
+.toast-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
 .toast span {
   flex: 1;
   min-width: 0;
@@ -28,6 +73,7 @@
 
 .toast button {
   flex-shrink: 0;
+  min-width: max-content;
   white-space: nowrap;
   font-weight: 600;
   color: var(--panel);
@@ -38,6 +84,8 @@
 .toast .toast-timer {
   position: absolute;
   left: 0;
+  right: 0;
+  margin: 0 auto;
   bottom: 0;
   width: 100%;
   height: 2px;
@@ -64,12 +112,11 @@
 
 .toast.floating {
   position: fixed;
-  left: 50%;
-  bottom: 24px;
+  top: 12px;
+  right: 16px;
   z-index: 90;
-  width: min(420px, calc(100vw - 32px));
+  width: min(380px, calc(100vw - 32px));
   margin: 0;
   padding: 11px 14px 13px 16px;
-  translate: -50% 0;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
 }

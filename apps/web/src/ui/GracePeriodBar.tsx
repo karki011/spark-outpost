@@ -68,9 +68,9 @@ export function GracePeriodBar({
   return (
     <motion.div
       className="toast floating grace"
-      initial={{ opacity: 0, y: 12, scale: 0.96 }}
+      initial={{ opacity: 0, y: -12, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 8, transition: { ...reveal, duration: 0.15 } }}
+      exit={{ opacity: 0, y: -8, transition: { ...reveal, duration: 0.15 } }}
       transition={reveal}
     >
       <span className="sr-only" role="status">

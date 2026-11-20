@@ -239,15 +239,6 @@
   color: var(--muted);
 }
 
-.map-toasts {
-  position: absolute;
-  left: 50%;
-  bottom: 18px;
-  z-index: 20;
-  width: min(340px, calc(100% - 28px));
-  transform: translateX(-50%);
-}
-
 .map-ep-col {
   display: grid;
   flex: 1;

@@ -488,9 +488,7 @@ export function MapPage({ onOpenInChat, onOpenChat }: MapPageProps) {
             }}
           />
         )}
-        <div className="map-toasts">
-          <ToastHost toaster={toaster} />
-        </div>
+        <ToastHost toaster={toaster} />
       </div>
       {adder.flow}
     </main>

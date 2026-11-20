@@ -57,7 +57,7 @@ export const chip = (page: Page, handle: string) =>
   strip(page).getByRole('button', { name: new RegExp(`^@${handle}\\b`) });
 export const sheet = (page: Page, name: string) => page.getByRole('dialog', { name });
 export const toast = (page: Page, text: string) =>
-  sidebar(page).getByRole('status').filter({ hasText: text });
+  page.locator('.toast-stack').getByRole('status').filter({ hasText: text });
 
 export async function seeded(
   page: Page,

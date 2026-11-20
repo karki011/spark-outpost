@@ -12,8 +12,7 @@ test.beforeEach(async () => {
 const sidebar = (page: Page) => page.getByRole('navigation', { name: 'Chats' });
 const row = (page: Page, title: string) =>
   sidebar(page).getByRole('listitem').filter({ hasText: title });
-const toast = (page: Page, text: string) =>
-  sidebar(page).getByRole('status').filter({ hasText: text });
+const toast = (page: Page, text: string) => page.getByRole('status').filter({ hasText: text });
 
 async function deleteChat(page: Page, title: string) {
   await row(page, title).hover();

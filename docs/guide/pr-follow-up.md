@@ -13,8 +13,8 @@ You'll let Spark handle checks and reviews on a chat's PRs. About 2 minutes.
 
    ![The opened PR row, with the items Spark gathered](images/pr-follow-up-row-light.png)
 
-3. When checks fail, feedback arrives or the PR falls behind, Spark messages the chat once idle as one **PR follow-up** row, folded unless it fails, needs you or has your message.
-4. The agent fixes or pushes back, merges the base if needed and pushes; Spark replies.
+3. When checks fail, feedback arrives or the PR falls behind, Spark messages the chat once idle, as a **PR #7 · round 1** card. Your message opens **Agent steps**.
+4. The agent fixes or pushes back, merges the base if needed and pushes; Spark replies. Read its summary.
 
 To approve pushes, turn on **Ask before pushing and replying** in **Settings → GitHub**.
 

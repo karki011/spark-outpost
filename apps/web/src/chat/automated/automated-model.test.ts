@@ -1,26 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { Approval, Run, RoundOutcome } from '@spark-outpost/contracts';
-import { RUN, watch } from '../pull-request/watch-fixture.ts';
-import {
-  isAutomatedTurn,
-  opensOnItsOwn,
-  roundHeadline,
-  sentForDisplay,
-  waitsOnYou,
-} from './automated-model.ts';
+import type { Approval, Run } from '@spark-outpost/contracts';
+import { RUN } from '../pull-request/watch-fixture.ts';
+import { isAutomatedTurn, opensOnItsOwn, sentForDisplay, waitsOnYou } from './automated-model.ts';
 
 const run = (fields: Partial<Run>) => ({ id: RUN, ...fields }) as Run;
-const outcome: RoundOutcome = {
-  runId: RUN,
-  round: 3,
-  ended: 'settled',
-  pushed: true,
-  merged: false,
-  replied: 2,
-  rerequested: false,
-  needs: 0,
-  unpushed: false,
-};
 
 describe('which turns fold into one row', () => {
   it('folds every PR follow-up round', () => {
@@ -30,22 +13,6 @@ describe('which turns fold into one row', () => {
   it('keeps typed turns and workflow turns, which have their own card', () => {
     expect(isAutomatedTurn(run({ typedByUser: true }))).toBe(false);
     expect(isAutomatedTurn(run({ workflowStarted: true }))).toBe(false);
-  });
-});
-
-describe('the row headline', () => {
-  const message = 'Spark: 2 review items arrived on PR #7, so I asked this chat to look. More.';
-
-  it('says why a round started while it works', () => {
-    expect(roundHeadline(null, message, 'running')).toBe(
-      '2 review items arrived on PR #7 · Working',
-    );
-  });
-
-  it('says what the round did once it settles', () => {
-    expect(roundHeadline({ key: 'k', watch: watch(), outcome }, message, 'succeeded')).toBe(
-      'PR #7 · round 3 · Replied to 2 comments, pushed a fix',
-    );
   });
 });
 

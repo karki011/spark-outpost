@@ -151,7 +151,6 @@ export const TurnSection = memo(function TurnSection({
       ))}
       {automated ? (
         <AutomatedTurn run={run} detail={detail} message={userMessage?.content ?? ''}>
-          {userMessage?.content && <SentBySpark text={userMessage.content} />}
           {work}
         </AutomatedTurn>
       ) : (

@@ -125,7 +125,7 @@ test('Dismiss clears a Needs you row by keyboard and Undo brings it back', async
   await expect(views(page).getByRole('button', { name: /^Snoozed/ })).toHaveCount(0);
   await expect(detail).not.toContainText('Why it needs attention');
   await expect(rail(page).getByLabel('1 ticket needs attention')).toBeVisible();
-  const toast = main(page).getByRole('status').filter({ hasText: 'Dismissed API-81' });
+  const toast = page.getByRole('status').filter({ hasText: 'Dismissed API-81' });
   await expect(toast).toContainText('It comes back if something changes.');
 
   await toast.getByRole('button', { name: 'Undo' }).click();
@@ -171,7 +171,7 @@ test('Dismiss drops the rail count at once and leaves the other rows mounted', a
   expect(await sibling.evaluate((node) => node.isConnected)).toBe(true);
 
   release();
-  const toast = main(page).getByRole('status').filter({ hasText: 'Dismissed API-81' });
+  const toast = page.getByRole('status').filter({ hasText: 'Dismissed API-81' });
   await expect(toast).toBeVisible();
   await expect(rail(page).getByLabel('1 ticket needs attention')).toBeVisible();
   expect(await sibling.evaluate((node) => (node as { kept?: boolean }).kept)).toBe(true);

@@ -114,7 +114,7 @@ test('search covers every ticket and Assign to me confirms before taking one', a
 
   await row(page, 'WEB-440').hover();
   await page.getByRole('button', { name: 'Assign WEB-440 to me' }).click();
-  const toasts = page.locator('.tk-toasts');
+  const toasts = page.locator('.toast-stack');
   await expect(toasts.getByText('Assigned WEB-440 to you in Linear.')).toBeVisible();
   await expect(section(page, 'Assigned to you')).toContainText('WEB-440');
   await toasts.getByRole('button', { name: 'Undo' }).click();

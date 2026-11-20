@@ -32,9 +32,9 @@ function Notice({ text, onDismiss }: { text: string; onDismiss: () => void }) {
     <motion.div
       className="toast floating"
       role="alert"
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: -12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 8 }}
+      exit={{ opacity: 0, y: -8 }}
       transition={reveal}
     >
       <span>{text}</span>
