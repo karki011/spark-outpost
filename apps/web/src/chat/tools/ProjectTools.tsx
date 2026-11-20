@@ -4,7 +4,7 @@ import { SetupSwitch } from '../project/SetupCard.tsx';
 import { useAgentConfig, useAgentConfigChange } from '../project/use-agent-config.ts';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
-import { ToolsGroupFrame, ToolText, useRailGroups } from './ToolsGroupFrame.tsx';
+import { RailOffWord, ToolsGroupFrame, ToolText, useRailGroups } from './ToolsGroupFrame.tsx';
 
 const PARTS: readonly { key: AgentConfigSwitch; title: string }[] = [
   { key: 'skills', title: 'Skills' },
@@ -63,6 +63,7 @@ function RepoParts({ project }: { project: Project }) {
           return (
             <li key={key}>
               <ToolText name={`${title} ${names.length}`} note={line} full={names.join(', ')} />
+              <RailOffWord checked={data.settings[key]} />
               <SetupSwitch
                 label={`${key === 'instructions' ? 'Follow' : 'Use'} ${key} from ${project.name}`}
                 checked={data.settings[key]}
