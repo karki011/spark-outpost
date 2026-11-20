@@ -31,7 +31,7 @@ export interface PlaceCommit {
 }
 
 export interface LandedCommits {
-  since: 'last_run' | 'recent';
+  since: 'last_run' | 'date' | 'recent';
   commits: readonly PlaceCommit[];
 }
 
@@ -42,6 +42,7 @@ export interface StepPlace {
   project: string | null;
   branch: string | null;
   base: string | null;
+  filesBase: string | null;
   files: readonly PlaceFile[] | null;
   pull: { number: number; title: string | null } | null;
   landed: LandedCommits | null;
@@ -101,13 +102,16 @@ function fileLines(files: readonly PlaceFile[], base: string | null): string[] {
   ];
 }
 
+const LANDED_WHEN: Record<LandedCommits['since'], string> = {
+  last_run: 'since the last successful scheduled run',
+  date: 'committed after the last successful scheduled run started (picked by commit date, so a rebased or cherry-picked commit may be missing or listed again)',
+  recent: `most recent first, up to ${PLACE_COMMITS_MAX}, since there is no earlier successful scheduled run`,
+};
+
 function landedLines(landed: LandedCommits, base: string | null): string[] {
   const on = base ? `on ${value(base)}` : 'on the base branch';
   const commits = landed.commits.slice(0, PLACE_COMMITS_MAX);
-  const when =
-    landed.since === 'last_run'
-      ? 'since the last successful scheduled run'
-      : `most recent first, up to ${PLACE_COMMITS_MAX}, since there is no earlier successful scheduled run`;
+  const when = LANDED_WHEN[landed.since];
   if (commits.length === 0) return [`Commits ${on} ${when}: none.`];
   return [
     `Commits ${on} ${when} (${commits.length}):`,
@@ -134,7 +138,7 @@ function dataLines(place: StepPlace): string[] {
     const title = place.pull.title ? ` ${value(place.pull.title)}` : '';
     lines.push(`This chat’s open pull request: #${place.pull.number}${title}`);
   }
-  if (place.files) lines.push(...fileLines(place.files, place.base));
+  if (place.files) lines.push(...fileLines(place.files, place.filesBase));
   if (place.landed) lines.push(...landedLines(place.landed, place.base));
   return lines;
 }

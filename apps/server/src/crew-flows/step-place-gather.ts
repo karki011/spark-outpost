@@ -4,18 +4,16 @@ import { chatWorktreeAt, type ChatWorktree } from '../persistence/chat-worktrees
 import type { Queryable } from '../persistence/db.ts';
 import { checkedOut } from '../pr-tracking/chat-repos.ts';
 import { parseNumstatZ } from '../projects/change-list.ts';
-import { defaultBranch, fetchBranch } from '../projects/chat-worktrees.ts';
+import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { originOf } from '../projects/repo-scan.ts';
 import { git, isGitWorkTree } from '../projects/snapshot.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import type { TurnWorkflowRun } from './run-records.ts';
+import { landedCommits } from './step-place-landed.ts';
 import {
-  PLACE_COMMITS_MAX,
   isScheduled,
   startedBy,
   stepPlaceBlock,
-  type LandedCommits,
-  type PlaceCommit,
   type PlaceFile,
   type StepPlace,
 } from './step-place.ts';
@@ -46,7 +44,7 @@ async function forkPoint(root: string, ref: string | null, record: ChatWorktree 
 }
 
 async function changedFiles(root: string, from: string | null): Promise<PlaceFile[]> {
-  const diff = from ? await git(root, ['diff', '--numstat', '--no-renames', '-z', from]) : '';
+  const diff = await git(root, ['diff', '--numstat', '--no-renames', '-z', from ?? 'HEAD']);
   const tracked = [...parseNumstatZ(diff)].map(([file, counts]) => ({
     path: file,
     ...counts,
@@ -71,52 +69,6 @@ async function openPull(db: Queryable, run: TurnWorkflowRun, branch: string | nu
   return rows[0] ?? null;
 }
 
-async function lastScheduledSuccess(
-  db: Queryable,
-  workspaceId: string,
-  run: TurnWorkflowRun,
-): Promise<Date | null> {
-  const { rows } = await db.query<{ started_at: Date }>(
-    `SELECT started_at FROM workflow_runs
-     WHERE workspace_id = $1 AND workflow_id = $2 AND id <> $3 AND kind = 'run'
-       AND source IN ('schedule', 'catch_up') AND status = 'succeeded'
-     ORDER BY started_at DESC LIMIT 1`,
-    [workspaceId, run.workflow.id, run.run.id],
-  );
-  return rows[0]?.started_at ?? null;
-}
-
-function parseLog(output: string): PlaceCommit[] {
-  return output
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => {
-      const [sha = '', subject = ''] = line.split('\x1f');
-      return { sha, subject };
-    });
-}
-
-async function landedCommits(
-  root: string,
-  base: string | null,
-  since: Date | null,
-): Promise<LandedCommits | null> {
-  if (!base) return null;
-  await fetchBranch(root, `origin/${base}`);
-  const ref = await firstRef(root, [`refs/remotes/origin/${base}`, `refs/heads/${base}`]);
-  if (!ref) return null;
-  const window = since ? [`--since=${since.toISOString()}`] : [];
-  const log = await git(root, [
-    'log',
-    `-n${PLACE_COMMITS_MAX}`,
-    '--no-color',
-    '--format=%h%x1f%s',
-    ...window,
-    ref,
-  ]);
-  return { since: since ? 'last_run' : 'recent', commits: parseLog(log) };
-}
-
 interface PlaceAsk {
   db: Queryable;
   input: RunInput;
@@ -135,17 +87,25 @@ async function gitPlace(ask: PlaceAsk, root: string, base: Omit<StepPlace, 'proj
     baseName ? `refs/heads/${baseName}` : null,
   ]);
   const from = await forkPoint(root, ref, record);
-  const since = base.scheduled
-    ? await maybe(() => lastScheduledSuccess(ask.db, ask.input.workspaceId, ask.turn))
-    : null;
   return {
     ...base,
     project,
     branch,
     base: baseName,
+    filesBase: from ? baseName : null,
     files: await maybe(() => changedFiles(root, from)),
     pull: await maybe(() => openPull(ask.db, ask.turn, branch)),
-    landed: base.scheduled ? await maybe(() => landedCommits(root, baseName, since)) : null,
+    landed: base.scheduled
+      ? await maybe(() =>
+          landedCommits({
+            db: ask.db,
+            workspaceId: ask.input.workspaceId,
+            turn: ask.turn,
+            root,
+            base: baseName,
+          }),
+        )
+      : null,
   };
 }
 
@@ -159,6 +119,7 @@ async function gatherStepPlace(ask: PlaceAsk): Promise<StepPlace | null> {
     scheduled: isScheduled(turn.run.source),
     branch: null,
     base: null,
+    filesBase: null,
     files: null,
     pull: null,
     landed: null,

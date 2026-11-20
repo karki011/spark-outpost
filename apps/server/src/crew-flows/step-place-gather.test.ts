@@ -116,6 +116,68 @@ describe('stepPlaceFor', () => {
     }
   });
 
+  it('compares with the last commit when no base branch can be found', async () => {
+    git('branch', '-m', 'main', 'develop');
+    await writeFile(path.join(root, 'a.ts'), 'edited\n');
+    await writeFile(path.join(root, 'b.ts'), 'staged\n');
+    git('add', 'b.ts');
+
+    const block = (await stepPlaceFor({ db: noRows, input: input([root]), turn: turn() }))!;
+
+    expect(block).toContain('Branch: develop\n');
+    expect(block).toContain('Changed files compared with the last commit, uncommitted ones');
+    expect(block).toContain('- a.ts (+1 -1)');
+    expect(block).toContain('- b.ts (+1 -0)');
+  });
+
+  it('drops the file list rather than claim none when there is no commit yet', async () => {
+    const fresh = await realpath(await mkdtemp(path.join(tmpdir(), 'spark-step-unborn-')));
+    try {
+      gitIn(fresh, 'init', '-q', '-b', 'main');
+      await writeFile(path.join(fresh, 'a.ts'), 'one\n');
+      gitIn(fresh, 'add', '.');
+
+      const block = (await stepPlaceFor({ db: noRows, input: input([fresh]), turn: turn() }))!;
+
+      expect(block).toContain('Branch: main');
+      expect(block).not.toContain('Changed files');
+    } finally {
+      await rm(fresh, { recursive: true, force: true });
+    }
+  });
+
+  it('lists commits since the base head the last scheduled run recorded, and records this one', async () => {
+    const recorded = git('rev-parse', 'HEAD');
+    await writeFile(path.join(root, 'a.ts'), 'two\n');
+    git('commit', '-q', '-am', 'After the last run');
+    const head = git('rev-parse', 'HEAD');
+    const writes: unknown[][] = [];
+    const db = {
+      query: async (sql: string, params: unknown[]) => {
+        if (sql.startsWith('UPDATE')) writes.push(params);
+        return { rows: [{ started_at: new Date(Date.now() + 3_600_000), base_head: recorded }] };
+      },
+    } as unknown as Queryable;
+
+    const block = (await stepPlaceFor({ db, input: input([root]), turn: turn('schedule') }))!;
+
+    expect(block).toContain('Commits on main since the last successful scheduled run (1):');
+    expect(block).toMatch(/- [0-9a-f]{7,} After the last run/);
+    expect(block).not.toContain(' Start');
+    expect(writes).toContainEqual(['r1', head]);
+  });
+
+  it('falls back to commit dates, and says so, when the last run recorded no base head', async () => {
+    const db = {
+      query: async () => ({ rows: [{ started_at: new Date(0), base_head: null }] }),
+    } as unknown as Queryable;
+
+    const block = (await stepPlaceFor({ db, input: input([root]), turn: turn('schedule') }))!;
+
+    expect(block).toContain('picked by commit date');
+    expect(block).toMatch(/- [0-9a-f]{7,} Start/);
+  });
+
   it('omits what it cannot read and still gives the rest', async () => {
     const block = (await stepPlaceFor({
       db: failing,

@@ -25,6 +25,7 @@ const chatRun: StepPlace = {
   project: 'acme/app',
   branch: 'spark/fix-dates',
   base: 'main',
+  filesBase: 'main',
   files: [
     file('src/dates.ts', 12, 3),
     { path: 'notes.md', added: null, removed: null, untracked: true },
@@ -87,6 +88,24 @@ describe('stepPlaceBlock', () => {
 
     expect(block).toContain('since there is no earlier successful scheduled run: none.');
     expect(block).toContain('up to 20');
+  });
+
+  it('warns when landed commits could only be picked by commit date', () => {
+    const block = stepPlaceBlock({
+      ...chatRun,
+      scheduled: true,
+      landed: { since: 'date', commits: [{ sha: 'abc1234', subject: 'Add retries' }] },
+    })!;
+
+    expect(block).toContain('picked by commit date');
+    expect(block).toContain('- abc1234 Add retries');
+  });
+
+  it('says the files are against the last commit when no base was found', () => {
+    const block = stepPlaceBlock({ ...chatRun, filesBase: null })!;
+
+    expect(block).toContain('Changed files compared with the last commit, uncommitted ones');
+    expect(block).toContain('Branch: spark/fix-dates, compared with main');
   });
 
   it('marks a test run as the throw-away copy', () => {
