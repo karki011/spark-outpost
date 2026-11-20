@@ -4,6 +4,7 @@ import { SetupSwitch } from '../project/SetupCard.tsx';
 import { useAgentConfig, useAgentConfigChange } from '../project/use-agent-config.ts';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
+import { RailOffWord, ToolsGroupFrame, ToolText, useRailGroups } from './ToolsGroupFrame.tsx';
 
 const PARTS: readonly { key: AgentConfigSwitch; title: string }[] = [
   { key: 'skills', title: 'Skills' },
@@ -29,33 +30,40 @@ function RepoParts({ project }: { project: Project }) {
   const config = useAgentConfig(project.id);
   const change = useAgentConfigChange(project.id);
   const { allows } = useRemoteClient();
+  const rail = useRailGroups();
+  const frame = {
+    groupKey: `project:${project.id}`,
+    kind: 'project',
+    title: project.name,
+    scope: 'this project',
+  } as const;
   if (!config.data) {
-    return (
+    const wait = (
       <QueryWait query={config} what={`agent setup for ${project.name}`}>
         <Skeleton label={`Loading agent setup for ${project.name}`} shape="list" rows={2} />
       </QueryWait>
+    );
+    if (!rail) return wait;
+    return (
+      <ToolsGroupFrame {...frame} summary={null}>
+        {wait}
+      </ToolsGroupFrame>
     );
   }
   const data = config.data;
   const parts = PARTS.filter(({ key }) => partNames(data, key).length > 0);
   if (parts.length === 0) return null;
+  const on = parts.filter(({ key }) => data.settings[key]).length;
   return (
-    <div className="tools-group">
-      <h4 className="tools-sub">
-        {project.name} <span>this project</span>
-      </h4>
+    <ToolsGroupFrame {...frame} summary={`${on} of ${parts.length} on`}>
       <ul aria-label={`Agent setup for ${project.name}`}>
         {parts.map(({ key, title }) => {
           const names = partNames(data, key);
           const line = namesLine(names);
           return (
             <li key={key}>
-              <span className="mcppop-text">
-                <code>
-                  {title} {names.length}
-                </code>
-                <small title={names.join(', ')}>{line}</small>
-              </span>
+              <ToolText name={`${title} ${names.length}`} note={line} full={names.join(', ')} />
+              <RailOffWord checked={data.settings[key]} />
               <SetupSwitch
                 label={`${key === 'instructions' ? 'Follow' : 'Use'} ${key} from ${project.name}`}
                 checked={data.settings[key]}
@@ -73,7 +81,7 @@ function RepoParts({ project }: { project: Project }) {
           {change.error.message}
         </p>
       )}
-    </div>
+    </ToolsGroupFrame>
   );
 }
 

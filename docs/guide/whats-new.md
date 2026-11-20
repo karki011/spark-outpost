@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                   | What to do                                               |
 | ---------------------------------------------- | -------------------------------------------------------- |
 | **A chat starts** trigger                      | [Triggers](workflow-triggers.md#the-events).             |
+| Context rail: one line per row                 | [Read the rows](context-rail.md#read-the-rows).          |
 | **Stopped** steps; **No output for 2m**        | [Follow a turn](follow-a-turn.md).                       |
 | Meeting card shows every button on one row     | Nothing to do.                                           |
 | **Health** in Settings                         | [Check Health](trouble-setup-and-reset.md#check-health). |
@@ -60,4 +61,3 @@ summary: What changed in recent releases and what to do next.
 | Context rail: tools, ports, floats        | [See a chat's context](context-rail.md).                              |
 | Build Sparks with an agent; Spark effort  | [Build with an agent](build-with-an-agent.md).                        |
 | Workflows: run view, Runs, `@id` fix      | [Follow a workflow run](workflow-runs.md).                            |
-| Test run and Try it: nothing is sent      | [Do a test run](test-run.md).                                         |
