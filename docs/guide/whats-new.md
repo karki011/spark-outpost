@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                   | What to do                                                 |
 | ---------------------------------------------- | ---------------------------------------------------------- |
 | Mid-turn mode switches                         | [Modes](modes-and-levels.md#what-spark-does-in-each-mode). |
+| **A chat starts** trigger                      | [Triggers](workflow-triggers.md#the-events).               |
 | Pushes wait while you use the Mac              | [Use your phone](use-your-phone.md).                       |
 | Context rail: one line per row                 | [Read the rows](context-rail.md#read-the-rows).            |
 | **Stopped** steps; **No output for 2m**        | [Follow a turn](follow-a-turn.md).                         |
@@ -61,4 +62,3 @@ summary: What changed in recent releases and what to do next.
 | Agents do much more in Jira               | [Jira tools](jira-tools.md).                                          |
 | Context rail: tools, ports, floats        | [See a chat's context](context-rail.md).                              |
 | Build Sparks with an agent; Spark effort  | [Build with an agent](build-with-an-agent.md).                        |
-| Workflows: run view, Runs, `@id` fix      | [Follow a workflow run](workflow-runs.md).                            |

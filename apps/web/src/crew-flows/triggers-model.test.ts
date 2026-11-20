@@ -32,6 +32,9 @@ describe('triggersSummary', () => {
     expect(triggersSummary({ ...defaultTriggers(), turnChanged: true, commit: true })).toBe(
       'On · runs when a turn changes files, a new commit',
     );
+    expect(triggersSummary({ ...defaultTriggers(), chatStarted: true })).toBe(
+      'On · runs when a chat starts',
+    );
   });
 });
 
