@@ -83,7 +83,7 @@ test('groups the switches by risk and keeps each count current', async ({ page }
   await expect(everyday).toContainText('All off');
   await expect(everyday.getByRole('switch')).toHaveCount(0);
   for (const name of ['Everyday', 'Set up work', 'High risk']) await expand(region, name);
-  await expect(everyday.getByRole('switch')).toHaveCount(4);
+  await expect(everyday.getByRole('switch')).toHaveCount(5);
   await expect(setup.getByRole('switch')).toHaveCount(4);
   await expect(risky.getByRole('switch')).toHaveCount(4);
   await expect(everyday).toContainText('All off');

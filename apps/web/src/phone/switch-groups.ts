@@ -14,6 +14,9 @@ export const MAC_ONLY_LINE =
 export const NOTIFY_UPDATES_NOTE =
   'Sends only the chat title and "Finished" or "Failed". Works only while "Notify when a chat needs you" is on.';
 
+export const NOTIFY_AWAY_ONLY_NOTE =
+  'Holds alerts while you used the keyboard or mouse in the last 2 minutes and the screen is unlocked, then sends what is still unread when you step away. Needs the Mac app.';
+
 export const SHOWN_SWITCHES = (Object.keys(REMOTE_SWITCH_LABELS) as RemoteSwitch[]).filter(
   (id) => !REMOTE_MAC_ONLY_SWITCHES.includes(id) && !REMOTE_SIGN_IN_SWITCHES.includes(id),
 );
@@ -29,17 +32,20 @@ export function shownGroups(): ShownGroup[] {
   })).filter((group) => group.switches.length > 0);
 }
 
+const PREFERENCES: readonly RemoteSwitch[] = ['notifyAwayOnly'];
+
 export function groupCount(ids: readonly RemoteSwitch[], switches: RemoteSwitches): string {
-  const on = ids.filter((id) => switches[id]).length;
+  const counted = ids.filter((id) => !PREFERENCES.includes(id));
+  const on = counted.filter((id) => switches[id]).length;
   if (on === 0) return 'All off';
-  if (on === ids.length) return 'All on';
-  return `${on} of ${ids.length} on`;
+  if (on === counted.length) return 'All on';
+  return `${on} of ${counted.length} on`;
 }
 
 export function labelsByState(switches: RemoteSwitches): { allowed: string[]; off: string[] } {
   const allowed: string[] = [];
   const off: string[] = [];
-  for (const id of SHOWN_SWITCHES) {
+  for (const id of SHOWN_SWITCHES.filter((shown) => !PREFERENCES.includes(shown))) {
     (switches[id] ? allowed : off).push(REMOTE_SWITCH_LABELS[id]);
   }
   return { allowed, off };
