@@ -34,19 +34,33 @@ async function finishPlan(runId: string, status = 'completed') {
   await h.t.db.query('UPDATE runs SET todo = $2 WHERE id = $1', [runId, JSON.stringify(todo)]);
 }
 
-async function openPullRequest(conversationId: string, runId: string) {
+async function chatTask(conversationId: string): Promise<string> {
   const taskId = randomUUID();
   await h.t.db.query('INSERT INTO tasks (id, conversation_id, title) VALUES ($1, $2, $3)', [
     taskId,
     conversationId,
     'Parser',
   ]);
+  return taskId;
+}
+
+async function mentionPullRequest(conversationId: string, runId: string) {
   await h.t.db.query(
     `INSERT INTO task_links (id, task_id, kind, url, title, source, created_at)
-     SELECT $1, $2, 'pr', 'https://github.com/acme/app/pull/7', 'acme/app#7', 'tool_output',
+     SELECT $1, $2, 'pr', 'https://github.com/acme/app/pull/9', 'acme/app#9', 'agent_text',
        r.created_at + interval '1 millisecond'
      FROM runs r WHERE r.id = $3`,
-    [randomUUID(), taskId, runId],
+    [randomUUID(), await chatTask(conversationId), runId],
+  );
+}
+
+async function openPullRequest(conversationId: string, runId: string) {
+  await h.t.db.query(
+    `INSERT INTO pr_watches (id, workspace_id, conversation_id, task_id, host, owner, repo,
+       number, url, branch, opened_via, opened_run_id)
+     VALUES ($1, $2, $3, $4, 'github.com', 'acme', 'app', 7,
+       'https://github.com/acme/app/pull/7', 'spark/parser', 'agent', $5)`,
+    [randomUUID(), h.t.workspaceId, conversationId, await chatTask(conversationId), runId],
   );
 }
 
@@ -77,6 +91,18 @@ describe('compaction at a natural break', { timeout: 60_000 }, () => {
     expect(next.steps).toContain(
       'Context compacted at a natural break: the last turn opened a pull request (70% full)',
     );
+  });
+
+  it('does not count a pull request the agent only mentioned', async () => {
+    h = await startCompactionHarness(['compact']);
+    const id = await newChat(h, 'hands-off');
+    const done = await say(h, id, 'Look at that PR #ctx70');
+    await mentionPullRequest(id, done.run.id);
+
+    const next = await say(h, id, 'Next task');
+
+    expect(next.steps.some((step) => step.includes('ompact'))).toBe(false);
+    expect(await compactionsOf(h, id)).toEqual([]);
   });
 
   it('leaves the chat alone mid-plan, below the warning point, or with the setting off', async () => {

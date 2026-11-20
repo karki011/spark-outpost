@@ -26,7 +26,7 @@ export async function naturalBreak(
 ): Promise<NaturalBreak | null> {
   const { rows } = await db.query<PreviousTurn>(
     `WITH previous AS (
-       SELECT r.status, r.todo, r.created_at, COALESCE(r.finished_at, now()) AS ended_at
+       SELECT r.id, r.status, r.todo, r.created_at, COALESCE(r.finished_at, now()) AS ended_at
        FROM runs r
        WHERE r.conversation_id = $1 AND r.parent_run_id IS NULL AND r.id <> $2
          AND r.created_at < (SELECT created_at FROM runs WHERE id = $2)
@@ -34,9 +34,9 @@ export async function naturalBreak(
      )
      SELECT p.status, p.todo,
        EXISTS (
-         SELECT 1 FROM task_links tl JOIN tasks t ON t.id = tl.task_id
-         WHERE t.conversation_id = $1 AND tl.kind = 'pr'
-           AND tl.created_at BETWEEN p.created_at AND p.ended_at
+         SELECT 1 FROM pr_watches w
+         WHERE w.conversation_id = $1 AND w.opened_via IN ('ship', 'agent')
+           AND (w.opened_run_id = p.id OR w.created_at BETWEEN p.created_at AND p.ended_at)
        ) AS pull_request
      FROM previous p`,
     [input.identity.threadId, input.identity.runId],
