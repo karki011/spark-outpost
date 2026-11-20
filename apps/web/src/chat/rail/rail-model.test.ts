@@ -45,7 +45,18 @@ describe('railRows', () => {
       detail: 'Choose project',
       action: { kind: 'project' },
     });
-    expect(rows[1]).toMatchObject({ text: 'Claude · Opus 5.5', detail: 'Plan', action: null });
+    expect(rows[1]).toMatchObject({ text: 'Opus 5.5', detail: 'Plan', action: null });
+  });
+
+  it('shows the model and a short mode, with the provider kept in the label', () => {
+    const agent = railRows({ ...base, mode: 'Bypass permissions' })[1];
+    expect(agent).toMatchObject({
+      text: 'Opus 5.5',
+      detail: 'Bypass',
+      label: 'Agent Claude · Opus 5.5, Bypass permissions',
+    });
+    expect(railRows({ ...base, mode: 'Workspace access' })[1]?.detail).toBe('Workspace access');
+    expect(railRows({ ...base, model: null })[1]?.text).toBe('Claude');
   });
 
   it('names the mode of a linked chat', () => {
@@ -61,9 +72,19 @@ describe('railRows', () => {
     });
     expect(project).toMatchObject({
       text: 'acme-web +1',
-      detail: 'spark/fix-dates · worktree',
-      onBranch: true,
+      detail: 'spark/fix-dates',
+      label: 'Project acme-web +1, spark/fix-dates · worktree',
     });
+  });
+
+  it('counts the instruction files followed and names the first', () => {
+    const rows = railRows({ ...base, following: ['CLAUDE.md', 'AGENTS.md'] });
+    expect(rows.find((row) => row.id === 'following')).toMatchObject({
+      text: 'Following 2',
+      detail: 'CLAUDE.md',
+      label: 'Following: CLAUDE.md, AGENTS.md',
+    });
+    expect(ids({ ...base, following: [] })).not.toContain('following');
   });
 
   it('shows Spark autonomy with the user-facing names and opens its setting', () => {
@@ -81,7 +102,7 @@ describe('railRows', () => {
       changes: { files: 3, added: 120, removed: 8 },
     });
     expect(rows.find((row) => row.id === 'changes')).toMatchObject({
-      text: '3 files changed',
+      text: '3 files',
       counts: { added: 120, removed: 8 },
       action: { kind: 'changes' },
     });
@@ -101,14 +122,12 @@ describe('railRows', () => {
         checks: 'failing',
       },
     });
-    expect(rows.find((row) => row.id === 'checks')).toMatchObject({
-      text: 'Checks failing',
-      tone: 'bad',
-      action: { kind: 'tab', tab: 'links' },
-    });
+    expect(rows.map((row) => row.id)).toEqual(['project', 'agent', 'pr']);
     expect(rows.find((row) => row.id === 'pr')).toMatchObject({
       text: 'PR #7',
-      detail: 'Draft',
+      detail: 'Checks failing',
+      tone: 'bad',
+      label: 'Pull request acme/widgets#7, Draft, checks failing. Opens on GitHub',
       action: { kind: 'link', href: 'https://github.com/acme/widgets/pull/7' },
     });
   });
@@ -126,21 +145,30 @@ describe('railRows', () => {
       railRows({ ...base, hasTask, watch, pulls: 3 }).find((entry) => entry.id === 'pr');
     expect(row(true)).toMatchObject({
       text: '3 pull requests',
-      detail: '#8 Open',
-      label: '3 pull requests. acme/widgets#8 is open',
+      detail: '#8 Open · failing',
+      label: '3 pull requests. acme/widgets#8 is open, checks failing',
+      tone: 'bad',
       action: { kind: 'tab', tab: 'links' },
     });
     expect(row(false)!.action).toEqual({ kind: 'link', href: watch.url });
+    const quiet = railRows({ ...base, watch: { ...watch, checks: 'none' }, pulls: 3 });
+    expect(quiet.find((entry) => entry.id === 'pr')!.detail).toBe('#8 Open');
   });
 
-  it('sums tokens, cost and context, and opens Cost only when there is a task', () => {
+  it('shows cost and context, keeps tokens in the label, and opens Cost only with a task', () => {
     const usage = { ...EMPTY_CONVERSATION_USAGE, totalTokens: 12_400, costUsd: 0.08 };
     const row = railRows({ ...base, usage, contextPercent: 23, hasTask: true }).at(-1);
     expect(row).toMatchObject({
       id: 'usage',
-      text: '12.4K tokens · $0.08',
+      text: '$0.08',
       detail: '23% context',
+      label: '12.4K tokens · $0.08, 23% context',
       action: { kind: 'tab', tab: 'cost' },
+    });
+    const free = { ...usage, costUsd: null };
+    expect(railRows({ ...base, usage: free }).at(-1)).toMatchObject({
+      text: '12.4K tokens',
+      detail: null,
     });
     expect(railRows({ ...base, usage, contextPercent: 23 }).at(-1)?.action).toBeNull();
     expect(railRows({ ...base, contextPercent: 5 }).at(-1)).toMatchObject({

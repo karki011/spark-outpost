@@ -34,9 +34,7 @@ export function RailPorts({ chatId }: { chatId: string }) {
             <span className="crail-ico" aria-hidden="true">
               <GlobeIcon />
             </span>
-            <span className="crail-text">
-              <span className="crail-main">localhost:{port}</span>
-            </span>
+            <span className="crail-main">localhost:{port}</span>
           </button>
         </li>
       ))}

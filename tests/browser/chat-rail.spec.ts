@@ -79,8 +79,8 @@ test.describe('plain chats', () => {
     await expect(workPanel(page)).toBeHidden();
     const rows = rail(page).getByRole('list', { name: 'This chat' });
     await expect(rows.getByRole('button', { name: 'Not linked. Choose project' })).toBeVisible();
-    await expect(rows).toContainText('Claude · Opus 5.5');
-    await expect(rows).toContainText('tokens');
+    await expect(rows.locator('[data-row="agent"] .crail-main')).toHaveText('Opus 5.5');
+    await expect(rows.locator('[data-row="usage"]')).toBeVisible();
     await expect(outline(page)).toHaveCount(0);
     await shoot(page, 'short-2000');
 
@@ -222,12 +222,10 @@ test.describe('plain chats', () => {
     await expect(rail(page)).toBeFocused();
     expect((await page.locator('.col').boundingBox())!.width).toBe(columnWidth);
     const tools = rail(page).getByRole('region', { name: 'Tools' });
-    await expect(tools.getByRole('button', { name: 'Tools' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
-    await expect(tools.getByRole('heading', { name: /^MCP servers/ })).toBeVisible();
-    await expect(tools.getByRole('heading', { name: /^Connectors/ })).toBeVisible();
+    const mcp = tools.getByRole('button', { name: /^MCP servers/ });
+    await expect(mcp).toHaveAttribute('aria-expanded', 'false');
+    await expect(tools.getByRole('button', { name: /^Connectors/ })).toBeVisible();
+    await expect(tools.getByRole('heading', { name: 'Tools' })).toBeVisible();
     const axe = await new AxeBuilder({ page })
       .include('.crail')
       .disableRules(['heading-order'])
@@ -251,15 +249,12 @@ test.describe('plain chats', () => {
     await expect(workPanel(page)).toBeVisible();
     await shoot(page, 'overlay-1280-work-panel');
 
-    const fold = rail(page)
-      .getByRole('region', { name: 'Tools' })
-      .getByRole('button', {
-        name: /^Tools/,
-      });
-    await fold.click();
+    await mcp.click();
     await expect(rail(page)).toBeVisible();
-    await expect(fold).toHaveAttribute('aria-expanded', 'false');
-    await expect(fold).toContainText('MCP server');
+    await expect(mcp).toHaveAttribute('aria-expanded', 'true');
+    await expect(tools.getByText('Changes apply to the next message.')).toBeVisible();
+    await mcp.click();
+    await expect(mcp).toHaveAttribute('aria-expanded', 'false');
     await expect(page.getByRole('dialog', { name: 'Tools in this chat' })).toHaveCount(0);
   });
 
@@ -329,7 +324,11 @@ test.describe('working chats', () => {
       await expect(rail(page).getByRole('list', { name: 'This chat' })).toContainText(
         'Full auto → PR',
       );
-      await expect(rail(page).getByRole('list', { name: 'This chat' })).toContainText('worktree');
+      await expect(
+        rail(page)
+          .getByRole('list', { name: 'This chat' })
+          .getByRole('button', { name: /· worktree$/ }),
+      ).toBeVisible();
       await shoot(page, 'agent-run-2000');
 
       before = (await page.locator('.col').boundingBox())!;
