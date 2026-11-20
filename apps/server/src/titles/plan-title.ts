@@ -4,7 +4,7 @@ import { redactSecrets } from '../audit/redact-stream.ts';
 const PLAN_TITLE_LENGTH = 60;
 const HEADING = /^#{1,6}\s+(.*)$/;
 const TOP_HEADING = /^#\s/;
-const LIST_MARK = /^(?:[-*+>]\s+|\d+[.)]\s+)+/;
+const LIST_MARK = /^(?:[-*+>]\s+|\d+[.)]\s+|\[[ xX]\]\s+)+/;
 const PLAN_PREFIX = /^(?:implementation\s+|proposed\s+|the\s+)?plan\s*(?::|-|–|—)\s*/i;
 const GENERIC = new Set([
   'plan',

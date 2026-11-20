@@ -118,7 +118,9 @@ export async function insertPlanDocument(db: Db, plan: NewPlanDocument): Promise
     const row = rows[0]!;
     if (approval) {
       await supersedeApproved(client, plan.conversationId, row.id);
-      await retitleFromPlan(client, plan.conversationId, row.body, approval.runId);
+      if (approval.by === 'user') {
+        await retitleFromPlan(client, plan.conversationId, row.body, approval.runId);
+      }
     }
     return toPlanDocument(row);
   });
@@ -147,7 +149,9 @@ export async function approvePlanDocument(
     const row = rows[0];
     if (!row) throw new PlanDocumentError(NOT_AWAITING_APPROVAL);
     await supersedeApproved(client, row.conversation_id, row.id);
-    await retitleFromPlan(client, row.conversation_id, row.body, approval.runId);
+    if (approval.by === 'user') {
+      await retitleFromPlan(client, row.conversation_id, row.body, approval.runId);
+    }
     return toPlanDocument(row);
   });
 }

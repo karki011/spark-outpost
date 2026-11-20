@@ -12,7 +12,7 @@ function TimedLine({ kind, time }: { kind: TimedKind; time: number }) {
     ),
   );
   return (
-    <span className="row-line" data-line={kind}>
+    <span className="row-line" data-line={kind} aria-hidden="true">
       {text}
     </span>
   );
@@ -22,7 +22,7 @@ export function RowLine({ line }: { line: Line | null }) {
   if (!line) return null;
   if (line.kind === 'doing') {
     return (
-      <span className="row-line" data-line="doing">
+      <span className="row-line" data-line="doing" aria-hidden="true">
         {line.text}
       </span>
     );

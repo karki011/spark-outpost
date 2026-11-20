@@ -35,11 +35,13 @@ function finishedUnread(chat: ConversationSummary): boolean {
 
 export function rowLine(chat: ConversationSummary, state: RowState): RowLine | null {
   switch (state.tone) {
-    case 'running':
-      if (chat.sessionType === 'terminal' || !state.sub || GENERIC_STEPS.has(state.sub)) {
-        return null;
-      }
-      return { kind: 'doing', text: state.sub };
+    case 'running': {
+      if (chat.sessionType === 'terminal') return null;
+      const run = chat.latestRun;
+      const text = run && !run.waitingOn && run.doing ? run.doing : state.sub;
+      if (!text || GENERIC_STEPS.has(text)) return null;
+      return { kind: 'doing', text };
+    }
     case 'permission':
     case 'asking': {
       const since = waitingSince(chat);

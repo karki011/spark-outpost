@@ -35,6 +35,10 @@ describe('planTitle', () => {
     expect(title).toMatch(/^Rotate /);
   });
 
+  it('drops a task-list box', () => {
+    expect(planTitle('- [ ] Move the helpers\n- [x] Done')).toBe('Move the helpers');
+  });
+
   it('gives nothing for a plan with no words', () => {
     expect(planTitle('# Plan\n\n---\n1.')).toBeNull();
     expect(planTitle('')).toBeNull();

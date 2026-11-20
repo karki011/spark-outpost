@@ -46,6 +46,22 @@ describe('rowLine', () => {
     expect(lineOf(chat({ latestRun: run('running') }))).toBeNull();
   });
 
+  it('prefers its own plan entry to the tool step, except while sub-agents work', () => {
+    const planned = chat({
+      latestRun: run('running', { step: 'Read row-state.ts', doing: 'Wire the plan step in' }),
+    });
+    expect(lineOf(planned)).toEqual({ kind: 'doing', text: 'Wire the plan step in' });
+    const waiting = chat({
+      latestRun: run('running', {
+        step: '2 agents working',
+        doing: 'Wire the plan step in',
+        waitingOn: 2,
+      }),
+    });
+    expect(lineOf(waiting)?.kind).toBe('doing');
+    expect(lineOf(waiting)).not.toEqual({ kind: 'doing', text: 'Wire the plan step in' });
+  });
+
   it('times how long a chat has waited for you', () => {
     const waiting = chat({
       needsInput: true,

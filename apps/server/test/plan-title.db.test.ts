@@ -94,6 +94,13 @@ describe('a chat titled from its agreed plan', () => {
     expect(rows[0]!.title_category).toBe('build');
   });
 
+  it('leaves the name alone when someone other than the user approved the plan', async () => {
+    const { id, runId } = await chat();
+    const plan = await propose(id, runId, '# Dark mode for Settings');
+    await approvePlanDocument(t.db, plan.id, { ...approval(runId), by: 'jev' });
+    expect((await titleOf(id)).source).toBe('message');
+  });
+
   it('changes nothing for a rejected plan', async () => {
     const { id, runId } = await chat();
     const plan = await propose(id, runId, '# Dark mode for Settings');

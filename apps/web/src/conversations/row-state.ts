@@ -27,13 +27,6 @@ function reason(error: string | null): string {
   return `Stopped: ${text.charAt(0).toLowerCase()}${text.slice(1)}`;
 }
 
-type LatestRun = NonNullable<ConversationSummary['latestRun']>;
-
-function runningStep(run: LatestRun): string | null {
-  if (run.waitingOn) return runStep(run);
-  return run.doing ?? runStep(run);
-}
-
 export function isRunning(chat: ConversationSummary): boolean {
   if (chat.sessionType === 'terminal')
     return chat.terminal?.state === 'working' || chat.terminal?.state === 'starting';
@@ -83,7 +76,7 @@ export function rowState(chat: ConversationSummary, open: boolean): RowState {
     case 'queued':
       return { tone: 'running', label: 'Running', sub: 'Starting' };
     case 'running':
-      return { tone: 'running', label: 'Running', sub: runningStep(run) ?? 'Working' };
+      return { tone: 'running', label: 'Running', sub: runStep(run) ?? 'Working' };
     case 'failed':
       return { tone: 'error', label: 'Stopped with an error', sub: reason(run.error) };
     case 'outcome_unknown':

@@ -49,22 +49,6 @@ describe('rowState', () => {
     );
   });
 
-  it('says what the agent is doing from its own plan, before the tool step', () => {
-    const planned = {
-      ...run('running', { step: 'Read row-state.ts' }),
-      doing: 'Wire the plan step into the row',
-    } as ConversationSummary['latestRun'];
-    expect(rowState(chat({ latestRun: planned }), false).sub).toBe(
-      'Wire the plan step into the row',
-    );
-    const waiting = {
-      ...run('running', { step: '2 agents working' }),
-      doing: 'Wire the plan step into the row',
-      waitingOn: 2,
-    } as ConversationSummary['latestRun'];
-    expect(rowState(chat({ latestRun: waiting }), false).sub).toBe('2 agents working');
-  });
-
   it('marks a finished reply until the chat is open', () => {
     const finished = chat({ unread: true, latestRun: run('succeeded') });
     expect(rowState(finished, false)).toMatchObject({
