@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { recordSessionSettings } from '../src/workflow/run-metadata.ts';
 import { CalendarHarness, MODES, PLANNING, STANDUP, tomorrowAt } from './spark-calendar-support.ts';
 
 let h: CalendarHarness;
@@ -39,6 +40,21 @@ describe('reading follows the mode the user picked', () => {
     const read = await h.read();
     expect(read.facts.events).toHaveLength(3);
     expect(await h.cards()).toEqual([]);
+  });
+
+  it('reads once the agent moves to a mode that reads, with no answer to the card', async () => {
+    await h.start({ mode: 'plan' });
+    const reading = h.read();
+    await h.pending();
+    await recordSessionSettings(h.t.db, h.chat.runId, {
+      kind: 'session_settings',
+      model: null,
+      effort: null,
+      mode: 'bypassPermissions',
+      options: {},
+    });
+    expect((await reading).facts.events).toHaveLength(3);
+    expect(h.audited().map((entry) => entry.decision)).toEqual(['mode']);
   });
 
   it('a declined read gives the agent no events', async () => {

@@ -34,6 +34,8 @@ The agent's mode is the provider's own setting, under its names. To change them,
 | A mode Spark doesn't recognise                                                 | The agent decides when to ask.                                                                              |
 | Every mode                                                                     | Enforces the [protected paths](protected-paths.md).                                                         |
 
+Spark checks the mode at each call, so a switch mid-turn or after a plan approval counts at once, and a waiting read card closes when the new mode reads without asking.
+
 ## Agent tools
 
 Agents' own tools, such as web search, follow the mode; web tools never open this computer's addresses.

@@ -3,6 +3,7 @@ import { createRunObservations } from '../observations/run-observations.ts';
 import { insertFinishedRunEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { appendNativeRun, type NativeFence } from '../persistence/native-terminal-turns.ts';
+import { clearReadCardsTheModeRuns } from '../spark-mcp/actions/mode-cleared-cards.ts';
 import type { SparkScope } from '../spark-mcp/deps.ts';
 import { SparkToolError } from '../spark-mcp/tool.ts';
 import type { ApprovalWaiters } from '../workflow/approval-waiters.ts';
@@ -98,6 +99,7 @@ export async function nativeTurnContext(
       scope.publish = mode ? await publishScope(db, { ...input, agentMode: mode }) : null;
       const effective = mode ?? (input.provider === 'claude' ? 'plan' : 'read-only');
       await db.query('UPDATE runs SET used_mode = $2 WHERE id = $1', [runId, mode]);
+      if (mode) await clearReadCardsTheModeRuns(db, runId, (event) => scope.actions!.append(event));
       audit.message('harness', {
         method: 'native/mode',
         params: {
