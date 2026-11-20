@@ -1,6 +1,6 @@
 # ACP v1 schema
 
-`schema.json` is the Agent Client Protocol v1 JSON Schema (draft 2020-12), copied on November 16, 2026 from `schema/v1/schema.json` in `@agentclientprotocol/sdk` 2.7.0, the SDK version Spark pins. It is kept byte for byte as shipped, so Prettier skips it.
+`schema.json` is the Agent Client Protocol v1 JSON Schema (draft 2020-12), copied on November 16, 2026 from `schema/v1/schema.json` in `@agentclientprotocol/sdk` 2.7.0 and byte for byte the same in 2.8.0, the SDK version Spark pins. It is kept byte for byte as shipped, so Prettier skips it.
 
 - Source: `node_modules/@agentclientprotocol/sdk/schema/v1/schema.json` (stable v1; the SDK's `schema.unstable.json` beside it adds the unstable features)
 - SHA-256 prefix: `e747a7bec3c02708`

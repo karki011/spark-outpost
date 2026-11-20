@@ -10,8 +10,8 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 
 - **You see:** a chat not moving.
 - **Why:** it usually waits for you or runs a long command.
-- **Fix:** read the end of the turn: a card waits there, or **Working** runs on.
-- **Still stuck:** **Stop**, then send a new message.
+- **Fix:** read the end of the turn: a card waits there, or **Working** runs on. **No output for 5m** only reports silence; Spark never stops it.
+- **Still stuck:** **Stop**, then send again.
 
 ## A run stopped with the app
 
