@@ -14,6 +14,7 @@ import {
   groupCount,
   labelsByState,
   MAC_ONLY_LINE,
+  NOTIFY_AWAY_ONLY_NOTE,
   NOTIFY_UPDATES_NOTE,
   SHOWN_SWITCHES,
   shownGroups,
@@ -87,6 +88,11 @@ function FixedRow({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+const NOTIFY_NOTES: Partial<Record<RemoteSwitch, string>> = {
+  notifyUpdates: NOTIFY_UPDATES_NOTE,
+  notifyAwayOnly: NOTIFY_AWAY_ONLY_NOTE,
+};
+
 function SwitchGroup({
   group,
   switches,
@@ -106,12 +112,12 @@ function SwitchGroup({
       <ul className="ph-switches ph-switch-grid">
         {group.switches.map((id) => (
           <Fragment key={id}>
-            {id === 'notifyUpdates' ? (
+            {NOTIFY_NOTES[id] ? (
               <SwitchRow
                 id={id}
                 checked={switches[id]}
                 disabled={!switches.notifications && !switches[id]}
-                note={NOTIFY_UPDATES_NOTE}
+                note={NOTIFY_NOTES[id]}
               />
             ) : (
               <SwitchRow id={id} checked={switches[id]} />

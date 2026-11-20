@@ -1,3 +1,4 @@
+import { powerMonitor } from 'electron';
 import type { BridgePort, WorkerBridge } from './browser/bridge.ts';
 import type { MenuPaneShortcut } from './help-menu.ts';
 import { startBrowserHost, type BrowserHostOptions } from './browser/host.ts';
@@ -5,6 +6,7 @@ import type { LinkOpening } from './link-opening.ts';
 import { startCalendarHost, type CalendarHostOptions } from './calendar/host.ts';
 import { joinBridges } from './mac-control/bridge.ts';
 import { startMacControlHost, type MacControlHostOptions } from './mac-control/host.ts';
+import { startMacPresence } from './mac-presence.ts';
 import { meetingHub } from './voice/meeting-hub.ts';
 
 export interface AgentHosts {
@@ -23,6 +25,7 @@ export async function startAgentHosts(
   const browser = await startBrowserHost(browserOptions);
   const mac = startMacControlHost(macOptions);
   const calendar = startCalendarHost(calendarOptions);
+  const presence = startMacPresence(powerMonitor);
   return {
     links: browser.links,
     connectWorker: (port) =>
@@ -31,6 +34,7 @@ export async function startAgentHosts(
         mac.connectWorker(port),
         calendar.connectWorker(port),
         meetingHub.connect(port),
+        presence.connect(port),
       ]),
     windowClosed: () => browser.windowClosed(),
     menuShortcut: (shortcut) => browser.menuShortcut(shortcut),
@@ -38,6 +42,7 @@ export async function startAgentHosts(
       browser.dispose();
       mac.dispose();
       calendar.dispose();
+      presence.dispose();
     },
   };
 }

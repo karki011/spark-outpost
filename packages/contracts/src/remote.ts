@@ -21,6 +21,7 @@ export const remoteSwitchSchema = z.enum([
   'terminalApprove',
   'notifications',
   'notifyUpdates',
+  'notifyAwayOnly',
   'artifacts',
 ]);
 export type RemoteSwitch = z.infer<typeof remoteSwitchSchema>;
@@ -39,6 +40,7 @@ export const remoteSwitchesSchema = z.object({
   terminalApprove: z.boolean(),
   notifications: z.boolean(),
   notifyUpdates: z.boolean(),
+  notifyAwayOnly: z.boolean(),
   artifacts: z.boolean(),
 });
 export type RemoteSwitches = z.infer<typeof remoteSwitchesSchema>;
@@ -57,6 +59,7 @@ export const REMOTE_SWITCH_DEFAULTS: RemoteSwitches = {
   terminalApprove: false,
   notifications: false,
   notifyUpdates: false,
+  notifyAwayOnly: true,
   artifacts: false,
 };
 
@@ -77,6 +80,7 @@ export const REMOTE_SWITCH_LABELS: Record<RemoteSwitch, string> = {
   terminalApprove: 'Approve in Terminal sessions',
   notifications: 'Notify when a chat needs you',
   notifyUpdates: 'Notify when a turn finishes or fails',
+  notifyAwayOnly: "Only notify my devices when I'm away from the Mac",
   artifacts: 'Open artifacts',
 };
 
@@ -127,7 +131,14 @@ export const REMOTE_SWITCH_GROUPS: readonly RemoteSwitchGroup[] = [
     id: 'everyday',
     title: 'Everyday',
     description: 'Helpful away from your desk. Low risk.',
-    switches: ['notifications', 'notifyUpdates', 'terminal', 'passkeys', 'artifacts'],
+    switches: [
+      'notifications',
+      'notifyUpdates',
+      'notifyAwayOnly',
+      'terminal',
+      'passkeys',
+      'artifacts',
+    ],
   },
   {
     id: 'setup',

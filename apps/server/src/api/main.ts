@@ -61,8 +61,7 @@ import { systemPortProbe } from '../terminal/chat-port-probe.ts';
 import { chatPortWatcher, type ChatPortWatcher } from '../terminal/chat-port-watcher.ts';
 import { postgresPort } from '../terminal/chat-ports.ts';
 import { resolveRunTarget } from './run-target.ts';
-import { pushKeys } from '../remote/push-keys.ts';
-import { startPushNotifier } from '../remote/push-notifier.ts';
+import { startPushServices } from '../remote/push-services.ts';
 import { connectDesktopCalendar } from '../calendar/host-client.ts';
 import { startCalendarTicker, type CalendarTicker } from '../calendar/ticker.ts';
 import { connectDesktopMeetings } from '../meetings/desktop-source.ts';
@@ -72,7 +71,6 @@ import { createMeetingService } from '../meetings/service.ts';
 import { googleClientConfig } from '../calendar/google/config.ts';
 import { createGoogleSource } from '../calendar/google/source.ts';
 import { CALENDAR_WRITTEN_CHANNEL, agentCalendarHosts } from '../calendar/agent/access.ts';
-import { generateVapidKeys, webPushSend } from '../remote/push-send.ts';
 import { startSlackSocket } from '../slack/socket.ts';
 import { startSlackServices } from './slack-services.ts';
 import { armShutdownWatchdog, runShutdownSteps } from './shutdown-steps.ts';
@@ -128,7 +126,6 @@ const { slackSignIn, slackDeps, focus, slackNotifier, slackMentions } = startSla
   workspaceId,
   secrets,
 });
-const remotePushKeys = pushKeys(secrets, generateVapidKeys);
 const desktopCalendar = connectDesktopCalendar(process.env, process);
 const googleCalendar = desktopCalendar
   ? createGoogleSource({ db, workspaceId, secrets, fetch, client: googleClientConfig(config) })
@@ -136,12 +133,11 @@ const googleCalendar = desktopCalendar
 await googleCalendar?.start();
 let calendarTicker: CalendarTicker | null = null;
 let chatPorts: ChatPortWatcher | null = null;
-const pushNotifier = startPushNotifier({
+const { keys: remotePushKeys, notifier: pushNotifier } = startPushServices({
   db,
   workspaceId,
-  keys: remotePushKeys,
+  secrets,
   focus,
-  send: webPushSend,
   held: () => calendarTicker?.held() ?? false,
 });
 calendarTicker = desktopCalendar

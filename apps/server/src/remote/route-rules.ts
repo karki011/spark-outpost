@@ -432,6 +432,7 @@ POST /api/conversations/:id/terminal/approval
 PUT /api/remote/push/subscription
 `,
   notifyUpdates: '',
+  notifyAwayOnly: '',
   artifacts: `
 GET /api/artifacts/:id/versions/:version/view
 GET /api/artifacts/:id/versions/:version/page
