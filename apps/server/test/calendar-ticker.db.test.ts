@@ -109,7 +109,7 @@ describe('the calendar ticker', () => {
     await ticker.tick();
     await ticker.tick();
     expect(push.meeting).toHaveBeenCalledTimes(1);
-    expect(push.meeting).toHaveBeenCalledWith(7);
+    expect(push.meeting).toHaveBeenCalledWith(NOW + 8 * MINUTE);
   });
 
   it('sends one meeting alert for meetings that start together', async () => {
@@ -141,7 +141,7 @@ describe('the calendar ticker', () => {
     await updateSettings(t.db, t.workspaceId, { phoneAlerts: true });
     events = [helperEvent('Late', -1, 20)];
     await ticker.tick();
-    expect(push.meeting).toHaveBeenCalledWith(0);
+    expect(push.meeting).toHaveBeenCalledWith(NOW - MINUTE);
     push.meeting.mockReset();
     events = [helperEvent('Later', -6, 20)];
     await ticker.tick();
@@ -157,7 +157,7 @@ describe('the calendar ticker', () => {
     events = [helperEvent('Standup', 0, 30)];
     await ticker.tick();
     expect(ticker.held()).toBe(true);
-    expect(push.meeting).toHaveBeenCalledWith(0);
+    expect(push.meeting).toHaveBeenCalledWith(NOW);
   });
 
   it('keeps choices when two syncs run at once', async () => {

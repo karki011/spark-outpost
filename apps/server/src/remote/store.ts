@@ -25,6 +25,7 @@ const SWITCH_COLUMNS: Record<RemoteSwitch, string> = {
   terminalApprove: 'can_terminal_approve',
   notifications: 'can_notifications',
   notifyUpdates: 'can_notify_updates',
+  notifyAwayOnly: 'can_notify_away_only',
   artifacts: 'can_artifacts',
 };
 

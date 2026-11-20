@@ -20,7 +20,7 @@ describe('switch groups', () => {
     expect([...shown].sort()).toEqual([...SHOWN_SWITCHES].sort());
     expect(shown).not.toContain('devices');
     expect(shown).not.toContain('passkeys');
-    expect(shown).toHaveLength(12);
+    expect(shown).toHaveLength(13);
   });
 
   it('keeps the groups in risk order', () => {
@@ -47,6 +47,16 @@ describe('group count', () => {
   });
 });
 
+describe('the away-from-the-Mac preference', () => {
+  it('is not counted or listed as something a device may do', () => {
+    const ids: RemoteSwitch[] = ['notifications', 'notifyAwayOnly'];
+    const switches = { ...REMOTE_SWITCH_DEFAULTS, notifications: false, notifyAwayOnly: true };
+    expect(groupCount(ids, switches)).toBe('All off');
+    const { allowed, off } = labelsByState(switches);
+    expect([...allowed, ...off]).not.toContain(REMOTE_SWITCH_LABELS.notifyAwayOnly);
+  });
+});
+
 describe('labels by state', () => {
   it('splits the shown switches into allowed and off', () => {
     const { allowed, off } = labelsByState({ ...REMOTE_SWITCH_DEFAULTS, reset: false });
@@ -54,6 +64,6 @@ describe('labels by state', () => {
     expect(off).toContain(REMOTE_SWITCH_LABELS.terminal);
     expect(allowed).toContain(REMOTE_SWITCH_LABELS.settings);
     expect(allowed).not.toContain(REMOTE_SWITCH_LABELS.reset);
-    expect(allowed.length + off.length).toBe(SHOWN_SWITCHES.length);
+    expect(allowed.length + off.length).toBe(SHOWN_SWITCHES.length - 1);
   });
 });

@@ -404,7 +404,7 @@ describe('a Terminal session waiting', () => {
 
 describe('calendar', () => {
   it('sends a meeting alert with no title, chat, prep or link', async () => {
-    notifier.meeting(10);
+    notifier.meeting(Date.now() + 10 * 60_000);
     await notifier.settled();
     expect(payloads()).toEqual([
       { title: 'Meeting in 10 min', body: '', chatId: null, tag: 'spark-meeting' },
@@ -412,7 +412,7 @@ describe('calendar', () => {
   });
 
   it('says Meeting now when Join opens at the start', async () => {
-    notifier.meeting(0);
+    notifier.meeting(Date.now());
     await notifier.settled();
     expect(payloads()).toEqual([
       { title: 'Meeting now', body: '', chatId: null, tag: 'spark-meeting' },
@@ -421,11 +421,11 @@ describe('calendar', () => {
 
   it('sends no meeting alert while the notify switch is off or alerts are held', async () => {
     holding = true;
-    notifier.meeting(10);
+    notifier.meeting(Date.now() + 10 * 60_000);
     await notifier.settled();
     await saveRemoteSwitches(t.db, t.workspaceId, { notifications: false });
     holding = false;
-    notifier.meeting(5);
+    notifier.meeting(Date.now() + 5 * 60_000);
     await notifier.settled();
     expect(sent).toEqual([]);
   });
