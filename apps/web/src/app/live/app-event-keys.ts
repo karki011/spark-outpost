@@ -66,6 +66,7 @@ export function isLiveQueryKey(key: QueryKey): boolean {
 
 const list: Invalidation = { queryKey: queryKeys.conversations, exact: true };
 const attention: Invalidation = { queryKey: attentionKey, exact: true };
+const healthChats: Invalidation = { queryKey: queryKeys.healthConversations, exact: true };
 const search: Invalidation = { queryKey: queryKeys.conversationSearches };
 const tasks: Invalidation = { queryKey: taskKeys.all };
 const changeSummaries: Invalidation = { queryKey: diffKeys.summaries };
@@ -244,8 +245,8 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
   }
 }
 
-function withAttention(invalidations: Invalidation[]): Invalidation[] {
-  return invalidations.includes(list) ? [...invalidations, attention] : invalidations;
+function withListFollowers(invalidations: Invalidation[]): Invalidation[] {
+  return invalidations.includes(list) ? [...invalidations, attention, healthChats] : invalidations;
 }
 
 export function isStepEvent(event: AppEvent): boolean {
@@ -264,7 +265,9 @@ export function mergeInvalidations(
   streamed: RunStreamed = () => false,
 ): Invalidation[] {
   const unique = new Map<string, Invalidation>();
-  const invalidations = events.flatMap((event) => withAttention(invalidationsFor(event, streamed)));
+  const invalidations = events.flatMap((event) =>
+    withListFollowers(invalidationsFor(event, streamed)),
+  );
   for (const invalidation of invalidations) {
     unique.set(JSON.stringify([invalidation.queryKey, invalidation.exact ?? false]), invalidation);
   }

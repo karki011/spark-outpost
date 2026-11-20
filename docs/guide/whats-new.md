@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                   | What to do                                                 |
 | ---------------------------------------------- | ---------------------------------------------------------- |
 | Mid-turn mode switches                         | [Modes](modes-and-levels.md#what-spark-does-in-each-mode). |
+| **Health** in Settings                         | [Check Health](trouble-setup-and-reset.md#check-health).   |
 | Follow-up rounds, triggered workflows fold     | Open the row for details.                                  |
 | Chat rows show steps; plans name chats         | [Chat list](statuses-and-limits.md#chat-list).             |
 | **Cost** by tool; model switch cache note      | [Prompt cache](statuses-and-limits.md#prompt-cache).       |
