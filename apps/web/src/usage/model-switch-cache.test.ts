@@ -92,8 +92,13 @@ describe('cacheOwner', () => {
       { startedAt: '2026-11-18T10:05:00Z', provider: 'claude', model: 'sonnet' },
       { parentRunId: 'x', startedAt: '2026-11-18T10:01:00Z', provider: 'claude', model: 'haiku' },
     ];
-    expect(cacheOwner(runs, '2026-11-18T10:02:00Z')?.model).toBe('opus');
+    expect(cacheOwner(runs, { at: '2026-11-18T10:02:00Z' })?.model).toBe('opus');
     expect(cacheOwner(runs, null)?.model).toBe('sonnet');
+    expect(cacheOwner(runs, { at: '2026-11-18T10:06:00Z', model: 'opus' })).toEqual({
+      provider: 'claude',
+      model: 'opus',
+      used: 'opus',
+    });
   });
 });
 

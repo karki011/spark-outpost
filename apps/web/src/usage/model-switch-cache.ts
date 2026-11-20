@@ -65,8 +65,15 @@ export function uncachedUsd(
   return (tokens * perMillion) / 1_000_000;
 }
 
-export function cacheOwner(runs: readonly CacheRun[], cacheAt: string | null): ModelChoice | null {
-  const at = cacheAt ? Date.parse(cacheAt) : Number.NaN;
+export function cacheOwner(
+  runs: readonly CacheRun[],
+  last: Pick<PromptCacheLast, 'at' | 'model'> | null,
+): ModelChoice | null {
+  const latest = runs.findLast((entry) => !entry.parentRunId);
+  if (last?.model) {
+    return { provider: latest?.provider ?? null, model: last.model, used: last.model };
+  }
+  const at = last ? Date.parse(last.at) : Number.NaN;
   const run = runs.findLast(
     (entry) =>
       !entry.parentRunId &&

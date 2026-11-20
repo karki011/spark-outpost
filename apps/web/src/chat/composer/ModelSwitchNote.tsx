@@ -38,7 +38,7 @@ export function ModelSwitchNote({ conversationId, settings, runs }: ModelSwitchN
   const allCards = cards.data?.providers.flatMap((entry) => entry.models.map((view) => view.card));
   const note = modelSwitchNote(
     last,
-    cacheOwner(runs, last?.at ?? null),
+    cacheOwner(runs, last),
     { provider, model: settings.model, label: label ?? null },
     allCards ?? NO_CARDS,
     now,
