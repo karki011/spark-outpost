@@ -72,6 +72,11 @@ test('Home shows the top request as one card, working chats below, and no finish
   await expect(card.getByRole('button', { name: /^Deny/ })).toBeVisible();
   await expect(card.getByRole('button', { name: 'Later' })).toBeVisible();
   await expect(card.getByRole('button', { name: /^Open chat/ })).toBeVisible();
+  const allowBox = (await card.getByRole('button', { name: /^Allow/ }).boundingBox())!;
+  const openBox = (await card.getByRole('button', { name: /^Open chat/ }).boundingBox())!;
+  expect(
+    Math.abs(allowBox.y + allowBox.height / 2 - (openBox.y + openBox.height / 2)),
+  ).toBeLessThanOrEqual(1);
   await expect(card.getByRole('group', { name: 'Requests' })).toHaveCount(0);
   await expect(section(page, /^Working/)).toContainText('Fix billing totals');
   await expect(homeBody(page)).not.toContainText('Tidy the README');

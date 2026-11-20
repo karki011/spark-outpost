@@ -10,12 +10,13 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                   | What to do                                           |
 | ---------------------------------------------- | ---------------------------------------------------- |
-| Follow-up rounds, triggered workflows fold     | Open the row.                                        |
+| **Stopped** steps; **No output for 2m**        | [Follow a turn](follow-a-turn.md).                   |
+| Follow-up rounds, triggered workflows fold     | Open the row for details.                            |
 | Chat rows show steps; plans name chats         | [Chat list](statuses-and-limits.md#chat-list).       |
 | **Cost** by tool; model switch cache note      | [Prompt cache](statuses-and-limits.md#prompt-cache). |
 | Worktrees holding `.env` or a running tab stay | [Where](where-spark-works.md#what-to-expect).        |
 | **@** lists workflows                          | Pick one and send.                                   |
-| **Stopped** steps; **No output for 2m**        | [Follow a turn](follow-a-turn.md).                   |
+| Spark Island is wider for requests             | Nothing to do.                                       |
 
 ## Mid-November 2026
 
@@ -29,8 +30,8 @@ summary: What changed in recent releases and what to do next.
 | Mac app: privacy screen, left-bar lock                     | [Turn it on](privacy-screen.md); **⇧⌘L** locks now.                                      |
 | **GitHub** page, reviews, auto-review, resizing            | [Guide](github-page.md).                                                                 |
 | **⌘1**–**⌘9** open chats                                   | [Keyboard shortcuts](keyboard-shortcuts.md#chats).                                       |
-| Agent terminal card; compact workflows                     | Nothing to do.                                                                           |
-| No **Ask about this**                                      | Use **Add to chat**.                                                                     |
+| Agent terminal card; compact workflows; more redaction     | Nothing to do.                                                                           |
+| No **Ask about this**; hidden sidebar stays hidden         | Use **Add to chat**.                                                                     |
 | Home: message box, Needs you, Working set                  | [Read Home](home.md).                                                                    |
 | Worktrees start from latest remote; Codex commits          | [Where it starts](where-spark-works.md#what-to-expect).                                  |
 | PR follow-up and adopting, in any chat                     | [Work on a PR](where-spark-works.md#work-on-a-pull-request).                             |
@@ -59,6 +60,3 @@ summary: What changed in recent releases and what to do next.
 | Test run and Try it: nothing is sent      | [Do a test run](test-run.md).                                         |
 | Sparks page: Crew, skills and files       | [Make a Spark](sparks.md).                                            |
 | Read anywhere; outside edits ask          | [Protected paths](protected-paths.md).                                |
-| The Relay Spark is removed                | Nothing; PR follow-up works as before.                                |
-| Transcripts: drag the list's edge         | Nothing; double-click resets it.                                      |
-| Ask about a meeting, **Catch me up**      | [Take meeting notes](meetings.md#ask-about-it).                       |
