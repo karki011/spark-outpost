@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                            | What to do                |
 | ------------------------------------------------------- | ------------------------- |
 | Follow-up rounds, triggered workflows fold into one row | Open the row for details. |
+| **@** lists workflows                                   | Pick one and send.        |
 
 ## Mid-November 2026
 

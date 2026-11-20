@@ -1,14 +1,21 @@
 import '../../teammates/spark-mention.css';
-import { SPARK_MENTION_HINT, type TeammateView } from '@spark-outpost/contracts';
+import {
+  SPARK_MENTION_HINT,
+  WORKFLOW_MENTION_HINT,
+  type TeammateView,
+  type WorkflowSummary,
+} from '@spark-outpost/contracts';
 import { TeammateFace } from '../../teammates/TeammateFace.tsx';
+import { ResumeIcon } from '../../ui/icons.tsx';
 import { FileList } from './FileList.tsx';
 import type { FileSearch, RepoFile } from './use-file-search.ts';
-import { sparkOptionId } from './use-mention.ts';
+import { sparkOptionId, workflowOptionId } from './use-mention.ts';
 
 interface MentionPickerProps {
   listId: string;
   left: number;
   sparks: readonly TeammateView[];
+  workflows: readonly WorkflowSummary[];
   active: number;
   showsFiles: boolean;
   search: FileSearch;
@@ -16,6 +23,7 @@ interface MentionPickerProps {
   onActive: (index: number) => void;
   onPick: (file: RepoFile) => void;
   onPickSpark: (spark: TeammateView) => void;
+  onPickWorkflow: (workflow: WorkflowSummary) => void;
 }
 
 const PANEL_WIDTH = 340;
@@ -24,6 +32,7 @@ export function MentionPicker({
   listId,
   left,
   sparks,
+  workflows,
   active,
   showsFiles,
   search,
@@ -31,6 +40,7 @@ export function MentionPicker({
   onActive,
   onPick,
   onPickSpark,
+  onPickWorkflow,
 }: MentionPickerProps) {
   return (
     <div
@@ -62,6 +72,38 @@ export function MentionPicker({
             ))}
           </div>
           <p className="eff-note spark-hint">{SPARK_MENTION_HINT}</p>
+        </>
+      )}
+      {workflows.length > 0 && (
+        <>
+          <div className="flist sparklist" role="listbox" aria-label="Workflows">
+            {workflows.map((workflow, index) => {
+              const at = sparks.length + index;
+              return (
+                <div
+                  key={workflow.id}
+                  id={workflowOptionId(listId, index)}
+                  className="fopt sparkopt"
+                  role="option"
+                  aria-selected={at === active}
+                  onPointerDown={(event) => event.preventDefault()}
+                  onPointerMove={() => {
+                    if (at !== active) onActive(at);
+                  }}
+                  onClick={() => onPickWorkflow(workflow)}
+                >
+                  <span className="flow-mark" aria-hidden="true">
+                    <ResumeIcon />
+                  </span>
+                  <span className="fname">
+                    <b>{workflow.name}</b>
+                    <small>@{workflow.id}</small>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="eff-note spark-hint">{WORKFLOW_MENTION_HINT}</p>
         </>
       )}
       {showsFiles && <FileList id={listId} search={search} attached={attached} onPick={onPick} />}

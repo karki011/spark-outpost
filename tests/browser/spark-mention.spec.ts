@@ -168,3 +168,54 @@ test('the main agent continues with a hand-off note when the message hands the w
   await expect(blocks).toHaveCount(1);
   await page.screenshot({ path: shot('turn-then-main') });
 });
+
+test('@ lists workflows too, inserts the id and starts the run when sent', async ({ page }) => {
+  const sparks = (await (await page.request.get('/api/teammates')).json()) as {
+    teammates: { id: string; name: string }[];
+  };
+  const pip = sparks.teammates.find((entry) => entry.name === 'Pip')!;
+  const step = { id: 'first', sparkId: pip.id, prompt: 'Look.', dependsOn: [], join: 'all' };
+  const workflow = {
+    id: 'review-flow',
+    name: 'Review flow',
+    steps: [{ ...step, onFailure: 'stop' }],
+  };
+  const saved = await page.request.put('/api/workflows/review-flow', {
+    data: { workflow, baseHash: null },
+  });
+  expect(saved.status(), await saved.text()).toBe(200);
+  try {
+    const input = await newChat(page);
+    await input.pressSequentially('@');
+    const flows = page.getByRole('listbox', { name: 'Workflows' }).getByRole('option');
+    await expect(flows).toHaveText([/Review flow.*@review-flow/]);
+    await expect(page.locator('.mentionpop')).toContainText('runs that workflow in this chat');
+    expect((await scan(page, '.mentionpop')).violations).toEqual([]);
+
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await expect(flows.nth(0)).toHaveAttribute('aria-selected', 'true');
+    await expect(input).toHaveAttribute(
+      'aria-activedescendant',
+      (await flows.nth(0).getAttribute('id'))!,
+    );
+    await page.screenshot({ path: shot('picker-workflows') });
+
+    await page.keyboard.press('Escape');
+    await input.fill('');
+    await input.pressSequentially('@rev');
+    await expect(sparkList(page)).toBeHidden();
+    await expect(flows).toHaveText([/Review flow/]);
+    await page.keyboard.press('Enter');
+    await expect(input).toHaveValue('@review-flow ');
+    await input.pressSequentially('the login change');
+    await input.press('Enter');
+
+    const turn = page.locator('section[data-turn]').first();
+    await expect(turn.getByRole('button', { name: 'Open run view' })).toBeVisible({
+      timeout: 30_000,
+    });
+  } finally {
+    await page.request.delete('/api/workflows/review-flow', { data: {} });
+  }
+});
