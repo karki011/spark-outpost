@@ -41,6 +41,60 @@ describe('splitBlocks', () => {
       sealed = blocks.slice(0, -1);
     }
   });
+
+  it('keeps a details fold with blank lines inside in one block', () => {
+    const fold = '<details><summary>Finding</summary>\n\n**Where:** here\n\n- fix\n\n</details>';
+    expect(splitBlocks(`Intro\n\n${fold}\n\nAfter.`)).toEqual(['Intro\n', `${fold}\n`, 'After.']);
+  });
+
+  it('keeps nested folds together until the outer one closes', () => {
+    const text =
+      '<details><summary>A</summary>\n\n<details><summary>B</summary>\n\nb\n\n</details>\n\na\n\n</details>\n\nEnd';
+    expect(splitBlocks(text)).toHaveLength(2);
+    expect(splitBlocks(text)[1]).toBe('End');
+  });
+
+  it('ignores details tags in code fences and inline code', () => {
+    expect(splitBlocks('```html\n<details>\n```\n\nNext')).toEqual([
+      '```html\n<details>\n```\n',
+      'Next',
+    ]);
+    expect(splitBlocks('Use `<details>` here.\n\nNext')).toEqual([
+      'Use `<details>` here.\n',
+      'Next',
+    ]);
+  });
+
+  it('does not hold blocks together for a details tag mentioned in prose', () => {
+    expect(splitBlocks('Use <details> tags to fold.\n\nNext\n\nLast')).toEqual([
+      'Use <details> tags to fold.\n',
+      'Next\n',
+      'Last',
+    ]);
+  });
+
+  it('keeps other HTML blocks with blank lines inside in one block', () => {
+    expect(splitBlocks('<pre>first\n\nsecond</pre>\n\nAfter')).toEqual([
+      '<pre>first\n\nsecond</pre>\n',
+      'After',
+    ]);
+    const table = '<table>\n<tr><td>a</td></tr>\n\n<tr><td>b</td></tr>\n</table>';
+    expect(splitBlocks(`${table}\n\nAfter`)).toEqual([`${table}\n`, 'After']);
+  });
+
+  it('ignores closing tags inside HTML comments', () => {
+    const fold = '<details><summary>Fold</summary>\n\n<!-- </details> -->\n\nHidden\n\n</details>';
+    expect(splitBlocks(`${fold}\n\nAfter`)).toEqual([`${fold}\n`, 'After']);
+    const spanning = '<details>\n\n<!--\n</details>\n-->\n\nHidden\n\n</details>';
+    expect(splitBlocks(`${spanning}\n\nAfter`)).toEqual([`${spanning}\n`, 'After']);
+  });
+
+  it('keeps an unclosed fold as the growing tail', () => {
+    expect(splitBlocks('Intro\n\n<details><summary>x</summary>\n\nmore\n\nyet more')).toEqual([
+      'Intro\n',
+      '<details><summary>x</summary>\n\nmore\n\nyet more',
+    ]);
+  });
 });
 
 describe('the clarify block', () => {
