@@ -51,6 +51,7 @@ import {
 import { SparkSuggestion } from '../teammates/SparkSuggestion.tsx';
 import { useMentionSparks } from '../teammates/use-mention-sparks.ts';
 import { ContextBar } from './project/ContextBar.tsx';
+import { useMentionWorkflows } from '../crew-flows/use-mention-workflows.ts';
 import { MentionPicker } from './project/MentionPicker.tsx';
 import { RepoFilePicker } from './project/RepoFilePicker.tsx';
 import { useAgentConfig } from './project/use-agent-config.ts';
@@ -124,9 +125,11 @@ export function Composer({
     repoPopover.anchorRef.current?.focus();
   };
   const sparks = useMentionSparks(conversationId);
+  const workflows = useMentionWorkflows();
   const mention = useMention({
     repos,
     sparks,
+    workflows,
     draft,
     setDraft,
     textareaRef,
@@ -446,6 +449,7 @@ export function Composer({
           listId={mention.listId}
           left={mention.left}
           sparks={mention.sparks}
+          workflows={mention.workflows}
           active={mention.active}
           showsFiles={mention.showsFiles}
           search={mention.search}
@@ -453,6 +457,7 @@ export function Composer({
           onActive={mention.setActive}
           onPick={mention.pick}
           onPickSpark={mention.pickSpark}
+          onPickWorkflow={mention.pickWorkflow}
         />
       )}
       {repoOpen && hasRepos && (
