@@ -1,16 +1,19 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import type { MacControlStatus, Profile } from '@spark-outpost/contracts';
 import { desktopMacControl } from '../desktop/desktop-bridge.ts';
 import { DocLink } from '../ui/DocLink.tsx';
 import { CheckIcon } from '../ui/icons.tsx';
+import {
+  MAC_CONTROL_STATUS_KEY,
+  macControlHelperMissing,
+  useMacControlStatus,
+} from './mac-control-status.ts';
 import { ProfileSwitchSetting } from './ProfileSwitchSetting.tsx';
 import '../providers/providers.css';
 import './full-disk-access.css';
 import './mac-control.css';
 
 export const MAC_CONTROL_LABEL = 'Let agents control other Mac apps';
-
-const STATUS_KEY = ['mac-control', 'status'] as const;
 
 const SWITCH_INFO = {
   lead: 'Agents read other Mac apps through the Accessibility tree and press their buttons and menus, one app per chat.',
@@ -46,17 +49,13 @@ function Permission({ status }: { status: MacControlStatus | undefined }) {
 function AccessibilityCard() {
   const mac = desktopMacControl();
   const queryClient = useQueryClient();
-  const status = useQuery({
-    queryKey: STATUS_KEY,
-    queryFn: async () => (await mac?.status()) ?? null,
-    refetchOnWindowFocus: 'always',
-  });
+  const status = useMacControlStatus();
   const current = status.data ?? undefined;
   const ask = async () => {
     const next = await mac?.prompt();
-    if (next) queryClient.setQueryData(STATUS_KEY, next);
+    if (next) queryClient.setQueryData(MAC_CONTROL_STATUS_KEY, next);
   };
-  const missing = current?.helper === 'missing' || current?.helper === 'failed';
+  const missing = macControlHelperMissing(current);
   return (
     <section className="pcard fda-card" aria-label="Accessibility">
       <div className="pc-head">
