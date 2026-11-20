@@ -4,13 +4,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { EDITS_OFF_NOTE } from '../src/crew-flows/step-edits.ts';
+import { PLACE_HEADER } from '../src/crew-flows/step-place.ts';
 import { startWorkflowRun } from '../src/crew-flows/start-run.ts';
 import { replyText } from '../src/persistence/spark-mentions.ts';
 import type { Worker } from '../src/workflow/worker.ts';
 import { at, schedulerClock } from './crew-schedule-support.ts';
 import { newSpark, saveFlow, step, useWorkflowsDir } from './crew-workflow-support.ts';
-import { chatOnItsBranch, type BranchChat } from './publish-step-support.ts';
-import { git } from './ship-support.ts';
+import { CHAT_BRANCH, chatOnItsBranch, type BranchChat } from './publish-step-support.ts';
+import { git, write } from './ship-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 import { changesOf, driveToEnd, openChat } from './turn-support.ts';
 import { connectAgents, startTurnWorker } from './turn-worker.ts';
@@ -123,5 +124,31 @@ describe('a triggered run that may change files', { timeout: 120_000 }, () => {
       [run.runId],
     );
     expect(steps.rows.map((row) => row.name)).toContain(EDITS_OFF_NOTE);
+  });
+});
+
+describe('a triggered run’s step prompt', { timeout: 120_000 }, () => {
+  it('says where the step is: repo, branch, base and the branch’s changed files', async () => {
+    const chat = await chatOnItsBranch(t, base, `place-${chats}`, 'hands-off');
+    await write(chat.repo.root, 'dates.ts', 'export const x = 1;\n');
+    git(chat.repo.root, 'add', 'dates.ts');
+    git(chat.repo.root, 'commit', '-qm', 'Add dates');
+    await write(chat.repo.root, 'notes.txt', 'changed\n');
+    await saveFlow(t, FLOW, [step('look', sparkId, { prompt: 'Review the branch.' })]);
+
+    const run = await triggered(chat.conversationId, false);
+
+    const { rows } = await t.db.query<{ prompt: string }>(
+      'SELECT prompt FROM runs WHERE parent_run_id = $1',
+      [run.runId],
+    );
+    const prompt = rows[0]!.prompt;
+    expect(prompt).toContain(PLACE_HEADER);
+    expect(prompt).toContain('Started by: a turn in this chat that kept changes (a trigger).');
+    expect(prompt).toContain('Project: acme/widgets');
+    expect(prompt).toContain(`Branch: ${CHAT_BRANCH}, compared with main`);
+    expect(prompt).toContain('- dates.ts (+1 -0)');
+    expect(prompt).toContain('- notes.txt (+1 -1)');
+    expect(prompt).not.toContain(chat.repo.root);
   });
 });
