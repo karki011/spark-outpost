@@ -93,6 +93,7 @@ describe('buildPromptCache', () => {
       rewriteUsd: 3.64,
       expired: null,
       estimateBy: 'spark',
+      model: 'claude-opus-5-5',
     });
   });
 
@@ -123,6 +124,7 @@ describe('buildPromptCache', () => {
       rewriteUsd: 0.0077,
       expired: false,
       estimateBy: 'claude-code',
+      model: 'claude-opus-5-5',
     });
   });
 

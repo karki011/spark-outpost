@@ -36,6 +36,20 @@
   flex-shrink: 0;
 }
 
+.sparkopt .flow-mark {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+}
+
+.sparkopt .flow-mark svg {
+  width: 14px;
+  height: 14px;
+}
+
 .sparkopt .fname small {
   direction: ltr;
 }

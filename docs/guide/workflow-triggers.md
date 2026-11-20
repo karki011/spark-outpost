@@ -23,7 +23,7 @@ A triggered workflow runs in the chat that set it off, on that chat's worktree a
 | **A new commit on the branch**      | After a turn adds a commit. **Only on branches** filters.    |
 | **A pull request opens or updates** | When a pull request Spark opened appears or gets a new head. |
 
-Spark skips a run when the chat's changes match the last run.
+Spark skips a run when the chat's changes match the last run. In the chat a run is one folded row; open it for the steps.
 
 ## Hold the publish
 

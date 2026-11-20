@@ -12,7 +12,7 @@ Use Spark elsewhere; work stays on the Mac. About 5 minutes. Needs Tailscale.
 2. Under **Devices**, select **Pair a device**; scan or type the code at the address.
 3. Check the codes match; **Confirm**.
 
-**Passkey.** On the device, select **Save a passkey for this device**, then **Sign in with a passkey** in another browser. It never pairs a new device. **Devices** has **Allow passkey sign-in**.
+**Passkey.** Select **Save a passkey for this device**, then **Sign in with a passkey** in another browser. It never pairs a new device. **Devices** has **Allow passkey sign-in**.
 
 Each device's **Actions** menu has **Rename**, **Send a test notification**, **Remove passkeys** and **Revoke**; **Remove old entry** clears a duplicate.
 
@@ -26,7 +26,9 @@ See what [outposts](outposts.md) allow.
 
 Devices answer [cards](answer-remotely.md). **Open artifacts** (off) shows artifacts.
 
-**Terminal sessions.** **Follow, type in and stop Terminal sessions** shows a session's messages and steps, a message box and **Stop**. **Approve in Terminal sessions** adds **Deny** and **Allow**. Both off. **Send now** stops the turn first. Messages shown aren't stored.
+**Terminal sessions.** **Follow, type in and stop Terminal sessions** shows messages, steps, a message box and **Stop**. **Send now** stops the turn first. Messages shown aren't stored.
+
+**Approve in Terminal sessions** adds **Deny** and **Allow**; Claude's dialog says so. Both off.
 
 **Awake.** With Remote control on, work or a connected device keeps the Mac awake, except a closed lid on battery.
 

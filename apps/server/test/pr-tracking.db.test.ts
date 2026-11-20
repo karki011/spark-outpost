@@ -8,8 +8,12 @@ import { conversationWatches } from '../src/pr-follow-up/view.ts';
 import { discoverChatPullRequests } from '../src/pr-tracking/discover.ts';
 import { chatPullRefresher } from '../src/pr-tracking/refresh.ts';
 import { trackTerminalPull } from '../src/pr-tracking/terminal.ts';
+import { withFacts } from '../src/pr-tracking/status.ts';
+import { withOwnHead } from '../src/pr-tracking/track.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { taskBranch } from '../src/workflow/publish-context.ts';
+import { ownRepoFor } from '../src/workflow/send-context.ts';
+import type { ApprovalRequest } from '../src/approvals/decide.ts';
 import {
   addPull,
   agentOpens,
@@ -96,6 +100,109 @@ describe('pull requests an agent opens in a chat', () => {
     await agentOpens(t, chat, 'https://github.com/Acme/Widgets/pull/7');
     expect(await tracked(t, chat.conversationId)).toHaveLength(1);
     expect(await audited(t, chat.conversationId)).toHaveLength(1);
+  });
+});
+
+describe('the head of a pull request the agent opened', () => {
+  const facts = (head: string) =>
+    ({ draft: false, headSha: 'b'.repeat(40), head }) as Parameters<typeof withFacts>[1];
+
+  it('keeps follow-up when the real head is a branch checked out in the chat', async () => {
+    const chat = await chatOnBranch(t, base, 'widgets');
+    git(chat.root, 'checkout', '-qb', 'CP-51843-quota-panel');
+    await agentOpens(t, chat, WIDGETS_7);
+    const [before] = await tracked(t, chat.conversationId);
+    expect(before).toMatchObject({ branch: CHAT_BRANCH, followUp: true });
+
+    const read = await withOwnHead(
+      t.db,
+      before!,
+      withFacts(before!, facts('CP-51843-quota-panel')),
+    );
+    expect(read).toMatchObject({ branch: 'CP-51843-quota-panel', followUp: true });
+  });
+
+  it('turns follow-up off when the real head is a branch the chat does not have', async () => {
+    const chat = await chatOnBranch(t, base, 'widgets');
+    await agentOpens(t, chat, WIDGETS_7);
+    const [before] = await tracked(t, chat.conversationId);
+
+    const read = await withOwnHead(
+      t.db,
+      before!,
+      withFacts(before!, facts('someone-elses-branch')),
+    );
+    expect(read).toMatchObject({ branch: 'someone-elses-branch', followUp: false });
+  });
+
+  it('never turns follow-up on for a pull request the chat only found', async () => {
+    const chat = await chatOnBranch(t, base, 'widgets');
+    await connectToken(t, secrets);
+    addPull(stub, 8, { head: 'feature/side-quest' });
+    git(chat.root, 'checkout', '-qb', 'feature/side-quest');
+    await discoverChatPullRequests(deps(), chat.conversationId);
+    const before = (await tracked(t, chat.conversationId)).find((pull) => pull.number === 8)!;
+
+    const read = await withOwnHead(t.db, before, withFacts(before, facts('feature/side-quest')));
+    expect(read.followUp).toBe(false);
+  });
+});
+
+describe('the publish rules on a pull request branch the agent opened', () => {
+  async function openedFrom(branch: string, via: 'agent' | 'discovery' = 'agent') {
+    const chat = await chatOnBranch(t, base, 'widgets');
+    git(chat.root, 'checkout', '-qB', branch);
+    await agentOpens(t, chat, WIDGETS_7);
+    await t.db.query(
+      `UPDATE pr_watches SET branch = $2, follow_up = $3, opened_via = $4
+       WHERE conversation_id = $1`,
+      [chat.conversationId, branch, via === 'agent', via],
+    );
+    return chat;
+  }
+
+  it('makes it the chat’s own branch while it is checked out', async () => {
+    const chat = await openedFrom('CP-51843-quota-panel');
+    expect(await taskBranch(t.db, chat.root)).toMatchObject({
+      branch: 'CP-51843-quota-panel',
+      pull: 7,
+    });
+
+    git(chat.root, 'checkout', '-q', CHAT_BRANCH);
+    expect(await taskBranch(t.db, chat.root)).toMatchObject({ branch: CHAT_BRANCH });
+  });
+
+  it('lets the agent comment and reply on it as the chat’s own pull request', async () => {
+    const chat = await openedFrom('CP-51843-quota-panel');
+    const command = 'gh pr comment 7 --body "@greptile-apps review"';
+    const asked = {
+      toolCallId: 't1',
+      rpcId: null,
+      kind: 'execute',
+      toolKind: 'execute',
+      title: command,
+      command,
+      cwd: chat.root,
+      paths: [],
+      diffs: [],
+      options: [],
+      roots: [{ path: chat.root, ignore: [] }],
+      home: '/Users/me',
+    } as ApprovalRequest;
+    expect(await ownRepoFor(t.db, chat.runId, asked)).toMatchObject({
+      branch: 'CP-51843-quota-panel',
+      pull: 7,
+    });
+  });
+
+  it('does not for a pull request the chat only found', async () => {
+    const chat = await openedFrom('feature/side-quest', 'discovery');
+    expect(await taskBranch(t.db, chat.root)).toMatchObject({ branch: CHAT_BRANCH });
+  });
+
+  it('never for a protected branch', async () => {
+    const chat = await openedFrom('main');
+    expect(await taskBranch(t.db, chat.root)).toMatchObject({ branch: CHAT_BRANCH });
   });
 });
 

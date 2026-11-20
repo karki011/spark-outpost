@@ -70,6 +70,7 @@
 
 .wf-mini {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   min-height: 28px;
@@ -77,8 +78,20 @@
 
 .wf-mini-stage {
   display: inline-flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 3px;
+}
+
+.wf-mini-stage[data-parallel] {
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.wf-mini-more {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .wf-mini-arrow {
@@ -154,6 +167,10 @@
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+}
+
+.wf-row-main .wf-mini {
+  margin-top: 4px;
 }
 
 .wf-row-main b {

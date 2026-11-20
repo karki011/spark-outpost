@@ -15,7 +15,7 @@ By default a chat in a mode that can change files gets its own git worktree and 
 1. Select the branch chip under the message box.
 2. Pick **New branch from** _branch_, a branch under **Or continue a branch**, **Work on a pull request…** or **Edit my files directly instead**.
 
-Hovering the chip shows where the branch started and how pull requests open.
+Hovering the chip shows where the branch started.
 
 ## Work on a pull request
 
@@ -23,6 +23,7 @@ Hovering the chip shows where the branch started and how pull requests open.
 
 - The agent pushes there without force, merges to update and handles [feedback](pr-follow-up.md).
 - A fork needs maintainer edits allowed. Otherwise, or for a protected branch, the chat gets a `spark/` branch from it.
+- A chat with its own branch switches in its worktree; commit first. A PR link in **Links** offers **Work on it here**.
 
 ## For every chat in a project
 
@@ -36,8 +37,10 @@ Hovering the chip shows where the branch started and how pull requests open.
 | Worktree | On the chat's own `spark/` branch | **Bring changes into** _branch_, or open a pull request |
 | My files | Your checkout                     | Nothing to do                                           |
 
-A new worktree starts from the latest `origin` default branch, unless your checkout has its own commits or you picked a branch.
+A new worktree starts from the latest `origin` default branch. Picking `main` starts a new branch from its latest code; another picked branch catches up with its remote first.
 
-If its lockfile differs from your checkout's, Spark installs dependencies there, saying so if that fails.
+If its lockfile differs from your checkout's, Spark installs dependencies, saying if that fails.
+
+Archiving, deleting or merging a chat removes its worktree, unless it holds an ignored file like `.env` or a tab or server runs there.
 
 **Next:** [Keep files and keys away from agents](sparkignore.md)

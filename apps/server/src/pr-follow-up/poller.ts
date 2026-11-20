@@ -24,6 +24,7 @@ import {
   withFacts,
 } from '../pr-tracking/status.ts';
 import { detailsOf, threadResolution } from '../pr-tracking/details.ts';
+import { withOwnHead } from '../pr-tracking/track.ts';
 import {
   isClean,
   OPEN_FOLLOW_UP_STATES,
@@ -206,7 +207,7 @@ async function observe(
   settings: PrFollowUpSettings,
 ): Promise<TrackedPull> {
   const { connection, facts } = await readFacts(await connectTo(deps, pull), pull);
-  const read = withFacts(pull, facts);
+  const read = await withOwnHead(deps.db, pull, withFacts(pull, facts));
   if (facts.state !== 'open') {
     return { ...endedPull(read, facts.state), intervalSeconds: MAX_INTERVAL_SECONDS };
   }

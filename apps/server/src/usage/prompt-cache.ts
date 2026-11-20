@@ -90,6 +90,7 @@ function lastFromRun(
     rewriteUsd: cacheWriteUsd(priceFor(row.provider, row.model), row.lastContext, ttl),
     expired: null,
     estimateBy: 'spark',
+    model: row.model,
   };
 }
 
@@ -112,6 +113,7 @@ function lastFromResume(
     rewriteUsd: reported ?? estimate,
     expired: resume.likelyExpired,
     estimateBy: reported === null ? 'spark' : 'claude-code',
+    model: session.model,
   };
 }
 

@@ -22,6 +22,7 @@ import {
   type InterruptionChoice,
   type InvolvementLevel,
   type Message,
+  type PlanProgress,
   type Run,
   type RunMode,
   type RunStatus,
@@ -112,7 +113,12 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   latest_run_agent_mode?: string | null;
   latest_run_interruption_choice?: InterruptionChoice | null;
   latest_run_asking_reply?: string | null;
-  latest_run_progress: { done: number; active: number; total: number } | null;
+  latest_run_progress: {
+    done: number;
+    active: number;
+    total: number;
+    doing?: string | null;
+  } | null;
   archived_at: Date | null;
   auto_archived_days?: number | null;
   pinned_at: Date | null;
@@ -188,6 +194,7 @@ export function toRun(row: RunRow): Run {
     errorDetails: row.error_details ?? null,
     ...(row.source === 'agent_cycle' ? { agentCycle: true } : {}),
     ...(row.source === 'pr_follow_up' ? { prFollowUp: true } : {}),
+    ...(row.source === 'workflow' ? { workflowStarted: true } : {}),
     ...(row.source === 'ui' ? { typedByUser: true } : {}),
     ...runOutpost(row),
   };
@@ -260,6 +267,17 @@ function latestAgents(row: ConversationSummaryRow): { working: number; total: nu
   return rosterCounts(roster);
 }
 
+function latestProgress(row: ConversationSummaryRow): PlanProgress | null {
+  const progress = row.latest_run_progress;
+  if (!progress || progress.total <= 0) return null;
+  return { done: progress.done, active: progress.active, total: progress.total };
+}
+
+function latestDoing(row: ConversationSummaryRow): string | null {
+  const doing = row.latest_run_progress?.doing?.replace(/\s+/g, ' ').trim();
+  return doing ? doing : null;
+}
+
 function latestStep(row: ConversationSummaryRow): string | null {
   const wait = latestWait(row);
   const agents = latestAgents(row);
@@ -285,10 +303,8 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
             step: latestStep(row),
             provider: row.latest_run_provider,
             agentMode: row.latest_run_agent_mode ?? null,
-            progress:
-              row.latest_run_progress && row.latest_run_progress.total > 0
-                ? row.latest_run_progress
-                : null,
+            progress: latestProgress(row),
+            doing: latestDoing(row),
             interruptionChoice: row.latest_run_interruption_choice ?? null,
             needsYou: needsYouLines(row.latest_run_asking_reply ?? '')[0] ?? null,
             ...latestWait(row),
