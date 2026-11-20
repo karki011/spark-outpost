@@ -114,7 +114,9 @@ test('drags a chat into a project at the placeholder with a lifted card', async 
   await page.mouse.up();
 
   await expect(page.locator('.drag-card')).toHaveCount(0);
-  await expect(page.locator('.toast-stack').getByRole('status').filter({ hasText: 'Moved to web' })).toBeVisible();
+  await expect(
+    page.locator('.toast-stack').getByRole('status').filter({ hasText: 'Moved to web' }),
+  ).toBeVisible();
   await expect(group.locator('.row.placeholder')).toHaveCount(0);
   await page.reload();
   await expect(titles(block(page, project.name))).toHaveText(['Alpha', 'Loose idea', 'Beta']);
