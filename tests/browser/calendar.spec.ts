@@ -255,12 +255,10 @@ test('the resting island names the next meeting and joins it', async ({ page }) 
   const bubble = island(page).getByRole('group', { name: 'Meeting Standup' });
   await expect(bubble).toContainText(/^In [1-5] min\s*Standup/);
   const join = bubble.getByRole('button', { name: 'Join Zoom: Standup' });
-  const more = bubble.getByRole('button', { name: 'More actions' });
   await expect(join.or(bubble.getByRole('button', { name: /^Join at start/ }))).toBeVisible();
   if (await join.isVisible()) {
     await join.click();
   } else {
-    await more.click();
     await bubble.getByRole('button', { name: 'Join Zoom now' }).click();
   }
   await expect.poll(() => opened(page)).toEqual(['https://acme.zoom.us/j/123456789']);
