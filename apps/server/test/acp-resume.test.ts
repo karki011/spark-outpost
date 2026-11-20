@@ -25,7 +25,7 @@ const store = mkdtempSync(join(tmpdir(), 'fake-acp-store-'));
 const workdir = join(store, 'workdir');
 afterAll(() => rmSync(store, { recursive: true, force: true }));
 
-function providerWith(capabilities: object, loadSession = false) {
+function providerWith(capabilities: object, loadSession = false, env: object = {}) {
   return createAcpProvider({
     definition,
     launch,
@@ -35,6 +35,7 @@ function providerWith(capabilities: object, loadSession = false) {
       FAKE_ACP_SESSION_STORE: store,
       FAKE_ACP_SESSION_CAPABILITIES: JSON.stringify(capabilities),
       ...(loadSession ? { FAKE_ACP_LOAD_SESSION: '1' } : {}),
+      ...env,
     },
   });
 }
@@ -100,10 +101,12 @@ describe('resuming ACP sessions against the fake agent', { timeout: 30_000 }, ()
     if (first.opened?.kind !== 'session') throw new Error('No session was reported.');
     const named = firstEntries.filter((entry) => entry.method === 'session/set_title');
     expect(JSON.stringify(named)).toContain('Pelican notes');
+    expect(first.opened.title).toBe('Pelican notes');
     const stored: StoredSession = {
       sessionId: first.opened.sessionId,
       cwd: first.opened.cwd,
       additionalDirectories: first.opened.additionalDirectories,
+      title: 'Pelican notes',
     };
     const laterEntries: ProtocolEntry[] = [];
     const later = await turn(
@@ -115,6 +118,30 @@ describe('resuming ACP sessions against the fake agent', { timeout: 30_000 }, ()
     );
     expect(later.opened).toMatchObject({ continued: true });
     expect(laterEntries.map((entry) => entry.method)).not.toContain('session/set_title');
+  });
+
+  it('renames a resumed session after the chat was renamed and keeps the stored title', async () => {
+    const provider = providerWith({ resume: {}, title: {} }, false, { FAKE_ACP_TITLE_LIMIT: '6' });
+    const first = await turn(provider, 'Remember PELICAN', fresh, [], 'Pelican notes');
+    if (first.opened?.kind !== 'session') throw new Error('No session was reported.');
+    expect(first.opened.title).toBe('Pelica');
+    const stored: StoredSession = {
+      sessionId: first.opened.sessionId,
+      cwd: first.opened.cwd,
+      additionalDirectories: first.opened.additionalDirectories,
+      title: 'Pelica',
+    };
+    const resume = { workdir, resume: stored, freshReason: null };
+    const sameEntries: ProtocolEntry[] = [];
+    await turn(provider, 'What word? #recall', resume, sameEntries, 'Pelican notes');
+    const sent = sameEntries.filter((entry) => entry.method === 'session/set_title');
+    expect(JSON.stringify(sent)).toContain('Pelican notes');
+    const renamedEntries: ProtocolEntry[] = [];
+    const renamed = await turn(provider, 'What word? #recall', resume, renamedEntries, 'Birds');
+    expect(
+      JSON.stringify(renamedEntries.filter((e) => e.method === 'session/set_title')),
+    ).toContain('Birds');
+    expect(renamed.opened).toMatchObject({ continued: true, title: 'Birds' });
   });
 
   it('resumes with session/resume and sends only the new message', async () => {

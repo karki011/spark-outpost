@@ -39,7 +39,8 @@ import { attachSteering, steeringSupported } from './steering.ts';
 import type { TurnMapper } from './subagent-updates.ts';
 import { turnGates, turnHandlers, type TurnGates } from './turn-handlers.ts';
 import type { Workspace } from './turn-launch.ts';
-import { nameNewSession } from './session-name.ts';
+import { nameSession, type SessionName } from './session-name.ts';
+import { assertSignedIn } from './auth-status.ts';
 import { createRequestLog, runPrompts } from './turn-loop.ts';
 import { createTurnTokens } from './turn-tokens.ts';
 import { updateSink } from './update-sink.ts';
@@ -62,6 +63,7 @@ interface SessionStart {
   opened: OpenedSession;
   request: acp.NewSessionRequest;
   notes: string[];
+  name: SessionName | null;
 }
 
 async function startSession(context: TurnContext, gates: TurnGates): Promise<SessionStart> {
@@ -77,6 +79,7 @@ async function startSession(context: TurnContext, gates: TurnGates): Promise<Ses
     },
   );
   assertProtocolVersion(definition.name, init);
+  await assertSignedIn(ctx, init, definition.name);
   const spark = sparkAcpServer(tools, definition, init);
   const claude = withClaudeSpark(
     withSparkFloor(
@@ -95,6 +98,7 @@ async function startSession(context: TurnContext, gates: TurnGates): Promise<Ses
     init,
     mcpServers: workspace.mcpServers,
     spark,
+    mcpOverStdin: connection.mcpOverStdin,
   });
   const opened = await openSession(
     ctx,
@@ -104,11 +108,10 @@ async function startSession(context: TurnContext, gates: TurnGates): Promise<Ses
     workspace.replay,
     signal,
   );
-  if (!opened.continued) {
-    await nameNewSession(ctx, init, opened.session.sessionId, turn.sessionTitle);
-  }
-  connection.attach({ init, session: opened.session, request: plan.request });
-  return { init, opened, request: plan.request, notes: plan.notes };
+  const stored = opened.continued ? (turn.session?.resume?.title ?? null) : null;
+  const name = stored ? { requested: stored, stored } : null;
+  connection.attach({ init, session: opened.session, request: plan.request, name });
+  return { init, opened, request: plan.request, notes: plan.notes, name };
 }
 
 function liveSession(connection: LiveConnection): SessionStart {
@@ -118,6 +121,7 @@ function liveSession(connection: LiveConnection): SessionStart {
     opened: { session: live.session, continued: true, freshReason: null, live: true },
     request: live.request,
     notes: [],
+    name: live.name ?? null,
   };
 }
 
@@ -161,7 +165,16 @@ export async function converse(context: TurnContext): Promise<acp.StopReason> {
         `${definition.name} can't read images. Remove the image and try again.`,
       );
     }
-    if (turn.session) push([sessionOutput(newSession, opened, turn.session.freshReason)]);
+    const name = await nameSession(
+      connection.ctx,
+      init,
+      session.sessionId,
+      turn.sessionTitle,
+      started.name,
+    );
+    const attached = connection.opened();
+    if (attached) attached.name = name;
+    if (turn.session) push([sessionOutput(newSession, opened, turn.session.freshReason, name)]);
     const wish = modeWish(definition, turn, policy !== null, gates.doing !== null);
     const applied = await applySessionSettings(
       connection.ctx,

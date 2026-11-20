@@ -107,7 +107,7 @@
   "agent-notification:session/update": {
     "status": "partial",
     "where": "apps/server/src/agents/acp/session-updates.ts",
-    "note": "Received and mapped to steps, text and usage. Several variants are partial or ignored; see Session updates. After session/cancel the provider keeps reading until the prompt response; the worker then records only tokens, requests, cost and sub-agent ends, not new steps or text (workflow/agent-turn.ts)."
+    "note": "Received and mapped to steps, text and usage. Several variants are partial or ignored; see Session updates. After session/cancel the provider keeps reading until the prompt response and the worker still applies tool-call, command and sub-agent updates, so a step the agent finishes after Stop is shown done; new reply text and thinking after the cancel are not shown (workflow/turn-failure.ts, workflow/agent-turn.ts). Each agent message's messageId is kept with a sha256 fingerprint of its text (messages.agent_messages) for a later rewind."
   },
   "agent-notification:elicitation/complete": {
     "status": "supported",
@@ -117,12 +117,12 @@
   "agent-notification:_*": {
     "status": "partial",
     "where": "auth-status.ts, acp-provider.ts, probe.ts",
-    "note": "One extension notification is read: _auth/status_update, which claude-agent-acp 0.81.2 and codex-acp 1.13.1 push with the sign-in the agent uses. Only authStatus.kind, label and account.plan are kept (validated with zod; the email is dropped) and stored with the provider's model availability. A payload that doesn't parse is ignored. Every other extension notification is ignored by the SDK."
+    "note": "One extension notification is read: _auth/status_update, which claude-agent-acp and codex-acp push with the sign-in the agent uses. Only authStatus.kind, label and account.plan are kept (validated with zod; the email is dropped) and stored with the provider's model availability. A payload that doesn't parse is ignored. The standard auth/status_update is read the same way (see its row). Every other extension notification is ignored by the SDK."
   },
   "client-notification:session/cancel": {
-    "status": "partial",
-    "where": "apps/server/src/agents/acp/acp-provider.ts",
-    "note": "Sent once as a notification on Stop while a prompt runs; the provider keeps reading until the prompt response and ends the run on stopReason cancelled (an error after the cancel ends it as stopped too). The process is stopped after that answer, or after a 5 s grace if the agent doesn't answer. Open tool steps are dropped rather than marked cancelled, and updates after the cancel record only usage. Covered by acp-session-lifecycle.test.ts and acp-provider.test.ts."
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/workflow/turn-failure.ts",
+    "note": "Sent once as a notification on Stop while a prompt runs; the provider keeps reading until the prompt response, applies tool-call updates that arrive meanwhile (SHOULD) and ends the run on stopReason cancelled (an error after the cancel ends it as stopped too). Steps still open at the answer are marked interrupted and show Stopped (icon and word). The process is stopped after that answer, or after a 5 s grace if the agent doesn't answer. Covered by acp-session-lifecycle.test.ts, acp-provider.test.ts and agui-events.db.test.ts."
   },
   "client-notification:_*": {
     "status": "not_applicable",
@@ -286,7 +286,7 @@
   },
   "agent-capability:sessionCapabilities.systemPrompt.mode.override": {
     "status": "not_applicable",
-    "note": "Stable v1 since SDK 2.7.0 (schema 1.32.0). Spark only adds to the agent's instructions and never replaces them, so override mode is not used. The append text still goes through claude-agent-acp's own session/new _meta.systemPrompt, not the new spec systemPrompt field."
+    "note": "Stable v1 since SDK 2.7.0 (schema 1.32.0). Spark only adds to the agent's instructions and never replaces them, so override mode is not used. When an agent advertises sessionCapabilities.systemPrompt, session/new, session/load and session/resume (Spark never forks) send the stable systemPrompt {mode: append} field (session-request-meta.ts); otherwise the text goes in _meta.systemPrompt.append. codex-acp advertises it but already gets Spark's text as developer instructions, so it keeps that path and never gets it twice."
   },
   "agent-capability:auth.logout": {
     "status": "not_applicable",
@@ -405,5 +405,20 @@
     "status": "supported",
     "where": "apps/server/src/agents/acp/client-info.ts",
     "note": "Stable v1 ClientSessionCapabilities.compaction (SDK 2.4.0), advertised as {} on a turn's connection, never on the capability probe."
+  },
+  "agent-method:session/set_title": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-name.ts, apps/server/src/agents/acp/turn-converse.ts",
+    "note": "Called only when sessionCapabilities.title is advertised: before a new session's first prompt and again on the next turn after the user renames the chat. The title in the response is kept as the session's agent title (provider_sessions.agent_title) and stops a repeat call for the same name. A refusal is ignored."
+  },
+  "agent-method:auth/status": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/auth-status.ts, apps/server/src/agents/acp/turn-converse.ts",
+    "note": "Called only when agentCapabilities.auth.status is advertised, after initialize and before the session opens. state unauthenticated stops the turn with the sign-in message; any other answer, or an error, lets the turn go on."
+  },
+  "agent-notification:auth/status_update": {
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/auth-status.ts, apps/server/src/agents/acp/live-connection.ts",
+    "note": "Read beside the vendor _auth/status_update. unauthenticated is stored as Not logged in; authenticated keeps the active account's label and the kind and plan from its _meta.claudeCode. Other states, and a payload that doesn't parse, are ignored."
   }
 }

@@ -15,20 +15,29 @@ import { SummaryText } from './SummaryText.tsx';
 import { clockText } from './status-text.ts';
 import type { PendingEntry, StatusStore } from './status-store.ts';
 import { useCardsInView } from './use-cards-in-view.ts';
-import { useHeadInView, useStatusLine, useThrottled, type StatusLine } from './use-status-line.ts';
+import {
+  useHeadInView,
+  useQuietPassed,
+  useStatusLine,
+  useThrottled,
+  type StatusLine,
+} from './use-status-line.ts';
 import { usePaneFocused } from '../split/chat-pane.ts';
 
 const ANNOUNCE_GAP_MS = 4_000;
 const NO_ENTRIES: readonly PendingEntry[] = [];
 
-function announcement(line: StatusLine | null): string {
+function announcement(line: StatusLine | null, quiet: boolean): string {
   if (!line) return '';
   if (line.kind === 'waiting') {
     const first = summaryText(line.entries[0]!.summary);
     if (line.entries.length === 1) return `Waiting for you: ${first}`;
     return `${line.entries.length} things are waiting for you. First: ${first}`;
   }
-  if (line.kind === 'running') return runningText(line.worker, line.activity);
+  if (line.kind === 'running') {
+    const running = runningText(line.worker, line.activity);
+    return quiet ? `${running} No output for over a minute.` : running;
+  }
   return line.elapsed === null ? line.word : `${line.word} after ${clockText(line.elapsed)}`;
 }
 
@@ -149,6 +158,7 @@ function LineBody({
         worker={line.worker}
         activity={line.activity}
         since={line.since}
+        quietSince={line.quietSince}
         queued={queued}
       />
     );
@@ -175,7 +185,8 @@ export function ComposerStatus({
   const pending = line?.kind === 'waiting' ? line.entries : NO_ENTRIES;
   useFocusHandoff(pending);
   useWaitingShortcut(pending);
-  const said = useThrottled(announcement(line), ANNOUNCE_GAP_MS, statusState(line));
+  const quiet = useQuietPassed(line?.kind === 'running' ? line.quietSince : null);
+  const said = useThrottled(announcement(line, quiet), ANNOUNCE_GAP_MS, statusState(line));
   const expand = useExpandReveal();
   const headInView = useHeadInView(store, line?.kind === 'running' ? line.worker.id : null);
   const cardsInView = useCardsInView(pending.map((entry) => entry.id));
