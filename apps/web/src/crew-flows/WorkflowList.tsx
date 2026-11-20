@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import type { WorkflowRun, WorkflowSummary } from '@spark-outpost/contracts';
 import { PlusIcon, ResumeIcon, WarnIcon } from '../ui/icons.tsx';
 import { LastRun } from './RunsList.tsx';
+import { RunInChats } from './RunInChats.tsx';
 import { ScheduleChip } from './ScheduleChip.tsx';
 import type { CrewSpark } from './spark-lookup.ts';
 import { StagePreview } from './StagePreview.tsx';
@@ -25,6 +27,8 @@ function WorkflowRow({
   onOpenRun,
 }: Omit<WorkflowListProps, 'workflows' | 'onNew'> & { workflow: WorkflowSummary }) {
   const run = useStartWorkflowRun();
+  const [picking, setPicking] = useState(false);
+  const blocked = workflow.problems > 0;
   const steps = workflow.stages.reduce((total, stage) => total + stage.length, 0);
   return (
     <li className="wf-row">
@@ -63,13 +67,30 @@ function WorkflowRow({
         type="button"
         className="btn primary sm"
         aria-label={`Run ${workflow.name}`}
-        disabled={workflow.problems > 0 || run.isPending}
-        title={workflow.problems > 0 ? 'Fix its problems in the editor first' : undefined}
+        disabled={blocked || run.isPending}
+        title={blocked ? 'Fix its problems in the editor first' : undefined}
         onClick={() => run.mutate(workflow.id, { onSuccess: onOpenRun })}
       >
         <ResumeIcon />
         Run
       </button>
+      <button
+        type="button"
+        className="btn line sm"
+        aria-label={`Run ${workflow.name} in chats`}
+        disabled={blocked}
+        title={blocked ? 'Fix its problems in the editor first' : undefined}
+        onClick={() => setPicking(true)}
+      >
+        Run in chats…
+      </button>
+      {picking && (
+        <RunInChats
+          workflowId={workflow.id}
+          workflowName={workflow.name}
+          onClose={() => setPicking(false)}
+        />
+      )}
     </li>
   );
 }
