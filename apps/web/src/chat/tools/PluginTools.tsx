@@ -6,9 +6,8 @@ import { PLUGINS_LABEL } from '../../settings/PluginsSettings.tsx';
 import { usePluginSwitch, useUserPlugins } from '../../settings/use-user-plugins.ts';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
-import { useId } from 'react';
 import { SetupSwitch } from '../project/SetupCard.tsx';
-import { RailOffWord, ToolsGroupFrame, ToolText } from './ToolsGroupFrame.tsx';
+import { RailOffWord, ToolsGroupFrame, ToolText, useToolsId } from './ToolsGroupFrame.tsx';
 
 function reviewInSettings(): void {
   requestSettings('chats');
@@ -27,7 +26,7 @@ function PluginRow({ plugin }: { plugin: UserPlugin }) {
   const toggle = usePluginSwitch(plugin);
   const checked = isOn(plugin);
   const status = pluginStatus(plugin, toggle.error);
-  const noteId = useId();
+  const noteId = useToolsId(`plugin-note-${plugin.key}`);
   return (
     <li>
       <ToolText

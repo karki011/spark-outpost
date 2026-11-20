@@ -1,7 +1,6 @@
-import { useId } from 'react';
 import type { ChatMcpServer } from '@spark-outpost/contracts';
 import { SetupSwitch } from '../project/SetupCard.tsx';
-import { RailOffWord, ToolText } from '../tools/ToolsGroupFrame.tsx';
+import { RailOffWord, ToolText, useToolsId } from '../tools/ToolsGroupFrame.tsx';
 import {
   projectServerDetail,
   userServerDetail,
@@ -22,7 +21,7 @@ interface UserRowProps {
 }
 
 function UserServerRow({ server, busy, onSet }: UserRowProps) {
-  const noteId = useId();
+  const noteId = useToolsId(`mcp-note-${server.id}`);
   const status = server.changed || server.check?.ok === false;
   return (
     <li>

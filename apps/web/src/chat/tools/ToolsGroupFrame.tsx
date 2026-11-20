@@ -1,6 +1,7 @@
-import { createContext, useContext, useId, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { useSwitchWords } from '../../brand/switch-words.ts';
 import { SparkleIcon, StrokeIcon } from '../../ui/icons.tsx';
+import { usePaneId } from '../split/chat-pane.ts';
 
 export interface RailGroups {
   isOpen(key: string): boolean;
@@ -13,6 +14,11 @@ export const RailGroupsProvider = RailGroupsContext.Provider;
 
 export function useRailGroups(): RailGroups | null {
   return useContext(RailGroupsContext);
+}
+
+export function useToolsId(base: string): string {
+  const scope = useRailGroups() ? 'crail' : 'tools';
+  return usePaneId(`${scope}-${base.replace(/\s+/g, '-')}`);
 }
 
 const ICONS = {
@@ -44,7 +50,7 @@ export function ToolsGroupFrame({
   children,
 }: ToolsGroupFrameProps) {
   const rail = useRailGroups();
-  const bodyId = useId();
+  const bodyId = useToolsId(`group-${groupKey}`);
   if (!rail) {
     return (
       <div className="tools-group">

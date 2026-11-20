@@ -60,11 +60,11 @@ export interface RailFacts {
   following?: readonly string[];
 }
 
-const CHECKS: Record<PrChecks, { text: string; tone?: RailTone }> = {
-  none: { text: 'No checks' },
-  pending: { text: 'Checks running', tone: 'warn' },
-  passing: { text: 'Checks passing', tone: 'ok' },
-  failing: { text: 'Checks failing', tone: 'bad' },
+const CHECKS: Record<PrChecks, { text: string; word: string | null; tone?: RailTone }> = {
+  none: { text: 'No checks', word: null },
+  pending: { text: 'Checks running', word: 'running', tone: 'warn' },
+  passing: { text: 'Checks passing', word: 'passing', tone: 'ok' },
+  failing: { text: 'Checks failing', word: 'failing', tone: 'bad' },
 };
 
 function prState(watch: NonNullable<RailFacts['watch']>): string {
@@ -82,7 +82,7 @@ function pullRow(watch: NonNullable<RailFacts['watch']>, count: number, hasTask:
     return {
       id: 'pr',
       text: `${count} pull requests`,
-      detail: `#${watch.number} ${prState(watch)}`,
+      detail: [`#${watch.number} ${prState(watch)}`, checks.word].filter(Boolean).join(' · '),
       label: `${count} pull requests. ${name} is ${prState(watch).toLowerCase()}, ${checks.text.toLowerCase()}`,
       action: hasTask ? { kind: 'tab', tab: 'links' } : { kind: 'link', href: watch.url },
       ...tone,

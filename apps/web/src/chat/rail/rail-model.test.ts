@@ -145,12 +145,14 @@ describe('railRows', () => {
       railRows({ ...base, hasTask, watch, pulls: 3 }).find((entry) => entry.id === 'pr');
     expect(row(true)).toMatchObject({
       text: '3 pull requests',
-      detail: '#8 Open',
+      detail: '#8 Open · failing',
       label: '3 pull requests. acme/widgets#8 is open, checks failing',
       tone: 'bad',
       action: { kind: 'tab', tab: 'links' },
     });
     expect(row(false)!.action).toEqual({ kind: 'link', href: watch.url });
+    const quiet = railRows({ ...base, watch: { ...watch, checks: 'none' }, pulls: 3 });
+    expect(quiet.find((entry) => entry.id === 'pr')!.detail).toBe('#8 Open');
   });
 
   it('shows cost and context, keeps tokens in the label, and opens Cost only with a task', () => {
