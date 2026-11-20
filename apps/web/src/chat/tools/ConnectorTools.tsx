@@ -7,6 +7,7 @@ import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { shipKeys } from '../../ship/ship-api.ts';
 import { slackKeys } from '../../slack/slack-api.ts';
+import { ToolsGroupFrame, ToolText } from './ToolsGroupFrame.tsx';
 
 interface ConnectorFacts {
   name: string;
@@ -73,10 +74,7 @@ function ConnectorRow({ connector }: { connector: AgentConnector }) {
   const note = on ? facts.gives : (facts.switchOff ?? 'Off');
   return (
     <li data-state={connector.state}>
-      <span className="mcppop-text">
-        <code>{facts.name}</code>
-        <small title={note}>{note}</small>
-      </span>
+      <ToolText name={facts.name} note={note} status={!on} />
       {on ? (
         <span className="tools-state on">On</span>
       ) : (
@@ -101,11 +99,15 @@ export function ConnectorTools() {
   const connectors = query.data?.connectors ?? [];
   const shown = connectors.filter((entry) => entry.state !== 'not_connected');
   const missing = connectors.filter((entry) => entry.state === 'not_connected');
+  const on = shown.filter((entry) => entry.state === 'on').length;
   return (
-    <div className="tools-group">
-      <h4 className="tools-sub">
-        Connectors <span>every chat</span>
-      </h4>
+    <ToolsGroupFrame
+      groupKey="connectors"
+      kind="connectors"
+      title="Connectors"
+      scope="every chat"
+      summary={query.data ? `${on} on` : null}
+    >
       <QueryWait query={query} what="connectors">
         <Skeleton label="Finding connectors" shape="list" rows={2} />
       </QueryWait>
@@ -126,6 +128,6 @@ export function ConnectorTools() {
           </button>
         </>
       )}
-    </div>
+    </ToolsGroupFrame>
   );
 }
