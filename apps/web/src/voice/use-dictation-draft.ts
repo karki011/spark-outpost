@@ -15,6 +15,8 @@ export function useDictationDraft(
   return {
     dictation,
     value: joinDictation(text, partial),
+    finish: (done: (text: string) => void) =>
+      dictation.finish((heard) => done(joinDictation(text, heard))),
     change: (value: string) => {
       if (partial.trim()) onSpoken?.();
       if (dictation.active) dictation.cancel();

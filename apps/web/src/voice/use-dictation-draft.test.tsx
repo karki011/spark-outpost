@@ -190,3 +190,48 @@ it('replaces revised tentative words on every partial and commits only the final
   emit(final('Ice cream for everyone.'));
   expect(hook.result.current.committed).toBe('Typed draft Ice cream for everyone.');
 });
+
+it('finish stops listening and hands over the draft with the final words once', async () => {
+  const done = vi.fn();
+  const hook = draft();
+  await act(async () => hook.result.current.dictation.toggle());
+  emit(partial('send this'));
+  act(() => hook.result.current.finish(done));
+  expect(speech.stop).toHaveBeenCalledWith('listen');
+  expect(done).not.toHaveBeenCalled();
+  emit(final('Send this.'));
+  emit(final('Send this.'));
+  expect(done.mock.calls).toEqual([['Typed draft Send this.']]);
+});
+
+it('finish hands over the draft alone when nothing was heard', async () => {
+  const done = vi.fn();
+  const hook = draft();
+  await act(async () => hook.result.current.dictation.toggle());
+  act(() => hook.result.current.finish(done));
+  emit(final(''));
+  expect(done.mock.calls).toEqual([['Typed draft']]);
+});
+
+it.each(['cancelled', 'escape'] as const)('finish sends nothing after %s', async (how) => {
+  const done = vi.fn();
+  const hook = draft();
+  await act(async () => hook.result.current.dictation.toggle());
+  emit(partial('never mind'));
+  act(() => hook.result.current.finish(done));
+  if (how === 'escape')
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })));
+  else emit({ kind: 'cancelled', id: 'listen' });
+  emit(final('late'));
+  expect(done).not.toHaveBeenCalled();
+});
+
+it('finish while the mic is still starting cancels it and hands over the draft', async () => {
+  speech.listen.mockReturnValue(new Promise(() => undefined));
+  const done = vi.fn();
+  const hook = draft();
+  act(() => hook.result.current.dictation.toggle());
+  act(() => hook.result.current.finish(done));
+  expect(done.mock.calls).toEqual([['Typed draft']]);
+  expect(hook.result.current.dictation.active).toBe(false);
+});

@@ -33,6 +33,7 @@ export function useDictation(onText: (text: string) => void, scope: string) {
   const [problem, setProblem] = useState<string | null>(null);
   const current = useRef<{ id: string; scope: string } | null>(null);
   const generation = useRef(0);
+  const afterFinal = useRef<((heard: string) => void) | null>(null);
   const [stateScope, setStateScope] = useState(scope);
   if (stateScope !== scope) {
     setStateScope(scope);
@@ -41,6 +42,7 @@ export function useDictation(onText: (text: string) => void, scope: string) {
   }
 
   const cancel = () => {
+    afterFinal.current = null;
     generation.current += 1;
     const id = current.current?.id;
     current.current = null;
@@ -50,6 +52,7 @@ export function useDictation(onText: (text: string) => void, scope: string) {
 
   useLayoutEffect(() => {
     return () => {
+      afterFinal.current = null;
       generation.current += 1;
       const id = current.current?.id;
       current.current = null;
@@ -71,11 +74,16 @@ export function useDictation(onText: (text: string) => void, scope: string) {
       setState({ phase: 'idle' });
       if (event.text.trim()) onText(event.text.trim());
       else setProblem(DICTATION_PROBLEMS.missed!);
+      const done = afterFinal.current;
+      afterFinal.current = null;
+      done?.(event.text.trim());
     } else if (event.kind === 'cancelled') {
       current.current = null;
+      afterFinal.current = null;
       setState({ phase: 'idle' });
     } else if (event.kind === 'error') {
       current.current = null;
+      afterFinal.current = null;
       setState({ phase: 'idle' });
       setProblem(DICTATION_PROBLEMS[event.error] ?? DICTATION_PROBLEMS.failed!);
     }
@@ -120,6 +128,16 @@ export function useDictation(onText: (text: string) => void, scope: string) {
     setState({ ...state, phase: 'working' });
   };
 
+  const finish = (done: (heard: string) => void) => {
+    if (state.phase === 'idle' || state.phase === 'starting') {
+      cancel();
+      done('');
+      return;
+    }
+    afterFinal.current = done;
+    stop();
+  };
+
   const active = state.phase !== 'idle';
   useEffect(() => {
     if (!active || !speech) return;
@@ -139,6 +157,7 @@ export function useDictation(onText: (text: string) => void, scope: string) {
     problem,
     active,
     cancel,
+    finish,
     toggle: () =>
       state.phase === 'idle' ? void start() : state.phase === 'starting' ? cancel() : stop(),
   };

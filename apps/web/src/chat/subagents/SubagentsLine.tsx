@@ -11,7 +11,8 @@ import {
 import { AgentCards } from './AgentCards.tsx';
 import type { AgentFocus } from './agent-board.ts';
 import { agentCounts, agentsLine, allDoneLine } from './agent-cards.ts';
-import { rollupRows } from './subagents-rollup.ts';
+
+const FACES_ONLY_AFTER = 4;
 
 export const OpenAgentsContext = createContext<((runId: string, workerId?: string) => void) | null>(
   null,
@@ -83,7 +84,7 @@ export function SubagentsLine({ runId, rows, live, leadModel = null }: Subagents
   const [focus, setFocus] = useState<AgentFocus | null>(null);
   const listId = useId();
   if (rows.length === 0) return null;
-  const rollup = rollupRows(rows, live);
+  const compact = rows.length > FACES_ONLY_AFTER;
   const counts = agentCounts(rows);
   const text = agentsLine(live ? counts : { ...counts, working: 0 });
   const done = allDoneLine(rows);
@@ -98,15 +99,10 @@ export function SubagentsLine({ runId, rows, live, leadModel = null }: Subagents
   return (
     <div className="sl">
       <div className="sl-line">
-        {rollup && (
-          <span className="sl-summary" data-rollup="true">
-            {rollup.text}
-          </span>
-        )}
-        {done && !rollup ? (
+        {done && !compact ? (
           <AllDone rows={rows} text={done} />
         ) : (
-          <Workers rows={rows} live={live} compact={rollup !== null} onPick={pick} />
+          <Workers rows={rows} live={live} compact={compact} onPick={pick} />
         )}
         <span className="sl-text sr-only" role="status">
           {text}

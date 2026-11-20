@@ -400,7 +400,7 @@ test('a denied microphone says so and opens Microphone settings', async ({ page 
   expect((await voiceCalls(page)).at(-1)).toEqual({ op: 'openSettings', args: ['microphone'] });
 });
 
-test('live dictation keeps the composer steady and sends only after confirmation', async ({
+test('live dictation keeps the composer steady and stopping it sends nothing', async ({
   page,
 }, testInfo) => {
   await resetTestDatabase({ onboarded: true });
@@ -448,10 +448,7 @@ test('live dictation keeps the composer steady and sends only after confirmation
   await expect(input).toHaveValue('Check this branch. please check');
   await emitVoice(page, { kind: 'partial', id, text: 'please check the login redirect' });
   await expect(input).toHaveValue('Check this branch. please check the login redirect');
-  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
-  await input.press('Enter');
-  await expect(input).toHaveValue('Check this branch. please check the login redirect');
-  expect(await userMessages()).toBe(before);
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
   await expect.poll(layoutShift).toBeLessThanOrEqual(1);
   await expect(page.locator('.mic-wrap').getByRole('status')).toHaveCSS('position', 'absolute');
   await page.screenshot({ path: testInfo.outputPath('dictation-listening.png') });
