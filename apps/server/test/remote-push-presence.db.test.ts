@@ -11,6 +11,7 @@ import { memorySecretStore } from '../src/setup/secrets.ts';
 import { createTestDb, startChat, type TestDb } from './support.ts';
 
 const HOST = 'mac.tail1234.ts.net';
+const MINUTE = 60_000;
 const KEYS = { publicKey: 'BPublicKeyForTests', privateKey: 'private-key-for-tests' };
 
 let t: TestDb;
@@ -112,6 +113,8 @@ async function finish() {
 
 const bodies = () =>
   sent.map((delivery) => (JSON.parse(delivery.payload) as { body: string; title: string }).body);
+const titles = () =>
+  sent.map((delivery) => (JSON.parse(delivery.payload) as { title: string }).title);
 
 describe('only notify when away from the Mac', () => {
   it('is on for a new install and asks the Mac whether the user is there', async () => {
@@ -163,35 +166,66 @@ describe('only notify when away from the Mac', () => {
 
   it('sends a meeting alert held at the Mac only if the meeting has not started', async () => {
     await atMac(true);
-    notifier.meeting(10);
+    notifier.meeting(clock + 10 * MINUTE);
     await notifier.settled();
     expect(sent).toEqual([]);
-    clock += 4 * 60_000;
+    clock += 4 * MINUTE;
     await atMac(false);
     expect(sent.map((delivery) => JSON.parse(delivery.payload) as unknown)).toEqual([
       { title: 'Meeting in 6 min', body: '', chatId: null, tag: 'spark-meeting' },
     ]);
 
     await atMac(true);
-    notifier.meeting(2);
+    notifier.meeting(clock + 2 * MINUTE);
     await notifier.settled();
-    clock += 3 * 60_000;
+    clock += 3 * MINUTE;
     await atMac(false);
     expect(sent).toHaveLength(1);
   });
 
   it('keeps the soonest held meeting when two come due at the Mac', async () => {
     await atMac(true);
-    notifier.meeting(10);
+    notifier.meeting(clock + 10 * MINUTE);
     await notifier.settled();
-    clock += 5 * 60_000;
-    notifier.meeting(10);
+    clock += 5 * MINUTE;
+    notifier.meeting(clock + 10 * MINUTE);
     await notifier.settled();
-    clock += 3 * 60_000;
+    clock += 3 * MINUTE;
     await atMac(false);
-    expect(
-      sent.map((delivery) => (JSON.parse(delivery.payload) as { title: string }).title),
-    ).toEqual(['Meeting in 2 min']);
+    expect(titles()).toEqual(['Meeting in 2 min']);
+  });
+
+  it('sends the next held meeting when the soonest one has started by the time the user leaves', async () => {
+    const at = clock;
+    await atMac(true);
+    notifier.meeting(at + 10 * MINUTE);
+    await notifier.settled();
+    clock = at + 5 * MINUTE;
+    notifier.meeting(at + 15 * MINUTE);
+    await notifier.settled();
+    clock = at + 11 * MINUTE;
+    await atMac(false);
+    expect(titles()).toEqual(['Meeting in 4 min']);
+  });
+
+  it('never sends a held meeting alert in the seconds after the meeting started', async () => {
+    const start = clock + 90_000;
+    await atMac(true);
+    notifier.meeting(start);
+    await notifier.settled();
+    clock = start + 20_000;
+    await atMac(false);
+    expect(sent).toEqual([]);
+  });
+
+  it('says Meeting in 1 min for a held meeting seconds away', async () => {
+    const start = clock + 2 * MINUTE;
+    await atMac(true);
+    notifier.meeting(start);
+    await notifier.settled();
+    clock = start - 20_000;
+    await atMac(false);
+    expect(titles()).toEqual(['Meeting in 1 min']);
   });
 
   it('forgets held pushes on restart and never sends them, or anything twice, afterwards', async () => {

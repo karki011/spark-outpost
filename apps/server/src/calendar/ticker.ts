@@ -15,7 +15,7 @@ import { calendarState } from './service.ts';
 export const CALENDAR_TICK_MS = 60_000;
 
 export interface MeetingPushes {
-  meeting(minutes: number): void;
+  meeting(start: number): void;
   release(): void;
 }
 
@@ -62,7 +62,7 @@ export function startCalendarTicker(deps: CalendarTickerDeps): CalendarTicker {
       if (!sent.claim(event.key)) continue;
       if (pushed.some((lead) => meetingsOverlap(lead, event))) continue;
       pushed.push(event);
-      deps.push.meeting(Math.max(0, Math.ceil((spanOf(event).start - at) / 60_000)));
+      deps.push.meeting(spanOf(event).start);
     }
   };
 
