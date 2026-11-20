@@ -43,11 +43,9 @@ export function RailArtifacts({ pages, onOpen }: RailArtifactsProps) {
               <span className="crail-ico" aria-hidden="true">
                 <ArtifactIcon />
               </span>
-              <span className="crail-text">
-                <span className="crail-main">{page.title}</span>
-                <span className="crail-detail">
-                  {ARTIFACT_KIND_LABELS[page.kind]} · version {page.versions.at(-1)?.version ?? 1}
-                </span>
+              <span className="crail-main">{page.title}</span>
+              <span className="crail-detail">
+                {ARTIFACT_KIND_LABELS[page.kind]} · version {page.versions.at(-1)?.version ?? 1}
               </span>
             </button>
           </li>
