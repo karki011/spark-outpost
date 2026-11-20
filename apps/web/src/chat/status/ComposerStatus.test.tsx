@@ -318,6 +318,14 @@ describe('while the agent works', () => {
     expect(status().querySelector('.cs-time')).toBeNull();
   });
 
+  it('calls a stalled Thinking step quiet', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    act(() => view.store.report({ ...CLAUDE, working: true, step: 'Thinking', outputSeq: 4 }));
+    await act(() => vi.advanceTimersByTimeAsync(3 * 60_000));
+    expect(status().querySelector('.cs-time')?.textContent).toBe('No output for 3m');
+  });
+
   it('keeps the step clock while a long command runs without output', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
     const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });

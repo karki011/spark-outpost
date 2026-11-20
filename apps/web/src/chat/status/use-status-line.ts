@@ -62,6 +62,8 @@ export function useStatusLine({
   const work = latestWork(snapshot.live);
   if (work || activeRunId) {
     const step = work?.step ?? null;
+    const activity = step ? stepActivity(step) : null;
+    const thinking = activity?.kind === 'think';
     return {
       kind: 'running',
       worker: work ?? {
@@ -70,9 +72,9 @@ export function useStatusLine({
         provider,
         kind: 'agent',
       },
-      activity: step ? stepActivity(step) : null,
+      activity,
       since: step ? work!.since : null,
-      quietSince: work && !work.doing && !step ? work.outputAt : null,
+      quietSince: work && !work.doing && (!step || thinking) ? work.outputAt : null,
     };
   }
   if (!ended || !isTerminalRunStatus(ended.status)) return null;

@@ -393,8 +393,10 @@ export async function runAgentTurn(
         if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
         if (output.kind === 'request_usage') await recordRequest(output.request);
         if (output.kind === 'usage') await recordSpend(output);
-        if (keptAfterCancel(output)) await events.observe(output);
-        if (keptAfterCancel(output)) await commands.observe(output);
+        if (keptAfterCancel(output)) {
+          await events.observe(output);
+          await commands.observe(output);
+        }
         continue;
       }
       options.onOutput?.(output);
