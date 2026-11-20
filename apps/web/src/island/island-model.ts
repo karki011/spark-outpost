@@ -89,16 +89,16 @@ export function hoverOpensHome(view: IslandView, hoverLine: boolean): boolean {
 }
 
 const CARD_WIDTHS = {
-  approval: 556,
-  force: 556,
-  question: 556,
-  open: 520,
+  approval: 720,
+  force: 720,
+  question: 720,
+  open: 680,
 } as const;
 const NOTE_WIDTH = 420;
 const NOW_WIDTH = 460;
 const NOW_WING = 104;
-const HOME_WIDTH = { share: 0.42, min: 640, max: 760 } as const;
-const PANEL_WIDTH = { share: 0.42, min: 640, max: 760 } as const;
+const HOME_WIDTH = { share: 0.5, min: 820, max: 960 } as const;
+const PANEL_WIDTH = { share: 0.5, min: 820, max: 960 } as const;
 
 function scaled(screenWidth: number, range: { share: number; min: number; max: number }): number {
   return Math.round(Math.min(range.max, Math.max(range.min, screenWidth * range.share)));
