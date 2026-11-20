@@ -306,10 +306,10 @@ describe('moods and quirks', () => {
 describe('panel width', () => {
   it('grows with the screen between a floor and a ceiling', () => {
     expect([1280, 1512, 1728, 1920, 3008].map((screen) => panelWidth('home', screen))).toEqual([
-      640, 640, 726, 760, 760,
+      820, 820, 864, 960, 960,
     ]);
     expect([1280, 1728, 1920].map((screen) => panelWidth('quick', screen))).toEqual([
-      640, 726, 760,
+      820, 864, 960,
     ]);
     expect(panelWidth('quick', 1920)).toBe(panelWidth('ask', 1920));
   });
