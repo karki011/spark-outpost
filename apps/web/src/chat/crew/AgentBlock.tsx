@@ -25,6 +25,8 @@ import { useChatAgentTerminals } from '../commands/use-agent-terminals.ts';
 import type { CommandAnswers } from '../commands/command-answers.ts';
 import { TurnRows } from '../rows/TurnRows.tsx';
 import { turnRowParts } from '../rows/turn-rows.ts';
+import { seenAfter } from '../steer/steer-model.ts';
+import type { BlockSteers } from './block-steers.tsx';
 import { turnCards } from '../turn/turn-cards.ts';
 import { ErrorLine, ModelSwitchNote, type TimedOutFacts } from '../ModelSwitchNote.tsx';
 import { shownSteps, shownText, streamLeads, viewSteps, type RunStep } from '../run-projection.ts';
@@ -115,6 +117,7 @@ interface BodyProps {
   approvals: readonly Approval[];
   repo: Project | null;
   waited?: TimedOutFacts;
+  steers?: BlockSteers | undefined;
 }
 
 const NO_COMMANDS: readonly CommandRun[] = [];
@@ -149,6 +152,7 @@ function AgentBody({
   approvals,
   repo,
   waited,
+  steers,
 }: BodyProps & StreamedProps) {
   const busy = agent.state === 'working' || agent.state === 'thinking';
   const saved = useChatAgentTerminals(conversationId).data;
@@ -180,6 +184,7 @@ function AgentBody({
     commands: shownCommands(commands, streamed, agent.id),
     shots,
     terminals,
+    steers: steers?.marks ?? [],
     cards: timeline.marks,
   });
   const status = blockStatus(
@@ -201,6 +206,7 @@ function AgentBody({
             todo: null,
             answers: NO_ANSWERS,
           }}
+          steers={(ids, index) => steers?.view(ids, seenAfter(parts, index))}
           cards={(ids) =>
             ids.flatMap((id) => {
               const card = timeline.byId.get(id);
@@ -261,6 +267,7 @@ interface AgentBlockProps {
   approvals: readonly Approval[];
   repo: Project | null;
   waited?: TimedOutFacts;
+  steers?: BlockSteers | undefined;
   after?: ReactNode;
   changes?: ReactNode;
   todo?: ReactNode;

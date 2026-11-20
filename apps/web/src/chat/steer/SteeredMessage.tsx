@@ -8,6 +8,7 @@ import {
   steerAnchor,
   steerGroups,
   turnSteers,
+  steersReadByNone,
   type SteerSeen,
   type SteerStatus,
 } from './steer-model.ts';
@@ -128,10 +129,10 @@ export function SteeredMessage({ message, detail, run, crew }: SteeredMessagePro
 interface TurnSteersProps {
   detail: ConversationDetail;
   run: Run;
+  placedIn?: readonly string[];
 }
 
-export function TurnSteers({ detail, run }: TurnSteersProps) {
-  return (
-    <SteerGroup messages={turnSteers(detail, run.id)} detail={detail} run={run} crew={false} />
-  );
+export function TurnSteers({ detail, run, placedIn = [] }: TurnSteersProps) {
+  const messages = steersReadByNone(turnSteers(detail, run.id), placedIn);
+  return <SteerGroup messages={messages} detail={detail} run={run} crew={false} />;
 }

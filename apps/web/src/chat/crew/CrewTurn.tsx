@@ -52,7 +52,8 @@ import { ParallelGroup } from './ParallelGroup.tsx';
 import { pieceLabels } from '../../crew/piece-labels.ts';
 import { SteerAnswer, steerAnswers } from '../steer/SteerAnswer.tsx';
 import { SteeredMessage } from '../steer/SteeredMessage.tsx';
-import { steerSlots, turnSteers } from '../steer/steer-model.ts';
+import { steerSlots, steersReadBy, steersReadByNone, turnSteers } from '../steer/steer-model.ts';
+import { blockSteers } from './block-steers.tsx';
 import { turnRunIds } from '../turn-props.ts';
 
 function footLabel(status: Orchestration['status']): string {
@@ -92,7 +93,9 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
   const checkApprovals = approvals.filter(isCheckApproval);
   const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals, run.id));
   const last = lastAgentIndex(items);
-  const steers = steerSlots(items.map(itemStartedAt), turnSteers(detail, run.id));
+  const allSteers = turnSteers(detail, run.id);
+  const ownBlocks = items.flatMap((item) => (item.kind === 'agent' ? [item.member.runId] : []));
+  const steers = steerSlots(items.map(itemStartedAt), steersReadByNone(allSteers, ownBlocks));
   const flags = steerSlots(
     items.map(itemStartedAt),
     (detail.railFlags ?? []).filter((flag) => flag.turnRunId === run.id),
@@ -140,6 +143,7 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
   const agentBlock = (item: Extract<CrewItem, { kind: 'agent' }>, collapsible: boolean) => {
     const member = item.member;
     const agent = runAgent(member, orchestration, detail.activity[member.runId] ?? []);
+    const read = ownBlocks.includes(member.runId) ? steersReadBy(allSteers, member.runId) : [];
     return (
       <AgentBlock
         key={member.runId}
@@ -147,7 +151,8 @@ export function CrewTurn({ run, detail, orchestration, repo }: CrewTurnProps) {
         anchor={agentAnchor(orchestration.runId, member.runId)}
         live={!isTerminalRunStatus(member.status)}
         settled={member.runId === run.id && handedOffAt !== null}
-        collapsed={collapsible && agent.state === 'done'}
+        collapsed={collapsible && agent.state === 'done' && read.length === 0}
+        steers={blockSteers(read, detail, run)}
         conversationId={detail.conversation.id}
         steps={detail.activity[member.runId] ?? []}
         text={textByRun.get(member.runId) ?? ''}

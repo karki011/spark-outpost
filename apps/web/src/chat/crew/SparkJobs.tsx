@@ -10,7 +10,9 @@ import {
 import { agentAnchor, sparkMembers } from '../../crew/conversation-crew.ts';
 import { runAgent } from '../../crew/crew-projection.ts';
 import { useRunStream } from '../use-run-stream.ts';
+import { steersReadBy, turnSteers } from '../steer/steer-model.ts';
 import { AgentBlock } from './AgentBlock.tsx';
+import { blockSteers } from './block-steers.tsx';
 
 const NO_TEXT = '';
 
@@ -53,6 +55,7 @@ export function SparkJobs({
     stream.orchestration && stream.orchestration.updatedAt > orchestration.updatedAt
       ? stream.orchestration
       : orchestration;
+  const steers = turnSteers(detail, run.id);
   return (
     <div className="crew-turn spark-jobs">
       {picked(current, pick).map((member) => (
@@ -72,6 +75,7 @@ export function SparkJobs({
               : []
           }
           repo={repo}
+          steers={blockSteers(steersReadBy(steers, member.runId), detail, run)}
         />
       ))}
     </div>

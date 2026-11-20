@@ -91,6 +91,21 @@ export function turnSteers(detail: ConversationDetail, runId: string): MemberMes
   );
 }
 
+export function readBy(message: MemberMessage): string {
+  return message.deliveredRunId ?? message.runId;
+}
+
+export function steersReadBy(messages: readonly MemberMessage[], runId: string): MemberMessage[] {
+  return messages.filter((message) => readBy(message) === runId);
+}
+
+export function steersReadByNone(
+  messages: readonly MemberMessage[],
+  runIds: readonly string[],
+): MemberMessage[] {
+  return messages.filter((message) => !runIds.includes(readBy(message)));
+}
+
 export function steerSlots<Item extends { createdAt: string }>(
   blockTimes: readonly (string | null)[],
   messages: readonly Item[],

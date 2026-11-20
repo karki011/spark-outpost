@@ -6,7 +6,14 @@ import type {
   Message,
   Run,
 } from '@spark-outpost/contracts';
-import { steerSlots, steerStatus, turnSteers, withSteer } from './steer-model.ts';
+import {
+  steerSlots,
+  steerStatus,
+  steersReadBy,
+  steersReadByNone,
+  turnSteers,
+  withSteer,
+} from './steer-model.ts';
 
 const TOP = 'top';
 const BOLT = 'bolt';
@@ -81,6 +88,16 @@ describe('turnSteers', () => {
     const saved = { id: 'raced', role: 'user', content: 'body raced' } as Message;
     const memberMessages = [steer('raced')];
     expect(turnSteers(detail({ memberMessages, messages: [saved] }), TOP)).toEqual([]);
+  });
+});
+
+describe('the run that read a message', () => {
+  it('is the run it was delivered to, else the run it was sent to', () => {
+    const toStep = steer('a', { deliveredRunId: 'step' });
+    const waiting = steer('b');
+    expect(steersReadBy([toStep, waiting], 'step')).toEqual([toStep]);
+    expect(steersReadBy([toStep, waiting], TOP)).toEqual([waiting]);
+    expect(steersReadByNone([toStep, waiting], ['step'])).toEqual([waiting]);
   });
 });
 
