@@ -77,17 +77,17 @@ describe("Claude's plan mode over ACP", { timeout: 20_000 }, () => {
   });
 
   it('reports each mode the session moves to, so the gate follows the live mode', async () => {
-    const { outputs } = await planTurn((request) => ({
+    const { outputs, error } = await planTurn((request) => ({
       outcome: 'selected',
       optionId: request.options.find((option) => option.optionId === 'exit-plan-auto')!.optionId,
       allowed: true,
       note: 'Approved the plan',
     }));
+    expect(error).toBeNull();
     const modes = outputs.flatMap((output) =>
       output.kind === 'session_settings' ? [output.mode] : [],
     );
-    expect(modes).toContain('plan');
-    expect(modes.at(-1)).not.toBe('plan');
+    expect(modes).toEqual([FAKE_AGENT_MODES.doMode, 'plan', FAKE_AGENT_MODES.doMode]);
   });
 
   it('keeps planning when the plan is not approved', async () => {

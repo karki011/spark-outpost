@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { APPROVAL_DECIDED, type RunEvent } from '@spark-outpost/contracts';
 import { getApproval } from '../src/persistence/approvals.ts';
+import { listen } from '../src/persistence/notifications.ts';
 import { recordSessionSettings } from '../src/workflow/run-metadata.ts';
 import {
   evidence,
@@ -10,6 +11,7 @@ import {
   type AtlassianHarness,
 } from './atlassian-support.ts';
 import { pendingCard } from './spark-mcp-support.ts';
+import { eventually, testDatabaseUrl } from './support.ts';
 
 let h: AtlassianHarness;
 const appended: RunEvent[] = [];
@@ -51,6 +53,28 @@ describe('Spark action reads follow the mode the agent is in now', () => {
     expect(settled?.payload.sparkResult).toMatchObject({ state: 'done' });
     expect(decided()).toHaveLength(1);
     expect(JSON.stringify(h.recorded.audited)).toContain('ranWithoutReview');
+  });
+
+  it('announces the settled card so an open chat refetches its result', async () => {
+    h = await startAtlassian('/plan CP-51865', 'plan');
+    const changed: string[] = [];
+    const listener = await listen(testDatabaseUrl(), 'changes', (payload) => {
+      const change = JSON.parse(payload) as { kind: string; conversationId: string | null };
+      if (change.kind === 'approval' && change.conversationId === h.conversationId) {
+        changed.push(change.kind);
+      }
+    });
+    try {
+      const read = h.tools.call('spark_jira', { action: 'read', key: 'WEB-418' });
+      await pendingCard(h.t);
+      await eventually(async () => changed.length > 0);
+      changed.length = 0;
+      await switchTo('bypassPermissions');
+      await read;
+      await eventually(async () => changed.length > 0);
+    } finally {
+      await listener.close();
+    }
   });
 
   it('asks again after the agent moves back to a mode that asks', async () => {
