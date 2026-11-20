@@ -236,3 +236,16 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+.cost-more {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.cost-more summary {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  cursor: pointer;
+}
