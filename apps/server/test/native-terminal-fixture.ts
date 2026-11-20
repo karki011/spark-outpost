@@ -173,16 +173,18 @@ export async function nativeRuntimeFixture(
       return response.status;
     },
     async modFacts(items: unknown[]) {
+      return (await this.modPost('/mod/telemetry', { items })).status;
+    },
+    async modPost(path: '/mod/telemetry' | '/mod/inbox', body: unknown) {
       const input = inputs.at(-1)!;
-      const response = await fetch(new URL('/mod/telemetry', input.hooks.url), {
+      return fetch(new URL(path, input.hooks.url), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${input.hooks.token}`,
         },
-        body: JSON.stringify({ items }),
+        body: JSON.stringify(body),
       });
-      return response.status;
     },
     async restart() {
       await this.runtime.dispose();

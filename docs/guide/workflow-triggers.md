@@ -19,12 +19,12 @@ A triggered workflow runs in the chat that set it off, on that chat's worktree a
 | Event                               | When it runs                                                 |
 | ----------------------------------- | ------------------------------------------------------------ |
 | **A chat starts**                   | After the first turn of a new chat.                          |
-| **A turn changes files**            | After a Do turn keeps changes, within about 30 seconds.      |
+| **A turn changes files**            | After a Do turn keeps changes.                               |
 | **Before publish**                  | At Full auto → PR, inside the turn, before Spark pushes.     |
 | **A new commit on the branch**      | After a turn adds a commit. **Only on branches** filters.    |
 | **A pull request opens or updates** | When a pull request Spark opened appears or gets a new head. |
 
-Spark skips a run when the chat's changes match the last run. **A chat starts** skips chats a workflow, another chat or Spark started.
+Spark skips a run when the chat's changes match the last run. **A chat starts** ignores chats Spark or a workflow started. Each run folds into one row.
 
 ## Hold the publish
 
@@ -40,6 +40,6 @@ With **Triggered and scheduled runs may change files**, steps on Claude may leav
 
 > **Important:** A triggered run is not your message. It can't ask for a push, a pull request or a Spark action.
 
-Triggers are set on the Mac only.
+Set triggers on the Mac.
 
 **Next:** [Run a workflow on a schedule](workflow-schedules.md)

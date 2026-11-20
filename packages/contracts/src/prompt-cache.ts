@@ -13,6 +13,7 @@ export const promptCacheLastSchema = z.object({
   rewriteUsd: z.number().nonnegative().nullable(),
   expired: z.boolean().nullable(),
   estimateBy: z.enum(['spark', 'claude-code']),
+  model: z.string().nullable().optional(),
 });
 export type PromptCacheLast = z.infer<typeof promptCacheLastSchema>;
 

@@ -1,7 +1,7 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { resetTestDatabase } from './database.ts';
+import { openTestDb, resetTestDatabase } from './database.ts';
 import { pickTerminalAgent } from './native-terminal-support.ts';
 import { chooseSessionType, openChats } from './navigation.ts';
 import { FAKE_CLAUDE_BIN } from './stub-config.ts';
@@ -26,6 +26,24 @@ test.beforeEach(async () => {
 test.afterEach(() => {
   rmSync(CODEX_FIXTURE, { force: true });
 });
+
+async function measuredLimits() {
+  const db = openTestDb();
+  try {
+    await db.query(`UPDATE native_terminal_sessions SET measure = $1::jsonb, measured_at = now()`, [
+      JSON.stringify({
+        context: { tokens: 50_000, window: 200_000, percent: 25 },
+        rateLimits: [
+          { kind: 'five_hour', percentUsed: 23.5, resetsAt: null },
+          { kind: 'seven_day', percentUsed: 7, resetsAt: null },
+        ],
+        costUsd: 0.03,
+      }),
+    ]);
+  } finally {
+    await db.end();
+  }
+}
 
 test('a Codex Terminal session shows its steps and tokens by turn, with no reported total', async ({
   page,
@@ -102,6 +120,8 @@ test('a Terminal session shows its steps, tokens by turn and the total the CLI r
   const total = panel.getByRole('region', { name: 'Session total' });
   await expect(total).toContainText('unknown until Claude Code exits and writes its own total');
   await page.screenshot({ path: path.resolve('.local/report/terminal-usage-cost-open.png') });
+  await expect(panel.getByRole('region', { name: 'Usage limits' })).toHaveCount(0);
+  await measuredLimits();
   await workspace.locator('.native-screen').click();
   await page.keyboard.type('exit');
   await page.keyboard.press('Enter');
@@ -110,5 +130,10 @@ test('a Terminal session shows its steps, tokens by turn and the total the CLI r
   await expect(total.getByRole('list', { name: 'Session total by model' })).toContainText(
     'claude-haiku-5-5',
   );
+  const limits = panel.getByRole('region', { name: 'Usage limits' });
+  await expect(limits).toContainText('5-hour limit');
+  await expect(limits).toContainText('23.5% used');
+  await expect(limits).toContainText('7-day limit');
+  await expect(limits).toContainText('50K of 200K tokens');
   await page.screenshot({ path: path.resolve('.local/report/terminal-usage-cost-reported.png') });
 });

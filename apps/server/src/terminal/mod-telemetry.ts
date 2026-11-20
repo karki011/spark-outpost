@@ -8,6 +8,7 @@ import {
   recordModUsage,
   type ModModelTotals,
 } from '../persistence/native-terminal-mod-usage.ts';
+import { recordModMeasure, recordSessionEnd } from '../persistence/native-terminal-mod-reports.ts';
 import { recordNativeStep } from '../persistence/native-terminal-steps.ts';
 import {
   longWritesByModel,
@@ -23,6 +24,7 @@ import {
   MOD_REPLY_CHARS,
   MOD_SIDE_INDEX,
 } from './native-mod-telemetry-script.ts';
+import { isNativeSessionId } from './native-hooks.ts';
 import { estimatedCost } from './turn-usage.ts';
 
 export const MOD_BATCH_MAX = 500;
@@ -31,6 +33,7 @@ const label = z.string().min(1).max(200);
 const count = z.number().int().nonnegative().max(1_000_000_000);
 const at = z.number().int().positive().max(8_640_000_000_000);
 const owned = { prompt: label, agent: label.nullable() };
+const percent = z.number().nonnegative().max(1000);
 const toolInput = z
   .record(z.string(), z.unknown())
   .nullable()
@@ -84,6 +87,27 @@ const itemSchema = z.discriminatedUnion('kind', [
     input: toolInput.optional(),
     output: z.string().max(MOD_OUTPUT_CHARS).optional(),
     asked: z.boolean().optional(),
+  }),
+  z.strictObject({
+    kind: z.literal('measure'),
+    at,
+    context: z
+      .strictObject({
+        tokens: count.nullable(),
+        window: count.positive(),
+        percent: percent.nullable(),
+      })
+      .nullable(),
+    rateLimits: z
+      .array(z.strictObject({ kind: label, percentUsed: percent, resetsAt: label.nullable() }))
+      .max(8),
+    costUsd: z.number().nonnegative().max(1_000_000).nullable(),
+  }),
+  z.strictObject({
+    kind: z.literal('session_end'),
+    at,
+    reason: z.string().regex(/^[a-z_]{1,40}$/),
+    resumeId: label.nullable(),
   }),
   z.strictObject({
     kind: z.literal('reply'),
@@ -217,8 +241,38 @@ async function recordRequest(db: Db, runId: string, item: Extract<ModItem, { kin
   });
 }
 
-async function recordItem(db: Db, runId: string, item: ModItem): Promise<void> {
-  if (item.kind === 'reply' || item.kind === 'cache_resume') return;
+type SessionItem = Extract<ModItem, { kind: 'cache_resume' | 'measure' | 'session_end' }>;
+type RunItem = Exclude<ModItem, SessionItem>;
+
+function sessionItem(item: ModItem): item is SessionItem {
+  return item.kind === 'cache_resume' || item.kind === 'measure' || item.kind === 'session_end';
+}
+
+async function recordSessionItem(db: Db, sessionId: string, item: SessionItem): Promise<void> {
+  if (item.kind === 'measure')
+    return recordModMeasure(db, sessionId, {
+      at: item.at,
+      context: item.context,
+      rateLimits: item.rateLimits,
+      costUsd: item.costUsd,
+    });
+  if (item.kind === 'session_end')
+    return recordSessionEnd(db, sessionId, {
+      reason: item.reason,
+      resumeId: item.resumeId !== null && isNativeSessionId(item.resumeId) ? item.resumeId : null,
+      at: new Date(item.at),
+    });
+  await recordCacheResume(db, sessionId, {
+    at: item.at,
+    secondsSince: item.secondsSince,
+    contextTokens: item.contextTokens,
+    likelyExpired: item.likelyExpired,
+    estimatedWriteUsd: item.estimatedWriteUsd,
+  });
+}
+
+async function recordItem(db: Db, runId: string, item: RunItem): Promise<void> {
+  if (item.kind === 'reply') return;
   const agentId = item.agent;
   if (item.kind === 'turn_start' || item.kind === 'turn_end') {
     await recordModTurn(db, runId, {
@@ -251,15 +305,8 @@ export async function recordModTelemetry(
   const touched = new Set<string>();
   const aborted: string[] = [];
   for (const item of items) {
-    if (item.kind === 'cache_resume') {
-      if (sessionId)
-        await recordCacheResume(db, sessionId, {
-          at: item.at,
-          secondsSince: item.secondsSince,
-          contextTokens: item.contextTokens,
-          likelyExpired: item.likelyExpired,
-          estimatedWriteUsd: item.estimatedWriteUsd,
-        });
+    if (sessionItem(item)) {
+      if (sessionId) await recordSessionItem(db, sessionId, item);
       continue;
     }
     const runId = runOf(item.prompt);

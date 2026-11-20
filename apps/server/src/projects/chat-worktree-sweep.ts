@@ -5,11 +5,13 @@ import {
   type ChatWorktree,
 } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
-import { releaseChatWorktree, type ReleaseReason } from './chat-worktree-cleanup.ts';
+import { releaseChatWorktree, type Released, type ReleaseReason } from './chat-worktree-cleanup.ts';
 import { branchMerged } from './chat-worktrees.ts';
 
 const SWEEP_EVERY_MS = 60_000;
 const REPOS_AT_ONCE = 4;
+const MERGED_KEPT_RECHECK_MS = 24 * 60 * 60_000;
+const mergedKeptAt = new Map<string, number>();
 
 export type Exclusive = <T>(work: () => Promise<T>) => Promise<T>;
 
@@ -50,23 +52,35 @@ async function releaseIdle(
   record: ChatWorktree,
   reason: ReleaseReason,
   exclusive: Exclusive,
-): Promise<void> {
-  await exclusive(async () => {
+): Promise<Released | null> {
+  return exclusive(async () => {
     const chat = record.conversationId;
-    if (chat && (await chatHasOpenRun(db, chat))) return;
-    if (chat && reason === 'archived' && !(await archivedOrDeleted(db, chat))) return;
-    await releaseChatWorktree(db, record, reason);
+    if (chat && (await chatHasOpenRun(db, chat))) return null;
+    if (chat && reason === 'archived' && !(await archivedOrDeleted(db, chat))) return null;
+    return releaseChatWorktree(db, record, reason);
   });
 }
 
+function mergedRecheckDue(id: string, now: number): boolean {
+  const keptAt = mergedKeptAt.get(id);
+  return keptAt === undefined || now - keptAt >= MERGED_KEPT_RECHECK_MS;
+}
+
 async function sweepOne(db: Queryable, record: ChatWorktree, exclusive: Exclusive): Promise<void> {
-  if (!record.conversationId) return releaseIdle(db, record, 'deleted', exclusive);
+  if (!record.conversationId) {
+    await releaseIdle(db, record, 'deleted', exclusive);
+    return;
+  }
   if (await archivedOrDeleted(db, record.conversationId)) {
-    return releaseIdle(db, record, 'archived', exclusive);
+    await releaseIdle(db, record, 'archived', exclusive);
+    return;
   }
-  if (await branchMerged(record.repoRoot, record.branch, record.baseCommit)) {
-    await releaseIdle(db, record, 'merged', exclusive);
-  }
+  const now = Date.now();
+  if (!mergedRecheckDue(record.id, now)) return;
+  if (!(await branchMerged(record.repoRoot, record.branch, record.baseCommit))) return;
+  const released = await releaseIdle(db, record, 'merged', exclusive);
+  if (released && !released.removed && !released.inUse) mergedKeptAt.set(record.id, now);
+  else mergedKeptAt.delete(record.id);
 }
 
 export async function sweepChatWorktrees(
