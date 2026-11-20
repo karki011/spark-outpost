@@ -106,6 +106,8 @@ describe('releasing a chat worktree', () => {
       removed: true,
       branchKept: false,
       saved: false,
+      ignoredKept: [],
+      inUse: false,
     });
     expect(existsSync(copy.path)).toBe(false);
     expect((await listBranches(root)).local).toEqual(['main']);
@@ -118,6 +120,8 @@ describe('releasing a chat worktree', () => {
       removed: true,
       branchKept: true,
       saved: true,
+      ignoredKept: [],
+      inUse: false,
     });
     expect(existsSync(copy.path)).toBe(false);
     const tip = await branchTipOf(root, copy.branch);

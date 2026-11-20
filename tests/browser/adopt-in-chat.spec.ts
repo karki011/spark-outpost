@@ -80,9 +80,9 @@ test('the Work panel offers a pull request to a chat that already has its own br
   await stubWorkspace(page);
   await openChats(page);
   const panel = page.locator('#work-panel');
-  if (!(await panel.isVisible())) {
-    await page.getByRole('button', { name: 'Show work panel' }).click();
-  }
+  const show = page.getByRole('button', { name: 'Show work panel' });
+  await expect(panel.or(show).first()).toBeVisible();
+  if (await show.isVisible()) await show.click();
   await panel.getByRole('button', { name: 'Work on a pull request…' }).click();
   await expect(panel).toContainText(
     'This chat switches to its branch; earlier work stays on spark/tidy-1a2b.',

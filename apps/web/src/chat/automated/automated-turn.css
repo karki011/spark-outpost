@@ -1,0 +1,114 @@
+.auto-turn {
+  margin: 4px 0 12px;
+}
+
+.auto-turn-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+}
+
+.auto-turn-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.auto-turn-toggle:hover,
+.auto-turn-toggle:focus-visible {
+  color: var(--text);
+}
+
+.auto-turn-toggle b {
+  flex: none;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.auto-turn-toggle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auto-turn-toggle .chev {
+  flex: none;
+  transition: transform 120ms ease;
+}
+
+.auto-turn[data-open='true'] .auto-turn-toggle .chev {
+  transform: rotate(90deg);
+}
+
+.auto-turn-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0 12px 20px;
+}
+
+.auto-turn-body[hidden] {
+  display: none;
+}
+
+.auto-turn-sent > summary {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.auto-turn-sent > summary::-webkit-details-marker {
+  display: none;
+}
+
+.auto-turn-sent > summary::before {
+  content: '▸';
+  margin-right: 4px;
+}
+
+.auto-turn-sent[open] > summary::before {
+  content: '▾';
+}
+
+.auto-turn-sent > summary:hover {
+  color: var(--text);
+}
+
+.auto-turn-sent .bubble {
+  max-width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auto-turn-toggle .chev {
+    transition: none;
+  }
+}
+
+.auto-turn-row .wf-state {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.auto-turn-row .btn {
+  flex: none;
+}

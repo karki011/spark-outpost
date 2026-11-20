@@ -21,11 +21,13 @@ export const summaryQuery = `
       SELECT jsonb_build_object(
         'done', count(*) FILTER (WHERE entry->>'status' = 'completed'),
         'active', count(*) FILTER (WHERE entry->>'status' = 'in_progress'),
-        'total', count(*))
+        'total', count(*),
+        'doing', (array_agg(entry->>'content' ORDER BY entry_order)
+          FILTER (WHERE entry->>'status' = 'in_progress'))[1])
       FROM (
         SELECT body FROM run_artifacts
         WHERE task_id = r.task_id AND kind = 'plan' ORDER BY version DESC LIMIT 1
-      ) plan, jsonb_array_elements(plan.body->'entries') entry
+      ) plan, jsonb_array_elements(plan.body->'entries') WITH ORDINALITY AS item(entry, entry_order)
       WHERE btrim(entry->>'content') <> ''
     ) END AS latest_run_progress,
     CASE WHEN r.status = 'running' THEN (

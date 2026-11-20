@@ -25,6 +25,8 @@ import { reveal } from '../ui/transitions.tsx';
 import { MatchSnippet } from './MatchSnippet.tsx';
 import { recencyLabel } from './recency.ts';
 import { rowFaceState, rowState } from './row-state.ts';
+import { rowLine } from './row-line.ts';
+import { RowLine } from './RowLine.tsx';
 import { BLOB_LABELS, chatBlob } from './chat-blob.ts';
 import { ChatBlob } from './ChatBlob.tsx';
 import { useChatOnScreen } from './on-screen.ts';
@@ -285,7 +287,11 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
             {handle && <span className="sr-only">{`, @${handle}`}</span>}
             {relation && <span className="sr-only">{`, ${relation}`}</span>}
             {terminal && <span className="sr-only">, Terminal session</span>}
-            {chat.match && <MatchSnippet match={chat.match} />}
+            {chat.match ? (
+              <MatchSnippet match={chat.match} />
+            ) : (
+              <RowLine line={rowLine(chat, state)} />
+            )}
             {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
             {autoArchived && <span className="sr-only">, {autoArchived}</span>}
           </span>
