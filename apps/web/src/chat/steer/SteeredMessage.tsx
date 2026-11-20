@@ -134,5 +134,5 @@ interface TurnSteersProps {
 
 export function TurnSteers({ detail, run, placedIn = [] }: TurnSteersProps) {
   const messages = steersReadByNone(turnSteers(detail, run.id), placedIn);
-  return <SteerGroup messages={messages} detail={detail} run={run} crew={false} />;
+  return <SteerGroup messages={messages} detail={detail} run={run} crew />;
 }
