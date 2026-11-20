@@ -190,6 +190,8 @@ export async function sweepableChatWorktrees(db: Queryable): Promise<ChatWorktre
          SELECT 1 FROM conversations c WHERE c.id = cw.conversation_id
            AND c.archived_at IS NOT NULL AND cw.kept_dirty_at >= c.archived_at
            AND cw.kept_dirty_at > now() - interval '1 day')
+       AND (cw.conversation_id IS NOT NULL OR cw.kept_dirty_at IS NULL
+         OR cw.kept_dirty_at <= now() - interval '1 day')
      ORDER BY cw.created_at`,
   );
   return rows.map(toRecord);

@@ -132,6 +132,7 @@ export function withClaudeSpark(
     ),
     agentTool: subagents,
     readDirs,
+    ...(prefs.compactIdleConversations ? { compactIdle: true } : {}),
   };
 }
 

@@ -14,6 +14,7 @@ const KIND_NAMES: Record<string, string> = {
   private_key: 'a private key',
   password: 'a password',
   url_password: 'a password',
+  basic_auth: 'a password',
 };
 
 function secretWarningText(kinds: readonly string[]): string {

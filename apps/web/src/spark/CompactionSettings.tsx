@@ -1,11 +1,13 @@
 import { useId, useState } from 'react';
 import { compactionThresholdError, reaskPercent, type Profile } from '@spark-outpost/contracts';
+import { ProfileSwitchSetting } from '../settings/ProfileSwitchSetting.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
 import { useProfileSetting } from '../settings/use-profile-setting.ts';
 import { SwitchValueSetting } from './SwitchValueSetting.tsx';
 
 export const WARN_LABEL = 'Warn when context is';
 export const COMPACT_LABEL = 'Compact automatically at';
+export const IDLE_COMPACT_LABEL = 'Compact idle conversations';
 
 const WARN_INFO = {
   lead: 'The context ring in the composer turns amber at this point.',
@@ -24,6 +26,23 @@ const COMPACT_INFO = {
     { label: 'Off', text: 'Spark only warns and offers the card; it never compacts by itself.' },
   ],
   footer: 'The full transcript always stays in the chat.',
+};
+
+const IDLE_INFO = {
+  lead: 'Lets Claude compact a long conversation left idle about an hour, so your next message isn’t sent uncached.',
+  items: [
+    {
+      label: 'Applies to',
+      text: 'Claude chats from their next message, and new Claude Terminal sessions.',
+    },
+    { label: 'Trade-off', text: 'A summary can drop detail the agent had.' },
+    { label: 'Sleeping', text: 'A turn sleeping until a wakeup can be compacted too.' },
+    {
+      label: 'Not counted',
+      text: 'In a chat it runs between turns, so its tokens and cost aren’t recorded.',
+    },
+  ],
+  footer: 'Off, Spark keeps Claude from compacting idle conversations. Codex is unchanged.',
 };
 
 type Check = (percent: number) => string | null;
@@ -149,6 +168,18 @@ export function CompactionSettings({ profile }: { profile: Profile }) {
       <h4 id="spark-compaction">Context compaction</h4>
       <WarnSetting profile={profile} />
       <CompactAtSetting profile={profile} />
+      <ProfileSwitchSetting
+        enabled={profile.compactIdleConversations}
+        label={IDLE_COMPACT_LABEL}
+        info={IDLE_INFO}
+        doc={{ page: 'compaction', heading: 'compact-idle-chats' }}
+        hint={(on) =>
+          on
+            ? 'Claude compacts a long chat or Terminal session left idle about an hour.'
+            : 'Claude never compacts an idle chat or Terminal session.'
+        }
+        toUpdate={(value) => ({ compactIdleConversations: value })}
+      />
     </section>
   );
 }

@@ -223,25 +223,3 @@
     height: 44px;
   }
 }
-
-.pr-round-head {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  margin: 0 0 4px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.pr-round-head b {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.pr-round-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-}

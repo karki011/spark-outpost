@@ -68,7 +68,7 @@ function setup(
       delay: async () => undefined,
     }),
     mod,
-    waitsForAnswer,
+    { db, waitsForAnswer, delay: async () => undefined },
   );
   return { remote, mod, session, row, sent, taken, approvals };
 }

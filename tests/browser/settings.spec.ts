@@ -322,10 +322,23 @@ test('context compaction thresholds validate inline and save from Spark settings
   await expect(toggle).toHaveAccessibleDescription(
     'Spark only warns and offers the card at 90%; it never compacts by itself.',
   );
+  const idle = spark.getByRole('switch', { name: 'Compact idle conversations' });
+  await expect(idle).not.toBeChecked();
+  await expect(idle).toHaveAccessibleDescription(
+    'Claude never compacts an idle chat or Terminal session.',
+  );
+  save = saved();
+  await idle.click();
+  await save;
+  await expect(idle).toBeChecked();
+  await expect(idle).toHaveAccessibleDescription(
+    'Claude compacts a long chat or Terminal session left idle about an hour.',
+  );
   expect(await profile()).toMatchObject({
     compactWarnPercent: 65,
     compactAtPercent: 90,
     autoCompact: false,
+    compactIdleConversations: true,
   });
 });
 
