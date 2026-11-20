@@ -13,10 +13,10 @@ About 2 minutes.
 1. The working line shows step and time; **Thinking** expands.
 2. Answered cards and flags stay; waiting cards sit last.
 3. Summaries separate commands **passed** from tools **done**.
-4. Browser, web, page and Mac steps get rows.
+4. Browser, web and Mac steps get rows.
 5. Code Mode labels discovery and reads; failures expand.
 6. Edits show **+N −M**; open as diffs.
-7. A done to-do folds.
+7. Done to-dos fold.
 8. Sidebar blobs show the **Agent TV** team.
 9. **View agents** opens **Work**; over four become clickable faces.
 10. **Message** opens that chat’s composer; **Ask lead to redirect** drafts in that chat.
@@ -63,6 +63,7 @@ Steps fold under **Worked for …**; steered replies don't.
 | **Good result** / **Bad result** | Rate the PR turn.                               |
 | Selected text                    | **Add to chat**, **Comment**, **Copy**.         |
 | Choices                          | Only fill the message box, or **Show as list**. |
+| HTML folds                       | **Enter** toggles.                              |
 | `/fresh` or **… → Start fresh**  | Drop old context.                               |
 | Ticks left of the thread         | Jump to messages.                               |
 
