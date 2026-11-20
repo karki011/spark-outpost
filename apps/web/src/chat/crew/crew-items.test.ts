@@ -53,6 +53,15 @@ describe('shownApprovals', () => {
     expect(shownApprovals([answered], [])).toEqual([answered]);
   });
 
+  it("keeps the stored result of a card the agent's mode settled over the streamed decision", () => {
+    const streamed = approval('a1', 'bolt-1', 'allowed', 'level');
+    const stored = {
+      ...streamed,
+      payload: { sparkResult: { state: 'done', message: 'Not needed any more.', url: null } },
+    } as Approval;
+    expect(shownApprovals([stored], [streamed])).toEqual([stored]);
+  });
+
   it('drops approvals settled without the user, such as a Stop', () => {
     const stopped = approval('a1', 'bolt-1', 'cancelled', 'stop');
     const allowlisted = approval('a22', 'bolt-1', 'allowed', 'allowlist');
