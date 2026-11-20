@@ -283,6 +283,7 @@ export type ProviderOutput =
       kind: 'step_finished';
       name: string;
       tool?: boolean;
+      failed?: boolean;
       toolKind?: string;
       toolName?: string;
       target?: string;

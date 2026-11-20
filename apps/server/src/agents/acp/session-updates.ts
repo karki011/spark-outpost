@@ -187,9 +187,10 @@ export function createUpdateMapper(agentName = 'The agent', checksWindow = false
     if (open === undefined) return [];
     openTools.delete(id);
     focus.done(id);
+    const finished = stepOf('step_finished', open, failed ? [] : finishedToolDiffs(open.changes));
     const outputs = [
       ...(open.shown ? [] : [stepOf('step_started', open)]),
-      stepOf('step_finished', open, failed ? [] : finishedToolDiffs(open.changes)),
+      failed && finished.kind === 'step_finished' ? { ...finished, failed } : finished,
     ];
     if (failed) outputs.push(...noteSteps(FAILED_PREFIX + open.name));
     return outputs;

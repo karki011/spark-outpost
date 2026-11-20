@@ -27,6 +27,11 @@ const KEPT_AFTER_CANCEL: ReadonlySet<ProviderOutput['kind']> = new Set([
   'subagent_finished',
 ]);
 
+function droppedAfterCancel(output: ProviderOutput): boolean {
+  if (output.kind === 'step_started') return !output.tool;
+  return output.kind === 'step_finished' && output.failed === true;
+}
+
 export function keptAfterCancel(output: ProviderOutput): boolean {
-  return KEPT_AFTER_CANCEL.has(output.kind);
+  return KEPT_AFTER_CANCEL.has(output.kind) && !droppedAfterCancel(output);
 }
