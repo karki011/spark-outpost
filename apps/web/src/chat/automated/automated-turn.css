@@ -146,16 +146,14 @@
 
 .auto-turn-items li {
   display: flex;
-  align-items: flex-start;
+  align-items: baseline;
   gap: 10px;
   min-width: 0;
 }
 
 .auto-turn-word {
   flex: none;
-  padding: 0 6px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
+  width: 72px;
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
@@ -163,13 +161,11 @@
 
 .auto-turn-word[data-triage='fix'],
 .auto-turn-word[data-triage='check'] {
-  border-color: color-mix(in srgb, var(--success) 45%, var(--line));
   color: var(--success);
 }
 
 .auto-turn-word[data-triage='question'],
 .auto-turn-word[data-triage='disagree'] {
-  border-color: color-mix(in srgb, var(--warn) 45%, var(--line));
   color: var(--warn);
 }
 
