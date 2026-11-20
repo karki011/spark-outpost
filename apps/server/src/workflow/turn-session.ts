@@ -132,6 +132,7 @@ export async function prepareTurnSession(
     ...decision.resume,
     ...(commands.length > 0 ? { commands: commands.map((command) => command.name) } : {}),
     ...(conversation && acrossFolders(input.provider) ? { anyFolder: true } : {}),
+    ...(stored?.agentTitle ? { title: stored.agentTitle } : {}),
   };
   const followUp =
     decision.resume && decision.stopped
@@ -216,6 +217,7 @@ export async function prepareTurnSession(
           additionalDirs: output.additionalDirectories,
           settingsHash: hash,
           replacedReason: output.freshReason ?? RESUME_REASONS.replaced,
+          agentTitle: output.title ?? null,
         });
       } catch (error) {
         if (!isUniqueViolation(error)) throw error;

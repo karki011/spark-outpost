@@ -6,6 +6,7 @@ import {
 import { redactText } from '../../audit/redact.ts';
 import { ModelRejectedError, ProviderError, UsageLimitError } from '../../providers/provider.ts';
 import { AgentExitedError } from './agent-process.ts';
+import { signedOutError } from './auth-status.ts';
 import { objectFields } from './object-fields.ts';
 import {
   classifyFailure,
@@ -77,9 +78,7 @@ export function namesCause(error: unknown): boolean {
 export function toProviderError(agentName: string, error: unknown, stderrTail: string): Error {
   if (error instanceof ProviderError) return error;
   if (error instanceof RequestError && error.code === AUTH_REQUIRED) {
-    return new ProviderError(
-      `${agentName} isn't signed in. Open Settings, reconnect ${agentName}, and try again.`,
-    );
+    return signedOutError(agentName);
   }
   if (stderrTail.trim()) console.error(`${agentName} agent stderr:\n${redactText(stderrTail)}`);
   if (error instanceof AgentExitedError) {

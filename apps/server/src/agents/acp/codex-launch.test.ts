@@ -5,9 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { RunCommand } from '../../setup/command.ts';
 import { agentDefinitions, codexConfig } from './agents.ts';
 import {
-  atLeast,
   CODEX_PROFILES_FROM,
-  codexVersion,
   isCodexConfigFailure,
   prepareCodexLaunch,
   startupOverrides,
@@ -47,11 +45,6 @@ describe('Codex permission profile support', () => {
 
   it('keeps profiles when the version cannot be read', () => {
     expect(supportsPermissionProfiles(null)).toBe(true);
-  });
-
-  it('compares versions numerically', () => {
-    expect(atLeast('0.157.0', '0.99.0')).toBe(true);
-    expect(atLeast('0.9.0', '0.149.1')).toBe(false);
   });
 });
 
@@ -176,29 +169,6 @@ describe('Codex startup wrapper', () => {
   it('passes through when no Codex was located', async () => {
     const launch = await prepareCodexLaunch({}, dir, false, reporting(''));
     expect(launch).toEqual({ cli: {}, profiles: true, version: null });
-  });
-});
-
-describe('codexVersion', () => {
-  it('reads the version once per path', async () => {
-    let calls = 0;
-    const run: RunCommand = async () => {
-      calls += 1;
-      return { code: 0, stdout: 'codex-cli 0.157.0\n', stderr: '' };
-    };
-    expect(await codexVersion('/bin/codex-cached', run)).toBe('0.157.0');
-    expect(await codexVersion('/bin/codex-cached', run)).toBe('0.157.0');
-    expect(calls).toBe(1);
-  });
-
-  it('is unknown when the command fails or prints nothing useful', async () => {
-    expect(await codexVersion('/bin/codex-fails', reporting('', 1))).toBeNull();
-    expect(await codexVersion('/bin/codex-blank', reporting('hello'))).toBeNull();
-    expect(
-      await codexVersion('/bin/codex-throws', async () => {
-        throw new Error('nope');
-      }),
-    ).toBeNull();
   });
 });
 

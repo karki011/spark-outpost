@@ -2,7 +2,10 @@ import type * as acp from '@agentclientprotocol/sdk/unstable';
 
 export const FAKE_AGENT_INFO = { name: '@fake/fake-acp-agent', title: 'Fake', version: '1.2.3' };
 
-export function fakeMcpCapabilities(): Pick<acp.AgentCapabilities, 'mcpCapabilities'> {
+export function fakeExtraCapabilities(): Pick<acp.AgentCapabilities, 'mcpCapabilities' | 'auth'> {
   const configured = process.env.FAKE_ACP_MCP_CAPABILITIES;
-  return configured ? { mcpCapabilities: JSON.parse(configured) as acp.McpCapabilities } : {};
+  return {
+    ...(configured ? { mcpCapabilities: JSON.parse(configured) as acp.McpCapabilities } : {}),
+    ...(process.env.FAKE_ACP_AUTH_STATE ? { auth: { status: {} } } : {}),
+  };
 }

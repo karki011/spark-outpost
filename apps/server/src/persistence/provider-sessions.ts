@@ -24,6 +24,7 @@ export interface ProviderSessionRecord {
   lastUsedAt: Date;
   closedAt: Date | null;
   closeReason: string | null;
+  agentTitle: string | null;
 }
 
 interface SessionRow {
@@ -49,6 +50,7 @@ interface SessionRow {
   last_used_at: Date;
   closed_at: Date | null;
   close_reason: string | null;
+  agent_title: string | null;
 }
 
 function toRecord(row: SessionRow): ProviderSessionRecord {
@@ -75,6 +77,7 @@ function toRecord(row: SessionRow): ProviderSessionRecord {
     lastUsedAt: row.last_used_at,
     closedAt: row.closed_at,
     closeReason: row.close_reason,
+    agentTitle: row.agent_title,
   };
 }
 
@@ -105,6 +108,7 @@ export interface SessionStart {
   additionalDirs: readonly string[];
   settingsHash: string;
   replacedReason: string;
+  agentTitle?: string | null;
 }
 
 export async function startProviderSession(db: Db, start: SessionStart): Promise<string | null> {
@@ -116,11 +120,17 @@ export async function startProviderSession(db: Db, start: SessionStart): Promise
     if (!conversation.rowCount) return null;
     const { rows } = await client.query<{ id: string }>(
       `UPDATE provider_sessions SET last_used_at = now(), last_message_id = NULL,
-              last_reply_hash = NULL
+              last_reply_hash = NULL, agent_title = COALESCE($5, agent_title)
        WHERE conversation_id = $1 AND agent_key = $2 AND session_id = $3
          AND settings_hash = $4 AND closed_at IS NULL
        RETURNING id`,
-      [start.conversationId, start.agentKey, start.sessionId, start.settingsHash],
+      [
+        start.conversationId,
+        start.agentKey,
+        start.sessionId,
+        start.settingsHash,
+        start.agentTitle ?? null,
+      ],
     );
     if (rows[0]) return rows[0].id;
     await client.query(
@@ -132,8 +142,8 @@ export async function startProviderSession(db: Db, start: SessionStart): Promise
     await client.query(
       `INSERT INTO provider_sessions
          (id, conversation_id, provider, agent_key, session_id, cwd, workdir, additional_dirs,
-          settings_hash)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          settings_hash, agent_title)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         id,
         start.conversationId,
@@ -144,6 +154,7 @@ export async function startProviderSession(db: Db, start: SessionStart): Promise
         start.workdir,
         [...start.additionalDirs],
         start.settingsHash,
+        start.agentTitle ?? null,
       ],
     );
     return id;
