@@ -85,7 +85,17 @@ async function stubPage(page: Page, sparkId: string, start: Partial<Settings> = 
   };
   await page.route(/\/api\/github\/inbox(\?.*)?$/, (route) => route.fulfill({ json: inbox }));
   await page.route(/\/api\/workflows$/, (route) =>
-    route.fulfill({ json: { workflows: [{ ...FLOW, stages: [], problems: 0 }] } }),
+    route.fulfill({
+      json: {
+        workflows: [
+          {
+            ...FLOW,
+            stages: [[{ stepId: 'check', sparkId }], [{ stepId: 'sum', sparkId }]],
+            problems: 0,
+          },
+        ],
+      },
+    }),
   );
   await page.route('**/api/github/review-settings', (route) => {
     if (route.request().method() !== 'PUT') return route.fulfill({ json: server.state });
@@ -132,7 +142,11 @@ test('the chip menu picks a reviewer and turns on auto-review, posting and appro
   const list = panel.getByRole('listbox', { name: 'Review with' });
   await expect(list.getByRole('option', { name: 'None' })).toBeFocused();
   await expect(list.getByRole('group', { name: 'Sparks' })).toContainText('PR Reviewer');
-  await expect(list.getByRole('group', { name: 'Workflows' })).toContainText('Deep review');
+  await expect(list.getByRole('group', { name: 'Workflows' })).toContainText('Deep review2 steps');
+  await expect(list.getByRole('group', { name: 'Sparks' })).toContainText('Reviews pull requests');
+  await expect(
+    list.getByRole('group', { name: 'Workflows' }).locator('.ar-faces svg, .ar-faces > *'),
+  ).not.toHaveCount(0);
 
   const auto = panel.getByRole('switch', { name: 'Review automatically' });
   const post = panel.getByRole('switch', { name: 'Reviewer may post to GitHub' });

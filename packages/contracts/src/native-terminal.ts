@@ -72,6 +72,24 @@ export function terminalDependenciesText(dependencies: TerminalDependencies): st
   return `Dependencies are still ${doing}. Commands that need them may fail until this finishes.`;
 }
 
+export const terminalModHealthSchema = z.object({
+  state: z.enum(['loaded', 'missing']),
+  reason: z.string().nullable(),
+});
+export type TerminalModHealth = z.infer<typeof terminalModHealthSchema>;
+
+export function terminalModText(health: TerminalModHealth): string | null {
+  if (health.state !== 'missing') return null;
+  return `Spark’s mod didn’t load: ${health.reason ?? 'it didn’t check in'}. Using the fallback.`;
+}
+
+export const terminalSessionEndSchema = z.object({
+  reason: z.string(),
+  resumeId: z.string().nullable(),
+  at: z.string(),
+});
+export type TerminalSessionEnd = z.infer<typeof terminalSessionEndSchema>;
+
 export const nativeTerminalSessionSchema = z.object({
   id: z.uuid(),
   conversationId: z.uuid(),
@@ -87,6 +105,8 @@ export const nativeTerminalSessionSchema = z.object({
   agentMode: z.string().nullable().default(null),
   readopted: z.object({ at: z.string(), stepsComplete: z.boolean() }).nullable().optional(),
   dependencies: terminalDependenciesSchema.nullable().optional(),
+  mod: terminalModHealthSchema.nullable().optional(),
+  ended: terminalSessionEndSchema.nullable().optional(),
 });
 export type NativeTerminalSession = z.infer<typeof nativeTerminalSessionSchema>;
 

@@ -1,9 +1,10 @@
-import { redacted, redactText } from './redact.ts';
+import { ENV_KEY, redacted, redactText } from './redact.ts';
 
-const ENV_LINE = /^[ \t]*(?:export[ \t]+)?[A-Za-z_][A-Za-z0-9_.-]*[ \t]*(?:=|$)/;
+const ENV_LINE = new RegExp(`^[ \\t]*(?:export[ \\t]+)?${ENV_KEY.source}[ \\t]*(?:=|$)`);
 const SPANNING_SECRETS = [
   /"[^"\\\n]{1,80}"\s*:\s*(?:"(?:[^"\\]|\\.)*"?)?/g,
   /\bBearer\s+\S*/gi,
+  /\bBasic\s+\S*/gi,
   /\bAuthorization:\s*(?:token\s+)?\S*/gi,
 ];
 const MID_LINE = '\u0001';

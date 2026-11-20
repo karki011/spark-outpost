@@ -29,13 +29,13 @@ If a repository can't be read, a line under the title says why and the page keep
 2. The details show checks, size, who it waits on, who approved and its ticket. Select the ticket to open it in **Tickets**.
 3. Select **Open chat** to go to the chat that opened it, or **Open on GitHub**.
 
-Press Esc to close the details.
+Drag to resize; Esc closes.
 
 ## Review with a Spark or workflow
 
 1. Select **Auto-review** at the top, or open **Settings → GitHub**.
 2. Under **Review with**, pick a Spark or workflow; its own instructions apply. None yet? **Open Sparks**.
 3. Turn on **Review automatically**: requested reviews run, again on new commits. Drafts wait.
-4. **Reviewer may post to GitHub** lets it post on that pull request and nowhere else. **Reviewer may approve** needs posting; it never merges.
+4. **Reviewer may post to GitHub** allows posts on that pull request only; **Reviewer may approve** needs it, never merges. Its instructions decide.
 
 **Next:** [Read a pull request review](review-pull-requests.md)

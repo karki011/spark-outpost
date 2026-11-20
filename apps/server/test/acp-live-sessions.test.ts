@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import type { SparkSessionPrefs } from '@spark-outpost/contracts';
 import { createAcpProvider, LOST_CYCLE } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
@@ -89,6 +90,7 @@ interface Send {
   signal?: AbortSignal;
   onOutput?: (output: ProviderOutput) => void;
   sparkScope?: SparkScope;
+  spark?: SparkSessionPrefs;
 }
 
 async function send(target: Chat, send: Send = {}) {
@@ -105,6 +107,7 @@ async function send(target: Chat, send: Send = {}) {
     },
     ...(send.approvals ? { approvals: send.approvals } : {}),
     ...(send.sparkScope ? { sparkScope: send.sparkScope } : {}),
+    ...(send.spark ? { spark: send.spark } : {}),
     ...(send.project ? { projectRoots: [send.project], mode: 'do' as const } : {}),
   })) {
     outputs.push(output);
@@ -207,6 +210,28 @@ describe('ACP provider with one live session per chat', { timeout: 30_000 }, () 
     await send(target, { sparkScope });
     offered = 'calendar on';
     const after = await send(target, { prompt: 'after', sparkScope });
+
+    expect(after.text).toContain('prompt=after');
+    expect(log.count('initialize')).toBe(2);
+    expect(log.count('session/resume')).toBe(1);
+  });
+
+  it('reopens with a resume when Compact idle conversations changes between messages', async () => {
+    const log = methodLog(store);
+    const target = chat(providerFor(claude, log.file));
+    const spark: SparkSessionPrefs = {
+      displayName: 'Sam',
+      personality: 'facts',
+      agentInstructions: '',
+      compactIdleConversations: false,
+    };
+
+    await send(target, { spark });
+    await send(target, { spark });
+    const after = await send(target, {
+      prompt: 'after',
+      spark: { ...spark, compactIdleConversations: true },
+    });
 
     expect(after.text).toContain('prompt=after');
     expect(log.count('initialize')).toBe(2);

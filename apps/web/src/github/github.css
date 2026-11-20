@@ -185,7 +185,7 @@
 }
 
 .gh-body[data-open] {
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .gh-list {

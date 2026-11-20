@@ -22,6 +22,8 @@ const QUEUE_CHARS = ${MOD_QUEUE_CHARS};
 const CLIPPED_FIELD_CHARS = ${MOD_CLIPPED_FIELD_CHARS};
 const KEPT = 256;
 const NOT_ARGUMENTS = new Set(['tool', 'tool_use_id', 'agentId', 'requestMeta', 'consent']);
+const KEEPS_RUNNING = new Set(['clear', 'resume']);
+const LIMITS_KEPT = 8;
 
 export function utf8Bytes(text) {
   let bytes = 0;
@@ -49,6 +51,31 @@ function count(value) {
   return Number.isSafeInteger(value) && value >= 0 ? value : 0;
 }
 
+function percent(value) {
+  return Number.isFinite(value) && value >= 0 && value <= 1000 ? value : null;
+}
+
+function measuredContext(context) {
+  if (!context || !Number.isSafeInteger(context.window) || context.window <= 0) return null;
+  return {
+    tokens: Number.isSafeInteger(context.tokens) && context.tokens >= 0 ? context.tokens : null,
+    window: context.window,
+    percent: percent(context.percent),
+  };
+}
+
+function measuredLimits(limits) {
+  if (!Array.isArray(limits)) return [];
+  return limits
+    .filter((limit) => limit && label(limit.kind) && percent(limit.percentUsed) !== null)
+    .slice(0, LIMITS_KEPT)
+    .map((limit) => ({
+      kind: limit.kind,
+      percentUsed: limit.percentUsed,
+      resetsAt: label(limit.resetsAt),
+    }));
+}
+
 function remember(map, key, value) {
   map.set(key, value);
   if (map.size > KEPT) map.delete(map.keys().next().value);
@@ -58,7 +85,7 @@ function clip(text, max) {
   return typeof text === 'string' ? text.slice(0, max) : '';
 }
 
-function stable(value) {
+export function stable(value) {
   if (Array.isArray(value)) return '[' + value.map(stable).join(',') + ']';
   if (value && typeof value === 'object')
     return '{' + Object.keys(value).sort().map((key) => JSON.stringify(key) + ':' + stable(value[key])).join(',') + '}';
@@ -89,6 +116,7 @@ export function telemetry() {
   let recording = false;
   let working = false;
   let lastMain = null;
+  let finished = false;
   const owners = new Map();
   const turns = new Map();
   const flying = new Map();
@@ -234,6 +262,25 @@ export function telemetry() {
       if (lastMain && !label(e.agentId) && e.turnId === lastMain.turn && model) lastMain.model = model;
     },
     idle: () => !working && lastMain !== null && lastMain.model !== null,
+    measured(e, at) {
+      if (finished || !e) return;
+      const cost = e.cost && Number.isFinite(e.cost.usd) && e.cost.usd >= 0 ? e.cost.usd : null;
+      for (let index = queue.length - 1; index >= 0; index--)
+        if (queue[index].item.kind === 'measure') queued -= queue.splice(index, 1)[0].size;
+      push({
+        kind: 'measure',
+        at,
+        context: measuredContext(e.context),
+        rateLimits: measuredLimits(e.rateLimits),
+        costUsd: cost,
+      });
+    },
+    sessionEnded(e, at) {
+      const reason = label(e && e.reason);
+      if (!reason) return;
+      push({ kind: 'session_end', at, reason, resumeId: label(e.resume && e.resume.id) });
+      if (!KEEPS_RUNNING.has(reason)) finished = true;
+    },
     between(costUsd) {
       if (!lastMain || typeof costUsd !== 'number' || costUsd <= 0) return;
       push({

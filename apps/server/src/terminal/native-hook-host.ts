@@ -8,7 +8,7 @@ export type PermissionHandler = (
   signal: AbortSignal,
 ) => Promise<ApprovalAnswer | null>;
 
-export type InboxHandler = (token: string) => Promise<unknown>;
+export type InboxHandler = (token: string, body: unknown) => Promise<unknown>;
 export type TelemetryHandler = (token: string, body: unknown) => Promise<boolean>;
 
 const PATHS = new Set(['/events', '/permission', '/mod/inbox', '/mod/telemetry']);
@@ -42,7 +42,7 @@ export async function nativeHookHost(
       return res.writeHead(400).end();
     }
     if (req.url === '/mod/inbox') {
-      const reply = await inbox(token);
+      const reply = await inbox(token, body);
       if (reply === null) return res.writeHead(404).end();
       return res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(reply));
     }

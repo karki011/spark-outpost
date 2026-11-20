@@ -4,8 +4,10 @@ import {
   isStale,
   isWorking,
   latestReview,
+  notPostedNote,
   postedLink,
   reviewAction,
+  reviewerLine,
   reviewMark,
   rowLabel,
   stateLabel,
@@ -137,5 +139,30 @@ describe('postedLink', () => {
     expect(postedLink(review({ posted: [{ kind: 'comment', url: null, at: 'x' }] }))).toEqual({
       kind: 'text',
     });
+  });
+});
+
+describe('reviewerLine', () => {
+  it('names whether a Spark or a workflow reviewed', () => {
+    expect(reviewerLine(review())).toBe('By Spark PR Reviewer');
+    expect(
+      reviewerLine(review({ reviewer: { kind: 'workflow', id: 'g', name: 'The Gauntlet' } })),
+    ).toBe('By workflow The Gauntlet');
+  });
+});
+
+describe('notPostedNote', () => {
+  it('explains a finished review that posted nothing while posting is allowed', () => {
+    expect(notPostedNote(review(), true)).toContain(
+      'PR Reviewer posts or approves only when its instructions say to',
+    );
+  });
+
+  it('stays quiet when posting is off, the review posted, or it is not finished', () => {
+    const posted = { kind: 'comment' as const, url: null, at: '2026-11-17T10:03:00.000Z' };
+    expect(notPostedNote(review(), false)).toBeNull();
+    expect(notPostedNote(review(), undefined)).toBeNull();
+    expect(notPostedNote(review({ posted: [posted] }), true)).toBeNull();
+    expect(notPostedNote(review({ state: 'running' }), true)).toBeNull();
   });
 });

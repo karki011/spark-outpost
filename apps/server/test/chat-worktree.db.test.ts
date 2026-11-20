@@ -106,12 +106,20 @@ describe('the worktree of a chat', { timeout: 60_000 }, () => {
   });
 
   it('is the checkout itself when the named branch is checked out and clean', async () => {
+    git(root, 'checkout', '-q', '-b', 'feature/notes');
+    const started = await build('on the feature/notes branch');
+    const copy = await chatCopy(started.conversationId);
+    expect(copy).toMatchObject({ branch: 'feature/notes', inPlace: true });
+    expect(await notes(root)).toContain('step 1');
+    expect(git(root, 'worktree', 'list')).not.toContain('.spark');
+  });
+
+  it('starts a new branch when the named branch is the checked-out default branch', async () => {
     const current = git(root, 'rev-parse', '--abbrev-ref', 'HEAD');
     const started = await build(`on the ${current} branch`);
     const copy = await chatCopy(started.conversationId);
-    expect(copy).toMatchObject({ branch: current, inPlace: true });
-    expect(await notes(root)).toContain('step 1');
-    expect(git(root, 'worktree', 'list')).not.toContain('.spark');
+    expect(copy).toMatchObject({ inPlace: false, baseBranch: current });
+    expect(copy?.branch).toMatch(/^spark\//);
   });
 
   it('is skipped when the user chose the checkout, and the project remembers that', async () => {

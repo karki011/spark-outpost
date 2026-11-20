@@ -22,6 +22,7 @@ import {
   type Watch,
 } from '../persistence/pr-watches.ts';
 import { getTaskShip } from '../persistence/task-ships.ts';
+import { checkedOut } from '../pr-tracking/chat-repos.ts';
 import { pushedHead } from '../ship/published.ts';
 import { syncWithPull } from './branch-sync.ts';
 import { connectTo, shipDepsOf, startRoundRun, type FollowUpDeps } from './deps.ts';
@@ -116,7 +117,7 @@ export async function startRound(
   if (queued.length === 0 && !merges) return needsYou(watch, line);
   const ship = watch.taskId ? await getTaskShip(deps.db, watch.taskId) : null;
   const root = await roundRoot(deps, watch);
-  if (!root) return needsYou(watch, 'Spark lost track of the branch this PR came from.');
+  if (!root) return needsYou(watch, lostBranchLine(watch.branch));
   if (watch.headSha) {
     const sync = await syncWithPull(root, ship?.remote ?? 'origin', watch.branch, watch.headSha);
     if (sync === 'diverged' || sync === 'unreachable') return needsYou(watch, SYNC_LINES[sync]);
@@ -385,11 +386,17 @@ async function settle(
   };
 }
 
+function lostBranchLine(branch: string): string {
+  return `This chat's worktree isn't on ${branch}. Check out ${branch} there and Spark follows up again.`;
+}
+
 async function roundRoot(deps: FollowUpDeps, watch: Watch): Promise<string | null> {
   const worktree = await primaryChatWorktree(deps.db, watch.conversationId);
-  if (worktree?.branch === watch.branch) return worktree.path;
   const ship = watch.taskId ? await getTaskShip(deps.db, watch.taskId) : null;
-  return ship?.rootPath ?? worktree?.path ?? null;
+  const root =
+    worktree?.branch === watch.branch ? worktree.path : (ship?.rootPath ?? worktree?.path ?? null);
+  if (!root || root !== worktree?.path) return root;
+  return (await checkedOut(root)) === watch.branch ? root : null;
 }
 
 async function settleRound(

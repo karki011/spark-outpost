@@ -1,4 +1,41 @@
+.gh-detail-wrap {
+  --gh-detail-cap: max(320px, calc(100cqw - 420px));
+  position: relative;
+  width: min(var(--gh-detail-w, 360px), var(--gh-detail-cap));
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.gh-resize {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.gh-resize:focus-visible {
+  outline: none;
+}
+
+.gh-detail-wrap:has(.gh-resize:hover) .gh-detail,
+.gh-detail-wrap:has(.gh-resize:focus-visible) .gh-detail,
+.gh-detail-wrap.dragging .gh-detail {
+  border-left-color: var(--line-strong);
+  box-shadow: inset 1px 0 0 var(--line-strong);
+}
+
+.gh-detail-wrap.dragging {
+  user-select: none;
+}
+
 .gh-detail {
+  flex: 1;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
   display: flex;
@@ -152,6 +189,15 @@
 @container gh (max-width: 1080px) {
   .gh-body[data-open] {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gh-detail-wrap {
+    position: static;
+    width: 0;
+  }
+
+  .gh-resize {
+    display: none;
   }
 
   .gh-detail {

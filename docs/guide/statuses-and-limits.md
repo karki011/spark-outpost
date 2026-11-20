@@ -27,13 +27,13 @@ A dot marks changes since your last visit; point at it.
 | **Done**: green             | A turn finished.                                     |
 | **Couldn't finish**: red    | A turn failed or was interrupted.                    |
 
-Below titles: what it's doing, **Waiting 3m** or **Finished 2:41 PM**.
+Below titles: its step, **Waiting 3m** or **Finished 2:41 PM**.
 
 **History** holds archived chats; **Unarchive** brings one back.
 
 **Archive inactive chats** ([Settings](settings.md), 2 days by default) archives a chat idle that long. Pinned, working and waiting chats, running Terminal sessions and outposts with an open request stay.
 
-**Projects** lists a project only while it has an active chat; pick a hidden one under **Choose project**.
+**Projects** lists projects with an active chat; others are under **Choose project**.
 
 A row reading **Flagged by Spark**: an unreviewed action crossed a protected path; it never counts.
 
@@ -108,7 +108,7 @@ Idle Claude chats badge the context ring; Terminal sessions say **Cache warm · 
 
 ## Limits
 
-A ring above **Pause** shows Claude plan use and resets once a window reaches 70%.
+A ring above **Pause** shows Claude plan use and resets past 70%; Terminal **Cost** shows **Usage limits**.
 
 | Limit                                | Value                                    |
 | ------------------------------------ | ---------------------------------------- |
