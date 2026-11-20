@@ -30,11 +30,14 @@ interface SparkJobsProps {
   orchestration: Orchestration;
   repo: Project | null;
   collapsed?: boolean;
-  pick?: 'all' | 'jobs' | 'steps';
+  pick?: SparkPick;
   withApprovals?: boolean;
+  placeSteers?: boolean;
 }
 
-function picked(orchestration: Orchestration, pick: SparkJobsProps['pick']): CrewMember[] {
+type SparkPick = 'all' | 'jobs' | 'steps';
+
+export function pickedMembers(orchestration: Orchestration, pick: SparkPick = 'all'): CrewMember[] {
   if (pick === 'jobs') return jobMembers(orchestration);
   const members = sparkMembers(orchestration);
   return pick === 'steps' ? members.filter((member) => member.spark?.step !== undefined) : members;
@@ -48,6 +51,7 @@ export function SparkJobs({
   collapsed = false,
   pick = 'all',
   withApprovals = true,
+  placeSteers = false,
 }: SparkJobsProps) {
   const live = !isTerminalRunStatus(run.status);
   const stream = useRunStream(run.id, detail.conversation.id, live);
@@ -55,10 +59,13 @@ export function SparkJobs({
     stream.orchestration && stream.orchestration.updatedAt > orchestration.updatedAt
       ? stream.orchestration
       : orchestration;
-  const steers = turnSteers(detail, run.id);
+  const steers = placeSteers ? turnSteers(detail, run.id) : [];
+  const placeable = pickedMembers(orchestration, pick).map((member) => member.runId);
+  const steersIn = (runId: string) =>
+    placeable.includes(runId) ? steersReadBy(steers, runId) : [];
   return (
     <div className="crew-turn spark-jobs">
-      {picked(current, pick).map((member) => (
+      {pickedMembers(current, pick).map((member) => (
         <AgentBlock
           key={member.runId}
           agent={runAgent(member, current, detail.activity[member.runId] ?? [])}
@@ -75,7 +82,7 @@ export function SparkJobs({
               : []
           }
           repo={repo}
-          steers={blockSteers(steersReadBy(steers, member.runId), detail, run)}
+          steers={blockSteers(steersIn(member.runId), detail, run)}
         />
       ))}
     </div>
