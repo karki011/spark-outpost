@@ -156,11 +156,9 @@ describe('SubagentsLine', () => {
       { ...row('f', 'failed'), name: 'Reviewer' },
     ];
 
-    it('rolls up into a summary and one face button per worker', () => {
+    it('shows one face button per worker with no count line', () => {
       const { container } = render(<SubagentsLine runId="run-six" rows={six} live />);
-      expect(container.querySelector('.sl-summary')?.textContent).toBe(
-        '5 Builders, 1 Reviewer · 4 done · 1 working · 1 failed',
-      );
+      expect(container.querySelector('.sl-line')?.textContent).not.toContain('Builders');
       const list = screen.getByRole('list', { name: 'Agent progress' });
       const items = within(list).getAllByRole('listitem');
       expect(items.map((item) => item.getAttribute('data-worker-id'))).toEqual([
@@ -197,7 +195,6 @@ describe('SubagentsLine', () => {
 
     it('keeps three workers as they were', () => {
       const { container } = render(<SubagentsLine runId="run-three" rows={rows} live />);
-      expect(container.querySelector('.sl-summary')).toBeNull();
       expect(container.querySelectorAll('.sl-worker')).toHaveLength(3);
       expect(
         within(screen.getByRole('list', { name: 'Agent progress' })).getAllByRole('button'),

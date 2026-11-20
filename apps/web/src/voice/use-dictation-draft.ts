@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import { joinDictation, useDictation } from './use-dictation.ts';
 
 export function useDictationDraft(
@@ -6,6 +7,10 @@ export function useDictationDraft(
   scope: string,
   onSpoken?: () => void,
 ) {
+  const latestText = useRef(text);
+  useLayoutEffect(() => {
+    latestText.current = text;
+  });
   const dictation = useDictation((heard) => {
     onSpoken?.();
     onText(joinDictation(text, heard));
@@ -15,6 +20,8 @@ export function useDictationDraft(
   return {
     dictation,
     value: joinDictation(text, partial),
+    finish: (done: (text: string) => void) =>
+      dictation.finish((heard) => done(joinDictation(latestText.current, heard))),
     change: (value: string) => {
       if (partial.trim()) onSpoken?.();
       if (dictation.active) dictation.cancel();

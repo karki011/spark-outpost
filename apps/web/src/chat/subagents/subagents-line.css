@@ -73,10 +73,6 @@
   }
 }
 
-.sl-summary {
-  overflow-wrap: anywhere;
-}
-
 .sl-faces {
   gap: 0;
 }
@@ -112,5 +108,31 @@
   .sl-face {
     min-width: 44px;
     min-height: 44px;
+  }
+}
+
+.sl-worker[data-state='done'] .chat-face {
+  opacity: 0.4;
+  filter: grayscale(1);
+  transition:
+    opacity 0.15s,
+    filter 0.15s;
+}
+
+@media (prefers-contrast: more) {
+  .sl-worker[data-state='done'] .chat-face {
+    opacity: 0.6;
+  }
+}
+
+.sl-face:hover .chat-face,
+.sl-face:focus-visible .chat-face {
+  opacity: 1;
+  filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-worker[data-state='done'] .chat-face {
+    transition: none;
   }
 }

@@ -40,6 +40,7 @@ import { SendButton } from './composer/SendButton.tsx';
 import { ComposerShell, composerRows } from './composer/ComposerShell.tsx';
 import { MicButton } from '../voice/MicButton.tsx';
 import { useDictationDraft } from '../voice/use-dictation-draft.ts';
+import { useSendAfterDictation } from '../voice/use-send-after-dictation.ts';
 import { useVoicePressTarget } from '../voice/press-target.ts';
 import { useChatPane, usePaneFocused } from './split/chat-pane.ts';
 import {
@@ -209,19 +210,18 @@ export function Composer({
   useUnsentWork(conversationId, hasText || attachments.items.length > 0 || quoteItems.length > 0);
   const sendName = hasText ? 'Send' : sendLabel(quoteItems.map((quote) => quote.kind));
   const [delivering, setDelivering] = useState(false);
-  const canQueue = queueing;
-  const canSend =
-    !voice.dictation.active &&
+  const sendReady =
     ready &&
-    (hasText || attachments.items.length > 0 || quoteItems.length > 0) &&
     !sending &&
     !delivering &&
-    (!busy || canQueue) &&
+    (!busy || queueing) &&
     !attachments.uploading &&
     !attachments.failed;
+  const hasExtras = attachments.items.length > 0 || quoteItems.length > 0;
+  const canSend = sendReady && (hasText || hasExtras || voice.dictation.active);
 
-  const outgoing = (): string | null => {
-    const parsed = parseSlash(draft);
+  const outgoing = (text: string): string | null => {
+    const parsed = parseSlash(text);
     const command = clientCommand(parsed);
     if (command && parsed) {
       setDraft('');
@@ -234,14 +234,12 @@ export function Composer({
       attachments.notify(blocked);
       return null;
     }
-    return draft;
+    return text;
   };
 
-  const submit = async (choice: BusyEnterAction = busyEnter) => {
-    lastChoice.current = choice;
-    if (!canSend || secrets.blocks(draft)) return;
-    const draftText = draft;
-    const typed = outgoing();
+  const send = async (choice: BusyEnterAction, draftText: string) => {
+    if (!sendReady || !(draftText.trim() || hasExtras) || secrets.blocks(draftText)) return;
+    const typed = outgoing(draftText);
     if (typed === null) return;
     const { content, annotations } = quotes?.compose(typed) ?? { content: typed, annotations: [] };
     const sentItems = [...attachments.items];
@@ -270,8 +268,13 @@ export function Composer({
     }
   };
 
+  const sendOrFinish = useSendAfterDictation(voice, draft, send);
+  const submit = (choice: BusyEnterAction = busyEnter) => {
+    lastChoice.current = choice;
+    sendOrFinish(choice);
+  };
   const sendAs = (choice: BusyEnterAction) => {
-    void submit(choice);
+    submit(choice);
     textareaRef.current?.focus();
   };
 
@@ -287,7 +290,7 @@ export function Composer({
       const inCode = codeBlockEnter(event, event.currentTarget);
       if (inCode === 'newline') return;
       event.preventDefault();
-      void submit(inCode === 'send' ? busyEnter : enterAction(event, busyEnter));
+      submit(inCode === 'send' ? busyEnter : enterAction(event, busyEnter));
     }
   };
 
@@ -299,7 +302,7 @@ export function Composer({
           guard={secrets}
           input={textareaRef}
           onText={setDraft}
-          onSendAnyway={() => void submit(lastChoice.current)}
+          onSendAnyway={() => submit(lastChoice.current)}
         />
       }
       above={above}
@@ -378,7 +381,7 @@ export function Composer({
             label={sendName}
             tip={SEND_KEYS_TIP}
             disabled={!canSend}
-            onSend={() => void submit()}
+            onSend={() => submit()}
             onStop={onStop}
             {...(queueing
               ? { busySend: { preferred: busyEnter, onChoice: sendAs, waiting: waitingOn > 0 } }

@@ -4,6 +4,7 @@ import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { VoiceEvent, VoiceListenResult } from '@spark-outpost/contracts';
 import { useDictationDraft } from './use-dictation-draft.ts';
+import { FINAL_WAIT_MS } from './use-dictation.ts';
 
 const speech = vi.hoisted(() => ({
   listen: vi.fn(),
@@ -189,4 +190,86 @@ it('replaces revised tentative words on every partial and commits only the final
   act(() => hook.result.current.dictation.toggle());
   emit(final('Ice cream for everyone.'));
   expect(hook.result.current.committed).toBe('Typed draft Ice cream for everyone.');
+});
+
+it('finish stops listening and hands over the draft with the final words once', async () => {
+  const done = vi.fn();
+  const hook = draft();
+  await act(async () => hook.result.current.dictation.toggle());
+  emit(partial('send this'));
+  act(() => hook.result.current.finish(done));
+  expect(speech.stop).toHaveBeenCalledWith('listen');
+  expect(done).not.toHaveBeenCalled();
+  emit(final('Send this.'));
+  emit(final('Send this.'));
+  expect(done.mock.calls).toEqual([['Typed draft Send this.']]);
+});
+
+it('finish hands over the draft alone when nothing was heard', async () => {
+  const done = vi.fn();
+  const hook = draft();
+  await act(async () => hook.result.current.dictation.toggle());
+  act(() => hook.result.current.finish(done));
+  emit(final(''));
+  expect(done.mock.calls).toEqual([['Typed draft']]);
+});
+
+it.each(['cancelled', 'escape'] as const)('finish sends nothing after %s', async (how) => {
+  const done = vi.fn();
+  const hook = draft();
+  await act(async () => hook.result.current.dictation.toggle());
+  emit(partial('never mind'));
+  act(() => hook.result.current.finish(done));
+  if (how === 'escape')
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })));
+  else emit({ kind: 'cancelled', id: 'listen' });
+  emit(final('late'));
+  expect(done).not.toHaveBeenCalled();
+});
+
+it('finish while the mic is still starting cancels it and hands over the draft', async () => {
+  speech.listen.mockReturnValue(new Promise(() => undefined));
+  const done = vi.fn();
+  const hook = draft();
+  act(() => hook.result.current.dictation.toggle());
+  act(() => hook.result.current.finish(done));
+  expect(done.mock.calls).toEqual([['Typed draft']]);
+  expect(hook.result.current.dictation.active).toBe(false);
+});
+
+it('finish gives up when the final text never arrives, sending nothing and saying so', async () => {
+  const done = vi.fn();
+  const hook = draft();
+  await act(async () => hook.result.current.dictation.toggle());
+  emit(partial('lost words'));
+  vi.useFakeTimers();
+  try {
+    act(() => hook.result.current.finish(done));
+    act(() => hook.result.current.finish(done));
+    expect(speech.stop).toHaveBeenCalledTimes(1);
+    act(() => vi.advanceTimersByTime(FINAL_WAIT_MS));
+  } finally {
+    vi.useRealTimers();
+  }
+  expect(done).not.toHaveBeenCalled();
+  expect(speech.cancel).toHaveBeenCalledWith('listen');
+  expect(hook.result.current.dictation.active).toBe(false);
+  expect(hook.result.current.dictation.problem).toBe('Voice stopped. Try again.');
+  expect(hook.result.current.value).toBe('Typed draft');
+  emit(final('late'));
+  expect(done).not.toHaveBeenCalled();
+});
+
+it('finish joins the final words to a draft that changed from outside while waiting', async () => {
+  const done = vi.fn();
+  const hook = renderHook(() => {
+    const [text, setText] = useState('Typed draft');
+    return { ...useDictationDraft(text, setText, 'chat'), setText };
+  });
+  await act(async () => hook.result.current.dictation.toggle());
+  act(() => hook.result.current.finish(done));
+  act(() => hook.result.current.setText('Draft from a request'));
+  emit(final('and more.'));
+  expect(done.mock.calls).toEqual([['Draft from a request and more.']]);
+  expect(hook.result.current.value).toBe('Draft from a request and more.');
 });

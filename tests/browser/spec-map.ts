@@ -284,6 +284,7 @@ export const SPEC_GROUPS = {
     'island-states',
     'island-terminal',
     'voice',
+    'voice-enter-send',
     'voice-focus',
     'voice-models',
     'voice-shortcut',
