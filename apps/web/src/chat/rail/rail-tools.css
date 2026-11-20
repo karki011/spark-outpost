@@ -1,0 +1,88 @@
+.crail-manage {
+  flex-shrink: 0;
+  margin-left: 6px;
+  padding: 0 6px;
+}
+
+.crail-tools-body {
+  padding: 0;
+}
+
+.crail-tools-body .crail-group {
+  padding: 0;
+  border-top: 0;
+}
+
+.crail-group-row[aria-expanded='true'] {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.crail-group-row .crail-chevron {
+  flex-shrink: 0;
+  margin-left: 0;
+}
+
+.crail-group-body {
+  padding: 2px 0 4px;
+}
+
+.crail-group-body :is(.tools-note, .tools-link, .mcp-error) {
+  margin-left: 30px;
+}
+
+.crail-tools-body .crail-group-body li {
+  min-height: 28px;
+  padding: 0 6px 0 30px;
+}
+
+.crail-group-body .mcppop-text code {
+  font-size: 12.5px;
+}
+
+.crail-group-body .mcppop-text small:not(.tools-status) {
+  display: none;
+  padding-bottom: 4px;
+  overflow: visible;
+  color: var(--muted);
+  white-space: normal;
+}
+
+.crail-group-body li:is(:hover, :focus-within) .mcppop-text small:not(.tools-status) {
+  display: block;
+}
+
+.crail-group-body .mcppop-text small.tools-status {
+  color: var(--muted);
+}
+
+.crail-tools-note {
+  padding: 6px 6px 0;
+}
+
+.crail-tools:not(:has(.crail-group-row[aria-expanded='true'])) .crail-tools-note {
+  display: none;
+}
+
+@media (hover: none) {
+  .crail-group-body .mcppop-text small:not(.tools-status) {
+    display: block;
+  }
+}
+
+@media (pointer: coarse) {
+  .crail-tools-body .crail-group-body li {
+    min-height: 44px;
+  }
+
+  .crail-manage,
+  .crail-group-body :is(.tools-link, .btn.sm) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .crail-group-body .btog.sm {
+    width: 44px;
+    height: 44px;
+  }
+}

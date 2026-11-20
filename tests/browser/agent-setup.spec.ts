@@ -215,10 +215,13 @@ test('the chat context names the instruction files the agent followed', async ({
   const rows = page
     .getByRole('region', { name: 'Chat context' })
     .getByRole('list', { name: 'This chat' });
-  await expect(rows.locator('[data-row="following"]')).toHaveText(
+  const following = rows.locator('[data-row="following"]');
+  await expect(following).toContainText(
     'Following: CLAUDE.md, CLAUDE.local.md, AGENTS.md, .cursorrules, .github/copilot-instructions.md, .cursor/rules/style.mdc',
     { timeout: 15_000 },
   );
+  await expect(following.locator('.crail-main')).toHaveText('Following 6');
+  await expect(following.locator('.crail-detail')).toHaveText('CLAUDE.md');
 });
 
 const trustGroup = (page: Page) => page.getByRole('group', { name: 'Trust app?' });

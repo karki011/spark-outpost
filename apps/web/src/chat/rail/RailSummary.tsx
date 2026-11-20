@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { BookIcon, BranchIcon, CheckIcon, FolderIcon, ShieldIcon } from '../../ui/icons.tsx';
+import { BookIcon, FolderIcon, ShieldIcon } from '../../ui/icons.tsx';
 import { WhoIcon } from '../../tasks/TaskIcons.tsx';
 import { Counts } from '../changes/FileChangeList.tsx';
 import { ChangesIcon, PullRequestIcon, UsageIcon } from './RailIcons.tsx';
@@ -17,7 +17,6 @@ function rowIcon(id: RailRowId, provider: string): ReactNode {
   if (id === 'following') return <BookIcon />;
   if (id === 'autonomy') return <ShieldIcon />;
   if (id === 'changes') return <ChangesIcon />;
-  if (id === 'checks') return <CheckIcon className="crail-check" />;
   if (id === 'pr') return <PullRequestIcon />;
   return <UsageIcon />;
 }
@@ -28,18 +27,14 @@ function RowBody({ row, provider }: { row: RailRow; provider: string }) {
       <span className="crail-ico" aria-hidden="true">
         {rowIcon(row.id, provider)}
       </span>
-      <span className="crail-text">
-        <span className="crail-main">
-          {row.text}
-          {row.counts && <Counts added={row.counts.added} removed={row.counts.removed} />}
+      <span className="crail-main">{row.text}</span>
+      {row.counts ? (
+        <span className="crail-detail">
+          <Counts added={row.counts.added} removed={row.counts.removed} />
         </span>
-        {row.detail && (
-          <span className="crail-detail">
-            {row.onBranch && <BranchIcon />}
-            {row.detail}
-          </span>
-        )}
-      </span>
+      ) : (
+        row.detail && <span className="crail-detail">{row.detail}</span>
+      )}
     </>
   );
 }
@@ -60,6 +55,7 @@ export function RailSummary({ rows, provider, onAction }: RailSummaryProps) {
                 target="_blank"
                 rel="noreferrer"
                 aria-label={row.label}
+                title={row.label}
               >
                 {body}
               </a>
@@ -69,12 +65,20 @@ export function RailSummary({ rows, provider, onAction }: RailSummaryProps) {
                 type="button"
                 className={className}
                 aria-label={row.label}
+                title={row.label}
                 onClick={() => onAction(action)}
               >
                 {body}
               </button>
             )}
-            {!action && <div className={className}>{body}</div>}
+            {!action && (
+              <div className={className} title={row.label}>
+                <span className="sr-only">{row.label}</span>
+                <span className="crail-line" aria-hidden="true">
+                  {body}
+                </span>
+              </div>
+            )}
           </li>
         );
       })}

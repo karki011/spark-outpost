@@ -1,8 +1,9 @@
-import { useId, useState } from 'react';
+import './rail-tools.css';
+import { useCallback, useMemo, useState } from 'react';
 import type { Project } from '@spark-outpost/contracts';
 import { requestSettings } from '../../settings/settings-request.ts';
-import { useChatMcp } from '../composer/use-chat-mcp.ts';
 import { ToolsGroups } from '../tools/ToolsGroups.tsx';
+import type { RailGroups } from '../tools/ToolsGroupFrame.tsx';
 
 interface RailToolsProps {
   conversationId: string;
@@ -10,55 +11,59 @@ interface RailToolsProps {
   provider: string | null;
 }
 
-function serversLine(on: number): string {
-  if (on === 0) return 'No MCP servers on';
-  return on === 1 ? '1 MCP server on' : `${on} MCP servers on`;
+const OPEN_KEY = 'spark-outpost.chat-rail.tools-open';
+
+function readOpen(): readonly string[] {
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(OPEN_KEY) ?? '[]');
+    return Array.isArray(stored) ? stored.filter((key) => typeof key === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeOpen(keys: readonly string[]): void {
+  try {
+    localStorage.setItem(OPEN_KEY, JSON.stringify(keys));
+  } catch {
+    return;
+  }
+}
+
+function useOpenGroups(): RailGroups {
+  const [open, setOpen] = useState(readOpen);
+  const toggle = useCallback((key: string) => {
+    setOpen((keys) => {
+      const next = keys.includes(key) ? keys.filter((entry) => entry !== key) : [...keys, key];
+      writeOpen(next);
+      return next;
+    });
+  }, []);
+  return useMemo(() => ({ isOpen: (key: string) => open.includes(key), toggle }), [open, toggle]);
 }
 
 export function RailTools({ conversationId, repos, provider }: RailToolsProps) {
-  const [open, setOpen] = useState(true);
-  const bodyId = useId();
-  const { servers } = useChatMcp(conversationId);
-  const on = (servers.data?.servers ?? []).filter((server) => server.enabled).length;
+  const groups = useOpenGroups();
   return (
     <section className="crail-section crail-tools" aria-label="Tools">
       <div className="crail-head">
+        <h3 className="crail-title">Tools</h3>
         <button
           type="button"
-          className="crail-fold"
-          aria-expanded={open}
-          aria-controls={bodyId}
-          onClick={() => setOpen(!open)}
+          className="tools-link crail-manage"
+          onClick={() => requestSettings('mcp')}
         >
-          <span className="crail-title">Tools</span>
-          {!open && (
-            <span className="crail-detail">
-              {servers.data ? serversLine(on) : 'MCP servers, plugins and skills'}
-            </span>
-          )}
-          <span className="crail-chevron" data-open={open || undefined} aria-hidden="true">
-            ›
-          </span>
+          Manage
         </button>
-        {open && (
-          <button
-            type="button"
-            className="tools-link crail-manage"
-            onClick={() => requestSettings('mcp')}
-          >
-            Manage
-          </button>
-        )}
       </div>
-      <div id={bodyId} hidden={!open}>
-        <p className="tools-note crail-tools-note">Changes apply to the next message.</p>
-        <ToolsGroups
-          conversationId={conversationId}
-          repos={repos}
-          provider={provider}
-          className="crail-tools-body"
-        />
-      </div>
+      <ToolsGroups
+        conversationId={conversationId}
+        repos={repos}
+        provider={provider}
+        className="crail-tools-body"
+        rail={groups}
+      />
+      <p className="tools-note crail-tools-note">Changes apply to the next message.</p>
     </section>
   );
 }

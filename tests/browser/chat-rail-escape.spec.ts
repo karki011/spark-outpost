@@ -27,11 +27,12 @@ test.describe('on a touch screen', () => {
     await page.getByRole('button', { name: 'Show context rail' }).click();
     await expect(rail(page)).toBeVisible();
     const section = rail(page).getByRole('region', { name: 'Tools' });
-    const tools = section.getByRole('button', { name: /^Tools/ });
-    await tools.scrollIntoViewIfNeeded();
-    const box = (await tools.boundingBox())!;
+    const connectors = section.getByRole('button', { name: /^Connectors/ });
+    await connectors.scrollIntoViewIfNeeded();
+    const box = (await connectors.boundingBox())!;
     expect(box.height).toBeGreaterThanOrEqual(44);
     expect(box.width).toBeGreaterThanOrEqual(44);
+    await connectors.click();
 
     const connect = section.getByRole('button', { name: 'Connect…' });
     await connect.scrollIntoViewIfNeeded();

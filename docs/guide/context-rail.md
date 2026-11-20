@@ -11,15 +11,19 @@ See what a chat's agent works with in the **Context** rail, and switch its tools
 ## Open the rail
 
 1. Open a chat with at least one turn.
-2. On a wide window the rail sits beside the thread and the message box, with a line between each part; **Hide context rail** tucks it away.
+2. On a wide window the rail sits beside the thread; **Hide context rail** tucks it away.
 3. In a narrow chat, or beside the Work panel, select **Show context rail** to float it over the thread.
 4. **Esc** or a click outside closes the floating rail.
 
 **On wide windows** in [Settings](settings.md) picks the rail, the Work panel or nothing.
 
+## Read the rows
+
+Each row is one line: project and branch, model and mode, files followed, autonomy, changes, pull request and checks, and cost. Hover a row for the full line.
+
 ## Switch tools
 
-**Tools** in the rail lists them; select **Tools** to fold it. **+** → **Tools…** in the message box, or `/mcp`, opens the same list as **Tools in this chat**.
+**Tools** shows each group on one line with how many are on; select one to open it in place. Hover or focus a tool for its description. **+** → **Tools…**, or `/mcp`, opens the same list.
 
 | Group                                                                   | Applies to        | Switch                                                                          |
 | ----------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------- |
@@ -28,11 +32,11 @@ See what a chat's agent works with in the **Context** rail, and switch its tools
 | **Claude plugins**                                                      | Every Claude chat | On or off; **Review** and **Flagged** open [Settings](use-claude-plugins.md)    |
 | **Connectors**                                                          | Every chat        | **On**; **Turn on**, **Sign in** or **Connect…** opens Connections → Connectors |
 
-A change applies from the next message. **Manage** (or **Manage in Settings**) opens MCP servers in Settings; hooks and trust stay in **Agent setup** under the message box.
+A change applies from the next message. **Manage** opens MCP servers in Settings; hooks and trust stay in **Agent setup**.
 
 ## Open a port
 
-Ports a shell tab listens on, like **localhost:5173**, show under the rows. Select one to open it in the [Browser pane](use-the-browser.md) (Mac).
+Ports a shell tab listens on, like **localhost:5173**, open in the [Browser pane](use-the-browser.md) (Mac).
 
 ## Open artifacts
 
@@ -40,6 +44,6 @@ Ports a shell tab listens on, like **localhost:5173**, show under the rows. Sele
 
 ## Float the chat list
 
-When a chat gets too narrow, say beside the Work panel, the chat list floats too. **Show sidebar** opens it over the chat; a pick, **Esc** or a click outside closes it. It docks again when there's room.
+When a chat gets too narrow, the chat list floats too: **Show sidebar** opens it; a pick, **Esc** or a click outside closes it.
 
 **Next:** [Follow, stop and queue messages](follow-a-turn.md)
