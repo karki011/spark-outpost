@@ -565,6 +565,21 @@ Server code is in `apps/server/src/crew-flows/` (`trigger-records.ts`, `trigger-
 
 **Limits:** Codex steps stay read-only when edits are on (its Ask session is a read-only sandbox). The pull request trigger covers pull requests Spark opened, not any pull request in a linked repo. A before-publish review counts its own steps' spend; its tokens are also in the turn's totals. No real agent ran a trigger end to end; the fake-agent database tests cover queueing, races, restart, skip, hold, release, stop and edits.
 
+## Where a step is (built 2026-11-20)
+
+Every step of a workflow run that works in a project folder gets a **Where you are** block in its prompt, after the intro and `TEST_RUN_NOTE`, so a reviewer starts from the branch and its changes instead of discovering them. `step-place-gather.ts` builds it once per run in `runWorkflow`, before any step starts (so it is "as of when this run started": with edits on, later steps may see more changes); `step-place.ts` formats it and is pure.
+
+| Line            | Where it comes from                                                                                                                                                                                         |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Started by      | `workflow_runs.kind`, `source` and `trigger_kind` (now on `TurnWorkflowRun`): Run, `@` in a chat, schedule, catch-up, each trigger kind, Before publish, `spark_workflow`, test run                         |
+| Project         | `originOf` (owner/name of `origin`), else the folder name of the worktree's `repo_root`. Never a path                                                                                                       |
+| Branch and base | `checkedOut`; base is the chat worktree's `base_branch`, else `defaultBranch`                                                                                                                               |
+| Changed files   | `git diff --numstat` from the merge base of the base (`base_ref`, `origin/<base>`, then `<base>`) and HEAD, uncommitted included, plus untracked files. Paths and counts only, sorted, 50 then "and N more" |
+| Pull request    | The chat's open `pr_watches` row for that branch (number and title)                                                                                                                                         |
+| Landed commits  | Schedule and catch-up runs: `git log` on `origin/<base>` (else `<base>`) since the workflow's last succeeded scheduled run, at most 20; on the first run, the 20 most recent                                |
+
+Only the first project root is described. A run with no project folder, and a GitHub review run (it carries its own pull request material), gets no block; `@Spark` hand-offs (`spark-job.ts`) are not workflow steps and are unchanged. The block says it is context that grants nothing and is not the user's message; branch names, paths, commit subjects and the title sit between `--- repository data ---` markers, each flattened to one line and clipped to 200 characters so none can forge the end marker. Every git and database read is caught on its own: a failure drops that line, never the run. No fetch is made, so the base can be as old as the last fetch.
+
 ## Rules for every stream
 
 - Follow `AGENTS.md`: no explanatory code comments, files at or below 500 lines, validate inputs at trust boundaries, no speculative configuration.

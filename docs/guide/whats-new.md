@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Workflow steps know their branch and changes    | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | Workflow card; **Run in chats…**                | [Workflow card](workflow-in-chat.md).                      |
 | Default Sparks follow the chat's mode           | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | Mid-turn mode switches                          | [Modes](modes-and-levels.md#what-spark-does-in-each-mode). |
@@ -63,4 +64,3 @@ summary: What changed in recent releases and what to do next.
 | Workflow triggers and schedules           | [Triggers](workflow-triggers.md), [schedules](workflow-schedules.md). |
 | Answer more cards from a device           | [Answer cards remotely](answer-remotely.md).                          |
 | Agents do much more in Jira               | [Jira tools](jira-tools.md).                                          |
-| Context rail: tools, ports, floats        | [See a chat's context](context-rail.md).                              |

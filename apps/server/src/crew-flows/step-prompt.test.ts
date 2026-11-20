@@ -40,6 +40,16 @@ describe('stepJobPrompt', () => {
     );
   });
 
+  it('puts where the step is before what it does', () => {
+    const prompt = stepJobPrompt({
+      ...job,
+      stepPrompt: 'Review it.',
+      place: 'Where you are: here',
+    });
+    expect(prompt.indexOf('Where you are: here')).toBeLessThan(prompt.indexOf('Review it.'));
+    expect(stepJobPrompt(job)).not.toContain('Where you are');
+  });
+
   it('asks for the findings format before publish', () => {
     expect(stepJobPrompt({ ...job, findings: true })).toContain(FINDINGS_FORMAT);
     expect(stepJobPrompt(job)).not.toContain(FINDINGS_FORMAT);
