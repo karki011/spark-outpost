@@ -10,13 +10,16 @@ import { agentConfigApi, agentConfigKey, projectTrustKey } from '../../api/agent
 
 const CONFIG_STALE_MS = 15_000;
 
-export function useAgentConfig(projectId: string | null) {
-  return useQuery({
-    queryKey: agentConfigKey(projectId ?? ''),
-    queryFn: () => agentConfigApi.get(projectId!),
+export function agentConfigQuery(projectId: string) {
+  return {
+    queryKey: agentConfigKey(projectId),
+    queryFn: () => agentConfigApi.get(projectId),
     staleTime: CONFIG_STALE_MS,
-    enabled: projectId !== null,
-  });
+  };
+}
+
+export function useAgentConfig(projectId: string | null) {
+  return useQuery({ ...agentConfigQuery(projectId ?? ''), enabled: projectId !== null });
 }
 
 export type AgentConfigChange =
