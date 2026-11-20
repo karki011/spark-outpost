@@ -1,5 +1,5 @@
 import './meeting-card.css';
-import { useId, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { XIcon } from '../../ui/icons.tsx';
 
 export interface MeetingCardRow {
@@ -52,8 +52,6 @@ export function CardButton(props: {
 }
 
 export function MeetingCardBody(props: MeetingCardBodyProps) {
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreId = useId();
   const more = [
     ...(props.more ?? []),
     ...(props.onDismiss ? [{ label: 'Dismiss', onAct: props.onDismiss }] : []),
@@ -85,26 +83,10 @@ export function MeetingCardBody(props: MeetingCardBodyProps) {
       {props.status}
       <div className="mc-acts">
         {props.children}
-        {more.length > 0 && (
-          <button
-            type="button"
-            className="mc-btn mc-more"
-            aria-label="More actions"
-            aria-expanded={moreOpen}
-            aria-controls={moreId}
-            onClick={() => setMoreOpen(!moreOpen)}
-          >
-            ···
-          </button>
-        )}
+        {more.map((action) => (
+          <CardButton key={action.label} label={action.label} onClick={action.onAct} />
+        ))}
       </div>
-      {more.length > 0 && (
-        <div id={moreId} className="mc-more-acts" hidden={!moreOpen}>
-          {more.map((action) => (
-            <CardButton key={action.label} label={action.label} onClick={action.onAct} />
-          ))}
-        </div>
-      )}
       {props.hint && <p className="mc-hint">{props.hint}</p>}
       <button
         type="button"
