@@ -153,6 +153,6 @@ export async function shot(page: Page, name: string, settle = 900) {
   await page.waitForTimeout(settle);
   await page.screenshot({
     path: path.join(SHOTS, `${name}.png`),
-    clip: { x: 260, y: 0, width: 760, height: 420 },
+    clip: { x: 160, y: 0, width: 960, height: 420 },
   });
 }
