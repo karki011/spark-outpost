@@ -125,7 +125,6 @@ test('the meeting card hangs from Scout with its details, snoozes through a relo
   await page.reload();
   await expect(bubble(page)).toBeVisible();
 
-  await bubble(page).getByRole('button', { name: 'More actions' }).click();
   await bubble(page).getByRole('button', { name: 'Open in Today' }).click();
   const standup = await eventKeyOf(page, 'Standup', apiNow(), apiNow() + DAY);
   await expect.poll(() => opened(page)).toEqual([`settings:today:${standup}`]);
@@ -154,7 +153,7 @@ async function dismissedNow(page: Page): Promise<boolean | undefined> {
     .upcoming.find((event) => event.title === 'Standup')?.dismissed;
 }
 
-test('× and Esc close the card until the start; Dismiss in ··· is for good, even after a reload', async ({
+test('× and Esc close the card until the start; Dismiss is for good, even after a reload', async ({
   page,
 }) => {
   const snoozes = () =>
@@ -175,7 +174,6 @@ test('× and Esc close the card until the start; Dismiss in ··· is for good, 
 
   await page.evaluate(() => localStorage.removeItem('spark-outpost.calendar-snoozes'));
   await page.reload();
-  await bubble(page).getByRole('button', { name: 'More actions' }).click();
   await bubble(page).getByRole('button', { name: 'Dismiss', exact: true }).click();
   await expect(bubble(page)).toBeHidden();
   await expect.poll(() => dismissedNow(page)).toBe(true);

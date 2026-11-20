@@ -64,10 +64,10 @@ describe('CalendarLineView meeting line', () => {
     expect(onDismiss).not.toHaveBeenCalled();
   });
 
-  it('dismisses for good only from ···', () => {
+  it('dismisses for good from its own button in the row', () => {
     const shown = line({});
     const { onDismiss } = show(shown);
-    fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
     act(() => vi.advanceTimersByTime(400));
     expect(onDismiss).toHaveBeenCalledWith(shown);
