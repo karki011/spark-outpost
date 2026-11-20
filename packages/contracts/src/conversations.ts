@@ -110,6 +110,7 @@ export const conversationSummarySchema = z.object({
       provider: z.string().nullable().default(null),
       agentMode: z.string().nullable().optional(),
       progress: planProgressSchema.nullable().default(null),
+      doing: z.string().nullable().optional(),
       interruptionChoice: interruptionChoiceSchema.nullable().optional(),
       needsYou: z.string().nullable().optional(),
       waitingOn: z.number().int().positive().optional(),

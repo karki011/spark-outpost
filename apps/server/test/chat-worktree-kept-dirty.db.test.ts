@@ -121,6 +121,13 @@ describe('sweeping the worktree of an archived chat with uncommitted work', () =
 
     await t.db.query('DELETE FROM conversations WHERE id = $1', [chat.conversationId]);
     await sweep();
+    expect(existsSync(chat.path)).toBe(true);
+
+    await t.db.query(
+      `UPDATE chat_worktrees SET kept_dirty_at = kept_dirty_at - interval '25 hours' WHERE id = $1`,
+      [chat.id],
+    );
+    await sweep();
 
     expect(existsSync(chat.path)).toBe(false);
     expect(git(root, 'show', `${chat.branch}:notes.txt`)).toBe('unsaved work');

@@ -75,7 +75,8 @@ export async function reserveNativeTerminalLaunch(
          label = EXCLUDED.label, active_run_id = EXCLUDED.active_run_id,
          launch_message_id = EXCLUDED.launch_message_id, generation = native_terminal_sessions.generation + 1,
          native_turn_id = NULL, observation = EXCLUDED.observation, reason = EXCLUDED.reason, updated_at = now(),
-         waiting_since = NULL
+         waiting_since = NULL, ended_reason = NULL, ended_resume_id = NULL, ended_at = NULL,
+         measure = NULL, measured_at = NULL
        RETURNING *`,
       [
         input.id,

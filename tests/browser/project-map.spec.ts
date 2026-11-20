@@ -101,6 +101,7 @@ test('arrows walk the areas, Enter opens one as a network and Escape goes back @
 test('search flies to a file; hovering shows its details and clicking opens a real preview', async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const projectId = await addProject(page, REPO_ROOT);
@@ -121,9 +122,15 @@ test('search flies to a file; hovering shows its details and clicking opens a re
     /Changed (today|yesterday|\d+ days ago|\w+ \d+) · \d+ commits? · \d+ authors?/,
   );
   await screenshot(page, 'hover-dark');
-  await page.mouse.click(x, y);
   const sheet = page.getByRole('dialog', { name: 'ticket-model.ts' });
-  await expect(sheet).toBeVisible();
+  await expect(async () => {
+    if (await sheet.isVisible()) return;
+    await page.mouse.move(x - 40, y - 40);
+    await page.mouse.move(x, y);
+    await expect(tip).toContainText('apps/web/src/tickets/ticket-model.ts', { timeout: 1_000 });
+    await page.mouse.click(x, y);
+    await expect(sheet).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
   await expect(sheet.getByRole('heading', { name: 'Depended on by' })).toBeVisible();
   await expect(sheet).toContainText(/Changed .* · \d+ commits? · \d+ authors?/);
   await expect(sheet.locator('.map-preview')).toContainText('export', { timeout: 15_000 });

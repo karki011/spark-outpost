@@ -24,8 +24,11 @@ export interface FakeEngine {
   };
   session: { usage: () => Promise<{ cost?: { usd: number } }> };
   prompt: { submit: (input: { text: string; asUser: true }) => Promise<unknown> };
+  turn: { abort: (input: { turnId: string }) => Promise<void> };
   ui: {
     log: (text: string) => void;
+    notice: (toolUseId: string, text: string | undefined) => void;
+    status: (text: string | undefined) => void;
     invalidate: (event: string) => void;
     resolve: () => { Text: string };
   };
@@ -51,6 +54,11 @@ export async function startSparkMod(options: { record?: boolean } = {}) {
   const replies: (() => Reply)[] = [];
   const submitted: { text: string; asUser: true }[] = [];
   const logs: string[] = [];
+  const aborted: string[] = [];
+  const notices: { id: string; text: string | undefined }[] = [];
+  const statuses: (string | undefined)[] = [];
+  let running: string | null = null;
+  let submits: Promise<unknown> | null = null;
   let redraws = 0;
   let spent = 0;
   let tick: () => Promise<void> = async () => undefined;
@@ -77,11 +85,20 @@ export async function startSparkMod(options: { record?: boolean } = {}) {
     prompt: {
       submit: async (input) => {
         submitted.push(input);
+        if (submits) await submits;
         return { text: input.text };
+      },
+    },
+    turn: {
+      abort: async ({ turnId }) => {
+        if (turnId !== running) throw new Error(`${turnId} is not the running turn`);
+        aborted.push(turnId);
       },
     },
     ui: {
       log: (text) => logs.push(text),
+      notice: (id, text) => notices.push({ id, text }),
+      status: (text) => statuses.push(text),
       invalidate: () => (redraws += 1),
       resolve: () => ({ Text: 'Text' }),
     },
@@ -104,6 +121,11 @@ export async function startSparkMod(options: { record?: boolean } = {}) {
     replies,
     submitted,
     logs,
+    aborted,
+    notices,
+    statuses,
+    running: (turnId: string | null) => (running = turnId),
+    holdSubmits: (until: Promise<unknown> | null) => (submits = until),
     writeConfig,
     hook,
     redraws: () => redraws,

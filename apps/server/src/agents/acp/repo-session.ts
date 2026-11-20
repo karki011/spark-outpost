@@ -25,6 +25,7 @@ export interface ClaudeRepoOptions {
   redirects?: RedirectSettings | null;
   floor?: SparkFloor;
   readDirs?: readonly string[];
+  compactIdle?: boolean;
 }
 
 export const NO_CLAUDE_REPO: ClaudeRepoOptions = {
