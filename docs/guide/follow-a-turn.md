@@ -10,34 +10,34 @@ About 2 minutes.
 
 ## See what's happening
 
-1. The working line shows step and time; **Thinking** expands.
+1. The working line shows step, time or **No output for 2m**; **Thinking** expands.
 2. Answered cards and flags stay; waiting cards sit last.
 3. Summaries separate commands **passed** from tools **done**.
-4. Browser, web and Mac steps get rows.
+4. Browser, web and Mac steps show.
 5. Code Mode labels discovery and reads; failures expand.
 6. Edits show **+N −M**; open as diffs.
 7. Done to-dos fold.
-8. Sidebar blobs show the **Agent TV** team.
-9. **View agents** opens **Work**; over four become clickable faces.
+8. Sidebar blobs show **Agent TV**.
+9. **View agents** opens **Work**; over four become faces.
 10. **Message** opens that chat’s composer; **Ask lead to redirect** drafts in that chat.
 
 **Open in terminal** shows failures in a [dock tab](terminals.md#watch-an-agents-command).
 
 ## Stop a turn
 
-1. **Stop** or **Esc** stops sub-agents and background work.
+**Stop** or **Esc** stops sub-agents and background work; unfinished steps show **Stopped**.
 
 ## Background work
 
 **Stop background tasks** or **Stop waiting** ends **Waiting on 1 background agent** or Claude’s **Sleeping until 10:48**.
 
-Waits last 30 minutes; resumed turns show **Continued on its own**.
+Agent waits stop at 30 minutes (**Continued on its own**).
 
 ## Queue messages
 
-Queues survive restarts; unsent text stays in this browser.
+Queues survive restarts; drafts stay in this browser.
 
-1. During a turn, **Enter** queues a message.
+1. **Enter** mid-turn queues a message.
 2. **⌘Enter** sends it into the turn: **Sent**, then **Claude took this in**.
 3. While the agent waits, **Enter** sends now; the queue follows.
 4. Queued: **Edit**, **Move up**, **Move down**, **Remove**, **Send now**; **Retry** ones are read-only.
@@ -51,8 +51,7 @@ Queues survive restarts; unsent text stays in this browser.
 
 ## Delete a running chat
 
-1. Select **… → Delete → Confirm delete**.
-2. **Undo** restores it.
+Select **… → Delete → Confirm delete**; **Undo** restores it.
 
 ## After a turn
 

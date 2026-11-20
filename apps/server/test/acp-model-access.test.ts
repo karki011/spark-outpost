@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
@@ -99,5 +102,26 @@ describe('model access reported over ACP by a fake agent', { timeout: 20_000 }, 
     const { error } = await run('Hi', 'gpt-6.1-sol', { FAKE_ACP_REJECT_STYLE: 'claude' });
     expect(error).toBeInstanceOf(ModelRejectedError);
     expect((error as ModelRejectedError).model).toBe('gpt-6.1-sol');
+  });
+
+  it('asks an agent that advertises auth status and stops before a session when signed out', async () => {
+    const log = join(mkdtempSync(join(tmpdir(), 'acp-auth-')), 'methods.log');
+    const { outputs, error } = await run('Hi', 'gpt-6-sol', {
+      FAKE_ACP_AUTH_STATE: 'unauthenticated',
+      FAKE_ACP_METHOD_LOG: log,
+    });
+    expect(readFileSync(log, 'utf8')).toContain('initialize');
+    expect(readFileSync(log, 'utf8')).not.toContain('session/new');
+    expect(String(error)).toContain("isn't signed in. Open Settings");
+    expect(
+      outputs.some((output) => output.kind === 'session' || output.kind === 'text_delta'),
+    ).toBe(false);
+  });
+
+  it('runs normally when the agent reports it is signed in or does not know', async () => {
+    for (const state of ['authenticated', 'unknown']) {
+      const { error } = await run('Hi', 'gpt-6-sol', { FAKE_ACP_AUTH_STATE: state });
+      expect(error).toBeNull();
+    }
   });
 });

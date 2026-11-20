@@ -204,6 +204,7 @@ export function SoloTurn({
     working,
     waitingText ? [] : steps,
     lead.since,
+    stream.lastSeq,
   );
   const interrupted = run.status === 'outcome_unknown';
   const shown = child?.modelSwitch || child?.errorDetails ? child : run;
@@ -320,6 +321,7 @@ export function SoloTurn({
         context={{
           runId: stepsRunId,
           working,
+          stopped: finished && run.status === 'cancelled',
           waiting,
           changes,
           todo: <TurnTodo entries={todoEntries} live={working} />,

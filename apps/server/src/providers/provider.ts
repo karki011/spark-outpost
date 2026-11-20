@@ -70,6 +70,7 @@ export interface StoredSession {
   additionalDirectories: readonly string[];
   commands?: readonly string[];
   anyFolder?: boolean;
+  title?: string;
 }
 
 export interface MissedMessage {
@@ -282,6 +283,7 @@ export type ProviderOutput =
       kind: 'step_finished';
       name: string;
       tool?: boolean;
+      failed?: boolean;
       toolKind?: string;
       toolName?: string;
       target?: string;
@@ -292,7 +294,13 @@ export type ProviderOutput =
       waits?: boolean;
     }
   | ({ kind: 'file_focus' } & FileFocus)
-  | { kind: 'text_delta'; delta: string; phase?: MessagePhase; newMessage?: boolean }
+  | {
+      kind: 'text_delta';
+      delta: string;
+      phase?: MessagePhase;
+      newMessage?: boolean;
+      messageId?: string;
+    }
   | { kind: 'thought_delta'; delta: string }
   | { kind: 'tool_started'; id: string; name: string; subagent?: string }
   | { kind: 'subagent_started'; id: string; parentId: string | null; name: string; task: string }
@@ -339,6 +347,7 @@ export type ProviderOutput =
       continued: boolean;
       freshReason: string | null;
       live?: boolean;
+      title?: string;
     }
   | { kind: 'link'; url: string; title: string; source: Exclude<TaskLinkSource, 'user'> }
   | { kind: 'artifact_link'; conversationId: string; artifactId: string }

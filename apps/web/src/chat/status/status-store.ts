@@ -21,10 +21,12 @@ export interface LiveInput extends Worker {
   working: boolean;
   step: string | null;
   startedAt?: number;
+  outputSeq?: number;
 }
 
 export interface LiveReport extends LiveInput {
   since: number;
+  outputAt: number | null;
 }
 
 export interface StatusSnapshot {
@@ -65,8 +67,19 @@ function sameReport(a: LiveReport | undefined, b: LiveInput): boolean {
     a.todo === b.todo &&
     a.working === b.working &&
     a.step === b.step &&
-    a.startedAt === b.startedAt
+    a.startedAt === b.startedAt &&
+    a.outputSeq === b.outputSeq
   );
+}
+
+function outputTime(
+  known: LiveReport | undefined,
+  input: LiveInput,
+  now: () => number,
+): number | null {
+  if (input.outputSeq === undefined) return null;
+  if (known && known.outputSeq === input.outputSeq) return known.outputAt;
+  return now();
 }
 
 export function createStatusStore(now: () => number = Date.now): StatusStore {
@@ -96,8 +109,9 @@ export function createStatusStore(now: () => number = Date.now): StatusStore {
       const known = state.live.find((report) => report.id === input.id);
       if (sameReport(known, input)) return;
       const since = input.startedAt ?? (known && known.step === input.step ? known.since : now());
+      const outputAt = outputTime(known, input, now);
       const others = state.live.filter((report) => report.id !== input.id);
-      publish({ ...state, live: [...others, { ...input, since }] });
+      publish({ ...state, live: [...others, { ...input, since, outputAt }] });
     },
     forget(id) {
       if (!state.live.some((report) => report.id === id)) return;
