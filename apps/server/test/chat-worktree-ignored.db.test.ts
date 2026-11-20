@@ -107,6 +107,33 @@ describe('chat worktrees that hold files git ignores', () => {
     expect(existsSync(chat.path)).toBe(false);
   });
 
+  it('removes a worktree whose dependencies sit in folders with no tracked files', async () => {
+    const chat = await chatWithWorktree();
+    await mkdir(join(chat.path, 'apps', 'web', 'node_modules', 'pkg'), { recursive: true });
+    await writeFile(join(chat.path, 'apps', 'web', 'node_modules', 'pkg', 'index.js'), 'x\n');
+    await archive(chat.conversationId);
+
+    await sweep();
+
+    expect(existsSync(chat.path)).toBe(false);
+  });
+
+  it('checks a merged chat kept for an ignored .env once a day, not on every sweep', async () => {
+    const chat = await chatWithWorktree();
+    await writeFile(join(chat.path, 'notes.txt'), 'done\n');
+    git(chat.path, 'add', 'notes.txt');
+    git(chat.path, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'notes');
+    git(root, 'merge', '-q', '--ff-only', chat.branch);
+    await writeFile(join(chat.path, '.env'), 'API_KEY=1\n');
+
+    await sweep();
+    expect(existsSync(join(chat.path, '.env'))).toBe(true);
+
+    await rm(join(chat.path, '.env'));
+    await sweep();
+    expect(existsSync(chat.path)).toBe(true);
+  });
+
   it('still removes a clean worktree, and a second sweep changes nothing', async () => {
     const chat = await chatWithWorktree();
     await archive(chat.conversationId);
@@ -181,6 +208,20 @@ describe('chat worktrees that something still runs in', () => {
       chat.path.replace(root, linked),
     ]);
     await openShellIn(chat.path);
+    await archive(chat.conversationId);
+
+    await sweep();
+
+    expect(existsSync(chat.path)).toBe(true);
+    await rm(link, { recursive: true, force: true });
+  });
+
+  it('matches a shell recorded through a symlink to the worktree path', async () => {
+    const link = await mkdtemp(join(tmpdir(), 'spark-link-'));
+    const linked = join(link, 'repo');
+    await symlink(root, linked);
+    const chat = await chatWithWorktree();
+    await openShellIn(chat.path.replace(root, linked));
     await archive(chat.conversationId);
 
     await sweep();

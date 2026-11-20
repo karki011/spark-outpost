@@ -54,5 +54,10 @@ export async function ignoredFilesThatMatter(worktree: string): Promise<string[]
     '--exclude-standard',
     '--directory',
   ]);
-  return output.split('\0').filter(Boolean).filter(ignoredEntryMatters).sort();
+  const entries = output.split('\0').filter(Boolean);
+  const leaves = entries.filter(
+    (entry) =>
+      !entry.endsWith('/') || !entries.some((other) => other !== entry && other.startsWith(entry)),
+  );
+  return leaves.filter(ignoredEntryMatters).sort();
 }
