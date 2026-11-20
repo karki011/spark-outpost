@@ -34,4 +34,5 @@ export const NEW_PROFILE = {
   macControl: false,
   codeMode: true,
   collapseFinishedTurns: true,
+  compactIdleConversations: false,
 };

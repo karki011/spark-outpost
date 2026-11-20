@@ -37,10 +37,6 @@ export async function naturalBreak(
          SELECT 1 FROM task_links tl JOIN tasks t ON t.id = tl.task_id
          WHERE t.conversation_id = $1 AND tl.kind = 'pr'
            AND tl.created_at BETWEEN p.created_at AND p.ended_at
-       ) OR EXISTS (
-         SELECT 1 FROM task_ships s JOIN tasks t ON t.id = s.task_id
-         WHERE t.conversation_id = $1 AND s.pr_number IS NOT NULL
-           AND s.pushed_at BETWEEN p.created_at AND p.ended_at
        ) AS pull_request
      FROM previous p`,
     [input.identity.threadId, input.identity.runId],

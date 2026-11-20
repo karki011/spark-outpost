@@ -123,7 +123,7 @@ describe('natural breaks', () => {
       'Context compacted at the compaction point (82% full)',
     );
     expect(cardTriggerText({ kind: 'break', why: 'pull-request' })).toBe(
-      ' The last turn opened or updated a pull request, a natural break to compact.',
+      ' The last turn opened a pull request, a natural break to compact.',
     );
     expect(cardTriggerText({ kind: 'threshold' })).toBe('');
   });

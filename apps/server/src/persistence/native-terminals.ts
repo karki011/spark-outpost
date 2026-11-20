@@ -23,7 +23,27 @@ export interface NativeTerminalRow {
   reason: string | null;
   usage_file?: string | null;
   usage_offset?: string | number | null;
+  mod_state?: 'loaded' | 'missing' | null;
+  mod_reason?: string | null;
+  mod_generation?: number | null;
+  ended_reason?: string | null;
+  ended_resume_id?: string | null;
+  ended_at?: Date | string | null;
   updated_at: Date;
+}
+
+function modHealth(row: NativeTerminalRow): NativeTerminalSession['mod'] {
+  if (!row.mod_state || row.mod_generation !== row.generation) return null;
+  return { state: row.mod_state, reason: row.mod_reason ?? null };
+}
+
+function sessionEnd(row: NativeTerminalRow): NativeTerminalSession['ended'] {
+  if (!row.ended_reason || !row.ended_at) return null;
+  return {
+    reason: row.ended_reason,
+    resumeId: row.ended_resume_id ?? null,
+    at: new Date(row.ended_at).toISOString(),
+  };
 }
 
 export function nativeTerminalView(
@@ -43,6 +63,8 @@ export function nativeTerminalView(
     observation: row.observation,
     reason: row.reason,
     agentMode,
+    mod: modHealth(row),
+    ended: sessionEnd(row),
   });
 }
 

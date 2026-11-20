@@ -66,6 +66,7 @@ interface ProfileRow {
   mac_control: boolean;
   code_mode: boolean;
   collapse_finished_turns: boolean;
+  compact_idle_conversations: boolean;
 }
 
 export interface ConnectionRow {
@@ -112,7 +113,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
        morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
        compact_at_break,
        heartbeat, wide_window, busy_enter, archive_inactive_days, terminal_record_like_chat,
-       mac_control, code_mode, collapse_finished_turns,
+       mac_control, code_mode, collapse_finished_turns, compact_idle_conversations,
        week_recap, week_recap_day, to_char(week_recap_time, 'HH24:MI') AS week_recap_time,
        to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
@@ -220,6 +221,7 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     codeMode: profile.code_mode && process.env.SPARK_CODE_MODE !== '0',
     ...(process.env.SPARK_CODE_MODE === '0' ? { codeModeUnavailable: true } : {}),
     collapseFinishedTurns: profile.collapse_finished_turns,
+    compactIdleConversations: profile.compact_idle_conversations,
   };
   return { profile: result, providers, advisors };
 }
@@ -286,6 +288,7 @@ export async function updateProfile(
        week_recap_time = COALESCE($34::time, week_recap_time),
        pr_follow_up_bots = COALESCE($35::text[], pr_follow_up_bots),
        compact_at_break = COALESCE($36, compact_at_break),
+       compact_idle_conversations = COALESCE($37, compact_idle_conversations),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -325,6 +328,7 @@ export async function updateProfile(
       update.weekRecapTime ?? null,
       update.prFollowUpBots ?? null,
       update.compactAtBreak ?? null,
+      update.compactIdleConversations ?? null,
     ],
   );
 }
@@ -349,6 +353,7 @@ export async function sparkPreferences(
     agentInstructions: instructions.text,
     instructionsNote: instructions.fileError && instructionsFileNote(instructions.fileError),
     codeMode: profile.code_mode && process.env.SPARK_CODE_MODE !== '0',
+    compactIdleConversations: profile.compact_idle_conversations,
   };
 }
 

@@ -152,6 +152,7 @@ describe('a Terminal session’s prompt cache from the Spark mod', () => {
       rewriteUsd: 6.6,
       expired: true,
       estimateBy: 'claude-code',
+      model: null,
     });
     await prompt('first');
     await f.modFacts([turnStart('first'), request('first', 0, { at: AT + 1000 })]);

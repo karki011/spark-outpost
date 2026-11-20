@@ -75,7 +75,7 @@ describe('compaction at a natural break', { timeout: 60_000 }, () => {
     const next = await say(h, id, 'Next task');
 
     expect(next.steps).toContain(
-      'Context compacted at a natural break: the last turn opened or updated a pull request (70% full)',
+      'Context compacted at a natural break: the last turn opened a pull request (70% full)',
     );
   });
 

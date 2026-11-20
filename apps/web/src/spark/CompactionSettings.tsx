@@ -7,6 +7,7 @@ import { SwitchValueSetting } from './SwitchValueSetting.tsx';
 
 export const WARN_LABEL = 'Warn when context is';
 export const COMPACT_LABEL = 'Compact automatically at';
+export const IDLE_COMPACT_LABEL = 'Compact idle conversations';
 export const BREAK_LABEL = 'Compact at a natural break';
 
 const WARN_INFO = {
@@ -28,12 +29,29 @@ const COMPACT_INFO = {
   footer: 'The full transcript always stays in the chat.',
 };
 
+const IDLE_INFO = {
+  lead: 'Lets Claude compact a long conversation left idle about an hour, so your next message isn’t sent uncached.',
+  items: [
+    {
+      label: 'Applies to',
+      text: 'Claude chats from their next message, and new Claude Terminal sessions.',
+    },
+    { label: 'Trade-off', text: 'A summary can drop detail the agent had.' },
+    { label: 'Sleeping', text: 'A turn sleeping until a wakeup can be compacted too.' },
+    {
+      label: 'Not counted',
+      text: 'In a chat it runs between turns, so its tokens and cost aren’t recorded.',
+    },
+  ],
+  footer: 'Off, Spark keeps Claude from compacting idle conversations. Codex is unchanged.',
+};
+
 const BREAK_INFO = {
   lead: 'Past the warning point, Spark compacts before your next message when the last turn ended at a natural break.',
   items: [
     {
       label: 'Natural break',
-      text: 'The agent finished its plan, or opened or updated a pull request.',
+      text: 'The agent finished its plan, or opened a pull request.',
     },
     { label: 'Automatic off', text: 'The card asks at the break instead.' },
     { label: 'Fallback', text: 'The compaction point still applies.' },
@@ -161,7 +179,7 @@ function CompactAtSetting({ profile }: { profile: Profile }) {
 function breakHint(on: boolean, profile: Profile): string {
   if (!on) return `Spark waits for ${profile.compactAtPercent}%.`;
   const action = profile.autoCompact ? 'compacts' : 'asks with the card';
-  return `From ${profile.compactWarnPercent}%, Spark ${action} when the last turn finished its plan or opened or updated a pull request.`;
+  return `From ${profile.compactWarnPercent}%, Spark ${action} when the last turn finished its plan or opened a pull request.`;
 }
 
 function BreakSetting({ profile }: { profile: Profile }) {
@@ -183,6 +201,18 @@ export function CompactionSettings({ profile }: { profile: Profile }) {
       <h4 id="spark-compaction">Context compaction</h4>
       <WarnSetting profile={profile} />
       <CompactAtSetting profile={profile} />
+      <ProfileSwitchSetting
+        enabled={profile.compactIdleConversations}
+        label={IDLE_COMPACT_LABEL}
+        info={IDLE_INFO}
+        doc={{ page: 'compaction', heading: 'compact-idle-chats' }}
+        hint={(on) =>
+          on
+            ? 'Claude compacts a long chat or Terminal session left idle about an hour.'
+            : 'Claude never compacts an idle chat or Terminal session.'
+        }
+        toUpdate={(value) => ({ compactIdleConversations: value })}
+      />
       <BreakSetting profile={profile} />
     </section>
   );

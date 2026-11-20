@@ -36,14 +36,29 @@ export async function nativeTerminalTarget(
   };
 }
 
+export interface TerminalLaunchSettings {
+  recordLikeChat: boolean;
+  compactIdle: boolean;
+}
+
+export async function terminalLaunchSettings(
+  db: Queryable,
+  conversationId: string,
+): Promise<TerminalLaunchSettings> {
+  const { rows } = await db.query<{ recording: boolean; compact_idle: boolean }>(
+    `SELECT p.terminal_record_like_chat AS recording, p.compact_idle_conversations AS compact_idle
+      FROM conversations c JOIN profiles p ON p.workspace_id = c.workspace_id WHERE c.id = $1`,
+    [conversationId],
+  );
+  return {
+    recordLikeChat: rows[0]?.recording === true,
+    compactIdle: rows[0]?.compact_idle === true,
+  };
+}
+
 export async function recordsTerminalLikeChat(
   db: Queryable,
   conversationId: string,
 ): Promise<boolean> {
-  const { rows } = await db.query<{ recording: boolean }>(
-    `SELECT p.terminal_record_like_chat AS recording FROM conversations c
-      JOIN profiles p ON p.workspace_id = c.workspace_id WHERE c.id = $1`,
-    [conversationId],
-  );
-  return rows[0]?.recording === true;
+  return (await terminalLaunchSettings(db, conversationId)).recordLikeChat;
 }

@@ -325,18 +325,31 @@ test('context compaction thresholds validate inline and save from Spark settings
   const atBreak = spark.getByRole('switch', { name: 'Compact at a natural break' });
   await expect(atBreak).toBeChecked();
   await expect(atBreak).toHaveAccessibleDescription(
-    'From 65%, Spark asks with the card when the last turn finished its plan or opened or updated a pull request.',
+    'From 65%, Spark asks with the card when the last turn finished its plan or opened a pull request.',
   );
   save = saved();
   await atBreak.click();
   await save;
   await expect(atBreak).not.toBeChecked();
   await expect(atBreak).toHaveAccessibleDescription('Spark waits for 90%.');
+  const idle = spark.getByRole('switch', { name: 'Compact idle conversations' });
+  await expect(idle).not.toBeChecked();
+  await expect(idle).toHaveAccessibleDescription(
+    'Claude never compacts an idle chat or Terminal session.',
+  );
+  save = saved();
+  await idle.click();
+  await save;
+  await expect(idle).toBeChecked();
+  await expect(idle).toHaveAccessibleDescription(
+    'Claude compacts a long chat or Terminal session left idle about an hour.',
+  );
   expect(await profile()).toMatchObject({
     compactWarnPercent: 65,
     compactAtPercent: 90,
     autoCompact: false,
     compactAtBreak: false,
+    compactIdleConversations: true,
   });
 });
 

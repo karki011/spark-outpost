@@ -5,7 +5,7 @@ export const THRESHOLD_LINE = 'Context compacted at the compaction point';
 
 const BREAK_REASONS: Record<NaturalBreak, string> = {
   'plan-done': 'the last turn finished its plan',
-  'pull-request': 'the last turn opened or updated a pull request',
+  'pull-request': 'the last turn opened a pull request',
 };
 
 export function breakReason(why: NaturalBreak): string {
