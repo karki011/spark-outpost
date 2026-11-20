@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                    | What to do                                               |
 | ----------------------------------------------- | -------------------------------------------------------- |
 | Compaction at natural breaks; handoff summaries | [Compaction](compaction.md#change-when-spark-compacts).  |
+| **A chat starts** trigger                       | [Triggers](workflow-triggers.md#the-events).             |
 | Pushes wait while you use the Mac               | [Use your phone](use-your-phone.md).                     |
 | Context rail: one line per row                  | [Read the rows](context-rail.md#read-the-rows).          |
 | **Stopped** steps; **No output for 2m**         | [Follow a turn](follow-a-turn.md).                       |

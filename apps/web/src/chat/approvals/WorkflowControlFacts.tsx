@@ -3,6 +3,7 @@ import { scheduleSummary } from '../../crew-flows/schedule-model.ts';
 import { hourCycle } from '../../desktop/hour-cycle.ts';
 
 const TRIGGER_WORDS: [keyof WorkflowTriggers, string][] = [
+  ['chatStarted', 'a chat starts'],
   ['turnChanged', 'a turn changes files'],
   ['beforePublish', 'before publish'],
   ['commit', 'a new commit'],

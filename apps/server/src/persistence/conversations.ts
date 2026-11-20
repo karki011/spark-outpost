@@ -46,6 +46,7 @@ import { findInterruption } from './interruptions.ts';
 import { withNativeTerminals } from './native-terminals.ts';
 import { applyConversationOptions } from './conversation-options.ts';
 import { continueOpenRequest } from '../outposts/continuation.ts';
+import { noteFirstMessage } from '../crew-flows/chat-started.ts';
 import { deviceStartingRun } from '../remote/run-mark.ts';
 import { listChatFiles } from '../chat-files/store.ts';
 import { listArtifactPages } from '../artifacts/store.ts';
@@ -399,6 +400,11 @@ export async function sendInTransaction(
   );
   await continueOpenRequest(client, conversationId, runId);
   if (!terminal) {
+    await noteFirstMessage(client, {
+      conversationId,
+      messageId: request.id,
+      source: request.source ?? null,
+    });
     await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [
       newId(),
       runId,
