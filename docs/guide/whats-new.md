@@ -10,12 +10,13 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                   | What to do                                           |
 | ---------------------------------------------- | ---------------------------------------------------- |
+| Meeting card shows every button on one row     | Nothing to do.                                       |
 | Follow-up rounds, triggered workflows fold     | Open the row for details.                            |
 | Chat rows show steps; plans name chats         | [Chat list](statuses-and-limits.md#chat-list).       |
 | **Cost** by tool; model switch cache note      | [Prompt cache](statuses-and-limits.md#prompt-cache). |
 | Worktrees holding `.env` or a running tab stay | [Where](where-spark-works.md#what-to-expect).        |
 | **@** lists workflows                          | Pick one and send.                                   |
-| Meeting card shows every button on one row     | Nothing to do.                                       |
+| Spark Island is wider for requests             | Nothing to do.                                       |
 
 ## Mid-November 2026
 
@@ -59,5 +60,4 @@ summary: What changed in recent releases and what to do next.
 | Test run and Try it: nothing is sent      | [Do a test run](test-run.md).                                         |
 | Sparks page: Crew, skills and files       | [Make a Spark](sparks.md).                                            |
 | Read anywhere; outside edits ask          | [Protected paths](protected-paths.md).                                |
-| Transcripts: drag the list's edge         | Nothing; double-click resets it.                                      |
-| Ask about a meeting, **Catch me up**      | [Take meeting notes](meetings.md#ask-about-it).                       |
+| The Relay Spark is removed                | Nothing; PR follow-up works as before.                                |
