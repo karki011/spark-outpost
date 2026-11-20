@@ -49,9 +49,9 @@ function candidates(body: string): string[] {
 
 export function planTitle(body: string): string | null {
   for (const line of candidates(body)) {
-    const text = cleanLine(line);
+    const text = cleanLine(redactSecrets(line, []));
     if (!usable(text)) continue;
-    const title = clipAtWord(redactSecrets(text, []), PLAN_TITLE_LENGTH);
+    const title = clipAtWord(text, PLAN_TITLE_LENGTH);
     return title.charAt(0).toUpperCase() + title.slice(1);
   }
   return null;

@@ -66,6 +66,17 @@ describe('a chat titled from its agreed plan', () => {
     expect(await titleOf(id)).toEqual({ title: 'Dark mode for Settings', source: 'auto' });
   });
 
+  it('keeps a plan title that matches the message title through the end of the turn', async () => {
+    const { id, runId } = await chat();
+    await t.db.query(`UPDATE runs SET category = 'build' WHERE id = $1`, [runId]);
+    const plan = await propose(id, runId, '# Add a dark mode to the settings page');
+    await approvePlanDocument(t.db, plan.id, approval(runId));
+    expect((await titleOf(id)).source).toBe('auto');
+    await recordSuggestedTitle(t.db, runId, 'Settings theme work');
+    await applyAutoTitle(t.db, runId);
+    expect((await titleOf(id)).title).toBe('Add a dark mode to the settings page');
+  });
+
   it('changes nothing for a rejected plan', async () => {
     const { id, runId } = await chat();
     const plan = await propose(id, runId, '# Dark mode for Settings');

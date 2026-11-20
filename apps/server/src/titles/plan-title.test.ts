@@ -29,6 +29,12 @@ describe('planTitle', () => {
     expect(title!.endsWith('…')).toBe(true);
   });
 
+  it('redacts a token before Markdown characters are stripped', () => {
+    const title = planTitle('# Rotate ghp_abcdefghijklmnopqrstuvwxyz0123456789');
+    expect(title).not.toMatch(/abcdefghijklmnop/);
+    expect(title).toMatch(/^Rotate /);
+  });
+
   it('gives nothing for a plan with no words', () => {
     expect(planTitle('# Plan\n\n---\n1.')).toBeNull();
     expect(planTitle('')).toBeNull();
