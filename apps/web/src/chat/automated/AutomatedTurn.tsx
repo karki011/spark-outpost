@@ -9,6 +9,7 @@ import { ReviewMarkdown } from '../markdown/ReviewMarkdown.tsx';
 import { usePaneId } from '../split/chat-pane.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { turnRunIds } from '../turn-props.ts';
+import { turnSteers } from '../steer/steer-model.ts';
 import { opensOnItsOwn, sentForDisplay, waitsOnYou } from './automated-model.ts';
 import {
   itemPlace,
@@ -97,8 +98,9 @@ export function AutomatedTurn({ run, detail, message, children }: AutomatedTurnP
   const stop = useMutation({ mutationFn: () => api.cancelRun(run.id) });
   const live = !isTerminalRunStatus(run.status);
   const waiting = waitsOnYou(detail.approvals, turnRunIds(detail, run.id));
-  const open = chosen ?? (live || opensOnItsOwn(run.status, waiting));
-  const stepsOpen = stepsChosen ?? opensOnItsOwn(run.status, waiting);
+  const steered = turnSteers(detail, run.id).length > 0;
+  const open = chosen ?? (live || opensOnItsOwn(run.status, { waiting, steered }));
+  const stepsOpen = stepsChosen ?? opensOnItsOwn(run.status, { waiting, steered });
   const bodyId = usePaneId(`auto-turn-${run.id}`);
   const title = roundTitle(found ?? null);
   return (

@@ -1,4 +1,5 @@
-import type { Approval, CrewMember, Message } from '@spark-outpost/contracts';
+import type { Approval, CrewMember, MemberMessage, Message } from '@spark-outpost/contracts';
+import { readBy } from '../steer/steer-model.ts';
 import { isCheckpoint, type CheckpointApproval } from '../checkpoints/checkpoint-model.ts';
 
 type AgentItem = { kind: 'agent'; member: CrewMember; checkpoints: CheckpointApproval[] };
@@ -169,4 +170,25 @@ export function closingReply(
   }
   if (crew.some((member) => member.runId === rootRunId)) return '';
   return own.at(-1)?.content ?? '';
+}
+
+interface BlockOwners {
+  blockRunIds: readonly string[];
+  rootRunId: string;
+  handedOffAt: string | null;
+}
+
+function readAfterHandOff(message: MemberMessage, rootRunId: string, handedOffAt: string | null) {
+  if (handedOffAt === null || readBy(message) !== rootRunId) return false;
+  return message.deliveredAt === null || Date.parse(message.deliveredAt) > Date.parse(handedOffAt);
+}
+
+export function steersInBlocks(
+  messages: readonly MemberMessage[],
+  { blockRunIds, rootRunId, handedOffAt }: BlockOwners,
+): MemberMessage[] {
+  return messages.filter(
+    (message) =>
+      blockRunIds.includes(readBy(message)) && !readAfterHandOff(message, rootRunId, handedOffAt),
+  );
 }

@@ -69,7 +69,7 @@ import { AgentMark, TurnMeta, agentChanged } from './turn/TurnParts.tsx';
 import { TurnChangesLine } from './turn/TurnChangesLine.tsx';
 import { turnMood } from './turn/turn-mood.ts';
 import { SteerGroup } from './steer/SteeredMessage.tsx';
-import { seenAfter, steerMarks, turnSteers } from './steer/steer-model.ts';
+import { seenAfter, steerMarks, steersReadByNone, turnSteers } from './steer/steer-model.ts';
 
 interface SoloTurnProps {
   run: Run;
@@ -78,7 +78,10 @@ interface SoloTurnProps {
   laterMessages: readonly Message[];
   previous?: Run | null;
   repo: Project | null;
+  steersPlacedIn?: readonly string[];
 }
+
+const NO_RUNS: readonly string[] = [];
 
 function soloChild(run: Run, detail: ConversationDetail) {
   const crew = detail.orchestrations?.[run.id]?.crew ?? [];
@@ -122,6 +125,7 @@ export function SoloTurn({
   laterMessages,
   previous = null,
   repo,
+  steersPlacedIn = NO_RUNS,
 }: SoloTurnProps) {
   const { member, child } = soloChild(run, detail);
   const provider = member?.provider ?? run.provider;
@@ -237,7 +241,7 @@ export function SoloTurn({
       command.toolCallId ? [command.toolCallId] : [],
     ),
   );
-  const steers = turnSteers(detail, run.id);
+  const steers = steersReadByNone(turnSteers(detail, run.id), steersPlacedIn);
   const rowInput = {
     text,
     steps: viewSteps(steps),

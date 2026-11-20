@@ -138,3 +138,27 @@ test('what Spark sent shows GitHub HTML and Markdown rendered, never run', async
   await expect(sent.locator('script')).toHaveCount(0);
   expect(await page.evaluate(() => 'hacked' in window)).toBe(false);
 });
+
+test('a follow-up round opens by itself to show a message you sent into it', async ({ page }) => {
+  await seedSettledRound();
+  const db = openTestDb();
+  try {
+    await db.query(
+      `INSERT INTO member_messages (id, conversation_id, run_id, body, urgency, status, delivered_at, delivered_run_id)
+       SELECT gen_random_uuid(), conversation_id, id, 'Also check the rounding', 'now', 'delivered', now(), id
+       FROM runs WHERE source = 'pr_follow_up'`,
+    );
+  } finally {
+    await db.end();
+  }
+  await openChats(page);
+  const turn = page.locator('[data-turn]').first();
+  const toggle = turn.getByRole('button', { name: /PR #7 · round 1/ });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(turn.locator('.auto-turn-steps')).toHaveAttribute('open', '');
+  await expect(turn.getByText('Also check the rounding')).toBeVisible();
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(turn.getByText('Also check the rounding')).toBeHidden();
+});

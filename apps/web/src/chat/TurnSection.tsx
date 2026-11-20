@@ -10,7 +10,7 @@ import { MessageAttachments } from './attachments/MessageAttachments.tsx';
 import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivider.tsx';
 import { compactionsByRun } from './compaction/compaction-text.ts';
 import { CrewTurn } from './crew/CrewTurn.tsx';
-import { SparkJobs, jobMembers, mainAgentRan } from './crew/SparkJobs.tsx';
+import { SparkJobs, jobMembers, mainAgentRan, pickedMembers } from './crew/SparkJobs.tsx';
 import { SparkTag } from '../teammates/SparkCrewFace.tsx';
 import { LinkCards } from './link-cards/LinkCards.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
@@ -94,19 +94,24 @@ export const TurnSection = memo(function TurnSection({
   const compactions = compactionsByRun(detail.compactions).get(run.id) ?? [];
   const automated = isAutomatedTurn(run);
   const workflow = isWorkflowTurn(detail, run);
+  const jobsShown = sparkLed !== null && (!workflow || handedTo.length > 0);
+  const steersPlacedIn = jobsShown
+    ? pickedMembers(sparkLed, workflow ? 'jobs' : 'all').map((member) => member.runId)
+    : [];
   const work = (
     <>
       {run.agentCycle && <p className="on-its-own">Continued on its own</p>}
       {workflow && (
         <WorkflowLine run={run} detail={detail} orchestration={orchestration} repo={repo} />
       )}
-      {sparkLed && (!workflow || handedTo.length > 0) && (
+      {sparkLed && jobsShown && (
         <SparkJobs
           run={run}
           detail={detail}
           orchestration={sparkLed}
           repo={repo}
           pick={workflow ? 'jobs' : 'all'}
+          placeSteers
         />
       )}
       {sparkLed && !mainAgentRan(sparkLed) ? null : crew ? (
@@ -119,9 +124,12 @@ export const TurnSection = memo(function TurnSection({
           laterMessages={laterMessages}
           previous={previous}
           repo={repo}
+          steersPlacedIn={steersPlacedIn}
         />
       )}
-      {sparkLed && !mainAgentRan(sparkLed) && <TurnSteers detail={detail} run={run} />}
+      {sparkLed && !mainAgentRan(sparkLed) && (
+        <TurnSteers detail={detail} run={run} placedIn={steersPlacedIn} />
+      )}
       <TurnOutpostLines conversation={detail.conversation} run={run} />
       <OpenedPullRequests
         conversationId={detail.conversation.id}

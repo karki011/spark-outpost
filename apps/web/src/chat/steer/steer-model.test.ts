@@ -6,7 +6,15 @@ import type {
   Message,
   Run,
 } from '@spark-outpost/contracts';
-import { steerSlots, steerStatus, turnSteers, withSteer } from './steer-model.ts';
+import {
+  readAt,
+  steerSlots,
+  steerStatus,
+  steersReadBy,
+  steersReadByNone,
+  turnSteers,
+  withSteer,
+} from './steer-model.ts';
 
 const TOP = 'top';
 const BOLT = 'bolt';
@@ -84,6 +92,16 @@ describe('turnSteers', () => {
   });
 });
 
+describe('the run that read a message', () => {
+  it('is the run it was delivered to, else the run it was sent to', () => {
+    const toStep = steer('a', { deliveredRunId: 'step' });
+    const waiting = steer('b');
+    expect(steersReadBy([toStep, waiting], 'step')).toEqual([toStep]);
+    expect(steersReadBy([toStep, waiting], TOP)).toEqual([waiting]);
+    expect(steersReadByNone([toStep, waiting], ['step'])).toEqual([waiting]);
+  });
+});
+
 describe('steerSlots', () => {
   const started = ['2026-10-05T10:00:00.000Z', '2026-10-05T10:00:10.000Z', null];
 
@@ -95,6 +113,18 @@ describe('steerSlots', () => {
   it('leaves blocks that start later below the message', () => {
     const later = [...started.slice(0, 2), '2026-10-05T10:01:00.000Z'];
     expect([...steerSlots(later, [steer('a')]).keys()]).toEqual([1]);
+  });
+
+  it('places a message by when it was read when asked, so one read after a later block follows it', () => {
+    const handOff = [
+      '2026-10-05T10:00:00.000Z',
+      '2026-10-05T10:00:10.000Z',
+      '2026-10-05T10:01:00.000Z',
+    ];
+    const readLate = steer('late', { deliveredAt: '2026-10-05T10:02:00.000Z' });
+    expect([...steerSlots(handOff, [readLate]).keys()]).toEqual([1]);
+    expect([...steerSlots(handOff, [readLate], readAt).keys()]).toEqual([2]);
+    expect([...steerSlots(handOff, [steer('unread')], readAt).keys()]).toEqual([1]);
   });
 
   it('keeps messages sent to the same place in the order they were sent', () => {
