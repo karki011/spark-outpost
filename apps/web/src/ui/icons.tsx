@@ -113,6 +113,12 @@ export function OutpostIcon() {
   return <StrokeIcon path="M6 21V4M6 5h11l-2.5 3.5L17 12H6" />;
 }
 
+export function WorkflowIcon() {
+  return (
+    <StrokeIcon path="M4 4h6v6H4zM14 14h6v6h-6zM7 10v4a3 3 0 0 0 3 3h4M14 7h3a3 3 0 0 1 3 3" />
+  );
+}
+
 export function PauseIcon() {
   return <StrokeIcon path="M9 5v14M15 5v14" />;
 }

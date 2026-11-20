@@ -1,22 +1,16 @@
 import './pr-card.css';
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type MouseEvent,
-  type ReactNode,
-} from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { PrWatch } from '@spark-outpost/contracts';
-import { CheckIcon, ChevronIcon, XIcon } from '../../ui/icons.tsx';
+import { XIcon } from '../../ui/icons.tsx';
+import { DockItem } from '../dock/DockItem.tsx';
+import { useDismissed } from '../dock/use-dismissed.ts';
 import { LineTotals } from '../changes/FileChangeList.tsx';
 import { PullRequestIcon } from '../rail/RailIcons.tsx';
 import { prWatchesQuery } from './pr-follow-up-api.ts';
 import {
   dismissKey,
   GROUP_OVER,
+  PR_DISMISSED,
   groupLine,
   rowFacts,
   rowSummary,
@@ -33,105 +27,10 @@ import { CLEAN_LINE } from './post-open-model.ts';
 import { PostOpenLines } from './PullOpenedLines.tsx';
 import { PullPanel } from './PullPanel.tsx';
 import { RefreshPullButton } from './RefreshPullButton.tsx';
-import { useDismissedPulls } from './use-dismissed-pulls.ts';
 import { usePullRefresh } from './use-pull-refresh.ts';
 import { useWatchContext, type WatchContext } from './use-watch-context.ts';
 import { watchIndicator, watchLabel } from './watch-indicator-model.ts';
 import { WatchMark } from './WatchIndicator.tsx';
-
-interface ExpandingProps {
-  className: string;
-  label: string;
-  toggleLabel: string;
-  row: ReactNode;
-  panel: ReactNode;
-  trailing?: ReactNode;
-  note?: string | null;
-  status?: string | null;
-}
-
-function Expanding({
-  className,
-  label,
-  toggleLabel,
-  row,
-  panel,
-  trailing,
-  note = null,
-  status = null,
-}: ExpandingProps) {
-  const [open, setOpen] = useState(false);
-  const toggle = useRef<HTMLButtonElement>(null);
-  const item = useRef<HTMLDivElement>(null);
-  const panelId = useId();
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!item.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onEscape = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape' && document.activeElement === document.body) setOpen(false);
-    };
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onEscape);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onEscape);
-    };
-  }, [open]);
-  const onRowClick = (event: MouseEvent<HTMLDivElement>) => {
-    if ((event.target as HTMLElement).closest('a, button')) return;
-    setOpen((value) => !value);
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Escape' || !open) return;
-    event.stopPropagation();
-    setOpen(false);
-    toggle.current?.focus();
-  };
-  return (
-    <div
-      ref={item}
-      className={open ? `${className} expanded` : className}
-      role="group"
-      aria-label={label}
-      onKeyDown={onKeyDown}
-    >
-      <div className="prc-row" onClick={onRowClick}>
-        <button
-          ref={toggle}
-          type="button"
-          className="prc-toggle"
-          aria-expanded={open}
-          aria-controls={panelId}
-          aria-label={toggleLabel}
-          onClick={() => setOpen((value) => !value)}
-        >
-          <ChevronIcon />
-          <PullRequestIcon />
-        </button>
-        {row}
-        {trailing}
-      </div>
-      {note && (
-        <p className="prc-problem" role="alert">
-          {note}
-        </p>
-      )}
-      {status && (
-        <p className="prc-clean">
-          <CheckIcon />
-          {status}
-        </p>
-      )}
-      {open && (
-        <div id={panelId} className="prc-panel">
-          {panel}
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface PrRowProps {
   watch: PrWatch;
@@ -167,7 +66,8 @@ function PrRowItem({ watch, repo, nested = false, context, onDismiss, onOpenLink
   const indicator = watchIndicator(watch, context.contextFor(watch.roundRunId));
   const name = `Pull request ${watch.repo}#${watch.number}`;
   return (
-    <Expanding
+    <DockItem
+      icon={<PullRequestIcon />}
       className={`prc-item ${state}${nested ? ' nested' : ''}`}
       label={name}
       toggleLabel={`${name} details`}
@@ -244,7 +144,7 @@ interface PrCardProps {
 
 export function PrCard({ conversationId, onOpenLinks }: PrCardProps) {
   const watches = useQuery(prWatchesQuery(conversationId)).data?.watches;
-  const [dismissed, dismiss] = useDismissedPulls(conversationId);
+  const [dismissed, dismiss] = useDismissed(PR_DISMISSED, conversationId);
   const shown = shownPulls(watches ?? [], dismissed);
   if (shown.length === 0) return null;
   return (
@@ -276,7 +176,8 @@ function PrRows({ conversationId, shown, dismissed, onDismiss, onOpenLinks }: Pr
         {grouped ? `${count}${line ? `: ${line}` : ''}` : announced(shown[0]!, context.mode)}
       </p>
       {grouped ? (
-        <Expanding
+        <DockItem
+          icon={<PullRequestIcon />}
           className="prc-item group"
           label={count}
           toggleLabel={`${count}, details`}

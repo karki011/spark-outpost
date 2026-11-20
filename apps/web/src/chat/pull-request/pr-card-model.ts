@@ -1,6 +1,8 @@
 import type { PrCheckRun, PrDetails, PrWatch } from '@spark-outpost/contracts';
 import { ciState, PULL_STATE_LABELS, pullState } from './pull-request-model.ts';
 
+export const PR_DISMISSED = 'spark-outpost.pr-card.dismissed';
+
 export type FactTone = 'bad' | 'prog' | 'warn' | 'plain';
 
 export interface RowFact {

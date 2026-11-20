@@ -111,6 +111,17 @@ async function tabTo(page: Page, target: Locator) {
   throw new Error('Tab never reached the control.');
 }
 
+async function openRunViewFromChat(page: Page, turn: Locator) {
+  await turn
+    .locator('.wfc-line')
+    .getByRole('button', { name: /^Show / })
+    .click();
+  await page
+    .getByRole('region', { name: 'Workflow runs' })
+    .getByRole('button', { name: 'Open run view' })
+    .click();
+}
+
 test('Run opens the live view and steps go from Waiting to Running to Done', async ({ page }) => {
   await saveWorkflow(page, 'review-flow', 'Review flow', [
     { id: 'first', sparkId: pip, prompt: 'Look for injection.' },
@@ -158,7 +169,11 @@ test('Run opens the live view and steps go from Waiting to Running to Done', asy
   await next.getByRole('button', { name: 'Open this step in the chat' }).click();
   const turn = page.locator('section[data-turn]').first();
   await expect(turn.locator('.agent-block .agent-name')).toHaveText(['Pip', 'Wren']);
-  await turn.getByRole('button', { name: 'Open run view' }).click();
+  await expect(turn.getByRole('button', { name: 'Steps (2)' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
+  await openRunViewFromChat(page, turn);
   await expect(runView(page, 'Review flow')).toBeVisible();
 });
 
@@ -258,10 +273,11 @@ test('a workflow started with @id in a chat offers its run view', async ({ page 
   await input.press('Enter');
 
   const turn = page.locator('section[data-turn]').first();
-  const link = turn.locator('.wf-run-link');
-  await expect(link).toContainText('Workflow Review flow', { timeout: SLOW });
-  await expect(link).toContainText('Done', { timeout: SLOW });
-  await link.getByRole('button', { name: 'Open run view' }).click();
+  await expect(turn.locator('.msg.me')).toContainText('@review-flow look at the login change');
+  const line = turn.locator('.wfc-line');
+  await expect(line).toContainText('Review flow', { timeout: SLOW });
+  await expect(line).toContainText('Done', { timeout: SLOW });
+  await openRunViewFromChat(page, turn);
   const view = runView(page, 'Review flow');
   await expect(live(view)).toContainText('1 of 1 step done');
   await expect(view.locator('.wf-tag')).toContainText('From a chat');
@@ -293,6 +309,6 @@ test('a step waiting on an approval card says so and links to the card', async (
   const card = page.locator('[id^="approval-"]').first();
   await expect(card).toBeVisible();
   await card.getByRole('button', { name: 'Allow', exact: true }).click();
-  await page.getByRole('button', { name: 'Open run view' }).click();
+  await openRunViewFromChat(page, page.locator('section[data-turn]').first());
   await expect(live(runView(page, 'Probe'))).toContainText('1 of 1 step done', { timeout: SLOW });
 });

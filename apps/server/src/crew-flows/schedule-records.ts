@@ -360,14 +360,15 @@ export async function settleSlot(
   );
 }
 
-export async function workflowRunning(
+export async function scheduledRunGoing(
   db: Queryable,
   workspaceId: string,
   workflowId: string,
 ): Promise<boolean> {
   const { rowCount } = await db.query(
-    `SELECT 1 FROM workflow_runs
-     WHERE workspace_id = $1 AND workflow_id = $2 AND kind = 'run' AND status = 'running' LIMIT 1`,
+    `SELECT 1 FROM workflow_schedule_slots s
+     JOIN workflow_runs r ON r.id = s.workflow_run_id
+     WHERE s.workspace_id = $1 AND s.workflow_id = $2 AND r.status = 'running' LIMIT 1`,
     [workspaceId, workflowId],
   );
   return rowCount === 1;

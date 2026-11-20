@@ -127,12 +127,34 @@ export function branchMatches(text: string, branch: string | null): boolean {
   return globs.some((glob) => globPattern(glob).test(branch));
 }
 
-const BLOCKING_LINE =
-  /^\s*(?:[-*+]|\d+[.)])?\s*(?:\*\*|__)?(?:\[\s*(?:critical|high)\s*\]|(?:critical|high)\s*(?:\*\*|__)?\s*:)/i;
+export const FINDING_SEVERITIES = ['critical', 'high', 'medium', 'low'] as const;
+export type FindingSeverity = (typeof FINDING_SEVERITIES)[number];
+
+export interface Finding {
+  severity: FindingSeverity;
+  text: string;
+}
+
+const FINDING_LINE =
+  /^\s*(?:[-*+]|\d+[.)])?\s*(?:\*\*|__)?(?:\[\s*(critical|high|medium|low)\s*\]|(critical|high|medium|low)\s*(?:\*\*|__)?\s*:)(.*)$/i;
+const LEFTOVER_MARKS = /^(?:\s*(?:\*\*|__))?\s*[:\-–—]?\s*/;
+
+function findingOf(line: string): Finding | null {
+  const match = FINDING_LINE.exec(line);
+  if (!match) return null;
+  const severity = (match[1] ?? match[2])!.toLowerCase() as FindingSeverity;
+  return { severity, text: match[3]!.replace(LEFTOVER_MARKS, '').trim() };
+}
+
+export function findingsIn(text: string | null): Finding[] {
+  if (!text) return [];
+  return text.split('\n').flatMap((line) => findingOf(line) ?? []);
+}
 
 export function blockingFindings(text: string | null): number {
-  if (!text) return 0;
-  return text.split('\n').filter((line) => BLOCKING_LINE.test(line)).length;
+  return findingsIn(text).filter(
+    (finding) => finding.severity === 'critical' || finding.severity === 'high',
+  ).length;
 }
 
 export const FINDINGS_FORMAT =

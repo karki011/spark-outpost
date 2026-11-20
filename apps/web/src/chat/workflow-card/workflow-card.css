@@ -1,0 +1,120 @@
+.wfc-item .prc-row .wf-state {
+  flex-shrink: 0;
+}
+
+.wfc-need {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wfc-sev {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.wfc-sev[data-severity='critical'] {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  color: var(--danger);
+}
+
+.wfc-sev[data-severity='high'] {
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--line));
+  color: var(--warn);
+}
+
+.wfc-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.wfc-findings ul,
+.wfc-steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wfc-finding {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wfc-finding-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+}
+
+.wfc-findings > .btn {
+  margin-top: 4px;
+}
+
+.wfc-steps {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.wfc-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.wfc-step b {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.wfc-step-note {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--danger);
+}
+
+.wfc-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0;
+}
+
+.wfc-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 4px 0 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.wfc-line > svg {
+  flex-shrink: 0;
+}
+
+.wfc-line b {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.wfc-ask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text);
+}
+
+.wfc-ask span {
+  flex: 1;
+  min-width: 0;
+}

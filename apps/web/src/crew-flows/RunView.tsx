@@ -23,6 +23,7 @@ import { RunStepPanel } from './RunStepPanel.tsx';
 import type { CrewSpark } from './spark-lookup.ts';
 import { useNow, useRunChat, useStopWorkflowRun, useWorkflowRun } from './use-workflow-runs.ts';
 import { stepLabels } from './workflow-model.ts';
+import { revealStep } from '../chat/workflow-card/reveal-steps.ts';
 
 const FlowGraph = lazy(() => import('./FlowGraph.tsx'));
 
@@ -188,11 +189,12 @@ function Loaded({
               now={now}
               inChat={inChat}
               onSelect={setPicked}
-              onOpenTurn={() =>
-                openChat(
-                  run.runId && selected.runId ? agentAnchor(run.runId, selected.runId) : null,
-                )
-              }
+              onOpenTurn={() => {
+                const anchor =
+                  run.runId && selected.runId ? agentAnchor(run.runId, selected.runId) : null;
+                if (anchor) revealStep(anchor);
+                openChat(anchor);
+              }}
               onOpenCard={(approvalId) => openChat(approvalAnchor(approvalId))}
             />
           )}

@@ -2,22 +2,13 @@ import './automated-turn.css';
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ConversationDetail, Run } from '@spark-outpost/contracts';
-import { OpenRunViewButton, useTurnWorkflowRun } from '../../crew-flows/WorkflowRunLink.tsx';
-import { RunState } from '../../crew-flows/RunState.tsx';
 import { ChevronIcon } from '../../ui/icons.tsx';
 import { ReviewMarkdown } from '../markdown/ReviewMarkdown.tsx';
 import { usePaneId } from '../split/chat-pane.ts';
 import { prWatchesQuery } from '../pull-request/pr-follow-up-api.ts';
 import { outcomesIn } from '../pull-request/round-model.ts';
 import { turnRunIds } from '../turn-props.ts';
-import {
-  opensOnItsOwn,
-  roundHeadline,
-  sentForDisplay,
-  waitsOnYou,
-  workflowHeadline,
-  workflowLabel,
-} from './automated-model.ts';
+import { opensOnItsOwn, roundHeadline, sentForDisplay, waitsOnYou } from './automated-model.ts';
 
 interface AutomatedTurnProps {
   run: Run;
@@ -59,10 +50,8 @@ export function SentBySpark({ text }: { text: string }) {
 
 export function AutomatedTurn({ run, detail, message, children }: AutomatedTurnProps) {
   const [chosen, setChosen] = useState<boolean | null>(null);
-  const workflowRun = useTurnWorkflowRun(run.id, run.workflowStarted === true);
   const waiting = waitsOnYou(detail.approvals, turnRunIds(detail, run.id));
-  const statuses = workflowRun ? [run.status, workflowRun.status] : [run.status];
-  const open = chosen ?? opensOnItsOwn(statuses, waiting);
+  const open = chosen ?? opensOnItsOwn(run.status, waiting);
   const bodyId = usePaneId(`auto-turn-${run.id}`);
   return (
     <div className="auto-turn" data-open={open}>
@@ -75,17 +64,8 @@ export function AutomatedTurn({ run, detail, message, children }: AutomatedTurnP
           onClick={() => setChosen(!open)}
         >
           <ChevronIcon />
-          {run.prFollowUp ? (
-            <RoundHeadline run={run} conversationId={detail.conversation.id} message={message} />
-          ) : (
-            <>
-              <b>Workflow {workflowLabel(workflowRun, message)}</b>
-              {workflowRun && <span>{workflowHeadline(workflowRun)}</span>}
-            </>
-          )}
+          <RoundHeadline run={run} conversationId={detail.conversation.id} message={message} />
         </button>
-        {workflowRun && <RunState status={workflowRun.status} />}
-        {workflowRun && <OpenRunViewButton run={workflowRun} quiet />}
       </div>
       <div id={bodyId} className="auto-turn-body" hidden={!open}>
         {children}
