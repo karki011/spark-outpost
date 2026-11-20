@@ -19,6 +19,8 @@ export const DICTATION_PROBLEMS: Partial<Record<VoiceErrorCode | 'missed', strin
   failed: 'Voice stopped. Try again.',
 };
 
+export const FINAL_WAIT_MS = 8000;
+
 export function joinDictation(current: string, heard: string): string {
   const text = heard.trim();
   if (!text) return current;
@@ -33,7 +35,14 @@ export function useDictation(onText: (text: string) => void, scope: string) {
   const [problem, setProblem] = useState<string | null>(null);
   const current = useRef<{ id: string; scope: string } | null>(null);
   const generation = useRef(0);
-  const afterFinal = useRef<((heard: string) => void) | null>(null);
+  const afterFinal = useRef<{
+    done: (heard: string) => void;
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+  const dropAfterFinal = () => {
+    if (afterFinal.current) clearTimeout(afterFinal.current.timer);
+    afterFinal.current = null;
+  };
   const [stateScope, setStateScope] = useState(scope);
   if (stateScope !== scope) {
     setStateScope(scope);
@@ -42,7 +51,7 @@ export function useDictation(onText: (text: string) => void, scope: string) {
   }
 
   const cancel = () => {
-    afterFinal.current = null;
+    dropAfterFinal();
     generation.current += 1;
     const id = current.current?.id;
     current.current = null;
@@ -52,6 +61,7 @@ export function useDictation(onText: (text: string) => void, scope: string) {
 
   useLayoutEffect(() => {
     return () => {
+      if (afterFinal.current) clearTimeout(afterFinal.current.timer);
       afterFinal.current = null;
       generation.current += 1;
       const id = current.current?.id;
@@ -74,16 +84,16 @@ export function useDictation(onText: (text: string) => void, scope: string) {
       setState({ phase: 'idle' });
       if (event.text.trim()) onText(event.text.trim());
       else setProblem(DICTATION_PROBLEMS.missed!);
-      const done = afterFinal.current;
-      afterFinal.current = null;
-      done?.(event.text.trim());
+      const pending = afterFinal.current;
+      dropAfterFinal();
+      pending?.done(event.text.trim());
     } else if (event.kind === 'cancelled') {
       current.current = null;
-      afterFinal.current = null;
+      dropAfterFinal();
       setState({ phase: 'idle' });
     } else if (event.kind === 'error') {
       current.current = null;
-      afterFinal.current = null;
+      dropAfterFinal();
       setState({ phase: 'idle' });
       setProblem(DICTATION_PROBLEMS[event.error] ?? DICTATION_PROBLEMS.failed!);
     }
@@ -128,13 +138,22 @@ export function useDictation(onText: (text: string) => void, scope: string) {
     setState({ ...state, phase: 'working' });
   };
 
+  const armAfterFinal = (id: string, done: (heard: string) => void) => {
+    const timer = setTimeout(() => {
+      if (current.current?.id !== id) return;
+      cancel();
+      setProblem(DICTATION_PROBLEMS.failed!);
+    }, FINAL_WAIT_MS);
+    afterFinal.current = { done, timer };
+  };
+
   const finish = (done: (heard: string) => void) => {
     if (state.phase === 'idle' || state.phase === 'starting') {
       cancel();
       done('');
       return;
     }
-    afterFinal.current = done;
+    if (!afterFinal.current) armAfterFinal(state.id, done);
     stop();
   };
 

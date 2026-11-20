@@ -40,6 +40,7 @@ import { SendButton } from './composer/SendButton.tsx';
 import { ComposerShell, composerRows } from './composer/ComposerShell.tsx';
 import { MicButton } from '../voice/MicButton.tsx';
 import { useDictationDraft } from '../voice/use-dictation-draft.ts';
+import { useSendAfterDictation } from '../voice/use-send-after-dictation.ts';
 import { useVoicePressTarget } from '../voice/press-target.ts';
 import { useChatPane, usePaneFocused } from './split/chat-pane.ts';
 import {
@@ -267,12 +268,11 @@ export function Composer({
     }
   };
 
+  const sendOrFinish = useSendAfterDictation(voice, draft, send);
   const submit = (choice: BusyEnterAction = busyEnter) => {
     lastChoice.current = choice;
-    if (voice.dictation.active) voice.finish((spoken) => void send(choice, spoken));
-    else void send(choice, draft);
+    sendOrFinish(choice);
   };
-
   const sendAs = (choice: BusyEnterAction) => {
     submit(choice);
     textareaRef.current?.focus();

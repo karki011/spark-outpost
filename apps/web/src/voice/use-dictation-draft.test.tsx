@@ -4,6 +4,7 @@ import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { VoiceEvent, VoiceListenResult } from '@spark-outpost/contracts';
 import { useDictationDraft } from './use-dictation-draft.ts';
+import { FINAL_WAIT_MS } from './use-dictation.ts';
 
 const speech = vi.hoisted(() => ({
   listen: vi.fn(),
@@ -234,4 +235,27 @@ it('finish while the mic is still starting cancels it and hands over the draft',
   act(() => hook.result.current.finish(done));
   expect(done.mock.calls).toEqual([['Typed draft']]);
   expect(hook.result.current.dictation.active).toBe(false);
+});
+
+it('finish gives up when the final text never arrives, sending nothing and saying so', async () => {
+  const done = vi.fn();
+  const hook = draft();
+  await act(async () => hook.result.current.dictation.toggle());
+  emit(partial('lost words'));
+  vi.useFakeTimers();
+  try {
+    act(() => hook.result.current.finish(done));
+    act(() => hook.result.current.finish(done));
+    expect(speech.stop).toHaveBeenCalledTimes(1);
+    act(() => vi.advanceTimersByTime(FINAL_WAIT_MS));
+  } finally {
+    vi.useRealTimers();
+  }
+  expect(done).not.toHaveBeenCalled();
+  expect(speech.cancel).toHaveBeenCalledWith('listen');
+  expect(hook.result.current.dictation.active).toBe(false);
+  expect(hook.result.current.dictation.problem).toBe('Voice stopped. Try again.');
+  expect(hook.result.current.value).toBe('Typed draft');
+  emit(final('late'));
+  expect(done).not.toHaveBeenCalled();
 });
