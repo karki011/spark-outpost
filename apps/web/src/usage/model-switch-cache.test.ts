@@ -75,6 +75,13 @@ describe('switchesModel', () => {
       ),
     ).toBe(false);
     expect(switchesModel(null, sonnet, CARDS)).toBe(false);
+    expect(
+      switchesModel(
+        { provider: 'claude', model: 'opus', used: 'claude-opus-5-5' },
+        { provider: 'claude', model: 'claude-opus-5-5' },
+        [],
+      ),
+    ).toBe(false);
   });
 });
 

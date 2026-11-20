@@ -28,6 +28,11 @@ function waitingSince(chat: ConversationSummary): number | null {
   return timeOf(chat.waitingSince);
 }
 
+function finishedUnread(chat: ConversationSummary): boolean {
+  if (chat.attention?.kind === 'flag' || chat.shellAlert) return false;
+  return chat.unread && chat.latestRun?.status === 'succeeded';
+}
+
 export function rowLine(chat: ConversationSummary, state: RowState): RowLine | null {
   switch (state.tone) {
     case 'running':
@@ -41,6 +46,7 @@ export function rowLine(chat: ConversationSummary, state: RowState): RowLine | n
       return since === null ? null : { kind: 'waiting', since };
     }
     case 'done': {
+      if (!finishedUnread(chat)) return null;
       const at = timeOf(chat.latestRun?.finishedAt);
       return at === null ? null : { kind: 'finished', at };
     }

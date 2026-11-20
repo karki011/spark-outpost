@@ -67,7 +67,8 @@ export function switchesModel(
   const after = cardForChoice(cards, next);
   if (before && after) return before.id !== after.id;
   const requested = bareModel(next.model);
-  return requested !== AGENT_DEFAULT && bareModel(previous.model) !== requested;
+  if (requested === AGENT_DEFAULT) return false;
+  return bareModel(previous.model) !== requested && bareModel(previous.used) !== requested;
 }
 
 export function modelSwitchNote(

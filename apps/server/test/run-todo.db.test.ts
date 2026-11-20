@@ -141,14 +141,20 @@ describe("each turn's own to-do", () => {
       { id: randomUUID(), content: 'held' },
       { provider: 'scripted' },
     );
-    const running = await eventually(async () => {
-      const row = (await listConversations(t.db, t.workspaceId)).find(
-        (chat) => chat.id === conversationId,
-      );
-      return row?.latestRun?.doing ? row.latestRun : null;
-    });
-    expect(running).toMatchObject({ doing: 'Step 2', progress: { done: 1, active: 2, total: 3 } });
-    release();
+    try {
+      const running = await eventually(async () => {
+        const row = (await listConversations(t.db, t.workspaceId)).find(
+          (chat) => chat.id === conversationId,
+        );
+        return row?.latestRun?.doing ? row.latestRun : null;
+      });
+      expect(running).toMatchObject({
+        doing: 'Step 2',
+        progress: { done: 1, active: 2, total: 3 },
+      });
+    } finally {
+      release();
+    }
     await eventually(async () => (await getRun(t.db, sent.run.id))?.finishedAt ?? null);
     const done = (await listConversations(t.db, t.workspaceId)).find(
       (chat) => chat.id === conversationId,

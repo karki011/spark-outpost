@@ -77,6 +77,23 @@ describe('a chat titled from its agreed plan', () => {
     expect((await titleOf(id)).title).toBe('Add a dark mode to the settings page');
   });
 
+  it('records the approving turn category when the plan title is already the auto title', async () => {
+    const { id, runId } = await chat();
+    await t.db.query(
+      `UPDATE conversations SET title = 'Dark mode for Settings', title_source = 'auto',
+         title_category = 'fix' WHERE id = $1`,
+      [id],
+    );
+    await t.db.query(`UPDATE runs SET category = 'build' WHERE id = $1`, [runId]);
+    const plan = await propose(id, runId, '# Dark mode for Settings');
+    await approvePlanDocument(t.db, plan.id, approval(runId));
+    const { rows } = await t.db.query<{ title_category: string }>(
+      'SELECT title_category FROM conversations WHERE id = $1',
+      [id],
+    );
+    expect(rows[0]!.title_category).toBe('build');
+  });
+
   it('changes nothing for a rejected plan', async () => {
     const { id, runId } = await chat();
     const plan = await propose(id, runId, '# Dark mode for Settings');

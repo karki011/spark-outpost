@@ -12,7 +12,7 @@ export async function retitleFromPlan(
   const { rows } = await db.query<{ title: string }>(
     `UPDATE conversations c SET title = $2, title_source = 'auto',
        title_category = COALESCE((SELECT r.category FROM runs r WHERE r.id = $3), c.title_category)
-     WHERE c.id = $1 AND c.title_source <> 'user' AND (c.title <> $2 OR c.title_source = 'message')
+     WHERE c.id = $1 AND c.title_source <> 'user'
        AND NOT EXISTS (
          SELECT 1 FROM conversation_tickets ct
          WHERE ct.conversation_id = c.id AND ct.state = 'linked'

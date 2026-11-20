@@ -64,6 +64,16 @@ describe('rowLine', () => {
     expect(lineOf({ ...finished, unread: false })).toBeNull();
   });
 
+  it('gives a flag or a shell alert no finished line', () => {
+    const latestRun = run('succeeded', { finishedAt: '2026-11-18T09:41:00.000Z' });
+    const flag = {
+      kind: 'flag',
+      title: 'Sent data after reading',
+    } as ConversationSummary['attention'];
+    expect(lineOf(chat({ attention: flag, latestRun }))).toBeNull();
+    expect(lineOf(chat({ shellAlert: 'Build failed', latestRun }))).toBeNull();
+  });
+
   it('leaves idle and terminal rows to one line', () => {
     expect(lineOf(chat())).toBeNull();
     const terminal = chat({
