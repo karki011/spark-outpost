@@ -2,7 +2,7 @@ import { Readable, Writable } from 'node:stream';
 import * as acp from '@agentclientprotocol/sdk/unstable';
 import { currentRequest, planReplies, planTurn } from './fake-acp-plans.ts';
 import { buildTurn } from './fake-acp-build.ts';
-import { pushAuthStatus, rejectedTurn, signedOut } from './fake-acp-access.ts';
+import { fakeAuthStatus, pushAuthStatus, rejectedTurn, signedOut } from './fake-acp-access.ts';
 import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { questionTurn } from './fake-acp-questions.ts';
@@ -14,7 +14,7 @@ import { publishTurn } from './fake-acp-publish.ts';
 import { sparkTurn } from './fake-acp-spark.ts';
 import { blocksTurn } from './fake-acp-attachments.ts';
 import { rememberConfig, restoreConfig } from './fake-acp-support.ts';
-import { FAKE_AGENT_INFO, fakeMcpCapabilities } from './fake-acp-init.ts';
+import { FAKE_AGENT_INFO, fakeExtraCapabilities } from './fake-acp-init.ts';
 import { compactionTurn, eventsTurn, leakSecrets } from './fake-acp-events.ts';
 import {
   orphanedCommandTurn,
@@ -49,7 +49,8 @@ import {
   newSessionId,
   readFakeSession,
   recordCancel,
-  recordClose,
+  closeFakeSession,
+  titleFakeSession,
   recordMethod,
   recordPrompt,
   replayHistory,
@@ -409,7 +410,7 @@ acp
         loadSession: loadSessionAdvertised,
         promptCapabilities,
         sessionCapabilities,
-        ...fakeMcpCapabilities(),
+        ...fakeExtraCapabilities(),
       },
       agentInfo: FAKE_AGENT_INFO,
     };
@@ -443,11 +444,9 @@ acp
     );
     return { configOptions: configOptions() };
   })
-  .onRequest(acp.methods.agent.session.close, (ctx) => {
-    recordMethod('session/close');
-    recordClose(ctx.params.sessionId);
-    return {};
-  })
+  .onRequest(acp.methods.agent.session.close, (ctx) => closeFakeSession(ctx.params.sessionId))
+  .onRequest(acp.methods.agent.session.setTitle, (ctx) => titleFakeSession(ctx.params.title))
+  .onRequest(acp.methods.agent.auth.status, () => fakeAuthStatus())
   .onRequest(acp.methods.agent.session.delete, (ctx) => deleteFakeSession(ctx.params.sessionId))
   .onRequest(acp.methods.agent.session.setMode, (ctx) => {
     config.mode = ctx.params.modeId;

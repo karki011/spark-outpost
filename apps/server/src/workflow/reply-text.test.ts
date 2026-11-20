@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { EventType, type RunEvent } from '@spark-outpost/contracts';
 import { describe, expect, it } from 'vitest';
 import { createReplyText } from './reply-text.ts';
@@ -31,7 +32,25 @@ describe('the text of a turn', () => {
   it('has no message and no final reply when nothing was said', () => {
     const { reply } = recorded();
 
-    expect(reply.result()).toEqual({ text: '', messageId: null, finalReply: null });
+    expect(reply.result()).toEqual({
+      text: '',
+      messageId: null,
+      finalReply: null,
+      agentMessages: [],
+    });
+  });
+
+  it("lists each agent message once, in order, fingerprinted on the agent's own text", () => {
+    const { reply } = recorded();
+    reply.noteAgent({ kind: 'text_delta', delta: 'Hel', messageId: 'm1' });
+    reply.noteAgent({ kind: 'text_delta', delta: 'lo', messageId: 'm1' });
+    reply.noteAgent({ kind: 'text_delta', delta: '\n\nBye', messageId: 'm2', newMessage: true });
+    reply.noteAgent({ kind: 'text_delta', delta: 'no id' });
+    const sha = (text: string) => `sha256:${createHash('sha256').update(text).digest('hex')}`;
+    expect(reply.result().agentMessages).toEqual([
+      { id: 'm1', fingerprint: sha('Hello') },
+      { id: 'm2', fingerprint: sha('Bye') },
+    ]);
   });
 });
 

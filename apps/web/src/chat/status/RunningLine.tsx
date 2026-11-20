@@ -1,9 +1,9 @@
 import { useTooltip } from '../../ui/Tooltip.tsx';
 import { Dot, QueuedTail, WorkerFace } from './line-parts.tsx';
 import type { StepActivity } from './step-activity.ts';
-import { clockText } from './status-text.ts';
+import { clockText, quietText } from './status-text.ts';
 import type { Worker } from './status-store.ts';
-import { SLOW_STEP_MS, useNow } from './use-status-line.ts';
+import { QUIET_MS, SLOW_STEP_MS, useNow } from './use-status-line.ts';
 
 function busyStep(activity: StepActivity | null): StepActivity | null {
   return activity && activity.kind !== 'think' ? activity : null;
@@ -31,16 +31,19 @@ export function RunningLine({
   worker,
   activity,
   since,
+  quietSince = null,
   queued = 0,
 }: {
   worker: Worker;
   activity: StepActivity | null;
   since: number | null;
+  quietSince?: number | null;
   queued?: number;
 }) {
   const step = busyStep(activity);
-  const now = useNow(since !== null);
+  const now = useNow(since !== null || quietSince !== null);
   const elapsed = since === null ? 0 : now - since;
+  const quiet = quietSince === null ? 0 : now - quietSince;
   const tip = useTooltip(step?.full ?? whoText(worker, step), { side: 'top' });
   return (
     <p className="cs-line run">
@@ -63,11 +66,18 @@ export function RunningLine({
           </span>
         </>
       )}
-      {elapsed >= SLOW_STEP_MS && (
+      {quiet >= QUIET_MS ? (
         <>
           <Dot />
-          <span className="cs-time">{clockText(elapsed)}</span>
+          <span className="cs-time">{quietText(quiet)}</span>
         </>
+      ) : (
+        elapsed >= SLOW_STEP_MS && (
+          <>
+            <Dot />
+            <span className="cs-time">{clockText(elapsed)}</span>
+          </>
+        )
       )}
       <QueuedTail queued={queued} />
       {tip.tooltip}

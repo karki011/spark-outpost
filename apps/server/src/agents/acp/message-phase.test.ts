@@ -29,16 +29,23 @@ describe('ACP message chunks keep their phase', () => {
     const mapper = createUpdateMapper();
 
     expect(mapper.map(said('I will count the files.', 'm1', 'commentary'))).toEqual([
-      { kind: 'text_delta', delta: 'I will count the files.', phase: 'commentary' },
+      {
+        kind: 'text_delta',
+        delta: 'I will count the files.',
+        messageId: 'm1',
+        phase: 'commentary',
+      },
     ]);
     expect(mapper.map(said('3', 'm2', 'final_answer'))).toEqual([
-      { kind: 'text_delta', delta: '\n\n3', newMessage: true, phase: 'final' },
+      { kind: 'text_delta', delta: '\n\n3', newMessage: true, messageId: 'm2', phase: 'final' },
     ]);
   });
 
   it('leaves text unmarked when the agent reports no phase', () => {
     const mapper = createUpdateMapper();
 
-    expect(mapper.map(said('Done.', 'm1'))).toEqual([{ kind: 'text_delta', delta: 'Done.' }]);
+    expect(mapper.map(said('Done.', 'm1'))).toEqual([
+      { kind: 'text_delta', delta: 'Done.', messageId: 'm1' },
+    ]);
   });
 });
