@@ -109,6 +109,12 @@ export function choicesFor(row: SparkRuleRow): ChoiceCopy[] {
   ];
 }
 
+export function unusedEntriesTitle(count: number): string {
+  return count === 1
+    ? "1 entry in your file isn't used"
+    : `${count} entries in your file aren't used`;
+}
+
 export function unusedKindLabel(kind: UnusedRuleEntry['kind']): string {
   if (kind === 'key') return 'Unknown key';
   if (kind === 'agent-tool') return "Agent tool rule: put it in Claude's settings";

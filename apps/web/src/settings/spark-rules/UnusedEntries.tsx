@@ -1,18 +1,12 @@
 import type { SparkRules } from '@spark-outpost/contracts';
 import { WarnIcon } from '../../ui/icons.tsx';
-import { unusedKindLabel } from './rule-rows.ts';
-
-function entriesTitle(count: number): string {
-  return count === 1
-    ? "1 entry in your file isn't used"
-    : `${count} entries in your file aren't used`;
-}
+import { unusedEntriesTitle, unusedKindLabel } from './rule-rows.ts';
 
 export function UnusedEntries({ rules }: { rules: SparkRules }) {
   if (rules.unused.length === 0) return null;
   return (
     <section className="rules-panel" aria-labelledby="rules-unused">
-      <h4 id="rules-unused">{entriesTitle(rules.unused.length)}</h4>
+      <h4 id="rules-unused">{unusedEntriesTitle(rules.unused.length)}</h4>
       <p className="set-hint">Spark keeps them in the file and leaves them alone.</p>
       <ul>
         {rules.unused.map((entry, index) => (

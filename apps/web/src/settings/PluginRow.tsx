@@ -3,14 +3,21 @@ import type { UserPlugin } from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { ChevronIcon } from '../ui/icons.tsx';
-import { confirmText, isChecking, isOn, needsConfirm, pluginAdds } from './plugin-model.ts';
+import {
+  confirmText,
+  isChecking,
+  isOn,
+  needsConfirm,
+  pluginAdds,
+  unloadableText,
+} from './plugin-model.ts';
 import { PluginDetails } from './PluginDetails.tsx';
 import { PluginStatus } from './PluginStatus.tsx';
 import { usePluginSwitch } from './use-user-plugins.ts';
 
 function rowHint(plugin: UserPlugin, error: string | null): string | null {
   if (error) return error;
-  if (!plugin.loadable) return plugin.unloadableReason ?? 'This plugin can’t load in chats.';
+  if (!plugin.loadable) return unloadableText(plugin);
   if (plugin.changed) return 'Changed since you turned it on — check again';
   if (isChecking(plugin)) return 'Spark is checking this plugin.';
   return null;

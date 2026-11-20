@@ -233,10 +233,11 @@ describe('app event invalidation', () => {
     expect(await invalidatedBy(event('attention'))).toEqual(['list']);
   });
 
-  it('anything that refreshes the chat list refreshes the inbox too', () => {
+  it('anything that refreshes the chat list refreshes the inbox and Health too', () => {
     for (const kind of ['seen', 'approval', 'run', 'conversation'] as const) {
-      const keys = mergeInvalidations([event(kind)]).map((each) => each.queryKey[0]);
+      const keys = mergeInvalidations([event(kind)]).map((each) => each.queryKey.join('/'));
       expect([kind, keys.includes('attention')]).toEqual([kind, true]);
+      expect([kind, keys.includes('conversations/health')]).toEqual([kind, true]);
     }
     const stepKeys = mergeInvalidations([event('calendar')]).map((each) => each.queryKey[0]);
     expect(stepKeys).not.toContain('attention');

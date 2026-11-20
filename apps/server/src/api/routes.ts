@@ -19,6 +19,7 @@ import {
   listConversationsAfter,
   sendUserMessage,
 } from '../persistence/conversations.ts';
+import { listHealthConversations } from '../persistence/health-chats.ts';
 import { AnnotationError, listAnnotations } from '../persistence/annotations.ts';
 import { reasoningText } from '../persistence/run-events.ts';
 import { countActiveRuns, getRun } from '../persistence/runs.ts';
@@ -96,6 +97,11 @@ export function apiRoutes(deps: RouteDeps): Router {
     const search = typeof req.query.q === 'string' ? req.query.q : '';
     if (search.length > CONVERSATION_SEARCH_MAX_LENGTH) {
       throw new BadRequestError('Search for a shorter phrase.');
+    }
+    if (req.query.health !== undefined) {
+      if (req.query.health !== '1') throw new BadRequestError('Ask for health with health=1.');
+      res.json(await listHealthConversations(db, workspaceId));
+      return;
     }
     if (req.query.after !== undefined) {
       const after = z.uuid().safeParse(req.query.after);
