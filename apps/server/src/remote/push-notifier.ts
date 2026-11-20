@@ -1,4 +1,9 @@
-import { terminalAttentionKey, type AppEvent, type PushTestResult } from '@spark-outpost/contracts';
+import {
+  terminalAttentionKey,
+  type AppEvent,
+  type PushTestResult,
+  type RemoteAccess,
+} from '@spark-outpost/contracts';
 import { listAttentionItems, readAttentionKeys } from '../persistence/attention-items.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ClientFocus } from '../slack/client-focus.ts';
@@ -32,16 +37,18 @@ export interface PushNotifierDeps {
   focus: Pick<ClientFocus, 'focusedClients'>;
   send: PushSend;
   held?: () => boolean;
+  present?: () => boolean | null;
 }
 
 export interface PushNotifierOptions {
   batchMs?: number;
   since?: Date;
+  now?: () => number;
 }
 
 export interface PushNotifier {
   changed(event: AppEvent): void;
-  meeting(minutes: number): void;
+  meeting(start: number): void;
   test(deviceId: string): Promise<PushTestResult>;
   release(): void;
   settled(): Promise<void>;
@@ -68,11 +75,13 @@ export function startPushNotifier(
 ): PushNotifier {
   const { db, workspaceId } = deps;
   const since = options.since ?? new Date();
+  const now = options.now ?? Date.now;
   const sent = new SentKeys();
   const terminals = new TerminalWaits();
   const scanning = new Set<string>();
   const heldChats = new Map<string, QueuedPush[]>();
   const shown = new Map<string, { keys: Set<string>; targets: Set<string> }>();
+  let heldMeetingStarts: number[] = [];
   let stopped = false;
   let work: Promise<void> = Promise.resolve();
 
@@ -166,9 +175,25 @@ export function startPushNotifier(
     };
   }
 
-  async function sendMeeting(minutes: number): Promise<void> {
+  async function meetingDue(start: number): Promise<void> {
+    if (atMac(await remoteAccess(db, workspaceId))) {
+      heldMeetingStarts.push(start);
+      return;
+    }
+    await sendMeeting(start);
+  }
+
+  async function releaseMeeting(): Promise<void> {
+    const ahead = heldMeetingStarts.filter((start) => start > now());
+    heldMeetingStarts = [];
+    if (ahead.length === 0) return;
+    await meetingDue(Math.min(...ahead));
+  }
+
+  async function sendMeeting(start: number): Promise<void> {
     const ready = await sender();
     if (!ready) return;
+    const minutes = Math.max(0, Math.ceil((start - now()) / 60_000));
     const payload = JSON.stringify(meetingPush(minutes));
     await Promise.all(ready.targets.map((target) => sendTo(target, payload, ready.sender)));
   }
@@ -190,12 +215,15 @@ export function startPushNotifier(
     return { outcome: 'failed', reason: refused?.reason ?? null };
   }
 
+  const atMac = (access: RemoteAccess) =>
+    access.switches.notifyAwayOnly && deps.present?.() === true;
+
   async function deliver(conversationId: string, items: QueuedPush[]): Promise<void> {
-    if (deps.held?.()) {
+    const access = await remoteAccess(db, workspaceId);
+    if (deps.held?.() || atMac(access)) {
       heldChats.set(conversationId, [...(heldChats.get(conversationId) ?? []), ...items]);
       return;
     }
-    const access = await remoteAccess(db, workspaceId);
     const alerting = await alertingSources(conversationId, access.switches.notifyUpdates);
     const live = items.filter((item) => alerting.has(item.source));
     if (live.length === 0) return;
@@ -260,9 +288,9 @@ export function startPushNotifier(
       scanning.add(conversationId);
       enqueue(() => scan(conversationId));
     },
-    meeting(minutes) {
+    meeting(start) {
       if (stopped || deps.held?.()) return;
-      enqueue(() => sendMeeting(minutes));
+      enqueue(() => meetingDue(start));
     },
     test(deviceId) {
       return sendTest(deviceId);
@@ -274,6 +302,8 @@ export function startPushNotifier(
       for (const [conversationId, items] of waiting) {
         enqueue(() => deliver(conversationId, items));
       }
+      if (deps.held?.()) heldMeetingStarts = [];
+      else enqueue(releaseMeeting);
     },
     async settled() {
       await work;
