@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                   | What to do                                               |
 | ---------------------------------------------- | -------------------------------------------------------- |
 | **A chat starts** trigger                      | [Triggers](workflow-triggers.md#the-events).             |
+| Meeting card shows every button on one row     | Nothing to do.                                           |
 | **Health** in Settings                         | [Check Health](trouble-setup-and-reset.md#check-health). |
 | Follow-up rounds, triggered workflows fold     | Open the row for details.                                |
 | Chat rows show steps; plans name chats         | [Chat list](statuses-and-limits.md#chat-list).           |
@@ -61,4 +62,3 @@ summary: What changed in recent releases and what to do next.
 | Test run and Try it: nothing is sent      | [Do a test run](test-run.md).                                         |
 | Sparks page: Crew, skills and files       | [Make a Spark](sparks.md).                                            |
 | Read anywhere; outside edits ask          | [Protected paths](protected-paths.md).                                |
-| The Relay Spark is removed                | Nothing; PR follow-up works as before.                                |

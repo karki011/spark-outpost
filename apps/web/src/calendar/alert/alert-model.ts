@@ -11,7 +11,7 @@ import {
 import { clock, span } from '../calendar-format.ts';
 
 const MINUTE_MS = 60_000;
-const CARD_HALF = 200;
+const CARD_HALF = 290;
 const EDGE = 16;
 const LANDING = 0.4;
 
