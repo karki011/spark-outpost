@@ -408,7 +408,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                     conversationId={conversationId}
                     detail={detail.data}
                     settings={settings}
-                    repo={repos[0] ?? null}
                     quotes={quotes}
                     onOpenLinks={task ? openLinks : null}
                   />

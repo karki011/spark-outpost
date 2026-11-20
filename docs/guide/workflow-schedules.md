@@ -22,7 +22,7 @@ A scheduled workflow starts on its own while Spark is open on your Mac. About 2 
 | When                              | What Spark does                                                                 |
 | --------------------------------- | ------------------------------------------------------------------------------- |
 | The Mac slept or Spark was closed | **Run once when back** starts one run, however many were missed. **Skip** none. |
-| The previous run is still going   | Skips the time and says so under **Recent runs**.                               |
+| The schedule's last run is going  | Skips the time and says so under **Recent runs**. Runs in other chats don't.    |
 | [Spark is paused](pause-spark.md) | Holds the time. On resume it starts one run, or none with **Skip**.             |
 | The workflow or project is gone   | Doesn't start, and **Recent runs** says why.                                    |
 | You delete the workflow           | Its schedule is deleted with it.                                                |

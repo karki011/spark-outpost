@@ -28,7 +28,14 @@ interface SparkJobsProps {
   orchestration: Orchestration;
   repo: Project | null;
   collapsed?: boolean;
-  jobsOnly?: boolean;
+  pick?: 'all' | 'jobs' | 'steps';
+  withApprovals?: boolean;
+}
+
+function picked(orchestration: Orchestration, pick: SparkJobsProps['pick']): CrewMember[] {
+  if (pick === 'jobs') return jobMembers(orchestration);
+  const members = sparkMembers(orchestration);
+  return pick === 'steps' ? members.filter((member) => member.spark?.step !== undefined) : members;
 }
 
 export function SparkJobs({
@@ -37,7 +44,8 @@ export function SparkJobs({
   orchestration,
   repo,
   collapsed = false,
-  jobsOnly = false,
+  pick = 'all',
+  withApprovals = true,
 }: SparkJobsProps) {
   const live = !isTerminalRunStatus(run.status);
   const stream = useRunStream(run.id, detail.conversation.id, live);
@@ -47,7 +55,7 @@ export function SparkJobs({
       : orchestration;
   return (
     <div className="crew-turn spark-jobs">
-      {(jobsOnly ? jobMembers(current) : sparkMembers(current)).map((member) => (
+      {picked(current, pick).map((member) => (
         <AgentBlock
           key={member.runId}
           agent={runAgent(member, current, detail.activity[member.runId] ?? [])}
@@ -58,7 +66,11 @@ export function SparkJobs({
           steps={detail.activity[member.runId] ?? []}
           text={NO_TEXT}
           error={member.error}
-          approvals={detail.approvals.filter((approval) => approval.runId === member.runId)}
+          approvals={
+            withApprovals
+              ? detail.approvals.filter((approval) => approval.runId === member.runId)
+              : []
+          }
           repo={repo}
         />
       ))}

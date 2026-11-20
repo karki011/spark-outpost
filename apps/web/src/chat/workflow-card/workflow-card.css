@@ -91,7 +91,6 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
   gap: 6px 8px;
   margin: 4px 0 12px;
   font-size: 12.5px;
@@ -107,6 +106,15 @@
   color: var(--text);
 }
 
-.wfc-line-steps {
-  flex-basis: 100%;
+.wfc-ask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text);
+}
+
+.wfc-ask span {
+  flex: 1;
+  min-width: 0;
 }

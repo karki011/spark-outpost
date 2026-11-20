@@ -106,7 +106,7 @@ export const TurnSection = memo(function TurnSection({
           detail={detail}
           orchestration={sparkLed}
           repo={repo}
-          jobsOnly={workflow}
+          pick={workflow ? 'jobs' : 'all'}
         />
       )}
       {sparkLed && !mainAgentRan(sparkLed) ? null : crew ? (

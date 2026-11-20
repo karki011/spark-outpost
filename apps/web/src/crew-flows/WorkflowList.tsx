@@ -77,7 +77,7 @@ function WorkflowRow({
       <button
         type="button"
         className="btn line sm"
-        aria-label={`Run ${workflow.name} in chats`}
+        aria-label={`Run in chats: ${workflow.name}`}
         disabled={blocked}
         title={blocked ? 'Fix its problems in the editor first' : undefined}
         onClick={() => setPicking(true)}

@@ -3,7 +3,6 @@ import { useQueries } from '@tanstack/react-query';
 import {
   isTerminalRunStatus,
   type ConversationDetail,
-  type Project,
   type WorkflowRun,
 } from '@spark-outpost/contracts';
 import { RunState } from '../../crew-flows/RunState.tsx';
@@ -38,7 +37,6 @@ interface CardEntry {
 interface EntryProps {
   entry: CardEntry;
   detail: ConversationDetail;
-  repo: Project | null;
   nested?: boolean;
   onFix: (finding: RunFinding) => void;
   onDismiss: (turnRunId: string) => void;
@@ -71,7 +69,7 @@ function Facts({
   );
 }
 
-function WorkflowEntry({ entry, detail, repo, nested = false, onFix, onDismiss }: EntryProps) {
+function WorkflowEntry({ entry, detail, nested = false, onFix, onDismiss }: EntryProps) {
   const focus = useWorkflowCardFocus();
   const stop = useStopWorkflowRun();
   const { run, turnRunId } = entry;
@@ -116,15 +114,7 @@ function WorkflowEntry({ entry, detail, repo, nested = false, onFix, onDismiss }
           </button>
         )
       }
-      panel={
-        <WorkflowPanel
-          run={run}
-          members={members}
-          approvals={approvals}
-          repo={repo}
-          onFix={onFix}
-        />
-      }
+      panel={<WorkflowPanel run={run} members={members} approvals={approvals} onFix={onFix} />}
     />
   );
 }
@@ -140,11 +130,10 @@ function groupLine(entries: readonly CardEntry[]): string {
 
 interface WorkflowCardProps {
   detail: ConversationDetail;
-  repo: Project | null;
   quotes: Pick<QuotesState, 'add' | 'requestFocus'>;
 }
 
-export function WorkflowCard({ detail, repo, quotes }: WorkflowCardProps) {
+export function WorkflowCard({ detail, quotes }: WorkflowCardProps) {
   const focus = useWorkflowCardFocus();
   const onFix = (finding: RunFinding) => {
     quotes.add({
@@ -207,7 +196,6 @@ export function WorkflowCard({ detail, repo, quotes }: WorkflowCardProps) {
               key={entry.turnRunId}
               entry={entry}
               detail={detail}
-              repo={repo}
               nested
               onFix={onFix}
               onDismiss={onDismiss}
@@ -220,7 +208,6 @@ export function WorkflowCard({ detail, repo, quotes }: WorkflowCardProps) {
             key={entry.turnRunId}
             entry={entry}
             detail={detail}
-            repo={repo}
             onFix={onFix}
             onDismiss={onDismiss}
           />

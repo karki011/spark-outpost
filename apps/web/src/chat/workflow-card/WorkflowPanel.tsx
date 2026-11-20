@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import type { Approval, CrewMember, Project, WorkflowRun } from '@spark-outpost/contracts';
+import type { Approval, CrewMember, WorkflowRun } from '@spark-outpost/contracts';
 import { formatDuration } from '../../audit/audit-model.ts';
 import { OpenRunViewButton } from '../../crew-flows/WorkflowRunLink.tsx';
 import { StepState } from '../../crew-flows/StepState.tsx';
 import { formatCost } from '../../usage/format.ts';
-import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
+import { focusPending } from '../status/focus-pending.ts';
 import { isBlocking, runFindings, SEVERITY_WORDS, type RunFinding } from './workflow-card-model.ts';
 
 interface FindingRowProps {
@@ -79,26 +79,23 @@ interface WorkflowPanelProps {
   run: WorkflowRun;
   members: readonly CrewMember[];
   approvals: readonly Approval[];
-  repo: Project | null;
   onFix: (finding: RunFinding) => void;
 }
 
-export function WorkflowPanel({ run, members, approvals, repo, onFix }: WorkflowPanelProps) {
+export function WorkflowPanel({ run, members, approvals, onFix }: WorkflowPanelProps) {
   const memberOf = (runId: string | null) => members.find((member) => member.runId === runId);
   return (
     <div className="wfc-panel">
-      {approvals.map((approval) => {
-        const member = memberOf(approval.runId);
-        return (
-          <ApprovalCard
-            key={approval.id}
-            approval={approval}
-            provider={member?.provider ?? ''}
-            {...(member ? { agent: member.name } : {})}
-            repo={repo}
-          />
-        );
-      })}
+      {approvals.map((approval) => (
+        <p key={approval.id} className="wfc-ask">
+          <span>
+            <b>{memberOf(approval.runId)?.name ?? 'A step'}</b> asks: {approval.title}
+          </span>
+          <button type="button" className="btn line sm" onClick={() => focusPending(approval.id)}>
+            Go to the card
+          </button>
+        </p>
+      ))}
       <Findings run={run} onFix={onFix} />
       <ul className="wfc-steps" aria-label="Steps">
         {run.steps.map((step) => (

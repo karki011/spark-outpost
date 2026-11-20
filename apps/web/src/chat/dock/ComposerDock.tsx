@@ -1,4 +1,4 @@
-import type { ChatSettings, ConversationDetail, Project, Run } from '@spark-outpost/contracts';
+import type { ChatSettings, ConversationDetail, Run } from '@spark-outpost/contracts';
 import { ModelSwitchNote } from '../composer/ModelSwitchNote.tsx';
 import { PrCard } from '../pull-request/PrCard.tsx';
 import type { QuotesState } from '../quotes/use-quotes.ts';
@@ -10,7 +10,6 @@ interface ComposerDockProps {
   conversationId: string;
   detail: ConversationDetail | undefined;
   settings: ChatSettings | null;
-  repo: Project | null;
   quotes: QuotesState;
   onOpenLinks: (() => void) | null;
 }
@@ -19,13 +18,12 @@ export function ComposerDock({
   conversationId,
   detail,
   settings,
-  repo,
   quotes,
   onOpenLinks,
 }: ComposerDockProps) {
   return (
     <>
-      {detail && <WorkflowCard detail={detail} repo={repo} quotes={quotes} />}
+      {detail && <WorkflowCard detail={detail} quotes={quotes} />}
       <PrCard conversationId={conversationId} onOpenLinks={onOpenLinks} />
       <ModelSwitchNote
         conversationId={conversationId}
