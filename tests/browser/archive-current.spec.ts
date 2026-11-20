@@ -12,9 +12,7 @@ const sidebar = (page: Page) => page.getByRole('navigation', { name: 'Chats' });
 const header = (page: Page) => page.getByRole('main').getByRole('heading', { level: 1 });
 const message = (page: Page) => page.getByRole('textbox', { name: 'Message' });
 const toast = (page: Page, title: string) =>
-  sidebar(page)
-    .getByRole('status')
-    .filter({ hasText: `Archived ${title}` });
+  page.getByRole('status').filter({ hasText: `Archived ${title}` });
 
 async function archive(page: Page, title: string) {
   await sidebar(page).getByRole('listitem').filter({ hasText: title }).hover();

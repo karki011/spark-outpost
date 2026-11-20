@@ -90,19 +90,6 @@
   }
 }
 
-.upd-toasts {
-  position: fixed;
-  left: 84px;
-  bottom: 16px;
-  z-index: 60;
-  width: 340px;
-}
-
-.upd-toasts:empty,
-.upd-toasts .toasts:empty {
-  display: none;
-}
-
 .upd-version {
   font-size: 13px;
   font-variant-numeric: tabular-nums;
@@ -158,12 +145,6 @@
 }
 
 @media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
-  .upd-toasts {
-    left: 16px;
-    right: 16px;
-    bottom: 76px;
-    width: auto;
-  }
 }
 
 .beta-badge {

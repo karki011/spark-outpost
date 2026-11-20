@@ -21,9 +21,7 @@ export function CopyToasts({ children }: { children: ReactNode }) {
   return (
     <CopyContext.Provider value={copy}>
       {children}
-      <div className="cal-toasts">
-        <ToastHost toaster={toaster} />
-      </div>
+      <ToastHost toaster={toaster} />
     </CopyContext.Provider>
   );
 }

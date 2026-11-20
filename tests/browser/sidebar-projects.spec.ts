@@ -22,8 +22,7 @@ test.beforeEach(async () => {
 
 const sidebar = (page: Page) => page.getByRole('navigation', { name: 'Chats' });
 const group = (page: Page, name: string) => sidebar(page).locator('.pblock', { hasText: name });
-const toast = (page: Page, text: string) =>
-  sidebar(page).getByRole('status').filter({ hasText: text });
+const toast = (page: Page, text: string) => page.getByRole('status').filter({ hasText: text });
 
 async function createProject(page: Page, name: string) {
   const folder = path.join(mkdtempSync(path.join(base, 'p-')), name);
