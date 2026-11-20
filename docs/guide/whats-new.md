@@ -10,7 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
-| **Enter** sends mid-dictation; done faces dim   | [Talk to Spark](voice.md#turn-it-on).                      |
+| **Enter** sends mid-dictation; PR panel tidied  | [Talk to Spark](voice.md#turn-it-on).                      |
 | Workflow steps know their branch and changes    | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | Workflow card; **Run in chats…**                | [Workflow card](workflow-in-chat.md).                      |
 | Default Sparks follow the chat's mode           | [Workflow steps](modes-and-levels.md#workflow-steps).      |

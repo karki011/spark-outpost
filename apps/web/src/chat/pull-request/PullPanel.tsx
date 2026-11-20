@@ -84,30 +84,41 @@ interface PullPanelProps {
 export function PullPanel({ watch, indicator, profile, onOpenLinks }: PullPanelProps) {
   const branch = branchLine(watch);
   const covered = indicator?.state === 'no_access' || indicator?.state === 'paused';
+  const showDoing = !(covered || indicator?.state === 'off');
+  const note = covered
+    ? null
+    : watch.unknownReason
+      ? { text: watch.unknownReason, bad: false }
+      : watch.lastError
+        ? { text: `Last check failed: ${watch.lastError}`, bad: true }
+        : null;
   return (
     <>
-      <p className="prc-full">
-        <a href={watch.url} target="_blank" rel="noopener noreferrer">
-          {watch.repo}#{watch.number}
-        </a>
-        {watch.title && <span>{watch.title}</span>}
-      </p>
-      <p className="prc-all">{factsLine(watch)}</p>
-      {indicator && <WatchDetail indicator={indicator} profile={profile} />}
-      {!(covered || indicator?.state === 'off') && (
-        <p className="prc-doing">
-          <span className="prc-who">Spark:</span> {watch.doing}
-          {watch.approvalId && (
-            <>
-              {' '}
-              <a href={`#${approvalAnchor(watch.approvalId)}`}>Review the card</a>
-            </>
-          )}
+      <header className="prc-full">
+        {watch.title && <p className="prc-heading">{watch.title}</p>}
+        <p className="prc-all">
+          <a href={watch.url} target="_blank" rel="noopener noreferrer">
+            {watch.repo}#{watch.number}
+          </a>
+          <span>{factsLine(watch)}</span>
         </p>
-      )}
-      {!covered && watch.unknownReason && <p className="prc-note">{watch.unknownReason}</p>}
-      {!covered && !watch.unknownReason && watch.lastError && (
-        <p className="prc-note bad">Last check failed: {watch.lastError}</p>
+      </header>
+      {(indicator || showDoing || note) && (
+        <section className="prc-status" aria-label="What Spark is doing">
+          {indicator && <WatchDetail indicator={indicator} profile={profile} />}
+          {showDoing && (
+            <p className="prc-doing">
+              <span className="prc-who">Spark:</span> {watch.doing}
+              {watch.approvalId && (
+                <>
+                  {' '}
+                  <a href={`#${approvalAnchor(watch.approvalId)}`}>Review the card</a>
+                </>
+              )}
+            </p>
+          )}
+          {note && <p className={note.bad ? 'prc-note bad' : 'prc-note'}>{note.text}</p>}
+        </section>
       )}
       {watch.items.length > 0 && <Items items={watch.items} />}
       <PullDetails watch={watch} />
