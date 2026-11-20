@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ModelCard, PromptCacheLast } from '@spark-outpost/contracts';
-import { modelSwitchNote, switchesModel, uncachedUsd } from './model-switch-cache.ts';
+import { cacheOwner, modelSwitchNote, switchesModel, uncachedUsd } from './model-switch-cache.ts';
 
 const card = (id: string, label: string, write: number | null, input = 5): ModelCard =>
   ({
@@ -82,6 +82,18 @@ describe('switchesModel', () => {
         [],
       ),
     ).toBe(false);
+  });
+});
+
+describe('cacheOwner', () => {
+  it('takes the turn that wrote the cache, not a later one that sent nothing', () => {
+    const runs = [
+      { startedAt: '2026-11-18T10:00:00Z', provider: 'claude', model: 'opus' },
+      { startedAt: '2026-11-18T10:05:00Z', provider: 'claude', model: 'sonnet' },
+      { parentRunId: 'x', startedAt: '2026-11-18T10:01:00Z', provider: 'claude', model: 'haiku' },
+    ];
+    expect(cacheOwner(runs, '2026-11-18T10:02:00Z')?.model).toBe('opus');
+    expect(cacheOwner(runs, null)?.model).toBe('sonnet');
   });
 });
 

@@ -6,6 +6,14 @@ import { formatCost } from './format.ts';
 const AGENT_DEFAULT = 'default';
 const LONG_WRITE_FACTOR = 2;
 
+export interface CacheRun {
+  parentRunId?: string | null | undefined;
+  startedAt: string | null;
+  provider: string | null;
+  model: string | null;
+  usedModel?: string | null | undefined;
+}
+
 export interface ModelChoice {
   provider: string | null;
   model: string | null;
@@ -55,6 +63,17 @@ export function uncachedUsd(
       ? price.inputPerMillion * LONG_WRITE_FACTOR
       : (price.cacheWritePerMillion ?? price.inputPerMillion);
   return (tokens * perMillion) / 1_000_000;
+}
+
+export function cacheOwner(runs: readonly CacheRun[], cacheAt: string | null): ModelChoice | null {
+  const at = cacheAt ? Date.parse(cacheAt) : Number.NaN;
+  const run = runs.findLast(
+    (entry) =>
+      !entry.parentRunId &&
+      entry.startedAt !== null &&
+      (Number.isNaN(at) || Date.parse(entry.startedAt) <= at),
+  );
+  return run ? { provider: run.provider, model: run.model, used: run.usedModel ?? null } : null;
 }
 
 export function switchesModel(

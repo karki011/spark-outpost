@@ -37,11 +37,24 @@ function usable(text: string): boolean {
   return /\p{L}/u.test(text) && text.length >= 3 && !GENERIC.has(text.toLowerCase());
 }
 
+const FENCE = /^(`{3,}|~{3,})/;
+
+function outsideFences(body: string): string[] {
+  const kept: string[] = [];
+  let fence: string | null = null;
+  for (const raw of body.split('\n')) {
+    const line = raw.trim();
+    const marker = FENCE.exec(line)?.[1];
+    if (fence === null && marker) fence = marker;
+    else if (fence !== null && marker && marker[0] === fence[0] && marker.length >= fence.length) {
+      fence = null;
+    } else if (fence === null && line) kept.push(line);
+  }
+  return kept;
+}
+
 function candidates(body: string): string[] {
-  const lines = body
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const lines = outsideFences(body);
   const titles = lines.flatMap((line) => (TOP_HEADING.test(line) ? [line.slice(2)] : []));
   const inOrder = lines.map((line) => HEADING.exec(line)?.[1] ?? line);
   return [...titles, ...inOrder];

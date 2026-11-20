@@ -35,6 +35,12 @@ describe('planTitle', () => {
     expect(title).toMatch(/^Rotate /);
   });
 
+  it('skips headings and lines inside fenced code', () => {
+    const plan =
+      '# Plan\n\nAdd health checks.\n\n```sh\n# Restart the service\nsystemctl restart\n```';
+    expect(planTitle(plan)).toBe('Add health checks');
+  });
+
   it('drops a task-list box', () => {
     expect(planTitle('- [ ] Move the helpers\n- [x] Done')).toBe('Move the helpers');
   });
