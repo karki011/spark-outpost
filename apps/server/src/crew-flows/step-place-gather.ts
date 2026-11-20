@@ -4,7 +4,7 @@ import { chatWorktreeAt, type ChatWorktree } from '../persistence/chat-worktrees
 import type { Queryable } from '../persistence/db.ts';
 import { checkedOut } from '../pr-tracking/chat-repos.ts';
 import { parseNumstatZ } from '../projects/change-list.ts';
-import { defaultBranch } from '../projects/chat-worktrees.ts';
+import { defaultBranch, fetchBranch } from '../projects/chat-worktrees.ts';
 import { originOf } from '../projects/repo-scan.ts';
 import { git, isGitWorkTree } from '../projects/snapshot.ts';
 import type { RunInput } from '../workflow/run-input.ts';
@@ -102,6 +102,7 @@ async function landedCommits(
   since: Date | null,
 ): Promise<LandedCommits | null> {
   if (!base) return null;
+  await fetchBranch(root, `origin/${base}`);
   const ref = await firstRef(root, [`refs/remotes/origin/${base}`, `refs/heads/${base}`]);
   if (!ref) return null;
   const window = since ? [`--since=${since.toISOString()}`] : [];

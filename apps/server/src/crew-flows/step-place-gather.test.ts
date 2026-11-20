@@ -10,8 +10,10 @@ import { stepPlaceFor } from './step-place-gather.ts';
 
 let root: string;
 
-const git = (...args: string[]) =>
-  execFileSync('git', ['-C', root, ...args], {
+const git = (...args: string[]) => gitIn(root, ...args);
+
+const gitIn = (dir: string, ...args: string[]) =>
+  execFileSync('git', ['-C', dir, ...args], {
     encoding: 'utf8',
     env: {
       ...process.env,
@@ -87,6 +89,31 @@ describe('stepPlaceFor', () => {
     expect(block).toContain('Changed files compared with main: none.');
     expect(block).toMatch(/- [0-9a-f]{7,} Second change/);
     expect(block).toContain('since there is no earlier successful scheduled run (2):');
+  });
+
+  it('fetches the base first on a scheduled run, so commits pushed since show up', async () => {
+    const scratch = await realpath(await mkdtemp(path.join(tmpdir(), 'spark-step-upstream-')));
+    try {
+      const upstream = path.join(scratch, 'upstream.git');
+      const other = path.join(scratch, 'other');
+      execFileSync('git', ['clone', '-q', '--bare', root, upstream]);
+      git('remote', 'add', 'origin', upstream);
+      git('fetch', '-q', 'origin');
+      execFileSync('git', ['clone', '-q', upstream, other]);
+      await writeFile(path.join(other, 'a.ts'), 'pushed\n');
+      gitIn(other, 'commit', '-q', '-am', 'Landed upstream');
+      gitIn(other, 'push', '-q', 'origin', 'main');
+
+      const block = (await stepPlaceFor({
+        db: noRows,
+        input: input([root]),
+        turn: turn('schedule'),
+      }))!;
+
+      expect(block).toContain('Landed upstream');
+    } finally {
+      await rm(scratch, { recursive: true, force: true });
+    }
   });
 
   it('omits what it cannot read and still gives the rest', async () => {
