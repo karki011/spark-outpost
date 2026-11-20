@@ -9,7 +9,7 @@ import { TeammateFace } from '../../teammates/TeammateFace.tsx';
 import { ResumeIcon } from '../../ui/icons.tsx';
 import { FileList } from './FileList.tsx';
 import type { FileSearch, RepoFile } from './use-file-search.ts';
-import { sparkOptionId, workflowOptionId } from './use-mention.ts';
+import { sparkListId, sparkOptionId, workflowListId, workflowOptionId } from './use-mention.ts';
 
 interface MentionPickerProps {
   listId: string;
@@ -49,7 +49,12 @@ export function MentionPicker({
     >
       {sparks.length > 0 && (
         <>
-          <div className="flist sparklist" role="listbox" aria-label="Sparks">
+          <div
+            id={sparkListId(listId)}
+            className="flist sparklist"
+            role="listbox"
+            aria-label="Sparks"
+          >
             {sparks.map((spark, index) => (
               <div
                 key={spark.id}
@@ -76,7 +81,12 @@ export function MentionPicker({
       )}
       {workflows.length > 0 && (
         <>
-          <div className="flist sparklist" role="listbox" aria-label="Workflows">
+          <div
+            id={workflowListId(listId)}
+            className="flist sparklist"
+            role="listbox"
+            aria-label="Workflows"
+          >
             {workflows.map((workflow, index) => {
               const at = sparks.length + index;
               return (

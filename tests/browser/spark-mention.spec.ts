@@ -199,6 +199,9 @@ test('@ lists workflows too, inserts the id and starts the run when sent', async
       'aria-activedescendant',
       (await flows.nth(0).getAttribute('id'))!,
     );
+    const controls = (await input.getAttribute('aria-controls'))!.split(' ');
+    const lists = page.locator('.mentionpop [role="listbox"]');
+    expect(controls).toEqual(await lists.evaluateAll((all) => all.map((list) => list.id)));
     await page.screenshot({ path: shot('picker-workflows') });
 
     await page.keyboard.press('Escape');

@@ -32,6 +32,9 @@ export function sparkOptionId(listId: string, index: number): string {
   return `${listId}-spark-${index}`;
 }
 
+export const sparkListId = (listId: string) => `${listId}-sparks`;
+export const workflowListId = (listId: string) => `${listId}-workflows`;
+
 export function workflowOptionId(listId: string, index: number): string {
   return `${listId}-workflow-${index}`;
 }
@@ -143,6 +146,12 @@ export function useMention({
         ? workflowOptionId(listId, active - matches.length)
         : optionId(listId, fileSearch.active);
 
+  const controls = [
+    ...(matches.length > 0 ? [sparkListId(listId)] : []),
+    ...(flows.length > 0 ? [workflowListId(listId)] : []),
+    ...(hasRepos ? [listId] : []),
+  ];
+
   return {
     open,
     listId,
@@ -160,7 +169,10 @@ export function useMention({
     handleKey,
     dismiss: () => setMention(null),
     inputProps: open
-      ? { 'aria-controls': listId, 'aria-activedescendant': total > 0 ? activeId : undefined }
+      ? {
+          'aria-controls': controls.join(' '),
+          'aria-activedescendant': total > 0 ? activeId : undefined,
+        }
       : {},
   };
 }
