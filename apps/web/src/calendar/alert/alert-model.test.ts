@@ -33,7 +33,8 @@ describe('alert card', () => {
   it('hangs the card under the menu bar, kept on screen near an edge', () => {
     const place = { anchorX: 760, top: 38, width: 1512, height: 982 };
     expect(rigFor(place)).toEqual({ x: 760, top: 38, drop: 355 });
-    expect(rigFor({ ...place, anchorX: 20 }).x).toBe(216);
+    expect(rigFor({ ...place, anchorX: 20 }).x).toBe(306);
+    expect(rigFor({ ...place, anchorX: 1500 }).x).toBe(1206);
     expect(parsePlace({ anchorX: 1, width: 2, height: 3 })).toBeNull();
   });
 
