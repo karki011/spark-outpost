@@ -259,3 +259,17 @@ it('finish gives up when the final text never arrives, sending nothing and sayin
   emit(final('late'));
   expect(done).not.toHaveBeenCalled();
 });
+
+it('finish joins the final words to a draft that changed from outside while waiting', async () => {
+  const done = vi.fn();
+  const hook = renderHook(() => {
+    const [text, setText] = useState('Typed draft');
+    return { ...useDictationDraft(text, setText, 'chat'), setText };
+  });
+  await act(async () => hook.result.current.dictation.toggle());
+  act(() => hook.result.current.finish(done));
+  act(() => hook.result.current.setText('Draft from a request'));
+  emit(final('and more.'));
+  expect(done.mock.calls).toEqual([['Draft from a request and more.']]);
+  expect(hook.result.current.value).toBe('Draft from a request and more.');
+});

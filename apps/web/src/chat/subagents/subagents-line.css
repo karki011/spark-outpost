@@ -119,16 +119,16 @@
     filter 0.15s;
 }
 
-.sl-face:hover .chat-face,
-.sl-face:focus-visible .chat-face {
-  opacity: 1;
-  filter: none;
-}
-
 @media (prefers-contrast: more) {
   .sl-worker[data-state='done'] .chat-face {
     opacity: 0.6;
   }
+}
+
+.sl-face:hover .chat-face,
+.sl-face:focus-visible .chat-face {
+  opacity: 1;
+  filter: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
