@@ -12,6 +12,7 @@ export interface WorkflowControlDeps {
   db: Db;
   workspaceId: string;
   chatFolders?: string | undefined;
+  fromChat?: string | null;
   store?: WorkflowStore;
   now?: () => Date;
 }
@@ -45,6 +46,7 @@ async function run(deps: WorkflowControlDeps, action: WorkflowControlAction) {
       conversationId: null,
       projectId: action.project?.id ?? null,
       message: action.message,
+      settingsFrom: deps.fromChat ?? null,
     },
   );
   return {

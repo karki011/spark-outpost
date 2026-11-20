@@ -32,6 +32,8 @@ Typing `@` in a chat lists workflows; pick one and send to start it. That turn s
 | **Skipped**   | It never started, because a step before it failed or the run was stopped. |
 | **Cancelled** | It was working when the run was stopped.                                  |
 
+See also [Workflow steps](modes-and-levels.md#workflow-steps).
+
 ## Stop it, or look back
 
 - **Stop** cancels the steps that are working and skips the rest.

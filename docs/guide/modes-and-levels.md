@@ -50,3 +50,17 @@ Turn one off with `permissions.deny` in `~/.claude/settings.json`, a project's `
 | **Full auto → PR** (default) | Only the agent's own approval | Kept by itself  | Agent pushes, opens a PR |
 
 The level doesn't choose [where the chat works](where-spark-works.md).
+
+## Workflow steps
+
+A step uses its Spark's **Provider**, **Model**, **Effort** and **Mode**. Where the Spark says **Default**:
+
+| The run                                                               | Takes                                        |
+| --------------------------------------------------------------------- | -------------------------------------------- |
+| Trigger, **Before publish**, `@` in a chat, a run in an existing chat | The chat's; the step says **(from chat)**    |
+| Started by an agent                                                   | The agent's chat's, copied to the run's chat |
+| **Run** into a new chat, a schedule's first run, a review, a test run | Yours; the step says **(your default)**      |
+
+A step in a Bypass permissions chat runs reads and other commands without asking. Spark tools that act or send, like posting to Slack or changing a ticket, don't take the chat's mode.
+
+Edits, commits, pushes, pull requests and installs stay refused in every mode, and [Spark rules](protected-paths.md) still apply.

@@ -12,6 +12,7 @@ import { BrowserShots } from '../../browser/BrowserShots.tsx';
 import { CrewBlob } from '../../crew/CrewBlob.tsx';
 import { modelLabel, roleLabel, usageParts, type CrewAgent } from '../../crew/crew-model.ts';
 import { memberReplyText } from '../../crew/member-reply.ts';
+import { agentSourceWords, useSparkModeText } from '../../crew/spark-settings-text.ts';
 import { ChevronIcon } from '../../ui/icons.tsx';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
 import { decidedFirst } from '../approvals/approval-events.ts';
@@ -42,8 +43,11 @@ const EFFORT_SCALE = ['low', 'medium', 'high', 'xhigh', 'max'].map((id) => ({
 }));
 
 function HeadMeta({ agent }: { agent: CrewAgent }) {
-  const model = modelLabel({ ...agent, effort: null });
-  const rest = [agent.routeNote, ...usageParts(agent)].filter(Boolean).join(' · ');
+  const model = [modelLabel({ ...agent, effort: null }), agentSourceWords(agent.spark)]
+    .filter(Boolean)
+    .join(' ');
+  const mode = useSparkModeText(agent.provider, agent.spark);
+  const rest = [mode, agent.routeNote, ...usageParts(agent)].filter(Boolean).join(' · ');
   return (
     <span className="ah-meta">
       · {model}

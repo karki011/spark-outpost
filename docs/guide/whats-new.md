@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Default Sparks follow the chat's mode           | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | Mid-turn mode switches                          | [Modes](modes-and-levels.md#what-spark-does-in-each-mode). |
 | Compaction at natural breaks; handoff summaries | [Compaction](compaction.md#change-when-spark-compacts).    |
 | **A chat starts** trigger                       | [Triggers](workflow-triggers.md#the-events).               |
@@ -62,4 +63,3 @@ summary: What changed in recent releases and what to do next.
 | Answer more cards from a device           | [Answer cards remotely](answer-remotely.md).                          |
 | Agents do much more in Jira               | [Jira tools](jira-tools.md).                                          |
 | Context rail: tools, ports, floats        | [See a chat's context](context-rail.md).                              |
-| Build Sparks with an agent; Spark effort  | [Build with an agent](build-with-an-agent.md).                        |

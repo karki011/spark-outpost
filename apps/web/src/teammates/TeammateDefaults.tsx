@@ -11,6 +11,7 @@ import { ChoicePicker, type PickerChoice } from '../ui/ChoicePicker.tsx';
 import { InfoTip } from '../ui/InfoTip.tsx';
 
 const DEFAULT = '';
+const INHERITED = "Default (the chat's, or your default when there's no chat)";
 
 export interface DefaultsDraft {
   provider: ProviderId | null;
@@ -86,7 +87,7 @@ function ProviderModels({
         <span>Mode</span>
         <ChoicePicker
           label="Mode"
-          choices={withDefault(`${provider.name} default`, modes)}
+          choices={withDefault(INHERITED, modes)}
           value={draft.agentMode ?? DEFAULT}
           onChange={(id) => onChange({ ...draft, agentMode: id || null })}
         />
@@ -105,7 +106,7 @@ export function TeammateDefaults({ draft, providers, onChange }: TeammateDefault
         <ChoicePicker
           label="Provider"
           choices={withDefault(
-            'Default provider',
+            INHERITED,
             connected.map((entry) => ({ id: entry.id, label: entry.name })),
           )}
           value={draft.provider ?? DEFAULT}
