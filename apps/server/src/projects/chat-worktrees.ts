@@ -122,7 +122,7 @@ export async function branchCheckedOut(root: string, branch: string): Promise<bo
   return lines(listed).includes(`branch refs/heads/${branch}`);
 }
 
-async function fetchBranch(root: string, ref: string): Promise<void> {
+export async function fetchBranch(root: string, ref: string): Promise<void> {
   const slash = ref.indexOf('/');
   if (slash <= 0) return;
   await run('git', ['-C', root, 'fetch', '--quiet', ref.slice(0, slash), ref.slice(slash + 1)], {

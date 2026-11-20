@@ -29,6 +29,7 @@ import {
   startStep,
   type TurnWorkflowRun,
 } from './run-records.ts';
+import { stepPlaceFor } from './step-place-gather.ts';
 import { stepJobPrompt, type StepNote } from './step-prompt.ts';
 import { runsInChat, stepSparks, type StepSpark } from './step-sparks.ts';
 
@@ -67,6 +68,7 @@ interface Running {
   sparks: ReadonlyMap<string, StepSpark>;
   inChat: boolean;
   defaults: SettingsPlace | null;
+  place: string | null;
   states: Record<string, WorkflowStepState>;
   notes: Map<string, string | null>;
 }
@@ -132,6 +134,7 @@ function promptFor(run: Running, step: WorkflowStep, spark: StepSpark, editing: 
     testRun: turn.run.kind === 'test',
     edits: editing ? 'yes' : edits ? 'unsupported' : 'no',
     findings: run.options.findings === true,
+    place: run.place,
   });
 }
 
@@ -225,6 +228,7 @@ export async function runWorkflow(
     ),
     inChat,
     defaults: inChat ? null : await yourDefaults(h),
+    place: await stepPlaceFor({ db: h.deps.db, input: h.input, turn }),
     states: startingStates(turn),
     notes: new Map(turn.run.steps.map((step) => [step.stepId, step.note])),
   };

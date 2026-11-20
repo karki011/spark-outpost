@@ -90,6 +90,7 @@ interface RunRow {
   conversation_id: string | null;
   run_id: string | null;
   gates_run_id: string | null;
+  trigger_kind: WorkflowTriggerKind | null;
   edits: boolean;
   message: string;
   continues: boolean;
@@ -261,6 +262,7 @@ export interface TurnWorkflowRun {
   message: string;
   continues: boolean;
   edits: boolean;
+  triggerKind: WorkflowTriggerKind | null;
 }
 
 async function turnRunOf(db: Queryable, row: RunRow | undefined) {
@@ -274,6 +276,7 @@ async function turnRunOf(db: Queryable, row: RunRow | undefined) {
     message: row.message,
     continues: row.continues,
     edits: row.edits,
+    triggerKind: row.trigger_kind,
   };
 }
 
