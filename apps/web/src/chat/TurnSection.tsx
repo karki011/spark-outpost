@@ -5,13 +5,12 @@ import {
   type Project,
   type Run,
 } from '@spark-outpost/contracts';
-import { isCrewTurn, isSparkLed, sparkMembers } from '../crew/conversation-crew.ts';
+import { isCrewTurn, isSparkLed } from '../crew/conversation-crew.ts';
 import { MessageAttachments } from './attachments/MessageAttachments.tsx';
 import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivider.tsx';
 import { compactionsByRun } from './compaction/compaction-text.ts';
 import { CrewTurn } from './crew/CrewTurn.tsx';
-import { SparkJobs, mainAgentRan } from './crew/SparkJobs.tsx';
-import { WorkflowRunLink } from '../crew-flows/WorkflowRunLink.tsx';
+import { SparkJobs, jobMembers, mainAgentRan } from './crew/SparkJobs.tsx';
 import { SparkTag } from '../teammates/SparkCrewFace.tsx';
 import { LinkCards } from './link-cards/LinkCards.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
@@ -30,6 +29,8 @@ import { RequestHeader, type RunOutpost } from './outpost/RequestHeader.tsx';
 import { memberChatId, useOutpostSeam } from './outpost/outpost-seam.ts';
 import { TurnOutpostLines } from './outpost/TurnOutpostLines.tsx';
 import { OutpostFaces } from '../outposts/MemberFace.tsx';
+import { isWorkflowTurn } from './workflow-card/workflow-card-model.ts';
+import { WorkflowLine } from './workflow-card/WorkflowLine.tsx';
 
 interface TurnSectionProps {
   run: Run;
@@ -89,16 +90,25 @@ export const TurnSection = memo(function TurnSection({
   const orchestration = detail.orchestrations?.[run.id] ?? null;
   const sparkLed = isSparkLed(orchestration) ? orchestration : null;
   const crew = !sparkLed && isCrewTurn(orchestration) ? orchestration : null;
-  const handedTo = sparkMembers(orchestration);
+  const handedTo = jobMembers(orchestration);
   const compactions = compactionsByRun(detail.compactions).get(run.id) ?? [];
-  const automated = isAutomatedTurn(run, previous);
+  const automated = isAutomatedTurn(run);
+  const workflow = isWorkflowTurn(detail, run);
   const work = (
     <>
       {run.agentCycle && <p className="on-its-own">Continued on its own</p>}
-      {!automated && userMessage && handedTo.some((member) => member.spark?.step !== undefined) && (
-        <WorkflowRunLink turnRunId={run.id} />
+      {workflow && (
+        <WorkflowLine run={run} detail={detail} orchestration={orchestration} repo={repo} />
       )}
-      {sparkLed && <SparkJobs run={run} detail={detail} orchestration={sparkLed} repo={repo} />}
+      {sparkLed && (!workflow || handedTo.length > 0) && (
+        <SparkJobs
+          run={run}
+          detail={detail}
+          orchestration={sparkLed}
+          repo={repo}
+          jobsOnly={workflow}
+        />
+      )}
       {sparkLed && !mainAgentRan(sparkLed) ? null : crew ? (
         <CrewTurn run={run} detail={detail} orchestration={crew} repo={repo} />
       ) : (
@@ -138,41 +148,45 @@ export const TurnSection = memo(function TurnSection({
         </AutomatedTurn>
       ) : (
         <>
-          {userMessage && (
-            <div className="msg me" data-message-id={userMessage.id}>
-              <MessageAttachments attachments={userMessage.attachments} />
-              {userMessage.content && (
-                <>
-                  {run.outpost ? (
-                    <OutpostRequest outpost={run.outpost} text={userMessage.content} />
-                  ) : (
-                    <div className="bubble">
-                      <QuotedText text={userMessage.content} />
-                    </div>
-                  )}
-                  <LinkCards text={userMessage.content} />
-                  <MessageActions
-                    text={userMessage.content}
-                    createdAt={userMessage.createdAt}
-                    copyLabel="Copy message"
-                    side="user"
-                  />
-                </>
-              )}
-              {handedTo.length > 0 && (
-                <p className="msg-sparks">
-                  Handed to
-                  {handedTo.map((member) => (
-                    <SparkTag
-                      key={member.runId}
-                      sparkId={member.spark?.id ?? ''}
-                      name={member.name}
-                      role={member.spark?.role ?? ''}
+          {run.workflowStarted && userMessage?.content ? (
+            <SentBySpark text={userMessage.content} />
+          ) : (
+            userMessage && (
+              <div className="msg me" data-message-id={userMessage.id}>
+                <MessageAttachments attachments={userMessage.attachments} />
+                {userMessage.content && (
+                  <>
+                    {run.outpost ? (
+                      <OutpostRequest outpost={run.outpost} text={userMessage.content} />
+                    ) : (
+                      <div className="bubble">
+                        <QuotedText text={userMessage.content} />
+                      </div>
+                    )}
+                    <LinkCards text={userMessage.content} />
+                    <MessageActions
+                      text={userMessage.content}
+                      createdAt={userMessage.createdAt}
+                      copyLabel="Copy message"
+                      side="user"
                     />
-                  ))}
-                </p>
-              )}
-            </div>
+                  </>
+                )}
+                {handedTo.length > 0 && (
+                  <p className="msg-sparks">
+                    Handed to
+                    {handedTo.map((member) => (
+                      <SparkTag
+                        key={member.runId}
+                        sparkId={member.spark?.id ?? ''}
+                        name={member.name}
+                        role={member.spark?.role ?? ''}
+                      />
+                    ))}
+                  </p>
+                )}
+              </div>
+            )
           )}
           {work}
         </>

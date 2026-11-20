@@ -47,8 +47,7 @@ import { createStatusStore } from './status/status-store.ts';
 import { providerName } from './provider-name.ts';
 import { repoSummary } from './project/repo-list.ts';
 import { useLinkedProjects } from './project/use-chat-repos.ts';
-import { ModelSwitchNote } from './composer/ModelSwitchNote.tsx';
-import { PrCard } from './pull-request/PrCard.tsx';
+import { ComposerDock } from './dock/ComposerDock.tsx';
 import { usePullRequestRefresh } from './pull-request/use-pull-request-refresh.ts';
 import { ChatTicketBar } from './tickets/ChatTicketBar.tsx';
 import { ChatTicketChips } from './tickets/ChatTicketChips.tsx';
@@ -258,6 +257,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
       status={status}
       board={agents.board}
       openAgents={panel.available ? openAgents : null}
+      conversationId={conversationId}
     >
       <FileSheetProvider>
         <Landmark
@@ -404,14 +404,14 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   running ? (detail.data?.conversation.latestRun?.background ?? null) : null
                 }
                 above={
-                  <>
-                    <PrCard conversationId={conversationId} onOpenLinks={task ? openLinks : null} />
-                    <ModelSwitchNote
-                      conversationId={conversationId}
-                      settings={settings}
-                      runs={detail.data?.runs ?? NO_RUNS}
-                    />
-                  </>
+                  <ComposerDock
+                    conversationId={conversationId}
+                    detail={detail.data}
+                    settings={settings}
+                    repo={repos[0] ?? null}
+                    quotes={quotes}
+                    onOpenLinks={task ? openLinks : null}
+                  />
                 }
                 {...(openAudit ? { onAudit: openAudit } : {})}
                 onStartFresh={() => startFresh.mutate()}

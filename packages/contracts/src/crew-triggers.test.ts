@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   anyTriggerOn,
   blockingFindings,
+  findingsIn,
   branchMatches,
   workflowTriggersSchema,
 } from './crew-triggers.ts';
@@ -50,6 +51,32 @@ describe('blockingFindings', () => {
     expect(blockingFindings('No findings. Nothing critical, high marks overall.')).toBe(0);
     expect(blockingFindings('Highlights: tests pass')).toBe(0);
     expect(blockingFindings(null)).toBe(0);
+  });
+});
+
+describe('findingsIn', () => {
+  it('reads each labelled line with its severity and text', () => {
+    const text = [
+      'Review done.',
+      '- [Critical] SQL built from user input in search.ts',
+      '* **[High]** token logged in debug output',
+      'High: missing auth check on /admin',
+      '1. [Medium] long function',
+      '[low] naming',
+      'Nothing critical here.',
+    ].join('\n');
+    expect(findingsIn(text)).toEqual([
+      { severity: 'critical', text: 'SQL built from user input in search.ts' },
+      { severity: 'high', text: 'token logged in debug output' },
+      { severity: 'high', text: 'missing auth check on /admin' },
+      { severity: 'medium', text: 'long function' },
+      { severity: 'low', text: 'naming' },
+    ]);
+  });
+
+  it('finds nothing in a clean reply', () => {
+    expect(findingsIn('No findings.')).toEqual([]);
+    expect(findingsIn(null)).toEqual([]);
   });
 });
 
