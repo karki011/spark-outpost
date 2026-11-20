@@ -1,4 +1,4 @@
-import { commandKey, type RunMode } from '@spark-outpost/contracts';
+import { commandKey, type AgentCommand, type RunMode } from '@spark-outpost/contracts';
 import { repoScanner } from '../agent-config/discovery.ts';
 import { loadRepoLaunch } from '../agent-config/launch.ts';
 import { conversationProjectIds } from '../agent-config/store.ts';
@@ -22,6 +22,7 @@ export interface CompactTarget {
   session: ProviderSessionRecord;
   mode: RunMode | null;
   commands: readonly string[];
+  compactTakesInput: boolean;
   model: string | null;
   effort: string | null;
 }
@@ -37,6 +38,20 @@ const REFUSE_ALL: PermissionGate = {
 
 export function offersCompact(commands: readonly string[]): boolean {
   return commands.some((name) => commandKey(name) === COMPACT_COMMAND);
+}
+
+export function compactTakesInput(commands: readonly AgentCommand[]): boolean {
+  return commands.some(
+    (command) => commandKey(command.name) === COMPACT_COMMAND && command.hint !== null,
+  );
+}
+
+export function compactPrompt(
+  target: Pick<CompactTarget, 'compactTakesInput'>,
+  instructions: string,
+) {
+  const bare = `/${COMPACT_COMMAND}`;
+  return target.compactTakesInput && instructions ? `${bare} ${instructions}` : bare;
 }
 
 function gated(mode: RunMode | null, roots: readonly string[]): boolean {
@@ -75,17 +90,20 @@ export async function compactInSession(
   target: CompactTarget,
   append: Append,
   signal: AbortSignal,
+  instructions: string,
 ): Promise<AgentCompaction | null> {
   const provider = deps.providers.get(target.session.provider);
   if (!provider) return null;
   const extras = await launchExtras(deps, input);
+  if (signal.aborted) return null;
   const audit = createAuditRecorder({ write: (entries) => log.write(entries) });
   const own = new AbortController();
   const stop = () => own.abort();
   signal.addEventListener('abort', stop, { once: true });
   const { session } = target;
+  const prompt = compactPrompt(target, instructions);
   const turn: ProviderTurn = {
-    prompt: `/${COMPACT_COMMAND}`,
+    prompt,
     history: [],
     settings: { ...input.settings, model: target.model, effort: target.effort },
     projectRoots: input.projectRoots,
@@ -102,7 +120,7 @@ export async function compactInSession(
         commands: [...target.commands],
       },
       freshReason: null,
-      followUp: `/${COMPACT_COMMAND}`,
+      followUp: prompt,
     },
     ...(extras.repo.length > 0 ? { repo: extras.repo } : {}),
     ...(extras.userMcp.length > 0 ? { userMcp: extras.userMcp } : {}),

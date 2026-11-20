@@ -36,7 +36,7 @@ function usageAt(percent: number, contextSize = FAKE_CONTEXT_SIZE): Usage {
 }
 
 export function fakeCompactTurn(turn: ProviderTurn): boolean {
-  return turn.prompt.trim() === '/compact' && turn.session?.resume != null;
+  return /^\/compact(\s|$)/.test(turn.prompt.trim()) && turn.session?.resume != null;
 }
 
 export function fakeSessionOutputs(turn: ProviderTurn): ProviderOutput[] {

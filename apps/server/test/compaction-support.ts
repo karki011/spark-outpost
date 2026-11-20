@@ -43,6 +43,7 @@ function fakeClaude(store: string, commands: readonly string[]): Provider {
       FAKE_ACP_SESSION_CAPABILITIES: JSON.stringify({ resume: {}, close: {} }),
       FAKE_ACP_COMMANDS: JSON.stringify(commands),
       FAKE_ACP_CONTEXT_SIZE: String(CONTEXT_SIZE),
+      FAKE_ACP_COMPACT_HINT: '<optional custom summarization instructions>',
     },
   });
 }
