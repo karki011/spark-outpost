@@ -43,16 +43,18 @@ test('a follow-up round is one folded row that opens to what it did', async ({ p
   await expect(page.locator('.chat-title')).toHaveText('Fix the cents parser');
   const turn = page.locator('[data-turn]').first();
   await expect(turn.locator('.msg.me')).toHaveCount(0);
-  const toggle = turn.getByRole('button', { name: /PR follow-up/ });
+  const toggle = turn.getByRole('button', { name: /PR #7 · round 1/ });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await expect(toggle).toContainText(
-    'PR #7 · round 1 · Replied to 3 comments, pushed a fix, re-requested review',
-  );
+  await expect(toggle).toContainText('Replied to 3 comments, pushed a fix, re-requested review');
+  await expect(turn.getByRole('button', { name: 'Stop turn' })).toHaveCount(0);
   await expect(turn.getByText('Show what Spark sent')).toBeHidden();
 
   await toggle.focus();
   await page.keyboard.press('Enter');
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  const items = turn.getByRole('list', { name: 'Review items in this round' });
+  await expect(items).toContainText('Fix');
+  await expect(turn.getByRole('button', { name: 'Follow-up settings' })).toBeVisible();
   const sent = turn.locator('.auto-turn-sent');
   await expect(sent.locator('.bubble')).toBeHidden();
   await sent.getByText('Show what Spark sent').click();
@@ -61,6 +63,35 @@ test('a follow-up round is one folded row that opens to what it did', async ({ p
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(turn.locator('.auto-turn-body')).toBeHidden();
+});
+
+test('a round in progress is an open card with its items and Stop turn', async ({ page }) => {
+  const seeded = await seedPrFollowUp();
+  const db = openTestDb();
+  try {
+    await db.query(
+      `UPDATE runs SET status = 'running', finished_at = NULL
+       WHERE conversation_id = $1 AND source = 'pr_follow_up'`,
+      [seeded.conversationId],
+    );
+    await db.query(
+      `UPDATE pr_watches SET phase = 'fixing', approval_id = NULL WHERE conversation_id = $1`,
+      [seeded.conversationId],
+    );
+    await db.query('DELETE FROM approvals WHERE id = $1', [seeded.approvalId]);
+  } finally {
+    await db.end();
+  }
+  await openChats(page);
+  const turn = page.locator('[data-turn]').first();
+  const toggle = turn.getByRole('button', { name: /PR #7 · round 1/ });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(toggle).toContainText(/review items? arrived · sent by Spark/);
+  await expect(turn.getByRole('button', { name: 'Stop turn' })).toBeVisible();
+  await expect(
+    turn.getByRole('list', { name: 'Review items in this round' }).getByRole('listitem'),
+  ).not.toHaveCount(0);
+  await expect(turn.locator('.auto-turn-steps')).not.toHaveAttribute('open');
 });
 
 const GITHUB_SENT = [
@@ -95,7 +126,7 @@ test('what Spark sent shows GitHub HTML and Markdown rendered, never run', async
   }
   await openChats(page);
   const turn = page.locator('[data-turn]').first();
-  await turn.getByRole('button', { name: /PR follow-up/ }).click();
+  await turn.getByRole('button', { name: /PR #7 · round 1/ }).click();
   await turn.getByText('Show what Spark sent').click();
   const sent = turn.locator('.auto-turn-sent .bubble');
   await expect(sent.locator('strong')).toHaveText('Rounds the wrong way');

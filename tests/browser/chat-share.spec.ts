@@ -76,9 +76,7 @@ test('copies a chat link from the row menu and from the chat header', async ({ p
   await shot(page, 'row-menu');
   await menu.getByRole('menuitem', { name: 'Copy chat link' }).click();
 
-  await expect(
-    sidebar(page).getByRole('status').filter({ hasText: 'Chat link copied.' }),
-  ).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Chat link copied.' })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(linkTo(chatId!));
 
   await page.evaluate(() => navigator.clipboard.writeText('cleared'));

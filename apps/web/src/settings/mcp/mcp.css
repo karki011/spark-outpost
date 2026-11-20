@@ -385,15 +385,6 @@
   background-size: 250% 100%;
   animation: shimmer 1.4s linear infinite;
 }
-.mcp-toasts {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-}
-.mcp-toasts:empty,
-.mcp-toasts .toasts:empty {
-  display: none;
-}
 
 .mpop.left.mcppop {
   width: min(420px, calc(100vw - 32px));

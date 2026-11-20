@@ -318,9 +318,7 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
           }}
         />
       )}
-      <div className="tk-toasts">
-        <ToastHost toaster={toaster} />
-      </div>
+      <ToastHost toaster={toaster} />
     </main>
   );
 }

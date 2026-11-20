@@ -21,7 +21,7 @@ summary: What changed in recent releases and what to do next.
 | **Stopped** steps; **No output for 2m**         | [Follow a turn](follow-a-turn.md).                         |
 | Meeting card shows every button on one row      | Nothing to do.                                             |
 | **Health** in Settings                          | [Check Health](trouble-setup-and-reset.md#check-health).   |
-| Follow-up rounds fold                           | Open the row.                                              |
+| Round card; top-right toasts                    | —                                                          |
 | Chat rows show steps; plans name chats          | [Chat list](statuses-and-limits.md#chat-list).             |
 | **Cost** by tool; model switch cache note       | [Prompt cache](statuses-and-limits.md#prompt-cache).       |
 | Worktrees holding `.env` or a running tab stay  | [Where](where-spark-works.md#what-to-expect).              |

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { ToastHost } from '../conversations/Toast.tsx';
 import { useToast } from '../conversations/use-toast.ts';
@@ -141,12 +140,7 @@ export function UpdateBlob() {
         </button>
       )}
       {tooltip}
-      {createPortal(
-        <div className="upd-toasts">
-          <ToastHost toaster={toaster} />
-        </div>,
-        document.body,
-      )}
+      <ToastHost toaster={toaster} />
     </>
   );
 }

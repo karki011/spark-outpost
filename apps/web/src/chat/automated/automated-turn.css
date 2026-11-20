@@ -112,3 +112,112 @@
 .auto-turn-row .btn {
   flex: none;
 }
+
+.auto-turn[data-live='true'] {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+}
+
+.auto-turn-ic {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--accent-text);
+  border-radius: 5px;
+  color: var(--accent-text);
+}
+
+.auto-turn-ic svg {
+  width: 11px;
+  height: 11px;
+}
+
+.auto-turn-items {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.auto-turn-items li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.auto-turn-word {
+  flex: none;
+  width: 72px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.auto-turn-word[data-triage='fix'],
+.auto-turn-word[data-triage='check'] {
+  color: var(--success);
+}
+
+.auto-turn-word[data-triage='question'],
+.auto-turn-word[data-triage='disagree'] {
+  color: var(--warn);
+}
+
+.auto-turn-item {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.auto-turn-item small {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auto-turn-item span {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auto-turn-items a {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.auto-turn-steps > summary,
+.auto-turn-foot {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.auto-turn-steps > summary {
+  cursor: pointer;
+}
+
+.auto-turn-work {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.auto-turn-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin: 0;
+}

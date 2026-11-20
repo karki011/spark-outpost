@@ -161,7 +161,7 @@ test('a searched ticket is assigned from the detail pane, and Start work moves a
   await expect(field(page, 'WEB-440', 'Assignee')).toHaveText('Unassigned');
   await detailOf(page, 'WEB-440').getByRole('button', { name: 'Assign to me' }).click();
   await expect(
-    page.locator('.tk-toasts').getByText('Assigned WEB-440 to you in Linear.'),
+    page.locator('.toast-stack').getByText('Assigned WEB-440 to you in Linear.'),
   ).toBeVisible();
   await expect(field(page, 'WEB-440', 'Assignee')).toHaveText('Alex Example (you)');
   await expect(detailOf(page, 'WEB-440').getByRole('button', { name: 'Assign to me' })).toHaveCount(

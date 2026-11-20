@@ -128,9 +128,7 @@ export function McpSection() {
           />
         ))}
       </div>
-      <div className="mcp-toasts">
-        <ToastHost toaster={toaster} />
-      </div>
+      <ToastHost toaster={toaster} />
     </div>
   );
 }

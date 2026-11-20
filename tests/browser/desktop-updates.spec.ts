@@ -107,7 +107,7 @@ test('the update blob goes from available through downloading to ready and insta
   await expect(ready).toHaveText('Restart');
   await expect(ready).not.toHaveAttribute('data-fill');
   await expect(ready.locator('.upd-blob-dot')).toBeVisible();
-  await expect(page.locator('.upd-toasts').getByRole('status')).toContainText(
+  await expect(page.locator('.toast-stack').getByRole('status')).toContainText(
     'Spark Outpost 0.3.0 is ready.',
   );
   await shot(page, 'ready');
@@ -118,7 +118,7 @@ test('the update blob goes from available through downloading to ready and insta
   });
   await expect(waiting).toHaveText('Waiting');
   await expect(
-    page.locator('.upd-toasts').getByRole('status').filter({ hasText: 'when your work finishes' }),
+    page.locator('.toast-stack').getByRole('status').filter({ hasText: 'when your work finishes' }),
   ).toBeVisible();
   await shot(page, 'waiting');
 
@@ -138,7 +138,7 @@ test('the ready toast appears once per version', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await fakeUpdater(page, { phase: 'ready', availableVersion: '0.3.0', progress: 100 });
   await page.goto('/');
-  const toast = page.locator('.upd-toasts').getByRole('status');
+  const toast = page.locator('.toast-stack').getByRole('status');
   await expect(toast).toContainText('Spark Outpost 0.3.0 is ready.');
   await page.reload();
   await expect(rail(page).getByRole('button', { name: /Restart to update/ })).toBeVisible();
@@ -263,7 +263,7 @@ const PREVIEW = {
 };
 
 const blob = (page: Page) => rail(page).locator('.upd-blob');
-const toasts = (page: Page) => page.locator('.upd-toasts').getByRole('status');
+const toasts = (page: Page) => page.locator('.toast-stack').getByRole('status');
 
 async function hoverTip(page: Page, text: string) {
   await page.mouse.move(640, 300);
