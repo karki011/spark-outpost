@@ -69,3 +69,5 @@ export const BROWSER_ICON = (
     <path d="M3 9h18M6.5 6.5h.01M9 6.5h.01" />
   </>
 );
+
+export const HEALTH_ICON = <path d="M3 12h4l2-5 4 10 2-5h6" />;

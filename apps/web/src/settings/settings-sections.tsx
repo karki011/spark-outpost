@@ -37,6 +37,7 @@ import { NotificationsSection } from './NotificationsSection.tsx';
 import { PRIVACY_SCREEN_ROWS, PrivacyScreenSection } from './PrivacyScreenSection.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { GithubSection, githubRows } from './GithubSection.tsx';
+import { HealthSection } from './health/HealthSection.tsx';
 import { SPARK_RULES_ROWS } from './spark-rules/rule-rows.ts';
 import { SparkRulesSection } from './spark-rules/SparkRulesSection.tsx';
 import { TERMINAL_RECORD_LABEL } from './TerminalRecordSetting.tsx';
@@ -302,6 +303,13 @@ export const SETTINGS_SECTIONS = [
     icon: icons.MAC_CONTROL_ICON,
     rows: () => [MAC_CONTROL_LABEL],
     render: ({ setup }) => setup && <MacControlSection profile={setup.profile} />,
+  },
+  {
+    id: 'health',
+    group: 'app',
+    label: 'Health',
+    icon: icons.HEALTH_ICON,
+    render: ({ onOpenChat }) => <HealthSection onOpenChat={onOpenChat} />,
   },
   {
     id: 'about',
