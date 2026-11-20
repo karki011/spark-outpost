@@ -3,7 +3,7 @@ import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { wrapTabFocus } from './focus-trap.ts';
 
-const FOCUSABLE = 'button:not([disabled]), input:not([disabled])';
+const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), textarea:not([disabled])';
 
 interface ModalFrameProps {
   className: string;

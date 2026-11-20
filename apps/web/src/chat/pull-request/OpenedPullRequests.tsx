@@ -6,7 +6,8 @@ import { prWatchesQuery } from './pr-follow-up-api.ts';
 import { openedSummary } from './post-open-model.ts';
 import { PostOpenLines } from './PullOpenedLines.tsx';
 import { openedIn } from './pull-request-model.ts';
-import { useDismissedPulls } from './use-dismissed-pulls.ts';
+import { useDismissed } from '../dock/use-dismissed.ts';
+import { PR_DISMISSED } from './pr-card-model.ts';
 import { followUpMode } from './use-watch-context.ts';
 
 interface OpenedPullRequestsProps {
@@ -21,7 +22,7 @@ export function OpenedPullRequests({ conversationId, runIds }: OpenedPullRequest
     notifyOnChangeProps: ['data'],
   });
   const profile = useQuery({ queryKey: setupKey, queryFn: setupApi.get }).data?.profile ?? null;
-  const [dismissed, dismiss] = useDismissedPulls(conversationId);
+  const [dismissed, dismiss] = useDismissed(PR_DISMISSED, conversationId);
   const opened = watches.data ?? [];
   if (opened.length === 0) return null;
   const mode = profile ? followUpMode(profile) : 'on';

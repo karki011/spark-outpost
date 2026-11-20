@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import { claimSlot, getSchedule } from '../src/crew-flows/schedule-records.ts';
 import { checkSchedules, STRANDED_CLAIM_MS } from '../src/crew-flows/scheduler.ts';
+import { startWorkflowRun } from '../src/crew-flows/start-run.ts';
 import { workflowStore } from '../src/crew-flows/workflow-store.ts';
 import { userText } from '../src/outposts/user-asked.ts';
 import { actionFacts } from '../src/spark-mcp/actions/action-policy.ts';
@@ -181,6 +183,26 @@ describe('a slot that comes due while the previous run is still going', () => {
         lastSlotAt: iso(at(10, 30)),
       },
     ]);
+  });
+
+  it('still starts while the same workflow runs in another chat', async () => {
+    await clock.save(everyHalfHour());
+    const other = await startWorkflowRun(clock.deps, {
+      kind: 'run',
+      workflowId: FLOW,
+      messageId: randomUUID(),
+      source: 'manual',
+      conversationId: null,
+      projectId: null,
+      message: '',
+    });
+
+    await clock.checkAt(at(9, 30));
+
+    const runs = await runsOf(t);
+    expect(runs.map((run) => run.status)).toEqual(['running', 'running']);
+    expect(runs.find((run) => run.id !== other.id)?.source).toBe('schedule');
+    expect(await quietSlots(t)).toEqual([]);
   });
 });
 

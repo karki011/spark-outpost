@@ -215,9 +215,7 @@ test('@ lists workflows too, inserts the id and starts the run when sent', async
     await input.press('Enter');
 
     const turn = page.locator('section[data-turn]').first();
-    await expect(turn.getByRole('button', { name: 'Open run view' })).toBeVisible({
-      timeout: 30_000,
-    });
+    await expect(turn.locator('.wfc-line')).toContainText('Review flow', { timeout: 30_000 });
   } finally {
     await page.request.delete('/api/workflows/review-flow', { data: {} });
   }

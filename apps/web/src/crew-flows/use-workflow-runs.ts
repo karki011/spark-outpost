@@ -14,13 +14,16 @@ export function useWorkflowRuns(workflowId: string | null) {
   });
 }
 
-export function useWorkflowRunOfTurn(turnRunId: string, enabled: boolean) {
-  return useQuery({
+export function workflowRunOfTurnQuery(turnRunId: string) {
+  return {
     queryKey: workflowRunKeys.ofTurn(turnRunId),
     queryFn: () => workflowRunsApi.ofTurn(turnRunId),
-    enabled,
     retry: false,
-  });
+  };
+}
+
+export function useWorkflowRunOfTurn(turnRunId: string, enabled: boolean) {
+  return useQuery({ ...workflowRunOfTurnQuery(turnRunId), enabled });
 }
 
 export function useWorkflowRun(runId: string, seed?: WorkflowRun) {

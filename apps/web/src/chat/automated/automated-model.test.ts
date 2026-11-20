@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Approval, Run, RoundOutcome, WorkflowRun } from '@spark-outpost/contracts';
+import type { Approval, Run, RoundOutcome } from '@spark-outpost/contracts';
 import { RUN, watch } from '../pull-request/watch-fixture.ts';
 import {
   isAutomatedTurn,
@@ -7,13 +7,9 @@ import {
   roundHeadline,
   sentForDisplay,
   waitsOnYou,
-  workflowHeadline,
-  workflowLabel,
 } from './automated-model.ts';
 
 const run = (fields: Partial<Run>) => ({ id: RUN, ...fields }) as Run;
-const earlier = run({ id: 'earlier' });
-
 const outcome: RoundOutcome = {
   runId: RUN,
   round: 3,
@@ -27,15 +23,13 @@ const outcome: RoundOutcome = {
 };
 
 describe('which turns fold into one row', () => {
-  it('folds every PR follow-up round and workflow-started turns after the first turn', () => {
-    expect(isAutomatedTurn(run({ prFollowUp: true }), null)).toBe(true);
-    expect(isAutomatedTurn(run({ prFollowUp: true }), earlier)).toBe(true);
-    expect(isAutomatedTurn(run({ workflowStarted: true }), earlier)).toBe(true);
+  it('folds every PR follow-up round', () => {
+    expect(isAutomatedTurn(run({ prFollowUp: true }))).toBe(true);
   });
 
-  it('keeps typed turns and a chat a workflow started as normal turns', () => {
-    expect(isAutomatedTurn(run({ typedByUser: true }), earlier)).toBe(false);
-    expect(isAutomatedTurn(run({ workflowStarted: true }), null)).toBe(false);
+  it('keeps typed turns and workflow turns, which have their own card', () => {
+    expect(isAutomatedTurn(run({ typedByUser: true }))).toBe(false);
+    expect(isAutomatedTurn(run({ workflowStarted: true }))).toBe(false);
   });
 });
 
@@ -51,13 +45,6 @@ describe('the row headline', () => {
   it('says what the round did once it settles', () => {
     expect(roundHeadline({ key: 'k', watch: watch(), outcome }, message, 'succeeded')).toBe(
       'PR #7 · round 3 · Replied to 2 comments, pushed a fix',
-    );
-  });
-
-  it('names what started a workflow and how far it got', () => {
-    const steps = [{ state: 'succeeded' }, { state: 'running' }] as WorkflowRun['steps'];
-    expect(workflowHeadline({ source: 'trigger', steps } as WorkflowRun)).toBe(
-      'Trigger · 1 of 2 steps done',
     );
   });
 });
@@ -95,23 +82,11 @@ describe('what Spark sent, as shown', () => {
 });
 
 describe('a row that opens by itself', () => {
-  it('opens when a card waits, or the turn or its workflow failed or ended unknown', () => {
-    expect(opensOnItsOwn(['running'], true)).toBe(true);
-    expect(opensOnItsOwn(['failed'], false)).toBe(true);
-    expect(opensOnItsOwn(['outcome_unknown'], false)).toBe(true);
-    expect(opensOnItsOwn(['succeeded', 'outcome_unknown'], false)).toBe(true);
-    expect(opensOnItsOwn(['succeeded', 'failed'], false)).toBe(true);
-    expect(opensOnItsOwn(['succeeded', 'succeeded'], false)).toBe(false);
-    expect(opensOnItsOwn(['cancelled'], false)).toBe(false);
-  });
-});
-
-describe('the workflow name on the row', () => {
-  it('uses the run, or the @id Spark sent while the run is not known', () => {
-    expect(workflowLabel({ workflowName: 'Review flow' } as WorkflowRun, '@review-flow')).toBe(
-      'Review flow',
-    );
-    expect(workflowLabel(null, '@review-flow Started by a trigger.')).toBe('review-flow');
-    expect(workflowLabel(null, 'no mention')).toBe('');
+  it('opens when a card waits, or the turn failed or ended unknown', () => {
+    expect(opensOnItsOwn('running', true)).toBe(true);
+    expect(opensOnItsOwn('failed', false)).toBe(true);
+    expect(opensOnItsOwn('outcome_unknown', false)).toBe(true);
+    expect(opensOnItsOwn('succeeded', false)).toBe(false);
+    expect(opensOnItsOwn('cancelled', false)).toBe(false);
   });
 });

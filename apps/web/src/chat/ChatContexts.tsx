@@ -5,6 +5,7 @@ import { StatusContext } from './status/status-context.ts';
 import type { StatusStore } from './status/status-store.ts';
 import { AgentBoardContext, type AgentBoard } from './subagents/agent-board.ts';
 import { OpenAgentsContext } from './subagents/SubagentsLine.tsx';
+import { useWorkflowCardState, WorkflowCardFocusContext } from './workflow-card/card-focus.ts';
 
 interface ChatContextsProps {
   viewChanges: ViewChanges | null;
@@ -12,6 +13,7 @@ interface ChatContextsProps {
   status: StatusStore;
   board: AgentBoard;
   openAgents: ((runId: string, workerId?: string) => void) | null;
+  conversationId: string;
   children: ReactNode;
 }
 
@@ -21,14 +23,18 @@ export function ChatContexts({
   status,
   board,
   openAgents,
+  conversationId,
   children,
 }: ChatContextsProps) {
+  const workflowCard = useWorkflowCardState(conversationId);
   return (
     <ViewChangesContext value={viewChanges}>
       <OpenPlanContext value={openPlan}>
         <StatusContext value={status}>
           <AgentBoardContext value={board}>
-            <OpenAgentsContext value={openAgents}>{children}</OpenAgentsContext>
+            <OpenAgentsContext value={openAgents}>
+              <WorkflowCardFocusContext value={workflowCard}>{children}</WorkflowCardFocusContext>
+            </OpenAgentsContext>
           </AgentBoardContext>
         </StatusContext>
       </OpenPlanContext>
