@@ -72,6 +72,11 @@ describe('the compacted chat summary', () => {
       role: index % 2 === 0 ? ('user' as const) : ('assistant' as const),
       content: index % 2 === 0 ? `request ${index / 2}` : `reply ${(index - 1) / 2}`,
     })),
+    requests: Array.from({ length: 20 }, (_, index) => ({
+      content: `request ${index}`,
+      sentOn: '2026-11-17',
+    })),
+    liveState: '## Live state, checked by Spark at 2026-11-18 09:00 UTC\n- Branch: spark/cents',
     agreedPlan: '## Agreed plan\n- Cents everywhere',
     changes: [{ path: 'src/parse.ts', additions: 12, deletions: 3 }],
     patch: '--- a/src/parse.ts\n+++ b/src/parse.ts\n+const cents = 1;',
@@ -79,13 +84,16 @@ describe('the compacted chat summary', () => {
     identifiers: '## Exact identifiers\n- Commits: `56cf70b5`',
   };
 
-  it('keeps the first request, every request, the plan, recent turns, diff and open issues', () => {
+  it('keeps the goal, live state, dated requests, the plan, recent turns, diff and open issues', () => {
     const text = chatSummaryPrompt(chat);
     expect(text.startsWith(CHAT_SUMMARY_HEADING)).toBe(true);
     expect(text).toContain(HISTORY_TOOL_NOTE);
-    expect(text).toContain('## What the chat started with\nrequest 0');
-    expect(text).toContain('1. request 0');
-    expect(text).toContain('20. request 19');
+    expect(text).toContain('## Goal and scope\nrequest 0');
+    expect(text).toContain('## Live state, checked by Spark at 2026-11-18 09:00 UTC');
+    expect(text).toContain("## Your decisions and requests\nThe user's own words");
+    expect(text).toContain('1. 2026-11-17: request 0');
+    expect(text).toContain('20. 2026-11-17: request 19');
+    expect(text).toContain('## Loose ends: uncommitted changes\n- src/parse.ts (+12 -3)');
     expect(text).toContain('## Agreed plan\n- Cents everywhere');
     expect(text).toContain('## Recent turns, verbatim');
     expect(text).toContain('Assistant: reply 19');
@@ -105,6 +113,8 @@ describe('the compacted chat summary', () => {
     }));
     const text = chatSummaryPrompt({
       history,
+      requests: history.map((turn) => ({ content: turn.content, sentOn: '2026-11-18' })),
+      liveState: '',
       agreedPlan: null,
       changes: [],
       patch: '',
@@ -112,8 +122,9 @@ describe('the compacted chat summary', () => {
       identifiers: '',
     });
     expect(text).toContain('(5 earlier requests not listed)');
-    expect(text).toContain('6. ask 5');
-    expect(text).not.toContain('1. ask 0');
+    expect(text).toContain('6. 2026-11-18: ask 5');
+    expect(text).not.toContain('1. 2026-11-18: ask 0');
+    expect(text).not.toContain('Live state');
     expect(text).not.toContain('## Current diff');
     expect(text).not.toContain('## Open issues');
     expect(text).not.toContain('## Exact identifiers');

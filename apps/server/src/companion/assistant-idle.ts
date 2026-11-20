@@ -95,6 +95,7 @@ async function compactIdle(
     session,
     mode: input.mode,
     commands,
+    compactTakesInput: false,
     model: input.settings.model,
     effort: input.settings.effort,
   };
@@ -106,6 +107,7 @@ async function compactIdle(
     target,
     ignore,
     new AbortController().signal,
+    '',
   );
   if (!compacted || !agentCompactWorked(reading, compacted.after)) {
     console.error(`Ask Spark's idle compaction did not shrink its context (run ${row.run_id})`);

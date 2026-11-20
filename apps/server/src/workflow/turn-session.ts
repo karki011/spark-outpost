@@ -9,7 +9,6 @@ import {
   finishProviderSession,
   forgetWorkdir,
   idleWorkdirs,
-  latestProviderSession,
   recordReportedCost,
   startProviderSession,
   sweepProviderSessions,
@@ -22,18 +21,13 @@ import { readingOf, selfCompacted } from '../compaction/policy.ts';
 import { recordSessionCommands, sessionCommands } from '../persistence/session-commands.ts';
 import type { ProviderOutput, SessionTarget } from '../providers/provider.ts';
 import type { StopReason } from './agent-turn.ts';
-import { plansThisTurn } from '../plans/plan-mode.ts';
 import { sameModel, type KnownWindow } from '../usage/context-window.ts';
 import type { RunInput } from './run-input.ts';
 import { insertSessionEvent, recordAppliedSettings } from '../persistence/session-events.ts';
 import { modelChange, sessionEvent, type SessionFacts } from './session-events.ts';
 import { agentDefinitions } from '../agents/acp/agents.ts';
-import {
-  conversationKey,
-  decideConversationResume,
-  usesConversationSession,
-} from './conversation-session.ts';
 import { loadSessionHandoff, missedMessages } from './session-handoff.ts';
+import { turnResume } from './turn-resume.ts';
 import {
   CREW_STOPPED_NOTE,
   RESUME_REASONS,
@@ -41,11 +35,8 @@ import {
   STOPPED_REPLY,
   SESSION_IDLE_MS,
   SESSION_WORKDIR_ROOT,
-  agentKey,
-  decideResume,
   replyHash,
   sessionWorkdir,
-  settingsHash,
   stoppedFollowUp,
 } from './session-decision.ts';
 
@@ -86,7 +77,6 @@ async function usedAnotherProvider(db: Db, conversationId: string, provider: str
   );
   return rowCount === 1;
 }
-const UNKEYED_SETTINGS = { model: null, effort: null, mode: null, planning: false, roots: [] };
 
 function acrossFolders(provider: string): boolean {
   const definitions: Record<string, { resumesAcrossFolders?: boolean } | undefined> =
@@ -110,36 +100,12 @@ export async function prepareTurnSession(
   const resumeKey = input.resumeKey ?? null;
   if (!chatTurn && !resumeKey) return null;
   const conversationId = input.identity.threadId;
-  const conversation = usesConversationSession(input);
-  const key = conversation
-    ? conversationKey(input.provider)
-    : agentKey(input.mode, chatTurn ? null : resumeKey);
-  const hash = settingsHash(
-    conversation
-      ? { provider: input.provider, ...UNKEYED_SETTINGS }
-      : {
-          provider: input.provider,
-          model: input.settings.model,
-          effort: input.settings.effort,
-          mode: input.mode,
-          planning: plansThisTurn(input),
-          roots: input.projectRoots,
-          keyed: !chatTurn,
-        },
+  const { conversation, key, hash, stored, decision } = await turnResume(
+    db,
+    input,
+    limits.idleMs,
+    now,
   );
-  const stored = await latestProviderSession(db, conversationId, key);
-  const decision = conversation
-    ? decideConversationResume({ stored, continuing: input.continuesRunId != null })
-    : decideResume({
-        stored,
-        hash,
-        previousMessageId: input.previousMessageId ?? null,
-        checksMessages: chatTurn,
-        now,
-        idleMs: limits.idleMs,
-        cwd: chatTurn ? (input.projectRoots[0] ?? null) : null,
-        continuing: input.continuesRunId != null,
-      });
   const handoffReason = !(conversation && chatTurn)
     ? null
     : decision.resume

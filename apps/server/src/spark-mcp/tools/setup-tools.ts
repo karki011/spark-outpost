@@ -227,6 +227,7 @@ async function settings(context: SparkToolContext) {
       warnAtPercent: profile.compactWarnPercent,
       compactAtPercent: profile.compactAtPercent,
       compactAutomatically: profile.autoCompact,
+      compactAtNaturalBreak: profile.compactAtBreak,
       askAgainAfterKeepGoingAtPercent: reaskPercent(profile.compactAtPercent),
     },
     openPullRequestsAs: profile.prReadyForReview ? 'ready for review' : 'draft',
@@ -273,7 +274,7 @@ export const setupTools = [
     name: 'spark_settings',
     title: 'Spark settings',
     description:
-      'Non-secret Settings → Spark values: default autonomy level (Automatic, Full auto → PR) and what each means, personality, auto-continue wait, compaction thresholds (warn, compact, automatic), morning brief time, the anonymous daily heartbeat and macOS Full Disk Access (Settings → About), new-chat defaults, ticket attention rules and Claude Code plugins. Per-project Builders at once and Where Spark works are in spark_projects.',
+      'Non-secret Settings → Spark values: default autonomy level (Automatic, Full auto → PR) and what each means, personality, auto-continue wait, compaction thresholds (warn, compact, automatic, at a natural break), morning brief time, the anonymous daily heartbeat and macOS Full Disk Access (Settings → About), new-chat defaults, ticket attention rules and Claude Code plugins. Per-project Builders at once and Where Spark works are in spark_projects.',
     input: {},
     run: (_args, context) => settings(context),
   }),
