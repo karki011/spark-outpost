@@ -8,10 +8,11 @@ summary: What changed in recent releases and what to do next.
 
 ## Late November 2026
 
-| What changed                                            | What to do                |
-| ------------------------------------------------------- | ------------------------- |
-| Follow-up rounds, triggered workflows fold into one row | Open the row for details. |
-| **@** lists workflows                                   | Pick one and send.        |
+| What changed                                   | What to do                                    |
+| ---------------------------------------------- | --------------------------------------------- |
+| Follow-up rounds, triggered workflows fold     | Open the row for details.                     |
+| Worktrees holding `.env` or a running tab stay | [Where](where-spark-works.md#what-to-expect). |
+| **@** lists workflows                          | Pick one and send.                            |
 
 ## Mid-November 2026
 
@@ -43,21 +44,20 @@ summary: What changed in recent releases and what to do next.
 
 ## Early November 2026
 
-| What changed                         | What to do                                      |
-| ------------------------------------ | ----------------------------------------------- |
-| **Sign in with Slack** is on         | [Connect Slack](connect-slack.md).              |
-| Slack @mentions show on Home         | [Connect Slack](connect-slack.md#use-it).       |
-| Workflow triggers                    | [Workflow triggers](workflow-triggers.md).      |
-| Answer more cards from a device      | [Answer cards remotely](answer-remotely.md).    |
-| Agents do much more in Jira          | [Jira tools](jira-tools.md).                    |
-| Context rail: tools, ports, floats   | [See a chat's context](context-rail.md).        |
-| Build Sparks by talking to an agent  | [Build with an agent](build-with-an-agent.md).  |
-| Ask an agent per Spark; Spark effort | [Build with an agent](build-with-an-agent.md).  |
-| Workflows: run view, Runs, `@id` fix | [Follow a workflow run](workflow-runs.md).      |
-| Test run and Try it: nothing is sent | [Do a test run](test-run.md).                   |
-| Workflows can run on a schedule      | [Schedule a workflow](workflow-schedules.md).   |
-| Sparks page: Crew, skills and files  | [Make a Spark](sparks.md).                      |
-| Read anywhere; outside edits ask     | [Protected paths](protected-paths.md).          |
-| Relay, the follow-up Spark, removed  | Nothing; PR follow-up works as before.          |
-| Transcripts: drag the list's edge    | Nothing; double-click resets it.                |
-| Ask about a meeting, **Catch me up** | [Take meeting notes](meetings.md#ask-about-it). |
+| What changed                         | What to do                                     |
+| ------------------------------------ | ---------------------------------------------- |
+| **Sign in with Slack** is on         | [Connect Slack](connect-slack.md).             |
+| Slack @mentions show on Home         | [Connect Slack](connect-slack.md#use-it).      |
+| Workflow triggers                    | [Workflow triggers](workflow-triggers.md).     |
+| Answer more cards from a device      | [Answer cards remotely](answer-remotely.md).   |
+| Agents do much more in Jira          | [Jira tools](jira-tools.md).                   |
+| Context rail: tools, ports, floats   | [See a chat's context](context-rail.md).       |
+| Build Sparks by talking to an agent  | [Build with an agent](build-with-an-agent.md). |
+| Ask an agent per Spark; Spark effort | [Build with an agent](build-with-an-agent.md). |
+| Workflows: run view, Runs, `@id` fix | [Follow a workflow run](workflow-runs.md).     |
+| Test run and Try it: nothing is sent | [Do a test run](test-run.md).                  |
+| Workflows can run on a schedule      | [Schedule a workflow](workflow-schedules.md).  |
+| Sparks page: Crew, skills and files  | [Make a Spark](sparks.md).                     |
+| Read anywhere; outside edits ask     | [Protected paths](protected-paths.md).         |
+| Relay, the follow-up Spark, removed  | Nothing; PR follow-up works as before.         |
+| Transcripts: drag the list's edge    | Nothing; double-click resets it.               |
