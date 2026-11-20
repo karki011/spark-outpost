@@ -95,6 +95,7 @@ export async function compactInSession(
   const provider = deps.providers.get(target.session.provider);
   if (!provider) return null;
   const extras = await launchExtras(deps, input);
+  if (signal.aborted) return null;
   const audit = createAuditRecorder({ write: (entries) => log.write(entries) });
   const own = new AbortController();
   const stop = () => own.abort();

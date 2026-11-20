@@ -1,6 +1,7 @@
 import type { Db } from '../persistence/db.ts';
 import { agreedPlanFor } from '../plans/plan-staleness.ts';
 import {
+  CHAT_REQUESTS,
   chatSummaryPrompt,
   openIssues,
   taskDiff,
@@ -11,6 +12,7 @@ import { chatIdentifiers } from './identifiers.ts';
 import { loadLiveState } from './live-state.ts';
 
 const REQUEST_CHARS = 300;
+const NO_REQUESTS = { requests: [], total: 0 };
 
 async function latestTaskId(db: Db, conversationId: string): Promise<string | null> {
   const { rows } = await db.query<{ id: string }>(
@@ -21,8 +23,9 @@ async function latestTaskId(db: Db, conversationId: string): Promise<string | nu
 }
 
 async function datedRequests(db: Db, conversationId: string, runId: string) {
-  const { rows } = await db.query<DatedRequest>(
-    `SELECT left(m.content, $3) AS content, to_char(m.created_at, 'YYYY-MM-DD') AS "sentOn"
+  const { rows } = await db.query<DatedRequest & { total: number }>(
+    `SELECT left(m.content, $3) AS content, to_char(m.created_at, 'YYYY-MM-DD') AS "sentOn",
+       count(*) OVER ()::int AS total
      FROM messages m
      WHERE m.conversation_id = $1 AND m.role = 'user' AND btrim(m.content) <> ''
        AND m.id <> (SELECT user_message_id FROM runs WHERE id = $2)
@@ -35,10 +38,12 @@ async function datedRequests(db: Db, conversationId: string, runId: string) {
        )
        AND m.created_at > COALESCE((SELECT pf.assistant_history_from FROM profiles pf
          WHERE pf.assistant_conversation_id = $1), '-infinity'::timestamptz)
-     ORDER BY m.created_at, m.id`,
-    [conversationId, runId, REQUEST_CHARS],
+     ORDER BY m.created_at DESC, m.id DESC
+     LIMIT $4`,
+    [conversationId, runId, REQUEST_CHARS, CHAT_REQUESTS],
   );
-  return rows;
+  const requests = rows.map(({ content, sentOn }) => ({ content, sentOn })).reverse();
+  return { requests, total: rows[0]?.total ?? 0 };
 }
 
 export async function buildChatSummary(
@@ -47,17 +52,18 @@ export async function buildChatSummary(
 ): Promise<string> {
   const conversationId = input.identity.threadId;
   const root = input.projectRoots[0] ?? null;
-  const [agreedPlan, diff, issues, identifiers, requests, liveState] = await Promise.all([
+  const [agreedPlan, diff, issues, identifiers, dated, liveState] = await Promise.all([
     agreedPlanFor(db, conversationId, root).catch(() => null),
     taskDiff(root ?? undefined),
     latestTaskId(db, conversationId).then((taskId) => openIssues(db, taskId)),
     chatIdentifiers(db, input),
-    datedRequests(db, conversationId, input.identity.runId).catch(() => []),
+    datedRequests(db, conversationId, input.identity.runId).catch(() => NO_REQUESTS),
     loadLiveState(db, conversationId, root, []),
   ]);
   return chatSummaryPrompt({
     history: input.history,
-    requests,
+    requests: dated.requests,
+    requestTotal: dated.total,
     liveState,
     agreedPlan,
     changes: diff.files,

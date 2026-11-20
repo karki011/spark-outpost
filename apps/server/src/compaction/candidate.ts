@@ -1,15 +1,12 @@
 import type { RunMode } from '@spark-outpost/contracts';
-import {
-  openChatSessions,
-  type ContextReading,
-  type ProviderSessionRecord,
-} from '../persistence/provider-sessions.ts';
+import type { ContextReading, ProviderSessionRecord } from '../persistence/provider-sessions.ts';
 import { sessionCommands } from '../persistence/session-commands.ts';
 import type { TurnDeps } from '../workflow/agent-turn.ts';
 import type { RunInput } from '../workflow/run-input.ts';
-import { SESSION_IDLE_MS, decideResume } from '../workflow/session-decision.ts';
+import { SESSION_IDLE_MS } from '../workflow/session-decision.ts';
+import { turnResume } from '../workflow/turn-resume.ts';
 import { compactTakesInput, type CompactTarget } from './agent-compact.ts';
-import { readingOf, usedPercent } from './policy.ts';
+import { readingOf } from './policy.ts';
 
 export interface Candidate extends CompactTarget {
   reading: ContextReading;
@@ -18,24 +15,6 @@ export interface Candidate extends CompactTarget {
 function modeOf(agentKey: string): RunMode | null {
   const mode = agentKey.slice('chat:'.length);
   return mode === 'ask' || mode === 'do' || mode === 'chat' ? mode : null;
-}
-
-function resumes(
-  session: ProviderSessionRecord,
-  input: RunInput,
-  idleMs: number,
-  now: Date,
-): boolean {
-  return (
-    decideResume({
-      stored: session,
-      hash: session.settingsHash,
-      previousMessageId: input.previousMessageId ?? null,
-      checksMessages: true,
-      now,
-      idleMs,
-    }).resume !== null
-  );
 }
 
 async function lastPick(deps: TurnDeps, input: RunInput, session: ProviderSessionRecord) {
@@ -51,22 +30,17 @@ async function lastPick(deps: TurnDeps, input: RunInput, session: ProviderSessio
 
 export async function candidateFor(deps: TurnDeps, input: RunInput): Promise<Candidate | null> {
   const idleMs = deps.sessionLimits?.idleMs ?? SESSION_IDLE_MS;
-  const now = new Date();
-  const sessions = await openChatSessions(deps.db, input.identity.threadId);
-  let best: { session: ProviderSessionRecord; reading: ContextReading } | null = null;
-  for (const session of sessions) {
-    const reading = readingOf(session.contextUsed, session.contextSize);
-    if (!reading || session.provider !== input.provider) continue;
-    if (!resumes(session, input, idleMs, now)) continue;
-    if (!best || usedPercent(reading) > usedPercent(best.reading)) best = { session, reading };
-  }
-  if (!best) return null;
-  const commands = await sessionCommands(deps.db, best.session.id);
+  const { stored: session, decision } = await turnResume(deps.db, input, idleMs, new Date());
+  if (!session || session.closedAt !== null || !decision.resume) return null;
+  const reading = readingOf(session.contextUsed, session.contextSize);
+  if (!reading) return null;
+  const commands = await sessionCommands(deps.db, session.id);
   return {
-    ...best,
-    mode: modeOf(best.session.agentKey),
+    session,
+    reading,
+    mode: modeOf(session.agentKey),
     commands: commands.map((command) => command.name),
     compactTakesInput: compactTakesInput(commands),
-    ...(await lastPick(deps, input, best.session)),
+    ...(await lastPick(deps, input, session)),
   };
 }

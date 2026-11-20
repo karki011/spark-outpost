@@ -21,7 +21,7 @@ export const CHAT_SUMMARY_ROLE =
 
 export const CHAT_SUMMARY_TURNS = { count: 12, limit: 4_000 };
 
-const CHAT_REQUESTS = 30;
+export const CHAT_REQUESTS = 30;
 const CHAT_REQUEST_LIMIT = 300;
 
 const REVIEW_FINDINGS = 10;
@@ -49,6 +49,7 @@ export interface DatedRequest {
 export interface ChatSummaryContext {
   history: readonly HistoryTurn[];
   requests: readonly DatedRequest[];
+  requestTotal?: number;
   liveState: string;
   agreedPlan: string | null;
   changes: readonly ChangedFile[];
@@ -57,11 +58,11 @@ export interface ChatSummaryContext {
   identifiers: string;
 }
 
-function requestsText(requests: readonly DatedRequest[]): string {
+function requestsText(requests: readonly DatedRequest[], total: number): string {
   const shown = requests
     .slice(-CHAT_REQUESTS)
     .map((request) => `${request.sentOn}: ${cap(request.content, CHAT_REQUEST_LIMIT)}`);
-  const dropped = requests.length - shown.length;
+  const dropped = Math.max(total, requests.length) - shown.length;
   const lines = shown.map((request, index) => `${index + 1 + dropped}. ${request}`);
   return dropped > 0
     ? [`(${dropped} earlier requests not listed)`, ...lines].join('\n')
@@ -84,7 +85,7 @@ export function chatSummaryPrompt(context: ChatSummaryContext): string {
     section(
       'Your decisions and requests',
       context.requests.length > 0
-        ? `The user's own words, with the date each was sent.\n${requestsText(context.requests)}`
+        ? `The user's own words, with the date each was sent.\n${requestsText(context.requests, context.requestTotal ?? 0)}`
         : 'None.',
     ),
   );

@@ -254,6 +254,7 @@ export async function compactBeforeTurn(
   const compacting: Compacting = { candidate, trigger: decision.trigger };
   if (input.assistant) {
     const compacted = await compactNow(deps, lease, input, append, control, compacting);
+    if (compacted.kind !== 'continue') return compacted;
     await recordAssistantEvent(
       deps.db,
       input.workspaceId,

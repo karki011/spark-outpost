@@ -82,4 +82,26 @@ describe("Spark's summary of a chat", () => {
     expect(decisions).not.toContain('open a pull request');
     expect(decisions).not.toContain('Carry on');
   });
+
+  it('lists the latest 30 requests in order and counts the earlier ones', async () => {
+    for (let index = 0; index < 33; index += 1) await message(`request ${index}`, 'ui');
+    await message('Workflow says to open a pull request', 'workflow');
+    await outpostRequest('Push the release branch now', false);
+    const runId = await message('Carry on', 'ui');
+
+    const summary = await buildChatSummary(t.db, {
+      identity: { runId, threadId: chatId },
+      projectRoots: [],
+      history: [],
+    });
+
+    const decisions = decisionsOf(summary);
+    expect(decisions).toContain('(3 earlier requests not listed)');
+    expect(decisions).not.toMatch(/: request 2\n/);
+    expect(decisions).toMatch(/4\. \d{4}-\d{2}-\d{2}: request 3\n/);
+    expect(decisions).toMatch(/33\. \d{4}-\d{2}-\d{2}: request 32\n/);
+    expect(decisions.indexOf('request 3\n')).toBeLessThan(decisions.indexOf('request 32'));
+    expect(decisions).not.toContain('open a pull request');
+    expect(decisions).not.toContain('Push the release branch now');
+  });
 });
