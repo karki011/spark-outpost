@@ -14,6 +14,7 @@ import { resolveUserMcp } from '../../mcp/launch.ts';
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
 import { agentEnvironment, processEnvironment } from './agent-env.ts';
 import { cliEnvironment } from './agent-cli.ts';
+import { claudeReadsMcpOverStdin } from './cli-version.ts';
 import { supportsDo, type AgentDefinition } from './agents.ts';
 import { CODEX_PLAIN_SANDBOX_NOTE, prepareCodexLaunch } from './codex-launch.ts';
 import { codexGitWrites } from './codex-permissions.ts';
@@ -252,6 +253,7 @@ export async function spawnConnection(
       env,
       readsFiles: workspace.policy !== null,
       tracksBackground: definition.cli === 'claude',
+      mcpOverStdin: await claudeReadsMcpOverStdin(located),
       key: plan.key,
       cleanup,
     });

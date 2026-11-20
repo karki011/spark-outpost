@@ -53,7 +53,13 @@ async function message(conversationId: string, role: 'user' | 'assistant', conte
 const usage = (costUsd: number | null) =>
   ({ kind: 'usage', contextUsed: 10, contextSize: 100, costUsd }) as const;
 
-async function completeTurn(input: RunInput, sessionId: string, reply: string, cost = 0.015) {
+async function completeTurn(
+  input: RunInput,
+  sessionId: string,
+  reply: string,
+  cost = 0.015,
+  title?: string,
+) {
   const turn = await prepareTurnSession(t.db, input, SESSION_LIMITS);
   if (!turn) throw new Error('The turn was not tracked.');
   await turn.started({
@@ -63,6 +69,7 @@ async function completeTurn(input: RunInput, sessionId: string, reply: string, c
     additionalDirectories: [],
     continued: turn.target.resume?.sessionId === sessionId,
     freshReason: turn.target.freshReason,
+    ...(title ? { title } : {}),
   });
   const recorded = await turn.usage(usage(cost));
   const messageId = await message(input.identity.threadId, 'assistant', reply);
@@ -86,6 +93,26 @@ describe('provider sessions across chat turns', () => {
     expect((await second.turn.usage(usage(null))).costUsd).toBeNull();
     const fresh = await completeTurn(chatTurnInput(t, id, randomUUID()), 's-2', 'New.', 0.02);
     expect(fresh.recorded.costUsd).toBe(0.02);
+  });
+
+  it('keeps the title the agent stored and offers it when the session is resumed', async () => {
+    const id = await conversation();
+    const first = await completeTurn(chatTurnInput(t, id, null), 's-1', 'Hi.', 0, 'Pelican');
+    const second = await completeTurn(chatTurnInput(t, id, first.messageId), 's-1', 'Again.', 0);
+    expect(second.turn.target.resume?.title).toBe('Pelican');
+    const third = await completeTurn(
+      chatTurnInput(t, id, second.messageId),
+      's-1',
+      'Renamed.',
+      0,
+      'Birds',
+    );
+    expect(third.turn.target.resume?.title).toBe('Pelican');
+    const { rows } = await t.db.query<{ agent_title: string }>(
+      'SELECT agent_title FROM provider_sessions WHERE conversation_id = $1 AND closed_at IS NULL',
+      [id],
+    );
+    expect(rows).toEqual([{ agent_title: 'Birds' }]);
   });
 
   it('saves no session when the chat was deleted while the turn ran', async () => {

@@ -1,6 +1,7 @@
 import { chmod, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runCommand, type RunCommand } from '../../setup/command.ts';
+import { atLeast, cliVersion } from './cli-version.ts';
 import { CODEX_READ_ONLY_MODE, codexPermissionProfiles } from './codex-permissions.ts';
 
 export const CODEX_PROFILES_FROM = '0.149.1';
@@ -9,38 +10,11 @@ const STARTUP_PROFILE = ':read-only';
 export const CODEX_PLAIN_SANDBOX_NOTE =
   "This Codex can't use Spark's secret-file protection, so it ran with Codex's own sandbox instead";
 
-const VERSION_TIMEOUT_MS = 10_000;
 const CONFIG_FAILURE =
   /failed to load (?:workspace requirements|configuration)|default_permissions/i;
-const versions = new Map<string, Promise<string | null>>();
-
-function parts(version: string): number[] {
-  return version.split('.').map((part) => Number.parseInt(part, 10));
-}
-
-export function atLeast(version: string, minimum: string): boolean {
-  const have = parts(version);
-  const need = parts(minimum);
-  for (let index = 0; index < need.length; index += 1) {
-    const difference = (have[index] ?? 0) - (need[index] ?? 0);
-    if (difference !== 0) return difference > 0;
-  }
-  return true;
-}
 
 export function supportsPermissionProfiles(version: string | null): boolean {
   return version === null || atLeast(version, CODEX_PROFILES_FROM);
-}
-
-export function codexVersion(path: string, run: RunCommand = runCommand): Promise<string | null> {
-  const known = versions.get(path);
-  if (known) return known;
-  const found = run(path, ['--version'], VERSION_TIMEOUT_MS).then(
-    (result) => (result.code === 0 ? (result.stdout.match(/\d+\.\d+\.\d+/)?.[0] ?? null) : null),
-    () => null,
-  );
-  versions.set(path, found);
-  return found;
 }
 
 export function isCodexConfigFailure(message: string): boolean {
@@ -101,7 +75,7 @@ export async function prepareCodexLaunch(
 ): Promise<CodexLaunch> {
   const path = cli.CODEX_PATH;
   if (!path) return { cli, profiles: !legacy, version: null };
-  const version = await codexVersion(path, run);
+  const version = await cliVersion(path, run);
   const capable = supportsPermissionProfiles(version);
   const profiles = capable && !legacy;
   const wrapped =

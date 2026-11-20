@@ -99,10 +99,18 @@ export async function eventsTurn(
   await update(search('twin-2', 'tools'));
   await update(done('twin-1', 'steps found'));
   if (text.includes('#hang')) {
+    const settles = text.includes('#settle');
     await update(thought('Still waiting on the second search'));
-    await new Promise((_resolve, reject) => {
-      signal.addEventListener('abort', () => reject(new Error('aborted')));
+    await new Promise((resolve, reject) => {
+      signal.addEventListener('abort', () =>
+        settles ? resolve(undefined) : reject(new Error('aborted')),
+      );
     });
+    if (settles) {
+      await update(done('twin-2', 'tools found'));
+      await say('Written after Stop.');
+      return 'cancelled';
+    }
   }
   await update(done('twin-2', 'tools found'));
   await say('Both searches finished.');

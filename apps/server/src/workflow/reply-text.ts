@@ -1,18 +1,29 @@
+import { createHash } from 'node:crypto';
 import type { RunEvent } from '@spark-outpost/contracts';
 import { newId } from '../persistence/ids.ts';
-import type { MessagePhase } from '../providers/provider.ts';
+import type { AgentMessageRef } from '../persistence/run-events.ts';
+import type { MessagePhase, ProviderOutput } from '../providers/provider.ts';
 import { runEvents } from './run-events.ts';
 
 interface ReplyResult {
   text: string;
   messageId: string | null;
   finalReply: string | null;
+  agentMessages: AgentMessageRef[];
 }
 
 interface ReplyText {
   say(delta: string): Promise<void>;
   mark(phase: MessagePhase | undefined, held: number): boolean;
+  noteAgent(output: Extract<ProviderOutput, { kind: 'text_delta' }>): void;
+  text(): string;
   result(): ReplyResult;
+}
+
+const MESSAGE_SEPARATOR = '\n\n';
+
+function fingerprint(text: string): string {
+  return `sha256:${createHash('sha256').update(text).digest('hex')}`;
 }
 
 export function createReplyText(append: (event: RunEvent) => Promise<unknown>): ReplyText {
@@ -20,6 +31,7 @@ export function createReplyText(append: (event: RunEvent) => Promise<unknown>): 
   let text = '';
   let finalStart: number | null = null;
   let inFinal = false;
+  const agentTexts = new Map<string, string>();
   const finalReply = () => (finalStart === null ? null : text.slice(finalStart).trim() || null);
   return {
     async say(delta) {
@@ -38,6 +50,17 @@ export function createReplyText(append: (event: RunEvent) => Promise<unknown>): 
       inFinal = final;
       return starts;
     },
-    result: () => ({ text, messageId, finalReply: finalReply() }),
+    noteAgent(output) {
+      if (!output.messageId) return;
+      const raw = output.newMessage ? output.delta.slice(MESSAGE_SEPARATOR.length) : output.delta;
+      agentTexts.set(output.messageId, (agentTexts.get(output.messageId) ?? '') + raw);
+    },
+    text: () => text,
+    result: () => ({
+      text,
+      messageId,
+      finalReply: finalReply(),
+      agentMessages: [...agentTexts].map(([id, said]) => ({ id, fingerprint: fingerprint(said) })),
+    }),
   };
 }

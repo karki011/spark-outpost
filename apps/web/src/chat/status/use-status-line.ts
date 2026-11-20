@@ -7,10 +7,17 @@ import { latestWork, type PendingEntry, type StatusStore, type Worker } from './
 
 export const DONE_SHOWN_MS = 8_000;
 export const SLOW_STEP_MS = 10_000;
+export const QUIET_MS = 60_000;
 
 export type StatusLine =
   | { kind: 'waiting'; entries: readonly PendingEntry[] }
-  | { kind: 'running'; worker: Worker; activity: StepActivity | null; since: number | null }
+  | {
+      kind: 'running';
+      worker: Worker;
+      activity: StepActivity | null;
+      since: number | null;
+      quietSince: number | null;
+    }
   | { kind: 'ended'; word: string; elapsed: number | null };
 
 const ENDED_WORDS: Record<TerminalRunStatus, string> = {
@@ -55,6 +62,8 @@ export function useStatusLine({
   const work = latestWork(snapshot.live);
   if (work || activeRunId) {
     const step = work?.step ?? null;
+    const activity = step ? stepActivity(step) : null;
+    const thinking = activity?.kind === 'think';
     return {
       kind: 'running',
       worker: work ?? {
@@ -63,8 +72,9 @@ export function useStatusLine({
         provider,
         kind: 'agent',
       },
-      activity: step ? stepActivity(step) : null,
+      activity,
       since: step ? work!.since : null,
+      quietSince: work && !work.doing && (!step || thinking) ? work.outputAt : null,
     };
   }
   if (!ended || !isTerminalRunStatus(ended.status)) return null;
@@ -81,6 +91,17 @@ export function useHeadInView(store: StatusStore, id: string | null): boolean {
     store.subscribe,
     () => id !== null && store.snapshot().headsInView.includes(id),
   );
+}
+
+export function useQuietPassed(quietSince: number | null): boolean {
+  const [passedFor, setPassedFor] = useState<number | null>(null);
+  useEffect(() => {
+    if (quietSince === null) return;
+    const wait = Math.max(0, quietSince + QUIET_MS - Date.now());
+    const timer = setTimeout(() => setPassedFor(quietSince), wait);
+    return () => clearTimeout(timer);
+  }, [quietSince]);
+  return quietSince !== null && passedFor === quietSince;
 }
 
 export function useNow(ticking: boolean): number {

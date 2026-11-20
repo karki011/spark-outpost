@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                   | What to do                                                 |
 | ---------------------------------------------- | ---------------------------------------------------------- |
 | Mid-turn mode switches                         | [Modes](modes-and-levels.md#what-spark-does-in-each-mode). |
+| **Stopped** steps; **No output for 2m**        | [Follow a turn](follow-a-turn.md).                         |
 | Meeting card shows every button on one row     | Nothing to do.                                             |
 | **Health** in Settings                         | [Check Health](trouble-setup-and-reset.md#check-health).   |
 | Follow-up rounds, triggered workflows fold     | Open the row for details.                                  |
@@ -61,4 +62,3 @@ summary: What changed in recent releases and what to do next.
 | Workflows: run view, Runs, `@id` fix      | [Follow a workflow run](workflow-runs.md).                            |
 | Test run and Try it: nothing is sent      | [Do a test run](test-run.md).                                         |
 | Sparks page: Crew, skills and files       | [Make a Spark](sparks.md).                                            |
-| Read anywhere; outside edits ask          | [Protected paths](protected-paths.md).                                |
