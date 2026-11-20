@@ -5,10 +5,15 @@ import { useChatWorkspace } from '../chat/project/use-chat-workspace.ts';
 export function AdoptPullSection({ conversationId }: { conversationId: string }) {
   const workspace = useChatWorkspace(conversationId);
   const data = workspace.data;
-  if (!data?.projectId || data.current || data.place !== 'worktree') return null;
+  if (!data?.projectId || data.place !== 'worktree') return null;
+  if (data.current && !data.current.worktree) return null;
   return (
     <section className="wauto" aria-label="Pull request">
-      <AdoptPullList conversationId={conversationId} projectId={data.projectId} />
+      <AdoptPullList
+        conversationId={conversationId}
+        projectId={data.projectId}
+        switchesFrom={data.current?.branch ?? null}
+      />
     </section>
   );
 }

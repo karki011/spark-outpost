@@ -1,4 +1,6 @@
 import { useId, type KeyboardEvent } from 'react';
+import type { TeammateFace as Face } from '@spark-outpost/contracts';
+import { TeammateFace } from '../teammates/TeammateFace.tsx';
 import { TickIcon } from '../ui/icons.tsx';
 import {
   NO_REVIEWER_KEY,
@@ -31,11 +33,23 @@ function moveFocus(event: KeyboardEvent<HTMLDivElement>) {
 
 interface OptionProps {
   label: string;
+  detail?: string | undefined;
+  faces?: readonly Face[] | undefined;
   selected: boolean;
   onPick: () => void;
 }
 
-function Option({ label, selected, onPick }: OptionProps) {
+function Faces({ faces }: { faces: readonly Face[] }) {
+  return (
+    <span className="ar-faces" aria-hidden="true">
+      {faces.map((face, index) => (
+        <TeammateFace key={index} face={face} size={18} />
+      ))}
+    </span>
+  );
+}
+
+function Option({ label, detail, faces, selected, onPick }: OptionProps) {
   return (
     <div
       role="option"
@@ -49,7 +63,11 @@ function Option({ label, selected, onPick }: OptionProps) {
         onPick();
       }}
     >
-      <span className="ar-option-name">{label}</span>
+      {faces && faces.length > 0 && <Faces faces={faces} />}
+      <span className="ar-option-name">
+        {label}
+        {detail && <small>{detail}</small>}
+      </span>
       {selected && <TickIcon />}
     </div>
   );
@@ -77,6 +95,8 @@ function Group({
         <Option
           key={reviewerKey(option)}
           label={option.name}
+          detail={option.detail}
+          faces={option.faces}
           selected={reviewerKey(option) === value}
           onPick={() => onPick(option)}
         />

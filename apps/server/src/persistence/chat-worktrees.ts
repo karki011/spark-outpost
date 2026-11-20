@@ -190,6 +190,8 @@ export async function sweepableChatWorktrees(db: Queryable): Promise<ChatWorktre
          SELECT 1 FROM conversations c WHERE c.id = cw.conversation_id
            AND c.archived_at IS NOT NULL AND cw.kept_dirty_at >= c.archived_at
            AND cw.kept_dirty_at > now() - interval '1 day')
+       AND (cw.conversation_id IS NOT NULL OR cw.kept_dirty_at IS NULL
+         OR cw.kept_dirty_at <= now() - interval '1 day')
      ORDER BY cw.created_at`,
   );
   return rows.map(toRecord);
@@ -221,6 +223,22 @@ export async function allLiveChatWorktrees(db: Queryable): Promise<ChatWorktree[
 
 export async function markChatWorktreeRemoved(db: Queryable, id: string): Promise<void> {
   await db.query('UPDATE chat_worktrees SET removed_at = now() WHERE id = $1', [id]);
+}
+
+export async function repointChatWorktree(
+  db: Queryable,
+  id: string,
+  branch: { name: string; base: string; commit: string },
+): Promise<void> {
+  await db.query(
+    `UPDATE chat_worktrees SET
+       base_commit = CASE WHEN branch = $2 THEN base_commit ELSE $4 END,
+       base_ref = CASE WHEN branch = $2 THEN base_ref ELSE NULL END,
+       landed_commit = CASE WHEN branch = $2 THEN landed_commit ELSE NULL END,
+       branch = $2, base_branch = $3, owns_branch = true
+     WHERE id = $1`,
+    [id, branch.name, branch.base, branch.commit],
+  );
 }
 
 export async function markChatWorktreeKeptDirty(db: Queryable, id: string): Promise<void> {

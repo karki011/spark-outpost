@@ -47,6 +47,7 @@ export type UpdateChatWorkspaceRequest = z.infer<typeof updateChatWorkspaceReque
 
 export const projectBranchesSchema = z.object({
   current: z.string().nullable(),
+  defaultBranch: z.string().nullable().default(null),
   local: z.array(z.string()),
   remote: z.array(z.string()),
   hasRemote: z.boolean().default(false),
@@ -87,6 +88,7 @@ export type OpenPulls = z.infer<typeof openPullsSchema>;
 export const adoptPullRequestSchema = z.object({
   projectId: z.uuid(),
   number: z.number().int().positive(),
+  url: z.string().url().max(2000).optional(),
 });
 export type AdoptPullRequest = z.infer<typeof adoptPullRequestSchema>;
 

@@ -11,6 +11,7 @@ import { PlanMeter } from '../usage/PlanMeter.tsx';
 import { costSummary, runIdentities, type CostRow, type CostSlice } from './cost-model.ts';
 import { useModelNamer } from './model-names.ts';
 import { SubagentCosts } from './SubagentCosts.tsx';
+import { ToolUsage } from './ToolUsage.tsx';
 
 const PROVIDER_COLORS: Record<string, string> = {
   claude: 'var(--c-claude)',
@@ -175,7 +176,10 @@ export function CostPane({ task, runs = [], agents = [], onAudit, conversationId
         </ul>
       )}
       {conversationId && (
-        <SubagentCosts conversationId={conversationId} runIds={task.runs.map((run) => run.id)} />
+        <>
+          <SubagentCosts conversationId={conversationId} runIds={task.runs.map((run) => run.id)} />
+          <ToolUsage conversationId={conversationId} runIds={task.runs.map((run) => run.id)} />
+        </>
       )}
       <p className="wnote">
         {estimated

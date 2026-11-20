@@ -5,7 +5,7 @@ export const COMMAND_CHARS = 44;
 const PHRASE_CHARS = 56;
 const ELLIPSIS = ' …';
 
-const INLINE_ENV = /\b([A-Za-z_][A-Za-z0-9_]*)=("[^"]*"|'[^']*'|\S+)/g;
+const INLINE_ENV = /\b([A-Za-z_][A-Za-z0-9_\u200B-\u200D\u2060\uFEFF]*)=("[^"]*"|'[^']*'|\S+)/g;
 const SECRET_FLAG =
   /(--?(?:token|access-token|password|passwd|secret|client-secret|api-?key|auth)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi;
 const LEADING_ENV = /^(?:(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|\S*)\s+)+/;

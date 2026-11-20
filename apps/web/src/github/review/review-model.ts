@@ -76,3 +76,16 @@ export function postedLink(review: GithubReview): PostedLink {
   }
   return { kind: 'text' };
 }
+
+export function reviewerLine(review: Pick<GithubReview, 'reviewer'>): string {
+  const kind = review.reviewer.kind === 'workflow' ? 'workflow' : 'Spark';
+  return `By ${kind} ${review.reviewer.name}`;
+}
+
+export function notPostedNote(
+  review: Pick<GithubReview, 'state' | 'posted' | 'reviewer'>,
+  mayPost: boolean | undefined,
+): string | null {
+  if (!mayPost || review.state !== 'done' || review.posted.length > 0) return null;
+  return `Nothing posted to GitHub. ${review.reviewer.name} posts or approves only when its instructions say to, and only if posting was on when the review started.`;
+}

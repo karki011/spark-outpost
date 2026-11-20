@@ -79,7 +79,7 @@ test('hiding and showing the sidebar beside the work panel never flips it to flo
   await page.setViewportSize({ width: 1400, height: 800 });
   const show = header(page).getByRole('button', { name: 'Show work panel' });
   await expect(async () => {
-    if (await show.isVisible()) await show.click();
+    if (await show.isVisible()) await show.click({ timeout: 1000 });
     await expect(workPanel(page)).toBeVisible({ timeout: 1000 });
   }).toPass();
   await expect(sidebar(page)).toBeVisible();

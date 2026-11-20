@@ -264,3 +264,15 @@
 .wsec.agreed + .wsec {
   margin-top: 14px;
 }
+
+.lwork {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: -2px 0 4px 12px;
+}
+
+.lwork .wnote {
+  margin: 0;
+}

@@ -1,35 +1,14 @@
 import './adopt-pull.css';
 import { useId, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  adoptPullResultSchema,
-  openPullsSchema,
-  type AdoptPullResult,
-  type OpenPull,
-  type OpenPulls,
-} from '@spark-outpost/contracts';
-import { request } from '../../api/client.ts';
+import { useQuery } from '@tanstack/react-query';
+import type { OpenPull } from '@spark-outpost/contracts';
 import { useRemoteClient } from '../../phone/use-remote-client.ts';
 import { ChevronIcon } from '../../ui/icons.tsx';
 import { PullRequestIcon } from '../rail/RailIcons.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
-import { workspaceKeys } from './use-chat-workspace.ts';
+import { adoptApi, adoptKeys, useAdoptPull } from './adopt-api.ts';
 
 export const ADOPT_LABEL = 'Work on a pull request…';
-
-const adoptKeys = {
-  open: (projectId: string) => ['projects', projectId, 'pull-requests', 'open'] as const,
-};
-
-const adoptApi = {
-  open: (projectId: string): Promise<OpenPulls> =>
-    request(openPullsSchema, `/projects/${projectId}/pull-requests/open`),
-  adopt: (conversationId: string, projectId: string, number: number): Promise<AdoptPullResult> =>
-    request(adoptPullResultSchema, `/conversations/${conversationId}/workspace/adopt`, {
-      method: 'POST',
-      body: JSON.stringify({ projectId, number }),
-    }),
-};
 
 function pullFacts(pull: OpenPull): string {
   const where = `${pull.head} → ${pull.base}`;
@@ -41,24 +20,23 @@ function pullFacts(pull: OpenPull): string {
 interface AdoptPullListProps {
   conversationId: string;
   projectId: string;
+  switchesFrom?: string | null;
 }
 
-export function AdoptPullList({ conversationId, projectId }: AdoptPullListProps) {
+export function AdoptPullList({
+  conversationId,
+  projectId,
+  switchesFrom = null,
+}: AdoptPullListProps) {
   const [open, setOpen] = useState(false);
   const listId = useId();
-  const queryClient = useQueryClient();
   const { remote } = useRemoteClient();
   const pulls = useQuery({
     queryKey: adoptKeys.open(projectId),
     queryFn: () => adoptApi.open(projectId),
     enabled: open,
   });
-  const adopt = useMutation({
-    mutationFn: (number: number) => adoptApi.adopt(conversationId, projectId, number),
-    onSuccess: (result) => {
-      queryClient.setQueryData(workspaceKeys.chat(conversationId), result.workspace);
-    },
-  });
+  const adopt = useAdoptPull(conversationId, projectId);
   if (remote) return null;
   const list = pulls.data?.pulls ?? [];
   return (
@@ -90,7 +68,7 @@ export function AdoptPullList({ conversationId, projectId }: AdoptPullListProps)
                   type="button"
                   className="adopt-row"
                   disabled={adopt.isPending}
-                  onClick={() => adopt.mutate(pull.number)}
+                  onClick={() => adopt.mutate({ number: pull.number })}
                 >
                   <b>
                     #{pull.number} {pull.title}
@@ -102,7 +80,9 @@ export function AdoptPullList({ conversationId, projectId }: AdoptPullListProps)
           </ul>
         )}
         <p className="adopt-hint">
-          The chat checks out its branch and may push to it, never force. Nothing merges.
+          {switchesFrom
+            ? `This chat switches to its branch; earlier work stays on ${switchesFrom}. Commit or discard changes first.`
+            : 'The chat checks out its branch and may push to it, never force. Nothing merges.'}
         </p>
         {adopt.data && (
           <p className="adopt-done" role="status">

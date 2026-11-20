@@ -5,8 +5,10 @@ import { Glyph } from '../../tickets/ticket-icons.tsx';
 import { useReviewSettings } from '../use-review-settings.ts';
 import {
   isStale,
+  notPostedNote,
   postedLink,
   reviewAction,
+  reviewerLine,
   stateLabel,
   type ReviewAction,
 } from './review-model.ts';
@@ -78,6 +80,7 @@ export function ReviewBlock({ item }: { item: GithubInboxItem }) {
   const { reviews, latest, busy, actionError, start, stop } = usePullReview(item.id);
   const chosen = settings ? settings.reviewer !== null : undefined;
   const action = reviewAction(latest, chosen);
+  const notPosted = latest ? notPostedNote(latest, settings?.mayPost) : null;
   const run = () => {
     if (busy || !action || action === 'pick-reviewer') return;
     if (action !== 'stop') start();
@@ -91,11 +94,12 @@ export function ReviewBlock({ item }: { item: GithubInboxItem }) {
         {latest && <StateWord review={latest} />}
       </div>
       {latest ? (
-        <p className="gh-review-by">By {latest.reviewer.name}</p>
+        <p className="gh-review-by">{reviewerLine(latest)}</p>
       ) : (
         reviews.isSuccess && <p className="gh-review-note">No review yet</p>
       )}
       {latest && <Outcome review={latest} headSha={item.headSha} />}
+      {notPosted && <p className="gh-review-note">{notPosted}</p>}
       {actionError && (
         <p className="gh-review-error" role="alert">
           {actionError}

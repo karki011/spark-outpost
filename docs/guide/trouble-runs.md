@@ -10,8 +10,8 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 
 - **You see:** a chat not moving.
 - **Why:** it usually waits for you or runs a long command.
-- **Fix:** read the end of the turn: a card waits there, or **Working** runs on. **No output for 5m** means the agent has sent nothing for that long; Spark never stops it for that.
-- **Still stuck:** **Stop**, then send a new message.
+- **Fix:** read the end of the turn: a card waits there, or **Working** runs on. **No output for 5m** only reports silence; Spark never stops it.
+- **Still stuck:** **Stop**, then send again.
 
 ## A run stopped with the app
 
@@ -50,3 +50,9 @@ summary: Fixes for a run that seems stuck, a run that stopped with the app, an e
 - **You see:** "Not published: …" ending a reply, or no PR at **Full auto → PR**.
 - **Why:** the publish step failed or was stopped; a later turn changing no files doesn't retry.
 - **Fix:** ask the agent to push and open the PR, or [ship](ship-and-pull-requests.md) it yourself.
+
+## Spark’s mod didn’t load
+
+- **You see:** "Spark’s mod didn’t load: …" in a Claude Terminal session.
+- **Why:** an organization setting or Claude Code kept it out.
+- **Fix:** nothing; phone messages and **Stop** use keys instead.

@@ -1,10 +1,15 @@
 import type { PrOpenedVia } from '@spark-outpost/contracts';
 import { redactValue } from '../audit/redact.ts';
 import { insertFinishedRunEntries } from '../persistence/audit-log.ts';
-import type { Db } from '../persistence/db.ts';
-import { trackPull, type PullAddress, type Tracked } from '../persistence/tracked-pulls.ts';
+import type { Db, Queryable } from '../persistence/db.ts';
+import {
+  trackPull,
+  type PullAddress,
+  type Tracked,
+  type TrackedPull,
+} from '../persistence/tracked-pulls.ts';
 import { parsePullUrl } from '../tickets/pull-status.ts';
-import { chatRepoOf, chatRepos, ownedBranch } from './chat-repos.ts';
+import { chatRepoOf, chatRepos, checkedOutHere, ownedBranch } from './chat-repos.ts';
 
 export interface PullSighting {
   conversationId: string;
@@ -118,4 +123,18 @@ export async function trackChatPull(db: Db, sighting: PullSighting): Promise<Tra
   const auditRun = sighting.runId ?? chat.run_id;
   if (tracked?.created && auditRun) await audit(db, auditRun, sighting, tracked);
   return tracked;
+}
+
+const OPENED_BY_CHAT: ReadonlySet<PrOpenedVia> = new Set(['ship', 'agent']);
+
+export async function withOwnHead<T extends TrackedPull>(
+  db: Queryable,
+  before: TrackedPull,
+  read: T,
+): Promise<T> {
+  const guessed = before.followUp && !read.followUp && read.branch !== before.branch;
+  if (!guessed || !OPENED_BY_CHAT.has(before.openedVia)) return read;
+  const repos = await chatRepos(db, before.conversationId);
+  const here = checkedOutHere(repos, before, read.branch);
+  return here ? { ...read, followUp: true } : read;
 }

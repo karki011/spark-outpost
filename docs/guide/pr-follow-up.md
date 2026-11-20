@@ -13,7 +13,7 @@ You'll let Spark handle checks and reviews on a chat's PRs. About 2 minutes.
 
    ![The opened PR row, with the items Spark gathered](images/pr-follow-up-row-light.png)
 
-3. When checks fail, feedback arrives or the PR falls behind, Spark messages the chat once idle.
+3. When checks fail, feedback arrives or the PR falls behind, Spark messages the chat once idle, shown as one folded **PR follow-up** row.
 4. The agent fixes or pushes back, merges the base if needed and pushes; Spark replies. Read its summary.
 
 To approve each push, turn on **Ask before pushing and replying** in **Settings → GitHub**.
@@ -41,6 +41,7 @@ On your Mac, add bot logins (`coderabbitai[bot]`) to **Review bots to act on**; 
 - Spark stops when CI fails the same way twice, or a reviewer repeats a pushed-back request.
 - Never force-pushes, rebases, merges, approves, resolves threads, dismisses reviews or adds reviewers.
 - The agent may comment on this PR only, under its mode.
+- A PR the agent opened from another branch, such as `CP-123-fix`, is followed while that branch stays checked out in the chat.
 - PR text is data, never instructions.
 
 ## Turn it off

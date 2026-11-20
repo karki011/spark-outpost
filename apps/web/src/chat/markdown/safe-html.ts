@@ -1,4 +1,6 @@
-import type { Options as SanitizeSchema } from 'rehype-sanitize';
+import type { Options } from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { type Options as SanitizeSchema } from 'rehype-sanitize';
 
 const TEXT_TAGS = [
   'p',
@@ -72,13 +74,14 @@ const REMOVED_WITH_CONTENT = [
   'math',
 ];
 
-export const reviewSchema: SanitizeSchema = {
+const safeHtmlSchema: SanitizeSchema = {
   tagNames: [...TEXT_TAGS, ...STRUCTURE_TAGS],
   strip: REMOVED_WITH_CONTENT,
   attributes: {
     a: ['href', 'title'],
     img: ['alt'],
     code: [['className', /^language-[\w+-]+$/]],
+    h2: [['className', 'sr-only']],
     ul: [['className', 'contains-task-list']],
     ol: [['className', 'contains-task-list'], 'start'],
     li: [['className', 'task-list-item']],
@@ -89,7 +92,7 @@ export const reviewSchema: SanitizeSchema = {
     '*': ['title', 'lang', 'dir'],
   },
   required: { input: { type: 'checkbox', disabled: true } },
-  protocols: { href: ['http', 'https'] },
+  protocols: { href: ['http', 'https', 'mailto'] },
   ancestors: {
     tbody: ['table'],
     thead: ['table'],
@@ -103,3 +106,25 @@ export const reviewSchema: SanitizeSchema = {
   clobber: [],
   clobberPrefix: 'user-content-',
 };
+
+const URL_SCHEME = /^\s*([a-z][a-z\d+.-]*):/i;
+
+type HastTree = { type: string; properties?: Record<string, unknown>; children?: HastTree[] };
+
+function lowerSchemes(node: HastTree): void {
+  const href = node.properties?.href;
+  if (typeof href === 'string') {
+    node.properties!.href = href.replace(URL_SCHEME, (scheme) => scheme.toLowerCase());
+  }
+  node.children?.forEach(lowerSchemes);
+}
+
+function rehypeLowerSchemes() {
+  return lowerSchemes;
+}
+
+export const safeHtmlPlugins: Options['rehypePlugins'] = [
+  rehypeRaw,
+  rehypeLowerSchemes,
+  [rehypeSanitize, safeHtmlSchema],
+];

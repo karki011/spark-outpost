@@ -1,4 +1,5 @@
 import type {
+  TerminalMeasure,
   CostSource,
   NativeTerminalProvider,
   NativeTerminalReported,
@@ -62,8 +63,13 @@ export async function nativeTerminalUsage(
   conversationId: string,
 ): Promise<NativeTerminalUsage> {
   const [session, runs, steps, reported, promptCache] = await Promise.all([
-    db.query<{ provider: NativeTerminalProvider; stopped: boolean }>(
-      `SELECT provider, state = 'exited' AND reason = $2 AS stopped
+    db.query<{
+      provider: NativeTerminalProvider;
+      stopped: boolean;
+      measure: Omit<TerminalMeasure, 'at'> | null;
+      measured_at: Date | null;
+    }>(
+      `SELECT provider, state = 'exited' AND reason = $2 AS stopped, measure, measured_at
        FROM native_terminal_sessions WHERE conversation_id = $1`,
       [conversationId, STOPPED_BY_USER],
     ),
@@ -104,7 +110,15 @@ export async function nativeTerminalUsage(
     reported: reportedTotals(reported.rows),
     stopped: session.rows[0]?.stopped ?? false,
     promptCache,
+    measure: measureOf(session.rows[0]),
   };
+}
+
+function measureOf(
+  row: { measure: Omit<TerminalMeasure, 'at'> | null; measured_at: Date | null } | undefined,
+): TerminalMeasure | null {
+  if (!row?.measure || !row.measured_at) return null;
+  return { ...row.measure, at: row.measured_at.toISOString() };
 }
 
 export interface NativeTurnTotals {

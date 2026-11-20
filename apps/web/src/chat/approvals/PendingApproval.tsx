@@ -213,7 +213,7 @@ export function PendingApproval({ approval, agent, repo, onDecided }: PendingApp
         {subjectLine && <CommandPreview command={subjectLine} />}
         {plan && (
           <div className="appr-plan" role="region" tabIndex={0} aria-label="Proposed plan">
-            <Markdown text={plan} />
+            <Markdown text={plan} html={false} />
           </div>
         )}
         {singleDiff && (
