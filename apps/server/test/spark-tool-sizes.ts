@@ -18,6 +18,8 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   outpost_draft: false,
   outpost_start: false,
   chat_messages: true,
+  sub_chats: false,
+  sub_chat_stop: false,
   calendar_read: false,
   calendar_edit: false,
   meetings: false,
@@ -42,6 +44,7 @@ export const SESSION_CASES = {
     pull_requests: true,
     github: true,
     outpost_draft: true,
+    sub_chats: true,
   },
   'plain chat with workflows': { ...NOTHING_AVAILABLE, crew_flows: true },
   'chat in an outpost, nothing connected': {
@@ -98,7 +101,8 @@ export async function advertisedSize(
   available: SparkAvailability,
   scope: SparkScope = SCOPE,
 ): Promise<AdvertisedSize> {
-  const server = sparkMcpServer({} as SparkToolDeps, scope, available);
+  const offered = scope.assistant ? { ...available, sub_chat_stop: true } : available;
+  const server = sparkMcpServer({} as SparkToolDeps, scope, offered);
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'spark-tool-sizes', version: '1.0.0' });
   await server.connect(serverSide);

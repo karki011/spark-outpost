@@ -1,8 +1,12 @@
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { pickRemote, remoteHasBranch, runGit } from '../ship/git.ts';
-import type { StackGit } from './ports.ts';
 
 export const NO_REMOTE = 'This repository has no git remote.';
+
+export interface StackGit {
+  isAncestor(repoRoot: string, ancestor: string, descendant: string): Promise<boolean>;
+  branchOnRemote(repoRoot: string, branch: string): Promise<boolean>;
+}
 
 export interface StackRepo extends StackGit {
   hasBranch(repoRoot: string, branch: string): Promise<boolean>;

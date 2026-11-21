@@ -86,7 +86,7 @@ import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import { createNativeRuntime } from '../terminal/native-runtime.ts';
 import { outpostDelivery } from '../outposts/mount.ts';
 import { askDelivery } from '../sub-chats/delivery.ts';
-import { stackGit } from '../outposts/stack-git.ts';
+import { stackGit } from '../sub-chats/stack-git.ts';
 
 const apiToken = takeLaunchToken(
   process.env,

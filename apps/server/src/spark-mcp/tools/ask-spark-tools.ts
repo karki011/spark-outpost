@@ -16,6 +16,7 @@ import { sparkTool, SparkToolError, uuidInput, type SparkToolContext } from '../
 import { chatIdInput } from './chat-tools.ts';
 import { findProject } from './project-tools.ts';
 import { sendFromChat } from './send-to-chat.ts';
+import { stopSubChat } from './stop-sub-chat.ts';
 
 export const ACTS_NOTE =
   'Spark runs it at once when the user set Ask Spark to Act, and otherwise shows them a card with Do it and Don’t; say what you asked for and wait for the card. Use it only when the user asked you to.';
@@ -118,10 +119,11 @@ const stopTool = sparkTool({
   name: 'spark_stop_chat',
   title: 'Stop a chat',
   acts: true,
-  assistantOnly: true,
-  description: `Stop the turn running in another chat. ${ACTS_NOTE}`,
+  needs: 'sub_chat_stop',
+  description: `Stop the turn running in another chat. A chat stops only its own sub-chats, at once or after a card by its mode. Ask Spark: ${ACTS_NOTE}`,
   input: { chat: chatIdInput },
   run: async (args, context) => {
+    if (!context.scope.assistant) return stopSubChat(context, args.chat);
     const chat = await targetChat(context, args.chat);
     return proposeAction(
       context,

@@ -12,7 +12,8 @@ import type { Db, Queryable } from '../persistence/db.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { newId } from '../persistence/ids.ts';
 import { ownRequestText } from '../persistence/outpost-own-request.ts';
-import { stackParentOf, type StackParent } from '../outposts/stack-base.ts';
+import { stackParentOf as outpostStackParentOf } from '../outposts/stack-base.ts';
+import { stackParentOf, type StackParent } from '../sub-chats/stack-base.ts';
 import {
   addChatWorktree,
   branchCheckedOut,
@@ -246,7 +247,9 @@ async function protectedNames(root: string): Promise<string[]> {
 }
 
 async function decide(deps: ChatPlaceDeps, target: Target, request: string) {
-  const parent = await stackParentOf(deps.db, target.conversationId);
+  const parent =
+    (await stackParentOf(deps.db, target.conversationId)) ??
+    (await outpostStackParentOf(deps.db, target.conversationId));
   const choice = await placeChoice(deps.db, target.conversationId, target.projectId);
   const branches = await listBranches(target.root);
   const known = new Set([...branches.local, ...branches.remote.keys()]);

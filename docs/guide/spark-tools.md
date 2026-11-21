@@ -58,7 +58,7 @@ summary: What agents can look up about Spark, the confirm card they show before 
 
 `spark_link_repo` and `spark_clone_repo` always ask ([repos](link-a-repo.md)).
 
-[Messages between chats](chat-messages.md) (`spark_send_to_chat`) are never your message.
+[Messages](chat-messages.md) (`spark_send_to_chat`) and [splits](split-into-sub-chats.md) (`spark_sub_chats`) are never your message.
 
 MCP server cards show the command; fill values in **Settings → Connectors → MCP servers**.
 

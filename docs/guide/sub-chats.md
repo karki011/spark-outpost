@@ -6,7 +6,9 @@ order: 236
 summary: Chats an agent starts to split one job, nested under their parent.
 ---
 
-When an agent splits a job, each piece runs in its own sub-chat under the chat that started it. A sub-chat is an ordinary chat: what you type there is your message to it.
+When an agent splits a job, each piece runs in its own sub-chat under the chat that started it, the parent. A sub-chat is an ordinary chat: what you type there is your message to it.
+
+Only an agent starts one: [ask it to split the job](split-into-sub-chats.md). One level only: a piece can't split again.
 
 ## Find a sub-chat
 

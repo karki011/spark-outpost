@@ -13,8 +13,8 @@ import {
 import { getCapabilities, resolveChatSettings } from '../persistence/chat-settings.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { outpostOf, OutpostError } from '../persistence/outposts.ts';
-import { providerModePosture } from './chat-posture.ts';
-import { modeAboveLead } from './mode-cap.ts';
+import { providerModePosture } from '../sub-chats/chat-posture.ts';
+import { modeAboveLead } from '../sub-chats/mode-cap.ts';
 import type { StoredDraft } from './ports.ts';
 import { LEAD_CHAT_GONE } from './story-start.ts';
 
@@ -93,7 +93,7 @@ async function newMember(
   const effective = agentMode ?? capabilities?.defaultMode ?? defaultModeFor(provider);
   const posture = await providerModePosture(deps.db, deps.workspaceId, provider, effective);
   if (aboveLeadMode(lead.posture, posture)) {
-    throw new OutpostError(400, modeAboveLead(chat.handle, leadHandle));
+    throw new OutpostError(400, modeAboveLead(`@${chat.handle}`, `@${leadHandle}`));
   }
   const parent = chat.dependsOn === undefined ? undefined : chatIds.get(chat.dependsOn);
   return {

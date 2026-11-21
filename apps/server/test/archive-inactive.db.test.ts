@@ -190,6 +190,18 @@ describe('archiving inactive chats', () => {
     expect(await archiveInactive(t.db, t.workspaceId)).toEqual([settledParent]);
   });
 
+  it('never archives a Held sub-chat, however long it has waited', async () => {
+    const parent = await idleChat(9, 'Parent of an old held piece');
+    const held = await addSubChat(t, parent, 'Old held piece');
+    await backdate(held, 9);
+    const finished = await addSubChat(t, parent, 'Old finished piece');
+    await markSubChatStarted(t.db, finished, randomUUID());
+    await turnIn(t, finished, 'succeeded');
+    await backdate(finished, 9);
+
+    expect(await archiveInactive(t.db, t.workspaceId)).toEqual([finished]);
+  });
+
   it('leaves an unsent draft alone', async () => {
     const draft = randomUUID();
     await t.db.query(

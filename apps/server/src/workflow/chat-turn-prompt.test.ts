@@ -11,6 +11,8 @@ const readPreferences = vi.hoisted(() => vi.fn(async () => ({})));
 vi.mock('../persistence/setup.ts', () => ({ sparkPreferences: readPreferences }));
 vi.mock('../persistence/outpost-stories.ts', () => ({ storyTaskOf: vi.fn() }));
 vi.mock('../crew-flows/builder-chat.ts', () => ({ builderChatScope: async () => null }));
+const splits = vi.hoisted(() => vi.fn(async () => false));
+vi.mock('../sub-chats/availability.ts', () => ({ splitsIntoSubChats: splits }));
 
 const db = {} as Queryable;
 const input = {
@@ -91,6 +93,24 @@ describe('chat delegation context', () => {
       outpostRequest: { postId: 'post', outpostName: 'Work', fromUser: false, wrapUp: false },
     });
     expect(assigned).toEqual(user);
+  });
+
+  it('gives the split guidance only to a chat that is offered spark_sub_chats', async () => {
+    expect((await chatPromptFacts(db, input)).subChatsTool).toBe(false);
+    splits.mockResolvedValueOnce(true);
+    expect((await chatPromptFacts(db, input)).subChatsTool).toBe(true);
+    expect(splits).toHaveBeenCalledWith(db, 'chat');
+  });
+
+  it('notes a sub-chat’s task turn as assigned work, and no other message from a chat', async () => {
+    const ask = { id: 'ask', fromTitle: 'Checkout rework', wantsReply: true };
+    const task = { ...input, chatAsk: { ...ask, kind: 'task' } } as RunInput;
+    const message = { ...input, chatAsk: { ...ask, kind: 'message' } } as RunInput;
+    const facts = await chatPromptFacts(db, task);
+    expect(requestAssignedWork(task)).toBe(true);
+    expect(chatTurnNoteFor(task, facts)).toContain('do not use spark_sub_chats');
+    expect(requestAssignedWork(message)).toBe(false);
+    expect(chatTurnNoteFor(message, facts)).toBeNull();
   });
 
   it('keeps the start tool in the session facts for a request turn', async () => {

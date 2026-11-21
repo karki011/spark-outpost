@@ -11,6 +11,7 @@ import {
   pluginsEditAuditFacts,
   rulesEditAuditFacts,
   sendToChatAuditFacts,
+  subChatActionAuditFacts,
   serviceNowAuditFacts,
   SPARK_ACTION_OPTION,
   sparkActionLabels,
@@ -91,7 +92,9 @@ function cardTitle(action: SparkAction): string {
     action.action === 'link_repo' ||
     action.action === 'github_read' ||
     action.action === 'clone_repo' ||
-    action.action === 'send_to_chat'
+    action.action === 'send_to_chat' ||
+    action.action === 'start_sub_chats' ||
+    action.action === 'stop_sub_chat'
   ) {
     return sparkActionQuestion(action);
   }
@@ -232,6 +235,7 @@ export function auditedAction(action: SparkAction): unknown {
     return { action: action.action, repo: action.repo, parentPath: action.parentPath };
   }
   if (action.action === 'send_to_chat') return sendToChatAuditFacts(action);
+  if (action.action === 'start_sub_chats') return subChatActionAuditFacts(action);
   return action;
 }
 

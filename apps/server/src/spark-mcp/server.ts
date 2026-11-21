@@ -56,6 +56,7 @@ import { outpostDraftTool } from './tools/outpost-draft-tool.ts';
 import { outpostNoteTool } from './tools/outpost-note-tool.ts';
 import { outpostStartTool } from './tools/outpost-start-tool.ts';
 import { outpostTool } from './tools/outpost-tool.ts';
+import { subChatsTool } from './tools/sub-chats-tool.ts';
 import { setupTools } from './tools/setup-tools.ts';
 import { taskTool } from './tools/task-tool.ts';
 import { teammatesTool } from './tools/teammates-tool.ts';
@@ -116,6 +117,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   slackPostTool,
   outpostAskTool,
   outpostStartTool,
+  subChatsTool,
   ...browserTools,
   macAppsTool,
   macReadTool,
@@ -229,6 +231,7 @@ export const CHAT_TURN_ONLY: ReadonlySet<string> = new Set([
   'spark_terminal_run',
   'spark_outpost_ask',
   'spark_outpost_start',
+  'spark_sub_chats',
   'spark_browser_sign_in',
   'spark_artifact',
   'spark_rules_edit',

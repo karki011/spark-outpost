@@ -14,7 +14,7 @@ import { getDraft, saveDraft } from '../src/persistence/outpost-drafts.ts';
 import { heldRequests, listPosts, unsentRequests } from '../src/persistence/outpost-posts.ts';
 import { storiesOf } from '../src/persistence/outpost-stories.ts';
 import { getOutpost, OutpostError } from '../src/persistence/outposts.ts';
-import { modeAboveLead } from '../src/outposts/mode-cap.ts';
+import { modeAboveLead } from '../src/sub-chats/mode-cap.ts';
 import {
   DRAFT_NOT_FOUND,
   firstMessageNotSent,
@@ -284,7 +284,7 @@ describe('starting a story from a draft', () => {
       {
         conversationId: api.new.conversationId,
         handle: 'api',
-        message: modeAboveLead('api', 'lead'),
+        message: modeAboveLead('@api', '@lead'),
       },
       {
         conversationId: web.new.conversationId,

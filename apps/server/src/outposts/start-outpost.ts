@@ -15,8 +15,8 @@ import { getDraft } from '../persistence/outpost-drafts.ts';
 import { insertTasks, storyTaskOf } from '../persistence/outpost-stories.ts';
 import { getOutpost, notifyOutpostChanged, OutpostError } from '../persistence/outposts.ts';
 import { InvalidDefaultError } from '../persistence/setup.ts';
-import { chatPosture } from './chat-posture.ts';
-import { modeAboveLead, userChoseMode } from './mode-cap.ts';
+import { chatPosture } from '../sub-chats/chat-posture.ts';
+import { modeAboveLead, userChoseMode } from '../sub-chats/mode-cap.ts';
 import type { StoredDraft } from './ports.ts';
 import {
   addWithNotice,
@@ -135,7 +135,7 @@ async function holdToLeadMode(
   const { posture: leadPosture } = await chatPosture(db, workspaceId, lead.conversationId);
   const { posture } = await chatPosture(db, workspaceId, startMemberChatId(member));
   if (aboveLeadMode(leadPosture, posture)) {
-    throw new OutpostError(400, modeAboveLead(member.handle, lead.handle));
+    throw new OutpostError(400, modeAboveLead(`@${member.handle}`, `@${lead.handle}`));
   }
 }
 

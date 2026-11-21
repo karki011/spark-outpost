@@ -219,11 +219,6 @@ export interface StoryStore {
   removeTask(db: Queryable, conversationId: string): Promise<boolean>;
 }
 
-export interface StackGit {
-  isAncestor(repoRoot: string, ancestor: string, descendant: string): Promise<boolean>;
-  branchOnRemote(repoRoot: string, branch: string): Promise<boolean>;
-}
-
 export interface OutboundRequest {
   postId: string;
   outpostId: string;

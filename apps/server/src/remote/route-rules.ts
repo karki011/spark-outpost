@@ -109,6 +109,7 @@ DELETE /api/conversations/:id/queue/:itemId
 GET /api/conversations/:id/queue
 PATCH /api/conversations/:id/queue/:itemId
 POST /api/conversations/:id/queue
+POST /api/conversations/:id/sub-chats/:subChatId/start
 POST /api/conversations/:id/queue/:itemId/send-now
 POST /api/conversations/:id/queue/send-now
 PUT /api/conversations/:id/queue/order

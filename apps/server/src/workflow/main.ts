@@ -35,7 +35,7 @@ import { googleClientConfig } from '../calendar/google/config.ts';
 import { connectDesktopCalendar } from '../calendar/host-client.ts';
 import { parseAppEvent } from '@spark-outpost/contracts';
 import { TaskWakes } from '../a2a/task-wakes.ts';
-import { stackGit } from '../outposts/stack-git.ts';
+import { stackGit } from '../sub-chats/stack-git.ts';
 import { processKillsSent } from '../terminal/process-group.ts';
 
 const config = loadConfig();

@@ -54,6 +54,10 @@ const UNSETTLED_SUB_CHAT = `EXISTS (
   )
 )`;
 
+const HELD_SUB_CHAT = `EXISTS (
+  SELECT 1 FROM sub_chats held WHERE held.conversation_id = c.id AND held.started_at IS NULL
+)`;
+
 const ENABLED_SCHEDULE = `EXISTS (
   SELECT 1 FROM workflow_schedules ws WHERE ws.conversation_id = c.id AND ws.enabled
 )`;
@@ -66,6 +70,7 @@ const INACTIVE = `${LISTED_CHAT} AND c.archived_at IS NULL AND c.pinned_at IS NU
   AND NOT ${RUNNING_TERMINAL}
   AND NOT ${OPEN_OUTPOST_REQUEST}
   AND NOT ${UNSETTLED_SUB_CHAT}
+  AND NOT ${HELD_SUB_CHAT}
   AND NOT ${ENABLED_SCHEDULE}`;
 
 export type Days = NonNullable<ArchiveInactiveDays>;

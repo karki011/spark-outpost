@@ -65,6 +65,10 @@ function routeOf(action: SparkAction): Route | null {
   if (action.action === 'send_to_chat') {
     return { method: 'POST', path: `/api/conversations/${PLACEHOLDER}/queue` };
   }
+  if (action.action === 'start_sub_chats') return { method: 'POST', path: '/api/conversations' };
+  if (action.action === 'stop_sub_chat') {
+    return { method: 'POST', path: `/api/runs/${PLACEHOLDER}/cancel` };
+  }
   if (action.action !== 'ask_spark') return null;
   switch (action.op) {
     case 'start_chat':

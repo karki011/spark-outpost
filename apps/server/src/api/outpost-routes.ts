@@ -43,14 +43,9 @@ import {
   setName,
   setPaused,
 } from '../persistence/outposts.ts';
-import type {
-  PeerAgent,
-  PostWithFacts,
-  StackGit,
-  StoredDraft,
-  StoredOutpost,
-} from '../outposts/ports.ts';
-import { cachedStackGit } from '../outposts/git-read-cache.ts';
+import type { PeerAgent, PostWithFacts, StoredDraft, StoredOutpost } from '../outposts/ports.ts';
+import type { StackGit } from '../sub-chats/stack-git.ts';
+import { cachedStackGit } from '../sub-chats/git-read-cache.ts';
 import { introViews } from '../outposts/intro-view.ts';
 import { joinOutpost, leaveOutpost, postToOutpost } from '../outposts/post-service.ts';
 import { toOutpostPost } from '../outposts/post-view.ts';

@@ -1,6 +1,6 @@
 import type { StartOutpostAction } from '@spark-outpost/contracts';
 import { draftStartedMessage, startDraft } from '../../outposts/draft-start.ts';
-import type { StartedBy } from '../../outposts/start-outpost.ts';
+import type { StartedBy } from '../../sub-chats/start.ts';
 import type { SparkToolContext } from '../tool.ts';
 import type { Performed } from './performed.ts';
 

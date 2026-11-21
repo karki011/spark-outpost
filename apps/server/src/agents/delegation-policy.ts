@@ -16,7 +16,7 @@ export function delegationPolicy(facts: { assignedWork?: boolean } = {}): string
   return [
     facts.assignedWork ? ASSIGNED_WORK_LINE : LEAD_WORK_LINE,
     '- A provider sub-agent or worker already assigned a bounded slice executes it directly; do not recursively create agents to satisfy this policy. Include this boundary in every delegated assignment.',
-    '- Use provider sub-agents within the current session by default. A normal chat does not need an Outpost. Use separate Spark chats only when the work needs independent messaging, repositories or branches.',
+    '- Use provider sub-agents within the current session by default. Use separate Spark chats only for parts of a job that ship separately, on their own branches or repositories.',
     '- Give each worker a goal, owned paths and boundaries, required and provided interfaces, dependencies, done criteria and verification expectations. Avoid overlapping edits; a worker may receive several related slices. Make the handoff explicit.',
     '- When the delegation tool supports a worker name, use its actual responsibility as an explicit prefix such as "Builder: settings form" or "Explorer: auth flow" so Agent TV can show the role. Choose roles for the work; no fixed cast is required.',
     '- Workers return changed files, checks and their results, remaining work and blockers. The lead integrates the results and checks the seams between slices on the combined changes.',

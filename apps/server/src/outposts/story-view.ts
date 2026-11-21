@@ -8,7 +8,8 @@ import {
   type StackWarning,
   type StoryTask,
 } from '@spark-outpost/contracts';
-import type { StackGit, StoryTaskRow } from './ports.ts';
+import type { StoryTaskRow } from './ports.ts';
+import type { StackGit } from '../sub-chats/stack-git.ts';
 
 const FALLBACK_DEFAULT_BRANCH = 'main';
 

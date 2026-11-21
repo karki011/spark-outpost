@@ -223,6 +223,7 @@ The user guide ships inside the app and lives in [`docs/guide`](docs/guide).
 | [Ship and pull requests](docs/guide/ship-and-pull-requests.md) | [Outposts](docs/guide/outposts.md)                       |
 | [The desktop companion](docs/guide/desktop-companion.md)       | [Privacy and secrets](docs/guide/privacy-and-secrets.md) |
 | [What's new](docs/guide/whats-new.md)                          | [Keyboard shortcuts](docs/guide/keyboard-shortcuts.md)   |
+| [Sub-chats](docs/guide/sub-chats.md)                           | [Split a job](docs/guide/split-into-sub-chats.md)        |
 
 Architecture notes are in [`docs/architecture`](docs/architecture). The full docs index is [docs/README.md](docs/README.md).
 

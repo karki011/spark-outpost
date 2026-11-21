@@ -21,7 +21,7 @@ import { statusForError } from '../src/api/routes.ts';
 import { saveCapabilities } from '../src/persistence/chat-settings.ts';
 import { saveDraft } from '../src/persistence/outpost-drafts.ts';
 import { heldRequests, unsentRequests } from '../src/persistence/outpost-posts.ts';
-import type { StackGit } from '../src/outposts/ports.ts';
+import type { StackGit } from '../src/sub-chats/stack-git.ts';
 import { DRAFT_NOT_FOUND } from '../src/outposts/start-outpost.ts';
 import { FAKE_CODEX_MODES } from '../src/providers/fake.ts';
 import { createProject } from '../src/projects/projects.ts';

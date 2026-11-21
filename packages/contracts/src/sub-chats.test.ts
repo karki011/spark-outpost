@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SUB_CHAT_TASK_MAX, SUB_CHAT_TITLE_MAX } from './start-sub-chats-action.ts';
 import { conversationDetailSchema, conversationSummarySchema } from './conversations.ts';
 import {
   chatAskSchema,
@@ -6,9 +7,6 @@ import {
   fromChatLine,
   sentToChatLine,
   startedSubChatsLine,
-  startSubChatsActionSchema,
-  SUB_CHAT_TASK_MAX,
-  SUB_CHAT_TITLE_MAX,
   subChatPieceSchema,
   subChatReportSchema,
   subChatsResponseSchema,
@@ -122,21 +120,6 @@ describe('a plan piece', () => {
     expect(
       subChatPieceSchema.safeParse({ title: 'Web', task: 'x'.repeat(SUB_CHAT_TASK_MAX + 1) })
         .success,
-    ).toBe(false);
-  });
-});
-
-describe('the start_sub_chats action', () => {
-  it('needs at least one piece and has no upper limit', () => {
-    const pieces = Array.from({ length: 40 }, (_, index) => ({
-      title: `Piece ${index}`,
-      task: 'Do it.',
-    }));
-    expect(startSubChatsActionSchema.safeParse({ action: 'start_sub_chats', pieces }).success).toBe(
-      true,
-    );
-    expect(
-      startSubChatsActionSchema.safeParse({ action: 'start_sub_chats', pieces: [] }).success,
     ).toBe(false);
   });
 });

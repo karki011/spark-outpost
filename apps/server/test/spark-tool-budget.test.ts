@@ -11,6 +11,7 @@ const RULES_EDIT_TOOL_MAX_CHARS = 1_000;
 const PLUGINS_EDIT_TOOL_MAX_CHARS = 500;
 const CREW_TOOLS_MAX_CHARS = 1_300;
 const CHAT_MESSAGES_TOOL_MAX_CHARS = 800;
+const SUB_CHATS_TOOL_MAX_CHARS = 1_500;
 
 describe('the size of the Spark tool list a session is sent', () => {
   it('stays within the budget for a plain chat with nothing connected', async () => {
@@ -75,8 +76,10 @@ describe('the size of the Spark tool list a session is sent', () => {
         linked.groups.publish! +
         linked.groups.pull_requests! +
         linked.groups.github! +
-        linked.groups.outpost_draft!,
+        linked.groups.outpost_draft! +
+        linked.groups.sub_chats!,
     );
+    expect(linked.groups.sub_chats).toBeLessThanOrEqual(SUB_CHATS_TOOL_MAX_CHARS);
     expect(everything.tools).toBeGreaterThan(linked.tools);
     expect(everything.groups.browser).toBeLessThanOrEqual(BROWSER_GROUP_MAX_CHARS);
     expect(everything.instructionChars).toBeLessThanOrEqual(INSTRUCTIONS_MAX_CHARS);

@@ -71,6 +71,12 @@ describe('remote policy', () => {
     );
   });
 
+  it('lets a paired device start a Held sub-chat anyway, with every switch off', () => {
+    const start = `/api/conversations/${ID}/sub-chats/${ID}/start`;
+    expect(remoteDecision('POST', start, ALL_OFF).kind).toBe('allow');
+    expect(remoteDecision('DELETE', start, ALL_ON).kind).toBe('refuse');
+  });
+
   it('lets a paired device start a proposed draft as proposed, but not create or edit outposts', () => {
     expect(remoteDecision('POST', `/api/outposts/drafts/${ID}/start`, ALL_OFF).kind).toBe('allow');
     expect(remoteDecision('GET', `/api/outposts/drafts/${ID}`, ALL_ON).kind).toBe('refuse');

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { prBase, stackWarnings } from './outpost-stack.ts';
-import type { StackFacts } from './outpost-story.ts';
+import {
+  isStacked,
+  prBase,
+  stackWarnings,
+  stackedCount,
+  storyOrder,
+  type StackFacts,
+  type StoryOrderItem,
+} from './sub-chat-stack.ts';
 import { stackWarningSchema } from './outposts.ts';
 
 const PARENT = 'spark/orders-endpoint-0a1b2c3d';
@@ -154,5 +161,100 @@ describe('stackWarnings', () => {
       expect(stackWarningSchema.parse(warning)).toEqual(warning);
       expect(warning.text.toLowerCase()).not.toContain('harness');
     }
+  });
+});
+
+const PROJECT = '4f0e0d0c-1a2b-4c3d-8e9f-001122334455';
+const OTHER_PROJECT = '5f0e0d0c-1a2b-4c3d-8e9f-001122334455';
+
+function task(conversationId: string, position: number, dependsOn: string | null = null) {
+  return { conversationId, position, dependsOn } satisfies StoryOrderItem;
+}
+
+function ids(tasks: readonly StoryOrderItem[]): string[] {
+  return storyOrder(tasks).map((item) => item.conversationId);
+}
+
+describe('storyOrder', () => {
+  it('keeps parallel tasks in position order', () => {
+    expect(ids([task('c', 2), task('a', 0), task('b', 1)])).toEqual(['a', 'b', 'c']);
+    expect(ids([])).toEqual([]);
+  });
+
+  it('puts a task after the one it depends on, whatever its position', () => {
+    expect(ids([task('web', 0, 'api'), task('api', 1)])).toEqual(['api', 'web']);
+    expect(ids([task('ios', 0, 'web'), task('web', 1, 'api'), task('api', 2)])).toEqual([
+      'api',
+      'web',
+      'ios',
+    ]);
+  });
+
+  it('keeps a stack together ahead of the next independent task', () => {
+    expect(
+      ids([task('api', 0), task('docs', 1), task('web', 2, 'api'), task('ios', 3, 'api')]),
+    ).toEqual(['api', 'web', 'ios', 'docs']);
+  });
+
+  it('treats a dependency outside the story, or on itself, as none', () => {
+    expect(ids([task('web', 1, 'deleted'), task('api', 0)])).toEqual(['api', 'web']);
+    expect(ids([task('web', 1, 'web'), task('api', 0)])).toEqual(['api', 'web']);
+  });
+
+  it('keeps every task of a cycle, once each, and does not loop', () => {
+    expect(ids([task('a', 1, 'b'), task('b', 2, 'a'), task('api', 0)])).toEqual(['api', 'a', 'b']);
+  });
+
+  it('keeps input order for equal positions and returns the same items without changing the input', () => {
+    const first = { ...task('a', 0), title: 'first' };
+    const second = { ...task('b', 0), title: 'second' };
+    const given = [first, second];
+    const ordered = storyOrder(given);
+    expect(ordered).toEqual([first, second]);
+    expect(ordered[0]).toBe(first);
+    expect(given).toEqual([first, second]);
+  });
+});
+
+describe('isStacked', () => {
+  it('is stacked on a parent in the same project', () => {
+    expect(isStacked({ projectId: PROJECT }, { projectId: PROJECT })).toBe(true);
+  });
+
+  it('never stacks an existing chat, which keeps its own branch, but stacks a new chat on one', () => {
+    const existing = { projectId: PROJECT, chatId: 'chat-1' };
+    expect(isStacked(existing, { projectId: PROJECT })).toBe(false);
+    expect(isStacked({ projectId: PROJECT }, existing)).toBe(true);
+  });
+
+  it('is order only across projects, with no parent, or with no project', () => {
+    expect(isStacked({ projectId: PROJECT }, { projectId: OTHER_PROJECT })).toBe(false);
+    expect(isStacked({ projectId: PROJECT }, null)).toBe(false);
+    expect(isStacked({ projectId: null }, { projectId: null })).toBe(false);
+    expect(isStacked({ projectId: PROJECT }, { projectId: null })).toBe(false);
+  });
+});
+
+describe('stackedCount', () => {
+  const chat = (handle: string, projectId: string, dependsOn?: string) => ({
+    handle,
+    projectId,
+    ...(dependsOn ? { dependsOn } : {}),
+  });
+
+  it('counts the chats that start from another chat in the same project', () => {
+    expect(
+      stackedCount([
+        chat('api', PROJECT),
+        chat('web', PROJECT, 'api'),
+        chat('docs', OTHER_PROJECT, 'api'),
+        chat('qa', PROJECT, 'web'),
+      ]),
+    ).toBe(2);
+  });
+
+  it('counts none for parallel chats or a parent that is not in the draft', () => {
+    expect(stackedCount([chat('api', PROJECT), chat('web', PROJECT)])).toBe(0);
+    expect(stackedCount([chat('web', PROJECT, 'api')])).toBe(0);
   });
 });

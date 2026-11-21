@@ -2,10 +2,8 @@ import { z } from 'zod';
 import { chatRefSchema } from './chat-ref.ts';
 import { involvementLevelSchema } from './involvement-levels.ts';
 import { prChecksSchema } from './pr-follow-up.ts';
+import { SUB_CHAT_TASK_MAX, SUB_CHAT_TITLE_MAX } from './start-sub-chats-action.ts';
 import { subChatPullStateSchema, subChatStatusSchema } from './sub-chat-status.ts';
-
-export const SUB_CHAT_TITLE_MAX = 100;
-export const SUB_CHAT_TASK_MAX = 20_000;
 
 const pieceTitle = z.string().trim().min(1).max(SUB_CHAT_TITLE_MAX);
 const pieceChoice = z.string().trim().min(1).max(200);
@@ -23,12 +21,6 @@ export const subChatPieceSchema = z.object({
   startsAfter: z.array(pieceTitle).default([]),
 });
 export type SubChatPiece = z.infer<typeof subChatPieceSchema>;
-
-export const startSubChatsActionSchema = z.object({
-  action: z.literal('start_sub_chats'),
-  pieces: z.array(subChatPieceSchema).min(1),
-});
-export type StartSubChatsAction = z.infer<typeof startSubChatsActionSchema>;
 
 export const subChatStartedWithSchema = z.object({
   provider: z.string(),

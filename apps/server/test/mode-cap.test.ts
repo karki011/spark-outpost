@@ -5,7 +5,7 @@ import {
   proposalAboveLead,
   proposedAboveOwnMode,
   userChoseMode,
-} from '../src/outposts/mode-cap.ts';
+} from '../src/sub-chats/mode-cap.ts';
 
 describe('the mode a sub-task chat may start in', () => {
   it('allows the same posture and any that asks more often', () => {
@@ -31,8 +31,8 @@ describe('the mode a sub-task chat may start in', () => {
   });
 
   it('names both chats in the refusal', () => {
-    expect(modeAboveLead('api', 'lead')).toContain('@api');
-    expect(modeAboveLead('api', 'lead')).toContain("@lead's");
+    expect(modeAboveLead('@api', '@lead')).toContain('@api');
+    expect(modeAboveLead('@api', '@lead')).toContain("@lead's");
   });
 });
 
@@ -52,8 +52,8 @@ describe("whose choice a starting chat's mode is", () => {
 describe('the modes a lead chat may propose in a draft', () => {
   it('accepts proposals that ask at least as often as the lead', () => {
     const chats = [
-      { handle: 'api', posture: 'edits' as const },
-      { handle: 'web', posture: 'asks' as const },
+      { name: '@api', posture: 'edits' as const },
+      { name: '@web', posture: 'asks' as const },
     ];
     expect(proposalAboveLead('edits', chats)).toBeNull();
     expect(proposalAboveLead('auto', [])).toBeNull();
@@ -61,21 +61,21 @@ describe('the modes a lead chat may propose in a draft', () => {
 
   it('refuses the first proposal that asks less often than the lead, by handle', () => {
     const chats = [
-      { handle: 'api', posture: 'asks' as const },
-      { handle: 'web', posture: 'full_access' as const },
-      { handle: 'docs', posture: 'auto' as const },
+      { name: '@api', posture: 'asks' as const },
+      { name: '@web', posture: 'full_access' as const },
+      { name: '@docs', posture: 'auto' as const },
     ];
-    expect(proposalAboveLead('asks', chats)).toBe(proposedAboveOwnMode('web'));
-    expect(proposedAboveOwnMode('web')).toContain('@web');
+    expect(proposalAboveLead('asks', chats)).toBe(proposedAboveOwnMode('@web'));
+    expect(proposedAboveOwnMode('@web')).toContain('@web');
   });
 
   it('refuses a proposed mode Spark cannot place, and holds an unknown lead mode to asking', () => {
-    expect(proposalAboveLead('auto', [{ handle: 'api', posture: 'unknown' }])).toBe(
-      proposedAboveOwnMode('api'),
+    expect(proposalAboveLead('auto', [{ name: '@api', posture: 'unknown' }])).toBe(
+      proposedAboveOwnMode('@api'),
     );
-    expect(proposalAboveLead('unknown', [{ handle: 'api', posture: 'edits' }])).toBe(
-      proposedAboveOwnMode('api'),
+    expect(proposalAboveLead('unknown', [{ name: '@api', posture: 'edits' }])).toBe(
+      proposedAboveOwnMode('@api'),
     );
-    expect(proposalAboveLead('unknown', [{ handle: 'api', posture: 'asks' }])).toBeNull();
+    expect(proposalAboveLead('unknown', [{ name: '@api', posture: 'asks' }])).toBeNull();
   });
 });

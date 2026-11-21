@@ -28,6 +28,7 @@ import { AtlassianFacts, atlassianByline, atlassianNote } from './AtlassianFacts
 import { ServiceNowFacts, serviceNowByline, serviceNowNote } from './ServiceNowFacts.tsx';
 import { SiteFacts } from './SiteFacts.tsx';
 import { OutpostStartFacts, outpostStartByline, outpostStartNote } from './OutpostStartFacts.tsx';
+import { SubChatsPlanFacts, subChatsByline, subChatsNote } from './SubChatsPlanFacts.tsx';
 import { siteByline, siteNote } from './site-card-text.ts';
 import { PrFollowUpFacts, PrRoundFacts } from './PrFollowUpFacts.tsx';
 import { McpActionFacts } from '../../settings/mcp/McpActionFacts.tsx';
@@ -161,6 +162,14 @@ function Facts({ action }: { action: SparkAction }) {
       );
     case 'start_outpost':
       return <OutpostStartFacts action={action} />;
+    case 'start_sub_chats':
+      return <SubChatsPlanFacts action={action} />;
+    case 'stop_sub_chat':
+      return (
+        <dl className="sac-facts">
+          <Fact label="Sub-chat">{action.subChat.title}</Fact>
+        </dl>
+      );
     case 'send_to_chat':
       return (
         <dl className="sac-facts">
@@ -228,6 +237,7 @@ function byline(action: SparkAction, agent: string, secretFiles?: readonly strin
     atlassianByline(action, agent) ??
     serviceNowByline(action, agent) ??
     outpostStartByline(action, agent) ??
+    subChatsByline(action, agent) ??
     rulesByline(action) ??
     crewByline(action) ??
     pluginsByline(action);
@@ -247,6 +257,7 @@ function confirmNote(action: SparkAction, secretFiles?: readonly string[]): stri
     atlassianNote(action) ??
     serviceNowNote(action) ??
     outpostStartNote(action) ??
+    subChatsNote(action) ??
     rulesNote(action) ??
     crewNote(action) ??
     pluginsNote(action);

@@ -1,13 +1,8 @@
 import { isStacked } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import { storyTaskOf } from '../persistence/outpost-stories.ts';
+import type { StackParent } from '../sub-chats/stack-base.ts';
 import type { StoryTaskRow } from './ports.ts';
-
-export interface StackParent {
-  parentChatId: string;
-  owner: string;
-  branch: string | null;
-}
 
 export interface StackBase {
   parentChatId: string;

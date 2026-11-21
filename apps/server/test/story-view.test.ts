@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RequestFacts, RunStatus } from '@spark-outpost/contracts';
-import type { StackGit, StoredPost, StoryTaskRow } from '../src/outposts/ports.ts';
+import type { StoredPost, StoryTaskRow } from '../src/outposts/ports.ts';
+import type { StackGit } from '../src/sub-chats/stack-git.ts';
 import { toStories, UNKNOWN_STACK } from '../src/outposts/story-view.ts';
 
 const OUTPOST = '0f0e0d0c-1a2b-4c3d-8e9f-001122334455';

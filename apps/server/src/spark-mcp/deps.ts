@@ -17,7 +17,7 @@ import type { SlackSignInConfig } from '../slack/sign-in-config.ts';
 import type { TicketDeps } from '../tickets/connections.ts';
 import type { InboxDeps } from '../tickets/inbox.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
-import type { StackGit } from '../outposts/ports.ts';
+import type { StackGit } from '../sub-chats/stack-git.ts';
 import type { RequestWakes } from '../outposts/request-wait.ts';
 
 export interface OutpostToolDeps {

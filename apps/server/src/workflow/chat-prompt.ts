@@ -16,6 +16,7 @@ export interface ChatPromptFacts {
   project: ChatPromptProject | null;
   outpostDraftTool: boolean;
   outpostStartTool?: boolean;
+  subChatsTool?: boolean;
   level: InvolvementLevel;
   asksWithTool?: boolean;
   assignedWork?: boolean;
@@ -40,6 +41,7 @@ function whereLines(project: ChatPromptProject): string[] {
 
 function subChatLines(facts: ChatPromptFacts): string[] {
   if (facts.assignedWork) return [];
+  if (facts.subChatsTool) return [text.SPLIT_SUB_CHATS_TOOL];
   if (facts.outpostStartTool) return [text.SPLIT_SUB_CHATS_START];
   return facts.outpostDraftTool ? [text.SPLIT_SUB_CHATS] : [];
 }

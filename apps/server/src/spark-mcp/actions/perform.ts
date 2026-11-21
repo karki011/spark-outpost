@@ -32,12 +32,13 @@ import { performAskSpark } from './ask-spark-perform.ts';
 import { performPublishArtifact } from './artifact-actions.ts';
 import { performStartOutpost } from './outpost-actions.ts';
 import { performSendToChat } from './send-to-chat-perform.ts';
+import { performStartSubChats, performStopSubChat } from './sub-chats-perform.ts';
 import { performRulesEdit } from './rules-edit-perform.ts';
 import { performPluginsEdit } from './plugins-edit-perform.ts';
 import { performCrewEdit } from './crew-edit-perform.ts';
 import { performLinkRepo } from './link-repo-perform.ts';
 import { performCloneRepo } from './clone-repo-perform.ts';
-import type { StartedBy } from '../../outposts/start-outpost.ts';
+import type { StartedBy } from '../../sub-chats/start.ts';
 
 export const OPEN_PR_RETIRED =
   'Spark no longer opens pull requests from a card. Ask the agent to push the branch and open it.';
@@ -46,6 +47,7 @@ export function performSparkAction(
   context: SparkToolContext,
   action: SparkAction,
   startedBy: StartedBy = 'user',
+  approvalId: string | null = null,
 ): Promise<Performed> {
   switch (action.action) {
     case 'open_pr':
@@ -134,6 +136,10 @@ export function performSparkAction(
       return performStartOutpost(context, action, startedBy);
     case 'send_to_chat':
       return performSendToChat(context, action);
+    case 'start_sub_chats':
+      return performStartSubChats(context, action, startedBy, approvalId);
+    case 'stop_sub_chat':
+      return performStopSubChat(context, action);
     case 'pr_follow_up':
       return Promise.reject(new Error('PR feedback is pushed by the follow-up round.'));
     case 'ask_spark':

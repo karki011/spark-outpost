@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { runGit } from '../ship/git.ts';
-import type { StackGit } from './ports.ts';
+import type { StackGit } from './stack-git.ts';
 
 const TTL_MS = 15_000;
 const PRUNE_ABOVE = 500;

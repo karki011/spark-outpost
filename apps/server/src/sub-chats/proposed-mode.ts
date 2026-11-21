@@ -29,10 +29,10 @@ function choiceName(choice: ModeChoice): string {
 }
 
 export function unknownProposedMode(
-  handle: string,
+  name: string,
   value: string,
   choices: readonly ModeChoice[],
 ): string {
   const modes = choices.map(choiceName).join(', ');
-  return `@${handle}: "${value}" is not a mode of this agent. Modes: ${modes}. Use one of these, or leave the mode out.`;
+  return `${name}: "${value}" is not a mode of this agent. Modes: ${modes}. Use one of these, or leave the mode out.`;
 }

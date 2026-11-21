@@ -2,7 +2,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { NO_REMOTE, stackGit } from '../src/outposts/stack-git.ts';
+import { NO_REMOTE, stackGit } from '../src/sub-chats/stack-git.ts';
 import { git, repoWithRemote, write, type TestRepo } from './ship-support.ts';
 
 const PARENT = 'spark/api-1a2b3c4d';

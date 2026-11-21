@@ -1,16 +1,9 @@
 import { prBase, type StackFacts, type StoryPullState } from '@spark-outpost/contracts';
-import type { StackBase } from '../approvals/publish-policy.ts';
 import type { ChatWorktree } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
+import { FALLBACK_DEFAULT_BRANCH, type PublishStack } from '../sub-chats/stack-publish.ts';
 import { ownerName } from './stack-base.ts';
-import type { StackRepo } from './stack-git.ts';
-
-export interface PublishStack {
-  pullBase: string;
-  stackBase: StackBase | null;
-}
-
-export const FALLBACK_DEFAULT_BRANCH = 'main';
+import type { StackRepo } from '../sub-chats/stack-git.ts';
 
 interface ParentRow {
   parent_chat: string | null;

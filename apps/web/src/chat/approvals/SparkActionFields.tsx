@@ -62,6 +62,7 @@ export function editsOf(action: SparkAction, draft: Draft): SparkActionEdits {
   const before = draftOf(action);
   const edits: SparkActionEdits = {};
   for (const field of editableFields(action.action)) {
+    if (field === 'subChats') continue;
     if (field === 'skip') {
       if (draft.skip.length > 0) edits.skip = draft.skip;
       continue;

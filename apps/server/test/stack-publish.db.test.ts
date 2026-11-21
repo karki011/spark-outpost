@@ -2,7 +2,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { stackGit } from '../src/outposts/stack-git.ts';
+import { stackGit } from '../src/sub-chats/stack-git.ts';
 import { publishStackOf } from '../src/outposts/stack-publish.ts';
 import { chatWorktreeAt, type ChatWorktree } from '../src/persistence/chat-worktrees.ts';
 import { deleteConversation } from '../src/persistence/conversation-actions.ts';

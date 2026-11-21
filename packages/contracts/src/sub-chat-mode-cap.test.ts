@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProviderCapabilities } from './chat-settings.ts';
-import { aboveLeadMode, cappedMode, chatModeRank, leadModeLimit } from './outpost-mode-cap.ts';
+import { aboveLeadMode, cappedMode, chatModeRank, leadModeLimit } from './sub-chat-mode-cap.ts';
 
 const CODEX_CAPABILITIES: ProviderCapabilities = {
   provider: 'codex',

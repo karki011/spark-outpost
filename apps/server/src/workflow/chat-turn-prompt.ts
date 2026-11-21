@@ -4,6 +4,7 @@ import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { storyTaskOf } from '../persistence/outpost-stories.ts';
+import { splitsIntoSubChats } from '../sub-chats/availability.ts';
 import { sparkPreferences, type SparkPreferences } from '../persistence/setup.ts';
 import { currentBranch } from '../projects/chat-worktrees.ts';
 import { isGitWorkTree } from '../projects/snapshot.ts';
@@ -43,17 +44,19 @@ export async function chatPromptFacts(
   known?: SparkPreferences,
 ): Promise<ChatPromptFacts> {
   const { threadId: conversationId, runId } = input.identity;
-  const [project, needs, prefs, storyTask, builderChat] = await Promise.all([
+  const [project, needs, prefs, storyTask, builderChat, subChatsTool] = await Promise.all([
     projectFacts(db, input),
     outpostNeeds(db, { conversationId, runId }),
     known ?? sparkPreferences(db, input.workspaceId),
     storyTaskOf(db, conversationId),
     builderChatScope(db, conversationId),
+    splitsIntoSubChats(db, conversationId),
   ]);
   return {
     project,
     outpostDraftTool: needs.outpost_draft,
     outpostStartTool: needs.outpost_start,
+    subChatsTool,
     level: input.level,
     asksWithTool: input.mode === 'do' && input.plansFirst !== true,
     assignedWork: storyTask !== null,
@@ -62,7 +65,8 @@ export async function chatPromptFacts(
   };
 }
 
-export function requestAssignedWork(input: Pick<RunInput, 'outpostRequest'>): boolean {
+export function requestAssignedWork(input: Pick<RunInput, 'outpostRequest' | 'chatAsk'>): boolean {
+  if (input.chatAsk?.kind === 'task') return true;
   const request = input.outpostRequest;
   return request != null && !request.fromUser && !request.wrapUp;
 }

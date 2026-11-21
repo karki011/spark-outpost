@@ -4,7 +4,7 @@ import {
   type OutpostAnswer,
 } from '@spark-outpost/contracts';
 import { redactText } from '../audit/redact.ts';
-import { sharedWorkReads, type GitReadCache } from '../outposts/git-read-cache.ts';
+import { sharedWorkReads, type GitReadCache } from '../sub-chats/git-read-cache.ts';
 import type { PostWithFacts } from '../outposts/ports.ts';
 import { taskChanges } from '../projects/task-changes.ts';
 import { branchWork } from '../workflow/publish-step-work.ts';

@@ -39,6 +39,10 @@ const CREW_CREATE_VERB = 'create|add|make|build|set up|draft|write';
 const CREW_CHANGE_VERB =
   'change|update|edit|rename|fix|rewrite|improve|tweak|adjust|delete|remove|revise';
 
+const SPLIT_REQUEST = asked(
+  'start|split|spin up|kick off|launch|create',
+  'sub-?chats?|outposts?|sub-?tasks?|parallel chats?|separate chats?',
+);
 const SEND_VERB = 'send|tell|ask|message|forward|pass|relay|share|notify|ping|reply';
 
 const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
@@ -116,10 +120,9 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     `${RECORD_NOUN}|callers?|work notes?`,
   ),
   send_to_chat: asked(SEND_VERB, 'chats?|sub-?chats?'),
-  start_outpost: asked(
-    'start|split|spin up|kick off|launch|create',
-    'sub-?chats?|outposts?|sub-?tasks?|parallel chats?|separate chats?',
-  ),
+  start_outpost: SPLIT_REQUEST,
+  start_sub_chats: SPLIT_REQUEST,
+  stop_sub_chat: asked('stop|cancel|halt|kill|end', 'sub-?chats?|chats?'),
   rules_edit: null,
   plugins_edit: null,
   workflow_control: asked(

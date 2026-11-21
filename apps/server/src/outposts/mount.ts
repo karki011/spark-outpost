@@ -10,7 +10,8 @@ import { resolveRunTarget } from '../api/run-target.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ShipDeps } from '../ship/prepare.ts';
 import { drainQueue } from '../workflow/queue-drain.ts';
-import type { PeerAgent, StackGit } from './ports.ts';
+import type { PeerAgent } from './ports.ts';
+import type { StackGit } from '../sub-chats/stack-git.ts';
 import { parentWorkCommitter } from './stacked-parent-work.ts';
 
 export interface OutpostDelivery {

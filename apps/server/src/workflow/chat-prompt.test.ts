@@ -91,6 +91,16 @@ describe('chatPrompt', () => {
     expect(build({})).not.toContain('AskUserQuestion');
   });
 
+  it('gives the one split rule, and no outpost tool, only when spark_sub_chats is offered', () => {
+    const prompt = build({ subChatsTool: true, outpostStartTool: true });
+    expect(prompt).toContain(text.SPLIT_SUB_CHATS_TOOL);
+    expect(prompt).toContain('separable parts that ship separately');
+    expect(prompt).toContain('When the user says to split, split');
+    expect(prompt).not.toContain('spark_outpost');
+    expect(build({})).not.toContain('spark_sub_chats');
+    expect(build({ subChatsTool: true, assignedWork: true })).not.toContain('spark_sub_chats');
+  });
+
   it('offers starting sub-chats only when the run has the start tool', () => {
     const prompt = build({ outpostStartTool: true });
     expect(prompt).toContain(text.SPLIT_SUB_CHATS_START);
@@ -170,6 +180,7 @@ describe('chatPrompt', () => {
     expect(note).toContain(text.TURN_NOTE_INTRO);
     expect(note).toContain(ASSIGNED_WORK_LINE);
     expect(note).toContain(text.TURN_NOTE_NO_SUB_CHATS);
+    expect(note).toContain('do not use spark_sub_chats');
     expect(note).not.toContain(text.PUBLISH_FOLLOW_UP);
   });
 
@@ -257,7 +268,9 @@ describe('chatPrompt', () => {
 
   it('keeps projectless chats on the in-session delegation path', () => {
     const prompt = chatPrompt({ ...base, project: null, outpostDraftTool: false });
-    expect(prompt).toContain('A normal chat does not need an Outpost');
+    expect(prompt).toContain(
+      'Use separate Spark chats only for parts of a job that ship separately',
+    );
     expect(prompt).toContain('Use only delegation capabilities actually available');
     expect(prompt).not.toContain('spark_outpost_start');
   });

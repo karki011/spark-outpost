@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { OUTPOST_DRAFT_ACTIVITY } from '@spark-outpost/contracts';
-import { proposedAboveOwnMode } from '../src/outposts/mode-cap.ts';
+import { proposedAboveOwnMode } from '../src/sub-chats/mode-cap.ts';
 import { saveCapabilities, updateChatSettings } from '../src/persistence/chat-settings.ts';
 import { getDraft } from '../src/persistence/outpost-drafts.ts';
 import { outpostDraftTool } from '../src/spark-mcp/tools/outpost-draft-tool.ts';
@@ -168,9 +168,9 @@ describe('spark_outpost_draft', () => {
 
     it('cannot ask less often than the proposing chat’s own mode', async () => {
       const over = [chat('api'), chat('web', { agentMode: 'bypassPermissions' })];
-      await expect(propose(lead, over).result).rejects.toThrow(proposedAboveOwnMode('web'));
+      await expect(propose(lead, over).result).rejects.toThrow(proposedAboveOwnMode('@web'));
       const other = [chat('api', { agent: 'codex', agentMode: 'agent-full-access' })];
-      await expect(propose(lead, other).result).rejects.toThrow(proposedAboveOwnMode('api'));
+      await expect(propose(lead, other).result).rejects.toThrow(proposedAboveOwnMode('@api'));
       expect(await count('outpost_drafts')).toBe(0);
     });
 
@@ -209,7 +209,7 @@ describe('spark_outpost_draft', () => {
       const stored = (await getDraft(t.db, t.workspaceId, drafted.draft))!;
       expect(stored.body.chats.map((each) => each.agentMode)).toEqual(['auto', 'acceptEdits']);
       const over = [chat('api', { agentMode: 'Bypass permissions' })];
-      await expect(propose(lead, over).result).rejects.toThrow(proposedAboveOwnMode('api'));
+      await expect(propose(lead, over).result).rejects.toThrow(proposedAboveOwnMode('@api'));
     });
 
     it('is refused when it is no mode of that agent, with the modes it has', async () => {

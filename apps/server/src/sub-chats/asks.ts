@@ -75,6 +75,10 @@ export type SendRule =
 
 const COORDINATING: ReadonlySet<ChatAskKind> = new Set(['report', 'reply']);
 
+export function coordinatesOwnSubChats(started: TurnStart): boolean {
+  return started.fromOwnSubChat && COORDINATING.has(started.kind);
+}
+
 function refuse(reason: string): SendRule {
   return { kind: 'refuse', reason };
 }
@@ -95,7 +99,7 @@ export function sendRule(facts: SendFacts): SendRule {
   const started = facts.startedBy;
   if (started) {
     if (started.fromChatId === facts.to.id) return { kind: 'mode' };
-    const coordinates = started.fromOwnSubChat && COORDINATING.has(started.kind);
+    const coordinates = coordinatesOwnSubChats(started);
     if (coordinates && facts.to.ownSubChat) return { kind: 'mode' };
     return refuse(coordinates ? SEND_REFUSALS.parentChain : SEND_REFUSALS.chain);
   }

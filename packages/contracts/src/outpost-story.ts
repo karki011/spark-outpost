@@ -1,4 +1,4 @@
-import type { DraftChat, RequestState, StackWarning, StoryPullState } from './outposts.ts';
+import type { DraftChat } from './outposts.ts';
 
 export type StoryProblemKind = 'cycle' | 'self' | 'unknown' | 'duplicate_handle' | 'duplicate_chat';
 
@@ -11,35 +11,7 @@ export interface StoryProblem {
 export type StoryChat = Pick<DraftChat, 'handle' | 'dependsOn'> &
   Partial<Pick<DraftChat, 'chatId'>>;
 
-export interface StoryOrderItem {
-  conversationId: string;
-  dependsOn: string | null;
-  position: number;
-}
-
-export interface StackSide {
-  projectId: string | null;
-  chatId?: string | undefined;
-}
-
-export interface StackFacts {
-  handle: string;
-  parentHandle: string;
-  defaultBranch: string;
-  branch: string | null;
-  pull: { state: StoryPullState; base: string | null } | null;
-  parentBranch: string | null;
-  parentOnRemote: boolean;
-  parentInBranch: boolean | null;
-  parentState: RequestState | null;
-  parentPull: { state: StoryPullState } | null;
-}
-
 export type StoryProblems = (chats: readonly StoryChat[]) => StoryProblem[];
-export type StoryOrder = <Item extends StoryOrderItem>(tasks: readonly Item[]) => Item[];
-export type IsStacked = (task: StackSide, parent: StackSide | null) => boolean;
-export type StackWarnings = (facts: StackFacts) => StackWarning[];
-export type PrBase = (facts: StackFacts) => string;
 
 function firstByHandle(chats: readonly StoryChat[]): Map<string, StoryChat> {
   const byHandle = new Map<string, StoryChat>();
@@ -138,52 +110,3 @@ export const storyProblems: StoryProblems = (chats) => {
     ...cycleProblems(known),
   ];
 };
-
-function byPosition<Item extends StoryOrderItem>(tasks: readonly Item[]): Item[] {
-  return tasks.toSorted((a, b) => a.position - b.position);
-}
-
-function parentIn<Item extends StoryOrderItem>(task: Item, ids: ReadonlySet<string>) {
-  const parent = task.dependsOn;
-  return parent !== null && parent !== task.conversationId && ids.has(parent) ? parent : null;
-}
-
-export const storyOrder: StoryOrder = <Item extends StoryOrderItem>(tasks: readonly Item[]) => {
-  const sorted = byPosition(tasks);
-  const ids = new Set(sorted.map((task) => task.conversationId));
-  const placed = new Set<Item>();
-  const ordered: Item[] = [];
-
-  const place = (task: Item): void => {
-    if (placed.has(task)) return;
-    placed.add(task);
-    ordered.push(task);
-    for (const child of sorted) {
-      if (parentIn(child, ids) === task.conversationId) place(child);
-    }
-  };
-
-  for (const task of sorted) {
-    if (parentIn(task, ids) === null) place(task);
-  }
-  for (const task of sorted) place(task);
-  return ordered;
-};
-
-export const isStacked: IsStacked = (task, parent) =>
-  parent !== null &&
-  task.chatId === undefined &&
-  task.projectId !== null &&
-  task.projectId === parent.projectId;
-
-export interface StackedChat extends StackSide {
-  handle: string;
-  dependsOn?: string | undefined;
-}
-
-export function stackedCount(chats: readonly StackedChat[]): number {
-  const byHandle = new Map(chats.map((chat) => [chat.handle, chat]));
-  return chats.filter((chat) =>
-    isStacked(chat, chat.dependsOn === undefined ? null : (byHandle.get(chat.dependsOn) ?? null)),
-  ).length;
-}

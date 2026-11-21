@@ -22,9 +22,9 @@ import {
   chatPosture,
   providerModeChoices,
   providerModePosture,
-} from '../../outposts/chat-posture.ts';
-import { proposalAboveLead, type ProposedChat } from '../../outposts/mode-cap.ts';
-import { proposedModeId, unknownProposedMode } from '../../outposts/proposed-mode.ts';
+} from '../../sub-chats/chat-posture.ts';
+import { proposalAboveLead, type ProposedChat } from '../../sub-chats/mode-cap.ts';
+import { proposedModeId, unknownProposedMode } from '../../sub-chats/proposed-mode.ts';
 import { outpostNeeds } from '../../outposts/outpost-availability.ts';
 import type { StoredDraft } from '../../outposts/ports.ts';
 import { newId } from '../../persistence/ids.ts';
@@ -205,11 +205,11 @@ async function proposedModes(
     const agentMode =
       choices.length === 0 ? chat.agentMode : proposedModeId(choices, chat.agentMode);
     if (agentMode === null) {
-      throw new SparkToolError(unknownProposedMode(chat.handle, chat.agentMode, choices));
+      throw new SparkToolError(unknownProposedMode(`@${chat.handle}`, chat.agentMode, choices));
     }
     resolved.push({ ...chat, agentMode });
     proposed.push({
-      handle: chat.handle,
+      name: `@${chat.handle}`,
       posture: await providerModePosture(deps.db, scope.workspaceId, provider, agentMode),
     });
   }
