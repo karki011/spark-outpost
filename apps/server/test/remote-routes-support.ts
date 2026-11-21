@@ -1,5 +1,4 @@
 import type { Express } from 'express';
-import { A2A_MOUNT_PATH } from '../src/a2a/agent-card.ts';
 
 interface StackLayer {
   route?: { path: string | string[]; methods: Record<string, boolean> };
@@ -10,8 +9,7 @@ interface StackLayer {
 function mountPrefix(layer: StackLayer): string {
   const under = (path: string) => layer.matchers.some((matches) => matches(path));
   if (under('/x')) return '';
-  if (under('/api/x')) return '/api';
-  return under(`${A2A_MOUNT_PATH}/x`) ? A2A_MOUNT_PATH : '';
+  return under('/api/x') ? '/api' : '';
 }
 
 function collect(stack: StackLayer[], prefix: string, found: Set<string>): void {

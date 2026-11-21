@@ -111,7 +111,6 @@ describe('an auto-review run end to end', () => {
       for (const tool of ['spark_artifact', 'spark_crew_edit', 'spark_rules_edit']) {
         expect(offered).not.toContain(tool);
       }
-      expect(offered.filter((tool) => tool.startsWith('spark_outpost'))).toEqual([]);
     }
     await saveReviewSettings(world.t.db, world.t.workspaceId, world.deps.store, {
       reviewer: { kind: 'spark', id: pip.id },

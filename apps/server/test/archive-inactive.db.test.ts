@@ -8,7 +8,9 @@ import {
   archiveInactive,
   startArchiveSweep,
 } from '../src/workflow/archive-inactive.ts';
+import { markSubChatStarted } from '../src/persistence/sub-chats.ts';
 import { createTestApp, localClient } from './app-support.ts';
+import { addSubChat, turnIn } from './sub-chat-fixtures.ts';
 import { createTestDb, eventually, startChat, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -73,26 +75,6 @@ async function addCard(runId: string, status: 'pending' | 'allowed', decidedAgo 
   );
 }
 
-async function outpostWith(member: string, request: 'open' | 'answered'): Promise<void> {
-  const outpostId = randomUUID();
-  await t.db.query(`INSERT INTO outposts (id, workspace_id, name) VALUES ($1, $2, 'Launch')`, [
-    outpostId,
-    t.workspaceId,
-  ]);
-  await t.db.query(
-    `INSERT INTO outpost_members (outpost_id, conversation_id, handle, position)
-     VALUES ($1, $2, 'docs', 1)`,
-    [outpostId, member],
-  );
-  const runId = request === 'answered' ? await runOf(member) : null;
-  await t.db.query(
-    `INSERT INTO outpost_posts (id, outpost_id, kind, body, from_user, to_handle,
-       to_conversation_id, run_id)
-     VALUES ($1, $2, 'request', 'Write the docs', true, 'docs', $3, $4)`,
-    [randomUUID(), outpostId, member, runId],
-  );
-}
-
 async function openSession(conversationId: string): Promise<string> {
   const sessionId = randomUUID();
   await t.db.query(
@@ -138,7 +120,7 @@ describe('archiving inactive chats', () => {
       expect((await summary(id)).archivedAt).toBeNull();
   });
 
-  it('never archives a busy, waiting, pinned, Terminal, Ask Spark or outpost chat', async () => {
+  it('never archives a busy, waiting, pinned, Terminal or Ask Spark chat', async () => {
     const running = await idleChat(9, 'Running');
     await t.db.query(`UPDATE runs SET status = 'running' WHERE conversation_id = $1`, [running]);
     const queuedTurn = await idleChat(9, 'Queued turn');
@@ -165,12 +147,36 @@ describe('archiving inactive chats', () => {
        ON CONFLICT (workspace_id) DO UPDATE SET assistant_conversation_id = $2`,
       [t.workspaceId, assistant],
     );
-    const member = await idleChat(9, 'Outpost member');
-    await outpostWith(member, 'open');
-    const answeredMember = await idleChat(9, 'Answered member');
-    await outpostWith(answeredMember, 'answered');
+    const idle = await idleChat(9, 'Idle');
 
-    expect(await archiveInactive(t.db, t.workspaceId)).toEqual([answeredMember]);
+    expect(await archiveInactive(t.db, t.workspaceId)).toEqual([idle]);
+  });
+
+  it('keeps a parent while a sub-chat is Held or Working, and archives it once they settle', async () => {
+    const heldParent = await idleChat(9, 'Parent of a held piece');
+    await addSubChat(t, heldParent, 'Held piece');
+    const workingParent = await idleChat(9, 'Parent of a working piece');
+    const working = await addSubChat(t, workingParent, 'Working piece');
+    await markSubChatStarted(t.db, working, randomUUID());
+    await turnIn(t, working, 'running');
+    const settledParent = await idleChat(9, 'Parent of a finished piece');
+    const finished = await addSubChat(t, settledParent, 'Finished piece');
+    await markSubChatStarted(t.db, finished, randomUUID());
+    await turnIn(t, finished, 'succeeded');
+
+    expect(await archiveInactive(t.db, t.workspaceId)).toEqual([settledParent]);
+  });
+
+  it('never archives a Held sub-chat, however long it has waited', async () => {
+    const parent = await idleChat(9, 'Parent of an old held piece');
+    const held = await addSubChat(t, parent, 'Old held piece');
+    await backdate(held, 9);
+    const finished = await addSubChat(t, parent, 'Old finished piece');
+    await markSubChatStarted(t.db, finished, randomUUID());
+    await turnIn(t, finished, 'succeeded');
+    await backdate(finished, 9);
+
+    expect(await archiveInactive(t.db, t.workspaceId)).toEqual([finished]);
   });
 
   it('leaves an unsent draft alone', async () => {

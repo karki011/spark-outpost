@@ -54,7 +54,7 @@ describe("a stacked sub-chat's worktree", { timeout: 60_000 }, () => {
     expect(record.baseCommit).toBe(api.tip);
     expect(git(record.path, 'rev-parse', 'HEAD')).toBe(api.tip);
     expect(git(record.path, 'symbolic-ref', '--short', 'HEAD')).toBe(record.branch);
-    expect(placed.note).toContain(`starts from @api's branch ${api.record.branch}`);
+    expect(placed.note).toContain(`starts from “Orders endpoint”'s branch ${api.record.branch}`);
   });
 
   it('owns a new branch even when the parent branch is checked out nowhere and is named', async () => {
@@ -76,7 +76,7 @@ describe("a stacked sub-chat's worktree", { timeout: 60_000 }, () => {
   it('starts from the default branch, and says so, when the parent has no branch', async () => {
     const { placed, record } = await place(pair.web);
     expect(record.baseBranch).toBe('main');
-    expect(placed.note).toContain('@api has no branch to build on');
+    expect(placed.note).toContain('“Orders endpoint” has no branch to build on');
   });
 
   it("starts from the default branch once the parent's pull request is merged", async () => {
@@ -85,6 +85,6 @@ describe("a stacked sub-chat's worktree", { timeout: 60_000 }, () => {
     const { placed, record } = await place(pair.web);
     expect(record.baseBranch).toBe('main');
     expect(record.baseCommit).toBe(git(repo.root, 'rev-parse', 'main'));
-    expect(placed.note).toContain('@api has no branch to build on');
+    expect(placed.note).toContain('“Orders endpoint” has no branch to build on');
   });
 });

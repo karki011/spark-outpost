@@ -10,6 +10,8 @@ import {
   isServiceNowAction,
   pluginsEditAuditFacts,
   rulesEditAuditFacts,
+  sendToChatAuditFacts,
+  subChatActionAuditFacts,
   serviceNowAuditFacts,
   SPARK_ACTION_OPTION,
   sparkActionLabels,
@@ -89,7 +91,10 @@ function cardTitle(action: SparkAction): string {
     action.action === 'workflow_control' ||
     action.action === 'link_repo' ||
     action.action === 'github_read' ||
-    action.action === 'clone_repo'
+    action.action === 'clone_repo' ||
+    action.action === 'send_to_chat' ||
+    action.action === 'start_sub_chats' ||
+    action.action === 'stop_sub_chat'
   ) {
     return sparkActionQuestion(action);
   }
@@ -121,7 +126,6 @@ function cardTitle(action: SparkAction): string {
   }
   if (action.action === 'create_ticket') return `${question} ${action.title}`;
   if (action.action === 'publish_artifact') return `${question} ${action.title}`;
-  if (action.action === 'start_outpost') return `${question} ${action.outpostName}`;
   if (action.action === 'open_pr') return `${question} ${action.title}`;
   if (action.action === 'post_slack') return `${question} #${action.channel.name}`;
   if ('name' in action) return `${question} ${action.name}`;
@@ -229,6 +233,8 @@ export function auditedAction(action: SparkAction): unknown {
   if (action.action === 'clone_repo') {
     return { action: action.action, repo: action.repo, parentPath: action.parentPath };
   }
+  if (action.action === 'send_to_chat') return sendToChatAuditFacts(action);
+  if (action.action === 'start_sub_chats') return subChatActionAuditFacts(action);
   return action;
 }
 

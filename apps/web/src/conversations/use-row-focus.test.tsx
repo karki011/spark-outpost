@@ -19,15 +19,15 @@ function Row({ id }: { id: string }) {
   );
 }
 
-function List({ member }: { member: boolean }) {
+function List({ nested }: { nested: boolean }) {
   const listRef = useRef<HTMLDivElement>(null);
-  useRowFocus(listRef, member ? 'api:orders' : '');
+  useRowFocus(listRef, nested ? 'api:orders' : '');
   return (
     <>
       <div ref={listRef}>
-        <ul aria-label="Outpost">{member && <Row id="api" />}</ul>
+        <ul aria-label="Sub-chats">{nested && <Row id="api" />}</ul>
         <ul aria-label="Project">
-          {!member && <Row id="api" />}
+          {!nested && <Row id="api" />}
           <Row id="docs" />
         </ul>
       </div>
@@ -37,36 +37,36 @@ function List({ member }: { member: boolean }) {
 }
 
 describe('useRowFocus', () => {
-  it('keeps focus on the same control when a chat moves under its outpost', () => {
-    const view = render(<List member={false} />);
+  it('keeps focus on the same control when a chat moves under its parent', () => {
+    const view = render(<List nested={false} />);
     screen.getByRole('button', { name: 'Options for api' }).focus();
-    view.rerender(<List member />);
+    view.rerender(<List nested />);
     const moved = screen.getByRole('button', { name: 'Options for api' });
-    expect(moved.closest('ul')?.getAttribute('aria-label')).toBe('Outpost');
+    expect(moved.closest('ul')?.getAttribute('aria-label')).toBe('Sub-chats');
     expect(document.activeElement).toBe(moved);
   });
 
   it('keeps focus on the row itself when the chat returns to its project', () => {
-    const view = render(<List member />);
+    const view = render(<List nested />);
     screen.getByRole('button', { name: 'Open api' }).focus();
-    view.rerender(<List member={false} />);
+    view.rerender(<List nested={false} />);
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Open api' }));
   });
 
   it('takes no focus when it had moved elsewhere before the chat moved', () => {
-    const view = render(<List member={false} />);
+    const view = render(<List nested={false} />);
     screen.getByRole('button', { name: 'Options for api' }).focus();
     const elsewhere = screen.getByRole('button', { name: 'Elsewhere' });
     elsewhere.focus();
-    view.rerender(<List member />);
+    view.rerender(<List nested />);
     expect(document.activeElement).toBe(elsewhere);
   });
 
   it('leaves focus alone when another chat moves', () => {
-    const view = render(<List member={false} />);
+    const view = render(<List nested={false} />);
     const docs = screen.getByRole('button', { name: 'Open docs' });
     docs.focus();
-    view.rerender(<List member />);
+    view.rerender(<List nested />);
     expect(document.activeElement).toBe(docs);
   });
 });

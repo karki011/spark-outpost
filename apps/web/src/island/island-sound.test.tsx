@@ -2,7 +2,7 @@
 import { StrictMode } from 'react';
 import { cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { API_CHAT, FE_CHAT } from '../outposts/test-fixtures.ts';
+import { API_CHAT, FE_CHAT } from '../test/chat-fixtures.ts';
 import type { Moment } from './island-model.ts';
 import { alertChime, useChimes, type Alert } from './island-sound.ts';
 

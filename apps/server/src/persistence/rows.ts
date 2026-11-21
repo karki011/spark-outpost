@@ -32,6 +32,7 @@ import {
   type TokenUsage,
 } from '@spark-outpost/contracts';
 import { toAttention, type PendingApprovalRow } from './attention.ts';
+import { subChatFields, type SubChatSummaryRow } from './sub-chat-facts.ts';
 
 export const MESSAGE_COLUMNS = 'id, conversation_id, role, content, run_id, created_at';
 
@@ -50,6 +51,7 @@ export interface RunRow {
   user_message_id: string | null;
   provider: string;
   source?: string | null;
+  from_chat?: string | null;
   todo?: unknown;
   status: RunStatus;
   error: string | null;
@@ -70,14 +72,6 @@ export interface RunRow {
   thought_tokens: number | null;
   subagent_tokens?: number | null;
   cost_source?: CostSource | null;
-  outpost_post_id?: string | null;
-  outpost_id?: string | null;
-  outpost_name?: string | null;
-  outpost_from_handle?: string | null;
-  outpost_from_user?: boolean | null;
-  outpost_user_started?: boolean | null;
-  outpost_agent_started?: boolean | null;
-  outpost_from_spark?: boolean | null;
   mode?: RunMode | null;
   picked_mode?: RunMode | null;
   start_as?: StartAs | null;
@@ -97,7 +91,7 @@ export interface RunRow {
   error_details?: string | null;
 }
 
-export interface ConversationSummaryRow extends PendingApprovalRow {
+export interface ConversationSummaryRow extends PendingApprovalRow, SubChatSummaryRow {
   id: string;
   shell_alert?: string | null;
   title: string;
@@ -133,9 +127,6 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   pull_request_merged: boolean;
   title_source: string;
   category: string | null;
-  outpost_id?: string | null;
-  outpost_name?: string | null;
-  outpost_handle?: string | null;
   teammate_id: string | null;
   teammate_name: string | null;
   teammate_role: string | null;
@@ -196,35 +187,13 @@ export function toRun(row: RunRow): Run {
     ...(row.source === 'pr_follow_up' ? { prFollowUp: true } : {}),
     ...(row.source === 'workflow' ? { workflowStarted: true } : {}),
     ...(row.source === 'ui' ? { typedByUser: true } : {}),
-    ...runOutpost(row),
+    ...(row.source === 'chat' ? { fromChat: row.from_chat ?? 'another chat' } : {}),
   };
 }
 
-export const RUN_OUTPOST_COLUMNS = `post.id AS outpost_post_id, post.outpost_id,
-  room.name AS outpost_name, post.from_handle AS outpost_from_handle,
-  post.from_user AS outpost_from_user, post.user_started AS outpost_user_started,
-  post.agent_started AS outpost_agent_started,
-  EXISTS (SELECT 1 FROM outpost_drafts wrap WHERE wrap.id = post.id) AS outpost_from_spark`;
-
-export const RUN_OUTPOST_JOINS = `LEFT JOIN outpost_posts post
-    ON r.source = 'outpost' AND post.id = r.user_message_id
-  LEFT JOIN outposts room ON room.id = post.outpost_id`;
-
-function runOutpost(row: RunRow): Pick<Run, 'outpost'> {
-  if (!row.outpost_post_id || !row.outpost_id || typeof row.outpost_name !== 'string') return {};
-  return {
-    outpost: {
-      postId: row.outpost_post_id,
-      outpostId: row.outpost_id,
-      outpostName: row.outpost_name,
-      fromHandle: row.outpost_from_handle ?? null,
-      fromUser: row.outpost_from_user === true,
-      fromSpark: row.outpost_from_spark === true,
-      userStarted: row.outpost_user_started === true,
-      agentStarted: row.outpost_agent_started === true,
-    },
-  };
-}
+export const RUN_FROM_CHAT_COLUMN = `(SELECT COALESCE(sender.title, ask.from_title)
+  FROM chat_asks ask LEFT JOIN conversations sender ON sender.id = ask.from_conversation_id
+  WHERE ask.id = r.user_message_id) AS from_chat`;
 
 function toTokenUsage(row: RunRow): TokenUsage | null {
   if (row.input_tokens === null || row.output_tokens === null) return null;
@@ -329,9 +298,11 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
     category: categorySchema.safeParse(row.category).data ?? null,
     teammate: toTeammateTag(row),
     pullRequestMerged: row.pull_request_merged,
-    ...(row.outpost_id && row.outpost_handle && typeof row.outpost_name === 'string'
-      ? { outpost: { id: row.outpost_id, name: row.outpost_name, handle: row.outpost_handle } }
-      : {}),
+    ...subChatFields(row, {
+      archived: row.archived_at !== null,
+      needsInput: row.needs_input,
+      runStatus: row.latest_run_status,
+    }),
   };
 }
 

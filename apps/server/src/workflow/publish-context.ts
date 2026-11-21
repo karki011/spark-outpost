@@ -19,9 +19,9 @@ import { watchesForConversation } from '../persistence/pr-watches.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { mainAgentPublishNote } from '../orchestration/context.ts';
 import type { PublishScope } from '../ship/agent-push.ts';
-import { stackGit } from '../outposts/stack-git.ts';
-import { publishStackOf } from '../outposts/stack-publish.ts';
-import { isStoryWrapUp, userText } from '../outposts/user-asked.ts';
+import { stackGit } from '../sub-chats/stack-git.ts';
+import { publishStackOf } from '../sub-chats/stack-publish.ts';
+import { isWrapUp, userText } from '../sub-chats/user-asked.ts';
 import type { RunInput } from './run-input.ts';
 
 const ALWAYS_PROTECTED = ['main', 'master'];
@@ -124,7 +124,7 @@ type GrantFacts = Pick<
   | 'userRequest'
   | 'followUpRound'
   | 'workspaceId'
-  | 'outpostRequest'
+  | 'chatAsk'
   | 'sparkRuleRetry'
   | 'assistantSent'
 > & {
@@ -141,7 +141,7 @@ export function publishGrant(input: GrantFacts): PublishGrant {
 type StartFacts = GrantFacts & Pick<RunInput, 'provider' | 'agentMode'>;
 
 export function startBasis(input: StartFacts): PublishBasis | null {
-  if (isStoryWrapUp(input)) return null;
+  if (isWrapUp(input)) return null;
   return publishBasis(modePosture(input.provider, input.agentMode), publishGrant(input));
 }
 
@@ -160,7 +160,7 @@ export async function publishScope(
   db: Queryable,
   input: StartFacts & Pick<RunInput, 'projectRoots'> & Partial<Pick<RunInput, 'role'>>,
 ): Promise<PublishScope | null> {
-  if (isStoryWrapUp(input) || (input.role ?? null) !== null) return null;
+  if (isWrapUp(input) || (input.role ?? null) !== null) return null;
   const root = input.projectRoots[0] ?? null;
   const task = await taskBranch(db, root).catch(() => null);
   if (!root || !task) return null;

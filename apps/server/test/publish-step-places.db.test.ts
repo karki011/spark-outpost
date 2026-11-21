@@ -248,7 +248,7 @@ describe('a stacked chat at Full auto → PR', { timeout: 120_000 }, () => {
     expect(stub.github.pulls).toEqual([]);
     expect(git(repo.bare, 'branch', '--list')).not.toContain(copy.branch);
     expect(said.replies.join('\n')).toContain(
-      parentNotPushedLine({ branch: PARENT_BRANCH, owner: '@api' }),
+      parentNotPushedLine({ branch: PARENT_BRANCH, owner: '“Orders endpoint”' }),
     );
   });
 });

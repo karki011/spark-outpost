@@ -14,11 +14,9 @@ export interface ChatPromptProject {
 
 export interface ChatPromptFacts {
   project: ChatPromptProject | null;
-  outpostDraftTool: boolean;
-  outpostStartTool?: boolean;
+  subChatsTool?: boolean;
   level: InvolvementLevel;
   asksWithTool?: boolean;
-  assignedWork?: boolean;
   builderChat?: { spark: { id: string; name: string } | null };
   customInstructions: string | null;
 }
@@ -38,17 +36,11 @@ function whereLines(project: ChatPromptProject): string[] {
   return lines;
 }
 
-function subChatLines(facts: ChatPromptFacts): string[] {
-  if (facts.assignedWork) return [];
-  if (facts.outpostStartTool) return [text.SPLIT_SUB_CHATS_START];
-  return facts.outpostDraftTool ? [text.SPLIT_SUB_CHATS] : [];
-}
-
 function splitSection(facts: ChatPromptFacts): string {
   return [
     text.SPLIT_HEADING,
-    delegationPolicy({ assignedWork: facts.assignedWork === true }),
-    ...subChatLines(facts),
+    delegationPolicy(),
+    ...(facts.subChatsTool ? [text.SPLIT_SUB_CHATS_TOOL] : []),
     facts.asksWithTool ? text.SPLIT_ASK_WITH_TOOL : text.SPLIT_UNCLEAR,
   ].join('\n');
 }
@@ -93,12 +85,12 @@ export function chatPrompt(facts: ChatPromptFacts): string {
 export interface ChatTurnFacts {
   project: ChatPromptProject | null;
   followUpRound: boolean;
-  requestAssigned: boolean;
+  taskTurn: boolean;
 }
 
 export function chatTurnNote(facts: ChatTurnFacts): string | null {
   const lines: string[] = [];
-  if (facts.requestAssigned) {
+  if (facts.taskTurn) {
     lines.push(text.TURN_NOTE_ASSIGNED, ASSIGNED_WORK_LINE, text.TURN_NOTE_NO_SUB_CHATS);
   }
   if (facts.followUpRound && facts.project && canPushTo(facts.project)) {

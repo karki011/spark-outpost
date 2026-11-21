@@ -18,15 +18,11 @@ const loadBrowser = () =>
 const loadSparks = () =>
   import('../sparks-page/SparksPage.tsx').then((module) => ({ default: module.SparksPage }));
 
-const loadOutpost = () =>
-  import('../outposts/OutpostView.tsx').then((module) => ({ default: module.OutpostView }));
-
 export const Analytics = lazy(loadAnalytics);
 export const Tickets = lazy(loadTickets);
 export const Phone = lazy(loadPhone);
 export const Today = lazy(loadToday);
 export const GithubPage = lazy(loadGithub);
-export const OutpostView = lazy(loadOutpost);
 export const BrowserView = lazy(loadBrowser);
 export const SparksPage = lazy(loadSparks);
 export const MapPage = lazy(() =>

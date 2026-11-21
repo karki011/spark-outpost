@@ -98,14 +98,14 @@ describe('a chat turn', { timeout: 60_000 }, () => {
     expect(without).toContain(
       'You are working for the user in Spark Outpost.\n\nHow to split work',
     );
-    expect(without).not.toContain('spark_outpost_draft');
+    expect(without).not.toContain('spark_sub_chats');
     expect(without).not.toContain('Publishing');
     const [worktree] = await chatWorktreesOf(t.db, conversationId);
     const append = systemAppend(linked.replies[0]!);
     expect(append).toContain(
       `Folder: ${worktree!.path} · Branch: ${worktree!.branch} (a worktree of ${basename(root)})\n`,
     );
-    expect(append).toContain('spark_outpost_draft');
+    expect(append).toContain('spark_sub_chats');
     expect(append).toContain(
       "Publishing\n- Don't push or open a pull request unless the user asks.",
     );

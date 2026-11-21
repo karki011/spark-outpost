@@ -32,6 +32,6 @@ The lead delegates implementation slices to available provider sub-agents, choos
 
 Assignments carry scope, interfaces, dependencies and done criteria. Workers return files, checks and blockers.
 
-Questions, planning and assigned slices need no recursive delegation. Across repositories or chats, use an [outpost](when-to-use-an-outpost.md).
+Questions, planning and assigned slices need no recursive delegation. For a job too big for one chat, ask the agent to [split it](split-into-sub-chats.md).
 
 Codex keeps your delegation settings. Without available workers, the agent explains and asks. Reports name workers, checks, skipped work and risks.

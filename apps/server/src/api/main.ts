@@ -84,8 +84,7 @@ import { locateCli } from '../setup/verify.ts';
 import { startSparkMcpHost } from '../spark-mcp/host.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import { createNativeRuntime } from '../terminal/native-runtime.ts';
-import { outpostDelivery } from '../outposts/mount.ts';
-import { stackGit } from '../outposts/stack-git.ts';
+import { askDelivery } from '../sub-chats/delivery.ts';
 
 const apiToken = takeLaunchToken(
   process.env,
@@ -163,20 +162,16 @@ const endpoints = {
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
 const githubApp = gitHubAppConfig(config);
 const githubDeps = { db, workspaceId, secrets, endpoints, runCommand, loginShell, githubApp };
-const outposts = outpostDelivery({
-  db,
-  port: config.API_PORT,
-  apiToken,
-  ship: shipDepsOf({
-    ...githubDeps,
-    githubApiUrl: config.GITHUB_API_URL,
-    branchPrefix: config.BRANCH_PREFIX,
-  }),
+const ship = shipDepsOf({
+  ...githubDeps,
+  githubApiUrl: config.GITHUB_API_URL,
+  branchPrefix: config.BRANCH_PREFIX,
 });
+const chatAsks = askDelivery(db, undefined, { ship });
 const appEvents = new AppEventFeed(undefined, (event) => {
   slackNotifier.changed(event);
   pushNotifier.changed(event);
-  outposts.changed(event);
+  chatAsks.changed(event);
   if (event.kind === 'pull_request') pullRequestChanged(db, workspaceId);
   if (event.kind === 'preview') void previews.sync();
   if (event.kind === 'agent_terminal') {
@@ -358,8 +353,6 @@ const { app, reconcileRemote } = createAppParts({
   previews,
   agentTerminals,
   appEvents,
-  outposts,
-  stackGit,
   activeWork,
   port: config.API_PORT,
   allowedOrigins: config.ALLOWED_ORIGINS,
@@ -428,7 +421,6 @@ const server = app.listen(config.API_PORT, config.API_HOST, () => {
   void sweepAtStart(pruning);
   pruneSchedule = schedulePrune(pruning);
   void slackSocket.refresh();
-  outposts.start();
   reconcileRemote().catch((error: unknown) => {
     console.error('Could not check Tailscale Serve', (error as Error).message);
   });
@@ -479,7 +471,7 @@ const shutdown = async (keepTerminals = false) => {
     ['calendar ticker', () => calendarTicker?.stop()],
     ['Google Calendar', () => googleCalendar?.stop()],
     ['push notifier', () => pushNotifier.stop()],
-    ['outposts', () => outposts.close()],
+    ['messages between chats', () => chatAsks.close()],
     ['HTTP server', () => server.close()],
     ['HTTP connections', () => server.closeAllConnections()],
     ['database listener', () => listener.close()],

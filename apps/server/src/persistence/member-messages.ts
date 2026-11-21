@@ -96,7 +96,9 @@ export async function listMemberMessages(
   conversationId: string,
 ): Promise<MemberMessage[]> {
   const { rows } = await db.query<MemberMessageRow>(
-    'SELECT * FROM member_messages WHERE conversation_id = $1 ORDER BY created_at, id',
+    `SELECT m.* FROM member_messages m
+     WHERE m.conversation_id = $1 AND NOT EXISTS (SELECT 1 FROM chat_asks a WHERE a.id = m.id)
+     ORDER BY m.created_at, m.id`,
     [conversationId],
   );
   return rows.map(toMemberMessage);

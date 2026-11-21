@@ -143,8 +143,7 @@
   font-size: 12px;
 }
 
-.mdf-tool,
-.mdf-toggle {
+.mdf-tool {
   flex-shrink: 0;
   display: grid;
   place-items: center;
@@ -157,22 +156,14 @@
     color 0.15s var(--out);
 }
 
-.mdf-tool:hover,
-.mdf-toggle:hover {
+.mdf-tool:hover {
   background: var(--raise);
   color: var(--text);
 }
 
-.mdf-tool[aria-pressed='true'],
-.mdf-toggle[aria-pressed='true'] {
+.mdf-tool[aria-pressed='true'] {
   background: var(--accent-soft);
   color: var(--accent-text);
-}
-
-.mdf-toggle {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
 }
 
 .mdf-float {

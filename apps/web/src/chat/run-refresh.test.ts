@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   EventType,
   MEMBER_MESSAGE_ACTIVITY,
-  OUTPOST_DRAFT_ACTIVITY,
+  SUB_CHATS_STARTED_ACTIVITY,
   type RunEvent,
 } from '@spark-outpost/contracts';
 import { refreshesChat } from './run-refresh.ts';
@@ -17,8 +17,8 @@ function activity(activityType: string): RunEvent {
 }
 
 describe('refreshesChat', () => {
-  it('refreshes the chat when a turn proposes an outpost draft, so its line shows at once', () => {
-    expect(refreshesChat(activity(OUTPOST_DRAFT_ACTIVITY))).toBe(true);
+  it('refreshes the chat when a turn starts sub-chats, so its line shows at once', () => {
+    expect(refreshesChat(activity(SUB_CHATS_STARTED_ACTIVITY))).toBe(true);
   });
 
   it('refreshes for a crew message and not for an activity it does not know', () => {

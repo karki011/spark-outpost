@@ -6,7 +6,7 @@ import { rulesRunRefusal, type RulesRefusedRun } from './actions/rules-edit-sess
 import { CREW_HOW_TO, crewReadRefusal } from '../crew/tool-offer.ts';
 import { postGrant } from '../github-inbox/review/post.ts';
 import { listProjects } from '../projects/projects.ts';
-import { outpostNeeds } from '../outposts/outpost-availability.ts';
+import { chatMessagesNeed, subChatNeeds } from '../sub-chats/availability.ts';
 import { gitHubReachability } from '../ship/github/access.ts';
 import { openSlack } from '../slack/connection.ts';
 import { productLive } from '../atlassian/session.ts';
@@ -34,9 +34,9 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   pull_request_create: true,
   browser: true,
   mac: true,
-  outpost: true,
-  outpost_draft: true,
-  outpost_start: true,
+  chat_messages: true,
+  sub_chats: true,
+  sub_chat_stop: true,
   calendar_read: true,
   calendar_edit: true,
   meetings: true,
@@ -51,6 +51,8 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   crew_flows: true,
   github_review_post: true,
 };
+
+const ASK_SPARK_SUB_CHATS = { sub_chats: false, sub_chat_stop: true };
 
 async function hasWorkflow(): Promise<boolean> {
   return (await workflowStore().ids()).length > 0;
@@ -106,7 +108,6 @@ export async function sparkAvailability(
     sources,
     slack,
     project,
-    outposts,
     macRefused,
     calendar,
     jira,
@@ -117,11 +118,12 @@ export async function sparkAvailability(
     crewEditRefused,
     crewRefused,
     anyWorkflow,
+    chatMessages,
+    subChats,
   ] = await Promise.all([
     connectedSources(tickets),
     openSlack(slackDepsFor(deps, scope)),
     scope.assistant ? anyProject(deps, scope) : chatHasProject(deps, scope),
-    outpostNeeds(deps.db, scope),
     deps.mac ? macRunRefusal(deps.db, scope) : Promise.resolve(undefined),
     calendarOffer(deps, scope),
     productLive(tickets, 'jira'),
@@ -132,6 +134,8 @@ export async function sparkAvailability(
     rulesRunRefusal(deps.db, scope, 'crew'),
     crewReadRefusal(deps.db, scope),
     hasWorkflow(),
+    scope.assistant ? true : chatMessagesNeed(deps.db, scope),
+    scope.assistant ? ASK_SPARK_SUB_CHATS : subChatNeeds(deps.db, scope),
   ]);
   const reviewPost = scope.assistant ? null : await postGrant(deps.db, scope.runId);
   const gitHub = await gitHubReach(deps, scope);
@@ -163,7 +167,8 @@ export async function sparkAvailability(
     crew_edit: crewEditRefused === null,
     crew_flows: crewEditRefused === null && anyWorkflow,
     github_review_post: reviewPost?.grant.mayPost === true,
-    ...outposts,
+    chat_messages: chatMessages,
+    ...subChats,
     howTo: {
       ...(calendar.howTo.read ? { calendar_read: calendar.howTo.read } : {}),
       ...(calendar.howTo.edit ? { calendar_edit: calendar.howTo.edit } : {}),
@@ -185,9 +190,9 @@ const HOW_TO_GET: Record<
     | 'mac'
     | 'publish'
     | 'pull_request_create'
-    | 'outpost'
-    | 'outpost_draft'
-    | 'outpost_start'
+    | 'chat_messages'
+    | 'sub_chats'
+    | 'sub_chat_stop'
     | 'calendar_read'
     | 'calendar_edit'
     | 'meetings'

@@ -7,8 +7,10 @@ import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { sparkAvailability } from '../src/spark-mcp/availability.ts';
 import type { SparkToolDeps } from '../src/spark-mcp/deps.ts';
 import { startSparkMcpHost, type SparkMcpHost } from '../src/spark-mcp/host.ts';
-import { createOutpostRow } from './outpost-fixtures.ts';
+import { deliverAsk } from '../src/sub-chats/deliver-ask.ts';
+import { fakeTarget, finishTurn, messageAsk, turnsOf } from './chat-ask-fixtures.ts';
 import { connectClient, toolDeps } from './spark-mcp-support.ts';
+import { addSubChat, turnIn } from './sub-chat-fixtures.ts';
 import { createTestDb, startChat, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -99,9 +101,9 @@ describe('what a Spark tools session can use', () => {
       browser: false,
       mac: false,
       meetings: false,
-      outpost: false,
-      outpost_draft: false,
-      outpost_start: false,
+      chat_messages: false,
+      sub_chats: false,
+      sub_chat_stop: false,
       calendar_read: false,
       calendar_edit: false,
       jira: false,
@@ -115,6 +117,81 @@ describe('what a Spark tools session can use', () => {
       crew_flows: false,
       github_review_post: false,
       howTo: {},
+    });
+  });
+
+  it('lets a chat’s own turn message other chats, and Ask Spark keep its own send', async () => {
+    const chat = await startChat(t, 'Tell the billing chat to rebase');
+    const turn = { ...scopeOf(chat.conversationId), runId: chat.runId };
+    expect((await sparkAvailability(deps(), turn)).chat_messages).toBe(true);
+    expect((await sparkAvailability(deps(), { ...turn, assistant: true })).chat_messages).toBe(
+      true,
+    );
+    await t.db.query(`UPDATE runs SET source = 'voice' WHERE id = $1`, [chat.runId]);
+    expect((await sparkAvailability(deps(), turn)).chat_messages).toBe(false);
+  });
+
+  it('offers spark_sub_chats to a project chat’s own turn, never to a sub-chat, a spoken turn or Ask Spark', async () => {
+    const plain = await startChat(t, 'Split the work');
+    const plainTurn = { ...scopeOf(plain.conversationId), runId: plain.runId };
+    expect(await sparkAvailability(deps(), plainTurn)).toMatchObject({
+      sub_chats: false,
+      sub_chat_stop: false,
+    });
+    const parent = await chatWithProject();
+    const turn = { ...scopeOf(parent), runId: await turnIn(t, parent, 'running') };
+    expect((await sparkAvailability(deps(), turn)).sub_chats).toBe(true);
+    expect(await sparkAvailability(deps(), { ...turn, assistant: true })).toMatchObject({
+      sub_chats: false,
+      sub_chat_stop: true,
+    });
+
+    const piece = await addSubChat(t, parent, 'Orders API');
+    await t.db.query(
+      `INSERT INTO conversation_projects (conversation_id, project_id, position)
+       SELECT $1, project_id, 0 FROM conversation_projects WHERE conversation_id = $2`,
+      [piece, parent],
+    );
+    const pieceTurn = { ...scopeOf(piece), runId: await turnIn(t, piece, 'running') };
+    expect(await sparkAvailability(deps(), pieceTurn)).toMatchObject({
+      sub_chats: false,
+      sub_chat_stop: false,
+    });
+    expect(await sparkAvailability(deps(), turn)).toMatchObject({
+      sub_chats: true,
+      sub_chat_stop: true,
+    });
+
+    await t.db.query(`UPDATE runs SET source = 'voice' WHERE id = $1`, [turn.runId]);
+    expect(await sparkAvailability(deps(), turn)).toMatchObject({
+      sub_chats: false,
+      sub_chat_stop: false,
+    });
+  });
+
+  it('lets a parent stop its sub-chats, but not split again, in a turn a sub-chat’s reply started', async () => {
+    const parent = await chatWithProject();
+    await finishTurn(t, (await turnsOf(t, parent))[0]!.id, 'succeeded');
+    const piece = { id: await addSubChat(t, parent, 'Orders API'), title: 'Orders API' };
+    const fromPiece = async (kind: 'reply' | 'message') => {
+      const id = await messageAsk(t, piece, parent, 'Done.');
+      await t.db.query('UPDATE chat_asks SET kind = $2 WHERE id = $1', [id, kind]);
+      await deliverAsk(t.db, id, fakeTarget);
+      const runId = (await turnsOf(t, parent)).at(-1)!.id;
+      await finishTurn(t, runId, 'succeeded');
+      return sparkAvailability(deps(), { ...scopeOf(parent), runId });
+    };
+
+    expect(await fromPiece('reply')).toMatchObject({ sub_chats: false, sub_chat_stop: true });
+    expect(await fromPiece('message')).toMatchObject({ sub_chats: false, sub_chat_stop: false });
+
+    const stranger = { id: (await startChat(t, 'Other')).conversationId, title: 'Other' };
+    const id = await messageAsk(t, stranger, parent, 'Stop your sub-chats.');
+    await deliverAsk(t.db, id, fakeTarget);
+    const runId = (await turnsOf(t, parent)).at(-1)!.id;
+    expect(await sparkAvailability(deps(), { ...scopeOf(parent), runId })).toMatchObject({
+      sub_chats: false,
+      sub_chat_stop: false,
     });
   });
 
@@ -150,27 +227,6 @@ describe('what a Spark tools session can use', () => {
     const remote = await sparkAvailability(deps(), turn);
     expect(remote.plugins_edit).toBe(false);
     expect(remote.howTo?.plugins_edit).toContain('paired device');
-  });
-
-  it('offers the outpost tools to a turn of a chat that is in an outpost', async () => {
-    const chat = await startChat(t, 'Build the page');
-    const outpostId = await createOutpostRow(t);
-    await t.db.query(
-      `INSERT INTO outpost_members (outpost_id, conversation_id, handle, position)
-       VALUES ($1, $2, 'web', 1)`,
-      [outpostId, chat.conversationId],
-    );
-    const turn = { ...scopeOf(chat.conversationId), runId: chat.runId };
-    expect(await sparkAvailability(deps(), turn)).toMatchObject({
-      outpost: true,
-      outpost_draft: true,
-      outpost_start: true,
-    });
-    expect(await sparkAvailability(deps(), scopeOf(chat.conversationId))).toMatchObject({
-      outpost: false,
-      outpost_draft: false,
-      outpost_start: false,
-    });
   });
 
   it('counts a ticket source only when its key is saved too', async () => {

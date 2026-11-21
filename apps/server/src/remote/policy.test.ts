@@ -64,31 +64,38 @@ describe('remote policy', () => {
     );
   });
 
-  it('lets a paired device start a proposed draft as proposed, but not create or edit outposts', () => {
-    expect(remoteDecision('POST', `/api/outposts/drafts/${ID}/start`, ALL_OFF).kind).toBe('allow');
-    expect(remoteDecision('GET', `/api/outposts/drafts/${ID}`, ALL_ON).kind).toBe('refuse');
-    expect(remoteDecision('POST', '/api/outposts', ALL_ON).kind).toBe('refuse');
-    expect(remoteDecision('DELETE', `/api/outposts/${ID}`, ALL_ON).kind).toBe('refuse');
-    expect(remoteDecision('PUT', `/api/outposts/${ID}/members/${ID}`, ALL_ON).kind).toBe('refuse');
-    expect(remoteDecision('PUT', `/api/outposts/${ID}/instructions`, ALL_ON).kind).toBe('refuse');
+  it('lets a paired device read a chat’s sub-chats wherever it may read chats', () => {
+    expect(remoteDecision('GET', `/api/conversations/${ID}/sub-chats`, ALL_OFF).kind).toBe('allow');
+    expect(remoteDecision('POST', `/api/conversations/${ID}/sub-chats`, ALL_ON).kind).toBe(
+      'refuse',
+    );
+  });
+
+  it('lets a paired device start a Held sub-chat anyway, with every switch off', () => {
+    const start = `/api/conversations/${ID}/sub-chats/${ID}/start`;
+    expect(remoteDecision('POST', start, ALL_OFF).kind).toBe('allow');
+    expect(remoteDecision('DELETE', start, ALL_ON).kind).toBe('refuse');
   });
 
   it('lets a paired device answer a start-sub-chats card like other Spark action cards', () => {
     const action = {
-      action: 'start_outpost',
-      draftId: ID,
-      outpostName: 'Docs split',
-      joining: false,
-      title: 'Read the docs',
-      chats: [
+      action: 'start_sub_chats',
+      parent: { id: ID, title: 'Docs split' },
+      pieces: [
         {
-          handle: 'api',
+          conversationId: ID,
           title: 'Read api docs',
-          project: 'shop',
-          agentMode: null,
-          dependsOn: null,
-          stacked: false,
           task: 'Read.',
+          project: { id: ID, name: 'shop' },
+          provider: 'claude',
+          agentName: 'Claude',
+          model: null,
+          effort: null,
+          agentMode: null,
+          level: null,
+          sameAsParent: true,
+          stackedOn: null,
+          startsAfter: [],
         },
       ],
     };

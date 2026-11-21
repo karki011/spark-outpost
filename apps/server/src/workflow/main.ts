@@ -9,7 +9,7 @@ import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { configuredBackup } from '../persistence/startup-backup.ts';
 import { migrateOrExit } from '../persistence/migrate-startup.ts';
-import { keepListening, listen } from '../persistence/notifications.ts';
+import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
 import { configuredSecretStore } from '../setup/secrets.ts';
 import { gitHubAppConfig } from '../ship/github/app-config.ts';
@@ -33,9 +33,6 @@ import { connectDesktopBrowser } from '../browser/host-client.ts';
 import { agentCalendarHosts } from '../calendar/agent/access.ts';
 import { googleClientConfig } from '../calendar/google/config.ts';
 import { connectDesktopCalendar } from '../calendar/host-client.ts';
-import { parseAppEvent } from '@spark-outpost/contracts';
-import { TaskWakes } from '../a2a/task-wakes.ts';
-import { stackGit } from '../outposts/stack-git.ts';
 import { processKillsSent } from '../terminal/process-group.ts';
 
 const config = loadConfig();
@@ -52,7 +49,6 @@ const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zs
 const githubApp = gitHubAppConfig(config);
 const codeScan = createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) });
 const desktopBrowser = connectDesktopBrowser(process.env, process);
-const outpostWakes = new TaskWakes();
 const parkedTurns = new ParkedTurns();
 const sparkGitHub = {
   runCommand,
@@ -86,7 +82,6 @@ const sparkDeps: SparkToolDeps = {
     fetch,
     client: googleClientConfig(config),
   }),
-  outposts: { wakes: outpostWakes, stackGit },
   agentRuntime: config.AGENT_RUNTIME,
   chatFolders,
   clones: clones.jobsFor,
@@ -162,15 +157,6 @@ const approvalListener = await listen(config.DATABASE_URL, 'approvals', (id) => 
     .catch(() => undefined);
 });
 const prPollListener = await listen(config.DATABASE_URL, POLL_CHANNEL, () => prFollowUp.wake());
-const outpostListener = await keepListening(
-  config.DATABASE_URL,
-  'changes',
-  (payload) => {
-    const event = parseAppEvent(payload);
-    if (event) outpostWakes.changed(event);
-  },
-  { onBack: () => outpostWakes.wakeAll() },
-);
 console.log(`Worker running with ${config.AGENT_RUNTIME} agents.`);
 
 const shutdown = async () => {
@@ -178,7 +164,6 @@ const shutdown = async () => {
   await listener.close();
   await approvalListener.close();
   await prPollListener.close();
-  await outpostListener.close();
   await projectMap.stop();
   await prFollowUp.stop();
   await worker.stop();

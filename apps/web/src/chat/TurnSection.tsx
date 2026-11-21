@@ -1,10 +1,5 @@
 import { memo } from 'react';
-import {
-  type ConversationDetail,
-  type Message,
-  type Project,
-  type Run,
-} from '@spark-outpost/contracts';
+import type { ConversationDetail, Message, Project, Run } from '@spark-outpost/contracts';
 import { isCrewTurn, isSparkLed } from '../crew/conversation-crew.ts';
 import { MessageAttachments } from './attachments/MessageAttachments.tsx';
 import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivider.tsx';
@@ -25,12 +20,11 @@ import { AutomatedTurn, SentBySpark } from './automated/AutomatedTurn.tsx';
 import { isAutomatedTurn } from './automated/automated-model.ts';
 import { InterruptedCard } from './interruption/InterruptedCard.tsx';
 import { InterruptedNote } from './interruption/InterruptedNote.tsx';
-import { RequestHeader, type RunOutpost } from './outpost/RequestHeader.tsx';
-import { memberChatId, useOutpostSeam } from './outpost/outpost-seam.ts';
-import { TurnOutpostLines } from './outpost/TurnOutpostLines.tsx';
-import { OutpostFaces } from '../outposts/MemberFace.tsx';
 import { isWorkflowTurn } from './workflow-card/workflow-card-model.ts';
 import { WorkflowLine } from './workflow-card/WorkflowLine.tsx';
+import { AskLines } from './sub-chats/AskLines.tsx';
+import { ChatTurnStart } from './sub-chats/ChatTurnStart.tsx';
+import { StartedLines } from './sub-chats/StartedLine.tsx';
 
 interface TurnSectionProps {
   run: Run;
@@ -41,21 +35,6 @@ interface TurnSectionProps {
   detail: ConversationDetail;
   repo: Project | null;
   onOpenChat: (conversationId: string) => void;
-}
-
-function OutpostRequest({ outpost, text }: { outpost: RunOutpost; text: string }) {
-  const seam = useOutpostSeam();
-  const open = seam ? () => seam.onOpenOutpost(outpost.outpostId, outpost.postId) : undefined;
-  const outposts = seam?.outposts ?? [];
-  const fromChatId = memberChatId(outposts, outpost.outpostId, outpost.fromHandle);
-  const members = outposts.find((listed) => listed.id === outpost.outpostId)?.members;
-  return (
-    <OutpostFaces members={members}>
-      <RequestHeader outpost={outpost} fromChatId={fromChatId} onOpen={open}>
-        <QuotedText text={text} />
-      </RequestHeader>
-    </OutpostFaces>
-  );
 }
 
 function sameMessages(before: readonly Message[], after: readonly Message[]): boolean {
@@ -98,6 +77,7 @@ export const TurnSection = memo(function TurnSection({
   const steersPlacedIn = jobsShown
     ? pickedMembers(sparkLed, workflow ? 'jobs' : 'all').map((member) => member.runId)
     : [];
+  const runIds = turnRunIds(detail, run.id);
   const work = (
     <>
       {run.agentCycle && <p className="on-its-own">Continued on its own</p>}
@@ -130,12 +110,15 @@ export const TurnSection = memo(function TurnSection({
       {sparkLed && !mainAgentRan(sparkLed) && (
         <TurnSteers detail={detail} run={run} placedIn={steersPlacedIn} />
       )}
-      <TurnOutpostLines conversation={detail.conversation} run={run} />
-      <OpenedPullRequests
-        conversationId={detail.conversation.id}
-        runIds={turnRunIds(detail, run.id)}
+      <StartedLines starts={detail.subChatStarts} runIds={runIds} />
+      <AskLines
+        asks={detail.asks}
+        chatId={detail.conversation.id}
+        runIds={runIds}
+        onOpenChat={onOpenChat}
       />
-      <PushNotices conversationId={detail.conversation.id} runIds={turnRunIds(detail, run.id)} />
+      <OpenedPullRequests conversationId={detail.conversation.id} runIds={runIds} />
+      <PushNotices conversationId={detail.conversation.id} runIds={runIds} />
     </>
   );
   return (
@@ -157,19 +140,22 @@ export const TurnSection = memo(function TurnSection({
         <>
           {run.workflowStarted && userMessage?.content ? (
             <SentBySpark text={userMessage.content} />
+          ) : run.fromChat && userMessage?.content ? (
+            <ChatTurnStart
+              detail={detail}
+              fromChat={run.fromChat}
+              message={userMessage}
+              onOpenChat={onOpenChat}
+            />
           ) : (
             userMessage && (
               <div className="msg me" data-message-id={userMessage.id}>
                 <MessageAttachments attachments={userMessage.attachments} />
                 {userMessage.content && (
                   <>
-                    {run.outpost ? (
-                      <OutpostRequest outpost={run.outpost} text={userMessage.content} />
-                    ) : (
-                      <div className="bubble">
-                        <QuotedText text={userMessage.content} />
-                      </div>
-                    )}
+                    <div className="bubble">
+                      <QuotedText text={userMessage.content} />
+                    </div>
                     <LinkCards text={userMessage.content} />
                     <MessageActions
                       text={userMessage.content}

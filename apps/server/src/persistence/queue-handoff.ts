@@ -2,7 +2,7 @@ import { withTransaction, type Db } from './db.ts';
 import { chatSparkPaused } from './spark-pause.ts';
 import { runWaitingOn } from './subagents.ts';
 
-const TYPED_BY_USER = `q.origin IS NULL AND q.outpost_post_id IS NULL
+const TYPED_BY_USER = `q.origin IS NULL
   AND q.spark_rule_card_id IS NULL AND q.continue_run_id IS NULL`;
 
 async function hasTypedItem(db: Db, conversationId: string, skip: readonly string[]) {

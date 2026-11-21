@@ -43,7 +43,19 @@ import {
   serviceNowQuestion,
 } from './servicenow-actions.ts';
 import { browserActionLabels, browserActionSchemas, browserQuestion } from './browser-actions.ts';
-import { startOutpostActionSchema, startOutpostLabels } from './outpost-start-action.ts';
+import {
+  sendToChatActionSchema,
+  sendToChatLabels,
+  sendToChatQuestion,
+} from './send-to-chat-action.ts';
+import {
+  applySubChatEdits,
+  startSubChatsActionSchema,
+  stopSubChatActionSchema,
+  subChatActionLabels,
+  subChatActionQuestion,
+  subChatEditSchema,
+} from './start-sub-chats-action.ts';
 import { askSparkActionSchema, askSparkLabels } from './ask-spark-action.ts';
 import { publishArtifactActionSchema, publishArtifactLabels } from './artifact-pages.ts';
 import { linkRepoActionSchema, linkRepoLabels, linkRepoQuestion } from './repos-folders.ts';
@@ -239,7 +251,9 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   calendarEditActionSchema,
   ...atlassianActionSchemas,
   ...serviceNowActionSchemas,
-  startOutpostActionSchema,
+  sendToChatActionSchema,
+  startSubChatsActionSchema,
+  stopSubChatActionSchema,
   askSparkActionSchema,
   publishArtifactActionSchema,
   rulesEditActionSchema,
@@ -263,6 +277,7 @@ export const sparkActionEditsSchema = z
     status: ticketStatusSchema,
     to: z.string().trim().min(1).max(100),
     skip: z.array(z.string().max(60)).max(101),
+    subChats: z.array(subChatEditSchema),
   })
   .partial()
   .strict();
@@ -299,7 +314,9 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   confluence_edit: [],
   servicenow_read: [],
   servicenow_edit: [],
-  start_outpost: [],
+  send_to_chat: [],
+  start_sub_chats: ['subChats'],
+  stop_sub_chat: [],
   ask_spark: [],
   publish_artifact: [],
   rules_edit: [],
@@ -317,6 +334,7 @@ export function editableFields(action: SparkActionName): readonly (keyof SparkAc
 
 export function applySparkEdits(action: SparkAction, edits: SparkActionEdits | null): SparkAction {
   if (!edits) return action;
+  if (action.action === 'start_sub_chats') return applySubChatEdits(action, edits.subChats ?? []);
   const allowed = EDITABLE[action.action];
   const picked = Object.fromEntries(
     Object.entries(edits).filter(([field]) => allowed.includes(field as keyof SparkActionEdits)),
@@ -420,7 +438,8 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
   ...atlassianActionLabels,
   ...serviceNowActionLabels,
   ...browserActionLabels,
-  ...startOutpostLabels,
+  ...sendToChatLabels,
+  ...subChatActionLabels,
   ...askSparkLabels,
   ...publishArtifactLabels,
   ...rulesEditLabels,
@@ -448,6 +467,10 @@ export function sparkActionQuestion(action: SparkAction): string {
   const teammate = teammateActionQuestion(action);
   if (teammate) return teammate;
   if (action.action === 'link_repo') return linkRepoQuestion(action);
+  if (action.action === 'send_to_chat') return sendToChatQuestion(action);
+  if (action.action === 'start_sub_chats' || action.action === 'stop_sub_chat') {
+    return subChatActionQuestion(action);
+  }
   return (
     atlassianQuestion(action) ??
     serviceNowQuestion(action) ??

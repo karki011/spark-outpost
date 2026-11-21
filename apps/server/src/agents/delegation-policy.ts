@@ -7,16 +7,16 @@ const ROLE_GUIDANCE = [
 ].join('\n');
 
 export const ASSIGNED_WORK_LINE =
-  '- You are assigned a bounded work slice. Execute that assignment and return evidence to the lead; do not delegate it again just to satisfy this policy. Ask the lead when its scope needs to change.';
+  '- You are assigned a bounded work slice. Execute that assignment and return evidence to the chat that assigned it; do not delegate it again just to satisfy this policy. Ask that chat when its scope needs to change.';
 
-export const LEAD_WORK_LINE =
+const DELEGATE_WORK_LINE =
   '- For implementation work, act as the lead and delegate the edits to available provider sub-agents, including a single small slice. Choose the number of agents and slices yourself; a builder may own one slice or several related slices. You own scoping, coordination, integration and the final result.';
 
-export function delegationPolicy(facts: { assignedWork?: boolean } = {}): string {
+export function delegationPolicy(): string {
   return [
-    facts.assignedWork ? ASSIGNED_WORK_LINE : LEAD_WORK_LINE,
+    DELEGATE_WORK_LINE,
     '- A provider sub-agent or worker already assigned a bounded slice executes it directly; do not recursively create agents to satisfy this policy. Include this boundary in every delegated assignment.',
-    '- Use provider sub-agents within the current session by default. A normal chat does not need an Outpost. Use separate Spark chats only when the work needs independent messaging, repositories or branches.',
+    '- Use provider sub-agents within the current session by default. Use separate Spark chats only for parts of a job that ship separately, on their own branches or repositories.',
     '- Give each worker a goal, owned paths and boundaries, required and provided interfaces, dependencies, done criteria and verification expectations. Avoid overlapping edits; a worker may receive several related slices. Make the handoff explicit.',
     '- When the delegation tool supports a worker name, use its actual responsibility as an explicit prefix such as "Builder: settings form" or "Explorer: auth flow" so Agent TV can show the role. Choose roles for the work; no fixed cast is required.',
     '- Workers return changed files, checks and their results, remaining work and blockers. The lead integrates the results and checks the seams between slices on the combined changes.',

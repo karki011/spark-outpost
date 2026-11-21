@@ -2,7 +2,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { NO_REMOTE, stackGit } from '../src/outposts/stack-git.ts';
+import { NO_REMOTE, stackGit } from '../src/sub-chats/stack-git.ts';
 import { git, repoWithRemote, write, type TestRepo } from './ship-support.ts';
 
 const PARENT = 'spark/api-1a2b3c4d';
@@ -31,21 +31,6 @@ afterEach(async () => {
 });
 
 describe('what Spark reads from the repository about a stack', () => {
-  it("knows whether the child holds the parent's commits", async () => {
-    expect(await stackGit.isAncestor(repo.root, PARENT, CHILD)).toBe(true);
-    await commitOn(PARENT, 'more.ts');
-    expect(await stackGit.isAncestor(repo.root, PARENT, CHILD)).toBe(false);
-    git(repo.root, 'checkout', '-q', CHILD);
-    git(repo.root, 'merge', '-q', '--no-edit', PARENT);
-    expect(await stackGit.isAncestor(repo.root, PARENT, CHILD)).toBe(true);
-  });
-
-  it('does not answer for a branch that is not there', async () => {
-    await expect(stackGit.isAncestor(repo.root, 'spark/gone', CHILD)).rejects.toThrow(
-      'Could not compare spark/gone',
-    );
-  });
-
   it('sees the parent on the remote only after it is pushed', async () => {
     expect(await stackGit.branchOnRemote(repo.root, PARENT)).toBe(false);
     git(repo.root, 'push', '-q', 'origin', PARENT);

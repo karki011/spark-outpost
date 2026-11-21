@@ -1,13 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { createConversation } from '../src/persistence/conversations.ts';
-import { insertTasks } from '../src/persistence/outpost-stories.ts';
-import { createOutpost } from '../src/persistence/outposts.ts';
+import { withTransaction } from '../src/persistence/db.ts';
+import { insertSubChat } from '../src/persistence/sub-chats.ts';
 import { createProject } from '../src/projects/projects.ts';
+import { emptyChat, STARTED_WITH } from './sub-chat-fixtures.ts';
 import type { TestDb } from './support.ts';
+
+export const STACK_PARENT_TITLE = 'Orders endpoint';
 
 export interface StackedPair {
   projectId: string;
-  outpostId: string;
   api: string;
   web: string;
 }
@@ -18,35 +20,25 @@ export async function projectChat(t: TestDb, projectId: string): Promise<string>
   return id;
 }
 
-export async function dependOn(t: TestDb, api: string, web: string): Promise<string> {
-  const outpostId = randomUUID();
-  await createOutpost(t.db, {
-    id: outpostId,
-    workspaceId: t.workspaceId,
-    name: 'Orders launch',
-    members: [
-      { conversationId: api, handle: 'api' },
-      { conversationId: web, handle: 'web' },
-    ],
-  });
-  const task = { outpostId, draftId: null, leadConversationId: null, openingPostId: null };
-  await insertTasks(t.db, [
-    {
-      ...task,
-      conversationId: api,
-      title: 'Orders endpoint',
-      position: 0,
-      dependsOnConversationId: null,
-    },
-    {
-      ...task,
-      conversationId: web,
-      title: 'Orders page',
-      position: 1,
-      dependsOnConversationId: api,
-    },
-  ]);
-  return outpostId;
+async function subChatOf(t: TestDb, parent: string, chat: string, stackedOn: string | null) {
+  await withTransaction(t.db, (client) =>
+    insertSubChat(client, {
+      conversationId: chat,
+      parentConversationId: parent,
+      task: 'Build it.',
+      stackedOn,
+      startsAfter: [],
+      startedWith: STARTED_WITH,
+      approvalId: null,
+    }),
+  );
+}
+
+export async function dependOn(t: TestDb, api: string, web: string): Promise<void> {
+  const parent = await emptyChat(t, 'Orders launch');
+  await t.db.query('UPDATE conversations SET title = $2 WHERE id = $1', [api, STACK_PARENT_TITLE]);
+  await subChatOf(t, parent, api, null);
+  await subChatOf(t, parent, web, api);
 }
 
 export async function stackedPair(t: TestDb, root: string, webRoot = root): Promise<StackedPair> {
@@ -54,7 +46,8 @@ export async function stackedPair(t: TestDb, root: string, webRoot = root): Prom
   const webProject = (await createProject(t.db, t.workspaceId, webRoot)).project.id;
   const api = await projectChat(t, projectId);
   const web = await projectChat(t, webProject);
-  return { projectId, outpostId: await dependOn(t, api, web), api, web };
+  await dependOn(t, api, web);
+  return { projectId, api, web };
 }
 
 export async function ownedWorktree(

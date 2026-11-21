@@ -1,7 +1,6 @@
 import { categorySchema, type TitleSource } from '@spark-outpost/contracts';
 import { decideAutoTitle, type AutoTitle } from '../titles/auto-title.ts';
 import type { Queryable } from './db.ts';
-import { ownRequestText } from './outpost-own-request.ts';
 
 export async function recordSuggestedTitle(
   db: Queryable,
@@ -13,7 +12,6 @@ export async function recordSuggestedTitle(
 
 interface TitleRow {
   conversation_id: string;
-  user_message_id: string;
   category: string | null;
   request: string;
   title: string;
@@ -27,7 +25,7 @@ const asCategory = (value: string | null) => categorySchema.safeParse(value).dat
 
 export async function applyAutoTitle(db: Queryable, runId: string): Promise<AutoTitle | null> {
   const { rows } = await db.query<TitleRow>(
-    `SELECT r.conversation_id, r.user_message_id, r.category, m.content AS request, c.title, c.title_source,
+    `SELECT r.conversation_id, r.category, m.content AS request, c.title, c.title_source,
        c.title_category,
        (SELECT s.suggested_title FROM runs s
         WHERE (s.id = r.id OR s.parent_run_id = r.id) AND s.suggested_title IS NOT NULL
@@ -53,7 +51,7 @@ export async function applyAutoTitle(db: Queryable, runId: string): Promise<Auto
     {
       suggested: row.suggested,
       category: asCategory(row.category),
-      request: (await ownRequestText(db, row.user_message_id)) ?? row.request,
+      request: row.request,
     },
   );
   if (!decided) return null;

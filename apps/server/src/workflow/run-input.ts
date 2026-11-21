@@ -1,6 +1,7 @@
 import {
   UNSET_RUN_LEVEL,
   type AgentRole,
+  type ChatAskKind,
   type ConfigValues,
   type Attachment,
   type InvolvementLevel,
@@ -17,7 +18,8 @@ import { usableDefault } from '../model-cards/cards.ts';
 import type { Db } from '../persistence/db.ts';
 import { latestSparkSeed } from '../persistence/compactions.ts';
 import type { AgentSettings, ConversationTurn, TurnAttachment } from '../providers/provider.ts';
-import { historyLabel, requestAuthor } from '../outposts/request-prompt.ts';
+import { askTurnFacts } from '../sub-chats/asks.ts';
+import { askHistoryLabel, type AskPromptFacts } from '../sub-chats/message-prompt.ts';
 import type { RunIdentity } from './run-events.ts';
 import { withInterruptionNote } from './continue-note.ts';
 import { usableSettings } from './model-guard.ts';
@@ -60,20 +62,9 @@ export interface RunInput {
   testRun?: boolean;
   reviewRun?: boolean;
   stepEdits?: boolean;
-  outpostRequest?: OutpostRequest | null;
+  chatAsk?: AskPromptFacts | null;
   turnTimes?: TurnTimes | null;
   agentCycle?: boolean;
-}
-
-export interface OutpostRequest {
-  postId: string;
-  outpostName: string | null;
-  fromUser: boolean;
-  fromHandle?: string | null;
-  fromTitle?: string | null;
-  userStarted?: boolean;
-  agentStarted?: boolean;
-  wrapUp?: boolean;
 }
 
 export interface TurnTimes {
@@ -91,18 +82,7 @@ export interface ProjectMove {
   to: string;
 }
 
-interface OutpostRow {
-  outpost_run: boolean | null;
-  outpost_from_user: boolean | null;
-  outpost_from_handle: string | null;
-  outpost_from_title: string | null;
-  outpost_user_started: boolean | null;
-  outpost_agent_started: boolean | null;
-  outpost_wrap_up: boolean | null;
-  outpost_name: string | null;
-}
-
-interface RunRow extends OutpostRow {
+interface RunRow {
   user_message_id: string;
   agent_cycle: boolean;
   conversation_id: string;
@@ -143,11 +123,14 @@ interface RunRow extends OutpostRow {
   continues_run_id: string | null;
 }
 
-interface HistoryRow extends OutpostRow {
+interface HistoryRow {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   created_at: Date;
+  ask_kind: ChatAskKind | null;
+  ask_from: string | null;
+  from_chat: boolean;
 }
 
 const RESENT_ATTACHMENT_TURNS = 3;
@@ -160,14 +143,9 @@ const toTurnAttachment = ({ name, mediaType, kind, data }: AttachmentFile): Turn
 });
 
 function asStored(row: HistoryRow): string {
-  const request = row.role === 'user' ? outpostRequestOf(row, row.id) : null;
-  if (!request) return row.content;
-  return historyLabel({
-    postId: request.postId,
-    outpostName: request.outpostName,
-    author: requestAuthor(request),
-    body: row.content,
-  });
+  if (!row.from_chat) return row.content;
+  const ask = { id: row.id, kind: row.ask_kind ?? 'message', fromTitle: row.ask_from ?? '' };
+  return askHistoryLabel(ask, row.content);
 }
 
 function withEarlierMentions(content: string, attachments: readonly Attachment[]): string {
@@ -222,20 +200,12 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'spark_rule' AS spark_rule_retry,
             (COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
-              IN ('assistant', 'workflow') OR COALESCE((r.route->'spark') ? 'step', false))
+              IN ('assistant', 'workflow', 'chat') OR COALESCE((r.route->'spark') ? 'step', false))
               AS assistant_sent,
             COALESCE((r.route->'spark') ? 'step', false) AS workflow_step,
             COALESCE((r.route->'spark'->>'test')::boolean, false) AS test_run,
             COALESCE((r.route->'spark'->>'edits')::boolean, false) AS step_edits,
             COALESCE((r.route->'spark'->>'review')::boolean, false) AS review_run,
-            COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
-              = 'outpost' AS outpost_run,
-            op.from_user AS outpost_from_user, o.name AS outpost_name,
-            op.from_handle AS outpost_from_handle, op.user_started AS outpost_user_started,
-            op.agent_started AS outpost_agent_started,
-            EXISTS (SELECT 1 FROM outpost_drafts od WHERE od.id = op.id) AS outpost_wrap_up,
-            (SELECT fc.title FROM conversations fc WHERE fc.id = op.from_conversation_id)
-              AS outpost_from_title,
             r.created_at AS started_at,
             (SELECT max(p.created_at) FROM runs p
              WHERE p.conversation_id = r.conversation_id AND p.parent_run_id IS NULL
@@ -273,8 +243,6 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
      FROM runs r
      LEFT JOIN messages m ON m.id = r.user_message_id
      JOIN conversations c ON c.id = r.conversation_id
-     LEFT JOIN outpost_posts op ON op.id = r.user_message_id
-     LEFT JOIN outposts o ON o.id = op.outpost_id
      LEFT JOIN provider_connections pc
        ON pc.workspace_id = c.workspace_id AND pc.provider = r.provider
       AND pc.disconnected_at IS NULL
@@ -287,20 +255,15 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
   if (row.agent_cycle) return withUsableModel(db, agentCycleInput(runId, row));
   const history = await db.query<HistoryRow>(
     `SELECT m.id, m.role, m.content, m.created_at,
-            EXISTS (
+            ask.kind AS ask_kind, COALESCE(ac.title, ask.from_title) AS ask_from,
+            m.role = 'user' AND (ask.id IS NOT NULL OR EXISTS (
               SELECT 1 FROM runs hr
               WHERE hr.user_message_id = m.id AND hr.parent_run_id IS NULL
-                AND hr.source = 'outpost'
-            ) AS outpost_run,
-            op.from_user AS outpost_from_user, o.name AS outpost_name,
-            op.from_handle AS outpost_from_handle, op.user_started AS outpost_user_started,
-            op.agent_started AS outpost_agent_started,
-            EXISTS (SELECT 1 FROM outpost_drafts od WHERE od.id = op.id) AS outpost_wrap_up,
-            (SELECT fc.title FROM conversations fc WHERE fc.id = op.from_conversation_id)
-              AS outpost_from_title
+                AND hr.source = 'chat'
+            )) AS from_chat
      FROM messages m
-     LEFT JOIN outpost_posts op ON op.id = m.id
-     LEFT JOIN outposts o ON o.id = op.outpost_id
+     LEFT JOIN chat_asks ask ON ask.id = m.id AND m.role = 'user'
+     LEFT JOIN conversations ac ON ac.id = ask.from_conversation_id
      WHERE m.conversation_id = $1
        AND m.created_at < (SELECT created_at FROM messages WHERE id = $2)
      ORDER BY m.created_at, m.id`,
@@ -331,7 +294,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     followUpRound: row.follow_up_round === true,
     sparkRuleRetry: row.spark_rule_retry === true,
     assistantSent: row.assistant_sent === true,
-    outpostRequest: outpostRequestOf(row, row.user_message_id),
+    chatAsk: await askTurnFacts(db, row.user_message_id),
     turnTimes: {
       startedAt: row.started_at.toISOString(),
       previousStartedAt: row.previous_started_at?.toISOString() ?? null,
@@ -377,20 +340,6 @@ async function chatSeed(
   return { text: stored.summary, historyFrom: covered + 1 };
 }
 
-function outpostRequestOf(row: OutpostRow, postId: string): OutpostRequest | null {
-  if (row.outpost_run !== true) return null;
-  return {
-    postId,
-    outpostName: row.outpost_name,
-    fromUser: row.outpost_from_user === true,
-    fromHandle: row.outpost_from_handle,
-    fromTitle: row.outpost_from_title,
-    userStarted: row.outpost_user_started === true,
-    agentStarted: row.outpost_agent_started === true,
-    wrapUp: row.outpost_wrap_up === true,
-  };
-}
-
 function settingsOf(row: RunRow): AgentSettings {
   const model = row.run_model ?? usableDefault(row.provider, row.model);
   return {
@@ -419,7 +368,6 @@ function agentCycleInput(runId: string, row: RunRow): RunInput {
     parentRunId: null,
     userRequest: '',
     followUpRound: false,
-    outpostRequest: null,
     role: null,
     askTitle: false,
     assistant: row.assistant,
@@ -451,7 +399,6 @@ function childInput(runId: string, row: RunRow): RunInput {
     followUpRound: row.follow_up_round === true,
     sparkRuleRetry: row.spark_rule_retry === true,
     assistantSent: row.assistant_sent === true,
-    outpostRequest: outpostRequestOf(row, row.user_message_id),
     workflowStep: row.workflow_step === true,
     testRun: row.test_run === true,
     reviewRun: row.review_run === true,

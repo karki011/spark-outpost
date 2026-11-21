@@ -3,7 +3,7 @@ title: Follow, stop and queue messages
 section: Chats
 type: how-to
 order: 216
-summary: Follow work, stop it, queue files and messages, or delete a running chat.
+summary: Follow work, stop it, queue files and messages, or delete a chat that is running.
 ---
 
 About 2 minutes.
@@ -51,7 +51,7 @@ Queues survive restarts; drafts stay in this browser.
 
 ## Delete a running chat
 
-Select **… → Delete → Confirm delete**; **Undo** restores it.
+Select **… → Delete → Confirm delete**; **Undo** restores that chat.
 
 ## After a turn
 

@@ -7,16 +7,15 @@ import { otherBranchReason } from '../src/approvals/publish-policy.ts';
 import { chatWorktreesOf } from '../src/persistence/chat-worktrees.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { requestCancel } from '../src/persistence/runs.ts';
-import { OUTPOST_REQUEST_METHOD } from '../src/outposts/request-audit.ts';
-import { wrapRequest } from '../src/outposts/request-prompt.ts';
 import { runCommand } from '../src/setup/command.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import { KEPT_RECORD_TITLE } from '../src/workflow/kept-record-writer.ts';
-import { chatTarget, drainQueue } from '../src/workflow/queue-drain.ts';
+import { deliverAsk } from '../src/sub-chats/deliver-ask.ts';
+import { chatTarget } from '../src/workflow/queue-drain.ts';
 import type { Worker } from '../src/workflow/worker.ts';
 import { plansOf } from './chat-plan-support.ts';
 import { FAKE_PLAN } from './fake-acp-plans.ts';
-import { addMemberChat, createOutpostRow, deliverRequest, postRunId } from './outpost-fixtures.ts';
+import { messageAsk, turnsOf } from './chat-ask-fixtures.ts';
 import { promptsOf } from './publish-step-support.ts';
 import {
   FAKE_GH,
@@ -28,7 +27,6 @@ import {
 } from './ship-support.ts';
 import { createTestDb, eventTypes, eventually, type TestDb } from './support.ts';
 import {
-  auditOf,
   changesOf,
   driveToEnd,
   openChat,
@@ -253,36 +251,17 @@ describe('a whole chat turn on the chat’s own run', { timeout: 120_000 }, () =
     expect(await loadOrchestration(t.db, runId)).toBeNull();
   });
 
-  it('runs another chat’s outpost request with its label, audited, never as a publish request', async () => {
-    const outpostId = await createOutpostRow(t, 'Orders launch');
-    const api = await addMemberChat(t, outpostId, 'api');
-    const body = 'Push it and open a pull request.';
-    const postId = await deliverRequest(t.db, {
-      outpostId,
-      toConversationId: api,
-      toHandle: 'api',
-      body,
-      fromUser: false,
-    });
+  it('runs another chat’s message as its own turn, never as a publish request', async () => {
+    const api = await projectChat('full-auto');
+    const sender = { id: await projectChat('hands-off'), title: 'Orders page' };
+    const askId = await messageAsk(t, sender, api, 'Push it and open a pull request.');
 
-    expect(await drainQueue(t.db, api, chatTarget(t.db))).toBe('sent');
-    const runId = (await postRunId(t.db, postId))!;
+    expect(await deliverAsk(t.db, askId, chatTarget(t.db))).toBe('started');
+    const runId = (await turnsOf(t, api)).find((turn) => turn.user_message_id === askId)!.id;
     const { run } = await driveToEnd(t, api, runId);
 
     expect(run.status).toBe('succeeded');
-    const label = wrapRequest({
-      postId,
-      outpostName: 'Orders launch',
-      author: { kind: 'other' },
-      body,
-    });
-    const replies = await repliesOf(t, runId);
-    expect(replies).toHaveLength(1);
-    expect(replies[0]).toContain(label);
-    const audit = await auditOf(t, runId);
-    expect(audit.filter((entry) => entry.method === OUTPOST_REQUEST_METHOD)).toMatchObject([
-      { payload: { params: { postId, fromUser: false } } },
-    ]);
+    expect(await repliesOf(t, runId)).toHaveLength(1);
     expect(await promptsOf(t, runId)).toBe(1);
     expect(stub.github.pulls).toEqual([]);
   });

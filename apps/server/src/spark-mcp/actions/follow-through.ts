@@ -48,7 +48,9 @@ async function audit(
     action.action === 'crew_edit' ||
     action.action === 'link_repo' ||
     action.action === 'github_read' ||
-    action.action === 'clone_repo';
+    action.action === 'clone_repo' ||
+    action.action === 'send_to_chat' ||
+    action.action === 'start_sub_chats';
   const payload = lean
     ? redactValue({
         action: auditedAction(action),
@@ -83,7 +85,7 @@ async function perform(deps: SparkToolDeps, claimed: ClaimedSparkAction): Promis
   };
   try {
     const startedBy = approval.decidedBy === 'level' ? 'agent' : 'user';
-    const performed = await performSparkAction(context, action, startedBy);
+    const performed = await performSparkAction(context, action, startedBy, approval.id);
     return {
       state: 'done',
       message: performed.message,

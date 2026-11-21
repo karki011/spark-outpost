@@ -21,10 +21,10 @@ import {
   type TurnRound,
 } from './round-card-model.ts';
 
-export function SentBySpark({ text }: { text: string }) {
+export function SentBySpark({ text, label }: { text: string; label?: string }) {
   return (
     <details className="auto-turn-sent">
-      <summary>Show what Spark sent</summary>
+      <summary>{label ?? 'Show what Spark sent'}</summary>
       <div className="bubble">
         <ReviewMarkdown text={sentForDisplay(text)} />
       </div>

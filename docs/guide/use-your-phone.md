@@ -20,7 +20,7 @@ Each device's **Actions** menu has **Rename**, **Send a test notification**, **R
 
 The right panel has the address, QR code and **Hold to disconnect all**.
 
-See what [outposts](outposts.md) allow.
+Devices read the [**Sub-chats**](sub-chats.md#find-a-sub-chat) tab.
 
 **Link a new folder or clone a repo** also allows **New folder** and agents' clones.
 

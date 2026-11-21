@@ -1,6 +1,6 @@
 import { gateBeforePublish } from '../crew-flows/before-publish.ts';
 import { noteEndedTurn } from '../crew-flows/trigger-events.ts';
-import { userText } from '../outposts/user-asked.ts';
+import { userText } from '../sub-chats/user-asked.ts';
 import { chatPlanInput } from '../plans/chat-plan-turn.ts';
 import { linkTicketForChanges } from '../tickets/chat-link.ts';
 import type { ChatTurnHooks } from './chat-turn-hooks.ts';

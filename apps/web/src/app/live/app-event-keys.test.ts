@@ -39,11 +39,6 @@ const cached: Record<string, QueryKey> = {
   previewA: ['preview', 'chat', A],
   previewB: ['preview', 'chat', B],
   previewProject: ['preview', 'project', A],
-  outpostList: ['outposts', 'list'],
-  outpostDetail: ['outposts', 'detail', A],
-  otherOutpostDetail: ['outposts', 'detail', B],
-  outpostDraft: ['outposts', 'draft', B],
-  draftsA: ['conversations', A, 'outpost-drafts'],
   terminalRemoteA: ['terminal-remote', A],
   terminalRemoteB: ['terminal-remote', B],
 };
@@ -83,10 +78,6 @@ describe('app event invalidation', () => {
         'health',
         'list',
         'outcome',
-        'otherOutpostDetail',
-        'outpostDetail',
-        'outpostDraft',
-        'outpostList',
         'previewA',
         'spendToday',
         'spendWeek',
@@ -103,35 +94,6 @@ describe('app event invalidation', () => {
       'previewA',
       'previewB',
       'previewProject',
-    ]);
-  });
-
-  it('an outpost change without an id refreshes every outpost and the sidebar list', async () => {
-    expect(await invalidatedBy(event('outpost_changed', null))).toEqual([
-      'list',
-      'otherOutpostDetail',
-      'outpostDetail',
-      'outpostDraft',
-      'outpostList',
-    ]);
-  });
-
-  it('an outpost change with an id refreshes that outpost, the outposts list and the sidebar list', async () => {
-    expect(await invalidatedBy({ ...event('outpost_changed', null), outpostId: A })).toEqual([
-      'list',
-      'outpostDetail',
-      'outpostDraft',
-      'outpostList',
-    ]);
-  });
-
-  it('an outpost change named for a chat also refreshes that chat’s draft lines', async () => {
-    expect(await invalidatedBy({ ...event('outpost_changed', A), outpostId: B })).toEqual([
-      'draftsA',
-      'list',
-      'otherOutpostDetail',
-      'outpostDraft',
-      'outpostList',
     ]);
   });
 
@@ -200,10 +162,6 @@ describe('app event invalidation', () => {
       'changesA',
       'detailA',
       'list',
-      'otherOutpostDetail',
-      'outpostDetail',
-      'outpostDraft',
-      'outpostList',
       'task',
       'today',
     ]);
@@ -241,6 +199,15 @@ describe('app event invalidation', () => {
     }
     const stepKeys = mergeInvalidations([event('calendar')]).map((each) => each.queryKey[0]);
     expect(stepKeys).not.toContain('attention');
+  });
+
+  it('a sub-chat change, a turn and a card refresh the sub-chats of every open Sub-chats tab', () => {
+    for (const kind of ['sub_chats_changed', 'run', 'approval', 'conversation'] as const) {
+      const keys = mergeInvalidations([event(kind)]).map((each) => each.queryKey.join('/'));
+      expect([kind, keys.includes('sub-chats')]).toEqual([kind, true]);
+    }
+    const quiet = mergeInvalidations([event('usage')]).map((each) => each.queryKey[0]);
+    expect(quiet).not.toContain('sub-chats');
   });
 
   it('a chat marked seen refreshes the chat list and search results, nothing else', async () => {

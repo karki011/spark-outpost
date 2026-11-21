@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { asPairedPhone } from './outposts-kit.ts';
+import { asPairedPhone } from './paired-phone.ts';
 import { openChats } from './navigation.ts';
 import { pickerPanel } from './permissions-kit.ts';
 import { resetWithAgents } from './project-chat-kit.ts';

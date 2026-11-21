@@ -60,8 +60,8 @@ import { teammateErrorStatus } from './teammate-routes.ts';
 import { workflowErrorStatus } from '../crew-flows/routes.ts';
 import { githubReviewErrorStatus } from './github-review-routes.ts';
 import { queueErrorStatus } from './queue-routes.ts';
+import { subChatErrorStatus } from './sub-chat-routes.ts';
 import { adoptErrorStatus } from './adopt-pull-routes.ts';
-import { outpostErrorStatus } from './outpost-routes.ts';
 import { interruptionErrorStatus } from './interruption-routes.ts';
 import { sparkRulesErrorStatus } from './spark-rules-routes.ts';
 import { resolveRunTarget } from './run-target.ts';
@@ -239,8 +239,8 @@ export function statusForError(error: unknown): { status: number; message: strin
     teammateErrorStatus(error) ??
     workflowErrorStatus(error) ??
     queueErrorStatus(error) ??
+    subChatErrorStatus(error) ??
     adoptErrorStatus(error) ??
-    outpostErrorStatus(error) ??
     cloneErrorStatus(error) ??
     interruptionErrorStatus(error) ??
     sparkRulesErrorStatus(error) ??

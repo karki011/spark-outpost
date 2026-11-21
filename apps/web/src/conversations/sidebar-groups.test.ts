@@ -11,6 +11,7 @@ import {
   pinnedSiblings,
   projectsWithChats,
 } from './sidebar-groups.ts';
+import { subChatTree } from './sub-chat-tree.ts';
 
 const project = (id: string, name: string): Project => ({
   id,
@@ -40,6 +41,24 @@ const chat = (id: string, extra: Partial<ConversationSummary> = {}): Conversatio
 });
 
 describe('activeGroups', () => {
+  it('does not list a nested sub-chat under its project a second time', () => {
+    const web = project('web', 'web-apps');
+    const parent = chat('parent', { projectIds: ['web'], subChatCount: 1 });
+    const piece = chat('piece', {
+      projectIds: ['web'],
+      parent: { id: 'parent', title: 'parent' },
+      subChat: { position: 0, status: 'working' },
+    });
+    const orphan = chat('orphan', {
+      projectIds: ['web'],
+      formerParent: { title: 'gone' },
+      subChat: { position: 0, status: 'done' },
+    });
+    const { roots } = subChatTree([parent, piece, orphan]);
+    const result = activeGroups(roots, [web]);
+    expect(result.groups[0]?.chats.map((c) => c.id)).toEqual(['parent', 'orphan']);
+  });
+
   it('groups chats under their primary repo and keeps empty projects', () => {
     const web = project('web', 'web-apps');
     const docs = project('docs', 'docs');

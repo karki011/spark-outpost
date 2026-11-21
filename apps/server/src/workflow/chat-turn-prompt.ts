@@ -1,9 +1,8 @@
 import { basename } from 'node:path';
 import { builderChatScope } from '../crew-flows/builder-chat.ts';
-import { outpostNeeds } from '../outposts/outpost-availability.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
-import { storyTaskOf } from '../persistence/outpost-stories.ts';
+import { splitsIntoSubChats } from '../sub-chats/availability.ts';
 import { sparkPreferences, type SparkPreferences } from '../persistence/setup.ts';
 import { currentBranch } from '../projects/chat-worktrees.ts';
 import { isGitWorkTree } from '../projects/snapshot.ts';
@@ -42,36 +41,32 @@ export async function chatPromptFacts(
   input: RunInput,
   known?: SparkPreferences,
 ): Promise<ChatPromptFacts> {
-  const { threadId: conversationId, runId } = input.identity;
-  const [project, needs, prefs, storyTask, builderChat] = await Promise.all([
+  const conversationId = input.identity.threadId;
+  const [project, prefs, builderChat, subChatsTool] = await Promise.all([
     projectFacts(db, input),
-    outpostNeeds(db, { conversationId, runId }),
     known ?? sparkPreferences(db, input.workspaceId),
-    storyTaskOf(db, conversationId),
     builderChatScope(db, conversationId),
+    splitsIntoSubChats(db, conversationId),
   ]);
   return {
     project,
-    outpostDraftTool: needs.outpost_draft,
-    outpostStartTool: needs.outpost_start,
+    subChatsTool,
     level: input.level,
     asksWithTool: input.mode === 'do' && input.plansFirst !== true,
-    assignedWork: storyTask !== null,
     ...(builderChat ? { builderChat } : {}),
     customInstructions: prefs.agentInstructions ?? null,
   };
 }
 
-export function requestAssignedWork(input: Pick<RunInput, 'outpostRequest'>): boolean {
-  const request = input.outpostRequest;
-  return request != null && !request.fromUser && !request.wrapUp;
+export function isTaskTurn(input: Pick<RunInput, 'chatAsk'>): boolean {
+  return input.chatAsk?.kind === 'task';
 }
 
 export function chatTurnNoteFor(input: RunInput, facts: ChatPromptFacts): string | null {
   return chatTurnNote({
     project: facts.project,
     followUpRound: input.followUpRound === true,
-    requestAssigned: !facts.assignedWork && requestAssignedWork(input),
+    taskTurn: isTaskTurn(input),
   });
 }
 

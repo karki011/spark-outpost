@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { ticketSourceIdSchema, type GithubInboxItem } from '@spark-outpost/contracts';
-import { webLink } from '../outposts/post-text.ts';
+import { webLink } from '../links/web-link.ts';
 import { Glyph } from '../tickets/ticket-icons.tsx';
 import { requestTicket } from '../tickets/ticket-request.ts';
 import { XIcon } from '../ui/icons.tsx';

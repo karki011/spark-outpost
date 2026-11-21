@@ -52,6 +52,12 @@ describe('attentionReport', () => {
     });
   });
 
+  it('names a sub-chat with its parent', () => {
+    const parent = { id: CARD, title: 'Checkout rework' };
+    const report = attentionReport([chat({ needsInput: true, parent })], [item()]);
+    expect(report.requests[0]?.title).toBe('Fix login in Checkout rework needs you');
+  });
+
   it('counts a Terminal session that waits and says what it waits for', () => {
     const terminal = { state: 'waiting_for_permission' } as ConversationSummary['terminal'];
     const report = attentionReport(

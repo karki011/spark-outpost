@@ -1,7 +1,3 @@
-.view.in-outpost > :is(.main:not(.op), .cpanes) {
-  display: none;
-}
-
 .view[hidden] {
   display: none;
 }

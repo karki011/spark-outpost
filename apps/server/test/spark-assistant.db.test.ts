@@ -127,7 +127,6 @@ describe('Ask Spark', () => {
       'spark_answer_card',
       'spark_pause',
       'spark_start_ticket',
-      'spark_post_outpost',
       'spark_clear_finished',
       'spark_set_aside',
       'spark_meeting',

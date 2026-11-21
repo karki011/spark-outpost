@@ -27,7 +27,13 @@ import { CalendarFacts, calendarByline, calendarNote } from './CalendarFacts.tsx
 import { AtlassianFacts, atlassianByline, atlassianNote } from './AtlassianFacts.tsx';
 import { ServiceNowFacts, serviceNowByline, serviceNowNote } from './ServiceNowFacts.tsx';
 import { SiteFacts } from './SiteFacts.tsx';
-import { OutpostStartFacts, outpostStartByline, outpostStartNote } from './OutpostStartFacts.tsx';
+import {
+  SubChatsPlanFacts,
+  subChatsByline,
+  subChatsNote,
+  subChatsPlanEdits,
+  useSubChatsPlanDraft,
+} from './SubChatsPlanFacts.tsx';
 import { siteByline, siteNote } from './site-card-text.ts';
 import { PrFollowUpFacts, PrRoundFacts } from './PrFollowUpFacts.tsx';
 import { McpActionFacts } from '../../settings/mcp/McpActionFacts.tsx';
@@ -159,8 +165,20 @@ function Facts({ action }: { action: SparkAction }) {
           </Fact>
         </dl>
       );
-    case 'start_outpost':
-      return <OutpostStartFacts action={action} />;
+    case 'stop_sub_chat':
+      return (
+        <dl className="sac-facts">
+          <Fact label="Sub-chat">{action.subChat.title}</Fact>
+        </dl>
+      );
+    case 'send_to_chat':
+      return (
+        <dl className="sac-facts">
+          <Fact label="To">{action.to.title}</Fact>
+          <Fact label="Message">{action.message}</Fact>
+          <Fact label="Reply">{action.reply ? 'Asked for' : 'Not asked for'}</Fact>
+        </dl>
+      );
     case 'rules_edit':
       return <RulesEditFacts action={action} />;
     case 'plugins_edit':
@@ -206,6 +224,7 @@ function Facts({ action }: { action: SparkAction }) {
       );
     case 'open_pr':
     case 'pr_follow_up':
+    case 'start_sub_chats':
     case 'ask_spark':
       return null;
   }
@@ -219,7 +238,7 @@ function byline(action: SparkAction, agent: string, secretFiles?: readonly strin
     calendarByline(action, agent) ??
     atlassianByline(action, agent) ??
     serviceNowByline(action, agent) ??
-    outpostStartByline(action, agent) ??
+    subChatsByline(action, agent) ??
     rulesByline(action) ??
     crewByline(action) ??
     pluginsByline(action);
@@ -238,7 +257,7 @@ function confirmNote(action: SparkAction, secretFiles?: readonly string[]): stri
     calendarNote(action) ??
     atlassianNote(action) ??
     serviceNowNote(action) ??
-    outpostStartNote(action) ??
+    subChatsNote(action) ??
     rulesNote(action) ??
     crewNote(action) ??
     pluginsNote(action);
@@ -289,13 +308,16 @@ export function SparkActionCard({
   const action = approval.payload.sparkAction!;
   const headingId = useId();
   const [draft, setDraft] = useState(() => draftOf(action));
+  const plan = useSubChatsPlanDraft();
   const place = useCardPlace(approval);
   const decide = useMutation({
     mutationFn: async (optionId: string) => {
       const allowing = approval.options.some(
         (option) => option.optionId === optionId && isAllow(option),
       );
-      const edits = allowing ? editsOf(action, draft) : {};
+      const edits = allowing
+        ? { ...editsOf(action, draft), ...subChatsPlanEdits(action, plan.edits) }
+        : {};
       await place.confirm();
       return approvalsApi.decide(approval.id, {
         optionId,
@@ -336,6 +358,22 @@ export function SparkActionCard({
       {option.name}
     </Button>
   ));
+  if (action.action === 'start_sub_chats') {
+    answerButtons.splice(
+      primary ? 1 : 0,
+      0,
+      <Button
+        key="edit"
+        tone="ghost"
+        small
+        aria-pressed={plan.editing}
+        disabled={decide.isPending}
+        onClick={plan.toggleEditing}
+      >
+        Edit
+      </Button>,
+    );
+  }
   return (
     <div
       className={callerSees ? 'appr sac sac-caller' : 'appr sac'}
@@ -353,6 +391,9 @@ export function SparkActionCard({
         </span>
       </div>
       <Facts action={action} />
+      {action.action === 'start_sub_chats' && (
+        <SubChatsPlanFacts action={action} plan={plan} disabled={decide.isPending} />
+      )}
       {action.action === 'pr_follow_up' && (
         <PrFollowUpFacts
           action={action}

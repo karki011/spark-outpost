@@ -12,7 +12,6 @@ const STARTING_SOURCES: ReadonlySet<string | null> = new Set([
   'ticket',
   'slack',
   'assistant',
-  'outpost',
 ]);
 
 export interface FirstMessage {
@@ -33,10 +32,8 @@ async function startedChatWorkspace(db: Queryable, message: FirstMessage): Promi
          WHERE m.conversation_id = c.id AND m.role = 'user' AND m.id <> $2)
        AND NOT EXISTS (
          SELECT 1 FROM compactions k
-         WHERE k.conversation_id = c.id AND k.from_conversation_id IS NOT NULL)
-       AND ($3::text IS DISTINCT FROM 'outpost' OR EXISTS (
-         SELECT 1 FROM outpost_posts post WHERE post.id = $2 AND post.from_user))`,
-    [message.conversationId, message.messageId, message.source],
+         WHERE k.conversation_id = c.id AND k.from_conversation_id IS NOT NULL)`,
+    [message.conversationId, message.messageId],
   );
   return rows[0]?.workspace_id ?? null;
 }

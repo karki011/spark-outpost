@@ -3,7 +3,7 @@ title: Glossary
 section: Reference
 type: reference
 order: 624
-summary: One-line definitions of the words you see in Spark Outpost - agent, mode, autonomy, sub-agent, outpost, worktree, Jev and more.
+summary: One-line definitions of the words you see in Spark Outpost - agent, mode, autonomy, sub-agent, sub-chat, worktree, Jev and more.
 ---
 
 | Term                   | Means                                                                                             |
@@ -20,9 +20,7 @@ summary: One-line definitions of the words you see in Spark Outpost - agent, mod
 | **Effort**             | How hard the agent thinks: Low to Max.                                                            |
 | **Jev**                | An [optional advisor](jev.md) from TypeSafe, used outside chats.                                  |
 | **MCP server**         | A tool server for agents, added in **Settings → Connectors → MCP servers**.                       |
-| **Outpost**            | A [thread](outposts.md) asking several chats for work.                                            |
-| **Story**              | A job a chat [split into sub-tasks](outpost-stories.md), one chat each.                           |
-| **Stacked**            | A sub-task whose branch and PR [build on another's](stacked-pull-requests.md).                    |
+| **Stacked**            | A sub-chat whose branch and PR [build on another's](stacked-pull-requests.md).                    |
 | **Publish step**       | Spark's one request to the agent to [push and open the PR](ship-and-pull-requests.md).            |
 | **Plugin**             | A Claude Code add-on you [turn on](use-claude-plugins.md) for Claude chats.                       |
 | **Protected path**     | [Something](protected-paths.md) that always asks or is refused.                                   |
@@ -32,6 +30,8 @@ summary: One-line definitions of the words you see in Spark Outpost - agent, mod
 | **Spark**              | The assistant layer around the agents; also a [named teammate](sparks.md) you make.               |
 | **Spark autonomy**     | What Spark does with finished work: **Automatic** or **Full auto → PR**.                          |
 | **Spark Island**       | The Mac app's [panel](desktop-companion.md) atop the screen.                                      |
+| **Sub-chat**           | A chat an agent [starts](split-into-sub-chats.md) for one piece of a job, under its parent.       |
+| **Sub-chats**          | A Work panel tab on a chat that [split a job](sub-chats.md): its sub-chats by status.             |
 | **Sub-agent**          | A [helper](follow-a-turn.md#see-whats-happening) the agent starts itself.                         |
 | **SPARK.md**           | A [Spark's](sparks.md) instructions, followed in every chat.                                      |
 | **Work panel**         | The chat's side panel: to-do, plan, changes, cost.                                                |

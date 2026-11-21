@@ -1,12 +1,12 @@
 import type { Run, StoredRunEvent } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
-import { RUN_OUTPOST_COLUMNS, RUN_OUTPOST_JOINS, toRun, type RunRow } from './rows.ts';
+import { RUN_FROM_CHAT_COLUMN, toRun, type RunRow } from './rows.ts';
 
 const FINISHED_STATUSES = ['succeeded', 'failed', 'cancelled', 'outcome_unknown'];
 
 export async function getRun(db: Queryable, id: string): Promise<Run | null> {
   const { rows } = await db.query<RunRow>(
-    `SELECT r.*, ${RUN_OUTPOST_COLUMNS} FROM runs r ${RUN_OUTPOST_JOINS} WHERE r.id = $1`,
+    `SELECT r.*, ${RUN_FROM_CHAT_COLUMN} FROM runs r WHERE r.id = $1`,
     [id],
   );
   return rows[0] ? toRun(rows[0]) : null;

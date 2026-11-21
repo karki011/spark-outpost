@@ -31,7 +31,7 @@ Below titles: its step, **Waiting 3m** or **Finished 2:41 PM**.
 
 **History** holds archived chats; **Unarchive** brings one back.
 
-**Archive inactive chats** ([Settings](settings.md), 2 days by default) archives a chat idle that long. Pinned, working and waiting chats, running Terminal sessions and outposts with an open request stay.
+**Archive inactive chats** ([Settings](settings.md), 2 days by default) archives a chat idle that long. Pinned, working and waiting chats, running Terminal sessions and parents with a **Working** or **Held** sub-chat stay.
 
 **Projects** lists projects with an active chat; others are under **Choose project**.
 
@@ -45,18 +45,7 @@ A row reading **Flagged by Spark**: an unreviewed action crossed a protected pat
 | **Needs you**         | A card in one of its chats waits.                                  |
 | **Done** / **Failed** | Latest request finished in the last hour / failed in the last day. |
 
-## Outpost requests
-
-| Status                  | Means                                                                   |
-| ----------------------- | ----------------------------------------------------------------------- |
-| **Queued**              | The chat is busy, failed, stopped or paused.                            |
-| **Working**             | Its turn runs.                                                          |
-| **Held**                | Shows **Waiting for @api** until it's answered.                         |
-| **Waiting on you**      | An unanswered approval or question, or a reply ending **Needs you: …**. |
-| **Failed**              | Turn failed, or **Not delivered: …**; listed with **Waiting on you**.   |
-| **Ready for review**    | Answered, pull request open.                                            |
-| **Idle**                | Answered, no open pull request.                                         |
-| **Done**, **Cancelled** | Pull request merged or closed, or you cancelled.                        |
+Sub-chats: [five statuses](sub-chats.md#statuses).
 
 ## Ticket groups
 
@@ -114,7 +103,6 @@ A ring above **Pause** shows Claude plan use and resets past 70%; Terminal **Cos
 | ------------------------------------ | ---------------------------------------- |
 | Approval card expiry                 | 30 minutes                               |
 | Open terminals, all chats            | 12, 5,000 lines each                     |
-| Chats in an outpost                  | 50                                       |
 | A Spark's standing instructions      | 2,000 characters                         |
 | Diff shown before **Load full file** | 2,000 lines; files over 1 MB stay folded |
 | Hold-to-confirm                      | 1.5 seconds; undo window 10 seconds      |

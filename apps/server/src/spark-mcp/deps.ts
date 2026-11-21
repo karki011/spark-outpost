@@ -17,13 +17,6 @@ import type { SlackSignInConfig } from '../slack/sign-in-config.ts';
 import type { TicketDeps } from '../tickets/connections.ts';
 import type { InboxDeps } from '../tickets/inbox.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
-import type { StackGit } from '../outposts/ports.ts';
-import type { RequestWakes } from '../outposts/request-wait.ts';
-
-export interface OutpostToolDeps {
-  wakes: RequestWakes;
-  stackGit?: StackGit;
-}
 
 export interface SparkToolDeps {
   db: Db;
@@ -42,7 +35,6 @@ export interface SparkToolDeps {
   mac?: MacHost | undefined;
   calendar?: AgentCalendarHosts | undefined;
   shotDir?: string;
-  outposts?: OutpostToolDeps | undefined;
   agentRuntime?: AgentRuntime | undefined;
   chatFolders?: string | undefined;
   clones?: ((workspaceId: string) => CloneJobs) | undefined;

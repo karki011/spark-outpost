@@ -13,9 +13,9 @@ const NOTHING: SparkAvailability = {
   pull_request_create: false,
   browser: false,
   mac: false,
-  outpost: false,
-  outpost_draft: false,
-  outpost_start: false,
+  chat_messages: false,
+  sub_chats: false,
+  sub_chat_stop: false,
   calendar_read: false,
   calendar_edit: false,
   meetings: false,
@@ -60,9 +60,9 @@ const GROUPS: [keyof SparkAvailability, string[]][] = [
       'spark_browser_sign_in',
     ],
   ],
-  ['outpost', ['spark_outpost', 'spark_outpost_ask', 'spark_outpost_note']],
-  ['outpost_draft', ['spark_outpost_draft']],
-  ['outpost_start', ['spark_outpost_start']],
+  ['chat_messages', ['spark_send_to_chat']],
+  ['sub_chats', ['spark_sub_chats']],
+  ['sub_chat_stop', ['spark_stop_chat']],
   ['ticket_create', ['spark_create_ticket']],
   ['jira', ['spark_jira', 'spark_jira_edit']],
   ['servicenow', ['spark_servicenow', 'spark_servicenow_edit']],
@@ -109,6 +109,44 @@ describe('which Spark tools a session is offered', () => {
     expect(offered.map((tool) => tool.name)).toContain('spark_research_repo');
   });
 
+  it('offers spark_send_to_chat to a chat turn that may message, and never to a read-only one', () => {
+    const chat = { ...NOTHING, chat_messages: true };
+    expect(names(chat)).toContain('spark_send_to_chat');
+    expect(names(chat, true)).not.toContain('spark_send_to_chat');
+    expect(names(NOTHING)).not.toContain('spark_send_to_chat');
+  });
+
+  it('keeps Ask Spark its own chat tools beside spark_send_to_chat', () => {
+    const assistant = sparkToolsFor(
+      { assistant: true },
+      { ...NOTHING, chat_messages: true, sub_chat_stop: true },
+    );
+    const assistantNames = assistant.map((tool) => tool.name);
+    expect(assistantNames).toEqual(
+      expect.arrayContaining(['spark_send_to_chat', 'spark_start_chat', 'spark_stop_chat']),
+    );
+    expect(names({ ...NOTHING, chat_messages: true })).not.toContain('spark_stop_chat');
+    expect(names({ ...NOTHING, chat_messages: true })).not.toContain('spark_start_chat');
+  });
+
+  it('offers spark_sub_chats to a chat that may split, never to Ask Spark or a read-only turn', () => {
+    const splits = { ...NOTHING, sub_chats: true };
+    expect(names(splits)).toContain('spark_sub_chats');
+    expect(names(splits, true)).not.toContain('spark_sub_chats');
+    expect(names(NOTHING)).not.toContain('spark_sub_chats');
+    const assistant = sparkToolsFor({ assistant: true }, EVERYTHING_AVAILABLE);
+    expect(assistant.map((tool) => tool.name)).not.toContain('spark_sub_chats');
+    const review = sparkToolsFor({ reviewRun: true }, EVERYTHING_AVAILABLE);
+    expect(review.map((tool) => tool.name)).not.toContain('spark_sub_chats');
+  });
+
+  it('offers spark_stop_chat to a parent for its sub-chats, never in a read-only turn', () => {
+    const parent = { ...NOTHING, sub_chat_stop: true };
+    expect(names(parent)).toContain('spark_stop_chat');
+    expect(names(parent, true)).not.toContain('spark_stop_chat');
+    expect(names(parent)).not.toContain('spark_start_chat');
+  });
+
   it('gives Ask Spark none of the GitHub repo tools', () => {
     const offered = sparkToolsFor({ assistant: true, readOnly: true }, EVERYTHING_AVAILABLE);
     const offeredNames = offered.map((tool) => tool.name);
@@ -145,13 +183,6 @@ describe('what a session is told about tools it was not offered', () => {
     expect(told(false, true)).toContain('spark_terminal_run for dev servers and watchers');
     expect(told(true, true)).not.toContain('spark_terminal_run');
     expect(told(false, false)).not.toContain('spark_terminal_run');
-  });
-
-  it('mentions the outpost tools only when one of them is offered', () => {
-    expect(sparkInstructionsFor({ ...NOTHING, outpost: true })).toContain('spark_outpost*');
-    expect(sparkInstructionsFor({ ...NOTHING, outpost_draft: true })).toContain('spark_outpost*');
-    expect(sparkInstructionsFor(NOTHING)).not.toContain('spark_outpost*');
-    expect(unavailableNote(NOTHING)).not.toContain('outpost');
   });
 
   it('uses the exact setting the session reported for a missing tool', () => {

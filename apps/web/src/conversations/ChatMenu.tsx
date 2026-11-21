@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent, type ReactNode } from 'react';
-import type { ConversationSummary, Outpost, Project } from '@spark-outpost/contracts';
+import type { ConversationSummary, Project } from '@spark-outpost/contracts';
 import {
   ArchiveIcon,
   ArrowDownIcon,
@@ -17,23 +17,11 @@ import {
   TrashIcon,
   UnpinIcon,
 } from '../ui/icons.tsx';
-import {
-  AddToOutpostItem,
-  HandlePick,
-  OutpostPick,
-  type AddToOutpostActions,
-} from './AddToOutpost.tsx';
 import { SplitViewIcon } from '../browser/BrowserIcons.tsx';
 import type { PickerAction } from '../ui/ChoicePicker.tsx';
 import { MenuItem as Item, MenuShell, type MenuAnchor } from './MenuShell.tsx';
 
-type Page = 'main' | 'move' | 'outposts' | 'handle';
-
-const BACK_FROM: Record<Exclude<Page, 'main'>, Page> = {
-  move: 'main',
-  outposts: 'main',
-  handle: 'outposts',
-};
+type Page = 'main' | 'move';
 
 export interface ChatMenuActions {
   onRename: () => void;
@@ -52,7 +40,6 @@ interface ChatMenuProps extends ChatMenuActions {
   chat: ConversationSummary;
   anchor: MenuAnchor;
   projects: readonly Project[];
-  outposts?: AddToOutpostActions | undefined;
   folderActions?: readonly PickerAction[];
   onClose: () => void;
 }
@@ -61,7 +48,6 @@ export function ChatMenu({
   chat,
   anchor,
   projects,
-  outposts,
   folderActions = [],
   onClose,
   onMoveUp,
@@ -70,13 +56,9 @@ export function ChatMenu({
   ...actions
 }: ChatMenuProps) {
   const [page, setPage] = useState<Page>('main');
-  const [target, setTarget] = useState<Outpost | null>(null);
   const [confirming, setConfirming] = useState(false);
   const archived = chat.archivedAt !== null;
   const primary = chat.projectIds[0] ?? null;
-  const canJoin = !archived && !chat.outpost && chat.sessionType !== 'terminal';
-  const joining = canJoin ? outposts : undefined;
-  const handleSource = projects.find((project) => project.id === primary)?.name ?? chat.title;
   const autoTitles = chat.titleSource !== 'user';
 
   const run = (action: () => void) => () => {
@@ -88,13 +70,13 @@ export function ChatMenu({
     if (page !== 'main' && (event.key === 'Escape' || event.key === 'ArrowLeft')) {
       event.preventDefault();
       event.stopPropagation();
-      setPage(BACK_FROM[page]);
+      setPage('main');
       return true;
     }
     const submenu = (document.activeElement as HTMLElement | null)?.dataset.submenu;
     if (event.key === 'ArrowRight' && page === 'main' && submenu !== undefined) {
       event.preventDefault();
-      setPage(submenu === 'outposts' ? 'outposts' : 'move');
+      setPage('move');
       return true;
     }
     return false;
@@ -132,7 +114,6 @@ export function ChatMenu({
           />
         </>
       )}
-      {joining && <AddToOutpostItem onOpen={() => setPage('outposts')} />}
       {!archived && (
         <button
           type="button"
@@ -209,38 +190,13 @@ export function ChatMenu({
     </>
   );
 
-  const outpostItems = joining && (
-    <OutpostPick
-      list={joining.list}
-      onBack={() => setPage('main')}
-      onPick={(outpost) => {
-        setTarget(outpost);
-        setPage('handle');
-      }}
-      onNew={run(joining.onNew)}
-    />
-  );
-
-  const handleItems = joining && target && (
-    <HandlePick
-      outpost={target}
-      suggestFrom={handleSource}
-      onBack={() => setPage('outposts')}
-      onAdd={(handle) => run(() => joining.onAdd(target.id, handle))()}
-    />
-  );
-
   const labels: Record<Page, string> = {
     main: `Options for ${chat.title}`,
     move: 'Move to project',
-    outposts: 'Add to outpost',
-    handle: target ? `Add to ${target.name}` : 'Add to outpost',
   };
   const pages: Record<Page, ReactNode> = {
     main: mainItems,
     move: moveItems,
-    outposts: outpostItems,
-    handle: handleItems,
   };
 
   return (

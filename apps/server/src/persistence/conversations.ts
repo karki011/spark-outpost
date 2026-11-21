@@ -39,21 +39,21 @@ import { LISTED_CHAT, searchConversations } from './conversation-search.ts';
 import { summaryQuery } from './summary-query.ts';
 import { taskForNewRun } from './tasks.ts';
 import { listQueue } from './chat-queue.ts';
+import { listChatAsks } from './chat-asks.ts';
+import { listSubChatStarts } from './sub-chats.ts';
 import { listMemberMessages } from './member-messages.ts';
 import { taskOverviews } from './task-views.ts';
 import { conversationUsage } from './usage.ts';
 import { findInterruption } from './interruptions.ts';
 import { withNativeTerminals } from './native-terminals.ts';
 import { applyConversationOptions } from './conversation-options.ts';
-import { continueOpenRequest } from '../outposts/continuation.ts';
 import { noteFirstMessage } from '../crew-flows/chat-started.ts';
 import { deviceStartingRun } from '../remote/run-mark.ts';
 import { listChatFiles } from '../chat-files/store.ts';
 import { listArtifactPages } from '../artifacts/store.ts';
 import {
   MESSAGE_COLUMNS,
-  RUN_OUTPOST_COLUMNS,
-  RUN_OUTPOST_JOINS,
+  RUN_FROM_CHAT_COLUMN,
   toConversationSummary,
   toMessage,
   toRun,
@@ -154,7 +154,7 @@ export async function pruneEmptyConversations(db: Queryable, workspaceId: string
        AND c.updated_at < now() - interval '1 day'
        AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
        AND NOT EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id)
-       AND NOT EXISTS (SELECT 1 FROM outpost_members om WHERE om.conversation_id = c.id)`,
+       AND NOT EXISTS (SELECT 1 FROM sub_chats sc WHERE sc.conversation_id = c.id)`,
     [workspaceId],
   );
 }
@@ -191,13 +191,15 @@ export async function getConversationDetail(
     subagents,
     nativeActivity,
     promptCache,
+    asks,
+    subChatStarts,
   ] = await Promise.all([
     db.query<MessageRow>(
       `SELECT ${MESSAGE_COLUMNS} FROM messages WHERE conversation_id = $1 ORDER BY created_at, id`,
       [id],
     ),
     db.query<RunRow>(
-      `SELECT r.*, ${RUN_OUTPOST_COLUMNS} FROM runs r ${RUN_OUTPOST_JOINS}
+      `SELECT r.*, ${RUN_FROM_CHAT_COLUMN} FROM runs r
        WHERE r.conversation_id = $1 ORDER BY r.created_at`,
       [id],
     ),
@@ -236,6 +238,8 @@ export async function getConversationDetail(
     conversationSubagents(db, id),
     nativeStepActivity(db, id),
     promptCacheFor(db, id),
+    listChatAsks(db, id),
+    listSubChatStarts(db, id),
   ]);
   const attachments = await attachmentsForMessages(
     db,
@@ -268,6 +272,8 @@ export async function getConversationDetail(
     ...(interruption ? { interruption } : {}),
     ...(Object.keys(subagents).length > 0 ? { subagents } : {}),
     ...(promptCache.last ? { promptCache } : {}),
+    ...(asks.length > 0 ? { asks } : {}),
+    ...(subChatStarts.length > 0 ? { subChatStarts } : {}),
   };
 }
 
@@ -311,12 +317,12 @@ export type SendMessageInput = Omit<
     | 'pr_follow_up'
     | 'queue'
     | 'slack'
-    | 'outpost'
     | 'spark_rule'
     | 'voice'
     | 'assistant'
     | 'pages'
     | 'workflow'
+    | 'chat'
     | undefined;
   startAs?: StartAs;
   continuesRunId?: string;
@@ -398,7 +404,6 @@ export async function sendInTransaction(
       device,
     ],
   );
-  await continueOpenRequest(client, conversationId, runId);
   if (!terminal) {
     await noteFirstMessage(client, {
       conversationId,

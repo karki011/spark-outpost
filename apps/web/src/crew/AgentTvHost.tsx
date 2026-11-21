@@ -11,7 +11,6 @@ import { useLeadSteps } from './lead-steps.ts';
 import { scrollToAnchor } from './scroll-to-anchor.ts';
 import { tvListRows } from './tv-list.ts';
 import { pendingAsks } from './tv-scene.ts';
-import { outpostKeys, outpostsApi } from '../outposts/outposts-api.ts';
 import { queueDraftAfterTyped, requestComposerFocus } from '../chat/composer/pending-draft.ts';
 import { invalidateChatDetail } from '../api/chat-detail.ts';
 
@@ -29,12 +28,6 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
     enabled: sourceId !== null,
   });
   const source = sourceId ? detail.data : undefined;
-  const outpostId = source?.conversation.outpost?.id;
-  const outpost = useQuery({
-    queryKey: outpostKeys.detail(outpostId ?? ''),
-    queryFn: () => outpostsApi.get(outpostId!),
-    enabled: outpostId !== undefined,
-  });
   const cast = tvCast(source, useLeadSteps());
   const members = castAgents(cast);
   const elsewhere = sourceId !== null && sourceId !== activeId;
@@ -79,12 +72,7 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
       onStop={(runId) => stop.mutate(runId)}
       branch={source?.conversation.branch ?? null}
       subagents={cast.subagents}
-      messageChats={[
-        { conversationId: sourceId, name: source?.conversation.outpost?.handle ?? 'lead' },
-        ...(outpost.data?.outpost.members ?? [])
-          .filter((member) => member.conversationId !== sourceId)
-          .map((member) => ({ conversationId: member.conversationId, name: member.handle })),
-      ]}
+      messageChats={[{ conversationId: sourceId, name: 'lead' }]}
       onMessage={(conversationId) => message(conversationId)}
       onRedirect={(row) => {
         const purpose = agentPurpose(row.task, row.name) ?? row.name;

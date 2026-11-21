@@ -20,10 +20,8 @@ export function builderNote(spark: { id: string; name: string } | null): string 
 }
 
 export const SPLIT_HEADING = 'How to split work';
-export const SPLIT_SUB_CHATS =
-  "- If separate Spark chats are needed, propose them with spark_outpost_draft and say why. The user starts them; you don't.";
-export const SPLIT_SUB_CHATS_START =
-  '- If separate Spark chats are needed, start them with spark_outpost_start when the user asked for it or the work needs it; propose them with spark_outpost_draft when the user should review the split first. Do not create an Outpost just to delegate an ordinary in-session slice.';
+export const SPLIT_SUB_CHATS_TOOL =
+  '- Stay in this chat unless the job has separable parts that ship separately; then start one sub-chat per part with spark_sub_chats. Use provider sub-agents inside the turn for research, review and tests. When the user says to split, split; when they say not to, don’t.';
 export const SPLIT_UNCLEAR = '- If the request is unclear, ask one question and stop.';
 export const SPLIT_ASK_WITH_TOOL =
   '- When the user should choose, or a detail you need is missing, call AskUserQuestion (Codex: request_user_input) with the options instead of writing them in your reply, and use the answer it returns.';
@@ -64,7 +62,7 @@ export const TURN_NOTE_INTRO =
 export const TURN_NOTE_ASSIGNED =
   'For this turn, instead of the first delegation line in your instructions:';
 export const TURN_NOTE_NO_SUB_CHATS =
-  '- This turn is assigned work: do not start or propose Spark chats from it, and do not use spark_outpost_start or spark_outpost_draft.';
+  '- This turn is assigned work: do not start Spark chats from it, and do not use spark_sub_chats.';
 export const TURN_NOTE_PUBLISHING =
   'For this turn, instead of the Publishing line in your instructions:';
 

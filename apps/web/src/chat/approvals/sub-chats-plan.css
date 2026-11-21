@@ -1,0 +1,101 @@
+.scplan {
+  margin: 10px 0 0;
+}
+
+.scplan-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.scplan-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.scplan-n {
+  flex: none;
+  align-self: flex-start;
+  width: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+
+.scplan-main {
+  display: flex;
+  flex: 1 1 12ch;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+
+.scplan-main small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.scplan-task {
+  margin: 6px 0 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.scplan-set {
+  flex: none;
+  max-width: 100%;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.scplan-pick {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.scplan-pick .choice-picker {
+  min-width: 132px;
+}
+
+.scplan-tasks {
+  min-height: 28px;
+  margin: 4px -6px 0;
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.scplan-tasks:hover {
+  background: var(--raise);
+}
+
+@media (pointer: coarse) {
+  .scplan-tasks {
+    min-height: 44px;
+  }
+}
+
+.sac .btn[aria-pressed='true'] {
+  background: var(--raise);
+  color: var(--text);
+}

@@ -5,7 +5,7 @@ function startedByUser(run: Run): boolean {
   return (
     run.typedByUser === true &&
     !(
-      run.outpost ||
+      run.fromChat ||
       run.prFollowUp ||
       run.agentCycle ||
       run.continuesRunId ||

@@ -1,4 +1,8 @@
-import { MEMBER_MESSAGE_ACTIVITY, type MemberMessage } from '@spark-outpost/contracts';
+import {
+  MEMBER_MESSAGE_ACTIVITY,
+  type ChatAsk,
+  type MemberMessage,
+} from '@spark-outpost/contracts';
 import { addToQueue } from '../persistence/chat-queue.ts';
 import { withTransaction, type Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
@@ -20,6 +24,7 @@ import type {
   SteerRequests,
   TurnInbox,
 } from '../providers/provider.ts';
+import { steeredAsks, type RecordObservation } from '../sub-chats/steered-ask.ts';
 import type { Append } from './agent-turn.ts';
 import { runEvents } from './run-events.ts';
 
@@ -37,6 +42,7 @@ interface InboxOptions {
   answerWaitMs?: number;
   append: Append;
   replySoFar?: () => { shown: string; held: number };
+  observed?: RecordObservation;
 }
 
 const ANSWER_WAIT_MS = 5_000;
@@ -62,6 +68,10 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     leave = () => resolve('left');
   });
   const handedBack = new Set<string>();
+  const asks = steeredAsks(db, topRunId, options.observed);
+  const fromChats = new Map<string, ChatAsk>();
+  const asksAmong = (messages: readonly MemberMessage[]) =>
+    messages.flatMap((message) => fromChats.get(message.id) ?? []);
   const handedOver = new Set<string>();
   const announce = (messages: readonly MemberMessage[], status: string) =>
     append(
@@ -99,10 +109,11 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
           messages.map((message) => message.id),
         );
         for (const { id, body, attachmentIds, annotations } of [...messages].reverse()) {
+          const origin = fromChats.has(id) ? { origin: 'chat' as const } : {};
           await addToQueue(
             client,
             conversationId,
-            { id, content: body, attachmentIds, annotations },
+            { id, content: body, attachmentIds, annotations, ...origin },
             'front',
           );
         }
@@ -114,8 +125,10 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     await announce(messages, 'queued');
   };
   const sendUnsteered = async (messages: readonly MemberMessage[]) => {
-    const queued = messages.filter((message) => handedOver.has(message.id));
-    const sentNow = messages.filter((message) => !handedOver.has(message.id));
+    const waits = (message: MemberMessage) =>
+      handedOver.has(message.id) || fromChats.has(message.id);
+    const queued = messages.filter(waits);
+    const sentNow = messages.filter((message) => !waits(message));
     if (queued.length > 0) await queueForLater(queued);
     if (sentNow.length === 0) return;
     const onlyWaiting =
@@ -124,15 +137,32 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     await (onlyWaiting ? queueForLater(sentNow) : interrupt(sentNow));
   };
   const prompt = async (messages: readonly MemberMessage[]): Promise<ProviderMessage | null> => {
-    const text = messagePrompt(messages);
+    const own = messages.filter((message) => !fromChats.has(message.id));
     const ids = messages.flatMap((message) => message.attachmentIds ?? []);
     try {
+      const steered = await Promise.all(asksAmong(messages).map((ask) => asks.prompt(ask)));
+      const text = [...(own.length > 0 ? [messagePrompt(own)] : []), ...steered].join('\n\n');
       return ids.length
         ? { text, attachments: await queuedAttachmentFiles(db, conversationId, ids) }
         : text;
     } catch {
       await missed(messages);
       return null;
+    }
+  };
+  const claim = async (urgentOnly: boolean) => {
+    const claimed = await claimMemberMessages(db, runId, topRunId, urgentOnly, anchor());
+    if (claimed.length === 0) return claimed;
+    try {
+      for (const [id, ask] of await asks.among(claimed)) fromChats.set(id, ask);
+      return claimed;
+    } catch {
+      await setMemberMessageStatus(
+        db,
+        claimed.map((item) => item.id),
+        'queued',
+      );
+      return [];
     }
   };
   const handQueue = async () => {
@@ -146,7 +176,7 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
   const poll = async () => {
     if (done) return;
     await handQueue().catch(() => undefined);
-    const claimed = await claimMemberMessages(db, runId, topRunId, send === null, anchor());
+    const claimed = await claim(send === null);
     if (claimed.length === 0) return;
     if (send) {
       const message = await prompt(claimed);
@@ -164,6 +194,7 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
         return;
       }
       if (outcome) {
+        await asks.delivered(asksAmong(claimed));
         await announce(claimed, 'delivered');
         return;
       }
@@ -193,10 +224,11 @@ export function openMemberInbox(db: Db, options: InboxOptions): MemberInbox {
     },
     async take() {
       if (done) return null;
-      const claimed = await claimMemberMessages(db, runId, topRunId, false, anchor());
+      const claimed = await claim(false);
       if (claimed.length === 0) return null;
       const message = await prompt(claimed);
       if (message === null) return null;
+      await asks.delivered(asksAmong(claimed)).catch(() => undefined);
       await announce(claimed, 'delivered').catch(() => undefined);
       return message;
     },

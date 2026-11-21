@@ -1,10 +1,9 @@
 import { z } from 'zod';
-import { ASK_SPARK_TEXT_MAX } from '@spark-outpost/contracts';
 import { finishedChat, INBOX_REFUSALS, waitingCard } from '../actions/ask-spark-inbox.ts';
 import { findMeeting, type MeetingOp } from '../actions/ask-spark-meetings.ts';
 import { proposeAction } from '../actions/confirm.ts';
-import { sparkTool, SparkToolError, uuidInput, type SparkToolContext } from '../tool.ts';
-import { ACTS_NOTE, action, brief, SENT_NOTE, summary, targetChat } from './ask-spark-tools.ts';
+import { sparkTool, SparkToolError, uuidInput } from '../tool.ts';
+import { ACTS_NOTE, action, summary, targetChat } from './ask-spark-tools.ts';
 import { chatIdInput } from './chat-tools.ts';
 
 const MEETING_OPS: Record<'snooze' | 'dismiss' | 'join', MeetingOp> = {
@@ -18,42 +17,6 @@ const MEETING_SUMMARY: Record<MeetingOp, string> = {
   dismiss_meeting: 'Dismiss the alerts for your next meeting',
   join_meeting: 'Join your next meeting',
 };
-
-async function findOutpost(context: SparkToolContext, reference: string) {
-  const { rows } = await context.deps.db.query<{ id: string; name: string }>(
-    `SELECT id, name FROM outposts
-     WHERE workspace_id = $1 AND (id::text = $2 OR lower(name) = lower($2))
-     ORDER BY created_at DESC LIMIT 1`,
-    [context.scope.workspaceId, reference.trim()],
-  );
-  const outpost = rows[0];
-  if (!outpost) throw new SparkToolError(INBOX_REFUSALS.noOutpost);
-  return outpost;
-}
-
-const postOutpostTool = sparkTool({
-  name: 'spark_post_outpost',
-  title: 'Post in an outpost',
-  acts: true,
-  assistantOnly: true,
-  description: `Post into an outpost thread: a message with one @handle asks that chat; one without is a note. ${SENT_NOTE} ${ACTS_NOTE}`,
-  input: {
-    outpost: z.string().trim().min(1).max(200).describe('The outpost name or id.'),
-    message: z.string().trim().min(1).max(ASK_SPARK_TEXT_MAX),
-  },
-  run: async (args, context) => {
-    const outpost = await findOutpost(context, args.outpost);
-    return proposeAction(
-      context,
-      action({
-        op: 'post_outpost',
-        summary: summary(`Post in “${outpost.name}”: ${brief(args.message)}`),
-        outpostId: outpost.id,
-        text: args.message,
-      }),
-    );
-  },
-});
 
 const clearFinishedTool = sparkTool({
   name: 'spark_clear_finished',
@@ -123,4 +86,4 @@ const meetingTool = sparkTool({
   },
 });
 
-export const askSparkIslandTools = [postOutpostTool, clearFinishedTool, setAsideTool, meetingTool];
+export const askSparkIslandTools = [clearFinishedTool, setAsideTool, meetingTool];

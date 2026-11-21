@@ -38,7 +38,6 @@ interface MarkdownInputProps extends TextareaProps {
   ref: RefObject<HTMLTextAreaElement | null>;
   value: string;
   formatting: boolean;
-  mentionable?: readonly string[] | undefined;
 }
 
 interface Selection {
@@ -75,7 +74,6 @@ export function MarkdownInput({
   ref,
   value,
   formatting,
-  mentionable,
   id,
   onKeyDown,
   onPaste,
@@ -191,7 +189,7 @@ export function MarkdownInput({
         />
       )}
       <div className="mdf-field">
-        <MarkdownMirror text={value} mirrorRef={mirrorRef} mentionable={mentionable} />
+        <MarkdownMirror text={value} mirrorRef={mirrorRef} />
         <textarea
           {...textareaProps}
           ref={ref}

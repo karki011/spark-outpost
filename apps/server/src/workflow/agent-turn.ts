@@ -38,6 +38,7 @@ import { prepareAskRun, prepareDoRun, prepareQuestions } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
 import { publishGrant, publishScope, startBasis } from './publish-context.ts';
 import { openMemberInbox } from './member-inbox.ts';
+import { turnNotes } from '../sub-chats/message-prompt.ts';
 import { recordAccount } from '../model-access/store.ts';
 import { createOutputQuiet } from './output-quiet.ts';
 import { guardedRun, recordErrorDetails, recordModelSwitch } from './model-guard.ts';
@@ -66,9 +67,6 @@ import { createLiveCost } from '../usage/live-cost.ts';
 import { recordPlan, withResetTime } from '../usage/plan-limits.ts';
 import { recordRequestUsage } from '../persistence/prompt-cache.ts';
 import { turnSessionFor, type TurnSession } from './turn-session.ts';
-import { asAgentReads } from '../outposts/agent-prompt.ts';
-import { preambleDeps } from '../outposts/preamble-stores.ts';
-import { answersDelivered, outpostPreamble } from '../outposts/turn-preamble.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
 import { repoScanner } from '../agent-config/discovery.ts';
 import { loadRepoLaunch } from '../agent-config/launch.ts';
@@ -231,6 +229,7 @@ export async function runAgentTurn(
         pollMs: deps.inboxPollMs ?? INBOX_POLL_MS,
         append,
         replySoFar: () => replySoFar(),
+        observed: observations.record,
       });
   const redaction = createRedactionFilter(secretValues);
   const sessionTitle = createSessionTitleWatch(secretValues, input.chatTitle);
@@ -299,8 +298,7 @@ export async function runAgentTurn(
       input.mode === 'do'
         ? await startRailFlags({ ...input, db: deps.db, runId: lease.runId, audit })
         : null;
-    const shown = asAgentReads(input);
-    turnSession = await turnSessionFor(deps, shown);
+    turnSession = await turnSessionFor(deps, input);
     const session = turnSession;
     const recordSpend = spendRecorder(deps.db, lease.runId, input.provider, session);
     const recordRequest = (request: RequestUsage) =>
@@ -318,17 +316,16 @@ export async function runAgentTurn(
           session?.target ?? null,
         )
       : null;
-    const outposts = preambleDeps(deps.db, input.workspaceId);
-    const outpost =
-      input.assistant || options.secondPrompt ? null : await outpostPreamble(outposts, shown);
-    const turnPreamble = assistantTurn ? assistantTurn.note : outpost?.text || undefined;
+    const turnPreamble = assistantTurn
+      ? assistantTurn.note
+      : turnNotes(options.secondPrompt ? null : input.chatAsk);
 
     if (input.modelSwitch) {
       await recordModelSwitch(deps.db, lease.runId, append, input.modelSwitch);
     }
     for await (const output of outputQuiet.tracked(
       guardedRun(guard, provider, {
-        prompt: promptWithBrowserCheck(shown.prompt, input, deps.browserPane === true),
+        prompt: promptWithBrowserCheck(input.prompt, input, deps.browserPane === true),
         attachments: input.attachments,
         history: input.seed ? input.history.slice(input.seed.historyFrom) : input.history,
         settings: input.settings,
@@ -458,7 +455,6 @@ export async function runAgentTurn(
     if (control.reason() === 'approval_timeout') throw new ProviderError(APPROVAL_TIMEOUT_MESSAGE);
     await settleAudit();
     if (control.reason() === 'lease_lost') return result('lease_lost');
-    if (outpost && !control.signal.aborted) await answersDelivered(outposts, outpost);
     const { text } = reply.result();
     await tasks.replied(text);
     const codexPlan = proposedPlan(text);

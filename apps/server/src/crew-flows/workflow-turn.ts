@@ -1,6 +1,6 @@
 import { findSparkMentions, mainAgentContinues, workflowProblems } from '@spark-outpost/contracts';
 import { publishOrchestration, type Handoff } from '../orchestration/spark-child.ts';
-import { userText } from '../outposts/user-asked.ts';
+import { userText } from '../sub-chats/user-asked.ts';
 import { newId } from '../persistence/ids.ts';
 import { insertOrchestration, updateOrchestration } from '../persistence/orchestrations.ts';
 import { reviewOptions, settleReviewOfWorkflowRun } from '../github-inbox/review/settle.ts';

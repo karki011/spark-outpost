@@ -135,9 +135,6 @@ export async function pruneUnlinkedAttachments(db: Queryable, workspaceId: strin
        AND created_at < now() - interval '1 day'
        AND NOT EXISTS (SELECT 1 FROM browser_screenshots s WHERE s.attachment_id = attachments.id)
        AND NOT EXISTS (
-         SELECT 1 FROM outpost_posts p WHERE attachments.id = ANY(p.attachment_ids)
-       )
-       AND NOT EXISTS (
          SELECT 1 FROM member_messages m WHERE attachments.id = ANY(m.attachment_ids)
        )
        AND NOT EXISTS (
