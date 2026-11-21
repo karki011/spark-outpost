@@ -85,6 +85,7 @@ import { startSparkMcpHost } from '../spark-mcp/host.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
 import { createNativeRuntime } from '../terminal/native-runtime.ts';
 import { outpostDelivery } from '../outposts/mount.ts';
+import { askDelivery } from '../sub-chats/delivery.ts';
 import { stackGit } from '../outposts/stack-git.ts';
 
 const apiToken = takeLaunchToken(
@@ -173,10 +174,12 @@ const outposts = outpostDelivery({
     branchPrefix: config.BRANCH_PREFIX,
   }),
 });
+const chatAsks = askDelivery(db);
 const appEvents = new AppEventFeed(undefined, (event) => {
   slackNotifier.changed(event);
   pushNotifier.changed(event);
   outposts.changed(event);
+  chatAsks.changed(event);
   if (event.kind === 'pull_request') pullRequestChanged(db, workspaceId);
   if (event.kind === 'preview') void previews.sync();
   if (event.kind === 'agent_terminal') {
@@ -480,6 +483,7 @@ const shutdown = async (keepTerminals = false) => {
     ['Google Calendar', () => googleCalendar?.stop()],
     ['push notifier', () => pushNotifier.stop()],
     ['outposts', () => outposts.close()],
+    ['messages between chats', () => chatAsks.close()],
     ['HTTP server', () => server.close()],
     ['HTTP connections', () => server.closeAllConnections()],
     ['database listener', () => listener.close()],

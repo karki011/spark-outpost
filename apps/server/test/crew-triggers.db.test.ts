@@ -11,7 +11,7 @@ import {
 } from '../src/crew-flows/trigger-records.ts';
 import { noteEndedTurn, seedPullMarks } from '../src/crew-flows/trigger-events.ts';
 import { checkTriggers, STRANDED_TRIGGER_MS } from '../src/crew-flows/trigger-runner.ts';
-import { userText } from '../src/outposts/user-asked.ts';
+import { userText } from '../src/sub-chats/user-asked.ts';
 import { setSparkPaused } from '../src/persistence/spark-pause.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
 import { at, finishRun, FLOW, runsOf, schedulerClock } from './crew-schedule-support.ts';

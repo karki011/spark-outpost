@@ -17,12 +17,8 @@ import { memberMessageSchema, queuedMessageSchema } from './crew-messages.ts';
 import { orchestrationSchema } from './orchestration.ts';
 import { conversationPlansSchema } from './plans.ts';
 import { teammateTagSchema } from './teammates.ts';
-import {
-  chatAskSchema,
-  chatRefSchema,
-  formerParentSchema,
-  subChatLinkSchema,
-} from './sub-chats.ts';
+import { chatRefSchema } from './chat-ref.ts';
+import { chatAskSchema, formerParentSchema, subChatLinkSchema } from './sub-chats.ts';
 import {
   interruptionChoiceSchema,
   interruptionSchema,

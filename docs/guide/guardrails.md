@@ -15,6 +15,7 @@ A guardrail is a rule Spark enforces itself, in every chat and agent mode. Every
 | [Protected paths](protected-paths.md)                         | Secret files, agent instructions, git hooks and files outside the project ask or are refused.                               |
 | [Publish rules](protected-paths.md#when-an-agent-may-publish) | The agent pushes only the chat's own branch, only with a reason; otherwise refused.                                         |
 | Nothing merges                                                | You merge pull requests yourself. Spark never approves or dismisses a review.                                               |
+| [Another chat's text](chat-messages.md) is never your message | A message or reply from another chat can't allow a push, a pull request or a Spark action.                                  |
 | The audit                                                     | Every action is recorded; one no card covered is marked [ran without review](approvals.md#actions-that-ran-without-review). |
 | Revert                                                        | **Revert to before this run** undoes a run's own edits.                                                                     |
 

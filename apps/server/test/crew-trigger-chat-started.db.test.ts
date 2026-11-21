@@ -195,6 +195,13 @@ describe('a chat starts', () => {
     expect((await events()).map((item) => item.conversationId)).toEqual([member]);
   });
 
+  it('never fires for a chat whose first message another chat sent', async () => {
+    await saveTriggers(t.db, t.workspaceId, FLOW, triggers());
+    const receiver = await openChat(t, { root });
+    await send(receiver, 'Build the API slice.', { source: 'chat' });
+    expect(await events()).toEqual([]);
+  });
+
   it('is due after the workflow’s wait', async () => {
     await saveTriggers(t.db, t.workspaceId, FLOW, triggers({ debounceMinutes: 5 }));
     const before = Date.now();

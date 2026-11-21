@@ -31,6 +31,7 @@ import { performServiceNowEdit } from './servicenow-perform.ts';
 import { performAskSpark } from './ask-spark-perform.ts';
 import { performPublishArtifact } from './artifact-actions.ts';
 import { performStartOutpost } from './outpost-actions.ts';
+import { performSendToChat } from './send-to-chat-perform.ts';
 import { performRulesEdit } from './rules-edit-perform.ts';
 import { performPluginsEdit } from './plugins-edit-perform.ts';
 import { performCrewEdit } from './crew-edit-perform.ts';
@@ -131,6 +132,8 @@ export function performSparkAction(
       return performServiceNowEdit(context, action);
     case 'start_outpost':
       return performStartOutpost(context, action, startedBy);
+    case 'send_to_chat':
+      return performSendToChat(context, action);
     case 'pr_follow_up':
       return Promise.reject(new Error('PR feedback is pushed by the follow-up round.'));
     case 'ask_spark':

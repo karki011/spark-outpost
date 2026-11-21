@@ -102,6 +102,7 @@ describe('what a Spark tools session can use', () => {
       outpost: false,
       outpost_draft: false,
       outpost_start: false,
+      chat_messages: false,
       calendar_read: false,
       calendar_edit: false,
       jira: false,
@@ -116,6 +117,17 @@ describe('what a Spark tools session can use', () => {
       github_review_post: false,
       howTo: {},
     });
+  });
+
+  it('lets a chat’s own turn message other chats, and Ask Spark keep its own send', async () => {
+    const chat = await startChat(t, 'Tell the billing chat to rebase');
+    const turn = { ...scopeOf(chat.conversationId), runId: chat.runId };
+    expect((await sparkAvailability(deps(), turn)).chat_messages).toBe(true);
+    expect((await sparkAvailability(deps(), { ...turn, assistant: true })).chat_messages).toBe(
+      true,
+    );
+    await t.db.query(`UPDATE runs SET source = 'voice' WHERE id = $1`, [chat.runId]);
+    expect((await sparkAvailability(deps(), turn)).chat_messages).toBe(false);
   });
 
   it('offers spark_rules_edit to a chat turn on the Mac, never to Ask Spark or a spoken turn', async () => {

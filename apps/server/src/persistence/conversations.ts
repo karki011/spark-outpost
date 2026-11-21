@@ -53,6 +53,7 @@ import { listChatFiles } from '../chat-files/store.ts';
 import { listArtifactPages } from '../artifacts/store.ts';
 import {
   MESSAGE_COLUMNS,
+  RUN_FROM_CHAT_COLUMN,
   RUN_OUTPOST_COLUMNS,
   RUN_OUTPOST_JOINS,
   toConversationSummary,
@@ -200,7 +201,7 @@ export async function getConversationDetail(
       [id],
     ),
     db.query<RunRow>(
-      `SELECT r.*, ${RUN_OUTPOST_COLUMNS} FROM runs r ${RUN_OUTPOST_JOINS}
+      `SELECT r.*, ${RUN_OUTPOST_COLUMNS}, ${RUN_FROM_CHAT_COLUMN} FROM runs r ${RUN_OUTPOST_JOINS}
        WHERE r.conversation_id = $1 ORDER BY r.created_at`,
       [id],
     ),
@@ -322,6 +323,7 @@ export type SendMessageInput = Omit<
     | 'assistant'
     | 'pages'
     | 'workflow'
+    | 'chat'
     | undefined;
   startAs?: StartAs;
   continuesRunId?: string;

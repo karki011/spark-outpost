@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { addIslandRequest } from '../src/companion/island-requests.ts';
 import { INBOX_REFUSALS } from '../src/spark-mcp/actions/ask-spark-inbox.ts';
 import { ASSISTANT_ONE_CHAT } from '../src/outposts/post-rules.ts';
-import { userText } from '../src/outposts/user-asked.ts';
+import { userText } from '../src/sub-chats/user-asked.ts';
 import { insertApproval } from '../src/persistence/approvals.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import { assistantRun, assistantScope, assistantSetup, setActs } from './ask-spark-support.ts';

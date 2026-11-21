@@ -1,4 +1,10 @@
-import type { ChatAsk, ChatAskDelivery, ChatAskKind, ChatAskState } from '@spark-outpost/contracts';
+import type {
+  ChatAsk,
+  ChatAskDelivery,
+  ChatAskKind,
+  ChatAskState,
+  TerminalRunStatus,
+} from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
 import { notifySubChatsChanged } from './sub-chats.ts';
 
@@ -142,4 +148,115 @@ export async function settleChatAsk(
      WHERE id = $1 AND state = 'waiting'`,
     [id, outcome.state, outcome.state === 'no_reply' ? outcome.reason : null],
   );
+}
+
+export async function chatAsksById(
+  db: Queryable,
+  ids: readonly string[],
+): Promise<Map<string, ChatAsk>> {
+  if (ids.length === 0) return new Map();
+  const { rows } = await db.query<ChatAskRow>(`${SELECT_ASK} WHERE a.id = ANY($1::uuid[])`, [ids]);
+  return new Map(rows.map((row) => [row.id, toChatAsk(row)]));
+}
+
+export async function isOpenChatAsk(db: Queryable, id: string): Promise<boolean> {
+  const { rowCount } = await db.query(
+    'SELECT 1 FROM chat_asks WHERE id = $1 AND delivered_as IS NULL AND settled_at IS NULL',
+    [id],
+  );
+  return rowCount === 1;
+}
+
+const NOT_HANDED = `a.delivered_as IS NULL AND a.settled_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM chat_queue q WHERE q.id = a.id)
+  AND NOT EXISTS (SELECT 1 FROM member_messages s WHERE s.id = a.id)
+  AND NOT EXISTS (SELECT 1 FROM messages sent WHERE sent.id = a.id)`;
+
+export async function undeliveredAskIds(db: Queryable): Promise<string[]> {
+  const { rows } = await db.query<{ id: string }>(
+    `SELECT a.id FROM chat_asks a WHERE ${NOT_HANDED} ORDER BY a.created_at, a.id`,
+  );
+  return rows.map((row) => row.id);
+}
+
+export async function returnAskToWaiting(db: Queryable, id: string): Promise<boolean> {
+  return changed(
+    db,
+    `UPDATE chat_asks SET delivered_as = NULL, run_id = NULL
+     WHERE id = $1 AND settled_at IS NULL`,
+    [id],
+  );
+}
+
+export async function endUndeliveredAsk(db: Queryable, id: string, reason: string) {
+  return changed(
+    db,
+    `UPDATE chat_asks SET state = CASE WHEN state = 'waiting' THEN 'no_reply' ELSE state END,
+       no_reply_reason = $2, settled_at = now()
+     WHERE id = $1 AND delivered_as IS NULL AND settled_at IS NULL`,
+    [id, reason],
+  );
+}
+
+export interface EndedAsk {
+  ask: ChatAsk;
+  runStatus: TerminalRunStatus | 'gone';
+  reply: string;
+  finalReply: string;
+  steerOffset: number;
+}
+
+export async function waitingAsksWithEndedTurn(
+  db: Queryable,
+  kinds: readonly ChatAskKind[],
+): Promise<EndedAsk[]> {
+  const { rows } = await db.query<
+    ChatAskRow & {
+      run_status: EndedAsk['runStatus'];
+      reply: string;
+      final_reply: string;
+      steer_offset: number;
+    }
+  >(
+    `SELECT asks.*, COALESCE(r.status, 'gone') AS run_status,
+       COALESCE(said.content, '') AS reply,
+       COALESCE(said.final_reply, said.content, '') AS final_reply,
+       COALESCE((SELECT s.delivered_text_offset FROM member_messages s
+                 WHERE s.id = asks.id AND s.delivered_run_id = asks.run_id), 0) AS steer_offset
+     FROM (${SELECT_ASK}) asks
+     LEFT JOIN runs r ON r.id = asks.run_id
+     LEFT JOIN LATERAL (
+       SELECT m.content, m.final_reply FROM messages m
+       WHERE m.run_id = r.id AND m.role = 'assistant'
+       ORDER BY m.created_at, m.id LIMIT 1
+     ) said ON true
+     WHERE asks.state = 'waiting' AND asks.delivered_as IS NOT NULL
+       AND asks.kind = ANY($1::text[])
+       AND (r.id IS NULL OR r.status NOT IN ('queued', 'running', 'awaiting_approval'))
+     ORDER BY asks.created_at, asks.id`,
+    [kinds],
+  );
+  return rows.map((row) => ({
+    ask: toChatAsk(row),
+    runStatus: row.run_status,
+    reply: row.reply,
+    finalReply: row.final_reply,
+    steerOffset: row.steer_offset,
+  }));
+}
+
+export interface MissedAsk {
+  id: string;
+  conversationId: string;
+  body: string;
+}
+
+export async function missedSteeredAsks(db: Queryable): Promise<MissedAsk[]> {
+  const { rows } = await db.query<{ id: string; conversation_id: string; body: string }>(
+    `SELECT s.id, s.conversation_id, s.body FROM member_messages s
+     JOIN chat_asks a ON a.id = s.id
+     WHERE s.status = 'missed' AND s.message_id IS NULL AND a.settled_at IS NULL
+     ORDER BY s.created_at, s.id`,
+  );
+  return rows.map((row) => ({ id: row.id, conversationId: row.conversation_id, body: row.body }));
 }

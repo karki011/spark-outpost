@@ -4,7 +4,7 @@ import { claimSlot, getSchedule } from '../src/crew-flows/schedule-records.ts';
 import { checkSchedules, STRANDED_CLAIM_MS } from '../src/crew-flows/scheduler.ts';
 import { startWorkflowRun } from '../src/crew-flows/start-run.ts';
 import { workflowStore } from '../src/crew-flows/workflow-store.ts';
-import { userText } from '../src/outposts/user-asked.ts';
+import { userText } from '../src/sub-chats/user-asked.ts';
 import { actionFacts } from '../src/spark-mcp/actions/action-policy.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { inactiveChats } from '../src/persistence/inactive-chats.ts';

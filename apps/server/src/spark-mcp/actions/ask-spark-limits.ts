@@ -62,6 +62,9 @@ function routeOf(action: SparkAction): Route | null {
   if (action.action === 'transition_ticket') {
     return { method: 'POST', path: `/api/tickets/linear/${PLACEHOLDER}/transition` };
   }
+  if (action.action === 'send_to_chat') {
+    return { method: 'POST', path: `/api/conversations/${PLACEHOLDER}/queue` };
+  }
   if (action.action !== 'ask_spark') return null;
   switch (action.op) {
     case 'start_chat':
@@ -170,12 +173,12 @@ export async function cardRefusalFor(
   return { approval, chat, refusal: cardRefusal(approval, chat, assistant) };
 }
 
-async function deviceRefusal(
+export async function deviceRefusal(
   db: Queryable,
   workspaceId: string,
   runId: string,
   action: SparkAction,
-  card: Approval | null,
+  card: Approval | null = null,
 ): Promise<string | null> {
   if (!(await runFromDevice(db, runId))) return null;
   const route = routeOf(action);
@@ -247,11 +250,11 @@ export function namesChat(text: string, title: string): boolean {
   return mentions(text, title, LINKED_TITLE_MIN);
 }
 
-export function askedToAnswer(question: string, answer: AskSparkAnswer, title: string): boolean {
-  const text = question.trim();
+export function commandNames(request: string, verbs: string, title: string): boolean {
+  const text = request.trim();
   if (text.includes('?')) return false;
   const command = new RegExp(
-    `(?:^|[.!;:,]\\s*|\\b(?:please|then|and|now|just)\\s+)(${ANSWER_VERBS[answer]})\\b`,
+    `(?:^|[.!;:,]\\s*|\\b(?:please|then|and|now|just)\\s+)(${verbs})\\b`,
     'gi',
   );
   return [...text.matchAll(command)].some((match) => {
@@ -259,6 +262,10 @@ export function askedToAnswer(question: string, answer: AskSparkAnswer, title: s
     const sentence = sentenceAround(text, verbAt);
     return !HOLDS_BACK.test(sentence) && namesChat(sentence, title);
   });
+}
+
+export function askedToAnswer(question: string, answer: AskSparkAnswer, title: string): boolean {
+  return commandNames(question, ANSWER_VERBS[answer], title);
 }
 
 async function questionOf(db: Queryable, runId: string): Promise<string> {

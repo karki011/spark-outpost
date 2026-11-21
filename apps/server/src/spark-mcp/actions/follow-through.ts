@@ -48,7 +48,8 @@ async function audit(
     action.action === 'crew_edit' ||
     action.action === 'link_repo' ||
     action.action === 'github_read' ||
-    action.action === 'clone_repo';
+    action.action === 'clone_repo' ||
+    action.action === 'send_to_chat';
   const payload = lean
     ? redactValue({
         action: auditedAction(action),

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { chatRefSchema } from './chat-ref.ts';
 import { involvementLevelSchema } from './involvement-levels.ts';
 import { prChecksSchema } from './pr-follow-up.ts';
 import { subChatPullStateSchema, subChatStatusSchema } from './sub-chat-status.ts';
@@ -58,9 +59,6 @@ export const subChatReportSchema = z.object({
   pullRequest: subChatPullRequestSchema.nullable(),
 });
 export type SubChatReport = z.infer<typeof subChatReportSchema>;
-
-export const chatRefSchema = z.object({ id: z.uuid(), title: z.string() });
-export type ChatRef = z.infer<typeof chatRefSchema>;
 
 export const subChatRowSchema = z.object({
   id: z.uuid(),

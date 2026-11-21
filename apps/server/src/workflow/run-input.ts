@@ -18,6 +18,8 @@ import type { Db } from '../persistence/db.ts';
 import { latestSparkSeed } from '../persistence/compactions.ts';
 import type { AgentSettings, ConversationTurn, TurnAttachment } from '../providers/provider.ts';
 import { historyLabel, requestAuthor } from '../outposts/request-prompt.ts';
+import { askTurnFacts } from '../sub-chats/asks.ts';
+import { askHistoryLabel, type AskPromptFacts } from '../sub-chats/message-prompt.ts';
 import type { RunIdentity } from './run-events.ts';
 import { withInterruptionNote } from './continue-note.ts';
 import { usableSettings } from './model-guard.ts';
@@ -61,6 +63,7 @@ export interface RunInput {
   reviewRun?: boolean;
   stepEdits?: boolean;
   outpostRequest?: OutpostRequest | null;
+  chatAsk?: AskPromptFacts | null;
   turnTimes?: TurnTimes | null;
   agentCycle?: boolean;
 }
@@ -148,6 +151,7 @@ interface HistoryRow extends OutpostRow {
   role: 'user' | 'assistant';
   content: string;
   created_at: Date;
+  ask_from: string | null;
 }
 
 const RESENT_ATTACHMENT_TURNS = 3;
@@ -160,6 +164,7 @@ const toTurnAttachment = ({ name, mediaType, kind, data }: AttachmentFile): Turn
 });
 
 function asStored(row: HistoryRow): string {
+  if (row.ask_from !== null) return askHistoryLabel(row.ask_from, row.id, row.content);
   const request = row.role === 'user' ? outpostRequestOf(row, row.id) : null;
   if (!request) return row.content;
   return historyLabel({
@@ -222,7 +227,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'spark_rule' AS spark_rule_retry,
             (COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
-              IN ('assistant', 'workflow') OR COALESCE((r.route->'spark') ? 'step', false))
+              IN ('assistant', 'workflow', 'chat') OR COALESCE((r.route->'spark') ? 'step', false))
               AS assistant_sent,
             COALESCE((r.route->'spark') ? 'step', false) AS workflow_step,
             COALESCE((r.route->'spark'->>'test')::boolean, false) AS test_run,
@@ -297,7 +302,10 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             op.agent_started AS outpost_agent_started,
             EXISTS (SELECT 1 FROM outpost_drafts od WHERE od.id = op.id) AS outpost_wrap_up,
             (SELECT fc.title FROM conversations fc WHERE fc.id = op.from_conversation_id)
-              AS outpost_from_title
+              AS outpost_from_title,
+            (SELECT COALESCE(ac.title, ask.from_title) FROM chat_asks ask
+             LEFT JOIN conversations ac ON ac.id = ask.from_conversation_id
+             WHERE ask.id = m.id AND m.role = 'user') AS ask_from
      FROM messages m
      LEFT JOIN outpost_posts op ON op.id = m.id
      LEFT JOIN outposts o ON o.id = op.outpost_id
@@ -332,6 +340,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     sparkRuleRetry: row.spark_rule_retry === true,
     assistantSent: row.assistant_sent === true,
     outpostRequest: outpostRequestOf(row, row.user_message_id),
+    chatAsk: await askTurnFacts(db, row.user_message_id),
     turnTimes: {
       startedAt: row.started_at.toISOString(),
       previousStartedAt: row.previous_started_at?.toISOString() ?? null,

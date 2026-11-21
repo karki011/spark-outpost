@@ -38,6 +38,7 @@ import { prepareAskRun, prepareDoRun, prepareQuestions } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
 import { publishGrant, publishScope, startBasis } from './publish-context.ts';
 import { openMemberInbox } from './member-inbox.ts';
+import { turnNotes } from '../sub-chats/message-prompt.ts';
 import { recordAccount } from '../model-access/store.ts';
 import { createOutputQuiet } from './output-quiet.ts';
 import { guardedRun, recordErrorDetails, recordModelSwitch } from './model-guard.ts';
@@ -231,6 +232,7 @@ export async function runAgentTurn(
         pollMs: deps.inboxPollMs ?? INBOX_POLL_MS,
         append,
         replySoFar: () => replySoFar(),
+        observed: observations.record,
       });
   const redaction = createRedactionFilter(secretValues);
   const sessionTitle = createSessionTitleWatch(secretValues, input.chatTitle);
@@ -321,7 +323,7 @@ export async function runAgentTurn(
     const outposts = preambleDeps(deps.db, input.workspaceId);
     const outpost =
       input.assistant || options.secondPrompt ? null : await outpostPreamble(outposts, shown);
-    const turnPreamble = assistantTurn ? assistantTurn.note : outpost?.text || undefined;
+    const turnPreamble = assistantTurn ? assistantTurn.note : turnNotes(input.chatAsk, outpost);
 
     if (input.modelSwitch) {
       await recordModelSwitch(deps.db, lease.runId, append, input.modelSwitch);

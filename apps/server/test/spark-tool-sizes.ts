@@ -17,6 +17,7 @@ const NOTHING_AVAILABLE: SparkAvailability = {
   outpost: false,
   outpost_draft: false,
   outpost_start: false,
+  chat_messages: true,
   calendar_read: false,
   calendar_edit: false,
   meetings: false,

@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
 | Sub-chats nest under their parent               | [Find a sub-chat](sub-chats.md#find-a-sub-chat).           |
+| Chats message each other                        | [Messages](chat-messages.md).                              |
 | **Enter** sends mid-dictation; PR panel tidied  | [Talk to Spark](voice.md#turn-it-on).                      |
 | Workflow steps know their branch and changes    | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | Workflow card; **Run in chats…**                | [Workflow card](workflow-in-chat.md).                      |
@@ -61,7 +62,6 @@ summary: What changed in recent releases and what to do next.
 
 ## Early November 2026
 
-| What changed                              | What to do                                                            |
-| ----------------------------------------- | --------------------------------------------------------------------- |
-| **Sign in with Slack**; @mentions on Home | [Connect Slack](connect-slack.md).                                    |
-| Workflow triggers and schedules           | [Triggers](workflow-triggers.md), [schedules](workflow-schedules.md). |
+| What changed                              | What to do                         |
+| ----------------------------------------- | ---------------------------------- |
+| **Sign in with Slack**; @mentions on Home | [Connect Slack](connect-slack.md). |

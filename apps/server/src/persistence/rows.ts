@@ -51,6 +51,7 @@ export interface RunRow {
   user_message_id: string | null;
   provider: string;
   source?: string | null;
+  from_chat?: string | null;
   todo?: unknown;
   status: RunStatus;
   error: string | null;
@@ -197,6 +198,7 @@ export function toRun(row: RunRow): Run {
     ...(row.source === 'pr_follow_up' ? { prFollowUp: true } : {}),
     ...(row.source === 'workflow' ? { workflowStarted: true } : {}),
     ...(row.source === 'ui' ? { typedByUser: true } : {}),
+    ...(row.source === 'chat' ? { fromChat: row.from_chat ?? 'another chat' } : {}),
     ...runOutpost(row),
   };
 }
@@ -206,6 +208,10 @@ export const RUN_OUTPOST_COLUMNS = `post.id AS outpost_post_id, post.outpost_id,
   post.from_user AS outpost_from_user, post.user_started AS outpost_user_started,
   post.agent_started AS outpost_agent_started,
   EXISTS (SELECT 1 FROM outpost_drafts wrap WHERE wrap.id = post.id) AS outpost_from_spark`;
+
+export const RUN_FROM_CHAT_COLUMN = `(SELECT COALESCE(sender.title, ask.from_title)
+  FROM chat_asks ask LEFT JOIN conversations sender ON sender.id = ask.from_conversation_id
+  WHERE ask.id = r.user_message_id) AS from_chat`;
 
 export const RUN_OUTPOST_JOINS = `LEFT JOIN outpost_posts post
     ON r.source = 'outpost' AND post.id = r.user_message_id

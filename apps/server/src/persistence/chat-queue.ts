@@ -21,6 +21,7 @@ interface QueueRow {
   outpost_post_id: string | null;
   spark_rule_card_id?: string | null;
   origin?: QueuedMessage['origin'] | null;
+  from_chat?: string | null;
   attachment_ids?: string[];
   annotations?: QueuedMessage['annotations'];
 }
@@ -55,6 +56,7 @@ function toQueued(row: QueueRow): QueuedMessage {
     ...(row.outpost_post_id ? { outpostPostId: row.outpost_post_id } : {}),
     ...(row.spark_rule_card_id ? { sparkRuleCardId: row.spark_rule_card_id } : {}),
     ...(row.origin ? { origin: row.origin } : {}),
+    ...(row.from_chat ? { fromChat: row.from_chat } : {}),
     ...(row.annotations?.length ? { annotations: row.annotations } : {}),
     ...(row.attachment_ids?.length ? { attachmentIds: row.attachment_ids } : {}),
   };
@@ -71,7 +73,10 @@ export interface NewQueued {
 
 export async function listQueue(db: Queryable, conversationId: string): Promise<QueuedMessage[]> {
   const { rows } = await db.query<QueueRow>(
-    'SELECT * FROM chat_queue WHERE conversation_id = $1 ORDER BY position, created_at, id',
+    `SELECT q.*, (SELECT COALESCE(sender.title, a.from_title) FROM chat_asks a
+                  LEFT JOIN conversations sender ON sender.id = a.from_conversation_id
+                  WHERE a.id = q.id) AS from_chat
+     FROM chat_queue q WHERE q.conversation_id = $1 ORDER BY q.position, q.created_at, q.id`,
     [conversationId],
   );
   return rows.map(toQueued);
@@ -166,11 +171,17 @@ async function addInTransaction(
   await rememberRemoteMessage(db, item.id);
 }
 
-function uneditableReason(row: {
+interface KeptRow {
   outpost_post_id: string | null;
   spark_rule_card_id: string | null;
-}): string {
+  origin: string | null;
+}
+
+function uneditableReason(row: KeptRow): string {
   if (row.outpost_post_id) return 'A request from an outpost can’t be edited. Remove it instead.';
+  if (row.origin === 'chat') {
+    return 'A message from another chat can’t be edited. Remove it instead.';
+  }
   if (row.spark_rule_card_id) {
     return 'A retry from a Spark rules card can’t be edited. Remove it instead.';
   }
@@ -187,15 +198,13 @@ export async function editQueued(
     `UPDATE chat_queue SET content = $3, updated_at = now()
      WHERE conversation_id = $1 AND id = $2
        AND outpost_post_id IS NULL AND spark_rule_card_id IS NULL
+       AND origin IS DISTINCT FROM 'chat'
        AND (length($3) > 0 OR cardinality(attachment_ids) > 0)`,
     [conversationId, id, content],
   );
   if (rowCount === 1) return;
-  const kept = await db.query<{
-    outpost_post_id: string | null;
-    spark_rule_card_id: string | null;
-  }>(
-    `SELECT outpost_post_id, spark_rule_card_id FROM chat_queue
+  const kept = await db.query<KeptRow>(
+    `SELECT outpost_post_id, spark_rule_card_id, origin FROM chat_queue
      WHERE conversation_id = $1 AND id = $2`,
     [conversationId, id],
   );

@@ -1,5 +1,5 @@
 import { asksPushOnly, requestedBy } from '../approvals/publish-policy.ts';
-import { isStoryWrapUp, userText } from '../outposts/user-asked.ts';
+import { isStoryWrapUp, userText } from '../sub-chats/user-asked.ts';
 import type { PublishReason } from './publish-prompt.ts';
 import type { RunInput } from './run-input.ts';
 

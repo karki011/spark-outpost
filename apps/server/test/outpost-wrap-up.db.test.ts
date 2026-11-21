@@ -5,7 +5,7 @@ import { startDispatcher } from '../src/a2a/dispatcher.ts';
 import { asAgentReads } from '../src/outposts/agent-prompt.ts';
 import { toOutpostPost } from '../src/outposts/post-view.ts';
 import { queueWrapUps } from '../src/outposts/story-wrap-ups.ts';
-import { userText } from '../src/outposts/user-asked.ts';
+import { userText } from '../src/sub-chats/user-asked.ts';
 import { markStarted, saveDraft } from '../src/persistence/outpost-drafts.ts';
 import { getPost, insertPosts, listPosts } from '../src/persistence/outpost-posts.ts';
 import { insertTasks } from '../src/persistence/outpost-stories.ts';

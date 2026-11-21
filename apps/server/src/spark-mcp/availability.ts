@@ -7,6 +7,7 @@ import { CREW_HOW_TO, crewReadRefusal } from '../crew/tool-offer.ts';
 import { postGrant } from '../github-inbox/review/post.ts';
 import { listProjects } from '../projects/projects.ts';
 import { outpostNeeds } from '../outposts/outpost-availability.ts';
+import { chatMessagesNeed } from '../sub-chats/availability.ts';
 import { gitHubReachability } from '../ship/github/access.ts';
 import { openSlack } from '../slack/connection.ts';
 import { productLive } from '../atlassian/session.ts';
@@ -37,6 +38,7 @@ export const EVERYTHING_AVAILABLE: SparkAvailability = {
   outpost: true,
   outpost_draft: true,
   outpost_start: true,
+  chat_messages: true,
   calendar_read: true,
   calendar_edit: true,
   meetings: true,
@@ -117,6 +119,7 @@ export async function sparkAvailability(
     crewEditRefused,
     crewRefused,
     anyWorkflow,
+    chatMessages,
   ] = await Promise.all([
     connectedSources(tickets),
     openSlack(slackDepsFor(deps, scope)),
@@ -132,6 +135,7 @@ export async function sparkAvailability(
     rulesRunRefusal(deps.db, scope, 'crew'),
     crewReadRefusal(deps.db, scope),
     hasWorkflow(),
+    scope.assistant ? true : chatMessagesNeed(deps.db, scope),
   ]);
   const reviewPost = scope.assistant ? null : await postGrant(deps.db, scope.runId);
   const gitHub = await gitHubReach(deps, scope);
@@ -163,6 +167,7 @@ export async function sparkAvailability(
     crew_edit: crewEditRefused === null,
     crew_flows: crewEditRefused === null && anyWorkflow,
     github_review_post: reviewPost?.grant.mayPost === true,
+    chat_messages: chatMessages,
     ...outposts,
     howTo: {
       ...(calendar.howTo.read ? { calendar_read: calendar.howTo.read } : {}),
@@ -188,6 +193,7 @@ const HOW_TO_GET: Record<
     | 'outpost'
     | 'outpost_draft'
     | 'outpost_start'
+    | 'chat_messages'
     | 'calendar_read'
     | 'calendar_edit'
     | 'meetings'

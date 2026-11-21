@@ -4,7 +4,7 @@ import { placeChatOrStop } from '../orchestration/chat-place.ts';
 import { handToSparks } from '../orchestration/spark-handoff.ts';
 import { recordKeptChanges } from '../outcomes/record.ts';
 import { auditOutpostRequest } from '../outposts/request-audit.ts';
-import { isStoryWrapUp } from '../outposts/user-asked.ts';
+import { isStoryWrapUp } from '../sub-chats/user-asked.ts';
 import { replyToWrapUp } from '../outposts/wrap-up-turn.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';

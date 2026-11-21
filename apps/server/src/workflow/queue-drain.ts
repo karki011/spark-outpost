@@ -13,6 +13,7 @@ import {
   takeQueued,
   takeTypedRequest,
 } from '../persistence/chat-queue.ts';
+import { isOpenChatAsk, markChatAskDelivered } from '../persistence/chat-asks.ts';
 import { chatSparkPaused, sparkPausedForChat } from '../persistence/spark-pause.ts';
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
 import { copyPostAttachments } from '../persistence/outpost-posts.ts';
@@ -111,6 +112,7 @@ async function sendQueued(
     ]);
   }
   if (item.sparkRuleCardId) await markRuleRetry(db, item.sparkRuleCardId, sent.run.id);
+  if (item.origin === 'chat') await markChatAskDelivered(db, item.id, 'turn', sent.run.id);
 }
 
 async function sendTypedWhilePaused(
@@ -144,19 +146,21 @@ export async function drainQueue(
     }
     const urgent = (await urgentLeftovers(client, conversationId))[0];
     if (urgent) {
-      await sendInTransaction(
+      const source = (await isOpenChatAsk(client, urgent.id)) ? 'chat' : 'queue';
+      const sent = await sendInTransaction(
         client,
         conversationId,
         {
           id: urgent.id,
           content: urgent.body,
-          source: 'queue',
+          source,
           attachmentIds: urgent.attachmentIds ?? [],
           annotations: urgent.annotations ?? [],
         },
         target,
       );
       await markMessageSent(client, urgent.id, 'sent', urgent.id);
+      if (source === 'chat') await markChatAskDelivered(client, urgent.id, 'turn', sent.run.id);
       return 'sent';
     }
     const flowing = await lastTurnSucceeded(client, conversationId);
@@ -191,6 +195,7 @@ const STEER_REFUSALS: Record<NonNullable<QueuedMessage['origin']>, string> = {
   assistant: 'A message from Ask Spark starts when this chat is free.',
   pages: 'A question about your tabs starts when Ask Spark is free.',
   voice: 'A spoken message starts when this chat is free.',
+  chat: 'A message from another chat starts when this chat is free.',
 };
 
 export async function sendNow(

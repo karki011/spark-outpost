@@ -43,6 +43,7 @@ export type SparkToolNeed =
   | 'outpost'
   | 'outpost_draft'
   | 'outpost_start'
+  | 'chat_messages'
   | 'calendar_read'
   | 'calendar_edit'
   | 'meetings'

@@ -10,6 +10,7 @@ import {
   isServiceNowAction,
   pluginsEditAuditFacts,
   rulesEditAuditFacts,
+  sendToChatAuditFacts,
   serviceNowAuditFacts,
   SPARK_ACTION_OPTION,
   sparkActionLabels,
@@ -89,7 +90,8 @@ function cardTitle(action: SparkAction): string {
     action.action === 'workflow_control' ||
     action.action === 'link_repo' ||
     action.action === 'github_read' ||
-    action.action === 'clone_repo'
+    action.action === 'clone_repo' ||
+    action.action === 'send_to_chat'
   ) {
     return sparkActionQuestion(action);
   }
@@ -229,6 +231,7 @@ export function auditedAction(action: SparkAction): unknown {
   if (action.action === 'clone_repo') {
     return { action: action.action, repo: action.repo, parentPath: action.parentPath };
   }
+  if (action.action === 'send_to_chat') return sendToChatAuditFacts(action);
   return action;
 }
 

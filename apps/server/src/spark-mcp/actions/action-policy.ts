@@ -4,8 +4,9 @@ import {
   type ModePosture,
   type SparkActionName,
 } from '@spark-outpost/contracts';
-import { userText, type UserTextInput } from '../../outposts/user-asked.ts';
+import { userText, type UserTextInput } from '../../sub-chats/user-asked.ts';
 import type { Queryable } from '../../persistence/db.ts';
+import { commandNames } from './ask-spark-limits.ts';
 
 export interface ActionFacts {
   posture: ModePosture;
@@ -37,6 +38,8 @@ const CREW_NOUN = 'sparks?|teammates?|skills?|workflows?|crew|spark\\.md';
 const CREW_CREATE_VERB = 'create|add|make|build|set up|draft|write';
 const CREW_CHANGE_VERB =
   'change|update|edit|rename|fix|rewrite|improve|tweak|adjust|delete|remove|revise';
+
+const SEND_VERB = 'send|tell|ask|message|forward|pass|relay|share|notify|ping|reply';
 
 const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   open_pr: asked('open|create|make|raise|submit|send|ship|put up', 'pr|prs|pull requests?'),
@@ -112,6 +115,7 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     'change|update|edit|set|note|comment|reply|tell|move|resolve|close|cancel|reprioriti[sz]e',
     `${RECORD_NOUN}|callers?|work notes?`,
   ),
+  send_to_chat: asked(SEND_VERB, 'chats?|sub-?chats?'),
   start_outpost: asked(
     'start|split|spin up|kick off|launch|create',
     'sub-?chats?|outposts?|sub-?tasks?|parallel chats?|separate chats?',
@@ -175,7 +179,7 @@ async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'spark_rule' AS spark_rule_retry,
             (COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
-              IN ('assistant', 'workflow') OR COALESCE((r.route->'spark') ? 'step', false))
+              IN ('assistant', 'workflow', 'chat') OR COALESCE((r.route->'spark') ? 'step', false))
               AS assistant_sent,
             (SELECT pf.assistant_acts FROM profiles pf
              WHERE pf.workspace_id = c.workspace_id
@@ -198,6 +202,19 @@ export async function userWroteTurn(db: Queryable, runId: string): Promise<boole
   if (run.assistant_sent === true || run.spark_rule_retry === true) return false;
   if (await followUpRun(db, runId)) return false;
   return run.outpost_run !== true || run.from_user === true;
+}
+
+export function askedToSend(request: string, chatTitle: string): boolean {
+  return commandNames(request, SEND_VERB, chatTitle);
+}
+
+export async function userAskedToSend(
+  db: Queryable,
+  runId: string,
+  chatTitle: string,
+): Promise<boolean> {
+  if (!(await userWroteTurn(db, runId))) return false;
+  return askedToSend(userText(runText(await runFacts(db, runId))), chatTitle);
 }
 
 async function followUpRun(db: Queryable, runId: string): Promise<boolean> {

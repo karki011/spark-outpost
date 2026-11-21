@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { historyLabel, requestAuthor, wrapRequest } from '../src/outposts/request-prompt.ts';
-import { userText } from '../src/outposts/user-asked.ts';
+import { userText } from '../src/sub-chats/user-asked.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { drainQueue, type ResolveTarget } from '../src/workflow/queue-drain.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';

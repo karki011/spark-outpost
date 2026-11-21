@@ -82,6 +82,7 @@ export const runSchema = z.object({
   prFollowUp: z.boolean().optional(),
   workflowStarted: z.boolean().optional(),
   typedByUser: z.boolean().optional(),
+  fromChat: z.string().optional(),
   outpost: z
     .object({
       postId: z.uuid(),

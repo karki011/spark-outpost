@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { advertisedSize, SESSION_CASES } from './spark-tool-sizes.ts';
 
-const PLAIN_CHAT_MAX_CHARS = 27_000;
+const PLAIN_CHAT_MAX_CHARS = 27_800;
 const INSTRUCTIONS_MAX_CHARS = 1_800;
 const BROWSER_GROUP_MAX_CHARS = 7_700;
 const ATLASSIAN_GROUPS_MAX_CHARS = 7_600;
@@ -10,6 +10,7 @@ const ARTIFACT_TOOL_MAX_CHARS = 1_500;
 const RULES_EDIT_TOOL_MAX_CHARS = 1_000;
 const PLUGINS_EDIT_TOOL_MAX_CHARS = 500;
 const CREW_TOOLS_MAX_CHARS = 1_300;
+const CHAT_MESSAGES_TOOL_MAX_CHARS = 800;
 
 describe('the size of the Spark tool list a session is sent', () => {
   it('stays within the budget for a plain chat with nothing connected', async () => {
@@ -18,6 +19,7 @@ describe('the size of the Spark tool list a session is sent', () => {
     expect(size.instructionChars).toBeLessThanOrEqual(INSTRUCTIONS_MAX_CHARS);
     expect(Object.keys(size.groups).sort()).toEqual([
       'artifacts',
+      'chat_messages',
       'crew_edit',
       'crew_read',
       'mcp_servers',
@@ -27,6 +29,7 @@ describe('the size of the Spark tool list a session is sent', () => {
       'sparks',
     ]);
     expect(size.groups.artifacts).toBeLessThanOrEqual(ARTIFACT_TOOL_MAX_CHARS);
+    expect(size.groups.chat_messages).toBeLessThanOrEqual(CHAT_MESSAGES_TOOL_MAX_CHARS);
     expect(size.groups.rules_edit).toBeLessThanOrEqual(RULES_EDIT_TOOL_MAX_CHARS);
     expect(size.groups.plugins_edit).toBeLessThanOrEqual(PLUGINS_EDIT_TOOL_MAX_CHARS);
     expect(size.groups.crew_read! + size.groups.crew_edit!).toBeLessThanOrEqual(

@@ -44,6 +44,11 @@ import {
 } from './servicenow-actions.ts';
 import { browserActionLabels, browserActionSchemas, browserQuestion } from './browser-actions.ts';
 import { startOutpostActionSchema, startOutpostLabels } from './outpost-start-action.ts';
+import {
+  sendToChatActionSchema,
+  sendToChatLabels,
+  sendToChatQuestion,
+} from './send-to-chat-action.ts';
 import { askSparkActionSchema, askSparkLabels } from './ask-spark-action.ts';
 import { publishArtifactActionSchema, publishArtifactLabels } from './artifact-pages.ts';
 import { linkRepoActionSchema, linkRepoLabels, linkRepoQuestion } from './repos-folders.ts';
@@ -240,6 +245,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   ...atlassianActionSchemas,
   ...serviceNowActionSchemas,
   startOutpostActionSchema,
+  sendToChatActionSchema,
   askSparkActionSchema,
   publishArtifactActionSchema,
   rulesEditActionSchema,
@@ -300,6 +306,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   servicenow_read: [],
   servicenow_edit: [],
   start_outpost: [],
+  send_to_chat: [],
   ask_spark: [],
   publish_artifact: [],
   rules_edit: [],
@@ -421,6 +428,7 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
   ...serviceNowActionLabels,
   ...browserActionLabels,
   ...startOutpostLabels,
+  ...sendToChatLabels,
   ...askSparkLabels,
   ...publishArtifactLabels,
   ...rulesEditLabels,
@@ -448,6 +456,7 @@ export function sparkActionQuestion(action: SparkAction): string {
   const teammate = teammateActionQuestion(action);
   if (teammate) return teammate;
   if (action.action === 'link_repo') return linkRepoQuestion(action);
+  if (action.action === 'send_to_chat') return sendToChatQuestion(action);
   return (
     atlassianQuestion(action) ??
     serviceNowQuestion(action) ??

@@ -21,7 +21,7 @@ import { mainAgentPublishNote } from '../orchestration/context.ts';
 import type { PublishScope } from '../ship/agent-push.ts';
 import { stackGit } from '../outposts/stack-git.ts';
 import { publishStackOf } from '../outposts/stack-publish.ts';
-import { isStoryWrapUp, userText } from '../outposts/user-asked.ts';
+import { isStoryWrapUp, userText } from '../sub-chats/user-asked.ts';
 import type { RunInput } from './run-input.ts';
 
 const ALWAYS_PROTECTED = ['main', 'master'];

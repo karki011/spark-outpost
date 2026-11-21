@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { publishRequested } from '../src/approvals/publish-policy.ts';
-import { userText } from '../src/outposts/user-asked.ts';
+import { userText } from '../src/sub-chats/user-asked.ts';
 import { explicitlyAsked } from '../src/spark-mcp/actions/action-policy.ts';
 
 const OPEN_A_PR = 'Add the endpoint and open a PR.';

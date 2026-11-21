@@ -58,6 +58,8 @@ summary: What agents can look up about Spark, the confirm card they show before 
 
 `spark_link_repo` and `spark_clone_repo` always ask ([repos](link-a-repo.md)).
 
+[Messages between chats](chat-messages.md) (`spark_send_to_chat`) are never your message.
+
 MCP server cards show the command; fill values in **Settings → Connectors → MCP servers**.
 
 ## Outpost tools
@@ -72,17 +74,17 @@ For chats in an [outpost](outposts.md).
 | Draft sub-task chats you review and start    | `spark_outpost_draft` |
 | Start sub-task chats now                     | `spark_outpost_start` |
 
-Sub-chats and Sparks' jobs get no `spark_outpost_start`. Another chat's text is never your message.
+Sub-chats and Sparks' jobs get no `spark_outpost_start`.
 
 ## Ask Spark tools
 
 [Ask Spark](companion-quick-chat.md#let-ask-spark-act) gets these too, minus publishing, follow-up, terminal runs, sign-ins, outpost asks and starts, artifacts, Spark rules, plugins and repo tools. Its own:
 
-| It can                                        | Tool                                                                                                                   |
-| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Act on chats, Spark and tickets               | `spark_start_chat`, `spark_send_to_chat`, `spark_stop_chat`, `spark_archive_chat`, `spark_pause`, `spark_start_ticket` |
-| Answer a card with **Allow once** or **Deny** | `spark_answer_card`                                                                                                    |
-| Post in outposts, tidy the Inbox, meetings    | `spark_post_outpost`, `spark_clear_finished`, `spark_set_aside`, `spark_meeting`                                       |
+| It can                                        | Tool                                                                                             |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Act on chats, Spark and tickets               | `spark_start_chat`, `spark_stop_chat`, `spark_archive_chat`, `spark_pause`, `spark_start_ticket` |
+| Answer a card with **Allow once** or **Deny** | `spark_answer_card`                                                                              |
+| Post in outposts, tidy the Inbox, meetings    | `spark_post_outpost`, `spark_clear_finished`, `spark_set_aside`, `spark_meeting`                 |
 
 ## When actions ask first
 

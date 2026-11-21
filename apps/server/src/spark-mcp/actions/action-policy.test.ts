@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { actionPath, explicitlyAsked, type ActionFacts } from './action-policy.ts';
+import { actionPath, askedToSend, explicitlyAsked, type ActionFacts } from './action-policy.ts';
 
 const facts = (overrides: Partial<ActionFacts>): ActionFacts => ({
   posture: 'asks',
@@ -65,7 +65,32 @@ describe('explicitlyAsked', () => {
     ['start_outpost', 'run the chat tests', false],
     ['start_outpost', "open this chat's settings", false],
     ['start_outpost', 'create a chat title helper', false],
+    ['send_to_chat', 'tell the billing chat to rebase', true],
+    ['send_to_chat', 'ask the other sub-chat for its schema', true],
+    ['send_to_chat', 'fix the chat header', false],
   ] as const)('%s for "%s" is %s', (action, request, expected) => {
     expect(explicitlyAsked(action, request)).toBe(expected);
+  });
+});
+
+describe('askedToSend', () => {
+  const title = 'Billing export';
+
+  it.each([
+    ['Tell Billing export to rebase on main.', true],
+    ['Fix the totals, then ask Billing export which column it reads.', true],
+    ['please message billing export that the schema changed', true],
+    ['Tell the other chat to rebase on main.', false],
+    ['Should I tell Billing export to rebase?', false],
+    ['Don’t tell Billing export about this yet.', false],
+    ['Never message Billing export.', false],
+    ['Billing export is the chat that reads this file.', false],
+    ['Tell Billing to rebase.', false],
+  ])('for "%s" is %s', (request, expected) => {
+    expect(askedToSend(request, title)).toBe(expected);
+  });
+
+  it('needs the chat named in the sentence that asks', () => {
+    expect(askedToSend('Billing export is busy. Tell it to rebase.', title)).toBe(false);
   });
 });

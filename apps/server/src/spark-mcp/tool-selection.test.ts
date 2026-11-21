@@ -16,6 +16,7 @@ const NOTHING: SparkAvailability = {
   outpost: false,
   outpost_draft: false,
   outpost_start: false,
+  chat_messages: false,
   calendar_read: false,
   calendar_edit: false,
   meetings: false,
@@ -63,6 +64,7 @@ const GROUPS: [keyof SparkAvailability, string[]][] = [
   ['outpost', ['spark_outpost', 'spark_outpost_ask', 'spark_outpost_note']],
   ['outpost_draft', ['spark_outpost_draft']],
   ['outpost_start', ['spark_outpost_start']],
+  ['chat_messages', ['spark_send_to_chat']],
   ['ticket_create', ['spark_create_ticket']],
   ['jira', ['spark_jira', 'spark_jira_edit']],
   ['servicenow', ['spark_servicenow', 'spark_servicenow_edit']],
@@ -107,6 +109,23 @@ describe('which Spark tools a session is offered', () => {
     expect(offered.some((tool) => tool.acts)).toBe(false);
     expect(offered.map((tool) => tool.name)).toContain('spark_tickets');
     expect(offered.map((tool) => tool.name)).toContain('spark_research_repo');
+  });
+
+  it('offers spark_send_to_chat to a chat turn that may message, and never to a read-only one', () => {
+    const chat = { ...NOTHING, chat_messages: true };
+    expect(names(chat)).toContain('spark_send_to_chat');
+    expect(names(chat, true)).not.toContain('spark_send_to_chat');
+    expect(names(NOTHING)).not.toContain('spark_send_to_chat');
+  });
+
+  it('keeps Ask Spark its own chat tools beside spark_send_to_chat', () => {
+    const assistant = sparkToolsFor({ assistant: true }, { ...NOTHING, chat_messages: true });
+    const assistantNames = assistant.map((tool) => tool.name);
+    expect(assistantNames).toEqual(
+      expect.arrayContaining(['spark_send_to_chat', 'spark_start_chat', 'spark_stop_chat']),
+    );
+    expect(names({ ...NOTHING, chat_messages: true })).not.toContain('spark_stop_chat');
+    expect(names({ ...NOTHING, chat_messages: true })).not.toContain('spark_start_chat');
   });
 
   it('gives Ask Spark none of the GitHub repo tools', () => {
