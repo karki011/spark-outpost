@@ -234,6 +234,43 @@ test('GitHub page starts a chat on the pull request branch and removes it when t
   await expect(pane.getByRole('button', { name: 'Start chat' })).toBeEnabled();
 });
 
+test('GitHub page offers the chat it could not remove after a failed start', async ({ page }) => {
+  const projectId = '7a1c2f9e-3b44-4c5d-8e6f-112233445566';
+  await stubInbox(page, inbox({ items: DESCRIBED.map((item) => ({ ...item, projectId })) }));
+  await stubDetails(page);
+  let createdId = '';
+  await page.route('**/api/conversations', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    const sent = route.request().postDataJSON() as Json;
+    createdId = String(sent.id);
+    return route.continue({ postData: JSON.stringify({ ...sent, projectIds: [] }) });
+  });
+  await page.route('**/api/conversations/*/workspace/adopt', (route) =>
+    route.fulfill({ status: 409, json: { error: 'The branch is checked out in another chat.' } }),
+  );
+  await page.route(/\/api\/conversations\/[^/]+$/, (route) =>
+    route.request().method() === 'DELETE'
+      ? route.fulfill({ status: 500, json: { error: 'Database is busy.' } })
+      : route.fallback(),
+  );
+  await openOnGithubPage(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const main = page.getByRole('main', { name: 'GitHub' });
+  await main.getByRole('button', { name: /Add audit log table/ }).click();
+  const pane = main.getByRole('complementary', { name: 'Add audit log table' });
+  await pane.getByRole('button', { name: 'Start chat' }).click();
+  const alert = pane.getByRole('alert');
+  await expect(alert).toContainText(
+    'The branch is checked out in another chat. The new chat could not be removed.',
+  );
+  await alert.getByRole('button', { name: 'Open that chat' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'PR #2: Add audit log table' }),
+  ).toBeVisible();
+  expect(createdId).not.toBe('');
+});
+
 test('GitHub page keeps the pull request it opened on when a refresh brings a newer one', async ({
   page,
 }) => {

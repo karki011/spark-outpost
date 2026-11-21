@@ -9,7 +9,22 @@ import { Glyph } from '../tickets/ticket-icons.tsx';
 import { githubKeys } from './github-api.ts';
 
 const TITLE_LIMIT = 100;
-const LEFT_BEHIND = 'The new chat could not be removed; delete it from Chats.';
+const LEFT_BEHIND = 'The new chat could not be removed.';
+
+class StartChatError extends Error {
+  constructor(
+    message: string,
+    readonly leftChatId: string | null,
+    cause: unknown,
+  ) {
+    super(message, { cause });
+  }
+}
+
+interface Problem {
+  text: string;
+  leftChatId: string | null;
+}
 
 function chatTitle(item: GithubInboxItem): string {
   return `PR #${item.number}: ${item.title}`.slice(0, TITLE_LIMIT);
@@ -34,7 +49,9 @@ async function startOnBranch(item: GithubInboxItem, projectId: string): Promise<
       () => false,
     );
     const reason = error instanceof Error ? error.message : 'The chat could not start.';
-    throw new Error(removed ? reason : `${reason} ${LEFT_BEHIND}`, { cause: error });
+    throw removed
+      ? new StartChatError(reason, null, error)
+      : new StartChatError(`${reason} ${LEFT_BEHIND}`, id, error);
   }
   return id;
 }
@@ -54,7 +71,7 @@ export function StartChat({ item, onOpenChat }: StartChatProps) {
   const queryClient = useQueryClient();
   const { remote } = useRemoteClient();
   const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Problem | null>(null);
   if (remote || item.conversationId) return null;
   const projectId = item.projectId;
 
@@ -73,7 +90,13 @@ export function StartChat({ item, onOpenChat }: StartChatProps) {
       ]);
       onOpenChat(id);
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : 'The chat could not start.');
+      setProblem({
+        text: error instanceof Error ? error.message : 'The chat could not start.',
+        leftChatId: error instanceof StartChatError ? error.leftChatId : null,
+      });
+      if (error instanceof StartChatError && error.leftChatId) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
+      }
     } finally {
       setBusy(false);
     }
@@ -99,7 +122,16 @@ export function StartChat({ item, onOpenChat }: StartChatProps) {
       )}
       {problem && (
         <p className="gh-start-note bad" role="alert">
-          {problem}
+          {problem.text}{' '}
+          {problem.leftChatId && (
+            <button
+              type="button"
+              className="btn line sm"
+              onClick={() => onOpenChat(problem.leftChatId!)}
+            >
+              Open that chat
+            </button>
+          )}
         </p>
       )}
     </>
