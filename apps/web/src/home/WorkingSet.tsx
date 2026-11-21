@@ -1,4 +1,5 @@
 import type { ConversationSummary } from '@spark-outpost/contracts';
+import { markedTitle } from '../conversations/sub-chat-tree.ts';
 import { AgentBlob } from '../brand/AgentBlob.tsx';
 import {
   HomeCard,
@@ -52,7 +53,7 @@ export function WorkingSet({ running, review, loading, ...props }: WorkingSetPro
               key={item.chat.id}
               index={index}
               label={<RunLabel item={item} />}
-              title={item.chat.title}
+              title={markedTitle(item.chat)}
               line={
                 <>
                   <span className="pj">{props.projectName(item.chat)}</span>
@@ -75,7 +76,7 @@ export function WorkingSet({ running, review, loading, ...props }: WorkingSetPro
               key={item.chat.id}
               index={running.length + index}
               label={<StatusLabel word={item.clean ? 'Ready' : 'Done'} tone="ok" />}
-              title={item.chat.title}
+              title={markedTitle(item.chat)}
               line={item.line}
               trailing={
                 <RowAction

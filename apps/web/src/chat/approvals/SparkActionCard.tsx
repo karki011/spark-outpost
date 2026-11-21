@@ -161,6 +161,14 @@ function Facts({ action }: { action: SparkAction }) {
       );
     case 'start_outpost':
       return <OutpostStartFacts action={action} />;
+    case 'send_to_chat':
+      return (
+        <dl className="sac-facts">
+          <Fact label="To">{action.to.title}</Fact>
+          <Fact label="Message">{action.message}</Fact>
+          <Fact label="Reply">{action.reply ? 'Asked for' : 'Not asked for'}</Fact>
+        </dl>
+      );
     case 'rules_edit':
       return <RulesEditFacts action={action} />;
     case 'plugins_edit':

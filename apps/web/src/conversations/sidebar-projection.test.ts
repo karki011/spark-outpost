@@ -67,6 +67,12 @@ describe('projected', () => {
     expect(projected(input('w2'), 'in')).toBeNull();
   });
 
+  it('never shifts a nested sub-chat, which has no place in the layout', () => {
+    expect(tailProject(layout, 'nested-sub-chat')).toBeNull();
+    expect(projected(input('nested-sub-chat'), 'out')).toBeNull();
+    expect(projected(input('nested-sub-chat'), 'in')).toBeNull();
+  });
+
   it('keeps a pinned loose chat among the pinned chats of the project', () => {
     const base = { ...layout, [pinnedIn('none')]: ['lp'] };
     const into = projected(input('lp', true, base), 'in');

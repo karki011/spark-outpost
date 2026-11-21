@@ -8,6 +8,7 @@ import {
 import { terminalMood } from '../terminal/native-state.ts';
 import type { ChatFaceState } from '../brand/chat-face.ts';
 import { runStep } from '../chat/wait-label.ts';
+import { nameInParent } from './sub-chat-tree.ts';
 
 export type RowTone = 'running' | 'permission' | 'asking' | 'done' | 'error' | 'idle';
 
@@ -115,7 +116,7 @@ export interface Attention {
 }
 
 export function waitingHeadline(chat: ConversationSummary): string {
-  return `${chat.title} ${asksPermission(chat) ? 'needs your permission' : 'needs your input'}`;
+  return `${nameInParent(chat)} ${asksPermission(chat) ? 'needs your permission' : 'needs your input'}`;
 }
 
 export function attention(

@@ -1,3 +1,4 @@
+import { nameInParent } from '../conversations/sub-chat-tree.ts';
 import type { Card } from './island-model.ts';
 
 function lastPart(path: string): string {
@@ -34,5 +35,5 @@ export function waitingTitle(card: Card): string {
   const member = memberTitle(card);
   if (member) return member;
   if (approval?.payload.checkpoint) return `${chat.title}: ready for you`;
-  return `${chat.title} needs you`;
+  return `${nameInParent(chat)} needs you`;
 }

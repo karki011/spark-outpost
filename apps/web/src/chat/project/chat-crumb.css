@@ -1,0 +1,42 @@
+.sub-crumb {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 6ch;
+  max-width: 40%;
+  color: var(--muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.sub-crumb-back {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 28px;
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  color: var(--accent-text);
+  font-weight: 500;
+  white-space: pre;
+}
+
+.sub-crumb-back:hover {
+  background: var(--raise);
+}
+
+.sub-crumb-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-head .sub-status {
+  font-size: 12.5px;
+}
+
+@media (pointer: coarse) {
+  .sub-crumb-back {
+    min-height: 44px;
+  }
+}

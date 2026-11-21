@@ -1,4 +1,5 @@
 import type { ConversationSummary } from '@spark-outpost/contracts';
+import { markedTitle } from '../conversations/sub-chat-tree.ts';
 import { HomeRow, HomeRows, StatusLabel, type StatusTone } from './HomeCards.tsx';
 import { RowButtons, RowError } from './RowButtons.tsx';
 import type { FeedRow, FeedSeverity } from './needs-model.ts';
@@ -21,7 +22,7 @@ export function NeedsFeed({ rows, onOpen }: NeedsFeedProps) {
             key={chat.id}
             index={index}
             label={<StatusLabel word={WORD[row.severity]} tone={TONE[row.severity]} />}
-            title={chat.title}
+            title={markedTitle(chat)}
             line={
               <>
                 {sub} · <span title={row.ageTitle}>{row.age}</span>

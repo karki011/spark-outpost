@@ -257,6 +257,7 @@ export const SPEC_GROUPS = {
     'outposts-agents',
     'outposts-story',
   ],
+  'sub-chats': ['sub-chats-sidebar'],
   'island-desktop': [
     'app-lock',
     'attention-sync',
@@ -366,7 +367,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/chat/queue/', groups: ['outposts'] },
   { prefix: 'apps/web/src/chat/tickets/', groups: ['tickets'] },
   { prefix: 'apps/web/src/chat/today/', groups: ['home'] },
-  { prefix: 'apps/web/src/chat/project/', groups: ['sidebar-projects'] },
+  { prefix: 'apps/web/src/chat/project/', groups: ['sidebar-projects', 'sub-chats'] },
   { prefix: 'apps/web/src/projects/', groups: ['sidebar-projects', 'island-desktop'] },
   { prefix: 'apps/web/src/companion/', groups: ['home', 'island-desktop'] },
   {
@@ -375,7 +376,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   },
   {
     prefix: 'apps/web/src/conversations/',
-    groups: ['sidebar-projects', 'chat', 'home', 'outposts'],
+    groups: ['sidebar-projects', 'chat', 'home', 'outposts', 'sub-chats'],
   },
   { prefix: 'apps/web/src/crew/', groups: ['agent-tv', 'chat'] },
   { prefix: 'apps/web/src/crew-flows/', groups: ['crew-flows'] },

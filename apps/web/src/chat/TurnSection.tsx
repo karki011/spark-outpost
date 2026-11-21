@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import {
+  fromChatLine,
   type ConversationDetail,
   type Message,
   type Project,
@@ -157,6 +158,11 @@ export const TurnSection = memo(function TurnSection({
         <>
           {run.workflowStarted && userMessage?.content ? (
             <SentBySpark text={userMessage.content} />
+          ) : run.fromChat && userMessage?.content ? (
+            <SentBySpark
+              text={userMessage.content}
+              label={`${fromChatLine(run.fromChat, userMessage.content)} · not your message`}
+            />
           ) : (
             userMessage && (
               <div className="msg me" data-message-id={userMessage.id}>

@@ -62,6 +62,7 @@ import { useRowFocus } from './use-row-focus.ts';
 import { useSidebarDnd, type Point } from './use-sidebar-dnd.ts';
 import { useSidebarFolds } from './use-sidebar-folds.ts';
 import { useSidebarShortcuts } from './use-sidebar-shortcuts.ts';
+import { flatTree, subChatFoldKey, subChatTree, treePlacement } from './sub-chat-tree.ts';
 import { ChatNumbers, useChatNumberKeys, useHeldChatNumbers } from './chat-number-keys.ts';
 import { useToast } from './use-toast.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
@@ -176,15 +177,19 @@ export const ConversationList = memo(function ConversationList({
   };
 
   const membership = memberships(outpostSeam?.outposts ?? NO_OUTPOSTS);
-  const grouped = activeGroups(outsideOutposts(visible, membership), projectList);
+  const tree = searching ? flatTree(visible) : subChatTree(visible);
+  const grouped = activeGroups(outsideOutposts(tree.roots, membership), projectList);
   useRowFocus(
     listRef,
-    [...membership].map(([chatId, member]) => `${chatId}:${member.outpostId}`).join(),
+    [...membership]
+      .map(([chatId, member]) => `${chatId}:${member.outpostId}`)
+      .concat(treePlacement(tree))
+      .join(),
   );
   const projectById = new Map(projectList.map((project) => [project.id, project]));
   const allProjectIds = projectList.map((project) => project.id);
   const withChats = projectsWithChats(
-    activeGroups(outsideOutposts(chats, membership), projectList).groups,
+    activeGroups(outsideOutposts(subChatTree(chats).roots, membership), projectList).groups,
   );
   const dnd = useSidebarDnd({
     layout: chatLayout(grouped),
@@ -272,11 +277,18 @@ export const ConversationList = memo(function ConversationList({
   );
   const handleDelete = useStableCallback((chat: ConversationSummary) => actions.remove(chat));
 
+  const subTree = (parentId: string) => {
+    const subs = tree.subs.get(parentId);
+    if (!subs) return undefined;
+    const key = subChatFoldKey(parentId);
+    return { subs, open: folds.isOpen(key), onToggle: () => folds.toggle(key), renderRow: subRow };
+  };
   const renderRow = (
     chat: ConversationSummary,
     sortable: boolean,
     index: number,
     member?: MemberChat,
+    nested = false,
   ) => (
     <ChatRow
       key={chat.id}
@@ -288,8 +300,10 @@ export const ConversationList = memo(function ConversationList({
       flash={chat.id === actions.flashId}
       index={index}
       handle={member?.handle}
-      faceless={member ? !member.face : false}
+      faceless={member ? !member.face : nested}
       relation={member ? roleLine(member.role) : null}
+      nested={nested}
+      tree={nested ? undefined : subTree(chat.id)}
       onOpen={handleOpen}
       onOpenBeside={onOpenBeside ? handleOpenBeside : undefined}
       onPrepare={prepareChat}
@@ -299,6 +313,9 @@ export const ConversationList = memo(function ConversationList({
       onDelete={handleDelete}
     />
   );
+
+  const subRow = (chat: ConversationSummary, index: number) =>
+    renderRow(chat, false, index, undefined, true);
 
   const rowsIn = (container: string) =>
     (dnd.layout[container] ?? []).flatMap((id) => {
@@ -389,7 +406,7 @@ export const ConversationList = memo(function ConversationList({
                     rowsIn={rowsIn}
                     renderRows={renderRows}
                     renderRow={renderRow}
-                    members={membersByOutpost(visible, membership)}
+                    members={membersByOutpost(tree.roots, membership)}
                     canAddProject={adder.allowed}
                     onAddProject={() => {
                       moveTarget.current = null;

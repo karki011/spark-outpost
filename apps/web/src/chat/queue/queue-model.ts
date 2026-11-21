@@ -26,7 +26,7 @@ export function queueNote(mode: QueueMode, count: number): string {
   return count === 1 ? 'Sends when this turn ends' : 'Send in order when this turn ends';
 }
 
-type Authored = Pick<QueuedMessage, 'outpostPostId' | 'sparkRuleCardId' | 'origin'>;
+type Authored = Pick<QueuedMessage, 'outpostPostId' | 'sparkRuleCardId' | 'origin' | 'fromChat'>;
 
 export function typedByUser(item: Authored): boolean {
   return !item.outpostPostId && !item.sparkRuleCardId && !item.origin;
@@ -39,18 +39,20 @@ export function stripNote(mode: QueueMode, items: readonly Authored[]): string {
 }
 
 export function canEdit(item: Authored): boolean {
-  return !item.outpostPostId && !item.sparkRuleCardId;
+  return !item.outpostPostId && !item.sparkRuleCardId && item.origin !== 'chat';
 }
 
 const ORIGIN_TAGS: Record<NonNullable<QueuedMessage['origin']>, string> = {
   assistant: 'Ask Spark',
   voice: 'Spoken',
   pages: 'Tabs question',
+  chat: 'From another chat',
 };
 
 export function authorTag(item: Authored): string | null {
   if (item.outpostPostId) return 'Outpost request';
   if (item.sparkRuleCardId) return 'Retry';
+  if (item.origin === 'chat' && item.fromChat) return `From ${item.fromChat}`;
   return item.origin ? ORIGIN_TAGS[item.origin] : null;
 }
 

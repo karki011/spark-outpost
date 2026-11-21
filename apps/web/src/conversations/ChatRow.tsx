@@ -34,6 +34,16 @@ import { RowTitle, useMarquee } from './RowTitle.tsx';
 import { useSortableMotion } from './use-sortable-motion.ts';
 import { RowFace } from './RowFace.tsx';
 import { pointerStart } from './sidebar-dnd-geometry.ts';
+import { ParentMark } from './ParentMark.tsx';
+import { SubChatStatusWord } from './SubChatStatusWord.tsx';
+import {
+  SubChatFold,
+  SubChatNeeds,
+  SubChatRows,
+  treeKeyDown,
+  type SubChatSlot,
+} from './SubChatRows.tsx';
+import { parentMarkText } from './sub-chat-tree.ts';
 
 interface ChatRowProps {
   chat: ConversationSummary;
@@ -46,6 +56,8 @@ interface ChatRowProps {
   handle?: string | undefined;
   faceless?: boolean;
   relation?: string | null;
+  nested?: boolean;
+  tree?: SubChatSlot | undefined;
   onOpen: (id: string) => void;
   onOpenBeside?: ((id: string) => void) | undefined;
   onPrepare?: (id: string) => void;
@@ -144,7 +156,7 @@ function HistoryActions({
 
 export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   const { chat, selected, renaming, sortable, settling, flash, handle } = props;
-  const { faceless = false, relation = null } = props;
+  const { faceless = false, relation = null, nested = false, tree } = props;
   const { onOpen, onMenu, onRename } = props;
   const history = chat.archivedAt !== null;
   const draggable = sortable && !renaming && !history;
@@ -177,6 +189,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     isDragging ? 'placeholder' : '',
     flash ? 'flash' : '',
     chat.pinnedAt ? 'pinned' : '',
+    tree ? 'has-subs' : '',
   ].filter(Boolean);
   const pointerListeners = pointerStart(listeners, draggable);
   const prepareTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -198,10 +211,12 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     onMenu(chat.id, event.currentTarget, { x: event.clientX, y: event.clientY });
   };
 
-  const rootProps = {
+  const sortProps = {
     ref: setNodeRef,
-    className: classes.join(' '),
     style: { transform: CSS.Translate.toString(transform), transition: transition },
+  };
+  const rowProps = {
+    className: classes.join(' '),
     'data-chat': chat.id,
     onContextMenu: renaming ? undefined : openMenuAt,
     onPointerEnter: (event: PointerEvent<HTMLElement>) => {
@@ -224,6 +239,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     terminal ? 'Terminal session' : null,
     handle ? `@${handle}` : null,
     relation,
+    nested ? null : parentMarkText(chat),
     chat.teammate ? `with ${chat.teammate.name}` : null,
     chat.titleSource === 'auto' ? 'Renamed by Spark' : null,
     chat.category ? categoryLabel(chat.category) : null,
@@ -234,6 +250,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   ].filter(Boolean);
   const content = (
     <>
+      {tree && <SubChatFold parent={chat} slot={tree} />}
       {renaming ? (
         <div className="row-open">
           {!faceless && <span className="st">{face}</span>}
@@ -282,6 +299,7 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
                 running={marquee.running}
                 titleRef={marquee.ref}
               />
+              {!nested && <ParentMark chat={chat} />}
               {chat.pullRequestMerged && <MergedMark />}
             </span>
             {handle && <span className="sr-only">{`, @${handle}`}</span>}
@@ -295,12 +313,22 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
             {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
             {autoArchived && <span className="sr-only">, {autoArchived}</span>}
           </span>
-          {blob && (
-            <span className="row-state" data-state={blob} aria-hidden="true">
-              {BLOB_LABELS[blob]}
-            </span>
+          {tree && <SubChatNeeds subs={tree.subs} />}
+          {chat.subChat ? (
+            <>
+              <span className="sr-only">, </span>
+              <SubChatStatusWord status={chat.subChat.status} />
+            </>
+          ) : (
+            <>
+              {blob && (
+                <span className="row-state" data-state={blob} aria-hidden="true">
+                  {BLOB_LABELS[blob]}
+                </span>
+              )}
+              <ChatBlob kind={blob} />
+            </>
           )}
-          <ChatBlob kind={blob} />
           {number !== undefined && (
             <Keys keys={[MAC ? '⌘' : 'Ctrl', String(number)]} className="key-hint row-number" />
           )}
@@ -354,9 +382,22 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
       layoutDependency={props.index}
       initial={false}
       transition={reveal}
-      {...rootProps}
+      {...sortProps}
+      {...(tree
+        ? {
+            className: `row-tree${tree.open ? ' open' : ''}${isDragging ? ' placeholder' : ''}`,
+            onKeyDown: (event) => treeKeyDown(event, tree),
+          }
+        : rowProps)}
     >
-      {content}
+      {tree ? (
+        <>
+          <div {...rowProps}>{content}</div>
+          <SubChatRows parent={chat} slot={tree} />
+        </>
+      ) : (
+        content
+      )}
     </motion.li>
   );
 });

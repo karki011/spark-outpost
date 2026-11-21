@@ -45,7 +45,7 @@ import { ChatContexts } from './ChatContexts.tsx';
 import { useChatAgents } from './subagents/use-chat-agents.ts';
 import { createStatusStore } from './status/status-store.ts';
 import { providerName } from './provider-name.ts';
-import { repoSummary } from './project/repo-list.ts';
+import { ChatCrumb, ChatHeadStatus } from './project/ChatCrumb.tsx';
 import { useLinkedProjects } from './project/use-chat-repos.ts';
 import { ComposerDock } from './dock/ComposerDock.tsx';
 import { usePullRequestRefresh } from './pull-request/use-pull-request-refresh.ts';
@@ -269,11 +269,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
         >
           <header className="head chat-head">
             {!pane.docked && <SidebarToggle />}
-            {repos.length > 0 && (
-              <span className="crumb" title={repos.map((repo) => repo.rootPath).join('\n')}>
-                {repoSummary(repos.map((repo) => repo.name))} /
-              </span>
-            )}
+            <ChatCrumb chat={detail.data?.conversation} repos={repos} onOpenChat={onOpenChat} />
             {detail.data && <ChatTeammate chat={detail.data.conversation} />}
             <h1
               className="chat-title"
@@ -283,6 +279,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             >
               {title}
             </h1>
+            <ChatHeadStatus chat={detail.data?.conversation} />
             <ChatTicketChips chat={tickets} />
             <div className="head-r">
               <DiffChip
