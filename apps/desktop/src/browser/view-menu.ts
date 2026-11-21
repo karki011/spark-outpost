@@ -1,5 +1,4 @@
-import { addressToUrl, classifyBrowserUrl } from '@spark-outpost/contracts';
-import { selectedPageText } from './selection-menu.ts';
+import { selectedPageText, webLink } from './selection-menu.ts';
 
 export interface ViewMenuFacts {
   selectionText: string;
@@ -16,13 +15,6 @@ export type ViewMenuItem =
   | { kind: 'copy_link'; label: string; url: string }
   | { kind: 'copy'; label: string }
   | { kind: 'separator' };
-
-function webLink(raw: string): string | null {
-  if (raw === '') return null;
-  const kind = classifyBrowserUrl(raw);
-  if (kind !== 'local' && kind !== 'external') return null;
-  return addressToUrl(raw);
-}
 
 export function viewMenuItems(facts: ViewMenuFacts): ViewMenuItem[] {
   const items: ViewMenuItem[] = [];

@@ -66,6 +66,20 @@ for (const [name, tab] of cases) {
   });
 }
 
+test('closing the last tab closes the pane, and closing one of two keeps it', async ({ page }) => {
+  await withDesktopBrowser(page);
+  const { pane, chatId } = await openPane(page);
+  const other = { title: 'Guide', url: 'https://docs.example.com/b' };
+  await push(page, chatId, [page1, other]);
+  await pane.getByRole('button', { name: 'Close Docs' }).click();
+  await push(page, chatId, [{ ...other, active: true }]);
+  await expect(pane).toBeVisible();
+
+  await pane.getByRole('button', { name: 'Close Guide' }).click();
+  await push(page, chatId, []);
+  await expect(pane).toBeHidden();
+});
+
 async function mainClosesWith(page: Page, closed: unknown) {
   await page.evaluate((answer) => {
     (window as unknown as { browserClosed: unknown }).browserClosed = answer;

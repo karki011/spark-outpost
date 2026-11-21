@@ -15,6 +15,7 @@ summary: What changed in recent releases and what to do next.
 | **Sub-chats** tab; plan card **Edit**           | [Sub-chats](sub-chats.md#find-a-sub-chat).                 |
 | Sub-chat reports, wrap-up                       | [Reports](sub-chat-reports.md).                            |
 | Agents split jobs into sub-chats                | [Split a job](split-into-sub-chats.md).                    |
+| Browser menus, docked tools                     | [Browser](use-the-browser.md).                             |
 | Sub-chats nest under their parent               | [Find a sub-chat](sub-chats.md#find-a-sub-chat).           |
 | Chats message each other                        | [Messages](chat-messages.md).                              |
 | **Enter** sends mid-dictation; PR panel tidied  | [Talk to Spark](voice.md#turn-it-on).                      |

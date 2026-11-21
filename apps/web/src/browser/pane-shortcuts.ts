@@ -11,7 +11,8 @@ import {
 import { desktopBrowser } from '../desktop/desktop-bridge.ts';
 import type { ShortcutKeys } from '../ui/Keys.tsx';
 import { MAC } from '../ui/shortcuts.ts';
-import { closeBrowserTab, sendBrowserCommand } from './browser-store.ts';
+import { sendBrowserCommand } from './browser-store.ts';
+import { closePaneTab } from './pane-open.ts';
 
 export interface PaneKeys {
   shown: ShortcutKeys;
@@ -48,7 +49,7 @@ export interface PaneCommands {
 export function chatPaneCommands(chatId: string): PaneCommands {
   return {
     send: (command) => sendBrowserCommand(chatId, command),
-    close: (tabId) => void closeBrowserTab(chatId, tabId),
+    close: (tabId) => void closePaneTab(chatId, tabId),
     ask: async (command) => desktopBrowser()?.command(chatId, command),
   };
 }

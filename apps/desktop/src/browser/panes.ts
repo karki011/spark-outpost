@@ -23,6 +23,7 @@ import { CLIPBOARD_WRITE, pagePermissionAllowed, type InputMarks } from './clipb
 import type { PageZooms } from './page-zoom.ts';
 import { BROWSER_PARTITION, requestAllowed, type GuardFacts } from './request-guard.ts';
 import type { SendsTo } from './selection-menu.ts';
+import { showTab } from './devtools-dock.ts';
 import { browserSession, devtoolsSession, type SessionGuards } from './sessions.ts';
 import { PaneTab } from './tab.ts';
 
@@ -196,6 +197,7 @@ export class BrowserPanes {
         found: (owner, active, matches) => this.options.found(owner, active, matches),
         devtoolsSession: () =>
           devtoolsSession({ blockedPorts: this.options.blockedPorts, log: this.options.log }),
+        devtoolsDocked: (view, docked) => this.dock(view, docked),
         zoomOf: (url) => this.options.pageZooms?.(chatId).of(url) ?? 1,
         used: (owner) => this.options.tabUsed?.(owner),
         pageKey: (owner, input) => this.options.pageKey?.(owner, input) ?? false,
@@ -453,26 +455,22 @@ export class BrowserPanes {
     const locked = appLockGate.locked();
     for (const pane of this.chats.values()) {
       for (const tab of pane.tabs) {
-        const view = tab.view();
-        if (!view) continue;
         const slot = this.options.slotBounds?.(tab);
         const showsActive =
           placement?.chatId === pane.chatId && !placement.covered && tab.active && !tab.peek;
         const bounds = slot !== undefined ? slot : showsActive ? placement.bounds : null;
-        const visible =
-          !locked &&
-          bounds !== null &&
-          bounds.width > 0 &&
-          bounds.height > 0 &&
-          tab.currentUrl() !== BLANK;
-        if (visible) view.setBounds(this.zoomed(bounds));
-        if (visible && !tab.shown) tab.media.syncZoom();
-        view.setVisible(visible);
-        if (visible) tab.pickOverlay?.setBounds(this.zoomed(bounds));
-        tab.pickOverlay?.setVisible(visible);
-        tab.shown = visible;
+        showTab(tab, locked ? null : bounds, (shown) => this.zoomed(shown));
       }
     }
+  }
+
+  private dock(view: WebContentsView, docked: boolean): void {
+    const window = this.options.window();
+    if (!window || window.isDestroyed()) return;
+    if (docked) view.setBounds(HIDDEN_BOUNDS);
+    if (docked) window.contentView.addChildView(view);
+    else window.contentView.removeChildView(view);
+    this.layout();
   }
 
   sleepAll(): void {

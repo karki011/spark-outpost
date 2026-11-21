@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { API_TOKEN_HEADER, type BrowserHistoryEvent } from '@spark-outpost/contracts';
 import { historyPoster } from './history-client.ts';
-import { viewHistory } from './view-history.ts';
+import { paneHistory, viewHistory } from './view-history.ts';
 
 function tab(chatId: string, url: string) {
   return { chatId, currentUrl: () => url };
@@ -65,5 +65,24 @@ describe('Browser view history', () => {
     answer(new Response(null, { status: 204 }));
     await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
     expect(JSON.parse(fetchImpl.mock.calls[1]![1].body)).toMatchObject({ kind: 'title' });
+  });
+});
+
+describe('chat pane history', () => {
+  it('records the user’s own pane tab in Work and never an agent’s tab', () => {
+    const events: BrowserHistoryEvent[] = [];
+    const history = paneHistory((event) => events.push(event));
+    const docs = 'https://docs.example.com/a';
+    const mine = { owner: 'user' as const, currentUrl: () => docs };
+    const agents = { owner: 'agent' as const, currentUrl: () => docs };
+    history.visited(mine, docs);
+    history.titled(mine, 'Docs');
+    history.visited(agents, docs);
+    history.titled(agents, 'Docs');
+    history.visited(mine, 'file:///Users/me/notes.html');
+    expect(events).toEqual([
+      { kind: 'visit', profile: 'work', url: docs, title: '' },
+      { kind: 'title', profile: 'work', url: docs, title: 'Docs' },
+    ]);
   });
 });

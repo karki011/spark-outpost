@@ -1,5 +1,4 @@
 import {
-  BrowserWindow,
   WebContentsView,
   type ContextMenuParams,
   type Input,
@@ -15,10 +14,10 @@ import {
   type BrowserTabOwner,
 } from '@spark-outpost/contracts';
 import { appLockGate } from '../app-lock-gate.ts';
-import { hideWhileLocked } from '../app-lock-windows.ts';
 import { paneShortcutOf } from './tab-keys.ts';
 import { attachCdp, type Cdp } from './cdp.ts';
 import type { InputMarks } from './clipboard-permission.ts';
+import { leavesPage } from './leave-site.ts';
 import { shiftedLinkClick } from './link-gesture.ts';
 import { capturePageLogs, type PageLogs } from './page-capture.ts';
 import { RefMap, tabRefNumbers } from './ref-map.ts';
@@ -42,6 +41,7 @@ export interface TabHooks {
   paneShortcut(tab: PaneTab, shortcut: BrowserShortcut): void;
   found(tab: PaneTab, active: number, matches: number): void;
   devtoolsSession(): Session;
+  devtoolsDocked(view: WebContentsView, docked: boolean): void;
   zoomOf(url: string): number;
   used?(tab: PaneTab): void;
   pageKey?(tab: PaneTab, input: Input): boolean;
@@ -108,7 +108,7 @@ export class PaneTab {
   private opening: Promise<LiveTab> | null = null;
   private waking: Promise<LiveTab> | null = null;
   private readonly hooks: TabHooks;
-  private devtools: BrowserWindow | null = null;
+  private devtools: WebContentsView | null = null;
   private closed = false;
   private lastClickAt: number | null = null;
 
@@ -137,40 +137,47 @@ export class PaneTab {
     return this.title;
   }
 
-  openDevtools(): void {
-    const contents = this.live?.view.webContents;
-    if (!contents || contents.isDestroyed()) return;
-    if (this.devtools && !this.devtools.isDestroyed()) {
-      this.devtools.focus();
+  toggleDevtools(): void {
+    if (this.devtools) {
+      this.closeDevtools();
       return;
     }
-    const window = new BrowserWindow({
-      width: 1000,
-      height: 700,
-      title: `Developer tools: ${this.title || 'Browser pane'}`,
+    const contents = this.live?.view.webContents;
+    if (!contents || contents.isDestroyed()) return;
+    const view = new WebContentsView({
       webPreferences: {
         session: this.hooks.devtoolsSession(),
         sandbox: true,
         contextIsolation: true,
       },
     });
-    this.devtools = window;
-    hideWhileLocked(window);
-    contents.setDevToolsWebContents(window.webContents);
+    this.devtools = view;
+    view.setBorderRadius(VIEW_RADIUS);
+    view.webContents.on('before-input-event', (event, input) => {
+      if (!isDevtoolsShortcut(input, process.platform)) return;
+      event.preventDefault();
+      this.closeDevtools();
+    });
+    contents.setDevToolsWebContents(view.webContents);
     contents.openDevTools({ mode: 'detach' });
     contents.once('devtools-closed', () => {
-      if (!window.isDestroyed()) window.close();
+      if (this.devtools === view) this.closeDevtools();
     });
-    window.on('closed', () => {
-      if (this.devtools === window) this.devtools = null;
-      if (!contents.isDestroyed()) contents.closeDevTools();
-    });
+    this.hooks.devtoolsDocked(view, true);
+  }
+
+  devtoolsView(): WebContentsView | null {
+    return this.devtools;
   }
 
   private closeDevtools(): void {
-    const window = this.devtools;
+    const view = this.devtools;
+    if (!view) return;
     this.devtools = null;
-    if (window && !window.isDestroyed()) window.close();
+    const contents = this.live?.view.webContents;
+    if (contents && !contents.isDestroyed()) contents.closeDevTools();
+    this.hooks.devtoolsDocked(view, false);
+    if (!view.webContents.isDestroyed()) view.webContents.close();
   }
 
   inputMarks(): InputMarks {
@@ -334,12 +341,16 @@ export class PaneTab {
       }
       if (isDevtoolsShortcut(input, process.platform)) {
         event.preventDefault();
-        this.openDevtools();
+        this.toggleDevtools();
         return;
       }
       if (!isAddShortcut(input, process.platform)) return;
       event.preventDefault();
       this.hooks.addShortcut(this);
+    });
+    contents.on('will-prevent-unload', (event) => {
+      const facts = { owner: this.owner, shown: this.shown, locked: appLockGate.locked() };
+      if (leavesPage(facts)) event.preventDefault();
     });
     contents.on('render-process-gone', () => this.note({ error: 'The page stopped working.' }));
     this.media.attach(contents);
