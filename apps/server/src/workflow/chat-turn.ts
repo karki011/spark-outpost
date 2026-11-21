@@ -4,8 +4,8 @@ import { placeChatOrStop } from '../orchestration/chat-place.ts';
 import { handToSparks } from '../orchestration/spark-handoff.ts';
 import { recordKeptChanges } from '../outcomes/record.ts';
 import { auditOutpostRequest } from '../outposts/request-audit.ts';
-import { isStoryWrapUp } from '../sub-chats/user-asked.ts';
-import { replyToWrapUp } from '../outposts/wrap-up-turn.ts';
+import { isWrapUp } from '../sub-chats/user-asked.ts';
+import { replyToWrapUp } from '../sub-chats/wrap-up-turn.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
 import { sparkPreferences, type SparkPreferences } from '../persistence/setup.ts';
@@ -90,7 +90,7 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
     if (!prepared) return;
     const reverted = await noteRevertedFiles(deps.db, prepared);
     input = reverted.input;
-    if (isStoryWrapUp(input)) {
+    if (isWrapUp(input)) {
       const prompted = await withChatPrompt(deps, input);
       return await replyToWrapUp(prompted, lease, input, append, control);
     }

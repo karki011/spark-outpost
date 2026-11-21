@@ -8,7 +8,7 @@ import { sparkAvailability } from '../src/spark-mcp/availability.ts';
 import type { SparkToolDeps } from '../src/spark-mcp/deps.ts';
 import { startSparkMcpHost, type SparkMcpHost } from '../src/spark-mcp/host.ts';
 import { createOutpostRow } from './outpost-fixtures.ts';
-import { deliverAsk } from '../src/sub-chats/delivery.ts';
+import { deliverAsk } from '../src/sub-chats/deliver-ask.ts';
 import { fakeTarget, finishTurn, messageAsk, turnsOf } from './chat-ask-fixtures.ts';
 import { connectClient, toolDeps } from './spark-mcp-support.ts';
 import { addSubChat, turnIn } from './sub-chat-fixtures.ts';

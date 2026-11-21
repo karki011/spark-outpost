@@ -1,6 +1,6 @@
 import type { SendToChatAction } from '@spark-outpost/contracts';
 import { createMessageAsk, targetChat, targetRefusal } from '../../sub-chats/asks.ts';
-import { deliverAsk } from '../../sub-chats/delivery.ts';
+import { deliverAsk } from '../../sub-chats/deliver-ask.ts';
 import { chatTarget } from '../../workflow/queue-drain.ts';
 import type { SparkToolContext } from '../tool.ts';
 import { sentMessage } from '../tools/send-to-chat.ts';

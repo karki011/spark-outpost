@@ -164,17 +164,13 @@ const endpoints = {
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
 const githubApp = gitHubAppConfig(config);
 const githubDeps = { db, workspaceId, secrets, endpoints, runCommand, loginShell, githubApp };
-const outposts = outpostDelivery({
-  db,
-  port: config.API_PORT,
-  apiToken,
-  ship: shipDepsOf({
-    ...githubDeps,
-    githubApiUrl: config.GITHUB_API_URL,
-    branchPrefix: config.BRANCH_PREFIX,
-  }),
+const ship = shipDepsOf({
+  ...githubDeps,
+  githubApiUrl: config.GITHUB_API_URL,
+  branchPrefix: config.BRANCH_PREFIX,
 });
-const chatAsks = askDelivery(db);
+const outposts = outpostDelivery({ db, port: config.API_PORT, apiToken, ship });
+const chatAsks = askDelivery(db, undefined, { ship });
 const appEvents = new AppEventFeed(undefined, (event) => {
   slackNotifier.changed(event);
   pushNotifier.changed(event);

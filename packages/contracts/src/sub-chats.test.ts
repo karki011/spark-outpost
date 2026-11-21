@@ -71,6 +71,7 @@ const TASK_ASK: ChatAsk = {
   deliveredAs: null,
   runId: null,
   noReplyReason: null,
+  report: null,
   createdAt: '2026-11-20T10:00:00.000Z',
   settledAt: null,
 };

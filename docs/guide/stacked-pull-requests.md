@@ -3,35 +3,35 @@ title: Stacked pull requests
 section: Projects and shipping
 type: concept
 order: 324
-summary: How a sub-task that starts after another in the same project builds on that branch, where its pull request points, and how to update and merge the stack.
+summary: How a sub-chat stacked on another builds on that branch, where its pull request points, when it starts, and how to update and merge the stack.
 ---
 
-A stacked sub-task builds on the earlier chat's `spark/*` branch, where Spark first commits that chat's kept changes. Updating is a merge; nothing rebases.
+A [sub-chat](sub-chats.md) stacked on another builds on that sub-chat's `spark/*` branch, where Spark first commits its kept changes. Updating is a merge; nothing rebases.
 
 ## Parallel or stacked
 
-| In the draft                                 | Branch starts from | Pull request targets |
-| -------------------------------------------- | ------------------ | -------------------- |
-| **Starts after**: **Nothing**                | The default branch | The default branch   |
-| **Starts after** `@api`, same project        | `@api`'s branch    | `@api`'s branch      |
-| **Starts after** `@api`, a different project | The default branch | The default branch   |
+| On the plan card               | Branch starts from  | Pull request targets |
+| ------------------------------ | ------------------- | -------------------- |
+| **New branch**                 | The default branch  | The default branch   |
+| **Stacked on 1**, same project | Sub-chat 1's branch | Sub-chat 1's branch  |
+| **Starts after 1, 2**          | The default branch  | The default branch   |
 
-The proposing chat picks parallel or stacked; change it before you [start the story](outpost-stories.md). A different branch you choose for the chat, or **Edit my files**, wins over the stack.
+The agent that [splits the job](split-into-sub-chats.md) picks parallel or stacked. **Starts after** is order only.
 
-## What you see
+## When it starts
 
-The **Story** bar shows each pull request as a chip, such as **#124 → #123** or **#124 → main**, with warnings as text.
+A stacked sub-chat is **Held** until the one below it has [reported](sub-chat-reports.md). Spark then commits that sub-chat's kept changes on its own branch, a local commit that is never pushed, and starts the stacked one.
 
-| Warning or line                             | Do                                                                                                                                      |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| "@api has commits that @fe does not have"   | Select **Update from @api** and send the request. `@fe` merges that branch.                                                             |
-| "Merging this now would not reach main"     | Select **Update from the default branch**, so `@fe`'s pull request targets it.                                                          |
-| **Needs you: @api's branch is not pushed.** | Have `@api` push first; until then Spark refuses `@fe`'s push, which carries `@api`'s commits. Unreviewed modes get a [flag](cards.md). |
+If the commit can't be made, or the one below failed or was stopped, it stays **Held**.
 
-## What stays the same
+## Pushing and merging
 
-- With the recommended [rules](protected-paths.md#spark-rules), a chat pushes only its own `spark/*` branch; force pushes need a lease and confirmation.
-- Nothing merges; you merge them, in the bar's order.
-- Once `@api`'s pull request merges or closes, `@fe`'s new pull request targets the default branch.
+| Rule                                                            | Why                                                          |
+| --------------------------------------------------------------- | ------------------------------------------------------------ |
+| A sub-chat pushes only its own `spark/*` branch                 | With the recommended [rules](protected-paths.md#spark-rules) |
+| Its push is refused while the branch below is not on the remote | The push would carry that branch's commits                   |
+| In a mode Spark can't review, that push gets a [flag](cards.md) | Spark never stops the run                                    |
+| Nothing merges; you merge, base first                           | The parent's wrap-up gives the order                         |
+| Once the pull request below merges or closes                    | A new pull request targets the default branch                |
 
-See [Ship a change](ship-and-pull-requests.md) and [What an outpost request may do](outpost-permissions.md).
+Outpost stories stack the same way; their **Story** bar shows each pull request and its warnings. See [Stories](outpost-stories.md), [Ship a change](ship-and-pull-requests.md) and [What an outpost request may do](outpost-permissions.md).

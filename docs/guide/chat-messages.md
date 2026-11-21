@@ -38,5 +38,6 @@ A chat's agent can send another chat a message and ask for a reply. The text is 
 | The turn the message started ends | That turn's reply.    |
 | The turn failed or was stopped    | **No reply** and why. |
 | You removed the queued message    | **No reply**.         |
+| You deleted the other chat        | **No reply** and why. |
 
 A reply arrives as a message too, so nothing waits and nothing has a deadline. Every message, reply and refusal is in the audit, without its text.

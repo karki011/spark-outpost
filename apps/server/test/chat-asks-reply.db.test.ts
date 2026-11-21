@@ -13,7 +13,8 @@ import {
   recordReply,
   waitingAskFor,
 } from '../src/sub-chats/asks.ts';
-import { deliverAsk, deliveryPass } from '../src/sub-chats/delivery.ts';
+import { deliverAsk } from '../src/sub-chats/deliver-ask.ts';
+import { deliveryPass } from '../src/sub-chats/delivery.ts';
 import { TAKEN_FROM_TURN } from '../src/sub-chats/message-prompt.ts';
 import { userText } from '../src/sub-chats/user-asked.ts';
 import { openMemberInbox } from '../src/workflow/member-inbox.ts';

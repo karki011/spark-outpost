@@ -102,6 +102,7 @@ export const chatAskSchema = z.object({
   deliveredAs: chatAskDeliverySchema.nullable(),
   runId: z.uuid().nullable(),
   noReplyReason: z.string().nullable(),
+  report: subChatReportSchema.nullable(),
   createdAt: z.string(),
   settledAt: z.string().nullable(),
 });

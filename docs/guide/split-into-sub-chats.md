@@ -30,4 +30,4 @@ After the start the sub-chat is yours: change its model, mode or autonomy there.
 
 > **Note:** The parent's agent can stop a sub-chat's turn (`spark_stop_chat`) and message it. It can't raise a sub-chat's mode, and its task can't allow a push or a pull request. Agents see a chat's `parent` and `subChats` in `spark_chats` and `spark_chat`.
 
-**Next:** [Sub-chats](sub-chats.md)
+**Next:** [Reports and the wrap-up](sub-chat-reports.md)

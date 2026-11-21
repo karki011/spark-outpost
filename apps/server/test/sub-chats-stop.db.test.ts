@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { STOP_ONLY_OWN_SUB_CHATS } from '../src/spark-mcp/tools/stop-sub-chat.ts';
-import { deliverAsk } from '../src/sub-chats/delivery.ts';
+import { deliverAsk } from '../src/sub-chats/deliver-ask.ts';
 import { fakeTarget, messageAsk, turnsOf } from './chat-ask-fixtures.ts';
 import {
   confirmCard,

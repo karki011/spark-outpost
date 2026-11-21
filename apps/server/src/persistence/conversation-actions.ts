@@ -1,4 +1,5 @@
 import type { ConversationSummary, UpdateConversationRequest } from '@spark-outpost/contracts';
+import { endAsksToDeletedChat } from '../sub-chats/asks.ts';
 import { ConversationNotFoundError, getSummary } from './conversations.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { notifySubChatsChanged, refreshParentTitle } from './sub-chats.ts';
@@ -38,6 +39,7 @@ export async function updateConversation(
     ],
   );
   if (!rowCount) throw new ConversationNotFoundError(id);
+  if (update.archived !== undefined) await notifySubChatsChanged(db, id);
   const summary = await getSummary(db, id);
   if (!summary) throw new ConversationNotFoundError(id);
   return summary;
@@ -82,6 +84,7 @@ export async function deleteConversation(db: Db, workspaceId: string, id: string
     );
     if (!found.rowCount) throw new ConversationNotFoundError(id);
     await refreshParentTitle(client, id);
+    await endAsksToDeletedChat(client, id);
     await client.query('DELETE FROM conversations WHERE id = $1', [id]);
     await notifySubChatsChanged(client, null);
   });

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { chatMessagesNeed } from '../src/sub-chats/availability.ts';
 import { SEND_REFUSALS } from '../src/sub-chats/asks.ts';
-import { deliverAsk } from '../src/sub-chats/delivery.ts';
+import { deliverAsk } from '../src/sub-chats/deliver-ask.ts';
 import { askNow, fakeTarget, messageAsk, turnsOf } from './chat-ask-fixtures.ts';
 import {
   confirmCard,

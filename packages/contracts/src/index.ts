@@ -111,6 +111,7 @@ export * from './send-to-chat-action.ts';
 export * from './start-sub-chats-action.ts';
 export * from './sub-chats.ts';
 export * from './sub-chat-status.ts';
+export * from './sub-chat-progress.ts';
 export * from './map.ts';
 export * from './companion.ts';
 export * from './assistant-history.ts';

@@ -25,10 +25,10 @@ With a row focused, **←** hides a parent's sub-chats or moves from a sub-chat 
 
 ## Statuses
 
-| Status               | Means                                                            |
-| -------------------- | ---------------------------------------------------------------- |
-| **Needs you**        | A card or question waits, or its last turn failed or was stopped |
-| **Working**          | A turn is running or about to start                              |
-| **Held**             | It has not started yet                                           |
-| **Ready for review** | It finished with an open pull request or kept changes            |
-| **Done**             | It finished with nothing left to review, or it is archived       |
+| Status               | Means                                                             |
+| -------------------- | ----------------------------------------------------------------- |
+| **Needs you**        | A card or question waits, or its last turn failed or was stopped  |
+| **Working**          | A turn is running or about to start                               |
+| **Held**             | It has not started yet; see [when it starts](sub-chat-reports.md) |
+| **Ready for review** | It finished with an open pull request or kept changes             |
+| **Done**             | It finished with nothing left to review, or it is archived        |

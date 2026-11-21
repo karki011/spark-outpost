@@ -24,6 +24,8 @@ export const SEND_REFUSALS = {
     'This turn was started by a sub-chat, so it can message only this chat’s own sub-chats. Tell the user if another chat needs to hear this.',
   notForThisChat: 'That message was not sent to this chat, so this chat can’t answer it.',
   notWaiting: 'That message is no longer waiting for a reply.',
+  taskReports:
+    'A task needs no replyTo: Spark reports this turn’s reply to that chat when the turn ends.',
 } as const;
 
 export const NO_REPLY_REASONS = {
@@ -32,6 +34,7 @@ export const NO_REPLY_REASONS = {
   gone: 'Its turn is gone.',
   empty: 'Its turn ended without an answer.',
   removed: 'The message was removed from its queue.',
+  deleted: 'That chat was deleted.',
 } as const;
 
 export class AskError extends Error {}
@@ -208,6 +211,7 @@ export async function waitingAskFor(db: Queryable, askId: string, chatId: string
   const ask = await getChatAsk(db, askId);
   if (!ask || ask.to.id !== chatId) throw new AskError(SEND_REFUSALS.notForThisChat);
   if (ask.state !== 'waiting') throw new AskError(SEND_REFUSALS.notWaiting);
+  if (ask.kind === 'task') throw new AskError(SEND_REFUSALS.taskReports);
   return ask;
 }
 
@@ -216,6 +220,7 @@ async function answerSender(
   ask: ChatAsk,
   fromRunId: string | null,
   body: string,
+  replyTo: string | null = ask.id,
 ): Promise<string | null> {
   if (ask.from.id === null) return null;
   const { rows } = await db.query<{ workspace_id: string }>(
@@ -234,7 +239,7 @@ async function answerSender(
     fromTitle: ask.to.title,
     toConversationId: ask.from.id,
     body: storedMessage(body),
-    replyTo: ask.id,
+    replyTo,
     wantsReply: false,
   });
   return id;
@@ -279,7 +284,19 @@ export async function endRemovedAsk(db: Queryable, askId: string): Promise<ChatA
   return end.settled ? ask : null;
 }
 
-export type AskAudit = 'reply' | 'no_reply';
+export async function endAsksToDeletedChat(db: Queryable, conversationId: string): Promise<void> {
+  const { rows } = await db.query<{ id: string }>(
+    `SELECT id FROM chat_asks WHERE to_conversation_id = $1 AND state = 'waiting'
+     ORDER BY created_at, id`,
+    [conversationId],
+  );
+  for (const { id } of rows) {
+    const ask = await getChatAsk(db, id);
+    if (ask) await answerSender(db, ask, null, `No reply: ${NO_REPLY_REASONS.deleted}`, null);
+  }
+}
+
+export type AskAudit = 'reply' | 'no_reply' | 'report';
 
 export async function auditAskEnd(
   db: Db,

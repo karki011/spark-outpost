@@ -1,9 +1,11 @@
-import type {
-  ChatAsk,
-  ChatAskDelivery,
-  ChatAskKind,
-  ChatAskState,
-  TerminalRunStatus,
+import {
+  subChatReportSchema,
+  type ChatAsk,
+  type ChatAskDelivery,
+  type ChatAskKind,
+  type ChatAskState,
+  type SubChatReport,
+  type TerminalRunStatus,
 } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
 import { notifySubChatsChanged } from './sub-chats.ts';
@@ -19,6 +21,7 @@ export interface NewChatAsk {
   body: string;
   replyTo: string | null;
   wantsReply: boolean;
+  report?: SubChatReport | null;
 }
 
 export type AskOutcome = { state: 'replied' } | { state: 'no_reply'; reason: string };
@@ -37,6 +40,7 @@ interface ChatAskRow {
   delivered_as: ChatAskDelivery | null;
   run_id: string | null;
   no_reply_reason: string | null;
+  report: unknown;
   created_at: Date;
   settled_at: Date | null;
 }
@@ -44,7 +48,7 @@ interface ChatAskRow {
 const SELECT_ASK = `SELECT a.id, a.kind, a.from_conversation_id, a.from_run_id,
     COALESCE(sender.title, a.from_title) AS from_title, a.to_conversation_id,
     receiver.title AS to_title, a.body, a.reply_to, a.state, a.delivered_as, a.run_id,
-    a.no_reply_reason, a.created_at, a.settled_at
+    a.no_reply_reason, a.report, a.created_at, a.settled_at
   FROM chat_asks a
   JOIN conversations receiver ON receiver.id = a.to_conversation_id
   LEFT JOIN conversations sender ON sender.id = a.from_conversation_id`;
@@ -62,6 +66,7 @@ function toChatAsk(row: ChatAskRow): ChatAsk {
     deliveredAs: row.delivered_as,
     runId: row.run_id,
     noReplyReason: row.no_reply_reason,
+    report: subChatReportSchema.safeParse(row.report).data ?? null,
     createdAt: row.created_at.toISOString(),
     settledAt: row.settled_at ? row.settled_at.toISOString() : null,
   };
@@ -91,8 +96,8 @@ export async function insertChatAsk(db: Queryable, ask: NewChatAsk): Promise<boo
   return changed(
     db,
     `INSERT INTO chat_asks (id, workspace_id, kind, from_conversation_id, from_run_id, from_title,
-       to_conversation_id, body, reply_to, state)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       to_conversation_id, body, reply_to, state, report)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      ON CONFLICT (id) DO NOTHING`,
     [
       ask.id,
@@ -105,6 +110,7 @@ export async function insertChatAsk(db: Queryable, ask: NewChatAsk): Promise<boo
       ask.body,
       ask.replyTo,
       ask.wantsReply ? 'waiting' : null,
+      ask.report ? JSON.stringify(ask.report) : null,
     ],
   );
 }
@@ -201,6 +207,7 @@ export async function endUndeliveredAsk(db: Queryable, id: string, reason: strin
 export interface EndedAsk {
   ask: ChatAsk;
   runStatus: TerminalRunStatus | 'gone';
+  error: string | null;
   reply: string;
   finalReply: string;
   steerOffset: number;
@@ -213,12 +220,13 @@ export async function waitingAsksWithEndedTurn(
   const { rows } = await db.query<
     ChatAskRow & {
       run_status: EndedAsk['runStatus'];
+      run_error: string | null;
       reply: string;
       final_reply: string;
       steer_offset: number;
     }
   >(
-    `SELECT asks.*, COALESCE(r.status, 'gone') AS run_status,
+    `SELECT asks.*, COALESCE(r.status, 'gone') AS run_status, r.error AS run_error,
        COALESCE(said.content, '') AS reply,
        COALESCE(said.final_reply, said.content, '') AS final_reply,
        COALESCE((SELECT s.delivered_text_offset FROM member_messages s
@@ -239,6 +247,7 @@ export async function waitingAsksWithEndedTurn(
   return rows.map((row) => ({
     ask: toChatAsk(row),
     runStatus: row.run_status,
+    error: row.run_error,
     reply: row.reply,
     finalReply: row.final_reply,
     steerOffset: row.steer_offset,

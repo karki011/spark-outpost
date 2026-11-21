@@ -1,4 +1,5 @@
 import {
+  heldReason,
   subChatReportSchema,
   subChatStartedWithSchema,
   type ChatRef,
@@ -11,6 +12,7 @@ import {
 import { withChatBranches } from './chat-worktrees.ts';
 import type { Queryable } from './db.ts';
 import { toConversationSummary, type ConversationSummaryRow } from './rows.ts';
+import { planOf } from './sub-chat-plans.ts';
 import { summaryQuery } from './summary-query.ts';
 
 export class SubChatError extends Error {}
@@ -194,7 +196,7 @@ export async function markSubChatStarted(
 ): Promise<boolean> {
   return changed(
     db,
-    `UPDATE sub_chats SET started_at = now(), task_ask_id = $2
+    `UPDATE sub_chats SET started_at = now(), task_ask_id = $2, wrapped_up_at = NULL
      WHERE conversation_id = $1 AND started_at IS NULL`,
     [conversationId, taskAskId],
   );
@@ -209,6 +211,20 @@ export async function saveSubChatReport(
     db,
     'UPDATE sub_chats SET report = $2, reported_at = now() WHERE conversation_id = $1',
     [conversationId, JSON.stringify(report)],
+  );
+}
+
+export async function claimWrapUp(
+  db: Queryable,
+  parentConversationId: string,
+  subChatIds: readonly string[],
+): Promise<boolean> {
+  return changed(
+    db,
+    `UPDATE sub_chats SET wrapped_up_at = now()
+     WHERE parent_conversation_id = $1 AND conversation_id = ANY($2::uuid[])
+       AND wrapped_up_at IS NULL`,
+    [parentConversationId, subChatIds],
   );
 }
 
@@ -268,14 +284,49 @@ function refsTo(ids: readonly string[], chats: Map<string, ConversationSummary>)
   });
 }
 
+async function heldReasons(
+  db: Queryable,
+  parentConversationId: string | null,
+): Promise<Map<string, string>> {
+  if (parentConversationId === null) return new Map();
+  const pieces = await planOf(db, parentConversationId);
+  const plan = new Map(pieces.map((piece) => [piece.id, piece]));
+  return new Map(
+    pieces.flatMap((piece) => {
+      const reason = heldReason(piece, plan);
+      return reason === null ? [] : [[piece.id, reason] as const];
+    }),
+  );
+}
+
+export async function subChatRow(db: Queryable, conversationId: string) {
+  const stored = await getSubChat(db, conversationId);
+  if (!stored) return null;
+  const rows = stored.parentConversationId
+    ? await subChatRows(db, stored.parentConversationId)
+    : await rowsOf(db, [stored], null);
+  return rows.find((row) => row.id === conversationId) ?? null;
+}
+
 export async function subChatRows(
   db: Queryable,
   parentConversationId: string,
 ): Promise<SubChatRow[]> {
-  const stored = await listSubChats(db, parentConversationId);
+  return rowsOf(db, await listSubChats(db, parentConversationId), parentConversationId);
+}
+
+async function rowsOf(
+  db: Queryable,
+  stored: readonly StoredSubChat[],
+  parentConversationId: string | null,
+): Promise<SubChatRow[]> {
   const ids = stored.map((piece) => piece.conversationId);
   if (ids.length === 0) return [];
-  const [chats, pulls] = await Promise.all([summariesOf(db, ids), pullRequestsOf(db, ids)]);
+  const [chats, pulls, held] = await Promise.all([
+    summariesOf(db, ids),
+    pullRequestsOf(db, ids),
+    heldReasons(db, parentConversationId),
+  ]);
   return stored.flatMap((piece) => {
     const chat = chats.get(piece.conversationId);
     if (!chat?.subChat) return [];
@@ -285,7 +336,7 @@ export async function subChatRows(
         title: chat.title,
         position: piece.position,
         status: chat.subChat.status,
-        why: whyNeedsUser(chat),
+        why: whyNeedsUser(chat) ?? held.get(piece.conversationId) ?? null,
         task: piece.task,
         branch: chat.branch ?? null,
         pullRequest: pulls.get(piece.conversationId) ?? null,

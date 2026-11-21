@@ -43,6 +43,17 @@ describe('publishReason', () => {
     expect(publishReason({ ...turn, level: 'full-auto', outpostRequest: wrapUp })).toBeNull();
   });
 
+  it('never publishes from the wrap-up of a chat’s sub-chats', () => {
+    const chatAsk = {
+      id: 'ask-1',
+      kind: 'wrap_up' as const,
+      fromTitle: 'Spark',
+      wantsReply: false,
+    };
+    expect(publishReason({ ...turn, level: 'full-auto', chatAsk })).toBeNull();
+    expect(publishReason({ ...turn, userRequest: 'Open a PR', chatAsk })).toBeNull();
+  });
+
   it('is a push-only ask when the message asks for the push and not the pull request', () => {
     const pushOnly = 'Push this branch, but do not open a pull request';
     expect(publishReason({ ...turn, userRequest: pushOnly })).toBe('asked-push');

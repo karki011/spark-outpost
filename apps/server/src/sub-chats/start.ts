@@ -25,7 +25,7 @@ import {
 import { chatTarget, type ResolveTarget } from '../workflow/queue-drain.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { storedMessage } from './asks.ts';
-import { deliverAsk } from './delivery.ts';
+import { deliverAsk } from './deliver-ask.ts';
 import { connectedAgents, isFolder, type FolderExists } from './plan-facts.ts';
 import { folderMissing, quoted, startChoices, type PlanAgent } from './plan.ts';
 

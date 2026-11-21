@@ -13,7 +13,7 @@ import { SUB_CHAT_CANNOT_BE_PARENT } from '../src/persistence/sub-chats.ts';
 import { FAKE_CODEX_MODES } from '../src/providers/fake.ts';
 import { performSparkAction } from '../src/spark-mcp/actions/perform.ts';
 import { NOT_FROM_ANOTHER_CHAT } from '../src/spark-mcp/tools/sub-chats-tool.ts';
-import { deliverAsk } from '../src/sub-chats/delivery.ts';
+import { deliverAsk } from '../src/sub-chats/deliver-ask.ts';
 import { folderMissing } from '../src/sub-chats/plan.ts';
 import { askNow, fakeTarget, messageAsk, turnsOf } from './chat-ask-fixtures.ts';
 import {

@@ -1,3 +1,5 @@
+import type { ChatAskKind } from '@spark-outpost/contracts';
+
 export interface UserTextInput {
   userRequest: string;
   outpostRequest?: { fromUser: boolean } | null | undefined;
@@ -13,8 +15,9 @@ export function userText(input: UserTextInput): string {
 
 export interface WrapUpInput {
   outpostRequest?: { wrapUp?: boolean } | null | undefined;
+  chatAsk?: { kind: ChatAskKind } | null | undefined;
 }
 
-export function isStoryWrapUp(input: WrapUpInput): boolean {
-  return input.outpostRequest?.wrapUp === true;
+export function isWrapUp(input: WrapUpInput): boolean {
+  return input.outpostRequest?.wrapUp === true || input.chatAsk?.kind === 'wrap_up';
 }

@@ -10,7 +10,8 @@ import {
 } from '../src/persistence/member-messages.ts';
 import { turnObservations } from '../src/persistence/observations.ts';
 import { setSparkPaused } from '../src/persistence/spark-pause.ts';
-import { deliverAsk, deliveryPass } from '../src/sub-chats/delivery.ts';
+import { deliverAsk } from '../src/sub-chats/deliver-ask.ts';
+import { deliveryPass } from '../src/sub-chats/delivery.ts';
 import { STEERED_ASK_OBSERVATION } from '../src/sub-chats/steered-ask.ts';
 import { userText } from '../src/sub-chats/user-asked.ts';
 import { openMemberInbox } from '../src/workflow/member-inbox.ts';

@@ -213,6 +213,7 @@ A reply (and a No reply notice) is itself delivered to the sender by the same de
   - Footer: "Written by the sub-chat's agent, not checked by Spark".
 - The task wrapper asks the sub-chat's agent to end its reply with `Changed:`, `Risks:` and `Blockers:` sections. Spark reads those sections; a missing one reads "None stated", and with none of them the reply's opening lines become Changed. A failed or stopped task turn sends a report with status Needs you and the reason.
 - A turn the user typed in a sub-chat, and a pull request follow-up round, update the sub-chat's row (latest report, status) and the Sub-chats tab. They do not start a turn in the parent.
+- A sub-chat "has reported" when its row's latest report has no failure reason. A deleted or archived sub-chat counts as reported, so nothing waits on it forever.
 - **Wrap-up:** when no sub-chat of the parent is Working and none can still start by itself (each has reported, failed or been stopped, or is Held behind one that failed or was stopped), Spark sends the parent one wrap-up: every sub-chat's status with Spark's own branch, commit, push and pull request record, and the order to merge stacked pull requests. It runs as a read-only reply (`asWrapUpReply`: a Do turn becomes an Ask turn), starts no build and no publish step, and authorises no push or pull request at any level or in any mode. It is written once per settled set; adding pieces later allows one more.
 
 ## 8. Landing: stacked sub-chats
@@ -279,6 +280,7 @@ CREATE TABLE chat_asks (
   delivered_as text CHECK (delivered_as IN ('turn', 'steer')),
   run_id uuid REFERENCES runs (id) ON DELETE SET NULL,
   no_reply_reason text,
+  report jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
   settled_at timestamptz
 );
@@ -288,7 +290,7 @@ CREATE INDEX chat_asks_undelivered ON chat_asks (created_at) WHERE delivered_as 
 CREATE INDEX chat_asks_waiting ON chat_asks (run_id) WHERE state = 'waiting';
 ```
 
-Plus, in the same migration: `chat_queue_origin_check` gains `'chat'`, and `runs_source_check` gains `'chat'`.
+Plus, in the same migration: `chat_queue_origin_check` gains `'chat'`, and `runs_source_check` gains `'chat'`. `chat_asks.report` (the structured report on a `report` ask) is added by `0269_chat_ask_report.sql`.
 
 Notes:
 
@@ -299,7 +301,7 @@ Notes:
 - `state` is null for a message that wants no reply. `from_conversation_id` is null for a wrap-up (Spark wrote it) and after the sender is deleted; `from_title` keeps the name for the line.
 - There is no plan table: a waiting plan lives in its approval card's payload, and a started plan is its `sub_chats` rows.
 
-Migration `0269_drop_outposts.sql` (slice 8):
+Migration `0270_drop_outposts.sql` (slice 8):
 
 - `UPDATE runs SET source = 'chat'` for outpost runs whose post was not typed by the user, and `'queue'` for those whose post was (`outpost_posts.from_user`), then recreate `runs_source_check` without `'outpost'`.
 - Delete `chat_queue` rows with `outpost_post_id`, then drop `chat_queue.outpost_post_id` and its index.

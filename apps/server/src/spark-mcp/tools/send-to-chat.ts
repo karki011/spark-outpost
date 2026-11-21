@@ -14,7 +14,7 @@ import {
   waitingAskFor,
   type SendRule,
 } from '../../sub-chats/asks.ts';
-import { deliverAsk } from '../../sub-chats/delivery.ts';
+import { deliverAsk } from '../../sub-chats/deliver-ask.ts';
 import { chatTarget } from '../../workflow/queue-drain.ts';
 import { userAskedToSend } from '../actions/action-policy.ts';
 import { deviceRefusal } from '../actions/ask-spark-limits.ts';

@@ -45,6 +45,8 @@ A row reading **Flagged by Spark**: an unreviewed action crossed a protected pat
 | **Needs you**         | A card in one of its chats waits.                                  |
 | **Done** / **Failed** | Latest request finished in the last hour / failed in the last day. |
 
+Sub-chats: [five statuses](sub-chats.md#statuses).
+
 ## Outpost requests
 
 | Status                  | Means                                                                   |

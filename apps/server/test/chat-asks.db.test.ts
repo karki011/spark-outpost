@@ -63,6 +63,7 @@ describe('storing an ask', () => {
       deliveredAs: null,
       runId: null,
       noReplyReason: null,
+      report: null,
       createdAt: expect.any(String),
       settledAt: null,
     });
@@ -188,13 +189,30 @@ describe('deleting a chat', () => {
     });
   });
 
-  it('removes the asks it received', async () => {
+  it('removes the asks it received and leaves a waiting sender a No reply notice', async () => {
     const sent = ask();
     await insertChatAsk(t.db, sent);
 
     await deleteConversation(t.db, t.workspaceId, receiver);
 
     expect(await getChatAsk(t.db, sent.id)).toBeNull();
+    expect(await listChatAsks(t.db, sender)).toMatchObject([
+      {
+        kind: 'reply',
+        from: { id: null, title: 'Orders API' },
+        to: { id: sender },
+        body: 'No reply: That chat was deleted.',
+        state: null,
+      },
+    ]);
+  });
+
+  it('removes an ask that wanted no reply without a notice', async () => {
+    const sent = ask({ wantsReply: false });
+    await insertChatAsk(t.db, sent);
+
+    await deleteConversation(t.db, t.workspaceId, receiver);
+
     expect(await listChatAsks(t.db, sender)).toEqual([]);
   });
 });

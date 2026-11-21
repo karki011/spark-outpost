@@ -1,6 +1,6 @@
 # Sub-chats: build plan
 
-> **Status: plan, nothing built (November 20, 2026).** Design: `SUB_CHATS.md`. Mock: `docs/design/mocks/sub-chats-mock.html` and `.png`. All work lands on the branch `sub-chats`. Read `AGENTS.md` first: no explanatory code comments, plain user-facing wording, handwritten files at or below 500 lines, no caps, budgets or timers.
+> **Status: slices 1 to 5 built (November 20, 2026).** Design: `SUB_CHATS.md`. Mock: `docs/design/mocks/sub-chats-mock.html` and `.png`. All work lands on the branch `sub-chats`. Read `AGENTS.md` first: no explanatory code comments, plain user-facing wording, handwritten files at or below 500 lines, no caps, budgets or timers.
 
 ## How to work the slices
 
@@ -256,7 +256,7 @@ Leave `OutpostGroup.tsx`, `OutpostRows.tsx` and `outpost-members.ts` alone; slic
 
 **Add**
 
-- `apps/server/migrations/0269_drop_outposts.sql` (design section 10): remap run source `outpost` to `chat` or `queue`, recreate `runs_source_check` without it, drop `chat_queue.outpost_post_id`, drop the five tables, expire pending `start_outpost` cards.
+- `apps/server/migrations/0270_drop_outposts.sql` (design section 10): remap run source `outpost` to `chat` or `queue`, recreate `runs_source_check` without it, drop `chat_queue.outpost_post_id`, drop the five tables, expire pending `start_outpost` cards.
 
 **Delete**
 
@@ -345,6 +345,14 @@ Leave `OutpostGroup.tsx`, `OutpostRows.tsx` and `outpost-members.ts` alone; slic
 36. **Found in slice 3:** the split guidance is a session fact (a chat with a project that is not a sub-chat), not a turn fact, so the session prompt stays the same across turns; a task turn gets the assigned-work turn note. A chat that is offered `spark_sub_chats` is no longer told about `spark_outpost_draft` or `spark_outpost_start`, which stay offered until slice 8. `spark_stop_chat` is offered to a parent in a turn the user started or one its own sub-chat's report or reply started, not in a turn any other chat's message started.
 37. **Found in slice 3:** the plain-chat tool list stayed under its 27,800 cap (27,775 to 27,796) by trimming words from the `spark_chats` and `spark_chat` descriptions; `spark_sub_chats` adds 1,467 characters to a chat with a project.
 38. **Found in slice 3:** the guide's how-to is `split-into-sub-chats.md` ("Split a job") beside the concept page `sub-chats.md`, which is near its 300-word cap. It documents **Start** and **Discard** only; **Edit** and **Start anyway** have no control in the web app until slice 6.
+39. **Found in slice 4:** `sub-chats/delivery.ts` keeps the pass and `askDelivery`; `hand` and `deliverAsk` moved to `sub-chats/deliver-ask.ts` so `release.ts` → `start.ts` → `deliver-ask.ts` has no import cycle. The pass is: requeue missed steers, settle or report ended asks, refresh reports, release Held sub-chats, queue wrap-ups, deliver. `askDelivery(db, resolveTarget, { ship })` gets the ship deps for the local commit.
+40. **Found in slice 4:** a report is a `chat_asks` row of kind `report` from the sub-chat to its parent, `reply_to` the task (or the later parent ask), with the structured report in the new column `chat_asks.report` (migration `0269_chat_ask_report.sql`; the outpost drop becomes `0270`) and on `ChatAsk.report`. The latest report is also on `sub_chats.report`. The task ask ends `replied` for a succeeded turn and `no_reply` with the reason otherwise; no `reply` row is written for a task. `replyTo` on a task is refused, so a task always ends in a report.
+41. **Found in slice 4:** a later message from the parent with `reply: true` is reported (not answered with a plain reply) when it started its own turn in the sub-chat; steered and answered with `replyTo`, or settled by the tail fallback, it stays a plain reply.
+42. **Found in slice 4:** "has reported" is read from the sub-chat's row: a report whose `reason` is null (its last ended turn succeeded). So a failed task that the user then finishes by typing in the sub-chat releases what waited on it, without a parent turn (decision 10). `packages/contracts/src/sub-chat-progress.ts` holds the pure rules (`subChatProgress`, `canStart`, `planSettled`, `heldReason`).
+43. **Found in slice 4, the design was silent:** a Held sub-chat stops waiting for a sub-chat that was deleted (design section 10) **or archived**: an archived sub-chat counts as reported, whatever its last turn did, and an archived Held sub-chat is never started by Spark. A Held sub-chat behind one that failed or was stopped stays Held and its row's `why` says which ("Held: “X” did not finish. Start anyway starts it."); one that only waits reads "Waits for “X”.".
+44. **Found in slice 4:** the wrap-up is a `chat_asks` row of kind `wrap_up` with no sender (`from.title` "Spark"), always queued and never steered, written when `planSettled` holds and at least one sub-chat has no `wrapped_up_at`; the claim sets it on every sub-chat it listed. Starting a Held sub-chat clears its mark, so Start anyway after a wrap-up allows one more. `isWrapUp` (`sub-chats/user-asked.ts`) reads the ask kind beside the outpost flag.
+45. **Found in slice 4:** deleting a chat writes a "No reply: That chat was deleted." notice to each chat with a Waiting ask to it (`reply_to` null, because the ask is deleted with the chat). A turn the user typed in a sub-chat and a follow-up round refresh `sub_chats.report` in the pass when a top-level turn ended after `reported_at`.
+46. **Found in slice 4:** the guide's reports page is the new `sub-chat-reports.md`, because `sub-chats.md` and `split-into-sub-chats.md` are at their word caps. `stacked-pull-requests.md` is rewritten for sub-chats and keeps one line pointing at outpost stories until slice 7. **Start anyway** is still undocumented as a control (slice 6).
 
 ## What the owner's decisions make hard
 
