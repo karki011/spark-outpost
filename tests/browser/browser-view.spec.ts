@@ -51,7 +51,7 @@ test('the Browser view opens in Personal, which agents cannot reach', async ({ p
 
 test('the address bar and tab list drive the chosen profile’s tabs', async ({ page }) => {
   const side = await openBrowserView(page);
-  const address = page.getByRole('main').getByRole('textbox', { name: 'Address' });
+  const address = page.getByRole('main').getByRole('combobox', { name: 'Address' });
   await expect(address).toBeFocused();
   await address.fill('example.com');
   await address.press('Enter');
@@ -77,7 +77,7 @@ test('the address bar and tab list drive the chosen profile’s tabs', async ({ 
   await expect(tab('Example Domain')).toHaveAttribute('aria-current', 'page');
   await expect(tab('Docs')).not.toHaveAttribute('aria-current');
   await expect(
-    page.getByRole('main', { name: 'Example Domain' }).getByRole('textbox', { name: 'Address' }),
+    page.getByRole('main', { name: 'Example Domain' }).getByRole('combobox', { name: 'Address' }),
   ).toHaveValue('https://example.com/');
 
   await tab('Example Domain').focus();
