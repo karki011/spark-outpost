@@ -201,22 +201,38 @@ export async function userWroteTurn(db: Queryable, runId: string): Promise<boole
   return !(await followUpRun(db, runId));
 }
 
-const NAMED_CHAT = 'chat-in-question';
-const OTHER_CHAT = 'some-other-chat';
+const NAMED_CHAT = 'zqnamedmentionqz';
+const OTHER_CHAT = 'zqothermentionqz';
 const AWAITS_REPLY =
   /(?:,?\s*\b(?:and|then)\s+)?\bwait(?:ing)?\s+(?:for|until|till)\s+(?:(?:its|their|the|a|an)\s+|it\s+(?:to\s+)?)?(?:repl(?:y|ies)|answers?|responses?|responds?)\b/gi;
+
+function withoutWaitForReply(text: string): string {
+  const named = text.indexOf(NAMED_CHAT);
+  return text.replace(AWAITS_REPLY, (wait: string, at: number) =>
+    named >= 0 && at > named ? '' : wait,
+  );
+}
+
+function isPlaceholder(title: string): boolean {
+  const name = title.trim().toLowerCase();
+  return name === NAMED_CHAT || name === OTHER_CHAT;
+}
 
 export function askedToSend(
   request: string,
   chatTitle: string,
   longerTitles: readonly string[] = [],
 ): boolean {
+  if ([chatTitle, ...longerTitles].some(isPlaceholder)) return false;
+  if (request.toLowerCase().includes(NAMED_CHAT) || request.toLowerCase().includes(OTHER_CHAT)) {
+    return false;
+  }
   const withoutOthers = longerTitles.reduce(
     (text, other) => replaceMentions(text, other, OTHER_CHAT),
     request,
   );
   if (!namesChat(withoutOthers, chatTitle)) return false;
-  const plain = replaceMentions(withoutOthers, chatTitle, NAMED_CHAT).replace(AWAITS_REPLY, '');
+  const plain = withoutWaitForReply(replaceMentions(withoutOthers, chatTitle, NAMED_CHAT));
   return commandNames(plain, SEND_VERB, NAMED_CHAT);
 }
 

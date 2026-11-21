@@ -122,6 +122,21 @@ describe('askedToSend', () => {
     expect(askedToSend(request, named)).toBe(expected);
   });
 
+  it('does not let a masked longer title stand in for a chat named like the mask’s words', () => {
+    expect(askedToSend('Tell Chat v2 to rebase.', 'Chat', ['Chat v2'])).toBe(false);
+    expect(askedToSend('Tell Chat v2 to rebase.', 'other', ['Chat v2'])).toBe(false);
+    expect(askedToSend('Tell Chat to rebase.', 'Chat', ['Chat v2'])).toBe(true);
+  });
+
+  it.each([
+    ['Wait until it responds, then message Billing export the result.', false],
+    ['Wait for its reply and then tell Billing export to rebase.', false],
+    ['Tell Billing export to rebase and wait for its reply.', true],
+    ['Tell Billing export to rebase, then wait until it answers.', true],
+  ])('keeps a wait that comes before the send: "%s" is %s', (request, expected) => {
+    expect(askedToSend(request, title)).toBe(expected);
+  });
+
   it('does not take a longer chat title for the shorter one inside it', () => {
     const longer = ['Billing export v2'];
     expect(askedToSend('Tell Billing export v2 to rebase.', title, longer)).toBe(false);
