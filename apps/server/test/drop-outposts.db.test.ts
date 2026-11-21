@@ -268,6 +268,41 @@ describe('upgrading past outposts', () => {
     expect(marks.rowCount).toBe(0);
   });
 
+  it('ends a turn that was waiting only on an outpost card, and leaves one with another card waiting', async () => {
+    const { db } = state;
+    const seeded = await seedOutpost(db);
+    const stillAsked = await card(db, seeded.writtenRun, null, 'pending');
+    await card(
+      db,
+      seeded.writtenRun,
+      { action: 'start_outpost', draftId: randomUUID(), outpostName: 'Second' },
+      'pending',
+    );
+    await db.query(
+      `UPDATE runs SET status = 'awaiting_approval', finished_at = NULL WHERE id = ANY($1::uuid[])`,
+      [[seeded.typedRun, seeded.writtenRun]],
+    );
+
+    await runMigrations(db);
+
+    const runs = await db.query<{ id: string; status: string; finished: boolean }>(
+      `SELECT id, status, finished_at IS NOT NULL AS finished FROM runs
+       WHERE id = ANY($1::uuid[])`,
+      [[seeded.typedRun, seeded.writtenRun]],
+    );
+    const byId = new Map(runs.rows.map((row) => [row.id, row]));
+    expect(byId.get(seeded.typedRun)).toMatchObject({ status: 'cancelled', finished: true });
+    expect(byId.get(seeded.writtenRun)).toMatchObject({
+      status: 'awaiting_approval',
+      finished: false,
+    });
+    const waiting = await db.query<{ id: string }>(
+      `SELECT id FROM approvals WHERE run_id = $1 AND status = 'pending'`,
+      [seeded.writtenRun],
+    );
+    expect(waiting.rows.map((row) => row.id)).toEqual([stillAsked]);
+  });
+
   it('lets runs and pull requests change afterwards', async () => {
     const { db } = state;
     const seeded = await seedOutpost(db);

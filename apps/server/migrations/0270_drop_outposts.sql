@@ -19,6 +19,23 @@ WHERE m.key = 'approval:' || a.id
     OR (a.payload->'sparkAction'->>'action' = 'ask_spark'
       AND a.payload->'sparkAction'->>'op' = 'post_outpost'));
 
+UPDATE runs r SET status = 'cancelled', finished_at = now()
+WHERE r.status = 'awaiting_approval'
+  AND EXISTS (
+    SELECT 1 FROM approvals a
+    WHERE a.run_id = r.id AND a.status = 'pending'
+      AND (a.payload->'sparkAction'->>'action' = 'start_outpost'
+        OR (a.payload->'sparkAction'->>'action' = 'ask_spark'
+          AND a.payload->'sparkAction'->>'op' = 'post_outpost'))
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM approvals a
+    WHERE a.run_id = r.id AND a.status = 'pending'
+      AND a.payload->'sparkAction'->>'action' IS DISTINCT FROM 'start_outpost'
+      AND NOT COALESCE(a.payload->'sparkAction'->>'action' = 'ask_spark'
+        AND a.payload->'sparkAction'->>'op' = 'post_outpost', false)
+  );
+
 DELETE FROM approvals a
 WHERE a.payload->'sparkAction'->>'action' = 'start_outpost'
    OR (a.payload->'sparkAction'->>'action' = 'ask_spark'
