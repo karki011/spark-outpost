@@ -155,9 +155,25 @@ test('the plan card lists each piece and Edit changes a piece’s model and effo
   await expect(card(page).getByText('Move cart totals behind totals/.')).toBeVisible();
 
   const edit = card(page).getByRole('button', { name: 'Edit' });
+  const fill = () => edit.evaluate((button) => getComputedStyle(button).backgroundColor);
+  const discard = card(page).getByRole('button', { name: 'Discard' });
+  await expect(edit).toHaveAttribute('aria-pressed', 'false');
+  const resting = await fill();
   await edit.focus();
   await page.keyboard.press('Enter');
   await expect(edit).toHaveAttribute('aria-pressed', 'true');
+  const look = () =>
+    edit.evaluate(async (button) => {
+      await Promise.allSettled(button.getAnimations().map((animation) => animation.finished));
+      const { backgroundColor, boxShadow } = getComputedStyle(button);
+      return { backgroundColor, boxShadow };
+    });
+  await discard.hover();
+  await expect.poll(fill).not.toBe(resting);
+  const pressed = await look();
+  expect(pressed.boxShadow).toContain('inset');
+  await edit.hover();
+  await expect.poll(look).toEqual(pressed);
   await expect(
     card(page).getByRole('group', { name: 'Model and effort for E2E checkout tests' }),
   ).toBeVisible();

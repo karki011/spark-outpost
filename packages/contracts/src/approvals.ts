@@ -126,6 +126,7 @@ export const approvalPayloadSchema = z.object({
   sparkAction: sparkActionSchema.optional(),
   sparkResult: sparkResultSchema.optional(),
   sparkRequested: z.boolean().optional(),
+  sparkAskedFor: z.boolean().optional(),
   agentReason: z.string().optional(),
   subagent: z.string().optional(),
   sparkRule: sparkRuleRefusalSchema.optional(),

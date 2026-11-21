@@ -242,10 +242,19 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function mentionOf(name: string, flags: string): RegExp {
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(name)}(?![\\p{L}\\p{N}])`, flags);
+}
+
 export function mentions(text: string, words: string, shortest: number): boolean {
   const name = words.trim();
   if (name.length < shortest) return false;
-  return new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(name)}(?![\\p{L}\\p{N}])`, 'iu').test(text);
+  return mentionOf(name, 'iu').test(text);
+}
+
+export function replaceMentions(text: string, words: string, replacement: string): string {
+  const name = words.trim();
+  return name === '' ? text : text.replace(mentionOf(name, 'giu'), replacement);
 }
 
 export function namesChat(text: string, title: string): boolean {

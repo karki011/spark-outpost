@@ -76,7 +76,8 @@ function permissionTitle(row: PendingApprovalRow, kind: ApprovalKind): string {
     if (files.length > 1) return `edit ${files.length} files`;
     return 'change files';
   }
-  return lowerFirst(title) || 'take an action';
+  const action = kind === 'spark_action' ? title.replace(/\?$/, '') : title;
+  return lowerFirst(action) || 'take an action';
 }
 
 function agentFor(row: PendingApprovalRow, kind: ApprovalKind): string | null {

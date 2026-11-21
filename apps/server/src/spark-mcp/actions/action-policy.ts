@@ -6,7 +6,7 @@ import {
 } from '@spark-outpost/contracts';
 import { userText, type UserTextInput } from '../../sub-chats/user-asked.ts';
 import type { Queryable } from '../../persistence/db.ts';
-import { commandNames } from './ask-spark-limits.ts';
+import { commandNames, namesChat, replaceMentions } from './ask-spark-limits.ts';
 
 export interface ActionFacts {
   posture: ModePosture;
@@ -155,6 +155,10 @@ export function actionPath(facts: ActionFacts): ActionPath {
   return 'confirm';
 }
 
+export function modeAsks(facts: ActionFacts): boolean {
+  return actionPath({ ...facts, requested: false }) === 'confirm';
+}
+
 interface RunFacts {
   provider: string | null;
   mode: string | null;
@@ -197,8 +201,50 @@ export async function userWroteTurn(db: Queryable, runId: string): Promise<boole
   return !(await followUpRun(db, runId));
 }
 
-export function askedToSend(request: string, chatTitle: string): boolean {
-  return commandNames(request, SEND_VERB, chatTitle);
+const NAMED_CHAT = 'zqnamedmentionqz';
+const OTHER_CHAT = 'zqothermentionqz';
+const AWAITS_REPLY =
+  /(?:,?\s*\b(?:and|then)\s+)?\bwait(?:ing)?\s+(?:for|until|till)\s+(?:(?:its|their|the|a|an)\s+|it\s+(?:to\s+)?)?(?:repl(?:y|ies)|answers?|responses?|responds?)\b/gi;
+
+function withoutWaitForReply(text: string): string {
+  const named = text.indexOf(NAMED_CHAT);
+  return text.replace(AWAITS_REPLY, (wait: string, at: number) =>
+    named >= 0 && at > named ? '' : wait,
+  );
+}
+
+function isPlaceholder(title: string): boolean {
+  const name = title.trim().toLowerCase();
+  return name === NAMED_CHAT || name === OTHER_CHAT;
+}
+
+export function askedToSend(
+  request: string,
+  chatTitle: string,
+  longerTitles: readonly string[] = [],
+): boolean {
+  if ([chatTitle, ...longerTitles].some(isPlaceholder)) return false;
+  if (request.toLowerCase().includes(NAMED_CHAT) || request.toLowerCase().includes(OTHER_CHAT)) {
+    return false;
+  }
+  const withoutOthers = longerTitles.reduce(
+    (text, other) => replaceMentions(text, other, OTHER_CHAT),
+    request,
+  );
+  if (!namesChat(withoutOthers, chatTitle)) return false;
+  const plain = withoutWaitForReply(replaceMentions(withoutOthers, chatTitle, NAMED_CHAT));
+  return commandNames(plain, SEND_VERB, NAMED_CHAT);
+}
+
+async function titlesContaining(db: Queryable, runId: string, title: string): Promise<string[]> {
+  const { rows } = await db.query<{ title: string }>(
+    `SELECT c.title FROM conversations c
+     WHERE c.workspace_id = (SELECT o.workspace_id FROM runs r
+         JOIN conversations o ON o.id = r.conversation_id WHERE r.id = $1)
+       AND lower(c.title) <> lower($2) AND position(lower($2) in lower(c.title)) > 0`,
+    [runId, title.trim()],
+  );
+  return rows.map((row) => row.title);
 }
 
 export async function userAskedToSend(
@@ -207,7 +253,9 @@ export async function userAskedToSend(
   chatTitle: string,
 ): Promise<boolean> {
   if (!(await userWroteTurn(db, runId))) return false;
-  return askedToSend(userText(runText(await runFacts(db, runId))), chatTitle);
+  const request = userText(runText(await runFacts(db, runId)));
+  if (!namesChat(request, chatTitle)) return false;
+  return askedToSend(request, chatTitle, await titlesContaining(db, runId, chatTitle));
 }
 
 async function followUpRun(db: Queryable, runId: string): Promise<boolean> {

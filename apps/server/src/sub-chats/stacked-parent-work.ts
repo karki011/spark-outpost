@@ -1,6 +1,7 @@
 import { chatTaskIds } from '../persistence/tasks.ts';
 import { planShip, type ShipDeps, type ShipPlan } from '../ship/prepare.ts';
 import { shipTask } from '../ship/service.ts';
+import { refreshReportRecord } from './reports.ts';
 import { stackParentOf } from './stack-base.ts';
 
 type Pending = 'none' | 'commit' | 'blocked';
@@ -25,5 +26,7 @@ async function commitKeptWork(deps: ShipDeps, chatId: string, branch: string): P
 export async function stackedOnWorkCommitted(deps: ShipDeps, subChatId: string): Promise<boolean> {
   const parent = await stackParentOf(deps.db, subChatId);
   if (!parent || parent.branch === null) return true;
-  return commitKeptWork(deps, parent.parentChatId, parent.branch);
+  if (!(await commitKeptWork(deps, parent.parentChatId, parent.branch))) return false;
+  await refreshReportRecord(deps.db, parent.parentChatId);
+  return true;
 }

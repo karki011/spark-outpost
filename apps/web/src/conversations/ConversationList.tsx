@@ -54,7 +54,13 @@ import { useRowFocus } from './use-row-focus.ts';
 import { useSidebarDnd, type Point } from './use-sidebar-dnd.ts';
 import { useSidebarFolds } from './use-sidebar-folds.ts';
 import { useSidebarShortcuts } from './use-sidebar-shortcuts.ts';
-import { flatTree, subChatFoldKey, subChatTree, treePlacement } from './sub-chat-tree.ts';
+import {
+  flatTree,
+  leavingDeletedParents,
+  subChatFoldKey,
+  subChatTree,
+  treePlacement,
+} from './sub-chat-tree.ts';
 import { ChatNumbers, useChatNumberKeys, useHeldChatNumbers } from './chat-number-keys.ts';
 import { useToast } from './use-toast.ts';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
@@ -126,10 +132,9 @@ export const ConversationList = memo(function ConversationList({
     onNew,
     onLeave,
   });
-  const present = (chat: ConversationSummary) => !actions.deleting.has(chat.id);
-  const chats = all.filter(present);
+  const chats = leavingDeletedParents(all, actions.deleting);
   const searching = query !== '' || isFiltering(filter);
-  const found = query !== '' ? (results.data ?? []).filter(present) : chats;
+  const found = query !== '' ? leavingDeletedParents(results.data ?? [], actions.deleting) : chats;
   const visible = found.filter(
     (chat) => matchesFilter(filter, chat.category) && matchesTeammate(filter, chat.teammate),
   );

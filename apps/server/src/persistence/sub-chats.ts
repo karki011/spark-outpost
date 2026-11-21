@@ -217,6 +217,20 @@ export async function saveSubChatReport(
   );
 }
 
+export async function saveSubChatReportRecord(
+  db: Queryable,
+  conversationId: string,
+  read: SubChatReport,
+  report: SubChatReport,
+): Promise<boolean> {
+  return changed(
+    db,
+    `UPDATE sub_chats SET report = $2
+     WHERE conversation_id = $1 AND $3::jsonb @> report AND report @> ($3::jsonb - 'said'::text)`,
+    [conversationId, JSON.stringify(report), JSON.stringify(read)],
+  );
+}
+
 export async function claimWrapUp(
   db: Queryable,
   parentConversationId: string,
@@ -231,12 +245,12 @@ export async function claimWrapUp(
   );
 }
 
-export async function refreshParentTitle(
+export async function leaveDeletedParent(
   client: Queryable,
   parentConversationId: string,
 ): Promise<void> {
   await client.query(
-    `UPDATE sub_chats sc SET parent_title = c.title FROM conversations c
+    `UPDATE sub_chats sc SET parent_title = c.title, approval_id = NULL FROM conversations c
      WHERE c.id = $1 AND sc.parent_conversation_id = c.id`,
     [parentConversationId],
   );

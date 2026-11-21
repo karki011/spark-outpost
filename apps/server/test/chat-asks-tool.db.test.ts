@@ -140,6 +140,55 @@ describe('spark_send_to_chat from a chat', () => {
 
     expect(sent).toMatchObject({ outcome: 'done', delivered: 'started' });
     expect(audited()).toContain('"allowedBy":"your message asked"');
+    const { rows } = await t.db.query<{ decided_by: string; asked: boolean | null }>(
+      `SELECT decided_by, (payload->>'sparkAskedFor')::boolean AS asked FROM approvals
+       WHERE run_id = $1`,
+      [runId],
+    );
+    expect(rows).toEqual([{ decided_by: 'level', asked: true }]);
+  });
+
+  it('sends when the message names a chat titled after a file and waits for its reply', async () => {
+    const notes = await emptyChat(t, 'Create notes.txt containing hello');
+    const runId = await turn(
+      own,
+      'Ask the chat "Create notes.txt containing hello" what file it changed, and wait for its reply.',
+      'default',
+    );
+    const harness = await toolsFor(own, runId);
+
+    const sent = (
+      await harness.call('spark_send_to_chat', { chat: notes, message: 'Which file?', reply: true })
+    ).json<Sent>();
+
+    expect(sent).toMatchObject({ outcome: 'done', delivered: 'started' });
+  });
+
+  it('asks on a card when the message names a longer chat title that holds this one', async () => {
+    const longer = await emptyChat(t, 'Billing export v2');
+    const runId = await turn(own, 'Tell Billing export v2 to rebase on main.', 'default');
+    const harness = await toolsFor(own, runId);
+
+    const toShorter = (
+      await harness.call('spark_send_to_chat', { chat: other, message: 'Rebase on main.' })
+    ).json<Sent>();
+    expect(toShorter.outcome).toBe('waiting_for_user');
+    expect(await turnsOf(t, other)).toEqual([]);
+    expect(await turnsOf(t, longer)).toEqual([]);
+  });
+
+  it('does not mark a send the mode allowed as asked for', async () => {
+    const subChat = await addSubChat(t, own, 'Totals');
+    const runId = await turn(own, 'Split the work.', 'auto');
+    const harness = await toolsFor(own, runId);
+
+    await harness.call('spark_send_to_chat', { chat: subChat, message: 'Use total_cents.' });
+
+    const { rows } = await t.db.query<{ asked: string | null }>(
+      `SELECT payload->>'sparkAskedFor' AS asked FROM approvals WHERE run_id = $1`,
+      [runId],
+    );
+    expect(rows).toEqual([{ asked: null }]);
   });
 
   it('refuses a chain, and answers the asking chat with replyTo without a card', async () => {

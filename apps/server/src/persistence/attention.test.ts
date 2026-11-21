@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { attentionLine } from '@spark-outpost/contracts';
 import { toAttention, type PendingApprovalRow } from './attention.ts';
 
 const ID = '00000000-0000-4000-8000-0000000000a1';
@@ -53,6 +54,18 @@ describe('toAttention', () => {
     expect(toAttention(pending({ pending_kind: 'other', pending_title: 'URL check' }))?.title).toBe(
       'URL check',
     );
+  });
+
+  it('states a Spark action card’s question without its question mark', () => {
+    const card = pending({ pending_kind: 'spark_action', pending_title: 'Start 3 sub-chats?' });
+    const attention = toAttention(card);
+    expect(attention?.title).toBe('start 3 sub-chats');
+    expect(attentionLine(attention)).toBe('Claude wants to start 3 sub-chats');
+    expect(
+      toAttention(
+        pending({ pending_kind: 'spark_action', pending_title: 'Create a ticket? Fix login' }),
+      )?.title,
+    ).toBe('create a ticket? Fix login');
   });
 
   it("reads the agent's own plan approval as a plan to review", () => {

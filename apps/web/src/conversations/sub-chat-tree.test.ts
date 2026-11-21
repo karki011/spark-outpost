@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ConversationSummary, SubChatStatus } from '@spark-outpost/contracts';
 import {
   flatTree,
+  leavingDeletedParents,
   markedTitle,
   nameInParent,
   needsYouCount,
@@ -134,6 +135,21 @@ describe('flattened wording', () => {
     expect(parentMarkText(sub('api', 0))).toBe('↳ Checkout rewrite');
     expect(markedTitle(sub('api', 0))).toBe('api ↳ Checkout rewrite');
     expect(nameInParent(sub('api', 0))).toBe('api in Checkout rewrite');
+  });
+
+  it('reads was part of while its parent waits out the Undo of a delete', () => {
+    const parent = chat('parent', { title: 'Checkout rewrite' });
+    const listed = leavingDeletedParents(
+      [parent, sub('api', 0), chat('other')],
+      new Set(['parent']),
+    );
+    expect(listed.map((each) => each.id)).toEqual(['api', 'other']);
+    expect(listed[0]?.parent).toBeUndefined();
+    expect(parentMarkText(listed[0]!)).toBe('· was part of Checkout rewrite');
+    expect(leavingDeletedParents([parent, sub('api', 0)], new Set())).toEqual([
+      parent,
+      sub('api', 0),
+    ]);
   });
 
   it('says what a chat was part of once its parent is deleted', () => {

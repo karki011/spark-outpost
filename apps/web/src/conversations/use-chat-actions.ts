@@ -12,6 +12,7 @@ import { hasUnsentWork } from '../chat/composer/unsent-work.ts';
 import { projectsApi } from '../api/projects.ts';
 import { movedProjectIds } from './sidebar-groups.ts';
 import { copyChatLink } from './use-copy-chat-link.tsx';
+import { dropDeletedChat } from './deleted-chat-cache.ts';
 import { patchOlderChats } from './use-older-chats.ts';
 import type { Toaster } from './use-toast.ts';
 
@@ -28,14 +29,6 @@ function patchSummaries(client: QueryClient, id: string, patch: SummaryPatch): v
   client.setQueryData<ConversationDetail>(queryKeys.conversation(id), (detail) =>
     detail ? { ...detail, conversation: { ...detail.conversation, ...patch } } : detail,
   );
-}
-
-function dropSummary(client: QueryClient, id: string): void {
-  const apply = (list: ConversationSummary[] | undefined) => list?.filter((chat) => chat.id !== id);
-  client.setQueryData<ConversationSummary[]>(queryKeys.conversations, apply);
-  patchOlderChats(client, apply);
-  client.setQueriesData<ConversationSummary[]>({ queryKey: SEARCH_ROOT }, apply);
-  client.removeQueries({ queryKey: queryKeys.conversation(id), exact: true });
 }
 
 async function refreshLists(client: QueryClient): Promise<void> {
@@ -209,7 +202,7 @@ export function useChatActions({
   const finishDelete = (chat: ConversationSummary) => {
     api.deleteConversation(chat.id).then(
       () => {
-        dropSummary(client, chat.id);
+        dropDeletedChat(client, chat.id);
         setDeletingId(chat.id, false);
       },
       (error: unknown) => {

@@ -21,6 +21,18 @@ function nestsUnder(chat: ConversationSummary, parents: ReadonlySet<string>): st
   return parents.has(chat.parent.id) ? chat.parent.id : null;
 }
 
+export function leavingDeletedParents(
+  chats: readonly ConversationSummary[],
+  deleting: ReadonlySet<string>,
+): ConversationSummary[] {
+  return chats.flatMap((chat) => {
+    if (deleting.has(chat.id)) return [];
+    if (!chat.parent || !deleting.has(chat.parent.id)) return [chat];
+    const { parent, ...rest } = chat;
+    return [{ ...rest, formerParent: { title: parent.title } }];
+  });
+}
+
 export function subChatTree(chats: readonly ConversationSummary[]): SubChatTree {
   const parents = listedParents(chats);
   const subs = new Map<string, ConversationSummary[]>();

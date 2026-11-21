@@ -42,7 +42,117 @@ describe('a sub-chat’s report', () => {
       changed: 'GET /orders returns total_cents.\nTwo files.',
       risks: 'The old total field is gone.',
       blockers: 'None',
+      said: 'The endpoint is in.',
     });
+  });
+
+  it('ends a section at the next label, whatever it is, and keeps that text', () => {
+    const reply = [
+      'Changed: b.js exports B.',
+      'Risks: None',
+      'Blockers: None',
+      'Verification: node -e printed B. I did not commit.',
+    ].join('\n');
+    const report = buildReport({ status: 'succeeded', reply, error: null }, FACTS);
+    expect(report.blockers).toBe('None');
+    expect(report.said).toBe('Verification: node -e printed B. I did not commit.');
+    expect(reportText(report)).toContain(
+      'Blockers: None\nAlso said: Verification: node -e printed B. I did not commit.',
+    );
+  });
+
+  it('ends a section at a bulleted or bold label it does not know', () => {
+    const reply = [
+      '- **Changed:** the parser.',
+      '- **Risks:** None',
+      'Blockers: None',
+      '- **Verification:** tests passed',
+      'Ran them twice.',
+      '* Next steps: merge it.',
+    ].join('\n');
+    const report = buildReport({ status: 'succeeded', reply, error: null }, FACTS);
+    expect(report).toMatchObject({
+      changed: 'the parser.',
+      risks: 'None',
+      blockers: 'None',
+      said: '- **Verification:** tests passed\nRan them twice.\n* Next steps: merge it.',
+    });
+  });
+
+  it('keeps ordinary bullets and a section’s own list in the section', () => {
+    const reply = [
+      'Changed: two things.',
+      '- fixed the parser',
+      '- report.ts: reads bulleted labels',
+      'Risks:',
+      '',
+      '- Parser: a list item that looks like a label',
+      '- **Tests:** another one',
+      'Blockers: None',
+    ].join('\n');
+    const report = buildReport({ status: 'succeeded', reply, error: null }, FACTS);
+    expect(report).toMatchObject({
+      changed: 'two things.\n- fixed the parser\n- report.ts: reads bulleted labels',
+      risks: '- Parser: a list item that looks like a label\n- **Tests:** another one',
+      blockers: 'None',
+      said: '',
+    });
+  });
+
+  it('ends a section’s list at a bulleted label once plain text has followed the list', () => {
+    const reply = ['Blockers:', '- none', 'That is all.', '- Verification: tests passed'].join(
+      '\n',
+    );
+    const report = buildReport({ status: 'succeeded', reply, error: null }, FACTS);
+    expect(report.blockers).toBe('- none\nThat is all.');
+    expect(report.said).toBe('- Verification: tests passed');
+  });
+
+  it('keeps what the reply says before, between and after the sections', () => {
+    const reply = [
+      'node --test passes: 1 test, 1 pass, 0 fail.',
+      '',
+      '**Changed:** a.test.js covers A.',
+      '- a.test.js: one test',
+      '### Notes',
+      'Ran it twice.',
+      'Risks: None',
+      '',
+      'Next steps: merge A first.',
+      'Blockers:',
+      'None',
+    ].join('\n');
+    const report = buildReport({ status: 'succeeded', reply, error: null }, FACTS);
+    expect(report).toMatchObject({
+      changed: 'a.test.js covers A.\n- a.test.js: one test',
+      risks: 'None',
+      blockers: 'None',
+      said: [
+        'node --test passes: 1 test, 1 pass, 0 fail.',
+        '',
+        '### Notes',
+        'Ran it twice.',
+        'Next steps: merge A first.',
+      ].join('\n'),
+    });
+    expect(reportText(report)).toContain('node --test passes: 1 test, 1 pass, 0 fail.');
+  });
+
+  it('keeps the rest of a reply that has no section after its opening lines', () => {
+    const lines = Array.from({ length: 9 }, (_, index) => `Line ${index + 1}.`);
+    const report = buildReport(
+      { status: 'succeeded', reply: lines.join('\n'), error: null },
+      FACTS,
+    );
+    expect(report.changed).toBe(lines.slice(0, 6).join('\n'));
+    expect(report.said).toBe(lines.slice(6).join('\n'));
+  });
+
+  it('adds a label written twice to the same section', () => {
+    const reply = 'Changed: the page.\nRisks: None\nChanged: and its test.';
+    const report = buildReport({ status: 'succeeded', reply, error: null }, FACTS);
+    expect(report.changed).toBe('the page.\nand its test.');
+    expect(report.said).toBe('');
   });
 
   it('takes branch, commit, push and pull request from Spark’s record, never the reply', () => {

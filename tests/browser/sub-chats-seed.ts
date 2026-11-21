@@ -158,6 +158,26 @@ export function firstTurn(conversationId: string): Promise<SeededTurn> {
   });
 }
 
+export function seedPlanApproval(parentId: string): Promise<void> {
+  return inDb(async (db) => {
+    const { rows } = await db.query<{ id: string }>(
+      `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash,
+         options, status, decided_at)
+       SELECT $1, r.id, $2, 'execute', 'Start sub-chats?',
+         '{"command": null, "cwd": null, "paths": [], "diffs": [], "truncated": false}',
+         'sha256:seed', '[]', 'allowed', now()
+       FROM runs r WHERE r.conversation_id = $3 ORDER BY r.created_at LIMIT 1
+       RETURNING id`,
+      [randomUUID(), `seed:${randomUUID()}`, parentId],
+    );
+    if (!rows[0]) throw new Error('That chat has no turn.');
+    await db.query('UPDATE sub_chats SET approval_id = $1 WHERE parent_conversation_id = $2', [
+      rows[0].id,
+      parentId,
+    ]);
+  });
+}
+
 export function markChatTurn(runId: string): Promise<void> {
   return inDb(async (db) => {
     await db.query(`UPDATE runs SET source = 'chat' WHERE id = $1`, [runId]);
