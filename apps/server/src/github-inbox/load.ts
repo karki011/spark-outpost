@@ -224,7 +224,7 @@ async function decorate(
     latestReviews(deps.db, deps.workspaceId, ids),
   ]);
   return snapshot.pulls
-    .map(({ host, headRef: _headRef, ...pull }) => {
+    .map(({ host, ...pull }) => {
       const ticketKey = keysOf.get(pull.id)?.find((key) => tickets.has(key.toUpperCase()));
       return {
         ...pull,
@@ -236,6 +236,17 @@ async function decorate(
       };
     })
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export function cachedInboxPull(
+  db: Db,
+  id: string,
+): { host: string; repo: string; number: number } | null {
+  for (const snapshot of cacheFor(db).values()) {
+    const found = snapshot.pulls.find((pull) => pull.id === id);
+    if (found) return { host: found.host, repo: found.repo, number: found.number };
+  }
+  return null;
 }
 
 export async function loadGithubInbox(

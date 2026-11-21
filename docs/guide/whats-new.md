@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| GitHub page: search, descriptions, Start chat   | [GitHub page](github-page.md#search).                      |
 | One tap sends on phones                         | [Use your phone](use-your-phone.md).                       |
 | Outposts are gone; agents split work instead    | [Sub-chats](sub-chats.md).                                 |
 | Old outpost requests read as from another chat  | Nothing to do.                                             |
@@ -60,5 +61,3 @@ summary: What changed in recent releases and what to do next.
 | One meeting card; Join takes notes                         | [Take meeting notes](meetings.md).                                                       |
 | Saved sign-ins type with no card                           | [Save a test sign-in](use-the-browser.md#save-a-test-sign-in).                           |
 | Browser: address at top, one chat per tab                  | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).                             |
-| Context rail: full height; **Tools** inline                | [See a chat's context](context-rail.md).                                                 |
-| Remote control: side panel, sections fold                  | [Use your phone](use-your-phone.md).                                                     |

@@ -174,6 +174,7 @@ POST /api/tickets/:source/:key/transition
 
 const NEVER = `
 GET /api/github/inbox
+GET /api/github/inbox/details
 POST /api/github/inbox/seen
 PUT /api/github/inbox/window
 GET /api/github/review-settings

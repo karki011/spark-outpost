@@ -3,6 +3,8 @@ import type { PullRequestChecks } from '@spark-outpost/contracts';
 
 const TEXT_LIMIT = 300;
 const LOGIN_LIMIT = 100;
+const PREVIEW_LIMIT = 2_000;
+const LABEL_LIMIT = 10;
 const MAX_RESULTS = 50;
 const QUERY_LIMIT = 250;
 const SAFE_NAME = /^[A-Za-z0-9_.-]{1,100}$/;
@@ -22,7 +24,13 @@ export interface FoundPull {
   authorIsBot: boolean;
   draft: boolean;
   updatedAt: string;
+  createdAt: string;
   headRef: string;
+  baseRef: string;
+  labels: { name: string; color: string | null }[];
+  assignees: string[];
+  comments: number | null;
+  bodyPreview: string;
   headSha: string;
   additions: number | null;
   deletions: number | null;
@@ -45,7 +53,7 @@ interface SearchPage {
   error: string | null;
 }
 
-const PULL_FIELDS = `number title url isDraft updatedAt headRefName headRefOid additions deletions changedFiles reviewDecision mergeable mergeStateStatus repository { nameWithOwner } author { __typename login } reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { login } } } } latestReviews(first: 20) { nodes { state author { login } } } reviewThreads(first: 100) { nodes { isResolved } } commits(last: 1) { nodes { commit { statusCheckRollup { state contexts(first: 100) { nodes { ... on CheckRun { status conclusion } } } } } } }`;
+const PULL_FIELDS = `number title url isDraft updatedAt createdAt headRefName baseRefName headRefOid bodyText labels(first: 10) { nodes { name color } } assignees(first: 10) { nodes { login } } comments { totalCount } additions deletions changedFiles reviewDecision mergeable mergeStateStatus repository { nameWithOwner } author { __typename login } reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { login } } } } latestReviews(first: 20) { nodes { state author { login } } } reviewThreads(first: 100) { nodes { isResolved } } commits(last: 1) { nodes { commit { statusCheckRollup { state contexts(first: 100) { nodes { ... on CheckRun { status conclusion } } } } } } }`;
 
 const safeRepo = (repo: InboxRepo) => SAFE_NAME.test(repo.owner) && SAFE_NAME.test(repo.name);
 
@@ -135,7 +143,22 @@ const pullNodeSchema = z.object({
   url: z.string().url(),
   isDraft: z.boolean().catch(false),
   updatedAt: z.string().min(1),
+  createdAt: z.string().catch(''),
   headRefName: z.string().catch(''),
+  baseRefName: z.string().catch(''),
+  bodyText: z.string().catch(''),
+  labels: nodesOf(
+    z.object({
+      name: z.string().min(1),
+      color: z
+        .string()
+        .regex(/^[0-9a-fA-F]{6}$/)
+        .nullable()
+        .catch(null),
+    }),
+  ),
+  assignees: nodesOf(loginOf),
+  comments: z.object({ totalCount: z.number().int().nonnegative() }).nullable().catch(null),
   headRefOid: z.string().regex(/^[0-9a-f]{40,64}$/),
   additions: count,
   deletions: count,
@@ -187,7 +210,15 @@ function toFound(node: PullNode, reviewRequested: boolean): FoundPull {
     authorIsBot: isBot(node.author),
     draft: node.isDraft,
     updatedAt: node.updatedAt,
+    createdAt: node.createdAt || node.updatedAt,
     headRef: node.headRefName.slice(0, TEXT_LIMIT),
+    baseRef: node.baseRefName.slice(0, TEXT_LIMIT),
+    labels: present(node.labels?.nodes)
+      .slice(0, LABEL_LIMIT)
+      .map((label) => ({ name: label.name.slice(0, LOGIN_LIMIT), color: label.color })),
+    assignees: present(node.assignees?.nodes).flatMap((assignee) => assignee?.login ?? []),
+    comments: node.comments?.totalCount ?? null,
+    bodyPreview: node.bodyText.slice(0, PREVIEW_LIMIT),
     headSha: node.headRefOid,
     additions: node.additions,
     deletions: node.deletions,

@@ -10,7 +10,13 @@ function node(fields: Record<string, unknown> = {}) {
     url: 'https://github.com/acme/widgets/pull/12',
     isDraft: false,
     updatedAt: '2026-11-15T10:00:00Z',
+    createdAt: '2026-11-12T08:00:00Z',
     headRefName: 'WEB-7-gadget',
+    baseRefName: 'main',
+    bodyText: 'Adds the gadget.',
+    labels: { nodes: [{ name: 'feature', color: 'a2eeef' }, { name: 'odd', color: 'nope' }, null] },
+    assignees: { nodes: [{ login: 'carol' }, null] },
+    comments: { totalCount: 5 },
     headRefOid: HEAD,
     additions: 10,
     deletions: 2,
@@ -68,6 +74,15 @@ describe('parsing the inbox search', () => {
         author: 'alice',
         authorIsBot: false,
         headRef: 'WEB-7-gadget',
+        baseRef: 'main',
+        createdAt: '2026-11-12T08:00:00Z',
+        bodyPreview: 'Adds the gadget.',
+        labels: [
+          { name: 'feature', color: 'a2eeef' },
+          { name: 'odd', color: null },
+        ],
+        assignees: ['carol'],
+        comments: 5,
         headSha: HEAD,
         requestedReviewers: ['hazel'],
         reviews: [{ login: 'bob', state: 'COMMENTED' }],
@@ -77,6 +92,33 @@ describe('parsing the inbox search', () => {
         reviewRequested: true,
       }),
     ]);
+  });
+
+  it('cuts a long description preview and falls back when the new fields are missing', () => {
+    const parsed = parseInboxPage(
+      page(
+        [
+          node({
+            bodyText: 'x'.repeat(5_000),
+            createdAt: undefined,
+            baseRefName: null,
+            labels: null,
+            assignees: 'x',
+            comments: null,
+          }),
+        ],
+        [],
+      ),
+      'review',
+    );
+    expect(parsed.pulls[0]).toMatchObject({
+      createdAt: '2026-11-15T10:00:00Z',
+      baseRef: '',
+      labels: [],
+      assignees: [],
+      comments: null,
+    });
+    expect(parsed.pulls[0]?.bodyPreview).toHaveLength(2_000);
   });
 
   it('drops a malformed node and keeps the good ones', () => {

@@ -16,7 +16,13 @@ function found(fields: Partial<FoundPull> = {}): FoundPull {
     authorIsBot: false,
     draft: false,
     updatedAt: '2026-11-15T10:00:00Z',
+    createdAt: '2026-11-14T10:00:00Z',
     headRef: 'spark/fix',
+    baseRef: 'main',
+    labels: [],
+    assignees: [],
+    comments: 0,
+    bodyPreview: '',
     headSha: HEAD,
     additions: 3,
     deletions: 1,
@@ -37,6 +43,28 @@ function found(fields: Partial<FoundPull> = {}): FoundPull {
 const groupOf = (fields: Partial<FoundPull>) => inboxPull(found(fields), ME)?.group;
 
 describe('inbox grouping', () => {
+  it('carries the branches, labels, assignees and description preview', () => {
+    const pull = inboxPull(
+      found({
+        baseRef: 'release',
+        labels: [{ name: 'bug', color: 'd73a4a' }],
+        assignees: ['lee'],
+        comments: 4,
+        bodyPreview: 'Fixes the widget',
+      }),
+      ME,
+    );
+    expect(pull).toMatchObject({
+      headRef: 'spark/fix',
+      baseRef: 'release',
+      createdAt: '2026-11-14T10:00:00Z',
+      labels: [{ name: 'bug', color: 'd73a4a' }],
+      assignees: ['lee'],
+      comments: 4,
+      bodyPreview: 'Fixes the widget',
+    });
+  });
+
   it('puts a pull request that asks for my review in review requested', () => {
     const pull = inboxPull(found({ author: 'alice', reviewRequested: true }), ME);
     expect(pull).toMatchObject({ group: 'review_requested', mine: false, id: 'acme/widgets#7' });

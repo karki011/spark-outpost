@@ -6,7 +6,7 @@ import type { FoundPull } from './search.ts';
 export type InboxPull = Omit<
   GithubInboxItem,
   'projectId' | 'conversationId' | 'ticket' | 'unseen' | 'updatedSinceSeen' | 'review'
-> & { headRef: string };
+>;
 
 interface PullState {
   draft: boolean;
@@ -84,10 +84,16 @@ export function inboxPull(found: FoundPull, viewer: string | null): InboxPull | 
     waitingOn: found.requestedReviewers,
     headSha: found.headSha,
     updatedAt: found.updatedAt,
+    createdAt: found.createdAt,
+    headRef: found.headRef,
+    baseRef: found.baseRef,
+    labels: found.labels,
+    assignees: found.assignees,
+    comments: found.comments,
+    bodyPreview: found.bodyPreview,
     additions: found.additions,
     deletions: found.deletions,
     changedFiles: found.changedFiles,
-    headRef: found.headRef,
   };
 }
 

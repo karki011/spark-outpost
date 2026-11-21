@@ -205,3 +205,26 @@ export function checksLine(item: GithubInboxItem): string {
   if (item.checks === 'passing') return 'Checks passing';
   return 'No checks';
 }
+
+export function dayLabel(iso: string, now: number): string {
+  const date = new Date(iso);
+  const sameYear = date.getFullYear() === new Date(now).getFullYear();
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  });
+}
+
+export function updatedLabel(iso: string, now: number): string {
+  const age = ageLabel(iso, now);
+  return age === 'now' ? 'updated just now' : `updated ${age} ago`;
+}
+
+export function fullDate(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+export function labelColor(color: string | null): string | undefined {
+  return color ? `#${color}` : undefined;
+}

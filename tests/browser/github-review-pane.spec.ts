@@ -61,6 +61,13 @@ function pull(id: string, overrides: Json = {}): Json {
     updatedAt: new Date(Date.now() - 3_600_000).toISOString(),
     additions: 12,
     deletions: 3,
+    createdAt: new Date(Date.now() - 7_200_000).toISOString(),
+    headRef: 'feature',
+    baseRef: 'main',
+    labels: [],
+    assignees: [],
+    comments: 0,
+    bodyPreview: '',
     changedFiles: 2,
     projectId: null,
     conversationId: null,
@@ -158,6 +165,7 @@ async function openPane(page: Page) {
   await main.locator('.gh-main').first().click();
   const pane = main.getByRole('complementary', { name: 'Retry webhook deliveries 1' });
   await expect(pane).toBeVisible();
+  await expect(pane.locator('.gh-sec .skel')).toHaveCount(0);
   return { main, pane, block: pane.getByRole('region', { name: 'Review' }) };
 }
 
