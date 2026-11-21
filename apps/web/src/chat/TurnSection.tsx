@@ -1,11 +1,5 @@
 import { memo } from 'react';
-import {
-  fromChatLine,
-  type ConversationDetail,
-  type Message,
-  type Project,
-  type Run,
-} from '@spark-outpost/contracts';
+import type { ConversationDetail, Message, Project, Run } from '@spark-outpost/contracts';
 import { isCrewTurn, isSparkLed } from '../crew/conversation-crew.ts';
 import { MessageAttachments } from './attachments/MessageAttachments.tsx';
 import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivider.tsx';
@@ -32,6 +26,9 @@ import { TurnOutpostLines } from './outpost/TurnOutpostLines.tsx';
 import { OutpostFaces } from '../outposts/MemberFace.tsx';
 import { isWorkflowTurn } from './workflow-card/workflow-card-model.ts';
 import { WorkflowLine } from './workflow-card/WorkflowLine.tsx';
+import { AskLines } from './sub-chats/AskLines.tsx';
+import { ChatTurnStart } from './sub-chats/ChatTurnStart.tsx';
+import { StartedLines } from './sub-chats/StartedLine.tsx';
 
 interface TurnSectionProps {
   run: Run;
@@ -99,6 +96,7 @@ export const TurnSection = memo(function TurnSection({
   const steersPlacedIn = jobsShown
     ? pickedMembers(sparkLed, workflow ? 'jobs' : 'all').map((member) => member.runId)
     : [];
+  const runIds = turnRunIds(detail, run.id);
   const work = (
     <>
       {run.agentCycle && <p className="on-its-own">Continued on its own</p>}
@@ -132,11 +130,15 @@ export const TurnSection = memo(function TurnSection({
         <TurnSteers detail={detail} run={run} placedIn={steersPlacedIn} />
       )}
       <TurnOutpostLines conversation={detail.conversation} run={run} />
-      <OpenedPullRequests
-        conversationId={detail.conversation.id}
-        runIds={turnRunIds(detail, run.id)}
+      <StartedLines starts={detail.subChatStarts} runIds={runIds} />
+      <AskLines
+        asks={detail.asks}
+        chatId={detail.conversation.id}
+        runIds={runIds}
+        onOpenChat={onOpenChat}
       />
-      <PushNotices conversationId={detail.conversation.id} runIds={turnRunIds(detail, run.id)} />
+      <OpenedPullRequests conversationId={detail.conversation.id} runIds={runIds} />
+      <PushNotices conversationId={detail.conversation.id} runIds={runIds} />
     </>
   );
   return (
@@ -159,9 +161,11 @@ export const TurnSection = memo(function TurnSection({
           {run.workflowStarted && userMessage?.content ? (
             <SentBySpark text={userMessage.content} />
           ) : run.fromChat && userMessage?.content ? (
-            <SentBySpark
-              text={userMessage.content}
-              label={`${fromChatLine(run.fromChat, userMessage.content)} · not your message`}
+            <ChatTurnStart
+              detail={detail}
+              fromChat={run.fromChat}
+              message={userMessage}
+              onOpenChat={onOpenChat}
             />
           ) : (
             userMessage && (

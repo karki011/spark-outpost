@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildReport,
-  NONE_STATED,
-  REPORT_FOOTER,
-  reportText,
-  TURN_REASONS,
-  type ReportFacts,
-} from './report.ts';
+import { NONE_STATED, REPORT_FOOTER } from '@spark-outpost/contracts';
+import { buildReport, reportText, TURN_REASONS, type ReportFacts } from './report.ts';
 
 const FACTS: ReportFacts = {
   status: 'ready_for_review',

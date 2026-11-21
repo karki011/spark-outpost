@@ -28,7 +28,13 @@ import { AtlassianFacts, atlassianByline, atlassianNote } from './AtlassianFacts
 import { ServiceNowFacts, serviceNowByline, serviceNowNote } from './ServiceNowFacts.tsx';
 import { SiteFacts } from './SiteFacts.tsx';
 import { OutpostStartFacts, outpostStartByline, outpostStartNote } from './OutpostStartFacts.tsx';
-import { SubChatsPlanFacts, subChatsByline, subChatsNote } from './SubChatsPlanFacts.tsx';
+import {
+  SubChatsPlanFacts,
+  subChatsByline,
+  subChatsNote,
+  subChatsPlanEdits,
+  useSubChatsPlanDraft,
+} from './SubChatsPlanFacts.tsx';
 import { siteByline, siteNote } from './site-card-text.ts';
 import { PrFollowUpFacts, PrRoundFacts } from './PrFollowUpFacts.tsx';
 import { McpActionFacts } from '../../settings/mcp/McpActionFacts.tsx';
@@ -162,8 +168,6 @@ function Facts({ action }: { action: SparkAction }) {
       );
     case 'start_outpost':
       return <OutpostStartFacts action={action} />;
-    case 'start_sub_chats':
-      return <SubChatsPlanFacts action={action} />;
     case 'stop_sub_chat':
       return (
         <dl className="sac-facts">
@@ -223,6 +227,7 @@ function Facts({ action }: { action: SparkAction }) {
       );
     case 'open_pr':
     case 'pr_follow_up':
+    case 'start_sub_chats':
     case 'ask_spark':
       return null;
   }
@@ -308,13 +313,16 @@ export function SparkActionCard({
   const action = approval.payload.sparkAction!;
   const headingId = useId();
   const [draft, setDraft] = useState(() => draftOf(action));
+  const plan = useSubChatsPlanDraft();
   const place = useCardPlace(approval);
   const decide = useMutation({
     mutationFn: async (optionId: string) => {
       const allowing = approval.options.some(
         (option) => option.optionId === optionId && isAllow(option),
       );
-      const edits = allowing ? editsOf(action, draft) : {};
+      const edits = allowing
+        ? { ...editsOf(action, draft), ...subChatsPlanEdits(action, plan.edits) }
+        : {};
       await place.confirm();
       return approvalsApi.decide(approval.id, {
         optionId,
@@ -355,6 +363,22 @@ export function SparkActionCard({
       {option.name}
     </Button>
   ));
+  if (action.action === 'start_sub_chats') {
+    answerButtons.splice(
+      primary ? 1 : 0,
+      0,
+      <Button
+        key="edit"
+        tone="ghost"
+        small
+        aria-pressed={plan.editing}
+        disabled={decide.isPending}
+        onClick={plan.toggleEditing}
+      >
+        Edit
+      </Button>,
+    );
+  }
   return (
     <div
       className={callerSees ? 'appr sac sac-caller' : 'appr sac'}
@@ -372,6 +396,9 @@ export function SparkActionCard({
         </span>
       </div>
       <Facts action={action} />
+      {action.action === 'start_sub_chats' && (
+        <SubChatsPlanFacts action={action} plan={plan} disabled={decide.isPending} />
+      )}
       {action.action === 'pr_follow_up' && (
         <PrFollowUpFacts
           action={action}

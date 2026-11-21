@@ -12,14 +12,16 @@ Only an agent starts one: [ask it to split the job](split-into-sub-chats.md). On
 
 ## Find a sub-chat
 
-| Where                             | What you see                                                                                                  |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Chats** side panel              | Sub-chats sit under their parent in plan order, joined by lines, and are not listed again under their project |
-| Parent row                        | An arrow hides or shows its sub-chats, and a count says how many need you                                     |
-| Sub-chat row                      | Its status: **Needs you**, **Working**, **Held**, **Ready for review** or **Done**                            |
-| **History**, search, Home, island | A plain row marked **↳** with the parent's name                                                               |
-| After the parent is deleted       | The sub-chat stays as a chat of its own, marked **was part of** with the parent's name                        |
-| Top of a sub-chat                 | **‹** and the parent's name lead back to the parent; the status sits beside the title                         |
+| Where                              | What you see                                                                                                           |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Chats** side panel               | Sub-chats sit under their parent in plan order, joined by lines, and are not listed again under their project          |
+| Parent row                         | An arrow hides or shows its sub-chats, and a count says how many need you                                              |
+| Sub-chat row                       | Its status: **Needs you**, **Working**, **Held**, **Ready for review** or **Done**                                     |
+| **History**, search, Home, island  | A plain row marked **↳** with the parent's name                                                                        |
+| After the parent is deleted        | The sub-chat stays as a chat of its own, marked **was part of** with the parent's name                                 |
+| Top of a sub-chat                  | **‹** and the parent's name lead back to the parent; the status sits beside the title                                  |
+| Parent's Work panel, **Sub-chats** | Every sub-chat by status, with its branch, pull request, model and what it waits for; **Open ›** on one that needs you |
+| First item in a sub-chat           | **Task from** the parent: the task and what the sub-chat started with                                                  |
 
 With a row focused, **←** hides a parent's sub-chats or moves from a sub-chat to its parent, and **→** shows them or moves into them. Spark remembers which parents you hid.
 

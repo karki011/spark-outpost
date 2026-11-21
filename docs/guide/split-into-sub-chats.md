@@ -10,11 +10,12 @@ One chat's agent splits a job into [sub-chats](sub-chats.md), each with its own 
 
 1. In a chat with a project, ask the agent: "split this into sub-chats".
 2. In **Auto**, **Bypass permissions**, **Auto review** or **Full access** it starts them at once. In **Accept edits** it does when your message asked. Otherwise answer its **Start N sub-chats?** card.
-3. Read each row of the card: the title, the project, **New branch**, **Stacked on 1** or **Starts after 1, 2**, the agent, model and effort, and the task.
-4. Select **Start**, or **Discard** to create nothing.
-5. Open a sub-chat from the **Chats** side panel, under this chat.
+3. Read each row: title, project, **New branch**, **Stacked on 1** or **Starts after 1, 2**, agent, model and effort. **Show each task ›** adds the tasks.
+4. Select **Edit** to pick a piece's model and effort.
+5. Select **Start**, or **Discard** to create nothing.
+6. Open a sub-chat under this chat in **Chats**, or from its **Sub-chats** tab.
 
-The agent can add more sub-chats later with another split. If one piece can't start, the result names it and why; the others start.
+The agent can split again later. A piece that can't start is named with why; the others start.
 
 ## What each piece starts with
 

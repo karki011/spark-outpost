@@ -11,6 +11,7 @@ import { AdoptPullSection } from './AdoptPullSection.tsx';
 import { AutonomySection } from './AutonomySection.tsx';
 import { AgentsSection } from '../chat/subagents/AgentsSection.tsx';
 import { TerminalWork } from '../terminal/usage/TerminalWork.tsx';
+import { SubChatsPane } from './SubChatsPane.tsx';
 import { TaskDetails, type WorkTab } from './TaskDetails.tsx';
 import { CloseIcon, PanelIcon } from './TaskIcons.tsx';
 import type { PanelWidthLimits } from '../ui/panel-width.ts';
@@ -48,6 +49,8 @@ interface WorkPanelProps {
   browser?: ((chrome: PanelChrome) => ReactNode) | null;
   artifact?: { title: string; render: (chrome: PanelChrome) => ReactNode } | null;
   terminal?: boolean;
+  subChats?: boolean;
+  onOpenChat?: (conversationId: string) => void;
 }
 
 export interface PanelChrome {
@@ -74,6 +77,8 @@ interface ViewSwitchProps {
 }
 
 export const WORK_PANEL_ID = 'work-panel';
+
+const ignoreOpen = () => undefined;
 
 function ViewTab({ tab, view, onView }: { tab: PanelTab } & Omit<ViewSwitchProps, 'tabs'>) {
   const tip = useTooltip(tab.name);
@@ -150,9 +155,13 @@ export function WorkPanel({
   browser = null,
   artifact = null,
   terminal = false,
+  subChats = false,
+  onOpenChat,
 }: WorkPanelProps) {
   const panelId = usePaneId(WORK_PANEL_ID);
-  const hasWork = task !== null || autonomy !== null || terminal;
+  const subChatsHeading = usePaneId('sub-chats-heading');
+  const listsSubChats = subChats && onOpenChat !== undefined;
+  const hasWork = task !== null || autonomy !== null || terminal || listsSubChats;
   const browsing = browser !== null && view === 'browser';
   const reading = artifact !== null && view === 'artifact';
   const wideView = browsing || reading;
@@ -257,11 +266,25 @@ export function WorkPanel({
                 heading={heading}
                 autonomy={autonomySection}
                 terminal={terminal}
+                subChats={listsSubChats}
+                onOpenChat={onOpenChat ?? ignoreOpen}
               />
             ) : terminal ? (
               <TerminalWork conversationId={conversationId} />
             ) : (
-              autonomySection
+              <>
+                {autonomySection}
+                {listsSubChats && (
+                  <section className="wsub" aria-labelledby={subChatsHeading}>
+                    <h3 id={subChatsHeading}>Sub-chats</h3>
+                    <SubChatsPane
+                      conversationId={conversationId}
+                      open={open}
+                      onOpenChat={onOpenChat}
+                    />
+                  </section>
+                )}
+              </>
             )}
           </div>
           {onAudit && !wideView && (

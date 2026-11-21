@@ -1,4 +1,6 @@
 import {
+  NONE_STATED,
+  REPORT_FOOTER,
   SUB_CHAT_STATUS_WORDS,
   type SubChatPullRequest,
   type SubChatReport,
@@ -6,9 +8,6 @@ import {
   type TerminalRunStatus,
 } from '@spark-outpost/contracts';
 
-export const NONE_STATED = 'None stated';
-export const REPORT_FOOTER =
-  "Written by the sub-chat's agent, not checked by Spark. The branch and pull request line is Spark's own record.";
 export const REPORT_SHAPE =
   'End your reply with three labelled sections, each on its own line: "Changed:" (what you changed), "Risks:" (what could go wrong or needs a careful look) and "Blockers:" (what stopped you or needs the user). Write "None" where there is nothing to say. Do not report the branch or pull request: Spark adds its own record of them.';
 

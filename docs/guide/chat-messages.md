@@ -30,6 +30,14 @@ A chat's agent can send another chat a message and ask for a reply. The text is 
 | Can't take it now  | Waits at the front of its queue. It never stops a turn. |
 | Is paused, stopped | Waits in the queue. Remove it there; you can't edit it. |
 
+## What you see
+
+| Where                      | The line                                                                         |
+| -------------------------- | -------------------------------------------------------------------------------- |
+| The sending chat           | **Asked** or **Sent to** the chat, with **Waiting**, **Replied** or **No reply** |
+| The receiving chat         | **From** the chat, marked "not your message"                                     |
+| Several rounds in one turn | One line, **N exchanges with** the chat, that opens                              |
+
 ## Replies
 
 | When                              | The asking chat gets  |

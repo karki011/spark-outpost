@@ -40,6 +40,7 @@ import { summaryQuery } from './summary-query.ts';
 import { taskForNewRun } from './tasks.ts';
 import { listQueue } from './chat-queue.ts';
 import { listChatAsks } from './chat-asks.ts';
+import { listSubChatStarts } from './sub-chats.ts';
 import { listMemberMessages } from './member-messages.ts';
 import { taskOverviews } from './task-views.ts';
 import { conversationUsage } from './usage.ts';
@@ -195,6 +196,7 @@ export async function getConversationDetail(
     nativeActivity,
     promptCache,
     asks,
+    subChatStarts,
   ] = await Promise.all([
     db.query<MessageRow>(
       `SELECT ${MESSAGE_COLUMNS} FROM messages WHERE conversation_id = $1 ORDER BY created_at, id`,
@@ -241,6 +243,7 @@ export async function getConversationDetail(
     nativeStepActivity(db, id),
     promptCacheFor(db, id),
     listChatAsks(db, id),
+    listSubChatStarts(db, id),
   ]);
   const attachments = await attachmentsForMessages(
     db,
@@ -274,6 +277,7 @@ export async function getConversationDetail(
     ...(Object.keys(subagents).length > 0 ? { subagents } : {}),
     ...(promptCache.last ? { promptCache } : {}),
     ...(asks.length > 0 ? { asks } : {}),
+    ...(subChatStarts.length > 0 ? { subChatStarts } : {}),
   };
 }
 

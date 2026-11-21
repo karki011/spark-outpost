@@ -166,9 +166,11 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const roomy = useRoomy(mainRef);
   const wideLayout = setup.data?.profile.wideWindow ?? DEFAULT_WIDE_WINDOW;
   const agents = useChatAgents();
+  const terminalChat = detail.data?.conversation.sessionType === 'terminal';
+  const hasSubChats = (detail.data?.conversation.subChatCount ?? 0) > 0;
   const panel = useTaskPanel(
     detail.data?.tasks ?? NO_TASKS,
-    autonomyLevel !== null || detail.data?.conversation.sessionType === 'terminal' || agents.has,
+    autonomyLevel !== null || terminalChat || agents.has || hasSubChats,
     panelOpensByDefault(roomy, wideLayout),
     browserPane,
     artifactPane,
@@ -208,7 +210,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     setPanelTab(tab);
     panel.setView('work');
   });
-  const openPlan = useStableCallback(() => openPanelTab('plan'));
   const openLinks = useStableCallback(() => openPanelTab('links'));
   const openAgents = useStableCallback((runId: string, workerId?: string) =>
     agents.open(panel, runId, workerId),
@@ -253,7 +254,8 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   return (
     <ChatContexts
       viewChanges={viewChanges}
-      openPlan={task ? openPlan : null}
+      openTab={openPanelTab}
+      hasTask={task !== null}
       status={status}
       board={agents.board}
       openAgents={panel.available ? openAgents : null}
@@ -456,6 +458,8 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             roots={panelRoots}
             runs={detail.data?.runs ?? []}
             terminal={terminalSession}
+            subChats={hasSubChats}
+            onOpenChat={openChat}
             width={panel.width}
             onWidth={panel.setWidth}
             limits={panel.limits}

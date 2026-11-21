@@ -18,7 +18,12 @@ import { orchestrationSchema } from './orchestration.ts';
 import { conversationPlansSchema } from './plans.ts';
 import { teammateTagSchema } from './teammates.ts';
 import { chatRefSchema } from './chat-ref.ts';
-import { chatAskSchema, formerParentSchema, subChatLinkSchema } from './sub-chats.ts';
+import {
+  chatAskSchema,
+  formerParentSchema,
+  subChatLinkSchema,
+  subChatsStartSchema,
+} from './sub-chats.ts';
 import {
   interruptionChoiceSchema,
   interruptionSchema,
@@ -213,6 +218,7 @@ export const conversationDetailSchema = z.object({
   subagents: z.record(z.string(), z.array(subagentRowSchema)).optional(),
   promptCache: promptCacheSchema.optional(),
   asks: z.array(chatAskSchema).optional(),
+  subChatStarts: z.array(subChatsStartSchema).optional(),
 });
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 

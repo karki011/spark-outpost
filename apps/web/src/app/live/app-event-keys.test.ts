@@ -243,6 +243,15 @@ describe('app event invalidation', () => {
     expect(stepKeys).not.toContain('attention');
   });
 
+  it('a sub-chat change, a turn and a card refresh the sub-chats of every open Sub-chats tab', () => {
+    for (const kind of ['sub_chats_changed', 'run', 'approval', 'conversation'] as const) {
+      const keys = mergeInvalidations([event(kind)]).map((each) => each.queryKey.join('/'));
+      expect([kind, keys.includes('sub-chats')]).toEqual([kind, true]);
+    }
+    const quiet = mergeInvalidations([event('usage')]).map((each) => each.queryKey[0]);
+    expect(quiet).not.toContain('sub-chats');
+  });
+
   it('a chat marked seen refreshes the chat list and search results, nothing else', async () => {
     expect(await invalidatedBy(event('seen'))).toEqual(['list', 'search']);
   });

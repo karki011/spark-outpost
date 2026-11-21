@@ -1,5 +1,7 @@
 import {
+  SUB_CHATS_STARTED_ACTIVITY,
   heldReason,
+  subChatsStartSchema,
   subChatReportSchema,
   subChatStartedWithSchema,
   type ChatRef,
@@ -8,6 +10,7 @@ import {
   type SubChatReport,
   type SubChatRow,
   type SubChatStartedWith,
+  type SubChatsStart,
 } from '@spark-outpost/contracts';
 import { withChatBranches } from './chat-worktrees.ts';
 import type { Queryable } from './db.ts';
@@ -348,5 +351,24 @@ async function rowsOf(
         reportedAt: piece.reportedAt ? piece.reportedAt.toISOString() : null,
       },
     ];
+  });
+}
+
+export async function listSubChatStarts(
+  db: Queryable,
+  conversationId: string,
+): Promise<SubChatsStart[]> {
+  const { rows } = await db.query<{ run_id: string; content: unknown }>(
+    `SELECT e.run_id, e.payload->'content' AS content
+     FROM run_events e
+     JOIN runs r ON r.id = e.run_id
+     WHERE r.conversation_id = $1
+       AND e.type = 'ACTIVITY_SNAPSHOT' AND e.payload->>'activityType' = $2
+     ORDER BY e.created_at, e.seq`,
+    [conversationId, SUB_CHATS_STARTED_ACTIVITY],
+  );
+  return rows.flatMap((row) => {
+    const start = subChatsStartSchema.safeParse({ ...Object(row.content), runId: row.run_id });
+    return start.success ? [start.data] : [];
   });
 }

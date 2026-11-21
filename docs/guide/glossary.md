@@ -32,6 +32,7 @@ summary: One-line definitions of the words you see in Spark Outpost - agent, mod
 | **Spark**              | The assistant layer around the agents; also a [named teammate](sparks.md) you make.               |
 | **Spark autonomy**     | What Spark does with finished work: **Automatic** or **Full auto → PR**.                          |
 | **Spark Island**       | The Mac app's [panel](desktop-companion.md) atop the screen.                                      |
+| **Sub-chats**          | A Work panel tab on a chat that [split a job](sub-chats.md): its sub-chats by status.             |
 | **Sub-agent**          | A [helper](follow-a-turn.md#see-whats-happening) the agent starts itself.                         |
 | **SPARK.md**           | A [Spark's](sparks.md) instructions, followed in every chat.                                      |
 | **Work panel**         | The chat's side panel: to-do, plan, changes, cost.                                                |

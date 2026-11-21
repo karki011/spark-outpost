@@ -248,6 +248,26 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
     recencyLabel(chat.updatedAt),
     autoArchived,
   ].filter(Boolean);
+  const marked = Boolean(chat.subChat) || (!nested && parentMarkText(chat) !== null);
+  const text = (
+    <span className="rt">
+      <span className="row-title-line">
+        <RowTitle
+          text={title}
+          overflow={marquee.overflow}
+          running={marquee.running}
+          titleRef={marquee.ref}
+        />
+        {chat.pullRequestMerged && <MergedMark />}
+      </span>
+      {handle && <span className="sr-only">{`, @${handle}`}</span>}
+      {relation && <span className="sr-only">{`, ${relation}`}</span>}
+      {terminal && <span className="sr-only">, Terminal session</span>}
+      {chat.match ? <MatchSnippet match={chat.match} /> : <RowLine line={rowLine(chat, state)} />}
+      {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
+      {autoArchived && <span className="sr-only">, {autoArchived}</span>}
+    </span>
+  );
   const content = (
     <>
       {tree && <SubChatFold parent={chat} slot={tree} />}
@@ -291,35 +311,24 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
           {...pointerListeners}
         >
           {!faceless && <span className="st">{face}</span>}
-          <span className="rt">
-            <span className="row-title-line">
-              <RowTitle
-                text={title}
-                overflow={marquee.overflow}
-                running={marquee.running}
-                titleRef={marquee.ref}
-              />
-              {!nested && <ParentMark chat={chat} />}
-              {chat.pullRequestMerged && <MergedMark />}
+          {marked ? (
+            <span className="sub-main">
+              {text}
+              <span className="sub-tail">
+                {!nested && <ParentMark chat={chat} />}
+                {chat.subChat && (
+                  <>
+                    <span className="sr-only">, </span>
+                    <SubChatStatusWord status={chat.subChat.status} />
+                  </>
+                )}
+              </span>
             </span>
-            {handle && <span className="sr-only">{`, @${handle}`}</span>}
-            {relation && <span className="sr-only">{`, ${relation}`}</span>}
-            {terminal && <span className="sr-only">, Terminal session</span>}
-            {chat.match ? (
-              <MatchSnippet match={chat.match} />
-            ) : (
-              <RowLine line={rowLine(chat, state)} />
-            )}
-            {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
-            {autoArchived && <span className="sr-only">, {autoArchived}</span>}
-          </span>
-          {tree && <SubChatNeeds subs={tree.subs} />}
-          {chat.subChat ? (
-            <>
-              <span className="sr-only">, </span>
-              <SubChatStatusWord status={chat.subChat.status} />
-            </>
           ) : (
+            text
+          )}
+          {tree && <SubChatNeeds subs={tree.subs} />}
+          {!chat.subChat && (
             <>
               {blob && (
                 <span className="row-state" data-state={blob} aria-hidden="true">

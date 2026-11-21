@@ -10,8 +10,9 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
-| Sub-chat reports and wrap-up                    | [Reports](sub-chat-reports.md).                            |
-| Agents split a job into sub-chats               | [Split a job](split-into-sub-chats.md).                    |
+| **Sub-chats** tab; plan card **Edit**           | [Sub-chats](sub-chats.md#find-a-sub-chat).                 |
+| Sub-chat reports, wrap-up                       | [Reports](sub-chat-reports.md).                            |
+| Agents split jobs into sub-chats                | [Split a job](split-into-sub-chats.md).                    |
 | Sub-chats nest under their parent               | [Find a sub-chat](sub-chats.md#find-a-sub-chat).           |
 | Chats message each other                        | [Messages](chat-messages.md).                              |
 | **Enter** sends mid-dictation; PR panel tidied  | [Talk to Spark](voice.md#turn-it-on).                      |
@@ -59,4 +60,3 @@ summary: What changed in recent releases and what to do next.
 | Remote control: side panel, sections fold                  | [Use your phone](use-your-phone.md).                                                     |
 | Wider pages, squircle corners, sidebar hide fix            | Nothing to do.                                                                           |
 | **Let Spark build one for you**; new empty tabs            | [Build with an agent](build-with-an-agent.md).                                           |
-| Fewer Settings pages                                       | [Settings](settings.md).                                                                 |

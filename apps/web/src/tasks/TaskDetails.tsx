@@ -14,6 +14,7 @@ import { CostPane } from './CostPane.tsx';
 import { CrewPane } from './CrewPane.tsx';
 import { LinksPane } from './LinksPane.tsx';
 import { AgreedPlan } from './AgreedPlan.tsx';
+import { SubChatsPane } from './SubChatsPane.tsx';
 import { TodoPane } from './TodoPane.tsx';
 import { taskApi, taskKeys } from './task-api.ts';
 import { TerminalCost } from '../terminal/usage/TerminalCost.tsx';
@@ -24,11 +25,13 @@ import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton, type SkeletonShape } from '../ui/loading/Skeleton.tsx';
 import { useChatPane } from '../chat/split/chat-pane.ts';
 
-export type WorkTab = 'todo' | 'steps' | 'plan' | 'crew' | 'links' | 'changes' | 'cost';
+export type WorkTab =
+  'todo' | 'steps' | 'sub-chats' | 'plan' | 'crew' | 'links' | 'changes' | 'cost';
 
 const PANE_SHAPES: Record<WorkTab, SkeletonShape> = {
   todo: 'list',
   steps: 'list',
+  'sub-chats': 'cards',
   plan: 'lines',
   crew: 'list',
   links: 'list',
@@ -36,11 +39,12 @@ const PANE_SHAPES: Record<WorkTab, SkeletonShape> = {
   cost: 'cards',
 };
 
-const NO_DETAIL: ReadonlySet<WorkTab> = new Set(['todo', 'steps', 'changes', 'crew']);
+const NO_DETAIL: ReadonlySet<WorkTab> = new Set(['todo', 'steps', 'sub-chats', 'changes', 'crew']);
 
 const tabNames: Record<WorkTab, string> = {
   todo: 'To-do',
   steps: 'Steps',
+  'sub-chats': 'Sub-chats',
   plan: 'Plan',
   crew: 'Crew',
   links: 'Links',
@@ -100,6 +104,8 @@ interface TaskDetailsProps {
   heading: Ref<HTMLHeadingElement>;
   autonomy: ReactNode;
   terminal?: boolean;
+  subChats: boolean;
+  onOpenChat: (conversationId: string) => void;
 }
 
 export function TaskDetails({
@@ -118,6 +124,8 @@ export function TaskDetails({
   heading,
   autonomy,
   terminal = false,
+  subChats,
+  onOpenChat,
 }: TaskDetailsProps) {
   const { idSuffix } = useChatPane();
   const detail = useQuery({
@@ -132,6 +140,7 @@ export function TaskDetails({
   const tabs: WorkTab[] = [
     ...(showsTodo ? (['todo'] as const) : []),
     ...(terminal ? (['steps'] as const) : []),
+    ...(subChats ? (['sub-chats'] as const) : []),
     ...(hasPlan ? (['plan'] as const) : []),
     ...(storedCrew ? (['crew'] as const) : []),
     'links',
@@ -208,6 +217,9 @@ export function TaskDetails({
         )}
         {current === 'crew' && orchestration && (
           <CrewPane agents={agents} labels={pieceLabels(orchestration)} />
+        )}
+        {current === 'sub-chats' && (
+          <SubChatsPane conversationId={conversationId} open={open} onOpenChat={onOpenChat} />
         )}
         {current === 'steps' && <TerminalSteps conversationId={conversationId} />}
         {current === 'cost' && terminal && <TerminalCost conversationId={conversationId} />}

@@ -181,6 +181,13 @@ describe('spark_sub_chats in a mode that acts', () => {
         notStarted: [],
       },
     ]);
+    const shown = (await getConversationDetail(t.db, parent.id))?.subChatStarts;
+    expect(
+      shown?.map((start) => [start.runId, start.subChats.map((piece) => piece.title)]),
+    ).toEqual([[runId, ['Orders API', 'Orders page', 'Docs']]]);
+    expect(
+      (await getConversationDetail(t.db, api!.conversation_id))?.subChatStarts,
+    ).toBeUndefined();
     const audit = await auditOf(runId);
     expect(audit).toContain('"event":"sub_chat_started"');
     expect(audit).toContain('"allowedBy":"ran at once (mode)"');

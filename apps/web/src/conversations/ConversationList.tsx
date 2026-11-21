@@ -219,6 +219,11 @@ export const ConversationList = memo(function ConversationList({
     return () => clearTimeout(timer);
   }, [over, overFolded, openFold]);
 
+  const selectedParentId = selectedId ? byId.get(selectedId)?.parent?.id : undefined;
+  useEffect(() => {
+    if (selectedParentId) openFold(subChatFoldKey(selectedParentId));
+  }, [selectedParentId, openFold]);
+
   const reveal = layout?.reveal;
   const closeDrawer = layout?.closeDrawer;
   const startNew = useCallback(() => {

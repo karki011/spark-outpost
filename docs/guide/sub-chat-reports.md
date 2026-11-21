@@ -17,7 +17,7 @@ When a [sub-chat](sub-chats.md) finishes its task, Spark sends its parent a repo
 | **Branch and pull request** | Spark's own record: branch, committed, pushed, pull request  |
 | **Risks**, **Blockers**     | The sub-chat's reply; **None stated** when it named none     |
 
-The reply's parts are the sub-chat agent's words, not checked by Spark.
+The parent shows it as a **Report** block. The reply's parts are the sub-chat agent's words, not checked by Spark.
 
 A report is [never your message](chat-messages.md) in the parent: it starts a turn there, or joins the running one, and allows no push or pull request. In that turn the parent's agent may message and stop only its own sub-chats.
 
@@ -28,12 +28,12 @@ What you type in a sub-chat later updates its row without waking the parent.
 | It waits for                    | Spark                                                              |
 | ------------------------------- | ------------------------------------------------------------------ |
 | Sub-chats that all reported     | Starts it by itself                                                |
-| One that failed or was stopped  | Keeps it **Held** and says which one                               |
+| One that failed or was stopped  | Keeps it **Held** and says which one; **Start anyway** starts it   |
 | One you deleted or archived     | Stops waiting for that one                                         |
 | A sub-chat it is stacked on     | First commits that chat's kept changes on its branch, never pushed |
 | Anything, while Spark is paused | Waits until you resume                                             |
 
-If that commit can't be made, it stays **Held**. See [Stacked pull requests](stacked-pull-requests.md).
+If that commit can't be made, it stays **Held**. **Start anyway** is on its row in the **Sub-chats** tab. See [Stacked pull requests](stacked-pull-requests.md).
 
 ## The wrap-up
 

@@ -51,6 +51,7 @@ it('hides it for turns the user did not type', () => {
   const outpost = { postId: ASKED } as Run['outpost'];
   const others: Partial<Run>[] = [
     { outpost },
+    { fromChat: 'Checkout rewrite' },
     { prFollowUp: true },
     { agentCycle: true },
     { continuesRunId: ASKED },

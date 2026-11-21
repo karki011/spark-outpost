@@ -2,6 +2,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { NONE_STATED, REPORT_FOOTER } from '@spark-outpost/contracts';
 import { waitingAsksWithEndedTurn } from '../src/persistence/chat-asks.ts';
 import { deleteConversation } from '../src/persistence/conversation-actions.ts';
 import { getMemberMessage } from '../src/persistence/member-messages.ts';
@@ -16,7 +17,7 @@ import {
 import { subChatNeeds } from '../src/sub-chats/availability.ts';
 import { deliverAsk } from '../src/sub-chats/deliver-ask.ts';
 import { deliveryPass } from '../src/sub-chats/delivery.ts';
-import { NONE_STATED, REPORT_FOOTER, TURN_REASONS } from '../src/sub-chats/report.ts';
+import { TURN_REASONS } from '../src/sub-chats/report.ts';
 import { sendReport } from '../src/sub-chats/reports.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
 import { askNow, fakeTarget, finishTurn, messageAsk, turnsOf } from './chat-ask-fixtures.ts';

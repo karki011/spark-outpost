@@ -29,6 +29,7 @@ import { islandRequestsKey } from '../../island/island-requests.ts';
 import { attentionKey } from '../../attention/attention-api.ts';
 import { sparkPauseKey } from '../pause/spark-pause-api.ts';
 import { workflowRunKeys } from '../../crew-flows/runs-api.ts';
+import { subChatKeys } from '../../tasks/use-sub-chats.ts';
 
 type RunStreamed = (runId: string) => boolean;
 
@@ -58,6 +59,7 @@ export const LIVE_ROOTS: readonly string[] = [
   islandRequestsKey[0],
   attentionKey[0],
   workflowRunKeys.all[0],
+  subChatKeys.all[0],
 ];
 
 export function isLiveQueryKey(key: QueryKey): boolean {
@@ -66,6 +68,7 @@ export function isLiveQueryKey(key: QueryKey): boolean {
 
 const list: Invalidation = { queryKey: queryKeys.conversations, exact: true };
 const attention: Invalidation = { queryKey: attentionKey, exact: true };
+const subChats: Invalidation = { queryKey: subChatKeys.all };
 const healthChats: Invalidation = { queryKey: queryKeys.healthConversations, exact: true };
 const search: Invalidation = { queryKey: queryKeys.conversationSearches };
 const tasks: Invalidation = { queryKey: taskKeys.all };
@@ -248,7 +251,9 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
 }
 
 function withListFollowers(invalidations: Invalidation[]): Invalidation[] {
-  return invalidations.includes(list) ? [...invalidations, attention, healthChats] : invalidations;
+  return invalidations.includes(list)
+    ? [...invalidations, attention, healthChats, subChats]
+    : invalidations;
 }
 
 export function isStepEvent(event: AppEvent): boolean {

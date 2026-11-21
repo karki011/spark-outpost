@@ -1,27 +1,18 @@
-import { randomUUID } from 'node:crypto';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
-import { openTestDb, resetTestDatabase } from './database.ts';
+import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { expectNoSidewaysScroll, PHONE } from './responsive-kit.ts';
-import { seedChats, type SeedApproval, type SeedChat } from './sidebar-seed.ts';
+import { seedChats, type SeedApproval } from './sidebar-seed.ts';
+import { linkPieces, type Piece } from './sub-chats-seed.ts';
 
 const SHOT = process.env.SUB_CHATS_SHOT ?? '';
 const PROJECT = 'storefront';
 const PARENT = 'Checkout rewrite';
 const SKINS = { light: 'apricot', dark: 'graphite' } as const;
-const STARTED_WITH = {
-  provider: 'fake',
-  model: 'sonnet',
-  effort: 'medium',
-  agentMode: 'auto',
-  level: 'full-auto',
-};
-
 const question: SeedApproval = {
   kind: 'clarify',
   title: 'Round tax per line or per order?',
@@ -31,11 +22,6 @@ const question: SeedApproval = {
     reason: 'The old code does both.',
   },
 };
-
-interface Piece extends SeedChat {
-  started?: boolean;
-  pullRequest?: number;
-}
 
 const PIECES: readonly Piece[] = [
   { title: 'Payments API v2', run: { status: 'succeeded' }, pullRequest: 412 },
@@ -55,37 +41,6 @@ test.beforeAll(() => {
 test.afterAll(() => {
   rmSync(base, { recursive: true, force: true });
 });
-
-async function linkPieces(parent: string | null, title: string, pieces: readonly Piece[]) {
-  const db = openTestDb();
-  try {
-    const workspaceId = await ensureLocalWorkspace(db);
-    for (const [position, piece] of pieces.entries()) {
-      await db.query(
-        `INSERT INTO sub_chats (conversation_id, parent_conversation_id, parent_title, position,
-           task, started_at, started_with)
-         VALUES ($1, $2, $3, $4, 'Build this piece.', CASE WHEN $5 THEN now() END, $6)`,
-        [piece.id, parent, title, position, piece.started ?? true, JSON.stringify(STARTED_WITH)],
-      );
-      if (!piece.pullRequest) continue;
-      await db.query(
-        `INSERT INTO pr_watches (id, workspace_id, conversation_id, host, owner, repo, number,
-           url, branch, pr_state, checks)
-         VALUES ($1, $2, $3, 'github.com', 'acme', 'shop', $4, $5, 'spark/piece', 'open',
-           'passing')`,
-        [
-          randomUUID(),
-          workspaceId,
-          piece.id,
-          piece.pullRequest,
-          `https://github.com/acme/shop/pull/${piece.pullRequest}`,
-        ],
-      );
-    }
-  } finally {
-    await db.end();
-  }
-}
 
 test.beforeEach(async ({ page }) => {
   test.slow();
@@ -191,6 +146,37 @@ test('a parent folds and unfolds, by pointer and by keyboard, and remembers it',
   await expect(rowButton(page, PARENT)).toBeFocused();
   await page.keyboard.press('ArrowLeft');
   await expect(fold(page)).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('a folded parent unfolds when one of its sub-chats is opened', async ({ page }) => {
+  await fold(page).click();
+  await expect(fold(page)).toHaveAttribute('aria-expanded', 'false');
+  await sidebar(page).getByRole('searchbox').fill('Cart totals');
+  await sidebar(page)
+    .locator('.row', { hasText: 'Cart totals service' })
+    .locator('.row-open')
+    .click();
+  await sidebar(page).getByRole('searchbox').fill('');
+  await expect(fold(page)).toHaveAttribute('aria-expanded', 'true');
+  await expect(subRows(page).filter({ hasText: 'Cart totals service' })).toHaveClass(/active/);
+});
+
+test('a narrow sidebar puts a sub-chat’s status under its title instead of cutting the title', async ({
+  page,
+}) => {
+  const row = subRows(page).filter({ hasText: 'Payments API v2' });
+  const title = row.locator('.tt');
+  const status = row.locator('.sub-status');
+  const fits = await title.evaluate((element) => element.scrollWidth <= element.clientWidth);
+  expect(fits).toBe(true);
+  const [titleBox, statusBox] = [await title.boundingBox(), await status.boundingBox()];
+  expect(statusBox!.y).toBeGreaterThanOrEqual(titleBox!.y + titleBox!.height - 1);
+  const short = subRows(page).filter({ hasText: 'Checkout UI' });
+  const [shortTitle, shortStatus] = [
+    await short.locator('.tt').boundingBox(),
+    await short.locator('.sub-status').boundingBox(),
+  ];
+  expect(Math.abs(shortStatus!.y - shortTitle!.y)).toBeLessThan(shortTitle!.height);
 });
 
 test('a sub-chat opens from the tree and its header leads back to the parent', async ({ page }) => {

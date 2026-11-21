@@ -2,7 +2,11 @@ import { z } from 'zod';
 import { chatRefSchema } from './chat-ref.ts';
 import { involvementLevelSchema } from './involvement-levels.ts';
 import { prChecksSchema } from './pr-follow-up.ts';
-import { SUB_CHAT_TASK_MAX, SUB_CHAT_TITLE_MAX } from './start-sub-chats-action.ts';
+import {
+  SUB_CHAT_TASK_MAX,
+  SUB_CHAT_TITLE_MAX,
+  subChatsStartedActivitySchema,
+} from './start-sub-chats-action.ts';
 import { subChatPullStateSchema, subChatStatusSchema } from './sub-chat-status.ts';
 
 const pieceTitle = z.string().trim().min(1).max(SUB_CHAT_TITLE_MAX);
@@ -52,6 +56,10 @@ export const subChatReportSchema = z.object({
 });
 export type SubChatReport = z.infer<typeof subChatReportSchema>;
 
+export const NONE_STATED = 'None stated';
+export const REPORT_FOOTER =
+  "Written by the sub-chat's agent, not checked by Spark. The branch and pull request line is Spark's own record.";
+
 export const subChatRowSchema = z.object({
   id: z.uuid(),
   title: z.string(),
@@ -72,6 +80,9 @@ export type SubChatRow = z.infer<typeof subChatRowSchema>;
 
 export const subChatsResponseSchema = z.object({ subChats: z.array(subChatRowSchema) });
 export type SubChatsResponse = z.infer<typeof subChatsResponseSchema>;
+
+export const subChatsStartSchema = subChatsStartedActivitySchema.extend({ runId: z.uuid() });
+export type SubChatsStart = z.infer<typeof subChatsStartSchema>;
 
 export const subChatLinkSchema = z.object({
   position: z.number().int().nonnegative(),
