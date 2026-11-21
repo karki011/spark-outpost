@@ -106,7 +106,6 @@ describe('a chat turn', { timeout: 60_000 }, () => {
       `Folder: ${worktree!.path} · Branch: ${worktree!.branch} (a worktree of ${basename(root)})\n`,
     );
     expect(append).toContain('spark_sub_chats');
-    expect(append).not.toContain('spark_outpost_draft');
     expect(append).toContain(
       "Publishing\n- Don't push or open a pull request unless the user asks.",
     );

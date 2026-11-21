@@ -69,7 +69,6 @@ interface SessionRow {
   modes: { id?: unknown; label?: unknown }[] | null;
   session_row: string | null;
   source: string | null;
-  from_user: boolean | null;
 }
 
 const USER_SOURCES: ReadonlySet<string> = new Set(['ui', 'queue', 'e2e']);
@@ -80,7 +79,6 @@ function modeNameOf(modes: SessionRow['modes'], mode: string | null): string {
 }
 
 function typedByUser(row: SessionRow): boolean {
-  if (row.source === 'outpost') return row.from_user === true;
   return row.source !== null && USER_SOURCES.has(row.source);
 }
 
@@ -89,8 +87,6 @@ export async function rulesSession(db: Queryable, runId: string): Promise<RulesS
     `SELECT r.provider, r.agent_mode, cap.modes,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               AS source,
-            (SELECT post.from_user FROM outpost_posts post
-             WHERE post.id = r.user_message_id) AS from_user,
             (SELECT s.id FROM provider_sessions s
              WHERE s.conversation_id = r.conversation_id AND s.provider = r.provider
                AND s.closed_at IS NULL AND starts_with(s.agent_key, 'chat:')

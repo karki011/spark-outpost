@@ -20,19 +20,11 @@ import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { mainAgentPublishNote } from '../orchestration/context.ts';
 import type { PublishScope } from '../ship/agent-push.ts';
 import { stackGit } from '../sub-chats/stack-git.ts';
-import { publishStackOf as outpostPublishStackOf } from '../outposts/stack-publish.ts';
-import { publishStackOf, type PublishStack } from '../sub-chats/stack-publish.ts';
+import { publishStackOf } from '../sub-chats/stack-publish.ts';
 import { isWrapUp, userText } from '../sub-chats/user-asked.ts';
 import type { RunInput } from './run-input.ts';
 
 const ALWAYS_PROTECTED = ['main', 'master'];
-
-async function stackOf(db: Queryable, record: ChatWorktree): Promise<PublishStack | null> {
-  return (
-    (await publishStackOf(db, stackGit, record)) ??
-    (await outpostPublishStackOf(db, stackGit, record))
-  );
-}
 
 export async function taskBranch(db: Queryable, root: string | null): Promise<TaskBranch | null> {
   if (!root) return null;
@@ -45,11 +37,11 @@ export async function taskBranch(db: Queryable, root: string | null): Promise<Ta
   const protectedBranches = [...new Set(named)];
   const opened = await openedPullBranch(db, record).catch(() => null);
   if (opened && !protectedBranches.includes(opened.branch)) {
-    const stack = await stackOf(db, record);
+    const stack = await publishStackOf(db, stackGit, record);
     return { branch: opened.branch, protectedBranches, pull: opened.number, ...stack };
   }
   const pull = await openPullNumber(db, record.conversationId, record.branch).catch(() => null);
-  const stack = await stackOf(db, record);
+  const stack = await publishStackOf(db, stackGit, record);
   const adopted = record.adopted?.pushes
     ? { author: record.adopted.author, pull: record.adopted.number }
     : null;
@@ -132,7 +124,6 @@ type GrantFacts = Pick<
   | 'userRequest'
   | 'followUpRound'
   | 'workspaceId'
-  | 'outpostRequest'
   | 'chatAsk'
   | 'sparkRuleRetry'
   | 'assistantSent'

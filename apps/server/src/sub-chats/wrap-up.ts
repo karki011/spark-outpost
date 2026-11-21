@@ -1,4 +1,4 @@
-import { storyOrder, type SubChatReport, type SubChatStatus } from '@spark-outpost/contracts';
+import { stackOrder, type SubChatReport, type SubChatStatus } from '@spark-outpost/contracts';
 import { recordLine, statusWords } from './report.ts';
 
 export interface WrapUpPiece {
@@ -40,7 +40,7 @@ function pieceLine(piece: WrapUpPiece, titles: ReadonlyMap<string, string>): str
 
 function inOrder(pieces: readonly WrapUpPiece[]): WrapUpPiece[] {
   const byId = new Map(pieces.map((piece) => [piece.id, piece]));
-  return storyOrder(
+  return stackOrder(
     pieces.map((piece) => ({
       conversationId: piece.id,
       dependsOn: piece.stackedOn !== null && byId.has(piece.stackedOn) ? piece.stackedOn : null,

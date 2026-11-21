@@ -13,9 +13,6 @@ const NOTHING: SparkAvailability = {
   pull_request_create: false,
   browser: false,
   mac: false,
-  outpost: false,
-  outpost_draft: false,
-  outpost_start: false,
   chat_messages: false,
   sub_chats: false,
   sub_chat_stop: false,
@@ -63,9 +60,6 @@ const GROUPS: [keyof SparkAvailability, string[]][] = [
       'spark_browser_sign_in',
     ],
   ],
-  ['outpost', ['spark_outpost', 'spark_outpost_ask', 'spark_outpost_note']],
-  ['outpost_draft', ['spark_outpost_draft']],
-  ['outpost_start', ['spark_outpost_start']],
   ['chat_messages', ['spark_send_to_chat']],
   ['sub_chats', ['spark_sub_chats']],
   ['sub_chat_stop', ['spark_stop_chat']],
@@ -189,13 +183,6 @@ describe('what a session is told about tools it was not offered', () => {
     expect(told(false, true)).toContain('spark_terminal_run for dev servers and watchers');
     expect(told(true, true)).not.toContain('spark_terminal_run');
     expect(told(false, false)).not.toContain('spark_terminal_run');
-  });
-
-  it('mentions the outpost tools only when one of them is offered', () => {
-    expect(sparkInstructionsFor({ ...NOTHING, outpost: true })).toContain('spark_outpost*');
-    expect(sparkInstructionsFor({ ...NOTHING, outpost_draft: true })).toContain('spark_outpost*');
-    expect(sparkInstructionsFor(NOTHING)).not.toContain('spark_outpost*');
-    expect(unavailableNote(NOTHING)).not.toContain('outpost');
   });
 
   it('uses the exact setting the session reported for a missing tool', () => {

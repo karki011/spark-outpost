@@ -18,33 +18,12 @@ interface QueueRow {
   position: number;
   continue_run_id: string | null;
   created_at: Date;
-  outpost_post_id: string | null;
   spark_rule_card_id?: string | null;
   origin?: QueuedMessage['origin'] | null;
   from_chat?: string | null;
   attachment_ids?: string[];
   annotations?: QueuedMessage['annotations'];
 }
-
-export const PAUSED_OUTPOST_ITEM = `EXISTS (
-  SELECT 1 FROM outpost_posts post JOIN outposts o ON o.id = post.outpost_id
-  WHERE post.id = q.outpost_post_id AND o.paused_at IS NOT NULL
-)`;
-
-export function postedAfterStop(post: string, lastRun: string): string {
-  return `(${post}.from_user AND ${lastRun}.status = 'cancelled'
-    AND ${post}.created_at > ${lastRun}.cancel_requested_at)`;
-}
-
-export const POSTED_AFTER_STOP_ITEM = `EXISTS (
-  SELECT 1 FROM outpost_posts post
-  JOIN LATERAL (
-    SELECT r.status, r.cancel_requested_at FROM runs r
-    WHERE r.conversation_id = q.conversation_id AND r.parent_run_id IS NULL
-    ORDER BY r.created_at DESC LIMIT 1
-  ) last ON true
-  WHERE post.id = q.outpost_post_id AND ${postedAfterStop('post', 'last')}
-)`;
 
 function toQueued(row: QueueRow): QueuedMessage {
   return {
@@ -53,7 +32,6 @@ function toQueued(row: QueueRow): QueuedMessage {
     position: row.position,
     continueRunId: row.continue_run_id,
     createdAt: row.created_at.toISOString(),
-    ...(row.outpost_post_id ? { outpostPostId: row.outpost_post_id } : {}),
     ...(row.spark_rule_card_id ? { sparkRuleCardId: row.spark_rule_card_id } : {}),
     ...(row.origin ? { origin: row.origin } : {}),
     ...(row.from_chat ? { fromChat: row.from_chat } : {}),
@@ -172,13 +150,11 @@ async function addInTransaction(
 }
 
 interface KeptRow {
-  outpost_post_id: string | null;
   spark_rule_card_id: string | null;
   origin: string | null;
 }
 
 function uneditableReason(row: KeptRow): string {
-  if (row.outpost_post_id) return 'A request from an outpost can’t be edited. Remove it instead.';
   if (row.origin === 'chat') {
     return 'A message from another chat can’t be edited. Remove it instead.';
   }
@@ -197,14 +173,14 @@ export async function editQueued(
   const { rowCount } = await db.query(
     `UPDATE chat_queue SET content = $3, updated_at = now()
      WHERE conversation_id = $1 AND id = $2
-       AND outpost_post_id IS NULL AND spark_rule_card_id IS NULL
+       AND spark_rule_card_id IS NULL
        AND origin IS DISTINCT FROM 'chat'
        AND (length($3) > 0 OR cardinality(attachment_ids) > 0)`,
     [conversationId, id, content],
   );
   if (rowCount === 1) return;
   const kept = await db.query<KeptRow>(
-    `SELECT outpost_post_id, spark_rule_card_id, origin FROM chat_queue
+    `SELECT spark_rule_card_id, origin FROM chat_queue
      WHERE conversation_id = $1 AND id = $2`,
     [conversationId, id],
   );
@@ -255,57 +231,11 @@ export async function takeQueued(
     `DELETE FROM chat_queue WHERE id = (
        SELECT q.id FROM chat_queue q
        WHERE q.conversation_id = $1
-         AND (q.id = $2 OR ($2::uuid IS NULL AND NOT ${PAUSED_OUTPOST_ITEM}))
+         AND (q.id = $2 OR $2::uuid IS NULL)
        ORDER BY q.position, q.created_at, q.id LIMIT 1
        FOR UPDATE OF q
      ) RETURNING *`,
     [conversationId, id],
   );
   return rows[0] ? toQueued(rows[0]) : null;
-}
-
-export async function takeTypedRequest(
-  db: Queryable,
-  conversationId: string,
-  postId: string,
-  flowing: boolean,
-): Promise<QueuedMessage | null> {
-  const { rows } = await db.query<QueueRow>(
-    `DELETE FROM chat_queue WHERE id = (
-       SELECT q.id FROM chat_queue q JOIN outpost_posts typed ON typed.id = q.outpost_post_id
-       WHERE q.conversation_id = $1 AND q.outpost_post_id = $2 AND typed.from_user
-         AND NOT ${PAUSED_OUTPOST_ITEM} ${flowing ? '' : `AND ${POSTED_AFTER_STOP_ITEM}`}
-       FOR UPDATE OF q
-     ) RETURNING *`,
-    [conversationId, postId],
-  );
-  return rows[0] ? toQueued(rows[0]) : null;
-}
-
-export async function takePostedAfterStop(
-  db: Queryable,
-  conversationId: string,
-): Promise<QueuedMessage | null> {
-  const { rows } = await db.query<QueueRow>(
-    `DELETE FROM chat_queue WHERE id = (
-       SELECT q.id FROM chat_queue q
-       WHERE q.conversation_id = $1 AND NOT ${PAUSED_OUTPOST_ITEM} AND ${POSTED_AFTER_STOP_ITEM}
-       ORDER BY q.position, q.created_at, q.id LIMIT 1
-       FOR UPDATE OF q
-     ) RETURNING *`,
-    [conversationId],
-  );
-  return rows[0] ? toQueued(rows[0]) : null;
-}
-
-export async function queuedOutpostPost(
-  db: Queryable,
-  conversationId: string,
-  id: string,
-): Promise<string | null> {
-  const { rows } = await db.query<{ outpost_post_id: string | null }>(
-    'SELECT outpost_post_id FROM chat_queue WHERE conversation_id = $1 AND id = $2',
-    [conversationId, id],
-  );
-  return rows[0]?.outpost_post_id ?? null;
 }

@@ -73,7 +73,6 @@ export const summaryQuery = `
     p.pending_payload_full_paths, p.pending_payload_truncated, p.pending_diffs,
     p.pending_options, p.pending_hash,
     p.pending_provider, p.pending_pr_feedback,
-    om.outpost_id, ob.name AS outpost_name, om.handle AS outpost_handle,
     ${SUB_CHAT_COLUMNS},
     ARRAY(
       SELECT cp.project_id::text FROM conversation_projects cp
@@ -83,8 +82,6 @@ export const summaryQuery = `
      WHERE cp.conversation_id = c.id ORDER BY cp.position, cp.created_at LIMIT 1) AS project_order
   FROM conversations c
   LEFT JOIN teammates tm ON tm.id = c.teammate_id
-  LEFT JOIN outpost_members om ON om.conversation_id = c.id
-  LEFT JOIN outposts ob ON ob.id = om.outpost_id
   ${SUB_CHAT_JOINS}
   LEFT JOIN LATERAL (
     SELECT id, status, error, finished_at, provider, task_id, interruption_choice,

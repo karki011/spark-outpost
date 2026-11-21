@@ -306,7 +306,8 @@ Migration `0270_drop_outposts.sql` (slice 8):
 - `UPDATE runs SET source = 'chat'` for outpost runs whose post was not typed by the user, and `'queue'` for those whose post was (`outpost_posts.from_user`), then recreate `runs_source_check` without `'outpost'`.
 - Delete `chat_queue` rows with `outpost_post_id`, then drop `chat_queue.outpost_post_id` and its index.
 - Drop `outpost_story_tasks`, `outpost_drafts`, `outpost_posts`, `outpost_members`, `outposts`.
-- Close pending `start_outpost` approval cards as expired.
+- Delete the `start_outpost` approval cards and Ask Spark's `post_outpost` cards, answered ones included, with their attention marks: the contracts no longer parse their payloads.
+- Drop the outpost triggers on `runs` and `pr_watches` and the outpost functions.
 - Former member chats keep their messages, worktrees, branches and pull requests. Their old request turns render as "From another chat · not your message".
 
 ## 11. Server shape

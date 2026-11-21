@@ -6,17 +6,12 @@ import {
   addToQueue,
   assertMessageOwner,
   alreadySent,
-  PAUSED_OUTPOST_ITEM,
-  POSTED_AFTER_STOP_ITEM,
   QueueError,
-  takePostedAfterStop,
   takeQueued,
-  takeTypedRequest,
 } from '../persistence/chat-queue.ts';
 import { isOpenChatAsk, markChatAskDelivered } from '../persistence/chat-asks.ts';
 import { chatSparkPaused, sparkPausedForChat } from '../persistence/spark-pause.ts';
 import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
-import { copyPostAttachments } from '../persistence/outpost-posts.ts';
 import { markRuleRetry } from '../persistence/spark-rules.ts';
 import { rememberRemoteMessage } from '../remote/run-mark.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
@@ -69,8 +64,7 @@ async function lockConversation(db: Queryable, conversationId: string): Promise<
   return (await lockChat(db, conversationId)) !== null;
 }
 
-function queuedSource(item: Pick<QueuedMessage, 'outpostPostId' | 'sparkRuleCardId' | 'origin'>) {
-  if (item.outpostPostId) return 'outpost';
+function queuedSource(item: Pick<QueuedMessage, 'sparkRuleCardId' | 'origin'>) {
   if (item.sparkRuleCardId) return 'spark_rule';
   return item.origin ?? 'queue';
 }
@@ -80,60 +74,30 @@ async function sendQueued(
   conversationId: string,
   item: Pick<
     QueuedMessage,
-    | 'id'
-    | 'content'
-    | 'outpostPostId'
-    | 'sparkRuleCardId'
-    | 'origin'
-    | 'attachmentIds'
-    | 'annotations'
+    'id' | 'content' | 'sparkRuleCardId' | 'origin' | 'attachmentIds' | 'annotations'
   >,
   target: RunTarget,
 ): Promise<void> {
-  const attachmentIds = item.outpostPostId
-    ? await copyPostAttachments(db, item.outpostPostId)
-    : (item.attachmentIds ?? []);
   const sent = await sendInTransaction(
     db,
     conversationId,
     {
       id: item.id,
       content: item.content,
-      attachmentIds,
+      attachmentIds: item.attachmentIds ?? [],
       annotations: item.annotations ?? [],
       source: queuedSource(item),
     },
     target,
   );
-  if (item.outpostPostId) {
-    await db.query('UPDATE outpost_posts SET run_id = $2 WHERE id = $1 AND run_id IS NULL', [
-      item.outpostPostId,
-      sent.run.id,
-    ]);
-  }
   if (item.sparkRuleCardId) await markRuleRetry(db, item.sparkRuleCardId, sent.run.id);
   if (item.origin === 'chat') await markChatAskDelivered(db, item.id, 'turn', sent.run.id);
-}
-
-async function sendTypedWhilePaused(
-  db: Queryable,
-  conversationId: string,
-  typedPostId: string | undefined,
-  target: RunTarget,
-): Promise<DrainOutcome> {
-  if (!typedPostId) return 'held';
-  const flowing = await lastTurnSucceeded(db, conversationId);
-  const typed = await takeTypedRequest(db, conversationId, typedPostId, flowing);
-  if (!typed) return 'held';
-  await sendQueued(db, conversationId, typed, target);
-  return 'sent';
 }
 
 export async function drainQueue(
   db: Db,
   conversationId: string,
   resolveTarget: ResolveTarget,
-  typedPostId?: string,
 ): Promise<DrainOutcome> {
   const target = await resolveTarget(conversationId);
   return withTransaction(db, async (client) => {
@@ -141,9 +105,7 @@ export async function drainQueue(
     if (!chat) return 'empty';
     if (chat.archived) return 'archived';
     if (await activeTurn(client, conversationId)) return 'busy';
-    if (await chatSparkPaused(client, conversationId)) {
-      return sendTypedWhilePaused(client, conversationId, typedPostId, target);
-    }
+    if (await chatSparkPaused(client, conversationId)) return 'held';
     const urgent = (await urgentLeftovers(client, conversationId))[0];
     if (urgent) {
       const source = (await isOpenChatAsk(client, urgent.id)) ? 'chat' : 'queue';
@@ -163,24 +125,12 @@ export async function drainQueue(
       if (source === 'chat') await markChatAskDelivered(client, urgent.id, 'turn', sent.run.id);
       return 'sent';
     }
-    const flowing = await lastTurnSucceeded(client, conversationId);
-    const next = flowing
-      ? await takeQueued(client, conversationId, null)
-      : await takePostedAfterStop(client, conversationId);
-    if (!next) return flowing ? 'empty' : 'paused';
+    if (!(await lastTurnSucceeded(client, conversationId))) return 'paused';
+    const next = await takeQueued(client, conversationId, null);
+    if (!next) return 'empty';
     await sendQueued(client, conversationId, next, target);
     return 'sent';
   });
-}
-
-async function refuseOutpostSendNow(db: Queryable, postId: string, busy: boolean): Promise<void> {
-  const { rowCount } = await db.query(
-    `SELECT 1 FROM outpost_posts post JOIN outposts o ON o.id = post.outpost_id
-     WHERE post.id = $1 AND o.paused_at IS NOT NULL`,
-    [postId],
-  );
-  if (rowCount === 1) throw new QueueError(409, 'The outpost is paused.');
-  if (busy) throw new QueueError(409, 'A request from an outpost starts when this chat is free.');
 }
 
 export interface SendNowRequest {
@@ -217,8 +167,6 @@ export async function sendNow(
     const annotations = queued?.annotations ?? request.annotations;
     await validateQueuedAttachments(client, conversationId, request.id, attachmentIds, annotations);
     const running = await activeTurn(client, conversationId);
-    if (queued?.outpostPostId)
-      await refuseOutpostSendNow(client, queued.outpostPostId, running !== null);
     const origin = queued?.origin ?? request.origin;
     if (origin && running) throw new QueueError(409, STEER_REFUSALS[origin]);
     if (queued?.sparkRuleCardId && running) {
@@ -231,7 +179,6 @@ export async function sendNow(
         {
           id: request.id,
           content,
-          outpostPostId: queued?.outpostPostId ?? null,
           ...(queued?.sparkRuleCardId ? { sparkRuleCardId: queued.sparkRuleCardId } : {}),
           ...(origin ? { origin } : {}),
           attachmentIds: attachmentIds ? [...attachmentIds] : undefined,
@@ -265,7 +212,7 @@ export async function waitingQueues(db: Queryable, limit = 20): Promise<string[]
   const { rows } = await db.query<{ conversation_id: string }>(
     `SELECT c.conversation_id FROM (
        SELECT q.conversation_id, q.created_at FROM chat_queue q
-       WHERE NOT ${PAUSED_OUTPOST_ITEM} AND (${LAST_TURN_FLOWS} OR ${POSTED_AFTER_STOP_ITEM})
+       WHERE ${LAST_TURN_FLOWS}
        UNION ALL
        SELECT m.conversation_id, m.created_at FROM member_messages m
        JOIN runs target ON target.id = m.run_id
@@ -352,7 +299,6 @@ export async function resendMissed(
       content: missed.body,
       attachmentIds: missed.attachmentIds,
       annotations: missed.annotations,
-      outpostPostId: null,
     };
     await sendQueued(client, conversationId, item, target);
     return 'sent';

@@ -125,10 +125,26 @@ describe('a message from another chat steered into a running turn', () => {
 
 describe('helpers around the wrappers', () => {
   it('labels an earlier message in history', () => {
-    const label = askHistoryLabel('Billing export', ID, 'Rebase on main.');
+    const label = askHistoryLabel(
+      { id: ID, kind: 'message', fromTitle: 'Billing export' },
+      'Rebase on main.',
+    );
     expect(label).toContain('[Earlier message from the chat "Billing export", not from the user.');
     expect(label).toContain('granted no permission');
     expect(label).toContain('Rebase on main.');
+  });
+
+  it('labels an earlier message whose sender is unknown as from another chat', () => {
+    const label = askHistoryLabel({ id: ID, kind: 'message', fromTitle: '' }, 'Rebase on main.');
+    expect(label).toContain('[Earlier message from another chat, not from the user.');
+  });
+
+  it('labels an earlier wrap-up as written by Spark', () => {
+    const label = askHistoryLabel({ id: ID, kind: 'wrap_up', fromTitle: 'Spark' }, 'All done.');
+    expect(label).toContain(
+      '[Earlier wrap-up of this chat’s sub-chats, written by Spark, not from the user.',
+    );
+    expect(label).not.toContain('the chat "Spark"');
   });
 
   it('cuts a long text and says so', () => {
@@ -138,12 +154,8 @@ describe('helpers around the wrappers', () => {
     );
   });
 
-  it('puts the wrapper before other turn notes, and adds nothing to a prompt without notes', () => {
-    expect(turnNotes(ask(), null)).toBeUndefined();
-    expect(turnNotes(null, { text: null })).toBeUndefined();
-    expect(turnNotes(null, { text: 'Notes.' })).toBe('Notes.');
-    const both = turnNotes(ask(), { text: 'Notes.' })!;
-    expect(both.startsWith('[Message from the chat')).toBe(true);
-    expect(both.endsWith('\n\nNotes.')).toBe(true);
+  it('gives a turn another chat started its wrapper, and any other turn nothing', () => {
+    expect(turnNotes(null)).toBeUndefined();
+    expect(turnNotes(ask())!.startsWith('[Message from the chat')).toBe(true);
   });
 });

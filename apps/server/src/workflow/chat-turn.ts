@@ -3,7 +3,6 @@ import { prepareTurn } from '../compaction/prepare-turn.ts';
 import { placeChatOrStop } from '../orchestration/chat-place.ts';
 import { handToSparks } from '../orchestration/spark-handoff.ts';
 import { recordKeptChanges } from '../outcomes/record.ts';
-import { auditOutpostRequest } from '../outposts/request-audit.ts';
 import { isWrapUp } from '../sub-chats/user-asked.ts';
 import { replyToWrapUp } from '../sub-chats/wrap-up-turn.ts';
 import type { Lease } from '../persistence/jobs.ts';
@@ -82,7 +81,6 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
     input = await withChatFolder(deps.chatFolders, input);
     if (input.agentCycle) return await runAgentCycle(start, input, seen);
-    await auditOutpostRequest(deps.db, lease, input);
     input = await noteProjectMove(deps.db, input, append, deps.chatFolders);
     const placed = await placeChatOrStop(deps, input, append, false);
     if (!placed) return;

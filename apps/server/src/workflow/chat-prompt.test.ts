@@ -20,7 +20,6 @@ const worktree: ChatPromptProject = {
 
 const base: ChatPromptFacts = {
   project: worktree,
-  outpostDraftTool: true,
   level: 'full-auto',
   customInstructions: null,
 };
@@ -46,7 +45,6 @@ describe('chatPrompt', () => {
         '',
         'How to split work',
         delegationPolicy(),
-        "- If separate Spark chats are needed, propose them with spark_outpost_draft and say why. The user starts them; you don't.",
         '- If the request is unclear, ask one question and stop.',
         '',
         'Engineering',
@@ -76,13 +74,6 @@ describe('chatPrompt', () => {
     expect(prompt.split('\n\n')[0]).toBe(text.INTRO);
   });
 
-  it('never mentions the draft tool when the run does not have it', () => {
-    const prompt = build({ outpostDraftTool: false });
-    expect(prompt).not.toContain('spark_outpost_draft');
-    expect(prompt).not.toContain('sub-chats');
-    expect(prompt).toContain(text.SPLIT_UNCLEAR);
-  });
-
   it('asks a Do turn to ask with its question tool, and leaves other turns as they were', () => {
     const doing = build({ asksWithTool: true });
     expect(doing).toContain(text.SPLIT_ASK_WITH_TOOL);
@@ -91,22 +82,13 @@ describe('chatPrompt', () => {
     expect(build({})).not.toContain('AskUserQuestion');
   });
 
-  it('gives the one split rule, and no outpost tool, only when spark_sub_chats is offered', () => {
-    const prompt = build({ subChatsTool: true, outpostStartTool: true });
+  it('gives the one split rule only when spark_sub_chats is offered', () => {
+    const prompt = build({ subChatsTool: true });
     expect(prompt).toContain(text.SPLIT_SUB_CHATS_TOOL);
     expect(prompt).toContain('separable parts that ship separately');
     expect(prompt).toContain('When the user says to split, split');
-    expect(prompt).not.toContain('spark_outpost');
     expect(build({})).not.toContain('spark_sub_chats');
-    expect(build({ subChatsTool: true, assignedWork: true })).not.toContain('spark_sub_chats');
-  });
-
-  it('offers starting sub-chats only when the run has the start tool', () => {
-    const prompt = build({ outpostStartTool: true });
-    expect(prompt).toContain(text.SPLIT_SUB_CHATS_START);
-    expect(prompt).toContain('spark_outpost_start');
-    expect(prompt).not.toContain("The user starts them; you don't.");
-    expect(build({})).not.toContain('spark_outpost_start');
+    expect(build({})).not.toContain('sub-chats');
   });
 
   it('describes a checkout, a missing repo name and a folder without a branch', () => {
@@ -248,31 +230,21 @@ describe('chatPrompt', () => {
   });
 
   it('asks the lead and its workers for the smallest complete change and a short risk line', () => {
-    for (const prompt of [build({}), build({ assignedWork: true })]) {
-      expect(prompt).toContain('stop at the first rung that holds: 1. Does it need to exist?');
-      expect(prompt).toContain('never add a dependency for a few lines');
-      expect(prompt).toContain('Be lazy about the solution, never about the change');
-      expect(prompt).toContain('Never cut validation at trust boundaries');
-      expect(prompt).toContain('Add no comment that restates what the code does');
-      expect(prompt).toContain('what was skipped or not checked and any risk the user must know');
-    }
-  });
-
-  it('keeps assigned workers bounded even when chat creation tools are present', () => {
-    const prompt = build({ assignedWork: true, outpostStartTool: true });
-    expect(prompt).toContain('Execute that assignment and return evidence to the lead');
-    expect(prompt).not.toContain('act as the lead');
-    expect(prompt).not.toContain('spark_outpost_start');
-    expect(prompt).not.toContain('spark_outpost_draft');
+    const prompt = build({});
+    expect(prompt).toContain('stop at the first rung that holds: 1. Does it need to exist?');
+    expect(prompt).toContain('never add a dependency for a few lines');
+    expect(prompt).toContain('Be lazy about the solution, never about the change');
+    expect(prompt).toContain('Never cut validation at trust boundaries');
+    expect(prompt).toContain('Add no comment that restates what the code does');
+    expect(prompt).toContain('what was skipped or not checked and any risk the user must know');
   });
 
   it('keeps projectless chats on the in-session delegation path', () => {
-    const prompt = chatPrompt({ ...base, project: null, outpostDraftTool: false });
+    const prompt = chatPrompt({ ...base, project: null });
     expect(prompt).toContain(
       'Use separate Spark chats only for parts of a job that ship separately',
     );
     expect(prompt).toContain('Use only delegation capabilities actually available');
-    expect(prompt).not.toContain('spark_outpost_start');
   });
 
   it('gives workers reusable roles and evidence-based handoffs without a fixed pipeline', () => {

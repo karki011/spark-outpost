@@ -14,12 +14,9 @@ export interface ChatPromptProject {
 
 export interface ChatPromptFacts {
   project: ChatPromptProject | null;
-  outpostDraftTool: boolean;
-  outpostStartTool?: boolean;
   subChatsTool?: boolean;
   level: InvolvementLevel;
   asksWithTool?: boolean;
-  assignedWork?: boolean;
   builderChat?: { spark: { id: string; name: string } | null };
   customInstructions: string | null;
 }
@@ -39,18 +36,11 @@ function whereLines(project: ChatPromptProject): string[] {
   return lines;
 }
 
-function subChatLines(facts: ChatPromptFacts): string[] {
-  if (facts.assignedWork) return [];
-  if (facts.subChatsTool) return [text.SPLIT_SUB_CHATS_TOOL];
-  if (facts.outpostStartTool) return [text.SPLIT_SUB_CHATS_START];
-  return facts.outpostDraftTool ? [text.SPLIT_SUB_CHATS] : [];
-}
-
 function splitSection(facts: ChatPromptFacts): string {
   return [
     text.SPLIT_HEADING,
-    delegationPolicy({ assignedWork: facts.assignedWork === true }),
-    ...subChatLines(facts),
+    delegationPolicy(),
+    ...(facts.subChatsTool ? [text.SPLIT_SUB_CHATS_TOOL] : []),
     facts.asksWithTool ? text.SPLIT_ASK_WITH_TOOL : text.SPLIT_UNCLEAR,
   ].join('\n');
 }

@@ -15,13 +15,10 @@ import {
   editQueued,
   listQueue,
   QueueError,
-  queuedOutpostPost,
   reorderQueue,
   takeQueued,
 } from '../persistence/chat-queue.ts';
-import { cancelPost } from '../persistence/outpost-tasks.ts';
 import { auditAskEnd, endRemovedAsk, NO_REPLY_REASONS } from '../sub-chats/asks.ts';
-import { stopRun } from '../workflow/stop-run.ts';
 import { drainQueue, resendMissed, sendNow, type ResolveTarget } from '../workflow/queue-drain.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { BadRequestError, paramId, parseBody } from './validation.ts';
@@ -87,24 +84,18 @@ export function queueRoutes({ db, workspaceId, fixedRunProvider }: QueueRouteDep
   };
 
   const removeQueued = async (conversationId: string, id: string) => {
-    const postId = await queuedOutpostPost(db, conversationId, id);
-    if (postId === null) {
-      const removed = await withTransaction(db, async (client) => {
-        const taken = await takeQueued(client, conversationId, id);
-        const ask = taken?.origin === 'chat' ? await endRemovedAsk(client, id) : null;
-        return { taken, ask };
-      });
-      if (removed.ask) {
-        await auditAskEnd(db, removed.ask, 'no_reply', NO_REPLY_REASONS.removed);
-      }
-      if (removed.taken) return;
-      if (await sentOrSending(db, id)) {
-        throw new QueueError(409, 'That message has already been sent.');
-      }
-      return;
+    const removed = await withTransaction(db, async (client) => {
+      const taken = await takeQueued(client, conversationId, id);
+      const ask = taken?.origin === 'chat' ? await endRemovedAsk(client, id) : null;
+      return { taken, ask };
+    });
+    if (removed.ask) {
+      await auditAskEnd(db, removed.ask, 'no_reply', NO_REPLY_REASONS.removed);
     }
-    const outcome = await cancelPost(db, postId);
-    if (outcome.kind === 'stopping') await stopRun(db, outcome.runId);
+    if (removed.taken) return;
+    if (await sentOrSending(db, id)) {
+      throw new QueueError(409, 'That message has already been sent.');
+    }
   };
 
   router.get('/conversations/:id/queue', async (req, res) => {

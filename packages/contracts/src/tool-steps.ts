@@ -36,7 +36,6 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_answer_card: 'Answering a card',
   spark_pause: 'Pausing or resuming Spark',
   spark_start_ticket: 'Starting work on a ticket',
-  spark_post_outpost: 'Posting in an outpost',
   spark_clear_finished: 'Clearing a finished chat',
   spark_set_aside: 'Setting a card aside',
   spark_meeting: 'Handling a meeting alert',
@@ -88,11 +87,6 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_slack: 'Reading Slack',
   spark_slack_post: 'Posting to Slack',
   spark_artifact: 'Making an artifact',
-  spark_outpost: 'Reading the outpost',
-  spark_outpost_ask: 'Asking another chat',
-  spark_outpost_note: 'Leaving a note in the outpost',
-  spark_outpost_draft: 'Proposing sub-task chats',
-  spark_outpost_start: 'Starting sub-task chats',
   spark_sub_chats: 'Starting sub-chats',
 };
 

@@ -59,11 +59,11 @@ describe.each(['hands-off', 'full-auto'] as const)(
       );
     });
 
-    it('after an outpost request', async () => {
-      expect(reused(await sequence(['user', 'outpost', 'user'], level))).toEqual([
+    it('reopens it for a message from another chat, whose turn is offered other Spark tools', async () => {
+      expect(reused(await sequence(['user', 'chat', 'user'], level))).toEqual([
         false,
-        true,
-        true,
+        false,
+        false,
       ]);
     });
 

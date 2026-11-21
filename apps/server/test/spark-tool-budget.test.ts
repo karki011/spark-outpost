@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { advertisedSize, SESSION_CASES } from './spark-tool-sizes.ts';
 
 const PLAIN_CHAT_MAX_CHARS = 27_800;
-const INSTRUCTIONS_MAX_CHARS = 1_800;
+const INSTRUCTIONS_MAX_CHARS = 1_650;
 const BROWSER_GROUP_MAX_CHARS = 7_700;
 const ATLASSIAN_GROUPS_MAX_CHARS = 7_600;
 const SERVICENOW_GROUP_MAX_CHARS = 3_000;
@@ -38,15 +38,6 @@ describe('the size of the Spark tool list a session is sent', () => {
     );
   });
 
-  it('adds the outpost tools only for a chat that can use them', async () => {
-    const plain = await advertisedSize(SESSION_CASES['plain chat, nothing connected']);
-    const member = await advertisedSize(SESSION_CASES['chat in an outpost, nothing connected']);
-    expect(member.tools - plain.tools).toBe(4);
-    expect(member.chars - plain.chars).toBe(member.groups.outpost! + member.groups.outpost_draft!);
-    expect(member.groups.other).toBe(plain.groups.other);
-    expect(member.instructionChars).toBeGreaterThan(plain.instructionChars);
-  });
-
   it('adds the ticket tools and four Atlassian tools, within a budget sized for every Jira action a person can take, with Atlassian connected', async () => {
     const plain = await advertisedSize(SESSION_CASES['plain chat, nothing connected']);
     const atlassian = await advertisedSize(SESSION_CASES['plain chat, Atlassian connected']);
@@ -76,7 +67,6 @@ describe('the size of the Spark tool list a session is sent', () => {
         linked.groups.publish! +
         linked.groups.pull_requests! +
         linked.groups.github! +
-        linked.groups.outpost_draft! +
         linked.groups.sub_chats!,
     );
     expect(linked.groups.sub_chats).toBeLessThanOrEqual(SUB_CHATS_TOOL_MAX_CHARS);

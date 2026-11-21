@@ -83,18 +83,6 @@ export const runSchema = z.object({
   workflowStarted: z.boolean().optional(),
   typedByUser: z.boolean().optional(),
   fromChat: z.string().optional(),
-  outpost: z
-    .object({
-      postId: z.uuid(),
-      outpostId: z.uuid(),
-      outpostName: z.string(),
-      fromHandle: z.string().nullable(),
-      fromUser: z.boolean(),
-      fromSpark: z.boolean().default(false),
-      userStarted: z.boolean().default(false),
-      agentStarted: z.boolean().default(false),
-    })
-    .optional(),
 });
 export type Run = z.infer<typeof runSchema>;
 
@@ -111,12 +99,4 @@ export const interruptionSchema = z.object({
 });
 export type Interruption = z.infer<typeof interruptionSchema>;
 
-export const OUTPOST_DRAFT_ACTIVITY = 'outpost_draft';
 export const PUBLISH_NOTE_ACTIVITY = 'publish_note';
-
-export const outpostDraftActivitySchema = z.object({
-  draftId: z.uuid(),
-  chats: z.number().int().positive(),
-  stacked: z.number().int().nonnegative(),
-});
-export type OutpostDraftActivity = z.infer<typeof outpostDraftActivitySchema>;

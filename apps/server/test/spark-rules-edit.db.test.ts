@@ -271,7 +271,7 @@ describe('Allow for this session', () => {
 
   it('never applies to a turn the user did not type', async () => {
     await grantSession();
-    await setRun('claude', 'bypassPermissions', 'outpost');
+    await setRun('claude', 'bypassPermissions', 'chat');
     await asksAgain();
   });
 

@@ -78,21 +78,6 @@ async function checkAt(now: Date): Promise<void> {
   await checkTriggers(clock.deps);
 }
 
-async function outpostPost(fromUser: boolean): Promise<string> {
-  const outpostId = randomUUID();
-  const postId = randomUUID();
-  await t.db.query(`INSERT INTO outposts (id, workspace_id, name) VALUES ($1, $2, 'Divider')`, [
-    outpostId,
-    t.workspaceId,
-  ]);
-  await t.db.query(
-    `INSERT INTO outpost_posts (id, outpost_id, kind, body, from_user, to_handle)
-     VALUES ($1, $2, 'request', 'Build it.', $3, 'api')`,
-    [postId, outpostId, fromUser],
-  );
-  return postId;
-}
-
 async function startedChat(): Promise<{ conversationId: string; runId: string }> {
   const conversationId = await openChat(t, { root });
   const runId = await send(conversationId, 'Fix the date divider.', { source: 'ui' });
@@ -185,14 +170,6 @@ describe('a chat starts', () => {
     await send(conversationId, 'Back to this.');
     expect(await events()).toHaveLength(1);
     expect(await runsOf(t)).toHaveLength(1);
-  });
-
-  it('fires for a chat the user starts with a request typed in an outpost', async () => {
-    await saveTriggers(t.db, t.workspaceId, FLOW, triggers());
-    const member = await openChat(t, { root });
-    const typed = await outpostPost(true);
-    await send(member, 'Build the API slice.', { id: typed, source: 'outpost' });
-    expect((await events()).map((item) => item.conversationId)).toEqual([member]);
   });
 
   it('never fires for a chat whose first message another chat sent', async () => {
@@ -327,11 +304,7 @@ describe('chats that never fire', () => {
     expect(await events()).toEqual([]);
   });
 
-  it('a sub-chat another chat’s outpost request started, and a fresh chat continued from another', async () => {
-    const sub = await openChat(t, { root });
-    const lead = await outpostPost(false);
-    await send(sub, 'Build the API slice.', { id: lead, source: 'outpost' });
-
+  it('a fresh chat continued from another', async () => {
     const original = await startedChat();
     const fresh = await openChat(t, { root });
     await t.db.query(

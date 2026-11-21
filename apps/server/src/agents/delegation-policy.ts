@@ -12,9 +12,9 @@ export const ASSIGNED_WORK_LINE =
 export const LEAD_WORK_LINE =
   '- For implementation work, act as the lead and delegate the edits to available provider sub-agents, including a single small slice. Choose the number of agents and slices yourself; a builder may own one slice or several related slices. You own scoping, coordination, integration and the final result.';
 
-export function delegationPolicy(facts: { assignedWork?: boolean } = {}): string {
+export function delegationPolicy(): string {
   return [
-    facts.assignedWork ? ASSIGNED_WORK_LINE : LEAD_WORK_LINE,
+    LEAD_WORK_LINE,
     '- A provider sub-agent or worker already assigned a bounded slice executes it directly; do not recursively create agents to satisfy this policy. Include this boundary in every delegated assignment.',
     '- Use provider sub-agents within the current session by default. Use separate Spark chats only for parts of a job that ship separately, on their own branches or repositories.',
     '- Give each worker a goal, owned paths and boundaries, required and provided interfaces, dependencies, done criteria and verification expectations. Avoid overlapping edits; a worker may receive several related slices. Make the handoff explicit.',

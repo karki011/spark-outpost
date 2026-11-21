@@ -88,8 +88,6 @@ function routeOf(action: SparkAction): Route | null {
       return { method: 'PUT', path: '/api/spark-pause' };
     case 'start_ticket':
       return { method: 'POST', path: `/api/tickets/linear/${PLACEHOLDER}/start` };
-    case 'post_outpost':
-      return { method: 'POST', path: `/api/outposts/${PLACEHOLDER}/posts` };
     case 'clear_finished':
       return { method: 'POST', path: `/api/attention/chats/${PLACEHOLDER}/read` };
     case 'dismiss_meeting':

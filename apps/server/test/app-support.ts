@@ -7,7 +7,6 @@ import type { CommandResult, RunCommand } from '../src/setup/command.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { loginShellSpawner } from '../src/terminal/pty.ts';
 import { TerminalSessions } from '../src/terminal/sessions.ts';
-import { outpostDelivery, type OutpostDelivery } from '../src/outposts/mount.ts';
 import { PreviewServers } from '../src/preview/servers.ts';
 import { AgentTerminals } from '../src/terminal/agent-terminals.ts';
 import { fakeAgentTerminalRuntime } from './agent-terminal-support.ts';
@@ -29,7 +28,6 @@ export interface TestAppOptions {
   probeCapabilities?: AppOptions['probeCapabilities'];
   appEvents?: AppEventFeed;
   hub?: RunEventHub;
-  outposts?: OutpostDelivery;
   port?: number;
   githubApiUrl?: string;
   githubApp?: AppOptions['githubApp'];
@@ -91,7 +89,6 @@ export function testAppOptions(t: TestDb, options: TestAppOptions = {}): AppOpti
       options.agentTerminals ??
       new AgentTerminals(t.db, t.workspaceId, fakeAgentTerminalRuntime().runtime),
     appEvents: options.appEvents ?? new AppEventFeed(),
-    outposts: options.outposts ?? outpostDelivery({ db: t.db, port, apiToken: API_TOKEN }),
     loginShell: '/bin/zsh',
     probeCapabilities: options.probeCapabilities ?? unavailableProbe,
     githubApiUrl: options.githubApiUrl,

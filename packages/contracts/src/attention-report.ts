@@ -16,7 +16,6 @@ export interface AttentionReport {
 }
 
 export function attentionRequestTitle(chat: ConversationSummary): string {
-  if (chat.outpost) return `@${chat.outpost.handle} needs you in ${chat.outpost.name}`;
   if (chat.parent) return `${chat.title} in ${chat.parent.title} needs you`;
   return `Spark needs you: ${chat.title}`;
 }

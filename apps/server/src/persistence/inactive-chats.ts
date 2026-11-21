@@ -30,14 +30,6 @@ const RUNNING_TERMINAL = `EXISTS (
   WHERE t.conversation_id = c.id AND t.state NOT IN ('exited', 'error', 'interrupted')
 )`;
 
-const OPEN_OUTPOST_REQUEST = `EXISTS (
-  SELECT 1 FROM outpost_members om
-  JOIN outpost_posts op ON op.outpost_id = om.outpost_id
-  LEFT JOIN runs carrying ON carrying.id = op.run_id
-  WHERE om.conversation_id = c.id AND op.kind = 'request' AND op.closed_state IS NULL
-    AND (op.run_id IS NULL OR carrying.status IN ('queued', 'running', 'awaiting_approval'))
-)`;
-
 const UNSETTLED_SUB_CHAT = `EXISTS (
   SELECT 1 FROM sub_chats piece
   WHERE piece.parent_conversation_id = c.id AND (
@@ -68,7 +60,6 @@ const INACTIVE = `${LISTED_CHAT} AND c.archived_at IS NULL AND c.pinned_at IS NU
   AND NOT ${QUEUED_MESSAGE}
   AND NOT ${WAITING_CARD}
   AND NOT ${RUNNING_TERMINAL}
-  AND NOT ${OPEN_OUTPOST_REQUEST}
   AND NOT ${UNSETTLED_SUB_CHAT}
   AND NOT ${HELD_SUB_CHAT}
   AND NOT ${ENABLED_SCHEDULE}`;

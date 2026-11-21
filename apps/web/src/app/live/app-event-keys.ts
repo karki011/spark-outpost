@@ -190,8 +190,6 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
       return [ticketInbox, ticketConnections, agentConnectors];
     case 'preview':
       return [{ queryKey: previewKeys.all }];
-    case 'outpost_changed':
-      return [];
     case 'sub_chats_changed':
       return [list, ...conversationScoped(event, false)];
     case 'agent_terminal':

@@ -31,21 +31,6 @@ afterEach(async () => {
 });
 
 describe('what Spark reads from the repository about a stack', () => {
-  it("knows whether the child holds the parent's commits", async () => {
-    expect(await stackGit.isAncestor(repo.root, PARENT, CHILD)).toBe(true);
-    await commitOn(PARENT, 'more.ts');
-    expect(await stackGit.isAncestor(repo.root, PARENT, CHILD)).toBe(false);
-    git(repo.root, 'checkout', '-q', CHILD);
-    git(repo.root, 'merge', '-q', '--no-edit', PARENT);
-    expect(await stackGit.isAncestor(repo.root, PARENT, CHILD)).toBe(true);
-  });
-
-  it('does not answer for a branch that is not there', async () => {
-    await expect(stackGit.isAncestor(repo.root, 'spark/gone', CHILD)).rejects.toThrow(
-      'Could not compare spark/gone',
-    );
-  });
-
   it('sees the parent on the remote only after it is pushed', async () => {
     expect(await stackGit.branchOnRemote(repo.root, PARENT)).toBe(false);
     git(repo.root, 'push', '-q', 'origin', PARENT);

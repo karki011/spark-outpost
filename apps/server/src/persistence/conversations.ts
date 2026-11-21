@@ -47,7 +47,6 @@ import { conversationUsage } from './usage.ts';
 import { findInterruption } from './interruptions.ts';
 import { withNativeTerminals } from './native-terminals.ts';
 import { applyConversationOptions } from './conversation-options.ts';
-import { continueOpenRequest } from '../outposts/continuation.ts';
 import { noteFirstMessage } from '../crew-flows/chat-started.ts';
 import { deviceStartingRun } from '../remote/run-mark.ts';
 import { listChatFiles } from '../chat-files/store.ts';
@@ -55,8 +54,6 @@ import { listArtifactPages } from '../artifacts/store.ts';
 import {
   MESSAGE_COLUMNS,
   RUN_FROM_CHAT_COLUMN,
-  RUN_OUTPOST_COLUMNS,
-  RUN_OUTPOST_JOINS,
   toConversationSummary,
   toMessage,
   toRun,
@@ -157,7 +154,6 @@ export async function pruneEmptyConversations(db: Queryable, workspaceId: string
        AND c.updated_at < now() - interval '1 day'
        AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
        AND NOT EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id)
-       AND NOT EXISTS (SELECT 1 FROM outpost_members om WHERE om.conversation_id = c.id)
        AND NOT EXISTS (SELECT 1 FROM sub_chats sc WHERE sc.conversation_id = c.id)`,
     [workspaceId],
   );
@@ -203,7 +199,7 @@ export async function getConversationDetail(
       [id],
     ),
     db.query<RunRow>(
-      `SELECT r.*, ${RUN_OUTPOST_COLUMNS}, ${RUN_FROM_CHAT_COLUMN} FROM runs r ${RUN_OUTPOST_JOINS}
+      `SELECT r.*, ${RUN_FROM_CHAT_COLUMN} FROM runs r
        WHERE r.conversation_id = $1 ORDER BY r.created_at`,
       [id],
     ),
@@ -321,7 +317,6 @@ export type SendMessageInput = Omit<
     | 'pr_follow_up'
     | 'queue'
     | 'slack'
-    | 'outpost'
     | 'spark_rule'
     | 'voice'
     | 'assistant'
@@ -409,7 +404,6 @@ export async function sendInTransaction(
       device,
     ],
   );
-  await continueOpenRequest(client, conversationId, runId);
   if (!terminal) {
     await noteFirstMessage(client, {
       conversationId,

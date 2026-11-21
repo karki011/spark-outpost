@@ -11,8 +11,6 @@ import {
 import type { Db, Queryable } from '../persistence/db.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { newId } from '../persistence/ids.ts';
-import { ownRequestText } from '../persistence/outpost-own-request.ts';
-import { stackParentOf as outpostStackParentOf } from '../outposts/stack-base.ts';
 import { stackParentOf, type StackParent } from '../sub-chats/stack-base.ts';
 import {
   addChatWorktree,
@@ -247,9 +245,7 @@ async function protectedNames(root: string): Promise<string[]> {
 }
 
 async function decide(deps: ChatPlaceDeps, target: Target, request: string) {
-  const parent =
-    (await stackParentOf(deps.db, target.conversationId)) ??
-    (await outpostStackParentOf(deps.db, target.conversationId));
+  const parent = await stackParentOf(deps.db, target.conversationId);
   const choice = await placeChoice(deps.db, target.conversationId, target.projectId);
   const branches = await listBranches(target.root);
   const known = new Set([...branches.local, ...branches.remote.keys()]);
@@ -296,10 +292,7 @@ async function freshPlace(deps: ChatPlaceDeps, input: RunInput, target: Target) 
     const record = await inPlace(deps, target, decision.branch);
     return { input, repoRoot: target.root, note: placeNote(record, null) };
   }
-  const asked = input.outpostRequest
-    ? await ownRequestText(deps.db, input.outpostRequest.postId)
-    : null;
-  const planned = await plannedSource(deps, target, asked ?? input.userRequest, branches, decision);
+  const planned = await plannedSource(deps, target, input.userRequest, branches, decision);
   if (!planned) return { input, repoRoot: target.root, note: null };
   const { record, prep } = await createCopy(deps, target, planned);
   const extra = decision.kind === 'new' ? decision.note : null;

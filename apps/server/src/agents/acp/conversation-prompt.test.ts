@@ -240,7 +240,7 @@ describe('command-first prompt', () => {
     expect(blocks[1]).toEqual({ type: 'text', text: '/deploy' });
   });
 
-  it('puts the preamble, the outpost note and the title request before the command', () => {
+  it('puts the preamble, the turn note and the title request before the command', () => {
     expect(commandPreamble({ preamble: 'P', turnPreamble: 'T', askTitle: true } as never)).toMatch(
       /^P\n\nT\n\n/,
     );

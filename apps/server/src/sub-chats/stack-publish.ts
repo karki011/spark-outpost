@@ -42,15 +42,8 @@ async function branchOwner(db: Queryable, worktree: ChatWorktree): Promise<Paren
 
 function pullBaseOf(parent: ParentRow, parentBranch: string | null, defaultBranch: string) {
   return prBase({
-    handle: '',
-    parentHandle: parent.title ?? '',
     defaultBranch,
-    branch: null,
-    pull: null,
     parentBranch,
-    parentOnRemote: true,
-    parentInBranch: null,
-    parentState: null,
     parentPull: parent.pr_state ? { state: parent.pr_state } : null,
   });
 }

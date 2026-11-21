@@ -142,7 +142,6 @@ export const conversationSummarySchema = z.object({
   branch: z.string().nullable().optional(),
   teammate: teammateTagSchema.nullable().optional(),
   pullRequestMerged: z.boolean().optional(),
-  outpost: z.object({ id: z.uuid(), name: z.string(), handle: z.string() }).optional(),
   parent: chatRefSchema.optional(),
   formerParent: formerParentSchema.optional(),
   subChat: subChatLinkSchema.optional(),

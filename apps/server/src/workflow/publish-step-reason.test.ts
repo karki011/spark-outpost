@@ -8,8 +8,6 @@ const turn: ReasonFacts = {
   parentRunId: null,
 };
 
-const fromAnotherChat = { postId: 'p1', outpostName: 'Launch', fromUser: false };
-
 describe('publishReason', () => {
   it('has no reason at Automatic when the message did not ask', () => {
     expect(publishReason(turn)).toBeNull();
@@ -34,13 +32,8 @@ describe('publishReason', () => {
   });
 
   it('does not count a request that came from another chat as the user asking', () => {
-    const request = { ...turn, userRequest: 'push it', outpostRequest: fromAnotherChat };
+    const request = { ...turn, userRequest: 'push it', assistantSent: true };
     expect(publishReason(request)).toBeNull();
-  });
-
-  it('never publishes from a story wrap-up', () => {
-    const wrapUp = { ...fromAnotherChat, fromUser: true, wrapUp: true };
-    expect(publishReason({ ...turn, level: 'full-auto', outpostRequest: wrapUp })).toBeNull();
   });
 
   it('never publishes from the wrap-up of a chat’s sub-chats', () => {

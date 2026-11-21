@@ -41,7 +41,7 @@ const CREW_CHANGE_VERB =
 
 const SPLIT_REQUEST = asked(
   'start|split|spin up|kick off|launch|create',
-  'sub-?chats?|outposts?|sub-?tasks?|parallel chats?|separate chats?',
+  'sub-?chats?|sub-?tasks?|parallel chats?|separate chats?',
 );
 const SEND_VERB = 'send|tell|ask|message|forward|pass|relay|share|notify|ping|reply';
 
@@ -120,7 +120,6 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
     `${RECORD_NOUN}|callers?|work notes?`,
   ),
   send_to_chat: asked(SEND_VERB, 'chats?|sub-?chats?'),
-  start_outpost: SPLIT_REQUEST,
   start_sub_chats: SPLIT_REQUEST,
   stop_sub_chat: asked('stop|cancel|halt|kill|end', 'sub-?chats?|chats?'),
   rules_edit: null,
@@ -162,8 +161,6 @@ interface RunFacts {
   request: string | null;
   child?: boolean | null;
   chosen_mode?: string | null;
-  outpost_run: boolean | null;
-  from_user: boolean | null;
   spark_rule_retry?: boolean | null;
   assistant_sent?: boolean | null;
   assistant_acts?: AssistantActs | null;
@@ -178,33 +175,26 @@ async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
               ELSE COALESCE(r.used_mode, CASE WHEN c.session_type = 'terminal' THEN NULL
                 ELSE r.agent_mode END) END AS mode,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
-              = 'outpost' AS outpost_run,
-            COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'spark_rule' AS spark_rule_retry,
             (COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               IN ('assistant', 'workflow', 'chat') OR COALESCE((r.route->'spark') ? 'step', false))
               AS assistant_sent,
             (SELECT pf.assistant_acts FROM profiles pf
              WHERE pf.workspace_id = c.workspace_id
-               AND pf.assistant_conversation_id = c.id) AS assistant_acts,
-            (SELECT post.from_user FROM outpost_posts post
-             WHERE post.id = r.user_message_id) AS from_user
+               AND pf.assistant_conversation_id = c.id) AS assistant_acts
      FROM runs r JOIN conversations c ON c.id = r.conversation_id
        LEFT JOIN messages m ON m.id = r.user_message_id
      WHERE r.id = $1`,
     [runId],
   );
-  return (
-    rows[0] ?? { provider: null, mode: null, request: null, outpost_run: null, from_user: null }
-  );
+  return rows[0] ?? { provider: null, mode: null, request: null };
 }
 
 export async function userWroteTurn(db: Queryable, runId: string): Promise<boolean> {
   const run = await runFacts(db, runId);
   if (run.provider === null && run.mode === null) return false;
   if (run.assistant_sent === true || run.spark_rule_retry === true) return false;
-  if (await followUpRun(db, runId)) return false;
-  return run.outpost_run !== true || run.from_user === true;
+  return !(await followUpRun(db, runId));
 }
 
 export function askedToSend(request: string, chatTitle: string): boolean {
@@ -233,7 +223,6 @@ async function followUpRun(db: Queryable, runId: string): Promise<boolean> {
 function runText(run: RunFacts): UserTextInput {
   return {
     userRequest: run.request ?? '',
-    outpostRequest: run.outpost_run === true ? { fromUser: run.from_user === true } : null,
     sparkRuleRetry: run.spark_rule_retry === true,
     assistantSent: run.assistant_sent === true,
   };

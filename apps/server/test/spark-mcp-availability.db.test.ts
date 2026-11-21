@@ -7,7 +7,6 @@ import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { sparkAvailability } from '../src/spark-mcp/availability.ts';
 import type { SparkToolDeps } from '../src/spark-mcp/deps.ts';
 import { startSparkMcpHost, type SparkMcpHost } from '../src/spark-mcp/host.ts';
-import { createOutpostRow } from './outpost-fixtures.ts';
 import { deliverAsk } from '../src/sub-chats/deliver-ask.ts';
 import { fakeTarget, finishTurn, messageAsk, turnsOf } from './chat-ask-fixtures.ts';
 import { connectClient, toolDeps } from './spark-mcp-support.ts';
@@ -102,9 +101,6 @@ describe('what a Spark tools session can use', () => {
       browser: false,
       mac: false,
       meetings: false,
-      outpost: false,
-      outpost_draft: false,
-      outpost_start: false,
       chat_messages: false,
       sub_chats: false,
       sub_chat_stop: false,
@@ -231,27 +227,6 @@ describe('what a Spark tools session can use', () => {
     const remote = await sparkAvailability(deps(), turn);
     expect(remote.plugins_edit).toBe(false);
     expect(remote.howTo?.plugins_edit).toContain('paired device');
-  });
-
-  it('offers the outpost tools to a turn of a chat that is in an outpost', async () => {
-    const chat = await startChat(t, 'Build the page');
-    const outpostId = await createOutpostRow(t);
-    await t.db.query(
-      `INSERT INTO outpost_members (outpost_id, conversation_id, handle, position)
-       VALUES ($1, $2, 'web', 1)`,
-      [outpostId, chat.conversationId],
-    );
-    const turn = { ...scopeOf(chat.conversationId), runId: chat.runId };
-    expect(await sparkAvailability(deps(), turn)).toMatchObject({
-      outpost: true,
-      outpost_draft: true,
-      outpost_start: true,
-    });
-    expect(await sparkAvailability(deps(), scopeOf(chat.conversationId))).toMatchObject({
-      outpost: false,
-      outpost_draft: false,
-      outpost_start: false,
-    });
   });
 
   it('counts a ticket source only when its key is saved too', async () => {

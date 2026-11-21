@@ -43,7 +43,6 @@ import {
   serviceNowQuestion,
 } from './servicenow-actions.ts';
 import { browserActionLabels, browserActionSchemas, browserQuestion } from './browser-actions.ts';
-import { startOutpostActionSchema, startOutpostLabels } from './outpost-start-action.ts';
 import {
   sendToChatActionSchema,
   sendToChatLabels,
@@ -252,7 +251,6 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   calendarEditActionSchema,
   ...atlassianActionSchemas,
   ...serviceNowActionSchemas,
-  startOutpostActionSchema,
   sendToChatActionSchema,
   startSubChatsActionSchema,
   stopSubChatActionSchema,
@@ -316,7 +314,6 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   confluence_edit: [],
   servicenow_read: [],
   servicenow_edit: [],
-  start_outpost: [],
   send_to_chat: [],
   start_sub_chats: ['subChats'],
   stop_sub_chat: [],
@@ -441,7 +438,6 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
   ...atlassianActionLabels,
   ...serviceNowActionLabels,
   ...browserActionLabels,
-  ...startOutpostLabels,
   ...sendToChatLabels,
   ...subChatActionLabels,
   ...askSparkLabels,

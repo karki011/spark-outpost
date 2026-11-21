@@ -31,11 +31,10 @@ async function datedRequests(db: Db, conversationId: string, runId: string) {
        AND m.id <> (SELECT user_message_id FROM runs WHERE id = $2)
        AND m.created_at < (SELECT created_at FROM runs WHERE id = $2)
        AND NOT EXISTS (
-         SELECT 1 FROM runs hr LEFT JOIN outpost_posts op ON op.id = m.id
+         SELECT 1 FROM runs hr
          WHERE hr.user_message_id = m.id AND hr.parent_run_id IS NULL
-           AND (hr.source IN ('assistant', 'workflow', 'spark_rule', 'pr_follow_up', 'agent_cycle',
+           AND hr.source IN ('assistant', 'workflow', 'spark_rule', 'pr_follow_up', 'agent_cycle',
              'chat')
-             OR (hr.source = 'outpost' AND op.from_user IS NOT TRUE))
        )
        AND m.created_at > COALESCE((SELECT pf.assistant_history_from FROM profiles pf
          WHERE pf.assistant_conversation_id = $1), '-infinity'::timestamptz)

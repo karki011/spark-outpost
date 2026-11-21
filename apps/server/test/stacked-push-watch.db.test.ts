@@ -18,7 +18,7 @@ import { createTestDb, type TestDb } from './support.ts';
 const API = 'spark/orders-endpoint-1a2b3c4d';
 const WEB = 'spark/orders-page-5e6f7a8b';
 const PUSH = `git push -u origin ${WEB}`;
-const TITLE = `Fake provider pushed a branch whose parent branch is not on the remote: ${WEB} on @api's ${API}`;
+const TITLE = `Fake provider pushed a branch whose parent branch is not on the remote: ${WEB} on “Orders endpoint”'s ${API}`;
 
 let t: TestDb;
 let scratch: string;
@@ -140,7 +140,11 @@ describe('the same push in a mode that asks', () => {
   }
 
   it.each([
-    ['when the message asked', true, parentNotPushedReason(WEB, { branch: API, owner: '@api' })],
+    [
+      'when the message asked',
+      true,
+      parentNotPushedReason(WEB, { branch: API, owner: '“Orders endpoint”' }),
+    ],
     ['with no request, by the publish rule, before any card', false, CHAT_PUBLISH_REASON],
   ])('is refused %s', async (_name, requested, reason) => {
     const answer = await gate(requested).review(

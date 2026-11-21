@@ -1,6 +1,4 @@
 import { approvalAttentionKey, type AskSparkAction } from '@spark-outpost/contracts';
-import { OutpostError } from '../../persistence/outposts.ts';
-import { postToOutpost } from '../../outposts/post-service.ts';
 import { getApproval } from '../../persistence/approvals.ts';
 import { markAttention } from '../../persistence/attention-items.ts';
 import { markConversationSeen } from '../../persistence/conversation-actions.ts';
@@ -12,7 +10,6 @@ import type { Performed } from './performed.ts';
 export const INBOX_REFUSALS = {
   notFinished: 'That chat has no finished turn to clear.',
   notWaiting: ASK_SPARK_REFUSALS.notWaiting,
-  noOutpost: 'That outpost no longer exists.',
 } as const;
 
 export async function finishedChat(
@@ -76,24 +73,6 @@ async function setAside(context: SparkToolContext, action: AskSparkAction) {
   return `Set “${card.title}” in “${card.chatTitle}” aside for later.`;
 }
 
-async function postOutpost(context: SparkToolContext, action: AskSparkAction) {
-  const { deps, scope } = context;
-  const outpostId = required(action.outpostId, 'outpost');
-  const posts = await postToOutpost(
-    { db: deps.db, workspaceId: scope.workspaceId },
-    {
-      outpostId,
-      author: { kind: 'assistant', runId: required(scope.runId, 'run') },
-      text: required(action.text, 'message'),
-    },
-  ).catch((error: unknown) => {
-    if (error instanceof OutpostError) throw new SparkToolError(error.message);
-    throw error;
-  });
-  const [post] = posts;
-  return post?.kind === 'request' ? `Posted a request to @${post.toHandle}.` : 'Posted a note.';
-}
-
 export async function performInbox(
   context: SparkToolContext,
   action: AskSparkAction,
@@ -103,9 +82,7 @@ export async function performInbox(
       const { message, chatId } = await clearFinished(context, action);
       return { message, url: null, output: { conversationId: chatId } };
     }
-    case 'set_aside':
-      return { message: await setAside(context, action), url: null, output: {} };
     default:
-      return { message: await postOutpost(context, action), url: null, output: {} };
+      return { message: await setAside(context, action), url: null, output: {} };
   }
 }

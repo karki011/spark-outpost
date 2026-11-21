@@ -42,7 +42,6 @@ export function action(fields: Partial<AskSparkAction> & Pick<AskSparkAction, 'o
     answer: null,
     ticket: null,
     text: null,
-    outpostId: null,
     meeting: null,
     ...fields,
   };

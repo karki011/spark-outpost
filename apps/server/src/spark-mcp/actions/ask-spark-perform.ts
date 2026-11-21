@@ -249,7 +249,6 @@ export function performAskSpark(
       return pause(context, false);
     case 'start_ticket':
       return startTicketWork(context, action);
-    case 'post_outpost':
     case 'clear_finished':
     case 'set_aside':
       return performInbox(context, action);

@@ -6,18 +6,12 @@ import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
 let chatId: string;
-let outpostId: string;
 let minute = 0;
 
 beforeEach(async () => {
   t = await createTestDb();
   chatId = (await createConversation(t.db, t.workspaceId, randomUUID())).id;
-  outpostId = randomUUID();
   minute = 0;
-  await t.db.query(`INSERT INTO outposts (id, workspace_id, name) VALUES ($1, $2, 'Launch')`, [
-    outpostId,
-    t.workspaceId,
-  ]);
 });
 
 afterEach(async () => {
@@ -42,17 +36,6 @@ async function message(content: string, source: string): Promise<string> {
   return runId;
 }
 
-async function outpostRequest(content: string, fromUser: boolean): Promise<void> {
-  await message(content, 'outpost');
-  await t.db.query(
-    `INSERT INTO outpost_posts (id, outpost_id, kind, body, from_user, from_handle, to_handle,
-       to_conversation_id)
-     SELECT m.id, $2, 'request', m.content, $3, CASE WHEN $3 THEN NULL ELSE 'api' END, 'docs', $4
-     FROM messages m WHERE m.conversation_id = $4 AND m.content = $1`,
-    [content, outpostId, fromUser, chatId],
-  );
-}
-
 function decisionsOf(summary: string): string {
   const start = summary.indexOf('Your decisions and requests');
   const end = summary.indexOf('Recent turns, verbatim');
@@ -62,8 +45,8 @@ function decisionsOf(summary: string): string {
 describe("Spark's summary of a chat", () => {
   it("lists only the user's own requests under their decisions", async () => {
     await message('Use PostgreSQL for storage', 'ui');
-    await outpostRequest('Push the release branch now', false);
-    await outpostRequest('Rename the docs folder', true);
+    await message('Push the release branch now', 'chat');
+    await message('Rename the docs folder', 'queue');
     await message('Ask Spark asked to delete the cache', 'assistant');
     await message('Workflow says to open a pull request', 'workflow');
     const runId = await message('Carry on', 'ui');
@@ -86,7 +69,7 @@ describe("Spark's summary of a chat", () => {
   it('lists the latest 30 requests in order and counts the earlier ones', async () => {
     for (let index = 0; index < 33; index += 1) await message(`request ${index}`, 'ui');
     await message('Workflow says to open a pull request', 'workflow');
-    await outpostRequest('Push the release branch now', false);
+    await message('Push the release branch now', 'chat');
     const runId = await message('Carry on', 'ui');
 
     const summary = await buildChatSummary(t.db, {

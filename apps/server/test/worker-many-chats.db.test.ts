@@ -13,12 +13,24 @@ import type { Provider } from '../src/providers/provider.ts';
 import { recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { doRun } from './approval-support.ts';
-import { gate, type Gate } from './outposts-e2e-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 const HOLD = 'hold this turn';
 const CHATS = 6;
 const CRASHED_RUNS = 15;
+
+interface Gate {
+  open(): void;
+  opened: Promise<void>;
+}
+
+function gate(): Gate {
+  let open = () => {};
+  const opened = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  return { open, opened };
+}
 
 let t: TestDb;
 let root: string;

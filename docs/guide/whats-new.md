@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
 | Outposts are gone; agents split work instead    | [Sub-chats](sub-chats.md).                                 |
+| Old outpost requests read as from another chat  | Nothing to do.                                             |
 | **Sub-chats** tab; plan card **Edit**           | [Sub-chats](sub-chats.md#find-a-sub-chat).                 |
 | Sub-chat reports, wrap-up                       | [Reports](sub-chat-reports.md).                            |
 | Agents split jobs into sub-chats                | [Split a job](split-into-sub-chats.md).                    |

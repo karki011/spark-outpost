@@ -2,15 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { addIslandRequest } from '../src/companion/island-requests.ts';
 import { INBOX_REFUSALS } from '../src/spark-mcp/actions/ask-spark-inbox.ts';
-import { ASSISTANT_ONE_CHAT } from '../src/outposts/post-rules.ts';
-import { userText } from '../src/sub-chats/user-asked.ts';
 import { insertApproval } from '../src/persistence/approvals.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import { assistantRun, assistantScope, assistantSetup, setActs } from './ask-spark-support.ts';
-import { addMemberChat, createOutpostRow } from './outpost-fixtures.ts';
 import {
   confirmCard,
-  pendingCard,
   recordedHooks,
   startSparkTools,
   type RecordedHooks,
@@ -58,21 +54,6 @@ async function waitingCard(runId: string) {
   });
 }
 
-async function posts(outpostId: string) {
-  const { rows } = await t.db.query<{
-    kind: string;
-    body: string;
-    from_user: boolean;
-    from_handle: string | null;
-    to_handle: string | null;
-  }>(
-    `SELECT kind, body, from_user, from_handle, to_handle FROM outpost_posts
-     WHERE outpost_id = $1 ORDER BY created_at`,
-    [outpostId],
-  );
-  return rows;
-}
-
 async function seenAt(conversationId: string) {
   const { rows } = await t.db.query<{ seen_at: Date | null }>(
     'SELECT seen_at FROM conversations WHERE id = $1',
@@ -95,57 +76,7 @@ async function setAsideKeys() {
   return rows.map((row) => row.key);
 }
 
-describe('Ask Spark in outposts and the Inbox', () => {
-  it('in Manual posts a request to an outpost chat after Do it, never as the user', async () => {
-    const outpostId = await createOutpostRow(t, 'Orders launch');
-    await addMemberChat(t, outpostId, 'api');
-    const { tools: harness } = await open();
-    const result = await harness.call('spark_post_outpost', {
-      outpost: 'orders launch',
-      message: '@api push the branch and open a pull request',
-    });
-    expect(result.json()).toMatchObject({ outcome: 'waiting_for_user' });
-    expect((await pendingCard(t)).title).toBe(
-      'Post in “Orders launch”: @api push the branch and open a pull request',
-    );
-    expect(await posts(outpostId)).toEqual([]);
-    const done = await confirmCard(t);
-    expect(done.payload.sparkResult?.message).toBe('Posted a request to @api.');
-    const [post] = await posts(outpostId);
-    expect(post).toMatchObject({
-      kind: 'request',
-      from_user: false,
-      from_handle: 'ask-spark',
-      to_handle: 'api',
-    });
-    expect(
-      userText({ userRequest: post!.body, outpostRequest: { fromUser: post!.from_user } }),
-    ).toBe('');
-    const view = await localClient(createTestApp(t)).get(`/api/outposts/${outpostId}`);
-    expect(view.status).toBe(200);
-    expect(JSON.stringify(view.body)).toContain('"fromHandle":"ask-spark"');
-  });
-
-  it('in Act leaves a note at once, and never addresses every chat', async () => {
-    await setActs(t, 'act');
-    const outpostId = await createOutpostRow(t, 'Orders launch');
-    await addMemberChat(t, outpostId, 'api');
-    await addMemberChat(t, outpostId, 'web');
-    const { tools: harness } = await open();
-    const note = await harness.call('spark_post_outpost', {
-      outpost: outpostId,
-      message: 'Launch moved to Friday.',
-    });
-    expect(note.json()).toMatchObject({ outcome: 'done', message: 'Posted a note.' });
-    const all = await harness.call('spark_post_outpost', {
-      outpost: outpostId,
-      message: '@all ship it',
-    });
-    expect(all.isError).toBe(true);
-    expect(all.text).toContain(ASSISTANT_ONE_CHAT);
-    expect((await posts(outpostId)).map((post) => post.kind)).toEqual(['note']);
-  });
-
+describe('Ask Spark and the Inbox', () => {
   it('clears a finished chat in Act at once and in Manual only after Do it', async () => {
     const { conversationId, runId } = await startChat(t, 'Done work');
     await t.db.query(`UPDATE runs SET status = 'succeeded' WHERE id = $1`, [runId]);

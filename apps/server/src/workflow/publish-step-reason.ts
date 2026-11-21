@@ -9,7 +9,6 @@ export type ReasonFacts = Pick<
   | 'level'
   | 'userRequest'
   | 'followUpRound'
-  | 'outpostRequest'
   | 'chatAsk'
   | 'parentRunId'
   | 'assistant'

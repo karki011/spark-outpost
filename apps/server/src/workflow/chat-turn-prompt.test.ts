@@ -1,15 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Queryable } from '../persistence/db.ts';
-import { storyTaskOf } from '../persistence/outpost-stories.ts';
 import { chatPromptFacts, chatTurnNoteFor, requestAssignedWork } from './chat-turn-prompt.ts';
 import type { RunInput } from './run-input.ts';
 
-vi.mock('../outposts/outpost-availability.ts', () => ({
-  outpostNeeds: async () => ({ outpost: true, outpost_draft: true, outpost_start: true }),
-}));
 const readPreferences = vi.hoisted(() => vi.fn(async () => ({})));
 vi.mock('../persistence/setup.ts', () => ({ sparkPreferences: readPreferences }));
-vi.mock('../persistence/outpost-stories.ts', () => ({ storyTaskOf: vi.fn() }));
 vi.mock('../crew-flows/builder-chat.ts', () => ({ builderChatScope: async () => null }));
 const splits = vi.hoisted(() => vi.fn(async () => false));
 vi.mock('../sub-chats/availability.ts', () => ({ splitsIntoSubChats: splits }));
@@ -26,7 +21,6 @@ const input = {
 describe('chat delegation context', () => {
   beforeEach(() => {
     readPreferences.mockClear();
-    vi.mocked(storyTaskOf).mockResolvedValue(null);
   });
 
   it('reads the preferences itself only when it was not given them', async () => {
@@ -38,61 +32,12 @@ describe('chat delegation context', () => {
     expect(facts.customInstructions).toBe('Prefer pnpm.');
   });
 
-  it('treats an ordinary chat as a lead without requiring an Outpost', async () => {
-    const facts = await chatPromptFacts(db, input);
-    expect(facts.assignedWork).toBe(false);
-    expect(facts.project).toBeNull();
-  });
-
-  it('keeps a story worker bounded across direct follow-up messages', async () => {
-    vi.mocked(storyTaskOf).mockResolvedValue({
-      task: {
-        conversationId: 'chat',
-        outpostId: 'outpost',
-        draftId: null,
-        leadConversationId: 'lead',
-        title: 'Build the form',
-        position: 0,
-        dependsOnConversationId: null,
-        openingPostId: null,
-        createdAt: '2026-10-24T00:00:00.000Z',
-      },
-      handle: 'builder',
-      storyTitle: null,
-      leadHandle: 'lead',
-      projectId: null,
-      repoRoot: null,
-      branch: null,
-      baseBranch: null,
-      ownsBranch: false,
-      pull: null,
-      opening: null,
-    });
-    expect((await chatPromptFacts(db, input)).assignedWork).toBe(true);
-    expect(storyTaskOf).toHaveBeenCalledWith(db, 'chat');
-  });
-
-  it.each([
-    [false, false, true],
-    [true, false, false],
-    [false, true, false],
-    [true, true, false],
-  ])('classifies fromUser=%s wrapUp=%s as assigned=%s', (fromUser, wrapUp, assigned) => {
-    expect(
-      requestAssignedWork({
-        outpostRequest: { postId: 'post', outpostName: 'Work', fromUser, wrapUp },
-      }),
-    ).toBe(assigned);
-  });
-
-  it('keeps the session facts the same for an assigned request and a user turn', async () => {
+  it('keeps the session facts the same for a turn another chat started and a user turn', async () => {
     const user = await chatPromptFacts(db, input);
-    const assigned = await chatPromptFacts(db, {
-      ...input,
-      followUpRound: true,
-      outpostRequest: { postId: 'post', outpostName: 'Work', fromUser: false, wrapUp: false },
-    });
+    const ask = { id: 'ask', kind: 'task', fromTitle: 'Checkout rework', wantsReply: true };
+    const assigned = await chatPromptFacts(db, { ...input, chatAsk: ask } as RunInput);
     expect(assigned).toEqual(user);
+    expect(user.project).toBeNull();
   });
 
   it('gives the split guidance only to a chat that is offered spark_sub_chats', async () => {
@@ -111,24 +56,5 @@ describe('chat delegation context', () => {
     expect(chatTurnNoteFor(task, facts)).toContain('do not use spark_sub_chats');
     expect(requestAssignedWork(message)).toBe(false);
     expect(chatTurnNoteFor(message, facts)).toBeNull();
-  });
-
-  it('keeps the start tool in the session facts for a request turn', async () => {
-    const facts = await chatPromptFacts(db, {
-      ...input,
-      outpostRequest: { postId: 'post', outpostName: 'Work', fromUser: false, wrapUp: false },
-    });
-    expect(facts.outpostStartTool).toBe(true);
-  });
-
-  it('notes the assigned request and the follow-up round in the turn, not for a story worker twice', async () => {
-    const request = {
-      ...input,
-      outpostRequest: { postId: 'post', outpostName: 'Work', fromUser: false, wrapUp: false },
-    } as RunInput;
-    const facts = await chatPromptFacts(db, request);
-    expect(chatTurnNoteFor(request, facts)).toContain('assigned work');
-    expect(chatTurnNoteFor(input, facts)).toBeNull();
-    expect(chatTurnNoteFor(request, { ...facts, assignedWork: true })).toBeNull();
   });
 });

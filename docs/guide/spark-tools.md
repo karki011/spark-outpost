@@ -62,10 +62,6 @@ summary: What agents can look up about Spark, the confirm card they show before 
 
 MCP server cards show the command; fill values in **Settings → Connectors → MCP servers**.
 
-## Tools being removed
-
-[Sub-chats](sub-chats.md) replace these; they go in the next update: `spark_outpost`, `spark_outpost_ask`, `spark_outpost_note`, `spark_outpost_draft`, `spark_outpost_start`, `spark_post_outpost`.
-
 ## Ask Spark tools
 
 [Ask Spark](companion-quick-chat.md#let-ask-spark-act) gets these too, minus publishing, follow-up, terminal runs, sign-ins, splitting into sub-chats, artifacts, Spark rules, plugins and repo tools. Its own:

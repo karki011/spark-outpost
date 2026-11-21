@@ -13,7 +13,6 @@ export const askSparkOpSchema = z.enum([
   'pause_spark',
   'resume_spark',
   'start_ticket',
-  'post_outpost',
   'clear_finished',
   'set_aside',
   'snooze_meeting',
@@ -35,7 +34,6 @@ export const askSparkActionSchema = z.object({
   answer: askSparkAnswerSchema.nullable(),
   ticket: z.object({ source: ticketSourceIdSchema, key: z.string().max(100) }).nullable(),
   text: z.string().max(ASK_SPARK_TEXT_MAX).nullable(),
-  outpostId: z.uuid().nullable().default(null),
   meeting: z
     .object({ eventKey: z.string().max(600), end: z.iso.datetime({ offset: true }) })
     .nullable()

@@ -11,18 +11,20 @@ import { updateChatSettings } from '../src/persistence/chat-settings.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
 import { startSparkMcpHost, type SparkMcpHost } from '../src/spark-mcp/host.ts';
-import { chatTarget, drainQueue } from '../src/workflow/queue-drain.ts';
+import { deliverAsk } from '../src/sub-chats/deliver-ask.ts';
+import { chatTarget } from '../src/workflow/queue-drain.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { linkedConversation } from './approval-support.ts';
 import { FAKE_ACP_LAUNCH } from './fake-acp-support.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import { methodLog, type MethodLog } from './live-session-support.ts';
-import { createOutpostRow, deliverRequest, postRunId } from './outpost-fixtures.ts';
+import { messageAsk, turnsOf } from './chat-ask-fixtures.ts';
 import { toolDeps } from './spark-mcp-support.ts';
+import { emptyChat } from './sub-chat-fixtures.ts';
 import { eventually, type TestDb } from './support.ts';
 import { gitRepo } from './turn-support.ts';
 
-export type TurnKind = 'user' | 'round' | 'outpost' | 'push';
+export type TurnKind = 'user' | 'round' | 'chat' | 'push';
 
 export interface TurnMeasure {
   kind: TurnKind;
@@ -37,7 +39,7 @@ export type Level = 'hands-off' | 'full-auto';
 const targetAt = (level: Level) =>
   ({ provider: 'claude', permission: 'do', agentMode: 'default', level }) as const;
 
-const MESSAGES: Record<Exclude<TurnKind, 'outpost'>, string> = {
+const MESSAGES: Record<Exclude<TurnKind, 'chat'>, string> = {
   user: 'next',
   round: 'Fix the failing check',
   push: 'push it',
@@ -77,11 +79,9 @@ export async function startReuseHarness(t: TestDb, store: string): Promise<Reuse
     approvalPollMs: 20,
     recoveryEveryMs: 1_000,
   });
-  const outpostId = await createOutpostRow(t, 'Reuse');
-  let chats = 0;
+  const sender = { id: await emptyChat(t, 'Orders page'), title: 'Orders page' };
 
   const chat = async (level: Level) => {
-    chats += 1;
     const root = await gitRepo();
     const remote = await realpath(mkdtempSync(join(store, 'remote-')));
     git(remote, 'init', '-q', '--bare');
@@ -102,32 +102,25 @@ export async function startReuseHarness(t: TestDb, store: string): Promise<Reuse
       ownsBranch: true,
     });
     await updateChatSettings(t.db, conversationId, { agentMode: 'default', level });
-    await t.db.query(
-      `INSERT INTO outpost_members (outpost_id, conversation_id, handle, position)
-       VALUES ($1, $2, $3, $4)`,
-      [outpostId, conversationId, `chat${chats}`, chats],
-    );
     return conversationId;
   };
 
   const startRequest = async (conversationId: string): Promise<string> => {
-    const { rows } = await t.db.query<{ handle: string }>(
-      'SELECT handle FROM outpost_members WHERE conversation_id = $1',
-      [conversationId],
+    const askId = await messageAsk(
+      t,
+      sender,
+      conversationId,
+      'What does the orders endpoint return?',
     );
-    const postId = await deliverRequest(t.db, {
-      outpostId,
-      toConversationId: conversationId,
-      toHandle: rows[0]!.handle,
-      body: 'What does the orders endpoint return?',
-      fromUser: false,
-    });
-    await drainQueue(t.db, conversationId, chatTarget(t.db));
-    return (await eventually(() => postRunId(t.db, postId)))!;
+    await deliverAsk(t.db, askId, chatTarget(t.db));
+    const turn = await eventually(async () =>
+      (await turnsOf(t, conversationId)).find((started) => started.user_message_id === askId),
+    );
+    return turn.id;
   };
 
   const start = async (conversationId: string, kind: TurnKind, level: Level): Promise<string> => {
-    if (kind === 'outpost') return startRequest(conversationId);
+    if (kind === 'chat') return startRequest(conversationId);
     const sent = await sendUserMessage(
       t.db,
       conversationId,

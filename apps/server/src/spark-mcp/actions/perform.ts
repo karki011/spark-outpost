@@ -30,7 +30,6 @@ import type { Performed } from './performed.ts';
 import { performServiceNowEdit } from './servicenow-perform.ts';
 import { performAskSpark } from './ask-spark-perform.ts';
 import { performPublishArtifact } from './artifact-actions.ts';
-import { performStartOutpost } from './outpost-actions.ts';
 import { performSendToChat } from './send-to-chat-perform.ts';
 import { performStartSubChats, performStopSubChat } from './sub-chats-perform.ts';
 import { performRulesEdit } from './rules-edit-perform.ts';
@@ -132,8 +131,6 @@ export function performSparkAction(
       return Promise.resolve({ message: 'The agent can read ServiceNow in this chat.', url: null });
     case 'servicenow_edit':
       return performServiceNowEdit(context, action);
-    case 'start_outpost':
-      return performStartOutpost(context, action, startedBy);
     case 'send_to_chat':
       return performSendToChat(context, action);
     case 'start_sub_chats':

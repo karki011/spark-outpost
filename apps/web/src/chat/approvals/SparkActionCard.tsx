@@ -225,7 +225,6 @@ function Facts({ action }: { action: SparkAction }) {
     case 'open_pr':
     case 'pr_follow_up':
     case 'start_sub_chats':
-    case 'start_outpost':
     case 'ask_spark':
       return null;
   }
