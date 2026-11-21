@@ -46,6 +46,7 @@ export function SendButton({
       aria-label={label}
       title={tip ?? (label === 'Send' ? undefined : label)}
       disabled={disabled}
+      onMouseDown={(event) => event.preventDefault()}
       onClick={onSend}
     >
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
