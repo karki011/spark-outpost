@@ -138,13 +138,14 @@ async function startedWith(
   workspaceId: string,
   conversationId: string,
 ): Promise<SubChatStartedWith> {
-  const settings = await resolveChatSettings(db, conversationId);
-  const defaults = settings.provider
-    ? await getCapabilities(db, workspaceId, settings.provider)
-    : null;
+  const chosen = await resolveChatSettings(db, conversationId);
+  const defaults = chosen.provider ? await getCapabilities(db, workspaceId, chosen.provider) : null;
+  const pin = chosen.model === null ? (defaults?.defaultModel ?? null) : null;
+  const settings =
+    pin === null ? chosen : await updateChatSettings(db, conversationId, { model: pin });
   return {
     provider: settings.provider ?? '',
-    model: settings.model ?? defaults?.defaultModel ?? null,
+    model: settings.model,
     effort: settings.effort,
     agentMode: settings.agentMode,
     level: settings.level,

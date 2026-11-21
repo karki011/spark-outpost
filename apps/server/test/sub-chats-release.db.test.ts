@@ -4,10 +4,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { addToQueue } from '../src/persistence/chat-queue.ts';
+import {
+  resolveChatSettings,
+  saveCapabilities,
+  updateChatSettings,
+} from '../src/persistence/chat-settings.ts';
 import { deleteConversation, updateConversation } from '../src/persistence/conversation-actions.ts';
 import { setSparkPaused } from '../src/persistence/spark-pause.ts';
 import { subChatRows } from '../src/persistence/sub-chats.ts';
 import { deliveryPass } from '../src/sub-chats/delivery.ts';
+import { chatTarget } from '../src/workflow/queue-drain.ts';
 import { askNow, fakeTarget, finishTurn, turnsOf } from './chat-ask-fixtures.ts';
 import {
   PARENT_TITLE,
@@ -210,5 +216,64 @@ describe('releasing Held sub-chats', () => {
     await pass();
 
     expect(await started()).toEqual(['Orders API', 'Orders page']);
+  });
+});
+
+describe('the model a Held sub-chat runs with', () => {
+  const MODELS = ['model-a', 'model-b'].map((id) => ({ id, label: id, description: null }));
+
+  async function defaultModel(model: string): Promise<void> {
+    await saveCapabilities(t.db, t.workspaceId, {
+      provider: 'claude',
+      models: MODELS,
+      efforts: [],
+      defaultModel: model,
+    });
+  }
+
+  async function modelOfTurn(conversationId: string): Promise<string | null> {
+    const { rows } = await t.db.query<{ model: string | null }>(
+      'SELECT model FROM runs WHERE conversation_id = $1',
+      [conversationId],
+    );
+    expect(rows).toHaveLength(1);
+    return rows[0]!.model;
+  }
+
+  it('is the one its row showed, though the agent’s default changed while it was Held', async () => {
+    const unpinned = await parentChat(t, { id: parent.projectId, root: parent.root });
+    await updateChatSettings(t.db, unpinned.id, { model: null });
+    await defaultModel('model-a');
+    const [first, held] = await startedPlan(
+      t,
+      unpinned,
+      [
+        { title: 'Schema', task: 'Add the table.' },
+        { title: 'Importer', task: 'Fill the table.', startsAfter: ['Schema'] },
+      ],
+      chatTarget(t.db),
+    );
+    expect(held!.started_at).toBeNull();
+    expect(held!.started_with.model).toBe('model-a');
+
+    await defaultModel('model-b');
+    await endTask(t, await taskOf(t, first!.conversation_id));
+    await deliveryPass(t.db, chatTarget(t.db));
+
+    expect(await modelOfTurn(first!.conversation_id)).toBe('model-a');
+    expect(await modelOfTurn(held!.conversation_id)).toBe('model-a');
+    expect((await resolveChatSettings(t.db, held!.conversation_id)).model).toBe('model-a');
+    expect((await resolveChatSettings(t.db, unpinned.id)).model).toBeNull();
+  });
+
+  it('stays the model the piece named', async () => {
+    await defaultModel('model-a');
+    const other = await parentChat(t, { id: parent.projectId, root: parent.root });
+    await updateChatSettings(t.db, other.id, { model: 'model-b' });
+
+    const [piece] = await startedPlan(t, other, [{ title: 'Schema', task: 'Add the table.' }]);
+
+    expect(piece!.started_with.model).toBe('model-b');
+    expect((await resolveChatSettings(t.db, piece!.conversation_id)).model).toBe('model-b');
   });
 });

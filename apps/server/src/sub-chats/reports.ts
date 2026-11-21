@@ -129,24 +129,46 @@ function withRecord(report: SubChatReport, facts: ReportFacts): SubChatReport {
   };
 }
 
+const RECORD_REFRESH_TRIES = 3;
+
+interface RecordRefresh {
+  refreshed: boolean;
+  outrun: boolean;
+}
+
+async function refreshRecordOnce(
+  db: Queryable,
+  conversationId: string,
+  read?: ReadBranchWork,
+): Promise<RecordRefresh> {
+  const row = await subChatRow(db, conversationId);
+  if (!row) return { refreshed: false, outrun: false };
+  const facts = await reportFacts(db, row, read);
+  const now = recordLine(facts);
+  const writes: boolean[] = [];
+  if (row.report && recordLine(row.report) !== now) {
+    const report = withRecord(row.report, facts);
+    writes.push(await saveSubChatReportRecord(db, conversationId, row.report, report));
+  }
+  const sent = await latestReportAskFrom(db, conversationId);
+  if (sent?.report && recordLine(sent.report) !== now) {
+    const report = withRecord(sent.report, facts);
+    const body = storedMessage(reportText(report));
+    writes.push(await rewriteReportAsk(db, sent.id, sent.report, report, body));
+  }
+  return { refreshed: writes.includes(true), outrun: writes.includes(false) };
+}
+
 export async function refreshReportRecord(
   db: Queryable,
   conversationId: string,
   read?: ReadBranchWork,
 ): Promise<boolean> {
-  const row = await subChatRow(db, conversationId);
-  if (!row) return false;
-  const facts = await reportFacts(db, row, read);
-  const now = recordLine(facts);
   let refreshed = false;
-  if (row.report && recordLine(row.report) !== now) {
-    refreshed = await saveSubChatReportRecord(db, conversationId, withRecord(row.report, facts));
-  }
-  const sent = await latestReportAskFrom(db, conversationId);
-  if (sent?.report && recordLine(sent.report) !== now) {
-    const report = withRecord(sent.report, facts);
-    await rewriteReportAsk(db, sent.id, report, storedMessage(reportText(report)));
-    refreshed = true;
+  for (let tries = 0; tries < RECORD_REFRESH_TRIES; tries += 1) {
+    const pass = await refreshRecordOnce(db, conversationId, read);
+    refreshed ||= pass.refreshed;
+    if (!pass.outrun) break;
   }
   return refreshed;
 }

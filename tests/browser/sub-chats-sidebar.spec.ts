@@ -95,6 +95,29 @@ async function deleteFromMenu(page: Page, title: string): Promise<void> {
   await menu.getByRole('menuitem', { name: 'Confirm delete' }).click();
 }
 
+async function watchParentMarks(page: Page, title: string): Promise<() => Promise<string[]>> {
+  await page.evaluate((text) => {
+    const marks = new Set<string>();
+    const read = () => {
+      for (const row of document.querySelectorAll('nav .row')) {
+        if (!row.textContent?.includes(text)) continue;
+        marks.add(
+          (row.querySelector('.parent-mark')?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        );
+      }
+    };
+    new MutationObserver(read).observe(document.body, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+    read();
+    Object.assign(globalThis, { parentMarksSeen: marks });
+  }, title);
+  return () =>
+    page.evaluate(() => [...(globalThis as { parentMarksSeen?: Set<string> }).parentMarksSeen!]);
+}
+
 async function expectAccessible(page: Page, include: string): Promise<void> {
   const results = await new AxeBuilder({ page })
     .include(include)
@@ -247,10 +270,22 @@ test('a chat whose parent was deleted stays at the top and says what it was part
       response.url().endsWith(`/api/conversations/${parentId}`),
     { timeout: 20_000 },
   );
+  const search = sidebar(page).getByRole('searchbox');
+  const found = sidebar(page).locator('.row', { hasText: 'Checkout UI' });
+  await search.fill('Checkout');
+  await expect(found.locator('.parent-mark')).toHaveText(`↳ , sub-chat of ${PARENT}`);
   await deleteFromMenu(page, PARENT);
-  await expect(left.locator('.parent-mark')).toHaveText(`· , was part of ${PARENT}`);
+  await expect(found.locator('.parent-mark')).toHaveText(`· , was part of ${PARENT}`);
+  const marksSeen = await watchParentMarks(page, 'Checkout UI');
   expect((await gone).status()).toBe(204);
+  await expect(deleted).toHaveCount(0);
   await expect(page.getByRole('status').filter({ hasText: 'Could not delete' })).toHaveCount(0);
+  await expect(rowButton(page, PARENT)).toHaveCount(0);
+  await expect(found.locator('.parent-mark')).toHaveText(`· , was part of ${PARENT}`);
+  await search.fill('');
+  await expect(left.locator('.parent-mark')).toHaveText(`· , was part of ${PARENT}`);
+  await expect(tree(page)).toHaveCount(0);
+  expect(await marksSeen()).toEqual([`· , was part of ${PARENT}`]);
   await openChats(page);
   await expect(left.locator('.parent-mark')).toHaveText(`· , was part of ${PARENT}`);
   await expect(tree(page)).toHaveCount(0);

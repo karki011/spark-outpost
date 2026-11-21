@@ -61,6 +61,53 @@ describe('a sub-chat’s report', () => {
     );
   });
 
+  it('ends a section at a bulleted or bold label it does not know', () => {
+    const reply = [
+      '- **Changed:** the parser.',
+      '- **Risks:** None',
+      'Blockers: None',
+      '- **Verification:** tests passed',
+      'Ran them twice.',
+      '* Next steps: merge it.',
+    ].join('\n');
+    const report = buildReport({ status: 'succeeded', reply, error: null }, FACTS);
+    expect(report).toMatchObject({
+      changed: 'the parser.',
+      risks: 'None',
+      blockers: 'None',
+      said: '- **Verification:** tests passed\nRan them twice.\n* Next steps: merge it.',
+    });
+  });
+
+  it('keeps ordinary bullets and a section’s own list in the section', () => {
+    const reply = [
+      'Changed: two things.',
+      '- fixed the parser',
+      '- report.ts: reads bulleted labels',
+      'Risks:',
+      '',
+      '- Parser: a list item that looks like a label',
+      '- **Tests:** another one',
+      'Blockers: None',
+    ].join('\n');
+    const report = buildReport({ status: 'succeeded', reply, error: null }, FACTS);
+    expect(report).toMatchObject({
+      changed: 'two things.\n- fixed the parser\n- report.ts: reads bulleted labels',
+      risks: '- Parser: a list item that looks like a label\n- **Tests:** another one',
+      blockers: 'None',
+      said: '',
+    });
+  });
+
+  it('ends a section’s list at a bulleted label once plain text has followed the list', () => {
+    const reply = ['Blockers:', '- none', 'That is all.', '- Verification: tests passed'].join(
+      '\n',
+    );
+    const report = buildReport({ status: 'succeeded', reply, error: null }, FACTS);
+    expect(report.blockers).toBe('- none\nThat is all.');
+    expect(report.said).toBe('- Verification: tests passed');
+  });
+
   it('keeps what the reply says before, between and after the sections', () => {
     const reply = [
       'node --test passes: 1 test, 1 pass, 0 fail.',

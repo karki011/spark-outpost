@@ -200,14 +200,15 @@ export async function latestReportAskFrom(
 export async function rewriteReportAsk(
   db: Queryable,
   id: string,
+  read: SubChatReport,
   report: SubChatReport,
   body: string,
 ): Promise<boolean> {
   return changed(
     db,
     `UPDATE chat_asks a SET report = $2, body = CASE WHEN ${NOT_HANDED} THEN $3 ELSE a.body END
-     WHERE a.id = $1`,
-    [id, JSON.stringify(report), body],
+     WHERE a.id = $1 AND $4::jsonb @> a.report AND a.report @> ($4::jsonb - 'said'::text)`,
+    [id, JSON.stringify(report), body, JSON.stringify(read)],
   );
 }
 

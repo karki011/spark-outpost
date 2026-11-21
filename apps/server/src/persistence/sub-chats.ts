@@ -220,12 +220,15 @@ export async function saveSubChatReport(
 export async function saveSubChatReportRecord(
   db: Queryable,
   conversationId: string,
+  read: SubChatReport,
   report: SubChatReport,
 ): Promise<boolean> {
-  return changed(db, 'UPDATE sub_chats SET report = $2 WHERE conversation_id = $1', [
-    conversationId,
-    JSON.stringify(report),
-  ]);
+  return changed(
+    db,
+    `UPDATE sub_chats SET report = $2
+     WHERE conversation_id = $1 AND $3::jsonb @> report AND report @> ($3::jsonb - 'said'::text)`,
+    [conversationId, JSON.stringify(report), JSON.stringify(read)],
+  );
 }
 
 export async function claimWrapUp(

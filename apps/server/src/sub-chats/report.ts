@@ -23,6 +23,7 @@ const SAID_MAX = 6000;
 const REASON_MAX = 300;
 const OPENING_LINES = 6;
 const LABEL_LINE = /^[\s>*_#-]*(changed|risks|blockers)[*_]*\s*:[*_]*\s*(.*)$/i;
+const BULLET = /^\s*[-*+]\s+/;
 const OTHER_LABEL_LINE =
   /^\s*(?:#{1,6}\s+\S|(?:>\s*)?(?:\*\*|__)?[A-Z][A-Za-z]*(?: [A-Za-z]+){0,3}(?:\*\*|__)?\s*:(?:\*\*|__)?(?:\s|$))/;
 
@@ -51,6 +52,7 @@ function sectionsOf(reply: string): { found: Map<Section, string>; rest: string[
   const lines = new Map<Section, string[]>();
   const rest: string[] = [];
   let current: string[] = rest;
+  let bulletList = false;
   for (const line of reply.split('\n')) {
     const label = LABEL_LINE.exec(line);
     if (label) {
@@ -58,9 +60,13 @@ function sectionsOf(reply: string): { found: Map<Section, string>; rest: string[
       current = lines.get(section) ?? [];
       lines.set(section, current);
       current.push(label[2] ?? '');
+      bulletList = (label[2] ?? '').trim() === '';
       continue;
     }
-    if (OTHER_LABEL_LINE.test(line)) current = rest;
+    const bulleted = BULLET.test(line);
+    const item = bulleted && bulletList;
+    if (!item && OTHER_LABEL_LINE.test(line.replace(BULLET, ''))) current = rest;
+    if (!bulleted && line.trim() !== '') bulletList = false;
     current.push(line);
   }
   const found = new Map<Section, string>();
