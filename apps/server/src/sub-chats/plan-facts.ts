@@ -10,8 +10,8 @@ import { providerModePosture } from './chat-posture.ts';
 import type { PlanAgent, PlanFacts } from './plan.ts';
 import { modeChoices } from './proposed-mode.ts';
 
-export const PARENT_HAS_NO_AGENT = 'This chat has no connected agent to start sub-chats with.';
-export const PARENT_HAS_NO_PROJECT =
+const PARENT_HAS_NO_AGENT = 'This chat has no connected agent to start sub-chats with.';
+const PARENT_HAS_NO_PROJECT =
   'Link a project to this chat first: sub-chats start from a chat with a project.';
 
 export type FolderExists = (path: string) => Promise<boolean>;

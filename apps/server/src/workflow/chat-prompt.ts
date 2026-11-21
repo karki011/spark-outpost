@@ -85,12 +85,12 @@ export function chatPrompt(facts: ChatPromptFacts): string {
 export interface ChatTurnFacts {
   project: ChatPromptProject | null;
   followUpRound: boolean;
-  requestAssigned: boolean;
+  taskTurn: boolean;
 }
 
 export function chatTurnNote(facts: ChatTurnFacts): string | null {
   const lines: string[] = [];
-  if (facts.requestAssigned) {
+  if (facts.taskTurn) {
     lines.push(text.TURN_NOTE_ASSIGNED, ASSIGNED_WORK_LINE, text.TURN_NOTE_NO_SUB_CHATS);
   }
   if (facts.followUpRound && facts.project && canPushTo(facts.project)) {

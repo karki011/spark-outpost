@@ -31,7 +31,7 @@ function isNotice(ask: ChatAsk, asks: readonly ChatAsk[]): boolean {
   return original ? original.state === 'no_reply' : true;
 }
 
-export function receivedText(ask: ChatAsk, asks: readonly ChatAsk[]): string {
+function receivedText(ask: ChatAsk, asks: readonly ChatAsk[]): string {
   const chat = ask.from.title;
   if (isNotice(ask, asks)) return `No reply from ${chat}: ${ask.body.slice(NOTICE_PREFIX.length)}`;
   if (ask.kind === 'wrap_up') return 'Wrap-up from Spark';

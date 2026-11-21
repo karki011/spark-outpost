@@ -1,7 +1,7 @@
 import { CHAT_MESSAGE_MAX, type ChatAskKind } from '@spark-outpost/contracts';
 import { REPORT_SHAPE } from './report.ts';
 
-export const CHAT_MESSAGE_TAG = 'chat-message';
+const CHAT_MESSAGE_TAG = 'chat-message';
 export const TAKEN_FROM_TURN = '(Taken from its turn; that chat did not answer with replyTo.)';
 
 export interface AskPromptFacts {

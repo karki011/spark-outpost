@@ -13,11 +13,7 @@ function pendingOn(plan: ShipPlan, branch: string): Pending {
   return plan.branch === branch && plan.modes.includes('commit') ? 'commit' : 'blocked';
 }
 
-export async function commitKeptWork(
-  deps: ShipDeps,
-  chatId: string,
-  branch: string,
-): Promise<boolean> {
+async function commitKeptWork(deps: ShipDeps, chatId: string, branch: string): Promise<boolean> {
   for (const taskId of await chatTaskIds(deps.db, chatId)) {
     const pending = pendingOn(await planShip(deps, taskId), branch);
     if (pending === 'blocked') return false;

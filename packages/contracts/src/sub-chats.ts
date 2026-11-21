@@ -88,7 +88,6 @@ export const subChatLinkSchema = z.object({
   position: z.number().int().nonnegative(),
   status: subChatStatusSchema,
 });
-export type SubChatLink = z.infer<typeof subChatLinkSchema>;
 
 export const formerParentSchema = z.object({ title: z.string() });
 

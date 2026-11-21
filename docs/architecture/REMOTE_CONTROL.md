@@ -166,7 +166,7 @@ So a second Mac can control the first one today, from Safari. Spark to Spark is 
 - The local server would hold remote content. Agents on the controlling Mac sit much closer to it.
 - Large, and it touches most of the app. Not now. Revisit after (a) has real use.
 
-**(c) Agents on one Mac talking to agents on the other.** A2A across Macs. This belongs with Outposts and is a later step. Today both A2A routes are `never` for a remote device, and that stays. Not designed here.
+**(c) Agents on one Mac talking to agents on the other.** An agent protocol such as A2A across Macs. A later step. Today Spark uses no agent protocol between chats and serves no A2A route (outposts and their loopback A2A endpoint were replaced by sub-chats on November 20, 2026; see [SUB_CHATS.md](SUB_CHATS.md)). Not designed here.
 
 **Recommendation: (a).**
 
@@ -387,18 +387,14 @@ A new sentence after it, when Spark to Spark is built:
 
 > - A Spark Outpost can control another one only as a paired device of that Mac: it shows the other Mac's remote web UI in its own window, in its own in-memory session partition, never the app session, with Spark's ports blocked, no node integration and no preload, locked to the saved Serve address. The device cookie is kept only in the keychain; no table, event, log or tool result holds it. Agents cannot see or drive that window, and what it shows is untrusted data. Saved Sparks are managed on the Mac only.
 
-In the outpost paragraph, two words change:
-
-> … never to a paired device or through Tailscale. A paired device may read an outpost, post, cancel, pause and rename; …
-
-Since October 20, 2026 a paired device may also start a draft as proposed and answer the agent's start card; see [PHONE_REMOTE.md](PHONE_REMOTE.md) and the outpost paragraph in `AGENTS.md`.
+The outpost paragraph this section also edited is gone: outposts were replaced by sub-chats on November 20, 2026. What a paired device may do with sub-chats is in [PHONE_REMOTE.md](PHONE_REMOTE.md) and the sub-chats paragraph in `AGENTS.md`.
 
 ### Decisions
 
 1. **The name.** "Remote control" for the page, the left bar item and the main switch; "paired device" for what connects. Recommend: yes, with the label table above.
 2. **Rename the internal folder and identifiers too** (`apps/web/src/phone/` and friends)? Recommend: yes, but as lane R6, alone, after the copy lanes merge. Keep the saved view id `'phone'`.
 3. **Guide page file name.** Rename to `remote-control.md` with a redirect, or keep `use-your-phone.md` and change only the title. Recommend: rename if the redirects file exists where this lands; otherwise keep the file name.
-4. **Spark to Spark option.** Recommend (a), a labelled window showing the host's remote UI. Not (b) now. (c) later with Outposts.
+4. **Spark to Spark option.** Recommend (a), a labelled window showing the host's remote UI. Not (b) now. (c) later.
 5. **Where the credential lives.** Keychain only, with an in-memory window session. The cost is that the host page's own browser storage is lost when the app quits. The simpler choice is a persistent partition, which writes the cookie to Chromium's cookie file. Recommend: keychain only.
 6. **A device may end its own session** (one new host route, allowed always, revokes only the caller). Recommend: yes, as a small follow-up. Until then the card tells the user to revoke on the host.
 7. **"On your Mac" in the host's copy.** Keep it, or have the host send its name and say "on Studio Mac". Recommend: keep it for the rename; change it with Spark to Spark.

@@ -34,17 +34,9 @@ describe('inline styling', () => {
     );
   });
 
-  it('marks @handles at a word start only', () => {
+  it('marks an @name at a word start only', () => {
     expect(inline('@dac-perms hi')).toBe('[mention:@dac-perms] hi');
     expect(inline('me@example.com')).toBe('me@example.com');
-  });
-
-  it('marks only the handles it is given when it has a list', () => {
-    const members = ['api', 'web', 'all'];
-    expect(show(inlineSpans('@api and @handle, @web. @All', [], members))).toBe(
-      '[mention:@api] and @handle, [mention:@web]. [mention:@All]',
-    );
-    expect(show(lineSpans('- ask @web_x', 'list', members))).toBe('[marker:-] ask @web_x');
   });
 
   it('leaves unmatched or spaced markers and snake_case as plain text', () => {

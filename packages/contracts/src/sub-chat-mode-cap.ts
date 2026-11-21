@@ -11,18 +11,18 @@ const CHAT_RANK: Readonly<Record<ModePosture, number>> = {
   unknown: 4,
 };
 
-const LEAD_RANK: Readonly<Record<ModePosture, number>> = { ...CHAT_RANK, unknown: 1 };
+const PARENT_RANK: Readonly<Record<ModePosture, number>> = { ...CHAT_RANK, unknown: 1 };
 
-export function chatModeRank(posture: ModePosture): number {
+function chatModeRank(posture: ModePosture): number {
   return CHAT_RANK[posture];
 }
 
-export function leadModeLimit(lead: ModePosture): number {
-  return LEAD_RANK[lead];
+function parentModeLimit(parent: ModePosture): number {
+  return PARENT_RANK[parent];
 }
 
-export function aboveLeadMode(lead: ModePosture, chat: ModePosture): boolean {
-  return chatModeRank(chat) > leadModeLimit(lead);
+export function aboveParentMode(parent: ModePosture, chat: ModePosture): boolean {
+  return chatModeRank(chat) > parentModeLimit(parent);
 }
 
 function rankOf(
@@ -37,9 +37,9 @@ export function cappedMode(
   provider: string,
   wanted: string | null,
   capabilities: ProviderCapabilities | undefined,
-  lead: ModePosture,
+  parent: ModePosture,
 ): string | null {
-  const limit = leadModeLimit(lead);
+  const limit = parentModeLimit(parent);
   const effective = wanted ?? capabilities?.defaultMode ?? defaultModeFor(provider);
   if (rankOf(provider, effective, capabilities) <= limit) return wanted;
   const allowed = (capabilities?.modes ?? [])

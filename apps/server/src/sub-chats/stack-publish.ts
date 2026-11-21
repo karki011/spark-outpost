@@ -10,7 +10,7 @@ export interface PublishStack {
   stackBase: StackBase | null;
 }
 
-export const FALLBACK_DEFAULT_BRANCH = 'main';
+const FALLBACK_DEFAULT_BRANCH = 'main';
 
 interface ParentRow {
   parent_chat: string | null;

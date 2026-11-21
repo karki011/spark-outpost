@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Queryable } from '../persistence/db.ts';
-import { chatPromptFacts, chatTurnNoteFor, requestAssignedWork } from './chat-turn-prompt.ts';
+import { chatPromptFacts, chatTurnNoteFor, isTaskTurn } from './chat-turn-prompt.ts';
 import type { RunInput } from './run-input.ts';
 
 const readPreferences = vi.hoisted(() => vi.fn(async () => ({})));
@@ -52,9 +52,9 @@ describe('chat delegation context', () => {
     const task = { ...input, chatAsk: { ...ask, kind: 'task' } } as RunInput;
     const message = { ...input, chatAsk: { ...ask, kind: 'message' } } as RunInput;
     const facts = await chatPromptFacts(db, task);
-    expect(requestAssignedWork(task)).toBe(true);
+    expect(isTaskTurn(task)).toBe(true);
     expect(chatTurnNoteFor(task, facts)).toContain('do not use spark_sub_chats');
-    expect(requestAssignedWork(message)).toBe(false);
+    expect(isTaskTurn(message)).toBe(false);
     expect(chatTurnNoteFor(message, facts)).toBeNull();
   });
 });

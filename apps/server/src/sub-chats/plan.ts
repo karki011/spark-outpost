@@ -1,5 +1,5 @@
 import {
-  aboveLeadMode,
+  aboveParentMode,
   cappedMode,
   defaultModeFor,
   modeKind,
@@ -190,14 +190,14 @@ function proposedMode(agent: PlanAgent, piece: SubChatPiece, wanted: string): st
 function modeOf(parent: PlanParent, agent: PlanAgent, piece: SubChatPiece): string | null {
   if (piece.mode !== undefined) {
     const mode = proposedMode(agent, piece, piece.mode);
-    if (aboveLeadMode(parent.posture, postureOf(agent, mode))) {
+    if (aboveParentMode(parent.posture, postureOf(agent, mode))) {
       throw new PlanRefusal(proposedAboveOwnMode(quoted(piece.title)));
     }
     return mode;
   }
   const inherited = agent.id === parent.provider ? parent.agentMode : null;
   const mode = cappedMode(agent.id, inherited, agent.capabilities, parent.posture);
-  if (aboveLeadMode(parent.posture, postureOf(agent, mode))) {
+  if (aboveParentMode(parent.posture, postureOf(agent, mode))) {
     throw new PlanRefusal(
       `${quoted(piece.title)}: ${agent.name} has no mode that asks at least as often as this chat’s. Use this chat’s agent for it.`,
     );

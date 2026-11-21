@@ -141,7 +141,7 @@ describe('chatPrompt', () => {
   });
 
   it('puts the follow-up push line in the turn note at any level where there is a remote', () => {
-    const note = chatTurnNote({ project: worktree, followUpRound: true, requestAssigned: false });
+    const note = chatTurnNote({ project: worktree, followUpRound: true, taskTurn: false });
     expect(note).toContain(text.TURN_NOTE_INTRO);
     expect(note).toContain(text.TURN_NOTE_PUBLISHING);
     expect(note).toContain(`- ${text.PUBLISH_FOLLOW_UP}`);
@@ -151,14 +151,12 @@ describe('chatPrompt', () => {
 
   it('gives a follow-up round no push line where there is nothing to push to', () => {
     const noRemote = { ...worktree, hasRemote: false };
-    expect(
-      chatTurnNote({ project: noRemote, followUpRound: true, requestAssigned: false }),
-    ).toBeNull();
-    expect(chatTurnNote({ project: null, followUpRound: true, requestAssigned: false })).toBeNull();
+    expect(chatTurnNote({ project: noRemote, followUpRound: true, taskTurn: false })).toBeNull();
+    expect(chatTurnNote({ project: null, followUpRound: true, taskTurn: false })).toBeNull();
   });
 
-  it('puts the assigned-work lines in the turn note for a request another chat wrote', () => {
-    const note = chatTurnNote({ project: worktree, followUpRound: false, requestAssigned: true });
+  it('puts the assigned-work lines in the turn note for a sub-chat’s task turn', () => {
+    const note = chatTurnNote({ project: worktree, followUpRound: false, taskTurn: true });
     expect(note).toContain(text.TURN_NOTE_INTRO);
     expect(note).toContain(ASSIGNED_WORK_LINE);
     expect(note).toContain(text.TURN_NOTE_NO_SUB_CHATS);
@@ -167,9 +165,7 @@ describe('chatPrompt', () => {
   });
 
   it('has no turn note for an ordinary turn', () => {
-    expect(
-      chatTurnNote({ project: worktree, followUpRound: false, requestAssigned: false }),
-    ).toBeNull();
+    expect(chatTurnNote({ project: worktree, followUpRound: false, taskTurn: false })).toBeNull();
   });
 
   it('says nothing about publishing for a worktree with no branch', () => {

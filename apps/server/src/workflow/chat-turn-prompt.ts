@@ -58,7 +58,7 @@ export async function chatPromptFacts(
   };
 }
 
-export function requestAssignedWork(input: Pick<RunInput, 'chatAsk'>): boolean {
+export function isTaskTurn(input: Pick<RunInput, 'chatAsk'>): boolean {
   return input.chatAsk?.kind === 'task';
 }
 
@@ -66,7 +66,7 @@ export function chatTurnNoteFor(input: RunInput, facts: ChatPromptFacts): string
   return chatTurnNote({
     project: facts.project,
     followUpRound: input.followUpRound === true,
-    requestAssigned: requestAssignedWork(input),
+    taskTurn: isTaskTurn(input),
   });
 }
 

@@ -29,8 +29,8 @@ Non-goals:
 - **Skill folders.** `agent-config/discovery.ts` scans `.claude/skills`, `.agents/skills` and `.codex/skills`. Claude gets all three through the sanitized plugin built from `scan.skills` (`agent-config/plugin-dir.ts`, `launch.ts`); Z.ai runs on the same Claude adapter (`ACP_AGENTS.md`); Codex reads `.agents/skills` and `.codex/skills` itself (`REPO_AGENT_CONFIG.md`). So today `.agents/skills` reaches every provider.
 - **Trust does not cover skills yet.** The trust fingerprint holds hooks, allow rules and MCP servers only (`executableItems` in `agent-config/trust.ts`); skills follow their own per-project switch (`REPO_AGENT_CONFIG.md`, "Fingerprint").
 - **Protected paths.** `INSTRUCTION_PREFIXES` in `projects/path-policy.ts` is `.claude/`, `.cursor/rules/` and `.spark/`, plus `AGENTS.md` and `CLAUDE.md` by name. An agent's write under `.agents/` or `.codex/` does not ask today; the separate safety-floor change on branch `spark/protect-agent-folders` adds them and is a prerequisite for phase 1.
-- **Drafts the user starts.** Outpost drafts (`persistence/outpost-drafts.ts`, `outposts/story-start.ts`) and agent plans (`workflow/plan-recorder.ts`, `persistence/plan-documents.ts`) live in the database and take effect only when the user acts.
-- **Remote.** Every route needs a rule in `remote/route-rules.ts` or the policy test fails. Outpost drafts are readable from a device; starting a story stays on the Mac.
+- **Drafts the user starts.** Outpost drafts (removed with outposts on November 20, 2026) and agent plans (`workflow/plan-recorder.ts`, `persistence/plan-documents.ts`) live in the database and take effect only when the user acts.
+- **Remote.** Every route needs a rule in `remote/route-rules.ts` or the policy test fails. When this was written, outpost drafts were readable from a device and starting one stayed on the Mac; outposts are gone since November 20, 2026.
 
 ## User flow
 
@@ -46,7 +46,7 @@ Non-goals:
 ## The review run
 
 - A child run on the chat's provider and model through `executeChildRun`, picked up by an `isLessonRun` check next to `isDigestRun`.
-- Read-only: no edit tools, no Spark action tools, no outpost tools, no publish step.
+- Read-only: no edit tools, no Spark action tools, no `spark_sub_chats`, no publish step.
 - Input: the user's messages (corrections first), each tagged with its message id, short reply excerpts, and the existing skills (name, description, body, path), all through `redactText` as `digest/input.ts` does. No tool output, other file contents or attachments.
 - Output: `none` or one proposal (`patch <path>` or `new <name>`) with a reason, the id of the user message it came from, and the full text, parsed like `digest/parse.ts`. As that parser keeps only chat ids it sent, this one keeps a proposal only when its source id is one of the user message ids it sent, so the source is always a user message of this chat.
 

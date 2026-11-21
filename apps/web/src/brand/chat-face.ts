@@ -56,11 +56,8 @@ export function chatFaceStyle(chatId: string): ChatFaceStyle {
   };
 }
 
-export function chatFace(
-  chatId: string,
-  state: ChatFaceState,
-  style: ChatFaceStyle = chatFaceStyle(chatId),
-): ChatFaceLook {
+export function chatFace(chatId: string, state: ChatFaceState): ChatFaceLook {
+  const style = chatFaceStyle(chatId);
   return { color: style.color, shape: style.shape, expression: EXPRESSIONS[state] };
 }
 

@@ -31,12 +31,11 @@ interface ChatFaceProps {
   size: ChatFaceSize;
   state?: ChatFaceState;
   label?: string | undefined;
-  style?: ChatFaceStyle | undefined;
 }
 
-export function ChatFace({ chatId, size, state = 'idle', label, style }: ChatFaceProps) {
+export function ChatFace({ chatId, size, state = 'idle', label }: ChatFaceProps) {
   const reduced = useReducedMotion();
-  const look = chatFace(chatId, state, style);
+  const look = chatFace(chatId, state);
   const blob = {
     ...chatBlob(chatId, look),
     size: DRAWN[size],

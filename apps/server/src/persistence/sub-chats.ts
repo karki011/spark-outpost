@@ -20,7 +20,7 @@ import { summaryQuery } from './summary-query.ts';
 
 export class SubChatError extends Error {}
 
-export const PARENT_NOT_FOUND = 'That chat does not exist. It may have been deleted.';
+const PARENT_NOT_FOUND = 'That chat does not exist. It may have been deleted.';
 export const SUB_CHAT_CANNOT_BE_PARENT = 'A sub-chat cannot start sub-chats.';
 export const PARENT_CANNOT_BE_SUB_CHAT = 'A chat that has sub-chats cannot become a sub-chat.';
 export const ALREADY_A_SUB_CHAT = 'That chat is already a sub-chat.';

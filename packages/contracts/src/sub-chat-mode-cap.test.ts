@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProviderCapabilities } from './chat-settings.ts';
-import { aboveLeadMode, cappedMode, chatModeRank, leadModeLimit } from './sub-chat-mode-cap.ts';
+import { aboveParentMode, cappedMode } from './sub-chat-mode-cap.ts';
 
 const CODEX_CAPABILITIES: ProviderCapabilities = {
   provider: 'codex',
@@ -29,22 +29,22 @@ const CLAUDE_CAPABILITIES: ProviderCapabilities = {
   defaultMode: 'auto',
 };
 
-describe('the mode cap between a lead chat and a chat it proposes', () => {
-  it('lets a proposed chat ask as often as the lead or more often, never less', () => {
-    expect(aboveLeadMode('asks', 'read_only')).toBe(false);
-    expect(aboveLeadMode('asks', 'asks')).toBe(false);
-    expect(aboveLeadMode('asks', 'edits')).toBe(true);
-    expect(aboveLeadMode('edits', 'auto')).toBe(true);
-    expect(aboveLeadMode('full_access', 'full_access')).toBe(false);
+describe('the mode cap between a parent chat and a sub-chat it proposes', () => {
+  it('lets a proposed chat ask as often as the parent or more often, never less', () => {
+    expect(aboveParentMode('asks', 'read_only')).toBe(false);
+    expect(aboveParentMode('asks', 'asks')).toBe(false);
+    expect(aboveParentMode('asks', 'edits')).toBe(true);
+    expect(aboveParentMode('edits', 'auto')).toBe(true);
+    expect(aboveParentMode('full_access', 'full_access')).toBe(false);
   });
 
-  it('treats a mode it cannot place as the most open for a chat and as asking for a lead', () => {
-    expect(aboveLeadMode('auto', 'unknown')).toBe(true);
-    expect(aboveLeadMode('unknown', 'edits')).toBe(true);
-    expect(aboveLeadMode('unknown', 'asks')).toBe(false);
+  it('treats a mode it cannot place as the most open for a chat and as asking for a parent', () => {
+    expect(aboveParentMode('auto', 'unknown')).toBe(true);
+    expect(aboveParentMode('unknown', 'edits')).toBe(true);
+    expect(aboveParentMode('unknown', 'asks')).toBe(false);
   });
 
-  it('ranks a chat no higher than the limit of a lead in the same mode', () => {
+  it('allows the parent’s own mode, except one it cannot place', () => {
     for (const posture of [
       'read_only',
       'asks',
@@ -53,23 +53,34 @@ describe('the mode cap between a lead chat and a chat it proposes', () => {
       'auto',
       'full_access',
     ] as const) {
-      expect(chatModeRank(posture)).toBeLessThanOrEqual(leadModeLimit(posture));
+      expect(aboveParentMode(posture, posture)).toBe(false);
     }
-    expect(chatModeRank('unknown')).toBeGreaterThan(leadModeLimit('unknown'));
+    expect(aboveParentMode('unknown', 'unknown')).toBe(true);
+  });
+
+  it('treats asking and denying as the same rank', () => {
+    expect(aboveParentMode('asks', 'denies')).toBe(false);
+    expect(aboveParentMode('denies', 'asks')).toBe(false);
+  });
+
+  it('lets an unknown chat mode through only under a parent with full access', () => {
+    expect(aboveParentMode('full_access', 'unknown')).toBe(false);
+    expect(aboveParentMode('auto', 'full_access')).toBe(true);
+    expect(aboveParentMode('read_only', 'asks')).toBe(true);
   });
 });
 
 describe('cappedMode', () => {
-  it('keeps a mode that asks at least as often as the lead', () => {
+  it('keeps a mode that asks at least as often as the parent', () => {
     expect(cappedMode('claude', 'default', CLAUDE_CAPABILITIES, 'edits')).toBe('default');
     expect(cappedMode('claude', 'acceptEdits', CLAUDE_CAPABILITIES, 'edits')).toBe('acceptEdits');
   });
 
-  it('keeps no mode when the agent default is within the lead', () => {
+  it('keeps no mode when the agent default is within the parent’s', () => {
     expect(cappedMode('claude', null, CLAUDE_CAPABILITIES, 'auto')).toBeNull();
   });
 
-  it('lowers a mode above the lead to the highest one the lead allows', () => {
+  it('lowers a mode above the parent’s to the highest one the parent allows', () => {
     expect(cappedMode('claude', 'bypassPermissions', CLAUDE_CAPABILITIES, 'edits')).toBe(
       'acceptEdits',
     );
@@ -77,7 +88,7 @@ describe('cappedMode', () => {
     expect(cappedMode('codex', 'agent', CODEX_CAPABILITIES, 'asks')).toBe('read-only');
   });
 
-  it('treats a lead in an unknown mode as one that asks', () => {
+  it('treats a parent in an unknown mode as one that asks', () => {
     expect(cappedMode('claude', 'auto', CLAUDE_CAPABILITIES, 'unknown')).toBe('default');
   });
 

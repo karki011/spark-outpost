@@ -29,7 +29,7 @@ import { deliverAsk } from './deliver-ask.ts';
 import { connectedAgents, isFolder, type FolderExists } from './plan-facts.ts';
 import { folderMissing, quoted, startChoices, type PlanAgent } from './plan.ts';
 
-export const PROJECT_GONE = 'That project no longer exists.';
+const PROJECT_GONE = 'That project no longer exists.';
 export const NOT_THIS_CHATS_SUB_CHAT = 'That chat is not a sub-chat of this chat.';
 
 export type StartedBy = 'user' | 'agent';
@@ -61,7 +61,7 @@ export interface SubChatsStarted {
 
 class PieceRefusal extends Error {}
 
-export function stackedOnMissing(title: string): string {
+function stackedOnMissing(title: string): string {
   return `It is stacked on ${quoted(title)}, which did not start.`;
 }
 

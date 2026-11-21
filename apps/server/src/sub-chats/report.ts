@@ -69,7 +69,7 @@ function openingOf(lines: readonly string[]): string {
   return clipped(said.join('\n'), SECTION_MAX);
 }
 
-export function turnReason(turn: Pick<ReportTurn, 'status' | 'error'>): string | null {
+function turnReason(turn: Pick<ReportTurn, 'status' | 'error'>): string | null {
   if (turn.status === 'succeeded') return null;
   if (turn.status === 'cancelled') return TURN_REASONS.stopped;
   if (turn.status === 'gone') return TURN_REASONS.gone;

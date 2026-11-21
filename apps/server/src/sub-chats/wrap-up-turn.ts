@@ -8,7 +8,7 @@ import {
 import { finishRun } from '../workflow/execute-run.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 
-export function asWrapUpReply(input: RunInput): RunInput {
+function asWrapUpReply(input: RunInput): RunInput {
   return { ...input, mode: input.mode === 'do' ? 'ask' : input.mode, planning: false };
 }
 
