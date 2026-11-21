@@ -1,0 +1,205 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+:root{--bg:#1c1720;--side:#18131b;--card:#262029;--card2:#201a24;--line:#3a3240;--fg:#ece6ef;--mute:#a59cab;--accent:#c9a6ff;--ok:#7fd1a8;--warn:#f0b86e;--bad:#ff8f8f;--info:#8fbcff}
+*{box-sizing:border-box}
+body{margin:0;background:#120e15;color:var(--fg);font:14px/1.45 -apple-system,"SF Pro Text",Inter,sans-serif;padding:28px 32px;width:1500px}
+h1{font-size:17px;margin:0 0 4px}
+.lead{color:var(--mute);font-size:13px;margin:0 0 16px;max-width:1100px}
+h2{font-size:14px;margin:30px 0 4px}
+.win{display:grid;grid-template-columns:300px 1fr 380px;height:800px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg)}
+.side{background:var(--side);border-right:1px solid var(--line);padding:14px 10px;font-size:13px}
+.side h3,.wp h3{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;margin:14px 8px 6px;font-weight:600}
+.item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;min-height:30px}
+.item.sel{background:#2e2634}
+.item .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kids{margin-left:15px;padding-left:20px}
+.kids .item{position:relative}
+.kids .item::before{content:'';position:absolute;left:-12px;top:0;height:100%;border-left:1.5px solid #6b6072}
+.kids .item:last-child::before{height:50%}
+.kids .item::after{content:'';position:absolute;left:-12px;top:50%;width:16px;border-top:1.5px solid #6b6072}
+.mdl{font-size:12px;color:var(--mute);border:1px solid var(--line);border-radius:5px;padding:0 6px;white-space:nowrap}
+.st{font-size:12px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.need{color:var(--warn)}.work{color:var(--info)}.held{color:var(--mute)}.rev{color:var(--accent)}.done{color:var(--ok)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.count{font-size:12px;color:var(--bg);background:var(--warn);border-radius:9px;padding:0 6px;font-weight:600}
+.chat{display:flex;flex-direction:column;min-width:0}
+.bar{display:flex;align-items:center;gap:10px;padding:11px 18px;border-bottom:1px solid var(--line);font-size:13px}
+.bar b{font-size:14px}.bar .m{color:var(--mute)}
+.msgs{flex:1;padding:18px 22px;overflow:hidden}
+.me{margin-left:auto;width:fit-content;max-width:520px;background:#3a3044;border-radius:14px;padding:9px 13px;margin-bottom:14px}
+.ai{margin-bottom:14px;max-width:640px}
+.ln{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:13px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:7px 2px;margin:4px 0 14px}
+.lnk{color:var(--accent);white-space:nowrap}
+.sp{flex:1}
+.queue{margin:0 18px;border:1px solid var(--line);border-bottom:none;border-radius:10px 10px 0 0;background:var(--card);font-size:13px}
+.qh{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line)}
+.qr{display:flex;align-items:center;gap:8px;padding:8px 12px}
+.qr+.qr{border-top:1px solid var(--line)}
+.btn{font-size:12.5px;border:1px solid var(--line);border-radius:7px;padding:4px 10px;background:#2e2634;color:var(--fg);min-height:28px;display:inline-flex;align-items:center;white-space:nowrap}
+.btn.p{background:var(--accent);color:#1c1720;border-color:var(--accent);font-weight:600}
+.comp{margin:0 18px 16px;border:1px solid var(--line);border-radius:0 0 12px 12px;background:var(--card2);padding:12px 14px;color:var(--mute);display:flex;align-items:center}
+.comp.solo{border-radius:12px}
+.wp{border-left:1px solid var(--line);background:var(--card2);padding:6px 12px;font-size:13px}
+.tabs{display:flex;gap:16px;padding:8px 8px 10px;border-bottom:1px solid var(--line);color:var(--mute)}
+.tabs .on{color:var(--fg);font-weight:600;border-bottom:2px solid var(--accent);padding-bottom:8px;margin-bottom:-11px}
+.grp{font-size:12px;color:var(--mute);margin:14px 6px 6px;font-weight:600}
+.prow{border:1px solid var(--line);border-radius:9px;background:var(--card);padding:9px 11px;margin-bottom:8px}
+.prow .top{display:flex;align-items:center;gap:8px}
+.prow .top b{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.prow .meta{color:var(--mute);font-size:12px;margin-top:3px}
+.prow .meta code,.rep code{font:12px ui-monospace,Menlo,monospace}
+.prow .why{font-size:12.5px;margin-top:6px;display:flex;align-items:center;gap:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.pane{border:1px solid var(--line);border-radius:12px;background:var(--bg);overflow:hidden}
+.pane .msgs{padding:16px 18px}
+.card{border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:13px;margin-bottom:12px}
+.card .hd{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.card .r{display:flex;gap:10px;padding:8px 12px;align-items:baseline}
+.card .r+.r{border-top:1px solid var(--line)}
+.card .r .n{color:var(--mute);width:16px}
+.card .r .d{color:var(--mute);font-size:12px}
+.card .ft{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line);align-items:center}
+.crumb{color:var(--mute)}.crumb b{color:var(--accent);font-weight:500}
+.rep{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 12px;font-size:13px;margin-bottom:12px}
+.rep dt{color:var(--mute);font-size:12px;margin-top:6px}.rep dd{margin:0}
+.rep .self{font-size:12px;color:var(--mute);margin-top:8px}
+.note{font-size:12.5px;color:var(--mute);margin:8px 2px 0}
+</style></head><body>
+
+<h1>Sub-chats · replaces outposts</h1>
+<p class="lead">No room, no handles, no request cards. A chat that splits its work becomes a parent; its sub-chats are ordinary chats nested under it. You talk to the parent to direct the job, or open a sub-chat and type there to steer one piece.</p>
+
+<div class="win">
+  <div class="side">
+    <h3>storefront</h3>
+    <div class="item sel"><span>▾</span><span class="t"><b>Checkout rewrite</b></span><span class="count">1</span></div>
+    <div class="kids">
+      <div class="item"><span class="t">Payments API v2</span><span class="st rev"><span class="dot"></span>Ready for review</span></div>
+      <div class="item"><span class="t">Cart totals service</span><span class="st need"><span class="dot"></span>Needs you</span></div>
+      <div class="item"><span class="t">Checkout UI</span><span class="st work"><span class="dot"></span>Working</span></div>
+      <div class="item"><span class="t">E2E checkout tests</span><span class="st held"><span class="dot"></span>Held</span></div>
+    </div>
+    <div class="item"><span>&nbsp;&nbsp;</span><span class="t">Fix flaky login spec</span><span class="st done"><span class="dot"></span>Done</span></div>
+    <div class="item"><span>&nbsp;&nbsp;</span><span class="t">Upgrade Vite</span><span class="st work"><span class="dot"></span>Working</span></div>
+    <h3>docs-site</h3>
+    <div class="item"><span>&nbsp;&nbsp;</span><span class="t">Rewrite install guide</span><span class="st held"><span class="dot"></span>Idle</span></div>
+  </div>
+
+  <div class="chat">
+    <div class="bar"><b>Checkout rewrite</b><span class="m">· storefront · 4 sub-chats</span><span class="sp"></span><span class="m">Claude · Opus 5.5 · high effort · Auto</span></div>
+    <div class="msgs">
+      <div class="me">Rewrite checkout on the new payments API. Split it up however makes sense.</div>
+      <div class="ai">I'll split this into four pieces. The API and the totals service don't touch the same files, so they run in parallel. The UI is stacked on the API branch, and the tests wait for all three.</div>
+      <div class="ln"><span>⑃</span><span>Started 4 sub-chats: Payments API v2, Cart totals service, Checkout UI, E2E checkout tests</span><span class="sp"></span><span class="lnk">Plan ›</span></div>
+      <div class="rep">
+        <b>Report · Payments API v2</b> <span class="st rev" style="margin-left:6px"><span class="dot"></span>Ready for review</span>
+        <dl style="margin:4px 0 0">
+          <dt>Changed</dt><dd>New <code>payments/v2</code> client, 14 files, old client kept behind a flag</dd>
+          <dt>Branch and pull request</dt><dd><code>spark/payments-api-v2</code> · <span class="lnk">#412</span> · checks passing</dd>
+          <dt>Risks</dt><dd>Refund path is untested against the sandbox</dd>
+        </dl>
+        <div class="self">Written by the sub-chat's agent, not checked by Spark</div>
+      </div>
+      <div class="ai">The API piece is ready and Checkout UI has started on top of it. Cart totals has a question for you about rounding.</div>
+    </div>
+    <div class="queue">
+      <div class="qh"><b>1 needs you</b><span class="m" style="color:var(--mute)">· 1 report waiting</span></div>
+      <div class="qr"><span class="st need"><span class="dot"></span>Needs you</span><span><b>Cart totals service</b> asks: round tax per line or per order?</span><span class="sp"></span><span class="btn p">Open chat</span></div>
+      <div class="qr"><span class="st rev"><span class="dot"></span>Ready for review</span><span><b>Payments API v2</b> · #412</span><span class="sp"></span><span class="btn">Review changes</span></div>
+    </div>
+    <div class="comp">Message Checkout rewrite…</div>
+  </div>
+
+  <div class="wp">
+    <div class="tabs"><span class="on">Plan</span><span>Changes</span><span>Links</span><span>Run</span></div>
+    <div class="grp">NEEDS YOU · 1</div>
+    <div class="prow">
+      <div class="top"><b>Cart totals service</b><span class="st need"><span class="dot"></span>Needs you</span></div>
+      <div class="meta"><code>spark/cart-totals</code> · no pull request yet · Sonnet 5.5</div>
+      <div class="meta">Started by this chat</div>
+      <div class="why">Question: round tax per line or per order?<span class="sp"></span><span class="lnk">Open ›</span></div>
+    </div>
+    <div class="grp">READY FOR REVIEW · 1</div>
+    <div class="prow">
+      <div class="top"><b>Payments API v2</b><span class="st rev"><span class="dot"></span>Ready for review</span></div>
+      <div class="meta"><code>spark/payments-api-v2</code> · <span class="lnk">#412</span> · checks passing · Opus 5.5</div>
+      <div class="meta">Started by this chat</div>
+    </div>
+    <div class="grp">WORKING · 1</div>
+    <div class="prow">
+      <div class="top"><b>Checkout UI</b><span class="st work"><span class="dot"></span>Working</span></div>
+      <div class="meta"><code>spark/checkout-ui</code> · stacked on Payments API v2 · Sonnet 5.5</div>
+      <div class="meta">Started by this chat</div>
+    </div>
+    <div class="grp">HELD · 1</div>
+    <div class="prow">
+      <div class="top"><b>E2E checkout tests</b><span class="st held"><span class="dot"></span>Held</span></div>
+      <div class="meta">Starts after Payments API v2, Cart totals service, Checkout UI · Haiku 5.5</div>
+      <div class="meta">Started by this chat</div>
+      <div class="why"><span class="sp"></span><span class="btn">Start anyway</span></div>
+    </div>
+    <div class="grp">DONE · 0</div>
+    <p class="note">Spark never merges. Each sub-chat publishes under its own mode and autonomy.</p>
+  </div>
+</div>
+
+<div class="two">
+  <div>
+    <h2>When the agent's mode asks first: one plan card</h2>
+    <p class="lead">In Auto and Bypass permissions the sub-chats start at once and you see only the "Started 4 sub-chats" line. Otherwise this card replaces drafts, the draft sheet and suggested threads. The parent picks a lighter model where a piece doesn't need its own; you can change any of them here.</p>
+    <div class="pane"><div class="msgs">
+      <div class="card">
+        <div class="hd"><b>Start 4 sub-chats?</b><span class="sp"></span><span style="color:var(--mute);font-size:12.5px">storefront · this chat: Opus 5.5 · high effort · Auto</span></div>
+        <div class="r"><span class="n">1</span><div style="flex:1"><b>Payments API v2</b><div class="d">New branch</div></div><span class="mdl">Same as this chat</span></div>
+        <div class="r"><span class="n">2</span><div style="flex:1"><b>Cart totals service</b><div class="d">New branch</div></div><span class="mdl">Sonnet 5.5 · medium ▾</span></div>
+        <div class="r"><span class="n">3</span><div style="flex:1"><b>Checkout UI</b><div class="d">Stacked on 1</div></div><span class="mdl">Sonnet 5.5 · medium ▾</span></div>
+        <div class="r"><span class="n">4</span><div style="flex:1"><b>E2E checkout tests</b><div class="d">Starts after 1, 2, 3</div></div><span class="mdl">Haiku 5.5 · low ▾</span></div>
+        <div class="ft"><span class="btn p">Start</span><span class="btn">Edit</span><span class="btn">Discard</span><span class="sp"></span><span class="lnk">Show each task ›</span></div>
+      </div>
+    </div></div>
+  </div>
+  <div>
+    <h2>Inside a sub-chat: an ordinary chat</h2>
+    <p class="lead">One composer, one meaning. What you type here is your message to this chat. The parent's task shows as a task, never as something you said.</p>
+    <div class="pane">
+      <div class="bar"><span class="crumb"><b>‹ Checkout rewrite</b> /</span><b>Cart totals service</b><span class="sp"></span><span class="st need"><span class="dot"></span>Needs you</span></div>
+      <div class="msgs">
+        <div class="card">
+          <div class="hd"><span>⑃</span><b>Task from Checkout rewrite</b><span class="sp"></span><span style="color:var(--mute);font-size:12.5px">Started by that chat · not your message</span></div>
+          <div class="r"><div>Move cart totals into their own service behind <code style="font:12px ui-monospace,Menlo,monospace">totals/</code>. Keep the public API of <code style="font:12px ui-monospace,Menlo,monospace">cart.ts</code> unchanged. Report what changed, the branch and any risks.</div></div>
+          <div class="r"><div class="d">Started with Sonnet 5.5 · medium effort · Auto · branch <code style="font:12px ui-monospace,Menlo,monospace">spark/cart-totals</code></div></div>
+        </div>
+        <div class="ai">Totals are moved into their own service. One decision I can't make from the code: should tax be rounded per line or per order? The old code does both in different places.</div>
+      </div>
+      <div class="comp solo">Message Cart totals service…</div>
+    </div>
+  </div>
+</div>
+
+<div class="two">
+  <div>
+    <h2>Where the tree is flattened: a marker back to the parent</h2>
+    <p class="lead">History, search and filtered lists show sub-chats as plain rows. Each keeps "↳" and its parent's name. If the parent is deleted, the sub-chat stays as a top-level chat that says what it was part of.</p>
+    <div class="pane"><div class="msgs" style="padding:10px 12px">
+      <div class="item"><span class="t">Payments API v2 <span style="color:var(--mute)">↳ Checkout rewrite</span></span><span class="st rev"><span class="dot"></span>Ready for review</span></div>
+      <div class="item"><span class="t">Upgrade Vite</span><span class="st work"><span class="dot"></span>Working</span></div>
+      <div class="item"><span class="t">Cart totals service <span style="color:var(--mute)">↳ Checkout rewrite</span></span><span class="st need"><span class="dot"></span>Needs you</span></div>
+      <div class="item"><span class="t">Search index rebuild <span style="color:var(--mute)">· was part of Catalog cleanup</span></span><span class="st done"><span class="dot"></span>Done</span></div>
+    </div></div>
+  </div>
+  <div>
+    <h2>Audit: every start, task and stop names both chats</h2>
+    <p class="lead">The entry says who started the sub-chat, with what, and whether a card approved it or the agent's mode ran it at once.</p>
+    <div class="pane"><div class="msgs" style="padding:6px 0">
+      <div class="card" style="border:none;background:none;margin:0">
+        <div class="r"><span class="d" style="width:44px">14:02</span><div><b>Sub-chat started</b> · Cart totals service<div class="d">By Checkout rewrite · Sonnet 5.5 · medium · Auto · ran at once (Auto)</div></div></div>
+        <div class="r"><span class="d" style="width:44px">14:02</span><div><b>Sub-chat started</b> · E2E checkout tests<div class="d">By Checkout rewrite · Haiku 5.5 · low · Auto · held: starts after 3 sub-chats</div></div></div>
+        <div class="r"><span class="d" style="width:44px">14:31</span><div><b>Task sent</b> · Payments API v2<div class="d">By Checkout rewrite · queued behind a running turn</div></div></div>
+        <div class="r"><span class="d" style="width:44px">14:40</span><div><b>Model changed</b> · Checkout UI<div class="d">By you · Sonnet 5.5 → Opus 5.5</div></div></div>
+        <div class="r"><span class="d" style="width:44px">15:05</span><div><b>Turn stopped</b> · E2E checkout tests<div class="d">By Checkout rewrite · your message asked</div></div></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+</body></html>
