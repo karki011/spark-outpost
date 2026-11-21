@@ -105,6 +105,7 @@ export function GithubRow({
         className="gh-main"
         data-id={item.id}
         aria-current={selected ? 'true' : undefined}
+        title={item.title}
         onClick={() => onOpen(item)}
       >
         <i className="gh-dot" aria-hidden="true" data-on={isFresh(item) || undefined} />
@@ -134,15 +135,15 @@ export function GithubRow({
               </span>
             )}
             {hidden && <HiddenLine hidden={hidden} terms={terms} />}
-          </span>
-          <span className="gh-dates">
-            <time dateTime={item.createdAt} title={`Opened ${fullDate(item.createdAt)}`}>
-              Opened {dayLabel(item.createdAt, now)}
-            </time>
-            <span aria-hidden="true"> · </span>
-            <time dateTime={item.updatedAt} title={`Updated ${fullDate(item.updatedAt)}`}>
-              {updatedLabel(item.updatedAt, now)}
-            </time>
+            <span className="gh-dates">
+              <time dateTime={item.createdAt} title={`Opened ${fullDate(item.createdAt)}`}>
+                Opened {dayLabel(item.createdAt, now)}
+              </time>
+              <span aria-hidden="true"> · </span>
+              <time dateTime={item.updatedAt} title={`Updated ${fullDate(item.updatedAt)}`}>
+                {updatedLabel(item.updatedAt, now)}
+              </time>
+            </span>
           </span>
         </span>
       </button>
