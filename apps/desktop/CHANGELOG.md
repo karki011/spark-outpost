@@ -4,6 +4,17 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.14
+
+- **Sub-chats replace outposts.** A chat's agent splits a job into sub-chats, nested under it in the Chats side panel, each with its own branch and pull request. The parent's Work panel has a **Sub-chats** tab, each sub-chat reports back, and the parent writes one wrap-up. Agents message other chats with `spark_send_to_chat`. Outposts and their page are gone; chats that were in one stay as plain chats.
+- **Workflow runs** show as one line in the chat and a card above the message box, with findings, steps, **Stop** and **Fix** (quotes a finding into your message). **Run in chats…** starts a workflow in several chats at once, and a schedule skips a slot only while its own run is going. Every step is told its project, branch, changed files and open pull request.
+- **GitHub page** lists review requests from every repository your account reaches, shows the list beside the details, and the workflow's run list says where each run started and which pull request it was about.
+- **Browser pane**: developer tools dock under the page (⌥⌘I), a right-click menu for links and fields, address bar suggestions from your history, a new tab opens your search engine's home page, closing the last tab closes the pane, and a page that asks before leaving shows **Leave** / **Stay**.
+- A PR follow-up round shows as a live card while it runs, and a message you send during a round or a workflow shows where it went.
+- Toasts share one stack at the top right; Esc or a swipe dismisses them.
+- **Enter** sends while dictating, after the last words arrive. Finished sub-agents' faces are dimmed, and the PR row panel is tidier.
+- On a phone, one tap on Send sends.
+
 ## 0.1.0-beta.13
 
 - **Settings → Health** lists what's broken or quietly ignored.
