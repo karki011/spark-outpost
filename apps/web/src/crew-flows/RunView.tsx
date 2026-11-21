@@ -7,7 +7,7 @@ import { agentAnchor, approvalAnchor } from '../crew/conversation-crew.ts';
 import { JUMP_TRIES, scrollToAnchor } from '../crew/scroll-to-anchor.ts';
 import { BackIcon, InfoIcon, WarnIcon, XIcon } from '../ui/icons.tsx';
 import {
-  SOURCE_WORDS,
+  sourceLine,
   finishedEdges,
   isLive,
   outcomeText,
@@ -53,7 +53,7 @@ function Loaded({
   const now = useNow(live);
   const stop = useStopWorkflowRun();
   const chat = useRunChat(run.conversationId);
-  const inChat = run.conversationId !== null;
+  const inChat = run.conversationId !== null && run.kind !== 'review';
 
   const graphSteps = useMemo(
     () =>
@@ -98,7 +98,7 @@ function Loaded({
         </button>
         <h2 className="wf-run-title">{run.workflowName}</h2>
         <span className="wf-tag">
-          {SOURCE_WORDS[run.source]} · {runWhen(run)}
+          {sourceLine(run)} · {runWhen(run)}
         </span>
         <span className="wf-bar-acts">
           {inChat && (

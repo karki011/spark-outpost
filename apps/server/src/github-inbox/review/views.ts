@@ -3,6 +3,7 @@ import type {
   GithubReviewPostKind,
   GithubReviewState,
   GithubReviewerKind,
+  WorkflowRunSource,
 } from '@spark-outpost/contracts';
 import type { Queryable } from '../../persistence/db.ts';
 import { pullKeyOf, type LatestReview } from './decide.ts';
@@ -22,6 +23,8 @@ interface ReviewRow {
   finished_at: Date | null;
   cost_usd: string | null;
   tokens: string | null;
+  started_from: WorkflowRunSource | null;
+  chat_id: string | null;
 }
 
 interface PostRow {
@@ -64,11 +67,18 @@ function toReview(row: ReviewRow, posts: readonly PostRow[]): GithubReview {
     })),
     costUsd: row.cost_usd === null ? null : Number(row.cost_usd),
     tokens: row.tokens === null ? null : Number(row.tokens),
+    startedFrom: row.started_from,
+    chatId: row.chat_id,
   };
 }
 
-const REVIEW_COLUMNS = `id, pull_id, head_sha, reviewer_kind, reviewer_id, reviewer_name, state,
-  body, error, requested_at, started_at, finished_at, cost_usd, tokens`;
+const REVIEW_COLUMNS = `g.id, g.pull_id, g.head_sha, g.reviewer_kind, g.reviewer_id, g.reviewer_name,
+  g.state, g.body, g.error, g.requested_at, g.started_at, g.finished_at, g.cost_usd, g.tokens,
+  COALESCE(w.source, CASE g.source WHEN 'auto' THEN 'github_auto' WHEN 'manual' THEN 'github_page' END)
+    AS started_from,
+  CASE WHEN g.source = 'elsewhere' THEN g.conversation_id END AS chat_id`;
+
+const REVIEW_FROM = `github_reviews g LEFT JOIN workflow_runs w ON w.id = g.workflow_run_id`;
 
 export async function listReviews(
   db: Queryable,
@@ -76,8 +86,9 @@ export async function listReviews(
   pull: string,
 ): Promise<GithubReview[]> {
   const { rows } = await db.query<ReviewRow>(
-    `SELECT ${REVIEW_COLUMNS} FROM github_reviews WHERE workspace_id = $1 AND pull_key = $2
-     ORDER BY requested_at DESC, id`,
+    `SELECT ${REVIEW_COLUMNS} FROM ${REVIEW_FROM}
+     WHERE g.workspace_id = $1 AND g.pull_key = $2
+     ORDER BY g.requested_at DESC, g.id`,
     [workspaceId, pullKeyOf(pull)],
   );
   const posts = await postsOf(
@@ -93,7 +104,7 @@ export async function getReview(
   id: string,
 ): Promise<GithubReview | null> {
   const { rows } = await db.query<ReviewRow>(
-    `SELECT ${REVIEW_COLUMNS} FROM github_reviews WHERE workspace_id = $1 AND id = $2`,
+    `SELECT ${REVIEW_COLUMNS} FROM ${REVIEW_FROM} WHERE g.workspace_id = $1 AND g.id = $2`,
     [workspaceId, id],
   );
   const row = rows[0];

@@ -6,7 +6,7 @@ order: 333
 summary: See the pull requests that need you on the GitHub page, grouped into reviews, fixes, ready to merge and waiting, and open one on GitHub or in its chat.
 ---
 
-You'll find the pull requests that need you. About 2 minutes. The GitHub page is in the Mac app only.
+About 2 minutes. Mac app only.
 
 First [connect GitHub](tickets-and-github.md#connect-github). Until then the page shows **Open Connectors**.
 
@@ -19,6 +19,8 @@ First [connect GitHub](tickets-and-github.md#connect-github). Until then the pag
 
 Each row shows a dot while new, the author, the ticket key, the checks (**Passing**, **Failing**, **Running**, **Conflict** or **Draft**), **New commits** when it changed since you looked, and the latest review.
 
+Review requests come from every repository; your own pull requests from linked projects.
+
 Bot pull requests you were asked to review share one **Dependency updates** row; select it to list them.
 
 If a repository can't be read, a line under the title says why and the page keeps the last list.
@@ -29,7 +31,7 @@ If a repository can't be read, a line under the title says why and the page keep
 2. The details show checks, size, who it waits on, who approved and its ticket. Select the ticket to open it in **Tickets**.
 3. Select **Open chat** to go to the chat that opened it, or **Open on GitHub**.
 
-Drag to resize; Esc closes.
+Drag the divider to resize; Esc closes.
 
 ## Review with a Spark or workflow
 

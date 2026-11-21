@@ -29,6 +29,7 @@ interface ChoicePickerProps {
   showNote?: boolean;
   describedBy?: string;
   actions?: readonly PickerAction[];
+  menuClassName?: string;
   onChange: (id: string) => void;
 }
 
@@ -44,6 +45,7 @@ export function ChoicePicker({
   showNote = true,
   describedBy,
   actions = [],
+  menuClassName,
   onChange,
 }: ChoicePickerProps) {
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
@@ -106,7 +108,7 @@ export function ChoicePicker({
           id={listId}
           role="menu"
           aria-label={label}
-          className={open ? 'choice-menu open' : 'choice-menu'}
+          className={['choice-menu', menuClassName, open && 'open'].filter(Boolean).join(' ')}
           style={position}
           onKeyDown={(event) => {
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {

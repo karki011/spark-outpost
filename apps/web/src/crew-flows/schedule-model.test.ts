@@ -28,6 +28,7 @@ function run(extra: Partial<WorkflowRun>): WorkflowRun {
     source: 'schedule',
     status: 'succeeded',
     conversationId: null,
+    pull: null,
     runId: null,
     stoppedBy: null,
     steps: [],

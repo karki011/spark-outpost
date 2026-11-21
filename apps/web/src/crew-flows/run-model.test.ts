@@ -12,6 +12,7 @@ import {
   statusParts,
   stepElapsed,
   waitingApproval,
+  sourceLine,
 } from './run-model.ts';
 
 const START = '2026-11-13T10:00:00.000Z';
@@ -46,6 +47,7 @@ function run(steps: WorkflowRunStep[], extra: Partial<WorkflowRun> = {}): Workfl
     source: 'manual',
     status: 'running',
     conversationId: uuid(2),
+    pull: null,
     runId: uuid(3),
     stoppedBy: null,
     steps,
@@ -269,5 +271,14 @@ describe('latestRun', () => {
     const real = run([], { id: uuid(21) });
     expect(latestRun([test, real])?.id).toBe(uuid(21));
     expect(latestRun([test])).toBeNull();
+  });
+});
+
+describe('where a run started', () => {
+  it('names the source and the pull request it was about', () => {
+    expect(sourceLine({ source: 'github_page', pull: 'acme/api#7' })).toBe(
+      'GitHub page · acme/api#7',
+    );
+    expect(sourceLine({ source: 'mention', pull: null })).toBe('From a chat');
   });
 });

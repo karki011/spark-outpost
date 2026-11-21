@@ -50,12 +50,14 @@ interface RunningRow {
   workspace_id: string;
   workflow_run_id: string | null;
   conversation_id: string | null;
+  elsewhere: boolean;
   stopping: boolean;
   claimed_at: Date | null;
   run_status: RunStatus | null;
 }
 
 const RUNNING_SELECT = `SELECT g.id, g.workspace_id, g.workflow_run_id, g.conversation_id,
+    g.source = 'elsewhere' AS elsewhere,
     g.stop_requested_at IS NOT NULL AS stopping, g.claimed_at, r.status AS run_status
   FROM github_reviews g
   LEFT JOIN workflow_runs w ON w.id = g.workflow_run_id
@@ -81,7 +83,10 @@ async function settleRow(db: Queryable, row: RunningRow, now: Date, strandedMs: 
   if (!run) return;
   const end = endOf(run, row.run_status, row.stopping);
   if (!end) return;
-  await settleReview(db, row.id, end, await usageOf(db, row.conversation_id));
+  const usage = row.elsewhere
+    ? { costUsd: run.spend.costUsd, tokens: run.spend.tokens }
+    : await usageOf(db, row.conversation_id);
+  await settleReview(db, row.id, end, usage);
 }
 
 export async function settleReviewOfWorkflowRun(

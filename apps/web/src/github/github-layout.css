@@ -1,10 +1,13 @@
-.gh-detail-wrap {
-  --gh-detail-cap: max(320px, calc(100cqw - 420px));
+.gh-list-wrap {
   position: relative;
-  width: min(var(--gh-detail-w, 360px), var(--gh-detail-cap));
   min-width: 0;
   min-height: 0;
   display: flex;
+}
+
+.gh-split[data-open] .gh-list-wrap {
+  --gh-list-cap: max(280px, calc(100cqw - 480px));
+  width: min(var(--gh-list-w, 400px), var(--gh-list-cap));
 }
 
 .gh-resize {
@@ -12,7 +15,7 @@
   z-index: 3;
   top: 0;
   bottom: 0;
-  left: -4px;
+  right: -4px;
   width: 8px;
   cursor: col-resize;
   touch-action: none;
@@ -22,9 +25,18 @@
   outline: none;
 }
 
-.gh-detail-wrap:has(.gh-resize:hover) .gh-detail,
-.gh-detail-wrap:has(.gh-resize:focus-visible) .gh-detail,
-.gh-detail-wrap.dragging .gh-detail {
+.gh-split:has(.gh-resize:hover) .gh-detail,
+.gh-split:has(.gh-resize:focus-visible) .gh-detail,
+.gh-split:has(.gh-list-wrap.dragging) .gh-detail {
+  border-left-color: var(--line-strong);
+  box-shadow: inset 1px 0 0 var(--line-strong);
+}
+
+.gh-list-wrap.dragging {
+  user-select: none;
+}
+
+.gh-detail {
   border-left-color: var(--line-strong);
   box-shadow: inset 1px 0 0 var(--line-strong);
 }
@@ -34,7 +46,6 @@
 }
 
 .gh-detail {
-  flex: 1;
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
@@ -45,6 +56,11 @@
   border-left: 1px solid var(--line);
   background: var(--panel);
   animation: gh-pane-in 0.2s var(--out);
+}
+
+.gh-detail > * {
+  width: 100%;
+  max-width: 960px;
 }
 
 @keyframes gh-pane-in {
@@ -86,7 +102,7 @@
   display: none;
 }
 
-.gh-facts {
+.gh-pr-facts {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 8px 14px;
@@ -94,11 +110,11 @@
   font-size: 13px;
 }
 
-.gh-facts dt {
+.gh-pr-facts dt {
   color: var(--muted);
 }
 
-.gh-facts dd {
+.gh-pr-facts dd {
   margin: 0;
   overflow-wrap: anywhere;
 }
@@ -181,19 +197,18 @@
 
   .gh-tile-line,
   .gh-age,
-  .gh-facts dt {
+  .gh-pr-facts dt {
     color: var(--text);
   }
 }
 
 @container gh (max-width: 1080px) {
-  .gh-body[data-open] {
+  .gh-split[data-open] {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .gh-detail-wrap {
-    position: static;
-    width: 0;
+  .gh-split[data-open] .gh-list-wrap {
+    width: auto;
   }
 
   .gh-resize {
@@ -206,7 +221,7 @@
     right: 0;
     bottom: 0;
     z-index: 6;
-    width: min(400px, calc(100% - 48px));
+    width: min(520px, calc(100% - 48px));
     border-left-color: var(--line-strong);
     box-shadow: -24px 0 60px rgba(0, 0, 0, 0.2);
   }
@@ -285,7 +300,9 @@
   .gh-tile-line {
     display: none;
   }
+}
 
+@container gh-list (max-width: 720px) {
   .gh-text {
     flex-direction: column;
     align-items: stretch;

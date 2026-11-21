@@ -404,28 +404,51 @@ test('a workflow review that posted nothing says so and names the workflow', asy
   await expect(block.getByRole('link', { name: 'View on GitHub' })).toHaveCount(0);
 });
 
-test('the details pane resizes by drag and keys and keeps its width', async ({ page }) => {
+test('a review started in a chat says so, opens its chat and has no Stop', async ({ page }) => {
+  await stubReviews(page, {
+    reviews: [
+      review({
+        state: 'running',
+        body: null,
+        finishedAt: null,
+        reviewer: { kind: 'workflow', id: 'gauntlet', name: 'The Gauntlet' },
+        startedFrom: 'mention',
+        chatId: '00000000-0000-4000-8000-0000000000c1',
+      }),
+    ],
+    summary: { state: 'running', headSha: HEAD, stale: false, posted: null },
+  });
+  const { block } = await openPane(page);
+  await expect(block).toContainText('By workflow The Gauntlet · Started from: From a chat');
+  await expect(block.getByRole('button', { name: 'Open chat' })).toBeVisible();
+  await expect(block.getByRole('button', { name: 'Stop' })).toHaveCount(0);
+});
+
+test('the pull request list resizes by drag and keys and keeps its width', async ({ page }) => {
   await stubReviews(page);
   await page.setViewportSize({ width: 1600, height: 900 });
   const { main, pane } = await openPane(page);
-  const handle = main.getByRole('separator', { name: 'Resize pull request details' });
-  const before = (await pane.boundingBox())!.width;
+  const handle = main.getByRole('separator', { name: 'Resize pull request list' });
+  const list = main.getByRole('region', { name: 'Pull requests' });
+  const before = (await list.boundingBox())!.width;
   const box = (await handle.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + 100);
   await page.mouse.down();
-  await page.mouse.move(box.x - 140, box.y + 100, { steps: 6 });
+  await page.mouse.move(box.x + 140, box.y + 100, { steps: 6 });
   await page.mouse.up();
-  await expect.poll(async () => (await pane.boundingBox())!.width).toBeGreaterThan(before + 100);
+  await expect.poll(async () => (await list.boundingBox())!.width).toBeGreaterThan(before + 100);
+  const wide = (await pane.boundingBox())!;
+  expect(wide.x + wide.width).toBeGreaterThan(1500);
 
   await handle.focus();
   await page.keyboard.press('Home');
-  await expect(handle).toHaveAttribute('aria-valuenow', '320');
-  await page.keyboard.press('Shift+ArrowLeft');
-  await expect(handle).toHaveAttribute('aria-valuenow', '368');
+  await expect(handle).toHaveAttribute('aria-valuenow', '280');
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect(handle).toHaveAttribute('aria-valuenow', '328');
 
   await page.reload();
   await main.locator('.gh-main').first().click();
-  await expect(handle).toHaveAttribute('aria-valuenow', '368');
+  await expect(handle).toHaveAttribute('aria-valuenow', '328');
   await page.keyboard.press('Escape');
   await expectAxeClean(page);
 });

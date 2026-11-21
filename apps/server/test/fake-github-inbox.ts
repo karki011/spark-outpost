@@ -93,7 +93,8 @@ function matching(
   include: (pull: FakePull) => boolean,
 ) {
   const nodes = pulls
-    .filter((pull) => pull.state === 'open' && search.repos.has(`${pull.owner}/${pull.repo}`))
+    .filter((pull) => pull.state === 'open')
+    .filter((pull) => search.repos.size === 0 || search.repos.has(`${pull.owner}/${pull.repo}`))
     .filter((pull) => (pull.updated_at ?? '9999').slice(0, 10) >= search.since)
     .filter(include)
     .map(node);
@@ -108,12 +109,18 @@ export function inboxSearchAnswer(
   const query = String(body.query ?? '');
   const review = searchIn(query, 'review');
   const mine = searchIn(query, 'mine');
-  if (!review || !mine) return null;
+  if (!review && !mine) return null;
   return {
     data: {
       viewer: { login },
-      review: matching(pulls, review, (pull) => (pull.requestedReviewers ?? []).includes(login)),
-      mine: matching(pulls, mine, (pull) => pull.openedBy === login),
+      ...(review
+        ? {
+            review: matching(pulls, review, (pull) =>
+              (pull.requestedReviewers ?? []).includes(login),
+            ),
+          }
+        : {}),
+      ...(mine ? { mine: matching(pulls, mine, (pull) => pull.openedBy === login) } : {}),
     },
   };
 }

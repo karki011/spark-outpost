@@ -39,6 +39,7 @@ function test(steps: WorkflowRunStep[], extra: Partial<WorkflowTestRun> = {}): W
       source: 'manual',
       status: 'running',
       conversationId: null,
+      pull: null,
       runId: null,
       stoppedBy: null,
       steps,

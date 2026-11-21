@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from 'react';
+import { useMemo, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type {
   GithubInboxGroup,
@@ -8,6 +8,8 @@ import type {
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { requestSettings } from '../settings/settings-request.ts';
 import { Glyph } from '../tickets/ticket-icons.tsx';
+import { PanelResizer } from '../ui/PanelResizer.tsx';
+import { useStoredPanelWidth, type PanelWidthLimits } from '../ui/panel-width.ts';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
@@ -19,6 +21,13 @@ import { defaultGroup, filterByProject, groupItems, isFresh } from './github-mod
 import { useGithubInbox } from './use-github-inbox.ts';
 import './github.css';
 import './github-layout.css';
+
+const LIST_WIDTH: PanelWidthLimits = {
+  key: 'spark.github.listWidth',
+  min: 280,
+  max: 720,
+  fallback: 400,
+};
 
 interface GithubPageProps {
   onOpenChat: (conversationId: string) => void;
@@ -68,6 +77,8 @@ export function GithubPage({ onOpenChat }: GithubPageProps) {
   const [projectId, setProjectId] = useState('');
   const [picked, setPicked] = useState<GithubInboxGroup | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [listWidth, setListWidth] = useStoredPanelWidth(LIST_WIDTH);
+  const shownWidth = { '--gh-list-w': `${listWidth ?? LIST_WIDTH.fallback}px` } as CSSProperties;
   const now = useMinuteClock();
   const data = inbox.data;
 
@@ -127,18 +138,33 @@ export function GithubPage({ onOpenChat }: GithubPageProps) {
         <>
           <Problems problems={data.problems} />
           <GithubTiles grouped={grouped} value={group} now={now} onChange={pickGroup} />
-          <div className="gh-body" data-open={openItem ? '' : undefined}>
-            <section className="gh-list" aria-label="Pull requests">
-              <GithubList
-                key={group}
-                group={group}
-                items={grouped[group]}
-                openId={openItem?.id ?? null}
-                now={now}
-                onOpen={open}
-                onOpenChat={onOpenChat}
-              />
-            </section>
+          <div className="gh-split" data-open={openItem ? '' : undefined}>
+            <div className="gh-list-wrap" style={shownWidth}>
+              <section className="gh-list" aria-label="Pull requests">
+                <GithubList
+                  key={group}
+                  group={group}
+                  items={grouped[group]}
+                  openId={openItem?.id ?? null}
+                  now={now}
+                  onOpen={open}
+                  onOpenChat={onOpenChat}
+                />
+              </section>
+              {openItem && (
+                <PanelResizer
+                  className="gh-resize"
+                  label="Resize pull request list"
+                  panelSelector=".gh-list-wrap"
+                  variable="--gh-list-w"
+                  cap="--gh-list-cap"
+                  side="right"
+                  limits={LIST_WIDTH}
+                  width={listWidth}
+                  onWidth={setListWidth}
+                />
+              )}
+            </div>
             {openItem && (
               <GithubDetail item={openItem} now={now} onClose={close} onOpenChat={onOpenChat} />
             )}

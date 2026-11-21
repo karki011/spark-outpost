@@ -31,6 +31,7 @@ export interface NewWorkflowRun {
   diffHash?: string | null;
   edits?: boolean;
   gatesRunId?: string;
+  pull?: string;
 }
 
 async function announce(db: Queryable, workflowRunId: string): Promise<void> {
@@ -42,12 +43,31 @@ async function announce(db: Queryable, workflowRunId: string): Promise<void> {
   );
 }
 
+const PULL_URL = /https?:\/\/[^\s/]+\/([\w.-]+)\/([\w.-]+)\/pull\/(\d+)/;
+
+export function pullNamedIn(message: string): string | null {
+  const found = PULL_URL.exec(message);
+  return found ? `${found[1]}/${found[2]}#${found[3]}` : null;
+}
+
+async function pullOfRun(db: Queryable, run: NewWorkflowRun): Promise<string | null> {
+  const named = pullNamedIn(run.message);
+  if (named) return named;
+  const { rows } = await db.query<{ pull: string }>(
+    `SELECT owner || '/' || repo || '#' || number AS pull FROM pr_watches
+     WHERE conversation_id = $1 AND workspace_id = $2 AND pr_state = 'open'
+     ORDER BY updated_at DESC LIMIT 1`,
+    [run.conversationId, run.workspaceId],
+  );
+  return rows[0]?.pull ?? null;
+}
+
 export async function insertWorkflowRun(db: Queryable, run: NewWorkflowRun): Promise<boolean> {
   const inserted = await db.query(
     `INSERT INTO workflow_runs (id, workspace_id, workflow_id, workflow_name, definition, kind,
        source, conversation_id, run_id, message, continues, one_spark, trigger_kind, diff_hash,
-       edits, gates_run_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+       edits, gates_run_id, pull_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
      ON CONFLICT (run_id) DO NOTHING`,
     [
       run.id,
@@ -66,6 +86,7 @@ export async function insertWorkflowRun(db: Queryable, run: NewWorkflowRun): Pro
       run.diffHash ?? null,
       run.edits === true,
       run.gatesRunId ?? null,
+      run.pull ?? (run.kind === 'run' ? await pullOfRun(db, run) : null),
     ],
   );
   if (inserted.rowCount !== 1) return false;
@@ -95,6 +116,7 @@ interface RunRow {
   message: string;
   continues: boolean;
   stopped_by: string | null;
+  pull_id: string | null;
   started_at: Date;
   finished_at: Date | null;
 }
@@ -158,6 +180,7 @@ function toRun(row: RunRow, steps: readonly StepRow[], spend: readonly SpendRow[
     source: row.source,
     status: row.status,
     conversationId: row.conversation_id,
+    pull: row.pull_id,
     runId: row.run_id ?? row.gates_run_id,
     stoppedBy: row.stopped_by,
     steps: steps.filter((step) => step.workflow_run_id === row.id).map(toStep),
@@ -249,7 +272,7 @@ export async function listWorkflowRuns(
   workflowId: string,
 ): Promise<WorkflowRun[]> {
   const { rows } = await db.query<RunRow>(
-    `SELECT * FROM workflow_runs WHERE workspace_id = $1 AND workflow_id = $2 AND kind = 'run'
+    `SELECT * FROM workflow_runs WHERE workspace_id = $1 AND workflow_id = $2 AND kind IN ('run', 'review')
      ORDER BY started_at DESC, id LIMIT $3`,
     [workspaceId, workflowId, WORKFLOW_RUNS_PAGE],
   );

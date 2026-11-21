@@ -3,6 +3,7 @@ import type {
   GithubReview,
   GithubReviewState,
 } from '@spark-outpost/contracts';
+import { SOURCE_WORDS } from '../../crew-flows/run-model.ts';
 import { webLink } from '../../links/web-link.ts';
 import type { GlyphName } from '../../tickets/ticket-icons.tsx';
 
@@ -55,7 +56,7 @@ export function reviewAction(
   review: GithubReview | null,
   reviewerChosen: boolean | undefined,
 ): ReviewAction | null {
-  if (review && isWorking(review.state)) return 'stop';
+  if (review && isWorking(review.state)) return review.chatId ? null : 'stop';
   if (reviewerChosen === undefined) return null;
   if (!reviewerChosen) return 'pick-reviewer';
   return review ? 'again' : 'now';
@@ -80,6 +81,10 @@ export function postedLink(review: GithubReview): PostedLink {
 export function reviewerLine(review: Pick<GithubReview, 'reviewer'>): string {
   const kind = review.reviewer.kind === 'workflow' ? 'workflow' : 'Spark';
   return `By ${kind} ${review.reviewer.name}`;
+}
+
+export function startedFromLine(review: Pick<GithubReview, 'startedFrom'>): string | null {
+  return review.startedFrom ? `Started from: ${SOURCE_WORDS[review.startedFrom]}` : null;
 }
 
 export function notPostedNote(

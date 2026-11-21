@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { WorkflowRun } from '@spark-outpost/contracts';
 import { relativeTime } from '../ui/relative-time.ts';
 import { WarnIcon } from '../ui/icons.tsx';
-import { SOURCE_WORDS, costText, latestRun, runElapsed, runWhen } from './run-model.ts';
+import { costText, latestRun, runElapsed, runWhen, sourceLine } from './run-model.ts';
 import { RunState } from './RunState.tsx';
 import { useNow, useWorkflowRuns } from './use-workflow-runs.ts';
 
@@ -40,7 +40,7 @@ interface RunsListProps {
 
 export function RunsList({ workflowId, onOpen }: RunsListProps) {
   const runs = useWorkflowRuns(workflowId);
-  const shown = (runs.data ?? []).filter((run) => run.kind === 'run');
+  const shown = (runs.data ?? []).filter((run) => run.kind !== 'test');
   const now = useNow(shown.some((run) => run.status === 'running'));
   return (
     <section className="wf-runs" aria-label="Runs" aria-busy={runs.isPending || undefined}>
@@ -64,7 +64,7 @@ export function RunsList({ workflowId, onOpen }: RunsListProps) {
               <RunRow
                 key={run.id}
                 when={runWhen(run)}
-                how={SOURCE_WORDS[run.source]}
+                how={sourceLine(run)}
                 state={<RunState status={run.status} />}
                 end={[runElapsed(run, now), ...(cost ? [cost] : [])]}
                 label={`Open the run from ${runWhen(run)}`}

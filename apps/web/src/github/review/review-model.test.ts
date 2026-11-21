@@ -9,6 +9,7 @@ import {
   reviewAction,
   reviewerLine,
   reviewMark,
+  startedFromLine,
   rowLabel,
   stateLabel,
 } from './review-model.ts';
@@ -28,6 +29,8 @@ function review(overrides: Partial<GithubReview> = {}): GithubReview {
     posted: [],
     costUsd: null,
     tokens: null,
+    startedFrom: null,
+    chatId: null,
     ...overrides,
   };
 }
@@ -164,5 +167,22 @@ describe('notPostedNote', () => {
     expect(notPostedNote(review(), undefined)).toBeNull();
     expect(notPostedNote(review({ posted: [posted] }), true)).toBeNull();
     expect(notPostedNote(review({ state: 'running' }), true)).toBeNull();
+  });
+});
+
+describe('a review started outside the GitHub page', () => {
+  it('says where it started', () => {
+    expect(startedFromLine(review({ startedFrom: 'mention' }))).toBe('Started from: From a chat');
+    expect(startedFromLine(review({ startedFrom: 'github_auto' }))).toBe(
+      'Started from: GitHub auto-review',
+    );
+    expect(startedFromLine(review())).toBeNull();
+  });
+
+  it('offers no Stop while it runs in a chat', () => {
+    const chatId = '00000000-0000-4000-8000-000000000042';
+    expect(reviewAction(review({ state: 'running', chatId }), true)).toBeNull();
+    expect(reviewAction(review({ state: 'running' }), true)).toBe('stop');
+    expect(reviewAction(review({ state: 'done', chatId }), true)).toBe('again');
   });
 });

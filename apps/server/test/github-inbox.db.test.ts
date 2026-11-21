@@ -108,7 +108,7 @@ describe('the GitHub inbox', () => {
     });
   });
 
-  it('groups open pull requests in linked projects', async () => {
+  it('groups own pull requests in linked projects and review requests from any repository', async () => {
     await connectGitHub();
     const projectId = await linkWidgets();
     pull(1, { openedBy: 'alice', requestedReviewers: [TOKEN_LOGIN] });
@@ -120,6 +120,12 @@ describe('the GitHub inbox', () => {
     pull(7, { openedBy: 'alice' });
     pull(8, { owner: 'other', repo: 'elsewhere' });
     pull(9, { updated_at: new Date(Date.now() - 20 * DAY).toISOString() });
+    pull(10, {
+      owner: 'other',
+      repo: 'elsewhere',
+      openedBy: 'alice',
+      requestedReviewers: [TOKEN_LOGIN],
+    });
 
     const shown = await inbox();
     expect(shown).toMatchObject({
@@ -135,6 +141,7 @@ describe('the GitHub inbox', () => {
       4: 'needs_fixes',
       5: 'waiting',
       6: 'waiting',
+      10: 'review_requested',
     });
     expect(shown.items.find((item) => item.number === 1)).toMatchObject({
       id: 'acme/widgets#1',
@@ -146,6 +153,10 @@ describe('the GitHub inbox', () => {
       ticket: null,
     });
     expect(shown.items.find((item) => item.number === 6)?.waitingOn).toEqual(['bob']);
+    expect(shown.items.find((item) => item.number === 10)).toMatchObject({
+      id: 'other/elsewhere#10',
+      projectId: null,
+    });
   });
 
   it('fills the chat that watches a pull request and a known ticket named in its branch', async () => {
@@ -188,7 +199,7 @@ describe('the GitHub inbox', () => {
     pull(1, { openedBy: 'alice', requestedReviewers: [TOKEN_LOGIN] });
 
     expect((await inbox()).items[0]?.unseen).toBe(true);
-    expect(searches()).toBe(1);
+    expect(searches()).toBe(2);
     const seen = await send('post', '/api/github/inbox/seen', {
       id: 'acme/widgets#1',
       headSha: SHA,
@@ -197,12 +208,12 @@ describe('the GitHub inbox', () => {
       unseen: false,
       updatedSinceSeen: false,
     });
-    expect(searches()).toBe(1);
+    expect(searches()).toBe(2);
 
     github.github.pulls[0]!.sha = NEW_SHA;
     expect((await inbox()).items[0]?.headSha).toBe(SHA);
     const refreshed = await inbox('?refresh=1');
-    expect(searches()).toBe(2);
+    expect(searches()).toBe(4);
     expect(refreshed.items[0]).toMatchObject({
       headSha: NEW_SHA,
       unseen: false,
@@ -214,13 +225,20 @@ describe('the GitHub inbox', () => {
     await connectGitHub();
     await linkWidgets();
     pull(2);
+    pull(3, {
+      owner: 'other',
+      repo: 'elsewhere',
+      openedBy: 'alice',
+      requestedReviewers: [TOKEN_LOGIN],
+    });
     const good = await inbox();
     github.github.searchFailure = { status: 403, message: 'API rate limit exceeded' };
 
     const limited = await inbox('?refresh=1');
-    expect(limited.items.map((item) => item.number)).toEqual([2]);
+    expect(limited.items.map((item) => item.number).toSorted()).toEqual([2, 3]);
     expect(limited.fetchedAt).toBe(good.fetchedAt);
     expect(limited.problems).toEqual([
+      { repo: null, message: expect.stringContaining('403') },
       { repo: 'acme/widgets', message: expect.stringContaining('403') },
     ]);
   });

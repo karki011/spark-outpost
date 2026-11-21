@@ -7,6 +7,7 @@ import { sparkPaused } from '../../persistence/spark-pause.ts';
 import type { GitHubDeps } from '../../ship/github/access.ts';
 import { stopRun } from '../../workflow/stop-run.ts';
 import { autoReviewWanted, debouncedDue, pullKeyOf, retryFailedBefore } from './decide.ts';
+import { linkPullRuns, unlinkedPullRuns } from './link-runs.ts';
 import { connectionForPull, readPullBasics, ReviewSetupError } from './material.ts';
 import {
   claimDueReviews,
@@ -94,7 +95,19 @@ export async function startDueReviews(deps: ReviewRunnerDeps): Promise<void> {
   for (const claim of claims) await startReview(deps, claim);
 }
 
+export async function linkRunsStartedElsewhere(deps: ReviewRunnerDeps): Promise<number> {
+  const runs = await unlinkedPullRuns(deps.db, deps.workspaceId, deps.now());
+  if (runs.length === 0) return 0;
+  const inbox = await loadGithubInbox(deps.github);
+  return linkPullRuns(deps.db, deps.workspaceId, runs, inbox.items);
+}
+
+export const STOP_IN_CHAT = 'This review runs in a chat. Stop it there.';
+
 export async function checkReviews(deps: ReviewRunnerDeps): Promise<void> {
+  await linkRunsStartedElsewhere(deps).catch((error: unknown) => {
+    console.error('Could not link workflow runs to their pull requests', error);
+  });
   await settleRunningReviews(deps.db, deps.workspaceId, deps.now(), STRANDED_REVIEW_MS);
   if (await sparkPaused(deps.db, deps.workspaceId)) return;
   await startDueReviews(deps);
@@ -136,6 +149,8 @@ export class ReviewNotFoundError extends Error {
 }
 
 export async function stopReview(deps: ReviewRunnerDeps, id: string): Promise<GithubReview> {
+  const found = await getReview(deps.db, deps.workspaceId, id);
+  if (found?.chatId) throw new BadRequestError(STOP_IN_CHAT);
   const target = await requestStop(deps.db, deps.workspaceId, id);
   if (!target) throw new ReviewNotFoundError();
   if (target.runId) await stopRun(deps.db, target.runId);

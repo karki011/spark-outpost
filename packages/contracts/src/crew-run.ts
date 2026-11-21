@@ -32,6 +32,8 @@ export const workflowRunSourceSchema = z.enum([
   'catch_up',
   'trigger',
   'agent',
+  'github_page',
+  'github_auto',
 ]);
 export type WorkflowRunSource = z.infer<typeof workflowRunSourceSchema>;
 
@@ -179,6 +181,7 @@ export const workflowRunSchema = z.object({
   source: workflowRunSourceSchema,
   status: workflowRunStatusSchema,
   conversationId: z.uuid().nullable(),
+  pull: z.string().nullable().default(null),
   runId: z.uuid().nullable(),
   stoppedBy: crewSlugSchema.nullable(),
   steps: z.array(workflowRunStepSchema),

@@ -1,7 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { rail } from './browser-view-support.ts';
+import { connectorCard } from './connector-cards.ts';
 import { resetTestDatabase } from './database.ts';
+import { clickSettings } from './rail-menu.ts';
 
 type Json = Record<string, unknown>;
 
@@ -178,6 +180,52 @@ test('GitHub page fits narrow, medium and wide windows', async ({ page }) => {
     expect({ width, ...overflow }).toEqual({ width, page: 0, list: 0, document: 0 });
     await page.keyboard.press('Escape');
     await expect(pane).toHaveCount(0);
+  }
+});
+
+test('GitHub page keeps details beside the list after Connectors was opened', async ({ page }) => {
+  await stubInbox(page, inbox());
+  await page.addInitScript(() => localStorage.setItem('spark-outpost.view', 'github'));
+  await page.setViewportSize({ width: 1440, height: 800 });
+  await page.goto('/');
+  const main = page.getByRole('main', { name: 'GitHub' });
+  await expect(main.locator('.gh-main').first()).toBeVisible();
+  await clickSettings(page);
+  await page.getByRole('tab', { name: 'Connectors' }).click();
+  await expect(connectorCard(page, 'github')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await main.locator('.gh-main').first().click();
+  const pane = main.getByRole('complementary');
+  await expect(pane).toBeVisible();
+  await pane.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished)),
+  );
+  const list = (await main.getByRole('region', { name: 'Pull requests' }).boundingBox())!;
+  const detail = (await pane.boundingBox())!;
+  expect(detail.x).toBeGreaterThanOrEqual(list.x + list.width - 1);
+  expect(Math.abs(detail.y - list.y)).toBeLessThanOrEqual(1);
+});
+
+test('GitHub page opens a wide project menu that stays inside the window', async ({ page }) => {
+  await stubInbox(page, inbox());
+  await page.addInitScript(() => localStorage.setItem('spark-outpost.view', 'github'));
+  await page.goto('/');
+  const main = page.getByRole('main', { name: 'GitHub' });
+  for (const width of [1440, 720]) {
+    await page.setViewportSize({ width, height: 800 });
+    await main.getByRole('button', { name: 'Project' }).click();
+    const all = page.getByRole('menuitemradio', { name: 'All projects' });
+    await expect(all).toBeVisible();
+    const panel = page.locator('.choice-menu.gh-project-menu');
+    await panel.evaluate((element) =>
+      Promise.all(element.getAnimations().map((animation) => animation.finished)),
+    );
+    const menu = (await panel.boundingBox())!;
+    expect(menu.width).toBeGreaterThanOrEqual(320);
+    expect(menu.x).toBeGreaterThanOrEqual(0);
+    expect(menu.x + menu.width).toBeLessThanOrEqual(width);
+    await page.keyboard.press('Escape');
+    await expect(all).toBeHidden();
   }
 });
 

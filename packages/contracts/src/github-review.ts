@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { workflowRunSourceSchema } from './crew-run.ts';
 
 export const githubPullIdSchema = z
   .string()
@@ -61,6 +62,8 @@ export const githubReviewSchema = z.object({
   posted: z.array(githubReviewPostedSchema),
   costUsd: z.number().nonnegative().nullable(),
   tokens: z.number().int().nonnegative().nullable(),
+  startedFrom: workflowRunSourceSchema.nullable().default(null),
+  chatId: z.uuid().nullable().default(null),
 });
 export type GithubReview = z.infer<typeof githubReviewSchema>;
 

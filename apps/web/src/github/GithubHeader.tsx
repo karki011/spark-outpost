@@ -48,6 +48,7 @@ export function GithubHeader(props: GithubHeaderProps) {
           <div className={props.projectId ? 'gh-pick on' : 'gh-pick'}>
             <ChoicePicker
               label="Project"
+              menuClassName="gh-project-menu"
               value={props.projectId}
               choices={[
                 { id: '', label: 'All projects' },
