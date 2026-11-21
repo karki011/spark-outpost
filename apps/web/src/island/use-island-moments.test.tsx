@@ -2,7 +2,7 @@
 import { cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import { API_CHAT, OUTPOST_ID, chat } from '../outposts/test-fixtures.ts';
+import { API_CHAT, chat } from '../test/chat-fixtures.ts';
 import { momentLine, useMoments } from './use-island-moments.ts';
 
 const RUN_ID = '0e000000-0000-4000-8000-000000000001';
@@ -12,9 +12,9 @@ afterEach(() => {
   localStorage.clear();
 });
 
-function member(status: 'running' | 'succeeded', needsYou: string | null): ConversationSummary {
+function turn(status: 'running' | 'succeeded'): ConversationSummary {
   return chat(API_CHAT, {
-    outpost: { id: OUTPOST_ID, name: 'Orders launch', handle: 'api' },
+    title: 'Orders endpoint',
     latestRun: {
       id: RUN_ID,
       status,
@@ -22,7 +22,7 @@ function member(status: 'running' | 'succeeded', needsYou: string | null): Conve
       step: null,
       provider: null,
       progress: null,
-      needsYou,
+      needsYou: null,
     },
   });
 }
@@ -32,31 +32,18 @@ function momentsOf(first: ConversationSummary[]) {
 }
 
 describe('useMoments', () => {
-  it('names the member chat that finished needing the user', () => {
-    const hook = momentsOf([member('running', null)]);
-    expect(hook.result.current.memberLine).toBeNull();
-    hook.rerender({ chats: [member('succeeded', 'Which field is the key?')] });
+  it('says a chat is done when its turn finishes', () => {
+    const hook = momentsOf([turn('running')]);
+    expect(hook.result.current.moment).toBeNull();
+    hook.rerender({ chats: [turn('succeeded')] });
     expect(hook.result.current.moment).toEqual({ kind: 'done', chatId: API_CHAT, runId: RUN_ID });
-    expect(hook.result.current.memberLine).toBe('@api needs you in Orders launch.');
-  });
-
-  it('has no member line for a turn that finished with nothing to ask', () => {
-    const hook = momentsOf([member('running', null)]);
-    hook.rerender({ chats: [member('succeeded', null)] });
-    expect(hook.result.current.moment?.kind).toBe('done');
-    expect(hook.result.current.memberLine).toBeNull();
+    expect(hook.result.current.text).toBe('Orders endpoint is done.');
   });
 });
 
 describe('momentLine', () => {
   it('says the chat is done or could not finish', () => {
-    expect(momentLine('done', 'Orders endpoint', null)).toBe('Orders endpoint is done.');
-    expect(momentLine('failed', 'Orders endpoint', null)).toBe('Orders endpoint couldn’t finish.');
-  });
-
-  it('says a member chat needs the user in place of saying it is done', () => {
-    expect(momentLine('done', 'Orders endpoint', '@api needs you in Orders launch.')).toBe(
-      '@api needs you in Orders launch.',
-    );
+    expect(momentLine('done', 'Orders endpoint')).toBe('Orders endpoint is done.');
+    expect(momentLine('failed', 'Orders endpoint')).toBe('Orders endpoint couldn’t finish.');
   });
 });

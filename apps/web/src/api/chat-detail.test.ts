@@ -13,7 +13,7 @@ describe('invalidateChatDetail', () => {
       detail: queryKeys.conversation(A),
       commands: queryKeys.agentCommands(A),
       annotations: queryKeys.annotations(A),
-      drafts: [...queryKeys.conversation(A), 'outpost-drafts'],
+      subChats: [...queryKeys.conversation(A), 'sub-chats'],
       other: queryKeys.conversation(B),
     };
     for (const key of Object.values(keys)) client.setQueryData(key, 'cached');

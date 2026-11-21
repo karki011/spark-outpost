@@ -3,7 +3,7 @@ import type {
   GithubReview,
   GithubReviewState,
 } from '@spark-outpost/contracts';
-import { webLink } from '../../outposts/post-text.ts';
+import { webLink } from '../../links/web-link.ts';
 import type { GlyphName } from '../../tickets/ticket-icons.tsx';
 
 export type ReviewAction = 'now' | 'again' | 'stop' | 'pick-reviewer';

@@ -3,7 +3,6 @@ import { onScreenChatIds } from './on-screen.ts';
 
 const SHOWN = {
   chatsView: true,
-  outpostOpen: false,
   settingsOpen: false,
   shownIds: ['chat-a'],
 };
@@ -20,9 +19,8 @@ describe('onScreenChatIds', () => {
     ]);
   });
 
-  it('is no chat while another view, an outpost or Settings covers the chat pane', () => {
+  it('is no chat while another view or Settings covers the chat pane', () => {
     expect(onScreenChatIds({ ...SHOWN, chatsView: false })).toEqual([]);
-    expect(onScreenChatIds({ ...SHOWN, outpostOpen: true })).toEqual([]);
     expect(onScreenChatIds({ ...SHOWN, settingsOpen: true })).toEqual([]);
   });
 });

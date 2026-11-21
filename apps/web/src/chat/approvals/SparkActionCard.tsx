@@ -27,7 +27,6 @@ import { CalendarFacts, calendarByline, calendarNote } from './CalendarFacts.tsx
 import { AtlassianFacts, atlassianByline, atlassianNote } from './AtlassianFacts.tsx';
 import { ServiceNowFacts, serviceNowByline, serviceNowNote } from './ServiceNowFacts.tsx';
 import { SiteFacts } from './SiteFacts.tsx';
-import { OutpostStartFacts, outpostStartByline, outpostStartNote } from './OutpostStartFacts.tsx';
 import {
   SubChatsPlanFacts,
   subChatsByline,
@@ -166,8 +165,6 @@ function Facts({ action }: { action: SparkAction }) {
           </Fact>
         </dl>
       );
-    case 'start_outpost':
-      return <OutpostStartFacts action={action} />;
     case 'stop_sub_chat':
       return (
         <dl className="sac-facts">
@@ -228,6 +225,7 @@ function Facts({ action }: { action: SparkAction }) {
     case 'open_pr':
     case 'pr_follow_up':
     case 'start_sub_chats':
+    case 'start_outpost':
     case 'ask_spark':
       return null;
   }
@@ -241,7 +239,6 @@ function byline(action: SparkAction, agent: string, secretFiles?: readonly strin
     calendarByline(action, agent) ??
     atlassianByline(action, agent) ??
     serviceNowByline(action, agent) ??
-    outpostStartByline(action, agent) ??
     subChatsByline(action, agent) ??
     rulesByline(action) ??
     crewByline(action) ??
@@ -261,7 +258,6 @@ function confirmNote(action: SparkAction, secretFiles?: readonly string[]): stri
     calendarNote(action) ??
     atlassianNote(action) ??
     serviceNowNote(action) ??
-    outpostStartNote(action) ??
     subChatsNote(action) ??
     rulesNote(action) ??
     crewNote(action) ??

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { chat, FE_CHAT } from '../outposts/test-fixtures.ts';
+import { chat, FE_CHAT } from '../test/chat-fixtures.ts';
 import { RowFace } from './RowFace.tsx';
 
 const SPARK = {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { API_CHAT, FE_CHAT, chat } from '../outposts/test-fixtures.ts';
+import { API_CHAT, FE_CHAT, chat } from '../test/chat-fixtures.ts';
 import { seenNotification } from './close-seen-notifications.ts';
 
 const WAITING = '2026-10-09T10:05:00.000Z';

@@ -19,7 +19,7 @@ A guardrail is a rule Spark enforces itself, in every chat and agent mode. Every
 | The audit                                                     | Every action is recorded; one no card covered is marked [ran without review](approvals.md#actions-that-ran-without-review). |
 | Revert                                                        | **Revert to before this run** undoes a run's own edits.                                                                     |
 
-Outposts add their own: [requests](outpost-permissions.md) and [stacked pull requests](stacked-pull-requests.md).
+Sub-chats add their own: [stacked pull requests](stacked-pull-requests.md).
 
 ## What Spark leaves to the agent
 

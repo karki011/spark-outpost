@@ -5,7 +5,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
-import { asPairedPhone } from './outposts-kit.ts';
+import { asPairedPhone } from './paired-phone.ts';
 import { expectNoSidewaysScroll, PHONE } from './responsive-kit.ts';
 import { seedChats, type SeedApproval } from './sidebar-seed.ts';
 import {

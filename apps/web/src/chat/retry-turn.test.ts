@@ -48,9 +48,7 @@ it('hides it on an earlier turn or while another turn runs or a message is queue
 });
 
 it('hides it for turns the user did not type', () => {
-  const outpost = { postId: ASKED } as Run['outpost'];
   const others: Partial<Run>[] = [
-    { outpost },
     { fromChat: 'Checkout rewrite' },
     { prFollowUp: true },
     { agentCycle: true },

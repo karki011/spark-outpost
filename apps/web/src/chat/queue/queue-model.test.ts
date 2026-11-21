@@ -54,10 +54,9 @@ describe('queue model', () => {
     ]);
   });
 
-  it('lets the user edit their own queued message and not a request from an outpost', () => {
+  it('lets the user edit their own queued message and not a message from another chat', () => {
     expect(canEdit(item('a', 1))).toBe(true);
-    expect(canEdit({ ...item('a', 1), outpostPostId: null })).toBe(true);
-    expect(canEdit({ ...item('a', 1), outpostPostId: 'post-1' })).toBe(false);
+    expect(canEdit({ ...item('a', 1), origin: 'chat' })).toBe(false);
   });
 
   it('adds a new message after the last one', () => {
@@ -65,16 +64,14 @@ describe('queue model', () => {
     expect(queuedItem('d', 'first', [])).toMatchObject({ position: 1 });
   });
 
-  it('names who wrote a queued message, and keeps retries and outpost requests read-only', () => {
+  it('names who wrote a queued message, and keeps retries read-only', () => {
     const own = item('a', 1);
     const retry = { ...own, sparkRuleCardId: 'card-a' };
     const fromAsk = { ...own, origin: 'assistant' as const };
-    const fromOutpost = { ...own, outpostPostId: 'post-a' };
     expect(authorTag(own)).toBeNull();
     expect(authorTag(retry)).toBe('Retry');
     expect(authorTag(fromAsk)).toBe('Ask Spark');
-    expect(authorTag(fromOutpost)).toBe('Outpost request');
-    expect([own, retry, fromAsk, fromOutpost].map(canEdit)).toEqual([true, false, true, false]);
+    expect([own, retry, fromAsk].map(canEdit)).toEqual([true, false, true]);
   });
 
   it('says queued messages go to the agent while it only waits, when the user wrote one', () => {

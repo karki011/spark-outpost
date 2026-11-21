@@ -30,7 +30,6 @@ import { OnScreenChat, onScreenChatIds } from '../conversations/on-screen.ts';
 import { isDocLinkOpen, leaveDocs, useDocLinks } from '../docs/doc-route.ts';
 import { DocsSkeleton } from '../docs/DocsSkeleton.tsx';
 import { Home } from '../home/Home.tsx';
-import { OutpostHost } from '../outposts/OutpostHost.tsx';
 import { ResetHost } from '../reset/ResetHost.tsx';
 import { SessionPaletteHost } from '../sessions/SessionPaletteHost.tsx';
 import { useSettingsState } from '../settings/use-settings-state.ts';
@@ -40,7 +39,6 @@ import { requestSettingFocus } from '../settings/setting-focus.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { FreezeWhileHidden } from '../ui/FreezeWhileHidden.tsx';
 import { useStableCallback } from '../ui/use-stable-callback.ts';
-import { useOutpostRoute } from './use-outpost-route.ts';
 import { TicketsViewSkeleton } from '../tickets/TicketsViewSkeleton.tsx';
 import { unseenNotices } from '../tickets/ticket-model.ts';
 import { attentionCount } from '../tickets/ticket-optimistic.ts';
@@ -63,7 +61,6 @@ import {
   GithubPage,
   MapPage,
   Onboarding,
-  OutpostView,
   PageWait,
   Phone,
   preloadSettings,
@@ -97,27 +94,16 @@ import '../ui/controls.css';
 import { openTodayEvent } from '../calendar/today-request.ts';
 import { useLinksToView } from '../browser-view/view-store.ts';
 
-const NO_IDS: readonly string[] = [];
-
 function ChatShell({ entering }: { entering: boolean }) {
   const queryClient = useQueryClient();
   const live = useAppEvents();
   const connection = useConnection();
-  const { route: outpost, show: showOutpost, close: closeOutpost } = useOutpostRoute();
-  const openOutpostId = outpost?.id ?? null;
   const conversations = useQuery({
     queryKey: queryKeys.conversations,
     queryFn: api.listConversations,
   });
   const split = useChatSplit(conversations.data);
-  const showInPane = split.show;
-  const selectChat = useCallback(
-    (id: string) => {
-      showInPane(id);
-      closeOutpost();
-    },
-    [showInPane, closeOutpost],
-  );
+  const selectChat = split.show;
   const [draftId, setDraftId] = useState(newDraftId);
   const [settings, setSettings] = useSettingsState();
   const [storedView, setViewState] = useState<AppView>(() =>
@@ -191,12 +177,6 @@ function ChatShell({ entering }: { entering: boolean }) {
     layout.closeDrawer();
   });
 
-  const openOutpost = useStableCallback((id: string, postId?: string, thread?: boolean) => {
-    showOutpost(id, postId, thread);
-    setView('chats');
-    layout.closeDrawer();
-  });
-
   const openFromDesktop = useRef(openChat);
   useEffect(() => {
     openFromDesktop.current = openChat;
@@ -244,16 +224,13 @@ function ChatShell({ entering }: { entering: boolean }) {
   );
   const onScreenIds = onScreenChatIds({
     chatsView: view === 'chats',
-    outpostOpen: openOutpostId !== null,
     settingsOpen: settings !== null,
     shownIds,
   });
-  const listedIds = openOutpostId ? NO_IDS : shownIds;
   useChatRetention(split.focus === 'secondary' ? besideId : activeId);
   useSeenChats(onScreenIds, chats, remote);
   const openBeside = useStableCallback((id: string) => {
     split.openBeside(id, activeId);
-    closeOutpost();
     setView('chats');
   });
 
@@ -267,182 +244,164 @@ function ChatShell({ entering }: { entering: boolean }) {
 
   return (
     <SidebarLayoutProvider value={layout}>
-      <OutpostHost openOutpostId={openOutpostId} onOpenOutpost={openOutpost}>
-        <div
-          className={classes.join(' ')}
-          style={layout.width ? ({ '--side-w': `${layout.width}px` } as CSSProperties) : undefined}
-        >
-          <Rail
-            view={view}
-            waiting={waiting}
-            ticketsWaiting={ticketsWaiting}
-            ticketNotices={ticketNotices}
-            githubUpdates={githubUpdates}
+      <div
+        className={classes.join(' ')}
+        style={layout.width ? ({ '--side-w': `${layout.width}px` } as CSSProperties) : undefined}
+      >
+        <Rail
+          view={view}
+          waiting={waiting}
+          ticketsWaiting={ticketsWaiting}
+          ticketNotices={ticketNotices}
+          githubUpdates={githubUpdates}
+          mood={mood}
+          onIntent={preloadView}
+          onSettingsIntent={preloadSettings}
+          onView={(next) => {
+            setView(next);
+            if (next === view && view === 'chats' && !layout.floating) layout.reveal();
+          }}
+          onSettings={() => setSettings('spark')}
+          onProfile={() => setSettings('spark')}
+        />
+        <div className="view" hidden={view !== 'chats'}>
+          <FreezeWhileHidden hidden={view !== 'chats'}>
+            <OnScreenChat.Provider value={onScreenIds}>
+              <ConversationList
+                selectedIds={shownIds}
+                onSelect={selectChat}
+                onOpenByNumber={openChat}
+                onOpenBeside={split.canSplit ? openBeside : null}
+                onLeave={split.leave}
+                onNew={startDraft}
+                onNewInProject={startDraftInProject}
+              />
+            </OnScreenChat.Provider>
+            <div className="scrim" aria-hidden="true" onClick={layout.closeDrawer} />
+            {activeId ? (
+              <ChatPanes primary={activeId} control={split} onOpenChat={openChat} />
+            ) : (
+              <main className="main" aria-busy="true" />
+            )}
+          </FreezeWhileHidden>
+        </div>
+        {view === 'home' && (
+          <Home
+            chats={chats}
+            loading={conversations.isPending}
             mood={mood}
-            onIntent={preloadView}
-            onSettingsIntent={preloadSettings}
-            onView={(next) => {
-              setView(next);
-              if (next === view && view === 'chats' && !layout.floating) layout.reveal();
+            draftId={homeDraftId}
+            onOpenChat={openAtCard}
+            onRotateDraft={rotateHomeDraft}
+            onOpenId={openChat}
+            onChats={() => setView('chats')}
+            onTickets={(itemId) => {
+              setTicketFocus(itemId);
+              setView('tickets');
             }}
-            onSettings={() => setSettings('spark')}
-            onProfile={() => setSettings('spark')}
+            onProviders={() => setSettings('ai')}
           />
-          <div className={openOutpostId ? 'view in-outpost' : 'view'} hidden={view !== 'chats'}>
-            <FreezeWhileHidden hidden={view !== 'chats'}>
-              <OnScreenChat.Provider value={onScreenIds}>
-                <ConversationList
-                  selectedIds={listedIds}
-                  onSelect={selectChat}
-                  onOpenByNumber={openChat}
-                  onOpenBeside={split.canSplit ? openBeside : null}
-                  onLeave={split.leave}
-                  onNew={startDraft}
-                  onNewInProject={startDraftInProject}
-                />
-              </OnScreenChat.Provider>
-              <div className="scrim" aria-hidden="true" onClick={layout.closeDrawer} />
-              <FreezeWhileHidden hidden={openOutpostId !== null}>
-                {activeId ? (
-                  <ChatPanes primary={activeId} control={split} onOpenChat={openChat} />
-                ) : (
-                  <main className="main" aria-busy="true" />
-                )}
-              </FreezeWhileHidden>
-              {openOutpostId && (
-                <Suspense
-                  fallback={<main className="main op" aria-label="Outpost" aria-busy="true" />}
-                >
-                  <OutpostView
-                    key={openOutpostId}
-                    id={openOutpostId}
-                    jumpTo={outpost?.jumpTo}
-                    openThread={outpost?.thread}
-                    onOpenChat={openChat}
-                    onGone={closeOutpost}
-                  />
-                </Suspense>
-              )}
-            </FreezeWhileHidden>
-          </div>
-          {view === 'home' && (
-            <Home
-              chats={chats}
-              loading={conversations.isPending}
-              mood={mood}
-              draftId={homeDraftId}
-              onOpenChat={openAtCard}
-              onRotateDraft={rotateHomeDraft}
-              onOpenId={openChat}
-              onChats={() => setView('chats')}
-              onTickets={(itemId) => {
-                setTicketFocus(itemId);
-                setView('tickets');
+        )}
+        {view === 'browser' && (
+          <Suspense fallback={<PageWait label="Browser" />}>
+            <BrowserView onOpenChat={openChat} />
+          </Suspense>
+        )}
+        {view === 'today' && (
+          <Suspense fallback={<PageWait label="Today" />}>
+            <Today chats={chats} onStartChat={startCalendarChat} onOpenChat={openChat} />
+          </Suspense>
+        )}
+        {view === 'analytics' && (
+          <Suspense fallback={<AnalyticsSkeleton />}>
+            <Analytics />
+          </Suspense>
+        )}
+        {view === 'tickets' && (
+          <Suspense fallback={<TicketsViewSkeleton />}>
+            <Tickets
+              focusId={ticketFocus}
+              onOpenChat={openChat}
+              onHome={() => {
+                setTicketFocus(null);
+                setView('home');
               }}
-              onProviders={() => setSettings('ai')}
             />
-          )}
-          {view === 'browser' && (
-            <Suspense fallback={<PageWait label="Browser" />}>
-              <BrowserView onOpenChat={openChat} />
-            </Suspense>
-          )}
-          {view === 'today' && (
-            <Suspense fallback={<PageWait label="Today" />}>
-              <Today chats={chats} onStartChat={startCalendarChat} onOpenChat={openChat} />
-            </Suspense>
-          )}
-          {view === 'analytics' && (
-            <Suspense fallback={<AnalyticsSkeleton />}>
-              <Analytics />
-            </Suspense>
-          )}
-          {view === 'tickets' && (
-            <Suspense fallback={<TicketsViewSkeleton />}>
-              <Tickets
-                focusId={ticketFocus}
-                onOpenChat={openChat}
-                onHome={() => {
-                  setTicketFocus(null);
-                  setView('home');
+          </Suspense>
+        )}
+        {view === 'github' && (
+          <Suspense fallback={<PageWait label="GitHub" />}>
+            <GithubPage onOpenChat={openChat} />
+          </Suspense>
+        )}
+        {view === 'sparks' && (
+          <Suspense fallback={<main className="main" aria-label="Sparks" aria-busy="true" />}>
+            <SparksPage />
+          </Suspense>
+        )}
+        {view === 'map' && (
+          <Suspense fallback={<PageWait label="Project map" />}>
+            <MapPage onOpenInChat={chatAboutFile} onOpenChat={openChat} />
+          </Suspense>
+        )}
+        {view === 'docs' && (
+          <Suspense fallback={<DocsSkeleton />}>
+            <DocsPage />
+          </Suspense>
+        )}
+        {view === 'phone' && (
+          <Suspense fallback={<PageWait label="Remote control" />}>
+            <Phone />
+          </Suspense>
+        )}
+        {view === 'chats' && (
+          <AgentTvHost
+            activeId={activeId}
+            onGoTo={(id) => {
+              selectChat(id);
+              layout.closeDrawer();
+            }}
+          />
+        )}
+        <StatusCompanion
+          chats={chats}
+          visible={
+            !layout.narrow &&
+            view !== 'map' &&
+            view !== 'browser' &&
+            (view !== 'chats' || activeId === null)
+          }
+          onOpenChat={openAtCard}
+          onHome={() => setView('home')}
+          onBuild={remote ? null : openBuilderChat}
+        />
+        {live.paused && !connection.lost && <LivePausedHint />}
+        <DefaultLevelNotice
+          onSettings={() => {
+            requestSettingFocus(LEVEL_LABEL);
+            setSettings('chats');
+          }}
+        />
+        <PasskeyOffer />
+        <SessionPaletteHost onOpenChat={openChat} />
+        <JoinShortcut remote={remote} onOpenEvent={openTodayEvent} />
+        <TeammateHost />
+        <AnimatePresence>
+          {settings && (
+            <Suspense key="settings" fallback={null}>
+              <SettingsDialog
+                section={settings}
+                onSection={setSettings}
+                onClose={() => setSettings(null)}
+                onOpenChat={(id) => {
+                  setSettings(null);
+                  openChat(id);
                 }}
               />
             </Suspense>
           )}
-          {view === 'github' && (
-            <Suspense fallback={<PageWait label="GitHub" />}>
-              <GithubPage onOpenChat={openChat} />
-            </Suspense>
-          )}
-          {view === 'sparks' && (
-            <Suspense fallback={<main className="main" aria-label="Sparks" aria-busy="true" />}>
-              <SparksPage />
-            </Suspense>
-          )}
-          {view === 'map' && (
-            <Suspense fallback={<PageWait label="Project map" />}>
-              <MapPage onOpenInChat={chatAboutFile} onOpenChat={openChat} />
-            </Suspense>
-          )}
-          {view === 'docs' && (
-            <Suspense fallback={<DocsSkeleton />}>
-              <DocsPage />
-            </Suspense>
-          )}
-          {view === 'phone' && (
-            <Suspense fallback={<PageWait label="Remote control" />}>
-              <Phone />
-            </Suspense>
-          )}
-          {view === 'chats' && (
-            <AgentTvHost
-              activeId={openOutpostId ? null : activeId}
-              onGoTo={(id) => {
-                selectChat(id);
-                layout.closeDrawer();
-              }}
-            />
-          )}
-          <StatusCompanion
-            chats={chats}
-            visible={
-              !layout.narrow &&
-              view !== 'map' &&
-              view !== 'browser' &&
-              (view !== 'chats' || activeId === null)
-            }
-            onOpenChat={openAtCard}
-            onHome={() => setView('home')}
-            onBuild={remote ? null : openBuilderChat}
-          />
-          {live.paused && !connection.lost && <LivePausedHint />}
-          <DefaultLevelNotice
-            onSettings={() => {
-              requestSettingFocus(LEVEL_LABEL);
-              setSettings('chats');
-            }}
-          />
-          <PasskeyOffer />
-          <SessionPaletteHost onOpenChat={openChat} />
-          <JoinShortcut remote={remote} onOpenEvent={openTodayEvent} />
-          <TeammateHost />
-          <AnimatePresence>
-            {settings && (
-              <Suspense key="settings" fallback={null}>
-                <SettingsDialog
-                  section={settings}
-                  onSection={setSettings}
-                  onClose={() => setSettings(null)}
-                  onOpenChat={(id) => {
-                    setSettings(null);
-                    openChat(id);
-                  }}
-                />
-              </Suspense>
-            )}
-          </AnimatePresence>
-        </div>
-      </OutpostHost>
+        </AnimatePresence>
+      </div>
     </SidebarLayoutProvider>
   );
 }

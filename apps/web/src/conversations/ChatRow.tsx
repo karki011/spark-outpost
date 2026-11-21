@@ -53,9 +53,7 @@ interface ChatRowProps {
   settling: boolean;
   flash: boolean;
   index: number;
-  handle?: string | undefined;
   faceless?: boolean;
-  relation?: string | null;
   nested?: boolean;
   tree?: SubChatSlot | undefined;
   onOpen: (id: string) => void;
@@ -155,8 +153,8 @@ function HistoryActions({
 }
 
 export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
-  const { chat, selected, renaming, sortable, settling, flash, handle } = props;
-  const { faceless = false, relation = null, nested = false, tree } = props;
+  const { chat, selected, renaming, sortable, settling, flash } = props;
+  const { faceless = false, nested = false, tree } = props;
   const { onOpen, onMenu, onRename } = props;
   const history = chat.archivedAt !== null;
   const draggable = sortable && !renaming && !history;
@@ -237,8 +235,6 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
   const tooltip = [
     title,
     terminal ? 'Terminal session' : null,
-    handle ? `@${handle}` : null,
-    relation,
     nested ? null : parentMarkText(chat),
     chat.teammate ? `with ${chat.teammate.name}` : null,
     chat.titleSource === 'auto' ? 'Renamed by Spark' : null,
@@ -260,8 +256,6 @@ export const ChatRow = memo(function ChatRow(props: ChatRowProps) {
         />
         {chat.pullRequestMerged && <MergedMark />}
       </span>
-      {handle && <span className="sr-only">{`, @${handle}`}</span>}
-      {relation && <span className="sr-only">{`, ${relation}`}</span>}
       {terminal && <span className="sr-only">, Terminal session</span>}
       {chat.match ? <MatchSnippet match={chat.match} /> : <RowLine line={rowLine(chat, state)} />}
       {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}

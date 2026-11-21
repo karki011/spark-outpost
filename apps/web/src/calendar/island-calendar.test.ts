@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CalendarEvent, CalendarNow, CalendarNudge } from '@spark-outpost/contracts';
 import { at, event, link } from './test-fixtures.ts';
-import { chat } from '../outposts/test-fixtures.ts';
+import { chat } from '../test/chat-fixtures.ts';
 import {
   calendarLine,
   catchUpText,

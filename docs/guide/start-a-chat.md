@@ -54,7 +54,7 @@ Web links show as cards; nothing is fetched.
 
 Paste a link from **Chat actions → Copy chat link** into another chat; the agent can [read it](spark-tools.md), never change it.
 
-Group chats in an [outpost](outposts.md).
+Split big jobs into [sub-chats](split-into-sub-chats.md).
 
 > **Tip:** Bring in a [Spark](sparks.md) teammate.
 

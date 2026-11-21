@@ -34,4 +34,4 @@ If the commit can't be made, or the one below failed or was stopped, it stays **
 | Nothing merges; you merge, base first                           | The parent's wrap-up gives the order                         |
 | Once the pull request below merges or closes                    | A new pull request targets the default branch                |
 
-Outpost stories stack the same way; their **Story** bar shows each pull request and its warnings. See [Stories](outpost-stories.md), [Ship a change](ship-and-pull-requests.md) and [What an outpost request may do](outpost-permissions.md).
+See [Ship a change](ship-and-pull-requests.md) and [Messages between chats](chat-messages.md).

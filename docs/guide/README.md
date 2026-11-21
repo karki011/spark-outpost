@@ -8,13 +8,13 @@ This folder is the single source for the user guide. The app bundles these pages
 
 `welcome.md`, the Docs landing page, lists at most 12 tasks in four groups. Every other page is reached from the sidebar, search or a link.
 
-| Reader                                    | Top tasks                                                                       | Starts in                    |
-| ----------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------- |
-| New user setting up                       | Connect a provider, send a first message, connect GitHub or a tracker           | Get started                  |
-| Daily user working in chats               | Start a chat, set the mode, answer cards, review changes, open a PR             | Chats, Projects and shipping |
-| Power user running outposts and Full auto | Set autonomy, plan first, outposts and stories, PR feedback, Sparks, the island | Chats, Mac app and providers |
-| Someone worried about safety or privacy   | See what always asks, what leaves the computer, what Jev reads                  | Understand Spark, Reference  |
-| Someone fixing a problem                  | Match a symptom to a fix, send diagnostics, start over                          | Help                         |
+| Reader                                     | Top tasks                                                                       | Starts in                    |
+| ------------------------------------------ | ------------------------------------------------------------------------------- | ---------------------------- |
+| New user setting up                        | Connect a provider, send a first message, connect GitHub or a tracker           | Get started                  |
+| Daily user working in chats                | Start a chat, set the mode, answer cards, review changes, open a PR             | Chats, Projects and shipping |
+| Power user running sub-chats and Full auto | Set autonomy, plan first, sub-chats and stacks, PR feedback, Sparks, the island | Chats, Mac app and providers |
+| Someone worried about safety or privacy    | See what always asks, what leaves the computer, what Jev reads                  | Understand Spark, Reference  |
+| Someone fixing a problem                   | Match a symptom to a fix, send diagnostics, start over                          | Help                         |
 
 ## Page types
 

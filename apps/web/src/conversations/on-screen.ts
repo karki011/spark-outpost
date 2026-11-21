@@ -2,7 +2,6 @@ import { createContext, useContext } from 'react';
 
 export interface ScreenState {
   chatsView: boolean;
-  outpostOpen: boolean;
   settingsOpen: boolean;
   shownIds: readonly string[];
 }
@@ -10,7 +9,7 @@ export interface ScreenState {
 const NONE: readonly string[] = [];
 
 export function onScreenChatIds(screen: ScreenState): readonly string[] {
-  if (!screen.chatsView || screen.outpostOpen || screen.settingsOpen) return NONE;
+  if (!screen.chatsView || screen.settingsOpen) return NONE;
   return screen.shownIds;
 }
 

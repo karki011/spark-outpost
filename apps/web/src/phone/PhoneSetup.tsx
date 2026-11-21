@@ -163,7 +163,7 @@ export function PhoneSetup(props: PhoneSetupProps) {
 const WHAT_YOU_GET: { label: string; text: string }[] = [
   {
     label: 'From your phone',
-    text: 'Read chats, send messages, answer approval cards, follow outposts, and get a notification when a chat needs you.',
+    text: 'Read chats, send messages, answer approval cards, follow sub-chats, and get a notification when a chat needs you.',
   },
   {
     label: 'You choose',

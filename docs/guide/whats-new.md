@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Outposts are gone; agents split work instead    | [Sub-chats](sub-chats.md).                                 |
 | **Sub-chats** tab; plan card **Edit**           | [Sub-chats](sub-chats.md#find-a-sub-chat).                 |
 | Sub-chat reports, wrap-up                       | [Reports](sub-chat-reports.md).                            |
 | Agents split jobs into sub-chats                | [Split a job](split-into-sub-chats.md).                    |
@@ -59,4 +60,3 @@ summary: What changed in recent releases and what to do next.
 | Context rail: full height; **Tools** inline                | [See a chat's context](context-rail.md).                                                 |
 | Remote control: side panel, sections fold                  | [Use your phone](use-your-phone.md).                                                     |
 | Wider pages, squircle corners, sidebar hide fix            | Nothing to do.                                                                           |
-| **Let Spark build one for you**; new empty tabs            | [Build with an agent](build-with-an-agent.md).                                           |

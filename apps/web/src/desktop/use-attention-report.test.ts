@@ -78,13 +78,6 @@ describe('attentionReport', () => {
     expect(rowState(asking, false).sub).toContain('wants to run a command');
   });
 
-  it('names an outpost member by its handle and outpost', () => {
-    const member = { ...asking, outpost: { id: OTHER, name: 'Launch', handle: 'api' } };
-    expect(attentionReport([member], [cardItem()]).requests[0]!.title).toBe(
-      '@api needs you in Launch',
-    );
-  });
-
   it('leaves archived chats and items read anywhere out', () => {
     const archived = chat({ id: OTHER, needsInput: true, archivedAt: '2026-10-01' });
     const items = [

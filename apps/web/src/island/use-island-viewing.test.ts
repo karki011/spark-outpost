@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FE_CHAT } from '../outposts/test-fixtures.ts';
+import { FE_CHAT } from '../test/chat-fixtures.ts';
 import { islandViewedChat } from './use-island-viewing.ts';
 
 describe('islandViewedChat', () => {

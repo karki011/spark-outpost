@@ -57,19 +57,19 @@ describe('chat retention', () => {
     expect(client.getQueryData(['projects'])).toEqual([]);
   });
 
-  it('keeps anything still on screen, such as a member chat in an outpost', () => {
+  it('keeps anything still on screen, such as a chat beside the selected one', () => {
     const client = new QueryClient();
-    seedChat(client, 'member');
+    seedChat(client, 'beside');
     const observer = new QueryObserver(client, {
-      queryKey: queryKeys.conversation('member'),
+      queryKey: queryKeys.conversation('beside'),
       enabled: false,
     });
     const stop = observer.subscribe(() => undefined);
 
     dropColdChats(client, new Set());
 
-    expect(client.getQueryData(queryKeys.conversation('member'))).toBeDefined();
-    expect(client.getQueryData(['tasks', 'member-task', 'changes', 'files'])).toBeDefined();
+    expect(client.getQueryData(queryKeys.conversation('beside'))).toBeDefined();
+    expect(client.getQueryData(['tasks', 'beside-task', 'changes', 'files'])).toBeDefined();
     stop();
   });
 

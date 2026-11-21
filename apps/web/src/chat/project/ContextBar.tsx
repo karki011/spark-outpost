@@ -1,15 +1,10 @@
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import type { ConversationDetail, Project } from '@spark-outpost/contracts';
-import { api, queryKeys } from '../../api/client.ts';
+import type { Project } from '@spark-outpost/contracts';
 import { useRemoteClient } from '../../phone/use-remote-client.ts';
 import { usePhone } from '../../ui/breakpoints.ts';
 import { DotsIcon } from '../../ui/icons.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
 import { TalkToChip } from '../../teammates/TalkToChip.tsx';
-import { memberRole, roleLine } from '../../outposts/member-roles.ts';
-import { OutpostChip } from '../outpost/OutpostChip.tsx';
-import { useOutpostSeam } from '../outpost/outpost-seam.ts';
 import { AgentSetup, useSetupAttention } from './AgentSetup.tsx';
 import { ChatBranch } from './ChatBranch.tsx';
 import { ProjectFolders } from './ProjectFolders.tsx';
@@ -19,31 +14,6 @@ import { useProjectBranch } from './use-chat-repos.ts';
 import { useChatWorkspace } from './use-chat-workspace.ts';
 
 type RepoPopover = ReturnType<typeof usePopover<HTMLButtonElement, HTMLDivElement>>;
-
-function memberOf(detail: ConversationDetail) {
-  return detail.conversation.outpost ?? null;
-}
-
-function MemberChip({ conversationId }: { conversationId: string }) {
-  const seam = useOutpostSeam();
-  const outpost = useQuery({
-    queryKey: queryKeys.conversation(conversationId),
-    queryFn: () => api.getConversation(conversationId),
-    select: memberOf,
-  }).data;
-  if (!outpost) return null;
-  const members = seam?.outposts.find((listed) => listed.id === outpost.id)?.members ?? [];
-  const role = memberRole(members, conversationId);
-  return (
-    <OutpostChip
-      name={outpost.name}
-      handle={outpost.handle}
-      lead={role?.kind === 'lead'}
-      relation={role ? roleLine(role) : null}
-      onOpen={seam ? () => seam.onOpenOutpost(outpost.id) : undefined}
-    />
-  );
-}
 
 interface DetailsChipProps {
   chipRef: RefObject<HTMLButtonElement | null>;
@@ -103,7 +73,6 @@ export function ContextBar({
   const people = (
     <>
       <TalkToChip conversationId={conversationId} />
-      <MemberChip conversationId={conversationId} />
     </>
   );
   const closeDetails = (event: KeyboardEvent<HTMLDivElement>) => {

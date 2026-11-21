@@ -20,10 +20,6 @@ import { AutomatedTurn, SentBySpark } from './automated/AutomatedTurn.tsx';
 import { isAutomatedTurn } from './automated/automated-model.ts';
 import { InterruptedCard } from './interruption/InterruptedCard.tsx';
 import { InterruptedNote } from './interruption/InterruptedNote.tsx';
-import { RequestHeader, type RunOutpost } from './outpost/RequestHeader.tsx';
-import { memberChatId, useOutpostSeam } from './outpost/outpost-seam.ts';
-import { TurnOutpostLines } from './outpost/TurnOutpostLines.tsx';
-import { OutpostFaces } from '../outposts/MemberFace.tsx';
 import { isWorkflowTurn } from './workflow-card/workflow-card-model.ts';
 import { WorkflowLine } from './workflow-card/WorkflowLine.tsx';
 import { AskLines } from './sub-chats/AskLines.tsx';
@@ -39,21 +35,6 @@ interface TurnSectionProps {
   detail: ConversationDetail;
   repo: Project | null;
   onOpenChat: (conversationId: string) => void;
-}
-
-function OutpostRequest({ outpost, text }: { outpost: RunOutpost; text: string }) {
-  const seam = useOutpostSeam();
-  const open = seam ? () => seam.onOpenOutpost(outpost.outpostId, outpost.postId) : undefined;
-  const outposts = seam?.outposts ?? [];
-  const fromChatId = memberChatId(outposts, outpost.outpostId, outpost.fromHandle);
-  const members = outposts.find((listed) => listed.id === outpost.outpostId)?.members;
-  return (
-    <OutpostFaces members={members}>
-      <RequestHeader outpost={outpost} fromChatId={fromChatId} onOpen={open}>
-        <QuotedText text={text} />
-      </RequestHeader>
-    </OutpostFaces>
-  );
 }
 
 function sameMessages(before: readonly Message[], after: readonly Message[]): boolean {
@@ -129,7 +110,6 @@ export const TurnSection = memo(function TurnSection({
       {sparkLed && !mainAgentRan(sparkLed) && (
         <TurnSteers detail={detail} run={run} placedIn={steersPlacedIn} />
       )}
-      <TurnOutpostLines conversation={detail.conversation} run={run} />
       <StartedLines starts={detail.subChatStarts} runIds={runIds} />
       <AskLines
         asks={detail.asks}
@@ -173,13 +153,9 @@ export const TurnSection = memo(function TurnSection({
                 <MessageAttachments attachments={userMessage.attachments} />
                 {userMessage.content && (
                   <>
-                    {run.outpost ? (
-                      <OutpostRequest outpost={run.outpost} text={userMessage.content} />
-                    ) : (
-                      <div className="bubble">
-                        <QuotedText text={userMessage.content} />
-                      </div>
-                    )}
+                    <div className="bubble">
+                      <QuotedText text={userMessage.content} />
+                    </div>
                     <LinkCards text={userMessage.content} />
                     <MessageActions
                       text={userMessage.content}

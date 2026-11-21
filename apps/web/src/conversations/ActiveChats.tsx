@@ -1,31 +1,13 @@
-import type { ReactNode } from 'react';
 import { SortableContext } from '@dnd-kit/sortable';
 import type { ConversationSummary, Project } from '@spark-outpost/contracts';
-import { useOutpostSeam } from '../chat/outpost/outpost-seam.ts';
 import { PlusIcon } from '../ui/icons.tsx';
-import { ChatRows } from './ChatRows.tsx';
 import { LooseChats, type RenderRows } from './LooseChats.tsx';
-import {
-  outpostFoldKey,
-  outpostRowsId,
-  type MemberChat,
-  type OutpostMembers,
-} from './outpost-members.ts';
-import { OutpostRows } from './OutpostRows.tsx';
 import { ProjectGroup } from './ProjectGroup.tsx';
 import { NO_PROJECT, listIn, pinnedIn, LOOSE } from './sidebar-order.ts';
-import { useSidebarLayout } from './sidebar-layout.tsx';
 import type { SidebarDnd } from './use-sidebar-dnd.ts';
 import type { SidebarFolds } from './use-sidebar-folds.ts';
 import { listSorting, projectDragId } from './sidebar-dnd-geometry.ts';
 import { PHONE_SWITCH_OFF } from '../phone/use-remote-client.ts';
-
-type RenderRow = (
-  chat: ConversationSummary,
-  sortable: boolean,
-  index: number,
-  member?: MemberChat,
-) => ReactNode;
 
 interface ActiveChatsProps {
   search: string;
@@ -38,8 +20,6 @@ interface ActiveChatsProps {
   renamingProjectId: string | null;
   rowsIn: (container: string) => ConversationSummary[];
   renderRows: RenderRows;
-  renderRow: RenderRow;
-  members: OutpostMembers;
   onAddProject: () => void;
   canAddProject: boolean;
   onNewInProject: (projectId: string) => void;
@@ -58,16 +38,12 @@ export function ActiveChats({
   renamingProjectId,
   rowsIn,
   renderRows,
-  renderRow,
-  members,
   onAddProject,
   canAddProject,
   onNewInProject,
   onProjectMenu,
   onProjectRename,
 }: ActiveChatsProps) {
-  const outpostSeam = useOutpostSeam();
-  const layout = useSidebarLayout();
   const over = dnd.overGroup;
   const blocks = dnd.projectIds.flatMap((id) => {
     const project = projectById.get(id);
@@ -80,35 +56,10 @@ export function ActiveChats({
   const loosePinned = rowsIn(pinnedIn(NO_PROJECT));
   const looseRest = rowsIn(LOOSE);
   const looseCount = loosePinned.length + looseRest.length;
-  const outposts = outpostSeam?.outposts ?? [];
-  const matched = outposts.filter((outpost) => members.has(outpost.id));
-  const shownOutposts = !searching ? outposts : matched.length > 0 ? matched : null;
-  const nothing = searching && shownBlocks.length === 0 && looseCount === 0 && matched.length === 0;
+  const nothing = searching && shownBlocks.length === 0 && looseCount === 0;
   if (nothing) return <p className="pempty wide">No active chats match “{search.trim()}”.</p>;
   return (
     <>
-      {outpostSeam && shownOutposts !== null && (
-        <OutpostRows
-          outposts={shownOutposts}
-          members={members}
-          openId={outpostSeam.openOutpostId}
-          isOpen={(id) => searching || folds.isOpen(outpostFoldKey(id))}
-          onToggle={(id) => folds.toggle(outpostFoldKey(id))}
-          onOpen={(id) => {
-            outpostSeam.onOpenOutpost(id);
-            layout?.closeDrawer();
-          }}
-          onNew={outpostSeam.canManage ? () => outpostSeam.onNewOutpost() : undefined}
-          renderMembers={(id, listed) => (
-            <ChatRows
-              id={outpostRowsId(id)}
-              chats={listed.map((member) => member.chat)}
-              sortable={false}
-              renderRow={(chat, index) => renderRow(chat, false, index, listed[index])}
-            />
-          )}
-        />
-      )}
       <div className="sec">
         <span>Projects</span>
         <button

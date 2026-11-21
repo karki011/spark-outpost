@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import { memberNeedsYou } from '../chat/outpost/member-moment.ts';
 import type { Voice } from '../spark/voice.ts';
 import { dayKey, greetingDue, greetingLine } from './greeting.ts';
 import {
@@ -73,18 +72,12 @@ export function useMoments(chats: readonly ConversationSummary[], loaded: boolea
     const timer = setTimeout(dismiss, MOMENT_MS);
     return () => clearTimeout(timer);
   }, [momentRun, dismiss]);
-  const memberLine = moment ? memberNeedsYou(moment, chats) : null;
   const title = chats.find((candidate) => candidate.id === moment?.chatId)?.title;
-  const text = moment && title ? momentLine(moment.kind, title, memberLine) : null;
-  return { moment, memberLine, text, streak, dismiss };
+  const text = moment && title ? momentLine(moment.kind, title) : null;
+  return { moment, text, streak, dismiss };
 }
 
-export function momentLine(
-  kind: 'done' | 'failed',
-  title: string,
-  memberLine: string | null,
-): string {
-  if (memberLine) return memberLine;
+export function momentLine(kind: 'done' | 'failed', title: string): string {
   return `${title} ${kind === 'done' ? 'is done' : 'couldn’t finish'}.`;
 }
 

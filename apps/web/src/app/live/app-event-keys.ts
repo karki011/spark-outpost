@@ -10,9 +10,7 @@ import { outcomeKeys } from '../../api/outcomes.ts';
 import { previewKeys } from '../../api/preview.ts';
 import { auditKeys } from '../../audit/audit-api.ts';
 import { mapKeys } from '../../map/map-api.ts';
-import { outpostKeys } from '../../outposts/outposts-api.ts';
 import { prWatchesKey } from '../../chat/pull-request/pr-follow-up-api.ts';
-import { chatDraftsKey } from '../../chat/outpost/chat-drafts.ts';
 import { diffKeys } from '../../diff/diff-api.ts';
 import { homeKeys } from '../../home/home-api.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
@@ -51,7 +49,6 @@ export const LIVE_ROOTS: readonly string[] = [
   teammateKeys.all[0],
   ticketKeys.all[0],
   previewKeys.all[0],
-  outpostKeys.all[0],
   agentTerminalKeys.all[0],
   chatPortsKey[0],
   calendarKeys.all[0],
@@ -85,22 +82,10 @@ const teammates: Invalidation = { queryKey: teammateKeys.all };
 const ticketInbox: Invalidation = { queryKey: ticketKeys.inbox, exact: true };
 const ticketConnections: Invalidation = { queryKey: ticketKeys.connections, exact: true };
 const agentConnectors: Invalidation = { queryKey: agentConnectorsKey, exact: true };
-const outposts: Invalidation = { queryKey: outpostKeys.all };
-const outpostList: Invalidation = { queryKey: outpostKeys.list, exact: true };
-const outpostDrafts: Invalidation = { queryKey: outpostKeys.drafts };
 const mapProjects: Invalidation = { queryKey: mapKeys.projects };
 const mapLinks: Invalidation = { queryKey: mapKeys.links([]) };
 const mapUnmatched: Invalidation = { queryKey: mapKeys.unmatched([]) };
 const mapLocated: Invalidation = { queryKey: ['map', 'locate'] };
-
-function changedOutposts(event: AppEvent): Invalidation[] {
-  if (!event.outpostId) return [outposts];
-  return [
-    { queryKey: outpostKeys.detail(event.outpostId), exact: true },
-    outpostList,
-    outpostDrafts,
-  ];
-}
 
 function conversationScoped(event: AppEvent, withAudit: boolean): Invalidation[] {
   const id = event.conversationId;
@@ -173,7 +158,6 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
         usage,
         planUsage,
         analytics,
-        outposts,
         ...outcome(event),
         ...runChangesOf(event),
         ...terminalRemote(event),
@@ -185,7 +169,7 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
     case 'subagent':
       return [list, ...conversationScoped(event, true)];
     case 'approval':
-      return [list, teammates, ...conversationScoped(event, true), tasks, today, outposts];
+      return [list, teammates, ...conversationScoped(event, true), tasks, today];
     case 'orchestration':
       return conversationScoped(event, false);
     case 'task':
@@ -207,13 +191,7 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
     case 'preview':
       return [{ queryKey: previewKeys.all }];
     case 'outpost_changed':
-      return [
-        list,
-        ...changedOutposts(event),
-        ...(event.conversationId
-          ? [{ queryKey: chatDraftsKey(event.conversationId), exact: true }]
-          : []),
-      ];
+      return [];
     case 'sub_chats_changed':
       return [list, ...conversationScoped(event, false)];
     case 'agent_terminal':

@@ -1,6 +1,6 @@
 import type { GithubInboxItem } from '@spark-outpost/contracts';
 import { initials } from '../calendar/month-model.ts';
-import { webLink } from '../outposts/post-text.ts';
+import { webLink } from '../links/web-link.ts';
 import { Glyph } from '../tickets/ticket-icons.tsx';
 import { ageLabel, botsState, isFresh, prState } from './github-model.ts';
 import { NewCommitsPill, ReviewPill, StatePill, TicketChip } from './StatePill.tsx';

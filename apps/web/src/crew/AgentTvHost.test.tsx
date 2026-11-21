@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, expect, it, vi } from 'vitest';
 import { AgentTvHost } from './AgentTvHost.tsx';
 import { queryKeys } from '../api/client.ts';
-import { outpostKeys } from '../outposts/outposts-api.ts';
 import { queueDraftAfterTyped } from '../chat/composer/pending-draft.ts';
 
 vi.mock('./agent-tv-store.ts', () => ({
@@ -51,29 +50,15 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-it('messages the named Outpost chat and redirects native workers to their owning member', () => {
+it('redirects a native worker through the chat that owns it', () => {
   const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
-  client.setQueryData(queryKeys.conversation('builder-chat'), {
-    conversation: { outpost: { id: 'outpost', handle: 'builder' } },
-  });
-  client.setQueryData(outpostKeys.detail('outpost'), {
-    outpost: {
-      members: [
-        { conversationId: 'lead-chat', handle: 'lead' },
-        { conversationId: 'builder-chat', handle: 'builder' },
-      ],
-    },
-  });
+  client.setQueryData(queryKeys.conversation('builder-chat'), { conversation: {} });
   const onGoTo = vi.fn();
   render(
     <QueryClientProvider client={client}>
       <AgentTvHost activeId="builder-chat" onGoTo={onGoTo} />
     </QueryClientProvider>,
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Message lead' }));
-  expect(onGoTo).toHaveBeenLastCalledWith('lead-chat');
-  fireEvent.click(screen.getByRole('button', { name: 'Message builder' }));
-  expect(onGoTo).toHaveBeenLastCalledWith('builder-chat');
   fireEvent.click(screen.getByRole('button', { name: 'Redirect worker' }));
   expect(onGoTo).toHaveBeenLastCalledWith('builder-chat');
   expect(queueDraftAfterTyped).toHaveBeenCalledWith(
@@ -83,7 +68,7 @@ it('messages the named Outpost chat and redirects native workers to their owning
   client.clear();
 });
 
-it('keeps the session lead destination for a standalone chat', () => {
+it('messages the chat’s own lead', () => {
   const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
   client.setQueryData(queryKeys.conversation('builder-chat'), { conversation: {} });
   const onGoTo = vi.fn();

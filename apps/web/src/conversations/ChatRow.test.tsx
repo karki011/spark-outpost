@@ -40,11 +40,10 @@ const chat: ConversationSummary = {
 };
 
 function renderRow(
-  handle?: string,
   row: ConversationSummary = chat,
   selected = false,
   onScreenId: string | null = null,
-  member: { faceless?: boolean; relation?: string | null } = {},
+  faceless = false,
   onPrepare?: (id: string) => void,
 ) {
   render(
@@ -58,8 +57,7 @@ function renderRow(
           settling={false}
           flash={false}
           index={0}
-          handle={handle}
-          {...member}
+          faceless={faceless}
           onOpen={vi.fn()}
           {...(onPrepare ? { onPrepare } : {})}
           onMenu={vi.fn()}
@@ -91,7 +89,7 @@ describe('ChatRow', () => {
   it('warms only a deliberate focus and cancels preparation on blur or unmount', () => {
     vi.useFakeTimers();
     const prepare = vi.fn();
-    renderRow(undefined, chat, false, null, {}, prepare);
+    renderRow(chat, false, null, false, prepare);
     const open = screen.getByRole('button', { name: /^Orders API/ });
     vi.spyOn(open, 'matches').mockReturnValue(true);
     fireEvent.focus(open);
@@ -112,7 +110,7 @@ describe('ChatRow', () => {
   it('does not warm the already selected chat', () => {
     vi.useFakeTimers();
     const prepare = vi.fn();
-    renderRow(undefined, chat, true, null, {}, prepare);
+    renderRow(chat, true, null, false, prepare);
     const open = screen.getByRole('button', { name: /^Orders API/ });
     vi.spyOn(open, 'matches').mockReturnValue(true);
     fireEvent.focus(open);
@@ -120,49 +118,42 @@ describe('ChatRow', () => {
     expect(prepare).not.toHaveBeenCalled();
   });
 
-  it('shows only the title, and keeps an outpost handle in the name and tooltip', () => {
-    renderRow('feature-dashboar');
-    const open = screen.getByRole('button', { name: /^Orders API, @feature-dashboar/ });
-    expect(open.getAttribute('title')).toContain('@feature-dashboar');
+  it('shows only the title', () => {
+    renderRow();
+    const open = screen.getByRole('button', { name: /^Orders API/ });
     expect(open.querySelector('.tt')?.textContent).toBe('Orders API');
     expect(open.querySelector('.sub')).toBeNull();
     expect(screen.getByRole('button', { name: 'Options for Orders API' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Move Orders API' })).toBeNull();
   });
 
-  it('draws a sub-chat without a face, with its state as a word and its relation in the name', () => {
-    renderRow('web', finished, false, null, {
-      faceless: true,
-      relation: 'Sub-chat of @lead, starts after @api',
-    });
-    const open = screen.getByRole('button', {
-      name: /^Orders API, @web, Sub-chat of @lead, starts after @api/,
-    });
-    expect(open.getAttribute('title')).toContain('@web · Sub-chat of @lead, starts after @api');
+  it('draws a faceless row without a face, with its state as a word', () => {
+    renderRow(finished, false, null, true);
+    const open = screen.getByRole('button', { name: /^Orders API/ });
     expect(open.querySelector('.st')).toBeNull();
     expect(open.querySelector('.row-state')?.textContent).toBe('Done');
     cleanup();
-    renderRow('lead', finished, false, null, { relation: 'Lead of 2 sub-chats' });
+    renderRow(finished);
     expect(document.querySelector('.row-open .st')).toBeTruthy();
     expect(document.querySelector('.row-state')?.textContent).toBe('Done');
   });
 
   it('names the blob of a chat that finished since it was seen', () => {
-    renderRow(undefined, finished);
+    renderRow(finished);
     expect(screen.getByRole('img', { name: 'Done' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /^Orders API.*Done$/ })).toBeTruthy();
   });
 
   it('shows no blob on the chat that is on screen, or on a quiet one', () => {
-    renderRow(undefined, finished, true, finished.id);
+    renderRow(finished, true, finished.id);
     expect(screen.queryByRole('img', { name: 'Done' })).toBeNull();
     cleanup();
     renderRow();
     expect(document.querySelector('.rblob')).toBeNull();
   });
 
-  it('shows the blob on the selected chat while Settings or an outpost covers it', () => {
-    renderRow(undefined, finished, true, null);
+  it('shows the blob on the selected chat while Settings covers it', () => {
+    renderRow(finished, true, null);
     expect(screen.getByRole('img', { name: 'Done' })).toBeTruthy();
   });
 });

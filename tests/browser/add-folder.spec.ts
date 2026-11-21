@@ -13,7 +13,6 @@ import {
 import { resetTestDatabase } from './database.ts';
 import { CLONE_TEST_ROOT } from './stub-config.ts';
 import { openChats } from './navigation.ts';
-import { NAME, newOutpost } from './outposts-kit.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { clickSettings } from './rail-menu.ts';
 
@@ -158,29 +157,6 @@ test('Settings → Projects makes a new folder and, when asked, a git repository
   await expect.poll(() => existsSync(path.join(base, 'invoice-tool', '.git'))).toBe(true);
   await expect(page.getByRole('list', { name: 'Linked folders' })).toContainText('invoice-tool');
   await expect(add).toBeFocused();
-});
-
-test('a new outpost chat with no projects adds a folder from its picker', async ({ page }) => {
-  await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'], catalog: true });
-  const folder = path.join(base, 'storefront');
-  mkdirSync(folder);
-  await openChats(page);
-  const sheet = await newOutpost(page, NAME);
-  await sheet.getByRole('radio', { name: 'New chat' }).click();
-  const trigger = sheet.getByRole('button', { name: 'Project', exact: true });
-  await trigger.click();
-  const menu = page.getByRole('menu', { name: 'Project' });
-  await expect(menu.getByRole('menuitemradio')).toHaveCount(0);
-  await expect(menu.getByRole('menuitem')).toHaveCount(2);
-  await expect(menu.getByRole('menuitem', { name: ADD_FOLDER })).toBeFocused();
-  await page.keyboard.press('Enter');
-  const dialog = page.getByRole('dialog', { name: 'Choose a project folder' });
-  await browseTo(dialog, folder);
-  await dialog.getByRole('button', { name: 'Use this folder' }).click();
-  await keepPlainFolder(page, 'storefront');
-  await expect(trigger).toContainText('storefront');
-  await expect(trigger).toBeFocused();
-  await expect(sheet).toBeVisible();
 });
 
 test('Move to project adds a folder and moves the chat into it', async ({ page }) => {

@@ -43,7 +43,7 @@ Free beta · [0.1.0-beta.13](releases/0.1.0-beta.13.md) · macOS 13+ (Mac contro
 
 ### Your agents, your modes
 
-Claude Code and Codex with their own permission modes, shown with their own names, or a local model through any server that speaks the Anthropic Messages API, such as Ollama or LM Studio. Spark’s recommended rules guard secret files, git hooks and config, and publishing; with no rules, the agent’s mode decides. Each chat keeps its agent running between messages; its sub-agents appear as cards in the Work panel, and the agent can start sub-chats in an outpost when the work spans repos.
+Claude Code and Codex with their own permission modes, shown with their own names, or a local model through any server that speaks the Anthropic Messages API, such as Ollama or LM Studio. Spark’s recommended rules guard secret files, git hooks and config, and publishing; with no rules, the agent’s mode decides. Each chat keeps its agent running between messages; its sub-agents appear as cards in the Work panel, and the agent can start sub-chats when the work splits into pieces.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/guide/images/chats-and-modes-permissions-dark.png">
@@ -215,15 +215,15 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for every command, the repo layou
 
 The user guide ships inside the app and lives in [`docs/guide`](docs/guide).
 
-| Start here                                                     | Go deeper                                                |
-| -------------------------------------------------------------- | -------------------------------------------------------- |
-| [Getting started](docs/guide/getting-started.md)               | [Agent mode](docs/guide/agent-mode.md)                   |
-| [Spark at a glance](docs/guide/how-spark-works.md)             | [Spark autonomy](docs/guide/spark-autonomy.md)           |
-| [Start a chat](docs/guide/start-a-chat.md)                     | [Protected paths](docs/guide/protected-paths.md)         |
-| [Ship and pull requests](docs/guide/ship-and-pull-requests.md) | [Outposts](docs/guide/outposts.md)                       |
-| [The desktop companion](docs/guide/desktop-companion.md)       | [Privacy and secrets](docs/guide/privacy-and-secrets.md) |
-| [What's new](docs/guide/whats-new.md)                          | [Keyboard shortcuts](docs/guide/keyboard-shortcuts.md)   |
-| [Sub-chats](docs/guide/sub-chats.md)                           | [Split a job](docs/guide/split-into-sub-chats.md)        |
+| Start here                                                     | Go deeper                                                    |
+| -------------------------------------------------------------- | ------------------------------------------------------------ |
+| [Getting started](docs/guide/getting-started.md)               | [Agent mode](docs/guide/agent-mode.md)                       |
+| [Spark at a glance](docs/guide/how-spark-works.md)             | [Spark autonomy](docs/guide/spark-autonomy.md)               |
+| [Start a chat](docs/guide/start-a-chat.md)                     | [Protected paths](docs/guide/protected-paths.md)             |
+| [Ship and pull requests](docs/guide/ship-and-pull-requests.md) | [Stacked pull requests](docs/guide/stacked-pull-requests.md) |
+| [The desktop companion](docs/guide/desktop-companion.md)       | [Privacy and secrets](docs/guide/privacy-and-secrets.md)     |
+| [What's new](docs/guide/whats-new.md)                          | [Keyboard shortcuts](docs/guide/keyboard-shortcuts.md)       |
+| [Sub-chats](docs/guide/sub-chats.md)                           | [Split a job](docs/guide/split-into-sub-chats.md)            |
 
 Architecture notes are in [`docs/architecture`](docs/architecture). The full docs index is [docs/README.md](docs/README.md).
 

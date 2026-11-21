@@ -117,7 +117,7 @@ export type UpdateRemoteCardAnsweringRequest = z.infer<
 >;
 
 export const REMOTE_ALWAYS_ALLOWED_LINE =
-  'Read chats, send messages, answer ordinary cards, read outposts';
+  'Read chats, send messages, answer ordinary cards, read sub-chats';
 
 export interface RemoteSwitchGroup {
   id: 'everyday' | 'setup' | 'high-risk';

@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import type { RemoteSession } from '../../packages/contracts/src/remote.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
@@ -17,7 +16,6 @@ import {
 test.describe.configure({ timeout: 180_000 });
 test.use({ trace: 'off' });
 
-const HANDLE = 'orders-web-app';
 const WIDTHS = [320, 375, 430];
 const THEMES = ['light', 'dark'] as const;
 
@@ -32,18 +30,10 @@ async function sql(text: string, values: unknown[]) {
   }
 }
 
-async function chatInOutpost(page: Page): Promise<void> {
+async function chatWithCachedPrompt(page: Page): Promise<void> {
   await editedChat(page, repo.root);
   const chats = (await (await page.request.get('/api/conversations')).json()) as { id: string }[];
   const chatId = chats[0]!.id;
-  const created = await page.request.post('/api/outposts', {
-    data: {
-      id: randomUUID(),
-      name: 'Web apps launch',
-      members: [{ conversationId: chatId, handle: HANDLE }],
-    },
-  });
-  expect(created.ok()).toBe(true);
   await sql(
     `INSERT INTO run_prompt_cache (run_id, first_key, first_write, last_key, last_context, last_at,
        model, ttl_seconds)
@@ -123,7 +113,7 @@ test.beforeEach(async ({ page }) => {
   repo = chatRepo();
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
   await page.setViewportSize(DESKTOP);
-  await chatInOutpost(page);
+  await chatWithCachedPrompt(page);
   await page.getByRole('button', { name: /^Model and effort/ }).click();
   await pickPermission(page, 'Full auto');
   await page.keyboard.press('Escape');
@@ -140,7 +130,7 @@ for (const width of WIDTHS) {
     await expect(detailsChip(page)).toBeVisible({ timeout: 20_000 });
     expect(await crowdedChips(page, '.comp-bar, .comp-foot')).toEqual([]);
     await expect(bar(page).getByRole('button', { name: /^Spark autonomy/ })).toHaveCount(0);
-    for (const hidden of ['.ctx-outpost', '.ctx-place', '.ctx-setup', '.ctx-repo']) {
+    for (const hidden of ['.ctx-place', '.ctx-setup', '.ctx-repo']) {
       await expect(bar(page).locator(hidden)).toBeHidden();
     }
     expect(await fitsComposer(page, '.ctxbar')).toBe(true);
@@ -153,7 +143,6 @@ for (const width of WIDTHS) {
 
     await detailsChip(page).click();
     await expect(detailsChip(page)).toHaveAttribute('aria-expanded', 'true');
-    await expect(details(page).locator('.ctx-outpost')).toContainText(`@${HANDLE}`);
     await expect(details(page).locator('.ctx-place')).toBeVisible();
     await expect(details(page).getByRole('button', { name: /^Agent setup/ })).toBeVisible();
     await expect(details(page).getByRole('button', { name: /^Project folders/ })).toBeVisible();
@@ -215,10 +204,7 @@ test('the desktop composer keeps the project and branch visible and folds setup 
   page,
 }) => {
   await page.goto('/');
-  await expect(bar(page).locator('.ctx-outpost')).toContainText(`@${HANDLE}`, {
-    timeout: 20_000,
-  });
-  await expect(bar(page).locator('.ctx-repo')).toBeVisible();
+  await expect(bar(page).locator('.ctx-repo')).toBeVisible({ timeout: 20_000 });
   await expect(bar(page).locator('.ctx-place')).toBeVisible();
   await expect(bar(page).locator('.ctx-setup')).toBeHidden();
   await expect(detailsChip(page)).toHaveAttribute('aria-expanded', 'false');
