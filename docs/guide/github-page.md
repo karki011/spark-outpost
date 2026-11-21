@@ -17,7 +17,7 @@ First [connect GitHub](tickets-and-github.md#connect-github). Until then the pag
 3. Narrow with **Last 14 days** or **Last 30 days**, and with **All projects** or one project.
 4. Spark checks every 2 minutes; **Refresh pull requests** checks now.
 
-Rows show a new dot, author, ticket key, checks (**Passing**, **Failing**, **Running**, **Conflict**, **Draft**), **New commits**, the latest review, labels, and when it was opened and updated.
+Rows show author, ticket, checks (**Passing**, **Failing**, **Running**, **Conflict**, **Draft**), **New commits**, the latest review, labels, and opened and updated dates.
 
 Pull requests you review come from every repository; your own from linked projects.
 
@@ -25,7 +25,7 @@ Bot pull requests share one **Dependency updates** row.
 
 ## Search
 
-Press / or select **Search pull requests**. Each word must match a title, number, repository, author, branch, label, ticket or description. Esc clears.
+Press / or select **Search pull requests**. Each word must match a title, number, repository, author, branch, label, ticket or the description's first 2,000 characters. Esc clears.
 
 ## Open a pull request
 
@@ -33,7 +33,7 @@ Press / or select **Search pull requests**. Each word must match a title, number
 2. Details show branches, the description, changed files, checks, size, assignees, reviewers and the ticket.
 3. **Open chat** goes to its chat. **Start chat** makes one on its branch; outside linked projects, one without it. **Open on GitHub** opens it.
 
-The page reopens on the pull request you last viewed, or the newest. Esc closes.
+Wide windows reopen on the pull request you last viewed, or the newest, unless you closed it. Esc closes.
 
 ## Review with a Spark or workflow
 

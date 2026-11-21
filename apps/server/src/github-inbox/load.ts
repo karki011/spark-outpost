@@ -156,6 +156,14 @@ async function reviewConnections(
   return [...byHost.values()];
 }
 
+const REVIEW_PARTS = ['review', 'reviewed'] as const;
+
+const reviewKey = (host: string, part: InboxPart) => `${host}:${part}`;
+
+function reviewPartOf(pull: HostedPull): InboxPart {
+  return pull.group === 'review_requested' ? 'review' : 'reviewed';
+}
+
 async function fetchReviewRequests(
   connection: GitHubConnection,
   since: string,
@@ -168,12 +176,15 @@ async function fetchReviewRequests(
       z.unknown(),
       'searching pull requests',
     );
-    const pages = (['review', 'reviewed'] as const).map((part) => parseInboxPage(body, part));
-    const answered = pages.map((page) => takePage(page, connection.host, null, into));
-    if (!answered.every(Boolean)) into.reviewFailed.add(connection.host);
+    for (const part of REVIEW_PARTS) {
+      const page = parseInboxPage(body, part);
+      if (!takePage(page, connection.host, null, into)) {
+        into.reviewFailed.add(reviewKey(connection.host, part));
+      }
+    }
   } catch (error) {
     into.problems.push({ repo: null, message: problemText(error) });
-    into.reviewFailed.add(connection.host);
+    REVIEW_PARTS.forEach((part) => into.reviewFailed.add(reviewKey(connection.host, part)));
   }
 }
 
@@ -205,15 +216,17 @@ async function fetchSnapshot(
   const kept = (previous?.pulls ?? []).filter(
     (pull) =>
       into.failed.has(repoKey(pull.host, pull.repo)) ||
-      (!pull.mine && into.reviewFailed.has(pull.host)),
+      (!pull.mine && into.reviewFailed.has(reviewKey(pull.host, reviewPartOf(pull)))),
   );
+  const fresh = strongest(into.pulls);
+  const freshIds = new Set(fresh.map((pull) => pull.id));
   const stale = previous && into.failed.size > 0 && into.pulls.length === 0;
   return {
     at: now,
     key,
     login: into.login ?? previous?.login ?? null,
     fetchedAt: stale ? previous.fetchedAt : new Date(now).toISOString(),
-    pulls: strongest([...into.pulls, ...kept]),
+    pulls: [...fresh, ...kept.filter((pull) => !freshIds.has(pull.id))],
     problems: into.problems,
   };
 }
@@ -254,15 +267,25 @@ async function decorate(
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
-export function cachedInboxPull(
-  db: Db,
+async function inboxScope(deps: GitHubDeps) {
+  const projects = await listProjects(deps.db, deps.workspaceId).catch(() => []);
+  const repos = await projectRepos(projects);
+  const key = [
+    deps.workspaceId,
+    ...repos.map((entry) => `${repoKey(entry.repo.host, slugOf(entry))}=${entry.projectId}`),
+  ].join(',');
+  return { repos, key };
+}
+
+export async function currentInboxPull(
+  deps: GitHubDeps,
   id: string,
-): { host: string; repo: string; number: number } | null {
-  for (const snapshot of cacheFor(db).values()) {
-    const found = snapshot.pulls.find((pull) => pull.id === id);
-    if (found) return { host: found.host, repo: found.repo, number: found.number };
-  }
-  return null;
+): Promise<{ host: string; repo: string; number: number } | null> {
+  const windowDays = await inboxWindowDays(deps.db, deps.workspaceId);
+  const snapshot = cacheFor(deps.db).get(windowDays);
+  if (!snapshot || snapshot.key !== (await inboxScope(deps)).key) return null;
+  const found = snapshot.pulls.find((pull) => pull.id === id);
+  return found ? { host: found.host, repo: found.repo, number: found.number } : null;
 }
 
 export async function loadGithubInbox(
@@ -274,12 +297,7 @@ export async function loadGithubInbox(
   if (!reach.saved && reach.ghLogin === null) {
     return { connected: false, login: null, windowDays, fetchedAt: null, items: [], problems: [] };
   }
-  const projects = await listProjects(deps.db, deps.workspaceId).catch(() => []);
-  const repos = await projectRepos(projects);
-  const key = [
-    deps.workspaceId,
-    ...repos.map((entry) => `${repoKey(entry.repo.host, slugOf(entry))}=${entry.projectId}`),
-  ].join(',');
+  const { repos, key } = await inboxScope(deps);
   const cache = cacheFor(deps.db);
   const now = deps.now?.() ?? Date.now();
   const hit = cache.get(windowDays);

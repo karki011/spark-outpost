@@ -40,6 +40,7 @@ export interface FoundPull {
   mergeState: string | null;
   requestedReviewers: string[];
   reviews: { login: string; state: string }[];
+  viewerReview: string | null;
   unresolvedThreads: number | null;
   checks: PullRequestChecks | null;
   failingChecks: number;
@@ -54,7 +55,7 @@ interface SearchPage {
   error: string | null;
 }
 
-const PULL_FIELDS = `number title url isDraft updatedAt createdAt headRefName baseRefName headRefOid bodyText labels(first: 10) { nodes { name color } } assignees(first: 10) { nodes { login } } comments { totalCount } additions deletions changedFiles reviewDecision mergeable mergeStateStatus repository { nameWithOwner } author { __typename login } reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { login } } } } latestReviews(first: 20) { nodes { state author { login } } } reviewThreads(first: 100) { nodes { isResolved } } commits(last: 1) { nodes { commit { statusCheckRollup { state contexts(first: 100) { nodes { ... on CheckRun { status conclusion } } } } } } }`;
+const PULL_FIELDS = `number title url isDraft updatedAt createdAt headRefName baseRefName headRefOid bodyText labels(first: 10) { nodes { name color } } assignees(first: 10) { nodes { login } } comments { totalCount } additions deletions changedFiles reviewDecision mergeable mergeStateStatus repository { nameWithOwner } author { __typename login } reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { login } } } } latestReviews(first: 20) { nodes { state author { login } } } viewerLatestReview { state } reviewThreads(first: 100) { nodes { isResolved } } commits(last: 1) { nodes { commit { statusCheckRollup { state contexts(first: 100) { nodes { ... on CheckRun { status conclusion } } } } } } }`;
 
 const safeRepo = (repo: InboxRepo) => SAFE_NAME.test(repo.owner) && SAFE_NAME.test(repo.name);
 
@@ -180,6 +181,7 @@ const pullNodeSchema = z.object({
     .catch(null),
   reviewRequests: nodesOf(z.object({ requestedReviewer: loginOf })),
   latestReviews: nodesOf(z.object({ state: z.string(), author: loginOf })),
+  viewerLatestReview: z.object({ state: z.string() }).nullable().catch(null),
   reviewThreads: nodesOf(z.object({ isResolved: z.boolean() })),
   commits: nodesOf(z.object({ commit: z.object({ statusCheckRollup: rollupSchema }) })),
 });
@@ -239,6 +241,7 @@ function toFound(node: PullNode, part: InboxPart): FoundPull {
     reviews: present(node.latestReviews?.nodes).flatMap((review) =>
       review.author ? [{ login: review.author.login, state: review.state }] : [],
     ),
+    viewerReview: node.viewerLatestReview?.state ?? null,
     unresolvedThreads: threads ? threads.filter((thread) => !thread.isResolved).length : null,
     checks,
     failingChecks: checks === 'failing' ? Math.max(failed, 1) : failed,

@@ -23,9 +23,12 @@ const EMPTY: Record<GithubInboxGroup, string> = {
 };
 
 export function GithubList({ group, items, openId, now, onOpen, onOpenChat }: GithubListProps) {
-  const [botsOpen, setBotsOpen] = useState(() =>
-    items.some((item) => item.authorIsBot && item.id === openId),
-  );
+  const [botsOpen, setBotsOpen] = useState(false);
+  const [shownFor, setShownFor] = useState<string | null>(null);
+  if (openId !== shownFor) {
+    setShownFor(openId);
+    if (items.some((item) => item.authorIsBot && item.id === openId)) setBotsOpen(true);
+  }
   const entries = listEntries(group, items);
   const onKeyDown = (event: KeyboardEvent<HTMLUListElement>) =>
     moveBetweenRows(event, items, openId, onOpen);

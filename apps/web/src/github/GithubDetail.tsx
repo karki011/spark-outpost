@@ -128,7 +128,7 @@ export function GithubDetail({ item, now, onClose, onOpenChat }: GithubDetailPro
             Open on GitHub
           </a>
         )}
-        <StartChat item={item} onOpenChat={onOpenChat} />
+        <StartChat key={item.id} item={item} onOpenChat={onOpenChat} />
       </div>
       <PullDetails item={item} />
       <dl className="gh-pr-facts">

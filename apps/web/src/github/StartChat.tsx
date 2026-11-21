@@ -9,6 +9,7 @@ import { Glyph } from '../tickets/ticket-icons.tsx';
 import { githubKeys } from './github-api.ts';
 
 const TITLE_LIMIT = 100;
+const LEFT_BEHIND = 'The new chat could not be removed; delete it from Chats.';
 
 function chatTitle(item: GithubInboxItem): string {
   return `PR #${item.number}: ${item.title}`.slice(0, TITLE_LIMIT);
@@ -28,8 +29,12 @@ async function startOnBranch(item: GithubInboxItem, projectId: string): Promise<
   try {
     await adoptApi.adopt(id, { projectId, number: item.number, url: item.url });
   } catch (error) {
-    await api.deleteConversation(id).catch(() => null);
-    throw error;
+    const removed = await api.deleteConversation(id).then(
+      () => true,
+      () => false,
+    );
+    const reason = error instanceof Error ? error.message : 'The chat could not start.';
+    throw new Error(removed ? reason : `${reason} ${LEFT_BEHIND}`, { cause: error });
   }
   return id;
 }

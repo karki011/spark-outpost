@@ -32,6 +32,7 @@ function found(fields: Partial<FoundPull> = {}): FoundPull {
     mergeState: 'CLEAN',
     requestedReviewers: [],
     reviews: [],
+    viewerReview: null,
     unresolvedThreads: 0,
     checks: 'passing',
     failingChecks: 0,
@@ -60,6 +61,11 @@ describe('pull requests you already reviewed', () => {
     });
     expect(inboxPull(approved, ME)?.group).toBe('approved');
     expect(inboxPull(commented, ME)?.group).toBe('reviewed');
+  });
+
+  it('uses your own latest review even when it is not among the listed reviews', () => {
+    const pull = found({ author: 'alice', reviewedByViewer: true, viewerReview: 'APPROVED' });
+    expect(inboxPull(pull, ME)?.group).toBe('approved');
   });
 
   it('keeps a pull request that asks for your review again in review requested', () => {

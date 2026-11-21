@@ -3,7 +3,7 @@ import type { GithubPullDetails } from '@spark-outpost/contracts';
 import { connectionsFor, type GitHubDeps } from '../ship/github/access.ts';
 import { repoPath, type GitHubConnection } from '../ship/github/connection.ts';
 import { GITHUB_PAGE_SIZE } from '../ship/github/pull-reads.ts';
-import { cachedInboxPull } from './load.ts';
+import { currentInboxPull } from './load.ts';
 
 const BODY_LIMIT = 60_000;
 const PATH_LIMIT = 500;
@@ -47,7 +47,7 @@ async function readWith(connection: GitHubConnection, path: string, number: numb
 }
 
 export async function loadPullDetails(deps: GitHubDeps, id: string): Promise<GithubPullDetails> {
-  const found = cachedInboxPull(deps.db, id);
+  const found = await currentInboxPull(deps, id);
   if (!found) throw new PullDetailsError(404, 'That pull request is not on the GitHub page.');
   const [owner = '', name = ''] = found.repo.split('/');
   const repo = { host: found.host, owner, name };

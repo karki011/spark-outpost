@@ -46,10 +46,8 @@ const sameLogin = (a: string, b: string | null) =>
 
 function othersGroup(found: FoundPull, viewer: string | null): GithubInboxGroup {
   if (found.reviewRequested) return 'review_requested';
-  const approved = found.reviews.some(
-    (review) => review.state === 'APPROVED' && sameLogin(review.login, viewer),
-  );
-  return approved ? 'approved' : 'reviewed';
+  const mine = found.reviews.find((review) => sameLogin(review.login, viewer))?.state;
+  return (found.viewerReview ?? mine) === 'APPROVED' ? 'approved' : 'reviewed';
 }
 
 export function inboxPull(found: FoundPull, viewer: string | null): InboxPull | null {

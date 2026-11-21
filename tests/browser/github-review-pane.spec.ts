@@ -148,6 +148,17 @@ async function stubReviews(
     server.listed.push(new URL(request.url()).searchParams.get('pull') ?? '');
     return route.fulfill({ json: { reviews: server.reviews } });
   });
+  await page.route('**/api/github/inbox/details?*', (route) =>
+    route.fulfill({
+      json: {
+        id: new URL(route.request().url()).searchParams.get('id'),
+        body: '',
+        bodyCut: false,
+        files: [],
+        filesTotal: 0,
+      },
+    }),
+  );
   await page.route(/\/api\/github\/reviews\/[^/]+\/stop$/, (route) => {
     const id = route.request().url().split('/').at(-2)!;
     server.stops.push(id);

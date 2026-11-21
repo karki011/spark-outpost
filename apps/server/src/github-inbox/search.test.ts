@@ -30,6 +30,7 @@ function node(fields: Record<string, unknown> = {}) {
       nodes: [{ requestedReviewer: { login: 'hazel' } }, { requestedReviewer: {} }],
     },
     latestReviews: { nodes: [{ state: 'COMMENTED', author: { login: 'bob' } }] },
+    viewerLatestReview: { state: 'COMMENTED' },
     reviewThreads: { nodes: [{ isResolved: true }, { isResolved: false }] },
     commits: {
       nodes: [
@@ -86,6 +87,7 @@ describe('parsing the inbox search', () => {
         headSha: HEAD,
         requestedReviewers: ['hazel'],
         reviews: [{ login: 'bob', state: 'COMMENTED' }],
+        viewerReview: 'COMMENTED',
         unresolvedThreads: 1,
         checks: 'failing',
         failingChecks: 1,
