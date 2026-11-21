@@ -90,6 +90,7 @@ export function BusySendButton({
         aria-label={MAIN_LABELS[preferred]}
         title={busyButtonTitle(preferred, MAC, waiting)}
         disabled={disabled}
+        onMouseDown={(event) => event.preventDefault()}
         onClick={() => onChoice(preferred)}
       >
         <ChoiceIcon action={preferred} />

@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| One tap sends on phones                         | [Use your phone](use-your-phone.md).                       |
 | Outposts are gone; agents split work instead    | [Sub-chats](sub-chats.md).                                 |
 | Old outpost requests read as from another chat  | Nothing to do.                                             |
 | **Sub-chats** tab; plan card **Edit**           | [Sub-chats](sub-chats.md#find-a-sub-chat).                 |
@@ -61,4 +62,3 @@ summary: What changed in recent releases and what to do next.
 | Browser: address at top, one chat per tab                  | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).                             |
 | Context rail: full height; **Tools** inline                | [See a chat's context](context-rail.md).                                                 |
 | Remote control: side panel, sections fold                  | [Use your phone](use-your-phone.md).                                                     |
-| Wider pages, squircle corners, sidebar hide fix            | Nothing to do.                                                                           |
