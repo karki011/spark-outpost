@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import {
   browserAvailable,
+  closeBrowserTab,
   dismissAgentOpened,
+  knownTabs,
   useAgentOpened,
+  useChatBrowser,
   useHandoff,
 } from './browser-store.ts';
 
@@ -52,6 +55,14 @@ export function setBrowserPaneOpen(chatId: string, open: boolean): void {
   for (const listener of listeners) listener();
 }
 
+const closingLast = new Map<string, string>();
+
+export async function closePaneTab(chatId: string, tabId: string): Promise<void> {
+  const tabs = knownTabs(chatId);
+  if (tabs.length === 1 && tabs[0]?.id === tabId) closingLast.set(chatId, tabId);
+  await closeBrowserTab(chatId, tabId);
+}
+
 function useBrowserPaneOpen(chatId: string): boolean {
   return useSyncExternalStore(subscribe, () => browserPaneOpen(chatId));
 }
@@ -65,6 +76,16 @@ export function useBrowserPane(chatId: string): BrowserPaneChoice | null {
   const open = useBrowserPaneOpen(chatId);
   const agentOpened = useAgentOpened(chatId);
   const handoff = useHandoff(chatId);
+  const { tabs } = useChatBrowser(chatId);
+
+  useEffect(() => {
+    const closing = closingLast.get(chatId);
+    if (closing === undefined || tabs.some((tab) => tab.id === closing)) return;
+    closingLast.delete(chatId);
+    if (tabs.length > 0) return;
+    setBrowserPaneOpen(chatId, false);
+    dismissAgentOpened(chatId);
+  }, [chatId, tabs]);
 
   useEffect(() => {
     if (agentOpened || handoff) setBrowserPaneOpen(chatId, true);

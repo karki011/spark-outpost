@@ -11,6 +11,7 @@ import type { PaneTab } from './tab.ts';
 
 export interface PaneCommandHooks {
   tabsMax: number;
+  home?(): string;
   pick?(tab: PaneTab, mode: 'element' | 'region' | 'off'): Promise<void>;
   closed?(tab: PaneTab): void;
 }
@@ -35,7 +36,7 @@ export async function runPaneCommand(
   hooks: PaneCommandHooks,
 ): Promise<BrowserClosedTab | BrowserPipResult | undefined> {
   if (action.command === 'new_tab') {
-    const url = action.url ? addressToUrl(action.url) : null;
+    const url = action.url ? addressToUrl(action.url) : (hooks.home?.() ?? null);
     const tab = panes.createTab(key, { owner: 'user', runId: null, url: 'about:blank' });
     if (!tab) return;
     panes.select(key, tab.id);
@@ -77,7 +78,7 @@ export async function runPaneCommand(
     tab.pinned = action.pinned;
     panes.noteChange(key);
   } else if (action.command === 'devtools') {
-    tab.openDevtools();
+    tab.toggleDevtools();
   } else if (action.command === 'pick') {
     if (!hooks.pick) return;
     tab.keep();

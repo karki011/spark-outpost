@@ -28,19 +28,19 @@ const key = (change: Partial<Parameters<typeof isAddShortcut>[0]>) => ({
   ...change,
 });
 
+const history = { canGoBack: true, canGoForward: false };
+const labels = (items: ReturnType<typeof selectionMenuItems>) =>
+  items.map((item) => ('label' in item ? item.label : '—'));
+
 describe('the selection menu', () => {
   it('offers Add to chat, Ask about this and Copy for selected page text', () => {
     const items = selectionMenuItems(
       { selectionText: 'Pricing', isEditable: false },
       false,
       'chat',
+      history,
     );
-    expect(items.map((item) => ('label' in item ? item.label : '—'))).toEqual([
-      'Add to chat',
-      'Ask about this',
-      '—',
-      'Copy',
-    ]);
+    expect(labels(items)).toEqual(['Add to chat', 'Ask about this', '—', 'Copy']);
   });
 
   it('says Add to terminal in a Terminal session', () => {
@@ -48,19 +48,74 @@ describe('the selection menu', () => {
       { selectionText: 'x', isEditable: false },
       false,
       'terminal',
+      history,
     );
     expect(first).toEqual({ kind: 'send', label: 'Add to terminal', intent: 'add' });
   });
 
-  it('shows nothing without a selection, in a field, or while selecting an element', () => {
-    expect(selectionMenuItems({ selectionText: ' \n ', isEditable: false }, false, 'chat')).toEqual(
-      [],
+  it('offers a web link first, and never a link that is not a web address', () => {
+    const facts = { selectionText: 'Pricing', isEditable: false };
+    const items = selectionMenuItems(
+      { ...facts, linkURL: 'https://example.com/pricing' },
+      false,
+      'chat',
+      history,
     );
+    expect(items[0]).toEqual({
+      kind: 'open_link',
+      label: 'Open link in new tab',
+      url: 'https://example.com/pricing',
+    });
+    expect(labels(items)).toEqual([
+      'Open link in new tab',
+      'Copy link',
+      '—',
+      'Add to chat',
+      'Ask about this',
+      '—',
+      'Copy',
+    ]);
+    const script = selectionMenuItems(
+      { ...facts, linkURL: 'javascript:alert(1)' },
+      false,
+      'chat',
+      history,
+    );
+    expect(labels(script)).toEqual(['Add to chat', 'Ask about this', '—', 'Copy']);
+  });
+
+  it('offers editing in a field and never sends its text to the chat', () => {
+    const items = selectionMenuItems(
+      { selectionText: 'me@x.io', isEditable: true },
+      false,
+      'chat',
+      history,
+    );
+    expect(labels(items)).toEqual(['Cut', 'Copy', 'Paste', 'Select all']);
+  });
+
+  it('offers Back, Forward and Reload on the page itself', () => {
+    const items = selectionMenuItems(
+      { selectionText: ' \n ', isEditable: false },
+      false,
+      'chat',
+      history,
+    );
+    expect(items).toEqual([
+      { kind: 'step', label: 'Back', action: 'back', enabled: true },
+      { kind: 'step', label: 'Forward', action: 'forward', enabled: false },
+      { kind: 'step', label: 'Reload', action: 'reload', enabled: true },
+    ]);
+  });
+
+  it('shows nothing while selecting an element', () => {
     expect(
-      selectionMenuItems({ selectionText: 'me@x.io', isEditable: true }, false, 'chat'),
-    ).toEqual([]);
-    expect(
-      selectionMenuItems({ selectionText: 'Pricing', isEditable: false }, true, 'chat'),
+      selectionMenuItems(
+        { selectionText: 'Pricing', isEditable: false, linkURL: 'https://example.com/' },
+        true,
+        'chat',
+        history,
+      ),
     ).toEqual([]);
   });
 });

@@ -155,6 +155,7 @@ export function BrowserPane({
   usePageShortcuts(chatId, runShortcut, showing);
   const shortcutAt = useRef(0);
   const tabKey = `${tab?.id ?? ''}:${tab?.url ?? ''}`;
+  const empty = browser.tabs.length === 0;
 
   useEffect(() => {
     const recent = Date.now() - shortcutAt.current < REFOCUS_MS;
@@ -163,10 +164,11 @@ export function BrowserPane({
   }, [tabKey]);
 
   useEffect(() => {
+    if (!showing && empty) started.current = false;
     if (!showing || started.current) return;
     started.current = true;
     void desktopBrowser()?.start(hiddenPlacement(home)).then(acceptBrowserState);
-  }, [showing, home]);
+  }, [showing, home, empty]);
 
   const act = (command: 'back' | 'forward' | 'reload' | 'stop') => {
     if (tab) sendBrowserCommand(chatId, { command, tabId: tab.id });
@@ -247,7 +249,7 @@ export function BrowserPane({
             Click to select, ⇧ click for more, ↑↓ parent or child, drag a box. Esc finishes.
           </p>
         ) : (
-          <AddressBar key={tabKey} commands={commands} tab={tab} />
+          <AddressBar key={tabKey} commands={commands} tab={tab} history="work" />
         )}
         <ZoomBadge tab={tab} commands={commands} />
         <ToolButton

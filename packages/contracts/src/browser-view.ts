@@ -130,10 +130,24 @@ export const browserSearchEngineSchema = z.enum(['duckduckgo', 'google', 'bing']
 export type BrowserSearchEngine = z.infer<typeof browserSearchEngineSchema>;
 export const DEFAULT_SEARCH_ENGINE: BrowserSearchEngine = 'duckduckgo';
 
-export const SEARCH_ENGINES: Record<BrowserSearchEngine, { label: string; base: string }> = {
-  duckduckgo: { label: 'DuckDuckGo', base: 'https://duckduckgo.com/?q=' },
-  google: { label: 'Google', base: 'https://www.google.com/search?q=' },
-  bing: { label: 'Bing', base: 'https://www.bing.com/search?q=' },
+interface SearchEngine {
+  label: string;
+  home: string;
+  base: string;
+}
+
+export const SEARCH_ENGINES: Record<BrowserSearchEngine, SearchEngine> = {
+  duckduckgo: {
+    label: 'DuckDuckGo',
+    home: 'https://duckduckgo.com/',
+    base: 'https://duckduckgo.com/?q=',
+  },
+  google: {
+    label: 'Google',
+    home: 'https://www.google.com/',
+    base: 'https://www.google.com/search?q=',
+  },
+  bing: { label: 'Bing', home: 'https://www.bing.com/', base: 'https://www.bing.com/search?q=' },
 };
 
 export function searchUrl(engine: BrowserSearchEngine, text: string): string {

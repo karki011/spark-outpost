@@ -17,7 +17,7 @@ About 2 minutes. Mac only.
 
 ## Test a page width
 
-Drag the pane's edge, or pick a **Page width**.
+Drag the pane's edge or pick **Page width**.
 
 ## Handle a tab
 
@@ -32,7 +32,7 @@ Drag the pane's edge, or pick a **Page width**.
 | Click, type, press keys, scroll, go back | Navigate your tab; download files |
 | Run scripts, inspect, wait, check speed  | Click a covered element           |
 
-Agents are signed in wherever you are. **Settings** → **Browser pane** signs out. **Open developer tools** (**⌥⌘I**) is yours.
+Agents are signed in wherever you are. **Settings** → **Browser pane** signs out. **Open developer tools** (**⌥⌘I**) docks yours.
 
 An agent's tab stays until you close it; **Pin so it isn’t reused** stops that.
 
@@ -50,7 +50,7 @@ Agents can't change it.
 1. Select **Select an element for the chat** and click it, or **Select a region for the chat** and drag a box. **⇧** click picks several; **Esc** finishes.
 2. Send the **Selected:** chip.
 
-Right-click highlighted text: **Add to chat** or **Ask about this** (**⌘⇧A**).
+Right-click links or highlighted text: **Add to chat**, **Ask about this** (**⌘⇧A**).
 
 ## Save a test sign-in
 

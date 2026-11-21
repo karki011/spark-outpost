@@ -1,5 +1,6 @@
 import {
   Menu,
+  clipboard,
   ipcMain,
   webContents,
   type BrowserWindow,
@@ -10,6 +11,7 @@ import {
 import {
   BROWSER_FOCUS_SHORTCUTS,
   BROWSER_TABS_MAX,
+  SEARCH_ENGINES,
   browserCommandSchema,
   browserIdSchema,
   browserSignOutSchema,
@@ -41,7 +43,7 @@ import { removeRetiredPartitions } from './retired-partitions.ts';
 import { BROWSER_PARTITION } from './request-guard.ts';
 import { signOut, signedInSites, type SessionGuards } from './sessions.ts';
 import { startBrowserViewHost, type BrowserViewHost } from './view-host.ts';
-import type { HistorySink } from './view-history.ts';
+import { paneHistory, type HistorySink } from './view-history.ts';
 import { loadSavedView } from './view-saved.ts';
 import { toView } from './view-transfer.ts';
 import type { LinkOpening } from '../link-opening.ts';
@@ -74,15 +76,27 @@ const CHANNELS = [
   IPC.browserToView,
 ];
 
+interface MenuActions {
+  sendText(intent: SelectionIntent): void;
+  openLink(url: string): void;
+}
+
 function menuTemplate(
   items: readonly SelectionMenuItem[],
-  sendText: (intent: SelectionIntent) => void,
-  copy: () => void,
+  tab: PaneTab,
+  actions: MenuActions,
 ): MenuItemConstructorOptions[] {
   return items.map((item) => {
-    if (item.kind === 'separator') return { type: 'separator' };
-    if (item.kind === 'copy') return { label: item.label, click: copy };
-    return { label: item.label, click: () => sendText(item.intent) };
+    const { kind } = item;
+    if (kind === 'separator') return { type: 'separator' };
+    if (kind === 'copy') return { label: item.label, click: () => tab.contents()?.copy() };
+    if (kind === 'send') return { label: item.label, click: () => actions.sendText(item.intent) };
+    if (kind === 'open_link') return { label: item.label, click: () => actions.openLink(item.url) };
+    if (kind === 'copy_link')
+      return { label: item.label, click: () => clipboard.writeText(item.url) };
+    if (kind === 'edit') return { label: item.label, click: () => tab.contents()?.[item.action]() };
+    const step = () => void tab.history(item.action);
+    return { label: item.label, enabled: item.enabled, click: step };
   });
 }
 
@@ -119,6 +133,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     view?.panes.noteAll();
   };
   const workZooms = savedPageZooms(saved, 'work', zoomChanged);
+  const history = paneHistory(options.history);
   const panes: BrowserPanes = new BrowserPanes({
     window: options.window,
     partition: () => BROWSER_PARTITION,
@@ -128,6 +143,8 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
     stateChanged: (state) => send(IPC.browserStateChanged, state),
     snapshot: (chatId, image) => send(IPC.browserSnapshot, { chatId, image }),
     localOriginSeen: (projectId, origin) => origins.note(projectId, origin),
+    visited: (tab, url) => history.visited(tab, url),
+    titled: (tab, title) => history.titled(tab, title),
     contextMenu: (tab, params) => showSelectionMenu(tab, params),
     addShortcut: (tab) => void addSelection(tab),
     paneShortcut,
@@ -153,14 +170,14 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
   };
 
   const showSelectionMenu = (tab: PaneTab, params: ContextMenuParams) => {
-    const items = selectionMenuItems(params, tab.picking, panes.sendsTo(tab.chatId));
+    const sendsTo = panes.sendsTo(tab.chatId);
+    const items = selectionMenuItems(params, tab.picking, sendsTo, tab.paneTab());
     const window = options.window();
     if (items.length === 0 || !window) return;
-    const template = menuTemplate(
-      items,
-      (intent) => sendSelection(tab, params.selectionText, intent),
-      () => tab.contents()?.copy(),
-    );
+    const template = menuTemplate(items, tab, {
+      sendText: (intent) => sendSelection(tab, params.selectionText, intent),
+      openLink: (url) => void command(tab.chatId, { command: 'new_tab', url }),
+    });
     Menu.buildFromTemplate(template).popup({ window });
   };
 
@@ -184,6 +201,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
   const command = (chatId: string, action: BrowserCommand) =>
     runPaneCommand(panes, chatId, action, {
       tabsMax: BROWSER_TABS_MAX,
+      home: () => SEARCH_ENGINES[saved.searchEngine()].home,
       pick: picker.pick,
       closed: (tab) => void picker.stop(tab).catch(() => undefined),
     });
