@@ -90,7 +90,12 @@ async function expectAccessible(page: Page, include: string): Promise<void> {
     .include(include)
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
     .analyze();
-  expect(results.violations.map((violation) => violation.id)).toEqual([]);
+  const found = results.violations.flatMap((violation) =>
+    violation.nodes.map(
+      (node) => `${violation.id}: ${node.target.join(' ')} (${node.any[0]?.message ?? ''})`,
+    ),
+  );
+  expect(found).toEqual([]);
 }
 
 test('sub-chats are nested under their parent in plan order, each with its status', async ({
