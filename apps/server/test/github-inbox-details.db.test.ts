@@ -156,6 +156,34 @@ describe('pull request details on the GitHub page', () => {
   });
 });
 
+describe('pull requests you already reviewed', () => {
+  it('lists those you approved and those you only reviewed from any repository', async () => {
+    await linkWidgets();
+    const others = { owner: 'other', repo: 'elsewhere', openedBy: 'alice' };
+    pull(20, { ...others, reviews: [{ user: { login: TOKEN_LOGIN }, state: 'APPROVED' }] });
+    pull(21, { ...others, reviews: [{ user: { login: TOKEN_LOGIN }, state: 'COMMENTED' }] });
+    pull(22, {
+      ...others,
+      requestedReviewers: [TOKEN_LOGIN],
+      reviews: [{ user: { login: TOKEN_LOGIN }, state: 'APPROVED' }],
+    });
+    pull(23, { ...others, reviews: [{ user: { login: 'bob' }, state: 'APPROVED' }] });
+    pull(24, { reviews: [{ user: { login: TOKEN_LOGIN }, state: 'COMMENTED' }] });
+    const shown = await loadInbox();
+    expect(Object.fromEntries(shown.items.map((item) => [item.number, item.group]))).toEqual({
+      20: 'approved',
+      21: 'reviewed',
+      22: 'review_requested',
+      24: 'waiting',
+    });
+    expect(shown.items.find((item) => item.number === 20)).toMatchObject({
+      mine: false,
+      unseen: false,
+      approvedBy: [TOKEN_LOGIN],
+    });
+  });
+});
+
 describe('starting a chat for a pull request', () => {
   it('creates a chat linked to the project with the pull request as its title', async () => {
     const projectId = await linkWidgets();

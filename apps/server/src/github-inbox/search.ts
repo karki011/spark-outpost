@@ -44,6 +44,7 @@ export interface FoundPull {
   checks: PullRequestChecks | null;
   failingChecks: number;
   reviewRequested: boolean;
+  reviewedByViewer: boolean;
 }
 
 interface SearchPage {
@@ -57,8 +58,11 @@ const PULL_FIELDS = `number title url isDraft updatedAt createdAt headRefName ba
 
 const safeRepo = (repo: InboxRepo) => SAFE_NAME.test(repo.owner) && SAFE_NAME.test(repo.name);
 
-function filters(kind: 'review-requested' | 'author', since: string): string {
-  return `is:pr is:open archived:false ${kind}:@me updated:>=${since} sort:updated-desc`;
+export type InboxPart = 'review' | 'mine' | 'reviewed';
+
+function filters(kind: 'review-requested' | 'author' | 'reviewed-by', since: string): string {
+  const others = kind === 'reviewed-by' ? ' -author:@me' : '';
+  return `is:pr is:open archived:false ${kind}:@me${others} updated:>=${since} sort:updated-desc`;
 }
 
 export function repoChunks(repos: readonly InboxRepo[], since: string): InboxRepo[][] {
@@ -90,7 +94,9 @@ export function inboxQuery(repos: readonly InboxRepo[], since: string): string {
 }
 
 export function reviewRequestsQuery(since: string): string {
-  return `query { viewer { login } ${searchField('review', filters('review-requested', since))} }`;
+  const requested = searchField('review', filters('review-requested', since));
+  const reviewed = searchField('reviewed', filters('reviewed-by', since));
+  return `query { viewer { login } ${requested} ${reviewed} }`;
 }
 
 const searchSchema = z.object({
@@ -107,6 +113,7 @@ const inboxEnvelopeSchema = z.object({
         .catch(null),
       review: searchSchema.nullish().catch(null),
       mine: searchSchema.nullish().catch(null),
+      reviewed: searchSchema.nullish().catch(null),
     })
     .nullable()
     .catch(null),
@@ -194,7 +201,7 @@ function isBot(author: PullNode['author']): boolean {
   return author.__typename === 'Bot' || author.login.toLowerCase().endsWith('[bot]');
 }
 
-function toFound(node: PullNode, reviewRequested: boolean): FoundPull {
+function toFound(node: PullNode, part: InboxPart): FoundPull {
   const rollup = present(node.commits?.nodes)[0]?.commit.statusCheckRollup ?? null;
   const checks = checksOf(rollup?.state);
   const failed = present(rollup?.contexts?.nodes).filter(
@@ -235,15 +242,16 @@ function toFound(node: PullNode, reviewRequested: boolean): FoundPull {
     unresolvedThreads: threads ? threads.filter((thread) => !thread.isResolved).length : null,
     checks,
     failingChecks: checks === 'failing' ? Math.max(failed, 1) : failed,
-    reviewRequested,
+    reviewRequested: part === 'review',
+    reviewedByViewer: part === 'reviewed',
   };
 }
 
-function pullsIn(search: z.infer<typeof searchSchema> | null, reviewRequested: boolean) {
+function pullsIn(search: z.infer<typeof searchSchema> | null, part: InboxPart) {
   const pulls: FoundPull[] = [];
   for (const node of search?.nodes ?? []) {
     const parsed = pullNodeSchema.safeParse(node);
-    if (parsed.success) pulls.push(toFound(parsed.data, reviewRequested));
+    if (parsed.success) pulls.push(toFound(parsed.data, part));
   }
   return pulls;
 }
@@ -251,7 +259,7 @@ function pullsIn(search: z.infer<typeof searchSchema> | null, reviewRequested: b
 const truncatedSearch = (search: z.infer<typeof searchSchema> | null) =>
   search !== null && search.issueCount > search.nodes.length;
 
-export function parseInboxPage(body: unknown, part: 'review' | 'mine'): SearchPage {
+export function parseInboxPage(body: unknown, part: InboxPart): SearchPage {
   const envelope = inboxEnvelopeSchema.safeParse(body);
   if (!envelope.success || !envelope.data.data) {
     const message = envelope.success ? envelope.data.errors?.[0]?.message : undefined;
@@ -268,7 +276,7 @@ export function parseInboxPage(body: unknown, part: 'review' | 'mine'): SearchPa
   const search = envelope.data.data[part] ?? null;
   return {
     viewer: viewer?.login ?? null,
-    pulls: pullsIn(search, part === 'review'),
+    pulls: pullsIn(search, part),
     truncated: truncatedSearch(search),
     error: search === null ? 'GitHub left part of the search unanswered.' : null,
   };

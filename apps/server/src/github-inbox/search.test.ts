@@ -121,6 +121,14 @@ describe('parsing the inbox search', () => {
     expect(parsed.pulls[0]?.bodyPreview).toHaveLength(2_000);
   });
 
+  it('marks pull requests found by the reviewed search', () => {
+    const parsed = parseInboxPage(
+      { data: { viewer: { login: 'hazel' }, reviewed: { issueCount: 1, nodes: [node()] } } },
+      'reviewed',
+    );
+    expect(parsed.pulls[0]).toMatchObject({ reviewRequested: false, reviewedByViewer: true });
+  });
+
   it('drops a malformed node and keeps the good ones', () => {
     const parsed = parseInboxPage(
       page([node({ headRefOid: 'not-a-sha' }), node({ number: 13 }), {}], []),
@@ -201,6 +209,11 @@ describe('the inbox query', () => {
     expect(review).toContain('review-requested:@me');
     expect(review).toContain('updated:>=2026-11-02');
     expect(review).not.toContain('repo:');
+    const reviewed = JSON.parse(
+      /reviewed: search\(query: ("(?:[^"\\]|\\.)*")/.exec(reviewRequestsQuery('2026-11-02'))![1]!,
+    ) as string;
+    expect(reviewed).toContain('reviewed-by:@me -author:@me');
+    expect(reviewed).not.toContain('repo:');
     expect(mine).toContain('author:@me');
     expect(mine).toContain('repo:acme/widgets');
   });

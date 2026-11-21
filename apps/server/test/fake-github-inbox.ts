@@ -115,7 +115,8 @@ export function inboxSearchAnswer(
   const query = String(body.query ?? '');
   const review = searchIn(query, 'review');
   const mine = searchIn(query, 'mine');
-  if (!review && !mine) return null;
+  const reviewed = searchIn(query, 'reviewed');
+  if (!review && !mine && !reviewed) return null;
   return {
     data: {
       viewer: { login },
@@ -127,6 +128,17 @@ export function inboxSearchAnswer(
           }
         : {}),
       ...(mine ? { mine: matching(pulls, mine, (pull) => pull.openedBy === login) } : {}),
+      ...(reviewed
+        ? {
+            reviewed: matching(
+              pulls,
+              reviewed,
+              (pull) =>
+                pull.openedBy !== login &&
+                (pull.reviews ?? []).some((entry) => entry.user.login === login),
+            ),
+          }
+        : {}),
     },
   };
 }

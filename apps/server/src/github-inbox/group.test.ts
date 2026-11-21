@@ -36,11 +36,45 @@ function found(fields: Partial<FoundPull> = {}): FoundPull {
     checks: 'passing',
     failingChecks: 0,
     reviewRequested: false,
+    reviewedByViewer: false,
     ...fields,
   };
 }
 
 const groupOf = (fields: Partial<FoundPull>) => inboxPull(found(fields), ME)?.group;
+
+describe('pull requests you already reviewed', () => {
+  it('puts one you approved in approved and one you only commented on in reviewed', () => {
+    const approved = found({
+      author: 'alice',
+      reviewedByViewer: true,
+      reviews: [{ login: ME, state: 'APPROVED' }],
+    });
+    const commented = found({
+      author: 'alice',
+      reviewedByViewer: true,
+      reviews: [
+        { login: ME, state: 'CHANGES_REQUESTED' },
+        { login: 'bob', state: 'APPROVED' },
+      ],
+    });
+    expect(inboxPull(approved, ME)?.group).toBe('approved');
+    expect(inboxPull(commented, ME)?.group).toBe('reviewed');
+  });
+
+  it('keeps a pull request that asks for your review again in review requested', () => {
+    const base = { author: 'alice', reviews: [{ login: ME, state: 'APPROVED' }] };
+    const pulls = inboxPulls(
+      [found({ ...base, reviewedByViewer: true }), found({ ...base, reviewRequested: true })],
+      ME,
+    );
+    expect(pulls.map((pull) => pull.group)).toEqual(['review_requested']);
+  });
+
+  it("leaves out someone else's pull request you neither reviewed nor were asked to", () => {
+    expect(inboxPull(found({ author: 'alice' }), ME)).toBeNull();
+  });
+});
 
 describe('inbox grouping', () => {
   it('carries the branches, labels, assignees and description preview', () => {

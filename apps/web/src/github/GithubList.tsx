@@ -18,6 +18,8 @@ const EMPTY: Record<GithubInboxGroup, string> = {
   needs_fixes: 'None of your pull requests need fixes.',
   ready_to_merge: 'Nothing is ready to merge yet.',
   waiting: 'None of your pull requests are waiting on others.',
+  reviewed: 'No open pull request you reviewed is waiting on its author.',
+  approved: 'No open pull request you approved is waiting to merge.',
 };
 
 export function GithubList({ group, items, openId, now, onOpen, onOpenChat }: GithubListProps) {

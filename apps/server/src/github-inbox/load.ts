@@ -26,8 +26,14 @@ import type { GitHubConnection } from '../ship/github/connection.ts';
 import { repoSlug } from '../ship/remote.ts';
 import { projectRepos, repoKey, type ProjectRepo } from '../tickets/github-pulls.ts';
 import { keysIn } from '../tickets/pull-ticket-keys.ts';
-import { inboxPulls, seenFlags, type InboxPull } from './group.ts';
-import { inboxQuery, parseInboxPage, repoChunks, reviewRequestsQuery } from './search.ts';
+import { inboxPulls, seenFlags, strongest, type InboxPull } from './group.ts';
+import {
+  inboxQuery,
+  parseInboxPage,
+  repoChunks,
+  reviewRequestsQuery,
+  type InboxPart,
+} from './search.ts';
 
 const CACHE_MS = 2 * 60_000;
 const DAY_MS = 24 * 60 * 60_000;
@@ -98,7 +104,7 @@ interface Fetched {
   problems: GithubInboxProblem[];
 }
 
-async function search(connection: GitHubConnection, query: string, part: 'review' | 'mine') {
+async function search(connection: GitHubConnection, query: string, part: InboxPart) {
   const body = await connection.post('/graphql', { query }, z.unknown(), 'searching pull requests');
   return parseInboxPage(body, part);
 }
@@ -109,7 +115,10 @@ function takePage(
   scope: string | null,
   into: Fetched,
 ): boolean {
-  if (page.error) into.problems.push({ repo: scope, message: page.error });
+  const known = into.problems.some(
+    (problem) => problem.repo === scope && problem.message === page.error,
+  );
+  if (page.error && !known) into.problems.push({ repo: scope, message: page.error });
   if (page.truncated) into.problems.push({ repo: scope, message: TRUNCATED });
   into.login ??= page.viewer;
   const pulls = inboxPulls(page.pulls, page.viewer);
@@ -153,8 +162,15 @@ async function fetchReviewRequests(
   into: Fetched,
 ): Promise<void> {
   try {
-    const page = await search(connection, reviewRequestsQuery(since), 'review');
-    if (!takePage(page, connection.host, null, into)) into.reviewFailed.add(connection.host);
+    const body = await connection.post(
+      '/graphql',
+      { query: reviewRequestsQuery(since) },
+      z.unknown(),
+      'searching pull requests',
+    );
+    const pages = (['review', 'reviewed'] as const).map((part) => parseInboxPage(body, part));
+    const answered = pages.map((page) => takePage(page, connection.host, null, into));
+    if (!answered.every(Boolean)) into.reviewFailed.add(connection.host);
   } catch (error) {
     into.problems.push({ repo: null, message: problemText(error) });
     into.reviewFailed.add(connection.host);
@@ -197,7 +213,7 @@ async function fetchSnapshot(
     key,
     login: into.login ?? previous?.login ?? null,
     fetchedAt: stale ? previous.fetchedAt : new Date(now).toISOString(),
-    pulls: [...into.pulls, ...kept],
+    pulls: strongest([...into.pulls, ...kept]),
     problems: into.problems,
   };
 }

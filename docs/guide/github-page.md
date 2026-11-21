@@ -13,13 +13,13 @@ First [connect GitHub](tickets-and-github.md#connect-github). Until then the pag
 ## Find your pull requests
 
 1. Select **GitHub** in the left bar. A dot on it means something new.
-2. Pick a group: **Review requested**, **Needs fixes**, **Ready to merge** or **Waiting on others**. Arrow keys move between them.
+2. Pick a group: **Review requested**, **Needs fixes**, **Ready to merge**, **Waiting on others**, **Reviewed by you** or **Approved by you**. Arrow keys move between them.
 3. Narrow with **Last 14 days** or **Last 30 days**, and with **All projects** or one project.
 4. Spark checks every 2 minutes; **Refresh pull requests** checks now.
 
 Rows show a new dot, author, ticket key, checks (**Passing**, **Failing**, **Running**, **Conflict**, **Draft**), **New commits**, the latest review, labels, and when it was opened and updated.
 
-Review requests come from every repository; your own pull requests from linked projects.
+Pull requests you review come from every repository; your own from linked projects.
 
 Bot pull requests share one **Dependency updates** row.
 

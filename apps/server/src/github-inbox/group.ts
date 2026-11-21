@@ -19,8 +19,7 @@ interface PullState {
   reviewDecision: string | null;
 }
 
-function inboxGroup(state: PullState, mine: boolean): GithubInboxGroup {
-  if (!mine) return 'review_requested';
+function ownGroup(state: PullState): GithubInboxGroup {
   if (state.draft) return 'waiting';
   const unresolvedThreads = (state.openThreads ?? 0) > 0;
   if (
@@ -45,9 +44,17 @@ function inboxGroup(state: PullState, mine: boolean): GithubInboxGroup {
 const sameLogin = (a: string, b: string | null) =>
   b !== null && a.toLowerCase() === b.toLowerCase();
 
+function othersGroup(found: FoundPull, viewer: string | null): GithubInboxGroup {
+  if (found.reviewRequested) return 'review_requested';
+  const approved = found.reviews.some(
+    (review) => review.state === 'APPROVED' && sameLogin(review.login, viewer),
+  );
+  return approved ? 'approved' : 'reviewed';
+}
+
 export function inboxPull(found: FoundPull, viewer: string | null): InboxPull | null {
   const mine = sameLogin(found.author, viewer);
-  if (!mine && !found.reviewRequested) return null;
+  if (!mine && !found.reviewRequested && !found.reviewedByViewer) return null;
   const changesRequested =
     found.reviewDecision === 'CHANGES_REQUESTED' ||
     found.reviews.some((review) => review.state === 'CHANGES_REQUESTED');
@@ -70,7 +77,7 @@ export function inboxPull(found: FoundPull, viewer: string | null): InboxPull | 
     author: found.author,
     authorIsBot: found.authorIsBot,
     mine,
-    group: inboxGroup(state, mine),
+    group: mine ? ownGroup(state) : othersGroup(found, viewer),
     draft: found.draft,
     checks: found.checks,
     failingChecks: found.failingChecks,
@@ -97,15 +104,22 @@ export function inboxPull(found: FoundPull, viewer: string | null): InboxPull | 
   };
 }
 
-export function inboxPulls(found: readonly FoundPull[], viewer: string | null): InboxPull[] {
-  const byId = new Map<string, InboxPull>();
-  for (const candidate of found) {
-    const pull = inboxPull(candidate, viewer);
-    if (!pull) continue;
+function weight(pull: InboxPull): number {
+  if (pull.mine) return 2;
+  return pull.group === 'review_requested' ? 1 : 0;
+}
+
+export function strongest<T extends InboxPull>(pulls: readonly T[]): T[] {
+  const byId = new Map<string, T>();
+  for (const pull of pulls) {
     const known = byId.get(pull.id);
-    if (!known || (pull.mine && !known.mine)) byId.set(pull.id, pull);
+    if (!known || weight(pull) > weight(known)) byId.set(pull.id, pull);
   }
   return [...byId.values()];
+}
+
+export function inboxPulls(found: readonly FoundPull[], viewer: string | null): InboxPull[] {
+  return strongest(found.flatMap((candidate) => inboxPull(candidate, viewer) ?? []));
 }
 
 export function seenFlags(

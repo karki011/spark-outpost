@@ -5,6 +5,8 @@ export const GROUPS: readonly GithubInboxGroup[] = [
   'needs_fixes',
   'ready_to_merge',
   'waiting',
+  'reviewed',
+  'approved',
 ];
 
 export const GROUP_LABEL: Record<GithubInboxGroup, string> = {
@@ -12,6 +14,8 @@ export const GROUP_LABEL: Record<GithubInboxGroup, string> = {
   needs_fixes: 'Needs fixes',
   ready_to_merge: 'Ready to merge',
   waiting: 'Waiting on others',
+  reviewed: 'Reviewed by you',
+  approved: 'Approved by you',
 };
 
 export type PrState = 'passing' | 'failing' | 'running' | 'conflict' | 'draft';
@@ -92,6 +96,8 @@ export function groupItems(
     needs_fixes: [],
     ready_to_merge: [],
     waiting: [],
+    reviewed: [],
+    approved: [],
   };
   for (const item of items) grouped[item.group].push(item);
   return grouped;
@@ -130,6 +136,8 @@ export function tileLine(
     return line || countPart(items.filter((item) => item.behind).length, 'behind') || '';
   }
   if (group === 'ready_to_merge') return 'Approved, checks pass';
+  if (group === 'reviewed') return 'Not approved by you';
+  if (group === 'approved') return 'Not merged yet';
   const oldest = items.reduce(
     (first, item) => (item.updatedAt < first ? item.updatedAt : first),
     items[0]!.updatedAt,

@@ -57,6 +57,8 @@ describe('searching the GitHub page', () => {
       needs_fixes: 1,
       ready_to_merge: 0,
       waiting: 0,
+      reviewed: 0,
+      approved: 0,
     });
   });
 

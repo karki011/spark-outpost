@@ -10,6 +10,8 @@ export const githubInboxGroupSchema = z.enum([
   'needs_fixes',
   'ready_to_merge',
   'waiting',
+  'reviewed',
+  'approved',
 ]);
 export type GithubInboxGroup = z.infer<typeof githubInboxGroupSchema>;
 
