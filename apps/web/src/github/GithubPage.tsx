@@ -138,8 +138,7 @@ export function GithubPage({ onOpenChat }: GithubPageProps) {
   const autoOpen = sideBySide ? initialPull(grouped, remembered) : null;
   const shownId = openId === undefined ? (autoOpen?.id ?? null) : openId;
   const openItem = shownId ? items.find((item) => item.id === shownId) : undefined;
-  const group =
-    picked ?? (openId === undefined ? autoOpen?.group : undefined) ?? defaultGroup(grouped);
+  const group = picked ?? openItem?.group ?? defaultGroup(grouped);
 
   const open = (item: GithubInboxItem) => {
     setOpenId(item.id);
@@ -149,6 +148,7 @@ export function GithubPage({ onOpenChat }: GithubPageProps) {
   const close = () => {
     if (!openItem) return;
     const id = openItem.id;
+    if (!searching) setPicked((current) => current ?? group);
     setOpenId(null);
     rememberOpen(null);
     focusRow(id);
@@ -185,7 +185,7 @@ export function GithubPage({ onOpenChat }: GithubPageProps) {
         searchRef={searchRef}
         onQuery={(next) => {
           setQuery(next);
-          setPicked(null);
+          setPicked(searchTerms(next).length === 0 ? (openItem?.group ?? null) : null);
         }}
       />
       {data === undefined ? (

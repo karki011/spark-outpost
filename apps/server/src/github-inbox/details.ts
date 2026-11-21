@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { GithubPullDetails } from '@spark-outpost/contracts';
-import { connectionFor, type GitHubDeps } from '../ship/github/access.ts';
-import { repoPath } from '../ship/github/connection.ts';
+import { connectionsFor, type GitHubDeps } from '../ship/github/access.ts';
+import { repoPath, type GitHubConnection } from '../ship/github/connection.ts';
 import { GITHUB_PAGE_SIZE } from '../ship/github/pull-reads.ts';
 import { cachedInboxPull } from './load.ts';
 
@@ -35,24 +35,44 @@ const fileSchema = z.object({
   deletions: z.number().int().nonnegative().catch(0),
 });
 
-export async function loadPullDetails(deps: GitHubDeps, id: string): Promise<GithubPullDetails> {
-  const found = cachedInboxPull(deps.db, id);
-  if (!found) throw new PullDetailsError(404, 'That pull request is not on the GitHub page.');
-  const [owner = '', name = ''] = found.repo.split('/');
-  const repo = { host: found.host, owner, name };
-  const connection = await connectionFor(deps, repo).catch(() => null);
-  if (!connection) {
-    throw new PullDetailsError(409, 'No GitHub connection reaches this repository.');
-  }
-  const path = `${repoPath(repo)}/pulls/${found.number}`;
-  const [pull, files] = await Promise.all([
-    connection.get(path, pullSchema, `reading pull request #${found.number}`),
+async function readWith(connection: GitHubConnection, path: string, number: number) {
+  return Promise.all([
+    connection.get(path, pullSchema, `reading pull request #${number}`),
     connection.get(
       `${path}/files?per_page=${GITHUB_PAGE_SIZE}`,
       z.array(fileSchema),
       'reading the changed files',
     ),
   ]);
+}
+
+export async function loadPullDetails(deps: GitHubDeps, id: string): Promise<GithubPullDetails> {
+  const found = cachedInboxPull(deps.db, id);
+  if (!found) throw new PullDetailsError(404, 'That pull request is not on the GitHub page.');
+  const [owner = '', name = ''] = found.repo.split('/');
+  const repo = { host: found.host, owner, name };
+  const connections = await connectionsFor(deps, repo).catch(() => []);
+  if (connections.length === 0) {
+    throw new PullDetailsError(409, 'No GitHub connection reaches this repository.');
+  }
+  const path = `${repoPath(repo)}/pulls/${found.number}`;
+  let failure: unknown = null;
+  for (const connection of connections) {
+    try {
+      const [pull, files] = await readWith(connection, path, found.number);
+      return detailsOf(id, pull, files);
+    } catch (error) {
+      failure = error;
+    }
+  }
+  throw failure;
+}
+
+function detailsOf(
+  id: string,
+  pull: z.infer<typeof pullSchema>,
+  files: z.infer<typeof fileSchema>[],
+): GithubPullDetails {
   const body = pull.body ?? '';
   return {
     id,

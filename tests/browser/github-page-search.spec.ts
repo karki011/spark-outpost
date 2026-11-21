@@ -17,6 +17,7 @@ const DESCRIBED: Json[] = [
     updatedAt: ago(5),
   }),
   ...ITEMS.slice(2),
+  pull('7', { title: 'Speed up uploads', group: 'needs_fixes', mine: true, updatedAt: ago(40) }),
 ];
 
 const LONG_BODY = [
@@ -129,8 +130,14 @@ test('GitHub page opens on the pull request looked at last, or else the newest',
     main.getByRole('radiogroup').getByRole('radio', { name: /^Needs fixes/ }),
   ).toHaveAttribute('aria-checked', 'true');
 
+  const needsFixes = main.getByRole('radiogroup').getByRole('radio', { name: /^Needs fixes/ });
+  await main.getByRole('button', { name: /Speed up uploads/ }).click();
+  await expect(main.getByRole('complementary', { name: 'Speed up uploads' })).toBeVisible();
+  await expect(needsFixes).toHaveAttribute('aria-checked', 'true');
   await main.getByRole('button', { name: 'Close details' }).click();
   await expect(main.getByRole('complementary')).toHaveCount(0);
+  await expect(needsFixes).toHaveAttribute('aria-checked', 'true');
+  await expect(main.getByRole('list', { name: 'Needs fixes' })).toBeVisible();
   await page.reload();
   await expect(main.locator('.gh-main').first()).toBeVisible();
   await expect(main.getByRole('complementary')).toHaveCount(0);

@@ -78,7 +78,7 @@ export function StartChat({ item, onOpenChat }: StartChatProps) {
     <>
       <button
         type="button"
-        className="btn primary sm"
+        className="btn line sm"
         disabled={busy}
         aria-describedby={projectId ? undefined : 'gh-start-note'}
         onClick={() => void start()}

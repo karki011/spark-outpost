@@ -117,13 +117,18 @@ export function GithubDetail({ item, now, onClose, onOpenChat }: GithubDetailPro
             Open chat
           </button>
         )}
-        <StartChat item={item} onOpenChat={onOpenChat} />
         {href && (
-          <a className="btn line sm" href={href} target="_blank" rel="noreferrer">
+          <a
+            className={conversationId ? 'btn line sm' : 'btn primary sm'}
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+          >
             <Glyph name="pr" size={13} />
             Open on GitHub
           </a>
         )}
+        <StartChat item={item} onOpenChat={onOpenChat} />
       </div>
       <PullDetails item={item} />
       <dl className="gh-pr-facts">
