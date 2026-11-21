@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import type { GithubInboxItem, GithubReview } from '@spark-outpost/contracts';
 import { ReviewMarkdown } from '../../chat/markdown/ReviewMarkdown.tsx';
+import { requestChat } from '../../app/chat-request.ts';
 import { Glyph } from '../../tickets/ticket-icons.tsx';
 import { useReviewSettings } from '../use-review-settings.ts';
 import {
@@ -9,6 +10,7 @@ import {
   postedLink,
   reviewAction,
   reviewerLine,
+  startedFromLine,
   stateLabel,
   type ReviewAction,
 } from './review-model.ts';
@@ -94,7 +96,9 @@ export function ReviewBlock({ item }: { item: GithubInboxItem }) {
         {latest && <StateWord review={latest} />}
       </div>
       {latest ? (
-        <p className="gh-review-by">{reviewerLine(latest)}</p>
+        <p className="gh-review-by">
+          {[reviewerLine(latest), startedFromLine(latest)].filter(Boolean).join(' · ')}
+        </p>
       ) : (
         reviews.isSuccess && <p className="gh-review-note">No review yet</p>
       )}
@@ -119,6 +123,16 @@ export function ReviewBlock({ item }: { item: GithubInboxItem }) {
             onClick={run}
           >
             {ACTION_LABEL[action]}
+          </button>
+        )}
+        {latest?.chatId && (
+          <button
+            type="button"
+            className="btn line sm gh-review-btn"
+            onClick={() => requestChat(latest.chatId!)}
+          >
+            <Glyph name="chat" size={13} />
+            Open chat
           </button>
         )}
         {latest && <Posted review={latest} />}

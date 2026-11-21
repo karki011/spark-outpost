@@ -16,6 +16,8 @@ You'll run your reviewer on a pull request and read what it wrote. About 2 minut
 
 With no reviewer picked, a line points to **Auto-review** instead of a button.
 
+A workflow you run in a chat counts too when your message has the pull request's link or the chat opened it. **Started from** names where each review began; **Open chat** goes there, where you stop it.
+
 ## Read it
 
 1. When the state shows **Done**, the review appears as the reviewer wrote it, with any folded sections.

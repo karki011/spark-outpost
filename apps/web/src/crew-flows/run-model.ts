@@ -35,7 +35,13 @@ export const SOURCE_WORDS: Record<WorkflowRunSource, string> = {
   catch_up: 'Catch-up',
   trigger: 'Trigger',
   agent: 'An agent',
+  github_page: 'GitHub page',
+  github_auto: 'GitHub auto-review',
 };
+
+export function sourceLine(run: Pick<WorkflowRun, 'source' | 'pull'>): string {
+  return run.pull ? `${SOURCE_WORDS[run.source]} · ${run.pull}` : SOURCE_WORDS[run.source];
+}
 
 export const NEEDS_YOU = 'Needs you';
 

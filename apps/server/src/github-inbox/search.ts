@@ -78,7 +78,11 @@ function searchField(alias: string, search: string): string {
 
 export function inboxQuery(repos: readonly InboxRepo[], since: string): string {
   const scope = repos.map((repo) => ` repo:${repo.owner}/${repo.name}`).join('');
-  return `query { viewer { login } ${searchField('review', `${filters('review-requested', since)}${scope}`)} ${searchField('mine', `${filters('author', since)}${scope}`)} }`;
+  return `query { viewer { login } ${searchField('mine', `${filters('author', since)}${scope}`)} }`;
+}
+
+export function reviewRequestsQuery(since: string): string {
+  return `query { viewer { login } ${searchField('review', filters('review-requested', since))} }`;
 }
 
 const searchSchema = z.object({
@@ -93,8 +97,8 @@ const inboxEnvelopeSchema = z.object({
         .object({ login: z.string().min(1).max(LOGIN_LIMIT) })
         .nullable()
         .catch(null),
-      review: searchSchema.nullable().catch(null),
-      mine: searchSchema.nullable().catch(null),
+      review: searchSchema.nullish().catch(null),
+      mine: searchSchema.nullish().catch(null),
     })
     .nullable()
     .catch(null),
@@ -216,7 +220,7 @@ function pullsIn(search: z.infer<typeof searchSchema> | null, reviewRequested: b
 const truncatedSearch = (search: z.infer<typeof searchSchema> | null) =>
   search !== null && search.issueCount > search.nodes.length;
 
-export function parseInboxPage(body: unknown): SearchPage {
+export function parseInboxPage(body: unknown, part: 'review' | 'mine'): SearchPage {
   const envelope = inboxEnvelopeSchema.safeParse(body);
   if (!envelope.success || !envelope.data.data) {
     const message = envelope.success ? envelope.data.errors?.[0]?.message : undefined;
@@ -229,12 +233,12 @@ export function parseInboxPage(body: unknown): SearchPage {
         : 'GitHub sent an unexpected answer to the search.',
     };
   }
-  const { viewer, review, mine } = envelope.data.data;
-  const missing = review === null || mine === null;
+  const { viewer } = envelope.data.data;
+  const search = envelope.data.data[part] ?? null;
   return {
     viewer: viewer?.login ?? null,
-    pulls: [...pullsIn(review, true), ...pullsIn(mine, false)],
-    truncated: truncatedSearch(review) || truncatedSearch(mine),
-    error: missing ? 'GitHub left part of the search unanswered.' : null,
+    pulls: pullsIn(search, part === 'review'),
+    truncated: truncatedSearch(search),
+    error: search === null ? 'GitHub left part of the search unanswered.' : null,
   };
 }

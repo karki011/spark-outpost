@@ -177,6 +177,8 @@ const HOW: Record<WorkflowRunSource, string> = {
   mention: 'In a chat',
   trigger: 'Triggered',
   agent: 'By an agent',
+  github_page: 'From the GitHub page',
+  github_auto: 'GitHub auto-review',
 };
 
 const RUN_STATE: Record<WorkflowRun['status'], [string, HistoryTone]> = {

@@ -16,13 +16,18 @@ import {
   watchKey,
 } from '../persistence/github-inbox.ts';
 import { listProjects } from '../projects/projects.ts';
-import { connectionFor, gitHubReachability, type GitHubDeps } from '../ship/github/access.ts';
+import {
+  connectionFor,
+  connectionsFor,
+  gitHubReachability,
+  type GitHubDeps,
+} from '../ship/github/access.ts';
 import type { GitHubConnection } from '../ship/github/connection.ts';
 import { repoSlug } from '../ship/remote.ts';
 import { projectRepos, repoKey, type ProjectRepo } from '../tickets/github-pulls.ts';
 import { keysIn } from '../tickets/pull-ticket-keys.ts';
 import { inboxPulls, seenFlags, type InboxPull } from './group.ts';
-import { inboxQuery, parseInboxPage, repoChunks, type InboxRepo } from './search.ts';
+import { inboxQuery, parseInboxPage, repoChunks, reviewRequestsQuery } from './search.ts';
 
 const CACHE_MS = 2 * 60_000;
 const DAY_MS = 24 * 60 * 60_000;
@@ -89,21 +94,27 @@ interface Fetched {
   login: string | null;
   pulls: HostedPull[];
   failed: Set<string>;
+  reviewFailed: Set<string>;
   problems: GithubInboxProblem[];
 }
 
-async function searchChunk(
-  connection: GitHubConnection,
-  chunk: readonly InboxRepo[],
-  since: string,
-) {
-  const body = await connection.post(
-    '/graphql',
-    { query: inboxQuery(chunk, since) },
-    z.unknown(),
-    'searching pull requests',
-  );
-  return parseInboxPage(body);
+async function search(connection: GitHubConnection, query: string, part: 'review' | 'mine') {
+  const body = await connection.post('/graphql', { query }, z.unknown(), 'searching pull requests');
+  return parseInboxPage(body, part);
+}
+
+function takePage(
+  page: Awaited<ReturnType<typeof search>>,
+  host: string,
+  scope: string | null,
+  into: Fetched,
+): boolean {
+  if (page.error) into.problems.push({ repo: scope, message: page.error });
+  if (page.truncated) into.problems.push({ repo: scope, message: TRUNCATED });
+  into.login ??= page.viewer;
+  const pulls = inboxPulls(page.pulls, page.viewer);
+  into.pulls.push(...pulls.map((pull) => ({ ...pull, host })));
+  return page.error === null || page.pulls.length > 0;
 }
 
 async function fetchGroup(group: ConnectionGroup, since: string, into: Fetched): Promise<void> {
@@ -113,19 +124,40 @@ async function fetchGroup(group: ConnectionGroup, since: string, into: Fetched):
     const keys = chunk.map((repo) => repoKey(host, `${repo.owner}/${repo.name}`));
     const scope = chunk.length === 1 ? `${chunk[0]!.owner}/${chunk[0]!.name}` : null;
     try {
-      const page = await searchChunk(group.connection, chunk, since);
-      if (page.error) {
-        into.problems.push({ repo: scope, message: page.error });
-        if (page.pulls.length === 0) keys.forEach((key) => into.failed.add(key));
-      }
-      if (page.truncated) into.problems.push({ repo: scope, message: TRUNCATED });
-      into.login ??= page.viewer;
-      const pulls = inboxPulls(page.pulls, page.viewer);
-      into.pulls.push(...pulls.map((pull) => ({ ...pull, host })));
+      const page = await search(group.connection, inboxQuery(chunk, since), 'mine');
+      if (!takePage(page, host, scope, into)) keys.forEach((key) => into.failed.add(key));
     } catch (error) {
       into.problems.push({ repo: scope, message: problemText(error) });
       keys.forEach((key) => into.failed.add(key));
     }
+  }
+}
+
+async function reviewConnections(
+  deps: GitHubDeps,
+  repos: readonly ProjectRepo[],
+): Promise<GitHubConnection[]> {
+  const byHost = new Map<string, GitHubConnection>();
+  for (const entry of repos) {
+    if (byHost.has(entry.repo.host)) continue;
+    const found = await connectionsFor(deps, entry.repo).catch(() => []);
+    const widest = found.find((connection) => connection.method !== 'app') ?? found[0];
+    if (widest) byHost.set(entry.repo.host, widest);
+  }
+  return [...byHost.values()];
+}
+
+async function fetchReviewRequests(
+  connection: GitHubConnection,
+  since: string,
+  into: Fetched,
+): Promise<void> {
+  try {
+    const page = await search(connection, reviewRequestsQuery(since), 'review');
+    if (!takePage(page, connection.host, null, into)) into.reviewFailed.add(connection.host);
+  } catch (error) {
+    into.problems.push({ repo: null, message: problemText(error) });
+    into.reviewFailed.add(connection.host);
   }
 }
 
@@ -141,12 +173,23 @@ async function fetchSnapshot(
   previous: Snapshot | undefined,
 ): Promise<Snapshot> {
   const now = deps.now?.() ?? Date.now();
-  const into: Fetched = { login: null, pulls: [], failed: new Set(), problems: [] };
+  const into: Fetched = {
+    login: null,
+    pulls: [],
+    failed: new Set(),
+    reviewFailed: new Set(),
+    problems: [],
+  };
   const groups = await groupByConnection(deps, repos, into.problems);
   const since = sinceDate(now, days);
+  for (const connection of await reviewConnections(deps, repos)) {
+    await fetchReviewRequests(connection, since, into);
+  }
   for (const group of groups) await fetchGroup(group, since, into);
-  const kept = (previous?.pulls ?? []).filter((pull) =>
-    into.failed.has(repoKey(pull.host, pull.repo)),
+  const kept = (previous?.pulls ?? []).filter(
+    (pull) =>
+      into.failed.has(repoKey(pull.host, pull.repo)) ||
+      (!pull.mine && into.reviewFailed.has(pull.host)),
   );
   const stale = previous && into.failed.size > 0 && into.pulls.length === 0;
   return {

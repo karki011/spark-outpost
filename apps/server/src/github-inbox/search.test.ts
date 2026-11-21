@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inboxQuery, parseInboxPage, repoChunks } from './search.ts';
+import { inboxQuery, parseInboxPage, repoChunks, reviewRequestsQuery } from './search.ts';
 
 const HEAD = 'c'.repeat(40);
 
@@ -58,7 +58,7 @@ const page = (review: unknown[], mine: unknown[], extra: Record<string, unknown>
 
 describe('parsing the inbox search', () => {
   it('reads the facts of a pull request', () => {
-    const parsed = parseInboxPage(page([node()], []));
+    const parsed = parseInboxPage(page([node()], []), 'review');
     expect(parsed.viewer).toBe('hazel');
     expect(parsed.error).toBeNull();
     expect(parsed.pulls).toEqual([
@@ -81,7 +81,8 @@ describe('parsing the inbox search', () => {
 
   it('drops a malformed node and keeps the good ones', () => {
     const parsed = parseInboxPage(
-      page([node({ headRefOid: 'not-a-sha' }), node({ number: 13 }), {}], [node({ url: 5 })]),
+      page([node({ headRefOid: 'not-a-sha' }), node({ number: 13 }), {}], []),
+      'review',
     );
     expect(parsed.pulls.map((pull) => pull.number)).toEqual([13]);
   });
@@ -89,6 +90,7 @@ describe('parsing the inbox search', () => {
   it('tolerates fields GitHub refused to give', () => {
     const parsed = parseInboxPage(
       page([], [node({ commits: null, reviewThreads: 'x', author: null, additions: -1 })]),
+      'mine',
     );
     expect(parsed.pulls[0]).toMatchObject({
       checks: null,
@@ -103,20 +105,23 @@ describe('parsing the inbox search', () => {
   it('marks a bot author', () => {
     const bot = parseInboxPage(
       page([node({ author: { __typename: 'Bot', login: 'renovate' } })], []),
+      'review',
     );
-    const suffixed = parseInboxPage(page([node({ author: { login: 'ci[bot]' } })], []));
+    const suffixed = parseInboxPage(page([node({ author: { login: 'ci[bot]' } })], []), 'review');
     expect(bot.pulls[0]?.authorIsBot).toBe(true);
     expect(suffixed.pulls[0]?.authorIsBot).toBe(true);
   });
 
   it('reports a refused search and an unexpected answer without throwing', () => {
-    expect(parseInboxPage({ data: null, errors: [{ message: 'Bad credentials' }] }).error).toBe(
-      'GitHub refused the search: Bad credentials',
-    );
-    expect(parseInboxPage('nonsense').error).toBe(
+    expect(
+      parseInboxPage({ data: null, errors: [{ message: 'Bad credentials' }] }, 'review').error,
+    ).toBe('GitHub refused the search: Bad credentials');
+    expect(parseInboxPage('nonsense', 'review').error).toBe(
       'GitHub sent an unexpected answer to the search.',
     );
-    expect(parseInboxPage({ data: { viewer: null, review: null, mine: 7 } })).toMatchObject({
+    expect(
+      parseInboxPage({ data: { viewer: null, review: null, mine: 7 } }, 'review'),
+    ).toMatchObject({
       pulls: [],
       error: 'GitHub left part of the search unanswered.',
     });
@@ -125,7 +130,7 @@ describe('parsing the inbox search', () => {
   it('notes a search with more results than it returned', () => {
     const body = page([node()], []);
     body.data.review.issueCount = 80;
-    expect(parseInboxPage(body).truncated).toBe(true);
+    expect(parseInboxPage(body, 'review').truncated).toBe(true);
   });
 });
 
@@ -139,11 +144,34 @@ describe('the inbox query', () => {
     expect(chunks.flat()).toHaveLength(20);
     expect(chunks.length).toBeGreaterThan(1);
     for (const chunk of chunks) {
-      const search = /review: search\(query: ("(?:[^"\\]|\\.)*")/.exec(
+      const search = /mine: search\(query: ("(?:[^"\\]|\\.)*")/.exec(
         inboxQuery(chunk, '2026-11-02'),
       );
       expect((JSON.parse(search![1]!) as string).length).toBeLessThanOrEqual(256);
     }
+  });
+
+  it('asks for review requests in every repository and for own pull requests in the linked ones', () => {
+    const searchOf = (query: string) =>
+      JSON.parse(/search\(query: ("(?:[^"\\]|\\.)*")/.exec(query)![1]!) as string;
+    const review = searchOf(reviewRequestsQuery('2026-11-02'));
+    const mine = searchOf(inboxQuery([{ owner: 'acme', name: 'widgets' }], '2026-11-02'));
+    expect(review).toContain('review-requested:@me');
+    expect(review).toContain('updated:>=2026-11-02');
+    expect(review).not.toContain('repo:');
+    expect(mine).toContain('author:@me');
+    expect(mine).toContain('repo:acme/widgets');
+  });
+
+  it('reads only the search it asked for', () => {
+    const body = page([node()], [node({ number: 13 })]);
+    expect(parseInboxPage(body, 'review').pulls.map((pull) => pull.number)).toEqual([12]);
+    expect(parseInboxPage(body, 'mine').pulls.map((pull) => pull.number)).toEqual([13]);
+    const mineOnly = { data: { viewer: { login: 'hazel' }, mine: { issueCount: 0, nodes: [] } } };
+    expect(parseInboxPage(mineOnly, 'mine').error).toBeNull();
+    expect(parseInboxPage(mineOnly, 'review').error).toBe(
+      'GitHub left part of the search unanswered.',
+    );
   });
 
   it('leaves out a repository name that could change the query', () => {

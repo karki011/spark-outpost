@@ -64,6 +64,8 @@ const SOURCE_STARTS: Record<WorkflowRunSource, string> = {
   catch_up: 'the workflow’s schedule, catching up a missed time',
   trigger: 'one of the workflow’s triggers',
   agent: 'a chat agent’s spark_workflow tool',
+  github_page: 'the user’s Review now on the GitHub page',
+  github_auto: 'Auto-review on the GitHub page',
 };
 
 export function startedBy(
