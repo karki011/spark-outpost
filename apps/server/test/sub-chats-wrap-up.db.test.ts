@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
+import { addToQueue } from '../src/persistence/chat-queue.ts';
 import { updateChatSettings } from '../src/persistence/chat-settings.ts';
 import { insertChatWorktree } from '../src/persistence/chat-worktrees.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
@@ -17,9 +18,9 @@ import { chatTarget, drainQueue } from '../src/workflow/queue-drain.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
 import type { Worker } from '../src/workflow/worker.ts';
 import { linkedConversation, sendDo } from './approval-support.ts';
-import { fakeTarget, finishTurn, turnsOf } from './chat-ask-fixtures.ts';
+import { fakeTarget, finishTurn, messageAsk, turnsOf } from './chat-ask-fixtures.ts';
 import { git, repoWithRemote, type TestRepo } from './ship-support.ts';
-import { addSubChat } from './sub-chat-fixtures.ts';
+import { addSubChat, turnIn } from './sub-chat-fixtures.ts';
 import { asksOf, endTask, startTask, type StartedTask } from './sub-chat-report-fixtures.ts';
 import { createTestDb, eventually, pinChatLevel, type TestDb } from './support.ts';
 import { connectAgents, startTurnWorker } from './turn-worker.ts';
@@ -139,6 +140,76 @@ describe('the wrap-up Spark sends a parent', () => {
     await pass();
 
     expect(await wrapUps()).toEqual([]);
+  });
+
+  it('waits while a sub-chat that reported works on a message the user typed there', async () => {
+    const page = await startTask(t, await addSubChat(t, parent, 'Orders page'));
+    await endTask(t, api);
+    await pass();
+    const followUp = await turnIn(t, api.id, 'running');
+
+    await endTask(t, page);
+    await pass();
+    await pass();
+    expect(await asksOf(t, parent, 'report')).toHaveLength(2);
+    expect(await wrapUps()).toEqual([]);
+
+    await finishTurn(t, followUp, 'succeeded', 'Tidied.');
+    await pass();
+    await pass();
+    expect(await wrapUps()).toHaveLength(1);
+  });
+
+  it('waits for a message queued in a sub-chat that reported, until its turn ends', async () => {
+    await endTask(t, api);
+    await addToQueue(t.db, api.id, { id: randomUUID(), content: 'Also rename the field.' });
+
+    await pass();
+    expect(await wrapUps()).toEqual([]);
+
+    expect(await drainQueue(t.db, api.id, fakeTarget)).toBe('sent');
+    await pass();
+    expect(await wrapUps()).toEqual([]);
+
+    const [, queued] = await turnsOf(t, api.id);
+    await finishTurn(t, queued!.id, 'succeeded', 'Renamed.');
+    await pass();
+    await pass();
+    expect(await wrapUps()).toHaveLength(1);
+  });
+
+  it('waits for a message from the parent that asks for no reply, until its turn ends', async () => {
+    await endTask(t, api);
+    await pass();
+    await endParentTurns();
+    await t.db.query('UPDATE sub_chats SET wrapped_up_at = NULL WHERE conversation_id = $1', [
+      api.id,
+    ]);
+    await t.db.query(`DELETE FROM chat_asks WHERE kind = 'wrap_up'`);
+    await messageAsk(t, { id: parent, title: 'Checkout rework' }, api.id, 'Rename the field.');
+
+    await pass();
+    expect(await wrapUps()).toEqual([]);
+    const [, asked] = await turnsOf(t, api.id);
+    expect(asked?.status).not.toBe('succeeded');
+
+    await finishTurn(t, asked!.id, 'succeeded', 'Renamed.');
+    await pass();
+    expect(await wrapUps()).toHaveLength(1);
+  });
+
+  it('does not wait on a message that stays queued behind a failed turn', async () => {
+    await endTask(t, api, 'failed', '');
+    await addToQueue(t.db, api.id, { id: randomUUID(), content: 'Try again.' });
+    await messageAsk(t, { id: parent, title: 'Checkout rework' }, api.id, 'Any news?');
+
+    await pass();
+    await pass();
+
+    expect(await drainQueue(t.db, api.id, fakeTarget)).toBe('paused');
+    const [wrapUp, ...more] = await wrapUps();
+    expect(more).toEqual([]);
+    expect(wrapUp!.body).toContain('“Orders API”: Needs you (Its last turn failed.)');
   });
 
   it('is written once more after sub-chats are added later', async () => {

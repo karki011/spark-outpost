@@ -29,6 +29,24 @@ const SELECT_PLAN = `SELECT s.conversation_id, s.parent_conversation_id, c.works
       SELECT 1 FROM chat_asks a
       WHERE a.to_conversation_id = s.conversation_id
         AND a.from_conversation_id = s.parent_conversation_id AND a.state = 'waiting'
+    ) OR EXISTS (
+      SELECT 1 FROM runs r
+      WHERE r.conversation_id = s.conversation_id AND r.parent_run_id IS NULL
+        AND r.status IN ('queued', 'running', 'awaiting_approval')
+    ) OR (
+      COALESCE((
+        SELECT r.status FROM runs r
+        WHERE r.conversation_id = s.conversation_id AND r.parent_run_id IS NULL
+        ORDER BY r.created_at DESC LIMIT 1
+      ), 'succeeded') = 'succeeded'
+      AND (
+        EXISTS (SELECT 1 FROM chat_queue q WHERE q.conversation_id = s.conversation_id)
+        OR EXISTS (
+          SELECT 1 FROM chat_asks a
+          WHERE a.to_conversation_id = s.conversation_id AND a.delivered_as IS NULL
+            AND a.settled_at IS NULL
+        )
+      )
     ) AS waiting,
     s.report IS NOT NULL AND s.report->>'reason' IS NULL AS reported
   FROM sub_chats s JOIN conversations c ON c.id = s.conversation_id`;

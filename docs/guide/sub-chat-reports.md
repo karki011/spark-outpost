@@ -33,7 +33,7 @@ What you type in a sub-chat later updates its row without waking the parent.
 | A sub-chat it is stacked on     | First commits that chat's kept changes on its branch, never pushed |
 | Anything, while Spark is paused | Waits until you resume                                             |
 
-If that commit can't be made, it stays **Held**. **Start anyway** is on its row in the **Sub-chats** tab. See [Stacked pull requests](stacked-pull-requests.md).
+If that commit can't be made, it stays **Held**, even after **Start anyway** (on its **Sub-chats** tab row). See [Stacked pull requests](stacked-pull-requests.md).
 
 ## The wrap-up
 

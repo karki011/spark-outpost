@@ -268,9 +268,12 @@ interface Created {
   failed: Map<string, string>;
 }
 
-async function createChats(deps: StartDeps, action: StartSubChatsAction): Promise<Created> {
+async function createChats(
+  deps: StartDeps,
+  action: StartSubChatsAction,
+  made: Created,
+): Promise<void> {
   const agents = await connectedAgents(deps.db, deps.workspaceId);
-  const made: Created = { created: new Set(), already: new Set(), failed: new Map() };
   for (const piece of action.pieces) {
     const id = piece.conversationId;
     if (await isSubChatOf(deps.db, id, action.parent.id)) {
@@ -282,12 +285,17 @@ async function createChats(deps: StartDeps, action: StartSubChatsAction): Promis
     if ('refusal' in tried) made.failed.set(id, tried.refusal);
     else made.created.add(id);
   }
-  return made;
 }
 
 async function alreadyStarted(db: Queryable, ref: ChatRef): Promise<StartedPiece> {
   const stored = await getSubChat(db, ref.id);
   return { ...ref, held: stored?.startedAt === null, already: true, delivered: null };
+}
+
+async function dropUnlinkedChats(db: Queryable, made: Created): Promise<void> {
+  for (const id of made.created) {
+    if (!made.already.has(id)) await dropUnlinkedChat(db, id).catch(() => undefined);
+  }
 }
 
 async function startPiece(
@@ -318,15 +326,21 @@ export async function startSubChats(
   deps: StartDeps,
   request: StartRequest,
 ): Promise<SubChatsStarted> {
-  const made = await createChats(deps, request.action);
+  const made: Created = { created: new Set(), already: new Set(), failed: new Map() };
   const result: SubChatsStarted = { subChats: [], notStarted: [] };
-  for (const piece of request.action.pieces) {
-    const started = await startPiece(deps, request, piece, made);
-    if (typeof started === 'string') {
-      result.notStarted.push({ title: piece.title, reason: started });
-    } else {
-      result.subChats.push(started);
+  try {
+    await createChats(deps, request.action, made);
+    for (const piece of request.action.pieces) {
+      const started = await startPiece(deps, request, piece, made);
+      if (typeof started === 'string') {
+        result.notStarted.push({ title: piece.title, reason: started });
+      } else {
+        result.subChats.push(started);
+      }
     }
+  } catch (error) {
+    await dropUnlinkedChats(deps.db, made);
+    throw error;
   }
   await showStartedLine(deps.db, request, result);
   return result;

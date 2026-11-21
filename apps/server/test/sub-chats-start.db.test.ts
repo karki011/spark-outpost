@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -15,6 +16,7 @@ import { performSparkAction } from '../src/spark-mcp/actions/perform.ts';
 import { NOT_FROM_ANOTHER_CHAT } from '../src/spark-mcp/tools/sub-chats-tool.ts';
 import { deliverAsk } from '../src/sub-chats/deliver-ask.ts';
 import { folderMissing } from '../src/sub-chats/plan.ts';
+import { startSubChats } from '../src/sub-chats/start.ts';
 import { askNow, fakeTarget, messageAsk, turnsOf } from './chat-ask-fixtures.ts';
 import {
   answerCard,
@@ -31,6 +33,7 @@ import {
   PARENT_SETTINGS,
   PARENT_TITLE,
   parentChat,
+  plannedAction,
   projectAt,
   subChatsOf,
   THREE_PIECES,
@@ -330,6 +333,32 @@ describe('spark_sub_chats in a mode that asks first', () => {
     const [docs] = await subChatsOf(t, parent.id);
     expect(docs).toMatchObject({ title: 'Docs', starts_after: [] });
     expect(docs?.started_at).not.toBeNull();
+  });
+
+  it('leaves no chat behind when recording a piece fails for an unexpected reason', async () => {
+    const action = await plannedAction(t, parent, THREE_PIECES);
+    const request = { action, approvalId: randomUUID(), runId: null, startedBy: 'user' as const };
+
+    await expect(
+      startSubChats({ db: t.db, workspaceId: t.workspaceId, resolveTarget: fakeTarget }, request),
+    ).rejects.toMatchObject({ code: '23503' });
+
+    const made = await t.db.query('SELECT title FROM conversations WHERE id = ANY($1::uuid[])', [
+      action.pieces.map((piece) => piece.conversationId),
+    ]);
+    expect(made.rows).toEqual([]);
+    expect(await subChatsOf(t, parent.id)).toEqual([]);
+
+    const again = await startSubChats(
+      { db: t.db, workspaceId: t.workspaceId, resolveTarget: fakeTarget },
+      { ...request, approvalId: null },
+    );
+    expect(again.subChats.map((piece) => piece.title)).toEqual([
+      'Orders API',
+      'Orders page',
+      'Docs',
+    ]);
+    expect(await subChatsOf(t, parent.id)).toHaveLength(3);
   });
 
   it('starts nothing twice when the same approved plan is performed again', async () => {

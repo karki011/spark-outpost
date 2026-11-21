@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { ChatSettings } from '@spark-outpost/contracts';
+import type { ChatSettings, StartSubChatsAction } from '@spark-outpost/contracts';
 import { updateChatSettings } from '../src/persistence/chat-settings.ts';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
 import { createProject } from '../src/projects/projects.ts';
@@ -94,26 +94,36 @@ export const THREE_PIECES = [
   { title: 'Docs', task: 'Document both.', startsAfter: ['Orders API', 'Orders page'] },
 ];
 
-export async function startedPlan(
+type PieceInput = { title: string; task: string; stackedOn?: string; startsAfter?: string[] };
+
+export async function plannedAction(
   t: TestDb,
   parent: ParentChat,
-  pieces: readonly { title: string; task: string; stackedOn?: string; startsAfter?: string[] }[],
-  resolveTarget: ResolveTarget = async () => ({ provider: 'fake' }),
-): Promise<SubChatRecord[]> {
+  pieces: readonly PieceInput[],
+): Promise<StartSubChatsAction> {
   const facts = await planFacts(t.db, t.workspaceId, parent.id);
   const plan = planSubChats(
     pieces.map((piece) => ({ ...piece, startsAfter: piece.startsAfter ?? [] })),
     facts,
   );
   if (plan.kind === 'refusal') throw new Error(plan.message);
+  return {
+    action: 'start_sub_chats',
+    parent: { id: parent.id, title: PARENT_TITLE },
+    pieces: plan.pieces,
+  };
+}
+
+export async function startedPlan(
+  t: TestDb,
+  parent: ParentChat,
+  pieces: readonly PieceInput[],
+  resolveTarget: ResolveTarget = async () => ({ provider: 'fake' }),
+): Promise<SubChatRecord[]> {
   await startSubChats(
     { db: t.db, workspaceId: t.workspaceId, resolveTarget },
     {
-      action: {
-        action: 'start_sub_chats',
-        parent: { id: parent.id, title: PARENT_TITLE },
-        pieces: plan.pieces,
-      },
+      action: await plannedAction(t, parent, pieces),
       approvalId: null,
       runId: null,
       startedBy: 'agent',

@@ -1,12 +1,14 @@
+import { randomUUID } from 'node:crypto';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { addToQueue } from '../src/persistence/chat-queue.ts';
 import { deleteConversation, updateConversation } from '../src/persistence/conversation-actions.ts';
 import { setSparkPaused } from '../src/persistence/spark-pause.ts';
 import { subChatRows } from '../src/persistence/sub-chats.ts';
 import { deliveryPass } from '../src/sub-chats/delivery.ts';
-import { askNow, fakeTarget, turnsOf } from './chat-ask-fixtures.ts';
+import { askNow, fakeTarget, finishTurn, turnsOf } from './chat-ask-fixtures.ts';
 import {
   PARENT_TITLE,
   parentChat,
@@ -17,6 +19,7 @@ import {
   type ParentChat,
   type SubChatRecord,
 } from './sub-chat-plan-fixtures.ts';
+import { turnIn } from './sub-chat-fixtures.ts';
 import { endTask, startTask, taskOf } from './sub-chat-report-fixtures.ts';
 import { connectCliProvider, createTestDb, type TestDb } from './support.ts';
 
@@ -80,6 +83,38 @@ describe('releasing Held sub-chats', () => {
 
     expect(await started()).toEqual(['Orders API', 'Orders page', 'Docs']);
     expect(await turnsOf(t, docs.conversation_id)).toHaveLength(1);
+  });
+
+  it('keeps one Held while the sub-chat it waits for works on a later message', async () => {
+    await endTask(t, await taskOf(t, api.conversation_id));
+    const followUp = await turnIn(t, api.conversation_id, 'running');
+
+    await pass();
+    await pass();
+
+    expect(await started()).toEqual(['Orders API']);
+    expect(await why('Orders page')).toBe('Waits for “Orders API”.');
+
+    await finishTurn(t, followUp, 'succeeded', 'Tidied.');
+    await pass();
+
+    expect(await started()).toEqual(['Orders API', 'Orders page']);
+  });
+
+  it('stops waiting on a message that stays queued once the later turn failed', async () => {
+    await endTask(t, await taskOf(t, api.conversation_id));
+    const followUp = await turnIn(t, api.conversation_id, 'running');
+    await addToQueue(t.db, api.conversation_id, { id: randomUUID(), content: 'And the docs.' });
+    await pass();
+    expect(await why('Orders page')).toBe('Waits for “Orders API”.');
+
+    await finishTurn(t, followUp, 'failed');
+    await pass();
+
+    expect(await started()).toEqual(['Orders API']);
+    expect(await why('Orders page')).toBe(
+      'Held: “Orders API” did not finish. Start anyway starts it.',
+    );
   });
 
   it('starts nothing twice however many passes run', async () => {
