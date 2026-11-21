@@ -49,6 +49,7 @@ export const subChatReportSchema = z.object({
   changed: z.string(),
   risks: z.string(),
   blockers: z.string(),
+  said: z.string().default(''),
   branch: z.string().nullable(),
   committed: z.boolean(),
   pushed: z.boolean(),
@@ -57,6 +58,7 @@ export const subChatReportSchema = z.object({
 export type SubChatReport = z.infer<typeof subChatReportSchema>;
 
 export const NONE_STATED = 'None stated';
+export const ALSO_SAID = 'Also said';
 export const REPORT_FOOTER =
   "Written by the sub-chat's agent, not checked by Spark. The branch and pull request line is Spark's own record.";
 

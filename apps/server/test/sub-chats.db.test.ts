@@ -50,6 +50,7 @@ const REPORT: SubChatReport = {
   changed: 'Added the endpoint.',
   risks: 'None stated',
   blockers: 'None stated',
+  said: '',
   branch: 'spark/piece',
   committed: true,
   pushed: true,

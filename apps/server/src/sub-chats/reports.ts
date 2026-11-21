@@ -1,17 +1,35 @@
 import type { SubChatReport } from '@spark-outpost/contracts';
 import { redactText, storableText } from '../audit/redact.ts';
+import { recordKeptChanges } from '../outcomes/record.ts';
 import {
   insertChatAsk,
+  latestReportAskFrom,
+  rewriteReportAsk,
   settleChatAsk,
   type AskOutcome,
   type EndedAsk,
 } from '../persistence/chat-asks.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
-import { getSubChat, saveSubChatReport, subChatRow } from '../persistence/sub-chats.ts';
+import {
+  getSubChat,
+  saveSubChatReport,
+  saveSubChatReportRecord,
+  subChatRow,
+} from '../persistence/sub-chats.ts';
 import { auditAskEnd, storedMessage } from './asks.ts';
 import { reportFacts, type ReadBranchWork } from './report-facts.ts';
-import { buildReport, reportText, type ReportTurn } from './report.ts';
+import {
+  buildReport,
+  recordLine,
+  reportText,
+  type ReportFacts,
+  type ReportTurn,
+} from './report.ts';
+
+export interface EndedTurn extends ReportTurn {
+  runId: string | null;
+}
 
 export async function reportsToParent(db: Queryable, ended: EndedAsk): Promise<boolean> {
   const { ask } = ended;
@@ -20,12 +38,32 @@ export async function reportsToParent(db: Queryable, ended: EndedAsk): Promise<b
   return (await getSubChat(db, ask.to.id))?.parentConversationId === ask.from.id;
 }
 
+async function workspaceOf(db: Queryable, conversationId: string | null): Promise<string | null> {
+  if (conversationId === null) return null;
+  const { rows } = await db.query<{ workspace_id: string }>(
+    'SELECT workspace_id FROM conversations WHERE id = $1',
+    [conversationId],
+  );
+  return rows[0]?.workspace_id ?? null;
+}
+
+async function keptChangesRecorded(
+  db: Queryable,
+  conversationId: string,
+  turn: EndedTurn,
+): Promise<void> {
+  if (turn.status !== 'succeeded' || turn.runId === null) return;
+  const workspaceId = await workspaceOf(db, conversationId);
+  if (workspaceId) await recordKeptChanges(db, workspaceId, turn.runId);
+}
+
 export async function reportOf(
   db: Queryable,
   conversationId: string,
-  turn: ReportTurn,
+  turn: EndedTurn,
   read?: ReadBranchWork,
 ): Promise<SubChatReport | null> {
+  await keptChangesRecorded(db, conversationId, turn);
   const row = await subChatRow(db, conversationId);
   if (!row) return null;
   const reply = storableText(redactText(turn.reply));
@@ -38,28 +76,24 @@ function outcomeOf(report: SubChatReport): AskOutcome {
     : { state: 'no_reply', reason: report.reason };
 }
 
-async function parentWorkspace(db: Queryable, parentId: string | null): Promise<string | null> {
-  if (parentId === null) return null;
-  const { rows } = await db.query<{ workspace_id: string }>(
-    'SELECT workspace_id FROM conversations WHERE id = $1',
-    [parentId],
-  );
-  return rows[0]?.workspace_id ?? null;
-}
-
 export async function sendReport(
   db: Db,
   ended: EndedAsk,
   read?: ReadBranchWork,
 ): Promise<string | null> {
   const { ask } = ended;
-  const turn = { status: ended.runStatus, reply: ended.finalReply, error: ended.error };
+  const turn = {
+    runId: ask.runId,
+    status: ended.runStatus,
+    reply: ended.finalReply,
+    error: ended.error,
+  };
   const report = await reportOf(db, ask.to.id, turn, read);
   if (!report) return null;
   const reportId = await withTransaction(db, async (client) => {
     if (!(await settleChatAsk(client, ask.id, outcomeOf(report)))) return null;
     await saveSubChatReport(client, ask.to.id, report);
-    const workspaceId = await parentWorkspace(client, ask.from.id);
+    const workspaceId = await workspaceOf(client, ask.from.id);
     if (workspaceId === null) return null;
     const id = newId();
     await insertChatAsk(client, {
@@ -85,8 +119,41 @@ export async function sendReport(
   return reportId;
 }
 
+function withRecord(report: SubChatReport, facts: ReportFacts): SubChatReport {
+  return {
+    ...report,
+    branch: facts.branch,
+    committed: facts.committed,
+    pushed: facts.pushed,
+    pullRequest: facts.pullRequest,
+  };
+}
+
+export async function refreshReportRecord(
+  db: Queryable,
+  conversationId: string,
+  read?: ReadBranchWork,
+): Promise<boolean> {
+  const row = await subChatRow(db, conversationId);
+  if (!row) return false;
+  const facts = await reportFacts(db, row, read);
+  const now = recordLine(facts);
+  let refreshed = false;
+  if (row.report && recordLine(row.report) !== now) {
+    refreshed = await saveSubChatReportRecord(db, conversationId, withRecord(row.report, facts));
+  }
+  const sent = await latestReportAskFrom(db, conversationId);
+  if (sent?.report && recordLine(sent.report) !== now) {
+    const report = withRecord(sent.report, facts);
+    await rewriteReportAsk(db, sent.id, report, storedMessage(reportText(report)));
+    refreshed = true;
+  }
+  return refreshed;
+}
+
 interface LaterTurn {
   conversation_id: string;
+  run_id: string;
   status: ReportTurn['status'];
   error: string | null;
   reply: string;
@@ -94,7 +161,7 @@ interface LaterTurn {
 
 export async function refreshReports(db: Db, read?: ReadBranchWork): Promise<number> {
   const { rows } = await db.query<LaterTurn>(
-    `SELECT s.conversation_id, r.status, r.error,
+    `SELECT s.conversation_id, r.id AS run_id, r.status, r.error,
        COALESCE(said.final_reply, said.content, '') AS reply
      FROM sub_chats s
      JOIN LATERAL (
@@ -118,7 +185,8 @@ export async function refreshReports(db: Db, read?: ReadBranchWork): Promise<num
   );
   let refreshed = 0;
   for (const row of rows) {
-    const report = await reportOf(db, row.conversation_id, row, read);
+    const turn = { runId: row.run_id, status: row.status, reply: row.reply, error: row.error };
+    const report = await reportOf(db, row.conversation_id, turn, read);
     if (report && (await saveSubChatReport(db, row.conversation_id, report))) refreshed += 1;
   }
   return refreshed;

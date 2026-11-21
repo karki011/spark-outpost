@@ -7,7 +7,7 @@ import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { expectNoSidewaysScroll, PHONE } from './responsive-kit.ts';
 import { seedChats, type SeedApproval } from './sidebar-seed.ts';
-import { linkPieces, type Piece } from './sub-chats-seed.ts';
+import { linkPieces, seedPlanApproval, type Piece } from './sub-chats-seed.ts';
 
 const SHOT = process.env.SUB_CHATS_SHOT ?? '';
 const PROJECT = 'storefront';
@@ -85,6 +85,16 @@ const rowButton = (page: Page, title: string) =>
 const header = (page: Page) => page.locator('header.chat-head');
 const crumb = (page: Page) => header(page).getByRole('navigation', { name: 'Parent chat' });
 
+async function deleteFromMenu(page: Page, title: string): Promise<void> {
+  await rowButton(page, title).hover();
+  await sidebar(page)
+    .getByRole('button', { name: `Options for ${title}` })
+    .click();
+  const menu = page.getByRole('menu', { name: `Options for ${title}` });
+  await menu.getByRole('menuitem', { name: 'Delete' }).click();
+  await menu.getByRole('menuitem', { name: 'Confirm delete' }).click();
+}
+
 async function expectAccessible(page: Page, include: string): Promise<void> {
   const results = await new AxeBuilder({ page })
     .include(include)
@@ -119,6 +129,7 @@ test('sub-chats are nested under their parent in plan order, each with its statu
   await expect(rowButton(page, PARENT)).toHaveAccessibleName(/1 sub-chat needs you/);
   await expect(rowButton(page, 'Payments API v2')).toHaveAccessibleName(/Ready for review/);
   await expect(fold(page)).toHaveAttribute('aria-expanded', 'true');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   for (const [theme, skin] of Object.entries(SKINS)) {
     await page.evaluate((value) => {
       document.documentElement.dataset.skin = value;
@@ -222,10 +233,25 @@ test('a chat whose parent was deleted stays at the top and says what it was part
   await expect(orphan.locator('.parent-mark')).toHaveText('· , was part of Catalog cleanup');
   await expect(tree(page).locator('.row', { hasText: 'Search index rebuild' })).toHaveCount(0);
 
-  const deleted = await page.request.delete(`/api/conversations/${parentId}`, { data: {} });
-  expect(deleted.status()).toBe(204);
-  await openChats(page);
+  await seedPlanApproval(parentId);
   const left = project(page).locator('.row', { hasText: 'Checkout UI' });
+  const deleted = page.getByRole('status').filter({ hasText: `Deleted ${PARENT}` });
+  await deleteFromMenu(page, PARENT);
+  await expect(left.locator('.parent-mark')).toHaveText(`· , was part of ${PARENT}`);
+  await deleted.getByRole('button', { name: 'Undo' }).click();
+  await expect(subRows(page)).toHaveCount(4);
+
+  const gone = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'DELETE' &&
+      response.url().endsWith(`/api/conversations/${parentId}`),
+    { timeout: 20_000 },
+  );
+  await deleteFromMenu(page, PARENT);
+  await expect(left.locator('.parent-mark')).toHaveText(`· , was part of ${PARENT}`);
+  expect((await gone).status()).toBe(204);
+  await expect(page.getByRole('status').filter({ hasText: 'Could not delete' })).toHaveCount(0);
+  await openChats(page);
   await expect(left.locator('.parent-mark')).toHaveText(`· , was part of ${PARENT}`);
   await expect(tree(page)).toHaveCount(0);
 });

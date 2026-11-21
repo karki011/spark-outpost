@@ -116,7 +116,20 @@ describe('approval outcome', () => {
           },
         }),
       ).detail,
-    ).toContain('Done without a card');
+    ).toBe(' Done without a card: the agent’s mode allows it.');
+    expect(
+      outcome(
+        decided({
+          status: 'allowed',
+          decidedBy: 'level',
+          payload: {
+            ...pending.payload,
+            sparkAskedFor: true,
+            sparkResult: { state: 'done', message: 'Asked “Billing export”.', url: null },
+          },
+        }),
+      ).detail,
+    ).toBe(' Done without a card: your message asked for it.');
     expect(spark({ state: 'failed', message: 'GitHub said no.', url: null })).toEqual({
       icon: 'no',
       label: 'It failed.',

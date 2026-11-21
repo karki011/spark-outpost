@@ -1,4 +1,5 @@
 import {
+  ALSO_SAID,
   NONE_STATED,
   REPORT_FOOTER,
   SUB_CHAT_STATUS_WORDS,
@@ -18,9 +19,12 @@ export const TURN_REASONS = {
 } as const;
 
 const SECTION_MAX = 4000;
+const SAID_MAX = 6000;
 const REASON_MAX = 300;
 const OPENING_LINES = 6;
 const LABEL_LINE = /^[\s>*_#-]*(changed|risks|blockers)[*_]*\s*:[*_]*\s*(.*)$/i;
+const OTHER_LABEL_LINE =
+  /^\s*(?:#{1,6}\s+\S|(?:>\s*)?(?:\*\*|__)?[A-Z][A-Za-z]*(?: [A-Za-z]+){0,3}(?:\*\*|__)?\s*:(?:\*\*|__)?(?:\s|$))/;
 
 type Section = 'changed' | 'risks' | 'blockers';
 
@@ -43,30 +47,41 @@ function clipped(text: string, max: number): string {
   return trimmed.length <= max ? trimmed : `${trimmed.slice(0, max - 1).trimEnd()}…`;
 }
 
-function sectionsOf(reply: string): { found: Map<Section, string>; opening: string[] } {
+function sectionsOf(reply: string): { found: Map<Section, string>; rest: string[] } {
   const lines = new Map<Section, string[]>();
-  const opening: string[] = [];
-  let current: string[] = opening;
+  const rest: string[] = [];
+  let current: string[] = rest;
   for (const line of reply.split('\n')) {
     const label = LABEL_LINE.exec(line);
-    if (!label) {
-      current.push(line);
+    if (label) {
+      const section = label[1]!.toLowerCase() as Section;
+      current = lines.get(section) ?? [];
+      lines.set(section, current);
+      current.push(label[2] ?? '');
       continue;
     }
-    current = [label[2] ?? ''];
-    lines.set(label[1]!.toLowerCase() as Section, current);
+    if (OTHER_LABEL_LINE.test(line)) current = rest;
+    current.push(line);
   }
   const found = new Map<Section, string>();
   for (const [section, text] of lines) {
     const body = clipped(text.join('\n'), SECTION_MAX);
     if (body) found.set(section, body);
   }
-  return { found, opening };
+  return { found, rest };
 }
 
-function openingOf(lines: readonly string[]): string {
-  const said = lines.filter((line) => line.trim() !== '').slice(0, OPENING_LINES);
-  return clipped(said.join('\n'), SECTION_MAX);
+function unlabelled(rest: readonly string[]): { changed: string; said: string } {
+  const opening: string[] = [];
+  const after: string[] = [];
+  for (const line of rest) {
+    if (opening.length < OPENING_LINES && line.trim() !== '') opening.push(line);
+    else if (opening.length >= OPENING_LINES) after.push(line);
+  }
+  return {
+    changed: clipped(opening.join('\n'), SECTION_MAX),
+    said: clipped(after.join('\n'), SAID_MAX),
+  };
 }
 
 function turnReason(turn: Pick<ReportTurn, 'status' | 'error'>): string | null {
@@ -78,15 +93,17 @@ function turnReason(turn: Pick<ReportTurn, 'status' | 'error'>): string | null {
 }
 
 export function buildReport(turn: ReportTurn, facts: ReportFacts): SubChatReport {
-  const { found, opening } = sectionsOf(turn.reply);
+  const { found, rest } = sectionsOf(turn.reply);
   const reason = turnReason(turn);
-  const unlabelled = found.size === 0 ? openingOf(opening) : '';
+  const loose =
+    found.size === 0 ? unlabelled(rest) : { changed: '', said: clipped(rest.join('\n'), SAID_MAX) };
   return {
     status: reason === null ? facts.status : 'needs_you',
     reason,
-    changed: found.get('changed') ?? (unlabelled || NONE_STATED),
+    changed: found.get('changed') ?? (loose.changed || NONE_STATED),
     risks: found.get('risks') ?? NONE_STATED,
     blockers: found.get('blockers') ?? NONE_STATED,
+    said: loose.said,
     branch: facts.branch,
     committed: facts.committed,
     pushed: facts.pushed,
@@ -122,6 +139,7 @@ export function reportText(report: SubChatReport): string {
     `Branch and pull request: ${recordLine(report)}`,
     `Risks: ${report.risks}`,
     `Blockers: ${report.blockers}`,
+    ...(report.said ? [`${ALSO_SAID}: ${report.said}`] : []),
     REPORT_FOOTER,
   ].join('\n');
 }

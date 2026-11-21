@@ -10,7 +10,11 @@ import {
 } from '@spark-outpost/contracts';
 import { insertFinishedRunEntries } from '../persistence/audit-log.ts';
 import { insertChatAsk } from '../persistence/chat-asks.ts';
-import { resolveChatSettings, updateChatSettings } from '../persistence/chat-settings.ts';
+import {
+  getCapabilities,
+  resolveChatSettings,
+  updateChatSettings,
+} from '../persistence/chat-settings.ts';
 import { createConversation } from '../persistence/conversations.ts';
 import { withTransaction, type Db, type DbClient, type Queryable } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
@@ -129,11 +133,18 @@ async function createChat(
   });
 }
 
-async function startedWith(db: Queryable, conversationId: string): Promise<SubChatStartedWith> {
+async function startedWith(
+  db: Queryable,
+  workspaceId: string,
+  conversationId: string,
+): Promise<SubChatStartedWith> {
   const settings = await resolveChatSettings(db, conversationId);
+  const defaults = settings.provider
+    ? await getCapabilities(db, workspaceId, settings.provider)
+    : null;
   return {
     provider: settings.provider ?? '',
-    model: settings.model,
+    model: settings.model ?? defaults?.defaultModel ?? null,
     effort: settings.effort,
     agentMode: settings.agentMode,
     level: settings.level,
@@ -184,7 +195,7 @@ async function linkPiece(
   const startsAfter = piece.startsAfter.filter((id) => created.has(id));
   const held = piece.stackedOn !== null || startsAfter.length > 0;
   return withTransaction(deps.db, async (client) => {
-    const settings = await startedWith(client, piece.conversationId);
+    const settings = await startedWith(client, deps.workspaceId, piece.conversationId);
     await insertSubChat(client, {
       conversationId: piece.conversationId,
       parentConversationId: action.parent.id,
@@ -367,13 +378,20 @@ export interface HeldStart {
   delivered: ChatAskDelivered | null;
 }
 
-async function planRun(db: Queryable, conversationId: string): Promise<string | null> {
-  const { rows } = await db.query<{ run_id: string | null }>(
-    `SELECT a.run_id FROM sub_chats s LEFT JOIN approvals a ON a.id = s.approval_id
+interface PlanRecord {
+  run_id: string | null;
+  title: string;
+}
+
+async function planRecord(db: Queryable, conversationId: string): Promise<PlanRecord | null> {
+  const { rows } = await db.query<PlanRecord>(
+    `SELECT a.run_id, c.title FROM sub_chats s
+     JOIN conversations c ON c.id = s.conversation_id
+     LEFT JOIN approvals a ON a.id = s.approval_id
      WHERE s.conversation_id = $1`,
     [conversationId],
   );
-  return rows[0]?.run_id ?? null;
+  return rows[0] ?? null;
 }
 
 export async function startHeldSubChat(
@@ -390,12 +408,13 @@ export async function startHeldSubChat(
     taskAsk(client, workspaceId, stored, from, null),
   );
   if (!askId) return { started: false, delivered: null };
-  const runId = await planRun(db, conversationId);
-  if (runId) {
+  const plan = await planRecord(db, conversationId);
+  const runId = plan?.run_id ?? null;
+  if (plan && runId) {
     const payload = {
       event: 'sub_chat_started',
       parent: from,
-      subChat: { id: conversationId },
+      subChat: { id: conversationId, title: plan.title },
       ...stored.startedWith,
       held: false,
       allowedBy: how,

@@ -48,7 +48,7 @@ const HOW_ALLOWED: Record<Exclude<SendRule['kind'], 'refuse'>, string> = {
 function proposal(rule: Exclude<SendRule['kind'], 'refuse'>): ProposeOptions {
   const audit = { allowedBy: HOW_ALLOWED[rule] };
   if (rule === 'card') return { alwaysAsk: true, audit };
-  return rule === 'asked' ? { path: 'perform', audit } : { audit };
+  return rule === 'asked' ? { path: 'perform', askedFor: true, audit } : { audit };
 }
 
 async function ownTitle(context: SparkToolContext, chatId: string): Promise<string> {

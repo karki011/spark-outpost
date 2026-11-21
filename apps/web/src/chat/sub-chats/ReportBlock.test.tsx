@@ -14,6 +14,7 @@ const REPORT: SubChatReport = {
   changed: 'New payments/v2 client, 14 files.',
   risks: 'Refund path is untested.',
   blockers: '',
+  said: '',
   branch: 'spark/payments-api-v2',
   committed: true,
   pushed: true,
@@ -43,6 +44,16 @@ describe('a sub-chat’s report', () => {
     expect(block.textContent).toContain('Ready for review');
     expect(block.textContent).toContain(REPORT_FOOTER);
     expect(block.textContent).toContain('not your message');
+  });
+
+  it('shows what else the agent said under the three sections', () => {
+    const said = 'node --test passes: 1 test.\n\nVerification: ran it twice.';
+    render(<ReportBlock from={from} report={{ ...REPORT, said }} />);
+    const block = screen.getByRole('region', { name: 'Report from Payments API v2' });
+    const terms = [...block.querySelectorAll('dt')].map((term) => term.textContent);
+    expect(terms).toEqual(['Changed', 'Branch and pull request', 'Risks', 'Blockers', 'Also said']);
+    expect(block.textContent).toContain('node --test passes: 1 test.');
+    expect(block.textContent).toContain('Verification: ran it twice.');
   });
 
   it('reads “None stated” for a section the agent left out', () => {

@@ -76,6 +76,12 @@ function chosenDetail(approval: Approval): string {
   return `${deniedDetail(approval)}${forRun ? ' Rejected for the rest of this run.' : ''}`;
 }
 
+function withoutCard(approval: Approval): string {
+  return approval.payload.sparkAskedFor
+    ? ' Done without a card: your message asked for it.'
+    : ' Done without a card: the agent’s mode allows it.';
+}
+
 function sparkOutcome(approval: Approval): Outcome | null {
   const result = approval.payload.sparkResult;
   if (!result || approval.status !== 'allowed') return null;
@@ -99,7 +105,7 @@ function sparkOutcome(approval: Approval): Outcome | null {
     return {
       icon: 'ok',
       label: result.message ?? 'Done.',
-      detail: byMode ? ' Done without a card: the agent’s mode allows it.' : '',
+      detail: byMode ? withoutCard(approval) : '',
     };
   }
   const doing = action ? sparkActionLabels[action.action].doing : 'Spark is doing it…';

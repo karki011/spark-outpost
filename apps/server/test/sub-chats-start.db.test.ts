@@ -16,7 +16,7 @@ import { performSparkAction } from '../src/spark-mcp/actions/perform.ts';
 import { NOT_FROM_ANOTHER_CHAT } from '../src/spark-mcp/tools/sub-chats-tool.ts';
 import { deliverAsk } from '../src/sub-chats/deliver-ask.ts';
 import { folderMissing } from '../src/sub-chats/plan.ts';
-import { startSubChats } from '../src/sub-chats/start.ts';
+import { startHeldSubChat, startSubChats } from '../src/sub-chats/start.ts';
 import { askNow, fakeTarget, messageAsk, turnsOf } from './chat-ask-fixtures.ts';
 import {
   answerCard,
@@ -198,6 +198,26 @@ describe('spark_sub_chats in a mode that acts', () => {
     expect(audit).toContain('"effort":"high"');
     expect(audit).not.toContain('total_cents');
     expect(JSON.stringify(recorded.audited)).not.toContain('total_cents');
+  });
+
+  it('names the sub-chat in the audit entry when a Held one is started later', async () => {
+    const { runId } = await split('auto');
+    const [, page] = await subChatsOf(t, parent.id);
+
+    await startHeldSubChat(
+      { db: t.db, workspaceId: t.workspaceId, resolveTarget: fakeTarget },
+      page!.conversation_id,
+      'everything it waited for has reported',
+    );
+
+    const entries = JSON.parse(await auditOf(runId)) as {
+      allowedBy: string;
+      subChat: { id: string; title?: string };
+    }[];
+    const released = entries.filter((entry) => entry.allowedBy.startsWith('everything'));
+    expect(released.map((entry) => entry.subChat)).toEqual([
+      { id: page!.conversation_id, title: 'Orders page' },
+    ]);
   });
 
   it('adds pieces on a second call, after the ones already there', async () => {
@@ -385,9 +405,9 @@ describe('who a sub-chat’s settings and mode come from', () => {
     await connectCliProvider(t, 'codex');
     await saveCapabilities(t.db, t.workspaceId, {
       provider: 'codex',
-      models: [],
+      models: [{ id: 'gpt-6-luna', label: '6 Luna', description: null }],
       efforts: [],
-      defaultModel: null,
+      defaultModel: 'gpt-6-luna',
       modes: FAKE_CODEX_MODES,
       defaultMode: 'agent',
     });
@@ -409,7 +429,7 @@ describe('who a sub-chat’s settings and mode come from', () => {
     const [web] = await subChatsOf(t, asking.id);
     expect(web?.started_with).toMatchObject({
       provider: 'codex',
-      model: null,
+      model: 'gpt-6-luna',
       agentMode: 'ask-every-action',
       level: 'hands-off',
     });

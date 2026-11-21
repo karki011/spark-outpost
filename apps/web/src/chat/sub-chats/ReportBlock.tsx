@@ -1,5 +1,6 @@
 import './sub-chats.css';
 import {
+  ALSO_SAID,
   NONE_STATED,
   REPORT_FOOTER,
   shownChatTitle,
@@ -83,6 +84,7 @@ export function ReportBlock({ from, report, onOpenChat }: ReportBlockProps) {
         </dd>
         <Section label="Risks" text={report.risks} />
         <Section label="Blockers" text={report.blockers} />
+        {report.said.trim() && <Section label={ALSO_SAID} text={report.said} />}
       </dl>
       <p className="sc-card-f">{REPORT_FOOTER}</p>
     </section>

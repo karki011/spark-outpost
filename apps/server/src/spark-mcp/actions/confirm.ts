@@ -29,7 +29,7 @@ import { lastFailedAttempt, WAITING_RESULT } from '../../persistence/spark-resul
 import { runEvents } from '../../workflow/run-events.ts';
 import type { SparkActionHooks, SparkScope } from '../deps.ts';
 import { SparkToolError, type SparkToolContext } from '../tool.ts';
-import { actionFacts, actionPath, type ActionPath } from './action-policy.ts';
+import { actionFacts, actionPath, modeAsks, type ActionPath } from './action-policy.ts';
 import { assistantPath, assistantRefusal } from './ask-spark-limits.ts';
 
 export const ASK_SPARK_ACTOR = 'Ask Spark';
@@ -148,6 +148,7 @@ function cardTitle(action: SparkAction): string {
 export interface CardPlan {
   path: ActionPath;
   requested: boolean;
+  askedFor?: boolean;
   observed: readonly string[];
   secretSend?: readonly string[];
   confirmName?: string;
@@ -195,6 +196,7 @@ export async function postCard(
         sparkAction: action,
         sparkResult: WAITING_RESULT,
         ...(requested ? { sparkRequested: true } : {}),
+        ...(path === 'perform' && plan.askedFor ? { sparkAskedFor: true } : {}),
         ...(observed.length > 0 ? { observed: [...observed] } : {}),
         ...(secretSend && secretSend.length > 0 ? { secretSend: [...secretSend] } : {}),
       },
@@ -282,6 +284,7 @@ function finished(approval: Approval) {
 export interface ProposeOptions {
   alwaysAsk?: boolean;
   path?: ActionPath;
+  askedFor?: boolean;
   options?: readonly ApprovalOption[];
   audit?: Record<string, unknown>;
   sendsTo?: string | null;
@@ -322,6 +325,9 @@ export async function proposeAction(
       : assistant
         ? await assistantPath(context.deps.db, run.scope.workspaceId, run.runId, action)
         : actionPath(facts);
+  const askedFor =
+    options.askedFor === true ||
+    (options.path === undefined && !assistant && path === 'perform' && modeAsks(facts));
   const failedBefore = await lastFailedAttempt(
     context.deps.db,
     run.scope.conversationId,
@@ -337,6 +343,7 @@ export async function proposeAction(
   const card = await postCard(context.deps.db, run, action, {
     path,
     requested: facts.requested,
+    askedFor: askedFor && !options.decide,
     observed,
     ...(options.confirmName ? { confirmName: options.confirmName } : {}),
     ...(options.declineName ? { declineName: options.declineName } : {}),

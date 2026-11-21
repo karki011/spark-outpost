@@ -25,6 +25,7 @@ const REPORT: SubChatReport = {
   changed: 'Added the orders endpoint.',
   risks: 'None stated',
   blockers: 'None stated',
+  said: '',
   branch: 'spark/orders-api-1a2b',
   committed: true,
   pushed: true,
@@ -128,6 +129,11 @@ describe('a plan piece', () => {
 describe('rows, reports and asks', () => {
   it('accepts a sub-chat row with its report', () => {
     expect(subChatsResponseSchema.parse({ subChats: [ROW] })).toEqual({ subChats: [ROW] });
+  });
+
+  it('reads a report stored before the general part existed', () => {
+    const stored = Object.fromEntries(Object.entries(REPORT).filter(([key]) => key !== 'said'));
+    expect(subChatReportSchema.parse(stored).said).toBe('');
   });
 
   it('refuses a report with a status outside the five words', () => {

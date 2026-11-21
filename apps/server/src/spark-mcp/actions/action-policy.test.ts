@@ -95,4 +95,40 @@ describe('askedToSend', () => {
   it('needs the chat named in the sentence that asks', () => {
     expect(askedToSend('Billing export is busy. Tell it to rebase.', title)).toBe(false);
   });
+
+  const file = 'Create notes.txt containing hello';
+  const plain = 'Add function B';
+
+  it.each([
+    [`Ask the chat "${file}" what file it changed, and wait for its reply.`, file, true],
+    [`Ask the chat "${file}" what file it changed`, file, true],
+    [`Ask the chat "${plain}" what file it changed, and wait for its reply.`, plain, true],
+    [`Ask the chat "${plain}" what file it changed`, plain, true],
+    [`Ask the chat ${plain} what file it changed and report back`, plain, true],
+    [`Ask the chat ${plain} what file it changed, and tell me the reply`, plain, true],
+    [`Ask ${plain} which file it changed, then wait until it answers.`, plain, true],
+    [`Tidy up. Then message ${file} that main moved. Thanks.`, file, true],
+    ['Tell Stop the flaky wait loop to rebase.', 'Stop the flaky wait loop', true],
+    [`Don't message ${plain}.`, plain, false],
+    [`Don’t ask ${file} anything.`, file, false],
+    [`Wait before you ask ${plain} what it changed.`, plain, false],
+    [`Wait, then ask ${plain} what it changed.`, plain, false],
+    [`Ask ${plain} what it changed, but wait for me.`, plain, false],
+    [`Ask ${plain} what it changed, and wait for its reply, but not yet.`, plain, false],
+    [`Ask ${plain} what it changed once the tests pass, not before.`, plain, false],
+    [`Should I ask ${file} what it changed?`, file, false],
+    [`The notes.txt file is wrong. Ask the other chat about it.`, file, false],
+  ])('for "%s" naming "%s" is %s', (request, named, expected) => {
+    expect(askedToSend(request, named)).toBe(expected);
+  });
+
+  it('does not take a longer chat title for the shorter one inside it', () => {
+    const longer = ['Billing export v2'];
+    expect(askedToSend('Tell Billing export v2 to rebase.', title, longer)).toBe(false);
+    expect(askedToSend('Tell Billing export v2 to rebase.', 'Billing export v2', [])).toBe(true);
+    expect(askedToSend('Tell Billing export to rebase.', title, longer)).toBe(true);
+    expect(
+      askedToSend('Tell Billing export v2 to rebase, and tell Billing export too.', title, longer),
+    ).toBe(true);
+  });
 });
