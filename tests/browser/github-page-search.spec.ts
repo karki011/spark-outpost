@@ -233,3 +233,23 @@ test('GitHub page starts a chat on the pull request branch and removes it when t
   await expect.poll(() => deleted).toEqual([created[0]!.id]);
   await expect(pane.getByRole('button', { name: 'Start chat' })).toBeEnabled();
 });
+
+test('GitHub page keeps the pull request it opened on when a refresh brings a newer one', async ({
+  page,
+}) => {
+  await stubInbox(page, inbox({ items: DESCRIBED }), { remember: true });
+  await stubDetails(page);
+  const newer = inbox({
+    items: [pull('9', { title: 'Arrived just now', updatedAt: ago(0.2) }), ...DESCRIBED],
+  });
+  await page.route(/\/api\/github\/inbox\?refresh=1$/, (route) => route.fulfill({ json: newer }));
+  await openOnGithubPage(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const main = page.getByRole('main', { name: 'GitHub' });
+  const pane = main.getByRole('complementary', { name: 'Fix timezone in export filenames' });
+  await expect(pane).toBeVisible();
+  await main.getByRole('button', { name: 'Refresh pull requests' }).click();
+  await expect(main.getByRole('button', { name: /Arrived just now/ })).toBeVisible();
+  await expect(pane).toBeVisible();
+});

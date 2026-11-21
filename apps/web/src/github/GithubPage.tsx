@@ -85,10 +85,18 @@ function Problems({ problems }: { problems: GithubInboxProblem[] }) {
   );
 }
 
-function useSideBySide(ref: RefObject<HTMLElement | null>): boolean {
-  const [wide, setWide] = useState(false);
+function useSideBySide(ref: RefObject<HTMLElement | null>): boolean | null {
+  const [wide, setWide] = useState<boolean | null>(null);
   useLayoutEffect(() => {
-    setWide((ref.current?.clientWidth ?? 0) > SIDE_BY_SIDE_WIDTH);
+    const node = ref.current;
+    if (!node) return;
+    const measure = () => {
+      if (node.clientWidth > 0) setWide(node.clientWidth > SIDE_BY_SIDE_WIDTH);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
   }, [ref]);
   return wide;
 }
@@ -135,9 +143,10 @@ export function GithubPage({ onOpenChat }: GithubPageProps) {
   const terms = useMemo(() => searchTerms(query), [query]);
   const matches = useMemo(() => searchItems(items, terms), [items, terms]);
   const searching = terms.length > 0;
-  const autoOpen = sideBySide ? initialPull(grouped, remembered) : null;
-  const shownId = openId === undefined ? (autoOpen?.id ?? null) : openId;
-  const openItem = shownId ? items.find((item) => item.id === shownId) : undefined;
+  if (openId === undefined && data && sideBySide !== null) {
+    setOpenId(sideBySide ? (initialPull(grouped, remembered)?.id ?? null) : null);
+  }
+  const openItem = openId ? items.find((item) => item.id === openId) : undefined;
   const group = picked ?? openItem?.group ?? defaultGroup(grouped);
 
   const open = (item: GithubInboxItem) => {
@@ -179,6 +188,7 @@ export function GithubPage({ onOpenChat }: GithubPageProps) {
         onProject={(id) => {
           setProjectId(id);
           setOpenId(null);
+          rememberOpen(null);
         }}
         onRefresh={() => refresh.mutate()}
         query={query}
