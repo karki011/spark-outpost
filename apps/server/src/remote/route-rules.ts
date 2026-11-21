@@ -128,6 +128,7 @@ POST /api/outposts/drafts/:id/start
 GET /api/conversations
 GET /api/conversations/:id
 GET /api/conversations/:id/annotations
+GET /api/conversations/:id/sub-chats
 GET /api/runs/:id
 GET /api/run-events
 GET /api/runs/:id/reasoning/:messageId

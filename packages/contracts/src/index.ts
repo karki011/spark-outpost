@@ -106,6 +106,8 @@ export * from './outpost-thread.ts';
 export * from './outpost-story.ts';
 export * from './outpost-stack.ts';
 export * from './outpost-start-action.ts';
+export * from './sub-chats.ts';
+export * from './sub-chat-status.ts';
 export * from './map.ts';
 export * from './companion.ts';
 export * from './assistant-history.ts';

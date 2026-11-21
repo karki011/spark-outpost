@@ -38,6 +38,22 @@ const OPEN_OUTPOST_REQUEST = `EXISTS (
     AND (op.run_id IS NULL OR carrying.status IN ('queued', 'running', 'awaiting_approval'))
 )`;
 
+const UNSETTLED_SUB_CHAT = `EXISTS (
+  SELECT 1 FROM sub_chats piece
+  WHERE piece.parent_conversation_id = c.id AND (
+    piece.started_at IS NULL
+    OR EXISTS (
+      SELECT 1 FROM runs pr
+      WHERE pr.conversation_id = piece.conversation_id AND pr.status IN ('queued', 'running')
+    )
+    OR EXISTS (SELECT 1 FROM chat_queue pq WHERE pq.conversation_id = piece.conversation_id)
+    OR EXISTS (
+      SELECT 1 FROM chat_asks pa
+      WHERE pa.to_conversation_id = piece.conversation_id AND pa.delivered_as IS NULL
+    )
+  )
+)`;
+
 const ENABLED_SCHEDULE = `EXISTS (
   SELECT 1 FROM workflow_schedules ws WHERE ws.conversation_id = c.id AND ws.enabled
 )`;
@@ -49,6 +65,7 @@ const INACTIVE = `${LISTED_CHAT} AND c.archived_at IS NULL AND c.pinned_at IS NU
   AND NOT ${WAITING_CARD}
   AND NOT ${RUNNING_TERMINAL}
   AND NOT ${OPEN_OUTPOST_REQUEST}
+  AND NOT ${UNSETTLED_SUB_CHAT}
   AND NOT ${ENABLED_SCHEDULE}`;
 
 export type Days = NonNullable<ArchiveInactiveDays>;

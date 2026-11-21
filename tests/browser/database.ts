@@ -83,6 +83,8 @@ const RESET_TABLES = [
   'map_overrides',
   'teammates',
   'outposts',
+  'sub_chats',
+  'chat_asks',
   'calendar_connection',
   'calendar_calendars',
   'calendar_google_accounts',

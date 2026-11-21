@@ -17,7 +17,8 @@ export const LISTED_CHAT = `c.workspace_id = $1 AND c.kind = 'chat'
   AND NOT EXISTS (SELECT 1 FROM profiles pf WHERE pf.assistant_conversation_id = c.id)
   AND (EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
     OR EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id)
-    OR EXISTS (SELECT 1 FROM outpost_members om WHERE om.conversation_id = c.id))`;
+    OR EXISTS (SELECT 1 FROM outpost_members om WHERE om.conversation_id = c.id)
+    OR EXISTS (SELECT 1 FROM sub_chats listed WHERE listed.conversation_id = c.id))`;
 
 interface ChatHit {
   conversationId: string;

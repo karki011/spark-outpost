@@ -21,6 +21,7 @@ const LIST_KINDS: readonly AppEventKind[] = [
   'approval',
   'task',
   'outpost_changed',
+  'sub_chats_changed',
   'attention',
 ];
 const chatListSchema = z.array(conversationSummarySchema);

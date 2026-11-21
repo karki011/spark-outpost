@@ -18,6 +18,12 @@ import { orchestrationSchema } from './orchestration.ts';
 import { conversationPlansSchema } from './plans.ts';
 import { teammateTagSchema } from './teammates.ts';
 import {
+  chatAskSchema,
+  chatRefSchema,
+  formerParentSchema,
+  subChatLinkSchema,
+} from './sub-chats.ts';
+import {
   interruptionChoiceSchema,
   interruptionSchema,
   messageSourceSchema,
@@ -136,6 +142,10 @@ export const conversationSummarySchema = z.object({
   teammate: teammateTagSchema.nullable().optional(),
   pullRequestMerged: z.boolean().optional(),
   outpost: z.object({ id: z.uuid(), name: z.string(), handle: z.string() }).optional(),
+  parent: chatRefSchema.optional(),
+  formerParent: formerParentSchema.optional(),
+  subChat: subChatLinkSchema.optional(),
+  subChatCount: z.number().int().positive().optional(),
   match: searchMatchSchema.optional(),
 });
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>;
@@ -206,6 +216,7 @@ export const conversationDetailSchema = z.object({
   interruption: interruptionSchema.nullable().optional(),
   subagents: z.record(z.string(), z.array(subagentRowSchema)).optional(),
   promptCache: promptCacheSchema.optional(),
+  asks: z.array(chatAskSchema).optional(),
 });
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 

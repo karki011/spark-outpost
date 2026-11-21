@@ -128,6 +128,12 @@ describe('never from a phone', () => {
     await phone.send('post', `/api/outposts/${id}/posts/${id}/cancel`).expect(404);
   });
 
+  it('lets a phone read a chat’s sub-chats, and nothing else under that path', async () => {
+    const id = crypto.randomUUID();
+    await phone.get(`/api/conversations/${id}/sub-chats`).expect(404);
+    await phone.send('post', `/api/conversations/${id}/sub-chats`).expect(403);
+  });
+
   it('refuses terminal creation through shared conversation and ticket routes', async () => {
     await phone
       .send('post', '/api/conversations', { sessionType: 'terminal', title: 'Native' })

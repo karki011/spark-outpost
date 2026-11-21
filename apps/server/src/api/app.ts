@@ -76,6 +76,7 @@ import { A2A_MOUNT_PATH } from '../a2a/agent-card.ts';
 import { outpostRouters, type OutpostDelivery } from '../outposts/mount.ts';
 import type { StackGit } from '../outposts/ports.ts';
 import type { PushKeys } from '../remote/push-keys.ts';
+import { subChatRoutes } from './sub-chat-routes.ts';
 import { artifactShareRoutes } from '../artifacts/share-routes.ts';
 import type { ShareService } from '../artifacts/share-service.ts';
 
@@ -190,6 +191,7 @@ export function createAppParts(options: AppOptions) {
   const outposts = outpostRouters(options);
   app.use('/api', outposts.api);
   app.use(A2A_MOUNT_PATH, outposts.a2a);
+  app.use('/api', subChatRoutes(options));
   app.use('/api', taskChangeRoutes(options));
   app.use('/api', shipRoutes(options));
   app.use('/api', githubReviewRoutes(options));

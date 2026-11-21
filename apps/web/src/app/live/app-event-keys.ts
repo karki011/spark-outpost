@@ -211,6 +211,8 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
           ? [{ queryKey: chatDraftsKey(event.conversationId), exact: true }]
           : []),
       ];
+    case 'sub_chats_changed':
+      return [list, ...conversationScoped(event, false)];
     case 'agent_terminal':
       return event.conversationId
         ? [{ queryKey: agentTerminalKeys.chat(event.conversationId), exact: true }]

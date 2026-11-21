@@ -20,12 +20,12 @@
 
 | Slice | One line                                                                             | Runs beside             |
 | ----- | ------------------------------------------------------------------------------------ | ----------------------- |
-| 1     | Schema, contracts, read model, Plan route                                            | nothing (first)         |
+| 1     | Schema, contracts, read model, sub-chats route                                       | nothing (first)         |
 | 2     | Messages between chats on the server: asks, delivery, steering, `spark_send_to_chat` | 5                       |
 | 3     | `spark_sub_chats`: plan card, start, settings, stacks, stop, tracking                | 5                       |
 | 4     | Reports, releasing Held sub-chats, the wrap-up                                       | 5                       |
 | 5     | Web: sidebar tree, flattened markers, breadcrumb, status                             | 2, 3, 4                 |
-| 6     | Web: Plan tab, plan card, task card, report block, message lines                     | nothing (needs 4 and 5) |
+| 6     | Web: Sub-chats tab, plan card, task card, report block, message lines                | nothing (needs 4 and 5) |
 | 7     | Delete outposts from the web, the browser specs and the guide                        | nothing                 |
 | 8     | Delete outposts and A2A from the server and contracts; drop migration                | nothing                 |
 | 9     | Dead-code sweep, `AGENTS.md`, architecture docs                                      | nothing                 |
@@ -41,8 +41,8 @@ Slices 2, 3 and 4 are one chain on the server. Slice 5 touches only `apps/web/sr
 **Add**
 
 - `apps/server/migrations/0268_sub_chats.sql`: `sub_chats`, `chat_asks`, `'chat'` added to `chat_queue_origin_check` and `runs_source_check` (design section 10). If `main` has taken `0268`, use the next free number.
-- `packages/contracts/src/sub-chats.ts`: schemas and types for a plan piece, the `start_sub_chats` action payload, a Plan row, an ask, a report, the `ConversationSummary` fields `parent`, `formerParent`, `subChat` and the detail field `asks`; the line texts ("Started N sub-chats: …", "Asked X: …", "From X: …", "N exchanges with X"). Export through `index.ts`.
-- `packages/contracts/src/sub-chat-status.ts`: `subChatStatus(facts)` returning one of the five words, and the group order for the Plan tab.
+- `packages/contracts/src/sub-chats.ts`: schemas and types for a plan piece, the `start_sub_chats` action payload, a sub-chat row (`SubChatRow`), an ask, a report, the `ConversationSummary` fields `parent`, `formerParent`, `subChat` and the detail field `asks`; the line texts ("Started N sub-chats: …", "Asked X: …", "From X: …", "N exchanges with X"). Export through `index.ts`.
+- `packages/contracts/src/sub-chat-status.ts`: `subChatStatus(facts)` returning one of the five words, and the group order for the Sub-chats tab.
 - `apps/server/src/persistence/sub-chats.ts`: insert, list by parent, read one, mark started, save report, refresh `parent_title`.
 - `apps/server/src/persistence/chat-asks.ts`: insert, read, list for a chat, mark delivered, settle.
 - `apps/server/src/api/sub-chat-routes.ts`: `GET /api/conversations/:id/sub-chats`.
@@ -73,7 +73,7 @@ Slices 2, 3 and 4 are one chain on the server. Slice 5 touches only `apps/web/sr
 
 **Add** (`apps/server/src/sub-chats/`)
 
-- `asks.ts`: who may send to whom (design section 3 table), creating an ask, recording a reply (`replyTo`), ending an ask No reply.
+- `asks.ts`: who may send to whom (design section 3 table, including the parent's exemption: in a turn a sub-chat's report or reply started, the parent may send to any of its own sub-chats), creating an ask, recording a reply (`replyTo`), ending an ask No reply.
 - `delivery.ts`: one pass woken by `sub_chats_changed`, run status changes and `spark_pause`: settle Waiting asks whose run ended (turn reply or tail fallback), deliver undelivered asks (active turn: `insertMemberMessage` with the ask id; idle: `addToQueue` with origin `chat`, then `drainQueue`). Started and closed from `apps/server/src/api/main.ts` beside the outpost dispatcher.
 - `message-prompt.ts`: the wrappers for a message that starts a turn and for a steered message (heading "Message from the chat …, not from the user", text marked as data, the reply instruction).
 - `availability.ts`: the `chat_messages` need.
@@ -121,7 +121,7 @@ Slices 2, 3 and 4 are one chain on the server. Slice 5 touches only `apps/web/sr
 
 - `spark-mcp/server.ts`: register the tool, add it to `CHAT_TURN_ONLY`; `tool.ts`, `availability.ts`, `sub-chats/availability.ts`: needs `sub_chats` and `sub_chat_stop`.
 - `packages/contracts/src/spark-actions.ts`: actions `start_sub_chats` (editable: per-piece model and effort) and `stop_sub_chat`; `action-policy.ts`: request patterns (replace `start_outpost`'s nouns; keep `start_outpost` until slice 8).
-- `tools/ask-spark-tools.ts`: `spark_stop_chat` offered to a parent for its own sub-chats (chat path), Ask Spark's path unchanged.
+- `tools/ask-spark-tools.ts`: `spark_stop_chat` offered to a parent for its own sub-chats (chat path), also in a turn a sub-chat's report or reply started; Ask Spark's path unchanged.
 - `tools/chat-tools.ts`: `spark_chats` filter `my_sub_chats`, `parent`, `subChats`; `spark_chat` parent and sub-chat fields.
 - `apps/server/src/orchestration/chat-place.ts`, `apps/server/src/workflow/publish-context.ts`: ask the sub-chats stack lookup first, the outpost one second (the fallback goes in slice 8).
 - `apps/server/src/workflow/chat-prompt-text.ts`, `chat-prompt.ts`, `chat-turn-prompt.ts`, `apps/server/src/agents/delegation-policy.ts`: the split guidance of design section 3, shown when `spark_sub_chats` is offered; the assigned-work line for a task turn.
@@ -161,7 +161,7 @@ Slices 2, 3 and 4 are one chain on the server. Slice 5 touches only `apps/web/sr
 **Tests**
 
 - Unit: `report.test.ts` (sections, missing sections, a reply with none, a failed turn), `wrap-up.test.ts` (moved cases, merge order for a stack).
-- `pnpm test:db`: `sub-chats-report.db.test.ts` (report delivered once per task turn; steered into a busy parent; a restart between turn end and report delivers it once; a report-started parent turn may message only that sub-chat and gets no `spark_sub_chats`), `sub-chats-release.db.test.ts` (released after all reports; Held behind a failure; Start anyway; Spark pause holds; the local parent commit at Automatic and the blocked case: move from `stacked-parent-work.db.test.ts` and `dependency-release.test.ts`), `sub-chats-wrap-up.db.test.ts` (one wrap-up when settled, read-only turn, no publish step at Full auto → PR and in Auto, one more after pieces are added).
+- `pnpm test:db`: `sub-chats-report.db.test.ts` (report delivered once per task turn; steered into a busy parent; a restart between turn end and report delivers it once; a report-started parent turn may message and stop any of its own sub-chats, may not message any other chat, and gets no `spark_sub_chats`), `sub-chats-release.db.test.ts` (released after all reports; Held behind a failure; Start anyway; Spark pause holds; the local parent commit at Automatic and the blocked case: move from `stacked-parent-work.db.test.ts` and `dependency-release.test.ts`), `sub-chats-wrap-up.db.test.ts` (one wrap-up when settled, read-only turn, no publish step at Full auto → PR and in Auto, one more after pieces are added).
 
 **Docs.** `docs/guide/sub-chats.md` (reports, Held and Start anyway, the wrap-up), `docs/guide/stacked-pull-requests.md` rewritten for sub-chats, `docs/guide/statuses-and-limits.md` (the five words), `whats-new.md`.
 
@@ -197,31 +197,31 @@ Leave `OutpostGroup.tsx`, `OutpostRows.tsx` and `outpost-members.ts` alone; slic
 
 ---
 
-## Slice 6: web Plan tab, cards and lines
+## Slice 6: web Sub-chats tab, cards and lines
 
-**Goal.** Everything else in the mock: the Plan tab, the plan card with model and effort pickers, the task card, the report block and the lines for messages between chats.
+**Goal.** Everything else in the mock: the Sub-chats tab, the plan card with model and effort pickers, the task card, the report block and the lines for messages between chats.
 
 **Add**
 
 - `apps/web/src/chat/sub-chats/`: `StartedLine.tsx`, `TaskCard.tsx`, `ReportBlock.tsx`, `AskLines.tsx` (with the collapsed "N exchanges with X"), `ask-lines.ts`, `sub-chats.css`.
 - `apps/web/src/chat/approvals/SubChatsPlanFacts.tsx`: the plan card (rows, **Edit** pickers for model and effort, **Show each task**), sending the edits with the approval.
-- `apps/web/src/tasks/SubChatsPane.tsx`, `sub-chats-pane.ts`, `use-sub-chats.ts`: the Plan tab (groups, rows, stack warnings, **Open**, **Start anyway**).
+- `apps/web/src/tasks/SubChatsPane.tsx`, `sub-chats-pane.ts`, `use-sub-chats.ts`: the Sub-chats tab (groups, rows, stack warnings, **Open**, **Start anyway**).
 
 **Change**
 
-- `apps/web/src/tasks/TaskDetails.tsx`, `WorkPanel.tsx`: tab id `sub-chats` labelled **Plan**, shown for a chat that has or had sub-chats even when it has no task of its own; the existing agreed-plan tab is relabelled **Agreed plan** (see Decisions).
+- `apps/web/src/tasks/TaskDetails.tsx`, `WorkPanel.tsx`: tab id `sub-chats` labelled **Sub-chats**, shown for a chat that has or had sub-chats even when it has no task of its own; the existing **Plan** tab (the agent's agreed plan) keeps its name (see Decisions).
 - `apps/web/src/chat/TurnSection.tsx`, `SparkActionCard.tsx`, `chat/queue/queue-model.ts`, `chat/retry-turn.ts`: render the new items; a turn another chat's message started offers no Retry as the user.
-- `apps/web/src/app/live/app-event-keys.ts`: `sub_chats_changed` refreshes the parent's Plan query and both chats' details.
-- Paired devices see the same Plan tab and lines; **Start anyway** follows its route rule; the plan card follows the ordinary card rules.
+- `apps/web/src/app/live/app-event-keys.ts`: `sub_chats_changed` refreshes the parent's sub-chats query and both chats' details.
+- Paired devices see the same Sub-chats tab and lines; **Start anyway** follows its route rule; the plan card follows the ordinary card rules.
 
 **Tests**
 
 - Unit: `ask-lines.test.ts` (states, collapsing, a deleted chat), `sub-chats-pane.test.ts` (grouping and order), `SubChatsPlanFacts.test.tsx` (pickers, keyboard, edits payload), `TaskCard.test.tsx`, `ReportBlock.test.tsx`.
-- Browser (fake provider, real server): `tests/browser/sub-chats.spec.ts` (ask the agent to split: the line, the tree, the Plan tab, a report, the wrap-up), `sub-chats-card.spec.ts` (plan card in Manual: edit a model, Start, Discard), `sub-chats-messages.spec.ts` (ask and reply lines in both chats, steered and queued), `sub-chats-phone.spec.ts` (paired phone reads the Plan and answers the card); add all to `spec-map.ts`. Streaming and background refresh must keep focus and scroll position in the Plan tab.
+- Browser (fake provider, real server): `tests/browser/sub-chats.spec.ts` (ask the agent to split: the line, the tree, the Sub-chats tab, a report, the wrap-up), `sub-chats-card.spec.ts` (plan card in Manual: edit a model, Start, Discard), `sub-chats-messages.spec.ts` (ask and reply lines in both chats, steered and queued), `sub-chats-phone.spec.ts` (paired phone reads the Sub-chats tab and answers the card); add all to `spec-map.ts`. Streaming and background refresh must keep focus and scroll position in the Sub-chats tab.
 
-**Docs.** `docs/guide/sub-chats.md` completed, `docs/guide/cards.md` and `answer-approvals.md` (plan card), `context-rail.md` or the page that documents the Work panel tabs (Plan, Agreed plan), `follow-a-turn.md` (message lines), `use-your-phone.md`, `whats-new.md`; screenshots through `pnpm docs:screenshots` if the guide page shows any.
+**Docs.** `docs/guide/sub-chats.md` completed, `docs/guide/cards.md` and `answer-approvals.md` (plan card), `context-rail.md` or the page that documents the Work panel tabs (Sub-chats beside Plan), `follow-a-turn.md` (message lines), `use-your-phone.md`, `whats-new.md`; screenshots through `pnpm docs:screenshots` if the guide page shows any.
 
-**Done when** the three screens of the mock (parent with Plan, plan card, sub-chat) exist against the real server on the fake provider, in light and dark and at phone width, and `pnpm check` and `pnpm test:browser:changed` pass. A real Claude chat splitting a small job is run once and its result reported (owner's "test for real" rule); that run is evidence, not a CI check.
+**Done when** the three screens of the mock (parent with the Sub-chats tab, plan card, sub-chat) exist against the real server on the fake provider, in light and dark and at phone width, and `pnpm check` and `pnpm test:browser:changed` pass. A real Claude chat splitting a small job is run once and its result reported (owner's "test for real" rule); that run is evidence, not a CI check.
 
 ---
 
@@ -314,27 +314,30 @@ Leave `OutpostGroup.tsx`, `OutpostRows.tsx` and `outpost-members.ts` alone; slic
 5. **Steered replies are not read from the stream.** The reply is an explicit `replyTo` call, else the reply of the turn the message started, else the text after the steer's offset when the turn ends, else No reply. Dropping the tail fallback, or not steering asks that want a reply, are both one-line changes.
 6. **A message from another chat never stops a turn.** The user's own steer may stop the turn and resend (`interrupt`); a chat's message goes to the queue instead.
 7. **One new run source, `chat`**, for every turn started by a task, message, reply, report or wrap-up. Old `outpost` runs are remapped to `chat`, or to `queue` when the user typed the request in the outpost.
-8. **The five-word status applies to sub-chats** (tree, flattened rows, Plan, report, `spark_chats`). Other chats keep today's sidebar states; the mock's "Idle" on a plain chat is today's state, not a sixth word.
+8. **The five-word status applies to sub-chats** (tree, flattened rows, the Sub-chats tab, report, `spark_chats`). Other chats keep today's sidebar states; the mock's "Idle" on a plain chat is today's state, not a sixth word.
 9. **A failed or stopped turn reads Needs you** with the reason, as outposts grouped Failed under Waiting on you.
-10. **Reports start a parent turn only for the task (or a later parent ask).** Turns the user typed in a sub-chat and follow-up rounds update the Plan row silently, so chatting in a sub-chat does not keep waking the parent.
+10. **Reports start a parent turn only for the task (or a later parent ask).** Turns the user typed in a sub-chat and follow-up rounds update the sub-chat row silently, so chatting in a sub-chat does not keep waking the parent.
 11. **Risks and Blockers come from labelled sections of the sub-chat's reply**; branch and pull request come from Spark's record. Missing sections read "None stated".
-12. **Sending between a sub-chat and its parent:** parent → sub-chat follows the mode; in a turn the parent's message started, the sub-chat may message the parent (the same-chat rule); in a turn the user typed in the sub-chat, messaging the parent is "any other chat" and needs the user's words or a card.
+12. **Sending between a sub-chat and its parent:** parent → sub-chat follows the mode, also in a turn a sub-chat's report or reply started (decision 23); in a turn the parent's message started, the sub-chat may message the parent (the same-chat rule); in a turn the user typed in the sub-chat, messaging the parent is "any other chat" and needs the user's words or a card.
 13. **"Any chat → any other chat" shows a card in every mode** when the user's message did not ask and name the chat, Bypass permissions and Full access included, as Ask Spark's card answers do.
 14. **The plan card edits model and effort only.** Mode is not editable there; the user raises a mode in the sub-chat.
 15. **A proposed mode above the parent's refuses the whole call**; an inherited mode is mapped down for another agent.
 16. **`spark_sub_chats` needs a project on the parent chat** (as `spark_outpost_start` did), so a chat with no project does not pay for the tool.
-17. **The Work panel already has a tab called Plan** (the agent's agreed plan, `TaskDetails.tsx`). The sub-chats tab takes the name **Plan**; the old one becomes **Agreed plan**. Owner should confirm the rename.
+17. **The sub-chats tab is named Sub-chats** (owner decision). The Work panel's existing **Plan** tab (the agent's agreed plan, `TaskDetails.tsx`) keeps its name and is not renamed. Contract names follow: `SubChatRow`, not `PlanRow`; docs say "Sub-chats tab" and "sub-chat row".
 18. **The user's Send now on a queued message from another chat is refused**, as it is for Ask Spark's messages; Spark steers those itself at delivery.
 19. **A parent is not auto-archived** while a sub-chat is Working or Held (replaces "an open request in its outpost").
 20. **Old outpost request turns stay in transcripts** and render "From another chat · not your message"; outpost threads, notes, pins, instructions and drafts are dropped with the tables.
 21. **Deletion order is web, then server**, so typecheck holds at each step; contract modules go with their last importer.
 22. **A2A is removed, not kept dormant** (`@a2a-js/sdk` leaves `package.json`), per AGENTS.md's "do not wrap every internal function in a protocol without a current need".
+23. **"No chains" exempts a parent messaging its own sub-chats** (owner decision). In a turn a sub-chat's report or reply started, the parent may `spark_send_to_chat` any of its own sub-chats and `spark_stop_chat` them, following its mode. In such a turn it still may not start new sub-chats (`spark_sub_chats` is not offered) or message any other chat.
+24. **Found in slice 1, owner to confirm: an archived sub-chat reads Done before Ready for review.** The design's table puts "or it is archived" in the last row, where first-match-wins gives it no effect. `subChatStatus` checks Held, Needs you, Working, then archived (Done), then Ready for review, so an archived sub-chat with an open pull request or kept changes reads Done; an archived one whose last turn failed still reads Needs you.
+25. **Found in slice 1:** a parent's summary also carries `subChatCount` (for the Sub-chats tab's visibility and `spark_chats`), a sub-chat with no message yet (Held) is listed and is never pruned as an empty chat, and the migration is `0268_sub_chats.sql`.
 
 ## What the owner's decisions make hard
 
-- **"No chains" also binds the parent.** A report starts a turn in the parent, and that turn was started by another chat's message, so by the rule it may answer the reporting sub-chat but may not message a sibling sub-chat or start more. The parent relays between sub-chats only on a turn the user typed. If the parent should coordinate on its own, exempt "a parent messaging its own sub-chats" from the no-chains rule; that is one condition in `sub-chats/asks.ts`.
+- **"No chains" binds the parent only in part** (decision 23). A report starts a turn in the parent, and that turn was started by another chat's message. In it the parent may message and stop any of its own sub-chats, so it can coordinate them without the user, but it may not start more sub-chats or message any other chat. That exemption is one condition in `sub-chats/asks.ts` and one in the `sub_chat_stop` need; a parent and its sub-chats can therefore exchange messages for as long as their agents keep going, with no cap, and the user stops it with Stop.
 - **Steering text the user did not type** is new: today `sendNow` refuses to steer anything but the user's own message. The steered text sits inside a turn the user started, so the backend's "the user's message asks for it" checks still read the turn's first message and are safe, but the agent itself reads the steer in the same session as the user's instructions. The wrapper labels it and it sets the send flag; the publish prompt's "later steering in this session" wording must say "the user's later steering".
 - **A prompt reply from a busy chat depends on the agent calling `replyTo`.** Without it the reply arrives at the end of the turn (tail fallback) or not at all.
 - **Tool budget.** Every chat now carries `spark_send_to_chat`, and chats with a project carry `spark_sub_chats` with a nested input. `spark_outpost_draft` leaves, but the plain-chat cap in `spark-tool-budget.test.ts` needs checking in slices 2 and 3.
-- **The Plan tab name clashes** with the existing agreed-plan tab (decision 17), and the Work panel's tabs are built around a task; a parent that only splits work has no task of its own, so the panel must show the tab without one.
+- **The Work panel's tabs are built around a task** (the sub-chats tab is named **Sub-chats**, so it no longer clashes with the agreed-plan **Plan** tab; decision 17); a parent that only splits work has no task of its own, so the panel must show the tab without one.
 - **knip per slice.** Moving stack and mode-cap code while outposts still run means the old modules import the moved ones for a few slices; the fallback in `chat-place.ts` and `publish-context.ts` must go in slice 8 or it is dead code.

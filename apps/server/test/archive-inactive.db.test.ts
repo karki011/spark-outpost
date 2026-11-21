@@ -8,7 +8,9 @@ import {
   archiveInactive,
   startArchiveSweep,
 } from '../src/workflow/archive-inactive.ts';
+import { markSubChatStarted } from '../src/persistence/sub-chats.ts';
 import { createTestApp, localClient } from './app-support.ts';
+import { addSubChat, turnIn } from './sub-chat-fixtures.ts';
 import { createTestDb, eventually, startChat, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -171,6 +173,21 @@ describe('archiving inactive chats', () => {
     await outpostWith(answeredMember, 'answered');
 
     expect(await archiveInactive(t.db, t.workspaceId)).toEqual([answeredMember]);
+  });
+
+  it('keeps a parent while a sub-chat is Held or Working, and archives it once they settle', async () => {
+    const heldParent = await idleChat(9, 'Parent of a held piece');
+    await addSubChat(t, heldParent, 'Held piece');
+    const workingParent = await idleChat(9, 'Parent of a working piece');
+    const working = await addSubChat(t, workingParent, 'Working piece');
+    await markSubChatStarted(t.db, working, randomUUID());
+    await turnIn(t, working, 'running');
+    const settledParent = await idleChat(9, 'Parent of a finished piece');
+    const finished = await addSubChat(t, settledParent, 'Finished piece');
+    await markSubChatStarted(t.db, finished, randomUUID());
+    await turnIn(t, finished, 'succeeded');
+
+    expect(await archiveInactive(t.db, t.workspaceId)).toEqual([settledParent]);
   });
 
   it('leaves an unsent draft alone', async () => {

@@ -18,6 +18,7 @@ export const appEventKindSchema = z.enum([
   'ticket',
   'preview',
   'outpost_changed',
+  'sub_chats_changed',
   'agent_terminal',
   'terminal_start',
   'spark_pause',

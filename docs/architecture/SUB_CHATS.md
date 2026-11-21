@@ -12,12 +12,12 @@ Six words cover the feature:
 | -------- | -------------------------------------------------------------------------------------------------- |
 | Parent   | A chat that started sub-chats. Any chat with a project can become one; a sub-chat cannot.          |
 | Sub-chat | An ordinary chat a parent's agent started. One level only.                                         |
-| Plan     | The set of sub-chats of one parent, shown in the parent's Work panel.                              |
+| Plan     | The set of sub-chats of one parent, shown in the **Sub-chats** tab of the parent's Work panel.     |
 | Task     | The first message a sub-chat gets. The parent's agent wrote it; it is never the user's message.    |
 | Report   | What Spark delivers to the parent when a sub-chat's task turn ends.                                |
 | Message  | Text one chat's agent sends another chat with `spark_send_to_chat`, optionally asking for a reply. |
 
-One status vocabulary is used in the sidebar tree, the Plan tab, the report and `spark_chats`: **Needs you, Working, Held, Ready for review, Done** (section 9).
+One status vocabulary is used in the sidebar tree, the Sub-chats tab, the report and `spark_chats`: **Needs you, Working, Held, Ready for review, Done** (section 9).
 
 ### Owner decisions this design implements
 
@@ -37,8 +37,8 @@ Where the tree is flattened (History, search results, filtered lists, Home, the 
 
 ### Parent chat
 
-- A line under the turn that started them: **Started N sub-chats: a, b, c** with **Plan ›**, which opens the Plan tab.
-- The Work panel gets a **Plan** tab, shown only for a chat that has (or had) sub-chats. One row per sub-chat, grouped **Needs you / Ready for review / Working / Held / Done**. A row shows the title, status, branch, pull request and its checks, model, **stacked on X** or **Starts after X, Y**, and **Started by this chat**. A Needs you row shows why (the question or card title) with **Open ›**. A Held row has **Start anyway**. The footer reads "Spark never merges. Each sub-chat publishes under its own mode and autonomy."
+- A line under the turn that started them: **Started N sub-chats: a, b, c** with **Sub-chats ›**, which opens the Sub-chats tab.
+- The Work panel gets a **Sub-chats** tab, shown only for a chat that has (or had) sub-chats. The existing **Plan** tab (the agent's agreed plan) keeps its name. One row per sub-chat, grouped **Needs you / Ready for review / Working / Held / Done**. A row shows the title, status, branch, pull request and its checks, model, **stacked on X** or **Starts after X, Y**, and **Started by this chat**. A Needs you row shows why (the question or card title) with **Open ›**. A Held row has **Start anyway**. The footer reads "Spark never merges. Each sub-chat publishes under its own mode and autonomy."
 - Reports appear in the transcript as a **Report · <sub-chat>** block with fixed fields (section 7).
 - There is no needs-you queue above the message box. Approvals and questions are answered in the sub-chat and surface through the existing attention state (island, Dock badge, sidebar count, pushes).
 
@@ -122,13 +122,14 @@ Who may send to whom:
 | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Parent → its own sub-chat                                                                       | Follows the agent's mode.                                                                                                                                                                                                                                               |
 | A turn another chat's message started → that same chat                                          | Follows the agent's mode (reply or ask again).                                                                                                                                                                                                                          |
-| Such a turn → any third chat                                                                    | Refused. No chains.                                                                                                                                                                                                                                                     |
+| A turn a sub-chat's report or reply started in its parent → any of the parent's own sub-chats   | Follows the agent's mode. The parent may coordinate its own sub-chats.                                                                                                                                                                                                  |
+| Such a turn → any other chat                                                                    | Refused. No chains.                                                                                                                                                                                                                                                     |
 | Any chat → any other chat                                                                       | Performed only when the user's own message in that turn asks for it and names the chat; otherwise a card in every mode. The backend checks the message with `userWroteTurn`, a `send_to_chat` request pattern and `namesChat` (the check Ask Spark's card answers use). |
 | Any chat → a Terminal session, Ask Spark's chat, a hidden `crew` chat, an archived chat, itself | Refused.                                                                                                                                                                                                                                                                |
 
 ### `spark_stop_chat` (extended)
 
-Ask Spark keeps today's path. A parent gets it for its own sub-chats only (need `sub_chat_stop`: the chat has at least one sub-chat), following the agent's mode (new action `stop_sub_chat`). Audited "Turn stopped · <sub-chat> · By <parent>".
+Ask Spark keeps today's path. A parent gets it for its own sub-chats only (need `sub_chat_stop`: the chat has at least one sub-chat), following the agent's mode (new action `stop_sub_chat`), including in a turn a sub-chat's report or reply started. Audited "Turn stopped · <sub-chat> · By <parent>".
 
 ### Tracking
 
@@ -151,7 +152,7 @@ Ask Spark keeps today's path. A parent gets it for its own sub-chats only (need 
 
 - A task, a message from another chat, a reply, a report and a wrap-up are never the user's message in the receiving chat. They cannot authorise a push, a pull request or a Spark action. The receiving chat's own mode and autonomy decide what happens: a sub-chat at Full auto → PR still opens its pull request, and one at Automatic does not because its parent said so.
 - Runs they start have run source `chat`. `userWroteTurn`, `userText`, the publish-step reason, the Spark and workflow extra card, the Spark rules session rule and the chat-started trigger treat `chat` as they treat `assistant` and `workflow` today: not the user's.
-- A sub-chat or a turn another chat's message started gets no `spark_sub_chats`. A turn another chat's message started may message only that chat.
+- A sub-chat or a turn another chat's message started gets no `spark_sub_chats`. A turn another chat's message started may message only that chat, with one exception: in a turn a sub-chat's report or reply started, the parent may send to (`spark_send_to_chat`) and stop (`spark_stop_chat`) any of its own sub-chats, following its mode. It still may not start new sub-chats or message any other chat in such a turn.
 - Text steered into a running turn counts as an untrusted work-data read in the receiving turn (it sets the send flag's note for the rest of that turn). A task or message that starts its own turn is Spark's own record of the chat's work and does not.
 - Not offered to spoken runs or child runs. A run started from a paired device gets `spark_sub_chats`, the chat path of `spark_send_to_chat` and `spark_stop_chat` only while that device's remote switches allow the matching routes (`POST /api/conversations`, `POST /api/conversations/:id/queue`, `POST /api/runs/:id/cancel`), using the `deviceRefusal` pattern in `ask-spark-limits.ts`. The plan card is an ordinary Spark action card.
 - Every start, task, message, reply, report and stop is an audit entry naming both chats and how it was allowed (mode, card, or "your message asked"), never the text.
@@ -211,7 +212,7 @@ A reply (and a No reply notice) is itself delivered to the sender by the same de
   - **Risks** and **Blockers**: from the sub-chat's reply.
   - Footer: "Written by the sub-chat's agent, not checked by Spark".
 - The task wrapper asks the sub-chat's agent to end its reply with `Changed:`, `Risks:` and `Blockers:` sections. Spark reads those sections; a missing one reads "None stated", and with none of them the reply's opening lines become Changed. A failed or stopped task turn sends a report with status Needs you and the reason.
-- A turn the user typed in a sub-chat, and a pull request follow-up round, update the sub-chat's row (latest report, status) and the Plan tab. They do not start a turn in the parent.
+- A turn the user typed in a sub-chat, and a pull request follow-up round, update the sub-chat's row (latest report, status) and the Sub-chats tab. They do not start a turn in the parent.
 - **Wrap-up:** when no sub-chat of the parent is Working and none can still start by itself (each has reported, failed or been stopped, or is Held behind one that failed or was stopped), Spark sends the parent one wrap-up: every sub-chat's status with Spark's own branch, commit, push and pull request record, and the order to merge stacked pull requests. It runs as a read-only reply (`asWrapUpReply`: a Do turn becomes an Ask turn), starts no build and no publish step, and authorises no push or pull request at any level or in any mode. It is written once per settled set; adding pieces later allows one more.
 
 ## 8. Landing: stacked sub-chats
@@ -221,8 +222,8 @@ Today's stacked-branch rules are kept and re-keyed from story tasks to `sub_chat
 - A stacked sub-chat's worktree branches from the sub-chat it is stacked on (`stackParentOf` in `orchestration/chat-place.ts`), and its pull request targets that branch while that pull request is open, otherwise the default branch (`prBase`).
 - It pushes only its own branch, never force pushes, updates by merge, and is refused a push by `spark_push` and by a gated `git push` while its parent branch is not on the remote (`approvals/publish-policy.ts`, `approvals/stacked-push.ts`, `ship/agent-push.ts`); in a mode the gate cannot see the push is flagged, never stopped (`observations/stacked-push-watch.ts`).
 - A stacked sub-chat is always Held until the one it is stacked on has reported. At Automatic, Spark first commits that sub-chat's kept changes on its own `spark/*` branch (a local commit like Ship → Commit, never pushed); if the commit cannot be made the stacked sub-chat stays Held (`stacked-parent-work.ts`).
-- `startsAfter` alone is order only. A Held sub-chat starts when everything it waits on has reported. When something it waits on failed or was stopped it stays Held and says so; **Start anyway** on the Plan row starts it.
-- Stack warnings (`stackWarnings`: parent not pushed, behind parent, base merged, base mismatch) show on the Plan row.
+- `startsAfter` alone is order only. A Held sub-chat starts when everything it waits on has reported. When something it waits on failed or was stopped it stays Held and says so; **Start anyway** on the sub-chat row starts it.
+- Stack warnings (`stackWarnings`: parent not pushed, behind parent, base merged, base mismatch) show on the sub-chat row.
 
 ## 9. Status
 
@@ -236,7 +237,7 @@ One pure function in `packages/contracts/src/sub-chat-status.ts` maps a sub-chat
 | Ready for review | Its last turn succeeded and it has an open pull request or kept changes not yet merged.         |
 | Done             | Its pull request is merged or closed, or it finished with nothing to review, or it is archived. |
 
-Chats that are neither a parent's sub-chat nor shown in a Plan keep today's sidebar row states. Sub-chat approvals, questions, finished and failed turns are ordinary attention items; no new attention kind is added.
+Chats that are neither a parent's sub-chat nor shown in a Sub-chats tab keep today's sidebar row states. Sub-chat approvals, questions, finished and failed turns are ordinary attention items; no new attention kind is added.
 
 ## 10. Data model
 
@@ -324,16 +325,16 @@ New folder `apps/server/src/sub-chats/`:
 | `availability.ts`                                                                                  | `sub_chats`, `chat_messages`, `sub_chat_stop` needs                                                                                          | replaces `outposts/outpost-availability.ts`                                                                                                                                        |
 | `user-asked.ts`                                                                                    | `userText`, `isWrapUp`                                                                                                                       | moved from `outposts/user-asked.ts` (imported by `crew-flows/workflow-turn.ts`, `workflow/chat-turn-steps.ts`, `publish-context.ts`, `publish-step-reason.ts`, `action-policy.ts`) |
 
-Contracts: `sub-chats.ts` (schemas for the plan action, plan rows, asks), `sub-chat-status.ts`, `sub-chat-stack.ts` (from `outpost-stack.ts` and the stack parts of `outpost-story.ts`), `sub-chat-mode-cap.ts` (from `outpost-mode-cap.ts`). App event `sub_chats_changed` replaces `outpost_changed`.
+Contracts: `sub-chats.ts` (schemas for the plan action, sub-chat rows (`SubChatRow`), asks), `sub-chat-status.ts`, `sub-chat-stack.ts` (from `outpost-stack.ts` and the stack parts of `outpost-story.ts`), `sub-chat-mode-cap.ts` (from `outpost-mode-cap.ts`). App event `sub_chats_changed` replaces `outpost_changed`.
 
 Delivery runs in the API process where the dispatcher runs today (`api/main.ts`); the worker needs only `stackGit` in its Spark tool deps. A2A is not used: nothing here needs an agent protocol between two chats in one process, so `@a2a-js/sdk` is removed. Should chats on different machines ever talk, that is the time to add a protocol.
 
 ### Routes
 
-| Route                                                    | Use                        | Paired device                                                                   |
-| -------------------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------- |
-| `GET /api/conversations/:id/sub-chats`                   | Plan rows for the Plan tab | Allowed with reading chats                                                      |
-| `POST /api/conversations/:id/sub-chats/:subChatId/start` | Start anyway               | Allowed with sending messages (the rule of `POST /api/conversations/:id/queue`) |
+| Route                                                    | Use                                 | Paired device                                                                   |
+| -------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------- |
+| `GET /api/conversations/:id/sub-chats`                   | Sub-chat rows for the Sub-chats tab | Allowed with reading chats                                                      |
+| `POST /api/conversations/:id/sub-chats/:subChatId/start` | Start anyway                        | Allowed with sending messages (the rule of `POST /api/conversations/:id/queue`) |
 
 Everything else rides existing routes: the conversation list and detail carry `parent`, `formerParent`, `subChat` and `asks`; the plan card is answered through the approvals route; the queue routes remove a queued message. Each new route gets its line in `apps/server/src/remote/route-rules.ts` or the policy test fails.
 

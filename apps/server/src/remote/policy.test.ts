@@ -64,6 +64,13 @@ describe('remote policy', () => {
     );
   });
 
+  it('lets a paired device read a chat’s sub-chats wherever it may read chats', () => {
+    expect(remoteDecision('GET', `/api/conversations/${ID}/sub-chats`, ALL_OFF).kind).toBe('allow');
+    expect(remoteDecision('POST', `/api/conversations/${ID}/sub-chats`, ALL_ON).kind).toBe(
+      'refuse',
+    );
+  });
+
   it('lets a paired device start a proposed draft as proposed, but not create or edit outposts', () => {
     expect(remoteDecision('POST', `/api/outposts/drafts/${ID}/start`, ALL_OFF).kind).toBe('allow');
     expect(remoteDecision('GET', `/api/outposts/drafts/${ID}`, ALL_ON).kind).toBe('refuse');

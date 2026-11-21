@@ -32,6 +32,7 @@ import {
   type TokenUsage,
 } from '@spark-outpost/contracts';
 import { toAttention, type PendingApprovalRow } from './attention.ts';
+import { subChatFields, type SubChatSummaryRow } from './sub-chat-facts.ts';
 
 export const MESSAGE_COLUMNS = 'id, conversation_id, role, content, run_id, created_at';
 
@@ -97,7 +98,7 @@ export interface RunRow {
   error_details?: string | null;
 }
 
-export interface ConversationSummaryRow extends PendingApprovalRow {
+export interface ConversationSummaryRow extends PendingApprovalRow, SubChatSummaryRow {
   id: string;
   shell_alert?: string | null;
   title: string;
@@ -332,6 +333,11 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
     ...(row.outpost_id && row.outpost_handle && typeof row.outpost_name === 'string'
       ? { outpost: { id: row.outpost_id, name: row.outpost_name, handle: row.outpost_handle } }
       : {}),
+    ...subChatFields(row, {
+      archived: row.archived_at !== null,
+      needsInput: row.needs_input,
+      runStatus: row.latest_run_status,
+    }),
   };
 }
 

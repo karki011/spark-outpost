@@ -39,6 +39,7 @@ import { LISTED_CHAT, searchConversations } from './conversation-search.ts';
 import { summaryQuery } from './summary-query.ts';
 import { taskForNewRun } from './tasks.ts';
 import { listQueue } from './chat-queue.ts';
+import { listChatAsks } from './chat-asks.ts';
 import { listMemberMessages } from './member-messages.ts';
 import { taskOverviews } from './task-views.ts';
 import { conversationUsage } from './usage.ts';
@@ -154,7 +155,8 @@ export async function pruneEmptyConversations(db: Queryable, workspaceId: string
        AND c.updated_at < now() - interval '1 day'
        AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
        AND NOT EXISTS (SELECT 1 FROM native_terminal_sessions t WHERE t.conversation_id = c.id)
-       AND NOT EXISTS (SELECT 1 FROM outpost_members om WHERE om.conversation_id = c.id)`,
+       AND NOT EXISTS (SELECT 1 FROM outpost_members om WHERE om.conversation_id = c.id)
+       AND NOT EXISTS (SELECT 1 FROM sub_chats sc WHERE sc.conversation_id = c.id)`,
     [workspaceId],
   );
 }
@@ -191,6 +193,7 @@ export async function getConversationDetail(
     subagents,
     nativeActivity,
     promptCache,
+    asks,
   ] = await Promise.all([
     db.query<MessageRow>(
       `SELECT ${MESSAGE_COLUMNS} FROM messages WHERE conversation_id = $1 ORDER BY created_at, id`,
@@ -236,6 +239,7 @@ export async function getConversationDetail(
     conversationSubagents(db, id),
     nativeStepActivity(db, id),
     promptCacheFor(db, id),
+    listChatAsks(db, id),
   ]);
   const attachments = await attachmentsForMessages(
     db,
@@ -268,6 +272,7 @@ export async function getConversationDetail(
     ...(interruption ? { interruption } : {}),
     ...(Object.keys(subagents).length > 0 ? { subagents } : {}),
     ...(promptCache.last ? { promptCache } : {}),
+    ...(asks.length > 0 ? { asks } : {}),
   };
 }
 
