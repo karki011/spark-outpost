@@ -26,6 +26,7 @@ import type { GitHubConnection } from '../ship/github/connection.ts';
 import { repoSlug } from '../ship/remote.ts';
 import { projectRepos, repoKey, type ProjectRepo } from '../tickets/github-pulls.ts';
 import { keysIn } from '../tickets/pull-ticket-keys.ts';
+import { firstAnswer } from './fallback.ts';
 import { inboxPulls, seenFlags, strongest, type InboxPull } from './group.ts';
 import {
   inboxQuery,
@@ -145,13 +146,16 @@ async function fetchGroup(group: ConnectionGroup, since: string, into: Fetched):
 async function reviewConnections(
   deps: GitHubDeps,
   repos: readonly ProjectRepo[],
-): Promise<GitHubConnection[]> {
-  const byHost = new Map<string, GitHubConnection>();
+): Promise<GitHubConnection[][]> {
+  const byHost = new Map<string, GitHubConnection[]>();
   for (const entry of repos) {
     if (byHost.has(entry.repo.host)) continue;
     const found = await connectionsFor(deps, entry.repo).catch(() => []);
-    const widest = found.find((connection) => connection.method !== 'app') ?? found[0];
-    if (widest) byHost.set(entry.repo.host, widest);
+    const widestFirst = [
+      ...found.filter((connection) => connection.method !== 'app'),
+      ...found.filter((connection) => connection.method === 'app'),
+    ];
+    if (widestFirst.length > 0) byHost.set(entry.repo.host, widestFirst);
   }
   return [...byHost.values()];
 }
@@ -165,16 +169,19 @@ function reviewPartOf(pull: HostedPull): InboxPart {
 }
 
 async function fetchReviewRequests(
-  connection: GitHubConnection,
+  connections: readonly GitHubConnection[],
   since: string,
   into: Fetched,
 ): Promise<void> {
+  const host = connections[0]!.host;
   try {
-    const body = await connection.post(
-      '/graphql',
-      { query: reviewRequestsQuery(since) },
-      z.unknown(),
-      'searching pull requests',
+    const { connection, answer: body } = await firstAnswer(connections, (each) =>
+      each.post(
+        '/graphql',
+        { query: reviewRequestsQuery(since) },
+        z.unknown(),
+        'searching pull requests',
+      ),
     );
     for (const part of REVIEW_PARTS) {
       const page = parseInboxPage(body, part);
@@ -184,7 +191,7 @@ async function fetchReviewRequests(
     }
   } catch (error) {
     into.problems.push({ repo: null, message: problemText(error) });
-    REVIEW_PARTS.forEach((part) => into.reviewFailed.add(reviewKey(connection.host, part)));
+    REVIEW_PARTS.forEach((part) => into.reviewFailed.add(reviewKey(host, part)));
   }
 }
 
@@ -209,8 +216,8 @@ async function fetchSnapshot(
   };
   const groups = await groupByConnection(deps, repos, into.problems);
   const since = sinceDate(now, days);
-  for (const connection of await reviewConnections(deps, repos)) {
-    await fetchReviewRequests(connection, since, into);
+  for (const connections of await reviewConnections(deps, repos)) {
+    await fetchReviewRequests(connections, since, into);
   }
   for (const group of groups) await fetchGroup(group, since, into);
   const kept = (previous?.pulls ?? []).filter(

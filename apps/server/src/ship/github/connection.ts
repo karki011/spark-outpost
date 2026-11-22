@@ -131,6 +131,9 @@ function errorMessage(action: string, response: GitHubResponse): string {
   if (response.status === 403 || response.status === 404) {
     return `GitHub denied access while ${action} (${response.status}). Check that your login or token can write to this repository.`;
   }
+  if (response.status >= 500) {
+    return `GitHub had a server error while ${action} (${response.status}). Try again in a moment.`;
+  }
   return `GitHub responded with ${response.status} while ${action}${detail ? `: ${detail}` : '.'}`;
 }
 
