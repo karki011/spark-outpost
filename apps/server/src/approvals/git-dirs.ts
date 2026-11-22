@@ -44,18 +44,23 @@ function labelIn(dirs: GitDirs, target: string): string | null {
 }
 
 export function gitControlLabel(roots: readonly GitRoot[], target: string): string | null {
+  const written = toGatePath(target);
   for (const root of roots) {
-    const label = root.gitDirs ? labelIn(root.gitDirs, target) : null;
+    const label = root.gitDirs ? labelIn(gateGitDirs(root.gitDirs), written) : null;
     if (label) return label;
   }
   return null;
 }
 
+export function gateGitDirs(dirs: GitDirs): GitDirs {
+  return { ...dirs, common: toGatePath(dirs.common), own: toGatePath(dirs.own) };
+}
+
 function globsFor(root: GitRoot): string[] {
-  const dirs = root.gitDirs;
-  if (!dirs) return [];
+  if (!root.gitDirs) return [];
+  const dirs = gateGitDirs(root.gitDirs);
   const shared =
-    dirs.common === path.join(root.path, '.git')
+    dirs.common === path.join(toGatePath(root.path), '.git')
       ? []
       : [path.join(dirs.common, 'hooks', '*'), path.join(dirs.common, 'config')];
   const own = dirs.own === dirs.common ? [] : [path.join(dirs.own, 'config.worktree')];

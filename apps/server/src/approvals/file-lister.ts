@@ -1,6 +1,12 @@
 import { execFile } from 'node:child_process';
 import { glob, readdir, readFile, realpath, stat } from 'node:fs/promises';
-import { gatePaths as path, gateRelative, toGatePath, toNativePath } from './gate-path.ts';
+import {
+  gatePaths as path,
+  gateRelative,
+  nativeOrNull,
+  toGatePath,
+  toNativePath,
+} from './gate-path.ts';
 import { promisify } from 'node:util';
 import { PROJECT_READ_MAX_BYTES } from '../projects/path-policy.ts';
 
@@ -34,16 +40,20 @@ const GIT_TIMEOUT_MS = 5_000;
 const SKIPPED_DIRS = new Set(['node_modules', '.git']);
 
 async function isDirectory(target: string): Promise<boolean | null> {
+  const native = nativeOrNull(target);
+  if (native === null) return null;
   try {
-    return (await stat(toNativePath(target))).isDirectory();
+    return (await stat(native)).isDirectory();
   } catch {
     return null;
   }
 }
 
 async function entriesOf(dir: string) {
+  const native = nativeOrNull(dir);
+  if (native === null) return [];
   try {
-    return await readdir(toNativePath(dir), { withFileTypes: true });
+    return await readdir(native, { withFileTypes: true });
   } catch {
     return [];
   }
@@ -79,8 +89,10 @@ async function committedUnchanged(file: string): Promise<boolean> {
 }
 
 async function readScript(target: string): Promise<ScriptFile | null> {
+  const written = nativeOrNull(target);
+  if (written === null) return null;
   try {
-    const native = await realpath(toNativePath(target));
+    const native = await realpath(written);
     const real = toGatePath(native);
     const stats = await stat(native);
     if (!stats.isFile()) return null;
@@ -92,10 +104,12 @@ async function readScript(target: string): Promise<ScriptFile | null> {
 }
 
 async function globFiles(pattern: string, cwd: string): Promise<string[] | null> {
+  const nativeCwd = nativeOrNull(cwd);
+  if (nativeCwd === null) return [];
   try {
     const found: string[] = [];
     const matches = glob(pattern, {
-      cwd: toNativePath(cwd),
+      cwd: nativeCwd,
       exclude: (name) => SKIPPED_DIRS.has(path.basename(String(name))),
     });
     for await (const match of matches) {

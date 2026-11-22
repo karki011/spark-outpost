@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { diskFiles } from './file-lister.ts';
+import { toGatePath as gate } from './gate-path.ts';
 
 let root: string;
 const git = (...args: string[]) =>
@@ -69,15 +70,17 @@ describe('diskFiles listing', () => {
     await writeFile(join(root, 'node_modules', 'pkg', 'index.js'), '');
     await mkdir(join(root, 'src'));
     await writeFile(join(root, 'src', 'a.py'), '');
-    expect((await diskFiles.glob('*.py', root))?.sort()).toEqual(
-      ['edited.py', 'ignored.py', 'new.py', 'tool.py'].map((name) => join(root, name)),
+    expect((await diskFiles.glob('*.py', gate(root)))?.sort()).toEqual(
+      ['edited.py', 'ignored.py', 'new.py', 'tool.py'].map((name) => gate(join(root, name))),
     );
-    const walked = await diskFiles.walk(root);
-    expect(walked).toContain(join(root, 'src', 'a.py'));
+    const walked = await diskFiles.walk(gate(root));
+    expect(walked).toContain(gate(join(root, 'src', 'a.py')));
     expect(walked?.some((file) => file.includes('node_modules') || file.includes('.git/'))).toBe(
       false,
     );
-    expect(await diskFiles.walk(join(root, 'tool.py'))).toEqual([join(root, 'tool.py')]);
+    expect(await diskFiles.walk(gate(join(root, 'tool.py')))).toEqual([
+      gate(join(root, 'tool.py')),
+    ]);
     expect(await diskFiles.walk(join(root, 'missing'))).toEqual([]);
   });
 });

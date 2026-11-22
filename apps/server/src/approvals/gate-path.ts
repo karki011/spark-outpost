@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { tmpdir } from 'node:os';
 import { relativeInside } from '../projects/path-policy.ts';
 
 export const gatePaths = path.posix;
@@ -6,6 +7,7 @@ export const gatePaths = path.posix;
 const WINDOWS_DRIVE = /^([A-Za-z]):(?:[\\/]|$)(.*)$/s;
 const WINDOWS_UNC = /^\\\\([^\\/]+)[\\/]([^\\/]+)(.*)$/s;
 const GATE_DRIVE = /^\/([A-Za-z])(?:\/(.*))?$/s;
+const GATE_TEMP = /^\/tmp(?:\/(.*))?$/s;
 
 export function toGatePath(native: string, platform: NodeJS.Platform = process.platform): string {
   if (platform !== 'win32') return native;
@@ -17,10 +19,20 @@ export function toGatePath(native: string, platform: NodeJS.Platform = process.p
 }
 
 export function toNativePath(gate: string, platform: NodeJS.Platform = process.platform): string {
+  return nativeOrNull(gate, platform) ?? gate;
+}
+
+export function nativeOrNull(
+  gate: string,
+  platform: NodeJS.Platform = process.platform,
+  temp: string = tmpdir(),
+): string | null {
   if (platform !== 'win32') return gate;
   const drive = GATE_DRIVE.exec(gate);
-  if (!drive) return gate;
-  return path.win32.join(`${drive[1]!.toUpperCase()}:\\`, drive[2] ?? '');
+  if (drive) return path.win32.join(`${drive[1]!.toUpperCase()}:\\`, drive[2] ?? '');
+  const inTemp = GATE_TEMP.exec(gate);
+  if (inTemp) return path.win32.join(temp, inTemp[1] ?? '');
+  return isWindowsPath(gate) ? gate : null;
 }
 
 export function isWindowsPath(word: string): boolean {

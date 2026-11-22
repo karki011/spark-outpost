@@ -208,10 +208,12 @@ export function programTokens(tokens: readonly string[]): string[] {
 export function resolveCommandPath(word: string, cwd: string, home: string): string {
   const written = toGatePath(word);
   const expanded =
-    written === '~' || written.startsWith('~/') ? path.join(home, written.slice(1)) : written;
+    written === '~' || written.startsWith('~/')
+      ? path.join(toGatePath(home), written.slice(1))
+      : written;
   const staticPart = expanded.split(/[*?[{]/)[0] ?? '';
   const base = staticPart === '' ? '.' : staticPart;
-  return path.resolve(cwd, base);
+  return path.resolve(toGatePath(cwd), base);
 }
 
 export function allowlistCovers(allowlist: readonly string[], command: string): boolean {

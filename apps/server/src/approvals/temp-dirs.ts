@@ -1,6 +1,6 @@
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { gatePaths as path, gateRelativeInside, toGatePath, toNativePath } from './gate-path.ts';
+import { gatePaths as path, gateRelativeInside, nativeOrNull, toGatePath } from './gate-path.ts';
 
 const FIXED_TEMP_ROOTS = ['/tmp', '/private/tmp', '/var/tmp', '/private/var/tmp'];
 const TEMP_VARIABLE = /^\$(?:TMPDIR|\{TMPDIR\})(?=\/|$)/;
@@ -10,8 +10,10 @@ function systemTemp(): string {
 }
 
 function realOrNull(target: string): string | null {
+  const native = nativeOrNull(target);
+  if (native === null) return null;
   try {
-    return toGatePath(realpathSync(toNativePath(target)));
+    return toGatePath(realpathSync(native));
   } catch {
     return null;
   }

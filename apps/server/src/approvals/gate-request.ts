@@ -1,10 +1,6 @@
-import type { GitDirs } from '../projects/path-policy.ts';
 import type { ApprovalRequest, RequestRoot } from './decide.ts';
 import { toGatePath } from './gate-path.ts';
-
-function gateGitDirs(dirs: GitDirs): GitDirs {
-  return { ...dirs, common: toGatePath(dirs.common), own: toGatePath(dirs.own) };
-}
+import { gateGitDirs } from './git-dirs.ts';
 
 function gateRoot(root: RequestRoot): RequestRoot {
   return {

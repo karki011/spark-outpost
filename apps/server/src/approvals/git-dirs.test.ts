@@ -3,9 +3,11 @@ import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { toGatePath } from './gate-path.ts';
 import { gitControlGlobs, gitControlLabel, readGitDirs } from './git-dirs.ts';
 
 let repo: string;
+const at = (...parts: string[]) => toGatePath(join(...parts));
 let worktree: string;
 
 const git = (cwd: string, ...args: string[]) =>
@@ -27,14 +29,14 @@ const rootOf = async (path: string) => ({ path, gitDirs: await readGitDirs(path)
 
 describe('readGitDirs()', () => {
   it('finds one git folder for a checkout', async () => {
-    const common = join(repo, '.git');
+    const common = at(repo, '.git');
     expect(await readGitDirs(repo)).toEqual({ common, own: common });
   });
 
   it("finds the checkout's git folder and the worktree's own one for a worktree", async () => {
     expect(await readGitDirs(worktree)).toEqual({
-      common: join(repo, '.git'),
-      own: join(repo, '.git', 'worktrees', 'chat-1'),
+      common: at(repo, '.git'),
+      own: at(repo, '.git', 'worktrees', 'chat-1'),
       branch: 'refs/heads/spark/chat-1',
     });
   });
@@ -53,17 +55,17 @@ describe('gitControlGlobs()', () => {
 
   it("names the real hooks, config and the worktree's own config for a worktree", async () => {
     expect(gitControlGlobs([await rootOf(worktree)])).toEqual([
-      join(repo, '.git', 'hooks', '*'),
-      join(repo, '.git', 'config'),
-      join(repo, '.git', 'worktrees', 'chat-1', 'config.worktree'),
+      at(repo, '.git', 'hooks', '*'),
+      at(repo, '.git', 'config'),
+      at(repo, '.git', 'worktrees', 'chat-1', 'config.worktree'),
     ]);
   });
 
   it('names the git folder of a linked folder that sits below the top of its repository', async () => {
     const below = { path: join(repo, 'packages'), gitDirs: await readGitDirs(repo) };
     expect(gitControlGlobs([below])).toEqual([
-      join(repo, '.git', 'hooks', '*'),
-      join(repo, '.git', 'config'),
+      at(repo, '.git', 'hooks', '*'),
+      at(repo, '.git', 'config'),
     ]);
   });
 
@@ -74,7 +76,7 @@ describe('gitControlGlobs()', () => {
 
   it('still names .git/hooks when core.hooksPath points somewhere else', async () => {
     git(repo, 'config', 'core.hooksPath', '.husky');
-    expect(gitControlGlobs([await rootOf(worktree)])).toContain(join(repo, '.git', 'hooks', '*'));
+    expect(gitControlGlobs([await rootOf(worktree)])).toContain(at(repo, '.git', 'hooks', '*'));
     expect(gitControlGlobs([await rootOf(worktree)]).join(' ')).not.toContain('.husky');
     git(repo, 'config', '--unset', 'core.hooksPath');
   });

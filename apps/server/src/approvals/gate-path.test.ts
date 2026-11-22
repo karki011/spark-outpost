@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isWindowsPath, toGatePath, toNativePath } from './gate-path.ts';
+import { isWindowsPath, nativeOrNull, toGatePath, toNativePath } from './gate-path.ts';
 
 describe('gate paths on Windows', () => {
   it('writes a drive path the way Git Bash does', () => {
@@ -19,8 +19,15 @@ describe('gate paths on Windows', () => {
   it('turns a Git Bash drive path back into a native one for file access', () => {
     expect(toNativePath('/c/Users/Me/repo', 'win32')).toBe('C:\\Users\\Me\\repo');
     expect(toNativePath('/d', 'win32')).toBe('D:\\');
-    expect(toNativePath('/tmp/x', 'win32')).toBe('/tmp/x');
     expect(toNativePath(toGatePath('E:\\a\\b c\\d', 'win32'), 'win32')).toBe('E:\\a\\b c\\d');
+  });
+
+  it('finds the Git Bash /tmp in the Windows temp folder and nothing for other mounts', () => {
+    expect(nativeOrNull('/tmp/x/y', 'win32', 'C:\\Temp')).toBe('C:\\Temp\\x\\y');
+    expect(nativeOrNull('/tmp', 'win32', 'C:\\Temp')).toBe('C:\\Temp');
+    expect(nativeOrNull('/usr/bin/env', 'win32')).toBeNull();
+    expect(nativeOrNull('/Users/me', 'win32')).toBeNull();
+    expect(nativeOrNull('/Users/me', 'darwin')).toBe('/Users/me');
   });
 
   it('changes nothing on macOS and Linux', () => {

@@ -1,5 +1,5 @@
 import { readdirSync } from 'node:fs';
-import { gatePaths as path, toGatePath, toNativePath } from './gate-path.ts';
+import { gatePaths as path, nativeOrNull, toGatePath } from './gate-path.ts';
 import { ACCEPTED_RECORD } from '../spark-rules/accepted.ts';
 import { USER_RULES_NAME, sparkChannel } from '../spark-rules/rules-store.ts';
 
@@ -17,8 +17,10 @@ const CHANNEL_NAMES = [
 ] as const;
 
 function listEntries(dir: string): readonly string[] {
+  const native = nativeOrNull(dir);
+  if (native === null) return [];
   try {
-    return readdirSync(toNativePath(dir));
+    return readdirSync(native);
   } catch {
     return [];
   }
