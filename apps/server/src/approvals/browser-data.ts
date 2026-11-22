@@ -161,16 +161,17 @@ export function browserDataRules(dataDir: string | null): string[] {
   ]);
 }
 
-function writtenForms(gate: string): string[] {
-  const native = toNativePath(gate);
-  return [...new Set([gate, native, native.replaceAll('\\', '/')])];
+function forwardOnWindows(text: string): string {
+  return process.platform === 'win32' ? text.replaceAll('\\', '/') : text;
 }
 
 function namesAnEntry(command: string, dataDir: string, entries: Entries): boolean {
-  const text = caseFolded(command);
-  return entries.some((entry) =>
-    writtenForms(entryPath(dataDir, entry)).some((form) => text.includes(caseFolded(form))),
-  );
+  const text = caseFolded(forwardOnWindows(command));
+  return entries.some((entry) => {
+    const gate = entryPath(dataDir, entry);
+    const native = forwardOnWindows(toNativePath(gate));
+    return [gate, native].some((form) => text.includes(caseFolded(form)));
+  });
 }
 
 function wordPaths(word: string): string[] {
