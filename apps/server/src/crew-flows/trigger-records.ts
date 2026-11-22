@@ -58,6 +58,14 @@ export async function getTriggers(
   return rows[0] ? toStored(rows[0]) : null;
 }
 
+export async function listTriggers(db: Queryable, workspaceId: string): Promise<StoredTriggers[]> {
+  const { rows } = await db.query<TriggersRow>(
+    'SELECT * FROM workflow_triggers WHERE workspace_id = $1 ORDER BY workflow_id',
+    [workspaceId],
+  );
+  return rows.map(toStored);
+}
+
 export type TriggerFlag =
   'turn_changed' | 'before_publish' | 'on_commit' | 'pull_request' | 'chat_started';
 

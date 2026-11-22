@@ -2,13 +2,14 @@ import { Router, type Request } from 'express';
 import {
   crewSlugSchema,
   workflowTriggersSchema,
+  type WorkflowTriggersList,
   type WorkflowTriggersView,
 } from '@spark-outpost/contracts';
 import { z } from 'zod';
 import { parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import { listHolds, PublishHoldNotFoundError, releaseHold } from './publish-holds.ts';
-import { deleteTriggers, getTriggers, listTriggerEvents } from './trigger-records.ts';
+import { deleteTriggers, getTriggers, listTriggerEvents, listTriggers } from './trigger-records.ts';
 import { setWorkflowTriggers } from './workflow-settings.ts';
 import { WorkflowNotFoundError, workflowStore, type WorkflowStore } from './workflow-store.ts';
 
@@ -39,6 +40,11 @@ export function triggerRoutes(deps: TriggerRouteDeps): Router {
     triggers: (await getTriggers(db, workspaceId, id))?.triggers ?? null,
     events: await listTriggerEvents(db, workspaceId, id),
     holds: await listHolds(db, workspaceId, id),
+  });
+
+  router.get('/workflow-triggers', async (_req, res) => {
+    const body: WorkflowTriggersList = { triggers: await listTriggers(db, workspaceId) };
+    res.json(body);
   });
 
   router.get('/workflows/:id/triggers', async (req, res) => {
