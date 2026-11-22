@@ -4,6 +4,12 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.16
+
+- **The resting island shows a recording.** While a meeting is recorded, Scout has a moving red waveform beside it, and the hover line keeps the title, **Open transcript** and **Stop** on one row.
+- **Code Mode combines any Spark tool.** A Code Mode script may call every Spark tool its chat is offered, actions included; cards, the agent's mode and the audit apply as for a direct call. Agents are told to use it for three or more reads, parallel reads, or filtering and joining results.
+- A message sent during a turn shows its copy button and time beside its status line, no longer over the reply below it.
+
 ## 0.1.0-beta.15
 
 - **GitHub page: search, descriptions and Start chat.** Search pull requests with `/` across titles, numbers, repositories, authors, branches, labels, ticket keys and descriptions. Rows show labels and when each was opened and updated; details show branches, the description, changed files, assignees and comments. **Reviewed by you** and **Approved by you** list open pull requests you already reviewed, and **Start chat** opens a chat on a pull request's branch or with its link.
