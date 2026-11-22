@@ -6,6 +6,21 @@ import { docsPlugin } from './src/docs/plugin.ts';
 
 const CHANGELOG = resolve(import.meta.dirname, '../desktop/CHANGELOG.md');
 const RELEASES_SLOT = '<ol class="releases" data-releases></ol>';
+const SPRITE = resolve(import.meta.dirname, 'src/scout-sprite.svg');
+const SPRITE_SLOT = '<svg class="sprite" data-sprite></svg>';
+
+function spritePlugin(): Plugin {
+  return {
+    name: 'spark-sprite',
+    transformIndexHtml: {
+      order: 'pre',
+      handler: (html) => html.replace(SPRITE_SLOT, readFileSync(SPRITE, 'utf8').trim()),
+    },
+    configureServer(server) {
+      server.watcher.add(SPRITE);
+    },
+  };
+}
 
 function changelogPlugin(): Plugin {
   return {
@@ -25,7 +40,7 @@ function changelogPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [changelogPlugin(), docsPlugin()],
+  plugins: [spritePlugin(), changelogPlugin(), docsPlugin()],
   build: {
     chunkSizeWarningLimit: 700,
     rolldownOptions: {
