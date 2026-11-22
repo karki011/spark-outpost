@@ -4,6 +4,14 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.15
+
+- **GitHub page: search, descriptions and Start chat.** Search pull requests with `/` across titles, numbers, repositories, authors, branches, labels, ticket keys and descriptions. Rows show labels and when each was opened and updated; details show branches, the description, changed files, assignees and comments. **Reviewed by you** and **Approved by you** list open pull requests you already reviewed, and **Start chat** opens a chat on a pull request's branch or with its link.
+- **Share a pull request review.** A finished review has **Copy review** (Markdown) and **Send to chat**, which attaches it to the pull request's chat, or a new one, without sending.
+- **Workflow runs work on the pull request they are about.** A run started in a chat names its pull request: the one your message links to, or the chat's most recently updated open one. When that isn't the branch the chat has checked out, its steps work on a temporary checkout of that pull request, which is deleted afterwards.
+- **A recording is visible everywhere.** While a meeting is recorded, Scout wears a red dot, hovering the island shows **Recording** with the meeting's title, elapsed time, **Open transcript** and **Stop**, and the left bar shows a dot on **Today** and a **Rec** item that opens the transcript.
+- Spoken commands end about half a second sooner after you stop talking.
+
 ## 0.1.0-beta.14
 
 - **Sub-chats replace outposts.** A chat's agent splits a job into sub-chats, nested under it in the Chats side panel, each with its own branch and pull request. The parent's Work panel has a **Sub-chats** tab, each sub-chat reports back, and the parent writes one wrap-up. Agents message other chats with `spark_send_to_chat`. Outposts and their page are gone; chats that were in one stay as plain chats.
