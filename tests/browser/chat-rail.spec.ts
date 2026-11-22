@@ -12,6 +12,7 @@ import {
   turnDone,
 } from './project-chat-kit.ts';
 import { resetTestDatabase } from './database.ts';
+import { animationsSettled } from './settle.ts';
 import { useSystemTheme } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
 import { seedPrFollowUp } from './pr-follow-up-seed.ts';
@@ -456,14 +457,7 @@ test.describe('working chats', () => {
       }
     }
     await shoot(page, 'tasks-list-2000');
-    await page.evaluate(() =>
-      Promise.allSettled(
-        document
-          .getAnimations()
-          .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
-          .map((animation) => animation.finished),
-      ),
-    );
+    await animationsSettled(page);
     const axe = await new AxeBuilder({ page }).include('.crail-tasks').analyze();
     expect(axe.violations).toEqual([]);
   });
