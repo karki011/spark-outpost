@@ -12,7 +12,7 @@ import {
   type TeammateView,
   type WorkflowSummary,
 } from '@spark-outpost/contracts';
-import { workflowsMatching } from '../../crew-flows/workflow-mentions.ts';
+import { workflowsMatching, type MentionWorkflow } from '../../crew-flows/workflow-mentions.ts';
 import { sparksMatching } from '../../teammates/use-mention-sparks.ts';
 import { optionId } from './FileList.tsx';
 import { caretLeft, findMention, removeMention, type Mention } from './mention.ts';
@@ -22,6 +22,7 @@ interface MentionOptions {
   repos: readonly Project[];
   sparks: readonly TeammateView[];
   workflows: readonly WorkflowSummary[];
+  onOpen?: () => void;
   draft: string;
   setDraft: (text: string) => void;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
@@ -43,6 +44,7 @@ export function useMention({
   repos,
   sparks,
   workflows,
+  onOpen,
   draft,
   setDraft,
   textareaRef,
@@ -52,6 +54,7 @@ export function useMention({
   const [left, setLeft] = useState(0);
   const [picked, setPicked] = useState({ query: '', index: 0 });
   const dismissedAt = useRef<number | null>(null);
+  const refreshedAt = useRef<number | null>(null);
   const pendingCaret = useRef<number | null>(null);
   const listId = useId();
   const query = mention?.query ?? '';
@@ -75,8 +78,10 @@ export function useMention({
   }, [draft, textareaRef]);
 
   const sync = (textarea: HTMLTextAreaElement) => {
-    if (!hasRepos && sparks.length === 0 && workflows.length === 0) return;
     const found = findMention(textarea.value, textarea.selectionStart);
+    if (found && found.start !== refreshedAt.current) onOpen?.();
+    refreshedAt.current = found?.start ?? null;
+    if (!hasRepos && sparks.length === 0 && workflows.length === 0) return;
     if (!found || found.start === dismissedAt.current) {
       if (!found) dismissedAt.current = null;
       setMention(null);
@@ -102,7 +107,9 @@ export function useMention({
     setMention(null);
   };
   const pickSpark = (spark: TeammateView) => insertName(spark.name);
-  const pickWorkflow = (workflow: WorkflowSummary) => insertName(workflow.id);
+  const pickWorkflow = (entry: MentionWorkflow) => {
+    if (!entry.blocked) insertName(entry.workflow.id);
+  };
 
   const pickActive = (): boolean => {
     const spark = matches[active];

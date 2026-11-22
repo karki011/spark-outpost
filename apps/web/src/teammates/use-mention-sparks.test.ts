@@ -7,8 +7,8 @@ const sparks = ['Pip', 'Wren', 'Release Pilot', 'Ada', 'Bolt', 'Nova', 'Juno', '
 const names = (query: string) => sparksMatching(sparks, query).map((spark) => spark.name);
 
 describe('sparksMatching', () => {
-  it('lists the first six Sparks for a bare @', () => {
-    expect(names('')).toEqual(['Pip', 'Wren', 'Release Pilot', 'Ada', 'Bolt', 'Nova']);
+  it('lists every Spark for a bare @', () => {
+    expect(names('')).toEqual(sparks.map((spark) => spark.name));
   });
 
   it('keeps Sparks with a word that starts with the query, ignoring case', () => {

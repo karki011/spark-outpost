@@ -16,8 +16,6 @@ export function useMentionSparks(conversationId: string): TeammateView[] {
   return teammates.filter((teammate) => teammate.id !== own.data);
 }
 
-const PICKER_LIMIT = 6;
-
 export function sparksMatching<T extends { name: string }>(
   sparks: readonly T[],
   query: string,
@@ -28,5 +26,5 @@ export function sparksMatching<T extends { name: string }>(
       .toLowerCase()
       .split(/\s+/)
       .some((word) => word.startsWith(wanted));
-  return sparks.filter((spark) => startsWord(spark.name)).slice(0, PICKER_LIMIT);
+  return sparks.filter((spark) => startsWord(spark.name));
 }

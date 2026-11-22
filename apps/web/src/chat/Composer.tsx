@@ -125,11 +125,12 @@ export function Composer({
     repoPopover.anchorRef.current?.focus();
   };
   const sparks = useMentionSparks(conversationId);
-  const workflows = useMentionWorkflows();
+  const { workflows, refresh: refreshWorkflows } = useMentionWorkflows();
   const mention = useMention({
     repos,
     sparks,
     workflows,
+    onOpen: refreshWorkflows,
     draft,
     setDraft,
     textareaRef,
