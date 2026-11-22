@@ -7,6 +7,12 @@ describe('what the island says it holds', () => {
     expect(scoutLabel(0, 1)).toBe('Spark: 1 set aside. Open Spark Island');
   });
 
+  it('says a meeting is being recorded before anything else', () => {
+    expect(scoutLabel(1, 0, true)).toBe(
+      'Spark: recording a meeting, 1 need you. Open Spark Island',
+    );
+  });
+
   it('counts requests, set-aside items and working chats, or says all quiet', () => {
     expect(islandStatus(2, 1, 3)).toBe('2 need you, 1 set aside, 3 working');
     expect(islandStatus(0, 0, 0)).toBe('all quiet');

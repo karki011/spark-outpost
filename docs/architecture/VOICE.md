@@ -74,7 +74,7 @@ Events: `level` (for the meter), `speech`, `partial` and `final` (`text`, `reaso
 
 | Purpose              | Ends when                                                                                                     |
 | -------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `command`, `confirm` | About 1.5 s of silence after speech (`paused`), or a press                                                    |
+| `command`, `confirm` | About 0.9 s of silence after speech (`paused`), or a press                                                    |
 | `dictation`          | A press only; it runs through pauses                                                                          |
 | All                  | Esc cancels; no speech stops it (3 s for `command` and `confirm`, 30 s for `dictation`); in hold mode, key-up |
 
@@ -221,7 +221,7 @@ No Phase 1 PR is done until each check below has run on this Mac and the PR repo
 | Fuzzy match right              | 1 picks the orders-web-app project and CP-49084; 2 the Dashboards chat                 |
 | Prefilled card, nothing starts | Screenshot; no run or message until Enter or "send"                                    |
 | Spoken answer plays and stops  | 3 and 4 prefill Ask Spark; once sent, the reply is spoken; Esc and a new press stop it |
-| End rules                      | A command ends after about 1.5 s of silence; 5 runs through its pauses until a press   |
+| End rules                      | A command ends after about 0.9 s of silence; 5 runs through its pauses until a press   |
 | Shortcut                       | Fn twice starts listening; with 🌐 set to Emoji, Spark says why and uses ⌥⇧V           |
 | Esc cancels                    | No transcript, no result                                                               |
 | Audio never leaves             | `nettop` during a run: no connection but the provider's for a sent message             |
@@ -356,6 +356,18 @@ Recorded on 2026-11-12 at commit `6feeb8b`, after Whisper base and Whisper large
 | Language note          | Launched with `-AppleLanguages "(ja)"`: "Parakeet doesn't cover Japanese, your Mac's language, and may transcribe it poorly."                                                                                                      |
 
 Found by the run and still open: the island ignored a Voice press in its first seconds after launch (one about 10 s in worked; not checked whether this predates the change), and `voice-settings.json` keeps `"whisper-base"` on disk until the next save, read as Parakeet. Not run: the x64 helper, and Fn twice (🌐 is set to Emoji on this Mac).
+
+### Real tests (0.9 s command pause)
+
+On 2026-11-21 (Apple silicon, macOS 26.5.2), the helper built from this change ran with `--allow-file-input`, Parakeet and Silero, driven over stdin with `say` WAVs paced in real time. This is real speech through the real detector and model, not the microphone.
+
+| Clip                                 | Result                                                                     |
+| ------------------------------------ | -------------------------------------------------------------------------- |
+| One phrase, then silence             | `paused` 1.03 s after the speech ended (the old rule measured 1.65–1.87 s) |
+| Two phrases 0.4, 0.6 and 0.8 s apart | Heard as one command; `paused` 0.98–1.01 s after the second phrase         |
+| Two phrases 1.0 and 1.2 s apart      | Cut at the pause: only the first phrase came back                          |
+
+So a pause of up to about 0.8 s inside a command survives and one of a second ends it; under the old rule a pause of about 1.4 s survived. Not run: the microphone in a room, and a person's own mid-sentence pauses.
 
 ## Licences
 

@@ -28,7 +28,7 @@ public struct ListenRules: Sendable {
 
     public var speechThreshold: Float = 0.5
     public var silenceThreshold: Float = 0.35
-    public var commandPause: Double = 1.5
+    public var commandPause: Double = 0.9
     public var dictationPause: Double = 0.8
     public var noSpeechLimit: Double = 30
     public var commandNoSpeechLimit: Double = 3

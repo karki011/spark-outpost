@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Recording in island, left bar; faster commands  | [Take meeting notes](meetings.md#record).                  |
 | Workflow steps run on the named pull request    | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | GitHub: search, Start chat, reviewed groups     | [GitHub page](github-page.md#search).                      |
 | Copy a review or send it to a chat              | [Reviews](review-pull-requests.md).                        |
@@ -61,4 +62,3 @@ summary: What changed in recent releases and what to do next.
 | Worktrees start from latest remote; Codex commits          | [Where it starts](where-spark-works.md#what-to-expect).                                  |
 | PR follow-up and adopting, in any chat                     | [Work on a PR](where-spark-works.md#work-on-a-pull-request).                             |
 | **Thinking** expands; `/compact`; less “Running”           | [Follow a turn](follow-a-turn.md#see-whats-happening).                                   |
-| One meeting card; Join takes notes                         | [Take meeting notes](meetings.md).                                                       |

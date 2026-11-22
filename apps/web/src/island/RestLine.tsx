@@ -6,8 +6,8 @@ function countParts(asking: number, setAside: number, working = 0): string[] {
   ].filter((part) => part !== null);
 }
 
-export function scoutLabel(asking: number, setAside: number): string {
-  const parts = countParts(asking, setAside);
+export function scoutLabel(asking: number, setAside: number, recording = false): string {
+  const parts = [...(recording ? ['recording a meeting'] : []), ...countParts(asking, setAside)];
   return parts.length > 0 ? `Spark: ${parts.join(', ')}. Open Spark Island` : 'Open Spark Island';
 }
 
@@ -16,9 +16,18 @@ export function islandStatus(asking: number, setAside: number, working: number):
   return parts.length > 0 ? parts.join(', ') : 'all quiet';
 }
 
-export function ScoutMarks({ asking, setAside }: { asking: number; setAside: number }) {
+export function ScoutMarks({
+  asking,
+  setAside,
+  recording,
+}: {
+  asking: number;
+  setAside: number;
+  recording: boolean;
+}) {
   return (
     <>
+      {recording && <span className="isl-rec-mark" aria-hidden="true" />}
       {asking > 0 && (
         <span className="isl-pbadge" aria-hidden="true">
           {asking}

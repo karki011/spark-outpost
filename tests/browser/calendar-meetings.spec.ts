@@ -49,6 +49,10 @@ test('a meeting is recorded, transcribed, written up, found by search and kept a
   await main.getByRole('button', { name: 'New meeting' }).click();
 
   await expect(main.getByText('Recording').first()).toBeVisible();
+  const railRecording = page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Recording .* Open transcript$/ });
+  await expect(railRecording).toContainText('Rec');
   const list = main.getByRole('list', { name: 'Meetings' });
   await list.getByRole('button').first().click();
   await main
@@ -81,6 +85,7 @@ test('a meeting is recorded, transcribed, written up, found by search and kept a
   const id = (status as { recordingId: string }).recordingId;
   await main.getByRole('button', { name: 'Stop' }).first().click();
   await expect(main.getByRole('button', { name: 'Stop' })).toHaveCount(0);
+  await expect(railRecording).toHaveCount(0);
   await expect.poll(() => notesState(page, id), { timeout: 30_000 }).toBe('ready');
   await main.getByRole('tab', { name: 'Notes' }).click();
   await expect(main.getByRole('button', { name: 'Write again' })).toBeVisible();

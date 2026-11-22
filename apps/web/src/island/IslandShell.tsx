@@ -223,13 +223,19 @@ export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRef
           data-wave={props.wave || undefined}
           data-edge={pose?.edge ?? undefined}
         >
-          {peeking && <ScoutMarks asking={props.asking} setAside={props.setAside} />}
+          {peeking && (
+            <ScoutMarks
+              asking={props.asking}
+              setAside={props.setAside}
+              recording={props.strip.recordingId !== null}
+            />
+          )}
           <span className="isl-glow" data-mood={props.mood ?? 'idle'} aria-hidden="true" />
           <BlobScout mood={props.mood} size={30} lookAtPointer={quiet} />
           <button
             type="button"
             className="isl-scout-btn"
-            aria-label={scoutLabel(props.asking, props.setAside)}
+            aria-label={scoutLabel(props.asking, props.setAside, props.strip.recordingId !== null)}
             onClick={props.onScout}
           />
           {hanging && (
