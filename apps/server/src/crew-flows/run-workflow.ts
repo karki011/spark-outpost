@@ -29,6 +29,7 @@ import {
   startStep,
   type TurnWorkflowRun,
 } from './run-records.ts';
+import { checkoutStepLine, type PullPlace } from './pr-checkout.ts';
 import { stepPlaceFor } from './step-place-gather.ts';
 import { stepJobPrompt, type StepNote } from './step-prompt.ts';
 import { runsInChat, stepSparks, type StepSpark } from './step-sparks.ts';
@@ -59,6 +60,7 @@ export interface ReviewOptions {
 export interface RunOptions {
   findings?: boolean;
   review?: ReviewOptions | null;
+  pull?: PullPlace;
 }
 
 interface Running {
@@ -210,6 +212,18 @@ async function yourDefaults(h: Handoff): Promise<SettingsPlace | null> {
   };
 }
 
+function inputOn(h: Handoff, pull: PullPlace): Handoff['input'] {
+  if (pull.kind !== 'checkout') return h.input;
+  const others = h.input.projectRoots.filter((root) => root !== pull.replaces);
+  return { ...h.input, projectRoots: [pull.path, ...others] };
+}
+
+async function placeOf(h: Handoff, turn: TurnWorkflowRun, pull: PullPlace) {
+  const place = await stepPlaceFor({ db: h.deps.db, input: inputOn(h, pull), turn });
+  const line = checkoutStepLine(pull);
+  return [line, place].filter((part) => part !== null).join('\n\n') || null;
+}
+
 export async function runWorkflow(
   h: Handoff,
   turn: TurnWorkflowRun,
@@ -228,7 +242,7 @@ export async function runWorkflow(
     ),
     inChat,
     defaults: inChat ? null : await yourDefaults(h),
-    place: await stepPlaceFor({ db: h.deps.db, input: h.input, turn }),
+    place: await placeOf(h, turn, options.pull ?? { kind: 'none' }),
     states: startingStates(turn),
     notes: new Map(turn.run.steps.map((step) => [step.stepId, step.note])),
   };

@@ -66,3 +66,5 @@ A step in a Bypass permissions chat runs reads and other commands without asking
 Edits, commits, pushes, pull requests and installs stay refused in every mode, and [Spark rules](protected-paths.md) still apply.
 
 A step in a project is told what started the run, the repository, the branch and its base, the changed files and the chat's open pull request. A scheduled step also gets commits that landed since the last scheduled run.
+
+A run about a pull request that isn't the chat's branch, such as one linked in your message, runs every step on a temporary copy of that pull request's code. The chat's own folder and branch stay as they are. Spark deletes the copy when the run ends, along with any changes steps made there. The run's note says so. A pull request in a repository the chat hasn't linked isn't copied: steps read it from GitHub.

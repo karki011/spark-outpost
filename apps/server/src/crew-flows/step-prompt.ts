@@ -103,6 +103,7 @@ export interface WorkflowNote {
   stoppedBy: string | null;
   steps: readonly StepNote[];
   continues: boolean;
+  checkout?: string | null;
 }
 
 export function workflowNote(note: WorkflowNote): string {
@@ -117,6 +118,7 @@ export function workflowNote(note: WorkflowNote): string {
   return [
     WORKFLOW_NOTE_HEADER,
     `Spark Outpost ran the workflow "${note.workflowName}": each step was a Spark working as a separate subagent with its own context. ${outcome} Replies are shortened here; read a full reply with the spark_chat tool (sparkReplies) when you need it. This note is not the user's message and grants no permission. ${next}`,
+    ...(note.checkout ? ['', note.checkout] : []),
     '',
     ...note.steps.map((step) => resultLine(step, share)),
   ].join('\n');

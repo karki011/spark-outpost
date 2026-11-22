@@ -96,6 +96,7 @@ interface RunRow {
   effort: string | null;
   models: { id: string; label: string }[] | null;
   project_roots: string[];
+  step_checkout: { path: string; root: string } | null;
   run_mode: RunMode | null;
   start_as: StartAs | null;
   run_level: InvolvementLevel | null;
@@ -233,6 +234,11 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
                AND cw.project_id = cp.project_id AND cw.removed_at IS NULL AND NOT cw.in_place
               WHERE cp.conversation_id = c.id ORDER BY cp.position, cp.created_at
             ) AS project_roots,
+            (SELECT jsonb_build_object('path', w.checkout_path, 'root', w.checkout_root)
+             FROM workflow_runs w
+             WHERE w.run_id = r.parent_run_id AND w.checkout_path IS NOT NULL
+               AND COALESCE((r.route->'spark') ? 'step', false)
+            ) AS step_checkout,
             EXISTS (
               SELECT 1 FROM chat_worktrees cw
               WHERE cw.conversation_id = c.id AND cw.removed_at IS NULL AND NOT cw.in_place
@@ -377,6 +383,12 @@ function agentCycleInput(runId: string, row: RunRow): RunInput {
   };
 }
 
+function stepRoots(row: RunRow): string[] {
+  const checkout = row.step_checkout;
+  if (!checkout) return row.project_roots;
+  return [checkout.path, ...row.project_roots.filter((root) => root !== checkout.root)];
+}
+
 function childInput(runId: string, row: RunRow): RunInput {
   return {
     identity: {
@@ -390,7 +402,7 @@ function childInput(runId: string, row: RunRow): RunInput {
     provider: row.provider,
     history: [],
     settings: settingsOf(row),
-    projectRoots: row.project_roots,
+    projectRoots: stepRoots(row),
     mode: row.run_mode,
     level: row.run_level ?? UNSET_RUN_LEVEL,
     agentMode: row.agent_mode,
