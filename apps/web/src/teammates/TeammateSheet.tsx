@@ -27,6 +27,7 @@ import {
   requestTeammateDelete,
   type SheetRequest,
 } from './teammate-store.ts';
+import { DeleteUsedIn } from '../sparks-page/SparkUsedIn.tsx';
 import { teammateKeys, teammatesApi } from './teammates-api.ts';
 
 const FOCUSABLE = 'button:not(:disabled), input, textarea, [tabindex="0"]';
@@ -156,6 +157,7 @@ export function TeammateSheet({ request, editing }: TeammateSheetProps) {
             />
             {editing && (
               <div ref={dangerRef} className="tm-danger">
+                <DeleteUsedIn sparkId={editing.id} name={editing.name} />
                 <HoldToConfirm
                   label={`Hold to delete ${editing.name}`}
                   hint="Its chats stay and lose the link. You get 10 seconds to undo."

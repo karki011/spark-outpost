@@ -1,6 +1,6 @@
 import './spark-files.css';
 import { useState } from 'react';
-import { SPARK_INSTRUCTIONS_FILE } from '@spark-outpost/contracts';
+import { SKILLS_FOLDER, SPARK_INSTRUCTIONS_FILE } from '@spark-outpost/contracts';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { PlusIcon, WarnIcon } from '../ui/icons.tsx';
 import { FileEditor } from './FileEditor.tsx';
@@ -10,18 +10,31 @@ import { parentFolder } from './folder-model.ts';
 import { NewFile, NewSkill } from './NewEntry.tsx';
 import { useSparkFolder } from './use-crew-files.ts';
 
+export type FilesScope = 'skills' | 'all';
+export type FilesStart = { kind: 'file'; path: string } | { kind: 'new-skill' };
+
 interface SparkFilesProps {
   sparkId: string;
   sparkName: string;
+  scope: FilesScope;
+  start?: FilesStart | null;
 }
 
-type Pane = { kind: 'file'; path: string } | { kind: 'new-skill' } | { kind: 'new-file' };
+type Pane = FilesStart | { kind: 'new-file' };
 
-export function SparkFiles({ sparkId, sparkName }: SparkFilesProps) {
+const FIRST: FilesStart = { kind: 'file', path: SPARK_INSTRUCTIONS_FILE };
+
+export function inSkillsScope(path: string): boolean {
+  return path === SPARK_INSTRUCTIONS_FILE || path.startsWith(`${SKILLS_FOLDER}/`);
+}
+
+export function SparkFiles({ sparkId, sparkName, scope, start = null }: SparkFilesProps) {
   const folder = useSparkFolder(sparkId);
   const edited = useEditedPaths(sparkId);
-  const [pane, setPane] = useState<Pane>({ kind: 'file', path: SPARK_INSTRUCTIONS_FILE });
-  const [lastPath, setLastPath] = useState(SPARK_INSTRUCTIONS_FILE);
+  const [pane, setPane] = useState<Pane>(start ?? FIRST);
+  const [lastPath, setLastPath] = useState(
+    start?.kind === 'file' ? start.path : SPARK_INSTRUCTIONS_FILE,
+  );
   const open = (path: string) => {
     setLastPath(path);
     setPane({ kind: 'file', path });
@@ -51,13 +64,20 @@ export function SparkFiles({ sparkId, sparkName }: SparkFilesProps) {
   }
 
   const { files, problems } = folder.data;
+  const shownPath = pane.kind === 'file' ? pane.path : null;
+  const listed =
+    scope === 'skills'
+      ? files.filter((file) => inSkillsScope(file.path) || file.path === shownPath)
+      : files;
   const problemAt = (path: string) => problems.find((entry) => entry.path === path)?.text ?? null;
   return (
     <div className="spk-files">
       <div className="spk-files-side">
         <FileTree
-          label={`${sparkName}’s folder`}
-          files={files}
+          label={
+            scope === 'skills' ? `${sparkName}’s instructions and skills` : `${sparkName}’s folder`
+          }
+          files={listed}
           selected={pane.kind === 'file' ? pane.path : null}
           edited={edited}
           problems={new Set(problems.map((entry) => entry.path))}

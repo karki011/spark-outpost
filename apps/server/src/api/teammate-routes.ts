@@ -3,7 +3,6 @@ import { z } from 'zod';
 import {
   createTeammateRequestSchema,
   crewPathSchema,
-  defaultTeammateRequestSchema,
   linkTeammateRequestSchema,
   saveCrewFileSchema,
   teammateStarterIdSchema,
@@ -111,7 +110,7 @@ export function teammateRoutes({
   });
 
   router.put('/teammate-default', async (req, res) => {
-    const { teammateId } = parseTeammateBody(defaultTeammateRequestSchema, req);
+    const { teammateId } = parseTeammateBody(linkTeammateRequestSchema, req);
     await setDefaultTeammate(db, workspaceId, teammateId);
     res.json({ teammateId });
   });

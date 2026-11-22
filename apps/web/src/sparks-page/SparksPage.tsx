@@ -57,7 +57,7 @@ export function SparksPage() {
   const workflows = useWorkflowCount();
   const [tab, setTab] = useState<SparksPageTab>('crew');
   const [openId, setOpenId] = useState<string | null>(null);
-  const [detailTab, setDetailTab] = useState<DetailTab>('details');
+  const [detailTab, setDetailTab] = useState<DetailTab>('setup');
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builderChatId, setBuilderChatId] = useState<string | null>(null);
   const [sparkChat, setSparkChat] = useState(false);
@@ -86,7 +86,7 @@ export function SparksPage() {
   }, []);
   const open = useCallback((sparkId: string | null) => {
     setTab('crew');
-    setDetailTab('details');
+    setDetailTab('setup');
     setSparkChat(false);
     setOpenId(sparkId);
   }, []);
@@ -129,6 +129,7 @@ export function SparksPage() {
               if (!sparkChat) closeBuilder();
               setSparkChat(!sparkChat);
             }}
+            onOpenSpark={open}
             onBack={() => open(null)}
           />
         </main>

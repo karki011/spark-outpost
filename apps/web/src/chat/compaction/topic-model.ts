@@ -1,4 +1,4 @@
-import type { AssistantTopic } from '@spark-outpost/contracts';
+import { sparkSettingsLine, type AssistantTopic } from '@spark-outpost/contracts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEKDAY = new Intl.DateTimeFormat('en-US', { weekday: 'long' });
@@ -27,6 +27,9 @@ export function dayLabel(time: number, now: number): string {
 export function topicLabel(topic: AssistantTopic, now: number): string {
   const day = dayLabel(Date.parse(topic.at), now);
   const when = day === 'Today' || day === 'Yesterday' ? day.toLowerCase() : day;
+  if (topic.kind === 'spark_settings') {
+    return `${sparkSettingsLine(topic.name ?? 'This Spark')} · ${when}`;
+  }
   return `${topic.kind === 'topic' ? 'New topic' : 'History cleared'} · ${when}`;
 }
 

@@ -5,6 +5,7 @@ import { usePhone } from '../../ui/breakpoints.ts';
 import { DotsIcon } from '../../ui/icons.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
 import { TalkToChip } from '../../teammates/TalkToChip.tsx';
+import { useDefaultSpark } from '../../teammates/use-default-spark.ts';
 import { AgentSetup, useSetupAttention } from './AgentSetup.tsx';
 import { ChatBranch } from './ChatBranch.tsx';
 import { ProjectFolders } from './ProjectFolders.tsx';
@@ -70,11 +71,8 @@ export function ContextBar({
   );
   const setupChip = setup && <AgentSetup key={primary.id} repos={repos} labelled />;
   const hasDetails = phone ? Boolean(branchChip) || Boolean(placeMenu) || setup : setup;
-  const people = (
-    <>
-      <TalkToChip conversationId={conversationId} />
-    </>
-  );
+  const people = <TalkToChip conversationId={conversationId} />;
+  useDefaultSpark(conversationId);
   const closeDetails = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!detailsOpen || event.key !== 'Escape' || event.defaultPrevented) return;
     event.preventDefault();
@@ -97,7 +95,6 @@ export function ContextBar({
             <>
               {phone && branchChip}
               {phone && placeMenu}
-              {people}
               {setupChip}
             </>
           ),
@@ -105,6 +102,7 @@ export function ContextBar({
       >
         {!phone && branchChip}
         {!phone && placeMenu}
+        {people}
         <DetailsChip
           chipRef={detailsChipRef}
           open={detailsOpen}
