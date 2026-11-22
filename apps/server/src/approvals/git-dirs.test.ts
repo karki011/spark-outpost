@@ -16,7 +16,7 @@ const git = (cwd: string, ...args: string[]) =>
   });
 
 beforeAll(() => {
-  repo = realpathSync(mkdtempSync(join(tmpdir(), 'spark-git-dirs-')));
+  repo = realpathSync.native(mkdtempSync(join(tmpdir(), 'spark-git-dirs-')));
   git(repo, 'init', '-q');
   git(repo, 'commit', '-q', '--allow-empty', '-m', 'base');
   worktree = join(repo, '.spark', 'worktrees', 'chat-1');

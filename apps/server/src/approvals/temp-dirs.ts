@@ -13,7 +13,7 @@ function realOrNull(target: string): string | null {
   const native = nativeOrNull(target);
   if (native === null) return null;
   try {
-    return toGatePath(realpathSync(native));
+    return toGatePath(realpathSync.native(native));
   } catch {
     return null;
   }

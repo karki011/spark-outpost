@@ -1,8 +1,8 @@
 import { realpathSync } from 'node:fs';
-import { gatePaths as path, toGatePath } from './gate-path.ts';
+import { gatePaths as path, toGatePath, toNativePath } from './gate-path.ts';
 import { sparkDataDir } from '../config.ts';
 import { globToRegExp } from '../projects/path-policy.ts';
-import { acceptedRecordPath } from '../spark-rules/accepted.ts';
+import { ACCEPTED_RECORD } from '../spark-rules/accepted.ts';
 import { sparkRulesFiles, type SparkRulesFiles } from '../spark-rules/rules-store.ts';
 import { commandDirs, commandTree, treeWords } from './command-tree.ts';
 import { resolveCommandPath } from './commands.ts';
@@ -44,9 +44,9 @@ export const SPARK_RULES_REASON =
   "Spark's own rules (settings.json in Spark's data folder, or the company's managed-settings.json) can't be read or changed by an agent directly; ask with spark_rules_edit and the user decides on a card";
 
 export function sparkRulesEntries(files: SparkRulesFiles = sparkRulesFiles()): string[] {
-  return [files.user, acceptedRecordPath(files.user), files.managed].map((file) =>
-    path.resolve(file),
-  );
+  const user = path.resolve(toGatePath(files.user));
+  const accepted = path.join(path.dirname(user), ACCEPTED_RECORD);
+  return [user, accepted, path.resolve(toGatePath(files.managed))];
 }
 
 export function entryPath(dataDir: string, entry: string): string {
@@ -161,9 +161,16 @@ export function browserDataRules(dataDir: string | null): string[] {
   ]);
 }
 
+function writtenForms(gate: string): string[] {
+  const native = toNativePath(gate);
+  return [...new Set([gate, native, native.replaceAll('\\', '/')])];
+}
+
 function namesAnEntry(command: string, dataDir: string, entries: Entries): boolean {
   const text = caseFolded(command);
-  return entries.some((entry) => text.includes(caseFolded(entryPath(dataDir, entry))));
+  return entries.some((entry) =>
+    writtenForms(entryPath(dataDir, entry)).some((form) => text.includes(caseFolded(form))),
+  );
 }
 
 function wordPaths(word: string): string[] {
