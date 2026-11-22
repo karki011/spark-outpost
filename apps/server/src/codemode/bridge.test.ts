@@ -107,17 +107,26 @@ it('preserves scope, argument validation, private observations and redacted resu
   bridge.close();
 });
 
-it('refuses mutations, unknown names and recursive execution even if offered', async () => {
-  const run = vi.fn(async () => ({}));
-  const { bridge } = fixture([
-    readTool(run, { acts: true }),
-    readTool(run, { name: 'spark_execute' }),
-    readTool(run, { name: 'spark_browser_read' }),
+it('runs an offered action through the dispatcher and refuses unknown names and recursion', async () => {
+  const run = vi.fn(async () => ({ status: 'waiting_for_user' }));
+  const nested = vi.fn(async () => ({}));
+  const { bridge, audit } = fixture([
+    readTool(run, { name: 'spark_slack_post', acts: true, privateData: false }),
+    readTool(nested, { name: 'spark_execute' }),
   ]);
-  for (const name of ['spark_tickets', 'spark_execute', 'spark_browser_read', 'constructor']) {
+  expect(await bridge.invoke('spark_slack_post', { query: 'hello' }, bridge.signal)).toMatchObject({
+    isError: false,
+    data: { status: 'waiting_for_user' },
+  });
+  expect(run).toHaveBeenCalledTimes(1);
+  expect(audit.mock.calls.map((call) => call[1].params)).toEqual([
+    expect.objectContaining({ name: 'spark_slack_post', outcome: 'started' }),
+    expect.objectContaining({ name: 'spark_slack_post', outcome: 'completed' }),
+  ]);
+  for (const name of ['spark_execute', 'spark_tickets', 'constructor']) {
     await expect(bridge.invoke(name, {}, bridge.signal)).rejects.toThrow('not available');
   }
-  expect(run).not.toHaveBeenCalled();
+  expect(nested).not.toHaveBeenCalled();
   bridge.close();
 });
 
@@ -125,7 +134,7 @@ it('refreshes availability and the session hook before every inner call', async 
   const run = vi.fn(async () => ({}));
   const tool = readTool(run);
   const { bridge, toolsFor, available, before } = fixture([tool]);
-  expect(await bridge.discover('tickets')).toMatchObject([
+  expect(await bridge.discover('spark_tickets')).toMatchObject([
     { name: 'spark_tickets', inputSchema: { type: 'object' } },
   ]);
   toolsFor.mockReturnValueOnce([]);
@@ -191,14 +200,21 @@ it('uses saved GitHub connections without invoking the gh fallback', async () =>
   bridge.close();
 });
 
-it('returns schemas only for an eligible discovery match', async () => {
+it('lists names without a query and returns schemas for a discovery match', async () => {
   const { bridge } = fixture([
     readTool(async () => ({})),
-    readTool(async () => ({}), { name: 'spark_push', acts: true }),
+    readTool(async () => ({}), { name: 'spark_push', title: 'Push', acts: true }),
+    readTool(async () => ({}), { name: 'spark_execute' }),
   ]);
-  expect(await bridge.discover('push')).toEqual([]);
-  expect(await bridge.discover('tickets')).toMatchObject([
-    { inputSchema: { required: ['query'] } },
+  expect(await bridge.discover()).toEqual([
+    { name: 'spark_tickets', title: 'Tickets', acts: false },
+    { name: 'spark_push', title: 'Push', acts: true },
+  ]);
+  expect(await bridge.discover('push')).toMatchObject([
+    { name: 'spark_push', acts: true, inputSchema: { required: ['query'] } },
+  ]);
+  expect(await bridge.discover('spark_tickets')).toMatchObject([
+    { acts: false, inputSchema: { required: ['query'] }, resultHint: expect.any(String) },
   ]);
   bridge.close();
 });

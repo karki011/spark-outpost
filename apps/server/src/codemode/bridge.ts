@@ -3,7 +3,12 @@ import { codeModeEnabled } from '../persistence/code-mode-settings.ts';
 import { sparkAvailability, type SparkAvailability } from '../spark-mcp/availability.ts';
 import type { SparkScope, SparkToolDeps } from '../spark-mcp/deps.ts';
 import { SparkToolError, type SparkTool, type SparkToolContext } from '../spark-mcp/tool.ts';
-import { codeModeOffered, codeModeTools, describeCodeModeTools } from './catalog.ts';
+import {
+  codeModeOffered,
+  codeModeTools,
+  describeCodeModeTools,
+  listCodeModeTools,
+} from './catalog.ts';
 import { codeModeResult } from './results.ts';
 
 export interface CodeModeAccess {
@@ -105,7 +110,8 @@ export function createCodeModeBridge(context: SparkToolContext, access: CodeMode
     receipts: () => receipts.map((receipt) => ({ ...receipt })),
     receiptCounts: () => ({ totalCalls: sequence, omittedCalls: sequence - receipts.length }),
     async discover(query?: string) {
-      return describeCodeModeTools(await available(), query);
+      const tools = await available();
+      return query?.trim() ? describeCodeModeTools(tools, query) : listCodeModeTools(tools);
     },
     async invoke(name: string, args: unknown, guestSignal: AbortSignal) {
       const callSignal = AbortSignal.any([signal, guestSignal]);

@@ -37,6 +37,29 @@ it('offers Code Mode by default for eligible live chat runs and respects opt-out
   expect(offered(scope())).toBe(false);
 });
 
+it('reaches every tool the session is offered and no action in a read-only session', async () => {
+  const names = async (context: SparkScope) => {
+    const tool = executeTool({
+      toolsFor: sparkToolsFor,
+      callTool: callSparkTool,
+      availabilityOf: async () => EVERYTHING_AVAILABLE,
+    });
+    const listed = (await tool.run({}, { scope: context, deps: {} as SparkToolDeps })) as {
+      tools: { name: string; acts: boolean }[];
+    };
+    return listed.tools;
+  };
+  const offered = sparkToolsFor(scope(), EVERYTHING_AVAILABLE)
+    .map((tool) => tool.name)
+    .filter((name) => name !== 'spark_execute');
+  const all = await names(scope());
+  expect(all.map((tool) => tool.name)).toEqual(offered);
+  expect(all.some((tool) => tool.acts)).toBe(true);
+  const readOnly = await names({ ...scope(), readOnly: true });
+  expect(readOnly.length).toBeGreaterThan(0);
+  expect(readOnly.some((tool) => tool.acts)).toBe(false);
+});
+
 it('discovers schemas and batches actual tool dispatch with partial failure receipts', async () => {
   const run = vi.fn(async ({ number }: { number: number }) => ({ number, checks: 'passing' }));
   const inner = sparkTool({

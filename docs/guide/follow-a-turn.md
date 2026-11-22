@@ -14,7 +14,7 @@ About 2 minutes.
 2. Answered cards and flags stay; waiting cards sit last.
 3. Summaries separate commands **passed** from tools **done**.
 4. Browser, web and Mac steps show.
-5. Code Mode labels discovery and reads; failures expand.
+5. Code Mode labels discovery and combining; failures expand.
 6. Edits show **+N −M**; open as diffs.
 7. Done to-dos fold.
 8. Sidebar blobs show **Agent TV**.
