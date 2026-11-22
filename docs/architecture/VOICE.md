@@ -357,6 +357,18 @@ Recorded on 2026-11-12 at commit `6feeb8b`, after Whisper base and Whisper large
 
 Found by the run and still open: the island ignored a Voice press in its first seconds after launch (one about 10 s in worked; not checked whether this predates the change), and `voice-settings.json` keeps `"whisper-base"` on disk until the next save, read as Parakeet. Not run: the x64 helper, and Fn twice (🌐 is set to Emoji on this Mac).
 
+### Real tests (0.9 s command pause)
+
+On 2026-11-21 (Apple silicon, macOS 26.5.2), the helper built from this change ran with `--allow-file-input`, Parakeet and Silero, driven over stdin with `say` WAVs paced in real time. This is real speech through the real detector and model, not the microphone.
+
+| Clip                                 | Result                                                                     |
+| ------------------------------------ | -------------------------------------------------------------------------- |
+| One phrase, then silence             | `paused` 1.03 s after the speech ended (the old rule measured 1.65–1.87 s) |
+| Two phrases 0.4, 0.6 and 0.8 s apart | Heard as one command; `paused` 0.98–1.01 s after the second phrase         |
+| Two phrases 1.0 and 1.2 s apart      | Cut at the pause: only the first phrase came back                          |
+
+So a pause of up to about 0.8 s inside a command survives and one of a second ends it; under the old rule a pause of about 1.4 s survived. Not run: the microphone in a room, and a person's own mid-sentence pauses.
+
 ## Licences
 
 Read 2026-10-15; Phase 2 rows read 2026-11-02. Notices for the speech engine, the weights and Silero ship in `Contents/Resources/voice/licenses/`, as tmux's do; Apple system voices are part of macOS. Settings → Voice credits Parakeet (NVIDIA, CC BY 4.0, converted to GGUF) under the **Speech model** card. Whisper models are no longer offered or downloaded; their weights row stays because the notice still ships in the bundle.
