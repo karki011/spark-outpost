@@ -1,5 +1,6 @@
 import { findSparkMentions, mainAgentContinues, workflowProblems } from '@spark-outpost/contracts';
 import { hasProject, publishOrchestration, type Handoff } from '../orchestration/spark-child.ts';
+import { typedOnTheMac } from '../orchestration/typed-on-mac.ts';
 import { userText } from '../sub-chats/user-asked.ts';
 import { newId } from '../persistence/ids.ts';
 import { insertOrchestration, updateOrchestration } from '../persistence/orchestrations.ts';
@@ -27,18 +28,6 @@ import { workflowStore } from './workflow-store.ts';
 export const WORKFLOW_MAC_ONLY = 'Workflows start on the Mac, so this one did not start.';
 export const WORKFLOW_STOPPED = 'The workflow stopped because a step failed.';
 
-const TYPED_SOURCES: ReadonlySet<string | null> = new Set([null, 'ui', 'e2e', 'bench', 'queue']);
-
-async function typedOnTheMac(h: Handoff): Promise<'yes' | 'device' | 'no'> {
-  const { rows } = await h.deps.db.query<{ source: string | null; device: string | null }>(
-    'SELECT source, remote_device_id AS device FROM runs WHERE id = $1',
-    [h.lease.runId],
-  );
-  const run = rows[0];
-  if (!run || !TYPED_SOURCES.has(run.source)) return 'no';
-  return run.device === null ? 'yes' : 'device';
-}
-
 async function startByMention(h: Handoff): Promise<TurnWorkflowRun | null> {
   const { deps, input, lease } = h;
   const text = input.followUpRound ? '' : userText(input);
@@ -47,7 +36,7 @@ async function startByMention(h: Handoff): Promise<TurnWorkflowRun | null> {
   const names = (await store.ids()).map((name) => ({ name }));
   const [mention] = findSparkMentions(text, names);
   if (!mention) return null;
-  const typed = await typedOnTheMac(h);
+  const typed = await typedOnTheMac(deps.db, lease.runId);
   if (typed === 'no') return null;
   if (typed === 'device') {
     await planNote(h.append, WORKFLOW_MAC_ONLY);

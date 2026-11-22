@@ -78,6 +78,7 @@ async function crewTurnMidBuild(conversationId: string) {
       effort: null,
       route: { name: 'Bolt' },
       mode: 'do',
+      level: 'hands-off',
       prompt: 'Build P1.',
     },
     30,

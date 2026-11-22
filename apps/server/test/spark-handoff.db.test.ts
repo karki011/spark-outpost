@@ -355,6 +355,7 @@ describe('restart recovery', () => {
         model: null,
         effort: null,
         mode: 'chat',
+        level: 'hands-off',
         prompt: 'review',
         route: { name: 'Pip', spark: { id: pip.id, role: 'Code reviewer', only: true } },
       },

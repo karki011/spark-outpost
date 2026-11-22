@@ -1,4 +1,4 @@
-import { ORCHESTRATION_ACTIVITY } from '@spark-outpost/contracts';
+import { ORCHESTRATION_ACTIVITY, type InvolvementLevel } from '@spark-outpost/contracts';
 import type { Lease } from '../persistence/jobs.ts';
 import { insertChildRun, loadOrchestration, type NewChild } from '../persistence/orchestrations.ts';
 import { requestCancel } from '../persistence/runs.ts';
@@ -9,6 +9,8 @@ import { executeChildRun } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { sparkRunSettings, type SparkRunSettings } from './spark-settings.ts';
+
+export const SPARK_CHILD_LEVEL: InvolvementLevel = 'hands-off';
 
 export interface Handoff {
   deps: ChatTurnDeps;
@@ -79,12 +81,12 @@ export function hasProject(input: RunInput): boolean {
 
 export async function runSparkChild(
   h: Handoff,
-  child: Omit<NewChild, 'parentRunId'>,
+  child: Omit<NewChild, 'parentRunId' | 'level'>,
   started?: (runId: string) => Promise<void>,
 ): Promise<TurnResult> {
   const lease = await insertChildRun(
     h.deps.db,
-    { ...child, parentRunId: h.lease.runId },
+    { ...child, parentRunId: h.lease.runId, level: SPARK_CHILD_LEVEL },
     h.deps.leaseSeconds,
   );
   const stopNow = new AbortController();

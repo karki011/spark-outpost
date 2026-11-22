@@ -201,8 +201,8 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'spark_rule' AS spark_rule_retry,
             (COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
-              IN ('assistant', 'workflow', 'chat') OR COALESCE((r.route->'spark') ? 'step', false))
-              AS assistant_sent,
+              IN ('assistant', 'workflow', 'chat') OR COALESCE(r.role = 'spark', false)
+              OR COALESCE((r.route->'spark') ? 'step', false)) AS assistant_sent,
             COALESCE((r.route->'spark') ? 'step', false) AS workflow_step,
             COALESCE((r.route->'spark'->>'test')::boolean, false) AS test_run,
             COALESCE((r.route->'spark'->>'edits')::boolean, false) AS step_edits,
