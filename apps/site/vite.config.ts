@@ -18,6 +18,9 @@ function spritePlugin(): Plugin {
     },
     configureServer(server) {
       server.watcher.add(SPRITE);
+      server.watcher.on('change', (file) => {
+        if (file === SPRITE) server.ws.send({ type: 'full-reload' });
+      });
     },
   };
 }
