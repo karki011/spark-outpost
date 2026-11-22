@@ -83,4 +83,13 @@ describe("the chat's own agent on Agent TV and in the rail", () => {
     expect(chatAgent(run({ status: 'cancelled' })).state).toBe('stopped');
     expect(chatAgent(run({ status: 'failed' })).line).toBe('hit a problem');
   });
+
+  it('carries when a thinking lead last sent output, and drops it once it is busy or waiting', () => {
+    const live = run({ status: 'running', finishedAt: null });
+    const quiet = { label: 'Thinking', since: null, quietSince: 40 };
+    expect(chatAgent(live, [], false, 0, null, quiet).quietSince).toBe(40);
+    expect(chatAgent(live, [], true, 0, null, quiet).quietSince).toBeUndefined();
+    const reading = { label: 'Reading a.ts', since: 5 };
+    expect(chatAgent(live, [], false, 0, null, reading).quietSince).toBeUndefined();
+  });
 });

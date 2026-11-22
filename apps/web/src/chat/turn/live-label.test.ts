@@ -63,4 +63,23 @@ describe('leadStep', () => {
       since: null,
     });
   });
+
+  it('marks a quiet Thinking line from the last output, never a step that is doing something', () => {
+    expect(leadStep({ ...none, outputAt: 40 })).toEqual({
+      label: 'Thinking',
+      since: null,
+      quietSince: 40,
+    });
+    const thinking = { name: 'Thinking', done: false, startedAt: 3 };
+    expect(leadStep({ ...none, steps: [thinking], outputAt: 40 }).quietSince).toBe(40);
+    const reading = { name: 'Read `a.ts`', done: false, startedAt: 5 };
+    expect(leadStep({ ...none, steps: [reading], outputAt: 40 })).toEqual({
+      label: 'Read a.ts',
+      since: 5,
+    });
+    expect(leadStep({ ...none, commands: [command('running')], outputAt: 40 }).quietSince).toBe(
+      undefined,
+    );
+    expect(leadStep(none)).toEqual({ label: 'Thinking', since: null });
+  });
 });

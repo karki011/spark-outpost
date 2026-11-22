@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { QuietNote } from '../chat/status/QuietNote.tsx';
 import { StepName } from '../chat/WorkLog.tsx';
 import { crewStateWord, headerMeta, type CrewAgent } from './crew-model.ts';
 import type { BubbleBox } from './tv-layout.ts';
@@ -64,6 +65,7 @@ export function DetailBubble({ id, box, agent, ask, onGo, onAsk }: DetailProps) 
       {agent.line && (
         <p className="tv-bub-now" title={agent.line.replaceAll('`', '')}>
           <StepName name={agent.line} />
+          <QuietNote since={agent.quietSince} className="tv-bub-quiet" prefix=" · " />
         </p>
       )}
       <div className="tv-bub-a">

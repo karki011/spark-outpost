@@ -10,18 +10,18 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Quiet **Thinking**: **No output for 2m**        | [Follow a turn](follow-a-turn.md).                         |
 | Workflow editor: one **Save**, **When it runs** | [Schedules](workflow-schedules.md).                        |
 | Spark **Setup**, **Used in**, default Spark     | [Set up a Spark](spark-setup.md).                          |
 | `@` lists all workflows, Sparks                 | [Run one](workflow-runs.md#run-one).                       |
 | Code Mode combines any Spark tool, cards kept   | [Code Mode](settings.md#code-mode).                        |
 | Island recording wave, left bar; fast commands  | [Take meeting notes](meetings.md#record).                  |
 | Steps know their branch, PR; may merge base     | [Workflow steps](modes-and-levels.md#workflow-steps).      |
-| GitHub: search, Start chat, reviewed groups     | [GitHub page](github-page.md#search).                      |
+| GitHub: search, Start chat, long review lists   | [GitHub page](github-page.md#search).                      |
 | Copy a review or send it to a chat              | [Reviews](review-pull-requests.md).                        |
 | Workflow runs say which pull request they took  | [Workflows](workflow-in-chat.md).                          |
 | One tap sends on phones                         | [Use your phone](use-your-phone.md).                       |
 | Outposts are gone; agents split work instead    | [Sub-chats](sub-chats.md).                                 |
-| GitHub review lists load in pages; no more 502  | Nothing to do.                                             |
 | Sub-chats nest; **Sub-chats** tab; **Edit**     | [Sub-chats](sub-chats.md#find-a-sub-chat).                 |
 | Sub-chat reports, wrap-up                       | [Reports](sub-chat-reports.md).                            |
 | Agents split jobs into sub-chats                | [Split a job](split-into-sub-chats.md).                    |

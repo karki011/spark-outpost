@@ -18,7 +18,13 @@ function subscribe(listener: () => void) {
 
 function setLeadStep(runId: string, step: LeadStep | null) {
   const known = shown.get(runId);
-  if (step && known?.label === step.label && known.since === step.since) return;
+  if (
+    step &&
+    known?.label === step.label &&
+    known.since === step.since &&
+    known.quietSince === step.quietSince
+  )
+    return;
   if (!step && !known) return;
   const next = new Map(shown);
   if (step) next.set(runId, step);
@@ -29,10 +35,14 @@ function setLeadStep(runId: string, step: LeadStep | null) {
 export function useReportLeadStep(runId: string, step: LeadStep | null): void {
   const label = step?.label ?? null;
   const since = step?.since ?? null;
+  const quietSince = step?.quietSince;
   useEffect(() => {
-    setLeadStep(runId, label === null ? null : { label, since });
+    setLeadStep(
+      runId,
+      label === null ? null : { label, since, ...(quietSince === undefined ? {} : { quietSince }) },
+    );
     return () => setLeadStep(runId, null);
-  }, [runId, label, since]);
+  }, [runId, label, since, quietSince]);
 }
 
 export function useLeadSteps(): LeadSteps {

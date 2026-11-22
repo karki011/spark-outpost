@@ -22,6 +22,7 @@ export interface CrewAgent {
   effort: string | null;
   state: CrewState;
   line: string;
+  quietSince?: number;
   tokens: number | null;
   costUsd: number | null;
   costSource: TotalCostSource | null;

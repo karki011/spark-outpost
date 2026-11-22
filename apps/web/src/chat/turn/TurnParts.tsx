@@ -7,6 +7,7 @@ import { formatTokens } from '../composer/model-options.ts';
 import { providerName } from '../provider-name.ts';
 import { Spinner } from '../rows/RowStatus.tsx';
 import { useLiveHead } from '../status/status-context.ts';
+import { QuietNote } from '../status/QuietNote.tsx';
 import { clockText } from '../status/status-text.ts';
 import { thoughtText } from '../thought-text.ts';
 import { useNow } from '../status/use-status-line.ts';
@@ -42,6 +43,7 @@ function WorkingNow({ step, clock }: { step: LeadStep; clock: string | null }) {
     <>
       <b>{step.label}</b>
       {clock && <span className="turn-working-meta"> · {clock}</span>}
+      <QuietNote since={step.quietSince} className="turn-working-meta" prefix=" · " />
     </>
   );
 }
