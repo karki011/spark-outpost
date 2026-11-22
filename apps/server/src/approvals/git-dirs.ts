@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { gatePaths as path, toGatePath, toNativePath } from './gate-path.ts';
 import type { GitDirs } from '../projects/path-policy.ts';
 import { runGit } from '../ship/git.ts';
 import { REPO_GIT_CONFIG } from './git-config.ts';
@@ -11,7 +11,7 @@ interface GitRoot {
 }
 
 export async function readGitDirs(root: string): Promise<GitDirs | null> {
-  const found = await runGit(root, [
+  const found = await runGit(toNativePath(root), [
     'rev-parse',
     '--path-format=absolute',
     '--git-common-dir',
@@ -20,8 +20,10 @@ export async function readGitDirs(root: string): Promise<GitDirs | null> {
     'HEAD',
   ]).catch(() => null);
   if (!found || found.code !== 0) return null;
-  const [common, own, head] = found.stdout.trim().split('\n');
-  if (!common || !own) return null;
+  const [nativeCommon, nativeOwn, head] = found.stdout.trim().split(/\r?\n/);
+  if (!nativeCommon || !nativeOwn) return null;
+  const common = toGatePath(nativeCommon);
+  const own = toGatePath(nativeOwn);
   const branch = own !== common && head?.startsWith('refs/heads/') ? head : null;
   return branch ? { common, own, branch } : { common, own };
 }

@@ -1,5 +1,5 @@
 import { readdirSync } from 'node:fs';
-import path from 'node:path';
+import { gatePaths as path, toGatePath, toNativePath } from './gate-path.ts';
 import { ACCEPTED_RECORD } from '../spark-rules/accepted.ts';
 import { USER_RULES_NAME, sparkChannel } from '../spark-rules/rules-store.ts';
 
@@ -18,7 +18,7 @@ const CHANNEL_NAMES = [
 
 function listEntries(dir: string): readonly string[] {
   try {
-    return readdirSync(dir);
+    return readdirSync(toNativePath(dir));
   } catch {
     return [];
   }
@@ -31,9 +31,9 @@ export function sparkDataReadRules(
   channel: string = sparkChannel(),
 ): string[] {
   if (!dataDir) return [];
-  const root = path.resolve(dataDir);
+  const root = path.resolve(toGatePath(dataDir));
   const channelDir = path.join(root, channel);
-  const kept = readable.map((folder) => path.resolve(folder));
+  const kept = readable.map((folder) => path.resolve(toGatePath(folder)));
   const known = (dir: string): readonly string[] => {
     if (dir === root) return [...TOP_LEVEL_NAMES, channel];
     return dir === channelDir ? CHANNEL_NAMES : [];

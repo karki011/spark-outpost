@@ -1,5 +1,5 @@
 import { realpathSync } from 'node:fs';
-import path from 'node:path';
+import { gatePaths as path, toGatePath, toNativePath } from './gate-path.ts';
 import { crewFolders } from '../crew/folders.ts';
 import { touchesPaths } from './browser-data.ts';
 import { commandDirs, commandTree, deleteTargets, type CommandTree } from './command-tree.ts';
@@ -27,10 +27,10 @@ function within(root: string, target: string): boolean {
 }
 
 export function guardedCrewFolders(env: NodeJS.ProcessEnv = process.env): string[] {
-  const named = crewFolders(env);
+  const named = crewFolders(env).map((folder) => toGatePath(folder));
   const real = named.flatMap((folder) => {
     try {
-      return [realpathSync(folder)];
+      return [toGatePath(realpathSync(toNativePath(folder)))];
     } catch {
       return [];
     }

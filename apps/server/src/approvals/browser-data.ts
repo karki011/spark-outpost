@@ -1,5 +1,5 @@
 import { realpathSync } from 'node:fs';
-import path from 'node:path';
+import { gatePaths as path, toGatePath } from './gate-path.ts';
 import { sparkDataDir } from '../config.ts';
 import { globToRegExp } from '../projects/path-policy.ts';
 import { acceptedRecordPath } from '../spark-rules/accepted.ts';
@@ -65,9 +65,9 @@ export function browserDataDir(
 ): string {
   const dataDir = sparkDataDir({ SPARK_DATA_DIR: env.SPARK_DATA_DIR }, fromCheckout);
   try {
-    return realpathSync(dataDir);
+    return toGatePath(realpathSync(dataDir));
   } catch {
-    return path.resolve(dataDir);
+    return path.resolve(toGatePath(dataDir));
   }
 }
 

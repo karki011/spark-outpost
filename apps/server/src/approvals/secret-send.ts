@@ -1,5 +1,5 @@
 import { readFile, stat } from 'node:fs/promises';
-import path from 'node:path';
+import { gatePaths as path, toNativePath } from './gate-path.ts';
 import { browserOrigin } from '@spark-outpost/contracts';
 import {
   projectSecretValues,
@@ -120,10 +120,10 @@ async function uploadedText(args: readonly string[], cwd: string, home: string):
   const texts: string[] = [];
   for (const candidate of candidates.filter((word) => !UNRESOLVED.test(word))) {
     const file = resolveCommandPath(candidate, cwd, home);
-    const found = await stat(file).catch(() => null);
+    const found = await stat(toNativePath(file)).catch(() => null);
     if (!found?.isFile()) continue;
     if (found.size > MAX_UPLOAD_BYTES || texts.length >= MAX_UPLOAD_FILES) unreadable = true;
-    else texts.push(await readFile(file, 'utf8').catch(() => ''));
+    else texts.push(await readFile(toNativePath(file), 'utf8').catch(() => ''));
   }
   return { text: texts.join('\n'), unreadable };
 }

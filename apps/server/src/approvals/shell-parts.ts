@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { gatePaths as path } from './gate-path.ts';
 import { gitSubcommand } from './git-commands.ts';
 import { gitConfigUse } from './git-config.ts';
 import { inTempDir } from './temp-dirs.ts';

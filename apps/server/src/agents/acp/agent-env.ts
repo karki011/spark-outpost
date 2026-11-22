@@ -108,6 +108,15 @@ async function baseEnvironment(
   return withHiddenServers(env, await codexUserMcpNames(base));
 }
 
+export function withGitBashOnly(
+  definition: Pick<AgentDefinition, 'repoStyle'>,
+  env: Record<string, string>,
+  platform: NodeJS.Platform = process.platform,
+): Record<string, string> {
+  if (platform !== 'win32' || definition.repoStyle !== 'claude') return env;
+  return { ...env, CLAUDE_CODE_USE_POWERSHELL_TOOL: '0' };
+}
+
 export async function agentEnvironment(
   options: AgentEnvironmentOptions,
   home: string,
@@ -116,6 +125,9 @@ export async function agentEnvironment(
   cannotPush = false,
 ): Promise<Record<string, string>> {
   const base = await baseEnvironment(options, home, browsing, repo);
-  const env = withBackgroundSubagents(options.definition, base);
+  const env = withGitBashOnly(
+    options.definition,
+    withBackgroundSubagents(options.definition, base),
+  );
   return cannotPush ? withoutPushing(env) : env;
 }

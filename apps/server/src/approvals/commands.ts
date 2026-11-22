@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { gatePaths as path, toGatePath } from './gate-path.ts';
 
 const CONTROL_OPERATORS = /[;&|\n]|\$\(|`|[<>]/;
 const SEPARATORS = new Set([';', '&', '|', '\n']);
@@ -206,7 +206,9 @@ export function programTokens(tokens: readonly string[]): string[] {
 }
 
 export function resolveCommandPath(word: string, cwd: string, home: string): string {
-  const expanded = word === '~' || word.startsWith('~/') ? path.join(home, word.slice(1)) : word;
+  const written = toGatePath(word);
+  const expanded =
+    written === '~' || written.startsWith('~/') ? path.join(home, written.slice(1)) : written;
   const staticPart = expanded.split(/[*?[{]/)[0] ?? '';
   const base = staticPart === '' ? '.' : staticPart;
   return path.resolve(cwd, base);

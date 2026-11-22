@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { glob, readdir, readFile, realpath, stat } from 'node:fs/promises';
-import path from 'node:path';
+import { gatePaths as path, gateRelative, toGatePath, toNativePath } from './gate-path.ts';
 import { promisify } from 'node:util';
 import { PROJECT_READ_MAX_BYTES } from '../projects/path-policy.ts';
 
@@ -35,7 +35,7 @@ const SKIPPED_DIRS = new Set(['node_modules', '.git']);
 
 async function isDirectory(target: string): Promise<boolean | null> {
   try {
-    return (await stat(target)).isDirectory();
+    return (await stat(toNativePath(target))).isDirectory();
   } catch {
     return null;
   }
@@ -43,7 +43,7 @@ async function isDirectory(target: string): Promise<boolean | null> {
 
 async function entriesOf(dir: string) {
   try {
-    return await readdir(dir, { withFileTypes: true });
+    return await readdir(toNativePath(dir), { withFileTypes: true });
   } catch {
     return [];
   }
@@ -70,7 +70,7 @@ async function committedUnchanged(file: string): Promise<boolean> {
     const { stdout } = await run(
       'git',
       ['status', '--porcelain', '--ignored', '--untracked-files=all', '--', path.basename(file)],
-      { cwd: path.dirname(file), encoding: 'utf8', timeout: GIT_TIMEOUT_MS },
+      { cwd: toNativePath(path.dirname(file)), encoding: 'utf8', timeout: GIT_TIMEOUT_MS },
     );
     return stdout.trim() === '';
   } catch {
@@ -80,10 +80,11 @@ async function committedUnchanged(file: string): Promise<boolean> {
 
 async function readScript(target: string): Promise<ScriptFile | null> {
   try {
-    const real = await realpath(target);
-    const stats = await stat(real);
+    const native = await realpath(toNativePath(target));
+    const real = toGatePath(native);
+    const stats = await stat(native);
     if (!stats.isFile()) return null;
-    const text = stats.size > PROJECT_READ_MAX_BYTES ? null : await readFile(real, 'utf8');
+    const text = stats.size > PROJECT_READ_MAX_BYTES ? null : await readFile(native, 'utf8');
     return { text, committed: await committedUnchanged(real) };
   } catch {
     return null;
@@ -94,12 +95,12 @@ async function globFiles(pattern: string, cwd: string): Promise<string[] | null>
   try {
     const found: string[] = [];
     const matches = glob(pattern, {
-      cwd,
+      cwd: toNativePath(cwd),
       exclude: (name) => SKIPPED_DIRS.has(path.basename(String(name))),
     });
     for await (const match of matches) {
       if (found.length >= MAX_ENTRIES) return null;
-      found.push(path.resolve(cwd, match));
+      found.push(path.resolve(cwd, gateRelative(match)));
     }
     return found;
   } catch {

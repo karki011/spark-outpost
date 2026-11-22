@@ -12,6 +12,7 @@ import { exitPlanText, isExitPlanKind } from '../../plans/plan-mode.ts';
 import type { GateAnswer } from '../../providers/provider.ts';
 import { objectFields } from './object-fields.ts';
 import { toolNameOf } from './tool-titles.ts';
+import { gateRequest } from '../../approvals/gate-request.ts';
 
 export interface RequestContext {
   rpcId: string | null;
@@ -158,7 +159,7 @@ export function approvalRequestFrom(
   const options = approvalOptions(params.options);
   const mcpServer = mcpServerOf(params, title);
   const agentReason = agentReasonOf(params);
-  return {
+  return gateRequest({
     toolCallId: toolCall.toolCallId,
     rpcId: context.rpcId,
     kind,
@@ -179,7 +180,7 @@ export function approvalRequestFrom(
     ...(context.attachedFiles?.length ? { attachedFiles: context.attachedFiles } : {}),
     ...(context.readable?.length ? { readable: context.readable } : {}),
     ...(context.mode !== undefined ? { mode: context.mode } : {}),
-  };
+  });
 }
 
 export function permissionResponse(answer: GateAnswer): acp.RequestPermissionResponse {
