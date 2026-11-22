@@ -1,8 +1,9 @@
-import { useState, type KeyboardEvent } from 'react';
+import { useMemo, useState, type KeyboardEvent } from 'react';
 import { keepPreviousData, useQueries } from '@tanstack/react-query';
 import type { Project, ProjectFile } from '@spark-outpost/contracts';
 import { projectKeys, projectsApi } from '../../api/projects.ts';
 import { useDebouncedValue } from '../../ui/use-debounced-value.ts';
+import type { PendingAttachment } from '../attachments/use-attachments.ts';
 import { interleave } from './repo-list.ts';
 
 const SEARCH_DELAY_MS = 150;
@@ -14,6 +15,18 @@ export interface RepoFile extends ProjectFile {
 
 export function repoFileKey(file: Pick<RepoFile, 'projectId' | 'path'>): string {
   return `${file.projectId}:${file.path}`;
+}
+
+export function useAttachedRepoPaths(items: readonly PendingAttachment[]): Set<string> {
+  return useMemo(
+    () =>
+      new Set(
+        items.flatMap((item) =>
+          item.source.type === 'repo' && item.status !== 'error' ? [repoFileKey(item.source)] : [],
+        ),
+      ),
+    [items],
+  );
 }
 
 export interface FileSearch {

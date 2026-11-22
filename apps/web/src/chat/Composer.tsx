@@ -55,7 +55,7 @@ import { useMentionWorkflows } from '../crew-flows/use-mention-workflows.ts';
 import { MentionPicker } from './project/MentionPicker.tsx';
 import { RepoFilePicker } from './project/RepoFilePicker.tsx';
 import { useAgentConfig } from './project/use-agent-config.ts';
-import { repoFileKey, type RepoFile } from './project/use-file-search.ts';
+import { useAttachedRepoPaths, type RepoFile } from './project/use-file-search.ts';
 import { useMention } from './project/use-mention.ts';
 import { enterAction } from './queue/send-choice.ts';
 import { MarkdownInput } from './composer/markdown/MarkdownInput.tsx';
@@ -193,16 +193,11 @@ export function Composer({
     setRepoOpen(false);
     textareaRef.current?.focus();
   }, []);
-  const attachedPaths = useMemo(
-    () =>
-      new Set(
-        attachments.items.flatMap((item) =>
-          item.source.type === 'repo' && item.status !== 'error' ? [repoFileKey(item.source)] : [],
-        ),
-      ),
-    [attachments.items],
-  );
-  useDraftRequests(conversationId, setDraft, textareaRef, quotes?.focusRequest ?? 0);
+  const attachedPaths = useAttachedRepoPaths(attachments.items);
+  useDraftRequests(conversationId, setDraft, textareaRef, {
+    focusRequest: quotes?.focusRequest ?? 0,
+    onFiles: attachments.add,
+  });
 
   const queueing = busy && onQueue !== undefined;
   const hasText = draft.trim().length > 0;

@@ -44,8 +44,37 @@ export interface StepPlace {
   base: string | null;
   filesBase: string | null;
   files: readonly PlaceFile[] | null;
-  pull: { number: number; title: string | null } | null;
+  pull: { id: string; number: number; title: string | null } | null;
+  target: RunPull | null;
   landed: LandedCommits | null;
+}
+
+export interface RunPull {
+  id: string;
+  named: boolean;
+  openInChat: number;
+  open: boolean;
+}
+
+export function runPullLine(target: RunPull): string {
+  if (target.named) return `This run is about pull request ${target.id}, named in the message.`;
+  if (target.open && target.openInChat > 1) {
+    return `This run is about pull request ${target.id}: the message named none, so Spark picked the most recently updated of this chat’s ${target.openInChat} open pull requests.`;
+  }
+  if (target.open)
+    return `This run is about pull request ${target.id}, this chat’s open pull request.`;
+  return `This run is about pull request ${target.id}.`;
+}
+
+function targetLines(place: StepPlace): string[] {
+  if (!place.target) return [];
+  const lines = [runPullLine(place.target)];
+  if (place.target.id !== place.pull?.id) {
+    lines.push(
+      'That pull request is not the branch checked out in this folder: read it from GitHub (for example gh pr view and gh pr diff) instead of the files here.',
+    );
+  }
+  return lines;
 }
 
 const TRIGGER_STARTS: Record<WorkflowTriggerKind, string> = {
@@ -140,6 +169,7 @@ function dataLines(place: StepPlace): string[] {
     const title = place.pull.title ? ` ${value(place.pull.title)}` : '';
     lines.push(`This chat’s open pull request: #${place.pull.number}${title}`);
   }
+  lines.push(...targetLines(place));
   if (place.files) lines.push(...fileLines(place.files, place.filesBase));
   if (place.landed) lines.push(...landedLines(place.landed, place.base));
   return lines;

@@ -25,6 +25,10 @@ Findings are the lines in the last steps' replies that start with `[Critical]`, 
 
 **Steps** on the line shows what each step did; **Open run view** shows the whole run. See [Follow a workflow run](workflow-runs.md).
 
+## Pick the pull request
+
+Add a pull request's link to your message to run on it. Without one, the run takes the chat's newest open pull request and names it. Steps read another branch's pull request from GitHub.
+
 ## Run in several chats
 
 1. Select **Sparks** in the left bar, then **Workflows**.

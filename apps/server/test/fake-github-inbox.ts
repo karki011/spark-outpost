@@ -32,7 +32,12 @@ function mergeFacts(pull: FakePull) {
   return { mergeable: 'MERGEABLE', mergeStateStatus: 'CLEAN' };
 }
 
-function node(pull: FakePull) {
+function viewerReview(pull: FakePull, login: string) {
+  const own = (pull.reviews ?? []).filter((review) => review.user.login === login);
+  return own.length > 0 ? { state: own.at(-1)!.state } : null;
+}
+
+function node(pull: FakePull, login: string) {
   const resolved = new Set(pull.resolvedComments ?? []);
   const roots = (pull.reviewComments ?? []).filter((comment) => !comment.in_reply_to_id);
   const state = rollupState(pull);
@@ -42,7 +47,13 @@ function node(pull: FakePull) {
     url: pull.html_url,
     isDraft: pull.draft,
     updatedAt: pull.updated_at ?? new Date().toISOString(),
+    createdAt: pull.created_at ?? pull.updated_at ?? new Date().toISOString(),
     headRefName: pull.head,
+    baseRefName: pull.base,
+    bodyText: pull.body,
+    labels: { nodes: (pull.labels ?? []).map((name) => ({ name, color: '0e8a16' })) },
+    assignees: { nodes: [] },
+    comments: { totalCount: 0 },
     headRefOid: pull.sha ?? DEFAULT_SHA,
     additions: pull.additions ?? null,
     deletions: pull.deletions ?? null,
@@ -60,6 +71,7 @@ function node(pull: FakePull) {
         author: { login: review.user.login },
       })),
     },
+    viewerLatestReview: viewerReview(pull, login),
     reviewThreads: {
       nodes: roots.map((comment) => ({
         isResolved: comment.id !== undefined && resolved.has(comment.id),
@@ -90,6 +102,7 @@ function node(pull: FakePull) {
 function matching(
   pulls: readonly FakePull[],
   search: Search,
+  login: string,
   include: (pull: FakePull) => boolean,
 ) {
   const nodes = pulls
@@ -97,7 +110,7 @@ function matching(
     .filter((pull) => search.repos.size === 0 || search.repos.has(`${pull.owner}/${pull.repo}`))
     .filter((pull) => (pull.updated_at ?? '9999').slice(0, 10) >= search.since)
     .filter(include)
-    .map(node);
+    .map((pull) => node(pull, login));
   return { issueCount: nodes.length, nodes };
 }
 
@@ -109,18 +122,31 @@ export function inboxSearchAnswer(
   const query = String(body.query ?? '');
   const review = searchIn(query, 'review');
   const mine = searchIn(query, 'mine');
-  if (!review && !mine) return null;
+  const reviewed = searchIn(query, 'reviewed');
+  if (!review && !mine && !reviewed) return null;
   return {
     data: {
       viewer: { login },
       ...(review
         ? {
-            review: matching(pulls, review, (pull) =>
+            review: matching(pulls, review, login, (pull) =>
               (pull.requestedReviewers ?? []).includes(login),
             ),
           }
         : {}),
-      ...(mine ? { mine: matching(pulls, mine, (pull) => pull.openedBy === login) } : {}),
+      ...(mine ? { mine: matching(pulls, mine, login, (pull) => pull.openedBy === login) } : {}),
+      ...(reviewed
+        ? {
+            reviewed: matching(
+              pulls,
+              reviewed,
+              login,
+              (pull) =>
+                pull.openedBy !== login &&
+                (pull.reviews ?? []).some((entry) => entry.user.login === login),
+            ),
+          }
+        : {}),
     },
   };
 }

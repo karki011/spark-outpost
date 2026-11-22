@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GithubInbox, GithubInboxItem } from '@spark-outpost/contracts';
+import { inboxItem as item } from './inbox-item-fixture.ts';
 import {
   type ListEntry,
   ageLabel,
@@ -22,40 +23,6 @@ function ids(entries: ListEntry[]): string[] {
 }
 
 const NOW = Date.parse('2026-11-16T12:00:00Z');
-
-function item(overrides: Partial<GithubInboxItem> = {}): GithubInboxItem {
-  return {
-    id: 'acme/api#1',
-    url: 'https://github.com/acme/api/pull/1',
-    repo: 'acme/api',
-    number: 1,
-    title: 'Fix it',
-    author: 'sam-kim',
-    authorIsBot: false,
-    mine: false,
-    group: 'review_requested',
-    draft: false,
-    checks: 'passing',
-    failingChecks: 0,
-    conflict: false,
-    behind: false,
-    openThreads: null,
-    changesRequested: false,
-    approvedBy: [],
-    waitingOn: [],
-    headSha: 'abc',
-    updatedAt: '2026-11-15T12:00:00Z',
-    additions: 10,
-    deletions: 2,
-    changedFiles: 3,
-    projectId: null,
-    conversationId: null,
-    ticket: null,
-    unseen: false,
-    updatedSinceSeen: false,
-    ...overrides,
-  };
-}
 
 function inbox(items: GithubInboxItem[], connected = true): GithubInbox {
   return { connected, login: 'me', windowDays: 14, fetchedAt: null, items, problems: [] };

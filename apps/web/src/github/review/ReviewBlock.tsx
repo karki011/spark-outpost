@@ -14,6 +14,7 @@ import {
   stateLabel,
   type ReviewAction,
 } from './review-model.ts';
+import { ReviewShare } from './ReviewShare.tsx';
 import { usePullReview } from './use-pull-review.ts';
 import './review-block.css';
 
@@ -76,7 +77,12 @@ function Outcome({ review, headSha }: { review: GithubReview; headSha: string })
   );
 }
 
-export function ReviewBlock({ item }: { item: GithubInboxItem }) {
+interface ReviewBlockProps {
+  item: GithubInboxItem;
+  onOpenChat: (conversationId: string) => void;
+}
+
+export function ReviewBlock({ item, onOpenChat }: ReviewBlockProps) {
   const titleId = useId();
   const { settings } = useReviewSettings();
   const { reviews, latest, busy, actionError, start, stop } = usePullReview(item.id);
@@ -136,6 +142,7 @@ export function ReviewBlock({ item }: { item: GithubInboxItem }) {
           </button>
         )}
         {latest && <Posted review={latest} />}
+        {latest && <ReviewShare item={item} review={latest} onOpenChat={onOpenChat} />}
       </div>
     </section>
   );

@@ -1,3 +1,4 @@
+import { pullDetailsErrorStatus } from '../github-inbox/details.ts';
 import { remoteDeviceOf } from '../remote/principal.ts';
 import { RecapNotFoundError, RecapNotReadyError } from '../recap/service.ts';
 import { z } from 'zod';
@@ -241,6 +242,7 @@ export function statusForError(error: unknown): { status: number; message: strin
     queueErrorStatus(error) ??
     subChatErrorStatus(error) ??
     adoptErrorStatus(error) ??
+    pullDetailsErrorStatus(error) ??
     cloneErrorStatus(error) ??
     interruptionErrorStatus(error) ??
     sparkRulesErrorStatus(error) ??

@@ -4,6 +4,7 @@ export interface PendingDraft {
   text: string;
   afterTyped: boolean;
   replaces?: readonly string[];
+  files?: readonly File[];
 }
 
 const drafts = new Map<string, PendingDraft>();
@@ -22,6 +23,14 @@ function setPendingDraft(conversationId: string, draft: PendingDraft): void {
 
 export function queueDraft(conversationId: string, text: string): void {
   setPendingDraft(conversationId, { text, afterTyped: false });
+}
+
+export function queueDraftWithFiles(
+  conversationId: string,
+  text: string,
+  files: readonly File[],
+): void {
+  setPendingDraft(conversationId, { text, afterTyped: true, files });
 }
 
 export function queueDraftAfterTyped(conversationId: string, text: string): void {

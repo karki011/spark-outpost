@@ -5,20 +5,28 @@ import { GROUP_LABEL, GROUPS, tileLine } from './github-model.ts';
 
 interface GithubTilesProps {
   grouped: Record<GithubInboxGroup, GithubInboxItem[]>;
-  value: GithubInboxGroup;
+  value: GithubInboxGroup | null;
+  matches?: Record<GithubInboxGroup, number> | null;
   now: number;
   onChange: (group: GithubInboxGroup) => void;
 }
 
+function matchLine(count: number): string {
+  if (count === 0) return 'No match';
+  return count === 1 ? '1 match' : `${count} matches`;
+}
+
 const STEPS: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
 
-export function GithubTiles({ grouped, value, now, onChange }: GithubTilesProps) {
+export function GithubTiles({ grouped, value, matches = null, now, onChange }: GithubTilesProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const index = GROUPS.indexOf(value);
+  const index = value ? GROUPS.indexOf(value) : -1;
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     let next: number | null = null;
-    if (event.key in STEPS) next = (index + STEPS[event.key]! + GROUPS.length) % GROUPS.length;
-    else if (event.key === 'Home') next = 0;
+    if (event.key in STEPS) {
+      const from = index === -1 ? (STEPS[event.key]! > 0 ? -1 : 0) : index;
+      next = (from + STEPS[event.key]! + GROUPS.length) % GROUPS.length;
+    } else if (event.key === 'Home') next = 0;
     else if (event.key === 'End') next = GROUPS.length - 1;
     if (next === null) return;
     event.preventDefault();
@@ -35,9 +43,12 @@ export function GithubTiles({ grouped, value, now, onChange }: GithubTilesProps)
     >
       {GROUPS.map((group) => {
         const items = grouped[group];
-        const line = tileLine(group, items, now);
+        const found = matches?.[group] ?? null;
+        const line = found === null ? tileLine(group, items, now) : matchLine(found);
         const checked = group === value;
-        const fresh = group === 'review_requested' && items.some((item) => item.unseen);
+        const focusable = checked || (value === null && group === GROUPS[0]);
+        const fresh =
+          found === null && group === 'review_requested' && items.some((item) => item.unseen);
         return (
           <button
             key={group}
@@ -47,7 +58,8 @@ export function GithubTiles({ grouped, value, now, onChange }: GithubTilesProps)
             data-group={group}
             aria-checked={checked}
             aria-label={`${GROUP_LABEL[group]}, ${items.length}, ${line}`}
-            tabIndex={checked ? 0 : -1}
+            data-empty={found === 0 || undefined}
+            tabIndex={focusable ? 0 : -1}
             onClick={() => onChange(group)}
           >
             <b className="gh-count">{items.length}</b>

@@ -1,5 +1,7 @@
 import {
   githubInboxSchema,
+  githubPullDetailsSchema,
+  type GithubPullDetails,
   type GithubInbox,
   type GithubInboxSeenRequest,
   type GithubInboxWindowDays,
@@ -8,11 +10,14 @@ import { request } from '../api/client.ts';
 
 export const githubKeys = {
   inbox: ['github', 'inbox'] as const,
+  details: (id: string, headSha: string) => ['github', 'details', id, headSha] as const,
 };
 
 export const githubApi = {
   inbox: (refresh = false): Promise<GithubInbox> =>
     request(githubInboxSchema, refresh ? '/github/inbox?refresh=1' : '/github/inbox'),
+  details: (id: string): Promise<GithubPullDetails> =>
+    request(githubPullDetailsSchema, `/github/inbox/details?id=${encodeURIComponent(id)}`),
   seen: (body: GithubInboxSeenRequest): Promise<GithubInbox> =>
     request(githubInboxSchema, '/github/inbox/seen', {
       method: 'POST',

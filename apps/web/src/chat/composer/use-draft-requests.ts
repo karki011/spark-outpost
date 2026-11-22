@@ -10,6 +10,7 @@ import {
 
 function withTyped(typed: string, pending: PendingDraft): string {
   const kept = typed.trim();
+  if (pending.text === '') return typed;
   if (!pending.afterTyped || kept === '' || pending.replaces?.includes(kept)) return pending.text;
   return `${typed.trimEnd()}\n\n${pending.text}`;
 }
@@ -18,7 +19,7 @@ export function useDraftRequests(
   conversationId: string,
   setDraft: Dispatch<SetStateAction<string>>,
   textareaRef: RefObject<HTMLTextAreaElement | null>,
-  focusRequest: number,
+  { focusRequest, onFiles }: { focusRequest: number; onFiles: (files: File[]) => void },
 ): void {
   const pendingDraft = usePendingDraft(conversationId);
   const storeFocusRequest = useComposerFocusRequest(conversationId);
@@ -27,11 +28,12 @@ export function useDraftRequests(
     const pending = takeDraft(conversationId);
     if (!pending) return;
     setDraft((current) => withTyped(current, pending));
+    if (pending.files?.length) onFiles([...pending.files]);
     requestAnimationFrame(() => {
       const input = textareaRef.current;
       if (input) focusAtEnd(input);
     });
-  }, [pendingDraft, conversationId, textareaRef, setDraft]);
+  }, [pendingDraft, conversationId, textareaRef, setDraft, onFiles]);
 
   useEffect(() => {
     if (focusRequest === 0 && storeFocusRequest === 0) return;
