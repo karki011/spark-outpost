@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { gatePaths as path } from './gate-path.ts';
 import { isSecretPath } from '../projects/path-policy.ts';
 import { commandTree, deleteTargets, treeWords, type CommandTree } from './command-tree.ts';
 import { resolveCommandPath } from './commands.ts';

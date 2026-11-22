@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { gatePaths as path } from './gate-path.ts';
 import { resolveCommandPath } from './commands.ts';
 import type { FileLister } from './file-lister.ts';
 import { FILE_FUNCTIONS, changesFiles, loadsEnvFile, readsUnknownFiles } from './inline-code.ts';

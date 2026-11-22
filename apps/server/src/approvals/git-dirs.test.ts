@@ -3,9 +3,11 @@ import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { gitControlGlobs, gitControlLabel, readGitDirs } from './git-dirs.ts';
+import { toGatePath } from './gate-path.ts';
+import { gateGitDirs, gitControlGlobs, gitControlLabel, readGitDirs } from './git-dirs.ts';
 
 let repo: string;
+const at = (...parts: string[]) => toGatePath(join(...parts));
 let worktree: string;
 
 const git = (cwd: string, ...args: string[]) =>
@@ -14,7 +16,7 @@ const git = (cwd: string, ...args: string[]) =>
   });
 
 beforeAll(() => {
-  repo = realpathSync(mkdtempSync(join(tmpdir(), 'spark-git-dirs-')));
+  repo = realpathSync.native(mkdtempSync(join(tmpdir(), 'spark-git-dirs-')));
   git(repo, 'init', '-q');
   git(repo, 'commit', '-q', '--allow-empty', '-m', 'base');
   worktree = join(repo, '.spark', 'worktrees', 'chat-1');
@@ -27,14 +29,14 @@ const rootOf = async (path: string) => ({ path, gitDirs: await readGitDirs(path)
 
 describe('readGitDirs()', () => {
   it('finds one git folder for a checkout', async () => {
-    const common = join(repo, '.git');
-    expect(await readGitDirs(repo)).toEqual({ common, own: common });
+    const common = at(repo, '.git');
+    expect(gateGitDirs((await readGitDirs(repo))!)).toEqual({ common, own: common });
   });
 
   it("finds the checkout's git folder and the worktree's own one for a worktree", async () => {
-    expect(await readGitDirs(worktree)).toEqual({
-      common: join(repo, '.git'),
-      own: join(repo, '.git', 'worktrees', 'chat-1'),
+    expect(gateGitDirs((await readGitDirs(worktree))!)).toEqual({
+      common: at(repo, '.git'),
+      own: at(repo, '.git', 'worktrees', 'chat-1'),
       branch: 'refs/heads/spark/chat-1',
     });
   });
@@ -53,17 +55,17 @@ describe('gitControlGlobs()', () => {
 
   it("names the real hooks, config and the worktree's own config for a worktree", async () => {
     expect(gitControlGlobs([await rootOf(worktree)])).toEqual([
-      join(repo, '.git', 'hooks', '*'),
-      join(repo, '.git', 'config'),
-      join(repo, '.git', 'worktrees', 'chat-1', 'config.worktree'),
+      at(repo, '.git', 'hooks', '*'),
+      at(repo, '.git', 'config'),
+      at(repo, '.git', 'worktrees', 'chat-1', 'config.worktree'),
     ]);
   });
 
   it('names the git folder of a linked folder that sits below the top of its repository', async () => {
     const below = { path: join(repo, 'packages'), gitDirs: await readGitDirs(repo) };
     expect(gitControlGlobs([below])).toEqual([
-      join(repo, '.git', 'hooks', '*'),
-      join(repo, '.git', 'config'),
+      at(repo, '.git', 'hooks', '*'),
+      at(repo, '.git', 'config'),
     ]);
   });
 
@@ -74,7 +76,7 @@ describe('gitControlGlobs()', () => {
 
   it('still names .git/hooks when core.hooksPath points somewhere else', async () => {
     git(repo, 'config', 'core.hooksPath', '.husky');
-    expect(gitControlGlobs([await rootOf(worktree)])).toContain(join(repo, '.git', 'hooks', '*'));
+    expect(gitControlGlobs([await rootOf(worktree)])).toContain(at(repo, '.git', 'hooks', '*'));
     expect(gitControlGlobs([await rootOf(worktree)]).join(' ')).not.toContain('.husky');
     git(repo, 'config', '--unset', 'core.hooksPath');
   });
@@ -103,5 +105,28 @@ describe('gitControlLabel()', () => {
 
   it('knows nothing about a root whose git folder was not read', () => {
     expect(gitControlLabel([{ path: worktree }], join(repo, '.git/config'))).toBeNull();
+  });
+});
+
+describe('gitControlLabel() for a network share', () => {
+  const dirs = {
+    common: '//host/share/main/.git',
+    own: '//host/share/main/.git/worktrees/chat-1',
+    branch: 'refs/heads/spark/chat-1',
+  };
+  const roots = [{ path: '//host/share/chat-1', gitDirs: dirs }];
+
+  it('names the shared config and the worktree config', () => {
+    expect(gitControlLabel(roots, '//host/share/main/.git/config')).toBe('.git/config');
+    expect(gitControlLabel(roots, '//host/share/main/.git/worktrees/chat-1/config.worktree')).toBe(
+      '.git/config.worktree',
+    );
+  });
+
+  it.runIf(process.platform === 'win32')('names them from Windows share paths', () => {
+    expect(gitControlLabel(roots, '\\\\host\\share\\main\\.git\\config')).toBe('.git/config');
+    expect(
+      gitControlLabel(roots, '\\\\host\\share\\main\\.git\\worktrees\\chat-1\\config.worktree'),
+    ).toBe('.git/config.worktree');
   });
 });

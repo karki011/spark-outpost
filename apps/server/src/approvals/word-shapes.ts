@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { gatePaths as path, toGatePath } from './gate-path.ts';
 
 const MAX_SHAPES = 64;
 const SUBSTITUTION = /\$\([^)]*\)|`[^`]*`|\$\{[^}]*\}|\$[A-Za-z_][A-Za-z0-9_]*|\$[0-9@*#?$!-]/g;
@@ -69,7 +69,7 @@ export function braceExpansions(word: string): string[] | null {
 }
 
 export function homeExpanded(word: string, home: string): string {
-  const withHome = word.replace(HOME_VARIABLE, home);
+  const withHome = toGatePath(word).replace(HOME_VARIABLE, home);
   if (withHome === '~' || withHome.startsWith('~/')) return path.join(home, withHome.slice(1));
   const user = USER_HOME.exec(withHome);
   if (!user) return withHome;

@@ -160,6 +160,13 @@ From the npm registry and official docs:
 - **Claude:** require Git for Windows and turn the PowerShell tool off in Spark's sessions with `CLAUDE_CODE_USE_POWERSHELL_TOOL=0`. The bash parser and the existing rules then still apply.
 - **Codex:** it only uses PowerShell, so the gate needs a PowerShell reader before Codex on Windows can get the same safety floor. The bash parser does not reject PowerShell: it reads `Get-Content C:\Users\me\.ssh\id_rsa` as an ordinary command, so its decisions on PowerShell can't be trusted. Until the reader exists, Spark must not claim the safety floor for Codex there. An always-ask fallback needs implementing: today an unreadable command does not always ask, since `approvals/decide.ts` can allow a command before its unreadable-command check, and that check depends on the run kind. Even with it, the Codex modes that run commands without sending them to the gate (Workspace access, Auto review, Full access) stay uncovered on Windows, as they are seen only after the fact on the Mac.
 
+## Phase 2 progress
+
+- **Gate paths (done):** the approval gate (`apps/server/src/approvals/`) reasons about paths with POSIX semantics on every platform (`gate-path.ts`). On Windows, native paths entering the gate are converted to Git Bash form (`C:\\x` → `/c/x`): roots, home, the working folder, tool paths, git folders, and the temp, data and crew folders (`gate-request.ts` at the entry points). Windows paths written in commands are read the same way. Git Bash `/tmp` maps to the Windows temp folder. File access converts back, and a POSIX path with no Windows equivalent is treated as missing. Claude permission rules use the same `/c/...` form.
+- **Claude on Windows (done):** Spark's Claude sessions set `CLAUDE_CODE_USE_POWERSHELL_TOOL=0`, so every command runs in Git Bash.
+- **Windows CI:** safety-rule unit tests went from 95 failing to 0. All unit tests went from 318 failing to about 235; the rest are terminal, worktree, desktop and tooling tests for later phases.
+- **Still open:** the always-ask fallback for Codex on Windows, ACLs for private files, and case-insensitive path matching beyond drive letters. Project folders on a network share (`\\server\share`) are not supported yet: POSIX path joins collapse the share's leading `//`, so a folder the gate can no longer map reads as unknown, and a server named with one letter would map to that drive. Keeping the share prefix through every join is a follow-up.
+
 ## Still unverified (needs a Windows machine)
 
 - That Spark's ACP sessions start with the user's logins on Windows.

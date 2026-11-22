@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { gatePaths as path, toGatePath, toNativePath } from './gate-path.ts';
 import type { GitDirs } from '../projects/path-policy.ts';
 import { runGit } from '../ship/git.ts';
 import { REPO_GIT_CONFIG } from './git-config.ts';
@@ -11,7 +11,7 @@ interface GitRoot {
 }
 
 export async function readGitDirs(root: string): Promise<GitDirs | null> {
-  const found = await runGit(root, [
+  const found = await runGit(toNativePath(root), [
     'rev-parse',
     '--path-format=absolute',
     '--git-common-dir',
@@ -20,7 +20,7 @@ export async function readGitDirs(root: string): Promise<GitDirs | null> {
     'HEAD',
   ]).catch(() => null);
   if (!found || found.code !== 0) return null;
-  const [common, own, head] = found.stdout.trim().split('\n');
+  const [common, own, head] = found.stdout.trim().split(/\r?\n/);
   if (!common || !own) return null;
   const branch = own !== common && head?.startsWith('refs/heads/') ? head : null;
   return branch ? { common, own, branch } : { common, own };
@@ -42,18 +42,23 @@ function labelIn(dirs: GitDirs, target: string): string | null {
 }
 
 export function gitControlLabel(roots: readonly GitRoot[], target: string): string | null {
+  const written = path.normalize(toGatePath(target));
   for (const root of roots) {
-    const label = root.gitDirs ? labelIn(root.gitDirs, target) : null;
+    const label = root.gitDirs ? labelIn(gateGitDirs(root.gitDirs), written) : null;
     if (label) return label;
   }
   return null;
 }
 
+export function gateGitDirs(dirs: GitDirs): GitDirs {
+  return { ...dirs, common: toGatePath(dirs.common), own: toGatePath(dirs.own) };
+}
+
 function globsFor(root: GitRoot): string[] {
-  const dirs = root.gitDirs;
-  if (!dirs) return [];
+  if (!root.gitDirs) return [];
+  const dirs = gateGitDirs(root.gitDirs);
   const shared =
-    dirs.common === path.join(root.path, '.git')
+    dirs.common === path.join(toGatePath(root.path), '.git')
       ? []
       : [path.join(dirs.common, 'hooks', '*'), path.join(dirs.common, 'config')];
   const own = dirs.own === dirs.common ? [] : [path.join(dirs.own, 'config.worktree')];

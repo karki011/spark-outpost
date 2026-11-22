@@ -1,5 +1,5 @@
-import path from 'node:path';
-import { isIgnoredPath, isSecretPath, relativeInside } from '../projects/path-policy.ts';
+import { gatePaths as path, gateRelativeInside } from './gate-path.ts';
+import { isIgnoredPath, isSecretPath } from '../projects/path-policy.ts';
 import type { ApprovalRequest, RequestRoot } from './decide.ts';
 import type { PartPlace } from './shell-parts.ts';
 
@@ -11,7 +11,7 @@ interface Placement {
 export function place(roots: readonly RequestRoot[], target: string): Placement {
   let best: Placement = { relative: null, root: null };
   for (const root of roots) {
-    const relative = relativeInside(root.path, target);
+    const relative = gateRelativeInside(root.path, target);
     if (relative === null) continue;
     if (!best.root || root.path.length > best.root.path.length) best = { relative, root };
   }
@@ -54,7 +54,7 @@ export function outsideRoots(request: ApprovalRequest, target: string): boolean 
 
 function inReadable(folders: readonly string[], target: string): boolean {
   return folders.some(
-    (folder) => path.resolve(folder) === target || relativeInside(folder, target) !== null,
+    (folder) => path.resolve(folder) === target || gateRelativeInside(folder, target) !== null,
   );
 }
 

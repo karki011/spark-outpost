@@ -1,14 +1,32 @@
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { relativeInside } from '../projects/path-policy.ts';
+import nativePath from 'node:path';
+import { gatePaths as path, gateRelativeInside, nativeOrNull, toGatePath } from './gate-path.ts';
 
 const FIXED_TEMP_ROOTS = ['/tmp', '/private/tmp', '/var/tmp', '/private/var/tmp'];
 const TEMP_VARIABLE = /^\$(?:TMPDIR|\{TMPDIR\})(?=\/|$)/;
 
+function volumeRoot(native: string): boolean {
+  const paths = process.platform === 'win32' ? nativePath.win32 : nativePath.posix;
+  if (!paths.isAbsolute(native)) return false;
+  const resolved = paths.resolve(native);
+  return resolved === paths.parse(resolved).root;
+}
+
+function gateVolumeRoot(gate: string): boolean {
+  const native = nativeOrNull(path.resolve(gate));
+  return native !== null && volumeRoot(native);
+}
+
+function systemTemp(): string {
+  return toGatePath(tmpdir());
+}
+
 function realOrNull(target: string): string | null {
+  const native = nativeOrNull(target);
+  if (native === null) return null;
   try {
-    return realpathSync(target);
+    return toGatePath(realpathSync.native(native));
   } catch {
     return null;
   }
@@ -28,19 +46,20 @@ function realTarget(target: string): string {
 }
 
 export function tempRoots(environment: NodeJS.ProcessEnv = process.env): string[] {
-  const named = [...FIXED_TEMP_ROOTS, tmpdir(), environment.TMPDIR ?? ''].filter(
+  const variable = toGatePath(environment.TMPDIR ?? '');
+  const named = [...FIXED_TEMP_ROOTS, systemTemp(), variable].filter(
     (root) => path.isAbsolute(root) && path.resolve(root) !== path.parse(root).root,
   );
   const resolved = named.map((root) => path.resolve(root));
   const real = resolved.flatMap((root) => realOrNull(root) ?? []);
-  return [...new Set([...resolved, ...real])];
+  return [...new Set([...resolved, ...real])].filter((root) => !gateVolumeRoot(root));
 }
 
 export function inTempDir(target: string): boolean {
   const real = realTarget(target);
-  return tempRoots().some((root) => relativeInside(root, real) !== null);
+  return tempRoots().some((root) => gateRelativeInside(root, real) !== null);
 }
 
 export function withTempVariable(word: string): string {
-  return word.replace(TEMP_VARIABLE, tmpdir());
+  return word.replace(TEMP_VARIABLE, systemTemp());
 }

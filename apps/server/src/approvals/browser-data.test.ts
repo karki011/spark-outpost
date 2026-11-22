@@ -10,6 +10,7 @@ import {
   sparkRulesFlagRules,
 } from './browser-data.ts';
 import { LOCAL_DATA_DIR } from '../config.ts';
+import { toGatePath } from './gate-path.ts';
 import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import { parseShell } from './shell-parse.ts';
 
@@ -105,7 +106,7 @@ describe('browser data paths', () => {
     expect(isBrowserData(DATA, DATA)).toBe(true);
     expect(isBrowserData(`${DATA}/postgres/base/1`, DATA)).toBe(true);
     expect(isBrowserData(`${DATA.toLowerCase()}/partitions/x`, DATA)).toBe(
-      process.platform === 'darwin',
+      process.platform === 'darwin' || process.platform === 'win32',
     );
     expect(isBrowserData(`${DATA}/spark/chats/x/work/a`, DATA)).toBe(false);
     expect(isBrowserData(`${DATA}/logs/api.log`, DATA)).toBe(false);
@@ -132,7 +133,7 @@ describe('browser data paths', () => {
 
   it("takes the folder from Spark's one data folder setting and never turns off", () => {
     expect(browserDataDir({ SPARK_DATA_DIR: '/nowhere/spark' })).toBe('/nowhere/spark');
-    expect(browserDataDir({}, true)).toBe(LOCAL_DATA_DIR);
+    expect(browserDataDir({}, true)).toBe(toGatePath(LOCAL_DATA_DIR));
     expect(() => browserDataDir({}, false)).toThrow('SPARK_DATA_DIR is not set');
     expect(() => browserDataDir({ SPARK_DATA_DIR: 'relative' })).toThrow('absolute');
   });

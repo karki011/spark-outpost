@@ -1,4 +1,5 @@
-import path from 'node:path';
+import { gatePaths as path } from './gate-path.ts';
+import { gateRequest } from './gate-request.ts';
 import { ALLOWED_REASONS } from '@spark-outpost/contracts';
 import type {
   ApprovalKind,
@@ -324,7 +325,7 @@ function ruledDecide(
   allowlist: readonly string[],
   options: DecideOptions = {},
 ): Decision {
-  const request = withResolvedVariables(asked);
+  const request = withResolvedVariables(gateRequest(asked));
   const browserData = options.browserData === undefined ? browserDataDir() : options.browserData;
   if (touchesBrowserData(request, browserData)) {
     return { verdict: 'reject', reason: BROWSER_DATA_REASON };

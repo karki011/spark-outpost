@@ -17,6 +17,7 @@ import {
   type RequestRoot,
 } from './decide.ts';
 import { place } from './request-place.ts';
+import { gateRequest } from './gate-request.ts';
 
 export const SPARK_COMMAND_TOOL_KIND = 'execute';
 export const SPARK_COMMAND_NOTE =
@@ -53,7 +54,7 @@ export function sparkCommandRequest(
   turn: Pick<SparkCommandTurn, 'roots' | 'home' | 'agentMode'>,
   start: SparkCommandStart,
 ): ApprovalRequest {
-  return {
+  return gateRequest({
     toolCallId: start.toolCallId,
     rpcId: null,
     kind: 'execute',
@@ -67,7 +68,7 @@ export function sparkCommandRequest(
     roots: turn.roots,
     home: turn.home,
     ...(turn.agentMode === null ? {} : { mode: turn.agentMode }),
-  };
+  });
 }
 
 export function commandHoldsSecret(command: string): boolean {
