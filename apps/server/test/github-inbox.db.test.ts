@@ -199,7 +199,7 @@ describe('the GitHub inbox', () => {
     pull(1, { openedBy: 'alice', requestedReviewers: [TOKEN_LOGIN] });
 
     expect((await inbox()).items[0]?.unseen).toBe(true);
-    expect(searches()).toBe(2);
+    expect(searches()).toBe(3);
     const seen = await send('post', '/api/github/inbox/seen', {
       id: 'acme/widgets#1',
       headSha: SHA,
@@ -208,12 +208,12 @@ describe('the GitHub inbox', () => {
       unseen: false,
       updatedSinceSeen: false,
     });
-    expect(searches()).toBe(2);
+    expect(searches()).toBe(3);
 
     github.github.pulls[0]!.sha = NEW_SHA;
     expect((await inbox()).items[0]?.headSha).toBe(SHA);
     const refreshed = await inbox('?refresh=1');
-    expect(searches()).toBe(4);
+    expect(searches()).toBe(6);
     expect(refreshed.items[0]).toMatchObject({
       headSha: NEW_SHA,
       unseen: false,
@@ -241,6 +241,23 @@ describe('the GitHub inbox', () => {
       { repo: null, message: expect.stringContaining('403') },
       { repo: 'acme/widgets', message: expect.stringContaining('403') },
     ]);
+  });
+
+  it('reads every page of review requests, one search per part', async () => {
+    await connectGitHub();
+    await linkWidgets();
+    for (let number = 100; number < 120; number += 1) {
+      pull(number, {
+        owner: 'other',
+        repo: 'elsewhere',
+        openedBy: 'alice',
+        requestedReviewers: [TOKEN_LOGIN],
+      });
+    }
+    const shown = await inbox();
+    expect(shown.items.filter((item) => item.group === 'review_requested')).toHaveLength(20);
+    expect(shown.problems).toEqual([]);
+    expect(searches()).toBe(4);
   });
 
   it('stores the window and searches only that far back', async () => {

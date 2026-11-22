@@ -21,7 +21,7 @@ summary: What changed in recent releases and what to do next.
 | Workflow runs say which pull request they took  | [Workflows](workflow-in-chat.md).                          |
 | One tap sends on phones                         | [Use your phone](use-your-phone.md).                       |
 | Outposts are gone; agents split work instead    | [Sub-chats](sub-chats.md).                                 |
-| GitHub page retries your other GitHub login     | Nothing to do.                                             |
+| GitHub review lists load in pages; no more 502  | Nothing to do.                                             |
 | Sub-chats nest; **Sub-chats** tab; **Edit**     | [Sub-chats](sub-chats.md#find-a-sub-chat).                 |
 | Sub-chat reports, wrap-up                       | [Reports](sub-chat-reports.md).                            |
 | Agents split jobs into sub-chats                | [Split a job](split-into-sub-chats.md).                    |

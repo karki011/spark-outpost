@@ -30,9 +30,10 @@ import { firstAnswer } from './fallback.ts';
 import { inboxPulls, seenFlags, strongest, type InboxPull } from './group.ts';
 import {
   inboxQuery,
+  MAX_RESULTS,
   parseInboxPage,
   repoChunks,
-  reviewRequestsQuery,
+  reviewQuery,
   type InboxPart,
 } from './search.ts';
 
@@ -105,17 +106,34 @@ interface Fetched {
   problems: GithubInboxProblem[];
 }
 
-async function search(connection: GitHubConnection, query: string, part: InboxPart) {
-  const body = await connection.post('/graphql', { query }, z.unknown(), 'searching pull requests');
-  return parseInboxPage(body, part);
+type InboxPage = ReturnType<typeof parseInboxPage>;
+
+async function search(
+  connection: GitHubConnection,
+  queryAfter: (after: string | null) => string,
+  part: InboxPart,
+): Promise<InboxPage> {
+  const found: InboxPage = { viewer: null, pulls: [], truncated: false, next: null, error: null };
+  let after: string | null = null;
+  do {
+    const query = queryAfter(after);
+    const body = await connection.post(
+      '/graphql',
+      { query },
+      z.unknown(),
+      'searching pull requests',
+    );
+    const page = parseInboxPage(body, part);
+    found.viewer ??= page.viewer;
+    found.pulls.push(...page.pulls);
+    found.error = page.error;
+    after = page.next;
+  } while (after !== null && found.error === null && found.pulls.length < MAX_RESULTS);
+  found.truncated = after !== null && found.error === null;
+  return found;
 }
 
-function takePage(
-  page: Awaited<ReturnType<typeof search>>,
-  host: string,
-  scope: string | null,
-  into: Fetched,
-): boolean {
+function takePage(page: InboxPage, host: string, scope: string | null, into: Fetched): boolean {
   const known = into.problems.some(
     (problem) => problem.repo === scope && problem.message === page.error,
   );
@@ -134,7 +152,11 @@ async function fetchGroup(group: ConnectionGroup, since: string, into: Fetched):
     const keys = chunk.map((repo) => repoKey(host, `${repo.owner}/${repo.name}`));
     const scope = chunk.length === 1 ? `${chunk[0]!.owner}/${chunk[0]!.name}` : null;
     try {
-      const page = await search(group.connection, inboxQuery(chunk, since), 'mine');
+      const page = await search(
+        group.connection,
+        (after) => inboxQuery(chunk, since, after),
+        'mine',
+      );
       if (!takePage(page, host, scope, into)) keys.forEach((key) => into.failed.add(key));
     } catch (error) {
       into.problems.push({ repo: scope, message: problemText(error) });
@@ -168,30 +190,26 @@ function reviewPartOf(pull: HostedPull): InboxPart {
   return pull.group === 'review_requested' ? 'review' : 'reviewed';
 }
 
-async function fetchReviewRequests(
+async function fetchReviewPart(
   connections: readonly GitHubConnection[],
+  part: (typeof REVIEW_PARTS)[number],
   since: string,
   into: Fetched,
 ): Promise<void> {
   const host = connections[0]!.host;
   try {
-    const { connection, answer: body } = await firstAnswer(connections, (each) =>
-      each.post(
-        '/graphql',
-        { query: reviewRequestsQuery(since) },
-        z.unknown(),
-        'searching pull requests',
-      ),
+    const { connection, answer: page } = await firstAnswer(connections, (each) =>
+      search(each, (after) => reviewQuery(part, since, after), part),
     );
-    for (const part of REVIEW_PARTS) {
-      const page = parseInboxPage(body, part);
-      if (!takePage(page, connection.host, null, into)) {
-        into.reviewFailed.add(reviewKey(connection.host, part));
-      }
+    if (!takePage(page, connection.host, null, into)) {
+      into.reviewFailed.add(reviewKey(connection.host, part));
     }
   } catch (error) {
-    into.problems.push({ repo: null, message: problemText(error) });
-    REVIEW_PARTS.forEach((part) => into.reviewFailed.add(reviewKey(host, part)));
+    const message = problemText(error);
+    if (!into.problems.some((problem) => problem.repo === null && problem.message === message)) {
+      into.problems.push({ repo: null, message });
+    }
+    into.reviewFailed.add(reviewKey(host, part));
   }
 }
 
@@ -217,7 +235,7 @@ async function fetchSnapshot(
   const groups = await groupByConnection(deps, repos, into.problems);
   const since = sinceDate(now, days);
   for (const connections of await reviewConnections(deps, repos)) {
-    await fetchReviewRequests(connections, since, into);
+    await Promise.all(REVIEW_PARTS.map((part) => fetchReviewPart(connections, part, since, into)));
   }
   for (const group of groups) await fetchGroup(group, since, into);
   const kept = (previous?.pulls ?? []).filter(
