@@ -14,7 +14,7 @@ Run a workflow and watch its steps finish. About 2 minutes.
 2. Select **Run** on a workflow. The run view opens. The run happens in its own chat.
 3. Read the line under the title: the run's state, steps done, time, tokens and cost.
 
-Type `@` in a chat, pick a workflow and send. `@pip-review` runs that workflow even with a Spark named Pip. Add a pull request link to run the steps on that pull request's code; see [Workflow steps](modes-and-levels.md#workflow-steps).
+Type `@` in a chat, pick a workflow and send. `@pip-review` runs that workflow even with a Spark named Pip.
 
 See also [Workflows in a chat](workflow-in-chat.md).
 
