@@ -107,3 +107,26 @@ describe('gitControlLabel()', () => {
     expect(gitControlLabel([{ path: worktree }], join(repo, '.git/config'))).toBeNull();
   });
 });
+
+describe('gitControlLabel() for a network share', () => {
+  const dirs = {
+    common: '//host/share/main/.git',
+    own: '//host/share/main/.git/worktrees/chat-1',
+    branch: 'refs/heads/spark/chat-1',
+  };
+  const roots = [{ path: '//host/share/chat-1', gitDirs: dirs }];
+
+  it('names the shared config and the worktree config', () => {
+    expect(gitControlLabel(roots, '//host/share/main/.git/config')).toBe('.git/config');
+    expect(gitControlLabel(roots, '//host/share/main/.git/worktrees/chat-1/config.worktree')).toBe(
+      '.git/config.worktree',
+    );
+  });
+
+  it.runIf(process.platform === 'win32')('names them from Windows share paths', () => {
+    expect(gitControlLabel(roots, '\\\\host\\share\\main\\.git\\config')).toBe('.git/config');
+    expect(
+      gitControlLabel(roots, '\\\\host\\share\\main\\.git\\worktrees\\chat-1\\config.worktree'),
+    ).toBe('.git/config.worktree');
+  });
+});

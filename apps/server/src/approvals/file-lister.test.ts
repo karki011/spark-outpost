@@ -93,3 +93,14 @@ describe('diskFiles absolute globs', () => {
     );
   });
 });
+
+describe('diskFiles on Windows', () => {
+  const platform = process.platform;
+  afterEach(() => Object.defineProperty(process, 'platform', { value: platform }));
+
+  it('reports a folder it cannot reach as unknown instead of empty', async () => {
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    expect(await diskFiles.walk('/server/share/repo')).toBeNull();
+    expect(await diskFiles.glob('*.env', '/server/share/repo')).toBeNull();
+  });
+});

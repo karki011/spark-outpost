@@ -115,7 +115,7 @@ function gateMatch(match: string): string {
 
 async function globFiles(pattern: string, cwd: string): Promise<string[] | null> {
   const nativeCwd = nativeOrNull(cwd);
-  if (nativeCwd === null) return [];
+  if (nativeCwd === null) return null;
   try {
     const found: string[] = [];
     const matches = glob(nativePattern(pattern), {
@@ -135,6 +135,7 @@ async function globFiles(pattern: string, cwd: string): Promise<string[] | null>
 export const diskFiles: FileSource = {
   glob: globFiles,
   walk: async (target) => {
+    if (nativeOrNull(target) === null) return null;
     const directory = await isDirectory(target);
     if (directory === null) return [];
     return directory ? walkTree(target) : [target];
