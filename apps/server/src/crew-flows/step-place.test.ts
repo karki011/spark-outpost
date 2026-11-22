@@ -171,7 +171,7 @@ describe('the pull request a run is about', () => {
   it('says the message named it, and that it is the checked-out branch', () => {
     const block = stepPlaceBlock({
       ...chatRun,
-      target: { id: 'acme/app#42', named: true, openInChat: 3 },
+      target: { id: 'acme/app#42', named: true, openInChat: 3, open: true },
     })!;
     expect(block).toContain('This run is about pull request acme/app#42, named in the message.');
     expect(block).not.toContain('not the branch checked out');
@@ -180,7 +180,7 @@ describe('the pull request a run is about', () => {
   it('says Spark picked the newest of several and that its branch is not checked out here', () => {
     const block = stepPlaceBlock({
       ...chatRun,
-      target: { id: 'acme/app#51', named: false, openInChat: 3 },
+      target: { id: 'acme/app#51', named: false, openInChat: 3, open: true },
     })!;
     expect(block).toContain(
       'This run is about pull request acme/app#51: the message named none, so Spark picked the most recently updated of this chat’s 3 open pull requests.',
@@ -191,11 +191,22 @@ describe('the pull request a run is about', () => {
   it('names a lone open pull request plainly', () => {
     const block = stepPlaceBlock({
       ...chatRun,
-      target: { id: 'acme/app#42', named: false, openInChat: 1 },
+      target: { id: 'acme/app#42', named: false, openInChat: 1, open: true },
     })!;
     expect(block).toContain(
       'This run is about pull request acme/app#42, this chat’s open pull request.',
     );
+  });
+
+  it('does not call a pull request open once it has closed', () => {
+    const block = stepPlaceBlock({
+      ...chatRun,
+      pull: null,
+      target: { id: 'acme/app#42', named: false, openInChat: 1, open: false },
+    })!;
+    expect(block).toContain('This run is about pull request acme/app#42.');
+    expect(block).not.toContain('open pull request');
+    expect(block).toContain('not the branch checked out in this folder');
   });
 });
 

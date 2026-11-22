@@ -57,7 +57,7 @@ describe('the pull request a workflow run is about', () => {
     await openPull(conversationId, 5, 1);
     await openPull(conversationId, 4, 10);
     const target = await runPull(t.db, await run(conversationId, runId, 'look'));
-    expect(target).toEqual({ id: 'acme/widgets#5', named: false, openInChat: 3 });
+    expect(target).toEqual({ id: 'acme/widgets#5', named: false, openInChat: 3, open: true });
     expect(runPullLine(target!)).toContain('picked the most recently updated of this chat’s 3');
   });
 
@@ -68,6 +68,18 @@ describe('the pull request a workflow run is about', () => {
     const message = 'look at https://github.com/acme/widgets/pull/3';
     const target = await runPull(t.db, await run(conversationId, runId, message));
     expect(target).toMatchObject({ id: 'acme/widgets#3', named: true });
+  });
+
+  it('stops calling the pull request open once it closes during the run', async () => {
+    const { conversationId, runId } = await startChat(t, '@gauntlet look');
+    await openPull(conversationId, 3, 30);
+    const picked = await run(conversationId, runId, 'look');
+    await t.db.query(`UPDATE pr_watches SET pr_state = 'closed' WHERE conversation_id = $1`, [
+      conversationId,
+    ]);
+    const target = await runPull(t.db, picked);
+    expect(target).toEqual({ id: 'acme/widgets#3', named: false, openInChat: 0, open: false });
+    expect(runPullLine(target!)).toBe('This run is about pull request acme/widgets#3.');
   });
 
   it('is none when the chat has no open pull request and the message names none', async () => {

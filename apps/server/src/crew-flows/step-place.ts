@@ -53,14 +53,17 @@ export interface RunPull {
   id: string;
   named: boolean;
   openInChat: number;
+  open: boolean;
 }
 
 export function runPullLine(target: RunPull): string {
   if (target.named) return `This run is about pull request ${target.id}, named in the message.`;
-  if (target.openInChat > 1) {
+  if (target.open && target.openInChat > 1) {
     return `This run is about pull request ${target.id}: the message named none, so Spark picked the most recently updated of this chat’s ${target.openInChat} open pull requests.`;
   }
-  return `This run is about pull request ${target.id}, this chat’s open pull request.`;
+  if (target.open)
+    return `This run is about pull request ${target.id}, this chat’s open pull request.`;
+  return `This run is about pull request ${target.id}.`;
 }
 
 function targetLines(place: StepPlace): string[] {

@@ -32,14 +32,19 @@ export function ReviewShare({ item, review, onOpenChat }: ReviewShareProps) {
   const { remote } = useRemoteClient();
   const { state, copy } = useCopyFeedback();
   const [problem, setProblem] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
   if (review.state !== 'done' || !review.body?.trim()) return null;
 
   const send = async () => {
+    if (sending) return;
+    setSending(true);
     setProblem(null);
     try {
       onOpenChat(await sendToChat(item, review));
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'The review could not go to a chat.');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -54,7 +59,12 @@ export function ReviewShare({ item, review, onOpenChat }: ReviewShareProps) {
         {state === 'idle' ? 'Copy review' : copyButtonText(state)}
       </button>
       {!remote && (
-        <button type="button" className="btn line sm gh-review-btn" onClick={() => void send()}>
+        <button
+          type="button"
+          className="btn line sm gh-review-btn"
+          disabled={sending}
+          onClick={() => void send()}
+        >
           <Glyph name="chat" size={13} />
           Send to chat
         </button>
