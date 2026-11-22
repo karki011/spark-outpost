@@ -22,6 +22,22 @@ GitHub Actions runs `.github/workflows/ci.yml` on demand (`workflow_dispatch`, A
 - **Left out**: the perf specs (`pnpm test:browser:perf`), whose 50 ms task budgets measure the machine; run them locally.
 - **macOS only**: a few tests check behaviour that exists only on a Mac and skip elsewhere: Control+D reaching a terminal session, Option-select in the terminal and the zsh login shell start-up. `pnpm check` and `pnpm test:browser` on a Mac still run them.
 
+## Windows
+
+`.github/workflows/windows.yml` is a separate workflow for the Windows port (`docs/architecture/WINDOWS_PLAN.md`). It runs by hand, and on a pull request that changes it or its scripts. It is not part of `ci-ok`.
+
+On `windows-2025` it runs `scripts/windows-smoke.ts`, which checks:
+
+- the bundled Postgres starts through `apps/desktop/src/postgres.ts`;
+- Credential Manager takes secrets of 100 to 5000 characters through `@napi-rs/keyring`;
+- `node-pty` runs PowerShell through ConPTY;
+- a named pipe echoes;
+- the bash command parser loads;
+- Git Bash is present;
+- the Claude and Codex ACP adapters answer `initialize`.
+
+It then runs the unit tests with `continue-on-error`, writes the failing files to the job summary through `scripts/vitest-summary.ts`, and uploads `vitest-windows.json` as `windows-unit-report`, kept 14 days. Run the smoke script locally with `pnpm exec tsx scripts/windows-smoke.ts`.
+
 ## Minutes
 
 While the repository is private, Actions usage counts against the plan ([GitHub billing](https://docs.github.com/en/billing/reference/product-usage-included)), so CI runs only when started by hand. Standard Linux runners on a private repository have 2 CPUs, which is why the db tests are sharded and the browser specs get one retry. A run uses roughly 150–200 Linux minutes. Once the repository is public, standard runners are free and have 4 CPUs, and the Swift jobs run whenever a helper changes.

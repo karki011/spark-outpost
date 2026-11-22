@@ -1,0 +1,52 @@
+name: Windows
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/windows.yml'
+      - 'scripts/windows-smoke.ts'
+      - 'scripts/vitest-summary.ts'
+      - 'scripts/acp-reply.ts'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+
+jobs:
+  smoke:
+    name: smoke (windows-2025)
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Smoke checks
+        shell: bash
+        run: pnpm exec tsx scripts/windows-smoke.ts
+      - name: Unit tests
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: pnpm exec vitest run --project unit --reporter=default --reporter=json --outputFile=vitest-windows.json
+      - name: Summarize unit tests
+        if: always()
+        shell: bash
+        run: pnpm exec tsx scripts/vitest-summary.ts vitest-windows.json
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-unit-report
+          path: |
+            vitest-windows.json
+            windows-smoke.md
+          if-no-files-found: ignore
+          retention-days: 14

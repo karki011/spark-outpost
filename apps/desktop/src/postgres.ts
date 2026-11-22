@@ -1,12 +1,15 @@
 import { execFile } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
 import pg from 'pg';
 import { LOOPBACK } from './ports.ts';
+import { startWithPgCtl, stopLeftoverWithPgCtl } from './postgres-windows.ts';
 
 const run = promisify(execFile);
 
@@ -27,6 +30,13 @@ async function loadWithoutExitHooks() {
     }
   }
   return EmbeddedPostgres;
+}
+
+async function windowsPgCtl(): Promise<string> {
+  const fromEmbedded = createRequire(fileURLToPath(import.meta.resolve('embedded-postgres')));
+  const entry = fromEmbedded.resolve(`@embedded-postgres/windows-${process.arch}`);
+  const binaries = (await import(pathToFileURL(entry).href)) as { pg_ctl: string };
+  return binaries.pg_ctl;
 }
 
 export interface DatabaseOptions {
@@ -112,14 +122,21 @@ export async function startDatabase(options: DatabaseOptions): Promise<Database>
     onLog: (message) => log(String(message).trimEnd()),
     onError: (error) => log(String(error)),
   });
+  const windows = process.platform === 'win32';
+  const pgCtl = windows ? await windowsPgCtl() : null;
+  const pgCtlOptions = pgCtl ? { pgCtl, dataDir, port, host: LOOPBACK, log } : null;
   if (!existsSync(path.join(dataDir, 'PG_VERSION'))) {
     log(`Creating the database cluster in ${dataDir}.`);
     await server.initialise();
+  } else if (pgCtlOptions) {
+    await stopLeftoverWithPgCtl(pgCtlOptions);
   } else {
     await stopLeftoverServer(dataDir, log);
   }
+  let stop: () => Promise<void> = () => server.stop();
   try {
-    await server.start();
+    if (pgCtlOptions) stop = await startWithPgCtl(pgCtlOptions);
+    else await server.start();
   } catch (error) {
     throw new Error(
       `Postgres did not start: ${(error as Error | undefined)?.message ?? 'it exited during startup'}. See the log above.`,
@@ -130,8 +147,8 @@ export async function startDatabase(options: DatabaseOptions): Promise<Database>
   try {
     await ensureDatabase(url);
   } catch (error) {
-    await server.stop().catch(() => undefined);
+    await stop().catch(() => undefined);
     throw error;
   }
-  return { url, stop: () => server.stop() };
+  return { url, stop };
 }
