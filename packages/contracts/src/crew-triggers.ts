@@ -25,6 +25,7 @@ export const workflowTriggersSchema = z.object({
   projectId: z.uuid().nullable().default(null),
   debounceMinutes: z.number().int().min(0).max(TRIGGER_DEBOUNCE_MAX).default(0),
   edits: z.boolean().default(false),
+  updateBase: z.boolean().default(false),
 });
 export type WorkflowTriggers = z.infer<typeof workflowTriggersSchema>;
 

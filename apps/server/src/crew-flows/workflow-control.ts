@@ -3,6 +3,7 @@ import { resolveRunTarget } from '../api/run-target.ts';
 import type { Db } from '../persistence/db.ts';
 import { requestCancel } from '../persistence/runs.ts';
 import { getWorkflowRun } from './run-records.ts';
+import { getTriggers } from './trigger-records.ts';
 import { deleteSchedule } from './schedule-records.ts';
 import { startWorkflowRun } from './start-run.ts';
 import { setWorkflowSchedule, setWorkflowTriggers } from './workflow-settings.ts';
@@ -91,13 +92,13 @@ export async function controlWorkflow(
     case 'unschedule':
       await deleteSchedule(db, workspaceId, action.workflowId);
       return { message: `Turned off the ${action.name} workflow’s schedule.`, output: {} };
-    case 'triggers':
-      await setWorkflowTriggers(
-        db,
-        workspaceId,
-        action.workflowId,
-        required(action.triggers, 'triggers'),
-      );
+    case 'triggers': {
+      const stored = await getTriggers(db, workspaceId, action.workflowId);
+      await setWorkflowTriggers(db, workspaceId, action.workflowId, {
+        ...required(action.triggers, 'triggers'),
+        updateBase: stored?.triggers.updateBase === true,
+      });
       return { message: `Saved the ${action.name} workflow’s triggers.`, output: {} };
+    }
   }
 }

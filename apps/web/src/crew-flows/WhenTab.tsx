@@ -48,6 +48,10 @@ export function WhenTab(props: WhenTabProps) {
           sparkById={props.sparkById}
           edits={draft.triggers.edits}
           onEdits={(edits) => onChange({ ...draft, triggers: { ...draft.triggers, edits } })}
+          updateBase={draft.triggers.updateBase}
+          onUpdateBase={(updateBase) =>
+            onChange({ ...draft, triggers: { ...draft.triggers, updateBase } })
+          }
         />
         <section className="wf-card-box" aria-label="Recent">
           <header className="wf-card-head">

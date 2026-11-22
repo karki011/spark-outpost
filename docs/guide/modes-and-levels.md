@@ -63,7 +63,12 @@ A step uses its Spark's **Provider**, **Model**, **Effort** and **Mode**. Where 
 
 A step in a Bypass permissions chat runs reads and other commands without asking. Spark tools that act or send, like posting to Slack or changing a ticket, don't take the chat's mode.
 
-Edits, commits, pushes, pull requests and installs stay refused in every mode, and [Spark rules](protected-paths.md) still apply.
+Edits, commits, pushes, pull requests and installs stay refused in every mode, and [Spark rules](protected-paths.md) still apply. [Triggered and scheduled runs may change files](workflow-triggers.md#let-runs-change-files) allows edits.
+
+With **Steps may update the branch from its base**, a step on Claude in a chat's own worktree may bring in the base, in any run but Before publish:
+
+- It merges, and rebases only while the branch isn't pushed, since that would need a force push.
+- It may edit files to resolve conflicts, or abort. Pushes stay refused. Only you set this switch.
 
 A step in a project is told what started the run, the repository, the branch and its base, the changed files and the chat's open pull request. A scheduled step also gets commits that landed since the last scheduled run.
 

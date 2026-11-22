@@ -66,8 +66,10 @@ export async function insertWorkflowRun(db: Queryable, run: NewWorkflowRun): Pro
   const inserted = await db.query(
     `INSERT INTO workflow_runs (id, workspace_id, workflow_id, workflow_name, definition, kind,
        source, conversation_id, run_id, message, continues, one_spark, trigger_kind, diff_hash,
-       edits, gates_run_id, pull_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+       edits, gates_run_id, pull_id, update_base)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+       $18 AND COALESCE((SELECT t.update_base FROM workflow_triggers t
+         WHERE t.workspace_id = $2 AND t.workflow_id = $3), false))
      ON CONFLICT (run_id) DO NOTHING`,
     [
       run.id,
@@ -87,6 +89,7 @@ export async function insertWorkflowRun(db: Queryable, run: NewWorkflowRun): Pro
       run.edits === true,
       run.gatesRunId ?? null,
       run.pull ?? (run.kind === 'run' ? await pullOfRun(db, run) : null),
+      run.kind === 'run' && run.triggerKind !== 'before_publish',
     ],
   );
   if (inserted.rowCount !== 1) return false;
@@ -113,6 +116,7 @@ interface RunRow {
   gates_run_id: string | null;
   trigger_kind: WorkflowTriggerKind | null;
   edits: boolean;
+  update_base: boolean;
   message: string;
   continues: boolean;
   stopped_by: string | null;
@@ -285,6 +289,7 @@ export interface TurnWorkflowRun {
   message: string;
   continues: boolean;
   edits: boolean;
+  updateBase: boolean;
   triggerKind: WorkflowTriggerKind | null;
 }
 
@@ -299,6 +304,7 @@ async function turnRunOf(db: Queryable, row: RunRow | undefined) {
     message: row.message,
     continues: row.continues,
     edits: row.edits,
+    updateBase: row.update_base,
     triggerKind: row.trigger_kind,
   };
 }
@@ -317,7 +323,7 @@ export async function workflowRunById(db: Queryable, id: string): Promise<TurnWo
 }
 
 export async function turnOffEdits(db: Queryable, id: string): Promise<void> {
-  await db.query('UPDATE workflow_runs SET edits = false WHERE id = $1', [id]);
+  await db.query('UPDATE workflow_runs SET edits = false, update_base = false WHERE id = $1', [id]);
 }
 
 export async function recordBlocking(db: Queryable, id: string, blocking: number): Promise<void> {

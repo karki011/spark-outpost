@@ -3,6 +3,7 @@ import { FINDINGS_FORMAT, SPARK_HANDOFF_NOTE_MAX } from '@spark-outpost/contract
 import {
   STEP_EDITS_ACCESS,
   STEP_EDITS_UNSUPPORTED,
+  stepBaseUpdateAccess,
   WORKFLOW_NOTE_HEADER,
   WORKFLOW_STEP_HEADER,
   stepJobPrompt,
@@ -38,6 +39,18 @@ describe('stepJobPrompt', () => {
     expect(stepJobPrompt({ ...job, edits: 'yes', hasProject: false })).not.toContain(
       STEP_EDITS_ACCESS,
     );
+  });
+
+  it('names the base and whether a rebase is allowed when the step may update the branch', () => {
+    const unpushed = { base: 'main', rebase: true };
+    const pushed = { base: 'develop', rebase: false };
+    const updating = stepJobPrompt({ ...job, edits: 'yes', baseUpdate: unpushed });
+    expect(updating).toContain(STEP_EDITS_ACCESS);
+    expect(updating).toContain(stepBaseUpdateAccess(unpushed));
+    expect(stepBaseUpdateAccess(unpushed)).toContain('git rebase origin/main');
+    expect(stepBaseUpdateAccess(pushed)).toContain('git merge --no-edit origin/develop');
+    expect(stepBaseUpdateAccess(pushed)).toContain('a rebase is refused');
+    expect(stepJobPrompt({ ...job, edits: 'yes' })).not.toContain('bring');
   });
 
   it('puts where the step is before what it does', () => {
