@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { gatePaths as path, gateRelative, toGatePath } from './gate-path.ts';
 
 const CONTROL_OPERATORS = /[;&|\n]|\$\(|`|[<>]/;
 const SEPARATORS = new Set([';', '&', '|', '\n']);
@@ -167,7 +167,7 @@ export function splitSimpleCommands(command: string): string[][] {
 }
 
 export function programName(program: readonly string[]): string {
-  return path.basename(program[0] ?? '');
+  return programBase(program[0] ?? '');
 }
 
 export interface Unwrapped {
@@ -182,7 +182,7 @@ export function unwrapCommand(tokens: readonly string[]): Unwrapped {
   let index = 0;
   while (index < tokens.length) {
     const token = tokens[index]!;
-    const wrapper = path.basename(token);
+    const wrapper = programBase(token);
     const valueFlags = WRAPPER_VALUE_FLAGS.get(wrapper);
     if (ASSIGNMENT.test(token) || SHELL_KEYWORDS.has(token)) {
       index++;
@@ -206,10 +206,14 @@ export function programTokens(tokens: readonly string[]): string[] {
 }
 
 export function resolveCommandPath(word: string, cwd: string, home: string): string {
-  const expanded = word === '~' || word.startsWith('~/') ? path.join(home, word.slice(1)) : word;
+  const written = toGatePath(word);
+  const expanded =
+    written === '~' || written.startsWith('~/')
+      ? path.join(toGatePath(home), written.slice(1))
+      : written;
   const staticPart = expanded.split(/[*?[{]/)[0] ?? '';
   const base = staticPart === '' ? '.' : staticPart;
-  return path.resolve(cwd, base);
+  return path.resolve(toGatePath(cwd), base);
 }
 
 export function allowlistCovers(allowlist: readonly string[], command: string): boolean {
@@ -220,4 +224,8 @@ export function allowlistCovers(allowlist: readonly string[], command: string): 
     if (normalized === allowed) return true;
     return normalized.startsWith(`${allowed} `) && !hasControlOperators(normalized);
   });
+}
+
+export function programBase(word: string): string {
+  return path.basename(gateRelative(word));
 }

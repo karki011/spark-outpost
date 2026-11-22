@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { posix as path } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
 import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';

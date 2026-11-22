@@ -12,6 +12,7 @@ import {
 } from '../src/providers/provider.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
+import { toGatePath } from '../src/approvals/gate-path.ts';
 
 const claude = createAcpProvider({
   definition: { ...agentDefinitions.claude, name: 'Fake', ...FAKE_AGENT_MODES },
@@ -99,7 +100,7 @@ describe('ACP permission requests in Do mode', { timeout: 20_000 }, () => {
         { optionId: 'yes', kind: 'allow_once' },
         { optionId: 'no', kind: 'reject_once' },
       ],
-      roots: [{ path: root }],
+      roots: [{ path: toGatePath(root) }],
     });
   });
 

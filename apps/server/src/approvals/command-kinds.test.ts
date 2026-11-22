@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   isPackageInstall,
   isSafeRead,
@@ -209,5 +209,15 @@ describe('test runners at Automatic (N4)', () => {
     expect(decide('edits', run('npm install'), NO_RUN_RULES, TEST_RUNNER_ALLOWLIST).verdict).toBe(
       'ask',
     );
+  });
+});
+
+describe('isPackageInstall on Windows', () => {
+  const platform = process.platform;
+  afterEach(() => Object.defineProperty(process, 'platform', { value: platform }));
+
+  it('names the program of a quoted Windows path', () => {
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    expect(isPackageInstall("'C:\\tools\\npm' install left-pad")).toBe(true);
   });
 });

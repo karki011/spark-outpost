@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { gatePaths as path } from './gate-path.ts';
 import type { ApprovalRequest } from './decide.ts';
 import { argumentWords, commandTree } from './command-tree.ts';
 import { programName, resolveCommandPath } from './commands.ts';

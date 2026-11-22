@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { gatePaths as path } from './gate-path.ts';
 import { argumentWords, commandTree } from './command-tree.ts';
 import type { ApprovalRequest } from './decide.ts';
 import { gitSubcommands } from './git-commands.ts';

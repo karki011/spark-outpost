@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { gatePaths as path } from './gate-path.ts';
 import { SHELLS } from './command-tree.ts';
 
 export type ScriptLanguage = 'code' | 'shell' | 'shebang';

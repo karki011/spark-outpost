@@ -163,11 +163,15 @@ export function protectedPath(relative: string): ProtectedKind | null {
   return inside || INSTRUCTION_PREFIXES.includes(`${relative}/`) ? 'instructions' : null;
 }
 
-export function relativeInside(root: string, target: string): string | null {
-  const relative = path.relative(root, target);
-  if (relative === '' || path.isAbsolute(relative)) return null;
-  if (relative === '..' || relative.startsWith(`..${path.sep}`)) return null;
-  return relative.split(path.sep).join('/');
+export function relativeInside(
+  root: string,
+  target: string,
+  paths: path.PlatformPath = path,
+): string | null {
+  const relative = paths.relative(root, target);
+  if (relative === '' || paths.isAbsolute(relative)) return null;
+  if (relative === '..' || relative.startsWith(`..${paths.sep}`)) return null;
+  return relative.split(paths.sep).join('/');
 }
 
 export function refusalFor(

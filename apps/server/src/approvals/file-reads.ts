@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { gatePaths as path } from './gate-path.ts';
 import { commandTree, findExecs, findRoots, type CommandTree } from './command-tree.ts';
 import { programName, programTokens, resolveCommandPath } from './commands.ts';
 import { globToRegExp } from '../projects/path-policy.ts';

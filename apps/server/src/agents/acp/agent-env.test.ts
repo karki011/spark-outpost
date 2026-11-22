@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { agentEnvironment, processEnvironment, withLoginShell } from './agent-env.ts';
+import {
+  agentEnvironment,
+  processEnvironment,
+  withGitBashOnly,
+  withLoginShell,
+} from './agent-env.ts';
 import { agentDefinitions, scriptLaunch } from './agents.ts';
 
 describe('an adapter launch', () => {
@@ -81,5 +86,19 @@ describe('the environment an agent session starts with', () => {
     );
     expect(env.SPARK_LOGIN_ONLY).toBe('yes');
     expect(env.CLAUDE_CODE_FORK_SUBAGENT).toBe('1');
+  });
+});
+
+describe('Claude on Windows', () => {
+  it('runs every command through Git Bash, where the gate can read it', () => {
+    const env = withGitBashOnly(agentDefinitions.claude, { PATH: 'x' }, 'win32');
+    expect(env).toEqual({ PATH: 'x', CLAUDE_CODE_USE_POWERSHELL_TOOL: '0' });
+  });
+
+  it('leaves macOS, Linux and Codex as they are', () => {
+    expect(withGitBashOnly(agentDefinitions.claude, { PATH: 'x' }, 'darwin')).toEqual({
+      PATH: 'x',
+    });
+    expect(withGitBashOnly(agentDefinitions.codex, { PATH: 'x' }, 'win32')).toEqual({ PATH: 'x' });
   });
 });
