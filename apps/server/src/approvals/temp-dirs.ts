@@ -13,6 +13,11 @@ function volumeRoot(native: string): boolean {
   return resolved === paths.parse(resolved).root;
 }
 
+function gateVolumeRoot(gate: string): boolean {
+  const native = nativeOrNull(path.resolve(gate));
+  return native !== null && volumeRoot(native);
+}
+
 function systemTemp(): string {
   return toGatePath(tmpdir());
 }
@@ -41,15 +46,13 @@ function realTarget(target: string): string {
 }
 
 export function tempRoots(environment: NodeJS.ProcessEnv = process.env): string[] {
-  const variable = environment.TMPDIR ?? '';
-  const fromVariable = volumeRoot(variable) ? [] : [toGatePath(variable)];
-  const system = volumeRoot(tmpdir()) ? [] : [systemTemp()];
-  const named = [...FIXED_TEMP_ROOTS, ...system, ...fromVariable].filter(
+  const variable = toGatePath(environment.TMPDIR ?? '');
+  const named = [...FIXED_TEMP_ROOTS, systemTemp(), variable].filter(
     (root) => path.isAbsolute(root) && path.resolve(root) !== path.parse(root).root,
   );
   const resolved = named.map((root) => path.resolve(root));
   const real = resolved.flatMap((root) => realOrNull(root) ?? []);
-  return [...new Set([...resolved, ...real])];
+  return [...new Set([...resolved, ...real])].filter((root) => !gateVolumeRoot(root));
 }
 
 export function inTempDir(target: string): boolean {
