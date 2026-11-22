@@ -52,7 +52,7 @@ import { useIslandRequests } from '../island/island-requests.ts';
 const NO_MEETINGS: readonly CalendarEvent[] = [];
 const NO_CLASHES: ReadonlyMap<string, readonly string[]> = new Map();
 
-function openMeetingNotes(meetingId: string): void {
+export function openMeetingNotes(meetingId: string): void {
   const desktop = sparkDesktop();
   if (desktop?.island.openSettings) desktop.island.openSettings(`today:meeting:${meetingId}`);
   else openTodayMeeting(meetingId);

@@ -11,6 +11,7 @@ import type { Decided } from './use-decide.ts';
 import { XIcon } from '../ui/icons.tsx';
 import type { Card, IslandView, Panel } from './island-model.ts';
 import { IslandHome, type HomeBundle } from './IslandHome.tsx';
+import { IslandRecording } from './IslandRecording.tsx';
 import { RestStrip, type StripData } from './RestStrip.tsx';
 import { IslandBar, PANEL_ORDER, type BarActions, type BarCounts } from './PanelTabs.tsx';
 import { QuickChat, type Compose, type FollowUp, type QuickDraft } from './QuickChat.tsx';
@@ -70,6 +71,7 @@ export interface IslandShellProps {
   onDraft: (draft: QuickDraft) => void;
   onTab: (panel: Panel) => void;
   onOpenChat: (id: string, runId?: string) => void;
+  onOpenMeeting: (id: string) => void;
   onDecided: (decided: Decided) => void;
   onLater: () => void;
   onReview: (card: Card) => void;
@@ -124,6 +126,12 @@ function PanelPane({ panel, props }: { panel: Panel; props: IslandShellProps }) 
   }
 }
 
+function RecordingRow({ props }: { props: IslandShellProps }) {
+  const { recordingId } = props.strip;
+  if (!recordingId) return null;
+  return <IslandRecording id={recordingId} variant="row" onOpen={props.onOpenMeeting} />;
+}
+
 function PanelBody({ panel, props }: { panel: Panel; props: IslandShellProps }) {
   const [shown, setShown] = useState<{ panel: Panel; direction: Direction }>({
     panel,
@@ -136,6 +144,7 @@ function PanelBody({ panel, props }: { panel: Panel; props: IslandShellProps }) 
   return (
     <div className="isl-body">
       <IslandBar panel={panel} counts={props.counts} actions={props.bar} onTab={props.onTab} />
+      <RecordingRow props={props} />
       <div key={panel} className="isl-pane" data-dir={shown.direction}>
         {props.speech && !props.speech.keepsPanel ? (
           <div className="isl-panel">
@@ -179,6 +188,7 @@ export function ViewBody({ props }: { props: IslandShellProps }) {
     case 'card':
       return (
         <div className="isl-body">
+          <RecordingRow props={props} />
           <CardView
             card={view.card}
             index={view.index}
@@ -198,6 +208,7 @@ export function ViewBody({ props }: { props: IslandShellProps }) {
             strip={props.strip}
             calendar={props.calendar}
             onOpen={props.onScout}
+            onOpenMeeting={props.onOpenMeeting}
             onDecided={props.home.onDecided}
           />
         </div>

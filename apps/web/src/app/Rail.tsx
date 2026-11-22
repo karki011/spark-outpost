@@ -5,11 +5,13 @@ import type { ScoutMood } from '../brand/BlobScout.tsx';
 import type { BlobExpression } from '../brand/blob-expression.ts';
 import { UserBlob } from '../brand/UserBlob.tsx';
 import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.tsx';
+import { useRecordingId } from '../meetings/index.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { CALENDAR_PATH } from '../ui/icons.tsx';
 import { browserViewAvailable } from '../browser-view/view-store.ts';
 import { useSparkPause } from './pause/use-spark-pause.ts';
 import { RailClock } from './RailClock.tsx';
+import { RailRecording } from './RailRecording.tsx';
 import { RAIL_LOCK_ICON, RailLock } from './RailLock.tsx';
 import { LOCK_LABEL, useLockAction } from '../app-lock/use-lock-action.ts';
 import { railAriaKeys, railHint, railTitle, useRailShortcuts } from './rail-shortcut.ts';
@@ -261,6 +263,8 @@ export function Rail({
   const layout = useSidebarLayout();
   const phone = layout?.narrow ?? false;
   const { remote } = useRemoteClient();
+  const liveRecordingId = useRecordingId();
+  const recordingId = remote ? null : liveRecordingId;
   const reopens = layout?.collapsed && !phone;
   const primary = phone
     ? PHONE_VIEWS
@@ -382,6 +386,9 @@ export function Rail({
               aria-label={`${ticketNotices} ticket ${ticketNotices === 1 ? 'update' : 'updates'} to look at`}
             />
           )}
+          {item.id === 'today' && recordingId && (
+            <i className="rdot rec" aria-label="Recording a meeting" />
+          )}
           {item.id === 'github' && githubUpdates && (
             <i className="rdot" aria-label="New pull request activity" />
           )}
@@ -459,6 +466,7 @@ export function Rail({
             ]}
           />
           {!remote && <RailLock />}
+          {recordingId && <RailRecording id={recordingId} />}
           <RailClock
             onOpen={remote ? undefined : () => onView('today')}
             onIntent={() => onIntent('today')}

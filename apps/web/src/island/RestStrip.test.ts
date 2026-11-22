@@ -3,7 +3,7 @@ import type { CalendarEvent } from '@spark-outpost/contracts';
 import type { Card } from './island-model.ts';
 import { hasHoverLine, type StripData } from './RestStrip.tsx';
 
-const quiet: StripData = { meeting: null, top: null };
+const quiet: StripData = { meeting: null, top: null, recordingId: null };
 const request = { ...quiet, top: { kind: 'approval' } as Card };
 const meeting = { ...quiet, meeting: { key: 'm' } as CalendarEvent };
 
@@ -17,5 +17,11 @@ describe('when hovering resting Scout shows one line', () => {
     expect(hasHoverLine(meeting, true)).toBe(false);
     expect(hasHoverLine(meeting, false)).toBe(true);
     expect(hasHoverLine(quiet, false)).toBe(false);
+  });
+
+  it('always has a line while a meeting is being recorded', () => {
+    const recording = { ...quiet, recordingId: 'r' };
+    expect(hasHoverLine(recording, true)).toBe(true);
+    expect(hasHoverLine(recording, false)).toBe(true);
   });
 });

@@ -27,7 +27,8 @@ import {
 } from '../desktop/desktop-bridge.ts';
 import { useChatListAttentionReport } from '../desktop/use-attention-report.ts';
 import { useConcealed } from '../app-lock/use-app-lock.ts';
-import { useIslandCalendar } from '../calendar/use-island-calendar.ts';
+import { openMeetingNotes, useIslandCalendar } from '../calendar/use-island-calendar.ts';
+import { useRecordingId } from '../meetings/index.ts';
 import { useMeetingHop } from '../calendar/use-meeting-hop.ts';
 import { useVoice } from '../spark/use-voice.ts';
 import { useReducedMotion } from '../ui/motion.ts';
@@ -143,6 +144,7 @@ export function IslandApp() {
     dismissMoment: dismiss,
   });
   const size = useIslandSize();
+  const recordingId = useRecordingId();
   const waiting = fresh.length;
   const calendar = useIslandCalendar(now, waiting, data.chats, {
     open: panel === 'home',
@@ -153,6 +155,7 @@ export function IslandApp() {
   const strip: StripData = {
     meeting: calendar.connected ? soonMeeting(calendar.upcoming, calendar.at) : null,
     top: fresh[0] ?? cards[0] ?? null,
+    recordingId,
   };
   const hoverLine = hasHoverLine(strip, calendar.line !== null);
   const view = islandView({
@@ -421,6 +424,10 @@ export function IslandApp() {
           focusSignal={focusSignal}
           home={home}
           strip={strip}
+          onOpenMeeting={(id) => {
+            closePanel();
+            openMeetingNotes(id);
+          }}
           sparks={sparks}
           bar={{
             sound,

@@ -6,22 +6,27 @@ import { minutesAhead } from './home-model.ts';
 import { answerable } from './inbox-model.ts';
 import type { Card } from './island-model.ts';
 import { useArmed } from './island-parts.tsx';
+import { IslandRecording } from './IslandRecording.tsx';
 import { SessionBlob } from './SessionBlob.tsx';
 import { findOption, useDecide, type Decided } from './use-decide.ts';
 
 export interface StripData {
   meeting: CalendarEvent | null;
   top: Card | null;
+  recordingId: string | null;
 }
 
 export function hasHoverLine(strip: StripData, calendarLine: boolean): boolean {
-  return strip.top !== null || (strip.meeting !== null && !calendarLine);
+  return (
+    strip.recordingId !== null || strip.top !== null || (strip.meeting !== null && !calendarLine)
+  );
 }
 
 interface RestStripProps {
   strip: StripData;
   calendar: IslandCalendar;
   onOpen: () => void;
+  onOpenMeeting: (id: string) => void;
   onDecided: (card: Card, decided: Decided) => void;
 }
 
@@ -105,8 +110,20 @@ function HoverMeeting({ event, calendar }: { event: CalendarEvent; calendar: Isl
   );
 }
 
-export function RestStrip({ strip, calendar, onOpen, onDecided }: RestStripProps) {
+function HoverLine({ strip, calendar, onOpen, onDecided }: RestStripProps) {
   if (strip.top) return <HoverRequest card={strip.top} onDecided={onDecided} onOpen={onOpen} />;
   if (strip.meeting) return <HoverMeeting event={strip.meeting} calendar={calendar} />;
   return null;
+}
+
+export function RestStrip(props: RestStripProps) {
+  const { recordingId } = props.strip;
+  return (
+    <>
+      <HoverLine {...props} />
+      {recordingId && (
+        <IslandRecording id={recordingId} variant="line" onOpen={props.onOpenMeeting} />
+      )}
+    </>
+  );
 }
