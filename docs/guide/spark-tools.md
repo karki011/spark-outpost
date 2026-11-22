@@ -32,9 +32,9 @@ summary: What agents can look up about Spark, the confirm card they show before 
 
 ## Combined reads
 
-| Operation                                                              | Tool            |
-| ---------------------------------------------------------------------- | --------------- |
-| Combine Spark tools (on by default; [turn off](settings.md#code-mode)) | `spark_execute` |
+| Operation                                                                | Tool            |
+| ------------------------------------------------------------------------ | --------------- |
+| Combine three or more tool calls (on; [turn off](settings.md#code-mode)) | `spark_execute` |
 
 ## Tools that act
 
