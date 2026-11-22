@@ -10,7 +10,13 @@ function node(fields: Record<string, unknown> = {}) {
     url: 'https://github.com/acme/widgets/pull/12',
     isDraft: false,
     updatedAt: '2026-11-15T10:00:00Z',
+    createdAt: '2026-11-12T08:00:00Z',
     headRefName: 'WEB-7-gadget',
+    baseRefName: 'main',
+    bodyText: 'Adds the gadget.',
+    labels: { nodes: [{ name: 'feature', color: 'a2eeef' }, { name: 'odd', color: 'nope' }, null] },
+    assignees: { nodes: [{ login: 'carol' }, null] },
+    comments: { totalCount: 5 },
     headRefOid: HEAD,
     additions: 10,
     deletions: 2,
@@ -24,6 +30,7 @@ function node(fields: Record<string, unknown> = {}) {
       nodes: [{ requestedReviewer: { login: 'hazel' } }, { requestedReviewer: {} }],
     },
     latestReviews: { nodes: [{ state: 'COMMENTED', author: { login: 'bob' } }] },
+    viewerLatestReview: { state: 'COMMENTED' },
     reviewThreads: { nodes: [{ isResolved: true }, { isResolved: false }] },
     commits: {
       nodes: [
@@ -68,15 +75,60 @@ describe('parsing the inbox search', () => {
         author: 'alice',
         authorIsBot: false,
         headRef: 'WEB-7-gadget',
+        baseRef: 'main',
+        createdAt: '2026-11-12T08:00:00Z',
+        bodyPreview: 'Adds the gadget.',
+        labels: [
+          { name: 'feature', color: 'a2eeef' },
+          { name: 'odd', color: null },
+        ],
+        assignees: ['carol'],
+        comments: 5,
         headSha: HEAD,
         requestedReviewers: ['hazel'],
         reviews: [{ login: 'bob', state: 'COMMENTED' }],
+        viewerReview: 'COMMENTED',
         unresolvedThreads: 1,
         checks: 'failing',
         failingChecks: 1,
         reviewRequested: true,
       }),
     ]);
+  });
+
+  it('cuts a long description preview and falls back when the new fields are missing', () => {
+    const parsed = parseInboxPage(
+      page(
+        [
+          node({
+            bodyText: 'x'.repeat(5_000),
+            createdAt: undefined,
+            baseRefName: null,
+            labels: null,
+            assignees: 'x',
+            comments: null,
+          }),
+        ],
+        [],
+      ),
+      'review',
+    );
+    expect(parsed.pulls[0]).toMatchObject({
+      createdAt: '2026-11-15T10:00:00Z',
+      baseRef: '',
+      labels: [],
+      assignees: [],
+      comments: null,
+    });
+    expect(parsed.pulls[0]?.bodyPreview).toHaveLength(2_000);
+  });
+
+  it('marks pull requests found by the reviewed search', () => {
+    const parsed = parseInboxPage(
+      { data: { viewer: { login: 'hazel' }, reviewed: { issueCount: 1, nodes: [node()] } } },
+      'reviewed',
+    );
+    expect(parsed.pulls[0]).toMatchObject({ reviewRequested: false, reviewedByViewer: true });
   });
 
   it('drops a malformed node and keeps the good ones', () => {
@@ -159,6 +211,11 @@ describe('the inbox query', () => {
     expect(review).toContain('review-requested:@me');
     expect(review).toContain('updated:>=2026-11-02');
     expect(review).not.toContain('repo:');
+    const reviewed = JSON.parse(
+      /reviewed: search\(query: ("(?:[^"\\]|\\.)*")/.exec(reviewRequestsQuery('2026-11-02'))![1]!,
+    ) as string;
+    expect(reviewed).toContain('reviewed-by:@me -author:@me');
+    expect(reviewed).not.toContain('repo:');
     expect(mine).toContain('author:@me');
     expect(mine).toContain('repo:acme/widgets');
   });

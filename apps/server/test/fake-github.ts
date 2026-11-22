@@ -25,6 +25,7 @@ export interface FakePull {
   state: 'open' | 'closed';
   merged?: boolean;
   created_at?: string;
+  labels?: string[];
   reviews?: {
     id?: number;
     user: { login: string };

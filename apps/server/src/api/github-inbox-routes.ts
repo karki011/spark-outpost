@@ -4,6 +4,7 @@ import {
   githubInboxWindowRequestSchema,
   githubPullIdSchema,
 } from '@spark-outpost/contracts';
+import { loadPullDetails } from '../github-inbox/details.ts';
 import { loadGithubInbox } from '../github-inbox/load.ts';
 import { markInboxSeen, saveInboxWindowDays } from '../persistence/github-inbox.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
@@ -16,6 +17,12 @@ export function githubInboxRoutes(deps: GitHubDeps): Router {
 
   router.get('/github/inbox', async (req, res) => {
     res.json(await loadGithubInbox(deps, { refresh: req.query.refresh === '1' }));
+  });
+
+  router.get('/github/inbox/details', async (req, res) => {
+    const id = githubPullIdSchema.safeParse(req.query.id);
+    if (!id.success) throw new BadRequestError('Invalid request: id.');
+    res.json(await loadPullDetails(deps, id.data));
   });
 
   router.post('/github/inbox/seen', async (req, res) => {

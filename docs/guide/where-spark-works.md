@@ -23,7 +23,7 @@ Hovering the chip shows where the branch started.
 
 - The agent pushes there without force, merges to update and handles [feedback](pr-follow-up.md).
 - A fork needs maintainer edits allowed. Otherwise, or for a protected branch, the chat gets a `spark/` branch from it.
-- A chat with its own branch switches in its worktree; commit first. A PR link in **Links** offers **Work on it here**.
+- A chat with its own branch switches in its worktree; commit first. **Work on it here** in **Links** and [**Start chat**](github-page.md#open-a-pull-request) adopt too.
 
 ## For every chat in a project
 

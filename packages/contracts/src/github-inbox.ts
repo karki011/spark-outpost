@@ -10,6 +10,8 @@ export const githubInboxGroupSchema = z.enum([
   'needs_fixes',
   'ready_to_merge',
   'waiting',
+  'reviewed',
+  'approved',
 ]);
 export type GithubInboxGroup = z.infer<typeof githubInboxGroupSchema>;
 
@@ -21,6 +23,15 @@ export const githubInboxTicketSchema = z.object({
   url: z.string().nullable(),
 });
 export type GithubInboxTicket = z.infer<typeof githubInboxTicketSchema>;
+
+export const githubInboxLabelSchema = z.object({
+  name: z.string(),
+  color: z
+    .string()
+    .regex(/^[0-9a-fA-F]{6}$/)
+    .nullable(),
+});
+export type GithubInboxLabel = z.infer<typeof githubInboxLabelSchema>;
 
 export const githubInboxItemSchema = z.object({
   id: z.string(),
@@ -43,6 +54,13 @@ export const githubInboxItemSchema = z.object({
   waitingOn: z.array(z.string()),
   headSha: z.string(),
   updatedAt: z.string(),
+  createdAt: z.string(),
+  headRef: z.string(),
+  baseRef: z.string(),
+  labels: z.array(githubInboxLabelSchema),
+  assignees: z.array(z.string()),
+  comments: z.number().int().nonnegative().nullable(),
+  bodyPreview: z.string(),
   additions: z.number().int().nonnegative().nullable(),
   deletions: z.number().int().nonnegative().nullable(),
   changedFiles: z.number().int().nonnegative().nullable(),
@@ -81,3 +99,20 @@ export const githubInboxWindowRequestSchema = z.object({
   windowDays: githubInboxWindowDaysSchema,
 });
 export type GithubInboxWindowRequest = z.infer<typeof githubInboxWindowRequestSchema>;
+
+export const githubPullFileSchema = z.object({
+  path: z.string(),
+  status: z.string(),
+  additions: z.number().int().nonnegative(),
+  deletions: z.number().int().nonnegative(),
+});
+export type GithubPullFile = z.infer<typeof githubPullFileSchema>;
+
+export const githubPullDetailsSchema = z.object({
+  id: z.string(),
+  body: z.string(),
+  bodyCut: z.boolean(),
+  files: z.array(githubPullFileSchema),
+  filesTotal: z.number().int().nonnegative(),
+});
+export type GithubPullDetails = z.infer<typeof githubPullDetailsSchema>;

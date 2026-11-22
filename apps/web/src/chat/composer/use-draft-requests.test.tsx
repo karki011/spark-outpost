@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   queueDraft,
   queueDraftAfterTyped,
+  queueDraftWithFiles,
   queueOption,
   requestComposerFocus,
   takeDraft,
@@ -13,6 +14,7 @@ import {
 import { useDraftRequests } from './use-draft-requests.ts';
 
 const CHAT = '00000000-0000-4000-8000-000000000002';
+const IDLE = { focusRequest: 0, onFiles: () => undefined };
 
 afterEach(() => {
   takeDraft(CHAT);
@@ -24,7 +26,7 @@ function composer(input: HTMLTextAreaElement | null) {
   const ref = createRef<HTMLTextAreaElement>();
   (ref as { current: HTMLTextAreaElement | null }).current = input;
   return renderHook(() => {
-    useDraftRequests(CHAT, () => undefined, ref, 0);
+    useDraftRequests(CHAT, () => undefined, ref, IDLE);
     return useComposerFocusRequest(CHAT);
   });
 }
@@ -59,7 +61,7 @@ function typedComposer(typed: string) {
   const ref = createRef<HTMLTextAreaElement>();
   return renderHook(() => {
     const [draft, setDraft] = useState(typed);
-    useDraftRequests(CHAT, setDraft, ref, 0);
+    useDraftRequests(CHAT, setDraft, ref, IDLE);
     return draft;
   });
 }
@@ -76,7 +78,7 @@ describe('text put back in the composer', () => {
     const ref = createRef<HTMLTextAreaElement>();
     const { result } = renderHook(() => {
       const [draft, setDraft] = useState('Original text');
-      useDraftRequests(CHAT, setDraft, ref, 0);
+      useDraftRequests(CHAT, setDraft, ref, IDLE);
       useLayoutEffect(() => setDraft('Original text plus new typing'), []);
       return draft;
     });
@@ -89,7 +91,7 @@ describe('text put back in the composer', () => {
     const { result } = renderHook(
       () => {
         const [draft, setDraft] = useState('Typed message');
-        useDraftRequests(CHAT, setDraft, ref, 0);
+        useDraftRequests(CHAT, setDraft, ref, IDLE);
         return draft;
       },
       { wrapper: StrictMode },
@@ -130,5 +132,22 @@ describe('a reply option put in the composer', () => {
     const { result } = typedComposer('Thanks, and');
     act(() => queueOption(CHAT, 'Use SQLite', options));
     expect(result.current).toBe('Thanks, and\n\nUse SQLite');
+  });
+});
+
+describe('files put in the composer with a draft', () => {
+  it('adds the files and keeps what the user had typed', () => {
+    const ref = createRef<HTMLTextAreaElement>();
+    const added: File[][] = [];
+    const onFiles = (files: File[]) => added.push(files);
+    const { result } = renderHook(() => {
+      const [draft, setDraft] = useState('Look at this');
+      useDraftRequests(CHAT, setDraft, ref, { focusRequest: 0, onFiles });
+      return draft;
+    });
+    const file = new File(['review'], 'review-pr-4.md', { type: 'text/markdown' });
+    act(() => queueDraftWithFiles(CHAT, '', [file]));
+    expect(result.current).toBe('Look at this');
+    expect(added).toEqual([[file]]);
   });
 });

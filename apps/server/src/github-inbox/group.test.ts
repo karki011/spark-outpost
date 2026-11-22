@@ -16,7 +16,13 @@ function found(fields: Partial<FoundPull> = {}): FoundPull {
     authorIsBot: false,
     draft: false,
     updatedAt: '2026-11-15T10:00:00Z',
+    createdAt: '2026-11-14T10:00:00Z',
     headRef: 'spark/fix',
+    baseRef: 'main',
+    labels: [],
+    assignees: [],
+    comments: 0,
+    bodyPreview: '',
     headSha: HEAD,
     additions: 3,
     deletions: 1,
@@ -26,17 +32,79 @@ function found(fields: Partial<FoundPull> = {}): FoundPull {
     mergeState: 'CLEAN',
     requestedReviewers: [],
     reviews: [],
+    viewerReview: null,
     unresolvedThreads: 0,
     checks: 'passing',
     failingChecks: 0,
     reviewRequested: false,
+    reviewedByViewer: false,
     ...fields,
   };
 }
 
 const groupOf = (fields: Partial<FoundPull>) => inboxPull(found(fields), ME)?.group;
 
+describe('pull requests you already reviewed', () => {
+  it('puts one you approved in approved and one you only commented on in reviewed', () => {
+    const approved = found({
+      author: 'alice',
+      reviewedByViewer: true,
+      reviews: [{ login: ME, state: 'APPROVED' }],
+    });
+    const commented = found({
+      author: 'alice',
+      reviewedByViewer: true,
+      reviews: [
+        { login: ME, state: 'CHANGES_REQUESTED' },
+        { login: 'bob', state: 'APPROVED' },
+      ],
+    });
+    expect(inboxPull(approved, ME)?.group).toBe('approved');
+    expect(inboxPull(commented, ME)?.group).toBe('reviewed');
+  });
+
+  it('uses your own latest review even when it is not among the listed reviews', () => {
+    const pull = found({ author: 'alice', reviewedByViewer: true, viewerReview: 'APPROVED' });
+    expect(inboxPull(pull, ME)?.group).toBe('approved');
+  });
+
+  it('keeps a pull request that asks for your review again in review requested', () => {
+    const base = { author: 'alice', reviews: [{ login: ME, state: 'APPROVED' }] };
+    const pulls = inboxPulls(
+      [found({ ...base, reviewedByViewer: true }), found({ ...base, reviewRequested: true })],
+      ME,
+    );
+    expect(pulls.map((pull) => pull.group)).toEqual(['review_requested']);
+  });
+
+  it("leaves out someone else's pull request you neither reviewed nor were asked to", () => {
+    expect(inboxPull(found({ author: 'alice' }), ME)).toBeNull();
+  });
+});
+
 describe('inbox grouping', () => {
+  it('carries the branches, labels, assignees and description preview', () => {
+    const pull = inboxPull(
+      found({
+        baseRef: 'release',
+        labels: [{ name: 'bug', color: 'd73a4a' }],
+        assignees: ['lee'],
+        comments: 4,
+        bodyPreview: 'Fixes the widget',
+      }),
+      ME,
+    );
+    expect(pull).toMatchObject({
+      headRef: 'spark/fix',
+      baseRef: 'release',
+      createdAt: '2026-11-14T10:00:00Z',
+      labels: [{ name: 'bug', color: 'd73a4a' }],
+      assignees: ['lee'],
+      comments: 4,
+      bodyPreview: 'Fixes the widget',
+    });
+  });
+
   it('puts a pull request that asks for my review in review requested', () => {
     const pull = inboxPull(found({ author: 'alice', reviewRequested: true }), ME);
     expect(pull).toMatchObject({ group: 'review_requested', mine: false, id: 'acme/widgets#7' });
