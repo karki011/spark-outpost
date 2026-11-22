@@ -1,4 +1,8 @@
+import path from 'node:path';
 import { argumentWords, commandTree } from './command-tree.ts';
+import type { ApprovalRequest } from './decide.ts';
+import { gitSubcommands } from './git-commands.ts';
+import { commandCwd, place } from './request-place.ts';
 
 export interface BaseUpdate {
   base: string;
@@ -106,4 +110,13 @@ export function baseUpdateVerdict(
   if (!parsed || parsed[0] !== 'git' || !UPDATES.has(parsed[1] ?? '')) return null;
   const verdict = verdictFor(parsed[1]!, parsed.slice(2), update);
   return verdict ?? { kind: 'refuse', reason: baseOnlyReason(update.base) };
+}
+
+export function baseUpdateRoot(request: ApprovalRequest): string | null {
+  if (request.kind !== 'execute' || !request.command || request.roots.length !== 1) return null;
+  if (gitSubcommands(request.command).length === 0) return null;
+  const only = request.roots[0]!.path;
+  const cwd = path.resolve(commandCwd(request));
+  const inside = cwd === path.resolve(only) || place(request.roots, cwd).relative !== null;
+  return inside ? only : null;
 }

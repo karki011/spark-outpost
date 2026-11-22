@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ASK_AUTO_WHY, NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
 import { ASK_RUN_REASON } from './ask-run.ts';
-import { baseOnlyReason, baseUpdateRefusal } from './base-update.ts';
+import { baseOnlyReason, baseUpdateRefusal, baseUpdateRoot } from './base-update.ts';
 
 const ROOT = '/work/app';
 
@@ -116,5 +116,25 @@ describe('decide() for a workflow step that may update its branch from its base'
         reason: ASK_RUN_REASON,
       });
     }
+  });
+});
+
+describe('the folder a base update applies to', () => {
+  it('is the one project root the command runs in', () => {
+    expect(baseUpdateRoot(run('git merge origin/main'))).toBe(ROOT);
+    expect(baseUpdateRoot({ ...run('git merge origin/main'), cwd: `${ROOT}/src` })).toBe(ROOT);
+  });
+
+  it('is none outside the project, with a second project or for a command that is not git', () => {
+    expect(baseUpdateRoot({ ...run('git merge origin/main'), cwd: '/Users/me/app' })).toBeNull();
+    const twoRoots = {
+      ...run('git merge origin/main'),
+      roots: [
+        { path: ROOT, ignore: [] },
+        { path: '/Users/me/app', ignore: [] },
+      ],
+    };
+    expect(baseUpdateRoot(twoRoots)).toBeNull();
+    expect(baseUpdateRoot(run('ls'))).toBeNull();
   });
 });

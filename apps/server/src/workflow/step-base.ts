@@ -1,10 +1,11 @@
 import type { BaseUpdate } from '../approvals/base-update.ts';
-import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
+import { branchesStackedOn, chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { git } from '../projects/snapshot.ts';
 import { stackGit } from '../sub-chats/stack-git.ts';
 import { publishStackOf } from '../sub-chats/stack-publish.ts';
+import { taskBranch } from './publish-context.ts';
 
 async function onRemote(root: string, branch: string): Promise<boolean> {
   try {
@@ -13,6 +14,13 @@ async function onRemote(root: string, branch: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function shared(db: Queryable, root: string, branch: string): Promise<boolean> {
+  const task = await taskBranch(db, root).catch(() => null);
+  if (task?.pull || task?.adopted) return true;
+  if ((await branchesStackedOn(db, root)).length > 0) return true;
+  return onRemote(root, branch);
 }
 
 export async function stepBaseUpdate(
@@ -28,7 +36,7 @@ export async function stepBaseUpdate(
     record.baseBranch ??
     (await defaultBranch(record.repoRoot).catch(() => null));
   if (!base || base === record.branch) return null;
-  return { base, rebase: !(await onRemote(root, record.branch)) };
+  return { base, rebase: !(await shared(db, root, record.branch)) };
 }
 
 export async function chatBaseUpdate(

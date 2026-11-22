@@ -10,8 +10,9 @@ import {
   ALLOWED_REASONS,
 } from '@spark-outpost/contracts';
 import { outsideWriteGranted, outsideWriteSession } from './outside-write-grant.ts';
-import { forcePush, gitSubcommands } from '../approvals/git-commands.ts';
+import { forcePush } from '../approvals/git-commands.ts';
 import { stepBaseUpdate } from './step-base.ts';
+import { baseUpdateRoot } from '../approvals/base-update.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
 import { publishContext } from './publish-context.ts';
@@ -125,9 +126,8 @@ function autoAsked(deps: GateDeps, request: ApprovalRequest): boolean {
 }
 
 async function baseUpdateFor(deps: GateDeps, request: ApprovalRequest) {
-  if (!deps.askBaseUpdate || request.kind !== 'execute' || !request.command) return null;
-  if (gitSubcommands(request.command).length === 0) return null;
-  return stepBaseUpdate(deps.db, request.roots[0]?.path ?? null).catch(() => null);
+  const root = deps.askBaseUpdate ? baseUpdateRoot(request) : null;
+  return root ? stepBaseUpdate(deps.db, root).catch(() => null) : null;
 }
 
 export async function forcePushDefault(request: ApprovalRequest): Promise<string | null> {
