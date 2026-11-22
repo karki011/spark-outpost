@@ -1,3 +1,5 @@
+import { RestRecording } from './IslandRecording.tsx';
+
 function countParts(asking: number, setAside: number, working = 0): string[] {
   return [
     asking > 0 ? `${asking} need you` : null,
@@ -20,14 +22,16 @@ export function ScoutMarks({
   asking,
   setAside,
   recording,
+  hidden,
 }: {
   asking: number;
   setAside: number;
   recording: boolean;
+  hidden: number;
 }) {
   return (
     <>
-      {recording && <span className="isl-rec-mark" aria-hidden="true" />}
+      {recording && <RestRecording hidden={hidden} />}
       {asking > 0 && (
         <span className="isl-pbadge" aria-hidden="true">
           {asking}

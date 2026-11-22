@@ -11,7 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
 | Code Mode combines any Spark tool, cards kept   | [Code Mode](settings.md#code-mode).                        |
-| Recording in island, left bar; faster commands  | [Take meeting notes](meetings.md#record).                  |
+| Island recording wave, left bar; fast commands  | [Take meeting notes](meetings.md#record).                  |
 | Workflow steps run on the named pull request    | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | GitHub: search, Start chat, reviewed groups     | [GitHub page](github-page.md#search).                      |
 | Copy a review or send it to a chat              | [Reviews](review-pull-requests.md).                        |

@@ -101,16 +101,18 @@ export function SteerGroup({ messages, detail, run, crew, seen }: SteerGroupProp
           )}
         </div>
       ))}
-      <SteerLine status={status} />
+      <div className="steer-foot">
+        <SteerLine status={status} />
+        <MessageActions
+          text={group.map((message) => message.body).join('\n\n')}
+          createdAt={group[0]!.createdAt}
+          copyLabel={group.length > 1 ? 'Copy messages' : 'Copy message'}
+          side="user"
+        />
+      </div>
       {group.every(canResend) && (
         <MissedActions messages={group} conversationId={detail.conversation.id} />
       )}
-      <MessageActions
-        text={group.map((message) => message.body).join('\n\n')}
-        createdAt={group[0]!.createdAt}
-        copyLabel={group.length > 1 ? 'Copy messages' : 'Copy message'}
-        side="user"
-      />
     </div>
   ));
 }
