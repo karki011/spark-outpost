@@ -17,6 +17,7 @@ export interface LeadInput {
   commands: readonly Pick<CommandView, 'status' | 'description' | 'command' | 'startedAt'>[];
   steps: readonly Pick<RunStep, 'name' | 'done' | 'subagent' | 'waits' | 'startedAt' | 'thought'>[];
   publishing: { since: number | null } | null;
+  sparks?: readonly string[];
   outputAt?: number | null;
 }
 
@@ -29,6 +30,12 @@ function quietFrom(outputAt: number | null | undefined): { quietSince?: number }
   return outputAt === null || outputAt === undefined ? {} : { quietSince: outputAt };
 }
 
+function waitingOn(sparks: readonly string[]): string {
+  if (sparks.length === 1) return `Waiting on ${sparks[0]}`;
+  if (sparks.length === 2) return `Waiting on ${sparks[0]} and ${sparks[1]}`;
+  return `Waiting on ${sparks.length} Sparks`;
+}
+
 function timeOf(iso: string): number | null {
   const time = Date.parse(iso);
   return Number.isFinite(time) ? time : null;
@@ -39,6 +46,7 @@ export function leadStep({
   commands,
   steps,
   publishing,
+  sparks = [],
   outputAt,
 }: LeadInput): LeadStep {
   const agents = subagents.filter((row) => row.state === 'working').length;
@@ -68,6 +76,7 @@ export function leadStep({
       ...(thinking ? quietFrom(outputAt) : {}),
     };
   }
+  if (sparks.length > 0) return { label: waitingOn(sparks), since: null };
   if (publishing) return { label: 'Publishing', since: publishing.since };
   return { label: 'Thinking', since: null, ...quietFrom(outputAt) };
 }

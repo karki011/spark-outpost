@@ -82,4 +82,17 @@ describe('leadStep', () => {
     );
     expect(leadStep(none)).toEqual({ label: 'Thinking', since: null });
   });
+
+  it('names the Sparks the turn waits on when it has no step of its own', () => {
+    expect(leadStep({ ...none, sparks: ['Docs'], outputAt: 40 })).toEqual({
+      label: 'Waiting on Docs',
+      since: null,
+    });
+    expect(leadStep({ ...none, sparks: ['Docs', 'Ops'] }).label).toBe('Waiting on Docs and Ops');
+    expect(leadStep({ ...none, sparks: ['Docs', 'Ops', 'Scope'] }).label).toBe(
+      'Waiting on 3 Sparks',
+    );
+    const reading = { name: 'Read `a.ts`', done: false, startedAt: 5 };
+    expect(leadStep({ ...none, sparks: ['Docs'], steps: [reading] }).label).toBe('Read a.ts');
+  });
 });

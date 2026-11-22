@@ -50,6 +50,7 @@ import { providerName } from './provider-name.ts';
 import { useLiveReport, useOutputAt } from './status/status-context.ts';
 import { TurnActivity } from './turn/TurnActivity.tsx';
 import { leadStep } from './turn/live-label.ts';
+import { workingSparks } from '../crew/conversation-crew.ts';
 import { useReportLeadStep } from '../crew/lead-steps.ts';
 import { TurnCardView } from './turn/TurnCardView.tsx';
 import { turnCards, type TurnCard } from './turn/turn-cards.ts';
@@ -189,12 +190,14 @@ export function SoloTurn({
     replyClosedAt,
   });
   const publishing = replies.publishText !== '' || commands.publish.length > 0;
-  const outputAt = useOutputAt(run.id);
+  const seenAt = useOutputAt(run.id);
+  const outputAt = stream.lastAt ?? seenAt;
   const lead = leadStep({
     subagents,
     commands: [...commands.reply, ...commands.publish],
     steps,
     publishing: stream.replyEnd || publishing ? { since: stream.replyEnd?.at ?? null } : null,
+    sparks: workingSparks(detail.orchestrations?.[run.id]),
     outputAt,
   });
   useReportLeadStep(run.id, working && !waiting ? lead : null);

@@ -207,6 +207,7 @@ export interface RunProjection extends ReplyStream {
   steps: RunStep[];
   error: string | null;
   lastSeq: number;
+  lastAt: number | null;
   approvals: readonly Approval[];
   approvalAt: Readonly<Record<string, number>>;
   orchestration: Orchestration | null;
@@ -223,6 +224,7 @@ export const initialRunProjection: RunProjection = {
   steps: [],
   error: null,
   lastSeq: 0,
+  lastAt: null,
   approvals: [],
   approvalAt: {},
   orchestration: null,
@@ -245,7 +247,8 @@ function withApprovalAt(
 export function applyRunEvent(state: RunProjection, seq: number, event: RunEvent): RunProjection {
   if (seq <= state.lastSeq) return state;
   const subagents = applySubagentEvent(state.subagents, event);
-  const next = { ...state, lastSeq: seq, subagents };
+  const lastAt = typeof event.timestamp === 'number' ? event.timestamp : null;
+  const next = { ...state, lastSeq: seq, lastAt, subagents };
   switch (event.type) {
     case EventType.RUN_STARTED:
       return { ...next, status: 'running' };

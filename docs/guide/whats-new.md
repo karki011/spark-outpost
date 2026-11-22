@@ -10,7 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
-| Quiet **Thinking**: **No output for 2m**        | [Follow a turn](follow-a-turn.md).                         |
+| Working line names Sparks; **No output for 2m** | [Follow a turn](follow-a-turn.md).                         |
 | Workflow editor: one **Save**, **When it runs** | [Schedules](workflow-schedules.md).                        |
 | Spark **Setup**, **Used in**, default Spark     | [Set up a Spark](spark-setup.md).                          |
 | `@` lists all workflows, Sparks                 | [Run one](workflow-runs.md#run-one).                       |
