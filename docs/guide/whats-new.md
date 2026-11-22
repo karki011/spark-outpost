@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Workflow steps run on the named pull request    | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | GitHub: search, Start chat, reviewed groups     | [GitHub page](github-page.md#search).                      |
 | Copy a review or send it to a chat              | [Reviews](review-pull-requests.md).                        |
 | Workflow runs say which pull request they took  | [Workflows](workflow-in-chat.md).                          |
@@ -61,4 +62,3 @@ summary: What changed in recent releases and what to do next.
 | PR follow-up and adopting, in any chat                     | [Work on a PR](where-spark-works.md#work-on-a-pull-request).                             |
 | **Thinking** expands; `/compact`; less “Running”           | [Follow a turn](follow-a-turn.md#see-whats-happening).                                   |
 | One meeting card; Join takes notes                         | [Take meeting notes](meetings.md).                                                       |
-| Saved sign-ins type with no card                           | [Save a test sign-in](use-the-browser.md#save-a-test-sign-in).                           |

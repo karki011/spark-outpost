@@ -1,5 +1,5 @@
 import { findSparkMentions, mainAgentContinues, workflowProblems } from '@spark-outpost/contracts';
-import { publishOrchestration, type Handoff } from '../orchestration/spark-child.ts';
+import { hasProject, publishOrchestration, type Handoff } from '../orchestration/spark-child.ts';
 import { userText } from '../sub-chats/user-asked.ts';
 import { newId } from '../persistence/ids.ts';
 import { insertOrchestration, updateOrchestration } from '../persistence/orchestrations.ts';
@@ -10,6 +10,13 @@ import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { insertWorkflowRun, workflowRunForTurn, type TurnWorkflowRun } from './run-records.ts';
 import { runWorkflow, type WorkflowEnd } from './run-workflow.ts';
+import {
+  checkoutChanges,
+  checkoutNote,
+  placeRunPull,
+  removeRunCheckout,
+  type PullPlace,
+} from './pr-checkout.ts';
 import { keepStepEdits, prepareStepEdits } from './step-edits.ts';
 import { runPull } from './step-place-gather.ts';
 import { runPullLine } from './step-place.ts';
@@ -87,6 +94,36 @@ async function finishTurn(h: Handoff, end: WorkflowEnd, note: string): Promise<v
   });
 }
 
+async function pullPlaceOf(h: Handoff, turn: TurnWorkflowRun): Promise<PullPlace> {
+  if (turn.run.kind !== 'run' || !turn.run.pull) return { kind: 'none' };
+  return placeRunPull({
+    db: h.deps.db,
+    workspaceId: h.input.workspaceId,
+    workflowRunId: turn.run.id,
+    pullId: turn.run.pull,
+    roots: hasProject(h.input) ? h.input.projectRoots : [],
+  });
+}
+
+async function runOnPlace(
+  h: Handoff,
+  turn: TurnWorkflowRun,
+  options: Parameters<typeof runWorkflow>[2],
+): Promise<{ end: WorkflowEnd | 'lease_lost'; checkout: string | null }> {
+  const pull = await pullPlaceOf(h, turn);
+  let end: WorkflowEnd | 'lease_lost';
+  try {
+    end = await runWorkflow(h, turn, { ...options, pull });
+  } catch (error) {
+    if (pull.kind === 'checkout') await removeRunCheckout(h.deps.db, turn.run.id);
+    throw error;
+  }
+  if (end === 'lease_lost') return { end, checkout: null };
+  const changed = pull.kind === 'checkout' ? await checkoutChanges(pull.path) : [];
+  if (pull.kind === 'checkout') await removeRunCheckout(h.deps.db, turn.run.id);
+  return { end, checkout: checkoutNote(pull, changed) };
+}
+
 export async function workflowTurn(
   h: Handoff,
   sparkMentioned: boolean,
@@ -107,7 +144,7 @@ export async function workflowTurn(
     turn.run.kind === 'review'
       ? await reviewOptions(deps.db, input.workspaceId, turn.run.id)
       : undefined;
-  const end = await runWorkflow(h, prepared, review === undefined ? {} : { review });
+  const { end, checkout } = await runOnPlace(h, prepared, review === undefined ? {} : { review });
   if (end === 'lease_lost') return 'finished';
   if (review !== undefined) await settleReviewOfWorkflowRun(deps.db, turn.run.id);
   await keepStepEdits(h, prepared);
@@ -118,6 +155,7 @@ export async function workflowTurn(
     workflowName: turn.workflow.name,
     continues,
     about: target ? runPullLine(target) : null,
+    checkout,
   });
   if (!continues) {
     await updateOrchestration(deps.db, lease.runId, { phase: 'finished' });
