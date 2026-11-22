@@ -31,7 +31,7 @@ export function baseUpdateRefusal(base: string): string {
 }
 
 export function baseOnlyReason(base: string): string {
-  return `This workflow step may update its branch only from ${base} (git pull origin ${base}, git merge origin/${base} or git rebase origin/${base}), one plain git command at a time`;
+  return `This workflow step may update its branch only from ${base}, one plain git command at a time with nothing chained: git merge --no-edit ${base} (or origin/${base}), git pull --no-rebase origin ${base}, or git rebase ${base} while the branch is not pushed`;
 }
 
 function words(command: string): string[] | null {
@@ -101,13 +101,21 @@ function verdictFor(sub: string, rest: readonly string[], update: BaseUpdate) {
   return add(rest) && rest.length > 0 ? ({ kind: 'allow' } as const) : null;
 }
 
+const BRANCH_UPDATES = new Set(['merge', 'pull', 'rebase']);
+
+function chained(command: string, update: BaseUpdate): BaseUpdateVerdict | null {
+  const updates = gitSubcommands(command).some((sub) => BRANCH_UPDATES.has(sub.name));
+  return updates ? { kind: 'refuse', reason: baseOnlyReason(update.base) } : null;
+}
+
 export function baseUpdateVerdict(
   command: string | null,
   update: BaseUpdate,
 ): BaseUpdateVerdict | null {
   if (!command) return null;
   const parsed = words(command);
-  if (!parsed || parsed[0] !== 'git' || !UPDATES.has(parsed[1] ?? '')) return null;
+  if (!parsed) return chained(command, update);
+  if (parsed[0] !== 'git' || !UPDATES.has(parsed[1] ?? '')) return null;
   const verdict = verdictFor(parsed[1]!, parsed.slice(2), update);
   return verdict ?? { kind: 'refuse', reason: baseOnlyReason(update.base) };
 }

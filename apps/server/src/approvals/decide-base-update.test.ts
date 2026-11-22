@@ -94,12 +94,21 @@ describe('decide() for a workflow step that may update its branch from its base'
   });
 
   it.each([
+    'git status && git fetch origin && git merge --no-edit origin/main',
+    'git merge origin/main; git log --oneline -3',
+  ])('refuses the chained %s and says to run each command on its own', (command) => {
+    expect(decide('read_only', run(command), NO_RUN_RULES, [], step(unpushed))).toMatchObject({
+      verdict: 'reject',
+      reason: baseOnlyReason('main'),
+    });
+  });
+
+  it.each([
     'git commit -m "merge"',
     'git push origin spark/fix',
     'git reset --hard origin/main',
     'git checkout main',
     'git stash',
-    'git merge origin/main && git push',
     'cd sub && git merge origin/main',
     'git -c core.hooksPath=/tmp merge origin/main',
     'HUSKY=0 git merge origin/main',

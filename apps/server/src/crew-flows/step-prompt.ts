@@ -40,11 +40,11 @@ export const STEP_EDITS_ACCESS =
 export const STEP_EDITS_UNSUPPORTED =
   'This workflow lets steps change files, but your agent can only do that on Claude, so this step stays read-only: describe the changes instead of making them.';
 export function stepBaseUpdateAccess(update: BaseUpdate): string {
-  const merge = `git merge --no-edit origin/${update.base}`;
+  const merge = `git merge --no-edit ${update.base}`;
   const how = update.rebase
-    ? `git fetch origin, then git rebase origin/${update.base} or ${merge}. This branch is not on the remote yet, so a rebase is allowed; once it is pushed, only a merge is`
-    : `git fetch origin, then ${merge} (or git pull --no-rebase origin ${update.base}). This branch is on the remote, so a rebase is refused: it would need a force push`;
-  return `You may also bring ${update.base} into this branch, one plain git command at a time: ${how}. Update only when the working tree is clean. Resolve conflicts with your edit tools, git add the resolved files and finish with GIT_EDITOR=true git merge --continue (or git rebase --continue); if you can't resolve them, run git merge --abort (or git rebase --abort) and say so. Don't push: the chat publishes the result.`;
+    ? `git rebase ${update.base} or ${merge}. This branch is not on the remote yet, so a rebase is allowed; once it is pushed, only a merge is`
+    : `${merge}. This branch is on the remote, so a rebase is refused: it would need a force push`;
+  return `You may also bring ${update.base} into this branch. Run each git command on its own, never chained with && or ;: ${how}. When the repository has an origin remote, run git fetch origin first and use origin/${update.base} instead of ${update.base}. Update only when the working tree is clean. Resolve conflicts with your edit tools, git add the resolved files and finish with GIT_EDITOR=true git merge --continue (or git rebase --continue); if you can't resolve them, run git merge --abort (or git rebase --abort) and say so. Don't push: the chat publishes the result.`;
 }
 const STEP_READ_ACCESS =
   'You can read the project and run commands. A command that is not read-only follows your permission mode and may wait for the user to allow it. You cannot change project files, commit, push or open pull requests.';

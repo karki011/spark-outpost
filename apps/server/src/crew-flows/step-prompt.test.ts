@@ -47,8 +47,8 @@ describe('stepJobPrompt', () => {
     const updating = stepJobPrompt({ ...job, edits: 'yes', baseUpdate: unpushed });
     expect(updating).toContain(STEP_EDITS_ACCESS);
     expect(updating).toContain(stepBaseUpdateAccess(unpushed));
-    expect(stepBaseUpdateAccess(unpushed)).toContain('git rebase origin/main');
-    expect(stepBaseUpdateAccess(pushed)).toContain('git merge --no-edit origin/develop');
+    expect(stepBaseUpdateAccess(unpushed)).toContain('git rebase main');
+    expect(stepBaseUpdateAccess(pushed)).toContain('git merge --no-edit develop');
     expect(stepBaseUpdateAccess(pushed)).toContain('a rebase is refused');
     expect(stepJobPrompt({ ...job, edits: 'yes' })).not.toContain('bring');
   });
