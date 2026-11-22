@@ -142,6 +142,9 @@ const MAC_INSTRUCTIONS =
 const TERMINAL_INSTRUCTIONS =
   ' Use spark_terminal_run for dev servers and watchers (no time limit; status and output show readiness and crashes).';
 
+const CODE_MODE_INSTRUCTIONS =
+  ' For three or more reads, or to filter, join or count results, use spark_execute: one script, and only its return value enters context.';
+
 const GITHUB_INSTRUCTIONS = " For a GitHub repo's code, use spark_research_repo, not web fetches.";
 
 export function sparkInstructionsFor(
@@ -149,7 +152,8 @@ export function sparkInstructionsFor(
   offered: readonly SparkTool[] = [],
 ): string {
   const terminal = offered.some((tool) => tool.name === terminalRunTool.name);
-  return `${INSTRUCTIONS}${available.browser ? BROWSER_INSTRUCTIONS : ''}${available.mac ? MAC_INSTRUCTIONS : ''}${terminal ? TERMINAL_INSTRUCTIONS : ''}${available.github ? GITHUB_INSTRUCTIONS : ''}${unavailableNote(available)}`;
+  const codeMode = offered.some((tool) => tool.name === 'spark_execute');
+  return `${INSTRUCTIONS}${available.browser ? BROWSER_INSTRUCTIONS : ''}${available.mac ? MAC_INSTRUCTIONS : ''}${terminal ? TERMINAL_INSTRUCTIONS : ''}${codeMode ? CODE_MODE_INSTRUCTIONS : ''}${available.github ? GITHUB_INSTRUCTIONS : ''}${unavailableNote(available)}`;
 }
 
 const READ_ONLY = {

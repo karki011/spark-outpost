@@ -12,7 +12,7 @@ Code Mode combines reads and transforms their results inside one local execution
 
 Cloudflare's executor is transient; its durable runtime uses separate storage and approval replay. Replay requires matching call order and arguments, and concurrent calls can diverge across passes. Spark's first implementation needs neither a second durable store nor replay. See [Cloudflare's execution model](https://developers.cloudflare.com/agents/tools/codemode/how-it-works/) and [runtime guide](https://developers.cloudflare.com/agents/tools/codemode/durable-runtime/).
 
-Cloudflare recommends direct tools for simple tasks and Code Mode for composition or discovery. Spark keeps both available by default; the agent chooses the appropriate tool. Settings → Chats & autonomy → Code Mode turns composition off. See [Code Mode overview](https://developers.cloudflare.com/agents/tools/codemode/).
+Cloudflare recommends direct tools for simple tasks and Code Mode for composition or discovery. Spark keeps both available by default; the agent chooses the appropriate tool. The Spark MCP server instructions, which a session reads even when it loads tool descriptions on demand, and the `spark_execute` description tell it when: three or more reads, parallel reads, or filtering, joining or counting results, and the direct tool for a single read. This follows Anthropic's programmatic tool calling guidance, which puts the rule in the tool description. See [programmatic tool calling](https://platform.claude.com/docs/en/agents-and-tools/tool-use/programmatic-tool-calling). Settings → Chats & autonomy → Code Mode turns composition off. See [Code Mode overview](https://developers.cloudflare.com/agents/tools/codemode/).
 
 The attached analysis is a design reference. Its OpenCode version, benchmark results and development estimates were not independently reproduced. Spark already uses Zod. QuickJS has standard JavaScript globals, including `globalThis`; isolation comes from withholding host capabilities, not removing JavaScript syntax.
 
@@ -42,5 +42,7 @@ A recorded October 25, 2026 comparison used two fresh real Codex 6 Sol chats at 
 | Off  | 17.429 s | 3                | $0.083028      |
 
 This sequential pair preceded the label polish and settings default change. It verifies the guide-read path, not a general speed or cost improvement; cache usage and model variation differ between runs. It is not evidence of a real Jira or GitHub workflow. Connector acceptance should still compare ticket/PR summaries against direct reads and exercise missing connections and paged results.
+
+A live test (`codemode.live.test.ts`) gives Claude and Codex a neutral question over several guide sections, with no mention of the tool, and passes only when at least three reads ran inside Code Mode. On November 21, 2026, with the rule only in the tool description, both agents made six direct reads and none in Code Mode; with the line in the server instructions both passed, one run each.
 
 Durable replay, approved writes, external MCP catalogs, generated TypeScript declarations and reusable scripts remain later slices. Enabling any of them requires evidence that it improves a real task and preserves Spark's existing permission behavior.
