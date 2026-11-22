@@ -22,7 +22,7 @@ describe('friendlyStep', () => {
       expect(friendlyStep(name, {})).toBe('Finding Code Mode tools');
       expect(friendlyStep(name, { query: 'guide' })).toBe('Finding Code Mode tools');
       expect(friendlyStep(name, { code: 'return await tools.call("spark_guide", {});' })).toBe(
-        'Combining reads with Code Mode',
+        'Combining tools with Code Mode',
       );
     }
   });
@@ -37,7 +37,7 @@ describe('friendlyStep', () => {
     expect(friendlyStep(name, envelope({ query: 'spark_guide' }))).toBe('Finding Code Mode tools');
     expect(
       friendlyStep(name, envelope({ code: 'return await tools.call("spark_guide", {});' })),
-    ).toBe('Combining reads with Code Mode');
+    ).toBe('Combining tools with Code Mode');
     expect(friendlyStep(name, envelope(null))).toBe('Finding Code Mode tools');
   });
 

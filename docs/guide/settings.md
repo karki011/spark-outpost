@@ -69,7 +69,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 
 ### Code Mode
 
-Agents combine supported reads locally beside direct tools. Off: direct tools only, from the next turn. Terminal sessions don't change. An installation can disable it.
+Agents combine Spark tools locally; cards still apply. Off: direct tools only, from the next turn. Terminal sessions don't change. An installation can disable it.
 
 ### Record Terminal sessions
 

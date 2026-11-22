@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Code Mode combines any Spark tool, cards kept   | [Code Mode](settings.md#code-mode).                        |
 | Recording in island, left bar; faster commands  | [Take meeting notes](meetings.md#record).                  |
 | Workflow steps run on the named pull request    | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | GitHub: search, Start chat, reviewed groups     | [GitHub page](github-page.md#search).                      |
@@ -18,11 +19,10 @@ summary: What changed in recent releases and what to do next.
 | One tap sends on phones                         | [Use your phone](use-your-phone.md).                       |
 | Outposts are gone; agents split work instead    | [Sub-chats](sub-chats.md).                                 |
 | Old outpost requests read as from another chat  | Nothing to do.                                             |
-| **Sub-chats** tab; plan card **Edit**           | [Sub-chats](sub-chats.md#find-a-sub-chat).                 |
+| Sub-chats nest; **Sub-chats** tab; **Edit**     | [Sub-chats](sub-chats.md#find-a-sub-chat).                 |
 | Sub-chat reports, wrap-up                       | [Reports](sub-chat-reports.md).                            |
 | Agents split jobs into sub-chats                | [Split a job](split-into-sub-chats.md).                    |
 | Browser menus, docked tools                     | [Browser](use-the-browser.md).                             |
-| Sub-chats nest under their parent               | [Find a sub-chat](sub-chats.md#find-a-sub-chat).           |
 | Chats message each other                        | [Messages](chat-messages.md).                              |
 | **Enter** sends mid-dictation; PR panel tidied  | [Talk to Spark](voice.md#turn-it-on).                      |
 | Workflow steps know their branch and changes    | [Workflow steps](modes-and-levels.md#workflow-steps).      |
