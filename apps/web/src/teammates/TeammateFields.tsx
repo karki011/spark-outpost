@@ -14,8 +14,12 @@ interface TeammateFieldsProps {
   onChange: (draft: TeammateDraft) => void;
 }
 
-export function TeammateFields({ draft, nameRef, nameInvalid, onChange }: TeammateFieldsProps) {
-  const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
+export function TeammateIdentityFields({
+  draft,
+  nameRef,
+  nameInvalid,
+  onChange,
+}: TeammateFieldsProps) {
   return (
     <>
       <label className="field">
@@ -45,6 +49,16 @@ export function TeammateFields({ draft, nameRef, nameInvalid, onChange }: Teamma
         shown={shownFace(draft)}
         onChange={(face) => onChange({ ...draft, face })}
       />
+    </>
+  );
+}
+
+export function TeammateFields(props: TeammateFieldsProps) {
+  const { draft, onChange } = props;
+  const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
+  return (
+    <>
+      <TeammateIdentityFields {...props} />
       <h3 className="tm-sub">Defaults for its chats</h3>
       <TeammateDefaults
         draft={draft}

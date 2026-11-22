@@ -14,11 +14,11 @@ Make a named teammate, give it skills and hand it jobs. About 3 minutes.
 2. On **Crew**, select **New Spark**, or **Add** on a suggestion such as **Pip · Code reviewer**.
 3. Type a **Name** and **Role**; **Change look** picks the blob.
 4. Pick the **Provider**, **Model**, **Effort**, **Mode**, **Spark autonomy** and **Default project**.
-5. Select **Create Spark**. It opens on **Details**.
+5. Select **Create Spark**. It opens on **Setup**.
 
 ## Give it instructions and skills
 
-1. Select **Skills and files**, or **Edit instructions** on **Details**.
+1. Select **Instructions and skills**, or **Edit** on **Setup**.
 2. Write in **SPARK.md** and select **Save** (⌘S). There is no length limit.
 3. Select **New skill**, type a **Name** and **Description**, then **Create skill**.
 4. Select **New file** for a script or notes; **Rename** and **Delete** are above the file.
@@ -34,14 +34,14 @@ Agents change Sparks per their mode ([when](build-with-an-agent.md#when-it-asks)
 | Open its home chat         | Select its card in the **Sparks** line on **Home**.               |
 | Start another chat with it | Before the first message, select **Talk to…** in the message box. |
 | Hand it one job            | Type `@` and pick it, or select the **Ask Pip?** chip.            |
-| Try it, sending nothing    | Use **Try it** on **Details**: [Do a test run](test-run.md).      |
+| Try it, sending nothing    | Select **Try it** at the top: [Do a test run](test-run.md).       |
 
 A job runs read-only with its own context, up to three Sparks in turn. Mode, approvals and protected paths never widen.
 
 ## Change or delete one
 
 1. Open **Sparks**, or select **Manage** in the **Sparks** line on **Home**, and select its card.
-2. Edit **Details** and select **Save**.
+2. Change **Setup**: [Set up a Spark](spark-setup.md).
 3. To delete it, hold **Hold to delete**. **Undo** lasts 10 seconds. Its chats stay.
 
 **Next:** [Choose where a chat works](where-spark-works.md)

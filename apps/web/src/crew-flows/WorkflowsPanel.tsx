@@ -5,6 +5,7 @@ import { rememberWorkflowPlace, rememberedWorkflowPlace } from '../sparks-page/s
 import { WarnIcon } from '../ui/icons.tsx';
 import { NewWorkflow } from './NewWorkflow.tsx';
 import { useWorkflowRunRequests } from './run-route.ts';
+import { useWorkflowRequests } from './workflow-route.ts';
 import { RunView } from './RunView.tsx';
 import { useCrewSparks } from './spark-lookup.ts';
 import { useWorkflow, useWorkflows } from './use-workflows.ts';
@@ -56,6 +57,7 @@ export function WorkflowsPanel() {
   useWorkflowRunRequests(
     useCallback((runId: string) => setView({ kind: 'run', runId, from: null }), []),
   );
+  useWorkflowRequests(useCallback((id: string) => setView({ kind: 'edit', id }), []));
   const openRun = (from: string | null) => (run: WorkflowRun) =>
     setView({ kind: 'run', runId: run.id, seed: run, from });
   const draft = (name: string, steps: WorkflowStep[]) => {

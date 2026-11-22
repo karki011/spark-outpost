@@ -13,7 +13,7 @@ test.beforeEach(async () => {
 });
 
 test.afterEach(async ({ page }) => {
-  await page.request.delete(`/api/workflows/${WORKFLOW_ID}`);
+  await page.request.delete(`/api/workflows/${WORKFLOW_ID}`, { data: {} });
 });
 
 async function pickSpark(page: Page, picker: string, spark: string) {

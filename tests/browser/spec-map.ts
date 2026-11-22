@@ -183,6 +183,7 @@ export const SPEC_GROUPS = {
     'spark-crew-edit',
     'spark-decisions',
     'spark-mention',
+    'spark-setup',
     'spark-sheet',
     'sparks',
     'sparks-page',

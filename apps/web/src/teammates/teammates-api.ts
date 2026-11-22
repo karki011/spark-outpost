@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import {
+  sparkUsageSchema,
   teammateChatSchema,
   teammateListSchema,
   teammateSchema,
   type CreateTeammateRequest,
+  type SparkUsage,
   type Teammate,
   type TeammateChat,
   type TeammateList,
@@ -14,7 +16,10 @@ import { forgetDraft, request } from '../api/client.ts';
 
 export const teammateKeys = {
   all: ['teammates'] as const,
+  usage: (id: string) => ['teammates', 'usage', id] as const,
 };
+
+const defaultTeammateSchema = z.object({ teammateId: z.uuid().nullable() });
 
 const json = (method: string, body: unknown): RequestInit => ({
   method,
@@ -40,6 +45,18 @@ export const teammatesApi = {
     forgetDraft(conversationId);
     return linked;
   },
+  startWithDefault: async (conversationId: string): Promise<TeammateChat> => {
+    const linked = await request(
+      teammateChatSchema,
+      `/conversations/${conversationId}/default-teammate`,
+      json('POST', {}),
+    );
+    if (linked.teammate) forgetDraft(conversationId);
+    return linked;
+  },
+  setDefault: (teammateId: string | null): Promise<{ teammateId: string | null }> =>
+    request(defaultTeammateSchema, '/teammate-default', json('PUT', { teammateId })),
+  usage: (id: string): Promise<SparkUsage> => request(sparkUsageSchema, `/teammates/${id}/usage`),
   dismissStarter: (starter: TeammateStarterId): Promise<null> =>
     request(z.null(), `/teammate-starters/${starter}/dismiss`, json('POST', {})),
 };

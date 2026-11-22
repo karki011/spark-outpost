@@ -12,6 +12,7 @@ import { BadRequestError, paramId, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import { requestCancel } from '../persistence/runs.ts';
+import { sparkUsage } from '../persistence/spark-usage.ts';
 import {
   BuilderChatNotFoundError,
   BuilderChatTakenError,
@@ -28,6 +29,7 @@ import { deleteTriggers } from './trigger-records.ts';
 import { SparkNotFoundError, startSparkTestRun, startWorkflowRun } from './start-run.ts';
 import { TestRunNotFoundError, discardTestRun, readTestRun } from './test-run.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
+import { workflowUsage } from './workflow-usage.ts';
 import {
   WorkflowBusyError,
   WorkflowChangedError,
@@ -137,6 +139,14 @@ export function workflowRoutes(deps: WorkflowRouteDeps): Router {
 
   router.get('/workflows/:id/runs', async (req, res) => {
     res.json({ runs: await listWorkflowRuns(db, workspaceId, workflowId(req)) });
+  });
+
+  router.get('/workflows/:id/usage', async (req, res) => {
+    res.json(await workflowUsage(db, workspaceId, workflowId(req)));
+  });
+
+  router.get('/teammates/:id/usage', async (req, res) => {
+    res.json(await sparkUsage({ db, workspaceId, store }, paramId(req)));
   });
 
   router.post('/workflows/:id/runs', async (req, res) => {

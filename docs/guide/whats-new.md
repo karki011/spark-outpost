@@ -11,6 +11,8 @@ summary: What changed in recent releases and what to do next.
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
 | Workflow editor: one **Save**, **When it runs** | [Schedules](workflow-schedules.md).                        |
+| Spark **Setup**, **Used in**, default Spark     | [Set up a Spark](spark-setup.md).                          |
+| `@` lists all workflows, Sparks                 | [Run one](workflow-runs.md#run-one).                       |
 | Code Mode combines any Spark tool, cards kept   | [Code Mode](settings.md#code-mode).                        |
 | Island recording wave, left bar; fast commands  | [Take meeting notes](meetings.md#record).                  |
 | Workflow steps know their branch, changes, PR   | [Workflow steps](modes-and-levels.md#workflow-steps).      |
@@ -41,8 +43,6 @@ summary: What changed in recent releases and what to do next.
 | Chat rows show steps; plans name chats          | [Chat list](statuses-and-limits.md#chat-list).             |
 | **Cost** by tool; model switch cache note       | [Prompt cache](statuses-and-limits.md#prompt-cache).       |
 | Worktrees holding `.env` or a running tab stay  | [Where](where-spark-works.md#what-to-expect).              |
-| **@** lists workflows                           | Pick one and send.                                         |
-| Wider Spark Island requests                     | Nothing to do.                                             |
 
 ## Mid-November 2026
 

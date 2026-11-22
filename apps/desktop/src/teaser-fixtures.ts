@@ -93,5 +93,9 @@ function teammate(name: string, state: TeammateState): TeammateView {
 }
 
 export function teammates(spec: [string, TeammateState][]): TeammateList {
-  return { teammates: spec.map(([name, state]) => teammate(name, state)), starters: [] };
+  return {
+    teammates: spec.map(([name, state]) => teammate(name, state)),
+    starters: [],
+    defaultTeammateId: null,
+  };
 }

@@ -1,13 +1,21 @@
-import type { Teammate, TeammateChat, UpdateChatSettingsRequest } from '@spark-outpost/contracts';
+import {
+  TEAMMATE_FOLLOWED_FIELDS,
+  UNTITLED_CONVERSATION,
+  type Teammate,
+  type TeammateChat,
+  type TeammateTag,
+  type UpdateChatSettingsRequest,
+  type UpdateTeammateRequest,
+} from '@spark-outpost/contracts';
 import type { StoredSparkBrief } from '../crew/spark-brief.ts';
-import { updateChatSettings } from './chat-settings.ts';
+import { clearChatAgent, updateChatSettings } from './chat-settings.ts';
 import { setConversationProjects } from './conversation-projects.ts';
 import { createConversation } from './conversations.ts';
 import { withTransaction, type Db, type DbClient, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
 import { SESSION_CLOSE_REASONS } from './provider-sessions.ts';
 import { InvalidDefaultError } from './setup.ts';
-import { TeammateConflictError, getTeammate } from './teammates.ts';
+import { TeammateConflictError, defaultTeammateId, getTeammate } from './teammates.ts';
 
 function defaultsOf(teammate: Teammate): UpdateChatSettingsRequest {
   const update: UpdateChatSettingsRequest = {};
@@ -92,6 +100,114 @@ export async function linkChat(
     await attach(client, workspaceId, conversationId, teammate);
     const { id, name, role, face } = teammate;
     return { conversationId, teammate: { id, name, role, face } };
+  });
+}
+
+const tagOf = ({ id, name, role, face }: Teammate): TeammateTag => ({ id, name, role, face });
+
+async function linkedTag(
+  client: Queryable,
+  workspaceId: string,
+  conversationId: string,
+): Promise<TeammateTag | null> {
+  const { rows } = await client.query<{ teammate_id: string | null }>(
+    'SELECT teammate_id FROM conversations WHERE id = $1 AND workspace_id = $2',
+    [conversationId, workspaceId],
+  );
+  const id = rows[0]?.teammate_id;
+  return id ? tagOf(await getTeammate(client, workspaceId, id)) : null;
+}
+
+export async function setDefaultTeammate(
+  db: Queryable,
+  workspaceId: string,
+  teammateId: string | null,
+): Promise<void> {
+  if (teammateId) await getTeammate(db, workspaceId, teammateId);
+  await db.query(
+    `INSERT INTO profiles (workspace_id, default_teammate_id) VALUES ($1, $2)
+     ON CONFLICT (workspace_id) DO UPDATE SET default_teammate_id = EXCLUDED.default_teammate_id`,
+    [workspaceId, teammateId],
+  );
+}
+
+export async function startWithDefaultTeammate(
+  db: Db,
+  workspaceId: string,
+  conversationId: string,
+): Promise<TeammateChat> {
+  return withTransaction(db, async (client) => {
+    const teammateId = await defaultTeammateId(client, workspaceId);
+    if (!teammateId) {
+      return { conversationId, teammate: await linkedTag(client, workspaceId, conversationId) };
+    }
+    const created = await client.query(
+      `INSERT INTO conversations (id, workspace_id, title) VALUES ($1, $2, $3)
+       ON CONFLICT (id) DO NOTHING`,
+      [conversationId, workspaceId, UNTITLED_CONVERSATION],
+    );
+    if (created.rowCount !== 1) {
+      return { conversationId, teammate: await linkedTag(client, workspaceId, conversationId) };
+    }
+    const teammate = await getTeammate(client, workspaceId, teammateId);
+    await attach(client, workspaceId, conversationId, teammate);
+    return { conversationId, teammate: tagOf(teammate) };
+  });
+}
+
+async function followAgent(
+  client: Queryable,
+  conversationId: string,
+  teammate: Teammate,
+): Promise<boolean> {
+  if (!teammate.provider) {
+    await clearChatAgent(client, conversationId);
+    return true;
+  }
+  return settleSettings(client, conversationId, {
+    provider: teammate.provider,
+    model: teammate.model,
+    effort: teammate.effort,
+    agentMode: teammate.agentMode,
+  });
+}
+
+export async function followTeammateSettings(
+  db: Db,
+  workspaceId: string,
+  teammate: Teammate,
+  update: UpdateTeammateRequest,
+): Promise<string[]> {
+  if (!TEAMMATE_FOLLOWED_FIELDS.some((field) => update[field] !== undefined)) return [];
+  return withTransaction(db, async (client) => {
+    const { rows } = await client.query<{ id: string }>(
+      `SELECT c.id FROM conversations c
+       WHERE c.workspace_id = $1 AND c.teammate_id = $2 AND c.archived_at IS NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM runs r WHERE r.conversation_id = c.id
+             AND r.status IN ('queued', 'running', 'awaiting_approval')
+         )
+       ORDER BY c.id FOR UPDATE OF c`,
+      [workspaceId, teammate.id],
+    );
+    const followed: string[] = [];
+    for (const { id } of rows) {
+      if (await followAgent(client, id, teammate)) followed.push(id);
+    }
+    if (followed.length === 0) return followed;
+    await client.query(
+      `UPDATE provider_sessions SET closed_at = now(), close_reason = $2
+       WHERE conversation_id = ANY($1::uuid[]) AND closed_at IS NULL`,
+      [followed, SESSION_CLOSE_REASONS.settings],
+    );
+    await client.query(
+      `INSERT INTO chat_notes (conversation_id, kind, name)
+       SELECT c.id, 'spark_settings', $2 FROM conversations c
+       WHERE c.id = ANY($1::uuid[])
+         AND EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)`,
+      [followed, teammate.name],
+    );
+    return followed;
   });
 }
 

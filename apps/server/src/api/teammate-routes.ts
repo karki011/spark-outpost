@@ -22,7 +22,14 @@ import {
 import { sparkFolder } from '../crew/spark-skills.ts';
 import type { Db } from '../persistence/db.ts';
 import { activeConnection } from '../persistence/setup.ts';
-import { closeTeammateSessions, linkChat, openHomeThread } from '../persistence/teammate-chats.ts';
+import {
+  closeTeammateSessions,
+  followTeammateSettings,
+  linkChat,
+  openHomeThread,
+  setDefaultTeammate,
+  startWithDefaultTeammate,
+} from '../persistence/teammate-chats.ts';
 import {
   TeammateConflictError,
   TeammateNotFoundError,
@@ -102,6 +109,12 @@ export function teammateRoutes({
     res.json(await teammateList(db, workspaceId));
   });
 
+  router.put('/teammate-default', async (req, res) => {
+    const { teammateId } = parseTeammateBody(linkTeammateRequestSchema, req);
+    await setDefaultTeammate(db, workspaceId, teammateId);
+    res.json({ teammateId });
+  });
+
   router.post('/teammates', async (req, res) => {
     const input = parseTeammateBody(createTeammateRequestSchema, req);
     await assertConnected(input.provider);
@@ -118,6 +131,7 @@ export function teammateRoutes({
     if (BRIEF_FIELDS.some((field) => update[field] !== undefined)) {
       await closeTeammateSessions(db, workspaceId, id);
     }
+    await followTeammateSettings(db, workspaceId, saved, update);
     res.json(saved);
   });
 
@@ -156,6 +170,10 @@ export function teammateRoutes({
   router.put('/conversations/:id/teammate', async (req, res) => {
     const { teammateId } = parseTeammateBody(linkTeammateRequestSchema, req);
     res.json(await linkChat(db, workspaceId, paramId(req), teammateId));
+  });
+
+  router.post('/conversations/:id/default-teammate', async (req, res) => {
+    res.json(await startWithDefaultTeammate(db, workspaceId, paramId(req)));
   });
 
   router.post('/teammate-starters/:starter/dismiss', async (req, res) => {

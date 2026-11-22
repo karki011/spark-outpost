@@ -18,7 +18,7 @@ import { activeConnection } from '../../persistence/setup.ts';
 import { sparkNameClash } from '../../crew/crew-drafts.ts';
 import { CREW_EDIT_REFUSALS, crewEditRefusal } from '../../crew/tool-offer.ts';
 import { workflowStore } from '../../crew-flows/workflow-store.ts';
-import { closeTeammateSessions } from '../../persistence/teammate-chats.ts';
+import { closeTeammateSessions, followTeammateSettings } from '../../persistence/teammate-chats.ts';
 import {
   createTeammate,
   deleteTeammate,
@@ -224,6 +224,7 @@ export async function performUpdateTeammate(
   if (changes.name !== undefined || changes.role !== undefined || changes.instructions) {
     await closeTeammateSessions(db, workspaceId, action.teammateId);
   }
+  await followTeammateSettings(db, workspaceId, saved, changes);
   return {
     message: `Saved ${saved.name}.`,
     url: null,

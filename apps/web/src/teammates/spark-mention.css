@@ -54,6 +54,34 @@
   direction: ltr;
 }
 
+.mentionpop .sparklist {
+  max-height: 176px;
+}
+
+.sparkopt[aria-disabled='true'] {
+  cursor: default;
+}
+
+.sparkopt[aria-disabled='true'] .fname b,
+.sparkopt[aria-disabled='true'] .flow-mark {
+  color: var(--muted);
+}
+
+.mention-kind {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.mention-kind svg {
+  width: 12px;
+  height: 12px;
+}
+
 .mentionpop .spark-hint {
   margin: 0;
   padding: 4px 16px 8px;
