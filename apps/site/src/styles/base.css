@@ -265,6 +265,43 @@ h2 {
   font-size: 14px;
 }
 
+.more {
+  padding-block: 80px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+}
+
+.more-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.more-grid li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+}
+
+.more-grid h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.more-grid p {
+  margin: 0;
+  flex: 1;
+  color: var(--muted);
+  font-size: 14px;
+  text-wrap: pretty;
+}
+
 .cta .scout-mark {
   width: 72px;
   height: 72px;
@@ -358,6 +395,10 @@ h2 {
     order: 0;
   }
 
+  .more-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .shots {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -370,6 +411,10 @@ h2 {
 @media (max-width: 480px) {
   :root {
     --gutter: 16px;
+  }
+
+  .more-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .nav {
