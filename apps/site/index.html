@@ -214,9 +214,10 @@
           </p>
           <p>
             Spark's recommended rules guard secret files, git hooks and config, and publishing: only
-            the chat's own <code>spark/</code> branch is pushed, never with force. With no rules,
-            the agent's mode decides. Where a mode never asks, Spark can't stop a step; it marks it
-            ran without review and flags any crossing of your rules.
+            the chat's own <code>spark/</code> branch is pushed, plain force pushes are refused and
+            <code>--force-with-lease</code> asks with hold to confirm. With no rules, the agent's
+            mode decides. Where a mode never asks, Spark can't stop a step; it marks it ran without
+            review and flags any crossing of your rules.
           </p>
         </div>
         <div class="demo" data-demo="modes"></div>

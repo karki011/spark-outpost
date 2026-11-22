@@ -168,7 +168,7 @@ The GitHub page lists the pull requests waiting for your review across your repo
 
 ### Every turn, measured
 
-Each turn shows its time, tool calls, tokens and cost, and the **Cost** tab breaks them down by tool, MCP server and skill. Nothing is capped, and a quiet agent is never stopped for it. **Settings → Health** lists what's broken or quietly ignored. [Statuses and limits](docs/guide/statuses-and-limits.md)
+Each turn shows its time, tool calls, tokens and cost, and the **Cost** tab breaks down calls and time by tool, MCP server and skill. Nothing is capped, and a quiet agent is never stopped for it. **Settings → Health** lists what's broken or quietly ignored. [Statuses and limits](docs/guide/statuses-and-limits.md)
 
 </td>
 </tr>
