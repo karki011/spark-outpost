@@ -6,8 +6,8 @@ import type { Queryable } from '../persistence/db.ts';
 import { checkedOut } from '../pr-tracking/chat-repos.ts';
 import { originOf } from '../projects/repo-scan.ts';
 import { git } from '../projects/snapshot.ts';
-import { prepareDependencies } from '../projects/worktree-deps.ts';
-import { WORKTREES_DIR, excludeSparkDir } from '../projects/worktrees.ts';
+import { cloneMatchingDependencies } from '../projects/worktree-deps.ts';
+import { WORKTREES_DIR, excludeSparkDir, repoTop } from '../projects/worktrees.ts';
 
 const run = promisify(execFile);
 const FETCH_TIMEOUT_MS = 60_000;
@@ -65,7 +65,7 @@ const sameRepo = (slug: string | null, pull: PullRef) =>
 
 async function linkedRoot(roots: readonly string[], pull: PullRef): Promise<string | null> {
   for (const root of roots) {
-    if (sameRepo(await maybe(() => originOf(root)), pull)) return root;
+    if (sameRepo(await maybe(async () => originOf(await repoTop(root))), pull)) return root;
   }
   return null;
 }
@@ -162,7 +162,8 @@ async function makeCheckout(ask: CheckoutAsk, root: string, pull: PullRef): Prom
   if (branch && watched && branch === watched) return { kind: 'none' };
   const main = await mainWorktree(root);
   const folder = checkoutFolder(main, ask.workflowRunId);
-  await record(ask, folder, root, main);
+  const project = path.join(folder, path.relative(await repoTop(root), root));
+  await record(ask, project, root, main);
   const head = await fetchHead(main, pull, checkoutRef(ask.workflowRunId));
   if (!head) {
     await removeRunCheckout(ask.db, ask.workflowRunId);
@@ -182,9 +183,10 @@ async function makeCheckout(ask: CheckoutAsk, root: string, pull: PullRef): Prom
     folder,
     checkoutRef(ask.workflowRunId),
   ]);
-  const prepare = ask.prepare ?? ((from, copy) => prepareDependencies(from, copy, { root: from }));
-  await maybe(() => prepare(root, folder));
-  return { kind: 'checkout', pull, path: folder, replaces: root, head };
+  const prepare =
+    ask.prepare ?? ((from, copy) => cloneMatchingDependencies(from, copy, { root: from }));
+  await maybe(() => prepare(root, project));
+  return { kind: 'checkout', pull, path: project, replaces: root, head };
 }
 
 export async function placeRunPull(ask: CheckoutAsk): Promise<PullPlace> {
@@ -231,7 +233,11 @@ async function removeFolder(main: string, folder: string, workflowRunId: string)
 export async function removeRunCheckout(db: Queryable, workflowRunId: string): Promise<void> {
   const row = await recorded(db, workflowRunId);
   if (row?.checkout_path && row.checkout_main) {
-    await removeFolder(row.checkout_main, row.checkout_path, workflowRunId);
+    await removeFolder(
+      row.checkout_main,
+      checkoutFolder(row.checkout_main, workflowRunId),
+      workflowRunId,
+    );
   }
   await db.query(
     `UPDATE workflow_runs SET checkout_path = NULL, checkout_root = NULL, checkout_main = NULL
@@ -240,9 +246,14 @@ export async function removeRunCheckout(db: Queryable, workflowRunId: string): P
   );
 }
 
+const CHECKOUT_IN_USE = `(w.status = 'running' OR EXISTS (
+  SELECT 1 FROM runs r WHERE r.id = w.run_id
+    AND r.status NOT IN ('succeeded', 'failed', 'cancelled', 'outcome_unknown')))`;
+
 export async function sweepRecordedCheckouts(db: Queryable): Promise<number> {
   const { rows } = await db.query<{ id: string }>(
-    `SELECT id FROM workflow_runs WHERE checkout_path IS NOT NULL AND status <> 'running'`,
+    `SELECT w.id FROM workflow_runs w
+     WHERE w.checkout_path IS NOT NULL AND NOT (${CHECKOUT_IN_USE})`,
   );
   for (const { id } of rows) await removeRunCheckout(db, id);
   return rows.length;
@@ -250,7 +261,7 @@ export async function sweepRecordedCheckouts(db: Queryable): Promise<number> {
 
 async function runningCheckouts(db: Queryable): Promise<Set<string>> {
   const { rows } = await db.query<{ id: string }>(
-    `SELECT id FROM workflow_runs WHERE status = 'running' AND checkout_path IS NOT NULL`,
+    `SELECT w.id FROM workflow_runs w WHERE w.checkout_path IS NOT NULL AND ${CHECKOUT_IN_USE}`,
   );
   return new Set(rows.map((row) => row.id));
 }
@@ -333,7 +344,10 @@ export function checkoutNote(place: PullPlace, changed: readonly string[]): stri
   if (place.kind !== 'checkout') return null;
   const ran = `The steps ran on a temporary checkout of pull request ${place.pull.id} at its head (${shortSha(place.head)}), not on this chat’s branch; Spark removed it when the run ended.`;
   if (changed.length === 0) return ran;
-  const shown = changed.slice(0, 20).join(', ');
+  const shown = changed
+    .slice(0, 20)
+    .map((name) => name.replace(/[\p{Cc}\s]+/gu, ' '))
+    .join(', ');
   const more = changed.length > 20 ? ` and ${changed.length - 20} more` : '';
   return `${ran} The steps changed ${changed.length} file${changed.length === 1 ? '' : 's'} there (${shown}${more}); nothing was committed, so those changes were discarded with the checkout.`;
 }

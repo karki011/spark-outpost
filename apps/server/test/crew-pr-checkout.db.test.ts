@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { workflowSchema, type WorkflowRunStatus } from '@spark-outpost/contracts';
@@ -81,14 +81,19 @@ async function newRun(pull = PULL_ID): Promise<string> {
   return id;
 }
 
-function place(workflowRunId: string, pullId = PULL_ID, roots = [repo.root]) {
+function place(
+  workflowRunId: string,
+  pullId = PULL_ID,
+  roots = [repo.root],
+  prepare: (() => Promise<unknown>) | null = async () => undefined,
+) {
   return placeRunPull({
     db: t.db,
     workspaceId: t.workspaceId,
     workflowRunId,
     pullId,
     roots,
-    prepare: async () => undefined,
+    ...(prepare ? { prepare } : {}),
   });
 }
 
@@ -247,5 +252,48 @@ describe('cleaning up checkouts the run left behind', () => {
     expect(worktreeList(repo.root)).not.toContain(orphan.path);
     expect(await exists(running.path)).toBe(true);
     expect(checkoutRefs(repo.root)).toBe(`refs/spark-outpost/pr-checkouts/${live}`);
+  });
+});
+
+describe('what a checkout never does', () => {
+  it('runs no install, so pull request scripts do not run', async () => {
+    const marker = path.join(base, `ran-${repos}`);
+    await writeFile(path.join(repo.root, 'package.json'), '{"name":"w","version":"1.0.0"}\n');
+    await writeFile(path.join(repo.root, 'package-lock.json'), '{"lockfileVersion":3}\n');
+    await mkdir(path.join(repo.root, 'node_modules', 'left-pad'), { recursive: true });
+    git(repo.root, 'checkout', '-q', '--detach', repo.pullHead);
+    await writeFile(
+      path.join(repo.root, 'package.json'),
+      JSON.stringify({ name: 'w', version: '1.0.0', scripts: { postinstall: `touch ${marker}` } }),
+    );
+    await writeFile(path.join(repo.root, 'package-lock.json'), '{"lockfileVersion":3,"x":1}\n');
+    git(repo.root, 'add', 'package.json', 'package-lock.json');
+    git(repo.root, 'commit', '-qm', 'add a postinstall');
+    const head = git(repo.root, 'rev-parse', 'HEAD');
+    git(repo.root, 'push', '-q', repo.bare, `+${head}:refs/pull/8/head`);
+    git(repo.root, 'checkout', '-q', CHAT_BRANCH);
+    git(repo.root, 'clean', '-qfd', '-e', 'node_modules');
+
+    const id = await newRun('acme/widgets#8');
+    const checkout = checkoutOf(await place(id, 'acme/widgets#8', [repo.root], null));
+
+    expect(await exists(path.join(checkout.path, 'package.json'))).toBe(true);
+    expect(await exists(path.join(checkout.path, 'node_modules'))).toBe(false);
+    expect(await exists(marker)).toBe(false);
+  });
+
+  it('keeps a project linked at a subfolder at that subfolder', async () => {
+    const sub = path.join(repo.root, 'packages', 'app');
+    await mkdir(sub, { recursive: true });
+    await writeFile(path.join(sub, 'index.txt'), 'app\n');
+    const id = await newRun();
+    const checkout = checkoutOf(await place(id, PULL_ID, [sub]));
+
+    expect(checkout.path).toBe(
+      path.join(repo.root, '.spark', 'worktrees', `pr-${id}`, 'packages', 'app'),
+    );
+    expect(checkout.replaces).toBe(sub);
+    await removeRunCheckout(t.db, id);
+    expect(await exists(path.join(repo.root, '.spark', 'worktrees', `pr-${id}`))).toBe(false);
   });
 });
