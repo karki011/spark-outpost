@@ -181,6 +181,14 @@ const gitBash: Check = async () => {
   throw new Error(`no bash among ${candidates.join(', ')}`);
 };
 
+function initializeReply(line: string): boolean {
+  try {
+    return (JSON.parse(line) as { id?: unknown }).id === 1;
+  } catch {
+    return false;
+  }
+}
+
 function acpStart(id: 'claude' | 'codex'): Check {
   return async () => {
     const launch = agentDefinitions[id].launch();
@@ -196,13 +204,17 @@ function acpStart(id: 'claude' | 'codex'): Check {
     try {
       const reply = await new Promise<string>((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error('no initialize reply')), ACP_TIMEOUT_MS);
-        child.once('exit', (code) => {
+        const fail = (error: Error) => {
           clearTimeout(timer);
-          reject(new Error(`exited ${code}: ${stderr.slice(-200)}`));
-        });
+          reject(error);
+        };
+        child.once('error', fail);
+        child.stdin.once('error', fail);
+        child.once('exit', (code) => fail(new Error(`exited ${code}: ${stderr.slice(-200)}`)));
         child.stdout.on('data', (data) => {
           stdout += String(data);
-          const line = stdout.split('\n').find((candidate) => candidate.includes('"id":1'));
+          const complete = stdout.split('\n').slice(0, -1);
+          const line = complete.find((candidate) => initializeReply(candidate));
           if (line) {
             clearTimeout(timer);
             resolve(line);
