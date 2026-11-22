@@ -6,6 +6,7 @@ import net from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { completeReply } from './acp-reply.ts';
 import { startDatabase } from '../apps/desktop/src/postgres.ts';
 import { agentDefinitions } from '../apps/server/src/agents/acp/agents.ts';
 import { parseShell } from '../apps/server/src/approvals/shell-parse.ts';
@@ -181,14 +182,6 @@ const gitBash: Check = async () => {
   throw new Error(`no bash among ${candidates.join(', ')}`);
 };
 
-function initializeReply(line: string): boolean {
-  try {
-    return (JSON.parse(line) as { id?: unknown }).id === 1;
-  } catch {
-    return false;
-  }
-}
-
 function acpStart(id: 'claude' | 'codex'): Check {
   return async () => {
     const launch = agentDefinitions[id].launch();
@@ -213,8 +206,7 @@ function acpStart(id: 'claude' | 'codex'): Check {
         child.once('exit', (code) => fail(new Error(`exited ${code}: ${stderr.slice(-200)}`)));
         child.stdout.on('data', (data) => {
           stdout += String(data);
-          const complete = stdout.split('\n').slice(0, -1);
-          const line = complete.find((candidate) => initializeReply(candidate));
+          const line = completeReply(stdout, 1);
           if (line) {
             clearTimeout(timer);
             resolve(line);
