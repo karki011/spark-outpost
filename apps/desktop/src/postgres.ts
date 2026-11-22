@@ -1,8 +1,10 @@
 import { execFile } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
 import pg from 'pg';
@@ -31,9 +33,9 @@ async function loadWithoutExitHooks() {
 }
 
 async function windowsPgCtl(): Promise<string> {
-  const binaries = (await import(`@embedded-postgres/windows-${process.arch}`)) as {
-    pg_ctl: string;
-  };
+  const fromEmbedded = createRequire(fileURLToPath(import.meta.resolve('embedded-postgres')));
+  const entry = fromEmbedded.resolve(`@embedded-postgres/windows-${process.arch}`);
+  const binaries = (await import(pathToFileURL(entry).href)) as { pg_ctl: string };
   return binaries.pg_ctl;
 }
 
