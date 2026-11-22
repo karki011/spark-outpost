@@ -45,6 +45,8 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: windows-unit-report
-          path: vitest-windows.json
+          path: |
+            vitest-windows.json
+            windows-smoke.md
           if-no-files-found: ignore
           retention-days: 14

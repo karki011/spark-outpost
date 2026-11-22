@@ -1,6 +1,6 @@
 import { spawn, execFile } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { appendFile, mkdtemp, rm } from 'node:fs/promises';
+import { appendFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import net from 'node:net';
 import { tmpdir } from 'node:os';
@@ -317,4 +317,5 @@ for (const check of CHECKS) results.push(await runCheck(check));
 const report = table(results);
 console.log(report);
 if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, report);
+await writeFile('windows-smoke.md', report);
 process.exit(results.every((result) => result.ok) ? 0 : 1);
