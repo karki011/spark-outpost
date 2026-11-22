@@ -62,6 +62,7 @@ export interface RunInput {
   testRun?: boolean;
   reviewRun?: boolean;
   stepEdits?: boolean;
+  stepUpdatesBase?: boolean;
   sparkWork?: boolean;
   chatAsk?: AskPromptFacts | null;
   turnTimes?: TurnTimes | null;
@@ -108,6 +109,7 @@ interface RunRow {
   test_run: boolean | null;
   review_run: boolean | null;
   step_edits: boolean | null;
+  step_updates_base: boolean | null;
   spark_work: boolean | null;
   started_at: Date;
   previous_started_at: Date | null;
@@ -208,6 +210,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             COALESCE((r.route->'spark') ? 'step', false) AS workflow_step,
             COALESCE((r.route->'spark'->>'test')::boolean, false) AS test_run,
             COALESCE((r.route->'spark'->>'edits')::boolean, false) AS step_edits,
+            COALESCE((r.route->'spark'->>'updateBase')::boolean, false) AS step_updates_base,
             COALESCE((r.route->'spark'->>'work')::boolean, false) AS spark_work,
             COALESCE((r.route->'spark'->>'review')::boolean, false) AS review_run,
             r.created_at AS started_at,
@@ -418,6 +421,8 @@ function childInput(runId: string, row: RunRow): RunInput {
     testRun: row.test_run === true,
     reviewRun: row.review_run === true,
     stepEdits: row.workflow_step === true && row.step_edits === true,
+    stepUpdatesBase:
+      row.workflow_step === true && row.step_edits === true && row.step_updates_base === true,
     sparkWork: row.run_role === 'spark' && row.run_mode === 'ask' && row.spark_work === true,
     role: row.run_role,
     askTitle: false,

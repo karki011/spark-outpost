@@ -2,7 +2,9 @@ import type { WorkflowControlAction, WorkflowTriggers } from '@spark-outpost/con
 import { scheduleSummary } from '../../crew-flows/schedule-model.ts';
 import { hourCycle } from '../../desktop/hour-cycle.ts';
 
-const TRIGGER_WORDS: [keyof WorkflowTriggers, string][] = [
+type CardTriggers = Omit<WorkflowTriggers, 'updateBase'>;
+
+const TRIGGER_WORDS: [keyof CardTriggers, string][] = [
   ['chatStarted', 'a chat starts'],
   ['turnChanged', 'a turn changes files'],
   ['beforePublish', 'before publish'],
@@ -10,12 +12,12 @@ const TRIGGER_WORDS: [keyof WorkflowTriggers, string][] = [
   ['pullRequest', 'a pull request'],
 ];
 
-function triggersText(triggers: WorkflowTriggers): string {
+function triggersText(triggers: CardTriggers): string {
   const on = TRIGGER_WORDS.filter(([key]) => triggers[key] === true).map(([, words]) => words);
   return on.length > 0 ? `On ${on.join(', ')}` : 'No triggers';
 }
 
-function triggerRights(triggers: WorkflowTriggers): string {
+function triggerRights(triggers: CardTriggers): string {
   const edits = triggers.edits ? 'Runs may change files' : 'Runs only read';
   return triggers.holdOnFindings ? `${edits}; findings hold the publish` : edits;
 }

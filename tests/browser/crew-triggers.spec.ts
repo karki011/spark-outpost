@@ -160,6 +160,10 @@ test('one leave guard covers a trigger change, and a bad pattern or wait says wh
     .getByRole('group', { name: 'What these runs may do' })
     .getByRole('switch', { name: 'Triggered and scheduled runs may change files' })
     .click();
+  await page
+    .getByRole('group', { name: 'What these runs may do' })
+    .getByRole('switch', { name: 'Steps may update the branch from its base' })
+    .click();
   await saveButton(page, 'Review').click();
   await expect(open.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();
   expect(api.log).toEqual(['triggers']);
@@ -168,6 +172,7 @@ test('one leave guard covers a trigger change, and a bad pattern or wait says wh
     branchGlob: 'release/*',
     debounceMinutes: 5,
     edits: true,
+    updateBase: true,
   });
 
   await triggers.getByRole('switch', { name: 'A chat starts' }).click();

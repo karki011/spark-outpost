@@ -37,6 +37,7 @@ export interface AskTurn {
   workflowStep?: boolean | undefined;
   testRun?: boolean | undefined;
   stepEdits?: boolean | undefined;
+  stepUpdatesBase?: boolean | undefined;
 }
 
 export interface DoRunOptions extends AskRunOptions {
@@ -85,6 +86,7 @@ export function prepareAskRun(options: AskRunOptions, turn: AskTurn): ApprovalGa
     askRun: true,
     ...(turn.testRun ? { holdsSends: true } : {}),
     ...(turn.workflowStep && turn.stepEdits ? { askEdits: true } : {}),
+    ...(turn.workflowStep && turn.stepUpdatesBase ? { askBaseUpdate: true } : {}),
     askAuto: async () =>
       turn.workflowStep
         ? chosenModeWhy(options.provider, options.mode, options.modes ?? [])

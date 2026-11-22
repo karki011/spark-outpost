@@ -127,6 +127,18 @@ B and E build against the Wave 0 shapes with a fake API until A and D land.
 
 **Without a project folder** a step runs as `chat` with no tools, as a hand-off does today.
 
+### Steps that update the branch from its base (design, 2026-11-22)
+
+A workflow switch, **Steps may update the branch from its base** (`workflow_triggers.update_base`), lets a step bring the chat's base into the chat's branch. It is the user's switch: an agent's `spark_workflow` `triggers` action cannot carry it and saving triggers keeps the stored value.
+
+- **Which runs:** `insertWorkflowRun` copies the switch to `workflow_runs.update_base` for every run of kind `run` except Before publish, whatever started it (Run, `@`, schedule, trigger, an agent), unlike `edits`, which only triggered and scheduled runs get. `prepareStepEdits` turns it off with a note when the chat has no worktree of its own; a pull request checkout never gets it.
+- **Which steps:** a step on Claude (`stepEditsOffered`) whose chat has a base (`stepBaseUpdate`: the stack or pull request base from `publishStackOf`, else the worktree's `base_branch`, else the default branch) gets the editing session (`route.spark.edits`) and `route.spark.updateBase`, so it can resolve conflicts with its edit tools. The prompt names the base and whether a rebase is allowed.
+- **Gate:** `baseUpdateVerdict` (`approvals/base-update.ts`) runs before the Ask refusal. It allows one plain git command at a time (no chaining, substitution, quotes, `-c`/`-C` or environment prefix but `GIT_EDITOR=true`): `git pull origin <base>`, `git merge <base>|origin/<base>` with `--no-edit`, `--ff`, `--no-ff` or `--ff-only`, `git rebase <base>|origin/<base>`, `--continue`, `--abort`, `--skip` or `--quit`, and `git add` of named paths or `-u`. Those then follow the step's mode like any other command. Any other `merge`, `pull`, `rebase` or `add`, and a chained command holding a `merge`, `pull` or `rebase`, is refused with the base it may use and a reminder to run each command on its own (the real-agent run found Haiku chaining them and giving up on the generic Ask refusal); `commit`, `push`, `reset`, `checkout`, `stash` and the rest stay refused by the Ask gate.
+- **Where:** only in a step run with one project root, for a command whose working folder is inside it and is the chat's own worktree (`baseUpdateRoot`, then `stepBaseUpdate`). Like the rest of the gate, it reads the folder the request reports, so a `cd` in an earlier command is not seen.
+- **Rebase:** allowed only while the chat's branch has no `refs/remotes/origin/<branch>`, no open pull request, is not an adopted branch and has no chat stacked on it (`taskBranch`, `branchesStackedOn`). A pushed branch would need a force push to publish a rebase, which publishing and follow-up never do, so the gate refuses it with a reason to merge instead. `git pull` without `--no-rebase` or `--ff-only` counts as a rebase.
+- **Kept record:** `runBase` already leaves commits imported from the base out of the run's changes, so the record shows only what the step changed, including its conflict resolutions (`step-base.db.test.ts`).
+- **Not covered:** two steps of one stage share the worktree; the prompt tells a step to update only on a clean tree, and git refuses a merge or rebase that would overwrite local changes. A merge commit made by `--continue` includes whatever the step staged; it stays local and shows in the kept record.
+
 ### Stream D: what was built (2026-11-13)
 
 Code is in `apps/server/src/crew-flows/`; tests are `apps/server/test/crew-workflow-*.db.test.ts` and the `*.test.ts` files beside the code.

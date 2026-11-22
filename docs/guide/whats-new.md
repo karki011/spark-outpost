@@ -15,7 +15,7 @@ summary: What changed in recent releases and what to do next.
 | `@` lists all workflows, Sparks                 | [Run one](workflow-runs.md#run-one).                       |
 | Code Mode combines any Spark tool, cards kept   | [Code Mode](settings.md#code-mode).                        |
 | Island recording wave, left bar; fast commands  | [Take meeting notes](meetings.md#record).                  |
-| Workflow steps know their branch, changes, PR   | [Workflow steps](modes-and-levels.md#workflow-steps).      |
+| Steps know their branch, PR; may merge base     | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | GitHub: search, Start chat, reviewed groups     | [GitHub page](github-page.md#search).                      |
 | Copy a review or send it to a chat              | [Reviews](review-pull-requests.md).                        |
 | Workflow runs say which pull request they took  | [Workflows](workflow-in-chat.md).                          |

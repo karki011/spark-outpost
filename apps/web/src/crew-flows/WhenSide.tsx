@@ -105,9 +105,12 @@ interface MayDoCardProps {
   sparkById: ReadonlyMap<string, CrewSpark>;
   edits: boolean;
   onEdits: (edits: boolean) => void;
+  updateBase: boolean;
+  onUpdateBase: (updateBase: boolean) => void;
 }
 
-export function MayDoCard({ steps, sparkById, edits, onEdits }: MayDoCardProps) {
+export function MayDoCard(props: MayDoCardProps) {
+  const { steps, sparkById, edits, onEdits, updateBase, onUpdateBase } = props;
   const ids = useId();
   const sparkIds = [...new Set(steps.map((step) => step.sparkId))];
   return (
@@ -146,6 +149,22 @@ export function MayDoCard({ steps, sparkById, edits, onEdits }: MayDoCardProps) 
           checked={edits}
           describedBy={`${ids}-edits`}
           onChange={onEdits}
+        />
+      </div>
+      <div className="wf-trigger-head">
+        <span>
+          <b>Steps may update the branch from its base</b>
+          <small id={`${ids}-base`}>
+            In any run in a chat with its own worktree, steps on Claude may merge the base into the
+            chat’s branch, or rebase while it isn’t pushed yet, and edit files to resolve conflicts.
+            Pushes stay refused. Runs before publish only read.
+          </small>
+        </span>
+        <BlobToggle
+          label="Steps may update the branch from its base"
+          checked={updateBase}
+          describedBy={`${ids}-base`}
+          onChange={onUpdateBase}
         />
       </div>
       <p className="wf-hint">To change a Spark’s agent, model or mode, open it on the Crew tab.</p>
