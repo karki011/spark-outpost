@@ -74,7 +74,7 @@ Events: `level` (for the meter), `speech`, `partial` and `final` (`text`, `reaso
 
 | Purpose              | Ends when                                                                                                     |
 | -------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `command`, `confirm` | About 1.5 s of silence after speech (`paused`), or a press                                                    |
+| `command`, `confirm` | About 0.9 s of silence after speech (`paused`), or a press                                                    |
 | `dictation`          | A press only; it runs through pauses                                                                          |
 | All                  | Esc cancels; no speech stops it (3 s for `command` and `confirm`, 30 s for `dictation`); in hold mode, key-up |
 
@@ -221,7 +221,7 @@ No Phase 1 PR is done until each check below has run on this Mac and the PR repo
 | Fuzzy match right              | 1 picks the orders-web-app project and CP-49084; 2 the Dashboards chat                 |
 | Prefilled card, nothing starts | Screenshot; no run or message until Enter or "send"                                    |
 | Spoken answer plays and stops  | 3 and 4 prefill Ask Spark; once sent, the reply is spoken; Esc and a new press stop it |
-| End rules                      | A command ends after about 1.5 s of silence; 5 runs through its pauses until a press   |
+| End rules                      | A command ends after about 0.9 s of silence; 5 runs through its pauses until a press   |
 | Shortcut                       | Fn twice starts listening; with 🌐 set to Emoji, Spark says why and uses ⌥⇧V           |
 | Esc cancels                    | No transcript, no result                                                               |
 | Audio never leaves             | `nettop` during a run: no connection but the provider's for a sent message             |

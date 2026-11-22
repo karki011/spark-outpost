@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Spoken commands end sooner after you stop       | [Talk to Spark](voice.md#turn-it-on).                      |
 | One tap sends on phones                         | [Use your phone](use-your-phone.md).                       |
 | Outposts are gone; agents split work instead    | [Sub-chats](sub-chats.md).                                 |
 | Old outpost requests read as from another chat  | Nothing to do.                                             |
