@@ -98,7 +98,7 @@ This is detection by microphone use, not a Zoom API, and it needs no new permiss
 
 A recording is never hidden from the user. While one runs:
 
-- The island shows a red dot, the word **Recording**, the meeting's title, elapsed time and **Stop**, in every island state. As built (`island/IslandRecording.tsx`): resting Scout wears a red dot and its label says "recording a meeting"; hovering Scout always opens a line with the title, elapsed time, **Open transcript** and **Stop**, under a request or meeting line when one shows; an open panel or card has the same row above it. The dot holds still with Reduce Motion.
+- The island shows a red dot, the word **Recording**, the meeting's title, elapsed time and **Stop**, in every island state. As built (`island/IslandRecording.tsx`): resting Scout has a tag beside it with a moving red waveform, below the notch and counted in the resting window's size, and its label says "recording a meeting"; hovering Scout always opens a one-row line with the title over **Recording** and the elapsed time, then **Open transcript** and **Stop**, under a request or meeting line when one shows; an open panel or card has the same row above it. The waveform holds still with Reduce Motion.
 - The left bar shows a red dot on **Today** and a **Rec** item with the elapsed time above the clock (`app/RailRecording.tsx`); it opens the meeting's transcript. Mac only: a paired device shows neither.
 - The menu bar item shows the same dot.
 - The Transcripts page shows the live meeting first.

@@ -83,6 +83,19 @@ test('messages sent during a turn sit inside it, grouped, with what the agent di
   const reply = (await turn.locator('.md').first().boundingBox())!;
   expect(bubble.y).toBeLessThan(reply.y);
   await expect(page.locator(`#steer-${LINT}`)).toBeVisible();
+
+  await taken.hover();
+  const actions = taken.getByRole('group', { name: 'Message actions' });
+  await expect(actions).toHaveCSS('opacity', '1');
+  const copy = (await actions.boundingBox())!;
+  const status = (await taken.getByRole('status').boundingBox())!;
+  const group = (await taken.boundingBox())!;
+  expect(copy.y + copy.height).toBeLessThanOrEqual(group.y + group.height + 6);
+  expect(copy.x + copy.width).toBeLessThanOrEqual(status.x);
+  expect(copy.x).toBeGreaterThanOrEqual(group.x);
+  if (process.env.ISLAND_SHOTS) {
+    await page.screenshot({ path: `${process.env.ISLAND_SHOTS}/steer-actions.png` });
+  }
 });
 
 test('a message the turn stopped before reading offers to send or edit it', async ({ page }) => {

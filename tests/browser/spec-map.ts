@@ -265,6 +265,7 @@ export const SPEC_GROUPS = {
     'island-peek',
     'island-projects',
     'island-rest-compact',
+    'island-recording',
     'island-rest-line',
     'island-size',
     'island-states',

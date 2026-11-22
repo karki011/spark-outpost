@@ -228,6 +228,7 @@ export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRef
               asking={props.asking}
               setAside={props.setAside}
               recording={props.strip.recordingId !== null}
+              hidden={Math.max(0, top - (pose?.y ?? 0))}
             />
           )}
           <span className="isl-glow" data-mood={props.mood ?? 'idle'} aria-hidden="true" />

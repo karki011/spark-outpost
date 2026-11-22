@@ -80,7 +80,11 @@ export function coreRects(island: HTMLElement | null): DOMRect[] {
 export function scoutRects(island: HTMLElement | null): DOMRect[] {
   const scout = restingScout(island);
   if (!scout) return [];
-  return [DOMRect.fromRect(shownBox(scout.getBoundingClientRect(), scoutEdge(scout)))];
+  const tag = scout.querySelector('.isl-rec-tag');
+  return [
+    DOMRect.fromRect(shownBox(scout.getBoundingClientRect(), scoutEdge(scout))),
+    ...(tag ? [tag.getBoundingClientRect()] : []),
+  ];
 }
 
 export function scoutHit(island: HTMLElement | null): ScoutHit | null {
