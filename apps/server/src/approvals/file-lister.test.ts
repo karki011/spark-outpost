@@ -87,7 +87,7 @@ describe('diskFiles listing', () => {
 
 describe('diskFiles absolute globs', () => {
   it('finds files for a pattern that names its folder in full', async () => {
-    const found = await diskFiles.glob(`${gate(root)}/*.py`, '/');
+    const found = await diskFiles.glob(`${gate(root)}/*.py`, gate(tmpdir()));
     expect(found?.sort()).toEqual(
       ['edited.py', 'ignored.py', 'new.py', 'tool.py'].map((name) => gate(join(root, name))),
     );
