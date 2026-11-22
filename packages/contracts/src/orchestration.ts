@@ -78,6 +78,7 @@ export const crewSparkSchema = z.object({
   step: z.string().optional(),
   test: z.boolean().optional(),
   edits: z.boolean().optional(),
+  work: z.boolean().optional(),
   review: z.boolean().optional(),
   origin: sparkOriginSchema.optional(),
   agentMode: z.string().nullable().optional(),

@@ -1,4 +1,4 @@
-import type { AgentModeOption } from '@spark-outpost/contracts';
+import { modeKind, modePosture, type AgentModeOption } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
 import { saveSnapshot, type RunSnapshot } from '../persistence/run-snapshots.ts';
@@ -15,6 +15,7 @@ import { ApprovalWaiters } from './approval-waiters.ts';
 import { askTurnAutoWhy, chosenModeWhy } from './ask-auto.ts';
 import { createQuestionGate } from './question-gate.ts';
 import type { RunObservations } from '../observations/run-observations.ts';
+import { isEditingPosture } from '../orchestration/spark-capability.ts';
 
 export interface AskRunOptions {
   db: Db;
@@ -93,6 +94,20 @@ export function prepareAskRun(options: AskRunOptions, turn: AskTurn): ApprovalGa
             provider: options.provider,
             modes: options.modes ?? [],
           }),
+    backup: async () => undefined,
+  });
+}
+
+export function prepareSparkWorkRun(options: AskRunOptions, turn: AskTurn): ApprovalGate {
+  const kind = modeKind(options.modes ?? [], options.mode);
+  const posture = modePosture(options.provider, options.mode, kind);
+  if (!isEditingPosture(posture)) return prepareAskRun(options, turn);
+  return createApprovalGate({
+    ...gateBasics(options),
+    posture,
+    changesProject: true,
+    workRun: true,
+    ...(turn.testRun ? { holdsSends: true } : {}),
     backup: async () => undefined,
   });
 }

@@ -18,6 +18,7 @@ import {
   type Handoff,
   type SettingsPlace,
 } from '../orchestration/spark-child.ts';
+import { sparkWorkMark } from '../orchestration/spark-work.ts';
 import { agentDefinitions } from '../agents/acp/agents.ts';
 import { draftChatSettings } from '../persistence/chat-settings.ts';
 import type { TurnResult } from '../workflow/agent-turn.ts';
@@ -157,6 +158,17 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
   const edits = turn.edits && hasProject(h.input) && !testRun;
   const editing = edits && stepEditsOffered(settings.provider);
   try {
+    const work = editing
+      ? {}
+      : await sparkWorkMark(h.deps.db, h.input, {
+          kind: 'step',
+          origin: 'step',
+          spark,
+          settings,
+          reviewRun,
+          testRun,
+          beforePublish: turn.triggerKind === 'before_publish',
+        });
     const result = await runSparkChild(
       h,
       {
@@ -177,6 +189,7 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
             step: step.id,
             ...(testRun ? { test: true } : {}),
             ...(editing ? { edits: true } : {}),
+            ...work,
             ...(reviewRun ? { review: true } : {}),
             ...settingsRoute(settings),
           },

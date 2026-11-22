@@ -54,6 +54,12 @@ Web: `suggestSpark` (`apps/web/src/teammates/spark-match.ts`) offers one chip, *
 
 Not built yet: a `spark_ask_spark` tool for the main agent to delegate, parallel mentions, and Sparks that change files.
 
+### Sparks that change files: what is in place (not reachable yet)
+
+- `sparkCapability` (`orchestration/spark-capability.ts`, pure) decides `read`, `work` or `sub_chat` for a handed job or a step, first match wins: a review or Before publish reads; no project reads; a mode that is read-only, Plan, denies or unknown reads; a Spark whose mode the user has not confirmed reads; a job that was not typed on the Mac (and is not a tool call or a step) reads; a Spark at Full auto → PR gets its own sub-chat for a typed or tool job outside a sub-chat, a test run and a step; a chat in the user's checkout reads; anything else works. `sparkWorkMark` (`orchestration/spark-work.ts`) gathers the facts for `@Name` and for a step and always passes `confirmed: false`, so every job still reads.
+- `route.spark.work` marks a work run. The run row stays `ask`; `loadRunInput` reads it as `sparkWork` only on a `role = 'spark'` run in mode `ask`. `prepareSparkWorkRun` (`workflow/do-run.ts`) builds its gate: the Spark's own mode posture through the ordinary `decide` path (edits, moves, deletes, shell writes, installs and local commits follow the mode; the floor, Spark rules, `WriteOutside`, `--no-verify`, the crew folders and browser data hold), `changesProject` so the publish and `gh` rules apply, no publish grant, sends held in a test run, and `workRunRefusal` (`approvals/ask-run.ts`), which refuses a push, `git send-email` and `request-pull`, every hosting CLI command that is not a read, a remote change and a `git config` write in every mode. A mode that only reads falls back to the Ask gate. The agent's environment cannot push (`cannotPush`) and `publishScope` is null for a child run.
+- Still to do before `confirmed` can be true: the Spark's confirmed-mode columns, the provider session that gives a work run edit tools, the kept record and snapshot for its changes, and the sub-chat path.
+
 ## API
 
 | Method and path                                | Body / result                                                                                               |

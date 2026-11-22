@@ -108,6 +108,7 @@ export interface ProviderTurn {
   changesProject?: boolean;
   publishes?: boolean;
   stepEdits?: boolean;
+  sparkWork?: boolean;
   planning?: boolean;
   plansFirst?: boolean;
   modeRequests?: ModeRequests;

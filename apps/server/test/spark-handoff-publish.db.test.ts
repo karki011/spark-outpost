@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
 import { publishBasis } from '../src/approvals/publish-policy.ts';
+import { insertChildRun } from '../src/persistence/orchestrations.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { replyText } from '../src/persistence/spark-mentions.ts';
 import { createTeammate } from '../src/persistence/teammates.ts';
@@ -51,6 +52,7 @@ interface ChildRow {
   id: string;
   level: string | null;
   origin: string | null;
+  work: boolean;
 }
 
 async function handOff(level: InvolvementLevel, agentMode: string, source = 'ui') {
@@ -66,7 +68,8 @@ async function handOff(level: InvolvementLevel, agentMode: string, source = 'ui'
   await harness.stop();
   harness = null;
   const { rows } = await t.db.query<ChildRow>(
-    `SELECT id, level, route->'spark'->>'origin' AS origin
+    `SELECT id, level, route->'spark'->>'origin' AS origin,
+            COALESCE((route->'spark') ? 'work', false) AS work
      FROM runs WHERE parent_run_id = $1 ORDER BY created_at`,
     [runId],
   );
@@ -91,6 +94,7 @@ describe('a Spark handed a message that asks to push and open a pull request', (
 
       expect(await replyText(t.db, child.id)).toContain('open a pull request');
       expect(child.level).toBe('hands-off');
+      expect(child.work).toBe(false);
       const input = await loadRunInput(t.db, child.id);
       const grant = publishGrant(input);
       expect(grant).toMatchObject({ level: 'hands-off', requested: false, followUp: null });
@@ -132,4 +136,51 @@ describe('where a mention came from', () => {
     },
     90_000,
   );
+});
+
+describe('a child run marked as a working Spark', () => {
+  async function marked(mode: 'ask' | 'chat', role: 'spark' | 'builder') {
+    const conversationId = await openChat(t, { root, level: 'full-auto' });
+    const parent = await sendMessage(t, conversationId, ASKS_TO_PUBLISH, {
+      permission: 'do',
+      agentMode: 'bypassPermissions',
+      level: 'full-auto',
+    });
+    const lease = await insertChildRun(
+      t.db,
+      {
+        parentRunId: parent,
+        role,
+        stepIndex: 0,
+        attempt: 1,
+        agentLabel: 'Pip · Code reviewer',
+        provider: 'claude',
+        model: null,
+        effort: null,
+        mode,
+        level: 'hands-off',
+        prompt: 'Fix it.',
+        agentMode: 'bypassPermissions',
+        route: {
+          name: 'Pip',
+          spark: { id: parent, role: 'Code reviewer', only: true, work: true },
+        },
+      },
+      30,
+    );
+    return loadRunInput(t.db, lease.runId);
+  }
+
+  it('is read as a work run that is never the user’s message and cannot publish', async () => {
+    const input = await marked('ask', 'spark');
+
+    expect(input).toMatchObject({ sparkWork: true, assistantSent: true, level: 'hands-off' });
+    expect(publishGrant(input)).toMatchObject({ requested: false, followUp: null });
+    expect(await publishScope(t.db, input)).toBeNull();
+  });
+
+  it('ignores the mark on a run that is not a Spark’s project job', async () => {
+    expect((await marked('chat', 'spark')).sparkWork).toBe(false);
+    expect((await marked('ask', 'builder')).sparkWork).toBe(false);
+  });
 });

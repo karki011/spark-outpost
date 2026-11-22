@@ -29,6 +29,10 @@ const EDITING_POSTURES: ReadonlySet<ModePosture> = new Set([
   'full_access',
 ]);
 
+export function isEditingPosture(posture: ModePosture): boolean {
+  return EDITING_POSTURES.has(posture);
+}
+
 export const CAPABILITY_REASONS = {
   review: 'Reviews only read.',
   beforePublish: 'A Before publish review only reads.',
@@ -55,7 +59,7 @@ export function sparkCapability(facts: SparkJobFacts): SparkCapabilityDecision {
   if (facts.reviewRun) return read(CAPABILITY_REASONS.review);
   if (facts.beforePublish) return read(CAPABILITY_REASONS.beforePublish);
   if (!facts.hasProject) return read(CAPABILITY_REASONS.noProject);
-  if (!EDITING_POSTURES.has(facts.posture)) return read(CAPABILITY_REASONS.readOnlyMode);
+  if (!isEditingPosture(facts.posture)) return read(CAPABILITY_REASONS.readOnlyMode);
   if (!facts.confirmed) return read(CAPABILITY_REASONS.unconfirmed);
   if (facts.origin === 'other') return read(CAPABILITY_REASONS.notTyped);
   if (ownsASubChat(facts)) return { capability: 'sub_chat', reason: CAPABILITY_REASONS.ownChat };

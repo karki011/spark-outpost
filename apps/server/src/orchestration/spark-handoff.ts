@@ -27,6 +27,7 @@ import {
   type Handoff,
 } from './spark-child.ts';
 import { mentionOrigin } from './typed-on-mac.ts';
+import { sparkWorkMark } from './spark-work.ts';
 import { handoffNote, sparkJobPrompt, withHandoffNote, type SparkResult } from './spark-job.ts';
 
 export const ALL_SPARKS_FAILED = 'The Spark could not finish this job.';
@@ -56,6 +57,12 @@ interface SparkJobRun {
 async function runSpark(h: Handoff, job: SparkJobRun): Promise<SparkResult> {
   const { spark, index, prompt, only, origin } = job;
   const settings = settingsFor(h, spark, { inChat: true, appliesOwnMode: true });
+  const work = await sparkWorkMark(h.deps.db, h.input, {
+    kind: 'mention',
+    origin,
+    spark,
+    settings,
+  });
   const result = await runSparkChild(h, {
     role: 'spark',
     stepIndex: index,
@@ -67,7 +74,7 @@ async function runSpark(h: Handoff, job: SparkJobRun): Promise<SparkResult> {
     route: {
       name: spark.name,
       routedBy: 'fixed',
-      spark: { id: spark.id, role: spark.role, only, origin, ...settingsRoute(settings) },
+      spark: { id: spark.id, role: spark.role, only, origin, ...work, ...settingsRoute(settings) },
     },
   });
   return { spark, outcome: result.outcome, text: result.text, error: result.error };

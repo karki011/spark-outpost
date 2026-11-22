@@ -62,6 +62,7 @@ export interface RunInput {
   testRun?: boolean;
   reviewRun?: boolean;
   stepEdits?: boolean;
+  sparkWork?: boolean;
   chatAsk?: AskPromptFacts | null;
   turnTimes?: TurnTimes | null;
   agentCycle?: boolean;
@@ -107,6 +108,7 @@ interface RunRow {
   test_run: boolean | null;
   review_run: boolean | null;
   step_edits: boolean | null;
+  spark_work: boolean | null;
   started_at: Date;
   previous_started_at: Date | null;
   agent_mode: string | null;
@@ -206,6 +208,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             COALESCE((r.route->'spark') ? 'step', false) AS workflow_step,
             COALESCE((r.route->'spark'->>'test')::boolean, false) AS test_run,
             COALESCE((r.route->'spark'->>'edits')::boolean, false) AS step_edits,
+            COALESCE((r.route->'spark'->>'work')::boolean, false) AS spark_work,
             COALESCE((r.route->'spark'->>'review')::boolean, false) AS review_run,
             r.created_at AS started_at,
             (SELECT max(p.created_at) FROM runs p
@@ -415,6 +418,7 @@ function childInput(runId: string, row: RunRow): RunInput {
     testRun: row.test_run === true,
     reviewRun: row.review_run === true,
     stepEdits: row.workflow_step === true && row.step_edits === true,
+    sparkWork: row.run_role === 'spark' && row.run_mode === 'ask' && row.spark_work === true,
     role: row.run_role,
     askTitle: false,
     previousMessageId: null,

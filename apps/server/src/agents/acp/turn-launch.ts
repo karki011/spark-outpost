@@ -156,7 +156,8 @@ export async function planLaunch(
   const stepEdits = policy !== null && turn.stepEdits === true && turn.mode !== 'do';
   const changing = policy !== null && (turn.mode === 'do' || stepEdits);
   if (changing && !stepEdits) assertCanChange(definition, turn);
-  const cannotPush = stepEdits || (turn.changesProject === true && turn.publishes !== true);
+  const working = stepEdits || turn.sparkWork === true;
+  const cannotPush = working || (turn.changesProject === true && turn.publishes !== true);
   const key = connectionKey({
     agent: definition.id,
     launch: options.launch ?? definition.launch(),

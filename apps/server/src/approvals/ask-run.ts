@@ -1,13 +1,17 @@
-import type { RequestRoot } from './decide.ts';
+import type { ApprovalRequest, RequestRoot } from './decide.ts';
 import { place } from './request-place.ts';
 import { commandTree } from './command-tree.ts';
 import { programName } from './commands.ts';
 import { isPackageInstall } from './command-kinds.ts';
-import { publishesCode, writesRepo } from './git-commands.ts';
+import { gitConfigUses, publishesCode, writesRepo } from './git-commands.ts';
+import { partRequests, type ShellView } from './shell-view.ts';
 import { writeTargets } from './write-targets.ts';
 
 export const ASK_RUN_REASON =
   "Ask mode doesn't change files — ask for the change in a message, or switch the agent's mode";
+
+export const WORK_RUN_REASON =
+  'A Spark working in this chat never pushes, opens or changes a pull request, writes to GitHub or changes remotes or git config. Leave the commits on the branch and say what is ready to publish';
 
 const FILE_CHANGERS = new Set(['mkdir', 'ln', 'chmod', 'chown', 'patch', 'dd', 'rsync']);
 
@@ -46,4 +50,16 @@ export function askRunRefusal(request: AskRunRequest, cwd: string, home: string)
   }
   if (request.command && commandChangesFiles(request.command, cwd, home)) return ASK_RUN_REASON;
   return null;
+}
+
+export function workRunRefusal(request: Pick<AskRunRequest, 'command'>): string | null {
+  const { command } = request;
+  if (!command) return null;
+  const changesRemotes = gitConfigUses(command).some((use) => use.writes);
+  return publishesCode(command) || changesRemotes ? WORK_RUN_REASON : null;
+}
+
+export function workRunChange(request: ApprovalRequest, view: ShellView | null): string | null {
+  const parts = view ? [request, ...partRequests(request, view)] : [request];
+  return parts.some((part) => workRunRefusal(part) !== null) ? WORK_RUN_REASON : null;
 }

@@ -102,6 +102,7 @@ export interface GateDeps {
   changesProject?: boolean;
   askRun?: boolean;
   askEdits?: boolean;
+  workRun?: boolean;
   askAuto?: () => Promise<string | null>;
   extraAllowlist?: () => readonly string[];
   append: Append;
@@ -388,6 +389,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       changesProject: deps.changesProject === true,
       askRun: deps.askRun === true,
       askEdits: deps.askEdits === true,
+      workRun: deps.workRun === true,
       askAutoWhy: autoAsked(deps, request) && deps.askAuto ? await deps.askAuto() : null,
       planningWhy: planningWhy(request),
       defaultBranch: await forcePushDefault(request),

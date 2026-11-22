@@ -34,7 +34,7 @@ import {
 } from './approval-gate.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
-import { prepareAskRun, prepareDoRun, prepareQuestions } from './do-run.ts';
+import { prepareAskRun, prepareDoRun, prepareQuestions, prepareSparkWorkRun } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
 import { publishGrant, publishScope, startBasis } from './publish-context.ts';
 import { openMemberInbox } from './member-inbox.ts';
@@ -289,9 +289,11 @@ export async function runAgentTurn(
             publish: publishGrant(input),
             snapshot: options.keepSnapshot,
           })
-        : asking
-          ? prepareAskRun(gateOptions, input)
-          : undefined;
+        : input.sparkWork && input.projectRoots.length > 0
+          ? prepareSparkWorkRun(gateOptions, input)
+          : asking
+            ? prepareAskRun(gateOptions, input)
+            : undefined;
     const asksUser = input.parentRunId === null && !input.assistant;
     const questions = asksUser ? prepareQuestions(gateOptions, approvals) : undefined;
     const rails =
@@ -340,6 +342,7 @@ export async function runAgentTurn(
         audit: observer,
         ...(input.mode ? { mode: input.mode } : {}),
         ...(input.stepEdits ? { stepEdits: true } : {}),
+        ...(input.sparkWork ? { sparkWork: true } : {}),
         ...(changesProject ? { changesProject: true } : {}),
         ...(changesProject && !input.chatFolder && startBasis(input) ? { publishes: true } : {}),
         ...(input.chatFolder ? { chatFolder: true } : {}),
