@@ -140,7 +140,7 @@ Until a phase lands, its features are hidden on Windows with "Coming to Windows"
 
 From the npm registry and official docs:
 
-- **Embedded Postgres:** `@embedded-postgres/windows-x64` exists at 17.10.0-beta.17. There is no Windows ARM build.
+- **Embedded Postgres:** `@embedded-postgres/windows-x64` exists at 17.10.0-beta.17. There is no Windows ARM build. On the Windows CI runner the server refused to start as administrator ("Execution of PostgreSQL by a user with administrative permissions is not permitted"), because embedded-postgres starts `postgres.exe` directly. On Windows Spark now starts and stops it with `pg_ctl` (`apps/desktop/src/postgres-windows.ts`), which drops administrator rights.
 - **Keychain library:** `@napi-rs/keyring` 2.1.0 ships `win32-x64`, `win32-ia32` and `win32-arm64` builds.
 - **Agent backends:** the Claude agent SDK and `@openai/codex` 0.166 both ship Windows x64 and arm64 binaries.
 - **Credential Manager size:** a blob is at most 2560 bytes (`CRED_MAX_CREDENTIAL_BLOB_SIZE`, [Microsoft docs](https://learn.microsoft.com/en-us/windows/win32/api/wincred/ns-wincred-credentialw)).
