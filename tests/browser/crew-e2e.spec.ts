@@ -88,8 +88,8 @@ test('a Spark with a skill and a two-step workflow are built on the page and run
   const open = page.getByRole('region', { name: `Workflow ${WORKFLOW_NAME}` });
   await pickSpark(page, 'Add the first Spark', 'Security');
   await pickSpark(page, 'Add a stage', 'Comment');
-  await open.getByRole('button', { name: 'Save' }).click();
-  await expect(open.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
+  await open.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(open.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();
 
   const saved = workflowFileSchema.parse(
     await (await page.request.get(`/api/workflows/${WORKFLOW_ID}`)).json(),
@@ -97,6 +97,7 @@ test('a Spark with a skill and a two-step workflow are built on the page and run
   expect(saved.workflow.steps.map((step) => step.dependsOn)).toEqual([[], ['security']]);
 
   await open.getByRole('button', { name: 'Run', exact: true }).click();
+  await page.getByRole('menu', { name: 'Run' }).getByRole('menuitem', { name: 'Run now' }).click();
   const runView = page.getByRole('region', { name: `Run of ${WORKFLOW_NAME}` });
   await expect(runView).toBeVisible();
   const run = await settledRun(page);
@@ -109,6 +110,33 @@ test('a Spark with a skill and a two-step workflow are built on the page and run
 
   await expect(runView.getByRole('status').filter({ hasText: '2 of 2 steps done' })).toBeVisible();
   await runView.getByRole('button', { name: 'Back to the workflow' }).click();
+
+  await open.getByRole('tab', { name: /^When it runs/ }).click();
+  const onCommit = open.getByRole('switch', { name: 'A new commit on the branch' });
+  await onCommit.click();
+  await open.getByRole('switch', { name: 'Run on a schedule' }).click();
+  await open.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(open.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();
+  await expect(open.locator('[data-chip]')).toHaveCount(2);
+  const stored = (await (
+    await page.request.get(`/api/workflows/${WORKFLOW_ID}/triggers`)
+  ).json()) as {
+    triggers: { commit: boolean };
+  };
+  expect(stored.triggers.commit).toBe(true);
+
+  const nav = page.getByRole('navigation', { name: 'Main' });
+  await nav.getByRole('button', { name: /^Home/ }).click();
+  await expect(open).toHaveCount(0);
+  await nav.getByRole('button', { name: /^Sparks/ }).click();
+  await expect(open.getByRole('tab', { name: /^When it runs/ })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(onCommit).toHaveAttribute('aria-checked', 'true');
+
   await open.getByRole('button', { name: 'Workflows' }).click();
-  await expect(page.getByRole('list', { name: 'Workflows' })).toContainText(WORKFLOW_NAME);
+  const row = page.getByRole('list', { name: 'Workflows' }).getByRole('listitem');
+  await expect(row).toContainText(WORKFLOW_NAME);
+  await expect(row.locator('[data-chip]')).toHaveCount(2);
 });

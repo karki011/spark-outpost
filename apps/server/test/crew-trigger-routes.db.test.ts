@@ -48,6 +48,9 @@ describe('trigger routes', () => {
     });
     const saved = await client.send('put', path, triggers).expect(200);
     expect((saved.body as WorkflowTriggersView).triggers).toEqual(triggers);
+    expect((await client.get('/api/workflow-triggers').expect(200)).body).toEqual({
+      triggers: [{ workflowId: FLOW, triggers }],
+    });
 
     await client.send('delete', path).expect(204);
     expect(await getTriggers(t.db, t.workspaceId, FLOW)).toBeNull();
@@ -84,6 +87,7 @@ describe('trigger routes', () => {
 
   it('keeps every trigger route on the Mac', () => {
     for (const route of [
+      'GET /api/workflow-triggers',
       'GET /api/workflows/:id/triggers',
       'PUT /api/workflows/:id/triggers',
       'DELETE /api/workflows/:id/triggers',

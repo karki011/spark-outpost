@@ -215,10 +215,11 @@ test('a failing step stops the workflow, and the Runs list and last-run line sho
   await shots(page, 'list');
 
   await row.getByRole('button', { name: 'Edit Gated flow' }).click();
-  const runs = page.getByRole('region', { name: 'Runs' });
+  await page.getByRole('tab', { name: /^Runs/ }).click();
+  const runs = page.getByRole('tabpanel', { name: 'Runs' });
   const runRows = runs.getByRole('listitem');
   await expect(runRows).toHaveCount(1);
-  await expect(runRows.first()).toContainText('Run button');
+  await expect(runRows.first()).toContainText('Run now');
   await expect(runRows.first()).toContainText('Failed');
   await passesAxe(page);
   await shots(page, 'runs');

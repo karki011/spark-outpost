@@ -5,6 +5,7 @@ import {
   workflowStages,
   type Workflow,
 } from '../../packages/contracts/src/crew-workflow.ts';
+import { fakeWhenApi, type FakeWhenApi } from './crew-when-kit.ts';
 
 export const PANEL_PATH = '/crew-flows-preview.html';
 
@@ -17,6 +18,10 @@ export interface FakeWorkflowApi {
   files: Map<string, StoredWorkflow>;
   saves: { id: string; baseHash: string | null }[];
   runs: string[];
+  runBodies: unknown[];
+  pastRuns: unknown[];
+  log: string[];
+  when: FakeWhenApi;
   put: (workflow: Workflow) => void;
 }
 
@@ -39,10 +44,15 @@ export async function fakeWorkflowApi(
 ): Promise<FakeWorkflowApi> {
   const sparks = new Set(sparkIds);
   let version = 0;
+  const log: string[] = [];
   const api: FakeWorkflowApi = {
     files: new Map(),
     saves: [],
     runs: [],
+    runBodies: [],
+    pastRuns: [],
+    log,
+    when: await fakeWhenApi(page, log),
     put: (workflow) => {
       version += 1;
       api.files.set(workflow.id, { workflow, hash: `hash-${version}` });
@@ -58,14 +68,17 @@ export async function fakeWorkflowApi(
   });
   const started: unknown[] = [];
   await page.route('**/api/workflow-runs/*', async (route) => {
-    await json(route, 200, started.at(-1));
+    await json(route, 200, started.at(-1) ?? api.pastRuns[0]);
   });
   await page.route('**/api/workflows/*/runs', async (route) => {
     const id = new URL(route.request().url()).pathname.split('/').at(-2)!;
-    if (route.request().method() === 'GET') return json(route, 200, { runs: started });
+    if (route.request().method() === 'GET') {
+      return json(route, 200, { runs: [...started, ...api.pastRuns] });
+    }
     const stored = api.files.get(id);
     if (!stored) return json(route, 404, { error: 'That workflow no longer exists.' });
     api.runs.push(id);
+    api.runBodies.push(route.request().postDataJSON());
     const run = {
       id: '00000000-0000-4000-8000-00000000f001',
       workflowId: id,
@@ -108,6 +121,7 @@ export async function fakeWorkflowApi(
     }
     const body = saveWorkflowSchema.parse(request.postDataJSON());
     api.saves.push({ id, baseHash: body.baseHash });
+    log.push('workflow');
     if ((stored?.hash ?? null) !== body.baseHash) {
       return json(route, 409, {
         error: 'This workflow changed somewhere else. Go back and open it again.',

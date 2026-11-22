@@ -10,9 +10,10 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Workflow editor: one **Save**, **When it runs** | [Schedules](workflow-schedules.md).                        |
 | Code Mode combines any Spark tool, cards kept   | [Code Mode](settings.md#code-mode).                        |
 | Island recording wave, left bar; fast commands  | [Take meeting notes](meetings.md#record).                  |
-| Workflow steps run on the named pull request    | [Workflow steps](modes-and-levels.md#workflow-steps).      |
+| Workflow steps know their branch, changes, PR   | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | GitHub: search, Start chat, reviewed groups     | [GitHub page](github-page.md#search).                      |
 | Copy a review or send it to a chat              | [Reviews](review-pull-requests.md).                        |
 | Workflow runs say which pull request they took  | [Workflows](workflow-in-chat.md).                          |
@@ -25,7 +26,6 @@ summary: What changed in recent releases and what to do next.
 | Browser menus, docked tools                     | [Browser](use-the-browser.md).                             |
 | Chats message each other                        | [Messages](chat-messages.md).                              |
 | **Enter** sends mid-dictation; PR panel tidied  | [Talk to Spark](voice.md#turn-it-on).                      |
-| Workflow steps know their branch and changes    | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | Workflow card; **Run in chats…**                | [Workflow card](workflow-in-chat.md).                      |
 | Default Sparks follow the chat's mode           | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | Mid-turn mode switches                          | [Modes](modes-and-levels.md#what-spark-does-in-each-mode). |

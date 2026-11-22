@@ -185,3 +185,22 @@ export function afterLabel(
   const names = parents.map((parent) => labels.get(parent)!);
   return step.join === 'any' ? `After any of ${listed(names)}` : `After ${listed(names)}`;
 }
+
+export function dependencyChanges(
+  before: readonly WorkflowStep[],
+  after: readonly WorkflowStep[],
+  labels: ReadonlyMap<string, string>,
+): string[] {
+  const old = new Map(before.map((step) => [step.id, step]));
+  return after.flatMap((step) => {
+    const was = old.get(step.id);
+    if (!was) return [];
+    const earlier = afterLabel(before, step.id, labels);
+    const now = afterLabel(after, step.id, labels);
+    const sameParents =
+      was.dependsOn.length === step.dependsOn.length &&
+      was.dependsOn.every((parent) => step.dependsOn.includes(parent));
+    if (sameParents || earlier === now) return [];
+    return [`${labels.get(step.id) ?? step.id}: ${now} · was ${earlier}`];
+  });
+}

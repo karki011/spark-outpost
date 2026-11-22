@@ -299,6 +299,7 @@ GET /api/workflows/:id/schedule
 PUT /api/workflows/:id/schedule
 DELETE /api/workflows/:id/schedule
 GET /api/workflows/:id/schedule/slots
+GET /api/workflow-triggers
 GET /api/workflows/:id/triggers
 PUT /api/workflows/:id/triggers
 DELETE /api/workflows/:id/triggers

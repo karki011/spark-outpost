@@ -85,6 +85,11 @@ export const workflowTriggersViewSchema = z.object({
 });
 export type WorkflowTriggersView = z.infer<typeof workflowTriggersViewSchema>;
 
+export const workflowTriggersListSchema = z.object({
+  triggers: z.array(z.object({ workflowId: crewSlugSchema, triggers: workflowTriggersSchema })),
+});
+export type WorkflowTriggersList = z.infer<typeof workflowTriggersListSchema>;
+
 export function anyTriggerOn(triggers: WorkflowTriggers): boolean {
   return (
     triggers.turnChanged ||

@@ -200,12 +200,26 @@
   align-self: flex-start;
 }
 
-.wf-runs {
+.wf-runs-tab {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px 20px;
-  border-top: 1px solid var(--line);
+  gap: 10px;
+  min-height: 0;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.wf-runs-quiet,
+.wf-runs-quiet:hover {
+  background: none;
+  cursor: default;
+}
+
+.wf-runs-note {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
 }
 
 .wf-runs-list {
@@ -246,7 +260,7 @@
 }
 
 .wf-runs-how {
-  flex: 0 0 110px;
+  flex: 0 0 170px;
   color: var(--muted);
 }
 
@@ -280,10 +294,4 @@
   .wf-last-run {
     min-height: 44px;
   }
-}
-
-.wf-runs {
-  flex: none;
-  max-height: 34%;
-  overflow-y: auto;
 }

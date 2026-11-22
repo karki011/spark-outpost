@@ -8,12 +8,24 @@ export interface CrewSpark {
   name: string;
   role: string;
   face: TeammateFace;
+  provider: string | null;
+  model: string | null;
+  agentMode: string | null;
 }
 
 export function useCrewSparks() {
   const { teammates, loading, error } = useTeammates();
   const sparks = useMemo<CrewSpark[]>(
-    () => teammates.map(({ id, name, role, face }) => ({ id, name, role, face })),
+    () =>
+      teammates.map(({ id, name, role, face, provider, model, agentMode }) => ({
+        id,
+        name,
+        role,
+        face,
+        provider,
+        model,
+        agentMode,
+      })),
     [teammates],
   );
   const byId = useMemo(() => new Map(sparks.map((spark) => [spark.id, spark])), [sparks]);

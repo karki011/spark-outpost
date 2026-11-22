@@ -1,22 +1,63 @@
-.wf-sched {
+.wf-when {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
   gap: 16px;
+  min-height: 0;
+  padding: 16px;
+  overflow-y: auto;
 }
 
-.wf-sched-switch {
+.wf-when-main,
+.wf-when-side {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.wf-when-main {
+  flex: 1.6;
+}
+
+.wf-when-side {
+  flex: 1;
+}
+
+.wf-card-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+}
+
+.wf-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
 }
 
-.wf-sched-switch > span {
+.wf-card-head > span,
+.wf-trigger-head > span {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
-.wf-sched-switch small {
+.wf-card-head h3 {
+  font-size: 14px;
+}
+
+.wf-card-head small,
+.wf-trigger-head small {
   color: var(--muted);
   font-size: 12.5px;
+  line-height: 1.45;
 }
 
 .wf-sched-field {
@@ -38,6 +79,16 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.wf-sched-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.wf-sched-pair > .wf-sched-field {
+  flex: 1 1 240px;
 }
 
 .wf-sched-num {
@@ -91,57 +142,94 @@
   line-height: 1.7;
 }
 
-.wf-sched-chip {
-  display: inline-flex;
-  align-self: flex-start;
-  align-items: center;
-  gap: 5px;
+.wf-field-problem:empty {
+  display: none;
 }
 
-.wf-sched-chip svg {
-  width: 12px;
-  height: 12px;
-}
-
-.wf-sched-runs {
+.wf-field-problem {
   display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-  padding: 20px;
-  overflow-y: auto;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  color: var(--danger);
+  font-size: 12.5px;
+  line-height: 1.45;
 }
 
-.wf-sched-runs ul {
+.wf-field-problem svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.wf-field-problem span {
+  color: var(--text);
+}
+
+.wf-triggers {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.wf-sched-run {
+.wf-trigger {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 14px;
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--panel);
-  font-size: 13px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
 }
 
-.wf-sched-run > b {
-  min-width: 150px;
+.wf-trigger-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wf-trigger-head b {
+  font-size: 13.5px;
   font-weight: 600;
 }
 
-.wf-sched-note {
-  flex: 1;
+.wf-trigger-branch {
+  width: min(100%, 320px);
+}
+
+.wf-maydo {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.wf-maydo > div {
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.wf-maydo dt {
+  flex: 0 0 38%;
   min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-maydo dd {
+  margin: 0;
+  color: var(--muted);
+}
+
+@container main (max-width: 900px) {
+  .wf-when {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 @media (pointer: coarse) {
