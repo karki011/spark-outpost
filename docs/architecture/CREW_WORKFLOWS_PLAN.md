@@ -594,7 +594,7 @@ The owner approved mocks of the Steps tab and the When it runs tab (`.local/mock
 
 **Tests:** `workflow-draft.test.ts` (the draft, counts, Where, validation, save order and partial failure), `activity-model.test.ts`, `triggers-model.test.ts`, `workflow-model.test.ts`; `tests/browser/crew-flows.spec.ts`, `crew-schedule.spec.ts` and the new `crew-triggers.spec.ts` (first save writes all three, edits survive a tab switch, the leave guard, validation, a half-failed save, Save and run, the Runs tab, and a workflow built and edited through the inspector with the keyboard alone), all on the preview page with faked routes; `crew-trigger-routes.db.test.ts` for the new list route.
 
-**Not verified, and limits:** the three specs fake the workflow, schedule and trigger routes, so the new tabs were not driven against the real schedule and trigger routes in a browser (`crew-e2e.spec.ts` and `crew-run-view.spec.ts` drive the real workflow and run routes). The remembered place was not exercised in a browser. The branch match list reads only chats the chat list returns, so an archived chat's branch is not shown.
+**Not verified, and limits:** the three editor specs fake the workflow, schedule and trigger routes. `crew-e2e.spec.ts` drives the real ones once: it saves a trigger and a schedule from the tab, reads the trigger back from the route, leaves the Sparks page and returns to the same workflow and tab, and sees both chips on the list row. Validation, the half-failed save and the Runs tab's held publish were only run against the fakes. The branch match list reads only chats the chat list returns, so an archived chat's branch is not shown.
 
 ## Where a step is (built 2026-11-20)
 
