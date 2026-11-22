@@ -88,8 +88,8 @@ test('a Spark with a skill and a two-step workflow are built on the page and run
   const open = page.getByRole('region', { name: `Workflow ${WORKFLOW_NAME}` });
   await pickSpark(page, 'Add the first Spark', 'Security');
   await pickSpark(page, 'Add a stage', 'Comment');
-  await open.getByRole('button', { name: 'Save' }).click();
-  await expect(open.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
+  await open.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(open.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();
 
   const saved = workflowFileSchema.parse(
     await (await page.request.get(`/api/workflows/${WORKFLOW_ID}`)).json(),
@@ -97,6 +97,7 @@ test('a Spark with a skill and a two-step workflow are built on the page and run
   expect(saved.workflow.steps.map((step) => step.dependsOn)).toEqual([[], ['security']]);
 
   await open.getByRole('button', { name: 'Run', exact: true }).click();
+  await page.getByRole('menu', { name: 'Run' }).getByRole('menuitem', { name: 'Run now' }).click();
   const runView = page.getByRole('region', { name: `Run of ${WORKFLOW_NAME}` });
   await expect(runView).toBeVisible();
   const run = await settledRun(page);

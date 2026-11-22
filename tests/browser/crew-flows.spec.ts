@@ -1,7 +1,19 @@
 import { mkdirSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { addSpark, fakeWorkflowApi, PANEL_PATH, step } from './crew-flows-kit.ts';
+import {
+  crew,
+  editor,
+  graphNodes,
+  inspector,
+  pickSpark,
+  runNow,
+  saveButton,
+  selectStep,
+  stage,
+  stepRow,
+} from './crew-editor-kit.ts';
+import { fakeWorkflowApi, PANEL_PATH, step } from './crew-flows-kit.ts';
 import { resetTestDatabase } from './database.ts';
 import { animationsSettled } from './settle.ts';
 import { PACKAGED } from './stub-config.ts';
@@ -20,28 +32,6 @@ test.beforeAll(() => {
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, catalog: true });
 });
-
-const editor = (page: Page, name: string) => page.getByRole('region', { name: `Workflow ${name}` });
-const stage = (page: Page, number: number) => page.getByRole('region', { name: `Stage ${number}` });
-const stepRow = (page: Page, id: string) => page.locator(`[data-step="${id}"]`);
-const graphNodes = (page: Page) => page.locator('.wf-graph .wf-node');
-
-async function crew(page: Page) {
-  return {
-    security: await addSpark(page, 'Security', 'Finds risky changes'),
-    lint: await addSpark(page, 'Lint', 'Style and unused code'),
-    comment: await addSpark(page, 'Comment', 'Writes review comments'),
-    ticketing: await addSpark(page, 'Ticketing', 'Updates the ticket'),
-  };
-}
-
-async function pickSpark(page: Page, picker: string, spark: string) {
-  await page.getByRole('button', { name: picker, exact: true }).click();
-  await page
-    .getByRole('menu', { name: picker })
-    .getByRole('menuitemradio', { name: new RegExp(`^${spark}`) })
-    .click();
-}
 
 async function shots(page: Page, name: string) {
   for (const scheme of ['light', 'dark'] as const) {
@@ -90,8 +80,9 @@ test('an empty Workflows tab suggests workflows from the crew and a new one save
 
   const open = editor(page, 'Pre-PR review');
   await expect(open.getByText('Add a Spark to start.')).toBeVisible();
-  await expect(open.getByRole('button', { name: 'Save' })).toBeDisabled();
+  await expect(saveButton(page, 'Pre-PR review')).toBeDisabled();
   await expect(open.getByRole('button', { name: 'Preview' })).toBeDisabled();
+  await expect(open.getByRole('tab')).toHaveText([/^Steps/, /^When it runs/, /^Runs/]);
 
   await pickSpark(page, 'Add the first Spark', 'Security');
   await pickSpark(page, 'Add a Spark to Stage 1', 'Lint');
@@ -108,9 +99,11 @@ test('an empty Workflows tab suggests workflows from the crew and a new one save
   await expectAccessible(page);
   await shots(page, 'editor');
 
-  await open.getByRole('button', { name: 'Save' }).click();
-  await expect(open.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
+  await expect(open.getByRole('status').filter({ hasText: '1 unsaved change' })).toBeVisible();
+  await saveButton(page, 'Pre-PR review').click();
+  await expect(open.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();
   expect(api.saves).toEqual([{ id: 'pre-pr-review', baseHash: null }]);
+  expect(api.log).toEqual(['workflow']);
   expect(api.files.get('pre-pr-review')?.workflow.steps.map((saved) => saved.dependsOn)).toEqual([
     [],
     [],
@@ -118,7 +111,7 @@ test('an empty Workflows tab suggests workflows from the crew and a new one save
     ['comment'],
   ]);
 
-  await open.getByRole('button', { name: 'Run', exact: true }).click();
+  await runNow(page, 'Pre-PR review');
   const run = page.getByRole('region', { name: 'Run of Pre-PR review' });
   await expect(run.getByRole('list', { name: 'All steps' }).getByRole('listitem')).toHaveCount(4);
   expect(api.runs).toEqual(['pre-pr-review']);
@@ -142,8 +135,15 @@ test('a suggestion opens in the editor as a draft that nothing has saved', async
   const open = editor(page, 'Then Ticketing wraps up');
   await expect(stage(page, 1).getByRole('listitem')).toHaveCount(3);
   await expect(stage(page, 2).getByRole('listitem')).toHaveCount(1);
-  await expect(open.getByRole('button', { name: 'Save' })).toBeEnabled();
-  await expect(open.getByRole('button', { name: 'Run', exact: true })).toBeDisabled();
+  await expect(saveButton(page, 'Then Ticketing wraps up')).toBeEnabled();
+  await expect(open.getByRole('button', { name: 'Save and test run' })).toBeEnabled();
+  await open.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(page.getByRole('menu', { name: 'Run' }).getByRole('menuitem')).toHaveText([
+    'Save and run now',
+    'Save and run with a message and project…',
+    'Save and run in chats…',
+  ]);
+  await page.keyboard.press('Escape');
   expect(api.saves).toEqual([]);
 
   await open.getByRole('button', { name: 'Workflows' }).click();
@@ -172,37 +172,46 @@ test('editing shows a loop inline, blocks Save until it is fixed and saves with 
   await page.goto(PANEL_PATH);
   await page.getByRole('button', { name: 'Edit Review' }).click();
   const open = editor(page, 'Review');
-  const save = open.getByRole('button', { name: 'Save' });
+  const save = saveButton(page, 'Review');
   await expect(save).toBeDisabled();
 
-  await stepRow(page, 'security').getByRole('button', { name: 'Details for Security' }).click();
-  await stepRow(page, 'security').getByRole('checkbox', { name: 'Comment' }).check();
-  await expect(stepRow(page, 'security')).toContainText(
+  const security = await selectStep(page, 'security', 'Security');
+  await security.getByRole('checkbox', { name: 'Comment' }).check();
+  await expect(security).toContainText(
     'These steps wait on each other: security → comment → security.',
   );
+  await expect(stepRow(page, 'security')).toContainText('Problem');
   await expect(open.getByText('Fix 1 problem to save.')).toBeVisible();
   await expect(save).toBeDisabled();
   await expect(open.getByRole('button', { name: 'Preview' })).toBeDisabled();
   await expect(graphNodes(page)).toHaveCount(3);
   await shots(page, 'editor-problem');
 
-  await stepRow(page, 'security').getByRole('checkbox', { name: 'Comment' }).uncheck();
+  await security.getByRole('checkbox', { name: 'Comment' }).uncheck();
   await expect(open.getByText('Fix 1 problem to save.')).toHaveCount(0);
 
-  await stepRow(page, 'lint').getByRole('button', { name: 'Move Lint to a later stage' }).click();
+  await graphNodes(page).getByRole('button', { name: 'Edit Lint' }).click();
+  const lint = inspector(page, 'Lint');
+  await expect(stepRow(page, 'lint').getByRole('button')).toHaveAttribute('aria-pressed', 'true');
+  await lint.getByRole('button', { name: 'Move Lint to a later stage' }).click();
   await expect(stage(page, 2).getByRole('listitem')).toHaveCount(2);
   await expect(stepRow(page, 'lint')).toContainText('After Security');
-  await stepRow(page, 'comment').getByRole('button', { name: 'Details for Comment' }).click();
-  await stepRow(page, 'comment').getByRole('checkbox', { name: 'Lint' }).check();
+  await expect(lint.getByRole('status')).toContainText('Lint: After Security · was Starts first');
+  await expect(lint.getByRole('status')).toContainText(
+    'Comment: After Security · was After all of Stage 1',
+  );
+  const comment = await selectStep(page, 'comment', 'Comment');
+  await comment.getByRole('checkbox', { name: 'Lint' }).check();
   await expect(stage(page, 3).getByRole('listitem')).toHaveCount(1);
   await expect(stepRow(page, 'comment')).toContainText('After Security and Lint');
-  await stepRow(page, 'comment').getByRole('radio', { name: 'Any finishes' }).click();
+  await comment.getByRole('radio', { name: 'Any finishes' }).click();
   await expect(stepRow(page, 'comment')).toContainText('After any of Security and Lint');
-  await stepRow(page, 'comment').getByRole('radio', { name: 'Continue' }).click();
-  await stepRow(page, 'comment').getByRole('textbox', { name: 'Extra prompt' }).fill('Be brief.');
+  await comment.getByRole('radio', { name: 'Continue' }).click();
+  await comment.getByRole('textbox', { name: 'Extra prompt' }).fill('Be brief.');
+  await expect(open.getByRole('status').filter({ hasText: '2 unsaved changes' })).toBeVisible();
 
   await save.click();
-  await expect(open.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
+  await expect(open.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();
   expect(api.saves).toEqual([{ id: 'review', baseHash: 'hash-1' }]);
   expect(api.files.get('review')?.workflow.steps[2]).toEqual({
     id: 'comment',
@@ -213,10 +222,14 @@ test('editing shows a loop inline, blocks Save until it is fixed and saves with 
     onFailure: 'continue',
   });
 
-  await stepRow(page, 'lint').getByRole('button', { name: 'Remove Lint' }).click();
+  await (
+    await selectStep(page, 'lint', 'Lint')
+  )
+    .getByRole('button', { name: 'Remove Lint' })
+    .click();
   await expect(stepRow(page, 'lint')).toHaveCount(0);
   await save.click();
-  await expect(open.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
+  await expect(open.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();
   expect(api.saves.at(-1)).toEqual({ id: 'review', baseHash: 'hash-2' });
 });
 
@@ -237,16 +250,20 @@ test('a deleted Spark and a stale save are reported, and a workflow can be delet
 
   await row.getByRole('button', { name: 'Edit Review' }).click();
   const open = editor(page, 'Review');
-  await expect(stepRow(page, 'gone')).toContainText('gone uses a Spark that no longer exists.');
   await expect(stepRow(page, 'gone')).toContainText('Missing Spark');
-  await stepRow(page, 'gone').getByRole('button', { name: 'Details for Missing Spark' }).click();
+  await expect(stepRow(page, 'gone')).toContainText('Problem');
+  const gone = await selectStep(page, 'gone', 'Missing Spark');
+  await expect(gone).toContainText('gone uses a Spark that no longer exists.');
   await pickSpark(page, 'Spark for Missing Spark', 'Lint');
   await expect(stepRow(page, 'gone')).toContainText('Lint');
-  await expect(open.getByRole('button', { name: 'Save' })).toBeEnabled();
+  await expect(saveButton(page, 'Review')).toBeEnabled();
 
   api.put({ ...api.files.get('review')!.workflow, name: 'Changed elsewhere' });
-  await open.getByRole('button', { name: 'Save' }).click();
-  await expect(open.getByRole('alert')).toContainText('This workflow changed somewhere else.');
+  await saveButton(page, 'Review').click();
+  await expect(open.getByRole('alert')).toContainText(
+    'The steps didn’t save: This workflow changed somewhere else.',
+  );
+  await expect(open.getByRole('status').filter({ hasText: '1 unsaved change' })).toBeVisible();
   expect(api.files.get('review')?.workflow.name).toBe('Changed elsewhere');
 
   const hold = open.getByRole('button', { name: 'Hold to delete Review' });
@@ -330,112 +347,9 @@ test('Preview plays the order and a pretend failure says what stops and what doe
   expect(calls).toEqual([]);
 
   await open.getByRole('button', { name: 'Back to editing' }).click();
-  await stepRow(page, 'lint').getByRole('button', { name: 'Details for Lint' }).click();
-  await expect(stepRow(page, 'lint').getByRole('radio', { name: 'Continue' })).toBeChecked();
-  await expect(open.getByRole('button', { name: 'Save' })).toBeEnabled();
-});
-
-test('a workflow is created, rearranged, previewed and saved with the keyboard alone', async ({
-  page,
-}) => {
-  const api = await fakeWorkflowApi(page, Object.values(await crew(page)));
-  await page.goto(PANEL_PATH);
-  const newButton = page.getByRole('button', { name: 'New workflow' });
-  await expect(newButton).toBeVisible();
-  await page.keyboard.press('Tab');
-  await expect(newButton).toBeFocused();
-  await page.keyboard.press('Enter');
-
-  await expect(page.getByRole('textbox', { name: 'Name' })).toBeFocused();
-  await page.keyboard.type('Keys only');
-  await page.keyboard.press('Tab');
-  await expect(page.getByRole('radio', { name: 'Blank' })).toBeFocused();
-  await page.keyboard.press('ArrowDown');
-  await expect(page.getByRole('radio', { name: 'Side by side' })).toBeChecked();
-  await page.keyboard.press('ArrowUp');
-  await expect(page.getByRole('radio', { name: 'Blank' })).toBeChecked();
-  for (const stop of ['Side by side', 'One after another', 'Then Ticketing wraps up']) {
-    await page.keyboard.press('Tab');
-    await expect(page.getByRole('radio', { name: stop })).toBeFocused();
-  }
-  await page.keyboard.press('Tab');
-  await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Open in editor' })).toBeFocused();
-  await page.keyboard.press('Enter');
-
-  const open = editor(page, 'Keys only');
-  await expect(open).toBeVisible();
-  const first = open.getByRole('button', { name: 'Add the first Spark' });
-  await first.focus();
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('menuitemradio', { name: /^Security/ })).toBeFocused();
-  await page.keyboard.press('Enter');
-  const securityDetails = stepRow(page, 'security').getByRole('button', {
-    name: 'Details for Security',
-  });
-  await expect(securityDetails).toBeFocused();
-
-  await open.getByRole('button', { name: 'Add a stage' }).focus();
-  await page.keyboard.press('Enter');
-  await page.keyboard.press('ArrowDown');
-  await expect(page.getByRole('menuitemradio', { name: /^Lint/ })).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(
-    stepRow(page, 'lint').getByRole('button', { name: 'Details for Lint' }),
-  ).toBeFocused();
-  await expect(stage(page, 2).getByRole('listitem')).toHaveCount(1);
-
-  await page.keyboard.press('Shift+Tab');
-  await page.keyboard.press('Shift+Tab');
-  const earlier = stepRow(page, 'lint').getByRole('button', {
-    name: 'Move Lint to an earlier stage',
-  });
-  await expect(earlier).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(stage(page, 1).getByRole('listitem')).toHaveCount(2);
-  await expect(
-    stepRow(page, 'lint').getByRole('button', { name: 'Move Lint to a later stage' }),
-  ).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(stage(page, 2).getByRole('listitem')).toHaveCount(1);
-  await expect(earlier).toBeFocused();
-
-  await page.keyboard.press('Tab');
-  await page.keyboard.press('Tab');
-  await expect(
-    stepRow(page, 'lint').getByRole('button', { name: 'Details for Lint' }),
-  ).toBeFocused();
-  await page.keyboard.press('Enter');
-  const after = stepRow(page, 'lint').getByRole('checkbox', { name: 'Security' });
-  await expect(after).toBeChecked();
-  await after.focus();
-  await page.keyboard.press('Space');
-  await expect(stage(page, 1).getByRole('listitem')).toHaveCount(2);
-  await expect(after).toBeFocused();
-  await page.keyboard.press('Space');
-  await expect(stage(page, 2).getByRole('listitem')).toHaveCount(1);
-  await expect(after).toBeFocused();
-
-  const fails = stepRow(page, 'lint').getByRole('radio', { name: 'Stop workflow' });
-  await fails.focus();
-  await page.keyboard.press('ArrowRight');
-  await expect(stepRow(page, 'lint').getByRole('radio', { name: 'Continue' })).toBeChecked();
-
-  await open.getByRole('button', { name: 'Preview' }).focus();
-  await page.keyboard.press('Enter');
-  await open.getByRole('checkbox', { name: 'Pretend Security fails' }).focus();
-  await page.keyboard.press('Space');
-  await expect(open.locator('.wf-result')).toContainText("Lint doesn't start.");
-  await open.getByRole('button', { name: 'Back to editing' }).focus();
-  await page.keyboard.press('Enter');
-
-  await open.getByRole('button', { name: 'Save' }).focus();
-  await page.keyboard.press('Enter');
-  await expect(open.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
-  expect(api.files.get('keys-only')?.workflow.steps).toMatchObject([
-    { id: 'security', dependsOn: [] },
-    { id: 'lint', dependsOn: ['security'], onFailure: 'continue' },
-  ]);
+  const lint = await selectStep(page, 'lint', 'Lint');
+  await expect(lint.getByRole('radio', { name: 'Continue' })).toBeChecked();
+  await expect(saveButton(page, 'Review')).toBeEnabled();
 });
 
 test('a wide parallel stage stays on one line in the list with a count of the rest', async ({

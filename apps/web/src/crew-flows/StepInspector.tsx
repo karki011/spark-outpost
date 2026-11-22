@@ -41,7 +41,7 @@ export function StepInspector(props: StepInspectorProps) {
       <aside className="wf-inspector" aria-label="Step details">
         <p className="wf-hint">
           {steps.length === 0
-            ? 'Add a Spark to start. Its details show here.'
+            ? 'The details of the step you select show here.'
             : 'Select a step in the list or the graph to edit it.'}
         </p>
       </aside>

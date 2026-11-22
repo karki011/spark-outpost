@@ -216,8 +216,8 @@ function EditorBody({ initial, baseHash, sparks, sparkById, onClose, ...props }:
       {leaving && (
         <div className="wf-notice" role="alertdialog" aria-label="Leave without saving?">
           <span>
-            <b>Leave without saving?</b> Your {count(editor.changes, 'unsaved change')} to the
-            steps, the schedule and the triggers will be lost.
+            <b>Leave without saving?</b> Your {count(editor.changes, 'unsaved change')} will be
+            lost.
           </span>
           <button type="button" className="btn line sm" autoFocus onClick={() => setLeaving(false)}>
             Keep editing

@@ -54,6 +54,7 @@ export function WhereCard({ draft, onChange }: WhereCardProps) {
         <span>Project</span>
         <ChoicePicker
           label="Project"
+          showNote={false}
           describedBy={`${ids}-hint`}
           choices={choices}
           value={value}
