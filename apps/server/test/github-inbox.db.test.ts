@@ -264,9 +264,17 @@ describe('the GitHub inbox', () => {
     await connectGitHub();
     await linkWidgets();
     pull(2);
-    const [first, second] = await Promise.all([inbox(), inbox('?refresh=1')]);
-    expect(first.items.map((item) => item.number)).toEqual([2]);
-    expect(second.fetchedAt).toBe(first.fetchedAt);
+    let release = () => {};
+    github.github.searchHold = new Promise((resolve) => (release = resolve));
+    const first = inbox();
+    await expect.poll(searches).toBe(2);
+    const second = inbox('?refresh=1');
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(searches()).toBe(2);
+    release();
+    const [one, two] = await Promise.all([first, second]);
+    expect(one.items.map((item) => item.number)).toEqual([2]);
+    expect(two.fetchedAt).toBe(one.fetchedAt);
     expect(searches()).toBe(3);
   });
 
