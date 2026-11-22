@@ -260,6 +260,16 @@ describe('the GitHub inbox', () => {
     expect(searches()).toBe(4);
   });
 
+  it('shares one GitHub fetch between requests that arrive while it runs', async () => {
+    await connectGitHub();
+    await linkWidgets();
+    pull(2);
+    const [first, second] = await Promise.all([inbox(), inbox('?refresh=1')]);
+    expect(first.items.map((item) => item.number)).toEqual([2]);
+    expect(second.fetchedAt).toBe(first.fetchedAt);
+    expect(searches()).toBe(3);
+  });
+
   it('stores the window and searches only that far back', async () => {
     await connectGitHub();
     await linkWidgets();

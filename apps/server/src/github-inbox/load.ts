@@ -62,6 +62,17 @@ interface ConnectionGroup {
 }
 
 const snapshots = new WeakMap<Db, Map<GithubInboxWindowDays, Snapshot>>();
+const fetching = new WeakMap<Db, Map<string, Promise<Snapshot>>>();
+
+function sharedFetch(db: Db, key: string, start: () => Promise<Snapshot>): Promise<Snapshot> {
+  const running = fetching.get(db) ?? new Map<string, Promise<Snapshot>>();
+  fetching.set(db, running);
+  const found = running.get(key);
+  if (found) return found;
+  const started = start().finally(() => running.delete(key));
+  running.set(key, started);
+  return started;
+}
 
 function cacheFor(db: Db): Map<GithubInboxWindowDays, Snapshot> {
   const found = snapshots.get(db);
@@ -329,7 +340,9 @@ export async function loadGithubInbox(
   const usable = hit && hit.key === key && now - hit.at < CACHE_MS && !options.refresh;
   const snapshot = usable
     ? hit
-    : await fetchSnapshot(deps, repos, windowDays, key, hit?.key === key ? hit : undefined);
+    : await sharedFetch(deps.db, `${windowDays}:${key}`, () =>
+        fetchSnapshot(deps, repos, windowDays, key, hit?.key === key ? hit : undefined),
+      );
   cache.set(windowDays, snapshot);
   return {
     connected: true,
