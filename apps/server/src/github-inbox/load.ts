@@ -26,8 +26,14 @@ import type { GitHubConnection } from '../ship/github/connection.ts';
 import { repoSlug } from '../ship/remote.ts';
 import { projectRepos, repoKey, type ProjectRepo } from '../tickets/github-pulls.ts';
 import { keysIn } from '../tickets/pull-ticket-keys.ts';
-import { inboxPulls, seenFlags, type InboxPull } from './group.ts';
-import { inboxQuery, parseInboxPage, repoChunks, reviewRequestsQuery } from './search.ts';
+import { inboxPulls, seenFlags, strongest, type InboxPull } from './group.ts';
+import {
+  inboxQuery,
+  parseInboxPage,
+  repoChunks,
+  reviewRequestsQuery,
+  type InboxPart,
+} from './search.ts';
 
 const CACHE_MS = 2 * 60_000;
 const DAY_MS = 24 * 60 * 60_000;
@@ -98,7 +104,7 @@ interface Fetched {
   problems: GithubInboxProblem[];
 }
 
-async function search(connection: GitHubConnection, query: string, part: 'review' | 'mine') {
+async function search(connection: GitHubConnection, query: string, part: InboxPart) {
   const body = await connection.post('/graphql', { query }, z.unknown(), 'searching pull requests');
   return parseInboxPage(body, part);
 }
@@ -109,7 +115,10 @@ function takePage(
   scope: string | null,
   into: Fetched,
 ): boolean {
-  if (page.error) into.problems.push({ repo: scope, message: page.error });
+  const known = into.problems.some(
+    (problem) => problem.repo === scope && problem.message === page.error,
+  );
+  if (page.error && !known) into.problems.push({ repo: scope, message: page.error });
   if (page.truncated) into.problems.push({ repo: scope, message: TRUNCATED });
   into.login ??= page.viewer;
   const pulls = inboxPulls(page.pulls, page.viewer);
@@ -147,17 +156,35 @@ async function reviewConnections(
   return [...byHost.values()];
 }
 
+const REVIEW_PARTS = ['review', 'reviewed'] as const;
+
+const reviewKey = (host: string, part: InboxPart) => `${host}:${part}`;
+
+function reviewPartOf(pull: HostedPull): InboxPart {
+  return pull.group === 'review_requested' ? 'review' : 'reviewed';
+}
+
 async function fetchReviewRequests(
   connection: GitHubConnection,
   since: string,
   into: Fetched,
 ): Promise<void> {
   try {
-    const page = await search(connection, reviewRequestsQuery(since), 'review');
-    if (!takePage(page, connection.host, null, into)) into.reviewFailed.add(connection.host);
+    const body = await connection.post(
+      '/graphql',
+      { query: reviewRequestsQuery(since) },
+      z.unknown(),
+      'searching pull requests',
+    );
+    for (const part of REVIEW_PARTS) {
+      const page = parseInboxPage(body, part);
+      if (!takePage(page, connection.host, null, into)) {
+        into.reviewFailed.add(reviewKey(connection.host, part));
+      }
+    }
   } catch (error) {
     into.problems.push({ repo: null, message: problemText(error) });
-    into.reviewFailed.add(connection.host);
+    REVIEW_PARTS.forEach((part) => into.reviewFailed.add(reviewKey(connection.host, part)));
   }
 }
 
@@ -189,15 +216,17 @@ async function fetchSnapshot(
   const kept = (previous?.pulls ?? []).filter(
     (pull) =>
       into.failed.has(repoKey(pull.host, pull.repo)) ||
-      (!pull.mine && into.reviewFailed.has(pull.host)),
+      (!pull.mine && into.reviewFailed.has(reviewKey(pull.host, reviewPartOf(pull)))),
   );
+  const fresh = strongest(into.pulls);
+  const freshIds = new Set(fresh.map((pull) => pull.id));
   const stale = previous && into.failed.size > 0 && into.pulls.length === 0;
   return {
     at: now,
     key,
     login: into.login ?? previous?.login ?? null,
     fetchedAt: stale ? previous.fetchedAt : new Date(now).toISOString(),
-    pulls: [...into.pulls, ...kept],
+    pulls: [...fresh, ...kept.filter((pull) => !freshIds.has(pull.id))],
     problems: into.problems,
   };
 }
@@ -224,7 +253,7 @@ async function decorate(
     latestReviews(deps.db, deps.workspaceId, ids),
   ]);
   return snapshot.pulls
-    .map(({ host, headRef: _headRef, ...pull }) => {
+    .map(({ host, ...pull }) => {
       const ticketKey = keysOf.get(pull.id)?.find((key) => tickets.has(key.toUpperCase()));
       return {
         ...pull,
@@ -238,6 +267,27 @@ async function decorate(
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
+async function inboxScope(deps: GitHubDeps) {
+  const projects = await listProjects(deps.db, deps.workspaceId).catch(() => []);
+  const repos = await projectRepos(projects);
+  const key = [
+    deps.workspaceId,
+    ...repos.map((entry) => `${repoKey(entry.repo.host, slugOf(entry))}=${entry.projectId}`),
+  ].join(',');
+  return { repos, key };
+}
+
+export async function currentInboxPull(
+  deps: GitHubDeps,
+  id: string,
+): Promise<{ host: string; repo: string; number: number } | null> {
+  const windowDays = await inboxWindowDays(deps.db, deps.workspaceId);
+  const snapshot = cacheFor(deps.db).get(windowDays);
+  if (!snapshot || snapshot.key !== (await inboxScope(deps)).key) return null;
+  const found = snapshot.pulls.find((pull) => pull.id === id);
+  return found ? { host: found.host, repo: found.repo, number: found.number } : null;
+}
+
 export async function loadGithubInbox(
   deps: GitHubDeps,
   options: { refresh?: boolean } = {},
@@ -247,12 +297,7 @@ export async function loadGithubInbox(
   if (!reach.saved && reach.ghLogin === null) {
     return { connected: false, login: null, windowDays, fetchedAt: null, items: [], problems: [] };
   }
-  const projects = await listProjects(deps.db, deps.workspaceId).catch(() => []);
-  const repos = await projectRepos(projects);
-  const key = [
-    deps.workspaceId,
-    ...repos.map((entry) => `${repoKey(entry.repo.host, slugOf(entry))}=${entry.projectId}`),
-  ].join(',');
+  const { repos, key } = await inboxScope(deps);
   const cache = cacheFor(deps.db);
   const now = deps.now?.() ?? Date.now();
   const hit = cache.get(windowDays);

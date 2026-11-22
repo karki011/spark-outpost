@@ -8,13 +8,14 @@ import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { originOf } from '../projects/repo-scan.ts';
 import { git, isGitWorkTree } from '../projects/snapshot.ts';
 import type { RunInput } from '../workflow/run-input.ts';
-import type { TurnWorkflowRun } from './run-records.ts';
+import { pullNamedIn, type TurnWorkflowRun } from './run-records.ts';
 import { landedCommits } from './step-place-landed.ts';
 import {
   isScheduled,
   startedBy,
   stepPlaceBlock,
   type PlaceFile,
+  type RunPull,
   type StepPlace,
 } from './step-place.ts';
 
@@ -58,15 +59,38 @@ async function changedFiles(root: string, from: string | null): Promise<PlaceFil
   return [...tracked, ...untracked].sort((a, b) => a.path.localeCompare(b.path));
 }
 
-async function openPull(db: Queryable, run: TurnWorkflowRun, branch: string | null) {
-  if (!branch || !run.run.conversationId) return null;
-  const { rows } = await db.query<{ number: number; title: string | null }>(
-    `SELECT number, title FROM pr_watches
+async function openPull(
+  db: Queryable,
+  run: TurnWorkflowRun,
+  branch: string | null,
+  repo: string | null,
+) {
+  if (!branch || !repo || !run.run.conversationId) return null;
+  const { rows } = await db.query<{ id: string; number: number; title: string | null }>(
+    `SELECT owner || '/' || repo || '#' || number AS id, number, title FROM pr_watches
      WHERE conversation_id = $1 AND branch = $2 AND pr_state = 'open'
+       AND lower(owner || '/' || repo) = lower($3)
      ORDER BY created_at DESC LIMIT 1`,
-    [run.run.conversationId, branch],
+    [run.run.conversationId, branch, repo],
   );
   return rows[0] ?? null;
+}
+
+export async function runPull(db: Queryable, turn: TurnWorkflowRun): Promise<RunPull | null> {
+  const id = turn.run.pull;
+  if (!id) return null;
+  if (pullNamedIn(turn.message) === id) return { id, named: true, openInChat: 0, open: false };
+  const { rows } = await db.query<{ id: string }>(
+    `SELECT owner || '/' || repo || '#' || number AS id FROM pr_watches
+     WHERE conversation_id = $1 AND pr_state = 'open'`,
+    [turn.run.conversationId],
+  );
+  return {
+    id,
+    named: false,
+    openInChat: rows.length,
+    open: rows.some((row) => row.id === id),
+  };
 }
 
 interface PlaceAsk {
@@ -94,7 +118,8 @@ async function gitPlace(ask: PlaceAsk, root: string, base: Omit<StepPlace, 'proj
     base: baseName,
     filesBase: from ? baseName : null,
     files: await maybe(() => changedFiles(root, from)),
-    pull: await maybe(() => openPull(ask.db, ask.turn, branch)),
+    pull: await maybe(() => openPull(ask.db, ask.turn, branch, repo)),
+    target: await maybe(() => runPull(ask.db, ask.turn)),
     landed: base.scheduled
       ? await maybe(() =>
           landedCommits({
@@ -122,6 +147,7 @@ async function gatherStepPlace(ask: PlaceAsk): Promise<StepPlace | null> {
     filesBase: null,
     files: null,
     pull: null,
+    target: null,
     landed: null,
   };
   if (!(await isGitWorkTree(root))) return { ...base, project: path.basename(root) };

@@ -61,6 +61,13 @@ function pull(id: string, overrides: Json = {}): Json {
     updatedAt: new Date(Date.now() - 3_600_000).toISOString(),
     additions: 12,
     deletions: 3,
+    createdAt: new Date(Date.now() - 7_200_000).toISOString(),
+    headRef: 'feature',
+    baseRef: 'main',
+    labels: [],
+    assignees: [],
+    comments: 0,
+    bodyPreview: '',
     changedFiles: 2,
     projectId: null,
     conversationId: null,
@@ -141,6 +148,17 @@ async function stubReviews(
     server.listed.push(new URL(request.url()).searchParams.get('pull') ?? '');
     return route.fulfill({ json: { reviews: server.reviews } });
   });
+  await page.route('**/api/github/inbox/details?*', (route) =>
+    route.fulfill({
+      json: {
+        id: new URL(route.request().url()).searchParams.get('id'),
+        body: '',
+        bodyCut: false,
+        files: [],
+        filesTotal: 0,
+      },
+    }),
+  );
   await page.route(/\/api\/github\/reviews\/[^/]+\/stop$/, (route) => {
     const id = route.request().url().split('/').at(-2)!;
     server.stops.push(id);
@@ -158,6 +176,7 @@ async function openPane(page: Page) {
   await main.locator('.gh-main').first().click();
   const pane = main.getByRole('complementary', { name: 'Retry webhook deliveries 1' });
   await expect(pane).toBeVisible();
+  await expect(pane.locator('.gh-sec .skel')).toHaveCount(0);
   return { main, pane, block: pane.getByRole('region', { name: 'Review' }) };
 }
 
@@ -451,4 +470,26 @@ test('the pull request list resizes by drag and keys and keeps its width', async
   await expect(handle).toHaveAttribute('aria-valuenow', '328');
   await page.keyboard.press('Escape');
   await expectAxeClean(page);
+});
+
+test('a finished review copies as Markdown and goes to a chat as an attachment', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await stubReviews(page, { reviews: [review()] });
+  const { block } = await openPane(page);
+  await block.getByRole('button', { name: 'Copy review' }).click();
+  await expect(block.getByRole('button', { name: 'Copied' })).toBeVisible();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain(
+    'Review of acme/api#1 (Retry webhook deliveries 1), by Spark PR Reviewer',
+  );
+  expect(copied).toContain(PROSE);
+
+  await block.getByRole('button', { name: 'Send to chat' }).click();
+  await expect(page.getByRole('textbox', { name: 'Message' })).toContainText(
+    'Pull request acme/api#1: https://github.com/acme/api/pull/1',
+  );
+  await expect(page.getByText('review-pr-1.md')).toBeVisible();
 });

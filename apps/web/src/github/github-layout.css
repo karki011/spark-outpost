@@ -227,6 +227,12 @@
   }
 }
 
+@container gh (max-width: 1180px) {
+  .gh-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @container gh (max-width: 900px) {
   .gh-tiles {
     gap: 8px;

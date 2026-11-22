@@ -3,7 +3,7 @@ title: Work from the GitHub page
 section: Projects and shipping
 type: how-to
 order: 333
-summary: See the pull requests that need you on the GitHub page, grouped into reviews, fixes, ready to merge and waiting, and open one on GitHub or in its chat.
+summary: See the pull requests that need you on the GitHub page, search them, read one's description and files, and start or open its chat.
 ---
 
 About 2 minutes. Mac app only.
@@ -13,25 +13,27 @@ First [connect GitHub](tickets-and-github.md#connect-github). Until then the pag
 ## Find your pull requests
 
 1. Select **GitHub** in the left bar. A dot on it means something new.
-2. Pick a group: **Review requested**, **Needs fixes**, **Ready to merge** or **Waiting on others**. Arrow keys move between them.
+2. Pick a group: **Review requested**, **Needs fixes**, **Ready to merge**, **Waiting on others**, **Reviewed by you** or **Approved by you**. Arrow keys move between them.
 3. Narrow with **Last 14 days** or **Last 30 days**, and with **All projects** or one project.
 4. Spark checks every 2 minutes; **Refresh pull requests** checks now.
 
-Each row shows a dot while new, the author, the ticket key, the checks (**Passing**, **Failing**, **Running**, **Conflict** or **Draft**), **New commits** when it changed since you looked, and the latest review.
+Rows show author, ticket, checks (**Passing**, **Failing**, **Running**, **Conflict**, **Draft**), **New commits**, the latest review, labels, and opened and updated dates.
 
-Review requests come from every repository; your own pull requests from linked projects.
+Pull requests you review come from every repository; your own from linked projects.
 
-Bot pull requests you were asked to review share one **Dependency updates** row; select it to list them.
+Bot pull requests share one **Dependency updates** row.
 
-If a repository can't be read, a line under the title says why and the page keeps the last list.
+## Search
+
+Press / or select **Search pull requests**. Each word must match a title, number, repository, author, branch, label, ticket or the description's first 2,000 characters. Esc clears.
 
 ## Open a pull request
 
-1. Select a row, or press ↓ and ↑ to reach it and Return to open it. This marks it seen.
-2. The details show checks, size, who it waits on, who approved and its ticket. Select the ticket to open it in **Tickets**.
-3. Select **Open chat** to go to the chat that opened it, or **Open on GitHub**.
+1. Select a row, or press ↓ and ↑ and Return. This marks it seen.
+2. Details show branches, the description, changed files, checks, size, assignees, reviewers and the ticket.
+3. **Open chat** goes to its chat. **Start chat** makes one on its branch; outside linked projects, one without it. **Open on GitHub** opens it.
 
-Drag the divider to resize; Esc closes.
+Wide windows reopen on the pull request you last viewed, or the newest, unless you closed it. Esc closes.
 
 ## Review with a Spark or workflow
 

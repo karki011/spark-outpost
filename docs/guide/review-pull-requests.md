@@ -23,6 +23,7 @@ A workflow you run in a chat counts too when your message has the pull request's
 1. When the state shows **Done**, the review appears as the reviewer wrote it, with any folded sections.
 2. **Reviewed an earlier commit** means new commits came since; select **Review again**.
 3. If the reviewer posted it, select **View on GitHub** to open it there.
+4. Select **Copy review** to copy it as Markdown, or **Send to chat** to attach it to the pull request's chat (or a new one) as untrusted text. Nothing sends until you do.
 
 **Failed** shows the error; select **Review again** to retry. In the list, each row shows the latest review, such as **Reviewing** or **Reviewed**.
 

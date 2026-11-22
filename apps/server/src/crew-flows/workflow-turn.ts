@@ -18,6 +18,8 @@ import {
   type PullPlace,
 } from './pr-checkout.ts';
 import { keepStepEdits, prepareStepEdits } from './step-edits.ts';
+import { runPull } from './step-place-gather.ts';
+import { runPullLine } from './step-place.ts';
 import { workflowNote } from './step-prompt.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
 import { workflowStore } from './workflow-store.ts';
@@ -147,7 +149,14 @@ export async function workflowTurn(
   if (review !== undefined) await settleReviewOfWorkflowRun(deps.db, turn.run.id);
   await keepStepEdits(h, prepared);
   const continues = turn.continues && end.status !== 'cancelled';
-  const note = workflowNote({ ...end, workflowName: turn.workflow.name, continues, checkout });
+  const target = await runPull(deps.db, turn).catch(() => null);
+  const note = workflowNote({
+    ...end,
+    workflowName: turn.workflow.name,
+    continues,
+    about: target ? runPullLine(target) : null,
+    checkout,
+  });
   if (!continues) {
     await updateOrchestration(deps.db, lease.runId, { phase: 'finished' });
     await publishOrchestration(h);

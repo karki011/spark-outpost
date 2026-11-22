@@ -4,8 +4,11 @@ import { webLink } from '../links/web-link.ts';
 import { Glyph } from '../tickets/ticket-icons.tsx';
 import { requestTicket } from '../tickets/ticket-request.ts';
 import { XIcon } from '../ui/icons.tsx';
-import { ageLabel, checksLine, prState, sizeLine } from './github-model.ts';
+import { checksLine, dayLabel, fullDate, prState, sizeLine, updatedLabel } from './github-model.ts';
+import { LabelChip } from './GithubRow.tsx';
+import { PullDetails } from './PullDetails.tsx';
 import { ReviewBlock } from './review/ReviewBlock.tsx';
+import { StartChat } from './StartChat.tsx';
 import { NewCommitsPill, StatePill } from './StatePill.tsx';
 
 interface GithubDetailProps {
@@ -80,25 +83,29 @@ export function GithubDetail({ item, now, onClose, onOpenChat }: GithubDetailPro
         </button>
       </header>
       <p className="gh-detail-sub">
-        {item.repo} #{item.number} · {item.author} · updated {ageLabel(item.updatedAt, now)} ago
+        {item.repo} #{item.number} · {item.author} ·{' '}
+        <time dateTime={item.createdAt} title={fullDate(item.createdAt)}>
+          opened {dayLabel(item.createdAt, now)}
+        </time>{' '}
+        ·{' '}
+        <time dateTime={item.updatedAt} title={fullDate(item.updatedAt)}>
+          {updatedLabel(item.updatedAt, now)}
+        </time>
       </p>
       <div className="gh-detail-pills">
         {state && <StatePill state={state} />}
         {item.updatedSinceSeen && <NewCommitsPill />}
+        {item.labels.map((label) => (
+          <LabelChip key={label.name} label={label} />
+        ))}
       </div>
-      <dl className="gh-pr-facts">
-        <Fact label="Checks">{checksLine(item)}</Fact>
-        {item.conflict && <Fact label="Branch">Has a merge conflict</Fact>}
-        {!item.conflict && item.behind && <Fact label="Branch">Behind its base</Fact>}
-        {item.changesRequested && <Fact label="Review">Changes requested</Fact>}
-        {item.openThreads !== null && item.openThreads > 0 && (
-          <Fact label="Threads">{item.openThreads} open</Fact>
-        )}
-        {size && <Fact label="Size">{size}</Fact>}
-        <Fact label="Waiting on">{names(item.waitingOn)}</Fact>
-        <Fact label="Approved by">{names(item.approvedBy)}</Fact>
-      </dl>
-      {item.ticket && <TicketBlock ticket={item.ticket} />}
+      {item.headRef && (
+        <p className="gh-branches">
+          <code>{item.headRef}</code>
+          <span aria-label="into"> → </span>
+          <code>{item.baseRef || 'base'}</code>
+        </p>
+      )}
       <div className="gh-detail-actions">
         {conversationId && (
           <button
@@ -121,8 +128,27 @@ export function GithubDetail({ item, now, onClose, onOpenChat }: GithubDetailPro
             Open on GitHub
           </a>
         )}
+        <StartChat key={item.id} item={item} onOpenChat={onOpenChat} />
       </div>
-      <ReviewBlock key={item.id} item={item} />
+      <PullDetails item={item} />
+      <dl className="gh-pr-facts">
+        <Fact label="Checks">{checksLine(item)}</Fact>
+        {item.conflict && <Fact label="Branch">Has a merge conflict</Fact>}
+        {!item.conflict && item.behind && <Fact label="Branch">Behind its base</Fact>}
+        {item.changesRequested && <Fact label="Review">Changes requested</Fact>}
+        {item.openThreads !== null && item.openThreads > 0 && (
+          <Fact label="Threads">{item.openThreads} open</Fact>
+        )}
+        {item.comments !== null && item.comments > 0 && (
+          <Fact label="Comments">{item.comments}</Fact>
+        )}
+        {size && <Fact label="Size">{size}</Fact>}
+        <Fact label="Assignees">{names(item.assignees)}</Fact>
+        <Fact label="Waiting on">{names(item.waitingOn)}</Fact>
+        <Fact label="Approved by">{names(item.approvedBy)}</Fact>
+      </dl>
+      {item.ticket && <TicketBlock ticket={item.ticket} />}
+      <ReviewBlock key={item.id} item={item} onOpenChat={onOpenChat} />
     </aside>
   );
 }

@@ -1,8 +1,19 @@
-import type { GithubInboxItem } from '@spark-outpost/contracts';
+import type { GithubInboxItem, GithubInboxLabel } from '@spark-outpost/contracts';
 import { initials } from '../calendar/month-model.ts';
 import { webLink } from '../links/web-link.ts';
 import { Glyph } from '../tickets/ticket-icons.tsx';
-import { ageLabel, botsState, isFresh, prState } from './github-model.ts';
+import {
+  ageLabel,
+  botsState,
+  dayLabel,
+  fullDate,
+  isFresh,
+  labelColor,
+  prState,
+  updatedLabel,
+} from './github-model.ts';
+import type { HiddenMatch } from './github-search.ts';
+import { Highlight } from './Highlight.tsx';
 import { NewCommitsPill, ReviewPill, StatePill, TicketChip } from './StatePill.tsx';
 
 interface GithubRowProps {
@@ -10,8 +21,38 @@ interface GithubRowProps {
   selected: boolean;
   nested?: boolean;
   now: number;
+  terms?: readonly string[];
+  hidden?: HiddenMatch | null;
   onOpen: (item: GithubInboxItem) => void;
   onOpenChat: (conversationId: string) => void;
+}
+
+const ROW_LABELS = 3;
+
+export function LabelChip({
+  label,
+  terms = [],
+}: {
+  label: GithubInboxLabel;
+  terms?: readonly string[];
+}) {
+  return (
+    <span className="gh-label">
+      <i aria-hidden="true" style={{ background: labelColor(label.color) }} />
+      <span className="gh-label-name">
+        <Highlight text={label.name} terms={terms} />
+      </span>
+    </span>
+  );
+}
+
+function HiddenLine({ hidden, terms }: { hidden: HiddenMatch; terms: readonly string[] }) {
+  return (
+    <span className="gh-found">
+      {hidden.where === 'branch' ? 'Branch ' : 'In description: '}
+      <Highlight text={hidden.text} terms={terms} />
+    </span>
+  );
 }
 
 function RowAction({ item, onOpenChat }: Pick<GithubRowProps, 'item' | 'onOpenChat'>) {
@@ -50,6 +91,8 @@ export function GithubRow({
   selected,
   nested = false,
   now,
+  terms = [],
+  hidden = null,
   onOpen,
   onOpenChat,
 }: GithubRowProps) {
@@ -62,6 +105,7 @@ export function GithubRow({
         className="gh-main"
         data-id={item.id}
         aria-current={selected ? 'true' : undefined}
+        title={item.title}
         onClick={() => onOpen(item)}
       >
         <i className="gh-dot" aria-hidden="true" data-on={isFresh(item) || undefined} />
@@ -70,18 +114,36 @@ export function GithubRow({
         </span>
         <span className="gh-text">
           <span className="gh-title">
-            {item.title}
+            <Highlight text={item.title} terms={terms} />
             {item.unseen && <span className="sr-only">, new</span>}
             <span className="sr-only">, by {item.author}</span>
           </span>
           <span className="gh-meta">
-            {item.ticket && <TicketChip ticketKey={item.ticket.key} />}
+            {item.ticket && <TicketChip ticketKey={item.ticket.key} terms={terms} />}
             {item.updatedSinceSeen && <NewCommitsPill />}
             {state && <StatePill state={state} />}
             <ReviewPill review={item.review} />
-            <time className="gh-age" dateTime={item.updatedAt}>
-              {ageLabel(item.updatedAt, now)}
-            </time>
+            {item.labels.slice(0, ROW_LABELS).map((label) => (
+              <LabelChip key={label.name} label={label} terms={terms} />
+            ))}
+            {item.labels.length > ROW_LABELS && (
+              <span className="gh-more">+{item.labels.length - ROW_LABELS}</span>
+            )}
+            {terms.length > 0 && (
+              <span className="gh-where">
+                <Highlight text={`${item.repo} #${item.number}`} terms={terms} />
+              </span>
+            )}
+            {hidden && <HiddenLine hidden={hidden} terms={terms} />}
+            <span className="gh-dates">
+              <time dateTime={item.createdAt} title={`Opened ${fullDate(item.createdAt)}`}>
+                Opened {dayLabel(item.createdAt, now)}
+              </time>
+              <span aria-hidden="true"> · </span>
+              <time dateTime={item.updatedAt} title={`Updated ${fullDate(item.updatedAt)}`}>
+                {updatedLabel(item.updatedAt, now)}
+              </time>
+            </span>
           </span>
         </span>
       </button>

@@ -1,6 +1,7 @@
 import type { GithubInboxReviewSummary } from '@spark-outpost/contracts';
 import { Glyph, type GlyphName } from '../tickets/ticket-icons.tsx';
 import { STATE_LABEL, type PrState } from './github-model.ts';
+import { Highlight } from './Highlight.tsx';
 import { rowLabel } from './review/review-model.ts';
 
 const GLYPH: Record<PrState, GlyphName> = {
@@ -29,8 +30,18 @@ export function NewCommitsPill() {
   );
 }
 
-export function TicketChip({ ticketKey }: { ticketKey: string }) {
-  return <span className="gh-chip">{ticketKey}</span>;
+export function TicketChip({
+  ticketKey,
+  terms = [],
+}: {
+  ticketKey: string;
+  terms?: readonly string[];
+}) {
+  return (
+    <span className="gh-chip">
+      <Highlight text={ticketKey} terms={terms} />
+    </span>
+  );
 }
 
 export function ReviewPill({ review }: { review: GithubInboxReviewSummary | null | undefined }) {
