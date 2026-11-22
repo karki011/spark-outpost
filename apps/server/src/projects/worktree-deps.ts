@@ -242,3 +242,21 @@ export async function prepareDependencies(
   if (await tryInstall()) return done('offline_install', note());
   return done('skipped', note());
 }
+
+export async function cloneMatchingDependencies(
+  main: string,
+  copy: string,
+  options: DepsOptions,
+): Promise<boolean> {
+  if (!(await exists(path.join(copy, 'package.json')))) return false;
+  const [mainLock, copyLock] = await Promise.all([
+    lockfileFingerprint(main),
+    lockfileFingerprint(copy),
+  ]);
+  if (!mainLock || mainLock !== copyLock) return false;
+  const folders = await nodeModulesFolders(main);
+  if (folders.length === 0) return false;
+  const platform = options.platform ?? process.platform;
+  const run = options.run ?? defaultRun(options);
+  return (await cloneFolders(main, copy, folders, platform, run)) === null;
+}

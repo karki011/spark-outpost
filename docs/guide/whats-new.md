@@ -12,6 +12,7 @@ summary: What changed in recent releases and what to do next.
 | ----------------------------------------------- | ---------------------------------------------------------- |
 | Island and left bar show a meeting is recording | [Take meeting notes](meetings.md#record).                  |
 | Spoken commands end sooner after you stop       | [Talk to Spark](voice.md#turn-it-on).                      |
+| Workflow steps run on the named pull request    | [Workflow steps](modes-and-levels.md#workflow-steps).      |
 | GitHub: search, Start chat, reviewed groups     | [GitHub page](github-page.md#search).                      |
 | Copy a review or send it to a chat              | [Reviews](review-pull-requests.md).                        |
 | Workflow runs say which pull request they took  | [Workflows](workflow-in-chat.md).                          |
@@ -61,4 +62,3 @@ summary: What changed in recent releases and what to do next.
 | Home: message box, Needs you, Working set                  | [Read Home](home.md).                                                                    |
 | Worktrees start from latest remote; Codex commits          | [Where it starts](where-spark-works.md#what-to-expect).                                  |
 | PR follow-up and adopting, in any chat                     | [Work on a PR](where-spark-works.md#work-on-a-pull-request).                             |
-| **Thinking** expands; `/compact`; less “Running”           | [Follow a turn](follow-a-turn.md#see-whats-happening).                                   |
