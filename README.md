@@ -12,12 +12,12 @@ Run Claude Code and Codex side by side on your Mac. Follow every step, answer th
 
 <a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-latest-arm64.dmg"><img alt="Download for Mac, Apple silicon" src="https://img.shields.io/badge/Download_for_Mac-Apple_silicon-2bb39a?style=for-the-badge&logo=apple&logoColor=white"></a> <a href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-latest-x64.dmg"><img alt="Download for Mac, Intel" src="https://img.shields.io/badge/Download_for_Mac-Intel-555555?style=for-the-badge&logo=apple&logoColor=white"></a>
 
-Free beta · [0.1.0-beta.16](releases/0.1.0-beta.16.md) · macOS 13+ (Mac control needs 14) · [All versions](releases/README.md)
+Free beta · [0.1.0-beta.17](releases/0.1.0-beta.17.md) · macOS 13+ (Mac control needs 14) · [All versions](releases/README.md)
 
 <!-- release-downloads:end -->
 
 <p>
-<a href="apps/desktop/CHANGELOG.md"><img alt="Version 0.1.0-beta.16" src="https://img.shields.io/badge/version-0.1.0--beta.16-2bb39a"></a>
+<a href="apps/desktop/CHANGELOG.md"><img alt="Version 0.1.0-beta.17" src="https://img.shields.io/badge/version-0.1.0--beta.17-2bb39a"></a>
 <img alt="macOS 13 or later" src="https://img.shields.io/badge/macOS-13%2B-111111?logo=apple&logoColor=white">
 <img alt="Apple silicon and Intel" src="https://img.shields.io/badge/arch-arm64%20%7C%20x64-555555">
 <img alt="Agent Client Protocol" src="https://img.shields.io/badge/protocol-ACP-6e56cf">
@@ -67,9 +67,9 @@ Each chat gets its own branch in a worktree. **Full auto → PR** opens the pull
 <tr>
 <td width="50%" valign="top">
 
-### Make your own Spark
+### Sparks and workflows
 
-Give a teammate a name, a face and a role, with its own chat, default provider, model and mode, and standing instructions. Talk to it directly, or type `@` in any chat to hand it one job, which it does read-only. Approvals and protected paths never change. [Make a Spark](docs/guide/sparks.md)
+Give a teammate a name, a role, standing instructions and skills, and set what it runs on under **Setup**; one Spark can be the default for new chats. Type `@` in any chat to hand it one job, which it does read-only. Chain Sparks into workflows that run on demand, on a schedule, when something happens in a chat or before a pull request is published. Approvals and Spark rules never change. [Make a Spark](docs/guide/sparks.md) · [Workflows](docs/guide/workflow-runs.md)
 
 </td>
 <td width="50%" valign="top">
@@ -153,6 +153,22 @@ An agent can show a page it built in the Work panel. **Share…** turns one vers
 ### A privacy screen
 
 Cover Spark's windows when you step away, after idle time, on sleep or with **⇧⌘L**, and unlock with Touch ID or a 6-digit code. It never locks the Mac, and chats keep running behind it. [Privacy screen](docs/guide/privacy-screen.md)
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### Pull request reviews
+
+The GitHub page lists the pull requests waiting for your review across your repositories. Pick a Spark or a workflow as the reviewer and run it on one, or turn on **Review automatically** to review each requested pull request again on new commits. It posts to GitHub only if you allow it, and never merges. [Review pull requests](docs/guide/review-pull-requests.md)
+
+</td>
+<td width="50%" valign="top">
+
+### Every turn, measured
+
+Each turn shows its time, tool calls, tokens and cost, and the **Cost** tab breaks them down by tool, MCP server and skill. Nothing is capped, and a quiet agent is never stopped for it. **Settings → Health** lists what's broken or quietly ignored. [Statuses and limits](docs/guide/statuses-and-limits.md)
 
 </td>
 </tr>

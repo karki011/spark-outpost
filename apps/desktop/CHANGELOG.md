@@ -4,6 +4,13 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.17
+
+- **Set up a Spark.** A Spark opens on **Setup**: pick its provider, model, effort, mode and autonomy, and **What this means** says whether it only reads, changes files or opens a pull request. Its chats pick up a change from their next turn with one line saying so. **Use for new chats** makes one Spark the default for new chats, and **Used in** lists the workflows and Sparks that name it.
+- **One workflow editor.** **Steps**, **When it runs** (schedule and triggers) and **Runs** share one **Save** with a count of unsaved changes, a step opens in an inspector beside the list or graph, and **Run** also takes a message and project. The workflow list shows each one's triggers.
+- **Steps may update the branch from its base.** With this switch on, a workflow step on Claude in a chat's own worktree may merge the base and resolve conflicts; pushes stay refused.
+- `@` lists every workflow and Spark, and a job handed to a Spark is never read as your message for a push, a pull request or a Spark action.
+
 ## 0.1.0-beta.16
 
 - **The resting island shows a recording.** While a meeting is recorded, Scout has a moving red waveform beside it, and the hover line keeps the title, **Open transcript** and **Stop** on one row.
