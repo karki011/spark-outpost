@@ -154,12 +154,12 @@ test('a picked look survives editing and Use name puts the blob back on the name
   await sparksMain(page)
     .getByRole('button', { name: /^Open Pip\./ })
     .click();
-  const form = sparksMain(page).getByRole('tabpanel', { name: 'Details' });
+  const form = sparksMain(page).getByRole('tabpanel', { name: 'Setup' });
   const save = form.getByRole('button', { name: 'Save' });
   await expect(form).toContainText('You picked this blob.');
   await form.getByRole('textbox', { name: 'Role' }).fill('Reviewer');
   await save.click();
-  await expect(form.getByRole('status')).toContainText('Saved');
+  await expect(sparksMain(page).getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
   expect((await storedSparks(page))[0]).toMatchObject({
     faceAuto: false,
     face: { shape: 'sun', color: 'gold' },
@@ -173,7 +173,7 @@ test('a picked look survives editing and Use name puts the blob back on the name
   await form.getByRole('button', { name: 'Use name' }).click();
   await expect(form).toContainText('Its blob comes from its name.');
   await save.click();
-  await expect(form.getByRole('status')).toContainText('Saved');
+  await expect(sparksMain(page).getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
   expect((await storedSparks(page))[0]).toMatchObject({ faceAuto: true });
 });
 

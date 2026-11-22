@@ -99,6 +99,7 @@ describe('jobs handed to a Spark by an @mention', () => {
         model: null,
         effort: null,
         mode: 'chat',
+        level: 'hands-off',
         prompt: 'review',
         route: { name: 'Pip', spark: { id: teammate.id, role: 'Code reviewer', only: true } },
       },

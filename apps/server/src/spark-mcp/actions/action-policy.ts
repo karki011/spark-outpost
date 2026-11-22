@@ -181,8 +181,8 @@ async function runFacts(db: Queryable, runId: string): Promise<RunFacts> {
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'spark_rule' AS spark_rule_retry,
             (COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
-              IN ('assistant', 'workflow', 'chat') OR COALESCE((r.route->'spark') ? 'step', false))
-              AS assistant_sent,
+              IN ('assistant', 'workflow', 'chat') OR COALESCE(r.role = 'spark', false)
+              OR COALESCE((r.route->'spark') ? 'step', false)) AS assistant_sent,
             (SELECT pf.assistant_acts FROM profiles pf
              WHERE pf.workspace_id = c.workspace_id
                AND pf.assistant_conversation_id = c.id) AS assistant_acts

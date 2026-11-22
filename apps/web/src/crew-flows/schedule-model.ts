@@ -54,11 +54,13 @@ export function defaultSchedule(today: Date): WorkflowSchedule {
   });
 }
 
-export function editSchedule(
-  schedule: WorkflowSchedule,
-  patch: Partial<WorkflowSchedule>,
+type Retimed = Pick<WorkflowSchedule, 'unit' | 'to' | 'anchor'> & { every: number | string };
+
+export function editSchedule<Schedule extends Retimed>(
+  schedule: Schedule,
+  patch: Partial<Schedule>,
   today: Date,
-): WorkflowSchedule {
+): Schedule {
   const next = { ...schedule, ...patch };
   const retimed = next.every !== schedule.every || next.unit !== schedule.unit;
   return {
@@ -167,7 +169,7 @@ export interface HistoryRow {
   tone: HistoryTone;
   note: string;
   took: string;
-  conversationId: string | null;
+  runId: string | null;
 }
 
 const HOW: Record<WorkflowRunSource, string> = {
@@ -205,13 +207,13 @@ function runRow(run: WorkflowRun, now: Date, cycle: HourCycle): HistoryRow {
     key: `run:${run.id}`,
     at: started.getTime(),
     when: whenLine(started, now, cycle),
-    how: HOW[run.source],
+    how: run.pull ? `${HOW[run.source]} · ${run.pull}` : HOW[run.source],
     scheduled: run.source === 'schedule' || run.source === 'catch_up',
     state,
     tone,
     note: failed ? `${failed.stepId} stopped the workflow` : '',
     took: run.finishedAt ? formatElapsed(Date.parse(run.finishedAt) - started.getTime()) : '',
-    conversationId: run.conversationId,
+    runId: run.id,
   };
 }
 
@@ -229,7 +231,7 @@ function slotRow(slot: ScheduleSlot, now: Date, cycle: HourCycle): HistoryRow {
     tone: slot.state === 'not_started' ? 'failed' : 'quiet',
     note: scheduleSlotReasonLine(slot),
     took: '',
-    conversationId: null,
+    runId: null,
   };
 }
 

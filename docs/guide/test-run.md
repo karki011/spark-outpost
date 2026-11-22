@@ -12,7 +12,7 @@ See what a workflow or one Spark would do before it can send anything. About 2 m
 
 1. Select **Sparks** in the left bar.
 2. For a workflow, open it on **Workflows** and select **Test run**. Save your changes first.
-3. For one Spark, open its card and find **Try it** under **Details**.
+3. For one Spark, open its card and select **Try it** at the top.
 4. Pick the **Project to copy**, or **No project**, and say what the run is about.
 5. Select **Start test run** or **Try it**.
 

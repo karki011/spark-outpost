@@ -21,7 +21,7 @@ async function openScribe(page: Page): Promise<string> {
     .getByRole('button', { name: /Scribe/ })
     .first()
     .click();
-  await page.getByRole('tab', { name: /Skills and files/ }).click();
+  await page.getByRole('tab', { name: /^Files/ }).click();
   return id;
 }
 

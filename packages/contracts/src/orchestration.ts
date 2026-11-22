@@ -68,6 +68,9 @@ export type OrchestrationDecision = z.infer<typeof orchestrationDecisionSchema>;
 export const sparkSettingFromSchema = z.enum(['spark', 'chat', 'default']);
 export type SparkSettingFrom = z.infer<typeof sparkSettingFromSchema>;
 
+export const sparkOriginSchema = z.enum(['typed_mac', 'tool', 'step', 'other']);
+export type SparkOrigin = z.infer<typeof sparkOriginSchema>;
+
 export const crewSparkSchema = z.object({
   id: z.uuid(),
   role: z.string(),
@@ -75,7 +78,9 @@ export const crewSparkSchema = z.object({
   step: z.string().optional(),
   test: z.boolean().optional(),
   edits: z.boolean().optional(),
+  work: z.boolean().optional(),
   review: z.boolean().optional(),
+  origin: sparkOriginSchema.optional(),
   agentMode: z.string().nullable().optional(),
   agentFrom: sparkSettingFromSchema.optional(),
   modeFrom: sparkSettingFromSchema.optional(),

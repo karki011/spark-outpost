@@ -56,7 +56,7 @@ async function openSpark(page: Page, name: string) {
 }
 
 async function openFiles(page: Page) {
-  await page.getByRole('tab', { name: /^Skills and files/ }).click();
+  await page.getByRole('tab', { name: /^Files/ }).click();
   await expect(tree(page)).toBeVisible();
 }
 
@@ -101,16 +101,16 @@ test('New Spark creates one and opens it; its card shows agent, mode and skills'
   await sheet.getByRole('button', { name: 'Create Spark' }).click();
 
   await expect(page.getByRole('heading', { level: 1, name: 'Security' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Details' })).toHaveAttribute('aria-selected', 'true');
-  const details = page.getByRole('tabpanel', { name: 'Details' });
+  await expect(page.getByRole('tab', { name: 'Setup' })).toHaveAttribute('aria-selected', 'true');
+  const details = page.getByRole('tabpanel', { name: 'Setup' });
   await expect(sheet).toHaveCount(0);
-  await expect(details.getByLabel('Name')).toHaveValue('Security');
+  await expect(details.getByRole('textbox', { name: 'Name' })).toHaveValue('Security');
   await passesAxe(page);
   await shots(page, 'spark-details');
 
-  await details.getByLabel('Role').fill('Finds security holes');
+  await details.getByRole('textbox', { name: 'Role' }).fill('Finds security holes');
   await details.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(pageMain(page).getByRole('status')).toContainText('Saved');
+  await expect(pageMain(page).getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
 
   const list = (await (await page.request.get('/api/teammates')).json()) as {
     teammates: { id: string; role: string }[];
@@ -166,7 +166,8 @@ test('add a skill and a script, edit, save, rename and delete', async ({ page })
   await expect(editor(page)).toHaveValue(
     /^---\nname: dependency-audit\ndescription: Check changed/,
   );
-  await expect(page.getByRole('tab', { name: 'Skills and files 2' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Instructions and skills 1' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Files 2' })).toBeVisible();
 
   await page.getByRole('button', { name: 'New file' }).click();
   const file = page.getByRole('form', { name: 'New file' });
@@ -299,7 +300,7 @@ test('the page works with the keyboard alone', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { level: 1, name: 'Security' })).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Details' }).focus();
+  await page.getByRole('tab', { name: 'Setup' }).focus();
   await page.keyboard.press('ArrowRight');
   await expect(tree(page)).toBeVisible();
   await page.keyboard.press('Tab');
@@ -339,7 +340,7 @@ test('the page works with the keyboard alone', async ({ page }) => {
     page.getByRole('button', { name: 'New skill' }),
     page.getByRole('button', { name: 'Save', exact: true }),
     row('SPARK.md'),
-    page.getByRole('tab', { name: 'Details' }),
+    page.getByRole('tab', { name: 'Setup' }),
   ]) {
     await tallEnough(control, 28);
   }

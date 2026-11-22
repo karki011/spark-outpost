@@ -164,6 +164,7 @@ test('Try it runs one Spark and Discard removes the run', async ({ page }) => {
     .getByRole('button', { name: /^Open Security\./ })
     .click();
 
+  await page.getByRole('button', { name: 'Try it', exact: true }).click();
   const form = page.getByRole('form', { name: 'Try it' });
   await form.scrollIntoViewIfNeeded();
   await pickProject(page);
@@ -198,6 +199,7 @@ test('leaving the view deletes the test run', async ({ page }) => {
     .locator('main.sparks')
     .getByRole('button', { name: /^Open Security\./ })
     .click();
+  await page.getByRole('button', { name: 'Try it', exact: true }).click();
   const form = page.getByRole('form', { name: 'Try it' });
   await pickProject(page);
   const started = page.waitForResponse(

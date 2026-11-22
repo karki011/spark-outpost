@@ -26,7 +26,7 @@ export const workflowControlActionSchema = z.object({
   workflowRunId: z.uuid().optional(),
   schedule: workflowScheduleSchema.optional(),
   scheduleBefore: workflowScheduleSchema.nullable().optional(),
-  triggers: workflowTriggersSchema.optional(),
+  triggers: workflowTriggersSchema.omit({ updateBase: true }).optional(),
   triggersBefore: workflowTriggersSchema.nullable().optional(),
 });
 export type WorkflowControlAction = z.infer<typeof workflowControlActionSchema>;

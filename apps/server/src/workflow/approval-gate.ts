@@ -11,6 +11,8 @@ import {
 } from '@spark-outpost/contracts';
 import { outsideWriteGranted, outsideWriteSession } from './outside-write-grant.ts';
 import { forcePush } from '../approvals/git-commands.ts';
+import { stepBaseUpdate } from './step-base.ts';
+import { baseUpdateRoot } from '../approvals/base-update.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
 import { publishContext } from './publish-context.ts';
@@ -102,6 +104,8 @@ export interface GateDeps {
   changesProject?: boolean;
   askRun?: boolean;
   askEdits?: boolean;
+  askBaseUpdate?: boolean;
+  workRun?: boolean;
   askAuto?: () => Promise<string | null>;
   extraAllowlist?: () => readonly string[];
   append: Append;
@@ -119,6 +123,11 @@ export interface GateDeps {
 
 function autoAsked(deps: GateDeps, request: ApprovalRequest): boolean {
   return request.kind === 'execute' || (deps.askEdits === true && request.kind === 'edit');
+}
+
+async function baseUpdateFor(deps: GateDeps, request: ApprovalRequest) {
+  const root = deps.askBaseUpdate ? baseUpdateRoot(request) : null;
+  return root ? stepBaseUpdate(deps.db, root).catch(() => null) : null;
 }
 
 export async function forcePushDefault(request: ApprovalRequest): Promise<string | null> {
@@ -388,6 +397,8 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       changesProject: deps.changesProject === true,
       askRun: deps.askRun === true,
       askEdits: deps.askEdits === true,
+      baseUpdate: await baseUpdateFor(deps, request),
+      workRun: deps.workRun === true,
       askAutoWhy: autoAsked(deps, request) && deps.askAuto ? await deps.askAuto() : null,
       planningWhy: planningWhy(request),
       defaultBranch: await forcePushDefault(request),

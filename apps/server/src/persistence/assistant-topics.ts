@@ -1,7 +1,9 @@
 import type { AssistantEventKind, AssistantTopic } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
 
-const TOPIC_KINDS: Partial<Record<AssistantEventKind, AssistantTopic['kind']>> = {
+type AssistantTopicKind = Exclude<AssistantTopic['kind'], 'spark_settings'>;
+
+const TOPIC_KINDS: Partial<Record<AssistantEventKind, AssistantTopicKind>> = {
   topic_started: 'topic',
   history_cleared: 'cleared',
 };
@@ -36,6 +38,23 @@ export async function listAssistantTopics(
   return rows.map(toTopic);
 }
 
+async function sparkSettingsNotes(
+  db: Queryable,
+  conversationId: string,
+): Promise<AssistantTopic[]> {
+  const { rows } = await db.query<{ id: string; name: string; at: Date }>(
+    `SELECT id, name, at FROM chat_notes
+     WHERE conversation_id = $1 AND kind = 'spark_settings' ORDER BY at, id`,
+    [conversationId],
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    kind: 'spark_settings',
+    at: row.at.toISOString(),
+    name: row.name,
+  }));
+}
+
 export async function conversationTopics(
   db: Queryable,
   conversationId: string,
@@ -47,5 +66,6 @@ export async function conversationTopics(
      ORDER BY e.at, e.id`,
     [conversationId, Object.keys(TOPIC_KINDS)],
   );
-  return rows.map(toTopic);
+  const notes = await sparkSettingsNotes(db, conversationId);
+  return [...rows.map(toTopic), ...notes].sort((a, b) => a.at.localeCompare(b.at));
 }

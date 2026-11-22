@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { Teammate, WorkflowControlAction } from '@spark-outpost/contracts';
+import {
+  workflowTriggersSchema,
+  type Teammate,
+  type WorkflowControlAction,
+} from '@spark-outpost/contracts';
 import { getSchedule } from '../src/crew-flows/schedule-records.ts';
-import { getTriggers } from '../src/crew-flows/trigger-records.ts';
+import { getTriggers, saveTriggers } from '../src/crew-flows/trigger-records.ts';
 import { controlWorkflow } from '../src/crew-flows/workflow-control.ts';
 import { workflowStore } from '../src/crew-flows/workflow-store.ts';
 import { newId } from '../src/persistence/ids.ts';
@@ -173,6 +177,24 @@ describe('spark_workflow', () => {
     expect((await getTriggers(t.db, t.workspaceId, 'nightly'))?.triggers).toMatchObject({
       pullRequest: true,
       commit: true,
+    });
+  });
+
+  it('never changes whether steps may update the branch from its base', async () => {
+    await crew.setRun('bypassPermissions');
+    const stored = (await getTriggers(t.db, t.workspaceId, 'nightly'))?.triggers;
+    await saveTriggers(t.db, t.workspaceId, 'nightly', {
+      ...workflowTriggersSchema.parse(stored ?? {}),
+      updateBase: true,
+    });
+    await call('spark_workflow', {
+      action: 'triggers',
+      workflow: 'nightly',
+      triggers: { commit: true, updateBase: false },
+    });
+    expect((await getTriggers(t.db, t.workspaceId, 'nightly'))?.triggers).toMatchObject({
+      commit: true,
+      updateBase: true,
     });
   });
 

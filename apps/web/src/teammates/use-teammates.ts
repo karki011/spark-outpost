@@ -16,5 +16,7 @@ export function useTeammates() {
     error: list.error,
     teammates,
     starters: list.data?.starters ?? [],
+    defaultTeammateId:
+      list.data?.defaultTeammateId === deleting?.id ? null : (list.data?.defaultTeammateId ?? null),
   };
 }

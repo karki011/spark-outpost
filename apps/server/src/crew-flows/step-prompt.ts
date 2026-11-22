@@ -6,6 +6,7 @@ import {
   type WorkflowRunStatus,
   type WorkflowStepState,
 } from '@spark-outpost/contracts';
+import type { BaseUpdate } from '../approvals/base-update.ts';
 
 export const WORKFLOW_STEP_HEADER = '# A workflow step handed to you by Spark Outpost';
 export const TEST_RUN_NOTE =
@@ -29,6 +30,7 @@ export interface StepJob {
   earlier: readonly StepNote[];
   testRun?: boolean;
   edits?: 'yes' | 'no' | 'unsupported';
+  baseUpdate?: BaseUpdate | null;
   findings?: boolean;
   place?: string | null;
 }
@@ -37,11 +39,21 @@ export const STEP_EDITS_ACCESS =
   'You can read the project, run commands and change files in the project folder. File changes and commands that are not read-only follow your permission mode and may wait for the user to allow them. Leave your changes uncommitted: you cannot commit, push, open pull requests, install packages or change files with shell commands; use your edit tools.';
 export const STEP_EDITS_UNSUPPORTED =
   'This workflow lets steps change files, but your agent can only do that on Claude, so this step stays read-only: describe the changes instead of making them.';
+export function stepBaseUpdateAccess(update: BaseUpdate): string {
+  const merge = `git merge --no-edit ${update.base}`;
+  const how = update.rebase
+    ? `git rebase ${update.base} or ${merge}. This branch is not on the remote yet, so a rebase is allowed; once it is pushed, only a merge is`
+    : `${merge}. This branch is on the remote, so a rebase is refused: it would need a force push`;
+  return `You may also bring ${update.base} into this branch. Run each git command on its own, never chained with && or ;: ${how}. When the repository has an origin remote, run git fetch origin first and use origin/${update.base} instead of ${update.base}. Update only when the working tree is clean. Resolve conflicts with your edit tools, git add the resolved files and finish with GIT_EDITOR=true git merge --continue (or git rebase --continue); if you can't resolve them, run git merge --abort (or git rebase --abort) and say so. Don't push: the chat publishes the result.`;
+}
 const STEP_READ_ACCESS =
   'You can read the project and run commands. A command that is not read-only follows your permission mode and may wait for the user to allow it. You cannot change project files, commit, push or open pull requests.';
 
 function accessLine(job: StepJob): string {
   if (!job.hasProject) return 'This chat has no project folder, so work from the text below.';
+  if (job.edits === 'yes' && job.baseUpdate) {
+    return `${STEP_EDITS_ACCESS} ${stepBaseUpdateAccess(job.baseUpdate)}`;
+  }
   if (job.edits === 'yes') return STEP_EDITS_ACCESS;
   if (job.edits === 'unsupported') return `${STEP_READ_ACCESS} ${STEP_EDITS_UNSUPPORTED}`;
   return STEP_READ_ACCESS;

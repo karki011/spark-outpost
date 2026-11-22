@@ -26,6 +26,7 @@ interface TriggersRow {
   project_id: string | null;
   debounce_minutes: number;
   edits: boolean;
+  update_base: boolean;
 }
 
 function toStored(row: TriggersRow): StoredTriggers {
@@ -42,6 +43,7 @@ function toStored(row: TriggersRow): StoredTriggers {
       projectId: row.project_id,
       debounceMinutes: row.debounce_minutes,
       edits: row.edits,
+      updateBase: row.update_base,
     }),
   };
 }
@@ -56,6 +58,14 @@ export async function getTriggers(
     [workspaceId, workflowId],
   );
   return rows[0] ? toStored(rows[0]) : null;
+}
+
+export async function listTriggers(db: Queryable, workspaceId: string): Promise<StoredTriggers[]> {
+  const { rows } = await db.query<TriggersRow>(
+    'SELECT * FROM workflow_triggers WHERE workspace_id = $1 ORDER BY workflow_id',
+    [workspaceId],
+  );
+  return rows.map(toStored);
 }
 
 export type TriggerFlag =
@@ -88,14 +98,15 @@ export async function saveTriggers(
   const { rows } = await db.query<TriggersRow>(
     `INSERT INTO workflow_triggers (workspace_id, workflow_id, turn_changed, before_publish,
        hold_on_findings, on_commit, branch_glob, pull_request, chat_started, project_id,
-       debounce_minutes, edits)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       debounce_minutes, edits, update_base)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      ON CONFLICT (workspace_id, workflow_id) DO UPDATE SET
        turn_changed = EXCLUDED.turn_changed, before_publish = EXCLUDED.before_publish,
        hold_on_findings = EXCLUDED.hold_on_findings, on_commit = EXCLUDED.on_commit,
        branch_glob = EXCLUDED.branch_glob, pull_request = EXCLUDED.pull_request,
        chat_started = EXCLUDED.chat_started, project_id = EXCLUDED.project_id,
-       debounce_minutes = EXCLUDED.debounce_minutes, edits = EXCLUDED.edits, updated_at = now()
+       debounce_minutes = EXCLUDED.debounce_minutes, edits = EXCLUDED.edits,
+       update_base = EXCLUDED.update_base, updated_at = now()
      RETURNING *`,
     [
       workspaceId,
@@ -110,6 +121,7 @@ export async function saveTriggers(
       triggers.projectId,
       triggers.debounceMinutes,
       triggers.edits,
+      triggers.updateBase,
     ],
   );
   await db.query(

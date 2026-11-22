@@ -171,6 +171,25 @@ export async function copyChatAgent(db: Queryable, fromId: string, toId: string)
   ]);
 }
 
+export async function clearChatAgent(db: Queryable, conversationId: string): Promise<void> {
+  const row = await settingsRow(db, conversationId);
+  const overrides: Overrides = {};
+  for (const [provider, choices] of Object.entries(row.overrides) as [
+    ProviderId,
+    ProviderChoices,
+  ][]) {
+    const kept: ProviderChoices = { ...choices };
+    delete kept.model;
+    delete kept.effort;
+    delete kept.agentMode;
+    if (Object.keys(kept).length > 0) overrides[provider] = kept;
+  }
+  await db.query(`UPDATE conversations SET provider = NULL, overrides = $2 WHERE id = $1`, [
+    conversationId,
+    JSON.stringify(overrides),
+  ]);
+}
+
 export async function updateChatSettings(
   db: Queryable,
   conversationId: string,

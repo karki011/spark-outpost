@@ -89,3 +89,7 @@ export function handoffNote(results: readonly SparkResult[], continues: boolean)
     ...results.map((result) => resultLine(result, share)),
   ].join('\n');
 }
+
+export function withHandoffNote<T extends { prompt: string }>(input: T, note: string): T {
+  return { ...input, prompt: `${input.prompt}\n\n${note}` };
+}

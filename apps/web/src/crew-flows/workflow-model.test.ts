@@ -5,6 +5,7 @@ import {
   addStep,
   afterLabel,
   canMove,
+  dependencyChanges,
   moveStep,
   removeStep,
   stagePreview,
@@ -191,5 +192,20 @@ describe('suggestions from the crew', () => {
     expect(wrap.name).toBe('Then Ticketing wraps up');
     expect(workflowStages(wrap.steps)).toEqual([['security', 'lint', 'comment'], ['ticketing']]);
     for (const suggestion of suggestions) expect(noProblems(suggestion.steps)).toEqual([]);
+  });
+});
+
+describe('dependencyChanges', () => {
+  it('says which steps wait on something else after a move', () => {
+    const steps = review();
+    const labels = stepLabels(steps, SPARKS);
+    expect(dependencyChanges(steps, moveStep(steps, 'lint', 'later'), labels)).toEqual([
+      'Lint: After Security · was Starts first',
+      'Comment: After Security · was After all of Stage 1',
+    ]);
+    expect(dependencyChanges(steps, moveStep(steps, 'comment', 'earlier'), labels)).toEqual([
+      'Comment: Starts first · was After all of Stage 1',
+    ]);
+    expect(dependencyChanges(steps, steps, labels)).toEqual([]);
   });
 });

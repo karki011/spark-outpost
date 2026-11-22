@@ -42,10 +42,26 @@ export function useSparksPageRequests(select: (request: SparksPageRequest) => vo
       pending = null;
       if (asked) select(asked);
     };
+    if (!pending && workflowPlace) pending = { sparkId: null, tab: 'workflows' };
     take();
     listeners.add(take);
     return () => {
       listeners.delete(take);
     };
   }, [select]);
+}
+
+export interface WorkflowPlace {
+  workflowId: string;
+  tab: string;
+}
+
+let workflowPlace: WorkflowPlace | null = null;
+
+export function rememberWorkflowPlace(place: WorkflowPlace | null): void {
+  workflowPlace = place;
+}
+
+export function rememberedWorkflowPlace(): WorkflowPlace | null {
+  return workflowPlace;
 }

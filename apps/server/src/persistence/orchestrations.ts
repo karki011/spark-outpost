@@ -2,6 +2,7 @@ import { checkpointKindSchema, translateMode, type ConfigValues } from '@spark-o
 import type {
   AgentRole,
   CheckpointKind,
+  InvolvementLevel,
   Depth,
   JevStatus,
   Orchestration,
@@ -92,6 +93,7 @@ export interface MemberFields {
 export interface NewChild extends MemberFields {
   parentRunId: string;
   mode: RunMode;
+  level: InvolvementLevel;
   prompt: string;
   agentMode?: string | null;
 }
@@ -118,7 +120,7 @@ export async function insertChildRun(
          agent_label, prompt, route, agent_mode, config_values)
        SELECT $1, p.conversation_id, p.user_message_id, $3, $4, $5, 'queued', p.task_id,
          (SELECT MAX(version) FROM run_artifacts a WHERE a.task_id = p.task_id AND a.kind = 'plan'),
-         $6, p.level, p.id, $7, $8, $9, $10, $11, $12, $13, $14
+         $6, $15, p.id, $7, $8, $9, $10, $11, $12, $13, $14
        FROM runs p WHERE p.id = $2`,
       [
         runId,
@@ -136,6 +138,7 @@ export async function insertChildRun(
         child.agentMode ??
           (from ? translateMode(from.provider, from.agent_mode, child.provider) : null),
         JSON.stringify(sameAgent ? from.config_values : {}),
+        child.level,
       ],
     );
     await client.query(

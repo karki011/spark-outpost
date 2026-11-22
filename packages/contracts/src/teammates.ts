@@ -162,6 +162,7 @@ export type TeammateStarterId = z.infer<typeof teammateStarterIdSchema>;
 export const teammateListSchema = z.object({
   teammates: z.array(teammateViewSchema),
   starters: z.array(teammateStarterIdSchema),
+  defaultTeammateId: z.uuid().nullable().default(null),
 });
 export type TeammateList = z.infer<typeof teammateListSchema>;
 
@@ -222,6 +223,12 @@ export const teammateChatSchema = z.object({
   teammate: teammateTagSchema.nullable(),
 });
 export type TeammateChat = z.infer<typeof teammateChatSchema>;
+
+export const TEAMMATE_FOLLOWED_FIELDS = ['provider', 'model', 'effort', 'agentMode'] as const;
+
+export function sparkSettingsLine(name: string): string {
+  return `${name}’s settings changed. This chat now uses them.`;
+}
 
 export interface TeammateStarter {
   id: TeammateStarterId;

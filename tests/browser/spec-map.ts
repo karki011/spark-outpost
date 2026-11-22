@@ -174,6 +174,7 @@ export const SPEC_GROUPS = {
     'crew-run-view',
     'crew-schedule',
     'crew-test-run',
+    'crew-triggers',
   ],
   sparks: [
     'crew-builder',
@@ -182,6 +183,7 @@ export const SPEC_GROUPS = {
     'spark-crew-edit',
     'spark-decisions',
     'spark-mention',
+    'spark-setup',
     'spark-sheet',
     'sparks',
     'sparks-page',

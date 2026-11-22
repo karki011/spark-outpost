@@ -15,7 +15,8 @@ import { guardedTargets, heldGuards } from './guarded-targets.ts';
 export { secretLabels } from './guarded-targets.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { NO_FILES, type FileLister } from './file-lister.ts';
-import { ASK_RUN_REASON, askRunRefusal, stepEditInside } from './ask-run.ts';
+import { ASK_RUN_REASON, askRunRefusal, stepEditInside, workRunChange } from './ask-run.ts';
+import { baseUpdateVerdict, type BaseUpdate } from './base-update.ts';
 import type { SparkRuleContext } from './gh-rules.ts';
 import {
   askedForRule,
@@ -140,6 +141,8 @@ export interface DecideOptions {
   files?: FileLister;
   askRun?: boolean;
   askEdits?: boolean;
+  baseUpdate?: BaseUpdate | null;
+  workRun?: boolean;
   askAutoWhy?: string | null;
   planningWhy?: string | null;
   defaultBranch?: string | null;
@@ -225,7 +228,14 @@ function fixedRefusal(
     : null;
   if (stacked) return stacked;
   if (request.command && skipsPushHooks(request.command)) return PUSH_HOOKS_REASON;
-  const editing = options.askEdits === true && stepEditInside(request);
+  const working = options.workRun ? workRunChange(request, view) : null;
+  if (working) return working;
+  const updating = options.baseUpdate
+    ? baseUpdateVerdict(request.command, options.baseUpdate)
+    : null;
+  if (updating?.kind === 'refuse') return updating.reason;
+  const editing =
+    (options.askEdits === true && stepEditInside(request)) || updating?.kind === 'allow';
   const asking = options.askRun && !editing ? askRunChange(request, view) : null;
   if (asking) return asking;
   if (forced?.kind === 'refuse') return forced.reason;

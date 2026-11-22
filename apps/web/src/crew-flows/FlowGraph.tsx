@@ -28,6 +28,7 @@ interface FlowGraphProps {
   finished?: ReadonlySet<string>;
   asking?: ReadonlySet<string>;
   selected?: string | null;
+  onSelect?: (stepId: string) => void;
   label: string;
 }
 
@@ -37,10 +38,20 @@ type StepNodeData = {
   state: WorkflowStepState | null;
   selected: boolean;
   asking: boolean;
+  pickable: boolean;
 };
 type StepNode = Node<StepNodeData, 'step'>;
 
 const StepNodeView = memo(function StepNodeView({ data }: NodeProps<StepNode>) {
+  const face = (
+    <>
+      <SparkDot spark={data.spark} size={26} />
+      <span className="wf-node-text">
+        <b>{data.label}</b>
+        {data.state && <RunStepState state={data.state} asking={data.asking} />}
+      </span>
+    </>
+  );
   return (
     <div
       className="wf-node"
@@ -48,11 +59,18 @@ const StepNodeView = memo(function StepNodeView({ data }: NodeProps<StepNode>) {
       data-selected={data.selected || undefined}
     >
       <Handle className="wf-node-handle" type="target" position={Position.Left} />
-      <SparkDot spark={data.spark} size={26} />
-      <span className="wf-node-text">
-        <b>{data.label}</b>
-        {data.state && <RunStepState state={data.state} asking={data.asking} />}
-      </span>
+      {data.pickable ? (
+        <button
+          type="button"
+          className="wf-node-pick nodrag nopan"
+          aria-pressed={data.selected}
+          aria-label={`Edit ${data.label}`}
+        >
+          {face}
+        </button>
+      ) : (
+        face
+      )}
       <Handle className="wf-node-handle" type="source" position={Position.Right} />
     </div>
   );
@@ -84,6 +102,7 @@ function Canvas({
   finished,
   asking,
   selected,
+  onSelect,
   label,
 }: FlowGraphProps) {
   const flow = useReactFlow();
@@ -116,11 +135,12 @@ function Canvas({
             state: states?.[step.id] ?? null,
             selected: selected === step.id,
             asking: asking?.has(step.id) ?? false,
+            pickable: onSelect !== undefined,
           },
         },
       ];
     });
-  }, [layout, steps, labels, sparks, states, selected, asking]);
+  }, [layout, steps, labels, sparks, states, selected, asking, onSelect]);
 
   const edges = useMemo<Edge[]>(() => {
     if (!layout) return [];
@@ -167,6 +187,7 @@ function Canvas({
         selectionKeyCode={null}
         multiSelectionKeyCode={null}
         zoomOnDoubleClick={false}
+        {...(onSelect ? { onNodeClick: (_event, node) => onSelect(node.id) } : {})}
       >
         <Background variant={BackgroundVariant.Dots} gap={24} size={1.2} />
       </ReactFlow>

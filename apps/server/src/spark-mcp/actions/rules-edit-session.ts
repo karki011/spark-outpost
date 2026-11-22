@@ -69,6 +69,7 @@ interface SessionRow {
   modes: { id?: unknown; label?: unknown }[] | null;
   session_row: string | null;
   source: string | null;
+  spark_child: boolean;
 }
 
 const USER_SOURCES: ReadonlySet<string> = new Set(['ui', 'queue', 'e2e']);
@@ -79,7 +80,7 @@ function modeNameOf(modes: SessionRow['modes'], mode: string | null): string {
 }
 
 function typedByUser(row: SessionRow): boolean {
-  return row.source !== null && USER_SOURCES.has(row.source);
+  return !row.spark_child && row.source !== null && USER_SOURCES.has(row.source);
 }
 
 export async function rulesSession(db: Queryable, runId: string): Promise<RulesSession | null> {
@@ -87,6 +88,7 @@ export async function rulesSession(db: Queryable, runId: string): Promise<RulesS
     `SELECT r.provider, r.agent_mode, cap.modes,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               AS source,
+            COALESCE(r.role = 'spark', false) AS spark_child,
             (SELECT s.id FROM provider_sessions s
              WHERE s.conversation_id = r.conversation_id AND s.provider = r.provider
                AND s.closed_at IS NULL AND starts_with(s.agent_key, 'chat:')

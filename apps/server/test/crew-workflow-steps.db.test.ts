@@ -176,6 +176,7 @@ describe('restart recovery', () => {
         model: null,
         effort: null,
         mode: 'chat',
+        level: 'hands-off',
         prompt: 'first',
         route: {
           name: 'Pip',

@@ -154,6 +154,7 @@ GET /api/teammates
 POST /api/teammate-starters/:starter/dismiss
 POST /api/teammates/:id/home
 PUT /api/conversations/:id/teammate
+POST /api/conversations/:id/default-teammate
 GET /api/tickets
 GET /api/tickets/:source/:key
 GET /api/tickets/attention-settings
@@ -283,6 +284,9 @@ GET /api/workflows/:id
 PUT /api/workflows/:id
 DELETE /api/workflows/:id
 GET /api/workflows/:id/runs
+GET /api/workflows/:id/usage
+GET /api/teammates/:id/usage
+PUT /api/teammate-default
 POST /api/workflows/:id/runs
 GET /api/workflow-runs/of-turn/:id
 GET /api/workflow-runs/:id
@@ -299,6 +303,7 @@ GET /api/workflows/:id/schedule
 PUT /api/workflows/:id/schedule
 DELETE /api/workflows/:id/schedule
 GET /api/workflows/:id/schedule/slots
+GET /api/workflow-triggers
 GET /api/workflows/:id/triggers
 PUT /api/workflows/:id/triggers
 DELETE /api/workflows/:id/triggers

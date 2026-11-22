@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { SaveWorkflow } from '@spark-outpost/contracts';
+import type { SaveWorkflow, StartWorkflowRun } from '@spark-outpost/contracts';
 import { workflowKeys, workflowsApi } from './workflows-api.ts';
 
 export function useWorkflows() {
@@ -37,5 +37,8 @@ export function useDeleteWorkflow() {
 }
 
 export function useStartWorkflowRun() {
-  return useMutation({ mutationFn: (id: string) => workflowsApi.startRun(id) });
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string } & Partial<StartWorkflowRun>) =>
+      workflowsApi.startRun(id, input),
+  });
 }

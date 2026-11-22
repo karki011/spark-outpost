@@ -25,6 +25,7 @@ export const workflowTriggersSchema = z.object({
   projectId: z.uuid().nullable().default(null),
   debounceMinutes: z.number().int().min(0).max(TRIGGER_DEBOUNCE_MAX).default(0),
   edits: z.boolean().default(false),
+  updateBase: z.boolean().default(false),
 });
 export type WorkflowTriggers = z.infer<typeof workflowTriggersSchema>;
 
@@ -84,6 +85,11 @@ export const workflowTriggersViewSchema = z.object({
   holds: z.array(publishHoldSchema),
 });
 export type WorkflowTriggersView = z.infer<typeof workflowTriggersViewSchema>;
+
+export const workflowTriggersListSchema = z.object({
+  triggers: z.array(z.object({ workflowId: crewSlugSchema, triggers: workflowTriggersSchema })),
+});
+export type WorkflowTriggersList = z.infer<typeof workflowTriggersListSchema>;
 
 export function anyTriggerOn(triggers: WorkflowTriggers): boolean {
   return (

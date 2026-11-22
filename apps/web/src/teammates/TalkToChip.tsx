@@ -16,7 +16,7 @@ function talkState(detail: ConversationDetail) {
 export function TalkToChip({ conversationId }: { conversationId: string }) {
   const menuId = useId();
   const client = useQueryClient();
-  const { teammates } = useTeammates();
+  const { teammates, defaultTeammateId } = useTeammates();
   const chat = useQuery({
     queryKey: queryKeys.conversation(conversationId),
     queryFn: () => api.getConversation(conversationId),
@@ -102,7 +102,10 @@ export function TalkToChip({ conversationId }: { conversationId: string }) {
             </span>
             <span>
               <b>{entry.name}</b>
-              <small>{entry.role || 'Spark'}</small>
+              <small>
+                {entry.role || 'Spark'}
+                {entry.id === defaultTeammateId && ' · Used for new chats'}
+              </small>
             </span>
             <TickIcon />
           </button>

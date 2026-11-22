@@ -339,15 +339,27 @@ async function dismissedStarters(db: Queryable, workspaceId: string): Promise<st
   return rows[0]?.dismissed ?? [];
 }
 
+export async function defaultTeammateId(
+  db: Queryable,
+  workspaceId: string,
+): Promise<string | null> {
+  const { rows } = await db.query<{ id: string | null }>(
+    'SELECT default_teammate_id AS id FROM profiles WHERE workspace_id = $1',
+    [workspaceId],
+  );
+  return rows[0]?.id ?? null;
+}
+
 export async function teammateList(
   db: Queryable,
   workspaceId: string,
   now = new Date(),
 ): Promise<TeammateList> {
-  const [teammates, signals, dismissed] = await Promise.all([
+  const [teammates, signals, dismissed, defaultId] = await Promise.all([
     listTeammates(db, workspaceId),
     chatSignals(db, workspaceId),
     dismissedStarters(db, workspaceId),
+    defaultTeammateId(db, workspaceId),
   ]);
   const taken = new Set(teammates.map((teammate) => teammate.name.toLowerCase()));
   return {
@@ -361,6 +373,7 @@ export async function teammateList(
     starters: TEAMMATE_STARTER_IDS.filter(
       (id) => !dismissed.includes(id) && !taken.has(id.toLowerCase()),
     ),
+    defaultTeammateId: defaultId,
   };
 }
 

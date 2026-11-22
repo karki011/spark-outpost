@@ -8,6 +8,12 @@ import { turnOffEdits, type TurnWorkflowRun } from './run-records.ts';
 
 export const EDITS_OFF_NOTE =
   'This workflow may change files, but this chat has no worktree of its own, so its steps only read. Changes are made only in a chat’s own worktree, never in your checkout.';
+export const UPDATE_OFF_NOTE =
+  'This workflow may update the branch from its base, but this chat has no worktree of its own, so its steps only read. A branch is updated only in a chat’s own worktree, never in your checkout.';
+
+function changesFiles(turn: TurnWorkflowRun): boolean {
+  return turn.edits || turn.updateBase;
+}
 
 async function chatCopy(h: Handoff): Promise<string | null> {
   if (h.input.mode !== 'do' || h.input.chatFolder) return null;
@@ -20,19 +26,19 @@ export async function prepareStepEdits(
   h: Handoff,
   turn: TurnWorkflowRun,
 ): Promise<TurnWorkflowRun> {
-  if (!turn.edits) return turn;
+  if (!changesFiles(turn)) return turn;
   const copy = await chatCopy(h);
   if (!copy) {
     await turnOffEdits(h.deps.db, turn.run.id);
-    await planNote(h.append, EDITS_OFF_NOTE);
-    return { ...turn, edits: false };
+    await planNote(h.append, turn.edits ? EDITS_OFF_NOTE : UPDATE_OFF_NOTE);
+    return { ...turn, edits: false, updateBase: false };
   }
   await takeSnapshot(h.deps.db, h.lease.runId, copy);
   return turn;
 }
 
 export async function keepStepEdits(h: Handoff, turn: TurnWorkflowRun): Promise<void> {
-  if (!turn.edits) return;
+  if (!changesFiles(turn)) return;
   const { db } = h.deps;
   const { workspaceId, level } = h.input;
   const changes = await runChanges(db, workspaceId, h.lease.runId, true).catch(() => null);

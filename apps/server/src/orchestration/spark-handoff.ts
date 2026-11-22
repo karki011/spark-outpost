@@ -3,6 +3,7 @@ import {
   mainAgentContinues,
   sparkWho,
   withoutShadowed,
+  type SparkOrigin,
 } from '@spark-outpost/contracts';
 import { workflowTurn } from '../crew-flows/workflow-turn.ts';
 import { workflowStore } from '../crew-flows/workflow-store.ts';
@@ -25,7 +26,9 @@ import {
   settingsRoute,
   type Handoff,
 } from './spark-child.ts';
-import { handoffNote, sparkJobPrompt, type SparkResult } from './spark-job.ts';
+import { mentionOrigin } from './typed-on-mac.ts';
+import { sparkWorkMark } from './spark-work.ts';
+import { handoffNote, sparkJobPrompt, withHandoffNote, type SparkResult } from './spark-job.ts';
 
 export const ALL_SPARKS_FAILED = 'The Spark could not finish this job.';
 
@@ -43,14 +46,23 @@ async function jobContext(db: Db, input: RunInput) {
   };
 }
 
-async function runSpark(
-  h: Handoff,
-  spark: MentionableSpark,
-  index: number,
-  prompt: string,
-  only: boolean,
-): Promise<SparkResult> {
+interface SparkJobRun {
+  spark: MentionableSpark;
+  index: number;
+  prompt: string;
+  only: boolean;
+  origin: SparkOrigin;
+}
+
+async function runSpark(h: Handoff, job: SparkJobRun): Promise<SparkResult> {
+  const { spark, index, prompt, only, origin } = job;
   const settings = settingsFor(h, spark, { inChat: true, appliesOwnMode: true });
+  const work = await sparkWorkMark(h.deps.db, h.input, {
+    kind: 'mention',
+    origin,
+    spark,
+    settings,
+  });
   const result = await runSparkChild(h, {
     role: 'spark',
     stepIndex: index,
@@ -62,7 +74,7 @@ async function runSpark(
     route: {
       name: spark.name,
       routedBy: 'fixed',
-      spark: { id: spark.id, role: spark.role, only, ...settingsRoute(settings) },
+      spark: { id: spark.id, role: spark.role, only, origin, ...work, ...settingsRoute(settings) },
     },
   });
   return { spark, outcome: result.outcome, text: result.text, error: result.error };
@@ -116,11 +128,12 @@ export async function handToSparks(h: Handoff): Promise<RunInput | 'finished'> {
   });
   await updateOrchestration(deps.db, lease.runId, { phase: 'scouting' });
   const context = await jobContext(deps.db, input);
+  const origin = await mentionOrigin(deps.db, lease.runId);
   const results: SparkResult[] = [];
   for (const [index, { spark }] of mentions.entries()) {
     if (h.control.signal.aborted) break;
     const prompt = sparkJobPrompt({ spark, request: input.userRequest, ...context });
-    const result = await runSpark(h, spark, index, prompt, !continues);
+    const result = await runSpark(h, { spark, index, prompt, only: !continues, origin });
     if (result.outcome === 'lease_lost') return 'finished';
     results.push(result);
   }
@@ -132,9 +145,5 @@ export async function handToSparks(h: Handoff): Promise<RunInput | 'finished'> {
     return 'finished';
   }
   await publishOrchestration(h);
-  return {
-    ...input,
-    prompt: `${input.prompt}\n\n${note}`,
-    userRequest: `${input.userRequest}\n\n${note}`,
-  };
+  return withHandoffNote(input, note);
 }

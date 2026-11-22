@@ -18,6 +18,7 @@ import {
   type Handoff,
   type SettingsPlace,
 } from '../orchestration/spark-child.ts';
+import { sparkWorkMark } from '../orchestration/spark-work.ts';
 import { agentDefinitions } from '../agents/acp/agents.ts';
 import { draftChatSettings } from '../persistence/chat-settings.ts';
 import type { TurnResult } from '../workflow/agent-turn.ts';
@@ -30,6 +31,8 @@ import {
   type TurnWorkflowRun,
 } from './run-records.ts';
 import { checkoutStepLine, type PullPlace } from './pr-checkout.ts';
+import type { BaseUpdate } from '../approvals/base-update.ts';
+import { chatBaseUpdate } from '../workflow/step-base.ts';
 import { stepPlaceFor } from './step-place-gather.ts';
 import { stepJobPrompt, type StepNote } from './step-prompt.ts';
 import { runsInChat, stepSparks, type StepSpark } from './step-sparks.ts';
@@ -109,7 +112,13 @@ export function stepEditsOffered(provider: string): boolean {
   return definitions[provider]?.cli === 'claude';
 }
 
-function promptFor(run: Running, step: WorkflowStep, spark: StepSpark, editing: boolean): string {
+interface StepAccess {
+  editing: boolean;
+  updating: boolean;
+  base: BaseUpdate | null;
+}
+
+function promptFor(run: Running, step: WorkflowStep, spark: StepSpark, access: StepAccess): string {
   const { h, turn } = run;
   const review = run.options.review;
   if (turn.run.kind === 'review' && review) {
@@ -124,7 +133,7 @@ function promptFor(run: Running, step: WorkflowStep, spark: StepSpark, editing: 
       earlier: passedOn(run, step, turn.workflow),
     });
   }
-  const edits = turn.edits && hasProject(h.input) && turn.run.kind !== 'test';
+  const edits = (turn.edits || turn.updateBase) && hasProject(h.input) && turn.run.kind !== 'test';
   return stepJobPrompt({
     spark,
     workflowName: turn.workflow.name,
@@ -134,10 +143,21 @@ function promptFor(run: Running, step: WorkflowStep, spark: StepSpark, editing: 
     hasProject: hasProject(h.input),
     earlier: passedOn(run, step, turn.workflow),
     testRun: turn.run.kind === 'test',
-    edits: editing ? 'yes' : edits ? 'unsupported' : 'no',
+    edits: access.editing || access.updating ? 'yes' : edits ? 'unsupported' : 'no',
+    ...(access.base ? { baseUpdate: access.base } : {}),
     findings: run.options.findings === true,
     place: run.place,
   });
+}
+
+async function stepAccess(run: Running, provider: string): Promise<StepAccess> {
+  const { h, turn } = run;
+  const offered = hasProject(h.input) && turn.run.kind === 'run' && stepEditsOffered(provider);
+  const wantsBase = offered && turn.updateBase && run.options.pull?.kind !== 'checkout';
+  const base = wantsBase
+    ? await chatBaseUpdate(h.deps.db, h.input.identity.threadId).catch(() => null)
+    : null;
+  return { editing: offered && turn.edits, updating: base !== null, base };
 }
 
 async function launch(run: Running, step: WorkflowStep, index: number): Promise<StepEnd> {
@@ -154,9 +174,20 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
     place: run.defaults,
   });
   const testRun = turn.run.kind === 'test';
-  const edits = turn.edits && hasProject(h.input) && !testRun;
-  const editing = edits && stepEditsOffered(settings.provider);
+  const access = await stepAccess(run, settings.provider);
+  const editing = access.editing || access.updating;
   try {
+    const work = editing
+      ? {}
+      : await sparkWorkMark(h.deps.db, h.input, {
+          kind: 'step',
+          origin: 'step',
+          spark,
+          settings,
+          reviewRun,
+          testRun,
+          beforePublish: turn.triggerKind === 'before_publish',
+        });
     const result = await runSparkChild(
       h,
       {
@@ -166,7 +197,7 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
         agentLabel: sparkWho(spark),
         ...childFields(settings),
         mode: hasProject(h.input) ? 'ask' : 'chat',
-        prompt: promptFor(run, step, spark, editing),
+        prompt: promptFor(run, step, spark, access),
         route: {
           name: spark.name,
           routedBy: 'fixed',
@@ -177,6 +208,8 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
             step: step.id,
             ...(testRun ? { test: true } : {}),
             ...(editing ? { edits: true } : {}),
+            ...(access.updating ? { updateBase: true } : {}),
+            ...work,
             ...(reviewRun ? { review: true } : {}),
             ...settingsRoute(settings),
           },

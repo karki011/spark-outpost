@@ -143,6 +143,7 @@ describe('where a step’s inherited settings come from', () => {
         model: null,
         effort: null,
         mode: 'ask',
+        level: 'hands-off',
         prompt: 'Read the ticket.',
         agentMode,
         route: { name: 'Pip', routedBy: 'fixed' },

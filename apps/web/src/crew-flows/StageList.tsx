@@ -1,8 +1,8 @@
-import { useLayoutEffect, useRef, useState } from 'react';
 import { workflowStages, type WorkflowProblem, type WorkflowStep } from '@spark-outpost/contracts';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
+import { WarnIcon } from '../ui/icons.tsx';
 import { sparkChoices, type CrewSpark } from './spark-lookup.ts';
-import { StepRow, stepControl, type EditSteps } from './StepRow.tsx';
+import { SparkDot } from './StagePreview.tsx';
 import { addStage, addStep, afterLabel } from './workflow-model.ts';
 
 interface StageListProps {
@@ -11,12 +11,13 @@ interface StageListProps {
   sparks: readonly CrewSpark[];
   sparkById: ReadonlyMap<string, CrewSpark>;
   problems: readonly WorkflowProblem[];
-  onChange: (steps: WorkflowStep[]) => void;
+  selected: string | null;
+  onSelect: (stepId: string) => void;
+  onAdd: (steps: WorkflowStep[]) => void;
 }
 
-function newStepId(before: readonly WorkflowStep[], after: readonly WorkflowStep[]): string | null {
-  const known = new Set(before.map((step) => step.id));
-  return after.find((step) => !known.has(step.id))?.id ?? null;
+export function stepButton(stepId: string): string {
+  return `[data-step="${stepId}"] [data-act="select"]`;
 }
 
 export function StageList({
@@ -25,38 +26,20 @@ export function StageList({
   sparks,
   sparkById,
   problems,
-  onChange,
+  selected,
+  onSelect,
+  onAdd,
 }: StageListProps) {
-  const root = useRef<HTMLDivElement>(null);
-  const focusNext = useRef<string | null>(null);
-  const [open, setOpen] = useState<string | null>(null);
   const stages = workflowStages(steps);
   const byId = new Map(steps.map((step) => [step.id, step]));
   const choices = sparkChoices(sparks);
-
-  useLayoutEffect(() => {
-    const selector = focusNext.current;
-    if (selector === null) return;
-    focusNext.current = null;
-    root.current?.querySelector<HTMLElement>(selector)?.focus();
-  });
-
-  const edit: EditSteps = (change, focus) => {
-    focusNext.current = focus ?? null;
-    onChange(change(steps));
-  };
-  const add = (next: WorkflowStep[]) => {
-    const id = newStepId(steps, next);
-    focusNext.current = id ? stepControl(id, 'details') : null;
-    onChange(next);
-  };
   const pick = (sparkId: string, place: (spark: CrewSpark) => WorkflowStep[]) => {
     const spark = sparkById.get(sparkId);
-    if (spark) add(place(spark));
+    if (spark) onAdd(place(spark));
   };
 
   return (
-    <div className="wf-stages" ref={root}>
+    <div className="wf-stages">
       {stages.map((stage, index) => (
         <section key={stage[0]} className="wf-stage" aria-label={`Stage ${index + 1}`}>
           <h4 className="wf-stage-h">
@@ -66,21 +49,31 @@ export function StageList({
           <ul className="wf-steps">
             {stage.map((id) => {
               const step = byId.get(id)!;
+              const label = labels.get(id) ?? id;
+              const bad = problems.filter((problem) => problem.stepId === id).length;
               return (
-                <StepRow
-                  key={id}
-                  step={step}
-                  steps={steps}
-                  label={labels.get(id) ?? id}
-                  after={afterLabel(steps, id, labels)}
-                  labels={labels}
-                  sparks={sparks}
-                  sparkById={sparkById}
-                  problems={problems.filter((problem) => problem.stepId === id)}
-                  open={open === id}
-                  onToggle={() => setOpen(open === id ? null : id)}
-                  edit={edit}
-                />
+                <li key={id} className="wf-step" data-step={id} data-bad={bad > 0 || undefined}>
+                  <button
+                    type="button"
+                    className="wf-step-pick"
+                    data-act="select"
+                    aria-pressed={selected === id}
+                    aria-label={`Edit ${label}`}
+                    onClick={() => onSelect(id)}
+                  >
+                    <SparkDot spark={sparkById.get(step.sparkId)} size={26} />
+                    <span className="wf-step-name">
+                      <b>{label}</b>
+                      <small>{afterLabel(steps, id, labels)}</small>
+                    </span>
+                    {bad > 0 && (
+                      <span className="wf-state" data-state="failed">
+                        <WarnIcon />
+                        {bad === 1 ? 'Problem' : `${bad} problems`}
+                      </span>
+                    )}
+                  </button>
+                </li>
               );
             })}
           </ul>

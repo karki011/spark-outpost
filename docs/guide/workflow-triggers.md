@@ -8,11 +8,11 @@ summary: Have a workflow run in a chat when it starts, when a turn changes files
 
 A triggered workflow runs in the chat that set it off, on that chat's worktree and branch. About 2 minutes.
 
-1. Open **Sparks**, then **Workflows**, and choose **Edit** on a saved workflow.
-2. Open the **Triggers** tab and turn on the events you want.
-3. Pick **In project**, or leave **Any project**.
-4. Set **Wait after the last trigger** so a burst starts one run.
-5. Choose **Save triggers**.
+1. Open **Sparks**, then **Workflows**, and choose **Edit** on a workflow.
+2. Open **When it runs** and turn on the events you want.
+3. Under **Where**, pick a **Project**, or leave **Any project**. The schedule shares it.
+4. Set **Wait** so a burst starts one run.
+5. Choose **Save**.
 
 ## The events
 
@@ -31,7 +31,7 @@ Spark skips a run when the chat's changes match the last run. **A chat starts** 
 With **Hold the publish while Critical or High findings are open**, steps mark findings **[Critical]**, **[High]**, **[Medium]** or **[Low]**. A Critical or High finding, or an unfinished review, holds the publish.
 
 - Fix it; the next Full auto turn reviews again.
-- **Release hold** under **Held publishes**; the next Full auto turn publishes.
+- **Release hold** on the **Runs** tab; the next Full auto turn publishes.
 - Ask for the publish, or **Stop** the review to publish nothing.
 
 ## Let runs change files
