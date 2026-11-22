@@ -76,6 +76,9 @@ const postgres: Check = () =>
       passwordFile: path.join(dir, 'password'),
       port: await freePort(),
       log: (line) => lines.push(line),
+    }).catch((error: unknown) => {
+      const tail = lines.slice(-6).join(' / ');
+      throw new Error(`${(error as Error).message} Log: ${tail}`, { cause: error });
     });
     try {
       const pg = desktopRequire('pg') as PgModule;
