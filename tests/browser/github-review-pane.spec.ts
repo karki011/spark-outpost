@@ -471,3 +471,25 @@ test('the pull request list resizes by drag and keys and keeps its width', async
   await page.keyboard.press('Escape');
   await expectAxeClean(page);
 });
+
+test('a finished review copies as Markdown and goes to a chat as an attachment', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await stubReviews(page, { reviews: [review()] });
+  const { block } = await openPane(page);
+  await block.getByRole('button', { name: 'Copy review' }).click();
+  await expect(block.getByRole('button', { name: 'Copied' })).toBeVisible();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain(
+    'Review of acme/api#1 (Retry webhook deliveries 1), by Spark PR Reviewer',
+  );
+  expect(copied).toContain(PROSE);
+
+  await block.getByRole('button', { name: 'Send to chat' }).click();
+  await expect(page.getByRole('textbox', { name: 'Message' })).toContainText(
+    'Pull request acme/api#1: https://github.com/acme/api/pull/1',
+  );
+  await expect(page.getByText('review-pr-1.md')).toBeVisible();
+});

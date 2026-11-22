@@ -7,6 +7,7 @@ import { adoptApi } from '../chat/project/adopt-api.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { Glyph } from '../tickets/ticket-icons.tsx';
 import { githubKeys } from './github-api.ts';
+import { chatOpening } from './review/review-share.ts';
 
 const TITLE_LIMIT = 100;
 const LEFT_BEHIND = 'The new chat could not be removed.';
@@ -58,7 +59,7 @@ async function startOnBranch(item: GithubInboxItem, projectId: string): Promise<
 
 function startWithoutProject(item: GithubInboxItem): string {
   const id = newDraftId();
-  queueDraft(id, `Pull request ${item.repo}#${item.number}: ${item.url}\n\n`);
+  queueDraft(id, chatOpening(item));
   return id;
 }
 

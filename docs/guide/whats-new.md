@@ -11,6 +11,8 @@ summary: What changed in recent releases and what to do next.
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
 | GitHub: search, Start chat, reviewed groups     | [GitHub page](github-page.md#search).                      |
+| Copy a review or send it to a chat              | [Reviews](review-pull-requests.md).                        |
+| Workflow runs say which pull request they took  | [Workflows](workflow-in-chat.md).                          |
 | One tap sends on phones                         | [Use your phone](use-your-phone.md).                       |
 | Outposts are gone; agents split work instead    | [Sub-chats](sub-chats.md).                                 |
 | Old outpost requests read as from another chat  | Nothing to do.                                             |
@@ -60,4 +62,3 @@ summary: What changed in recent releases and what to do next.
 | **Thinking** expands; `/compact`; less “Running”           | [Follow a turn](follow-a-turn.md#see-whats-happening).                                   |
 | One meeting card; Join takes notes                         | [Take meeting notes](meetings.md).                                                       |
 | Saved sign-ins type with no card                           | [Save a test sign-in](use-the-browser.md#save-a-test-sign-in).                           |
-| Browser: address at top, one chat per tab                  | [Browse on your own](browse-on-your-own.md#chat-with-a-tab).                             |

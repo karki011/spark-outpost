@@ -148,7 +148,7 @@ export function GithubDetail({ item, now, onClose, onOpenChat }: GithubDetailPro
         <Fact label="Approved by">{names(item.approvedBy)}</Fact>
       </dl>
       {item.ticket && <TicketBlock ticket={item.ticket} />}
-      <ReviewBlock key={item.id} item={item} />
+      <ReviewBlock key={item.id} item={item} onOpenChat={onOpenChat} />
     </aside>
   );
 }
