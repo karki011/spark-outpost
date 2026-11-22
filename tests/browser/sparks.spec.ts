@@ -203,10 +203,10 @@ test('edit a Spark, then hold to delete with Undo; its chats stay @packaged', as
   await openSparksPage(page);
 
   await sparkCard(page, 'Wren').click();
-  const details = sparksMain(page).getByRole('tabpanel', { name: 'Details' });
+  const details = sparksMain(page).getByRole('tabpanel', { name: 'Setup' });
   await details.getByRole('textbox', { name: 'Role' }).fill('Docs and guides');
   await details.getByRole('button', { name: 'Save' }).click();
-  await expect(details.getByRole('status')).toContainText('Saved');
+  await expect(sparksMain(page).getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
   await backToRoster(page);
   await expect(sparkCard(page, 'Wren')).toContainText('Docs and guides');
 
