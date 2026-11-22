@@ -1,5 +1,5 @@
 import { readFile, stat } from 'node:fs/promises';
-import { gatePaths as path, nativeOrNull } from './gate-path.ts';
+import { gatePaths as path, nativeOrNull, toNativePath } from './gate-path.ts';
 import { browserOrigin } from '@spark-outpost/contracts';
 import {
   projectSecretValues,
@@ -65,9 +65,13 @@ async function withMainCheckouts(roots: readonly string[]): Promise<string[]> {
   return [...new Set([...roots, ...mains.filter((main): main is string => main !== null)])];
 }
 
+function nativeRoots(roots: readonly string[]): string[] {
+  return roots.map((root) => toNativePath(root));
+}
+
 async function secretSources(roots: readonly string[]): Promise<SecretSource[]> {
   const sources: SecretSource[] = [];
-  for (const root of await withMainCheckouts(roots)) {
+  for (const root of await withMainCheckouts(nativeRoots(roots))) {
     for (const file of await secretFiles(root)) {
       const values = (await secretFileValues(path.join(root, file))).filter(distinctive);
       if (values.length > 0) sources.push({ file, values });
@@ -152,7 +156,7 @@ export async function pushedSecretFiles(root: string, branch: string): Promise<s
 
 export async function turnSecretValues(roots: readonly string[]): Promise<string[]> {
   const nested = (await secretSources(roots)).flatMap((source) => source.values);
-  const values = [...(await projectSecretValues(roots)), ...nested];
+  const values = [...(await projectSecretValues(nativeRoots(roots))), ...nested];
   const encoded = values.flatMap((value) => [value, encodeURIComponent(value)]);
   return [...new Set(encoded)].sort((a, b) => b.length - a.length);
 }

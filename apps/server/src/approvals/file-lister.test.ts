@@ -84,3 +84,12 @@ describe('diskFiles listing', () => {
     expect(await diskFiles.walk(join(root, 'missing'))).toEqual([]);
   });
 });
+
+describe('diskFiles absolute globs', () => {
+  it('finds files for a pattern that names its folder in full', async () => {
+    const found = await diskFiles.glob(`${gate(root)}/*.py`, '/');
+    expect(found?.sort()).toEqual(
+      ['edited.py', 'ignored.py', 'new.py', 'tool.py'].map((name) => gate(join(root, name))),
+    );
+  });
+});

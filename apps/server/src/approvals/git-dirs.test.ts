@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { toGatePath } from './gate-path.ts';
-import { gitControlGlobs, gitControlLabel, readGitDirs } from './git-dirs.ts';
+import { gateGitDirs, gitControlGlobs, gitControlLabel, readGitDirs } from './git-dirs.ts';
 
 let repo: string;
 const at = (...parts: string[]) => toGatePath(join(...parts));
@@ -30,11 +30,11 @@ const rootOf = async (path: string) => ({ path, gitDirs: await readGitDirs(path)
 describe('readGitDirs()', () => {
   it('finds one git folder for a checkout', async () => {
     const common = at(repo, '.git');
-    expect(await readGitDirs(repo)).toEqual({ common, own: common });
+    expect(gateGitDirs((await readGitDirs(repo))!)).toEqual({ common, own: common });
   });
 
   it("finds the checkout's git folder and the worktree's own one for a worktree", async () => {
-    expect(await readGitDirs(worktree)).toEqual({
+    expect(gateGitDirs((await readGitDirs(worktree))!)).toEqual({
       common: at(repo, '.git'),
       own: at(repo, '.git', 'worktrees', 'chat-1'),
       branch: 'refs/heads/spark/chat-1',

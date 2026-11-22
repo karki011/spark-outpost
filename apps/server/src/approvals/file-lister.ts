@@ -3,6 +3,7 @@ import { glob, readdir, readFile, realpath, stat } from 'node:fs/promises';
 import {
   gatePaths as path,
   gateRelative,
+  isWindowsPath,
   nativeOrNull,
   toGatePath,
   toNativePath,
@@ -103,18 +104,27 @@ async function readScript(target: string): Promise<ScriptFile | null> {
   }
 }
 
+function nativePattern(pattern: string): string {
+  if (!path.isAbsolute(pattern)) return pattern;
+  return gateRelative(toNativePath(pattern));
+}
+
+function gateMatch(match: string): string {
+  return isWindowsPath(match) ? toGatePath(match) : gateRelative(match);
+}
+
 async function globFiles(pattern: string, cwd: string): Promise<string[] | null> {
   const nativeCwd = nativeOrNull(cwd);
   if (nativeCwd === null) return [];
   try {
     const found: string[] = [];
-    const matches = glob(pattern, {
+    const matches = glob(nativePattern(pattern), {
       cwd: nativeCwd,
       exclude: (name) => SKIPPED_DIRS.has(path.basename(String(name))),
     });
     for await (const match of matches) {
       if (found.length >= MAX_ENTRIES) return null;
-      found.push(path.resolve(cwd, gateRelative(match)));
+      found.push(path.resolve(cwd, gateMatch(match)));
     }
     return found;
   } catch {

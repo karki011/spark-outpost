@@ -20,10 +20,8 @@ export async function readGitDirs(root: string): Promise<GitDirs | null> {
     'HEAD',
   ]).catch(() => null);
   if (!found || found.code !== 0) return null;
-  const [nativeCommon, nativeOwn, head] = found.stdout.trim().split(/\r?\n/);
-  if (!nativeCommon || !nativeOwn) return null;
-  const common = toGatePath(nativeCommon);
-  const own = toGatePath(nativeOwn);
+  const [common, own, head] = found.stdout.trim().split(/\r?\n/);
+  if (!common || !own) return null;
   const branch = own !== common && head?.startsWith('refs/heads/') ? head : null;
   return branch ? { common, own, branch } : { common, own };
 }
