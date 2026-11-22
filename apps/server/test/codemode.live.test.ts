@@ -34,6 +34,46 @@ function hasCombinedResult(output: unknown): boolean {
 }
 
 describe.each(['claude', 'codex'] as const)('live %s Code Mode', (id) => {
+  it('chooses Code Mode unprompted for several reads that need filtering', async () => {
+    const t = await createTestDb();
+    const recorded = recordedHooks();
+    const host = await startSparkMcpHost(toolDeps(t));
+    try {
+      await connectCliProvider(t, id);
+      const { conversationId, runId } = await startChat(t, 'Compare guide sections');
+      const provider = createAcpProvider({ definition: agentDefinitions[id], sparkTools: host });
+      let text = '';
+      const steps: string[] = [];
+      for await (const output of provider.run({
+        prompt:
+          'Using the Spark guide, tell me which of these sections mention approval cards: overview, providers, spark-tools, compaction, spark-own-tools, safety-floor. Reply with the section ids only.',
+        history: [],
+        settings: { method: 'cli', model: null, modelLabel: null, effort: 'low' },
+        signal: recorded.hooks.signal,
+        sparkScope: {
+          workspaceId: t.workspaceId,
+          conversationId,
+          runId,
+          codeMode: true,
+          actions: recorded.hooks,
+        },
+      })) {
+        if (output.kind === 'text_delta') text += output.delta;
+        if (output.kind === 'step_started') steps.push(output.name);
+      }
+      const innerReads = recorded.audited.filter((entry) => {
+        const event = entry as { method?: string; params?: { outcome?: string } };
+        return event.method === 'spark/code_mode_call' && event.params?.outcome === 'completed';
+      });
+      console.log(`${id} Code Mode unprompted`, { steps, innerReads: innerReads.length, text });
+      expect(innerReads.length).toBeGreaterThanOrEqual(3);
+    } finally {
+      recorded.stop();
+      await host.close();
+      await t.cleanup();
+    }
+  });
+
   it('discovers the tool and combines two guide reads in the local runtime', async () => {
     const t = await createTestDb();
     const recorded = recordedHooks();

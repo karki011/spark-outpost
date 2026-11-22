@@ -25,22 +25,28 @@ export function codeModeOffered(scope: Partial<SparkScope>): boolean {
 }
 
 export function codeModeTools(tools: readonly SparkTool[]): readonly SparkTool[] {
-  return tools.filter(
-    (tool) => Object.hasOwn(RESULT_HINTS, tool.name) && !tool.acts && !tool.assistantOnly,
-  );
+  return tools.filter((tool) => tool.name !== 'spark_execute');
 }
 
-export function describeCodeModeTools(tools: readonly SparkTool[], query?: string) {
-  const search = query?.trim().toLowerCase();
+export function listCodeModeTools(tools: readonly SparkTool[]) {
+  return codeModeTools(tools).map((tool) => ({
+    name: tool.name,
+    title: tool.title,
+    acts: tool.acts === true,
+  }));
+}
+
+export function describeCodeModeTools(tools: readonly SparkTool[], query: string) {
+  const search = query.trim().toLowerCase();
   return codeModeTools(tools)
-    .filter(
-      (tool) =>
-        !search || `${tool.name} ${tool.title} ${tool.description}`.toLowerCase().includes(search),
+    .filter((tool) =>
+      `${tool.name} ${tool.title} ${tool.description}`.toLowerCase().includes(search),
     )
     .map((tool) => ({
       name: tool.name,
       description: tool.description,
+      acts: tool.acts === true,
       inputSchema: z.toJSONSchema(z.object(tool.input), { io: 'input' }),
-      resultHint: RESULT_HINTS[tool.name],
+      ...(Object.hasOwn(RESULT_HINTS, tool.name) ? { resultHint: RESULT_HINTS[tool.name] } : {}),
     }));
 }

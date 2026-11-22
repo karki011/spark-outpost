@@ -14,7 +14,7 @@ export function CodeModeSetting({
       enabled={enabled && !unavailable}
       disabled={unavailable === true}
       label={CODE_MODE_LABEL}
-      info="Lets agents combine supported ticket, pull request and guide reads locally. Direct tools stay available. No additional permissions or Terminal changes."
+      info="Lets agents combine Spark tools in one local script. Each call keeps its card, mode and audit. Direct tools stay available. No Terminal changes."
       doc={{ page: 'settings', heading: 'code-mode' }}
       hint={(on) =>
         unavailable

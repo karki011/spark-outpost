@@ -203,7 +203,7 @@ export function friendlyStep(title: string, input?: unknown): string {
         ? input.arguments
         : input;
     return 'code' in args && typeof args.code === 'string' && args.code.trim()
-      ? 'Combining reads with Code Mode'
+      ? 'Combining tools with Code Mode'
       : 'Finding Code Mode tools';
   }
   if (mcp) return mcpStep(mcp);

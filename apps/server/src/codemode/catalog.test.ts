@@ -47,18 +47,20 @@ it('keeps listing and empty-search guide shapes distinct from successful matches
   });
 });
 
-it('advertises real input schemas for all five tools with defaulted fields omittable', () => {
-  const descriptions = describeCodeModeTools([...workTools, ...githubTools, docsTool, guideTool]);
-  expect(descriptions.map((tool) => tool.name).sort()).toEqual([
+it('advertises real input schemas and result hints with defaulted fields omittable', () => {
+  const hinted = describeCodeModeTools(
+    [...workTools, ...githubTools, docsTool, guideTool],
+    'spark_',
+  ).filter((tool) => tool.resultHint);
+  expect(hinted.map((tool) => tool.name).sort()).toEqual([
     'spark_docs',
     'spark_guide',
     'spark_pr',
     'spark_pull_requests',
     'spark_tickets',
   ]);
-  for (const tool of descriptions) {
+  for (const tool of hinted) {
     expect(tool.inputSchema.type).toBe('object');
-    expect(tool.resultHint).toBeTruthy();
     const required = tool.inputSchema.required ?? [];
     for (const field of ['limit', 'offset', 'action', 'state'])
       expect(required).not.toContain(field);

@@ -29,7 +29,7 @@ describe('ACP session update mapping', () => {
     expect(outputs).toContainEqual(
       expect.objectContaining({
         kind: 'step_started',
-        name: 'Combining reads with Code Mode',
+        name: 'Combining tools with Code Mode',
         toolKind: 'other',
         toolName: 'mcp.spark.spark_execute',
       }),
