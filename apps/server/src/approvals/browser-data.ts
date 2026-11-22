@@ -72,7 +72,7 @@ export function browserDataDir(
 }
 
 function caseFolded(text: string): string {
-  return process.platform === 'darwin' ? text.toLowerCase() : text;
+  return process.platform === 'darwin' || process.platform === 'win32' ? text.toLowerCase() : text;
 }
 
 function comparable(target: string): string {

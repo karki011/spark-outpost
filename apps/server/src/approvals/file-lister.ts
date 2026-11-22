@@ -67,7 +67,7 @@ async function walkTree(root: string): Promise<string[] | null> {
     const dir = pending.pop()!;
     for (const entry of await entriesOf(dir)) {
       if (files.length >= MAX_ENTRIES) return null;
-      const full = path.join(dir, entry.name);
+      const full = `${dir.replace(/\/+$/, '')}/${entry.name}`;
       if (entry.isDirectory()) {
         if (!SKIPPED_DIRS.has(entry.name)) pending.push(full);
       } else files.push(full);

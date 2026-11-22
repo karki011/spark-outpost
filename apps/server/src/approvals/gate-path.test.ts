@@ -43,4 +43,16 @@ describe('gate paths on Windows', () => {
     expect(isWindowsPath('/c/Users')).toBe(false);
     expect(isWindowsPath('http://x')).toBe(false);
   });
+
+  it('reads parent steps the Windows way before naming the drive', () => {
+    expect(toGatePath('C:\\..\\d\\secret.txt', 'win32')).toBe('/c/d/secret.txt');
+    expect(toGatePath('C:\\work\\file', 'win32')).toBe('/c/work/file');
+  });
+
+  it('turns a network share back into its Windows form', () => {
+    expect(nativeOrNull('//server/share/repo/a.ts', 'win32')).toBe('\\\\server\\share\\repo\\a.ts');
+    expect(toNativePath(toGatePath('\\\\server\\share\\repo', 'win32'), 'win32')).toBe(
+      '\\\\server\\share\\repo',
+    );
+  });
 });

@@ -7,6 +7,7 @@ import {
   type RunChange,
   type RunChanges,
 } from '@spark-outpost/contracts';
+import { toNativePath } from '../approvals/gate-path.ts';
 import { branchesStackedOn } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
 import {
@@ -104,7 +105,8 @@ export async function backupBeforeEdit(
   read: (target: string) => Promise<FileBefore> = readBefore,
 ): Promise<void> {
   if (snapshot.kind !== 'files') return;
-  for (const target of targets) {
+  for (const asked of targets) {
+    const target = toNativePath(asked);
     if (relativeInside(snapshot.root, target) === null) continue;
     const content = await read(target);
     if (content === 'not-a-file') continue;

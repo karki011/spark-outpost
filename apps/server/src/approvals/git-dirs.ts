@@ -42,7 +42,7 @@ function labelIn(dirs: GitDirs, target: string): string | null {
 }
 
 export function gitControlLabel(roots: readonly GitRoot[], target: string): string | null {
-  const written = toGatePath(target);
+  const written = path.normalize(toGatePath(target));
   for (const root of roots) {
     const label = root.gitDirs ? labelIn(gateGitDirs(root.gitDirs), written) : null;
     if (label) return label;

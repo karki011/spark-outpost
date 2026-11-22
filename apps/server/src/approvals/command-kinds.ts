@@ -1,5 +1,5 @@
-import { gatePaths as path } from './gate-path.ts';
 import {
+  programBase,
   programTokens,
   resolveCommandPath,
   splitSimpleCommands,
@@ -95,7 +95,7 @@ function bundleInstall(args: readonly string[]): boolean {
 function isInstall(tokens: readonly string[]): boolean {
   const [first, ...args] = programTokens(tokens);
   if (!first) return false;
-  const program = path.basename(first);
+  const program = programBase(first);
   if (PACKAGE_MANAGERS.has(program)) return jsInstall(program, args);
   if (program === 'bundle') return bundleInstall(args);
   if (PIPS.has(program) || PYTHONS.has(program) || program === 'uv') {
