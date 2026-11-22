@@ -68,6 +68,43 @@ async function freePort(): Promise<number> {
   return address.port;
 }
 
+function postgresBinary(): string {
+  const platform = isWindows ? 'windows' : process.platform;
+  const binaries = desktopRequire(`@embedded-postgres/${platform}-${process.arch}`) as {
+    postgres: string;
+  };
+  return binaries.postgres;
+}
+
+async function directRun(file: string, args: string[]): Promise<string> {
+  const child = spawn(file, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  let output = '';
+  child.stdout.on('data', (data) => {
+    output += String(data);
+  });
+  child.stderr.on('data', (data) => {
+    output += String(data);
+  });
+  const timer = setTimeout(() => child.kill(), 8_000);
+  const code = await new Promise<string>((resolve) => {
+    child.once('error', (error) => resolve(`spawn error ${error.message}`));
+    child.once('exit', (exitCode, signal) => resolve(`exit ${exitCode ?? signal}`));
+  });
+  clearTimeout(timer);
+  return `${code} ${output.trim().slice(-300)}`;
+}
+
+async function directPostgres(dataDir: string): Promise<string> {
+  try {
+    const binary = postgresBinary();
+    const version = await directRun(binary, ['--version']);
+    const start = await directRun(binary, ['-D', dataDir, '-p', String(await freePort())]);
+    return `version: ${version}; start: ${start}`;
+  } catch (error) {
+    return `could not run: ${(error as Error).message}`;
+  }
+}
+
 const postgres: Check = () =>
   withTempDir('spark-pg-', async (dir) => {
     const lines: string[] = [];
@@ -76,9 +113,12 @@ const postgres: Check = () =>
       passwordFile: path.join(dir, 'password'),
       port: await freePort(),
       log: (line) => lines.push(line),
-    }).catch((error: unknown) => {
+    }).catch(async (error: unknown) => {
       const tail = lines.slice(-6).join(' / ');
-      throw new Error(`${(error as Error).message} Log: ${tail}`, { cause: error });
+      const direct = await directPostgres(path.join(dir, 'data'));
+      throw new Error(`${(error as Error).message} Log: ${tail} Direct: ${direct}`, {
+        cause: error,
+      });
     });
     try {
       const pg = desktopRequire('pg') as PgModule;
