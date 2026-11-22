@@ -106,7 +106,7 @@ describe('browser data paths', () => {
     expect(isBrowserData(DATA, DATA)).toBe(true);
     expect(isBrowserData(`${DATA}/postgres/base/1`, DATA)).toBe(true);
     expect(isBrowserData(`${DATA.toLowerCase()}/partitions/x`, DATA)).toBe(
-      process.platform === 'darwin',
+      process.platform === 'darwin' || process.platform === 'win32',
     );
     expect(isBrowserData(`${DATA}/spark/chats/x/work/a`, DATA)).toBe(false);
     expect(isBrowserData(`${DATA}/logs/api.log`, DATA)).toBe(false);
