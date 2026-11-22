@@ -54,6 +54,13 @@ export async function applyConversationOptions(
     'UPDATE conversations SET session_type = $2, terminal_provider = $3 WHERE id = $1',
     [id, sessionType, provider],
   );
+  if (sessionType === 'terminal') {
+    await db.query(
+      `UPDATE conversations SET teammate_id = NULL, provider = NULL, overrides = '{}'
+       WHERE id = $1 AND teammate_id IS NOT NULL`,
+      [id],
+    );
+  }
   if (options.projectIds)
     await setConversationProjects(db, workspaceId, id, [...new Set(options.projectIds)]);
   if (options.title)

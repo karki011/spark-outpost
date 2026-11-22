@@ -6,8 +6,9 @@ export const ASSISTANT_ANSWER_LINKS_MAX = 3;
 
 export const assistantTopicSchema = z.object({
   id: z.uuid(),
-  kind: z.enum(['topic', 'cleared']),
+  kind: z.enum(['topic', 'cleared', 'spark_settings']),
   at: z.string(),
+  name: z.string().optional(),
 });
 export type AssistantTopic = z.infer<typeof assistantTopicSchema>;
 
