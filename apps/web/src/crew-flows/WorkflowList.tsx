@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import type { WorkflowRun, WorkflowSummary } from '@spark-outpost/contracts';
 import { PlusIcon, ResumeIcon, WarnIcon } from '../ui/icons.tsx';
-import { LastRun } from './RunsList.tsx';
+import { LastRun } from './LastRun.tsx';
 import { RunInChats } from './RunInChats.tsx';
-import { ScheduleChip } from './ScheduleChip.tsx';
 import type { CrewSpark } from './spark-lookup.ts';
 import { StagePreview } from './StagePreview.tsx';
 import { useStartWorkflowRun } from './use-workflows.ts';
+import { SavedWhenChips } from './WhenChips.tsx';
 
 interface WorkflowListProps {
   workflows: readonly WorkflowSummary[];
@@ -38,7 +38,7 @@ function WorkflowRow({
           {plural(steps, 'step')} · {plural(workflow.stages.length, 'stage')}
         </small>
         <StagePreview stages={workflow.stages} sparks={sparkById} />
-        <ScheduleChip workflowId={workflow.id} />
+        <SavedWhenChips workflowId={workflow.id} />
       </span>
       <span className="wf-row-status" role="status">
         {workflow.problems > 0 && (
@@ -69,7 +69,7 @@ function WorkflowRow({
         aria-label={`Run ${workflow.name}`}
         disabled={blocked || run.isPending}
         title={blocked ? 'Fix its problems in the editor first' : undefined}
-        onClick={() => run.mutate(workflow.id, { onSuccess: onOpenRun })}
+        onClick={() => run.mutate({ id: workflow.id }, { onSuccess: onOpenRun })}
       >
         <ResumeIcon />
         Run

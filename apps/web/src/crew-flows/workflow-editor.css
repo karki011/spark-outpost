@@ -32,6 +32,21 @@
   margin-left: auto;
 }
 
+.wf-load-back {
+  align-self: flex-start;
+  margin: 10px 16px;
+}
+
+.wf-editor > .page-tabs {
+  margin: 0;
+  padding: 0 14px;
+}
+
+.wf-problem .btn {
+  flex: none;
+  margin-left: auto;
+}
+
 .wf-notice {
   display: flex;
   flex-wrap: wrap;
@@ -65,6 +80,59 @@
   overflow-y: auto;
 }
 
+.wf-steps-tab > .wf-col {
+  width: min(340px, 32%);
+}
+
+.wf-inspector {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 12px;
+  width: min(340px, 32%);
+  padding: 16px;
+  border-left: 1px solid var(--line);
+  background: var(--panel);
+  overflow-y: auto;
+}
+
+.wf-inspector textarea {
+  resize: vertical;
+}
+
+.wf-inspector-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wf-inspector-head h3 {
+  flex: 1;
+  min-width: 0;
+  margin-left: 4px;
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-moved:empty {
+  display: none;
+}
+
+.wf-moved {
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.wf-moved ul {
+  margin: 2px 0 0;
+  padding-left: 16px;
+}
+
 .wf-col-right {
   width: min(380px, 42%);
   border-right: 0;
@@ -76,21 +144,6 @@
   flex: 1;
   min-width: 0;
   min-height: 320px;
-}
-
-.wf-canvas-cap {
-  position: absolute;
-  z-index: 5;
-  top: 10px;
-  left: 12px;
-  margin: 0;
-  padding: 3px 9px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  corner-shape: round;
-  background: var(--panel);
-  color: var(--muted);
-  font-size: 12px;
 }
 
 .wf-stages {
@@ -126,24 +179,41 @@
 }
 
 .wf-step {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 6px 8px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--bg);
 }
 
-.wf-step[data-bad] {
-  border-color: var(--danger);
-}
-
-.wf-step-row {
+.wf-step-pick {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wf-step-pick:hover {
+  background: var(--raise);
+}
+
+.wf-step-pick[aria-pressed='true'] {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.wf-step-pick:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.wf-step[data-bad] {
+  border-color: var(--danger);
 }
 
 .wf-step-name {
@@ -194,21 +264,6 @@
   outline-offset: 1px;
 }
 
-.wf-more .chev {
-  transition: transform 0.2s;
-}
-
-.wf-more[aria-expanded='true'] .chev {
-  transform: rotate(90deg);
-}
-
-.wf-step-more {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 4px 4px 8px;
-}
-
 .wf-fieldrow {
   display: flex;
   flex-direction: column;
@@ -248,10 +303,6 @@
   height: 15px;
   margin: 0;
   accent-color: var(--accent);
-}
-
-.wf-step-more textarea {
-  resize: vertical;
 }
 
 .wf-danger {
@@ -362,6 +413,8 @@
   }
 
   .wf-col,
+  .wf-steps-tab > .wf-col,
+  .wf-inspector,
   .wf-col-right {
     width: 100%;
     border-right: 0;

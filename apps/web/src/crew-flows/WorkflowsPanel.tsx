@@ -1,6 +1,7 @@
 import './crew-flows.css';
 import { useCallback, useMemo, useState } from 'react';
 import type { WorkflowRun, WorkflowStep } from '@spark-outpost/contracts';
+import { rememberWorkflowPlace, rememberedWorkflowPlace } from '../sparks-page/sparks-route.ts';
 import { WarnIcon } from '../ui/icons.tsx';
 import { NewWorkflow } from './NewWorkflow.tsx';
 import { useWorkflowRunRequests } from './run-route.ts';
@@ -31,13 +32,27 @@ function Problem({ text }: { text: string }) {
   );
 }
 
+function startView(): View {
+  const place = rememberedWorkflowPlace();
+  return place ? { kind: 'edit', id: place.workflowId } : { kind: 'list' };
+}
+
 export function WorkflowsPanel() {
-  const [view, setView] = useState<View>({ kind: 'list' });
+  const [view, setView] = useState<View>(startView);
   const list = useWorkflows();
   const crew = useCrewSparks();
   const file = useWorkflow(view.kind === 'edit' ? view.id : null);
   const suggestions = useMemo(() => suggestWorkflows(crew.sparks), [crew.sparks]);
-  const toList = () => setView({ kind: 'list' });
+  const toList = () => {
+    rememberWorkflowPlace(null);
+    setView({ kind: 'list' });
+  };
+  const edit = (id: string) => {
+    if (rememberedWorkflowPlace()?.workflowId !== id) {
+      rememberWorkflowPlace({ workflowId: id, tab: 'steps' });
+    }
+    setView({ kind: 'edit', id });
+  };
   useWorkflowRunRequests(
     useCallback((runId: string) => setView({ kind: 'run', runId, from: null }), []),
   );
@@ -59,7 +74,7 @@ export function WorkflowsPanel() {
           sparks={crew.sparks}
           sparkById={crew.byId}
           backLabel={from === null ? 'Workflows' : 'Back to the workflow'}
-          onBack={from === null ? toList : () => setView({ kind: 'edit', id: from })}
+          onBack={from === null ? toList : () => edit(from)}
         />
       </div>
     );
@@ -130,7 +145,7 @@ export function WorkflowsPanel() {
           workflows={list.data ?? []}
           sparkById={crew.byId}
           onNew={() => setView({ kind: 'new' })}
-          onEdit={(id) => setView({ kind: 'edit', id })}
+          onEdit={edit}
           onOpenRun={openRun(null)}
         />
       )}

@@ -101,3 +101,30 @@
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
+
+.wf-node:has(.wf-node-pick) {
+  padding: 0;
+}
+
+.wf-node-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wf-node-pick:hover {
+  background: var(--raise);
+}
+
+.wf-node-pick:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

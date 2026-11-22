@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { PublishHold, TriggerEvent } from '@spark-outpost/contracts';
 import {
+  branchProblem,
   defaultTriggers,
   eventRow,
   holdLine,
-  triggerProblem,
-  triggersSummary,
+  matchingBranches,
+  triggerLabels,
 } from './triggers-model.ts';
 
 const now = new Date(2026, 10, 14, 10, 0);
@@ -26,26 +27,42 @@ function event(extra: Partial<TriggerEvent>): TriggerEvent {
   };
 }
 
-describe('triggersSummary', () => {
-  it('says off when nothing is on and lists the events that are', () => {
-    expect(triggersSummary(null)).toBe('Off · no event starts this workflow');
-    expect(triggersSummary({ ...defaultTriggers(), turnChanged: true, commit: true })).toBe(
-      'On · runs when a turn changes files, a new commit',
-    );
-    expect(triggersSummary({ ...defaultTriggers(), chatStarted: true })).toBe(
-      'On · runs when a chat starts',
-    );
+describe('triggerLabels', () => {
+  it('names each trigger that is on, in the order the tab lists them', () => {
+    expect(triggerLabels(null)).toEqual([]);
+    expect(triggerLabels(defaultTriggers())).toEqual([]);
+    expect(
+      triggerLabels({ ...defaultTriggers(), beforePublish: true, commit: true, chatStarted: true }),
+    ).toEqual(['Chat starts', 'New commit', 'Before publish']);
   });
 });
 
-describe('triggerProblem', () => {
-  it('needs Before publish for a hold', () => {
-    expect(triggerProblem({ ...defaultTriggers(), holdOnFindings: true })).toBe(
-      'Holding a publish needs Before publish on.',
+describe('branchProblem', () => {
+  it('accepts globs a branch can match and names the ones it cannot', () => {
+    expect(branchProblem('')).toBeNull();
+    expect(branchProblem('spark/*, main release/**')).toBeNull();
+    expect(branchProblem('spark/*, feat..ure')).toMatch(/^feat\.\.ure can never match a branch/);
+    expect(branchProblem('-x /lead trail/ a:b')).toMatch(/^-x, \/lead, trail\/ and a:b can never/);
+  });
+});
+
+describe('matchingBranches', () => {
+  const branches = ['spark/a', 'spark/b', 'main', null, undefined, 'spark/a'];
+
+  it('lists the chat branches a pattern matches now', () => {
+    expect(matchingBranches('', branches)).toBe('Every branch.');
+    expect(matchingBranches('spark/*', branches)).toBe('Matches now: spark/a, spark/b.');
+    expect(matchingBranches('release/*', branches)).toBe(
+      'No chat is on a matching branch right now.',
     );
-    expect(
-      triggerProblem({ ...defaultTriggers(), beforePublish: true, holdOnFindings: true }),
-    ).toBeNull();
+    expect(matchingBranches('a..b', branches)).toBeNull();
+  });
+
+  it('counts the rest when many match', () => {
+    const many = Array.from({ length: 6 }, (_, index) => `spark/${index}`);
+    expect(matchingBranches('spark/*', many)).toBe(
+      'Matches now: spark/0, spark/1, spark/2, spark/3 and 2 more.',
+    );
   });
 });
 
