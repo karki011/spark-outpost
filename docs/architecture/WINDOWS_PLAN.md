@@ -188,7 +188,7 @@ From the npm registry and official docs:
 - **Codex sandbox paths (done):** Codex's permission profiles name folders (browser data, Sparks and workflows, a worktree's git data) as native Windows paths (`agents/acp/codex-permissions.ts`); macOS is unchanged.
 - **Shell tab folder (done):** Git Bash starts with `CHERE_INVOKING=1`, so its login profile stays in the tab's folder instead of moving to the home folder.
 - **Test temp folder:** the unit tests' temp sandbox sets `TEMP` and `TMP` as well as `TMPDIR` on Windows.
-- **Folders in use (gap):** Windows won't remove a folder a running shell is in, so "ends a shell when its folder is removed" can't happen there; Deleting a chat waits for its shells to stop before removing its worktree; a worktree released while a shell is still open in it (archiving) is still to handle. The crash-recovery installer test uses a POSIX script and runs only off Windows.
+- **Folders in use (done):** Windows won't remove a folder a running shell is in, so "ends a shell when its folder is removed" can't happen there; Deleting a chat waits for its shells to stop before removing its worktree, and archiving keeps a worktree while a shell, agent terminal tab, Terminal session or preview is still open in it or a folder below it, comparing paths in Windows form (`persistence/folder-in-use.ts`). The crash-recovery installer test uses a POSIX script and runs only off Windows.
 - **Git and keychain wording (done):** a missing Git points Windows at Git for Windows instead of Apple's command line tools (`gitInstallHint`), and the keychain wait names Windows Credential Manager.
 - **Line endings:** the Windows CI job turns off `core.autocrlf` so tests that read files back see the committed bytes.
 
@@ -196,6 +196,7 @@ From the npm registry and official docs:
 
 ## Phase 4 progress
 
+- **Mark-of-the-Web (done):** a download the user saves gets a `Zone.Identifier` stream with `ZoneId=3` on Windows (`apps/desktop/src/browser/quarantine.ts`), as the Mac writes `com.apple.quarantine`; the Windows unit run writes and reads it back.
 - **Unsigned installer (test only):** `pnpm desktop:package -- --platform win` (the default on Windows) builds a per-user NSIS installer for x64 (`apps/desktop/release/<version>/Spark-Outpost-<version>-windows-alpha-x64.exe`) with the app, server, web and Postgres, and none of the Mac helpers (tmux, Mac control, calendar, voice, no-activate). Postgres keeps its whole `bin` folder on Windows (its DLLs sit beside `pg_ctl.exe`, `initdb.exe` and `postgres.exe`), and node-pty keeps its `win32-x64` prebuild with ConPTY. `--release` is refused on Windows until Authenticode signing and a Windows update feed exist. The **installer** job in `.github/workflows/windows.yml` builds it, installs it silently, starts Postgres from the installed files, launches the installed app with a temporary data folder, uninstalls it, and keeps the installer as a 3-day CI artifact; it is never published.
 
 ## Still unverified (needs a Windows machine)
