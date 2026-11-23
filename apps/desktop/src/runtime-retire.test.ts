@@ -5,6 +5,8 @@ import path from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { isRuntimeHost, namesRuntimeHost, recordedPid, retireHost } from './runtime-retire.ts';
 
+const signalled = (signal: NodeJS.Signals) => (process.platform === 'win32' ? null : signal);
+
 let folder: string;
 const children: ChildProcess[] = [];
 
@@ -79,7 +81,7 @@ describe('retiring an earlier runtime host', () => {
   it('terminates a host that does not answer, then kills one that ignores the signal', async () => {
     const quiet = await host('quiet', '');
     await retireHost({ directory: quiet.directory, pid: quiet.pid, stop: null, timeoutMs: 5_000 });
-    expect(await quiet.exited).toBe('SIGTERM');
+    expect(await quiet.exited).toBe(signalled('SIGTERM'));
     const stubborn = await host('stubborn', `process.on('SIGTERM', () => {})`);
     await retireHost({
       directory: stubborn.directory,
@@ -87,7 +89,7 @@ describe('retiring an earlier runtime host', () => {
       stop: () => new Promise(() => undefined),
       timeoutMs: 300,
     });
-    expect(await stubborn.exited).toBe('SIGKILL');
+    expect(await stubborn.exited).toBe(signalled('SIGKILL'));
   });
 
   it("never signals a process that is not this directory's runtime host", async () => {

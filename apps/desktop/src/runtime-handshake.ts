@@ -22,8 +22,8 @@ export function runtimePaths(
   directory: string,
   platform: NodeJS.Platform = process.platform,
 ): RuntimePaths {
-  const files = platform === 'win32' ? path.win32 : path;
-  const socket = platform === 'win32' ? pipeName(directory) : path.join(directory, 'control.sock');
+  const files = platform === 'win32' ? path.win32 : path.posix;
+  const socket = platform === 'win32' ? pipeName(directory) : files.join(directory, 'control.sock');
   if (!isPipe(socket) && Buffer.byteLength(socket) > SOCKET_PATH_LIMIT)
     throw new Error(`The data folder path is too long for the local runtime socket: ${socket}`);
   return {

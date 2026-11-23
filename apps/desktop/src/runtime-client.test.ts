@@ -8,6 +8,9 @@ import { pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { LocalRuntime } from './runtime-client.ts';
+import { runtimePaths } from './runtime-handshake.ts';
+
+const signalled = (signal: NodeJS.Signals) => (process.platform === 'win32' ? null : signal);
 
 let bundle: string;
 let folder: string;
@@ -106,6 +109,7 @@ describe('independent local runtime', () => {
     ) as Record<string, unknown>;
     expect(endpoint.port).toBeUndefined();
     expect(endpoint.pid).toEqual(expect.any(Number));
+    if (process.platform === 'win32') return;
     expect((await stat(directory)).mode & 0o777).toBe(0o700);
     expect((await stat(path.join(directory, 'token'))).mode & 0o777).toBe(0o600);
     expect((await stat(path.join(directory, 'endpoint.json'))).mode & 0o777).toBe(0o600);
@@ -149,9 +153,7 @@ describe('independent local runtime', () => {
       path.join(directory, 'endpoint.json'),
       JSON.stringify({ port, pid: process.pid }),
     );
-    await new Promise<void>((resolve) =>
-      local.listen(path.join(directory, 'control.sock'), resolve),
-    );
+    await new Promise<void>((resolve) => local.listen(runtimePaths(directory).socket, resolve));
     local.on('connection', () => local.close());
     const runtime = await connect(userData);
     expect(received).toContain('hello');
@@ -163,7 +165,7 @@ describe('independent local runtime', () => {
   it('refuses a local connection that has not proven it holds the token', async () => {
     const userData = await mkdtemp(path.join(folder, 'u-'));
     const runtime = await connect(userData);
-    const socketPath = path.join(userData, 'runtime/control.sock');
+    const socketPath = runtimePaths(path.join(userData, 'runtime')).socket;
     const frames = [
       { id: randomUUID(), request: { kind: 'info' } },
       { id: randomUUID(), token: 'wrong'.repeat(8), request: { kind: 'info' } },
@@ -275,7 +277,7 @@ describe('independent local runtime', () => {
       child.on('exit', (_code, signal) => resolve(signal)),
     );
     expect(errors).toBe('');
-    expect(exit).toBe('SIGKILL');
+    expect(exit).toBe(signalled('SIGKILL'));
     const { pid } = JSON.parse(await readFile(resultFile, 'utf8')) as { pid: number };
     expect(alive(pid)).toBe(true);
     const recovered = await connect(userData);
@@ -369,27 +371,30 @@ describe('independent local runtime', () => {
     expect(info.pid).not.toBe(host.pid);
   });
 
-  it('stops a headless host of the earlier loopback protocol before starting', async () => {
-    const userData = await mkdtemp(path.join(folder, 'l-'));
-    const directory = path.join(userData, 'runtime');
-    await mkdir(directory, { mode: 0o700 });
-    await mkdir(path.join(userData, 'old'));
-    const script = path.join(userData, 'old/runtime-host.js');
-    const stopped = path.join(userData, 'stopped');
-    await writeFile(
-      script,
-      `const fs = require('node:fs'); const path = require('node:path'); process.on('SIGTERM', () => { fs.writeFileSync(${JSON.stringify(stopped)}, 'graceful'); process.exit(0); }); fs.writeFileSync(path.join(process.argv[2], 'token'), 'legacy-control-token-'.repeat(2)); fs.writeFileSync(path.join(process.argv[2], 'endpoint.json'), JSON.stringify({ port: 9, pid: process.pid })); setInterval(() => {}, 1000);`,
-    );
-    await writeFile(path.join(userData, 'old/package.json'), '{"type":"commonjs"}');
-    const host = spawn(process.execPath, [script, directory], { stdio: 'ignore' });
-    outside.push(host);
-    const gone = new Promise((resolve) => host.once('exit', resolve));
-    await until(() => exists(path.join(directory, 'endpoint.json')));
-    const fresh = await connect(userData, '2.0.0');
-    await gone;
-    expect(await readFile(stopped, 'utf8')).toBe('graceful');
-    expect((await fresh.info()).version).toBe('2.0.0');
-  });
+  it.skipIf(process.platform === 'win32')(
+    'stops a headless host of the earlier loopback protocol before starting, a Mac-only protocol stopped by SIGTERM',
+    async () => {
+      const userData = await mkdtemp(path.join(folder, 'l-'));
+      const directory = path.join(userData, 'runtime');
+      await mkdir(directory, { mode: 0o700 });
+      await mkdir(path.join(userData, 'old'));
+      const script = path.join(userData, 'old/runtime-host.js');
+      const stopped = path.join(userData, 'stopped');
+      await writeFile(
+        script,
+        `const fs = require('node:fs'); const path = require('node:path'); process.on('SIGTERM', () => { fs.writeFileSync(${JSON.stringify(stopped)}, 'graceful'); process.exit(0); }); fs.writeFileSync(path.join(process.argv[2], 'token'), 'legacy-control-token-'.repeat(2)); fs.writeFileSync(path.join(process.argv[2], 'endpoint.json'), JSON.stringify({ port: 9, pid: process.pid })); setInterval(() => {}, 1000);`,
+      );
+      await writeFile(path.join(userData, 'old/package.json'), '{"type":"commonjs"}');
+      const host = spawn(process.execPath, [script, directory], { stdio: 'ignore' });
+      outside.push(host);
+      const gone = new Promise((resolve) => host.once('exit', resolve));
+      await until(() => exists(path.join(directory, 'endpoint.json')));
+      const fresh = await connect(userData, '2.0.0');
+      await gone;
+      expect(await readFile(stopped, 'utf8')).toBe('graceful');
+      expect((await fresh.info()).version).toBe('2.0.0');
+    },
+  );
 
   it('starts fresh and leaves the process alone when a stale endpoint names an unrelated pid', async () => {
     const external = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
