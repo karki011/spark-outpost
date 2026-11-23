@@ -448,11 +448,29 @@ export class TerminalSessions {
     session.view?.detach();
     session.view = null;
     if (keepRunning) session.pty?.detach?.();
-    else if (session.pty?.kill) session.pty.kill();
-    else if (session.pty) void killProcessTree(session.pty.pid);
+    else if (session.pty) this.stopPty(session.pty);
     if (session.pty && session.kind.type === 'shell') this.watcher?.ended(session.id);
     if (!keepRunning) session.client?.send({ type: 'ended', reason, exitCode });
     session.client?.close();
     session.client = null;
+  }
+
+  private stopPty(pty: PtyProcess) {
+    if (!pty.kill) {
+      void killProcessTree(pty.pid);
+      return;
+    }
+    if (process.platform !== 'win32') {
+      pty.kill();
+      return;
+    }
+    const kill = pty.kill.bind(pty);
+    void killProcessTree(pty.pid).finally(() => {
+      try {
+        kill();
+      } catch {
+        return;
+      }
+    });
   }
 }

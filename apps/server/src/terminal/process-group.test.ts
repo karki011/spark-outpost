@@ -125,6 +125,14 @@ describe('runningCommand', () => {
     const table = [row(10, 1, '-zsh', 10), row(40, 10, '/bin/sleep 100'), row(41, 40, 'x')];
     expect(runningCommand(10, table)).toBe('sleep 100');
   });
+
+  it('looks past the Git Bash wrapper to the shell it starts on Windows', () => {
+    const wrapper = row(10, 1, 'C:\\Program Files\\Git\\bin\\bash.exe --login -i');
+    const shell = row(20, 10, '"C:\\Program Files\\Git\\bin\\..\\usr\\bin\\bash.exe" --login -i');
+    expect(runningCommand(10, [wrapper, shell], 'win32')).toBeNull();
+    const sleep = row(30, 20, 'C:\\Program Files\\Git\\usr\\bin\\sleep.exe 100');
+    expect(runningCommand(10, [wrapper, shell, sleep], 'win32')).toBe('sleep 100');
+  });
 });
 
 describe('commandLabel', () => {
@@ -134,6 +142,16 @@ describe('commandLabel', () => {
     );
     expect(commandLabel('node server.js')).toBe('node server.js');
     expect(commandLabel('/usr/bin/make watch')).toBe('make watch');
+  });
+
+  it('reads Windows program paths with spaces and quotes', () => {
+    expect(commandLabel('C:\\Program Files\\nodejs\\node.exe server.js', 'win32')).toBe(
+      'node server.js',
+    );
+    expect(commandLabel('"C:\\Program Files\\Git\\usr\\bin\\make.exe" watch', 'win32')).toBe(
+      'make watch',
+    );
+    expect(commandLabel('/usr/bin/make watch', 'darwin')).toBe('make watch');
   });
 
   it('shortens very long command lines', () => {

@@ -44,9 +44,32 @@ export function descendantsOf(
   return found;
 }
 
-export function commandLabel(args: string): string {
-  const [program = '', ...rest] = args.trim().split(/\s+/);
-  const name = path.basename(program).replace(/^-/, '');
+const WINDOWS_PROGRAM = /^(?:"([^"]+)"|([A-Za-z]:\\.*?\.exe)(?=\s|$)|(\S+))\s*(.*)$/i;
+const GIT_BASH_SHELL = /\\usr\\bin\\bash\.exe$/i;
+
+function splitProgram(args: string, platform: NodeJS.Platform): [string, string[]] {
+  const trimmed = args.trim();
+  if (platform !== 'win32') {
+    const [program = '', ...rest] = trimmed.split(/\s+/);
+    return [program, rest];
+  }
+  const match = WINDOWS_PROGRAM.exec(trimmed);
+  const program = match?.[1] ?? match?.[2] ?? match?.[3] ?? '';
+  const rest = match?.[4] ? match[4].split(/\s+/) : [];
+  return [program, rest];
+}
+
+function programName(program: string, platform: NodeJS.Platform): string {
+  if (platform !== 'win32') return path.basename(program).replace(/^-/, '');
+  return path.win32
+    .basename(program)
+    .replace(/\.exe$/i, '')
+    .replace(/^-/, '');
+}
+
+export function commandLabel(args: string, platform: NodeJS.Platform = process.platform): string {
+  const [program, rest] = splitProgram(args, platform);
+  const name = programName(program, platform);
   const [script, ...scriptArgs] = rest;
   const words =
     INTERPRETERS.test(name) && script?.includes('/')
@@ -56,7 +79,22 @@ export function commandLabel(args: string): string {
   return label.length > COMMAND_MAX_LENGTH ? `${label.slice(0, COMMAND_MAX_LENGTH - 1)}…` : label;
 }
 
-export function runningCommand(root: number, table: readonly ProcessRow[]): string | null {
+function shellRoot(root: number, table: readonly ProcessRow[], platform: NodeJS.Platform): number {
+  if (platform !== 'win32') return root;
+  const [program] = splitProgram(table.find((row) => row.pid === root)?.args ?? '', platform);
+  if (GIT_BASH_SHELL.test(program)) return root;
+  const shell = table.find(
+    (row) => row.ppid === root && GIT_BASH_SHELL.test(splitProgram(row.args, platform)[0]),
+  );
+  return shell?.pid ?? root;
+}
+
+export function runningCommand(
+  wrapper: number,
+  table: readonly ProcessRow[],
+  platform: NodeJS.Platform = process.platform,
+): string | null {
+  const root = shellRoot(wrapper, table, platform);
   const descendants = new Set(descendantsOf(root, table));
   const running = table.filter((row) => descendants.has(row.pid) && !NOT_A_COMMAND.test(row.args));
   const foreground = table.find((row) => row.pid === root)?.foregroundGroup;
@@ -64,7 +102,7 @@ export function runningCommand(root: number, table: readonly ProcessRow[]): stri
     running.find((row) => row.pid === foreground) ??
     running.find((row) => row.ppid === root) ??
     running[0];
-  return main ? commandLabel(main.args) : null;
+  return main ? commandLabel(main.args, platform) : null;
 }
 
 function parseProcessTable(output: string): ProcessRow[] {

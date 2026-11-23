@@ -3,9 +3,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { TerminalServerMessage } from '@spark-outpost/contracts';
-import { isAlive } from './process-group.ts';
+import { isAlive, processKillsSent } from './process-group.ts';
 import { loginShellSpawner } from './pty.ts';
-import { TEST_SHELL } from './test-shell.fixture.ts';
+import { shellPid, TEST_SHELL } from './test-shell.fixture.ts';
 import type { OpenShell } from '../persistence/terminal-shells.ts';
 import type { ShellAlert } from '../persistence/shell-alerts.ts';
 import { defaultLimits, TerminalLimitError, TerminalSessions } from './sessions.ts';
@@ -19,10 +19,17 @@ beforeEach(() => {
   folder = realpathSync(mkdtempSync(path.join(tmpdir(), 'spark-shell-')));
 });
 
-afterEach(() => {
+afterEach(async () => {
   sessions?.killAll();
-  rmSync(folder, { recursive: true, force: true });
+  await processKillsSent();
+  rmSync(folder, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
 });
+
+const HERE = process.platform === 'win32' ? '$(cygpath -w "$PWD")' : '$(pwd)';
+
+function nativeFolder() {
+  return process.platform === 'win32' ? realpathSync.native(folder) : folder;
+}
 
 function recorder() {
   const messages: TerminalServerMessage[] = [];
@@ -61,8 +68,8 @@ describe('chat shells', () => {
     useLimits();
     const shell = openShell(null);
     expect(shell.created).not.toHaveProperty('command');
-    shell.terminal.input('echo "at:$(pwd)"\r');
-    await until(() => shell.screen.text.includes(`at:${folder}`));
+    shell.terminal.input(`echo "at:${HERE}"\r`);
+    await until(() => shell.screen.text.includes(`at:${nativeFolder()}`));
     expect(shell.screen.text).not.toContain('npm i -g');
   });
 
@@ -79,7 +86,7 @@ describe('chat shells', () => {
     const first = openShell('chat-a');
     const second = openShell('chat-a');
     const other = openShell('chat-b');
-    first.terminal.input('echo "PID=$$"\r');
+    first.terminal.input(`echo "PID=${shellPid('$$')}"\r`);
     await until(() => /PID=\d+/.test(first.screen.text));
     const pid = Number(/PID=(\d+)/.exec(first.screen.text)![1]);
 
@@ -96,7 +103,7 @@ describe('chat shells', () => {
     expect(sessions.activeCount).toBe(1);
   });
 
-  it('ends a shell when its folder is removed', async () => {
+  it.skipIf(process.platform === 'win32')('ends a shell when its folder is removed', async () => {
     const inner = path.join(folder, 'worktree');
     mkdirSync(inner);
     useLimits({ ...defaultLimits, folderCheckMs: 30 });

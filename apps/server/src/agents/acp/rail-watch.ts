@@ -2,7 +2,7 @@ import { homedir } from 'node:os';
 import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { RailKind, RailOriginal } from '@spark-outpost/contracts';
 import type { ApprovalRequest, RequestRoot } from '../../approvals/decide.ts';
-import { gatePaths } from '../../approvals/gate-path.ts';
+import { gatePaths, toGatePath } from '../../approvals/gate-path.ts';
 import { railCrossings, type RailCrossing } from '../../approvals/rail-crossings.ts';
 import { observedSecretReads } from '../../approvals/secret-reads.ts';
 import { outsideRoots } from '../../approvals/request-place.ts';
@@ -49,8 +49,9 @@ const ORIGINAL_MAX_CHARS = 64 * 1024;
 const TOOL_FIELDS = ['title', 'kind', 'rawInput', 'locations', 'content', '_meta'] as const;
 
 function shown(target: string, home: string): string {
-  if (!gatePaths.isAbsolute(target)) return target;
-  const relative = gatePaths.relative(home, target);
+  const gate = toGatePath(target);
+  if (!gatePaths.isAbsolute(gate)) return target;
+  const relative = gatePaths.relative(toGatePath(home), gate);
   return relative && !relative.startsWith('..') && !gatePaths.isAbsolute(relative)
     ? `~/${relative}`
     : target;

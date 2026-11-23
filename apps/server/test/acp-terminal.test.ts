@@ -53,7 +53,7 @@ describe('command output over ACP against a fake agent', { timeout: 20_000 }, ()
       { kind: 'command_output', id: 'term-1', data: '\u001b[31merror\u001b[0m unused variable\n' },
       { kind: 'command_finished', id: 'term-1', failed: true, exitCode: 2 },
     ]);
-    expect(outputs[0]).toHaveProperty('cwd', expect.stringMatching(/^\//));
+    expect(outputs[0]).toHaveProperty('cwd', expect.stringMatching(/^(\/|[A-Za-z]:\\)/));
   });
 
   it('reports end-only output once the command ends, named after its later title and description', async () => {
