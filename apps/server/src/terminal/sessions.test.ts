@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { TerminalServerMessage } from '@spark-outpost/contracts';
 import { isAlive } from './process-group.ts';
 import { loginShellSpawner } from './pty.ts';
-import { shellPid, TEST_SHELL } from './test-shell.fixture.ts';
+import { backgroundPid, shellPid, TEST_SHELL } from './test-shell.fixture.ts';
 import {
   defaultLimits,
   TerminalAuthError,
@@ -33,6 +33,8 @@ function start(limits = defaultLimits) {
   return { created, messages, screen, client, isClosed: () => closed };
 }
 
+const PID_WAIT_MS = process.platform === 'win32' ? 15_000 : 4000;
+
 async function until(check: () => boolean, timeoutMs = 4000) {
   const deadline = Date.now() + timeoutMs;
   while (!check()) {
@@ -62,8 +64,8 @@ describe('terminal sessions', () => {
   it('kills the shell and everything it started when closed', async () => {
     const { created, messages, screen, client, isClosed } = start();
     const terminal = sessions.attach(created.id, created.token, client, size);
-    terminal.input(`\u0015nohup sleep 300 >/dev/null 2>&1 & echo PID=${shellPid('$!')} \r`);
-    await until(() => /PID=\d+/.test(screen.text));
+    terminal.input(`\u0015nohup sleep 300 >/dev/null 2>&1 & echo PID=${backgroundPid('sleep')} \r`);
+    await until(() => /PID=(\d+|none)/.test(screen.text), PID_WAIT_MS);
     const child = pidOf(screen.text);
     expect(isAlive(child)).toBe(true);
 
@@ -73,7 +75,7 @@ describe('terminal sessions', () => {
     expect(isClosed()).toBe(true);
     await until(() => !isAlive(child));
     expect(sessions.activeCount).toBe(0);
-  });
+  }, 30_000);
 
   it('kills the terminal when the page disconnects', async () => {
     const { created, messages, screen, client } = start();

@@ -20,7 +20,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await rm(root, { recursive: true, force: true });
+  await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
 });
 
 const live = () => rangeSignature({ root, from: 'snapshot', until: null });
@@ -96,7 +96,7 @@ describe('working tree signature', () => {
     try {
       expect(await rangeSignature({ root: plain, from: 'a', until: null })).toBeNull();
     } finally {
-      await rm(plain, { recursive: true, force: true });
+      await rm(plain, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
     }
   });
 });

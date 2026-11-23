@@ -7,6 +7,7 @@ import {
   isAlive,
   killProcessTree,
   processKillsSent,
+  processTable,
   processTreeNow,
   runningCommand,
   signalGroup,
@@ -99,6 +100,14 @@ describe.skipIf(process.platform === 'win32')('killing a process tree (POSIX job
 function row(pid: number, ppid: number, args: string, foregroundGroup = 0): ProcessRow {
   return { pid, ppid, foregroundGroup, args };
 }
+
+describe('processTable', () => {
+  it('lists this process with its parent', async () => {
+    const row = (await processTable()).find((entry) => entry.pid === process.pid);
+    expect(row?.ppid).toBe(process.ppid);
+    expect(row?.args).toContain('node');
+  }, 20_000);
+});
 
 describe('withoutStaleParents', () => {
   it('drops a parent link to a process that started after the child', () => {
