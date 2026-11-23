@@ -159,15 +159,35 @@ export async function processTable(): Promise<ProcessRow[]> {
   }
 }
 
-export function endWindowsTree(pid: number): Promise<void> {
+export function endWindowsTree(pid: number, force = true): Promise<void> {
+  const args = ['/PID', String(pid), '/T', ...(force ? ['/F'] : [])];
   return new Promise((resolve) => {
-    execFile(
-      system32('taskkill.exe'),
-      ['/PID', String(pid), '/T', '/F'],
-      { windowsHide: true },
-      () => resolve(),
-    );
+    execFile(system32('taskkill.exe'), args, { windowsHide: true }, () => resolve());
   });
+}
+
+async function untilGone(pids: readonly number[], waitMs: number): Promise<void> {
+  const deadline = Date.now() + waitMs;
+  while (pids.some((pid) => isAlive(pid)) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
+async function endWindowsTrees(
+  roots: readonly number[],
+  graceMs: number,
+  first: NodeJS.Signals,
+): Promise<void> {
+  if (first === 'SIGKILL') {
+    await Promise.all(roots.map((pid) => endWindowsTree(pid)));
+    return;
+  }
+  const table = await processTable();
+  const targets = [...new Set(roots.flatMap((pid) => [pid, ...descendantsOf(pid, table)]))];
+  await Promise.all(roots.map((pid) => endWindowsTree(pid, false)));
+  await untilGone(targets, graceMs);
+  const left = targets.filter((pid) => isAlive(pid));
+  await Promise.all(left.map((pid) => endWindowsTree(pid)));
 }
 
 export function signalGroup(
@@ -176,7 +196,8 @@ export function signalGroup(
   platform: NodeJS.Platform = process.platform,
 ): boolean {
   if (platform === 'win32') {
-    void endWindowsTree(pid);
+    if (!isAlive(pid)) return false;
+    void endWindowsTree(pid, name === 'SIGKILL');
     return true;
   }
   try {
@@ -234,7 +255,7 @@ async function signalTree(
   const orphaned = seenEarlier.filter((pid) => isAlive(pid));
   const roots = [root, ...orphaned];
   if (process.platform === 'win32') {
-    await Promise.all(roots.map((pid) => endWindowsTree(pid)));
+    await endWindowsTrees(roots, graceMs, first);
     return;
   }
   const table = await processTable();

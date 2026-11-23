@@ -9,6 +9,7 @@ import {
   processKillsSent,
   processTreeNow,
   runningCommand,
+  signalGroup,
   type ProcessRow,
 } from './process-group.ts';
 
@@ -87,6 +88,12 @@ describe.skipIf(process.platform === 'win32')('killing a process tree (POSIX job
 function row(pid: number, ppid: number, args: string, foregroundGroup = 0): ProcessRow {
   return { pid, ppid, foregroundGroup, args };
 }
+
+describe('signalGroup', () => {
+  it('reports a process that is already gone on Windows', () => {
+    expect(signalGroup(2 ** 22 + 7, 'SIGTERM', 'win32')).toBe(false);
+  });
+});
 
 describe('descendantsOf', () => {
   it('finds children and grandchildren but not unrelated processes', () => {
