@@ -1,6 +1,6 @@
 import { glob, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
-import type { MacArch } from './builder-config.ts';
+import type { BuildPlatform, MacArch } from './builder-config.ts';
 
 export const BUNDLED_AGENT_CLIS = [
   'node_modules/**/@openai/codex',
@@ -18,8 +18,11 @@ export function isDeadWeight(file: string): boolean {
 
 const NODE_PTY_ENTRIES = new Set(['package.json', 'LICENSE', 'lib', 'prebuilds']);
 
-export function nodePtyLeftovers(entries: string[], prebuilds: string[], arch: MacArch): string[] {
-  const kept = `darwin-${arch}`;
+export function nodePtyPrebuild(platform: BuildPlatform, arch: MacArch): string {
+  return `${platform === 'win' ? 'win32' : 'darwin'}-${arch}`;
+}
+
+export function nodePtyLeftovers(entries: string[], prebuilds: string[], kept: string): string[] {
   return [
     ...entries.filter((entry) => !NODE_PTY_ENTRIES.has(entry)),
     ...prebuilds.filter((entry) => entry !== kept).map((entry) => `prebuilds/${entry}`),
@@ -46,12 +49,12 @@ async function removeDeadWeight(root: string): Promise<void> {
   }
 }
 
-async function pruneNodePty(serverDir: string, arch: MacArch): Promise<void> {
+async function pruneNodePty(serverDir: string, prebuild: string): Promise<void> {
   const ptyDir = path.join(serverDir, 'node_modules/node-pty');
   const leftovers = nodePtyLeftovers(
     await readdir(ptyDir),
     await readdir(path.join(ptyDir, 'prebuilds')),
-    arch,
+    prebuild,
   );
   for (const leftover of leftovers) {
     await rm(path.join(ptyDir, leftover), { recursive: true, force: true });
@@ -59,9 +62,9 @@ async function pruneNodePty(serverDir: string, arch: MacArch): Promise<void> {
   await removeMatches(ptyDir, ['lib/**/*.test.js']);
 }
 
-export async function pruneServer(serverDir: string, arch: MacArch): Promise<void> {
+export async function pruneServer(serverDir: string, prebuild: string): Promise<void> {
   await removeMatches(serverDir, BUNDLED_AGENT_CLIS);
-  await pruneNodePty(serverDir, arch);
+  await pruneNodePty(serverDir, prebuild);
   await removeDeadWeight(serverDir);
 }
 

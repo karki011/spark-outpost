@@ -128,7 +128,7 @@ Each phase ends with the real-machine tests used on the Mac, on a Windows 11 x64
 1. **Ground truth.** Add a manual `windows-latest` CI job; install on a Windows VM; confirm ACP sessions and which shell commands reach the gate.
 2. **Safety floor.** Windows paths and temp folders, ACLs, Claude on Git Bash with the PowerShell tool off, and the Windows test matrix for `approvals/`.
 3. **Foundations.** Postgres, Credential Manager with chunking, named pipes, ConPTY, PATH.
-4. **Shell and packaging.** Fluent shell, tray, taskbar, toasts, island, privacy screen with Windows Hello, NSIS installer, signing, update feed. **First Windows beta.**
+4. **Shell and packaging.** Fluent shell, tray, taskbar, toasts, island, privacy screen with Windows Hello, NSIS installer, signing, update feed. **First Windows alpha.** Windows ships as an alpha, named so in the installer and the About panel, until it has had real use.
 5. **Terminal session host.** Restart survival to match tmux.
 6. **Helper part 1.** Calendar (Microsoft Graph) and Voice with meeting loopback.
 7. **Helper part 2.** Mac control on UI Automation, as "Computer control" on Windows.

@@ -3,12 +3,17 @@ import { cp, glob, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { build, Platform } from 'electron-builder';
-import { builderConfig, signingPlan, type MacArch } from './builder-config.ts';
+import { Arch, build, Platform } from 'electron-builder';
+import { builderConfig, signingPlan, type BuildPlatform, type MacArch } from './builder-config.ts';
 import { buildTmux } from './build-tmux.ts';
 import { notarizeDmgs } from './notarize-dmg.ts';
-import { collect, pruneRuntime, pruneServer } from './prune.ts';
-import { checkPostgresStarts, postgresNativeDir, prunePostgres } from './prune-postgres.ts';
+import { collect, nodePtyPrebuild, pruneRuntime, pruneServer } from './prune.ts';
+import {
+  checkPostgresStarts,
+  postgresNativeDir,
+  prunePostgres,
+  prunePostgresWindows,
+} from './prune-postgres.ts';
 import { stageTmux } from './tmux-bundle.ts';
 import { buildMacControl, stageMacControl } from './mac-control-bundle.ts';
 import { buildCalendar, stageCalendar } from './calendar-bundle.ts';
@@ -30,51 +35,74 @@ const DEPLOY_LEFTOVERS = [
   'tsconfig.json',
 ];
 
+export function pnpmCommand(
+  args: string[],
+  execPath: string | undefined = process.env.npm_execpath,
+  platform: NodeJS.Platform = process.platform,
+): [string, string[]] {
+  if (platform !== 'win32') return ['pnpm', args];
+  if (execPath && /\.[cm]?js$/i.test(execPath)) return [process.execPath, [execPath, ...args]];
+  if (execPath && /\.exe$/i.test(execPath)) return [execPath, args];
+  throw new Error(`Can't run pnpm from ${execPath ?? 'nowhere'}; run this through pnpm.`);
+}
+
 async function deploy(
   filter: string,
   arch: MacArch,
+  platform: BuildPlatform,
   target: string,
   unused: string[],
 ): Promise<void> {
-  await run(
-    'pnpm',
-    [
-      '--filter',
-      filter,
-      'deploy',
-      '--prod',
-      `--cpu=${arch}`,
-      '--os=darwin',
-      '--config.node-linker=hoisted',
-      target,
-    ],
-    { cwd: repoRoot, maxBuffer: 64 * 1024 * 1024 },
-  );
+  const [command, args] = pnpmCommand([
+    '--filter',
+    filter,
+    'deploy',
+    '--prod',
+    `--cpu=${arch}`,
+    `--os=${platform === 'win' ? 'win32' : 'darwin'}`,
+    '--config.node-linker=hoisted',
+    target,
+  ]);
+  await run(command, args, { cwd: repoRoot, maxBuffer: 64 * 1024 * 1024 });
   for (const leftover of [...DEPLOY_LEFTOVERS, ...unused]) {
     await rm(path.join(target, leftover), { recursive: true, force: true });
   }
 }
 
-async function stageRuntime(runtimeDir: string, arch: MacArch): Promise<void> {
-  await deploy('@spark-outpost/desktop', arch, runtimeDir, ['src', 'scripts', 'build', 'release']);
+async function stageRuntime(
+  runtimeDir: string,
+  arch: MacArch,
+  platform: BuildPlatform,
+): Promise<void> {
+  await deploy('@spark-outpost/desktop', arch, platform, runtimeDir, [
+    'src',
+    'scripts',
+    'build',
+    'release',
+  ]);
   await pruneRuntime(runtimeDir);
-  const postgres = postgresNativeDir(runtimeDir, arch);
-  await prunePostgres(postgres);
-  if (arch === os.arch()) await checkPostgresStarts(postgres);
+  const postgres = postgresNativeDir(runtimeDir, arch, platform);
+  if (platform === 'win') await prunePostgresWindows(postgres);
+  else await prunePostgres(postgres);
+  const hosts: Partial<Record<NodeJS.Platform, BuildPlatform>> = { darwin: 'mac', win32: 'win' };
+  const hostPlatform = hosts[process.platform];
+  const onHost = platform === hostPlatform && arch === os.arch();
+  if (onHost) await checkPostgresStarts(postgres, platform);
 }
 
-async function stageArch(stageDir: string, arch: MacArch): Promise<void> {
+async function stageArch(stageDir: string, arch: MacArch, platform: BuildPlatform): Promise<void> {
   const archDir = path.join(stageDir, arch);
-  await stageRuntime(path.join(archDir, 'runtime'), arch);
+  await stageRuntime(path.join(archDir, 'runtime'), arch, platform);
   const serverDir = path.join(archDir, 'server');
-  await deploy('@spark-outpost/server', arch, serverDir, ['test']);
+  await deploy('@spark-outpost/server', arch, platform, serverDir, ['test']);
   const tests = await collect(glob('src/**/*.test.ts', { cwd: serverDir }));
   for (const test of tests) await rm(path.join(serverDir, test));
-  await pruneServer(serverDir, arch);
+  await pruneServer(serverDir, nodePtyPrebuild(platform, arch));
   await cp(path.join(repoRoot, 'docs/guide'), path.join(serverDir, 'guide'), {
     recursive: true,
     filter: (source) => !source.includes(`${path.sep}images`),
   });
+  if (platform === 'win') return;
   await stageTmux(await buildTmux(repoRoot, arch), arch, archDir);
   await stageMacControl(await buildMacControl(repoRoot, arch), arch, archDir);
   await stageCalendar(await buildCalendar(repoRoot, arch), arch, archDir);
@@ -116,15 +144,24 @@ export interface PackageOptions {
   packageName?: string;
   appId?: string;
   formats?: ('zip' | 'dmg')[];
+  platform?: BuildPlatform;
   prepareServer?: (serverDir: string) => Promise<void>;
 }
 
+function buildTargets(platform: BuildPlatform, archs: MacArch[]) {
+  if (platform === 'win') {
+    return Platform.WINDOWS.createTarget(['nsis'], ...archs.map((arch) => Arch[arch]));
+  }
+  return Platform.MAC.createTarget();
+}
+
 export async function packageDesktop(options: PackageOptions): Promise<string[]> {
+  const platform = options.platform ?? 'mac';
   const stageDir = path.join(releaseDir, 'stage');
   await rm(stageDir, { recursive: true, force: true });
   await stageApp(stageDir, options.version);
   for (const arch of options.archs) {
-    await stageArch(stageDir, arch);
+    await stageArch(stageDir, arch, platform);
     await options.prepareServer?.(path.join(stageDir, arch, 'server'));
   }
   const config = builderConfig({
@@ -135,18 +172,20 @@ export async function packageDesktop(options: PackageOptions): Promise<string[]>
     archs: options.archs,
     env: options.env,
     entitlements: path.join(desktopDir, 'build/entitlements.mac.plist'),
-    icon: path.join(desktopDir, 'build/icon.icns'),
+    icon: path.join(desktopDir, platform === 'win' ? 'assets/icon.png' : 'build/icon.icns'),
+    platform,
     ...(options.packageName ? { packageName: options.packageName } : {}),
     ...(options.formats ? { formats: options.formats } : {}),
     ...(options.appId ? { appId: options.appId } : {}),
   });
   const artifacts = await build({
     projectDir: path.join(stageDir, 'app'),
-    targets: Platform.MAC.createTarget(),
+    targets: buildTargets(platform, options.archs),
     config,
     publish: 'never',
   });
-  if (signingPlan(options.env).notarize) await notarizeDmgs(artifacts, options.env);
+  if (platform === 'mac' && signingPlan(options.env).notarize)
+    await notarizeDmgs(artifacts, options.env);
   await writeReleaseNotes(options.outputDir, options.version);
   return artifacts;
 }

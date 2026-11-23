@@ -11,6 +11,7 @@ import {
   packagedSlackClientId,
   releaseProblems,
   RELEASE_ARCHS,
+  type BuildPlatform,
   type MacArch,
 } from './builder-config.ts';
 import { desktopDir, packageDesktop, releaseDir } from './stage.ts';
@@ -20,10 +21,22 @@ const { values } = parseArgs({
     arch: { type: 'string', default: 'all' },
     version: { type: 'string' },
     release: { type: 'boolean', default: false },
+    platform: { type: 'string', default: process.platform === 'win32' ? 'win' : 'mac' },
   },
 });
 
+function buildPlatform(value: string): BuildPlatform {
+  if (value === 'mac' || value === 'win') return value;
+  throw new Error(`Unknown --platform ${value}; use mac or win.`);
+}
+
+const platform = buildPlatform(values.platform);
+
 function archs(value: string): MacArch[] {
+  if (platform === 'win') {
+    if (value === 'all' || value === 'current' || value === 'x64') return ['x64'];
+    throw new Error('Windows builds are x64 only: Postgres has no Windows arm64 build.');
+  }
   if (value === 'all') return RELEASE_ARCHS;
   if (value === 'current') return [os.arch() === 'arm64' ? 'arm64' : 'x64'];
   if (value === 'x64' || value === 'arm64') return [value];
@@ -51,6 +64,12 @@ const manifest = JSON.parse(await readFile(path.join(desktopDir, 'package.json')
 };
 const version = values.version ?? manifest.version;
 const targets = archs(values.arch);
+if (values.release && platform === 'win') {
+  console.error(
+    "Can't build a Windows release yet: Authenticode signing and a Windows update feed are not set up. Leave out --release for an unsigned test build.",
+  );
+  process.exit(1);
+}
 if (values.release) {
   const problems = releaseProblems(process.env, targets);
   if (problems.length > 0) {
@@ -74,6 +93,7 @@ const outputDir = path.join(releaseDir, version);
 const artifacts = await packageDesktop({
   version,
   archs: targets,
+  platform,
   outputDir,
   env: process.env,
 });
