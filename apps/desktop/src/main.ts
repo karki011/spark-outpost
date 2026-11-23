@@ -61,6 +61,7 @@ import { guardMigrations, readSkippedVersion, skippedVersionFile } from './updat
 import { startUpdater, type Updater } from './updater.ts';
 import { fetchActiveRuns } from './active-runs.ts';
 import { showFailureDialog } from './error-dialog.ts';
+import { makeDataFolderPrivate } from './private-folder.ts';
 import { readKeepAwake, startKeepAwake, type KeepAwake } from './keep-awake.ts';
 import { apiOrigin, targetsApi } from './api-token.ts';
 import { IPC } from './ipc-channels.ts';
@@ -114,6 +115,7 @@ const fileLog = new FileLog({ dir: paths.logs });
 const log = (source: string) => sourceLogger(fileLog, source);
 
 const mainLog = log('main');
+makeDataFolderPrivate(paths.userData, mainLog);
 const bootTeasers = startBootTeasers({
   userData: paths.userData,
   version: app.getVersion(),
