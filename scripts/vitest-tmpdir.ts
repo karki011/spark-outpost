@@ -17,11 +17,20 @@ export function processesUsing(
     .map((row) => row.pid);
 }
 
+const WINDOWS_TABLE = [
+  '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
+  'Get-CimInstance Win32_Process | ForEach-Object { "$($_.ProcessId) $($_.ParentProcessId) 0 $($_.CommandLine)" }',
+].join('; ');
+
 function processTable(): ProcessRow[] {
-  const result = spawnSync('ps', ['-axww', '-o', 'pid=,ppid=,pgid=,command='], {
-    encoding: 'utf8',
-  });
-  return result.status === 0 ? parseProcessTable(result.stdout) : [];
+  const result =
+    process.platform === 'win32'
+      ? spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', WINDOWS_TABLE], {
+          encoding: 'utf8',
+          windowsHide: true,
+        })
+      : spawnSync('ps', ['-axww', '-o', 'pid=,ppid=,pgid=,command='], { encoding: 'utf8' });
+  return result.status === 0 ? parseProcessTable(result.stdout.replaceAll('\r', '')) : [];
 }
 
 function alive(pid: number): boolean {
@@ -51,14 +60,18 @@ async function stopProcessesUsing(folder: string): Promise<void> {
   for (const pid of pids.filter(alive)) signal(pid, 'SIGKILL');
 }
 
+const TEMP_VARIABLES = process.platform === 'win32' ? ['TMPDIR', 'TEMP', 'TMP'] : ['TMPDIR'];
+
 export default function setup(): () => Promise<void> {
-  const previous = process.env.TMPDIR;
+  const previous = TEMP_VARIABLES.map((name) => [name, process.env[name]] as const);
   const folder = mkdtempSync(path.join(tmpdir(), SHORT_PREFIX_FOR_SOCKET_PATHS));
-  process.env.TMPDIR = folder;
+  for (const name of TEMP_VARIABLES) process.env[name] = folder;
   return async () => {
     await stopProcessesUsing(folder);
     rmSync(folder, { recursive: true, force: true, maxRetries: 3 });
-    if (previous === undefined) delete process.env.TMPDIR;
-    else process.env.TMPDIR = previous;
+    for (const [name, value] of previous) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
   };
 }
