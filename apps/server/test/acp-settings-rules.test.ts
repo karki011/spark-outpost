@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
+import { toGatePath } from '../src/approvals/gate-path.ts';
 import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
 import type { ProviderOutput } from '../src/providers/provider.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
@@ -80,7 +81,7 @@ describe("the user's and project's Claude deny and ask rules", { timeout: 20_000
     expect(options.disallowedTools).toEqual(
       expect.arrayContaining([
         'WebSearch',
-        `Read(/${root}/private/**)`,
+        `Read(/${toGatePath(root)}/private/**)`,
         'mcp__spark__spark_slack_post',
         'Edit(**/.env)',
         'WebFetch(domain:localhost)',

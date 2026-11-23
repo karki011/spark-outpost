@@ -221,6 +221,14 @@ export async function heldTitleTurn(say: Say): Promise<acp.StopReason> {
   return 'end_turn';
 }
 
+const ORPHAN_SCRIPT = [
+  "const { spawn } = require('node:child_process');",
+  "const { writeFileSync } = require('node:fs');",
+  "const sleeper = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 600000)'], { stdio: 'ignore' });",
+  'writeFileSync(process.argv[1], String(sleeper.pid));',
+  'setInterval(() => {}, 1000);',
+].join('\n');
+
 export async function orphanedCommandTurn(
   client: acp.AgentContext,
   rootId: string,
@@ -229,9 +237,7 @@ export async function orphanedCommandTurn(
 ): Promise<acp.StopReason> {
   const pidFile = /#orphan (\S+)/.exec(text)?.[1];
   if (!pidFile) return 'end_turn';
-  const shell = spawn('/bin/sh', ['-c', 'sleep 600 & echo $! > "$0"; wait', pidFile], {
-    stdio: 'ignore',
-  });
+  const shell = spawn(process.execPath, ['-e', ORPHAN_SCRIPT, pidFile], { stdio: 'ignore' });
   await client.notify(acp.methods.client.session.update, {
     sessionId: rootId,
     update: {
