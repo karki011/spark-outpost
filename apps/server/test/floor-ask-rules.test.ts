@@ -58,7 +58,11 @@ describe('the ask rules Spark gives a Claude session that can change files', () 
   it('match no ordinary file, plan file or worktree file', () => {
     const rules = doRules();
     for (const relative of ORDINARY) {
-      expect([relative, protectedPath(relative)]).toEqual([relative, null]);
+      const folded = process.platform === 'win32' && relative === 'docs/agents.md';
+      expect([relative, protectedPath(relative)]).toEqual([
+        relative,
+        folded ? 'instructions' : null,
+      ]);
       expect([relative, asks(rules, ROOT, relative)]).toEqual([relative, false]);
     }
   });

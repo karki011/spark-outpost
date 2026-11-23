@@ -154,10 +154,15 @@ export const INSTRUCTION_GLOBS: readonly string[] = [
 
 export const GIT_CONTROL_GLOBS: readonly string[] = ['.git/hooks/*', GIT_CONFIG];
 
-export function protectedPath(relative: string): ProtectedKind | null {
+const FOLDED_INSTRUCTION_NAMES = new Set([...INSTRUCTION_NAMES].map((name) => name.toLowerCase()));
+
+export function protectedPath(written: string): ProtectedKind | null {
+  const folds = process.platform === 'win32';
+  const relative = folds ? written.toLowerCase() : written;
   if (GIT_HOOK.test(relative) || relative === GIT_CONFIG) return 'git_control';
   const name = relative.split('/').pop() ?? '';
-  if (INSTRUCTION_NAMES.has(name) || INSTRUCTION_FILES.has(relative)) return 'instructions';
+  const names = folds ? FOLDED_INSTRUCTION_NAMES : INSTRUCTION_NAMES;
+  if (names.has(name) || INSTRUCTION_FILES.has(relative)) return 'instructions';
   if (SPARK_OWN_DIRS.some((dir) => relative.startsWith(dir))) return null;
   const inside = INSTRUCTION_PREFIXES.some((prefix) => relative.startsWith(prefix));
   return inside || INSTRUCTION_PREFIXES.includes(`${relative}/`) ? 'instructions' : null;
@@ -170,8 +175,20 @@ export function relativeInside(
 ): string | null {
   const relative = paths.relative(root, target);
   if (relative === '' || paths.isAbsolute(relative)) return null;
-  if (relative === '..' || relative.startsWith(`..${paths.sep}`)) return null;
+  if (relative === '..' || relative.startsWith(`..${paths.sep}`)) {
+    return process.platform === 'win32' ? insideIgnoringCase(root, target, paths) : null;
+  }
   return relative.split(paths.sep).join('/');
+}
+
+function insideIgnoringCase(root: string, target: string, paths: path.PlatformPath): string | null {
+  const base = paths.resolve(root);
+  const full = paths.resolve(target);
+  const prefix = base.endsWith(paths.sep) ? base : `${base}${paths.sep}`;
+  if (prefix.toLowerCase().length !== prefix.length) return null;
+  if (!full.toLowerCase().startsWith(prefix.toLowerCase())) return null;
+  const rest = full.slice(prefix.length);
+  return rest === '' ? null : rest.split(paths.sep).join('/');
 }
 
 export function refusalFor(
