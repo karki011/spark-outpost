@@ -35,12 +35,15 @@ const DEPLOY_LEFTOVERS = [
   'tsconfig.json',
 ];
 
-function pnpmCommand(args: string[]): [string, string[]] {
-  const script = process.env.npm_execpath;
-  if (process.platform === 'win32' && script && /\.c?js$/.test(script)) {
-    return [process.execPath, [script, ...args]];
-  }
-  return ['pnpm', args];
+export function pnpmCommand(
+  args: string[],
+  execPath: string | undefined = process.env.npm_execpath,
+  platform: NodeJS.Platform = process.platform,
+): [string, string[]] {
+  if (platform !== 'win32') return ['pnpm', args];
+  if (execPath && /\.[cm]?js$/i.test(execPath)) return [process.execPath, [execPath, ...args]];
+  if (execPath && /\.exe$/i.test(execPath)) return [execPath, args];
+  throw new Error(`Can't run pnpm from ${execPath ?? 'nowhere'}; run this through pnpm.`);
 }
 
 async function deploy(
