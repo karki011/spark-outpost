@@ -33,6 +33,7 @@ export interface PublishGrant {
   requested: boolean;
   asked?: PublishAsk | null;
   followUp?: FollowUpRound | null;
+  withheld?: boolean;
 }
 
 export interface StackBase {
@@ -117,6 +118,7 @@ export function publishBasis(
   grant: PublishGrant,
   actions: readonly PublishAction[] = [],
 ): PublishBasis | null {
+  if (grant.withheld) return null;
   if (messageAsks(grant, actions)) return 'requested';
   if (grant.level === 'full-auto') return 'full_auto';
   if (grant.followUp) return 'follow_up';

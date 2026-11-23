@@ -136,8 +136,8 @@ export function publishGrant(input: GrantFacts): PublishGrant {
   const followUp = input.followUpRound
     ? { workspaceId: input.workspaceId, conversationId: input.identity.threadId }
     : null;
-  const level = input.workflowStarted ? 'hands-off' : input.level;
-  return { level, ...requestedBy(userText(input)), followUp };
+  const grant = { level: input.level, ...requestedBy(userText(input)), followUp };
+  return input.workflowStarted ? { ...grant, withheld: true } : grant;
 }
 
 type StartFacts = GrantFacts & Pick<RunInput, 'provider' | 'agentMode'>;
