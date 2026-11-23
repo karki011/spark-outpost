@@ -10,7 +10,7 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron';
 import { BROWSER_HOST_ENV, isBetaVersion, parseSparkChatLink } from '@spark-outpost/contracts';
-import { linkIn } from './deep-link.ts';
+import { launchLink, linkIn } from './deep-link.ts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
 import { stableApiPort } from './api-port.ts';
 import { waitForApi } from './api-ready.ts';
@@ -101,7 +101,10 @@ let spark: SparkWindow | null = null;
 let origin: string | null = null;
 let savedTheme: string | null = null;
 let companionHost: CompanionHost | null = null;
-let pendingLinkChat: string | null = null;
+const startLink = launchLink(process.argv, config.linkScheme);
+let pendingLinkChat: string | null = startLink
+  ? parseSparkChatLink(startLink, config.linkScheme)
+  : null;
 let localApi: { origin: string; token: string } | null = null;
 let failureHelp: string | null = null;
 let updater: Updater | null = null;
