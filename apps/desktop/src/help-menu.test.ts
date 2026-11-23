@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MenuItemConstructorOptions } from 'electron';
-import { aboutVersion, appMenuTemplate, type HelpActions } from './help-menu.ts';
+import { aboutVersion, appMenuTemplate, releaseStage, type HelpActions } from './help-menu.ts';
 
 function actions(change: Partial<HelpActions> = {}): HelpActions {
   return {
@@ -276,10 +276,19 @@ describe('the View menu', () => {
 
 describe('aboutVersion', () => {
   it('labels beta builds in the About panel', () => {
-    expect(aboutVersion('0.1.0-beta.1', true)).toEqual({
+    expect(aboutVersion('0.1.0-beta.1', 'Beta')).toEqual({
       applicationVersion: '0.1.0-beta.1',
       version: 'Beta',
     });
-    expect(aboutVersion('0.1.0', false)).toEqual({ applicationVersion: '0.1.0' });
+    expect(aboutVersion('0.1.0', null)).toEqual({ applicationVersion: '0.1.0' });
+  });
+});
+
+describe('releaseStage', () => {
+  it('calls every Windows build an alpha and a Mac beta version a beta', () => {
+    expect(releaseStage(true, 'win32')).toBe('Alpha');
+    expect(releaseStage(false, 'win32')).toBe('Alpha');
+    expect(releaseStage(true, 'darwin')).toBe('Beta');
+    expect(releaseStage(false, 'darwin')).toBeNull();
   });
 });
