@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { TerminalServerMessage } from '@spark-outpost/contracts';
-import { isAlive, processKillsSent, processTable } from './process-group.ts';
+import { isAlive, processKillsSent } from './process-group.ts';
 import { loginShellSpawner } from './pty.ts';
 import { shellPid, TEST_SHELL } from './test-shell.fixture.ts';
 import type { OpenShell } from '../persistence/terminal-shells.ts';
@@ -134,11 +134,8 @@ describe('chat shells', () => {
       return seen === label;
     };
     shell.terminal.input('sleep 100\r');
-    await until(shows('sleep 100'), PROCESS_WAIT_MS).catch(async () => {
-      const rows = (await processTable())
-        .filter((row) => /bash|sleep|conhost|OpenConsole/i.test(row.args))
-        .map((row) => `${row.pid}<-${row.ppid} ${row.args}`);
-      throw new Error(`Expected sleep 100, last saw ${JSON.stringify(seen)}.\n${rows.join('\n')}`);
+    await until(shows('sleep 100'), PROCESS_WAIT_MS).catch(() => {
+      throw new Error(`Expected sleep 100, last saw ${JSON.stringify(seen)}.`);
     });
 
     shell.terminal.input('\x03');

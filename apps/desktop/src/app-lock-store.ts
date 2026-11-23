@@ -24,12 +24,29 @@ export function readAppLockRecord(file: string): AppLockRecord {
   }
 }
 
+const BUSY = new Set(['EPERM', 'EBUSY', 'EACCES']);
+const RENAME_TRIES = 10;
+
+async function replace(temporary: string, file: string): Promise<void> {
+  for (let tries = 1; ; tries += 1) {
+    try {
+      await rename(temporary, file);
+      return;
+    } catch (error) {
+      const busy =
+        process.platform === 'win32' && BUSY.has((error as NodeJS.ErrnoException).code ?? '');
+      if (!busy || tries >= RENAME_TRIES) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 20 * tries));
+    }
+  }
+}
+
 export async function saveAppLockRecord(file: string, record: AppLockRecord): Promise<void> {
   mkdirSync(path.dirname(file), { recursive: true });
   const temporary = `${file}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`;
   try {
     await writeFile(temporary, serializeAppLockRecord(record), { mode: 0o600 });
-    await rename(temporary, file);
+    await replace(temporary, file);
   } catch (error) {
     await rm(temporary, { force: true });
     throw error;
