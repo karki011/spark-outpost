@@ -194,6 +194,10 @@ From the npm registry and official docs:
 
 - **Desktop runtime connection:** on Windows the desktop app and its background service talk over a named pipe (`\\.\pipe\spark-outpost-runtime-<hash of the data folder>`) instead of a Unix socket (`runtime-handshake.ts`). The token and endpoint files stay in the private data folder, and every connection still proves it holds the token before anything else is sent, so the pipe's default access rules are not relied on. Finding a leftover service reads its command line through `Win32_Process` instead of `ps`, allowing for quoted paths (`runtime-retire.ts`).
 
+## Phase 4 progress
+
+- **Hour cycle (done):** times follow the Windows short time format (`sShortTime` under `HKCU\Control Panel\International`: `H` is a 24-hour clock, `h` a 12-hour one), read with `reg.exe` from System32 at start and again whenever a Spark window gains focus (`apps/desktop/src/hour-cycle.ts`).
+
 ## Still unverified (needs a Windows machine)
 
 - That Spark's ACP sessions start with the user's logins on Windows.

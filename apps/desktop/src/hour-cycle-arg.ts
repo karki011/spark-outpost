@@ -10,6 +10,19 @@ export function macHourCycle(read: (key: string) => boolean): HourCycle | null {
   return null;
 }
 
+export function windowsShortTime(regOutput: string): string | null {
+  const match = /^\s*sShortTime\s+REG_SZ\s+(.+?)\s*$/m.exec(regOutput);
+  return match?.[1] ?? null;
+}
+
+export function windowsHourCycle(shortTime: string | null): HourCycle | null {
+  if (!shortTime) return null;
+  const pattern = shortTime.replace(/'[^']*'/g, '');
+  if (pattern.includes('H')) return 'h23';
+  if (pattern.includes('h')) return 'h12';
+  return null;
+}
+
 export function isHourCycle(value: unknown): value is HourCycle {
   return value === 'h12' || value === 'h23';
 }
