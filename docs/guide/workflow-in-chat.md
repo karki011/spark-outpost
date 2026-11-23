@@ -27,7 +27,7 @@ Findings are last-step reply lines starting `[Critical]`, `[High]`, `[Medium]` o
 
 ## The chat's agent gets the report
 
-When a run ends, the chat's agent reads each step's reply (up to 4,000 characters) and answers under the line. It is not your message; the chat's mode and autonomy decide what the agent may do.
+When a run ends, the chat's agent reads each step's reply (up to 4,000 characters) and answers under the line. It is not your message: the agent follows the chat's mode, and a run you didn't start with `@` never pushes.
 
 ## Pick the pull request
 

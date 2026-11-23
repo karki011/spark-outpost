@@ -15,7 +15,8 @@ const NEITHER: SubChatNeeds = { sub_chats: false, sub_chat_stop: false };
 
 const OWN_TURN = `FROM runs r JOIN conversations c ON c.id = r.conversation_id
   WHERE r.id = $2 AND c.id = $1 AND r.parent_run_id IS NULL
-    AND r.source IS DISTINCT FROM 'voice' AND c.kind = 'chat'
+    AND r.source IS DISTINCT FROM 'voice' AND r.source IS DISTINCT FROM 'workflow'
+    AND c.kind = 'chat'
     AND c.session_type <> 'terminal'`;
 
 export async function chatMessagesNeed(db: Queryable, session: ChatSession): Promise<boolean> {

@@ -125,9 +125,12 @@ export const WORKFLOW_REPORT_STEP_MAX = 4000;
 const REPORT_LINE =
   'This report is handed to you, the chat’s main agent: read it, act on what needs acting on as this chat’s mode and autonomy allow, and say briefly what you did or that nothing needs doing. Do not redo the steps.';
 
+const NO_PUBLISH_LINE =
+  'This turn does not push or open a pull request: changes you make stay in the chat for the user.';
+
 function nextLine(note: WorkflowNote): string {
   if (!note.continues) return 'The main agent did not run for this message.';
-  if (note.fromUser !== true) return REPORT_LINE;
+  if (note.fromUser !== true) return `${REPORT_LINE} ${NO_PUBLISH_LINE}`;
   return `${REPORT_LINE} If the user’s message asks for more than the steps did, do that too.`;
 }
 

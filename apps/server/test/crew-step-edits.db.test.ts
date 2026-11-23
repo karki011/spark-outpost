@@ -10,7 +10,12 @@ import { replyText } from '../src/persistence/spark-mentions.ts';
 import type { Worker } from '../src/workflow/worker.ts';
 import { at, schedulerClock } from './crew-schedule-support.ts';
 import { newSpark, saveFlow, step, useWorkflowsDir } from './crew-workflow-support.ts';
-import { CHAT_BRANCH, chatOnItsBranch, type BranchChat } from './publish-step-support.ts';
+import {
+  CHAT_BRANCH,
+  chatOnItsBranch,
+  promptsOf,
+  type BranchChat,
+} from './publish-step-support.ts';
 import { git, write } from './ship-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 import { changesOf, driveToEnd, openChat, repliesOf } from './turn-support.ts';
@@ -94,6 +99,21 @@ describe('a triggered run that may change files', { timeout: 120_000 }, () => {
     expect(report).toContain('handed to you, the chat’s main agent');
     expect(report).toContain('fix (Pip');
     expect(report).not.toContain('If the user’s message asks');
+  });
+
+  it('never publishes from the turn, even when the chat is at Full auto → PR', async () => {
+    const chat = await chatOnItsBranch(t, base, `edits-${chats}`, 'full-auto', 'none');
+    const target = path.join(chat.repo.root, 'notes.txt');
+    await saveFlow(t, FLOW, [step('fix', sparkId, { prompt: `Fix it. #fswrite ${target}` })]);
+    const head = git(chat.repo.root, 'rev-parse', 'HEAD');
+
+    const run = await triggered(chat.conversationId, true);
+
+    expect(await notes(chat)).toBe('x');
+    expect(git(chat.repo.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(await promptsOf(t, run.runId!)).toBe(1);
+    const [report] = await repliesOf(t, run.runId!);
+    expect(report).toContain('This turn does not push or open a pull request');
   });
 
   it('keeps the step read-only without the option', async () => {

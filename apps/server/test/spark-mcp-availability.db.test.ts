@@ -131,7 +131,7 @@ describe('what a Spark tools session can use', () => {
     expect((await sparkAvailability(deps(), turn)).chat_messages).toBe(false);
   });
 
-  it('offers spark_sub_chats to a project chat’s own turn, never to a sub-chat, a spoken turn or Ask Spark', async () => {
+  it('offers spark_sub_chats to a project chat’s own turn, never to a sub-chat, a workflow’s turn, a spoken turn or Ask Spark', async () => {
     const plain = await startChat(t, 'Split the work');
     const plainTurn = { ...scopeOf(plain.conversationId), runId: plain.runId };
     expect(await sparkAvailability(deps(), plainTurn)).toMatchObject({
@@ -160,6 +160,13 @@ describe('what a Spark tools session can use', () => {
     expect(await sparkAvailability(deps(), turn)).toMatchObject({
       sub_chats: true,
       sub_chat_stop: true,
+    });
+
+    await t.db.query(`UPDATE runs SET source = 'workflow' WHERE id = $1`, [turn.runId]);
+    expect(await sparkAvailability(deps(), turn)).toMatchObject({
+      sub_chats: false,
+      sub_chat_stop: false,
+      chat_messages: false,
     });
 
     await t.db.query(`UPDATE runs SET source = 'voice' WHERE id = $1`, [turn.runId]);

@@ -127,6 +127,7 @@ type GrantFacts = Pick<
   | 'chatAsk'
   | 'sparkRuleRetry'
   | 'assistantSent'
+  | 'workflowStarted'
 > & {
   identity: Pick<RunInput['identity'], 'threadId'>;
 };
@@ -135,7 +136,8 @@ export function publishGrant(input: GrantFacts): PublishGrant {
   const followUp = input.followUpRound
     ? { workspaceId: input.workspaceId, conversationId: input.identity.threadId }
     : null;
-  return { level: input.level, ...requestedBy(userText(input)), followUp };
+  const level = input.workflowStarted ? 'hands-off' : input.level;
+  return { level, ...requestedBy(userText(input)), followUp };
 }
 
 type StartFacts = GrantFacts & Pick<RunInput, 'provider' | 'agentMode'>;
