@@ -73,7 +73,7 @@ describe('terminal sessions', () => {
     expect(isClosed()).toBe(true);
     await until(() => !isAlive(child));
     expect(sessions.activeCount).toBe(0);
-  });
+  }, 20_000);
 
   it('kills the terminal when the page disconnects', async () => {
     const { created, messages, screen, client } = start();

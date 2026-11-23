@@ -137,7 +137,7 @@ function parseProcessTable(output: string): ProcessRow[] {
 
 const WINDOWS_TABLE = [
   '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
-  'Get-CimInstance Win32_Process | ForEach-Object { $created = if ($_.CreationDate) { ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() } else { 0 }; "$($_.ProcessId) $($_.ParentProcessId) $created $($_.CommandLine)" }',
+  'Get-CimInstance Win32_Process | ForEach-Object { $created = 0; if ($_.CreationDate) { $created = ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() }; "$($_.ProcessId) $($_.ParentProcessId) $created $($_.CommandLine)" }',
 ].join('; ');
 
 function system32(file: string): string {
