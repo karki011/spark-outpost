@@ -9,6 +9,7 @@ import {
   agentDefinitions,
 } from './agents.ts';
 import { sessionMeta } from './session-start.ts';
+import { CLAUDE_WINDOWS_ENV } from './claude-windows-env.fixture.ts';
 
 const project = { roots: [{ path: '/work/app', ignore: [] }] } as unknown as PathPolicy;
 const { claude } = agentDefinitions;
@@ -85,6 +86,7 @@ describe("the agent process of the chat's own changing run that may not publish"
       GIT_CONFIG_COUNT: '1',
       GIT_CONFIG_KEY_0: `url.${NO_PUSH_URL}.pushInsteadOf`,
       GIT_CONFIG_VALUE_0: '',
+      ...CLAUDE_WINDOWS_ENV,
     });
   });
 
@@ -92,6 +94,7 @@ describe("the agent process of the chat's own changing run that may not publish"
     expect(await agentEnvironment(options, '/runs/1')).toEqual({
       ...options.env,
       CLAUDE_CODE_FORK_SUBAGENT: '1',
+      ...CLAUDE_WINDOWS_ENV,
     });
   });
 });

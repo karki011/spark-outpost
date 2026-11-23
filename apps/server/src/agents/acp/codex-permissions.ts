@@ -1,6 +1,6 @@
 import { browserDataDir, entryPath, guardedDataEntries } from '../../approvals/browser-data.ts';
 import { guardedCrewFolders } from '../../approvals/crew-folders.ts';
-import { join } from 'node:path';
+import { gatePaths, toGatePath, toNativePath } from '../../approvals/gate-path.ts';
 import type { GitDirs } from '../../projects/path-policy.ts';
 import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
 
@@ -26,6 +26,8 @@ function crewReadOnly(folders: readonly string[]): Record<string, string> {
 
 const WORKTREE_LINKS = ['HEAD', 'commondir', 'gitdir', 'config.worktree'];
 
+const join = gatePaths.join;
+
 function branchRefAccess(common: string, branch: string | undefined): Record<string, string> {
   if (!branch) return {};
   const ref = join(common, branch);
@@ -33,7 +35,8 @@ function branchRefAccess(common: string, branch: string | undefined): Record<str
   return { [ref]: 'write', [`${ref}.lock`]: 'write', [log]: 'write' };
 }
 
-function worktreeGitAccess(dirs: GitDirs): Record<string, string> {
+function worktreeGitAccess(native: GitDirs): Record<string, string> {
+  const dirs = { ...native, own: toGatePath(native.own), common: toGatePath(native.common) };
   if (dirs.own === dirs.common) return {};
   return {
     [dirs.own]: 'write',
@@ -43,6 +46,16 @@ function worktreeGitAccess(dirs: GitDirs): Record<string, string> {
     [join(dirs.common, 'hooks')]: 'read',
     [join(dirs.common, 'config')]: 'read',
   };
+}
+
+function nativeKeys<T>(entries: Record<string, T>): Record<string, T> {
+  if (process.platform !== 'win32') return entries;
+  return Object.fromEntries(
+    Object.entries(entries).map(([key, value]) => [
+      key.startsWith('/') ? toNativePath(key) : key,
+      value,
+    ]),
+  );
 }
 
 export function codexGitWrites(gitDirs: readonly (GitDirs | null | undefined)[]) {
@@ -57,9 +70,10 @@ export function codexPermissionProfiles(
 ): Record<string, object> {
   const projectRoots = secrets ? { ':project_roots': secretDenies() } : {};
   const denied = { ...projectRoots, ...crewReadOnly(crew), ...browserDataDenies(dataDir) };
-  const working = { ...gitWrites, ...denied };
+  const working = nativeKeys({ ...gitWrites, ...denied });
+  const deniedHere = nativeKeys(denied);
   return {
-    [CODEX_READ_ONLY_MODE]: { extends: ':read-only', filesystem: denied },
+    [CODEX_READ_ONLY_MODE]: { extends: ':read-only', filesystem: deniedHere },
     [CODEX_DO_MODE]: {
       extends: ':workspace',
       filesystem: { ':slash_tmp': 'read', ...working },
@@ -67,7 +81,7 @@ export function codexPermissionProfiles(
     'workspace-write': { extends: ':workspace', filesystem: working },
     agent: { extends: ':workspace', filesystem: working },
     'agent-full-access': {
-      filesystem: { ':root': 'write', ...denied },
+      filesystem: { ':root': 'write', ...deniedHere },
       network: { enabled: true },
     },
   };

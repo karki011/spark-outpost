@@ -3,7 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { isAlive, processTable } from '../../terminal/process-group.ts';
 import { startAgentProcess, type AgentProcess } from './agent-process.ts';
 
-const STRAY_JOB = 'set -m; sleep 300 & echo "job $!" >&2; wait';
+const STRAY_JOB = [
+  "const { spawn } = require('node:child_process');",
+  "const job = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 300000)'], { detached: true, stdio: 'ignore' });",
+  "process.stderr.write('job ' + job.pid + '\\n');",
+  'setInterval(() => {}, 1000);',
+].join('\n');
+const AGENT_ENV = {
+  PATH: process.env.PATH ?? '',
+  ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
+};
 
 async function until<T>(read: () => T | null | Promise<T | null>): Promise<T> {
   for (let tries = 0; tries < 250; tries += 1) {
@@ -23,9 +32,11 @@ function forceKill(pid: number): void {
 }
 
 async function agentWithJob(): Promise<{ agent: AgentProcess; root: number; job: number }> {
-  const agent = startAgentProcess({ command: '/bin/sh', args: ['-c', STRAY_JOB] }, tmpdir(), {
-    PATH: '/usr/bin:/bin',
-  });
+  const agent = startAgentProcess(
+    { command: process.execPath, args: ['-e', STRAY_JOB] },
+    tmpdir(),
+    AGENT_ENV,
+  );
   agent.exited.catch(() => undefined);
   const job = await until(() => {
     const match = /job (\d+)/.exec(agent.stderrTail());

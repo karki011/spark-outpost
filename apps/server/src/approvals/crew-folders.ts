@@ -17,7 +17,7 @@ export const CREW_FOLDER_REASON =
 const TOOL_CHANGES = new Set(['delete', 'move']);
 
 function comparable(target: string): string {
-  const resolved = path.resolve(target).replace(/^\/(tmp|var)(?=\/|$)/, '/private/$1');
+  const resolved = path.resolve(toGatePath(target)).replace(/^\/(tmp|var)(?=\/|$)/, '/private/$1');
   return process.platform === 'darwin' || process.platform === 'win32'
     ? resolved.toLowerCase()
     : resolved;
