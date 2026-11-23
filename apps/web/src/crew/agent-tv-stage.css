@@ -430,6 +430,10 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+.tv-bub-quiet {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
 .tv-bub-now code {
   font-size: 0.94em;
 }

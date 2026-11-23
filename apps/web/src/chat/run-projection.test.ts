@@ -360,4 +360,19 @@ describe('shownSteps', () => {
     expect(shownSteps(stream, saved, false)).toEqual(stream.steps);
     expect(shownSteps({ steps: [] }, saved, false)).toBe(saved);
   });
+
+  it('keeps the time of the last event when it carries one, and forgets it when it does not', () => {
+    const step = applyRunEvent(initialRunProjection, 1, {
+      type: EventType.STEP_FINISHED,
+      stepName: 'Read `a.ts`',
+      timestamp: 1_000,
+    });
+    expect(step.lastAt).toBe(1_000);
+    const text = applyRunEvent(step, 2, {
+      type: EventType.TEXT_MESSAGE_CONTENT,
+      messageId: 'm',
+      delta: 'Hi',
+    });
+    expect(text.lastAt).toBeNull();
+  });
 });

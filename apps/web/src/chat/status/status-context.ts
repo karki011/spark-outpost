@@ -1,4 +1,4 @@
-import { createContext, use, useCallback, useEffect } from 'react';
+import { createContext, use, useCallback, useEffect, useSyncExternalStore } from 'react';
 import type { RunStep } from '../run-projection.ts';
 import type { PendingSummary } from './pending-summary.ts';
 import type { StatusStore, Worker } from './status-store.ts';
@@ -97,5 +97,15 @@ export function useLiveHead(id: string | null) {
       };
     },
     [store, id],
+  );
+}
+
+const NO_STORE = () => () => {};
+
+export function useOutputAt(id: string): number | null {
+  const store = use(StatusContext);
+  return useSyncExternalStore(
+    store?.subscribe ?? NO_STORE,
+    () => store?.snapshot().live.find((report) => report.id === id)?.outputAt ?? null,
   );
 }

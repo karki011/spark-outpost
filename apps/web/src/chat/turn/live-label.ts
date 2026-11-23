@@ -8,6 +8,7 @@ export interface LeadStep {
   label: string;
   since: number | null;
   thought?: string;
+  quietSince?: number;
   repeatsRow?: true;
 }
 
@@ -16,6 +17,8 @@ export interface LeadInput {
   commands: readonly Pick<CommandView, 'status' | 'description' | 'command' | 'startedAt'>[];
   steps: readonly Pick<RunStep, 'name' | 'done' | 'subagent' | 'waits' | 'startedAt' | 'thought'>[];
   publishing: { since: number | null } | null;
+  sparks?: readonly string[];
+  outputAt?: number | null;
 }
 
 function liveThought(step: Pick<RunStep, 'name' | 'thought'>): { thought?: string } {
@@ -23,12 +26,29 @@ function liveThought(step: Pick<RunStep, 'name' | 'thought'>): { thought?: strin
   return thought && stepKind(step.name) === 'think' ? { thought } : {};
 }
 
+function quietFrom(outputAt: number | null | undefined): { quietSince?: number } {
+  return outputAt === null || outputAt === undefined ? {} : { quietSince: outputAt };
+}
+
+function waitingOn(sparks: readonly string[]): string {
+  if (sparks.length === 1) return `Waiting on ${sparks[0]}`;
+  if (sparks.length === 2) return `Waiting on ${sparks[0]} and ${sparks[1]}`;
+  return `Waiting on ${sparks.length} Sparks`;
+}
+
 function timeOf(iso: string): number | null {
   const time = Date.parse(iso);
   return Number.isFinite(time) ? time : null;
 }
 
-export function leadStep({ subagents, commands, steps, publishing }: LeadInput): LeadStep {
+export function leadStep({
+  subagents,
+  commands,
+  steps,
+  publishing,
+  sparks = [],
+  outputAt,
+}: LeadInput): LeadStep {
   const agents = subagents.filter((row) => row.state === 'working').length;
   if (agents > 0) {
     return {
@@ -48,8 +68,15 @@ export function leadStep({ subagents, commands, steps, publishing }: LeadInput):
   const open = steps.findLast((step) => !step.done && !step.subagent && !step.waits);
   if (open) {
     const label = friendlyStep(open.name).replaceAll('`', '').trim();
-    return { label: label || 'Working', since: open.startedAt ?? null, ...liveThought(open) };
+    const thinking = stepKind(open.name) === 'think';
+    return {
+      label: label || 'Working',
+      since: open.startedAt ?? null,
+      ...liveThought(open),
+      ...(thinking ? quietFrom(outputAt) : {}),
+    };
   }
+  if (sparks.length > 0) return { label: waitingOn(sparks), since: null };
   if (publishing) return { label: 'Publishing', since: publishing.since };
-  return { label: 'Thinking', since: null };
+  return { label: 'Thinking', since: null, ...quietFrom(outputAt) };
 }

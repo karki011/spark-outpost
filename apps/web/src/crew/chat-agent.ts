@@ -86,6 +86,9 @@ export function chatAgent(
     effort: run.effort,
     state,
     line: agentLine(run, state, steps, waitingOn, background, live, current),
+    ...(state === 'thinking' && live?.quietSince !== undefined
+      ? { quietSince: live.quietSince }
+      : {}),
     tokens: run.usage?.tokens?.total ?? null,
     costUsd: run.usage?.costUsd ?? null,
     costSource: run.usage?.costSource ?? null,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inboxQuery, parseInboxPage, repoChunks, reviewRequestsQuery } from './search.ts';
+import { inboxQuery, parseInboxPage, repoChunks, reviewQuery } from './search.ts';
 
 const HEAD = 'c'.repeat(40);
 
@@ -206,18 +206,28 @@ describe('the inbox query', () => {
   it('asks for review requests in every repository and for own pull requests in the linked ones', () => {
     const searchOf = (query: string) =>
       JSON.parse(/search\(query: ("(?:[^"\\]|\\.)*")/.exec(query)![1]!) as string;
-    const review = searchOf(reviewRequestsQuery('2026-11-02'));
+    const review = searchOf(reviewQuery('review', '2026-11-02'));
     const mine = searchOf(inboxQuery([{ owner: 'acme', name: 'widgets' }], '2026-11-02'));
     expect(review).toContain('review-requested:@me');
     expect(review).toContain('updated:>=2026-11-02');
     expect(review).not.toContain('repo:');
-    const reviewed = JSON.parse(
-      /reviewed: search\(query: ("(?:[^"\\]|\\.)*")/.exec(reviewRequestsQuery('2026-11-02'))![1]!,
-    ) as string;
+    const reviewed = searchOf(reviewQuery('reviewed', '2026-11-02'));
     expect(reviewed).toContain('reviewed-by:@me -author:@me');
     expect(reviewed).not.toContain('repo:');
     expect(mine).toContain('author:@me');
     expect(mine).toContain('repo:acme/widgets');
+  });
+
+  it('asks one search per query, a page at a time, and passes the cursor GitHub gave', () => {
+    const first = reviewQuery('review', '2026-11-02');
+    expect(first).toMatch(/review: search\(.*first: 15\)/);
+    expect(first).not.toContain('reviewed:');
+    expect(first).not.toContain('after:');
+    expect(reviewQuery('reviewed', '2026-11-02', 'Y3Vyc29y"x')).toContain('after: "Y3Vyc29y\\"x"');
+    const body = page([node()], []);
+    expect(parseInboxPage(body, 'review').next).toBeNull();
+    Object.assign(body.data.review, { pageInfo: { hasNextPage: true, endCursor: 'abc' } });
+    expect(parseInboxPage(body, 'review').next).toBe('abc');
   });
 
   it('reads only the search it asked for', () => {

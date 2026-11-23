@@ -88,6 +88,7 @@ export interface FakeGitHub {
   app: FakeGitHubApp;
   requests: { method: string; path: string; via: FakePull['via'] | null }[];
   searchFailure: { status: number; message: string } | null;
+  searchHold: Promise<void> | null;
   handle(req: IncomingMessage, res: ServerResponse, path: string): Promise<void>;
 }
 
@@ -209,6 +210,7 @@ export function fakeGitHub(): FakeGitHub {
     app,
     requests,
     searchFailure: null,
+    searchHold: null,
     async handle(req, res, path) {
       const url = new URL(path, 'http://fake');
       const signIn = await app.login(req, url.pathname);
@@ -240,6 +242,7 @@ export function fakeGitHub(): FakeGitHub {
       if (req.method === 'POST' && url.pathname === '/graphql') {
         const body = await readJson(req);
         const search = inboxSearchAnswer(pulls, body, who.login);
+        if (search && fake.searchHold) await fake.searchHold;
         if (search && fake.searchFailure) {
           return send(res, fake.searchFailure.status, { message: fake.searchFailure.message });
         }

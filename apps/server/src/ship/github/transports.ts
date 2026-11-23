@@ -58,7 +58,7 @@ function fieldArgs(body: Record<string, string | boolean> | undefined): string[]
   );
 }
 
-const HTTP_STATUS = /\(HTTP (\d{3})\)/;
+const HTTP_STATUS = /\bHTTP (\d{3})\b/;
 
 function ghDetail(stderr: string): string {
   const line = redactText(stderr).trim().split('\n').at(-1)?.slice(0, 200);

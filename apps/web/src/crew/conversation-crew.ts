@@ -9,7 +9,7 @@ import type {
 import { topLevelRuns } from '../chat/turns.ts';
 import { chatAgent } from './chat-agent.ts';
 import type { LeadSteps } from './lead-steps.ts';
-import type { CrewAgent } from './crew-model.ts';
+import { isBusy, type CrewAgent } from './crew-model.ts';
 import { crewAgents, runAgent } from './crew-projection.ts';
 
 export function latestOrchestration(detail: ConversationDetail | undefined): Orchestration | null {
@@ -21,6 +21,13 @@ export function latestOrchestration(detail: ConversationDetail | undefined): Orc
 
 export function sparkMembers(orchestration: Orchestration | null | undefined): CrewMember[] {
   return orchestration?.crew.filter((member) => member.role === 'spark') ?? [];
+}
+
+export function workingSparks(orchestration: Orchestration | null | undefined): string[] {
+  if (!orchestration) return [];
+  return sparkMembers(orchestration)
+    .filter((member) => isBusy(runAgent(member, orchestration).state))
+    .map((member) => member.name);
 }
 
 export function isSparkLed(orchestration: Orchestration | null | undefined): boolean {

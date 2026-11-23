@@ -5,7 +5,9 @@ const TEXT_LIMIT = 300;
 const LOGIN_LIMIT = 100;
 const PREVIEW_LIMIT = 2_000;
 const LABEL_LIMIT = 10;
-const MAX_RESULTS = 50;
+export const MAX_RESULTS = 50;
+const PAGE_SIZE = 15;
+const CURSOR_LIMIT = 200;
 const QUERY_LIMIT = 250;
 const SAFE_NAME = /^[A-Za-z0-9_.-]{1,100}$/;
 const FAILED_CONCLUSIONS = new Set(['FAILURE', 'TIMED_OUT', 'ACTION_REQUIRED', 'STARTUP_FAILURE']);
@@ -52,6 +54,7 @@ interface SearchPage {
   viewer: string | null;
   pulls: FoundPull[];
   truncated: boolean;
+  next: string | null;
   error: string | null;
 }
 
@@ -85,23 +88,38 @@ export function repoChunks(repos: readonly InboxRepo[], since: string): InboxRep
   return chunks;
 }
 
-function searchField(alias: string, search: string): string {
-  return `${alias}: search(query: ${JSON.stringify(search)}, type: ISSUE, first: ${MAX_RESULTS}) { issueCount nodes { ... on PullRequest { ${PULL_FIELDS} } } }`;
+function searchField(alias: InboxPart, search: string, after: string | null): string {
+  const from = after === null ? '' : `, after: ${JSON.stringify(after)}`;
+  return `${alias}: search(query: ${JSON.stringify(search)}, type: ISSUE, first: ${PAGE_SIZE}${from}) { issueCount pageInfo { hasNextPage endCursor } nodes { ... on PullRequest { ${PULL_FIELDS} } } }`;
 }
 
-export function inboxQuery(repos: readonly InboxRepo[], since: string): string {
+export function inboxQuery(
+  repos: readonly InboxRepo[],
+  since: string,
+  after: string | null = null,
+): string {
   const scope = repos.map((repo) => ` repo:${repo.owner}/${repo.name}`).join('');
-  return `query { viewer { login } ${searchField('mine', `${filters('author', since)}${scope}`)} }`;
+  return `query { viewer { login } ${searchField('mine', `${filters('author', since)}${scope}`, after)} }`;
 }
 
-export function reviewRequestsQuery(since: string): string {
-  const requested = searchField('review', filters('review-requested', since));
-  const reviewed = searchField('reviewed', filters('reviewed-by', since));
-  return `query { viewer { login } ${requested} ${reviewed} }`;
+export function reviewQuery(
+  part: 'review' | 'reviewed',
+  since: string,
+  after: string | null = null,
+): string {
+  const kind = part === 'review' ? 'review-requested' : 'reviewed-by';
+  return `query { viewer { login } ${searchField(part, filters(kind, since), after)} }`;
 }
 
 const searchSchema = z.object({
   issueCount: z.number().int().nonnegative(),
+  pageInfo: z
+    .object({
+      hasNextPage: z.boolean(),
+      endCursor: z.string().min(1).max(CURSOR_LIMIT).nullable(),
+    })
+    .nullish()
+    .catch(null),
   nodes: z.array(z.unknown()),
 });
 
@@ -262,6 +280,9 @@ function pullsIn(search: z.infer<typeof searchSchema> | null, part: InboxPart) {
 const truncatedSearch = (search: z.infer<typeof searchSchema> | null) =>
   search !== null && search.issueCount > search.nodes.length;
 
+const nextCursor = (search: z.infer<typeof searchSchema> | null) =>
+  search?.pageInfo?.hasNextPage ? (search.pageInfo.endCursor ?? null) : null;
+
 export function parseInboxPage(body: unknown, part: InboxPart): SearchPage {
   const envelope = inboxEnvelopeSchema.safeParse(body);
   if (!envelope.success || !envelope.data.data) {
@@ -270,6 +291,7 @@ export function parseInboxPage(body: unknown, part: InboxPart): SearchPage {
       viewer: null,
       pulls: [],
       truncated: false,
+      next: null,
       error: message
         ? `GitHub refused the search: ${message.slice(0, 200)}`
         : 'GitHub sent an unexpected answer to the search.',
@@ -281,6 +303,7 @@ export function parseInboxPage(body: unknown, part: InboxPart): SearchPage {
     viewer: viewer?.login ?? null,
     pulls: pullsIn(search, part),
     truncated: truncatedSearch(search),
+    next: nextCursor(search),
     error: search === null ? 'GitHub left part of the search unanswered.' : null,
   };
 }

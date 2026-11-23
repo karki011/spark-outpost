@@ -6,14 +6,26 @@ const DEFAULT_SHA = 'e'.repeat(40);
 interface Search {
   repos: Set<string>;
   since: string;
+  first: number;
+  offset: number;
 }
 
+const PAGING = /^, type: ISSUE, first: (\d+)(?:, after: ("(?:[^"\\]|\\.)*"))?/;
+
 function searchIn(query: string, alias: string): Search | null {
-  const literal = SEARCH(alias).exec(query)?.[1];
-  if (!literal) return null;
+  const found = SEARCH(alias).exec(query);
+  const literal = found?.[1];
+  if (!found || !literal) return null;
   const text = JSON.parse(literal) as string;
   const repos = new Set([...text.matchAll(/repo:(\S+)/g)].map((match) => match[1]!));
-  return { repos, since: /updated:>=(\S+)/.exec(text)?.[1] ?? '' };
+  const paging = PAGING.exec(query.slice(found.index + found[0].length));
+  const after = paging?.[2] ? (JSON.parse(paging[2]) as string) : null;
+  return {
+    repos,
+    since: /updated:>=(\S+)/.exec(text)?.[1] ?? '',
+    first: Number(paging?.[1] ?? 100),
+    offset: after === null ? 0 : Number(after.replace('cursor-', '')),
+  };
 }
 
 function rollupState(pull: FakePull): string | null {
@@ -111,7 +123,12 @@ function matching(
     .filter((pull) => (pull.updated_at ?? '9999').slice(0, 10) >= search.since)
     .filter(include)
     .map((pull) => node(pull, login));
-  return { issueCount: nodes.length, nodes };
+  const end = search.offset + search.first;
+  return {
+    issueCount: nodes.length,
+    pageInfo: { hasNextPage: end < nodes.length, endCursor: `cursor-${end}` },
+    nodes: nodes.slice(search.offset, end),
+  };
 }
 
 export function inboxSearchAnswer(

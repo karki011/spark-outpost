@@ -200,7 +200,7 @@ export function GithubPage({ onOpenChat }: GithubPageProps) {
       />
       {data === undefined ? (
         <div className="gh-wait">
-          <QueryWait query={inbox} what="your pull requests">
+          <QueryWait query={inbox} what="the pull request list">
             <Skeleton label="Loading groups" shape="cards" rows={4} className="gh-skel-tiles" />
             <Skeleton label="Loading pull requests" shape="list" rows={6} />
           </QueryWait>
