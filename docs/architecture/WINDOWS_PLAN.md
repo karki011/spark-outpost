@@ -172,7 +172,7 @@ From the npm registry and official docs:
 
 ## Phase 3 progress
 
-- **Credential Manager size (done):** keyring stores UTF-16, so one entry holds about 1,200 characters. On Windows, `nativeKeyring` splits a longer secret into parts of 1,000 characters (`apps/server/src/setup/keyring-chunks.ts`): the parts go in `<account>#chunk-<n>` entries, and the main entry holds a marker with the count. Writes go parts first and the marker last, then remove leftover parts. A missing part is an error, never a short secret. The Mac keychain is unchanged.
+- **Credential Manager size (done):** keyring stores UTF-16, so one entry holds about 1,200 characters. On Windows, `nativeKeyring` splits a longer secret into parts of 1,000 characters (`apps/server/src/setup/keyring-chunks.ts`): each save writes its parts under new names (`<account>#<generation>-<n>`, a random generation per save) and then switches the main entry's marker to them, so a save that fails part way leaves the old secret whole. The old parts are removed after the switch. A missing part is an error, never a short secret. The Mac keychain is unchanged.
 
 ## Still unverified (needs a Windows machine)
 

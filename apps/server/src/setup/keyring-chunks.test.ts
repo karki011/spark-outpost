@@ -42,7 +42,8 @@ describe('secrets larger than Windows Credential Manager holds', () => {
     const keyring = chunkedKeyring(inner);
     await keyring.set('a', 'y'.repeat(3500));
     await keyring.set('a', 'z'.repeat(1500));
-    expect([...inner.entries.keys()].sort()).toEqual(['a', 'a#chunk-1', 'a#chunk-2']);
+    expect(inner.entries.size).toBe(3);
+    expect(await keyring.get('a')).toBe('z'.repeat(1500));
     await keyring.set('a', 'short');
     expect([...inner.entries.keys()]).toEqual(['a']);
     await keyring.set('a', 'w'.repeat(2500));
@@ -52,16 +53,34 @@ describe('secrets larger than Windows Credential Manager holds', () => {
 
   it('never reads a secret that looks like the part marker as parts', async () => {
     const keyring = chunkedKeyring(memory());
-    await keyring.set('a', 'spark-chunks:v1:2');
-    expect(await keyring.get('a')).toBe('spark-chunks:v1:2');
+    await keyring.set('a', 'spark-chunks:v1:0123abcd:2');
+    expect(await keyring.get('a')).toBe('spark-chunks:v1:0123abcd:2');
   });
 
   it('fails loudly when a part is missing', async () => {
     const inner = memory();
     const keyring = chunkedKeyring(inner);
     await keyring.set('a', 'q'.repeat(2500));
-    inner.entries.delete('a#chunk-2');
+    const second = [...inner.entries.keys()].find((key) => key.endsWith('-2'))!;
+    inner.entries.delete(second);
     await expect(keyring.get('a')).rejects.toThrow('Part 2 of 3');
+  });
+
+  it('keeps the old secret whole when replacing it fails part way', async () => {
+    const inner = memory();
+    const keyring = chunkedKeyring(inner);
+    await keyring.set('a', 'a'.repeat(2500));
+    const set = inner.set;
+    let writes = 0;
+    inner.set = async (account, secret) => {
+      writes += 1;
+      if (writes === 2) throw new Error('Credential Manager failed');
+      await set(account, secret);
+    };
+    await expect(keyring.set('a', 'b'.repeat(2500))).rejects.toThrow('Credential Manager failed');
+    inner.set = set;
+    expect(await keyring.get('a')).toBe('a'.repeat(2500));
+    expect(inner.entries.size).toBe(4);
   });
 
   it('never splits a character made of two halves', () => {
