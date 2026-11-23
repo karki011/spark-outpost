@@ -197,7 +197,7 @@ From the npm registry and official docs:
 ## Phase 4 progress
 
 - **Taskbar, tray and notifications (done):** on Windows the app sets its AppUserModelID to the channel's app id (the id the installer gives its shortcut), so notifications show and group under Spark Outpost; the waiting count shows as a red overlay dot on the taskbar button with the count as its description (`apps/desktop/src/app-badge.ts`), where the Mac sets the Dock badge; and the tray uses the colour app icon at 32 px, since the Mac's black template icon disappears on a dark taskbar.
-- **Deep links (done):** the packaged app registers its link scheme with `setAsDefaultProtocolClient`, a link to a running app arrives through `second-instance`, and a chat link that starts the app is read from its launch arguments (`launchLink` in `apps/desktop/src/deep-link.ts`), where the Mac gets `open-url`.
+- **Deep links (done):** the packaged app registers its link scheme with `setAsDefaultProtocolClient`, a link to a running app arrives through `second-instance`, and a chat link that starts the app is read from its launch arguments (`launchChat` in `apps/desktop/src/deep-link.ts`), where the Mac gets `open-url`.
 
 ## Still unverified (needs a Windows machine)
 

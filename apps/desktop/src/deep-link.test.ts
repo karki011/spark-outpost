@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseSparkChatLink, sparkChatLink } from '@spark-outpost/contracts';
-import { launchLink, linkIn } from './deep-link.ts';
+import { launchChat, linkIn } from './deep-link.ts';
 
 const CHAT = '3f0c9a52-6f0e-4d53-9a35-0d1f5a4b7c11';
 
@@ -13,10 +13,11 @@ describe('Spark chat links', () => {
     expect(linkIn([`spark-outpost-dev://chat/${CHAT}`], 'spark-outpost')).toBeNull();
   });
 
-  it('reads a link from the launch arguments only on Windows, where it starts the app', () => {
+  it('opens a chat link from the launch arguments only on Windows, where it starts the app', () => {
     const argv = ['C:\\Spark Outpost.exe', `spark-outpost://chat/${CHAT}`];
-    expect(launchLink(argv, 'spark-outpost', 'win32')).toBe(`spark-outpost://chat/${CHAT}`);
-    expect(launchLink(argv, 'spark-outpost', 'darwin')).toBeNull();
+    expect(launchChat(argv, 'spark-outpost', 'win32')).toBe(CHAT);
+    expect(launchChat(argv, 'spark-outpost', 'darwin')).toBeNull();
+    expect(launchChat(['C:\\Spark Outpost.exe'], 'spark-outpost', 'win32')).toBeNull();
   });
 
   it('round-trips a chat id for each channel scheme', () => {
