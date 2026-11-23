@@ -197,6 +197,7 @@ From the npm registry and official docs:
 ## Phase 4 progress
 
 - **Mark-of-the-Web (done):** a download the user saves gets a `Zone.Identifier` stream with `ZoneId=3` on Windows (`apps/desktop/src/browser/quarantine.ts`), as the Mac writes `com.apple.quarantine`; the Windows unit run writes and reads it back.
+- **Hour cycle (done):** times follow the Windows short time format (`sShortTime` under `HKCU\Control Panel\International`: `H` is a 24-hour clock, `h` a 12-hour one), read with `reg.exe` from System32 at start and again whenever a Spark window gains focus (`apps/desktop/src/hour-cycle.ts`).
 - **Unsigned installer (test only):** `pnpm desktop:package -- --platform win` (the default on Windows) builds a per-user NSIS installer for x64 (`apps/desktop/release/<version>/Spark-Outpost-<version>-windows-alpha-x64.exe`) with the app, server, web and Postgres, and none of the Mac helpers (tmux, Mac control, calendar, voice, no-activate). Postgres keeps its whole `bin` folder on Windows (its DLLs sit beside `pg_ctl.exe`, `initdb.exe` and `postgres.exe`), and node-pty keeps its `win32-x64` prebuild with ConPTY. `--release` is refused on Windows until Authenticode signing and a Windows update feed exist. The **installer** job in `.github/workflows/windows.yml` builds it, installs it silently, starts Postgres from the installed files, launches the installed app with a temporary data folder, uninstalls it, and keeps the installer as a 3-day CI artifact; it is never published.
 
 ## Still unverified (needs a Windows machine)
