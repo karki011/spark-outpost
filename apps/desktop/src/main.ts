@@ -84,6 +84,7 @@ const bootPreload = path.join(import.meta.dirname, 'boot-preload.cjs');
 const icons = channelIcons(path.join(app.getAppPath(), 'assets'), config);
 
 app.setName(config.appName);
+if (process.platform === 'win32') app.setAppUserModelId(config.appId);
 app.setAboutPanelOptions({
   applicationName: config.appName,
   ...aboutVersion(app.getVersion(), isBetaVersion(app.getVersion())),
@@ -419,6 +420,7 @@ async function launch(): Promise<void> {
     preload,
     settingsPath: settingsFile(paths.userData),
     trayIcon: icons.tray,
+    badgeWindow: () => spark?.window ?? null,
     showSpark,
     quit: () => app.quit(),
     log: mainLog,

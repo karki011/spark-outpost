@@ -194,6 +194,10 @@ From the npm registry and official docs:
 
 - **Desktop runtime connection:** on Windows the desktop app and its background service talk over a named pipe (`\\.\pipe\spark-outpost-runtime-<hash of the data folder>`) instead of a Unix socket (`runtime-handshake.ts`). The token and endpoint files stay in the private data folder, and every connection still proves it holds the token before anything else is sent, so the pipe's default access rules are not relied on. Finding a leftover service reads its command line through `Win32_Process` instead of `ps`, allowing for quoted paths (`runtime-retire.ts`).
 
+## Phase 4 progress
+
+- **Taskbar, tray and notifications (done):** on Windows the app sets its AppUserModelID to the channel's app id (the id the installer gives its shortcut), so notifications show and group under Spark Outpost; the waiting count shows as a red overlay dot on the taskbar button with the count as its description (`apps/desktop/src/app-badge.ts`), where the Mac sets the Dock badge; and the tray uses the colour app icon at 32 px, since the Mac's black template icon disappears on a dark taskbar.
+
 ## Still unverified (needs a Windows machine)
 
 - That Spark's ACP sessions start with the user's logins on Windows.
