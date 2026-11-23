@@ -197,6 +197,7 @@ From the npm registry and official docs:
 ## Phase 4 progress
 
 - **Mark-of-the-Web (done):** a download the user saves gets a `Zone.Identifier` stream with `ZoneId=3` on Windows (`apps/desktop/src/browser/quarantine.ts`), as the Mac writes `com.apple.quarantine`; the Windows unit run writes and reads it back.
+- **Hour cycle (done):** times follow the Windows short time format (`sShortTime` under `HKCU\Control Panel\International`: `H` is a 24-hour clock, `h` a 12-hour one), read with `reg.exe` from System32 at start and again whenever a Spark window gains focus (`apps/desktop/src/hour-cycle.ts`).
 - **Taskbar, tray and notifications (done):** on Windows the app sets its AppUserModelID to the channel's app id (the id the installer gives its shortcut), so notifications show and group under Spark Outpost; the waiting count shows as a red overlay dot on the taskbar button with the count as its description (`apps/desktop/src/app-badge.ts`), where the Mac sets the Dock badge; and the tray uses the colour app icon at 32 px, since the Mac's black template icon disappears on a dark taskbar. Windows builds say Alpha in the About panel and in Help and Updates, where the Mac says Beta.
 - **Deep links (done):** the packaged app registers its link scheme with `setAsDefaultProtocolClient`, a link to a running app arrives through `second-instance`, and a chat link that starts the app is read from its launch arguments (`launchChat` in `apps/desktop/src/deep-link.ts`), where the Mac gets `open-url`.
 
