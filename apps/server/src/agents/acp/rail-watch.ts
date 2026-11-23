@@ -1,8 +1,8 @@
 import { homedir } from 'node:os';
-import path from 'node:path';
 import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { RailKind, RailOriginal } from '@spark-outpost/contracts';
 import type { ApprovalRequest, RequestRoot } from '../../approvals/decide.ts';
+import { gatePaths, toGatePath, toNativePath } from '../../approvals/gate-path.ts';
 import { railCrossings, type RailCrossing } from '../../approvals/rail-crossings.ts';
 import { observedSecretReads } from '../../approvals/secret-reads.ts';
 import { outsideRoots } from '../../approvals/request-place.ts';
@@ -49,11 +49,12 @@ const ORIGINAL_MAX_CHARS = 64 * 1024;
 const TOOL_FIELDS = ['title', 'kind', 'rawInput', 'locations', 'content', '_meta'] as const;
 
 function shown(target: string, home: string): string {
-  if (!path.isAbsolute(target)) return target;
-  const relative = path.relative(home, target);
-  return relative && !relative.startsWith('..') && !path.isAbsolute(relative)
+  const gate = toGatePath(target);
+  if (!gatePaths.isAbsolute(gate)) return target;
+  const relative = gatePaths.relative(toGatePath(home), gate);
+  return relative && !relative.startsWith('..') && !gatePaths.isAbsolute(relative)
     ? `~/${relative}`
-    : target;
+    : toNativePath(gate);
 }
 
 function changesInside(crossing: RailCrossing, request: ApprovalRequest): boolean {
@@ -63,9 +64,9 @@ function changesInside(crossing: RailCrossing, request: ApprovalRequest): boolea
 }
 
 function originalsOf(crossing: RailCrossing, request: ApprovalRequest, home: string) {
-  const wanted = new Set(crossing.paths);
+  const wanted = new Set(crossing.paths.map((target) => toGatePath(target)));
   return request.diffs.flatMap((diff): RailOriginal[] =>
-    diff.oldText !== null && wanted.has(diff.path)
+    diff.oldText !== null && wanted.has(toGatePath(diff.path))
       ? [{ path: shown(diff.path, home), text: diff.oldText.slice(0, ORIGINAL_MAX_CHARS) }]
       : [],
   );
@@ -116,9 +117,9 @@ export function createRailWatch(context: RailWatchContext): RailWatch {
       const rails = (await railCrossings(request, { shell, rules })).map((crossing) => ({
         toolCallId: ran.toolCallId,
         rail: crossing.rail,
-        paths: crossing.paths.map((target) => shown(target, home)),
+        paths: crossing.paths.map((target) => shown(target, request.home)),
         inside: changesInside(crossing, request),
-        originals: originalsOf(crossing, request, home),
+        originals: originalsOf(crossing, request, request.home),
         stopped: stoppedByAgent(
           context.cli ?? null,
           crossing.rail,

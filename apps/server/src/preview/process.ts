@@ -3,6 +3,7 @@ import net from 'node:net';
 import { spawn as spawnNodePty } from 'node-pty';
 import { killProcessTree } from '../terminal/process-group.ts';
 import type { PreviewProcess, PreviewRuntime, PreviewSpawn } from './servers.ts';
+import { defaultShell } from '../setup/default-shell.ts';
 
 const CONNECT_TIMEOUT_MS = 400;
 const ANSWER_TIMEOUT_MS = 2_000;
@@ -72,7 +73,7 @@ export function spawnInLoginShell(
 
 export function previewRuntime(
   env: NodeJS.ProcessEnv = process.env,
-  shell = env.SHELL || '/bin/zsh',
+  shell = defaultShell(env),
 ): PreviewRuntime {
   return {
     spawn: spawnInLoginShell(shell),

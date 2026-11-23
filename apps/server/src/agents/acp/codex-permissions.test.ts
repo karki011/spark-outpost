@@ -88,4 +88,18 @@ describe('codexPermissionProfiles', () => {
     expect(profiles['read-only']!.filesystem).not.toHaveProperty('/repo/.git/objects');
     expect(profiles['agent-full-access']!.filesystem).not.toHaveProperty('/repo/.git/hooks');
   });
+
+  it('keeps a network share root on every git path', () => {
+    const writes = codexGitWrites([
+      {
+        common: '//server/share/repo/.git',
+        own: '//server/share/repo/.git/worktrees/w',
+        branch: 'refs/heads/spark/w',
+      },
+    ]);
+    expect(Object.keys(writes).every((key) => key.startsWith('//server/share/repo/.git'))).toBe(
+      true,
+    );
+    expect(writes).toHaveProperty(['//server/share/repo/.git/objects'], 'write');
+  });
 });

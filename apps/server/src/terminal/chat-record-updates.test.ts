@@ -1,10 +1,11 @@
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createCommandTracker } from '../agents/acp/command-output.ts';
 import { createRailWatch } from '../agents/acp/rail-watch.ts';
 import { createTurnMapper } from '../agents/acp/subagent-updates.ts';
 import { toolCallEnded, toolCallStarted, type RecordedTool } from './chat-record-updates.ts';
 
-const ROOT = '/work/project';
+const ROOT = resolve('/work/project');
 
 function replay(tool: RecordedTool, output: string) {
   const mapper = createTurnMapper('Claude Code', false);
@@ -34,7 +35,7 @@ describe('a Terminal tool call as a chat would have seen it', () => {
       {
         id: 'toolu_2',
         name: 'Edit',
-        input: { file_path: `${ROOT}/src/app.ts`, old_string: 'a', new_string: 'b' },
+        input: { file_path: join(ROOT, 'src/app.ts'), old_string: 'a', new_string: 'b' },
       },
       'ok',
     );
@@ -44,7 +45,7 @@ describe('a Terminal tool call as a chat would have seen it', () => {
 
   it('reports a read of a secret file by its path, and an unasked push as a crossing', async () => {
     const watch = createRailWatch({ roots: [{ path: ROOT, ignore: [] }], cwd: ROOT });
-    const read = { id: 'toolu_3', name: 'Read', input: { file_path: `${ROOT}/.env` } };
+    const read = { id: 'toolu_3', name: 'Read', input: { file_path: join(ROOT, '.env') } };
     await watch.observe(toolCallStarted(read, ROOT));
     const seen = await watch.observe(toolCallEnded(read, 'TOKEN=x', false));
     expect(seen.secretReads).toEqual(['.env']);

@@ -8,6 +8,7 @@ import {
   type TerminalServerMessage,
 } from '@spark-outpost/contracts';
 import { loginShellSpawner } from './pty.ts';
+import { TEST_SHELL } from './test-shell.fixture.ts';
 import { TerminalSessions } from './sessions.ts';
 import { attachTerminalSockets } from './websocket.ts';
 
@@ -22,7 +23,7 @@ beforeEach(async () => {
   server = createServer((_req, res) => res.end());
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   port = (server.address() as AddressInfo).port;
-  const spawn = loginShellSpawner('/bin/sh');
+  const spawn = loginShellSpawner(TEST_SHELL);
   reported = [];
   sessions = new TerminalSessions((options) => ({
     ...spawn(options),

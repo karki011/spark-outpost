@@ -14,7 +14,9 @@ afterEach(async () => {
 });
 
 function sleeper(): number {
-  const child = spawn('/bin/sleep', ['30'], { stdio: 'ignore' });
+  const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30_000)'], {
+    stdio: 'ignore',
+  });
   children.push(child);
   return child.pid!;
 }

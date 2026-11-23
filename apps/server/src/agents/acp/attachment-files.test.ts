@@ -22,8 +22,8 @@ describe('attachment folder', () => {
     expect(one).not.toBe(two);
     expect(await readFile(one, 'utf8')).toBe('one');
     expect(await readFile(two, 'utf8')).toBe('two');
-    expect((await stat(one)).mode & 0o777).toBe(0o600);
-    expect((await stat(dirname(one))).mode & 0o777).toBe(0o700);
+    if (process.platform !== 'win32') expect((await stat(one)).mode & 0o777).toBe(0o600);
+    if (process.platform !== 'win32') expect((await stat(dirname(one))).mode & 0o777).toBe(0o700);
     const later = file('data.zip', 'three');
     const more = await folder.prepare([later], support);
     expect(more.get(later)).not.toBe(one);

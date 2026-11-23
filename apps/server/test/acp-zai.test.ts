@@ -17,6 +17,7 @@ import { createProviders } from '../src/workflow/providers.ts';
 import { createAuditRecorder } from '../src/workflow/audit-recorder.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
+import { CLAUDE_WINDOWS_ENV_NAMES } from '../src/agents/acp/claude-windows-env.fixture.ts';
 
 const KEY = 'zai-test-key-0123456789abcdef.QwErTyUiOp';
 const FAKE_MODELS = JSON.stringify([
@@ -128,6 +129,7 @@ describe('Z.ai provider against the fake agent', { timeout: 20_000 }, () => {
       'CLAUDE_CODE_AUTO_COMPACT_WINDOW',
       'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC',
       'CLAUDE_CODE_FORK_SUBAGENT',
+      ...CLAUDE_WINDOWS_ENV_NAMES,
       'CLAUDE_CONFIG_DIR',
     ]);
   });

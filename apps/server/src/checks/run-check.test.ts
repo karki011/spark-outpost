@@ -51,7 +51,7 @@ describe('running a check', () => {
       timeoutMs: 300,
     });
     expect(run.timedOut).toBe(true);
-    expect(run.exitCode).toBeNull();
+    if (process.platform !== 'win32') expect(run.exitCode).toBeNull();
   });
 
   it('stops when its signal aborts', async () => {

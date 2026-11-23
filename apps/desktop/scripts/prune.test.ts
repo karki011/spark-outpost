@@ -25,6 +25,7 @@ async function files(dir: string): Promise<string[]> {
   return entries
     .filter((entry) => entry.isFile())
     .map((entry) => path.relative(dir, path.join(entry.parentPath, entry.name)))
+    .map((file) => file.split(path.sep).join('/'))
     .sort();
 }
 

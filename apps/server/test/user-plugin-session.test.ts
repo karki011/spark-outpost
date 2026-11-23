@@ -103,7 +103,8 @@ describe('the plugin copy', () => {
     expect(await readFile(join(dir, 'agents/helper.md'), 'utf8')).toBe(
       '---\nname: helper\n---\nHelp.\n',
     );
-    expect((await stat(join(dir, 'scripts/deploy.sh'))).mode & 0o111).not.toBe(0);
+    if (process.platform !== 'win32')
+      expect((await stat(join(dir, 'scripts/deploy.sh'))).mode & 0o111).not.toBe(0);
     await expect(stat(join(dir, 'hooks/hooks.json'))).rejects.toThrow();
   });
 

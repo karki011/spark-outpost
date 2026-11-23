@@ -35,6 +35,8 @@ import {
 } from './clone-failure.ts';
 import { cloneEnvironment, startGitClone, type GitCloneProcess } from './clone-git.ts';
 import { advance, CONNECTING, type CloneProgress } from './clone-progress.ts';
+import { signalGroup } from '../../terminal/process-group.ts';
+import { releaseWindowsOrphan } from './clone-recovery-windows.ts';
 
 export interface CloneJobsDeps {
   db: Db;
@@ -138,11 +140,14 @@ async function ownedElsewhere(marker: CloneMarker): Promise<boolean> {
 
 async function stopOrphan(marker: CloneMarker): Promise<void> {
   if (!marker.pid || !(await runningClone(marker))) return;
-  try {
-    process.kill(-marker.pid, 'SIGKILL');
-  } catch {
-    return;
-  }
+  signalGroup(marker.pid, 'SIGKILL');
+}
+
+async function releaseOrphan(marker: CloneMarker): Promise<boolean> {
+  if (process.platform === 'win32') return releaseWindowsOrphan(marker);
+  if (await ownedElsewhere(marker)) return false;
+  await stopOrphan(marker);
+  return true;
 }
 
 async function configLeak(destination: string, tokens: readonly string[]): Promise<boolean> {
@@ -345,8 +350,7 @@ export function createCloneJobs(deps: CloneJobsDeps): CloneJobs {
     async recover() {
       const home = await deps.home();
       for (const marker of await cloneMarkers(deps.db, deps.workspaceId)) {
-        if (entries.has(marker.id) || (await ownedElsewhere(marker))) continue;
-        await stopOrphan(marker);
+        if (entries.has(marker.id) || !(await releaseOrphan(marker))) continue;
         const removed = await removeClaimed(marker.destination, marker.identity);
         await deleteCloneMarker(deps.db, marker.id);
         entries.set(marker.id, {

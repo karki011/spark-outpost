@@ -1,4 +1,5 @@
-import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -32,7 +33,7 @@ let audited: { method: string; params: Record<string, unknown> }[];
 let stopsAsked: unknown[][];
 
 beforeEach(async () => {
-  root = await realpath(await mkdtemp(path.join(tmpdir(), 'spark-terminal-run-')));
+  root = realpathSync.native(await mkdtemp(path.join(tmpdir(), 'spark-terminal-run-')));
   audited = [];
   stopsAsked = [];
 });

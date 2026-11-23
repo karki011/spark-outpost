@@ -90,7 +90,9 @@ export function cwdLabel(cwd: string | null, roots: readonly string[]): string |
   for (const root of roots) {
     const relative = path.relative(root, cwd);
     if (relative === '') return './';
-    if (!relative.startsWith('..') && !path.isAbsolute(relative)) return `./${relative}`;
+    if (!relative.startsWith('..') && !path.isAbsolute(relative)) {
+      return `./${relative.split(path.sep).join('/')}`;
+    }
   }
   const home = homedir();
   return cwd === home || cwd.startsWith(`${home}${path.sep}`) ? `~${cwd.slice(home.length)}` : cwd;

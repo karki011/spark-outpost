@@ -3,6 +3,7 @@ import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { buildClaudePermissionPresentation } from '@agentclientprotocol/claude-agent-acp/dist/permissions/presentation.js';
 import { readingTurnReviews } from './do-handlers.ts';
 import { approvalRequestFrom } from './permission-request.ts';
+import { gateAbs } from './gate-abs.fixture.ts';
 
 const context = {
   rpcId: '7',
@@ -31,7 +32,11 @@ describe('Claude tools the adapter shows as "other"', () => {
       asked('NotebookEdit', { notebook_path: '/work/app/CLAUDE.md', new_source: 'x' }),
       context,
     );
-    expect(request).toMatchObject({ kind: 'edit', paths: ['/work/app/CLAUDE.md'], command: null });
+    expect(request).toMatchObject({
+      kind: 'edit',
+      paths: [gateAbs('/work/app/CLAUDE.md')],
+      command: null,
+    });
   });
 
   it("reads a Monitor's command as a command the gate can judge", () => {

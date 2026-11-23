@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { agentDefinitions } from './agents.ts';
 import { agentEnvironment } from './agent-env.ts';
 import { codexUserMcpNames } from './codex-mcp.ts';
+import { CLAUDE_WINDOWS_ENV } from './claude-windows-env.fixture.ts';
 
 let home: string;
 let codexHome: string;
@@ -54,6 +55,11 @@ describe('user-level Codex MCP servers', () => {
       { definition: agentDefinitions.claude, env: { PATH: '/bin', CODEX_HOME: codexHome } },
       home,
     );
-    expect(env).toEqual({ PATH: '/bin', CODEX_HOME: codexHome, CLAUDE_CODE_FORK_SUBAGENT: '1' });
+    expect(env).toEqual({
+      PATH: '/bin',
+      CODEX_HOME: codexHome,
+      CLAUDE_CODE_FORK_SUBAGENT: '1',
+      ...CLAUDE_WINDOWS_ENV,
+    });
   });
 });

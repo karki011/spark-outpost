@@ -20,7 +20,7 @@ describe('takeLaunchToken', () => {
     const file = join(dir, 'run', 'api-token');
     const first = takeLaunchToken({}, file);
     expect(readFileSync(file, 'utf8')).toBe(first);
-    expect(statSync(file).mode & 0o777).toBe(0o600);
+    if (process.platform !== 'win32') expect(statSync(file).mode & 0o777).toBe(0o600);
     expect(first.length).toBeGreaterThanOrEqual(43);
 
     const second = takeLaunchToken({}, file);
@@ -32,7 +32,7 @@ describe('takeLaunchToken', () => {
     const file = join(dir, 'api-token');
     writeFileSync(file, 'stale', { mode: 0o644 });
     takeLaunchToken({}, file);
-    expect(statSync(file).mode & 0o777).toBe(0o600);
+    if (process.platform !== 'win32') expect(statSync(file).mode & 0o777).toBe(0o600);
   });
 
   it('uses a token passed by the launcher, removes it from the environment and writes no file', () => {

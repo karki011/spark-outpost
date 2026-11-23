@@ -68,8 +68,9 @@ export function probeTargets(
 }
 
 export function workingFolder(base: string, folder: string | null): string | null {
-  const target = path.resolve(base, folder ?? '.');
-  const inside = target === base || target.startsWith(`${base}${path.sep}`);
+  const root = path.resolve(base);
+  const target = path.resolve(root, folder ?? '.');
+  const inside = target === root || target.startsWith(`${root}${path.sep}`);
   return inside ? target : null;
 }
 

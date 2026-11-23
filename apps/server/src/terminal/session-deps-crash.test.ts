@@ -110,28 +110,34 @@ describe(
   'dependency preparation after Spark crashed in the middle of it',
   { timeout: 60_000 },
   () => {
-    it('ends the installer the crash left running before it installs again, then finishes', async () => {
-      const orphan = await crashingSpark();
-      expect(isAlive(orphan)).toBe(true);
-      const ended: DepsEnded[] = [];
-      const deps = sessionDeps({ ended: (result) => ended.push(result) });
-      await deps.resume(db, CHAT, copy);
-      await vi.waitFor(() => expect(started()).toHaveLength(2), WAIT);
-      expect(isAlive(orphan)).toBe(false);
-      const [, second] = started();
-      expect(logged().slice(0, 3)).toEqual([`start ${orphan}`, `start ${second}`]);
-      expect(deps.status(CHAT)).toMatchObject({ state: 'preparing' });
-      writeFileSync(release, '');
-      await vi.waitFor(() => expect(ended).toHaveLength(1), WAIT);
-      expect(ended[0]).toMatchObject({ outcome: 'prepared', method: 'offline_install' });
-      expect(logged()).toEqual([`start ${orphan}`, `start ${second}`, `end ${second}`]);
-      expect(existsSync(join(copy, 'node_modules'))).toBe(true);
-      expect(existsSync(marker)).toBe(false);
-      expect(deps.status(CHAT)).toBeNull();
-    });
+    it.skipIf(process.platform === 'win32')(
+      'ends the installer the crash left running before it installs again, then finishes',
+      async () => {
+        const orphan = await crashingSpark();
+        expect(isAlive(orphan)).toBe(true);
+        const ended: DepsEnded[] = [];
+        const deps = sessionDeps({ ended: (result) => ended.push(result) });
+        await deps.resume(db, CHAT, copy);
+        await vi.waitFor(() => expect(started()).toHaveLength(2), WAIT);
+        expect(isAlive(orphan)).toBe(false);
+        const [, second] = started();
+        expect(logged().slice(0, 3)).toEqual([`start ${orphan}`, `start ${second}`]);
+        expect(deps.status(CHAT)).toMatchObject({ state: 'preparing' });
+        writeFileSync(release, '');
+        await vi.waitFor(() => expect(ended).toHaveLength(1), WAIT);
+        expect(ended[0]).toMatchObject({ outcome: 'prepared', method: 'offline_install' });
+        expect(logged()).toEqual([`start ${orphan}`, `start ${second}`, `end ${second}`]);
+        expect(existsSync(join(copy, 'node_modules'))).toBe(true);
+        expect(existsSync(marker)).toBe(false);
+        expect(deps.status(CHAT)).toBeNull();
+      },
+    );
 
     it('never signals a process whose start time is not the recorded one', async () => {
-      const bystander = spawn('/bin/sleep', ['60'], { detached: true, stdio: 'ignore' });
+      const bystander = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)'], {
+        detached: true,
+        stdio: 'ignore',
+      });
       strays.push(bystander.pid!);
       mkdirSync(marker, { recursive: true });
       writeFileSync(

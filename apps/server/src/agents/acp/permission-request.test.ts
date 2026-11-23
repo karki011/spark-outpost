@@ -1,6 +1,8 @@
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { decodeClaudePermissionResponse } from '@agentclientprotocol/claude-agent-acp/dist/permissions/response.js';
 import { approvalRequestFrom, permissionResponse } from './permission-request.ts';
+import { gateAbs } from './gate-abs.fixture.ts';
 
 const context = {
   rpcId: '12',
@@ -196,8 +198,8 @@ describe('approvalRequestFrom', () => {
     expect(request).toMatchObject({
       kind: 'edit',
       command: null,
-      paths: ['/work/app/src/a.ts'],
-      diffs: [{ path: '/work/app/src/a.ts', oldText: 'a', newText: 'b' }],
+      paths: [gateAbs('/work/app/src/a.ts')],
+      diffs: [{ path: resolve('/work/app/src/a.ts'), oldText: 'a', newText: 'b' }],
     });
   });
 

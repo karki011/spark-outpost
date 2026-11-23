@@ -15,7 +15,13 @@ describe('scratch paths', () => {
   it('places a path whose folders do not exist yet under the real temp folder', () => {
     const missing = join(tmpdir(), 'spark-turn-tasks-missing', 'not', 'made', 'yet');
     expect(assertScratchPath(missing)).toBe(
-      join(realpathSync(tmpdir()), 'spark-turn-tasks-missing', 'not', 'made', 'yet'),
+      join(
+        process.platform === 'win32' ? realpathSync.native(tmpdir()) : realpathSync(tmpdir()),
+        'spark-turn-tasks-missing',
+        'not',
+        'made',
+        'yet',
+      ),
     );
   });
 

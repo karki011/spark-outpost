@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { signalGroup } from '../terminal/process-group.ts';
 
 export const PUSH_TIMEOUT_MS = 30 * 60_000;
 const KILL_GRACE_MS = 5_000;
@@ -24,15 +25,11 @@ function boundedTail(chunks: Buffer[]): string {
 }
 
 function stopGroup(pid: number | undefined, signal: NodeJS.Signals): void {
-  if (pid === undefined) return;
+  if (pid === undefined || signalGroup(pid, signal)) return;
   try {
-    process.kill(-pid, signal);
+    process.kill(pid, signal);
   } catch {
-    try {
-      process.kill(pid, signal);
-    } catch {
-      return;
-    }
+    return;
   }
 }
 

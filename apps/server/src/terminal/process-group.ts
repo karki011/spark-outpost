@@ -12,7 +12,7 @@ export interface ProcessRow {
   args: string;
 }
 
-const PS_LINE = /^(\d+)\s+(\d+)\s+(-?\d+)\s+(.*)$/;
+const PS_LINE = /^(\d+)\s+(\d+)\s+(-?\d+)(?:\s+(.*))?$/;
 const INTERPRETERS = /^(node|bun|deno|python[\d.]*|ruby|perl)$/;
 const SCRIPT_EXTENSION = /\.(c?js|mjs|py|rb)$/;
 const COMMAND_MAX_LENGTH = 60;
@@ -44,27 +44,79 @@ export function descendantsOf(
   return found;
 }
 
-export function commandLabel(args: string): string {
-  const [program = '', ...rest] = args.trim().split(/\s+/);
-  const name = path.basename(program).replace(/^-/, '');
+const WINDOWS_PROGRAM = /^(?:"([^"]+)"|([A-Za-z]:\\.*?\.exe)(?=\s|$)|(\S+))\s*(.*)$/i;
+const GIT_BASH_SHELL = /\\usr\\bin\\bash\.exe$/i;
+
+function splitProgram(args: string, platform: NodeJS.Platform): [string, string[]] {
+  const trimmed = args.trim();
+  if (platform !== 'win32') {
+    const [program = '', ...rest] = trimmed.split(/\s+/);
+    return [program, rest];
+  }
+  const match = WINDOWS_PROGRAM.exec(trimmed);
+  const program = match?.[1] ?? match?.[2] ?? match?.[3] ?? '';
+  const rest = match?.[4] ? match[4].split(/\s+/) : [];
+  return [program, rest];
+}
+
+function programName(program: string, platform: NodeJS.Platform): string {
+  if (platform !== 'win32') return path.basename(program).replace(/^-/, '');
+  return path.win32
+    .basename(program)
+    .replace(/\.exe$/i, '')
+    .replace(/^-/, '');
+}
+
+export function commandLabel(args: string, platform: NodeJS.Platform = process.platform): string {
+  const [program, rest] = splitProgram(args, platform);
+  const name = programName(program, platform);
   const [script, ...scriptArgs] = rest;
+  const scriptPath = platform === 'win32' ? /[\\/]/ : /\//;
   const words =
-    INTERPRETERS.test(name) && script?.includes('/')
-      ? [path.basename(script).replace(SCRIPT_EXTENSION, ''), ...scriptArgs]
+    INTERPRETERS.test(name) && script && scriptPath.test(script)
+      ? [
+          (platform === 'win32' ? path.win32 : path).basename(script).replace(SCRIPT_EXTENSION, ''),
+          ...scriptArgs,
+        ]
       : [name, ...rest];
   const label = words.join(' ');
   return label.length > COMMAND_MAX_LENGTH ? `${label.slice(0, COMMAND_MAX_LENGTH - 1)}…` : label;
 }
 
-export function runningCommand(root: number, table: readonly ProcessRow[]): string | null {
+function isGitBashShell(row: ProcessRow, platform: NodeJS.Platform): boolean {
+  return platform === 'win32' && GIT_BASH_SHELL.test(splitProgram(row.args, platform)[0]);
+}
+
+function shellRoot(root: number, table: readonly ProcessRow[], platform: NodeJS.Platform): number {
+  if (platform !== 'win32') return root;
+  const [program] = splitProgram(table.find((row) => row.pid === root)?.args ?? '', platform);
+  if (GIT_BASH_SHELL.test(program)) return root;
+  const shell = table.find(
+    (row) => row.ppid === root && GIT_BASH_SHELL.test(splitProgram(row.args, platform)[0]),
+  );
+  return shell?.pid ?? root;
+}
+
+export function runningCommand(
+  wrapper: number,
+  table: readonly ProcessRow[],
+  platform: NodeJS.Platform = process.platform,
+): string | null {
+  const root = shellRoot(wrapper, table, platform);
   const descendants = new Set(descendantsOf(root, table));
-  const running = table.filter((row) => descendants.has(row.pid) && !NOT_A_COMMAND.test(row.args));
+  const running = table.filter(
+    (row) =>
+      descendants.has(row.pid) &&
+      row.args.trim() !== '' &&
+      !NOT_A_COMMAND.test(row.args) &&
+      !isGitBashShell(row, platform),
+  );
   const foreground = table.find((row) => row.pid === root)?.foregroundGroup;
   const main =
     running.find((row) => row.pid === foreground) ??
     running.find((row) => row.ppid === root) ??
     running[0];
-  return main ? commandLabel(main.args) : null;
+  return main ? commandLabel(main.args, platform) : null;
 }
 
 function parseProcessTable(output: string): ProcessRow[] {
@@ -83,12 +135,107 @@ function parseProcessTable(output: string): ProcessRow[] {
   return rows;
 }
 
-export async function processTable(): Promise<ProcessRow[]> {
+const WINDOWS_TABLE = [
+  '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
+  'Get-CimInstance Win32_Process | ForEach-Object { $created = if ($_.CreationDate) { ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() } else { 0 }; "$($_.ProcessId) $($_.ParentProcessId) $created $($_.CommandLine)" }',
+].join('; ');
+
+function system32(file: string): string {
+  return path.win32.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', file);
+}
+
+function powerShell(script: string): [string, string[]] {
+  const powershell = system32('WindowsPowerShell\\v1.0\\powershell.exe');
+  return [powershell, ['-NoProfile', '-NonInteractive', '-Command', script]];
+}
+
+export async function powerShellOutput(script: string): Promise<string> {
+  const [command, args] = powerShell(script);
+  const { stdout } = await execFileAsync(command, args, { encoding: 'utf8', windowsHide: true });
+  return stdout;
+}
+
+export function withoutStaleParents(rows: readonly ProcessRow[]): ProcessRow[] {
+  const created = new Map(rows.map((row) => [row.pid, row.foregroundGroup]));
+  return rows.map((row) => {
+    const parent = created.get(row.ppid);
+    const stale = parent !== undefined && parent > row.foregroundGroup;
+    return { ...row, ppid: stale ? 0 : row.ppid, foregroundGroup: 0 };
+  });
+}
+
+function readTable(output: string): ProcessRow[] {
+  const rows = parseProcessTable(output);
+  return process.platform === 'win32' ? withoutStaleParents(rows) : rows;
+}
+
+function tableCommand(): [string, string[]] {
+  return process.platform === 'win32' ? powerShell(WINDOWS_TABLE) : ['/bin/ps', PS_ARGS];
+}
+
+export async function processTableOrNull(): Promise<ProcessRow[] | null> {
   try {
-    const { stdout } = await execFileAsync('/bin/ps', PS_ARGS, { encoding: 'utf8' });
-    return parseProcessTable(stdout);
+    const [command, args] = tableCommand();
+    const { stdout } = await execFileAsync(command, args, { encoding: 'utf8', windowsHide: true });
+    const rows = readTable(stdout);
+    return rows.length > 0 ? rows : null;
   } catch {
-    return [];
+    return null;
+  }
+}
+
+export async function processTable(): Promise<ProcessRow[]> {
+  return (await processTableOrNull()) ?? [];
+}
+
+export function endWindowsTree(pid: number, force = true): Promise<boolean> {
+  const args = ['/PID', String(pid), '/T', ...(force ? ['/F'] : [])];
+  return new Promise((resolve) => {
+    execFile(system32('taskkill.exe'), args, { windowsHide: true }, (error) => resolve(!error));
+  });
+}
+
+async function untilGone(pids: readonly number[], waitMs: number): Promise<void> {
+  const deadline = Date.now() + waitMs;
+  while (pids.some((pid) => isAlive(pid)) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
+async function endWindowsTrees(
+  roots: readonly number[],
+  graceMs: number,
+  first: NodeJS.Signals,
+): Promise<void> {
+  if (first === 'SIGKILL') {
+    await Promise.all(roots.map((pid) => endWindowsTree(pid)));
+    return;
+  }
+  const table = await processTable();
+  const targets = [...new Set(roots.flatMap((pid) => [pid, ...descendantsOf(pid, table)]))];
+  const asked = await Promise.all(roots.map((pid) => endWindowsTree(pid, false)));
+  if (asked.every(Boolean)) await untilGone(targets, graceMs);
+  const left = targets.filter((pid) => isAlive(pid));
+  await Promise.all(left.map((pid) => endWindowsTree(pid)));
+}
+
+export function signalGroup(
+  pid: number,
+  name: NodeJS.Signals,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  if (platform === 'win32') {
+    if (!isAlive(pid)) return false;
+    void endWindowsTree(pid, name === 'SIGKILL').then((ended) => {
+      if (!ended && name === 'SIGKILL') signal(pid, 'SIGKILL');
+    });
+    return true;
+  }
+  try {
+    process.kill(-pid, name);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -102,9 +249,10 @@ function signal(pid: number, name: NodeJS.Signals) {
 
 export function processTreeNow(root: number): number[] {
   try {
+    const [command, args] = tableCommand();
     return descendantsOf(
       root,
-      parseProcessTable(execFileSync('/bin/ps', PS_ARGS, { encoding: 'utf8' })),
+      readTable(execFileSync(command, args, { encoding: 'utf8', windowsHide: true })),
     );
   } catch {
     return [];
@@ -135,9 +283,13 @@ async function signalTree(
   first: NodeJS.Signals,
   seenEarlier: readonly number[],
 ): Promise<void> {
-  const table = await processTable();
   const orphaned = seenEarlier.filter((pid) => isAlive(pid));
   const roots = [root, ...orphaned];
+  if (process.platform === 'win32') {
+    await endWindowsTrees(roots, graceMs, first);
+    return;
+  }
+  const table = await processTable();
   const targets = [...new Set(roots.flatMap((pid) => [pid, ...descendantsOf(pid, table)]))];
   for (const pid of targets) signal(pid, first);
   signal(-root, first);

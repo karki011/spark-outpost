@@ -9,6 +9,8 @@ import {
   processKillsSent,
   processTreeNow,
   runningCommand,
+  signalGroup,
+  withoutStaleParents,
   type ProcessRow,
 } from './process-group.ts';
 
@@ -31,6 +33,15 @@ async function treeWithStrayJob(): Promise<{ root: number; job: number; stop: ()
   return { root, job, stop };
 }
 
+const IDLE = 'setInterval(() => {}, 1000)';
+
+async function treeWithGrandchild(): Promise<{ root: number; grandchild: number }> {
+  const parent = `const c = require('node:child_process').spawn(process.execPath, ['-e', ${JSON.stringify(IDLE)}], { stdio: 'ignore' }); console.log(c.pid); ${IDLE}`;
+  const child = spawn(process.execPath, ['-e', parent], { stdio: ['ignore', 'pipe', 'ignore'] });
+  const [line] = (await once(child.stdout, 'data')) as [Buffer];
+  return { root: child.pid!, grandchild: Number(line.toString().trim()) };
+}
+
 async function gone(pid: number): Promise<boolean> {
   for (let tries = 0; tries < 100 && isAlive(pid); tries += 1) {
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -38,7 +49,27 @@ async function gone(pid: number): Promise<boolean> {
   return !isAlive(pid);
 }
 
-describe('killing a process tree', () => {
+describe('ending a process and what it started', () => {
+  it('ends the root and its grandchild on every platform', async () => {
+    const tree = await treeWithGrandchild();
+    try {
+      expect(processTreeNow(tree.root)).toContain(tree.grandchild);
+      await killProcessTree(tree.root, 50);
+      expect(await gone(tree.grandchild)).toBe(true);
+      expect(await gone(tree.root)).toBe(true);
+    } finally {
+      for (const pid of [tree.grandchild, tree.root]) {
+        try {
+          process.kill(pid, 'SIGKILL');
+        } catch {
+          continue;
+        }
+      }
+    }
+  });
+});
+
+describe.skipIf(process.platform === 'win32')('killing a process tree (POSIX job control)', () => {
   it('finds a job in its own process group and signals it with the root', async () => {
     const tree = await treeWithStrayJob();
     try {
@@ -68,6 +99,23 @@ describe('killing a process tree', () => {
 function row(pid: number, ppid: number, args: string, foregroundGroup = 0): ProcessRow {
   return { pid, ppid, foregroundGroup, args };
 }
+
+describe('withoutStaleParents', () => {
+  it('drops a parent link to a process that started after the child', () => {
+    const rows = [
+      { pid: 100, ppid: 1, foregroundGroup: 5_000, args: 'new root' },
+      { pid: 200, ppid: 100, foregroundGroup: 1_000, args: 'old orphan' },
+      { pid: 300, ppid: 100, foregroundGroup: 6_000, args: 'real child' },
+    ];
+    expect(descendantsOf(100, withoutStaleParents(rows))).toEqual([300]);
+  });
+});
+
+describe('signalGroup', () => {
+  it('reports a process that is already gone on Windows', () => {
+    expect(signalGroup(2 ** 22 + 7, 'SIGTERM', 'win32')).toBe(false);
+  });
+});
 
 describe('descendantsOf', () => {
   it('finds children and grandchildren but not unrelated processes', () => {
@@ -106,6 +154,17 @@ describe('runningCommand', () => {
     const table = [row(10, 1, '-zsh', 10), row(40, 10, '/bin/sleep 100'), row(41, 40, 'x')];
     expect(runningCommand(10, table)).toBe('sleep 100');
   });
+
+  it('looks past the Git Bash wrapper to the shell it starts on Windows', () => {
+    const wrapper = row(10, 1, 'C:\\Program Files\\Git\\bin\\bash.exe --login -i');
+    const shell = row(20, 10, '"C:\\Program Files\\Git\\bin\\..\\usr\\bin\\bash.exe" --login -i');
+    expect(runningCommand(10, [wrapper, shell], 'win32')).toBeNull();
+    const sleep = row(30, 20, 'C:\\Program Files\\Git\\usr\\bin\\sleep.exe 100');
+    expect(runningCommand(10, [wrapper, shell, sleep], 'win32')).toBe('sleep 100');
+    const stub = row(25, 20, '"C:\\Program Files\\Git\\usr\\bin\\bash.exe" --login -i');
+    const forked = row(31, 25, 'C:\\Program Files\\Git\\usr\\bin\\sleep.exe 100');
+    expect(runningCommand(10, [wrapper, shell, stub, forked], 'win32')).toBe('sleep 100');
+  });
 });
 
 describe('commandLabel', () => {
@@ -115,6 +174,19 @@ describe('commandLabel', () => {
     );
     expect(commandLabel('node server.js')).toBe('node server.js');
     expect(commandLabel('/usr/bin/make watch')).toBe('make watch');
+  });
+
+  it('reads Windows program paths with spaces and quotes', () => {
+    expect(commandLabel('C:\\Program Files\\nodejs\\node.exe server.js', 'win32')).toBe(
+      'node server.js',
+    );
+    expect(commandLabel('"C:\\Program Files\\Git\\usr\\bin\\make.exe" watch', 'win32')).toBe(
+      'make watch',
+    );
+    expect(commandLabel('/usr/bin/make watch', 'darwin')).toBe('make watch');
+    expect(commandLabel('node C:\\work\\app\\server.js --port 3000', 'win32')).toBe(
+      'server --port 3000',
+    );
   });
 
   it('shortens very long command lines', () => {

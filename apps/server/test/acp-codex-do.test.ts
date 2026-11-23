@@ -7,6 +7,7 @@ import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { primaryOnlyNote } from '../src/agents/acp/folder-notes.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import { decide, NO_RUN_RULES, type ApprovalRequest } from '../src/approvals/decide.ts';
+import { toNativePath } from '../src/approvals/gate-path.ts';
 import type { GateAnswer, PermissionGate, ProviderOutput } from '../src/providers/provider.ts';
 import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
@@ -151,7 +152,7 @@ describe('Codex Do through the fake agent', { timeout: 20_000 }, () => {
     const { stub, reviewed } = levelGate('asks');
     const result = await run('#codex ls;;cat ../lib/x.txt', stub, [root, other]);
     expect(result.steps).toContain(primaryOnlyNote(agentDefinitions.codex, root));
-    expect(reviewed[0]!.request.roots.map((entry) => entry.path)).toEqual([root]);
+    expect(reviewed[0]!.request.roots.map((entry) => toNativePath(entry.path))).toEqual([root]);
     expect(reviewed.map((entry) => entry.verdict)).toEqual(['allow', 'ask']);
   });
 });

@@ -2,7 +2,9 @@ import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { processKillsSent } from './process-group.ts';
 import { loginShellSpawner } from './pty.ts';
+import { TEST_SHELL } from './test-shell.fixture.ts';
 import { pullRequestScan, type TerminalPullRequest } from './pull-request-scan.ts';
 import { defaultLimits, TerminalSessions } from './sessions.ts';
 import { shellWatchers } from './shell-watchers.ts';
@@ -60,9 +62,10 @@ describe('a chat shell', () => {
   let sessions: TerminalSessions | null = null;
   let folder = '';
 
-  afterEach(() => {
+  afterEach(async () => {
     sessions?.killAll();
-    rmSync(folder, { recursive: true, force: true });
+    await processKillsSent();
+    rmSync(folder, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
   });
 
   it('hands what a tool prints in the tab to the scan', async () => {
@@ -70,7 +73,7 @@ describe('a chat shell', () => {
     const found: TerminalPullRequest[] = [];
     const ended: string[] = [];
     sessions = new TerminalSessions(
-      loginShellSpawner('/bin/sh'),
+      loginShellSpawner(TEST_SHELL),
       defaultLimits,
       shellWatchers(
         { opened: () => undefined, ended: (id) => ended.push(id) },

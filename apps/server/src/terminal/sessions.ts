@@ -65,6 +65,7 @@ const isAgent = (kind: Session['kind']): kind is ShellKind & { agent: AgentReque
 
 export class TerminalSessions {
   private readonly sessions = new Map<string, Session>();
+  private readonly stopping = new Map<string, Set<Promise<void>>>();
   private folderWatch: NodeJS.Timeout | null = null;
 
   constructor(
@@ -324,11 +325,12 @@ export class TerminalSessions {
     return runningCommand(session.pty.pid, await processTable());
   }
 
-  endChat(conversationId: string): number {
+  async endChat(conversationId: string): Promise<number> {
     const shells = [...this.sessions.values()].filter(
       (session) => session.kind.type === 'shell' && session.kind.conversationId === conversationId,
     );
-    for (const session of shells) this.end(session, 'chat_removed', null);
+    const ending = shells.map((session) => this.end(session, 'chat_removed', null));
+    await Promise.all([...ending, ...(this.stopping.get(conversationId) ?? [])]);
     return shells.length;
   }
 
@@ -439,20 +441,52 @@ export class TerminalSessions {
     reason: TerminalEndReason,
     exitCode: number | null,
     keepRunning = false,
-  ) {
-    if (!this.sessions.delete(session.id)) return;
+  ): Promise<void> {
+    if (!this.sessions.delete(session.id)) return Promise.resolve();
     if (isAgent(session.kind)) session.kind.agent.observer?.ended();
     session.timers.forEach(clearTimeout);
     if (session.idleTimer) clearTimeout(session.idleTimer);
     if (session.quietTimer) clearTimeout(session.quietTimer);
     session.view?.detach();
     session.view = null;
+    let stopped = Promise.resolve();
     if (keepRunning) session.pty?.detach?.();
-    else if (session.pty?.kill) session.pty.kill();
-    else if (session.pty) void killProcessTree(session.pty.pid);
+    else if (session.pty) stopped = this.stopPty(session.pty);
+    if (session.kind.type === 'shell' && session.kind.conversationId) {
+      this.track(session.kind.conversationId, stopped);
+    }
     if (session.pty && session.kind.type === 'shell') this.watcher?.ended(session.id);
     if (!keepRunning) session.client?.send({ type: 'ended', reason, exitCode });
     session.client?.close();
     session.client = null;
+    return stopped;
+  }
+
+  private track(conversationId: string, stopped: Promise<void>) {
+    const pending = this.stopping.get(conversationId) ?? new Set<Promise<void>>();
+    pending.add(stopped);
+    this.stopping.set(conversationId, pending);
+    void stopped.finally(() => {
+      pending.delete(stopped);
+      if (pending.size === 0 && this.stopping.get(conversationId) === pending) {
+        this.stopping.delete(conversationId);
+      }
+    });
+  }
+
+  private stopPty(pty: PtyProcess): Promise<void> {
+    if (!pty.kill) return killProcessTree(pty.pid);
+    if (process.platform !== 'win32') {
+      pty.kill();
+      return Promise.resolve();
+    }
+    const kill = pty.kill.bind(pty);
+    return killProcessTree(pty.pid).finally(() => {
+      try {
+        kill();
+      } catch {
+        return;
+      }
+    });
   }
 }

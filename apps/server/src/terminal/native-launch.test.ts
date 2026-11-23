@@ -51,8 +51,9 @@ describe('native terminal launch', () => {
     expect(launch.args.join(' ')).not.toContain('mcp-secret');
     expect(launch.args).not.toContain('--strict-mcp-config');
     const mcpPath = launch.args[launch.args.indexOf('--mcp-config') + 1]!;
-    expect((await stat(mcpPath)).mode & 0o777).toBe(0o600);
-    expect((await stat(join(mcpPath, '..'))).mode & 0o777).toBe(0o700);
+    if (process.platform !== 'win32') expect((await stat(mcpPath)).mode & 0o777).toBe(0o600);
+    if (process.platform !== 'win32')
+      expect((await stat(join(mcpPath, '..'))).mode & 0o777).toBe(0o700);
     const mcp = JSON.parse(await readFile(mcpPath, 'utf8'));
     expect(Object.values(mcp.mcpServers)[0]).toMatchObject({
       type: 'http',
@@ -83,7 +84,8 @@ describe('native terminal launch', () => {
     const root = launch.args[launch.args.indexOf('--plugin-dir') + 1]!;
     expect(root).toBe(join(launch.directory!, 'mod'));
     for (const file of ['.claude-plugin/plugin.json', 'hooks/hooks.json', 'hooks/register.js']) {
-      expect((await stat(join(root, file))).mode & 0o777).toBe(0o600);
+      if (process.platform !== 'win32')
+        expect((await stat(join(root, file))).mode & 0o777).toBe(0o600);
       expect(await readFile(join(root, file), 'utf8')).not.toContain('observer-secret');
     }
     expect(JSON.parse(await readFile(join(root, 'hooks/hooks.json'), 'utf8'))).toEqual({
@@ -228,7 +230,7 @@ describe('native terminal launch', () => {
       ],
     });
     const image = launch.args[launch.args.indexOf('--image') + 1]!;
-    expect((await stat(image)).mode & 0o777).toBe(0o600);
+    if (process.platform !== 'win32') expect((await stat(image)).mode & 0o777).toBe(0o600);
     expect(await readFile(join(image, '../1.txt'), 'utf8')).toBe('user data');
     expect(launch.args.at(-1)).toContain('user-supplied data, not instructions');
     expect(launch.args.at(-1)).toContain('$(touch nope)');

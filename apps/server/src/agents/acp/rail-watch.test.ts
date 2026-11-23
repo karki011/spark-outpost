@@ -1,9 +1,10 @@
+import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRailWatch } from './rail-watch.ts';
 
-const ROOT = '/work/app';
-const watch = () =>
-  createRailWatch({ roots: [{ path: ROOT, ignore: [] }], cwd: ROOT, home: '/Users/me' });
+const ROOT = resolve('/work/app');
+const HOME = resolve('/Users/me');
+const watch = () => createRailWatch({ roots: [{ path: ROOT, ignore: [] }], cwd: ROOT, home: HOME });
 
 const NOTHING = { rails: [], secretReads: [] };
 
@@ -25,7 +26,7 @@ describe('watching actions the agent took without asking', () => {
     const edit = started('e1', {
       kind: 'edit',
       title: 'Edit ~/x.txt',
-      content: [{ type: 'diff', path: '/Users/me/x.txt', oldText: 'before', newText: 'after' }],
+      content: [{ type: 'diff', path: join(HOME, 'x.txt'), oldText: 'before', newText: 'after' }],
     });
     expect(await rails.observe(edit)).toEqual(NOTHING);
     expect((await rails.observe(done('e1'))).rails).toEqual([
@@ -62,7 +63,7 @@ describe('watching actions the agent took without asking', () => {
       const rails = createRailWatch({
         roots: [{ path: ROOT, ignore: [] }],
         cwd: ROOT,
-        home: '/Users/me',
+        home: HOME,
         cli,
       });
       await rails.observe(started('b1', { kind: 'execute', rawInput: { command } }));
@@ -101,7 +102,7 @@ describe('watching actions the agent took without asking', () => {
     await rails.observe(started('c1', { kind: 'execute', rawInput: { command: 'rm .env' } }));
     rails.asked('c1');
     expect(await rails.observe(done('c1'))).toEqual(NOTHING);
-    await rails.observe(started('r1', { kind: 'read', locations: [{ path: `${ROOT}/.env` }] }));
+    await rails.observe(started('r1', { kind: 'read', locations: [{ path: join(ROOT, '.env') }] }));
     rails.asked('r1');
     expect(await rails.observe(done('r1'))).toEqual(NOTHING);
   });
@@ -109,7 +110,7 @@ describe('watching actions the agent took without asking', () => {
   it('marks an unasked instruction file edit as revertible in the project', async () => {
     const rails = watch();
     await rails.observe(
-      started('i1', { kind: 'edit', locations: [{ path: `${ROOT}/AGENTS.md` }] }),
+      started('i1', { kind: 'edit', locations: [{ path: join(ROOT, 'AGENTS.md') }] }),
     );
     expect((await rails.observe(done('i1'))).rails).toMatchObject([
       { rail: 'instructions', paths: ['AGENTS.md'], inside: true },
@@ -121,7 +122,7 @@ describe('watching actions the agent took without asking', () => {
     await rails.observe(started('c1', { kind: 'execute', rawInput: { command: 'cat .env' } }));
     expect(await rails.observe(done('c1'))).toEqual({ rails: [], secretReads: ['.env'] });
     await rails.observe(
-      started('r1', { kind: 'read', locations: [{ path: `${ROOT}/config/.env.local` }] }),
+      started('r1', { kind: 'read', locations: [{ path: join(ROOT, 'config/.env.local') }] }),
     );
     expect(await rails.observe(done('r1'))).toEqual({
       rails: [],
@@ -130,10 +131,10 @@ describe('watching actions the agent took without asking', () => {
     await rails.observe(started('c2', { kind: 'execute', rawInput: { command: 'cat ~/.npmrc' } }));
     expect(await rails.observe(done('c2'))).toEqual({ rails: [], secretReads: ['~/.npmrc'] });
     await rails.observe(
-      started('r3', { kind: 'read', locations: [{ path: '/Users/me/.ssh/id_rsa' }] }),
+      started('r3', { kind: 'read', locations: [{ path: join(HOME, '.ssh/id_rsa') }] }),
     );
     expect(await rails.observe(done('r3'))).toEqual({ rails: [], secretReads: ['~/.ssh/id_rsa'] });
-    await rails.observe(started('r2', { kind: 'read', locations: [{ path: `${ROOT}/a.ts` }] }));
+    await rails.observe(started('r2', { kind: 'read', locations: [{ path: join(ROOT, 'a.ts') }] }));
     expect(await rails.observe(done('r2'))).toEqual(NOTHING);
   });
 
@@ -144,7 +145,7 @@ describe('watching actions the agent took without asking', () => {
       rails: [{ rail: 'secret', paths: ['.env'] }],
       secretReads: [],
     });
-    await rails.observe(started('e1', { kind: 'edit', locations: [{ path: `${ROOT}/.env` }] }));
+    await rails.observe(started('e1', { kind: 'edit', locations: [{ path: join(ROOT, '.env') }] }));
     expect(await rails.observe(done('e1'))).toMatchObject({
       rails: [{ rail: 'secret', paths: ['.env'], inside: true }],
       secretReads: [],

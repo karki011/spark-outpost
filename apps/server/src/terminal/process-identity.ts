@@ -3,14 +3,23 @@ import { randomUUID } from 'node:crypto';
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { z } from 'zod';
-import { isAlive, killProcessTree } from './process-group.ts';
+import { isAlive, killProcessTree, powerShellOutput } from './process-group.ts';
 
 const run = promisify(execFile);
 const recordSchema = z.object({ pid: z.number().int().positive(), started: z.string().min(1) });
 const RECHECK_MS = 50;
 
+async function windowsStartedAt(pid: number): Promise<string | null> {
+  const query = `(Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}').CreationDate`;
+  const stdout = await powerShellOutput(
+    `$d = ${query}; if ($d) { $d.ToUniversalTime().ToString('o') }`,
+  );
+  return stdout.trim() || null;
+}
+
 export async function processStartedAt(pid: number): Promise<string | null> {
   try {
+    if (process.platform === 'win32') return await windowsStartedAt(pid);
     const { stdout } = await run('/bin/ps', ['-o', 'lstart=', '-p', String(pid)], {
       env: { ...process.env, LC_ALL: 'C' },
     });
