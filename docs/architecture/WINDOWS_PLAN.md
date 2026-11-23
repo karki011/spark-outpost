@@ -194,6 +194,10 @@ From the npm registry and official docs:
 
 - **Desktop runtime connection:** on Windows the desktop app and its background service talk over a named pipe (`\\.\pipe\spark-outpost-runtime-<hash of the data folder>`) instead of a Unix socket (`runtime-handshake.ts`). The token and endpoint files stay in the private data folder, and every connection still proves it holds the token before anything else is sent, so the pipe's default access rules are not relied on. Finding a leftover service reads its command line through `Win32_Process` instead of `ps`, allowing for quoted paths (`runtime-retire.ts`).
 
+## Phase 4 progress
+
+- **Mark-of-the-Web (done):** a download the user saves gets a `Zone.Identifier` stream with `ZoneId=3` on Windows (`apps/desktop/src/browser/quarantine.ts`), as the Mac writes `com.apple.quarantine`; the Windows unit run writes and reads it back.
+
 ## Still unverified (needs a Windows machine)
 
 - That Spark's ACP sessions start with the user's logins on Windows.
