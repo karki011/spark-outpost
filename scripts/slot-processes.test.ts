@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { decideSlot, parseProcessTable, type ProcessRow } from './slot-processes.ts';
 
@@ -27,9 +28,9 @@ describe('decideSlot', () => {
     const decision = decideSlot(
       [
         { pid: 200, port: 20910, cwd: ROOT },
-        { pid: 301, port: 20911, cwd: `${ROOT}/apps/server` },
-        { pid: 400, port: 20912, cwd: `${ROOT}/apps/web` },
-        { pid: 600, port: null, cwd: `${ROOT}/apps/server` },
+        { pid: 301, port: 20911, cwd: path.join(ROOT, 'apps/server') },
+        { pid: 400, port: 20912, cwd: path.join(ROOT, 'apps/web') },
+        { pid: 600, port: null, cwd: path.join(ROOT, 'apps/server') },
       ],
       rows,
       ROOT,
@@ -58,7 +59,11 @@ describe('decideSlot', () => {
   });
 
   it('treats something that is not a Spark test server as foreign, even in this checkout', () => {
-    const decision = decideSlot([{ pid: 500, port: 20912, cwd: `${ROOT}/apps/web` }], rows, ROOT);
+    const decision = decideSlot(
+      [{ pid: 500, port: 20912, cwd: path.join(ROOT, 'apps/web') }],
+      rows,
+      ROOT,
+    );
     expect(decision.blocked.map((verdict) => verdict.kind)).toEqual(['foreign']);
   });
 
