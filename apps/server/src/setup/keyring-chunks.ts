@@ -39,8 +39,13 @@ export function splitSecret(secret: string, limit: number = CHUNK_LIMIT): string
 async function deleteParts(inner: Keyring, account: string, parts: Parts | null) {
   if (!parts) return;
   for (let index = 1; index <= parts.count; index += 1) {
-    await inner.delete(chunkAccount(account, parts.generation, index)).catch(() => undefined);
+    const part = chunkAccount(account, parts.generation, index);
+    if ((await inner.get(part)) !== null) await inner.delete(part);
   }
+}
+
+async function dropParts(inner: Keyring, account: string, parts: Parts | null) {
+  await deleteParts(inner, account, parts).catch(() => undefined);
 }
 
 export function chunkedKeyring(inner: Keyring, limit: number = CHUNK_LIMIT): Keyring {
@@ -63,7 +68,7 @@ export function chunkedKeyring(inner: Keyring, limit: number = CHUNK_LIMIT): Key
       const before = partsOf(await inner.get(account));
       if (secret.length <= limit && !secret.startsWith(MARKER)) {
         await inner.set(account, secret);
-        await deleteParts(inner, account, before);
+        await dropParts(inner, account, before);
         return;
       }
       const pieces = splitSecret(secret, limit);
@@ -73,16 +78,15 @@ export function chunkedKeyring(inner: Keyring, limit: number = CHUNK_LIMIT): Key
           await inner.set(chunkAccount(account, next.generation, index + 1), piece);
         }
       } catch (error) {
-        await deleteParts(inner, account, next);
+        await dropParts(inner, account, next);
         throw error;
       }
       await inner.set(account, `${MARKER}${next.generation}:${next.count}`);
-      await deleteParts(inner, account, before);
+      await dropParts(inner, account, before);
     },
     async delete(account) {
-      const parts = partsOf(await inner.get(account).catch(() => null));
+      await deleteParts(inner, account, partsOf(await inner.get(account)));
       await inner.delete(account);
-      await deleteParts(inner, account, parts);
     },
   };
 }

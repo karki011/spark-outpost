@@ -83,6 +83,37 @@ describe('secrets larger than Windows Credential Manager holds', () => {
     expect(inner.entries.size).toBe(4);
   });
 
+  it('keeps the main entry when a part cannot be deleted, so deleting again finishes', async () => {
+    const inner = memory();
+    const keyring = chunkedKeyring(inner);
+    await keyring.set('a', 'c'.repeat(2500));
+    const remove = inner.delete;
+    let deletes = 0;
+    inner.delete = async (account) => {
+      deletes += 1;
+      if (deletes === 2) throw new Error('Credential Manager failed');
+      await remove(account);
+    };
+    await expect(keyring.delete('a')).rejects.toThrow('Credential Manager failed');
+    expect(inner.entries.has('a')).toBe(true);
+    inner.delete = remove;
+    await keyring.delete('a');
+    expect(inner.entries.size).toBe(0);
+  });
+
+  it('deletes nothing when the part count cannot be read', async () => {
+    const inner = memory();
+    const keyring = chunkedKeyring(inner);
+    await keyring.set('a', 'd'.repeat(2500));
+    const get = inner.get;
+    inner.get = async () => {
+      throw new Error('locked');
+    };
+    await expect(keyring.delete('a')).rejects.toThrow('locked');
+    inner.get = get;
+    expect(inner.entries.size).toBe(4);
+  });
+
   it('never splits a character made of two halves', () => {
     const parts = splitSecret(`${'a'.repeat(999)}😀b`, 1000);
     expect(parts).toEqual(['a'.repeat(999), '😀b']);
