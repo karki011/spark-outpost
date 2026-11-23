@@ -8,6 +8,6 @@ export function shellPid(variable: '$$'): string {
 
 export function backgroundPid(program: string): string {
   if (process.platform !== 'win32') return '$!';
-  const waitForExec = `for i in $(seq 100); do case "$(cat /proc/$!/exename 2>/dev/null)" in */${program}) break;; esac; sleep 0.1; done`;
-  return `$(${waitForExec}; cat /proc/$!/winpid)`;
+  const found = `case "$(cat /proc/$!/exename 2>/dev/null)" in */${program}) cat /proc/$!/winpid; exit;; esac`;
+  return `$(for i in $(seq 100); do ${found}; sleep 0.1; done; echo none)`;
 }

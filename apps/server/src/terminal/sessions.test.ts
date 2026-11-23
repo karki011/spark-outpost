@@ -33,6 +33,8 @@ function start(limits = defaultLimits) {
   return { created, messages, screen, client, isClosed: () => closed };
 }
 
+const PID_WAIT_MS = process.platform === 'win32' ? 15_000 : 4000;
+
 async function until(check: () => boolean, timeoutMs = 4000) {
   const deadline = Date.now() + timeoutMs;
   while (!check()) {
@@ -63,7 +65,7 @@ describe('terminal sessions', () => {
     const { created, messages, screen, client, isClosed } = start();
     const terminal = sessions.attach(created.id, created.token, client, size);
     terminal.input(`\u0015nohup sleep 300 >/dev/null 2>&1 & echo PID=${backgroundPid('sleep')} \r`);
-    await until(() => /PID=\d+/.test(screen.text));
+    await until(() => /PID=(\d+|none)/.test(screen.text), PID_WAIT_MS);
     const child = pidOf(screen.text);
     expect(isAlive(child)).toBe(true);
 
@@ -73,7 +75,7 @@ describe('terminal sessions', () => {
     expect(isClosed()).toBe(true);
     await until(() => !isAlive(child));
     expect(sessions.activeCount).toBe(0);
-  }, 20_000);
+  }, 30_000);
 
   it('kills the terminal when the page disconnects', async () => {
     const { created, messages, screen, client } = start();
