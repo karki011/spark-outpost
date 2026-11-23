@@ -18,7 +18,9 @@ const TOOL_CHANGES = new Set(['delete', 'move']);
 
 function comparable(target: string): string {
   const resolved = path.resolve(target).replace(/^\/(tmp|var)(?=\/|$)/, '/private/$1');
-  return process.platform === 'darwin' ? resolved.toLowerCase() : resolved;
+  return process.platform === 'darwin' || process.platform === 'win32'
+    ? resolved.toLowerCase()
+    : resolved;
 }
 
 function within(root: string, target: string): boolean {

@@ -12,6 +12,7 @@ import {
   type ApprovalRequest,
 } from '../src/approvals/decide.ts';
 import type { PathPolicy } from '../src/projects/path-policy.ts';
+import { toGatePath } from '../src/approvals/gate-path.ts';
 import { asksBeforeEditing, sessionAskRules } from './fake-acp-floor.ts';
 
 let repo: string;
@@ -19,7 +20,7 @@ let other: string;
 let worktree: string;
 
 function newRepo(prefix: string): string {
-  const folder = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
+  const folder = realpathSync.native(mkdtempSync(join(tmpdir(), prefix)));
   const git = (...args: string[]) =>
     execFileSync('git', ['-C', folder, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args]);
   git('init', '-q');
@@ -87,11 +88,12 @@ describe('the ask rules of a Claude session that works in a worktree', () => {
 
   it('write every rule for a path outside the folder as an absolute path', async () => {
     const { rules } = await session([worktree]);
-    const outside = rules.filter((rule) => rule.includes(join(repo, '.git')));
+    const gitDir = toGatePath(join(repo, '.git'));
+    const outside = rules.filter((rule) => rule.includes(gitDir));
     expect(outside).toEqual([
-      `Edit(/${join(repo, '.git', 'hooks', '*')})`,
-      `Edit(/${join(repo, '.git', 'config')})`,
-      `Edit(/${join(repo, '.git', 'worktrees', 'chat-1', 'config.worktree')})`,
+      `Edit(/${gitDir}/hooks/*)`,
+      `Edit(/${gitDir}/config)`,
+      `Edit(/${gitDir}/worktrees/chat-1/config.worktree)`,
     ]);
   });
 });

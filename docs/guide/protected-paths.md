@@ -20,6 +20,8 @@ With no [rules](#spark-rules), the default, the mode decides all of this but out
 | **Force pushes**             | `git push --force-with-lease` to a named, non-default branch                                                                             | Hold to confirm; no "always" option. Claude can't, even in **Bypass permissions**.                                      |
 | **Sending a secret value**   | A push, `gh` upload, or site address or text holding a secret file's value                                                               | Hold to confirm, naming the file.                                                                                       |
 
+On Windows, any letter case matches.
+
 ![The Change agent instructions card with Allow once, Allow for this chat and Deny](images/approvals-instructions-light.png)
 
 The recommended rules also refuse other branches than the chat's or its [adopted one](where-spark-works.md#work-on-a-pull-request), other force pushes and remote changes. Unasked changes are [flagged](approvals.md#actions-that-ran-without-review).
@@ -35,7 +37,7 @@ Even with no rules:
 
 A blocked step reads "Refused …".
 
-When a chat says Codex "ran with Codex's own sandbox instead", the browser data block can't apply there. In a mode that runs without asking, Spark flags a shell command it sees reading it, after it runs.
+When a chat says Codex "ran with Codex's own sandbox instead", the browser data block can't apply. In a mode that runs without asking, Spark flags a command reading it afterwards.
 
 ## Spark rules
 

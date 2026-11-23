@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join, matchesGlob, relative, resolve } from 'node:path';
+import { dirname, join, posix, resolve } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk/unstable';
 import { runCommand } from './fake-acp-floor-commands.ts';
 
@@ -13,6 +13,13 @@ interface FloorTurn {
 }
 
 const EDIT_RULE = /^Edit\((.+)\)$/;
+const WINDOWS_DRIVE = /^([A-Za-z]):[\\/]?(.*)$/s;
+
+function toGatePath(native: string): string {
+  const drive = process.platform === 'win32' ? WINDOWS_DRIVE.exec(native) : null;
+  if (!drive) return native;
+  return posix.join(`/${drive[1]!.toLowerCase()}`, drive[2]!.replaceAll('\\', '/'));
+}
 
 function fieldsOf(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
@@ -25,12 +32,14 @@ export function sessionAskRules(meta: unknown): string[] {
 }
 
 export function asksBeforeEditing(rules: readonly string[], cwd: string, target: string): boolean {
+  const gateCwd = toGatePath(cwd);
+  const gateTarget = toGatePath(target);
   return rules.some((rule) => {
     const glob = EDIT_RULE.exec(rule)?.[1];
     if (!glob) return false;
     return glob.startsWith('//')
-      ? matchesGlob(target, glob.slice(1))
-      : matchesGlob(relative(cwd, target), glob);
+      ? posix.matchesGlob(gateTarget, glob.slice(1))
+      : posix.matchesGlob(posix.relative(gateCwd, gateTarget), glob);
   });
 }
 
