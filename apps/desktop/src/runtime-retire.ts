@@ -37,7 +37,9 @@ function escaped(text: string): string {
 }
 
 export function namesRuntimeHost(command: string, directory: string): boolean {
-  const host = new RegExp(`${escaped(HOST_SCRIPT)}"? ("?)${escaped(directory)}\\1(?: |$)`);
+  const host = new RegExp(
+    `(?:^|[\\\\/" ])${escaped(HOST_SCRIPT)}"? ("?)${escaped(directory)}\\1(?: |$)`,
+  );
   return host.test(command);
 }
 

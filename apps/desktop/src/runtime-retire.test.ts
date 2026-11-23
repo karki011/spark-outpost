@@ -116,5 +116,8 @@ describe('reading a runtime host command line', () => {
     expect(namesRuntimeHost(`node runtime-host.js ${directory}-old`, directory)).toBe(false);
     expect(namesRuntimeHost(`node runtime-host.js "${directory}`, directory)).toBe(false);
     expect(namesRuntimeHost(`node other.js ${directory}`, directory)).toBe(false);
+    expect(
+      namesRuntimeHost(`node "C:\\Other App\\not-runtime-host.js" "${directory}"`, directory),
+    ).toBe(false);
   });
 });
