@@ -45,7 +45,7 @@ async function commandLine(pid: number): Promise<string> {
   if (process.platform !== 'win32') {
     return (await run('ps', ['-ww', '-o', 'args=', '-p', String(pid)])).stdout.trim();
   }
-  const query = `(Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}').CommandLine`;
+  const query = `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; (Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}').CommandLine`;
   const { stdout } = await run('powershell.exe', [
     '-NoProfile',
     '-NonInteractive',
