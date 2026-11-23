@@ -15,7 +15,7 @@ function powershell(env: NodeJS.ProcessEnv): string {
 }
 
 function quoted(text: string): string {
-  return `'${text.replaceAll("'", "''")}'`;
+  return `'${text.replace(/['\u2018\u2019\u201A\u201B]/g, (mark) => mark + mark)}'`;
 }
 
 export function privateFolderScript(folder: string): string {

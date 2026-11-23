@@ -17,6 +17,12 @@ describe('private data folder on Windows', () => {
     );
   });
 
+  it('doubles curly single quotes, which PowerShell also reads as quotes', () => {
+    expect(privateFolderScript('C:\\Users\\O\u2019Neil\\Spark')).toContain(
+      "-LiteralPath 'C:\\Users\\O\u2019\u2019Neil\\Spark'",
+    );
+  });
+
   it('runs PowerShell from System32 by full path', () => {
     const calls: string[] = [];
     makeFolderPrivate('C:\\Spark', {
