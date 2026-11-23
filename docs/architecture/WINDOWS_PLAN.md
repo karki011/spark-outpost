@@ -194,6 +194,10 @@ From the npm registry and official docs:
 
 - **Desktop runtime connection:** on Windows the desktop app and its background service talk over a named pipe (`\\.\pipe\spark-outpost-runtime-<hash of the data folder>`) instead of a Unix socket (`runtime-handshake.ts`). The token and endpoint files stay in the private data folder, and every connection still proves it holds the token before anything else is sent, so the pipe's default access rules are not relied on. Finding a leftover service reads its command line through `Win32_Process` instead of `ps`, allowing for quoted paths (`runtime-retire.ts`).
 
+## Phase 4 progress
+
+- **Coming to Windows (started):** the desktop preload exposes the Mac control and Voice bridges only on macOS, so their Settings pages, the mic button and the island's voice entry are absent on Windows instead of reporting a missing helper. Terminal sessions show **Coming to Windows** in the session type menu and can't be chosen there, and the ticket dialog offers only a chat, until phase 5. The web reads the platform from `window.sparkDesktop.platform` (`onWindows()` in `apps/web/src/desktop/desktop-bridge.ts`).
+
 ## Still unverified (needs a Windows machine)
 
 - That Spark's ACP sessions start with the user's logins on Windows.
