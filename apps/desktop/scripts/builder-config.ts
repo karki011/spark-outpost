@@ -282,7 +282,11 @@ export function builderConfig(options: BuilderOptions): Configuration {
         icon: options.icon,
         target: [{ target: 'nsis', arch: options.archs }],
       },
-      nsis: { oneClick: true, perMachine: false },
+      nsis: {
+        oneClick: true,
+        perMachine: false,
+        artifactName: 'Spark-Outpost-${version}-windows-alpha-${arch}.${ext}',
+      },
     };
   }
   return {

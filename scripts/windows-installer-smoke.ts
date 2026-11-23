@@ -36,7 +36,8 @@ async function check(name: string, required: boolean, run: () => Promise<string>
 
 async function installer(): Promise<string> {
   const found: string[] = [];
-  for await (const file of glob('apps/desktop/release/*/Spark-Outpost-*-x64.exe')) found.push(file);
+  for await (const file of glob('apps/desktop/release/*/Spark-Outpost-*-windows-alpha-x64.exe'))
+    found.push(file);
   if (found.length !== 1) throw new Error(`expected one installer, found ${found.length}`);
   return path.resolve(found[0]!);
 }

@@ -138,7 +138,11 @@ describe('builderConfig', () => {
       productName: 'Spark Outpost',
       publish: null,
       win: { icon: '/assets/icon.png', target: [{ target: 'nsis', arch: ['x64'] }] },
-      nsis: { oneClick: true, perMachine: false },
+      nsis: {
+        oneClick: true,
+        perMachine: false,
+        artifactName: 'Spark-Outpost-${version}-windows-alpha-${arch}.${ext}',
+      },
     });
     expect(config).not.toHaveProperty('mac');
     expect(config).not.toHaveProperty('dmg');
