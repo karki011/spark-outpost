@@ -146,7 +146,7 @@ From the npm registry and official docs:
 - **Credential Manager size:** a blob is at most 2560 bytes (`CRED_MAX_CREDENTIAL_BLOB_SIZE`, [Microsoft docs](https://learn.microsoft.com/en-us/windows/win32/api/wincred/ns-wincred-credentialw)).
   - `telemetry:headers` allows up to 20 × (128 + 4096) bytes, so one entry can't hold it, and even a single long header can fail.
   - Fix: split large secrets into chunks, or keep an encrypted file whose key lives in Credential Manager.
-  - Still to check: whether keyring stores UTF-16, which halves the usable size.
+  - Checked on the Windows runner: keyring stores UTF-16, so about 1,200 characters fit (see Phase 3 progress).
 - **Claude Code shell** ([setup docs](https://code.claude.com/docs/en/setup)):
   - With Git for Windows installed, the Bash tool runs in Git Bash (`CLAUDE_CODE_GIT_BASH_PATH` sets the path). Its PowerShell tool also runs alongside by default for claude.ai and Console accounts.
   - Without Git, every command goes through the PowerShell tool.
@@ -169,6 +169,10 @@ From the npm registry and official docs:
 - **Private data folder:** on Windows the desktop app makes Spark's data folder private at start (`apps/desktop/src/private-folder.ts`): PowerShell from System32 replaces the folder's whole rule list (`Set-Acl` with SDDL) with full control for the current user (by SID, Microsoft Entra accounts included), SYSTEM and Administrators only, with inheritance off and inherited by everything inside, so an explicit grant to someone else does not survive, so the Postgres password, `app-lock.json`, the launch token and the database are covered without changing each file's `0o600`. Files Spark puts in the temp folder are already private, since Windows keeps it under the user's profile. A failure is logged and Spark still starts. The Windows CI check gives a test folder an explicit grant to Everyone, then confirms the folder is private by its security descriptor and that Postgres starts inside it. The desktop runtime pipe's rules come with named pipes in phase 3.
 - **Letter case:** on Windows, instruction files and git control match in any case (`agents.md`, `.GIT/hooks/…`), a path inside a project counts as inside when it differs from the project folder only in case, and Sparks' folders compare case-insensitively, as Spark's data folder already did. macOS keeps exact case for instruction files, matching Claude's own ask rules.
 - Project folders on a network share (`\\server\share`) are not supported yet: POSIX path joins collapse the share's leading `//`, so a folder the gate can no longer map reads as unknown, and a server named with one letter would map to that drive. Keeping the share prefix through every join is a follow-up.
+
+## Phase 3 progress
+
+- **Credential Manager size (done):** keyring stores UTF-16, so one entry holds about 1,200 characters. On Windows, `nativeKeyring` splits a longer secret into parts of 1,000 characters (`apps/server/src/setup/keyring-chunks.ts`): each save writes its parts under new names (`<account>#<generation>-<n>`, a random generation per save) and then switches the main entry's marker to them, so a save that fails part way leaves the old secret whole. The old parts are removed after the switch. A missing part is an error, never a short secret. The Mac keychain is unchanged.
 
 ## Still unverified (needs a Windows machine)
 

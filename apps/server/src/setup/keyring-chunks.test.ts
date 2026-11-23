@@ -1,0 +1,132 @@
+import { describe, expect, it } from 'vitest';
+import type { Keyring } from './keychain.ts';
+import { chunkedKeyring, splitSecret } from './keyring-chunks.ts';
+
+function memory(limit = 1280): Keyring & { entries: Map<string, string> } {
+  const entries = new Map<string, string>();
+  return {
+    entries,
+    async get(account) {
+      return entries.get(account) ?? null;
+    },
+    async set(account, secret) {
+      if (secret.length > limit) throw new Error('longer than the platform allows');
+      entries.set(account, secret);
+    },
+    async delete(account) {
+      entries.delete(account);
+    },
+  };
+}
+
+describe('secrets larger than Windows Credential Manager holds', () => {
+  it('keeps a short secret in one entry, as before', async () => {
+    const inner = memory();
+    const keyring = chunkedKeyring(inner);
+    await keyring.set('token', 'abc');
+    expect([...inner.entries]).toEqual([['token', 'abc']]);
+    expect(await keyring.get('token')).toBe('abc');
+  });
+
+  it('splits a long secret into parts and reads it back whole', async () => {
+    const inner = memory();
+    const keyring = chunkedKeyring(inner);
+    const secret = 'x'.repeat(5000);
+    await keyring.set('telemetry:headers', secret);
+    expect(inner.entries.size).toBe(6);
+    expect(await keyring.get('telemetry:headers')).toBe(secret);
+  });
+
+  it('removes parts left over when the secret gets shorter or is deleted', async () => {
+    const inner = memory();
+    const keyring = chunkedKeyring(inner);
+    await keyring.set('a', 'y'.repeat(3500));
+    await keyring.set('a', 'z'.repeat(1500));
+    expect(inner.entries.size).toBe(3);
+    expect(await keyring.get('a')).toBe('z'.repeat(1500));
+    await keyring.set('a', 'short');
+    expect([...inner.entries.keys()]).toEqual(['a']);
+    await keyring.set('a', 'w'.repeat(2500));
+    await keyring.delete('a');
+    expect(inner.entries.size).toBe(0);
+  });
+
+  it('never reads a secret that looks like the part marker as parts', async () => {
+    const keyring = chunkedKeyring(memory());
+    await keyring.set('a', 'spark-chunks:v1:0123abcd:2');
+    expect(await keyring.get('a')).toBe('spark-chunks:v1:0123abcd:2');
+  });
+
+  it('fails loudly when a part is missing', async () => {
+    const inner = memory();
+    const keyring = chunkedKeyring(inner);
+    await keyring.set('a', 'q'.repeat(2500));
+    const second = [...inner.entries.keys()].find((key) => key.endsWith('-2'))!;
+    inner.entries.delete(second);
+    await expect(keyring.get('a')).rejects.toThrow('Part 2 of 3');
+  });
+
+  it('keeps the old secret whole when replacing it fails part way', async () => {
+    const inner = memory();
+    const keyring = chunkedKeyring(inner);
+    await keyring.set('a', 'a'.repeat(2500));
+    const set = inner.set;
+    let writes = 0;
+    inner.set = async (account, secret) => {
+      writes += 1;
+      if (writes === 2) throw new Error('Credential Manager failed');
+      await set(account, secret);
+    };
+    await expect(keyring.set('a', 'b'.repeat(2500))).rejects.toThrow('Credential Manager failed');
+    inner.set = set;
+    expect(await keyring.get('a')).toBe('a'.repeat(2500));
+    expect(inner.entries.size).toBe(4);
+  });
+
+  it('keeps the main entry when a part cannot be deleted, so deleting again finishes', async () => {
+    const inner = memory();
+    const keyring = chunkedKeyring(inner);
+    await keyring.set('a', 'c'.repeat(2500));
+    const remove = inner.delete;
+    let deletes = 0;
+    inner.delete = async (account) => {
+      deletes += 1;
+      if (deletes === 2) throw new Error('Credential Manager failed');
+      await remove(account);
+    };
+    await expect(keyring.delete('a')).rejects.toThrow('Credential Manager failed');
+    expect(inner.entries.has('a')).toBe(true);
+    inner.delete = remove;
+    await keyring.delete('a');
+    expect(inner.entries.size).toBe(0);
+  });
+
+  it('deletes nothing when the part count cannot be read', async () => {
+    const inner = memory();
+    const keyring = chunkedKeyring(inner);
+    await keyring.set('a', 'd'.repeat(2500));
+    const get = inner.get;
+    inner.get = async () => {
+      throw new Error('locked');
+    };
+    await expect(keyring.delete('a')).rejects.toThrow('locked');
+    inner.get = get;
+    expect(inner.entries.size).toBe(4);
+  });
+
+  it('never reuses the part names of the secret it replaces', async () => {
+    const inner = memory();
+    const names = ['0000aaaa', '0000aaaa', '1111bbbb'];
+    const keyring = chunkedKeyring(inner, 1000, () => names.shift()!);
+    await keyring.set('a', 'e'.repeat(2500));
+    await keyring.set('a', 'f'.repeat(2500));
+    expect(await keyring.get('a')).toBe('f'.repeat(2500));
+    expect(inner.entries.get('a')).toBe('spark-chunks:v1:1111bbbb:3');
+    expect(inner.entries.size).toBe(4);
+  });
+
+  it('never splits a character made of two halves', () => {
+    const parts = splitSecret(`${'a'.repeat(999)}😀b`, 1000);
+    expect(parts).toEqual(['a'.repeat(999), '😀b']);
+  });
+});
