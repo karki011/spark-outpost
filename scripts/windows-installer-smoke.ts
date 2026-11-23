@@ -60,6 +60,7 @@ async function install(): Promise<string> {
 async function installedPostgres(): Promise<string> {
   const dir = await mkdtemp(path.join(tmpdir(), 'spark-installed-pg-'));
   const dataDir = path.join(dir, 'data');
+  let stop: (() => Promise<void>) | null = null;
   try {
     await runFile(path.join(POSTGRES_BIN, 'initdb.exe'), [
       '-D',
@@ -70,16 +71,19 @@ async function installedPostgres(): Promise<string> {
       '-E',
       'UTF8',
     ]);
-    const stop = await startWithPgCtl({
+    stop = await startWithPgCtl({
       pgCtl: path.join(POSTGRES_BIN, 'pg_ctl.exe'),
       dataDir,
       port: 54_329,
       host: '127.0.0.1',
       log: (line) => console.log(line),
     });
-    await stop();
+    const running = stop;
+    stop = null;
+    await running();
     return 'initdb, then pg_ctl start and stop, from the installed files';
   } finally {
+    await stop?.().catch(() => undefined);
     await rm(dir, { recursive: true, force: true }).catch(() => undefined);
   }
 }
@@ -95,6 +99,13 @@ async function logTail(dataRoot: string): Promise<string> {
   return tails.join('\n\n');
 }
 
+async function postgresRunning(dataDir: string): Promise<boolean> {
+  return runFile(path.join(POSTGRES_BIN, 'pg_ctl.exe'), ['status', '-D', dataDir]).then(
+    () => true,
+    () => false,
+  );
+}
+
 async function launch(): Promise<string> {
   const dataRoot = await mkdtemp(path.join(tmpdir(), 'spark-app-data-'));
   const child = spawn(APP_EXE, [], {
@@ -105,23 +116,24 @@ async function launch(): Promise<string> {
   child.once('exit', (code) => {
     exitCode = code ?? -1;
   });
+  const postgresData = path.join(dataRoot, 'Spark Outpost', 'postgres');
   const started = Date.now();
   let database = false;
   while (Date.now() - started < LAUNCH_WAIT_MS && exitCode === null && !database) {
     await delay(2_000);
-    database = await stat(path.join(dataRoot, 'Spark Outpost', 'postgres', 'PG_VERSION'))
-      .then(() => true)
-      .catch(() => false);
+    database = await postgresRunning(postgresData);
   }
   await delay(10_000);
   const alive = exitCode === null;
+  const stillRunning = database && (await postgresRunning(postgresData));
   if (child.pid) await runFile('taskkill', ['/PID', String(child.pid), '/T', '/F']).catch(() => {});
   await delay(3_000);
   const tail = await logTail(dataRoot);
   console.log(tail);
-  if (!database) throw new Error(`no database after ${LAUNCH_WAIT_MS / 1000}s\n${tail}`);
   if (!alive) throw new Error(`the app exited with ${exitCode}\n${tail}`);
-  return 'the installed app started and made its database';
+  if (!database) throw new Error(`Postgres not running after ${LAUNCH_WAIT_MS / 1000}s\n${tail}`);
+  if (!stillRunning) throw new Error(`Postgres stopped 10s after it started\n${tail}`);
+  return 'the installed app stayed up with its Postgres running';
 }
 
 async function uninstall(): Promise<string> {
@@ -138,13 +150,15 @@ async function uninstall(): Promise<string> {
 }
 
 await check('Install silently', true, install);
-await check('App executable', true, () => exists(APP_EXE));
-await check('pg_ctl in the installed app', true, () =>
-  exists(path.join(POSTGRES_BIN, 'pg_ctl.exe')),
-);
-await check('Postgres from the installed files', true, installedPostgres);
-await check('Launch the installed app', false, launch);
-await check('Uninstall silently', true, uninstall);
+if (results[0]!.ok) {
+  await check('App executable', true, () => exists(APP_EXE));
+  await check('pg_ctl in the installed app', true, () =>
+    exists(path.join(POSTGRES_BIN, 'pg_ctl.exe')),
+  );
+  await check('Postgres from the installed files', true, installedPostgres);
+  await check('Launch the installed app', false, launch);
+  await check('Uninstall silently', true, uninstall);
+}
 
 const lines = [
   '## Windows installer',
