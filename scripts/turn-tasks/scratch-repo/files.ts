@@ -1,5 +1,5 @@
 import { readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 
 export const TEMPLATE_DIR = join(import.meta.dirname, 'template');
 const SUFFIX = '.tpl';
@@ -25,7 +25,7 @@ export async function templateFiles(dir: string = TEMPLATE_DIR): Promise<Templat
     .filter((entry) => entry.isFile() && entry.name.endsWith(SUFFIX))
     .map((entry) => {
       const source = join(entry.parentPath, entry.name);
-      return { source, target: targetPath(source.slice(dir.length + 1)) };
+      return { source, target: targetPath(source.slice(dir.length + 1).replaceAll(sep, '/')) };
     })
     .sort((a, b) => a.target.localeCompare(b.target));
 }

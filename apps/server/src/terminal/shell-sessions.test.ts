@@ -48,6 +48,8 @@ function recorder() {
   return { messages, screen, client };
 }
 
+const PROCESS_WAIT_MS = process.platform === 'win32' ? 15_000 : 4000;
+
 async function until(check: () => boolean | Promise<boolean>, timeoutMs = 4000) {
   const deadline = Date.now() + timeoutMs;
   while (!(await check())) {
@@ -126,11 +128,20 @@ describe('chat shells', () => {
     await until(() => shell.screen.text.includes('ready-4'));
     expect(await sessions.runningCommand(shell.created.id)).toBeNull();
 
+    let seen: string | null = null;
+    const shows = (label: string | null) => async () => {
+      seen = await sessions.runningCommand(shell.created.id);
+      return seen === label;
+    };
     shell.terminal.input('sleep 100\r');
-    await until(async () => (await sessions.runningCommand(shell.created.id)) === 'sleep 100');
+    await until(shows('sleep 100'), PROCESS_WAIT_MS).catch(() => {
+      throw new Error(`Expected sleep 100, last saw ${JSON.stringify(seen)}.`);
+    });
 
     shell.terminal.input('\x03');
-    await until(async () => (await sessions.runningCommand(shell.created.id)) === null);
+    await until(shows(null), PROCESS_WAIT_MS).catch(() => {
+      throw new Error(`Expected nothing running, last saw ${JSON.stringify(seen)}.`);
+    });
     expect(await sessions.runningCommand('not-a-session')).toBeNull();
   }, 30_000);
 

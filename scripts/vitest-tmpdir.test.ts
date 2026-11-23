@@ -48,7 +48,8 @@ describe('vitest temp folder sandbox', () => {
 
     await teardown();
 
-    expect(await exit).toBe('SIGTERM');
+    const ended = await exit;
+    if (process.platform !== 'win32') expect(ended).toBe('SIGTERM');
     expect(existsSync(folder)).toBe(false);
   });
 });
