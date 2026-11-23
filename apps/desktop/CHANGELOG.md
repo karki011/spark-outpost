@@ -4,6 +4,12 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.18
+
+- **The chat's agent reads every workflow report.** When a workflow run in a chat ends, however it started (Run, `@`, a schedule, a trigger), the chat's own agent reads each step's reply in the same turn and answers under the run's line: what it fixed, or that nothing needs doing. **Steps** on the line shows the first line of each step's reply; open a step to read all of it. A run you didn't start with `@` never pushes or opens a pull request: its fixes stay in the chat for you.
+- **A tidier `@` menu.** It is wider, lists Sparks, Workflows and Files under headings in one list, shows each name above its description, and explains the highlighted row in one line at the bottom.
+- The GitHub page's review requests load again, and the working line says what a quiet turn is doing.
+
 ## 0.1.0-beta.17
 
 - **Set up a Spark.** A Spark opens on **Setup**: pick its provider, model, effort, mode and autonomy, and **What this means** says whether it only reads, changes files or opens a pull request. Its chats pick up a change from their next turn with one line saying so. **Use for new chats** makes one Spark the default for new chats, and **Used in** lists the workflows and Sparks that name it.
