@@ -2,6 +2,7 @@ import { projectSecretValues } from '../audit/secret-values.ts';
 import { folderExists, spawnInLoginShell } from '../preview/process.ts';
 import type { PreviewRuntime } from '../preview/servers.ts';
 import { killProcessTree } from './process-group.ts';
+import { defaultShell } from '../setup/default-shell.ts';
 
 export interface AgentTerminalRuntime extends Pick<
   PreviewRuntime,
@@ -18,7 +19,7 @@ function stopWithTerm(pid: number): void {
 
 export function agentTerminalRuntime(
   env: NodeJS.ProcessEnv = process.env,
-  shell = env.SHELL || '/bin/zsh',
+  shell = defaultShell(env),
 ): AgentTerminalRuntime {
   return {
     env,

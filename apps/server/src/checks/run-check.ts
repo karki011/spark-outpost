@@ -7,6 +7,7 @@ import { relativeInside } from '../projects/path-policy.ts';
 import { isSecretEnvName } from '../setup/environment.ts';
 import type { CheckCommand } from './detect.ts';
 import { SetupScanner, type EnvironmentProblem } from './failures.ts';
+import { signalGroup } from '../terminal/process-group.ts';
 
 export const CHECK_TIMEOUT_MS = 600_000;
 const KILL_GRACE_MS = 2_000;
@@ -72,12 +73,7 @@ export class OutputTail {
 }
 
 function killGroup(pid: number | undefined, signal: NodeJS.Signals): void {
-  if (pid === undefined) return;
-  try {
-    process.kill(-pid, signal);
-  } catch {
-    return;
-  }
+  if (pid !== undefined) signalGroup(pid, signal);
 }
 
 export interface RunOptions {

@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { childEnvironment } from '../../setup/environment.ts';
+import { signalGroup } from '../../terminal/process-group.ts';
 
 const OUTPUT_TAIL_CHARS = 8_000;
 const KILL_GRACE_MS = 3_000;
@@ -68,14 +69,6 @@ export function cloneArguments(
     request.url,
     request.destination,
   ];
-}
-
-function signalGroup(pid: number, signal: NodeJS.Signals): void {
-  try {
-    process.kill(-pid, signal);
-  } catch {
-    return;
-  }
 }
 
 export function startGitClone(request: GitCloneRequest): GitCloneProcess {

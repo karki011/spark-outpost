@@ -25,7 +25,8 @@ describe('what a Terminal session keeps for re-adoption', () => {
   it('stores the grant digest, the tools port and the launch mode in a private file', async () => {
     const directory = launchDir('one');
     await writeAdoptRecord(directory, record);
-    expect(statSync(join(directory, 'adopt.json')).mode & 0o777).toBe(0o600);
+    if (process.platform !== 'win32')
+      expect(statSync(join(directory, 'adopt.json')).mode & 0o777).toBe(0o600);
     expect(await readStoredLaunch(root)).toEqual({ directory, record, observed: false });
   });
 
@@ -52,7 +53,8 @@ describe('what a Terminal session keeps for re-adoption', () => {
       observed: true,
       record: { ceiling: 'plan' },
     });
-    expect(statSync(join(newer, 'observer.json')).mode & 0o777).toBe(0o600);
+    if (process.platform !== 'win32')
+      expect(statSync(join(newer, 'observer.json')).mode & 0o777).toBe(0o600);
   });
 
   it('finds nothing in a folder with no readable record', async () => {
@@ -62,7 +64,9 @@ describe('what a Terminal session keeps for re-adoption', () => {
   });
 
   it('keeps each session under its channel', () => {
-    expect(sessionRoot('/data', 'spark-dev', 'abc')).toBe('/data/spark-dev/terminal-sessions/abc');
+    expect(sessionRoot('/data', 'spark-dev', 'abc')).toBe(
+      join('/data', 'spark-dev', 'terminal-sessions', 'abc'),
+    );
   });
 });
 

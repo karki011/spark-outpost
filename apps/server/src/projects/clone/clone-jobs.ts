@@ -35,6 +35,7 @@ import {
 } from './clone-failure.ts';
 import { cloneEnvironment, startGitClone, type GitCloneProcess } from './clone-git.ts';
 import { advance, CONNECTING, type CloneProgress } from './clone-progress.ts';
+import { signalGroup } from '../../terminal/process-group.ts';
 
 export interface CloneJobsDeps {
   db: Db;
@@ -138,11 +139,7 @@ async function ownedElsewhere(marker: CloneMarker): Promise<boolean> {
 
 async function stopOrphan(marker: CloneMarker): Promise<void> {
   if (!marker.pid || !(await runningClone(marker))) return;
-  try {
-    process.kill(-marker.pid, 'SIGKILL');
-  } catch {
-    return;
-  }
+  signalGroup(marker.pid, 'SIGKILL');
 }
 
 async function configLeak(destination: string, tokens: readonly string[]): Promise<boolean> {

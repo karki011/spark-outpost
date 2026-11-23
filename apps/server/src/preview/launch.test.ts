@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { API_TOKEN_ENV } from '@spark-outpost/contracts';
 import {
@@ -91,8 +92,8 @@ describe('preview ports', () => {
 
 describe('preview folders and logs', () => {
   it('keeps the working folder inside the project', () => {
-    expect(workingFolder('/repo', null)).toBe('/repo');
-    expect(workingFolder('/repo', 'apps/web')).toBe('/repo/apps/web');
+    expect(workingFolder('/repo', null)).toBe(path.resolve('/repo'));
+    expect(workingFolder('/repo', 'apps/web')).toBe(path.resolve('/repo/apps/web'));
     expect(workingFolder('/repo', '../other')).toBeNull();
     expect(workingFolder('/repo', '/etc')).toBeNull();
   });

@@ -1,6 +1,9 @@
+import { sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { nativeActivity } from './native-context.ts';
 import { parseNativeHook } from './native-hooks.ts';
+
+const native = (posix: string) => posix.split('/').join(sep);
 
 describe('native terminal observation', () => {
   it('records lifecycle identity without copying tool arguments or results', () => {
@@ -84,8 +87,9 @@ describe('native terminal observation', () => {
     const event = parseNativeHook('codex', {
       session_id: '01a13d05-5a6a-7b93-9b73-31bffd0f34eb',
       turn_id: '01a13d0a-7a87-72d0-b76e-3779bfbebeab',
-      transcript_path:
+      transcript_path: native(
         '/Users/me/.codex/sessions/2026/10/14/rollout-2026-10-14T20-45-23-01a13d05-5a6a-7b93-9b73-31bffd0f34eb.jsonl',
+      ),
       cwd: '/work',
       hook_event_name: 'Interrupt',
       model: 'gpt-6-astra',
@@ -154,7 +158,7 @@ describe('native terminal observation', () => {
 
   it('keeps a Claude transcript path only when it is the absolute file of the reported session', () => {
     const event = { hook_event_name: 'UserPromptSubmit', session_id: 'native-session' };
-    const path = '/home/projects/repo/native-session.jsonl';
+    const path = native('/home/projects/repo/native-session.jsonl');
     expect(parseNativeHook('claude', { ...event, transcript_path: path })).toEqual({
       kind: 'prompt',
       nativeSessionId: 'native-session',
@@ -162,9 +166,9 @@ describe('native terminal observation', () => {
     });
     for (const transcript_path of [
       'native-session.jsonl',
-      '/home/projects/repo/another-session.jsonl',
-      '/home/projects/repo/../native-session.jsonl',
-      '/home/projects/repo/native-session.jsonl/',
+      native('/home/projects/repo/another-session.jsonl'),
+      native('/home/projects/repo/../native-session.jsonl'),
+      native('/home/projects/repo/native-session.jsonl/'),
     ])
       expect(parseNativeHook('claude', { ...event, transcript_path })).toEqual({
         kind: 'prompt',
@@ -182,7 +186,9 @@ describe('native terminal observation', () => {
 
   it('keeps a Codex rollout path only when it is the file of the reported thread', () => {
     const event = { hook_event_name: 'UserPromptSubmit', session_id: 'thread-1', model: 'gpt-x' };
-    const path = '/home/.codex/sessions/2026/10/12/rollout-2026-10-12T21-48-18-thread-1.jsonl';
+    const path = native(
+      '/home/.codex/sessions/2026/10/12/rollout-2026-10-12T21-48-18-thread-1.jsonl',
+    );
     expect(parseNativeHook('codex', { ...event, transcript_path: path })).toEqual({
       kind: 'prompt',
       nativeSessionId: 'thread-1',
@@ -190,8 +196,8 @@ describe('native terminal observation', () => {
       model: 'gpt-x',
     });
     for (const transcript_path of [
-      '/home/.codex/sessions/thread-1.jsonl',
-      '/home/.codex/sessions/rollout-2026-thread-2.jsonl',
+      native('/home/.codex/sessions/thread-1.jsonl'),
+      native('/home/.codex/sessions/rollout-2026-thread-2.jsonl'),
       'rollout-2026-thread-1.jsonl',
     ])
       expect(parseNativeHook('codex', { ...event, transcript_path })).toEqual({
@@ -203,7 +209,9 @@ describe('native terminal observation', () => {
 
   it('names the file of a sub-agent only from the ids the hook reports', () => {
     const tool = { hook_event_name: 'PreToolUse', tool_use_id: 'call_1', tool_name: 'Bash' };
-    const child = '/home/.codex/sessions/2026/10/12/rollout-2026-10-12T21-49-25-thread-2.jsonl';
+    const child = native(
+      '/home/.codex/sessions/2026/10/12/rollout-2026-10-12T21-49-25-thread-2.jsonl',
+    );
     expect(
       parseNativeHook('codex', {
         ...tool,
@@ -220,7 +228,7 @@ describe('native terminal observation', () => {
         transcript_path: child,
       }),
     ).not.toHaveProperty('agentTranscriptPath');
-    const main = '/home/projects/repo/native-session.jsonl';
+    const main = native('/home/projects/repo/native-session.jsonl');
     expect(
       parseNativeHook('claude', {
         ...tool,
@@ -230,8 +238,9 @@ describe('native terminal observation', () => {
       }),
     ).toMatchObject({
       transcriptPath: main,
-      agentTranscriptPath:
+      agentTranscriptPath: native(
         '/home/projects/repo/native-session/subagents/agent-aec39d782762e820d.jsonl',
+      ),
     });
     expect(
       parseNativeHook('claude', {

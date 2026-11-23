@@ -26,8 +26,8 @@ describe('a picture for a Terminal session', () => {
     expect(first).toMatch(/browser-[0-9a-f]{8}\.png$/);
     expect(second).toMatch(/\.jpg$/);
     expect(await readFile(first)).toEqual(PNG);
-    expect((await stat(first)).mode & 0o777).toBe(0o600);
-    expect((await stat(dirname(first))).mode & 0o777).toBe(0o700);
+    if (process.platform !== 'win32') expect((await stat(first)).mode & 0o777).toBe(0o600);
+    if (process.platform !== 'win32') expect((await stat(dirname(first))).mode & 0o777).toBe(0o700);
   });
 
   it('refuses anything but PNG and JPEG', async () => {

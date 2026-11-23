@@ -3,6 +3,7 @@ import type { TerminalColors } from '@spark-outpost/contracts';
 import { spawn as spawnNodePty } from 'node-pty';
 import { childEnvironment } from '../setup/environment.ts';
 import type { StartObserver } from './start-timing.ts';
+import { defaultShell } from '../setup/default-shell.ts';
 
 export interface PtyProcess {
   readonly pid: number;
@@ -37,7 +38,7 @@ export function shellEnvironment(env: NodeJS.ProcessEnv): Record<string, string>
   return { ...clean, TERM: 'xterm-256color', COLORTERM: 'truecolor' };
 }
 
-export function loginShellSpawner(shell = process.env.SHELL || '/bin/zsh'): SpawnPty {
+export function loginShellSpawner(shell = defaultShell()): SpawnPty {
   return ({ cols, rows, cwd, command, args, env }) => {
     const pty = spawnNodePty(command ?? shell, command ? (args ?? []) : ['-l'], {
       name: 'xterm-256color',

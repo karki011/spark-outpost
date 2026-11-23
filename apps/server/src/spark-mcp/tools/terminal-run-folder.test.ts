@@ -38,7 +38,7 @@ describe('the folder a Spark terminal starts in', () => {
 
   it('keeps an absolute folder, normalised', () => {
     expect(resolveFolder(roots(), `${root}/web/`)).toBe(path.join(root, 'web'));
-    expect(resolveFolder(roots(), '/etc')).toBe('/etc');
+    expect(resolveFolder(roots(), '/etc')).toBe(path.resolve('/etc'));
   });
 });
 
