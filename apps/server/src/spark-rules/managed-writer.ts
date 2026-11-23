@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, win32 } from 'node:path';
 import { promisify } from 'node:util';
 import { RulesFileError } from './rules-file.ts';
 import { rulesTextHash } from './accepted.ts';
@@ -118,6 +118,15 @@ async function plainWrite(target: string, text: string, previousHash: string): P
   await rename(temp, target);
 }
 
+export function sameFile(
+  first: string,
+  second: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  if (platform !== 'win32') return first === second;
+  return win32.resolve(first).toLowerCase() === win32.resolve(second).toLowerCase();
+}
+
 export function managedWriteFor(target: string): ManagedWrite {
-  return target === managedRulesFile() ? adminManagedWrite() : plainWrite;
+  return sameFile(target, managedRulesFile()) ? adminManagedWrite() : plainWrite;
 }

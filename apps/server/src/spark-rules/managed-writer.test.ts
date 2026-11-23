@@ -15,6 +15,7 @@ import {
   INSTALL_SCRIPT,
   installArgs,
   managedWriteFor,
+  sameFile,
   STALE_COMPANY,
   STALE_MARK,
   type StagedWrite,
@@ -169,5 +170,14 @@ describe.skipIf(process.platform === 'win32')('the macOS admin prompt for the co
   it('uses the admin prompt only for the real company file', () => {
     expect(managedWriteFor('/tmp/elsewhere.json').name).toBe('plainWrite');
     expect(managedWriteFor(managedRulesFile()).name).not.toBe('plainWrite');
+  });
+
+  it('knows the company file on Windows by any spelling of its path', () => {
+    const company = 'C:\\ProgramData\\SparkOutpost\\managed-settings.json';
+    expect(sameFile('c:/programdata/SparkOutpost/Managed-Settings.json', company, 'win32')).toBe(
+      true,
+    );
+    expect(sameFile('C:\\ProgramData\\Other\\managed-settings.json', company, 'win32')).toBe(false);
+    expect(sameFile('/Library/A/x.json', '/library/a/x.json', 'darwin')).toBe(false);
   });
 });
