@@ -1,14 +1,17 @@
 import { realpath } from 'node:fs/promises';
+import path, { type PlatformPath } from 'node:path';
 import { AGENT_TERMINAL_LIVE } from './agent-terminals.ts';
 import type { Queryable } from './db.ts';
 
 async function resolved(folder: string): Promise<string> {
-  const given = folder.replace(/\/+$/, '');
-  return realpath(given).catch(() => given);
+  return realpath(folder).catch(() => folder);
 }
 
-function within(path: string, folder: string): boolean {
-  return path === folder || path.startsWith(`${folder}/`);
+export function within(child: string, folder: string, paths: PlatformPath = path): boolean {
+  const relative = paths.relative(folder, child);
+  if (relative === '') return true;
+  if (relative === '..' || relative.startsWith(`..${paths.sep}`)) return false;
+  return !paths.isAbsolute(relative);
 }
 
 export async function folderInUse(db: Queryable, folder: string): Promise<boolean> {
@@ -23,8 +26,8 @@ export async function folderInUse(db: Queryable, folder: string): Promise<boolea
      SELECT folder FROM preview_servers WHERE wanted = 'running'`,
   );
   const target = await resolved(folder);
-  for (const { path } of rows) {
-    if (path && within(await resolved(path), target)) return true;
+  for (const row of rows) {
+    if (row.path && within(await resolved(row.path), target)) return true;
   }
   return false;
 }
