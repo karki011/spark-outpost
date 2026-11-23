@@ -9,8 +9,8 @@ import {
   session,
   type IpcMainInvokeEvent,
 } from 'electron';
-import { BROWSER_HOST_ENV, isBetaVersion, parseSparkChatLink } from '@spark-outpost/contracts';
-import { linkIn } from './deep-link.ts';
+import { BROWSER_HOST_ENV, parseSparkChatLink } from '@spark-outpost/contracts';
+import { launchChat, linkIn } from './deep-link.ts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
 import { stableApiPort } from './api-port.ts';
 import { waitForApi } from './api-ready.ts';
@@ -29,7 +29,7 @@ import { guardDownloads } from './downloads.ts';
 import { FileLog, sourceLogger } from './file-log.ts';
 import { scheduleHeartbeat, type HeartbeatTimer } from './heartbeat.ts';
 import { startHelp, type Help } from './help.ts';
-import { aboutVersion } from './help-menu.ts';
+import { setAppIdentity } from './app-identity.ts';
 import type { Database, DatabaseOptions } from './postgres.ts';
 import { LocalRuntime } from './runtime-client.ts';
 import { serverEntry } from './runtime-entries.ts';
@@ -83,12 +83,7 @@ const preload = path.join(import.meta.dirname, 'preload.cjs');
 const bootPreload = path.join(import.meta.dirname, 'boot-preload.cjs');
 const icons = channelIcons(path.join(app.getAppPath(), 'assets'), config);
 
-app.setName(config.appName);
-app.setAboutPanelOptions({
-  applicationName: config.appName,
-  ...aboutVersion(app.getVersion(), isBetaVersion(app.getVersion())),
-  iconPath: icons.app,
-});
+setAppIdentity(config, icons.app);
 app.setPath('userData', paths.userData);
 app.setAppLogsPath(paths.logs);
 process.env.LC_ALL = POSTGRES_LOCALE;
@@ -100,7 +95,7 @@ let spark: SparkWindow | null = null;
 let origin: string | null = null;
 let savedTheme: string | null = null;
 let companionHost: CompanionHost | null = null;
-let pendingLinkChat: string | null = null;
+let pendingLinkChat: string | null = launchChat(process.argv, config.linkScheme);
 let localApi: { origin: string; token: string } | null = null;
 let failureHelp: string | null = null;
 let updater: Updater | null = null;
@@ -419,6 +414,7 @@ async function launch(): Promise<void> {
     preload,
     settingsPath: settingsFile(paths.userData),
     trayIcon: icons.tray,
+    badgeWindow: () => spark?.window ?? null,
     showSpark,
     quit: () => app.quit(),
     log: mainLog,

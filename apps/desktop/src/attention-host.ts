@@ -1,4 +1,11 @@
-import { app, ipcMain, Notification, type IpcMainEvent, type WebContents } from 'electron';
+import {
+  ipcMain,
+  Notification,
+  type BrowserWindow,
+  type IpcMainEvent,
+  type WebContents,
+} from 'electron';
+import { showAppBadge } from './app-badge.ts';
 import type { AttentionReport } from '@spark-outpost/contracts';
 import { appLockGate } from './app-lock-gate.ts';
 import {
@@ -25,6 +32,7 @@ interface AttentionHostOptions {
   sparkFocused: () => boolean;
   openChat: (chatId: string) => void;
   showSpark: () => void;
+  badgeWindow: () => BrowserWindow | null;
   blocked: (on: boolean) => void;
   log: (line: string) => void;
 }
@@ -51,7 +59,7 @@ export function startAttentionHost(options: AttentionHostOptions): AttentionHost
 
   const showBadge = () => {
     const badge = dockBadge(options.channelBadge, report.count, options.enabled());
-    app.dock?.setBadge(badge);
+    showAppBadge(badge, options.badgeWindow());
     return badge;
   };
 
@@ -150,7 +158,7 @@ export function startAttentionHost(options: AttentionHostOptions): AttentionHost
       for (const [page, gone] of pageGone) page.off('destroyed', gone);
       pageGone.clear();
       for (const key of [...shown.keys()]) forget(key);
-      app.dock?.setBadge(options.channelBadge ?? '');
+      showAppBadge(options.channelBadge ?? '', options.badgeWindow());
     },
   };
 }
