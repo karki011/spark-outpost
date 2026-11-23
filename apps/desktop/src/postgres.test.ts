@@ -16,6 +16,16 @@ vi.mock('embedded-postgres', () => ({
   }),
 }));
 
+const pgCtl = vi.hoisted(() => {
+  const stop = vi.fn(() => Promise.resolve());
+  return { stop, start: vi.fn(() => Promise.resolve(stop)) };
+});
+
+vi.mock('./postgres-windows.ts', () => ({
+  startWithPgCtl: pgCtl.start,
+  stopLeftoverWithPgCtl: vi.fn(() => Promise.resolve()),
+}));
+
 vi.mock('pg', () => ({
   default: {
     Client: vi.fn(function Client() {
@@ -47,6 +57,7 @@ it('stops the embedded Postgres it started when the database cannot be created',
   });
 
   await expect(starting).rejects.toThrow('password authentication failed');
-  expect(server.start).toHaveBeenCalledOnce();
-  expect(server.stop).toHaveBeenCalledOnce();
+  const started = process.platform === 'win32' ? pgCtl : server;
+  expect(started.start).toHaveBeenCalledOnce();
+  expect(started.stop).toHaveBeenCalledOnce();
 });
