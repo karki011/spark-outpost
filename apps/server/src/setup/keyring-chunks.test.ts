@@ -114,6 +114,17 @@ describe('secrets larger than Windows Credential Manager holds', () => {
     expect(inner.entries.size).toBe(4);
   });
 
+  it('never reuses the part names of the secret it replaces', async () => {
+    const inner = memory();
+    const names = ['0000aaaa', '0000aaaa', '1111bbbb'];
+    const keyring = chunkedKeyring(inner, 1000, () => names.shift()!);
+    await keyring.set('a', 'e'.repeat(2500));
+    await keyring.set('a', 'f'.repeat(2500));
+    expect(await keyring.get('a')).toBe('f'.repeat(2500));
+    expect(inner.entries.get('a')).toBe('spark-chunks:v1:1111bbbb:3');
+    expect(inner.entries.size).toBe(4);
+  });
+
   it('never splits a character made of two halves', () => {
     const parts = splitSecret(`${'a'.repeat(999)}😀b`, 1000);
     expect(parts).toEqual(['a'.repeat(999), '😀b']);

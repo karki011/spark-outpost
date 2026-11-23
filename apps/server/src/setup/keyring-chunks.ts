@@ -48,7 +48,19 @@ async function dropParts(inner: Keyring, account: string, parts: Parts | null) {
   await deleteParts(inner, account, parts).catch(() => undefined);
 }
 
-export function chunkedKeyring(inner: Keyring, limit: number = CHUNK_LIMIT): Keyring {
+const randomGeneration = () => randomBytes(4).toString('hex');
+
+function freshGeneration(before: Parts | null, generate: () => string): string {
+  let generation = generate();
+  while (generation === before?.generation) generation = generate();
+  return generation;
+}
+
+export function chunkedKeyring(
+  inner: Keyring,
+  limit: number = CHUNK_LIMIT,
+  generate: () => string = randomGeneration,
+): Keyring {
   return {
     async get(account) {
       const head = await inner.get(account);
@@ -72,7 +84,7 @@ export function chunkedKeyring(inner: Keyring, limit: number = CHUNK_LIMIT): Key
         return;
       }
       const pieces = splitSecret(secret, limit);
-      const next: Parts = { generation: randomBytes(4).toString('hex'), count: pieces.length };
+      const next: Parts = { generation: freshGeneration(before, generate), count: pieces.length };
       try {
         for (const [index, piece] of pieces.entries()) {
           await inner.set(chunkAccount(account, next.generation, index + 1), piece);
