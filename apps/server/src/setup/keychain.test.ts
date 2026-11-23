@@ -72,9 +72,11 @@ describe('keychain cache', () => {
     const error = await keychain.get('claude:api_key').catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(KeychainWaitingError);
     expect((error as Error).message).toBe(KEYCHAIN_WAITING_MESSAGE);
-    if (process.platform !== 'win32') {
-      expect(KEYCHAIN_WAITING_MESSAGE).toMatch(/Waiting for macOS keychain access.*Always Allow/);
-    }
+    expect(KEYCHAIN_WAITING_MESSAGE).toMatch(
+      process.platform === 'win32'
+        ? /Waiting for Windows Credential Manager/
+        : /Waiting for macOS keychain access.*Always Allow/,
+    );
     expect(keychain.waiting()).toBe(true);
 
     fake.releaseAll();
