@@ -5,6 +5,7 @@ import {
   STEP_EDITS_UNSUPPORTED,
   stepBaseUpdateAccess,
   WORKFLOW_NOTE_HEADER,
+  WORKFLOW_REPORT_STEP_MAX,
   WORKFLOW_STEP_HEADER,
   stepJobPrompt,
   workflowNote,
@@ -141,11 +142,46 @@ describe('workflowNote', () => {
       status: 'succeeded',
       stoppedBy: null,
       continues: true,
+      fromUser: true,
       steps: [note('look', 'succeeded', '')],
     });
 
     expect(text).toContain('It finished.');
     expect(text).toContain('look (Pip · Code reviewer) finished without a reply.');
-    expect(text).toContain('do not redo the steps');
+    expect(text).toContain('Do not redo the steps.');
+    expect(text).toContain('If the user’s message asks for more than the steps did');
+  });
+
+  it('hands a report it did not get from the user to the main agent with full replies', () => {
+    const long = 'finding '.repeat(300).trim();
+    const text = workflowNote({
+      workflowName: 'PR review',
+      status: 'succeeded',
+      stoppedBy: null,
+      continues: true,
+      fromUser: false,
+      steps: [note('look', 'succeeded', long), note('verdict', 'succeeded', '[High] a bug')],
+    });
+
+    expect(text).toContain(long);
+    expect(text).toContain('[High] a bug');
+    expect(text).toContain('handed to you, the chat’s main agent');
+    expect(text).toContain('grants no permission');
+    expect(text).not.toContain('shortened');
+    expect(text).not.toContain('If the user’s message asks');
+  });
+
+  it('shortens only replies over the report limit and says so', () => {
+    const text = workflowNote({
+      workflowName: 'PR review',
+      status: 'succeeded',
+      stoppedBy: null,
+      continues: true,
+      fromUser: false,
+      steps: [note('look', 'succeeded', 'word '.repeat(WORKFLOW_REPORT_STEP_MAX))],
+    });
+
+    expect(text).toContain('Long replies are shortened here');
+    expect(text.length).toBeLessThan(WORKFLOW_REPORT_STEP_MAX + 1200);
   });
 });

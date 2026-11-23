@@ -32,6 +32,20 @@ export async function saveSnapshot(
   );
 }
 
+export async function savedSnapshot(
+  db: Queryable,
+  runId: string,
+  root: string,
+): Promise<RunSnapshot | null> {
+  const { rows } = await db.query<{ snapshot_kind: SnapshotKind; snapshot_ref: string | null }>(
+    `SELECT snapshot_kind, snapshot_ref FROM runs
+     WHERE id = $1 AND snapshot_root = $2 AND snapshot_kind IS NOT NULL`,
+    [runId, root],
+  );
+  const row = rows[0];
+  return row ? { kind: row.snapshot_kind, ref: row.snapshot_ref, root } : null;
+}
+
 export async function getSnapshot(
   db: Queryable,
   workspaceId: string,

@@ -1,4 +1,4 @@
-import { findSparkMentions, mainAgentContinues, workflowProblems } from '@spark-outpost/contracts';
+import { findSparkMentions, workflowProblems } from '@spark-outpost/contracts';
 import { hasProject, publishOrchestration, type Handoff } from '../orchestration/spark-child.ts';
 import { typedOnTheMac } from '../orchestration/typed-on-mac.ts';
 import { userText } from '../sub-chats/user-asked.ts';
@@ -59,7 +59,7 @@ async function startByMention(h: Handoff): Promise<TurnWorkflowRun | null> {
     conversationId: input.identity.threadId,
     runId: lease.runId,
     message: `${text.slice(0, mention.start)}${text.slice(mention.end)}`.trim(),
-    continues: mainAgentContinues(text, [mention]),
+    continues: true,
   });
   return workflowRunForTurn(deps.db, lease.runId);
 }
@@ -143,6 +143,7 @@ export async function workflowTurn(
     ...end,
     workflowName: turn.workflow.name,
     continues,
+    fromUser: turn.run.source === 'mention',
     about: target ? runPullLine(target) : null,
     checkout,
   });

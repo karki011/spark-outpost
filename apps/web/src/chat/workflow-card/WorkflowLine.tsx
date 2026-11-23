@@ -17,6 +17,7 @@ import {
   severityCounts,
   shownOnCard,
   stepMembers,
+  stepReplies,
   SEVERITY_WORDS,
 } from './workflow-card-model.ts';
 
@@ -102,6 +103,7 @@ export function WorkflowLine({ run, detail, orchestration, repo }: WorkflowLineP
           collapsed
           pick="steps"
           withApprovals={false}
+          replies={stepReplies(workflowRun)}
         />
       )}
       {cards.map((approval) => {

@@ -13,7 +13,7 @@ import { newSpark, saveFlow, step, useWorkflowsDir } from './crew-workflow-suppo
 import { CHAT_BRANCH, chatOnItsBranch, type BranchChat } from './publish-step-support.ts';
 import { git, write } from './ship-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-import { changesOf, driveToEnd, openChat } from './turn-support.ts';
+import { changesOf, driveToEnd, openChat, repliesOf } from './turn-support.ts';
 import { connectAgents, startTurnWorker } from './turn-worker.ts';
 
 const FLOW = 'fixer';
@@ -90,6 +90,10 @@ describe('a triggered run that may change files', { timeout: 120_000 }, () => {
     expect((await changesOf(t, run.runId!)).files).toEqual([
       { path: 'notes.txt', change: 'modified' },
     ]);
+    const [report] = await repliesOf(t, run.runId!);
+    expect(report).toContain('handed to you, the chat’s main agent');
+    expect(report).toContain('fix (Pip');
+    expect(report).not.toContain('If the user’s message asks');
   });
 
   it('keeps the step read-only without the option', async () => {

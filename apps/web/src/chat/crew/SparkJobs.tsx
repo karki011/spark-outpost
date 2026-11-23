@@ -33,6 +33,7 @@ interface SparkJobsProps {
   pick?: SparkPick;
   withApprovals?: boolean;
   placeSteers?: boolean;
+  replies?: ReadonlyMap<string, string>;
 }
 
 type SparkPick = 'all' | 'jobs' | 'steps';
@@ -52,6 +53,7 @@ export function SparkJobs({
   pick = 'all',
   withApprovals = true,
   placeSteers = false,
+  replies,
 }: SparkJobsProps) {
   const live = !isTerminalRunStatus(run.status);
   const stream = useRunStream(run.id, detail.conversation.id, live);
@@ -74,7 +76,7 @@ export function SparkJobs({
           collapsed={collapsed && steersIn(member.runId).length === 0}
           conversationId={detail.conversation.id}
           steps={detail.activity[member.runId] ?? []}
-          text={NO_TEXT}
+          text={replies?.get(member.runId) ?? NO_TEXT}
           error={member.error}
           approvals={
             withApprovals

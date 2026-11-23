@@ -170,12 +170,7 @@ function addSpend(total: WorkflowRunSpend, row: SpendRow): WorkflowRunSpend {
   };
 }
 
-function spendOwner(row: RunRow): string | null {
-  return row.run_id ?? (row.gates_run_id ? row.id : null);
-}
-
 function toRun(row: RunRow, steps: readonly StepRow[], spend: readonly SpendRow[]): WorkflowRun {
-  const owner = spendOwner(row);
   return {
     id: row.id,
     workflowId: row.workflow_id,
@@ -188,7 +183,7 @@ function toRun(row: RunRow, steps: readonly StepRow[], spend: readonly SpendRow[
     runId: row.run_id ?? row.gates_run_id,
     stoppedBy: row.stopped_by,
     steps: steps.filter((step) => step.workflow_run_id === row.id).map(toStep),
-    spend: spend.filter((entry) => entry.owner === owner).reduce(addSpend, NO_SPEND),
+    spend: spend.filter((entry) => entry.owner === row.id).reduce(addSpend, NO_SPEND),
     startedAt: row.started_at.toISOString(),
     finishedAt: iso(row.finished_at),
   };
@@ -209,24 +204,15 @@ async function stepsOf(db: Queryable, ids: readonly string[]): Promise<StepRow[]
   return rows;
 }
 
-async function spendOf(
-  db: Queryable,
-  runIds: readonly string[],
-  gateIds: readonly string[],
-): Promise<SpendRow[]> {
-  if (runIds.length === 0 && gateIds.length === 0) return [];
+async function spendOf(db: Queryable, ids: readonly string[]): Promise<SpendRow[]> {
+  if (ids.length === 0) return [];
   const { rows } = await db.query<SpendRow>(
-    `SELECT COALESCE(r.parent_run_id, r.id)::text AS owner,
-       COALESCE(r.total_tokens, r.input_tokens + r.output_tokens) AS tokens,
-       r.cost_usd, r.cost_source
-     FROM runs r WHERE r.id = ANY($1::uuid[]) OR r.parent_run_id = ANY($1::uuid[])
-     UNION ALL
-     SELECT s.workflow_run_id::text AS owner,
+    `SELECT s.workflow_run_id::text AS owner,
        COALESCE(r.total_tokens, r.input_tokens + r.output_tokens) AS tokens,
        r.cost_usd, r.cost_source
      FROM workflow_run_steps s JOIN runs r ON r.id = s.run_id
-     WHERE s.workflow_run_id = ANY($2::uuid[])`,
-    [runIds, gateIds],
+     WHERE s.workflow_run_id = ANY($1::uuid[])`,
+    [ids],
   );
   return rows;
 }
@@ -238,8 +224,7 @@ async function assemble(db: Queryable, rows: readonly RunRow[]): Promise<Workflo
   );
   const spend = await spendOf(
     db,
-    rows.flatMap((row) => (row.run_id ? [row.run_id] : [])),
-    rows.flatMap((row) => (row.run_id === null && row.gates_run_id ? [row.id] : [])),
+    rows.map((row) => row.id),
   );
   return rows.map((row) => toRun(row, steps, spend));
 }
