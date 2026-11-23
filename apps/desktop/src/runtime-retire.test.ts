@@ -119,6 +119,7 @@ describe('reading a runtime host command line', () => {
     expect(onWindows(`node "C:\\Other App\\not runtime-host.js" "${directory}"`)).toBe(false);
     expect(onWindows(`node other.js "notes runtime-host.js ${directory}"`)).toBe(false);
     expect(onWindows(`node other.js "notes \\" runtime-host.js ${directory} extra"`)).toBe(false);
+    expect(onWindows(`node other.js "notes "" runtime-host.js ${directory} extra"`)).toBe(false);
     expect(onWindows(`node C:\\app\\runtime-host.js "C:\\a\\\\" "${directory}"`)).toBe(false);
   });
 

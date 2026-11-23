@@ -62,7 +62,10 @@ function windowsArgs(command: string): string[] {
       started = true;
       continue;
     }
-    if (char === '"') {
+    if (char === '"' && quoted && command[index + 1] === '"') {
+      arg += '"';
+      index += 1;
+    } else if (char === '"') {
       quoted = !quoted;
       started = true;
     } else if ((char === ' ' || char === '\t') && !quoted) {
