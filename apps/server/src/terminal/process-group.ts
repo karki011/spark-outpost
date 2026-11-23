@@ -12,7 +12,7 @@ export interface ProcessRow {
   args: string;
 }
 
-const PS_LINE = /^(\d+)\s+(\d+)\s+(-?\d+)\s+(.*)$/;
+const PS_LINE = /^(\d+)\s+(\d+)\s+(-?\d+)(?:\s+(.*))?$/;
 const INTERPRETERS = /^(node|bun|deno|python[\d.]*|ruby|perl)$/;
 const SCRIPT_EXTENSION = /\.(c?js|mjs|py|rb)$/;
 const COMMAND_MAX_LENGTH = 60;
@@ -106,7 +106,10 @@ export function runningCommand(
   const descendants = new Set(descendantsOf(root, table));
   const running = table.filter(
     (row) =>
-      descendants.has(row.pid) && !NOT_A_COMMAND.test(row.args) && !isGitBashShell(row, platform),
+      descendants.has(row.pid) &&
+      row.args.trim() !== '' &&
+      !NOT_A_COMMAND.test(row.args) &&
+      !isGitBashShell(row, platform),
   );
   const foreground = table.find((row) => row.pid === root)?.foregroundGroup;
   const main =
@@ -134,7 +137,7 @@ function parseProcessTable(output: string): ProcessRow[] {
 
 const WINDOWS_TABLE = [
   '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
-  'Get-CimInstance Win32_Process | ForEach-Object { "$($_.ProcessId) $($_.ParentProcessId) 0 $($_.CommandLine)" }',
+  'Get-CimInstance Win32_Process | ForEach-Object { $created = if ($_.CreationDate) { ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() } else { 0 }; "$($_.ProcessId) $($_.ParentProcessId) $created $($_.CommandLine)" }',
 ].join('; ');
 
 function system32(file: string): string {
@@ -152,6 +155,20 @@ export async function powerShellOutput(script: string): Promise<string> {
   return stdout;
 }
 
+export function withoutStaleParents(rows: readonly ProcessRow[]): ProcessRow[] {
+  const created = new Map(rows.map((row) => [row.pid, row.foregroundGroup]));
+  return rows.map((row) => {
+    const parent = created.get(row.ppid);
+    const stale = parent !== undefined && parent > row.foregroundGroup;
+    return { ...row, ppid: stale ? 0 : row.ppid, foregroundGroup: 0 };
+  });
+}
+
+function readTable(output: string): ProcessRow[] {
+  const rows = parseProcessTable(output);
+  return process.platform === 'win32' ? withoutStaleParents(rows) : rows;
+}
+
 function tableCommand(): [string, string[]] {
   return process.platform === 'win32' ? powerShell(WINDOWS_TABLE) : ['/bin/ps', PS_ARGS];
 }
@@ -160,7 +177,7 @@ export async function processTable(): Promise<ProcessRow[]> {
   try {
     const [command, args] = tableCommand();
     const { stdout } = await execFileAsync(command, args, { encoding: 'utf8', windowsHide: true });
-    return parseProcessTable(stdout);
+    return readTable(stdout);
   } catch {
     return [];
   }
@@ -204,7 +221,9 @@ export function signalGroup(
 ): boolean {
   if (platform === 'win32') {
     if (!isAlive(pid)) return false;
-    void endWindowsTree(pid, name === 'SIGKILL');
+    void endWindowsTree(pid, name === 'SIGKILL').then((ended) => {
+      if (!ended && name === 'SIGKILL') signal(pid, 'SIGKILL');
+    });
     return true;
   }
   try {
@@ -228,7 +247,7 @@ export function processTreeNow(root: number): number[] {
     const [command, args] = tableCommand();
     return descendantsOf(
       root,
-      parseProcessTable(execFileSync(command, args, { encoding: 'utf8', windowsHide: true })),
+      readTable(execFileSync(command, args, { encoding: 'utf8', windowsHide: true })),
     );
   } catch {
     return [];

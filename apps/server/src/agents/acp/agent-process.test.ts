@@ -38,14 +38,22 @@ async function agentWithJob(): Promise<{ agent: AgentProcess; root: number; job:
     AGENT_ENV,
   );
   agent.exited.catch(() => undefined);
-  const job = await until(() => {
-    const match = /job (\d+)/.exec(agent.stderrTail());
-    return match ? Number(match[1]) : null;
-  });
-  const root = await until(
-    async () => (await processTable()).find((row) => row.pid === job)?.ppid ?? null,
-  );
-  return { agent, root, job };
+  let job: number | null = null;
+  try {
+    job = await until(() => {
+      const match = /job (\d+)/.exec(agent.stderrTail());
+      return match ? Number(match[1]) : null;
+    });
+    const started = job;
+    const root = await until(
+      async () => (await processTable()).find((row) => row.pid === started)?.ppid ?? null,
+    );
+    return { agent, root, job };
+  } catch (error) {
+    await agent.kill();
+    if (job !== null) forceKill(job);
+    throw error;
+  }
 }
 
 async function gone(pid: number): Promise<boolean> {

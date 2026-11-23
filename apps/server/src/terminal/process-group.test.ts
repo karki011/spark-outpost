@@ -10,6 +10,7 @@ import {
   processTreeNow,
   runningCommand,
   signalGroup,
+  withoutStaleParents,
   type ProcessRow,
 } from './process-group.ts';
 
@@ -51,10 +52,20 @@ async function gone(pid: number): Promise<boolean> {
 describe('ending a process and what it started', () => {
   it('ends the root and its grandchild on every platform', async () => {
     const tree = await treeWithGrandchild();
-    expect(processTreeNow(tree.root)).toContain(tree.grandchild);
-    await killProcessTree(tree.root, 50);
-    expect(await gone(tree.grandchild)).toBe(true);
-    expect(await gone(tree.root)).toBe(true);
+    try {
+      expect(processTreeNow(tree.root)).toContain(tree.grandchild);
+      await killProcessTree(tree.root, 50);
+      expect(await gone(tree.grandchild)).toBe(true);
+      expect(await gone(tree.root)).toBe(true);
+    } finally {
+      for (const pid of [tree.grandchild, tree.root]) {
+        try {
+          process.kill(pid, 'SIGKILL');
+        } catch {
+          continue;
+        }
+      }
+    }
   });
 });
 
@@ -88,6 +99,17 @@ describe.skipIf(process.platform === 'win32')('killing a process tree (POSIX job
 function row(pid: number, ppid: number, args: string, foregroundGroup = 0): ProcessRow {
   return { pid, ppid, foregroundGroup, args };
 }
+
+describe('withoutStaleParents', () => {
+  it('drops a parent link to a process that started after the child', () => {
+    const rows = [
+      { pid: 100, ppid: 1, foregroundGroup: 5_000, args: 'new root' },
+      { pid: 200, ppid: 100, foregroundGroup: 1_000, args: 'old orphan' },
+      { pid: 300, ppid: 100, foregroundGroup: 6_000, args: 'real child' },
+    ];
+    expect(descendantsOf(100, withoutStaleParents(rows))).toEqual([300]);
+  });
+});
 
 describe('signalGroup', () => {
   it('reports a process that is already gone on Windows', () => {

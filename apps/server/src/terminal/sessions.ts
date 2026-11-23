@@ -65,6 +65,7 @@ const isAgent = (kind: Session['kind']): kind is ShellKind & { agent: AgentReque
 
 export class TerminalSessions {
   private readonly sessions = new Map<string, Session>();
+  private readonly stopping = new Map<string, Set<Promise<void>>>();
   private folderWatch: NodeJS.Timeout | null = null;
 
   constructor(
@@ -328,7 +329,8 @@ export class TerminalSessions {
     const shells = [...this.sessions.values()].filter(
       (session) => session.kind.type === 'shell' && session.kind.conversationId === conversationId,
     );
-    await Promise.all(shells.map((session) => this.end(session, 'chat_removed', null)));
+    const ending = shells.map((session) => this.end(session, 'chat_removed', null));
+    await Promise.all([...ending, ...(this.stopping.get(conversationId) ?? [])]);
     return shells.length;
   }
 
@@ -450,11 +452,26 @@ export class TerminalSessions {
     let stopped = Promise.resolve();
     if (keepRunning) session.pty?.detach?.();
     else if (session.pty) stopped = this.stopPty(session.pty);
+    if (session.kind.type === 'shell' && session.kind.conversationId) {
+      this.track(session.kind.conversationId, stopped);
+    }
     if (session.pty && session.kind.type === 'shell') this.watcher?.ended(session.id);
     if (!keepRunning) session.client?.send({ type: 'ended', reason, exitCode });
     session.client?.close();
     session.client = null;
     return stopped;
+  }
+
+  private track(conversationId: string, stopped: Promise<void>) {
+    const pending = this.stopping.get(conversationId) ?? new Set<Promise<void>>();
+    pending.add(stopped);
+    this.stopping.set(conversationId, pending);
+    void stopped.finally(() => {
+      pending.delete(stopped);
+      if (pending.size === 0 && this.stopping.get(conversationId) === pending) {
+        this.stopping.delete(conversationId);
+      }
+    });
   }
 
   private stopPty(pty: PtyProcess): Promise<void> {

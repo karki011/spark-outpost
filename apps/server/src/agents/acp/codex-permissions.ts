@@ -26,7 +26,10 @@ function crewReadOnly(folders: readonly string[]): Record<string, string> {
 
 const WORKTREE_LINKS = ['HEAD', 'commondir', 'gitdir', 'config.worktree'];
 
-const join = gatePaths.join;
+function join(base: string, ...parts: string[]): string {
+  const joined = gatePaths.join(base, ...parts);
+  return base.startsWith('//') && !joined.startsWith('//') ? `/${joined}` : joined;
+}
 
 function branchRefAccess(common: string, branch: string | undefined): Record<string, string> {
   if (!branch) return {};

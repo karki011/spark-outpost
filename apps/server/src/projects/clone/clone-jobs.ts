@@ -35,7 +35,7 @@ import {
 } from './clone-failure.ts';
 import { cloneEnvironment, startGitClone, type GitCloneProcess } from './clone-git.ts';
 import { advance, CONNECTING, type CloneProgress } from './clone-progress.ts';
-import { signalGroup } from '../../terminal/process-group.ts';
+import { isAlive, processTable, signalGroup } from '../../terminal/process-group.ts';
 
 export interface CloneJobsDeps {
   db: Db;
@@ -108,7 +108,17 @@ function toJob(entry: Entry): CloneJob {
   };
 }
 
-function commandOf(pid: number): Promise<string> {
+async function windowsRow(pid: number) {
+  return (await processTable()).find((row) => row.pid === pid) ?? null;
+}
+
+async function cannotTell(pid: number): Promise<boolean> {
+  if (process.platform !== 'win32') return false;
+  return isAlive(pid) && (await processTable()).length === 0;
+}
+
+async function commandOf(pid: number): Promise<string> {
+  if (process.platform === 'win32') return (await windowsRow(pid))?.args ?? '';
   return new Promise((resolve) => {
     execFile('ps', ['-o', 'command=', '-p', String(pid)], { timeout: PS_TIMEOUT_MS }, (_e, out) =>
       resolve(String(out)),
@@ -116,7 +126,8 @@ function commandOf(pid: number): Promise<string> {
   });
 }
 
-function parentOf(pid: number): Promise<number | null> {
+async function parentOf(pid: number): Promise<number | null> {
+  if (process.platform === 'win32') return (await windowsRow(pid))?.ppid ?? null;
   return new Promise((resolve) => {
     execFile('ps', ['-o', 'ppid=', '-p', String(pid)], { timeout: PS_TIMEOUT_MS }, (_e, out) => {
       const parent = Number.parseInt(String(out).trim(), 10);
@@ -132,6 +143,7 @@ async function runningClone(marker: CloneMarker): Promise<boolean> {
 }
 
 async function ownedElsewhere(marker: CloneMarker): Promise<boolean> {
+  if (marker.pid && (await cannotTell(marker.pid))) return true;
   if (!marker.pid || !(await runningClone(marker))) return false;
   const parent = await parentOf(marker.pid);
   return parent !== null && parent > 1 && parent !== process.pid;
