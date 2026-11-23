@@ -27,8 +27,12 @@ afterEach(async () => {
 
 const HERE = process.platform === 'win32' ? '$(cygpath -w "$PWD")' : '$(pwd)';
 
-function nativeFolder() {
-  return process.platform === 'win32' ? realpathSync.native(folder) : folder;
+function printedFolder(screen: string) {
+  if (process.platform !== 'win32') return screen.includes(`at:${folder}`);
+  const text = screen.toLowerCase();
+  return [folder, realpathSync.native(folder)].some((form) =>
+    text.includes(`at:${form.toLowerCase()}`),
+  );
 }
 
 function recorder() {
@@ -69,7 +73,7 @@ describe('chat shells', () => {
     const shell = openShell(null);
     expect(shell.created).not.toHaveProperty('command');
     shell.terminal.input(`echo "at:${HERE}"\r`);
-    await until(() => shell.screen.text.includes(`at:${nativeFolder()}`));
+    await until(() => printedFolder(shell.screen.text));
     expect(shell.screen.text).not.toContain('npm i -g');
   });
 

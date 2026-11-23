@@ -152,6 +152,9 @@ describe('commandLabel', () => {
       'make watch',
     );
     expect(commandLabel('/usr/bin/make watch', 'darwin')).toBe('make watch');
+    expect(commandLabel('node C:\\work\\app\\server.js --port 3000', 'win32')).toBe(
+      'server --port 3000',
+    );
   });
 
   it('shortens very long command lines', () => {

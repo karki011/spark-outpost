@@ -182,6 +182,10 @@ From the npm registry and official docs:
 - **Company rules file (read done):** on Windows Spark reads `%ProgramData%\SparkOutpost\managed-settings.json`. Writing it through a UAC prompt is not built yet; the card says an administrator can edit the file. Checking that only administrators can write it is still to do.
 - **Worktree `node_modules` (gap):** Windows has no clone-copy command, so a new worktree gets its packages from an offline install or a fresh install, not a copy of the main checkout's `node_modules`.
 - **Shell tab commands (done):** the running command of a shell tab looks past Git Bash's `bin\bash.exe` wrapper to the shell it starts, and reads Windows program paths with spaces or quotes. Closing a tab ends its whole process tree before the console closes.
+- **Chats with no project (done):** the check that keeps a chat with no project inside its own private folder compares paths in one form, so on Windows it no longer treats that folder as outside Spark's data folder (`approvals/crew-folders.ts`).
+- **Codex sandbox paths (done):** Codex's permission profiles name folders (browser data, Sparks and workflows, a worktree's git data) as native Windows paths (`agents/acp/codex-permissions.ts`); macOS is unchanged.
+- **Shell tab folder (done):** Git Bash starts with `CHERE_INVOKING=1`, so its login profile stays in the tab's folder instead of moving to the home folder.
+- **Test temp folder:** the unit tests' temp sandbox sets `TEMP` and `TMP` as well as `TMPDIR` on Windows.
 - **Folders in use (gap):** Windows won't remove a folder a running shell is in, so "ends a shell when its folder is removed" can't happen there; Deleting a chat waits for its shells to stop before removing its worktree; a worktree released while a shell is still open in it (archiving) is still to handle. The crash-recovery installer test uses a POSIX script and runs only off Windows.
 - **Line endings:** the Windows CI job turns off `core.autocrlf` so tests that read files back see the committed bytes.
 
@@ -193,5 +197,6 @@ From the npm registry and official docs:
 - Which shell commands actually reach the gate.
 - The packaged app's install, signing and bundled Postgres start.
 - ConPTY, named pipes and the file-permission (ACL) changes.
+- That Codex enforces its permission profiles with native Windows path keys.
 
 Plan: add a manual `windows-latest` CI job (`pnpm check` plus a packaging smoke test), then run one real install on a Windows VM.

@@ -2,7 +2,7 @@ import { homedir } from 'node:os';
 import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { RailKind, RailOriginal } from '@spark-outpost/contracts';
 import type { ApprovalRequest, RequestRoot } from '../../approvals/decide.ts';
-import { gatePaths, toGatePath } from '../../approvals/gate-path.ts';
+import { gatePaths, toGatePath, toNativePath } from '../../approvals/gate-path.ts';
 import { railCrossings, type RailCrossing } from '../../approvals/rail-crossings.ts';
 import { observedSecretReads } from '../../approvals/secret-reads.ts';
 import { outsideRoots } from '../../approvals/request-place.ts';
@@ -54,7 +54,7 @@ function shown(target: string, home: string): string {
   const relative = gatePaths.relative(toGatePath(home), gate);
   return relative && !relative.startsWith('..') && !gatePaths.isAbsolute(relative)
     ? `~/${relative}`
-    : target;
+    : toNativePath(gate);
 }
 
 function changesInside(crossing: RailCrossing, request: ApprovalRequest): boolean {

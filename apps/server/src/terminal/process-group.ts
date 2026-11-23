@@ -71,9 +71,13 @@ export function commandLabel(args: string, platform: NodeJS.Platform = process.p
   const [program, rest] = splitProgram(args, platform);
   const name = programName(program, platform);
   const [script, ...scriptArgs] = rest;
+  const scriptPath = platform === 'win32' ? /[\\/]/ : /\//;
   const words =
-    INTERPRETERS.test(name) && script?.includes('/')
-      ? [path.basename(script).replace(SCRIPT_EXTENSION, ''), ...scriptArgs]
+    INTERPRETERS.test(name) && script && scriptPath.test(script)
+      ? [
+          (platform === 'win32' ? path.win32 : path).basename(script).replace(SCRIPT_EXTENSION, ''),
+          ...scriptArgs,
+        ]
       : [name, ...rest];
   const label = words.join(' ');
   return label.length > COMMAND_MAX_LENGTH ? `${label.slice(0, COMMAND_MAX_LENGTH - 1)}…` : label;

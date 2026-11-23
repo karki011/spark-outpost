@@ -150,7 +150,9 @@ describe('a live session', () => {
     const codex = codexConfig(true, null, true, floor) as Profiles;
     const filesystem = codex.permissions['agent']!.filesystem;
     expect(filesystem).not.toHaveProperty(':project_roots');
-    expect(JSON.stringify(filesystem)).toContain(process.env.SPARK_RULES_FILE!);
+    expect(JSON.stringify(filesystem)).toContain(
+      JSON.stringify(process.env.SPARK_RULES_FILE!).slice(1, -1),
+    );
   });
 
   it('with the recommended rules keeps every floor flag rule', async () => {

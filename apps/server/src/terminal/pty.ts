@@ -38,6 +38,9 @@ export function shellEnvironment(env: NodeJS.ProcessEnv): Record<string, string>
   return { ...clean, TERM: 'xterm-256color', COLORTERM: 'truecolor' };
 }
 
+const STAY_IN_FOLDER: Record<string, string> =
+  process.platform === 'win32' ? { CHERE_INVOKING: '1' } : {};
+
 export function loginShellSpawner(shell = defaultShell()): SpawnPty {
   return ({ cols, rows, cwd, command, args, env }) => {
     const pty = spawnNodePty(command ?? shell, command ? (args ?? []) : ['-l'], {
@@ -45,7 +48,7 @@ export function loginShellSpawner(shell = defaultShell()): SpawnPty {
       cols,
       rows,
       cwd: cwd ?? os.homedir(),
-      env: { ...shellEnvironment(process.env), ...env },
+      env: { ...shellEnvironment(process.env), ...STAY_IN_FOLDER, ...env },
     });
     return {
       pid: pty.pid,
