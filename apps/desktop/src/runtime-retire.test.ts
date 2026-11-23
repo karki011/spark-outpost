@@ -107,6 +107,9 @@ describe('reading a runtime host command line', () => {
   it('matches the directory plain or in quotes, as Windows writes it', () => {
     expect(namesRuntimeHost(`node /app/runtime-host.js ${directory}`, directory)).toBe(true);
     expect(namesRuntimeHost(`node C:\\app\\runtime-host.js "${directory}"`, directory)).toBe(true);
+    expect(namesRuntimeHost(`node "C:\\My App\\runtime-host.js" "${directory}"`, directory)).toBe(
+      true,
+    );
     expect(
       namesRuntimeHost(`"node.exe" "C:\\app\\runtime-host.js" "${directory}" x`, directory),
     ).toBe(true);
@@ -118,6 +121,9 @@ describe('reading a runtime host command line', () => {
     expect(namesRuntimeHost(`node other.js ${directory}`, directory)).toBe(false);
     expect(
       namesRuntimeHost(`node "C:\\Other App\\not-runtime-host.js" "${directory}"`, directory),
+    ).toBe(false);
+    expect(
+      namesRuntimeHost(`node "C:\\Other App\\not runtime-host.js" "${directory}"`, directory),
     ).toBe(false);
   });
 });
