@@ -45,13 +45,22 @@ describe('channel', () => {
   });
 
   it('shows the Spark icon, with a DEV badge for the dev channel, and the template tray icon', () => {
-    expect(channelIcons('/app/assets', channelConfig('prod'))).toEqual({
+    expect(channelIcons('/app/assets', channelConfig('prod'), 'darwin')).toEqual({
       app: path.join('/app/assets/icon.png'),
       tray: path.join('/app/assets/trayTemplate.png'),
     });
-    expect(channelIcons('/app/assets', channelConfig('dev'))).toEqual({
+    expect(channelIcons('/app/assets', channelConfig('dev'), 'darwin')).toEqual({
       app: path.join('/app/assets/icon-dev.png'),
       tray: path.join('/app/assets/trayTemplate.png'),
     });
+  });
+
+  it('uses the colour app icon in the Windows tray, where a black template icon would vanish', () => {
+    expect(channelIcons('/app/assets', channelConfig('prod'), 'win32').tray).toBe(
+      path.join('/app/assets/icon.png'),
+    );
+    expect(channelIcons('/app/assets', channelConfig('dev'), 'win32').tray).toBe(
+      path.join('/app/assets/icon-dev.png'),
+    );
   });
 });

@@ -173,9 +173,16 @@ export function appMenuTemplate(actions: HelpActions): MenuItemConstructorOption
   ];
 }
 
+export type ReleaseStage = 'Alpha' | 'Beta';
+
+export function releaseStage(beta: boolean, platform: NodeJS.Platform): ReleaseStage | null {
+  if (platform === 'win32') return 'Alpha';
+  return beta ? 'Beta' : null;
+}
+
 export function aboutVersion(
   version: string,
-  beta: boolean,
+  stage: ReleaseStage | null,
 ): { applicationVersion: string; version?: string } {
-  return beta ? { applicationVersion: version, version: 'Beta' } : { applicationVersion: version };
+  return stage ? { applicationVersion: version, version: stage } : { applicationVersion: version };
 }

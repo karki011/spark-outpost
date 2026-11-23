@@ -71,9 +71,14 @@ export interface ChannelIcons {
   tray: string;
 }
 
-export function channelIcons(assetsDir: string, config: ChannelConfig): ChannelIcons {
+export function channelIcons(
+  assetsDir: string,
+  config: ChannelConfig,
+  platform: NodeJS.Platform = process.platform,
+): ChannelIcons {
+  const app = path.join(assetsDir, config.badge ? 'icon-dev.png' : 'icon.png');
   return {
-    app: path.join(assetsDir, config.badge ? 'icon-dev.png' : 'icon.png'),
-    tray: path.join(assetsDir, 'trayTemplate.png'),
+    app,
+    tray: platform === 'win32' ? app : path.join(assetsDir, 'trayTemplate.png'),
   };
 }

@@ -8,6 +8,7 @@ import {
   nativeImage,
   Tray,
   type IpcMainEvent,
+  type NativeImage,
   type IpcMainInvokeEvent,
 } from 'electron';
 import { isIslandHeight, parseIslandRegions } from '@spark-outpost/contracts';
@@ -53,6 +54,7 @@ interface CompanionHostOptions {
   preload: string;
   settingsPath: string;
   trayIcon: string;
+  badgeWindow: () => BrowserWindow | null;
   showSpark: () => void;
   quit: () => void;
   log: (line: string) => void;
@@ -89,9 +91,19 @@ function broadcast(channel: string, payload: unknown): void {
   }
 }
 
-function openTray(iconFile: string, toolTip: string): MenuBarTray {
+const WINDOWS_TRAY_SIZE = 32;
+
+function trayImage(iconFile: string): NativeImage {
   const image = nativeImage.createFromPath(iconFile);
+  if (process.platform === 'win32') {
+    return image.resize({ width: WINDOWS_TRAY_SIZE, height: WINDOWS_TRAY_SIZE, quality: 'best' });
+  }
   image.setTemplateImage(true);
+  return image;
+}
+
+function openTray(iconFile: string, toolTip: string): MenuBarTray {
+  const image = trayImage(iconFile);
   const tray = new Tray(image);
   tray.setToolTip(toolTip);
   return {
@@ -317,6 +329,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     sparkFocused,
     openChat,
     showSpark: options.showSpark,
+    badgeWindow: options.badgeWindow,
     blocked: (on) => companion.setNotifyBlocked(on),
     log: options.log,
   });
