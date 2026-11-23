@@ -1,4 +1,4 @@
-import { loginShellEnv, loginShellPath } from '../setup/login-path.ts';
+import { loginShellEnv, loginShellPath, userLoginShell } from '../setup/login-path.ts';
 import type { IntakeDeps } from '../advisor/jev-types.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
 import { loadConfig, sparkDataDir } from '../config.ts';
@@ -45,7 +45,7 @@ const stopLagMonitor = startLagMonitor({ processName: 'worker', work: activeWork
 const approvalWaiters = new ApprovalWaiters();
 const secrets = configuredSecretStore(config);
 const jevDeps: IntakeDeps = { db, secrets, fetch, baseUrl: config.TYPESAFE_BASE_URL };
-const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
+const loginShell = userLoginShell(config.CLI_LOOKUP_LOGIN_SHELL);
 const githubApp = gitHubAppConfig(config);
 const codeScan = createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) });
 const desktopBrowser = connectDesktopBrowser(process.env, process);

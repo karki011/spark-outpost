@@ -164,112 +164,120 @@ describe('protected paths', () => {
   });
 });
 
-describe('resolveProjectPath with a fake filesystem', () => {
-  const policy = fakePolicy({
-    '/work/app/README.md': '/work/app/README.md',
-    '/work/app/src': '/work/app/src',
-    '/work/app/link-out': '/etc/passwd',
-    '/work/app/notes.txt': '/work/app/.env',
-    '/work/app/.git': '/work/app/.git',
-  });
-
-  it('resolves files inside the root to absolute and relative paths', async () => {
-    await expect(resolveProjectPath(policy, '/work/app/README.md', 'read')).resolves.toEqual({
-      root: '/work/app',
-      absolute: '/work/app/README.md',
-      relative: 'README.md',
-    });
-  });
-
-  it('refuses relative paths', async () => {
-    expect(await reason(policy, 'README.md')).toBe('not absolute');
-  });
-
-  it('refuses .. escapes before touching the disk', async () => {
-    expect(await reason(policy, '/work/app/../other/x')).toBe('outside the project');
-    expect(await reason(policy, '/work/app/src/../../../etc/passwd')).toBe('outside the project');
-  });
-
-  it('refuses symlinks that escape the root or point at secrets', async () => {
-    expect(await reason(policy, '/work/app/link-out')).toBe('outside the project');
-    expect(await reason(policy, '/work/app/notes.txt')).toBe('secret file');
-  });
-
-  it('refuses secret names even when they do not exist', async () => {
-    expect(await reason(policy, '/work/app/.env')).toBe('secret file');
-  });
-
-  it('reports missing files for reads instead of refusing them', async () => {
-    await expect(resolveProjectPath(policy, '/work/app/nope.txt', 'read')).rejects.toMatchObject({
-      code: 'ENOENT',
-    });
-  });
-
-  it('resolves new files for writes through their nearest existing parent', async () => {
-    await expect(resolveProjectPath(policy, '/work/app/src/new/a.ts', 'write')).resolves.toEqual({
-      root: '/work/app',
-      absolute: '/work/app/src/new/a.ts',
-      relative: 'src/new/a.ts',
-    });
-    expect(await reason(policy, '/work/app/.git/HEAD', 'write')).toBe('inside .git');
-  });
-});
-
-describe('resolveProjectPath across several roots', () => {
-  const roots = [
-    { path: '/work/app', ignore: [] },
-    { path: '/work/lib', ignore: ['generated/'] },
-    { path: '/work/app/vendor/kit', ignore: [] },
-  ];
-  const policy = fakePolicy(
-    {
+describe.skipIf(process.platform === 'win32')(
+  'resolveProjectPath with a fake filesystem (POSIX paths; the real-folder tests cover Windows)',
+  () => {
+    const policy = fakePolicy({
       '/work/app/README.md': '/work/app/README.md',
-      '/work/lib/src/index.ts': '/work/lib/src/index.ts',
-      '/work/lib/generated/api.ts': '/work/lib/generated/api.ts',
-      '/work/app/lib-link.ts': '/work/lib/src/index.ts',
-      '/work/app/vendor/kit/a.ts': '/work/app/vendor/kit/a.ts',
-      '/work/lib/escape': '/work/other/x.ts',
-    },
-    roots,
-  );
-
-  it('reads from any linked root and reports which root it came from', async () => {
-    await expect(resolveProjectPath(policy, '/work/lib/src/index.ts', 'read')).resolves.toEqual({
-      root: '/work/lib',
-      absolute: '/work/lib/src/index.ts',
-      relative: 'src/index.ts',
+      '/work/app/src': '/work/app/src',
+      '/work/app/link-out': '/etc/passwd',
+      '/work/app/notes.txt': '/work/app/.env',
+      '/work/app/.git': '/work/app/.git',
     });
-    await expect(resolveProjectPath(policy, '/work/app/README.md', 'read')).resolves.toMatchObject({
-      root: '/work/app',
+
+    it('resolves files inside the root to absolute and relative paths', async () => {
+      await expect(resolveProjectPath(policy, '/work/app/README.md', 'read')).resolves.toEqual({
+        root: '/work/app',
+        absolute: '/work/app/README.md',
+        relative: 'README.md',
+      });
     });
-  });
 
-  it('follows symlinks from one linked root into another', async () => {
-    await expect(resolveProjectPath(policy, '/work/app/lib-link.ts', 'read')).resolves.toEqual({
-      root: '/work/lib',
-      absolute: '/work/lib/src/index.ts',
-      relative: 'src/index.ts',
+    it('refuses relative paths', async () => {
+      expect(await reason(policy, 'README.md')).toBe('not absolute');
     });
-  });
 
-  it('uses the closest root for nested folders', async () => {
-    await expect(
-      resolveProjectPath(policy, '/work/app/vendor/kit/a.ts', 'read'),
-    ).resolves.toMatchObject({ root: '/work/app/vendor/kit', relative: 'a.ts' });
-  });
+    it('refuses .. escapes before touching the disk', async () => {
+      expect(await reason(policy, '/work/app/../other/x')).toBe('outside the project');
+      expect(await reason(policy, '/work/app/src/../../../etc/passwd')).toBe('outside the project');
+    });
 
-  it("applies each root's own ignore rules and still refuses paths outside every root", async () => {
-    expect(await reason(policy, '/work/lib/generated/api.ts')).toBe('secret file');
-    expect(await reason(policy, '/work/lib/.env')).toBe('secret file');
-    expect(await reason(policy, '/work/other/x.ts')).toBe('outside the project');
-    expect(await reason(policy, '/work/lib/escape')).toBe('outside the project');
-    expect(await reason(policy, '/work/lib/../other/x.ts')).toBe('outside the project');
-  });
+    it('refuses symlinks that escape the root or point at secrets', async () => {
+      expect(await reason(policy, '/work/app/link-out')).toBe('outside the project');
+      expect(await reason(policy, '/work/app/notes.txt')).toBe('secret file');
+    });
 
-  it('refuses the root folders themselves', async () => {
-    expect(await reason(policy, '/work/lib')).toBe('outside the project');
-  });
-});
+    it('refuses secret names even when they do not exist', async () => {
+      expect(await reason(policy, '/work/app/.env')).toBe('secret file');
+    });
+
+    it('reports missing files for reads instead of refusing them', async () => {
+      await expect(resolveProjectPath(policy, '/work/app/nope.txt', 'read')).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    });
+
+    it('resolves new files for writes through their nearest existing parent', async () => {
+      await expect(resolveProjectPath(policy, '/work/app/src/new/a.ts', 'write')).resolves.toEqual({
+        root: '/work/app',
+        absolute: '/work/app/src/new/a.ts',
+        relative: 'src/new/a.ts',
+      });
+      expect(await reason(policy, '/work/app/.git/HEAD', 'write')).toBe('inside .git');
+    });
+  },
+);
+
+describe.skipIf(process.platform === 'win32')(
+  'resolveProjectPath across several roots (POSIX paths; the real-folder tests cover Windows)',
+  () => {
+    const roots = [
+      { path: '/work/app', ignore: [] },
+      { path: '/work/lib', ignore: ['generated/'] },
+      { path: '/work/app/vendor/kit', ignore: [] },
+    ];
+    const policy = fakePolicy(
+      {
+        '/work/app/README.md': '/work/app/README.md',
+        '/work/lib/src/index.ts': '/work/lib/src/index.ts',
+        '/work/lib/generated/api.ts': '/work/lib/generated/api.ts',
+        '/work/app/lib-link.ts': '/work/lib/src/index.ts',
+        '/work/app/vendor/kit/a.ts': '/work/app/vendor/kit/a.ts',
+        '/work/lib/escape': '/work/other/x.ts',
+      },
+      roots,
+    );
+
+    it('reads from any linked root and reports which root it came from', async () => {
+      await expect(resolveProjectPath(policy, '/work/lib/src/index.ts', 'read')).resolves.toEqual({
+        root: '/work/lib',
+        absolute: '/work/lib/src/index.ts',
+        relative: 'src/index.ts',
+      });
+      await expect(
+        resolveProjectPath(policy, '/work/app/README.md', 'read'),
+      ).resolves.toMatchObject({
+        root: '/work/app',
+      });
+    });
+
+    it('follows symlinks from one linked root into another', async () => {
+      await expect(resolveProjectPath(policy, '/work/app/lib-link.ts', 'read')).resolves.toEqual({
+        root: '/work/lib',
+        absolute: '/work/lib/src/index.ts',
+        relative: 'src/index.ts',
+      });
+    });
+
+    it('uses the closest root for nested folders', async () => {
+      await expect(
+        resolveProjectPath(policy, '/work/app/vendor/kit/a.ts', 'read'),
+      ).resolves.toMatchObject({ root: '/work/app/vendor/kit', relative: 'a.ts' });
+    });
+
+    it("applies each root's own ignore rules and still refuses paths outside every root", async () => {
+      expect(await reason(policy, '/work/lib/generated/api.ts')).toBe('secret file');
+      expect(await reason(policy, '/work/lib/.env')).toBe('secret file');
+      expect(await reason(policy, '/work/other/x.ts')).toBe('outside the project');
+      expect(await reason(policy, '/work/lib/escape')).toBe('outside the project');
+      expect(await reason(policy, '/work/lib/../other/x.ts')).toBe('outside the project');
+    });
+
+    it('refuses the root folders themselves', async () => {
+      expect(await reason(policy, '/work/lib')).toBe('outside the project');
+    });
+  },
+);
 
 describe('resolveProjectPath on a real directory', () => {
   let base: string;

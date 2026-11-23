@@ -1,3 +1,4 @@
+import { mkdtempSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, realpath, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -54,7 +55,7 @@ describe('git snapshots', () => {
 });
 
 function freshTree(at: string = root): string {
-  const scratch = execFileSync('mktemp', ['-d'], { encoding: 'utf8' }).trim();
+  const scratch = mkdtempSync(join(tmpdir(), 'spark-fresh-index-'));
   const env = { ...process.env, GIT_INDEX_FILE: join(scratch, 'index') };
   const run = (...args: string[]) =>
     execFileSync('git', ['-C', at, ...args], { encoding: 'utf8', env }).trim();
@@ -63,7 +64,7 @@ function freshTree(at: string = root): string {
     run('add', '-A', '--', '.', ':(exclude,glob)**/node_modules/**');
     return run('write-tree');
   } finally {
-    execFileSync('rm', ['-rf', scratch]);
+    rmSync(scratch, { recursive: true, force: true });
   }
 }
 

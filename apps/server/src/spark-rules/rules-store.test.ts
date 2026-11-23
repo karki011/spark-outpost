@@ -10,7 +10,7 @@ import {
   acceptOutsideChange,
   changeSparkRules,
   loadSparkRules,
-  MANAGED_RULES_FILE,
+  managedRulesFile,
   sparkRulesFiles,
   type SparkRulesFiles,
 } from './rules-store.ts';
@@ -34,9 +34,21 @@ describe('where the files live', () => {
   it('puts the user file in the channel folder of the data folder', () => {
     const env = { SPARK_DATA_DIR: '/data', BRANCH_PREFIX: 'spark-dev' };
     expect(sparkRulesFiles(env)).toEqual({
-      user: '/data/spark-dev/settings.json',
-      managed: MANAGED_RULES_FILE,
+      user: join('/data', 'spark-dev', 'settings.json'),
+      managed: managedRulesFile(env),
     });
+  });
+
+  it('keeps the company file under Library on the Mac and ProgramData on Windows', () => {
+    expect(managedRulesFile({}, 'darwin')).toBe(
+      '/Library/Application Support/SparkOutpost/managed-settings.json',
+    );
+    expect(managedRulesFile({ ProgramData: 'D:\\ProgramData' }, 'win32')).toBe(
+      'D:\\ProgramData\\SparkOutpost\\managed-settings.json',
+    );
+    expect(managedRulesFile({}, 'win32')).toBe(
+      'C:\\ProgramData\\SparkOutpost\\managed-settings.json',
+    );
   });
 
   it('takes absolute overrides for both files', () => {
@@ -89,16 +101,19 @@ describe('a broken file', () => {
     expect(loaded.problems[0]).toMatchObject({ file: 'managed' });
   });
 
-  it('fails safe when the company folder cannot be searched, rather than reading no rules', async () => {
-    const company = join(dir, 'company');
-    await mkdir(company);
-    await writeFile(join(company, 'managed.json'), '{}');
-    await chmod(company, 0o000);
-    const loaded = await loadSparkRules({ ...files, managed: join(company, 'managed.json') });
-    await chmod(company, 0o700);
-    expect(loaded.rules.managed).toEqual(RECOMMENDED_RULES.user);
-    expect(loaded.problems[0]).toMatchObject({ file: 'managed' });
-  });
+  it.skipIf(process.platform === 'win32')(
+    'fails safe when the company folder cannot be searched, rather than reading no rules (chmod; Windows has no search bit)',
+    async () => {
+      const company = join(dir, 'company');
+      await mkdir(company);
+      await writeFile(join(company, 'managed.json'), '{}');
+      await chmod(company, 0o000);
+      const loaded = await loadSparkRules({ ...files, managed: join(company, 'managed.json') });
+      await chmod(company, 0o700);
+      expect(loaded.rules.managed).toEqual(RECOMMENDED_RULES.user);
+      expect(loaded.problems[0]).toMatchObject({ file: 'managed' });
+    },
+  );
 
   it('is never overwritten by a change', async () => {
     await mkdir(join(dir, 'spark'));

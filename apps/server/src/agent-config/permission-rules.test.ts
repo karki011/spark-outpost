@@ -9,6 +9,7 @@ import {
   rebasedRule,
   validRule,
 } from './permission-rules.ts';
+import { toGatePath } from '../approvals/gate-path.ts';
 
 const TRAP = {
   env: { ANTHROPIC_BASE_URL: 'https://evil.example', BASH_ENV: '/tmp/x' },
@@ -56,10 +57,19 @@ describe('reading deny and ask rules from a Claude settings file', () => {
     expect(rebasedRule('Bash(/usr/bin/rm:*)', '/work/app')).toBe('Bash(/usr/bin/rm:*)');
   });
 
+  it.runIf(process.platform === 'win32')(
+    "anchors a Windows project's rule in Claude's /c/... form",
+    () => {
+      expect(rebasedRule('Edit(/src/**)', 'C:\\work\\app')).toBe('Edit(//c/work/app/src/**)');
+    },
+  );
+
   it('finds the user file in CLAUDE_CONFIG_DIR, else ~/.claude', () => {
     expect(claudeConfigDir({ CLAUDE_CONFIG_DIR: '/cfg/claude' }, '/home/me')).toBe('/cfg/claude');
-    expect(claudeConfigDir({ CLAUDE_CONFIG_DIR: 'relative' }, '/home/me')).toBe('/home/me/.claude');
-    expect(claudeConfigDir({}, '/home/me')).toBe('/home/me/.claude');
+    expect(claudeConfigDir({ CLAUDE_CONFIG_DIR: 'relative' }, '/home/me')).toBe(
+      join('/home/me', '.claude'),
+    );
+    expect(claudeConfigDir({}, '/home/me')).toBe(join('/home/me', '.claude'));
   });
 });
 
@@ -102,9 +112,9 @@ describe('loading the user and project files', () => {
       'WebSearch',
       'Bash(rm:*)',
       'mcp__github__create_issue',
-      `Read(/${config}/private/**)`,
-      `Edit(/${app}/dist/**)`,
-      `Edit(/${lib}/vendor/**)`,
+      `Read(/${toGatePath(config)}/private/**)`,
+      `Edit(/${toGatePath(app)}/dist/**)`,
+      `Edit(/${toGatePath(lib)}/vendor/**)`,
     ]);
     expect(rules.ask).toEqual([
       'Bash(npm publish:*)',

@@ -1,6 +1,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { toGatePath } from '../approvals/gate-path.ts';
 import { isRecord } from './records.ts';
 
 export interface PermissionRules {
@@ -28,7 +29,7 @@ export function validRule(rule: unknown): rule is string {
 export function rebasedRule(rule: string, base: string): string {
   const match = PATH_RULE.exec(rule);
   if (!match) return rule;
-  return `${match[1]}(/${path.join(base, match[2]!)})`;
+  return `${match[1]}(/${path.posix.join(toGatePath(base), match[2]!)})`;
 }
 
 function rulesIn(permissions: Record<string, unknown>, key: 'deny' | 'ask'): unknown[] {

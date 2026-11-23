@@ -79,7 +79,7 @@ import { cloneJobsFor } from './project-clone-routes.ts';
 import { connectDesktopBrowser } from '../browser/host-client.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
 import { scanIndexPace } from '../map/scan-index-pace.ts';
-import { loginShellEnv, loginShellPath } from '../setup/login-path.ts';
+import { loginShellEnv, loginShellPath, userLoginShell } from '../setup/login-path.ts';
 import { locateCli } from '../setup/verify.ts';
 import { startSparkMcpHost } from '../spark-mcp/host.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
@@ -159,7 +159,7 @@ const endpoints = {
   zaiBaseUrl: config.ZAI_BASE_URL,
   fetch,
 };
-const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
+const loginShell = userLoginShell(config.CLI_LOOKUP_LOGIN_SHELL);
 const githubApp = gitHubAppConfig(config);
 const githubDeps = { db, workspaceId, secrets, endpoints, runCommand, loginShell, githubApp };
 const ship = shipDepsOf({

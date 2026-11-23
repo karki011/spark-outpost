@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loginShellEnv, parseLoginEnv } from './login-path.ts';
+import { loginShellEnv, parseLoginEnv, userLoginShell } from './login-path.ts';
 
 describe('the login shell environment', () => {
   it('reads every exported variable after the marker, whatever the shell printed first', () => {
@@ -27,5 +27,14 @@ describe('the login shell environment', () => {
     expect(
       await loginShellEnv(async () => ({ code: 0, stdout: '', stderr: '' }), null)(),
     ).toBeNull();
+  });
+});
+
+describe('which login shell Spark asks', () => {
+  it("uses the user's shell on the Mac and Linux, and none on Windows or when turned off", () => {
+    expect(userLoginShell(true, { SHELL: '/bin/bash' }, 'darwin')).toBe('/bin/bash');
+    expect(userLoginShell(true, {}, 'linux')).toBe('/bin/zsh');
+    expect(userLoginShell(false, { SHELL: '/bin/bash' }, 'darwin')).toBeNull();
+    expect(userLoginShell(true, { SHELL: '/usr/bin/bash' }, 'win32')).toBeNull();
   });
 });

@@ -45,13 +45,29 @@ describe('adoptLoginShellPath', () => {
     await adoptLoginShellPath(
       env,
       async () => '__SPARK_PATH__/Users/me/node/bin:/usr/bin__SPARK_PATH__',
+      'darwin',
     );
     expect(env.PATH).toBe('/Users/me/node/bin:/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin');
   });
 
   it('still adds the Homebrew folders when the shell gives nothing', async () => {
     const env: NodeJS.ProcessEnv = { PATH: '/usr/bin:/bin' };
-    await adoptLoginShellPath(env, async () => '');
+    await adoptLoginShellPath(env, async () => '', 'darwin');
     expect(env.PATH).toBe('/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin');
+  });
+
+  it('leaves the Windows PATH alone, which has no login shell and separates with ;', async () => {
+    const env: NodeJS.ProcessEnv = { PATH: 'C:\\Windows\\system32;C:\\Program Files\\nodejs' };
+    let asked = false;
+    await adoptLoginShellPath(
+      env,
+      async () => {
+        asked = true;
+        return '';
+      },
+      'win32',
+    );
+    expect(env.PATH).toBe('C:\\Windows\\system32;C:\\Program Files\\nodejs');
+    expect(asked).toBe(false);
   });
 });

@@ -7,7 +7,7 @@ import { promisify } from 'node:util';
 import { RulesFileError } from './rules-file.ts';
 import { rulesTextHash } from './accepted.ts';
 import {
-  MANAGED_RULES_FILE,
+  managedRulesFile,
   readRulesFile,
   StaleRulesError,
   type ManagedWrite,
@@ -86,6 +86,11 @@ function scriptError(error: unknown): Error {
 
 export function adminManagedWrite(runner: ScriptRunner = osascript): ManagedWrite {
   return async (target, text, previousHash) => {
+    if (process.platform === 'win32') {
+      throw new RulesFileError(
+        `Spark can't change company rules on Windows yet. An administrator can edit ${target}.`,
+      );
+    }
     if (process.platform !== 'darwin') {
       throw new RulesFileError('Company rules can only be changed on a Mac.');
     }
@@ -114,5 +119,5 @@ async function plainWrite(target: string, text: string, previousHash: string): P
 }
 
 export function managedWriteFor(target: string): ManagedWrite {
-  return target === MANAGED_RULES_FILE ? adminManagedWrite() : plainWrite;
+  return target === managedRulesFile() ? adminManagedWrite() : plainWrite;
 }

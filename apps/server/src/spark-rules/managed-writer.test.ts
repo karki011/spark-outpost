@@ -19,7 +19,7 @@ import {
   STALE_MARK,
   type StagedWrite,
 } from './managed-writer.ts';
-import { MANAGED_RULES_FILE, StaleRulesError } from './rules-store.ts';
+import { managedRulesFile, StaleRulesError } from './rules-store.ts';
 
 const run = promisify(execFile);
 const TARGET = "/Library/Application Support/Spark's Outpost/managed-settings.json";
@@ -59,7 +59,7 @@ async function install(write: StagedWrite): Promise<string> {
   }
 }
 
-describe('the macOS admin prompt for the company file', () => {
+describe.skipIf(process.platform === 'win32')('the macOS admin prompt for the company file', () => {
   it('passes the install script and paths as arguments, never inside the AppleScript', () => {
     const args = adminScriptArgs({
       source: '/tmp/x/managed-settings.json',
@@ -168,6 +168,6 @@ describe('the macOS admin prompt for the company file', () => {
 
   it('uses the admin prompt only for the real company file', () => {
     expect(managedWriteFor('/tmp/elsewhere.json').name).toBe('plainWrite');
-    expect(managedWriteFor(MANAGED_RULES_FILE).name).not.toBe('plainWrite');
+    expect(managedWriteFor(managedRulesFile()).name).not.toBe('plainWrite');
   });
 });

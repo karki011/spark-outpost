@@ -104,6 +104,10 @@ function matchesIgnore(relative: string, pattern: string): boolean {
 
 const SECRET_NAME_PATTERNS = SECRET_FILE_PATTERNS.map(globToRegExp);
 
+function slashed(file: string): string {
+  return process.platform === 'win32' ? file.replaceAll('\\', '/') : file;
+}
+
 function isSecretName(name: string): boolean {
   const lower = name.toLowerCase();
   if (SECRET_FILE_EXCEPTIONS.includes(lower)) return false;
@@ -111,11 +115,12 @@ function isSecretName(name: string): boolean {
 }
 
 export function isIgnoredPath(relative: string, ignore: readonly string[]): boolean {
-  return ignore.some((pattern) => matchesIgnore(relative, pattern));
+  const slashedRelative = slashed(relative);
+  return ignore.some((pattern) => matchesIgnore(slashedRelative, pattern));
 }
 
 export function isSecretPath(relative: string, ignore: readonly string[] = []): boolean {
-  const name = relative.split('/').pop() ?? '';
+  const name = slashed(relative).split('/').pop() ?? '';
   return isSecretName(name) || isIgnoredPath(relative, ignore);
 }
 
@@ -124,7 +129,7 @@ const CREDENTIAL_LOCATION_RULES = CREDENTIAL_LOCATIONS.map((location) =>
 );
 
 export function isCredentialPath(absolute: string): boolean {
-  const segments = absolute.toLowerCase().split('/').filter(Boolean);
+  const segments = slashed(absolute).toLowerCase().split('/').filter(Boolean);
   if (isSecretName(segments.at(-1) ?? '')) return true;
   return CREDENTIAL_LOCATION_RULES.some((rule) =>
     segments.some((_, start) =>
@@ -163,7 +168,7 @@ export function isInsideGitFolder(relative: string): boolean {
 
 export function protectedPath(written: string): ProtectedKind | null {
   const folds = process.platform === 'win32';
-  const relative = folds ? written.toLowerCase() : written;
+  const relative = folds ? slashed(written).toLowerCase() : written;
   if (GIT_HOOK.test(relative) || relative === GIT_CONFIG) return 'git_control';
   const name = relative.split('/').pop() ?? '';
   const names = folds ? FOLDED_INSTRUCTION_NAMES : INSTRUCTION_NAMES;

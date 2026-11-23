@@ -7,6 +7,13 @@ import { listRemoteHeads } from './git.ts';
 import { pushCommand, TOKEN_ENV, withOneShotToken, withTokenAccess } from './push.ts';
 
 const TOKEN = 'github_pat_11SECRETSECRET_0123456789abcdef';
+
+function runAskpass(script: string, prompt: string, env: Record<string, string>): string {
+  const options = { env: { ...process.env, ...env }, encoding: 'utf8' as const };
+  return process.platform === 'win32'
+    ? execFileSync('sh', [script, prompt], options)
+    : execFileSync(script, [prompt], options);
+}
 let root: string;
 
 beforeEach(async () => {
@@ -28,10 +35,7 @@ describe('pushing with the GitHub connection', { timeout: 20_000 }, () => {
       script = access.env.GIT_ASKPASS!;
       const text = await readFile(script, 'utf8');
       expect(text).not.toContain(TOKEN);
-      const answer = execFileSync(script, ['Password for https://github.com:'], {
-        env: { ...process.env, ...access.env },
-        encoding: 'utf8',
-      });
+      const answer = runAskpass(script, 'Password for https://github.com:', access.env);
       expect(answer.trim()).toBe(TOKEN);
     });
     await expect(readdir(path.dirname(script))).rejects.toThrow();
@@ -44,11 +48,7 @@ describe('pushing with the GitHub connection', { timeout: 20_000 }, () => {
       expect(Object.values(access.env).join(' ')).not.toContain(TOKEN);
       expect(access.env[TOKEN_ENV]).toBeUndefined();
       expect(await readFile(script, 'utf8')).not.toContain(TOKEN);
-      const ask = (prompt: string) =>
-        execFileSync(script, [prompt], {
-          env: { ...process.env, ...access.env },
-          encoding: 'utf8',
-        });
+      const ask = (prompt: string) => runAskpass(script, prompt, access.env);
       expect(ask("Username for 'https://github.com':").trim()).toBe('x-access-token');
       expect(ask("Password for 'https://x-access-token@github.com':").trim()).toBe(TOKEN);
       expect(ask("Password for 'https://x-access-token@github.com':").trim()).toBe('');
