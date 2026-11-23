@@ -1,4 +1,5 @@
 import { AsyncEntry } from '@napi-rs/keyring';
+import { chunkedKeyring } from './keyring-chunks.ts';
 
 export interface Keyring {
   get(account: string): Promise<string | null>;
@@ -30,6 +31,11 @@ export class KeychainWaitingError extends Error {
 }
 
 export function nativeKeyring(service: string): Keyring {
+  const store = keyringEntries(service);
+  return process.platform === 'win32' ? chunkedKeyring(store) : store;
+}
+
+function keyringEntries(service: string): Keyring {
   const entry = (account: string) => new AsyncEntry(service, account);
   return {
     async get(account) {
