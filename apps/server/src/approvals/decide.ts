@@ -1,4 +1,3 @@
-import { gatePaths as path } from './gate-path.ts';
 import { gateRequest } from './gate-request.ts';
 import { ALLOWED_REASONS } from '@spark-outpost/contracts';
 import type {
@@ -48,13 +47,9 @@ import {
   touchesBrowserData,
   touchesSparkRules,
 } from './browser-data.ts';
-import {
-  changesCrewFolders,
-  CREW_FOLDER_REASON,
-  inFolders,
-  inReadableFolder,
-} from './crew-folders.ts';
-import { commandCwd, outsideRoots, place, placedLabel } from './request-place.ts';
+import { changesCrewFolders, CREW_FOLDER_REASON } from './crew-folders.ts';
+import { commandCwd, place, placedLabel } from './request-place.ts';
+import { readsSparkData, SPARK_DATA_READ_REASON } from './spark-data-reads.ts';
 import { alwaysAsk, type RailFound } from './rails.ts';
 import type { ShellScript } from './shell-parse.ts';
 import { withResolvedVariables } from './shell-variables.ts';
@@ -154,6 +149,7 @@ export interface DecideOptions {
   outsideWriteGrant?: boolean;
   shell?: ShellScript | null;
   agentAsks?: boolean;
+  powershell?: boolean;
   publish?: PublishContext;
   sparkRules?: SparkRuleContext;
   browserData?: string | null;
@@ -269,20 +265,8 @@ function matchesRule(request: ApprovalRequest, rule: RunRule): boolean {
 
 const ASK: Decision = { verdict: 'ask', reason: null };
 
-export const SPARK_DATA_READ_REASON =
-  "Spark's own data folder can't be read, except the Sparks and workflows folders";
-
-function readsSparkData(request: ApprovalRequest, dataDir: string | null): boolean {
-  if (!dataDir || request.toolKind !== 'read') return false;
-  const attached = request.attachedFiles ?? [];
-  return request.paths.some(
-    (target) =>
-      inFolders(target, [dataDir]) &&
-      outsideRoots(request, target) &&
-      !inReadableFolder(request, target) &&
-      !attached.includes(path.resolve(target)),
-  );
-}
+export const POWERSHELL_REASON =
+  "Spark can't read PowerShell commands yet, so on Windows it asks before each Codex command";
 
 export const UNREADABLE_REASON =
   "Spark couldn't check that this command only reads, and this run only reads";
@@ -420,6 +404,11 @@ function byMode(
   const rules = rulesOf(options.sparkRules);
   const railDenied = alwaysAsk(request, files, view, railsWith(rules, 'deny'));
   if (railDenied) return { verdict: 'reject', reason: railDenied.reason, rule: railDenied.rule };
+  if (options.powershell && request.kind === 'execute' && request.command) {
+    return posture === 'denies'
+      ? unapproved(posture)
+      : { verdict: 'ask', reason: POWERSHELL_REASON };
+  }
   const asking = railsWith(rules, 'ask');
   const always = alwaysAsk(request, files, view, asking, options.outsideWriteGrant === true);
   if (always) return railAsked(request, always);

@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
 import { BROWSER_DATA_REASON, SPARK_RULES_REASON } from './browser-data.ts';
 import { CREW_FOLDER_REASON, crewFolderRules } from './crew-folders.ts';
-import { NO_RUN_RULES, SPARK_DATA_READ_REASON, decide, type ApprovalRequest } from './decide.ts';
+import { NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
+import { SPARK_DATA_READ_REASON } from './spark-data-reads.ts';
 import { parseShell } from './shell-parse.ts';
 
 const ROOT = '/work/app';

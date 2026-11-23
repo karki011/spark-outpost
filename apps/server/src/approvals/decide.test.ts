@@ -12,10 +12,10 @@ import {
   ruleFor,
   type ApprovalRequest,
   type RunRule,
-  SPARK_DATA_READ_REASON,
 } from './decide.ts';
 import { outsideDeleteReason } from './rails.ts';
 import type { FileLister } from './file-lister.ts';
+import { SPARK_DATA_READ_REASON } from './spark-data-reads.ts';
 
 const ROOT = '/work/app';
 const noFiles: FileLister = { glob: () => [], walk: () => [], script: () => null };
