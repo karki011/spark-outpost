@@ -2,7 +2,13 @@ import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { isDeadWeight, nodePtyLeftovers, pruneRuntime, pruneServer } from './prune.ts';
+import {
+  isDeadWeight,
+  nodePtyLeftovers,
+  nodePtyPrebuild,
+  pruneRuntime,
+  pruneServer,
+} from './prune.ts';
 
 let root: string | null = null;
 
@@ -59,7 +65,7 @@ describe('nodePtyLeftovers', () => {
           'typings',
         ],
         ['darwin-arm64', 'darwin-x64', 'win32-arm64', 'win32-x64'],
-        'arm64',
+        nodePtyPrebuild('mac', 'arm64'),
       ),
     ).toEqual([
       'README.md',
@@ -72,6 +78,16 @@ describe('nodePtyLeftovers', () => {
       'prebuilds/win32-arm64',
       'prebuilds/win32-x64',
     ]);
+  });
+
+  it('keeps the Windows prebuild with ConPTY for a Windows build', () => {
+    expect(
+      nodePtyLeftovers(
+        ['lib', 'package.json', 'prebuilds'],
+        ['darwin-arm64', 'darwin-x64', 'win32-arm64', 'win32-x64'],
+        nodePtyPrebuild('win', 'x64'),
+      ),
+    ).toEqual(['prebuilds/darwin-arm64', 'prebuilds/darwin-x64', 'prebuilds/win32-arm64']);
   });
 });
 
@@ -102,7 +118,7 @@ describe('pruneServer', () => {
       'node_modules/zod/LICENSE',
       'node_modules/zod/README.md',
     ]);
-    await pruneServer(dir, 'x64');
+    await pruneServer(dir, nodePtyPrebuild('mac', 'x64'));
     expect(await files(dir)).toEqual([
       'node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs',
       'node_modules/@anthropic-ai/sdk/index.js',

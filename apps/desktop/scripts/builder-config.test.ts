@@ -1,4 +1,7 @@
-import { readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { Arch } from 'electron-builder';
 import { describe, expect, it } from 'vitest';
 import {
   builderConfig,
@@ -120,6 +123,44 @@ describe('builderConfig', () => {
         ],
       },
     });
+  });
+
+  it('builds a per-user NSIS installer for Windows with no Mac settings', () => {
+    const config = builderConfig({
+      ...base,
+      archs: ['x64'],
+      env: {},
+      icon: '/assets/icon.png',
+      platform: 'win',
+    });
+    expect(config).toMatchObject({
+      appId: 'ai.spark-outpost.app',
+      productName: 'Spark Outpost',
+      publish: null,
+      win: { icon: '/assets/icon.png', target: [{ target: 'nsis', arch: ['x64'] }] },
+      nsis: { oneClick: true, perMachine: false },
+    });
+    expect(config).not.toHaveProperty('mac');
+    expect(config).not.toHaveProperty('dmg');
+  });
+
+  it('copies only the runtime, server and web into the Windows resources folder', async () => {
+    const stageDir = await mkdtemp(path.join(os.tmpdir(), 'spark-stage-'));
+    const appOutDir = await mkdtemp(path.join(os.tmpdir(), 'spark-out-'));
+    for (const file of [
+      'x64/runtime/node_modules/pg/index.js',
+      'x64/server/main.js',
+      'web/index.html',
+    ]) {
+      await mkdir(path.dirname(path.join(stageDir, file)), { recursive: true });
+      await writeFile(path.join(stageDir, file), '');
+    }
+    const config = builderConfig({ ...base, stageDir, archs: ['x64'], env: {}, platform: 'win' });
+    const afterPack = config.afterPack as (context: unknown) => Promise<void>;
+    await afterPack({ appOutDir, arch: Arch.x64 });
+    const resources = path.join(appOutDir, 'resources');
+    expect((await readdir(resources)).sort()).toEqual(['app', 'server', 'web']);
+    expect(await readdir(path.join(resources, 'app/node_modules'))).toEqual(['pg']);
   });
 
   it('says why the app asks for the microphone and calendars, and grants both entitlements', async () => {

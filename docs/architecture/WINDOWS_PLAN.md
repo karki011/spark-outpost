@@ -194,6 +194,10 @@ From the npm registry and official docs:
 
 - **Desktop runtime connection:** on Windows the desktop app and its background service talk over a named pipe (`\\.\pipe\spark-outpost-runtime-<hash of the data folder>`) instead of a Unix socket (`runtime-handshake.ts`). The token and endpoint files stay in the private data folder, and every connection still proves it holds the token before anything else is sent, so the pipe's default access rules are not relied on. Finding a leftover service reads its command line through `Win32_Process` instead of `ps`, allowing for quoted paths (`runtime-retire.ts`).
 
+## Phase 4 progress
+
+- **Unsigned installer (test only):** `pnpm desktop:package -- --platform win` (the default on Windows) builds a per-user NSIS installer for x64 (`apps/desktop/release/<version>/Spark-Outpost-<version>-x64.exe`) with the app, server, web and Postgres, and none of the Mac helpers (tmux, Mac control, calendar, voice, no-activate). Postgres keeps its whole `bin` folder on Windows (its DLLs sit beside `pg_ctl.exe`, `initdb.exe` and `postgres.exe`), and node-pty keeps its `win32-x64` prebuild with ConPTY. `--release` is refused on Windows until Authenticode signing and a Windows update feed exist. The **installer** job in `.github/workflows/windows.yml` builds it, installs it silently, starts Postgres from the installed files, launches the installed app with a temporary data folder, uninstalls it, and keeps the installer as a 3-day CI artifact; it is never published.
+
 ## Still unverified (needs a Windows machine)
 
 - That Spark's ACP sessions start with the user's logins on Windows.
