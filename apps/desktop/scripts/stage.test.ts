@@ -16,6 +16,6 @@ describe('pnpmCommand', () => {
       ['deploy'],
     ]);
     expect(() => pnpmCommand(['deploy'], 'C:\\pnpm\\pnpm.cmd', 'win32')).toThrow(/through pnpm/);
-    expect(() => pnpmCommand(['deploy'], undefined, 'win32')).toThrow(/through pnpm/);
+    expect(() => pnpmCommand(['deploy'], '', 'win32')).toThrow(/through pnpm/);
   });
 });

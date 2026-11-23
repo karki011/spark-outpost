@@ -78,9 +78,8 @@ async function installedPostgres(): Promise<string> {
       host: '127.0.0.1',
       log: (line) => console.log(line),
     });
-    const running = stop;
+    await stop();
     stop = null;
-    await running();
     return 'initdb, then pg_ctl start and stop, from the installed files';
   } finally {
     await stop?.().catch(() => undefined);
@@ -113,6 +112,11 @@ async function launch(): Promise<string> {
     stdio: 'ignore',
   });
   let exitCode: number | null = null;
+  let startError: Error | null = null;
+  child.once('error', (error) => {
+    startError = error;
+    exitCode = -1;
+  });
   child.once('exit', (code) => {
     exitCode = code ?? -1;
   });
@@ -130,6 +134,7 @@ async function launch(): Promise<string> {
   await delay(3_000);
   const tail = await logTail(dataRoot);
   console.log(tail);
+  if (startError) throw new Error(`the app did not start: ${(startError as Error).message}`);
   if (!alive) throw new Error(`the app exited with ${exitCode}\n${tail}`);
   if (!database) throw new Error(`Postgres not running after ${LAUNCH_WAIT_MS / 1000}s\n${tail}`);
   if (!stillRunning) throw new Error(`Postgres stopped 10s after it started\n${tail}`);
