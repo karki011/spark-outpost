@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { windowsRecovery } from './clone-recovery-windows.ts';
+import { treeStopped, windowsRecovery } from './clone-recovery-windows.ts';
 
 const DEST = 'C:\\Users\\me\\work\\app';
 const marker = { pid: 40, destination: DEST };
@@ -43,6 +43,18 @@ describe('recovering an interrupted clone on Windows', () => {
   it('cleans up when the pid now belongs to something that is not this clone', () => {
     const other = { pid: 40, ppid: 1, foregroundGroup: 0, args: 'notepad.exe' };
     expect(windowsRecovery(marker, [other], true, SELF)).toEqual({ action: 'clean' });
-    expect(windowsRecovery(marker, [helper], true, SELF)).toEqual({ action: 'clean' });
+  });
+
+  it('keeps the folder while something the clone started outlives it', () => {
+    expect(windowsRecovery(marker, [helper], false, SELF)).toEqual({ action: 'keep' });
+  });
+
+  it('counts the tree as stopped only when no member or child of one is left', () => {
+    const other = { pid: 90, ppid: 1, foregroundGroup: 0, args: 'explorer.exe' };
+    expect(treeStopped([40, 41], [other])).toBe(true);
+    expect(treeStopped([40, 41], null)).toBe(false);
+    expect(treeStopped([40, 41], [other, helper])).toBe(false);
+    const late = { pid: 77, ppid: 41, foregroundGroup: 0, args: 'git-index-pack.exe' };
+    expect(treeStopped([40, 41], [other, late])).toBe(false);
   });
 });

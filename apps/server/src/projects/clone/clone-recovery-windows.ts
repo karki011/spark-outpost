@@ -23,7 +23,9 @@ export function windowsRecovery(
   if (!marker.pid) return { action: 'clean' };
   if (table === null) return alive ? { action: 'keep' } : { action: 'clean' };
   const row = table.find((entry) => entry.pid === marker.pid);
-  if (!row) return { action: 'clean' };
+  if (!row) {
+    return descendantsOf(marker.pid, table).length > 0 ? { action: 'keep' } : { action: 'clean' };
+  }
   const cloning = row.args.includes(' clone ') && row.args.includes(marker.destination);
   if (!cloning) return { action: 'clean' };
   const parentRunning = table.some((entry) => entry.pid === row.ppid);
@@ -37,5 +39,12 @@ export async function releaseWindowsOrphan(marker: RecoveredClone): Promise<bool
   const decision = windowsRecovery(marker, table, alive, process.pid);
   if (decision.action !== 'stop') return decision.action === 'clean';
   await killProcessTree(decision.tree[0]!, 0, 'SIGKILL');
-  return decision.tree.every((pid) => !isAlive(pid));
+  return treeStopped(decision.tree, await processTableOrNull());
+}
+
+export function treeStopped(tree: readonly number[], after: readonly ProcessRow[] | null): boolean {
+  if (after === null) return false;
+  const running = new Set(after.map((row) => row.pid));
+  if (tree.some((pid) => running.has(pid))) return false;
+  return tree.every((pid) => descendantsOf(pid, after).length === 0);
 }
