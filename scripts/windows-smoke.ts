@@ -291,6 +291,7 @@ const privateFolder: Check = async () => {
   const folder = path.win32.join('C:\\', `spark-private-${randomBytes(4).toString('hex')}`);
   await mkdir(folder);
   try {
+    await runFile('icacls.exe', [folder, '/grant', '*S-1-1-0:(OI)(CI)R']);
     const before = OPEN_TO_OTHERS.test(await folderSddl(folder));
     makeFolderPrivate(folder);
     const sddl = await folderSddl(folder);
