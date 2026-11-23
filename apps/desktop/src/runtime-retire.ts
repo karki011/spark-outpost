@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
 
@@ -36,11 +37,22 @@ function escaped(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export function namesRuntimeHost(command: string, directory: string): boolean {
-  const script = escaped(HOST_SCRIPT);
-  const quoted = `"(?:[^"]*[\\\\/])?${script}"`;
-  const bare = `(?:[^" ]*[\\\\/])?${script}`;
-  const host = new RegExp(`(?:^| )(?:${quoted}|${bare}) ("?)${escaped(directory)}\\1(?: |$)`);
+function windowsArgs(command: string): string[] {
+  return [...command.matchAll(/"([^"]*)"|(\S+)/g)].map((match) => match[1] ?? match[2] ?? '');
+}
+
+export function namesRuntimeHost(
+  command: string,
+  directory: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  if (platform === 'win32') {
+    const args = windowsArgs(command);
+    return args.some(
+      (arg, index) => path.win32.basename(arg) === HOST_SCRIPT && args[index + 1] === directory,
+    );
+  }
+  const host = new RegExp(`(?:^|[ /])${escaped(HOST_SCRIPT)} ${escaped(directory)}(?: |$)`);
   return host.test(command);
 }
 

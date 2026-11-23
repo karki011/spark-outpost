@@ -103,27 +103,32 @@ describe('retiring an earlier runtime host', () => {
 
 describe('reading a runtime host command line', () => {
   const directory = 'C:\\Users\\me\\AppData\\Roaming\\Spark Outpost\\runtime';
+  const onWindows = (command: string) => namesRuntimeHost(command, directory, 'win32');
 
   it('matches the directory plain or in quotes, as Windows writes it', () => {
-    expect(namesRuntimeHost(`node /app/runtime-host.js ${directory}`, directory)).toBe(true);
-    expect(namesRuntimeHost(`node C:\\app\\runtime-host.js "${directory}"`, directory)).toBe(true);
-    expect(namesRuntimeHost(`node "C:\\My App\\runtime-host.js" "${directory}"`, directory)).toBe(
-      true,
-    );
-    expect(
-      namesRuntimeHost(`"node.exe" "C:\\app\\runtime-host.js" "${directory}" x`, directory),
-    ).toBe(true);
+    expect(onWindows(`node C:\\app\\runtime-host.js "${directory}"`)).toBe(true);
+    expect(onWindows(`node "C:\\My App\\runtime-host.js" "${directory}"`)).toBe(true);
+    expect(onWindows(`"node.exe" "C:\\app\\runtime-host.js" "${directory}" x`)).toBe(true);
+    expect(onWindows(`node runtime-host.js C:\\data\\runtime`)).toBe(false);
   });
 
-  it('refuses another directory that starts the same way', () => {
-    expect(namesRuntimeHost(`node runtime-host.js ${directory}-old`, directory)).toBe(false);
-    expect(namesRuntimeHost(`node runtime-host.js "${directory}`, directory)).toBe(false);
-    expect(namesRuntimeHost(`node other.js ${directory}`, directory)).toBe(false);
-    expect(
-      namesRuntimeHost(`node "C:\\Other App\\not-runtime-host.js" "${directory}"`, directory),
-    ).toBe(false);
-    expect(
-      namesRuntimeHost(`node "C:\\Other App\\not runtime-host.js" "${directory}"`, directory),
-    ).toBe(false);
+  it('refuses another directory, another script or the name inside one argument on Windows', () => {
+    expect(onWindows(`node runtime-host.js "${directory}-old"`)).toBe(false);
+    expect(onWindows(`node runtime-host.js "${directory}`)).toBe(false);
+    expect(onWindows(`node other.js "${directory}"`)).toBe(false);
+    expect(onWindows(`node "C:\\Other App\\not-runtime-host.js" "${directory}"`)).toBe(false);
+    expect(onWindows(`node "C:\\Other App\\not runtime-host.js" "${directory}"`)).toBe(false);
+    expect(onWindows(`node other.js "notes runtime-host.js ${directory}"`)).toBe(false);
+  });
+
+  it('matches the Mac form, where ps prints arguments unquoted', () => {
+    const macDirectory = '/Users/me/Library/Application Support/Spark Outpost/runtime';
+    const host =
+      '/Applications/Spark Outpost.app/Contents/MacOS/Spark Outpost /Applications/Spark Outpost.app/Contents/Resources/app.asar/dist/runtime-host.js';
+    const onMac = (command: string) => namesRuntimeHost(command, macDirectory, 'darwin');
+    expect(onMac(`${host} ${macDirectory} 0.1.0 /app/server`)).toBe(true);
+    expect(onMac(`${host} ${macDirectory}`)).toBe(true);
+    expect(onMac(`${host} ${macDirectory}-old`)).toBe(false);
+    expect(onMac(`/bin/node /x/not-runtime-host.js ${macDirectory}`)).toBe(false);
   });
 });
