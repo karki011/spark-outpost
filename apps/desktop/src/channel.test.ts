@@ -2,7 +2,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { channelConfig, channelIcons, channelPaths, resolveChannel } from './channel.ts';
 
-const APP_DATA = '/Users/me/Library/Application Support';
+const APP_DATA = path.resolve('/Users/me/Library/Application Support');
 
 describe('channel', () => {
   it('runs from source as the dev channel and only a packaged build as prod', () => {
