@@ -197,6 +197,7 @@ From the npm registry and official docs:
 ## Phase 4 progress
 
 - **Mark-of-the-Web (done):** a download the user saves gets a `Zone.Identifier` stream with `ZoneId=3` on Windows (`apps/desktop/src/browser/quarantine.ts`), as the Mac writes `com.apple.quarantine`; the Windows unit run writes and reads it back.
+- **Hour cycle (done):** times follow the Windows short time format (`sShortTime` under `HKCU\Control Panel\International`: `H` is a 24-hour clock, `h` a 12-hour one), read with `reg.exe` from System32 at start and again whenever a Spark window gains focus (`apps/desktop/src/hour-cycle.ts`).
 - **Coming to Windows (started):** the desktop preload exposes the Mac control and Voice bridges only on macOS, so their Settings pages, the mic button and the island's voice entry are absent on Windows instead of reporting a missing helper. Terminal sessions show **Coming to Windows** in the session type menu and can't be chosen there, and the ticket dialog offers only a chat, until phase 5. The web reads the platform from `window.sparkDesktop.platform` (`onWindows()` in `apps/web/src/desktop/desktop-bridge.ts`).
 
 ## Still unverified (needs a Windows machine)
