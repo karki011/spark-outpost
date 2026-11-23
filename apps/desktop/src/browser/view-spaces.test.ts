@@ -150,7 +150,7 @@ describe('saved Spaces', () => {
     first.view.dispose();
 
     const store = await loadSavedView(folder, () => undefined);
-    expect((await stat(file)).mode & 0o777).toBe(0o600);
+    if (process.platform !== 'win32') expect((await stat(file)).mode & 0o777).toBe(0o600);
     const second = startTestBrowser(store);
     await invoke('browser-view:start', 'personal');
     const after = await state('personal');

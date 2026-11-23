@@ -7,8 +7,9 @@ import {
   requestAllowed,
   withoutSparkToken,
 } from './request-guard.ts';
+import { fileUrl, localPath } from './project-files.fixture.ts';
 
-const facts = { blockedPorts: new Set([32682, 55050, 61884]), roots: ['/Users/me/app'] };
+const facts = { blockedPorts: new Set([32682, 55050, 61884]), roots: [localPath('/Users/me/app')] };
 
 describe('what a page in the pane may request', () => {
   it('blocks the API, Postgres and Spark tool ports on any host and scheme', () => {
@@ -33,13 +34,21 @@ describe('what a page in the pane may request', () => {
   });
 
   it('allows files only inside linked projects', () => {
-    expect(requestAllowed('file:///Users/me/app/index.html', facts)).toBe(true);
-    expect(requestAllowed('file:///Users/me/app/../.ssh/id_rsa', facts)).toBe(false);
-    expect(requestAllowed('file:///Users/me/application/index.html', facts)).toBe(false);
+    expect(requestAllowed(fileUrl('/Users/me/app/index.html'), facts)).toBe(true);
+    expect(requestAllowed(`${fileUrl('/Users/me/app')}/../.ssh/id_rsa`, facts)).toBe(false);
+    expect(requestAllowed(fileUrl('/Users/me/application/index.html'), facts)).toBe(false);
     expect(requestAllowed('file:///etc/passwd', facts)).toBe(false);
     expect(requestAllowed('file://server/share/x.html', facts)).toBe(false);
-    expect(insideRoots('/Users/me/app', ['/Users/me/app'])).toBe(true);
+    expect(insideRoots(localPath('/Users/me/app'), [localPath('/Users/me/app')])).toBe(true);
   });
+
+  it.runIf(process.platform === 'win32')(
+    'matches project files in any letter case on Windows',
+    () => {
+      expect(requestAllowed(fileUrl('/USERS/ME/APP/Index.html'), facts)).toBe(true);
+      expect(requestAllowed(fileUrl('/USERS/ME/APPLICATION/index.html'), facts)).toBe(false);
+    },
+  );
 
   it('refuses other schemes', () => {
     expect(requestAllowed('chrome://settings', facts)).toBe(false);
@@ -63,7 +72,7 @@ describe('what an agent may open', () => {
     'http://192.168.1.20:3000/',
     'http://localhost:5173/',
     'http://app.test:4000/',
-    'file:///Users/me/app/index.html',
+    fileUrl('/Users/me/app/index.html'),
   ])('opens %s', (url) => {
     expect(agentOpenProblem(url, facts)).toBeNull();
   });
@@ -98,7 +107,7 @@ describe('what an agent may open', () => {
 
   it('refuses a file outside the chat’s projects', () => {
     expect(agentOpenProblem('file:///etc/passwd', facts)).toBe(AGENT_OPEN_REFUSALS.file);
-    expect(agentOpenProblem('file:///Users/me/app/../.ssh/id_rsa', facts)).toBe(
+    expect(agentOpenProblem(`${fileUrl('/Users/me/app')}/../.ssh/id_rsa`, facts)).toBe(
       AGENT_OPEN_REFUSALS.file,
     );
   });

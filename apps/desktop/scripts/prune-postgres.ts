@@ -30,7 +30,7 @@ export function loaderPathLinks(file: string, otoolOutput: string): string[] {
     if (!name.startsWith('@loader_path/')) {
       throw new Error(`Can't resolve ${name} linked from ${file}; only @loader_path is supported.`);
     }
-    return path.resolve(path.dirname(file), name.slice('@loader_path/'.length));
+    return path.posix.resolve(path.posix.dirname(file), name.slice('@loader_path/'.length));
   });
 }
 

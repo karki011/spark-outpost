@@ -3,6 +3,7 @@ import { runBrowserOp } from './agent-ops.ts';
 import { net, type FakeContents } from './electron.fixture.ts';
 import { BrowserPanes } from './panes.ts';
 import { BROWSER_PARTITION } from './request-guard.ts';
+import { fileUrl, localPath } from './project-files.fixture.ts';
 
 vi.mock('electron', async () => (await import('./electron.fixture.ts')).fakeElectron);
 vi.mock('./cdp.ts', () => ({
@@ -14,8 +15,8 @@ const CHAT_B = '22222222-3333-4444-8555-666666666666';
 const CHAT_C = '33333333-4444-4555-8666-777777777777';
 const PROJECT_A = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const PROJECT_B = 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff';
-const homeA = { projectId: PROJECT_A, roots: ['/Users/me/app-a'] };
-const homeB = { projectId: PROJECT_B, roots: ['/Users/me/app-b'] };
+const homeA = { projectId: PROJECT_A, roots: [localPath('/Users/me/app-a')] };
+const homeB = { projectId: PROJECT_B, roots: [localPath('/Users/me/app-b')] };
 const noProject = { projectId: null, roots: [] };
 const SITE = 'https://docs.example.com';
 const signal = new AbortController().signal;
@@ -80,12 +81,12 @@ describe('one Browser pane profile for every chat', () => {
     const session = inA.session;
     expect(inB.session).toBe(session);
 
-    expect(session.requestCancelled('file:///Users/me/app-a/index.html', inA)).toBe(false);
-    expect(session.requestCancelled('file:///Users/me/app-b/index.html', inA)).toBe(true);
-    expect(session.requestCancelled('file:///Users/me/app-b/index.html', inB)).toBe(false);
-    expect(session.requestCancelled('file:///Users/me/app-a/index.html', inB)).toBe(true);
-    expect(session.requestCancelled('file:///Users/me/app-a/index.html', inC)).toBe(true);
-    expect(session.requestCancelled('file:///Users/me/app-a/index.html')).toBe(true);
+    expect(session.requestCancelled(fileUrl('/Users/me/app-a/index.html'), inA)).toBe(false);
+    expect(session.requestCancelled(fileUrl('/Users/me/app-b/index.html'), inA)).toBe(true);
+    expect(session.requestCancelled(fileUrl('/Users/me/app-b/index.html'), inB)).toBe(false);
+    expect(session.requestCancelled(fileUrl('/Users/me/app-a/index.html'), inB)).toBe(true);
+    expect(session.requestCancelled(fileUrl('/Users/me/app-a/index.html'), inC)).toBe(true);
+    expect(session.requestCancelled(fileUrl('/Users/me/app-a/index.html'))).toBe(true);
   });
 
   it('refuses another project’s file when an agent in chat A opens it', async () => {
@@ -97,7 +98,7 @@ describe('one Browser pane profile for every chat', () => {
           op: 'open',
           chatId: CHAT_A,
           runId: null,
-          url: 'file:///Users/me/app-b/secret.html',
+          url: fileUrl('/Users/me/app-b/secret.html'),
           tab: undefined,
           ...homeA,
         },
@@ -108,14 +109,17 @@ describe('one Browser pane profile for every chat', () => {
 
   it('stops loading a folder the chat no longer links', async () => {
     const inA = await agentOpens(CHAT_A, homeA, `${SITE}/a`);
-    const both = { projectId: PROJECT_A, roots: ['/Users/me/app-a', '/Users/me/wt-a'] };
+    const both = {
+      projectId: PROJECT_A,
+      roots: [localPath('/Users/me/app-a'), localPath('/Users/me/wt-a')],
+    };
     panes.touch(CHAT_A, both);
-    expect(inA.session.requestCancelled('file:///Users/me/wt-a/index.html', inA)).toBe(false);
+    expect(inA.session.requestCancelled(fileUrl('/Users/me/wt-a/index.html'), inA)).toBe(false);
 
     panes.touch(CHAT_A, homeA);
-    expect(panes.guardFacts(CHAT_A).roots).toEqual(['/Users/me/app-a']);
-    expect(inA.session.requestCancelled('file:///Users/me/wt-a/index.html', inA)).toBe(true);
-    expect(inA.session.requestCancelled('file:///Users/me/app-a/index.html', inA)).toBe(false);
+    expect(panes.guardFacts(CHAT_A).roots).toEqual([localPath('/Users/me/app-a')]);
+    expect(inA.session.requestCancelled(fileUrl('/Users/me/wt-a/index.html'), inA)).toBe(true);
+    expect(inA.session.requestCancelled(fileUrl('/Users/me/app-a/index.html'), inA)).toBe(false);
   });
 
   it('forgets a removed chat’s project files', async () => {
@@ -123,6 +127,6 @@ describe('one Browser pane profile for every chat', () => {
     const keep = await agentOpens(CHAT_B, homeB, `${SITE}/b`);
     panes.forget(CHAT_A);
     expect(panes.guardFacts(CHAT_A).roots).toEqual([]);
-    expect(keep.session.requestCancelled('file:///Users/me/app-a/x.html', inA)).toBe(true);
+    expect(keep.session.requestCancelled(fileUrl('/Users/me/app-a/x.html'), inA)).toBe(true);
   });
 });

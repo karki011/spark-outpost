@@ -26,7 +26,7 @@ describe('FileLog', () => {
       '2026-10-01T12:00:00.000Z [api] API listening on http://127.0.0.1:4318\n' +
         '2026-10-01T12:00:00.000Z [api] second line\n',
     );
-    expect(statSync(log.file).mode & 0o777).toBe(0o600);
+    if (process.platform !== 'win32') expect(statSync(log.file).mode & 0o777).toBe(0o600);
   });
 
   it('redacts keys, tokens and private key blocks before they reach the disk', () => {

@@ -83,21 +83,24 @@ describe('data folder copies', () => {
 });
 
 describe('findDumpTools', { timeout: 20_000 }, () => {
-  it('uses the first folder with pg_dump and pg_restore from Postgres 17', async () => {
-    const old = path.join(work, 'pg16');
-    const partial = path.join(work, 'dump-only');
-    const good = path.join(work, 'pg17');
-    await fakeTool(old, 'pg_dump', '16.4');
-    await fakeTool(old, 'pg_restore', '16.4');
-    await fakeTool(partial, 'pg_dump', '17.2');
-    await fakeTool(good, 'pg_dump', '17.6 (Homebrew)');
-    await fakeTool(good, 'pg_restore', '17.6 (Homebrew)');
+  it.skipIf(process.platform === 'win32')(
+    'uses the first folder with pg_dump and pg_restore from Postgres 17 (Homebrew folders; Windows backs up by copying the data folder)',
+    async () => {
+      const old = path.join(work, 'pg16');
+      const partial = path.join(work, 'dump-only');
+      const good = path.join(work, 'pg17');
+      await fakeTool(old, 'pg_dump', '16.4');
+      await fakeTool(old, 'pg_restore', '16.4');
+      await fakeTool(partial, 'pg_dump', '17.2');
+      await fakeTool(good, 'pg_dump', '17.6 (Homebrew)');
+      await fakeTool(good, 'pg_restore', '17.6 (Homebrew)');
 
-    expect(await findDumpTools([path.join(work, 'none'), old, partial, good])).toEqual({
-      pgDump: path.join(good, 'pg_dump'),
-      pgRestore: path.join(good, 'pg_restore'),
-    });
-  });
+      expect(await findDumpTools([path.join(work, 'none'), old, partial, good])).toEqual({
+        pgDump: path.join(good, 'pg_dump'),
+        pgRestore: path.join(good, 'pg_restore'),
+      });
+    },
+  );
 
   it('falls back to a folder copy when no matching tools exist', async () => {
     await fakeTool(path.join(work, 'pg16'), 'pg_dump', '16.4');
