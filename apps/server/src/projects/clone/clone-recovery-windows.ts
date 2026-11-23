@@ -1,6 +1,5 @@
 import {
   descendantsOf,
-  isAlive,
   killProcessTree,
   processTableOrNull,
   type ProcessRow,
@@ -17,11 +16,10 @@ export type WindowsRecovery =
 export function windowsRecovery(
   marker: RecoveredClone,
   table: readonly ProcessRow[] | null,
-  alive: boolean,
   self: number,
 ): WindowsRecovery {
   if (!marker.pid) return { action: 'clean' };
-  if (table === null) return alive ? { action: 'keep' } : { action: 'clean' };
+  if (table === null) return { action: 'keep' };
   const row = table.find((entry) => entry.pid === marker.pid);
   if (!row) {
     return descendantsOf(marker.pid, table).length > 0 ? { action: 'keep' } : { action: 'clean' };
@@ -35,8 +33,7 @@ export function windowsRecovery(
 
 export async function releaseWindowsOrphan(marker: RecoveredClone): Promise<boolean> {
   const table = await processTableOrNull();
-  const alive = marker.pid !== null && isAlive(marker.pid);
-  const decision = windowsRecovery(marker, table, alive, process.pid);
+  const decision = windowsRecovery(marker, table, process.pid);
   if (decision.action !== 'stop') return decision.action === 'clean';
   await killProcessTree(decision.tree[0]!, 0, 'SIGKILL');
   return treeStopped(decision.tree, await processTableOrNull());

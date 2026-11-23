@@ -14,20 +14,22 @@ const helper = { pid: 41, ppid: 40, foregroundGroup: 0, args: 'git-remote-https.
 
 describe('recovering an interrupted clone on Windows', () => {
   it('keeps the folder when the process table cannot be read and the clone may still run', () => {
-    expect(windowsRecovery(marker, null, true, SELF)).toEqual({ action: 'keep' });
+    expect(windowsRecovery(marker, null, SELF)).toEqual({ action: 'keep' });
   });
 
-  it('cleans up when the table cannot be read but the process is gone', () => {
-    expect(windowsRecovery(marker, null, false, SELF)).toEqual({ action: 'clean' });
+  it('keeps the folder when the table cannot be read, even after the clone itself is gone', () => {
+    expect(windowsRecovery({ ...marker, pid: 2 ** 22 + 9 }, null, SELF)).toEqual({
+      action: 'keep',
+    });
   });
 
   it('keeps a clone another running process owns', () => {
     const owner = { pid: 900, ppid: 1, foregroundGroup: 0, args: 'node api.js' };
-    expect(windowsRecovery(marker, [owner, clone(900)], true, SELF)).toEqual({ action: 'keep' });
+    expect(windowsRecovery(marker, [owner, clone(900)], SELF)).toEqual({ action: 'keep' });
   });
 
   it('stops an orphaned clone with everything it started', () => {
-    expect(windowsRecovery(marker, [clone(555), helper], true, SELF)).toEqual({
+    expect(windowsRecovery(marker, [clone(555), helper], SELF)).toEqual({
       action: 'stop',
       tree: [40, 41],
     });
@@ -35,18 +37,18 @@ describe('recovering an interrupted clone on Windows', () => {
 
   it('stops a clone this process still parents', () => {
     const self = { pid: SELF, ppid: 1, foregroundGroup: 0, args: 'node api.js' };
-    expect(windowsRecovery(marker, [self, clone(SELF)], true, SELF)).toMatchObject({
+    expect(windowsRecovery(marker, [self, clone(SELF)], SELF)).toMatchObject({
       action: 'stop',
     });
   });
 
   it('cleans up when the pid now belongs to something that is not this clone', () => {
     const other = { pid: 40, ppid: 1, foregroundGroup: 0, args: 'notepad.exe' };
-    expect(windowsRecovery(marker, [other], true, SELF)).toEqual({ action: 'clean' });
+    expect(windowsRecovery(marker, [other], SELF)).toEqual({ action: 'clean' });
   });
 
   it('keeps the folder while something the clone started outlives it', () => {
-    expect(windowsRecovery(marker, [helper], false, SELF)).toEqual({ action: 'keep' });
+    expect(windowsRecovery(marker, [helper], SELF)).toEqual({ action: 'keep' });
   });
 
   it('counts the tree as stopped only when no member or child of one is left', () => {
