@@ -84,7 +84,8 @@ async function stageRuntime(
   const postgres = postgresNativeDir(runtimeDir, arch, platform);
   if (platform === 'win') await prunePostgresWindows(postgres);
   else await prunePostgres(postgres);
-  const hostPlatform = { darwin: 'mac', win32: 'win' }[process.platform as string];
+  const hosts: Partial<Record<NodeJS.Platform, BuildPlatform>> = { darwin: 'mac', win32: 'win' };
+  const hostPlatform = hosts[process.platform];
   const onHost = platform === hostPlatform && arch === os.arch();
   if (onHost) await checkPostgresStarts(postgres, platform);
 }

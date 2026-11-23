@@ -132,6 +132,14 @@ async function launch(): Promise<string> {
   const alive = exitCode === null;
   const stillRunning = database && (await postgresRunning(postgresData));
   if (child.pid) await runFile('taskkill', ['/PID', String(child.pid), '/T', '/F']).catch(() => {});
+  await runFile(path.join(POSTGRES_BIN, 'pg_ctl.exe'), [
+    'stop',
+    '-D',
+    postgresData,
+    '-m',
+    'fast',
+    '-w',
+  ]).catch(() => undefined);
   await delay(3_000);
   const tail = await logTail(dataRoot);
   console.log(tail);
@@ -142,17 +150,22 @@ async function launch(): Promise<string> {
   return 'the installed app stayed up with its Postgres running';
 }
 
+function present(file: string): Promise<boolean> {
+  return stat(file).then(
+    () => true,
+    () => false,
+  );
+}
+
 async function uninstall(): Promise<string> {
   await runFile(UNINSTALLER, ['/S'], { timeout: 120_000 });
+  const files = [APP_EXE, path.join(POSTGRES_BIN, 'pg_ctl.exe')];
   for (let attempt = 0; attempt < 30; attempt += 1) {
-    const left = await stat(APP_EXE).then(
-      () => true,
-      () => false,
-    );
-    if (!left) return 'removed';
+    const left = (await Promise.all(files.map(present))).some(Boolean);
+    if (!left) return 'removed, Postgres included';
     await delay(1_000);
   }
-  throw new Error(`${APP_EXE} is still there`);
+  throw new Error(`still there after uninstall: ${files.join(' or ')}`);
 }
 
 await check('Install silently', true, install);
