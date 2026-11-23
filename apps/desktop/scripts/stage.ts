@@ -35,6 +35,14 @@ const DEPLOY_LEFTOVERS = [
   'tsconfig.json',
 ];
 
+function pnpmCommand(args: string[]): [string, string[]] {
+  const script = process.env.npm_execpath;
+  if (process.platform === 'win32' && script && /\.c?js$/.test(script)) {
+    return [process.execPath, [script, ...args]];
+  }
+  return ['pnpm', args];
+}
+
 async function deploy(
   filter: string,
   arch: MacArch,
@@ -42,20 +50,17 @@ async function deploy(
   target: string,
   unused: string[],
 ): Promise<void> {
-  await run(
-    'pnpm',
-    [
-      '--filter',
-      filter,
-      'deploy',
-      '--prod',
-      `--cpu=${arch}`,
-      `--os=${platform === 'win' ? 'win32' : 'darwin'}`,
-      '--config.node-linker=hoisted',
-      target,
-    ],
-    { cwd: repoRoot, maxBuffer: 64 * 1024 * 1024 },
-  );
+  const [command, args] = pnpmCommand([
+    '--filter',
+    filter,
+    'deploy',
+    '--prod',
+    `--cpu=${arch}`,
+    `--os=${platform === 'win' ? 'win32' : 'darwin'}`,
+    '--config.node-linker=hoisted',
+    target,
+  ]);
+  await run(command, args, { cwd: repoRoot, maxBuffer: 64 * 1024 * 1024 });
   for (const leftover of [...DEPLOY_LEFTOVERS, ...unused]) {
     await rm(path.join(target, leftover), { recursive: true, force: true });
   }
