@@ -1,6 +1,7 @@
 import { execFile, execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { msysTable, msysTableNow, withMsysParents } from './msys-processes.ts';
 
 const execFileAsync = promisify(execFile);
 const PS_ARGS = ['-A', '-o', 'pid=,ppid=,tpgid=,args='];
@@ -164,9 +165,10 @@ export function withoutStaleParents(rows: readonly ProcessRow[]): ProcessRow[] {
   });
 }
 
-function readTable(output: string): ProcessRow[] {
+function readTable(output: string, msys: string | null = null): ProcessRow[] {
   const rows = parseProcessTable(output);
-  return process.platform === 'win32' ? withoutStaleParents(rows) : rows;
+  if (process.platform !== 'win32') return rows;
+  return withMsysParents(withoutStaleParents(rows), msys);
 }
 
 function tableCommand(): [string, string[]] {
@@ -176,8 +178,11 @@ function tableCommand(): [string, string[]] {
 export async function processTableOrNull(): Promise<ProcessRow[] | null> {
   try {
     const [command, args] = tableCommand();
-    const { stdout } = await execFileAsync(command, args, { encoding: 'utf8', windowsHide: true });
-    const rows = readTable(stdout);
+    const [{ stdout }, msys] = await Promise.all([
+      execFileAsync(command, args, { encoding: 'utf8', windowsHide: true }),
+      msysTable(),
+    ]);
+    const rows = readTable(stdout, msys);
     return rows.length > 0 ? rows : null;
   } catch {
     return null;
@@ -207,12 +212,13 @@ async function endWindowsTrees(
   graceMs: number,
   first: NodeJS.Signals,
 ): Promise<void> {
-  if (first === 'SIGKILL') {
-    await Promise.all(roots.map((pid) => endWindowsTree(pid)));
-    return;
-  }
   const table = await processTable();
   const targets = [...new Set(roots.flatMap((pid) => [pid, ...descendantsOf(pid, table)]))];
+  if (first === 'SIGKILL') {
+    await Promise.all(roots.map((pid) => endWindowsTree(pid)));
+    await Promise.all(targets.filter((pid) => isAlive(pid)).map((pid) => endWindowsTree(pid)));
+    return;
+  }
   const asked = await Promise.all(roots.map((pid) => endWindowsTree(pid, false)));
   if (asked.every(Boolean)) await untilGone(targets, graceMs);
   const left = targets.filter((pid) => isAlive(pid));
@@ -252,7 +258,10 @@ export function processTreeNow(root: number): number[] {
     const [command, args] = tableCommand();
     return descendantsOf(
       root,
-      readTable(execFileSync(command, args, { encoding: 'utf8', windowsHide: true })),
+      readTable(
+        execFileSync(command, args, { encoding: 'utf8', windowsHide: true }),
+        msysTableNow(),
+      ),
     );
   } catch {
     return [];
