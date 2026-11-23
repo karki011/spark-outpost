@@ -1,6 +1,6 @@
 import { spawn, execFile } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { appendFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import net from 'node:net';
 import { tmpdir } from 'node:os';
@@ -8,6 +8,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { completeReply } from './acp-reply.ts';
 import { startDatabase } from '../apps/desktop/src/postgres.ts';
+import { makeFolderPrivate } from '../apps/desktop/src/private-folder.ts';
 import { agentDefinitions } from '../apps/server/src/agents/acp/agents.ts';
 import { parseShell } from '../apps/server/src/approvals/shell-parse.ts';
 import { nativeKeyring } from '../apps/server/src/setup/keychain.ts';
@@ -277,8 +278,41 @@ function acpStart(id: 'claude' | 'codex'): Check {
   };
 }
 
+const OPEN_TO_OTHERS = /;;;(WD|AU|BU)\)/;
+
+async function folderSddl(folder: string): Promise<string> {
+  const command = `(Get-Acl -LiteralPath '${folder.replaceAll("'", "''")}').Sddl`;
+  const { stdout } = await runFile('powershell.exe', ['-NoProfile', '-Command', command]);
+  return stdout.trim();
+}
+
+const privateFolder: Check = async () => {
+  if (!isWindows) return 'skipped: Windows only';
+  const folder = path.win32.join('C:\\', `spark-private-${randomBytes(4).toString('hex')}`);
+  await mkdir(folder);
+  try {
+    await runFile('icacls.exe', [folder, '/grant', '*S-1-1-0:(OI)(CI)R']);
+    const before = OPEN_TO_OTHERS.test(await folderSddl(folder));
+    makeFolderPrivate(folder);
+    const sddl = await folderSddl(folder);
+    if (!sddl.includes('D:P')) throw new Error(`inheritance still on: ${sddl}`);
+    if (OPEN_TO_OTHERS.test(sddl)) throw new Error(`others can still read it: ${sddl}`);
+    const database = await startDatabase({
+      dataDir: path.join(folder, 'postgres'),
+      passwordFile: path.join(folder, 'postgres-password'),
+      port: await freePort(),
+      log: () => undefined,
+    });
+    await database.stop();
+    return `open to others before: ${before}; after: private, and Postgres started inside it`;
+  } finally {
+    await rm(folder, { recursive: true, force: true }).catch(() => undefined);
+  }
+};
+
 const CHECKS: [string, Check][] = [
   ['Embedded Postgres', postgres],
+  ['Private data folder', privateFolder],
   ['Keychain sizes', keyring],
   ['PTY', pty],
   ['Named pipe / socket', pipe],
