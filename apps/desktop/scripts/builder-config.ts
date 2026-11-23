@@ -28,6 +28,7 @@ const GITHUB_APP_SLUG = 'spark-outpost';
 const SLACK_CLIENT_ID = '12090759669655.12602512337571';
 
 export type MacArch = 'x64' | 'arm64';
+export type BuildPlatform = 'mac' | 'win';
 
 export const MICROPHONE_USAGE =
   'Spark Outpost listens only while you press the Voice shortcut or the mic button, or while a meeting you started is recording, and turns your speech into text on this Mac.';
@@ -182,17 +183,24 @@ export function packagedShareUrl(env: Env): string | null {
   return origin;
 }
 
-function resourcesDir(context: AfterPackContext): string {
+function resourcesDir(context: AfterPackContext, platform: BuildPlatform): string {
+  if (platform === 'win') return path.join(context.appOutDir, 'resources');
   const app = `${context.packager.appInfo.productFilename}.app`;
   return path.join(context.appOutDir, app, 'Contents/Resources');
 }
 
-async function copyRuntime(stageDir: string, arch: MacArch, resources: string): Promise<void> {
+async function copyRuntime(
+  stageDir: string,
+  arch: MacArch,
+  resources: string,
+  platform: BuildPlatform,
+): Promise<void> {
   const copy = (from: string, to: string) =>
     cp(from, path.join(resources, to), { recursive: true, verbatimSymlinks: true });
   await copy(path.join(stageDir, arch, 'runtime/node_modules'), 'app/node_modules');
   await copy(path.join(stageDir, arch, 'server'), 'server');
   await copy(path.join(stageDir, 'web'), 'web');
+  if (platform === 'win') return;
   await copy(path.join(stageDir, arch, 'tmux'), 'tmux');
   await checkTmuxBinary(path.join(resources, 'tmux/bin/tmux'), arch);
   await copy(path.join(stageDir, arch, 'mac-control'), 'mac-control');
@@ -217,9 +225,11 @@ export interface BuilderOptions {
   packageName?: string;
   appId?: string;
   formats?: ('zip' | 'dmg')[];
+  platform?: BuildPlatform;
 }
 
 export function builderConfig(options: BuilderOptions): Configuration {
+  const platform = options.platform ?? 'mac';
   const prod = channelConfig('prod');
   const signing = signingPlan(options.env);
   const feed = updateFeedUrl(options.env);
@@ -228,7 +238,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
   const githubApp = packagedGitHubApp(options.env);
   const slackApp = packagedSlackClientId(options.env);
   const google = packagedGoogleClient(options.env);
-  return {
+  const shared: Configuration = {
     appId: options.appId ?? prod.appId,
     productName: prod.appName,
     electronVersion: options.electronVersion,
@@ -254,11 +264,33 @@ export function builderConfig(options: BuilderOptions): Configuration {
     asar: false,
     files: ['package.json', 'dist/**', 'assets/**'],
     afterPack: (context) =>
-      copyRuntime(options.stageDir, Arch[context.arch] as MacArch, resourcesDir(context)),
+      copyRuntime(
+        options.stageDir,
+        Arch[context.arch] as MacArch,
+        resourcesDir(context, platform),
+        platform,
+      ),
     protocols: [{ name: prod.appName, schemes: [prod.linkScheme] }],
     artifactName: 'Spark-Outpost-${version}-${arch}.${ext}',
     generateUpdatesFilesForAllChannels: true,
     publish: feed ? [{ provider: 'generic', url: feed, useMultipleRangeRequest: false }] : null,
+  };
+  if (platform === 'win') {
+    return {
+      ...shared,
+      win: {
+        icon: options.icon,
+        target: [{ target: 'nsis', arch: options.archs }],
+      },
+      nsis: {
+        oneClick: true,
+        perMachine: false,
+        artifactName: 'Spark-Outpost-${version}-windows-alpha-${arch}.${ext}',
+      },
+    };
+  }
+  return {
+    ...shared,
     mac: {
       category: 'public.app-category.developer-tools',
       icon: options.icon,
