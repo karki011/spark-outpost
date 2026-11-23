@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { isRuntimeHost, recordedPid, retireHost } from './runtime-retire.ts';
+import { isRuntimeHost, namesRuntimeHost, recordedPid, retireHost } from './runtime-retire.ts';
 
 let folder: string;
 const children: ChildProcess[] = [];
@@ -96,5 +96,23 @@ describe('retiring an earlier runtime host', () => {
     expect(other.child.exitCode).toBeNull();
     expect(other.child.signalCode).toBeNull();
     await retireHost({ directory: other.directory, pid: null, stop: null, timeoutMs: 300 });
+  });
+});
+
+describe('reading a runtime host command line', () => {
+  const directory = 'C:\\Users\\me\\AppData\\Roaming\\Spark Outpost\\runtime';
+
+  it('matches the directory plain or in quotes, as Windows writes it', () => {
+    expect(namesRuntimeHost(`node /app/runtime-host.js ${directory}`, directory)).toBe(true);
+    expect(namesRuntimeHost(`node C:\\app\\runtime-host.js "${directory}"`, directory)).toBe(true);
+    expect(
+      namesRuntimeHost(`"node.exe" "C:\\app\\runtime-host.js" "${directory}" x`, directory),
+    ).toBe(true);
+  });
+
+  it('refuses another directory that starts the same way', () => {
+    expect(namesRuntimeHost(`node runtime-host.js ${directory}-old`, directory)).toBe(false);
+    expect(namesRuntimeHost(`node runtime-host.js "${directory}`, directory)).toBe(false);
+    expect(namesRuntimeHost(`node other.js ${directory}`, directory)).toBe(false);
   });
 });

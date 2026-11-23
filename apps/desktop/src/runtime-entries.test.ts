@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { isBundledService, serverEntry } from './runtime-entries.ts';
 
@@ -10,10 +11,12 @@ const api = {
 
 describe('bundled server entries', () => {
   it('names the API, worker and migration entries under the server folder', () => {
-    expect(serverEntry('/app/server', 'api')).toBe('/app/server/src/api/main.ts');
-    expect(serverEntry('/app/server', 'worker')).toBe('/app/server/src/workflow/main.ts');
+    expect(serverEntry('/app/server', 'api')).toBe(path.join('/app/server/src/api/main.ts'));
+    expect(serverEntry('/app/server', 'worker')).toBe(
+      path.join('/app/server/src/workflow/main.ts'),
+    );
     expect(serverEntry('/app/server', 'migrate')).toBe(
-      '/app/server/src/persistence/migrate-cli.ts',
+      path.join('/app/server/src/persistence/migrate-cli.ts'),
     );
   });
 

@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 
 const SOCKET_PATH_LIMIT = 103;
@@ -9,14 +9,27 @@ export interface RuntimePaths {
   endpoint: string;
 }
 
-export function runtimePaths(directory: string): RuntimePaths {
-  const socket = path.join(directory, 'control.sock');
-  if (Buffer.byteLength(socket) > SOCKET_PATH_LIMIT)
+export function isPipe(socket: string): boolean {
+  return socket.startsWith('\\\\.\\pipe\\');
+}
+
+function pipeName(directory: string): string {
+  const key = createHash('sha256').update(directory.toLowerCase()).digest('hex').slice(0, 24);
+  return `\\\\.\\pipe\\spark-outpost-runtime-${key}`;
+}
+
+export function runtimePaths(
+  directory: string,
+  platform: NodeJS.Platform = process.platform,
+): RuntimePaths {
+  const files = platform === 'win32' ? path.win32 : path;
+  const socket = platform === 'win32' ? pipeName(directory) : path.join(directory, 'control.sock');
+  if (!isPipe(socket) && Buffer.byteLength(socket) > SOCKET_PATH_LIMIT)
     throw new Error(`The data folder path is too long for the local runtime socket: ${socket}`);
   return {
     socket,
-    token: path.join(directory, 'token'),
-    endpoint: path.join(directory, 'endpoint.json'),
+    token: files.join(directory, 'token'),
+    endpoint: files.join(directory, 'endpoint.json'),
   };
 }
 

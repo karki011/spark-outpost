@@ -4,7 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
 
 const run = promisify(execFile);
-const HOST_SCRIPT = 'runtime-host.js ';
+const HOST_SCRIPT = 'runtime-host.js';
 export const RETIRE_TIMEOUT_MS = 30_000;
 
 interface Retirement {
@@ -32,17 +32,35 @@ export async function recordedPid(endpoint: string): Promise<number | null> {
   }
 }
 
+function escaped(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function namesRuntimeHost(command: string, directory: string): boolean {
+  const host = new RegExp(`${escaped(HOST_SCRIPT)}"? ("?)${escaped(directory)}\\1(?: |$)`);
+  return host.test(command);
+}
+
+async function commandLine(pid: number): Promise<string> {
+  if (process.platform !== 'win32') {
+    return (await run('ps', ['-ww', '-o', 'args=', '-p', String(pid)])).stdout.trim();
+  }
+  const query = `(Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}').CommandLine`;
+  const { stdout } = await run('powershell.exe', [
+    '-NoProfile',
+    '-NonInteractive',
+    '-Command',
+    query,
+  ]);
+  return stdout.trim();
+}
+
 export async function isRuntimeHost(pid: number, directory: string): Promise<boolean> {
-  let command: string;
   try {
-    command = (await run('ps', ['-ww', '-o', 'args=', '-p', String(pid)])).stdout.trim();
+    return namesRuntimeHost(await commandLine(pid), directory);
   } catch {
     return false;
   }
-  const start = command.indexOf(`${HOST_SCRIPT}${directory}`);
-  if (start < 0) return false;
-  const next = command[start + HOST_SCRIPT.length + directory.length];
-  return next === undefined || next === ' ';
 }
 
 async function exited(pid: number, deadline: number): Promise<boolean> {
@@ -73,5 +91,8 @@ export async function retireHost(retirement: Retirement): Promise<void> {
     }
     if (await exited(pid, Date.now() + timeoutMs)) return;
   }
-  throw new Error('The earlier local runtime did not stop. Restart the Mac, then reopen Spark.');
+  const computer = process.platform === 'win32' ? 'your computer' : 'the Mac';
+  throw new Error(
+    `The earlier local runtime did not stop. Restart ${computer}, then reopen Spark.`,
+  );
 }
