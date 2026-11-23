@@ -5,6 +5,12 @@ import { taskLinkSchema } from './tasks.ts';
 export const GIT_INSTALL_HINT =
   'Git is not installed. Install Apple’s command line tools by running `xcode-select --install` in Terminal, then try again.';
 export const GIT_INSTALL_COMMAND = 'xcode-select --install';
+const WINDOWS_GIT_INSTALL_HINT =
+  'Git is not installed. Install Git for Windows from https://git-scm.com/download/win, then try again.';
+
+export function gitInstallHint(platform: string): string {
+  return platform === 'win32' ? WINDOWS_GIT_INSTALL_HINT : GIT_INSTALL_HINT;
+}
 
 export const gitStatusSchema = z.object({
   installed: z.boolean(),

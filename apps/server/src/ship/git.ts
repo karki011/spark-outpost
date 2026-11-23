@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   GIT_INSTALL_COMMAND,
-  GIT_INSTALL_HINT,
+  gitInstallHint,
   type GitStatus,
   type ShipFile,
 } from '@spark-outpost/contracts';
@@ -122,7 +122,7 @@ export async function openGitInstaller(
 ): Promise<GitStatus> {
   const status = await gitStatus(run, platform);
   if (status.installed) return status;
-  if (!status.canInstall) throw new GitInstallerError(GIT_INSTALL_HINT);
+  if (!status.canInstall) throw new GitInstallerError(gitInstallHint(platform));
   const [file = '', ...args] = GIT_INSTALL_COMMAND.split(' ');
   const opened = await run(file, args, INSTALLER_MS);
   if (opened.code !== 0) {

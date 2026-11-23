@@ -1,5 +1,5 @@
 import {
-  GIT_INSTALL_HINT,
+  gitInstallHint,
   type ShipBlock,
   type ShipFile,
   type ShipMode,
@@ -79,7 +79,7 @@ export interface ShipPlan {
 const block = (reason: ShipBlock['reason'], message: string): ShipBlock => ({ reason, message });
 
 export const BLOCKED = {
-  gitMissing: block('git_missing', GIT_INSTALL_HINT),
+  gitMissing: block('git_missing', gitInstallHint(process.platform)),
   running: block('running', 'The task is still working. Ship it after it finishes.'),
   noChanges: block('no_changes', 'This task has no file changes to ship.'),
   severalFolders: block(
