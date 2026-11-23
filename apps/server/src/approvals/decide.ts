@@ -154,6 +154,7 @@ export interface DecideOptions {
   outsideWriteGrant?: boolean;
   shell?: ShellScript | null;
   agentAsks?: boolean;
+  powershell?: boolean;
   publish?: PublishContext;
   sparkRules?: SparkRuleContext;
   browserData?: string | null;
@@ -284,6 +285,9 @@ function readsSparkData(request: ApprovalRequest, dataDir: string | null): boole
   );
 }
 
+export const POWERSHELL_REASON =
+  "Spark can't read PowerShell commands yet, so on Windows it asks before each Codex command";
+
 export const UNREADABLE_REASON =
   "Spark couldn't check that this command only reads, and this run only reads";
 
@@ -397,6 +401,11 @@ function ruledDecide(
     return { verdict: 'ask', reason: INSTRUCTION_REASON, instructionFiles: guarded.instructions };
   }
   if (found) return { verdict: 'ask', reason: secretSendReason(found), secretSend: found };
+  if (options.powershell && request.kind === 'execute' && request.command) {
+    return posture === 'denies'
+      ? unapproved(posture)
+      : { verdict: 'ask', reason: POWERSHELL_REASON };
+  }
   const files = options.files ?? NO_FILES;
   const weighed: Weighing = { posture, asked, request, view, published, files };
   return noted(byMode(weighed, runRules, allowlist, options), sentOut(request, files, options));

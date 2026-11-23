@@ -409,6 +409,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       outsideWriteGrant: await outsideWriteGranted(deps.db, deps.runId),
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),
+      powershell: deps.provider === 'codex' && process.platform === 'win32',
       sparkRules: await sparkRulesForRun(deps.db, deps.runId),
       ...(await publishContext(deps.db, deps.publish, request)),
     };
