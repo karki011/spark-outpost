@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { TerminalServerMessage } from '@spark-outpost/contracts';
 import { isAlive } from './process-group.ts';
 import { loginShellSpawner } from './pty.ts';
-import { shellPid, TEST_SHELL } from './test-shell.fixture.ts';
+import { backgroundPid, shellPid, TEST_SHELL } from './test-shell.fixture.ts';
 import {
   defaultLimits,
   TerminalAuthError,
@@ -62,7 +62,7 @@ describe('terminal sessions', () => {
   it('kills the shell and everything it started when closed', async () => {
     const { created, messages, screen, client, isClosed } = start();
     const terminal = sessions.attach(created.id, created.token, client, size);
-    terminal.input(`\u0015nohup sleep 300 >/dev/null 2>&1 & echo PID=${shellPid('$!')} \r`);
+    terminal.input(`\u0015nohup sleep 300 >/dev/null 2>&1 & echo PID=${backgroundPid('sleep')} \r`);
     await until(() => /PID=\d+/.test(screen.text));
     const child = pidOf(screen.text);
     expect(isAlive(child)).toBe(true);

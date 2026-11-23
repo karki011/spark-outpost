@@ -14,7 +14,11 @@ interface Linked {
 }
 
 export function msysPs(shell: string = defaultShell()): string {
-  return path.win32.join(path.win32.dirname(path.win32.dirname(shell)), 'usr', 'bin', 'ps.exe');
+  const bin = path.win32.dirname(shell);
+  const inUsr = path.win32.basename(path.win32.dirname(bin)).toLowerCase() === 'usr';
+  return inUsr
+    ? path.win32.join(bin, 'ps.exe')
+    : path.win32.join(path.win32.dirname(bin), 'usr', 'bin', 'ps.exe');
 }
 
 export function withMsysParents<T extends Linked>(rows: readonly T[], msys: string | null): T[] {

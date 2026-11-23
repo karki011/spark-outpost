@@ -168,7 +168,7 @@ export function withoutStaleParents(rows: readonly ProcessRow[]): ProcessRow[] {
 function readTable(output: string, msys: string | null = null): ProcessRow[] {
   const rows = parseProcessTable(output);
   if (process.platform !== 'win32') return rows;
-  return withMsysParents(withoutStaleParents(rows), msys);
+  return withoutStaleParents(withMsysParents(rows, msys));
 }
 
 function tableCommand(): [string, string[]] {
