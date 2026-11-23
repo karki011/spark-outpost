@@ -20,8 +20,13 @@ export interface KeychainTiming {
 
 const KEYCHAIN_TIMEOUT_MS = 10_000;
 const KEYCHAIN_FRESH_MS = 60_000;
-export const KEYCHAIN_WAITING_MESSAGE =
+const MAC_KEYCHAIN_WAITING =
   'Waiting for macOS keychain access — check for a prompt asking to let Spark use the keychain and click Always Allow.';
+const WINDOWS_KEYCHAIN_WAITING =
+  'Waiting for Windows Credential Manager — Spark will try again in a moment.';
+
+export const KEYCHAIN_WAITING_MESSAGE =
+  process.platform === 'win32' ? WINDOWS_KEYCHAIN_WAITING : MAC_KEYCHAIN_WAITING;
 
 export class KeychainWaitingError extends Error {
   constructor() {

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { keychainCache, KeychainWaitingError, type Keyring } from './keychain.ts';
+import {
+  KEYCHAIN_WAITING_MESSAGE,
+  keychainCache,
+  KeychainWaitingError,
+  type Keyring,
+} from './keychain.ts';
 
 interface Pending {
   account: string;
@@ -66,7 +71,12 @@ describe('keychain cache', () => {
     expect(keychain.waiting()).toBe(false);
     const error = await keychain.get('claude:api_key').catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(KeychainWaitingError);
-    expect((error as Error).message).toMatch(/Waiting for macOS keychain access.*Always Allow/);
+    expect((error as Error).message).toBe(KEYCHAIN_WAITING_MESSAGE);
+    expect(KEYCHAIN_WAITING_MESSAGE).toMatch(
+      process.platform === 'win32'
+        ? /Waiting for Windows Credential Manager/
+        : /Waiting for macOS keychain access.*Always Allow/,
+    );
     expect(keychain.waiting()).toBe(true);
 
     fake.releaseAll();

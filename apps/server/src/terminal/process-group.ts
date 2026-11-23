@@ -212,15 +212,11 @@ async function endWindowsTrees(
   graceMs: number,
   first: NodeJS.Signals,
 ): Promise<void> {
+  const force = first === 'SIGKILL';
   const table = await processTable();
   const targets = [...new Set(roots.flatMap((pid) => [pid, ...descendantsOf(pid, table)]))];
-  if (first === 'SIGKILL') {
-    await Promise.all(roots.map((pid) => endWindowsTree(pid)));
-    await Promise.all(targets.filter((pid) => isAlive(pid)).map((pid) => endWindowsTree(pid)));
-    return;
-  }
-  const asked = await Promise.all(roots.map((pid) => endWindowsTree(pid, false)));
-  if (asked.every(Boolean)) await untilGone(targets, graceMs);
+  const asked = await Promise.all(roots.map((pid) => endWindowsTree(pid, force)));
+  if (!force && asked.every(Boolean)) await untilGone(targets, graceMs);
   const left = targets.filter((pid) => isAlive(pid));
   await Promise.all(left.map((pid) => endWindowsTree(pid)));
 }

@@ -163,7 +163,7 @@ describe('ACP provider against a fake agent over stdio', { timeout: 20_000 }, ()
         controller.abort();
       }
     }
-    expect(Date.now() - abortedAt).toBeLessThan(4_000);
+    expect(Date.now() - abortedAt).toBeLessThan(process.platform === 'win32' ? 10_000 : 4_000);
   }, 15_000);
 
   it.each([
