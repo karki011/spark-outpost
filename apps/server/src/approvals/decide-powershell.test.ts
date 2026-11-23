@@ -3,6 +3,7 @@ import { MODE_POSTURES, type ModePosture } from '@spark-outpost/contracts';
 import { NO_RUN_RULES, POWERSHELL_REASON, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { parseShell } from './shell-parse.ts';
+import { NO_SPARK_RULES } from '../spark-rules/resolve.ts';
 
 const ROOT = '/c/work/app';
 const noFiles: FileLister = { glob: () => [], walk: () => [], script: () => null };
@@ -60,5 +61,17 @@ describe('Codex commands on Windows', () => {
 
   it('reads commands as before elsewhere', async () => {
     expect(await decideCommand('auto', 'ls', false)).not.toEqual(ASKS);
+  });
+
+  it('still refuses what a Spark rule denies', async () => {
+    const command = 'echo hi > ../outside.txt';
+    const rules = { ...NO_SPARK_RULES, user: { allow: [], ask: [], deny: ['WriteOutside'] } };
+    const decision = decide('auto', request({ command, title: command }), NO_RUN_RULES, [], {
+      files: noFiles,
+      shell: await parseShell(command),
+      powershell: true,
+      sparkRules: { rules, once: [] },
+    });
+    expect(decision.verdict).toBe('reject');
   });
 });

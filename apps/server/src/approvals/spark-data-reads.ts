@@ -1,5 +1,8 @@
 import { readdirSync } from 'node:fs';
 import { gatePaths as path, nativeOrNull, toGatePath } from './gate-path.ts';
+import type { ApprovalRequest } from './decide.ts';
+import { inFolders, inReadableFolder } from './crew-folders.ts';
+import { outsideRoots } from './request-place.ts';
 import { ACCEPTED_RECORD } from '../spark-rules/accepted.ts';
 import { USER_RULES_NAME, sparkChannel } from '../spark-rules/rules-store.ts';
 
@@ -54,4 +57,19 @@ export function sparkDataReadRules(
   };
   walk(root);
   return rules;
+}
+
+export const SPARK_DATA_READ_REASON =
+  "Spark's own data folder can't be read, except the Sparks and workflows folders";
+
+export function readsSparkData(request: ApprovalRequest, dataDir: string | null): boolean {
+  if (!dataDir || request.toolKind !== 'read') return false;
+  const attached = request.attachedFiles ?? [];
+  return request.paths.some(
+    (target) =>
+      inFolders(target, [dataDir]) &&
+      outsideRoots(request, target) &&
+      !inReadableFolder(request, target) &&
+      !attached.includes(path.resolve(target)),
+  );
 }
