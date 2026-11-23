@@ -173,14 +173,19 @@ function tableCommand(): [string, string[]] {
   return process.platform === 'win32' ? powerShell(WINDOWS_TABLE) : ['/bin/ps', PS_ARGS];
 }
 
-export async function processTable(): Promise<ProcessRow[]> {
+export async function processTableOrNull(): Promise<ProcessRow[] | null> {
   try {
     const [command, args] = tableCommand();
     const { stdout } = await execFileAsync(command, args, { encoding: 'utf8', windowsHide: true });
-    return readTable(stdout);
+    const rows = readTable(stdout);
+    return rows.length > 0 ? rows : null;
   } catch {
-    return [];
+    return null;
   }
+}
+
+export async function processTable(): Promise<ProcessRow[]> {
+  return (await processTableOrNull()) ?? [];
 }
 
 export function endWindowsTree(pid: number, force = true): Promise<boolean> {

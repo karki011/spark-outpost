@@ -35,12 +35,8 @@ import {
 } from './clone-failure.ts';
 import { cloneEnvironment, startGitClone, type GitCloneProcess } from './clone-git.ts';
 import { advance, CONNECTING, type CloneProgress } from './clone-progress.ts';
-import {
-  isAlive,
-  killProcessTree,
-  processTable,
-  signalGroup,
-} from '../../terminal/process-group.ts';
+import { signalGroup } from '../../terminal/process-group.ts';
+import { releaseWindowsOrphan } from './clone-recovery-windows.ts';
 
 export interface CloneJobsDeps {
   db: Db;
@@ -113,17 +109,7 @@ function toJob(entry: Entry): CloneJob {
   };
 }
 
-async function windowsRow(pid: number) {
-  return (await processTable()).find((row) => row.pid === pid) ?? null;
-}
-
-async function cannotTell(pid: number): Promise<boolean> {
-  if (process.platform !== 'win32') return false;
-  return isAlive(pid) && (await processTable()).length === 0;
-}
-
-async function commandOf(pid: number): Promise<string> {
-  if (process.platform === 'win32') return (await windowsRow(pid))?.args ?? '';
+function commandOf(pid: number): Promise<string> {
   return new Promise((resolve) => {
     execFile('ps', ['-o', 'command=', '-p', String(pid)], { timeout: PS_TIMEOUT_MS }, (_e, out) =>
       resolve(String(out)),
@@ -131,8 +117,7 @@ async function commandOf(pid: number): Promise<string> {
   });
 }
 
-async function parentOf(pid: number): Promise<number | null> {
-  if (process.platform === 'win32') return (await windowsRow(pid))?.ppid ?? null;
+function parentOf(pid: number): Promise<number | null> {
   return new Promise((resolve) => {
     execFile('ps', ['-o', 'ppid=', '-p', String(pid)], { timeout: PS_TIMEOUT_MS }, (_e, out) => {
       const parent = Number.parseInt(String(out).trim(), 10);
@@ -148,20 +133,20 @@ async function runningClone(marker: CloneMarker): Promise<boolean> {
 }
 
 async function ownedElsewhere(marker: CloneMarker): Promise<boolean> {
-  if (marker.pid && (await cannotTell(marker.pid))) return true;
   if (!marker.pid || !(await runningClone(marker))) return false;
   const parent = await parentOf(marker.pid);
   return parent !== null && parent > 1 && parent !== process.pid;
 }
 
-async function stopOrphan(marker: CloneMarker): Promise<boolean> {
-  if (!marker.pid) return true;
-  if (!(await runningClone(marker))) return !(await cannotTell(marker.pid));
-  if (process.platform === 'win32') {
-    await killProcessTree(marker.pid, 0, 'SIGKILL');
-    return !isAlive(marker.pid);
-  }
+async function stopOrphan(marker: CloneMarker): Promise<void> {
+  if (!marker.pid || !(await runningClone(marker))) return;
   signalGroup(marker.pid, 'SIGKILL');
+}
+
+async function releaseOrphan(marker: CloneMarker): Promise<boolean> {
+  if (process.platform === 'win32') return releaseWindowsOrphan(marker);
+  if (await ownedElsewhere(marker)) return false;
+  await stopOrphan(marker);
   return true;
 }
 
@@ -365,8 +350,7 @@ export function createCloneJobs(deps: CloneJobsDeps): CloneJobs {
     async recover() {
       const home = await deps.home();
       for (const marker of await cloneMarkers(deps.db, deps.workspaceId)) {
-        if (entries.has(marker.id) || (await ownedElsewhere(marker))) continue;
-        if (!(await stopOrphan(marker))) continue;
+        if (entries.has(marker.id) || !(await releaseOrphan(marker))) continue;
         const removed = await removeClaimed(marker.destination, marker.identity);
         await deleteCloneMarker(deps.db, marker.id);
         entries.set(marker.id, {
