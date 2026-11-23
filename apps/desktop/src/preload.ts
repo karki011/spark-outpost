@@ -32,7 +32,43 @@ function initiallyLocked(): boolean {
 
 restoreSettings();
 
+const macOnly = {
+  macControl: {
+    status: () => ipcRenderer.invoke(IPC.macControlStatus),
+    prompt: () => ipcRenderer.invoke(IPC.macControlPrompt),
+    openSettings: () => ipcRenderer.invoke(IPC.macControlOpenSettings),
+    stop: () => ipcRenderer.invoke(IPC.macControlStop),
+    resume: () => ipcRenderer.invoke(IPC.macControlResume),
+    indicator: () => ipcRenderer.invoke(IPC.macControlIndicator),
+    onIndicator: (callback: (state: unknown) => void) =>
+      listen(IPC.macControlIndicatorChanged, callback),
+  },
+  speech: {
+    status: () => ipcRenderer.invoke(IPC.voiceStatus),
+    turnOn: () => ipcRenderer.invoke(IPC.voiceTurnOn),
+    turnOff: () => ipcRenderer.invoke(IPC.voiceTurnOff),
+    download: () => ipcRenderer.invoke(IPC.voiceDownload),
+    cancelDownload: () => ipcRenderer.invoke(IPC.voiceCancelDownload),
+    update: (patch: unknown) => ipcRenderer.invoke(IPC.voiceUpdate, patch),
+    setShortcut: (accelerator: string | null) =>
+      ipcRenderer.invoke(IPC.voiceSetShortcut, accelerator),
+    listen: (purpose: string, hint: string, file?: string) =>
+      ipcRenderer.invoke(IPC.voiceListen, purpose, hint, file),
+    stop: (id: string) => ipcRenderer.invoke(IPC.voiceStop, id),
+    cancel: (id: string) => ipcRenderer.invoke(IPC.voiceCancel, id),
+    speak: (text: string) => ipcRenderer.invoke(IPC.voiceSpeak, text),
+    hush: () => ipcRenderer.invoke(IPC.voiceHush),
+    testPress: (file: string) => ipcRenderer.invoke(IPC.voiceTestPress, file),
+    setPressTarget: (on: boolean) => ipcRenderer.invoke(IPC.voicePressTarget, on),
+    pressIsland: () => ipcRenderer.invoke(IPC.voicePressIsland),
+    openSettings: (page: string) => ipcRenderer.invoke(IPC.voiceOpenSettings, page),
+    onEvent: (callback: (event: unknown) => void) => listen(IPC.voiceEvent, callback),
+    onChange: (callback: (status: unknown) => void) => listen(IPC.voiceChanged, callback),
+  },
+};
+
 contextBridge.exposeInMainWorld('sparkDesktop', {
+  ...(process.platform === 'darwin' ? macOnly : {}),
   platform: process.platform,
   theme: {
     saved: themeFromArgs(process.argv),
@@ -132,38 +168,6 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
   },
   sparkRules: {
     openFile: () => ipcRenderer.invoke(IPC.sparkRulesOpenFile),
-  },
-  macControl: {
-    status: () => ipcRenderer.invoke(IPC.macControlStatus),
-    prompt: () => ipcRenderer.invoke(IPC.macControlPrompt),
-    openSettings: () => ipcRenderer.invoke(IPC.macControlOpenSettings),
-    stop: () => ipcRenderer.invoke(IPC.macControlStop),
-    resume: () => ipcRenderer.invoke(IPC.macControlResume),
-    indicator: () => ipcRenderer.invoke(IPC.macControlIndicator),
-    onIndicator: (callback: (state: unknown) => void) =>
-      listen(IPC.macControlIndicatorChanged, callback),
-  },
-  speech: {
-    status: () => ipcRenderer.invoke(IPC.voiceStatus),
-    turnOn: () => ipcRenderer.invoke(IPC.voiceTurnOn),
-    turnOff: () => ipcRenderer.invoke(IPC.voiceTurnOff),
-    download: () => ipcRenderer.invoke(IPC.voiceDownload),
-    cancelDownload: () => ipcRenderer.invoke(IPC.voiceCancelDownload),
-    update: (patch: unknown) => ipcRenderer.invoke(IPC.voiceUpdate, patch),
-    setShortcut: (accelerator: string | null) =>
-      ipcRenderer.invoke(IPC.voiceSetShortcut, accelerator),
-    listen: (purpose: string, hint: string, file?: string) =>
-      ipcRenderer.invoke(IPC.voiceListen, purpose, hint, file),
-    stop: (id: string) => ipcRenderer.invoke(IPC.voiceStop, id),
-    cancel: (id: string) => ipcRenderer.invoke(IPC.voiceCancel, id),
-    speak: (text: string) => ipcRenderer.invoke(IPC.voiceSpeak, text),
-    hush: () => ipcRenderer.invoke(IPC.voiceHush),
-    testPress: (file: string) => ipcRenderer.invoke(IPC.voiceTestPress, file),
-    setPressTarget: (on: boolean) => ipcRenderer.invoke(IPC.voicePressTarget, on),
-    pressIsland: () => ipcRenderer.invoke(IPC.voicePressIsland),
-    openSettings: (page: string) => ipcRenderer.invoke(IPC.voiceOpenSettings, page),
-    onEvent: (callback: (event: unknown) => void) => listen(IPC.voiceEvent, callback),
-    onChange: (callback: (status: unknown) => void) => listen(IPC.voiceChanged, callback),
   },
   browser: {
     state: (chatId: string) => ipcRenderer.invoke(IPC.browserState, chatId),
