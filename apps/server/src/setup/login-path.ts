@@ -5,6 +5,15 @@ const MARKER = '__SPARK_PATH__=';
 
 const cached = new Map<string, Promise<string | null>>();
 
+export function userLoginShell(
+  enabled: boolean,
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): string | null {
+  if (!enabled || platform === 'win32') return null;
+  return env.SHELL || '/bin/zsh';
+}
+
 async function readLoginPath(run: RunCommand, shell: string): Promise<string | null> {
   const result = await run(shell, ['-ilc', `printf '${MARKER}%s\\n' "$PATH"`], LOOKUP_TIMEOUT_MS);
   if (result.code !== 0) return null;

@@ -2,12 +2,12 @@ import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, win32 } from 'node:path';
 import { promisify } from 'node:util';
 import { RulesFileError } from './rules-file.ts';
 import { rulesTextHash } from './accepted.ts';
 import {
-  MANAGED_RULES_FILE,
+  managedRulesFile,
   readRulesFile,
   StaleRulesError,
   type ManagedWrite,
@@ -86,6 +86,11 @@ function scriptError(error: unknown): Error {
 
 export function adminManagedWrite(runner: ScriptRunner = osascript): ManagedWrite {
   return async (target, text, previousHash) => {
+    if (process.platform === 'win32') {
+      throw new RulesFileError(
+        `Spark can't change company rules on Windows yet. An administrator can edit ${target}.`,
+      );
+    }
     if (process.platform !== 'darwin') {
       throw new RulesFileError('Company rules can only be changed on a Mac.');
     }
@@ -113,6 +118,15 @@ async function plainWrite(target: string, text: string, previousHash: string): P
   await rename(temp, target);
 }
 
+export function sameFile(
+  first: string,
+  second: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  if (platform !== 'win32') return first === second;
+  return win32.resolve(first).toLowerCase() === win32.resolve(second).toLowerCase();
+}
+
 export function managedWriteFor(target: string): ManagedWrite {
-  return target === MANAGED_RULES_FILE ? adminManagedWrite() : plainWrite;
+  return sameFile(target, managedRulesFile()) ? adminManagedWrite() : plainWrite;
 }

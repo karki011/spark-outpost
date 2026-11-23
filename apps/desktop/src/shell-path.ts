@@ -43,7 +43,9 @@ export async function loginShellPath(
 export async function adoptLoginShellPath(
   env: NodeJS.ProcessEnv,
   run: ShellRunner = defaultRunner,
+  platform: NodeJS.Platform = process.platform,
 ): Promise<void> {
+  if (platform === 'win32') return;
   const fromShell = await loginShellPath(env.SHELL || '/bin/zsh', run);
   env.PATH = mergePath(fromShell, env.PATH, FALLBACK_DIRS.join(':'));
 }

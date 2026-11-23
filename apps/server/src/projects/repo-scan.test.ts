@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { originUrlIn, repoMatch, scanRepos, type RepoScanLimits } from './repo-scan.ts';
 
@@ -48,7 +48,9 @@ afterAll(async () => {
 });
 
 function byPath(scan: Awaited<ReturnType<typeof scanRepos>>) {
-  return Object.fromEntries(scan.repos.map((found) => [found.path.slice(base.length), found]));
+  return Object.fromEntries(
+    scan.repos.map((found) => [found.path.slice(base.length).split(sep).join('/'), found]),
+  );
 }
 
 describe('scanning repos folders for git repositories', () => {

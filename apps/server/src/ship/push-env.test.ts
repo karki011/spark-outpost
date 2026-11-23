@@ -60,8 +60,10 @@ describe('a push Spark runs itself', { timeout: 30_000 }, () => {
     const [login, userconfig, home, pathValue] = (await readFile(seen, 'utf8')).trim().split('|');
     expect(login).toBe('from-the-login-shell');
     expect(userconfig).toBe('/Users/me/.npmrc');
-    expect(home).toBe(process.env.HOME);
-    expect(pathValue).toContain(process.env.PATH);
+    if (process.platform !== 'win32') {
+      expect(home).toBe(process.env.HOME);
+      expect(pathValue).toContain(process.env.PATH);
+    }
   });
 
   it('fails with the hook named in plain words when the hook exits 1, and pushes nothing', async () => {

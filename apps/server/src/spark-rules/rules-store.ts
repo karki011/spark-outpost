@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join } from 'node:path';
+import { basename, dirname, isAbsolute, join, win32 } from 'node:path';
 import { sparkDataDir } from '../config.ts';
 import { DEFAULT_BRANCH_PREFIX } from '../projects/worktrees.ts';
 import { RECOMMENDED_RULES, recommendedRulesText } from './recommended.ts';
@@ -42,7 +42,16 @@ export interface LoadedRules {
   outside: OutsideChange | null;
 }
 
-export const MANAGED_RULES_FILE = '/Library/Application Support/SparkOutpost/managed-settings.json';
+const MAC_MANAGED_RULES_FILE = '/Library/Application Support/SparkOutpost/managed-settings.json';
+
+export function managedRulesFile(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  if (platform !== 'win32') return MAC_MANAGED_RULES_FILE;
+  const programData = env.ProgramData?.trim() || env.PROGRAMDATA?.trim() || 'C:\\ProgramData';
+  return win32.join(programData, 'SparkOutpost', 'managed-settings.json');
+}
 export const USER_RULES_NAME = 'settings.json';
 const MAX_FILE_BYTES = 256 * 1024;
 
@@ -59,7 +68,7 @@ export function sparkRulesFiles(env: NodeJS.ProcessEnv = process.env): SparkRule
   const dataDir = () => sparkDataDir({ SPARK_DATA_DIR: env.SPARK_DATA_DIR });
   return {
     user: absolute(env.SPARK_RULES_FILE) ?? join(dataDir(), sparkChannel(env), USER_RULES_NAME),
-    managed: absolute(env.SPARK_MANAGED_RULES_FILE) ?? MANAGED_RULES_FILE,
+    managed: absolute(env.SPARK_MANAGED_RULES_FILE) ?? managedRulesFile(env),
   };
 }
 

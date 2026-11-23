@@ -43,17 +43,17 @@ const create = (file: string, text: string) =>
 describe('where Spark folders live', () => {
   it('keys the folder by the Spark id under the channel folder', () => {
     const env = { SPARK_DATA_DIR: '/data', BRANCH_PREFIX: 'dev' };
-    expect(crewSparksDir(env)).toBe('/data/dev/sparks');
-    expect(crewWorkflowsDir(env)).toBe('/data/dev/workflows');
+    expect(crewSparksDir(env)).toBe(path.join('/data', 'dev', 'sparks'));
+    expect(crewWorkflowsDir(env)).toBe(path.join('/data', 'dev', 'workflows'));
     expect(sparkFolderPath('/data/dev/sparks', spark.toUpperCase())).toBe(
-      `/data/dev/sparks/${spark}`,
+      path.join('/data/dev/sparks', spark),
     );
   });
 
   it('takes absolute overrides for tests and ignores relative ones', () => {
     const env = { SPARK_DATA_DIR: '/data', SPARK_CREW_DIR: '/t/s', SPARK_WORKFLOWS_DIR: 'rel' };
-    expect(crewSparksDir(env)).toBe('/t/s');
-    expect(crewWorkflowsDir(env)).toBe('/data/spark/workflows');
+    expect(crewSparksDir(env)).toBe(path.resolve('/t/s'));
+    expect(crewWorkflowsDir(env)).toBe(path.join('/data', 'spark', 'workflows'));
   });
 
   it('refuses a folder name that is not a Spark id', () => {

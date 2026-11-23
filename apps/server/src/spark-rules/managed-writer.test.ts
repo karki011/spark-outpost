@@ -15,11 +15,12 @@ import {
   INSTALL_SCRIPT,
   installArgs,
   managedWriteFor,
+  sameFile,
   STALE_COMPANY,
   STALE_MARK,
   type StagedWrite,
 } from './managed-writer.ts';
-import { MANAGED_RULES_FILE, StaleRulesError } from './rules-store.ts';
+import { managedRulesFile, StaleRulesError } from './rules-store.ts';
 
 const run = promisify(execFile);
 const TARGET = "/Library/Application Support/Spark's Outpost/managed-settings.json";
@@ -59,7 +60,7 @@ async function install(write: StagedWrite): Promise<string> {
   }
 }
 
-describe('the macOS admin prompt for the company file', () => {
+describe.skipIf(process.platform === 'win32')('the macOS admin prompt for the company file', () => {
   it('passes the install script and paths as arguments, never inside the AppleScript', () => {
     const args = adminScriptArgs({
       source: '/tmp/x/managed-settings.json',
@@ -168,6 +169,15 @@ describe('the macOS admin prompt for the company file', () => {
 
   it('uses the admin prompt only for the real company file', () => {
     expect(managedWriteFor('/tmp/elsewhere.json').name).toBe('plainWrite');
-    expect(managedWriteFor(MANAGED_RULES_FILE).name).not.toBe('plainWrite');
+    expect(managedWriteFor(managedRulesFile()).name).not.toBe('plainWrite');
+  });
+
+  it('knows the company file on Windows by any spelling of its path', () => {
+    const company = 'C:\\ProgramData\\SparkOutpost\\managed-settings.json';
+    expect(sameFile('c:/programdata/SparkOutpost/Managed-Settings.json', company, 'win32')).toBe(
+      true,
+    );
+    expect(sameFile('C:\\ProgramData\\Other\\managed-settings.json', company, 'win32')).toBe(false);
+    expect(sameFile('/Library/A/x.json', '/library/a/x.json', 'darwin')).toBe(false);
   });
 });

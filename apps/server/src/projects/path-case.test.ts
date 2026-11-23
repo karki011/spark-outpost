@@ -1,6 +1,13 @@
 import { posix } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { protectedPath, refusalFor, relativeInside } from './path-policy.ts';
+import {
+  isCredentialPath,
+  isIgnoredPath,
+  isSecretPath,
+  protectedPath,
+  refusalFor,
+  relativeInside,
+} from './path-policy.ts';
 
 const platform = process.platform;
 
@@ -50,5 +57,24 @@ describe('letter case in protected paths', () => {
     expect(refusalFor('.Git/HEAD', 'write', [])).toBe('inside .git');
     on('linux');
     expect(refusalFor('.GIT/objects/x', 'write', [])).toBeNull();
+  });
+
+  it('reads backslashes as folder separators in secret and sign-in paths on Windows', () => {
+    on('win32');
+    expect(isCredentialPath('C:\\Users\\me\\.ssh\\config')).toBe(true);
+    expect(isCredentialPath('C:\\Users\\me\\.config\\gh\\hosts.yml')).toBe(true);
+    expect(isCredentialPath('C:\\work\\app\\.env')).toBe(true);
+    expect(isCredentialPath('C:\\work\\app\\README.md')).toBe(false);
+    expect(isSecretPath('config\\.env.local')).toBe(true);
+    expect(isIgnoredPath('private\\notes.txt', ['private/'])).toBe(true);
+    expect(protectedPath('.git\\hooks\\pre-push')).toBe('git_control');
+    expect(protectedPath('docs\\agents.md')).toBe('instructions');
+  });
+
+  it('keeps a backslash as part of a name on macOS and Linux', () => {
+    on('darwin');
+    expect(isCredentialPath('/Users/me/.ssh/config')).toBe(true);
+    expect(isCredentialPath('/Users/me/a\\.ssh\\config')).toBe(false);
+    expect(protectedPath('.git\\hooks\\pre-push')).toBeNull();
   });
 });

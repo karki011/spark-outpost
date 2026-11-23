@@ -50,13 +50,16 @@ describe('the folder picker listing', () => {
     expect((await listFolders(undefined, { home: bare })).path).toBe(bare);
   });
 
-  it('says how to allow access when the folder cannot be read, keeping the places', async () => {
-    const listing = await listFolders(join(home, 'Locked'), { home });
-    expect(listing.folders).toEqual([]);
-    expect(listing.denied).toContain('permission');
-    expect(listing.parent).toBe(home);
-    expect(listing.places[0]).toEqual({ name: 'Home', path: home });
-  });
+  it.skipIf(process.platform === 'win32')(
+    'says how to allow access when the folder cannot be read, keeping the places (chmod; Windows uses ACLs)',
+    async () => {
+      const listing = await listFolders(join(home, 'Locked'), { home });
+      expect(listing.folders).toEqual([]);
+      expect(listing.denied).toContain('permission');
+      expect(listing.parent).toBe(home);
+      expect(listing.places[0]).toEqual({ name: 'Home', path: home });
+    },
+  );
 
   it('points to macOS privacy settings only when macOS refused the folder', () => {
     expect(accessProblem('EPERM')).toContain('Privacy & Security');
