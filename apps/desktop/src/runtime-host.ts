@@ -8,7 +8,13 @@ import { STOP_KEEPING_TERMINALS } from '@spark-outpost/contracts';
 import { startDatabase, type Database } from './postgres.ts';
 import { descendantsOf, isAlive, processTable } from '../../server/src/terminal/process-group.ts';
 import { isBundledService, serverEntry } from './runtime-entries.ts';
-import { createSecret, runtimePaths, runtimeProof, sameProof } from './runtime-handshake.ts';
+import {
+  createSecret,
+  isPipe,
+  runtimePaths,
+  runtimeProof,
+  sameProof,
+} from './runtime-handshake.ts';
 import {
   RUNTIME_FRAME_LIMIT,
   runtimeFrameSchema,
@@ -296,14 +302,14 @@ const answered = await new Promise<boolean>((resolve) => {
   probe.once('error', () => resolve(false));
 });
 if (answered) process.exit(0);
-await rm(paths.socket, { force: true });
+if (!isPipe(paths.socket)) await rm(paths.socket, { force: true });
 await rm(paths.endpoint, { force: true });
 await writeFile(`${paths.token}.next`, token, { mode: 0o600 });
 await rename(`${paths.token}.next`, paths.token);
 const umask = process.umask(0o077);
 server.listen(paths.socket, async () => {
   process.umask(umask);
-  await chmod(paths.socket, 0o600);
+  if (!isPipe(paths.socket)) await chmod(paths.socket, 0o600);
   await writeFile(paths.endpoint, JSON.stringify({ pid: process.pid, version }), { mode: 0o600 });
   await chmod(paths.endpoint, 0o600);
 });

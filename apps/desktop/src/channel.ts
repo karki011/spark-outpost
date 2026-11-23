@@ -56,7 +56,7 @@ export interface ChannelPaths {
 }
 
 export function channelPaths(appDataDir: string, config: ChannelConfig): ChannelPaths {
-  const userData = path.join(appDataDir, config.dataFolderName);
+  const userData = path.join(path.resolve(appDataDir), config.dataFolderName);
   return {
     userData,
     postgresData: path.join(userData, 'postgres'),

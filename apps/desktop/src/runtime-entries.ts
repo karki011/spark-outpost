@@ -25,5 +25,5 @@ export function isBundledService(
   if (path.resolve(service.bootstrap) !== path.resolve(layout.bootstrap)) return false;
   if (path.resolve(service.cwd) !== path.resolve(serverDir)) return false;
   const entry = path.resolve(service.entry);
-  return Object.values(ENTRIES).some((allowed) => path.join(serverDir, allowed) === entry);
+  return Object.values(ENTRIES).some((allowed) => path.resolve(serverDir, allowed) === entry);
 }

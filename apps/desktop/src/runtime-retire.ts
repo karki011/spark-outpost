@@ -1,10 +1,11 @@
 import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
 
 const run = promisify(execFile);
-const HOST_SCRIPT = 'runtime-host.js ';
+const HOST_SCRIPT = 'runtime-host.js';
 export const RETIRE_TIMEOUT_MS = 30_000;
 
 interface Retirement {
@@ -32,17 +33,90 @@ export async function recordedPid(endpoint: string): Promise<number | null> {
   }
 }
 
+function escaped(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function windowsArgs(command: string): string[] {
+  const args: string[] = [];
+  let arg = '';
+  let started = false;
+  let quoted = false;
+  let index = 0;
+  while (index < command.length) {
+    const char = command[index];
+    if (char === '\\') {
+      let slashes = 0;
+      while (command[index] === '\\') {
+        slashes += 1;
+        index += 1;
+      }
+      if (command[index] === '"') {
+        arg += '\\'.repeat(Math.floor(slashes / 2));
+        if (slashes % 2 === 1) arg += '"';
+        else quoted = !quoted;
+        index += 1;
+      } else {
+        arg += '\\'.repeat(slashes);
+      }
+      started = true;
+      continue;
+    }
+    if (char === '"' && quoted && command[index + 1] === '"') {
+      arg += '"';
+      index += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+      started = true;
+    } else if ((char === ' ' || char === '\t') && !quoted) {
+      if (started) args.push(arg);
+      arg = '';
+      started = false;
+    } else {
+      arg += char;
+      started = true;
+    }
+    index += 1;
+  }
+  if (started) args.push(arg);
+  return args;
+}
+
+export function namesRuntimeHost(
+  command: string,
+  directory: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  if (platform === 'win32') {
+    const args = windowsArgs(command);
+    return args.some(
+      (arg, index) => path.win32.basename(arg) === HOST_SCRIPT && args[index + 1] === directory,
+    );
+  }
+  const host = new RegExp(`(?:^|[ /])${escaped(HOST_SCRIPT)} ${escaped(directory)}(?: |$)`);
+  return host.test(command);
+}
+
+async function commandLine(pid: number): Promise<string> {
+  if (process.platform !== 'win32') {
+    return (await run('ps', ['-ww', '-o', 'args=', '-p', String(pid)])).stdout.trim();
+  }
+  const query = `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; (Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}').CommandLine`;
+  const { stdout } = await run('powershell.exe', [
+    '-NoProfile',
+    '-NonInteractive',
+    '-Command',
+    query,
+  ]);
+  return stdout.trim();
+}
+
 export async function isRuntimeHost(pid: number, directory: string): Promise<boolean> {
-  let command: string;
   try {
-    command = (await run('ps', ['-ww', '-o', 'args=', '-p', String(pid)])).stdout.trim();
+    return namesRuntimeHost(await commandLine(pid), directory);
   } catch {
     return false;
   }
-  const start = command.indexOf(`${HOST_SCRIPT}${directory}`);
-  if (start < 0) return false;
-  const next = command[start + HOST_SCRIPT.length + directory.length];
-  return next === undefined || next === ' ';
 }
 
 async function exited(pid: number, deadline: number): Promise<boolean> {
@@ -73,5 +147,8 @@ export async function retireHost(retirement: Retirement): Promise<void> {
     }
     if (await exited(pid, Date.now() + timeoutMs)) return;
   }
-  throw new Error('The earlier local runtime did not stop. Restart the Mac, then reopen Spark.');
+  const computer = process.platform === 'win32' ? 'your computer' : 'the Mac';
+  throw new Error(
+    `The earlier local runtime did not stop. Restart ${computer}, then reopen Spark.`,
+  );
 }

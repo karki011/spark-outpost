@@ -3,7 +3,9 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { isRuntimeHost, recordedPid, retireHost } from './runtime-retire.ts';
+import { isRuntimeHost, namesRuntimeHost, recordedPid, retireHost } from './runtime-retire.ts';
+
+const signalled = (signal: NodeJS.Signals) => (process.platform === 'win32' ? null : signal);
 
 let folder: string;
 const children: ChildProcess[] = [];
@@ -79,7 +81,7 @@ describe('retiring an earlier runtime host', () => {
   it('terminates a host that does not answer, then kills one that ignores the signal', async () => {
     const quiet = await host('quiet', '');
     await retireHost({ directory: quiet.directory, pid: quiet.pid, stop: null, timeoutMs: 5_000 });
-    expect(await quiet.exited).toBe('SIGTERM');
+    expect(await quiet.exited).toBe(signalled('SIGTERM'));
     const stubborn = await host('stubborn', `process.on('SIGTERM', () => {})`);
     await retireHost({
       directory: stubborn.directory,
@@ -87,7 +89,7 @@ describe('retiring an earlier runtime host', () => {
       stop: () => new Promise(() => undefined),
       timeoutMs: 300,
     });
-    expect(await stubborn.exited).toBe('SIGKILL');
+    expect(await stubborn.exited).toBe(signalled('SIGKILL'));
   });
 
   it("never signals a process that is not this directory's runtime host", async () => {
@@ -96,5 +98,39 @@ describe('retiring an earlier runtime host', () => {
     expect(other.child.exitCode).toBeNull();
     expect(other.child.signalCode).toBeNull();
     await retireHost({ directory: other.directory, pid: null, stop: null, timeoutMs: 300 });
+  });
+});
+
+describe('reading a runtime host command line', () => {
+  const directory = 'C:\\Users\\me\\AppData\\Roaming\\Spark Outpost\\runtime';
+  const onWindows = (command: string) => namesRuntimeHost(command, directory, 'win32');
+
+  it('matches the directory plain or in quotes, as Windows writes it', () => {
+    expect(onWindows(`node C:\\app\\runtime-host.js "${directory}"`)).toBe(true);
+    expect(onWindows(`node "C:\\My App\\runtime-host.js" "${directory}"`)).toBe(true);
+    expect(onWindows(`"node.exe" "C:\\app\\runtime-host.js" "${directory}" x`)).toBe(true);
+    expect(onWindows(`node runtime-host.js C:\\data\\runtime`)).toBe(false);
+  });
+
+  it('refuses another directory, another script or the name inside one argument on Windows', () => {
+    expect(onWindows(`node runtime-host.js "${directory}-old"`)).toBe(false);
+    expect(onWindows(`node other.js "${directory}"`)).toBe(false);
+    expect(onWindows(`node "C:\\Other App\\not-runtime-host.js" "${directory}"`)).toBe(false);
+    expect(onWindows(`node "C:\\Other App\\not runtime-host.js" "${directory}"`)).toBe(false);
+    expect(onWindows(`node other.js "notes runtime-host.js ${directory}"`)).toBe(false);
+    expect(onWindows(`node other.js "notes \\" runtime-host.js ${directory} extra"`)).toBe(false);
+    expect(onWindows(`node other.js "notes "" runtime-host.js ${directory} extra"`)).toBe(false);
+    expect(onWindows(`node C:\\app\\runtime-host.js "C:\\a\\\\" "${directory}"`)).toBe(false);
+  });
+
+  it('matches the Mac form, where ps prints arguments unquoted', () => {
+    const macDirectory = '/Users/me/Library/Application Support/Spark Outpost/runtime';
+    const host =
+      '/Applications/Spark Outpost.app/Contents/MacOS/Spark Outpost /Applications/Spark Outpost.app/Contents/Resources/app.asar/dist/runtime-host.js';
+    const onMac = (command: string) => namesRuntimeHost(command, macDirectory, 'darwin');
+    expect(onMac(`${host} ${macDirectory} 0.1.0 /app/server`)).toBe(true);
+    expect(onMac(`${host} ${macDirectory}`)).toBe(true);
+    expect(onMac(`${host} ${macDirectory}-old`)).toBe(false);
+    expect(onMac(`/bin/node /x/not-runtime-host.js ${macDirectory}`)).toBe(false);
   });
 });
