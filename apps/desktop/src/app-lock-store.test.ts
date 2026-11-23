@@ -55,7 +55,7 @@ describe('the privacy screen file', () => {
     };
     await saveAppLockRecord(file, record);
     expect(readAppLockRecord(file)).toEqual(record);
-    expect((await stat(file)).mode & 0o777).toBe(0o600);
+    if (process.platform !== 'win32') expect((await stat(file)).mode & 0o777).toBe(0o600);
     expect(await readFile(file, 'utf8')).not.toContain('042917');
   });
 

@@ -3,6 +3,7 @@ import { net, type FakeContents } from './electron.fixture.ts';
 import { invoke, memorySaved, startTestBrowser } from './view-host.fixture.ts';
 import { keptTabs, parseSavedView } from './view-saved.ts';
 import { toView } from './view-transfer.ts';
+import { fileUrl, localPath } from './project-files.fixture.ts';
 
 vi.mock('electron', async () => (await import('./electron-ipc.fixture.ts')).fakeElectronWithIpc);
 vi.mock('./cdp.ts', () => ({
@@ -244,9 +245,9 @@ describe('moving a chat tab to the Browser view', () => {
     const file = chats.createTab(
       CHAT,
       { owner: 'user', runId: null, url: 'about:blank' },
-      { projectId: null, roots: ['/Users/me/app'] },
+      { projectId: null, roots: [localPath('/Users/me/app')] },
     )!;
-    await file.load('file:///Users/me/app/index.html');
+    await file.load(fileUrl('/Users/me/app/index.html'));
     expect(await toView(chats, view, { chatId: CHAT, tabId: file.id })).toEqual({
       ok: false,
       reason: 'Only web pages open in the Browser view.',

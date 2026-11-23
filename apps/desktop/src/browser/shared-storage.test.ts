@@ -4,6 +4,7 @@ import { net, type FakeContents } from './electron.fixture.ts';
 import { BrowserPanes } from './panes.ts';
 import { BROWSER_PARTITION } from './request-guard.ts';
 import { loginDom } from './sign-in-dom.fixture.ts';
+import { fileUrl, localPath } from './project-files.fixture.ts';
 
 vi.mock('electron', async () => (await import('./electron.fixture.ts')).fakeElectron);
 vi.mock('./cdp.ts', () => ({
@@ -16,7 +17,7 @@ const API_PORT = 32682;
 const USER = BROWSER_PARTITION;
 const SITE = 'https://docs.example.com';
 const LOCAL = 'http://localhost:5173/';
-const home = { projectId: PROJECT, roots: ['/Users/me/app'] };
+const home = { projectId: PROJECT, roots: [localPath('/Users/me/app')] };
 const signal = new AbortController().signal;
 
 let panes: BrowserPanes;
@@ -200,8 +201,8 @@ describe('the guards on the storage agent tabs share', () => {
     expect(session.requestCancelled(`http://127.0.0.1:${API_PORT}/api/health`, page)).toBe(true);
     expect(session.requestCancelled(`ws://rebind.example.com:${API_PORT}/`, page)).toBe(true);
     expect(session.requestCancelled('file:///etc/passwd', page)).toBe(true);
-    expect(session.requestCancelled('file:///Users/me/app/index.html', page)).toBe(false);
-    expect(session.requestCancelled('file:///Users/me/app/index.html')).toBe(true);
+    expect(session.requestCancelled(fileUrl('/Users/me/app/index.html'), page)).toBe(false);
+    expect(session.requestCancelled(fileUrl('/Users/me/app/index.html'))).toBe(true);
     expect(session.requestCancelled(`${SITE}/app.js`, page)).toBe(false);
     for (const permission of ['media', 'geolocation', 'notifications', 'clipboard-read']) {
       expect(session.permissionGranted(permission), permission).toBe(false);

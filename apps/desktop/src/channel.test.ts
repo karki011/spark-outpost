@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { channelConfig, channelIcons, channelPaths, resolveChannel } from './channel.ts';
 
@@ -34,23 +35,23 @@ describe('channel', () => {
 
   it('keeps the dev data, database and backups under the dev folder', () => {
     const paths = channelPaths(APP_DATA, channelConfig('dev'));
-    expect(paths.userData).toBe(`${APP_DATA}/Spark Outpost Dev`);
+    expect(paths.userData).toBe(path.join(APP_DATA, 'Spark Outpost Dev'));
     for (const inside of [paths.postgresData, paths.postgresPassword, paths.backups, paths.logs]) {
-      expect(inside.startsWith(`${paths.userData}/`)).toBe(true);
+      expect(inside.startsWith(`${paths.userData}${path.sep}`)).toBe(true);
     }
     expect(channelPaths(APP_DATA, channelConfig('prod')).userData).toBe(
-      `${APP_DATA}/Spark Outpost`,
+      path.join(APP_DATA, 'Spark Outpost'),
     );
   });
 
   it('shows the Spark icon, with a DEV badge for the dev channel, and the template tray icon', () => {
     expect(channelIcons('/app/assets', channelConfig('prod'))).toEqual({
-      app: '/app/assets/icon.png',
-      tray: '/app/assets/trayTemplate.png',
+      app: path.join('/app/assets/icon.png'),
+      tray: path.join('/app/assets/trayTemplate.png'),
     });
     expect(channelIcons('/app/assets', channelConfig('dev'))).toEqual({
-      app: '/app/assets/icon-dev.png',
-      tray: '/app/assets/trayTemplate.png',
+      app: path.join('/app/assets/icon-dev.png'),
+      tray: path.join('/app/assets/trayTemplate.png'),
     });
   });
 });

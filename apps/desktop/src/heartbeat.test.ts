@@ -68,7 +68,7 @@ describe('loadInstallId', () => {
     expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     expect(await loadInstallId(file)).toBe(first);
     expect((await readFile(file, 'utf8')).trim()).toBe(first);
-    expect((await stat(file)).mode & 0o777).toBe(0o600);
+    if (process.platform !== 'win32') expect((await stat(file)).mode & 0o777).toBe(0o600);
   });
 
   it('replaces an unreadable id with a new one', async () => {
