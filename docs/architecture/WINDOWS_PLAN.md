@@ -188,7 +188,7 @@ From the npm registry and official docs:
 - **Codex sandbox paths (done):** Codex's permission profiles name folders (browser data, Sparks and workflows, a worktree's git data) as native Windows paths (`agents/acp/codex-permissions.ts`); macOS is unchanged.
 - **Shell tab folder (done):** Git Bash starts with `CHERE_INVOKING=1`, so its login profile stays in the tab's folder instead of moving to the home folder.
 - **Test temp folder:** the unit tests' temp sandbox sets `TEMP` and `TMP` as well as `TMPDIR` on Windows.
-- **Folders in use (gap):** Windows won't remove a folder a running shell is in, so "ends a shell when its folder is removed" can't happen there; Deleting a chat waits for its shells to stop before removing its worktree; a worktree released while a shell is still open in it (archiving) is still to handle. The crash-recovery installer test uses a POSIX script and runs only off Windows.
+- **Folders in use (done):** Windows won't remove a folder a running shell is in, so "ends a shell when its folder is removed" can't happen there; Deleting a chat waits for its shells to stop before removing its worktree, and archiving keeps a worktree while a shell, agent terminal tab, Terminal session or preview is still open in it or a folder below it, comparing paths in Windows form (`persistence/folder-in-use.ts`). The crash-recovery installer test uses a POSIX script and runs only off Windows.
 - **Git and keychain wording (done):** a missing Git points Windows at Git for Windows instead of Apple's command line tools (`gitInstallHint`), and the keychain wait names Windows Credential Manager.
 - **Line endings:** the Windows CI job turns off `core.autocrlf` so tests that read files back see the committed bytes.
 
