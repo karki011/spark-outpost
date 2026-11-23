@@ -19,7 +19,7 @@ import {
 import { getTaskDetail } from '../persistence/task-views.ts';
 import { TaskNotFoundError } from '../persistence/tasks.ts';
 import { findEntry, type ChangeSet, type SetEntry } from './change-sets.ts';
-import { isSecretPath, protectedPath, relativeInside } from './path-policy.ts';
+import { isInsideGitFolder, isSecretPath, protectedPath, relativeInside } from './path-policy.ts';
 import { readIgnore } from './project-fs.ts';
 import { publishedState } from './published-state.ts';
 import {
@@ -85,7 +85,7 @@ async function realAncestor(target: string): Promise<string> {
 export async function staysInside(root: string, relative: string): Promise<boolean> {
   const target = path.resolve(root, relative);
   if (relativeInside(root, target) === null) return false;
-  if (relative.split('/')[0] === '.git' || protectedPath(relative) === 'git_control') return false;
+  if (isInsideGitFolder(relative) || protectedPath(relative) === 'git_control') return false;
   const [realRoot, realParent] = await Promise.all([
     realpath(root),
     realAncestor(path.dirname(target)),

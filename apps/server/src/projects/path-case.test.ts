@@ -1,6 +1,6 @@
 import { posix } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { protectedPath, relativeInside } from './path-policy.ts';
+import { protectedPath, refusalFor, relativeInside } from './path-policy.ts';
 
 const platform = process.platform;
 
@@ -42,5 +42,13 @@ describe('letter case in protected paths', () => {
       on(value);
       expect(relativeInside('/Work/App', '/work/app/a.ts', posix)).toBeNull();
     }
+  });
+
+  it('refuses writes inside .git in any case on Windows', () => {
+    on('win32');
+    expect(refusalFor('.GIT/objects/x', 'write', [])).toBe('inside .git');
+    expect(refusalFor('.Git/HEAD', 'write', [])).toBe('inside .git');
+    on('linux');
+    expect(refusalFor('.GIT/objects/x', 'write', [])).toBeNull();
   });
 });

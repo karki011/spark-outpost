@@ -156,6 +156,11 @@ export const GIT_CONTROL_GLOBS: readonly string[] = ['.git/hooks/*', GIT_CONFIG]
 
 const FOLDED_INSTRUCTION_NAMES = new Set([...INSTRUCTION_NAMES].map((name) => name.toLowerCase()));
 
+export function isInsideGitFolder(relative: string): boolean {
+  const first = relative.split('/')[0] ?? '';
+  return (process.platform === 'win32' ? first.toLowerCase() : first) === '.git';
+}
+
 export function protectedPath(written: string): ProtectedKind | null {
   const folds = process.platform === 'win32';
   const relative = folds ? written.toLowerCase() : written;
@@ -200,7 +205,7 @@ export function refusalFor(
   const kept =
     access === 'agent_read' ? isIgnoredPath(relative, ignore) : isSecretPath(relative, ignore);
   if (kept) return 'secret file';
-  const git = relative.split('/')[0] === '.git';
+  const git = isInsideGitFolder(relative);
   if (access === 'write' && git && protectedPath(relative) === null) return 'inside .git';
   return null;
 }
