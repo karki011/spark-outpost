@@ -64,9 +64,9 @@ function changesInside(crossing: RailCrossing, request: ApprovalRequest): boolea
 }
 
 function originalsOf(crossing: RailCrossing, request: ApprovalRequest, home: string) {
-  const wanted = new Set(crossing.paths);
+  const wanted = new Set(crossing.paths.map((target) => toGatePath(target)));
   return request.diffs.flatMap((diff): RailOriginal[] =>
-    diff.oldText !== null && wanted.has(diff.path)
+    diff.oldText !== null && wanted.has(toGatePath(diff.path))
       ? [{ path: shown(diff.path, home), text: diff.oldText.slice(0, ORIGINAL_MAX_CHARS) }]
       : [],
   );

@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { decodeClaudePermissionResponse } from '@agentclientprotocol/claude-agent-acp/dist/permissions/response.js';
 import { approvalRequestFrom, permissionResponse } from './permission-request.ts';
@@ -198,7 +199,7 @@ describe('approvalRequestFrom', () => {
       kind: 'edit',
       command: null,
       paths: [gateAbs('/work/app/src/a.ts')],
-      diffs: [{ path: gateAbs('/work/app/src/a.ts'), oldText: 'a', newText: 'b' }],
+      diffs: [{ path: resolve('/work/app/src/a.ts'), oldText: 'a', newText: 'b' }],
     });
   });
 

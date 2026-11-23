@@ -139,6 +139,9 @@ describe('runningCommand', () => {
     expect(runningCommand(10, [wrapper, shell], 'win32')).toBeNull();
     const sleep = row(30, 20, 'C:\\Program Files\\Git\\usr\\bin\\sleep.exe 100');
     expect(runningCommand(10, [wrapper, shell, sleep], 'win32')).toBe('sleep 100');
+    const stub = row(25, 20, '"C:\\Program Files\\Git\\usr\\bin\\bash.exe" --login -i');
+    const forked = row(31, 25, 'C:\\Program Files\\Git\\usr\\bin\\sleep.exe 100');
+    expect(runningCommand(10, [wrapper, shell, stub, forked], 'win32')).toBe('sleep 100');
   });
 });
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SparkSessionPrefs, TeammateBrief } from '@spark-outpost/contracts';
 import { crewFolderRules, guardedCrewFolders } from '../../approvals/crew-folders.ts';
+import { toNativePath } from '../../approvals/gate-path.ts';
 import { tempRoots } from '../../approvals/temp-dirs.ts';
 import { claudeSessionMeta } from './agents.ts';
 import { CLAUDE_DO_TOOLS, CLAUDE_READ_TOOLS } from './claude-tools.ts';
@@ -132,7 +133,7 @@ describe('Codex may read crew folders and never write them', () => {
     >;
     for (const folder of guardedCrewFolders()) {
       for (const profile of Object.values(profiles)) {
-        expect(profile.filesystem[folder]).toBe('read');
+        expect(profile.filesystem[toNativePath(folder)]).toBe('read');
       }
     }
   });

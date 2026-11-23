@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk/unstable';
 import { describe, expect, it } from 'vitest';
 import { approvalRequestFrom } from './permission-request.ts';
@@ -84,7 +85,7 @@ describe('a trimmed permission request from the Claude adapter', () => {
     );
     expect(request.kind).toBe('edit');
     expect(request.paths).toEqual([gateAbs('/work/a.txt')]);
-    expect(request.diffs).toEqual([{ path: gateAbs('/work/a.txt'), oldText: 'a', newText: 'b' }]);
+    expect(request.diffs).toEqual([{ path: resolve('/work/a.txt'), oldText: 'a', newText: 'b' }]);
   });
 
   it('never replaces what the request itself says', () => {

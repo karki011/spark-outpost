@@ -83,6 +83,10 @@ export function commandLabel(args: string, platform: NodeJS.Platform = process.p
   return label.length > COMMAND_MAX_LENGTH ? `${label.slice(0, COMMAND_MAX_LENGTH - 1)}…` : label;
 }
 
+function isGitBashShell(row: ProcessRow, platform: NodeJS.Platform): boolean {
+  return platform === 'win32' && GIT_BASH_SHELL.test(splitProgram(row.args, platform)[0]);
+}
+
 function shellRoot(root: number, table: readonly ProcessRow[], platform: NodeJS.Platform): number {
   if (platform !== 'win32') return root;
   const [program] = splitProgram(table.find((row) => row.pid === root)?.args ?? '', platform);
@@ -100,7 +104,10 @@ export function runningCommand(
 ): string | null {
   const root = shellRoot(wrapper, table, platform);
   const descendants = new Set(descendantsOf(root, table));
-  const running = table.filter((row) => descendants.has(row.pid) && !NOT_A_COMMAND.test(row.args));
+  const running = table.filter(
+    (row) =>
+      descendants.has(row.pid) && !NOT_A_COMMAND.test(row.args) && !isGitBashShell(row, platform),
+  );
   const foreground = table.find((row) => row.pid === root)?.foregroundGroup;
   const main =
     running.find((row) => row.pid === foreground) ??
@@ -159,10 +166,10 @@ export async function processTable(): Promise<ProcessRow[]> {
   }
 }
 
-export function endWindowsTree(pid: number, force = true): Promise<void> {
+export function endWindowsTree(pid: number, force = true): Promise<boolean> {
   const args = ['/PID', String(pid), '/T', ...(force ? ['/F'] : [])];
   return new Promise((resolve) => {
-    execFile(system32('taskkill.exe'), args, { windowsHide: true }, () => resolve());
+    execFile(system32('taskkill.exe'), args, { windowsHide: true }, (error) => resolve(!error));
   });
 }
 
@@ -184,8 +191,8 @@ async function endWindowsTrees(
   }
   const table = await processTable();
   const targets = [...new Set(roots.flatMap((pid) => [pid, ...descendantsOf(pid, table)]))];
-  await Promise.all(roots.map((pid) => endWindowsTree(pid, false)));
-  await untilGone(targets, graceMs);
+  const asked = await Promise.all(roots.map((pid) => endWindowsTree(pid, false)));
+  if (asked.every(Boolean)) await untilGone(targets, graceMs);
   const left = targets.filter((pid) => isAlive(pid));
   await Promise.all(left.map((pid) => endWindowsTree(pid)));
 }
