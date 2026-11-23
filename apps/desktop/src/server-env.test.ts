@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { channelConfig, channelPaths } from './channel.ts';
 import { apiEnv, browserWorkerEnv, workerEnv, type ServerLaunch } from './server-env.ts';
@@ -52,13 +53,13 @@ describe('server environment', () => {
   it('tells the API where the logs are, for diagnostics', () => {
     expect(apiEnv(launch)).toMatchObject({
       SPARK_APP_VERSION: '0.1.0-beta.1',
-      SPARK_LOG_DIR: '/Users/me/Library/Application Support/Spark Outpost Dev/logs',
+      SPARK_LOG_DIR: path.join('/Users/me/Library/Application Support/Spark Outpost Dev/logs'),
     });
     expect(workerEnv(launch).SPARK_LOG_DIR).toBeUndefined();
   });
 
   it('gives the API, the worker and migrations the same data folder', () => {
-    const userData = '/Users/me/Library/Application Support/Spark Outpost Dev';
+    const userData = path.join('/Users/me/Library/Application Support/Spark Outpost Dev');
     expect(paths.userData).toBe(userData);
     for (const env of [apiEnv(launch), workerEnv(launch), browserWorkerEnv(launch)]) {
       expect(env.SPARK_DATA_DIR).toBe(userData);

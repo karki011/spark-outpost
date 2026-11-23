@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { guardMediaInPage } from './media-guard-page.ts';
 import { guardSessionMedia, mediaGuardPreload } from './media-guard.ts';
@@ -83,6 +84,6 @@ describe('guardSessionMedia', () => {
   });
 
   it('points at the bundled guard beside main', () => {
-    expect(mediaGuardPreload('/app/dist')).toBe('/app/dist/media-guard-preload.cjs');
+    expect(mediaGuardPreload('/app/dist')).toBe(path.join('/app/dist/media-guard-preload.cjs'));
   });
 });

@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { BrowserDownload } from '@spark-outpost/contracts';
 import type { InputMarks } from './clipboard-permission.ts';
@@ -80,7 +81,7 @@ describe('the downloads list', () => {
     expect(list.decide(download.fake, tab('personal', marks()))).toBe(true);
     expect(download.fake.setSaveDialogOptions).toHaveBeenCalledWith({
       title: 'Save download',
-      defaultPath: '/Users/me/Downloads/report.pdf',
+      defaultPath: path.join('/Users/me/Downloads/report.pdf'),
     });
     const [entry] = lists.at(-1)!;
     expect(entry).toMatchObject({ where: 'personal', by: 'you', state: 'saving' });

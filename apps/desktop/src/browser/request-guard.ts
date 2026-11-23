@@ -27,10 +27,15 @@ export function portOf(url: ParsedUrl): number | null {
   return DEFAULT_PORTS[url.protocol] ?? null;
 }
 
-export function insideRoots(file: string, roots: readonly string[]): boolean {
+function comparable(file: string): string {
   const resolved = path.resolve(file);
+  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
+
+export function insideRoots(file: string, roots: readonly string[]): boolean {
+  const resolved = comparable(file);
   return roots.some((root) => {
-    const base = path.resolve(root);
+    const base = comparable(root);
     return resolved === base || resolved.startsWith(`${base}${path.sep}`);
   });
 }
