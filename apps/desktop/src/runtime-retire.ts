@@ -38,7 +38,45 @@ function escaped(text: string): string {
 }
 
 function windowsArgs(command: string): string[] {
-  return [...command.matchAll(/"([^"]*)"|(\S+)/g)].map((match) => match[1] ?? match[2] ?? '');
+  const args: string[] = [];
+  let arg = '';
+  let started = false;
+  let quoted = false;
+  let index = 0;
+  while (index < command.length) {
+    const char = command[index];
+    if (char === '\\') {
+      let slashes = 0;
+      while (command[index] === '\\') {
+        slashes += 1;
+        index += 1;
+      }
+      if (command[index] === '"') {
+        arg += '\\'.repeat(Math.floor(slashes / 2));
+        if (slashes % 2 === 1) arg += '"';
+        else quoted = !quoted;
+        index += 1;
+      } else {
+        arg += '\\'.repeat(slashes);
+      }
+      started = true;
+      continue;
+    }
+    if (char === '"') {
+      quoted = !quoted;
+      started = true;
+    } else if ((char === ' ' || char === '\t') && !quoted) {
+      if (started) args.push(arg);
+      arg = '';
+      started = false;
+    } else {
+      arg += char;
+      started = true;
+    }
+    index += 1;
+  }
+  if (started) args.push(arg);
+  return args;
 }
 
 export function namesRuntimeHost(

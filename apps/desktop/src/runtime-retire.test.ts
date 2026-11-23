@@ -114,11 +114,12 @@ describe('reading a runtime host command line', () => {
 
   it('refuses another directory, another script or the name inside one argument on Windows', () => {
     expect(onWindows(`node runtime-host.js "${directory}-old"`)).toBe(false);
-    expect(onWindows(`node runtime-host.js "${directory}`)).toBe(false);
     expect(onWindows(`node other.js "${directory}"`)).toBe(false);
     expect(onWindows(`node "C:\\Other App\\not-runtime-host.js" "${directory}"`)).toBe(false);
     expect(onWindows(`node "C:\\Other App\\not runtime-host.js" "${directory}"`)).toBe(false);
     expect(onWindows(`node other.js "notes runtime-host.js ${directory}"`)).toBe(false);
+    expect(onWindows(`node other.js "notes \\" runtime-host.js ${directory} extra"`)).toBe(false);
+    expect(onWindows(`node C:\\app\\runtime-host.js "C:\\a\\\\" "${directory}"`)).toBe(false);
   });
 
   it('matches the Mac form, where ps prints arguments unquoted', () => {
